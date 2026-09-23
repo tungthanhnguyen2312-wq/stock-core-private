@@ -313,6 +313,7 @@ def run_daily_producer(
         root=root, session=selected, operation_dir=operation_dir, registry_inputs=inputs,
         requested_at=vn_now().isoformat(timespec="seconds"),
         runtime_root_override=runtime_root_override,
+        integrated_investment_decision_product=integrated_investment_decision_product,
     )
     run_identity = _run_identity(selected, producer_head, consumer_head, plan, operation["manifest"]["operation_identity"])
     run_dir = output_root / selected / run_identity.split(":", 1)[1]

@@ -8,11 +8,31 @@ import pytest
 
 from current_valuation_opportunity_integration import build_artifacts as build_opportunity_artifacts
 from investment_decision_workspace_projection import (
-    InvestmentDecisionWorkspaceError, RELATIVE_VALUATION_LABELS, build_artifacts, build_ticker_card,
-    content_identity,
+    InvestmentDecisionWorkspaceError, RELATIVE_VALUATION_LABELS, content_identity,
 )
+import investment_decision_workspace_projection as _workspace_module
+from _integrated_decision_fixture import integrated_decision as _integrated_decision, minimal_integrated_record
 
 DECISION = "2026-08-28"
+
+
+def build_artifacts(**kwargs):
+    """CURRENT_DECISION_SURFACE_CONVERGENCE_V1: the Workspace now requires its action-decision
+    authority. Pre-existing tests here exercise other card sections, so they receive a real,
+    same-session, same-ticker-set Integrated Decision built by the production builder."""
+    if "integrated_decision_artifact" not in kwargs:
+        opportunity = kwargs.get("opportunity_artifact") or {}
+        decision = kwargs.get("decision_artifact") or {}
+        tickers = sorted(opportunity.get("records") or {})
+        session = opportunity.get("as_of_session") or decision.get("as_of_session")
+        kwargs["integrated_decision_artifact"] = _integrated_decision(session, tickers) if tickers and session else None
+    return _workspace_module.build_artifacts(**kwargs)
+
+
+def build_ticker_card(**kwargs):
+    if "integrated_record" not in kwargs:
+        kwargs["integrated_record"] = minimal_integrated_record(kwargs["ticker"], DECISION)
+    return _workspace_module.build_ticker_card(**kwargs)
 
 
 # ---------------------------------------------------------------------------

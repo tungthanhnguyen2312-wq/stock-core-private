@@ -7,7 +7,7 @@ replay on `46adbc0` (Dashboard `60afab5c`, `PUBLISHED`, public-byte `PASS`). Own
 crash-recovery corrective `c7216d3` = implementation complete / test validated; next ordinary
 Daily observation pending, not an ACTIVE writer. See `docs/STATE.md` and `docs/DECISIONS.md`.
 
-**Next milestone -- `CURRENT_DECISION_SURFACE_CONVERGENCE_V1` = `NEXT` (queued, not started):**
+**Active milestone -- `CURRENT_DECISION_SURFACE_CONVERGENCE_V1` = `ACTIVE` (implementation complete as a local release candidate; awaiting owner review and promotion; see `docs/STATE.md`). Bounded contract:**
 
 - **Decision authority.** `research_action_posture` is the single cross-surface action-decision
   authority. `research_stance` stays a secondary research-candidate/screening dimension and

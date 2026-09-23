@@ -505,8 +505,14 @@ def materialize_current_investment_decision_workspace(
     tactical_behavior: Mapping[str, Any] | None = None,
     current_research_scope: Mapping[str, Any] | None = None,
     root: Path | None = None,
+    integrated_investment_decision_product: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build the current-session Investment Decision Workspace from already-resolved inputs.
+
+    ``integrated_investment_decision_product`` (CURRENT_DECISION_SURFACE_CONVERGENCE_V1) is the
+    exact Integrated Decision artifact the AI/current-decision delivery uses. It is the Workspace's
+    single action-decision authority; without it the Workspace fails closed rather than presenting
+    the legacy ``research_stance`` as an action decision.
 
     ``registry_inputs`` is the same dict ``daily_research_session_operations.resolve_inputs()``
     already produced for the current session (reused here, not re-read): its ``tactical`` entry
@@ -597,6 +603,7 @@ def materialize_current_investment_decision_workspace(
         signal_velocity_artifact=signal_velocity_artifact,
         flow_price_artifact=flow_price_artifact,
         flow_research_cohort_tickers=flow_research_cohort_tickers,
+        integrated_decision_artifact=integrated_investment_decision_product,
     )
     return {
         "opportunity_context": opportunity_and_decision["opportunity_context"],
@@ -648,6 +655,7 @@ def materialize_and_write_current_product_projections(
     registry_inputs: Mapping[str, Any],
     requested_at: str,
     runtime_root_override: Path | None = None,
+    integrated_investment_decision_product: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Top-level entry point: materialize both current products and write them into
     ``operation_dir`` (the same Daily Research Session Operation directory
@@ -682,7 +690,7 @@ def materialize_and_write_current_product_projections(
             session=session, registry_inputs=registry_inputs, supplementary=supplementary,
             requested_at=requested_at, feature_store=feature_store_artifact,
             tactical_behavior=tactical_behavior_artifact, current_research_scope=current_research_scope,
-            root=root,
+            root=root, integrated_investment_decision_product=integrated_investment_decision_product,
         )
         workspace = workspace_bundle["workspace"]
         snapshot_root = Path(runtime_root_override) if runtime_root_override is not None else runtime_root(root)

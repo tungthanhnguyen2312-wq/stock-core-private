@@ -32,6 +32,14 @@ def test_priority_posture_reconciliation_keeps_priority_distinct_from_actionabil
     assert result["integrated_posture"] == iidp.POSTURE_WAIT_FOR_CONFIRMATION
 
 
+def _current_disposition(session: str = "2026-08-28") -> dict:
+    """A retained same-session technical coverage disposition establishing CURRENT_SESSION."""
+    return {
+        "disposition": "SAME_SESSION_TECHNICAL_COVERED", "has_exact_session_bar": True,
+        "is_current_session": True, "feature_as_of_session": session,
+    }
+
+
 def _sample_tactical_record(
     *,
     eligible: bool = True,
@@ -519,6 +527,7 @@ class TestGovernanceAndStructure:
             valuation_record=_sample_valuation_record(),
             relative_volume_record=None,
             market_sector_record=None,
+            technical_coverage_disposition_record=_current_disposition(),
         )
         # Not unhedged breakout confirmed, but early reversal / setup needing confirmation
         assert dec["tactical_phase"] == iidp.TACTICAL_EARLY_REVERSAL
@@ -546,6 +555,7 @@ class TestGovernanceAndStructure:
             valuation_record=_sample_valuation_record(),
             relative_volume_record=rvol,
             market_sector_record=None,
+            technical_coverage_disposition_record=_current_disposition(),
         )
         assert dec["research_action_posture"] == iidp.POSTURE_WAIT_FOR_CONFIRMATION
         assert "VOLUME_CONTRACTION" in dec["why_now"] or "volume contradiction" in dec["why_now"]
@@ -570,6 +580,7 @@ class TestGovernanceAndStructure:
             valuation_record=_sample_valuation_record(),
             relative_volume_record={"status": "AVAILABLE", "volume_acceleration_ratio": 1.5, "relative_volume_percentile": 0.85},
             market_sector_record=mkt,
+            technical_coverage_disposition_record=_current_disposition(),
         )
         assert dec["research_action_posture"] == iidp.POSTURE_WAIT_FOR_CONFIRMATION
         assert dec["research_action_posture"] != iidp.POSTURE_AVOID

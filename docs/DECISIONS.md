@@ -1,5 +1,23 @@
 # Decisions & Architectural Decision Records
 
+## 2026-09-23 - Current decision surface convergence V1
+
+- **Converge on the existing seams; no second decision engine.** Workspace takes the Integrated Decision
+  as a required input; Screener/Home/AI brief/Action Center project from it. `research_stance` is kept for
+  compatibility as a secondary research screen, not renamed.
+- **Evidence-currency lineage = Level-2 `same_session_technical_coverage_disposition/v1`.** It is the
+  already-governed per-ticker exact-session technical verdict (also the Action Center freshness source);
+  `CURRENT_SESSION` needs its exact bar + current window dated at the decision session, `LAST_TRADE_AS_OF`
+  its explicit older `feature_as_of_session`. `requested_at`, artifact session, posture, stance and calendar
+  arithmetic are never used.
+- **Priority source = same-session Level-2 opportunity prioritization, via the existing queue builder.**
+  The sealed operation's own queue is built after the Integrated Decision and cannot feed it; the Level-2
+  artifact is the pre-decision, lineage-checked equivalent (and already the Daily brief's priority source).
+- **`decision_identity` gains `evidence_currency` and drops the priority record identity**, so priority
+  can never move a security decision's identity.
+- **Absent private portfolio is unknown.** The Integrated record's `portfolio_context.is_held` is `None`
+  (was `False`) when no portfolio is supplied.
+
 ## 2026-09-23 - Owner Daily crash-recovery promotion and roadmap sync V1
 
 - **Close `CURRENT_FOREIGN_FLOW_DAILY_ACTIVATION_V1` on real evidence, authority unchanged.**

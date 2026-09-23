@@ -732,7 +732,6 @@ def run_canonical_daily_operation(
     # for attaching a rich-decision delivery surface to a sealed operation.
     enrichment = build_enrichment_components(
         root, resolved_session, artifact_root=artifact_root, runtime_root=runtime_root,
-        priority_queue_artifact=None,
         retained_evidence_root=retained_evidence_root,
         output_root=operation_output_root,
     )
@@ -907,6 +906,7 @@ def run_canonical_daily_operation(
     post_handoff_presentation_projection = run_post_handoff_presentation_projection(
         root, runtime_root, resolved_session,
         producer_run_dir=producer_result.get("run_dir"), output_root=operation_output_root,
+        integrated_investment_decision_product=integrated_delivery,
     )
     # Overlay the already-promoted runtime-served Workspace/Screener bytes with the enriched
     # presentation projection above -- so the same-session Signal Velocity/Flow-Price that

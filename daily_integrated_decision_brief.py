@@ -31,6 +31,7 @@ from pathlib import Path
 from typing import Any, Mapping, Sequence
 
 import daily_session_level2_package as level2
+import integrated_investment_decision_product as integrated_decision_module
 import integrated_decision_prospective_feedback as feedback_bridge
 import owner_research_focus
 
@@ -136,6 +137,7 @@ def _compact_opportunity_row(record: Mapping[str, Any], priority_tier_by_ticker:
     trigger = record.get("trigger") or {}
     return {
         "ticker": record["ticker"], "research_action_posture": record.get("research_action_posture"),
+        "evidence_currency": record.get("evidence_currency"),
         "tactical_phase": record.get("tactical_phase"), "fundamental_state": record.get("fundamental_state"),
         "trigger_state": trigger.get("trigger_state"), "distance_to_trigger_pct": trigger.get("distance_to_trigger_pct"),
         "participation_confirmation_state": _participation_confirmation_state(record),
@@ -332,6 +334,7 @@ def build_watchlist_record(*, ticker: str, current: Mapping[str, Any] | None, ta
     return {
         "ticker": ticker, "status": "AVAILABLE", "sector": sector_label,
         "research_action_posture": current.get("research_action_posture"),
+        "evidence_currency": current.get("evidence_currency"),
         "legacy_stance": legacy.get("legacy_stance"),
         "posture_transition": (posture_transition_row or {}).get("transition", "UNAVAILABLE"),
         "fundamental_state": current.get("fundamental_state"), "fundamental_support": current.get("fundamental_support"),
@@ -566,6 +569,10 @@ def build_artifact(
     )
     risk_summary = build_risk_summary(current_records=current_records, watchlist_tickers=watchlist_tickers, what_changed_today=what_changed_today)
     financial_evidence_context = build_financial_evidence_context(financial_analysis_product_current)
+    # CURRENT_DECISION_SURFACE_CONVERGENCE_V1: compact full-universe read model projected directly
+    # from the Integrated Decision records -- enough to verify (ticker, research_action_posture,
+    # evidence_currency) for every ticker. No analytical reasoning is duplicated here.
+    surface_index = integrated_decision_module.decision_surface_index(integrated_decision_current)
 
     artifact: dict[str, Any] = {
         "schema_version": SCHEMA_VERSION, "contract_version": CONTRACT_VERSION,
@@ -576,11 +583,14 @@ def build_artifact(
         "opportunity_sets": opportunity_sets, "watchlist": watchlist,
         "decision_transitions": decision_transitions, "what_changed_today": what_changed_today,
         "risk_summary": risk_summary, "financial_evidence_context": financial_evidence_context,
+        "decision_surface_index": surface_index,
         "feedback_status": feedback_status if feedback_status is not None else {"availability": "UNAVAILABLE", "reason_codes": ["FEEDBACK_STATUS_NOT_SUPPLIED"]},
         "coverage": {
             "universe_denominator": integrated_decision_current.get("coverage", {}).get("universe_denominator"),
             "integrated_context_available": integrated_decision_current.get("coverage", {}).get("integrated_context_available"),
             "watchlist_coverage": watchlist["available_count"],
+            "decision_surface_index_count": surface_index["denominator"],
+            "evidence_currency_distribution": integrated_decision_current.get("coverage", {}).get("evidence_currency_distribution"),
         },
         "source_artifact_identities": {
             "integrated_investment_decision_product": integrated_decision_current.get("artifact_identity"),

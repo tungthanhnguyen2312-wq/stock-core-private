@@ -19,8 +19,30 @@ from test_investment_decision_workspace_projection import (
     _artifact, valuation_record, watchlist as _watchlist_record,
 )
 
+from _integrated_decision_fixture import integrated_decision as _integrated_decision
+
 SESSION = "2026-09-11"
 OTHER_SESSION = "2026-08-28"
+
+
+def _integrated_for(session, registry_inputs):
+    """The Workspace's required action-decision authority, built by the production builder over
+    exactly the Daily denominator (watchlist | valuation) the Workspace itself uses."""
+    registry_inputs = registry_inputs or {}
+    tickers = set(((registry_inputs.get("tactical") or {}).get("records") or {})) | set(
+        ((registry_inputs.get("valuation") or {}).get("records") or {})
+    )
+    return _integrated_decision(session, tickers) if tickers else None
+
+
+def _materialize_workspace(**kwargs):
+    kwargs.setdefault("integrated_investment_decision_product", _integrated_for(kwargs["session"], kwargs.get("registry_inputs")))
+    return ccpp.materialize_current_investment_decision_workspace(**kwargs)
+
+
+def _materialize_and_write(**kwargs):
+    kwargs.setdefault("integrated_investment_decision_product", _integrated_for(kwargs["session"], kwargs.get("registry_inputs")))
+    return ccpp.materialize_and_write_current_product_projections(**kwargs)
 
 
 def _watchlist_artifact(tickers=("AAA", "BBB"), *, session=SESSION):
@@ -120,7 +142,7 @@ def test_resolve_flow_research_cohort_tickers_reads_real_owner_focus_config():
 # ---------------------------------------------------------------------------
 
 def test_workspace_as_of_session_matches_the_explicit_session_parameter_not_a_hardcoded_date():
-    bundle = ccpp.materialize_current_investment_decision_workspace(
+    bundle = _materialize_workspace(
         session=SESSION, registry_inputs=_registry_inputs(), supplementary={},
         requested_at="2026-09-11T18:00:00+07:00",
     )
@@ -130,7 +152,7 @@ def test_workspace_as_of_session_matches_the_explicit_session_parameter_not_a_ha
 
 def test_workspace_works_for_an_arbitrary_session_parameter_not_just_2026_09_11():
     other = "2026-09-04"
-    bundle = ccpp.materialize_current_investment_decision_workspace(
+    bundle = _materialize_workspace(
         session=other, registry_inputs=_registry_inputs(session=other), supplementary={},
         requested_at=f"{other}T18:00:00+07:00",
     )
@@ -139,14 +161,14 @@ def test_workspace_works_for_an_arbitrary_session_parameter_not_just_2026_09_11(
 
 def test_workspace_raises_when_required_registry_inputs_are_missing():
     with pytest.raises(ccpp.CanonicalCurrentProductProjectionsError):
-        ccpp.materialize_current_investment_decision_workspace(
+        _materialize_workspace(
             session=SESSION, registry_inputs={}, supplementary={}, requested_at="2026-09-11T18:00:00+07:00",
         )
 
 
 def test_workspace_no_ticker_silently_drops():
     tickers = ("AAA", "BBB", "CCC")
-    bundle = ccpp.materialize_current_investment_decision_workspace(
+    bundle = _materialize_workspace(
         session=SESSION, registry_inputs=_registry_inputs(tickers), supplementary={},
         requested_at="2026-09-11T18:00:00+07:00",
     )
@@ -155,7 +177,7 @@ def test_workspace_no_ticker_silently_drops():
 
 
 def test_workspace_missing_liquidity_axis_remains_unavailable_not_fabricated():
-    bundle = ccpp.materialize_current_investment_decision_workspace(
+    bundle = _materialize_workspace(
         session=SESSION, registry_inputs=_registry_inputs(), supplementary={"liquidity": None},
         requested_at="2026-09-11T18:00:00+07:00",
     )
@@ -164,7 +186,7 @@ def test_workspace_missing_liquidity_axis_remains_unavailable_not_fabricated():
 
 
 def test_workspace_portfolio_unavailable_stays_not_evaluated_never_a_share_count():
-    bundle = ccpp.materialize_current_investment_decision_workspace(
+    bundle = _materialize_workspace(
         session=SESSION, registry_inputs=_registry_inputs(), supplementary={},
         requested_at="2026-09-11T18:00:00+07:00",
     )
@@ -184,7 +206,7 @@ def test_workspace_threads_supplementary_velocity_and_flow_price_into_every_card
             "independent_supporting_axes": [], "contradicting_axes": [],
         }],
     }
-    bundle = ccpp.materialize_current_investment_decision_workspace(
+    bundle = _materialize_workspace(
         session=SESSION, registry_inputs=_registry_inputs(tickers=("AAA", "BBB")),
         supplementary={"signal_velocity": velocity_artifact, "flow_price": None},
         requested_at="2026-09-11T18:00:00+07:00",
@@ -252,7 +274,7 @@ def test_flow_price_prefers_operation_linked_current_evidence_over_a_stale_stati
         }],
     }
 
-    bundle = ccpp.materialize_current_investment_decision_workspace(
+    bundle = _materialize_workspace(
         session=session, registry_inputs=_registry_inputs(tickers=("HPG", "BBB"), session=session),
         supplementary={"signal_velocity": velocity_artifact, "flow_price": stale_flow_price_artifact},
         requested_at=f"{session}T18:00:00+07:00", root=tmp_path,
@@ -311,7 +333,7 @@ def test_flow_price_degrades_gracefully_when_no_root_supplied():
                      "evidence_quality": {"state": "COMPLETE_RETAINED_EVIDENCE"}, "axes": {},
                      "independent_supporting_axes": [], "contradicting_axes": []}],
     }
-    bundle = ccpp.materialize_current_investment_decision_workspace(
+    bundle = _materialize_workspace(
         session=SESSION, registry_inputs=_registry_inputs(tickers=("HPG",)),
         supplementary={"signal_velocity": velocity_artifact},
         requested_at="2026-09-11T18:00:00+07:00",
@@ -327,7 +349,7 @@ def test_unavailable_recurring_axes_are_explicit_and_do_not_synthesize_a_contrac
             "reason_code": "NO_PORTFOLIO_RESEARCH_CONTEXT_SUPPLIED",
         },
     }
-    bundle = ccpp.materialize_current_investment_decision_workspace(
+    bundle = _materialize_workspace(
         session=SESSION, registry_inputs=_registry_inputs(), supplementary={},
         requested_at="2026-09-11T18:00:00+07:00",
     )
@@ -339,7 +361,7 @@ def test_thesis_case_context_materializes_over_the_daily_denominator_even_with_n
     CASES_DECISION_INPUT_V1): it now materializes from whatever financial_analysis_product_context/
     events are supplied, degrading individual tickers -- never the whole axis -- when both are
     absent, exactly like every other optional axis in this module."""
-    bundle = ccpp.materialize_current_investment_decision_workspace(
+    bundle = _materialize_workspace(
         session=SESSION, registry_inputs=_registry_inputs(), supplementary={},
         requested_at="2026-09-11T18:00:00+07:00",
     )
@@ -357,7 +379,7 @@ def test_thesis_case_context_materializes_over_the_daily_denominator_even_with_n
 def test_workspace_prefers_registered_event_context_over_no_input_when_present():
     inputs = _registry_inputs()
     inputs["event_context"] = {"research_session": "2026-09-05", "artifact_identity": "evt:1", "records": {}}
-    bundle = ccpp.materialize_current_investment_decision_workspace(
+    bundle = _materialize_workspace(
         session=SESSION, registry_inputs=inputs, supplementary={}, requested_at="2026-09-11T18:00:00+07:00",
     )
     assert bundle["opportunity_context"]["source_artifacts"]["corporate_event_context"] == "evt:1"
@@ -368,7 +390,7 @@ def test_workspace_wires_the_supplied_leadership_artifact_into_lineage():
         "artifact_identity": "leadership:same-session", "session": SESSION,
         "ticker_contexts": {t: {"sector_leadership_context": {"group_key": "TECHNOLOGY"}} for t in ("AAA", "BBB")},
     }
-    bundle = ccpp.materialize_current_investment_decision_workspace(
+    bundle = _materialize_workspace(
         session=SESSION, registry_inputs=_registry_inputs(), supplementary={"leadership": same_session_leadership},
         requested_at="2026-09-11T18:00:00+07:00",
     )
@@ -387,7 +409,7 @@ def test_workspace_wires_the_supplied_leadership_artifact_into_lineage():
 def test_screener_master_as_of_session_is_the_explicit_session_never_derived_from_the_snapshot(tmp_path):
     snapshot_path = tmp_path / "screen_snapshot.csv"
     _snapshot_csv(snapshot_path)
-    workspace_bundle = ccpp.materialize_current_investment_decision_workspace(
+    workspace_bundle = _materialize_workspace(
         session=SESSION, registry_inputs=_registry_inputs(), supplementary={},
         requested_at="2026-09-11T18:00:00+07:00",
     )
@@ -402,7 +424,7 @@ def test_screener_master_as_of_session_is_the_explicit_session_never_derived_fro
 def test_screener_master_preserves_rows_even_when_financial_and_official_universe_are_absent(tmp_path):
     snapshot_path = tmp_path / "screen_snapshot.csv"
     _snapshot_csv(snapshot_path, tickers=("AAA", "BBB", "CCC"))
-    workspace_bundle = ccpp.materialize_current_investment_decision_workspace(
+    workspace_bundle = _materialize_workspace(
         session=SESSION, registry_inputs=_registry_inputs(("AAA", "BBB", "CCC")), supplementary={},
         requested_at="2026-09-11T18:00:00+07:00",
     )
@@ -435,7 +457,7 @@ def test_top_level_writes_matching_json_js_pair_and_workspace_file_on_success(tm
     monkeypatch.setenv("STOCK_LOOKUP_RUNTIME_ROOT", str(runtime_dir))
 
     operation_dir = tmp_path / "operation"
-    result = ccpp.materialize_and_write_current_product_projections(
+    result = _materialize_and_write(
         root=tmp_path, session=SESSION, operation_dir=operation_dir,
         registry_inputs=_registry_inputs(), requested_at="2026-09-11T18:00:00+07:00",
     )
@@ -508,6 +530,10 @@ def test_retained_2026_09_11_replay_materializes_genuinely_current_products(tmp_
     result = ccpp.materialize_and_write_current_product_projections(
         root=root, session=REPLAY_SESSION, operation_dir=operation_dir,
         registry_inputs=registry_inputs, requested_at=f"{REPLAY_SESSION}T18:00:00+07:00",
+        integrated_investment_decision_product=json.loads(
+            (root / "operations-review" / "canonical-post-close-v1" / REPLAY_SESSION / "enrichment"
+             / "integrated_investment_decision_product.json").read_text(encoding="utf-8")
+        ),
     )
     assert result["status"] == "MATERIALIZED"
     assert result["workspace"]["as_of_session"] == REPLAY_SESSION

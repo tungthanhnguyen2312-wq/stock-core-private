@@ -46,6 +46,20 @@ STANCE_ORDER = (
     "AVOID_NEW_ENTRY",
     "INSUFFICIENT_EVIDENCE",
 )
+#: Primary decision summary vocabulary (CURRENT_DECISION_SURFACE_CONVERGENCE_V1): the Integrated
+#: Decision's research_action_posture, carried per ticker by the Screener's ``decision`` view.
+POSTURE_ORDER = (
+    "INITIATE_ON_BREAKOUT",
+    "ACCUMULATE_ON_RETEST",
+    "EARLY_WATCH",
+    "WAIT_FOR_CONFIRMATION",
+    "HOLD",
+    "HOLD_DO_NOT_ADD",
+    "REDUCE",
+    "AVOID",
+    "INSUFFICIENT_CURRENT_RESEARCH",
+)
+EVIDENCE_CURRENCY_ORDER = ("CURRENT_SESSION", "LAST_TRADE_AS_OF", "NO_CURRENT_EVIDENCE", "UNKNOWN")
 TACTICAL_ORDER = (
     "DOWNTREND",
     "SELLING_PRESSURE_EASING",
@@ -125,6 +139,13 @@ def _sector_label(card: Mapping[str, Any]) -> str | None:
     return label
 
 
+def _evidence_currency_class(value: object) -> str:
+    # Pure bucket of the Producer-owned value; LAST_TRADE_AS_OF:<date> collapses to one class.
+    if isinstance(value, str) and value.startswith("LAST_TRADE_AS_OF:"):
+        return "LAST_TRADE_AS_OF"
+    return value if value in ("CURRENT_SESSION", "NO_CURRENT_EVIDENCE") else "UNKNOWN"
+
+
 def breadth_state(up: int, down: int) -> str:
     """Pure, deterministic, descriptive breadth label -- mirrors
     ``assets/js/dashboard-product-summary.js``'s ``marketBreadthStateLabel`` exactly
@@ -175,6 +196,20 @@ def build_home_summary(projection: Mapping[str, Any], *, requested_at: str) -> d
     tactical_counts = Counter({state: 0 for state in TACTICAL_ORDER})
     for card in tactical_available:
         tactical_counts[card["tactical"]["entry_state"]] += 1
+    posture_counts = Counter({posture: 0 for posture in POSTURE_ORDER})
+    currency_counts = Counter({name: 0 for name in EVIDENCE_CURRENCY_ORDER})
+    posture_available = 0
+    position_conditional = 0
+    for card in cards:
+        decision = card.get("decision") if isinstance(card, Mapping) else None
+        decision = decision if isinstance(decision, Mapping) else {}
+        posture = decision.get("research_action_posture")
+        if posture:
+            posture_available += 1
+            posture_counts[posture] += 1
+        currency_counts[_evidence_currency_class(decision.get("evidence_currency"))] += 1
+        if decision.get("position_conditional") is True:
+            position_conditional += 1
     stance_counts = Counter({stance: 0 for stance in STANCE_ORDER})
     for card in cards:
         research = card.get("research") if isinstance(card, Mapping) else None
@@ -230,7 +265,21 @@ def build_home_summary(projection: Mapping[str, Any], *, requested_at: str) -> d
             "missing_session_return": len(price_available) - len(priced),
             "state": breadth_state(up, down),
         },
+        "primary_decision_field": "research_action_posture",
+        "research_action_posture": {
+            "available": posture_available > 0,
+            "coverage": posture_available,
+            "counts": dict(sorted(posture_counts.items())),
+            "order": list(POSTURE_ORDER),
+            "position_conditional_count": position_conditional,
+        },
+        "evidence_currency": {
+            "counts": dict(sorted(currency_counts.items())),
+            "order": list(EVIDENCE_CURRENCY_ORDER),
+        },
+        # Secondary research-screen diagnostic only -- never the primary decision summary.
         "research_stance": {
+            "role": "SECONDARY_RESEARCH_SCREEN_DIAGNOSTIC",
             "available": denominator > 0,
             "counts": dict(sorted(stance_counts.items())),
             "order": list(STANCE_ORDER),

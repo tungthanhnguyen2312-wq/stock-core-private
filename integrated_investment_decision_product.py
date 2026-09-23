@@ -26,6 +26,7 @@ from __future__ import annotations
 import copy
 import hashlib
 import json
+from collections import Counter
 from typing import Any, Mapping, Sequence
 
 import financial_analysis_product_projection as fa_product_projection
@@ -170,8 +171,160 @@ EFFECT_BLOCKS_VALUATION_ONLY = "BLOCKS_VALUATION_COMPONENT_ONLY"
 EFFECT_BLOCKS_DECISION = "BLOCKS_CURRENT_DECISION"
 
 
+# ── Evidence Currency (CURRENT_DECISION_SURFACE_CONVERGENCE_V1) ─────────────────
+# One Producer-owned per-ticker field. Lineage: the Level-2 Daily
+# same_session_technical_coverage_disposition/v1 artifact for the exact decision session -- the
+# same already-governed per-ticker same-session price/technical verdict the Action Center's
+# freshness block and the Workspace indicator bridge already consume. It is never inferred from
+# requested_at, the overall artifact session, posture, legacy stance, calendar arithmetic, or mere
+# universe membership. Every consumer passes it through; none re-derives it.
+EVIDENCE_CURRENCY_CURRENT_SESSION = "CURRENT_SESSION"
+EVIDENCE_CURRENCY_LAST_TRADE_PREFIX = "LAST_TRADE_AS_OF:"
+EVIDENCE_CURRENCY_NO_CURRENT_EVIDENCE = "NO_CURRENT_EVIDENCE"
+EVIDENCE_CURRENCY_SOURCE_CONTRACT = "same_session_technical_coverage_disposition/v1"
+_CURRENT_SESSION_DISPOSITION = "SAME_SESSION_TECHNICAL_COVERED"
+# A disposition that asserts the retained evidence itself is conflicted/unexplained never yields
+# a dated currency, even when a feature date happens to be present.
+_UNTRUSTED_DISPOSITIONS = frozenset({"MALFORMED_OR_CONFLICTED", "UNEXPLAINED"})
+EVIDENCE_CURRENCY_GATE_RULE = "NO_CURRENT_EVIDENCE_NEVER_WAIT_FOR_CONFIRMATION"
+
+# Position context. Reuses portfolio_aware_decision.POSITION_STATES; the only added value is the
+# explicit unknown used when no private portfolio was supplied -- absence is never NOT_HELD.
+POSITION_UNKNOWN_NOT_SUPPLIED = "UNKNOWN_POSITION_NOT_SUPPLIED"
+# Postures whose meaning presupposes an existing holding: without a confirmed position they are
+# presented conditionally ("HOLD -- if currently held"), never as a claim of ownership.
+POSITION_CONDITIONAL_POSTURES = frozenset({"HOLD", "HOLD_DO_NOT_ADD", "REDUCE"})
+
+DECISION_SURFACE_INDEX_CONTRACT = "decision_surface_index/v1"
+
+
 class IntegratedDecisionProductError(ValueError):
     """Fail-closed error for integrated investment decision product."""
+
+
+def _is_iso_date(value: Any) -> bool:
+    if not isinstance(value, str) or len(value) != 10 or value[4] != "-" or value[7] != "-":
+        return False
+    return value[:4].isdigit() and value[5:7].isdigit() and value[8:].isdigit()
+
+
+def resolve_evidence_currency(disposition_record: Mapping[str, Any] | None, *, decision_session: str) -> str:
+    """Map one retained same-session technical coverage disposition record to evidence currency.
+
+    CURRENT_SESSION requires the ticker's own disposition to establish an exact-session bar AND
+    a current-session technical window dated at the decision session. LAST_TRADE_AS_OF:<date>
+    requires an explicit retained feature date strictly older than the decision session. Anything
+    else (absent record, undated, conflicted, future-dated) is NO_CURRENT_EVIDENCE.
+    """
+    if not isinstance(disposition_record, Mapping):
+        return EVIDENCE_CURRENCY_NO_CURRENT_EVIDENCE
+    disposition = disposition_record.get("disposition")
+    feature_as_of = disposition_record.get("feature_as_of_session")
+    if disposition in _UNTRUSTED_DISPOSITIONS:
+        return EVIDENCE_CURRENCY_NO_CURRENT_EVIDENCE
+    if (
+        disposition == _CURRENT_SESSION_DISPOSITION
+        and disposition_record.get("has_exact_session_bar") is True
+        and disposition_record.get("is_current_session") is True
+        and feature_as_of == decision_session
+    ):
+        return EVIDENCE_CURRENCY_CURRENT_SESSION
+    if disposition != _CURRENT_SESSION_DISPOSITION and _is_iso_date(feature_as_of) and feature_as_of < decision_session:
+        return EVIDENCE_CURRENCY_LAST_TRADE_PREFIX + feature_as_of
+    return EVIDENCE_CURRENCY_NO_CURRENT_EVIDENCE
+
+
+def is_valid_evidence_currency(value: Any) -> bool:
+    if value in (EVIDENCE_CURRENCY_CURRENT_SESSION, EVIDENCE_CURRENCY_NO_CURRENT_EVIDENCE):
+        return True
+    return (
+        isinstance(value, str) and value.startswith(EVIDENCE_CURRENCY_LAST_TRADE_PREFIX)
+        and _is_iso_date(value[len(EVIDENCE_CURRENCY_LAST_TRADE_PREFIX):])
+    )
+
+
+def evidence_currency_class(value: Any) -> str:
+    """Aggregation bucket: the dated LAST_TRADE_AS_OF:<date> values collapse to one class."""
+    if isinstance(value, str) and value.startswith(EVIDENCE_CURRENCY_LAST_TRADE_PREFIX):
+        return "LAST_TRADE_AS_OF"
+    return value if value in (EVIDENCE_CURRENCY_CURRENT_SESSION, EVIDENCE_CURRENCY_NO_CURRENT_EVIDENCE) else "UNKNOWN"
+
+
+def coherent_technical_coverage_disposition_records(
+    artifact: Mapping[str, Any] | None, *, session: str,
+) -> Mapping[str, Any] | None:
+    """Strict same-session / content-identity gate for the evidence-currency source artifact.
+
+    ``None`` in -> ``None`` out (every ticker then resolves NO_CURRENT_EVIDENCE). A supplied but
+    wrong-contract, wrong-session, or self-inconsistent artifact fails closed loudly rather than
+    being partially trusted.
+    """
+    if artifact is None:
+        return None
+    import same_session_technical_coverage_disposition as disposition_module
+    if artifact.get("contract_version") != EVIDENCE_CURRENCY_SOURCE_CONTRACT:
+        raise IntegratedDecisionProductError("TECHNICAL_COVERAGE_DISPOSITION_CONTRACT_MISMATCH")
+    if artifact.get("session") != session:
+        raise IntegratedDecisionProductError(
+            f"TECHNICAL_COVERAGE_DISPOSITION_SESSION_MISMATCH:expected={session}:observed={artifact.get('session')}"
+        )
+    if disposition_module.content_identity(artifact).get("artifact_sha256") != artifact.get("artifact_sha256"):
+        raise IntegratedDecisionProductError("TECHNICAL_COVERAGE_DISPOSITION_CONTENT_IDENTITY_INVALID")
+    records = artifact.get("records")
+    if not isinstance(records, Mapping):
+        raise IntegratedDecisionProductError("TECHNICAL_COVERAGE_DISPOSITION_RECORDS_INVALID")
+    return records
+
+
+def position_context_view(portfolio_summary: Mapping[str, Any] | None) -> dict[str, Any]:
+    """Explicit position context. No supplied portfolio means UNKNOWN, never NOT_HELD."""
+    summary = portfolio_summary or {}
+    if summary.get("status") == "AVAILABLE" and isinstance(summary.get("is_held"), bool):
+        return {"status": "SUPPLIED", "position_state": "HELD" if summary["is_held"] else "NOT_HELD"}
+    return {"status": "NOT_SUPPLIED", "position_state": POSITION_UNKNOWN_NOT_SUPPLIED}
+
+
+def opportunity_priority_view(queue_record: Mapping[str, Any] | None) -> dict[str, Any]:
+    """Orthogonal inspection field: what to look at first, never what to do."""
+    if not isinstance(queue_record, Mapping) or not queue_record:
+        return {"status": "UNAVAILABLE", "research_priority_tier": None, "entry_relevant": None,
+                "reason": "NO_QUALIFYING_CURRENT_SESSION_PRIORITY_EVIDENCE"}
+    return {
+        "status": "AVAILABLE",
+        "research_priority_tier": queue_record.get("research_priority_tier") or queue_record.get("priority_tier"),
+        "entry_relevant": queue_record.get("entry_relevant"),
+        "source_contract": "daily_opportunity_decision_queue/v1",
+        "authority": "INSPECTION_ORDER_ONLY_NOT_AN_ACTION_POSTURE",
+    }
+
+
+def decision_surface_index(artifact: Mapping[str, Any]) -> dict[str, Any]:
+    """Compact full-universe read model over Integrated Decision records.
+
+    Shared by every delivery surface (AI brief, Action Center) so the convergence tuple
+    ``(ticker, research_action_posture, evidence_currency)`` is projected once, identically, and
+    never re-derived. It is a read model, not an authority artifact: it carries no reasoning.
+    """
+    records = artifact.get("records") if isinstance(artifact, Mapping) else None
+    if not isinstance(records, Mapping):
+        raise IntegratedDecisionProductError("DECISION_SURFACE_INDEX_SOURCE_RECORDS_INVALID")
+    rows = []
+    for ticker in sorted(records):
+        record = records[ticker] or {}
+        rows.append({
+            "ticker": ticker,
+            "research_action_posture": record.get("research_action_posture"),
+            "evidence_currency": record.get("evidence_currency"),
+            "opportunity_priority_tier": (record.get("opportunity_priority") or {}).get("research_priority_tier"),
+        })
+    return {
+        "contract_version": DECISION_SURFACE_INDEX_CONTRACT,
+        "role": "READ_MODEL_NOT_AUTHORITY",
+        "session": artifact.get("session"),
+        "source_integrated_investment_decision_product_identity": artifact.get("artifact_identity"),
+        "denominator": len(rows),
+        "rows": rows,
+    }
 
 
 def _canon(value: Any) -> str:
@@ -192,12 +345,20 @@ def content_identity(artifact: Mapping[str, Any]) -> dict[str, str]:
 
 
 def decision_identity(record: Mapping[str, Any]) -> str:
-    """Feedback-ready deterministic identity for one ticker decision record."""
+    """Feedback-ready deterministic identity for one ticker decision record.
+
+    Includes ``evidence_currency`` (a decision on different evidence currency is a different
+    decision state). Deliberately excludes every OPPORTUNITY_PRIORITY input: priority is an
+    orthogonal inspection axis and must never move the security decision identity.
+    """
+    source_identities = dict(record.get("source_identities") or {})
+    source_identities.pop("priority_queue_record_identity", None)
     fields = {
         "ticker": record.get("ticker"),
         "as_of_session": record.get("as_of_session"),
         "policy_version": "v1",
         "research_action_posture": record.get("research_action_posture"),
+        "evidence_currency": record.get("evidence_currency"),
         "fundamental_state": record.get("fundamental_state"),
         "tactical_phase": record.get("tactical_phase"),
         "trigger_state": (record.get("trigger") or {}).get("trigger_state"),
@@ -205,7 +366,7 @@ def decision_identity(record: Mapping[str, Any]) -> str:
         "trigger_condition_identity": ((record.get("trigger") or {}).get("condition") or {}).get("condition_identity"),
         "invalidation_level": (record.get("invalidation") or {}).get("invalidation_level"),
         "invalidation_condition_identity": ((record.get("invalidation") or {}).get("condition") or {}).get("condition_identity"),
-        "source_identities": record.get("source_identities"),
+        "source_identities": source_identities,
     }
     return f"decision:{record.get('ticker')}:{_sha256(fields)[:16]}"
 
@@ -1136,8 +1297,14 @@ def build_ticker_integrated_decision(
     tactical_boundaries_identity: str | None = None,
     corporate_intelligence_record: Mapping[str, Any] | None = None,
     producer_artifact_identities: Mapping[str, Any] | None = None,
+    technical_coverage_disposition_record: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Assemble one complete, self-contained integrated investment decision record."""
+    """Assemble one complete, self-contained integrated investment decision record.
+
+    ``technical_coverage_disposition_record`` is this ticker's retained same-session technical
+    coverage disposition (see ``resolve_evidence_currency``); absent, evidence currency fails
+    closed to NO_CURRENT_EVIDENCE.
+    """
     tactical = tactical_record or {}
     financial = financial_record or {}
     valuation = valuation_record or {}
@@ -1194,7 +1361,8 @@ def build_ticker_integrated_decision(
     else:
         portfolio_summary = {
             "status": "NOT_PROVIDED",
-            "is_held": False,
+            # Unknown, not False: an absent private portfolio never means NOT_HELD.
+            "is_held": None,
             "policy_note": "No explicit portfolio supplied; security attractiveness is independently evaluated.",
         }
 
@@ -1222,6 +1390,21 @@ def build_ticker_integrated_decision(
         participation_summary=part_summary,
         market_sector_summary=mkt_summary,
     )
+    # 7b. Evidence-currency gate (CURRENT_DECISION_SURFACE_CONVERGENCE_V1, the only posture
+    # correction authorized there). WAIT_FOR_CONFIRMATION means evidence exists and a defined
+    # confirmation is pending; with no current evidence at all it resolves to the existing
+    # fail-closed posture. No threshold is retuned and no other policy branch is reordered.
+    evidence_currency = resolve_evidence_currency(technical_coverage_disposition_record, decision_session=as_of_session)
+    evidence_currency_gate = {"rule": EVIDENCE_CURRENCY_GATE_RULE, "applied": False}
+    if evidence_currency == EVIDENCE_CURRENCY_NO_CURRENT_EVIDENCE and posture == POSTURE_WAIT_FOR_CONFIRMATION:
+        evidence_currency_gate = {"rule": EVIDENCE_CURRENCY_GATE_RULE, "applied": True, "ungated_policy_output": posture}
+        posture = POSTURE_INSUFFICIENT
+        why_now = (
+            f"{ticker}: No current price/technical evidence for this session (evidence_currency="
+            f"{EVIDENCE_CURRENCY_NO_CURRENT_EVIDENCE}); a wait-for-confirmation posture requires existing "
+            "evidence with a defined pending confirmation."
+        )
+        missing_effect = EFFECT_BLOCKS_DECISION
     priority_posture = _priority_posture_reconciliation(
         priority_queue_record, posture=posture, tactical=tactical, why_now=why_now,
     )
@@ -1294,6 +1477,16 @@ def build_ticker_integrated_decision(
         "ticker": ticker,
         "as_of_session": as_of_session,
         "research_action_posture": posture,
+        "evidence_currency": evidence_currency,
+        "evidence_currency_lineage": {
+            "method": EVIDENCE_CURRENCY_SOURCE_CONTRACT,
+            "disposition": (technical_coverage_disposition_record or {}).get("disposition"),
+            "feature_as_of_session": (technical_coverage_disposition_record or {}).get("feature_as_of_session"),
+        },
+        "evidence_currency_gate": evidence_currency_gate,
+        "position_context": position_context_view(portfolio_summary),
+        # Orthogonal inspection axis; never part of the action label or decision_identity.
+        "opportunity_priority": opportunity_priority_view(priority_queue_record),
         "fundamental_state": fund_state,
         "tactical_phase": tac_phase,
         "market_structure_state": tactical.get("market_structure_state", "INSUFFICIENT_HISTORY"),
@@ -1372,8 +1565,15 @@ def build_artifact(
     tactical_confirmation_artifact: Mapping[str, Any] | None = None,
     tactical_boundaries_artifact: Mapping[str, Any] | None = None,
     corporate_intelligence_artifact: Mapping[str, Any] | None = None,
+    technical_coverage_disposition_artifact: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Build the market-wide integrated investment decision product artifact."""
+    """Build the market-wide integrated investment decision product artifact.
+
+    ``technical_coverage_disposition_artifact`` is the exact-session evidence-currency source
+    (strictly session/identity checked). ``priority_queue_artifact``, when supplied, must be the
+    same session's ``daily_opportunity_decision_queue/v1``; it only populates the orthogonal
+    OPPORTUNITY_PRIORITY inspection fields and can never change posture or decision identity.
+    """
     fa_contract = (financial_analysis_artifact or {}).get("contract_version")
     if fa_contract is not None and fa_contract != FINANCIAL_ANALYSIS_COMPACT_CONTRACT:
         raise IntegratedDecisionProductError(
@@ -1388,6 +1588,14 @@ def build_artifact(
     priority_records = (priority_queue_artifact or {}).get("records") or {}
     if priority_queue_artifact is not None and not isinstance(priority_records, Mapping):
         raise IntegratedDecisionProductError("PRIORITY_QUEUE_RECORDS_INVALID")
+    if priority_queue_artifact is not None and priority_queue_artifact.get("research_session") != session:
+        # Never resurrect a stale priority queue merely to make coverage nonzero.
+        raise IntegratedDecisionProductError(
+            f"PRIORITY_QUEUE_SESSION_MISMATCH:expected={session}:observed={priority_queue_artifact.get('research_session')}"
+        )
+    disposition_records = coherent_technical_coverage_disposition_records(
+        technical_coverage_disposition_artifact, session=session,
+    ) or {}
     momentum_records = (momentum_artifact or {}).get("records") or {}
     tactical_confirmation_records = (tactical_confirmation_artifact or {}).get("records") or {}
     tactical_boundaries_records = (tactical_boundaries_artifact or {}).get("records") or {}
@@ -1427,6 +1635,10 @@ def build_artifact(
     ci_active_risk = 0
     ci_mixed_or_unresolved = 0
     ci_material = 0
+    currency_counts: Counter[str] = Counter({"CURRENT_SESSION": 0, "LAST_TRADE_AS_OF": 0, "NO_CURRENT_EVIDENCE": 0})
+    currency_gate_applied = 0
+    priority_available = 0
+    position_counts: Counter[str] = Counter()
 
     for ticker in all_tickers:
         tac_rec = tac_records.get(ticker)
@@ -1463,8 +1675,15 @@ def build_artifact(
                 "tactical_boundaries": (tactical_boundaries_artifact or {}).get("artifact_identity"),
                 "corporate_intelligence": (corporate_intelligence_artifact or {}).get("artifact_identity"),
             },
+            technical_coverage_disposition_record=disposition_records.get(ticker),
         )
         records[ticker] = dec
+        currency_counts[evidence_currency_class(dec["evidence_currency"])] += 1
+        if dec["evidence_currency_gate"].get("applied"):
+            currency_gate_applied += 1
+        if dec["opportunity_priority"]["status"] == "AVAILABLE":
+            priority_available += 1
+        position_counts[dec["position_context"]["position_state"]] += 1
 
         # Update counts
         p = dec["research_action_posture"]
@@ -1551,7 +1770,18 @@ def build_artifact(
         "corporate_intelligence_active_risk_count": ci_active_risk,
         "corporate_intelligence_mixed_or_unresolved_count": ci_mixed_or_unresolved,
         "corporate_intelligence_material_event_count": ci_material,
+        "evidence_currency_distribution": dict(sorted(currency_counts.items())),
+        "evidence_currency_gate_applied_count": currency_gate_applied,
+        "no_current_evidence_wait_count": sum(
+            1 for rec in records.values()
+            if rec["evidence_currency"] == EVIDENCE_CURRENCY_NO_CURRENT_EVIDENCE
+            and rec["research_action_posture"] == POSTURE_WAIT_FOR_CONFIRMATION
+        ),
+        "opportunity_priority_available_count": priority_available,
+        "position_context_distribution": dict(sorted(position_counts.items())),
     }
+    if coverage["no_current_evidence_wait_count"]:
+        raise IntegratedDecisionProductError("INVARIANT_VIOLATION:NO_CURRENT_EVIDENCE_WAIT_FOR_CONFIRMATION")
 
     payload: dict[str, Any] = {
         "schema_version": "integrated_investment_decision_product/1.0.0",
@@ -1571,6 +1801,15 @@ def build_artifact(
             "tactical_confirmation": (tactical_confirmation_artifact or {}).get("artifact_identity"),
             "tactical_boundaries": (tactical_boundaries_artifact or {}).get("artifact_identity"),
             "corporate_intelligence": (corporate_intelligence_artifact or {}).get("artifact_identity"),
+            "technical_coverage_disposition": (
+                (technical_coverage_disposition_artifact or {}).get("artifact_identity") if disposition_records else None
+            ),
+        },
+        "decision_authority": {
+            "primary_action_decision_field": "research_action_posture",
+            "evidence_currency_field": "evidence_currency",
+            "evidence_currency_source_contract": EVIDENCE_CURRENCY_SOURCE_CONTRACT,
+            "opportunity_priority_role": "ORTHOGONAL_INSPECTION_AXIS_NEVER_ALTERS_POSTURE_OR_DECISION_IDENTITY",
         },
         "authority_boundary": {
             "is_actionable": False,

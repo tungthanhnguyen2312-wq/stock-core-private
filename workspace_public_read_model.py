@@ -85,6 +85,16 @@ def _thin_card(ticker: str, card: Mapping[str, Any], shard_key: str) -> dict[str
         "ticker": ticker,
         "sector": card.get("sector"),
         "as_of_session": card.get("as_of_session"),
+        # Primary action decision (Integrated Decision pass-through) and its evidence currency.
+        "research_action_posture": card.get("research_action_posture"),
+        "evidence_currency": card.get("evidence_currency"),
+        "position_context": dict(card.get("position_context") or {}) or None,
+        "action_presentation": dict(card.get("action_presentation") or {}) or None,
+        "opportunity_priority": {
+            "status": (card.get("opportunity_priority") or {}).get("status"),
+            "research_priority_tier": (card.get("opportunity_priority") or {}).get("research_priority_tier"),
+        },
+        # Secondary research-screen context only.
         "research_stance": card.get("research_stance"),
         "research_stance_readiness": card.get("research_stance_readiness"),
         "entry_state": card.get("entry_state"),
@@ -197,6 +207,7 @@ def build_public_read_model(payload: Mapping[str, Any]) -> tuple[dict[str, Any],
         "coverage": payload.get("coverage") or {},
         "official_scope_coverage": payload.get("official_scope_coverage"),
         "blocked_outputs": payload.get("blocked_outputs") or {},
+        "decision_authority": payload.get("decision_authority"),
         "authority_effect": payload.get("authority_effect"),
         # Global (not per-ticker) provenance for the whole publish -- tiny (a handful of source
         # artifact identities), and read by the ticker-detail drawer's "Dữ liệu" disclosure for

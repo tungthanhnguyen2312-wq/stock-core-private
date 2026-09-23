@@ -1297,8 +1297,15 @@ def test_run_post_handoff_prospective_outcome_feedback_degrades_on_subprocess_fa
 # THIS session. Must never write to, or read a stale copy of, the sealed Producer operation
 # directory. ----
 
+INTEGRATED_TEST_IDENTITY = "integrated_investment_decision_product/v1:test"
+
+
+def _integrated_delivery(session):
+    return {"session": session, "artifact_identity": INTEGRATED_TEST_IDENTITY, "records": {}}
+
+
 def _sealed_operation(tmp_path, session, *, artifact_identity="investment_decision_workspace_projection/v1:sealed",
-                      opportunity="opp:1", decision="dec:1"):
+                      opportunity="opp:1", decision="dec:1", integrated=INTEGRATED_TEST_IDENTITY):
     run_dir = tmp_path / "run"
     run_dir.mkdir()
     operation_rel = f"operations-review/daily-research-session-operations-v1/{session}/op"
@@ -1308,7 +1315,8 @@ def _sealed_operation(tmp_path, session, *, artifact_identity="investment_decisi
     }), encoding="utf-8")
     (tmp_path / operation_rel / "investment_decision_workspace_projection.json").write_text(json.dumps({
         "artifact_identity": artifact_identity,
-        "source_artifacts": {"opportunity_context": opportunity, "security_decision_context": decision},
+        "source_artifacts": {"opportunity_context": opportunity, "security_decision_context": decision,
+                             "integrated_investment_decision_product": integrated},
     }), encoding="utf-8")
     return run_dir
 
@@ -1336,13 +1344,15 @@ def test_run_post_handoff_presentation_projection_writes_to_new_directory_never_
 
     written = {}
 
-    def fake_materialize(*, root, session, operation_dir, registry_inputs, requested_at, runtime_root_override):
+    def fake_materialize(*, root, session, operation_dir, registry_inputs, requested_at, runtime_root_override,
+                         integrated_investment_decision_product=None):
         written["operation_dir"] = operation_dir
         operation_dir.mkdir(parents=True, exist_ok=True)
         (operation_dir / "investment_decision_workspace_projection.json").write_text(json.dumps({
             "artifact_identity": "investment_decision_workspace_projection/v1:new",
             "source_artifacts": {
                 "opportunity_context": "opp:1", "security_decision_context": "dec:1",
+                "integrated_investment_decision_product": INTEGRATED_TEST_IDENTITY,
                 "signal_velocity": "multi_session_signal_velocity:x",
                 "flow_price_divergence_shadow": "flow_price_divergence_shadow:y",
             },
@@ -1355,7 +1365,10 @@ def test_run_post_handoff_presentation_projection_writes_to_new_directory_never_
 
     monkeypatch.setattr(ccpp, "materialize_and_write_current_product_projections", fake_materialize)
 
-    result = cpc.run_post_handoff_presentation_projection(tmp_path, tmp_path / "runtime", session, producer_run_dir=run_dir)
+    result = cpc.run_post_handoff_presentation_projection(
+        tmp_path, tmp_path / "runtime", session, producer_run_dir=run_dir,
+        integrated_investment_decision_product=_integrated_delivery(session),
+    )
 
     assert result["status"] == "COLLECTED"
     assert result["lineage_status"] == "VERIFIED_AGAINST_SEALED_PRODUCER_WORKSPACE"
@@ -1374,17 +1387,22 @@ def test_run_post_handoff_presentation_projection_unavailable_on_lineage_diverge
     monkeypatch.setattr(dros, "load_registry", lambda root: {})
     monkeypatch.setattr(dros, "resolve_inputs", lambda root, s, registry: ({}, {}))
 
-    def fake_materialize(*, root, session, operation_dir, registry_inputs, requested_at, runtime_root_override):
+    def fake_materialize(*, root, session, operation_dir, registry_inputs, requested_at, runtime_root_override,
+                         integrated_investment_decision_product=None):
         operation_dir.mkdir(parents=True, exist_ok=True)
         (operation_dir / "investment_decision_workspace_projection.json").write_text(json.dumps({
             "artifact_identity": "investment_decision_workspace_projection/v1:new",
-            "source_artifacts": {"opportunity_context": "opp:DIFFERENT", "security_decision_context": "dec:1"},
+            "source_artifacts": {"opportunity_context": "opp:DIFFERENT", "security_decision_context": "dec:1",
+                                 "integrated_investment_decision_product": INTEGRATED_TEST_IDENTITY},
         }), encoding="utf-8")
         return {"status": "MATERIALIZED", "session": session, "workspace": {}, "screener_master_projection": {}}
 
     monkeypatch.setattr(ccpp, "materialize_and_write_current_product_projections", fake_materialize)
 
-    result = cpc.run_post_handoff_presentation_projection(tmp_path, tmp_path / "runtime", session, producer_run_dir=run_dir)
+    result = cpc.run_post_handoff_presentation_projection(
+        tmp_path, tmp_path / "runtime", session, producer_run_dir=run_dir,
+        integrated_investment_decision_product=_integrated_delivery(session),
+    )
     assert result["status"] == "UNAVAILABLE"
     assert "LINEAGE_DIVERGED" in result["reason"]
 
@@ -1395,7 +1413,9 @@ def test_run_post_handoff_presentation_projection_degrades_on_skipped_materializ
     monkeypatch.setattr(dros, "resolve_inputs", lambda root, s, registry: ({}, {}))
     monkeypatch.setattr(ccpp, "materialize_and_write_current_product_projections",
                         lambda **k: {"status": "SKIPPED", "reason_code": "TEST_REASON"})
-    result = cpc.run_post_handoff_presentation_projection(tmp_path, tmp_path / "runtime", session)
+    result = cpc.run_post_handoff_presentation_projection(
+        tmp_path, tmp_path / "runtime", session, integrated_investment_decision_product=_integrated_delivery(session),
+    )
     assert result["status"] == "UNAVAILABLE"
     assert result["reason"] == "TEST_REASON"
 
@@ -1405,7 +1425,9 @@ def test_run_post_handoff_presentation_projection_degrades_on_exception(tmp_path
         raise RuntimeError("no registry")
 
     monkeypatch.setattr(dros, "load_registry", boom)
-    result = cpc.run_post_handoff_presentation_projection(tmp_path, tmp_path / "runtime", "2026-08-25")
+    result = cpc.run_post_handoff_presentation_projection(
+        tmp_path, tmp_path / "runtime", "2026-08-25", integrated_investment_decision_product=_integrated_delivery("2026-08-25"),
+    )
     assert result["status"] == "UNAVAILABLE"
     assert "no registry" in result["reason"]
 
@@ -1415,7 +1437,8 @@ def test_run_post_handoff_presentation_projection_without_producer_run_dir_skips
     monkeypatch.setattr(dros, "load_registry", lambda root: {})
     monkeypatch.setattr(dros, "resolve_inputs", lambda root, s, registry: ({}, {}))
 
-    def fake_materialize(*, root, session, operation_dir, registry_inputs, requested_at, runtime_root_override):
+    def fake_materialize(*, root, session, operation_dir, registry_inputs, requested_at, runtime_root_override,
+                         integrated_investment_decision_product=None):
         operation_dir.mkdir(parents=True, exist_ok=True)
         (operation_dir / "investment_decision_workspace_projection.json").write_text(json.dumps({
             "artifact_identity": "investment_decision_workspace_projection/v1:new", "source_artifacts": {},
@@ -1424,6 +1447,48 @@ def test_run_post_handoff_presentation_projection_without_producer_run_dir_skips
 
     monkeypatch.setattr(ccpp, "materialize_and_write_current_product_projections", fake_materialize)
 
-    result = cpc.run_post_handoff_presentation_projection(tmp_path, tmp_path / "runtime", session, producer_run_dir=None)
+    result = cpc.run_post_handoff_presentation_projection(
+        tmp_path, tmp_path / "runtime", session, producer_run_dir=None,
+        integrated_investment_decision_product=_integrated_delivery(session),
+    )
     assert result["status"] == "COLLECTED"
     assert result["lineage_status"] == "UNVERIFIED"
+
+
+def test_run_post_handoff_presentation_projection_requires_the_same_session_integrated_decision(tmp_path, monkeypatch):
+    # CURRENT_DECISION_SURFACE_CONVERGENCE_V1: no retained/supplied Integrated Decision means no
+    # presentation re-join at all -- never a Workspace without its action-decision authority.
+    session = "2026-08-25"
+    monkeypatch.setattr(ccpp, "materialize_and_write_current_product_projections",
+                        lambda **k: pytest.fail("must not materialize without the Integrated Decision"))
+    result = cpc.run_post_handoff_presentation_projection(tmp_path, tmp_path / "runtime", session)
+    assert result == {"status": "UNAVAILABLE", "session": session,
+                      "reason": "PRESENTATION_PROJECTION_INTEGRATED_DECISION_UNAVAILABLE"}
+    stale = cpc.run_post_handoff_presentation_projection(
+        tmp_path, tmp_path / "runtime", session, integrated_investment_decision_product=_integrated_delivery("2026-08-22"),
+    )
+    assert stale["reason"] == "PRESENTATION_PROJECTION_INTEGRATED_DECISION_UNAVAILABLE"
+
+
+def test_run_post_handoff_presentation_projection_diverged_integrated_identity_is_unavailable(tmp_path, monkeypatch):
+    session = "2026-08-25"
+    run_dir = _sealed_operation(tmp_path, session)
+    monkeypatch.setattr(dros, "load_registry", lambda root: {})
+    monkeypatch.setattr(dros, "resolve_inputs", lambda root, s, registry: ({}, {}))
+
+    def fake_materialize(*, operation_dir, **kwargs):
+        operation_dir.mkdir(parents=True, exist_ok=True)
+        (operation_dir / "investment_decision_workspace_projection.json").write_text(json.dumps({
+            "artifact_identity": "investment_decision_workspace_projection/v1:new",
+            "source_artifacts": {"opportunity_context": "opp:1", "security_decision_context": "dec:1",
+                                 "integrated_investment_decision_product": "integrated_investment_decision_product/v1:OTHER"},
+        }), encoding="utf-8")
+        return {"status": "MATERIALIZED", "session": session, "workspace": {}, "screener_master_projection": {}}
+
+    monkeypatch.setattr(ccpp, "materialize_and_write_current_product_projections", fake_materialize)
+    result = cpc.run_post_handoff_presentation_projection(
+        tmp_path, tmp_path / "runtime", session, producer_run_dir=run_dir,
+        integrated_investment_decision_product=_integrated_delivery(session),
+    )
+    assert result["status"] == "UNAVAILABLE"
+    assert "LINEAGE_DIVERGED" in result["reason"]

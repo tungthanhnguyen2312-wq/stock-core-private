@@ -996,10 +996,15 @@ def test_presentation_projection_runs_after_post_handoff_observers_and_lands_in_
             "flow_price_divergence_shadow": {"status": "COLLECTED"},
         }
 
-    def presentation(root, runtime_root, session, *, producer_run_dir=None, output_root=None):
+    def presentation(root, runtime_root, session, *, producer_run_dir=None, output_root=None,
+                     integrated_investment_decision_product=None):
         order.append("presentation")
         assert session == SESSION
         assert producer_run_dir == tmp_path  # this test's _producer() fixture sets run_dir=tmp_path
+        # CURRENT_DECISION_SURFACE_CONVERGENCE_V1: the re-join receives the exact same-session
+        # Integrated Decision object the Daily Producer consumed.
+        assert isinstance(integrated_investment_decision_product, dict)
+        assert integrated_investment_decision_product.get("session") == SESSION
         return {
             "status": "COLLECTED", "session": session,
             "contract_version": "post_handoff_presentation_projection/v1",

@@ -25,6 +25,7 @@ from typing import Any, Mapping
 from current_research_valuation_context import RELATIVE_METHODS
 import current_research_official_universe_scope as current_research_official_universe_scope_module
 import velocity_flow_price_presentation_projection as velocity_flow_price
+import integrated_investment_decision_product as integrated_decision_module
 import indicator_metric_display_state as indicator_display_state
 import same_session_technical_coverage_disposition as technical_coverage_disposition_module
 import market_wide_current_technical_coverage_scaleout as technical_coverage_scaleout_module
@@ -355,6 +356,70 @@ def _lineage_view(opportunity_record: Mapping[str, Any]) -> dict[str, Any]:
     }
 
 
+def _position_context(integrated_record: Mapping[str, Any], portfolio_view: Mapping[str, Any]) -> dict[str, Any]:
+    """Explicit position context. The Integrated Decision's own context is the default; a locally
+    evaluated explicit portfolio may only replace UNKNOWN with a confirmed HELD/NOT_HELD. Absence
+    of a private portfolio is never NOT_HELD."""
+    if isinstance(portfolio_view, Mapping) and portfolio_view.get("evaluated") is True:
+        return {"status": "SUPPLIED", "position_state": portfolio_view.get("holding_status")}
+    context = integrated_record.get("position_context")
+    if isinstance(context, Mapping) and context.get("status") == "SUPPLIED":
+        return {"status": "SUPPLIED", "position_state": context.get("position_state")}
+    return {"status": "NOT_SUPPLIED", "position_state": integrated_decision_module.POSITION_UNKNOWN_NOT_SUPPLIED}
+
+
+def _action_decision_view(integrated_record: Mapping[str, Any] | None, portfolio_view: Mapping[str, Any]) -> dict[str, Any]:
+    if not isinstance(integrated_record, Mapping):
+        raise InvestmentDecisionWorkspaceError("INTEGRATED_DECISION_RECORD_MISSING")
+    posture = integrated_record.get("research_action_posture")
+    position = _position_context(integrated_record, portfolio_view)
+    held = position["position_state"] in ("HELD", "HELD_ABOVE_POLICY_CAP")
+    conditional = posture in integrated_decision_module.POSITION_CONDITIONAL_POSTURES and not held
+    return {
+        "research_action_posture": posture,
+        "evidence_currency": integrated_record.get("evidence_currency"),
+        "decision_identity": integrated_record.get("decision_identity"),
+        "position_context": position,
+        # HOLD without a confirmed position reads "HOLD -- if currently held"; ownership is never
+        # fabricated.
+        "action_presentation": {
+            "position_conditional": conditional,
+            "condition": "IF_CURRENTLY_HELD" if conditional else None,
+        },
+        "opportunity_priority": dict(integrated_record.get("opportunity_priority") or {"status": "UNAVAILABLE"}),
+    }
+
+
+def _coherent_integrated_records(
+    integrated_decision_artifact: Mapping[str, Any] | None, *, as_of_session: str | None, tickers: list[str],
+) -> Mapping[str, Any]:
+    """Strict same-session / ticker-set / identity gate for the action-decision authority."""
+    if not isinstance(integrated_decision_artifact, Mapping):
+        raise InvestmentDecisionWorkspaceError("INTEGRATED_DECISION_INPUT_REQUIRED")
+    if integrated_decision_artifact.get("contract_version") != integrated_decision_module.CONTRACT_VERSION:
+        raise InvestmentDecisionWorkspaceError("INTEGRATED_DECISION_CONTRACT_UNSUPPORTED")
+    if integrated_decision_artifact.get("session") != as_of_session:
+        raise InvestmentDecisionWorkspaceError(
+            f"INTEGRATED_DECISION_SESSION_MISMATCH:expected={as_of_session}:observed={integrated_decision_artifact.get('session')}"
+        )
+    if integrated_decision_module.content_identity(integrated_decision_artifact).get("artifact_identity") != integrated_decision_artifact.get("artifact_identity"):
+        raise InvestmentDecisionWorkspaceError("INTEGRATED_DECISION_CONTENT_IDENTITY_INVALID")
+    records = integrated_decision_artifact.get("records")
+    if not isinstance(records, Mapping) or set(records) != set(tickers):
+        raise InvestmentDecisionWorkspaceError("INTEGRATED_DECISION_TICKER_SET_MISMATCH")
+    for ticker in tickers:
+        record = records[ticker]
+        if not isinstance(record, Mapping) or record.get("ticker") != ticker:
+            raise InvestmentDecisionWorkspaceError(f"INTEGRATED_DECISION_RECORD_IDENTITY_MISMATCH:{ticker}")
+        if record.get("research_action_posture") not in integrated_decision_module.RESEARCH_ACTION_POSTURES:
+            raise InvestmentDecisionWorkspaceError(f"INTEGRATED_DECISION_POSTURE_INVALID:{ticker}")
+        if not integrated_decision_module.is_valid_evidence_currency(record.get("evidence_currency")):
+            raise InvestmentDecisionWorkspaceError(f"INTEGRATED_DECISION_EVIDENCE_CURRENCY_INVALID:{ticker}")
+        if record.get("decision_identity") != integrated_decision_module.decision_identity(record):
+            raise InvestmentDecisionWorkspaceError(f"INTEGRATED_DECISION_RECORD_DECISION_IDENTITY_INVALID:{ticker}")
+    return records
+
+
 def _coherent_technical_evidence(
     *, as_of_session: str | None,
     technical_coverage_disposition: Mapping[str, Any] | None,
@@ -414,8 +479,13 @@ def build_ticker_card(
     flow_research_cohort_tickers: frozenset[str] = frozenset(),
     technical_coverage_disposition_records: Mapping[str, Any] | None = None,
     technical_history_recovery_records: Mapping[str, Any] | None = None,
+    integrated_record: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Compose one seven-section decision-workspace card for a single ticker.
+
+    ``integrated_record`` is this ticker's Integrated Decision record: the single action-decision
+    authority (``research_action_posture``/``evidence_currency``), passed through verbatim.
+    ``research_stance`` stays on the card only as secondary research-screen context.
 
     ``technical_coverage_disposition_records``/``technical_history_recovery_records`` (both
     optional) are already session-coherence-checked per-ticker record maps (see
@@ -436,6 +506,7 @@ def build_ticker_card(
     warnings = (decision_record.get("warnings_counter_thesis") or {}).get("warnings") or decision_record.get("warnings") or []
     financial = decision_record.get("financial_analysis") or {"status": "NOT_SUPPLIED", "compact": None}
     as_of_session = decision_record.get("as_of_session") or opportunity_record.get("as_of_session")
+    portfolio_view = _portfolio_view(portfolio_research, ticker, sector)
     card: dict[str, Any] = {
         "ticker": ticker,
         "as_of_session": as_of_session,
@@ -448,7 +519,11 @@ def build_ticker_card(
         "flow_price": velocity_flow_price.flow_price_view(
             ticker=ticker, artifact=flow_price_artifact, cohort_tickers=flow_research_cohort_tickers,
         ),
-        # A. Current stance
+        # A. Action decision (CURRENT_DECISION_SURFACE_CONVERGENCE_V1) -- verbatim pass-through of
+        # the Integrated Decision; never re-derived here.
+        **_action_decision_view(integrated_record, portfolio_view),
+        # Secondary research-screen / candidate context (legacy security_decision_context field,
+        # kept for compatibility). It is NOT an action recommendation.
         "research_stance": decision_record.get("research_stance"),
         "research_stance_readiness": decision_record.get("research_stance_readiness"),
         "entry_state": decision_record.get("entry_state"),
@@ -537,7 +612,7 @@ def build_ticker_card(
         "catalyst": catalyst_view,
         "liquidity": _liquidity_view(opportunity_record),
         # F. Portfolio impact
-        "portfolio": _portfolio_view(portfolio_research, ticker, sector),
+        "portfolio": portfolio_view,
         # Prospective research case
         "prospective_case": prospective_record,
         # G. Data / authority
@@ -547,6 +622,10 @@ def build_ticker_card(
             "research_stance_is_not_execution_order": True, "priority_now_is_not_buy_now": True,
             "security_attractiveness_separate_from_portfolio_fit": True,
             "portfolio_fit_does_not_mutate_research_stance": True,
+            "research_action_posture_is_the_action_decision": True,
+            "research_stance_is_secondary_research_screen_only": True,
+            "opportunity_priority_never_alters_action_posture": True,
+            "missing_private_portfolio_is_unknown_position_not_not_held": True,
         },
     }
     # DASHBOARD_INVESTOR_FIRST_PRESENTATION_SIMPLIFICATION_V1: additive, presentation-only
@@ -575,6 +654,7 @@ def build_artifacts(
     flow_research_cohort_tickers: frozenset[str] = frozenset(),
     technical_coverage_disposition: Mapping[str, Any] | None = None,
     technical_history_recovery: Mapping[str, Any] | None = None,
+    integrated_decision_artifact: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Join a matched opportunity_context/v1 + security_decision_context/v1 pair into the
     compact investment_decision_workspace_projection/v1 artifact. Raises fail-closed if the two
@@ -627,6 +707,15 @@ def build_artifacts(
         raise InvestmentDecisionWorkspaceError("EMPTY_WORKSPACE_DENOMINATOR")
     if set(opportunity_records) != set(decision_records):
         raise InvestmentDecisionWorkspaceError("OPPORTUNITY_DECISION_TICKER_SET_MISMATCH")
+    # CURRENT_DECISION_SURFACE_CONVERGENCE_V1: the exact Integrated Decision artifact used by the
+    # AI/current-decision delivery is the single action-decision authority for every card. Same
+    # session, same ticker set, self-consistent identity -- or no Workspace at all (never a silent
+    # fallback to research_stance as the action decision).
+    integrated_records = _coherent_integrated_records(
+        integrated_decision_artifact,
+        as_of_session=opportunity_artifact.get("as_of_session") or decision_artifact.get("as_of_session"),
+        tickers=tickers,
+    )
 
     leadership_records = (leadership or {}).get("ticker_contexts") if isinstance(leadership, Mapping) else None
     if not isinstance(leadership_records, Mapping):
@@ -659,6 +748,7 @@ def build_artifacts(
             flow_research_cohort_tickers=flow_research_cohort_tickers,
             technical_coverage_disposition_records=technical_disposition_records,
             technical_history_recovery_records=technical_recovery_records,
+            integrated_record=integrated_records[ticker],
         )
         if current_research_scope_supplied:
             card["official_research_scope"] = current_research_official_universe_scope_module.ticker_scope_view(
@@ -688,6 +778,11 @@ def build_artifacts(
         }
 
     stance_counts = Counter(card["research_stance"] or "NONE" for card in cards.values())
+    posture_counts = Counter(card["research_action_posture"] for card in cards.values())
+    currency_counts = Counter(
+        integrated_decision_module.evidence_currency_class(card["evidence_currency"]) for card in cards.values()
+    )
+    position_counts = Counter(card["position_context"]["position_state"] for card in cards.values())
     entry_state_counts = Counter(card["entry_state"] or "NONE" for card in cards.values())
     valuation_counts = Counter(card["valuation"]["relative_research_state"] or "NONE" for card in cards.values())
     guard_applied_count = sum(1 for card in cards.values() if card["valuation"]["market_cap_semantic_guard_applied"])
@@ -729,6 +824,7 @@ def build_artifacts(
             technical_history_recovery.get("artifact_identity")
             if technical_recovery_records is not None else None
         ),
+        "integrated_investment_decision_product": integrated_decision_artifact.get("artifact_identity"),
     }
 
     artifact: dict[str, Any] = {
@@ -743,6 +839,16 @@ def build_artifacts(
             "pre_scope_ticker_count": pre_scope_ticker_count,
             "current_research_scope_supplied": current_research_scope_supplied,
             "current_research_scope_applied": current_research_scope_applied,
+            "research_action_posture_distribution": dict(sorted(posture_counts.items())),
+            "evidence_currency_distribution": dict(sorted(currency_counts.items())),
+            "position_context_distribution": dict(sorted(position_counts.items())),
+            "position_conditional_action_count": sum(
+                1 for card in cards.values() if card["action_presentation"]["position_conditional"]
+            ),
+            "opportunity_priority_available_count": sum(
+                1 for card in cards.values() if card["opportunity_priority"].get("status") == "AVAILABLE"
+            ),
+            # Secondary research-screen diagnostic only (see decision_authority below).
             "research_stance_distribution": dict(sorted(stance_counts.items())),
             "entry_state_distribution": dict(sorted(entry_state_counts.items())),
             "valuation_relative_state_distribution": dict(sorted(valuation_counts.items())),
@@ -760,6 +866,14 @@ def build_artifacts(
             "universal_score": "SCORING_PROHIBITED", "ordinal_rank": "RANKING_PROHIBITED",
             "probability_of_success": "FORECAST_PROHIBITED", "target_price": "NOT_EMITTED",
             "backtest_or_pit_outcome": "NOT_EMITTED", "portfolio_optimization": "NOT_EMITTED",
+        },
+        "decision_authority": {
+            "primary_action_decision_field": "research_action_posture",
+            "primary_action_decision_source": integrated_decision_artifact.get("artifact_identity"),
+            "evidence_currency_field": "evidence_currency",
+            "research_stance_role": "SECONDARY_RESEARCH_SCREEN_CANDIDATE_CONTEXT_NOT_AN_ACTION_RECOMMENDATION",
+            "opportunity_priority_role": "ORTHOGONAL_INSPECTION_AXIS_NEVER_ALTERS_ACTION_POSTURE",
+            "position_context_role": "EXPLICIT_UNKNOWN_WITHOUT_PRIVATE_PORTFOLIO_NEVER_NOT_HELD",
         },
         "cards": cards,
         "authority_effect": "NONE / PRODUCT_WORKSPACE_ONLY",

@@ -18,7 +18,19 @@ from current_research_official_universe_scope import (
     CurrentResearchOfficialUniverseScopeError, eligible_ticker_set, resolve_scope,
 )
 from screener_master_projection import build_projection
-from investment_decision_workspace_projection import build_artifacts as build_workspace_artifacts
+import investment_decision_workspace_projection as _workspace_module
+from _integrated_decision_fixture import integrated_decision as _integrated_decision
+
+
+def build_workspace_artifacts(**kwargs):
+    # CURRENT_DECISION_SURFACE_CONVERGENCE_V1: supply the Workspace's required, same-session
+    # Integrated Decision (production builder) over the same ticker set.
+    opportunity = kwargs["opportunity_artifact"]
+    kwargs.setdefault("integrated_decision_artifact", _integrated_decision(
+        opportunity.get("as_of_session") or kwargs["decision_artifact"].get("as_of_session"),
+        sorted(opportunity.get("records") or {}),
+    ))
+    return _workspace_module.build_artifacts(**kwargs)
 
 
 ROOT = Path(__file__).resolve().parents[1]

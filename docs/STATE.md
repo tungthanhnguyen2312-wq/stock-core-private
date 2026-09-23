@@ -1,5 +1,33 @@
 # Stock Lookup — Operational State
 
+**Current decision surface convergence V1 (2026-09-23):**
+`CURRENT_DECISION_SURFACE_CONVERGENCE_V1 = ACTIVE / IMPLEMENTATION_COMPLETE_LOCAL_RELEASE_CANDIDATE /
+AWAITING_OWNER_REVIEW_AND_M1_PROMOTION`. Local checkpoint commits only; no push, merge, Daily, replay,
+or publication.
+
+1. **One action authority.** `research_action_posture` (Integrated Decision) is the single cross-surface
+   action decision. The Workspace consumes the exact same-session Integrated Decision artifact the AI /
+   current-decision delivery uses (strict session, ticker-set, content- and decision-identity checks; a
+   missing input fails closed, never falls back to `research_stance`). Screener carries a separate
+   `decision` view; the Home summary counts postures. `research_stance` remains only as a secondary
+   research-screen field with explicit role metadata.
+2. **Evidence currency.** Producer-owned per-ticker `evidence_currency` = `CURRENT_SESSION` /
+   `LAST_TRADE_AS_OF:<YYYY-MM-DD>` / `NO_CURRENT_EVIDENCE`, derived only from the exact-session Level-2
+   `same_session_technical_coverage_disposition/v1` (session + content-identity gated). Part of
+   `decision_identity`; every consumer passes it through.
+3. **Only posture correction.** `NO_CURRENT_EVIDENCE` + `WAIT_FOR_CONFIRMATION` resolves to
+   `INSUFFICIENT_CURRENT_RESEARCH`; the invariant is enforced when the artifact is built.
+4. **Opportunity priority.** Wired from the same-session governed queue
+   (`daily_opportunity_decision_queue.build` over Level-2 `current_opportunity_prioritization/v1` + triage),
+   otherwise explicitly unavailable. Excluded from `decision_identity`; never changes posture.
+5. **Position context.** No private portfolio means `UNKNOWN_POSITION_NOT_SUPPLIED`, never `NOT_HELD`;
+   HOLD-family postures are presented as "HOLD — if currently held".
+6. **Retained 2026-09-23 offline replay.** Denominator 1,683; the only posture change is 158
+   WAIT→INSUFFICIENT; tuple parity 1,683/1,683 on Workspace, published index, Screener, AI brief index and
+   Action Center index; priority available 1,507/1,683 with zero posture/identity changes from priority.
+   Baseline before M1: 85 directional stance-vs-posture disagreements, 733 WAIT of which 615 lacked
+   current-session evidence (158 with none), priority 0/1,683.
+
 **Owner Daily crash-recovery promotion and roadmap sync V1 (2026-09-23):**
 Roadmap execution state synchronized after the 2026-09-23 Gate 0 closeout. No Daily, replay,
 acquisition, or analytical run was performed by this sync.

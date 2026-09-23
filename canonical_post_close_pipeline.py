@@ -597,6 +597,53 @@ def enrichment_output_path(root: Path, session: str, name: str) -> Path:
     return root / "operations-review" / "canonical-post-close-v1" / session / "enrichment" / f"{name}.json"
 
 
+def resolve_current_session_priority_queue(
+    session: str, *, opportunity: Mapping[str, Any] | None, triage: Mapping[str, Any] | None,
+) -> tuple[dict[str, Any] | None, dict[str, Any]]:
+    """Resolve the governed OPPORTUNITY_PRIORITY source for the Integrated Decision seam.
+
+    Reuses the existing ``daily_opportunity_decision_queue.build`` presentation layer over this
+    exact session's Level-2 ``current_opportunity_prioritization/v1`` (already the Integrated
+    Decision's ``legacy_decision_artifact`` and the Daily brief's priority source) plus the same
+    session's entry-candidate triage. No new score, tier, or ranking is computed. Any missing,
+    stale, or self-inconsistent input leaves priority explicitly unavailable -- never a stale
+    queue resurrected to make coverage nonzero.
+    """
+    import current_opportunity_prioritization as opportunity_module
+    import daily_opportunity_decision_queue as queue_module
+    import full_universe_entry_candidate_triage as triage_module
+
+    def unavailable(reason: str) -> tuple[None, dict[str, Any]]:
+        return None, {"status": "UNAVAILABLE", "reason": reason}
+
+    if not isinstance(opportunity, Mapping):
+        return unavailable("CURRENT_OPPORTUNITY_PRIORITIZATION_NOT_RETAINED")
+    if opportunity.get("contract_version") != "current_opportunity_prioritization/v1":
+        return unavailable("CURRENT_OPPORTUNITY_PRIORITIZATION_CONTRACT_MISMATCH")
+    if opportunity.get("research_session") != session:
+        return unavailable("CURRENT_OPPORTUNITY_PRIORITIZATION_SESSION_MISMATCH")
+    if opportunity_module.content_identity(opportunity).get("artifact_sha256") != opportunity.get("artifact_sha256"):
+        return unavailable("CURRENT_OPPORTUNITY_PRIORITIZATION_CONTENT_IDENTITY_INVALID")
+    if not isinstance(triage, Mapping):
+        return unavailable("SESSION_ENTRY_CANDIDATE_TRIAGE_NOT_RETAINED")
+    if triage.get("source_market_session") != session:
+        return unavailable("SESSION_ENTRY_CANDIDATE_TRIAGE_SESSION_MISMATCH")
+    if triage_module.content_identity(triage).get("artifact_sha256") != triage.get("artifact_sha256"):
+        return unavailable("SESSION_ENTRY_CANDIDATE_TRIAGE_CONTENT_IDENTITY_INVALID")
+    try:
+        queue = queue_module.build(opportunity=opportunity, triage=triage)
+    except Exception as exc:  # noqa: BLE001 -- priority is orthogonal; never blocks the decision
+        return unavailable(f"PRIORITY_QUEUE_BUILD_FAILED:{type(exc).__name__}")
+    if queue.get("research_session") != session:
+        return unavailable("PRIORITY_QUEUE_SESSION_MISMATCH")
+    return queue, {
+        "status": "RESOLVED_SAME_SESSION",
+        "artifact_identity": queue.get("artifact_identity"),
+        "source_artifact_identities": dict(queue.get("source_artifact_identities") or {}),
+        "record_count": len(queue.get("records") or {}),
+    }
+
+
 def build_enrichment_components(
     root: Path, session: str, *, artifact_root: Path | None = None, runtime_root: Path | None = None,
     priority_queue_artifact: Mapping[str, Any] | None = None,
@@ -858,6 +905,20 @@ def build_enrichment_components(
             corporate_intelligence_artifact = None
         if corporate_intelligence_artifact is not None:
             _write_json(paths["corporate_intelligence_axis"], corporate_intelligence_artifact)
+        # CURRENT_DECISION_SURFACE_CONVERGENCE_V1: evidence currency is sourced from this exact
+        # session's Level-2 same_session_technical_coverage_disposition/v1 (strict session and
+        # content-identity checks live in the Integrated Decision boundary itself).
+        technical_coverage_disposition = _load(paths["technical_coverage_disposition"]) or _load(retained_paths["technical_coverage_disposition"])
+        # OPPORTUNITY_PRIORITY: an explicitly supplied queue wins; otherwise the same-session,
+        # lineage-verified governed queue is resolved, or the axis stays explicitly unavailable.
+        queue = priority_queue_artifact
+        if queue is None:
+            queue, priority_resolution = resolve_current_session_priority_queue(
+                session, opportunity=opp, triage=_load(paths["session_triage"]) or _load(retained_paths["session_triage"]),
+            )
+        else:
+            priority_resolution = {"status": "SUPPLIED_BY_CALLER", "artifact_identity": queue.get("artifact_identity")}
+        results["opportunity_priority_queue"] = priority_resolution
         res = build(
             session=session,
             requested_at=requested_at,
@@ -867,7 +928,8 @@ def build_enrichment_components(
             relative_volume_artifact=relative_volume,
             market_sector_artifact=mkt,
             legacy_decision_artifact=opp,
-            priority_queue_artifact=priority_queue_artifact,
+            priority_queue_artifact=queue,
+            technical_coverage_disposition_artifact=technical_coverage_disposition,
             momentum_artifact=momentum,
             tactical_confirmation_artifact=confirmation,
             tactical_boundaries_artifact=tactical_boundaries,
@@ -1064,6 +1126,7 @@ def _sealed_workspace_lineage(root: Path, producer_run_dir: Path) -> dict[str, A
 def run_post_handoff_presentation_projection(
     root: Path, runtime_root: Path, session: str, *,
     producer_run_dir: Path | None = None, output_root: Path | None = None,
+    integrated_investment_decision_product: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Additive, presentation-only re-join of the current-product projections (Investment
     Decision Workspace / Screener Master Projection) now that post-handoff observers (Signal
@@ -1086,9 +1149,20 @@ def run_post_handoff_presentation_projection(
     projection's -- a mismatch means the join drifted from Producer's own inputs and this
     degrades to UNAVAILABLE rather than presenting an inconsistent overlay. Non-blocking: any
     failure here never revises the completed Daily Producer result.
+
+    CURRENT_DECISION_SURFACE_CONVERGENCE_V1: the re-join consumes the exact same Integrated
+    Decision the sealed Workspace used (supplied by object, else this session's retained
+    enrichment output), and the lineage check also requires that identity to match -- the
+    presentation overlay can never carry a different action decision than the sealed product.
     """
     output_root = output_root or root
     lineage = _sealed_workspace_lineage(root, producer_run_dir) if producer_run_dir is not None else None
+    integrated = integrated_investment_decision_product
+    if integrated is None:
+        integrated = _load(enrichment_output_path(output_root, session, "integrated_investment_decision_product"))
+    if not isinstance(integrated, Mapping) or integrated.get("session") != session:
+        return {"status": "UNAVAILABLE", "session": session,
+                "reason": "PRESENTATION_PROJECTION_INTEGRATED_DECISION_UNAVAILABLE"}
     try:
         from daily_research_session_operations import load_registry, resolve_inputs
         from canonical_current_product_projections import materialize_and_write_current_product_projections
@@ -1100,6 +1174,7 @@ def run_post_handoff_presentation_projection(
         result = materialize_and_write_current_product_projections(
             root=root, session=session, operation_dir=presentation_dir, registry_inputs=registry_inputs,
             requested_at=vn_now().isoformat(timespec="seconds"), runtime_root_override=runtime_root,
+            integrated_investment_decision_product=integrated,
         )
     except Exception as exc:
         return {"status": "UNAVAILABLE", "session": session, "reason": f"{type(exc).__name__}:{exc}"}
@@ -1114,7 +1189,7 @@ def run_post_handoff_presentation_projection(
     if lineage is not None:
         matches = all(
             lineage["source_artifacts"].get(key) == new_source_artifacts.get(key)
-            for key in ("opportunity_context", "security_decision_context")
+            for key in ("opportunity_context", "security_decision_context", "integrated_investment_decision_product")
         )
         if not matches:
             return {"status": "UNAVAILABLE", "session": session,
@@ -1623,7 +1698,6 @@ def run_canonical_post_close(
     # the producer nor the delivery layer performs a "latest" lookup.
     enrichment = build_enrichment_components(
         root, session, artifact_root=artifact_root, runtime_root=runtime_root,
-        priority_queue_artifact=None,
     )
     integrated_delivery = (enrichment.get("integrated_investment_decision_product") or {}).get("artifact")
     if not isinstance(integrated_delivery, Mapping) or integrated_delivery.get("session") != session:
@@ -1671,6 +1745,7 @@ def run_canonical_post_close(
     post_handoff_feedback = run_post_handoff_prospective_outcome_feedback(root, session)
     post_handoff_presentation_projection = run_post_handoff_presentation_projection(
         root, runtime_root, session, producer_run_dir=producer_result.get("run_dir"),
+        integrated_investment_decision_product=integrated_delivery,
     )
     return {
         "session": session, "acquisition": acquisition, "enrichment": enrichment,

@@ -45,6 +45,7 @@ from pathlib import Path
 from typing import Any, Mapping, Sequence
 
 import asymmetric_dislocation_research as _asymmetric
+import integrated_investment_decision_product as _integrated
 import owner_research_exclusions as _owner_research_exclusions
 import owner_research_focus as _owner_focus
 import personal_portfolio_quant_risk_decomposition as _quant
@@ -167,6 +168,9 @@ def _evidence_block(ticker: str, record: Mapping[str, Any], *, session: str, cov
     return {
         "why_now": record.get("why_now"),
         "research_action_posture": record.get("research_action_posture"),
+        # Producer-owned evidence currency, passed through. The ``freshness`` block below stays a
+        # diagnostic explanation only; it never re-derives a competing decision-currency class.
+        "evidence_currency": record.get("evidence_currency"),
         "tactical_phase": record.get("tactical_phase"),
         "market_structure_state": record.get("market_structure_state"),
         "fundamental_state": record.get("fundamental_state"),
@@ -193,6 +197,24 @@ def _evidence_block(ticker: str, record: Mapping[str, Any], *, session: str, cov
         "freshness": freshness,
         "source_identities": {"decision_identity": record.get("decision_identity")},
     }
+
+
+def _build_decision_surface_index(
+    integrated_decision_artifact: Mapping[str, Any], *, portfolio_aware_decision_artifact: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    """Full-universe (ticker, research_action_posture, evidence_currency) read model -- the same
+    shared projection the AI brief carries -- plus explicit position context. No monetary value
+    enters this index. Without a private portfolio every position is UNKNOWN, never NOT_HELD.
+    Holding-specific portfolio actions stay in their own sections and are not conflated here."""
+    index = _integrated.decision_surface_index(integrated_decision_artifact)
+    supplied = isinstance(portfolio_aware_decision_artifact, Mapping)
+    position_records = (portfolio_aware_decision_artifact or {}).get("records") or {} if supplied else {}
+    for row in index["rows"]:
+        # Reuses portfolio_aware_decision's own position_state vocabulary verbatim.
+        state = (position_records.get(row["ticker"]) or {}).get("position_state") if supplied else None
+        row["position_context"] = state or _integrated.POSITION_UNKNOWN_NOT_SUPPLIED
+    index["position_context_source"] = "PRIVATE_PORTFOLIO_LOCAL" if supplied else "NOT_SUPPLIED"
+    return index
 
 
 # ── Action remaps (deterministic lookup tables over already-computed posture/portfolio fields) ────
@@ -623,6 +645,9 @@ def build_artifact(
     )
     investment_accounts = _build_investment_accounts_section(portfolio_snapshot)
     portfolio_quant_risk = _build_portfolio_quant_risk_section(quant_risk_artifact)
+    decision_surface = _build_decision_surface_index(
+        integrated_decision_artifact, portfolio_aware_decision_artifact=portfolio_aware_decision_artifact,
+    )
 
     body: dict[str, Any] = {
         "schema_version": "1.0.0",
@@ -639,6 +664,7 @@ def build_artifact(
         "investment_accounts": investment_accounts,
         "portfolio_quant_risk": portfolio_quant_risk,
         "attention_queue": attention,
+        "decision_surface_index": decision_surface,
         "coverage": {
             "security_denominator": len(integrated_records),
             "portfolio_supplied": portfolio_aware_decision_artifact is not None,
@@ -807,7 +833,10 @@ def public_console_summary(artifact: Mapping[str, Any], *, destination: Path | N
 
 def _md_evidence_line(evidence: Mapping[str, Any]) -> str:
     freshness = evidence.get("freshness") or {}
-    return f"  - why: {evidence.get('why_now') or 'n/a'} _(price: {freshness.get('price_freshness', 'NOT_EVALUATED')})_"
+    return (
+        f"  - why: {evidence.get('why_now') or 'n/a'} _(evidence: {evidence.get('evidence_currency') or 'n/a'}; "
+        f"price: {freshness.get('price_freshness', 'NOT_EVALUATED')})_"
+    )
 
 
 def markdown(artifact: Mapping[str, Any]) -> str:

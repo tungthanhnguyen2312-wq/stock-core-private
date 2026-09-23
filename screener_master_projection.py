@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import Any, Iterable, Mapping, Sequence
 
 import current_research_official_universe_scope as current_research_official_universe_scope_module
+import integrated_investment_decision_product as integrated_decision_module
 
 CONTRACT_VERSION = "screener_master_projection/v1"
 MILESTONE = "SCREENER_MASTER_PROJECTION_AND_DECISION_DRAWER_INTEGRATION_V1"
@@ -461,6 +462,32 @@ def _research_view(workspace_card: Mapping[str, Any] | None, *, session: str, wo
     }
 
 
+def _decision_view(workspace_card: Mapping[str, Any] | None) -> dict[str, Any]:
+    """Canonical action decision carried verbatim from the Workspace card (itself a pass-through
+    of the Integrated Decision). Separate from the secondary ``research`` screening view; never
+    re-derived or widened here (CURRENT_DECISION_SURFACE_CONVERGENCE_V1)."""
+    if not isinstance(workspace_card, Mapping) or not workspace_card.get("research_action_posture"):
+        return {
+            "research_action_posture": None,
+            "evidence_currency": None,
+            "position_context": None,
+            "position_conditional": None,
+            "opportunity_priority_tier": None,
+            "status": UNKNOWN,
+            "reason": "WORKSPACE_CARD_ABSENT" if not isinstance(workspace_card, Mapping) else "ACTION_POSTURE_ABSENT",
+        }
+    position = workspace_card.get("position_context") or {}
+    return {
+        "research_action_posture": workspace_card.get("research_action_posture"),
+        "evidence_currency": workspace_card.get("evidence_currency"),
+        "position_context": position.get("position_state"),
+        "position_conditional": (workspace_card.get("action_presentation") or {}).get("position_conditional"),
+        "opportunity_priority_tier": (workspace_card.get("opportunity_priority") or {}).get("research_priority_tier"),
+        "status": AVAILABLE,
+        "reason": None,
+    }
+
+
 def _workspace_ref(ticker: str, workspace_card: Mapping[str, Any] | None, workspace_identity: str | None) -> dict[str, Any]:
     if not isinstance(workspace_card, Mapping):
         return {
@@ -545,6 +572,7 @@ def _assert_no_naked_required_null(card: Mapping[str, Any]) -> None:
         ("liquidity.research_value", card["liquidity"]["research_value"], card["liquidity"]["research_value_status"], card["liquidity"].get("research_value_reason")),
         ("tactical.entry_state", card["tactical"]["entry_state"], card["tactical"]["status"], card["tactical"].get("reason")),
         ("research.stance", card["research"]["stance"], card["research"]["status"], card["research"].get("reason")),
+        ("decision.research_action_posture", card["decision"]["research_action_posture"], card["decision"]["status"], card["decision"].get("reason")),
         ("display_exchange", card["display_exchange"], card["exchange_status"], card.get("exchange_reason")),
     )
     naked = [name for name, value, status, reason in required if value is None and not (status and (reason or status))]
@@ -562,6 +590,7 @@ def _count_naked_required_null(cards: Mapping[str, Mapping[str, Any]]) -> int:
             (card["liquidity"]["research_value"], card["liquidity"]["research_value_status"], card["liquidity"].get("research_value_reason")),
             (card["tactical"]["entry_state"], card["tactical"]["status"], card["tactical"].get("reason")),
             (card["research"]["stance"], card["research"]["status"], card["research"].get("reason")),
+            (card["decision"]["research_action_posture"], card["decision"]["status"], card["decision"].get("reason")),
             (card["display_exchange"], card["exchange_status"], card.get("exchange_reason")),
         )
         count += sum(1 for value, status, reason in checks if value is None and not (status and (reason or status)))
@@ -588,6 +617,7 @@ def build_ticker_card(
     liquidity, execution = _liquidity_view(ticker, workspace_card=workspace_card, liquidity_by_ticker=liquidity_by_ticker)
     tactical = _tactical_view(workspace_card, session=session)
     research = _research_view(workspace_card, session=session, workspace_identity=workspace_identity)
+    decision = _decision_view(workspace_card)
     financial_v2 = _financial_v2_view(ticker, financial_by_ticker, workspace_card)
     freshness = {
         "price": price["freshness"],
@@ -610,6 +640,9 @@ def build_ticker_card(
         "liquidity": liquidity,
         "execution": execution,
         "tactical": tactical,
+        # Primary action decision (Integrated Decision via Workspace).
+        "decision": decision,
+        # Secondary research-screen / candidate context (legacy research_stance).
         "research": research,
         "workspace_ref": _workspace_ref(ticker, workspace_card, workspace_identity),
         "financial_v2": financial_v2,
@@ -621,6 +654,8 @@ def build_ticker_card(
             "no_probability": True,
             "no_target_price": True,
             "research_stance_is_not_execution_order": True,
+            "research_stance_is_secondary_research_screen_only": True,
+            "research_action_posture_is_the_action_decision": True,
             "tactical_entry_is_not_buy": True,
             "data_ready_is_not_buy": True,
             "no_fake_gtgd": True,
@@ -822,6 +857,13 @@ def build_projection(
             "research_liquidity_proxy_count": sum(card["liquidity"]["method"] == LIQUIDITY_PROXY for card in cards.values()),
             "numeric_liquidity_value_count": sum(card["liquidity"]["research_value"] is not None for card in cards.values()),
             "execution_capacity_exact_blocked_count": sum(card["execution"]["capacity_exact_status"] == EXECUTION_BLOCKED for card in cards.values()),
+            "research_action_posture_available_count": sum(card["decision"]["status"] == AVAILABLE for card in cards.values()),
+            "research_action_posture_distribution": dict(sorted(Counter(card["decision"]["research_action_posture"] or "NONE" for card in cards.values()).items())),
+            "evidence_currency_distribution": dict(sorted(Counter(
+                integrated_decision_module.evidence_currency_class(card["decision"]["evidence_currency"])
+                for card in cards.values()
+            ).items())),
+            "position_conditional_action_count": sum(card["decision"]["position_conditional"] is True for card in cards.values()),
             "research_stance_available_count": sum(card["research"]["status"] == AVAILABLE for card in cards.values()),
             "tactical_available_count": sum(card["tactical"]["status"] == AVAILABLE for card in cards.values()),
             "financial_v2_available_count": sum(card["financial_v2"]["status"] == "AVAILABLE" for card in cards.values()),
@@ -832,6 +874,11 @@ def build_projection(
             "tactical_entry_state_distribution": dict(sorted(Counter(card["tactical"]["entry_state"] or "NONE" for card in cards.values()).items())),
         },
         "official_scope_coverage": official_scope_coverage,
+        "decision_authority": {
+            "primary_action_decision_field": "decision.research_action_posture",
+            "primary_action_decision_source": (workspace.get("source_artifacts") or {}).get("integrated_investment_decision_product") if isinstance(workspace, Mapping) else None,
+            "research_stance_role": "SECONDARY_RESEARCH_SCREEN_DIAGNOSTIC_NOT_AN_ACTION_RECOMMENDATION",
+        },
         "source_artifacts": {
             "screen_snapshot": snapshot_identity,
             "investment_decision_workspace": workspace_identity,
