@@ -227,6 +227,9 @@ def _fresh_run_stubs(monkeypatch, order: list[str]) -> None:
         if expected_name == "stock-core-private":
             order.append("producer_preflight")
             return {"head": "producer", "status": "UP_TO_DATE"}
+        if expected_name == "ai-core-private":  # covered by test_consumer_preflight_*
+            order.append("consumer_preflight")
+            return {"head": "consumer", "status": "UP_TO_DATE"}
         order.append("dashboard_preflight")
         return real_preflight(root, expected_name=expected_name,
                               expected_remote_fragment=expected_remote_fragment, **kwargs)
@@ -252,7 +255,7 @@ def test_dirty_dashboard_blocks_owner_daily_before_any_analytical_work(monkeypat
     with pytest.raises(workflow.OwnerDailyError, match="UNEXPECTED_TRACKED_CHANGES"):
         workflow.run_workflow(root=producer, runtime_root=tmp_path / "runtime",
                               handoff_repo=tmp_path / "handoff", dashboard_web_dir=web)
-    assert order == ["producer_preflight", "dashboard_preflight"], "Daily must never start"
+    assert order == ["producer_preflight", "consumer_preflight", "dashboard_preflight"], "Daily must never start"
 
 
 def test_stale_clean_dashboard_is_fast_forwarded_before_daily_starts(monkeypatch, tmp_path):
@@ -265,7 +268,7 @@ def test_stale_clean_dashboard_is_fast_forwarded_before_daily_starts(monkeypatch
     with pytest.raises(RuntimeError, match="STOP_AFTER_ORDERING_PROOF"):
         workflow.run_workflow(root=producer, runtime_root=tmp_path / "runtime",
                               handoff_repo=tmp_path / "handoff", dashboard_web_dir=web)
-    assert order == ["producer_preflight", "dashboard_preflight", "daily"]
+    assert order == ["producer_preflight", "consumer_preflight", "dashboard_preflight", "daily"]
     assert _git(web, "rev-parse", "HEAD") == remote_head
 
 
@@ -278,7 +281,7 @@ def test_no_publish_dashboard_skips_the_dashboard_preflight(monkeypatch, tmp_pat
         workflow.run_workflow(root=producer, runtime_root=tmp_path / "runtime",
                               handoff_repo=tmp_path / "handoff", dashboard_web_dir=tmp_path / "absent",
                               publish_dashboard=False)
-    assert order == ["producer_preflight", "daily"]
+    assert order == ["producer_preflight", "consumer_preflight", "daily"]
 
 
 def test_dashboard_preflight_reuses_the_single_safe_sync_engine():

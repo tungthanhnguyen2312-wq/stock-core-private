@@ -36,7 +36,9 @@ from canonical_dashboard_runtime_release import (  # noqa: E402
 from canonical_trusted_subset_release import (  # noqa: E402
     CanonicalTrustedSubsetError, materialize_canonical_trusted_subset,
 )
-from checkout_cleanliness_contract import classify_checkout_cleanliness  # noqa: E402
+from checkout_cleanliness_contract import (  # noqa: E402
+    CONSUMER_APPROVED_UNTRACKED_PREFIXES, classify_checkout_cleanliness,
+)
 from governed_publication_completion import (  # noqa: E402
     resolve_dashboard_origin_main_sha,
     verify_existing_publication_completion,
@@ -101,7 +103,8 @@ def _is_sole_pending_daily_state_diff(root: Path) -> bool:
 
 def preflight_repository(root: Path, *, expected_name: str, expected_remote_fragment: str,
                          completed_session: str | None = None,
-                         runtime_root: Path | None = None) -> dict[str, str]:
+                         runtime_root: Path | None = None,
+                         approved_untracked_prefixes: tuple[str, ...] | None = None) -> dict[str, str]:
     """Synchronize a clean main checkout only by safe fast-forward; never discard work.
 
     ``completed_session`` (explicit replay / verified auto-resume only) is the ONE narrow
@@ -124,7 +127,10 @@ def preflight_repository(root: Path, *, expected_name: str, expected_remote_frag
     _git(root, "fetch", "origin")
     if _git(root, "branch", "--show-current") != "main":
         raise OwnerDailyError("Repository preflight", "BRANCH_IS_NOT_MAIN", "Switch to main without discarding work.")
-    cleanliness = classify_checkout_cleanliness(root)
+    # None keeps the Producer's governed runtime/evidence prefixes; a sibling checkout passes its
+    # own explicit contract (e.g. CONSUMER_APPROVED_UNTRACKED_PREFIXES).
+    cleanliness = (classify_checkout_cleanliness(root) if approved_untracked_prefixes is None
+                   else classify_checkout_cleanliness(root, approved_untracked_prefixes))
     pending_daily_state = bool(
         cleanliness.tracked_dirty_paths and completed_session is not None
         and _is_sole_pending_daily_state_diff(root)
@@ -183,6 +189,33 @@ def preflight_dashboard_repository(dashboard_web_dir: Path) -> dict[str, str]:
     """
     return preflight_repository(dashboard_web_dir, expected_name="market-dashboard",
                                 expected_remote_fragment="market-dashboard")
+
+
+def consumer_root_for(producer_root: Path) -> Path:
+    """The ONE ai-core-private checkout canonical Daily executes: canonical_daily_operation records
+    ``_git_head(root.parent / "ai-core-private")`` as ``consumer_head``,
+    daily_research_session_operations imports ``builders.build_ticker_context`` from it, and the
+    trusted-subset release verifies bundles with it. Never a worktree or another clone."""
+    return Path(producer_root).resolve().parent / "ai-core-private"
+
+
+def preflight_consumer_repository(consumer_root: Path, *, producer_root: Path) -> dict[str, str]:
+    """PRE_DAILY_WORKSPACE_READINESS_CORRECTIVE_V1 final hardening: normal Daily (and the
+    publication path's trusted-subset verification) EXECUTES code from the sibling ai-core-private
+    checkout, so that checkout is governed before any analytical work, with the same single shared
+    safe-sync engine as the Producer and Dashboard: exact canonical path (the path Daily imports
+    from), ai-core-private origin, ``main``, fetch, clean tracked state, the explicit Consumer
+    untracked contract (CONSUMER_APPROVED_UNTRACKED_PREFIXES -- never the Producer's data/...
+    prefixes), UP_TO_DATE / ``pull --ff-only`` only, ahead or diverged fails closed. Never resets,
+    rebases, stashes, or cleans. The returned ``head`` is the Consumer HEAD Daily then records.
+    """
+    expected = consumer_root_for(producer_root)
+    if os.path.normcase(str(Path(consumer_root).resolve())) != os.path.normcase(str(expected)):
+        raise OwnerDailyError("Repository preflight", "WRONG_CONSUMER_PATH:" + str(Path(consumer_root).resolve()),
+                              f"Daily executes the Consumer at {expected}; govern that checkout.")
+    return preflight_repository(expected, expected_name="ai-core-private",
+                                expected_remote_fragment="ai-core-private",
+                                approved_untracked_prefixes=CONSUMER_APPROVED_UNTRACKED_PREFIXES)
 
 
 def _load(path: Path) -> dict[str, Any]:
@@ -412,6 +445,94 @@ def _run_daily(root: Path, runtime_root: Path) -> None:
                               "Read the log; no state or AI publication was attempted.")
 
 
+_DAILY_BRIEF_FILENAME = "daily_integrated_decision_brief_artifact.json"
+
+
+def _handoff_brief_error(reason: str) -> OwnerDailyError:
+    return OwnerDailyError("AI handoff build", reason,
+                           "The retained Daily Integrated Decision Brief this operation declares is missing or "
+                           "invalid; AI handoff was refused before publication. It is never recreated here.")
+
+
+def verify_retained_daily_brief_for_handoff(source: Path, session: str) -> dict[str, Any]:
+    """PRE_DAILY_WORKSPACE_READINESS_CORRECTIVE_V1 (Phase C): close the M1 Brief/index false-PASS.
+
+    The retained operation's OWN declarations decide what is required -- never the calendar:
+    - it declares a Brief when ``run_manifest.json`` ``outputs.daily_integrated_decision_brief``
+      or the session bundle's ``integrated_decision_overlay_v1.daily_integrated_decision_brief_identity``
+      is set; the retained Brief file is then required, bound to the session and that identity;
+    - it is an M1 (CURRENT_DECISION_SURFACE_CONVERGENCE_V1) operation when the overlay's copy of the
+      Integrated Decision coverage carries ``evidence_currency_distribution``; the Brief's
+      ``decision_surface_index`` is then required: denominator == the Integrated Decision's own
+      ``universe_denominator`` == row count, every ticker exactly once, every row carrying ticker /
+      research_action_posture / evidence_currency, bound to the same Integrated Decision identity,
+      and zero NO_CURRENT_EVIDENCE + WAIT_FOR_CONFIRMATION rows;
+    - a genuine pre-M1 operation that declares no Brief keeps the legacy behavior (no Brief file).
+    Read-only; never builds or repairs a Brief. research_stance plays no role.
+    """
+    source = Path(source)
+    manifest_path = source / "run_manifest.json"
+    manifest = _load(manifest_path) if manifest_path.is_file() else {}
+    bundle = _load(source / "ai_research_session_bundle.json")
+    overlay = bundle.get("integrated_decision_overlay_v1")
+    overlay = overlay if isinstance(overlay, Mapping) else {}
+    coverage = overlay.get("coverage") if isinstance(overlay.get("coverage"), Mapping) else {}
+    declared = [value for value in (((manifest.get("outputs") or {}).get("daily_integrated_decision_brief")),
+                                    overlay.get("daily_integrated_decision_brief_identity")) if value]
+    m1 = isinstance(coverage.get("evidence_currency_distribution"), Mapping)
+    path = source / _DAILY_BRIEF_FILENAME
+    if not declared and not m1:
+        return {"status": "LEGACY_NO_BRIEF_DECLARED", "m1": False,
+                "brief_path": path if path.is_file() else None}
+    if m1 and not declared:
+        raise _handoff_brief_error("M1_DAILY_BRIEF_NOT_DECLARED")
+    if len(set(declared)) != 1:
+        raise _handoff_brief_error("DAILY_BRIEF_DECLARED_IDENTITY_CONFLICT")
+    if not path.is_file():
+        raise _handoff_brief_error(("M1_" if m1 else "") + "DAILY_BRIEF_RETAINED_FILE_MISSING")
+    try:
+        wrapper = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        raise _handoff_brief_error("DAILY_BRIEF_UNREADABLE") from None
+    brief = wrapper.get("daily_integrated_decision_brief") if isinstance(wrapper, Mapping) else None
+    if not isinstance(brief, Mapping):
+        brief = wrapper if isinstance(wrapper, Mapping) else None
+    if not isinstance(brief, Mapping):
+        raise _handoff_brief_error("DAILY_BRIEF_MALFORMED")
+    if brief.get("session") != session or (isinstance(wrapper, Mapping) and wrapper.get("session") not in (None, session)):
+        raise _handoff_brief_error("DAILY_BRIEF_SESSION_MISMATCH")
+    if brief.get("artifact_identity") != declared[0]:
+        raise _handoff_brief_error("DAILY_BRIEF_IDENTITY_MISMATCH")
+    if not m1:
+        return {"status": "DECLARED_BRIEF_VERIFIED", "m1": False, "brief_path": path,
+                "brief_identity": declared[0]}
+
+    index = brief.get("decision_surface_index")
+    if not isinstance(index, Mapping) or not isinstance(index.get("rows"), list):
+        raise _handoff_brief_error("M1_DECISION_SURFACE_INDEX_MISSING")
+    rows = index["rows"]
+    canonical = coverage.get("universe_denominator")
+    if not isinstance(canonical, int) or isinstance(canonical, bool) or canonical <= 0:
+        raise _handoff_brief_error("M1_CANONICAL_DENOMINATOR_UNAVAILABLE")
+    if index.get("denominator") != canonical or len(rows) != canonical:
+        raise _handoff_brief_error(f"M1_DECISION_SURFACE_INDEX_DENOMINATOR_MISMATCH:index={index.get('denominator')}"
+                                   f":rows={len(rows)}:canonical={canonical}")
+    if index.get("source_integrated_investment_decision_product_identity") != overlay.get("integrated_investment_decision_product_identity"):
+        raise _handoff_brief_error("M1_DECISION_SURFACE_INDEX_SOURCE_IDENTITY_MISMATCH")
+    seen: set[str] = set()
+    for row in rows:
+        if not isinstance(row, Mapping) or not all(isinstance(row.get(key), str) and row.get(key)
+                                                   for key in ("ticker", "research_action_posture", "evidence_currency")):
+            raise _handoff_brief_error("M1_DECISION_SURFACE_INDEX_ROW_MALFORMED")
+        if row["ticker"] in seen:
+            raise _handoff_brief_error("M1_DECISION_SURFACE_INDEX_DUPLICATE_TICKER:" + row["ticker"])
+        seen.add(row["ticker"])
+        if row["evidence_currency"] == "NO_CURRENT_EVIDENCE" and row["research_action_posture"] == "WAIT_FOR_CONFIRMATION":
+            raise _handoff_brief_error("M1_NO_CURRENT_EVIDENCE_WAIT_PRESENT:" + row["ticker"])
+    return {"status": "M1_BRIEF_AND_INDEX_VERIFIED", "m1": True, "brief_path": path,
+            "brief_identity": declared[0], "decision_surface_index_denominator": canonical}
+
+
 def publish_ai_handoff(root: Path, handoff_repo: Path, completion: Mapping[str, Any]) -> dict[str, Any]:
     from ai_handoff_publication import publish, verify_remote_publication
     from post_handoff_presentation_attestation import read_attestation
@@ -420,9 +541,12 @@ def publish_ai_handoff(root: Path, handoff_repo: Path, completion: Mapping[str, 
     needed = ("ai_research_session_bundle.json", "daily_opportunity_decision_queue_artifact.json", "ai_research_bundle_manifest.json")
     if any(not (source / name).is_file() for name in needed):
         raise OwnerDailyError("AI handoff build", "AI_HANDOFF_REQUIRED_FILE_MISSING")
-    daily_brief = source / "daily_integrated_decision_brief_artifact.json"
     previous = None
     session = str(completion["session"])
+    # A declared (and, for M1, index-bearing) Brief is required and verified before publication;
+    # only a genuine pre-M1 operation that never declared one publishes without it.
+    brief_check = verify_retained_daily_brief_for_handoff(source, session)
+    daily_brief = brief_check["brief_path"]
     # Additive only -- see CANONICAL_DAILY_OWNER_PUBLICATION_RESUME_AND_PRESENTATION_JOIN_V1
     # section 3. The dedicated attestation artifact (never the sealed Producer operation
     # directory `source` itself) is the sole input; a missing attestation (older session,
@@ -430,10 +554,12 @@ def publish_ai_handoff(root: Path, handoff_repo: Path, completion: Mapping[str, 
     presentation_attestation = read_attestation(root, session)
     published = publish(handoff_repo, source, session,
                         producer_checkpoint=_git(root, "rev-parse", "HEAD"), push=True,
-                        daily_integrated_decision_brief=daily_brief if daily_brief.is_file() else None,
+                        daily_integrated_decision_brief=daily_brief,
                         previous=previous,
                         post_handoff_presentation=presentation_attestation)
-    return {"publication": published, "remote": verify_remote_publication(handoff_repo, published)}
+    return {"publication": published, "remote": verify_remote_publication(handoff_repo, published),
+            "daily_brief_check": {key: (str(value) if isinstance(value, Path) else value)
+                                  for key, value in brief_check.items()}}
 
 
 def materialize_action_center(root: Path, session: str) -> dict[str, Any]:
@@ -789,6 +915,9 @@ def run_workflow(*, root: Path = ROOT, runtime_root: Path = DEFAULT_RUNTIME,
         # passes completed_session=None and keeps the strict clean-checkout contract.
         producer = preflight_repository(root, expected_name="stock-core-private", expected_remote_fragment="stock-core-private",
                                         completed_session=replay_completed_session, runtime_root=runtime_root)
+        # The Consumer checkout whose code Daily and the release path execute is governed before
+        # any analytical work too (fresh Daily and replay/resume alike).
+        consumer_preflight = preflight_consumer_repository(consumer_root_for(root), producer_root=root)
         # The canonical Dashboard checkout must be publishable before analytical work starts:
         # a stale-but-clean checkout is fast-forwarded here, a dirty/ahead/diverged one stops
         # Daily now instead of failing Dashboard publication after the whole Daily.
@@ -830,7 +959,7 @@ def run_workflow(*, root: Path = ROOT, runtime_root: Path = DEFAULT_RUNTIME,
                 "reason": "PRESENTATION_UNKNOWN_CANNOT_COMPLETE", "presentation_state": presentation_state,
             })
             return {"status": "BLOCKED", "session": completion["session"], "daily_status": daily_status,
-                    "producer_preflight": producer, "dashboard_preflight": dashboard_preflight, "producer_state": producer_state,
+                    "producer_preflight": producer, "dashboard_preflight": dashboard_preflight, "consumer_preflight": consumer_preflight, "producer_state": producer_state,
                     "presentation_state": presentation_state, "reason": "PRESENTATION_UNKNOWN_CANNOT_COMPLETE",
                     "hint": "The dedicated post-handoff presentation attestation for this session is missing or "
                             "does not yet prove BOUND/LEGITIMATE_UNAVAILABLE. Publication was refused before it "
@@ -885,7 +1014,7 @@ def run_workflow(*, root: Path = ROOT, runtime_root: Path = DEFAULT_RUNTIME,
                 "dashboard_failed": dashboard_failed, "action_center_status": action_center["status"],
             })
             return {"status": "PARTIAL", "session": completion["session"], "daily_status": daily_status,
-                    "producer_preflight": producer, "dashboard_preflight": dashboard_preflight, "producer_state": producer_state,
+                    "producer_preflight": producer, "dashboard_preflight": dashboard_preflight, "consumer_preflight": consumer_preflight, "producer_state": producer_state,
                     "dashboard": dashboard, "ai_handoff": handoff, "action_center": action_center,
                     "journal_run_id": run_id}
         action_center["view_open"] = open_action_center_view(str(action_center["view_path"]))
@@ -916,6 +1045,7 @@ def run_workflow(*, root: Path = ROOT, runtime_root: Path = DEFAULT_RUNTIME,
             "daily_producer_operation_identity": record.get("daily_producer_operation_identity"),
             "t0_snapshot": _t0_snapshot_attestation(root, completion),
             "producer_state_retained": producer_state.get("status"),
+            "consumer_preflight": {"head": consumer_preflight.get("head"), "status": consumer_preflight.get("status")},
             "presentation_bound_state": presentation_state,
             "post_handoff_presentation_projection": {
                 "status": presentation_projection.get("status"),
@@ -933,7 +1063,7 @@ def run_workflow(*, root: Path = ROOT, runtime_root: Path = DEFAULT_RUNTIME,
             "action_center": {"session": session, "status": action_center.get("status"), "identity": action_center.get("identity")},
         })
         return {"status": "PASS", "session": completion["session"], "daily_status": daily_status,
-                "producer_preflight": producer, "dashboard_preflight": dashboard_preflight, "producer_state": producer_state,
+                "producer_preflight": producer, "dashboard_preflight": dashboard_preflight, "consumer_preflight": consumer_preflight, "producer_state": producer_state,
                 "dashboard": dashboard, "ai_handoff": handoff, "action_center": action_center,
                 "journal_run_id": run_id}
     except BaseException as exc:

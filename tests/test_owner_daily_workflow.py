@@ -1507,6 +1507,9 @@ def _replay_preflight(root: Path, runtime: Path, session: str | None = SESSION) 
 
 
 def _stub_downstream_publication(monkeypatch) -> None:
+    # These tests exercise the real Producer preflight's pending-registry path; the sibling
+    # Consumer checkout gate has its own real-git tests (test_pre_daily_consumer_and_m1_brief_guards).
+    monkeypatch.setattr(workflow, "preflight_consumer_repository", lambda *a, **k: {"head": "consumer", "status": "UP_TO_DATE"})
     monkeypatch.setattr(workflow, "publish_ai_handoff", lambda *a, **k: {"remote": {"remote_sha": "ai"}})
     monkeypatch.setattr(workflow, "materialize_action_center", lambda _root, session: {"status": "READY", "session": session, "json_path": "p.json", "view_path": "p.md"})
     monkeypatch.setattr(workflow, "open_action_center_view", lambda _p: {"status": "READY"})

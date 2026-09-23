@@ -68,7 +68,19 @@ def _git(root: Path, *args: str) -> tuple[int, str]:
     return result.returncode, result.stdout
 
 
-def classify_checkout_cleanliness(root: Path) -> CheckoutCleanliness:
+# PRE_DAILY_WORKSPACE_READINESS_CORRECTIVE_V1: the explicit untracked contract for the
+# ai-core-private Consumer checkout, whose code canonical Daily imports (the Consumer root is put
+# on sys.path; builders.build_ticker_context) -- deliberately NOT the Producer's data/... evidence
+# prefixes above. The only approved untracked root is `.worktrees/`, which holds git-managed
+# nested worktrees: a dot-prefixed directory is not an importable package and is never on the
+# import path. Every other untracked file (a stray .py could shadow an import) blocks Daily. The
+# Consumer's own runtime output, exports/context_packages/, is gitignored and never listed here.
+CONSUMER_APPROVED_UNTRACKED_PREFIXES: tuple[str, ...] = (".worktrees/",)
+
+
+def classify_checkout_cleanliness(
+    root: Path, approved_prefixes: tuple[str, ...] = APPROVED_RUNTIME_EVIDENCE_PREFIXES,
+) -> CheckoutCleanliness:
     """Classify ``root``'s working tree. Never mutates, deletes, or moves anything.
 
     - Any tracked change (modified/added/deleted/renamed/staged) blocks.
@@ -93,10 +105,10 @@ def classify_checkout_cleanliness(root: Path) -> CheckoutCleanliness:
     untracked_paths = [line.strip() for line in untracked_out.splitlines() if line.strip()]
 
     approved_untracked_paths = tuple(sorted(
-        p for p in untracked_paths if p.startswith(APPROVED_RUNTIME_EVIDENCE_PREFIXES)
+        p for p in untracked_paths if p.startswith(approved_prefixes)
     ))
     unsafe_untracked_paths = tuple(sorted(
-        p for p in untracked_paths if not p.startswith(APPROVED_RUNTIME_EVIDENCE_PREFIXES)
+        p for p in untracked_paths if not p.startswith(approved_prefixes)
     ))
 
     if tracked_dirty_paths:
