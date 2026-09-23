@@ -138,6 +138,42 @@ def test_resumable_state_resume_when_intended_session_not_yet_known(tmp_path):
     assert result["resolved_session"] == SESSION
 
 
+def test_advance_persists_resolved_session_on_a_same_stage_re_advance(tmp_path):
+    """Reproduces the exact 2026-09-23 live-Daily incident: a fresh acquisition first marks
+    SESSION_RESOLVED reached with NO resolved_session yet (the intended-session estimate is not
+    authoritative -- see tools/run_owner_daily.run_workflow's own docstring), then, once Daily
+    Producer's own gate confirms the exact session, calls advance() a SECOND time for the SAME
+    stage with resolved_session now supplied. Both calls have `target_index == current_index`
+    (SAME stage), which previously hit the early-return branch and silently skipped the write
+    because it compared the just-mutated in-memory `resolved_session` to itself -- always equal.
+    A hard kill any time after this (very common: the owner's Daily window can close mid-
+    publication) then left a durable journal that looked exactly like a bare `SESSION_RESOLVED`-
+    only run: `_auto_resumable_session` requires a truthy `resolved_session` and would return
+    None, so the NEXT ordinary invocation could not auto-resume publication for an analytically
+    already-`LOCAL_COMPLETE` session -- it would instead start a brand new Daily and re-run the
+    analytical kernel, exactly the outcome `CANONICAL_DAILY_OWNER_PUBLICATION_RESUME_AND_
+    PRESENTATION_JOIN_V1` section 2 documents as the intended, NOT the actual, behavior."""
+    entry = journal.start_run(tmp_path, intended_session=SESSION)
+    journal.advance(tmp_path, entry["run_id"], journal.SESSION_RESOLVED)
+    stage_only = journal.read_journal(tmp_path)
+    assert stage_only["stage"] == journal.SESSION_RESOLVED
+    assert stage_only["resolved_session"] is None
+
+    confirmed = journal.advance(tmp_path, entry["run_id"], journal.SESSION_RESOLVED, resolved_session=SESSION)
+    assert confirmed["resolved_session"] == SESSION
+    on_disk = journal.read_journal(tmp_path)
+    assert on_disk["resolved_session"] == SESSION
+    # Same stage as the prior advance() call, so no THIRD stage_history entry is appended --
+    # only STARTED (from start_run) and SESSION_RESOLVED (the first advance) exist; the second
+    # advance() call fills in the confirmed identity without moving or duplicating the stage.
+    assert on_disk["stage"] == journal.SESSION_RESOLVED
+    assert len(on_disk["stage_history"]) == 2
+
+    result = journal.resumable_state(tmp_path, intended_session=SESSION)
+    assert result["action"] == "RESUME"
+    assert result["resolved_session"] == SESSION
+
+
 def test_resumable_state_already_complete(tmp_path):
     entry = journal.start_run(tmp_path, intended_session=SESSION)
     journal.advance(tmp_path, entry["run_id"], journal.LOCAL_COMPLETE, resolved_session=SESSION)

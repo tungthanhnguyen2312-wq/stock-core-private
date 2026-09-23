@@ -129,6 +129,14 @@ def advance(
         return current
     if stage not in STAGE_ORDER:
         raise OwnerDailyJournalError(f"JOURNAL_UNKNOWN_STAGE:{stage}")
+    # Captured BEFORE the mutation below, so the same-stage early return can tell whether
+    # `resolved_session` is genuinely NEW information (must be persisted) rather than comparing
+    # the just-mutated field to itself, which is always equal and previously made this branch a
+    # silent no-write no-op -- see the regression test for the exact failure this caused:
+    # a `SESSION_RESOLVED`-only journal calling advance(SESSION_RESOLVED, resolved_session=...)
+    # a second time (the documented "filled in once that confirmation exists" design) never
+    # durably recorded the session, so `_auto_resumable_session` could never find it resumable.
+    previously_recorded_resolved_session = current.get("resolved_session")
     if resolved_session is not None:
         if current.get("resolved_session") not in (None, resolved_session):
             raise OwnerDailyJournalError("JOURNAL_SESSION_IDENTITY_MISMATCH")
@@ -136,7 +144,7 @@ def advance(
     current_index = STAGE_ORDER.index(current["stage"]) if current.get("stage") in STAGE_ORDER else -1
     target_index = STAGE_ORDER.index(stage)
     if target_index <= current_index:
-        if resolved_session is not None and current.get("resolved_session") != resolved_session:
+        if resolved_session is not None and previously_recorded_resolved_session != resolved_session:
             _atomic_write(journal_path(root), current)
         return current
     current["stage"] = stage
