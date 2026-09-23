@@ -1,5 +1,44 @@
 # Stock Lookup — Operational State
 
+**Owner Daily crash-recovery promotion and roadmap sync V1 (2026-09-23):**
+Roadmap execution state synchronized after the 2026-09-23 Gate 0 closeout. No Daily, replay,
+acquisition, or analytical run was performed by this sync.
+
+1. **`CURRENT_FOREIGN_FLOW_DAILY_ACTIVATION_V1 = COMPLETE / LIVE_ACCEPTED_2026_09_23 /
+   VALUE_ONLY_NON_ACTIONABLE_AUTHORITY_UNCHANGED`** (implementation `c219a88`). The real
+   2026-09-23 normal Daily (retained at `97475bf`) ran the current foreign-flow observer in the
+   normal path: 11/11 COMPLETE, 0 failed, 0 conflicts; Flow-Price COLLECTED from the exact
+   retained current-session VALUE (11 evaluable); presentation lineage verified against the
+   sealed Producer Workspace; failure isolation and persistable-Daily semantics intact; recovery
+   did not rerun the analytical kernel. No liquidity, sizing, execution, recommendation, PIT, or
+   RAW_AS_TRADED promotion.
+
+2. **2026-09-23 Owner Daily / Dashboard Gate 0 = ACCEPTED.** The first owner run was PARTIAL
+   only on `DASHBOARD_HOME_SUMMARY_SOURCE_SCREENER_IDENTITY_MISMATCH`: the post-handoff restage
+   replaced the runtime Screener but kept the sealed Home summary. Corrective
+   `DASHBOARD_PRESENTATION_RESTAGE_HOME_SUMMARY_COHERENCE_V1` (`46adbc0`) re-derives the Home
+   summary from the exact restaged Screener; the publisher guard is unchanged. Replay
+   `--replay-completed-session 2026-09-23` on `46adbc0`: Dashboard `60afab5c`, session
+   2026-09-23, `PUBLISHED`, public-byte identity `PASS`, remote/public
+   `build_info.market_session` and `investment_workspace.source_session` = 2026-09-23, Home
+   summary source == served restaged Screener (`75d5cc51...`); AI handoff
+   `ALREADY_PUBLISHED_VERIFIED`; Action Center `READY`; Producer state `NO_CHANGE`; owner result
+   `PASS`; journal `COMPLETE`; analytical kernel rerun NO.
+
+3. **Owner Daily crash-recovery corrective = IMPLEMENTATION_COMPLETE / TEST_VALIDATED /
+   NEXT_ORDINARY_DAILY_OBSERVATION_PENDING** (`c7216d3`; continuation of
+   `CANONICAL_DAILY_OWNER_PUBLICATION_RESUME_AND_PRESENTATION_JOIN_V1`). Same-stage
+   `resolved_session` is durable; explicit replay / verified auto-resume may carry the governed
+   Daily registry as the sole pending in-place modification only with no other tracked diff, no
+   unsafe untracked path, HEAD == `origin/main`, and exact-session `verify_daily_completion()`
+   (committed only by `commit_daily_state()`); fresh Daily stays strict; remote divergence fails
+   closed; `--result-path` inside the Producer checkout is refused
+   (`RESULT_PATH_INSIDE_PRODUCER_CHECKOUT`). `c7216d3` was not exercised by the 2026-09-23
+   replay; observing it on the next ordinary Daily is not an ACTIVE roadmap writer.
+
+4. **Next: `CURRENT_DECISION_SURFACE_CONVERGENCE_V1` = NEXT** (sole `queued_next`, not
+   started). Bounded contract in `docs/ROADMAP.md`.
+
 **Current foreign-flow Daily activation V1 (2026-09-23):**
 `CURRENT_FOREIGN_FLOW_DAILY_ACTIVATION_V1 =
 IMPLEMENTATION_COMPLETE_AWAITING_2026_09_23_LIVE_ACCEPTANCE`. Owner-directed activation of

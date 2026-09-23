@@ -1,5 +1,36 @@
 # Stock Lookup — Architecture & Roadmap
 
+**Roadmap sync after 2026-09-23 Gate 0 (2026-09-23):**
+`CURRENT_FOREIGN_FLOW_DAILY_ACTIVATION_V1` = `COMPLETE` / `LIVE_ACCEPTED_2026_09_23` (value-only,
+authority unchanged). 2026-09-23 Owner Daily / Dashboard Gate 0 accepted via completed-session
+replay on `46adbc0` (Dashboard `60afab5c`, `PUBLISHED`, public-byte `PASS`). Owner Daily
+crash-recovery corrective `c7216d3` = implementation complete / test validated; next ordinary
+Daily observation pending, not an ACTIVE writer. See `docs/STATE.md` and `docs/DECISIONS.md`.
+
+**Next milestone -- `CURRENT_DECISION_SURFACE_CONVERGENCE_V1` = `NEXT` (queued, not started):**
+
+- **Decision authority.** `research_action_posture` is the single cross-surface action-decision
+  authority. `research_stance` stays a secondary research-candidate/screening dimension and
+  never competes as a second action recommendation.
+- **Evidence currency.** Standardize `CURRENT_SESSION`, `LAST_TRADE_AS_OF:<YYYY-MM-DD>`, and
+  `NO_CURRENT_EVIDENCE`. `NO_CURRENT_EVIDENCE` is never rendered as analytical
+  `WAIT_FOR_CONFIRMATION`; WAIT means relevant evidence exists and a defined confirmation is
+  pending.
+- **Position context.** Keep it explicit. Without a private portfolio position, HOLD is shown
+  conditionally (`HOLD -- if currently held`); ownership is never fabricated.
+- **Opportunity priority.** Wire `OPPORTUNITY_PRIORITY` as an orthogonal inspection/ranking axis
+  that does not alter `research_action_posture` in M1 (decision = what to do; priority = what
+  to inspect first); priority stays shadow/observational for policy interaction.
+- **Convergence target.** Producer / Dashboard / AI handoff / Action Center agree on at least
+  `(ticker, research_action_posture, evidence_currency)` for the full current canonical
+  universe. Use the current canonical denominator, never a hardcoded constant; 1,683 is the
+  known 2026-09-23 acceptance baseline.
+- **Acceptance intent.** Zero conflicting action-posture authority between surfaces; zero
+  `NO_CURRENT_EVIDENCE` names rendered as analytical WAIT; `research_stance` secondary; priority
+  never mutates posture; deterministic/hermetic cross-surface contract tests.
+- **Out of scope.** Portfolio optimization, storage migration, presentation refactor, PIT
+  expansion, new source/provider work, any authority promotion.
+
 **Current foreign-flow Daily activation V1 (2026-09-23):**
 `CURRENT_FOREIGN_FLOW_DAILY_ACTIVATION_V1 =
 IMPLEMENTATION_COMPLETE_AWAITING_2026_09_23_LIVE_ACCEPTANCE`. Normal zero-flag

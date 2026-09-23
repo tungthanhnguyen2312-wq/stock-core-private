@@ -1,5 +1,25 @@
 # Decisions & Architectural Decision Records
 
+## 2026-09-23 - Owner Daily crash-recovery promotion and roadmap sync V1
+
+- **Close `CURRENT_FOREIGN_FLOW_DAILY_ACTIVATION_V1` on real evidence, authority unchanged.**
+  `COMPLETE` / `LIVE_ACCEPTED_2026_09_23` / `VALUE_ONLY_NON_ACTIONABLE_AUTHORITY_UNCHANGED`,
+  checkpoint `c219a88` (implementation); live acceptance is the retained 2026-09-23 Daily
+  (`97475bf`) whose attestation shows 11/11 COMPLETE, 0 failed, 0 conflicts and Flow-Price
+  COLLECTED on exact current-session VALUE.
+- **Record Gate 0 as accepted, and attribute it precisely.** The 2026-09-23 replay ran on
+  Producer `46adbc0` (Home-summary restage coherence corrective) and reached Dashboard
+  `60afab5c` `PUBLISHED` / public-byte `PASS`, owner `PASS`, journal `COMPLETE`, no kernel rerun.
+  It did not exercise `c7216d3`.
+- **Treat crash recovery as a continuation, not a new program.** The `a09e034` / `a89abfd` /
+  `c7216d3` commits extend `CANONICAL_DAILY_OWNER_PUBLICATION_RESUME_AND_PRESENTATION_JOIN_V1`
+  (checkpoint moved to `c7216d3`). Its next-ordinary-Daily observation is recorded as pending
+  but is not an ACTIVE writer, so it does not block analytical product work.
+- **Queue exactly one successor.** `CURRENT_DECISION_SURFACE_CONVERGENCE_V1` = `NEXT` (sole
+  `queued_next`), bounded as written in `docs/ROADMAP.md`: `research_action_posture` is the one
+  action authority, evidence currency never turns missing evidence into WAIT, HOLD is
+  conditional without a known position, and `OPPORTUNITY_PRIORITY` never mutates posture.
+
 ## 2026-09-23 - Current foreign-flow Daily activation V1
 
 `CURRENT_FOREIGN_FLOW_DAILY_ACTIVATION_V1` =
