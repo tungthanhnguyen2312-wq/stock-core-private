@@ -465,41 +465,141 @@ def _handoff_delivery_error(reason: str) -> OwnerDailyError:
                            "repaired here.")
 
 
+_DAILY_PRODUCT_FILENAME = "current_daily_decision_research_product_artifact.json"
+_BUNDLE_FILENAME = "ai_research_session_bundle.json"
+#: Integrated Decision fields the AI delivery copies verbatim (``ai_research_session_delivery.
+#: _integrated_record_for_delivery``); each delivered value must equal the canonical record's.
+_M1_CANONICAL_PROJECTED_FIELDS = ("ticker", "decision_identity", "research_action_posture",
+                                  "evidence_currency", "position_context")
+
+
+def _canonical_json(value: Any) -> str:
+    """Deterministic structural form for exact equality (never conflates True/1 or 1/1.0)."""
+    return json.dumps(value, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
+
+
+def _reject_duplicate_keys(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+    result: dict[str, Any] = {}
+    for key, value in pairs:
+        if key in result:
+            raise _handoff_delivery_error(f"M1_AI_DELIVERY_DUPLICATE_KEY:{key}")
+        result[key] = value
+    return result
+
+
+def _m1_canonical_sources(root: Path | None, source: Path, session: str, bundle: Mapping[str, Any],
+                          identity: Any) -> tuple[Mapping[str, Any], list[str], list[str]]:
+    """The canonical objects an M1 AI delivery was projected from -- never a second definition.
+
+    - Integrated Decision records: this session's retained artifact, read by the governed loader
+      the Action Center uses, bound to the delivery by its recomputed content identity.
+    - Scoped cohort and owner-focus set: the operation's sealed Daily product, bound by its
+      recomputed identity. The delivery emits one scoped context per ``detailed_research_cards``
+      ticker and one owner-focus context per ``owner_focus.tickers`` entry.
+    """
+    if root is None:
+        raise _handoff_delivery_error("M1_CANONICAL_ROOT_NOT_SUPPLIED")
+    import current_daily_decision_research_product as daily_product_contract
+    import integrated_investment_decision_product as integrated_contract
+    from portfolio_aware_decision import load_integrated_decision_artifact
+    try:
+        integrated = load_integrated_decision_artifact(Path(root), session)
+    except (OSError, json.JSONDecodeError):
+        raise _handoff_delivery_error("M1_CANONICAL_INTEGRATED_DECISION_UNAVAILABLE") from None
+    records = integrated.get("records") if isinstance(integrated, Mapping) else None
+    if (not isinstance(records, Mapping) or integrated.get("session") != session
+            or integrated.get("artifact_identity") != identity
+            or integrated_contract.content_identity(integrated)["artifact_identity"] != identity):
+        raise _handoff_delivery_error("M1_CANONICAL_INTEGRATED_DECISION_IDENTITY_MISMATCH")
+    try:
+        product = json.loads((source / _DAILY_PRODUCT_FILENAME).read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        raise _handoff_delivery_error("M1_CANONICAL_DAILY_PRODUCT_UNAVAILABLE") from None
+    if (not isinstance(product, Mapping) or product.get("artifact_identity") != bundle.get("product_identity")
+            or daily_product_contract.content_identity(product)["artifact_identity"] != product.get("artifact_identity")):
+        raise _handoff_delivery_error("M1_CANONICAL_DAILY_PRODUCT_IDENTITY_MISMATCH")
+    scoped = product.get("detailed_research_cards")
+    owner_focus = product.get("owner_focus")
+    owner_focus = owner_focus.get("tickers") if isinstance(owner_focus, Mapping) else None
+    if (not isinstance(scoped, Mapping) or not isinstance(owner_focus, list)
+            or not all(isinstance(ticker, str) and ticker for ticker in owner_focus)
+            or len(set(owner_focus)) != len(owner_focus)):
+        raise _handoff_delivery_error("M1_CANONICAL_DELIVERY_SCOPE_MALFORMED")
+    return records, sorted(scoped), list(owner_focus)
+
+
 def _verify_m1_integrated_projection(label: str, ticker: Any, delivered: Any,
-                                     index_rows: Mapping[str, Mapping[str, Any]], identity: Any) -> None:
+                                     index_rows: Mapping[str, Mapping[str, Any]],
+                                     canonical: Mapping[str, Any], identity: Any) -> None:
     """M1_LIVE_ACCEPTANCE_CORRECTIVE_V1: one delivered ``integrated_decision_v1`` must be the
-    exact decision-surface index row it projects -- same ticker, posture and evidence currency,
-    bound to the same Integrated Decision, with the Integrated Decision's own position context."""
-    expected = index_rows.get(ticker) if isinstance(ticker, str) else None
-    if expected is None:
+    exact projection of its canonical Integrated Decision record -- bound to the same Integrated
+    Decision, with the Brief index's ticker, posture and evidence currency, and every projected
+    field (``position_context`` included) structurally equal to the canonical record. Nothing is
+    normalized or inferred."""
+    index_row = index_rows.get(ticker) if isinstance(ticker, str) else None
+    record = canonical.get(ticker) if isinstance(ticker, str) else None
+    if index_row is None or not isinstance(record, Mapping):
         raise _handoff_delivery_error(f"M1_AI_DELIVERY_TICKER_NOT_IN_DECISION_SURFACE_INDEX:{label}:{ticker}")
     if not isinstance(delivered, Mapping):
         raise _handoff_delivery_error(f"M1_AI_DELIVERY_INTEGRATED_DECISION_MISSING:{label}:{ticker}")
     if delivered.get("integrated_investment_decision_product_identity") != identity:
         raise _handoff_delivery_error(f"M1_AI_DELIVERY_INTEGRATED_DECISION_IDENTITY_MISMATCH:{label}:{ticker}")
     for key in ("ticker", "research_action_posture", "evidence_currency"):
-        if delivered.get(key) != expected.get(key):
+        if delivered.get(key) != index_row.get(key):
             raise _handoff_delivery_error(f"M1_AI_DELIVERY_DECISION_SURFACE_MISMATCH:{label}:{ticker}:{key}")
     if not isinstance(delivered.get("position_context"), Mapping):
         raise _handoff_delivery_error(f"M1_AI_DELIVERY_POSITION_CONTEXT_MISSING:{label}:{ticker}")
+    for key in _M1_CANONICAL_PROJECTED_FIELDS:
+        if _canonical_json(delivered.get(key)) != _canonical_json(record.get(key)):
+            raise _handoff_delivery_error(f"M1_AI_DELIVERY_CANONICAL_IID_MISMATCH:{label}:{ticker}:{key}")
 
 
-def _verify_m1_ai_delivery(source: Path, bundle: Mapping[str, Any], index_rows: Mapping[str, Mapping[str, Any]],
-                           identity: Any) -> dict[str, int]:
+def _verify_exact_scope(label: str, delivered: list[Any], expected: list[str]) -> None:
+    """A delivered context set must be exactly the canonical one: nothing missing, extra or repeated."""
+    duplicates = sorted({str(ticker) for ticker in delivered if delivered.count(ticker) > 1})
+    if duplicates:
+        raise _handoff_delivery_error(f"M1_AI_DELIVERY_{label}_DUPLICATE:{','.join(duplicates)}")
+    missing = sorted(set(expected) - set(delivered))
+    extra = sorted(str(ticker) for ticker in set(delivered) - set(expected))
+    if missing or extra:
+        raise _handoff_delivery_error(f"M1_AI_DELIVERY_{label}_SET_MISMATCH:expected={len(expected)}"
+                                      f":actual={len(delivered)}:missing={','.join(missing)}:extra={','.join(extra)}")
+
+
+def _verify_m1_ai_delivery(root: Path | None, source: Path, session: str,
+                           index_rows: Mapping[str, Mapping[str, Any]], identity: Any) -> dict[str, int]:
     """Every AI-delivered Integrated Decision surface of an M1 operation -- scoped contexts,
-    owner-focus contexts, and the full-universe companion (exactly one row per index ticker) --
-    must equal the Brief's decision-surface index. Read-only; nothing is rebuilt."""
+    owner-focus contexts, and the full-universe companion -- must be exactly the canonical set,
+    each entry the exact projection of its canonical Integrated Decision record. Read-only;
+    nothing is rebuilt or repaired."""
+    try:
+        # Re-read strictly: a repeated scoped key would otherwise collapse silently on load.
+        bundle = json.loads((source / _BUNDLE_FILENAME).read_text(encoding="utf-8"),
+                            object_pairs_hook=_reject_duplicate_keys)
+    except (OSError, json.JSONDecodeError):
+        raise _handoff_delivery_error("M1_AI_DELIVERY_BUNDLE_UNREADABLE") from None
+    canonical, expected_scoped, expected_owner_focus = _m1_canonical_sources(root, source, session, bundle, identity)
+    if set(canonical) != set(index_rows):
+        raise _handoff_delivery_error("M1_DECISION_SURFACE_INDEX_DIVERGES_FROM_CANONICAL_IID:ticker_set")
+    for ticker, row in index_rows.items():
+        record = canonical[ticker]
+        if not isinstance(record, Mapping) or any(
+                record.get(key) != row.get(key) for key in ("ticker", "research_action_posture", "evidence_currency")):
+            raise _handoff_delivery_error(f"M1_DECISION_SURFACE_INDEX_DIVERGES_FROM_CANONICAL_IID:{ticker}")
     cards = bundle.get("ticker_research_contexts")
     if not isinstance(cards, Mapping):
         raise _handoff_delivery_error("M1_AI_DELIVERY_TICKER_CONTEXTS_MISSING")
+    _verify_exact_scope("SCOPED", list(cards), expected_scoped)
     for ticker, card in sorted(cards.items()):
         delivered = card.get("integrated_decision_v1") if isinstance(card, Mapping) else None
-        _verify_m1_integrated_projection("ticker_research_contexts", ticker, delivered, index_rows, identity)
-    owner_focus = bundle.get("owner_focus_research_contexts") or []
+        _verify_m1_integrated_projection("ticker_research_contexts", ticker, delivered, index_rows, canonical, identity)
+    owner_focus = bundle.get("owner_focus_research_contexts")
+    if not isinstance(owner_focus, list) or not all(isinstance(row, Mapping) for row in owner_focus):
+        raise _handoff_delivery_error("M1_AI_DELIVERY_OWNER_FOCUS_CONTEXTS_MALFORMED")
+    _verify_exact_scope("OWNER_FOCUS", [row.get("ticker") for row in owner_focus], expected_owner_focus)
     for row in owner_focus:
-        row = row if isinstance(row, Mapping) else {}
         _verify_m1_integrated_projection("owner_focus_research_contexts", row.get("ticker"),
-                                         row.get("integrated_decision_v1"), index_rows, identity)
+                                         row.get("integrated_decision_v1"), index_rows, canonical, identity)
     path = source / _FULL_UNIVERSE_FILENAME
     if not path.is_file():
         raise _handoff_delivery_error("M1_AI_FULL_UNIVERSE_COMPANION_MISSING")
@@ -515,7 +615,7 @@ def _verify_m1_ai_delivery(source: Path, bundle: Mapping[str, Any], index_rows: 
                 if ticker in seen:
                     raise _handoff_delivery_error(f"M1_AI_FULL_UNIVERSE_DUPLICATE_TICKER:{ticker}")
                 _verify_m1_integrated_projection("full_universe", ticker, row.get("integrated_decision_v1"),
-                                                 index_rows, identity)
+                                                 index_rows, canonical, identity)
                 seen.add(ticker)
     except (OSError, json.JSONDecodeError):
         raise _handoff_delivery_error("M1_AI_FULL_UNIVERSE_COMPANION_UNREADABLE") from None
@@ -525,7 +625,8 @@ def _verify_m1_ai_delivery(source: Path, bundle: Mapping[str, Any], index_rows: 
             "full_universe_rows": len(seen)}
 
 
-def verify_retained_daily_brief_for_handoff(source: Path, session: str) -> dict[str, Any]:
+def verify_retained_daily_brief_for_handoff(source: Path, session: str, *,
+                                            root: Path | None = None) -> dict[str, Any]:
     """PRE_DAILY_WORKSPACE_READINESS_CORRECTIVE_V1 (Phase C): close the M1 Brief/index false-PASS.
 
     The retained operation's OWN declarations decide what is required -- never the calendar:
@@ -538,10 +639,12 @@ def verify_retained_daily_brief_for_handoff(source: Path, session: str) -> dict[
       ``universe_denominator`` == row count, every ticker exactly once, every row carrying ticker /
       research_action_posture / evidence_currency, bound to the same Integrated Decision identity,
       and zero NO_CURRENT_EVIDENCE + WAIT_FOR_CONFIRMATION rows;
-    - for the same M1 operation, every AI-delivered ``integrated_decision_v1`` (scoped contexts,
-      owner-focus contexts, and the full-universe companion, exactly one row per index ticker)
-      must equal its index row and carry the Integrated Decision's position context
-      (M1_LIVE_ACCEPTANCE_CORRECTIVE_V1);
+    - for the same M1 operation, the scoped contexts, owner-focus contexts and full-universe
+      companion must be exactly the canonical sets (the sealed Daily product's cards and owner
+      focus; one row per index ticker), and every delivered ``integrated_decision_v1`` must equal
+      its index row and be the exact projection of the bound canonical Integrated Decision record,
+      ``position_context`` included (M1_LIVE_ACCEPTANCE_CORRECTIVE_V1). ``root`` locates that
+      retained record; an M1 operation without it is refused;
     - a genuine pre-M1 operation that declares no Brief keeps the legacy behavior (no Brief file).
     Read-only; never builds or repairs a Brief. research_stance plays no role.
     """
@@ -604,7 +707,7 @@ def verify_retained_daily_brief_for_handoff(source: Path, session: str) -> dict[
         seen.add(row["ticker"])
         if row["evidence_currency"] == "NO_CURRENT_EVIDENCE" and row["research_action_posture"] == "WAIT_FOR_CONFIRMATION":
             raise _handoff_brief_error("M1_NO_CURRENT_EVIDENCE_WAIT_PRESENT:" + row["ticker"])
-    ai_delivery = _verify_m1_ai_delivery(source, bundle, {row["ticker"]: row for row in rows},
+    ai_delivery = _verify_m1_ai_delivery(root, source, session, {row["ticker"]: row for row in rows},
                                          overlay.get("integrated_investment_decision_product_identity"))
     return {"status": "M1_BRIEF_AND_INDEX_VERIFIED", "m1": True, "brief_path": path,
             "brief_identity": declared[0], "decision_surface_index_denominator": canonical,
@@ -623,7 +726,7 @@ def publish_ai_handoff(root: Path, handoff_repo: Path, completion: Mapping[str, 
     session = str(completion["session"])
     # A declared (and, for M1, index-bearing) Brief is required and verified before publication;
     # only a genuine pre-M1 operation that never declared one publishes without it.
-    brief_check = verify_retained_daily_brief_for_handoff(source, session)
+    brief_check = verify_retained_daily_brief_for_handoff(source, session, root=root)
     daily_brief = brief_check["brief_path"]
     # Additive only -- see CANONICAL_DAILY_OWNER_PUBLICATION_RESUME_AND_PRESENTATION_JOIN_V1
     # section 3. The dedicated attestation artifact (never the sealed Producer operation
