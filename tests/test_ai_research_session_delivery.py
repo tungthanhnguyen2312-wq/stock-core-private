@@ -16,7 +16,15 @@ def _integrated_delivery_fixture(*, session="2026-08-21", identity="integrated_i
         "coverage": {"universe_denominator": 1, "residual": 0},
         "records": {
             "AAA": {
+                "ticker": "AAA",
+                "as_of_session": session,
+                "decision_identity": "decision:AAA:0001",
                 "research_action_posture": "INITIATE_ON_BREAKOUT",
+                "evidence_currency": "CURRENT_SESSION",
+                "evidence_currency_gate": {"applied": False, "rule": "NO_CURRENT_EVIDENCE_NEVER_WAIT_FOR_CONFIRMATION"},
+                "evidence_currency_lineage": {"disposition": "SAME_SESSION_TECHNICAL_COVERED", "feature_as_of_session": session},
+                "position_context": {"position_state": "UNKNOWN_POSITION_NOT_SUPPLIED", "status": "NOT_SUPPLIED"},
+                "opportunity_priority": {"status": "AVAILABLE", "research_priority_tier": "MONITOR", "authority": "INSPECTION_ORDER_ONLY_NOT_AN_ACTION_POSTURE"},
                 "tactical_phase": "BREAKOUT_CONFIRMED",
                 "trigger": {"trigger_type": "BREAKOUT", "trigger_level": 42.5, "trigger_state": "TRIGGERED", "distance_to_trigger_pct": 0.0},
                 "invalidation": {"invalidation_level": 40.0, "invalidation_method": "CLOSE_BELOW_SUPPORT", "distance_to_invalidation_pct": 0.06},
@@ -334,3 +342,100 @@ def test_no_alphabetical_sampling_and_entry_action_are_tactical_labels_not_recom
     blob = json.dumps(primary)
     assert "target_price" not in blob
     assert primary["authority_boundary"].get("recommendation") != "BUY"
+
+
+# ---------------------------------------------------------------- M1_LIVE_ACCEPTANCE_CORRECTIVE_V1
+# The retained 2026-09-24 delivery projected research_action_posture but dropped evidence_currency
+# and position_context from every Integrated Decision overlay (103 scoped + 1,683 full-universe
+# rows), and never attached the overlay to the owner-focus contexts.
+
+M1_IID_ID = "integrated_investment_decision_product/v1:m1"
+_CURRENCIES = ("CURRENT_SESSION", "LAST_TRADE_AS_OF:2026-08-25", "NO_CURRENT_EVIDENCE")
+_POSTURES = ("WAIT_FOR_CONFIRMATION", "AVOID", "INSUFFICIENT_CURRENT_RESEARCH")
+
+
+def _m1_iid(tickers, *, session="2026-08-26"):
+    records = {}
+    for index, ticker in enumerate(sorted(tickers)):
+        records[ticker] = {
+            "ticker": ticker, "as_of_session": session, "decision_identity": f"decision:{ticker}:{index:04d}",
+            "research_action_posture": _POSTURES[index % 3], "evidence_currency": _CURRENCIES[index % 3],
+            "evidence_currency_gate": {"applied": index % 3 == 2, "rule": "NO_CURRENT_EVIDENCE_NEVER_WAIT_FOR_CONFIRMATION"},
+            "evidence_currency_lineage": {"method": "same_session_technical_coverage_disposition/v1"},
+            "position_context": {"position_state": "UNKNOWN_POSITION_NOT_SUPPLIED", "status": "NOT_SUPPLIED"},
+            "opportunity_priority": {"status": "AVAILABLE", "research_priority_tier": "MONITOR"},
+            "tactical_phase": "BASE", "trigger": None, "invalidation": None,
+        }
+    return {"contract_version": "integrated_investment_decision_product/v1", "session": session,
+            "artifact_identity": M1_IID_ID, "coverage": {"universe_denominator": len(records)}, "records": records}
+
+
+def _m1_delivery(*, missing_owner_focus=()):
+    inputs = _scoped_inputs()
+    universe = set(inputs["descriptive"]["records"])
+    iid = _m1_iid(universe | set(OWNER_FOCUS_TICKERS))
+    inputs["integrated_investment_decision_product"] = iid
+    return iid, build_delivery(_scoped_operation(missing_owner_focus=missing_owner_focus), inputs)
+
+
+def _assert_exact_projection(delivered, record):
+    assert delivered["ticker"] == record["ticker"]
+    assert delivered["research_action_posture"] == record["research_action_posture"]
+    assert delivered["evidence_currency"] == record["evidence_currency"]
+    assert delivered["position_context"] == record["position_context"]
+    assert delivered["evidence_currency_gate"] == record["evidence_currency_gate"]
+    assert delivered["evidence_currency_lineage"] == record["evidence_currency_lineage"]
+    assert delivered["opportunity_priority"] == record["opportunity_priority"]
+    assert delivered["decision_identity"] == record["decision_identity"]
+    assert delivered["as_of_session"] == record["as_of_session"]
+    assert delivered["integrated_investment_decision_product_identity"] == M1_IID_ID
+
+
+def test_full_universe_companion_is_a_one_to_one_projection_of_the_integrated_decision():
+    iid, delivery = _m1_delivery()
+    rows = [json.loads(line) for line in delivery["full_universe"].splitlines() if line]
+    assert [row["ticker"] for row in rows] == sorted(_scoped_inputs()["descriptive"]["records"])
+    for row in rows:
+        _assert_exact_projection(row["integrated_decision_v1"], iid["records"][row["ticker"]])
+    assert sum(1 for row in rows if "evidence_currency" not in row["integrated_decision_v1"]) == 0
+    assert sum(1 for row in rows if "position_context" not in row["integrated_decision_v1"]) == 0
+    assert {(row["ticker"], row["integrated_decision_v1"]["research_action_posture"], row["integrated_decision_v1"]["evidence_currency"])
+            for row in rows} == {(t, iid["records"][t]["research_action_posture"], iid["records"][t]["evidence_currency"])
+                                 for t in _scoped_inputs()["descriptive"]["records"]}
+
+
+def test_scoped_and_owner_focus_overlays_carry_the_exact_integrated_decision_row():
+    iid, delivery = _m1_delivery(missing_owner_focus=("HPG",))
+    primary = json.loads(delivery["primary"])
+    for ticker, context in primary["ticker_research_contexts"].items():
+        _assert_exact_projection(context["integrated_decision_v1"], iid["records"][ticker])
+    owner_rows = primary["owner_focus_research_contexts"]
+    assert [row["ticker"] for row in owner_rows] == list(OWNER_FOCUS_TICKERS)
+    for row in owner_rows:
+        _assert_exact_projection(row["integrated_decision_v1"], iid["records"][row["ticker"]])
+    # An owner-focus name without a Product V2 card still gets its canonical posture; the card's own
+    # explicit absence is preserved alongside it.
+    hpg = next(row for row in owner_rows if row["ticker"] == "HPG")
+    assert hpg["status"] == ABSENT_OWNER_FOCUS_STATUS
+    assert hpg["integrated_decision_v1"]["research_action_posture"] == iid["records"]["HPG"]["research_action_posture"]
+
+
+def test_integrated_projection_never_recomputes_or_fabricates_decision_fields():
+    operation = _operation()
+    for card in operation["product"]["detailed_research_cards"].values():
+        card["research_stance"] = "ACCUMULATE"  # a contradicting legacy stance must play no role
+    integrated = _integrated_delivery_fixture()
+    record = integrated["records"]["AAA"]
+    del record["position_context"], record["evidence_currency_lineage"]
+    inputs = {"descriptive": {"records": {"AAA": {}}}, "tactical": {"records": {"AAA": {"entry_action": "BUY_ON_CONFIRMATION"}}},
+              "integrated_investment_decision_product": integrated}
+    delivery = build_delivery(operation, inputs)
+    for row in (json.loads(delivery["primary"])["ticker_research_contexts"]["AAA"]["integrated_decision_v1"],
+                json.loads(delivery["full_universe"])["integrated_decision_v1"]):
+        assert row["research_action_posture"] == "INITIATE_ON_BREAKOUT"
+        assert row["evidence_currency"] == "CURRENT_SESSION"
+        # Unknown stays unknown: an absent source field is delivered as null, never inferred.
+        assert row["position_context"] is None
+        assert row["evidence_currency_lineage"] is None
+    source = open(__import__("ai_research_session_delivery").__file__, encoding="utf-8").read()
+    assert "research_stance" not in source

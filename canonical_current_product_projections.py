@@ -238,7 +238,7 @@ def resolve_velocity_and_flow_price_inputs(root: Path, session: str) -> dict[str
 
 def materialize_current_flow_price_divergence_shadow(
     *, root: Path, session: str, velocity_artifact: Mapping[str, Any] | None,
-    flow_cohort_tickers: frozenset[str],
+    flow_cohort_tickers: frozenset[str], runtime_root_override: Path | None = None,
 ) -> dict[str, Any] | None:
     """Rebuild ``flow_price_divergence_shadow/v1`` fresh, in-process, from the current-session
     VALUE store -- never by resolving a static dated artifact file.
@@ -264,10 +264,16 @@ def materialize_current_flow_price_divergence_shadow(
 
     Returns ``None`` (never raises) when Velocity is absent/wrong-contract, or when no cohort
     ticker currently verifies -- an absent Flow-Price axis must never block the Workspace.
+
+    M1_LIVE_ACCEPTANCE_CORRECTIVE_V1: the VALUE store is runtime data, so it is read from the
+    runtime root the caller explicitly selected for this release whenever one is supplied. The
+    2026-09-24 re-join silently resolved the Producer-local store (last session 2026-09-18) while
+    the release runtime already held all 11 exact-session observations, publishing 11/11
+    ``FLOW_UNAVAILABLE``. ``runtime_root(root)`` remains only the no-override legacy default.
     """
     if not isinstance(velocity_artifact, Mapping) or velocity_artifact.get("contract_version") != velocity_flow_price_presentation_projection.SIGNAL_VELOCITY_CONTRACT_VERSION:
         return None
-    runtime = runtime_root(root)
+    runtime = Path(runtime_root_override).resolve() if runtime_root_override is not None else runtime_root(root)
     series: dict[str, Any] = {}
     for ticker in sorted(flow_cohort_tickers):
         try:
@@ -506,6 +512,7 @@ def materialize_current_investment_decision_workspace(
     current_research_scope: Mapping[str, Any] | None = None,
     root: Path | None = None,
     integrated_investment_decision_product: Mapping[str, Any] | None = None,
+    runtime_root_override: Path | None = None,
 ) -> dict[str, Any]:
     """Build the current-session Investment Decision Workspace from already-resolved inputs.
 
@@ -588,7 +595,7 @@ def materialize_current_investment_decision_workspace(
     flow_price_artifact = (
         materialize_current_flow_price_divergence_shadow(
             root=Path(root), session=session, velocity_artifact=signal_velocity_artifact,
-            flow_cohort_tickers=flow_research_cohort_tickers,
+            flow_cohort_tickers=flow_research_cohort_tickers, runtime_root_override=runtime_root_override,
         )
         if root is not None else None
     )
@@ -666,6 +673,10 @@ def materialize_and_write_current_product_projections(
     reported as ``status: SKIPPED`` with a reason code -- core Daily, the decision cockpit, and
     AI handoff must never be blocked by this optional current-product step, exactly like
     ``canonical_daily_operation.py``'s own macro-refresh step.
+
+    ``runtime_root_override`` is the release's explicitly selected runtime root; when supplied it
+    governs EVERY runtime-data read here (the exact-session screen snapshot and the foreign-flow
+    VALUE store), never a Producer-local fallback (M1_LIVE_ACCEPTANCE_CORRECTIVE_V1).
     """
     root = Path(root)
     operation_dir = Path(operation_dir)
@@ -691,6 +702,7 @@ def materialize_and_write_current_product_projections(
             requested_at=requested_at, feature_store=feature_store_artifact,
             tactical_behavior=tactical_behavior_artifact, current_research_scope=current_research_scope,
             root=root, integrated_investment_decision_product=integrated_investment_decision_product,
+            runtime_root_override=runtime_root_override,
         )
         workspace = workspace_bundle["workspace"]
         snapshot_root = Path(runtime_root_override) if runtime_root_override is not None else runtime_root(root)

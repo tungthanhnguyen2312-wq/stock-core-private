@@ -109,7 +109,14 @@ def _valuation_methods_for_delivery(record: Mapping[str, Any]) -> dict[str, Any]
     return result
 
 
-def _integrated_record_for_delivery(record: Any) -> dict[str, Any] | None:
+def _integrated_record_for_delivery(record: Any, *, integrated_identity: str | None = None) -> dict[str, Any] | None:
+    """Project one Integrated Decision record for AI delivery.
+
+    M1_LIVE_ACCEPTANCE_CORRECTIVE_V1: the decision-surface fields (ticker binding,
+    ``evidence_currency`` and its gate/lineage, ``position_context``, priority) are
+    copied verbatim from the canonical record, never recomputed here.  A field the
+    record does not carry is delivered as ``None``; it is never inferred.
+    """
     if not isinstance(record, Mapping):
         return None
     trigger = _selected_fields(record.get("trigger"), (
@@ -119,7 +126,16 @@ def _integrated_record_for_delivery(record: Any) -> dict[str, Any] | None:
         "invalidation_level", "invalidation_method", "distance_to_invalidation_pct",
     ))
     return {
+        "ticker": record.get("ticker"),
+        "decision_identity": record.get("decision_identity"),
+        "integrated_investment_decision_product_identity": integrated_identity,
+        "as_of_session": record.get("as_of_session"),
         "research_action_posture": record.get("research_action_posture"),
+        "evidence_currency": record.get("evidence_currency"),
+        "evidence_currency_gate": copy.deepcopy(record.get("evidence_currency_gate")),
+        "evidence_currency_lineage": copy.deepcopy(record.get("evidence_currency_lineage")),
+        "position_context": copy.deepcopy(record.get("position_context")),
+        "opportunity_priority": copy.deepcopy(record.get("opportunity_priority")),
         "tactical_phase": record.get("tactical_phase"),
         "trigger": trigger,
         "invalidation": invalidation,
@@ -161,7 +177,10 @@ def _integrated_overlay(session: str, integrated: Mapping[str, Any], daily_brief
             "no_position_size": True,
             "no_numeric_risk_reward": True,
         },
-        "records": {ticker: _integrated_record_for_delivery(record) for ticker, record in sorted(records.items())},
+        "records": {
+            ticker: _integrated_record_for_delivery(record, integrated_identity=integrated["artifact_identity"])
+            for ticker, record in sorted(records.items())
+        },
     }
 
 
@@ -398,7 +417,7 @@ def _analysis_scope(product: Mapping[str, Any], *, full_universe_record_count: i
     }
 
 
-def _owner_focus_contexts(product: Mapping[str, Any]) -> list[dict[str, Any]]:
+def _owner_focus_contexts(product: Mapping[str, Any], integrated_overlay: Mapping[str, Any] | None = None) -> list[dict[str, Any]]:
     cards = product.get("detailed_research_cards") or {}
     rows = []
     for ticker in owner_focus_tickers():
@@ -414,6 +433,11 @@ def _owner_focus_contexts(product: Mapping[str, Any]) -> list[dict[str, Any]]:
                 "is_actionable": False,
                 "entry_action_is_research_label_not_execution_instruction": True,
             })
+        # Owner focus is reviewed first, so it must carry the same Integrated Decision
+        # projection as every other scoped context (the record exists for the whole universe,
+        # including an owner-focus name without a Product V2 card).
+        if integrated_overlay is not None:
+            rows[-1]["integrated_decision_v1"] = copy.deepcopy((integrated_overlay.get("records") or {}).get(ticker))
     return rows
 
 
@@ -562,7 +586,7 @@ def build_delivery(operation: Mapping[str, Any], inputs: Mapping[str, Any]) -> d
         "source_freshness_matrix": copy.deepcopy(operation.get("source_freshness_matrix")),
         "financial_analysis": {"market_summary": financial_summary, "ticker_index": financial_index,
                                "source_context_identity": (financial_context or {}).get("source_context_identity")},
-        "owner_focus_research_contexts": _owner_focus_contexts(product),
+        "owner_focus_research_contexts": _owner_focus_contexts(product, integrated_overlay),
         "research_cohorts": {"watchlist": copy.deepcopy(product["watchlist"]), "owner_focus": copy.deepcopy(product.get("owner_focus") or {"tickers": list(owner_focus_tickers()), "is_portfolio_holdings": False}), "high_priority_review": copy.deepcopy(product["high_priority_full_universe_review_set"]), "deterministic_cohorts": copy.deepcopy(product["research_cohorts"]), "entry_relevant_90_count": product["aggregate_validation"]["entry_relevant_90_count"]},
         "ticker_research_contexts": {
             ticker: {**copy.deepcopy(cards[ticker]), **({"financial_analysis": _delivery_financial_context(financial_context, ticker)} if financial_context is not None else {})}

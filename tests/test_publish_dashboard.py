@@ -25,6 +25,13 @@ import publish_dashboard as pd  # noqa: E402
 from tools.publish_release import RELEASE_ALLOWLIST as TRUSTED_AI_RELEASE_ALLOWLIST  # noqa: E402
 
 
+def _cockpit_fixture(session: str, *, operation_identity: str = "daily_research_session_operation:fixture") -> dict:
+    """A minimal current_decision_cockpit_projection/v2 payload for one session."""
+    return {"schema_version": "current_decision_cockpit_projection/v2", "session": session,
+            "projection_identity": f"dashboard_decision_cockpit_projection:fixture-{session}",
+            "source": {"operation_identity": operation_identity}, "authority_boundary": {"is_actionable": False}}
+
+
 def _write_min_fixture(root: Path) -> None:
     (root / "data").mkdir(parents=True, exist_ok=True)
     (root / "assets" / "js").mkdir(parents=True, exist_ok=True)
@@ -65,6 +72,8 @@ def _write_min_fixture(root: Path) -> None:
         }) + "\n",
         encoding="utf-8",
     )
+    (root / "data" / "current_decision_cockpit.json").write_text(
+        json.dumps(_cockpit_fixture("2026-07-17")) + "\n", encoding="utf-8")
     for name in (
         "app.js", "style.css", "assets/js/value-format.js",
         "assets/js/company-panel.js", "assets/css/tailwind.generated.css",
@@ -431,6 +440,7 @@ def _write_backend_fixture(root: Path, session: str, *, live_session: str | None
         "cards": {"HPG": {"ticker": "HPG"}},
         "coverage": {"ticker_denominator": 1, "zero_silent_ticker_drops": True},
     }), encoding="utf-8")
+    (root / "data" / "current_decision_cockpit.json").write_text(json.dumps(_cockpit_fixture(session)), encoding="utf-8")
 
 
 class SessionMismatchStopsBeforeAnyWriteTests(_PublishDashboardTestBase):
@@ -518,6 +528,8 @@ class PathResolutionReadsFreshBackendTests(_PublishDashboardTestBase):
         (backend / "data").mkdir()
         shutil.copy2(self.tmp / "data" / "investment_decision_workspace.json",
                      backend / "data" / "investment_decision_workspace.json")
+        shutil.copy2(self.tmp / "data" / "current_decision_cockpit.json",
+                     backend / "data" / "current_decision_cockpit.json")
         pd.BACKEND_ROOT = backend
 
         self.assertEqual(pd.source_root("analysis_bundle.json"), pd.WEB_ROOT)
@@ -875,6 +887,78 @@ class WorkspacePublicationContractTests(_PublishDashboardTestBase):
         source.write_text(json.dumps(payload), encoding="utf-8")
         valid = pd.validate_workspace_projection(source, "2026-07-17")
         self.assertEqual(valid["artifact_identity"], "investment_decision_workspace_projection/v1:fixture")
+
+
+class CurrentDecisionCockpitPublicationTests(_PublishDashboardTestBase):
+    """M1_LIVE_ACCEPTANCE_CORRECTIVE_V1: the 2026-09-24 release published a 2026-09-15
+    data/current_decision_cockpit.json beside the 2026-09-24 Workspace, because no step of this
+    governed publisher ever restaged it. Rule: current release artifact session == release session."""
+
+    def _write_backend_cockpit(self, payload):
+        (self.backend / pd.COCKPIT_ASSET).write_text(json.dumps(payload), encoding="utf-8")
+
+    def test_dry_run_refuses_a_cockpit_from_another_session_before_any_write(self):
+        self._write_backend_cockpit(_cockpit_fixture("2026-07-10"))
+        before = self._all_files(exclude_logs=True)
+        rc = self._run(["publish_dashboard.py"])
+        self.assertEqual(rc, 1)
+        self.assertEqual(before, self._all_files(exclude_logs=True))
+
+    def test_live_refuses_a_stale_cockpit_before_any_copy_or_git_publication(self):
+        self._write_backend_cockpit(_cockpit_fixture("2026-07-10"))
+        with mock.patch.object(pd, "copy_public_artifacts") as m_copy, \
+             mock.patch.object(pd, "publish_live") as m_publish:
+            rc = self._run(["publish_dashboard.py", "--live"])
+        self.assertEqual(rc, 1)
+        m_copy.assert_not_called()
+        m_publish.assert_not_called()
+
+    def test_a_missing_or_malformed_cockpit_fails_closed(self):
+        source = self.backend / pd.COCKPIT_ASSET
+        source.unlink()
+        with self.assertRaisesRegex(ValueError, "CURRENT_DECISION_COCKPIT_NOT_PUBLISHED: missing"):
+            pd.validate_current_decision_cockpit(source, "2026-07-17")
+        for mutation, reason in (
+            ({"schema_version": "current_decision_cockpit_projection/v1"}, "unsupported schema"),
+            ({"projection_identity": ""}, "missing projection identity"),
+            ({"source": {}}, "missing operation lineage"),
+            ({"authority_boundary": {"is_actionable": True}}, "authority boundary"),
+        ):
+            self._write_backend_cockpit({**_cockpit_fixture("2026-07-17"), **mutation})
+            with self.assertRaisesRegex(ValueError, reason):
+                pd.validate_current_decision_cockpit(source, "2026-07-17")
+
+    def test_live_publish_replaces_the_served_previous_session_cockpit_and_records_its_session(self):
+        (self.tmp / pd.COCKPIT_ASSET).write_text(
+            json.dumps(_cockpit_fixture("2026-07-10", operation_identity="previous-release")), encoding="utf-8")
+        self.fake_git.status_output = " M dashboard.html\n"
+        with mock.patch.object(pd, "run_release_smoke_tests", return_value=0), \
+             mock.patch.object(pd, "publish_live", return_value=0):
+            rc = self._run(["publish_dashboard.py", "--live"])
+        self.assertEqual(rc, 0)
+        self.assertEqual((self.tmp / pd.COCKPIT_ASSET).read_bytes(), (self.backend / pd.COCKPIT_ASSET).read_bytes())
+        build_info = json.loads((self.tmp / "data" / "build_info.json").read_text(encoding="utf-8"))
+        self.assertEqual(build_info["current_decision_cockpit"]["status"], "CURRENT")
+        self.assertEqual(build_info["current_decision_cockpit"]["source_session"], build_info["market_session"])
+        self.assertEqual(build_info["current_decision_cockpit"]["operation_identity"],
+                         "daily_research_session_operation:fixture")
+
+    def test_the_cockpit_must_be_the_one_the_runtime_release_declares(self):
+        source = self.backend / pd.COCKPIT_ASSET
+        declared = {"sha256": pd.sha256(source), "projection_identity": _cockpit_fixture("2026-07-17")["projection_identity"],
+                    "session": "2026-07-17"}
+        manifest_path = self.backend / "bundle_manifest.json"
+        manifest_path.write_text(json.dumps({"canonical_runtime_release": {"lineage": {"current_decision_cockpit": declared}}}),
+                                 encoding="utf-8")
+        self.assertEqual(pd.validate_current_decision_cockpit(source, "2026-07-17")["session"], "2026-07-17")
+        manifest_path.write_text(json.dumps({"lineage": {"current_decision_cockpit": {**declared, "sha256": "0" * 64}}}),
+                                 encoding="utf-8")
+        with self.assertRaisesRegex(ValueError, "CURRENT_DECISION_COCKPIT_RELEASE_LINEAGE_MISMATCH"):
+            pd.validate_current_decision_cockpit(source, "2026-07-17")
+
+    def test_the_cockpit_is_a_required_safe_web_artifact(self):
+        self.assertIn(pd.COCKPIT_ASSET, pd.SAFE_WEB_ARTIFACTS)
+        self.assertNotIn(pd.COCKPIT_ASSET, pd.OPTIONAL_SAFE_WEB_ARTIFACTS)
 
 
 if __name__ == "__main__":

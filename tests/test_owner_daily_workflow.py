@@ -151,6 +151,7 @@ def _write_dashboard_build_info(web: Path, session: str = SESSION, *, build_id: 
     path.write_text(json.dumps({
         "market_session": session, "build_id": build_id,
         "investment_workspace": {"status": "CURRENT", "source_session": session},
+        "current_decision_cockpit": {"status": "CURRENT", "source_session": session},
     }), encoding="utf-8")
     return path
 
@@ -375,10 +376,29 @@ def test_verify_dashboard_session_ready_when_both_sessions_match(tmp_path):
     (web / "data" / "build_info.json").write_text(json.dumps({
         "market_session": SESSION, "build_id": "abc",
         "investment_workspace": {"status": "CURRENT", "source_session": SESSION},
+        "current_decision_cockpit": {"status": "CURRENT", "source_session": SESSION},
     }), encoding="utf-8")
     result = workflow.verify_dashboard_session(web, SESSION)
     assert result["status"] == "READY"
     assert result["observed_session"] == SESSION
+
+
+@pytest.mark.parametrize("cockpit", [
+    {"status": "CURRENT", "source_session": "2026-09-15"},  # the published 2026-09-24 release shape
+    None,                                                   # a release that never proved its cockpit
+])
+def test_verify_dashboard_session_requires_the_current_cockpit_session(tmp_path, cockpit):
+    """M1_LIVE_ACCEPTANCE_CORRECTIVE_V1: a release whose current Decision Cockpit belongs to
+    another session (or is unproven) is not a session-coherent Dashboard release."""
+    web = tmp_path / "web"; (web / "data").mkdir(parents=True)
+    build_info = {"market_session": SESSION, "build_id": "abc",
+                  "investment_workspace": {"status": "CURRENT", "source_session": SESSION}}
+    if cockpit is not None:
+        build_info["current_decision_cockpit"] = cockpit
+    (web / "data" / "build_info.json").write_text(json.dumps(build_info), encoding="utf-8")
+    result = workflow.verify_dashboard_session(web, SESSION)
+    assert result["status"] == "FAILED"
+    assert "build_info.current_decision_cockpit.source_session=" in result["reason"]
 
 
 def test_publish_dashboard_release_invokes_all_group_with_exact_session(monkeypatch, tmp_path):

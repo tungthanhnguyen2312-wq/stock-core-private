@@ -131,8 +131,16 @@ OPTIONAL_SAFE_WEB_ARTIFACTS = {
     HOME_SUMMARY_ASSET,
     HOME_SUMMARY_JS_ASSET,
 }
+# M1_LIVE_ACCEPTANCE_CORRECTIVE_V1: the Investment Workspace renders its market, owner-focus,
+# portfolio-risk, data-gap, verify-next and lineage panels from this Decision Cockpit, so it is a
+# REQUIRED current product: staged into BACKEND_ROOT by the canonical runtime release from the same
+# Producer run as the Workspace, and published only when it carries this release's session. The
+# 2026-09-24 release served a 2026-09-15 cockpit because nothing on this path ever restaged it.
+COCKPIT_ASSET = "data/current_decision_cockpit.json"
+COCKPIT_SCHEMA = "current_decision_cockpit_projection/v2"
 SAFE_WEB_ARTIFACTS = set(COPY_ARTIFACTS) | {
     WORKSPACE_INDEX_ASSET, "data/screener_data.js", "data/build_info.json", "data/build_info.js",
+    COCKPIT_ASSET,
 }
 # A legacy web-root artifact this publisher must actively retire (never re-create) once found --
 # see retire_legacy_workspace_monolith(). Distinct from NEVER_PUBLISH (paths that were never
@@ -493,6 +501,66 @@ def copy_dashboard_home_summary(source: Path) -> bool:
     return changed
 
 
+def _runtime_release_cockpit_lineage() -> Mapping[str, object] | None:
+    """The canonical runtime release's own lineage entry for the cockpit it staged, if declared
+    (before or after the trusted-subset manifest embeds the release under
+    ``canonical_runtime_release``)."""
+    try:
+        manifest = json.loads((BACKEND_ROOT / "bundle_manifest.json").read_text(encoding="utf-8-sig"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    if not isinstance(manifest, dict):
+        return None
+    release = manifest.get("canonical_runtime_release")
+    lineage = (release.get("lineage") if isinstance(release, dict) else None) or manifest.get("lineage")
+    entry = lineage.get("current_decision_cockpit") if isinstance(lineage, dict) else None
+    return entry if isinstance(entry, dict) else None
+
+
+def validate_current_decision_cockpit(source: Path, market_session: str) -> dict[str, object]:
+    """Fail closed unless the current Decision Cockpit belongs to THIS release session.
+
+    ``current release artifact session == release session``: a cockpit from any other session is
+    refused rather than published (or left published) under the ``current_*`` path. When the
+    runtime release declares the cockpit it staged, the bytes must be exactly those.
+    """
+    if not source.is_file():
+        raise ValueError(f"CURRENT_DECISION_COCKPIT_NOT_PUBLISHED: missing {source}")
+    try:
+        payload = json.loads(source.read_text(encoding="utf-8-sig"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise ValueError(f"CURRENT_DECISION_COCKPIT_NOT_PUBLISHED: unreadable {source}") from exc
+    if not isinstance(payload, dict) or payload.get("schema_version") != COCKPIT_SCHEMA:
+        raise ValueError("CURRENT_DECISION_COCKPIT_NOT_PUBLISHED: unsupported schema")
+    if payload.get("session") != market_session:
+        raise ValueError(
+            "CURRENT_DECISION_COCKPIT_SESSION_MISMATCH: "
+            f"cockpit={payload.get('session')} market={market_session}"
+        )
+    if not isinstance(payload.get("projection_identity"), str) or not payload["projection_identity"]:
+        raise ValueError("CURRENT_DECISION_COCKPIT_NOT_PUBLISHED: missing projection identity")
+    if not (payload.get("source") or {}).get("operation_identity"):
+        raise ValueError("CURRENT_DECISION_COCKPIT_NOT_PUBLISHED: missing operation lineage")
+    if (payload.get("authority_boundary") or {}).get("is_actionable") is not False:
+        raise ValueError("CURRENT_DECISION_COCKPIT_NOT_PUBLISHED: authority boundary is not non-actionable")
+    declared = _runtime_release_cockpit_lineage()
+    if declared is not None and (declared.get("sha256") != sha256(source)
+                                 or declared.get("projection_identity") != payload["projection_identity"]
+                                 or declared.get("session") != market_session):
+        raise ValueError("CURRENT_DECISION_COCKPIT_RELEASE_LINEAGE_MISMATCH")
+    return payload
+
+
+def copy_current_decision_cockpit(source: Path) -> bool:
+    """Copy the release's validated same-session cockpit bytes into the served checkout."""
+    target = WEB_ROOT / COCKPIT_ASSET
+    target.parent.mkdir(parents=True, exist_ok=True)
+    if target.is_file() and sha256(target) == sha256(source):
+        return False
+    atomic_copy_file(source, target, validator=validate_json_file)
+    return True
+
+
 def read_csv_rows(path: Path) -> tuple[list[dict[str, str]], list[str]]:
     if not path.exists() or path.stat().st_size == 0:
         raise ValueError(f"thiếu/rỗng: {path.name}")
@@ -636,7 +704,8 @@ def compute_published_at(existing: dict[str, object], build_id: str, live: bool,
 
 def compute_manifest(rows: list[dict[str, str]], breadth: list[dict[str, str]],
                      market_session: str, head: str, live: bool = False,
-                     workspace: Mapping[str, object] | None = None) -> tuple[dict[str, object], str]:
+                     workspace: Mapping[str, object] | None = None,
+                     cockpit: Mapping[str, object] | None = None) -> tuple[dict[str, object], str]:
     """Pure: compute the manifest dict + the screener_data.js content it references.
 
     Reads existing on-disk files (screen_snapshot.csv, market_breadth.csv, the
@@ -732,6 +801,15 @@ def compute_manifest(rows: list[dict[str, str]], breadth: list[dict[str, str]],
             "status": "CURRENT" if workspace.get("as_of_session") == market_session else "SESSION_MISMATCH",
             "source_session": workspace.get("as_of_session"),
             "artifact_identity": workspace.get("artifact_identity"),
+        }
+    if cockpit is not None:
+        # Same additive pattern as investment_workspace: Owner Daily proves the served cockpit's
+        # session against these exact bytes (M1_LIVE_ACCEPTANCE_CORRECTIVE_V1).
+        manifest["current_decision_cockpit"] = {
+            "status": "CURRENT" if cockpit.get("session") == market_session else "SESSION_MISMATCH",
+            "source_session": cockpit.get("session"),
+            "projection_identity": cockpit.get("projection_identity"),
+            "operation_identity": (cockpit.get("source") or {}).get("operation_identity"),
         }
     return manifest, screener_js_content
 
@@ -1100,8 +1178,11 @@ def main() -> int:
                 home_summary_source, market_session,
                 screener_artifact_identity=screener.get("artifact_identity") if screener else None,
             )
+        cockpit_source = BACKEND_ROOT / COCKPIT_ASSET
+        cockpit = validate_current_decision_cockpit(cockpit_source, market_session)
         copy_plan = plan_copy_artifacts()
-        manifest, screener_js_content = compute_manifest(rows, breadth, market_session, head, live=args.live, workspace=workspace)
+        manifest, screener_js_content = compute_manifest(rows, breadth, market_session, head, live=args.live,
+                                                         workspace=workspace, cockpit=cockpit)
         version_plan = plan_asset_versions(str(manifest["build_id"]))
         companion_plan = compute_current_session_companions(market_session, str(manifest["build_id"]))
         # LIVE mode validates the real post-copy state below (after copy_public_artifacts()) --
@@ -1141,6 +1222,7 @@ def main() -> int:
             log("[DRY-RUN] Dashboard Home summary: optional / not supplied")
         else:
             log(f"[DRY-RUN] Dashboard Home summary: {home_summary_source} · {home_summary['denominator']} mã · {home_summary['artifact_identity']}")
+        log(f"[DRY-RUN] Current decision cockpit: {cockpit_source} · session {cockpit['session']} · {cockpit['projection_identity']}")
         log(f"[DRY-RUN] Build id dự kiến (phiên {market_session}): {manifest['build_id']}")
         log(f"[DRY-RUN] Sẽ cập nhật asset-version trên {len(version_plan)} trang HTML: "
             f"{', '.join(version_plan) or '(không có)'}")
@@ -1173,6 +1255,8 @@ def main() -> int:
         if home_summary is not None:
             home_summary_changed = copy_dashboard_home_summary(home_summary_source)
             log(f"Dashboard Home summary: {'đã materialize' if home_summary_changed else 'không đổi'} ({home_summary['denominator']} mã).")
+        cockpit_changed = copy_current_decision_cockpit(cockpit_source)
+        log(f"Current decision cockpit: {'đã materialize' if cockpit_changed else 'không đổi'} (phiên {cockpit['session']}).")
         write_build_manifest(manifest, screener_js_content)
         update_asset_versions(str(manifest["build_id"]))
         if not companion_plan.omitted:

@@ -239,6 +239,13 @@ def _rows(n: int) -> list[dict]:
     return rows
 
 
+def _delivered(row: dict) -> dict:
+    """The M1 AI-delivery projection of one index row (ai_research_session_delivery shape)."""
+    return {"ticker": row["ticker"], "research_action_posture": row["research_action_posture"],
+            "evidence_currency": row["evidence_currency"], "integrated_investment_decision_product_identity": IDP,
+            "position_context": {"position_state": "UNKNOWN_POSITION_NOT_SUPPLIED", "status": "NOT_SUPPLIED"}}
+
+
 def _operation(tmp_path: Path, *, m1: bool = True, declare: bool = True, write_brief: bool = True,
                rows: list[dict] | None = None, denominator: int = 8, index_denominator: int | None = None,
                with_index: bool = True, brief_session: str = SESSION, brief_identity: str = BRIEF_ID) -> Path:
@@ -250,7 +257,20 @@ def _operation(tmp_path: Path, *, m1: bool = True, declare: bool = True, write_b
     overlay = {"contract_version": "integrated_decision_delivery_overlay/v1", "session": SESSION,
                "integrated_investment_decision_product_identity": IDP, "coverage": coverage,
                "daily_integrated_decision_brief_identity": BRIEF_ID if declare else None}
-    (source / "ai_research_session_bundle.json").write_text(json.dumps({"integrated_decision_overlay_v1": overlay}))
+    bundle: dict = {"integrated_decision_overlay_v1": overlay}
+    if m1:
+        # A coherent M1 AI delivery: 3 scoped cards, 2 owner-focus contexts, and one full-universe
+        # companion row per canonical index row, each the exact projection of that row.
+        delivered_rows = _rows(denominator)
+        bundle["ticker_research_contexts"] = {
+            row["ticker"]: {"ticker": row["ticker"], "integrated_decision_v1": _delivered(row)} for row in delivered_rows[:3]
+        }
+        bundle["owner_focus_research_contexts"] = [
+            {"ticker": row["ticker"], "status": "AVAILABLE", "integrated_decision_v1": _delivered(row)} for row in delivered_rows[:2]
+        ]
+        (source / "ai_research_full_universe.ndjson").write_text("".join(
+            json.dumps({"ticker": row["ticker"], "integrated_decision_v1": _delivered(row)}) + "\n" for row in delivered_rows))
+    (source / "ai_research_session_bundle.json").write_text(json.dumps(bundle))
     outputs = {"integrated_investment_decision_product": IDP}
     if declare:
         outputs["daily_integrated_decision_brief"] = BRIEF_ID
@@ -275,6 +295,96 @@ def test_m1_operation_with_a_valid_brief_and_index_passes(tmp_path):
     assert result["status"] == "M1_BRIEF_AND_INDEX_VERIFIED"
     assert result["decision_surface_index_denominator"] == 8
     assert result["brief_path"].name == "daily_integrated_decision_brief_artifact.json"
+    assert result["ai_delivery_parity"] == {"ticker_research_contexts": 3, "owner_focus_research_contexts": 2,
+                                            "full_universe_rows": 8}
+
+
+# ---------------------------------------------------------------- M1_LIVE_ACCEPTANCE_CORRECTIVE_V1
+# The retained 2026-09-24 delivery carried research_action_posture but no evidence_currency /
+# position_context on every overlay, and no overlay at all on the owner-focus contexts. The
+# handoff guard now refuses exactly those shapes, on every AI surface, before publication.
+
+def _rewrite_bundle(source: Path, mutate) -> None:
+    path = source / "ai_research_session_bundle.json"
+    bundle = json.loads(path.read_text())
+    mutate(bundle)
+    path.write_text(json.dumps(bundle))
+
+
+def _rewrite_full_universe(source: Path, mutate) -> None:
+    path = source / "ai_research_full_universe.ndjson"
+    rows = [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
+    replaced = mutate(rows)  # in-place mutators return whatever they return; only a list replaces
+    rows = replaced if isinstance(replaced, list) else rows
+    path.write_text("".join(json.dumps(row) + "\n" for row in rows))
+
+
+def _scoped(bundle: dict) -> dict:
+    return bundle["ticker_research_contexts"]["T000"]["integrated_decision_v1"]
+
+
+def _owner(bundle: dict) -> dict:
+    return bundle["owner_focus_research_contexts"][1]["integrated_decision_v1"]
+
+
+@pytest.mark.parametrize("surface", ["ticker_research_contexts", "owner_focus_research_contexts", "full_universe"])
+@pytest.mark.parametrize("field", ["evidence_currency", "position_context"])
+def test_m1_delivery_missing_a_decision_surface_field_is_refused(tmp_path, surface, field):
+    source = _operation(tmp_path)
+    if surface == "full_universe":
+        _rewrite_full_universe(source, lambda rows: rows[5]["integrated_decision_v1"].pop(field))
+        ticker = "T005"
+    else:
+        _rewrite_bundle(source, lambda bundle: (_scoped if surface == "ticker_research_contexts" else _owner)(bundle).pop(field))
+        ticker = "T000" if surface == "ticker_research_contexts" else "T001"
+    reason = ("M1_AI_DELIVERY_DECISION_SURFACE_MISMATCH:" if field == "evidence_currency"
+              else "M1_AI_DELIVERY_POSITION_CONTEXT_MISSING:")
+    with pytest.raises(workflow.OwnerDailyError, match=f"{reason}{surface}:{ticker}"):
+        workflow.verify_retained_daily_brief_for_handoff(source, SESSION)
+
+
+def test_m1_owner_focus_context_without_the_integrated_overlay_is_refused(tmp_path):
+    source = _operation(tmp_path)
+    _rewrite_bundle(source, lambda bundle: bundle["owner_focus_research_contexts"][0].pop("integrated_decision_v1"))
+    with pytest.raises(workflow.OwnerDailyError,
+                       match="M1_AI_DELIVERY_INTEGRATED_DECISION_MISSING:owner_focus_research_contexts:T000"):
+        workflow.verify_retained_daily_brief_for_handoff(source, SESSION)
+
+
+def test_m1_delivery_posture_that_disagrees_with_the_index_is_refused(tmp_path):
+    # e.g. a delivery that re-derived posture from research_stance instead of projecting the IID.
+    source = _operation(tmp_path)
+    _rewrite_bundle(source, lambda bundle: _scoped(bundle).update(research_action_posture="ACCUMULATE_ON_RETEST"))
+    with pytest.raises(workflow.OwnerDailyError,
+                       match="M1_AI_DELIVERY_DECISION_SURFACE_MISMATCH:ticker_research_contexts:T000:research_action_posture"):
+        workflow.verify_retained_daily_brief_for_handoff(source, SESSION)
+
+
+def test_m1_delivery_bound_to_another_integrated_decision_is_refused(tmp_path):
+    source = _operation(tmp_path)
+    _rewrite_full_universe(source, lambda rows: rows[0]["integrated_decision_v1"].update(
+        integrated_investment_decision_product_identity="integrated_investment_decision_product/v1:other"))
+    with pytest.raises(workflow.OwnerDailyError, match="M1_AI_DELIVERY_INTEGRATED_DECISION_IDENTITY_MISMATCH:full_universe:T000"):
+        workflow.verify_retained_daily_brief_for_handoff(source, SESSION)
+
+
+def test_m1_full_universe_companion_must_be_exactly_one_row_per_index_ticker(tmp_path):
+    source = _operation(tmp_path)
+    (source / "ai_research_full_universe.ndjson").unlink()
+    with pytest.raises(workflow.OwnerDailyError, match="M1_AI_FULL_UNIVERSE_COMPANION_MISSING"):
+        workflow.verify_retained_daily_brief_for_handoff(source, SESSION)
+    short = tmp_path / "short"
+    short.mkdir()
+    source = _operation(short)
+    _rewrite_full_universe(source, lambda rows: rows[:-1])
+    with pytest.raises(workflow.OwnerDailyError, match="M1_AI_FULL_UNIVERSE_INDEX_SET_MISMATCH:rows=7:index=8"):
+        workflow.verify_retained_daily_brief_for_handoff(source, SESSION)
+    duplicate = tmp_path / "duplicate"
+    duplicate.mkdir()
+    source = _operation(duplicate)
+    _rewrite_full_universe(source, lambda rows: rows + [rows[3]])
+    with pytest.raises(workflow.OwnerDailyError, match="M1_AI_FULL_UNIVERSE_DUPLICATE_TICKER:T003"):
+        workflow.verify_retained_daily_brief_for_handoff(source, SESSION)
 
 
 def test_m1_operation_with_the_brief_missing_is_refused(tmp_path):

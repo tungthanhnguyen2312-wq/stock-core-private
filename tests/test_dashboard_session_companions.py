@@ -190,6 +190,13 @@ def _write_session_web(root: Path, session: str = SESSION) -> None:
     for name in ("app.js", "style.css", "assets/js/value-format.js",
                  "assets/js/company-panel.js", "assets/css/tailwind.generated.css"):
         (root / name).write_text("/* fixture */\n", encoding="utf-8")
+    # The current Decision Cockpit is a required same-session product (M1_LIVE_ACCEPTANCE_CORRECTIVE_V1).
+    (root / pd.COCKPIT_ASSET).write_text(json.dumps({
+        "schema_version": pd.COCKPIT_SCHEMA, "session": session,
+        "projection_identity": f"dashboard_decision_cockpit_projection:fixture-{session}",
+        "source": {"operation_identity": "daily_research_session_operation:fixture"},
+        "authority_boundary": {"is_actionable": False},
+    }), encoding="utf-8")
     for relative in sorted(pd.SAFE_WEB_ARTIFACTS):
         path = root / relative
         if path.exists():

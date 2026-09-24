@@ -341,6 +341,84 @@ def test_flow_price_degrades_gracefully_when_no_root_supplied():
     assert bundle["workspace"]["cards"]["HPG"]["flow_price"]["relationship"] == "FLOW_UNAVAILABLE"
 
 
+# ---------------------------------------------------------------------------
+# M1_LIVE_ACCEPTANCE_CORRECTIVE_V1 (Finding D): the 2026-09-24 post-handoff re-join passed the
+# Dashboard runtime as ``runtime_root_override`` yet resolved the foreign-flow VALUE store through
+# ``runtime_root(root)`` -- in the real in-process Daily STOCK_LOOKUP_RUNTIME_ROOT is unset, so that
+# is the Producer checkout, whose local store ended 2026-09-18. The Workspace then showed 11/11
+# FLOW_UNAVAILABLE although the release runtime held all 11 exact-session observations. The test
+# session's conftest normally exports the variable, which is how this escaped; these tests remove it.
+# ---------------------------------------------------------------------------
+
+def _velocity(session, ticker="HPG"):
+    return {
+        "contract_version": "multi_session_signal_velocity/v1.2",
+        "artifact_identity": "multi_session_signal_velocity:test",
+        "records": [{"ticker": ticker, "session": session, "overall_transition_state": "MIXED_TRANSITION",
+                     "evidence_quality": {"state": "COMPLETE_RETAINED_EVIDENCE"},
+                     "axes": {"structural_repair": {"trajectory": {}}},
+                     "independent_supporting_axes": [], "contradicting_axes": []}],
+    }
+
+
+def _split_roots(tmp_path, monkeypatch):
+    """Producer-local store stale at an earlier session; the release runtime holds this session."""
+    monkeypatch.delenv("STOCK_LOOKUP_RUNTIME_ROOT", raising=False)
+    producer, runtime = tmp_path / "producer", tmp_path / "dashboard-runtime"
+    _write_value_observation(producer, "HPG", OTHER_SESSION)
+    _write_value_observation(runtime, "HPG", SESSION, buy=520_495_564_350, sell=269_865_036_850)
+    return producer, runtime
+
+
+def test_flow_price_reads_the_selected_release_runtime_not_the_producer_local_store(tmp_path, monkeypatch):
+    producer, runtime = _split_roots(tmp_path, monkeypatch)
+    kwargs = dict(session=SESSION, registry_inputs=_registry_inputs(tickers=("HPG", "BBB")),
+                  supplementary={"signal_velocity": _velocity(SESSION)},
+                  requested_at=f"{SESSION}T18:00:00+07:00", root=producer)
+
+    selected = _materialize_workspace(runtime_root_override=runtime, **kwargs)["workspace"]["cards"]["HPG"]["flow_price"]
+    assert selected["relationship"] != "FLOW_UNAVAILABLE"
+    assert selected["foreign_flow_state"] == "NET_FOREIGN_BUY"
+    assert selected["latest_qualified_flow_session"] == SESSION
+    # The pre-fix resolution (no explicit runtime, variable unset) reads the stale Producer store.
+    legacy = _materialize_workspace(**kwargs)["workspace"]["cards"]["HPG"]["flow_price"]
+    assert legacy["relationship"] == "FLOW_UNAVAILABLE"
+
+
+def test_top_level_rejoin_uses_its_runtime_root_override_for_every_runtime_read(tmp_path, monkeypatch):
+    producer, runtime = _split_roots(tmp_path, monkeypatch)
+    _snapshot_csv(runtime / "screen_snapshot.csv", tickers=("HPG", "BBB"))
+    supplementary_dir = producer / "operations-review" / "multi-session-signal-velocity-v1.2" / SESSION
+    supplementary_dir.mkdir(parents=True)
+    (supplementary_dir / "multi_session_signal_velocity_artifact.json").write_text(json.dumps(_velocity(SESSION)), encoding="utf-8")
+
+    result = _materialize_and_write(
+        root=producer, session=SESSION, operation_dir=tmp_path / "presentation",
+        registry_inputs=_registry_inputs(tickers=("HPG", "BBB")),
+        requested_at=f"{SESSION}T18:00:00+07:00", runtime_root_override=runtime,
+    )
+
+    assert result["status"] == "MATERIALIZED"
+    workspace = json.loads((tmp_path / "presentation" / ccpp.WORKSPACE_ARTIFACT_FILENAME).read_text(encoding="utf-8"))
+    assert workspace["source_artifacts"]["flow_price_divergence_shadow"] is not None
+    assert workspace["cards"]["HPG"]["flow_price"]["foreign_flow_state"] == "NET_FOREIGN_BUY"
+
+
+def test_flow_observer_restaging_never_moves_posture_or_evidence_currency(tmp_path, monkeypatch):
+    producer, runtime = _split_roots(tmp_path, monkeypatch)
+    inputs = _registry_inputs(tickers=("HPG", "BBB"))
+    integrated = _integrated_for(SESSION, inputs)
+    common = dict(session=SESSION, registry_inputs=inputs, requested_at=f"{SESSION}T18:00:00+07:00",
+                  root=producer, integrated_investment_decision_product=integrated)
+    sealed = _materialize_workspace(supplementary={}, **common)["workspace"]["cards"]
+    observed = _materialize_workspace(supplementary={"signal_velocity": _velocity(SESSION)},
+                                      runtime_root_override=runtime, **common)["workspace"]["cards"]
+    assert observed["HPG"]["flow_price"]["relationship"] != sealed["HPG"]["flow_price"]["relationship"]
+    for ticker in sealed:
+        for field in ("research_action_posture", "evidence_currency"):
+            assert observed[ticker][field] == sealed[ticker][field] == integrated["records"][ticker][field]
+
+
 def test_unavailable_recurring_axes_are_explicit_and_do_not_synthesize_a_contract():
     statuses = ccpp.unavailable_recurring_context_axes()
     assert statuses == {

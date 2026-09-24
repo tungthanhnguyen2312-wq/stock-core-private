@@ -1994,7 +1994,8 @@
     {
       "milestone_id": "CURRENT_DECISION_SURFACE_CONVERGENCE_V1",
       "state": "ACTIVE",
-      "narrative_disposition": "IMPLEMENTATION_COMPLETE_LOCAL_RELEASE_CANDIDATE / RETAINED_2026_09_23_REPLAY_ACCEPTED_OFFLINE / AWAITING_OWNER_REVIEW_AND_M1_PROMOTION",
+      "narrative_disposition": "LIVE_ACCEPTANCE_CORRECTIVE_PENDING_REVIEW",
+      "live_acceptance_corrective": "M1_LIVE_ACCEPTANCE_CORRECTIVE_V1 (2026-09-24): implementation promoted 2026-09-24 (Producer 8be6223 / Dashboard 42eef05); the 2026-09-24 ordinary Daily completed but independent live acceptance returned M1_LIVE_ACCEPTANCE_FAIL on five delivery/presentation/lineage/launcher defects (AI delivery omitted evidence_currency/position_context; 2026-09-15 current_decision_cockpit.json published with the 2026-09-24 release; restaged release-manifest path/identity/hash split; foreign-flow presentation read the Producer-local store; Desktop PowerShell 5.1 launcher killed Owner Daily on native stderr). Corrective is a local checkpoint on fix/m1-live-acceptance-corrective-v1 (base 872b11b); not pushed, not merged; no Daily, replay, publication, provider call or DB write. Analytical decisions unchanged. Next gate: CODEX_MAX_CORRECTIVE_REVIEW, then promotion and the next ordinary Daily's live acceptance. See docs/DECISIONS.md 2026-09-24.",
       "checkpoint": null,
       "dependencies": [
         "INTEGRATED_INVESTMENT_DECISION_PRODUCT_V1",

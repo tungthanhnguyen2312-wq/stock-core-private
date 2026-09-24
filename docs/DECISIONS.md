@@ -1,5 +1,38 @@
 # Decisions & Architectural Decision Records
 
+## 2026-09-24 - M1 live-acceptance corrective V1
+
+The 2026-09-24 Daily completed, but live acceptance failed on delivery, presentation, lineage and
+launcher defects. The M1 analytical surfaces were unchanged and correct. Each fix below keeps the
+existing seam.
+
+- **AI delivery projects the Integrated Decision; it does not recompute it.**
+  `integrated_decision_v1` now carries `ticker`, `decision_identity`, the Integrated Decision
+  identity, `evidence_currency` with its gate and lineage, `position_context` and
+  `opportunity_priority`. These are copied verbatim, and a field the record lacks stays null.
+  Owner-focus contexts carry the overlay too. The contract string stays
+  `integrated_decision_delivery_overlay/v1` because the change is additive. The AI-handoff guard
+  now refuses an M1 operation unless every scoped, owner-focus and full-universe overlay equals
+  its decision-surface index row and the full-universe companion has exactly one row per ticker.
+- **`current_decision_cockpit.json` is a current product.** The Workspace renders seven panels
+  from it, so it is not a compatibility or obsolete artifact. The canonical runtime release
+  restages it on every release from the same Producer run as the Workspace. It must match that
+  run manifest's declared bytes and identity. The governed publisher refuses it unless its
+  session equals the release session, and records it in `build_info.current_decision_cockpit`.
+  Owner Daily's session proof requires it.
+- **A release-manifest entry names one physical artifact.** After the presentation restage,
+  `path`, `sha256` and `artifact_identity` all describe the served replacement, which is the
+  retained post-handoff file. The sealed artifact moves whole into `sealed_source`. A Home
+  summary derived with no retained twin is declared as `path_root: RUNTIME_ROOT`. The coherence
+  verifier follows every declared path.
+- **An explicit release runtime root governs every runtime read.** When
+  `runtime_root_override` is supplied, the foreign-flow VALUE store is read from it, never from
+  `runtime_root(root)`. The in-process Daily never sets `STOCK_LOOKUP_RUNTIME_ROOT`, and
+  `tests/conftest.py` always does, which is why the test suite could not see this defect.
+- **Native stderr is output, not a PowerShell failure.** `tools/run_owner_daily.ps1` sets
+  `'Continue'` for the single native call only and renders stderr records back to plain text.
+  The native exit code decides the outcome. Python failure semantics are unchanged.
+
 ## 2026-09-23 - Current decision surface convergence V1
 
 - **Converge on the existing seams; no second decision engine.** Workspace takes the Integrated Decision

@@ -1,5 +1,21 @@
 # Stock Lookup — Operational State
 
+**M1 live-acceptance corrective (2026-09-24):**
+`CURRENT_DECISION_SURFACE_CONVERGENCE_V1 = ACTIVE / LIVE_ACCEPTANCE_CORRECTIVE_PENDING_REVIEW`.
+
+The M1 implementation was promoted on 2026-09-24, and the 2026-09-24 Daily completed. Live
+acceptance then failed on five defects:
+- AI delivery dropped `evidence_currency` and `position_context`.
+- The release served a 2026-09-15 `current_decision_cockpit.json`.
+- Release-manifest path/identity/hash entries were split.
+- Foreign-flow presentation read the Producer-local store.
+- The Desktop PowerShell launcher killed Owner Daily on native stderr.
+
+`M1_LIVE_ACCEPTANCE_CORRECTIVE_V1` fixes all five on a local checkpoint. It is not pushed or
+merged, and no Daily, replay or publication was run. Analytical decisions are unchanged. See
+`docs/DECISIONS.md` (2026-09-24). M1 is not complete until independent review, promotion and the
+next ordinary Daily's live acceptance.
+
 **Current decision surface convergence V1 (2026-09-23):**
 `CURRENT_DECISION_SURFACE_CONVERGENCE_V1 = ACTIVE / IMPLEMENTATION_COMPLETE_LOCAL_RELEASE_CANDIDATE /
 AWAITING_OWNER_REVIEW_AND_M1_PROMOTION`. Local checkpoint commits only; no push, merge, Daily, replay,

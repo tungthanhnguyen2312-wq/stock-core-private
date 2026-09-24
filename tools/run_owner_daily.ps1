@@ -1,10 +1,20 @@
 [CmdletBinding()]
-param([string]$ReplayCompletedSession)
+param(
+    [string]$ReplayCompletedSession,
+    # Isolated-regression seams only. The Desktop "Stock Lookup Daily.cmd" passes none of them, so the
+    # owner route is unchanged: canonical run_owner_daily.py, canonical run-logs, pause before closing.
+    [string]$EntryScript,
+    [string]$LogDirectory,
+    [switch]$NoPause
+)
 
 $ErrorActionPreference = 'Stop'
 $repo = Split-Path -Parent $PSScriptRoot
 $runtime = 'C:\Projects\StockLookup\dashboard-runtime'
 $logDir = 'C:\Projects\StockLookup\run-logs'
+if ($LogDirectory) { $logDir = $LogDirectory }
+$entry = Join-Path $PSScriptRoot 'run_owner_daily.py'
+if ($EntryScript) { $entry = $EntryScript }
 New-Item -ItemType Directory -Force -Path $logDir | Out-Null
 $stamp = Get-Date -Format 'yyyyMMdd_HHmmss'
 $log = Join-Path $logDir "stock_lookup_daily_$stamp.log"
@@ -26,10 +36,27 @@ Write-Host '[7/9] Remote verification'
 Write-Host '[8/9] Personal Action Center'
 Write-Host '[9/9] Open owner view'
 
-$arguments = @('-u', (Join-Path $PSScriptRoot 'run_owner_daily.py'), '--runtime-root', $runtime, '--result-path', $result)
+$arguments = @('-u', $entry, '--runtime-root', $runtime, '--result-path', $result)
 if ($ReplayCompletedSession) { $arguments += @('--replay-completed-session', $ReplayCompletedSession) }
-& $python @arguments 2>&1 | Tee-Object -FilePath $log
-$exitCode = $LASTEXITCODE
+# M1_LIVE_ACCEPTANCE_CORRECTIVE_V1: under Windows PowerShell 5.1, `2>&1` wraps every native stderr
+# line in an ErrorRecord, and with the script-wide 'Stop' preference the FIRST such line became a
+# terminating NativeCommandError that killed run_owner_daily.py before it could record its own
+# outcome (no result.json, no journal FAILED, no FINAL STATUS -- every Desktop Daily that wrote to
+# stderr since 2026-09-17, including the 2026-09-24 acquisition failure). Stderr is expected native
+# output, not a PowerShell failure: 'Continue' is scoped to this one call, each stderr record is
+# rendered back to its own text so both streams stay visible and logged, and the native exit code
+# alone decides the outcome.
+$exitCode = $null
+$scriptPreference = $ErrorActionPreference
+$ErrorActionPreference = 'Continue'
+try {
+    & $python @arguments 2>&1 | ForEach-Object {
+        if ($_ -is [System.Management.Automation.ErrorRecord]) { $_.ToString() } else { $_ }
+    } | Tee-Object -FilePath $log
+    $exitCode = $LASTEXITCODE
+} finally {
+    $ErrorActionPreference = $scriptPreference
+}
 
 function Get-LastLoggedStep([string]$LogPath) {
     if (-not (Test-Path $LogPath)) { return $null }
@@ -90,6 +117,10 @@ if (Test-Path $result) {
     Write-Host ("LAST LOGGED STEP: " + (Get-LastLoggedStep $log))
 }
 Write-Host ("LOG: " + $log)
-if (-not (Test-Path $result)) { Read-Host 'Press Enter to close'; exit 1 }
-if ($exitCode -ne 0) { Read-Host 'Press Enter to close'; exit $exitCode }
-Read-Host 'Press Enter to close'
+# A non-zero native exit code is always preserved; a zero exit without the run's own result file
+# is still not success.
+$finalExitCode = 0
+if ($null -ne $exitCode -and $exitCode -ne 0) { $finalExitCode = $exitCode }
+elseif (-not (Test-Path $result)) { $finalExitCode = 1 }
+if (-not $NoPause) { Read-Host 'Press Enter to close' }
+exit $finalExitCode

@@ -242,6 +242,27 @@ def test_pipeline_materializes_before_runtime_readiness(tmp_path, monkeypatch):
     assert seen == ["materialize", "readiness"]
 
 
+def _cockpit_payload(session, operation_identity="operation:exact"):
+    """A current_decision_cockpit_projection/v2 payload with a self-consistent projection identity
+    (ai_research_session_delivery.build_dashboard_projection's own identity rule)."""
+    cockpit = {"schema_version": runtime_release.COCKPIT_SCHEMA_VERSION,
+               "projection_kind": "RELEASED_HUMAN_DECISION_COCKPIT", "session": session,
+               "authority_boundary": {"is_actionable": False},
+               "source": {"operation_identity": operation_identity},
+               "decision_card_v1": {"AAA": {"verdict": "WAIT_FOR_CONFIRMATION"}}}
+    cockpit["projection_identity"] = runtime_release.COCKPIT_PROJECTION_PREFIX + runtime_release.stable_id(cockpit)
+    return cockpit
+
+
+def _write_run_cockpit(root, manifest, *, session, payload=None):
+    """The Producer run's retained dashboard/current_decision_cockpit_projection.json."""
+    path = root / "dashboard" / "current_decision_cockpit_projection.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    operation_identity = (manifest.get("daily_session_operation") or {}).get("identity")
+    path.write_text(json.dumps(payload or _cockpit_payload(session, operation_identity)), encoding="utf-8")
+    return path
+
+
 def _workspace_release_fixture(tmp_path, monkeypatch):
     session = "2026-09-17"
     root = tmp_path / "producer"
@@ -278,6 +299,9 @@ def _workspace_release_fixture(tmp_path, monkeypatch):
                         "denominator": {"ticker_count": 1}},
                     "dashboard_home_summary": {"status": "MATERIALIZED", "artifact_identity": home_summary["artifact_identity"],
                         "as_of_session": session, "source_artifact_identity": screener["artifact_identity"], "denominator": 1}}}
+    cockpit_path = _write_run_cockpit(root, manifest, session=session)
+    manifest["dashboard_projection"] = {"identity": json.loads(cockpit_path.read_text(encoding="utf-8"))["projection_identity"],
+                                        "sha256": runtime_release._sha256(cockpit_path)}
     run_path = write(root / "run_manifest.json", manifest)
     bundle_path = write(root / "bundle.json", {})
     sources = {}
@@ -1003,4 +1027,204 @@ def test_coherence_verifier_detects_manifest_identity_drift(tmp_path, monkeypatc
     manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
     with pytest.raises(runtime_release.CanonicalRuntimeReleaseError,
                        match=f"RUNTIME_MANIFEST_{label}_IDENTITY_INCOHERENT_AFTER_RESTAGE"):
+        runtime_release._verify_runtime_manifest_coherence(runtime)
+
+
+# =====================================================================================
+# M1_LIVE_ACCEPTANCE_CORRECTIVE_V1
+# B: the 2026-09-24 release served data/current_decision_cockpit.json from 2026-09-15 beside a
+#    2026-09-24 Workspace -- the cockpit was never restaged by the governed release path.
+# C: after the post-handoff restage, three manifest entries kept the SEALED operation path while
+#    declaring the RESTAGED identity/hash (3 identity + 3 byte-hash mismatches on following path).
+# =====================================================================================
+
+def _stale_runtime_cockpit(runtime):
+    stale = runtime / runtime_release.COCKPIT_RELEASE_FILE
+    stale.parent.mkdir(parents=True, exist_ok=True)
+    stale.write_text(json.dumps(_cockpit_payload("2026-09-15", "operation:previous-release")), encoding="utf-8")
+    return stale
+
+
+def test_release_restages_the_same_run_same_session_cockpit_over_a_previous_release_copy(tmp_path, monkeypatch):
+    root, _, _, manifest = _workspace_release_fixture(tmp_path, monkeypatch)
+    runtime = tmp_path / "runtime"
+    _stale_runtime_cockpit(runtime)
+
+    runtime_release.materialize_canonical_runtime_release(root, runtime, "2026-09-17")
+
+    served = runtime / runtime_release.COCKPIT_RELEASE_FILE
+    assert served.read_bytes() == (root / "dashboard" / "current_decision_cockpit_projection.json").read_bytes()
+    payload = json.loads(served.read_text(encoding="utf-8"))
+    assert payload["session"] == "2026-09-17"
+    release = json.loads((runtime / "bundle_manifest.json").read_text(encoding="utf-8"))
+    entry = release["lineage"]["current_decision_cockpit"]
+    assert entry == {"path": "dashboard/current_decision_cockpit_projection.json", "sha256": runtime_release._sha256(served),
+                     "projection_identity": payload["projection_identity"], "session": "2026-09-17",
+                     "operation_identity": "operation:exact", "producer_run_identity": "run:exact"}
+    assert runtime_release.COCKPIT_RELEASE_FILE in release["release_files"]
+    runtime_release._verify_runtime_manifest_coherence(runtime, root=root)
+
+
+@pytest.mark.parametrize("breakage,reason", [
+    ("missing", "COCKPIT_EXACT_SESSION_PROJECTION_MISSING"),
+    ("undeclared_bytes", "COCKPIT_PRODUCER_RUN_HASH_MISMATCH"),
+    ("previous_session", "COCKPIT_SESSION_MISMATCH:2026-09-15"),
+    ("other_operation", "COCKPIT_OPERATION_IDENTITY_MISMATCH"),
+    ("tampered_identity", "COCKPIT_PROJECTION_IDENTITY_MISMATCH"),
+    ("actionable", "COCKPIT_AUTHORITY_BOUNDARY_INVALID"),
+])
+def test_a_cockpit_that_is_not_this_runs_exact_session_projection_fails_before_any_runtime_write(
+        tmp_path, monkeypatch, breakage, reason):
+    root, _, _, manifest = _workspace_release_fixture(tmp_path, monkeypatch)
+    cockpit_path = root / "dashboard" / "current_decision_cockpit_projection.json"
+    payload = json.loads(cockpit_path.read_text(encoding="utf-8"))
+    if breakage == "missing":
+        cockpit_path.unlink()
+    else:
+        if breakage == "previous_session":
+            payload = _cockpit_payload("2026-09-15")
+        elif breakage == "other_operation":
+            payload = _cockpit_payload("2026-09-17", "operation:other")
+        elif breakage == "tampered_identity":
+            payload["projection_identity"] = runtime_release.COCKPIT_PROJECTION_PREFIX + "0" * 64
+        elif breakage == "actionable":
+            payload = dict(_cockpit_payload("2026-09-17"), authority_boundary={"is_actionable": True})
+            payload["projection_identity"] = runtime_release.COCKPIT_PROJECTION_PREFIX + runtime_release.stable_id(
+                {k: v for k, v in payload.items() if k != "projection_identity"})
+        cockpit_path.write_text(json.dumps(payload) + ("\n" if breakage == "undeclared_bytes" else ""), encoding="utf-8")
+        if breakage != "undeclared_bytes":  # the run manifest declares exactly these bytes and identity
+            manifest["dashboard_projection"] = {"identity": payload["projection_identity"],
+                                                "sha256": runtime_release._sha256(cockpit_path)}
+    runtime = tmp_path / "runtime"
+    stale = _stale_runtime_cockpit(runtime)
+    stale_bytes = stale.read_bytes()
+
+    with pytest.raises(runtime_release.CanonicalRuntimeReleaseError, match=reason):
+        runtime_release.materialize_canonical_runtime_release(root, runtime, "2026-09-17")
+    assert stale.read_bytes() == stale_bytes
+    assert not (runtime / "bundle_manifest.json").exists()
+
+
+def _presentation_with_retained_home_twin(root, workspace, source):
+    """The real post-handoff projection retains its own Home summary beside its Screener."""
+    enriched, new_screener, presentation_result = _presentation_with_new_screener(root, workspace, source)
+    twin = runtime_release.dashboard_home_summary.build_home_summary(new_screener, requested_at=new_screener["requested_at"])
+    presentation_dir = (root / presentation_result["path"]).parent
+    (presentation_dir / "dashboard_home_summary.json").write_text(json.dumps(twin), encoding="utf-8")
+    return enriched, new_screener, twin, presentation_result
+
+
+def _follow_declared_path(root, runtime, entry):
+    base = runtime if entry.get("path_root") == runtime_release.RUNTIME_PATH_ROOT else root
+    physical = base / entry["path"]
+    return physical, json.loads(physical.read_text(encoding="utf-8"))
+
+
+def test_restaged_manifest_paths_hashes_and_identities_name_the_same_served_artifacts(tmp_path, monkeypatch):
+    root, source, workspace, _ = _workspace_release_fixture(tmp_path, monkeypatch)
+    runtime = tmp_path / "runtime"
+    runtime_release.materialize_canonical_runtime_release(root, runtime, RESTAGE_SESSION)
+    sealed = copy.deepcopy(json.loads((runtime / "bundle_manifest.json").read_text(encoding="utf-8"))["lineage"])
+    enriched, new_screener, twin, presentation_result = _presentation_with_retained_home_twin(root, workspace, source)
+
+    assert runtime_release.restage_runtime_with_presentation_projection(runtime, root, presentation_result)["status"] == "RESTAGED"
+
+    lineage = json.loads((runtime / "bundle_manifest.json").read_text(encoding="utf-8"))["lineage"]
+    presentation_dir = (root / presentation_result["path"]).parent.relative_to(root).as_posix()
+    expected = {
+        "investment_decision_workspace": ("data/investment_decision_workspace.json", enriched, "investment_decision_workspace_projection.json"),
+        "screener_master_projection": ("data/screener_master_projection.json", new_screener, "screener_master_projection.json"),
+        "dashboard_home_summary": ("data/dashboard_home_summary.json", twin, "dashboard_home_summary.json"),
+    }
+    for key, (served_relative, artifact, filename) in expected.items():
+        entry = lineage[key]
+        physical, payload = _follow_declared_path(root, runtime, entry)
+        assert entry["path"] == f"{presentation_dir}/{filename}"
+        assert runtime_release._sha256(physical) == entry["sha256"] == runtime_release._sha256(runtime / served_relative)
+        assert payload["artifact_identity"] == entry["artifact_identity"] == artifact["artifact_identity"]
+        assert payload["as_of_session"] == entry["session"] == RESTAGE_SESSION
+        # Sealed provenance survives whole and separately: it still resolves to the sealed artifact.
+        assert entry["sealed_source"]["path"] == sealed[key]["path"]
+        assert entry["sealed_source"]["artifact_identity"] == sealed[key]["artifact_identity"]
+        assert runtime_release._sha256(root / entry["sealed_source"]["path"]) == entry["sealed_source"]["sha256"]
+    assert lineage["presentation_projection"]["sealed_workspace_artifact_identity"] == sealed["investment_decision_workspace"]["artifact_identity"]
+    runtime_release._verify_runtime_manifest_coherence(runtime, root=root)
+
+
+def test_home_summary_derived_without_a_retained_twin_is_declared_by_its_runtime_path(tmp_path, monkeypatch):
+    root, source, workspace, _ = _workspace_release_fixture(tmp_path, monkeypatch)
+    runtime = tmp_path / "runtime"
+    runtime_release.materialize_canonical_runtime_release(root, runtime, RESTAGE_SESSION)
+    _, _, presentation_result = _presentation_with_new_screener(root, workspace, source)
+
+    assert runtime_release.restage_runtime_with_presentation_projection(runtime, root, presentation_result)["status"] == "RESTAGED"
+
+    entry = json.loads((runtime / "bundle_manifest.json").read_text(encoding="utf-8"))["lineage"]["dashboard_home_summary"]
+    assert entry["path_root"] == runtime_release.RUNTIME_PATH_ROOT and entry["path"] == "data/dashboard_home_summary.json"
+    physical, payload = _follow_declared_path(root, runtime, entry)
+    assert runtime_release._sha256(physical) == entry["sha256"] and payload["artifact_identity"] == entry["artifact_identity"]
+    runtime_release._verify_runtime_manifest_coherence(runtime, root=root)
+
+
+def test_a_retained_home_twin_that_diverges_from_the_governed_derivation_refuses_the_restage(tmp_path, monkeypatch):
+    root, source, workspace, _ = _workspace_release_fixture(tmp_path, monkeypatch)
+    runtime = tmp_path / "runtime"
+    runtime_release.materialize_canonical_runtime_release(root, runtime, RESTAGE_SESSION)
+    before = _runtime_bytes(runtime)
+    _, _, twin, presentation_result = _presentation_with_retained_home_twin(root, workspace, source)
+    twin["source_artifact_identity"] = "screener_master_projection/v1:" + "b" * 64
+    (root / presentation_result["path"]).parent.joinpath("dashboard_home_summary.json").write_text(json.dumps(twin), encoding="utf-8")
+
+    result = runtime_release.restage_runtime_with_presentation_projection(runtime, root, presentation_result)
+
+    assert result["status"] == "SKIPPED"
+    assert "HOME_SUMMARY_RETAINED_PRESENTATION_TWIN_DIVERGES_FROM_DERIVATION" in result["reason"]
+    assert _runtime_bytes(runtime) == before
+
+
+def test_repeated_restage_carries_sealed_provenance_forward_unchanged(tmp_path, monkeypatch):
+    root, source, workspace, _ = _workspace_release_fixture(tmp_path, monkeypatch)
+    runtime = tmp_path / "runtime"
+    runtime_release.materialize_canonical_runtime_release(root, runtime, RESTAGE_SESSION)
+    sealed_path = json.loads((runtime / "bundle_manifest.json").read_text(encoding="utf-8"))["lineage"]["investment_decision_workspace"]["path"]
+    _, _, _, presentation_result = _presentation_with_retained_home_twin(root, workspace, source)
+    runtime_release.restage_runtime_with_presentation_projection(runtime, root, presentation_result)
+    first = (runtime / "bundle_manifest.json").read_bytes()
+    runtime_release.restage_runtime_with_presentation_projection(runtime, root, presentation_result)
+    assert (runtime / "bundle_manifest.json").read_bytes() == first
+    lineage = json.loads(first)["lineage"]
+    assert lineage["investment_decision_workspace"]["sealed_source"]["path"] == sealed_path
+    assert "sealed_source" not in lineage["investment_decision_workspace"]["sealed_source"]
+
+
+@pytest.mark.parametrize("key,label", [
+    ("investment_decision_workspace", "WORKSPACE"),
+    ("screener_master_projection", "SCREENER"),
+    ("dashboard_home_summary", "HOME_SUMMARY"),
+])
+def test_coherence_verifier_refuses_the_retained_2026_09_24_manifest_shape(tmp_path, monkeypatch, key, label):
+    """Pre-fix shape: the entry keeps the SEALED path while declaring the RESTAGED identity/hash."""
+    root, source, workspace, _ = _workspace_release_fixture(tmp_path, monkeypatch)
+    runtime = tmp_path / "runtime"
+    runtime_release.materialize_canonical_runtime_release(root, runtime, RESTAGE_SESSION)
+    _, _, _, presentation_result = _presentation_with_retained_home_twin(root, workspace, source)
+    runtime_release.restage_runtime_with_presentation_projection(runtime, root, presentation_result)
+    manifest_path = runtime / "bundle_manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    entry = manifest["lineage"][key]
+    entry["path"] = entry["sealed_source"]["path"]
+    entry.pop("path_root", None)
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+    runtime_release._verify_runtime_manifest_coherence(runtime)  # served-bytes checks alone cannot see it
+    with pytest.raises(runtime_release.CanonicalRuntimeReleaseError, match=f"RUNTIME_MANIFEST_{label}_PATH_SHA256_MISMATCH"):
+        runtime_release._verify_runtime_manifest_coherence(runtime, root=root)
+
+
+def test_coherence_verifier_refuses_a_served_cockpit_from_another_session(tmp_path, monkeypatch):
+    root, _, _, _ = _workspace_release_fixture(tmp_path, monkeypatch)
+    runtime = tmp_path / "runtime"
+    runtime_release.materialize_canonical_runtime_release(root, runtime, "2026-09-17")
+    _stale_runtime_cockpit(runtime)
+    with pytest.raises(runtime_release.CanonicalRuntimeReleaseError, match="RUNTIME_MANIFEST_CURRENT_DECISION_COCKPIT_INCOHERENT"):
         runtime_release._verify_runtime_manifest_coherence(runtime)
