@@ -27,6 +27,18 @@ values; its default is ``skip-if-absent`` because provider packages are optional
 (see ``requirements-providers.txt``). ``strict`` turns an absent provider into
 ``PROVIDER_RUNTIME_REQUIRED``.
 
+Retained evidence is read from ``STOCKLOOKUP_RETAINED_EVIDENCE_ROOT`` when set (for example the
+Producer main checkout while testing from a git worktree), otherwise from the repository root.
+It is read-only either way: tests that execute builders copy their inputs into ``tmp_path``
+(``tests/_retained_scratch.py``), and ``tests/_canonical_evidence_write_guard.py`` refuses any
+write under it. Never link (junction/symlink) canonical evidence into a worktree. Tests that read
+evidence through their own ``ROOT`` constant ignore the variable.
+
+A declared evidence path that ``config/retained_evidence_quarantine.json`` quarantines -- the
+file itself or the folder holding it -- fails the test with ``RETAINED_EVIDENCE_QUARANTINED``
+under every policy: contaminated retained evidence is never a baseline (see
+``retained_evidence_quarantine.py``).
+
 Hermetic CI deselects both tiers with ``-m "not retained_evidence and not provider_runtime"``
 and separately runs ``-m retained_evidence`` under ``skip-if-absent`` so every evidence-dependent
 test is still collected and reported with its explicit reason.
@@ -39,6 +51,7 @@ from __future__ import annotations
 
 import importlib.util
 import os
+import sys
 from pathlib import Path, PurePosixPath
 
 import pytest
@@ -47,6 +60,7 @@ RETAINED_EVIDENCE_MARKER = "retained_evidence"
 PROVIDER_RUNTIME_MARKER = "provider_runtime"
 
 RETAINED_EVIDENCE_POLICY_ENV = "STOCKLOOKUP_RETAINED_EVIDENCE_POLICY"
+RETAINED_EVIDENCE_ROOT_ENV = "STOCKLOOKUP_RETAINED_EVIDENCE_ROOT"
 PROVIDER_RUNTIME_POLICY_ENV = "STOCKLOOKUP_PROVIDER_RUNTIME_POLICY"
 
 POLICY_STRICT = "strict"
@@ -78,6 +92,28 @@ def validate_evidence_path(raw: object) -> str:
 
 def missing_evidence(root: Path, relative_paths: tuple[str, ...]) -> list[str]:
     return [rel for rel in relative_paths if not (root / rel).exists()]
+
+
+def retained_evidence_root(default: Path | None = None) -> Path:
+    """Where retained evidence is read from (read-only): the configured root, else the repo root."""
+    configured = os.getenv(RETAINED_EVIDENCE_ROOT_ENV, "").strip()
+    if configured:
+        return Path(configured)
+    return default if default is not None else Path(__file__).resolve().parents[1]
+
+
+def quarantined_evidence(relative_paths: tuple[str, ...]) -> list[str]:
+    repo_root = str(Path(__file__).resolve().parents[1])
+    if repo_root not in sys.path:  # this module also runs as a standalone plugin (-p _test_tiers)
+        sys.path.append(repo_root)
+    import retained_evidence_quarantine as quarantine
+
+    registry = quarantine.load_registry()
+    return [
+        f"{rel} ({entry['path']}: {entry['classification']})"
+        for rel in relative_paths
+        for entry in quarantine.quarantined_entries_named_by(rel, registry)
+    ]
 
 
 def provider_module_available(name: str) -> bool:
@@ -126,7 +162,14 @@ def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item
 def pytest_runtest_setup(item: pytest.Item) -> None:
     if item.get_closest_marker(RETAINED_EVIDENCE_MARKER) is not None:
         paths = tuple(validate_evidence_path(raw) for raw in _marker_args(item, RETAINED_EVIDENCE_MARKER))
-        absent = missing_evidence(Path(item.config.rootpath), paths)
+        quarantined = quarantined_evidence(paths)
+        if quarantined:
+            pytest.fail(
+                f"RETAINED_EVIDENCE_QUARANTINED: {'; '.join(quarantined)}. Quarantined retained "
+                "evidence is never a baseline (config/retained_evidence_quarantine.json).",
+                pytrace=False,
+            )
+        absent = missing_evidence(retained_evidence_root(Path(item.config.rootpath)), paths)
         if absent:
             policy = resolve_policy(RETAINED_EVIDENCE_POLICY_ENV, POLICY_STRICT)
             listed = ", ".join(absent)

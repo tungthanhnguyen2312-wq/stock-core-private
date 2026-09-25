@@ -28,3 +28,13 @@ from _test_tiers import (  # noqa: E402,F401 -- re-exported as this conftest's p
     pytest_configure,
     pytest_runtest_setup,
 )
+
+# No test may write into canonical retained evidence (RETAINED_EVIDENCE_INCIDENT_20260925);
+# see tests/_canonical_evidence_write_guard.py. Installed before any test module is imported.
+import _canonical_evidence_write_guard as _evidence_write_guard  # noqa: E402
+from _canonical_evidence_write_guard import (  # noqa: E402,F401 -- re-exported fixture and hook
+    canonical_evidence_write_guard,
+    pytest_sessionfinish,
+)
+
+_evidence_write_guard.install()

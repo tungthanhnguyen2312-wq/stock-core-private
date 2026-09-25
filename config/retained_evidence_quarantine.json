@@ -1,0 +1,154 @@
+{
+  "contract_version": "retained_evidence_quarantine/v1",
+  "purpose": "Retained evidence that must never be treated as a pristine historical baseline: not for retained regression comparison, historical acceptance, or IID-dependent posture replay. Paths are relative to the retained-evidence root (the Producer checkout). Nothing listed here is deleted, restored or rewritten by this registry; restoration or supersession is an owner decision recorded by amending this file.",
+  "incident": {
+    "id": "RETAINED_EVIDENCE_INCIDENT_20260925",
+    "summary": "Tests in tests/test_canonical_post_close_pipeline.py called build_enrichment_components(ROOT, ...) and rewrote Level-2 artifacts under the repository's operations-review; an evidence-linked validation run on 2026-09-25 21:07-21:15 rewrote 19 files (2 with changed content). Earlier test runs had already rewritten the 2026-08-25 (2026-09-23) and 2026-09-04 (2026-09-22) IIDs.",
+    "report": "claude-reports/retained-evidence-integrity-incident-closeout-20260925/REPORT.md"
+  },
+  "excluded_uses": [
+    "RETAINED_REGRESSION_BASELINE",
+    "HISTORICAL_ACCEPTANCE_BASELINE",
+    "IID_DEPENDENT_POSTURE_REPLAY"
+  ],
+  "iid_posture_replay_excluded_sessions": [
+    "2026-08-25",
+    "2026-09-04"
+  ],
+  "quarantined": [
+    {
+      "path": "operations-review/integrated-investment-decision-product-v1-20260825/integrated_investment_decision_product_artifact.json",
+      "classification": "CONTAMINATED_UNRECOVERABLE",
+      "observed_sha256": "50ec8b848aefa864771ead8ad3717b3a55b95eec4d446c6456597e936362a9fb",
+      "observed_size_bytes": 66646113,
+      "note": "No production lineage or identity exists; the pre-incident bytes were themselves a 2026-09-23 test regeneration (pytest-1524). Never regenerate and call it original."
+    },
+    {
+      "path": "operations-review/integrated-investment-decision-product-v1-20260825/market_structure_breakout_v3_projection_artifact.json",
+      "classification": "NON_PRISTINE_CONTENT_UNVERIFIED",
+      "observed_sha256": "0588dc7d6caa7036d8d2503b88597466b0bbfb3d19d3d8e5d529d247eaf902c6",
+      "observed_size_bytes": 2480853,
+      "note": "IID-folder companion rewritten by a test during the incident; original content cannot be proven."
+    },
+    {
+      "path": "operations-review/integrated-investment-decision-product-v1-20260825/tactical_confirmation_context_artifact.json",
+      "classification": "NON_PRISTINE_CONTENT_UNVERIFIED",
+      "observed_sha256": "5eef38f41bb73861f20d6f5cef4b4fd09f56b2a95a2d79ab0dcc9339578f87fb",
+      "observed_size_bytes": 1514923,
+      "note": "IID-folder companion rewritten by a test during the incident; original content cannot be proven."
+    },
+    {
+      "path": "operations-review/integrated-investment-decision-product-v1-20260825/tactical_confirmation_invalidation_boundaries_artifact.json",
+      "classification": "NON_PRISTINE_CONTENT_UNVERIFIED",
+      "observed_sha256": "9b5ef1b97ee97a6b61dcd8daf37b83fe4eae4f7698b178abb5832e986ad6ba17",
+      "observed_size_bytes": 3516747,
+      "note": "IID-folder companion rewritten by a test during the incident; original content cannot be proven."
+    },
+    {
+      "path": "operations-review/integrated-investment-decision-product-v1-20260825/tactical_momentum_context_artifact.json",
+      "classification": "NON_PRISTINE_CONTENT_UNVERIFIED",
+      "observed_sha256": "1d70800b98ba767e6dc3a040cb152c9b0c1742d211db0293efe80822a0ada946",
+      "observed_size_bytes": 4814597,
+      "note": "IID-folder companion rewritten by a test during the incident; original content cannot be proven."
+    },
+    {
+      "path": "operations-review/integrated-investment-decision-product-v1-20260825/tactical_setup_tags_artifact.json",
+      "classification": "NON_PRISTINE_CONTENT_UNVERIFIED",
+      "observed_sha256": "67480c9b271fc78a2decc0a2a34b811d82c095074e2db40ba80b905af55c9fbf",
+      "observed_size_bytes": 17646028,
+      "note": "IID-folder companion rewritten by a test during the incident; original content cannot be proven."
+    },
+    {
+      "path": "operations-review/integrated-investment-decision-product-v1-20260825/technical_structure_context_artifact.json",
+      "classification": "NON_PRISTINE_CONTENT_UNVERIFIED",
+      "observed_sha256": "871bfd249a8213d93fd9a4e133caa918b6895a77a41ba3d0afec2608af335a49",
+      "observed_size_bytes": 6891073,
+      "note": "IID-folder companion rewritten by a test during the incident; original content cannot be proven."
+    },
+    {
+      "path": "operations-review/integrated-investment-decision-product-v1-20260904/integrated_investment_decision_product_artifact.json",
+      "classification": "NON_PRISTINE_ORIGINAL_RECONSTRUCTABLE",
+      "observed_sha256": "55927093bd2e95c38d1fa0691c75dcb6724a49630bf32a7e236e1658924a764b",
+      "observed_size_bytes": 68783951,
+      "note": "Retained file is not the production original. The production original is independently recorded by canonical-post-close-v1/2026-09-04/session_handoff_bundle.json and reconstructable; this file is not restored or overwritten here.",
+      "authoritative_production_identity": "integrated_investment_decision_product/v1:55173e1a18839c746037f77f2735dd5828e74fd481525515297c490483e7e68b",
+      "authoritative_identity_source": "operations-review/canonical-post-close-v1/2026-09-04/session_handoff_bundle.json"
+    },
+    {
+      "path": "operations-review/integrated-investment-decision-product-v1-20260904/market_structure_breakout_v3_projection_artifact.json",
+      "classification": "NON_PRISTINE_CONTENT_UNVERIFIED",
+      "observed_sha256": "9bbee5f92d7d20bf034bad0b9e24bee4cbdd93282c4ab944fd434e54df976d26",
+      "observed_size_bytes": 2492295,
+      "note": "IID-folder companion rewritten by a test during the incident; the folder already mixed generations; original content cannot be proven."
+    },
+    {
+      "path": "operations-review/integrated-investment-decision-product-v1-20260904/tactical_confirmation_context_artifact.json",
+      "classification": "NON_PRISTINE_CONTENT_UNVERIFIED",
+      "observed_sha256": "4b0c382f58bb3ac761633b71f9faaae7e1dfed0ca0dd64fc26b3345277b33338",
+      "observed_size_bytes": 1491473,
+      "note": "IID-folder companion rewritten by a test during the incident; the folder already mixed generations; original content cannot be proven."
+    },
+    {
+      "path": "operations-review/integrated-investment-decision-product-v1-20260904/tactical_confirmation_invalidation_boundaries_artifact.json",
+      "classification": "NON_PRISTINE_CONTENT_UNVERIFIED",
+      "observed_sha256": "1fc4e5344d05da547ec16991e8b76f5d9f951c95744626eccdcf929da9a88e12",
+      "observed_size_bytes": 3598098,
+      "note": "IID-folder companion rewritten by a test during the incident; the folder already mixed generations; original content cannot be proven."
+    },
+    {
+      "path": "operations-review/integrated-investment-decision-product-v1-20260904/tactical_momentum_context_artifact.json",
+      "classification": "NON_PRISTINE_CONTENT_UNVERIFIED",
+      "observed_sha256": "02eab146c0ffec61eacf193a62f4ea8cd770b3de3d678d15e2de70b894fccef6",
+      "observed_size_bytes": 4931469,
+      "note": "IID-folder companion rewritten by a test during the incident; the folder already mixed generations; original content cannot be proven."
+    },
+    {
+      "path": "operations-review/integrated-investment-decision-product-v1-20260904/tactical_setup_tags_artifact.json",
+      "classification": "NON_PRISTINE_CONTENT_UNVERIFIED",
+      "observed_sha256": "acfa3e282a0982563bcf9ad97125b3b97e4126234c4d25e77319307808823db2",
+      "observed_size_bytes": 17610364,
+      "note": "IID-folder companion rewritten by a test during the incident; the folder already mixed generations; original content cannot be proven."
+    },
+    {
+      "path": "operations-review/integrated-investment-decision-product-v1-20260904/technical_structure_context_artifact.json",
+      "classification": "NON_PRISTINE_CONTENT_UNVERIFIED",
+      "observed_sha256": "33241b57d8c6c141ebb76126d533d6c89a61460b36271a5f3ac9153253de5777",
+      "observed_size_bytes": 7205015,
+      "note": "IID-folder companion rewritten by a test during the incident; the folder already mixed generations; original content cannot be proven."
+    },
+    {
+      "path": "operations-review/financial-analysis-product-v2-20260904/current_research_valuation_context_artifact.json",
+      "classification": "NON_PRISTINE_CONTENT_UNVERIFIED",
+      "observed_sha256": "07ca5c236e897e953e7cb766dfae2630ca52cd2148df76ad4d54e65cd8449192",
+      "observed_size_bytes": 30499332,
+      "note": "Rewritten by a test during the incident; original content cannot be proven."
+    },
+    {
+      "path": "operations-review/financial-analysis-product-v2-20260904/financial_analysis_product_artifact.json",
+      "classification": "NON_PRISTINE_CONTENT_UNVERIFIED",
+      "observed_sha256": "c587af57ee95c29d90b4b008b8fa96d89cf18917dc722d3f7369ac7767545e69",
+      "observed_size_bytes": 35388286,
+      "note": "Rewritten by a test during the incident; original content cannot be proven."
+    }
+  ],
+  "incident_touched_content_verified": [
+    {
+      "path": "operations-review/financial-analysis-product-v2-20260825/current_research_valuation_context_artifact.json",
+      "observed_sha256": "76f5ef75e961ae542731e241974a0e7be53fbb4caf412f345da207c9db094ef6",
+      "observed_size_bytes": 30132831,
+      "note": "Content equals independent pre-incident copies (2026-09-09 worktrees); mtime-only touch."
+    },
+    {
+      "path": "operations-review/financial-analysis-product-v2-20260825/financial_analysis_product_artifact.json",
+      "observed_sha256": "2d4c6f050e56662dd772cee27c172b2e14047580f3454ba797e10fb11ef192eb",
+      "observed_size_bytes": 35388286,
+      "note": "Content equals independent pre-incident copies (2026-09-09 worktrees); mtime-only touch."
+    },
+    {
+      "path": "operations-review/current-corporate-intelligence-axis-v1/current_corporate_intelligence_axis_artifact.json",
+      "observed_sha256": "c7c4a5e86d7f951e439440f6d530643e36a1b1aee201a184ec49b17f0112fa95",
+      "observed_size_bytes": 8849550,
+      "note": "Artifact identity equals the one recorded by a 2026-09-08 artifact; mtime-only touch. Current-state artifact, rewritten by every Daily."
+    }
+  ]
+}

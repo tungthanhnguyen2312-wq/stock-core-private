@@ -36,7 +36,15 @@ class _ParentImportTrap:
 def main() -> int:
     sys.meta_path.insert(0, _ParentImportTrap())
 
+    # The whole post-close closure the credentialed Daily parent loads, including the shared
+    # session-bar integrity and tactical reference-window modules it now computes through.
+    import canonical_daily_operation  # noqa: F401
+    import canonical_post_close_pipeline  # noqa: F401
     import daily_session_level2_package as level2
+    import market_wide_current_technical_coverage_scaleout  # noqa: F401
+    import mva_daily_research_bundle  # noqa: F401
+    import session_bar_integrity  # noqa: F401
+    import tactical_reference_window  # noqa: F401
     import dnse_access
     import dnse_secrets_env
     import mva_exact_session_snapshot as snapshotter

@@ -291,6 +291,57 @@ def test_malformed_tier_marker_is_a_usage_error_at_collection(tmp_path, marker, 
     assert expected in completed.stderr + completed.stdout
 
 
+_QUARANTINED_TESTS = textwrap.dedent(
+    """
+    import pytest
+
+    @pytest.mark.retained_evidence(
+        "operations-review/integrated-investment-decision-product-v1-20260825/integrated_investment_decision_product_artifact.json")
+    def test_quarantined_file():
+        raise AssertionError("must never run against quarantined evidence")
+
+    @pytest.mark.retained_evidence("operations-review/integrated-investment-decision-product-v1-20260904")
+    def test_quarantined_folder():
+        raise AssertionError("must never run against quarantined evidence")
+
+    @pytest.mark.retained_evidence("evidence/present.json")
+    def test_unquarantined():
+        assert True
+    """
+)
+
+
+@pytest.mark.parametrize("policy", ("strict", "skip-if-absent"))
+def test_quarantined_retained_evidence_fails_under_every_policy_present_or_absent(tmp_path, policy):
+    # The 09-04 folder exists in this scratch root and the 08-25 file does not: neither may run.
+    (tmp_path / "operations-review" / "integrated-investment-decision-product-v1-20260904").mkdir(parents=True)
+    completed, outcomes = _run_tiered(
+        tmp_path, source=_QUARANTINED_TESTS, STOCKLOOKUP_RETAINED_EVIDENCE_POLICY=policy,
+    )
+    assert completed.returncode == 1
+    for name, classification in (
+        ("test_quarantined_file", "CONTAMINATED_UNRECOVERABLE"),
+        ("test_quarantined_folder", "NON_PRISTINE_ORIGINAL_RECONSTRUCTABLE"),
+    ):
+        status, message = outcomes[name]
+        assert status == "error" and "RETAINED_EVIDENCE_QUARANTINED" in message, (name, message)
+        assert classification in message
+    assert outcomes["test_unquarantined"][0] == "passed"
+
+
+def test_retained_evidence_root_variable_is_where_presence_is_checked(tmp_path):
+    source_root = tmp_path / "producer"
+    (source_root / "evidence").mkdir(parents=True)
+    (source_root / "evidence" / "absent.json").write_text("{}", encoding="utf-8")
+    (source_root / "evidence" / "present.json").write_text("{}", encoding="utf-8")
+    run_root = tmp_path / "worktree"
+    run_root.mkdir()
+    _, outcomes = _run_tiered(run_root, "-k", "absent_evidence", STOCKLOOKUP_RETAINED_EVIDENCE_ROOT=str(source_root))
+    status, message = outcomes["test_absent_evidence"]
+    # Present under the configured root, so the tier lets it run (and its own body fails).
+    assert status == "failure" and "must never run without its evidence" in message
+
+
 def test_unknown_policy_value_is_a_usage_error(tmp_path):
     completed, _ = _run_tiered(tmp_path, STOCKLOOKUP_RETAINED_EVIDENCE_POLICY="skip")
     assert completed.returncode == pytest.ExitCode.USAGE_ERROR

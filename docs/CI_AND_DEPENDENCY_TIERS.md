@@ -126,6 +126,36 @@ Tests currently in the retained-evidence tier (all inside the CI focused selecti
 
 The last three used an unconditional `skipif`. They are now strict locally, like the first two.
 
+The five `build_enrichment_components` replays in `test_canonical_post_close_pipeline.py`
+(2026-08-25 and 2026-09-04 inputs) are also in this tier. They are outside the focused
+selection because each rebuilds a full Integrated Decision (about 2 minutes).
+
+### Retained evidence is read-only for tests (RETAINED_EVIDENCE_INCIDENT_20260925)
+
+- **Scratch copies only.** A test that executes a Level-2 builder copies the inputs it needs
+  into `tmp_path` as real files (`tests/_retained_scratch.py`) and passes that tree as the
+  builder's `artifact_root`/`output_root`. It never passes the retained root as a write root.
+  Before this rule, five enrichment tests rebuilt the 2026-08-25 and 2026-09-04 Integrated
+  Decision folders in place.
+- **Write guard.** `tests/_canonical_evidence_write_guard.py` installs a `sys.addaudithook` guard
+  for the whole test process. Any write, create, rename, remove, mkdir, utime or copy whose
+  *resolved* target is under `operations-review/` or `data/` raises
+  `CanonicalEvidenceWriteRefused`. The protected trees belong to this checkout, to the Producer
+  main checkout when running from a worktree, and to `STOCKLOOKUP_RETAINED_EVIDENCE_ROOT`.
+  Resolution follows junctions and symlinks, so a write through a link is refused too. Every
+  refusal is also recorded, so a test still fails at teardown even when the code under test
+  swallows the exception. The guard is in-process only: a spawned Python subprocess must be
+  given scratch roots explicitly.
+- **No links into evidence.** Never junction or symlink canonical `operations-review/` into a
+  worktree. To run the retained tier from a worktree, set
+  `STOCKLOOKUP_RETAINED_EVIDENCE_ROOT=<Producer checkout>`. Marker presence checks and
+  `tests/_retained_scratch.py` then read from that root. Tests that use their own `ROOT` constant
+  do not see the variable.
+- **Quarantine.** `config/retained_evidence_quarantine.json`, read by
+  `retained_evidence_quarantine.py`, lists retained files that must never be a baseline. A
+  `retained_evidence` marker that names a quarantined file, or the folder holding it, fails with
+  `RETAINED_EVIDENCE_QUARANTINED` under every policy.
+
 ## 4. CI workflow (`.github/workflows/producer-ci.yml`)
 
 - Every job installs only `CORE_INSTALL` (core + test under `constraints.txt`). No secrets, no

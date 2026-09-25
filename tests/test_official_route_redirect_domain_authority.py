@@ -74,8 +74,9 @@ def test_cross_domain_redirect_cannot_yield_owner_review_ready() -> None:
     assert record["domain_binding_verdict"] == "INVALID"
 
 
-def test_retained_bid_replay_preserves_hosts_and_becomes_ready_generically() -> None:
-    artifact = execute_bounded_enrichment(live_network=False)
+def test_retained_bid_replay_preserves_hosts_and_becomes_ready_generically(tmp_path) -> None:
+    # Offline replay still creates its evidence directory: keep it out of operations-review.
+    artifact = execute_bounded_enrichment(live_network=False, evidence_dir=tmp_path / "evidence")
     bid = next(record for record in artifact["records"] if record["ticker"] == "BID")
     assert bid["requested_host"] == "www.bidv.com.vn"
     assert bid["final_host"] == "bidv.com.vn"
@@ -84,9 +85,9 @@ def test_retained_bid_replay_preserves_hosts_and_becomes_ready_generically() -> 
     assert bid["prospective_owner_review_status"] == OWNER_REVIEW_READY
 
 
-def test_registry_unchanged_and_replay_deterministic() -> None:
+def test_registry_unchanged_and_replay_deterministic(tmp_path) -> None:
     before = hashlib.sha256(REGISTRY_PATH.read_bytes()).hexdigest()
-    first = execute_bounded_enrichment(live_network=False)
-    second = execute_bounded_enrichment(live_network=False)
+    first = execute_bounded_enrichment(live_network=False, evidence_dir=tmp_path / "evidence")
+    second = execute_bounded_enrichment(live_network=False, evidence_dir=tmp_path / "evidence")
     assert first == second
     assert hashlib.sha256(REGISTRY_PATH.read_bytes()).hexdigest() == before

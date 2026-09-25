@@ -59,6 +59,12 @@ env:
     tests/test_multi_source_market_evidence_contract.py
     tests/test_historical_series_failover.py
     tests/test_run_market_wide_current_technical_coverage_scaleout.py
+    tests/test_session_bar_integrity.py
+    tests/test_tactical_reference_window.py
+    tests/test_integrity_bypass_boundaries.py
+    tests/test_mva_runtime_integrity_ordering.py
+    tests/test_data_integrity_tactical_integration.py
+    tests/test_retained_evidence_quarantine_and_write_guard.py
 
 jobs:
   structural:

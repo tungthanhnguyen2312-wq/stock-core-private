@@ -118,4 +118,3 @@ def resolve_record(record: Any, *, as_of_session: str | None = None) -> tuple[An
 
 def is_refused(record: Any) -> bool:
     return isinstance(record, Mapping) and (record.get("session_bar_integrity") or {}).get("status") == CONFLICTING_DUPLICATE_REFUSED
-

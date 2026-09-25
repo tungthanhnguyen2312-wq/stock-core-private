@@ -1,5 +1,65 @@
 # Decisions & Architectural Decision Records
 
+## 2026-09-26 - M1 stabilization integration RC V1 (isolated release candidate, not promoted)
+
+One release candidate is built on the Provider Runtime Isolation final corrective (`89e3a9d`).
+The reviewed data-integrity and tactical commits (`ad6e63b`…`a069ff6`) are cherry-picked onto it.
+The only textual conflicts were in this file. The analytical code is patch-identical to
+`a069ff6`, and the provider code is identical to `89e3a9d`. There is no second integrity
+resolver, no second window implementation and no second provider-runtime state machine.
+
+**Retained-evidence incident hardening (RETAINED_EVIDENCE_INCIDENT_20260925):**
+
+- **Quarantine registry.** `config/retained_evidence_quarantine.json` (via
+  `retained_evidence_quarantine.py`) lists 16 retained files. It pins each file's SHA-256 as
+  observed at quarantine time. Nothing is deleted, restored or rewritten.
+  - 2026-08-25 IID: `CONTAMINATED_UNRECOVERABLE`.
+  - 2026-09-04 IID: `NON_PRISTINE_ORIGINAL_RECONSTRUCTABLE`. Its authoritative production
+    identity `…:55173e1a…` is recorded by the 2026-09-04 handoff.
+  - The 12 companions in both IID folders and the 2026-09-04 financial-analysis-product-v2 pair:
+    `NON_PRISTINE_CONTENT_UNVERIFIED`.
+- **Excluded uses.** A quarantined file is never a retained-regression baseline, a
+  historical-acceptance baseline, or input to IID-dependent posture replay. Posture replay for
+  2026-08-25 and 2026-09-04 is excluded. Their raw session-bar facts stay usable.
+- **Where it is enforced.**
+  - The pytest retained-evidence tier refuses a declared quarantined path with
+    `RETAINED_EVIDENCE_QUARANTINED`.
+  - `tools/run_core_daily_decision_coherence_replay.py` reports its 2026-08-25 regression check
+    as `EXCLUDED_RETAINED_EVIDENCE_QUARANTINED` instead of comparing.
+  - The prospective-feedback observer already excluded both IIDs; it is unchanged.
+- **Restoration or supersession of the 2026-09-04 path stays an owner decision.** It is recorded
+  by amending the registry.
+
+**Test hygiene:**
+
+- **The polluting tests now use scratch copies.** Five enrichment tests built into the
+  repository root. The incident report named four; the fifth is
+  `test_component_local_failure_does_not_block_unrelated_components`. They now copy their Level-2
+  inputs into `tmp_path` (`tests/_retained_scratch.py`), and are marked `retained_evidence`.
+- **Write guard.** An audit-hook guard (`tests/_canonical_evidence_write_guard.py`) refuses and
+  records any test-process write under `operations-review/` or `data/` of this checkout, of the
+  Producer main checkout, and of `STOCKLOOKUP_RETAINED_EVIDENCE_ROOT`. Resolution goes through
+  junctions and symlinks.
+- **Other writers the guard exposed.** A full hermetic run found 13 more tests that wrote under
+  the repository's `operations-review`. Nine already failed before the guard (absent retained
+  route evidence). The other four were fixed to use scratch, and none trips the guard now:
+  - two route-enrichment replay files, which created the evidence directory even in offline
+    replay;
+  - the Phase-2 closeout readiness test, which rewrote the tracked
+    `p2-closeout-financial-fact-panel-20260820` outputs;
+  - the archive-path resolution test, which created `operations-review/test-evidence`.
+- **Evidence root for worktrees.** `STOCKLOOKUP_RETAINED_EVIDENCE_ROOT` lets a worktree read
+  canonical evidence without linking it.
+- **Production behaviour is unchanged.**
+
+**Also:** the AVAILABLE-parent import-containment check now imports the whole post-close closure
+the credentialed Daily parent loads, including `session_bar_integrity` and
+`tactical_reference_window`.
+
+**Authority.** No authority, provider policy (`SECURITY_REVIEW_BLOCKED`), threshold or
+`research_action_posture` policy changed. This is not merged to `main`. Next gate: owner review
+for stabilization promotion.
+
 ## 2026-09-25 - Data integrity and tactical reference integration V1
 
 The owner approved the order: session-bar integrity first, then the tactical reference window.

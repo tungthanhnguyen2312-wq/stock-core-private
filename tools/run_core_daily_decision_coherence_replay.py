@@ -88,10 +88,27 @@ def _watchlist_view(integrated: Mapping[str, Any], raw_valuation: Mapping[str, A
 def _regression_projection_check() -> dict[str, Any]:
     """Assert the recovered-history consumer produces the already-retained 2026-08-25 projection."""
     import market_structure_breakout_product_projection as projection
+    import retained_evidence_quarantine as quarantine
     import technical_structure_context as structure
 
     session = "2026-08-25"
     token = session.replace("-", "")
+    baselines = (
+        OPS / "integrated-investment-decision-product-v1-20260825" / "market_structure_breakout_v3_projection_artifact.json",
+        OPS / "integrated-investment-decision-product-v1-20260825" / "integrated_investment_decision_product_artifact.json",
+    )
+    quarantined = [
+        entry for entry in (quarantine.quarantine_entry(path, evidence_root=ROOT) for path in baselines) if entry
+    ]
+    if quarantined:
+        # RETAINED_EVIDENCE_INCIDENT_20260925: the retained 2026-08-25 IID folder was rewritten
+        # by tests and has no production lineage. It is never a regression baseline.
+        return {
+            "session": session,
+            "status": "EXCLUDED_" + quarantine.REFUSAL_CODE,
+            "quarantined_baselines": sorted((entry["path"], entry["classification"]) for entry in quarantined),
+            "preserves_previously_valid_tactical_states": None,
+        }
     descriptive = _load(OPS / f"market-wide-current-descriptive-research-v1-{token}" / "market_wide_current_descriptive_research_artifact.json")
     snapshot = _load(OPS / f"p3f9b-market-wide-exact-session-scaleout-{token}" / "p3f9b_mva_exact_session_snapshot.json")
     recovery = _load(OPS / f"market-wide-current-technical-coverage-scaleout-v1-{token}" / "market_wide_current_technical_coverage_recovery_artifact.json")

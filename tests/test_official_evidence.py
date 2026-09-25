@@ -1,5 +1,6 @@
 import hashlib
 import json
+import shutil
 import tempfile
 import unittest
 from pathlib import Path
@@ -61,12 +62,16 @@ class OfficialEvidenceTests(unittest.TestCase):
         self.assertEqual(record["official_evidence"]["extraction"], citation["extraction"])
 
     def test_explicit_archive_path_resolves_without_a_flat_copy(self):
-        archive = Path(__file__).resolve().parents[1] / "operations-review" / "test-evidence" / "archive.pdf"
-        archive.parent.mkdir(parents=True, exist_ok=True)
-        self.addCleanup(lambda: archive.parent.rmdir() if archive.parent.exists() else None)
-        self.addCleanup(lambda: archive.unlink(missing_ok=True))
+        # A relative archive path resolves against the Producer checkout. Use its gitignored
+        # scratch area, never operations-review (retained evidence is read-only for tests).
+        producer_root = Path(__file__).resolve().parents[1]
+        scratch_base = producer_root / ".stocklookup" / "scratch"
+        scratch_base.mkdir(parents=True, exist_ok=True)
+        scratch = Path(tempfile.mkdtemp(prefix="test-evidence-", dir=scratch_base))
+        self.addCleanup(shutil.rmtree, scratch, True)
+        archive = scratch / "archive.pdf"
         archive.write_bytes(b"archive authoritative document")
-        self._write_manifest(self._record(archive, archive_document_path=archive.relative_to(Path(__file__).resolve().parents[1])))
+        self._write_manifest(self._record(archive, archive_document_path=archive.relative_to(producer_root)))
         self._write_citation()
 
         result = load_cited_financial_records(self.root, "ABC")
