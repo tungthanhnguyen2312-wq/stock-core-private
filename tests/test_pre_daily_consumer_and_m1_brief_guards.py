@@ -294,7 +294,7 @@ def _operation(tmp_path: Path, *, m1: bool = True, declare: bool = True, write_b
     import daily_integrated_decision_brief as brief_contract
     from ai_research_session_delivery import project_integrated_decision_delivery_overlay
     from daily_research_session_operations import _identity as operation_identity_of
-    from field_temporal_contract import stable_id
+    from daily_research_session_operations import brief_retention_identity
 
     source = tmp_path / "op"
     source.mkdir()
@@ -333,8 +333,7 @@ def _operation(tmp_path: Path, *, m1: bool = True, declare: bool = True, write_b
         wrapper = {"schema_version": "1.0.0", "contract_version": "daily_session_integrated_decision_brief_artifact/v1",
                    "session": SESSION, "daily_operation_identity": manifest["operation_identity"],
                    "integrated_investment_decision_product_identity": idp, "daily_integrated_decision_brief": brief}
-        wrapper["artifact_sha256"] = stable_id(wrapper)
-        wrapper["artifact_identity"] = "daily_session_integrated_decision_brief_artifact:" + wrapper["artifact_sha256"]
+        wrapper.update(brief_retention_identity(wrapper))
         (source / "daily_integrated_decision_brief_artifact.json").write_text(json.dumps(wrapper))
 
     overlay = project_integrated_decision_delivery_overlay(SESSION, iid, brief if declare else None)
@@ -821,7 +820,7 @@ def test_a_forged_replacement_daily_product_is_refused(monkeypatch, tmp_path, fo
     ("product_absent", "M1_CANONICAL_DAILY_PRODUCT_UNAVAILABLE"),
     ("product_cards_edited", "M1_CANONICAL_DAILY_PRODUCT_IDENTITY_MISMATCH"),
     ("bundle_bound_to_another_product", "M1_AI_DELIVERY_BINDING_MISMATCH:product_identity"),
-    ("brief_wrapper_of_another_operation", "M1_DAILY_BRIEF_RETENTION_BINDING_MISMATCH"),
+    ("brief_wrapper_of_another_operation", "M1_DAILY_BRIEF_RETENTION_IDENTITY_MISMATCH"),
     ("manifest_absent", "OPERATION_MANIFEST_UNAVAILABLE"),
     ("manifest_other_session", "OPERATION_MANIFEST_SESSION_MISMATCH"),
 ])
@@ -867,3 +866,86 @@ def test_no_m1_failure_falls_back_to_the_pre_m1_route(monkeypatch, tmp_path, cor
     with pytest.raises(workflow.OwnerDailyError):
         workflow.publish_ai_handoff(_root(source), tmp_path / "handoff", _completion(source))
     assert "called" not in captured
+
+
+# ---- Brief retention wrapper identity (final delta review)
+# The wrapper's artifact_sha256 was checked but its declared artifact_identity was not: a forged or
+# deleted identity still verified. Under the retention contract the identity is the recomputed
+# digest under the contract prefix (daily_research_session_operations.brief_retention_identity).
+
+_WRAPPER = "daily_integrated_decision_brief_artifact.json"
+_WRAPPER_IDENTITY = "M1_DAILY_BRIEF_RETENTION_IDENTITY_MISMATCH"
+_WRAPPER_BINDING = "M1_DAILY_BRIEF_RETENTION_BINDING_MISMATCH"
+
+
+def _reseal(wrapper: dict) -> None:
+    from daily_research_session_operations import brief_retention_identity
+    wrapper.update(brief_retention_identity(wrapper))
+
+
+def _rebind_and_reseal(key: str, value: str):
+    def mutate(wrapper, _other):
+        wrapper[key] = value
+        _reseal(wrapper)
+    return mutate
+
+
+_WRAPPER_TAMPERS = {
+    "missing_artifact_identity": (lambda w, o: w.pop("artifact_identity"), _WRAPPER_IDENTITY),
+    "random_forged_identity": (lambda w, o: w.update(artifact_identity="forged"), _WRAPPER_IDENTITY),
+    "forged_well_formed_identity": (lambda w, o: w.update(
+        artifact_identity="daily_session_integrated_decision_brief_artifact:" + "0" * 64), _WRAPPER_IDENTITY),
+    "identity_of_another_brief": (lambda w, o: w.update(artifact_identity=o["artifact_identity"]), _WRAPPER_IDENTITY),
+    "identity_and_sha_of_another_brief": (lambda w, o: w.update(artifact_identity=o["artifact_identity"],
+                                                                  artifact_sha256=o["artifact_sha256"]), _WRAPPER_IDENTITY),
+    "valid_sha_bad_identity_prefix": (lambda w, o: w.update(
+        artifact_identity="daily_integrated_decision_brief/v1:" + w["artifact_sha256"]), _WRAPPER_IDENTITY),
+    "valid_identity_bad_sha": (lambda w, o: w.update(artifact_sha256="0" * 64), _WRAPPER_IDENTITY),
+    "missing_sha": (lambda w, o: w.pop("artifact_sha256"), _WRAPPER_IDENTITY),
+    "content_edited_identity_kept": (lambda w, o: w.update(schema_version="9.9.9"), _WRAPPER_IDENTITY),
+    "other_contract_resealed": (_rebind_and_reseal("contract_version", "daily_session_integrated_decision_brief_artifact/v2"),
+                                _WRAPPER_IDENTITY),
+    "wrong_operation_binding_resealed": (_rebind_and_reseal("daily_operation_identity", "daily_research_session_operation:other"),
+                                         _WRAPPER_BINDING),
+    "wrong_iid_binding_resealed": (_rebind_and_reseal("integrated_investment_decision_product_identity",
+                                                      "integrated_investment_decision_product/v1:other"), _WRAPPER_BINDING),
+}
+
+
+def test_the_valid_retained_wrapper_is_self_identifying_and_passes(monkeypatch, tmp_path):
+    from daily_research_session_operations import brief_retention_identity
+    source = _operation(tmp_path)
+    wrapper = json.loads((source / _WRAPPER).read_text())
+    assert {key: wrapper[key] for key in ("artifact_sha256", "artifact_identity")} == brief_retention_identity(wrapper)
+    captured = _publish_stubs(monkeypatch, source)
+    result = workflow.publish_ai_handoff(_root(source), tmp_path / "handoff", _completion(source))
+    assert result["daily_brief_check"]["status"] == "M1_BRIEF_AND_INDEX_VERIFIED"
+    assert captured.get("called") is True
+
+
+@pytest.mark.parametrize("strip_marker", [False, True])
+@pytest.mark.parametrize("name", sorted(_WRAPPER_TAMPERS))
+def test_a_wrapper_that_is_not_its_own_sealed_identity_is_refused(monkeypatch, tmp_path, name, strip_marker):
+    tamper, reason = _WRAPPER_TAMPERS[name]
+    other_root = tmp_path / "other"
+    other_root.mkdir()
+    other = json.loads((_operation(other_root, denominator=9) / _WRAPPER).read_text())  # a different Brief
+    base = tmp_path / "base"
+    base.mkdir()
+    source = _operation(base)
+    _rewrite_json(source / _WRAPPER, lambda w: tamper(w, other))
+    if strip_marker:  # no pre-M1 fallback either
+        _rewrite_bundle(source, _strip_distribution)
+    with pytest.raises(workflow.OwnerDailyError, match="^" + re.escape(reason) + "$"):
+        _verify(source)
+    captured = _publish_stubs(monkeypatch, source)
+    with pytest.raises(workflow.OwnerDailyError, match="^" + re.escape(reason) + "$"):
+        workflow.publish_ai_handoff(_root(source), tmp_path / "handoff", _completion(source))
+    assert "called" not in captured
+
+
+def test_the_writer_and_the_verifier_share_one_wrapper_identity_rule():
+    import inspect
+    import daily_research_session_operations as operations
+    assert "brief_retention_identity" in inspect.getsource(operations._integrated_brief_retention_artifact)
+    assert "brief_retention_identity" in inspect.getsource(workflow.resolve_m1_handoff_authority)

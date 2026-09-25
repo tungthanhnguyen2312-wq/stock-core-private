@@ -521,8 +521,9 @@ def resolve_m1_handoff_authority(source: Path, session: str, *, root: Path | Non
 
     ``None`` exactly when the sealed operation genuinely predates M1. Otherwise the identity chain
     sealed operation manifest -> declared Integrated Decision (retained, recomputed) -> declared
-    Brief and its decision-surface index (recomputed, bound to the operation and the Integrated
-    Decision) -> declared Daily product (recomputed) -> the expected overlay, projected by the
+    Brief and its decision-surface index (recomputed; its retention wrapper's own identity
+    recomputed and bound to the operation and the Integrated Decision) -> declared Daily product
+    (recomputed) -> the expected overlay, projected by the
     delivery's own ``project_integrated_decision_delivery_overlay``. Scoped and owner-focus sets
     come only from that declared Daily product; the full-universe set from the Integrated Decision.
     """
@@ -532,7 +533,7 @@ def resolve_m1_handoff_authority(source: Path, session: str, *, root: Path | Non
     import daily_integrated_decision_brief as brief_contract
     import integrated_investment_decision_product as integrated_contract
     from ai_research_session_delivery import project_integrated_decision_delivery_overlay
-    from field_temporal_contract import stable_id
+    from daily_research_session_operations import BRIEF_RETENTION_CONTRACT, brief_retention_identity
     from portfolio_aware_decision import load_integrated_decision_artifact
 
     outputs = manifest.get("outputs") if isinstance(manifest.get("outputs"), Mapping) else {}
@@ -575,10 +576,16 @@ def resolve_m1_handoff_authority(source: Path, session: str, *, root: Path | Non
     if (brief.get("artifact_identity") != brief_identity
             or brief_contract.content_identity(brief)["artifact_identity"] != brief_identity):
         raise _handoff_brief_error("DAILY_BRIEF_IDENTITY_MISMATCH")
-    unsealed = {key: value for key, value in wrapper.items() if key not in ("artifact_sha256", "artifact_identity")}
+    # The retention wrapper is self-identifying under its own contract: ``artifact_sha256`` is the
+    # stable id of every other field and ``artifact_identity`` is that digest under the contract
+    # prefix (``daily_research_session_operations.brief_retention_identity``, the writer's own rule).
+    wrapper_identity = brief_retention_identity(wrapper)
+    if (wrapper.get("contract_version") != BRIEF_RETENTION_CONTRACT
+            or wrapper.get("artifact_sha256") != wrapper_identity["artifact_sha256"]
+            or wrapper.get("artifact_identity") != wrapper_identity["artifact_identity"]):
+        raise _handoff_brief_error("M1_DAILY_BRIEF_RETENTION_IDENTITY_MISMATCH")
     if (wrapper.get("daily_operation_identity") != manifest.get("operation_identity")
-            or wrapper.get("integrated_investment_decision_product_identity") != integrated_identity
-            or wrapper.get("artifact_sha256") != stable_id(unsealed)):
+            or wrapper.get("integrated_investment_decision_product_identity") != integrated_identity):
         raise _handoff_brief_error("M1_DAILY_BRIEF_RETENTION_BINDING_MISMATCH")
     index = brief.get("decision_surface_index")
     if not isinstance(index, Mapping) or not isinstance(index.get("rows"), list):

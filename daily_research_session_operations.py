@@ -232,13 +232,16 @@ def _integrated_delivery_binding(
     }
 
 
+BRIEF_RETENTION_CONTRACT = "daily_session_integrated_decision_brief_artifact/v1"
+
+
 def _integrated_brief_retention_artifact(operation: Mapping[str, Any]) -> dict[str, Any] | None:
     binding = operation.get("integrated_delivery")
     if not isinstance(binding, Mapping) or not isinstance(binding.get("daily_integrated_decision_brief"), Mapping):
         return None
     artifact = {
         "schema_version": "1.0.0",
-        "contract_version": "daily_session_integrated_decision_brief_artifact/v1",
+        "contract_version": BRIEF_RETENTION_CONTRACT,
         "session": operation["manifest"]["market_session"],
         "daily_operation_identity": operation["manifest"]["operation_identity"],
         "integrated_investment_decision_product_identity": binding["integrated_investment_decision_product"]["artifact_identity"],
@@ -246,9 +249,15 @@ def _integrated_brief_retention_artifact(operation: Mapping[str, Any]) -> dict[s
         "source_frozen_input_identities": copy.deepcopy(binding["source_frozen_input_identities"]),
         "authority_boundary": copy.deepcopy(binding["authority_boundary"]),
     }
-    artifact["artifact_sha256"] = stable_id(artifact)
-    artifact["artifact_identity"] = "daily_session_integrated_decision_brief_artifact:" + artifact["artifact_sha256"]
+    artifact.update(brief_retention_identity(artifact))
     return artifact
+
+
+def brief_retention_identity(artifact: Mapping[str, Any]) -> dict[str, str]:
+    """The retention artifact's own identity: ``artifact_sha256`` is the stable id of every other
+    field, and ``artifact_identity`` is that digest under the retention contract's prefix."""
+    digest = stable_id({key: value for key, value in artifact.items() if key not in ("artifact_sha256", "artifact_identity")})
+    return {"artifact_sha256": digest, "artifact_identity": "daily_session_integrated_decision_brief_artifact:" + digest}
 
 
 def retain_integrated_decision_brief(
