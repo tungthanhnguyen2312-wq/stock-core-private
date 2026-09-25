@@ -9,6 +9,7 @@ from __future__ import annotations
 from collections import Counter
 from datetime import date
 import inspect
+from itertools import groupby
 import json
 import math
 from pathlib import Path
@@ -129,24 +130,41 @@ def _load_runtime_market(runtime_root: Path, *, frozen_session: str) -> tuple[li
         sessions = list(reversed(sessions_desc))
         if len(sessions) != LOOKBACK_SESSIONS or sessions[-1] != frozen_session:
             raise ValueError("RETAINED_COMPLETED_SESSION_WINDOW_INSUFFICIENT")
-        placeholders = ",".join("?" for _ in sessions)
+        window = set(sessions)
         connection.row_factory = sqlite3.Row
-        rows = [dict(row) for row in connection.execute(f"SELECT * FROM ohlcv WHERE date IN ({placeholders}) ORDER BY ticker, date", sessions).fetchall()]
+        # FULL T0-eligible stored series -> shared session_bar_integrity -> 20-session window ->
+        # projection. Never window first: a conflicting duplicate older than the window would be
+        # sliced away before integrity could see it. Rows after T0 are excluded here, before any
+        # processing. Streamed one ticker at a time so the full history is never held at once.
+        grouped: dict[str, list[dict[str, Any]]] = {}
+        refused: dict[str, dict[str, Any]] = {}
+
+        def admit(ticker: str, bars: list[dict[str, Any]]) -> None:
+            resolved, refusal = _full_bar_integrity(bars, as_of_session=frozen_session)
+            if resolved is None:
+                refused[ticker] = refusal
+                return
+            projected = [{"date": str(row["date"]), "close": row.get("close"), "volume": row.get("volume"), "source": row.get("source")}
+                         for row in resolved if str(row["date"]) in window]
+            if projected:
+                grouped[ticker] = projected
+
+        # Stream in primary-key order; tickers stored under several spellings of one upper-cased
+        # symbol are buffered so each symbol is still resolved as one series.
+        spellings = Counter(str(row[0]).upper() for row in connection.execute("SELECT DISTINCT ticker FROM ohlcv"))
+        merged: dict[str, list[dict[str, Any]]] = {}
+        rows = connection.execute("SELECT * FROM ohlcv WHERE date <= ? ORDER BY ticker, date", (frozen_session,))
+        for stored_ticker, ticker_rows in groupby(rows, key=lambda row: row["ticker"]):
+            ticker = str(stored_ticker).upper()
+            bars = [{**dict(row), "session": str(row["date"])} for row in ticker_rows]
+            if spellings[ticker] > 1:
+                merged.setdefault(ticker, []).extend(bars)
+            else:
+                admit(ticker, bars)
+        for ticker, bars in merged.items():
+            admit(ticker, sorted(bars, key=lambda row: row["session"]))
     finally:
         connection.close()
-    full_bars: dict[str, list[dict[str, Any]]] = {}
-    for row in rows:
-        full_bars.setdefault(str(row["ticker"]).upper(), []).append({**row, "session": str(row["date"])})
-    # Full retained bars -> shared session_bar_integrity -> projection (never the reverse).
-    grouped: dict[str, list[dict[str, Any]]] = {}
-    refused: dict[str, dict[str, Any]] = {}
-    for ticker, bars in full_bars.items():
-        resolved, refusal = _full_bar_integrity(bars, as_of_session=frozen_session)
-        if resolved is None:
-            refused[ticker] = refusal
-            continue
-        grouped[ticker] = [{"date": str(row["date"]), "close": row.get("close"), "volume": row.get("volume"), "source": row.get("source")}
-                           for row in resolved]
     return candidates, grouped, sessions, refused
 
 

@@ -27,6 +27,15 @@ The owner approved the order: session-bar integrity first, then the tactical ref
   - **Historical context.** `market_wide_historical_research_context` fixes the T0-eligible rows
     (at or before the target session) before the shared decision, so later rows never reach a
     session map. The former last-wins map now refuses any duplicate that reaches it.
+- **MVA runtime ordering (Codex final blocker).** The runtime-DB loader read only the latest 20
+  sessions before calling `session_bar_integrity`. A conflicting duplicate older than the window
+  was sliced away, and the ticker was admitted as `SHADOW_ONLY`; the snapshot path refused the same
+  input. The loader now streams every stored row at or before T0 (ordered by ticker and date),
+  resolves each ticker's full T0-eligible series through the shared function, and only then keeps
+  the 20 window sessions and projects them. So a conflict anywhere in the T0-qualified series
+  refuses the ticker, and snapshot and runtime give the same disposition. Rows after T0 are still
+  excluded first. Cost: the loader reads the full history (about 1.94M rows, one ticker in
+  memory at a time) instead of 20 sessions.
 - **Unchanged:** `historical_series_failover` still refuses any duplicate row in a provider
   series, identical copies included. That gate is stricter and never selects a copy. Provider
   policy, thresholds and posture policy are also unchanged.
