@@ -234,6 +234,111 @@ def test_write_through_a_junction_or_symlink_is_refused(tmp_path):
     assert list(protected.iterdir()) == []
 
 
+_DIR_FD_MUTATIONS = {
+    "unlink": lambda fd: os.unlink("existing.json", dir_fd=fd),
+    "rmdir": lambda fd: os.rmdir("sub", dir_fd=fd),
+    "mkdir": lambda fd: os.mkdir("new", dir_fd=fd),
+    "rename_out_of": lambda fd: os.rename("existing.json", "moved.json", src_dir_fd=fd),
+    "chmod": lambda fd: os.chmod("existing.json", 0o644, dir_fd=fd),
+    "utime": lambda fd: os.utime("existing.json", dir_fd=fd),
+}
+_needs_dir_fd = pytest.mark.skipif(
+    not {os.unlink, os.rmdir, os.mkdir} <= os.supports_dir_fd, reason="platform has no dir_fd file APIs",
+)
+
+
+def _evidence_tree(root: Path) -> None:
+    (root / "sub").mkdir(parents=True)
+    (root / "existing.json").write_text("retained", encoding="utf-8")
+
+
+def _snapshot(root: Path) -> list:
+    return sorted((p.relative_to(root).as_posix(), p.read_bytes() if p.is_file() else None) for p in root.rglob("*"))
+
+
+@_needs_dir_fd
+@pytest.mark.parametrize("mutation", sorted(_DIR_FD_MUTATIONS))
+@pytest.mark.parametrize("via_link", (False, True), ids=("direct", "linked"))
+def test_a_dir_fd_relative_mutation_inside_protected_evidence_is_refused(tmp_path, monkeypatch, mutation, via_link):
+    """The descriptor names the real evidence directory (directly or through a worktree link), so
+    the relative name must resolve there even when the working directory is unrelated scratch."""
+    protected = tmp_path / "producer" / "operations-review"
+    _evidence_tree(protected)
+    opened = protected
+    if via_link:
+        opened = tmp_path / "worktree" / "operations-review"
+        opened.parent.mkdir()
+        _link_directory(opened, protected)
+    cwd = tmp_path / "cwd"
+    cwd.mkdir()
+    monkeypatch.chdir(cwd)
+    before = _snapshot(protected)
+    fd = os.open(opened, os.O_RDONLY)
+    try:
+        with guard.protect_temporarily(protected):
+            with pytest.raises(guard.CanonicalEvidenceWriteRefused, match=guard.REFUSAL_CODE):
+                _DIR_FD_MUTATIONS[mutation](fd)
+    finally:
+        os.close(fd)
+    recorded = guard.drain_violations()
+    assert len(recorded) == 1 and os.path.normcase(os.path.realpath(protected)) in recorded[0]
+    assert _snapshot(protected) == before
+
+
+@_needs_dir_fd
+def test_rmtree_of_scratch_holding_data_and_operations_review_is_not_mistaken_for_the_checkout(tmp_path, monkeypatch):
+    """GitHub clean-clone regression (PR #4 run #77): POSIX ``shutil.rmtree`` removes a scratch
+    tree's ``data``/``operations-review`` subdirectories as ``os.rmdir(name, dir_fd=...)``; with the
+    working directory at the checkout the guard used to resolve ``name`` to the checkout's own
+    protected ``data``/``operations-review`` and refuse the cleanup. Run from the real checkout
+    against its real protected roots, as CI does."""
+    import tempfile
+
+    monkeypatch.chdir(ROOT)
+    assert guard.is_protected(ROOT / "data") and guard.is_protected(ROOT / "operations-review")
+    stage = Path(tempfile.mkdtemp(prefix="stocklookup_guard_clean_clone_"))
+    with tempfile.TemporaryDirectory() as raw:
+        for root in (stage, Path(raw), tmp_path / "pytest-owned"):
+            for name in ("data", "operations-review"):
+                (root / name / "nested" / name).mkdir(parents=True)
+                (root / name / "nested" / name / "artifact.json").write_text("{}", encoding="utf-8")
+        shutil.rmtree(stage)
+        shutil.rmtree(tmp_path / "pytest-owned")
+    assert not stage.exists() and not Path(raw).exists()
+    assert guard.drain_violations() == []
+
+
+def test_a_protected_root_is_still_refused_when_removed_by_absolute_path(tmp_path):
+    """The dir_fd resolution does not exempt ``os.rmdir``: removing a protected root (or anything
+    under it) by absolute path is refused exactly as before, including the empty root itself."""
+    protected = tmp_path / "producer" / "data"
+    protected.mkdir(parents=True)
+    with guard.protect_temporarily(protected):
+        with pytest.raises(guard.CanonicalEvidenceWriteRefused):
+            os.rmdir(protected)
+        with pytest.raises(guard.CanonicalEvidenceWriteRefused):
+            shutil.rmtree(protected)
+    assert len(guard.drain_violations()) == 2
+    assert protected.is_dir()
+
+
+@_needs_dir_fd
+def test_a_dir_fd_whose_directory_cannot_be_named_fails_closed(tmp_path, monkeypatch):
+    scratch = tmp_path / "scratch"
+    scratch.mkdir()
+    monkeypatch.setattr(guard, "_directory_of_fd", lambda fd: None)
+    fd = os.open(scratch, os.O_RDONLY)
+    try:
+        with pytest.raises(guard.CanonicalEvidenceWriteRefused, match=guard.UNRESOLVED_DIR_FD):
+            os.mkdir("new", dir_fd=fd)
+    finally:
+        os.close(fd)
+    monkeypatch.undo()
+    assert not (scratch / "new").exists()
+    recorded = guard.drain_violations()
+    assert len(recorded) == 1 and guard.UNRESOLVED_DIR_FD in recorded[0]
+
+
 def test_a_swallowed_refusal_is_still_recorded(tmp_path):
     protected = tmp_path / "producer" / "operations-review"
     protected.mkdir(parents=True)

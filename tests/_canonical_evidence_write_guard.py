@@ -12,6 +12,13 @@ mkdir/rmdir, utime/chmod/truncate, copy destinations, link targets, rmtree) whos
 target lies under a protected root. Resolution follows junctions and symlinks, so write-through
 from a linked worktree is refused as well. Reads are never affected.
 
+A relative target that comes with a ``dir_fd`` (``shutil.rmtree`` on POSIX removes a tree with
+``os.unlink(name, dir_fd=...)``/``os.rmdir(name, dir_fd=...)``) is resolved against the directory
+that descriptor names, never against the process working directory: resolving it against the CWD
+both refused scratch cleanup of a ``tmp/.../data`` subdirectory as if it were this checkout's
+``data`` and let a descriptor-relative mutation inside real evidence pass. A descriptor whose
+directory cannot be named is refused (fail closed).
+
 Protected roots: ``operations-review`` and ``data`` of this checkout, of the Producer main
 checkout when this checkout is a git worktree, and of ``STOCKLOOKUP_RETAINED_EVIDENCE_ROOT``
 when set. A refusal raises ``CanonicalEvidenceWriteRefused`` (a ``PermissionError``) at the
@@ -39,24 +46,26 @@ PROTECTED_SUBDIRECTORIES = ("operations-review", "data")
 REFUSAL_CODE = "CANONICAL_EVIDENCE_WRITE_REFUSED"
 
 _WRITE_FLAGS = os.O_WRONLY | os.O_RDWR | os.O_APPEND | os.O_CREAT | os.O_TRUNC
-# event -> indexes of the arguments that are mutation targets
+# event -> (target argument index, index of that target's dir_fd argument or None). Layouts are
+# CPython's audit-event signatures; a dir_fd of -1/None means "relative to the working directory".
 _TARGET_ARGS = {
-    "os.rename": (0, 1),
-    "os.remove": (0,),
-    "os.rmdir": (0,),
-    "os.mkdir": (0,),
-    "os.truncate": (0,),
-    "os.utime": (0,),
-    "os.chmod": (0,),
-    "os.link": (1,),
-    "os.symlink": (1,),
-    "shutil.copyfile": (1,),
-    "shutil.copytree": (1,),
-    "shutil.move": (0, 1),
-    "shutil.rmtree": (0,),
-    "_winapi.CopyFile2": (1,),
-    "_winapi.CreateJunction": (1,),
+    "os.rename": ((0, 2), (1, 3)),
+    "os.remove": ((0, 1),),
+    "os.rmdir": ((0, 1),),
+    "os.mkdir": ((0, 2),),
+    "os.truncate": ((0, None),),
+    "os.utime": ((0, 3),),
+    "os.chmod": ((0, 2),),
+    "os.link": ((1, 3),),
+    "os.symlink": ((1, 2),),
+    "shutil.copyfile": ((1, None),),
+    "shutil.copytree": ((1, None),),
+    "shutil.move": ((0, None), (1, None)),
+    "shutil.rmtree": ((0, 1),),
+    "_winapi.CopyFile2": ((1, None),),
+    "_winapi.CreateJunction": ((1, None),),
 }
+UNRESOLVED_DIR_FD = "UNRESOLVED_DIR_FD"
 
 
 class CanonicalEvidenceWriteRefused(PermissionError):
@@ -94,15 +103,36 @@ def default_protected_roots(repo_root: Path = REPO_ROOT) -> list[Path]:
     return [base / name for base in bases for name in PROTECTED_SUBDIRECTORIES]
 
 
-def _key(path: object) -> str | None:
+def _directory_of_fd(fd: int) -> str | None:
+    """The path of the directory an open descriptor refers to, or ``None`` if it cannot be named."""
+    try:
+        return os.readlink(f"/proc/self/fd/{fd}")  # Linux
+    except (OSError, ValueError):
+        pass
+    try:
+        import fcntl
+
+        raw = fcntl.fcntl(fd, fcntl.F_GETPATH, bytes(1024))  # macOS / BSD
+        return os.fsdecode(raw.split(b"\0", 1)[0]) or None
+    except (ImportError, AttributeError, OSError, ValueError):
+        return None
+
+
+def _key(path: object, dir_fd: object = None) -> str | None:
     if isinstance(path, bytes):
         path = os.fsdecode(path)
     if not isinstance(path, (str, os.PathLike)):
         return None  # file descriptors, None
+    path = os.fspath(path)
+    if isinstance(dir_fd, int) and not isinstance(dir_fd, bool) and dir_fd >= 0 and not os.path.isabs(path):
+        base = _directory_of_fd(dir_fd)
+        if base is None:
+            return UNRESOLVED_DIR_FD
+        path = os.path.join(base, path)
     try:
-        return os.path.normcase(os.path.realpath(os.fspath(path)))
+        return os.path.normcase(os.path.realpath(path))
     except (OSError, ValueError):
-        return os.path.normcase(os.path.abspath(os.fspath(path)))
+        return os.path.normcase(os.path.abspath(path))
 
 
 @dataclass
@@ -116,10 +146,12 @@ class _GuardState:
 _STATE = _GuardState()
 
 
-def _protected_hit(target: object) -> str | None:
-    key = _key(target)
+def _protected_hit(target: object, dir_fd: object = None) -> str | None:
+    key = _key(target, dir_fd)
     if key is None:
         return None
+    if key == UNRESOLVED_DIR_FD:  # the real target is unknown: fail closed
+        return f"{UNRESOLVED_DIR_FD}:{dir_fd}:{os.fsdecode(os.fspath(target))}"
     for root in _STATE.protected:
         if key == root or key.startswith(root + os.sep):
             return key
@@ -147,12 +179,13 @@ def _hook(event: str, args: tuple) -> None:
         if hit is not None:
             _refuse(event, hit)
         return
-    indexes = _TARGET_ARGS.get(event)
-    if indexes is None:
+    targets = _TARGET_ARGS.get(event)
+    if targets is None:
         return
-    for index in indexes:
+    for index, dir_fd_index in targets:
         if index < len(args):
-            hit = _protected_hit(args[index])
+            dir_fd = args[dir_fd_index] if dir_fd_index is not None and dir_fd_index < len(args) else None
+            hit = _protected_hit(args[index], dir_fd)
             if hit is not None:
                 _refuse(event, hit)
 
