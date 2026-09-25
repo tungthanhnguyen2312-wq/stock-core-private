@@ -9,6 +9,53 @@ on:
 permissions:
   contents: read
 
+# Hermetic core tier (docs/CI_AND_DEPENDENCY_TIERS.md):
+# - installs ONLY requirements.txt + requirements-test.txt under constraints.txt; the optional
+#   provider runtime (requirements-providers.txt: vnstock/vnai/anthropic) is never installed;
+# - tests/provider_import_block/sitecustomize.py (via PYTHONPATH) refuses vnstock/vnai in every
+#   interpreter of the job, subprocesses included, so a hidden provider import fails loudly;
+# - no secrets, no provider calls, no retained evidence (operations-review/ and data/ are
+#   gitignored and absent from a clean clone).
+env:
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
+  PYTHONPATH: ${{ github.workspace }}/tests/provider_import_block
+  CORE_INSTALL: python -m pip install -r requirements.txt -r requirements-test.txt -c constraints.txt
+  HERMETIC_MARKERS: not retained_evidence and not provider_runtime
+  FOCUSED_SELECTION: >-
+    tests/test_ci_dependency_tiers.py
+    tests/test_canonical_daily_operation.py
+    tests/test_session_registry_gap_reconciliation.py
+    tests/test_session_comparison_semantics.py
+    tests/test_next_session_decision_brief_comparison_metadata.py
+    tests/test_daily_producer_pipeline.py::test_completed_session_gate_uses_governed_ledger_not_clock_inference
+    tests/test_daily_producer_pipeline.py::test_completed_session_gate_refuses_incomplete_session
+    tests/test_daily_producer_pipeline.py::test_gate_A_future_session_refused_even_with_complete_looking_evidence
+    tests/test_daily_producer_pipeline.py::test_gate_B_same_day_without_completed_evidence_refused
+    tests/test_daily_producer_pipeline.py::test_gate_C_same_day_with_explicit_completed_evidence_accepted
+    tests/test_ai_handoff_source_freshness_matrix.py
+    tests/test_ai_handoff_publication.py
+    tests/test_tactical_reversal_shadow_collection_operationalization.py
+    tests/test_vnstock_worker_client.py
+    tests/test_vnstock_exact_session_worker_equivalence.py
+    tests/test_vnstock_worker_import_containment.py
+    tests/test_multi_source_exact_session_resolver.py
+    tests/test_multi_source_market_evidence_contract.py
+    tests/test_vnstock_rate_governor.py
+    tests/test_macro_vcb_adapter.py
+    tests/test_macro_sjc_adapter.py
+    tests/test_macro_sync_source_fetchers.py
+    tests/test_macro_import_containment.py
+    tests/test_dashboard_domain_freshness.py
+    tests/test_canonical_current_product_projections.py
+    tests/test_canonical_recurring_decision_context_materialization.py
+    tests/test_investment_decision_workspace_projection.py
+    tests/test_screener_master_projection.py
+    tests/test_current_valuation_opportunity_integration.py
+    tests/test_dashboard_release_publisher.py
+    tests/test_producer_sync_timestamp_contract.py::MetadataUpdatedTests
+    tests/test_producer_sync_timestamp_contract.py::FreshnessGateCompatibilityTests
+    tests/test_producer_sync_timestamp_contract.py::UntouchedDataAsOfIsWallClockIndependentTests
+
 jobs:
   structural:
     name: Structural contracts
@@ -28,12 +75,14 @@ jobs:
         with:
           python-version: '3.13'
       - run: python -m pip install --upgrade pip
-      - run: python -m pip install -r requirements.txt pytest
+      - run: ${{ env.CORE_INSTALL }}
+      - run: python -m pip check
+      - run: python tools/verify_dependency_tiers.py --installed
       - run: python -m py_compile stocklookup.py daily_analysis_pipeline.py canonical_daily_operation.py daily_producer_pipeline.py daily_research_session_operations.py
       - run: python -c "import json; json.load(open('docs/ROADMAP_STATE.json', encoding='utf-8'))"
       - run: python tools/stocklookup_roadmap.py --check
       - run: >-
-          pytest -q
+          pytest -q -m "${{ env.HERMETIC_MARKERS }}"
           tests/test_production_call_shape_smoke.py::test_offline_guard_blocks_requests_urllib_and_vnstock_import
           tests/test_production_call_shape_smoke.py::test_owner_daily_entry_route_remains_canonical
 
@@ -46,11 +95,11 @@ jobs:
         with:
           python-version: '3.13'
       - run: python -m pip install --upgrade pip
-      - run: python -m pip install -r requirements.txt pytest
-      - run: pytest -q tests/test_production_call_shape_smoke.py
+      - run: ${{ env.CORE_INSTALL }}
+      - run: pytest -q -m "${{ env.HERMETIC_MARKERS }}" tests/test_production_call_shape_smoke.py
 
   focused-regressions:
-    name: Focused deterministic regressions
+    name: Focused deterministic regressions (hermetic tier)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -58,36 +107,23 @@ jobs:
         with:
           python-version: '3.13'
       - run: python -m pip install --upgrade pip
-      - run: python -m pip install -r requirements.txt pytest
-      - run: >-
-          pytest -q
-          tests/test_canonical_daily_operation.py
-          --deselect=tests/test_canonical_daily_operation.py::test_isolated_2026_08_26_full_replay_reaches_published_without_dispatch
-          tests/test_session_registry_gap_reconciliation.py
-          tests/test_session_comparison_semantics.py
-          tests/test_next_session_decision_brief_comparison_metadata.py
-          tests/test_daily_producer_pipeline.py::test_completed_session_gate_uses_governed_ledger_not_clock_inference
-          tests/test_daily_producer_pipeline.py::test_completed_session_gate_refuses_incomplete_session
-          tests/test_daily_producer_pipeline.py::test_gate_A_future_session_refused_even_with_complete_looking_evidence
-          tests/test_daily_producer_pipeline.py::test_gate_B_same_day_without_completed_evidence_refused
-          tests/test_daily_producer_pipeline.py::test_gate_C_same_day_with_explicit_completed_evidence_accepted
-          tests/test_ai_handoff_source_freshness_matrix.py
-          tests/test_ai_handoff_publication.py
-          tests/test_tactical_reversal_shadow_collection_operationalization.py
-          tests/test_vnstock_worker_client.py
-          tests/test_vnstock_exact_session_worker_equivalence.py
-          tests/test_vnstock_worker_import_containment.py
-          tests/test_multi_source_exact_session_resolver.py
-          tests/test_multi_source_market_evidence_contract.py
-          tests/test_vnstock_rate_governor.py
-          tests/test_macro_vcb_adapter.py
-          tests/test_macro_sjc_adapter.py
-          tests/test_macro_sync_source_fetchers.py
-          tests/test_macro_import_containment.py
-          tests/test_dashboard_domain_freshness.py
-          tests/test_canonical_current_product_projections.py
-          tests/test_canonical_recurring_decision_context_materialization.py
-          tests/test_investment_decision_workspace_projection.py
-          tests/test_screener_master_projection.py
-          tests/test_current_valuation_opportunity_integration.py
-          tests/test_dashboard_release_publisher.py
+      - run: ${{ env.CORE_INSTALL }}
+      - run: pytest -q -rs -m "${{ env.HERMETIC_MARKERS }}" $FOCUSED_SELECTION
+
+  retained-evidence-tier:
+    # Accounting only: the retained-evidence tests of the focused selection, run from the clean
+    # clone. Their governed evidence is gitignored, so each one skips with an explicit
+    # RETAINED_EVIDENCE_ABSENT:<path> reason (-rs prints them). The owner's local acceptance runs
+    # the same tests with the default strict policy, where missing evidence fails.
+    name: Retained-evidence tier (clean-clone accounting)
+    runs-on: ubuntu-latest
+    env:
+      STOCKLOOKUP_RETAINED_EVIDENCE_POLICY: skip-if-absent
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: python -m pip install --upgrade pip
+      - run: ${{ env.CORE_INSTALL }}
+      - run: pytest -q -rs -m retained_evidence $FOCUSED_SELECTION

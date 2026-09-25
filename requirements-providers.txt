@@ -1,0 +1,36 @@
+# Stock Lookup Producer — OPTIONAL provider runtime dependencies
+#
+# KHÔNG thuộc tier hermetic core / CI: core CI không cài file này và chặn import vnstock/vnai
+# (tests/provider_import_block). Tuy vậy, chức năng provider trong production VẪN cần chúng:
+#
+#   vnstock (kéo theo vnai như dependency bắc cầu)
+#     - lane dữ liệu bổ trợ KBS/VCI của Daily: daily_session_level2_package ->
+#       vnstock_worker_client -> vnstock_worker_process -> vn_stock_pipeline -> vnstock
+#       (vnstock_worker_process cũng import vnai trực tiếp, trong try/except);
+#     - các script đồng bộ provider: meta_sync, bctc_sync, blacklist_sync, company_profile_sync,
+#       company_subsidiaries_sync, corporate_events_sync, index_constituents_sync,
+#       instrument_master_sync, ownership_structure_sync, shareholders_sync, financial_observations,
+#       missing_payload_reconciliation, annual_provider_financial_recovery,
+#       provider_financial_source_metadata, vci_financial_statement_retention.
+#     Mọi import vnstock/vnai trong source đều là import trễ (bên trong hàm), nên lõi import được
+#     khi thiếu provider; chỉ lời gọi provider thật mới cần package.
+#     Sau khi cài vnstock, còn 1 bước bắt buộc:
+#       python -c "from vnstock import vnai; vnai.setup_api_key('KEY_CUA_BAN')"
+#
+#   anthropic — chỉ cần cho ai_analyzer.py khi GỌI API THẬT (không cần cho --dry-run).
+#
+# Cài (khi package khả dụng trên chỉ mục):
+#   python -m pip install -r requirements.txt -r requirements-providers.txt -c constraints.txt
+#
+# TRẠNG THÁI CHỈ MỤC (đã kiểm 2026-09-25): PyPI Simple API (PEP 792) trả
+# project-status "quarantined" cho cả vnstock và vnai, với danh sách file/phiên bản rỗng, nên
+# `pip install vnstock` thất bại ("from versions: none"). Đó là trạng thái chỉ mục/security
+# review của PyPI; tài liệu này không suy ra kết luận nào khác. Không vendor, không mirror riêng,
+# không tải wheel từ nguồn không tin cậy. Khi quarantine còn hiệu lực, một máy chưa có sẵn
+# vnstock không thể dựng lại provider runtime từ PyPI.
+# Lần cài được cuối cùng quan sát trong Producer CI (run 73, 2026-09-24, Python 3.13):
+# vnstock 4.0.8, vnai 2.6.1, anthropic 1.8.0. Các dòng dưới đây cố ý để dạng khoảng (không pin
+# trong constraints.txt) vì hiện không thể kiểm chứng lại một bản phân phối vnstock/vnai nào.
+
+vnstock>=4.0.4
+anthropic>=0.116

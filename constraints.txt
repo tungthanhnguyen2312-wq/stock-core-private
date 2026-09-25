@@ -1,0 +1,40 @@
+# Stock Lookup Producer — deterministic constraints for the CORE + TEST dependency closure.
+#
+#   python -m pip install -r requirements.txt -r requirements-test.txt -c constraints.txt
+#
+# Every distribution that closure installs is pinned exactly, so the same tracked requirements
+# resolve to the same versions in CI and locally (tools/verify_dependency_tiers.py enforces it).
+# Source of the versions: the last Producer CI install that succeeded (run 73, 2026-09-24,
+# CPython 3.13 on ubuntu-latest), i.e. the set the core suite was last validated against; the
+# same set was re-validated from a clean clone without vnstock/vnai on CPython 3.13.
+#
+# Deliberately NOT pinned here: requirements-providers.txt (vnstock, vnai, anthropic) -- vnstock
+# and vnai currently have no installable distribution on PyPI to verify a pin against, and they
+# must never block the core install. pip itself is also not pinned (CI upgrades it first).
+# Update procedure: change a pin only together with a green core CI run on the new set.
+
+# --- requirements.txt (core runtime) ---
+pandas==2.3.3
+numpy==2.2.6
+requests==2.34.2
+pyarrow==25.0.1
+openpyxl==3.1.5
+
+# --- requirements-test.txt (core test) ---
+pytest==9.1.1
+
+# --- transitive closure of the above ---
+certifi==2026.7.22
+charset-normalizer==3.5.1
+et-xmlfile==2.0.0
+idna==3.20
+iniconfig==2.3.0
+packaging==26.3
+pluggy==1.6.0
+pygments==2.21.0
+python-dateutil==2.9.0.post0
+pytz==2026.4
+six==1.17.0
+tzdata==2026.4
+urllib3==2.8.0
+colorama==0.4.6         # Windows only: pytest's sys_platform == "win32" dependency

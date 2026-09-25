@@ -21,3 +21,10 @@ from _runtime_root import RUNTIME_ROOT, _RUNTIME_ROOT_ENV
 
 if not os.getenv(_RUNTIME_ROOT_ENV, "").strip():
     os.environ[_RUNTIME_ROOT_ENV] = str(RUNTIME_ROOT)
+
+# Explicit test tiers (hermetic / retained-evidence / provider-runtime); see tests/_test_tiers.py.
+from _test_tiers import (  # noqa: E402,F401 -- re-exported as this conftest's pytest hooks
+    pytest_collection_modifyitems,
+    pytest_configure,
+    pytest_runtest_setup,
+)

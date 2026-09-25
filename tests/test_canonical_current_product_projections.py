@@ -291,9 +291,10 @@ _LIVE_ENRICHMENT_OPERATION_PATH = REPO_ROOT / "operations-review" / "current-for
 _LIVE_OBSERVATIONS_DIR = REPO_ROOT / "data" / "dnse-foreign-flow" / "observations"
 
 
-@pytest.mark.skipif(
-    not (_LIVE_VELOCITY_PATH.is_file() and _LIVE_ENRICHMENT_OPERATION_PATH.is_file() and _LIVE_OBSERVATIONS_DIR.is_dir()),
-    reason="real retained 2026-09-18 live foreign-flow evidence not present in this checkout",
+# Retained-evidence tier: the real retained 2026-09-18 live foreign-flow evidence.
+@pytest.mark.retained_evidence(
+    *(path.relative_to(REPO_ROOT).as_posix()
+      for path in (_LIVE_VELOCITY_PATH, _LIVE_ENRICHMENT_OPERATION_PATH, _LIVE_OBSERVATIONS_DIR))
 )
 def test_real_2026_09_18_live_enrichment_reproduces_the_accepted_relationship_distribution(monkeypatch):
     """FLOW_PRICE_CANONICAL_SOURCE_BACKFILL_AND_PRESENTATION_CORRECTIVE_V1 real-artifact
@@ -586,15 +587,12 @@ def _replay_root() -> Path:
     return Path(__file__).resolve().parents[1]
 
 
-def _replay_evidence_present(root: Path) -> bool:
-    return (root / "operations-review" / "watchlist-tactical-entry-decision-v1-20260911"
-            / "watchlist_tactical_entry_classifier_artifact.json").is_file()
-
-
+# Retained-evidence tier: replays the real retained 2026-09-11 operations-review evidence.
+@pytest.mark.retained_evidence(
+    "operations-review/watchlist-tactical-entry-decision-v1-20260911/watchlist_tactical_entry_classifier_artifact.json"
+)
 def test_retained_2026_09_11_replay_materializes_genuinely_current_products(tmp_path, monkeypatch):
     root = _replay_root()
-    if not _replay_evidence_present(root):
-        pytest.skip("retained 2026-09-11 operations-review evidence not present in this checkout")
     from daily_research_session_operations import load_registry, resolve_inputs
 
     registry = load_registry(root)

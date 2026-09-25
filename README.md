@@ -106,6 +106,20 @@ For development and governance, consult the following authoritative documents:
 - Python 3.11+ (Python 3.13 supported)
 - Windows users: enable `core.longpaths` (`git config --global core.longpaths true`)
 
+### Dependencies & Test Tiers
+```bash
+# Core runtime + test tier, deterministic (exactly what CI installs):
+python -m pip install -r requirements.txt -r requirements-test.txt -c constraints.txt
+
+# Optional provider runtime (vnstock/vnai for the KBS/VCI supplemental lane, anthropic):
+python -m pip install -r requirements.txt -r requirements-providers.txt -c constraints.txt
+```
+Production provider functionality still requires `requirements-providers.txt`. While PyPI lists
+`vnstock`/`vnai` as quarantined (no installable distribution), that runtime cannot be rebuilt
+from PyPI, but the core install and hermetic CI do not depend on it. Tests are tiered as
+hermetic, `retained_evidence` (strict locally, skipped with an explicit reason on a clean clone)
+and `provider_runtime`. See [docs/CI_AND_DEPENDENCY_TIERS.md](docs/CI_AND_DEPENDENCY_TIERS.md).
+
 ### Running Deterministic Unit Tests
 ```powershell
 # Run core deterministic test suite:
