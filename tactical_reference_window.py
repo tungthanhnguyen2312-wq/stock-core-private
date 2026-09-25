@@ -17,12 +17,18 @@ Contract (unchanged intent, now enforced):
 * ``ma_20`` = arithmetic mean of the window's 20 closes.
 * ``momentum_20d`` = ``close[last] / close[first] - 1`` over the same window: close(T0) versus
   the close 19 observations earlier, which is 19 return intervals.
-* Exact duplicate rows for one session collapse to one observation.
+* Duplicate rows for one session are resolved by ``session_bar_integrity`` -- the single
+  repository duplicate policy (DATA_INTEGRITY_AND_TACTICAL_REFERENCE_INTEGRATION_V1). Rows that
+  are identical in every field they carry collapse; any other duplicate refuses the series with
+  ``session_bar_integrity.REFUSAL_REASON``. This module keeps no duplicate rule of its own. Callers
+  normally pass rows the shared boundary (``technical_structure_context.
+  resolve_target_session_observations``) already resolved on the full retained observation, so
+  this check only guards a caller that bypassed it.
 * The window fails closed with a blocker when:
   * fewer than 20 observations exist through the feature session;
   * a close is missing, non-finite or non-positive;
   * a volume is missing;
-  * a session's duplicate rows disagree;
+  * a session has conflicting duplicate rows;
   * price-basis / transformation identities are mixed.
   It never falls back to a longer or shorter history. The last two cases are input-integrity
   refusals (``INTEGRITY_BLOCKERS``).
@@ -37,18 +43,18 @@ import math
 import statistics
 from typing import Any, Mapping, Sequence
 
+import session_bar_integrity
+
 REFERENCE_WINDOW_OBSERVATIONS = 20
 WINDOW_CONVENTION = "LATEST_20_QUALIFIED_RETAINED_OBSERVATIONS_THROUGH_FEATURE_SESSION"
 MOMENTUM_CONVENTION = "CLOSE_LAST_OVER_CLOSE_FIRST_OF_WINDOW_MINUS_ONE_19_INTERVALS"
 
 BLOCKER_INCOMPLETE_WINDOW = "COMPLETE_20_SESSION_WINDOW_REQUIRED"
-BLOCKER_CONFLICTING_DUPLICATE_SESSION = "REFERENCE_WINDOW_CONFLICTING_DUPLICATE_SESSION"
 BLOCKER_MIXED_PRICE_BASIS = "REFERENCE_WINDOW_PRICE_BASIS_INCOMPATIBLE"
 # Input-integrity refusals: the retained observations themselves contradict each other, which
 # no later stage of the same session can repair. (Contrast COMPLETE_20_SESSION_WINDOW_REQUIRED,
 # which a technical-history recovery can legitimately fill.)
-INTEGRITY_BLOCKERS = frozenset({BLOCKER_CONFLICTING_DUPLICATE_SESSION, BLOCKER_MIXED_PRICE_BASIS})
-_DUPLICATE_IDENTITY_FIELDS = ("close", "volume", "price_basis", "transformation_identity")
+INTEGRITY_BLOCKERS = frozenset({session_bar_integrity.REFUSAL_REASON, BLOCKER_MIXED_PRICE_BASIS})
 
 AVAILABLE = "AVAILABLE"
 MISSING = "MISSING"
@@ -65,34 +71,6 @@ def _session_of(row: Mapping[str, Any]) -> str | None:
     return str(value) if value is not None else None
 
 
-def collapse_exact_duplicate_sessions(rows: Sequence[Mapping[str, Any]]) -> tuple[list[Mapping[str, Any]], frozenset[str]]:
-    """Collapse same-session rows that are exact copies (close, volume, basis, transformation);
-    report sessions whose duplicate rows disagree. Order of first occurrence is preserved.
-
-    A retained snapshot can carry the same session twice (2026-09-16: a duplicated 2026-09-15 bar
-    for 599 tickers, 193 with conflicting closes). An exact copy carries no ambiguity; a
-    conflicting copy is never averaged or silently resolved.
-    """
-    by_session: dict[str, list[Mapping[str, Any]]] = {}
-    ordered_sessions: list[str] = []
-    for row in rows:
-        session = _session_of(row)
-        if session not in by_session:
-            by_session[session] = []
-            ordered_sessions.append(session)
-        by_session[session].append(row)
-    collapsed: list[Mapping[str, Any]] = []
-    conflicting: set[str] = set()
-    for session in ordered_sessions:
-        group = by_session[session]
-        if len({tuple(row.get(field) for field in _DUPLICATE_IDENTITY_FIELDS) for row in group}) > 1:
-            conflicting.add(session)
-            collapsed.extend(group)
-        else:
-            collapsed.append(group[0])
-    return collapsed, frozenset(conflicting)
-
-
 def select_reference_window(
     rows: Sequence[Mapping[str, Any]], *, as_of_session: str | None = None,
     length: int = REFERENCE_WINDOW_OBSERVATIONS,
@@ -107,7 +85,11 @@ def select_reference_window(
     dated = [row for row in rows if isinstance(row, Mapping) and _session_of(row) is not None]
     if as_of_session is not None:
         dated = [row for row in dated if _session_of(row) <= as_of_session]
-    ordered, conflicting = collapse_exact_duplicate_sessions(sorted(dated, key=_session_of))
+    # The one duplicate policy: rows are keyed by ``session`` for session_bar_integrity.
+    keyed = [row if row.get("session") == _session_of(row) else {**row, "session": _session_of(row)} for row in dated]
+    integrity = session_bar_integrity.resolve_session_bars(keyed)
+    refused = integrity["status"] == session_bar_integrity.CONFLICTING_DUPLICATE_REFUSED
+    ordered = sorted(keyed if refused else integrity["observations"], key=_session_of)
     last_session = _session_of(ordered[-1]) if ordered else None
     window = ordered[-length:]
 
@@ -116,8 +98,8 @@ def select_reference_window(
                 "last_session": last_session, "observations": len(window), "convention": WINDOW_CONVENTION}
 
     sessions = [_session_of(row) for row in window]
-    if conflicting.intersection(sessions):
-        return _missing(BLOCKER_CONFLICTING_DUPLICATE_SESSION)
+    if refused:
+        return _missing(session_bar_integrity.REFUSAL_REASON)
     if len(window) < length:
         return _missing(BLOCKER_INCOMPLETE_WINDOW)
     closes = [_finite(row.get("close")) for row in window]

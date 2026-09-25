@@ -352,15 +352,14 @@ def _classify_ticker(
         pf_record=pf_record, recovery_override=recovery_override, target_session=target_session,
     )
     history_record = {"observations": winning_record.get("observations")} if history_source == "RETAINED_TECHNICAL_HISTORY_RECOVERY" else winning_record
-    # Same series discipline as the shared reference window: nothing dated after the target
-    # session, and an exact duplicate bar counts once (a conflicting duplicate is left as-is here;
-    # inside the MA20 window it makes the descriptive features, and so this record, ineligible).
+    # Nothing dated after the target session. Duplicate bars were already resolved by
+    # session_bar_integrity inside resolve_target_session_observations (exact copies collapsed,
+    # conflicting records refused), so this series and the structural series are the same one.
     series_rows = sorted(
         (row for row in (history_record or {}).get("observations") or []
          if isinstance(row, Mapping) and row.get("session") and str(row["session"]) <= target_session),
         key=lambda row: str(row["session"]),
     )
-    series_rows, _ = reference_window.collapse_exact_duplicate_sessions(series_rows)
     sessions, closes = _closes({"observations": series_rows})
     if not sessions or sessions[-1] != target_session:
         reason = (session_bar_integrity.REFUSAL_REASON if history_source == "SESSION_BAR_CONFLICT_REFUSED"

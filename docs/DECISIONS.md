@@ -1,5 +1,26 @@
 # Decisions & Architectural Decision Records
 
+## 2026-09-25 - Data integrity and tactical reference integration V1
+
+The owner approved the order: session-bar integrity first, then the tactical reference window.
+`session_bar_integrity` is the only duplicate policy.
+
+- **The tactical window keeps no duplicate rule of its own.** The tactical corrective's
+  `collapse_exact_duplicate_sessions` compared only close, volume, basis and transformation.
+  It therefore treated ACG's 2026-09-16 copies, which differ only in `high`, as exact. That
+  function, its field list and `REFERENCE_WINDOW_CONFLICTING_DUPLICATE_SESSION` are removed.
+  - `select_reference_window` delegates to `session_bar_integrity.resolve_session_bars`. A
+    conflict anywhere in the series refuses it with `CONFLICTING_DUPLICATE_SESSION_BAR`.
+  - The momentum context's second collapse is removed. Its series is the one
+    `resolve_target_session_observations` already resolved, which is also the structural series.
+- **Technical-history recovery judges duplicates on the full observation.** `recovery_candidates`
+  resolves integrity before projecting to `(date, close, volume)`, so a refused record is a
+  candidate for re-acquisition. `recovery_record` labels a contradictory re-fetch
+  `SESSION_BAR_CONFLICT_REFUSED`, never `INSUFFICIENT_HISTORY_AFTER_EXTENDED_LOOKBACK`.
+- **Unchanged:** `historical_series_failover` still refuses any duplicate row in a provider
+  series, identical copies included. That gate is stricter and never selects a copy. Provider
+  policy, thresholds and posture policy are also unchanged.
+
 ## 2026-09-25 - Session-bar duplicate integrity corrective V1
 
 The retained 2026-09-16 P3F9B snapshot carries two 2026-09-15 DNSE bars for 599 tickers, plus

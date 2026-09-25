@@ -6,6 +6,7 @@ import json
 from collections import Counter
 from typing import Any, Mapping, Sequence
 
+import session_bar_integrity
 from field_temporal_contract import stable_id
 from mva_daily_research_bundle import market_features
 from mva_exact_session_snapshot import _observation_rows
@@ -63,9 +64,16 @@ def recovery_candidates(*, baseline_artifact: Mapping[str, Any], p3f9b_snapshot:
         if records[ticker].get("technical_features", {}).get("status") == "MISSING":
             candidates.append(ticker)
             continue
+        # Duplicate bars are judged on the full retained observation by the one shared policy,
+        # never on the projected (date, close, volume) rows below. A refused record is a
+        # candidate: only an independently re-acquired, feature-safe series can replace it.
+        integrity = session_bar_integrity.resolve_session_bars(source.get("observations", []), as_of_session=target)
+        if integrity["status"] == session_bar_integrity.CONFLICTING_DUPLICATE_REFUSED:
+            candidates.append(ticker)
+            continue
         tonight_rows = [
             {"date": row["session"], "close": row.get("close"), "volume": row.get("volume")}
-            for row in source.get("observations", [])
+            for row in integrity["observations"]
             if isinstance(row, Mapping) and row.get("session") is not None
         ]
         if market_features(tonight_rows).get("status") == "MISSING":
@@ -103,10 +111,17 @@ def recovery_record(*, ticker: str, response: Mapping[str, Any], target_session:
             "observations": observations,
             "attempt_count": attempt_count,
         }
-    features = market_features([{"date": row["session"], "close": row["close"], "volume": row["volume"]} for row in observations])
-    state = "RECOVERED_COMPLETE_TECHNICAL_HISTORY" if features.get("status") == "SHADOW_ONLY" else "INSUFFICIENT_HISTORY_AFTER_EXTENDED_LOOKBACK"
+    integrity = session_bar_integrity.resolve_session_bars(observations, as_of_session=target_session)
+    if integrity["status"] == session_bar_integrity.CONFLICTING_DUPLICATE_REFUSED:
+        # The re-fetched history is itself contradictory. That is not lifetime history
+        # insufficiency, so it must not be labelled INSUFFICIENT_HISTORY_AFTER_EXTENDED_LOOKBACK.
+        state, reason = "SESSION_BAR_CONFLICT_REFUSED", session_bar_integrity.REFUSAL_REASON
+    else:
+        features = market_features([{"date": row["session"], "close": row["close"], "volume": row["volume"]} for row in integrity["observations"]])
+        state = "RECOVERED_COMPLETE_TECHNICAL_HISTORY" if features.get("status") == "SHADOW_ONLY" else "INSUFFICIENT_HISTORY_AFTER_EXTENDED_LOOKBACK"
+        reason = None if state.startswith("RECOVERED") else "COMPLETE_20_SESSION_WINDOW_REQUIRED"
     return {
-        "ticker": ticker, "state": state, "reason": None if state.startswith("RECOVERED") else "COMPLETE_20_SESSION_WINDOW_REQUIRED",
+        "ticker": ticker, "state": state, "reason": reason,
         "query": dict(query), "provider": response.get("provider"), "endpoint": response.get("endpoint"),
         "payload_sha256": hashlib.sha256(_canonical_json(body).encode("utf-8")).hexdigest(),
         "observations": observations,

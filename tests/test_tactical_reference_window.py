@@ -18,6 +18,7 @@ import current_market_screening_opportunity_comparison_foundation as screening_m
 import market_structure_breakout_product_projection as projection_module
 import market_wide_current_descriptive_research as descriptive_module
 import market_wide_current_fundamental_research as fundamental_module
+import session_bar_integrity
 import tactical_momentum_context as momentum_module
 import tactical_reference_window as window
 import technical_structure_context as structure_module
@@ -141,14 +142,17 @@ class WindowSelectionTests(unittest.TestCase):
         rows = _rows(EXACT_WINDOW)
         rows.append({**rows[-3], "close": 99.0})  # same session, different close (2026-09-16 shape)
         result = window.select_reference_window(rows, as_of_session=TARGET)
-        self.assertEqual(result["blockers"], [window.BLOCKER_CONFLICTING_DUPLICATE_SESSION])
-        self.assertIn(window.BLOCKER_CONFLICTING_DUPLICATE_SESSION, window.INTEGRITY_BLOCKERS)
-        self.assertEqual(market_features(rows)["blockers"], [window.BLOCKER_CONFLICTING_DUPLICATE_SESSION])
+        self.assertEqual(result["blockers"], [session_bar_integrity.REFUSAL_REASON])
+        self.assertIn(session_bar_integrity.REFUSAL_REASON, window.INTEGRITY_BLOCKERS)
+        self.assertEqual(market_features(rows)["blockers"], [session_bar_integrity.REFUSAL_REASON])
 
-    def test_conflicting_duplicate_outside_window_does_not_contaminate(self) -> None:
+    def test_conflicting_duplicate_outside_window_refuses_under_the_shared_policy(self) -> None:
+        # DATA_INTEGRITY_AND_TACTICAL_REFERENCE_INTEGRATION_V1: the window keeps no duplicate rule
+        # of its own. session_bar_integrity refuses the whole series, wherever the conflict sits.
         rows = _rows([95.0] * 5 + EXACT_WINDOW)
         rows.append({**rows[1], "close": 1.0})
-        self.assertEqual(window.reference_values(rows, as_of_session=TARGET)["ma_20"], 12.5)
+        result = window.reference_values(rows, as_of_session=TARGET)
+        self.assertEqual((result["ma_20"], result["blockers"]), (None, [session_bar_integrity.REFUSAL_REASON]))
 
     def test_future_observation_never_enters_t0_window(self) -> None:
         rows = _rows(EXACT_WINDOW)
@@ -273,7 +277,7 @@ class DescriptiveIntegrityRefusalTests(unittest.TestCase):
         _, descriptive, tactical, momentum = _pipeline({"GEE": observations, "UPX": _observations([10.0 + 0.1 * i for i in range(60)])})
         technical = descriptive["records"]["GEE"]["technical_features"]
         self.assertEqual(technical["status"], "MISSING")
-        self.assertEqual(technical["blockers"], [window.BLOCKER_CONFLICTING_DUPLICATE_SESSION])
+        self.assertEqual(technical["blockers"], [session_bar_integrity.REFUSAL_REASON])
         self.assertIsNone(tactical["records"]["GEE"]["entry_state"])
         self.assertEqual(momentum["records"]["GEE"]["eligibility"]["status"], "NOT_ELIGIBLE")
         self.assertEqual(descriptive["records"]["UPX"]["technical_features"]["status"], "SHADOW_ONLY")
