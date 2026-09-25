@@ -1,7 +1,7 @@
 # Stock Lookup — Operational State
 
-**M1 live-acceptance corrective (2026-09-24):**
-`CURRENT_DECISION_SURFACE_CONVERGENCE_V1 = ACTIVE / LIVE_ACCEPTANCE_CORRECTIVE_PENDING_REVIEW`.
+**M1 live-acceptance corrective (promoted 2026-09-25):**
+`CURRENT_DECISION_SURFACE_CONVERGENCE_V1 = ACTIVE / CORRECTIVE_PROMOTED / LIVE_ACCEPTANCE_PENDING_NEXT_ORDINARY_DAILY`.
 
 The M1 implementation was promoted on 2026-09-24, and the 2026-09-24 Daily completed. Live
 acceptance then failed on five defects:
@@ -11,15 +11,18 @@ acceptance then failed on five defects:
 - Foreign-flow presentation read the Producer-local store.
 - The Desktop PowerShell launcher killed Owner Daily on native stderr.
 
-`M1_LIVE_ACCEPTANCE_CORRECTIVE_V1` fixes all five on a local checkpoint. It is not pushed or
-merged, and no Daily, replay or publication was run. Analytical decisions are unchanged. See
-`docs/DECISIONS.md` (2026-09-24). M1 is not complete until independent review, promotion and the
-next ordinary Daily's live acceptance.
+`M1_LIVE_ACCEPTANCE_CORRECTIVE_V1` fixes all five. The independently reviewed corrective chain
+was fast-forward promoted to Producer `main` through `2d32e51` on 2026-09-25. No Daily, replay,
+provider call, production DB write, Dashboard publication or AI-handoff republication was run
+during this promotion; analytical decisions are unchanged. See `docs/DECISIONS.md`
+(2026-09-24). M1 remains ACTIVE until the next ordinary Daily's live acceptance; 2026-09-24
+will not be replayed for this corrective.
 
-**Current decision surface convergence V1 (2026-09-23):**
-`CURRENT_DECISION_SURFACE_CONVERGENCE_V1 = ACTIVE / IMPLEMENTATION_COMPLETE_LOCAL_RELEASE_CANDIDATE /
-AWAITING_OWNER_REVIEW_AND_M1_PROMOTION`. Local checkpoint commits only; no push, merge, Daily, replay,
-or publication.
+**Historical current decision surface convergence V1 implementation snapshot (2026-09-23):**
+At that checkpoint, `CURRENT_DECISION_SURFACE_CONVERGENCE_V1 = ACTIVE /
+IMPLEMENTATION_COMPLETE_LOCAL_RELEASE_CANDIDATE / AWAITING_OWNER_REVIEW_AND_M1_PROMOTION`.
+The implementation was then local; no push, merge, Daily, replay or publication occurred in
+that implementation step.
 
 1. **One action authority.** `research_action_posture` (Integrated Decision) is the single cross-surface
    action decision. The Workspace consumes the exact same-session Integrated Decision artifact the AI /
