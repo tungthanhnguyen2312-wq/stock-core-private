@@ -17,9 +17,12 @@ packet, case, or orchestration abstraction:
   rebuilt.
 - The retained P3F9B exact-session snapshot for OHLC history -- re-read, never refetched.
 
-A CRITICAL correctness point ``market_features()`` does not itself expose: it computes over
-whatever chronological window it is handed, without asserting that the window's last row is the
-*target* session. For a ``SESSION_MISSING`` ticker the window's last row is necessarily an
+``market_features()`` computes over the authoritative latest-20-observation window through the
+target session (``tactical_reference_window``; TACTICAL_REFERENCE_WINDOW_CORRECTIVE_V1 -- before
+it, the whole retained history was averaged under the ``ma_20``/``momentum_20d`` names).
+
+A CRITICAL correctness point ``market_features()`` does not itself expose: it does not assert
+that the window's last row is the *target* session. For a ``SESSION_MISSING`` ticker the window's last row is necessarily an
 *earlier* session. This module labels every technical-feature result with the actual
 ``feature_as_of_session`` it was computed against and an explicit ``is_current_session`` flag, and
 restricts same-session breadth/sector aggregation (advancing/declining, momentum descriptors) to
@@ -38,6 +41,7 @@ from typing import Any, Mapping, Sequence
 from field_temporal_contract import stable_id as _p3f9b_stable_id
 from market_regime_breadth_context import _descriptor
 from mva_daily_research_bundle import market_features
+import tactical_reference_window as reference_window
 import market_wide_current_liquidity_research as liquidity_module
 from sector_relative_research_context import MIN_COHORT_MEMBERS, _bucket
 import session_bar_integrity
@@ -145,8 +149,11 @@ def _feature_rows(pf_record: Mapping[str, Any]) -> list[dict[str, Any]]:
     observations = pf_record.get("observations")
     if not isinstance(observations, list):
         return []
+    # price_basis/transformation_identity ride along only so the shared reference window can
+    # refuse a window that mixes bases; they are absent (None) on recovery-series rows.
     return [
-        {"date": row.get("session"), "close": row.get("close"), "volume": row.get("volume")}
+        {"date": row.get("session"), "close": row.get("close"), "volume": row.get("volume"),
+         "price_basis": row.get("price_basis"), "transformation_identity": row.get("transformation_identity")}
         for row in observations if isinstance(row, Mapping) and row.get("session")
     ]
 
@@ -154,10 +161,13 @@ def _feature_rows(pf_record: Mapping[str, Any]) -> list[dict[str, Any]]:
 def _technical_features(pf_record: Mapping[str, Any], *, target_session: str,
                         provenance: Mapping[str, Any] | None = None,
                         provider_volume_compatible: bool = True) -> dict[str, Any]:
+    # TACTICAL_REFERENCE_WINDOW_CORRECTIVE_V1: the features are computed over the authoritative
+    # latest-20-observation window through the target session, never over the whole retained
+    # history (which previously made ma_20/momentum_20d a ~250-session mean/return).
     rows = _feature_rows(pf_record)
-    result = market_features(rows)
-    dates = sorted(str(row["date"]) for row in rows)
-    latest = dates[-1] if dates else None
+    result = market_features(rows, as_of_session=target_session)
+    window = reference_window.select_reference_window(rows, as_of_session=target_session)
+    latest = window["last_session"]
     if not provider_volume_compatible and isinstance(result.get("values"), Mapping):
         # KBS/VCI history can qualify for close-only Current Research after the exact-session
         # compatibility gate. It does not qualify a cross-family volume baseline, so preserve
@@ -171,6 +181,13 @@ def _technical_features(pf_record: Mapping[str, Any], *, target_session: str,
         "feature_as_of_session": latest,
         "is_current_session": latest == target_session,
         "technical_history_provenance": dict(provenance or {"source": "RETAINED_P3F9B_EXACT_SESSION_SNAPSHOT"}),
+        "reference_window": {
+            "convention": window["convention"],
+            "momentum_convention": reference_window.MOMENTUM_CONVENTION,
+            "observations": window["observations"],
+            "first_session": window["first_session"],
+            "last_session": window["last_session"],
+        },
     }
 
 

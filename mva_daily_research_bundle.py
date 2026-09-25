@@ -19,6 +19,7 @@ from typing import Any, Mapping, Sequence
 from field_temporal_contract import stable_id
 from market_data_contracts import FeatureStatus
 import mva_provider_share_proxy as proxy
+import tactical_reference_window as reference_window
 
 SCHEMA_VERSION = "1.0.0"
 CONTRACT_VERSION = "p3f7_mva_daily_research_bundle/v1"
@@ -58,17 +59,23 @@ def derive_empirical_active_cohort(rows_by_ticker: Mapping[str, Sequence[Mapping
     return contract | {"exclusions": exclusions}
 
 
-def market_features(rows: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
-    """Compute descriptive features only from a complete, chronological window."""
-    ordered = sorted(rows, key=lambda row: str(row["date"]))
+def market_features(rows: Sequence[Mapping[str, Any]], *, as_of_session: str | None = None) -> dict[str, Any]:
+    """Compute descriptive features only from the complete, chronological 20-observation window.
+
+    The window is selected by ``tactical_reference_window.select_reference_window`` (latest 20
+    retained observations not after ``as_of_session``). A longer history never contributes; an
+    unusable row inside the window fails closed instead of being skipped.
+    """
+    window = reference_window.select_reference_window(rows, as_of_session=as_of_session, length=LOOKBACK_SESSIONS)
+    if window["status"] != reference_window.AVAILABLE:
+        return {"status": "MISSING", "blockers": list(window["blockers"]), "values": {}}
+    ordered = window["rows"]
     closes = [_as_float(row.get("close")) for row in ordered]
     volumes = [_as_float(row.get("volume")) for row in ordered]
-    if len(ordered) < LOOKBACK_SESSIONS or any(value is None or value <= 0 for value in closes) or any(value is None for value in volumes):
-        return {"status": "MISSING", "blockers": ["COMPLETE_20_SESSION_WINDOW_REQUIRED"], "values": {}}
     returns = [(closes[index] / closes[index - 1]) - 1 for index in range(1, len(closes))]
     median_volume = statistics.median(volumes)
-    values = {"close": closes[-1], "return_1d": returns[-1], "momentum_20d": (closes[-1] / closes[0]) - 1,
-              "ma_3": statistics.mean(closes[-3:]), "ma_5": statistics.mean(closes[-5:]), "ma_20": statistics.mean(closes),
+    values = {"close": closes[-1], "return_1d": returns[-1], "momentum_20d": reference_window.reference_momentum_20d(closes),
+              "ma_3": statistics.mean(closes[-3:]), "ma_5": statistics.mean(closes[-5:]), "ma_20": reference_window.reference_ma20(closes),
               "volatility_20d": statistics.pstdev(returns), "relative_volume_provider_scoped": (volumes[-1] / median_volume if median_volume else None)}
     return {"status": "SHADOW_ONLY", "price_basis": "ADJUSTED_RETROSPECTIVE", "historical_pit_eligible": False,
             "method": "retained_20_completed_session_window; no_imputation", "values": values,

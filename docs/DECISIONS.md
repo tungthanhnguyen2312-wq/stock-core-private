@@ -33,6 +33,48 @@ No other retained snapshot (2026-08-20 .. 2026-09-24) has a duplicate.
   learning) already require exactly one bar and are unchanged. No threshold or posture policy
   changed.
 
+## 2026-09-25 - Tactical reference-window corrective V1 (isolated branch, not promoted)
+
+`TACTICAL_REFERENCE_WINDOW_CORRECTIVE_V1` is implemented on `feature/tactical-reference-window-corrective-v1`
+from `cde156e`. It is not merged or pushed; M1 live acceptance runs on `cde156e`.
+
+- **Defect.** `market_wide_current_descriptive_research._technical_features()` passed the whole
+  retained history (~250 observations) to `mva_daily_research_bundle.market_features()`. That
+  function only checked for at least 20 rows. As a result, `ma_20`, `momentum_20d`,
+  `volatility_20d`, `ma_3`/`ma_5` and relative volume were whole-history values under 20-session
+  names, while the artifact declared `retained_20_completed_session_window`. The 2026-08-31
+  Tactical V2 entry recorded this as a known characteristic and left it unfixed. On retained
+  2026-09-24 evidence, `ma_20` equals the whole-history mean for 837/837 classified tickers
+  that have a retained series.
+- **Restored contract (unchanged intent, now enforced).** The new pure module
+  `tactical_reference_window.py` selects the latest 20 retained observations not after the
+  feature session.
+  - `ma_20` is the mean of the 20 closes in that window.
+  - `momentum_20d` is `close[last] / close[first] - 1` over the same window (19 intervals).
+  - The window fails closed on fewer than 20 observations, an unusable close or volume inside
+    the window, a duplicate session, or mixed `price_basis`/`transformation_identity`.
+  - An unusable row is never skipped, and the window never falls back to longer history.
+  - Future-dated rows never enter.
+  Callers that already pass exactly 20 rows (the MVA bundle, the historical research context,
+  the tactical replay) produce identical values.
+- **One computation.** `market_features()` and `tactical_momentum_context` use the same window
+  function and the same `trailing_mean`. On 09-24, classifier `ma_20` equals momentum MA20 for
+  842/842 tactical-eligible tickers; before the fix, 0/842 matched. Momentum MA50/100/200 moved by
+  at most 1 ulp (sum/len → `statistics.mean`), with no ordering change. Momentum records gain an
+  additive `reference_window` block; descriptive technical features gain window metadata.
+- **Unchanged.**
+  - Tactical thresholds and the nine-state table.
+  - The structural engine: swing/pivot/breakout/invalidation/MA20 slope stay identical under
+    altered descriptive values.
+  - Posture policy and priority code.
+  Tactical classifications change only because their inputs are corrected. On the 09-24 scratch
+  rebuild, 564/842 entry states changed and posture, evidence currency, market regime and
+  sector leadership changed for 0/1,683. On other sessions the corrected momentum/trend inputs
+  may still change the market/sector regime, and through it the posture.
+- **Acquisition-side effect.** `market_wide_current_technical_coverage_scaleout` now judges
+  completeness on the same 20-observation window, so an unusable row older than the window no
+  longer marks a ticker as missing.
+
 ## 2026-09-25 - Provider runtime isolation V1 (candidate, stacked on the CI hermetic tier)
 
 Owner architecture decisions D1–D4 for the optional KBS/VCI provider runtime (vnstock/vnai).
