@@ -542,6 +542,52 @@ def _sentinel_secondary_malformed(evidence: Mapping[str, Any], cohort: Sequence[
     return False
 
 
+def _sentinel_conflict_resolution(evidence: Mapping[str, Any], sentinel: Mapping[str, Any], health: Mapping[str, Any]) -> dict[str, Any]:
+    """Prove, from the retained per-ticker observations, that every sentinel DNSE conflict resolved.
+
+    Re-derives each cohort ticker's outcome with ``resolve_ticker`` exactly as
+    ``classify_dnse_provider_health`` counts a conflict (DNSE exact and at least one of VCI/KBS
+    exact). ``RESOLVED_CORROBORATED_NON_DNSE_CURRENT_RESEARCH`` is a resolved conflict (VCI and
+    KBS agree with each other and override DNSE). ``SOURCE_CONFLICT`` is not: the ordinary
+    resolver would still tie-break to DNSE. The published record's own resolution must agree.
+    Proof fails when a conflict is unresolved or when the re-derived conflicts do not reproduce
+    the sentinel's own ``conflict_count``.
+    """
+    records = evidence.get("records") if isinstance(evidence.get("records"), Mapping) else {}
+    cohort = sorted({str(t) for t in (sentinel.get("cohort_tickers") or [])})
+    resolved, unresolved, unprovable = [], [], []
+    for ticker in cohort:
+        record = records.get(ticker) if isinstance(records, Mapping) else None
+        observations = record.get("observations") if isinstance(record, Mapping) else None
+        if not isinstance(observations, list):
+            unprovable.append(ticker)
+            continue
+        dnse_ob = next((o for o in observations if isinstance(o, Mapping) and o.get("source") == "DNSE"), None)
+        if dnse_ob is None or dnse_ob.get("status") != STATUS_EXACT_SESSION_OBSERVED:
+            continue
+        if not any(isinstance(o, Mapping) and o.get("source") in ("VCI", "KBS")
+                   and o.get("status") == STATUS_EXACT_SESSION_OBSERVED for o in observations):
+            continue
+        outcome = resolve_ticker(ticker, observations)["resolution"]
+        if outcome not in (RESOLUTION_CONFLICT, RESOLUTION_CORROBORATED_NON_DNSE):
+            continue
+        published = record.get("resolution") if isinstance(record.get("resolution"), Mapping) else {}
+        if outcome == RESOLUTION_CORROBORATED_NON_DNSE and published.get("resolution") == RESOLUTION_CORROBORATED_NON_DNSE:
+            resolved.append(ticker)
+        else:
+            unresolved.append(ticker)
+    expected = health.get("conflict_count")
+    reproduced = isinstance(expected, int) and not isinstance(expected, bool) and expected == len(resolved) + len(unresolved)
+    return {
+        "resolved_conflict_tickers": resolved,
+        "unresolved_conflict_tickers": unresolved,
+        "unprovable_cohort_tickers": unprovable,
+        "sentinel_conflict_count": expected,
+        "conflict_count_reproduced": reproduced,
+        "proven": reproduced and not unresolved and not unprovable and bool(resolved),
+    }
+
+
 def dnse_quality_license(
     evidence: Mapping[str, Any] | None, *, degraded_recovery_mode: str | None = None,
 ) -> dict[str, Any]:
@@ -558,6 +604,7 @@ def dnse_quality_license(
     recovery = evidence.get("degraded_provider_recovery") if isinstance(evidence.get("degraded_provider_recovery"), Mapping) else {}
     mode = degraded_recovery_mode if degraded_recovery_mode is not None else recovery.get("mode")
 
+    conflict_resolution = None
     if sentinel is None or state is None:
         license_, reason = LICENSE_NOT_EVALUATED, "NO_DNSE_QUALITY_SENTINEL_IN_EVIDENCE"
     elif state == DNSE_HEALTH_UNASSESSED_SUPPLEMENTAL_RUNTIME_UNAVAILABLE:
@@ -565,7 +612,15 @@ def dnse_quality_license(
     elif state == DNSE_HEALTH_EXACT_AND_CORROBORATED:
         license_, reason = LICENSE_CORROBORATED_HEALTHY, "SENTINEL_CORROBORATED_NO_CONFLICT"
     elif state == DNSE_HEALTH_MATERIAL_CONFLICT:
-        license_, reason = LICENSE_ISOLATED_CONFLICT_RESOLVED, "SENTINEL_ISOLATED_CONFLICT_RESOLVED_PER_TICKER"
+        # A material conflict licenses ordinary Daily only when every sentinel conflict is proven
+        # resolved from the retained observations; otherwise it is a data-quality failure.
+        conflict_resolution = _sentinel_conflict_resolution(evidence, sentinel, health)
+        if conflict_resolution["proven"]:
+            license_, reason = LICENSE_ISOLATED_CONFLICT_RESOLVED, "SENTINEL_ISOLATED_CONFLICT_RESOLVED_PER_TICKER"
+        elif conflict_resolution["unresolved_conflict_tickers"]:
+            license_, reason = LICENSE_DATA_QUALITY_FAILED, "SENTINEL_MATERIAL_CONFLICT_UNRESOLVED"
+        else:
+            license_, reason = LICENSE_DATA_QUALITY_FAILED, "SENTINEL_MATERIAL_CONFLICT_RESOLUTION_NOT_PROVEN"
     elif state == DNSE_HEALTH_BROAD_STALE_OR_INCOMPLETE_EOD:
         if mode == DEGRADED_RECOVERY_MODE_COMPLETED:
             license_, reason = LICENSE_BROAD_STALE_RECOVERED, "DNSE_QUARANTINED_DEGRADED_RECOVERY_COMPLETED"
@@ -594,6 +649,7 @@ def dnse_quality_license(
         "conflict_count": health.get("conflict_count") if health else None,
         "uncorroborated_count": health.get("uncorroborated_count") if health else None,
         "degraded_recovery_mode": mode,
+        "conflict_resolution": conflict_resolution,
         "dnse_raw_evidence_status": "RETAINED_UNCHANGED",
         "evidence_currency_relation": "SEPARATE_AXIS_CURRENT_SESSION_IS_NOT_CORROBORATION",
     }

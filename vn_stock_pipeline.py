@@ -33,7 +33,7 @@ PRIMARY_SRC = "VCI"    # Trả về đơn vị nghìn (K-VND)
 FAILOVER_SRC = "KBS"
 SOURCE_SCALES = {"VCI": 1000, "KBS": 1000}   # map đơn vị giá theo nguồn (kiểm chứng 2026-07)
 
-REQUEST_DELAY = 1.1
+REQUEST_DELAY = vnstock_rate_governor.VNSTOCK_REQUEST_DELAY_SECONDS
 
 
 def _env_number(name, default, cast, minimum):

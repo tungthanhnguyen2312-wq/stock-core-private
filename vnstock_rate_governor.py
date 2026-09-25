@@ -53,6 +53,12 @@ VNSTOCK_OBSERVED_HARD_CEILING_RPM = 60
 # existing 45-minute runtime budget (548 / 45 * 60s =~ 12.2 minutes at steady state).
 DEFAULT_EFFECTIVE_RPM = 45
 RATE_WINDOW_SECONDS = 60.0
+# Per-request pacing (seconds) between sequential VCI/KBS requests: ~55 requests/minute across
+# both sources, under the 60/minute ceiling above. Owned here -- a stdlib-only module both the
+# provider adapter and the credential-bearing Daily parent already import -- so the parent can
+# read the pacing without importing the adapter (PROVIDER_RUNTIME_ISOLATION_V1).
+# vn_stock_pipeline.REQUEST_DELAY is this same value.
+VNSTOCK_REQUEST_DELAY_SECONDS = 1.1
 
 
 class VnstockRateGovernor:

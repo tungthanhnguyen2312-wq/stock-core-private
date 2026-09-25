@@ -674,8 +674,10 @@ def _default_fetch_single_source():
 
 
 def _default_request_delay() -> float:
-    import vn_stock_pipeline as vsp
-    return vsp.REQUEST_DELAY
+    # The same value as vn_stock_pipeline.REQUEST_DELAY, read from its neutral owner: the
+    # credential-bearing Daily parent never imports the provider adapter, not even for a constant.
+    from vnstock_rate_governor import VNSTOCK_REQUEST_DELAY_SECONDS
+    return VNSTOCK_REQUEST_DELAY_SECONDS
 
 
 def _lineage_hash_for_session(lineage: list[Mapping[str, Any]], session: str) -> str | None:

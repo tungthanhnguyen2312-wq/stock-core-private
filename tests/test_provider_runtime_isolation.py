@@ -227,7 +227,10 @@ def test_configured_provider_interpreter_starts_and_reports_versions_only_after_
         assert handle.state["runtime_info"]["provider_distributions"] == {"vnstock": "fake-0", "vnai": "fake-0"}
         assert len(popen_counter) == 1
         argv = popen_counter[0]
-        assert argv[0] == sys.executable
+        # The configured interpreter is the one spawned. resolve_provider_interpreter normalises the
+        # path (os.path.normcase lowercases it on Windows), so compare as paths, not raw strings.
+        assert os.path.samefile(argv[0], sys.executable)
+        assert os.path.normcase(os.path.abspath(argv[0])) == os.path.normcase(os.path.abspath(sys.executable))
         assert argv[1:6] == ["-s", "-E", "-X", "utf8", "-u"]
         assert argv[-1] == str(FAKE_WORKER)
     finally:
@@ -486,6 +489,123 @@ def test_dnse_broad_anomaly_with_completed_recovery_is_broad_stale_recovered():
     assert contract.dnse_quality_license(evidence)["license"] == "BROAD_STALE_RECOVERED"
     assert contract.dnse_quality_license(evidence, degraded_recovery_mode=None)["license"] == "BROAD_STALE_RECOVERED"
     assert contract.dnse_quality_license(evidence, degraded_recovery_mode="NOT_TRIGGERED")["license"] == "DATA_QUALITY_FAILED"
+
+
+# --- A material conflict licenses ordinary Daily only when every conflict is proven resolved ---
+
+
+def _exact_obs(ticker: str, source: str, close: float) -> dict:
+    return contract.build_source_observation(
+        ticker=ticker, requested_session=TARGET, observed_session=TARGET, source=source,
+        provider_interface="TEST", retrieved_at=REQUESTED_AT, status=contract.STATUS_EXACT_SESSION_OBSERVED,
+        native={"open": close, "high": close, "low": close, "close": close, "volume": 1000},
+    )
+
+
+def _conflict_evidence(spec: dict[str, tuple[float, float, float]], *, reverse: bool = False) -> dict:
+    """Sentinel evidence built with the contract's own resolver/classifier from (DNSE, VCI, KBS) closes."""
+    tickers = sorted(spec, reverse=reverse)
+    observations = {}
+    for ticker in tickers:
+        dnse, vci, kbs = spec[ticker]
+        rows = [_exact_obs(ticker, "DNSE", dnse), _exact_obs(ticker, "VCI", vci), _exact_obs(ticker, "KBS", kbs)]
+        observations[ticker] = list(reversed(rows)) if reverse else rows
+    return {
+        "target_session": TARGET,
+        "dnse_exact_session_count": len(tickers),
+        "dnse_quality_sentinel": {"cohort_tickers": tickers,
+                                  "health": contract.classify_dnse_provider_health(observations)},
+        "degraded_provider_recovery": {"mode": "NOT_TRIGGERED"},
+        "records": {t: {"observations": observations[t], "resolution": contract.resolve_ticker(t, observations[t])}
+                    for t in tickers},
+    }
+
+
+RESOLVED_CONFLICTS = {"CLEAN": (10.1, 10.1, 10.1), "OK_1": (10.1, 12.0, 12.0), "OK_2": (20.0, 25.0, 25.0)}
+# VCI and KBS disagree with each other and with DNSE: SOURCE_CONFLICT, never a justified value.
+UNRESOLVED = {**RESOLVED_CONFLICTS, "BAD": (10.1, 12.0, 14.0)}
+
+
+def test_material_conflict_with_every_conflict_resolved_is_isolated_conflict_resolved():
+    evidence = _conflict_evidence(RESOLVED_CONFLICTS)
+    assert evidence["dnse_quality_sentinel"]["health"]["state"] == "DNSE_MATERIAL_CONFLICT"
+    license_ = contract.dnse_quality_license(evidence)
+    assert (license_["license"], license_["qualifies_for_ordinary_daily"]) == ("ISOLATED_CONFLICT_RESOLVED", True)
+    assert license_["conflict_resolution"]["resolved_conflict_tickers"] == ["OK_1", "OK_2"]
+    assert license_["conflict_resolution"]["unresolved_conflict_tickers"] == []
+
+
+def test_material_conflict_with_one_unresolved_conflict_is_not_licensed():
+    evidence = _conflict_evidence(UNRESOLVED)
+    assert evidence["dnse_quality_sentinel"]["health"]["state"] == "DNSE_MATERIAL_CONFLICT"
+    assert evidence["records"]["BAD"]["resolution"]["resolution"] == "SOURCE_CONFLICT"
+    license_ = contract.dnse_quality_license(evidence)
+    assert license_["license"] == "DATA_QUALITY_FAILED"
+    assert license_["reason_code"] == "SENTINEL_MATERIAL_CONFLICT_UNRESOLVED"
+    assert license_["qualifies_for_ordinary_daily"] is False
+    assert license_["conflict_resolution"]["unresolved_conflict_tickers"] == ["BAD"]
+
+
+@pytest.mark.parametrize("spec", [RESOLVED_CONFLICTS, UNRESOLVED])
+def test_conflict_resolution_license_is_row_and_order_invariant(spec):
+    assert contract.dnse_quality_license(_conflict_evidence(spec)) == contract.dnse_quality_license(
+        _conflict_evidence(spec, reverse=True))
+
+
+def test_published_resolution_must_agree_with_the_rederived_one():
+    evidence = _conflict_evidence(RESOLVED_CONFLICTS)
+    evidence["records"]["OK_1"]["resolution"] = {**evidence["records"]["OK_1"]["resolution"], "resolution": "SOURCE_CONFLICT"}
+    license_ = contract.dnse_quality_license(evidence)
+    assert (license_["license"], license_["reason_code"]) == ("DATA_QUALITY_FAILED", "SENTINEL_MATERIAL_CONFLICT_UNRESOLVED")
+
+
+def test_conflict_count_that_the_observations_cannot_reproduce_is_not_proven():
+    evidence = _conflict_evidence(RESOLVED_CONFLICTS)
+    evidence["dnse_quality_sentinel"]["health"]["conflict_count"] = 3
+    license_ = contract.dnse_quality_license(evidence)
+    assert (license_["license"], license_["reason_code"]) == ("DATA_QUALITY_FAILED", "SENTINEL_MATERIAL_CONFLICT_RESOLUTION_NOT_PROVEN")
+    del evidence["records"]["OK_2"]
+    evidence["dnse_quality_sentinel"]["health"]["conflict_count"] = 2
+    assert contract.dnse_quality_license(evidence)["qualifies_for_ordinary_daily"] is False
+
+
+def test_unresolved_conflict_refuses_snapshot_reuse(tmp_path):
+    snapshot_path, evidence_path = tmp_path / "snapshot.json", tmp_path / "evidence.json"
+    snapshot_path.write_text(json.dumps({"degraded_provider_recovery": {"mode": "NOT_TRIGGERED"}}), encoding="utf-8")
+    evidence_path.write_text(json.dumps(_conflict_evidence(RESOLVED_CONFLICTS)), encoding="utf-8")
+    assert level2._canonical_snapshot_gate_satisfied(snapshot_path, evidence_path, TARGET) is True
+    evidence_path.write_text(json.dumps(_conflict_evidence(UNRESOLVED)), encoding="utf-8")
+    assert level2._canonical_snapshot_gate_satisfied(snapshot_path, evidence_path, TARGET) is False
+
+
+def test_unresolved_conflict_blocks_ordinary_daily_acquisition(tmp_path, monkeypatch):
+    import multi_source_exact_session_resolver as resolver
+
+    _level2_acquire(tmp_path, monkeypatch, handle=available_handle(), dnse_records={
+        "EXACT_A": ("EXACT_SESSION_RETAINED", [_dnse_obs(TARGET)]),
+    })
+    monkeypatch.setattr(resolver, "resolve_exact_session_with_autorecovery",
+                        lambda **_kw: (_conflict_evidence(UNRESOLVED), {"records": {}}))
+    with pytest.raises(level2.SupplementalProviderBlocked) as exc:
+        level2.ensure_exact_session_snapshot(tmp_path, TARGET, tmp_path / "runtime")
+    assert exc.value.kind == level2.SUPPLEMENTAL_BLOCK_KIND_QUALITY
+    assert exc.value.quality_license["license"] == "DATA_QUALITY_FAILED"
+    paths = level2.session_artifact_paths(tmp_path, TARGET)
+    assert not paths["exact_session_snapshot"].exists() and not paths["multi_source_market_evidence"].exists()
+
+
+@pytest.mark.retained_evidence(
+    "operations-review/p3f9b-market-wide-exact-session-scaleout-20260911/multi_source_exact_session_market_evidence.json",
+    "operations-review/p3f9b-market-wide-exact-session-scaleout-20260915/multi_source_exact_session_market_evidence.json",
+)
+@pytest.mark.parametrize(("nodash", "resolved"), [("20260911", 4), ("20260915", 11)])
+def test_retained_isolated_conflict_sessions_still_qualify(nodash, resolved):
+    path = ROOT / f"operations-review/p3f9b-market-wide-exact-session-scaleout-{nodash}/multi_source_exact_session_market_evidence.json"
+    evidence = json.loads(path.read_text(encoding="utf-8"))  # read only
+    license_ = contract.dnse_quality_license(evidence)
+    assert (license_["license"], license_["qualifies_for_ordinary_daily"]) == ("ISOLATED_CONFLICT_RESOLVED", True)
+    assert len(license_["conflict_resolution"]["resolved_conflict_tickers"]) == resolved
+    assert license_["conflict_resolution"]["unresolved_conflict_tickers"] == []
 
 
 @pytest.mark.parametrize(("evidence", "expected", "qualifies"), [
@@ -833,6 +953,25 @@ def test_technical_history_recovery_uses_the_isolated_worker_boundary(monkeypatc
     finally:
         fetch.close()
     assert seen == [{"session": TARGET}]
+
+
+def test_available_runtime_daily_parent_never_imports_the_provider_adapter():
+    # The AVAILABLE path (not only the blocked policy): the real ensure_exact_session_snapshot runs
+    # the real resolver through a live fake worker to a qualified snapshot in a fresh process, and
+    # any attempt to import vn_stock_pipeline/vnstock/vnai in that parent is trapped.
+    script = Path(__file__).with_name("fixtures") / "check_available_daily_parent_import_containment.py"
+    result = subprocess.run([sys.executable, "-u", str(script)], capture_output=True, text=True, timeout=120)
+    assert result.returncode == 0, f"stdout={result.stdout!r} stderr={result.stderr!r}"
+    assert "AVAILABLE_DAILY_PARENT_IMPORT_CONTAINMENT_OK" in result.stdout
+
+
+def test_request_pacing_has_one_neutral_owner():
+    import multi_source_exact_session_resolver as resolver
+    import vn_stock_pipeline
+    import vnstock_rate_governor
+
+    assert resolver._default_request_delay() == vnstock_rate_governor.VNSTOCK_REQUEST_DELAY_SECONDS
+    assert vn_stock_pipeline.REQUEST_DELAY == vnstock_rate_governor.VNSTOCK_REQUEST_DELAY_SECONDS == 1.1
 
 
 def test_technical_history_recovery_process_never_imports_provider_modules():
