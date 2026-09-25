@@ -194,7 +194,7 @@ FAMILY_REGISTRY: dict[str, dict[str, Any]] = {
     TECHNICAL_CLOSE_HISTORY: _entry(
         description="Whether a provider-native retained close series is safe for close-only technical/tactical use.",
         required_dimensions=("session", "historical_series_identity", "current_session_observation_identity", "target_close_compatibility", "provider", "price_representation"),
-        fitness_tiers=("READY", "RETAINED_TECHNICAL_HISTORY_RECOVERY", "RECOVERY_REJECTED_TARGET_SESSION_CLOSE_MISMATCH", "P3F9B_EXACT_SESSION_RECORD", "BLOCKED"),
+        fitness_tiers=("READY", "RETAINED_TECHNICAL_HISTORY_RECOVERY", "RECOVERY_REJECTED_TARGET_SESSION_CLOSE_MISMATCH", "RECOVERY_REJECTED_SESSION_BAR_CONFLICT", "P3F9B_EXACT_SESSION_RECORD", "SESSION_BAR_CONFLICT_REFUSED", "BLOCKED"),
         authoritative_module="historical_series_failover",
         authoritative_functions=("select_feature_safe_series", "build_provider_series"),
         notes="One provider series is selected only after strict target-session-close compatibility with the resolved snapshot. DNSE remains primary; KBS/VCI can be Current-Research close-history fallbacks, never blended fragments or PIT facts.",
@@ -428,7 +428,10 @@ def evaluate_technical_close_history(
     ``RETAINED_TECHNICAL_HISTORY_RECOVERY`` (fit for use), ``P3F9B_EXACT_SESSION_RECORD`` (fit for
     use, just not recovery-extended), or ``RECOVERY_REJECTED_TARGET_SESSION_CLOSE_MISMATCH`` (the
     recovery series was rejected; the plain snapshot record is returned instead, which may itself
-    still be too shallow for a given feature's own minimum-history requirement)."""
+    still be too shallow for a given feature's own minimum-history requirement),
+    ``RECOVERY_REJECTED_SESSION_BAR_CONFLICT`` (same, because the recovery series carried
+    conflicting duplicate bars) or ``SESSION_BAR_CONFLICT_REFUSED`` (the snapshot record carries
+    conflicting duplicate bars; not fit for use -- see ``session_bar_integrity``)."""
     winning_record, source = technical_structure_context.resolve_target_session_observations(
         pf_record=pf_record, recovery_override=recovery_override, target_session=target_session,
     )

@@ -21,6 +21,7 @@ import hashlib
 import json
 from typing import Any, Mapping
 
+import session_bar_integrity
 from technical_structure_context import (
     MAX_LOOKBACK_SESSIONS,
     SWING_N,
@@ -349,7 +350,9 @@ def _classify_ticker(
     history_record = {"observations": winning_record.get("observations")} if history_source == "RETAINED_TECHNICAL_HISTORY_RECOVERY" else winning_record
     sessions, closes = _closes(history_record)
     if not sessions or sessions[-1] != target_session:
-        record = _insufficient_record(ticker, "RETAINED_CLOSE_SERIES_MISSING_OR_NOT_CURRENT_SESSION", len(closes))
+        reason = (session_bar_integrity.REFUSAL_REASON if history_source == "SESSION_BAR_CONFLICT_REFUSED"
+                  else "RETAINED_CLOSE_SERIES_MISSING_OR_NOT_CURRENT_SESSION")
+        record = _insufficient_record(ticker, reason, len(closes))
         record["technical_history_lineage"] = {
             "source": history_source, "recovery_artifact_identity": recovery_identity,
             "recovery_payload_sha256": recovery_override.get("payload_sha256") if isinstance(recovery_override, Mapping) else None,

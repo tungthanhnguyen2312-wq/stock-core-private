@@ -17,6 +17,7 @@ import json
 from collections import Counter
 from typing import Any, Mapping, Sequence
 
+import session_bar_integrity
 from field_temporal_contract import stable_id as _p3f9b_stable_id
 from market_wide_current_technical_coverage_scaleout import (
     content_identity as recovery_content_identity,
@@ -390,10 +391,19 @@ def evaluate_historical_context(
     target_session: str,
     provenance: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Pure within-ticker descriptive context over retained observations."""
-    bars = _observation_bars(observations)
+    """Pure within-ticker descriptive context over retained observations.
+
+    Observations first pass the shared ``session_bar_integrity`` invariant: identical duplicate bars
+    collapse, and conflicting duplicate bars refuse the ticker instead of letting the last copy win.
+    """
+    integrity = session_bar_integrity.resolve_session_bars(observations, as_of_session=target_session)
+    refused = integrity["status"] == session_bar_integrity.CONFLICTING_DUPLICATE_REFUSED
+    bars = _observation_bars(integrity["observations"] if isinstance(integrity["observations"], list) else observations)
     provenance = dict(provenance or {"source": "RETAINED_P3F9B_EXACT_SESSION_SNAPSHOT"})
+    if integrity["status"] != session_bar_integrity.UNIQUE:
+        provenance["session_bar_integrity"] = session_bar_integrity.integrity_summary(integrity)
     if not bars:
+        missing_reason = session_bar_integrity.REFUSAL_REASON if refused else "NO_RETAINED_TRADING_OBSERVATIONS"
         return {
             "context_status": "MISSING",
             "as_of_session": None,
@@ -409,15 +419,15 @@ def evaluate_historical_context(
                 "window_rule": "ACTUAL_RETAINED_TRADING_OBSERVATIONS_NO_CALENDAR_IMPUTATION",
                 **provenance,
             },
-            "trailing_range": _blocked_field("MISSING", "NO_RETAINED_TRADING_OBSERVATIONS"),
-            "fifty_two_week_range": _blocked_field("MISSING", "NO_RETAINED_TRADING_OBSERVATIONS"),
-            "drawdown": _blocked_field("MISSING", "NO_RETAINED_TRADING_OBSERVATIONS"),
-            "volatility_regime": _blocked_field("MISSING", "NO_RETAINED_TRADING_OBSERVATIONS"),
-            "momentum": _blocked_field("MISSING", "NO_RETAINED_TRADING_OBSERVATIONS"),
-            "ma_alignment": _blocked_field("MISSING", "NO_RETAINED_TRADING_OBSERVATIONS"),
-            "relative_volume": _blocked_field("MISSING", "NO_RETAINED_TRADING_OBSERVATIONS"),
-            "technical_state_frequency": _blocked_field("MISSING", "NO_RETAINED_TRADING_OBSERVATIONS"),
-            "structural_state": _blocked_field("MISSING", "NO_RETAINED_TRADING_OBSERVATIONS"),
+            "trailing_range": _blocked_field("MISSING", missing_reason),
+            "fifty_two_week_range": _blocked_field("MISSING", missing_reason),
+            "drawdown": _blocked_field("MISSING", missing_reason),
+            "volatility_regime": _blocked_field("MISSING", missing_reason),
+            "momentum": _blocked_field("MISSING", missing_reason),
+            "ma_alignment": _blocked_field("MISSING", missing_reason),
+            "relative_volume": _blocked_field("MISSING", missing_reason),
+            "technical_state_frequency": _blocked_field("MISSING", missing_reason),
+            "structural_state": _blocked_field("MISSING", missing_reason),
             "cross_sectional_historical_comparison": _blocked_field(
                 "BLOCKED", "HISTORICAL_PIT_MEMBERSHIP_UNAVAILABLE",
             ),

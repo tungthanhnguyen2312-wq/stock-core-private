@@ -40,6 +40,7 @@ from market_regime_breadth_context import _descriptor
 from mva_daily_research_bundle import market_features
 import market_wide_current_liquidity_research as liquidity_module
 from sector_relative_research_context import MIN_COHORT_MEMBERS, _bucket
+import session_bar_integrity
 from technical_structure_context import resolve_target_session_observations
 
 CONTRACT_VERSION = "market_wide_current_descriptive_research/v1"
@@ -61,12 +62,14 @@ def _assert_no_recoverable_same_session_technical_gap(
     records: Mapping[str, Mapping[str, Any]], snapshot_records: Mapping[str, Any],
     recovery_records: Mapping[str, Any] | None = None,
     close_mismatch_rejected: frozenset[str] = frozenset(),
+    session_bar_conflict_refused: frozenset[str] = frozenset(),
 ) -> None:
     """Future sessions must not emit exact-session bars without same-session technicals unless
     unrecoverable. ``close_mismatch_rejected`` (see ``resolve_target_session_observations``) is
     unrecoverable for the identical reason ``INSUFFICIENT_HISTORY_AFTER_EXTENDED_LOOKBACK`` is: a
-    genuine, correctly-enforced safety refusal, not a code defect this gate should ever flag."""
-    unrecoverable = set(close_mismatch_rejected)
+    genuine, correctly-enforced safety refusal, not a code defect this gate should ever flag.
+    ``session_bar_conflict_refused`` (``session_bar_integrity``) is the same kind of refusal."""
+    unrecoverable = set(close_mismatch_rejected) | set(session_bar_conflict_refused)
     if recovery_records:
         for ticker, rec in recovery_records.items():
             if isinstance(rec, Mapping) and rec.get("state") in PROVEN_STRUCTURAL_TECHNICAL_INSUFFICIENCY_STATES:
@@ -320,6 +323,7 @@ def build_artifact(
 
     records: dict[str, dict[str, Any]] = {}
     close_mismatch_rejected: set[str] = set()
+    session_bar_conflict_refused: set[str] = set()
     for ticker in sorted(ur_records):
         ur = ur_records[ticker]
         activity_state = ur["activity_and_session_state"]
@@ -352,10 +356,27 @@ def build_artifact(
                     },
                     provider_volume_compatible=history_provider == "DNSE",
                 )
+            elif history_source == "SESSION_BAR_CONFLICT_REFUSED":
+                # session_bar_integrity refused the record: two non-identical bars for one session and
+                # no rule establishing which is authoritative. Fail closed with the explicit reason;
+                # never average, never pick first/last.
+                session_bar_conflict_refused.add(ticker)
+                technical = {
+                    "status": "MISSING", "blockers": [session_bar_integrity.REFUSAL_REASON], "values": {},
+                    "feature_as_of_session": None, "is_current_session": False,
+                    "technical_history_provenance": {
+                        "source": "RETAINED_P3F9B_EXACT_SESSION_SNAPSHOT",
+                        "session_bar_integrity": winning_record.get("session_bar_integrity"),
+                    },
+                }
             else:
-                if history_source == "RECOVERY_REJECTED_TARGET_SESSION_CLOSE_MISMATCH":
+                if history_source.startswith("RECOVERY_REJECTED_"):
                     close_mismatch_rejected.add(ticker)
-                technical = _technical_features(pf_records[ticker], target_session=target_session)
+                provenance = None
+                if isinstance(winning_record, Mapping) and winning_record.get("session_bar_integrity"):
+                    provenance = {"source": "RETAINED_P3F9B_EXACT_SESSION_SNAPSHOT",
+                                  "session_bar_integrity": winning_record["session_bar_integrity"]}
+                technical = _technical_features(winning_record, target_session=target_session, provenance=provenance)
         else:
             technical = {"status": "NOT_APPLICABLE", "reason": "OUT_OF_CURRENT_DESCRIPTIVE_SCOPE",
                         "feature_as_of_session": None, "is_current_session": False, "values": {}}
@@ -379,6 +400,7 @@ def build_artifact(
     recovery_all_records = technical_history_recovery_artifact.get("records", {}) if technical_history_recovery_artifact else None
     _assert_no_recoverable_same_session_technical_gap(
         records, pf_records, recovery_all_records, close_mismatch_rejected=frozenset(close_mismatch_rejected),
+        session_bar_conflict_refused=frozenset(session_bar_conflict_refused),
     )
 
     in_scope_records = [record for record in records.values() if record["in_current_descriptive_scope"]]

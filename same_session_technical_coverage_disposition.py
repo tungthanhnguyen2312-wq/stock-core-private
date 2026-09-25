@@ -12,6 +12,7 @@ import json
 from collections import Counter
 from typing import Any, Mapping
 
+import session_bar_integrity
 from current_official_market_universe import (
     OFFICIAL_CURRENT_EXCHANGE_SECURITY,
     OFFICIAL_CURRENT_STOCK_LIST_CANDIDATE,
@@ -90,6 +91,11 @@ def _classify_one(
 
     if conflicted:
         disposition, reason = "MALFORMED_OR_CONFLICTED", "CONFLICTING_SAME_SESSION_AND_SOURCE_STATE"
+    elif session_bar_integrity.REFUSAL_REASON in (technical.get("blockers") or []):
+        # The retained record carries two non-identical bars for one session and no rule
+        # establishes which is authoritative (``session_bar_integrity``): conflicted evidence,
+        # not a recoverable pipeline filter.
+        disposition, reason = "MALFORMED_OR_CONFLICTED", session_bar_integrity.REFUSAL_REASON
     elif same_session:
         disposition, reason = "SAME_SESSION_TECHNICAL_COVERED", "EXACT_SESSION_BAR_AND_COMPLETE_TECHNICAL_WINDOW"
     elif source_disp == "PROVIDER_REJECTED":

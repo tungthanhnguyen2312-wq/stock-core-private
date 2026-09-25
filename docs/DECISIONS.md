@@ -1,5 +1,38 @@
 # Decisions & Architectural Decision Records
 
+## 2026-09-25 - Session-bar duplicate integrity corrective V1
+
+The retained 2026-09-16 P3F9B snapshot carries two 2026-09-15 DNSE bars for 599 tickers, plus
+pre-/post-adjustment copies of 2026-08-28/09-03/09-04 for VPI and TCH: 605 pairs over 600 tickers.
+412 pairs are identical and 193 conflict (191 tickers). Every pair shares one provider, request,
+`retrieved_at`, price basis and transformation identity. The copies are already present in
+`dnse_only_exact_session_snapshot.json`: DNSE's `/price/ohlc` response itself carried both, and
+`mva_exact_session_snapshot._observation_rows` enforces uniqueness only for the target session.
+No other retained snapshot (2026-08-20 .. 2026-09-24) has a duplicate.
+
+- **One `(ticker, session)` invariant, in `session_bar_integrity`.** Series consumers resolve
+  records through it. Identical bars (every retained field equal) collapse, because any copy yields
+  the same observation. Conflicting bars refuse the record for series use
+  (`CONFLICTING_DUPLICATE_SESSION_BAR`); rows after the as-of session never influence the decision.
+- **No authority rule exists for conflicting copies, so none is invented.** List position is not
+  provenance, recency is not evidence, and ingest time is never a supersession rule. The
+  contemporaneous evidence also disagrees with itself: DNSE's own 2026-09-15 retrieval matches the
+  second copy for 187 conflicts, while VCI and KBS matched the first copy in all 11 sentinel cases.
+- **The boundary is `technical_structure_context.resolve_target_session_observations`.** It is the
+  existing shared resolver for retained technical history. Descriptive features, the structural
+  engine and momentum pass through it, and the recovery series is subject to the same invariant.
+  Relative-volume research and historical context read raw records, so they call the same function.
+  - Relative volume previously refused even identical copies.
+  - Historical context previously kept the last copy.
+  - The prospective-feedback fallback previously kept the last row per session.
+- **A refused ticker is conflicted evidence.** Its coverage disposition is `MALFORMED_OR_CONFLICTED`,
+  so its evidence currency is `NO_CURRENT_EVIDENCE`. The descriptive recoverable-gap guard treats
+  the refusal as unrecoverable, and the Daily's existing gap-recovery path may still re-acquire a
+  clean history.
+- Retained evidence is not rewritten. Target-session point readers (valuation, prospective
+  learning) already require exactly one bar and are unchanged. No threshold or posture policy
+  changed.
+
 ## 2026-09-25 - Provider runtime isolation V1 (candidate, stacked on the CI hermetic tier)
 
 Owner architecture decisions D1–D4 for the optional KBS/VCI provider runtime (vnstock/vnai).

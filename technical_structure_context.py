@@ -28,6 +28,7 @@ from collections import Counter
 from statistics import pstdev
 from typing import Any, Mapping, Sequence
 
+import session_bar_integrity
 from field_temporal_contract import stable_id as _p3f9b_stable_id
 from price_structure_breakout_context import NEAR
 
@@ -615,14 +616,25 @@ def resolve_target_session_observations(
     recovery series when its target-session close matches the snapshot's exactly;
     otherwise fall back to the pre-recovery P3F9B-only behavior. Shared by every
     consumer of retained technical history so this invariant is enforced exactly once.
+
+    Both candidate records first pass the ``session_bar_integrity`` uniqueness invariant: exact
+    duplicate bars collapse, and a record with conflicting duplicate bars is refused
+    (``SESSION_BAR_CONFLICT_REFUSED``, or ``RECOVERY_REJECTED_SESSION_BAR_CONFLICT`` for a refused
+    recovery series). The target-session close compared here is the snapshot's own row, which the
+    acquisition parser already requires to be unique.
     """
+    resolved_pf, _pf_integrity = session_bar_integrity.resolve_record(pf_record, as_of_session=target_session)
+    pf_source = "SESSION_BAR_CONFLICT_REFUSED" if session_bar_integrity.is_refused(resolved_pf) else "P3F9B_EXACT_SESSION_RECORD"
     if isinstance(recovery_override, Mapping) and recovery_override.get("state") == "RECOVERED_COMPLETE_TECHNICAL_HISTORY":
-        recovered_close = _session_close(recovery_override, target_session)
+        resolved_recovery, _recovery_integrity = session_bar_integrity.resolve_record(recovery_override, as_of_session=target_session)
         resolved_close = _session_close(pf_record, target_session)
+        if session_bar_integrity.is_refused(resolved_recovery):
+            return resolved_pf, "RECOVERY_REJECTED_SESSION_BAR_CONFLICT" if pf_source == "P3F9B_EXACT_SESSION_RECORD" else pf_source
+        recovered_close = _session_close(resolved_recovery, target_session)
         if recovered_close is not None and recovered_close == resolved_close:
-            return recovery_override, "RETAINED_TECHNICAL_HISTORY_RECOVERY"
-        return pf_record, "RECOVERY_REJECTED_TARGET_SESSION_CLOSE_MISMATCH"
-    return pf_record, "P3F9B_EXACT_SESSION_RECORD"
+            return resolved_recovery, "RETAINED_TECHNICAL_HISTORY_RECOVERY"
+        return resolved_pf, "RECOVERY_REJECTED_TARGET_SESSION_CLOSE_MISMATCH" if pf_source == "P3F9B_EXACT_SESSION_RECORD" else pf_source
+    return resolved_pf, pf_source
 
 
 def _classify_ticker(
@@ -641,7 +653,9 @@ def _classify_ticker(
     history_record = {"observations": winning_record.get("observations")} if history_source == "RETAINED_TECHNICAL_HISTORY_RECOVERY" else winning_record
     sessions, closes = _closes(history_record)
     if not sessions or sessions[-1] != target_session:
-        record = _insufficient_record(ticker, "RETAINED_CLOSE_SERIES_MISSING_OR_NOT_CURRENT_SESSION", len(closes))
+        reason = (session_bar_integrity.REFUSAL_REASON if history_source == "SESSION_BAR_CONFLICT_REFUSED"
+                  else "RETAINED_CLOSE_SERIES_MISSING_OR_NOT_CURRENT_SESSION")
+        record = _insufficient_record(ticker, reason, len(closes))
         record["technical_history_lineage"] = {
             "source": history_source, "recovery_artifact_identity": recovery_identity,
             "recovery_payload_sha256": recovery_override.get("payload_sha256") if isinstance(recovery_override, Mapping) else None,
