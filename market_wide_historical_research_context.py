@@ -174,7 +174,23 @@ def _blocked_field(status: str, reason: str, **extra: Any) -> dict[str, Any]:
     return payload
 
 
+def _t0_eligible_rows(observations: Any, *, target_session: str) -> list[Mapping[str, Any]]:
+    """The exact T0 row set: dated observations at or before the target session, nothing later.
+
+    Established BEFORE the shared duplicate decision, so a row dated after T0 can never reach
+    duplicate resolution, a session map, the history, momentum, structure or any T0 output.
+    """
+    if not isinstance(observations, (list, tuple)):
+        return []
+    return [
+        row for row in observations
+        if isinstance(row, Mapping) and isinstance(row.get("session"), str) and row["session"] <= target_session
+    ]
+
+
 def _observation_bars(observations: Sequence[Any]) -> list[dict[str, Any]]:
+    """Bars from rows ``session_bar_integrity`` already resolved. No session map selects between
+    copies: a duplicate reaching here would be a contract breach, so it refuses loudly."""
     bars: list[dict[str, Any]] = []
     seen: dict[str, dict[str, Any]] = {}
     for row in observations:
@@ -194,6 +210,8 @@ def _observation_bars(observations: Sequence[Any]) -> list[dict[str, Any]]:
             "price_basis": row.get("price_basis"),
             "provider": row.get("provider"),
         }
+        if bar["session"] in seen:
+            raise MarketWideHistoricalResearchContextError("DUPLICATE_SESSION_BAR_REACHED_HISTORICAL_SERIES")
         seen[bar["session"]] = bar
     for session in sorted(seen):
         bars.append(seen[session])
@@ -393,12 +411,14 @@ def evaluate_historical_context(
 ) -> dict[str, Any]:
     """Pure within-ticker descriptive context over retained observations.
 
-    Observations first pass the shared ``session_bar_integrity`` invariant: identical duplicate bars
-    collapse, and conflicting duplicate bars refuse the ticker instead of letting the last copy win.
+    Order: the T0-eligible rows (at or before ``target_session``) are fixed first; only those pass
+    the shared ``session_bar_integrity`` invariant (identical duplicate bars collapse, conflicting
+    ones refuse the ticker); only the resolved series feeds the calculations.
     """
-    integrity = session_bar_integrity.resolve_session_bars(observations, as_of_session=target_session)
+    eligible = _t0_eligible_rows(observations, target_session=target_session)
+    integrity = session_bar_integrity.resolve_session_bars(eligible, as_of_session=target_session)
     refused = integrity["status"] == session_bar_integrity.CONFLICTING_DUPLICATE_REFUSED
-    bars = _observation_bars(integrity["observations"] if isinstance(integrity["observations"], list) else observations)
+    bars = _observation_bars(integrity["observations"])
     provenance = dict(provenance or {"source": "RETAINED_P3F9B_EXACT_SESSION_SNAPSHOT"})
     if integrity["status"] != session_bar_integrity.UNIQUE:
         provenance["session_bar_integrity"] = session_bar_integrity.integrity_summary(integrity)

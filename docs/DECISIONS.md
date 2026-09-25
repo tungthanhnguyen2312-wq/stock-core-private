@@ -17,6 +17,16 @@ The owner approved the order: session-bar integrity first, then the tactical ref
   resolves integrity before projecting to `(date, close, volume)`, so a refused record is a
   candidate for re-acquisition. `recovery_record` labels a contradictory re-fetch
   `SESSION_BAR_CONFLICT_REFUSED`, never `INSUFFICIENT_HISTORY_AFTER_EXTENDED_LOOKBACK`.
+- **Two bypasses closed, both found by Codex review:**
+  - **MVA bundle.** `mva_daily_research_bundle` projected bars to `(date, close, volume)` before
+    any duplicate decision, and its cohort used a last-row-wins date map. Both loaders now resolve
+    the full retained bars through `session_bar_integrity` before projecting. The runtime-DB path
+    reads `SELECT *`. The cohort refuses with `CONFLICTING_DUPLICATE_SESSION_BAR`. On the retained
+    2026-09-16 snapshot the old path crashed (`KeyError: 'return_1d'`): the cohort admitted
+    conflicting tickers whose window was then refused.
+  - **Historical context.** `market_wide_historical_research_context` fixes the T0-eligible rows
+    (at or before the target session) before the shared decision, so later rows never reach a
+    session map. The former last-wins map now refuses any duplicate that reaches it.
 - **Unchanged:** `historical_series_failover` still refuses any duplicate row in a provider
   series, identical copies included. That gate is stricter and never selects a copy. Provider
   policy, thresholds and posture policy are also unchanged.
