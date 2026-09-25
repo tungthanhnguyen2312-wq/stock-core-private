@@ -57,7 +57,8 @@ Where vnstock/vnai are needed:
   function). CI runs with both imports blocked (§4).
 - **Core analytical imports: no.** Importing the core modules never imports a provider.
 - **Production provider workers: yes.** The KBS/VCI supplemental path and the sync scripts need
-  vnstock (and therefore vnai). While the quarantine lasts, a machine that does not already have
+  vnstock (and therefore vnai). Since PROVIDER_RUNTIME_ISOLATION_V1 the Daily path can reach them
+  only through the governed, isolated provider runtime (§7). While the quarantine lasts, a machine that does not already have
   them cannot rebuild the provider runtime from PyPI. Do not vendor or privately mirror the
   packages, and do not fetch wheels from untrusted locations.
 - **Provider contract tests: no.** Repo-wide, only `MetadataUpdatedTests` in
@@ -180,3 +181,63 @@ failures are dominated by:
   paths as data. None of them is on the hermetic CI path.
 - `requirements-providers.txt` keeps the vnstock `setup_api_key` step from the old
   `requirements.txt`. The `docs/USER_GUIDE.md` that the old file referred to does not exist.
+
+## 7. Provider runtime isolation (PROVIDER_RUNTIME_ISOLATION_V1)
+
+Owner decisions D1–D4 are recorded in `docs/DECISIONS.md` (2026-09-25).
+
+- **Policy (D1).**
+  - `config/provider_runtime_policy.json` is the owner's explicit, tracked switch. It is
+    currently `SECURITY_REVIEW_BLOCKED`, and a missing or invalid file reads the same way.
+  - Under a blocked policy no provider worker is spawned, whatever is installed.
+  - Only `ALLOW_CONFIGURED_PROVIDER_RUNTIME` allows a launch.
+  - Nothing polls a package index.
+- **Dedicated interpreter (D3).**
+  - `STOCKLOOKUP_PROVIDER_PYTHON` must point to a separate provider environment. Install it
+    with `requirements.txt` + `requirements-providers.txt` + `constraints.txt`, and only from a
+    trustworthy source while the quarantine lasts.
+  - If the variable is unset, missing or the core interpreter, the state is `NOT_CONFIGURED`.
+    There is no fallback to the core interpreter.
+- **Environment.**
+  - The worker environment is an explicit allow-list: OS, temp, home, locale, CA-bundle and
+    proxy variables.
+  - `DNSE_*`, `LIVESPEED_*` and `FINHAY_*` are never forwarded. `*TOKEN*`, `*SECRET*`,
+    `*PASSWORD*`, `*API_KEY*` and similar names are forwarded only when the policy's
+    `allowed_provider_env` lists them exactly.
+  - `PYTHONPATH` and the other `PYTHON*` variables are not forwarded.
+- **Interpreter flags.** `-s -E -X utf8 -u`, with a neutral temp cwd rather than the repository.
+  - `-X utf8` replaces the UTF-8 variables that `-E` ignores.
+  - Isolated mode (`-I`) is deliberately not used: it would drop the script directory the
+    worker imports its protocol and adapter from.
+- **What this is and is not.** It isolates processes, dependencies and credentials. It is not a
+  security sandbox: a permitted provider runtime can still reach the network, send telemetry and
+  write files.
+- **One boundary.**
+  - The exact-session resolver (gap recovery, residual-yield probe, DNSE quality sentinel,
+    degraded expansion) and technical-history recovery all use the same worker.
+  - No Daily process that holds DNSE credentials imports `vn_stock_pipeline`, `vnstock` or
+    `vnai`.
+- **States.** `provider_runtime_state` takes one of twelve states: `AVAILABLE`, `NOT_CONFIGURED`,
+  `SECURITY_REVIEW_BLOCKED`, `NOT_INSTALLED`, `IMPORT_FAILED`, `STARTUP_FAILED`,
+  `STARTUP_TIMEOUT`, `PROTOCOL_VIOLATION`, `PROCESS_CRASHED`, `AUTH_FAILED`, `RATE_LIMITED`,
+  `UNAVAILABLE_CAUSE_UNKNOWN`. It is operational metadata only.
+- **DNSE quality license** (`dnse_quality_license/v1`). It is a separate axis from evidence
+  currency.
+  - It qualifies for ordinary Daily only as `CORROBORATED_HEALTHY`,
+    `ISOLATED_CONFLICT_RESOLVED`, `BROAD_STALE_RECOVERED` or `NOT_REQUIRED_NO_DNSE_EXACT_BAR`.
+  - `UNASSESSED_NO_SECONDARY_OBSERVATION` (D2), `UNASSESSED_SUPPLEMENTAL_RUNTIME_UNAVAILABLE`
+    and `DATA_QUALITY_FAILED` never qualify.
+- **Daily outcome.**
+  - An unavailable runtime ends at `BLOCKED_SUPPLEMENTAL_PROVIDER_RUNTIME`. A live runtime whose
+    license does not qualify ends at `BLOCKED_DNSE_QUALITY_UNLICENSED`. Both exit 1, and neither
+    is "not ready" or a pipeline failure.
+  - DNSE evidence is retained, and a `supplemental_provider_block.json` diagnostic records both
+    axes.
+  - Nothing is published: there is no degraded path (D4). A blocked run never satisfies M1 live
+    acceptance.
+- **Tests.** `tests/test_provider_runtime_isolation.py` is hermetic: it uses the fake worker and
+  an explicit test-only ALLOW policy. The real worker script is spawned only to prove that an
+  interpreter without vnstock/vnai reports `NOT_INSTALLED` without executing any provider code.
+- **Validation status.** Synthetic validation passes from a clean clone. Validation against local
+  retained evidence and against a live Daily has not been done: it needs the owner's machine and
+  an explicit owner policy decision.

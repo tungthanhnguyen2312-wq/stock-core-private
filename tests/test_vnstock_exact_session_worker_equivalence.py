@@ -35,7 +35,8 @@ from multi_source_exact_session_resolver import (
 )
 from vn_stock_pipeline import FetchOutcome
 from vnstock_rate_governor import VnstockRateGovernor, get_active_governor, set_active_governor
-from vnstock_worker_client import VnstockWorkerFetcher
+from _provider_runtime_fixtures import fake_fetcher
+from vnstock_worker_client import VnstockWorkerFetcher  # noqa: F401
 
 TARGET = "2026-09-10"
 REQUESTED_AT = "2026-09-10T20:00:00+07:00"
@@ -148,7 +149,7 @@ def _run_after(dnse_snapshot, sentinel_cohort, **kwargs):
     # daily_session_level2_package.ensure_exact_session_snapshot's identical hygiene comment) --
     # tests must restore it themselves so one test's worker never leaks into another test file's
     # unrelated vn_stock_pipeline/vnstock_rate_governor assertions.
-    worker = VnstockWorkerFetcher(worker_script=FAKE_WORKER, request_timeout=10.0, startup_timeout=10.0)
+    worker = fake_fetcher(worker_script=FAKE_WORKER, request_timeout=10.0, startup_timeout=10.0)
     previous_active_governor = get_active_governor()
     try:
         return resolve_exact_session_with_autorecovery(
@@ -307,7 +308,7 @@ def test_N_runtime_budget_forecast_identical_for_real_governor_and_worker_shim()
     estimated_minimum_seconds_for -- proving N: the worker split changes nothing about the
     existing budget/abort contract."""
     real_governor = VnstockRateGovernor()
-    worker = VnstockWorkerFetcher(worker_script=FAKE_WORKER)
+    worker = fake_fetcher(worker_script=FAKE_WORKER)
     clock = [0.0]
     try:
         real_guard = _DailyRecoveryRuntimeGuard(

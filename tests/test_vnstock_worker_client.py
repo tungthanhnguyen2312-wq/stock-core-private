@@ -12,6 +12,7 @@ from pathlib import Path
 
 import pytest
 
+from _provider_runtime_fixtures import fake_fetcher
 from vnstock_rate_governor import DEFAULT_EFFECTIVE_RPM, RATE_WINDOW_SECONDS, VnstockRateGovernor
 from vnstock_worker_client import VnstockWorkerFetcher
 from vnstock_worker_protocol import (
@@ -28,7 +29,7 @@ FAKE_WORKER = Path(__file__).with_name("fixtures") / "fake_vnstock_worker.py"
 def _fetcher(**overrides) -> VnstockWorkerFetcher:
     kwargs = {"worker_script": FAKE_WORKER, "request_timeout": 5.0, "startup_timeout": 5.0, "shutdown_timeout": 5.0}
     kwargs.update(overrides)
-    return VnstockWorkerFetcher(**kwargs)
+    return fake_fetcher(**kwargs)
 
 
 def test_lazy_start_never_spawns_a_process_until_first_fetch():

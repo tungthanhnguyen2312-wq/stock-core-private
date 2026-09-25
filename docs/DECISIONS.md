@@ -1,5 +1,83 @@
 # Decisions & Architectural Decision Records
 
+## 2026-09-25 - Provider runtime isolation V1 (candidate, stacked on the CI hermetic tier)
+
+Owner architecture decisions D1–D4 for the optional KBS/VCI provider runtime (vnstock/vnai).
+The PyPI Simple API reports these packages as quarantined. That is an index/security-review
+status only; nothing more is inferred from it.
+
+- **D1: explicit policy, blocked by default.** The owner controls the policy in the tracked file
+  `config/provider_runtime_policy.json` (`provider_runtime_policy/v1`). It is currently
+  `SECURITY_REVIEW_BLOCKED`, and a missing or invalid file reads the same way. Under a blocked
+  policy no provider worker is ever spawned, and an already-installed package does not bypass
+  it. The policy is never polled from a package index and never changed by network conditions.
+  `ALLOW_CONFIGURED_PROVIDER_RUNTIME` is the only allowing value, and only the owner sets it.
+- **D2: an uncorroborated DNSE bar is not a healthy license.** A worker that starts but returns
+  no usable sentinel observation used to produce `DNSE_EXACT_BUT_UNCORROBORATED`, and Daily then
+  continued as ordinary. That route now yields the quality license
+  `UNASSESSED_NO_SECONDARY_OBSERVATION` and a governed block. The DNSE raw evidence is kept
+  unchanged and is not marked invalid.
+- **D3: a dedicated provider interpreter.** The worker runs only under `STOCKLOOKUP_PROVIDER_PYTHON`.
+  If that is unset, missing, or the same as the core interpreter, the state is `NOT_CONFIGURED`.
+  There is no fallback to `sys.executable`.
+- **D4: no degraded publication.** V1 isolates the runtime, classifies its state and blocks. It
+  adds no DNSE-only publish path.
+
+Implementation:
+- **Runtime contract.** `provider_runtime_state.py` holds the twelve-state runtime contract
+  (`provider_runtime_state/v1`). It is operational metadata only and never data authority;
+  `DATA_QUALITY_FAILED` lives on the evidence axis instead.
+- **Quality license.** `multi_source_market_evidence_contract.dnse_quality_license`
+  (`dnse_quality_license/v1`) is always re-derived from the retained sentinel evidence, never read
+  from a stored label. It is a separate axis from evidence currency: `CURRENT_SESSION` is not
+  corroboration, and its vocabulary is unchanged. `NOT_REQUIRED_NO_DNSE_EXACT_BAR` qualifies,
+  because a session where DNSE has no exact bar at all has no DNSE value that needs licensing
+  (for example, a KBS-recovered DNSE-lag day).
+- **Worker isolation.**
+  - The worker environment is built from an allow-list. `DNSE_*`, `LIVESPEED_*` and `FINHAY_*`
+    are never forwarded, and secret-shaped names only when the policy allow-lists them exactly.
+  - Interpreter flags are `-s -E -X utf8 -u` in a neutral cwd. Isolated mode (`-I`) is not used,
+    because it would also drop the script directory the worker imports from.
+  - Package versions are reported only after the READY handshake. The worker checks with
+    `find_spec` whether a package is not installed at all (`NOT_INSTALLED`) or installed but
+    failing to import (`IMPORT_FAILED`), before any import.
+  - A startup `worker_error` is now a startup failure; it was previously misread as a protocol
+    violation.
+- **One provider boundary.** Technical-history recovery used to import `vn_stock_pipeline` into
+  a process that holds DNSE credentials. It now goes through the same worker (purpose
+  `technical_history`). When the runtime is unavailable it records
+  `SUPPLEMENTAL_HISTORY_RUNTIME_UNAVAILABLE` and makes no VCI request.
+- **Resolver when the runtime is unavailable.**
+  - It makes no requests. Every gap-recovery and sentinel observation becomes a stub:
+    `NOT_ATTEMPTED_SUPPLEMENTAL_PROVIDER_RUNTIME_UNAVAILABLE:<state>`.
+  - Gap resolution is `SESSION_MISSING_DNSE_SUPPLEMENTAL_NOT_ATTEMPTED`, never
+    `SESSION_MISSING_ALL_SOURCES`.
+  - The residual-yield probe reads `NOT_EVALUATED...`, and degraded recovery reads
+    `NOT_EVALUABLE...`.
+  - The sentinel verdict is `DNSE_QUALITY_UNASSESSED_SUPPLEMENTAL_RUNTIME_UNAVAILABLE`, so it
+    never silently disappears.
+- **Governed Daily stages.**
+  - `BLOCKED_SUPPLEMENTAL_PROVIDER_RUNTIME` covers an unavailable runtime, including a mid-run
+    worker failure. `BLOCKED_DNSE_QUALITY_UNLICENSED` covers a live runtime whose license does
+    not qualify.
+  - Neither is `FAILED_ACQUISITION_PIPELINE`, and neither is "not ready" (exit 1).
+  - The DNSE-only snapshot is retained. A write-once `supplemental_provider_block.json` records
+    both axes. No canonical snapshot or evidence file is written, so a blocked run can never be
+    reused.
+- **Reuse gate.** The Level-2 and post-close reuse gates re-derive the license and require it to
+  qualify. They refuse companion evidence for another session and refuse unreadable evidence.
+- **Operation record.** It carries `operating_mode = ORDINARY_DAILY`, `provider_runtime_state`
+  and `dnse_quality_license`. `canonical_daily_operation.m1_live_acceptance_eligible` states
+  that M1 needs a completed ordinary Daily with an `AVAILABLE` runtime and a qualifying license.
+  M1 acceptance itself is not redefined, and `research_action_posture` policy is unchanged. A
+  blocked run stops before the producer, so it emits no posture at all.
+
+**Operational consequence.** While D1 stays `SECURITY_REVIEW_BLOCKED`, every ordinary Daily on a
+checkout containing this change ends at `BLOCKED_SUPPLEMENTAL_PROVIDER_RUNTIME` with the DNSE
+evidence retained. Resuming ordinary Daily needs an explicit owner policy change plus a dedicated
+provider interpreter. This is process and dependency isolation, not a security sandbox: a
+permitted provider runtime can still reach the network, send telemetry and write files.
+
 ## 2026-09-24 - M1 live-acceptance corrective V1
 
 The 2026-09-24 Daily completed, but live acceptance failed on delivery, presentation, lineage and

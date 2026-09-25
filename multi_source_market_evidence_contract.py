@@ -72,10 +72,16 @@ RESOLUTION_CONFLICT = "SOURCE_CONFLICT"
 # always retained unchanged in the full evidence record (see resolve_ticker below).
 RESOLUTION_CORROBORATED_NON_DNSE = "RESOLVED_CORROBORATED_NON_DNSE_CURRENT_RESEARCH"
 RESOLUTION_ALL_MISSING = "SESSION_MISSING_ALL_SOURCES"
+# PROVIDER_RUNTIME_ISOLATION_V1: no source observed the session AND every secondary source was
+# not attempted because the supplemental provider runtime was unavailable. Never reported as
+# SESSION_MISSING_ALL_SOURCES -- that would claim VCI/KBS had nothing when they were never asked.
+RESOLUTION_SUPPLEMENTAL_NOT_ATTEMPTED = "SESSION_MISSING_DNSE_SUPPLEMENTAL_NOT_ATTEMPTED"
 RESOLUTION_OUTCOMES = frozenset({
     RESOLUTION_CORROBORATED, RESOLUTION_SINGLE_SOURCE, RESOLUTION_CONFLICT,
-    RESOLUTION_CORROBORATED_NON_DNSE, RESOLUTION_ALL_MISSING,
+    RESOLUTION_CORROBORATED_NON_DNSE, RESOLUTION_ALL_MISSING, RESOLUTION_SUPPLEMENTAL_NOT_ATTEMPTED,
 })
+# Reason code prefix every secondary-source stub carries when the runtime was unavailable.
+SUPPLEMENTAL_RUNTIME_NOT_ATTEMPTED_REASON = "NOT_ATTEMPTED_SUPPLEMENTAL_PROVIDER_RUNTIME_UNAVAILABLE"
 
 # ---------------------------------------------------------------------------
 # DNSE same-date provider-health classification (bounded sentinel cohort only --
@@ -87,9 +93,14 @@ DNSE_HEALTH_EXACT_AND_CORROBORATED = "DNSE_EXACT_AND_CORROBORATED"
 DNSE_HEALTH_EXACT_BUT_UNCORROBORATED = "DNSE_EXACT_BUT_UNCORROBORATED"
 DNSE_HEALTH_MATERIAL_CONFLICT = "DNSE_MATERIAL_CONFLICT"
 DNSE_HEALTH_BROAD_STALE_OR_INCOMPLETE_EOD = "DNSE_BROAD_STALE_OR_INCOMPLETE_EOD"
+# PROVIDER_RUNTIME_ISOLATION_V1: the sentinel could not run at all because the supplemental
+# provider runtime was unavailable. Distinct from EXACT_BUT_UNCORROBORATED (the providers were
+# asked and returned no exact bar).
+DNSE_HEALTH_UNASSESSED_SUPPLEMENTAL_RUNTIME_UNAVAILABLE = "DNSE_QUALITY_UNASSESSED_SUPPLEMENTAL_RUNTIME_UNAVAILABLE"
 DNSE_HEALTH_STATES = frozenset({
     DNSE_HEALTH_EXACT_AND_CORROBORATED, DNSE_HEALTH_EXACT_BUT_UNCORROBORATED,
     DNSE_HEALTH_MATERIAL_CONFLICT, DNSE_HEALTH_BROAD_STALE_OR_INCOMPLETE_EOD,
+    DNSE_HEALTH_UNASSESSED_SUPPLEMENTAL_RUNTIME_UNAVAILABLE,
 })
 
 # Fraction of DNSE-assessable sentinel tickers (DNSE observed AND at least one of VCI/KBS also
@@ -274,9 +285,13 @@ def resolve_ticker(ticker: str, observations: Sequence[Mapping[str, Any]]) -> di
     """
     observed = [o for o in observations if o.get("status") == STATUS_EXACT_SESSION_OBSERVED]
     if not observed:
+        secondary = [o for o in observations if o.get("source") != "DNSE"]
+        runtime_not_attempted = bool(secondary) and all(
+            str(o.get("reason_code") or "").startswith(SUPPLEMENTAL_RUNTIME_NOT_ATTEMPTED_REASON) for o in secondary
+        )
         return {
             "ticker": ticker,
-            "resolution": RESOLUTION_ALL_MISSING,
+            "resolution": RESOLUTION_SUPPLEMENTAL_NOT_ATTEMPTED if runtime_not_attempted else RESOLUTION_ALL_MISSING,
             "resolved_source": None,
             "resolved_normalized": None,
             "cross_source_conflict": False,
@@ -478,4 +493,107 @@ def classify_dnse_provider_health(sentinel_observations: Mapping[str, Sequence[M
         "conflict_count": conflicts,
         "uncorroborated_count": uncorroborated,
         "per_ticker_resolution": per_ticker,
+    }
+
+
+# ---------------------------------------------------------------------------
+# DNSE quality license (PROVIDER_RUNTIME_ISOLATION_V1).
+#
+# A separate axis from evidence currency: CURRENT_SESSION says an exact-session bar and a complete
+# same-session technical window exist; it never says the DNSE bar was corroborated. The license
+# says whether this session's DNSE same-date values carry an explicit, retained quality verdict
+# that ordinary Daily may rely on. It is derived deterministically from the retained sentinel
+# evidence -- never from a stored label -- and never invalidates or rewrites the DNSE raw evidence.
+# ---------------------------------------------------------------------------
+DNSE_QUALITY_LICENSE_CONTRACT = "dnse_quality_license/v1"
+LICENSE_CORROBORATED_HEALTHY = "CORROBORATED_HEALTHY"
+LICENSE_ISOLATED_CONFLICT_RESOLVED = "ISOLATED_CONFLICT_RESOLVED"
+LICENSE_BROAD_STALE_RECOVERED = "BROAD_STALE_RECOVERED"
+# The session has no DNSE exact-session bar at all (e.g. DNSE lagging at acquisition time and
+# every resolved bar came from KBS/VCI): there is no DNSE value that needs a license.
+LICENSE_NOT_REQUIRED_NO_DNSE_EXACT_BAR = "NOT_REQUIRED_NO_DNSE_EXACT_BAR"
+LICENSE_UNASSESSED_NO_SECONDARY_OBSERVATION = "UNASSESSED_NO_SECONDARY_OBSERVATION"
+LICENSE_UNASSESSED_SUPPLEMENTAL_RUNTIME_UNAVAILABLE = "UNASSESSED_SUPPLEMENTAL_RUNTIME_UNAVAILABLE"
+LICENSE_DATA_QUALITY_FAILED = "DATA_QUALITY_FAILED"
+# No sentinel verdict exists in the evidence (a caller that never ran one); never qualifying.
+LICENSE_NOT_EVALUATED = "NOT_EVALUATED_NO_QUALITY_SENTINEL"
+DNSE_QUALITY_LICENSES = frozenset({
+    LICENSE_CORROBORATED_HEALTHY, LICENSE_ISOLATED_CONFLICT_RESOLVED, LICENSE_BROAD_STALE_RECOVERED,
+    LICENSE_NOT_REQUIRED_NO_DNSE_EXACT_BAR, LICENSE_UNASSESSED_NO_SECONDARY_OBSERVATION,
+    LICENSE_UNASSESSED_SUPPLEMENTAL_RUNTIME_UNAVAILABLE, LICENSE_DATA_QUALITY_FAILED, LICENSE_NOT_EVALUATED,
+})
+# Owner decision D2: UNASSESSED_* is never a healthy ordinary-Daily quality license.
+ORDINARY_DAILY_QUALIFYING_LICENSES = frozenset({
+    LICENSE_CORROBORATED_HEALTHY, LICENSE_ISOLATED_CONFLICT_RESOLVED, LICENSE_BROAD_STALE_RECOVERED,
+    LICENSE_NOT_REQUIRED_NO_DNSE_EXACT_BAR,
+})
+DEGRADED_RECOVERY_MODE_COMPLETED = "COMPLETED"
+
+
+def _sentinel_secondary_malformed(evidence: Mapping[str, Any], cohort: Sequence[str]) -> bool:
+    records = evidence.get("records") if isinstance(evidence.get("records"), Mapping) else {}
+    for ticker in cohort:
+        record = records.get(ticker) if isinstance(records, Mapping) else None
+        observations = record.get("observations") if isinstance(record, Mapping) else None
+        for observation in observations or []:
+            if (isinstance(observation, Mapping) and observation.get("source") in ("VCI", "KBS")
+                    and observation.get("status") == STATUS_MALFORMED):
+                return True
+    return False
+
+
+def dnse_quality_license(
+    evidence: Mapping[str, Any] | None, *, degraded_recovery_mode: str | None = None,
+) -> dict[str, Any]:
+    """Deterministic DNSE quality license for one session's multi-source evidence artifact.
+
+    ``degraded_recovery_mode`` overrides the evidence's own ``degraded_provider_recovery.mode``
+    (a reuse gate passes the snapshot's marker so a snapshot/evidence mismatch cannot license).
+    """
+    evidence = evidence if isinstance(evidence, Mapping) else {}
+    sentinel = evidence.get("dnse_quality_sentinel") if isinstance(evidence.get("dnse_quality_sentinel"), Mapping) else None
+    health = sentinel.get("health") if sentinel and isinstance(sentinel.get("health"), Mapping) else {}
+    state = health.get("state") if health else None
+    dnse_exact = evidence.get("dnse_exact_session_count")
+    recovery = evidence.get("degraded_provider_recovery") if isinstance(evidence.get("degraded_provider_recovery"), Mapping) else {}
+    mode = degraded_recovery_mode if degraded_recovery_mode is not None else recovery.get("mode")
+
+    if sentinel is None or state is None:
+        license_, reason = LICENSE_NOT_EVALUATED, "NO_DNSE_QUALITY_SENTINEL_IN_EVIDENCE"
+    elif state == DNSE_HEALTH_UNASSESSED_SUPPLEMENTAL_RUNTIME_UNAVAILABLE:
+        license_, reason = LICENSE_UNASSESSED_SUPPLEMENTAL_RUNTIME_UNAVAILABLE, "SENTINEL_NOT_RUN_SUPPLEMENTAL_RUNTIME_UNAVAILABLE"
+    elif state == DNSE_HEALTH_EXACT_AND_CORROBORATED:
+        license_, reason = LICENSE_CORROBORATED_HEALTHY, "SENTINEL_CORROBORATED_NO_CONFLICT"
+    elif state == DNSE_HEALTH_MATERIAL_CONFLICT:
+        license_, reason = LICENSE_ISOLATED_CONFLICT_RESOLVED, "SENTINEL_ISOLATED_CONFLICT_RESOLVED_PER_TICKER"
+    elif state == DNSE_HEALTH_BROAD_STALE_OR_INCOMPLETE_EOD:
+        if mode == DEGRADED_RECOVERY_MODE_COMPLETED:
+            license_, reason = LICENSE_BROAD_STALE_RECOVERED, "DNSE_QUARANTINED_DEGRADED_RECOVERY_COMPLETED"
+        else:
+            license_, reason = LICENSE_DATA_QUALITY_FAILED, "DNSE_BROAD_STALE_WITHOUT_COMPLETED_RECOVERY"
+    elif state == DNSE_HEALTH_EXACT_BUT_UNCORROBORATED:
+        if isinstance(dnse_exact, int) and not isinstance(dnse_exact, bool) and dnse_exact == 0:
+            license_, reason = LICENSE_NOT_REQUIRED_NO_DNSE_EXACT_BAR, "NO_DNSE_EXACT_SESSION_BAR_TO_LICENSE"
+        elif _sentinel_secondary_malformed(evidence, sentinel.get("cohort_tickers") or []):
+            license_, reason = LICENSE_DATA_QUALITY_FAILED, "SENTINEL_SECONDARY_OBSERVATION_MALFORMED"
+        else:
+            license_, reason = LICENSE_UNASSESSED_NO_SECONDARY_OBSERVATION, "SENTINEL_RAN_NO_SECONDARY_EXACT_OBSERVATION"
+    else:
+        license_, reason = LICENSE_NOT_EVALUATED, f"UNRECOGNIZED_SENTINEL_STATE:{state}"
+
+    return {
+        "contract_version": DNSE_QUALITY_LICENSE_CONTRACT,
+        "license": license_,
+        "reason_code": reason,
+        "qualifies_for_ordinary_daily": license_ in ORDINARY_DAILY_QUALIFYING_LICENSES,
+        "target_session": evidence.get("target_session"),
+        "source_health_state": state,
+        "dnse_exact_session_count": dnse_exact,
+        "dnse_assessed_count": health.get("dnse_assessed_count") if health else None,
+        "corroborated_count": health.get("corroborated_count") if health else None,
+        "conflict_count": health.get("conflict_count") if health else None,
+        "uncorroborated_count": health.get("uncorroborated_count") if health else None,
+        "degraded_recovery_mode": mode,
+        "dnse_raw_evidence_status": "RETAINED_UNCHANGED",
+        "evidence_currency_relation": "SEPARATE_AXIS_CURRENT_SESSION_IS_NOT_CORROBORATION",
     }

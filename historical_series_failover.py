@@ -19,6 +19,20 @@ from collections import Counter
 from datetime import date, timedelta
 from typing import Any, Callable, Mapping, Sequence
 
+from provider_runtime_state import SUPPLEMENTAL_PROVIDER_RUNTIME_UNAVAILABLE, SupplementalProviderRuntimeUnavailable
+
+# PROVIDER_RUNTIME_ISOLATION_V1: a secondary series that was not fetched because the isolated
+# supplemental provider runtime was unavailable -- never CLEAN_MISSING (the provider was not
+# asked) and never TRANSPORT_OR_PROVIDER_FAILURE (the provider did not fail).
+PROVIDER_RUNTIME_UNAVAILABLE_STATUS = "PROVIDER_RUNTIME_UNAVAILABLE"
+
+
+def is_runtime_unavailable_series(series: Mapping[str, Any] | None) -> bool:
+    """True when a secondary series was not fetched because the provider runtime was unavailable."""
+    return isinstance(series, Mapping) and str(series.get("reason") or "").startswith(
+        SUPPLEMENTAL_PROVIDER_RUNTIME_UNAVAILABLE
+    )
+
 
 CONTRACT_VERSION = "historical_series_failover/v1"
 PROVIDER_INTERFACE = {
@@ -284,7 +298,17 @@ def vnstock_provider_series(
         except ValueError as exc:
             raise HistoricalSeriesFailoverError("REQUESTED_END_INVALID") from exc
     began = time.monotonic()
-    outcome = fetch(ticker, provider, requested_start, provider_request_end)
+    try:
+        outcome = fetch(ticker, provider, requested_start, provider_request_end)
+    except SupplementalProviderRuntimeUnavailable as exc:
+        return build_provider_series(
+            ticker=ticker, provider=provider, target_session=target_session, requested_at=requested_at,
+            requested_start=requested_start, requested_end=requested_end, provider_requested_end=provider_request_end,
+            rows=[], status=PROVIDER_RUNTIME_UNAVAILABLE_STATUS,
+            reason=f"{SUPPLEMENTAL_PROVIDER_RUNTIME_UNAVAILABLE}:{exc.state_record.get('state')}",
+            latency_seconds=0.0 if latency_seconds is None else latency_seconds,
+            request_attempts=0, retry_count=0,
+        )
     observed_latency = latency_seconds if latency_seconds is not None else round(time.monotonic() - began, 3)
     accounting = {
         "request_attempts": int(getattr(outcome, "request_attempts", 0) or 0),

@@ -25,13 +25,66 @@ from market_wide_current_technical_coverage_scaleout import (
 from mva_exact_session_snapshot import EXACT_SESSION_OHLC_LOOKBACK_CALENDAR_DAYS
 from historical_series_failover import (
     build_provider_series,
+    is_runtime_unavailable_series,
     recovery_record_from_selection,
     select_feature_safe_series,
     snapshot_target_close,
     vnstock_provider_series,
 )
+import provider_runtime_state as runtime_contract
+import vnstock_worker_client as worker_client
 from vnstock_rate_governor import VnstockRateGovernor, set_active_governor
-from vn_stock_pipeline import fetch_single_source
+from vnstock_worker_protocol import PURPOSE_TECHNICAL_HISTORY, VnstockWorkerFailure
+
+# PROVIDER_RUNTIME_ISOLATION_V1: this process holds DNSE credentials, so it never imports the
+# provider adapter (vn_stock_pipeline / vnstock / vnai). Every KBS/VCI history request goes through
+# the same isolated provider worker boundary canonical Daily uses (see _ProviderHistoryFetch).
+SUPPLEMENTAL_HISTORY_RUNTIME_UNAVAILABLE = "SUPPLEMENTAL_HISTORY_RUNTIME_UNAVAILABLE"
+
+
+class _ProviderHistoryFetch:
+    """``fetch_single_source``-shaped callable over one lazily opened, governed provider runtime.
+
+    The runtime is opened only if a ticker actually needs a KBS/VCI history request. An
+    unavailable runtime (policy blocked, interpreter not configured, startup failure, or a worker
+    failure mid-invocation) raises ``SupplementalProviderRuntimeUnavailable`` for every request,
+    which ``vnstock_provider_series`` records as ``PROVIDER_RUNTIME_UNAVAILABLE`` -- never a
+    fabricated provider miss or failure.
+    """
+
+    def __init__(self, *, session: str):
+        self._session = session
+        self._runtime: worker_client.ProviderRuntimeHandle | None = None
+
+    def __call__(self, ticker: str, source: str, start: str, end: str):
+        if self._runtime is None:
+            self._runtime = worker_client.open_provider_runtime(session=self._session)
+        if not self._runtime.available:
+            raise self._runtime.unavailable_error()
+        try:
+            return self._runtime.fetcher.fetch(ticker, source, start, end, purpose=PURPOSE_TECHNICAL_HISTORY)
+        except VnstockWorkerFailure as exc:
+            raise runtime_contract.SupplementalProviderRuntimeUnavailable(self._runtime.final_state()) from exc
+
+    def runtime_state(self) -> dict:
+        if self._runtime is None:
+            return {"state": None, "reason_code": "PROVIDER_RUNTIME_NOT_OPENED_NO_SUPPLEMENTAL_REQUEST_NEEDED"}
+        return self._runtime.final_state()
+
+    def worker_governor_diagnostic(self) -> dict | None:
+        if self._runtime is None or not self._runtime.available:
+            return None
+        return self._runtime.fetcher.diagnostic()
+
+    def close(self) -> None:
+        if self._runtime is not None:
+            self._runtime.shutdown()
+
+
+def _provider_boundary_not_supplied(*_args, **_kwargs):
+    raise runtime_contract.SupplementalProviderRuntimeUnavailable(runtime_contract.runtime_state_record(
+        runtime_contract.NOT_CONFIGURED, "PROVIDER_FETCH_BOUNDARY_NOT_SUPPLIED",
+    ))
 
 
 BASELINE = ROOT / "operations-review/market-wide-current-descriptive-research-v1-20260823/market_wide_current_descriptive_research_artifact.json"
@@ -78,13 +131,20 @@ def _dnse_series(*, record: Mapping, ticker: str, target_session: str, retrieved
 
 
 def _feature_safe_record(*, ticker: str, dnse_record: Mapping, snapshot_record: Mapping,
-                         target_session: str, retrieved_at: str, start: str, end: str) -> dict:
+                         target_session: str, retrieved_at: str, start: str, end: str,
+                         fetch: Callable | None = None) -> dict:
     """Keep DNSE primary; call KBS then VCI only when a compatible close history is absent.
 
     A clean KBS no-data result deliberately stops here: retained qualification treats it as no
     incremental historical yield, not a reason to burn VCI traffic. Transport/malformed/target-
     close-mismatch outcomes can still justify VCI because they are not a clean capability miss.
+    An unavailable provider runtime also stops here (VCI shares the same runtime) and is recorded
+    as ``SUPPLEMENTAL_HISTORY_RUNTIME_UNAVAILABLE``.
+
+    ``fetch`` is the isolated provider boundary (``_ProviderHistoryFetch``); omitted, every
+    secondary request is recorded as runtime-unavailable -- there is no in-process fallback.
     """
+    fetch = fetch or _provider_boundary_not_supplied
     series = {
         "DNSE": _dnse_series(record=dnse_record, ticker=ticker, target_session=target_session,
                               retrieved_at=retrieved_at, start=start, end=end),
@@ -109,16 +169,18 @@ def _feature_safe_record(*, ticker: str, dnse_record: Mapping, snapshot_record: 
     if selection.get("fitness") != "READY":
         series["KBS"] = vnstock_provider_series(
             ticker=ticker, provider="KBS", target_session=target_session, requested_at=retrieved_at,
-            requested_start=start, requested_end=end, fetch=fetch_single_source,
+            requested_start=start, requested_end=end, fetch=fetch,
         )
         selection = select_feature_safe_series(
             ticker=ticker, target_session=target_session, feature_family="TECHNICAL_CLOSE_HISTORY",
             snapshot_record=snapshot_record, provider_series=series,
         )
-        if selection.get("fitness") != "READY" and series["KBS"].get("reason") != "CLEAN_MISSING":
+        if selection.get("fitness") != "READY" and is_runtime_unavailable_series(series["KBS"]):
+            selection = {**selection, "blocked_reason": SUPPLEMENTAL_HISTORY_RUNTIME_UNAVAILABLE}
+        elif selection.get("fitness") != "READY" and series["KBS"].get("reason") != "CLEAN_MISSING":
             series["VCI"] = vnstock_provider_series(
                 ticker=ticker, provider="VCI", target_session=target_session, requested_at=retrieved_at,
-                requested_start=start, requested_end=end, fetch=fetch_single_source,
+                requested_start=start, requested_end=end, fetch=fetch,
             )
             selection = select_feature_safe_series(
                 ticker=ticker, target_session=target_session, feature_family="TECHNICAL_CLOSE_HISTORY",
@@ -147,6 +209,7 @@ def _recover_records(
     original = {key: os.environ.get(key) for pair in CREDENTIAL_ENV_PAIRS for key in pair}
     governor = VnstockRateGovernor()
     previous_governor = set_active_governor(governor)
+    provider_fetch = _ProviderHistoryFetch(session=snapshot["resolved_completed_session"])
     try:
         ensure_credentials_loaded()
         credentials = credentials_for_request()
@@ -169,7 +232,7 @@ def _recover_records(
                 ticker=ticker, dnse_record=dnse_record,
                 snapshot_record=(snapshot.get("records") or {}).get(ticker) or {},
                 target_session=snapshot["resolved_completed_session"], retrieved_at=retrieved_at,
-                start=start.date().isoformat(), end=target.date().isoformat(),
+                start=start.date().isoformat(), end=target.date().isoformat(), fetch=provider_fetch,
             )
             full_record = {**record, "raw_response_body": response.get("body") if response.get("ok") else None}
             records.append(full_record)
@@ -177,6 +240,8 @@ def _recover_records(
                 on_record(ticker, full_record)
         diagnostic = governor.diagnostic()
         diagnostic.update({
+            "provider_runtime": provider_fetch.runtime_state(),
+            "provider_worker_governor": provider_fetch.worker_governor_diagnostic(),
             "scope": "ONE_HISTORICAL_RECOVERY_INVOCATION",
             "runtime_budget_seconds": HISTORICAL_FALLBACK_RUNTIME_BUDGET_SECONDS,
             "projected_maximum_governor_seconds": round(
@@ -185,6 +250,7 @@ def _recover_records(
         })
         return records, diagnostic
     finally:
+        provider_fetch.close()
         set_active_governor(previous_governor)
         for key, value in original.items():
             if value is None:

@@ -19,8 +19,14 @@
 #
 #   anthropic — chỉ cần cho ai_analyzer.py khi GỌI API THẬT (không cần cho --dry-run).
 #
-# Cài (khi package khả dụng trên chỉ mục):
-#   python -m pip install -r requirements.txt -r requirements-providers.txt -c constraints.txt
+# Cài (khi package khả dụng trên chỉ mục) VÀO MỘT MÔI TRƯỜNG PROVIDER RIÊNG, không phải môi
+# trường lõi (PROVIDER_RUNTIME_ISOLATION_V1, quyết định owner D3):
+#   <provider-venv-python> -m pip install -r requirements.txt -r requirements-providers.txt -c constraints.txt
+#   đặt STOCKLOOKUP_PROVIDER_PYTHON=<provider-venv-python>
+# Daily chỉ khởi chạy worker provider khi config/provider_runtime_policy.json do owner đặt là
+# ALLOW_CONFIGURED_PROVIDER_RUNTIME; hiện tại là SECURITY_REVIEW_BLOCKED (D1) nên Daily dừng ở
+# BLOCKED_SUPPLEMENTAL_PROVIDER_RUNTIME và giữ nguyên evidence DNSE. Xem
+# docs/CI_AND_DEPENDENCY_TIERS.md §7.
 #
 # TRẠNG THÁI CHỈ MỤC (đã kiểm 2026-09-25): PyPI Simple API (PEP 792) trả
 # project-status "quarantined" cho cả vnstock và vnai, với danh sách file/phiên bản rỗng, nên
