@@ -467,10 +467,7 @@ def _handoff_delivery_error(reason: str) -> OwnerDailyError:
 
 _DAILY_PRODUCT_FILENAME = "current_daily_decision_research_product_artifact.json"
 _BUNDLE_FILENAME = "ai_research_session_bundle.json"
-#: Integrated Decision fields the AI delivery copies verbatim (``ai_research_session_delivery.
-#: _integrated_record_for_delivery``); each delivered value must equal the canonical record's.
-_M1_CANONICAL_PROJECTED_FIELDS = ("ticker", "decision_identity", "research_action_posture",
-                                  "evidence_currency", "position_context")
+_OPERATION_MANIFEST_FILENAME = "run_manifest.json"
 
 
 def _canonical_json(value: Any) -> str:
@@ -487,71 +484,182 @@ def _reject_duplicate_keys(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
     return result
 
 
-def _m1_canonical_sources(root: Path | None, source: Path, session: str, bundle: Mapping[str, Any],
-                          identity: Any) -> tuple[Mapping[str, Any], list[str], list[str]]:
-    """The canonical objects an M1 AI delivery was projected from -- never a second definition.
+def _load_strict_json(text: str) -> Any:
+    """Parse M1 delivery JSON; a repeated key anywhere fails instead of silently keeping the last."""
+    return json.loads(text, object_pairs_hook=_reject_duplicate_keys)
 
-    - Integrated Decision records: this session's retained artifact, read by the governed loader
-      the Action Center uses, bound to the delivery by its recomputed content identity.
-    - Scoped cohort and owner-focus set: the operation's sealed Daily product, bound by its
-      recomputed identity. The delivery emits one scoped context per ``detailed_research_cards``
-      ticker and one owner-focus context per ``owner_focus.tickers`` entry.
+
+def _sealed_operation_manifest(source: Path, session: str, expected_operation_identity: str | None) -> Mapping[str, Any]:
+    """The retained operation's own sealed manifest: it must recompute to its ``operation_identity``
+    and, when the caller knows it, be the completed Daily's operation."""
+    from daily_research_session_operations import _identity as operation_identity_of
+    try:
+        manifest = json.loads((source / _OPERATION_MANIFEST_FILENAME).read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        raise _handoff_brief_error("OPERATION_MANIFEST_UNAVAILABLE") from None
+    if not isinstance(manifest, Mapping) or manifest.get("market_session") != session:
+        raise _handoff_brief_error("OPERATION_MANIFEST_SESSION_MISMATCH")
+    if operation_identity_of(manifest) != manifest.get("operation_identity"):
+        raise _handoff_brief_error("OPERATION_MANIFEST_IDENTITY_MISMATCH")
+    if expected_operation_identity is not None and manifest.get("operation_identity") != expected_operation_identity:
+        raise _handoff_brief_error("OPERATION_MANIFEST_NOT_THE_COMPLETED_DAILY_OPERATION")
+    return manifest
+
+
+def _sealed_m1_applicable(manifest: Mapping[str, Any]) -> bool:
+    """M1 applicability, from the sealed manifest's own copy of the Integrated Decision coverage
+    (an M1 Integrated Decision declares its evidence-currency distribution). Never the delivery."""
+    summary = manifest.get("coverage_summary")
+    coverage = summary.get("integrated_investment_decision") if isinstance(summary, Mapping) else None
+    return isinstance(coverage, Mapping) and isinstance(coverage.get("evidence_currency_distribution"), Mapping)
+
+
+def resolve_m1_handoff_authority(source: Path, session: str, *, root: Path | None,
+                                 manifest: Mapping[str, Any]) -> dict[str, Any] | None:
+    """M1_LIVE_ACCEPTANCE_CORRECTIVE_V1: the authority an M1 AI delivery is verified against,
+    resolved only from sealed state -- the delivery under verification never contributes to it.
+
+    ``None`` exactly when the sealed operation genuinely predates M1. Otherwise the identity chain
+    sealed operation manifest -> declared Integrated Decision (retained, recomputed) -> declared
+    Brief and its decision-surface index (recomputed, bound to the operation and the Integrated
+    Decision) -> declared Daily product (recomputed) -> the expected overlay, projected by the
+    delivery's own ``project_integrated_decision_delivery_overlay``. Scoped and owner-focus sets
+    come only from that declared Daily product; the full-universe set from the Integrated Decision.
     """
-    if root is None:
-        raise _handoff_delivery_error("M1_CANONICAL_ROOT_NOT_SUPPLIED")
+    if not _sealed_m1_applicable(manifest):
+        return None
     import current_daily_decision_research_product as daily_product_contract
+    import daily_integrated_decision_brief as brief_contract
     import integrated_investment_decision_product as integrated_contract
+    from ai_research_session_delivery import project_integrated_decision_delivery_overlay
+    from field_temporal_contract import stable_id
     from portfolio_aware_decision import load_integrated_decision_artifact
+
+    outputs = manifest.get("outputs") if isinstance(manifest.get("outputs"), Mapping) else {}
+    integrated_identity = outputs.get("integrated_investment_decision_product")
+    brief_identity = outputs.get("daily_integrated_decision_brief")
+    product_identity = outputs.get("daily_product")
+    if not brief_identity:
+        raise _handoff_brief_error("M1_DAILY_BRIEF_NOT_DECLARED")
+    if not integrated_identity or not product_identity:
+        raise _handoff_brief_error("M1_SEALED_DECLARATION_MISSING")
+    if root is None:
+        raise _handoff_brief_error("M1_CANONICAL_ROOT_NOT_SUPPLIED")
+
+    # Declared Integrated Decision: the retained artifact, read by the governed loader.
     try:
         integrated = load_integrated_decision_artifact(Path(root), session)
     except (OSError, json.JSONDecodeError):
-        raise _handoff_delivery_error("M1_CANONICAL_INTEGRATED_DECISION_UNAVAILABLE") from None
+        raise _handoff_brief_error("M1_CANONICAL_INTEGRATED_DECISION_UNAVAILABLE") from None
     records = integrated.get("records") if isinstance(integrated, Mapping) else None
     if (not isinstance(records, Mapping) or integrated.get("session") != session
-            or integrated.get("artifact_identity") != identity
-            or integrated_contract.content_identity(integrated)["artifact_identity"] != identity):
-        raise _handoff_delivery_error("M1_CANONICAL_INTEGRATED_DECISION_IDENTITY_MISMATCH")
+            or integrated.get("contract_version") != integrated_contract.CONTRACT_VERSION
+            or integrated.get("artifact_identity") != integrated_identity
+            or integrated_contract.content_identity(integrated)["artifact_identity"] != integrated_identity
+            or _canonical_json(integrated.get("coverage")) != _canonical_json(manifest["coverage_summary"]["integrated_investment_decision"])):
+        raise _handoff_brief_error("M1_CANONICAL_INTEGRATED_DECISION_IDENTITY_MISMATCH")
+
+    # Declared Brief, retained with this operation and bound to it and to the Integrated Decision.
+    path = source / _DAILY_BRIEF_FILENAME
+    if not path.is_file():
+        raise _handoff_brief_error("M1_DAILY_BRIEF_RETAINED_FILE_MISSING")
+    try:
+        wrapper = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        raise _handoff_brief_error("DAILY_BRIEF_UNREADABLE") from None
+    brief = wrapper.get("daily_integrated_decision_brief") if isinstance(wrapper, Mapping) else None
+    if not isinstance(brief, Mapping) or brief.get("contract_version") != brief_contract.CONTRACT_VERSION:
+        raise _handoff_brief_error("DAILY_BRIEF_MALFORMED")
+    if brief.get("session") != session or wrapper.get("session") != session:
+        raise _handoff_brief_error("DAILY_BRIEF_SESSION_MISMATCH")
+    if (brief.get("artifact_identity") != brief_identity
+            or brief_contract.content_identity(brief)["artifact_identity"] != brief_identity):
+        raise _handoff_brief_error("DAILY_BRIEF_IDENTITY_MISMATCH")
+    unsealed = {key: value for key, value in wrapper.items() if key not in ("artifact_sha256", "artifact_identity")}
+    if (wrapper.get("daily_operation_identity") != manifest.get("operation_identity")
+            or wrapper.get("integrated_investment_decision_product_identity") != integrated_identity
+            or wrapper.get("artifact_sha256") != stable_id(unsealed)):
+        raise _handoff_brief_error("M1_DAILY_BRIEF_RETENTION_BINDING_MISMATCH")
+    index = brief.get("decision_surface_index")
+    if not isinstance(index, Mapping) or not isinstance(index.get("rows"), list):
+        raise _handoff_brief_error("M1_DECISION_SURFACE_INDEX_MISSING")
+    rows = index["rows"]
+    denominator = (integrated.get("coverage") or {}).get("universe_denominator")
+    if not isinstance(denominator, int) or isinstance(denominator, bool) or denominator <= 0:
+        raise _handoff_brief_error("M1_CANONICAL_DENOMINATOR_UNAVAILABLE")
+    if index.get("denominator") != denominator or len(rows) != denominator:
+        raise _handoff_brief_error(f"M1_DECISION_SURFACE_INDEX_DENOMINATOR_MISMATCH:index={index.get('denominator')}"
+                                   f":rows={len(rows)}:canonical={denominator}")
+    if index.get("source_integrated_investment_decision_product_identity") != integrated_identity:
+        raise _handoff_brief_error("M1_DECISION_SURFACE_INDEX_SOURCE_IDENTITY_MISMATCH")
+    index_rows: dict[str, Mapping[str, Any]] = {}
+    for row in rows:
+        if not isinstance(row, Mapping) or not all(isinstance(row.get(key), str) and row.get(key)
+                                                   for key in ("ticker", "research_action_posture", "evidence_currency")):
+            raise _handoff_brief_error("M1_DECISION_SURFACE_INDEX_ROW_MALFORMED")
+        if row["ticker"] in index_rows:
+            raise _handoff_brief_error("M1_DECISION_SURFACE_INDEX_DUPLICATE_TICKER:" + row["ticker"])
+        index_rows[row["ticker"]] = row
+        if row["evidence_currency"] == "NO_CURRENT_EVIDENCE" and row["research_action_posture"] == "WAIT_FOR_CONFIRMATION":
+            raise _handoff_brief_error("M1_NO_CURRENT_EVIDENCE_WAIT_PRESENT:" + row["ticker"])
+    if set(index_rows) != set(records):
+        raise _handoff_brief_error("M1_DECISION_SURFACE_INDEX_DIVERGES_FROM_CANONICAL_IID:ticker_set")
+    for ticker, row in index_rows.items():
+        record = records[ticker]
+        if not isinstance(record, Mapping) or any(
+                record.get(key) != row.get(key) for key in ("ticker", "research_action_posture", "evidence_currency")):
+            raise _handoff_brief_error(f"M1_DECISION_SURFACE_INDEX_DIVERGES_FROM_CANONICAL_IID:{ticker}")
+
+    # Declared Daily product: the only source of the scoped and owner-focus sets.
     try:
         product = json.loads((source / _DAILY_PRODUCT_FILENAME).read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
-        raise _handoff_delivery_error("M1_CANONICAL_DAILY_PRODUCT_UNAVAILABLE") from None
-    if (not isinstance(product, Mapping) or product.get("artifact_identity") != bundle.get("product_identity")
-            or daily_product_contract.content_identity(product)["artifact_identity"] != product.get("artifact_identity")):
-        raise _handoff_delivery_error("M1_CANONICAL_DAILY_PRODUCT_IDENTITY_MISMATCH")
+        raise _handoff_brief_error("M1_CANONICAL_DAILY_PRODUCT_UNAVAILABLE") from None
+    if (not isinstance(product, Mapping) or product.get("session") != session
+            or product.get("contract_version") != daily_product_contract.CONTRACT_VERSION
+            or product.get("artifact_identity") != product_identity
+            or daily_product_contract.content_identity(product)["artifact_identity"] != product_identity):
+        raise _handoff_brief_error("M1_CANONICAL_DAILY_PRODUCT_IDENTITY_MISMATCH")
     scoped = product.get("detailed_research_cards")
     owner_focus = product.get("owner_focus")
     owner_focus = owner_focus.get("tickers") if isinstance(owner_focus, Mapping) else None
     if (not isinstance(scoped, Mapping) or not isinstance(owner_focus, list)
             or not all(isinstance(ticker, str) and ticker for ticker in owner_focus)
             or len(set(owner_focus)) != len(owner_focus)):
-        raise _handoff_delivery_error("M1_CANONICAL_DELIVERY_SCOPE_MALFORMED")
-    return records, sorted(scoped), list(owner_focus)
+        raise _handoff_brief_error("M1_CANONICAL_DELIVERY_SCOPE_MALFORMED")
+
+    overlay = project_integrated_decision_delivery_overlay(session, integrated, brief)
+    projections = overlay.pop("records")
+    return {
+        "manifest": manifest, "operation_identity": manifest.get("operation_identity"),
+        "integrated_identity": integrated_identity, "brief_identity": brief_identity,
+        "product_identity": product_identity, "brief_path": path, "denominator": denominator,
+        "overlay_header": overlay, "projections": projections,
+        "scoped": sorted(scoped), "owner_focus": list(owner_focus), "full_universe": sorted(records),
+    }
 
 
-def _verify_m1_integrated_projection(label: str, ticker: Any, delivered: Any,
-                                     index_rows: Mapping[str, Mapping[str, Any]],
-                                     canonical: Mapping[str, Any], identity: Any) -> None:
-    """M1_LIVE_ACCEPTANCE_CORRECTIVE_V1: one delivered ``integrated_decision_v1`` must be the
-    exact projection of its canonical Integrated Decision record -- bound to the same Integrated
-    Decision, with the Brief index's ticker, posture and evidence currency, and every projected
-    field (``position_context`` included) structurally equal to the canonical record. Nothing is
-    normalized or inferred."""
-    index_row = index_rows.get(ticker) if isinstance(ticker, str) else None
-    record = canonical.get(ticker) if isinstance(ticker, str) else None
-    if index_row is None or not isinstance(record, Mapping):
+def _first_difference(delivered: Mapping[str, Any], expected: Mapping[str, Any]) -> str:
+    """The first top-level field (sorted) where two projections differ, for the refusal reason."""
+    for key in sorted(set(delivered) | set(expected)):
+        left = _canonical_json(delivered[key]) if key in delivered else "<absent>"
+        right = _canonical_json(expected[key]) if key in expected else "<absent>"
+        if left != right:
+            return key
+    return "<object>"
+
+
+def _verify_m1_projection(label: str, ticker: Any, delivered: Any, projections: Mapping[str, Any]) -> None:
+    """One delivered ``integrated_decision_v1`` must be exactly the canonical projection of its
+    Integrated Decision record -- the whole object, every field authority-bound."""
+    if not isinstance(ticker, str) or ticker not in projections:
         raise _handoff_delivery_error(f"M1_AI_DELIVERY_TICKER_NOT_IN_DECISION_SURFACE_INDEX:{label}:{ticker}")
     if not isinstance(delivered, Mapping):
         raise _handoff_delivery_error(f"M1_AI_DELIVERY_INTEGRATED_DECISION_MISSING:{label}:{ticker}")
-    if delivered.get("integrated_investment_decision_product_identity") != identity:
-        raise _handoff_delivery_error(f"M1_AI_DELIVERY_INTEGRATED_DECISION_IDENTITY_MISMATCH:{label}:{ticker}")
-    for key in ("ticker", "research_action_posture", "evidence_currency"):
-        if delivered.get(key) != index_row.get(key):
-            raise _handoff_delivery_error(f"M1_AI_DELIVERY_DECISION_SURFACE_MISMATCH:{label}:{ticker}:{key}")
-    if not isinstance(delivered.get("position_context"), Mapping):
-        raise _handoff_delivery_error(f"M1_AI_DELIVERY_POSITION_CONTEXT_MISSING:{label}:{ticker}")
-    for key in _M1_CANONICAL_PROJECTED_FIELDS:
-        if _canonical_json(delivered.get(key)) != _canonical_json(record.get(key)):
-            raise _handoff_delivery_error(f"M1_AI_DELIVERY_CANONICAL_IID_MISMATCH:{label}:{ticker}:{key}")
+    expected = projections[ticker]
+    if _canonical_json(delivered) != _canonical_json(expected):
+        raise _handoff_delivery_error(f"M1_AI_DELIVERY_PROJECTION_MISMATCH:{label}:{ticker}:"
+                                      f"{_first_difference(delivered, expected)}")
 
 
 def _verify_exact_scope(label: str, delivered: list[Any], expected: list[str]) -> None:
@@ -566,40 +674,41 @@ def _verify_exact_scope(label: str, delivered: list[Any], expected: list[str]) -
                                       f":actual={len(delivered)}:missing={','.join(missing)}:extra={','.join(extra)}")
 
 
-def _verify_m1_ai_delivery(root: Path | None, source: Path, session: str,
-                           index_rows: Mapping[str, Mapping[str, Any]], identity: Any) -> dict[str, int]:
-    """Every AI-delivered Integrated Decision surface of an M1 operation -- scoped contexts,
-    owner-focus contexts, and the full-universe companion -- must be exactly the canonical set,
-    each entry the exact projection of its canonical Integrated Decision record. Read-only;
-    nothing is rebuilt or repaired."""
+def _verify_m1_ai_delivery(source: Path, session: str, authority: Mapping[str, Any]) -> dict[str, int]:
+    """The candidate AI delivery against the resolved authority: bound to the same operation,
+    Daily product, Integrated Decision and Brief; its overlay header and every scoped, owner-focus
+    and full-universe ``integrated_decision_v1`` exactly the canonical projection; each context set
+    exactly the canonical one. Read-only; nothing is rebuilt or repaired."""
     try:
-        # Re-read strictly: a repeated scoped key would otherwise collapse silently on load.
-        bundle = json.loads((source / _BUNDLE_FILENAME).read_text(encoding="utf-8"),
-                            object_pairs_hook=_reject_duplicate_keys)
+        bundle = _load_strict_json((source / _BUNDLE_FILENAME).read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
         raise _handoff_delivery_error("M1_AI_DELIVERY_BUNDLE_UNREADABLE") from None
-    canonical, expected_scoped, expected_owner_focus = _m1_canonical_sources(root, source, session, bundle, identity)
-    if set(canonical) != set(index_rows):
-        raise _handoff_delivery_error("M1_DECISION_SURFACE_INDEX_DIVERGES_FROM_CANONICAL_IID:ticker_set")
-    for ticker, row in index_rows.items():
-        record = canonical[ticker]
-        if not isinstance(record, Mapping) or any(
-                record.get(key) != row.get(key) for key in ("ticker", "research_action_posture", "evidence_currency")):
-            raise _handoff_delivery_error(f"M1_DECISION_SURFACE_INDEX_DIVERGES_FROM_CANONICAL_IID:{ticker}")
+    if not isinstance(bundle, Mapping):
+        raise _handoff_delivery_error("M1_AI_DELIVERY_BUNDLE_UNREADABLE")
+    for key, expected in (("session", session), ("operation_identity", authority["operation_identity"]),
+                          ("product_identity", authority["product_identity"])):
+        if bundle.get(key) != expected:
+            raise _handoff_delivery_error(f"M1_AI_DELIVERY_BINDING_MISMATCH:{key}")
+    header = bundle.get("integrated_decision_overlay_v1")
+    if not isinstance(header, Mapping):
+        raise _handoff_delivery_error("M1_AI_DELIVERY_OVERLAY_HEADER_MISMATCH:<object>")
+    if _canonical_json(header) != _canonical_json(authority["overlay_header"]):
+        raise _handoff_delivery_error("M1_AI_DELIVERY_OVERLAY_HEADER_MISMATCH:"
+                                      + _first_difference(header, authority["overlay_header"]))
+    projections = authority["projections"]
     cards = bundle.get("ticker_research_contexts")
     if not isinstance(cards, Mapping):
         raise _handoff_delivery_error("M1_AI_DELIVERY_TICKER_CONTEXTS_MISSING")
-    _verify_exact_scope("SCOPED", list(cards), expected_scoped)
+    _verify_exact_scope("SCOPED", list(cards), authority["scoped"])
     for ticker, card in sorted(cards.items()):
         delivered = card.get("integrated_decision_v1") if isinstance(card, Mapping) else None
-        _verify_m1_integrated_projection("ticker_research_contexts", ticker, delivered, index_rows, canonical, identity)
+        _verify_m1_projection("ticker_research_contexts", ticker, delivered, projections)
     owner_focus = bundle.get("owner_focus_research_contexts")
     if not isinstance(owner_focus, list) or not all(isinstance(row, Mapping) for row in owner_focus):
         raise _handoff_delivery_error("M1_AI_DELIVERY_OWNER_FOCUS_CONTEXTS_MALFORMED")
-    _verify_exact_scope("OWNER_FOCUS", [row.get("ticker") for row in owner_focus], expected_owner_focus)
+    _verify_exact_scope("OWNER_FOCUS", [row.get("ticker") for row in owner_focus], authority["owner_focus"])
     for row in owner_focus:
-        _verify_m1_integrated_projection("owner_focus_research_contexts", row.get("ticker"),
-                                         row.get("integrated_decision_v1"), index_rows, canonical, identity)
+        _verify_m1_projection("owner_focus_research_contexts", row.get("ticker"), row.get("integrated_decision_v1"), projections)
     path = source / _FULL_UNIVERSE_FILENAME
     if not path.is_file():
         raise _handoff_delivery_error("M1_AI_FULL_UNIVERSE_COMPANION_MISSING")
@@ -609,65 +718,71 @@ def _verify_m1_ai_delivery(root: Path | None, source: Path, session: str,
             for line in handle:
                 if not line.strip():
                     continue
-                row = json.loads(line)
+                row = _load_strict_json(line)
                 row = row if isinstance(row, Mapping) else {}
                 ticker = row.get("ticker")
                 if ticker in seen:
                     raise _handoff_delivery_error(f"M1_AI_FULL_UNIVERSE_DUPLICATE_TICKER:{ticker}")
-                _verify_m1_integrated_projection("full_universe", ticker, row.get("integrated_decision_v1"),
-                                                 index_rows, canonical, identity)
+                _verify_m1_projection("full_universe", ticker, row.get("integrated_decision_v1"), projections)
                 seen.add(ticker)
     except (OSError, json.JSONDecodeError):
         raise _handoff_delivery_error("M1_AI_FULL_UNIVERSE_COMPANION_UNREADABLE") from None
-    if seen != set(index_rows):
-        raise _handoff_delivery_error(f"M1_AI_FULL_UNIVERSE_INDEX_SET_MISMATCH:rows={len(seen)}:index={len(index_rows)}")
+    if seen != set(authority["full_universe"]):
+        raise _handoff_delivery_error(f"M1_AI_FULL_UNIVERSE_INDEX_SET_MISMATCH:rows={len(seen)}"
+                                      f":index={len(authority['full_universe'])}")
     return {"ticker_research_contexts": len(cards), "owner_focus_research_contexts": len(owner_focus),
             "full_universe_rows": len(seen)}
 
 
-def verify_retained_daily_brief_for_handoff(source: Path, session: str, *,
-                                            root: Path | None = None) -> dict[str, Any]:
-    """PRE_DAILY_WORKSPACE_READINESS_CORRECTIVE_V1 (Phase C): close the M1 Brief/index false-PASS.
+def verify_retained_daily_brief_for_handoff(source: Path, session: str, *, root: Path | None = None,
+                                            expected_operation_identity: str | None = None) -> dict[str, Any]:
+    """PRE_DAILY_WORKSPACE_READINESS_CORRECTIVE_V1 (Phase C) and M1_LIVE_ACCEPTANCE_CORRECTIVE_V1:
+    refuse an AI handoff whose retained operation does not carry what it declares.
 
-    The retained operation's OWN declarations decide what is required -- never the calendar:
-    - it declares a Brief when ``run_manifest.json`` ``outputs.daily_integrated_decision_brief``
-      or the session bundle's ``integrated_decision_overlay_v1.daily_integrated_decision_brief_identity``
-      is set; the retained Brief file is then required, bound to the session and that identity;
-    - it is an M1 (CURRENT_DECISION_SURFACE_CONVERGENCE_V1) operation when the overlay's copy of the
-      Integrated Decision coverage carries ``evidence_currency_distribution``; the Brief's
-      ``decision_surface_index`` is then required: denominator == the Integrated Decision's own
-      ``universe_denominator`` == row count, every ticker exactly once, every row carrying ticker /
-      research_action_posture / evidence_currency, bound to the same Integrated Decision identity,
-      and zero NO_CURRENT_EVIDENCE + WAIT_FOR_CONFIRMATION rows;
-    - for the same M1 operation, the scoped contexts, owner-focus contexts and full-universe
-      companion must be exactly the canonical sets (the sealed Daily product's cards and owner
-      focus; one row per index ticker), and every delivered ``integrated_decision_v1`` must equal
-      its index row and be the exact projection of the bound canonical Integrated Decision record,
-      ``position_context`` included (M1_LIVE_ACCEPTANCE_CORRECTIVE_V1). ``root`` locates that
-      retained record; an M1 operation without it is refused;
-    - a genuine pre-M1 operation that declares no Brief keeps the legacy behavior (no Brief file).
-    Read-only; never builds or repairs a Brief. research_stance plays no role.
+    The sealed operation manifest (recomputed; and, when given, the completed Daily's operation)
+    decides everything -- never the calendar and never the delivery under verification:
+    - M1 operation (its sealed Integrated Decision coverage declares an evidence-currency
+      distribution): ``resolve_m1_handoff_authority`` builds the canonical chain and
+      ``_verify_m1_ai_delivery`` requires the delivery to be its exact projection. Any failure is
+      final; an M1 operation never falls back to the pre-M1 route below.
+    - genuine pre-M1 operation: the legacy behavior. A declared Brief (manifest ``outputs`` or the
+      overlay) must be retained, bound to the session and that identity; none declared keeps the
+      no-Brief route. A delivery that claims M1 contradicts the sealed operation and is refused.
+    ``root`` locates the retained Integrated Decision; an M1 operation without it is refused.
+    Read-only; never builds or repairs anything. research_stance plays no role.
     """
     source = Path(source)
-    manifest_path = source / "run_manifest.json"
-    manifest = _load(manifest_path) if manifest_path.is_file() else {}
-    bundle = _load(source / "ai_research_session_bundle.json")
+    manifest = _sealed_operation_manifest(source, session, expected_operation_identity)
+    authority = resolve_m1_handoff_authority(source, session, root=root, manifest=manifest)
+    if authority is not None:
+        ai_delivery = _verify_m1_ai_delivery(source, session, authority)
+        return {"status": "M1_BRIEF_AND_INDEX_VERIFIED", "m1": True, "brief_path": authority["brief_path"],
+                "brief_identity": authority["brief_identity"], "decision_surface_index_denominator": authority["denominator"],
+                "ai_delivery_parity": ai_delivery,
+                "authority": {"operation_identity": authority["operation_identity"],
+                              "integrated_investment_decision_product_identity": authority["integrated_identity"],
+                              "daily_integrated_decision_brief_identity": authority["brief_identity"],
+                              "daily_product_identity": authority["product_identity"],
+                              "expected_scoped": len(authority["scoped"]),
+                              "expected_owner_focus": len(authority["owner_focus"]),
+                              "expected_full_universe": len(authority["full_universe"])}}
+
+    bundle = _load(source / _BUNDLE_FILENAME)
     overlay = bundle.get("integrated_decision_overlay_v1")
     overlay = overlay if isinstance(overlay, Mapping) else {}
     coverage = overlay.get("coverage") if isinstance(overlay.get("coverage"), Mapping) else {}
+    if isinstance(coverage.get("evidence_currency_distribution"), Mapping):
+        raise _handoff_brief_error("M1_APPLICABILITY_CONTRADICTS_SEALED_OPERATION")
     declared = [value for value in (((manifest.get("outputs") or {}).get("daily_integrated_decision_brief")),
                                     overlay.get("daily_integrated_decision_brief_identity")) if value]
-    m1 = isinstance(coverage.get("evidence_currency_distribution"), Mapping)
     path = source / _DAILY_BRIEF_FILENAME
-    if not declared and not m1:
+    if not declared:
         return {"status": "LEGACY_NO_BRIEF_DECLARED", "m1": False,
                 "brief_path": path if path.is_file() else None}
-    if m1 and not declared:
-        raise _handoff_brief_error("M1_DAILY_BRIEF_NOT_DECLARED")
     if len(set(declared)) != 1:
         raise _handoff_brief_error("DAILY_BRIEF_DECLARED_IDENTITY_CONFLICT")
     if not path.is_file():
-        raise _handoff_brief_error(("M1_" if m1 else "") + "DAILY_BRIEF_RETAINED_FILE_MISSING")
+        raise _handoff_brief_error("DAILY_BRIEF_RETAINED_FILE_MISSING")
     try:
         wrapper = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
@@ -681,37 +796,7 @@ def verify_retained_daily_brief_for_handoff(source: Path, session: str, *,
         raise _handoff_brief_error("DAILY_BRIEF_SESSION_MISMATCH")
     if brief.get("artifact_identity") != declared[0]:
         raise _handoff_brief_error("DAILY_BRIEF_IDENTITY_MISMATCH")
-    if not m1:
-        return {"status": "DECLARED_BRIEF_VERIFIED", "m1": False, "brief_path": path,
-                "brief_identity": declared[0]}
-
-    index = brief.get("decision_surface_index")
-    if not isinstance(index, Mapping) or not isinstance(index.get("rows"), list):
-        raise _handoff_brief_error("M1_DECISION_SURFACE_INDEX_MISSING")
-    rows = index["rows"]
-    canonical = coverage.get("universe_denominator")
-    if not isinstance(canonical, int) or isinstance(canonical, bool) or canonical <= 0:
-        raise _handoff_brief_error("M1_CANONICAL_DENOMINATOR_UNAVAILABLE")
-    if index.get("denominator") != canonical or len(rows) != canonical:
-        raise _handoff_brief_error(f"M1_DECISION_SURFACE_INDEX_DENOMINATOR_MISMATCH:index={index.get('denominator')}"
-                                   f":rows={len(rows)}:canonical={canonical}")
-    if index.get("source_integrated_investment_decision_product_identity") != overlay.get("integrated_investment_decision_product_identity"):
-        raise _handoff_brief_error("M1_DECISION_SURFACE_INDEX_SOURCE_IDENTITY_MISMATCH")
-    seen: set[str] = set()
-    for row in rows:
-        if not isinstance(row, Mapping) or not all(isinstance(row.get(key), str) and row.get(key)
-                                                   for key in ("ticker", "research_action_posture", "evidence_currency")):
-            raise _handoff_brief_error("M1_DECISION_SURFACE_INDEX_ROW_MALFORMED")
-        if row["ticker"] in seen:
-            raise _handoff_brief_error("M1_DECISION_SURFACE_INDEX_DUPLICATE_TICKER:" + row["ticker"])
-        seen.add(row["ticker"])
-        if row["evidence_currency"] == "NO_CURRENT_EVIDENCE" and row["research_action_posture"] == "WAIT_FOR_CONFIRMATION":
-            raise _handoff_brief_error("M1_NO_CURRENT_EVIDENCE_WAIT_PRESENT:" + row["ticker"])
-    ai_delivery = _verify_m1_ai_delivery(root, source, session, {row["ticker"]: row for row in rows},
-                                         overlay.get("integrated_investment_decision_product_identity"))
-    return {"status": "M1_BRIEF_AND_INDEX_VERIFIED", "m1": True, "brief_path": path,
-            "brief_identity": declared[0], "decision_surface_index_denominator": canonical,
-            "ai_delivery_parity": ai_delivery}
+    return {"status": "DECLARED_BRIEF_VERIFIED", "m1": False, "brief_path": path, "brief_identity": declared[0]}
 
 
 def publish_ai_handoff(root: Path, handoff_repo: Path, completion: Mapping[str, Any]) -> dict[str, Any]:
@@ -726,7 +811,11 @@ def publish_ai_handoff(root: Path, handoff_repo: Path, completion: Mapping[str, 
     session = str(completion["session"])
     # A declared (and, for M1, index-bearing) Brief is required and verified before publication;
     # only a genuine pre-M1 operation that never declared one publishes without it.
-    brief_check = verify_retained_daily_brief_for_handoff(source, session, root=root)
+    # The completed Daily's own operation identity anchors the sealed manifest the guard trusts.
+    if not completion.get("operation_id"):
+        raise _handoff_brief_error("COMPLETED_DAILY_OPERATION_IDENTITY_MISSING")
+    brief_check = verify_retained_daily_brief_for_handoff(
+        source, session, root=root, expected_operation_identity=completion["operation_id"])
     daily_brief = brief_check["brief_path"]
     # Additive only -- see CANONICAL_DAILY_OWNER_PUBLICATION_RESUME_AND_PRESENTATION_JOIN_V1
     # section 3. The dedicated attestation artifact (never the sealed Producer operation

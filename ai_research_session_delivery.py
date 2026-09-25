@@ -109,13 +109,15 @@ def _valuation_methods_for_delivery(record: Mapping[str, Any]) -> dict[str, Any]
     return result
 
 
-def _integrated_record_for_delivery(record: Any, *, integrated_identity: str | None = None) -> dict[str, Any] | None:
+def project_integrated_decision_for_ai_delivery(record: Any, *, integrated_identity: str | None = None) -> dict[str, Any] | None:
     """Project one Integrated Decision record for AI delivery.
 
     M1_LIVE_ACCEPTANCE_CORRECTIVE_V1: the decision-surface fields (ticker binding,
     ``evidence_currency`` and its gate/lineage, ``position_context``, priority) are
     copied verbatim from the canonical record, never recomputed here.  A field the
-    record does not carry is delivered as ``None``; it is never inferred.
+    record does not carry is delivered as ``None``; it is never inferred. ``is_actionable`` and
+    the other boundary flags are fixed by this contract, not taken from the record, so the whole
+    returned object (boundary flags included) is what AI handoff verification requires exactly.
     """
     if not isinstance(record, Mapping):
         return None
@@ -160,7 +162,12 @@ def _integrated_record_for_delivery(record: Any, *, integrated_identity: str | N
     }
 
 
-def _integrated_overlay(session: str, integrated: Mapping[str, Any], daily_brief: Mapping[str, Any] | None) -> dict[str, Any]:
+def project_integrated_decision_delivery_overlay(session: str, integrated: Mapping[str, Any], daily_brief: Mapping[str, Any] | None) -> dict[str, Any]:
+    """The Integrated Decision overlay (header plus per-ticker projections) the AI delivery carries.
+
+    The single definition: Owner Daily's M1 handoff verifier rebuilds it from the canonical
+    Integrated Decision and Brief and requires the delivered bytes to equal it exactly.
+    """
     records = integrated.get("records") or {}
     return {
         "contract_version": INTEGRATED_DELIVERY_CONTRACT,
@@ -178,7 +185,7 @@ def _integrated_overlay(session: str, integrated: Mapping[str, Any], daily_brief
             "no_numeric_risk_reward": True,
         },
         "records": {
-            ticker: _integrated_record_for_delivery(record, integrated_identity=integrated["artifact_identity"])
+            ticker: project_integrated_decision_for_ai_delivery(record, integrated_identity=integrated["artifact_identity"])
             for ticker, record in sorted(records.items())
         },
     }
@@ -199,7 +206,7 @@ def _daily_brief_transition(daily_brief: Mapping[str, Any] | None, ticker: str) 
 
 def _decision_card(ticker: str, record: Mapping[str, Any], daily_brief: Mapping[str, Any] | None) -> dict[str, Any]:
     """A compact presentation of only existing Integrated Decision/brief facts."""
-    delivered = _integrated_record_for_delivery(record) or {}
+    delivered = project_integrated_decision_for_ai_delivery(record) or {}
     return {
         "contract_version": DECISION_CARD_CONTRACT,
         "verdict": delivered.get("research_action_posture"),
@@ -524,7 +531,7 @@ def build_dashboard_projection(
         "what_to_verify_next": copy.deepcopy(product["what_to_verify_next"]),
     }
     if integrated_decision is not None:
-        overlay = _integrated_overlay(manifest["market_session"], integrated_decision, daily_integrated_brief)
+        overlay = project_integrated_decision_delivery_overlay(manifest["market_session"], integrated_decision, daily_integrated_brief)
         projection["source"]["integrated_investment_decision_product_identity"] = integrated_decision["artifact_identity"]
         projection["source"]["daily_integrated_decision_brief_identity"] = (
             daily_integrated_brief.get("artifact_identity") if daily_integrated_brief else None
@@ -559,7 +566,7 @@ def build_delivery(operation: Mapping[str, Any], inputs: Mapping[str, Any]) -> d
     boundary = _authority_boundary(product)
     integrated_decision, daily_integrated_brief = _integrated_delivery_inputs(session, inputs)
     integrated_overlay = (
-        _integrated_overlay(session, integrated_decision, daily_integrated_brief)
+        project_integrated_decision_delivery_overlay(session, integrated_decision, daily_integrated_brief)
         if integrated_decision is not None else None
     )
     financial_context = validate_product_context(inputs.get("financial_analysis_product_context"))
