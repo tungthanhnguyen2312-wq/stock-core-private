@@ -132,10 +132,23 @@ class WindowSelectionTests(unittest.TestCase):
         self.assertEqual(window.reference_values(shuffled, as_of_session=TARGET), expected)
         self.assertEqual(market_features(shuffled), market_features(rows))
 
-    def test_duplicate_session_inside_window_fails_closed(self) -> None:
+    def test_exact_duplicate_session_counts_once(self) -> None:
+        rows = _rows([95.0] * 5 + EXACT_WINDOW)
+        doubled = rows + [dict(rows[-1]), dict(rows[-7])]
+        self.assertEqual(window.reference_values(doubled, as_of_session=TARGET), window.reference_values(rows, as_of_session=TARGET))
+
+    def test_conflicting_duplicate_session_inside_window_fails_closed(self) -> None:
         rows = _rows(EXACT_WINDOW)
-        rows.append(dict(rows[-1]))
-        self.assertEqual(window.select_reference_window(rows)["blockers"], [window.BLOCKER_DUPLICATE_SESSION])
+        rows.append({**rows[-3], "close": 99.0})  # same session, different close (2026-09-16 shape)
+        result = window.select_reference_window(rows, as_of_session=TARGET)
+        self.assertEqual(result["blockers"], [window.BLOCKER_CONFLICTING_DUPLICATE_SESSION])
+        self.assertIn(window.BLOCKER_CONFLICTING_DUPLICATE_SESSION, window.INTEGRITY_BLOCKERS)
+        self.assertEqual(market_features(rows)["blockers"], [window.BLOCKER_CONFLICTING_DUPLICATE_SESSION])
+
+    def test_conflicting_duplicate_outside_window_does_not_contaminate(self) -> None:
+        rows = _rows([95.0] * 5 + EXACT_WINDOW)
+        rows.append({**rows[1], "close": 1.0})
+        self.assertEqual(window.reference_values(rows, as_of_session=TARGET)["ma_20"], 12.5)
 
     def test_future_observation_never_enters_t0_window(self) -> None:
         rows = _rows(EXACT_WINDOW)
@@ -250,6 +263,27 @@ class SharedReferenceSourceTests(unittest.TestCase):
         self.assertEqual(technical["feature_as_of_session"], TARGET)
         self.assertEqual(technical["values"], self.descriptive["records"]["GEE"]["technical_features"]["values"])
         self.assertEqual(tactical["records"]["GEE"]["signals"]["ma_20"], GEE_TRUE_MA20)
+        self.assertEqual(momentum["records"]["GEE"]["reference_window"]["ma_20"], GEE_TRUE_MA20)
+
+
+class DescriptiveIntegrityRefusalTests(unittest.TestCase):
+    def test_conflicting_duplicate_fails_closed_per_ticker_without_aborting_the_build(self) -> None:
+        observations = _observations(GEE_LIKE)
+        observations.append({**observations[-2], "close": 61.5})  # conflicting copy of a window session
+        _, descriptive, tactical, momentum = _pipeline({"GEE": observations, "UPX": _observations([10.0 + 0.1 * i for i in range(60)])})
+        technical = descriptive["records"]["GEE"]["technical_features"]
+        self.assertEqual(technical["status"], "MISSING")
+        self.assertEqual(technical["blockers"], [window.BLOCKER_CONFLICTING_DUPLICATE_SESSION])
+        self.assertIsNone(tactical["records"]["GEE"]["entry_state"])
+        self.assertEqual(momentum["records"]["GEE"]["eligibility"]["status"], "NOT_ELIGIBLE")
+        self.assertEqual(descriptive["records"]["UPX"]["technical_features"]["status"], "SHADOW_ONLY")
+
+    def test_exact_duplicate_bar_keeps_classifier_and_momentum_identical(self) -> None:
+        observations = _observations(GEE_LIKE)
+        observations.append(dict(observations[-4]))
+        _, descriptive, tactical, momentum = _pipeline({"GEE": observations})
+        self.assertEqual(tactical["records"]["GEE"]["signals"]["ma_20"], GEE_TRUE_MA20)
+        self.assertEqual(momentum["records"]["GEE"]["moving_averages"]["20"]["value"], GEE_TRUE_MA20)
         self.assertEqual(momentum["records"]["GEE"]["reference_window"]["ma_20"], GEE_TRUE_MA20)
 
 

@@ -74,6 +74,13 @@ def _assert_no_recoverable_same_session_technical_gap(
     genuine, correctly-enforced safety refusal, not a code defect this gate should ever flag.
     ``session_bar_conflict_refused`` (``session_bar_integrity``) is the same kind of refusal."""
     unrecoverable = set(close_mismatch_rejected) | set(session_bar_conflict_refused)
+    # An input-integrity refusal of the reference window (conflicting duplicate bars, mixed price
+    # basis) is likewise a correctly-enforced refusal of contradictory retained evidence, not a
+    # recoverable technical-history gap (TACTICAL_REFERENCE_WINDOW_CORRECTIVE_V1).
+    unrecoverable.update(
+        ticker for ticker, record in records.items()
+        if set((record.get("technical_features") or {}).get("blockers") or ()) & reference_window.INTEGRITY_BLOCKERS
+    )
     if recovery_records:
         for ticker, rec in recovery_records.items():
             if isinstance(rec, Mapping) and rec.get("state") in PROVEN_STRUCTURAL_TECHNICAL_INSUFFICIENCY_STATES:

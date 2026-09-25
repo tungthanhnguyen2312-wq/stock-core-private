@@ -51,10 +51,17 @@ from `cde156e`. It is not merged or pushed; M1 live acceptance runs on `cde156e`
   feature session.
   - `ma_20` is the mean of the 20 closes in that window.
   - `momentum_20d` is `close[last] / close[first] - 1` over the same window (19 intervals).
+  - An exact duplicate bar counts once.
   - The window fails closed on fewer than 20 observations, an unusable close or volume inside
-    the window, a duplicate session, or mixed `price_basis`/`transformation_identity`.
+    the window, conflicting duplicate bars for one session, or mixed
+    `price_basis`/`transformation_identity`.
   - An unusable row is never skipped, and the window never falls back to longer history.
   - Future-dated rows never enter.
+  - The last two refusals are input-integrity refusals. The recoverable-gap guard treats them
+    like a close-mismatch rejection: the ticker fails closed and the build does not abort. The
+    retained 2026-09-16 P3F9B snapshot duplicates the 2026-09-15 bar for 599 tickers, 193 of
+    them with conflicting closes. Before this fix those rows were silently averaged into
+    `ma_20`, and the structural engine still sees both copies.
   Callers that already pass exactly 20 rows (the MVA bundle, the historical research context,
   the tactical replay) produce identical values.
 - **One computation.** `market_features()` and `tactical_momentum_context` use the same window
