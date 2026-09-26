@@ -59,10 +59,10 @@ def _probe_env() -> dict[str, str]:
     return env
 
 
-def _site_dir(venv_root: Path) -> Path:
-    if os.name == "nt":
+def _site_dir(venv_root: Path, *, os_name: str = os.name) -> Path:
+    if os_name == "nt":
         return venv_root / "Lib" / "site-packages"
-    version = "python" + ".".join(sys.version_info[:2])
+    version = f"python{sys.version_info.major}.{sys.version_info.minor}"
     return venv_root / "lib" / version / "site-packages"
 
 

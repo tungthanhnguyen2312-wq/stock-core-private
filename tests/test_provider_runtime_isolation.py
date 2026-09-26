@@ -13,11 +13,13 @@ import json
 import os
 import subprocess
 import sys
+import sysconfig
 from pathlib import Path
 from typing import Any
 
 import pytest
 
+import _provider_build_fixtures as build_fixtures
 import canonical_daily_operation as cdo
 import canonical_post_close_pipeline as cpc
 import daily_session_level2_package as level2
@@ -46,6 +48,32 @@ REAL_WORKER = ROOT / "vnstock_worker_process.py"
 TARGET = "2026-09-10"
 REQUESTED_AT = "2026-09-10T20:00:00+07:00"
 NONEXISTENT_CORE = str(Path("/nonexistent/core/python"))
+
+
+
+def test_fake_venv_posix_site_dir_is_lib_pythonX_Y_site_packages(tmp_path):
+    # The shared fake-venv fixture's POSIX branch, exercised on every OS via os_name (Windows
+    # never reaches it otherwise; a str.join over int version parts broke Linux CI run #82).
+    venv_root = tmp_path / "venv"
+    site = build_fixtures._site_dir(venv_root, os_name="posix")
+    expected = f"lib/python{sys.version_info.major}.{sys.version_info.minor}/site-packages"
+    assert site.relative_to(venv_root).as_posix() == expected
+    assert build_fixtures._posix_site_rel(site) == expected
+    if not sysconfig.get_config_var("Py_GIL_DISABLED"):
+        scheme = sysconfig.get_path("purelib", "posix_venv", vars={"base": "/venv", "platbase": "/venv"}, expand=True)
+        assert Path(scheme).as_posix().endswith("/" + expected)
+
+
+def test_fake_venv_windows_site_dir_is_lib_site_packages(tmp_path):
+    site = build_fixtures._site_dir(tmp_path / "venv", os_name="nt")
+    assert site.relative_to(tmp_path / "venv").as_posix() == "Lib/site-packages"
+
+
+def test_fake_venv_site_dir_matches_the_created_interpreter(tmp_path):
+    # The real created venv on this OS must place packages exactly where the fixture plants them.
+    root = build_fixtures.cached_fake_venv(owner_profile=str(tmp_path / "owner-profile"))
+    assert (build_fixtures._site_dir(root) / "vnai" / "__init__.py").is_file()
+
 
 SYNTHETIC_SECRETS = {
     "DNSE_API_KEY": "synthetic-dnse-key-000",
