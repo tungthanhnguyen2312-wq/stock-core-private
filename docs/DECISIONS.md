@@ -22,6 +22,33 @@ Bounded provider-runtime operationalization under active M1. Not a new analytica
 - **Next gate.** `OWNER_PROVIDER_BUILD_DECISION_THEN_BOUNDED_LIVE_QUALIFICATION`.
 - **Checkpoint.** Implementation `f2bed7f06f6ff7b534702a7925c86efd677c4d84` (pinned in
   `docs/ROADMAP_STATE.json`).
+- **Roadmap state.** `BLOCKED`, meaning the implementation is checkpointed and promotion
+  review is pending. It was earlier recorded as `COMPLETE`, which was premature. It becomes
+  `COMPLETE` only after an independent promotion review and a merge to `main`. M1 stays the
+  single `ACTIVE` milestone.
+- **Final fail-closed corrective** (an independent review against `fa20fc7`, rechecked on
+  `3a7ebd3`):
+  - **OS containment.** Mandatory for every `APPROVED_PINNED_BUILD`, both in manifest semantics
+    and again at launch authorization. Required: `state=OWNER_VERIFIED`,
+    `egress_gateway_verified`, `job_object_kill_on_close` and `runtime_root_read_only_acl` all
+    true, a restricted identity that is a non-privileged Windows SID or a POSIX `uid:<n>`
+    matching the host platform, and a SHA-256 verification evidence hash.
+  - **Egress gateway.** A bound gateway and its verification must agree for any status. An
+    approved build with approved endpoints needs a bound gateway. The Python requests allow-list
+    stays in place as defense in depth.
+  - **Owner-root separation.** Before any provider directory is created, the provider state
+    root, scratch base and venv root must not overlap any owner denied root, in either
+    direction, compared on both absolute and resolved paths.
+  - **Worker filesystem policy.** A denied owner root now dominates any nested read-only or
+    writable root.
+  - **State-file credential.** `APPROVED_STATE_FILE` requires a regular file holding
+    `{"api_key": "<value>"}` (the vnai 2.5.0 format, reviewed as source text, never imported).
+    The value is checked with the same placeholder semantics as the ENV mechanism, and
+    diagnostics never carry it.
+  - **Fake evidence.** Test-fixture containment evidence (`TEST_FIXTURE_ONLY`) may drive only
+    the offline Gate B launch mode. Gate A reports the tracked DRAFT as a live candidate
+    `BLOCKED`.
+  - **CI coverage.** These security tests are in the CI focused selection.
 
 ## 2026-09-26 - Owner decisions for contained provider qualification (recorded; not an approval)
 

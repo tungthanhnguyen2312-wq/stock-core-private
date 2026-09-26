@@ -286,6 +286,12 @@ Owner decisions D1–D4 are recorded in `docs/DECISIONS.md` (2026-09-25).
 - **Tests.** `tests/test_provider_runtime_isolation.py` is hermetic: it uses the fake worker and
   an explicit test-only ALLOW policy. The real worker script is spawned only to prove that an
   interpreter without vnstock/vnai reports `NOT_INSTALLED` without executing any provider code.
+  `tests/test_provider_build_boundary.py`, `tests/test_provider_fail_closed_boundary.py` and
+  `tests/test_provider_qualification.py` are also in the focused selection. They cover manifest
+  approval semantics, the mandatory OS containment and egress-gateway gates, owner-root separation,
+  denied-root dominance, state-file credential validation, the 20 rpm ceiling, the tzdata
+  requirement and offline Gates A/B. Their fake venv and provider roots live outside the invoking
+  user's home (`STOCKLOOKUP_PROVIDER_FIXTURE_BASE` overrides the location).
 - **Validation status (2026-09-26).**
   - The code is promoted to `main` (`9575cb04`). Hermetic validation passes from a clean clone on
     Linux CI (#78, #79).

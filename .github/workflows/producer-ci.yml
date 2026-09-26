@@ -56,6 +56,9 @@ env:
     tests/test_producer_sync_timestamp_contract.py::FreshnessGateCompatibilityTests
     tests/test_producer_sync_timestamp_contract.py::UntouchedDataAsOfIsWallClockIndependentTests
     tests/test_provider_runtime_isolation.py
+    tests/test_provider_build_boundary.py
+    tests/test_provider_fail_closed_boundary.py
+    tests/test_provider_qualification.py
     tests/test_multi_source_market_evidence_contract.py
     tests/test_historical_series_failover.py
     tests/test_run_market_wide_current_technical_coverage_scaleout.py

@@ -310,13 +310,13 @@
    },
    {
     "relative_path": "provider_build_manifest.py",
-    "sha256": "bb8032c7dea79024c29bbff94e203bf57ec71f9779a5571e37d27140b9adaa41",
-    "size": 95096
+    "sha256": "c534e3b6678ef1cefd40e2429ff18a48ff4ae9ff71faa7f2443b3193026f4516",
+    "size": 104700
    },
    {
     "relative_path": "provider_worker_containment.py",
-    "sha256": "5fd3d83a296c1c9a9bbc5c98c989ede9b84fce19bc605e3c0b413618335ed63c",
-    "size": 35094
+    "sha256": "98a427d0e361164688029d6eaf142ab2a28ba3991857e19d6684ce87c1e32699",
+    "size": 35578
    },
    {
     "relative_path": "provider_execution_guard.py",

@@ -63,6 +63,32 @@ def test_gate_b_fake_governed_real_worker_reaches_ready(tmp_path):
     assert state["runtime_info"]["rate_contract"]["governor_effective_rpm"] <= 20
 
 
+def test_gate_a_live_candidate_fails_closed_on_the_tracked_draft():
+    report = qual.gate_a_live_candidate()
+    assert report["verdict"] == "FAIL"
+    assert {"BUILD_NOT_APPROVED", "PROVIDER_OS_CONTAINMENT_UNVERIFIED"} <= set(report["reason_codes"])
+    assert report["live_qualification"] is False
+
+
+def test_gate_a_live_candidate_refuses_fake_containment_and_unverified_gateway(tmp_path):
+    runtime = protocol_runtime(tmp_path / "rt")
+    assert "PROVIDER_OS_CONTAINMENT_FAKE_EVIDENCE_REFUSED" in qual.gate_a_live_candidate(runtime.manifest_path)["reason_codes"]
+    broken = protocol_runtime(tmp_path / "broken", mutate_manifest=lambda m: m["os_containment"].__setitem__(
+        "egress_gateway_verified", False))
+    assert qual.gate_a_live_candidate(broken.manifest_path)["verdict"] == "FAIL"
+
+
+def test_fake_gates_are_marked_offline_only(tmp_path):
+    runtime = protocol_runtime(tmp_path / "rt")
+    gate_a = qual.gate_a_fake(runtime)
+    assert gate_a["containment_evidence"] == "TEST_FIXTURE_ONLY_NOT_OWNER_VERIFIED"
+    assert "PROVIDER_OS_CONTAINMENT_FAKE_EVIDENCE_REFUSED" in gate_a["live_candidate_blockers"]
+    gate_b = qual.gate_b_fake(protocol_runtime(tmp_path / "rt-b"))
+    assert gate_b["verdict"] == "PASS"
+    assert gate_b["authorizes_live_launch"] is False
+    assert gate_b["containment_evidence"] == "TEST_FIXTURE_ONLY_NOT_OWNER_VERIFIED"
+
+
 def test_cli_json_report_never_claims_live_qualification():
     report = qual.run(gate="A")
     dumped = json.dumps(report)
@@ -70,3 +96,4 @@ def test_cli_json_report_never_claims_live_qualification():
     assert report["provider_build_approved"] is False
     assert "OFFLINE_FAKE_PROVIDER_QUALIFICATION" in dumped
     assert report["verdict"] in ("PASS", "FAIL")
+    assert report["live_candidate_readiness"]["state"] == "BLOCKED"

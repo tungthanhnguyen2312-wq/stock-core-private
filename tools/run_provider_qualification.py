@@ -92,6 +92,45 @@ def gate_a_tracked_draft() -> dict[str, Any]:
     }
 
 
+def live_candidate_blockers(manifest: dict[str, Any]) -> list[dict[str, Any]]:
+    """What stops ``manifest`` from being a live-launch candidate (Gates C/D/E, ordinary Daily):
+    approval state, mandatory OS containment + egress gateway, credential/rate binding, telemetry,
+    and fake (test-fixture) containment evidence. Empty = no static blocker."""
+    blockers: list[dict[str, Any]] = []
+    if manifest.get("status") != build_manifest.STATUS_APPROVED or manifest.get("launch_authorized") is not True:
+        blockers.append(_fail("BUILD_NOT_APPROVED", status=manifest.get("status")))
+    blockers += build_manifest.os_containment_violations(manifest)
+    blockers += build_manifest.egress_gateway_violations(manifest, approved=True)
+    credential = manifest.get("vendor_credential") or {}
+    if credential.get("mechanism") not in build_manifest.CREDENTIAL_MECHANISMS:
+        blockers.append(_fail(build_manifest.R_CREDENTIAL_CONTRACT_INVALID, error="credential mechanism unresolved"))
+    else:
+        blockers += build_manifest.rate_binding_violations(manifest.get("rate_tier_binding"), credential)
+    for index, entry in enumerate(manifest.get("telemetry_disposition") or []):
+        if entry.get("decision") not in (build_manifest.TELEMETRY_DENY, build_manifest.TELEMETRY_ALLOW):
+            blockers.append(_fail(build_manifest.R_TELEMETRY_UNRESOLVED, field=f"telemetry_disposition[{index}]"))
+    if build_manifest._containment_evidence_is_fake(manifest):
+        blockers.append(_fail(build_manifest.R_OS_CONTAINMENT_FAKE_EVIDENCE, error="test-fixture containment evidence"))
+    return blockers
+
+
+def gate_a_live_candidate(manifest_path: Path | None = None) -> dict[str, Any]:
+    """Gate A for a LIVE candidate: FAIL while any mandatory containment/credential contract is
+    unresolved. (The tracked DRAFT is expected to fail this -- it is not a live candidate yet.)"""
+    try:
+        manifest, digest = build_manifest.load_manifest(manifest_path)
+    except build_manifest.ProviderBuildManifestError as exc:
+        return {"gate": GATE_A, "mode": MODE, "verdict": "FAIL", "reason_codes": [exc.reason_code],
+                "failures": exc.failures, "live_qualification": False}
+    blockers = live_candidate_blockers(manifest)
+    return {
+        "gate": GATE_A, "mode": MODE, "scope": "LIVE_CANDIDATE",
+        "verdict": "FAIL" if blockers else "PASS",
+        "reason_codes": sorted({item["code"] for item in blockers}) or ["LIVE_CANDIDATE_STATIC_PREFLIGHT_PASS"],
+        "failures": blockers, "manifest_sha256": digest, "live_qualification": False,
+    }
+
+
 def gate_a_fake(runtime) -> dict[str, Any]:
     """Static preflight of a fake attested runtime (interpreter, lock, containment contract)."""
     reasons: list[dict[str, Any]] = []
@@ -117,6 +156,8 @@ def gate_a_fake(runtime) -> dict[str, Any]:
         "failures": reasons, "identity": identity, "manifest_sha256": digest,
         "interpreter": runtime.interpreter, "live_qualification": False,
         "request_budget": manifest.get("launch_mode", {}).get("request_budget"),
+        "containment_evidence": "TEST_FIXTURE_ONLY_NOT_OWNER_VERIFIED",
+        "live_candidate_blockers": sorted({item["code"] for item in live_candidate_blockers(manifest)}),
     }
 
 
@@ -144,7 +185,10 @@ def gate_b_fake(runtime) -> dict[str, Any]:
         "reason_codes": ["FAKE_CONTAINED_STARTUP_PASS"],
         "identity": identity, "state": state, "containment_events": events,
         "live_qualification": False, "request_budget": budget,
-        "note": "Fake worker protocol launch. Not a live provider qualification.",
+        "containment_evidence": "TEST_FIXTURE_ONLY_NOT_OWNER_VERIFIED",
+        "authorizes_live_launch": False,
+        "note": "Fake worker protocol launch. Not a live provider qualification, not owner-verified OS "
+                "containment, not Gates C/D/E and not ordinary-Daily qualification.",
     }
 
 
@@ -166,6 +210,12 @@ def run(*, gate: str = "ALL") -> dict[str, Any]:
     if gate in ("A", "ALL"):
         results["gate_a_tracked_draft"] = gate_a_tracked_draft()
         results["gate_a_fake"] = gate_a_fake(protocol_runtime())
+        # Reported, not a gate verdict of this offline run: the tracked DRAFT is not a live candidate.
+        live = gate_a_live_candidate()
+        results["live_candidate_readiness"] = {
+            "scope": "TRACKED_MANIFEST_AS_LIVE_CANDIDATE", "state": "BLOCKED" if live["verdict"] != "PASS" else "READY",
+            "reason_codes": live["reason_codes"],
+        }
     if gate in ("B", "ALL"):
         results["gate_b_fake"] = gate_b_fake(protocol_runtime())
     for letter in ("C", "D", "E"):

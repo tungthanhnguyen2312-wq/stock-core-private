@@ -189,6 +189,11 @@ R_TELEMETRY_UNRESOLVED = "PROVIDER_TELEMETRY_DISPOSITION_UNRESOLVED"
 R_ENDPOINT_CONTRACT_INVALID = "PROVIDER_ENDPOINT_CONTRACT_INVALID"
 R_ENVIRONMENT_CONTRACT_INVALID = "PROVIDER_ENVIRONMENT_CONTRACT_INVALID"
 R_FILESYSTEM_CONTRACT_INVALID = "PROVIDER_FILESYSTEM_CONTRACT_INVALID"
+R_PROVIDER_ROOT_OVERLAPS_OWNER_ROOT = "PROVIDER_ROOT_OVERLAPS_OWNER_DENIED_ROOT"
+R_OS_CONTAINMENT_UNVERIFIED = "PROVIDER_OS_CONTAINMENT_UNVERIFIED"
+R_OS_CONTAINMENT_FAKE_EVIDENCE = "PROVIDER_OS_CONTAINMENT_FAKE_EVIDENCE_REFUSED"
+R_EGRESS_GATEWAY_CONTRACT_INVALID = "PROVIDER_EGRESS_GATEWAY_CONTRACT_INVALID"
+R_CREDENTIAL_STATE_FILE_INVALID = "PROVIDER_CREDENTIAL_STATE_FILE_INVALID"
 R_DEPENDENCY_LOCK_MISMATCH = "PROVIDER_DEPENDENCY_LOCK_MISMATCH"
 R_WORKER_CONTRACT_INVALID = "PROVIDER_WORKER_CONTRACT_INVALID"
 R_INTERPRETER_PATH_MISMATCH = "PROVIDER_ATTESTATION_INTERPRETER_PATH_MISMATCH"
@@ -228,9 +233,25 @@ R_STUBS_MISMATCH = "PROVIDER_ATTESTATION_STARTUP_STUBS_MISMATCH"
 
 _SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 _PLACEHOLDER_CREDENTIAL_RE = re.compile(
-    r"^(?:|x+|0+|placeholder|dummy|test|testing|changeme|change[-_]?me|your[-_ ]?(?:api[-_ ]?)?key|fake|none|null|todo|tbd|<.*>)$",
+    r"^(?:|x+|0+|\*+|(?:placeholder|dummy|fake|test|testing|sample|example|demo)(?:[-_ ]?(?:api[-_ ]?)?key)?"
+    r"|changeme|change[-_]?me|your[-_ ]?(?:api[-_ ]?)?key(?:[-_ ]?here)?|none|null|todo|tbd|<.*>|\$\{.*\}|%.*%)$",
     re.IGNORECASE,
 )
+# OS containment identity: a Windows SID or a POSIX ``uid:<n>``; never a privileged/shared principal.
+_WINDOWS_SID_RE = re.compile(r"^S-1-[0-9]+(?:-[0-9]+){1,14}$")
+_POSIX_UID_RE = re.compile(r"^uid:[1-9][0-9]*$")
+_PRIVILEGED_OR_SHARED_SIDS = frozenset({
+    "S-1-1-0", "S-1-5-7", "S-1-5-11", "S-1-5-18", "S-1-5-19", "S-1-5-20", "S-1-5-32-544", "S-1-5-32-545",
+})
+OS_CONTAINMENT_OWNER_VERIFIED = "OWNER_VERIFIED"
+OS_CONTAINMENT_REQUIRED_TRUE = ("egress_gateway_verified", "job_object_kill_on_close", "runtime_root_read_only_acl")
+# Test fixtures mark their containment block with this text. Such evidence may drive only the
+# offline Gate B contained-startup launch mode, never Gates C/D/E or ordinary Daily.
+FAKE_CONTAINMENT_EVIDENCE_MARKER = "TEST_FIXTURE_ONLY"
+# The vendor state file is ``{"api_key": "<key>"}`` (vnai 2.5.0 beam/auth.py setup_api_key/_has_api_key,
+# reviewed as source text; vnai treats a blank stripped value as no key).
+VENDOR_CREDENTIAL_STATE_FIELD = "api_key"
+_MAX_STATE_CREDENTIAL_BYTES = 4096
 
 
 class ProviderBuildManifestError(RuntimeError):
@@ -506,6 +527,100 @@ def rate_binding_violations(
     return failures
 
 
+def restricted_identity_problem(value: Any) -> str | None:
+    """Why ``value`` is not a bound low-privilege OS identity (``None`` when it is one)."""
+    if not isinstance(value, str) or not value.strip():
+        return "missing"
+    if _WINDOWS_SID_RE.match(value):
+        return "privileged or shared principal" if value in _PRIVILEGED_OR_SHARED_SIDS else None
+    if _POSIX_UID_RE.match(value):
+        return None
+    return "not a Windows SID (S-1-...) or POSIX uid:<n>"
+
+
+def os_containment_violations(manifest: Mapping[str, Any]) -> list[dict[str, Any]]:
+    """Every OS-level containment condition an approved build must carry, owner-verified.
+
+    The in-process requests allow-list is defense in depth only: code outside that boundary is
+    contained by the OS identity/ACLs, the Job object and the egress gateway, so none may be
+    missing, false or unresolved.
+    """
+    containment = manifest.get("os_containment") or {}
+    failures = []
+    if containment.get("state") != OS_CONTAINMENT_OWNER_VERIFIED:
+        failures.append(_failure(R_OS_CONTAINMENT_UNVERIFIED, field="os_containment.state", state=containment.get("state")))
+    for key in OS_CONTAINMENT_REQUIRED_TRUE:
+        if containment.get(key) is not True:
+            failures.append(_failure(R_OS_CONTAINMENT_UNVERIFIED, field=f"os_containment.{key}"))
+    problem = restricted_identity_problem(containment.get("restricted_identity_sid"))
+    if problem:
+        failures.append(_failure(R_OS_CONTAINMENT_UNVERIFIED, field="os_containment.restricted_identity_sid", error=problem))
+    if not _is_sha256(containment.get("verification_evidence_sha256")):
+        failures.append(_failure(R_OS_CONTAINMENT_UNVERIFIED, field="os_containment.verification_evidence_sha256"))
+    return failures
+
+
+def egress_gateway_violations(manifest: Mapping[str, Any], *, approved: bool) -> list[dict[str, Any]]:
+    """The bound OS egress gateway and its containment evidence must agree (any status); an approved
+    build with approved endpoints must route them through a bound gateway."""
+    network = manifest.get("network") or {}
+    containment = manifest.get("os_containment") or {}
+    gateway = network.get("egress_gateway")
+    verified = containment.get("egress_gateway_verified") is True
+    failures = []
+    if gateway is not None:
+        host = str((gateway or {}).get("host") or "").strip() if isinstance(gateway, Mapping) else ""
+        port = gateway.get("port") if isinstance(gateway, Mapping) else None
+        if not host or not isinstance(port, int) or isinstance(port, bool) or not 1 <= port <= 65535:
+            failures.append(_failure(R_EGRESS_GATEWAY_CONTRACT_INVALID, error="gateway needs a host and a port in 1..65535"))
+        if not verified or containment.get("state") != OS_CONTAINMENT_OWNER_VERIFIED:
+            failures.append(_failure(R_EGRESS_GATEWAY_CONTRACT_INVALID,
+                                     error="gateway bound but OS egress containment is not owner-verified"))
+    elif verified:
+        failures.append(_failure(R_EGRESS_GATEWAY_CONTRACT_INVALID, error="egress gateway verified but no gateway is bound"))
+    if approved and network.get("endpoints") and gateway is None:
+        failures.append(_failure(R_EGRESS_GATEWAY_CONTRACT_INVALID,
+                                 error="approved endpoints without the mandatory OS egress gateway"))
+    return failures
+
+
+def _containment_evidence_is_fake(manifest: Mapping[str, Any]) -> bool:
+    containment = manifest.get("os_containment") or {}
+    texts = [str(item) for item in containment.get("requirements") or []]
+    texts.append(str(containment.get("restricted_identity_sid") or ""))
+    return any(FAKE_CONTAINMENT_EVIDENCE_MARKER in text for text in texts)
+
+
+def _paths_overlap(left: Any, right: Any) -> bool:
+    """Equal, nested or ancestor in either direction, over absolute AND resolved forms."""
+    for a in _forms(left):
+        for b in _forms(right):
+            if a == b or a.startswith(b.rstrip("\\/") + os.sep) or b.startswith(a.rstrip("\\/") + os.sep):
+                return True
+    return False
+
+
+def provider_root_violations(manifest: Mapping[str, Any], denied_roots: Sequence[str]) -> list[dict[str, Any]]:
+    """Provider state/scratch roots (and the venv) must be disjoint from every owner denied root.
+
+    Checked before any provider directory is created: a provider root inside (or above) the owner
+    profile would let a writable/read-only classification collide with the owner denial."""
+    filesystem = manifest.get("filesystem") or {}
+    candidates = {
+        "filesystem.provider_state_root": filesystem.get("provider_state_root"),
+        "filesystem.provider_scratch_base": filesystem.get("provider_scratch_base"),
+        "runtime.venv_root": (manifest.get("runtime") or {}).get("venv_root"),
+    }
+    failures = []
+    for field_name, value in candidates.items():
+        if not value:
+            continue
+        for denied in denied_roots:
+            if _paths_overlap(value, denied):
+                failures.append(_failure(R_PROVIDER_ROOT_OVERLAPS_OWNER_ROOT, field=field_name, denied_root=denied))
+    return failures
+
+
 def manifest_contract_violations(manifest: Mapping[str, Any]) -> list[dict[str, Any]]:
     """Invariants every manifest satisfies whatever its status (beyond the JSON schema)."""
     failures: list[dict[str, Any]] = []
@@ -556,7 +671,9 @@ def manifest_contract_violations(manifest: Mapping[str, Any]) -> list[dict[str, 
         failures.append(_failure(R_WORKER_CONTRACT_INVALID, error="argv_flags differ from the governed worker flags"))
     if [dict(item) for item in worker.get("startup_stubs") or []] != [dict(item) for item in WORKER_STARTUP_STUBS]:
         failures.append(_failure(R_STUBS_MISMATCH, error="startup_stubs differ from the worker's stub set"))
+    failures += egress_gateway_violations(manifest, approved=status == STATUS_APPROVED)
     if status == STATUS_APPROVED:
+        failures += os_containment_violations(manifest)
         failures += rate_binding_violations(manifest.get("rate_tier_binding"), manifest.get("vendor_credential"))
         for index, entry in enumerate(manifest.get("telemetry_disposition") or []):
             if entry.get("decision") not in (TELEMETRY_DENY, TELEMETRY_ALLOW):
@@ -1177,6 +1294,42 @@ def observed_credential_tier(environment: Mapping[str, str], state_root: Path) -
     return (TIER_FREE if sources else TIER_GUEST), sources
 
 
+def _credential_value_code(value: str) -> str | None:
+    """ENV and STATE_FILE share one semantics. Never returns or logs the value itself."""
+    stripped = value.strip()
+    if not stripped:
+        return R_CREDENTIAL_REQUIRED_ABSENT
+    if _PLACEHOLDER_CREDENTIAL_RE.match(stripped):
+        return R_CREDENTIAL_PLACEHOLDER
+    return None
+
+
+def state_file_credential_violations(state_file: Path) -> list[dict[str, Any]]:
+    """The isolated provider state root's vendor key file: a regular file holding
+    ``{"api_key": "<non-placeholder>"}``. Diagnostics never carry the value."""
+    try:
+        info = os.lstat(state_file)
+    except OSError:
+        return [_failure(R_CREDENTIAL_REQUIRED_ABSENT, source="STATE_FILE")]
+    if not stat.S_ISREG(info.st_mode) or _is_link(Path(state_file)):
+        return [_failure(R_CREDENTIAL_STATE_FILE_INVALID, source="STATE_FILE", error="not a regular file")]
+    if info.st_size == 0:
+        return [_failure(R_CREDENTIAL_REQUIRED_ABSENT, source="STATE_FILE", error="empty")]
+    if info.st_size > _MAX_STATE_CREDENTIAL_BYTES:
+        return [_failure(R_CREDENTIAL_STATE_FILE_INVALID, source="STATE_FILE", error="oversized")]
+    try:
+        payload = json.loads(Path(state_file).read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, ValueError):
+        return [_failure(R_CREDENTIAL_STATE_FILE_INVALID, source="STATE_FILE", error="malformed")]
+    if not isinstance(payload, dict) or VENDOR_CREDENTIAL_STATE_FIELD not in payload:
+        return [_failure(R_CREDENTIAL_STATE_FILE_INVALID, source="STATE_FILE", error=f"missing {VENDOR_CREDENTIAL_STATE_FIELD}")]
+    value = payload[VENDOR_CREDENTIAL_STATE_FIELD]
+    if not isinstance(value, str):
+        return [_failure(R_CREDENTIAL_STATE_FILE_INVALID, source="STATE_FILE", error=f"{VENDOR_CREDENTIAL_STATE_FIELD} not a string")]
+    code = _credential_value_code(value)
+    return [_failure(code, source="STATE_FILE", field=VENDOR_CREDENTIAL_STATE_FIELD)] if code else []
+
+
 def credential_launch_violations(
     manifest: Mapping[str, Any], *, parent_environ: Mapping[str, str], state_root: Path,
     configured_governor_rpm: int | None = None,
@@ -1191,16 +1344,13 @@ def credential_launch_violations(
     upper = {str(name).upper(): str(value) for name, value in parent_environ.items()}
     state_file = Path(state_root) / VENDOR_CREDENTIAL_STATE_FILE
     if mechanism == CREDENTIAL_APPROVED_ENV_NAME:
-        value = upper.get(VENDOR_CREDENTIAL_NAME, "")
-        if not value.strip():
-            failures.append(_failure(R_CREDENTIAL_REQUIRED_ABSENT, name=VENDOR_CREDENTIAL_NAME))
-        elif _PLACEHOLDER_CREDENTIAL_RE.match(value.strip()):
-            failures.append(_failure(R_CREDENTIAL_PLACEHOLDER, name=VENDOR_CREDENTIAL_NAME))
+        code = _credential_value_code(upper.get(VENDOR_CREDENTIAL_NAME, ""))
+        if code:
+            failures.append(_failure(code, name=VENDOR_CREDENTIAL_NAME))
         if state_file.exists():
             failures.append(_failure(R_CREDENTIAL_NOT_APPROVED_PRESENT, source="STATE_FILE"))
     elif mechanism == CREDENTIAL_APPROVED_STATE_FILE:
-        if not state_file.is_file() or state_file.stat().st_size == 0:
-            failures.append(_failure(R_CREDENTIAL_REQUIRED_ABSENT, source="STATE_FILE"))
+        failures += state_file_credential_violations(state_file)
     else:  # NONE -> guest: no key may be discoverable, neither forwarded nor in the state root
         if state_file.exists():
             failures.append(_failure(R_TIER_MISMATCH, error="guest tier but a key file exists in the provider state root"))
@@ -1301,6 +1451,16 @@ def _approval_violations(manifest: Mapping[str, Any], policy: runtime_contract.P
     if terms.get("agreement_file_policy") != TERMS_PREPROVISIONED or not terms.get("owner_decision_id") \
             or not _is_sha256(terms.get("terms_text_sha256")):
         failures.append(_failure(R_TERMS_UNRESOLVED))
+    # Re-checked here, not only by load_manifest: launch never relies on a single validation layer.
+    failures += os_containment_violations(manifest)
+    failures += egress_gateway_violations(manifest, approved=True)
+    identity = str((manifest.get("os_containment") or {}).get("restricted_identity_sid") or "")
+    platform_ok = bool(_WINDOWS_SID_RE.match(identity)) if os.name == "nt" else bool(_POSIX_UID_RE.match(identity))
+    if identity and not platform_ok:
+        failures.append(_failure(R_OS_CONTAINMENT_UNVERIFIED, field="os_containment.restricted_identity_sid",
+                                 error=f"identity form does not match this platform ({os.name})"))
+    if launch_mode != LAUNCH_MODE_GATE_B and _containment_evidence_is_fake(manifest):
+        failures.append(_failure(R_OS_CONTAINMENT_FAKE_EVIDENCE, launch_mode=launch_mode))
     return failures
 
 
@@ -1346,6 +1506,11 @@ def authorize_provider_launch(
         raise ProviderAttestationError(status.reason_code or R_REVOKED, [_failure(status.reason_code or R_REVOKED, **status.to_record())])
     filesystem = manifest["filesystem"]
     state_root = Path(filesystem["provider_state_root"])
+    # Owner-root separation before anything is read from or created under a provider root.
+    denied = owner_denied_roots(parent_environ, producer_root=producer_root)
+    failures = provider_root_violations(manifest, denied)
+    if failures:
+        raise ProviderAttestationError(failures[0]["code"], failures)
     failures = credential_launch_violations(manifest, parent_environ=parent_environ, state_root=state_root,
                                             configured_governor_rpm=configured_governor_rpm)
     terms_file = state_root / str((manifest.get("terms_acceptance") or {}).get("agreement_file_relative_path") or "")
@@ -1395,7 +1560,6 @@ def authorize_provider_launch(
         bundled_manifest = bundle_root / BUNDLED_MANIFEST_RELATIVE_PATH
         bundled_manifest.parent.mkdir(parents=True, exist_ok=True)
         bundled_manifest.write_bytes(canonical_json_bytes(manifest))
-        denied = owner_denied_roots(parent_environ, producer_root=producer_root)
         read_only = [runtime["venv_root"], runtime["base_prefix"], str(bundle_root)]
         writable = [str(state_root), str(scratch_root)]
         entrypoint = bundle_root / manifest["worker"]["entrypoint"]

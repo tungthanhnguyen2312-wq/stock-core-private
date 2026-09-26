@@ -40,6 +40,10 @@ TEST_BUILD_ID = "VNSTOCK_KBS_VCI-TEST-FIXTURE-UNAPPROVED-NOT-A-LIVE-BUILD"
 FAKE_ENDPOINT_HOST = "fake-provider.test"
 FAKE_ENDPOINT_PATH = "/ohlc/{symbol}"
 FAKE_ENDPOINT_URL = f"https://{FAKE_ENDPOINT_HOST}{FAKE_ENDPOINT_PATH}"
+FAKE_EGRESS_GATEWAY = {"host": "egress-gateway.test", "port": 3128}
+# Syntactically valid, deliberately fake low-privilege identities (never a real principal).
+FAKE_RESTRICTED_IDENTITY = "S-1-5-21-1111111111-2222222222-3333333333-1001" if os.name == "nt" else "uid:64001"
+ISOLATED_BASE_ENV = "STOCKLOOKUP_PROVIDER_FIXTURE_BASE"
 PROTOCOL_CONTROL_ENV = (
     "FAKE_WORKER_STARTUP_FAIL",
     "FAKE_WORKER_STARTUP_KIND",
@@ -49,6 +53,51 @@ PROTOCOL_CONTROL_ENV = (
 )
 _VENV_CACHE: Path | None = None
 _LIVE: list["FakeProviderRuntime"] = []
+
+
+def _under_any(path: str, roots: list[str]) -> bool:
+    candidate = os.path.normcase(os.path.realpath(path))
+    for root in roots:
+        base = os.path.normcase(os.path.realpath(root))
+        if candidate == base or candidate.startswith(base.rstrip("\\/") + os.sep):
+            return True
+    return False
+
+
+_ISOLATED_BASE: Path | None = None
+
+
+def isolated_base() -> Path:
+    """Parent for fake provider venvs and provider state/scratch roots.
+
+    ``owner_denied_roots`` always denies the invoking user's home and this checkout, and denied roots
+    dominate, so these must live outside both. Linux ``/tmp`` already does; Windows ``%TEMP%`` is
+    under the profile, so fall back to ``%PUBLIC%`` / ``%ProgramData%`` (override: ``STOCKLOOKUP_PROVIDER_FIXTURE_BASE``).
+    """
+    global _ISOLATED_BASE
+    if _ISOLATED_BASE is not None and _ISOLATED_BASE.is_dir():
+        return _ISOLATED_BASE
+    owner_roots = [os.path.expanduser("~"), str(ROOT)]
+    candidates = [os.environ.get(ISOLATED_BASE_ENV), tempfile.gettempdir()]
+    if os.name == "nt":
+        candidates += [os.environ.get("PUBLIC"), os.environ.get("ProgramData")]
+    for candidate in candidates:
+        if not candidate or _under_any(candidate, owner_roots):
+            continue
+        try:
+            base = Path(candidate) / "sl-provider-fixture"
+            base.mkdir(parents=True, exist_ok=True)
+        except OSError:
+            continue
+        _ISOLATED_BASE = base.resolve()
+        return _ISOLATED_BASE
+    raise RuntimeError(f"FAKE_PROVIDER_FIXTURE_NO_BASE_OUTSIDE_OWNER_ROOTS (set {ISOLATED_BASE_ENV})")
+
+
+def _isolated_mkdtemp(prefix: str) -> Path:
+    path = Path(tempfile.mkdtemp(prefix=prefix, dir=isolated_base()))
+    atexit.register(lambda: shutil.rmtree(path, ignore_errors=True))
+    return path
 
 
 def _probe_env() -> dict[str, str]:
@@ -361,11 +410,10 @@ def cached_fake_venv(*, owner_profile: str) -> Path:
             marker = next(_VENV_CACHE.glob("lib/python*/site-packages/vnai/__init__.py"), None)
         if marker is not None and marker.is_file() and owner_profile in marker.read_text(encoding="utf-8"):
             return _VENV_CACHE
-    root = Path(tempfile.mkdtemp(prefix="sl-fake-provider-venv-"))
+    root = _isolated_mkdtemp("sl-fake-provider-venv-")
     _create_venv(root)
     _plant_fake_packages(_site_dir(root), owner_profile=owner_profile)
     _VENV_CACHE = root
-    atexit.register(lambda: shutil.rmtree(root, ignore_errors=True))
     return root
 
 
@@ -574,7 +622,7 @@ def build_fake_provider_runtime(
     (owner_profile / ".vnstock" / "api_key.json").write_text('{"api_key":"owner-secret-must-not-leak"}\n', encoding="utf-8")
     (owner_profile / ".stocklookup" / "secrets.env").write_text("DNSE_API_KEY=owner-dnse\n", encoding="utf-8")
     if unexpected_pth or startup_hook or system_site or private_venv or not include_tzdata or not vnai_probes_owner_profile:
-        venv_root = Path(tempfile.mkdtemp(prefix="sl-fake-provider-venv-mut-"))
+        venv_root = _isolated_mkdtemp("sl-fake-provider-venv-mut-")
         _create_venv(venv_root)
         _plant_fake_packages(
             _site_dir(venv_root), owner_profile=str(owner_profile),
@@ -596,8 +644,10 @@ def build_fake_provider_runtime(
             encoding="utf-8",
         )
 
-    state_root = root / "provider-state"
-    scratch_base = root / "provider-scratch"
+    # Provider roots live outside every owner denied root (see isolated_base), never under ``root``.
+    provider_roots = _isolated_mkdtemp("sl-fake-provider-roots-")
+    state_root = provider_roots / "provider-state"
+    scratch_base = provider_roots / "provider-scratch"
     state_root.mkdir(parents=True, exist_ok=True)
     scratch_base.mkdir(parents=True, exist_ok=True)
     terms_text = "TEST_FIXTURE_ONLY terms\n"
@@ -724,7 +774,7 @@ def build_fake_provider_runtime(
         },
         "network": {
             "default_deny": True,
-            "egress_gateway": None,
+            "egress_gateway": dict(FAKE_EGRESS_GATEWAY),
             "endpoints": endpoints if endpoints is not None else ([_approved_endpoint()] if style == "governed" else []),
             "enforcement_policy_sha256": None,
             "review_candidate_endpoints": [],
@@ -754,7 +804,7 @@ def build_fake_provider_runtime(
         "os_containment": {
             "state": "OWNER_VERIFIED",
             "requirements": ["TEST_FIXTURE_ONLY -- not an owner OS verification"],
-            "restricted_identity_sid": "TEST_FIXTURE",
+            "restricted_identity_sid": FAKE_RESTRICTED_IDENTITY,
             "job_object_kill_on_close": True,
             "egress_gateway_verified": True,
             "runtime_root_read_only_acl": True,

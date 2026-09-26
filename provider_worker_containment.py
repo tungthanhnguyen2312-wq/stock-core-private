@@ -348,40 +348,46 @@ class FilesystemPolicy:
     read_only_roots: tuple[str, ...]
     writable_roots: tuple[str, ...]
     _index: tuple[tuple[str, str], ...] = field(default=(), repr=False, compare=False)
+    _denied: tuple[str, ...] = field(default=(), repr=False, compare=False)
 
     def __post_init__(self) -> None:
+        denied = {form for root in self.denied_roots if root for form in (_norm(root), _norm_real(root))}
         index: dict[str, str] = {}
-        # Later classes win on an identical root: an approved root is always explicit.
-        for kind, roots in ((_ROOT_DENIED, self.denied_roots), (_ROOT_READ_ONLY, self.read_only_roots),
-                            (_ROOT_WRITABLE, self.writable_roots)):
+        # Later classes win on an identical root among the approved (read-only/writable) roots.
+        for kind, roots in ((_ROOT_READ_ONLY, self.read_only_roots), (_ROOT_WRITABLE, self.writable_roots)):
             for root in roots:
                 if not root:
                     continue
                 for form in {_norm(root), _norm_real(root)}:
                     index[form] = kind
         ordered = tuple(sorted(index.items(), key=lambda item: len(item[0]), reverse=True))
+        object.__setattr__(self, "_denied", tuple(sorted(denied)))
         object.__setattr__(self, "_index", ordered)
 
     def _classify(self, candidate: str) -> str | None:
+        # A denied owner root dominates: a more specific read-only/writable root configured beneath
+        # it never re-opens it.
+        if any(_within(candidate, root) for root in self._denied):
+            return _ROOT_DENIED
         for root, kind in self._index:
             if _within(candidate, root):
                 return kind
         return None
 
     def evaluate(self, path: Any, *, write: bool) -> str | None:
-        """``None`` when access is permitted, else a reason code. The most specific root decides;
-        a path outside every known root is left to the OS controls."""
+        """``None`` when access is permitted, else a reason code. A denied root (absolute or resolved
+        form) always wins; otherwise the most specific approved root decides; a path outside every
+        known root is left to the OS controls."""
         try:
             raw = os.fsdecode(path)
         except TypeError:
             return None  # a file descriptor or an object that is not a path
         forms = {_norm(raw), _norm_real(raw)}
-        for form in forms:
-            kind = self._classify(form)
-            if kind == _ROOT_DENIED:
-                return FILESYSTEM_DENIED_ROOT
-            if kind == _ROOT_READ_ONLY and write:
-                return FILESYSTEM_WRITE_TO_READ_ONLY_ROOT
+        kinds = {self._classify(form) for form in forms}
+        if _ROOT_DENIED in kinds:
+            return FILESYSTEM_DENIED_ROOT
+        if _ROOT_READ_ONLY in kinds and write:
+            return FILESYSTEM_WRITE_TO_READ_ONLY_ROOT
         return None
 
     def to_record(self) -> dict[str, Any]:
