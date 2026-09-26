@@ -158,27 +158,58 @@ POST_ACQUISITION_NOT_READY_STAGES = frozenset({
 NOT_READY_STAGES = PRE_ACQUISITION_NOT_READY_STAGES | POST_ACQUISITION_NOT_READY_STAGES
 
 OPERATING_MODE_ORDINARY_DAILY = "ORDINARY_DAILY"
+# Any explicit diagnostic/override invocation of the canonical operation (retained-evidence/output
+# root overrides, --no-new-provider-acquisition, offline working dates, a pinned requested-at).
+OPERATING_MODE_DIAGNOSTIC = "DIAGNOSTIC_OVERRIDE"
+# tools/run_recovery_replay.py -- never runs through this module's operation at all.
+OPERATING_MODE_RECOVERY_REPLAY = "RECOVERY_REPLAY"
+CANONICAL_OPERATION_MODES = frozenset({OPERATING_MODE_ORDINARY_DAILY, OPERATING_MODE_DIAGNOSTIC})
 
 
 def m1_live_acceptance_eligible(record_or_stage: Mapping[str, Any] | str) -> bool:
-    """Only a completed ordinary Daily can be offered to M1 live acceptance.
+    """Only a completed, live ordinary Daily can be offered to M1 live acceptance.
 
-    Does not redefine M1 acceptance; it states the precondition PROVIDER_RUNTIME_ISOLATION_V1
-    must not weaken: a record from a blocked/degraded run (any refusal stage, including the
-    supplemental-provider blocks) or a record without a qualifying DNSE quality license is never
-    eligible.
+    Does not redefine M1 acceptance; it states its preconditions:
+      * a real ``ORDINARY_DAILY`` operating mode -- never ``RECOVERY_REPLAY``, a diagnostic
+        override, an idempotent/offline replay record or any record carrying a recovery marker;
+      * a completed Core Daily (``LOCAL_COMPLETE`` / ``PUBLISHED``), so every mandatory
+        DNSE/session/coverage/producer gate passed -- a blocked run (any refusal stage) never is;
+      * a recorded provider-runtime state (a pre-V1 record that carries none is not eligible) and a
+        DNSE quality license that satisfies the Core-Daily proceed predicate
+        (``license_qualifies_for_core_daily``) -- NOT the corroboration predicate.
+    2026-09-26 DNSE-first rebaseline: the OPTIONAL_SUPPLEMENTAL provider runtime no longer has to
+    be ``AVAILABLE``; ``UNASSESSED_SUPPLEMENTAL_RUNTIME_UNAVAILABLE`` proceeds on its explicit
+    DNSE_PRIMARY_UNCORROBORATED basis (its values stay uncorroborated). ``DATA_QUALITY_FAILED``, ``NOT_EVALUATED`` and D2's
+    ``UNASSESSED_NO_SECONDARY_OBSERVATION`` never qualify.
     """
-    if isinstance(record_or_stage, str):
+    if not isinstance(record_or_stage, Mapping):
         return False
     if record_or_stage.get("daily_operation_state") not in (STATE_LOCAL_COMPLETE, STATE_PUBLISHED):
         return False
+    if record_or_stage.get("operating_mode") != OPERATING_MODE_ORDINARY_DAILY:
+        return False
+    if record_or_stage.get("is_idempotent_replay") is True or "recovery_replay" in record_or_stage:
+        return False
     acquisition = record_or_stage.get("acquisition") if isinstance(record_or_stage.get("acquisition"), Mapping) else {}
+    if acquisition.get("operating_mode") not in (None, OPERATING_MODE_ORDINARY_DAILY) or "recovery_replay" in acquisition:
+        return False
+    runtime_state = acquisition.get("provider_runtime_state")
+    if not isinstance(runtime_state, str) or not runtime_state:
+        return False
     license_ = acquisition.get("dnse_quality_license") if isinstance(acquisition.get("dnse_quality_license"), Mapping) else {}
-    return (
-        record_or_stage.get("operating_mode") == OPERATING_MODE_ORDINARY_DAILY
-        and acquisition.get("provider_runtime_state") == "AVAILABLE"
-        and license_.get("qualifies_for_ordinary_daily") is True
+    from multi_source_market_evidence_contract import (
+        LICENSE_UNASSESSED_SUPPLEMENTAL_RUNTIME_UNAVAILABLE, license_qualifies_for_core_daily,
     )
+    name = license_.get("license")
+    # Re-derived from the license NAME: a stored boolean label can never smuggle a non-qualifying
+    # license (DATA_QUALITY_FAILED, NOT_EVALUATED, D2's UNASSESSED_NO_SECONDARY_OBSERVATION) through.
+    if not license_qualifies_for_core_daily(name):
+        return False
+    stored = license_.get("qualifies_for_core_daily", license_.get("qualifies_for_ordinary_daily"))
+    if stored is False:
+        return False
+    # The DNSE-primary license is only coherent with a runtime that really was not AVAILABLE.
+    return not (name == LICENSE_UNASSESSED_SUPPLEMENTAL_RUNTIME_UNAVAILABLE and runtime_state == "AVAILABLE")
 
 
 class CanonicalDailyOperationError(CanonicalPostCloseError):
@@ -469,9 +500,15 @@ def format_owner_daily_status(
             f"Provider runtime: {runtime.get('state')} ({runtime.get('reason_code')})",
             f"DNSE quality license: {license_.get('license') or 'NOT_ASSESSED'}",
             "DNSE evidence: RETAINED",
-            "Publication: BLOCKED (no degraded publication)",
+            "Publication: BLOCKED",
             "M1 live acceptance: NOT_SATISFIED_BY_THIS_RUN",
-            "Action: owner provider-runtime/quality decision required; see config/provider_runtime_policy.json",
+            (
+                "Action: supplemental runtime failed mid-operation; rerun Daily (the OPTIONAL_SUPPLEMENTAL "
+                "runtime is not required when it is unavailable at preflight)"
+                if exc.stage == STAGE_BLOCKED_SUPPLEMENTAL_PROVIDER_RUNTIME
+                else "Action: DNSE quality license not qualified (data-quality/unassessed); review the "
+                     "retained supplemental_provider_block.json before any rerun"
+            ),
         ]
     elif exc.stage in POST_ACQUISITION_NOT_READY_STAGES:
         reasons = ",".join(phase_b.get("reason_codes") or []) or str(exc)
@@ -602,8 +639,18 @@ def run_canonical_daily_operation(
     retained_evidence_root: Path | None = None,
     operation_output_root: Path | None = None,
     no_new_provider_acquisition: bool = False,
+    operating_mode: str = OPERATING_MODE_ORDINARY_DAILY,
 ) -> dict[str, Any]:
-    """Foreground one-shot daily operation. Tests must inject ``now`` / ``requested_at``."""
+    """Foreground one-shot daily operation. Tests must inject ``now`` / ``requested_at``.
+
+    ``operating_mode`` is ``ORDINARY_DAILY`` (the zero-flag owner Daily) or ``DIAGNOSTIC_OVERRIDE``.
+    ``RECOVERY_REPLAY`` is refused: recovery is its own isolated runner and never produces an
+    ordinary Daily record."""
+    if operating_mode not in CANONICAL_OPERATION_MODES:
+        raise CanonicalDailyOperationError(
+            STAGE_BLOCKED_PRE_ACQUISITION,
+            f"OPERATING_MODE_NOT_PERMITTED_FOR_CANONICAL_DAILY:{operating_mode}",
+        )
     root = Path(root)
     runtime_root = Path(runtime_root)
     instant = now or vn_now()
@@ -1162,7 +1209,7 @@ def run_canonical_daily_operation(
     if snapshot.get("provider_runtime_state") is not None:
         record["acquisition"]["provider_runtime_state"] = snapshot.get("provider_runtime_state")
         record["acquisition"]["dnse_quality_license"] = snapshot.get("dnse_quality_license")
-        record["operating_mode"] = OPERATING_MODE_ORDINARY_DAILY
+        record["operating_mode"] = operating_mode
     persistable = {k: v for k, v in record.items() if k not in {
         "producer_result", "decision_packet", "prospective", "prospective_decision_snapshot_detail", "enrichment",
         "tactical_reversal_shadow_collection", "post_handoff_observers", "post_handoff_prospective_decision_feedback",

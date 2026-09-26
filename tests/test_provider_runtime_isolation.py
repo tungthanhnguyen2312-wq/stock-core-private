@@ -766,9 +766,15 @@ def test_quality_license_edge_cases(evidence, expected, qualifies):
 
 
 def test_quality_license_is_a_separate_axis_from_evidence_currency():
+    # ORDINARY_DAILY_QUALIFYING_LICENSES keeps its qualified-source-health meaning (no UNASSESSED_*).
     assert contract.ORDINARY_DAILY_QUALIFYING_LICENSES.isdisjoint({
         "UNASSESSED_NO_SECONDARY_OBSERVATION", "UNASSESSED_SUPPLEMENTAL_RUNTIME_UNAVAILABLE", "DATA_QUALITY_FAILED",
     })
+    # The 2026-09-26 Core-Daily proceed predicate is a separate set, never an alias.
+    assert contract.CORE_DAILY_PROCEED_LICENSES - contract.ORDINARY_DAILY_QUALIFYING_LICENSES == {
+        "UNASSESSED_SUPPLEMENTAL_RUNTIME_UNAVAILABLE"}
+    assert contract.CORROBORATED_VALUE_LICENSES.isdisjoint({
+        "UNASSESSED_NO_SECONDARY_OBSERVATION", "UNASSESSED_SUPPLEMENTAL_RUNTIME_UNAVAILABLE"})
     license_ = contract.dnse_quality_license(healthy_sentinel_evidence(TARGET))
     assert license_["evidence_currency_relation"] == "SEPARATE_AXIS_CURRENT_SESSION_IS_NOT_CORROBORATION"
     import integrated_investment_decision_product as iid
@@ -797,27 +803,44 @@ def _level2_acquire(tmp_path, monkeypatch, *, handle: Any | None, dnse_records: 
     return snapshot
 
 
-def test_blocked_runtime_ends_in_a_governed_runtime_block_and_retains_dnse_evidence(tmp_path, monkeypatch, popen_counter):
+def test_blocked_runtime_is_a_dnse_primary_capability_state_not_a_daily_block(tmp_path, monkeypatch, popen_counter):
+    """2026-09-26 DNSE-first rebaseline (supersedes the V1 governed runtime block): with the real
+    tracked SECURITY_REVIEW_BLOCKED policy no worker is spawned, nothing supplemental is attempted
+    or fabricated, and the Core Daily snapshot is written on the explicit DNSE_PRIMARY_UNCORROBORATED
+    basis -- never relabelled CORROBORATED_HEALTHY."""
     # No open_provider_runtime patch: the real tracked SECURITY_REVIEW_BLOCKED policy applies.
     _level2_acquire(tmp_path, monkeypatch, handle=None, dnse_records={
         "EXACT_A": ("EXACT_SESSION_RETAINED", [_dnse_obs(TARGET)]), "GAP_B": ("SESSION_MISSING", []),
     })
     paths = level2.session_artifact_paths(tmp_path, TARGET)
-    with pytest.raises(level2.SupplementalProviderBlocked) as exc:
-        level2.ensure_exact_session_snapshot(tmp_path, TARGET, tmp_path / "runtime")
-    assert exc.value.kind == level2.SUPPLEMENTAL_BLOCK_KIND_RUNTIME
-    assert exc.value.runtime_state["state"] == rt.SECURITY_REVIEW_BLOCKED
-    assert exc.value.quality_license["license"] == "UNASSESSED_SUPPLEMENTAL_RUNTIME_UNAVAILABLE"
-    assert popen_counter == []
+    path = level2.ensure_exact_session_snapshot(tmp_path, TARGET, tmp_path / "runtime")
+    assert popen_counter == []  # no Vnstock worker spawn
     assert paths["dnse_only_exact_session_snapshot"].is_file()  # raw DNSE retained
-    assert not paths["exact_session_snapshot"].exists()  # never a reusable canonical snapshot
-    assert not paths["multi_source_market_evidence"].exists()
-    block = json.loads(paths["supplemental_provider_block"].read_text(encoding="utf-8"))
-    assert block["ordinary_daily"] == "BLOCKED" and block["degraded_publication"] == "NOT_IMPLEMENTED_V1"
-    assert block["multi_source_evidence"]["records"]["GAP_B"]["resolution"]["resolution"] == (
-        "SESSION_MISSING_DNSE_SUPPLEMENTAL_NOT_ATTEMPTED"
-    )
-    assert block["block_identity"].startswith("supplemental_provider_block:")
+    assert not paths["supplemental_provider_block"].exists()
+    written = json.loads(path.read_text(encoding="utf-8"))
+    assert written["provider_runtime_state"] == rt.SECURITY_REVIEW_BLOCKED
+    assert written["dnse_quality_license"]["license"] == "UNASSESSED_SUPPLEMENTAL_RUNTIME_UNAVAILABLE"
+    assert written["dnse_quality_license"]["license"] != "CORROBORATED_HEALTHY"
+    assert written["dnse_quality_license"]["qualifies_for_ordinary_daily"] is False  # not qualified health
+    assert written["dnse_quality_license"]["qualifies_for_core_daily"] is True
+    assert written["dnse_quality_license"]["dnse_values_corroborated"] is False
+    assert written["dnse_quality_license"]["core_daily_basis"] == "DNSE_PRIMARY_UNCORROBORATED"
+    assert written["companion_evidence_required"] is True
+    capability = written["supplemental_provider_capability"]
+    assert capability["state"] == "SUPPLEMENTAL_PROVIDER_RUNTIME_UNAVAILABLE"
+    assert capability["role"] == "OPTIONAL_SUPPLEMENTAL" and capability["authority_effect"] == "NONE"
+    assert capability["dependent_surfaces"] == "NOT_ATTEMPTED_SUPPLEMENTAL_PROVIDER_RUNTIME_UNAVAILABLE"
+    # Supplemental-dependent fields stay explicitly unavailable; no fabricated KBS/VCI bar.
+    assert written["records"]["GAP_B"]["disposition"] != "EXACT_SESSION_RETAINED"
+    evidence = json.loads(paths["multi_source_market_evidence"].read_text(encoding="utf-8"))
+    assert evidence["records"]["GAP_B"]["resolution"]["resolution"] == "SESSION_MISSING_DNSE_SUPPLEMENTAL_NOT_ATTEMPTED"
+    assert evidence["dnse_quality_sentinel"]["health"]["state"] == "DNSE_QUALITY_UNASSESSED_SUPPLEMENTAL_RUNTIME_UNAVAILABLE"
+    for record in evidence["records"].values():
+        for observation in record.get("observations") or []:
+            if observation.get("source") in ("KBS", "VCI"):
+                assert observation.get("status") != "EXACT_SESSION_OBSERVED"
+    # The reuse gate accepts it on an identical rerun (no new acquisition), still DNSE-primary.
+    assert level2.ensure_exact_session_snapshot(tmp_path, TARGET, tmp_path / "runtime") == path
 
 
 def test_live_runtime_without_secondary_observation_is_a_governed_quality_block(tmp_path, monkeypatch):
@@ -895,10 +918,19 @@ def test_same_session_rerun_cannot_upgrade_an_unassessed_snapshot(tmp_path):
     paths = level2.session_artifact_paths(tmp_path, TARGET)
     _write(paths["exact_session_snapshot"], {"resolved_completed_session": TARGET})
     unassessed = healthy_sentinel_evidence(TARGET)
-    unassessed["dnse_quality_sentinel"]["health"] = {"state": "DNSE_QUALITY_UNASSESSED_SUPPLEMENTAL_RUNTIME_UNAVAILABLE"}
+    # D2 (live runtime, no secondary observation) stays unqualified after the DNSE-first rebaseline.
+    unassessed["dnse_quality_sentinel"]["health"] = {"state": "DNSE_EXACT_BUT_UNCORROBORATED"}
     # Even a stored label claiming a healthy license is ignored: the license is re-derived.
     unassessed["dnse_quality_license"] = {"license": "CORROBORATED_HEALTHY", "qualifies_for_ordinary_daily": True}
     _write(paths["multi_source_market_evidence"], unassessed)
+    with pytest.raises(ValueError, match="P3F9B_EXISTING_SNAPSHOT_PROVIDER_HEALTH_GATE_UNRESOLVED"):
+        level2.ensure_exact_session_snapshot(tmp_path, TARGET, tmp_path / "runtime")
+    # A runtime-unavailable sentinel whose retained runtime record claims AVAILABLE is
+    # self-contradictory and never reused either.
+    contradictory = healthy_sentinel_evidence(TARGET)
+    contradictory["dnse_quality_sentinel"]["health"] = {"state": "DNSE_QUALITY_UNASSESSED_SUPPLEMENTAL_RUNTIME_UNAVAILABLE"}
+    contradictory["provider_runtime"] = {"state": "AVAILABLE"}
+    _write(paths["multi_source_market_evidence"], contradictory)
     with pytest.raises(ValueError, match="P3F9B_EXISTING_SNAPSHOT_PROVIDER_HEALTH_GATE_UNRESOLVED"):
         level2.ensure_exact_session_snapshot(tmp_path, TARGET, tmp_path / "runtime")
 
@@ -987,7 +1019,10 @@ def test_m1_live_acceptance_eligibility_requires_a_qualified_ordinary_daily():
     }
     assert cdo.m1_live_acceptance_eligible(qualified) is True
     for mutate in (
-        lambda r: r["acquisition"].update(provider_runtime_state="SECURITY_REVIEW_BLOCKED"),
+        # 2026-09-26: a corroborated license with a runtime that was NOT available is incoherent
+        # only for the DNSE-primary license; CORROBORATED_HEALTHY is re-derived evidence, so an
+        # unavailable-runtime record with it stays eligible (see the DNSE-primary test below).
+        lambda r: r["acquisition"].update(provider_runtime_state=None),
         lambda r: r["acquisition"].update(dnse_quality_license={
             "license": "UNASSESSED_NO_SECONDARY_OBSERVATION", "qualifies_for_ordinary_daily": False}),
         lambda r: r["acquisition"].pop("dnse_quality_license"),  # reused pre-V1 snapshot
@@ -1002,7 +1037,11 @@ def test_m1_live_acceptance_eligibility_requires_a_qualified_ordinary_daily():
 
 
 def test_qualified_daily_record_carries_both_axes_and_ordinary_mode(tmp_path, monkeypatch):
-    from test_canonical_daily_operation import _acquired, _run
+    from test_canonical_daily_operation import SESSION as SESSION_CDO, _acquired, _run
+
+    evidence = healthy_sentinel_evidence(SESSION_CDO)
+    evidence["provider_runtime"] = {"state": "AVAILABLE"}
+    _write(level2.session_artifact_paths(tmp_path, SESSION_CDO)["multi_source_market_evidence"], evidence)
 
     def acquire(*_a, **_k):
         acquired = _acquired(tmp_path)
