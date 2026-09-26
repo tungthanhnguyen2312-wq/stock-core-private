@@ -66,6 +66,11 @@ ACCESS_NONE = "NO_ACCESS"
 # The only top-level keys a normalised attestation carries; anything else (for example the
 # manifest's own declaration keys) is refused -- declarations are not evidence.
 _RESULT_SECTIONS = ("binding", "worker_process", "restricted_identity", "process_control", "acl", "egress")
+# Top-level ownership of a normalised attestation. The issuer alone sets these, from the issuance
+# envelope (contract constant, the permitted backend's identity, BackendVerification.verified_at_utc,
+# the canonical identity of the raw observations). A backend result may only describe enforcement in
+# _RESULT_SECTIONS; a reserved or unknown top-level key in it is an ownership violation.
+ISSUER_RESERVED_KEYS = ("contract_version", "backend", "verified_at_utc", "evidence_sha256")
 MAX_ATTESTATION_AGE = timedelta(minutes=10)
 CLOCK_SKEW = timedelta(seconds=5)
 
@@ -91,8 +96,10 @@ class OSEnforcementAttestationRejected(RuntimeError):
 
 @dataclass(frozen=True)
 class BackendVerification:
-    """What a backend's verification phase returns: its identity, the raw OS observations it made
-    (opaque evidence; hashed for identity only) and the result it derived from them."""
+    """What a backend's verification phase returns, in three separate parts: (1) its envelope --
+    ``backend_id``, ``contract_version``, ``verified_at_utc``; (2) the raw OS observations it made
+    (opaque evidence; hashed for identity only); (3) the normalised enforcement ``result``, limited to
+    the ``_RESULT_SECTIONS``. The attestation's contract metadata is never the backend's to choose."""
 
     backend_id: str
     contract_version: str
@@ -386,15 +393,25 @@ def egress_violations(section: Any, expected: Mapping[str, Any], *, platform: st
 def attestation_contract_violations(
     normalized: Mapping[str, Any], expected: Mapping[str, Any], *, requirement: str, spawned_pid: int,
     worker_facts: Mapping[str, Any] | None, now: datetime | None = None, platform: str = sys.platform,
+    envelope: Mapping[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
-    """Every reason a normalised backend result does not establish the requirement. Empty = valid."""
+    """Every reason a normalised backend result does not establish the requirement. Empty = valid.
+    ``envelope`` is the issuer-owned metadata the issuer computed; when given, every reserved key of
+    ``normalized`` must equal it exactly."""
     failures: list[dict[str, Any]] = []
     facts = worker_facts if isinstance(worker_facts, Mapping) else {}
     current = now or _now()
     backend = normalized.get("backend") or {}
-    extra = set(normalized) - {"contract_version", "backend", "verified_at_utc", "evidence_sha256", *_RESULT_SECTIONS}
+    extra = set(normalized) - {*ISSUER_RESERVED_KEYS, *_RESULT_SECTIONS}
     if extra:
         failures.append(_fail("attestation", f"unexpected keys {sorted(extra)}; declarations are not evidence"))
+    if normalized.get("contract_version") != ATTESTATION_CONTRACT_VERSION:
+        failures.append(_fail("contract_version", "not the attestation contract version"))
+    if not build_manifest._is_sha256(normalized.get("evidence_sha256")):
+        failures.append(_fail("evidence_sha256", "not a SHA-256 content identity"))
+    for key in ISSUER_RESERVED_KEYS if envelope is not None else ():
+        if normalized.get(key) != envelope.get(key):
+            failures.append(_fail(key, "issuer-owned metadata differs from the issuance envelope"))
     binding = normalized.get("binding") if isinstance(normalized.get("binding"), Mapping) else {}
     for key in ("launch_id", "manifest_sha256", "build_id", "policy_decision_id", "platform"):
         if not expected.get(key) or binding.get(key) != expected.get(key):
@@ -479,7 +496,15 @@ def issue_attestation(
             or verification.contract_version != getattr(backend, "contract_version", None):
         raise OSEnforcementAttestationRejected([_fail("verification.backend_id", "verification from another backend identity",
                                                       R_BACKEND_NOT_AUTHORIZED)])
-    normalized = {
+    # Ownership: the result may only carry the canonical enforcement sections. A reserved issuer key
+    # or any other top-level key is refused outright -- never silently dropped or overridden.
+    ownership = [_fail(f"verification.result.{key}", "issuer-owned attestation metadata; a backend result cannot set it")
+                 for key in sorted(set(verification.result) & set(ISSUER_RESERVED_KEYS))]
+    ownership += [_fail(f"verification.result.{key}", "not a normalised enforcement result section")
+                  for key in sorted(set(verification.result) - set(ISSUER_RESERVED_KEYS) - set(_RESULT_SECTIONS))]
+    if ownership:
+        raise OSEnforcementAttestationRejected(ownership)
+    envelope = {
         "contract_version": ATTESTATION_CONTRACT_VERSION,
         "backend": {"backend_id": verification.backend_id, "contract_version": verification.contract_version,
                     "kind": getattr(backend, "kind", None)},
@@ -487,11 +512,11 @@ def issue_attestation(
         # Content identity of the raw observations -- never the trust decision.
         "evidence_sha256": build_manifest.canonical_sha256(dict(verification.raw_observations or {})),
     }
-    for key, value in verification.result.items():
-        normalized[key] = value  # unknown keys are refused by the contract check
+    normalized = {**{key: verification.result[key] for key in _RESULT_SECTIONS if key in verification.result},
+                  **envelope}
     failures = attestation_contract_violations(
         normalized, expected_enforcement_binding(launch), requirement=requirement, spawned_pid=getattr(process, "pid", None),
-        worker_facts=worker_facts, now=now,
+        worker_facts=worker_facts, now=now, envelope=envelope,
     )
     if failures:
         raise OSEnforcementAttestationRejected(failures)

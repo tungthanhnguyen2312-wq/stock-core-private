@@ -291,7 +291,6 @@ def test_a_content_hash_is_identity_not_proof(monkeypatch, live_launch):
     # A self-consistent report hash says nothing: an incomplete result with a matching digest fails.
     thin = {"binding": _complete_result(live_launch)["binding"],
             "worker_process": {"spawned_pid": SPAWNED_PID}}
-    thin["evidence_sha256"] = build_manifest.canonical_sha256(thin)
     fields = _rejected_fields(monkeypatch, live_launch, thin)
     assert {"restricted_identity", "process_control", "acl", "egress", "worker_process.creation_time_utc"} <= fields
 
@@ -300,7 +299,56 @@ def test_result_carrying_manifest_declarations_is_refused(monkeypatch, live_laun
     result = _complete_result(live_launch)
     result.update({key: live_launch.manifest["os_containment"][key]
                    for key in ("job_object_kill_on_close", "egress_gateway_verified", "runtime_root_read_only_acl")})
-    assert "attestation" in _rejected_fields(monkeypatch, live_launch, result)
+    assert _rejected_fields(monkeypatch, live_launch, result) == {
+        "verification.result.job_object_kill_on_close", "verification.result.egress_gateway_verified",
+        "verification.result.runtime_root_read_only_acl"}
+
+
+# --- issuer-owned metadata ------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("key, value", [
+    ("contract_version", "provider_os_enforcement_attestation/v0"),
+    ("evidence_sha256", "0" * 64),
+    ("backend", {"backend_id": "stocklookup-windows-os-enforcement", "contract_version": "x", "kind": "PRODUCTION_OS_ENFORCEMENT"}),
+    ("verified_at_utc", "2099-01-01T00:00:00Z"),
+    ("unrelated_top_level_key", True),
+])
+def test_a_result_can_never_set_issuer_owned_or_unknown_top_level_keys(monkeypatch, live_launch, key, value):
+    result = _complete_result(live_launch)
+    result[key] = value
+    assert _rejected_fields(monkeypatch, live_launch, result) == {f"verification.result.{key}"}
+
+
+def test_issued_metadata_comes_only_from_the_issuance_envelope(monkeypatch, live_launch):
+    trusted = _issue(monkeypatch, live_launch)
+    normalized = trusted.normalized
+    assert normalized["contract_version"] == os_enforcement.ATTESTATION_CONTRACT_VERSION
+    assert normalized["backend"] == {"backend_id": FAKE_PRODUCTION_BACKEND_ID,
+                                     "contract_version": os_enforcement.BACKEND_CONTRACT_VERSION,
+                                     "kind": os_enforcement.BACKEND_PRODUCTION}
+    # Identity of the fixture verifier's raw observations -- content identity, not proof.
+    assert normalized["evidence_sha256"] == build_manifest.canonical_sha256({"fixture_only": True, "pid": SPAWNED_PID})
+    assert trusted.evidence_sha256 == normalized["evidence_sha256"]
+    assert set(normalized) == {*os_enforcement.ISSUER_RESERVED_KEYS, "binding", "worker_process", "restricted_identity",
+                               "process_control", "acl", "egress"}
+
+
+@pytest.mark.parametrize("key, value", [
+    ("contract_version", "provider_os_enforcement_attestation/v0"),
+    ("evidence_sha256", "0" * 64),
+    ("evidence_sha256", "not-a-hash"),
+    ("verified_at_utc", "2099-01-01T00:00:00Z"),
+    ("backend", {"backend_id": "other", "contract_version": "x", "kind": "PRODUCTION_OS_ENFORCEMENT"}),
+])
+def test_contract_check_refuses_envelope_drift_even_for_internal_mappings(monkeypatch, live_launch, key, value):
+    trusted = _issue(monkeypatch, live_launch)
+    envelope = {name: trusted.normalized[name] for name in os_enforcement.ISSUER_RESERVED_KEYS}
+    tampered = dict(trusted.normalized, **{key: value})
+    failures = os_enforcement.attestation_contract_violations(
+        tampered, os_enforcement.expected_enforcement_binding(live_launch), requirement=trusted.requirement,
+        spawned_pid=SPAWNED_PID, worker_facts=_facts(live_launch), envelope=envelope)
+    assert key in {item["field"] for item in failures}
 
 
 # --- backend identity (1, 2, 3) ----------------------------------------------------------------
