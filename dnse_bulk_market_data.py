@@ -87,6 +87,12 @@ def _retry_after_seconds(response: Any) -> float | None:
     return value
 
 
+def _decode_json(raw: bytes) -> Any:
+    import json
+
+    return json.loads(raw.decode("utf-8"))
+
+
 def fetch_capability_raw(
     capability: str,
     *,
@@ -96,6 +102,7 @@ def fetch_capability_raw(
     query: Mapping[str, Any] | None = None,
     request_get: Callable[..., Any] | None = None,
     timeout: tuple[float, float] = (5.0, 15.0),
+    retain_raw_bytes: bool = False,
 ) -> dict[str, Any]:
     """Issue exactly one signed, read-only GET call and return its full body.
 
@@ -103,6 +110,15 @@ def fetch_capability_raw(
     error, or transport failure) -- never raises. ``result["body"]`` is
     present only when ``ok`` is true and is the provider's response exactly
     as received (after JSON decoding), with no truncation or redaction.
+
+    ``retain_raw_bytes`` (RECOVERY_REPLAY raw-retention contract): additionally
+    return ``raw_bytes`` -- the exact HTTP response body bytes as received, for
+    every HTTP response (any status) -- plus ``content_type``, and decode
+    ``body`` from exactly those bytes. A 200 whose bytes are not JSON is
+    ``ok = False`` / ``response_body_not_json`` with the bytes still returned.
+    Request headers, the signature and credentials are never returned. The
+    default (``False``) behaviour is byte-for-byte unchanged for every other
+    caller.
     """
     path = resolve_endpoint(capability, symbol)
     headers = auth_headers(api_key, api_secret, "GET", path)
@@ -122,6 +138,14 @@ def fetch_capability_raw(
         result["elapsed_ms"] = round((time.monotonic() - started) * 1000, 1)
         status_code = int(response.status_code)
         result["http_status"] = status_code
+        if retain_raw_bytes:
+            raw = getattr(response, "content", None)
+            result["raw_bytes"] = bytes(raw) if raw is not None else b""
+            headers = getattr(response, "headers", None)
+            try:
+                result["content_type"] = headers.get("Content-Type") if headers is not None else None
+            except AttributeError:
+                result["content_type"] = None
         if status_code in (401, 403):
             result.update(ok=False, error_code="authentication_failed")
             return result
@@ -134,9 +158,17 @@ def fetch_capability_raw(
         if status_code != 200:
             result.update(ok=False, error_code=f"http_status_{status_code}")
             try:
-                result["body"] = response.json()
+                result["body"] = _decode_json(result["raw_bytes"]) if retain_raw_bytes else response.json()
             except Exception:
                 result["body_text_preview"] = str(getattr(response, "text", "") or "")[:2000]
+            return result
+        if retain_raw_bytes:
+            try:
+                result["body"] = _decode_json(result["raw_bytes"])
+            except Exception:
+                result.update(ok=False, error_code="response_body_not_json")
+                return result
+            result["ok"] = True
             return result
         result["ok"] = True
         result["body"] = response.json()

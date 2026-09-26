@@ -438,3 +438,87 @@ def test_research_action_posture_policy_body_is_untouched_by_this_corrective():
 
     assert iid.EVIDENCE_CURRENCY_CURRENT_SESSION == "CURRENT_SESSION"
     assert hasattr(iid, "decide_research_action_posture")
+
+
+# ---------------------------------------------------------------------------------------------
+# PR8 corrective BLOCKER 4: no companion-free ordinary reuse, compatibility scoped by mode
+# ---------------------------------------------------------------------------------------------
+
+
+def _full_snapshot(**extra) -> dict:
+    return {
+        "resolved_completed_session": TARGET, "retained_snapshot_session": TARGET,
+        "contract_version": "p3f9_exact_session_mva_snapshot/v2", "materialization_scope": "FULL_CANONICAL_CANDIDATE_SET",
+        "unattempted_without_explicit_disposition": 0, "exact_session_observed_count": 900,
+        "attempted_candidate_count": 1000, "requested_at": f"{TARGET}T19:00:00+07:00",
+        "snapshot_sha256": "abc", "snapshot_identity": "p3f9_exact_session_snapshot:abc", **extra,
+    }
+
+
+NOW = datetime(2026, 9, 10, 20, 0, tzinfo=VN_TZ)
+
+
+def test_new_snapshot_with_companion_is_evaluated_normally(tmp_path, monkeypatch):
+    monkeypatch.setattr(level2, "supplemental_runtime_launchable", lambda: False)
+    paths = level2.session_artifact_paths(tmp_path, TARGET)
+    _write(paths["multi_source_market_evidence"], _unavailable_evidence())
+    cpc.assert_post_close_eligible(_full_snapshot(companion_evidence_required=True), TARGET, now=NOW, artifact_root=tmp_path)
+
+
+def test_new_snapshot_without_companion_is_refused(tmp_path):
+    with pytest.raises(cpc.PreCutoffArtifactError, match="QUALITY_EVIDENCE_MISSING"):
+        cpc.assert_post_close_eligible(_full_snapshot(companion_evidence_required=True), TARGET, now=NOW, artifact_root=tmp_path)
+    with pytest.raises(cpc.PreCutoffArtifactError, match="QUALITY_EVIDENCE_MISSING"):  # not even in compatibility mode
+        cpc.assert_post_close_eligible(_full_snapshot(companion_evidence_required=True), TARGET, now=NOW,
+                                       artifact_root=tmp_path, historical_compatibility=True)
+
+
+def test_legacy_shaped_snapshot_without_companion_is_refused_on_the_ordinary_path(tmp_path):
+    legacy = _full_snapshot()  # none of the post-corrective quality fields
+    with pytest.raises(cpc.PreCutoffArtifactError, match="QUALITY_EVIDENCE_MISSING"):
+        cpc.assert_post_close_eligible(legacy, TARGET, now=NOW, artifact_root=tmp_path)
+    paths = level2.session_artifact_paths(tmp_path, TARGET)
+    _write(paths["exact_session_snapshot"], legacy)
+    assert level2._canonical_snapshot_gate_satisfied(paths["exact_session_snapshot"], paths["multi_source_market_evidence"], TARGET) is False
+    # Evidence that predates the sentinel is not trusted either.
+    _write(paths["multi_source_market_evidence"], {"target_session": TARGET})
+    assert level2._canonical_snapshot_gate_satisfied(paths["exact_session_snapshot"], paths["multi_source_market_evidence"], TARGET) is False
+
+
+def test_explicit_historical_compatibility_accepts_only_a_genuine_legacy_snapshot(tmp_path):
+    legacy = _full_snapshot()
+    cpc.assert_post_close_eligible(legacy, TARGET, now=NOW, artifact_root=tmp_path, historical_compatibility=True)
+    paths = level2.session_artifact_paths(tmp_path, TARGET)
+    _write(paths["exact_session_snapshot"], legacy)
+    assert level2._canonical_snapshot_gate_satisfied(
+        paths["exact_session_snapshot"], paths["multi_source_market_evidence"], TARGET, historical_compatibility=True) is True
+
+
+def test_recovery_artifact_without_companion_is_refused_even_in_compatibility_mode(tmp_path):
+    recovery = _full_snapshot(operating_mode="RECOVERY_REPLAY")
+    for compat in (False, True):
+        with pytest.raises(cpc.PreCutoffArtifactError):
+            cpc.assert_post_close_eligible(recovery, TARGET, now=NOW, artifact_root=tmp_path, historical_compatibility=compat)
+
+
+def _capture_acquire_kwargs(tmp_path, monkeypatch, **run_kwargs):
+    from test_canonical_daily_operation import _acquired, _run
+
+    seen = {}
+
+    def acquire(*_a, **kwargs):
+        seen.update(kwargs)
+        return _acquired(tmp_path)
+
+    _run(tmp_path, monkeypatch, acquire_fn=acquire, **run_kwargs)
+    return seen
+
+
+def test_ordinary_daily_never_requests_historical_compatibility(tmp_path, monkeypatch):
+    assert "historical_compatibility" not in _capture_acquire_kwargs(tmp_path, monkeypatch)
+
+
+def test_only_a_no_new_acquisition_diagnostic_replay_requests_historical_compatibility(tmp_path, monkeypatch):
+    seen = _capture_acquire_kwargs(tmp_path, monkeypatch, operating_mode=cdo.OPERATING_MODE_DIAGNOSTIC,
+                                   no_new_provider_acquisition=True)
+    assert seen.get("historical_compatibility") is True

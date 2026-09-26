@@ -1,5 +1,64 @@
 # Decisions & Architectural Decision Records
 
+## 2026-09-27 - PR #8 recovery-integrity blocking corrective (M1; same branch, not promoted)
+
+An independent Codex promotion review of PR #8 at `69b8dba` returned `PROMOTION_REVIEW_FAIL`. The
+reviewed PASS areas are unchanged:
+- the Core-Daily/corroboration split and `DATA_QUALITY_FAILED` blocking;
+- sentinel re-evaluation and M1 mode gating;
+- recovery isolation, temporal and denominator semantics;
+- posture policy;
+- Vnstock stays unlaunched.
+
+Fixes:
+- **Run state.** A raw conflict never counts as `COMPLETE`, and "terminal" is not a synonym for
+  "successful".
+  - Only `EXACT_SESSION_OBSERVED`, `PRIOR_SESSION_ONLY`, `PROVIDER_REJECTED` and `NO_HISTORY` are
+    classified outcomes. Every other outcome is a defect or unresolved state: raw conflict, invalid
+    orphan, unverifiable raw, `UNKNOWN`, exhausted transient, rate-limit stop, auth failure, not
+    attempted, or an incomplete foreign-flow chain.
+  - Overall states: `COMPLETE` 0, `PARTIAL_RETRYABLE` 3, `PARTIAL_UNRESOLVED` 4,
+    `BLOCKED_INTEGRITY` 5, `BLOCKED_AUTH` 6.
+  - Only `COMPLETE` writes `recovery_session_market_reconstruction.json`. Every other state writes
+    only `recovery_partial_diagnostic.json` and moves a stale completion claim aside.
+  - Conflict-resolution contract: never auto-resolved, re-requested or overwritten. The owner
+    resolves it by starting fresh isolated roots; the blocked state root is kept.
+- **Exact bytes.** The governed `dnse_bulk_market_data.fetch_capability_raw` gains an opt-in
+  `retain_raw_bytes`. It returns the exact response body bytes plus content type, and decodes the
+  body from those bytes. The default behaviour and credential handling are unchanged.
+  - Recovery writes the `.body` bytes write-once, fsyncs, re-reads and verifies length and SHA-256.
+    Only then does it write a completion-marked envelope, and only then parse from the retained
+    bytes and advance the journal.
+  - Raw JSON is never regenerated from a Python object.
+  - A fetch without exact bytes is an integrity stop.
+- **Orphans fail closed.** Adoption requires all of the following to hold: contract version,
+  completion marker, exact request identity, target session, symbol, endpoint, request parameters,
+  status metadata, `acquired_at`, the body file, its length, its SHA-256, and a parse under the
+  response contract. Anything else is `BLOCKED_INTEGRITY` and never a terminal `UNKNOWN`.
+- **Companion evidence.** Ordinary post-close and Level-2 reuse refuse any companion-less snapshot,
+  including a legacy-shaped one. The only compatibility path is `historical_compatibility`: set
+  only by `run_canonical_daily_operation` for `DIAGNOSTIC_OVERRIDE` with
+  `no_new_provider_acquisition`, and only for a genuinely pre-V1 snapshot. Recovery and
+  post-corrective snapshots are refused even there.
+- **Foreign-flow chain identity.** Every chain, complete or not, retains:
+  - the ordered page SHA-256 list and `chain_sha256`;
+  - the page count, terminal-cursor status, request/session identity and `acquired_at` range.
+  - The algorithm is `recovery_foreign_flow_chain/v1`: `sha256(canonical_json({"chain_contract",
+    "page_sha256": [ordered]}))`.
+  - Only a verified, terminal, complete chain normalizes to VALUE.
+- **Sequencing (one authoritative gate):**
+  1. implementation corrective;
+  2. exact-head independent review;
+  3. isolated 2026-09-25 recovery on that reviewed exact RC, before merge;
+  4. analyze/review the package;
+  5. merge PR #8 only if no implementation blocker appears;
+  6. the next valid ordinary Daily;
+  7. M1 live acceptance.
+  The recovery is an acceptance exercise and does not promote the ordinary-Daily corrective.
+  `STATE`, `ROADMAP` and `ROADMAP_STATE` agree.
+
+**Nothing ran:** no provider call, Daily, live recovery, merge or authority promotion.
+
 ## 2026-09-26 - DNSE-first Daily and recovery infrastructure corrective (M1; branch, not promoted)
 
 Owner rebaseline inside the ACTIVE `CURRENT_DECISION_SURFACE_CONVERGENCE_V1`. Branch

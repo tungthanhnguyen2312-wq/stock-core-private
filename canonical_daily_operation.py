@@ -651,6 +651,10 @@ def run_canonical_daily_operation(
             STAGE_BLOCKED_PRE_ACQUISITION,
             f"OPERATING_MODE_NOT_PERMITTED_FOR_CANONICAL_DAILY:{operating_mode}",
         )
+    # Legacy companion-less snapshot reuse is scoped by operating mode, never by trusting absence:
+    # only an explicit DIAGNOSTIC_OVERRIDE historical replay that forbids new provider acquisition
+    # may use it. ORDINARY_DAILY never can.
+    historical_compatibility = operating_mode == OPERATING_MODE_DIAGNOSTIC and no_new_provider_acquisition
     root = Path(root)
     runtime_root = Path(runtime_root)
     instant = now or vn_now()
@@ -746,6 +750,8 @@ def run_canonical_daily_operation(
         nonlocal acquisition_calls
         acquisition_calls += 1
         kwargs: dict[str, Any] = {"workers": workers, "now": instant}
+        if historical_compatibility:
+            kwargs["historical_compatibility"] = True
         if explicit_retained_evidence_root or operation_output_root != root or no_new_provider_acquisition:
             kwargs.update(
                 retained_evidence_root=retained_evidence_root,
@@ -805,6 +811,7 @@ def run_canonical_daily_operation(
             assert_post_close_eligible(
                 snapshot, resolved_session, now=instant,
                 artifact_root=Path(acquisition.get("artifact_root") or root),
+                historical_compatibility=historical_compatibility,
             )
         except PreCutoffArtifactError as exc:
             raise CanonicalDailyOperationError(STAGE_BLOCKED_POST_ACQUISITION, str(exc), local_state={"phase_a": phase_a}) from exc

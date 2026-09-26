@@ -29,8 +29,9 @@ M1 is **not** closed and not marked complete.
   - Policy `SECURITY_REVIEW_BLOCKED` still means no worker spawn, no core-Python fallback, no Vnstock
     import and no stale KBS/VCI fallback. Supplemental-dependent fields stay `NOT_ATTEMPTED` /
     `UNAVAILABLE`.
-  - Reuse: a post-corrective snapshot is reusable only with its companion multi-source evidence. A
-    DNSE-primary snapshot is re-evaluated once the supplemental runtime becomes launchable.
+  - Reuse: on the ordinary path a snapshot is reusable only with its companion multi-source evidence
+    (since 2026-09-27 this applies to legacy-shaped snapshots too). A DNSE-primary snapshot is
+    re-evaluated once the supplemental runtime becomes launchable.
   - `m1_live_acceptance_eligible` requires a real `ORDINARY_DAILY`, a completed Core Daily, a
     recorded runtime state and a core-daily license re-derived from its name. It no longer requires
     an `AVAILABLE` supplemental runtime. It refuses `RECOVERY_REPLAY`, `DIAGNOSTIC_OVERRIDE`,
@@ -46,8 +47,25 @@ M1 is **not** closed and not marked complete.
   - Foreign flow is written to an isolated store only (`DNSE_RETROSPECTIVE_VALUE_ONLY`).
 - **Nothing ran.** No live provider call, Daily, 2026-09-25 recovery, publication or authority
   promotion happened. See `docs/DECISIONS.md` 2026-09-26 (DNSE-first entry).
-- **Next gate:** run the isolated 2026-09-25 recovery → analyze 2026-09-25 → review/promote this
-  corrective → next valid ordinary Daily → M1 live acceptance.
+- **PR #8 recovery-integrity corrective (2026-09-27, same branch; review found
+  `PROMOTION_REVIEW_FAIL` at `69b8dba`).**
+  - A raw conflict or any other defect outcome never counts as `COMPLETE`. The overall states are
+    `COMPLETE` / `PARTIAL_RETRYABLE` / `PARTIAL_UNRESOLVED` / `BLOCKED_INTEGRITY` / `BLOCKED_AUTH`, and
+    the exit codes are 0 / 3 / 4 / 5 / 6.
+  - Recovery keeps the exact HTTP response body bytes, fsynced and verified before parsing.
+  - An orphan raw file is adopted only when every invariant holds.
+  - Ordinary reuse refuses any companion-less snapshot. Legacy compatibility is scoped to an
+    explicit no-new-acquisition diagnostic replay.
+  - Every foreign-flow cursor chain carries a `chain_sha256`.
+- **Next gate (one authoritative sequence; `docs/ROADMAP.md` and `docs/ROADMAP_STATE.json` agree):**
+  1. implementation corrective (PR #8);
+  2. exact-head independent review of that RC;
+  3. run the isolated 2026-09-25 RECOVERY_REPLAY on that reviewed exact RC, before merge;
+  4. analyze/review the recovered 2026-09-25 package;
+  5. only if live recovery exposes no implementation blocker, promote/merge PR #8;
+  6. the next valid ordinary Daily;
+  7. M1 live acceptance on it.
+  The isolated recovery is an acceptance exercise for the recovery infrastructure with no production/current side effect. It does NOT promote the ordinary-Daily semantic corrective, and it never serves M1.
 
 **Windows provider OS containment (2026-09-26):**
 `WINDOWS_PROVIDER_RUNTIME_OS_CONTAINMENT_AND_ATTESTATION_V1 = DEFERRED / HOST_PROVISIONED / CONTAINMENT_QUALIFIED_18_OF_18 / MERGED_785fe07`.

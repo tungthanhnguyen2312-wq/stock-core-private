@@ -7,13 +7,17 @@
 - PR #6 (`ad685ac`) and PR #7 (`785fe07`) are merged. Their provider build boundary and Windows OS
   containment are preserved as reusable infrastructure. Both roadmap entries are now `DEFERRED`
   (operationalization is not an M1 prerequisite).
-- `CURRENT_DECISION_SURFACE_CONVERGENCE_V1` stays `ACTIVE`. The immediate chain is now:
-  1. review and promote the DNSE-first Daily corrective (Draft PR; an unavailable supplemental
-     runtime no longer blocks Core Daily; `DATA_QUALITY_FAILED` still blocks);
-  2. run the isolated `RECOVERY_REPLAY` of 2026-09-25 and analyze it (analysis only; never M1);
-  3. the next valid ordinary Daily;
-  4. M1 live acceptance on it;
-  5. only then close M1 and select the next analytical milestone (owner authorization required).
+- `CURRENT_DECISION_SURFACE_CONVERGENCE_V1` stays `ACTIVE`. The one immediate sequence (identical in
+  `docs/STATE.md` and `docs/ROADMAP_STATE.json`, corrected 2026-09-27):
+  1. implementation corrective (PR #8);
+  2. exact-head independent review of that RC;
+  3. run the isolated 2026-09-25 RECOVERY_REPLAY on that reviewed exact RC, before merge;
+  4. analyze/review the recovered 2026-09-25 package;
+  5. only if live recovery exposes no implementation blocker, promote/merge PR #8;
+  6. the next valid ordinary Daily;
+  7. M1 live acceptance on it.
+  Only then close M1 and select the next analytical milestone (owner authorization required).
+  The isolated recovery is an acceptance exercise for the recovery infrastructure with no production/current side effect. It does NOT promote the ordinary-Daily semantic corrective, and it never serves M1.
 - The provider-runtime operationalization step in the entry below is superseded by this sync.
 
 **Roadmap sync after M1 stabilization promotion (2026-09-26):**

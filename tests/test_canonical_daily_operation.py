@@ -47,8 +47,17 @@ def _p3f9b(session: str, *, requested_at: str, exact: int = 889, total: int = 16
     return payload
 
 
-def _acquired(tmp_path: Path, session: str = SESSION, *, reused: bool = False, **snap_kw) -> dict:
+def _acquired(tmp_path: Path, session: str = SESSION, *, reused: bool = False, companion: bool = True, **snap_kw) -> dict:
     snapshot = _p3f9b(session, requested_at=snap_kw.pop("requested_at", f"{session}T19:19:00+07:00"), **snap_kw)
+    if companion:
+        # Every real acquisition retains its companion multi-source evidence; ordinary post-close
+        # reuse refuses a companion-less snapshot (PR8 corrective).
+        import daily_session_level2_package as level2
+        from _provider_runtime_fixtures import healthy_sentinel_evidence
+
+        evidence_path = level2.session_artifact_paths(tmp_path, session)["multi_source_market_evidence"]
+        evidence_path.parent.mkdir(parents=True, exist_ok=True)
+        evidence_path.write_text(json.dumps(healthy_sentinel_evidence(session)), encoding="utf-8")
     return {
         "snapshot": snapshot,
         "resolved_completed_session": session,

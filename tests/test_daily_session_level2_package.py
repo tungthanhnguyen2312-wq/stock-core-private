@@ -195,13 +195,19 @@ def test_ensure_exact_session_snapshot_retains_runtime_budget_abort_not_partial_
     assert abort["abort_identity"].startswith("daily_multi_source_recovery_runtime_budget_abort:")
 
 
-def test_ensure_exact_session_snapshot_is_idempotent_when_already_present(tmp_path):
+def test_ensure_exact_session_snapshot_companionless_reuse_only_in_explicit_historical_mode(tmp_path):
+    """PR8 corrective: a bare (companion-less) snapshot is never ordinary reusable evidence; only the
+    explicit, non-ordinary historical-compatibility mode reuses a genuinely pre-V1 one."""
     session = "2026-08-26"
     paths = level2.session_artifact_paths(tmp_path, session)
     _write_json(paths["exact_session_snapshot"], {"resolved_completed_session": session})
 
     with patch.object(level2, "run_cmd") as mocked:
-        result = level2.ensure_exact_session_snapshot(tmp_path, session, tmp_path / "runtime")
+        with pytest.raises(ValueError, match="PROVIDER_HEALTH_GATE_UNRESOLVED"):
+            level2.ensure_exact_session_snapshot(tmp_path, session, tmp_path / "runtime")
+        result = level2.ensure_exact_session_snapshot(
+            tmp_path, session, tmp_path / "runtime", historical_compatibility=True,
+        )
 
     mocked.assert_not_called()
     assert result == paths["exact_session_snapshot"]
@@ -209,7 +215,7 @@ def test_ensure_exact_session_snapshot_is_idempotent_when_already_present(tmp_pa
 
 def test_ensure_exact_session_snapshot_is_idempotent_when_companion_evidence_is_healthy(tmp_path):
     """An existing snapshot with companion evidence showing a NON-degraded sentinel verdict is
-    reused exactly like a bare snapshot with no companion evidence at all."""
+    reused (ordinary path)."""
     session = "2026-08-26"
     paths = level2.session_artifact_paths(tmp_path, session)
     _write_json(paths["exact_session_snapshot"], {"resolved_completed_session": session})

@@ -1203,16 +1203,23 @@ def requires_companion_evidence(snapshot: Any) -> bool:
     )
 
 
+HISTORICAL_COMPATIBILITY_MODE = "HISTORICAL_REPLAY_LEGACY_COMPANIONLESS_SNAPSHOT"
+
+
 def core_daily_reuse_refusal(
     snapshot: Any, evidence: Any, session: str | None, *, evidence_present: bool,
     degraded_recovery_mode: Any = None, launchable: bool | None = None,
+    historical_compatibility: bool = False,
 ) -> str | None:
     """One shared reuse policy for an existing exact-session snapshot (None = reusable).
 
     * RECOVERY_REPLAY artifacts are never ordinary-Daily evidence.
-    * A post-corrective snapshot without companion evidence is refused (missing evidence is never
-      "trusted"); only a legacy pre-V1 bare snapshot keeps the historical "nothing to disprove
-      trust with" reading.
+    * Missing companion multi-source evidence (or evidence without a DNSE quality sentinel) is
+      refused -- absence is never "trusted", however legacy the snapshot looks. The ONLY exception is
+      ``historical_compatibility=True`` (``HISTORICAL_COMPATIBILITY_MODE``), which an explicit
+      non-ordinary diagnostic/historical replay may pass for a genuinely pre-V1 snapshot (one that
+      carries none of the post-corrective quality fields). Ordinary Daily never passes it, and a
+      post-corrective or RECOVERY_REPLAY artifact is refused even then.
     * The DNSE quality license is re-derived from the retained evidence (never a stored label) and
       must satisfy ``qualifies_for_core_daily``.
     * A DNSE-primary (UNASSESSED_SUPPLEMENTAL_RUNTIME_UNAVAILABLE) snapshot is not reused once the
@@ -1225,14 +1232,15 @@ def core_daily_reuse_refusal(
 
     if is_recovery_replay_artifact(snapshot) or is_recovery_replay_artifact(evidence):
         return "RECOVERY_REPLAY_ARTIFACT_NOT_ORDINARY_DAILY"
+    legacy_allowed = historical_compatibility and not requires_companion_evidence(snapshot)
     if not evidence_present:
-        return "COMPANION_EVIDENCE_MISSING" if requires_companion_evidence(snapshot) else None
+        return None if legacy_allowed else "COMPANION_EVIDENCE_MISSING"
     if not isinstance(evidence, Mapping):
         return "COMPANION_EVIDENCE_UNREADABLE"
     if session is not None and evidence.get("target_session") not in (None, session):
         return "COMPANION_EVIDENCE_SESSION_MISMATCH"
     if not isinstance(evidence.get("dnse_quality_sentinel"), Mapping):
-        return "COMPANION_EVIDENCE_HAS_NO_QUALITY_SENTINEL" if requires_companion_evidence(snapshot) else None
+        return None if legacy_allowed else "COMPANION_EVIDENCE_HAS_NO_QUALITY_SENTINEL"
     license_ = dnse_quality_license(evidence, degraded_recovery_mode=degraded_recovery_mode)
     if not license_["qualifies_for_core_daily"]:
         return "DNSE_QUALITY_LICENSE_NOT_CORE_DAILY_QUALIFIED:" + str(license_["license"])
@@ -1244,7 +1252,9 @@ def core_daily_reuse_refusal(
     return None
 
 
-def _canonical_snapshot_gate_satisfied(snapshot_path: Path, evidence_path: Path, session: str | None = None) -> bool:
+def _canonical_snapshot_gate_satisfied(
+    snapshot_path: Path, evidence_path: Path, session: str | None = None, *, historical_compatibility: bool = False,
+) -> bool:
     """Is an existing on-disk canonical exact-session snapshot safe to reuse unconditionally?
 
     Corrective fix for the P0 idempotency-escape defect: the OLD ensure_exact_session_snapshot
@@ -1274,6 +1284,7 @@ def _canonical_snapshot_gate_satisfied(snapshot_path: Path, evidence_path: Path,
     marker = recovery.get("mode") if isinstance(recovery, Mapping) else None
     return core_daily_reuse_refusal(
         snapshot, evidence, session, evidence_present=evidence_present, degraded_recovery_mode=marker,
+        historical_compatibility=historical_compatibility,
     ) is None
 
 
@@ -1315,9 +1326,13 @@ def ensure_exact_session_snapshot(
     now: datetime | None = None,
     *,
     execution_root: Path | None = None,
+    historical_compatibility: bool = False,
 ) -> Path:
     """Idempotently acquire the resolved exact-session snapshot for ``session`` under
     ``artifact_root``.
+
+    ``historical_compatibility`` is only for an explicit non-ordinary historical replay (see
+    ``core_daily_reuse_refusal``); ordinary Daily never sets it.
 
     This is the exact-session acquisition boundary, extracted so a caller that only needs the
     snapshot itself (canonical_post_close_pipeline.acquire_and_materialize, in particular, so it
@@ -1366,7 +1381,9 @@ def ensure_exact_session_snapshot(
     p3f9b_snapshot = paths["exact_session_snapshot"]
     evidence_path = paths["multi_source_market_evidence"]
     if p3f9b_snapshot.exists():
-        if not _canonical_snapshot_gate_satisfied(p3f9b_snapshot, evidence_path, session):
+        if not _canonical_snapshot_gate_satisfied(
+            p3f9b_snapshot, evidence_path, session, historical_compatibility=historical_compatibility,
+        ):
             raise ValueError(
                 "P3F9B_EXISTING_SNAPSHOT_PROVIDER_HEALTH_GATE_UNRESOLVED:session=" + session
                 + ":retained snapshot's companion evidence does not carry a DNSE quality license "

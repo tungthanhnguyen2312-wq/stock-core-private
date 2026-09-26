@@ -15,8 +15,15 @@ Fail-closed defaults:
 Rerunning the identical command resumes from the journal: terminal tickers whose retained raw bytes
 still validate are never requested again; conflicting retained bytes stop only that ticker.
 
-Exit codes: 0 = acquisition COMPLETE and package written; 3 = stopped/incomplete (resumable, package
-written from what is retained); 2 = refusal (roots, plan mismatch, missing acknowledgement, ...).
+Exit codes (overall acquisition state, ``recovery_replay.overall_status``):
+  0 = COMPLETE            -- the only state that writes ``recovery_session_market_reconstruction.json``;
+  3 = PARTIAL_RETRYABLE   -- rerun the identical command to continue;
+  4 = PARTIAL_UNRESOLVED  -- UNKNOWN / exhausted-transient outcomes a rerun will not change;
+  5 = BLOCKED_INTEGRITY   -- a raw conflict / invalid orphan / unverifiable raw (never auto-resolved);
+  6 = BLOCKED_AUTH;
+  2 = refusal (roots, plan mismatch, missing acknowledgement, ...).
+Every non-COMPLETE run writes only ``recovery_partial_diagnostic.json`` (no completion claim).
+Terminal is never a synonym for successful.
 """
 from __future__ import annotations
 
@@ -151,19 +158,19 @@ def main(
 
     counters = rr.RunCounters()
     pacer = rr.Pacer(plan["controls"]["min_start_interval_seconds"], clock=clock, sleep=sleep)
+    previous_state = rr._load_json(layout.run_state_path) if layout.run_state_path.is_file() else None
     if args.analyze_only:
-        acquisition = {"status": "ANALYZE_ONLY", "network_calls_this_run": 0}
+        stop_reason = (previous_state or {}).get("stop_reason") if isinstance(previous_state, Mapping) else None
+        network_calls = 0
         journals = {t: rr._load_json(layout.journal_path(t)) or {} for t in plan["acquisition_attempt_cohort"]["tickers"]}
-        ff_status = "ANALYZE_ONLY"
     else:
         if not args.acknowledge_live_provider_calls:
             summary.update(status="REFUSED", reason="LIVE_PROVIDER_CALLS_NOT_ACKNOWLEDGED", provider_calls=0)
             _emit(summary)
             return 2
         if fetcher is None:
-            from dnse_bulk_market_data import fetch_capability_raw
-
-            fetcher = fetch_capability_raw
+            # The existing governed DNSE boundary, asked to return the exact response bytes.
+            fetcher = rr.governed_recovery_fetcher()
         if credentials is None:
             from dnse_access import credentials_for_request
             from dnse_secrets_env import ensure_credentials_loaded
@@ -179,44 +186,58 @@ def main(
             api_secret=credentials[1], pacer=pacer, counters=counters, now_iso=now_iso,
         )
         journals = acquisition.pop("journals")
-        ff_status = "SKIPPED"
-        if plan["foreign_flow"]["cohort"] and acquisition["status"] not in (rr.RUN_STOPPED_AUTH, rr.RUN_STOPPED_RATE_LIMIT):
+        stop_reason = acquisition["stop_reason"]
+        network_calls = acquisition["network_calls_this_run"]
+        if plan["foreign_flow"]["cohort"] and stop_reason not in (rr.STOP_AUTH, rr.STOP_RATE_LIMIT, rr.STOP_INTEGRITY):
             ff = rr.acquire_foreign_flow(
                 plan=plan, layout=layout, writer=writer, fetcher=fetcher, api_key=credentials[0],
                 api_secret=credentials[1], pacer=pacer, counters=counters, now_iso=now_iso,
             )
-            ff_status = ff["status"]
+            stop_reason = stop_reason or ff["stop_reason"]
+    chains = rr.load_chains(plan, layout)
+    run_status = rr.overall_status(plan, journals, chains, stop_reason)
     foreign_flow = None
     if plan["foreign_flow"]["cohort"]:
         foreign_flow = rr.normalize_foreign_flow(plan=plan, layout=layout, writer=writer)
         writer.write_json_atomic(layout.foreign_flow_path, foreign_flow)
-    quality = rr.build_quality_report(plan, journals)
+    quality = rr.build_quality_report(plan, journals, run_status)
     writer.write_json_atomic(layout.quality_path, quality)
     reconstruction = rr.build_reconstruction(
-        plan=plan, layout=layout, journals=journals, quality=quality, foreign_flow=foreign_flow,
-        acquisition_status=acquisition["status"],
+        plan=plan, layout=layout, journals=journals, quality=quality, foreign_flow=foreign_flow, run_status=run_status,
     )
-    writer.write_json_atomic(layout.reconstruction_path, reconstruction)
+    run_token = now_iso().replace(":", "").replace("+", "p")
+    if run_status["complete"]:
+        # The ONLY completion claim. Any older partial diagnostic is moved aside.
+        writer.retire(layout.partial_diagnostic_path, run_token)
+        writer.write_json_atomic(layout.reconstruction_path, reconstruction)
+        output_path = layout.reconstruction_path
+    else:
+        # Never a completion claim: a stale completed reconstruction cannot survive a non-COMPLETE run.
+        writer.retire(layout.reconstruction_path, run_token)
+        writer.write_json_atomic(layout.partial_diagnostic_path, reconstruction)
+        output_path = layout.partial_diagnostic_path
     run_state = {
         "operating_mode": rr.OPERATING_MODE, "target_session": target, "plan_identity": plan["artifact_identity"],
-        "acquisition_status": acquisition["status"], "foreign_flow_status": ff_status,
-        "network_calls_this_run": acquisition.get("network_calls_this_run", 0),
-        "counters": counters.as_dict(), "updated_at": now_iso(),
-        "reconstruction_identity": reconstruction["artifact_identity"],
+        "acquisition_status": run_status["status"], "complete": run_status["complete"], "stop_reason": stop_reason,
+        "network_calls_this_run": network_calls, "counters": counters.as_dict(), "updated_at": now_iso(),
+        "output": str(output_path), "output_identity": reconstruction["artifact_identity"],
+        "conflict_resolution_contract": rr.CONFLICT_RESOLUTION_CONTRACT,
     }
     writer.write_json_atomic(layout.run_state_path, run_state)
     summary.update(
-        status=acquisition["status"], foreign_flow_status=ff_status, counters=counters.as_dict(),
+        status=run_status["status"], complete=run_status["complete"], stop_reason=stop_reason,
+        run_status={k: run_status[k] for k in ("ticker_state_counts", "integrity_blocked", "unresolved", "foreign_flow")},
+        counters=counters.as_dict(), network_calls_this_run=network_calls,
         quality={k: quality[k] for k in (
             "attempted_count", "exact_session_count", "exact_over_attempted_ratio", "provider_rejected_count",
             "prior_session_only_count", "no_history_count", "transport_failure_count", "rate_limit_count",
             "unknown_count", "not_attempted_count")},
         foreign_flow_complete=None if foreign_flow is None else foreign_flow["complete_count"],
-        reconstruction_identity=reconstruction["artifact_identity"],
+        output=str(output_path), output_identity=reconstruction["artifact_identity"],
         pacing_seconds_slept=round(pacer.slept, 3),
     )
     _emit(summary)
-    return 0 if acquisition["status"] in (rr.RUN_COMPLETE, "ANALYZE_ONLY") else 3
+    return rr.EXIT_CODES[run_status["status"]]
 
 
 if __name__ == "__main__":

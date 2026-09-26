@@ -53,14 +53,23 @@ def _ohlc_body(sessions: list[str], *, base: float = 10.0, last_close: float | N
             "l": [c - 0.2 for c in closes], "c": closes, "v": [1000 + i for i in range(len(sessions))]}
 
 
-def ok(body: dict) -> dict:
-    return {"ok": True, "http_status": 200, "body": body}
+def ok(body: dict, raw: bytes | None = None) -> dict:
+    """A 200 as the governed fetch boundary returns it with ``retain_raw_bytes=True``."""
+    raw = raw if raw is not None else json.dumps(body, indent=1).encode("utf-8")
+    try:
+        parsed = json.loads(raw.decode("utf-8"))
+    except ValueError:
+        return {"ok": False, "http_status": 200, "error_code": "response_body_not_json", "raw_bytes": raw}
+    return {"ok": True, "http_status": 200, "body": parsed, "raw_bytes": raw}
 
 
-def err(status: int | None, code: str, **extra) -> dict:
+def err(status: int | None, code: str, body: Any = None, **extra) -> dict:
     out = {"ok": False, "error_code": code, **extra}
     if status is not None:
         out["http_status"] = status
+        payload = body if body is not None else {"error": code}
+        out["raw_bytes"] = json.dumps(payload).encode("utf-8")
+        out["body"] = payload
     return out
 
 
@@ -161,7 +170,7 @@ def _standard_ohlc() -> dict[str, list[dict]]:
         "HPG": [ok(_ohlc_body(HISTORY, last_close=5.0))],
         "PRI": [ok(_ohlc_body(PRIOR_ONLY))],
         "NOH": [ok({"t": [], "o": [], "h": [], "l": [], "c": [], "v": []})],
-        "REJ": [err(400, "http_status_400", body={"message": "invalid symbol"})],
+        "REJ": [err(400, "http_status_400", {"message": "invalid symbol"})],
     }
 
 
@@ -202,22 +211,36 @@ def test_fresh_run_complete_with_every_terminal_disposition(tmp_path):
     assert quality["healthy_market_threshold"] == "NONE_DEFINED"
 
 
-def test_raw_is_retained_before_interpretation_with_real_acquisition_time(tmp_path):
+def _stem(env, ticker: str, attempt: int = 1) -> Path:
+    return env.state / env.journal(ticker)["attempts"][attempt - 1]["raw_stem"]
+
+
+def test_exact_provider_bytes_are_retained_before_interpretation_with_real_acquisition_time(tmp_path):
     env = Env(tmp_path, ["FPT", "REJ"])
-    env.run(FakeDnse({"FPT": _standard_ohlc()["FPT"], "REJ": _standard_ohlc()["REJ"]}), "--no-foreign-flow")
+    exact = b'{ "t": %s,\n "o":%s,"h":%s,"l":%s,"c":%s,"v":%s }' % tuple(
+        json.dumps(v).encode() for v in _ohlc_body(HISTORY).values())
+    fake = FakeDnse({"FPT": [ok(_ohlc_body(HISTORY), raw=exact)], "REJ": _standard_ohlc()["REJ"]})
+    code, _ = env.run(fake, "--no-foreign-flow")
+    assert code == 0
     attempt = env.journal("FPT")["attempts"][0]
-    raw_path = env.state / attempt["raw_path"]
-    raw = json.loads(raw_path.read_text(encoding="utf-8"))
-    assert rr.sha256_text(raw_path.read_text(encoding="utf-8")) == attempt["raw_sha256"]
-    assert raw["target_session"] == TARGET and raw["request_identity"] == rr.ohlc_request_identity("FPT", TARGET)
-    assert raw["acquired_at"] == "2026-09-26T21:00:00+07:00"  # real time, never backdated
-    assert raw["acquisition_temporal_claim"] == "ACQUIRED_RETROSPECTIVELY_AT_ACQUIRED_AT_NOT_ON_TARGET_SESSION"
-    assert raw["requested_range"]["to_session"] == TARGET
-    assert TARGET in raw["provider_session_timestamps"]["sessions"]
-    assert raw["price_basis"] == rr.PRICE_BASIS and "ADJUSTED_RETROSPECTIVE" in raw["price_basis"]
-    assert raw["endpoint"] == "/price/ohlc" and raw["provider"] == "DNSE"
-    rejected = json.loads((env.state / env.journal("REJ")["attempts"][0]["raw_path"]).read_text(encoding="utf-8"))
-    assert rejected["http_status"] == 400 and rejected["body"] == {"message": "invalid symbol"}
+    stem = _stem(env, "FPT")
+    body = rr.body_path(stem).read_bytes()
+    assert body == exact  # the exact bytes, never regenerated from a Python object
+    assert rr.sha256_bytes(body) == attempt["body_sha256"] and len(body) == attempt["body_length"]
+    envelope = json.loads(rr.envelope_path(stem).read_text(encoding="utf-8"))
+    assert "body" not in envelope  # the envelope never carries a re-serialized body
+    assert envelope["completion_marker"] == rr.RAW_COMPLETION_MARKER
+    assert envelope["body_hash_scope"] == "EXACT_HTTP_RESPONSE_BODY_BYTES_AS_RECEIVED"
+    assert envelope["target_session"] == TARGET and envelope["request_identity"] == rr.ohlc_request_identity("FPT", TARGET)
+    assert envelope["acquired_at"] == "2026-09-26T21:00:00+07:00"  # real time, never backdated
+    assert envelope["acquisition_temporal_claim"] == "ACQUIRED_RETROSPECTIVELY_AT_ACQUIRED_AT_NOT_ON_TARGET_SESSION"
+    assert envelope["requested_range"]["to_session"] == TARGET
+    assert envelope["price_basis"] == rr.PRICE_BASIS and "ADJUSTED_RETROSPECTIVE" in envelope["price_basis"]
+    assert envelope["endpoint"] == "/price/ohlc" and envelope["provider"] == "DNSE"
+    assert rr.sha256_bytes(rr.envelope_path(stem).read_bytes()) == attempt["envelope_sha256"]
+    rejected_stem = _stem(env, "REJ")
+    assert json.loads(rr.envelope_path(rejected_stem).read_text(encoding="utf-8"))["http_status"] == 400
+    assert json.loads(rr.body_path(rejected_stem).read_bytes()) == {"message": "invalid symbol"}
 
 
 def test_reconstruction_carries_hard_labels_and_no_decision_product(tmp_path):
@@ -282,7 +305,9 @@ def test_resume_after_three_consecutive_429_stop(tmp_path):
     throttled = FakeDnse({"AAA": [ok(_ohlc_body(HISTORY))], "BBB": [err(429, "rate_limited", retry_after_seconds=7)],
                           "CCC": [ok(_ohlc_body(HISTORY))]})
     code, summary = env.run(throttled, "--no-foreign-flow")
-    assert code == 3 and summary["status"] == rr.RUN_STOPPED_RATE_LIMIT
+    assert code == 3 and summary["status"] == rr.RUN_PARTIAL_RETRYABLE
+    assert summary["stop_reason"] == rr.STOP_RATE_LIMIT and summary["complete"] is False
+    assert not (env.output / "recovery_session_market_reconstruction.json").exists()
     assert [c[2]["symbol"] for c in throttled.calls] == ["AAA", "BBB", "BBB", "BBB"]
     assert 7 in [round(s) for s in env.sleeps] or any(s >= 7 for s in env.sleeps)  # Retry-After honored
     assert not (env.state / "journal" / "dnse_ohlc" / "CCC.json").exists()  # never attempted after the stop
@@ -291,6 +316,8 @@ def test_resume_after_three_consecutive_429_stop(tmp_path):
     code, summary = env.run(healthy, "--no-foreign-flow")
     assert code == 0 and summary["status"] == rr.RUN_COMPLETE
     assert [c[2]["symbol"] for c in healthy.calls] == ["BBB", "CCC"]  # AAA reused, not re-requested
+    assert (env.output / "recovery_session_market_reconstruction.json").is_file()
+    assert not (env.output / "recovery_partial_diagnostic.json").exists()  # retired, never current
     assert len(env.journal("BBB")["attempts"]) == 4
 
 
@@ -309,10 +336,11 @@ def test_transport_failure_retries_then_terminal_when_exhausted(tmp_path):
     env = Env(tmp_path, ["AAA", "BBB"])
     fake = FakeDnse({"AAA": [err(None, "request_failed_ConnectionError"), ok(_ohlc_body(HISTORY))],
                      "BBB": [err(503, "http_status_503")]})
-    code, _ = env.run(fake, "--no-foreign-flow")
-    assert code == 0
+    code, summary = env.run(fake, "--no-foreign-flow")
+    assert code == 4 and summary["status"] == rr.RUN_PARTIAL_UNRESOLVED  # exhausted transient is a defect
     assert env.journal("AAA")["disposition"] == rr.EXACT_SESSION_OBSERVED
     bbb = env.journal("BBB")
+    assert bbb["state"] == rr.TICKER_UNRESOLVED
     assert bbb["disposition"] == rr.TRANSPORT_FAILURE and bbb["retry_state"]["exhausted"] is True
     assert len(bbb["attempts"]) == rr.DEFAULT_MAX_ATTEMPTS_PER_TICKER
     quality = env.output_json("recovery_acquisition_quality.json")
@@ -324,73 +352,301 @@ def test_authentication_failure_stops_network_acquisition(tmp_path):
     fake = FakeDnse({"AAA": [ok(_ohlc_body(HISTORY))], "BBB": [err(401, "authentication_failed")],
                      "CCC": [ok(_ohlc_body(HISTORY))]})
     code, summary = env.run(fake)
-    assert code == 3 and summary["status"] == rr.RUN_STOPPED_AUTH
+    assert code == 6 and summary["status"] == rr.RUN_BLOCKED_AUTH
     assert [c[2].get("symbol") for c in fake.calls] == ["AAA", "BBB"]  # no further calls, no foreign flow
-    assert summary["foreign_flow_status"] == "SKIPPED"
+    assert summary["foreign_flow_complete"] == 0 and not any(c[0] == "foreign_trading" for c in fake.calls)
 
 
 def test_hard_call_budget_stops_acquisition(tmp_path):
     env = Env(tmp_path, ["AAA", "BBB", "CCC"])
     fake = FakeDnse({t: [ok(_ohlc_body(HISTORY))] for t in ("AAA", "BBB", "CCC")})
     code, summary = env.run(fake, "--no-foreign-flow", "--call-budget", "2")
-    assert code == 3 and summary["status"] == rr.RUN_STOPPED_BUDGET
+    assert code == 3 and summary["status"] == rr.RUN_PARTIAL_RETRYABLE and summary["stop_reason"] == rr.STOP_BUDGET
     assert len(fake.calls) == 2
     assert env.output_json("recovery_acquisition_quality.json")["not_attempted_count"] == 1
 
 
-def test_tampered_retained_raw_stops_only_that_ticker(tmp_path):
-    env = Env(tmp_path, ["AAA", "BBB"])
-    env.run(FakeDnse({t: [ok(_ohlc_body(HISTORY))] for t in ("AAA", "BBB")}), "--no-foreign-flow")
-    raw_path = env.state / env.journal("AAA")["attempts"][0]["raw_path"]
-    raw_path.write_text(raw_path.read_text(encoding="utf-8").replace('"DNSE"', '"DNSX"', 1), encoding="utf-8")
+def test_single_raw_conflict_among_complete_candidates_is_never_complete(tmp_path):
+    """BLOCKER 1: one tampered retained raw among otherwise-complete candidates -> BLOCKED_INTEGRITY,
+    non-zero exit, no completion claim, and it stays blocked on rerun (never auto-resolved)."""
+    env = Env(tmp_path, ["AAA", "BBB", "CCC"])
+    code, _ = env.run(FakeDnse({t: [ok(_ohlc_body(HISTORY))] for t in ("AAA", "BBB", "CCC")}), "--no-foreign-flow")
+    assert code == 0 and (env.output / "recovery_session_market_reconstruction.json").is_file()
+    body = rr.body_path(_stem(env, "AAA"))
+    _flip(body)  # same length, different bytes
 
     def no_network(*_a, **_k):
         raise AssertionError("no network on resume")
 
-    code, _ = env.run(no_network, "--no-foreign-flow")
-    assert code == 0
-    assert env.journal("AAA")["state"] == rr.STOPPED_CONFLICT
-    assert env.journal("AAA")["conflict"] == "RETAINED_RAW_HASH_MISMATCH"
-    assert env.journal("BBB")["disposition"] == rr.EXACT_SESSION_OBSERVED
+    for _ in range(2):  # the rerun stays blocked under the conflict-resolution contract
+        code, summary = env.run(no_network, "--no-foreign-flow")
+        assert code == rr.EXIT_CODES[rr.RUN_BLOCKED_INTEGRITY] == 5
+        assert summary["status"] == rr.RUN_BLOCKED_INTEGRITY and summary["complete"] is False
+        assert summary["run_status"]["integrity_blocked"][0]["ticker"] == "AAA"
+        assert not (env.output / "recovery_session_market_reconstruction.json").exists()  # no completion claim
+        diagnostic = env.output_json("recovery_partial_diagnostic.json")
+        assert diagnostic["reconstruction_complete"] is False
+        assert diagnostic["artifact_kind"] == "PARTIAL_DIAGNOSTIC_NOT_A_COMPLETED_RECONSTRUCTION"
+        assert diagnostic["contract_version"] == "recovery_partial_diagnostic/v1"
+        run_state = json.loads((env.state / "run_state.json").read_text(encoding="utf-8"))
+        assert run_state["complete"] is False
+        assert run_state["conflict_resolution_contract"] == rr.CONFLICT_RESOLUTION_CONTRACT
+    assert env.journal("AAA")["state"] == rr.TICKER_INTEGRITY
+    assert env.journal("AAA")["conflict"] == "RAW_BODY_HASH_MISMATCH"  # hash checked before resume
+    assert env.journal("BBB")["state"] == rr.TICKER_CLASSIFIED
+    # The earlier completion claim was moved aside, never left as current.
+    assert list(env.output.glob("recovery_session_market_reconstruction.json.retired-*"))
     quality = env.output_json("recovery_acquisition_quality.json")
-    assert quality["raw_payload_conflicts"] == [{"ticker": "AAA", "conflict": "RETAINED_RAW_HASH_MISMATCH"}]
-    assert "AAA" not in env.output_json("recovery_session_market_reconstruction.json")["per_ticker"]
+    assert quality["acquisition_complete"] is False
+    assert quality["raw_payload_conflicts"] == [{"ticker": "AAA", "conflict": "RAW_BODY_HASH_MISMATCH"}]
 
 
-def test_conflicting_bytes_for_the_same_request_identity_are_never_overwritten(tmp_path):
-    env = Env(tmp_path, ["AAA", "BBB"])
-    env.run(FakeDnse({"AAA": [ok(_ohlc_body(HISTORY))], "BBB": [ok(_ohlc_body(HISTORY))]}), "--plan-only", "--no-foreign-flow")
-    squatter = env.state / "raw" / "dnse_ohlc" / "AAA" / (rr.ohlc_request_identity("AAA", TARGET).split(":")[1] + "__attempt01.json")
-    squatter.parent.mkdir(parents=True)
-    squatter.write_text('{"request_identity": "someone-else"}\n', encoding="utf-8")
-    code, _ = env.run(FakeDnse({"AAA": [ok(_ohlc_body(HISTORY))], "BBB": [ok(_ohlc_body(HISTORY))]}), "--no-foreign-flow")
-    assert code == 0  # one ticker's conflict never corrupts the run
-    assert env.journal("AAA")["state"] == rr.STOPPED_CONFLICT
-    assert env.journal("AAA")["conflict"] == "CONFLICTING_RETAINED_RAW_PAYLOAD"
-    assert squatter.read_text(encoding="utf-8") == '{"request_identity": "someone-else"}\n'
-    assert env.journal("BBB")["disposition"] == rr.EXACT_SESSION_OBSERVED
+def _layout(env) -> rr.RecoveryLayout:
+    return rr.RecoveryLayout(env.output.resolve(), env.runtime.resolve(), env.state.resolve())
 
 
-def test_orphan_raw_from_a_crash_is_reused_without_a_second_call(tmp_path):
+def _plant_orphan(env, ticker: str = "AAA", *, response: dict | None = None, attempt: int = 1,
+                  mutate_envelope=None, mutate_body=None) -> Path:
+    """Simulate a crash after the raw was retained but before the journal advanced."""
+    layout = _layout(env)
+    identity = rr.ohlc_request_identity(ticker, TARGET)
+    stem = layout.raw_stem(ticker, identity, attempt)
+    writer = rr.RecoveryWriter({"state_root": layout.state_root})
+    rr.retain_response(writer, stem, capability="ohlc", ticker=ticker, target_session=TARGET, request_identity=identity,
+                       attempt=attempt, response=response or ok(_ohlc_body(HISTORY)),
+                       query=rr.ohlc_request_query(ticker, TARGET), endpoint="/price/ohlc",
+                       started_at="2026-09-26T20:59:59+07:00", acquired_at="2026-09-26T21:00:00+07:00")
+    if mutate_envelope is not None:
+        envelope = json.loads(rr.envelope_path(stem).read_text(encoding="utf-8"))
+        mutate_envelope(envelope)
+        rr.envelope_path(stem).write_text(json.dumps(envelope), encoding="utf-8")
+    if mutate_body is not None:
+        mutate_body(rr.body_path(stem))
+    return stem
+
+
+def _no_network(*_a, **_k):
+    raise AssertionError("an orphan must never trigger another provider call")
+
+
+def test_valid_complete_orphan_is_adopted_without_another_call(tmp_path):
     env = Env(tmp_path, ["AAA"])
     env.run(None, "--plan-only", "--no-foreign-flow")
-    identity = rr.ohlc_request_identity("AAA", TARGET)
-    record = rr.build_raw_record(ticker="AAA", target_session=TARGET, request_identity=identity, attempt=1,
-                                 response={**ok(_ohlc_body(HISTORY)), "endpoint": "/price/ohlc",
-                                           "query_sent": rr.ohlc_request_query("AAA", TARGET)},
-                                 started_at="x", acquired_at="2026-09-26T20:00:00+07:00")
-    layout = rr.RecoveryLayout(env.output.resolve(), env.runtime.resolve(), env.state.resolve())
-    path = layout.raw_path("AAA", identity, 1)
-    path.parent.mkdir(parents=True)
-    path.write_text(rr.raw_record_text(record), encoding="utf-8", newline="\n")
-
-    def no_network(*_a, **_k):
-        raise AssertionError("orphan raw must be reused")
-
-    code, _ = env.run(no_network, "--no-foreign-flow")
-    assert code == 0
+    _plant_orphan(env)
+    code, summary = env.run(_no_network, "--no-foreign-flow")
+    assert code == 0 and summary["status"] == rr.RUN_COMPLETE
     attempt = env.journal("AAA")["attempts"][0]
-    assert attempt["recovered_from_orphan_raw"] is True and attempt["disposition"] == rr.EXACT_SESSION_OBSERVED
+    assert attempt["recovered_from_orphan_raw"] is True and attempt["network_call"] is True
+    assert attempt["disposition"] == rr.EXACT_SESSION_OBSERVED
+    assert summary["counters"]["calls"] == 1  # the crashed call still counts against the budget
+
+
+def _truncate(path: Path) -> None:
+    path.write_bytes(path.read_bytes()[:-7])
+
+
+def _flip(path: Path) -> None:
+    data = bytearray(path.read_bytes())
+    data[-3] = ord("9") if data[-3] != ord("9") else ord("8")
+    path.write_bytes(bytes(data))
+
+
+@pytest.mark.parametrize(("label", "kwargs", "code"), [
+    ("missing raw file", {"mutate_body": lambda p: p.unlink()}, "RAW_BODY_FILE_MISSING"),
+    ("truncated file", {"mutate_body": _truncate}, "RAW_BODY_LENGTH_MISMATCH_TRUNCATED_OR_EXTENDED"),
+    ("mismatched hash", {"mutate_body": _flip}, "RAW_BODY_HASH_MISMATCH"),
+    ("mismatched request identity", {"mutate_envelope": lambda e: e.update(request_identity="dnse_ohlc_1d:other")},
+     "RAW_ENVELOPE_REQUEST_IDENTITY_MISMATCH"),
+    ("mismatched symbol", {"mutate_envelope": lambda e: e.update(ticker="ZZZ")}, "RAW_ENVELOPE_TICKER_MISMATCH"),
+    ("mismatched target session", {"mutate_envelope": lambda e: e.update(target_session="2026-09-24")},
+     "RAW_ENVELOPE_TARGET_SESSION_MISMATCH"),
+    ("mismatched request parameters", {"mutate_envelope": lambda e: e["requested_range"]["query"].update({"from": 1})},
+     "RAW_ENVELOPE_REQUEST_PARAMETERS_MISMATCH"),
+    ("missing completion marker", {"mutate_envelope": lambda e: e.pop("completion_marker")}, "RAW_COMPLETION_MARKER_MISSING"),
+    ("wrong contract", {"mutate_envelope": lambda e: e.update(contract_version="recovery_raw_provider_response/v1")},
+     "RAW_ENVELOPE_CONTRACT_MISMATCH"),
+    ("malformed payload", {"response": ok({}, raw=b'{"t": [1, 2'), }, "RAW_BODY_MALFORMED_UNDER_RESPONSE_CONTRACT"),
+    ("valid parse but incomplete envelope: no acquired_at", {"mutate_envelope": lambda e: e.pop("acquired_at")},
+     "RAW_ENVELOPE_ACQUIRED_AT_MISSING"),
+    ("valid parse but incomplete envelope: no status metadata", {"mutate_envelope": lambda e: e.update(http_status=None)},
+     "RAW_ENVELOPE_STATUS_METADATA_INCONSISTENT"),
+    ("valid parse but incomplete envelope: body length absent", {"mutate_envelope": lambda e: e.pop("body_length")},
+     "RAW_BODY_LENGTH_MISMATCH_TRUNCATED_OR_EXTENDED"),
+])
+def test_invalid_orphan_is_never_adopted_and_blocks_the_run(tmp_path, label, kwargs, code):
+    env = Env(tmp_path, ["AAA", "BBB"])
+    env.run(None, "--plan-only", "--no-foreign-flow")
+    if "response" in kwargs:
+        # A malformed 200 body is retained exactly (the fetch boundary reports it as not-JSON);
+        # force the envelope to claim ok so the adopting side must catch it.
+        kwargs = {"response": {**kwargs["response"], "ok": True}}
+    _plant_orphan(env, **kwargs)
+    fake = FakeDnse({"BBB": [ok(_ohlc_body(HISTORY))]})
+    exit_code, summary = env.run(fake, "--no-foreign-flow")
+    assert exit_code == 5 and summary["status"] == rr.RUN_BLOCKED_INTEGRITY, label
+    journal = env.journal("AAA")
+    assert journal["state"] == rr.TICKER_INTEGRITY and journal["disposition"] == rr.UNKNOWN
+    assert journal["conflict"] == "INVALID_ORPHAN:" + code, label
+    assert journal["attempts"] == []  # never adopted as evidence
+    assert [c[2]["symbol"] for c in fake.calls] == ["BBB"]  # AAA never re-requested
+    assert not (env.output / "recovery_session_market_reconstruction.json").exists()
+
+
+def test_body_without_completed_envelope_is_an_invalid_orphan_and_is_never_overwritten(tmp_path):
+    env = Env(tmp_path, ["AAA", "BBB"])
+    env.run(None, "--plan-only", "--no-foreign-flow")
+    stem = _layout(env).raw_stem("AAA", rr.ohlc_request_identity("AAA", TARGET), 1)
+    squatter = rr.body_path(stem)
+    squatter.parent.mkdir(parents=True)
+    squatter.write_bytes(b'{"half written')
+    code, _ = env.run(FakeDnse({"BBB": [ok(_ohlc_body(HISTORY))]}), "--no-foreign-flow")
+    assert code == 5
+    assert env.journal("AAA")["conflict"] == "INVALID_ORPHAN:ORPHAN_BODY_WITHOUT_COMPLETED_ENVELOPE"
+    assert squatter.read_bytes() == b'{"half written'
+    assert env.journal("BBB")["state"] == rr.TICKER_CLASSIFIED
+
+
+def test_write_once_refuses_different_bytes_for_the_same_path(tmp_path):
+    writer = rr.RecoveryWriter({"state_root": tmp_path.resolve()})
+    target = tmp_path / "raw.body"
+    sha, length = writer.write_bytes_once(target, b'{"a":1}')
+    assert (sha, length) == (rr.sha256_bytes(b'{"a":1}'), 7)
+    assert writer.write_bytes_once(target, b'{"a":1}') == (sha, length)  # identical: no-op
+    with pytest.raises(rr.RawPayloadConflict):
+        writer.write_bytes_once(target, b'{"a": 1}')
+    assert target.read_bytes() == b'{"a":1}'
+
+
+def test_whitespace_and_key_order_give_different_raw_identity_but_equal_parsed_content(tmp_path):
+    compact = b'{"t":[1],"c":[2]}'
+    spaced = b'{ "t": [1], "c": [2] }\n'
+    reordered = b'{"c":[2],"t":[1]}'
+    hashes = {rr.sha256_bytes(x) for x in (compact, spaced, reordered)}
+    assert len(hashes) == 3
+    assert json.loads(compact) == json.loads(spaced) == json.loads(reordered)
+    env = Env(tmp_path, ["AAA", "BBB"])
+    body = _ohlc_body(HISTORY)
+    a = json.dumps(body, separators=(",", ":")).encode()
+    b = json.dumps(dict(reversed(list(body.items()))), indent=3).encode()
+    code, _ = env.run(FakeDnse({"AAA": [ok(body, raw=a)], "BBB": [ok(body, raw=b)]}), "--no-foreign-flow")
+    assert code == 0
+    ja, jb = env.journal("AAA")["attempts"][0], env.journal("BBB")["attempts"][0]
+    assert ja["body_sha256"] == rr.sha256_bytes(a) and jb["body_sha256"] == rr.sha256_bytes(b)
+    assert ja["body_sha256"] != jb["body_sha256"]
+    rec = env.output_json("recovery_session_market_reconstruction.json")["per_ticker"]
+    assert rec["AAA"]["session_bar"] == rec["BBB"]["session_bar"]  # same parsed content
+
+
+def test_fetcher_without_exact_bytes_is_an_integrity_stop(tmp_path):
+    env = Env(tmp_path, ["AAA", "BBB"])
+    parsed_only = {"ok": True, "http_status": 200, "body": _ohlc_body(HISTORY)}  # no raw_bytes
+    fake = FakeDnse({"AAA": [parsed_only], "BBB": [ok(_ohlc_body(HISTORY))]})
+    code, summary = env.run(fake, "--no-foreign-flow")
+    assert code == 5 and summary["status"] == rr.RUN_BLOCKED_INTEGRITY
+    assert summary["stop_reason"] == rr.STOP_INTEGRITY
+    assert env.journal("AAA")["conflict"] == "RAW_RETENTION_FAILED:FETCH_ADAPTER_DID_NOT_RETURN_EXACT_RESPONSE_BYTES"
+    assert [c[2]["symbol"] for c in fake.calls] == ["AAA"]  # acquisition stops for review
+
+
+def test_governed_fetch_boundary_returns_exact_bytes_without_credentials():
+    import dnse_bulk_market_data as bulk
+
+    exact = b'{ "t" : [1714000000] ,"o":[1],"h":[1],"l":[1],"c":[1],"v":[1] }'
+
+    class Response:
+        status_code = 200
+        content = exact
+        headers = {"Content-Type": "application/json", "Retry-After": None}
+
+        def json(self):
+            raise AssertionError("recovery decodes from the exact bytes, not response.json()")
+
+    seen = {}
+
+    def request_get(url, params, headers, timeout):
+        seen["headers"] = headers
+        return Response()
+
+    result = bulk.fetch_capability_raw("ohlc", api_key="k-synthetic", api_secret="s-synthetic",
+                                       query={"symbol": "AAA"}, request_get=request_get, retain_raw_bytes=True)
+    assert result["ok"] is True and result["raw_bytes"] == exact
+    assert result["body"] == json.loads(exact)
+    assert result["content_type"] == "application/json"
+    text = json.dumps({k: v for k, v in result.items() if k != "raw_bytes"})
+    assert "s-synthetic" not in text and "X-Signature" not in text and "k-synthetic" not in text
+    # Non-JSON 200 bytes are retained and reported, never silently parsed.
+    Response.content = b"<html>maintenance</html>"
+    broken = bulk.fetch_capability_raw("ohlc", api_key="k", api_secret="s", query={}, request_get=request_get,
+                                       retain_raw_bytes=True)
+    assert broken["ok"] is False and broken["error_code"] == "response_body_not_json"
+    assert broken["raw_bytes"] == b"<html>maintenance</html>"
+    # Default callers are unchanged: no raw_bytes key.
+    Response.content = exact
+    Response.json = lambda self: json.loads(exact)
+    assert "raw_bytes" not in bulk.fetch_capability_raw("ohlc", api_key="k", api_secret="s", query={}, request_get=request_get)
+
+
+def test_governed_recovery_fetcher_asks_the_boundary_for_exact_bytes(monkeypatch):
+    import dnse_bulk_market_data as bulk
+
+    captured = {}
+    monkeypatch.setattr(bulk, "fetch_capability_raw", lambda capability, **kw: captured.update(kw, capability=capability) or {})
+    rr.governed_recovery_fetcher()("ohlc", api_key="k", api_secret="s", symbol=None, query={"symbol": "AAA"})
+    assert captured["retain_raw_bytes"] is True and captured["capability"] == "ohlc"
+
+
+# ---------------------------------------------------------------------------------------------
+# Foreign-flow chain identity
+# ---------------------------------------------------------------------------------------------
+
+
+def test_chain_hash_algorithm_is_deterministic_order_and_length_sensitive():
+    pages = ["a" * 64, "b" * 64, "c" * 64]
+    assert rr.chain_sha256(pages) == rr.chain_sha256(list(pages))
+    expected = rr.sha256_text(rr.canonical_json({"chain_contract": "recovery_foreign_flow_chain/v1", "page_sha256": pages}))
+    assert rr.chain_sha256(pages) == expected
+    assert rr.chain_sha256(list(reversed(pages))) != rr.chain_sha256(pages)
+    assert rr.chain_sha256(pages + ["d" * 64]) != rr.chain_sha256(pages)
+    assert rr.chain_sha256(pages[:2]) != rr.chain_sha256(pages)
+
+
+def test_incomplete_chain_retains_its_chain_hash_but_never_normalizes(tmp_path):
+    env = Env(tmp_path, ["FPT", "HPG"])
+    ff = {"FPT": [_ff_page("FPT", [(f"{TARGET} 14:45:00", 900, 400)], "c1"), err(400, "http_status_400")],
+          "HPG": _standard_ff()["HPG"]}
+    env.run(FakeDnse({"FPT": _standard_ohlc()["FPT"], "HPG": _standard_ohlc()["HPG"]}, ff))
+    chain = json.loads((env.state / "journal" / "dnse_foreign_trading" / "FPT.json").read_text(encoding="utf-8"))
+    identity = chain["chain_identity"]
+    assert identity["page_count"] == 1 and identity["terminal_cursor_reached"] is False
+    assert identity["chain_sha256"] == rr.chain_sha256(identity["page_sha256"])
+    assert identity["request_identity"]["target_session"] == TARGET and identity["acquired_at_min"]
+    out = env.output_json("recovery_foreign_flow_value.json")["records"]["FPT"]
+    assert out["status"] == "NON_TERMINAL_CHAIN_NOT_NORMALIZED" and out["value"] is None
+    assert out["chain_identity"]["chain_sha256"] == identity["chain_sha256"]
+
+
+def test_complete_chain_carries_its_chain_hash_and_normalizes(tmp_path):
+    env = Env(tmp_path, ["FPT", "HPG"])
+    env.run(FakeDnse({"FPT": _standard_ohlc()["FPT"], "HPG": _standard_ohlc()["HPG"]}, _standard_ff()))
+    out = env.output_json("recovery_foreign_flow_value.json")["records"]["FPT"]
+    assert out["status"] == "COMPLETE_CHAIN_VALUE_NORMALIZED"
+    identity = out["chain_identity"]
+    assert identity["page_count"] == 2 and identity["terminal_cursor_reached"] is True
+    assert identity["chain_sha256"] == rr.chain_sha256(identity["page_sha256"])
+    assert len(set(identity["page_sha256"])) == 2
+
+
+def test_tampered_foreign_flow_page_blocks_integrity_and_never_normalizes(tmp_path):
+    env = Env(tmp_path, ["FPT", "HPG"])
+    env.run(FakeDnse({"FPT": _standard_ohlc()["FPT"], "HPG": _standard_ohlc()["HPG"]}, _standard_ff()))
+    page = env.state / "raw" / "dnse_foreign_trading" / "FPT" / "page_0001.body"
+    page.write_bytes(page.read_bytes() + b" ")
+
+    code, summary = env.run(_no_network)
+    assert code == 5 and summary["status"] == rr.RUN_BLOCKED_INTEGRITY
+    assert summary["run_status"]["foreign_flow"]["integrity_blocked"][0]["ticker"] == "FPT"
+    out = env.output_json("recovery_foreign_flow_value.json")["records"]["FPT"]
+    assert out["status"] == "CHAIN_INTEGRITY_FAILED"
 
 
 def test_plan_is_frozen_and_changed_controls_refuse_resume(tmp_path):
@@ -430,7 +686,7 @@ def test_non_terminal_foreign_flow_chain_is_never_normalized(tmp_path):
     ff = {"FPT": [_ff_page("FPT", [(f"{TARGET} 14:45:00", 900, 400)], "c1"), err(400, "http_status_400")],
           "HPG": _standard_ff()["HPG"]}
     code, summary = env.run(FakeDnse({"FPT": _standard_ohlc()["FPT"], "HPG": _standard_ohlc()["HPG"]}, ff))
-    assert code == 0
+    assert code == 4 and summary["status"] == rr.RUN_PARTIAL_UNRESOLVED  # an incomplete chain is never COMPLETE
     out = env.output_json("recovery_foreign_flow_value.json")
     assert out["records"]["FPT"]["status"] == "NON_TERMINAL_CHAIN_NOT_NORMALIZED"
     assert out["records"]["FPT"]["value"] is None
@@ -633,3 +889,15 @@ def test_recovery_modules_never_import_a_vnstock_provider_package():
                            "ai_handoff_publication", "dashboard_release_publisher",
                            "integrated_investment_decision_product", "daily_integrated_decision_brief",
                            "canonical_daily_operation", "next_session_decision_brief"}
+
+
+def test_unknown_disposition_is_never_complete(tmp_path):
+    env = Env(tmp_path, ["AAA", "BBB"])
+    fake = FakeDnse({"AAA": [ok({}, raw=b"<html>maintenance</html>")], "BBB": [ok(_ohlc_body(HISTORY))]})
+    code, summary = env.run(fake, "--no-foreign-flow")
+    assert code == 4 and summary["status"] == rr.RUN_PARTIAL_UNRESOLVED
+    journal = env.journal("AAA")
+    assert journal["state"] == rr.TICKER_UNRESOLVED and journal["disposition"] == rr.UNKNOWN
+    assert rr.body_path(env.state / journal["attempts"][0]["raw_stem"]).read_bytes() == b"<html>maintenance</html>"
+    assert not (env.output / "recovery_session_market_reconstruction.json").exists()
+    assert env.output_json("recovery_partial_diagnostic.json")["reconstruction_complete"] is False
