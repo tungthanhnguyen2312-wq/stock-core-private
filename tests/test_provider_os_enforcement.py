@@ -27,6 +27,10 @@ OTHER_PLATFORM_CONTROL = ("LINUX_CGROUP_V2_KILL" if sys.platform == "win32" else
 SPAWNED_PID = 4242
 # A Windows venv python.exe is a redirector: the interpreter is its child.
 INTERPRETER_PID = 4243 if sys.platform == "win32" else SPAWNED_PID
+# Explicitly simulated platforms use fixed PIDs, independent of the host runner OS: a Windows
+# redirector and its interpreter child are distinct processes; on POSIX they are the same one.
+WIN_SPAWNED_PID, WIN_INTERPRETER_PID = 5150, 5151
+POSIX_PID = 6160
 
 
 class _Process:
@@ -67,15 +71,15 @@ def _as_live(launch, mode=build_manifest.LAUNCH_MODE_GATE_C):
     return dataclasses.replace(launch, launch_mode=mode, os_enforcement_requirement=build_manifest.OS_ENFORCEMENT_PRODUCTION)
 
 
-def _process_control(expected, platform=sys.platform):
+def _process_control(expected, platform=sys.platform, spawned_pid=SPAWNED_PID, interpreter_pid=INTERPRETER_PID):
     if platform == "win32":
         return {"mechanism": "WINDOWS_JOB_OBJECT_KILL_ON_CLOSE", "source": "OS_JOB_QUERY",
                 "job": {"name": expected["job_name"], "membership_verified_with_job_handle": True,
-                        "assigned_pids": [SPAWNED_PID, INTERPRETER_PID],
+                        "assigned_pids": [spawned_pid, interpreter_pid],
                         "limits": {"kill_on_job_close": True, "breakaway_ok": False, "silent_breakaway_ok": False,
                                    "active_process_limit": expected["job_active_process_limit"]}}}
     return {"mechanism": "LINUX_CGROUP_V2_KILL", "source": "OS_CGROUP_QUERY",
-            "cgroup": {"path": expected["cgroup_path"], "member_pids": [SPAWNED_PID, INTERPRETER_PID], "kill_on_close": True}}
+            "cgroup": {"path": expected["cgroup_path"], "member_pids": [spawned_pid, interpreter_pid], "kill_on_close": True}}
 
 
 def _complete_result(launch):
@@ -379,14 +383,16 @@ WIN_EXPECTED = {"process_control_mechanism": "WINDOWS_JOB_OBJECT_KILL_ON_CLOSE",
 
 
 def _win_section():
-    return _process_control(WIN_EXPECTED, platform="win32")
+    return _process_control(WIN_EXPECTED, platform="win32", spawned_pid=WIN_SPAWNED_PID, interpreter_pid=WIN_INTERPRETER_PID)
 
 
 @pytest.mark.parametrize("mutate, field", [
     (lambda s: s.pop("job"), "process_control.job.name"),  # 9: in-a-job alone, no job identity
     (lambda s: s["job"].update(name="Local\\SomeOtherJob"), "process_control.job.name"),  # 10
     (lambda s: s["job"].update(membership_verified_with_job_handle=False), "process_control.job.membership_verified_with_job_handle"),
-    (lambda s: s["job"].update(assigned_pids=[SPAWNED_PID]), "process_control.job.assigned_pids"),
+    # The redirector (spawned) PID alone: the interpreter child must be in the exact Job too.
+    (lambda s: s["job"].update(assigned_pids=[WIN_SPAWNED_PID]), "process_control.job.assigned_pids"),
+    (lambda s: s["job"].update(assigned_pids=[WIN_INTERPRETER_PID]), "process_control.job.assigned_pids"),
     (lambda s: s["job"]["limits"].pop("kill_on_job_close"), "process_control.job.limits.kill_on_job_close"),  # 11
     (lambda s: s["job"]["limits"].update(breakaway_ok=True), "process_control.job.limits.breakaway_ok"),  # 12
     (lambda s: s["job"]["limits"].update(silent_breakaway_ok=True), "process_control.job.limits.silent_breakaway_ok"),  # 13
@@ -397,13 +403,13 @@ def test_windows_job_contract_binds_the_exact_launch_job(mutate, field):
     section = _win_section()
     mutate(section)
     failures = os_enforcement.process_control_violations(section, WIN_EXPECTED, platform="win32",
-                                                         spawned_pid=SPAWNED_PID, interpreter_pid=INTERPRETER_PID)
+                                                         spawned_pid=WIN_SPAWNED_PID, interpreter_pid=WIN_INTERPRETER_PID)
     assert field in {item["field"] for item in failures}
 
 
 def test_windows_job_contract_accepts_the_complete_section():
     assert os_enforcement.process_control_violations(_win_section(), WIN_EXPECTED, platform="win32",
-                                                     spawned_pid=SPAWNED_PID, interpreter_pid=INTERPRETER_PID) == []
+                                                     spawned_pid=WIN_SPAWNED_PID, interpreter_pid=WIN_INTERPRETER_PID) == []
 
 
 def test_mechanism_name_plus_verified_is_not_a_job(monkeypatch, live_launch):
@@ -425,12 +431,12 @@ def test_worker_in_job_observation_alone_is_insufficient(monkeypatch, live_launc
 
 
 def test_posix_cgroup_contract_binds_the_exact_launch_cgroup():
-    section = _process_control(WIN_EXPECTED, platform="linux")
+    section = _process_control(WIN_EXPECTED, platform="linux", spawned_pid=POSIX_PID, interpreter_pid=POSIX_PID)
     assert os_enforcement.process_control_violations(section, dict(WIN_EXPECTED, process_control_mechanism="LINUX_CGROUP_V2_KILL"),
-                                                     platform="linux", spawned_pid=SPAWNED_PID, interpreter_pid=INTERPRETER_PID) == []
+                                                     platform="linux", spawned_pid=POSIX_PID, interpreter_pid=POSIX_PID) == []
     section["cgroup"]["path"] = "/some/other"
     failures = os_enforcement.process_control_violations(section, dict(WIN_EXPECTED, process_control_mechanism="LINUX_CGROUP_V2_KILL"),
-                                                         platform="linux", spawned_pid=SPAWNED_PID, interpreter_pid=INTERPRETER_PID)
+                                                         platform="linux", spawned_pid=POSIX_PID, interpreter_pid=POSIX_PID)
     assert "process_control.cgroup.path" in {item["field"] for item in failures}
 
 
