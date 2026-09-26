@@ -194,6 +194,34 @@
        "egress_gateway_verified": {
         "type": "boolean"
        },
+       "enforcement_backend": {
+        "additionalProperties": false,
+        "properties": {
+         "backend_id": {
+          "minLength": 1,
+          "type": "string"
+         },
+         "contract_version": {
+          "const": "provider_os_enforcement_backend/v1"
+         }
+        },
+        "required": [
+         "backend_id",
+         "contract_version"
+        ],
+        "type": "object"
+       },
+       "job_active_process_limit": {
+        "anyOf": [
+         {
+          "minimum": 1,
+          "type": "integer"
+         },
+         {
+          "type": "null"
+         }
+        ]
+       },
        "job_object_kill_on_close": {
         "type": "boolean"
        },
@@ -234,6 +262,7 @@
       },
       "required": [
        "egress_gateway_verified",
+       "enforcement_backend",
        "job_object_kill_on_close",
        "process_control_mechanism",
        "requirements",
@@ -1107,7 +1136,23 @@
       {
        "additionalProperties": false,
        "properties": {
+        "executable_sha256": {
+         "pattern": "^[0-9a-f]{64}$",
+         "type": "string"
+        },
+        "gateway_id": {
+         "minLength": 1,
+         "type": "string"
+        },
         "host": {
+         "minLength": 1,
+         "type": "string"
+        },
+        "implementation": {
+         "minLength": 1,
+         "type": "string"
+        },
+        "ipc_endpoint": {
          "minLength": 1,
          "type": "string"
         },
@@ -1252,6 +1297,41 @@
    "properties": {
     "egress_gateway_verified": {
      "type": "boolean"
+    },
+    "enforcement_backend": {
+     "anyOf": [
+      {
+       "additionalProperties": false,
+       "properties": {
+        "backend_id": {
+         "minLength": 1,
+         "type": "string"
+        },
+        "contract_version": {
+         "const": "provider_os_enforcement_backend/v1"
+        }
+       },
+       "required": [
+        "backend_id",
+        "contract_version"
+       ],
+       "type": "object"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "job_active_process_limit": {
+     "anyOf": [
+      {
+       "minimum": 1,
+       "type": "integer"
+      },
+      {
+       "type": "null"
+      }
+     ]
     },
     "job_object_kill_on_close": {
      "type": "boolean"

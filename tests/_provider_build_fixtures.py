@@ -40,7 +40,13 @@ TEST_BUILD_ID = "VNSTOCK_KBS_VCI-TEST-FIXTURE-UNAPPROVED-NOT-A-LIVE-BUILD"
 FAKE_ENDPOINT_HOST = "fake-provider.test"
 FAKE_ENDPOINT_PATH = "/ohlc/{symbol}"
 FAKE_ENDPOINT_URL = f"https://{FAKE_ENDPOINT_HOST}{FAKE_ENDPOINT_PATH}"
-FAKE_EGRESS_GATEWAY = {"host": "egress-gateway.test", "port": 3128}
+FAKE_EGRESS_GATEWAY = {
+    "host": "egress-gateway.test", "port": 3128, "gateway_id": "TEST_FIXTURE_ONLY_EGRESS_GATEWAY",
+    "implementation": "TEST_FIXTURE_ONLY", "ipc_endpoint": "TEST_FIXTURE_ONLY_PIPE", "executable_sha256": "e" * 64,
+}
+# Fixture-only production-contract verifier identity. The marker keeps it (and any manifest binding it)
+# out of every live launch mode; it exists to exercise the attestation contract, never real enforcement.
+FAKE_PRODUCTION_BACKEND_ID = "TEST_FIXTURE_ONLY_PRODUCTION_CONTRACT_VERIFIER"
 # Syntactically valid, deliberately fake low-privilege identities (never a real principal).
 FAKE_RESTRICTED_IDENTITY = "S-1-5-21-1111111111-2222222222-3333333333-1001" if os.name == "nt" else "uid:64001"
 # The reviewed process-lifetime control of this host; a Windows Job object is claimed only on Windows.
@@ -802,6 +808,9 @@ def build_fake_provider_runtime(
             "requirements": ["TEST_FIXTURE_ONLY -- not an owner OS verification"],
             "restricted_identity_sid": FAKE_RESTRICTED_IDENTITY,
             "process_control_mechanism": FAKE_PROCESS_CONTROL,
+            "enforcement_backend": {"backend_id": FAKE_PRODUCTION_BACKEND_ID,
+                                    "contract_version": build_manifest.OS_ENFORCEMENT_BACKEND_CONTRACT_VERSION},
+            "job_active_process_limit": 2 if sys.platform == "win32" else None,
             "job_object_kill_on_close": sys.platform == "win32",
             "egress_gateway_verified": True,
             "runtime_root_read_only_acl": True,

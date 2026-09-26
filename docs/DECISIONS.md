@@ -54,8 +54,8 @@ Bounded provider-runtime operationalization under active M1. Not a new analytica
   - **Requirements, not proof.** A manifest's `os_containment` block states requirements. No
     boolean in it authorizes a launch by itself.
   - **Only a backend spawns a worker.** `provider_os_enforcement` defines the backend boundary
-    (`preflight`, `spawn_contained`, `attest_spawned_process`) and `validate_attestation`. The
-    client has no direct `subprocess.Popen` path.
+    (`preflight`, `spawn_contained`, `verify_spawned_process`). The client has no direct
+    `subprocess.Popen` path.
   - **Production backend required for live modes.** Gates C/D/E, ordinary Daily and Gate B of a
     real build need a production backend. None is implemented (`production_backend()` returns
     `None`), so these launches fail with `PROVIDER_OS_ENFORCEMENT_UNAVAILABLE` at authorization,
@@ -64,10 +64,8 @@ Bounded provider-runtime operationalization under active M1. Not a new analytica
   - **Plain Popen is offline-fake only.** It is allowed only for Gate B with test-fixture
     containment evidence and test-fixture packages. The backend re-checks this at spawn, and its
     attestation states that nothing was OS-enforced.
-  - **What a production attestation must bind.** Platform, launch id, worker PID, and an
-    observed identity, process control, ACLs, egress mechanism and gateway. Its evidence hash must
-    cover the attestation body. An attestation shaped like, or hashed like, the manifest's
-    declarations is refused.
+  - **What a production attestation must bind.** Superseded by the attestation-contract
+    corrective below.
   - **Worker cross-check.** The worker reads its own platform, PID/PPID, token SID or uid and
     (on Windows) Job membership from the OS. It checks them against the contract's
     `os_enforcement` binding in self-attestation and reports them in READY for the parent to
@@ -80,6 +78,45 @@ Bounded provider-runtime operationalization under active M1. Not a new analytica
     classes; `ALLOW_OWNER_APPROVED` is refused for them (owner decision 2026-09-26). This also
     covers `VNAI_LICENSE_VERIFY`: any auth route must come from a new owner decision as a
     manifest-bound endpoint, not as a telemetry ALLOW.
+- **Attestation-contract corrective** (an independent review against `1e5157b`: the contract a
+  future production backend must satisfy accepted self-authored reports):
+  - **Trust by issuance, not by shape.** A backend's verification phase returns a typed
+    `BackendVerification` (raw observations + derived result).
+    `provider_os_enforcement.issue_attestation` is the only producer of a
+    `TrustedOSEnforcementAttestation` (private issuer sentinel). It accepts a verification only
+    from the configured production backend (`production_backend()`) for live modes, or from the
+    offline fake backend for the offline fake Gate B. It normalises the result and validates it
+    against bindings derived from the launch and the approved manifest. The launch layer accepts
+    only an issued attestation for its exact launch (`accept_attestation`). Plain mappings or
+    directly constructed objects are refused.
+  - **Hashes are identity only.** `evidence_sha256` identifies the raw observations; it is never
+    the trust decision.
+  - **Bound backend identity.** An approved manifest binds
+    `os_containment.enforcement_backend` (`backend_id` + `provider_os_enforcement_backend/v1`).
+    An absent, empty, unexpected or offline-fake backend id, or a mismatched contract, fails. A
+    fixture-marked backend id makes the manifest fake evidence, so it is refused in every live
+    mode.
+  - **Exact launch.** Launch id, manifest digest, build, policy decision id and platform must
+    match. The spawned PID and interpreter PID must match (Windows venv redirector: the
+    interpreter is the spawned process's child). The worker creation time must fall after
+    launch issuance, and verification must be fresh.
+  - **Windows Job.** The attestation must name the per-launch Job
+    (`Local\StockLookupProvider-<launch_id>`), confirm membership verified with the launcher's
+    own Job handle, list the assigned PIDs, and show `kill_on_job_close`, no breakaway, no silent
+    breakaway, and the manifest's `job_active_process_limit`. The POSIX equivalent is the
+    per-launch cgroup-v2 path, member PIDs and kill-on-close.
+  - **Egress.** `egress_policy_sha256` covers the gateway, the approved endpoint rules, the
+    telemetry DENY digest and the direct-egress prohibition. The attestation must report that
+    exact digest, the telemetry digest, a verified direct-egress prohibition, and a verified
+    gateway identity. An approved gateway declares `gateway_id`, `implementation`,
+    `ipc_endpoint` and `executable_sha256`; an address alone is not an identity.
+  - **ACL.** The attestation must report effective access verified for exactly the ACL policy
+    roots (venv, base, bundle: read/execute; state, scratch: read/write; owner denied roots: no
+    access), for the restricted identity, with the policy digest.
+  - **Worker observations corroborate only.** Platform, PID/PPID, SID/uid and Job membership
+    cannot establish the Job identity, limits, ACLs, egress enforcement or gateway policy.
+  - **Status.** No production backend exists, so live Gates C/D/E and ordinary Daily stay
+    blocked (`PROVIDER_OS_ENFORCEMENT_UNAVAILABLE`).
 
 ## 2026-09-26 - Owner decisions for contained provider qualification (recorded; not an approval)
 

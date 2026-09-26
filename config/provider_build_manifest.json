@@ -310,8 +310,8 @@
    },
    {
     "relative_path": "provider_build_manifest.py",
-    "sha256": "8cbcb839671bbe6f864fbaf911516f2dd71980eb97044d6419061813fd39c3ef",
-    "size": 116110
+    "sha256": "f57f7a0ef069d225f4bfc88dac9a8590d45f42ed3e065210bae7a62fc0282190",
+    "size": 120732
    },
    {
     "relative_path": "provider_worker_containment.py",

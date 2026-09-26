@@ -254,6 +254,12 @@ PROCESS_CONTROL_BY_PLATFORM = {"win32": "WINDOWS_JOB_OBJECT_KILL_ON_CLOSE", "lin
 # or -- for the offline fake Gate B only -- plain Popen.
 OS_ENFORCEMENT_PRODUCTION = "PRODUCTION_OS_ENFORCEMENT"
 OS_ENFORCEMENT_OFFLINE_FAKE = "OFFLINE_FAKE_DIRECT_POPEN"
+# The backend contract a production OS-enforcement backend implements; an approved manifest binds
+# the exact backend id + this contract (os_containment.enforcement_backend).
+OS_ENFORCEMENT_BACKEND_CONTRACT_VERSION = "provider_os_enforcement_backend/v1"
+OFFLINE_FAKE_BACKEND_ID = "offline-fake-direct-popen"
+EGRESS_POLICY_CONTRACT_VERSION = "provider_egress_policy/v1"
+GATEWAY_IDENTITY_KEYS = ("gateway_id", "implementation", "ipc_endpoint", "executable_sha256")
 TEST_FIXTURE_PROVENANCE = "TEST_FIXTURE_ONLY"
 # Owner decision 2026-09-26: every reviewed ancillary vendor service is DENY. An approved manifest
 # must materialise DENY for each of these; ALLOW_OWNER_APPROVED is not sufficient for them.
@@ -581,6 +587,17 @@ def os_containment_violations(manifest: Mapping[str, Any]) -> list[dict[str, Any
     elif platform != "win32" and containment.get("job_object_kill_on_close") is not False:
         failures.append(_failure(R_OS_CONTAINMENT_UNVERIFIED, field="os_containment.job_object_kill_on_close",
                                  error="a Windows Job object cannot be claimed for a non-Windows runtime"))
+    backend = containment.get("enforcement_backend")
+    if not isinstance(backend, Mapping) or not str(backend.get("backend_id") or "").strip() \
+            or backend.get("backend_id") == OFFLINE_FAKE_BACKEND_ID:
+        failures.append(_failure(R_OS_CONTAINMENT_UNVERIFIED, field="os_containment.enforcement_backend",
+                                 error="an approved build binds its production OS-enforcement backend id"))
+    elif backend.get("contract_version") != OS_ENFORCEMENT_BACKEND_CONTRACT_VERSION:
+        failures.append(_failure(R_OS_CONTAINMENT_UNVERIFIED, field="os_containment.enforcement_backend",
+                                 error=f"backend contract must be {OS_ENFORCEMENT_BACKEND_CONTRACT_VERSION}"))
+    limit = containment.get("job_active_process_limit")
+    if platform == "win32" and (not isinstance(limit, int) or isinstance(limit, bool) or limit < 1):
+        failures.append(_failure(R_OS_CONTAINMENT_UNVERIFIED, field="os_containment.job_active_process_limit"))
     problem = restricted_identity_problem(containment.get("restricted_identity_sid"))
     if problem:
         failures.append(_failure(R_OS_CONTAINMENT_UNVERIFIED, field="os_containment.restricted_identity_sid", error=problem))
@@ -610,7 +627,54 @@ def egress_gateway_violations(manifest: Mapping[str, Any], *, approved: bool) ->
     if approved and network.get("endpoints") and gateway is None:
         failures.append(_failure(R_EGRESS_GATEWAY_CONTRACT_INVALID,
                                  error="approved endpoints without the mandatory OS egress gateway"))
+    if approved and isinstance(gateway, Mapping):
+        # An address is not an identity: the approved gateway names its implementation, IPC
+        # endpoint and executable, so a different process on the same port never qualifies.
+        for key in GATEWAY_IDENTITY_KEYS:
+            value = gateway.get(key)
+            if not (_is_sha256(value) if key == "executable_sha256" else isinstance(value, str) and value.strip()):
+                failures.append(_failure(R_EGRESS_GATEWAY_CONTRACT_INVALID, field=f"network.egress_gateway.{key}",
+                                         error="gateway identity unresolved"))
     return failures
+
+
+def telemetry_policy_sha256(manifest: Mapping[str, Any]) -> str:
+    """Identity of the telemetry disposition (owner decision: every reviewed class DENY)."""
+    entries = []
+    for entry in manifest.get("telemetry_disposition") or []:
+        entries.append({key: entry.get(key) for key in ("endpoint_ref", "layer", "host", "process", "method",
+                                                        "path_pattern", "port", "scheme", "decision")})
+    return canonical_sha256(sorted(entries, key=lambda item: str(item.get("endpoint_ref"))))
+
+
+def egress_policy_identity(manifest: Mapping[str, Any]) -> dict[str, Any]:
+    """The egress policy an OS egress backend must enforce for this build: the exact gateway,
+    the approved endpoint rules, the telemetry DENY disposition and the direct-egress prohibition."""
+    network = manifest.get("network") or {}
+    endpoints = [{key: item.get(key) for key in ("scheme", "host", "port", "method", "path_pattern", "max_redirects")}
+                 for item in network.get("endpoints") or []]
+    return {
+        "contract_version": EGRESS_POLICY_CONTRACT_VERSION,
+        "provider_family": manifest.get("provider_family"), "build_id": manifest.get("build_id"),
+        "default_deny": network.get("default_deny") is True, "direct_egress": "PROHIBITED",
+        "gateway": dict(network.get("egress_gateway") or {}) or None,
+        "endpoints": sorted(endpoints, key=lambda item: json.dumps(item, sort_keys=True)),
+        "telemetry_policy_sha256": telemetry_policy_sha256(manifest),
+    }
+
+
+def egress_policy_sha256(manifest: Mapping[str, Any]) -> str:
+    return canonical_sha256(egress_policy_identity(manifest))
+
+
+def expected_job_name(launch_id: str) -> str:
+    """The Windows Job a production backend creates for exactly this launch."""
+    return f"Local\\StockLookupProvider-{launch_id}"
+
+
+def expected_cgroup_path(launch_id: str) -> str:
+    """The cgroup-v2 path a POSIX production backend creates for exactly this launch."""
+    return f"/stocklookup-provider/{launch_id}"
 
 
 def telemetry_owner_deny_violations(manifest: Mapping[str, Any]) -> list[dict[str, Any]]:
@@ -738,7 +802,8 @@ def worker_os_enforcement_violations(contract: Mapping[str, Any], facts: Mapping
                 failures.append(_failure(R_OS_ENFORCEMENT_WORKER_MISMATCH, field="in_job"))
         elif facts.get("platform") == "linux":
             expected_cgroup = enforcement.get("expected_cgroup")
-            if not expected_cgroup or facts.get("cgroup") != expected_cgroup:
+            observed_cgroup = str(facts.get("cgroup") or "").split("::", 1)[-1]
+            if not expected_cgroup or observed_cgroup != expected_cgroup:
                 failures.append(_failure(R_OS_ENFORCEMENT_WORKER_MISMATCH, field="cgroup"))
         else:
             failures.append(_failure(R_OS_ENFORCEMENT_WORKER_MISMATCH, field="platform", error="no reviewed production control"))
@@ -751,6 +816,7 @@ def _containment_evidence_is_fake(manifest: Mapping[str, Any]) -> bool:
     containment = manifest.get("os_containment") or {}
     texts = [str(item) for item in containment.get("requirements") or []]
     texts.append(str(containment.get("restricted_identity_sid") or ""))
+    texts.append(str((containment.get("enforcement_backend") or {}).get("backend_id") or ""))
     return any(FAKE_CONTAINMENT_EVIDENCE_MARKER in text for text in texts)
 
 
@@ -1785,8 +1851,10 @@ def authorize_provider_launch(
                 if requirement == OS_ENFORCEMENT_PRODUCTION else None,
                 "process_control_mechanism": (manifest.get("os_containment") or {}).get("process_control_mechanism")
                 if requirement == OS_ENFORCEMENT_PRODUCTION else None,
-                # Supplied by the production backend's preflight (POSIX cgroup); absent => refused.
-                "expected_cgroup": None,
+                "expected_cgroup": expected_cgroup_path(launch_id) if requirement == OS_ENFORCEMENT_PRODUCTION else None,
+                "expected_job_name": expected_job_name(launch_id) if requirement == OS_ENFORCEMENT_PRODUCTION else None,
+                "expected_egress_policy_sha256": egress_policy_sha256(manifest)
+                if requirement == OS_ENFORCEMENT_PRODUCTION else None,
             },
             "authority_effect": AUTHORITY_EFFECT,
         }
@@ -1802,7 +1870,8 @@ def authorize_provider_launch(
         scratch_root=str(scratch_root), state_root=str(state_root), cwd=str(cwd), environment=environment,
         contract_path=str(contract_path), governor_rpm=int(rate["governor_effective_rpm"]),
         tier=credential["expected_vnai_tier"], policy=policy,
-        attestation={"static_checks": "PASS", "probe": probe, "denied_roots": denied, "manifest_sha256": digest},
+        attestation={"static_checks": "PASS", "probe": probe, "denied_roots": denied, "manifest_sha256": digest,
+                     "issued_at_utc": now.strftime("%Y-%m-%dT%H:%M:%SZ")},
         os_enforcement_requirement=requirement,
         _issuer=_LAUNCH_ISSUER,
     )

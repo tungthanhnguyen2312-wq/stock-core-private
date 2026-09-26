@@ -266,20 +266,22 @@ class VnstockWorkerFetcher:
         self._verify_os_enforcement()
 
     def _verify_os_enforcement(self) -> None:
-        """Before any request: the backend's attestation of the spawned process, checked against
-        the launch, the manifest requirements and the worker's own OS observations."""
+        """Before any request: an attestation issued from the backend's own verification of the
+        spawned process (validated against this launch, the manifest and the worker's own OS
+        observations), then accepted for exactly this launch."""
         assert self._process is not None and self._backend is not None
-        try:
-            attestation = self._backend.attest_spawned_process(self._launch, self._process)
-        except Exception as exc:  # noqa: BLE001 -- any attestation failure is a refusal
-            attestation = {"error": type(exc).__name__}
         facts = (self._runtime_info or {}).get("os_facts")
-        failures = os_enforcement.validate_attestation(
-            attestation, launch=self._launch, worker_pid=self._process.pid, worker_facts=facts)
+        attestation = None
+        try:
+            attestation = os_enforcement.issue_attestation(self._backend, self._launch, self._process, worker_facts=facts)
+            failures = os_enforcement.accept_attestation(attestation, launch=self._launch)
+        except os_enforcement.OSEnforcementAttestationRejected as exc:
+            failures = exc.failures
+        except Exception as exc:  # noqa: BLE001 -- any verification failure is a refusal
+            failures = [{"code": os_enforcement.R_ATTESTATION_INVALID, "field": "verification", "error": type(exc).__name__}]
         with self._diagnostics_lock:
             self._diagnostics["os_enforcement"] = {
-                "backend_kind": attestation.get("backend_kind") if isinstance(attestation, dict) else None,
-                "evidence_sha256": attestation.get("evidence_sha256") if isinstance(attestation, dict) else None,
+                **(attestation.to_record() if attestation is not None and not failures else {}),
                 "requirement": self._launch.os_enforcement_requirement, "failures": failures[:20],
             }
         if failures:
