@@ -824,3 +824,121 @@ def test_provisioning_plan_fails_closed_on_conflicting_state(tmp_path, case):
         resolved["deny_roots"] = roots[resolved["deny_roots"]]
     result = _plan(tmp_path, _observed(**resolved))
     assert result["ok"] is False and f"PROVISIONING_REFUSED:{code}" in result["refused"], result
+
+
+# ---------------------------------------------------------------------------------------------
+# Post-provision verifier (owner APPLY 2026-09-26: ACCOUNT; FIREWALL_RULE; DENY_ACE failed while the
+# host state was exact). Root cause: Invoke-Apply's Write-Step lines are pipeline output, so
+# `$sid = Invoke-Apply ...` captured "[provision] ... [provision] ... S-1-5-21-...". The fixtures
+# below are the Windows-native read-back representations measured on that host.
+# ---------------------------------------------------------------------------------------------
+
+HOST_WORKER_SID = "S-1-5-21-270160003-185743851-2814889227-1005"
+POLLUTED_SID = ("[provision] creating local account StockLookupProvider [provision] adding worker deny ACE on "
+                "C:\\Projects\\StockLookup (propagating) " + HOST_WORKER_SID)
+
+
+def _host_ace(**overrides):
+    # Get-Acl .Access for (D;OICI;FA;;;<worker>) on C:\Projects\StockLookup, normalized to strings.
+    ace = {"sid": HOST_WORKER_SID, "type": "Deny", "rights": "FullControl",
+           "inheritance": "ContainerInherit, ObjectInherit", "propagation": "None", "inherited": False}
+    ace.update(overrides)
+    return ace
+
+
+def _host_observation(**overrides):
+    text = PROVISION_SCRIPT.read_text(encoding="utf-8")
+    runtime = "C:\\ProgramData\\StockLookup\\provider-runtime"
+    observed = {
+        "account": {"exists": True, "sid": HOST_WORKER_SID, "enabled": True,
+                    "description": _ps_constant(text, "AccountDescription"), "groups": ["S-1-5-32-545"]},
+        "dirs": [{"path": p, "exists": True, "protected": True} for p in
+                 [runtime] + [f"{runtime}\\{name}" for name in ("host", "runtime", "state", "scratch", "gateway-ledger", "evidence")]],
+        "blob_exists": True,
+        "rule": _exact_rule(sid=HOST_WORKER_SID),
+        "group_rule_count": 1,
+        "deny_roots": [{"path": DENY_ROOT, "exists": True, "aces": [
+            {"sid": "S-1-5-18", "type": "Allow", "rights": "FullControl", "inheritance": "ContainerInherit, ObjectInherit",
+             "propagation": "None", "inherited": True},
+            _host_ace()]}],
+    }
+    observed.update(overrides)
+    return observed
+
+
+def _verify(tmp_path, observed, sid=HOST_WORKER_SID):
+    fixture = tmp_path / f"verify-{uuid.uuid4().hex}.json"
+    fixture.write_text(json.dumps({"sid": sid, "observed": observed}), encoding="utf-8")
+    completed = subprocess.run(["powershell.exe", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-File",
+                                str(PROVISION_SCRIPT), "-SelfTestVerifyFixture", str(fixture)],
+                               capture_output=True, text=True, timeout=120)
+    return json.loads(completed.stdout.strip().splitlines()[-1])["failures"]
+
+
+@windows_only
+def test_post_provision_verifier_accepts_the_exact_windows_readback_of_this_host(tmp_path):
+    assert _verify(tmp_path, _host_observation()) == []
+
+
+@windows_only
+def test_post_provision_verifier_refuses_a_pipeline_polluted_sid_explicitly(tmp_path):
+    # The exact string the pre-fix main passed: now a named failure, never a silent mismatch.
+    assert _verify(tmp_path, _host_observation(), sid=POLLUTED_SID) == ["WORKER_SID_MALFORMED"]
+    assert _verify(tmp_path, _host_observation(), sid="") == ["WORKER_SID_MALFORMED"]
+
+
+def _one_root(*aces):
+    return [{"path": DENY_ROOT, "exists": True, "aces": list(aces)}]
+
+
+@windows_only
+@pytest.mark.parametrize("case,expected", [
+    ("disabled", "ACCOUNT"), ("other_sid", "ACCOUNT"), ("admin_group", "GROUP:S-1-5-32-544"),
+    ("rule_other_sid", "FIREWALL_RULE"), ("rule_disabled", "FIREWALL_RULE"), ("extra_group_rule", "FIREWALL_GROUP"),
+    ("deny_inherited_only", f"DENY_ACE:{DENY_ROOT}"), ("deny_inherit_only_propagation", f"DENY_ACE:{DENY_ROOT}"),
+    ("deny_not_full", f"DENY_ACE:{DENY_ROOT}"), ("deny_plus_allow", f"DENY_ACE:{DENY_ROOT}"), ("no_deny", f"DENY_ACE:{DENY_ROOT}"),
+    ("unprotected_dir", "ACL_NOT_PROTECTED:C:\\ProgramData\\StockLookup\\provider-runtime"), ("no_blob", "CREDENTIAL_BLOB"),
+])
+def test_post_provision_verifier_still_fails_on_genuinely_wrong_enforcement(tmp_path, case, expected):
+    observed = _host_observation()
+    account = dict(observed["account"])
+    if case == "disabled":
+        account["enabled"] = False
+    elif case == "other_sid":
+        account["sid"] = "S-1-5-21-270160003-185743851-2814889227-1006"
+    elif case == "admin_group":
+        account["groups"] = ["S-1-5-32-545", "S-1-5-32-544"]
+    observed["account"] = account
+    if case == "rule_other_sid":
+        observed["rule"] = _exact_rule(sid="S-1-5-21-270160003-185743851-2814889227-1006")
+    elif case == "rule_disabled":
+        observed["rule"] = _exact_rule(sid=HOST_WORKER_SID, enabled="False")
+    elif case == "extra_group_rule":
+        observed["group_rule_count"] = 2
+    elif case == "deny_inherited_only":  # (D;OICIID;FA;;;<worker>) as read back on a child
+        observed["deny_roots"] = _one_root(_host_ace(inherited=True))
+    elif case == "deny_inherit_only_propagation":
+        observed["deny_roots"] = _one_root(_host_ace(propagation="InheritOnly"))
+    elif case == "deny_not_full":
+        observed["deny_roots"] = _one_root(_host_ace(rights="Write, Synchronize"))
+    elif case == "deny_plus_allow":
+        observed["deny_roots"] = _one_root(_host_ace(), _host_ace(type="Allow", rights="ReadAndExecute, Synchronize"))
+    elif case == "no_deny":
+        observed["deny_roots"] = _one_root()
+    elif case == "unprotected_dir":
+        observed["dirs"] = [dict(observed["dirs"][0], protected=False)] + observed["dirs"][1:]
+    elif case == "no_blob":
+        observed["blob_exists"] = False
+    assert _verify(tmp_path, observed) == [expected]
+
+
+def test_apply_returns_no_pipeline_value_and_main_rereads_the_worker_sid():
+    text = PROVISION_SCRIPT.read_text(encoding="utf-8")
+    apply_body = text.split("function Invoke-Apply", 1)[1].split("function Resolve-ProvisionedWorkerSid", 1)[0]
+    assert "Write-Step" in apply_body  # its steps are pipeline output, so it must not return a value
+    assert not any(line.strip().startswith("return") for line in apply_body.splitlines())
+    main = text.split("# --- main ---", 1)[1]
+    assert "= Invoke-Apply" not in main
+    assert main.index("$sid = Resolve-ProvisionedWorkerSid $state") < main.index("$failures = Test-Provisioned $sid")
+    record = text.split("function Write-CompletionRecord", 1)[1].split("\n}", 1)[0]
+    assert "Test-WorkerSidShape $Sid" in record

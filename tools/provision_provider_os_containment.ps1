@@ -45,7 +45,12 @@ param(
     [string]$SelfTestPlanFixture,
     # Diagnostics only (no mutation): check this script's constants against the live
     # LocalAccounts cmdlet parameter limits (e.g. -Description <= 48 characters).
-    [switch]$SelfTestParameterLimits
+    [switch]$SelfTestParameterLimits,
+    # Diagnostics only (no mutation): evaluate the post-provision verifier on a JSON fixture
+    # {"sid": ..., "observed": ...} holding OS-native read-back representations.
+    [string]$SelfTestVerifyFixture,
+    # Read-only, no elevation needed: run the post-provision verifier against the live host.
+    [switch]$VerifyOnly
 )
 
 $ErrorActionPreference = 'Stop'
@@ -158,20 +163,41 @@ function Get-RuleObservation {
     }
 }
 
-function Get-DenyObservation([string]$Root, [string]$Sid) {
-    # explicit_deny: our exact inheritable FullControl deny for the worker SID is present.
-    # explicit_allow: any OTHER explicit ACE for the worker SID (allow, or a narrower deny) -- a conflict.
-    $observation = [ordered]@{ path = $Root; exists = (Test-Path -LiteralPath $Root); explicit_deny = $false; explicit_allow = $false }
-    if (-not $observation.exists -or -not $Sid) { return $observation }
+function Test-WorkerSidShape([string]$Sid) {
+    # A local-account SID and nothing else (e.g. never a string that captured pipeline log lines).
+    return ($Sid -cmatch '^S-1-5-21-\d+-\d+-\d+-\d+$')
+}
+
+function Get-AceRecords([string]$Root) {
+    # Native .NET read-back of the explicit + inherited ACEs, normalized to strings (read-only).
+    $records = @()
     foreach ($ace in (Get-Acl -LiteralPath $Root).Access) {
-        if ($ace.IsInherited) { continue }
-        try { $aceSid = $ace.IdentityReference.Translate([Security.Principal.SecurityIdentifier]).Value } catch { continue }
-        if ($aceSid -ne $Sid) { continue }
-        $exactDeny = $ace.AccessControlType -eq 'Deny' -and [string]$ace.FileSystemRights -eq 'FullControl' `
-            -and [string]$ace.InheritanceFlags -eq 'ContainerInherit, ObjectInherit'
+        try { $aceSid = $ace.IdentityReference.Translate([Security.Principal.SecurityIdentifier]).Value } catch { $aceSid = "UNTRANSLATABLE:$($ace.IdentityReference)" }
+        $records += [ordered]@{ sid = $aceSid; type = [string]$ace.AccessControlType; rights = [string]$ace.FileSystemRights
+            inheritance = [string]$ace.InheritanceFlags; propagation = [string]$ace.PropagationFlags; inherited = [bool]$ace.IsInherited }
+    }
+    return ,$records
+}
+
+function Resolve-DenyObservation([string]$Root, [bool]$Exists, $Aces, [string]$Sid) {
+    # Pure. explicit_deny: our exact inheritable FullControl deny for the worker SID is present on the
+    # root itself (not inherit-only). explicit_allow: any OTHER explicit ACE for the worker SID (allow,
+    # or a narrower deny) -- a conflict.
+    $observation = [ordered]@{ path = $Root; exists = $Exists; explicit_deny = $false; explicit_allow = $false }
+    if (-not $Exists -or -not $Sid) { return $observation }
+    foreach ($ace in @($Aces)) {
+        if ($ace.inherited -or $ace.sid -ne $Sid) { continue }
+        $exactDeny = $ace.type -eq 'Deny' -and $ace.rights -eq 'FullControl' `
+            -and $ace.inheritance -eq 'ContainerInherit, ObjectInherit' -and $ace.propagation -eq 'None'
         if ($exactDeny) { $observation.explicit_deny = $true } else { $observation.explicit_allow = $true }
     }
     return $observation
+}
+
+function Get-DenyObservation([string]$Root, [string]$Sid) {
+    $exists = Test-Path -LiteralPath $Root
+    $aces = if ($exists -and $Sid) { Get-AceRecords $Root } else { @() }
+    return (Resolve-DenyObservation $Root $exists $aces $Sid)
 }
 
 function Invoke-Preflight {
@@ -407,30 +433,69 @@ function Invoke-Apply($State, $Actions) {
             -Direction Outbound -Action Block -Profile Any -Protocol Any -RemoteAddress Any -LocalAddress Any -Program Any `
             -LocalUser "D:(A;;CC;;;$sid)" -Enabled True | Out-Null
     } elseif (-not (Test-RuleExact $rule $sid)) { Fail 'FIREWALL_CONFLICT' "rule '$RuleName' is not the exact provisioned rule" }
+    # No return value: every Write-Step above is pipeline output, so a returned SID would arrive
+    # concatenated with the step lines (owner APPLY 2026-09-26). The caller re-reads the SID.
+}
+
+function Resolve-ProvisionedWorkerSid($State) {
+    # The worker SID read back from the OS after APPLY -- never taken from a function's pipeline output.
+    $account = Get-WorkerAccount
+    if (-not $account) { Fail 'ACCOUNT_MISSING' "$AccountName does not exist after APPLY" }
+    $sid = [string]$account.SID.Value
+    if (-not (Test-WorkerSidShape $sid)) { Fail 'WORKER_SID_MALFORMED' "unexpected worker SID form '$sid'" }
+    if ($State.account.exists -and $sid -ne $State.account.sid) { Fail 'ACCOUNT_CONFLICT' 'the worker SID changed during provisioning' }
     return $sid
 }
 
-function Test-Provisioned([string]$Sid) {
-    # Every invariant except the completion record itself (written only after this passes).
-    $failures = @()
+function Get-VerificationObservation {
+    # Read-only snapshot of every provisioned invariant, in the OS's own normalized representation.
     $account = Get-WorkerAccount
-    if (-not $account -or $account.SID.Value -ne $Sid -or -not $account.Enabled -or [string]$account.Description -ne $AccountDescription) { $failures += 'ACCOUNT' }
-    foreach ($group in @(Get-AccountGroups)) { if ($group -ne 'S-1-5-32-545') { $failures += "GROUP:$group" } }
-    foreach ($dir in @($RuntimeRoot) + @($Subtrees.Values | ForEach-Object { Join-Path $RuntimeRoot $_ })) {
-        if (-not (Test-Path -LiteralPath $dir)) { $failures += "DIR:$dir" } elseif ((Get-Acl -LiteralPath $dir).AreAccessRulesProtected -ne $true) { $failures += "ACL_NOT_PROTECTED:$dir" }
+    $observed = [ordered]@{ account = [ordered]@{ exists = [bool]$account; sid = $null; enabled = $null; description = $null; groups = @() } }
+    if ($account) {
+        $observed.account.sid = [string]$account.SID.Value
+        $observed.account.enabled = [bool]$account.Enabled
+        $observed.account.description = [string]$account.Description
+        $observed.account.groups = Get-AccountGroups
     }
-    if (-not (Test-Path -LiteralPath $CredentialBlob)) { $failures += 'CREDENTIAL_BLOB' }
-    $rule = Get-RuleObservation
-    if (-not $rule.exists -or -not (Test-RuleExact $rule $Sid)) { $failures += 'FIREWALL_RULE' }
-    if (@(Get-NetFirewallRule -Group $RuleGroup -ErrorAction SilentlyContinue).Count -ne 1) { $failures += 'FIREWALL_GROUP' }
-    foreach ($root in $DenyRoots) {
-        $observed = Get-DenyObservation $root $Sid
-        if (-not $observed.explicit_deny -or $observed.explicit_allow) { $failures += "DENY_ACE:$root" }
+    $observed.dirs = @(foreach ($dir in @($RuntimeRoot) + @($Subtrees.Values | ForEach-Object { Join-Path $RuntimeRoot $_ })) {
+        $exists = Test-Path -LiteralPath $dir
+        [ordered]@{ path = $dir; exists = $exists; protected = ($exists -and (Get-Acl -LiteralPath $dir).AreAccessRulesProtected -eq $true) }
+    })
+    $observed.blob_exists = Test-Path -LiteralPath $CredentialBlob
+    $observed.rule = Get-RuleObservation
+    $observed.group_rule_count = @(Get-NetFirewallRule -Group $RuleGroup -ErrorAction SilentlyContinue).Count
+    $observed.deny_roots = @(foreach ($root in $DenyRoots) {
+        $exists = Test-Path -LiteralPath $root
+        [ordered]@{ path = $root; exists = $exists; aces = $(if ($exists) { Get-AceRecords $root } else { @() }) }
+    })
+    return $observed
+}
+
+function Get-VerificationFailures($Observed, [string]$Sid) {
+    # Pure: observation + expected worker SID -> failure codes. Every invariant except the
+    # completion record itself (written only after this passes).
+    $failures = @()
+    if (-not (Test-WorkerSidShape $Sid)) { return ,@('WORKER_SID_MALFORMED') }
+    $account = $Observed.account
+    if (-not $account.exists -or $account.sid -ne $Sid -or $account.enabled -ne $true -or $account.description -ne $AccountDescription) { $failures += 'ACCOUNT' }
+    foreach ($group in @($account.groups)) { if ($group -ne 'S-1-5-32-545') { $failures += "GROUP:$group" } }
+    foreach ($dir in @($Observed.dirs)) {
+        if (-not $dir.exists) { $failures += "DIR:$($dir.path)" } elseif ($dir.protected -ne $true) { $failures += "ACL_NOT_PROTECTED:$($dir.path)" }
+    }
+    if (-not $Observed.blob_exists) { $failures += 'CREDENTIAL_BLOB' }
+    if (-not $Observed.rule.exists -or -not (Test-RuleExact $Observed.rule $Sid)) { $failures += 'FIREWALL_RULE' }
+    if ($Observed.group_rule_count -ne 1) { $failures += 'FIREWALL_GROUP' }
+    foreach ($root in @($Observed.deny_roots)) {
+        $deny = Resolve-DenyObservation ([string]$root.path) ([bool]$root.exists) $root.aces $Sid
+        if (-not $deny.explicit_deny -or $deny.explicit_allow) { $failures += "DENY_ACE:$($root.path)" }
     }
     return ,$failures
 }
 
+function Test-Provisioned([string]$Sid) { return ,(Get-VerificationFailures (Get-VerificationObservation) $Sid) }
+
 function Write-CompletionRecord([string]$Sid) {
+    if (-not (Test-WorkerSidShape $Sid)) { Fail 'WORKER_SID_MALFORMED' 'refusing to write a completion record for a malformed worker SID' }
     $record = [ordered]@{
         contract_version = $ContractVersion; backend_id = $BackendId; worker_account = $AccountName; worker_sid = $Sid
         owner_sid = $OwnerSid; runtime_root = $RuntimeRoot; subtrees = $Subtrees
@@ -465,6 +530,20 @@ if ($SelfTestPlanFixture) {
     catch { Write-Output ([ordered]@{ ok = $false; refused = [string]$_.Exception.Message } | ConvertTo-Json -Compress) }
     exit 0
 }
+if ($SelfTestVerifyFixture) {
+    $fixture = Get-Content -LiteralPath $SelfTestVerifyFixture -Raw | ConvertFrom-Json
+    Write-Output ([ordered]@{ failures = (Get-VerificationFailures $fixture.observed ([string]$fixture.sid)) } | ConvertTo-Json -Depth 5 -Compress)
+    exit 0
+}
+if ($VerifyOnly) {
+    # Read-only, non-elevated: the post-provision verifier against the live host, SID read from the OS.
+    $account = Get-WorkerAccount
+    $liveSid = if ($account) { [string]$account.SID.Value } else { '' }
+    $failures = Get-VerificationFailures (Get-VerificationObservation) $liveSid
+    Write-Output ([ordered]@{ worker_sid = $liveSid; record_exists = (Test-Path -LiteralPath $RecordPath); failures = $failures } | ConvertTo-Json -Depth 4 -Compress)
+    if ($failures.Count -gt 0) { exit 2 }
+    exit 0
+}
 if ($Plan -and $Apply) { Fail 'MODE' 'choose -Plan or -Apply' }
 $state = Invoke-Preflight
 Assert-HostPrerequisites $state
@@ -474,7 +553,8 @@ if (-not $Apply) {
     Write-Step 'PLAN ONLY: nothing was changed. Re-run elevated with -Apply -OwnerSid <owner SID> to provision.'
     exit 0
 }
-$sid = Invoke-Apply $state $actions
+Invoke-Apply $state $actions
+$sid = Resolve-ProvisionedWorkerSid $state
 $failures = Test-Provisioned $sid
 if ($failures.Count -gt 0) {
     Write-Step "POST-PROVISION VERIFICATION FAILED (no completion record written; re-running -Apply resumes): $($failures -join '; ')"
