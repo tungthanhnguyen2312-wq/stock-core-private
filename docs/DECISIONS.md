@@ -1,6 +1,99 @@
 # Decisions & Architectural Decision Records
 
+## 2026-09-26 - M1 stabilization promoted to `main`; post-promotion state sync
+
+The cumulative stabilization RC was promoted to Producer `main` as one unit: PR #4 was merged as
+merge commit `9575cb04c899696a02b22ba9dfcfed9a4961cf2d`. Its parents are `cde156e` and the RC
+head `d0cf6783eb33c211ca5c8dd0a6f25fa8032c517e`, and its tree equals `d0cf678`.
+
+- **Lineage.** `cde156e` → `522cc46` (hermetic CI/dependency tiers) → `1fe1fcc` → `89e3a9d`
+  (Provider Runtime Isolation V1 and its final corrective) → `2d66528` … `2ddd586` (session-bar
+  integrity and the tactical latest-20 window) → `ca8918c` (retained-evidence quarantine and
+  canonical-evidence test write guard) → `d0cf678` (Linux `dir_fd` write-guard corrective) →
+  merge `9575cb04`.
+- **Why `d0cf678` exists.** The independent review of `ca8918c` found one blocker. On Linux,
+  `shutil.rmtree` removes a folder's children with `os.rmdir(name, dir_fd=...)`, and the guard
+  resolved `name` against the working directory. So cleaning up any temporary tree with a
+  `data/` or `operations-review/` child was refused as if it were canonical evidence. CI #77
+  showed 10 teardown errors from this.
+  - `d0cf678` resolves each target against the folder its handle actually names, and refuses a
+    handle that cannot be named.
+  - The final review confirmed that the guard's argument positions match CPython 3.13's audit
+    events.
+- **Verification.**
+  - CI #78 (exact head `d0cf678`; 707 focused tests passed on Linux) and #79 (push, `main` =
+    `9575cb04`) pass. #79 is the first green `main` Producer CI run since #31 (2026-09-17).
+  - Final independent verdict: `PROMOTION_REVIEW_PASS_WITH_NONBLOCKING_DEBT`, no blockers.
+- **2026-09-16 analytical attribution (independent review).**
+  - The retained snapshot has 191 tickers with conflicting duplicate bars. These are exactly the
+    191 evidence-currency changes (`CURRENT_SESSION` → `NO_CURRENT_EVIDENCE`, disposition
+    `MALFORMED_OR_CONFLICTED`).
+  - All 208 posture changes fall on those 191 tickers plus 17 exact-duplicate tickers.
+  - No replayable session without duplicates changes posture.
+  - The two stronger transitions are GHC `AVOID → INITIATE_ON_BREAKOUT` and HCC
+    `HOLD → ACCUMULATE_ON_RETEST`. Base code, including base posture policy, reproduces both
+    exactly when given the same input with only the exact duplicate collapsed.
+  - So they come from corrected exact-duplicate handling, not from provider changes, wider
+    licensing or a policy change.
+- **PR #3** (`522cc46`) is superseded by PR #4. GitHub marks it MERGED only because `522cc46` is
+  contained in `main`. This sync does not touch it.
+
+**Decisions:**
+- **M1 is not closed.** `CURRENT_DECISION_SURFACE_CONVERGENCE_V1` stays `ACTIVE` with disposition
+  `STABILIZATION_PROMOTED_LIVE_ACCEPTANCE_PENDING_SAFE_ORDINARY_DAILY`. Only a qualifying
+  ordinary Daily's live acceptance can close it.
+- **The provider-runtime gate is a standing operational block.**
+  - It is recorded as `blocked_capabilities.SUPPLEMENTAL_PROVIDER_RUNTIME_OPERATION`
+    (`SECURITY_REVIEW_BLOCKED`).
+  - The isolation code is promoted, but the runtime is not operationally approved: the policy
+    stays `SECURITY_REVIEW_BLOCKED` and a dedicated `STOCKLOOKUP_PROVIDER_PYTHON` is required,
+    with no core-Python fallback.
+  - Until the policy changes, every ordinary Daily ends at `BLOCKED_SUPPLEMENTAL_PROVIDER_RUNTIME`
+    and cannot serve M1 live acceptance.
+  - Runtime availability never promotes source or market-data authority by side effect.
+- **The next gate is provider-runtime operationalization, and no new analytical milestone is
+  queued.**
+  - The operationalization design waits for the bounded Codex provider-runtime-readiness output,
+    which is not yet available; this record does not guess implementation details.
+  - The order is operationalization → a qualifying safe ordinary Daily → M1 live acceptance →
+    close M1 and select the next analytical milestone.
+- **The retained-evidence incident stays governed by promoted code.**
+  - The 2026-08-25 IID is `CONTAMINATED_UNRECOVERABLE` and never a regression baseline.
+  - The retained 2026-09-04 IID copy is `NON_PRISTINE_ORIGINAL_RECONSTRUCTABLE`. Its production
+    identity `…:55173e1a…` stays recoverable through the 2026-09-04 handoff.
+  - IID-dependent posture replay for both sessions is excluded.
+  - No file was silently restored; all 16 quarantine pins are unchanged.
+- **Roadmap-state checkpoint hygiene.** Before editing `docs/ROADMAP_STATE.json`, the 32
+  literal `HEAD` checkpoint sentinels on COMPLETE milestones were frozen, per the
+  `roadmap_execution_state.resolve_checkpoint` contract.
+  - Each now names the commit that first recorded that milestone COMPLETE with the sentinel.
+  - Every one descends from its milestone's `starting_checkpoint`.
+  - Without this, they would all have re-resolved to this sync commit.
+  - `implementation_lineage_head` is now `9575cb04`.
+- **Authority unchanged.**
+  - `RAW_AS_TRADED` is NOT PROMOTED.
+  - Historical PIT, liquidity/sizing and `ACTIVE_UNIVERSE` authority are not promoted.
+  - Valuation and recommendation authority are unchanged.
+  - `research_action_posture` remains the sole action authority, and `research_stance` stays
+    secondary.
+  - `evidence_currency` and position-context meanings are unchanged, and `OPPORTUNITY_PRIORITY`
+    stays orthogonal.
+- **Non-blocking debt carried forward.**
+  - The write guard does not cover child Python processes or native SQLite writes, and Python's
+    `open` audit event carries no `dir_fd`.
+  - Quarantine has limited production callers.
+  - Legacy manual provider scripts import vnstock in-process whenever the core interpreter can.
+    Canonical Daily does not.
+  - The provider worker is not an OS sandbox.
+  - There is a second, non-authoritative MA20 surface.
+  - Recovery lineage does not record a superseded P3F9B conflict.
+- **Nothing ran.** No Daily, provider call, retained-evidence mutation, production DB write or
+  publication was performed for the promotion or this sync.
+
 ## 2026-09-26 - M1 stabilization integration RC V1 (isolated release candidate, not promoted)
+
+*Promoted to `main` on 2026-09-26 as `9575cb04` (see the entry above); the text below is the
+pre-promotion record.*
 
 One release candidate is built on the Provider Runtime Isolation final corrective (`89e3a9d`).
 The reviewed data-integrity and tactical commits (`ad6e63b`…`a069ff6`) are cherry-picked onto it.
@@ -135,6 +228,9 @@ No other retained snapshot (2026-08-20 .. 2026-09-24) has a duplicate.
 
 ## 2026-09-25 - Tactical reference-window corrective V1 (isolated branch, not promoted)
 
+*Promoted to `main` on 2026-09-26 as part of the stabilization unit `9575cb04` (see the
+2026-09-26 promotion entry); the text below is the pre-promotion record.*
+
 `TACTICAL_REFERENCE_WINDOW_CORRECTIVE_V1` is implemented on `feature/tactical-reference-window-corrective-v1`
 from `cde156e`. It is not merged or pushed; M1 live acceptance runs on `cde156e`.
 
@@ -183,6 +279,10 @@ from `cde156e`. It is not merged or pushed; M1 live acceptance runs on `cde156e`
   longer marks a ticker as missing.
 
 ## 2026-09-25 - Provider runtime isolation V1 (candidate, stacked on the CI hermetic tier)
+
+*The code was promoted to `main` on 2026-09-26 as part of the stabilization unit `9575cb04` (see
+the 2026-09-26 promotion entry). The provider runtime itself remains `SECURITY_REVIEW_BLOCKED`
+and is not operationally approved. The text below is the pre-promotion record.*
 
 Owner architecture decisions D1–D4 for the optional KBS/VCI provider runtime (vnstock/vnai).
 The PyPI Simple API reports these packages as quarantined. That is an index/security-review

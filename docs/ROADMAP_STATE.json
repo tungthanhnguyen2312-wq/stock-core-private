@@ -9,7 +9,7 @@
     "ai_rules": "docs/AI_RULES.md",
     "note": "This file is the machine-readable EXECUTION-STATE authority: which milestone is current/active/next/blocked, what checkpoint proves each completed milestone, and whether recorded state contradicts Git/worktree reality. It does not restate or supersede the narrative docs' technical content and is not a substitute for reading them. Where this file and a narrative doc appear to disagree, that is a conflict to surface to the owner (AGENTS.md 'Default lightweight bootstrap' rule), never an automatic override in either direction."
   },
-  "implementation_lineage_head": "2d32e5161391db4c6d2836cf3d334a45f2b864ea",
+  "implementation_lineage_head": "9575cb04c899696a02b22ba9dfcfed9a4961cf2d",
   "last_updated_checkpoint": "HEAD",
   "known_operational_diff_allowlist": [
     "config/daily_research_session_input_registry.json"
@@ -46,7 +46,7 @@
       "state": "COMPLETE",
       "narrative_disposition": "PRESENTATION_ONLY / NO_NEW_ANALYTICAL_AUTHORITY / SEE_SUPERSEDING_CORRECTIVE_ABOVE",
       "starting_checkpoint": "d6f02b257e3762716f6ce2b1410f734e2ad79cc9",
-      "checkpoint": "HEAD",
+      "checkpoint": "7118a06fd218b0e73520724640b2154ee250d1b1",
       "dependencies": [
         "MULTI_SESSION_SIGNAL_VELOCITY_AND_EARLY_TRANSITION_INTELLIGENCE_V1",
         "FLOW_PRICE_DIVERGENCE_SHADOW_V1"
@@ -70,7 +70,7 @@
       "state": "COMPLETE",
       "narrative_disposition": "IMPLEMENTATION_COMPLETE / NO_NETWORK_LIVE_ACCEPTANCE_PENDING",
       "starting_checkpoint": "a0e883595d93d99bb4f32b5518634556be461f00",
-      "checkpoint": "HEAD",
+      "checkpoint": "7eec2649301c4be0d6e2683a1a9b5c78d091b7fe",
       "dependencies": [
         "FLOW_PRICE_DIVERGENCE_SHADOW_V1"
       ],
@@ -91,7 +91,7 @@
       "state": "COMPLETE",
       "narrative_disposition": "PARTIAL_BY_EVIDENCE / RETAINED_VALUE_ONLY_SHADOW_RESEARCH",
       "starting_checkpoint": "da6efb39c1a27ad62d4c3ea1c5d0a408a4827fc9",
-      "checkpoint": "HEAD",
+      "checkpoint": "8773c8f00506d171627b96f1e4df9568b6691cd4",
       "dependencies": [
         "MULTI_SESSION_SIGNAL_VELOCITY_AND_EARLY_TRANSITION_INTELLIGENCE_V1"
       ],
@@ -110,7 +110,7 @@
       "state": "COMPLETE",
       "narrative_disposition": "PARTIAL_BY_EVIDENCE / RETAINED_SESSION_RESEARCH_ONLY / NO_AUTHORITY_PROMOTION",
       "starting_checkpoint": "ab028772309f1866156066c804684c0ff6eaa76f",
-      "checkpoint": "HEAD",
+      "checkpoint": "00071a980da88dfa28cf1aa7674dabd7ea002ca1",
       "dependencies": [],
       "unlocks": [],
       "authority_effect": "NONE / PIT_SAFE_RETAINED_SESSION_SIGNAL_VELOCITY_RESEARCH_ONLY",
@@ -127,7 +127,7 @@
       "state": "COMPLETE",
       "narrative_disposition": "PARTIAL_DASHBOARD_PUBLICATION_BLOCKED",
       "starting_checkpoint": "9a6c0e6621517e2d6930f3c087cead3ec1be9980",
-      "checkpoint": "HEAD",
+      "checkpoint": "f9ad133ce3d17adf43ae58cc6888db25248c4e89",
       "dependencies": [
         "PERSONAL_PORTFOLIO_QUANT_RISK_DECOMPOSITION_V1"
       ],
@@ -144,7 +144,7 @@
       "state": "COMPLETE",
       "narrative_disposition": "PERSONAL_ACTION_CENTER_RELEASED",
       "starting_checkpoint": "48d8f9b270d79d738052a3f1803ee87678632c7e",
-      "checkpoint": "HEAD",
+      "checkpoint": "9c6ce4def64535d5094568a07a95639e5a95431b",
       "dependencies": [
         "PERSONAL_DECISION_INPUT_TRUTH_V1"
       ],
@@ -161,7 +161,7 @@
       "state": "COMPLETE",
       "narrative_disposition": "PERSONAL_DECISION_INPUT_TRUTH_RELEASED",
       "starting_checkpoint": "33a029308ea870f12abcd23f99aafb0b27d24488",
-      "checkpoint": "HEAD",
+      "checkpoint": "48d8f9b270d79d738052a3f1803ee87678632c7e",
       "dependencies": [],
       "unlocks": [],
       "authority_effect": "NONE / PRIVATE_LOCAL_ONLY_CURRENT_POSITION_TRUTH_CORRECTIVE",
@@ -176,7 +176,7 @@
       "state": "COMPLETE",
       "narrative_disposition": "RETROSPECTIVE_RESEARCH_REPLAY_READY / PIT_AUTHORITY_UNCHANGED",
       "starting_checkpoint": "0053835f8883def96175220315cbffac2722fae9",
-      "checkpoint": "HEAD",
+      "checkpoint": "2541b9359e5aaa73dcb1139d8606be0b075139e3",
       "dependencies": [
         "TACTICAL_REVERSAL_RETROSPECTIVE_VALIDATION_V1"
       ],
@@ -193,7 +193,7 @@
       "state": "COMPLETE",
       "narrative_disposition": "HISTORICAL_TIMING_DIAGNOSTIC_READY / POLICY_UNCHANGED",
       "starting_checkpoint": "8828593c6ee4d86a5997d294b380b7e516f08b54",
-      "checkpoint": "HEAD",
+      "checkpoint": "0053835f8883def96175220315cbffac2722fae9",
       "dependencies": [
         "PRICE_BASIS_SEMANTICS_AND_FEATURE_FITNESS_V1"
       ],
@@ -210,7 +210,7 @@
       "state": "COMPLETE",
       "narrative_disposition": "SHADOW_BASIS_FITNESS_READY / AUTHORITY_UNCHANGED",
       "starting_checkpoint": "8373078eecdfa69631e000a3a87457bd4aebcb64",
-      "checkpoint": "HEAD",
+      "checkpoint": "1b9b6508c693b20306a02a0cb5fab6cff1edac36",
       "dependencies": [],
       "unlocks": [],
       "authority_effect": "NONE / SHADOW_BASIS_FITNESS_QUERY_ONLY",
@@ -225,7 +225,7 @@
       "state": "COMPLETE",
       "narrative_disposition": "PRE_ACQUISITION_FAIL_CLOSED / SAFE_RESUME_CONTRACT_READY",
       "starting_checkpoint": "c106e74d039efb8400864d9e7daf275b7cbd3a33",
-      "checkpoint": "HEAD",
+      "checkpoint": "8373078eecdfa69631e000a3a87457bd4aebcb64",
       "dependencies": [],
       "unlocks": [
         "DAILY_BRIEF_PRESEAL_CORRECTIVE_NEW_SESSION_PRODUCTION_ACCEPTANCE"
@@ -241,7 +241,7 @@
       "milestone_id": "DAILY_BRIEF_PRESEAL_CORRECTIVE_NEW_SESSION_PRODUCTION_ACCEPTANCE",
       "state": "COMPLETE",
       "narrative_disposition": "GUARDED_NEW_SESSION_PRODUCTION_ACCEPTANCE_PASS",
-      "checkpoint": "HEAD",
+      "checkpoint": "ac592015b7d93c14f9487e49d21b27e54daf2906",
       "dependencies": [
         "DAILY_PRODUCTION_EXECUTION_ENVIRONMENT_GUARD_V1"
       ],
@@ -1486,7 +1486,7 @@
       "state": "COMPLETE",
       "narrative_disposition": "COMPLETE / SHADOW_ONLY / PRODUCTION_POLICY_UNCHANGED",
       "starting_checkpoint": "78457cdfc780024bb153df422b3c3024b87f2df8",
-      "checkpoint": "HEAD",
+      "checkpoint": "08e247aabfc780dda6bd75fa9b9f55b20fcc4a47",
       "dependencies": [
         "TACTICAL_REVERSAL_PROBE_POLICY_COUNTERFACTUAL_EVALUATION_V1"
       ],
@@ -1503,7 +1503,7 @@
       "state": "COMPLETE",
       "narrative_disposition": "COMPLETE / COLLECTION_READY / ACTIVE_COLLECTION / NO_PRODUCTION_CHANGE",
       "starting_checkpoint": "d758814c73dc2bf60cfa605f4a6738e2c36ea6a7",
-      "checkpoint": "HEAD",
+      "checkpoint": "3cd7c881257abfed85affbfaca82c8892631bc32",
       "dependencies": [
         "TACTICAL_REVERSAL_SHADOW_PROBE_POLICY_V1"
       ],
@@ -1520,7 +1520,7 @@
       "state": "COMPLETE",
       "narrative_disposition": "COMPLETE / SHADOW_COLLECTION_OPERATIONAL_YES / HISTORICAL_MAPPING_COMPLETE / GENUINE_PROSPECTIVE_VALIDATION_NOT_YET_MATURE",
       "starting_checkpoint": "3cd7c881257abfed85affbfaca82c8892631bc32",
-      "checkpoint": "HEAD",
+      "checkpoint": "00adacef99c338c00e18c8dea147479176bec2d2",
       "dependencies": [
         "TACTICAL_REVERSAL_PROSPECTIVE_SHADOW_COLLECTION_V1"
       ],
@@ -1537,7 +1537,7 @@
       "state": "COMPLETE",
       "narrative_disposition": "COMPLETE / CONSERVATIVE_HISTORICAL_RECONCILIATION / COMPARATOR_SEMANTICS_ADDITIVE",
       "starting_checkpoint": "00adacef99c338c00e18c8dea147479176bec2d2",
-      "checkpoint": "HEAD",
+      "checkpoint": "6bbce33af42ccebd40eb8da917d1b7af669b0a7d",
       "dependencies": [
         "TACTICAL_REVERSAL_SHADOW_COLLECTION_OPERATIONALIZATION_V1"
       ],
@@ -1571,7 +1571,7 @@
       "state": "COMPLETE",
       "narrative_disposition": "COMPLETE / NETWORK_IN_CI_FORBIDDEN / PRODUCTION_CALL_SHAPE_SMOKE_ACTIVE / PRODUCTION_ANALYTICAL_BEHAVIOR_UNCHANGED",
       "starting_checkpoint": "3e9585b58cf8c6ddb9a9c80b1c93528b2e72cb27",
-      "checkpoint": "HEAD",
+      "checkpoint": "036f20600e9f9edd5bdccc9b5eb454205c15215d",
       "dependencies": [
         "AI_HANDOFF_FRESHNESS_AND_SOURCE_CONVERGENCE_V1"
       ],
@@ -1619,7 +1619,7 @@
       "milestone_id": "CANONICAL_CURRENT_PRODUCT_PROJECTIONS_AND_DASHBOARD_BINDING_V1",
       "state": "COMPLETE",
       "narrative_disposition": "COMPLETE_LOCAL / RELEASE_NOT_YET_AUTHORIZED / SCREENER_MASTER_RECURRING_CURRENT_PRODUCT / INVESTMENT_WORKSPACE_RECURRING_CURRENT_PRODUCT / ONE_OFF_HISTORICAL_TOOLS_RETAINED_FOR_REPRODUCIBILITY_ONLY / DASHBOARD_PRODUCT_FRESHNESS_DERIVED_FROM_PRODUCT_ARTIFACT",
-      "checkpoint": "HEAD",
+      "checkpoint": "fda11ad025433700068a297be4e4edd736031e3a",
       "dependencies": [
         "MACRO_NETWORK_GOVERNANCE_AND_VNSTOCK_DECOUPLING_V1"
       ],
@@ -1637,7 +1637,7 @@
       "milestone_id": "CANONICAL_RECURRING_DECISION_CONTEXT_MATERIALIZATION_V1",
       "state": "COMPLETE",
       "narrative_disposition": "COMPLETE_LOCAL / RELEASE_NOT_YET_AUTHORIZED / FUNDAMENTAL_FEATURE_STORE_RECURRING / TACTICAL_BEHAVIOR_CONTEXT_RECURRING / NON_HISTORICAL_SOURCE_BOUND",
-      "checkpoint": "HEAD",
+      "checkpoint": "a6e148b5288505ec5796889e37d014a5ac5ec3cb",
       "dependencies": [
         "CANONICAL_CURRENT_PRODUCT_PROJECTIONS_AND_DASHBOARD_BINDING_V1"
       ],
@@ -1653,7 +1653,7 @@
       "milestone_id": "CANONICAL_RECURRING_THESIS_AND_PORTFOLIO_CONTEXT_MATERIALIZATION_V1",
       "state": "COMPLETE",
       "narrative_disposition": "PARTIAL_BY_CURRENT_SOURCE_AVAILABILITY / COMPLETE_LOCAL / RELEASE_NOT_YET_AUTHORIZED",
-      "checkpoint": "HEAD",
+      "checkpoint": "1a924786c71bb806fdfda1eedaec316babd905d8",
       "dependencies": [
         "CANONICAL_RECURRING_DECISION_CONTEXT_MATERIALIZATION_V1"
       ],
@@ -1669,7 +1669,7 @@
       "milestone_id": "CANONICAL_EVIDENCE_BOUND_THESIS_CASES_DECISION_INPUT_V1",
       "state": "COMPLETE",
       "narrative_disposition": "COMPLETE_LOCAL / RELEASE_NOT_YET_AUTHORIZED",
-      "checkpoint": "HEAD",
+      "checkpoint": "0adff34748e089ba877d910efd1cbaf4d8325742",
       "dependencies": [
         "CANONICAL_RECURRING_THESIS_AND_PORTFOLIO_CONTEXT_MATERIALIZATION_V1"
       ],
@@ -1685,7 +1685,7 @@
       "milestone_id": "CURRENT_EVENT_CATALYST_DECISION_SEMANTICS_CORRECTIVE_V1",
       "state": "COMPLETE",
       "narrative_disposition": "COMPLETE_LOCAL / EVENT_CONTRACT_SEMANTICS_CORRECTED / AUTHORITY_UNCHANGED",
-      "checkpoint": "HEAD",
+      "checkpoint": "325a26657ad9b5e96e3bcf3529f01bca98b1720d",
       "dependencies": [
         "CANONICAL_EVIDENCE_BOUND_THESIS_CASES_DECISION_INPUT_V1"
       ],
@@ -1769,7 +1769,7 @@
       "state": "COMPLETE",
       "narrative_disposition": "AI_HANDOFF_RELEASED_CORE_ROADMAP_RESUMED",
       "starting_checkpoint": "372c13ceea16212222b3e6ee527471ee7608fc37",
-      "checkpoint": "HEAD",
+      "checkpoint": "37829148f2cff70cad0cd587605c53d297c5bf9b",
       "dependencies": [
         "CURRENT_RESEARCH_AI_HANDOFF_PACKET_V1"
       ],
@@ -1786,7 +1786,7 @@
       "state": "COMPLETE",
       "narrative_disposition": "GUARDED_DAILY_PRODUCTION_ACCEPTANCE_CLOSED",
       "starting_checkpoint": "df0d8881df88a6c97511a5930da72af69a690880",
-      "checkpoint": "HEAD",
+      "checkpoint": "ac592015b7d93c14f9487e49d21b27e54daf2906",
       "dependencies": [
         "DAILY_PRODUCTION_EXECUTION_ENVIRONMENT_GUARD_V1",
         "DAILY_BRIEF_PRESEAL_CORRECTIVE_NEW_SESSION_PRODUCTION_ACCEPTANCE"
@@ -1804,7 +1804,7 @@
       "state": "COMPLETE",
       "narrative_disposition": "OFFICIAL_EVIDENCE_ACQUIRED_PARTIAL_BY_SOURCE_CEILING",
       "starting_checkpoint": "5bede23a882b7a0428b781e9ce8e7d25d19d3014",
-      "checkpoint": "HEAD",
+      "checkpoint": "0179d2c2e42b284a3cbf49d19a5ee6fac4394e5c",
       "dependencies": [
         "PRICE_BASIS_FACTOR_CHAIN_AND_PIT_SERIES_QUALIFICATION_V1"
       ],
@@ -1821,7 +1821,7 @@
       "state": "COMPLETE",
       "narrative_disposition": "FACTOR_CHAIN_PIPELINE_READY / PIT_SERIES_PARTIAL_BY_EVIDENCE",
       "starting_checkpoint": "37829148f2cff70cad0cd587605c53d297c5bf9b",
-      "checkpoint": "HEAD",
+      "checkpoint": "5bede23a882b7a0428b781e9ce8e7d25d19d3014",
       "dependencies": [
         "PRICE_BASIS_SEMANTICS_AND_FEATURE_FITNESS_V1"
       ],
@@ -1857,7 +1857,7 @@
       "state": "COMPLETE",
       "narrative_disposition": "PERSONAL_PORTFOLIO_QUANT_RISK_RELEASED",
       "starting_checkpoint": "03959e9fa57f441ee7d9e5ccf17ac2904d67f98d",
-      "checkpoint": "HEAD",
+      "checkpoint": "9a6c0e6621517e2d6930f3c087cead3ec1be9980",
       "dependencies": [
         "PRIVATE_MULTI_BROKER_INVESTMENT_ACCOUNT_CONTEXT_V1"
       ],
@@ -1874,7 +1874,7 @@
       "state": "COMPLETE",
       "narrative_disposition": "INDICATOR_METRIC_AVAILABILITY_AND_DISPLAY_STATE_CONTRACTS_RELEASED_BACKEND_ONLY",
       "starting_checkpoint": "9a662ae3e134030e2b2b8fe7b5b4b7f3e69acb90",
-      "checkpoint": "HEAD",
+      "checkpoint": "43e10a4f476f288106b87704ee84e560a1d03af5",
       "dependencies": [],
       "unlocks": [],
       "authority_effect": "DESCRIPTIVE_RECONCILIATION_ONLY / NO_NEW_ACQUISITION_OR_ENGINE_AUTHORITY / DASHBOARD_NOT_MODIFIED",
@@ -1889,7 +1889,7 @@
       "state": "COMPLETE",
       "narrative_disposition": "HOME_SUMMARY_WIRED_INTO_PRODUCER_PIPELINE_CACHE_BUSTING_CI_GATE_ADDED_LOCAL_UNPUSHED",
       "starting_checkpoint": "cbf458e9ac6796994a9ed0d44d59b823f3d60550",
-      "checkpoint": "HEAD",
+      "checkpoint": "80b979f57704d37bf896b338223f5c8ac2899260",
       "dependencies": [],
       "unlocks": [],
       "authority_effect": "PRESENTATION_ONLY / NO_NEW_ANALYTICAL_AUTHORITY / NO_RANKING_SCORE_RECOMMENDATION / DASHBOARD_HOME_ONLY",
@@ -1904,7 +1904,7 @@
       "state": "COMPLETE",
       "narrative_disposition": "CLASSIFICATION_AND_LIVE_PATH_WIRING_CORRECTED_COUNTS_RECONCILE_LOCAL_UNPUSHED",
       "starting_checkpoint": "80b979f57704d37bf896b338223f5c8ac2899260",
-      "checkpoint": "HEAD",
+      "checkpoint": "c5443aa43bb100208d85893585fa075e85b7d136",
       "dependencies": [
         "INDICATOR_AND_METRIC_AVAILABILITY_RECONCILIATION_V1"
       ],
@@ -1921,7 +1921,7 @@
       "state": "COMPLETE",
       "narrative_disposition": "CHECKOUT_CLEANLINESS_CONTRACT_UNIFIED_PLUS_TECHNICAL_RECOVERY_RESUMABILITY_AND_OWNER_RESULT_UX_HARDENING_LOCAL_UNPUSHED",
       "starting_checkpoint": "5505d56fabe57849114d40efd5598097a00a302b",
-      "checkpoint": "HEAD",
+      "checkpoint": "e6c3fc0aae88398ee20985a85128eaa40f33888f",
       "dependencies": [],
       "unlocks": [],
       "authority_effect": "OPERATIONAL_ONLY / NO_NEW_ANALYTICAL_AUTHORITY / NO_PROVIDER_AUTHORITY_CHANGE / NO_PIT_RAW_SEMANTICS_CHANGE / NO_DASHBOARD_CHANGE / NO_NETWORK_CALL",
@@ -1936,7 +1936,7 @@
       "state": "COMPLETE",
       "narrative_disposition": "SIX_OF_SIX_HISTORICAL_SESSIONS_RESOLVED / FOUR_ACQUIRED_TWO_STRUCTURALLY_INELIGIBLE / GOVERNED_5_SESSION_PERSISTENCE_NOW_PROVEN_VIA_BOUNDED_REGISTRY_FALLBACK / CURRENT_21_09_FLOW_CORRECTLY_ABSENT",
       "starting_checkpoint": "6330b964a7e808e669a4e9177cb8e19e68517124",
-      "checkpoint": "HEAD",
+      "checkpoint": "a60dc58a68bcca16707433d66c4d9be498d734db",
       "dependencies": [
         "CURRENT_FOREIGN_FLOW_RETENTION_PRODUCTIONIZATION_V1"
       ],
@@ -1994,9 +1994,16 @@
     {
       "milestone_id": "CURRENT_DECISION_SURFACE_CONVERGENCE_V1",
       "state": "ACTIVE",
-      "narrative_disposition": "CORRECTIVE_PROMOTED_LIVE_ACCEPTANCE_PENDING_NEXT_ORDINARY_DAILY",
-      "live_acceptance_corrective": "M1_LIVE_ACCEPTANCE_CORRECTIVE_V1 (2026-09-24): implementation promoted 2026-09-24 (Producer 8be6223 / Dashboard 42eef05); the 2026-09-24 ordinary Daily completed but independent live acceptance returned M1_LIVE_ACCEPTANCE_FAIL on five delivery/presentation/lineage/launcher defects (AI delivery omitted evidence_currency/position_context; 2026-09-15 current_decision_cockpit.json published with the 2026-09-24 release; restaged release-manifest path/identity/hash split; foreign-flow presentation read the Producer-local store; Desktop PowerShell 5.1 launcher killed Owner Daily on native stderr). The independently reviewed corrective chain 27b928f -> dc16500 -> 3695340 -> 2d32e51 was fast-forward promoted to Producer main on 2026-09-25. No Daily, replay, provider call, production DB write, Dashboard publication or AI-handoff republication occurred during promotion. Analytical decisions unchanged. Next gate: the next ordinary Daily's live acceptance; no 2026-09-24 replay. See docs/DECISIONS.md 2026-09-24.",
-      "checkpoint": "2d32e5161391db4c6d2836cf3d334a45f2b864ea",
+      "narrative_disposition": "STABILIZATION_PROMOTED_LIVE_ACCEPTANCE_PENDING_SAFE_ORDINARY_DAILY",
+      "live_acceptance_corrective": "M1_LIVE_ACCEPTANCE_CORRECTIVE_V1 (2026-09-24): implementation promoted 2026-09-24 (Producer 8be6223 / Dashboard 42eef05); the 2026-09-24 ordinary Daily completed but independent live acceptance returned M1_LIVE_ACCEPTANCE_FAIL on five delivery/presentation/lineage/launcher defects (AI delivery omitted evidence_currency/position_context; 2026-09-15 current_decision_cockpit.json published with the 2026-09-24 release; restaged release-manifest path/identity/hash split; foreign-flow presentation read the Producer-local store; Desktop PowerShell 5.1 launcher killed Owner Daily on native stderr). The independently reviewed corrective chain 27b928f -> dc16500 -> 3695340 -> 2d32e51 was fast-forward promoted to Producer main on 2026-09-25. No Daily, replay, provider call, production DB write, Dashboard publication or AI-handoff republication occurred during promotion. Analytical decisions unchanged. Next gate: the next ordinary Daily's live acceptance; no 2026-09-24 replay. See docs/DECISIONS.md 2026-09-24. [2026-09-26: that next gate is superseded by stabilization_promotion below -- while the provider policy is SECURITY_REVIEW_BLOCKED, every ordinary Daily ends at BLOCKED_SUPPLEMENTAL_PROVIDER_RUNTIME and cannot serve M1 live acceptance.]",
+      "stabilization_promotion": "M1_STABILIZATION_INTEGRATION_RC_V1 promoted to Producer main 2026-09-26 as ONE stabilization unit: PR #4 merged at 9575cb04c899696a02b22ba9dfcfed9a4961cf2d (parents cde156e + RC head d0cf678; tree identical to d0cf678). Lineage: cde156e -> 522cc46 (hermetic CI/dependency tiers) -> 1fe1fcc -> 89e3a9d (PROVIDER_RUNTIME_ISOLATION_V1 + final corrective) -> 2d66528 / 19ff27e / 92f634c / 091e58b / dbb0e10 / 2ddd586 (session-bar integrity + tactical latest-20 window; patch-identical to reviewed ad6e63b..a069ff6) -> ca8918c (retained-evidence quarantine + canonical-evidence test write guard) -> d0cf678 (Linux dir_fd write-guard corrective) -> merge 9575cb04. Producer CI #78 (PR, exact head d0cf678) and #79 (push, main 9575cb04) PASS. Independent promotion review: PROMOTION_REVIEW_PASS_WITH_NONBLOCKING_DEBT, BLOCKERS = NONE. PR #3 (522cc46) is superseded by PR #4; GitHub reports it MERGED only because 522cc46 is contained in main. Provider runtime isolation CODE is promoted; the provider runtime itself is NOT operationally approved: config/provider_runtime_policy.json stays SECURITY_REVIEW_BLOCKED, a dedicated STOCKLOOKUP_PROVIDER_PYTHON remains required, and there is no fallback to core Python. No Daily, provider call, retained-evidence mutation, production DB write or publication occurred during promotion or this sync. Analytical semantics now promoted: one session_bar_integrity duplicate policy (exact duplicates collapse only when every retained field is identical; conflicting duplicates fail closed); integrity on the full T0-qualified series before any window slicing; ma_20 = mean of the latest 20 qualified observations; momentum_20d = close[t] / close[t-19] - 1. Action policy, research_action_posture sole authority, research_stance secondary, evidence_currency meanings, position context and OPPORTUNITY_PRIORITY orthogonality are unchanged. See docs/DECISIONS.md 2026-09-26 and docs/STATE.md.",
+      "live_acceptance_prerequisites": [
+        "PROVIDER_RUNTIME_OPERATIONALIZATION: owner decision + implementation satisfying the provider-runtime safety contract (policy change from SECURITY_REVIEW_BLOCKED, dedicated provider interpreter, readiness handshake); design pending the bounded Codex provider-runtime-readiness output, not yet available on 2026-09-26",
+        "QUALIFYING_SAFE_ORDINARY_DAILY: an ordinary Daily with provider_runtime_state AVAILABLE and a DNSE quality license that qualifies for ordinary Daily (canonical_daily_operation.m1_live_acceptance_eligible)",
+        "M1_LIVE_ACCEPTANCE on that Daily",
+        "Only then close M1 and select the next analytical roadmap milestone (owner authorization required)"
+      ],
+      "checkpoint": "9575cb04c899696a02b22ba9dfcfed9a4961cf2d",
       "dependencies": [
         "INTEGRATED_INVESTMENT_DECISION_PRODUCT_V1",
         "CANONICAL_CURRENT_PRODUCT_PROJECTIONS_AND_DASHBOARD_BINDING_V1",
@@ -2012,7 +2019,7 @@
         "NEXT"
       ],
       "owner_override": "OWNER_DIRECTIVE_2026_09_23_CURRENT_DECISION_SURFACE_CONVERGENCE_V1",
-      "notes": "ACTIVE / CORRECTIVE_PROMOTED / LIVE_ACCEPTANCE_PENDING_NEXT_ORDINARY_DAILY. The initial M1 implementation was promoted on 2026-09-24; the independently reviewed corrective chain through 2d32e51 was fast-forward promoted to Producer main on 2026-09-25. No Daily, replay, provider call, production DB write, Dashboard publication or AI-handoff republication occurred during corrective promotion. (1) research_action_posture is the single cross-surface action authority: the Workspace now requires the exact same-session Integrated Decision artifact (strict session / ticker-set / content-identity / per-record decision_identity checks; no fallback to research_stance) and Screener/Home summarize posture; research_stance stays only as a secondary research-screen field with explicit role metadata. (2) evidence_currency (CURRENT_SESSION / LAST_TRADE_AS_OF:<date> / NO_CURRENT_EVIDENCE) is Producer-owned, derived only from the exact-session Level-2 same_session_technical_coverage_disposition/v1 (strict session + content identity), passed through by every surface, and part of decision_identity. (3) The only posture correction: NO_CURRENT_EVIDENCE + WAIT_FOR_CONFIRMATION resolves to INSUFFICIENT_CURRENT_RESEARCH (invariant enforced at build). (4) OPPORTUNITY_PRIORITY wired via the existing daily_opportunity_decision_queue.build over the same-session Level-2 current_opportunity_prioritization/v1 + entry-candidate triage (lineage/session/self-identity checked, otherwise explicitly unavailable); priority is excluded from decision_identity and never changes posture. (5) Position context explicit: no private portfolio => UNKNOWN_POSITION_NOT_SUPPLIED (never NOT_HELD); HOLD/HOLD_DO_NOT_ADD/REDUCE presented conditionally. (6) AI brief and Action Center carry a full-universe decision_surface_index read model. Retained 2026-09-23 read-only replay: denominator 1,683 (Integrated = disposition = snapshot = Workspace = Screener); 9/9 replay input identities match the retained Integrated Decision; the only posture change is 158 WAIT->INSUFFICIENT (gate); NO_CURRENT_EVIDENCE WAIT 0; tuple parity 1,683/1,683 on Workspace, published index, Screener, AI brief index and Action Center index; priority available 1,507/1,683 with zero posture/currency/trigger/invalidation/decision_identity changes attributable to priority. No score, probability, target price, sizing, execution, RAW_AS_TRADED or PIT authority introduced. Original queue notes follow. QUEUED_NEXT; not started by this sync. Queued does not mean started. BOUNDED CONTRACT: (1) Decision authority: research_action_posture is the single cross-surface action-decision authority; research_stance stays a secondary research-candidate/screening dimension and must not compete as a second action recommendation. (2) Evidence currency: standardize CURRENT_SESSION, LAST_TRADE_AS_OF:<YYYY-MM-DD>, NO_CURRENT_EVIDENCE; NO_CURRENT_EVIDENCE is never rendered as analytical WAIT_FOR_CONFIRMATION (WAIT means relevant evidence exists and a defined confirmation is pending). (3) Position context stays explicit: without a private portfolio position, HOLD is presented conditionally ('HOLD -- if currently held'); ownership is never fabricated. (4) OPPORTUNITY_PRIORITY is wired as an orthogonal inspection/ranking axis that does not alter research_action_posture in M1 (decision = what to do; priority = what to inspect first); priority stays shadow/observational for policy interaction. (5) Convergence target: Producer / Dashboard / AI handoff / Action Center agree on at least (ticker, research_action_posture, evidence_currency) for the full current canonical universe -- use the current canonical denominator, never a hardcoded constant; 1,683 is the known 2026-09-23 acceptance baseline. ACCEPTANCE INTENT: zero conflicting action-posture authority between surfaces; zero NO_CURRENT_EVIDENCE names rendered as analytical WAIT; research_stance secondary; priority never mutates posture; deterministic/hermetic cross-surface contract tests. OUT OF SCOPE: portfolio optimization, storage migration, presentation refactor, PIT expansion, new source/provider work, any authority promotion.",
+      "notes": "ACTIVE / STABILIZATION_PROMOTED / LIVE_ACCEPTANCE_PENDING_SAFE_ORDINARY_DAILY (2026-09-26). The cumulative stabilization RC was promoted to main at 9575cb04 (see stabilization_promotion). M1 is NOT closed: it stays ACTIVE until a qualifying ordinary Daily passes live acceptance, which first requires provider-runtime operationalization (see live_acceptance_prerequisites). Prior status (2026-09-25): CORRECTIVE_PROMOTED / LIVE_ACCEPTANCE_PENDING_NEXT_ORDINARY_DAILY. The initial M1 implementation was promoted on 2026-09-24; the independently reviewed corrective chain through 2d32e51 was fast-forward promoted to Producer main on 2026-09-25. No Daily, replay, provider call, production DB write, Dashboard publication or AI-handoff republication occurred during corrective promotion. (1) research_action_posture is the single cross-surface action authority: the Workspace now requires the exact same-session Integrated Decision artifact (strict session / ticker-set / content-identity / per-record decision_identity checks; no fallback to research_stance) and Screener/Home summarize posture; research_stance stays only as a secondary research-screen field with explicit role metadata. (2) evidence_currency (CURRENT_SESSION / LAST_TRADE_AS_OF:<date> / NO_CURRENT_EVIDENCE) is Producer-owned, derived only from the exact-session Level-2 same_session_technical_coverage_disposition/v1 (strict session + content identity), passed through by every surface, and part of decision_identity. (3) The only posture correction: NO_CURRENT_EVIDENCE + WAIT_FOR_CONFIRMATION resolves to INSUFFICIENT_CURRENT_RESEARCH (invariant enforced at build). (4) OPPORTUNITY_PRIORITY wired via the existing daily_opportunity_decision_queue.build over the same-session Level-2 current_opportunity_prioritization/v1 + entry-candidate triage (lineage/session/self-identity checked, otherwise explicitly unavailable); priority is excluded from decision_identity and never changes posture. (5) Position context explicit: no private portfolio => UNKNOWN_POSITION_NOT_SUPPLIED (never NOT_HELD); HOLD/HOLD_DO_NOT_ADD/REDUCE presented conditionally. (6) AI brief and Action Center carry a full-universe decision_surface_index read model. Retained 2026-09-23 read-only replay: denominator 1,683 (Integrated = disposition = snapshot = Workspace = Screener); 9/9 replay input identities match the retained Integrated Decision; the only posture change is 158 WAIT->INSUFFICIENT (gate); NO_CURRENT_EVIDENCE WAIT 0; tuple parity 1,683/1,683 on Workspace, published index, Screener, AI brief index and Action Center index; priority available 1,507/1,683 with zero posture/currency/trigger/invalidation/decision_identity changes attributable to priority. No score, probability, target price, sizing, execution, RAW_AS_TRADED or PIT authority introduced. Original queue notes follow. QUEUED_NEXT; not started by this sync. Queued does not mean started. BOUNDED CONTRACT: (1) Decision authority: research_action_posture is the single cross-surface action-decision authority; research_stance stays a secondary research-candidate/screening dimension and must not compete as a second action recommendation. (2) Evidence currency: standardize CURRENT_SESSION, LAST_TRADE_AS_OF:<YYYY-MM-DD>, NO_CURRENT_EVIDENCE; NO_CURRENT_EVIDENCE is never rendered as analytical WAIT_FOR_CONFIRMATION (WAIT means relevant evidence exists and a defined confirmation is pending). (3) Position context stays explicit: without a private portfolio position, HOLD is presented conditionally ('HOLD -- if currently held'); ownership is never fabricated. (4) OPPORTUNITY_PRIORITY is wired as an orthogonal inspection/ranking axis that does not alter research_action_posture in M1 (decision = what to do; priority = what to inspect first); priority stays shadow/observational for policy interaction. (5) Convergence target: Producer / Dashboard / AI handoff / Action Center agree on at least (ticker, research_action_posture, evidence_currency) for the full current canonical universe -- use the current canonical denominator, never a hardcoded constant; 1,683 is the known 2026-09-23 acceptance baseline. ACCEPTANCE INTENT: zero conflicting action-posture authority between surfaces; zero NO_CURRENT_EVIDENCE names rendered as analytical WAIT; research_stance secondary; priority never mutates posture; deterministic/hermetic cross-surface contract tests. OUT OF SCOPE: portfolio optimization, storage migration, presentation refactor, PIT expansion, new source/provider work, any authority promotion.",
       "starting_checkpoint": "0ed2f738a06bb5848214f9d8bb395cbc0cc581e0"
     }
   ],
@@ -2058,6 +2065,13 @@
       "reason": "docs/AI_RULES.md rule 8 / AGENTS.md: DNSE/Livespeed is the provider direction; do not add another provider without a new owner decision. EODHD is explicitly rejected (REJECTED_BY_OWNER).",
       "reopen_gate": "A new, explicit owner decision naming a specific additional provider and use case.",
       "reference_checkpoint": null
+    },
+    {
+      "capability": "SUPPLEMENTAL_PROVIDER_RUNTIME_OPERATION",
+      "state": "SECURITY_REVIEW_BLOCKED",
+      "reason": "PROVIDER_RUNTIME_ISOLATION_V1 code is promoted (main 9575cb04) but the optional KBS/VCI provider runtime (vnstock/vnai, provider family VNSTOCK_KBS_VCI) is not operationally approved: owner decision D1 keeps config/provider_runtime_policy.json at SECURITY_REVIEW_BLOCKED (a missing/invalid policy reads the same), so no provider worker is spawned and every ordinary Daily ends at BLOCKED_SUPPLEMENTAL_PROVIDER_RUNTIME with DNSE evidence retained and nothing published (D4: no degraded publication). D3: the worker runs only under a dedicated STOCKLOOKUP_PROVIDER_PYTHON interpreter, with no fallback to core Python. This blocks M1 live acceptance. provider_runtime_state is operational metadata only (authority_effect NONE_OPERATIONAL_METADATA_ONLY): runtime availability never promotes source, market-data, RAW_AS_TRADED, PIT, liquidity or any other authority by side effect.",
+      "reopen_gate": "An explicit owner provider-runtime operationalization decision recorded in config/provider_runtime_policy.json (ALLOW_CONFIGURED_PROVIDER_RUNTIME) plus a dedicated provider interpreter installed from a trustworthy source that passes the READY handshake, implemented to the provider-runtime safety contract. Design is pending the bounded Codex provider-runtime-readiness output. Never reopened by an already-installed package, a package-index status change, or a fallback to the core interpreter.",
+      "reference_checkpoint": "9575cb04c899696a02b22ba9dfcfed9a4961cf2d"
     }
   ]
 }

@@ -1,5 +1,21 @@
 # Stock Lookup — Architecture & Roadmap
 
+**Roadmap sync after M1 stabilization promotion (2026-09-26):**
+- The cumulative stabilization RC (PR #4) is promoted to Producer `main` at merge commit
+  `9575cb04c899696a02b22ba9dfcfed9a4961cf2d`. Lineage: `cde156e` → cumulative RC → `d0cf678`
+  → `9575cb04`. PR #3 (`522cc46`) is superseded by PR #4.
+- `CURRENT_DECISION_SURFACE_CONVERGENCE_V1` stays `ACTIVE`
+  (`STABILIZATION_PROMOTED_LIVE_ACCEPTANCE_PENDING_SAFE_ORDINARY_DAILY`). It is not closed.
+- No new analytical milestone is queued (`queued_next` is empty). The immediate dependency
+  chain is:
+  1. provider-runtime operationalization: owner decision plus implementation. The design is
+     pending the bounded Codex provider-runtime-readiness output, which is not yet available.
+     The provider policy stays `SECURITY_REVIEW_BLOCKED`;
+  2. a qualifying, safe ordinary Daily;
+  3. M1 live acceptance;
+  4. only then close M1 and select the next analytical milestone.
+- No authority was promoted. See `docs/STATE.md` and `docs/DECISIONS.md` (2026-09-26).
+
 **Roadmap sync after 2026-09-23 Gate 0 (2026-09-23):**
 `CURRENT_FOREIGN_FLOW_DAILY_ACTIVATION_V1` = `COMPLETE` / `LIVE_ACCEPTED_2026_09_23` (value-only,
 authority unchanged). 2026-09-23 Owner Daily / Dashboard Gate 0 accepted via completed-session
@@ -7,7 +23,7 @@ replay on `46adbc0` (Dashboard `60afab5c`, `PUBLISHED`, public-byte `PASS`). Own
 crash-recovery corrective `c7216d3` = implementation complete / test validated; next ordinary
 Daily observation pending, not an ACTIVE writer. See `docs/STATE.md` and `docs/DECISIONS.md`.
 
-**Active milestone -- `CURRENT_DECISION_SURFACE_CONVERGENCE_V1` = `ACTIVE` (implementation and corrective chain promoted to Producer `main`; live acceptance awaits the next ordinary Daily; see `docs/STATE.md`). Bounded contract:**
+**Active milestone -- `CURRENT_DECISION_SURFACE_CONVERGENCE_V1` = `ACTIVE` (implementation, corrective chain and 2026-09-26 stabilization RC promoted to Producer `main`; live acceptance awaits a qualifying safe ordinary Daily, which first requires provider-runtime operationalization; see `docs/STATE.md`). Bounded contract:**
 
 - **Decision authority.** `research_action_posture` is the single cross-surface action-decision
   authority. `research_stance` stays a secondary research-candidate/screening dimension and
