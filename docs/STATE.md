@@ -1,7 +1,7 @@
 # Stock Lookup — Operational State
 
 **Windows provider OS containment (2026-09-26):**
-`WINDOWS_PROVIDER_RUNTIME_OS_CONTAINMENT_AND_ATTESTATION_V1 = BLOCKED / IMPLEMENTED_LOCAL / OWNER_ELEVATED_PROVISIONING_REQUIRED`.
+`WINDOWS_PROVIDER_RUNTIME_OS_CONTAINMENT_AND_ATTESTATION_V1 = BLOCKED / HOST_PROVISIONED / CONTAINMENT_QUALIFIED_18_OF_18 / PROMOTION_REVIEW_AND_MERGE_PENDING`.
 It started from `main` = `ad685ac` (the owner's merge of PR #6). M1 stays ACTIVE.
 
 - **Implemented.** `provider_os_enforcement.production_backend()` now has a real Windows backend
@@ -14,14 +14,23 @@ It started from `main` = `ad685ac` (the owner's merge of PR #6). M1 stays ACTIVE
   - a per-launch ACL-protected pipe;
   - a hard 20 rpm gateway ceiling;
   - manifest-bound qualification evidence.
-- **Not yet active.** The backend is live only on a host with a valid provisioning record. None
-  exists yet, so every live launch still fails with `PROVIDER_OS_ENFORCEMENT_UNAVAILABLE`.
-- **Owner action (elevated, once).** Run `tools/provision_provider_os_containment.ps1 -Apply
-  -OwnerSid <owner SID>`. Then, non-elevated, run
-  `python tools/run_provider_os_containment_qualification.py` (tests L1–L18, as the worker).
-  - The first owner `-Apply` failed on a 66-character account description (limit 48) before
-    changing anything. The corrected script is resumable and idempotent, fails closed on
-    conflicting state, and writes its completion record only last. See `docs/DECISIONS.md`.
+- **Provisioned and qualified (2026-09-26).** The owner's elevated `-Apply` provisioned the
+  host (worker `StockLookupProvider`, `S-1-5-21-270160003-185743851-2814889227-1005`). It needed
+  two APPLY correctives first: `f1325b5` (the verifier received a pipeline-polluted SID) and
+  `ccb0ffa` (Users-membership idempotency). The non-elevated qualification, run as the worker,
+  returned `PASS` 18/18. Evidence is retained under `C:\ProgramData\StockLookup\provider-runtime`
+  and is not tracked:
+  - report `containment_qualification_20260926T125849Z.json`, SHA-256
+    `26358a995ef37d7fac5da2c569c9214b2c1404f985375326de8e821da1099a13` (the future
+    `os_containment.verification_evidence_sha256`);
+  - firewall-policy digest `8de29d54427b2b2ba4a9e60ca7daeb8ea4da06e6005cc1854ece95198247f4ee`.
+  `production_backend()` now resolves to `stocklookup-windows-os-enforcement`. The draft manifest
+  is unchanged: the evidence hash, identity and `OWNER_VERIFIED` are bound in the owner-approved
+  manifest, together with `runtime.platform` and the named-pipe gateway.
+- **Direct DNS (L11).** A per-user WFP block of UDP is silent on Windows: the send succeeds and
+  the datagram is dropped. L11 therefore passes on an OS refusal, or on a controlled silent drop:
+  the worker is unanswered, the owner is answered by the same servers, and worker TCP/53 is
+  refused. Residual, not scored: loopback, the host's own LAN address, and the DNS Client service.
 - **Still required after a containment PASS, in order:**
   1. the dedicated provider venv (the lock forbids installation before a manifest approval
      pins it);

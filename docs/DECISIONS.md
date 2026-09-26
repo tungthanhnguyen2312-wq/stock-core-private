@@ -44,6 +44,16 @@ Started from `main` = `ad685ac` (the owner's merge of PR #6). M1 stays the singl
     PowerShell and Python digests are proven identical. The manifest-bound
     `os_containment.verification_evidence_sha256` must name a retained PASS containment
     qualification report for the same SID and firewall digest.
+  - **Direct DNS evidence (L11), decided 2026-09-26 after a measured rehearsal.**
+    - A per-user WFP block of UDP is silent on Windows. The worker's `sendto` reports success, the
+      datagram is dropped, and `recv` times out; TCP gets WSAEACCES (10013).
+    - L11 passes only on an OS refusal, or on a silent drop proven by control in the same run:
+      - every worker UDP/53 query goes unanswered;
+      - the owner is answered by every same server;
+      - worker TCP/53 to every same server is refused with 10013.
+    - Missing control or TCP evidence fails the check. An unanswered query alone never passes.
+    - Not scored, reported as residual: Windows exempts loopback and the host's own LAN
+      addresses from the rule (measured), and names resolve through the DNS Client service.
 - **Implemented: the governed egress gateway** (`provider_egress_gateway.py`).
   - **Path.** Worker → per-launch local named pipe `\\.\pipe\StockLookupProviderGateway-<launch_id>`
     → gateway thread in the Producer → HTTPS. The pipe is created as the first instance, with a
