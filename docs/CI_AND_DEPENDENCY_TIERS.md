@@ -268,6 +268,11 @@ Owner decisions D1–D4 are recorded in `docs/DECISIONS.md` (2026-09-25).
 - **Tests.** `tests/test_provider_runtime_isolation.py` is hermetic: it uses the fake worker and
   an explicit test-only ALLOW policy. The real worker script is spawned only to prove that an
   interpreter without vnstock/vnai reports `NOT_INSTALLED` without executing any provider code.
-- **Validation status.** Synthetic validation passes from a clean clone. Validation against local
-  retained evidence and against a live Daily has not been done: it needs the owner's machine and
-  an explicit owner policy decision.
+- **Validation status (2026-09-26).**
+  - The code is promoted to `main` (`9575cb04`). Hermetic validation passes from a clean clone on
+    Linux CI (#78, #79).
+  - The provider runtime is not operationally approved: the policy stays
+    `SECURITY_REVIEW_BLOCKED`.
+  - No live Daily has run with a provider runtime. That needs an explicit owner
+    provider-runtime operationalization decision and a dedicated provider interpreter (see
+    `docs/STATE.md`).

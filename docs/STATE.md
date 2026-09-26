@@ -1,20 +1,111 @@
 # Stock Lookup — Operational State
 
-**Provider runtime isolation V1 (candidate branch `claude/provider-runtime-isolation-v1`, not on `main`):**
-`PROVIDER_RUNTIME_ISOLATION_V1 = IMPLEMENTED_LOCAL_CANDIDATE / SYNTHETIC_VALIDATION_ONLY / AWAITING_OWNER_REVIEW`.
-It is stacked on the CI hermetic tier candidate (PR #3, `522cc46`) and implements owner decisions
-D1–D4 (`docs/DECISIONS.md` 2026-09-25):
-- D1: the provider policy is `SECURITY_REVIEW_BLOCKED`, so no provider worker is spawned.
-- D2: an uncorroborated DNSE sentinel no longer licenses ordinary Daily.
-- D3: the worker runs only under a dedicated `STOCKLOOKUP_PROVIDER_PYTHON`, with no fallback.
-- D4: there is no degraded publication.
-Once merged, and while D1 stands, every ordinary Daily ends at
-`BLOCKED_SUPPLEMENTAL_PROVIDER_RUNTIME` with the DNSE evidence retained. M1 live acceptance
-therefore stays pending until the owner explicitly allows a configured provider runtime. No
-Daily, provider call, retained-evidence validation or publication was run for this candidate.
+**M1 stabilization integration promoted to `main` (2026-09-26):**
+`CURRENT_DECISION_SURFACE_CONVERGENCE_V1 = ACTIVE / STABILIZATION_PROMOTED / LIVE_ACCEPTANCE_PENDING_SAFE_ORDINARY_DAILY`.
 
-**M1 live-acceptance corrective (promoted 2026-09-25):**
+M1 is **not** closed. It stays ACTIVE until a qualifying ordinary Daily passes live acceptance, and
+no ordinary Daily can qualify until the provider runtime is operationalized (below).
+
+- **Promoted.** PR #4 (`M1_STABILIZATION_INTEGRATION_RC_V1`) merged to Producer `main` as merge
+  commit `9575cb04c899696a02b22ba9dfcfed9a4961cf2d`. Its parents are `cde156e` and the RC head
+  `d0cf6783eb33c211ca5c8dd0a6f25fa8032c517e`, and its tree equals `d0cf678`. It was promoted as
+  one stabilization unit:
+  - hermetic CI and dependency tiers (`522cc46`);
+  - `PROVIDER_RUNTIME_ISOLATION_V1` with its final corrective (`1fe1fcc`, `89e3a9d`);
+  - session-bar integrity and the tactical latest-20 window (`2d66528` … `2ddd586`,
+    patch-identical to the reviewed `ad6e63b` … `a069ff6`);
+  - retained-evidence quarantine and the canonical-evidence test write guard (`ca8918c`);
+  - the Linux `dir_fd` write-guard corrective (`d0cf678`).
+- **Lineage.** `cde156e` → cumulative RC → `d0cf678` → merge `9575cb04`.
+- **CI and review.**
+  - Producer CI #78 (PR, exact head `d0cf678`) and #79 (push, `main` = `9575cb04`) both pass.
+    #79 is the first green `main` Producer CI run since #31 (2026-09-17).
+  - Independent promotion review: `PROMOTION_REVIEW_PASS_WITH_NONBLOCKING_DEBT`, no blockers.
+- **PR #3** (`522cc46`) is superseded by PR #4. GitHub shows it as MERGED only because `522cc46`
+  is contained in `main`. No separate merge happened.
+- **Nothing ran.** No Daily, provider call, retained-evidence mutation, production DB write or
+  publication happened during the promotion or this state sync.
+
+**Provider-runtime gate (owner decisions D1–D4, `docs/DECISIONS.md` 2026-09-25):**
+- The Provider Runtime Isolation **code** is promoted. The provider runtime itself is **not**
+  operationally approved.
+- `config/provider_runtime_policy.json` stays `SECURITY_REVIEW_BLOCKED` (D1). A missing or
+  invalid policy reads the same way, and no provider worker is spawned.
+- A dedicated `STOCKLOOKUP_PROVIDER_PYTHON` interpreter is still required (D3). There is no
+  fallback to the core Python.
+- An uncorroborated DNSE sentinel does not license ordinary Daily (D2), and there is no degraded
+  publication (D4).
+- So every ordinary Daily currently ends at `BLOCKED_SUPPLEMENTAL_PROVIDER_RUNTIME`. DNSE
+  evidence is retained and nothing is published, so no ordinary Daily can currently serve M1
+  live acceptance (`canonical_daily_operation.m1_live_acceptance_eligible`).
+- `provider_runtime_state` is operational metadata only. Provider-runtime availability must never
+  promote source, market-data or any other authority as a side effect.
+- Recorded machine-readably as `blocked_capabilities.SUPPLEMENTAL_PROVIDER_RUNTIME_OPERATION` in
+  `docs/ROADMAP_STATE.json`.
+
+**Retained-evidence incident (`RETAINED_EVIDENCE_INCIDENT_20260925`):**
+- **2026-08-25 Integrated Decision (IID):** contaminated and non-pristine
+  (`CONTAMINATED_UNRECOVERABLE`). It is quarantined and is never a historical regression
+  baseline.
+- **2026-09-04 IID, retained canonical copy:** non-pristine
+  (`NON_PRISTINE_ORIGINAL_RECONSTRUCTABLE`). IID-dependent posture replay for 2026-09-04 (and
+  2026-08-25) is excluded.
+  - The exact production identity (`integrated_investment_decision_product/v1:55173e1a…`) stays
+    separately recorded and recoverable through the 2026-09-04 session handoff bundle.
+  - No silent historical restoration occurred: all 16 quarantined files still match their pinned
+    SHA-256s.
+- **Enforcement is now promoted code.**
+  - `config/retained_evidence_quarantine.json` + `retained_evidence_quarantine.py`: restoration
+    or supersession is an owner decision recorded by amending the registry.
+  - The retained-evidence test tier refuses a declared quarantined path.
+  - The test write guard refuses writes under canonical `operations-review/` and `data/`,
+    including through links and `dir_fd`-relative paths.
+
+**Analytical semantics now on `main`:**
+- There is one governed duplicate policy for session bars, `session_bar_integrity`:
+  - exact duplicates collapse only when every retained field is identical;
+  - conflicting duplicates fail closed (`CONFLICTING_DUPLICATE_SESSION_BAR`), with no averaging
+    and no first/last wins.
+- Integrity runs on the full T0-qualified series before any tactical window is selected.
+- `ma_20` is the mean of the latest 20 qualified observations, and
+  `momentum_20d = close[t] / close[t-19] - 1`. There is no whole-history fallback.
+- Action policy is unchanged. On the retained 2026-09-16 duplicate session, every posture change
+  traces to the integrity semantics alone (see `docs/DECISIONS.md` 2026-09-26).
+
+**Authority boundaries (unchanged):**
+- `RAW_AS_TRADED` = NOT PROMOTED.
+- Historical PIT authority, liquidity/sizing authority and `ACTIVE_UNIVERSE` authority are not
+  promoted (Section 3 Invariants 1–3).
+- Valuation and recommendation authority are unchanged.
+- `research_action_posture` remains the sole action authority, and `research_stance` stays
+  secondary.
+- The `evidence_currency` meanings and position-context semantics are unchanged, and
+  `OPPORTUNITY_PRIORITY` stays orthogonal to posture.
+
+**Next gate, in order (no new analytical milestone is queued):**
+1. Provider-runtime operationalization: an owner decision plus an implementation that satisfies
+   the provider-runtime safety contract. The design is pending the bounded Codex
+   provider-runtime-readiness output, which is not yet available. Implementation details are not
+   guessed here.
+2. A qualifying, safe ordinary Daily.
+3. M1 live acceptance on that Daily.
+4. Only then close M1 and select the next analytical roadmap milestone, with owner authorization.
+
+**Non-blocking debt from the promotion review:**
+- The write guard does not cover child Python processes or native SQLite writes, and Python's
+  `open` audit event carries no `dir_fd`.
+- Quarantine enforcement has limited production callers.
+- Legacy manual provider scripts (`*_sync.py`, `vn_stock_pipeline.py`, and two
+  `tools/run_*` diagnostic tools) import vnstock in-process if the core interpreter can import it.
+  Canonical Daily does not.
+- The provider worker is not an OS sandbox.
+- There is a second, non-authoritative MA20 surface (`tactical_momentum_context.moving_averages`).
+- Recovery lineage does not record a superseded P3F9B conflict.
+
+**Historical snapshot -- M1 live-acceptance corrective (promoted 2026-09-25):**
+At that checkpoint,
 `CURRENT_DECISION_SURFACE_CONVERGENCE_V1 = ACTIVE / CORRECTIVE_PROMOTED / LIVE_ACCEPTANCE_PENDING_NEXT_ORDINARY_DAILY`.
+The "next ordinary Daily" gate below is superseded by the 2026-09-26 provider-runtime gate above.
 
 The M1 implementation was promoted on 2026-09-24, and the 2026-09-24 Daily completed. Live
 acceptance then failed on five defects:
@@ -28,8 +119,9 @@ acceptance then failed on five defects:
 was fast-forward promoted to Producer `main` through `2d32e51` on 2026-09-25. No Daily, replay,
 provider call, production DB write, Dashboard publication or AI-handoff republication was run
 during this promotion; analytical decisions are unchanged. See `docs/DECISIONS.md`
-(2026-09-24). M1 remains ACTIVE until the next ordinary Daily's live acceptance; 2026-09-24
-will not be replayed for this corrective.
+(2026-09-24). At that checkpoint M1 remained ACTIVE pending the next ordinary Daily's live
+acceptance (superseded 2026-09-26: see the provider-runtime gate above); 2026-09-24 will not be
+replayed for this corrective.
 
 **Historical current decision surface convergence V1 implementation snapshot (2026-09-23):**
 At that checkpoint, `CURRENT_DECISION_SURFACE_CONVERGENCE_V1 = ACTIVE /
@@ -4498,6 +4590,14 @@ Real two-session replay (`tools/run_daily_integrated_decision_brief_replay.py`, 
 
 ## 1. Executive Program State
 
+> **Current-state pointer (2026-09-26):** the entries in this section are dated historical
+> snapshots. For the current state, see the top of this file (M1 stabilization promotion) and
+> `docs/ROADMAP_STATE.json`:
+> - `CURRENT_DECISION_SURFACE_CONVERGENCE_V1` is the only ACTIVE milestone.
+> - `TACTICAL_MARKET_STRUCTURE_AND_BREAKOUT_V3` and `INTEGRATED_INVESTMENT_DECISION_PRODUCT_V1`
+>   are COMPLETE.
+> - `queued_next` is empty.
+
 **Corporate Intelligence catalyst/event/risk decision axis V1 (2026-09-05):** `CORPORATE_INTELLIGENCE_CATALYST_EVENT_RISK_DECISION_INTEGRATION_V1 = COMPLETE / PARTIAL_BY_EVIDENCE`, commit `8d62313` on top of `3d95749`, local-only/unpushed. Owner explicitly authorized this exact milestone despite `queued_next=[]`. New `current_corporate_intelligence_axis.py` normalizes the existing, previously-uncoordinated corporate-event stack (`current_corporate_event_context.py`, `market_wide_current_corporate_intelligence.py`, `bitemporal_semantic_contract.py`) into one canonical event taxonomy, a 7-value status ladder, deterministic catalyst/risk/mixed/informational classification, and materiality that fails closed to `POTENTIALLY_MATERIAL` (never `MATERIAL`, since no compatible amount-vs-denominator comparison exists in retained evidence). It activates `current_corporate_event_context`'s existing but previously-unused `supplemental_events` parameter to surface the retained HPG/VNM/VCB issuer chains, without modifying that shared component. Wired additively into `integrated_investment_decision_product.py` as a 9th `CORPORATE_INTELLIGENCE` evidence axis, built with its own local try/except in `canonical_post_close_pipeline.py` so a corporate-evidence failure cannot cascade into the whole Integrated Decision build (proven live); `decide_research_action_posture`'s signature is unchanged (verified by direct inspection). Independently discovered and documented, not fixed: `current_official_event_context`'s retained artifact has had `research_session` frozen at `2026-08-21` since before this milestone, so the pre-existing `corporate_event_context` enrichment component has been silently degrading to a frozen prior-as-of artifact every day since -- this new axis surfaces that staleness explicitly per ticker (`evidence_session_stale`) instead of hiding it. Real market-wide replay: 1,507 denominator, 1,103 tickers with retained evidence, 4,453 deduplicated events, 0 active-catalyst/active-risk tickers as of the frozen evidence session (reported honestly, not manufactured). `prospective_decision_retention.py` tracks the new axis's T0 completeness without retrofitting legacy snapshots. 51 new tests in the new module plus 18 targeted additions across 4 adjacent files; a broader `export_ai_bundle.py` sweep's 32 failures were independently verified pre-existing and unrelated (temporary single-file revert to clean HEAD reproduced identical failures). No provider, PIT, liquidity, sizing, universal score, probability, or authority-promotion change; `research_action_posture` is unchanged. Artifact: `operations-review/corporate-intelligence-catalyst-event-risk-decision-integration-v1-20260905/`.
 
 **Authoritative current common shares qualification and scaleout V1 (2026-08-24):** `NO_NEW_SCALABLE_AUTHORITY`. A raw-first six-ticker KBS public-profile pilot retained immutable HTTP 400 responses but no usable share observation, schema, effective date, or common-share semantic proof. The 1,683-candidate disposition ledger is six `UNAVAILABLE` plus 1,677 justified non-attempts; no bulk crawl occurred after the failed pilot. Strict valuation, peer valuation, and Value remain blocked; VCI issued-share shadow proxy semantics are unchanged.
@@ -4724,6 +4824,11 @@ Frozen pre-open artifact for the actual configured 11-ticker production cohort (
 ---
 
 ## 4. Current Critical Path & Exact Next Action
+
+> **Current-state pointer (2026-09-26):** the "exact next action" statements below are dated
+> historical snapshots and are superseded. The current next gate is provider-runtime
+> operationalization, then a qualifying safe ordinary Daily, then M1 live acceptance (top of this
+> file and `docs/ROADMAP_STATE.json`).
 
 ### Core analytical product completion (2026-09-02 rebaseline)
 
