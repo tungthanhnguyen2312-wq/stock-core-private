@@ -563,6 +563,7 @@ def build_fake_provider_runtime(
     system_site: bool = False,
     include_tzdata: bool = True,
     vnai_probes_owner_profile: bool = True,
+    private_venv: bool = False,
 ) -> FakeProviderRuntime:
     """Construct a throwaway fake provider environment under ``root`` (or a temp dir)."""
     root = Path(root) if root is not None else Path(tempfile.mkdtemp(prefix="sl-fake-provider-rt-"))
@@ -572,7 +573,7 @@ def build_fake_provider_runtime(
     (owner_profile / ".stocklookup").mkdir(parents=True, exist_ok=True)
     (owner_profile / ".vnstock" / "api_key.json").write_text('{"api_key":"owner-secret-must-not-leak"}\n', encoding="utf-8")
     (owner_profile / ".stocklookup" / "secrets.env").write_text("DNSE_API_KEY=owner-dnse\n", encoding="utf-8")
-    if unexpected_pth or startup_hook or system_site or not include_tzdata or not vnai_probes_owner_profile:
+    if unexpected_pth or startup_hook or system_site or private_venv or not include_tzdata or not vnai_probes_owner_profile:
         venv_root = Path(tempfile.mkdtemp(prefix="sl-fake-provider-venv-mut-"))
         _create_venv(venv_root)
         _plant_fake_packages(
@@ -584,7 +585,9 @@ def build_fake_provider_runtime(
         vnai_init = _site_dir(venv_root) / "vnai" / "__init__.py"
         if vnai_init.is_file() and str(owner_profile) not in vnai_init.read_text(encoding="utf-8"):
             _plant_fake_packages(_site_dir(venv_root), owner_profile=str(owner_profile))
-    interpreter = str(_venv_python(venv_root).resolve())
+    # Resolve the venv directory (canonical ancestors), never the interpreter itself: on POSIX
+    # bin/python is a symlink to the base Python and must stay the logical venv interpreter.
+    interpreter = str(_venv_python(venv_root.resolve()))
     site = _site_dir(venv_root)
     if system_site:
         cfg = (venv_root / "pyvenv.cfg").read_text(encoding="utf-8")

@@ -897,11 +897,21 @@ def describe_provider_runtime(
     Returns ``{"runtime": {...}, "packages": [...], "installed_tree_manifest": {...}}`` -- the
     runtime-bound manifest sections. Installs nothing and imports no provider package.
     """
+    # Logical identity: the configured path (abspath, never realpath). On POSIX a venv's
+    # bin/python is normally a symlink to the base interpreter; following it would leave the venv
+    # and read the base installation as if it were the provider environment. The physical
+    # executable (realpath) is attested separately below (executable_realpath / base_executable).
     exe = Path(os.path.abspath(executable))
-    probe = probe_interpreter(str(exe), env=probe_env)
     venv_root = exe.parent.parent
+    if not (venv_root / "pyvenv.cfg").is_file():
+        raise ProviderAttestationError(R_VENV_CONFIG_MISMATCH, [_failure(
+            R_VENV_CONFIG_MISMATCH, path=str(venv_root / "pyvenv.cfg"), error="configured interpreter is not in a venv")])
+    probe = probe_interpreter(str(exe), env=probe_env)
     cfg = _read_pyvenv_cfg(venv_root)
     base_prefix = Path(probe["base_prefix"])
+    if _same_path(venv_root, base_prefix) or not _same_path(probe.get("executable"), exe):
+        raise ProviderAttestationError(R_VENV_MISMATCH, [_failure(
+            R_VENV_MISMATCH, venv_root=str(venv_root), base_prefix=str(base_prefix), executable=probe.get("executable"))])
     if os.name == "nt":
         base_executable = Path(cfg.get("home", "")) / "python.exe"
         relative_site_dirs = list(site_dirs or [".", "Lib/site-packages"])
@@ -968,6 +978,8 @@ def attest_runtime_static(
         failures.append(_failure(R_EXECUTABLE_HASH_MISMATCH, path=str(exe)))
     if not _norm(exe).startswith(_norm(venv_root) + os.sep):
         failures.append(_failure(R_VENV_CONFIG_MISMATCH, error="executable outside the bound venv root"))
+    if _same_path(venv_root, runtime.get("base_prefix", "")):
+        failures.append(_failure(R_VENV_CONFIG_MISMATCH, error="bound venv root is the base installation"))
     for directory in (venv_root, *_site_dirs(venv_root, runtime.get("site_dirs") or [])):
         if _is_link(directory):
             failures.append(_failure(R_REPARSE_POINT, path=str(directory)))
@@ -1036,7 +1048,9 @@ def attest_runtime_static(
                         return failures
         for item in observed_tree["links"]:
             target = _norm(item["resolved_target"])
-            internal = target.startswith(_norm(venv_root) + os.sep)
+            # resolved_target is physical, so compare it with the physical venv root (an ancestor
+            # directory may itself be a symlink, e.g. /tmp -> /private/tmp).
+            internal = target.startswith(_norm(os.path.realpath(venv_root)) + os.sep)
             if os.name == "nt" or not (internal or target == _norm(runtime.get("executable_realpath", ""))):
                 failures.append(_failure(R_REPARSE_POINT, path=item["relative_path"]))
     failures += _dependency_lock_membership(manifest, manifest_dir)

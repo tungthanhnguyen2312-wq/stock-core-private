@@ -21,6 +21,7 @@ import pytest
 
 import _provider_build_fixtures as build_fixtures
 import canonical_daily_operation as cdo
+import provider_build_manifest as build_manifest
 import canonical_post_close_pipeline as cpc
 import daily_session_level2_package as level2
 import multi_source_market_evidence_contract as contract
@@ -73,6 +74,92 @@ def test_fake_venv_site_dir_matches_the_created_interpreter(tmp_path):
     # The real created venv on this OS must place packages exactly where the fixture plants them.
     root = build_fixtures.cached_fake_venv(owner_profile=str(tmp_path / "owner-profile"))
     assert (build_fixtures._site_dir(root) / "vnai" / "__init__.py").is_file()
+
+
+posix_symlinked_venv = pytest.mark.skipif(
+    os.name == "nt", reason="POSIX venv interpreters are symlinks; Windows venvs copy python.exe")
+
+
+@posix_symlinked_venv
+def test_posix_symlinked_venv_keeps_logical_venv_identity_and_attests_physical_executable(tmp_path):
+    root = build_fixtures.cached_fake_venv(owner_profile=str(tmp_path / "owner-profile")).resolve()
+    exe = root / "bin" / "python"
+    assert exe.is_symlink()
+    physical = Path(os.path.realpath(exe))
+    assert not str(physical).startswith(str(root) + os.sep)  # the target lives in the base Python
+    described = build_manifest.describe_provider_runtime(str(exe), probe_env=build_fixtures._probe_env())
+    runtime = described["runtime"]
+    assert runtime["executable_path"] == str(exe)
+    assert runtime["venv_root"] == str(root)
+    assert runtime["venv_config_sha256"] == build_manifest.sha256_file(root / "pyvenv.cfg")
+    assert runtime["executable_realpath"] == str(physical)
+    assert runtime["base_executable_path"] == str(physical)
+    assert runtime["base_executable_sha256"] == build_manifest.sha256_file(physical)
+    assert runtime["site_dirs"] == [build_fixtures._site_dir(root).relative_to(root).as_posix()]
+    assert {item["site_dir"] for item in described["packages"]} == set(runtime["site_dirs"])
+    assert {"vnai", "vnstock"} <= {item["name"] for item in described["packages"]}
+
+
+@posix_symlinked_venv
+def test_posix_symlink_outside_a_venv_fails_closed(tmp_path):
+    base = os.path.realpath(build_fixtures.cached_fake_venv(owner_profile=str(tmp_path / "op")) / "bin" / "python")
+    rogue = tmp_path / "rogue" / "bin" / "python"
+    rogue.parent.mkdir(parents=True)
+    rogue.symlink_to(base)
+    with pytest.raises(build_manifest.ProviderAttestationError) as exc:
+        build_manifest.describe_provider_runtime(str(rogue), probe_env=build_fixtures._probe_env())
+    assert exc.value.reason_code == build_manifest.R_VENV_CONFIG_MISMATCH
+
+
+@posix_symlinked_venv
+def test_posix_changed_interpreter_target_fails_static_attestation(tmp_path):
+    runtime = build_fixtures.protocol_runtime(tmp_path / "rt", private_venv=True)
+    manifest = runtime.manifest
+    exe = Path(runtime.interpreter)
+    assert exe.is_symlink()
+    assert build_manifest.attest_runtime_static(
+        manifest, configured_executable=runtime.interpreter, manifest_dir=runtime.manifest_path.parent,
+        worker_script=ROOT / manifest["worker"]["entrypoint"]) == []
+    replacement = tmp_path / "other-python"
+    replacement.write_bytes(b"#!/bin/sh\nexit 0\n")
+    replacement.chmod(0o755)
+    exe.unlink()
+    exe.symlink_to(replacement)
+    codes = {item["code"] for item in build_manifest.attest_runtime_static(
+        manifest, configured_executable=runtime.interpreter, manifest_dir=runtime.manifest_path.parent,
+        worker_script=ROOT / manifest["worker"]["entrypoint"])}
+    assert build_manifest.R_REPARSE_POINT in codes
+    assert build_manifest.R_EXECUTABLE_HASH_MISMATCH in codes
+
+
+def test_system_python_is_not_accepted_as_a_provider_venv():
+    # The base installation (not a venv: no pyvenv.cfg beside it) fails closed with a typed refusal.
+    base = build_fixtures.cached_fake_venv(owner_profile="system-python-probe")
+    cfg = build_manifest._read_pyvenv_cfg(base)
+    home = Path(cfg["home"])
+    candidates = [home / "python.exe"] if os.name == "nt" else [Path(os.path.realpath(build_fixtures._venv_python(base)))]
+    system_python = next(path for path in candidates if path.is_file())
+    with pytest.raises(build_manifest.ProviderAttestationError) as exc:
+        build_manifest.describe_provider_runtime(str(system_python), probe_env=build_fixtures._probe_env())
+    assert exc.value.reason_code in (build_manifest.R_VENV_CONFIG_MISMATCH, build_manifest.R_VENV_MISMATCH)
+
+
+def test_bound_venv_root_substitution_fails_static_attestation(tmp_path):
+    runtime = build_fixtures.protocol_runtime(tmp_path / "rt")
+    manifest = json.loads(json.dumps(runtime.manifest))
+    decoy = tmp_path / "decoy-venv"
+    decoy.mkdir()
+    (decoy / "pyvenv.cfg").write_bytes((Path(manifest["runtime"]["venv_root"]) / "pyvenv.cfg").read_bytes())
+    manifest["runtime"]["venv_root"] = str(decoy)
+    codes = {item["code"] for item in build_manifest.attest_runtime_static(
+        manifest, configured_executable=runtime.interpreter, manifest_dir=runtime.manifest_path.parent,
+        worker_script=ROOT / manifest["worker"]["entrypoint"])}
+    assert build_manifest.R_VENV_CONFIG_MISMATCH in codes
+    manifest["runtime"]["venv_root"] = manifest["runtime"]["base_prefix"]
+    codes = {item["code"] for item in build_manifest.attest_runtime_static(
+        manifest, configured_executable=runtime.interpreter, manifest_dir=runtime.manifest_path.parent,
+        worker_script=ROOT / manifest["worker"]["entrypoint"])}
+    assert build_manifest.R_VENV_CONFIG_MISMATCH in codes
 
 
 SYNTHETIC_SECRETS = {
