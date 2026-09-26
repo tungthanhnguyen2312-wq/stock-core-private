@@ -1154,6 +1154,96 @@ class SupplementalProviderBlocked(RuntimeError):
         )
 
 
+RECOVERY_REPLAY_OPERATING_MODE = "RECOVERY_REPLAY"
+
+
+def is_recovery_replay_artifact(payload: Any) -> bool:
+    """True when ``payload`` declares itself RECOVERY_REPLAY evidence (tools/run_recovery_replay.py).
+
+    Such artifacts are retrospective reconstructions under isolated roots; they must never
+    satisfy an ordinary-Daily reuse gate, post-close eligibility or M1 live acceptance."""
+    if not isinstance(payload, Mapping):
+        return False
+    if payload.get("operating_mode") == RECOVERY_REPLAY_OPERATING_MODE:
+        return True
+    recovery = payload.get("recovery_replay")
+    return isinstance(recovery, Mapping) or recovery is True
+
+
+CORE_DAILY_QUALITY_CONTRACT = "dnse_core_daily_quality/v1"
+
+
+def supplemental_runtime_launchable() -> bool:
+    """Could the OPTIONAL_SUPPLEMENTAL runtime be launched now (policy allows + dedicated interpreter
+    configured)? A non-spawning check: nothing is started, imported or contacted. Used only to decide
+    that an existing DNSE-primary (unassessed) snapshot must not suppress a new quality/sentinel
+    attempt once the supplemental runtime becomes available."""
+    import os
+
+    import provider_runtime_state as runtime_contract
+
+    policy = runtime_contract.load_provider_policy()
+    if not policy.allows_launch:
+        return False
+    interpreter, _ = runtime_contract.resolve_provider_interpreter(
+        os.environ, core_executable=sys.executable, policy=policy,
+    )
+    return interpreter is not None
+
+
+def requires_companion_evidence(snapshot: Any) -> bool:
+    """Post-corrective (PROVIDER_RUNTIME_ISOLATION_V1 and later) snapshots always carry their quality
+    axes and must have their companion multi-source evidence to be reusable."""
+    if not isinstance(snapshot, Mapping):
+        return False
+    return (
+        snapshot.get("companion_evidence_required") is True
+        or "provider_runtime_state" in snapshot
+        or "dnse_quality_license" in snapshot
+    )
+
+
+def core_daily_reuse_refusal(
+    snapshot: Any, evidence: Any, session: str | None, *, evidence_present: bool,
+    degraded_recovery_mode: Any = None, launchable: bool | None = None,
+) -> str | None:
+    """One shared reuse policy for an existing exact-session snapshot (None = reusable).
+
+    * RECOVERY_REPLAY artifacts are never ordinary-Daily evidence.
+    * A post-corrective snapshot without companion evidence is refused (missing evidence is never
+      "trusted"); only a legacy pre-V1 bare snapshot keeps the historical "nothing to disprove
+      trust with" reading.
+    * The DNSE quality license is re-derived from the retained evidence (never a stored label) and
+      must satisfy ``qualifies_for_core_daily``.
+    * A DNSE-primary (UNASSESSED_SUPPLEMENTAL_RUNTIME_UNAVAILABLE) snapshot is not reused once the
+      supplemental runtime is launchable: OHLC reuse must not suppress a new quality/corroboration
+      attempt.
+    """
+    from multi_source_market_evidence_contract import (
+        DNSE_PRIMARY_UNCORROBORATED_LICENSES, dnse_quality_license,
+    )
+
+    if is_recovery_replay_artifact(snapshot) or is_recovery_replay_artifact(evidence):
+        return "RECOVERY_REPLAY_ARTIFACT_NOT_ORDINARY_DAILY"
+    if not evidence_present:
+        return "COMPANION_EVIDENCE_MISSING" if requires_companion_evidence(snapshot) else None
+    if not isinstance(evidence, Mapping):
+        return "COMPANION_EVIDENCE_UNREADABLE"
+    if session is not None and evidence.get("target_session") not in (None, session):
+        return "COMPANION_EVIDENCE_SESSION_MISMATCH"
+    if not isinstance(evidence.get("dnse_quality_sentinel"), Mapping):
+        return "COMPANION_EVIDENCE_HAS_NO_QUALITY_SENTINEL" if requires_companion_evidence(snapshot) else None
+    license_ = dnse_quality_license(evidence, degraded_recovery_mode=degraded_recovery_mode)
+    if not license_["qualifies_for_core_daily"]:
+        return "DNSE_QUALITY_LICENSE_NOT_CORE_DAILY_QUALIFIED:" + str(license_["license"])
+    if license_["license"] in DNSE_PRIMARY_UNCORROBORATED_LICENSES:
+        if launchable is None:
+            launchable = supplemental_runtime_launchable()
+        if launchable:
+            return "SUPPLEMENTAL_RUNTIME_NOW_LAUNCHABLE_QUALITY_REEVALUATION_REQUIRED"
+    return None
+
+
 def _canonical_snapshot_gate_satisfied(snapshot_path: Path, evidence_path: Path, session: str | None = None) -> bool:
     """Is an existing on-disk canonical exact-session snapshot safe to reuse unconditionally?
 
@@ -1161,43 +1251,30 @@ def _canonical_snapshot_gate_satisfied(snapshot_path: Path, evidence_path: Path,
     wrote the canonical projection before ever checking DNSE provider-health, so a rerun that
     merely found the file present would reuse a possibly-degraded-and-never-verified snapshot
     with no re-verification at all. This function makes that reuse decision explicit by loading
-    the sibling multi-source evidence artifact (written alongside the snapshot -- see
-    multi_source_market_evidence key in session_artifact_paths) and re-deriving its DNSE quality
-    license (multi_source_market_evidence_contract.dnse_quality_license) against the snapshot's
-    OWN self-declared ``degraded_provider_recovery`` marker.
-
-    PROVIDER_RUNTIME_ISOLATION_V1: reuse requires a license that qualifies for ordinary Daily
-    (owner decision D2 -- an UNASSESSED license, e.g. a pre-V1 snapshot written through the
-    uncorroborated-sentinel route, is never reused), and companion evidence for a different
-    session never licenses this one. The license is always recomputed from the retained sentinel
-    evidence, never read from a stored label. An unreadable companion evidence file is refused.
-
-    A missing companion evidence file, or evidence that predates the DNSE quality sentinel
-    entirely, is legacy "nothing to disprove trust with" -- a bare snapshot fixture (this
-    module's own existing tests, or any artifact that predates the multi-source evidence artifact
-    entirely) is reused exactly as before.
+    the sibling multi-source evidence artifact and re-deriving its DNSE quality license against the
+    snapshot's OWN self-declared ``degraded_provider_recovery`` marker -- see
+    ``core_daily_reuse_refusal`` for the full policy (2026-09-26: Core-Daily proceed predicate,
+    mandatory companion evidence for post-corrective snapshots, RECOVERY_REPLAY refusal, and
+    re-evaluation once the supplemental runtime becomes launchable).
     """
-    if not evidence_path.is_file():
-        return True
-    try:
-        evidence = json.loads(evidence_path.read_text(encoding="utf-8"))
-    except (OSError, ValueError):
-        return False
-    if not isinstance(evidence, Mapping):
-        return False
-    if session is not None and evidence.get("target_session") not in (None, session):
-        return False
-    if not isinstance(evidence.get("dnse_quality_sentinel"), Mapping):
-        return True
     try:
         snapshot = json.loads(snapshot_path.read_text(encoding="utf-8"))
     except (OSError, ValueError):
-        return False
-    from multi_source_market_evidence_contract import dnse_quality_license
-
+        snapshot = None
+    evidence_present = evidence_path.is_file()
+    evidence: Any = None
+    if evidence_present:
+        try:
+            evidence = json.loads(evidence_path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            evidence = None
+        if snapshot is None:
+            return False
     recovery = snapshot.get("degraded_provider_recovery") if isinstance(snapshot, Mapping) else None
     marker = recovery.get("mode") if isinstance(recovery, Mapping) else None
-    return bool(dnse_quality_license(evidence, degraded_recovery_mode=marker)["qualifies_for_ordinary_daily"])
+    return core_daily_reuse_refusal(
+        snapshot, evidence, session, evidence_present=evidence_present, degraded_recovery_mode=marker,
+    ) is None
 
 
 def _write_supplemental_block(
@@ -1295,8 +1372,10 @@ def ensure_exact_session_snapshot(
                 + ":retained snapshot's companion evidence does not carry a DNSE quality license "
                   "that qualifies for ordinary Daily (e.g. an unresolved "
                   "DNSE_BROAD_STALE_OR_INCOMPLETE_EOD with no completed degraded-provider-recovery "
-                  "marker, or an unassessed/uncorroborated sentinel) -- never reused as-is; caller "
-                  "must redirect to a fresh attempt root."
+                  "marker, an unassessed/uncorroborated sentinel, missing companion evidence, a "
+                  "RECOVERY_REPLAY artifact, or a DNSE-primary snapshot whose supplemental quality "
+                  "evaluation is now possible) -- never reused as-is; caller must redirect to a fresh "
+                  "attempt root."
             )
         return p3f9b_snapshot
     import mva_exact_session_snapshot as snapshotter
@@ -1447,16 +1526,23 @@ def ensure_exact_session_snapshot(
         set_active_governor(previous_active_governor)
 
     runtime_state = runtime.final_state()
-    quality_license = dnse_quality_license(evidence)
+    # The runtime record is attached BEFORE the license is derived, so the license can refuse a
+    # sentinel/runtime contradiction (see dnse_quality_license).
     evidence["provider_runtime"] = runtime_state
+    quality_license = dnse_quality_license(evidence)
     evidence["dnse_quality_license"] = quality_license
     evidence.pop("evidence_sha256", None)
     evidence.pop("evidence_identity", None)
     evidence["evidence_sha256"] = stable_id(evidence)
     evidence["evidence_identity"] = f"multi_source_exact_session_market_evidence:{evidence['evidence_sha256']}"
-    runtime_ok = runtime_state.get("state") == runtime_contract.AVAILABLE
-    if not runtime_ok or not quality_license["qualifies_for_ordinary_daily"]:
-        kind = SUPPLEMENTAL_BLOCK_KIND_RUNTIME if not runtime_ok else SUPPLEMENTAL_BLOCK_KIND_QUALITY
+    # 2026-09-26 DNSE-first rebaseline: an unavailable OPTIONAL_SUPPLEMENTAL runtime is no longer a
+    # Daily-invalidating event by itself. The question here is only the Core-Daily proceed predicate
+    # (``qualifies_for_core_daily``) -- UNASSESSED_SUPPLEMENTAL_RUNTIME_UNAVAILABLE proceeds on the
+    # explicit DNSE_PRIMARY_UNCORROBORATED basis with ``dnse_values_corroborated = False``; D2's
+    # UNASSESSED_NO_SECONDARY_OBSERVATION, DATA_QUALITY_FAILED and NOT_EVALUATED still block. A mid-operation worker failure (above) still blocks: its
+    # partially attempted observations cannot honestly be restated as "not attempted".
+    if not quality_license["qualifies_for_core_daily"]:
+        kind = SUPPLEMENTAL_BLOCK_KIND_QUALITY
         _write_supplemental_block(
             block_path, kind=kind, session=session, dnse_snapshot=dnse_snapshot,
             runtime_state=runtime_state, quality_license=quality_license, evidence=evidence,
@@ -1475,8 +1561,29 @@ def ensure_exact_session_snapshot(
     projected["dnse_quality_license"] = {
         "license": quality_license["license"],
         "qualifies_for_ordinary_daily": quality_license["qualifies_for_ordinary_daily"],
+        "qualifies_for_core_daily": quality_license["qualifies_for_core_daily"],
+        "dnse_values_corroborated": quality_license["dnse_values_corroborated"],
         "reason_code": quality_license["reason_code"],
+        "core_daily_basis": quality_license["core_daily_basis"],
+        "supplemental_capability_state": quality_license["supplemental_capability_state"],
     }
+    # Post-corrective snapshots are reusable only together with this companion evidence file.
+    projected["companion_evidence_required"] = True
+    projected["core_daily_quality_contract"] = CORE_DAILY_QUALITY_CONTRACT
+    if quality_license["supplemental_capability_state"] != "SUPPLEMENTAL_PROVIDER_RUNTIME_AVAILABLE":
+        # Explicit, never silently healthy: every supplemental-dependent surface of this session
+        # (KBS/VCI gap recovery, the DNSE quality sentinel, the residual-yield probe, degraded
+        # recovery, technical-history recovery) stays NOT_ATTEMPTED / UNAVAILABLE.
+        projected["supplemental_provider_capability"] = {
+            "provider_family": runtime_contract.PROVIDER_FAMILY_VNSTOCK_KBS_VCI,
+            "role": "OPTIONAL_SUPPLEMENTAL",
+            "state": quality_license["supplemental_capability_state"],
+            "provider_runtime_state": runtime_state.get("state"),
+            "provider_runtime_reason_code": runtime_state.get("reason_code"),
+            "dependent_surfaces": "NOT_ATTEMPTED_SUPPLEMENTAL_PROVIDER_RUNTIME_UNAVAILABLE",
+            "dnse_corroboration": quality_license.get("dnse_corroboration"),
+            "authority_effect": "NONE",
+        }
 
     # DAILY_ACTIVITY_AWARE_ADAPTIVE_GAP_RECOVERY_V1 (2026-09-04): make the semantically-correct
     # current-equity/recovery-eligible coverage explicitly visible on the artifact itself, without

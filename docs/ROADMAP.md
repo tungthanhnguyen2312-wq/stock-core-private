@@ -1,5 +1,21 @@
 # Stock Lookup — Architecture & Roadmap
 
+**Roadmap sync for the DNSE-first rebaseline (2026-09-26):**
+- Owner decision: DNSE/Livespeed stays primary. `VNSTOCK_KBS_VCI` is `OPTIONAL_SUPPLEMENTAL /
+  DEFERRED_NON_CRITICAL` for current M1 execution. No Vnstock terms acceptance, runtime
+  authorization or source-authority promotion.
+- PR #6 (`ad685ac`) and PR #7 (`785fe07`) are merged. Their provider build boundary and Windows OS
+  containment are preserved as reusable infrastructure. Both roadmap entries are now `DEFERRED`
+  (operationalization is not an M1 prerequisite).
+- `CURRENT_DECISION_SURFACE_CONVERGENCE_V1` stays `ACTIVE`. The immediate chain is now:
+  1. review and promote the DNSE-first Daily corrective (Draft PR; an unavailable supplemental
+     runtime no longer blocks Core Daily; `DATA_QUALITY_FAILED` still blocks);
+  2. run the isolated `RECOVERY_REPLAY` of 2026-09-25 and analyze it (analysis only; never M1);
+  3. the next valid ordinary Daily;
+  4. M1 live acceptance on it;
+  5. only then close M1 and select the next analytical milestone (owner authorization required).
+- The provider-runtime operationalization step in the entry below is superseded by this sync.
+
 **Roadmap sync after M1 stabilization promotion (2026-09-26):**
 - The cumulative stabilization RC (PR #4) is promoted to Producer `main` at merge commit
   `9575cb04c899696a02b22ba9dfcfed9a4961cf2d`. Lineage: `cde156e` → cumulative RC → `d0cf678`
@@ -25,7 +41,7 @@ replay on `46adbc0` (Dashboard `60afab5c`, `PUBLISHED`, public-byte `PASS`). Own
 crash-recovery corrective `c7216d3` = implementation complete / test validated; next ordinary
 Daily observation pending, not an ACTIVE writer. See `docs/STATE.md` and `docs/DECISIONS.md`.
 
-**Active milestone -- `CURRENT_DECISION_SURFACE_CONVERGENCE_V1` = `ACTIVE` (implementation, corrective chain and 2026-09-26 stabilization RC promoted to Producer `main`; live acceptance awaits a qualifying safe ordinary Daily, which first requires provider-runtime operationalization; see `docs/STATE.md`). Bounded contract:**
+**Active milestone -- `CURRENT_DECISION_SURFACE_CONVERGENCE_V1` = `ACTIVE` (implementation, corrective chain and 2026-09-26 stabilization RC promoted to Producer `main`; live acceptance awaits a qualifying ordinary Daily; since the 2026-09-26 DNSE-first rebaseline that no longer requires provider-runtime operationalization, only promotion of the DNSE-first corrective; see `docs/STATE.md`). Bounded contract:**
 
 - **Decision authority.** `research_action_posture` is the single cross-surface action-decision
   authority. `research_stance` stays a secondary research-candidate/screening dimension and

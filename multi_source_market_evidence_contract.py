@@ -523,10 +523,35 @@ DNSE_QUALITY_LICENSES = frozenset({
     LICENSE_UNASSESSED_SUPPLEMENTAL_RUNTIME_UNAVAILABLE, LICENSE_DATA_QUALITY_FAILED, LICENSE_NOT_EVALUATED,
 })
 # Owner decision D2: UNASSESSED_* is never a healthy ordinary-Daily quality license.
+# 2026-09-26: this set keeps exactly that meaning -- qualified/assessed source-health evidence. It is
+# NOT the Core-Daily proceed predicate (see CORE_DAILY_PROCEED_LICENSES below) and it is NOT the
+# corroboration predicate (see CORROBORATED_VALUE_LICENSES below).
 ORDINARY_DAILY_QUALIFYING_LICENSES = frozenset({
     LICENSE_CORROBORATED_HEALTHY, LICENSE_ISOLATED_CONFLICT_RESOLVED, LICENSE_BROAD_STALE_RECOVERED,
     LICENSE_NOT_REQUIRED_NO_DNSE_EXACT_BAR,
 })
+# Licenses under which this session's DNSE same-date values were actually cross-checked against a
+# secondary source (``dnse_values_corroborated``). False for every UNASSESSED_* state and for
+# NOT_REQUIRED_NO_DNSE_EXACT_BAR (no DNSE value exists to corroborate).
+CORROBORATED_VALUE_LICENSES = frozenset({
+    LICENSE_CORROBORATED_HEALTHY, LICENSE_ISOLATED_CONFLICT_RESOLVED, LICENSE_BROAD_STALE_RECOVERED,
+})
+# 2026-09-26 owner rebaseline (DNSE_FIRST_DAILY_AND_RECOVERY_INFRASTRUCTURE_CORRECTIVE): DNSE/Livespeed
+# is primary; VNSTOCK_KBS_VCI is OPTIONAL_SUPPLEMENTAL / DEFERRED_NON_CRITICAL. An intentionally
+# *unavailable* supplemental runtime is an explicit capability state, not a Daily-invalidating
+# event. ``qualifies_for_core_daily`` is ONLY the operational Core-Daily proceed predicate: the
+# qualified licenses above, plus UNASSESSED_SUPPLEMENTAL_RUNTIME_UNAVAILABLE on the explicit
+# DNSE_PRIMARY_UNCORROBORATED basis (and only when the retained runtime record is consistent). The
+# DNSE values stay explicitly uncorroborated. Every mandatory DNSE exact-session/session/coverage/
+# post-close/producer gate still applies independently. DATA_QUALITY_FAILED, NOT_EVALUATED and D2's
+# UNASSESSED_NO_SECONDARY_OBSERVATION never proceed.
+DNSE_PRIMARY_UNCORROBORATED_LICENSES = frozenset({LICENSE_UNASSESSED_SUPPLEMENTAL_RUNTIME_UNAVAILABLE})
+CORE_DAILY_PROCEED_LICENSES = ORDINARY_DAILY_QUALIFYING_LICENSES | DNSE_PRIMARY_UNCORROBORATED_LICENSES
+CORE_DAILY_BASIS_QUALIFIED = "QUALIFIED_SOURCE_HEALTH"
+CORE_DAILY_BASIS_DNSE_PRIMARY_UNCORROBORATED = "DNSE_PRIMARY_UNCORROBORATED"
+SUPPLEMENTAL_CAPABILITY_AVAILABLE = "SUPPLEMENTAL_PROVIDER_RUNTIME_AVAILABLE"
+SUPPLEMENTAL_CAPABILITY_UNAVAILABLE = "SUPPLEMENTAL_PROVIDER_RUNTIME_UNAVAILABLE"
+SUPPLEMENTAL_CAPABILITY_UNKNOWN = "SUPPLEMENTAL_PROVIDER_RUNTIME_STATE_NOT_RECORDED"
 DEGRADED_RECOVERY_MODE_COMPLETED = "COMPLETED"
 
 
@@ -603,12 +628,19 @@ def dnse_quality_license(
     dnse_exact = evidence.get("dnse_exact_session_count")
     recovery = evidence.get("degraded_provider_recovery") if isinstance(evidence.get("degraded_provider_recovery"), Mapping) else {}
     mode = degraded_recovery_mode if degraded_recovery_mode is not None else recovery.get("mode")
+    runtime_record = evidence.get("provider_runtime") if isinstance(evidence.get("provider_runtime"), Mapping) else {}
+    recorded_runtime_state = runtime_record.get("state")
 
     conflict_resolution = None
     if sentinel is None or state is None:
         license_, reason = LICENSE_NOT_EVALUATED, "NO_DNSE_QUALITY_SENTINEL_IN_EVIDENCE"
     elif state == DNSE_HEALTH_UNASSESSED_SUPPLEMENTAL_RUNTIME_UNAVAILABLE:
-        license_, reason = LICENSE_UNASSESSED_SUPPLEMENTAL_RUNTIME_UNAVAILABLE, "SENTINEL_NOT_RUN_SUPPLEMENTAL_RUNTIME_UNAVAILABLE"
+        if recorded_runtime_state == "AVAILABLE":
+            # The sentinel says the runtime was unavailable but the retained runtime record says
+            # it was AVAILABLE: self-contradictory evidence never licenses anything.
+            license_, reason = LICENSE_NOT_EVALUATED, "SENTINEL_RUNTIME_UNAVAILABLE_CONTRADICTS_RUNTIME_RECORD"
+        else:
+            license_, reason = LICENSE_UNASSESSED_SUPPLEMENTAL_RUNTIME_UNAVAILABLE, "SENTINEL_NOT_RUN_SUPPLEMENTAL_RUNTIME_UNAVAILABLE"
     elif state == DNSE_HEALTH_EXACT_AND_CORROBORATED:
         license_, reason = LICENSE_CORROBORATED_HEALTHY, "SENTINEL_CORROBORATED_NO_CONFLICT"
     elif state == DNSE_HEALTH_MATERIAL_CONFLICT:
@@ -636,11 +668,36 @@ def dnse_quality_license(
     else:
         license_, reason = LICENSE_NOT_EVALUATED, f"UNRECOGNIZED_SENTINEL_STATE:{state}"
 
+    if license_ in DNSE_PRIMARY_UNCORROBORATED_LICENSES:
+        basis = CORE_DAILY_BASIS_DNSE_PRIMARY_UNCORROBORATED
+    elif license_ in ORDINARY_DAILY_QUALIFYING_LICENSES:
+        basis = CORE_DAILY_BASIS_QUALIFIED
+    else:
+        basis = None
+    if license_ == LICENSE_UNASSESSED_SUPPLEMENTAL_RUNTIME_UNAVAILABLE:
+        supplemental_capability = SUPPLEMENTAL_CAPABILITY_UNAVAILABLE
+    elif recorded_runtime_state == "AVAILABLE":
+        supplemental_capability = SUPPLEMENTAL_CAPABILITY_AVAILABLE
+    elif recorded_runtime_state is not None:
+        supplemental_capability = SUPPLEMENTAL_CAPABILITY_UNAVAILABLE
+    else:
+        supplemental_capability = SUPPLEMENTAL_CAPABILITY_UNKNOWN
     return {
         "contract_version": DNSE_QUALITY_LICENSE_CONTRACT,
         "license": license_,
         "reason_code": reason,
+        # Qualified/assessed source-health evidence (unchanged meaning).
         "qualifies_for_ordinary_daily": license_ in ORDINARY_DAILY_QUALIFYING_LICENSES,
+        # 2026-09-26 DNSE-first rebaseline: three distinct predicates, never aliased.
+        "qualifies_for_core_daily": license_ in CORE_DAILY_PROCEED_LICENSES,
+        "dnse_values_corroborated": license_ in CORROBORATED_VALUE_LICENSES,
+        "core_daily_basis": basis,
+        "dnse_corroboration": (
+            "NOT_CORROBORATED_SUPPLEMENTAL_UNAVAILABLE" if basis == CORE_DAILY_BASIS_DNSE_PRIMARY_UNCORROBORATED
+            else ("CORROBORATED" if license_ in CORROBORATED_VALUE_LICENSES else "NOT_CORROBORATED")
+        ),
+        "supplemental_capability_state": supplemental_capability,
+        "supplemental_runtime_state": recorded_runtime_state,
         "target_session": evidence.get("target_session"),
         "source_health_state": state,
         "dnse_exact_session_count": dnse_exact,
@@ -653,3 +710,12 @@ def dnse_quality_license(
         "dnse_raw_evidence_status": "RETAINED_UNCHANGED",
         "evidence_currency_relation": "SEPARATE_AXIS_CURRENT_SESSION_IS_NOT_CORROBORATION",
     }
+
+
+def license_qualifies_for_core_daily(license_name: Any) -> bool:
+    """Core-Daily proceed predicate from a license NAME (never from a stored boolean label)."""
+    return license_name in CORE_DAILY_PROCEED_LICENSES
+
+
+def license_values_corroborated(license_name: Any) -> bool:
+    return license_name in CORROBORATED_VALUE_LICENSES
