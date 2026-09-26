@@ -1,5 +1,45 @@
 # Stock Lookup — Operational State
 
+**Windows provider OS containment (2026-09-26):**
+`WINDOWS_PROVIDER_RUNTIME_OS_CONTAINMENT_AND_ATTESTATION_V1 = BLOCKED / HOST_PROVISIONED / CONTAINMENT_QUALIFIED_18_OF_18 / PROMOTION_REVIEW_AND_MERGE_PENDING`.
+It started from `main` = `ad685ac` (the owner's merge of PR #6). M1 stays ACTIVE.
+
+- **Implemented.** `provider_os_enforcement.production_backend()` now has a real Windows backend
+  (`provider_windows_os_backend.py`, `stocklookup-windows-os-enforcement`) and a named-pipe egress
+  gateway (`provider_egress_gateway.py`). The backend covers:
+  - the dedicated `StockLookupProvider` account;
+  - the per-launch Job (kill-on-close, no breakaway, limit read back);
+  - kernel effective-access ACL checks;
+  - a worker-SID firewall block on all outbound traffic (IPv4/IPv6);
+  - a per-launch ACL-protected pipe;
+  - a hard 20 rpm gateway ceiling;
+  - manifest-bound qualification evidence.
+- **Provisioned and qualified (2026-09-26).** The owner's elevated `-Apply` provisioned the
+  host (worker `StockLookupProvider`, `S-1-5-21-270160003-185743851-2814889227-1005`). It needed
+  two APPLY correctives first: `f1325b5` (the verifier received a pipeline-polluted SID) and
+  `ccb0ffa` (Users-membership idempotency). The non-elevated qualification, run as the worker,
+  returned `PASS` 18/18. Evidence is retained under `C:\ProgramData\StockLookup\provider-runtime`
+  and is not tracked:
+  - report `containment_qualification_20260926T125849Z.json`, SHA-256
+    `26358a995ef37d7fac5da2c569c9214b2c1404f985375326de8e821da1099a13` (the future
+    `os_containment.verification_evidence_sha256`);
+  - firewall-policy digest `8de29d54427b2b2ba4a9e60ca7daeb8ea4da06e6005cc1854ece95198247f4ee`.
+  `production_backend()` now resolves to `stocklookup-windows-os-enforcement`. The draft manifest
+  is unchanged: the evidence hash, identity and `OWNER_VERIFIED` are bound in the owner-approved
+  manifest, together with `runtime.platform` and the named-pipe gateway.
+- **Direct DNS (L11).** A per-user WFP block of UDP is silent on Windows: the send succeeds and
+  the datagram is dropped. L11 therefore passes on an OS refusal, or on a controlled silent drop:
+  the worker is unanswered, the owner is answered by the same servers, and worker TCP/53 is
+  refused. Residual, not scored: loopback, the host's own LAN address, and the DNS Client service.
+- **Still required after a containment PASS, in order:**
+  1. the dedicated provider venv (the lock forbids installation before a manifest approval
+     pins it);
+  2. an owner terms decision for vnai's `.vnstock/id/terms_agreement.txt` (never manufactured);
+  3. an approved manifest pin + policy transition;
+  4. Gates A/B, then live Gates C→E.
+- **Nothing ran.** No provider call, Daily, 2026-09-25 recovery or authority promotion happened.
+  See `docs/DECISIONS.md` 2026-09-26.
+
 **M1 stabilization integration promoted to `main` (2026-09-26):**
 `CURRENT_DECISION_SURFACE_CONVERGENCE_V1 = ACTIVE / STABILIZATION_PROMOTED / LIVE_ACCEPTANCE_PENDING_SAFE_ORDINARY_DAILY`.
 

@@ -1,5 +1,161 @@
 # Decisions & Architectural Decision Records
 
+## 2026-09-26 - WINDOWS_PROVIDER_RUNTIME_OS_CONTAINMENT_AND_ATTESTATION_V1 (implemented; elevated provisioning owner-blocked)
+
+Owner-directed provider-runtime operationalization under active M1. Not an analytical milestone.
+Started from `main` = `ad685ac` (the owner's merge of PR #6). M1 stays the single `ACTIVE` milestone.
+
+- **Implemented: the production Windows OS-enforcement backend** (`provider_windows_os_backend.py`,
+  backend id `stocklookup-windows-os-enforcement`, contract `provider_os_enforcement_backend/v1`).
+  `provider_os_enforcement.production_backend()` returns it only on a Windows host with a valid
+  provisioning record. Elsewhere it returns `None`, so live launches still fail closed with
+  `PROVIDER_OS_ENFORCEMENT_UNAVAILABLE`. There is no POSIX production backend.
+  - **Identity.** The worker runs as the dedicated standard local account `StockLookupProvider`,
+    started with `CreateProcessWithLogonW`. It is never a Codex, sandbox or service account.
+    Its random logon secret exists only as an owner-scope DPAPI blob in the protected host
+    directory. It is decrypted in memory per launch and never logged.
+  - **Reading the identity back.** The SID is read from the spawned process (token query where
+    the token DACL allows it, else the process object's owner). The interpreter's SID is read
+    again by impersonating it on the gateway pipe. Worker self-observation only corroborates.
+  - **Why this mechanism.** `CreateProcessWithLogonW` is the only way to start another account's
+    process from a non-elevated Producer without adding a service. `CreateProcessAsUser` and
+    `CreateProcessWithTokenW` need privileges the owner's filtered token lacks.
+  - **Restricted token.** A further restricted token is **not** applied. With these APIs it
+    would need exactly those privileges. It stays optional defense in depth, not a prerequisite.
+  - **Job sequence.** Create the Job `Local\StockLookupProvider-<launch_id>` (DACL: SYSTEM + the
+    Producer only). Read back KILL_ON_JOB_CLOSE, the active-process limit and no (silent)
+    breakaway. Create the worker suspended and assign it. Verify membership through the Job's
+    own handle (`IsProcessInJob` + PID list) and the limits again. Only then resume. The Producer
+    keeps the Job handle; `kill` terminates the whole Job.
+  - **Job facts measured on this host.**
+    - Windows attaches `conhost.exe` to a console process's Job. It is classified by image and
+      parent (Toolhelp snapshot), never counted as a worker process.
+    - `conhost` does not consume the active-process limit. So the venv worker (redirector +
+      interpreter) needs `job_active_process_limit = 2`.
+    - A child beyond the limit is refused with error 1816. `CREATE_BREAKAWAY_FROM_JOB` is
+      refused with error 5.
+  - **ACLs.** Effective access is a kernel `AccessCheck(MAXIMUM_ALLOWED)` against each ACL-policy
+    root, using an interactive logon token of the worker account. It is never an ACL listing. The
+    Producer, as owner of each per-launch path, applies that launch's scratch/bundle/contract
+    DACLs before the worker exists.
+  - **Egress.** One Defender Firewall (WFP) rule blocks every outbound protocol to every remote
+    address (IPv4 and IPv6) for the worker SID. Each launch reads back the rule, its group and
+    all three profiles and compares them with the provisioned firewall-policy digest. The
+    PowerShell and Python digests are proven identical. The manifest-bound
+    `os_containment.verification_evidence_sha256` must name a retained PASS containment
+    qualification report for the same SID and firewall digest.
+  - **Direct DNS evidence (L11), decided 2026-09-26 after a measured rehearsal.**
+    - A per-user WFP block of UDP is silent on Windows. The worker's `sendto` reports success, the
+      datagram is dropped, and `recv` times out; TCP gets WSAEACCES (10013).
+    - L11 passes only on an OS refusal, or on a silent drop proven by control in the same run:
+      - every worker UDP/53 query goes unanswered;
+      - the owner is answered by every same server;
+      - worker TCP/53 to every same server is refused with 10013.
+    - Missing control or TCP evidence fails the check. An unanswered query alone never passes.
+    - Not scored, reported as residual: Windows exempts loopback and the host's own LAN
+      addresses from the rule (measured), and names resolve through the DNS Client service.
+- **Implemented: the governed egress gateway** (`provider_egress_gateway.py`).
+  - **Path.** Worker → per-launch local named pipe `\\.\pipe\StockLookupProviderGateway-<launch_id>`
+    → gateway thread in the Producer → HTTPS. The pipe is created as the first instance, with a
+    protected DACL (SYSTEM and the Producer: full; worker: read/write, no new instances) and
+    remote clients rejected.
+  - **Client admission.** A client must be a process of the launch's Job. Its SID, read back by
+    impersonation after its first frame, must be the worker SID. Anything else is dropped and
+    recorded.
+  - **What the gateway will perform.** There is no CONNECT, tunnel or generic fetch. Only an
+    operation that `EgressPolicy` allow-lists (scheme, host, port, method, path) is performed.
+    Headers are allow-listed (no Cookie, Authorization, Host or Proxy-*). Redirects are refused,
+    never followed (`max_redirects` 0).
+  - **Rate.** The owner's 20 requests/minute is a hard ceiling here, enforced by refusal, never
+    by sleeping.
+  - **Telemetry.** Telemetry hosts are refused and counted as the manifest's DENY.
+  - **Lineage.** Each performed request gets a lineage record (request id, launch, safe URL with
+    secret-shaped query values hashed, acquired-at, response digest) in a ledger the worker
+    cannot read.
+- **Worker integration.** Under the production backend, the worker connects the gateway before
+  containment and before any provider code. It verifies the server PID and the egress-policy
+  digest. Its `requests` guard then forwards allow-listed requests to the gateway. In named-pipe
+  mode `EgressPolicy.direct_network` is `False`, so the in-process socket layer refuses every
+  resolution and connect. `provider_egress_gateway.py` joins the bundled worker sources, and the
+  DRAFT manifest's source hashes are refreshed.
+- **Contract amendments.**
+  - **Manifest.** A gateway may declare `transport = WINDOWS_NAMED_PIPE`, with no host/port and a
+    local pipe `ipc_endpoint` template containing `{launch_id}`.
+  - **Attestation.** For that transport, the attestation checks `transport` instead of host/port.
+    Every other binding is unchanged.
+- **Provisioning (owner, elevated, once).** `tools/provision_provider_os_containment.ps1`:
+  - It handles only the account, directories + protected ACLs, a worker-SID deny ACE, one
+    firewall rule and the non-secret host record.
+  - `-Plan` (the default) prints the plan and changes nothing. `-Apply` requires elevation plus
+    `-OwnerSid`, refuses conflicting accounts or rules, and verifies every invariant afterwards.
+  - **Why the deny ACE.** `C:\Projects` grants `Authenticated Users: Modify`, so any new standard
+    account could otherwise read and write the Producer checkout, the production DB and retained
+    evidence. The deny ACE goes on `C:\Projects\StockLookup` and is inherited. The owner profile
+    already denies other users; that is verified, not changed.
+- **Verification (owner, non-elevated).** `tools/run_provider_os_containment_qualification.py`
+  runs the controlled tests L1–L18 (identity, Job, kill-on-close, breakaway, ACLs, direct
+  IPv4/IPv6/DNS, pipe admission, gateway refusals, validators, fake backend) as the real worker.
+  It uses a stub upstream and imports no provider package.
+  - **Report.** It writes the report whose SHA-256 an approved manifest binds.
+  - **Harness mode.** `--same-identity-harness` exercises the same plumbing under the owner's
+    identity and is never a qualification. On this host the harness passed every
+    identity-independent check.
+- **Residual limits (recorded, not hidden).**
+  - **DNS.** Name queries handed to the DNS Client service are outside a per-user WFP block. The
+    worker's in-process layer refuses all resolution, and the gateway path needs none.
+  - **Loopback.** WFP does not filter loopback. The probe reports loopback reachability as a
+    residual observation.
+  - **Gateway process.** The gateway runs inside the Producer process. Its identity is the module
+    hash plus "server PID == this process".
+- **Test determinism.** `STOCKLOOKUP_PROVIDER_OS_BACKEND=disabled` is a disable-only switch. The
+  test session sets it, so a provisioned owner host cannot change test outcomes. It can never
+  enable or redirect the backend.
+- **Not done, and why.**
+  - **Elevation.** The agent cannot elevate. Account, ACL and firewall provisioning is the
+    owner's single elevated command.
+  - **Provider runtime.** `config/provider_dependency_lock.json` says nothing may be installed
+    from it until a build manifest that pins it is approved. So the dedicated venv is not
+    installed and `STOCKLOOKUP_PROVIDER_PYTHON` is not bound.
+  - **Terms.** The candidate vnai requires `.vnstock/id/terms_agreement.txt`. The manifest's
+    `terms_acceptance` is `UNRESOLVED_LAUNCH_BLOCKED` (no owner decision, no terms-text digest).
+    Acceptance is never manufactured, so this is an outstanding owner requirement.
+  - **Live calls.** Gates C/D/E, ordinary Daily and the 2026-09-25 recovery were not run. There
+    were no live provider calls.
+- **Authority.** None promoted. `config/provider_runtime_policy.json` stays
+  `SECURITY_REVIEW_BLOCKED`, and the manifest stays `DRAFT`.
+- **PR #6 status.** The owner merged PR #6 to `main` as `ad685ac` (2026-09-26T09:49Z). No
+  review is recorded on the PR. The roadmap entry for
+  `APPROVED_PROVIDER_BUILD_AND_EXECUTION_BOUNDARY_V1` notes the merge. Recording it `COMPLETE`
+  is left to the owner, under that entry's own review rule.
+- **Provisioning corrective (after `8266a25`; GitHub CI #91 green on `8266a25`).**
+  - **What failed.** The owner's elevated `-Apply` stopped at `New-LocalUser`: its 66-character
+    `-Description` exceeds the cmdlet's `ValidateLength(0, 48)`.
+  - **Host inspected, read-only, before any change.** Nothing had been created: no account, no
+    `C:\ProgramData\StockLookup`, no DPAPI blob, no record, no firewall rule, no deny ACE on
+    `C:\Projects\StockLookup`. Parameter validation failed before the first mutating call.
+  - **Description fix.** The description is the constant
+    `Contained StockLookup provider worker identity` (46 characters). It also marks the account
+    as this script's. Regression checks are static on every platform and, on Windows, compare
+    against the live cmdlet limits via `-SelfTestParameterLimits`.
+  - **Resumable, idempotent APPLY.** A pure plan function turns observed state into actions and
+    refuses conflicts.
+    - **Resume and reuse.** An existing account is reused only if it has this script's
+      description and belongs to no group but Users.
+    - **Logon secret.** It is reset only when unrecoverable (account present, blob absent).
+      Otherwise the stored blob is validated against the account and kept, or the run fails
+      closed.
+    - **ACEs and rules.** The deny ACE is added once. The firewall rule is created once, and an
+      existing one must already be exact.
+    - **Conflicts fail closed.** These refuse: a foreign account, extra groups, a mismatched rule,
+      an extra rule in the group, unrelated entries under `C:\ProgramData\StockLookup`, another
+      explicit ACE for the worker SID, a record for another SID, and a record without its account.
+    - **Never deletes.** Nothing is ever removed.
+  - **Completion marker last.** An existing record is moved aside before any change. The new one
+    is written only after every invariant verifies, via a temp file and an atomic rename. A failed
+    run therefore never looks provisioned.
+  - **Partial state reported.** The qualification tool reports `PARTIAL_PROVISIONING`, not
+    `NOT_PROVISIONED`, when an interrupted run left state behind without a record.
+
 ## 2026-09-26 - APPROVED_PROVIDER_BUILD_AND_EXECUTION_BOUNDARY_V1 (pre-approval infrastructure)
 
 Bounded provider-runtime operationalization under active M1. Not a new analytical lane.

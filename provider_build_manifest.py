@@ -152,7 +152,7 @@ WORKER_SOURCE_FILES = (
     "vnstock_worker_process.py", "vnstock_worker_protocol.py", "vnstock_rate_governor.py",
     "provider_build_manifest.py", "provider_worker_containment.py", "provider_execution_guard.py",
     "provider_runtime_state.py", "vn_stock_pipeline.py", "market_data_lineage.py", "runtime_paths.py",
-    "vn_time.py",
+    "vn_time.py", "provider_egress_gateway.py",
 )
 # Import-cache stubs the worker installs before vnstock is first imported (see
 # vnstock_worker_process._install_startup_stubs); the manifest must name exactly these.
@@ -260,6 +260,10 @@ OS_ENFORCEMENT_BACKEND_CONTRACT_VERSION = "provider_os_enforcement_backend/v1"
 OFFLINE_FAKE_BACKEND_ID = "offline-fake-direct-popen"
 EGRESS_POLICY_CONTRACT_VERSION = "provider_egress_policy/v1"
 GATEWAY_IDENTITY_KEYS = ("gateway_id", "implementation", "ipc_endpoint", "executable_sha256")
+# The Windows production gateway is reached over a per-launch local named pipe, never over TCP
+# (provider_egress_gateway); a gateway without ``transport`` is the legacy host/port form.
+GATEWAY_TRANSPORT_WINDOWS_NAMED_PIPE = "WINDOWS_NAMED_PIPE"
+LOCAL_PIPE_PREFIX = "\\\\.\\pipe\\"
 TEST_FIXTURE_PROVENANCE = "TEST_FIXTURE_ONLY"
 # Owner decision 2026-09-26: every reviewed ancillary vendor service is DENY. An approved manifest
 # must materialise DENY for each of these; ALLOW_OWNER_APPROVED is not sufficient for them.
@@ -615,9 +619,20 @@ def egress_gateway_violations(manifest: Mapping[str, Any], *, approved: bool) ->
     verified = containment.get("egress_gateway_verified") is True
     failures = []
     if gateway is not None:
+        transport = gateway.get("transport") if isinstance(gateway, Mapping) else None
         host = str((gateway or {}).get("host") or "").strip() if isinstance(gateway, Mapping) else ""
         port = gateway.get("port") if isinstance(gateway, Mapping) else None
-        if not host or not isinstance(port, int) or isinstance(port, bool) or not 1 <= port <= 65535:
+        if transport == GATEWAY_TRANSPORT_WINDOWS_NAMED_PIPE:
+            # Local named-pipe IPC: no network address at all; the endpoint is a per-launch pipe.
+            endpoint = str(gateway.get("ipc_endpoint") or "")
+            if host or port is not None:
+                failures.append(_failure(R_EGRESS_GATEWAY_CONTRACT_INVALID, error="a named-pipe gateway has no host/port"))
+            if not endpoint.startswith(LOCAL_PIPE_PREFIX) or "{launch_id}" not in endpoint:
+                failures.append(_failure(R_EGRESS_GATEWAY_CONTRACT_INVALID,
+                                         error="named-pipe ipc_endpoint must be a local pipe template with {launch_id}"))
+        elif transport is not None:
+            failures.append(_failure(R_EGRESS_GATEWAY_CONTRACT_INVALID, error=f"unknown gateway transport {transport!r}"))
+        elif not host or not isinstance(port, int) or isinstance(port, bool) or not 1 <= port <= 65535:
             failures.append(_failure(R_EGRESS_GATEWAY_CONTRACT_INVALID, error="gateway needs a host and a port in 1..65535"))
         if not verified or containment.get("state") != OS_CONTAINMENT_OWNER_VERIFIED:
             failures.append(_failure(R_EGRESS_GATEWAY_CONTRACT_INVALID,

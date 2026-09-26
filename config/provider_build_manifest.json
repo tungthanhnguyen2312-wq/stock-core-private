@@ -295,8 +295,8 @@
   "source_files": [
    {
     "relative_path": "vnstock_worker_process.py",
-    "sha256": "82a6f12f81a23b3ce37f2a9a05594f5dbb1bc4e37a1929a6d8d8966b334306f7",
-    "size": 23596
+    "sha256": "a06250c444e89af622b9fbcd719e2736c930508f8845fa8ac046d355865caef7",
+    "size": 26658
    },
    {
     "relative_path": "vnstock_worker_protocol.py",
@@ -310,13 +310,13 @@
    },
    {
     "relative_path": "provider_build_manifest.py",
-    "sha256": "f57f7a0ef069d225f4bfc88dac9a8590d45f42ed3e065210bae7a62fc0282190",
-    "size": 120732
+    "sha256": "b669f5bda271706fb1b3c7e4f86362ab0a312e88a1456cffd3e62b640381ef67",
+    "size": 121969
    },
    {
     "relative_path": "provider_worker_containment.py",
-    "sha256": "144f979d817c43ee5deec89f5da734bfb24be03716a9ffb9cb070c24246eba89",
-    "size": 35752
+    "sha256": "b2229f37cef2dd0a66b8e99c72477330c5eb645ef50d326d30ca65afc6281a86",
+    "size": 37868
    },
    {
     "relative_path": "provider_execution_guard.py",
@@ -347,6 +347,11 @@
     "relative_path": "vn_time.py",
     "sha256": "5fa57ef0b366bb462d9a0ad578d0b5a2d3b549a11545c61567d6e1a617d9a17c",
     "size": 1514
+   },
+   {
+    "relative_path": "provider_egress_gateway.py",
+    "sha256": "6634310deac6242f41312abbe6b9d74dfed8507ab626f7daf8825eca99a185d7",
+    "size": 39806
    }
   ],
   "startup_stubs": [

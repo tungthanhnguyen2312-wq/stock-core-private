@@ -196,12 +196,19 @@ class EndpointRule:
         }
 
 
+GATEWAY_TRANSPORT_WINDOWS_NAMED_PIPE = "WINDOWS_NAMED_PIPE"
+
+
 @dataclass(frozen=True)
 class EgressPolicy:
     rules: tuple[EndpointRule, ...]
     gateway_host: str | None = None
     gateway_port: int | None = None
     source: str = "APPROVED_BUILD_MANIFEST"
+    # False when every allow-listed request leaves through the named-pipe egress gateway: the
+    # worker then needs no name resolution and no socket at all, so the socket layer refuses all.
+    direct_network: bool = True
+    gateway_transport: str | None = None
 
     @classmethod
     def from_endpoints(
@@ -210,6 +217,11 @@ class EgressPolicy:
     ) -> "EgressPolicy":
         rules = tuple(EndpointRule.from_mapping(item) for item in endpoints)
         host = port = None
+        if gateway and gateway.get("transport") == GATEWAY_TRANSPORT_WINDOWS_NAMED_PIPE:
+            if gateway.get("host") or gateway.get("port") is not None or not str(gateway.get("ipc_endpoint") or ""):
+                raise ValueError("EGRESS_GATEWAY_INVALID")
+            return cls(rules=rules, source=source, direct_network=False,
+                       gateway_transport=GATEWAY_TRANSPORT_WINDOWS_NAMED_PIPE)
         if gateway:
             host, port = str(gateway.get("host") or "").lower(), int(gateway.get("port") or 0)
             if not host or port <= 0:
@@ -251,6 +263,9 @@ class EgressPolicy:
         return None
 
     def host_allowed(self, host: str) -> bool:
+        """Whether the worker's own socket layer may resolve/connect to ``host``."""
+        if not self.direct_network:
+            return False
         host = (host or "").lower().rstrip(".")
         return host in self.hosts() or (self.gateway_host is not None and host == self.gateway_host)
 
@@ -259,7 +274,9 @@ class EgressPolicy:
             "source": self.source,
             "rules": [rule.to_record() for rule in self.rules],
             "egress_gateway": ({"host": self.gateway_host, "port": self.gateway_port}
-                               if self.gateway_host else None),
+                               if self.gateway_host else
+                               ({"transport": self.gateway_transport} if self.gateway_transport else None)),
+            "direct_network": self.direct_network,
         }
 
 
@@ -485,16 +502,17 @@ class WorkerContainment:
         self._wrap_name_resolution()
         self._installed = True
 
-    def install_requests_guard(self) -> str:
-        """Wrap ``requests.Session.send`` when ``requests`` is part of the attested closure."""
+    def install_requests_guard(self, *, forward: Callable[..., Any] | None = None) -> str:
+        """Wrap ``requests.Session.send`` when ``requests`` is part of the attested closure.
+        ``forward`` (the egress-gateway client) replaces the direct send for allow-listed requests."""
         try:
             import requests.sessions  # noqa: F401 -- part of the approved dependency closure
         except ImportError:
             self.requests_guard = "REQUESTS_NOT_IN_RUNTIME"
             return self.requests_guard
         install_requests_transport_guard(lambda: self.egress, log=self.log, phase=lambda: self.phase,
-                                         expected_hosts=self.expected_network_denials)
-        self.requests_guard = "INSTALLED"
+                                         expected_hosts=self.expected_network_denials, forward=forward)
+        self.requests_guard = "INSTALLED_VIA_EGRESS_GATEWAY" if forward is not None else "INSTALLED"
         return self.requests_guard
 
     @property
@@ -726,10 +744,14 @@ def enforce_transport_policy(method: Any, url: Any, *, layer: str = LAYER_TRANSP
 def install_requests_transport_guard(
     policy: Callable[[], EgressPolicy | None], *, log: ContainmentEventLog | None = None,
     phase: Callable[[], str] = lambda: PHASE_OPERATION, expected_hosts: Iterable[str] = (),
+    forward: Callable[..., Any] | None = None,
 ) -> Callable[[], None]:
     """Wrap ``requests.sessions.Session.send``; returns an uninstall callable (tests only).
 
-    Every hop is checked before it leaves the process and redirects are never followed.
+    Every hop is checked before it leaves the process and redirects are never followed. With
+    ``forward`` (``forward(prepared_request, **send_kwargs) -> requests.Response``) an allow-listed
+    request is handed to the egress gateway instead of being sent from this process; a policy
+    refusal by the gateway is recorded like an in-process refusal.
     """
     import requests.sessions as sessions
 
@@ -752,7 +774,18 @@ def install_requests_transport_guard(
         if reason is not None:
             _refuse(reason, method, url)
         kwargs["allow_redirects"] = False
-        response = original(self, request, **kwargs)
+        if forward is not None:
+            try:
+                response = forward(request, **kwargs)
+            except ProviderContainmentViolation:
+                raise
+            except Exception as exc:  # noqa: BLE001 -- a gateway policy refusal is a transport refusal
+                code = getattr(exc, "code", None)
+                if isinstance(code, str) and getattr(exc, "kind", None) == "POLICY_REFUSAL":
+                    _refuse(code, method, url, getattr(exc, "detail", None))
+                raise
+        else:
+            response = original(self, request, **kwargs)
         if response.is_redirect or response.is_permanent_redirect:
             location = response.headers.get("location") or ""
             target = urljoin(url, location)
