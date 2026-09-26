@@ -70,6 +70,8 @@ env:
     tests/test_mva_runtime_integrity_ordering.py
     tests/test_data_integrity_tactical_integration.py
     tests/test_retained_evidence_quarantine_and_write_guard.py
+    tests/test_dnse_first_daily_semantics.py
+    tests/test_recovery_replay.py
 
 jobs:
   structural:

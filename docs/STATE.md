@@ -1,8 +1,60 @@
 # Stock Lookup — Operational State
 
+**DNSE-first Daily and recovery infrastructure corrective (2026-09-26, owner rebaseline):**
+`CURRENT_DECISION_SURFACE_CONVERGENCE_V1 = ACTIVE / DNSE_FIRST_CORRECTIVE_IN_REVIEW / LIVE_ACCEPTANCE_PENDING_QUALIFYING_ORDINARY_DAILY`.
+M1 is **not** closed and not marked complete.
+
+- **Owner decision.** DNSE/Livespeed remains the primary market-data direction. `VNSTOCK_KBS_VCI` is
+  `OPTIONAL_SUPPLEMENTAL / DEFERRED_NON_CRITICAL` for current M1 execution.
+  - No Vnstock terms acceptance and no Vnstock runtime authorization.
+  - No source-authority promotion.
+  - The merged containment/runtime-boundary infrastructure (PR #6 `ad685ac`, PR #7 `785fe07`) is
+    preserved as reusable security infrastructure. It is not a requirement to activate Vnstock.
+- **Stale state corrected.** PR #7 is **merged** as `785fe072ca9ad86ce4e3c0ff53b0d8f69cd90f44`.
+  Windows OS containment is implemented, host-provisioned, qualified 18/18 and merged. The Vnstock
+  runtime stays uninstalled, unapproved and unlaunched (policy `SECURITY_REVIEW_BLOCKED`).
+  Operationalizing it is no longer on the M1 critical path.
+- **Corrective (branch `claude/dnse-first-daily-recovery-corrective-v1`, Draft PR, not promoted).**
+  Until it is merged, `main` still ends every ordinary Daily at `BLOCKED_SUPPLEMENTAL_PROVIDER_RUNTIME`.
+  - An unavailable supplemental runtime is an explicit capability state, not a Daily-invalidating
+    event. `dnse_quality_license` carries three separate predicates, never aliased:
+    - `qualifies_for_ordinary_daily`: qualified source health (unchanged set).
+    - `qualifies_for_core_daily`: the operational proceed predicate. It adds only
+      `UNASSESSED_SUPPLEMENTAL_RUNTIME_UNAVAILABLE`, on the explicit `DNSE_PRIMARY_UNCORROBORATED`
+      basis, and only when the retained runtime record is consistent.
+    - `dnse_values_corroborated`: false for every `UNASSESSED_*` state.
+  - Still blocking: `DATA_QUALITY_FAILED`, `NOT_EVALUATED`, D2's
+    `UNASSESSED_NO_SECONDARY_OBSERVATION`, and a mid-operation supplemental worker failure. Every
+    mandatory DNSE exact-session/session/coverage/post-close/producer gate is unchanged.
+  - Policy `SECURITY_REVIEW_BLOCKED` still means no worker spawn, no core-Python fallback, no Vnstock
+    import and no stale KBS/VCI fallback. Supplemental-dependent fields stay `NOT_ATTEMPTED` /
+    `UNAVAILABLE`.
+  - Reuse: a post-corrective snapshot is reusable only with its companion multi-source evidence. A
+    DNSE-primary snapshot is re-evaluated once the supplemental runtime becomes launchable.
+  - `m1_live_acceptance_eligible` requires a real `ORDINARY_DAILY`, a completed Core Daily, a
+    recorded runtime state and a core-daily license re-derived from its name. It no longer requires
+    an `AVAILABLE` supplemental runtime. It refuses `RECOVERY_REPLAY`, `DIAGNOSTIC_OVERRIDE`,
+    idempotent replays and recovery markers.
+  - `research_action_posture` thresholds and mapping are unchanged.
+- **Recovery infrastructure (same branch).** `tools/run_recovery_replay.py` runs an isolated,
+  resumable `RECOVERY_REPLAY` of one explicit past session. It produces
+  `recovery_session_market_reconstruction/v1` with `temporal_claim = SESSION_MARKET_RECONSTRUCTION_ONLY`,
+  `pit_friday_decision_reconstruction = false`, `m1_live_acceptance_eligible = false` and
+  `publication = FORBIDDEN`.
+  - It builds no Integrated Decision, brief, posture, AI handoff, Dashboard or cockpit.
+  - Overlays are `CURRENT_RESEARCH_OVERLAY_ACQUIRED_OR_RETAINED_LATER`. `ACTIVE_UNIVERSE` stays UNKNOWN.
+  - Foreign flow is written to an isolated store only (`DNSE_RETROSPECTIVE_VALUE_ONLY`).
+- **Nothing ran.** No live provider call, Daily, 2026-09-25 recovery, publication or authority
+  promotion happened. See `docs/DECISIONS.md` 2026-09-26 (DNSE-first entry).
+- **Next gate:** run the isolated 2026-09-25 recovery → analyze 2026-09-25 → review/promote this
+  corrective → next valid ordinary Daily → M1 live acceptance.
+
 **Windows provider OS containment (2026-09-26):**
-`WINDOWS_PROVIDER_RUNTIME_OS_CONTAINMENT_AND_ATTESTATION_V1 = BLOCKED / HOST_PROVISIONED / CONTAINMENT_QUALIFIED_18_OF_18 / PROMOTION_REVIEW_AND_MERGE_PENDING`.
-It started from `main` = `ad685ac` (the owner's merge of PR #6). M1 stays ACTIVE.
+`WINDOWS_PROVIDER_RUNTIME_OS_CONTAINMENT_AND_ATTESTATION_V1 = DEFERRED / HOST_PROVISIONED / CONTAINMENT_QUALIFIED_18_OF_18 / MERGED_785fe07`.
+*(Reconciled 2026-09-26: PR #7 is merged as `785fe07`; the earlier "promotion review and merge
+pending" wording is superseded. Further Vnstock operationalization is DEFERRED_NON_CRITICAL under
+the owner rebaseline above.)* It started from `main` = `ad685ac` (the owner's merge of PR #6). M1
+stays ACTIVE.
 
 - **Implemented.** `provider_os_enforcement.production_backend()` now has a real Windows backend
   (`provider_windows_os_backend.py`, `stocklookup-windows-os-enforcement`) and a named-pipe egress
@@ -31,7 +83,8 @@ It started from `main` = `ad685ac` (the owner's merge of PR #6). M1 stays ACTIVE
   the datagram is dropped. L11 therefore passes on an OS refusal, or on a controlled silent drop:
   the worker is unanswered, the owner is answered by the same servers, and worker TCP/53 is
   refused. Residual, not scored: loopback, the host's own LAN address, and the DNS Client service.
-- **Still required after a containment PASS, in order:**
+- **Still required after a containment PASS, in order** *(only if the owner later chooses to
+  operationalize the now OPTIONAL_SUPPLEMENTAL runtime; not an M1 prerequisite since 2026-09-26)*:
   1. the dedicated provider venv (the lock forbids installation before a manifest approval
      pins it);
   2. an owner terms decision for vnai's `.vnstock/id/terms_agreement.txt` (never manufactured);
@@ -43,8 +96,9 @@ It started from `main` = `ad685ac` (the owner's merge of PR #6). M1 stays ACTIVE
 **M1 stabilization integration promoted to `main` (2026-09-26):**
 `CURRENT_DECISION_SURFACE_CONVERGENCE_V1 = ACTIVE / STABILIZATION_PROMOTED / LIVE_ACCEPTANCE_PENDING_SAFE_ORDINARY_DAILY`.
 
-M1 is **not** closed. It stays ACTIVE until a qualifying ordinary Daily passes live acceptance, and
-no ordinary Daily can qualify until the provider runtime is operationalized (below).
+M1 is **not** closed. It stays ACTIVE until a qualifying ordinary Daily passes live acceptance.
+*(Superseded 2026-09-26 by the DNSE-first rebaseline above: provider-runtime operationalization is
+no longer required for a qualifying ordinary Daily once the corrective is promoted.)*
 
 - **Promoted.** PR #4 (`M1_STABILIZATION_INTEGRATION_RC_V1`) merged to Producer `main` as merge
   commit `9575cb04c899696a02b22ba9dfcfed9a4961cf2d`. Its parents are `cde156e` and the RC head
@@ -75,9 +129,10 @@ no ordinary Daily can qualify until the provider runtime is operationalized (bel
   fallback to the core Python.
 - An uncorroborated DNSE sentinel does not license ordinary Daily (D2), and there is no degraded
   publication (D4).
-- So every ordinary Daily currently ends at `BLOCKED_SUPPLEMENTAL_PROVIDER_RUNTIME`. DNSE
-  evidence is retained and nothing is published, so no ordinary Daily can currently serve M1
-  live acceptance (`canonical_daily_operation.m1_live_acceptance_eligible`).
+- So every ordinary Daily on current `main` ends at `BLOCKED_SUPPLEMENTAL_PROVIDER_RUNTIME`. DNSE
+  evidence is retained and nothing is published. *(Amended 2026-09-26: the DNSE-first corrective
+  removes this global block once promoted; D1 and D3 are unchanged, D2 is unchanged, and the D4
+  consequence is amended as recorded in `docs/DECISIONS.md`.)*
 - `provider_runtime_state` is operational metadata only. Provider-runtime availability must never
   promote source, market-data or any other authority as a side effect.
 - Recorded machine-readably as `blocked_capabilities.SUPPLEMENTAL_PROVIDER_RUNTIME_OPERATION` in
@@ -122,7 +177,8 @@ no ordinary Daily can qualify until the provider runtime is operationalized (bel
 - The `evidence_currency` meanings and position-context semantics are unchanged, and
   `OPPORTUNITY_PRIORITY` stays orthogonal to posture.
 
-**Next gate, in order (no new analytical milestone is queued):**
+**Next gate, in order (no new analytical milestone is queued)** *(superseded 2026-09-26 by the
+DNSE-first rebaseline's next gate at the top of this file; kept as the prior record)*:
 1. Provider-runtime operationalization. Pre-approval infrastructure
    `APPROVED_PROVIDER_BUILD_AND_EXECUTION_BOUNDARY_V1` is implemented (manifest, attestation,
    containment, legacy-bypass hardening, fake qualification Gates A/B). The package/build is
