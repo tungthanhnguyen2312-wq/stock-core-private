@@ -66,6 +66,7 @@ DNS_SERVERS = ("1.1.1.1", "8.8.8.8")
 HARNESS_TARGETS = {"ipv4": ("192.0.2.1",), "ipv6": ("2001:db8::1",), "dns": ("192.0.2.53",)}
 WSAEACCES = 10013
 PASS, FAIL, NOT_PROVISIONED = "PASS", "FAIL", "NOT_PROVISIONED"
+PARTIAL_PROVISIONING = "PARTIAL_PROVISIONING"
 STATUS_HARNESS = "HARNESS_ONLY_NOT_QUALIFICATION"
 RESULT_KEYS = (
     "WORKER_SID_EXACT", "JOB_EXACT_MEMBERSHIP", "JOB_KILL_ON_CLOSE", "BREAKAWAY_BLOCKED", "ACL_POSITIVE",
@@ -442,6 +443,13 @@ def fake_backend_refused() -> dict[str, Any]:
     return _result(ok, refusal_codes=sorted(codes), configured_backend=getattr(configured, "backend_id", None))
 
 
+def provisioning_leftovers() -> list[str]:
+    """Host state an interrupted provisioning APPLY may leave behind without a completion record."""
+    candidates = [os.path.dirname(backend.RUNTIME_ROOT), backend.RUNTIME_ROOT,
+                  os.path.join(backend.RUNTIME_ROOT, backend.SUBTREES["host"], backend.CREDENTIAL_BLOB_NAME)]
+    return [path for path in candidates if os.path.exists(path)]
+
+
 def qualify(*, harness_root: Path | None, owner_profile: str) -> dict[str, Any]:
     record = None
     if harness_root is None:
@@ -451,7 +459,11 @@ def qualify(*, harness_root: Path | None, owner_profile: str) -> dict[str, Any]:
             return {"contract_version": backend.QUALIFICATION_REPORT_CONTRACT_VERSION, "status": FAIL, "generated_at_utc": _utc(),
                     "error": exc.reason_code, "results": {key: {"outcome": FAIL} for key in RESULT_KEYS}}
         if record is None:
-            return {"contract_version": backend.QUALIFICATION_REPORT_CONTRACT_VERSION, "status": NOT_PROVISIONED,
+            # No completion record: never a qualification. Leftovers of an interrupted APPLY make the
+            # host PARTIAL (re-running the provisioning -Apply resumes it); nothing at all is NOT_PROVISIONED.
+            leftovers = provisioning_leftovers()
+            return {"contract_version": backend.QUALIFICATION_REPORT_CONTRACT_VERSION,
+                    "status": PARTIAL_PROVISIONING if leftovers else NOT_PROVISIONED, "leftovers": leftovers,
                     "generated_at_utc": _utc(), "host_record": backend.HOST_RECORD_PATH,
                     "results": {key: {"outcome": NOT_PROVISIONED} for key in RESULT_KEYS}}
     ctx = _Context(record=record, harness_root=harness_root)
@@ -513,7 +525,7 @@ def main(argv: list[str] | None = None) -> int:
                "report_sha256": build_manifest.sha256_bytes(data),
                "results": {key: (report.get("results") or {}).get(key, {}).get("outcome") for key in RESULT_KEYS}}
     print(json.dumps(summary, indent=1))
-    return 0 if report.get("status") in (PASS, STATUS_HARNESS) else (3 if report.get("status") == NOT_PROVISIONED else 2)
+    return 0 if report.get("status") in (PASS, STATUS_HARNESS) else (3 if report.get("status") in (NOT_PROVISIONED, PARTIAL_PROVISIONING) else 2)
 
 
 if __name__ == "__main__":

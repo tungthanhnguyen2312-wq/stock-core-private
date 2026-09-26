@@ -19,6 +19,9 @@ It started from `main` = `ad685ac` (the owner's merge of PR #6). M1 stays ACTIVE
 - **Owner action (elevated, once).** Run `tools/provision_provider_os_containment.ps1 -Apply
   -OwnerSid <owner SID>`. Then, non-elevated, run
   `python tools/run_provider_os_containment_qualification.py` (tests L1–L18, as the worker).
+  - The first owner `-Apply` failed on a 66-character account description (limit 48) before
+    changing anything. The corrected script is resumable and idempotent, fails closed on
+    conflicting state, and writes its completion record only last. See `docs/DECISIONS.md`.
 - **Still required after a containment PASS, in order:**
   1. the dedicated provider venv (the lock forbids installation before a manifest approval
      pins it);

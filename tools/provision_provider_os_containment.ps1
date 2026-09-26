@@ -39,7 +39,13 @@ param(
     [string[]]$DenyRoots = @('C:\Projects\StockLookup'),
     # Diagnostics only (no mutation, no elevation): print the firewall policy digest for a SID so
     # it can be compared with provider_windows_os_backend.firewall_policy_sha256.
-    [string]$SelfTestDigestSid
+    [string]$SelfTestDigestSid,
+    # Diagnostics only (no mutation): print the provisioning actions the plan function derives
+    # from an observed-state JSON fixture (resume/idempotence/conflict tests).
+    [string]$SelfTestPlanFixture,
+    # Diagnostics only (no mutation): check this script's constants against the live
+    # LocalAccounts cmdlet parameter limits (e.g. -Description <= 48 characters).
+    [switch]$SelfTestParameterLimits
 )
 
 $ErrorActionPreference = 'Stop'
@@ -49,6 +55,10 @@ $ContractVersion  = 'provider_windows_host_provisioning/v1'
 $BackendId        = 'stocklookup-windows-os-enforcement'
 $AccountName      = 'StockLookupProvider'
 $AccountFullName  = 'StockLookup provider worker (contained)'
+# New-LocalUser/Set-LocalUser -Description is limited to 48 characters (-Name to 20). This exact
+# value also marks the account as ours: an account of this name with another description is a
+# conflict and is never reused.
+$AccountDescription = 'Contained StockLookup provider worker identity'
 $RuntimeRoot      = 'C:\ProgramData\StockLookup\provider-runtime'
 $ProgramDataStockLookup = 'C:\ProgramData\StockLookup'
 $Subtrees         = [ordered]@{ host = 'host'; runtime = 'runtime'; state = 'state'; scratch = 'scratch'; ledger = 'gateway-ledger'; evidence = 'evidence' }
@@ -122,75 +132,152 @@ function Get-FirewallPolicy([string]$Sid) {
     }
 }
 
-# --- preflight -------------------------------------------------------------------------------------
+# --- preflight (read-only) -------------------------------------------------------------------------
+function Get-AccountGroups {
+    $groups = @()
+    foreach ($group in Get-LocalGroup) {
+        try {
+            if (Get-LocalGroupMember -Group $group -Member $AccountName -ErrorAction Stop) { $groups += $group.SID.Value }
+        } catch { }
+    }
+    return ,$groups
+}
+
+function Get-RuleObservation {
+    $rule = Get-NetFirewallRule -Name $RuleName -ErrorAction SilentlyContinue
+    if (-not $rule) { return [ordered]@{ exists = $false } }
+    $address = $rule | Get-NetFirewallAddressFilter
+    $port = $rule | Get-NetFirewallPortFilter
+    $app = $rule | Get-NetFirewallApplicationFilter
+    return [ordered]@{
+        exists = $true; enabled = [string]$rule.Enabled; direction = [string]$rule.Direction; action = [string]$rule.Action
+        profile = [string]$rule.Profile; group = [string]$rule.Group; protocol = [string]$port.Protocol
+        remote_address = @($address.RemoteAddress | ForEach-Object { [string]$_ })
+        local_address = @($address.LocalAddress | ForEach-Object { [string]$_ })
+        program = [string]$app.Program; local_user = [string]($rule | Get-NetFirewallSecurityFilter).LocalUser
+    }
+}
+
+function Get-DenyObservation([string]$Root, [string]$Sid) {
+    # explicit_deny: our exact inheritable FullControl deny for the worker SID is present.
+    # explicit_allow: any OTHER explicit ACE for the worker SID (allow, or a narrower deny) -- a conflict.
+    $observation = [ordered]@{ path = $Root; exists = (Test-Path -LiteralPath $Root); explicit_deny = $false; explicit_allow = $false }
+    if (-not $observation.exists -or -not $Sid) { return $observation }
+    foreach ($ace in (Get-Acl -LiteralPath $Root).Access) {
+        if ($ace.IsInherited) { continue }
+        try { $aceSid = $ace.IdentityReference.Translate([Security.Principal.SecurityIdentifier]).Value } catch { continue }
+        if ($aceSid -ne $Sid) { continue }
+        $exactDeny = $ace.AccessControlType -eq 'Deny' -and [string]$ace.FileSystemRights -eq 'FullControl' `
+            -and [string]$ace.InheritanceFlags -eq 'ContainerInherit, ObjectInherit'
+        if ($exactDeny) { $observation.explicit_deny = $true } else { $observation.explicit_allow = $true }
+    }
+    return $observation
+}
+
 function Invoke-Preflight {
     $state = [ordered]@{}
     $state.elevated = Test-Elevated
     $state.current_sid = [Security.Principal.WindowsIdentity]::GetCurrent().User.Value
-    $state.os = (Get-CimInstance Win32_OperatingSystem | Select-Object -ExpandProperty Caption)
     $account = Get-WorkerAccount
-    $state.account_exists = [bool]$account
-    $state.account_sid = if ($account) { $account.SID.Value } else { $null }
+    $state.account = [ordered]@{ exists = [bool]$account; sid = $null; description = $null; enabled = $null; groups = @() }
     if ($account) {
-        $groups = @()
-        foreach ($group in Get-LocalGroup) {
-            try {
-                if (Get-LocalGroupMember -Group $group -Member $AccountName -ErrorAction Stop) { $groups += $group.SID.Value }
-            } catch { }
-        }
-        $state.account_groups = $groups
+        $state.account.sid = $account.SID.Value
+        $state.account.description = [string]$account.Description
+        $state.account.enabled = [bool]$account.Enabled
+        $state.account.groups = Get-AccountGroups
+    }
+    $state.programdata_children = @()
+    if (Test-Path -LiteralPath $ProgramDataStockLookup) {
+        $state.programdata_children = @(Get-ChildItem -LiteralPath $ProgramDataStockLookup -Force | ForEach-Object { $_.Name })
     }
     $state.runtime_root_exists = Test-Path -LiteralPath $RuntimeRoot
-    $state.record_exists = Test-Path -LiteralPath $RecordPath
-    $rules = @(Get-NetFirewallRule -Name $RuleName -ErrorAction SilentlyContinue)
-    $state.rule_exists = $rules.Count -gt 0
+    $state.blob_exists = Test-Path -LiteralPath $CredentialBlob
+    $state.record = [ordered]@{ exists = (Test-Path -LiteralPath $RecordPath); worker_sid = $null }
+    if ($state.record.exists) {
+        try { $state.record.worker_sid = [string](Get-Content -LiteralPath $RecordPath -Raw | ConvertFrom-Json).worker_sid } catch { $state.record.worker_sid = 'UNREADABLE' }
+    }
+    $state.rule = Get-RuleObservation
     $state.group_rules = @(Get-NetFirewallRule -Group $RuleGroup -ErrorAction SilentlyContinue | ForEach-Object { $_.Name })
     $state.firewall_profiles = @(Get-NetFirewallProfile -PolicyStore ActiveStore | ForEach-Object {
         [ordered]@{ name = [string]$_.Name; enabled = [string]$_.Enabled; allow_local_firewall_rules = [string]$_.AllowLocalFirewallRules } })
-    $state.deny_roots = @($DenyRoots | ForEach-Object { [ordered]@{ path = $_; exists = (Test-Path -LiteralPath $_) } })
+    $state.deny_roots = @($DenyRoots | ForEach-Object { Get-DenyObservation $_ $state.account.sid })
     # CreateProcessWithLogonW needs the Secondary Logon service; it is checked, never changed.
     $state.seclogon_start_mode = [string](Get-CimInstance Win32_Service -Filter "Name='seclogon'" | Select-Object -ExpandProperty StartMode)
     return $state
 }
 
-function Assert-NoConflict($State) {
-    if ($State.account_exists) {
-        $extra = @($State.account_groups | Where-Object { $_ -ne 'S-1-5-32-545' })
+# --- plan (pure: observed state -> actions, or a conflict) -----------------------------------------
+function Test-RuleExact($Rule, [string]$Sid) {
+    return ($Rule.enabled -eq 'True' -and $Rule.direction -eq 'Outbound' -and $Rule.action -eq 'Block' -and $Rule.profile -eq 'Any' `
+        -and $Rule.group -eq $RuleGroup -and $Rule.protocol -eq 'Any' -and (@($Rule.remote_address) -join ',') -eq 'Any' `
+        -and (@($Rule.local_address) -join ',') -eq 'Any' -and $Rule.program -eq 'Any' -and $Rule.local_user -eq "D:(A;;CC;;;$Sid)")
+}
+
+function Get-ProvisioningActions($State) {
+    # Ordered actions for a resumable, idempotent APPLY. Throws PROVISIONING_REFUSED on any
+    # conflicting state; it never plans the deletion of anything.
+    $actions = [ordered]@{}
+    $account = $State.account
+    if ($account.exists) {
+        if ($account.description -ne $AccountDescription) { Fail 'ACCOUNT_CONFLICT' "an account named $AccountName exists that this script did not create (description differs)" }
+        $extra = @($account.groups | Where-Object { $_ -ne 'S-1-5-32-545' })
         if ($extra.Count -gt 0) { Fail 'ACCOUNT_CONFLICT' "existing $AccountName is in groups other than Users: $($extra -join ',')" }
-        if ($State.record_exists) {
-            $record = Get-Content -LiteralPath $RecordPath -Raw | ConvertFrom-Json
-            if ($record.worker_sid -ne $State.account_sid) { Fail 'ACCOUNT_CONFLICT' 'host record names a different worker SID' }
-        }
+        $actions.account = 'REUSE_VERIFIED'
+        # The logon secret is rotated only when it is unrecoverable (no blob); an existing blob is
+        # validated against the account and kept, or the run fails closed.
+        $actions.secret = if ($State.blob_exists) { 'KEEP_EXISTING_BLOB_AFTER_VALIDATION' } else { 'RESET_AND_STORE' }
+    } else {
+        if ($State.record.exists) { Fail 'RECORD_CONFLICT' 'a provisioning record exists but the worker account does not' }
+        $actions.account = 'CREATE'
+        $actions.secret = 'GENERATE_AND_STORE'
     }
-    foreach ($name in $State.group_rules) {
+    $sid = $account.sid
+    if ($State.record.exists -and $account.exists -and $State.record.worker_sid -ne $sid) { Fail 'RECORD_CONFLICT' 'the provisioning record names a different worker SID' }
+    $unrelated = @($State.programdata_children | Where-Object { $_ -ne 'provider-runtime' })
+    if ($unrelated.Count -gt 0) { Fail 'RUNTIME_ROOT_CONFLICT' "$ProgramDataStockLookup holds unrelated entries ($($unrelated -join ',')); its protected ACL would change them" }
+    $actions.directories = if ($State.runtime_root_exists) { 'COMPLETE_AND_CONVERGE_ACLS' } else { 'CREATE_AND_APPLY_ACLS' }
+    foreach ($name in @($State.group_rules)) {
         if ($name -ne $RuleName) { Fail 'FIREWALL_CONFLICT' "unexpected rule '$name' in group '$RuleGroup'" }
     }
+    if ($State.rule.exists) {
+        if (-not $sid -or -not (Test-RuleExact $State.rule $sid)) { Fail 'FIREWALL_CONFLICT' "rule '$RuleName' exists but is not the exact provisioned rule" }
+        $actions.firewall = 'PRESENT_EXACT'
+    } else { $actions.firewall = 'CREATE' }
+    $deny = [ordered]@{}
+    foreach ($root in @($State.deny_roots)) {
+        if (-not $root.exists) { Fail 'DENY_ROOT_MISSING' "deny root $($root.path) does not exist" }
+        if ($root.explicit_allow) { Fail 'ACL_CONFLICT' "$($root.path) carries another explicit ACE for the worker SID" }
+        $deny[[string]$root.path] = if ($root.explicit_deny) { 'PRESENT' } else { 'ADD' }
+    }
+    $actions.deny_aces = $deny
+    $actions.record = if ($State.record.exists) { 'SUPERSEDE_THEN_WRITE_LAST' } else { 'WRITE_LAST' }
+    return $actions
+}
+
+function Assert-HostPrerequisites($State) {
     foreach ($profile in $State.firewall_profiles) {
         if ($profile.enabled -ne 'True') { Fail 'FIREWALL_PROFILE_DISABLED' "firewall profile $($profile.name) is not enabled" }
         if ($profile.allow_local_firewall_rules -eq 'False') { Fail 'FIREWALL_LOCAL_RULES_DISABLED' "profile $($profile.name) ignores local rules" }
-    }
-    foreach ($root in $State.deny_roots) {
-        if (-not $root.exists) { Fail 'DENY_ROOT_MISSING' "deny root $($root.path) does not exist" }
     }
     if (-not $State.seclogon_start_mode -or $State.seclogon_start_mode -eq 'Disabled') {
         Fail 'SECONDARY_LOGON_UNAVAILABLE' "the Secondary Logon service (seclogon) is '$($State.seclogon_start_mode)'; the worker launch needs it (this script does not change services)"
     }
 }
 
-function Show-Plan($State) {
+function Show-Plan($State, $Actions) {
     Write-Step "mode: $(if ($Apply) { 'APPLY' } else { 'PLAN (no mutation)' })"
     Write-Step "invoking identity SID: $($State.current_sid); elevated: $($State.elevated); seclogon: $($State.seclogon_start_mode)"
-    Write-Step "worker account '$AccountName': $(if ($State.account_exists) { "exists ($($State.account_sid)) -> reuse, reset logon secret" } else { 'create (standard user, Users group only, password never expires, hidden from sign-in)' })"
-    Write-Step "logon secret: random 48-character, set on the account, stored ONLY as DPAPI(CurrentUser of $($State.current_sid)) blob $CredentialBlob"
-    Write-Step "runtime root $RuntimeRoot (+ $($Subtrees.Values -join ', ')): protected ACLs"
+    Write-Step "worker account '$AccountName': $($Actions.account)$(if ($State.account.exists) { " ($($State.account.sid))" }) (standard user, Users group only, password never expires, hidden from sign-in)"
+    Write-Step "logon secret: $($Actions.secret); stored ONLY as DPAPI(CurrentUser of $($State.current_sid)) blob $CredentialBlob"
+    Write-Step "runtime root $RuntimeRoot (+ $($Subtrees.Values -join ', ')): $($Actions.directories)"
     Write-Step "  $ProgramDataStockLookup : SYSTEM F, Administrators F, owner RX (this folder only); no Users write"
     Write-Step "  runtime\ : SYSTEM F, Administrators F, owner M, worker RX"
     Write-Step "  state\   : SYSTEM F, Administrators F, owner M, worker M"
     Write-Step "  scratch\ : SYSTEM F, Administrators F, owner M, worker traverse only (per-launch ACLs are set by the backend)"
     Write-Step "  host\, gateway-ledger\, evidence\ : SYSTEM F, Administrators F, owner M; worker none"
-    foreach ($root in $State.deny_roots) { Write-Step "deny ACE (OI)(CI) Full for worker SID on $($root.path) (inheritance propagates; may take minutes)" }
-    Write-Step "firewall rule '$RuleName' (group '$RuleGroup'): Outbound, Block, Profile Any, Protocol Any, RemoteAddress Any, LocalUser = worker SID"
-    Write-Step "host record $RecordPath (non-secret)"
+    foreach ($path in $Actions.deny_aces.Keys) { Write-Step "deny ACE (OI)(CI) Full for worker SID on ${path}: $($Actions.deny_aces[$path]) (inheritance propagates; may take minutes)" }
+    Write-Step "firewall rule '$RuleName' (group '$RuleGroup'): $($Actions.firewall) (Outbound, Block, Profile Any, Protocol Any, RemoteAddress Any, LocalUser = worker SID)"
+    Write-Step "host record $RecordPath (non-secret completion marker): $($Actions.record)"
 }
 
 # --- mutation --------------------------------------------------------------------------------------
@@ -205,120 +292,155 @@ function New-LogonSecret {
 }
 
 function Set-ProtectedAcl([string]$Path, [string]$Sddl) {
-    # DACL only (protected): owner/group/SACL are left as they are.
+    # DACL only (protected): owner/group/SACL are left as they are. Re-applying the same DACL is a no-op.
     $acl = Get-Acl -LiteralPath $Path
     $acl.SetSecurityDescriptorSddlForm($Sddl, [Security.AccessControl.AccessControlSections]::Access)
     Set-Acl -LiteralPath $Path -AclObject $acl
 }
 
-function Invoke-Apply($State) {
+function Write-FileAtomic([string]$Path, [byte[]]$Bytes, [string]$Sddl) {
+    # Temp file in the same protected directory, its DACL set, then a rename into place.
+    $temp = "$Path.tmp-$([guid]::NewGuid().ToString('N'))"
+    [IO.File]::WriteAllBytes($temp, $Bytes)
+    Set-ProtectedAcl $temp $Sddl
+    Move-Item -LiteralPath $temp -Destination $Path -Force
+}
+
+function Protect-Secret([string]$SecretText) {
+    $plain = [Text.Encoding]::UTF8.GetBytes($SecretText)
+    try { return [Security.Cryptography.ProtectedData]::Protect($plain, $Entropy, [Security.Cryptography.DataProtectionScope]::CurrentUser) }
+    finally { [Array]::Clear($plain, 0, $plain.Length) }
+}
+
+function Test-StoredSecret {
+    # Decrypt the existing blob (owner DPAPI) and validate it against the account. The value never
+    # leaves this function and is never printed.
+    Add-Type -AssemblyName System.DirectoryServices.AccountManagement
+    $plain = [Security.Cryptography.ProtectedData]::Unprotect([IO.File]::ReadAllBytes($CredentialBlob), $Entropy,
+        [Security.Cryptography.DataProtectionScope]::CurrentUser)
+    try {
+        $context = New-Object System.DirectoryServices.AccountManagement.PrincipalContext([System.DirectoryServices.AccountManagement.ContextType]::Machine)
+        try { return [bool]$context.ValidateCredentials($AccountName, [Text.Encoding]::UTF8.GetString($plain)) } finally { $context.Dispose() }
+    } finally { [Array]::Clear($plain, 0, $plain.Length) }
+}
+
+function Invoke-Apply($State, $Actions) {
     if (-not $State.elevated) { Fail 'NOT_ELEVATED' 'run -Apply from an elevated (Administrator) PowerShell' }
     if (-not $OwnerSid) { Fail 'OWNER_SID_REQUIRED' 'pass -OwnerSid <owner SID> (the non-elevated Producer identity)' }
     if ($OwnerSid -ne $State.current_sid) { Fail 'OWNER_MISMATCH' "elevated identity $($State.current_sid) is not the owner $OwnerSid (DPAPI must bind to the owner)" }
     Add-Type -AssemblyName System.Security
+    $o = $OwnerSid
 
-    # 1. account + secret ----------------------------------------------------------------------------
-    $secretText = New-LogonSecret
-    $secure = ConvertTo-SecureString -String $secretText -AsPlainText -Force
-    $account = Get-WorkerAccount
-    if (-not $account) {
+    # 0. The completion record is moved aside first: a run that fails from here on never looks provisioned.
+    if ($Actions.record -eq 'SUPERSEDE_THEN_WRITE_LAST') {
+        $superseded = "$RecordPath.superseded-$((Get-Date).ToUniversalTime().ToString('yyyyMMddTHHmmssZ'))"
+        Write-Step "moving the existing completion record aside to $superseded"
+        Move-Item -LiteralPath $RecordPath -Destination $superseded
+    }
+
+    # 1. directories + owner-only ACLs (the host dir is protected before any secret is stored) --------
+    foreach ($dir in @($ProgramDataStockLookup, $RuntimeRoot) + @($Subtrees.Values | ForEach-Object { Join-Path $RuntimeRoot $_ })) {
+        if (-not (Test-Path -LiteralPath $dir)) { New-Item -ItemType Directory -Path $dir | Out-Null }
+    }
+    Set-ProtectedAcl $ProgramDataStockLookup "D:P(A;OICI;FA;;;SY)(A;OICI;FA;;;BA)(A;;0x1200a9;;;$o)"
+    Set-ProtectedAcl $RuntimeRoot "D:P(A;OICI;FA;;;SY)(A;OICI;FA;;;BA)(A;;0x1200a9;;;$o)"
+    foreach ($private in @('host', 'gateway-ledger', 'evidence')) {
+        Set-ProtectedAcl (Join-Path $RuntimeRoot $private) "D:P(A;OICI;FA;;;SY)(A;OICI;FA;;;BA)(A;OICI;0x1301bf;;;$o)"
+    }
+
+    # 2. account + secret (a created/reset secret is stored at once, so it is never lost) --------------
+    $blobSddl = "D:P(A;;FA;;;SY)(A;;FA;;;BA)(A;;FA;;;$o)"
+    if ($Actions.account -eq 'CREATE') {
+        $secretText = New-LogonSecret
         Write-Step "creating local account $AccountName"
-        $account = New-LocalUser -Name $AccountName -Password $secure -FullName $AccountFullName `
-            -Description 'Dedicated contained provider worker identity (no interactive use).' `
-            -PasswordNeverExpires -UserMayNotChangePassword -AccountNeverExpires
+        New-LocalUser -Name $AccountName -Password (ConvertTo-SecureString -String $secretText -AsPlainText -Force) `
+            -FullName $AccountFullName -Description $AccountDescription `
+            -PasswordNeverExpires -UserMayNotChangePassword -AccountNeverExpires | Out-Null
+        Write-FileAtomic $CredentialBlob (Protect-Secret $secretText) $blobSddl
+        $secretText = $null
+    } elseif ($Actions.secret -eq 'RESET_AND_STORE') {
+        $secretText = New-LogonSecret
+        Write-Step "the logon secret of $AccountName is unrecoverable (no blob): resetting it once"
+        Set-LocalUser -Name $AccountName -Password (ConvertTo-SecureString -String $secretText -AsPlainText -Force)
+        Write-FileAtomic $CredentialBlob (Protect-Secret $secretText) $blobSddl
+        $secretText = $null
     } else {
-        Write-Step "resetting logon secret of existing $AccountName"
-        Set-LocalUser -Name $AccountName -Password $secure -PasswordNeverExpires $true -UserMayChangePassword $false
-        Enable-LocalUser -Name $AccountName
+        if (-not (Test-StoredSecret)) { Fail 'CREDENTIAL_BLOB_MISMATCH' "the stored logon secret does not validate for $AccountName (not rotated automatically; owner decision required)" }
+        Write-Step "reusing $AccountName and its stored logon secret (validated)"
     }
     $account = Get-WorkerAccount
     $sid = $account.SID.Value
-    try { Add-LocalGroupMember -SID 'S-1-5-32-545' -Member $AccountName -ErrorAction Stop } catch { if ($_.Exception.Message -notmatch 'already a member') { throw } }
+    if ($State.account.exists -and $sid -ne $State.account.sid) { Fail 'ACCOUNT_CONFLICT' 'the worker SID changed during provisioning' }
+    Set-LocalUser -Name $AccountName -Description $AccountDescription -PasswordNeverExpires $true -UserMayChangePassword $false
+    if (-not $account.Enabled) { Enable-LocalUser -Name $AccountName }
+    if (-not (@(Get-AccountGroups) -contains 'S-1-5-32-545')) { Add-LocalGroupMember -SID 'S-1-5-32-545' -Member $AccountName }
     $userList = 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon\SpecialAccounts\UserList'
     if (-not (Test-Path $userList)) { New-Item -Path $userList -Force | Out-Null }
     New-ItemProperty -Path $userList -Name $AccountName -PropertyType DWord -Value 0 -Force | Out-Null
 
-    # 2. directories + ACLs ---------------------------------------------------------------------------
-    foreach ($dir in @($ProgramDataStockLookup, $RuntimeRoot) + @($Subtrees.Values | ForEach-Object { Join-Path $RuntimeRoot $_ })) {
-        if (-not (Test-Path -LiteralPath $dir)) { New-Item -ItemType Directory -Path $dir | Out-Null }
-    }
-    $o = $OwnerSid; $w = $sid
+    # 3. worker-specific ACLs ---------------------------------------------------------------------------
+    $w = $sid
     Set-ProtectedAcl $ProgramDataStockLookup "D:P(A;OICI;FA;;;SY)(A;OICI;FA;;;BA)(A;;0x1200a9;;;$o)(A;;0x100020;;;$w)"
     Set-ProtectedAcl $RuntimeRoot "D:P(A;OICI;FA;;;SY)(A;OICI;FA;;;BA)(A;;0x1200a9;;;$o)(A;;0x100020;;;$w)"
     Set-ProtectedAcl (Join-Path $RuntimeRoot 'runtime')  "D:P(A;OICI;FA;;;SY)(A;OICI;FA;;;BA)(A;OICI;0x1301bf;;;$o)(A;OICI;0x1200a9;;;$w)"
     Set-ProtectedAcl (Join-Path $RuntimeRoot 'state')    "D:P(A;OICI;FA;;;SY)(A;OICI;FA;;;BA)(A;OICI;0x1301bf;;;$o)(A;OICI;0x1301bf;;;$w)"
     Set-ProtectedAcl (Join-Path $RuntimeRoot 'scratch')  "D:P(A;OICI;FA;;;SY)(A;OICI;FA;;;BA)(A;OICI;0x1301bf;;;$o)(A;;0x100020;;;$w)"
-    foreach ($private in @('host', 'gateway-ledger', 'evidence')) {
-        Set-ProtectedAcl (Join-Path $RuntimeRoot $private) "D:P(A;OICI;FA;;;SY)(A;OICI;FA;;;BA)(A;OICI;0x1301bf;;;$o)"
-    }
 
-    # 3. DPAPI blob (owner current-user scope) ---------------------------------------------------------
-    $plain = [Text.Encoding]::UTF8.GetBytes($secretText)
-    try {
-        $blob = [Security.Cryptography.ProtectedData]::Protect($plain, $Entropy, [Security.Cryptography.DataProtectionScope]::CurrentUser)
-    } finally { [Array]::Clear($plain, 0, $plain.Length) }
-    [IO.File]::WriteAllBytes($CredentialBlob, $blob)
-    Set-ProtectedAcl $CredentialBlob "D:P(A;;FA;;;SY)(A;;FA;;;BA)(A;;FA;;;$o)"
-    $secretText = $null; $secure = $null
-
-    # 4. deny ACEs on owner-data roots ------------------------------------------------------------------
-    $provisionedDeny = @()
+    # 4. deny ACEs on owner-data roots (added once; never duplicated) -----------------------------------
     foreach ($root in $DenyRoots) {
-        $acl = Get-Acl -LiteralPath $root
-        $identity = New-Object Security.Principal.SecurityIdentifier($sid)
-        $rule = New-Object Security.AccessControl.FileSystemAccessRule($identity, 'FullControl', 'ContainerInherit,ObjectInherit', 'None', 'Deny')
-        $present = @($acl.Access | Where-Object { $_.AccessControlType -eq 'Deny' -and $_.IdentityReference.Translate([Security.Principal.SecurityIdentifier]).Value -eq $sid -and -not $_.IsInherited })
-        if ($present.Count -eq 0) {
+        $observed = Get-DenyObservation $root $sid
+        if ($observed.explicit_allow) { Fail 'ACL_CONFLICT' "$root carries another explicit ACE for the worker SID" }
+        if (-not $observed.explicit_deny) {
             Write-Step "adding worker deny ACE on $root (propagating)"
-            $acl.AddAccessRule($rule)
+            $acl = Get-Acl -LiteralPath $root
+            $identity = New-Object Security.Principal.SecurityIdentifier($sid)
+            $acl.AddAccessRule((New-Object Security.AccessControl.FileSystemAccessRule($identity, 'FullControl', 'ContainerInherit,ObjectInherit', 'None', 'Deny')))
             Set-Acl -LiteralPath $root -AclObject $acl
         }
-        $provisionedDeny += $root
     }
 
-    # 5. firewall rule --------------------------------------------------------------------------------
-    $existing = Get-NetFirewallRule -Name $RuleName -ErrorAction SilentlyContinue
-    if ($existing) { Remove-NetFirewallRule -Name $RuleName }
-    New-NetFirewallRule -Name $RuleName -DisplayName 'StockLookup provider worker: deny all direct outbound' -Group $RuleGroup `
-        -Description 'The contained provider worker identity has no direct network egress; its only path is the local named-pipe egress gateway.' `
-        -Direction Outbound -Action Block -Profile Any -Protocol Any -RemoteAddress Any -LocalAddress Any -Program Any `
-        -LocalUser "D:(A;;CC;;;$sid)" -Enabled True | Out-Null
-
-    # 6. host record ------------------------------------------------------------------------------------
-    $record = [ordered]@{
-        contract_version = $ContractVersion; backend_id = $BackendId; worker_account = $AccountName; worker_sid = $sid
-        owner_sid = $OwnerSid; runtime_root = $RuntimeRoot; subtrees = $Subtrees
-        firewall_rule_name = $RuleName; firewall_policy_sha256 = (Get-Sha256Hex (ConvertTo-CanonicalJson (Get-FirewallPolicy $sid)))
-        credential_blob = $CredentialBlob; denied_roots_provisioned = @($provisionedDeny)
-        provisioned_at_utc = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
-        provisioner_sha256 = (Get-FileHash -LiteralPath $PSCommandPath -Algorithm SHA256).Hash.ToLowerInvariant()
-    }
-    [IO.File]::WriteAllText($RecordPath, ($record | ConvertTo-Json -Depth 5), (New-Object Text.UTF8Encoding($false)))
-    Set-ProtectedAcl $RecordPath "D:P(A;;FA;;;SY)(A;;FA;;;BA)(A;;0x1200a9;;;$o)"
+    # 5. firewall rule (created once; an existing rule must already be exact) --------------------------
+    $rule = Get-RuleObservation
+    if (-not $rule.exists) {
+        New-NetFirewallRule -Name $RuleName -DisplayName 'StockLookup provider worker: deny all direct outbound' -Group $RuleGroup `
+            -Description 'The contained provider worker identity has no direct network egress; its only path is the local named-pipe egress gateway.' `
+            -Direction Outbound -Action Block -Profile Any -Protocol Any -RemoteAddress Any -LocalAddress Any -Program Any `
+            -LocalUser "D:(A;;CC;;;$sid)" -Enabled True | Out-Null
+    } elseif (-not (Test-RuleExact $rule $sid)) { Fail 'FIREWALL_CONFLICT' "rule '$RuleName' is not the exact provisioned rule" }
     return $sid
 }
 
 function Test-Provisioned([string]$Sid) {
+    # Every invariant except the completion record itself (written only after this passes).
     $failures = @()
     $account = Get-WorkerAccount
-    if (-not $account -or $account.SID.Value -ne $Sid -or -not $account.Enabled) { $failures += 'ACCOUNT' }
-    foreach ($group in Get-LocalGroup) {
-        if ($group.SID.Value -eq 'S-1-5-32-545') { continue }
-        try { if (Get-LocalGroupMember -Group $group -Member $AccountName -ErrorAction Stop) { $failures += "GROUP:$($group.Name)" } } catch { }
-    }
+    if (-not $account -or $account.SID.Value -ne $Sid -or -not $account.Enabled -or [string]$account.Description -ne $AccountDescription) { $failures += 'ACCOUNT' }
+    foreach ($group in @(Get-AccountGroups)) { if ($group -ne 'S-1-5-32-545') { $failures += "GROUP:$group" } }
     foreach ($dir in @($RuntimeRoot) + @($Subtrees.Values | ForEach-Object { Join-Path $RuntimeRoot $_ })) {
         if (-not (Test-Path -LiteralPath $dir)) { $failures += "DIR:$dir" } elseif ((Get-Acl -LiteralPath $dir).AreAccessRulesProtected -ne $true) { $failures += "ACL_NOT_PROTECTED:$dir" }
     }
     if (-not (Test-Path -LiteralPath $CredentialBlob)) { $failures += 'CREDENTIAL_BLOB' }
-    $rule = Get-NetFirewallRule -Name $RuleName -ErrorAction SilentlyContinue
-    if (-not $rule -or [string]$rule.Action -ne 'Block' -or [string]$rule.Direction -ne 'Outbound' -or [string]$rule.Enabled -ne 'True') { $failures += 'FIREWALL_RULE' }
-    elseif ([string]($rule | Get-NetFirewallSecurityFilter).LocalUser -ne "D:(A;;CC;;;$Sid)") { $failures += 'FIREWALL_LOCAL_USER' }
+    $rule = Get-RuleObservation
+    if (-not $rule.exists -or -not (Test-RuleExact $rule $Sid)) { $failures += 'FIREWALL_RULE' }
+    if (@(Get-NetFirewallRule -Group $RuleGroup -ErrorAction SilentlyContinue).Count -ne 1) { $failures += 'FIREWALL_GROUP' }
     foreach ($root in $DenyRoots) {
-        $deny = @((Get-Acl -LiteralPath $root).Access | Where-Object { $_.AccessControlType -eq 'Deny' -and $_.IdentityReference.Translate([Security.Principal.SecurityIdentifier]).Value -eq $Sid })
-        if ($deny.Count -eq 0) { $failures += "DENY_ACE:$root" }
+        $observed = Get-DenyObservation $root $Sid
+        if (-not $observed.explicit_deny -or $observed.explicit_allow) { $failures += "DENY_ACE:$root" }
     }
-    if (-not (Test-Path -LiteralPath $RecordPath)) { $failures += 'RECORD' }
     return ,$failures
+}
+
+function Write-CompletionRecord([string]$Sid) {
+    $record = [ordered]@{
+        contract_version = $ContractVersion; backend_id = $BackendId; worker_account = $AccountName; worker_sid = $Sid
+        owner_sid = $OwnerSid; runtime_root = $RuntimeRoot; subtrees = $Subtrees
+        firewall_rule_name = $RuleName; firewall_policy_sha256 = (Get-Sha256Hex (ConvertTo-CanonicalJson (Get-FirewallPolicy $Sid)))
+        credential_blob = $CredentialBlob; denied_roots_provisioned = @($DenyRoots)
+        provisioned_at_utc = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+        provisioner_sha256 = (Get-FileHash -LiteralPath $PSCommandPath -Algorithm SHA256).Hash.ToLowerInvariant()
+    }
+    $bytes = (New-Object Text.UTF8Encoding($false)).GetBytes(($record | ConvertTo-Json -Depth 5))
+    Write-FileAtomic $RecordPath $bytes "D:P(A;;FA;;;SY)(A;;FA;;;BA)(A;;0x1200a9;;;$OwnerSid)"
 }
 
 # --- main --------------------------------------------------------------------------------------------
@@ -326,20 +448,40 @@ if ($SelfTestDigestSid) {
     Write-Output (Get-Sha256Hex (ConvertTo-CanonicalJson (Get-FirewallPolicy $SelfTestDigestSid)))
     exit 0
 }
+if ($SelfTestParameterLimits) {
+    $limits = [ordered]@{}
+    foreach ($pair in @(@('New-LocalUser', 'Name', $AccountName), @('New-LocalUser', 'Description', $AccountDescription),
+                        @('Set-LocalUser', 'Description', $AccountDescription), @('New-LocalUser', 'FullName', $AccountFullName))) {
+        $attribute = (Get-Command $pair[0]).Parameters[$pair[1]].Attributes | Where-Object { $_ -is [System.Management.Automation.ValidateLengthAttribute] }
+        $max = if ($attribute) { [int]$attribute.MaxLength } else { $null }
+        $limits["$($pair[0]) -$($pair[1])"] = [ordered]@{ length = $pair[2].Length; max = $max; ok = ($null -eq $max -or $pair[2].Length -le $max) }
+    }
+    Write-Output ($limits | ConvertTo-Json -Depth 4 -Compress)
+    exit 0
+}
+if ($SelfTestPlanFixture) {
+    $fixture = Get-Content -LiteralPath $SelfTestPlanFixture -Raw | ConvertFrom-Json
+    try { Write-Output ([ordered]@{ ok = $true; actions = (Get-ProvisioningActions $fixture) } | ConvertTo-Json -Depth 5 -Compress) }
+    catch { Write-Output ([ordered]@{ ok = $false; refused = [string]$_.Exception.Message } | ConvertTo-Json -Compress) }
+    exit 0
+}
 if ($Plan -and $Apply) { Fail 'MODE' 'choose -Plan or -Apply' }
 $state = Invoke-Preflight
-Assert-NoConflict $state
-Show-Plan $state
+Assert-HostPrerequisites $state
+$actions = Get-ProvisioningActions $state
+Show-Plan $state $actions
 if (-not $Apply) {
     Write-Step 'PLAN ONLY: nothing was changed. Re-run elevated with -Apply -OwnerSid <owner SID> to provision.'
     exit 0
 }
-$sid = Invoke-Apply $state
+$sid = Invoke-Apply $state $actions
 $failures = Test-Provisioned $sid
 if ($failures.Count -gt 0) {
-    Write-Step "POST-PROVISION VERIFICATION FAILED: $($failures -join '; ')"
+    Write-Step "POST-PROVISION VERIFICATION FAILED (no completion record written; re-running -Apply resumes): $($failures -join '; ')"
     exit 2
 }
+Write-CompletionRecord $sid
+if (-not (Test-Path -LiteralPath $RecordPath)) { Write-Step 'COMPLETION RECORD NOT WRITTEN'; exit 2 }
 Write-Step "PROVISIONED: worker $AccountName $sid; runtime root $RuntimeRoot; firewall rule $RuleName; record $RecordPath"
 Write-Step 'Next (non-elevated owner shell): python tools\run_provider_os_containment_qualification.py'
 exit 0

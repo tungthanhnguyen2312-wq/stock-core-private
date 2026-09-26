@@ -117,6 +117,34 @@ Started from `main` = `ad685ac` (the owner's merge of PR #6). M1 stays the singl
   review is recorded on the PR. The roadmap entry for
   `APPROVED_PROVIDER_BUILD_AND_EXECUTION_BOUNDARY_V1` notes the merge. Recording it `COMPLETE`
   is left to the owner, under that entry's own review rule.
+- **Provisioning corrective (after `8266a25`; GitHub CI #91 green on `8266a25`).**
+  - **What failed.** The owner's elevated `-Apply` stopped at `New-LocalUser`: its 66-character
+    `-Description` exceeds the cmdlet's `ValidateLength(0, 48)`.
+  - **Host inspected, read-only, before any change.** Nothing had been created: no account, no
+    `C:\ProgramData\StockLookup`, no DPAPI blob, no record, no firewall rule, no deny ACE on
+    `C:\Projects\StockLookup`. Parameter validation failed before the first mutating call.
+  - **Description fix.** The description is the constant
+    `Contained StockLookup provider worker identity` (46 characters). It also marks the account
+    as this script's. Regression checks are static on every platform and, on Windows, compare
+    against the live cmdlet limits via `-SelfTestParameterLimits`.
+  - **Resumable, idempotent APPLY.** A pure plan function turns observed state into actions and
+    refuses conflicts.
+    - **Resume and reuse.** An existing account is reused only if it has this script's
+      description and belongs to no group but Users.
+    - **Logon secret.** It is reset only when unrecoverable (account present, blob absent).
+      Otherwise the stored blob is validated against the account and kept, or the run fails
+      closed.
+    - **ACEs and rules.** The deny ACE is added once. The firewall rule is created once, and an
+      existing one must already be exact.
+    - **Conflicts fail closed.** These refuse: a foreign account, extra groups, a mismatched rule,
+      an extra rule in the group, unrelated entries under `C:\ProgramData\StockLookup`, another
+      explicit ACE for the worker SID, a record for another SID, and a record without its account.
+    - **Never deletes.** Nothing is ever removed.
+  - **Completion marker last.** An existing record is moved aside before any change. The new one
+    is written only after every invariant verifies, via a temp file and an atomic rename. A failed
+    run therefore never looks provisioned.
+  - **Partial state reported.** The qualification tool reports `PARTIAL_PROVISIONING`, not
+    `NOT_PROVISIONED`, when an interrupted run left state behind without a record.
 
 ## 2026-09-26 - APPROVED_PROVIDER_BUILD_AND_EXECUTION_BOUNDARY_V1 (pre-approval infrastructure)
 

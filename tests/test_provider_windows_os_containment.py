@@ -645,3 +645,182 @@ def test_provisioning_script_digest_matches_the_backend_and_plan_mutates_nothing
     completed = subprocess.run(["powershell.exe", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-File",
                                 str(script), "-SelfTestDigestSid", WORKER_SID], capture_output=True, text=True, timeout=120)
     assert completed.stdout.strip() == backend.firewall_policy_sha256(WORKER_SID)
+
+
+# ---------------------------------------------------------------------------------------------
+# Provisioning script: parameter limits, resumable/idempotent APPLY, completion marker last.
+# ---------------------------------------------------------------------------------------------
+
+PROVISION_SCRIPT = ROOT / "tools" / "provision_provider_os_containment.ps1"
+
+
+def _ps_constant(text, name):
+    import re
+
+    match = re.search(rf"^\${name}\s*=\s*'([^']*)'", text, re.MULTILINE)
+    assert match, name
+    return match.group(1)
+
+
+def test_provisioning_constants_fit_the_local_accounts_parameter_limits():
+    # Regression (owner APPLY 2026-09-26): New-LocalUser -Description is ValidateLength(0, 48).
+    text = PROVISION_SCRIPT.read_text(encoding="utf-8")
+    assert len(_ps_constant(text, "AccountDescription")) <= 48
+    name = _ps_constant(text, "AccountName")
+    assert len(name) <= 20 and name == backend.WORKER_ACCOUNT_NAME
+    for line in text.splitlines():
+        if line.lstrip().startswith("#"):
+            continue
+        if "-Description" in line and "LocalUser" in line:
+            assert "-Description $AccountDescription" in line, line
+        if line.strip().startswith("-FullName"):
+            assert "-Description $AccountDescription" in line, line  # never an inline literal
+
+
+def test_provisioning_writes_the_completion_record_only_after_verification_and_never_deletes():
+    text = PROVISION_SCRIPT.read_text(encoding="utf-8")
+    apply_body = text.split("function Invoke-Apply", 1)[1].split("function Test-Provisioned", 1)[0]
+    assert "Write-CompletionRecord" not in apply_body and "WriteAllText" not in apply_body
+    main = text.split("# --- main ---", 1)[1]
+    assert main.index("$failures = Test-Provisioned $sid") < main.index("Write-CompletionRecord $sid")
+    assert main.index("exit 2") < main.index("Write-CompletionRecord $sid")
+    # A pre-existing record is moved aside before any mutation; nothing is ever removed.
+    assert apply_body.index("SUPERSEDE_THEN_WRITE_LAST") < apply_body.index("New-Item -ItemType Directory")
+    for verb in ("Remove-NetFirewallRule", "Remove-LocalUser", "Remove-Item", "RemoveAccessRule", "Disable-NetFirewall"):
+        assert verb not in text, verb
+
+
+def test_qualification_reports_partial_provisioning_without_a_completion_record(monkeypatch, tmp_path):
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location("qualification_tool", ROOT / "tools" / "run_provider_os_containment_qualification.py")
+    tool = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(tool)
+    runtime = tmp_path / "StockLookup" / "provider-runtime"
+    monkeypatch.setattr(backend, "RUNTIME_ROOT", str(runtime))
+    monkeypatch.setattr(backend, "HOST_RECORD_PATH", str(runtime / "host" / "provisioning_record.json"))
+    assert tool.qualify(harness_root=None, owner_profile=str(tmp_path))["status"] == tool.NOT_PROVISIONED
+    (runtime / "host").mkdir(parents=True)
+    report = tool.qualify(harness_root=None, owner_profile=str(tmp_path))
+    assert report["status"] == tool.PARTIAL_PROVISIONING and str(runtime) in report["leftovers"]
+    assert {item["outcome"] for item in report["results"].values()} == {tool.NOT_PROVISIONED}
+
+
+DENY_ROOT = "C:\\Projects\\StockLookup"
+
+
+def _deny_root(**overrides):
+    root = {"path": DENY_ROOT, "exists": True, "explicit_deny": False, "explicit_allow": False}
+    root.update(overrides)
+    return root
+
+
+def _observed(**overrides):
+    state = {
+        "elevated": True, "current_sid": "S-1-5-21-1-2-3-1001",
+        "account": {"exists": False, "sid": None, "description": None, "enabled": None, "groups": []},
+        "programdata_children": [], "runtime_root_exists": False, "blob_exists": False,
+        "record": {"exists": False, "worker_sid": None}, "rule": {"exists": False}, "group_rules": [],
+        "firewall_profiles": [], "deny_roots": [_deny_root()], "seclogon_start_mode": "Manual",
+    }
+    state.update(overrides)
+    return state
+
+
+def _our_account(**overrides):
+    text = PROVISION_SCRIPT.read_text(encoding="utf-8")
+    account = {"exists": True, "sid": WORKER_SID, "description": _ps_constant(text, "AccountDescription"), "enabled": True,
+               "groups": ["S-1-5-32-545"]}
+    account.update(overrides)
+    return account
+
+
+def _exact_rule(sid=WORKER_SID, **overrides):
+    rule = {"exists": True, "enabled": "True", "direction": "Outbound", "action": "Block", "profile": "Any",
+            "group": backend.FIREWALL_GROUP, "protocol": "Any", "remote_address": ["Any"], "local_address": ["Any"],
+            "program": "Any", "local_user": f"D:(A;;CC;;;{sid})"}
+    rule.update(overrides)
+    return rule
+
+
+def _plan(tmp_path, state):
+    fixture = tmp_path / f"observed-{uuid.uuid4().hex}.json"
+    fixture.write_text(json.dumps(state), encoding="utf-8")
+    completed = subprocess.run(["powershell.exe", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-File",
+                                str(PROVISION_SCRIPT), "-SelfTestPlanFixture", str(fixture)],
+                               capture_output=True, text=True, timeout=120)
+    return json.loads(completed.stdout.strip().splitlines()[-1])
+
+
+@windows_only
+def test_provisioning_script_parses_and_its_constants_pass_the_live_cmdlet_limits():
+    command = ("$e=$null; [void][System.Management.Automation.Language.Parser]::ParseFile("
+               f"'{PROVISION_SCRIPT}', [ref]$null, [ref]$e); $e.Count")
+    parsed = subprocess.run(["powershell.exe", "-NoProfile", "-NonInteractive", "-Command", command],
+                            capture_output=True, text=True, timeout=120)
+    assert parsed.stdout.strip() == "0", parsed.stdout + parsed.stderr
+    limits = subprocess.run(["powershell.exe", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-File",
+                             str(PROVISION_SCRIPT), "-SelfTestParameterLimits"], capture_output=True, text=True, timeout=120)
+    observed = json.loads(limits.stdout)
+    assert observed["New-LocalUser -Description"]["max"] == 48
+    assert all(item["ok"] for item in observed.values()), observed
+
+
+@windows_only
+def test_provisioning_plan_fresh_resume_and_idempotent(tmp_path):
+    fresh = _plan(tmp_path, _observed())
+    assert fresh["ok"] and fresh["actions"]["account"] == "CREATE" and fresh["actions"]["secret"] == "GENERATE_AND_STORE"
+    assert fresh["actions"]["firewall"] == "CREATE" and fresh["actions"]["record"] == "WRITE_LAST"
+    assert set(fresh["actions"]["deny_aces"].values()) == {"ADD"}
+    # Interrupted after the account was created, before its secret was stored: reset once, complete the rest.
+    resumed = _plan(tmp_path, _observed(account=_our_account(), runtime_root_exists=True,
+                                        programdata_children=["provider-runtime"]))
+    assert resumed["ok"] and resumed["actions"]["account"] == "REUSE_VERIFIED"
+    assert resumed["actions"]["secret"] == "RESET_AND_STORE"
+    assert resumed["actions"]["directories"] == "COMPLETE_AND_CONVERGE_ACLS"
+    # Interrupted after the secret was stored: the blob is kept (validated at apply), never rotated.
+    kept = _plan(tmp_path, _observed(account=_our_account(), runtime_root_exists=True, blob_exists=True))
+    assert kept["actions"]["secret"] == "KEEP_EXISTING_BLOB_AFTER_VALIDATION"
+    # Fully provisioned: nothing is created or added again; the record is superseded, then rewritten last.
+    complete = _plan(tmp_path, _observed(
+        account=_our_account(), runtime_root_exists=True, blob_exists=True, programdata_children=["provider-runtime"],
+        record={"exists": True, "worker_sid": WORKER_SID}, rule=_exact_rule(), group_rules=[backend.FIREWALL_RULE_NAME],
+        deny_roots=[_deny_root(explicit_deny=True)]))
+    actions = complete["actions"]
+    assert complete["ok"] and actions["account"] == "REUSE_VERIFIED"
+    assert actions["secret"] == "KEEP_EXISTING_BLOB_AFTER_VALIDATION"
+    assert actions["firewall"] == "PRESENT_EXACT" and set(actions["deny_aces"].values()) == {"PRESENT"}
+    assert actions["record"] == "SUPERSEDE_THEN_WRITE_LAST"
+
+
+CONFLICTS = {
+    "foreign_account": ({"account": "FOREIGN"}, "ACCOUNT_CONFLICT"),
+    "admin_member": ({"account": "ADMIN_MEMBER"}, "ACCOUNT_CONFLICT"),
+    "allow_rule": ({"account": "OURS", "rule": "ALLOW_RULE"}, "FIREWALL_CONFLICT"),
+    "other_sid_rule": ({"account": "OURS", "rule": "OTHER_SID_RULE"}, "FIREWALL_CONFLICT"),
+    "extra_group_rule": ({"group_rules": [backend.FIREWALL_RULE_NAME, "Someone-Else"]}, "FIREWALL_CONFLICT"),
+    "unrelated_programdata": ({"programdata_children": ["provider-runtime", "unrelated-app"]}, "RUNTIME_ROOT_CONFLICT"),
+    "other_worker_ace": ({"account": "OURS", "deny_roots": "OTHER_ACE"}, "ACL_CONFLICT"),
+    "record_other_sid": ({"account": "OURS", "record": {"exists": True, "worker_sid": "S-1-5-21-9-9-9-1234"}}, "RECORD_CONFLICT"),
+    "record_without_account": ({"record": {"exists": True, "worker_sid": WORKER_SID}}, "RECORD_CONFLICT"),
+    "deny_root_missing": ({"deny_roots": "MISSING"}, "DENY_ROOT_MISSING"),
+}
+
+
+@windows_only
+@pytest.mark.parametrize("case", sorted(CONFLICTS))
+def test_provisioning_plan_fails_closed_on_conflicting_state(tmp_path, case):
+    overrides, code = CONFLICTS[case]
+    resolved = dict(overrides)
+    accounts = {"OURS": _our_account(), "FOREIGN": _our_account(description="someone else's account"),
+                "ADMIN_MEMBER": _our_account(groups=["S-1-5-32-545", "S-1-5-32-544"])}
+    if "account" in resolved:
+        resolved["account"] = accounts[resolved["account"]]
+    rules = {"ALLOW_RULE": _exact_rule(action="Allow"), "OTHER_SID_RULE": _exact_rule(sid="S-1-5-21-9-9-9-1234")}
+    if "rule" in resolved:
+        resolved["rule"] = rules[resolved["rule"]]
+    roots = {"OTHER_ACE": [_deny_root(explicit_allow=True)], "MISSING": [_deny_root(exists=False)]}
+    if isinstance(resolved.get("deny_roots"), str):
+        resolved["deny_roots"] = roots[resolved["deny_roots"]]
+    result = _plan(tmp_path, _observed(**resolved))
+    assert result["ok"] is False and f"PROVISIONING_REFUSED:{code}" in result["refused"], result
