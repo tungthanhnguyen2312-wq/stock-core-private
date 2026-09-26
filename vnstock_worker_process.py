@@ -21,6 +21,9 @@ APPROVED_PROVIDER_BUILD_AND_EXECUTION_BOUNDARY_V1 -- start-up order (each step f
        digest, environment names, profile redirection, credential tier, working directory -- a
        direct launch under the core or any other interpreter stops HERE, before any provider
        discovery or import (``PROVIDER_RUNTIME_ATTESTATION_FAILED``);
+   2b. under the Windows production backend: connect the launch's named-pipe egress gateway
+       (``provider_egress_gateway``), verify its server process and egress-policy digest -- the
+       worker's only network path (its OS identity has no direct egress);
     3. in-worker containment (``provider_worker_containment``): process/socket/filesystem audit
        hook, name-resolution tracking and the ``requests`` transport guard, all driven by the
        approved manifest -- installed BEFORE any provider code can run;
@@ -51,6 +54,7 @@ import threading
 import traceback
 import types
 from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
 from typing import Any
 
 from vnstock_worker_protocol import (
@@ -286,6 +290,43 @@ def _emit_startup_failure(kind: str, exc: BaseException | None, *, real_stdout, 
     _emit(message, real_stdout=real_stdout)
 
 
+def _connect_egress_gateway(contract: dict[str, Any]):
+    """The launch's named-pipe egress gateway client, or ``None`` when the launch has none (the
+    offline fake Gate B). The pipe name derives from the manifest template + launch id; the
+    expected server process comes from the read-only binding the backend wrote before spawn."""
+    gateway = (contract.get("network") or {}).get("egress_gateway") or {}
+    if gateway.get("transport") != "WINDOWS_NAMED_PIPE":
+        return None
+    import provider_egress_gateway as egress_gateway
+
+    roots = contract.get("roots") or {}
+    binding = json.loads(Path(roots["scratch_root"], "gateway_binding.json").read_text(encoding="utf-8"))
+    pipe_name = egress_gateway.ipc_endpoint_for(contract["launch_id"], gateway["ipc_endpoint"])
+    if binding.get("launch_id") != contract["launch_id"] or binding.get("ipc_endpoint_instance") != pipe_name:
+        raise egress_gateway.GatewayRefusal(egress_gateway.R_SERVER_IDENTITY_MISMATCH, egress_gateway.KIND_PROTOCOL)
+    client = egress_gateway.NamedPipeGatewayClient(
+        pipe_name=pipe_name, launch_id=contract["launch_id"],
+        egress_policy_sha256=(contract.get("os_enforcement") or {}).get("expected_egress_policy_sha256"),
+        expected_server_pid=int(binding["server_pid"]))
+    client.connect()
+    return client
+
+
+def _gateway_forwarder(client):
+    """``requests`` send replacement: the governed operation goes to the gateway, which performs it."""
+    import provider_egress_gateway as egress_gateway
+
+    def forward(prepared, **_kwargs):
+        body = prepared.body
+        if isinstance(body, str):
+            body = body.encode("utf-8")
+        answer = client.request(method=str(prepared.method), url=str(prepared.url),
+                                headers=list(prepared.headers.items()), body=body or None)
+        return egress_gateway.answer_to_requests_response(answer, prepared)
+
+    return forward
+
+
 def main() -> int:
     # Reserve the real fd 1 for the protocol only; redirect Python-level sys.stdout so any
     # accidental print()/banner from the adapter or a dependency lands somewhere harmless
@@ -316,6 +357,16 @@ def main() -> int:
     # check the OS-enforcement backend's attestation against the worker's own view of itself.
     os_facts = build_manifest.observe_worker_os_facts()
 
+    # --- 2b. egress gateway (production Windows backend): the worker's only network path --------
+    # Connected before containment is installed and before any provider code exists: the pipe is
+    # the trusted Producer's per-launch endpoint, verified by server process and policy digest.
+    try:
+        gateway_client = _connect_egress_gateway(contract)
+    except Exception as exc:  # noqa: BLE001
+        _emit_startup_failure(STARTUP_KIND_ATTESTATION_FAILED, None, real_stdout=real_stdout, attestation_failures=[{
+            "code": getattr(exc, "code", None) or "GATEWAY_UNAVAILABLE", "error": type(exc).__name__}])
+        return 1
+
     # --- 3./4. containment, then the worker attestation for the execution guard ----------------
     try:
         import provider_execution_guard as guard
@@ -324,7 +375,8 @@ def main() -> int:
         containment = worker_containment.install_worker_containment(
             build_manifest.worker_containment_from_contract(contract),
         )
-        requests_guard = containment.install_requests_guard()
+        requests_guard = containment.install_requests_guard(
+            forward=_gateway_forwarder(gateway_client) if gateway_client is not None else None)
         guard.grant_worker_attestation(guard.issue_worker_attestation(
             build_id=contract["build_id"], manifest_sha256=contract["manifest_sha256"],
             launch_id=contract["launch_id"], revocation_epoch=int(contract.get("revocation_epoch") or 0),
@@ -399,6 +451,7 @@ def main() -> int:
     containment.set_phase(worker_containment.PHASE_OPERATION)
     runtime["attestation"] = guard.current_worker_attestation().to_record()
     runtime["os_facts"] = os_facts
+    runtime["egress_gateway"] = dict(gateway_client.server) if gateway_client is not None else None
     runtime["containment"] = {"requests_guard": requests_guard, "startup_stubs": stubs,
                               "events": containment.log.summary()}
     runtime["rate_contract"] = {"governor_effective_rpm": governor.limit, "tier_minute_limit": governor.hard_ceiling,

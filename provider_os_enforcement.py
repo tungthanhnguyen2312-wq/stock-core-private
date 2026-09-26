@@ -28,9 +28,12 @@ launch layer (``vnstock_worker_client``) accepts only an issued attestation (``a
 This is not a cryptographic boundary against hostile in-process code; it stops the launch contract
 from accepting declarative reports as OS proof.
 
-**No production backend is implemented yet** (``production_backend()`` returns ``None``): the
-Windows restricted identity + Job object + ACLs + OS egress gateway belong to the provisioning
-milestone, so every live launch still fails closed with ``PROVIDER_OS_ENFORCEMENT_UNAVAILABLE``.
+**Production backend (WINDOWS_PROVIDER_RUNTIME_OS_CONTAINMENT_AND_ATTESTATION_V1):**
+``production_backend()`` is ``provider_windows_os_backend.configured_backend()`` -- the Windows
+backend (dedicated worker account, per-launch Job, kernel effective-access ACL checks, worker-SID
+firewall block, named-pipe egress gateway) when this host carries a valid provisioning record, and
+``None`` everywhere else (every non-Windows host, every unprovisioned Windows host), where every live
+launch still fails closed with ``PROVIDER_OS_ENFORCEMENT_UNAVAILABLE``.
 """
 from __future__ import annotations
 
@@ -262,10 +265,15 @@ class OfflineFakeDirectPopenBackend:
 def production_backend() -> ProviderOSEnforcementBackend | None:
     """The production OS-enforcement backend for this host, or ``None``.
 
-    Not implemented in this milestone: provisioning a restricted identity, the per-launch Job object
-    (or cgroup), ACLs and the OS egress gateway is the next (owner-authorized) provisioning milestone.
-    Returning ``None`` keeps every live launch mode fail-closed."""
-    return None
+    Windows only, and only on a host provisioned by ``tools/provision_provider_os_containment.ps1``
+    (a valid host record). There is no POSIX production backend: ``None`` keeps every live launch
+    mode fail-closed there. The same instance is returned on every call, so issuance can require
+    ``backend is production_backend()``."""
+    if sys.platform != "win32":
+        return None
+    import provider_windows_os_backend
+
+    return provider_windows_os_backend.configured_backend()
 
 
 def backend_for_launch(launch: build_manifest.ProviderLaunchAuthorization) -> ProviderOSEnforcementBackend:
@@ -382,7 +390,12 @@ def egress_violations(section: Any, expected: Mapping[str, Any], *, platform: st
         failures.append(_fail("egress.direct_egress_prohibited_verified", "direct egress around the gateway not proven prohibited"))
     gateway = section.get("gateway") if isinstance(section.get("gateway"), Mapping) else {}
     wanted = expected.get("gateway") or {}
-    for key in ("gateway_id", "implementation", "ipc_endpoint", "executable_sha256", "host", "port"):
+    # A named-pipe gateway is identified by its transport and pipe template (it has no address);
+    # a legacy gateway additionally by host and port.
+    keys = ("gateway_id", "implementation", "ipc_endpoint", "executable_sha256")
+    keys += (("transport",) if wanted.get("transport") == build_manifest.GATEWAY_TRANSPORT_WINDOWS_NAMED_PIPE
+             else ("host", "port"))
+    for key in keys:
         if not wanted.get(key) or gateway.get(key) != wanted.get(key):
             failures.append(_fail(f"egress.gateway.{key}", "gateway identity differs from the approved gateway"))
     if gateway.get("identity_verified") is not True:

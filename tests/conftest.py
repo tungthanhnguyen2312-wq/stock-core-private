@@ -22,6 +22,11 @@ from _runtime_root import RUNTIME_ROOT, _RUNTIME_ROOT_ENV
 if not os.getenv(_RUNTIME_ROOT_ENV, "").strip():
     os.environ[_RUNTIME_ROOT_ENV] = str(RUNTIME_ROOT)
 
+# A provisioned owner host must not change test outcomes: the Windows production OS-enforcement
+# backend is disabled for the test session (disable-only switch, inherited by subprocesses; see
+# provider_windows_os_backend.DISABLE_ENV). Tests of the real backend clear it explicitly.
+os.environ["STOCKLOOKUP_PROVIDER_OS_BACKEND"] = "disabled"
+
 # Explicit test tiers (hermetic / retained-evidence / provider-runtime); see tests/_test_tiers.py.
 from _test_tiers import (  # noqa: E402,F401 -- re-exported as this conftest's pytest hooks
     pytest_collection_modifyitems,

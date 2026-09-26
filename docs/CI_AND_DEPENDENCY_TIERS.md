@@ -295,6 +295,18 @@ Owner decisions D1–D4 are recorded in `docs/DECISIONS.md` (2026-09-25).
   plain Popen for the offline fake Gate B only), the owner telemetry DENY decision and offline
   Gates A/B. Their fake venv and provider roots live outside the invoking
   user's home (`STOCKLOOKUP_PROVIDER_FIXTURE_BASE` overrides the location).
+- **Windows production backend tests** (`tests/test_provider_windows_os_containment.py`, focused
+  selection).
+  - **Hermetic contract tests** run on every platform, Linux CI included. They cover the firewall,
+    host-record and qualification-report contracts, access and Job-member classification, the
+    named-pipe gateway contract, and the gateway core (policy, redirect, 20 rpm, telemetry DENY,
+    lineage).
+  - **Win32 primitive tests** are skipped off Windows. They exercise real Job objects, the
+    suspended spawn, the pipe gateway and `AccessCheck` under the invoking user's own identity.
+    They never claim worker-identity containment. Only
+    `tools/run_provider_os_containment_qualification.py` proves that, on a provisioned host.
+  - **Disable switch.** The test session sets `STOCKLOOKUP_PROVIDER_OS_BACKEND=disabled`, a
+    disable-only switch, so a provisioned owner host cannot change test outcomes.
 - **Validation status (2026-09-26).**
   - The code is promoted to `main` (`9575cb04`). Hermetic validation passes from a clean clone on
     Linux CI (#78, #79).

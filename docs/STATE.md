@@ -1,5 +1,33 @@
 # Stock Lookup — Operational State
 
+**Windows provider OS containment (2026-09-26):**
+`WINDOWS_PROVIDER_RUNTIME_OS_CONTAINMENT_AND_ATTESTATION_V1 = BLOCKED / IMPLEMENTED_LOCAL / OWNER_ELEVATED_PROVISIONING_REQUIRED`.
+It started from `main` = `ad685ac` (the owner's merge of PR #6). M1 stays ACTIVE.
+
+- **Implemented.** `provider_os_enforcement.production_backend()` now has a real Windows backend
+  (`provider_windows_os_backend.py`, `stocklookup-windows-os-enforcement`) and a named-pipe egress
+  gateway (`provider_egress_gateway.py`). The backend covers:
+  - the dedicated `StockLookupProvider` account;
+  - the per-launch Job (kill-on-close, no breakaway, limit read back);
+  - kernel effective-access ACL checks;
+  - a worker-SID firewall block on all outbound traffic (IPv4/IPv6);
+  - a per-launch ACL-protected pipe;
+  - a hard 20 rpm gateway ceiling;
+  - manifest-bound qualification evidence.
+- **Not yet active.** The backend is live only on a host with a valid provisioning record. None
+  exists yet, so every live launch still fails with `PROVIDER_OS_ENFORCEMENT_UNAVAILABLE`.
+- **Owner action (elevated, once).** Run `tools/provision_provider_os_containment.ps1 -Apply
+  -OwnerSid <owner SID>`. Then, non-elevated, run
+  `python tools/run_provider_os_containment_qualification.py` (tests L1–L18, as the worker).
+- **Still required after a containment PASS, in order:**
+  1. the dedicated provider venv (the lock forbids installation before a manifest approval
+     pins it);
+  2. an owner terms decision for vnai's `.vnstock/id/terms_agreement.txt` (never manufactured);
+  3. an approved manifest pin + policy transition;
+  4. Gates A/B, then live Gates C→E.
+- **Nothing ran.** No provider call, Daily, 2026-09-25 recovery or authority promotion happened.
+  See `docs/DECISIONS.md` 2026-09-26.
+
 **M1 stabilization integration promoted to `main` (2026-09-26):**
 `CURRENT_DECISION_SURFACE_CONVERGENCE_V1 = ACTIVE / STABILIZATION_PROMOTED / LIVE_ACCEPTANCE_PENDING_SAFE_ORDINARY_DAILY`.
 

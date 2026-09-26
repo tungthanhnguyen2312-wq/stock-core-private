@@ -59,6 +59,7 @@ env:
     tests/test_provider_build_boundary.py
     tests/test_provider_fail_closed_boundary.py
     tests/test_provider_os_enforcement.py
+    tests/test_provider_windows_os_containment.py
     tests/test_provider_qualification.py
     tests/test_multi_source_market_evidence_contract.py
     tests/test_historical_series_failover.py
