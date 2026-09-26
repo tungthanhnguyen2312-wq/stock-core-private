@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any, Iterable, Mapping
 
 from cash_flow_debt_mapping import canonicalize_items
+from provider_execution_guard import require_governed_provider_execution
 
 
 SCHEMA_VERSION = "1.0.0"
@@ -98,6 +99,7 @@ def append_observations(path: Path, observations: Iterable[Mapping[str, Any]]) -
 
 
 def ingest_pilot(runtime_root: Path, tickers: Mapping[str,str], *, retrieved_at: str | None = None) -> dict[str, Any]:
+    require_governed_provider_execution("financial_observations.ingest_pilot")
     from vnstock.api.financial import Finance
     retrieved_at=retrieved_at or datetime.now(timezone.utc).isoformat(); version=importlib.metadata.version("vnstock"); collected=[]
     for ticker, entity in tickers.items():

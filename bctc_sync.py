@@ -20,6 +20,7 @@ from typing import Callable, Literal
 from vn_time import vn_now, vn_now_iso
 
 import pandas as pd
+from provider_execution_guard import require_governed_provider_execution
 
 # Console Windows mặc định cp1252 -> vỡ khi in tiếng Việt
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
@@ -93,6 +94,7 @@ def load_config(path: Path | None = None) -> dict:
 
 
 def _finance(symbol: str, source: str):
+    require_governed_provider_execution("bctc_sync._finance")
     from vnstock.api.financial import Finance
 
     return Finance(source=source, symbol=symbol)

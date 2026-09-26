@@ -15,6 +15,7 @@ import re
 from typing import Any, Mapping
 
 import requests
+from provider_execution_guard import require_governed_provider_execution
 
 PROVIDER = "VCI"
 CONTRACT_VERSION = "vci_financial_statement_retention/v1"
@@ -71,6 +72,7 @@ def fetch_statement(ticker: str, family: str, frequency: str, *, timeout: int = 
     """
     if family not in FAMILIES or frequency not in FREQUENCIES:
         raise ValueError("unsupported VCI financial family/frequency")
+    require_governed_provider_execution("vci_financial_statement_retention.fetch_statement")
     from vnstock.explorer.vci.const import _VCIQ_URL
     from vnstock.core.utils.user_agent import get_headers
     base_url = _VCIQ_URL

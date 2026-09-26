@@ -212,6 +212,24 @@ failures are dominated by:
 - `requirements-providers.txt` keeps the vnstock `setup_api_key` step from the old
   `requirements.txt`. The `docs/USER_GUIDE.md` that the old file referred to does not exist.
 
+## 7a. Provider dependency candidate lock (APPROVED_PROVIDER_BUILD_AND_EXECUTION_BOUNDARY_V1)
+
+`config/provider_dependency_lock.json` is the governed worker's **candidate** dependency
+contract (39-package reviewable closure; 23-package runtime-minimal hypothesis; 16 packages
+unnecessary for the KBS/VCI worker, including the anthropic / plotting / notebook stack).
+It is not an install recipe and not an approval. Nothing may be installed from it until the
+owner approves a build manifest that pins this file's canonical SHA-256.
+
+`requirements-providers.txt` remains the optional/unrelated-environment hint (vnstock,
+anthropic). It is not an approval manifest and not the production provider lock.
+
+`config/provider_build_manifest.json` remains `DRAFT` / `launch_authorized=false`.
+`config/provider_runtime_policy.json` remains `SECURITY_REVIEW_BLOCKED`.
+
+`tools/verify_dependency_tiers.py` checks lock structure, core/provider separation, and the
+manifest/lock digest relationship. `tools/refresh_provider_build_manifest.py` rewrites DRAFT
+worker-source hashes and the lock digest only.
+
 ## 7. Provider runtime isolation (PROVIDER_RUNTIME_ISOLATION_V1)
 
 Owner decisions D1–D4 are recorded in `docs/DECISIONS.md` (2026-09-25).

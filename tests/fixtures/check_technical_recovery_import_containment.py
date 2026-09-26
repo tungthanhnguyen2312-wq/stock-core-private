@@ -20,15 +20,29 @@ for entry in (_REPO_ROOT, _REPO_ROOT / "tools", _REPO_ROOT / "tests"):
 def main() -> int:
     import run_market_wide_current_technical_coverage_scaleout as runner
     import vnstock_worker_client
-    from _provider_runtime_fixtures import FAKE_WORKER, TEST_ALLOW_POLICY
+    from _provider_runtime_fixtures import protocol_runtime
 
+    runtime = protocol_runtime()
     real_open = vnstock_worker_client.open_provider_runtime
 
     def fake_open(**kwargs):
-        return real_open(
-            policy=TEST_ALLOW_POLICY, environ={"STOCKLOOKUP_PROVIDER_PYTHON": sys.executable},
-            core_executable="/nonexistent/core/python", worker_script=FAKE_WORKER, **kwargs,
-        )
+        args = {
+            "policy": runtime.policy,
+            "environ": runtime.parent_environ(),
+            "core_executable": "/nonexistent/core/python",
+            "worker_script": runtime.manifest["worker"]["entrypoint"],
+            "manifest_path": runtime.manifest_path,
+            "revocation_registry_path": runtime.registry_path,
+            "launch_mode": runtime.launch_mode,
+            "producer_root": _REPO_ROOT,
+            "extra_env": runtime.extra_env or None,
+            "startup_timeout": 15.0,
+            "request_timeout": 10.0,
+            "shutdown_timeout": 5.0,
+        }
+        args.update({key: value for key, value in kwargs.items() if value is not None or key == "session"})
+        args["worker_script"] = _REPO_ROOT / runtime.manifest["worker"]["entrypoint"]
+        return real_open(**args)
 
     runner.worker_client.open_provider_runtime = fake_open
     fetch = runner._ProviderHistoryFetch(session="2026-09-10")

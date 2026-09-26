@@ -418,10 +418,16 @@ PROVIDER_INTERFACE = {
     "VCI": "vnstock_quote_history/v4",
     "KBS": "vnstock_quote_history/v4",
 }
+# Route templates the reviewed vnstock quote path actually requests (the KBS entry named a
+# nonexistent ``.../investment/history`` route before APPROVED_PROVIDER_BUILD_AND_EXECUTION_
+# BOUNDARY_V1; provenance metadata only -- request semantics unchanged).
 PROVIDER_ENDPOINT = {
     "VCI": "https://trading.vietcap.com.vn/api/chart/OHLCChart/gap-chart",
-    "KBS": "https://kbbuddywts.kbsec.com.vn/iis-server/investment/history",
+    "KBS": "https://kbbuddywts.kbsec.com.vn/iis-server/investment/stocks/{symbol}/data_day",
 }
+# Why a resolution that needed VCI/KBS but was given no governed fetch boundary refuses instead of
+# importing the provider adapter in-process (the removed implicit fallback).
+REASON_PROVIDER_FETCH_BOUNDARY_NOT_SUPPLIED = "PROVIDER_FETCH_BOUNDARY_NOT_SUPPLIED"
 
 
 class MultiSourceResolverError(ValueError):
@@ -667,10 +673,22 @@ class _DailyRecoveryRuntimeGuard:
         }
 
 
-def _default_fetch_single_source():
-    import vn_stock_pipeline as vsp
-    vsp._install_bounded_http()
-    return vsp.fetch_single_source
+def _require_fetch_boundary(fetch_single_source: Callable[..., Any] | None) -> Callable[..., Any]:
+    """The caller-supplied governed fetch boundary, or a fail-closed refusal.
+
+    APPROVED_PROVIDER_BUILD_AND_EXECUTION_BOUNDARY_V1 removed the implicit in-process fallback
+    (``import vn_stock_pipeline`` + ``_install_bounded_http`` under the caller's interpreter).
+    Callers pass ``vnstock_worker_client`` (``open_provider_runtime(...).fetcher.fetch`` or a
+    ``GovernedProviderHistoryFetch``) -- or a ``supplemental_runtime_state`` that is not
+    ``AVAILABLE``, in which case no fetch is needed at all.
+    """
+    if fetch_single_source is not None:
+        return fetch_single_source
+    import provider_runtime_state as runtime_contract
+
+    raise runtime_contract.SupplementalProviderRuntimeUnavailable(runtime_contract.runtime_state_record(
+        runtime_contract.NOT_CONFIGURED, REASON_PROVIDER_FETCH_BOUNDARY_NOT_SUPPLIED,
+    ))
 
 
 def _default_request_delay() -> float:
@@ -826,7 +844,7 @@ def _resolve_multi_source_exact_session_snapshot_core(
         fetch_many = None
         delay = 0.0
     else:
-        fetch = fetch_single_source or _default_fetch_single_source()
+        fetch = _require_fetch_boundary(fetch_single_source)
         delay = request_delay if request_delay is not None else _default_request_delay()
 
     dnse_records = dnse_snapshot.get("records")
@@ -1782,7 +1800,7 @@ def _resolve_exact_session_with_autorecovery_core(
             raise MultiSourceResolverError("SUPPLEMENTAL_FETCH_FORBIDDEN_RUNTIME_UNAVAILABLE")
         delay = 0.0
     else:
-        real_fetch = fetch_single_source or _default_fetch_single_source()
+        real_fetch = _require_fetch_boundary(fetch_single_source)
         delay = request_delay if request_delay is not None else _default_request_delay()
     provider_policies = _recovery_provider_policies(delay)
     runtime_guard = _DailyRecoveryRuntimeGuard(

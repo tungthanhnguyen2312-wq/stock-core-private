@@ -17,6 +17,11 @@ from runtime_paths import runtime_root
 from market_data_lineage import build_ohlcv_lineage_records, init_ohlcv_lineage_schema, upsert_ohlcv_lineage
 from vn_time import vn_now, vn_today
 import vnstock_rate_governor
+# APPROVED_PROVIDER_BUILD_AND_EXECUTION_BOUNDARY_V1: stdlib-only boundary modules. The provider
+# functions below run only inside the attested worker; the quote transport sends only what the
+# approved manifest's endpoint allow-list scopes.
+import provider_execution_guard as execution_guard
+import provider_worker_containment as worker_containment
 
 # ==========================================
 # CẤU HÌNH HỆ THỐNG
@@ -67,15 +72,35 @@ if LOG_LEVEL not in {"DEBUG", "INFO", "WARNING", "ERROR"}:
     raise ValueError("VNSTOCK_LOG_LEVEL phải là DEBUG, INFO, WARNING hoặc ERROR")
 
 TRANSIENT_HTTP_STATUS = {408, 429, 500, 502, 503, 504}
+# The routes the reviewed vnstock 4.0.4 quote path actually requests (1D interval). Before
+# APPROVED_PROVIDER_BUILD_AND_EXECUTION_BOUNDARY_V1 the KBS entry named a nonexistent
+# ``.../investment/history`` route, so KBS lineage recorded the wrong endpoint and governor
+# diagnostics labelled every KBS request UNKNOWN (dossier finding N4). Metadata/diagnostic
+# correctness only: request semantics and provider authority are unchanged.
+KBS_STOCK_HISTORY_ROUTE = "https://kbbuddywts.kbsec.com.vn/iis-server/investment/stocks/{symbol}/data_day"
+KBS_INDEX_HISTORY_ROUTE = "https://kbbuddywts.kbsec.com.vn/iis-server/investment/index/{symbol}/data_day"
 PROVIDER_ENDPOINT_HINT = {
     "VCI": "https://trading.vietcap.com.vn/api/chart/OHLCChart/gap-chart",
-    "KBS": "https://kbbuddywts.kbsec.com.vn/iis-server/investment/history",
+    "KBS": KBS_STOCK_HISTORY_ROUTE,
+}
+_PROVIDER_ROUTE_PATTERNS = {
+    "VCI": (worker_containment.compile_path_pattern("/api/chart/OHLCChart/gap-chart"), "trading.vietcap.com.vn"),
+    "KBS": (worker_containment.compile_path_pattern("/iis-server/investment/stocks/{symbol}/data_day"), "kbbuddywts.kbsec.com.vn"),
+    "KBS_INDEX": (worker_containment.compile_path_pattern("/iis-server/investment/index/{symbol}/data_day"), "kbbuddywts.kbsec.com.vn"),
 }
 
 EXIT_SUCCESS = 0
 EXIT_FAILURE = 1
 EXIT_PARTIAL = 2
 EXIT_SOURCE_UNAVAILABLE = 3
+# The legacy provider CLI commands (update/backfill/universe) are refused outside the governed
+# worker; this code lets an orchestrator report the refusal instead of a generic failure.
+EXIT_REFUSED_UNGOVERNED_PROVIDER = 4
+_PROVIDER_CLI_OPERATIONS = {
+    "universe": "vn_stock_pipeline.cli.universe",
+    "backfill": "vn_stock_pipeline.cli.backfill",
+    "update": "vn_stock_pipeline.cli.update",
+}
 
 _PROVIDER_HEALTH = {}
 _PROVIDER_HEALTH_LOCK = RLock()
@@ -159,10 +184,20 @@ def _retry_after_seconds(response):
 
 
 def _provider_for_endpoint(endpoint):
-    for provider, hint in PROVIDER_ENDPOINT_HINT.items():
-        if endpoint.startswith(_safe_endpoint(hint)):
-            return provider
+    """Diagnostic provider label of a ``_safe_endpoint`` string (route pattern, not a prefix)."""
+    parts = urlsplit(str(endpoint))
+    host = (parts.hostname or "").lower()
+    for provider, (pattern, route_host) in _PROVIDER_ROUTE_PATTERNS.items():
+        if host == route_host and pattern.match(parts.path or "/"):
+            return "KBS" if provider == "KBS_INDEX" else provider
     return "UNKNOWN"
+
+
+def lineage_endpoint(source, ticker):
+    """The route template the reviewed quote path requests for ``ticker`` (lineage metadata)."""
+    if source == "KBS" and str(ticker).upper() in INDEX_SYMBOLS:
+        return KBS_INDEX_HISTORY_ROUTE
+    return PROVIDER_ENDPOINT_HINT[source]
 
 
 def _bounded_send_request_direct(
@@ -171,11 +206,17 @@ def _bounded_send_request_direct(
     """Transport thay thế process-local cho vnstock, với timeout connect/read riêng."""
     del timeout  # Không dùng timeout đơn của package; dùng cấu hình tập trung ở trên.
     endpoint = _safe_endpoint(url)
+    # APPROVED_PROVIDER_BUILD_AND_EXECUTION_BOUNDARY_V1: the transport allow-list comes first --
+    # an unapproved scheme/host/port/method/path (or no installed policy at all) is refused before
+    # a rate-governor slot is consumed and before anything leaves the process. Inside the worker
+    # the policy is the approved manifest's, installed once and locked; requests itself is also
+    # wrapped there, so a redirect to an unapproved host fails closed as well.
+    worker_containment.enforce_transport_policy(method, url)
     # DAILY_GLOBAL_VNSTOCK_RATE_GOVERNOR_V1: every VCI/KBS request -- every pass, every
     # sentinel, every retry -- funnels through this one function, so this is the single place
-    # a shared, process-wide rate governor can guarantee the vnai 60-requests/minute hard
-    # ceiling is never reached. A caller that never installed a governor (most tests, ad-hoc
-    # scripts) sees byte-identical pre-existing behavior -- see vnstock_rate_governor.py.
+    # a shared, process-wide rate governor can guarantee the vendor's per-minute ceiling is never
+    # reached. A caller that never installed a governor (most tests, ad-hoc scripts) sees the
+    # pre-existing unpaced behavior -- see vnstock_rate_governor.py.
     governor = vnstock_rate_governor.get_active_governor()
     if governor is not None:
         governor.acquire(provider=_provider_for_endpoint(endpoint))
@@ -231,14 +272,26 @@ def _bounded_send_request_direct(
 
 
 def _install_bounded_http():
-    """Patch đúng transport hook mà VCI/KBS dùng; không sửa package trong .venv."""
+    """Patch đúng transport hook mà VCI/KBS dùng; không sửa package trong .venv.
+
+    Only inside the attested provider worker: under the core interpreter this raises
+    ``GovernedProviderExecutionRequired`` before ``vnstock`` is imported."""
+    execution_guard.require_governed_provider_execution("vn_stock_pipeline._install_bounded_http")
     import vnstock.core.utils.client as client
 
     if client.send_request_direct is not _bounded_send_request_direct:
         client.send_request_direct = _bounded_send_request_direct
 
 
+def transport_boundary_installed():
+    """True only when vnstock's quote transport hook is this module's bounded, allow-listed one
+    (checked by the worker before READY; never imports vnstock when it is not already loaded)."""
+    client = sys.modules.get("vnstock.core.utils.client")
+    return client is not None and client.send_request_direct is _bounded_send_request_direct
+
+
 def _quote(symbol, source):
+    execution_guard.require_governed_provider_execution("vn_stock_pipeline._quote")
     _install_bounded_http()
     from vnstock.api.quote import Quote
 
@@ -255,6 +308,7 @@ def get_universe():
     return INDEX_SYMBOLS + [t for t in base if t not in INDEX_SYMBOLS]
 
 def load_full_universe():
+    execution_guard.require_governed_provider_execution("vn_stock_pipeline.load_full_universe")
     from vnstock.api.listing import Listing
     df = Listing(source="VCI").symbols_by_exchange()
     tcol = next((c for c in df.columns if "type" in c.lower()), None)
@@ -513,7 +567,7 @@ def fetch_single_source(ticker, source, start, end, *, bypass_circuit_check=Fals
             if df is not None and len(df):
                 retrieved_at = datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
                 lineage = build_ohlcv_lineage_records(
-                    df, source=source, endpoint=PROVIDER_ENDPOINT_HINT[source], retrieved_at=retrieved_at
+                    df, source=source, endpoint=lineage_endpoint(source, ticker), retrieved_at=retrieved_at
                 )
                 _record_provider_result(source, healthy_response=True)
                 _request_log(ticker, source, attempt, "success", time.monotonic() - started)
@@ -538,6 +592,14 @@ def fetch_single_source(ticker, source, start, end, *, bypass_circuit_check=Fals
                             timeout_count=sum("timeout" in item for item in errors))
         except Exception as e:
             inner = _unwrap_retry_error(e)
+            if isinstance(inner, (execution_guard.ProviderExecutionGuardError,
+                                  worker_containment.ProviderContainmentDenied)):
+                # A refused provider execution or a containment/transport-allow-list refusal is
+                # never a provider "empty"/"failed" answer: it propagates to the worker, which
+                # reports it as a runtime-level failure.
+                if inner is e:
+                    raise
+                raise inner from e
             message = str(inner).lower()
             if any(k in message for k in ("dữ liệu trống", "không tìm thấy dữ liệu", "no data", "empty")):
                 _record_provider_result(source, healthy_response=True)
@@ -798,6 +860,12 @@ def main(argv=None):
     if cmd not in CMDS:
         print("Lệnh khả dụng:", " | ".join(CMDS.keys()))
         return EXIT_FAILURE
+    if cmd in _PROVIDER_CLI_OPERATIONS:
+        # APPROVED_PROVIDER_BUILD_AND_EXECUTION_BOUNDARY_V1: these commands executed vnstock under
+        # the core interpreter. Refused before the database is opened or anything is imported;
+        # `status` and `export` (retained-data readers) keep working.
+        print(execution_guard.legacy_operator_refusal(_PROVIDER_CLI_OPERATIONS[cmd]), file=sys.stderr, flush=True)
+        return EXIT_REFUSED_UNGOVERNED_PROVIDER
     if cmd == "backfill":
         return cmd_backfill(args[1] if len(args) > 1 else "pending")
     result = CMDS[cmd]()

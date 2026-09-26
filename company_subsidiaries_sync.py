@@ -14,6 +14,7 @@ import sqlite3
 from collections.abc import Mapping, Sequence
 from datetime import datetime, timezone
 from typing import Any
+from provider_execution_guard import require_governed_provider_execution
 
 
 COMPANY_SUBSIDIARY_SNAPSHOT_SCHEMA_VERSION = 1
@@ -278,6 +279,7 @@ def persist_current_snapshot(
 def fetch_current_payload(ticker: str, source_name: str) -> dict[str, Any]:
     """Fetch only the current provider response through Vnstock's public API."""
     source = _source_name(source_name)
+    require_governed_provider_execution("company_subsidiaries_sync.fetch_current_payload")
     from vnstock.api.company import Company
 
     company = Company(source=source, symbol=ticker, random_agent=False, show_log=False)

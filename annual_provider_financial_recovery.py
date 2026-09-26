@@ -16,6 +16,7 @@ import pandas as pd
 
 from canonical_financial_facts import build_facts
 from raw_financial_observations import extract_payload_file, parse_payload_name, sha256_file
+from provider_execution_guard import require_governed_provider_execution
 
 CONTRACT_VERSION = "annual_provider_financial_retention/v1"
 APPROVED_ROUTE = {
@@ -191,6 +192,7 @@ def reconcile_annual_facts(annual_facts: Iterable[Mapping[str, Any]],
 
 def acquire_annual_once(plan: Iterable[Mapping[str, str]]) -> list[dict[str, Any]]:
     """Issue the plan literally: no retry/failover/delay and no secret-bearing logging."""
+    require_governed_provider_execution("annual_provider_financial_recovery.acquire_annual_once")
     from vnstock.api.financial import Finance
     results = []
     for request in plan:

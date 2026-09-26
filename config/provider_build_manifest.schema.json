@@ -1,0 +1,2086 @@
+{
+ "$comment": "APPROVED_PROVIDER_BUILD_AND_EXECUTION_BOUNDARY_V1. Derived from the dossier v1.1 contract (claude-reports/provider-supply-chain-approval-dossier-v1-takeover-20260926/approval-manifest.schema.v1_1.json). Changes: policy.tracked_policy_sha256 is replaced by approval.policy_decision_id because the tracked policy pins this manifest's canonical SHA-256 (a mutual hash pin is cyclic); runtime binds the venv, base runtime, Python build and site directories explicitly; packages bind their dist-info and RECORD-derived manifest; worker binds entrypoint and adapter module; network separates approved endpoints from review candidates; telemetry entries carry their route or process; os_containment records the owner's OS-level verification. Semantic rules not expressible here live in provider_build_manifest.manifest_contract_violations.",
+ "$id": "urn:stocklookup:provider-build-approval-manifest:v1.2",
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "additionalProperties": false,
+ "allOf": [
+  {
+   "else": {
+    "properties": {
+     "approval": {
+      "type": "null"
+     },
+     "launch_authorized": {
+      "const": false
+     }
+    }
+   },
+   "if": {
+    "properties": {
+     "status": {
+      "const": "APPROVED_PINNED_BUILD"
+     }
+    },
+    "required": [
+     "status"
+    ],
+    "type": "object"
+   },
+   "then": {
+    "properties": {
+     "approval": {
+      "additionalProperties": false,
+      "properties": {
+       "approved_at_utc": {
+        "minLength": 1,
+        "type": "string"
+       },
+       "decision_id": {
+        "minLength": 1,
+        "type": "string"
+       },
+       "evidence_bundle_sha256": {
+        "pattern": "^[0-9a-f]{64}$",
+        "type": "string"
+       },
+       "expires_at_utc": {
+        "minLength": 1,
+        "type": "string"
+       },
+       "owner_id": {
+        "minLength": 1,
+        "type": "string"
+       },
+       "policy_decision_id": {
+        "minLength": 1,
+        "type": "string"
+       },
+       "signature": {
+        "anyOf": [
+         {
+          "minLength": 1,
+          "type": "string"
+         },
+         {
+          "type": "null"
+         }
+        ]
+       },
+       "signature_algorithm": {
+        "anyOf": [
+         {
+          "minLength": 1,
+          "type": "string"
+         },
+         {
+          "type": "null"
+         }
+        ]
+       },
+       "trust_key_id": {
+        "anyOf": [
+         {
+          "minLength": 1,
+          "type": "string"
+         },
+         {
+          "type": "null"
+         }
+        ]
+       }
+      },
+      "required": [
+       "approved_at_utc",
+       "decision_id",
+       "evidence_bundle_sha256",
+       "expires_at_utc",
+       "owner_id",
+       "policy_decision_id",
+       "signature",
+       "signature_algorithm",
+       "trust_key_id"
+      ],
+      "type": "object"
+     },
+     "dependency_lock": {
+      "additionalProperties": false,
+      "properties": {
+       "path": {
+        "minLength": 1,
+        "type": "string"
+       },
+       "selected_closure": {
+        "enum": [
+         "CANDIDATE_CLOSURE",
+         "RUNTIME_MINIMAL_HYPOTHESIS"
+        ]
+       },
+       "sha256": {
+        "pattern": "^[0-9a-f]{64}$",
+        "type": "string"
+       }
+      },
+      "required": [
+       "path",
+       "selected_closure",
+       "sha256"
+      ],
+      "type": "object"
+     },
+     "filesystem": {
+      "additionalProperties": false,
+      "properties": {
+       "acl_policy_sha256": {
+        "anyOf": [
+         {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+         },
+         {
+          "type": "null"
+         }
+        ]
+       },
+       "denied_root_classes": {
+        "items": {
+         "minLength": 1,
+         "type": "string"
+        },
+        "type": "array"
+       },
+       "provider_scratch_base": {
+        "minLength": 1,
+        "type": "string"
+       },
+       "provider_state_root": {
+        "minLength": 1,
+        "type": "string"
+       },
+       "read_only_roots": {
+        "items": {
+         "minLength": 1,
+         "type": "string"
+        },
+        "type": "array"
+       },
+       "reparse_points_allowed": {
+        "const": false
+       },
+       "writable_roots": {
+        "items": {
+         "minLength": 1,
+         "type": "string"
+        },
+        "type": "array"
+       }
+      },
+      "required": [
+       "acl_policy_sha256",
+       "denied_root_classes",
+       "provider_scratch_base",
+       "provider_state_root",
+       "read_only_roots",
+       "reparse_points_allowed",
+       "writable_roots"
+      ],
+      "type": "object"
+     },
+     "launch_authorized": {
+      "const": true
+     },
+     "os_containment": {
+      "additionalProperties": false,
+      "properties": {
+       "egress_gateway_verified": {
+        "type": "boolean"
+       },
+       "job_object_kill_on_close": {
+        "type": "boolean"
+       },
+       "requirements": {
+        "items": {
+         "minLength": 1,
+         "type": "string"
+        },
+        "type": "array"
+       },
+       "restricted_identity_sid": {
+        "anyOf": [
+         {
+          "minLength": 1,
+          "type": "string"
+         },
+         {
+          "type": "null"
+         }
+        ]
+       },
+       "runtime_root_read_only_acl": {
+        "type": "boolean"
+       },
+       "state": {
+        "const": "OWNER_VERIFIED"
+       },
+       "verification_evidence_sha256": {
+        "pattern": "^[0-9a-f]{64}$",
+        "type": "string"
+       }
+      },
+      "required": [
+       "egress_gateway_verified",
+       "job_object_kill_on_close",
+       "requirements",
+       "restricted_identity_sid",
+       "runtime_root_read_only_acl",
+       "state",
+       "verification_evidence_sha256"
+      ],
+      "type": "object"
+     },
+     "packages": {
+      "items": {
+       "additionalProperties": false,
+       "properties": {
+        "artifact_filename": {
+         "minLength": 1,
+         "type": "string"
+        },
+        "artifact_sha256": {
+         "pattern": "^[0-9a-f]{64}$",
+         "type": "string"
+        },
+        "artifact_size": {
+         "minimum": 1,
+         "type": "integer"
+        },
+        "artifact_source_url": {
+         "minLength": 1,
+         "type": "string"
+        },
+        "dist_info": {
+         "minLength": 1,
+         "type": "string"
+        },
+        "installed_manifest_sha256": {
+         "pattern": "^[0-9a-f]{64}$",
+         "type": "string"
+        },
+        "name": {
+         "minLength": 1,
+         "type": "string"
+        },
+        "native_manifest_sha256": {
+         "anyOf": [
+          {
+           "pattern": "^[0-9a-f]{64}$",
+           "type": "string"
+          },
+          {
+           "type": "null"
+          }
+         ]
+        },
+        "provenance_classification": {
+         "enum": [
+          "PROVENANCE_PARTIAL",
+          "PROVENANCE_SUFFICIENT_FOR_OWNER_REVIEW",
+          "PROVENANCE_VERIFIED",
+          "TEST_FIXTURE_ONLY"
+         ]
+        },
+        "provenance_evidence_sha256": {
+         "anyOf": [
+          {
+           "pattern": "^[0-9a-f]{64}$",
+           "type": "string"
+          },
+          {
+           "type": "null"
+          }
+         ]
+        },
+        "requires_dist": {
+         "items": {
+          "minLength": 1,
+          "type": "string"
+         },
+         "type": "array"
+        },
+        "site_dir": {
+         "minLength": 1,
+         "type": "string"
+        },
+        "version": {
+         "minLength": 1,
+         "type": "string"
+        }
+       },
+       "required": [
+        "artifact_filename",
+        "artifact_sha256",
+        "artifact_size",
+        "artifact_source_url",
+        "dist_info",
+        "installed_manifest_sha256",
+        "name",
+        "native_manifest_sha256",
+        "provenance_classification",
+        "provenance_evidence_sha256",
+        "requires_dist",
+        "site_dir",
+        "version"
+       ],
+       "type": "object"
+      },
+      "minItems": 1,
+      "type": "array"
+     },
+     "rate_tier_binding": {
+      "additionalProperties": false,
+      "properties": {
+       "governor_effective_rpm": {
+        "minimum": 1,
+        "type": "integer"
+       },
+       "max_fraction_of_tier_minute_limit": {
+        "maximum": 0.75,
+        "minimum": 0,
+        "type": "number"
+       },
+       "planned_session_request_budget": {
+        "minimum": 0,
+        "type": "integer"
+       },
+       "tier": {
+        "enum": [
+         "guest",
+         "free"
+        ]
+       },
+       "tier_limits": {
+        "additionalProperties": false,
+        "properties": {
+         "day": {
+          "minimum": 1,
+          "type": "integer"
+         },
+         "hour": {
+          "minimum": 1,
+          "type": "integer"
+         },
+         "min": {
+          "minimum": 1,
+          "type": "integer"
+         }
+        },
+        "required": [
+         "day",
+         "hour",
+         "min"
+        ],
+        "type": "object"
+       }
+      },
+      "required": [
+       "governor_effective_rpm",
+       "max_fraction_of_tier_minute_limit",
+       "planned_session_request_budget",
+       "tier",
+       "tier_limits"
+      ],
+      "type": "object"
+     },
+     "revocation": {
+      "additionalProperties": false,
+      "properties": {
+       "epoch": {
+        "minimum": 0,
+        "type": "integer"
+       },
+       "kill_active_workers_on_revoke": {
+        "const": true
+       },
+       "reason": {
+        "anyOf": [
+         {
+          "minLength": 1,
+          "type": "string"
+         },
+         {
+          "type": "null"
+         }
+        ]
+       },
+       "registry_identity": {
+        "minLength": 1,
+        "type": "string"
+       },
+       "revoked_at_utc": {
+        "anyOf": [
+         {
+          "minLength": 1,
+          "type": "string"
+         },
+         {
+          "type": "null"
+         }
+        ]
+       },
+       "state": {
+        "const": "ACTIVE"
+       }
+      },
+      "required": [
+       "epoch",
+       "kill_active_workers_on_revoke",
+       "reason",
+       "registry_identity",
+       "revoked_at_utc",
+       "state"
+      ],
+      "type": "object"
+     },
+     "runtime": {
+      "additionalProperties": false,
+      "properties": {
+       "base_executable_path": {
+        "minLength": 1,
+        "type": "string"
+       },
+       "base_executable_sha256": {
+        "pattern": "^[0-9a-f]{64}$",
+        "type": "string"
+       },
+       "base_prefix": {
+        "minLength": 1,
+        "type": "string"
+       },
+       "base_runtime_files": {
+        "items": {
+         "additionalProperties": false,
+         "properties": {
+          "relative_path": {
+           "minLength": 1,
+           "type": "string"
+          },
+          "sha256": {
+           "pattern": "^([0-9a-f]{64}|DIRECTORY)$",
+           "type": "string"
+          },
+          "size": {
+           "minimum": -1,
+           "type": "integer"
+          }
+         },
+         "required": [
+          "relative_path",
+          "sha256",
+          "size"
+         ],
+         "type": "object"
+        },
+        "type": "array"
+       },
+       "executable_path": {
+        "minLength": 1,
+        "type": "string"
+       },
+       "executable_realpath": {
+        "minLength": 1,
+        "type": "string"
+       },
+       "executable_sha256": {
+        "pattern": "^[0-9a-f]{64}$",
+        "type": "string"
+       },
+       "implementation": {
+        "minLength": 1,
+        "type": "string"
+       },
+       "include_system_site_packages": {
+        "const": false
+       },
+       "installed_tree_manifest": {
+        "additionalProperties": false,
+        "properties": {
+         "file_count": {
+          "minimum": 0,
+          "type": "integer"
+         },
+         "path": {
+          "anyOf": [
+           {
+            "minLength": 1,
+            "type": "string"
+           },
+           {
+            "type": "null"
+           }
+          ]
+         },
+         "sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+         }
+        },
+        "required": [
+         "file_count",
+         "path",
+         "sha256"
+        ],
+        "type": "object"
+       },
+       "platform": {
+        "minLength": 1,
+        "type": "string"
+       },
+       "pointer_bits": {
+        "enum": [
+         32,
+         64
+        ]
+       },
+       "python_build": {
+        "minLength": 1,
+        "type": "string"
+       },
+       "python_version": {
+        "minLength": 1,
+        "type": "string"
+       },
+       "site_dirs": {
+        "items": {
+         "minLength": 1,
+         "type": "string"
+        },
+        "minItems": 1,
+        "type": "array"
+       },
+       "startup_hook_files": {
+        "items": {
+         "additionalProperties": false,
+         "properties": {
+          "relative_path": {
+           "minLength": 1,
+           "type": "string"
+          },
+          "sha256": {
+           "pattern": "^([0-9a-f]{64}|DIRECTORY)$",
+           "type": "string"
+          },
+          "size": {
+           "minimum": -1,
+           "type": "integer"
+          }
+         },
+         "required": [
+          "relative_path",
+          "sha256",
+          "size"
+         ],
+         "type": "object"
+        },
+        "type": "array"
+       },
+       "user_site_enabled": {
+        "const": false
+       },
+       "venv_config_sha256": {
+        "pattern": "^[0-9a-f]{64}$",
+        "type": "string"
+       },
+       "venv_root": {
+        "minLength": 1,
+        "type": "string"
+       }
+      },
+      "required": [
+       "base_executable_path",
+       "base_executable_sha256",
+       "base_prefix",
+       "base_runtime_files",
+       "executable_path",
+       "executable_realpath",
+       "executable_sha256",
+       "implementation",
+       "include_system_site_packages",
+       "installed_tree_manifest",
+       "platform",
+       "pointer_bits",
+       "python_build",
+       "python_version",
+       "site_dirs",
+       "startup_hook_files",
+       "user_site_enabled",
+       "venv_config_sha256",
+       "venv_root"
+      ],
+      "type": "object"
+     },
+     "terms_acceptance": {
+      "properties": {
+       "agreement_file_policy": {
+        "const": "OWNER_PREPROVISIONED_IN_PROVIDER_STATE_ROOT"
+       },
+       "agreement_file_relative_path": {
+        "minLength": 1,
+        "type": "string"
+       },
+       "owner_decision_id": {
+        "minLength": 1,
+        "type": "string"
+       },
+       "terms_text_sha256": {
+        "pattern": "^[0-9a-f]{64}$",
+        "type": "string"
+       }
+      },
+      "type": "object"
+     },
+     "vendor_credential": {
+      "additionalProperties": false,
+      "properties": {
+       "credential_name": {
+        "enum": [
+         "VNSTOCK_API_KEY",
+         null
+        ]
+       },
+       "expected_vnai_tier": {
+        "enum": [
+         "guest",
+         "free"
+        ]
+       },
+       "fabricated_or_placeholder_key_forbidden": {
+        "const": true
+       },
+       "mechanism": {
+        "enum": [
+         "NONE",
+         "APPROVED_ENV_NAME",
+         "APPROVED_STATE_FILE"
+        ]
+       },
+       "owner_decision_id": {
+        "anyOf": [
+         {
+          "minLength": 1,
+          "type": "string"
+         },
+         {
+          "type": "null"
+         }
+        ]
+       }
+      },
+      "required": [
+       "credential_name",
+       "expected_vnai_tier",
+       "fabricated_or_placeholder_key_forbidden",
+       "mechanism",
+       "owner_decision_id"
+      ],
+      "type": "object"
+     }
+    }
+   }
+  }
+ ],
+ "properties": {
+  "approval": {
+   "anyOf": [
+    {
+     "additionalProperties": false,
+     "properties": {
+      "approved_at_utc": {
+       "minLength": 1,
+       "type": "string"
+      },
+      "decision_id": {
+       "minLength": 1,
+       "type": "string"
+      },
+      "evidence_bundle_sha256": {
+       "pattern": "^[0-9a-f]{64}$",
+       "type": "string"
+      },
+      "expires_at_utc": {
+       "minLength": 1,
+       "type": "string"
+      },
+      "owner_id": {
+       "minLength": 1,
+       "type": "string"
+      },
+      "policy_decision_id": {
+       "minLength": 1,
+       "type": "string"
+      },
+      "signature": {
+       "anyOf": [
+        {
+         "minLength": 1,
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ]
+      },
+      "signature_algorithm": {
+       "anyOf": [
+        {
+         "minLength": 1,
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ]
+      },
+      "trust_key_id": {
+       "anyOf": [
+        {
+         "minLength": 1,
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ]
+      }
+     },
+     "required": [
+      "approved_at_utc",
+      "decision_id",
+      "evidence_bundle_sha256",
+      "expires_at_utc",
+      "owner_id",
+      "policy_decision_id",
+      "signature",
+      "signature_algorithm",
+      "trust_key_id"
+     ],
+     "type": "object"
+    },
+    {
+     "type": "null"
+    }
+   ]
+  },
+  "authority_effect": {
+   "const": "NONE_OPERATIONAL_METADATA_ONLY"
+  },
+  "build_id": {
+   "minLength": 1,
+   "type": "string"
+  },
+  "contract_version": {
+   "const": "provider_build_approval_manifest/v1.2"
+  },
+  "dependency_graph_sha256": {
+   "anyOf": [
+    {
+     "pattern": "^[0-9a-f]{64}$",
+     "type": "string"
+    },
+    {
+     "type": "null"
+    }
+   ]
+  },
+  "dependency_lock": {
+   "additionalProperties": false,
+   "properties": {
+    "path": {
+     "minLength": 1,
+     "type": "string"
+    },
+    "selected_closure": {
+     "enum": [
+      "CANDIDATE_CLOSURE",
+      "RUNTIME_MINIMAL_HYPOTHESIS",
+      "UNRESOLVED"
+     ]
+    },
+    "sha256": {
+     "anyOf": [
+      {
+       "pattern": "^[0-9a-f]{64}$",
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    }
+   },
+   "required": [
+    "path",
+    "selected_closure",
+    "sha256"
+   ],
+   "type": "object"
+  },
+  "description": {
+   "minLength": 1,
+   "type": "string"
+  },
+  "environment": {
+   "additionalProperties": false,
+   "properties": {
+    "allowed_names": {
+     "items": {
+      "minLength": 1,
+      "type": "string"
+     },
+     "type": "array"
+    },
+    "credential_names": {
+     "items": {
+      "minLength": 1,
+      "type": "string"
+     },
+     "type": "array"
+    },
+    "denied_secret_classes": {
+     "items": {
+      "enum": [
+       "OWNER_PROFILE_FILES",
+       "OWNER_VENDOR_STATE_DOT_VNSTOCK",
+       "STOCK_LOOKUP_SECRETS_FILE",
+       "DNSE_LIVESPEED_FINHAY_FHSC_CREDENTIALS",
+       "VENDOR_ALIAS_KEYS_VNSTOCK_DNSE_FMP_BINANCE",
+       "SSH_GIT_NETRC",
+       "BROWSER_AND_OS_CREDENTIAL_STORES",
+       "AI_AGENT_CREDENTIALS_CODEX_CLAUDE",
+       "PRODUCTION_RUNTIME_AND_DBS",
+       "PORTFOLIO_AND_PRIVATE_RESEARCH",
+       "RETAINED_EVIDENCE_AND_REPOSITORIES"
+      ]
+     },
+     "minItems": 11,
+     "type": "array",
+     "uniqueItems": true
+    },
+    "forbidden_names": {
+     "items": {
+      "minLength": 1,
+      "type": "string"
+     },
+     "type": "array"
+    },
+    "forbidden_prefixes": {
+     "items": {
+      "minLength": 1,
+      "type": "string"
+     },
+     "type": "array"
+    },
+    "inherit_parent": {
+     "const": false
+    },
+    "redirected_profile_names": {
+     "additionalProperties": false,
+     "properties": {
+      "APPDATA": {
+       "enum": [
+        "PROVIDER_STATE_ROOT",
+        "PROVIDER_STATE_ROOT/AppData/Roaming",
+        "PROVIDER_STATE_ROOT/AppData/Local",
+        "PROVIDER_SCRATCH_ROOT"
+       ]
+      },
+      "HOME": {
+       "enum": [
+        "PROVIDER_STATE_ROOT",
+        "PROVIDER_STATE_ROOT/AppData/Roaming",
+        "PROVIDER_STATE_ROOT/AppData/Local",
+        "PROVIDER_SCRATCH_ROOT"
+       ]
+      },
+      "HOMEDRIVE": {
+       "enum": [
+        "PROVIDER_STATE_ROOT",
+        "PROVIDER_STATE_ROOT/AppData/Roaming",
+        "PROVIDER_STATE_ROOT/AppData/Local",
+        "PROVIDER_SCRATCH_ROOT"
+       ]
+      },
+      "HOMEPATH": {
+       "enum": [
+        "PROVIDER_STATE_ROOT",
+        "PROVIDER_STATE_ROOT/AppData/Roaming",
+        "PROVIDER_STATE_ROOT/AppData/Local",
+        "PROVIDER_SCRATCH_ROOT"
+       ]
+      },
+      "LOCALAPPDATA": {
+       "enum": [
+        "PROVIDER_STATE_ROOT",
+        "PROVIDER_STATE_ROOT/AppData/Roaming",
+        "PROVIDER_STATE_ROOT/AppData/Local",
+        "PROVIDER_SCRATCH_ROOT"
+       ]
+      },
+      "TEMP": {
+       "enum": [
+        "PROVIDER_STATE_ROOT",
+        "PROVIDER_STATE_ROOT/AppData/Roaming",
+        "PROVIDER_STATE_ROOT/AppData/Local",
+        "PROVIDER_SCRATCH_ROOT"
+       ]
+      },
+      "TMP": {
+       "enum": [
+        "PROVIDER_STATE_ROOT",
+        "PROVIDER_STATE_ROOT/AppData/Roaming",
+        "PROVIDER_STATE_ROOT/AppData/Local",
+        "PROVIDER_SCRATCH_ROOT"
+       ]
+      },
+      "USERPROFILE": {
+       "enum": [
+        "PROVIDER_STATE_ROOT",
+        "PROVIDER_STATE_ROOT/AppData/Roaming",
+        "PROVIDER_STATE_ROOT/AppData/Local",
+        "PROVIDER_SCRATCH_ROOT"
+       ]
+      }
+     },
+     "required": [
+      "APPDATA",
+      "HOME",
+      "HOMEDRIVE",
+      "HOMEPATH",
+      "LOCALAPPDATA",
+      "TEMP",
+      "TMP",
+      "USERPROFILE"
+     ],
+     "type": "object"
+    }
+   },
+   "required": [
+    "allowed_names",
+    "credential_names",
+    "denied_secret_classes",
+    "forbidden_names",
+    "forbidden_prefixes",
+    "inherit_parent",
+    "redirected_profile_names"
+   ],
+   "type": "object"
+  },
+  "filesystem": {
+   "additionalProperties": false,
+   "properties": {
+    "acl_policy_sha256": {
+     "anyOf": [
+      {
+       "pattern": "^[0-9a-f]{64}$",
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "denied_root_classes": {
+     "items": {
+      "minLength": 1,
+      "type": "string"
+     },
+     "type": "array"
+    },
+    "provider_scratch_base": {
+     "anyOf": [
+      {
+       "minLength": 1,
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "provider_state_root": {
+     "anyOf": [
+      {
+       "minLength": 1,
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "read_only_roots": {
+     "items": {
+      "minLength": 1,
+      "type": "string"
+     },
+     "type": "array"
+    },
+    "reparse_points_allowed": {
+     "const": false
+    },
+    "writable_roots": {
+     "items": {
+      "minLength": 1,
+      "type": "string"
+     },
+     "type": "array"
+    }
+   },
+   "required": [
+    "acl_policy_sha256",
+    "denied_root_classes",
+    "provider_scratch_base",
+    "provider_state_root",
+    "read_only_roots",
+    "reparse_points_allowed",
+    "writable_roots"
+   ],
+   "type": "object"
+  },
+  "launch_authorized": {
+   "type": "boolean"
+  },
+  "launch_mode": {
+   "additionalProperties": false,
+   "properties": {
+    "mode": {
+     "enum": [
+      "QUALIFICATION_GATE_B_CONTAINED_STARTUP",
+      "QUALIFICATION_GATE_C_AUTH_PROBE",
+      "QUALIFICATION_GATE_D_EXACT_SESSION",
+      "QUALIFICATION_GATE_E_QUALITY_LICENSE",
+      "ORDINARY_DAILY"
+     ]
+    },
+    "ordinary_daily_requires_qualification_evidence": {
+     "const": true
+    },
+    "request_budget": {
+     "additionalProperties": false,
+     "properties": {
+      "max_seconds": {
+       "minimum": 1,
+       "type": "integer"
+      },
+      "max_total_http": {
+       "minimum": 0,
+       "type": "integer"
+      }
+     },
+     "required": [
+      "max_seconds",
+      "max_total_http"
+     ],
+     "type": "object"
+    }
+   },
+   "required": [
+    "mode",
+    "ordinary_daily_requires_qualification_evidence",
+    "request_budget"
+   ],
+   "type": "object"
+  },
+  "network": {
+   "additionalProperties": false,
+   "properties": {
+    "default_deny": {
+     "const": true
+    },
+    "egress_gateway": {
+     "anyOf": [
+      {
+       "additionalProperties": false,
+       "properties": {
+        "host": {
+         "minLength": 1,
+         "type": "string"
+        },
+        "port": {
+         "minimum": 1,
+         "type": "integer"
+        }
+       },
+       "required": [
+        "host",
+        "port"
+       ],
+       "type": "object"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "endpoints": {
+     "items": {
+      "additionalProperties": false,
+      "properties": {
+       "host": {
+        "pattern": "^[a-z0-9.-]+$",
+        "type": "string"
+       },
+       "max_redirects": {
+        "const": 0
+       },
+       "method": {
+        "enum": [
+         "GET",
+         "POST"
+        ]
+       },
+       "path_pattern": {
+        "pattern": "^/",
+        "type": "string"
+       },
+       "port": {
+        "const": 443
+       },
+       "purpose": {
+        "minLength": 1,
+        "type": "string"
+       },
+       "scheme": {
+        "const": "https"
+       }
+      },
+      "required": [
+       "host",
+       "max_redirects",
+       "method",
+       "path_pattern",
+       "port",
+       "purpose",
+       "scheme"
+      ],
+      "type": "object"
+     },
+     "type": "array"
+    },
+    "enforcement_policy_sha256": {
+     "anyOf": [
+      {
+       "pattern": "^[0-9a-f]{64}$",
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "review_candidate_endpoints": {
+     "items": {
+      "additionalProperties": false,
+      "properties": {
+       "host": {
+        "pattern": "^[a-z0-9.-]+$",
+        "type": "string"
+       },
+       "max_redirects": {
+        "const": 0
+       },
+       "method": {
+        "enum": [
+         "GET",
+         "POST"
+        ]
+       },
+       "path_pattern": {
+        "pattern": "^/",
+        "type": "string"
+       },
+       "port": {
+        "const": 443
+       },
+       "purpose": {
+        "minLength": 1,
+        "type": "string"
+       },
+       "scheme": {
+        "const": "https"
+       },
+       "source": {
+        "minLength": 1,
+        "type": "string"
+       },
+       "state": {
+        "const": "REVIEW_CANDIDATE_NOT_APPROVED"
+       }
+      },
+      "required": [
+       "host",
+       "max_redirects",
+       "method",
+       "path_pattern",
+       "port",
+       "purpose",
+       "scheme",
+       "source",
+       "state"
+      ],
+      "type": "object"
+     },
+     "type": "array"
+    }
+   },
+   "required": [
+    "default_deny",
+    "egress_gateway",
+    "endpoints",
+    "enforcement_policy_sha256",
+    "review_candidate_endpoints"
+   ],
+   "type": "object"
+  },
+  "os_containment": {
+   "additionalProperties": false,
+   "properties": {
+    "egress_gateway_verified": {
+     "type": "boolean"
+    },
+    "job_object_kill_on_close": {
+     "type": "boolean"
+    },
+    "requirements": {
+     "items": {
+      "minLength": 1,
+      "type": "string"
+     },
+     "type": "array"
+    },
+    "restricted_identity_sid": {
+     "anyOf": [
+      {
+       "minLength": 1,
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "runtime_root_read_only_acl": {
+     "type": "boolean"
+    },
+    "state": {
+     "enum": [
+      "NOT_PROVISIONED_OWNER_DECISION_REQUIRED",
+      "OWNER_VERIFIED"
+     ]
+    },
+    "verification_evidence_sha256": {
+     "anyOf": [
+      {
+       "pattern": "^[0-9a-f]{64}$",
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    }
+   },
+   "required": [
+    "egress_gateway_verified",
+    "job_object_kill_on_close",
+    "requirements",
+    "restricted_identity_sid",
+    "runtime_root_read_only_acl",
+    "state",
+    "verification_evidence_sha256"
+   ],
+   "type": "object"
+  },
+  "packages": {
+   "items": {
+    "additionalProperties": false,
+    "properties": {
+     "artifact_filename": {
+      "minLength": 1,
+      "type": "string"
+     },
+     "artifact_sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+     },
+     "artifact_size": {
+      "minimum": 1,
+      "type": "integer"
+     },
+     "artifact_source_url": {
+      "minLength": 1,
+      "type": "string"
+     },
+     "dist_info": {
+      "minLength": 1,
+      "type": "string"
+     },
+     "installed_manifest_sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+     },
+     "name": {
+      "minLength": 1,
+      "type": "string"
+     },
+     "native_manifest_sha256": {
+      "anyOf": [
+       {
+        "pattern": "^[0-9a-f]{64}$",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "provenance_classification": {
+      "enum": [
+       "PROVENANCE_PARTIAL",
+       "PROVENANCE_SUFFICIENT_FOR_OWNER_REVIEW",
+       "PROVENANCE_VERIFIED",
+       "TEST_FIXTURE_ONLY"
+      ]
+     },
+     "provenance_evidence_sha256": {
+      "anyOf": [
+       {
+        "pattern": "^[0-9a-f]{64}$",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "requires_dist": {
+      "items": {
+       "minLength": 1,
+       "type": "string"
+      },
+      "type": "array"
+     },
+     "site_dir": {
+      "minLength": 1,
+      "type": "string"
+     },
+     "version": {
+      "minLength": 1,
+      "type": "string"
+     }
+    },
+    "required": [
+     "artifact_filename",
+     "artifact_sha256",
+     "artifact_size",
+     "artifact_source_url",
+     "dist_info",
+     "installed_manifest_sha256",
+     "name",
+     "native_manifest_sha256",
+     "provenance_classification",
+     "provenance_evidence_sha256",
+     "requires_dist",
+     "site_dir",
+     "version"
+    ],
+    "type": "object"
+   },
+   "type": "array"
+  },
+  "provider_family": {
+   "const": "VNSTOCK_KBS_VCI"
+  },
+  "qualification_evidence_sha256": {
+   "anyOf": [
+    {
+     "pattern": "^[0-9a-f]{64}$",
+     "type": "string"
+    },
+    {
+     "type": "null"
+    }
+   ]
+  },
+  "rate_tier_binding": {
+   "anyOf": [
+    {
+     "additionalProperties": false,
+     "properties": {
+      "governor_effective_rpm": {
+       "minimum": 1,
+       "type": "integer"
+      },
+      "max_fraction_of_tier_minute_limit": {
+       "maximum": 0.75,
+       "minimum": 0,
+       "type": "number"
+      },
+      "planned_session_request_budget": {
+       "minimum": 0,
+       "type": "integer"
+      },
+      "tier": {
+       "enum": [
+        "guest",
+        "free"
+       ]
+      },
+      "tier_limits": {
+       "additionalProperties": false,
+       "properties": {
+        "day": {
+         "minimum": 1,
+         "type": "integer"
+        },
+        "hour": {
+         "minimum": 1,
+         "type": "integer"
+        },
+        "min": {
+         "minimum": 1,
+         "type": "integer"
+        }
+       },
+       "required": [
+        "day",
+        "hour",
+        "min"
+       ],
+       "type": "object"
+      }
+     },
+     "required": [
+      "governor_effective_rpm",
+      "max_fraction_of_tier_minute_limit",
+      "planned_session_request_budget",
+      "tier",
+      "tier_limits"
+     ],
+     "type": "object"
+    },
+    {
+     "type": "null"
+    }
+   ]
+  },
+  "revocation": {
+   "additionalProperties": false,
+   "properties": {
+    "epoch": {
+     "minimum": 0,
+     "type": "integer"
+    },
+    "kill_active_workers_on_revoke": {
+     "const": true
+    },
+    "reason": {
+     "anyOf": [
+      {
+       "minLength": 1,
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "registry_identity": {
+     "minLength": 1,
+     "type": "string"
+    },
+    "revoked_at_utc": {
+     "anyOf": [
+      {
+       "minLength": 1,
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "state": {
+     "enum": [
+      "UNAPPROVED",
+      "ACTIVE",
+      "REVOKED"
+     ]
+    }
+   },
+   "required": [
+    "epoch",
+    "kill_active_workers_on_revoke",
+    "reason",
+    "registry_identity",
+    "revoked_at_utc",
+    "state"
+   ],
+   "type": "object"
+  },
+  "runtime": {
+   "anyOf": [
+    {
+     "additionalProperties": false,
+     "properties": {
+      "base_executable_path": {
+       "minLength": 1,
+       "type": "string"
+      },
+      "base_executable_sha256": {
+       "pattern": "^[0-9a-f]{64}$",
+       "type": "string"
+      },
+      "base_prefix": {
+       "minLength": 1,
+       "type": "string"
+      },
+      "base_runtime_files": {
+       "items": {
+        "additionalProperties": false,
+        "properties": {
+         "relative_path": {
+          "minLength": 1,
+          "type": "string"
+         },
+         "sha256": {
+          "pattern": "^([0-9a-f]{64}|DIRECTORY)$",
+          "type": "string"
+         },
+         "size": {
+          "minimum": -1,
+          "type": "integer"
+         }
+        },
+        "required": [
+         "relative_path",
+         "sha256",
+         "size"
+        ],
+        "type": "object"
+       },
+       "type": "array"
+      },
+      "executable_path": {
+       "minLength": 1,
+       "type": "string"
+      },
+      "executable_realpath": {
+       "minLength": 1,
+       "type": "string"
+      },
+      "executable_sha256": {
+       "pattern": "^[0-9a-f]{64}$",
+       "type": "string"
+      },
+      "implementation": {
+       "minLength": 1,
+       "type": "string"
+      },
+      "include_system_site_packages": {
+       "const": false
+      },
+      "installed_tree_manifest": {
+       "additionalProperties": false,
+       "properties": {
+        "file_count": {
+         "minimum": 0,
+         "type": "integer"
+        },
+        "path": {
+         "anyOf": [
+          {
+           "minLength": 1,
+           "type": "string"
+          },
+          {
+           "type": "null"
+          }
+         ]
+        },
+        "sha256": {
+         "pattern": "^[0-9a-f]{64}$",
+         "type": "string"
+        }
+       },
+       "required": [
+        "file_count",
+        "path",
+        "sha256"
+       ],
+       "type": "object"
+      },
+      "platform": {
+       "minLength": 1,
+       "type": "string"
+      },
+      "pointer_bits": {
+       "enum": [
+        32,
+        64
+       ]
+      },
+      "python_build": {
+       "minLength": 1,
+       "type": "string"
+      },
+      "python_version": {
+       "minLength": 1,
+       "type": "string"
+      },
+      "site_dirs": {
+       "items": {
+        "minLength": 1,
+        "type": "string"
+       },
+       "minItems": 1,
+       "type": "array"
+      },
+      "startup_hook_files": {
+       "items": {
+        "additionalProperties": false,
+        "properties": {
+         "relative_path": {
+          "minLength": 1,
+          "type": "string"
+         },
+         "sha256": {
+          "pattern": "^([0-9a-f]{64}|DIRECTORY)$",
+          "type": "string"
+         },
+         "size": {
+          "minimum": -1,
+          "type": "integer"
+         }
+        },
+        "required": [
+         "relative_path",
+         "sha256",
+         "size"
+        ],
+        "type": "object"
+       },
+       "type": "array"
+      },
+      "user_site_enabled": {
+       "const": false
+      },
+      "venv_config_sha256": {
+       "pattern": "^[0-9a-f]{64}$",
+       "type": "string"
+      },
+      "venv_root": {
+       "minLength": 1,
+       "type": "string"
+      }
+     },
+     "required": [
+      "base_executable_path",
+      "base_executable_sha256",
+      "base_prefix",
+      "base_runtime_files",
+      "executable_path",
+      "executable_realpath",
+      "executable_sha256",
+      "implementation",
+      "include_system_site_packages",
+      "installed_tree_manifest",
+      "platform",
+      "pointer_bits",
+      "python_build",
+      "python_version",
+      "site_dirs",
+      "startup_hook_files",
+      "user_site_enabled",
+      "venv_config_sha256",
+      "venv_root"
+     ],
+     "type": "object"
+    },
+    {
+     "type": "null"
+    }
+   ]
+  },
+  "schema_ref": {
+   "minLength": 1,
+   "type": "string"
+  },
+  "status": {
+   "enum": [
+    "DRAFT",
+    "APPROVED_PINNED_BUILD",
+    "SECURITY_REVIEW_BLOCKED",
+    "REJECTED",
+    "REVOKED"
+   ]
+  },
+  "telemetry_disposition": {
+   "items": {
+    "additionalProperties": false,
+    "allOf": [
+     {
+      "if": {
+       "additionalProperties": true,
+       "properties": {
+        "layer": {
+         "const": "NETWORK"
+        }
+       },
+       "required": [
+        "layer"
+       ],
+       "type": "object"
+      },
+      "then": {
+       "required": [
+        "host",
+        "method",
+        "path_pattern",
+        "port",
+        "scheme"
+       ]
+      }
+     },
+     {
+      "if": {
+       "additionalProperties": true,
+       "properties": {
+        "layer": {
+         "const": "PROCESS"
+        }
+       },
+       "required": [
+        "layer"
+       ],
+       "type": "object"
+      },
+      "then": {
+       "required": [
+        "process"
+       ]
+      }
+     }
+    ],
+    "properties": {
+     "decision": {
+      "enum": [
+       "DENY",
+       "ALLOW_OWNER_APPROVED",
+       "UNRESOLVED_OWNER_DECISION_REQUIRED"
+      ]
+     },
+     "endpoint_ref": {
+      "minLength": 1,
+      "type": "string"
+     },
+     "expected_failure_behavior": {
+      "minLength": 1,
+      "type": "string"
+     },
+     "host": {
+      "pattern": "^[a-z0-9.-]+$",
+      "type": "string"
+     },
+     "layer": {
+      "enum": [
+       "NETWORK",
+       "PROCESS"
+      ]
+     },
+     "method": {
+      "enum": [
+       "GET",
+       "POST"
+      ]
+     },
+     "path_pattern": {
+      "pattern": "^/",
+      "type": "string"
+     },
+     "port": {
+      "const": 443
+     },
+     "process": {
+      "minLength": 1,
+      "type": "string"
+     },
+     "reachability": {
+      "minLength": 1,
+      "type": "string"
+     },
+     "scheme": {
+      "const": "https"
+     }
+    },
+    "required": [
+     "decision",
+     "endpoint_ref",
+     "expected_failure_behavior",
+     "layer"
+    ],
+    "type": "object"
+   },
+   "minItems": 1,
+   "type": "array"
+  },
+  "terms_acceptance": {
+   "additionalProperties": false,
+   "properties": {
+    "agreement_file_policy": {
+     "enum": [
+      "OWNER_PREPROVISIONED_IN_PROVIDER_STATE_ROOT",
+      "UNRESOLVED_LAUNCH_BLOCKED"
+     ]
+    },
+    "agreement_file_relative_path": {
+     "anyOf": [
+      {
+       "minLength": 1,
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "license_identities": {
+     "items": {
+      "minLength": 1,
+      "type": "string"
+     },
+     "type": "array"
+    },
+    "owner_decision_id": {
+     "anyOf": [
+      {
+       "minLength": 1,
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "terms_text_sha256": {
+     "anyOf": [
+      {
+       "pattern": "^[0-9a-f]{64}$",
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    }
+   },
+   "required": [
+    "agreement_file_policy",
+    "agreement_file_relative_path",
+    "license_identities",
+    "owner_decision_id",
+    "terms_text_sha256"
+   ],
+   "type": "object"
+  },
+  "vendor_credential": {
+   "additionalProperties": false,
+   "properties": {
+    "credential_name": {
+     "enum": [
+      "VNSTOCK_API_KEY",
+      null
+     ]
+    },
+    "expected_vnai_tier": {
+     "enum": [
+      "guest",
+      "free",
+      null
+     ]
+    },
+    "fabricated_or_placeholder_key_forbidden": {
+     "const": true
+    },
+    "mechanism": {
+     "enum": [
+      "NONE",
+      "APPROVED_ENV_NAME",
+      "APPROVED_STATE_FILE",
+      "UNRESOLVED"
+     ]
+    },
+    "owner_decision_id": {
+     "anyOf": [
+      {
+       "minLength": 1,
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    }
+   },
+   "required": [
+    "credential_name",
+    "expected_vnai_tier",
+    "fabricated_or_placeholder_key_forbidden",
+    "mechanism",
+    "owner_decision_id"
+   ],
+   "type": "object"
+  },
+  "worker": {
+   "additionalProperties": false,
+   "properties": {
+    "adapter_module": {
+     "pattern": "^[A-Za-z_][A-Za-z0-9_]*$",
+     "type": "string"
+    },
+    "argv_flags": {
+     "items": {
+      "minLength": 1,
+      "type": "string"
+     },
+     "minItems": 1,
+     "type": "array"
+    },
+    "entrypoint": {
+     "minLength": 1,
+     "type": "string"
+    },
+    "git_commit": {
+     "anyOf": [
+      {
+       "pattern": "^[0-9a-f]{40}$",
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "lineage_endpoint_map": {
+     "additionalProperties": false,
+     "properties": {
+      "KBS": {
+       "minLength": 1,
+       "type": "string"
+      },
+      "VCI": {
+       "minLength": 1,
+       "type": "string"
+      }
+     },
+     "required": [
+      "KBS",
+      "VCI"
+     ],
+     "type": "object"
+    },
+    "protocol_version": {
+     "minLength": 1,
+     "type": "string"
+    },
+    "source_files": {
+     "items": {
+      "additionalProperties": false,
+      "properties": {
+       "relative_path": {
+        "minLength": 1,
+        "type": "string"
+       },
+       "sha256": {
+        "pattern": "^([0-9a-f]{64}|DIRECTORY)$",
+        "type": "string"
+       },
+       "size": {
+        "minimum": -1,
+        "type": "integer"
+       }
+      },
+      "required": [
+       "relative_path",
+       "sha256",
+       "size"
+      ],
+      "type": "object"
+     },
+     "minItems": 1,
+     "type": "array"
+    },
+    "startup_stubs": {
+     "items": {
+      "additionalProperties": false,
+      "properties": {
+       "attributes": {
+        "items": {
+         "minLength": 1,
+         "type": "string"
+        },
+        "type": "array"
+       },
+       "module": {
+        "minLength": 1,
+        "type": "string"
+       }
+      },
+      "required": [
+       "attributes",
+       "module"
+      ],
+      "type": "object"
+     },
+     "type": "array"
+    }
+   },
+   "required": [
+    "adapter_module",
+    "argv_flags",
+    "entrypoint",
+    "git_commit",
+    "lineage_endpoint_map",
+    "protocol_version",
+    "source_files",
+    "startup_stubs"
+   ],
+   "type": "object"
+  }
+ },
+ "required": [
+  "approval",
+  "authority_effect",
+  "build_id",
+  "contract_version",
+  "dependency_graph_sha256",
+  "dependency_lock",
+  "environment",
+  "filesystem",
+  "launch_authorized",
+  "launch_mode",
+  "network",
+  "os_containment",
+  "packages",
+  "provider_family",
+  "qualification_evidence_sha256",
+  "rate_tier_binding",
+  "revocation",
+  "runtime",
+  "status",
+  "telemetry_disposition",
+  "terms_acceptance",
+  "vendor_credential",
+  "worker"
+ ],
+ "title": "Provider build approval manifest v1.2",
+ "type": "object"
+}

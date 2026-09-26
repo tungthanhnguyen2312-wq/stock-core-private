@@ -30,6 +30,7 @@ from shareholder_pipeline import (
     run_source_chain,
 )
 from runtime_paths import runtime_root
+from provider_execution_guard import require_governed_provider_execution
 
 # Console Windows mặc định cp1252 -> vỡ khi in tên cổ đông tiếng Việt
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
@@ -259,6 +260,7 @@ def normalize(df, ticker, source):
 
 def _provider_payload(ticker, source):
     """Fetch one provider payload while keeping unsupported/network distinct."""
+    require_governed_provider_execution("shareholders_sync._provider_payload")
     from vnstock.api.company import Company
 
     for attempt in range(1, MAX_RETRY + 1):

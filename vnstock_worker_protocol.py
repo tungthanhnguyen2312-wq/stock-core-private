@@ -26,7 +26,12 @@ from typing import Any
 # object (interpreter + provider distribution versions, reported only after a successful start),
 # a startup ``worker_error`` (request_id null) carries ``startup_failure_kind``, and the
 # ``technical_history`` purpose tag exists. Every 1.0.0 field keeps its meaning.
-PROTOCOL_VERSION = "vnstock_worker_protocol/1.1.0"
+# 1.2.0 (APPROVED_PROVIDER_BUILD_AND_EXECUTION_BOUNDARY_V1): additive -- READY's ``runtime`` may
+# carry the worker attestation identity and a containment summary; a startup ``worker_error`` may
+# carry ``attestation_failures``/``containment_events``/``provider_modules_loaded``; a request
+# ``worker_error`` may carry the ``WORKER_CONTAINMENT_VIOLATION`` class; the parent-side
+# ``PROVIDER_BUILD_REVOKED`` class exists. Every 1.1.0 field keeps its meaning.
+PROTOCOL_VERSION = "vnstock_worker_protocol/1.2.0"
 
 MSG_FETCH = "fetch"
 MSG_FETCH_RESULT = "fetch_result"
@@ -56,6 +61,10 @@ STARTUP_KIND_STARTUP_EXCEPTION = "WORKER_STARTUP_EXCEPTION"
 STARTUP_KIND_SPAWN_FAILED = "SPAWN_FAILED"
 STARTUP_KIND_STARTUP_TIMEOUT = "STARTUP_TIMEOUT"
 STARTUP_KIND_EXITED_BEFORE_READY = "EXITED_BEFORE_READY"
+# 1.2.0: emitted by the worker itself (values mirror provider_runtime_state.STARTUP_KIND_*).
+STARTUP_KIND_ATTESTATION_FAILED = "PROVIDER_RUNTIME_ATTESTATION_FAILED"
+STARTUP_KIND_CONTAINMENT_VIOLATION = "PROVIDER_STARTUP_CONTAINMENT_VIOLATION"
+STARTUP_KIND_INIT_FAILED = "PROVIDER_INIT_FAILED_UNDER_CONTAINMENT"
 
 # Failure classes a worker_error message may carry -- distinct from any provider-level outcome
 # status (EXACT_SESSION_OBSERVED / SESSION_MISSING / SOURCE_REJECTED / TRANSPORT_FAILED /
@@ -65,6 +74,11 @@ FAILURE_CLASS_REQUEST_PROCESSING_EXCEPTION = "WORKER_REQUEST_PROCESSING_EXCEPTIO
 FAILURE_CLASS_PROTOCOL_VIOLATION = "WORKER_PROTOCOL_VIOLATION"
 FAILURE_CLASS_TIMEOUT = "WORKER_TIMEOUT"
 FAILURE_CLASS_PROCESS_EXIT = "WORKER_PROCESS_EXIT"
+# 1.2.0: a provider action outside the approved containment (unapproved host/redirect on the
+# quote transport, or an unexpected denied egress/process/filesystem attempt). Fail closed.
+FAILURE_CLASS_CONTAINMENT_VIOLATION = "WORKER_CONTAINMENT_VIOLATION"
+# 1.2.0: assigned by the parent client when the revocation registry revokes the running build.
+FAILURE_CLASS_BUILD_REVOKED = "PROVIDER_BUILD_REVOKED"
 
 
 class VnstockWorkerFailure(RuntimeError):
@@ -118,6 +132,21 @@ class VnstockWorkerAdapterError(VnstockWorkerFailure):
         super().__init__(
             message, failure_class=FAILURE_CLASS_REQUEST_PROCESSING_EXCEPTION, diagnostics=diagnostics,
         )
+
+
+class VnstockWorkerContainmentError(VnstockWorkerFailure):
+    """The worker refused a provider action outside the approved containment. Permanent for the
+    fetcher: a runtime that stepped outside its approved boundary is not used again."""
+
+    def __init__(self, message: str, *, diagnostics: dict[str, Any] | None = None):
+        super().__init__(message, failure_class=FAILURE_CLASS_CONTAINMENT_VIOLATION, diagnostics=diagnostics)
+
+
+class ProviderBuildRevokedError(VnstockWorkerFailure):
+    """The revocation registry revoked the running build; raised at the next controlled boundary."""
+
+    def __init__(self, message: str, *, diagnostics: dict[str, Any] | None = None):
+        super().__init__(message, failure_class=FAILURE_CLASS_BUILD_REVOKED, diagnostics=diagnostics)
 
 
 @dataclass

@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0.0",
   "contract_version": "provider_runtime_policy/v1",
-  "description": "Owner-controlled launch policy for optional provider runtimes (PROVIDER_RUNTIME_ISOLATION_V1). Read by provider_runtime_state.load_provider_policy; never changed automatically and never derived from network or package-index conditions. A missing or invalid file reads as SECURITY_REVIEW_BLOCKED.",
+  "description": "Owner-controlled launch policy for optional provider runtimes (PROVIDER_RUNTIME_ISOLATION_V1). Read by provider_runtime_state.load_provider_policy; never changed automatically and never derived from network or package-index conditions. A missing or invalid file reads as SECURITY_REVIEW_BLOCKED. APPROVED_PROVIDER_BUILD_AND_EXECUTION_BOUNDARY_V1: an ALLOW_CONFIGURED_PROVIDER_RUNTIME policy launches nothing by itself -- it must also pin an approved build manifest (approved_build_manifest: {path, sha256 = the manifest's canonical SHA-256}) and a decision_id equal to that manifest's approval.policy_decision_id; the manifest, revocation registry, credential/rate binding and interpreter attestation must then all pass. Both pin fields stay null while the policy is blocked.",
   "providers": {
     "VNSTOCK_KBS_VCI": {
       "policy": "SECURITY_REVIEW_BLOCKED",
@@ -9,7 +9,9 @@
       "evidence_ref": "PyPI Simple API (PEP 792) reported project-status 'quarantined' with no installable files for vnstock and vnai, observed 2026-09-25 (docs/CI_AND_DEPENDENCY_TIERS.md). Index status only; no other conclusion is drawn.",
       "set_by": "OWNER_DECISION_D1_PROVIDER_RUNTIME_ISOLATION_V1",
       "set_at": "2026-09-25",
-      "allowed_provider_env": []
+      "allowed_provider_env": [],
+      "approved_build_manifest": null,
+      "decision_id": null
     }
   }
 }

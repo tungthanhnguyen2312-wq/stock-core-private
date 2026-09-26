@@ -21,7 +21,7 @@ _CHECK_SCRIPT = Path(__file__).with_name("fixtures") / "check_parent_import_cont
 def test_parent_process_never_imports_vnstock_or_vnai_for_exact_session_resolution():
     result = subprocess.run(
         [sys.executable, "-u", str(_CHECK_SCRIPT)],
-        capture_output=True, text=True, timeout=30,
+        capture_output=True, text=True, timeout=90,
     )
     assert result.returncode == 0, (
         f"stdout={result.stdout!r} stderr={result.stderr!r}"

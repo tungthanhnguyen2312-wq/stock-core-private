@@ -1,0 +1,362 @@
+{
+ "approval": null,
+ "authority_effect": "NONE_OPERATIONAL_METADATA_ONLY",
+ "build_id": "VNSTOCK_KBS_VCI-CANDIDATE-vnstock-4.0.4-vnai-2.5.0-UNAPPROVED",
+ "contract_version": "provider_build_approval_manifest/v1.2",
+ "dependency_graph_sha256": null,
+ "dependency_lock": {
+  "path": "config/provider_dependency_lock.json",
+  "selected_closure": "UNRESOLVED",
+  "sha256": "9c0e13aeaf3d8056652f9fd464eb69fa67cb140360f568dc5b4b28f0d4b6319d"
+ },
+ "description": "DRAFT provider build approval manifest (APPROVED_PROVIDER_BUILD_AND_EXECUTION_BOUNDARY_V1, pre-approval foundation). NOTHING HERE IS APPROVED: status DRAFT, launch_authorized false, approval null, no runtime, no approved endpoint, credential/rate/terms/telemetry/OS containment unresolved. The owner fills these only by an explicit decision, then pins this file's canonical SHA-256 in config/provider_runtime_policy.json. The tracked policy stays SECURITY_REVIEW_BLOCKED.",
+ "environment": {
+  "allowed_names": [
+   "COMSPEC",
+   "CURL_CA_BUNDLE",
+   "LANG",
+   "LANGUAGE",
+   "LC_ALL",
+   "LC_CTYPE",
+   "NUMBER_OF_PROCESSORS",
+   "OS",
+   "PATH",
+   "PATHEXT",
+   "PROCESSOR_ARCHITECTURE",
+   "REQUESTS_CA_BUNDLE",
+   "SSL_CERT_DIR",
+   "SSL_CERT_FILE",
+   "SYSTEMDRIVE",
+   "SYSTEMROOT",
+   "TZ",
+   "WINDIR"
+  ],
+  "credential_names": [],
+  "denied_secret_classes": [
+   "OWNER_PROFILE_FILES",
+   "OWNER_VENDOR_STATE_DOT_VNSTOCK",
+   "STOCK_LOOKUP_SECRETS_FILE",
+   "DNSE_LIVESPEED_FINHAY_FHSC_CREDENTIALS",
+   "VENDOR_ALIAS_KEYS_VNSTOCK_DNSE_FMP_BINANCE",
+   "SSH_GIT_NETRC",
+   "BROWSER_AND_OS_CREDENTIAL_STORES",
+   "AI_AGENT_CREDENTIALS_CODEX_CLAUDE",
+   "PRODUCTION_RUNTIME_AND_DBS",
+   "PORTFOLIO_AND_PRIVATE_RESEARCH",
+   "RETAINED_EVIDENCE_AND_REPOSITORIES"
+  ],
+  "forbidden_names": [
+   "FMP_API_KEY",
+   "FMP_TOKEN",
+   "STOCK_LOOKUP_SECRETS_FILE",
+   "VNSTOCK_BINANCE_API_KEY",
+   "VNSTOCK_DNSE_API_KEY",
+   "VNSTOCK_FMP_API_KEY"
+  ],
+  "forbidden_prefixes": [
+   "DNSE_",
+   "LIVESPEED_",
+   "FINHAY_",
+   "FHSC_"
+  ],
+  "inherit_parent": false,
+  "redirected_profile_names": {
+   "APPDATA": "PROVIDER_STATE_ROOT/AppData/Roaming",
+   "HOME": "PROVIDER_STATE_ROOT",
+   "HOMEDRIVE": "PROVIDER_STATE_ROOT",
+   "HOMEPATH": "PROVIDER_STATE_ROOT",
+   "LOCALAPPDATA": "PROVIDER_STATE_ROOT/AppData/Local",
+   "TEMP": "PROVIDER_SCRATCH_ROOT",
+   "TMP": "PROVIDER_SCRATCH_ROOT",
+   "USERPROFILE": "PROVIDER_STATE_ROOT"
+  }
+ },
+ "filesystem": {
+  "acl_policy_sha256": null,
+  "denied_root_classes": [
+   "OWNER_PROFILE (USERPROFILE/HOME/APPDATA/LOCALAPPDATA of the parent and of the current process)",
+   "OWNER_VENDOR_STATE (%USERPROFILE%\\.vnstock incl. api_key.json)",
+   "STOCK_LOOKUP_STATE (%USERPROFILE%\\.stocklookup: secrets.env, portfolio, private research)",
+   "PRODUCER_CHECKOUT (repositories, worktrees, operations-review, data, retained evidence)",
+   "RUNTIME_ROOT (STOCK_LOOKUP_RUNTIME_ROOT: vn_stock.db and runtime artifacts)",
+   "SECRETS_FILE (STOCK_LOOKUP_SECRETS_FILE target)"
+  ],
+  "provider_scratch_base": null,
+  "provider_state_root": null,
+  "read_only_roots": [],
+  "reparse_points_allowed": false,
+  "writable_roots": []
+ },
+ "launch_authorized": false,
+ "launch_mode": {
+  "mode": "QUALIFICATION_GATE_B_CONTAINED_STARTUP",
+  "ordinary_daily_requires_qualification_evidence": true,
+  "request_budget": {
+   "max_seconds": 15,
+   "max_total_http": 0
+  }
+ },
+ "network": {
+  "default_deny": true,
+  "egress_gateway": null,
+  "endpoints": [],
+  "enforcement_policy_sha256": null,
+  "review_candidate_endpoints": [
+   {
+    "host": "kbbuddywts.kbsec.com.vn",
+    "max_redirects": 0,
+    "method": "GET",
+    "path_pattern": "/iis-server/investment/stocks/{symbol}/data_day",
+    "port": 443,
+    "purpose": "KBS daily OHLCV (stock symbols)",
+    "scheme": "https",
+    "source": "vnstock/explorer/kbs/quote.py:262",
+    "state": "REVIEW_CANDIDATE_NOT_APPROVED"
+   },
+   {
+    "host": "kbbuddywts.kbsec.com.vn",
+    "max_redirects": 0,
+    "method": "GET",
+    "path_pattern": "/iis-server/investment/index/{symbol}/data_day",
+    "port": 443,
+    "purpose": "KBS daily OHLCV (index symbols, only if index scope is approved)",
+    "scheme": "https",
+    "source": "vnstock/explorer/kbs/quote.py:260",
+    "state": "REVIEW_CANDIDATE_NOT_APPROVED"
+   },
+   {
+    "host": "trading.vietcap.com.vn",
+    "max_redirects": 0,
+    "method": "POST",
+    "path_pattern": "/api/chart/OHLCChart/gap-chart",
+    "port": 443,
+    "purpose": "VCI daily OHLCV",
+    "scheme": "https",
+    "source": "vnstock/explorer/vci/quote.py:260",
+    "state": "REVIEW_CANDIDATE_NOT_APPROVED"
+   }
+  ]
+ },
+ "os_containment": {
+  "egress_gateway_verified": false,
+  "job_object_kill_on_close": false,
+  "requirements": [
+   "dedicated low-privilege OS identity (or VM/container) with NTFS deny ACLs on the owner profile, Stock Lookup state, checkout and runtime root",
+   "reparse-point/junction denial on the approved roots",
+   "Job object: kill-on-close process tree, active-process limit, no breakaway",
+   "default-deny egress through an HTTPS-aware gateway enforcing host+method+path",
+   "read-only ACL on the provider runtime root"
+  ],
+  "restricted_identity_sid": null,
+  "runtime_root_read_only_acl": false,
+  "state": "NOT_PROVISIONED_OWNER_DECISION_REQUIRED",
+  "verification_evidence_sha256": null
+ },
+ "packages": [],
+ "provider_family": "VNSTOCK_KBS_VCI",
+ "qualification_evidence_sha256": null,
+ "rate_tier_binding": null,
+ "revocation": {
+  "epoch": 0,
+  "kill_active_workers_on_revoke": true,
+  "reason": null,
+  "registry_identity": "config/provider_revocation_registry.json",
+  "revoked_at_utc": null,
+  "state": "UNAPPROVED"
+ },
+ "runtime": null,
+ "schema_ref": "config/provider_build_manifest.schema.json",
+ "status": "DRAFT",
+ "telemetry_disposition": [
+  {
+   "decision": "UNRESOLVED_OWNER_DECISION_REQUIRED",
+   "endpoint_ref": "VNAI_ANALYTICS",
+   "expected_failure_behavior": "vnai swallows the error; the denial is recorded as a containment event",
+   "host": "hq.vnstocks.com",
+   "layer": "NETWORK",
+   "method": "POST",
+   "path_pattern": "/analytics",
+   "port": 443,
+   "reachability": "vnai.setup() start-up dispatch + 300 s periodic thread",
+   "scheme": "https"
+  },
+  {
+   "decision": "UNRESOLVED_OWNER_DECISION_REQUIRED",
+   "endpoint_ref": "VNAI_CONTENT_DELIVERY",
+   "expected_failure_behavior": "promotional content unavailable; no effect on KBS/VCI data",
+   "host": "hq.vnstocks.com",
+   "layer": "NETWORK",
+   "method": "GET",
+   "path_pattern": "/content-delivery",
+   "port": 443,
+   "reachability": "start-up for non-subscribers + periodic display",
+   "scheme": "https"
+  },
+  {
+   "decision": "UNRESOLVED_OWNER_DECISION_REQUIRED",
+   "endpoint_ref": "VNAI_LICENSE_VERIFY",
+   "expected_failure_behavior": "local tier derivation continues; Gate C must record the outcome",
+   "host": "vnstocks.com",
+   "layer": "NETWORK",
+   "method": "POST",
+   "path_pattern": "/api/vnstock/license/verify",
+   "port": 443,
+   "reachability": "only when Guardian.verify receives an api_key",
+   "scheme": "https"
+  },
+  {
+   "decision": "UNRESOLVED_OWNER_DECISION_REQUIRED",
+   "endpoint_ref": "VNAI_DEVICE_REGISTER",
+   "expected_failure_behavior": "helper unused by the worker; a denial is recorded",
+   "host": "vnstocks.com",
+   "layer": "NETWORK",
+   "method": "POST",
+   "path_pattern": "/api/vnstock/auth/device-register",
+   "port": 443,
+   "reachability": "setup_api_key helper path, not worker start-up",
+   "scheme": "https"
+  },
+  {
+   "decision": "UNRESOLVED_OWNER_DECISION_REQUIRED",
+   "endpoint_ref": "VNAI_PROFILE_SYNC",
+   "expected_failure_behavior": "helper unused by the worker; a denial is recorded",
+   "host": "api.vnstocks.com",
+   "layer": "NETWORK",
+   "method": "POST",
+   "path_pattern": "/v1/user/profile/sync",
+   "port": 443,
+   "reachability": "public sync_profile_to_api helper only",
+   "scheme": "https"
+  },
+  {
+   "decision": "UNRESOLVED_OWNER_DECISION_REQUIRED",
+   "endpoint_ref": "VNSTOCK_UPDATE_PYPI",
+   "expected_failure_behavior": "never reached in the worker; live only under the core interpreter, which is now refused",
+   "host": "pypi.org",
+   "layer": "NETWORK",
+   "method": "GET",
+   "path_pattern": "/pypi/{package}/json",
+   "port": 443,
+   "reachability": "update_notice at vnstock import (stubbed by the worker's import-cache stub)",
+   "scheme": "https"
+  },
+  {
+   "decision": "UNRESOLVED_OWNER_DECISION_REQUIRED",
+   "endpoint_ref": "VNAI_GIT_PROBE",
+   "expected_failure_behavior": "the spawn is refused immediately (no hang); vnai reports has_git false",
+   "layer": "PROCESS",
+   "process": "git",
+   "reachability": "vnai Inspector.analyze_git_info at start-up"
+  },
+  {
+   "decision": "UNRESOLVED_OWNER_DECISION_REQUIRED",
+   "endpoint_ref": "VNSTOCK_UPDATE_PIP_LIST",
+   "expected_failure_behavior": "never reached in the worker; a spawn would be refused",
+   "layer": "PROCESS",
+   "process": "python",
+   "reachability": "update_notice pip list at vnstock import (stubbed by the worker's import-cache stub)"
+  }
+ ],
+ "terms_acceptance": {
+  "agreement_file_policy": "UNRESOLVED_LAUNCH_BLOCKED",
+  "agreement_file_relative_path": ".vnstock/id/terms_agreement.txt",
+  "license_identities": [
+   "vnstock 4.0.4: custom personal/research/non-commercial terms -- owner review required",
+   "vnai 2.5.0: proprietary -- owner review required",
+   "vnstock-ezchart 1.0.2: MIT"
+  ],
+  "owner_decision_id": null,
+  "terms_text_sha256": null
+ },
+ "vendor_credential": {
+  "credential_name": null,
+  "expected_vnai_tier": null,
+  "fabricated_or_placeholder_key_forbidden": true,
+  "mechanism": "UNRESOLVED",
+  "owner_decision_id": null
+ },
+ "worker": {
+  "adapter_module": "vn_stock_pipeline",
+  "argv_flags": [
+   "-s",
+   "-E",
+   "-X",
+   "utf8",
+   "-u",
+   "-B"
+  ],
+  "entrypoint": "vnstock_worker_process.py",
+  "git_commit": null,
+  "lineage_endpoint_map": {
+   "KBS": "https://kbbuddywts.kbsec.com.vn/iis-server/investment/stocks/{symbol}/data_day",
+   "VCI": "https://trading.vietcap.com.vn/api/chart/OHLCChart/gap-chart"
+  },
+  "protocol_version": "vnstock_worker_protocol/1.2.0",
+  "source_files": [
+   {
+    "relative_path": "vnstock_worker_process.py",
+    "sha256": "bb55008e9e5730bce9d45473805962799ec524c64ecb59d8cd8f2404270fab88",
+    "size": 23312
+   },
+   {
+    "relative_path": "vnstock_worker_protocol.py",
+    "sha256": "b3eb0b089ebf29b732af03464164ab36e8c6412d3734cf4d67ce9d860ba603ec",
+    "size": 11343
+   },
+   {
+    "relative_path": "vnstock_rate_governor.py",
+    "sha256": "c568e628fe3f711b285b9d5544062a0d19f7c0888cc796d2d35ee54a4e805ced",
+    "size": 11047
+   },
+   {
+    "relative_path": "provider_build_manifest.py",
+    "sha256": "4968d6f48833ed7f0e4ca4330f9e8e09e3b43856848f0a7609f1ff20f6742b64",
+    "size": 93433
+   },
+   {
+    "relative_path": "provider_worker_containment.py",
+    "sha256": "5fd3d83a296c1c9a9bbc5c98c989ede9b84fce19bc605e3c0b413618335ed63c",
+    "size": 35094
+   },
+   {
+    "relative_path": "provider_execution_guard.py",
+    "sha256": "a24b0b8d64f6ce3f1d15f517e39fec771f9b6616abfbd8613f10523b7ecedc0d",
+    "size": 15981
+   },
+   {
+    "relative_path": "provider_runtime_state.py",
+    "sha256": "a7932fe8fe8e6346ae58d669432e43c80e62167e90cdde6204cc377cda85a31e",
+    "size": 28053
+   },
+   {
+    "relative_path": "vn_stock_pipeline.py",
+    "sha256": "e550c541676f4ba689361e8207c082f210045cab6006095079bfd7761129cb0a",
+    "size": 40446
+   },
+   {
+    "relative_path": "market_data_lineage.py",
+    "sha256": "cdc543328b8697b67cc12263714102a18f0505bd27c6c49bc693f8f71634bead",
+    "size": 3931
+   },
+   {
+    "relative_path": "runtime_paths.py",
+    "sha256": "0b99eff71358db411ebf5b27b4e0a3afdb32d5e07680ab113d426df620b1a72c",
+    "size": 536
+   },
+   {
+    "relative_path": "vn_time.py",
+    "sha256": "5fa57ef0b366bb462d9a0ad578d0b5a2d3b549a11545c61567d6e1a617d9a17c",
+    "size": 1514
+   }
+  ],
+  "startup_stubs": [
+   {
+    "attributes": [
+     "migrate_to_sponsor",
+     "update_notice"
+    ],
+    "module": "vnstock.core.utils.upgrade"
+   }
+  ]
+ }
+}

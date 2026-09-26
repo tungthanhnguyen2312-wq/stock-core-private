@@ -41,9 +41,11 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
-_REPO_ROOT = Path(__file__).resolve().parents[2]
-if str(_REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(_REPO_ROOT))
+_HERE = Path(__file__).resolve().parent
+for _candidate in (_HERE, _HERE.parent, _HERE.parent.parent):
+    if (_candidate / "vnstock_worker_protocol.py").is_file() and str(_candidate) not in sys.path:
+        sys.path.insert(0, str(_candidate))
+        break
 
 from vnstock_worker_protocol import (  # noqa: E402
     MSG_FETCH,

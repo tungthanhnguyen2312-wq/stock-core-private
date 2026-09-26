@@ -15,30 +15,18 @@ import sys
 from pathlib import Path
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
-if str(_REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(_REPO_ROOT))
-
-FAKE_WORKER = Path(__file__).with_name("fake_vnstock_worker.py")
-
+for _entry in (_REPO_ROOT, _REPO_ROOT / "tests"):
+    if str(_entry) not in sys.path:
+        sys.path.insert(0, str(_entry))
 
 def main() -> int:
     import multi_source_exact_session_resolver  # noqa: F401
     import vnstock_worker_client
     import vnstock_worker_protocol  # noqa: F401
 
-    import provider_runtime_state as runtime_contract
+    from _provider_runtime_fixtures import fake_fetcher
 
-    # Explicit test-only launch policy and interpreter (PROVIDER_RUNTIME_ISOLATION_V1: the
-    # tracked owner policy stays SECURITY_REVIEW_BLOCKED and no interpreter is ever defaulted).
-    policy = runtime_contract.ProviderPolicy(
-        provider_family=runtime_contract.PROVIDER_FAMILY_VNSTOCK_KBS_VCI,
-        policy=runtime_contract.POLICY_ALLOW_CONFIGURED_PROVIDER_RUNTIME,
-        reason="TEST_FIXTURE_EXPLICIT_ALLOW_FAKE_WORKER_ONLY", source="TEST_FIXTURE",
-    )
-    worker = vnstock_worker_client.VnstockWorkerFetcher(
-        python_executable=sys.executable, policy=policy,
-        worker_script=FAKE_WORKER, request_timeout=10.0, startup_timeout=10.0,
-    )
+    worker = fake_fetcher(request_timeout=10.0, startup_timeout=15.0)
     try:
         outcome = worker.fetch("EXACT_A", "KBS", "2026-09-01", "2026-09-10")
         assert outcome.status == "success"

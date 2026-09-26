@@ -1,20 +1,22 @@
 """Shared hermetic fixtures for the isolated provider runtime (PROVIDER_RUNTIME_ISOLATION_V1).
 
-No real vnstock/vnai anywhere: the "provider interpreter" is this test interpreter running the
-deterministic fake worker (``tests/fixtures/fake_vnstock_worker.py``), and the launch policy is an
-explicit test-only ``ALLOW`` object -- never the tracked owner policy, which stays
-``SECURITY_REVIEW_BLOCKED``.
+No real vnstock/vnai anywhere: the "provider interpreter" is a throwaway fake venv (no pip /
+network) running the deterministic fake worker (``tests/fixtures/fake_vnstock_worker.py``) under
+an attested test-only ALLOW launch. The tracked owner policy stays ``SECURITY_REVIEW_BLOCKED``.
 """
 from __future__ import annotations
 
-import sys
-from pathlib import Path
 from typing import Any
 
 import provider_runtime_state as runtime_contract
 import vnstock_worker_client as worker_client
-
-FAKE_WORKER = Path(__file__).with_name("fixtures") / "fake_vnstock_worker.py"
+from _provider_build_fixtures import (  # noqa: F401 -- re-exported for isolation tests
+    FAKE_WORKER,
+    FakeProviderRuntime,
+    build_fake_provider_runtime,
+    governed_runtime,
+    protocol_runtime,
+)
 
 TEST_ALLOW_POLICY = runtime_contract.ProviderPolicy(
     provider_family=runtime_contract.PROVIDER_FAMILY_VNSTOCK_KBS_VCI,
@@ -25,16 +27,14 @@ TEST_ALLOW_POLICY = runtime_contract.ProviderPolicy(
 
 
 def fake_fetcher(**overrides: Any) -> worker_client.VnstockWorkerFetcher:
-    kwargs: dict[str, Any] = {
-        "python_executable": sys.executable,
-        "policy": TEST_ALLOW_POLICY,
-        "worker_script": FAKE_WORKER,
-        "request_timeout": 10.0,
-        "startup_timeout": 10.0,
-        "shutdown_timeout": 5.0,
-    }
-    kwargs.update(overrides)
-    return worker_client.VnstockWorkerFetcher(**kwargs)
+    extra_env = overrides.pop("extra_env", None) or overrides.pop("env", None)
+    root = overrides.pop("root", None)
+    style = overrides.pop("style", "protocol")
+    overrides.pop("worker_script", None)
+    overrides.pop("python_executable", None)
+    overrides.pop("policy", None)
+    runtime = build_fake_provider_runtime(root, style=style, extra_env=extra_env)
+    return runtime.fetcher(**overrides)
 
 
 class StubFetcher:

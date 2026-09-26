@@ -30,8 +30,21 @@ Credential isolation
     not even by explicit allow-listing, and generic secret-shaped names (``*TOKEN*``, ``*SECRET*``,
     ``*PASSWORD*``, ...) are forwarded only when exactly allow-listed by the policy.
 
-This is process and dependency isolation, not a security sandbox: a spawned provider runtime can
-still perform its own network access, telemetry and file-system writes.
+APPROVED_PROVIDER_BUILD_AND_EXECUTION_BOUNDARY_V1
+    * Profile and temp names (``USERPROFILE``, ``HOME``, ``HOMEDRIVE``/``HOMEPATH``, ``APPDATA``,
+      ``LOCALAPPDATA``, ``TEMP``/``TMP``/``TMPDIR``) are never inherited from the parent any more:
+      forwarding them exposed the owner's ``%USERPROFILE%\\.vnstock\\api_key.json`` to vendor code
+      (dossier finding N2). ``provider_build_manifest.build_isolated_worker_environment``
+      constructs them from the worker-owned provider state/scratch roots instead.
+    * An allowing policy is not enough to launch: it must also pin an approved build manifest
+      (``approved_build_manifest`` path + canonical SHA-256, ``decision_id``), and the manifest,
+      revocation registry, credential/rate binding and interpreter attestation must all pass
+      (``provider_build_manifest.authorize_provider_launch``). Any refusal there is recorded as
+      ``SECURITY_REVIEW_BLOCKED`` with the manifest/attestation reason code -- the runtime-state
+      vocabulary stays exactly the twelve states below.
+
+This is process and dependency isolation plus in-worker containment, not a security sandbox; see
+``provider_worker_containment`` for what in-process controls can and cannot enforce.
 """
 from __future__ import annotations
 
@@ -106,6 +119,13 @@ REASON_REQUEST_PROCESSING_EXCEPTION = "PROVIDER_WORKER_REQUEST_PROCESSING_EXCEPT
 REASON_AUTH_REJECTED = "PROVIDER_AUTH_REJECTED_NO_USABLE_RESPONSE"
 REASON_RATE_LIMITED = "PROVIDER_RATE_LIMITED_NO_USABLE_RESPONSE"
 REASON_UNCLASSIFIED_WORKER_FAILURE = "PROVIDER_WORKER_FAILURE_UNCLASSIFIED"
+# APPROVED_PROVIDER_BUILD_AND_EXECUTION_BOUNDARY_V1 (all under SECURITY_REVIEW_BLOCKED except the
+# initialisation failure, which is a STARTUP_FAILED of an attested, contained runtime).
+REASON_WORKER_SELF_ATTESTATION_FAILED = "PROVIDER_WORKER_SELF_ATTESTATION_FAILED"
+REASON_STARTUP_CONTAINMENT_VIOLATION = "PROVIDER_STARTUP_CONTAINMENT_VIOLATION"
+REASON_CONTAINMENT_VIOLATION = "PROVIDER_CONTAINMENT_VIOLATION"
+REASON_BUILD_REVOKED = "PROVIDER_BUILD_REVOKED"
+REASON_INIT_FAILED_UNDER_CONTAINMENT = "PROVIDER_INIT_FAILED_UNDER_CONTAINMENT"
 
 # Generic per-operation reason a recovery surface records when it was not attempted because the
 # supplemental provider runtime was unavailable (residual-yield probe, gap recovery,
@@ -119,6 +139,9 @@ STARTUP_KIND_EXITED_BEFORE_READY = "EXITED_BEFORE_READY"
 STARTUP_KIND_PACKAGE_NOT_INSTALLED = "PROVIDER_PACKAGE_NOT_INSTALLED"
 STARTUP_KIND_IMPORT_FAILED = "PROVIDER_IMPORT_FAILED"
 STARTUP_KIND_STARTUP_EXCEPTION = "WORKER_STARTUP_EXCEPTION"
+STARTUP_KIND_ATTESTATION_FAILED = "PROVIDER_RUNTIME_ATTESTATION_FAILED"
+STARTUP_KIND_CONTAINMENT_VIOLATION = "PROVIDER_STARTUP_CONTAINMENT_VIOLATION"
+STARTUP_KIND_INIT_FAILED = "PROVIDER_INIT_FAILED_UNDER_CONTAINMENT"
 
 _STARTUP_KIND_TO_STATE = {
     STARTUP_KIND_SPAWN_FAILED: (STARTUP_FAILED, REASON_SPAWN_FAILED),
@@ -127,6 +150,9 @@ _STARTUP_KIND_TO_STATE = {
     STARTUP_KIND_PACKAGE_NOT_INSTALLED: (NOT_INSTALLED, REASON_PACKAGE_NOT_INSTALLED),
     STARTUP_KIND_IMPORT_FAILED: (IMPORT_FAILED, REASON_IMPORT_FAILED),
     STARTUP_KIND_STARTUP_EXCEPTION: (STARTUP_FAILED, REASON_STARTUP_EXCEPTION),
+    STARTUP_KIND_ATTESTATION_FAILED: (SECURITY_REVIEW_BLOCKED, REASON_WORKER_SELF_ATTESTATION_FAILED),
+    STARTUP_KIND_CONTAINMENT_VIOLATION: (SECURITY_REVIEW_BLOCKED, REASON_STARTUP_CONTAINMENT_VIOLATION),
+    STARTUP_KIND_INIT_FAILED: (STARTUP_FAILED, REASON_INIT_FAILED_UNDER_CONTAINMENT),
 }
 
 # Must equal vnstock_worker_protocol.FAILURE_CLASS_* (kept literal: this module imports nothing
@@ -136,7 +162,12 @@ _FAILURE_CLASS_TO_STATE = {
     "WORKER_PROCESS_EXIT": (PROCESS_CRASHED, REASON_PROCESS_EXIT),
     "WORKER_TIMEOUT": (UNAVAILABLE_CAUSE_UNKNOWN, REASON_REQUEST_TIMEOUT),
     "WORKER_REQUEST_PROCESSING_EXCEPTION": (UNAVAILABLE_CAUSE_UNKNOWN, REASON_REQUEST_PROCESSING_EXCEPTION),
+    "WORKER_CONTAINMENT_VIOLATION": (SECURITY_REVIEW_BLOCKED, REASON_CONTAINMENT_VIOLATION),
+    "PROVIDER_BUILD_REVOKED": (SECURITY_REVIEW_BLOCKED, REASON_BUILD_REVOKED),
 }
+# Diagnostics a worker failure may carry into the runtime-state detail (bounded, never secrets).
+_FAILURE_DETAIL_KEYS = ("attestation_failures", "containment_events", "revocation", "reason_code",
+                        "provider_modules_loaded")
 
 
 class ProviderRuntimeContractError(ValueError):
@@ -170,6 +201,7 @@ SECRET_ENV_MARKERS = (
     "ACCESS_KEY", "COOKIE", "SIGNATURE", "AUTH",
 )
 _ENV_NAME_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+_SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 
 
 @dataclass(frozen=True)
@@ -185,6 +217,11 @@ class ProviderPolicy:
     allowed_provider_env: tuple[str, ...] = field(default_factory=tuple)
     source: str = "EXPLICIT"
     load_reason_code: str | None = None
+    # APPROVED_PROVIDER_BUILD_AND_EXECUTION_BOUNDARY_V1: the approved build this policy pins. An
+    # allowing policy without a pin can never launch (provider_build_manifest refuses it).
+    approved_manifest_path: str | None = None
+    approved_manifest_sha256: str | None = None
+    decision_id: str | None = None
 
     def __post_init__(self) -> None:
         if self.policy not in POLICY_VALUES:
@@ -194,6 +231,8 @@ class ProviderPolicy:
                 raise ProviderRuntimeContractError(f"PROVIDER_ENV_ALLOWLIST_NAME_INVALID:{name!r}")
             if name.upper().startswith(DENIED_ENV_PREFIXES):
                 raise ProviderRuntimeContractError(f"PROVIDER_ENV_ALLOWLIST_DENIED_FAMILY:{name}")
+        if self.approved_manifest_sha256 is not None and not _SHA256_RE.match(str(self.approved_manifest_sha256)):
+            raise ProviderRuntimeContractError("PROVIDER_POLICY_MANIFEST_SHA256_INVALID")
 
     @property
     def allows_launch(self) -> bool:
@@ -211,6 +250,11 @@ class ProviderPolicy:
             "allowed_provider_env": sorted(self.allowed_provider_env),
             "source": self.source,
             "load_reason_code": self.load_reason_code,
+            "approved_build_manifest": (
+                {"path": self.approved_manifest_path, "sha256": self.approved_manifest_sha256}
+                if self.approved_manifest_path or self.approved_manifest_sha256 else None
+            ),
+            "decision_id": self.decision_id,
         }
 
 
@@ -246,6 +290,13 @@ def load_provider_policy(
     allowed = entry.get("allowed_provider_env") or []
     if not isinstance(allowed, list):
         return _fail_closed_policy(REASON_POLICY_MISSING_OR_INVALID, "allowed_provider_env_not_a_list")
+    pin = entry.get("approved_build_manifest")
+    if pin is not None and not (isinstance(pin, Mapping) and isinstance(pin.get("path"), str)
+                                and isinstance(pin.get("sha256"), str)):
+        return _fail_closed_policy(REASON_POLICY_MISSING_OR_INVALID, "approved_build_manifest_shape")
+    decision_id = entry.get("decision_id")
+    if decision_id is not None and not isinstance(decision_id, str):
+        return _fail_closed_policy(REASON_POLICY_MISSING_OR_INVALID, "decision_id_shape")
     try:
         return ProviderPolicy(
             provider_family=provider_family,
@@ -256,6 +307,9 @@ def load_provider_policy(
             set_at=entry.get("set_at"),
             allowed_provider_env=tuple(allowed),
             source=f"TRACKED_POLICY_FILE:{policy_path.name}",
+            approved_manifest_path=pin.get("path") if pin else None,
+            approved_manifest_sha256=pin.get("sha256") if pin else None,
+            decision_id=decision_id,
         )
     except ProviderRuntimeContractError as exc:
         return _fail_closed_policy(REASON_POLICY_MISSING_OR_INVALID, str(exc))
@@ -366,6 +420,10 @@ def runtime_state_from_worker_failure(
             str(failure_class), (UNAVAILABLE_CAUSE_UNKNOWN, REASON_UNCLASSIFIED_WORKER_FAILURE),
         )
         detail = {"failure_class": failure_class}
+    for key in _FAILURE_DETAIL_KEYS:
+        value = diagnostics.get(key)
+        if value:
+            detail[key] = value[:50] if isinstance(value, list) else value
     return runtime_state_record(state, reason, phase=phase, policy=policy, interpreter_configured=True, detail=detail)
 
 
@@ -418,15 +476,20 @@ def classify_observed_runtime(
 # ---------------------------------------------------------------------------------------------
 
 # Operating-system values a Python worker needs to run and reach HTTPS endpoints. Compared
-# case-insensitively (Windows environment names are case-insensitive).
+# case-insensitively (Windows environment names are case-insensitive). Profile and temp names
+# (USERPROFILE, HOME, HOMEDRIVE, HOMEPATH, APPDATA, LOCALAPPDATA, TEMP, TMP, TMPDIR) are NOT
+# here: they are never inherited from the parent; the governed launch constructs them from the
+# provider state/scratch roots (provider_build_manifest.build_isolated_worker_environment).
 BASE_ENV_ALLOWLIST = frozenset({
     "PATH", "PATHEXT", "SYSTEMROOT", "SYSTEMDRIVE", "WINDIR", "COMSPEC", "OS",
     "NUMBER_OF_PROCESSORS", "PROCESSOR_ARCHITECTURE",
-    "TEMP", "TMP", "TMPDIR",
-    "HOME", "USERPROFILE", "HOMEDRIVE", "HOMEPATH", "APPDATA", "LOCALAPPDATA",
     "LANG", "LANGUAGE", "LC_ALL", "LC_CTYPE", "TZ",
     "SSL_CERT_FILE", "SSL_CERT_DIR", "REQUESTS_CA_BUNDLE", "CURL_CA_BUNDLE",
     "HTTP_PROXY", "HTTPS_PROXY", "NO_PROXY",
+})
+# Never inherited, whatever the allow-list says (they would point vendor code at the owner profile).
+PROFILE_ENV_NAMES = frozenset({
+    "USERPROFILE", "HOME", "HOMEDRIVE", "HOMEPATH", "APPDATA", "LOCALAPPDATA", "TEMP", "TMP", "TMPDIR",
 })
 
 
@@ -461,7 +524,7 @@ def build_provider_environment(
 
     def _permitted(name: str) -> bool:
         upper = name.upper()
-        if is_denied_family(upper):
+        if is_denied_family(upper) or upper in PROFILE_ENV_NAMES:
             return False
         if upper in allowed:
             return True
@@ -480,7 +543,8 @@ def build_provider_environment(
 
 # Interpreter flags for the provider worker (see docs/CI_AND_DEPENDENCY_TIERS.md):
 #   -s  no user site-packages;  -E  ignore PYTHON* variables (PYTHONPATH/PYTHONHOME/...);
-#   -X utf8  replaces PYTHONUTF8/PYTHONIOENCODING, which -E would otherwise ignore;  -u unbuffered.
+#   -X utf8  replaces PYTHONUTF8/PYTHONIOENCODING, which -E would otherwise ignore;  -u unbuffered;
+#   -B  never write bytecode (the worker writes nothing into its runtime or bundle).
 # Not -I: isolated mode also drops the script directory from sys.path, which the worker needs
-# to import this repository's protocol/adapter modules.
-WORKER_INTERPRETER_FLAGS = ("-s", "-E", "-X", "utf8", "-u")
+# to import its bundled protocol/adapter modules.
+WORKER_INTERPRETER_FLAGS = ("-s", "-E", "-X", "utf8", "-u", "-B")

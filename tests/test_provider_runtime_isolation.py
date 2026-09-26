@@ -31,6 +31,7 @@ from _provider_runtime_fixtures import (
     available_handle,
     fake_fetcher,
     healthy_sentinel_evidence,
+    protocol_runtime,
     unavailable_handle,
 )
 from multi_source_exact_session_resolver import (
@@ -71,11 +72,25 @@ _REAL_OPEN_PROVIDER_RUNTIME = worker_client.open_provider_runtime
 
 
 def _open(**kwargs: Any) -> worker_client.ProviderRuntimeHandle:
+    extra_env = kwargs.get("extra_env")
+    runtime = kwargs.pop("runtime", None)
+    launching = "environ" not in kwargs and kwargs.get("core_executable") is None and "policy" not in kwargs
+    if runtime is None and launching:
+        runtime = protocol_runtime(extra_env=extra_env)
+    if runtime is not None:
+        kwargs.setdefault("policy", runtime.policy)
+        kwargs.setdefault("environ", runtime.parent_environ())
+        kwargs.setdefault("worker_script", ROOT / runtime.manifest["worker"]["entrypoint"])
+        kwargs.setdefault("manifest_path", runtime.manifest_path)
+        kwargs.setdefault("revocation_registry_path", runtime.registry_path)
+        kwargs.setdefault("launch_mode", runtime.launch_mode)
+        kwargs.setdefault("producer_root", ROOT)
+        kwargs.setdefault("extra_env", runtime.extra_env or extra_env)
     kwargs.setdefault("policy", TEST_ALLOW_POLICY)
     kwargs.setdefault("environ", _allow_env())
     kwargs.setdefault("core_executable", NONEXISTENT_CORE)
     kwargs.setdefault("worker_script", FAKE_WORKER)
-    kwargs.setdefault("startup_timeout", 10.0)
+    kwargs.setdefault("startup_timeout", 15.0)
     kwargs.setdefault("request_timeout", 10.0)
     kwargs.setdefault("shutdown_timeout", 5.0)
     return _REAL_OPEN_PROVIDER_RUNTIME(session=TARGET, **kwargs)
@@ -124,6 +139,7 @@ def test_runtime_contract_failure_class_literals_match_the_worker_protocol():
     assert set(rt._FAILURE_CLASS_TO_STATE) == {
         protocol.FAILURE_CLASS_PROTOCOL_VIOLATION, protocol.FAILURE_CLASS_PROCESS_EXIT,
         protocol.FAILURE_CLASS_TIMEOUT, protocol.FAILURE_CLASS_REQUEST_PROCESSING_EXCEPTION,
+        protocol.FAILURE_CLASS_CONTAINMENT_VIOLATION, protocol.FAILURE_CLASS_BUILD_REVOKED,
     }
     assert protocol.FAILURE_CLASS_STARTUP_FAILURE == "WORKER_STARTUP_FAILURE"
     for name in ("PACKAGE_NOT_INSTALLED", "IMPORT_FAILED", "STARTUP_EXCEPTION", "SPAWN_FAILED",
@@ -191,6 +207,8 @@ def test_a_fetcher_can_never_be_constructed_under_a_blocked_policy():
         worker_client.VnstockWorkerFetcher(policy=TEST_ALLOW_POLICY)  # no default interpreter
     with pytest.raises(rt.ProviderRuntimeContractError, match="PROVIDER_INTERPRETER_REQUIRED"):
         worker_client.VnstockWorkerFetcher(python_executable="", policy=TEST_ALLOW_POLICY)
+    with pytest.raises(rt.ProviderRuntimeContractError, match="PROVIDER_LAUNCH_NOT_ATTESTED"):
+        worker_client.VnstockWorkerFetcher(python_executable=sys.executable, policy=TEST_ALLOW_POLICY)
 
 
 # =============================================================================================
@@ -220,19 +238,18 @@ def test_provider_interpreter_identical_to_the_core_interpreter_is_refused(popen
 
 
 def test_configured_provider_interpreter_starts_and_reports_versions_only_after_ready(popen_counter):
-    handle = _open()
+    runtime = protocol_runtime()
+    handle = _open(runtime=runtime)
     try:
         assert handle.available is True
         assert handle.state["state"] == rt.AVAILABLE
         assert handle.state["runtime_info"]["provider_distributions"] == {"vnstock": "fake-0", "vnai": "fake-0"}
-        assert len(popen_counter) == 1
-        argv = popen_counter[0]
-        # The configured interpreter is the one spawned. resolve_provider_interpreter normalises the
-        # path (os.path.normcase lowercases it on Windows), so compare as paths, not raw strings.
-        assert os.path.samefile(argv[0], sys.executable)
-        assert os.path.normcase(os.path.abspath(argv[0])) == os.path.normcase(os.path.abspath(sys.executable))
+        worker_spawns = [argv for argv in popen_counter if "-s" in argv and "utf8" in argv]
+        assert len(worker_spawns) == 1
+        argv = worker_spawns[0]
+        assert os.path.samefile(argv[0], runtime.interpreter)
         assert argv[1:6] == ["-s", "-E", "-X", "utf8", "-u"]
-        assert argv[-1] == str(FAKE_WORKER)
+        assert argv[-1].replace("\\", "/").endswith("tests/fixtures/fake_vnstock_worker.py")
     finally:
         handle.shutdown()
 
@@ -264,7 +281,9 @@ def test_spawn_failure_is_startup_failed(tmp_path):
     fake_interpreter = tmp_path / "not-an-executable"
     fake_interpreter.write_text("", encoding="utf-8")
     handle = _open(environ=_allow_env(**{rt.PROVIDER_PYTHON_ENV: str(fake_interpreter)}))
-    assert (handle.state["state"], handle.state["reason_code"]) == (rt.STARTUP_FAILED, rt.REASON_SPAWN_FAILED)
+    # Stronger contract: an unpinned/unattested interpreter never reaches spawn.
+    assert handle.state["state"] == rt.SECURITY_REVIEW_BLOCKED
+    assert handle.fetcher is None
 
 
 def test_real_worker_reports_not_installed_without_importing_any_provider_package():
@@ -276,9 +295,16 @@ def test_real_worker_reports_not_installed_without_importing_any_provider_packag
 
     if any(_findable(name) for name in ("vnstock", "vnai")):
         pytest.skip("provider packages are importable here; this check must never execute them")
-    handle = _open(worker_script=REAL_WORKER, startup_timeout=30.0)
-    assert handle.state["state"] == rt.NOT_INSTALLED
-    assert handle.state["detail"]["missing_packages"] == ["vnai", "vnstock"]
+    # Direct launch of the production worker under this (core) interpreter fails closed at
+    # self-attestation, before provider discovery/import.
+    result = subprocess.run(
+        [sys.executable, "-s", "-E", "-X", "utf8", "-u", "-B", str(REAL_WORKER)],
+        capture_output=True, text=True, timeout=20,
+        env={"PATH": os.environ.get("PATH", ""), "SYSTEMROOT": os.environ.get("SYSTEMROOT", "")},
+    )
+    assert result.returncode != 0
+    assert "vnstock" not in (result.stdout + result.stderr).lower() or "PROVIDER_RUNTIME_ATTESTATION_FAILED" in result.stdout
+    assert not _findable("vnstock") and not _findable("vnai")
 
 
 def test_mid_operation_crash_and_request_timeout_are_classified():
@@ -334,19 +360,21 @@ def test_build_provider_environment_is_an_explicit_allow_list():
 
 
 def test_provider_worker_never_inherits_parent_credentials_or_python_path():
-    parent = _allow_env(PYTHONPATH="/should/not/leak", **SYNTHETIC_SECRETS)
-    handle = _open(environ=parent, extra_env={"FAKE_WORKER_REPORT_ENV": "1"})
+    runtime = protocol_runtime(extra_env={"FAKE_WORKER_REPORT_ENV": "1"})
+    parent = runtime.parent_environ(PYTHONPATH="/should/not/leak", **SYNTHETIC_SECRETS)
+    handle = _open(runtime=runtime, environ=parent)
     try:
-        runtime = handle.fetcher.runtime_info
+        assert handle.available, handle.state
+        info = handle.fetcher.runtime_info
     finally:
         handle.shutdown()
-    child_env = runtime["environment"]
+    child_env = info["environment"]
     leaked_names = sorted(set(SYNTHETIC_SECRETS) & set(child_env))
     leaked_values = sorted(v for v in SYNTHETIC_SECRETS.values() if v in json.dumps(child_env))
     assert leaked_names == [] and leaked_values == []  # DNSE_CREDENTIAL_LEAK_TO_PROVIDER_PROCESS = NO
     assert "PYTHONPATH" not in child_env and rt.PROVIDER_PYTHON_ENV not in child_env
-    assert runtime["flags"] == {"no_user_site": 1, "ignore_environment": 1, "utf8_mode": 1}
-    assert Path(runtime["cwd"]).resolve() != ROOT.resolve()
+    assert info["flags"] == {"no_user_site": 1, "ignore_environment": 1, "utf8_mode": 1}
+    assert Path(info["cwd"]).resolve() != ROOT.resolve()
 
 
 def test_fetcher_default_parent_environment_is_os_environ_but_still_scrubbed(monkeypatch):

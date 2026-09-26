@@ -83,10 +83,12 @@ no ordinary Daily can qualify until the provider runtime is operationalized (bel
   `OPPORTUNITY_PRIORITY` stays orthogonal to posture.
 
 **Next gate, in order (no new analytical milestone is queued):**
-1. Provider-runtime operationalization: an owner decision plus an implementation that satisfies
-   the provider-runtime safety contract. The design is pending the bounded Codex
-   provider-runtime-readiness output, which is not yet available. Implementation details are not
-   guessed here.
+1. Provider-runtime operationalization. Pre-approval infrastructure
+   `APPROVED_PROVIDER_BUILD_AND_EXECUTION_BOUNDARY_V1` is implemented (manifest, attestation,
+   containment, legacy-bypass hardening, fake qualification Gates A/B). The package/build is
+   **not** approved. Policy stays `SECURITY_REVIEW_BLOCKED`. Live qualification remains blocked
+   pending owner decisions (package/provenance, terms/license, credential/rate, telemetry,
+   OS containment/provisioning, policy transition, live qualification authorization).
 2. A qualifying, safe ordinary Daily.
 3. M1 live acceptance on that Daily.
 4. Only then close M1 and select the next analytical roadmap milestone, with owner authorization.

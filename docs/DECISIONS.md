@@ -1,5 +1,26 @@
 # Decisions & Architectural Decision Records
 
+## 2026-09-26 - APPROVED_PROVIDER_BUILD_AND_EXECUTION_BOUNDARY_V1 (pre-approval infrastructure)
+
+Bounded provider-runtime operationalization under active M1. Not a new analytical lane.
+`queued_next` stays empty. M1 (`CURRENT_DECISION_SURFACE_CONVERGENCE_V1`) stays ACTIVE.
+
+- **Implemented.** Approval-manifest schema and validator; parent pre-launch attestation;
+  worker self-attestation; owner-profile isolation; credential/rate binding; transport
+  allow-list; startup and subprocess containment; revocation at controlled request
+  boundaries; shared execution guard over the 19 provider boundaries; resolver implicit
+  in-process fallback removed; OHLC tools routed through the governed worker; candidate
+  provider dependency lock; KBS lineage corrected to `stocks/{symbol}/data_day`; offline
+  fake qualification Gates A/B (`OFFLINE_FAKE_PROVIDER_QUALIFICATION`).
+- **Not implemented / still blocked.** Package/build approval; real provider credentials;
+  live Gates C/D/E; ordinary Daily; dedicated production provider environment; policy
+  transition.
+- **Invariant.** `config/provider_runtime_policy.json` stays `SECURITY_REVIEW_BLOCKED`.
+  The tracked manifest stays `DRAFT` with `launch_authorized=false`. Pin fields stay null.
+  `requirements-providers.txt` is not an approval manifest and not the production provider
+  lock; `config/provider_dependency_lock.json` is a candidate contract only.
+- **Next gate.** `OWNER_PROVIDER_BUILD_DECISION_THEN_BOUNDED_LIVE_QUALIFICATION`.
+
 ## 2026-09-26 - M1 stabilization promoted to `main`; post-promotion state sync
 
 The cumulative stabilization RC was promoted to Producer `main` as one unit: PR #4 was merged as

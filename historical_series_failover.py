@@ -40,9 +40,12 @@ PROVIDER_INTERFACE = {
     "KBS": "vnstock_quote_history/v4",
     "VCI": "vnstock_quote_history/v4",
 }
+# KBS: the route the reviewed vnstock quote path actually requests (it named a nonexistent
+# ``.../investment/history`` route before APPROVED_PROVIDER_BUILD_AND_EXECUTION_BOUNDARY_V1;
+# provenance metadata only).
 PROVIDER_ENDPOINT = {
     "DNSE": "/price/ohlc",
-    "KBS": "https://kbbuddywts.kbsec.com.vn/iis-server/investment/history",
+    "KBS": "https://kbbuddywts.kbsec.com.vn/iis-server/investment/stocks/{symbol}/data_day",
     "VCI": "https://trading.vietcap.com.vn/api/chart/OHLCChart/gap-chart",
 }
 HISTORICAL_CLOSE_SOURCE_ORDER = ("DNSE", "KBS", "VCI")
