@@ -40,6 +40,9 @@ except ImportError:
         EventOutcome = EventStage = build_observability_event = emit_observability_event = None
 
 SCRIPT_DIR = Path(__file__).resolve().parent
+# vn_stock_pipeline.EXIT_REFUSED_UNGOVERNED_PROVIDER (kept literal: this orchestrator never imports
+# the provider adapter).
+LEGACY_PROVIDER_REFUSED_EXIT_CODE = 4
 DEFAULT_TICKERS = [
     "POW",
     "SSI",
@@ -157,6 +160,13 @@ def run(name: str, command: list[str], env: dict[str, str], runner: Callable, ro
         except Exception:
             pass
 
+    if result.returncode == LEGACY_PROVIDER_REFUSED_EXIT_CODE and name == "price_update":
+        # APPROVED_PROVIDER_BUILD_AND_EXECUTION_BOUNDARY_V1: `vn_stock_pipeline.py update` refuses to
+        # run vnstock under the core interpreter. Report the refusal and its migration path, not a
+        # generic step failure.
+        from provider_execution_guard import legacy_operator_refusal
+
+        raise RuntimeError(f"{name} refused: {legacy_operator_refusal('daily_analysis_pipeline.legacy_price_update')}")
     if result.returncode:
         raise RuntimeError(f"{name} failed with exit code {result.returncode}")
     return record

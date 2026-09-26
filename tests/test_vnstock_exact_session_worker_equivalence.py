@@ -307,8 +307,10 @@ def test_N_runtime_budget_forecast_identical_for_real_governor_and_worker_shim()
     pacing-floor forecast comes from a real VnstockRateGovernor or the worker-shim's duck-typed
     estimated_minimum_seconds_for -- proving N: the worker split changes nothing about the
     existing budget/abort contract."""
-    real_governor = VnstockRateGovernor()
-    worker = fake_fetcher(worker_script=FAKE_WORKER)
+    worker = fake_fetcher()
+    real_governor = VnstockRateGovernor(
+        limit=worker._launch.governor_rpm, hard_ceiling=max(worker._launch.governor_rpm + 1, 20),
+    )
     clock = [0.0]
     try:
         real_guard = _DailyRecoveryRuntimeGuard(

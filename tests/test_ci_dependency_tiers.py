@@ -53,6 +53,10 @@ def test_tracked_dependency_tiers_have_no_violation():
     assert vdt.static_violations(*_tracked_texts()) == []
 
 
+def test_provider_lock_is_a_candidate_contract_separated_from_core():
+    assert vdt.provider_lock_violations(ROOT) == []
+
+
 def test_core_tier_declares_no_provider_package_and_providers_keep_vnstock():
     core, test, providers, _ = _tracked_texts()
     core_names = set(vdt.parse_requirement_names(core)) | set(vdt.parse_requirement_names(test))

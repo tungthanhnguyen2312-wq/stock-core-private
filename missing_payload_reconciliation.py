@@ -58,6 +58,7 @@ from pathlib import Path
 from typing import Any, Callable, Iterable, Mapping
 
 from atomic_io import atomic_write_json
+from provider_execution_guard import require_governed_provider_execution
 
 VERSION = "1.0.0"
 STATE_RELATIVE = Path("data") / "market-wide-financials" / "missing_payload_reconciliation.json"
@@ -128,6 +129,7 @@ def classify_exception(exc: BaseException) -> tuple[str, str]:
 
 def _default_fetcher(ticker: str, source: str, family: str, period: str = "quarter") -> Any:
     """The authorized statement path, exactly as `bctc_sync._finance` builds it."""
+    require_governed_provider_execution("missing_payload_reconciliation._default_fetcher")
     from vnstock.api.financial import Finance
 
     return getattr(Finance(source=source, symbol=ticker), family)(period=period)

@@ -40,7 +40,7 @@ from __future__ import annotations
 import threading
 import time
 from collections import deque
-from typing import Any, Callable
+from typing import Any, Callable, Mapping
 
 # vnai.beam.auth's own "free" tier table records min=60/hour=3600/day=10000 -- byte-identical
 # to this project's own live 2026-09-04 failure evidence. Encoded explicitly (see module
@@ -51,7 +51,16 @@ VNSTOCK_OBSERVED_HARD_CEILING_RPM = 60
 # counter, and the fact that vnai's window may not start at exactly the same instant as ours.
 # Effective throughput (45/min) still clears a full 548-ticker market-wide expansion within the
 # existing 45-minute runtime budget (548 / 45 * 60s =~ 12.2 minutes at steady state).
+# APPROVED_PROVIDER_BUILD_AND_EXECUTION_BOUNDARY_V1: this 45 assumes vnai's "free" tier, which
+# exists only when a vendor key is present (dossier finding N3). The governed provider worker no
+# longer uses it: ``governor_from_rate_contract`` derives the limit from the approved manifest's
+# rate_tier_binding (a contained, key-less "guest" worker is 20/min, so at most 15/min).
 DEFAULT_EFFECTIVE_RPM = 45
+MAX_FRACTION_OF_TIER_MINUTE_LIMIT = 0.75
+# Owner decision 2026-09-26 (initial contained qualification): the governed worker never exceeds
+# 20 requests/minute, even when the bound/detected vendor tier would allow more. Mirrored by
+# provider_build_manifest.OWNER_APPROVED_GOVERNOR_CEILING_RPM (the manifest validator).
+OWNER_APPROVED_GOVERNOR_CEILING_RPM = 20
 RATE_WINDOW_SECONDS = 60.0
 # Per-request pacing (seconds) between sequential VCI/KBS requests: ~55 requests/minute across
 # both sources, under the 60/minute ceiling above. Owned here -- a stdlib-only module both the
@@ -150,6 +159,41 @@ class VnstockRateGovernor:
             "not_authoritative": True,
             "production_db_authority": False,
         }
+
+
+class RateContractViolation(ValueError):
+    """The configured/requested governor rate is not covered by the approved rate contract."""
+
+
+def governor_from_rate_contract(
+    rate: Mapping[str, Any], *, configured_limit: int | None = None,
+    clock: Callable[[], float] = time.monotonic, sleep_fn: Callable[[float], None] = time.sleep,
+) -> VnstockRateGovernor:
+    """The provider worker's governor, derived from the approved rate contract (the launch
+    contract's copy of the manifest ``rate_tier_binding``) -- never from ``DEFAULT_EFFECTIVE_RPM``
+    or any assumption that a vendor credential exists.
+
+    Fails closed (``RateContractViolation``) when the contract is incomplete, when its governor
+    rate exceeds 75% of the bound tier's per-minute limit or the owner's absolute ceiling
+    (``OWNER_APPROVED_GOVERNOR_CEILING_RPM``), or when ``configured_limit`` asks for more than the
+    approved rate.
+    """
+    try:
+        approved = int(rate["governor_effective_rpm"])
+        tier_minute = int(rate["tier_limits"]["min"])
+    except (KeyError, TypeError, ValueError) as exc:
+        raise RateContractViolation(f"VNSTOCK_RATE_CONTRACT_INCOMPLETE:{type(exc).__name__}") from None
+    if approved < 1 or tier_minute < 1 or approved > int(MAX_FRACTION_OF_TIER_MINUTE_LIMIT * tier_minute):
+        raise RateContractViolation(f"VNSTOCK_RATE_CONTRACT_EXCEEDS_TIER_FRACTION:{approved}/{tier_minute}")
+    if approved > OWNER_APPROVED_GOVERNOR_CEILING_RPM:
+        raise RateContractViolation(
+            f"VNSTOCK_RATE_CONTRACT_EXCEEDS_OWNER_CEILING:{approved}>{OWNER_APPROVED_GOVERNOR_CEILING_RPM}"
+        )
+    if configured_limit is not None and configured_limit > approved:
+        raise RateContractViolation(f"VNSTOCK_GOVERNOR_EXCEEDS_APPROVED_RATE:{configured_limit}>{approved}")
+    return VnstockRateGovernor(
+        limit=configured_limit or approved, hard_ceiling=tier_minute, clock=clock, sleep_fn=sleep_fn,
+    )
 
 
 _ACTIVE_GOVERNOR: VnstockRateGovernor | None = None

@@ -1,5 +1,13 @@
 # Stock Lookup Producer — OPTIONAL provider runtime dependencies
 #
+# THIS FILE IS NOT AN APPROVAL MANIFEST AND NOT THE PRODUCTION PROVIDER LOCK.
+# It is a human-facing install hint for optional/unrelated environments only.
+# The governed worker's candidate dependency contract is
+# config/provider_dependency_lock.json (CANDIDATE_FOR_OWNER_REVIEW_NOT_APPROVED).
+# Nothing here, and nothing in that lock, is an approved provider build.
+# config/provider_build_manifest.json remains DRAFT with launch_authorized=false.
+# config/provider_runtime_policy.json remains SECURITY_REVIEW_BLOCKED.
+#
 # KHÔNG thuộc tier hermetic core / CI: core CI không cài file này và chặn import vnstock/vnai
 # (tests/provider_import_block). Tuy vậy, chức năng provider trong production VẪN cần chúng:
 #

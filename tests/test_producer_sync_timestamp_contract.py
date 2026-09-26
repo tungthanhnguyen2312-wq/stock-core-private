@@ -91,10 +91,26 @@ class MetadataUpdatedTests(unittest.TestCase):
         self.conn.close()
 
     def _run_with_frozen_clock(self, iso_value, tickers=("ABC",), refresh=False):
+        # sync_fundamentals is an UNSUPPORTED_LEGACY_PROVIDER_OPERATION outside a governed worker
+        # (APPROVED_PROVIDER_BUILD_AND_EXECUTION_BOUNDARY_V1; see
+        # test_the_real_sync_fundamentals_refuses_before_importing_the_provider). This contract
+        # exercises only its write-path timestamp with inert provider interfaces and a mocked
+        # call_api, so the guard is neutralised here explicitly -- never the provider itself.
         with mock.patch.object(meta_sync, "vn_now_iso", return_value=iso_value), \
              mock.patch.object(meta_sync, "call_api", return_value=None), \
+             mock.patch.object(meta_sync, "require_governed_provider_execution"), \
              mock.patch.dict(sys.modules, _inert_vnstock_interface()):
             meta_sync.sync_fundamentals(self.conn, list(tickers), refresh=refresh)
+
+    def test_the_real_sync_fundamentals_refuses_before_importing_the_provider(self):
+        import provider_execution_guard as guard
+
+        with mock.patch.dict(sys.modules, _inert_vnstock_interface()), \
+             mock.patch.object(meta_sync, "call_api", side_effect=AssertionError("provider call attempted")):
+            with self.assertRaises(guard.UnsupportedLegacyProviderOperation) as raised:
+                meta_sync.sync_fundamentals(self.conn, ["ABC"])
+        self.assertIn("meta_sync.sync_fundamentals", str(raised.exception))
+        self.assertEqual(self.conn.execute("SELECT COUNT(*) FROM metadata").fetchone()[0], 0)
 
     def test_inert_vnstock_interface_refuses_any_provider_use(self):
         stub = _inert_vnstock_interface()

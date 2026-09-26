@@ -17,6 +17,7 @@ import pandas as pd
 import requests
 
 from raw_financial_observations import extract_payload, sha256_file
+from provider_execution_guard import require_governed_provider_execution
 
 CONTRACT_VERSION = "provider_financial_source_metadata/v1"
 KBS_URL = "https://kbbuddywts.kbsec.com.vn/iis-server/investment/stock/finance-info"
@@ -64,6 +65,7 @@ def raw_response_path(root: Path | str, request: Mapping[str, Any], response_has
 
 def fetch_raw_once(request: Mapping[str, Any]) -> dict[str, Any]:
     """Perform exactly one public KBS request and retain the unparsed body in the result."""
+    require_governed_provider_execution("provider_financial_source_metadata.fetch_raw_once")
     from vnstock.explorer.kbs.financial import Finance
 
     client = Finance(symbol=str(request["ticker"]), period="year", show_log=False)
@@ -133,6 +135,7 @@ def metadata_rows(request: Mapping[str, Any], raw: Mapping[str, Any], *, raw_has
 
 def adapter_dataframe_from_raw(request: Mapping[str, Any], raw: Mapping[str, Any]) -> pd.DataFrame:
     """Apply the installed adapter's parser to retained raw JSON, without another request."""
+    require_governed_provider_execution("provider_financial_source_metadata.adapter_dataframe_from_raw")
     from vnstock.explorer.kbs.financial import Finance
     if request["statement_family"] == "income_statement":
         report_key = "Kết quả kinh doanh"

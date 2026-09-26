@@ -10,8 +10,33 @@ from unittest import mock
 import pandas as pd
 import requests
 
+import provider_worker_containment as worker_containment
 import vn_stock_pipeline as pipeline
 import vnstock_rate_governor
+
+
+def _test_egress_policy():
+    """In-process allow-list so transport unit tests can exercise timeout/status without a worker."""
+    return worker_containment.EgressPolicy.from_endpoints([
+        {"scheme": "https", "host": "example.test", "port": 443, "method": "GET",
+         "path_pattern": "/path", "purpose": "TEST", "max_redirects": 0},
+        {"scheme": "https", "host": "trading.vietcap.com.vn", "port": 443, "method": "GET",
+         "path_pattern": "/api/chart/OHLCChart/gap-chart", "purpose": "TEST", "max_redirects": 0},
+        {"scheme": "https", "host": "trading.vietcap.com.vn", "port": 443, "method": "POST",
+         "path_pattern": "/api/chart/OHLCChart/gap-chart", "purpose": "TEST", "max_redirects": 0},
+        {"scheme": "https", "host": "kbbuddywts.kbsec.com.vn", "port": 443, "method": "GET",
+         "path_pattern": "/iis-server/investment/stocks/{symbol}/data_day", "purpose": "TEST", "max_redirects": 0},
+        {"scheme": "https", "host": "kbbuddywts.kbsec.com.vn", "port": 443, "method": "GET",
+         "path_pattern": "/iis-server/investment/index/{symbol}/data_day", "purpose": "TEST", "max_redirects": 0},
+        {"scheme": "https", "host": "something-else.test", "port": 443, "method": "GET",
+         "path_pattern": "/path", "purpose": "TEST", "max_redirects": 0},
+    ])
+
+
+def _install_test_egress(testcase: unittest.TestCase) -> None:
+    scope = worker_containment.egress_policy_scope(_test_egress_policy())
+    scope.__enter__()
+    testcase.addCleanup(scope.__exit__, None, None, None)
 
 
 def raw_bar(symbol="VNINDEX", date="2026-07-18", volume=100):
@@ -346,6 +371,9 @@ class ScaleDiagnosticTests(unittest.TestCase):
 
 
 class TransportTests(unittest.TestCase):
+    def setUp(self):
+        _install_test_egress(self)
+
     @mock.patch.object(pipeline.requests, "get")
     def test_connect_and_read_timeouts_are_classified(self, get):
         for error, expected in (
@@ -412,6 +440,7 @@ class RateGovernorWiringTests(unittest.TestCase):
     vnstock_rate_governor.py's own module docstring for why this is the correct hook point."""
 
     def setUp(self):
+        _install_test_egress(self)
         self.addCleanup(vnstock_rate_governor.set_active_governor, vnstock_rate_governor.get_active_governor())
 
     @mock.patch.object(pipeline.requests, "get")
@@ -625,9 +654,14 @@ class ExitCodeTests(unittest.TestCase):
         )
 
     def test_main_propagates_command_exit_code(self):
-        with mock.patch.dict(pipeline.CMDS, {"update": mock.Mock(return_value=2)}):
-            self.assertEqual(2, pipeline.main(["update"]))
+        with mock.patch.dict(pipeline.CMDS, {"status": mock.Mock(return_value=2)}):
+            self.assertEqual(2, pipeline.main(["status"]))
         self.assertEqual(pipeline.EXIT_FAILURE, pipeline.main(["not-a-command"]))
+
+    def test_update_backfill_universe_cli_refuse_ungoverned_provider_execution(self):
+        for cmd in ("update", "backfill", "universe"):
+            with self.subTest(cmd=cmd):
+                self.assertEqual(pipeline.EXIT_REFUSED_UNGOVERNED_PROVIDER, pipeline.main([cmd]))
 
 
 if __name__ == "__main__":

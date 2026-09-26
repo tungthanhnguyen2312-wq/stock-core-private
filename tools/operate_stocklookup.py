@@ -931,6 +931,14 @@ def main(argv=None, runner=subprocess.run) -> int:
         # be a dry run.
         print("[operate] --refresh-metadata requires --execute", file=sys.stderr)
         return 2
+    if args.refresh_metadata:
+        # APPROVED_PROVIDER_BUILD_AND_EXECUTION_BOUNDARY_V1: meta_sync.py runs vnstock under the
+        # core interpreter; it stays refused until wrapped behind the governed provider worker.
+        from provider_execution_guard import legacy_operator_refusal
+
+        print(f"[operate] --refresh-metadata refused: "
+              f"{legacy_operator_refusal('operate_stocklookup.refresh_metadata')}", file=sys.stderr)
+        return 2
     tickers = [t.strip().upper() for t in args.tickers.split(",") if t.strip()]
     if not tickers:
         print("[operate] no tickers requested", file=sys.stderr)

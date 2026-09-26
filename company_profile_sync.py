@@ -9,6 +9,7 @@ import sqlite3
 from collections.abc import Mapping
 from datetime import datetime, timezone
 from typing import Any
+from provider_execution_guard import require_governed_provider_execution
 
 
 COMPANY_PROFILE_SNAPSHOT_SCHEMA_VERSION = 1
@@ -223,6 +224,7 @@ def persist_current_snapshot(
 def fetch_current_payload(ticker: str, source_name: str) -> dict[str, Any]:
     """Fetch exactly one current Vnstock overview row through its public API."""
     source = _source_name(source_name)
+    require_governed_provider_execution("company_profile_sync.fetch_current_payload")
     from vnstock.api.company import Company
 
     frame = Company(source=source, symbol=ticker, random_agent=False, show_log=False).overview()

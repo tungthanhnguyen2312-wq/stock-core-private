@@ -8,6 +8,7 @@ from datetime import datetime
 import pandas as pd
 from runtime_paths import runtime_root
 from vn_time import vn_now_iso
+from provider_execution_guard import require_governed_provider_execution
 
 # Console Windows mặc định cp1252 -> vỡ khi in tên ngành/cổ đông tiếng Việt
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
@@ -118,6 +119,7 @@ def call_api(fn, label):
 # ==========================================
 def sync_exchange_industry(conn, universe):
     """2 request cho TOÀN BỘ thị trường (ưu tiên bulk để tiết kiệm quota)."""
+    require_governed_provider_execution("meta_sync.sync_exchange_industry")
     from vnstock.api.listing import Listing
     uni = set(universe)
 
@@ -150,6 +152,7 @@ def sync_exchange_industry(conn, universe):
 
 def sync_foreign_room(conn, tickers):
     """price_board nhận LIST -> batch {PRICE_BOARD_BATCH} mã/request thay vì 1686 request lẻ."""
+    require_governed_provider_execution("meta_sync.sync_foreign_room")
     from vnstock.api.trading import Trading
     n_ok = 0
     for i in range(0, len(tickers), PRICE_BOARD_BATCH):
@@ -213,6 +216,7 @@ def est_free_float(sh, state_pct):
 def sync_fundamentals(conn, tickers, refresh=False):
     """Phần NẶNG: ~3 request/mã x ~1686 mã ≈ 2 giờ. Resumable: bỏ qua mã đã có `updated`
     (trừ khi --refresh). Metadata cơ bản đổi chậm -> chạy lại MỖI QUÝ là đủ."""
+    require_governed_provider_execution("meta_sync.sync_fundamentals")
     from vnstock.api.financial import Finance
     from vnstock.api.company import Company
 
@@ -284,6 +288,7 @@ def sync_ratio_only(conn, tickers, limit=0):
     """Backfill RIÊNG phần KBS ratio (pe/pb/roe/dividend_yield) — 1 request/mã thay vì 3.
     Dùng khi thêm cột mới (dividend_yield) mà không muốn --refresh toàn bộ.
     Resume tự nhiên: chỉ cào mã dividend_yield còn NULL."""
+    require_governed_provider_execution("meta_sync.sync_ratio_only")
     from vnstock.api.financial import Finance
     todo = [r[0] for r in conn.execute(
         "SELECT ticker FROM metadata WHERE updated IS NOT NULL AND dividend_yield IS NULL")]

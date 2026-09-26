@@ -32,6 +32,7 @@ from multi_source_exact_session_resolver import (  # noqa: E402
     select_sentinel_cohort,
 )
 import mva_exact_session_snapshot as snapshotter  # noqa: E402
+import vnstock_worker_client as worker_client  # noqa: E402
 from runtime_paths import runtime_root as resolve_runtime_root  # noqa: E402
 
 VN_TZ = timezone(timedelta(hours=7))
@@ -75,14 +76,25 @@ def execute(
     sentinel_path = output_dir / "dnse_quality_sentinel_cohort.json"
     sentinel_path.write_text(json.dumps(sentinel, ensure_ascii=False, sort_keys=True, indent=2) + "\n", encoding="utf-8")
 
-    evidence, projected = resolve_multi_source_exact_session_snapshot(
-        dnse_snapshot=dnse_snapshot,
-        target_session=dnse_snapshot["resolved_completed_session"],
-        requested_at=dnse_snapshot["requested_at"],
-        recovery_window_days=recovery_window_days,
-        max_recovery_candidates=max_recovery_candidates,
-        sentinel_cohort=sentinel["tickers"],
-    )
+    # APPROVED_PROVIDER_BUILD_AND_EXECUTION_BOUNDARY_V1: VCI/KBS go only through the governed,
+    # attested provider worker (the resolver no longer falls back to importing the provider adapter
+    # in this interpreter). An unavailable runtime is passed as its state record, so every
+    # recovery/sentinel observation is recorded as explicitly not attempted -- never fetched.
+    runtime = worker_client.open_provider_runtime(session=dnse_snapshot["resolved_completed_session"])
+    try:
+        evidence, projected = resolve_multi_source_exact_session_snapshot(
+            dnse_snapshot=dnse_snapshot,
+            target_session=dnse_snapshot["resolved_completed_session"],
+            requested_at=dnse_snapshot["requested_at"],
+            recovery_window_days=recovery_window_days,
+            max_recovery_candidates=max_recovery_candidates,
+            sentinel_cohort=sentinel["tickers"],
+            fetch_single_source=runtime.fetcher.fetch if runtime.available else None,
+            supplemental_runtime_state=None if runtime.available else runtime.state,
+        )
+    finally:
+        runtime.shutdown()
+    provider_runtime_state = runtime.final_state()
     evidence_path = output_dir / "multi_source_exact_session_market_evidence.json"
     evidence_path.write_text(json.dumps(evidence, ensure_ascii=False, sort_keys=True, indent=2) + "\n", encoding="utf-8")
     projected_path = output_dir / "resolved_exact_session_snapshot.json"
@@ -122,6 +134,7 @@ def execute(
         "evidence_identity": evidence["evidence_identity"],
         "resolved_snapshot_identity": projected["snapshot_identity"],
         "dnse_only_snapshot_identity": dnse_snapshot["snapshot_identity"],
+        "provider_runtime_state": provider_runtime_state,
         "output_dir": str(output_dir),
     }
     result_path = output_dir / "run_summary.json"

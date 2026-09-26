@@ -1,5 +1,171 @@
 # Decisions & Architectural Decision Records
 
+## 2026-09-26 - APPROVED_PROVIDER_BUILD_AND_EXECUTION_BOUNDARY_V1 (pre-approval infrastructure)
+
+Bounded provider-runtime operationalization under active M1. Not a new analytical lane.
+`queued_next` stays empty. M1 (`CURRENT_DECISION_SURFACE_CONVERGENCE_V1`) stays ACTIVE.
+
+- **Implemented.** Approval-manifest schema and validator; parent pre-launch attestation;
+  worker self-attestation; owner-profile isolation; credential/rate binding; transport
+  allow-list; startup and subprocess containment; revocation at controlled request
+  boundaries; shared execution guard over the 19 provider boundaries; resolver implicit
+  in-process fallback removed; OHLC tools routed through the governed worker; candidate
+  provider dependency lock; KBS lineage corrected to `stocks/{symbol}/data_day`; offline
+  fake qualification Gates A/B (`OFFLINE_FAKE_PROVIDER_QUALIFICATION`).
+- **Not implemented / still blocked.** Package/build approval; real provider credentials;
+  live Gates C/D/E; ordinary Daily; dedicated production provider environment; policy
+  transition.
+- **Invariant.** `config/provider_runtime_policy.json` stays `SECURITY_REVIEW_BLOCKED`.
+  The tracked manifest stays `DRAFT` with `launch_authorized=false`. Pin fields stay null.
+  `requirements-providers.txt` is not an approval manifest and not the production provider
+  lock; `config/provider_dependency_lock.json` is a candidate contract only.
+- **Next gate.** `OWNER_PROVIDER_BUILD_DECISION_THEN_BOUNDED_LIVE_QUALIFICATION`.
+- **Checkpoint.** Implementation `f2bed7f06f6ff7b534702a7925c86efd677c4d84` (pinned in
+  `docs/ROADMAP_STATE.json`).
+- **Roadmap state.** `BLOCKED`, meaning the implementation is checkpointed and promotion
+  review is pending. It was earlier recorded as `COMPLETE`, which was premature. It becomes
+  `COMPLETE` only after an independent promotion review and a merge to `main`. M1 stays the
+  single `ACTIVE` milestone.
+- **Final fail-closed corrective** (an independent review against `fa20fc7`, rechecked on
+  `3a7ebd3`):
+  - **OS containment.** Mandatory for every `APPROVED_PINNED_BUILD`, both in manifest semantics
+    and again at launch authorization. Required: `state=OWNER_VERIFIED`,
+    `egress_gateway_verified`, `job_object_kill_on_close` and `runtime_root_read_only_acl` all
+    true, a restricted identity that is a non-privileged Windows SID or a POSIX `uid:<n>`
+    matching the host platform, and a SHA-256 verification evidence hash.
+  - **Egress gateway.** A bound gateway and its verification must agree for any status. An
+    approved build with approved endpoints needs a bound gateway. The Python requests allow-list
+    stays in place as defense in depth.
+  - **Owner-root separation.** Before any provider directory is created, the provider state
+    root, scratch base and venv root must not overlap any owner denied root, in either
+    direction, compared on both absolute and resolved paths.
+  - **Worker filesystem policy.** A denied owner root now dominates any nested read-only or
+    writable root.
+  - **State-file credential.** `APPROVED_STATE_FILE` requires a regular file holding
+    `{"api_key": "<value>"}` (the vnai 2.5.0 format, reviewed as source text, never imported).
+    The value is checked with the same placeholder semantics as the ENV mechanism, and
+    diagnostics never carry it.
+  - **Fake evidence.** Test-fixture containment evidence (`TEST_FIXTURE_ONLY`) may drive only
+    the offline Gate B launch mode. Gate A reports the tracked DRAFT as a live candidate
+    `BLOCKED`.
+  - **CI coverage.** These security tests are in the CI focused selection.
+- **Runtime OS-enforcement corrective** (an independent review against `94e3e91`: OS
+  containment was still self-asserted):
+  - **Requirements, not proof.** A manifest's `os_containment` block states requirements. No
+    boolean in it authorizes a launch by itself.
+  - **Only a backend spawns a worker.** `provider_os_enforcement` defines the backend boundary
+    (`preflight`, `spawn_contained`, `verify_spawned_process`). The client has no direct
+    `subprocess.Popen` path.
+  - **Production backend required for live modes.** Gates C/D/E, ordinary Daily and Gate B of a
+    real build need a production backend. None is implemented (`production_backend()` returns
+    `None`), so these launches fail with `PROVIDER_OS_ENFORCEMENT_UNAVAILABLE` at authorization,
+    before any provider directory or process exists. Building the backend (restricted identity,
+    Job object or cgroup, ACLs, OS egress gate) is the provisioning milestone.
+  - **Plain Popen is offline-fake only.** It is allowed only for Gate B with test-fixture
+    containment evidence and test-fixture packages. The backend re-checks this at spawn, and its
+    attestation states that nothing was OS-enforced.
+  - **What a production attestation must bind.** Superseded by the attestation-contract
+    corrective below.
+  - **Worker cross-check.** The worker reads its own platform, PID/PPID, token SID or uid and
+    (on Windows) Job membership from the OS. It checks them against the contract's
+    `os_enforcement` binding in self-attestation and reports them in READY for the parent to
+    cross-check. A Windows venv `python.exe` is a redirector, so there the spawned PID is the
+    worker's parent.
+  - **Platform-aware process control.** `process_control_mechanism` is
+    `WINDOWS_JOB_OBJECT_KILL_ON_CLOSE` on Windows and `LINUX_CGROUP_V2_KILL` on Linux. A
+    non-Windows runtime may not claim `job_object_kill_on_close`.
+  - **Telemetry.** An approved manifest must materialise DENY for all eight reviewed telemetry
+    classes; `ALLOW_OWNER_APPROVED` is refused for them (owner decision 2026-09-26). This also
+    covers `VNAI_LICENSE_VERIFY`: any auth route must come from a new owner decision as a
+    manifest-bound endpoint, not as a telemetry ALLOW.
+- **Attestation-contract corrective** (an independent review against `1e5157b`: the contract a
+  future production backend must satisfy accepted self-authored reports):
+  - **Trust by issuance, not by shape.** A backend's verification phase returns a typed
+    `BackendVerification` (raw observations + derived result).
+    `provider_os_enforcement.issue_attestation` is the only producer of a
+    `TrustedOSEnforcementAttestation` (private issuer sentinel). It accepts a verification only
+    from the configured production backend (`production_backend()`) for live modes, or from the
+    offline fake backend for the offline fake Gate B. It normalises the result and validates it
+    against bindings derived from the launch and the approved manifest. The launch layer accepts
+    only an issued attestation for its exact launch (`accept_attestation`). Plain mappings or
+    directly constructed objects are refused.
+  - **Hashes are identity only.** `evidence_sha256` identifies the raw observations; it is never
+    the trust decision.
+  - **Bound backend identity.** An approved manifest binds
+    `os_containment.enforcement_backend` (`backend_id` + `provider_os_enforcement_backend/v1`).
+    An absent, empty, unexpected or offline-fake backend id, or a mismatched contract, fails. A
+    fixture-marked backend id makes the manifest fake evidence, so it is refused in every live
+    mode.
+  - **Exact launch.** Launch id, manifest digest, build, policy decision id and platform must
+    match. The spawned PID and interpreter PID must match (Windows venv redirector: the
+    interpreter is the spawned process's child). The worker creation time must fall after
+    launch issuance, and verification must be fresh.
+  - **Windows Job.** The attestation must name the per-launch Job
+    (`Local\StockLookupProvider-<launch_id>`), confirm membership verified with the launcher's
+    own Job handle, list the assigned PIDs, and show `kill_on_job_close`, no breakaway, no silent
+    breakaway, and the manifest's `job_active_process_limit`. The POSIX equivalent is the
+    per-launch cgroup-v2 path, member PIDs and kill-on-close.
+  - **Egress.** `egress_policy_sha256` covers the gateway, the approved endpoint rules, the
+    telemetry DENY digest and the direct-egress prohibition. The attestation must report that
+    exact digest, the telemetry digest, a verified direct-egress prohibition, and a verified
+    gateway identity. An approved gateway declares `gateway_id`, `implementation`,
+    `ipc_endpoint` and `executable_sha256`; an address alone is not an identity.
+  - **ACL.** The attestation must report effective access verified for exactly the ACL policy
+    roots (venv, base, bundle: read/execute; state, scratch: read/write; owner denied roots: no
+    access), for the restricted identity, with the policy digest.
+  - **Worker observations corroborate only.** Platform, PID/PPID, SID/uid and Job membership
+    cannot establish the Job identity, limits, ACLs, egress enforcement or gateway policy.
+  - **Status.** No production backend exists, so live Gates C/D/E and ordinary Daily stay
+    blocked (`PROVIDER_OS_ENFORCEMENT_UNAVAILABLE`).
+
+## 2026-09-26 - Owner decisions for contained provider qualification (recorded; not an approval)
+
+The owner authorized ChatGPT to make the remaining provider-runtime decisions. The decisions
+below are fixed for this milestone. They are **not** a build approval. The tracked manifest
+stays `DRAFT` and the policy stays `SECURITY_REVIEW_BLOCKED` until the steps under
+"Sequence" have happened.
+
+- **Candidate build.** The exact locally retained 39-wheel candidate
+  (`config/provider_dependency_lock.json`) may proceed to contained qualification. This is not
+  unrestricted source/data authority and does not waive the manifest/hash/containment
+  requirements.
+- **Credential.** Only through the governed provider-worker credential mechanism. The worker
+  must never discover or consume `%USERPROFILE%\.vnstock\api_key.json` or any owner-profile
+  fallback. No fake or placeholder key.
+- **Rate.** Initial approved ceiling: 20 requests/minute. The governor never exceeds it, even
+  when a detected vendor tier would allow more. Code enforces it through
+  `OWNER_APPROVED_GOVERNOR_CEILING_RPM` in both `provider_build_manifest.rate_binding_violations`
+  and `vnstock_rate_governor.governor_from_rate_contract`. Without it, the free tier's 75% share
+  would have allowed 45/min.
+- **Telemetry / ancillary vendor services.** DENY by default: analytics/telemetry,
+  advertising/content delivery, device registration, profile sync, and unrelated vendor
+  endpoints. If provider initialization cannot run while these are denied, fail closed and
+  report the dependency. Never enable them silently.
+- **Network.** Only the exact market-data/auth endpoints needed for bounded qualification.
+  Their values must be bound in the manifest.
+- **Terms.** Do not manufacture or silently record a terms/license acceptance
+  programmatically. If execution needs an explicit acceptance that has not been seen before,
+  stop and report the exact requirement.
+- **OS containment.** A dedicated provider environment/profile/scratch area, isolated at the
+  filesystem level from the owner profile, `.stocklookup` secrets, DNSE/Livespeed/Finhay
+  secrets, production DB/runtime data, and portfolio/private research data. Prefer a
+  low-privilege OS identity or enforceable ACLs. If that needs an unavailable elevation/admin
+  step, return a provisioning blocker rather than weakening containment.
+- **Sequence.** Bounded live qualification Gates C→E are authorized only after (1) this
+  infrastructure is promoted, (2) the exact runtime is provisioned, and (3) Gates A/B pass on
+  it. Ordinary Daily is authorized only after C→E pass, on the next valid completed trading
+  session.
+- **Corrective (same branch, after `f2bed7f`).** The governed real-worker + fake-provider
+  fixture could not import its adapter (`ZoneInfoNotFoundError`). Classification:
+  **FIXTURE_ONLY**. The worker bundles `vn_time`, which builds `ZoneInfo("Asia/Ho_Chi_Minh")`,
+  and Windows has no system tz database, so tzdata is a real runtime requirement. That
+  requirement is already met by the candidate contract: `tzdata 2025.3` (sha256 `06a47e57…`) is
+  in the 39-wheel lock and in `RUNTIME_MINIMAL_23`, and pandas requires `tzdata>=2022.7`. No
+  lock change is needed and no artifact acquisition is outstanding. The fixture now plants a fake
+  `tzdata` distribution with the real package layout. A Windows regression test proves that
+  removing it breaks the real worker, and the governed fake runtime reaches READY (fake governed
+  Gate B PASS).
+
 ## 2026-09-26 - M1 stabilization promoted to `main`; post-promotion state sync
 
 The cumulative stabilization RC was promoted to Producer `main` as one unit: PR #4 was merged as

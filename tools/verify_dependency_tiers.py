@@ -30,6 +30,8 @@ CORE_REQUIREMENTS = "requirements.txt"
 TEST_REQUIREMENTS = "requirements-test.txt"
 PROVIDER_REQUIREMENTS = "requirements-providers.txt"
 CONSTRAINTS = "constraints.txt"
+PROVIDER_LOCK = "config/provider_dependency_lock.json"
+PROVIDER_MANIFEST = "config/provider_build_manifest.json"
 
 # Distributions that must stay out of the core/test tier. vnai is never declared directly
 # (it arrives with vnstock) but must not leak into core either.
@@ -110,6 +112,46 @@ def static_violations(
     return violations
 
 
+def provider_lock_violations(root: Path) -> list[str]:
+    """Candidate provider lock vs tracked DRAFT manifest vs core/provider separation."""
+    sys.path.insert(0, str(root))
+    import provider_build_manifest as build_manifest  # local import: this file is also imported by tests
+
+    violations: list[str] = []
+    lock_path = root / PROVIDER_LOCK
+    manifest_path = root / PROVIDER_MANIFEST
+    if not lock_path.is_file():
+        return [f"PROVIDER_LOCK_ABSENT: {PROVIDER_LOCK} is required as a candidate contract"]
+    try:
+        lock, digest = build_manifest.load_dependency_lock(lock_path)
+    except build_manifest.ProviderBuildManifestError as exc:
+        return [f"PROVIDER_LOCK_INVALID: {exc.reason_code}"]
+    if lock.get("approval_state") == "APPROVED":
+        violations.append("PROVIDER_LOCK_MARKED_APPROVED: the candidate lock must not be an approval")
+    names = {build_manifest.canonical_distribution_name(item["name"]) for item in lock["candidate_closure"]["packages"]}
+    if "anthropic" in names:
+        violations.append("PROVIDER_LOCK_CONTAINS_ANTHROPIC: anthropic is not a governed-worker dependency")
+    for name in ("vnstock", "vnai"):
+        if name not in names:
+            violations.append(f"PROVIDER_LOCK_MISSING_PROVIDER: {name}")
+    if not manifest_path.is_file():
+        violations.append(f"PROVIDER_BUILD_MANIFEST_ABSENT: {PROVIDER_MANIFEST}")
+        return violations
+    try:
+        manifest, _ = build_manifest.load_manifest(manifest_path)
+    except build_manifest.ProviderBuildManifestError as exc:
+        violations.append(f"PROVIDER_BUILD_MANIFEST_INVALID: {exc.reason_code}")
+        return violations
+    if manifest.get("status") == build_manifest.STATUS_APPROVED or manifest.get("launch_authorized") is True:
+        violations.append("PROVIDER_BUILD_MANIFEST_APPROVED: tracked manifest must remain DRAFT / launch_authorized=false")
+    ref = manifest.get("dependency_lock") or {}
+    if ref.get("sha256") != digest:
+        violations.append("PROVIDER_MANIFEST_LOCK_DIGEST_MISMATCH: refresh DRAFT worker/lock identities")
+    if ref.get("path") not in (PROVIDER_LOCK, str(lock_path)):
+        violations.append(f"PROVIDER_MANIFEST_LOCK_PATH_UNEXPECTED: {ref.get('path')}")
+    return violations
+
+
 def _requirement_closure(roots: list[str]) -> dict[str, str]:
     """Installed ``{canonical name: version}`` reachable from ``roots`` (markers evaluated)."""
     from packaging.requirements import Requirement  # installed with pytest; pinned in constraints
@@ -168,6 +210,8 @@ def main(argv: list[str] | None = None) -> int:
     violations = static_violations(
         texts[CORE_REQUIREMENTS], texts[TEST_REQUIREMENTS], texts[PROVIDER_REQUIREMENTS], texts[CONSTRAINTS],
     )
+    if (root / PROVIDER_LOCK).is_file() or (root / PROVIDER_MANIFEST).is_file():
+        violations.extend(provider_lock_violations(root))
     if args.installed and not violations:
         roots = parse_requirement_names(texts[CORE_REQUIREMENTS]) + parse_requirement_names(texts[TEST_REQUIREMENTS])
         violations = installed_violations(roots, parse_constraints(texts[CONSTRAINTS]))

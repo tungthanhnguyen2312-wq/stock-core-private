@@ -8,9 +8,11 @@
   (`STABILIZATION_PROMOTED_LIVE_ACCEPTANCE_PENDING_SAFE_ORDINARY_DAILY`). It is not closed.
 - No new analytical milestone is queued (`queued_next` is empty). The immediate dependency
   chain is:
-  1. provider-runtime operationalization: owner decision plus implementation. The design is
-     pending the bounded Codex provider-runtime-readiness output, which is not yet available.
-     The provider policy stays `SECURITY_REVIEW_BLOCKED`;
+  1. provider-runtime operationalization. Bounded pre-approval infrastructure
+     `APPROVED_PROVIDER_BUILD_AND_EXECUTION_BOUNDARY_V1` is implemented; the package/build is
+     unapproved; policy stays `SECURITY_REVIEW_BLOCKED`; owner decisions for contained
+     qualification are recorded; live Gates C→E wait for promotion, runtime provisioning and
+     Gates A/B on that runtime;
   2. a qualifying, safe ordinary Daily;
   3. M1 live acceptance;
   4. only then close M1 and select the next analytical milestone.

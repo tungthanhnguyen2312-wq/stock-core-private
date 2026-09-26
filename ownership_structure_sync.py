@@ -9,6 +9,7 @@ import sqlite3
 from collections.abc import Mapping, Sequence
 from datetime import datetime, timezone
 from typing import Any
+from provider_execution_guard import require_governed_provider_execution
 
 
 OWNERSHIP_STRUCTURE_SNAPSHOT_SCHEMA_VERSION = 1
@@ -181,6 +182,7 @@ def payload_from_ownership_frame(frame: Any, ticker: str) -> dict[str, Any]:
 
 def fetch_current_payload(ticker: str) -> dict[str, Any]:
     """Fetch the current KBS ownership response through Vnstock's public API."""
+    require_governed_provider_execution("ownership_structure_sync.fetch_current_payload")
     from vnstock.api.company import Company
 
     frame = Company(source=SOURCE_NAME, symbol=ticker, random_agent=False, show_log=False).ownership()

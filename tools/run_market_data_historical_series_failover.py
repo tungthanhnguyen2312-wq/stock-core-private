@@ -30,8 +30,10 @@ from historical_series_failover import (
 )
 from market_wide_current_technical_coverage_scaleout import content_identity as recovery_identity
 from mva_exact_session_snapshot import EXACT_SESSION_OHLC_LOOKBACK_CALENDAR_DAYS, _observation_rows
-from vnstock_rate_governor import VnstockRateGovernor, set_active_governor
-from vn_stock_pipeline import fetch_single_source
+# APPROVED_PROVIDER_BUILD_AND_EXECUTION_BOUNDARY_V1: KBS/VCI history goes through the governed,
+# attested provider worker (never a module-level `from vn_stock_pipeline import fetch_single_source`
+# under this interpreter). An unavailable runtime is recorded per series as PROVIDER_RUNTIME_UNAVAILABLE.
+from vnstock_worker_client import GovernedProviderHistoryFetch
 
 
 MILESTONE = "MARKET_DATA_HISTORICAL_SERIES_REDUNDANCY_AND_FEATURE_SAFE_FAILOVER_V1"
@@ -89,12 +91,13 @@ def _dnse_series(*, ticker: str, target_session: str, start: str, end: str, cred
     )
 
 
-def _vnstock_series(*, ticker: str, provider: str, target_session: str, start: str, end: str) -> dict[str, Any]:
-    # vnstock_provider_series calls the existing fetch_single_source adapter.  The active governor
-    # installed by qualify() consequently covers every KBS and VCI request in this invocation.
+def _vnstock_series(*, ticker: str, provider: str, target_session: str, start: str, end: str,
+                    fetch: GovernedProviderHistoryFetch) -> dict[str, Any]:
+    # vnstock_provider_series calls the governed worker boundary; the worker's own contract-derived
+    # rate governor covers every KBS and VCI request of this invocation.
     return vnstock_provider_series(
         ticker=ticker, provider=provider, target_session=target_session, requested_at=datetime.now(VN_TZ).isoformat(),
-        requested_start=start, requested_end=end, fetch=fetch_single_source,
+        requested_start=start, requested_end=end, fetch=fetch,
     )
 
 
@@ -170,16 +173,15 @@ def qualify(*, root: Path, out: Path, target_session: str) -> dict[str, Any]:
         credentials = credentials_for_request()
         if not credentials:
             raise RuntimeError("DNSE_CREDENTIAL_INJECTION_REQUIRED")
-        governor = VnstockRateGovernor()
-        prior = set_active_governor(governor)
+        provider_fetch = GovernedProviderHistoryFetch(session=target_session)
         results: dict[str, Any] = {}
         try:
             for ticker in COHORT:
                 series = {"DNSE": _dnse_series(ticker=ticker, target_session=target_session, start=start, end=end, credentials=credentials)}
                 # Qualification intentionally exercises both existing Vnstock interfaces.  Production
                 # routing remains KBS-before-VCI and does not make VCI calls after KBS CLEAN_MISSING.
-                series["KBS"] = _vnstock_series(ticker=ticker, provider="KBS", target_session=target_session, start=start, end=end)
-                series["VCI"] = _vnstock_series(ticker=ticker, provider="VCI", target_session=target_session, start=start, end=end)
+                series["KBS"] = _vnstock_series(ticker=ticker, provider="KBS", target_session=target_session, start=start, end=end, fetch=provider_fetch)
+                series["VCI"] = _vnstock_series(ticker=ticker, provider="VCI", target_session=target_session, start=start, end=end, fetch=provider_fetch)
                 anchor = (snapshot.get("records") or {}).get(ticker) or {}
                 primary = select_feature_safe_series(
                     ticker=ticker, target_session=target_session, feature_family="TECHNICAL_CLOSE_HISTORY",
@@ -196,9 +198,12 @@ def qualify(*, root: Path, out: Path, target_session: str) -> dict[str, Any]:
                     "fitness_matrix": provider_fitness_matrix(series),
                     "primary_selection": primary, "fallback_simulation_without_dnse": fallback,
                 }
+            diagnostic = provider_fetch.worker_governor_diagnostic() or {
+                "source": "VNSTOCK_WORKER_GOVERNOR_DIAGNOSTIC_UNAVAILABLE",
+                "provider_runtime": provider_fetch.runtime_state(),
+            }
         finally:
-            set_active_governor(prior)
-        diagnostic = governor.diagnostic()
+            provider_fetch.close()
         diagnostic["scope"] = "ONE_BOUNDED_QUALIFICATION_INVOCATION"
     finally:
         for key, value in original.items():

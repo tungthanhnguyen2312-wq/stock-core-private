@@ -169,9 +169,12 @@ def test_estimated_minimum_seconds_for_matches_the_real_governor_exactly():
     real = VnstockRateGovernor()
     fetcher = _fetcher()
     try:
+        rpm = fetcher._launch.governor_rpm
         for n in (0, 1, 5, 45, 100):
-            assert fetcher.estimated_minimum_seconds_for(n) == real.estimated_minimum_seconds_for(n)
-        assert fetcher.estimated_minimum_seconds_for(45) == 45 * (RATE_WINDOW_SECONDS / DEFAULT_EFFECTIVE_RPM)
+            expected = 0.0 if n == 0 else n * (RATE_WINDOW_SECONDS / rpm)
+            assert fetcher.estimated_minimum_seconds_for(n) == expected
+        assert fetcher.estimated_minimum_seconds_for(45) == 45 * (RATE_WINDOW_SECONDS / rpm)
+        assert rpm <= DEFAULT_EFFECTIVE_RPM
     finally:
         fetcher.shutdown()
 

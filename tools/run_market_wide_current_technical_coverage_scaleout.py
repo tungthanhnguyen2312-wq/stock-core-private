@@ -34,7 +34,6 @@ from historical_series_failover import (
 import provider_runtime_state as runtime_contract
 import vnstock_worker_client as worker_client
 from vnstock_rate_governor import VnstockRateGovernor, set_active_governor
-from vnstock_worker_protocol import PURPOSE_TECHNICAL_HISTORY, VnstockWorkerFailure
 
 # PROVIDER_RUNTIME_ISOLATION_V1: this process holds DNSE credentials, so it never imports the
 # provider adapter (vn_stock_pipeline / vnstock / vnai). Every KBS/VCI history request goes through
@@ -42,43 +41,9 @@ from vnstock_worker_protocol import PURPOSE_TECHNICAL_HISTORY, VnstockWorkerFail
 SUPPLEMENTAL_HISTORY_RUNTIME_UNAVAILABLE = "SUPPLEMENTAL_HISTORY_RUNTIME_UNAVAILABLE"
 
 
-class _ProviderHistoryFetch:
-    """``fetch_single_source``-shaped callable over one lazily opened, governed provider runtime.
-
-    The runtime is opened only if a ticker actually needs a KBS/VCI history request. An
-    unavailable runtime (policy blocked, interpreter not configured, startup failure, or a worker
-    failure mid-invocation) raises ``SupplementalProviderRuntimeUnavailable`` for every request,
-    which ``vnstock_provider_series`` records as ``PROVIDER_RUNTIME_UNAVAILABLE`` -- never a
-    fabricated provider miss or failure.
-    """
-
-    def __init__(self, *, session: str):
-        self._session = session
-        self._runtime: worker_client.ProviderRuntimeHandle | None = None
-
-    def __call__(self, ticker: str, source: str, start: str, end: str):
-        if self._runtime is None:
-            self._runtime = worker_client.open_provider_runtime(session=self._session)
-        if not self._runtime.available:
-            raise self._runtime.unavailable_error()
-        try:
-            return self._runtime.fetcher.fetch(ticker, source, start, end, purpose=PURPOSE_TECHNICAL_HISTORY)
-        except VnstockWorkerFailure as exc:
-            raise runtime_contract.SupplementalProviderRuntimeUnavailable(self._runtime.final_state()) from exc
-
-    def runtime_state(self) -> dict:
-        if self._runtime is None:
-            return {"state": None, "reason_code": "PROVIDER_RUNTIME_NOT_OPENED_NO_SUPPLEMENTAL_REQUEST_NEEDED"}
-        return self._runtime.final_state()
-
-    def worker_governor_diagnostic(self) -> dict | None:
-        if self._runtime is None or not self._runtime.available:
-            return None
-        return self._runtime.fetcher.diagnostic()
-
-    def close(self) -> None:
-        if self._runtime is not None:
-            self._runtime.shutdown()
+# The governed OHLC boundary now lives in vnstock_worker_client (shared by every operator tool);
+# this name is kept for the existing callers and tests.
+_ProviderHistoryFetch = worker_client.GovernedProviderHistoryFetch
 
 
 def _provider_boundary_not_supplied(*_args, **_kwargs):

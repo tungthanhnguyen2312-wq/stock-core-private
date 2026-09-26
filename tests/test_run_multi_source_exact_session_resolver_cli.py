@@ -1,5 +1,6 @@
 import json
 import sys
+import types
 from pathlib import Path
 from unittest.mock import patch
 
@@ -40,6 +41,28 @@ def _stub_fetch_always_missing(ticker, source, start, end):
     return FetchOutcome("empty")
 
 
+class _FakeGovernedRuntime:
+    """Stands in for ``vnstock_worker_client.open_provider_runtime()``: the CLI reaches VCI/KBS
+    only through the governed worker's fetch boundary (APPROVED_PROVIDER_BUILD_AND_EXECUTION_
+    BOUNDARY_V1 removed the resolver's implicit in-process fallback)."""
+
+    available = True
+    state = {"state": "AVAILABLE", "reason_code": "TEST_FIXTURE_FAKE_GOVERNED_RUNTIME"}
+
+    def __init__(self, fetch):
+        self.fetcher = types.SimpleNamespace(fetch=fetch)
+
+    def shutdown(self):
+        pass
+
+    def final_state(self):
+        return dict(self.state)
+
+
+def _governed_fetch(fetch):
+    return patch.object(cli.worker_client, "open_provider_runtime", return_value=_FakeGovernedRuntime(fetch))
+
+
 def _fake_dnse_snapshot(candidates, requested_at, target_session, **kw):
     return {
         "contract_version": "p3f9_exact_session_mva_snapshot/v2",
@@ -70,7 +93,7 @@ def test_cli_explicit_session_is_threaded_through_to_dnse_and_resolver(tmp_path)
          patch.object(cli, "ensure_credentials_loaded", return_value={"configured": True}), \
          patch.object(cli, "credentials_for_request", return_value=("key", "secret")), \
          patch.object(cli.snapshotter, "materialize_snapshot", fake_materialize_snapshot), \
-         patch.object(resolver_module, "_default_fetch_single_source", return_value=_stub_fetch_always_missing):
+         _governed_fetch(_stub_fetch_always_missing):
         result = cli.execute(
             runtime=tmp_path / "runtime", output_dir=tmp_path / "out",
             target_session=SESSION, workers=4,
@@ -104,7 +127,7 @@ def test_cli_watchlist_11_status_reports_every_named_ticker(tmp_path):
          patch.object(cli, "ensure_credentials_loaded", return_value={"configured": True}), \
          patch.object(cli, "credentials_for_request", return_value=("key", "secret")), \
          patch.object(cli.snapshotter, "materialize_snapshot", fake_materialize_snapshot), \
-         patch.object(resolver_module, "_default_fetch_single_source", return_value=_stub_fetch_always_missing):
+         _governed_fetch(_stub_fetch_always_missing):
         result = cli.execute(runtime=tmp_path / "runtime", output_dir=tmp_path / "out", target_session=SESSION)
 
     assert set(result["watchlist_11_status"]) == set(cli.WATCHLIST_11)
@@ -120,7 +143,7 @@ def test_cli_builds_and_reports_dnse_quality_sentinel(tmp_path):
          patch.object(cli, "ensure_credentials_loaded", return_value={"configured": True}), \
          patch.object(cli, "credentials_for_request", return_value=("key", "secret")), \
          patch.object(cli.snapshotter, "materialize_snapshot", fake_materialize_snapshot), \
-         patch.object(resolver_module, "_default_fetch_single_source", return_value=_stub_fetch_always_missing):
+         _governed_fetch(_stub_fetch_always_missing):
         result = cli.execute(runtime=tmp_path / "runtime", output_dir=tmp_path / "out", target_session=SESSION)
 
     assert result["dnse_quality_sentinel"] is not None
@@ -148,7 +171,7 @@ def test_cli_persists_all_artifacts_then_raises_on_broad_dnse_conflict(tmp_path)
          patch.object(cli, "ensure_credentials_loaded", return_value={"configured": True}), \
          patch.object(cli, "credentials_for_request", return_value=("key", "secret")), \
          patch.object(cli.snapshotter, "materialize_snapshot", fake_materialize_snapshot), \
-         patch.object(resolver_module, "_default_fetch_single_source", return_value=conflicting_fetch):
+         _governed_fetch(conflicting_fetch):
         with pytest.raises(DnseProviderWideQualityDegraded) as excinfo:
             cli.execute(runtime=tmp_path / "runtime", output_dir=tmp_path / "out", target_session=SESSION)
 

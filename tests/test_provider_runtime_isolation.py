@@ -13,12 +13,15 @@ import json
 import os
 import subprocess
 import sys
+import sysconfig
 from pathlib import Path
 from typing import Any
 
 import pytest
 
+import _provider_build_fixtures as build_fixtures
 import canonical_daily_operation as cdo
+import provider_build_manifest as build_manifest
 import canonical_post_close_pipeline as cpc
 import daily_session_level2_package as level2
 import multi_source_market_evidence_contract as contract
@@ -31,6 +34,7 @@ from _provider_runtime_fixtures import (
     available_handle,
     fake_fetcher,
     healthy_sentinel_evidence,
+    protocol_runtime,
     unavailable_handle,
 )
 from multi_source_exact_session_resolver import (
@@ -45,6 +49,118 @@ REAL_WORKER = ROOT / "vnstock_worker_process.py"
 TARGET = "2026-09-10"
 REQUESTED_AT = "2026-09-10T20:00:00+07:00"
 NONEXISTENT_CORE = str(Path("/nonexistent/core/python"))
+
+
+
+def test_fake_venv_posix_site_dir_is_lib_pythonX_Y_site_packages(tmp_path):
+    # The shared fake-venv fixture's POSIX branch, exercised on every OS via os_name (Windows
+    # never reaches it otherwise; a str.join over int version parts broke Linux CI run #82).
+    venv_root = tmp_path / "venv"
+    site = build_fixtures._site_dir(venv_root, os_name="posix")
+    expected = f"lib/python{sys.version_info.major}.{sys.version_info.minor}/site-packages"
+    assert site.relative_to(venv_root).as_posix() == expected
+    assert build_fixtures._posix_site_rel(site) == expected
+    if not sysconfig.get_config_var("Py_GIL_DISABLED"):
+        scheme = sysconfig.get_path("purelib", "posix_venv", vars={"base": "/venv", "platbase": "/venv"}, expand=True)
+        assert Path(scheme).as_posix().endswith("/" + expected)
+
+
+def test_fake_venv_windows_site_dir_is_lib_site_packages(tmp_path):
+    site = build_fixtures._site_dir(tmp_path / "venv", os_name="nt")
+    assert site.relative_to(tmp_path / "venv").as_posix() == "Lib/site-packages"
+
+
+def test_fake_venv_site_dir_matches_the_created_interpreter(tmp_path):
+    # The real created venv on this OS must place packages exactly where the fixture plants them.
+    root = build_fixtures.cached_fake_venv(owner_profile=str(tmp_path / "owner-profile"))
+    assert (build_fixtures._site_dir(root) / "vnai" / "__init__.py").is_file()
+
+
+posix_symlinked_venv = pytest.mark.skipif(
+    os.name == "nt", reason="POSIX venv interpreters are symlinks; Windows venvs copy python.exe")
+
+
+@posix_symlinked_venv
+def test_posix_symlinked_venv_keeps_logical_venv_identity_and_attests_physical_executable(tmp_path):
+    root = build_fixtures.cached_fake_venv(owner_profile=str(tmp_path / "owner-profile")).resolve()
+    exe = root / "bin" / "python"
+    assert exe.is_symlink()
+    physical = Path(os.path.realpath(exe))
+    assert not str(physical).startswith(str(root) + os.sep)  # the target lives in the base Python
+    described = build_manifest.describe_provider_runtime(str(exe), probe_env=build_fixtures._probe_env())
+    runtime = described["runtime"]
+    assert runtime["executable_path"] == str(exe)
+    assert runtime["venv_root"] == str(root)
+    assert runtime["venv_config_sha256"] == build_manifest.sha256_file(root / "pyvenv.cfg")
+    assert runtime["executable_realpath"] == str(physical)
+    assert runtime["base_executable_path"] == str(physical)
+    assert runtime["base_executable_sha256"] == build_manifest.sha256_file(physical)
+    assert runtime["site_dirs"] == [build_fixtures._site_dir(root).relative_to(root).as_posix()]
+    assert {item["site_dir"] for item in described["packages"]} == set(runtime["site_dirs"])
+    assert {"vnai", "vnstock"} <= {item["name"] for item in described["packages"]}
+
+
+@posix_symlinked_venv
+def test_posix_symlink_outside_a_venv_fails_closed(tmp_path):
+    base = os.path.realpath(build_fixtures.cached_fake_venv(owner_profile=str(tmp_path / "op")) / "bin" / "python")
+    rogue = tmp_path / "rogue" / "bin" / "python"
+    rogue.parent.mkdir(parents=True)
+    rogue.symlink_to(base)
+    with pytest.raises(build_manifest.ProviderAttestationError) as exc:
+        build_manifest.describe_provider_runtime(str(rogue), probe_env=build_fixtures._probe_env())
+    assert exc.value.reason_code == build_manifest.R_VENV_CONFIG_MISMATCH
+
+
+@posix_symlinked_venv
+def test_posix_changed_interpreter_target_fails_static_attestation(tmp_path):
+    runtime = build_fixtures.protocol_runtime(tmp_path / "rt", private_venv=True)
+    manifest = runtime.manifest
+    exe = Path(runtime.interpreter)
+    assert exe.is_symlink()
+    assert build_manifest.attest_runtime_static(
+        manifest, configured_executable=runtime.interpreter, manifest_dir=runtime.manifest_path.parent,
+        worker_script=ROOT / manifest["worker"]["entrypoint"]) == []
+    replacement = tmp_path / "other-python"
+    replacement.write_bytes(b"#!/bin/sh\nexit 0\n")
+    replacement.chmod(0o755)
+    exe.unlink()
+    exe.symlink_to(replacement)
+    codes = {item["code"] for item in build_manifest.attest_runtime_static(
+        manifest, configured_executable=runtime.interpreter, manifest_dir=runtime.manifest_path.parent,
+        worker_script=ROOT / manifest["worker"]["entrypoint"])}
+    assert build_manifest.R_REPARSE_POINT in codes
+    assert build_manifest.R_EXECUTABLE_HASH_MISMATCH in codes
+
+
+def test_system_python_is_not_accepted_as_a_provider_venv():
+    # The base installation (not a venv: no pyvenv.cfg beside it) fails closed with a typed refusal.
+    base = build_fixtures.cached_fake_venv(owner_profile="system-python-probe")
+    cfg = build_manifest._read_pyvenv_cfg(base)
+    home = Path(cfg["home"])
+    candidates = [home / "python.exe"] if os.name == "nt" else [Path(os.path.realpath(build_fixtures._venv_python(base)))]
+    system_python = next(path for path in candidates if path.is_file())
+    with pytest.raises(build_manifest.ProviderAttestationError) as exc:
+        build_manifest.describe_provider_runtime(str(system_python), probe_env=build_fixtures._probe_env())
+    assert exc.value.reason_code in (build_manifest.R_VENV_CONFIG_MISMATCH, build_manifest.R_VENV_MISMATCH)
+
+
+def test_bound_venv_root_substitution_fails_static_attestation(tmp_path):
+    runtime = build_fixtures.protocol_runtime(tmp_path / "rt")
+    manifest = json.loads(json.dumps(runtime.manifest))
+    decoy = tmp_path / "decoy-venv"
+    decoy.mkdir()
+    (decoy / "pyvenv.cfg").write_bytes((Path(manifest["runtime"]["venv_root"]) / "pyvenv.cfg").read_bytes())
+    manifest["runtime"]["venv_root"] = str(decoy)
+    codes = {item["code"] for item in build_manifest.attest_runtime_static(
+        manifest, configured_executable=runtime.interpreter, manifest_dir=runtime.manifest_path.parent,
+        worker_script=ROOT / manifest["worker"]["entrypoint"])}
+    assert build_manifest.R_VENV_CONFIG_MISMATCH in codes
+    manifest["runtime"]["venv_root"] = manifest["runtime"]["base_prefix"]
+    codes = {item["code"] for item in build_manifest.attest_runtime_static(
+        manifest, configured_executable=runtime.interpreter, manifest_dir=runtime.manifest_path.parent,
+        worker_script=ROOT / manifest["worker"]["entrypoint"])}
+    assert build_manifest.R_VENV_CONFIG_MISMATCH in codes
+
 
 SYNTHETIC_SECRETS = {
     "DNSE_API_KEY": "synthetic-dnse-key-000",
@@ -71,11 +187,25 @@ _REAL_OPEN_PROVIDER_RUNTIME = worker_client.open_provider_runtime
 
 
 def _open(**kwargs: Any) -> worker_client.ProviderRuntimeHandle:
+    extra_env = kwargs.get("extra_env")
+    runtime = kwargs.pop("runtime", None)
+    launching = "environ" not in kwargs and kwargs.get("core_executable") is None and "policy" not in kwargs
+    if runtime is None and launching:
+        runtime = protocol_runtime(extra_env=extra_env)
+    if runtime is not None:
+        kwargs.setdefault("policy", runtime.policy)
+        kwargs.setdefault("environ", runtime.parent_environ())
+        kwargs.setdefault("worker_script", ROOT / runtime.manifest["worker"]["entrypoint"])
+        kwargs.setdefault("manifest_path", runtime.manifest_path)
+        kwargs.setdefault("revocation_registry_path", runtime.registry_path)
+        kwargs.setdefault("launch_mode", runtime.launch_mode)
+        kwargs.setdefault("producer_root", ROOT)
+        kwargs.setdefault("extra_env", runtime.extra_env or extra_env)
     kwargs.setdefault("policy", TEST_ALLOW_POLICY)
     kwargs.setdefault("environ", _allow_env())
     kwargs.setdefault("core_executable", NONEXISTENT_CORE)
     kwargs.setdefault("worker_script", FAKE_WORKER)
-    kwargs.setdefault("startup_timeout", 10.0)
+    kwargs.setdefault("startup_timeout", 15.0)
     kwargs.setdefault("request_timeout", 10.0)
     kwargs.setdefault("shutdown_timeout", 5.0)
     return _REAL_OPEN_PROVIDER_RUNTIME(session=TARGET, **kwargs)
@@ -124,6 +254,7 @@ def test_runtime_contract_failure_class_literals_match_the_worker_protocol():
     assert set(rt._FAILURE_CLASS_TO_STATE) == {
         protocol.FAILURE_CLASS_PROTOCOL_VIOLATION, protocol.FAILURE_CLASS_PROCESS_EXIT,
         protocol.FAILURE_CLASS_TIMEOUT, protocol.FAILURE_CLASS_REQUEST_PROCESSING_EXCEPTION,
+        protocol.FAILURE_CLASS_CONTAINMENT_VIOLATION, protocol.FAILURE_CLASS_BUILD_REVOKED,
     }
     assert protocol.FAILURE_CLASS_STARTUP_FAILURE == "WORKER_STARTUP_FAILURE"
     for name in ("PACKAGE_NOT_INSTALLED", "IMPORT_FAILED", "STARTUP_EXCEPTION", "SPAWN_FAILED",
@@ -191,6 +322,8 @@ def test_a_fetcher_can_never_be_constructed_under_a_blocked_policy():
         worker_client.VnstockWorkerFetcher(policy=TEST_ALLOW_POLICY)  # no default interpreter
     with pytest.raises(rt.ProviderRuntimeContractError, match="PROVIDER_INTERPRETER_REQUIRED"):
         worker_client.VnstockWorkerFetcher(python_executable="", policy=TEST_ALLOW_POLICY)
+    with pytest.raises(rt.ProviderRuntimeContractError, match="PROVIDER_LAUNCH_NOT_ATTESTED"):
+        worker_client.VnstockWorkerFetcher(python_executable=sys.executable, policy=TEST_ALLOW_POLICY)
 
 
 # =============================================================================================
@@ -220,19 +353,18 @@ def test_provider_interpreter_identical_to_the_core_interpreter_is_refused(popen
 
 
 def test_configured_provider_interpreter_starts_and_reports_versions_only_after_ready(popen_counter):
-    handle = _open()
+    runtime = protocol_runtime()
+    handle = _open(runtime=runtime)
     try:
         assert handle.available is True
         assert handle.state["state"] == rt.AVAILABLE
         assert handle.state["runtime_info"]["provider_distributions"] == {"vnstock": "fake-0", "vnai": "fake-0"}
-        assert len(popen_counter) == 1
-        argv = popen_counter[0]
-        # The configured interpreter is the one spawned. resolve_provider_interpreter normalises the
-        # path (os.path.normcase lowercases it on Windows), so compare as paths, not raw strings.
-        assert os.path.samefile(argv[0], sys.executable)
-        assert os.path.normcase(os.path.abspath(argv[0])) == os.path.normcase(os.path.abspath(sys.executable))
+        worker_spawns = [argv for argv in popen_counter if "-s" in argv and "utf8" in argv]
+        assert len(worker_spawns) == 1
+        argv = worker_spawns[0]
+        assert os.path.samefile(argv[0], runtime.interpreter)
         assert argv[1:6] == ["-s", "-E", "-X", "utf8", "-u"]
-        assert argv[-1] == str(FAKE_WORKER)
+        assert argv[-1].replace("\\", "/").endswith("tests/fixtures/fake_vnstock_worker.py")
     finally:
         handle.shutdown()
 
@@ -264,7 +396,9 @@ def test_spawn_failure_is_startup_failed(tmp_path):
     fake_interpreter = tmp_path / "not-an-executable"
     fake_interpreter.write_text("", encoding="utf-8")
     handle = _open(environ=_allow_env(**{rt.PROVIDER_PYTHON_ENV: str(fake_interpreter)}))
-    assert (handle.state["state"], handle.state["reason_code"]) == (rt.STARTUP_FAILED, rt.REASON_SPAWN_FAILED)
+    # Stronger contract: an unpinned/unattested interpreter never reaches spawn.
+    assert handle.state["state"] == rt.SECURITY_REVIEW_BLOCKED
+    assert handle.fetcher is None
 
 
 def test_real_worker_reports_not_installed_without_importing_any_provider_package():
@@ -276,9 +410,16 @@ def test_real_worker_reports_not_installed_without_importing_any_provider_packag
 
     if any(_findable(name) for name in ("vnstock", "vnai")):
         pytest.skip("provider packages are importable here; this check must never execute them")
-    handle = _open(worker_script=REAL_WORKER, startup_timeout=30.0)
-    assert handle.state["state"] == rt.NOT_INSTALLED
-    assert handle.state["detail"]["missing_packages"] == ["vnai", "vnstock"]
+    # Direct launch of the production worker under this (core) interpreter fails closed at
+    # self-attestation, before provider discovery/import.
+    result = subprocess.run(
+        [sys.executable, "-s", "-E", "-X", "utf8", "-u", "-B", str(REAL_WORKER)],
+        capture_output=True, text=True, timeout=20,
+        env={"PATH": os.environ.get("PATH", ""), "SYSTEMROOT": os.environ.get("SYSTEMROOT", "")},
+    )
+    assert result.returncode != 0
+    assert "vnstock" not in (result.stdout + result.stderr).lower() or "PROVIDER_RUNTIME_ATTESTATION_FAILED" in result.stdout
+    assert not _findable("vnstock") and not _findable("vnai")
 
 
 def test_mid_operation_crash_and_request_timeout_are_classified():
@@ -334,19 +475,21 @@ def test_build_provider_environment_is_an_explicit_allow_list():
 
 
 def test_provider_worker_never_inherits_parent_credentials_or_python_path():
-    parent = _allow_env(PYTHONPATH="/should/not/leak", **SYNTHETIC_SECRETS)
-    handle = _open(environ=parent, extra_env={"FAKE_WORKER_REPORT_ENV": "1"})
+    runtime = protocol_runtime(extra_env={"FAKE_WORKER_REPORT_ENV": "1"})
+    parent = runtime.parent_environ(PYTHONPATH="/should/not/leak", **SYNTHETIC_SECRETS)
+    handle = _open(runtime=runtime, environ=parent)
     try:
-        runtime = handle.fetcher.runtime_info
+        assert handle.available, handle.state
+        info = handle.fetcher.runtime_info
     finally:
         handle.shutdown()
-    child_env = runtime["environment"]
+    child_env = info["environment"]
     leaked_names = sorted(set(SYNTHETIC_SECRETS) & set(child_env))
     leaked_values = sorted(v for v in SYNTHETIC_SECRETS.values() if v in json.dumps(child_env))
     assert leaked_names == [] and leaked_values == []  # DNSE_CREDENTIAL_LEAK_TO_PROVIDER_PROCESS = NO
     assert "PYTHONPATH" not in child_env and rt.PROVIDER_PYTHON_ENV not in child_env
-    assert runtime["flags"] == {"no_user_site": 1, "ignore_environment": 1, "utf8_mode": 1}
-    assert Path(runtime["cwd"]).resolve() != ROOT.resolve()
+    assert info["flags"] == {"no_user_site": 1, "ignore_environment": 1, "utf8_mode": 1}
+    assert Path(info["cwd"]).resolve() != ROOT.resolve()
 
 
 def test_fetcher_default_parent_environment_is_os_environ_but_still_scrubbed(monkeypatch):

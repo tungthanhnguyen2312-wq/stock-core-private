@@ -5,6 +5,7 @@ import argparse
 from datetime import datetime
 import pandas as pd
 from vn_time import vn_now
+from provider_execution_guard import require_governed_provider_execution
 
 # Console Windows mặc định cp1252 -> vỡ khi in tiếng Việt
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
@@ -69,6 +70,7 @@ CSV_HEADER = """\
 def scan_trading_status(tickers):
     """Quét trading_status toàn thị trường qua price_board bulk (batch 50/request).
     Trả về dict ticker -> raw_status; mã lỗi mạng bị bỏ qua lần này (chạy lại sẽ có)."""
+    require_governed_provider_execution("blacklist_sync.scan_trading_status")
     from vnstock.api.trading import Trading
     status = {}
     for i in range(0, len(tickers), PRICE_BOARD_BATCH):

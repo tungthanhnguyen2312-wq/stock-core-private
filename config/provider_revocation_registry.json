@@ -1,0 +1,8 @@
+{
+ "builds": {},
+ "contract_version": "provider_revocation_registry/v1",
+ "current_epoch": 0,
+ "description": "Owner-controlled revocation registry for provider builds (APPROVED_PROVIDER_BUILD_AND_EXECUTION_BOUNDARY_V1). Read by provider_build_manifest.load_revocation_registry at every launch and by vnstock_worker_client at every controlled boundary (spawn and each request). To revoke: raise current_epoch and/or set builds.<build_id> = {\"state\": \"REVOKED\", \"epoch\": <n>, \"reason\": ..., \"revoked_at_utc\": ..., \"decision_id\": ...} and/or list the manifest's canonical SHA-256 in revoked_manifest_sha256. A revoked or stale-epoch build cannot start, and an active worker fails at its next request with its process killed and reaped. A missing or invalid registry refuses every launch. No build is approved, so nothing is listed.",
+ "provider_family": "VNSTOCK_KBS_VCI",
+ "revoked_manifest_sha256": []
+}

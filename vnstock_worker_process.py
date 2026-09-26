@@ -8,32 +8,53 @@ policy -- every request it receives already names the exact ``(ticker, provider,
 fetch; ``purpose`` is diagnostic context only and must never change which adapter call is made.
 
 This is the ONLY place in the whole exact-session acquisition path that imports ``vnstock``/
-``vnai`` (transitively, via ``vn_stock_pipeline``) after this milestone. It is launched by
-``vnstock_worker_client.VnstockWorkerFetcher`` as a plain child process
-(``sys.executable vnstock_worker_process.py``) and speaks newline-delimited JSON on stdin/stdout
-(``vnstock_worker_protocol``). stdout carries ONLY protocol messages -- never banners, prints, or
-provider stdout; anything the adapter or a dependency writes to stdout would corrupt the protocol
-stream, so this process redirects its own real stdout to a private fd and gives the adapter/
-dependencies a harmless replacement for the duration of the run (see ``_reserve_protocol_stdout``).
+``vnai`` (transitively, via ``vn_stock_pipeline``). It is launched by
+``vnstock_worker_client.VnstockWorkerFetcher`` as a plain child process and speaks
+newline-delimited JSON on stdin/stdout (``vnstock_worker_protocol``). stdout carries ONLY protocol
+messages -- never banners, prints, or provider stdout; this process redirects its own real stdout
+to a private fd and gives the adapter/dependencies a harmless replacement for the whole run.
 
-Not a security sandbox. Process separation here buys failure isolation, import containment,
-lifetime containment, and bounded timeout handling -- it does not by itself prevent telemetry,
-filesystem writes, or arbitrary outbound network activity by the ``vnstock``/``vnai`` package or
-its dependencies. Those require separate controls and are out of this milestone's scope.
+APPROVED_PROVIDER_BUILD_AND_EXECUTION_BOUNDARY_V1 -- start-up order (each step fail-closed):
+    1. reserve the protocol fd;
+    2. self-attestation against the launch contract (``provider_build_manifest.self_attest_worker``):
+       interpreter flags/prefix/hash/build, ``sys.path``, startup hooks, bundled sources, manifest
+       digest, environment names, profile redirection, credential tier, working directory -- a
+       direct launch under the core or any other interpreter stops HERE, before any provider
+       discovery or import (``PROVIDER_RUNTIME_ATTESTATION_FAILED``);
+    3. in-worker containment (``provider_worker_containment``): process/socket/filesystem audit
+       hook, name-resolution tracking and the ``requests`` transport guard, all driven by the
+       approved manifest -- installed BEFORE any provider code can run;
+    4. worker attestation granted to ``provider_execution_guard`` (the guarded provider operations
+       of this process and of ``vn_stock_pipeline`` now pass);
+    5. provider discovery (distribution presence + origin inside the attested runtime);
+    6. the rate governor, derived from the approved rate contract (never the free-tier default);
+    7. import-cache stubs bound by the manifest, then provider initialisation (``vnai.setup()``)
+       under containment -- vendor telemetry, profile reads, subprocesses and egress are refused
+       and recorded; an initialisation exception fails closed with its exact type;
+    8. the adapter import and its quote-transport boundary (``_install_bounded_http``), verified
+       installed;
+    9. start-up verdict: any UNEXPECTED containment denial (one the manifest's telemetry
+       disposition does not name) fails closed (``PROVIDER_STARTUP_CONTAINMENT_VIOLATION``);
+   10. READY, carrying versions, the attestation identity and a containment summary.
+Each request is a further controlled boundary: an unapproved quote host/redirect or any new
+unexpected denial answers ``WORKER_CONTAINMENT_VIOLATION`` and the parent fails the runtime.
+
+Not a security sandbox (see ``provider_worker_containment``): OS-level controls remain required.
 """
 from __future__ import annotations
 
+import importlib
 import json
 import os
 import sys
 import threading
 import traceback
+import types
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 
-import types
-
 from vnstock_worker_protocol import (
+    FAILURE_CLASS_CONTAINMENT_VIOLATION,
     FAILURE_CLASS_REQUEST_PROCESSING_EXCEPTION,
     FAILURE_CLASS_STARTUP_FAILURE,
     MSG_FETCH,
@@ -45,29 +66,30 @@ from vnstock_worker_protocol import (
     MSG_SHUTDOWN_ACK,
     MSG_WORKER_ERROR,
     PROTOCOL_VERSION,
+    STARTUP_KIND_ATTESTATION_FAILED,
+    STARTUP_KIND_CONTAINMENT_VIOLATION,
     STARTUP_KIND_IMPORT_FAILED,
+    STARTUP_KIND_INIT_FAILED,
     STARTUP_KIND_PACKAGE_NOT_INSTALLED,
     STARTUP_KIND_STARTUP_EXCEPTION,
 )
 
-# Provider distributions this worker needs (requirements-providers.txt). Checked with
-# importlib.util.find_spec BEFORE anything imports them, so an absent runtime is reported as
-# NOT_INSTALLED without executing any provider code, distinct from an installed-but-failing one.
+# Provider distributions this worker needs (config/provider_dependency_lock.json). Checked with
+# importlib.util.find_spec only AFTER self-attestation and containment, so an absent runtime is
+# reported as NOT_INSTALLED without executing any provider code, distinct from a failing one.
 PROVIDER_DISTRIBUTIONS = ("vnstock", "vnai")
 
-# Generous internal concurrency: the REAL throttle is the shared rate governor's 45-req/60s
-# budget (vnstock_rate_governor), not this pool's size. The parent's own per-provider dispatch
-# policy (KBS max 2 concurrent, VCI sequential) already bounds how many requests are ever
-# in flight at once, so this only needs to be large enough to never itself become a bottleneck.
+# Generous internal concurrency: the REAL throttle is the contract-derived rate governor, not this
+# pool's size. The parent's own per-provider dispatch policy already bounds in-flight requests.
 _WORKER_INTERNAL_POOL_SIZE = 8
-# A request the parent never asked us to reconsider must still eventually return -- this is a
-# process-level safety net, independent of (and larger than) the parent's own per-request
-# timeout, so the parent's timeout always fires first under normal operation.
 _STDOUT_WRITE_LOCK = threading.Lock()
+_MAX_REPORTED_EVENTS = 50
+REASON_TRANSPORT_BOUNDARY_NOT_INSTALLED = "PROVIDER_TRANSPORT_BOUNDARY_NOT_INSTALLED"
+REASON_DISTRIBUTION_ORIGIN_OUTSIDE_RUNTIME = "PROVIDER_DISTRIBUTION_ORIGIN_OUTSIDE_RUNTIME"
 
 
 def _emit(message: dict[str, Any], *, real_stdout) -> None:
-    line = json.dumps(message, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    line = json.dumps(message, ensure_ascii=False, sort_keys=True, separators=(",", ":"), default=str)
     with _STDOUT_WRITE_LOCK:
         real_stdout.write(line + "\n")
         real_stdout.flush()
@@ -77,21 +99,43 @@ def _dataframe_to_rows(df) -> list[dict[str, Any]]:
     return json.loads(df.to_json(orient="records", date_format="iso"))
 
 
-def _process_fetch(request: dict[str, Any], *, real_stdout) -> None:
+def _provider_modules_loaded() -> list[str]:
+    return sorted(name for name in sys.modules if name.split(".", 1)[0] in PROVIDER_DISTRIBUTIONS)
+
+
+def _emit_containment_violation(request_id: Any, reason_code: str, message: str, events: list, *, real_stdout) -> None:
+    _emit(
+        {
+            "protocol_version": PROTOCOL_VERSION, "type": MSG_WORKER_ERROR, "request_id": request_id,
+            "failure_class": FAILURE_CLASS_CONTAINMENT_VIOLATION, "reason_code": reason_code,
+            "message": message, "containment_events": events[:_MAX_REPORTED_EVENTS],
+        },
+        real_stdout=real_stdout,
+    )
+
+
+def _process_fetch(request: dict[str, Any], *, real_stdout, adapter, containment) -> None:
+    import provider_execution_guard as guard
+    import provider_worker_containment as worker_containment
+
     request_id = request.get("request_id")
     ticker = request.get("ticker")
     provider = request.get("provider")
+    mark = containment.log.sequence
     try:
-        # vn_stock_pipeline (and therefore pandas/numpy) is imported eagerly in main() on the
-        # main thread before this pool ever starts serving requests -- see that comment for why.
-        # By the time we get here it is already a cheap sys.modules lookup, never a first-time
-        # C-extension load from a background thread.
-        import vn_stock_pipeline as vsp
-
-        outcome = vsp.fetch_single_source(
+        guard.require_governed_provider_execution("vnstock_worker_process.fetch")
+        # The adapter (and therefore pandas/numpy) was imported on the main thread before this
+        # pool started serving requests -- never a first-time C-extension load from a pool thread.
+        outcome = adapter.fetch_single_source(
             ticker, provider, request.get("start"), request.get("end"),
             bypass_circuit_check=bool(request.get("bypass_circuit_check", False)),
         )
+        unexpected = containment.log.unexpected_after(mark)
+        if unexpected:
+            _emit_containment_violation(request_id, unexpected[0]["reason_code"],
+                                        "unexpected containment denial during the request", unexpected,
+                                        real_stdout=real_stdout)
+            return
         rows: list[dict[str, Any]] = []
         unit_scale = None
         if outcome.status == "success" and outcome.data is not None:
@@ -117,6 +161,11 @@ def _process_fetch(request: dict[str, Any], *, real_stdout) -> None:
             "retry_after_seconds": float(outcome.retry_after_seconds),
         }
         _emit(response, real_stdout=real_stdout)
+    except (guard.ProviderContainmentViolation, worker_containment.ProviderContainmentDenied) as exc:
+        # An unapproved host/method/path/redirect on the quote transport, or a denied action on the
+        # data path: never a provider-level outcome, never retried.
+        _emit_containment_violation(request_id, getattr(exc, "reason_code", type(exc).__name__), f"{type(exc).__name__}:{exc}",
+                                    containment.log.events(after=mark), real_stdout=real_stdout)
     except Exception as exc:  # noqa: BLE001 -- must reach the parent as a typed worker_error,
         # never crash the worker for one bad request, never silently drop it.
         _emit(
@@ -132,97 +181,74 @@ def _process_fetch(request: dict[str, Any], *, real_stdout) -> None:
         )
 
 
-def _disable_vnstock_update_notice() -> None:
-    """Pre-seed ``sys.modules['vnstock.core.utils.upgrade']`` with a no-op stub, via ordinary
-    Python import-cache semantics, BEFORE anything imports ``vnstock`` for the first time.
-
-    ``vnstock/__init__.py`` unconditionally calls ``update_notice(verbose=False)`` at module
-    level on every fresh interpreter's first import, which shells out to ``python -m pip list
-    --format=json`` (``vnstock.core.utils.upgrade._get_installed_version_robust``) under a
-    ``subprocess.run(timeout=5)`` that is NOT robust against a grandchild process holding the
-    stdout pipe open past that timeout (a known CPython subprocess/pipe-inheritance hazard) --
-    observed directly, via a watchdog thread stack dump during this milestone's own live release
-    probe, hanging for 60+ seconds with zero further CPU consumed. This is vnstock's own
-    self-promotion/update-nag feature -- purely cosmetic console output nobody ever sees in a
-    non-interactive worker process -- wholly unrelated to KBS/VCI data fetching, so it is
-    disabled here rather than left to occasionally stall a real acquisition. This does not
-    modify the installed package: it only pre-populates the interpreter's own module cache, the
-    same mechanism Python's own import system already uses to avoid re-executing an
-    already-imported module.
-    """
-    module_name = "vnstock.core.utils.upgrade"
-    if module_name in sys.modules:
-        return
+# Import-cache stubs, by module name. The manifest's worker.startup_stubs must name exactly these
+# (provider_build_manifest.WORKER_STARTUP_STUBS); self-attestation refuses any drift.
+def _vnstock_upgrade_stub(module_name: str) -> types.ModuleType:
+    """``vnstock/__init__.py`` calls ``update_notice(verbose=False)`` at import, which shells out
+    to ``pip list`` and fetches pypi.org/vnstocks.com (dossier: live under core Python). A
+    cosmetic update nag with no bearing on KBS/VCI data: pre-seeding the import cache (never the
+    installed package) makes it a no-op instead of a denied subprocess + denied egress."""
     stub = types.ModuleType(module_name)
     stub.update_notice = lambda verbose=False: None  # noqa: ARG005 -- must match the real signature
-    stub.migrate_to_sponsor = lambda target_dir=".": None  # noqa: ARG005 -- imported but never called at module level
-    sys.modules[module_name] = stub
+    stub.migrate_to_sponsor = lambda target_dir=".": None  # noqa: ARG005 -- imported, never called at import
+    return stub
 
 
-def _preempt_vnai_git_telemetry_hang() -> None:
-    """Trigger ``vnai``'s lazy singleton telemetry initialization ourselves, on the main thread,
-    during startup, with ``subprocess.run``/``subprocess.Popen`` temporarily short-circuited for
-    ``git``-prefixed argv only -- so ``vnai.scope.profile.Inspector``'s first-construction
-    ``analyze_git_info()`` (module-level ``inspector = Inspector()`` at
-    ``vnai/scope/profile.py:674``, reached via ``vnai.setup()`` the first time any decorated
-    ``vnstock`` call runs) sees a fast, clean "not a git repository" result and short-circuits
-    immediately, instead of running several ``subprocess.run(["git", ...])`` calls that carry NO
-    ``timeout=`` at all.
+_STUB_FACTORIES = {"vnstock.core.utils.upgrade": _vnstock_upgrade_stub}
 
-    Observed directly, via a watchdog thread stack dump during this milestone's own live release
-    probe: these unbounded git calls hung for 60+ seconds even from a neutral, non-repository
-    working directory (a real, environment-specific git/credential-helper hazard on this machine,
-    not something this project's own code can fix by choice of cwd alone). ``vnai``'s own
-    commercial-usage/telemetry detection is not something this project's correctness depends on
-    -- the actual KBS/VCI request-rate governance this project relies on is
-    ``vnstock_rate_governor.VnstockRateGovernor``, entirely independent of vnai's internal
-    accounting (see that module's own docstring) -- so short-circuiting just the git probe here
-    changes no behavior this project's contracts depend on.
 
-    Only ``git``-argv calls are intercepted, and only for the duration of this one controlled
-    trigger; every other ``subprocess`` call in this process (including the real KBS/VCI HTTP
-    transport, which does not use ``subprocess`` at all) is completely unaffected, and the real
-    ``subprocess.run``/``Popen`` are restored immediately afterward in every case (success,
-    exception, or the singleton having already been constructed by something else).
+def _install_startup_stubs(contract: dict[str, Any]) -> list[str]:
+    installed = []
+    for item in (contract.get("worker") or {}).get("startup_stubs") or []:
+        name = item["module"]
+        if name not in sys.modules:
+            sys.modules[name] = _STUB_FACTORIES[name](name)
+            installed.append(name)
+    return installed
+
+
+def _initialize_provider_under_containment() -> None:
+    """Run the provider's own start-up (``vnai.setup()``) with containment already active.
+
+    vnai's lazy singleton initialisation (telemetry dispatch, device fingerprint, terms record,
+    content fetch, periodic sync thread, git probe) otherwise runs on the first decorated vnstock
+    call. Doing it here, on the main thread, keeps every side effect inside the start-up phase,
+    where an unexpected one fails the launch before READY. The old ``subprocess.run``-only git
+    short-circuit is gone: the audit hook refuses every process-creation route (``Popen`` too),
+    and a refused spawn returns immediately, so the historical git hang cannot occur.
     """
-    import subprocess
+    import provider_execution_guard as guard
 
-    if "vnai" in sys.modules:
-        return  # Already imported (by something else) -- too late to preempt safely; no-op.
+    guard.require_governed_provider_execution("vnstock_worker_process.provider_initialization")
+    import vnai
 
-    real_run = subprocess.run
-
-    def _fake_run(popenargs, *args, **kwargs):
-        argv = popenargs if isinstance(popenargs, (list, tuple)) else [popenargs]
-        if argv and str(argv[0]).lower().endswith("git"):
-            # Fast, clean "not a git repository" result -- no process ever spawned for this
-            # call, so there is nothing left to hang on. analyze_git_info() checks only
-            # returncode/stdout, both satisfied by this CompletedProcess.
-            return subprocess.CompletedProcess(argv, 1, stdout="", stderr="")
-        return real_run(popenargs, *args, **kwargs)
-
-    subprocess.run = _fake_run
-    try:
-        import vnai
-
-        # A bare `import vnai` alone does NOT construct the Inspector singleton -- that only
-        # happens inside vnai's own `wrapper()` decorator calling `setup()` the first time a
-        # decorated vnstock API method actually runs. Call it explicitly here, under the patch,
-        # so the singleton is already safely constructed by the time the real fetch triggers the
-        # same `setup()` call for real (vnai's own `_get_core()` finds `_core_instance` already
-        # set and returns it immediately, never reaching this code path again).
-        vnai.setup()
-    except Exception:  # noqa: BLE001 -- vnai is optional to this preemption; a real failure here
-        # surfaces normally later, at the real (unguarded) call inside vn_stock_pipeline.
-        pass
-    finally:
-        subprocess.run = real_run
+    vnai.setup()
 
 
 def _missing_provider_distributions() -> list[str]:
     import importlib.util
 
     return [name for name in PROVIDER_DISTRIBUTIONS if importlib.util.find_spec(name) is None]
+
+
+def _distribution_origin_failures(contract: dict[str, Any]) -> list[dict[str, Any]]:
+    """Every provider package must resolve from the attested runtime's site directories -- never a
+    user site, the core interpreter or the worker bundle (``find_spec`` executes no package code)."""
+    import importlib.util
+
+    import provider_build_manifest as build_manifest
+
+    interpreter = contract.get("interpreter") or {}
+    site_dirs = build_manifest._site_dirs(build_manifest.Path(interpreter.get("venv_root", ".")),
+                                          interpreter.get("site_dirs") or [])
+    failures = []
+    for name in PROVIDER_DISTRIBUTIONS:
+        spec = importlib.util.find_spec(name)
+        origin = (spec.origin if spec and spec.origin not in (None, "namespace") else None) or \
+            (list(spec.submodule_search_locations or [None])[0] if spec else None)
+        if origin is None or not any(build_manifest._under(origin, site_dir) for site_dir in site_dirs):
+            failures.append({"code": REASON_DISTRIBUTION_ORIGIN_OUTSIDE_RUNTIME, "name": name, "origin": origin})
+    return failures
 
 
 def _runtime_info() -> dict[str, Any]:
@@ -254,6 +280,7 @@ def _emit_startup_failure(kind: str, exc: BaseException | None, *, real_stdout, 
         "message": f"{type(exc).__name__}:{exc}" if exc is not None else kind,
         "exception_type": type(exc).__name__ if exc is not None else None,
         "traceback": traceback.format_exc(limit=20) if exc is not None else None,
+        "provider_modules_loaded": _provider_modules_loaded(),
     }
     message.update(extra)
     _emit(message, real_stdout=real_stdout)
@@ -267,8 +294,52 @@ def main() -> int:
     devnull = open(os.devnull, "w", encoding="utf-8")
     sys.stdout = devnull
 
+    # --- 2. self-attestation, before ANY provider discovery or import -------------------------
     try:
+        import provider_build_manifest as build_manifest
+
+        try:
+            contract = build_manifest.read_launch_contract()
+            failures = build_manifest.self_attest_worker(
+                contract, protocol_version=PROTOCOL_VERSION, entrypoint_file=os.path.abspath(__file__),
+            )
+        except build_manifest.ProviderAttestationError as exc:
+            contract, failures = None, exc.failures
+    except Exception as exc:  # noqa: BLE001
+        _emit_startup_failure(STARTUP_KIND_STARTUP_EXCEPTION, exc, real_stdout=real_stdout)
+        return 1
+    if failures:
+        _emit_startup_failure(STARTUP_KIND_ATTESTATION_FAILED, None, real_stdout=real_stdout,
+                              attestation_failures=failures[:_MAX_REPORTED_EVENTS])
+        return 1
+    # Read from the OS before containment is installed; reported in READY so the parent can cross-
+    # check the OS-enforcement backend's attestation against the worker's own view of itself.
+    os_facts = build_manifest.observe_worker_os_facts()
+
+    # --- 3./4. containment, then the worker attestation for the execution guard ----------------
+    try:
+        import provider_execution_guard as guard
+        import provider_worker_containment as worker_containment
+
+        containment = worker_containment.install_worker_containment(
+            build_manifest.worker_containment_from_contract(contract),
+        )
+        requests_guard = containment.install_requests_guard()
+        guard.grant_worker_attestation(guard.issue_worker_attestation(
+            build_id=contract["build_id"], manifest_sha256=contract["manifest_sha256"],
+            launch_id=contract["launch_id"], revocation_epoch=int(contract.get("revocation_epoch") or 0),
+            checks=("LAUNCH_CONTRACT", "INTERPRETER", "SITE_ISOLATION", "WORKER_SOURCES", "MANIFEST_DIGEST",
+                    "ENVIRONMENT", "PROFILE_REDIRECTION", "CREDENTIAL_TIER", "CONTAINMENT_INSTALLED"),
+        ))
+    except Exception as exc:  # noqa: BLE001
+        _emit_startup_failure(STARTUP_KIND_STARTUP_EXCEPTION, exc, real_stdout=real_stdout)
+        return 1
+
+    # --- 5. provider discovery ------------------------------------------------------------------
+    try:
+        guard.require_governed_provider_execution("vnstock_worker_process.provider_discovery")
         missing = _missing_provider_distributions()
+        origin_failures = [] if missing else _distribution_origin_failures(contract)
     except Exception as exc:  # noqa: BLE001
         _emit_startup_failure(STARTUP_KIND_STARTUP_EXCEPTION, exc, real_stdout=real_stdout)
         return 1
@@ -277,38 +348,63 @@ def main() -> int:
             STARTUP_KIND_PACKAGE_NOT_INSTALLED, None, real_stdout=real_stdout, missing_packages=missing,
         )
         return 1
+    if origin_failures:
+        _emit_startup_failure(STARTUP_KIND_ATTESTATION_FAILED, None, real_stdout=real_stdout,
+                              attestation_failures=origin_failures)
+        return 1
 
+    # --- 6. governor from the approved rate contract ----------------------------------------------
     try:
         import vnstock_rate_governor as governor_module
 
-        governor = governor_module.VnstockRateGovernor()
+        governor = governor_module.governor_from_rate_contract(contract["rate"])
         governor_module.set_active_governor(governor)
     except Exception as exc:  # noqa: BLE001
         _emit_startup_failure(STARTUP_KIND_STARTUP_EXCEPTION, exc, real_stdout=real_stdout)
         return 1
 
+    # --- 7. stubs + provider initialisation under containment -----------------------------------
     try:
-
-        # Import vn_stock_pipeline (and its heavy pandas/numpy dependency chain) here, on the
-        # MAIN thread, before the request-handling thread pool exists and before any request is
-        # served. numpy's native C-extension initialization (multiarray/OpenBLAS setup) is not
-        # safe to trigger for the first time from a non-main thread -- doing so from inside a
-        # ThreadPoolExecutor worker (as a naive per-request `import vn_stock_pipeline` would)
-        # deadlocks inside CPython's import lock/numpy's own C-level init with zero further CPU
-        # consumed, observed directly via a watchdog thread stack dump during this milestone's
-        # own live-probe qualification. Once imported here, every later `import vn_stock_pipeline`
-        # from any thread (including inside _process_fetch) is a cheap sys.modules lookup, not a
-        # re-execution of module-level code, so this fully and permanently avoids the hazard.
-        _disable_vnstock_update_notice()
-        _preempt_vnai_git_telemetry_hang()
-        import vn_stock_pipeline as vsp
-
-        vsp._install_bounded_http()
-        runtime = _runtime_info()
+        stubs = _install_startup_stubs(contract)
+        _initialize_provider_under_containment()
     except Exception as exc:  # noqa: BLE001
-        _emit_startup_failure(STARTUP_KIND_IMPORT_FAILED, exc, real_stdout=real_stdout)
+        _emit_startup_failure(STARTUP_KIND_INIT_FAILED, exc, real_stdout=real_stdout,
+                              containment_events=containment.log.events()[:_MAX_REPORTED_EVENTS])
         return 1
 
+    # --- 8. adapter + quote-transport boundary ------------------------------------------------
+    try:
+        # Imported here, on the MAIN thread, before the request pool exists: numpy's native
+        # initialisation is not safe to trigger first from a pool thread (observed deadlock).
+        adapter = importlib.import_module(contract["worker"]["adapter_module"])
+        adapter._install_bounded_http()
+        boundary_installed = bool(adapter.transport_boundary_installed())
+        runtime = _runtime_info()
+    except Exception as exc:  # noqa: BLE001
+        _emit_startup_failure(STARTUP_KIND_IMPORT_FAILED, exc, real_stdout=real_stdout,
+                              containment_events=containment.log.events()[:_MAX_REPORTED_EVENTS])
+        return 1
+    if not boundary_installed:
+        _emit_startup_failure(STARTUP_KIND_CONTAINMENT_VIOLATION, None, real_stdout=real_stdout,
+                              reason_code=REASON_TRANSPORT_BOUNDARY_NOT_INSTALLED)
+        return 1
+
+    # --- 9. start-up verdict ------------------------------------------------------------------
+    unexpected = containment.log.unexpected_after(0)
+    if unexpected:
+        _emit_startup_failure(STARTUP_KIND_CONTAINMENT_VIOLATION, None, real_stdout=real_stdout,
+                              reason_code=unexpected[0]["reason_code"],
+                              containment_events=unexpected[:_MAX_REPORTED_EVENTS])
+        return 1
+    containment.set_phase(worker_containment.PHASE_OPERATION)
+    runtime["attestation"] = guard.current_worker_attestation().to_record()
+    runtime["os_facts"] = os_facts
+    runtime["containment"] = {"requests_guard": requests_guard, "startup_stubs": stubs,
+                              "events": containment.log.summary()}
+    runtime["rate_contract"] = {"governor_effective_rpm": governor.limit, "tier_minute_limit": governor.hard_ceiling,
+                                "credential_tier": (contract.get("credential") or {}).get("expected_tier")}
+
+    # --- 10. READY -------------------------------------------------------------------------------
     pool = ThreadPoolExecutor(max_workers=_WORKER_INTERNAL_POOL_SIZE, thread_name_prefix="vnstock-worker")
     _emit(
         {"protocol_version": PROTOCOL_VERSION, "type": MSG_READY, "request_id": None, "runtime": runtime},
@@ -339,14 +435,16 @@ def main() -> int:
                 continue
             msg_type = message.get("type")
             if msg_type == MSG_FETCH:
-                pool.submit(_process_fetch, message, real_stdout=real_stdout)
+                pool.submit(_process_fetch, message, real_stdout=real_stdout, adapter=adapter, containment=containment)
             elif msg_type == MSG_GOVERNOR_DIAGNOSTIC:
+                diagnostic = governor.diagnostic()
+                diagnostic["containment_events"] = containment.log.summary()
                 _emit(
                     {
                         "protocol_version": PROTOCOL_VERSION,
                         "type": MSG_GOVERNOR_DIAGNOSTIC_RESULT,
                         "request_id": message.get("request_id"),
-                        "diagnostic": governor.diagnostic(),
+                        "diagnostic": diagnostic,
                     },
                     real_stdout=real_stdout,
                 )
