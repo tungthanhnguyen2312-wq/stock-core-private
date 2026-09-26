@@ -185,6 +185,7 @@ def main() -> int:
         "ipv4_tcp": {target: _attempt(_tcp(socket.AF_INET, (target, 443))) for target in plan["ipv4_targets"]},
         "ipv6_tcp": {target: _attempt(_tcp(socket.AF_INET6, (target, 443, 0, 0))) for target in plan["ipv6_targets"]},
         "dns_udp_direct": {server: _attempt(_dns_udp(server)) for server in plan["dns_servers"]},
+        "dns_tcp_direct": {server: _attempt(_tcp(socket.AF_INET, (server, 53))) for server in plan["dns_servers"]},
         "system_resolver": _attempt(_resolver),
         "loopback_tcp": _attempt(_tcp(socket.AF_INET, ("127.0.0.1", int(plan["loopback_port"])))),
     }

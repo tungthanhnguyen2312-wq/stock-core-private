@@ -39,6 +39,7 @@ import json
 import os
 import shutil
 import socket
+import struct
 import sys
 import threading
 import time
@@ -103,6 +104,41 @@ def _owner_tcp_control(family: int, target: str) -> dict[str, Any]:
         return {"succeeded": True}
     except OSError as exc:
         return {"succeeded": False, "errno": exc.errno, "winerror": getattr(exc, "winerror", None)}
+
+
+def _dns_query(query_id: int) -> bytes:
+    query = struct.pack(">HHHHHH", query_id, 0x0100, 1, 0, 0, 0)
+    query += b"".join(bytes([len(part)]) + part.encode("ascii") for part in "example.com".split(".")) + b"\x00"
+    return query + struct.pack(">HH", 1, 1)
+
+
+def _owner_dns_control(server: str) -> dict[str, Any]:
+    """Owner-side UDP/53 baseline, same query shape and timeout as the worker probe. A worker UDP
+    block is silent on Windows (the send "succeeds", the datagram is dropped: measured 2026-09-26),
+    so an unanswered worker query only counts as blocked when the owner is answered by that server."""
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+            sock.settimeout(5)
+            sock.sendto(_dns_query(0x4F43), (server, 53))
+            data, _ = sock.recvfrom(512)
+        return {"answered": len(data) >= 12 and data[:2] == b"\x4f\x43"}
+    except OSError as exc:
+        return {"answered": False, "error": type(exc).__name__, "winerror": getattr(exc, "winerror", None)}
+
+
+def dns_blocked_result(worker_udp: dict[str, Any], worker_tcp: dict[str, Any], owner_control: dict[str, Any]) -> dict[str, Any]:
+    """L11. PASS on an observed OS refusal (WSAEACCES) of every worker query, or on a SILENT DROP
+    proven by control: every worker UDP query unanswered (timeout), the owner answered by every
+    same server in the same run, and worker TCP/53 to every same server refused with WSAEACCES."""
+    servers = sorted(worker_udp)
+    refused = bool(servers) and all(_blocked_by_os(worker_udp[s]) for s in servers)
+    silent = bool(servers) and all(
+        not worker_udp[s].get("succeeded") and worker_udp[s].get("error") == "TimeoutError"
+        and (owner_control.get(s) or {}).get("answered") is True
+        and _blocked_by_os(worker_tcp.get(s) or {}) for s in servers)
+    basis = "OS_BLOCK_OBSERVED" if refused else ("SILENT_DROP_OWNER_CONTROL_ANSWERED_TCP53_REFUSED" if silent
+                                                 else "NOT_PROVEN_BLOCKED")
+    return _result(refused or silent, worker=worker_udp, worker_tcp53=worker_tcp, owner_control=owner_control, basis=basis)
 
 
 def _selftest_perform(method: str, url: str, headers: Any, body: Any) -> gateway.UpstreamResponse:
@@ -334,11 +370,13 @@ def run_probe(ctx: _Context, *, owner_profile: str) -> dict[str, Any]:
         v6_blocked or no_route, worker=v6, owner_control=v6_control,
         basis="OS_BLOCK_OBSERVED" if v6_blocked else ("HOST_HAS_NO_IPV6_ROUTE_RULE_SCOPE_ANY" if no_route else "WORKER_REACHED_IPV6"))
     dns = network.get("dns_udp_direct") or {}
-    results["DIRECT_DNS_BLOCKED"] = _result(bool(dns) and all(_blocked_by_os(item) for item in dns.values()), worker=dns)
+    results["DIRECT_DNS_BLOCKED"] = dns_blocked_result(dns, network.get("dns_tcp_direct") or {},
+                                                       {server: _owner_dns_control(server) for server in dns})
     results["_residual_observations"] = {
         "SYSTEM_RESOLVER_VIA_DNS_CLIENT_SERVICE": network.get("system_resolver"),
         "LOOPBACK_TCP": network.get("loopback_tcp"),
-        "note": "Name queries handed to the DNS Client service and loopback TCP are outside a per-user WFP block; "
+        "note": "Name queries handed to the DNS Client service and loopback TCP (Windows also exempts the host's own "
+                "non-loopback addresses) are outside a per-user WFP block; "
                 "the worker's in-process containment refuses all resolution/sockets and the gateway path needs neither.",
     }
     gw = report.get("gateway") or {}

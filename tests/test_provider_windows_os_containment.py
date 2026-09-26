@@ -942,3 +942,124 @@ def test_apply_returns_no_pipeline_value_and_main_rereads_the_worker_sid():
     assert main.index("$sid = Resolve-ProvisionedWorkerSid $state") < main.index("$failures = Test-Provisioned $sid")
     record = text.split("function Write-CompletionRecord", 1)[1].split("\n}", 1)[0]
     assert "Test-WorkerSidShape $Sid" in record
+
+
+# ---------------------------------------------------------------------------------------------
+# Users membership idempotency (owner elevated retry 2026-09-26: Add-LocalGroupMember raised
+# "already a member of group S-1-5-32-545"). Root cause: `@(Get-AccountGroups)` nested the
+# `,$groups` return value into a one-element Object[], so `-contains 'S-1-5-32-545'` was always
+# false and the add was always attempted. Membership is now one pure decision shared by plan and
+# apply, read by SID; the fixtures use the host's read-back (worker in Users only).
+# ---------------------------------------------------------------------------------------------
+
+@windows_only
+@pytest.mark.parametrize("groups,expected", [
+    (["S-1-5-32-545"], "NOOP"),   # exact Users membership observed on this host
+    ([], "ADD"),                  # missing -> add once
+])
+def test_users_membership_plan_is_noop_when_present_and_add_when_missing(tmp_path, groups, expected):
+    result = _plan(tmp_path, _observed(account=_our_account(sid=HOST_WORKER_SID, groups=groups), runtime_root_exists=True,
+                                       blob_exists=True, programdata_children=["provider-runtime"],
+                                       rule=_exact_rule(sid=HOST_WORKER_SID), group_rules=[backend.FIREWALL_RULE_NAME],
+                                       deny_roots=[_deny_root(explicit_deny=True)]))
+    assert result["ok"], result
+    assert result["actions"]["users_membership"] == expected
+    assert result["actions"]["account"] == "REUSE_VERIFIED"
+    assert result["actions"]["secret"] == "KEEP_EXISTING_BLOB_AFTER_VALIDATION"
+    assert result["actions"]["firewall"] == "PRESENT_EXACT" and set(result["actions"]["deny_aces"].values()) == {"PRESENT"}
+
+
+@windows_only
+def test_users_membership_is_ensured_after_create(tmp_path):
+    assert _plan(tmp_path, _observed())["actions"]["users_membership"] == "ENSURE_AFTER_CREATE"
+
+
+@windows_only
+@pytest.mark.parametrize("groups", [
+    ["S-1-5-32-545", "S-1-5-32-544"],                      # Administrators
+    ["S-1-5-32-555"],                                      # another group, no Users
+    ["S-1-5-32-545", "UNREADABLE:S-1-5-32-544"],           # a group whose members could not be read
+])
+def test_users_membership_fails_closed_on_any_other_or_unreadable_group(tmp_path, groups):
+    result = _plan(tmp_path, _observed(account=_our_account(sid=HOST_WORKER_SID, groups=groups)))
+    assert result["ok"] is False and "PROVISIONING_REFUSED:ACCOUNT_CONFLICT" in result["refused"], result
+
+
+@windows_only
+def test_verifier_fails_closed_on_an_unreadable_group(tmp_path):
+    observed = _host_observation()
+    observed["account"] = dict(observed["account"], groups=["S-1-5-32-545", "UNREADABLE:S-1-5-32-544"])
+    assert _verify(tmp_path, observed) == ["GROUP:UNREADABLE:S-1-5-32-544"]
+
+
+def test_membership_is_decided_once_by_sid_and_never_via_exception_or_nested_array():
+    text = PROVISION_SCRIPT.read_text(encoding="utf-8")
+    for hazard in ("@(Get-AccountGroups", "@(Get-AceRecords", "@(Get-VerificationFailures", "@(Test-Provisioned"):
+        assert hazard not in text, hazard
+    apply_body = text.split("function Invoke-Apply", 1)[1].split("function Resolve-ProvisionedWorkerSid", 1)[0]
+    add_line = next(line for line in apply_body.splitlines() if "Add-LocalGroupMember" in line)
+    assert "-ErrorAction" not in add_line and "MemberExists" not in text
+    assert "$groups = Get-AccountGroups $sid" in apply_body
+    assert "(Get-UsersMembershipAction $groups) -eq 'ADD'" in apply_body
+    reader = text.split("function Get-AccountGroups", 1)[1].split("function Get-UsersMembershipAction", 1)[0]
+    assert "-Member $AccountName" not in reader and "$member.SID.Value -eq $Sid" in reader
+    assert 'UNREADABLE:' in reader
+
+
+# ---------------------------------------------------------------------------------------------
+# L11 direct DNS (qualification rehearsal 2026-09-26 with the real worker): a per-user WFP block of
+# UDP is SILENT on Windows -- the worker's sendto returned 29 bytes, recvfrom timed out -- while the
+# owner was answered by both servers and worker TCP/53 got WSAEACCES. Representations below are the
+# probe's measured read-backs.
+# ---------------------------------------------------------------------------------------------
+
+def _qualification_tool():
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location("qualification_tool_dns", ROOT / "tools" / "run_provider_os_containment_qualification.py")
+    tool = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(tool)
+    return tool
+
+
+UDP_TIMEOUT = {"succeeded": False, "error": "TimeoutError", "errno": None, "winerror": None}
+UDP_ANSWERED = {"succeeded": True, "detail": {"answer_bytes": 61}}
+TCP_REFUSED = {"succeeded": False, "error": "PermissionError", "errno": 13, "winerror": 10013}
+TCP_CONNECTED = {"succeeded": True, "detail": {"connected": True}}
+SERVERS = ("1.1.1.1", "8.8.8.8")
+
+
+@pytest.mark.parametrize("udp,tcp,control,outcome,basis", [
+    # measured on this host: silent UDP drop, owner answered, TCP/53 refused by the OS
+    (UDP_TIMEOUT, TCP_REFUSED, {"answered": True}, "PASS", "SILENT_DROP_OWNER_CONTROL_ANSWERED_TCP53_REFUSED"),
+    # an OS refusal of the UDP send itself remains sufficient
+    (TCP_REFUSED, TCP_REFUSED, {"answered": False}, "PASS", "OS_BLOCK_OBSERVED"),
+    # the worker got an answer: direct DNS works
+    (UDP_ANSWERED, TCP_REFUSED, {"answered": True}, "FAIL", "NOT_PROVEN_BLOCKED"),
+    # no owner answer: an unanswered worker query proves nothing (offline host, filtered resolver)
+    (UDP_TIMEOUT, TCP_REFUSED, {"answered": False, "error": "TimeoutError"}, "FAIL", "NOT_PROVEN_BLOCKED"),
+    # the firewall rule does not bind the worker for this destination
+    (UDP_TIMEOUT, TCP_CONNECTED, {"answered": True}, "FAIL", "NOT_PROVEN_BLOCKED"),
+    # a non-timeout failure is not a proven drop
+    ({"succeeded": False, "error": "ConnectionResetError", "winerror": 10054}, TCP_REFUSED, {"answered": True}, "FAIL",
+     "NOT_PROVEN_BLOCKED"),
+])
+def test_direct_dns_block_requires_an_os_refusal_or_a_controlled_silent_drop(udp, tcp, control, outcome, basis):
+    tool = _qualification_tool()
+    result = tool.dns_blocked_result({s: udp for s in SERVERS}, {s: tcp for s in SERVERS}, {s: control for s in SERVERS})
+    assert result["outcome"] == outcome and result["basis"] == basis, result
+
+
+def test_direct_dns_block_fails_closed_when_one_server_lacks_evidence():
+    tool = _qualification_tool()
+    control = {"1.1.1.1": {"answered": True}}  # no control for 8.8.8.8
+    result = tool.dns_blocked_result({s: UDP_TIMEOUT for s in SERVERS}, {s: TCP_REFUSED for s in SERVERS}, control)
+    assert result["outcome"] == "FAIL"
+    assert tool.dns_blocked_result({}, {}, {})["outcome"] == "FAIL"
+    tcp_missing = tool.dns_blocked_result({s: UDP_TIMEOUT for s in SERVERS}, {}, {s: {"answered": True} for s in SERVERS})
+    assert tcp_missing["outcome"] == "FAIL"
+
+
+def test_probe_measures_worker_tcp53_for_every_dns_server():
+    text = (ROOT / "tools" / "provider_containment_probe.py").read_text(encoding="utf-8")
+    assert '"dns_tcp_direct": {server: _attempt(_tcp(socket.AF_INET, (server, 53))) for server in plan["dns_servers"]}' in text

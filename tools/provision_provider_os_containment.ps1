@@ -138,14 +138,33 @@ function Get-FirewallPolicy([string]$Sid) {
 }
 
 # --- preflight (read-only) -------------------------------------------------------------------------
-function Get-AccountGroups {
+function Get-AccountGroups([string]$Sid) {
+    # SIDs of every local group whose member list holds the worker SID (compared by SID, never by
+    # name). A group whose members cannot be read is reported as UNREADABLE:<group SID>, which the
+    # plan and the verifier treat as a conflict (fail closed; never silently "not a member").
+    # NOTE: returns ,$groups -- assign it (`$x = Get-AccountGroups $sid`); never wrap the call in
+    # @(...), which nests the array and makes -contains always false (owner APPLY 2026-09-26).
     $groups = @()
     foreach ($group in Get-LocalGroup) {
-        try {
-            if (Get-LocalGroupMember -Group $group -Member $AccountName -ErrorAction Stop) { $groups += $group.SID.Value }
-        } catch { }
+        try { $members = @(Get-LocalGroupMember -Group $group -ErrorAction Stop) }
+        catch { $groups += "UNREADABLE:$($group.SID.Value)"; continue }
+        foreach ($member in $members) {
+            if ($member.SID -and $member.SID.Value -eq $Sid) { $groups += [string]$group.SID.Value; break }
+        }
     }
     return ,$groups
+}
+
+function Get-UsersMembershipAction($Groups) {
+    # Pure. Exactly Users -> NOOP; no group -> ADD (once); anything else -> refuse.
+    $hasUsers = $false
+    $extra = @()
+    foreach ($group in $Groups) {
+        if ([string]$group -eq 'S-1-5-32-545') { $hasUsers = $true } else { $extra += [string]$group }
+    }
+    if ($extra.Count -gt 0) { Fail 'ACCOUNT_CONFLICT' "$AccountName is in groups other than Users: $($extra -join ',')" }
+    if ($hasUsers) { return 'NOOP' }
+    return 'ADD'
 }
 
 function Get-RuleObservation {
@@ -210,7 +229,7 @@ function Invoke-Preflight {
         $state.account.sid = $account.SID.Value
         $state.account.description = [string]$account.Description
         $state.account.enabled = [bool]$account.Enabled
-        $state.account.groups = Get-AccountGroups
+        $state.account.groups = Get-AccountGroups $state.account.sid
     }
     $state.programdata_children = @()
     if (Test-Path -LiteralPath $ProgramDataStockLookup) {
@@ -246,8 +265,7 @@ function Get-ProvisioningActions($State) {
     $account = $State.account
     if ($account.exists) {
         if ($account.description -ne $AccountDescription) { Fail 'ACCOUNT_CONFLICT' "an account named $AccountName exists that this script did not create (description differs)" }
-        $extra = @($account.groups | Where-Object { $_ -ne 'S-1-5-32-545' })
-        if ($extra.Count -gt 0) { Fail 'ACCOUNT_CONFLICT' "existing $AccountName is in groups other than Users: $($extra -join ',')" }
+        $actions.users_membership = Get-UsersMembershipAction $account.groups
         $actions.account = 'REUSE_VERIFIED'
         # The logon secret is rotated only when it is unrecoverable (no blob); an existing blob is
         # validated against the account and kept, or the run fails closed.
@@ -255,6 +273,7 @@ function Get-ProvisioningActions($State) {
     } else {
         if ($State.record.exists) { Fail 'RECORD_CONFLICT' 'a provisioning record exists but the worker account does not' }
         $actions.account = 'CREATE'
+        $actions.users_membership = 'ENSURE_AFTER_CREATE'
         $actions.secret = 'GENERATE_AND_STORE'
     }
     $sid = $account.sid
@@ -294,6 +313,7 @@ function Show-Plan($State, $Actions) {
     Write-Step "mode: $(if ($Apply) { 'APPLY' } else { 'PLAN (no mutation)' })"
     Write-Step "invoking identity SID: $($State.current_sid); elevated: $($State.elevated); seclogon: $($State.seclogon_start_mode)"
     Write-Step "worker account '$AccountName': $($Actions.account)$(if ($State.account.exists) { " ($($State.account.sid))" }) (standard user, Users group only, password never expires, hidden from sign-in)"
+    Write-Step "Users (S-1-5-32-545) membership: $($Actions.users_membership)"
     Write-Step "logon secret: $($Actions.secret); stored ONLY as DPAPI(CurrentUser of $($State.current_sid)) blob $CredentialBlob"
     Write-Step "runtime root $RuntimeRoot (+ $($Subtrees.Values -join ', ')): $($Actions.directories)"
     Write-Step "  $ProgramDataStockLookup : SYSTEM F, Administrators F, owner RX (this folder only); no Users write"
@@ -399,7 +419,12 @@ function Invoke-Apply($State, $Actions) {
     if ($State.account.exists -and $sid -ne $State.account.sid) { Fail 'ACCOUNT_CONFLICT' 'the worker SID changed during provisioning' }
     Set-LocalUser -Name $AccountName -Description $AccountDescription -PasswordNeverExpires $true -UserMayChangePassword $false
     if (-not $account.Enabled) { Enable-LocalUser -Name $AccountName }
-    if (-not (@(Get-AccountGroups) -contains 'S-1-5-32-545')) { Add-LocalGroupMember -SID 'S-1-5-32-545' -Member $AccountName }
+    # Membership re-read by SID after create/reuse: exactly Users -> no-op; none -> add once; other -> refuse.
+    $groups = Get-AccountGroups $sid
+    if ((Get-UsersMembershipAction $groups) -eq 'ADD') {
+        Write-Step "adding $AccountName to Users (S-1-5-32-545)"
+        Add-LocalGroupMember -SID 'S-1-5-32-545' -Member $AccountName
+    }
     $userList = 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon\SpecialAccounts\UserList'
     if (-not (Test-Path $userList)) { New-Item -Path $userList -Force | Out-Null }
     New-ItemProperty -Path $userList -Name $AccountName -PropertyType DWord -Value 0 -Force | Out-Null
@@ -455,7 +480,7 @@ function Get-VerificationObservation {
         $observed.account.sid = [string]$account.SID.Value
         $observed.account.enabled = [bool]$account.Enabled
         $observed.account.description = [string]$account.Description
-        $observed.account.groups = Get-AccountGroups
+        $observed.account.groups = Get-AccountGroups $observed.account.sid
     }
     $observed.dirs = @(foreach ($dir in @($RuntimeRoot) + @($Subtrees.Values | ForEach-Object { Join-Path $RuntimeRoot $_ })) {
         $exists = Test-Path -LiteralPath $dir
