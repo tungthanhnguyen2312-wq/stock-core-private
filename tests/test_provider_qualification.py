@@ -37,6 +37,15 @@ def test_live_gates_cde_are_unavailable():
         payload = qual.unavailable_live_gate(letter)
         assert payload["verdict"] == "UNAVAILABLE"
         assert "OWNER_APPROVAL" in payload["reason_codes"][0]
+        # Even after an owner approval: no production OS-enforcement backend exists yet.
+        assert "PROVIDER_OS_ENFORCEMENT_UNAVAILABLE" in payload["reason_codes"]
+        assert payload["blocker"] == "OS_ENFORCEMENT_PROVISIONING"
+        assert payload["live_qualification"] is False
+
+
+def test_live_candidate_blockers_include_os_enforcement_provisioning(tmp_path):
+    runtime = protocol_runtime(tmp_path / "rt")
+    assert "PROVIDER_OS_ENFORCEMENT_UNAVAILABLE" in qual.gate_a_live_candidate(runtime.manifest_path)["reason_codes"]
 
 
 def test_gate_b_fake_protocol_launch_passes(tmp_path):

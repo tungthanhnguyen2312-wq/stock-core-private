@@ -29,6 +29,7 @@ if str(TESTS) not in sys.path:
     sys.path.insert(0, str(TESTS))
 
 import provider_build_manifest as build_manifest  # noqa: E402
+import provider_os_enforcement as os_enforcement  # noqa: E402
 import provider_runtime_state as runtime_contract  # noqa: E402
 
 MODE = "OFFLINE_FAKE_PROVIDER_QUALIFICATION"
@@ -111,6 +112,10 @@ def live_candidate_blockers(manifest: dict[str, Any]) -> list[dict[str, Any]]:
             blockers.append(_fail(build_manifest.R_TELEMETRY_UNRESOLVED, field=f"telemetry_disposition[{index}]"))
     if build_manifest._containment_evidence_is_fake(manifest):
         blockers.append(_fail(build_manifest.R_OS_CONTAINMENT_FAKE_EVIDENCE, error="test-fixture containment evidence"))
+    blockers += build_manifest.telemetry_owner_deny_violations(manifest)
+    if os_enforcement.production_backend() is None:
+        blockers.append(_fail(build_manifest.R_OS_ENFORCEMENT_UNAVAILABLE,
+                              error="no production OS-enforcement backend is provisioned"))
     return blockers
 
 
@@ -193,9 +198,15 @@ def gate_b_fake(runtime) -> dict[str, Any]:
 
 
 def unavailable_live_gate(letter: str) -> dict[str, Any]:
+    reasons = [GATES_UNAVAILABLE[letter]]
+    if os_enforcement.production_backend() is None:
+        # Even an owner-approved build cannot reach a live gate: the manifest's OS containment is a
+        # requirement, and no production backend exists yet to establish and attest it.
+        reasons.append(build_manifest.R_OS_ENFORCEMENT_UNAVAILABLE)
     return {
         "gate": letter, "mode": MODE, "verdict": "UNAVAILABLE",
-        "reason_codes": [GATES_UNAVAILABLE[letter]],
+        "reason_codes": reasons,
+        "blocker": "OS_ENFORCEMENT_PROVISIONING" if build_manifest.R_OS_ENFORCEMENT_UNAVAILABLE in reasons else None,
         "live_qualification": False,
     }
 

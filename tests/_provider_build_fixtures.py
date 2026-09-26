@@ -43,6 +43,8 @@ FAKE_ENDPOINT_URL = f"https://{FAKE_ENDPOINT_HOST}{FAKE_ENDPOINT_PATH}"
 FAKE_EGRESS_GATEWAY = {"host": "egress-gateway.test", "port": 3128}
 # Syntactically valid, deliberately fake low-privilege identities (never a real principal).
 FAKE_RESTRICTED_IDENTITY = "S-1-5-21-1111111111-2222222222-3333333333-1001" if os.name == "nt" else "uid:64001"
+# The reviewed process-lifetime control of this host; a Windows Job object is claimed only on Windows.
+FAKE_PROCESS_CONTROL = build_manifest.PROCESS_CONTROL_BY_PLATFORM.get(sys.platform)
 ISOLATED_BASE_ENV = "STOCKLOOKUP_PROVIDER_FIXTURE_BASE"
 PROTOCOL_CONTROL_ENV = (
     "FAKE_WORKER_STARTUP_FAIL",
@@ -425,15 +427,9 @@ def _worker_sources(entrypoint: str) -> list[dict[str, Any]]:
 
 
 def _telemetry_deny() -> list[dict[str, Any]]:
-    return [
-        {"decision": "DENY", "endpoint_ref": "VNAI_ANALYTICS", "expected_failure_behavior": "recorded",
-         "host": "hq.vnstocks.com", "layer": "NETWORK", "method": "POST", "path_pattern": "/analytics",
-         "port": 443, "reachability": "fake vnai.setup()", "scheme": "https"},
-        {"decision": "DENY", "endpoint_ref": "VNAI_GIT_PROBE", "expected_failure_behavior": "recorded",
-         "layer": "PROCESS", "process": "git", "reachability": "fake vnai.setup()"},
-        {"decision": "DENY", "endpoint_ref": "VNSTOCK_UPDATE_PIP_LIST", "expected_failure_behavior": "recorded",
-         "layer": "PROCESS", "process": "python", "reachability": "fake vnai.setup()"},
-    ]
+    """Every reviewed telemetry class of the tracked DRAFT, materialised as DENY (owner decision)."""
+    tracked, _digest = build_manifest.load_manifest()
+    return [dict(item, decision=build_manifest.TELEMETRY_DENY) for item in tracked["telemetry_disposition"]]
 
 
 def _approved_endpoint() -> dict[str, Any]:
@@ -805,7 +801,8 @@ def build_fake_provider_runtime(
             "state": "OWNER_VERIFIED",
             "requirements": ["TEST_FIXTURE_ONLY -- not an owner OS verification"],
             "restricted_identity_sid": FAKE_RESTRICTED_IDENTITY,
-            "job_object_kill_on_close": True,
+            "process_control_mechanism": FAKE_PROCESS_CONTROL,
+            "job_object_kill_on_close": sys.platform == "win32",
             "egress_gateway_verified": True,
             "runtime_root_read_only_acl": True,
             "verification_evidence_sha256": "b" * 64,

@@ -49,6 +49,37 @@ Bounded provider-runtime operationalization under active M1. Not a new analytica
     the offline Gate B launch mode. Gate A reports the tracked DRAFT as a live candidate
     `BLOCKED`.
   - **CI coverage.** These security tests are in the CI focused selection.
+- **Runtime OS-enforcement corrective** (an independent review against `94e3e91`: OS
+  containment was still self-asserted):
+  - **Requirements, not proof.** A manifest's `os_containment` block states requirements. No
+    boolean in it authorizes a launch by itself.
+  - **Only a backend spawns a worker.** `provider_os_enforcement` defines the backend boundary
+    (`preflight`, `spawn_contained`, `attest_spawned_process`) and `validate_attestation`. The
+    client has no direct `subprocess.Popen` path.
+  - **Production backend required for live modes.** Gates C/D/E, ordinary Daily and Gate B of a
+    real build need a production backend. None is implemented (`production_backend()` returns
+    `None`), so these launches fail with `PROVIDER_OS_ENFORCEMENT_UNAVAILABLE` at authorization,
+    before any provider directory or process exists. Building the backend (restricted identity,
+    Job object or cgroup, ACLs, OS egress gate) is the provisioning milestone.
+  - **Plain Popen is offline-fake only.** It is allowed only for Gate B with test-fixture
+    containment evidence and test-fixture packages. The backend re-checks this at spawn, and its
+    attestation states that nothing was OS-enforced.
+  - **What a production attestation must bind.** Platform, launch id, worker PID, and an
+    observed identity, process control, ACLs, egress mechanism and gateway. Its evidence hash must
+    cover the attestation body. An attestation shaped like, or hashed like, the manifest's
+    declarations is refused.
+  - **Worker cross-check.** The worker reads its own platform, PID/PPID, token SID or uid and
+    (on Windows) Job membership from the OS. It checks them against the contract's
+    `os_enforcement` binding in self-attestation and reports them in READY for the parent to
+    cross-check. A Windows venv `python.exe` is a redirector, so there the spawned PID is the
+    worker's parent.
+  - **Platform-aware process control.** `process_control_mechanism` is
+    `WINDOWS_JOB_OBJECT_KILL_ON_CLOSE` on Windows and `LINUX_CGROUP_V2_KILL` on Linux. A
+    non-Windows runtime may not claim `job_object_kill_on_close`.
+  - **Telemetry.** An approved manifest must materialise DENY for all eight reviewed telemetry
+    classes; `ALLOW_OWNER_APPROVED` is refused for them (owner decision 2026-09-26). This also
+    covers `VNAI_LICENSE_VERIFY`: any auth route must come from a new owner decision as a
+    manifest-bound endpoint, not as a telemetry ALLOW.
 
 ## 2026-09-26 - Owner decisions for contained provider qualification (recorded; not an approval)
 

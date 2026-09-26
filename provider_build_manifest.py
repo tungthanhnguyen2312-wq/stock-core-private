@@ -194,6 +194,9 @@ R_OS_CONTAINMENT_UNVERIFIED = "PROVIDER_OS_CONTAINMENT_UNVERIFIED"
 R_OS_CONTAINMENT_FAKE_EVIDENCE = "PROVIDER_OS_CONTAINMENT_FAKE_EVIDENCE_REFUSED"
 R_EGRESS_GATEWAY_CONTRACT_INVALID = "PROVIDER_EGRESS_GATEWAY_CONTRACT_INVALID"
 R_CREDENTIAL_STATE_FILE_INVALID = "PROVIDER_CREDENTIAL_STATE_FILE_INVALID"
+R_OS_ENFORCEMENT_UNAVAILABLE = "PROVIDER_OS_ENFORCEMENT_UNAVAILABLE"
+R_OS_ENFORCEMENT_WORKER_MISMATCH = "PROVIDER_OS_ENFORCEMENT_WORKER_MISMATCH"
+R_TELEMETRY_OWNER_DENY_REQUIRED = "PROVIDER_TELEMETRY_OWNER_DECISION_DENY_REQUIRED"
 R_DEPENDENCY_LOCK_MISMATCH = "PROVIDER_DEPENDENCY_LOCK_MISMATCH"
 R_WORKER_CONTRACT_INVALID = "PROVIDER_WORKER_CONTRACT_INVALID"
 R_INTERPRETER_PATH_MISMATCH = "PROVIDER_ATTESTATION_INTERPRETER_PATH_MISMATCH"
@@ -244,7 +247,20 @@ _PRIVILEGED_OR_SHARED_SIDS = frozenset({
     "S-1-1-0", "S-1-5-7", "S-1-5-11", "S-1-5-18", "S-1-5-19", "S-1-5-20", "S-1-5-32-544", "S-1-5-32-545",
 })
 OS_CONTAINMENT_OWNER_VERIFIED = "OWNER_VERIFIED"
-OS_CONTAINMENT_REQUIRED_TRUE = ("egress_gateway_verified", "job_object_kill_on_close", "runtime_root_read_only_acl")
+OS_CONTAINMENT_REQUIRED_TRUE = ("egress_gateway_verified", "runtime_root_read_only_acl")
+# Process-lifetime control is platform-specific: a Windows Job object is not a POSIX control.
+PROCESS_CONTROL_BY_PLATFORM = {"win32": "WINDOWS_JOB_OBJECT_KILL_ON_CLOSE", "linux": "LINUX_CGROUP_V2_KILL"}
+# Who may spawn a provider worker (provider_os_enforcement): the production OS-enforcement backend,
+# or -- for the offline fake Gate B only -- plain Popen.
+OS_ENFORCEMENT_PRODUCTION = "PRODUCTION_OS_ENFORCEMENT"
+OS_ENFORCEMENT_OFFLINE_FAKE = "OFFLINE_FAKE_DIRECT_POPEN"
+TEST_FIXTURE_PROVENANCE = "TEST_FIXTURE_ONLY"
+# Owner decision 2026-09-26: every reviewed ancillary vendor service is DENY. An approved manifest
+# must materialise DENY for each of these; ALLOW_OWNER_APPROVED is not sufficient for them.
+REVIEWED_TELEMETRY_REFS = (
+    "VNAI_ANALYTICS", "VNAI_CONTENT_DELIVERY", "VNAI_LICENSE_VERIFY", "VNAI_DEVICE_REGISTER", "VNAI_PROFILE_SYNC",
+    "VNSTOCK_UPDATE_PYPI", "VNAI_GIT_PROBE", "VNSTOCK_UPDATE_PIP_LIST",
+)
 # Test fixtures mark their containment block with this text. Such evidence may drive only the
 # offline Gate B contained-startup launch mode, never Gates C/D/E or ordinary Daily.
 FAKE_CONTAINMENT_EVIDENCE_MARKER = "TEST_FIXTURE_ONLY"
@@ -552,6 +568,19 @@ def os_containment_violations(manifest: Mapping[str, Any]) -> list[dict[str, Any
     for key in OS_CONTAINMENT_REQUIRED_TRUE:
         if containment.get(key) is not True:
             failures.append(_failure(R_OS_CONTAINMENT_UNVERIFIED, field=f"os_containment.{key}"))
+    platform = str((manifest.get("runtime") or {}).get("platform") or "")
+    mechanism = PROCESS_CONTROL_BY_PLATFORM.get(platform)
+    if mechanism is None:
+        failures.append(_failure(R_OS_CONTAINMENT_UNVERIFIED, field="os_containment.process_control_mechanism",
+                                 error=f"no reviewed process-lifetime control for platform {platform!r}"))
+    elif containment.get("process_control_mechanism") != mechanism:
+        failures.append(_failure(R_OS_CONTAINMENT_UNVERIFIED, field="os_containment.process_control_mechanism",
+                                 error=f"{platform} requires {mechanism}"))
+    if platform == "win32" and containment.get("job_object_kill_on_close") is not True:
+        failures.append(_failure(R_OS_CONTAINMENT_UNVERIFIED, field="os_containment.job_object_kill_on_close"))
+    elif platform != "win32" and containment.get("job_object_kill_on_close") is not False:
+        failures.append(_failure(R_OS_CONTAINMENT_UNVERIFIED, field="os_containment.job_object_kill_on_close",
+                                 error="a Windows Job object cannot be claimed for a non-Windows runtime"))
     problem = restricted_identity_problem(containment.get("restricted_identity_sid"))
     if problem:
         failures.append(_failure(R_OS_CONTAINMENT_UNVERIFIED, field="os_containment.restricted_identity_sid", error=problem))
@@ -581,6 +610,140 @@ def egress_gateway_violations(manifest: Mapping[str, Any], *, approved: bool) ->
     if approved and network.get("endpoints") and gateway is None:
         failures.append(_failure(R_EGRESS_GATEWAY_CONTRACT_INVALID,
                                  error="approved endpoints without the mandatory OS egress gateway"))
+    return failures
+
+
+def telemetry_owner_deny_violations(manifest: Mapping[str, Any]) -> list[dict[str, Any]]:
+    """Owner decision (2026-09-26): ancillary vendor services are DENY. An approved manifest must
+    materialise DENY for every reviewed telemetry class and may ALLOW nothing."""
+    failures = []
+    seen = set()
+    for index, entry in enumerate(manifest.get("telemetry_disposition") or []):
+        seen.add(entry.get("endpoint_ref"))
+        if entry.get("decision") != TELEMETRY_DENY:
+            failures.append(_failure(R_TELEMETRY_OWNER_DENY_REQUIRED, field=f"telemetry_disposition[{index}]",
+                                     endpoint_ref=entry.get("endpoint_ref"), decision=entry.get("decision")))
+    for ref in REVIEWED_TELEMETRY_REFS:
+        if ref not in seen:
+            failures.append(_failure(R_TELEMETRY_OWNER_DENY_REQUIRED, endpoint_ref=ref, error="reviewed class not materialised as DENY"))
+    return failures
+
+
+def offline_fake_launch_eligible(manifest: Mapping[str, Any], launch_mode: str) -> bool:
+    """Only the offline fake Gate B may run under plain Popen: test-fixture containment evidence AND
+    every bound package a test-fixture distribution. A real build never qualifies, whatever its mode."""
+    packages = manifest.get("packages") or []
+    return (launch_mode == LAUNCH_MODE_GATE_B and _containment_evidence_is_fake(manifest) and bool(packages)
+            and all(item.get("provenance_classification") == TEST_FIXTURE_PROVENANCE for item in packages))
+
+
+def os_enforcement_requirement(manifest: Mapping[str, Any], launch_mode: str) -> str:
+    return OS_ENFORCEMENT_OFFLINE_FAKE if offline_fake_launch_eligible(manifest, launch_mode) else OS_ENFORCEMENT_PRODUCTION
+
+
+def _current_process_identity() -> str | None:
+    """This process's OS identity: the token user SID on Windows, ``uid:<n>`` on POSIX."""
+    if os.name != "nt":
+        return f"uid:{os.getuid()}" if hasattr(os, "getuid") else None
+    try:
+        import ctypes
+        from ctypes import wintypes
+
+        advapi32 = ctypes.WinDLL("advapi32", use_last_error=True)
+        kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+        kernel32.GetCurrentProcess.restype = wintypes.HANDLE
+        advapi32.OpenProcessToken.argtypes = [wintypes.HANDLE, wintypes.DWORD, ctypes.POINTER(wintypes.HANDLE)]
+        advapi32.GetTokenInformation.argtypes = [wintypes.HANDLE, ctypes.c_int, ctypes.c_void_p, wintypes.DWORD,
+                                                 ctypes.POINTER(wintypes.DWORD)]
+        advapi32.ConvertSidToStringSidW.argtypes = [ctypes.c_void_p, ctypes.POINTER(wintypes.LPWSTR)]
+        kernel32.LocalFree.argtypes = [ctypes.c_void_p]
+        kernel32.CloseHandle.argtypes = [wintypes.HANDLE]
+        token = wintypes.HANDLE()
+        if not advapi32.OpenProcessToken(kernel32.GetCurrentProcess(), 0x0008, ctypes.byref(token)):  # TOKEN_QUERY
+            return None
+        try:
+            size = wintypes.DWORD()
+            advapi32.GetTokenInformation(token, 1, None, 0, ctypes.byref(size))  # TokenUser
+            buffer = ctypes.create_string_buffer(size.value)
+            if not advapi32.GetTokenInformation(token, 1, buffer, size, ctypes.byref(size)):
+                return None
+            sid = ctypes.cast(buffer, ctypes.POINTER(ctypes.c_void_p))[0]
+            text = wintypes.LPWSTR()
+            if not advapi32.ConvertSidToStringSidW(sid, ctypes.byref(text)):
+                return None
+            try:
+                return text.value
+            finally:
+                kernel32.LocalFree(text)
+        finally:
+            kernel32.CloseHandle(token)
+    except (OSError, AttributeError, ValueError):
+        return None
+
+
+def _current_process_in_job() -> bool | None:
+    """Whether this process belongs to a Windows Job object (``None`` off Windows / on error)."""
+    if os.name != "nt":
+        return None
+    try:
+        import ctypes
+        from ctypes import wintypes
+
+        kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+        kernel32.GetCurrentProcess.restype = wintypes.HANDLE
+        kernel32.IsProcessInJob.argtypes = [wintypes.HANDLE, wintypes.HANDLE, ctypes.POINTER(wintypes.BOOL)]
+        result = wintypes.BOOL()
+        if not kernel32.IsProcessInJob(kernel32.GetCurrentProcess(), None, ctypes.byref(result)):
+            return None
+        return bool(result.value)
+    except (OSError, AttributeError, ValueError):
+        return None
+
+
+def observe_worker_os_facts() -> dict[str, Any]:
+    """Facts the worker reads about ITSELF from the OS (never from its launch contract)."""
+    cgroup = None
+    if sys.platform == "linux":
+        try:
+            cgroup = Path("/proc/self/cgroup").read_text(encoding="utf-8").strip().splitlines()[-1]
+        except (OSError, IndexError):
+            cgroup = None
+    return {"platform": sys.platform, "pid": os.getpid(), "ppid": os.getppid(), "identity": _current_process_identity(),
+            "in_job": _current_process_in_job(), "cgroup": cgroup}
+
+
+def worker_os_enforcement_violations(contract: Mapping[str, Any], facts: Mapping[str, Any],
+                                     bundled_manifest: Mapping[str, Any] | None) -> list[dict[str, Any]]:
+    """In-worker check of the launch's OS-enforcement binding against what the worker observes."""
+    enforcement = contract.get("os_enforcement")
+    if not isinstance(enforcement, Mapping):
+        return [_failure(R_OS_ENFORCEMENT_WORKER_MISMATCH, error="launch contract carries no os_enforcement binding")]
+    failures = []
+    requirement = enforcement.get("requirement")
+    if enforcement.get("launch_id") != contract.get("launch_id"):
+        failures.append(_failure(R_OS_ENFORCEMENT_WORKER_MISMATCH, field="launch_id"))
+    if enforcement.get("platform") != facts.get("platform"):
+        failures.append(_failure(R_OS_ENFORCEMENT_WORKER_MISMATCH, field="platform", observed=facts.get("platform")))
+    if bundled_manifest is not None and os_enforcement_requirement(bundled_manifest, str(contract.get("launch_mode"))) != requirement:
+        failures.append(_failure(R_OS_ENFORCEMENT_WORKER_MISMATCH, field="requirement", error="differs from the bundled manifest"))
+    if requirement == OS_ENFORCEMENT_OFFLINE_FAKE:
+        if contract.get("launch_mode") != LAUNCH_MODE_GATE_B:
+            failures.append(_failure(R_OS_ENFORCEMENT_WORKER_MISMATCH, field="requirement", error="offline fake outside Gate B"))
+    elif requirement == OS_ENFORCEMENT_PRODUCTION:
+        expected = enforcement.get("expected_restricted_identity")
+        if not expected or facts.get("identity") != expected:
+            failures.append(_failure(R_OS_ENFORCEMENT_WORKER_MISMATCH, field="identity", observed=facts.get("identity")))
+        if facts.get("platform") == "win32":
+            if facts.get("in_job") is not True:
+                failures.append(_failure(R_OS_ENFORCEMENT_WORKER_MISMATCH, field="in_job"))
+        elif facts.get("platform") == "linux":
+            expected_cgroup = enforcement.get("expected_cgroup")
+            if not expected_cgroup or facts.get("cgroup") != expected_cgroup:
+                failures.append(_failure(R_OS_ENFORCEMENT_WORKER_MISMATCH, field="cgroup"))
+        else:
+            failures.append(_failure(R_OS_ENFORCEMENT_WORKER_MISMATCH, field="platform", error="no reviewed production control"))
+    else:
+        failures.append(_failure(R_OS_ENFORCEMENT_WORKER_MISMATCH, field="requirement", error=f"unknown {requirement!r}"))
     return failures
 
 
@@ -678,11 +841,7 @@ def manifest_contract_violations(manifest: Mapping[str, Any]) -> list[dict[str, 
         for index, entry in enumerate(manifest.get("telemetry_disposition") or []):
             if entry.get("decision") not in (TELEMETRY_DENY, TELEMETRY_ALLOW):
                 failures.append(_failure(R_TELEMETRY_UNRESOLVED, field=f"telemetry_disposition[{index}]"))
-            elif entry.get("decision") == TELEMETRY_ALLOW and entry.get("layer") == "NETWORK":
-                failures += _endpoint_violations([telemetry_endpoint_rule(entry)], field_name=f"telemetry_disposition[{index}]")
-            elif entry.get("decision") == TELEMETRY_ALLOW:
-                failures.append(_failure(R_TELEMETRY_UNRESOLVED, field=f"telemetry_disposition[{index}]",
-                                         error="only a NETWORK telemetry route can be owner-allowed; processes are always denied"))
+        failures += telemetry_owner_deny_violations(manifest)
         filesystem = manifest.get("filesystem") or {}
         state_root, scratch = filesystem.get("provider_state_root"), filesystem.get("provider_scratch_base")
         if not (isinstance(state_root, str) and os.path.isabs(state_root) and isinstance(scratch, str) and os.path.isabs(scratch)):
@@ -1391,6 +1550,7 @@ class ProviderLaunchAuthorization:
     tier: str
     policy: runtime_contract.ProviderPolicy
     attestation: Mapping[str, Any]
+    os_enforcement_requirement: str = OS_ENFORCEMENT_PRODUCTION
     _issuer: object = field(default=None, repr=False, compare=False)
     _state: dict = field(default_factory=dict, repr=False, compare=False)
 
@@ -1461,6 +1621,10 @@ def _approval_violations(manifest: Mapping[str, Any], policy: runtime_contract.P
                                  error=f"identity form does not match this platform ({os.name})"))
     if launch_mode != LAUNCH_MODE_GATE_B and _containment_evidence_is_fake(manifest):
         failures.append(_failure(R_OS_CONTAINMENT_FAKE_EVIDENCE, launch_mode=launch_mode))
+    if (manifest.get("os_containment") or {}).get("process_control_mechanism") != PROCESS_CONTROL_BY_PLATFORM.get(sys.platform):
+        failures.append(_failure(R_OS_CONTAINMENT_UNVERIFIED, field="os_containment.process_control_mechanism",
+                                 error=f"not the process-lifetime control of this host ({sys.platform})"))
+    failures += telemetry_owner_deny_violations(manifest)
     return failures
 
 
@@ -1511,6 +1675,16 @@ def authorize_provider_launch(
     failures = provider_root_violations(manifest, denied)
     if failures:
         raise ProviderAttestationError(failures[0]["code"], failures)
+    # A manifest's os_containment block is a requirement, never proof: anything but the offline fake
+    # Gate B needs a production OS-enforcement backend, and plain Popen is never that backend.
+    requirement = os_enforcement_requirement(manifest, launch_mode)
+    if requirement == OS_ENFORCEMENT_PRODUCTION:
+        import provider_os_enforcement as os_enforcement
+
+        if os_enforcement.production_backend() is None:
+            raise ProviderAttestationError(R_OS_ENFORCEMENT_UNAVAILABLE, [_failure(
+                R_OS_ENFORCEMENT_UNAVAILABLE, launch_mode=launch_mode,
+                error="no production OS-enforcement backend is provisioned; plain Popen is offline-fake only")])
     failures = credential_launch_violations(manifest, parent_environ=parent_environ, state_root=state_root,
                                             configured_governor_rpm=configured_governor_rpm)
     terms_file = state_root / str((manifest.get("terms_acceptance") or {}).get("agreement_file_relative_path") or "")
@@ -1605,6 +1779,15 @@ def authorize_provider_launch(
             "environment": {"allowed_names": sorted({*(str(n).upper() for n in manifest["environment"]["allowed_names"]),
                                                      *credential_names, *REDIRECTED_PROFILE_NAMES, "TMPDIR", LAUNCH_CONTRACT_ENV})},
             "terms_agreement_relative_path": manifest["terms_acceptance"].get("agreement_file_relative_path"),
+            "os_enforcement": {
+                "requirement": requirement, "launch_id": launch_id, "platform": sys.platform,
+                "expected_restricted_identity": (manifest.get("os_containment") or {}).get("restricted_identity_sid")
+                if requirement == OS_ENFORCEMENT_PRODUCTION else None,
+                "process_control_mechanism": (manifest.get("os_containment") or {}).get("process_control_mechanism")
+                if requirement == OS_ENFORCEMENT_PRODUCTION else None,
+                # Supplied by the production backend's preflight (POSIX cgroup); absent => refused.
+                "expected_cgroup": None,
+            },
             "authority_effect": AUTHORITY_EFFECT,
         }
         contract_path.write_bytes(canonical_json_bytes(contract))
@@ -1620,6 +1803,7 @@ def authorize_provider_launch(
         contract_path=str(contract_path), governor_rpm=int(rate["governor_effective_rpm"]),
         tier=credential["expected_vnai_tier"], policy=policy,
         attestation={"static_checks": "PASS", "probe": probe, "denied_roots": denied, "manifest_sha256": digest},
+        os_enforcement_requirement=requirement,
         _issuer=_LAUNCH_ISSUER,
     )
 
@@ -1716,11 +1900,15 @@ def self_attest_worker(
         if not path.is_file() or file_identity(path, item["relative_path"]) != dict(item):
             failures.append(_failure(R_WORKER_SOURCE_MISMATCH, path=item["relative_path"]))
     bundled_manifest = bundle_root / str(contract.get("manifest_bundle_path"))
+    bundled: dict[str, Any] | None = None
     try:
-        if manifest_digest(json.loads(bundled_manifest.read_text(encoding="utf-8"))) != contract.get("manifest_sha256"):
+        bundled = json.loads(bundled_manifest.read_text(encoding="utf-8"))
+        if manifest_digest(bundled) != contract.get("manifest_sha256"):
             failures.append(_failure(R_MANIFEST_DIGEST_MISMATCH))
     except (OSError, ValueError):
         failures.append(_failure(R_MANIFEST_DIGEST_MISMATCH, error="bundled manifest unreadable"))
+    failures += worker_os_enforcement_violations(contract, observe_worker_os_facts(),
+                                                 bundled if isinstance(bundled, dict) else None)
     allowed_names = {str(name).upper() for name in (contract.get("environment") or {}).get("allowed_names") or []}
     for name in sorted(os.environ):
         upper = name.upper()

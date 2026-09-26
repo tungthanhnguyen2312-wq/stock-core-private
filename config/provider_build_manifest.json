@@ -295,8 +295,8 @@
   "source_files": [
    {
     "relative_path": "vnstock_worker_process.py",
-    "sha256": "bb55008e9e5730bce9d45473805962799ec524c64ecb59d8cd8f2404270fab88",
-    "size": 23312
+    "sha256": "82a6f12f81a23b3ce37f2a9a05594f5dbb1bc4e37a1929a6d8d8966b334306f7",
+    "size": 23596
    },
    {
     "relative_path": "vnstock_worker_protocol.py",
@@ -310,13 +310,13 @@
    },
    {
     "relative_path": "provider_build_manifest.py",
-    "sha256": "c534e3b6678ef1cefd40e2429ff18a48ff4ae9ff71faa7f2443b3193026f4516",
-    "size": 104700
+    "sha256": "8cbcb839671bbe6f864fbaf911516f2dd71980eb97044d6419061813fd39c3ef",
+    "size": 116110
    },
    {
     "relative_path": "provider_worker_containment.py",
-    "sha256": "98a427d0e361164688029d6eaf142ab2a28ba3991857e19d6684ce87c1e32699",
-    "size": 35578
+    "sha256": "144f979d817c43ee5deec89f5da734bfb24be03716a9ffb9cb070c24246eba89",
+    "size": 35752
    },
    {
     "relative_path": "provider_execution_guard.py",
@@ -325,8 +325,8 @@
    },
    {
     "relative_path": "provider_runtime_state.py",
-    "sha256": "a7932fe8fe8e6346ae58d669432e43c80e62167e90cdde6204cc377cda85a31e",
-    "size": 28053
+    "sha256": "0c82db077df55aac494b2da5f141586ab8e1a6da274ad7c26f9eac3206af7c32",
+    "size": 28620
    },
    {
     "relative_path": "vn_stock_pipeline.py",

@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 import os
 import subprocess
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -53,7 +54,10 @@ def _dir_alias(link: Path, target: Path) -> bool:
 
 @pytest.mark.parametrize("field, value", [
     ("egress_gateway_verified", False),
-    ("job_object_kill_on_close", False),
+    # The wrong claim for this host: Windows requires the Job object; POSIX must not claim one.
+    ("job_object_kill_on_close", sys.platform != "win32"),
+    ("process_control_mechanism", None),
+    ("process_control_mechanism", "LINUX_CGROUP_V2_KILL" if sys.platform == "win32" else "WINDOWS_JOB_OBJECT_KILL_ON_CLOSE"),
     ("runtime_root_read_only_acl", False),
     ("restricted_identity_sid", None),
     ("restricted_identity_sid", "TEST_FIXTURE"),

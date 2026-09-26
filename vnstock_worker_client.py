@@ -59,6 +59,7 @@ from pathlib import Path
 from typing import Any, Mapping
 
 import provider_build_manifest as build_manifest
+import provider_os_enforcement as os_enforcement
 import provider_runtime_state as runtime_contract
 
 # vnstock_rate_governor is a pure accounting/policy module (threading/time/collections only --
@@ -169,6 +170,7 @@ class VnstockWorkerFetcher:
         self._pending_lock = threading.Lock()
         self._pending: dict[str, queue.Queue] = {}
         self._process: subprocess.Popen | None = None
+        self._backend: os_enforcement.ProviderOSEnforcementBackend | None = None
         self._reader_thread: threading.Thread | None = None
         self._started = False
         self._failed_exc: VnstockWorkerFailure | None = None
@@ -215,16 +217,22 @@ class VnstockWorkerFetcher:
                     raise self._failed_exc
                 return
             try:
-                self._launch.consume()
-                # The launch's environment was constructed from the manifest: allow-listed OS
-                # names, the approved credential (if any), and profile/temp names redirected into
-                # the provider state/scratch roots -- never a copy of this process's environment.
-                self._process = subprocess.Popen(
-                    list(self._launch.argv),
-                    stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                    text=True, encoding="utf-8", bufsize=1, env=dict(self._launch.environment),
-                    cwd=str(self._worker_cwd),
+                # Only an OS-enforcement backend spawns a worker: the production backend for every
+                # live mode (none is provisioned yet -> refused here), plain Popen only for the
+                # offline fake Gate B. There is no direct Popen fallback in this client.
+                self._backend = os_enforcement.backend_for_launch(self._launch)
+                self._backend.preflight(self._launch)
+            except os_enforcement.OSEnforcementUnavailable as exc:
+                failure = VnstockWorkerStartupError(
+                    f"WORKER_OS_ENFORCEMENT_REFUSED:{exc.reason_code}",
+                    diagnostics={"startup_failure_kind": runtime_contract.STARTUP_KIND_OS_ENFORCEMENT_UNAVAILABLE,
+                                 "reason_code": exc.reason_code},
                 )
+                self._failed_exc = failure
+                raise failure from None
+            try:
+                self._launch.consume()
+                self._process = self._backend.spawn_contained(self._launch)
             except OSError as exc:
                 failure = VnstockWorkerStartupError(
                     f"WORKER_PROCESS_SPAWN_FAILED:{exc}",
@@ -255,6 +263,33 @@ class VnstockWorkerFetcher:
             raise failure
         if self._failed_exc is not None:
             raise self._failed_exc
+        self._verify_os_enforcement()
+
+    def _verify_os_enforcement(self) -> None:
+        """Before any request: the backend's attestation of the spawned process, checked against
+        the launch, the manifest requirements and the worker's own OS observations."""
+        assert self._process is not None and self._backend is not None
+        try:
+            attestation = self._backend.attest_spawned_process(self._launch, self._process)
+        except Exception as exc:  # noqa: BLE001 -- any attestation failure is a refusal
+            attestation = {"error": type(exc).__name__}
+        facts = (self._runtime_info or {}).get("os_facts")
+        failures = os_enforcement.validate_attestation(
+            attestation, launch=self._launch, worker_pid=self._process.pid, worker_facts=facts)
+        with self._diagnostics_lock:
+            self._diagnostics["os_enforcement"] = {
+                "backend_kind": attestation.get("backend_kind") if isinstance(attestation, dict) else None,
+                "evidence_sha256": attestation.get("evidence_sha256") if isinstance(attestation, dict) else None,
+                "requirement": self._launch.os_enforcement_requirement, "failures": failures[:20],
+            }
+        if failures:
+            failure = VnstockWorkerStartupError(
+                f"WORKER_OS_ENFORCEMENT_ATTESTATION_FAILED:{failures[0]['code']}:{failures[0].get('field')}",
+                diagnostics={"startup_failure_kind": runtime_contract.STARTUP_KIND_OS_ENFORCEMENT_ATTESTATION_FAILED,
+                             "attestation_failures": failures[:50], "reason_code": failures[0]["code"]},
+            )
+            self._fail(failure)
+            raise failure
 
     def _reader_loop(self) -> None:
         assert self._process is not None and self._process.stdout is not None

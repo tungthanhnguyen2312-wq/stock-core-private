@@ -153,6 +153,8 @@ def main() -> int:
         "python_version": "fake",
         "python_implementation": "fake",
         "provider_distributions": {"vnstock": "fake-0", "vnai": "fake-0"},
+        # What the parent cross-checks against the (offline fake) OS-enforcement attestation.
+        "os_facts": {"platform": sys.platform, "pid": os.getpid(), "ppid": os.getppid(), "identity": None, "in_job": None, "cgroup": None},
     }
     if os.environ.get("FAKE_WORKER_REPORT_ENV") == "1":
         runtime["environment"] = dict(os.environ)

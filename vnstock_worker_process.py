@@ -312,6 +312,9 @@ def main() -> int:
         _emit_startup_failure(STARTUP_KIND_ATTESTATION_FAILED, None, real_stdout=real_stdout,
                               attestation_failures=failures[:_MAX_REPORTED_EVENTS])
         return 1
+    # Read from the OS before containment is installed; reported in READY so the parent can cross-
+    # check the OS-enforcement backend's attestation against the worker's own view of itself.
+    os_facts = build_manifest.observe_worker_os_facts()
 
     # --- 3./4. containment, then the worker attestation for the execution guard ----------------
     try:
@@ -395,6 +398,7 @@ def main() -> int:
         return 1
     containment.set_phase(worker_containment.PHASE_OPERATION)
     runtime["attestation"] = guard.current_worker_attestation().to_record()
+    runtime["os_facts"] = os_facts
     runtime["containment"] = {"requests_guard": requests_guard, "startup_stubs": stubs,
                               "events": containment.log.summary()}
     runtime["rate_contract"] = {"governor_effective_rpm": governor.limit, "tier_minute_limit": governor.hard_ceiling,

@@ -197,6 +197,12 @@
        "job_object_kill_on_close": {
         "type": "boolean"
        },
+       "process_control_mechanism": {
+        "enum": [
+         "WINDOWS_JOB_OBJECT_KILL_ON_CLOSE",
+         "LINUX_CGROUP_V2_KILL"
+        ]
+       },
        "requirements": {
         "items": {
          "minLength": 1,
@@ -229,6 +235,7 @@
       "required": [
        "egress_gateway_verified",
        "job_object_kill_on_close",
+       "process_control_mechanism",
        "requirements",
        "restricted_identity_sid",
        "runtime_root_read_only_acl",
@@ -1248,6 +1255,19 @@
     },
     "job_object_kill_on_close": {
      "type": "boolean"
+    },
+    "process_control_mechanism": {
+     "anyOf": [
+      {
+       "enum": [
+        "WINDOWS_JOB_OBJECT_KILL_ON_CLOSE",
+        "LINUX_CGROUP_V2_KILL"
+       ]
+      },
+      {
+       "type": "null"
+      }
+     ]
     },
     "requirements": {
      "items": {

@@ -24,9 +24,9 @@ Four layers, all driven by the approved build manifest through the launch contra
    This closes the old interception gap that only short-circuited ``subprocess.run``.
 4. Filesystem layer -- the hook denies ``open``/``listdir``/``scandir`` and every mutating ``os``
    call under a denied root (the owner profile and its ``.vnstock``/``.stocklookup`` state, the
-   producer checkout, the runtime root, secrets files) unless the path lies inside a more specific
-   approved root (read-only: interpreter, venv, worker bundle; read-write: provider state root,
-   per-launch scratch root).
+   producer checkout, the runtime root, secrets files). A denied root always wins over an approved
+   root configured beneath it; elsewhere the most specific approved root decides (read-only:
+   interpreter, venv, worker bundle; read-write: provider state root, per-launch scratch root).
 
 Every denial is recorded in ``ContainmentEventLog`` with a deterministic reason code. A denial the
 manifest's telemetry disposition names (``DENY``) is *expected* -- vendor telemetry is refused on
@@ -37,7 +37,8 @@ after a denial.
 This is in-process containment, not a security sandbox. Native code and ``ctypes`` can bypass audit
 hooks, and existence probes (``os.stat``) raise no audit event. The dossier's OS-level controls --
 restricted identity, NTFS deny ACLs, Job object, default-deny egress gateway, read-only runtime --
-remain required before any owner approval.
+are established and attested by a production ``provider_os_enforcement`` backend; without one,
+every live launch mode is refused before a worker exists.
 """
 from __future__ import annotations
 
