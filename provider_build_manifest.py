@@ -108,6 +108,9 @@ REVIEWED_VENDOR_TIER_LIMITS = {
     TIER_FREE: {"min": 60, "hour": 3600, "day": 10000},
 }
 MAX_FRACTION_OF_TIER_MINUTE_LIMIT = 0.75
+# Owner decision 2026-09-26: absolute governor ceiling, independent of the bound tier (the free
+# tier's 75% share would be 45/min). Mirrors vnstock_rate_governor.OWNER_APPROVED_GOVERNOR_CEILING_RPM.
+OWNER_APPROVED_GOVERNOR_CEILING_RPM = 20
 
 TELEMETRY_DENY = "DENY"
 TELEMETRY_ALLOW = "ALLOW_OWNER_APPROVED"
@@ -489,9 +492,13 @@ def rate_binding_violations(
         fraction = MAX_FRACTION_OF_TIER_MINUTE_LIMIT
     rpm = binding.get("governor_effective_rpm")
     minute = limits.get("min") if isinstance(limits.get("min"), int) else reviewed["min"]
-    ceiling = int(fraction * minute)
+    ceiling = min(int(fraction * minute), OWNER_APPROVED_GOVERNOR_CEILING_RPM)
     if not isinstance(rpm, int) or isinstance(rpm, bool) or rpm < 1 or rpm > ceiling:
-        failures.append(_failure(R_GOVERNOR_EXCEEDS_APPROVED, error=f"governor rpm {rpm!r} > floor({fraction} x {minute}) = {ceiling}"))
+        failures.append(_failure(
+            R_GOVERNOR_EXCEEDS_APPROVED,
+            error=f"governor rpm {rpm!r} > min(floor({fraction} x {minute}), owner ceiling "
+                  f"{OWNER_APPROVED_GOVERNOR_CEILING_RPM}) = {ceiling}",
+        ))
     budget = binding.get("planned_session_request_budget")
     day = limits.get("day") if isinstance(limits.get("day"), int) else reviewed["day"]
     if not isinstance(budget, int) or isinstance(budget, bool) or budget < 0 or budget > day:

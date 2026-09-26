@@ -10,8 +10,9 @@
   chain is:
   1. provider-runtime operationalization. Bounded pre-approval infrastructure
      `APPROVED_PROVIDER_BUILD_AND_EXECUTION_BOUNDARY_V1` is implemented; the package/build is
-     unapproved; policy stays `SECURITY_REVIEW_BLOCKED`; live qualification is blocked pending
-     owner decisions;
+     unapproved; policy stays `SECURITY_REVIEW_BLOCKED`; owner decisions for contained
+     qualification are recorded; live Gates C→E wait for promotion, runtime provisioning and
+     Gates A/B on that runtime;
   2. a qualifying, safe ordinary Daily;
   3. M1 live acceptance;
   4. only then close M1 and select the next analytical milestone.

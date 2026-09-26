@@ -305,13 +305,13 @@
    },
    {
     "relative_path": "vnstock_rate_governor.py",
-    "sha256": "c568e628fe3f711b285b9d5544062a0d19f7c0888cc796d2d35ee54a4e805ced",
-    "size": 11047
+    "sha256": "d84d1ae302ee499ee6a88762422b4b4209a6b043bc0b46a989128fcd09d17fd8",
+    "size": 11654
    },
    {
     "relative_path": "provider_build_manifest.py",
-    "sha256": "4968d6f48833ed7f0e4ca4330f9e8e09e3b43856848f0a7609f1ff20f6742b64",
-    "size": 93433
+    "sha256": "8ed5031833872562c3ff6f8275fa269e2db5cbe7cb55f1e957a21b9d564fdc33",
+    "size": 93831
    },
    {
     "relative_path": "provider_worker_containment.py",

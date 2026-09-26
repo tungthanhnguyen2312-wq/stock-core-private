@@ -57,6 +57,10 @@ VNSTOCK_OBSERVED_HARD_CEILING_RPM = 60
 # rate_tier_binding (a contained, key-less "guest" worker is 20/min, so at most 15/min).
 DEFAULT_EFFECTIVE_RPM = 45
 MAX_FRACTION_OF_TIER_MINUTE_LIMIT = 0.75
+# Owner decision 2026-09-26 (initial contained qualification): the governed worker never exceeds
+# 20 requests/minute, even when the bound/detected vendor tier would allow more. Mirrored by
+# provider_build_manifest.OWNER_APPROVED_GOVERNOR_CEILING_RPM (the manifest validator).
+OWNER_APPROVED_GOVERNOR_CEILING_RPM = 20
 RATE_WINDOW_SECONDS = 60.0
 # Per-request pacing (seconds) between sequential VCI/KBS requests: ~55 requests/minute across
 # both sources, under the 60/minute ceiling above. Owned here -- a stdlib-only module both the
@@ -170,8 +174,9 @@ def governor_from_rate_contract(
     or any assumption that a vendor credential exists.
 
     Fails closed (``RateContractViolation``) when the contract is incomplete, when its governor
-    rate exceeds 75% of the bound tier's per-minute limit, or when ``configured_limit`` asks for
-    more than the approved rate.
+    rate exceeds 75% of the bound tier's per-minute limit or the owner's absolute ceiling
+    (``OWNER_APPROVED_GOVERNOR_CEILING_RPM``), or when ``configured_limit`` asks for more than the
+    approved rate.
     """
     try:
         approved = int(rate["governor_effective_rpm"])
@@ -180,6 +185,10 @@ def governor_from_rate_contract(
         raise RateContractViolation(f"VNSTOCK_RATE_CONTRACT_INCOMPLETE:{type(exc).__name__}") from None
     if approved < 1 or tier_minute < 1 or approved > int(MAX_FRACTION_OF_TIER_MINUTE_LIMIT * tier_minute):
         raise RateContractViolation(f"VNSTOCK_RATE_CONTRACT_EXCEEDS_TIER_FRACTION:{approved}/{tier_minute}")
+    if approved > OWNER_APPROVED_GOVERNOR_CEILING_RPM:
+        raise RateContractViolation(
+            f"VNSTOCK_RATE_CONTRACT_EXCEEDS_OWNER_CEILING:{approved}>{OWNER_APPROVED_GOVERNOR_CEILING_RPM}"
+        )
     if configured_limit is not None and configured_limit > approved:
         raise RateContractViolation(f"VNSTOCK_GOVERNOR_EXCEEDS_APPROVED_RATE:{configured_limit}>{approved}")
     return VnstockRateGovernor(

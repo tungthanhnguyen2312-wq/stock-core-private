@@ -18,6 +18,7 @@ import provider_execution_guard as guard
 import provider_runtime_state as rt
 import provider_worker_containment as containment
 import vn_stock_pipeline as pipeline
+import vnstock_rate_governor as rate_governor
 from _provider_build_fixtures import (
     FAKE_ENDPOINT_HOST,
     FAKE_WORKER,
@@ -62,6 +63,20 @@ def test_tracked_lock_is_a_candidate_not_an_approval():
     assert lock["candidate_closure"]["count"] == 39
     assert len(lock["runtime_minimal_hypothesis"]["packages"]) == 23
     assert len(lock["unnecessary_for_governed_worker"]["packages"]) == 16
+
+
+def test_tracked_lock_carries_the_tzdata_the_worker_timezone_needs():
+    # The worker bundles vn_time, which builds ZoneInfo("Asia/Ho_Chi_Minh") at import; Windows has
+    # no system tz database, so the governed closure must carry tzdata (pandas Requires-Dist too).
+    assert "vn_time.py" in build_manifest.WORKER_SOURCE_FILES
+    lock, _digest = build_manifest.load_dependency_lock()
+    [tzdata] = [item for item in lock["candidate_closure"]["packages"] if item["name"] == "tzdata"]
+    assert tzdata["version"] == "2025.3"
+    assert tzdata["artifact_filename"] == "tzdata-2025.3-py2.py3-none-any.whl"
+    assert tzdata["artifact_sha256"] == "06a47e5700f3081aab02b2e513160914ff0694bce9947d6b76ebd6bf57cfc5d1"
+    assert tzdata["installed_bytes_match_artifact"] is True
+    assert "tzdata" in lock["runtime_minimal_hypothesis"]["packages"]
+    assert "tzdata" not in lock["unnecessary_for_governed_worker"]["packages"]
 
 
 @pytest.mark.parametrize("payload", [None, "{not json", "[]"])
@@ -180,6 +195,39 @@ def test_governor_rate_above_manifest_maximum_fails(tmp_path):
     with pytest.raises(build_manifest.ProviderAttestationError) as exc:
         runtime.authorize(configured_governor_rpm=runtime.manifest["rate_tier_binding"]["governor_effective_rpm"] + 1)
     assert exc.value.reason_code == build_manifest.R_GOVERNOR_EXCEEDS_APPROVED
+
+
+def test_owner_ceiling_caps_the_free_tier_binding_at_20_rpm():
+    credential = {"mechanism": build_manifest.CREDENTIAL_APPROVED_ENV_NAME, "expected_vnai_tier": build_manifest.TIER_FREE,
+                  "credential_name": build_manifest.VENDOR_CREDENTIAL_NAME, "owner_decision_id": "TEST_FIXTURE_DECISION",
+                  "fabricated_or_placeholder_key_forbidden": True}
+
+    def binding(rpm):
+        return {"tier": build_manifest.TIER_FREE, "tier_limits": dict(build_manifest.REVIEWED_VENDOR_TIER_LIMITS[build_manifest.TIER_FREE]),
+                "max_fraction_of_tier_minute_limit": build_manifest.MAX_FRACTION_OF_TIER_MINUTE_LIMIT,
+                "governor_effective_rpm": rpm, "planned_session_request_budget": 0}
+
+    assert build_manifest.OWNER_APPROVED_GOVERNOR_CEILING_RPM == rate_governor.OWNER_APPROVED_GOVERNOR_CEILING_RPM == 20
+    assert build_manifest.rate_binding_violations(binding(20), credential) == []
+    for rpm in (21, 45):  # 45 = the free tier's 75% share, which the owner ceiling forbids
+        codes = {item["code"] for item in build_manifest.rate_binding_violations(binding(rpm), credential)}
+        assert codes == {build_manifest.R_GOVERNOR_EXCEEDS_APPROVED}
+
+
+def test_worker_governor_refuses_a_contract_above_the_owner_ceiling():
+    free_minute = build_manifest.REVIEWED_VENDOR_TIER_LIMITS[build_manifest.TIER_FREE]["min"]
+    with pytest.raises(rate_governor.RateContractViolation, match="EXCEEDS_OWNER_CEILING"):
+        rate_governor.governor_from_rate_contract({"governor_effective_rpm": 45, "tier_limits": {"min": free_minute}})
+    governor = rate_governor.governor_from_rate_contract({"governor_effective_rpm": 20, "tier_limits": {"min": free_minute}})
+    assert governor.limit == 20
+
+
+def test_free_tier_fixture_launch_is_bound_at_the_owner_ceiling(tmp_path):
+    runtime = protocol_runtime(
+        tmp_path / "rt", credential_mechanism=build_manifest.CREDENTIAL_APPROVED_ENV_NAME,
+        credential_value="test-fixture-credential-not-a-real-key",
+    )
+    assert runtime.manifest["rate_tier_binding"]["governor_effective_rpm"] == 20
 
 
 def test_valid_guest_tier_rate_contract_passes(tmp_path):
@@ -380,17 +428,35 @@ def test_qualification_mode_is_explicitly_offline_fake():
 
 
 def test_governed_worker_self_attests_before_provider_adapter_import(tmp_path):
+    # Real worker + fake packages whose vnai.setup() also reads owner-profile secrets: the worker
+    # self-attests, imports the adapter (tzdata present), then fails closed on the unexpected
+    # owner-profile denials. The declared telemetry/process denials are expected, not failures.
     runtime = governed_runtime(tmp_path)
     handle = runtime.open_provider_runtime(startup_timeout=25.0)
     try:
-        assert handle.state["reason_code"] != rt.REASON_WORKER_SELF_ATTESTATION_FAILED
-        assert handle.state["state"] in (
-            rt.IMPORT_FAILED, rt.STARTUP_FAILED, rt.SECURITY_REVIEW_BLOCKED, rt.AVAILABLE, rt.NOT_INSTALLED,
-        )
+        assert handle.state["reason_code"] == rt.REASON_STARTUP_CONTAINMENT_VIOLATION, handle.state
+        assert handle.state["state"] == rt.SECURITY_REVIEW_BLOCKED
+        assert not handle.available
         detail = handle.state.get("detail") or {}
+        assert detail.get("exception_type") is None
+        assert "vnstock.api.quote" in detail.get("provider_modules_loaded", [])
         events = detail.get("containment_events") or []
-        reasons = {item.get("reason_code") for item in events}
-        assert containment.FILESYSTEM_DENIED_ROOT in reasons or handle.available
-        assert containment.PROCESS_CREATION_DENIED in reasons or handle.available
+        assert events and {item.get("reason_code") for item in events} == {containment.FILESYSTEM_DENIED_ROOT}
+        targets = " ".join(str(item.get("target")) for item in events)
+        assert "api_key.json" in targets and "secrets.env" in targets
+    finally:
+        handle.shutdown()
+
+
+@pytest.mark.skipif(os.name != "nt", reason="POSIX interpreters fall back to the system tz database")
+def test_governed_worker_without_tzdata_fails_adapter_import(tmp_path):
+    # Proves the fake tzdata models a real requirement rather than hiding one: remove it and the
+    # real worker cannot import its adapter on Windows.
+    runtime = governed_runtime(tmp_path, include_tzdata=False, vnai_probes_owner_profile=False)
+    handle = runtime.open_provider_runtime(startup_timeout=25.0)
+    try:
+        assert handle.state["state"] == rt.IMPORT_FAILED, handle.state
+        assert handle.state["reason_code"] == rt.REASON_IMPORT_FAILED
+        assert (handle.state.get("detail") or {}).get("exception_type") == "ZoneInfoNotFoundError"
     finally:
         handle.shutdown()

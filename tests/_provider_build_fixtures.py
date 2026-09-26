@@ -18,6 +18,7 @@ import hashlib
 import json
 import os
 import shutil
+import struct
 import subprocess
 import sys
 import tempfile
@@ -69,16 +70,19 @@ def _venv_python(venv_root: Path) -> Path:
     return venv_root / "Scripts" / "python.exe" if os.name == "nt" else venv_root / "bin" / "python"
 
 
-def _write(path: Path, text: str) -> None:
+def _write(path: Path, body: str | bytes) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(text, encoding="utf-8")
+    if isinstance(body, bytes):
+        path.write_bytes(body)
+    else:
+        path.write_text(body, encoding="utf-8")
 
 
 def _sha256_text(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
-def _plant_distribution(site: Path, name: str, version: str, files: Mapping[str, str]) -> dict[str, Any]:
+def _plant_distribution(site: Path, name: str, version: str, files: Mapping[str, str | bytes]) -> dict[str, Any]:
     """Write a fake installed distribution (modules + dist-info METADATA/RECORD). No wheel, no pip."""
     written: list[Path] = []
     for relative, body in files.items():
@@ -240,23 +244,29 @@ def migrate_to_sponsor(target_dir="."):
 '''
 
 _FAKE_VNAI_TEMPLATE = '''
-"""TEST_FIXTURE_ONLY fake vnai. Attempts the vendor start-up side effects under containment."""
+"""TEST_FIXTURE_ONLY fake vnai. Attempts the vendor start-up side effects under containment.
+
+With _PROBE_OWNER_PROFILE it also tries the owner-profile secrets (an unexpected denial: the
+worker must fail closed). Without it, only the manifest-declared telemetry/process side effects
+are attempted (expected denials: the worker must reach READY)."""
 import os
 import subprocess
 from pathlib import Path
 
 _OWNER_PROFILE = {owner_profile!r}
+_PROBE_OWNER_PROFILE = {probe_owner_profile!r}
 _TELEMETRY_URL = "https://hq.vnstocks.com/analytics"
 
 def setup():
-    try:
-        Path(_OWNER_PROFILE).joinpath(".vnstock", "api_key.json").read_text(encoding="utf-8")
-    except Exception:
-        pass
-    try:
-        Path(_OWNER_PROFILE).joinpath(".stocklookup", "secrets.env").read_text(encoding="utf-8")
-    except Exception:
-        pass
+    if _PROBE_OWNER_PROFILE:
+        try:
+            Path(_OWNER_PROFILE).joinpath(".vnstock", "api_key.json").read_text(encoding="utf-8")
+        except Exception:
+            pass
+        try:
+            Path(_OWNER_PROFILE).joinpath(".stocklookup", "secrets.env").read_text(encoding="utf-8")
+        except Exception:
+            pass
     try:
         import urllib.request
         urllib.request.urlopen(_TELEMETRY_URL, timeout=1)
@@ -273,8 +283,36 @@ def setup():
 '''
 
 
-def _plant_fake_packages(site: Path, *, owner_profile: str) -> list[dict[str, Any]]:
+def _tzif_fixed_offset(offset_seconds: int, abbreviation: str, posix_tz: str) -> bytes:
+    """Minimal RFC 8536 TZif v2 zone: no transitions, one local-time type, POSIX TZ footer."""
+    abbr = abbreviation.encode("ascii") + b"\0"
+
+    def block() -> bytes:
+        header = b"TZif2" + b"\0" * 15 + struct.pack(">6l", 0, 0, 0, 0, 1, len(abbr))
+        return header + struct.pack(">lBB", offset_seconds, 0, 0) + abbr
+
+    return block() + block() + b"\n" + posix_tz.encode("ascii") + b"\n"
+
+
+# The real worker imports vn_time (a bundled worker source), which builds
+# ZoneInfo("Asia/Ho_Chi_Minh") at import. Windows has no system tz database, so the governed
+# runtime needs the ``tzdata`` distribution -- pinned in the tracked candidate lock (tzdata 2025.3,
+# pandas Requires-Dist ``tzdata>=2022.7``, member of RUNTIME_MINIMAL_23). The fake mirrors the
+# real package layout that zoneinfo resolves (``tzdata.zoneinfo.Asia`` / ``Ho_Chi_Minh``).
+_FAKE_TZDATA_FILES: dict[str, str | bytes] = {
+    "tzdata/__init__.py": 'IANA_VERSION = "TEST_FIXTURE_ONLY"\n',
+    "tzdata/zoneinfo/__init__.py": "",
+    "tzdata/zoneinfo/Asia/__init__.py": "",
+    "tzdata/zoneinfo/Asia/Ho_Chi_Minh": _tzif_fixed_offset(7 * 3600, "+07", "<+07>-7"),
+}
+
+
+def _plant_fake_packages(
+    site: Path, *, owner_profile: str, include_tzdata: bool = True, vnai_probes_owner_profile: bool = True,
+) -> list[dict[str, Any]]:
     packages = []
+    if include_tzdata:
+        packages.append(_plant_distribution(site, "tzdata", "0.0.0", _FAKE_TZDATA_FILES))
     packages.append(_plant_distribution(site, "requests", "0.0.0", {
         "requests/__init__.py": _FAKE_REQUESTS,
         "requests/sessions.py": "from requests import Session, Request, Response\n",
@@ -293,7 +331,9 @@ def _plant_fake_packages(site: Path, *, owner_profile: str) -> list[dict[str, An
         "vnstock/core/utils/upgrade.py": _FAKE_VNSTOCK_UPGRADE,
     }))
     packages.append(_plant_distribution(site, "vnai", "0.0.0", {
-        "vnai/__init__.py": _FAKE_VNAI_TEMPLATE.format(owner_profile=owner_profile),
+        "vnai/__init__.py": _FAKE_VNAI_TEMPLATE.format(
+            owner_profile=owner_profile, probe_owner_profile=vnai_probes_owner_profile,
+        ),
     }))
     return sorted(packages, key=lambda item: item["name"])
 
@@ -521,6 +561,8 @@ def build_fake_provider_runtime(
     unexpected_pth: bool = False,
     startup_hook: bool = False,
     system_site: bool = False,
+    include_tzdata: bool = True,
+    vnai_probes_owner_profile: bool = True,
 ) -> FakeProviderRuntime:
     """Construct a throwaway fake provider environment under ``root`` (or a temp dir)."""
     root = Path(root) if root is not None else Path(tempfile.mkdtemp(prefix="sl-fake-provider-rt-"))
@@ -530,10 +572,13 @@ def build_fake_provider_runtime(
     (owner_profile / ".stocklookup").mkdir(parents=True, exist_ok=True)
     (owner_profile / ".vnstock" / "api_key.json").write_text('{"api_key":"owner-secret-must-not-leak"}\n', encoding="utf-8")
     (owner_profile / ".stocklookup" / "secrets.env").write_text("DNSE_API_KEY=owner-dnse\n", encoding="utf-8")
-    if unexpected_pth or startup_hook or system_site:
+    if unexpected_pth or startup_hook or system_site or not include_tzdata or not vnai_probes_owner_profile:
         venv_root = Path(tempfile.mkdtemp(prefix="sl-fake-provider-venv-mut-"))
         _create_venv(venv_root)
-        _plant_fake_packages(_site_dir(venv_root), owner_profile=str(owner_profile))
+        _plant_fake_packages(
+            _site_dir(venv_root), owner_profile=str(owner_profile),
+            include_tzdata=include_tzdata, vnai_probes_owner_profile=vnai_probes_owner_profile,
+        )
     else:
         venv_root = cached_fake_venv(owner_profile=str(owner_profile))
         vnai_init = _site_dir(venv_root) / "vnai" / "__init__.py"
@@ -579,7 +624,10 @@ def build_fake_provider_runtime(
     now = datetime.now(timezone.utc)
     tier = build_manifest.TIER_GUEST if credential_mechanism == build_manifest.CREDENTIAL_NONE else build_manifest.TIER_FREE
     reviewed = build_manifest.REVIEWED_VENDOR_TIER_LIMITS[tier]
-    rpm = governor_rpm if governor_rpm is not None else int(build_manifest.MAX_FRACTION_OF_TIER_MINUTE_LIMIT * reviewed["min"])
+    rpm = governor_rpm if governor_rpm is not None else min(
+        int(build_manifest.MAX_FRACTION_OF_TIER_MINUTE_LIMIT * reviewed["min"]),
+        build_manifest.OWNER_APPROVED_GOVERNOR_CEILING_RPM,
+    )
     allowed_names = sorted(runtime_contract.BASE_ENV_ALLOWLIST | set(PROTOCOL_CONTROL_ENV))
     credential_names: list[str] = []
     if credential_mechanism == build_manifest.CREDENTIAL_APPROVED_ENV_NAME:

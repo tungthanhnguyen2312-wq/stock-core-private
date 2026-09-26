@@ -10,7 +10,7 @@ sys.path.insert(0, str(ROOT / "tools"))
 sys.path.insert(0, str(ROOT / "tests"))
 
 import run_provider_qualification as qual  # noqa: E402
-from _provider_build_fixtures import MODE_OFFLINE_FAKE, protocol_runtime  # noqa: E402
+from _provider_build_fixtures import MODE_OFFLINE_FAKE, governed_runtime, protocol_runtime  # noqa: E402
 
 
 def test_mode_is_explicitly_offline_fake_and_cannot_be_confused_with_live():
@@ -45,6 +45,22 @@ def test_gate_b_fake_protocol_launch_passes(tmp_path):
     assert report["live_qualification"] is False
     assert report["verdict"] == "PASS", report
     assert report["state"]["state"] == "AVAILABLE"
+
+
+def test_gate_b_fake_governed_real_worker_reaches_ready(tmp_path):
+    # The real vnstock_worker_process.py against fake packages (incl. the tzdata the worker's
+    # timezone needs) reaches READY with only the manifest-declared, expected denials.
+    runtime = governed_runtime(tmp_path, vnai_probes_owner_profile=False)
+    assert qual.gate_a_fake(runtime)["verdict"] == "PASS"
+    report = qual.gate_b_fake(runtime)
+    assert report["verdict"] == "PASS", report
+    assert report["live_qualification"] is False
+    state = report["state"]
+    assert state["state"] == "AVAILABLE"
+    events = state["runtime_info"]["containment"]["events"]
+    assert events["unexpected_denial_count"] == 0
+    assert set(events["by_reason"]) <= {"PROCESS_CREATION_DENIED", "SOCKET_HOST_NOT_ALLOWLISTED"}
+    assert state["runtime_info"]["rate_contract"]["governor_effective_rpm"] <= 20
 
 
 def test_cli_json_report_never_claims_live_qualification():

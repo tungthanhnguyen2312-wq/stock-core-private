@@ -20,6 +20,56 @@ Bounded provider-runtime operationalization under active M1. Not a new analytica
   `requirements-providers.txt` is not an approval manifest and not the production provider
   lock; `config/provider_dependency_lock.json` is a candidate contract only.
 - **Next gate.** `OWNER_PROVIDER_BUILD_DECISION_THEN_BOUNDED_LIVE_QUALIFICATION`.
+- **Checkpoint.** Implementation `f2bed7f06f6ff7b534702a7925c86efd677c4d84` (pinned in
+  `docs/ROADMAP_STATE.json`).
+
+## 2026-09-26 - Owner decisions for contained provider qualification (recorded; not an approval)
+
+The owner authorized ChatGPT to make the remaining provider-runtime decisions. The decisions
+below are fixed for this milestone. They are **not** a build approval. The tracked manifest
+stays `DRAFT` and the policy stays `SECURITY_REVIEW_BLOCKED` until the steps under
+"Sequence" have happened.
+
+- **Candidate build.** The exact locally retained 39-wheel candidate
+  (`config/provider_dependency_lock.json`) may proceed to contained qualification. This is not
+  unrestricted source/data authority and does not waive the manifest/hash/containment
+  requirements.
+- **Credential.** Only through the governed provider-worker credential mechanism. The worker
+  must never discover or consume `%USERPROFILE%\.vnstock\api_key.json` or any owner-profile
+  fallback. No fake or placeholder key.
+- **Rate.** Initial approved ceiling: 20 requests/minute. The governor never exceeds it, even
+  when a detected vendor tier would allow more. Code enforces it through
+  `OWNER_APPROVED_GOVERNOR_CEILING_RPM` in both `provider_build_manifest.rate_binding_violations`
+  and `vnstock_rate_governor.governor_from_rate_contract`. Without it, the free tier's 75% share
+  would have allowed 45/min.
+- **Telemetry / ancillary vendor services.** DENY by default: analytics/telemetry,
+  advertising/content delivery, device registration, profile sync, and unrelated vendor
+  endpoints. If provider initialization cannot run while these are denied, fail closed and
+  report the dependency. Never enable them silently.
+- **Network.** Only the exact market-data/auth endpoints needed for bounded qualification.
+  Their values must be bound in the manifest.
+- **Terms.** Do not manufacture or silently record a terms/license acceptance
+  programmatically. If execution needs an explicit acceptance that has not been seen before,
+  stop and report the exact requirement.
+- **OS containment.** A dedicated provider environment/profile/scratch area, isolated at the
+  filesystem level from the owner profile, `.stocklookup` secrets, DNSE/Livespeed/Finhay
+  secrets, production DB/runtime data, and portfolio/private research data. Prefer a
+  low-privilege OS identity or enforceable ACLs. If that needs an unavailable elevation/admin
+  step, return a provisioning blocker rather than weakening containment.
+- **Sequence.** Bounded live qualification Gates C→E are authorized only after (1) this
+  infrastructure is promoted, (2) the exact runtime is provisioned, and (3) Gates A/B pass on
+  it. Ordinary Daily is authorized only after C→E pass, on the next valid completed trading
+  session.
+- **Corrective (same branch, after `f2bed7f`).** The governed real-worker + fake-provider
+  fixture could not import its adapter (`ZoneInfoNotFoundError`). Classification:
+  **FIXTURE_ONLY**. The worker bundles `vn_time`, which builds `ZoneInfo("Asia/Ho_Chi_Minh")`,
+  and Windows has no system tz database, so tzdata is a real runtime requirement. That
+  requirement is already met by the candidate contract: `tzdata 2025.3` (sha256 `06a47e57…`) is
+  in the 39-wheel lock and in `RUNTIME_MINIMAL_23`, and pandas requires `tzdata>=2022.7`. No
+  lock change is needed and no artifact acquisition is outstanding. The fixture now plants a fake
+  `tzdata` distribution with the real package layout. A Windows regression test proves that
+  removing it breaks the real worker, and the governed fake runtime reaches READY (fake governed
+  Gate B PASS).
 
 ## 2026-09-26 - M1 stabilization promoted to `main`; post-promotion state sync
 
