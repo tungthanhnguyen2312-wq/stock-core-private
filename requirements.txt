@@ -1,21 +1,19 @@
-# VNSTOCK — runtime dependencies
-# Chỉ liệt kê package thực sự được import trong code (đã kiểm bằng grep toàn bộ *.py).
-# Cài: pip install -r requirements.txt
+# Stock Lookup Producer — CORE runtime dependencies (tier hermetic core / CI)
+# Chỉ gồm package mà lõi thực sự import: pipeline offline, feature/quant engine, canonical
+# daily operation, publication contracts và toàn bộ test hermetic.
 #
-# Sau khi cài, còn 1 bước bắt buộc cho vnstock (đọc docs/USER_GUIDE.md):
-#   python -c "from vnstock import vnai; vnai.setup_api_key('KEY_CUA_BAN')"
+# Cài tái lập (giống CI, khuyến nghị):
+#   python -m pip install -r requirements.txt -r requirements-test.txt -c constraints.txt
+#
+# Provider runtime TÙY CHỌN nằm ở requirements-providers.txt (vnstock/vnai cho lane bổ trợ
+# KBS/VCI của Daily, anthropic cho ai_analyzer.py gọi API thật). Production provider path VẪN
+# cần các package đó; core CI thì không. Xem docs/CI_AND_DEPENDENCY_TIERS.md.
 
-# --- Lõi — bắt buộc cho toàn bộ pipeline (giá, metadata, macro, tin tức,
-#     cổ đông, BCTC, chỉ báo kỹ thuật, quant engine offline) ---
-vnstock>=4.0.4
 pandas>=2.3
 numpy>=2.2
 requests>=2.33
 pyarrow>=24.0
 openpyxl>=3.1            # private local-only portfolio workbook import
-
-# --- Tùy chọn — chỉ cần khi dùng đúng tính năng tương ứng ---
-anthropic>=0.116          # chỉ cần cho ai_analyzer.py khi GỌI API THẬT (không cần cho --dry-run)
 
 # pandas_ta               # chỉ cần cho `vn_indicators.py full` (~130 chỉ báo mở rộng, hiếm dùng);
 #                           đã bọc try/except trong code — bỏ qua êm nếu chưa cài, bỏ comment nếu cần

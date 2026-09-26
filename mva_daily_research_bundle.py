@@ -9,6 +9,7 @@ from __future__ import annotations
 from collections import Counter
 from datetime import date
 import inspect
+from itertools import groupby
 import json
 import math
 from pathlib import Path
@@ -19,6 +20,8 @@ from typing import Any, Mapping, Sequence
 from field_temporal_contract import stable_id
 from market_data_contracts import FeatureStatus
 import mva_provider_share_proxy as proxy
+import session_bar_integrity
+import tactical_reference_window as reference_window
 
 SCHEMA_VERSION = "1.0.0"
 CONTRACT_VERSION = "p3f7_mva_daily_research_bundle/v1"
@@ -36,12 +39,45 @@ def _as_float(value: Any) -> float | None:
     return float(value) if isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value) else None
 
 
-def derive_empirical_active_cohort(rows_by_ticker: Mapping[str, Sequence[Mapping[str, Any]]], *, sessions: Sequence[str], candidate_tickers: Sequence[str]) -> dict[str, Any]:
-    """Derive a non-canonical, complete-observation cohort without imputation."""
+def _keyed_by_session(rows: Sequence[Mapping[str, Any]]) -> list[Mapping[str, Any]]:
+    """Key ``date``-dated rows by ``session`` so the shared integrity authority can read them."""
+    return [row if "session" in row else {**row, "session": str(row.get("date"))} for row in rows if isinstance(row, Mapping)]
+
+
+def _full_bar_integrity(bars: Any, *, as_of_session: str | None) -> tuple[list[Mapping[str, Any]] | None, dict[str, Any] | None]:
+    """Resolve FULL retained bars through ``session_bar_integrity`` before any projection.
+
+    Returns the unique resolved bars, or ``(None, summary)`` when a session carries conflicting
+    duplicate bars (for example bars differing only in ``high`` or in price-basis identity).
+    Never projection first: a projected row cannot see the fields that make two bars conflict.
+    """
+    resolution = session_bar_integrity.resolve_session_bars(bars, as_of_session=as_of_session)
+    if resolution["status"] == session_bar_integrity.CONFLICTING_DUPLICATE_REFUSED:
+        return None, session_bar_integrity.integrity_summary(resolution)
+    observations = resolution["observations"]
+    return (list(observations) if isinstance(observations, list) else []), None
+
+
+def derive_empirical_active_cohort(rows_by_ticker: Mapping[str, Sequence[Mapping[str, Any]]], *, sessions: Sequence[str], candidate_tickers: Sequence[str],
+                                   integrity_refused: Mapping[str, Mapping[str, Any]] | None = None) -> dict[str, Any]:
+    """Derive a non-canonical, complete-observation cohort without imputation.
+
+    Repeated sessions are resolved by ``session_bar_integrity``, never last-row-wins.
+    ``integrity_refused`` names tickers whose FULL retained bars a loader already refused.
+    """
     required = tuple(sorted(set(str(day) for day in sessions)))
     members, exclusions = [], {}
+    refused_upstream = dict(integrity_refused or {})
     for ticker in sorted({str(value).upper() for value in candidate_tickers}):
-        rows = {str(row.get("date")): row for row in rows_by_ticker.get(ticker, ())}
+        if ticker in refused_upstream:
+            resolved, refusal = None, refused_upstream[ticker]
+        else:
+            resolved, refusal = _full_bar_integrity(_keyed_by_session(rows_by_ticker.get(ticker, ())),
+                                                    as_of_session=required[-1] if required else None)
+        if resolved is None:
+            exclusions[ticker] = {"reason": session_bar_integrity.REFUSAL_REASON, "session_bar_integrity": refusal}
+            continue
+        rows = {str(row.get("session")): row for row in resolved}
         missing = [day for day in required if day not in rows]
         malformed = [day for day in required if day in rows and (_as_float(rows[day].get("close")) is None or _as_float(rows[day].get("close")) <= 0 or _as_float(rows[day].get("volume")) is None)]
         if missing or malformed:
@@ -58,17 +94,23 @@ def derive_empirical_active_cohort(rows_by_ticker: Mapping[str, Sequence[Mapping
     return contract | {"exclusions": exclusions}
 
 
-def market_features(rows: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
-    """Compute descriptive features only from a complete, chronological window."""
-    ordered = sorted(rows, key=lambda row: str(row["date"]))
+def market_features(rows: Sequence[Mapping[str, Any]], *, as_of_session: str | None = None) -> dict[str, Any]:
+    """Compute descriptive features only from the complete, chronological 20-observation window.
+
+    The window is selected by ``tactical_reference_window.select_reference_window`` (latest 20
+    retained observations not after ``as_of_session``). A longer history never contributes; an
+    unusable row inside the window fails closed instead of being skipped.
+    """
+    window = reference_window.select_reference_window(rows, as_of_session=as_of_session, length=LOOKBACK_SESSIONS)
+    if window["status"] != reference_window.AVAILABLE:
+        return {"status": "MISSING", "blockers": list(window["blockers"]), "values": {}}
+    ordered = window["rows"]
     closes = [_as_float(row.get("close")) for row in ordered]
     volumes = [_as_float(row.get("volume")) for row in ordered]
-    if len(ordered) < LOOKBACK_SESSIONS or any(value is None or value <= 0 for value in closes) or any(value is None for value in volumes):
-        return {"status": "MISSING", "blockers": ["COMPLETE_20_SESSION_WINDOW_REQUIRED"], "values": {}}
     returns = [(closes[index] / closes[index - 1]) - 1 for index in range(1, len(closes))]
     median_volume = statistics.median(volumes)
-    values = {"close": closes[-1], "return_1d": returns[-1], "momentum_20d": (closes[-1] / closes[0]) - 1,
-              "ma_3": statistics.mean(closes[-3:]), "ma_5": statistics.mean(closes[-5:]), "ma_20": statistics.mean(closes),
+    values = {"close": closes[-1], "return_1d": returns[-1], "momentum_20d": reference_window.reference_momentum_20d(closes),
+              "ma_3": statistics.mean(closes[-3:]), "ma_5": statistics.mean(closes[-5:]), "ma_20": reference_window.reference_ma20(closes),
               "volatility_20d": statistics.pstdev(returns), "relative_volume_provider_scoped": (volumes[-1] / median_volume if median_volume else None)}
     return {"status": "SHADOW_ONLY", "price_basis": "ADJUSTED_RETROSPECTIVE", "historical_pit_eligible": False,
             "method": "retained_20_completed_session_window; no_imputation", "values": values,
@@ -78,7 +120,7 @@ def market_features(rows: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
             "warnings": ["ADJUSTED_RETROSPECTIVE_NOT_RAW_AS_TRADED", "RELATIVE_VOLUME_IS_PROVIDER_SCOPED_NOT_LIQUIDITY_AUTHORITY"]}
 
 
-def _load_runtime_market(runtime_root: Path, *, frozen_session: str) -> tuple[list[str], dict[str, list[dict[str, Any]]], list[str]]:
+def _load_runtime_market(runtime_root: Path, *, frozen_session: str) -> tuple[list[str], dict[str, list[dict[str, Any]]], list[str], dict[str, dict[str, Any]]]:
     database = runtime_root / "vn_stock.db"
     connection = sqlite3.connect(f"file:{database.resolve().as_posix()}?mode=ro", uri=True)
     try:
@@ -88,14 +130,42 @@ def _load_runtime_market(runtime_root: Path, *, frozen_session: str) -> tuple[li
         sessions = list(reversed(sessions_desc))
         if len(sessions) != LOOKBACK_SESSIONS or sessions[-1] != frozen_session:
             raise ValueError("RETAINED_COMPLETED_SESSION_WINDOW_INSUFFICIENT")
-        placeholders = ",".join("?" for _ in sessions)
-        rows = connection.execute(f"SELECT ticker, date, close, volume, source FROM ohlcv WHERE date IN ({placeholders}) ORDER BY ticker, date", sessions).fetchall()
+        window = set(sessions)
+        connection.row_factory = sqlite3.Row
+        # FULL T0-eligible stored series -> shared session_bar_integrity -> 20-session window ->
+        # projection. Never window first: a conflicting duplicate older than the window would be
+        # sliced away before integrity could see it. Rows after T0 are excluded here, before any
+        # processing. Streamed one ticker at a time so the full history is never held at once.
+        grouped: dict[str, list[dict[str, Any]]] = {}
+        refused: dict[str, dict[str, Any]] = {}
+
+        def admit(ticker: str, bars: list[dict[str, Any]]) -> None:
+            resolved, refusal = _full_bar_integrity(bars, as_of_session=frozen_session)
+            if resolved is None:
+                refused[ticker] = refusal
+                return
+            projected = [{"date": str(row["date"]), "close": row.get("close"), "volume": row.get("volume"), "source": row.get("source")}
+                         for row in resolved if str(row["date"]) in window]
+            if projected:
+                grouped[ticker] = projected
+
+        # Stream in primary-key order; tickers stored under several spellings of one upper-cased
+        # symbol are buffered so each symbol is still resolved as one series.
+        spellings = Counter(str(row[0]).upper() for row in connection.execute("SELECT DISTINCT ticker FROM ohlcv"))
+        merged: dict[str, list[dict[str, Any]]] = {}
+        rows = connection.execute("SELECT * FROM ohlcv WHERE date <= ? ORDER BY ticker, date", (frozen_session,))
+        for stored_ticker, ticker_rows in groupby(rows, key=lambda row: row["ticker"]):
+            ticker = str(stored_ticker).upper()
+            bars = [{**dict(row), "session": str(row["date"])} for row in ticker_rows]
+            if spellings[ticker] > 1:
+                merged.setdefault(ticker, []).extend(bars)
+            else:
+                admit(ticker, bars)
+        for ticker, bars in merged.items():
+            admit(ticker, sorted(bars, key=lambda row: row["session"]))
     finally:
         connection.close()
-    grouped: dict[str, list[dict[str, Any]]] = {}
-    for ticker, day, close, volume, source in rows:
-        grouped.setdefault(str(ticker).upper(), []).append({"date": str(day), "close": close, "volume": volume, "source": source})
-    return candidates, grouped, sessions
+    return candidates, grouped, sessions, refused
 
 
 def _maps(root: Path) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
@@ -108,7 +178,7 @@ def _maps(root: Path) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
     return fundamentals, authoritative, proxies
 
 
-def _load_snapshot_market(snapshot_path: Path) -> tuple[list[str], dict[str, list[dict[str, Any]]], list[str], str]:
+def _load_snapshot_market(snapshot_path: Path) -> tuple[list[str], dict[str, list[dict[str, Any]]], list[str], str, dict[str, dict[str, Any]]]:
     snapshot = json.loads(snapshot_path.read_text(encoding="utf-8"))
     frozen = str(snapshot["retained_snapshot_session"])
     if snapshot.get("resolved_completed_session") != frozen or snapshot.get("source", {}).get("intraday_observations_used") is not False:
@@ -117,10 +187,21 @@ def _load_snapshot_market(snapshot_path: Path) -> tuple[list[str], dict[str, lis
     if len(sessions) != LOOKBACK_SESSIONS or sessions[-1] != frozen:
         raise ValueError("EXACT_SESSION_SNAPSHOT_WINDOW_INSUFFICIENT")
     candidates = sorted(snapshot.get("records", {}).keys())
-    grouped = {ticker: [{"date": row["session"], "close": row["close"], "volume": row["volume"], "source": "DNSE_SHADOW_SNAPSHOT"}
-                        for row in record.get("observations", []) if row.get("session") in sessions]
-               for ticker, record in snapshot["records"].items() if record.get("status") == "OBSERVED"}
-    return candidates, grouped, sessions, frozen
+    # Full retained bars -> shared session_bar_integrity -> projection (never the reverse): a
+    # duplicate differing only in ``high`` or in price-basis identity is refused before the
+    # projection below drops those fields.
+    grouped: dict[str, list[dict[str, Any]]] = {}
+    refused: dict[str, dict[str, Any]] = {}
+    for ticker, record in snapshot["records"].items():
+        if record.get("status") != "OBSERVED":
+            continue
+        resolved, refusal = _full_bar_integrity(record.get("observations", []), as_of_session=frozen)
+        if resolved is None:
+            refused[ticker] = refusal
+            continue
+        grouped[ticker] = [{"date": row["session"], "close": row["close"], "volume": row["volume"], "source": "DNSE_SHADOW_SNAPSHOT"}
+                           for row in resolved if row.get("session") in sessions]
+    return candidates, grouped, sessions, frozen, refused
 
 
 def build_mva_daily_research_bundle(runtime_root: Path, *, root: Path, envelope: Mapping[str, Any] | None = None,
@@ -132,14 +213,14 @@ def build_mva_daily_research_bundle(runtime_root: Path, *, root: Path, envelope:
     p3f3 = json.loads((root / "operations-review/p3f3-operational-valuation-input-scaleout-20260820/p3f3_operational_valuation_input_scaleout_artifact.json").read_text(encoding="utf-8"))
     if snapshot_path is None:
         frozen = p3f3["valuation_session"]["valuation_session"]
-        candidates, rows_by_ticker, sessions = _load_runtime_market(runtime_root, frozen_session=frozen)
+        candidates, rows_by_ticker, sessions, integrity_refused = _load_runtime_market(runtime_root, frozen_session=frozen)
         snapshot_identity = None
         selection_contract = "P3F3_latest_completed_vietnam_weekday_with_exact_retained_observation"
     else:
-        candidates, rows_by_ticker, sessions, frozen = _load_snapshot_market(snapshot_path)
+        candidates, rows_by_ticker, sessions, frozen, integrity_refused = _load_snapshot_market(snapshot_path)
         snapshot_identity = json.loads(snapshot_path.read_text(encoding="utf-8")).get("snapshot_identity")
         selection_contract = "P3F9_exact_completed_session_DNSE_shadow_snapshot"
-    cohort = derive_empirical_active_cohort(rows_by_ticker, sessions=sessions, candidate_tickers=candidates)
+    cohort = derive_empirical_active_cohort(rows_by_ticker, sessions=sessions, candidate_tickers=candidates, integrity_refused=integrity_refused)
     fundamentals, authoritative, proxies = _maps(root)
     member_set = set(cohort["members"])
     records = []
@@ -168,7 +249,7 @@ def build_mva_daily_research_bundle(runtime_root: Path, *, root: Path, envelope:
                                 "verdict": "P3F7_MVA_DAILY_BUNDLE_COMPLETE", **use_envelope,
                                 "frozen_session": {"session": frozen, "selection_contract": selection_contract, "incomplete_intraday_used": False},
                                 "empirical_active_cohort": {key: value for key, value in cohort.items() if key != "exclusions"},
-                                "market_summary": {"candidate_universe_size": len(candidates), "observed_market_candidates": len(rows_by_ticker), "empirical_active_cohort_size": len(active_rows), "missing_or_excluded_count": len(candidates) - len(active_rows), "breadth": breadth,
+                                "market_summary": {"candidate_universe_size": len(candidates), "observed_market_candidates": len(rows_by_ticker) + len(integrity_refused), "empirical_active_cohort_size": len(active_rows), "missing_or_excluded_count": len(candidates) - len(active_rows), "breadth": breadth,
                                                    "feature_availability": {"market_features_shadow_only": len(active_rows), "foreign_flow_value_blocked": len(records), "fundamental_records_available": len(fundamentals)},
                                                    "proxy_valuation_coverage": proxy_ready, "authoritative_valuation_coverage": 0,
                                                    "blocked_capability_counts": {"liquidity_sizing": len(records), "pit_backtest": len(records), "macro_liquidity": len(records)}},

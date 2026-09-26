@@ -22,7 +22,11 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
-PROTOCOL_VERSION = "vnstock_worker_protocol/1.0.0"
+# 1.1.0 (PROVIDER_RUNTIME_ISOLATION_V1): additive -- the READY message may carry a ``runtime``
+# object (interpreter + provider distribution versions, reported only after a successful start),
+# a startup ``worker_error`` (request_id null) carries ``startup_failure_kind``, and the
+# ``technical_history`` purpose tag exists. Every 1.0.0 field keeps its meaning.
+PROTOCOL_VERSION = "vnstock_worker_protocol/1.1.0"
 
 MSG_FETCH = "fetch"
 MSG_FETCH_RESULT = "fetch_result"
@@ -41,6 +45,17 @@ PURPOSE_GAP_RECOVERY = "gap_recovery"
 PURPOSE_RESIDUAL_YIELD_PROBE = "residual_yield_probe"
 PURPOSE_QUALITY_CORROBORATION = "quality_corroboration"
 PURPOSE_DEGRADED_EXPANSION = "degraded_expansion"
+PURPOSE_TECHNICAL_HISTORY = "technical_history"
+
+# Startup-failure kinds a startup worker_error may carry (values mirror
+# provider_runtime_state.STARTUP_KIND_*, which maps them to runtime states). The first two are
+# emitted by the worker itself; the rest are assigned by the parent-side client.
+STARTUP_KIND_PACKAGE_NOT_INSTALLED = "PROVIDER_PACKAGE_NOT_INSTALLED"
+STARTUP_KIND_IMPORT_FAILED = "PROVIDER_IMPORT_FAILED"
+STARTUP_KIND_STARTUP_EXCEPTION = "WORKER_STARTUP_EXCEPTION"
+STARTUP_KIND_SPAWN_FAILED = "SPAWN_FAILED"
+STARTUP_KIND_STARTUP_TIMEOUT = "STARTUP_TIMEOUT"
+STARTUP_KIND_EXITED_BEFORE_READY = "EXITED_BEFORE_READY"
 
 # Failure classes a worker_error message may carry -- distinct from any provider-level outcome
 # status (EXACT_SESSION_OBSERVED / SESSION_MISSING / SOURCE_REJECTED / TRANSPORT_FAILED /

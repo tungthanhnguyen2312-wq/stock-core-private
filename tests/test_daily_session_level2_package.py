@@ -1,5 +1,6 @@
 import json
 import sys
+from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
 from unittest.mock import patch
@@ -20,6 +21,7 @@ from daily_session_level2_package import (
     write_level2_package,
 )
 from vn_time import VN_TZ
+from _provider_runtime_fixtures import available_handle, healthy_sentinel_evidence
 
 ROOT = Path(__file__).resolve().parents[1]
 NAMED_TRIAGE = ROOT / "operations-review/full-universe-entry-candidate-triage-20260824/full_universe_entry_candidate_triage_20260824.json"
@@ -96,10 +98,21 @@ def _patch_resolved_acquisition(session: str, *, resolved_session: str | None = 
         calls.append({"stage": "resolver", "target_session": target_session})
         projected = dict(dnse_snapshot)
         projected["resolved_completed_session"] = resolved_session
-        return {"evidence": True}, projected
+        # PROVIDER_RUNTIME_ISOLATION_V1: ordinary Daily requires a qualifying DNSE quality
+        # license, so the faked resolver returns a corroborated sentinel verdict.
+        return healthy_sentinel_evidence(target_session), projected
+
+    import vnstock_worker_client
+
+    @contextmanager
+    def _candidates_and_available_runtime():
+        # An AVAILABLE provider runtime (stub fetcher; the resolver itself is faked below).
+        with patch.object(snapshotter, "canonical_candidates", fake_canonical_candidates), \
+             patch.object(vnstock_worker_client, "open_provider_runtime", lambda **_kw: available_handle()):
+            yield
 
     patches = [
-        patch.object(snapshotter, "canonical_candidates", fake_canonical_candidates),
+        _candidates_and_available_runtime(),
         patch.object(dnse_secrets_env, "ensure_credentials_loaded", fake_ensure_credentials_loaded),
         patch.object(dnse_access, "credentials_for_request", fake_credentials_for_request),
         patch.object(snapshotter, "materialize_snapshot", fake_materialize_snapshot),

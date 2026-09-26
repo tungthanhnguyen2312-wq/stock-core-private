@@ -864,10 +864,13 @@ _REAL_DISPOSITION_PATH = (
 _REAL_RECOVERY_PATH = (
     _OPS / "market-wide-current-technical-coverage-scaleout-v1-20260918" / "market_wide_current_technical_coverage_recovery_artifact.json"
 )
-_REAL_EVIDENCE_AVAILABLE = _REAL_WORKSPACE_PATH.exists() and _REAL_DISPOSITION_PATH.exists() and _REAL_RECOVERY_PATH.exists()
 
 
-@pytest.mark.skipif(not _REAL_EVIDENCE_AVAILABLE, reason="real 2026-09-18 technical evidence artifacts not retained in this checkout")
+# Retained-evidence tier: the real retained 2026-09-18 technical evidence artifacts.
+@pytest.mark.retained_evidence(
+    *(path.relative_to(_OPS.parent).as_posix()
+      for path in (_REAL_WORKSPACE_PATH, _REAL_DISPOSITION_PATH, _REAL_RECOVERY_PATH))
+)
 def test_real_20260918_live_path_reconciles_to_the_exact_evidence_verified_counts():
     """Phase 6/7/8 real end-to-end proof: the LIVE display-metrics caller (not a helper called
     in isolation) reconciles the real, retained 2026-09-18 universe (1,683 tickers) to exactly

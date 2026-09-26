@@ -1,5 +1,265 @@
 # Decisions & Architectural Decision Records
 
+## 2026-09-26 - M1 stabilization integration RC V1 (isolated release candidate, not promoted)
+
+One release candidate is built on the Provider Runtime Isolation final corrective (`89e3a9d`).
+The reviewed data-integrity and tactical commits (`ad6e63b`…`a069ff6`) are cherry-picked onto it.
+The only textual conflicts were in this file. The analytical code is patch-identical to
+`a069ff6`, and the provider code is identical to `89e3a9d`. There is no second integrity
+resolver, no second window implementation and no second provider-runtime state machine.
+
+**Retained-evidence incident hardening (RETAINED_EVIDENCE_INCIDENT_20260925):**
+
+- **Quarantine registry.** `config/retained_evidence_quarantine.json` (via
+  `retained_evidence_quarantine.py`) lists 16 retained files. It pins each file's SHA-256 as
+  observed at quarantine time. Nothing is deleted, restored or rewritten.
+  - 2026-08-25 IID: `CONTAMINATED_UNRECOVERABLE`.
+  - 2026-09-04 IID: `NON_PRISTINE_ORIGINAL_RECONSTRUCTABLE`. Its authoritative production
+    identity `…:55173e1a…` is recorded by the 2026-09-04 handoff.
+  - The 12 companions in both IID folders and the 2026-09-04 financial-analysis-product-v2 pair:
+    `NON_PRISTINE_CONTENT_UNVERIFIED`.
+- **Excluded uses.** A quarantined file is never a retained-regression baseline, a
+  historical-acceptance baseline, or input to IID-dependent posture replay. Posture replay for
+  2026-08-25 and 2026-09-04 is excluded. Their raw session-bar facts stay usable.
+- **Where it is enforced.**
+  - The pytest retained-evidence tier refuses a declared quarantined path with
+    `RETAINED_EVIDENCE_QUARANTINED`.
+  - `tools/run_core_daily_decision_coherence_replay.py` reports its 2026-08-25 regression check
+    as `EXCLUDED_RETAINED_EVIDENCE_QUARANTINED` instead of comparing.
+  - The prospective-feedback observer already excluded both IIDs; it is unchanged.
+- **Restoration or supersession of the 2026-09-04 path stays an owner decision.** It is recorded
+  by amending the registry.
+
+**Test hygiene:**
+
+- **The polluting tests now use scratch copies.** Five enrichment tests built into the
+  repository root. The incident report named four; the fifth is
+  `test_component_local_failure_does_not_block_unrelated_components`. They now copy their Level-2
+  inputs into `tmp_path` (`tests/_retained_scratch.py`), and are marked `retained_evidence`.
+- **Write guard.** An audit-hook guard (`tests/_canonical_evidence_write_guard.py`) refuses and
+  records any test-process write under `operations-review/` or `data/` of this checkout, of the
+  Producer main checkout, and of `STOCKLOOKUP_RETAINED_EVIDENCE_ROOT`. Resolution goes through
+  junctions and symlinks.
+- **Other writers the guard exposed.** A full hermetic run found 13 more tests that wrote under
+  the repository's `operations-review`. Nine already failed before the guard (absent retained
+  route evidence). The other four were fixed to use scratch, and none trips the guard now:
+  - two route-enrichment replay files, which created the evidence directory even in offline
+    replay;
+  - the Phase-2 closeout readiness test, which rewrote the tracked
+    `p2-closeout-financial-fact-panel-20260820` outputs;
+  - the archive-path resolution test, which created `operations-review/test-evidence`.
+- **Evidence root for worktrees.** `STOCKLOOKUP_RETAINED_EVIDENCE_ROOT` lets a worktree read
+  canonical evidence without linking it.
+- **Production behaviour is unchanged.**
+
+**Also:** the AVAILABLE-parent import-containment check now imports the whole post-close closure
+the credentialed Daily parent loads, including `session_bar_integrity` and
+`tactical_reference_window`.
+
+**Authority.** No authority, provider policy (`SECURITY_REVIEW_BLOCKED`), threshold or
+`research_action_posture` policy changed. This is not merged to `main`. Next gate: owner review
+for stabilization promotion.
+
+## 2026-09-25 - Data integrity and tactical reference integration V1
+
+The owner approved the order: session-bar integrity first, then the tactical reference window.
+`session_bar_integrity` is the only duplicate policy.
+
+- **The tactical window keeps no duplicate rule of its own.** The tactical corrective's
+  `collapse_exact_duplicate_sessions` compared only close, volume, basis and transformation.
+  It therefore treated ACG's 2026-09-16 copies, which differ only in `high`, as exact. That
+  function, its field list and `REFERENCE_WINDOW_CONFLICTING_DUPLICATE_SESSION` are removed.
+  - `select_reference_window` delegates to `session_bar_integrity.resolve_session_bars`. A
+    conflict anywhere in the series refuses it with `CONFLICTING_DUPLICATE_SESSION_BAR`.
+  - The momentum context's second collapse is removed. Its series is the one
+    `resolve_target_session_observations` already resolved, which is also the structural series.
+- **Technical-history recovery judges duplicates on the full observation.** `recovery_candidates`
+  resolves integrity before projecting to `(date, close, volume)`, so a refused record is a
+  candidate for re-acquisition. `recovery_record` labels a contradictory re-fetch
+  `SESSION_BAR_CONFLICT_REFUSED`, never `INSUFFICIENT_HISTORY_AFTER_EXTENDED_LOOKBACK`.
+- **Two bypasses closed, both found by Codex review:**
+  - **MVA bundle.** `mva_daily_research_bundle` projected bars to `(date, close, volume)` before
+    any duplicate decision, and its cohort used a last-row-wins date map. Both loaders now resolve
+    the full retained bars through `session_bar_integrity` before projecting. The runtime-DB path
+    reads `SELECT *`. The cohort refuses with `CONFLICTING_DUPLICATE_SESSION_BAR`. On the retained
+    2026-09-16 snapshot the old path crashed (`KeyError: 'return_1d'`): the cohort admitted
+    conflicting tickers whose window was then refused.
+  - **Historical context.** `market_wide_historical_research_context` fixes the T0-eligible rows
+    (at or before the target session) before the shared decision, so later rows never reach a
+    session map. The former last-wins map now refuses any duplicate that reaches it.
+- **MVA runtime ordering (Codex final blocker).** The runtime-DB loader read only the latest 20
+  sessions before calling `session_bar_integrity`. A conflicting duplicate older than the window
+  was sliced away, and the ticker was admitted as `SHADOW_ONLY`; the snapshot path refused the same
+  input. The loader now streams every stored row at or before T0 (ordered by ticker and date),
+  resolves each ticker's full T0-eligible series through the shared function, and only then keeps
+  the 20 window sessions and projects them. So a conflict anywhere in the T0-qualified series
+  refuses the ticker, and snapshot and runtime give the same disposition. Rows after T0 are still
+  excluded first. Cost: the loader reads the full history (about 1.94M rows, one ticker in
+  memory at a time) instead of 20 sessions.
+- **Unchanged:** `historical_series_failover` still refuses any duplicate row in a provider
+  series, identical copies included. That gate is stricter and never selects a copy. Provider
+  policy, thresholds and posture policy are also unchanged.
+
+## 2026-09-25 - Session-bar duplicate integrity corrective V1
+
+The retained 2026-09-16 P3F9B snapshot carries two 2026-09-15 DNSE bars for 599 tickers, plus
+pre-/post-adjustment copies of 2026-08-28/09-03/09-04 for VPI and TCH: 605 pairs over 600 tickers.
+412 pairs are identical and 193 conflict (191 tickers). Every pair shares one provider, request,
+`retrieved_at`, price basis and transformation identity. The copies are already present in
+`dnse_only_exact_session_snapshot.json`: DNSE's `/price/ohlc` response itself carried both, and
+`mva_exact_session_snapshot._observation_rows` enforces uniqueness only for the target session.
+No other retained snapshot (2026-08-20 .. 2026-09-24) has a duplicate.
+
+- **One `(ticker, session)` invariant, in `session_bar_integrity`.** Series consumers resolve
+  records through it. Identical bars (every retained field equal) collapse, because any copy yields
+  the same observation. Conflicting bars refuse the record for series use
+  (`CONFLICTING_DUPLICATE_SESSION_BAR`); rows after the as-of session never influence the decision.
+- **No authority rule exists for conflicting copies, so none is invented.** List position is not
+  provenance, recency is not evidence, and ingest time is never a supersession rule. The
+  contemporaneous evidence also disagrees with itself: DNSE's own 2026-09-15 retrieval matches the
+  second copy for 187 conflicts, while VCI and KBS matched the first copy in all 11 sentinel cases.
+- **The boundary is `technical_structure_context.resolve_target_session_observations`.** It is the
+  existing shared resolver for retained technical history. Descriptive features, the structural
+  engine and momentum pass through it, and the recovery series is subject to the same invariant.
+  Relative-volume research and historical context read raw records, so they call the same function.
+  - Relative volume previously refused even identical copies.
+  - Historical context previously kept the last copy.
+  - The prospective-feedback fallback previously kept the last row per session.
+- **A refused ticker is conflicted evidence.** Its coverage disposition is `MALFORMED_OR_CONFLICTED`,
+  so its evidence currency is `NO_CURRENT_EVIDENCE`. The descriptive recoverable-gap guard treats
+  the refusal as unrecoverable, and the Daily's existing gap-recovery path may still re-acquire a
+  clean history.
+- Retained evidence is not rewritten. Target-session point readers (valuation, prospective
+  learning) already require exactly one bar and are unchanged. No threshold or posture policy
+  changed.
+
+## 2026-09-25 - Tactical reference-window corrective V1 (isolated branch, not promoted)
+
+`TACTICAL_REFERENCE_WINDOW_CORRECTIVE_V1` is implemented on `feature/tactical-reference-window-corrective-v1`
+from `cde156e`. It is not merged or pushed; M1 live acceptance runs on `cde156e`.
+
+- **Defect.** `market_wide_current_descriptive_research._technical_features()` passed the whole
+  retained history (~250 observations) to `mva_daily_research_bundle.market_features()`. That
+  function only checked for at least 20 rows. As a result, `ma_20`, `momentum_20d`,
+  `volatility_20d`, `ma_3`/`ma_5` and relative volume were whole-history values under 20-session
+  names, while the artifact declared `retained_20_completed_session_window`. The 2026-08-31
+  Tactical V2 entry recorded this as a known characteristic and left it unfixed. On retained
+  2026-09-24 evidence, `ma_20` equals the whole-history mean for 837/837 classified tickers
+  that have a retained series.
+- **Restored contract (unchanged intent, now enforced).** The new pure module
+  `tactical_reference_window.py` selects the latest 20 retained observations not after the
+  feature session.
+  - `ma_20` is the mean of the 20 closes in that window.
+  - `momentum_20d` is `close[last] / close[first] - 1` over the same window (19 intervals).
+  - An exact duplicate bar counts once.
+  - The window fails closed on fewer than 20 observations, an unusable close or volume inside
+    the window, conflicting duplicate bars for one session, or mixed
+    `price_basis`/`transformation_identity`.
+  - An unusable row is never skipped, and the window never falls back to longer history.
+  - Future-dated rows never enter.
+  - The last two refusals are input-integrity refusals. The recoverable-gap guard treats them
+    like a close-mismatch rejection: the ticker fails closed and the build does not abort. The
+    retained 2026-09-16 P3F9B snapshot duplicates the 2026-09-15 bar for 599 tickers, 193 of
+    them with conflicting closes. Before this fix those rows were silently averaged into
+    `ma_20`, and the structural engine still sees both copies.
+  Callers that already pass exactly 20 rows (the MVA bundle, the historical research context,
+  the tactical replay) produce identical values.
+- **One computation.** `market_features()` and `tactical_momentum_context` use the same window
+  function and the same `trailing_mean`. On 09-24, classifier `ma_20` equals momentum MA20 for
+  842/842 tactical-eligible tickers; before the fix, 0/842 matched. Momentum MA50/100/200 moved by
+  at most 1 ulp (sum/len → `statistics.mean`), with no ordering change. Momentum records gain an
+  additive `reference_window` block; descriptive technical features gain window metadata.
+- **Unchanged.**
+  - Tactical thresholds and the nine-state table.
+  - The structural engine: swing/pivot/breakout/invalidation/MA20 slope stay identical under
+    altered descriptive values.
+  - Posture policy and priority code.
+  Tactical classifications change only because their inputs are corrected. On the 09-24 scratch
+  rebuild, 564/842 entry states changed and posture, evidence currency, market regime and
+  sector leadership changed for 0/1,683. On other sessions the corrected momentum/trend inputs
+  may still change the market/sector regime, and through it the posture.
+- **Acquisition-side effect.** `market_wide_current_technical_coverage_scaleout` now judges
+  completeness on the same 20-observation window, so an unusable row older than the window no
+  longer marks a ticker as missing.
+
+## 2026-09-25 - Provider runtime isolation V1 (candidate, stacked on the CI hermetic tier)
+
+Owner architecture decisions D1–D4 for the optional KBS/VCI provider runtime (vnstock/vnai).
+The PyPI Simple API reports these packages as quarantined. That is an index/security-review
+status only; nothing more is inferred from it.
+
+- **D1: explicit policy, blocked by default.** The owner controls the policy in the tracked file
+  `config/provider_runtime_policy.json` (`provider_runtime_policy/v1`). It is currently
+  `SECURITY_REVIEW_BLOCKED`, and a missing or invalid file reads the same way. Under a blocked
+  policy no provider worker is ever spawned, and an already-installed package does not bypass
+  it. The policy is never polled from a package index and never changed by network conditions.
+  `ALLOW_CONFIGURED_PROVIDER_RUNTIME` is the only allowing value, and only the owner sets it.
+- **D2: an uncorroborated DNSE bar is not a healthy license.** A worker that starts but returns
+  no usable sentinel observation used to produce `DNSE_EXACT_BUT_UNCORROBORATED`, and Daily then
+  continued as ordinary. That route now yields the quality license
+  `UNASSESSED_NO_SECONDARY_OBSERVATION` and a governed block. The DNSE raw evidence is kept
+  unchanged and is not marked invalid.
+- **D3: a dedicated provider interpreter.** The worker runs only under `STOCKLOOKUP_PROVIDER_PYTHON`.
+  If that is unset, missing, or the same as the core interpreter, the state is `NOT_CONFIGURED`.
+  There is no fallback to `sys.executable`.
+- **D4: no degraded publication.** V1 isolates the runtime, classifies its state and blocks. It
+  adds no DNSE-only publish path.
+
+Implementation:
+- **Runtime contract.** `provider_runtime_state.py` holds the twelve-state runtime contract
+  (`provider_runtime_state/v1`). It is operational metadata only and never data authority;
+  `DATA_QUALITY_FAILED` lives on the evidence axis instead.
+- **Quality license.** `multi_source_market_evidence_contract.dnse_quality_license`
+  (`dnse_quality_license/v1`) is always re-derived from the retained sentinel evidence, never read
+  from a stored label. It is a separate axis from evidence currency: `CURRENT_SESSION` is not
+  corroboration, and its vocabulary is unchanged. `NOT_REQUIRED_NO_DNSE_EXACT_BAR` qualifies,
+  because a session where DNSE has no exact bar at all has no DNSE value that needs licensing
+  (for example, a KBS-recovered DNSE-lag day).
+- **Worker isolation.**
+  - The worker environment is built from an allow-list. `DNSE_*`, `LIVESPEED_*` and `FINHAY_*`
+    are never forwarded, and secret-shaped names only when the policy allow-lists them exactly.
+  - Interpreter flags are `-s -E -X utf8 -u` in a neutral cwd. Isolated mode (`-I`) is not used,
+    because it would also drop the script directory the worker imports from.
+  - Package versions are reported only after the READY handshake. The worker checks with
+    `find_spec` whether a package is not installed at all (`NOT_INSTALLED`) or installed but
+    failing to import (`IMPORT_FAILED`), before any import.
+  - A startup `worker_error` is now a startup failure; it was previously misread as a protocol
+    violation.
+- **One provider boundary.** Technical-history recovery used to import `vn_stock_pipeline` into
+  a process that holds DNSE credentials. It now goes through the same worker (purpose
+  `technical_history`). When the runtime is unavailable it records
+  `SUPPLEMENTAL_HISTORY_RUNTIME_UNAVAILABLE` and makes no VCI request.
+- **Resolver when the runtime is unavailable.**
+  - It makes no requests. Every gap-recovery and sentinel observation becomes a stub:
+    `NOT_ATTEMPTED_SUPPLEMENTAL_PROVIDER_RUNTIME_UNAVAILABLE:<state>`.
+  - Gap resolution is `SESSION_MISSING_DNSE_SUPPLEMENTAL_NOT_ATTEMPTED`, never
+    `SESSION_MISSING_ALL_SOURCES`.
+  - The residual-yield probe reads `NOT_EVALUATED...`, and degraded recovery reads
+    `NOT_EVALUABLE...`.
+  - The sentinel verdict is `DNSE_QUALITY_UNASSESSED_SUPPLEMENTAL_RUNTIME_UNAVAILABLE`, so it
+    never silently disappears.
+- **Governed Daily stages.**
+  - `BLOCKED_SUPPLEMENTAL_PROVIDER_RUNTIME` covers an unavailable runtime, including a mid-run
+    worker failure. `BLOCKED_DNSE_QUALITY_UNLICENSED` covers a live runtime whose license does
+    not qualify.
+  - Neither is `FAILED_ACQUISITION_PIPELINE`, and neither is "not ready" (exit 1).
+  - The DNSE-only snapshot is retained. A write-once `supplemental_provider_block.json` records
+    both axes. No canonical snapshot or evidence file is written, so a blocked run can never be
+    reused.
+- **Reuse gate.** The Level-2 and post-close reuse gates re-derive the license and require it to
+  qualify. They refuse companion evidence for another session and refuse unreadable evidence.
+- **Operation record.** It carries `operating_mode = ORDINARY_DAILY`, `provider_runtime_state`
+  and `dnse_quality_license`. `canonical_daily_operation.m1_live_acceptance_eligible` states
+  that M1 needs a completed ordinary Daily with an `AVAILABLE` runtime and a qualifying license.
+  M1 acceptance itself is not redefined, and `research_action_posture` policy is unchanged. A
+  blocked run stops before the producer, so it emits no posture at all.
+
+**Operational consequence.** While D1 stays `SECURITY_REVIEW_BLOCKED`, every ordinary Daily on a
+checkout containing this change ends at `BLOCKED_SUPPLEMENTAL_PROVIDER_RUNTIME` with the DNSE
+evidence retained. Resuming ordinary Daily needs an explicit owner policy change plus a dedicated
+provider interpreter. This is process and dependency isolation, not a security sandbox: a
+permitted provider runtime can still reach the network, send telemetry and write files.
+
 ## 2026-09-24 - M1 live-acceptance corrective V1
 
 The 2026-09-24 Daily completed, but live acceptance failed on delivery, presentation, lineage and

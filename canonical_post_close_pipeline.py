@@ -50,7 +50,7 @@ from daily_research_session_operations import (
     validate_coherence,
 )
 from multi_source_exact_session_resolver import DEGRADED_RECOVERY_COMPLETED
-from multi_source_market_evidence_contract import DNSE_HEALTH_BROAD_STALE_OR_INCOMPLETE_EOD
+from multi_source_market_evidence_contract import DNSE_HEALTH_BROAD_STALE_OR_INCOMPLETE_EOD, dnse_quality_license
 from vn_time import VN_TZ, vn_now
 
 ROOT = Path(__file__).resolve().parent
@@ -129,6 +129,21 @@ POST_CLOSE_COLLECTION_CUTOFF_LOCAL_TIME = DEFAULT_POST_CLOSE_ATTEMPT_FLOOR
 
 class CanonicalPostCloseError(ValueError):
     """A deliberately concise operational refusal, mirroring DailyProducerError's style."""
+
+
+class SupplementalProviderBlockError(CanonicalPostCloseError):
+    """PROVIDER_RUNTIME_ISOLATION_V1 governed block surfaced from acquisition: the supplemental
+    provider runtime was unavailable, or it ran and the DNSE quality license does not qualify for
+    ordinary Daily. DNSE evidence is retained; nothing downstream is materialized or published.
+    Carries ``kind``, ``runtime_state``, ``quality_license`` and ``diagnostic_path``."""
+
+    def __init__(self, message: str, *, kind: str, runtime_state: Mapping[str, Any],
+                 quality_license: Mapping[str, Any] | None, diagnostic_path: Path | None):
+        super().__init__(message)
+        self.kind = kind
+        self.runtime_state = dict(runtime_state)
+        self.quality_license = dict(quality_license) if quality_license else None
+        self.diagnostic_path = diagnostic_path
 
 
 class PreCutoffArtifactError(CanonicalPostCloseError):
@@ -381,11 +396,25 @@ def assert_post_close_eligible(
                 evidence = json.loads(evidence_path.read_text(encoding="utf-8"))
             except (OSError, ValueError):
                 evidence = None
-            sentinel = evidence.get("dnse_quality_sentinel") if isinstance(evidence, Mapping) else None
-            health = sentinel.get("health") if isinstance(sentinel, Mapping) else None
-            if isinstance(health, Mapping) and health.get("state") == DNSE_HEALTH_BROAD_STALE_OR_INCOMPLETE_EOD:
+            if not isinstance(evidence, Mapping):
+                # PROVIDER_RUNTIME_ISOLATION_V1: unreadable companion evidence proves nothing.
+                raise PreCutoffArtifactError(
+                    f"EXISTING_ARTIFACT_DNSE_QUALITY_EVIDENCE_UNREADABLE:session={session}"
+                )
+            sentinel = evidence.get("dnse_quality_sentinel")
+            if evidence.get("target_session") not in (None, session):
+                # PROVIDER_RUNTIME_ISOLATION_V1: another session's evidence never licenses this one.
+                raise PreCutoffArtifactError(
+                    f"EXISTING_ARTIFACT_DNSE_QUALITY_EVIDENCE_SESSION_MISMATCH:session={session}"
+                )
+            if isinstance(sentinel, Mapping):
+                # PROVIDER_RUNTIME_ISOLATION_V1: the license is re-derived from the retained
+                # sentinel evidence against the snapshot's own degraded-recovery marker; an
+                # unresolved BROAD_STALE and (owner decision D2) any UNASSESSED license both refuse
+                # reuse, so a cached snapshot can never upgrade an unassessed session.
                 recovery = snapshot.get("degraded_provider_recovery")
-                if not (isinstance(recovery, Mapping) and recovery.get("mode") == DEGRADED_RECOVERY_COMPLETED):
+                marker = recovery.get("mode") if isinstance(recovery, Mapping) else None
+                if not dnse_quality_license(evidence, degraded_recovery_mode=marker)["qualifies_for_ordinary_daily"]:
                     raise PreCutoffArtifactError(
                         f"EXISTING_ARTIFACT_DNSE_PROVIDER_HEALTH_GATE_NOT_SATISFIED:session={session}"
                     )
@@ -518,6 +547,13 @@ def acquire_and_materialize(
         level2.ensure_exact_session_snapshot(
         artifact_root, session, runtime_root, workers=workers, now=now, execution_root=root,
         )
+    except level2.SupplementalProviderBlocked as exc:
+        raise SupplementalProviderBlockError(
+            "REFUSE_CANONICAL_POST_CLOSE:" + str(exc)
+            + ":DNSE evidence retained; ordinary Daily blocked (no degraded publication in V1).",
+            kind=exc.kind, runtime_state=exc.runtime_state, quality_license=exc.quality_license,
+            diagnostic_path=exc.diagnostic_path,
+        ) from exc
     except ValueError as exc:
         if str(exc).startswith("P3F9B_ACQUIRED_SESSION_MISMATCH"):
             raise CanonicalPostCloseError(

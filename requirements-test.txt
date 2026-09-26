@@ -1,0 +1,5 @@
+# Stock Lookup Producer — CORE test dependencies (tier hermetic core / CI).
+# Dùng cùng requirements.txt và constraints.txt:
+#   python -m pip install -r requirements.txt -r requirements-test.txt -c constraints.txt
+
+pytest>=9.1

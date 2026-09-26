@@ -26,6 +26,7 @@ import json
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
+import session_bar_integrity
 from prospective_decision_outcome_measurement import FIELD_NOT_RETAINED, PENDING, classify_feedback_taxonomy
 
 CONTRACT_VERSION = "integrated_decision_prospective_feedback/v2"
@@ -76,7 +77,10 @@ def _price_observations(p3f9b_snapshot: Mapping[str, Any] | None, ticker: str) -
     if not p3f9b_snapshot:
         return {}
     record = (p3f9b_snapshot.get("records") or {}).get(ticker) or {}
-    return {row["session"]: row for row in (record.get("observations") or []) if isinstance(row, Mapping) and isinstance(row.get("session"), str)}
+    # Shared (ticker, session) invariant instead of a silent last-row-wins dict: identical duplicate
+    # bars collapse, conflicting ones leave this multi-session lookup empty (fail closed).
+    rows = session_bar_integrity.resolve_session_bars(record.get("observations") or [])["observations"]
+    return {row["session"]: row for row in rows if isinstance(row, Mapping) and isinstance(row.get("session"), str)}
 
 
 def retained_session_price_observations(

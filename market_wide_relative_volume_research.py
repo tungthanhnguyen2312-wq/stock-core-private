@@ -14,6 +14,8 @@ from datetime import date
 from statistics import median
 from typing import Any, Mapping
 
+import session_bar_integrity
+
 
 CONTRACT_VERSION = "market_wide_relative_volume_research/v1"
 MILESTONE = "MARKET_WIDE_RELATIVE_VOLUME_RESEARCH_V1"
@@ -102,6 +104,14 @@ def _ticker_record(ticker: str, observations: Any, session: str) -> dict[str, An
     if not isinstance(observations, list):
         result.update(status="UNAVAILABLE", reason="OBSERVATIONS_MISSING")
         return result
+    # Shared (ticker, session) invariant: identical duplicate bars collapse; conflicting ones refuse
+    # the ticker. The DUPLICATE_SESSION_ROW check below then only guards non-snapshot callers.
+    integrity = session_bar_integrity.resolve_session_bars(observations, as_of_session=session)
+    if integrity["status"] == session_bar_integrity.CONFLICTING_DUPLICATE_REFUSED:
+        result.update(status="UNAVAILABLE", reason=session_bar_integrity.REFUSAL_REASON,
+                      session_bar_integrity=session_bar_integrity.integrity_summary(integrity))
+        return result
+    observations = integrity["observations"]
     valid_rows: dict[str, float] = {}
     future_rows = 0
     for row in observations:

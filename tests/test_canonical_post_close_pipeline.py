@@ -13,6 +13,8 @@ import daily_session_level2_package as level2
 from daily_research_session_operations import load_registry
 from vn_time import VN_TZ
 
+from _retained_scratch import enrichment_roots
+
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -343,18 +345,25 @@ def test_acquisition_never_writes_into_runtime_root(tmp_path, monkeypatch):
 
 # --- 6. research components receive the same exact session (real retained evidence replay) ---
 
-def test_enrichment_components_stamp_requested_session(tmp_path, monkeypatch):
+@pytest.mark.retained_evidence(
+    "operations-review/market-wide-current-descriptive-research-v1-20260825/market_wide_current_descriptive_research_artifact.json",
+    "operations-review/p3f9b-market-wide-exact-session-scaleout-20260825/p3f9b_mva_exact_session_snapshot.json",
+    "operations-review/current-official-market-universe-integration-v1-20260824/current_official_market_universe_artifact.json",
+)
+def test_enrichment_components_stamp_requested_session(tmp_path):
     session = "2026-08-25"
-    monkeypatch.setattr(cpc, "enrichment_output_path", lambda root, s, name: tmp_path / f"{name}.json")
-    results = cpc.build_enrichment_components(ROOT, session)
+    roots = enrichment_roots(session, tmp_path)
+    results = cpc.build_enrichment_components(roots["retained_evidence_root"], session, **roots)
     field_by_name = {"financial_momentum": "session", "corporate_event_context": "research_session", "historical_context": "session", "integrated_investment_decision_product": "session"}
-    assert set(results) == set(field_by_name)
+    # The Integrated Decision step also reports how it resolved the opportunity-priority queue;
+    # that is a resolution record, not a component artifact.
+    assert set(field_by_name) <= set(results) <= set(field_by_name) | {"opportunity_priority_queue"}
     # corporate_event_context intentionally does NOT stamp the requested `session`: since
     # CORPORATE_EVENT_CANONICAL_DATA_REFRESH_AND_LEDGER_CONSOLIDATION_V1, it binds to retained
     # official_event_context's own evidence session instead of fabricating today's date over
     # frozen evidence -- exactly mirroring current_corporate_intelligence_axis's own build below.
     official_event_context = json.loads(
-        level2.session_artifact_paths(ROOT, session)["official_event_context"].read_text(encoding="utf-8")
+        level2.session_artifact_paths(roots["retained_evidence_root"], session)["official_event_context"].read_text(encoding="utf-8")
     )
     expected_session = {
         "financial_momentum": session, "historical_context": session,
@@ -368,7 +377,12 @@ def test_enrichment_components_stamp_requested_session(tmp_path, monkeypatch):
             assert row["artifact"].get(session_field) == expected_session[name]
 
 
-def test_corporate_event_context_builds_fresh_with_supplemental_events(tmp_path, monkeypatch):
+@pytest.mark.retained_evidence(
+    "operations-review/market-wide-current-descriptive-research-v1-20260904/market_wide_current_descriptive_research_artifact.json",
+    "operations-review/p3f9b-market-wide-exact-session-scaleout-20260904/p3f9b_mva_exact_session_snapshot.json",
+    "operations-review/current-official-market-universe-integration-v1-20260824/current_official_market_universe_artifact.json",
+)
+def test_corporate_event_context_builds_fresh_with_supplemental_events(tmp_path):
     """Regression guard for CORPORATE_EVENT_CANONICAL_DATA_REFRESH_AND_LEDGER_CONSOLIDATION_V1:
     before this fix, _corporate_event_context() always called build_artifact() with
     research_session=<today's session>, which never matches the frozen official_event_context's
@@ -379,8 +393,8 @@ def test_corporate_event_context_builds_fresh_with_supplemental_events(tmp_path,
     current_research_risk_register.py/current_research_decision_packet.py (the shared enrichment
     component's consumers) never saw the HPG/VNM/VCB retained issuer/VSDC chains
     current_corporate_intelligence_axis.py already surfaces separately."""
-    monkeypatch.setattr(cpc, "enrichment_output_path", lambda root, s, name: tmp_path / f"{name}.json")
-    results = cpc.build_enrichment_components(ROOT, "2026-09-04")
+    roots = enrichment_roots("2026-09-04", tmp_path)
+    results = cpc.build_enrichment_components(roots["retained_evidence_root"], "2026-09-04", **roots)
     row = results["corporate_event_context"]
     assert row["status"] == "BUILT"
     hpg = row["artifact"]["records"].get("HPG")
@@ -494,6 +508,11 @@ def test_corporate_intelligence_axis_wired_into_integrated_decision_with_local_i
     assert 'research_session=official_event_context_ci.get("research_session")' in body
 
 
+@pytest.mark.retained_evidence(
+    "operations-review/market-wide-current-descriptive-research-v1-20260825/market_wide_current_descriptive_research_artifact.json",
+    "operations-review/p3f9b-market-wide-exact-session-scaleout-20260825/p3f9b_mva_exact_session_snapshot.json",
+    "operations-review/current-official-market-universe-integration-v1-20260824/current_official_market_universe_artifact.json",
+)
 def test_corporate_intelligence_axis_failure_does_not_break_the_integrated_decision(monkeypatch, tmp_path):
     """The single most important isolation guarantee for this milestone: a broken corporate-
     evidence build must degrade corporate_intelligence_context to NOT_PROVIDED, never fail the
@@ -504,8 +523,8 @@ def test_corporate_intelligence_axis_failure_does_not_break_the_integrated_decis
         raise RuntimeError("SIMULATED_CORPORATE_INTELLIGENCE_FAILURE")
 
     monkeypatch.setattr(current_corporate_intelligence_axis, "build_artifact", boom)
-    monkeypatch.setattr(cpc, "enrichment_output_path", lambda root, s, name: tmp_path / f"{name}.json")
-    results = cpc.build_enrichment_components(ROOT, "2026-08-25")
+    roots = enrichment_roots("2026-08-25", tmp_path)
+    results = cpc.build_enrichment_components(roots["retained_evidence_root"], "2026-08-25", **roots)
     idp = results["integrated_investment_decision_product"]
     assert idp["status"] == "BUILT"
     sample_ticker = next(iter(idp["artifact"]["records"]))
@@ -514,12 +533,17 @@ def test_corporate_intelligence_axis_failure_does_not_break_the_integrated_decis
     assert idp["artifact"]["coverage"]["corporate_intelligence_context_evaluated"] == 0
 
 
-def test_live_replay_reports_corporate_intelligence_coverage_and_staleness(tmp_path, monkeypatch):
+@pytest.mark.retained_evidence(
+    "operations-review/market-wide-current-descriptive-research-v1-20260825/market_wide_current_descriptive_research_artifact.json",
+    "operations-review/p3f9b-market-wide-exact-session-scaleout-20260825/p3f9b_mva_exact_session_snapshot.json",
+    "operations-review/current-official-market-universe-integration-v1-20260824/current_official_market_universe_artifact.json",
+)
+def test_live_replay_reports_corporate_intelligence_coverage_and_staleness(tmp_path):
     """Real retained-evidence replay (not a mock): every 2026-08-25 ticker gets a Corporate
     Intelligence read, and it is honestly flagged stale because no fresher official ex-date
     evidence has been retained since 2026-08-21 (verified live, not assumed)."""
-    monkeypatch.setattr(cpc, "enrichment_output_path", lambda root, s, name: tmp_path / f"{name}.json")
-    results = cpc.build_enrichment_components(ROOT, "2026-08-25")
+    roots = enrichment_roots("2026-08-25", tmp_path)
+    results = cpc.build_enrichment_components(roots["retained_evidence_root"], "2026-08-25", **roots)
     idp = results["integrated_investment_decision_product"]
     assert idp["status"] == "BUILT"
     coverage = idp["artifact"]["coverage"]
@@ -534,6 +558,11 @@ def test_live_replay_reports_corporate_intelligence_coverage_and_staleness(tmp_p
 
 # --- 7. component-local missing evidence does not globally reject unrelated uses ---
 
+@pytest.mark.retained_evidence(
+    "operations-review/market-wide-current-descriptive-research-v1-20260825/market_wide_current_descriptive_research_artifact.json",
+    "operations-review/p3f9b-market-wide-exact-session-scaleout-20260825/p3f9b_mva_exact_session_snapshot.json",
+    "operations-review/current-official-market-universe-integration-v1-20260824/current_official_market_universe_artifact.json",
+)
 def test_component_local_failure_does_not_block_unrelated_components(tmp_path, monkeypatch):
     import current_corporate_event_context
 
@@ -541,13 +570,13 @@ def test_component_local_failure_does_not_block_unrelated_components(tmp_path, m
         raise RuntimeError("SIMULATED_COMPONENT_FAILURE")
 
     monkeypatch.setattr(current_corporate_event_context, "build_artifact", boom)
-    monkeypatch.setattr(cpc, "enrichment_output_path", lambda root, s, name: tmp_path / f"{name}.json")
-    results = cpc.build_enrichment_components(ROOT, "2026-08-25")
+    roots = enrichment_roots("2026-08-25", tmp_path)
+    results = cpc.build_enrichment_components(roots["retained_evidence_root"], "2026-08-25", **roots)
     assert "SIMULATED_COMPONENT_FAILURE" in (results["corporate_event_context"].get("reason") or "")
     assert results["corporate_event_context"]["status"] in ("PRIOR_AS_OF_CONTEXT", "UNAVAILABLE")
     if results["corporate_event_context"]["status"] == "PRIOR_AS_OF_CONTEXT":
         assert results["corporate_event_context"]["path"] == level2.session_artifact_paths(
-            ROOT, "2026-08-25"
+            roots["retained_evidence_root"], "2026-08-25"
         )["corporate_event_context"]
     # unrelated components still ran independently and reached a definitive status, not skipped
     assert results["financial_momentum"]["status"] in ("BUILT", "PRIOR_AS_OF_CONTEXT", "UNAVAILABLE")

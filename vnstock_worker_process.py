@@ -35,6 +35,7 @@ import types
 
 from vnstock_worker_protocol import (
     FAILURE_CLASS_REQUEST_PROCESSING_EXCEPTION,
+    FAILURE_CLASS_STARTUP_FAILURE,
     MSG_FETCH,
     MSG_FETCH_RESULT,
     MSG_GOVERNOR_DIAGNOSTIC,
@@ -44,7 +45,15 @@ from vnstock_worker_protocol import (
     MSG_SHUTDOWN_ACK,
     MSG_WORKER_ERROR,
     PROTOCOL_VERSION,
+    STARTUP_KIND_IMPORT_FAILED,
+    STARTUP_KIND_PACKAGE_NOT_INSTALLED,
+    STARTUP_KIND_STARTUP_EXCEPTION,
 )
+
+# Provider distributions this worker needs (requirements-providers.txt). Checked with
+# importlib.util.find_spec BEFORE anything imports them, so an absent runtime is reported as
+# NOT_INSTALLED without executing any provider code, distinct from an installed-but-failing one.
+PROVIDER_DISTRIBUTIONS = ("vnstock", "vnai")
 
 # Generous internal concurrency: the REAL throttle is the shared rate governor's 45-req/60s
 # budget (vnstock_rate_governor), not this pool's size. The parent's own per-provider dispatch
@@ -210,6 +219,46 @@ def _preempt_vnai_git_telemetry_hang() -> None:
         subprocess.run = real_run
 
 
+def _missing_provider_distributions() -> list[str]:
+    import importlib.util
+
+    return [name for name in PROVIDER_DISTRIBUTIONS if importlib.util.find_spec(name) is None]
+
+
+def _runtime_info() -> dict[str, Any]:
+    """Interpreter and provider distribution versions -- reported only in the READY message,
+    i.e. only after the provider runtime genuinely imported and initialised."""
+    import platform
+    from importlib import metadata
+
+    versions: dict[str, str | None] = {}
+    for name in PROVIDER_DISTRIBUTIONS:
+        try:
+            versions[name] = metadata.version(name)
+        except metadata.PackageNotFoundError:
+            versions[name] = None
+    return {
+        "python_version": platform.python_version(),
+        "python_implementation": platform.python_implementation(),
+        "provider_distributions": versions,
+    }
+
+
+def _emit_startup_failure(kind: str, exc: BaseException | None, *, real_stdout, **extra: Any) -> None:
+    message = {
+        "protocol_version": PROTOCOL_VERSION,
+        "type": MSG_WORKER_ERROR,
+        "request_id": None,
+        "failure_class": FAILURE_CLASS_STARTUP_FAILURE,
+        "startup_failure_kind": kind,
+        "message": f"{type(exc).__name__}:{exc}" if exc is not None else kind,
+        "exception_type": type(exc).__name__ if exc is not None else None,
+        "traceback": traceback.format_exc(limit=20) if exc is not None else None,
+    }
+    message.update(extra)
+    _emit(message, real_stdout=real_stdout)
+
+
 def main() -> int:
     # Reserve the real fd 1 for the protocol only; redirect Python-level sys.stdout so any
     # accidental print()/banner from the adapter or a dependency lands somewhere harmless
@@ -219,10 +268,26 @@ def main() -> int:
     sys.stdout = devnull
 
     try:
+        missing = _missing_provider_distributions()
+    except Exception as exc:  # noqa: BLE001
+        _emit_startup_failure(STARTUP_KIND_STARTUP_EXCEPTION, exc, real_stdout=real_stdout)
+        return 1
+    if missing:
+        _emit_startup_failure(
+            STARTUP_KIND_PACKAGE_NOT_INSTALLED, None, real_stdout=real_stdout, missing_packages=missing,
+        )
+        return 1
+
+    try:
         import vnstock_rate_governor as governor_module
 
         governor = governor_module.VnstockRateGovernor()
         governor_module.set_active_governor(governor)
+    except Exception as exc:  # noqa: BLE001
+        _emit_startup_failure(STARTUP_KIND_STARTUP_EXCEPTION, exc, real_stdout=real_stdout)
+        return 1
+
+    try:
 
         # Import vn_stock_pipeline (and its heavy pandas/numpy dependency chain) here, on the
         # MAIN thread, before the request-handling thread pool exists and before any request is
@@ -239,22 +304,16 @@ def main() -> int:
         import vn_stock_pipeline as vsp
 
         vsp._install_bounded_http()
+        runtime = _runtime_info()
     except Exception as exc:  # noqa: BLE001
-        _emit(
-            {
-                "protocol_version": PROTOCOL_VERSION,
-                "type": MSG_WORKER_ERROR,
-                "request_id": None,
-                "failure_class": "WORKER_STARTUP_FAILURE",
-                "message": f"{type(exc).__name__}:{exc}",
-                "traceback": traceback.format_exc(limit=20),
-            },
-            real_stdout=real_stdout,
-        )
+        _emit_startup_failure(STARTUP_KIND_IMPORT_FAILED, exc, real_stdout=real_stdout)
         return 1
 
     pool = ThreadPoolExecutor(max_workers=_WORKER_INTERNAL_POOL_SIZE, thread_name_prefix="vnstock-worker")
-    _emit({"protocol_version": PROTOCOL_VERSION, "type": MSG_READY, "request_id": None}, real_stdout=real_stdout)
+    _emit(
+        {"protocol_version": PROTOCOL_VERSION, "type": MSG_READY, "request_id": None, "runtime": runtime},
+        real_stdout=real_stdout,
+    )
 
     stdin = sys.stdin
     try:

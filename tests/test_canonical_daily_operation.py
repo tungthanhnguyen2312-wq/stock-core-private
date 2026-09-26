@@ -1147,6 +1147,16 @@ def test_contradictory_pre_acquisition_evidence_blocks_before_acquire(tmp_path, 
     assert exc.value.stage == cdo.STAGE_BLOCKED_PRE_ACQUISITION
 
 
+_PRE_WORKSPACE_SCALEOUT_ARTIFACT = (
+    "operations-review/canonical-post-close-v1/2026-08-26/post-close-attempt-191900/operations-review/"
+    "p3f9b-market-wide-exact-session-scaleout-20260826/p3f9b_market_wide_exact_session_scaleout_artifact.json"
+)
+
+
+# Retained-evidence tier: replays the real, gitignored 2026-08-26 operation retained under
+# operations-review/. The synthetic counterpart of the fail-closed boundary itself is
+# tests/test_canonical_dashboard_runtime_release.py (WORKSPACE_PRODUCER_MATERIALIZATION_UNAVAILABLE).
+@pytest.mark.retained_evidence(_PRE_WORKSPACE_SCALEOUT_ARTIFACT)
 def test_retained_pre_workspace_session_fails_closed_before_publication(tmp_path, monkeypatch):
     """The August operation predates Workspace retention; publication must fail closed."""
     from tests.test_governed_publication_completion import (
@@ -1156,12 +1166,7 @@ def test_retained_pre_workspace_session_fails_closed_before_publication(tmp_path
     import canonical_dashboard_runtime_release as runtime_release
     import canonical_trusted_subset_release as trusted
 
-    scaleout = (
-        ROOT / "operations-review" / "canonical-post-close-v1" / SESSION
-        / "post-close-attempt-191900" / "operations-review"
-        / "p3f9b-market-wide-exact-session-scaleout-20260826"
-        / "p3f9b_market_wide_exact_session_scaleout_artifact.json"
-    )
+    scaleout = ROOT / _PRE_WORKSPACE_SCALEOUT_ARTIFACT
     envelope = json.loads(scaleout.read_text(encoding="utf-8"))
     snapshot = _p3f9b(
         SESSION,
@@ -1276,24 +1281,30 @@ def test_retained_pre_workspace_session_fails_closed_before_publication(tmp_path
 # =====================================================================================
 
 
-def test_real_2026_09_21_retained_evidence_skips_working_dates_probe(tmp_path: Path, monkeypatch):
-    session = "2026-09-21"
-    now = datetime(2026, 9, 21, 19, 0, tzinfo=VN_TZ)
-    real_evidence_dir = ROOT / "operations-review" / "p3f9b-market-wide-exact-session-scaleout-20260921"
-    real_snapshot_path = real_evidence_dir / "p3f9b_mva_exact_session_snapshot.json"
-    assert real_snapshot_path.is_file(), "real retained 2026-09-21 evidence must exist for this acceptance test"
+_REAL_2026_09_21_SNAPSHOT = (
+    "operations-review/p3f9b-market-wide-exact-session-scaleout-20260921/p3f9b_mva_exact_session_snapshot.json"
+)
 
-    dest_dir = tmp_path / "operations-review" / "p3f9b-market-wide-exact-session-scaleout-20260921"
+
+def _assert_retained_resume_skips_working_dates_probe(
+    tmp_path: Path, monkeypatch, *, session: str, now: datetime, evidence_dir: Path,
+) -> None:
+    """Copy one retained exact-session evidence directory into an isolated root and prove a
+    same-day resume after the safety floor skips working_dates end to end."""
+    snapshot_path = evidence_dir / "p3f9b_mva_exact_session_snapshot.json"
+    assert snapshot_path.is_file(), f"retained {session} exact-session snapshot must exist for this acceptance test"
+
+    dest_dir = tmp_path / "operations-review" / f"p3f9b-market-wide-exact-session-scaleout-{session.replace('-', '')}"
     dest_dir.mkdir(parents=True)
-    shutil.copy2(real_snapshot_path, dest_dir / "p3f9b_mva_exact_session_snapshot.json")
-    evidence_sibling = real_evidence_dir / "multi_source_exact_session_market_evidence.json"
+    shutil.copy2(snapshot_path, dest_dir / "p3f9b_mva_exact_session_snapshot.json")
+    evidence_sibling = evidence_dir / "multi_source_exact_session_market_evidence.json"
     if evidence_sibling.is_file():
         shutil.copy2(evidence_sibling, dest_dir / "multi_source_exact_session_market_evidence.json")
 
-    real_snapshot = json.loads(real_snapshot_path.read_text(encoding="utf-8"))
-    assert real_snapshot.get("resolved_completed_session") == session
+    snapshot = json.loads(snapshot_path.read_text(encoding="utf-8"))
+    assert snapshot.get("resolved_completed_session") == session
 
-    # The loader/eligibility helpers must recognize the real retained evidence copy.
+    # The loader/eligibility helpers must recognize the retained evidence copy.
     loaded = gate.load_exact_session_evidence_from_root(tmp_path, session)
     assert loaded is not None
     assert "records" not in loaded
@@ -1342,3 +1353,32 @@ def test_real_2026_09_21_retained_evidence_skips_working_dates_probe(tmp_path: P
     assert calls["acquire"] == 1
     assert record["session"] == session
     assert record["session_gate_semantic"] == gate.READY_SEMANTIC
+
+
+# Retained-evidence tier: the real, gitignored 2026-09-21 retained evidence.
+@pytest.mark.retained_evidence(_REAL_2026_09_21_SNAPSHOT)
+def test_real_2026_09_21_retained_evidence_skips_working_dates_probe(tmp_path: Path, monkeypatch):
+    _assert_retained_resume_skips_working_dates_probe(
+        tmp_path, monkeypatch,
+        session="2026-09-21",
+        now=datetime(2026, 9, 21, 19, 0, tzinfo=VN_TZ),
+        evidence_dir=(ROOT / _REAL_2026_09_21_SNAPSHOT).parent,
+    )
+
+
+def test_synthetic_retained_mva_snapshot_skips_working_dates_probe(tmp_path: Path, monkeypatch):
+    """Hermetic counterpart of the real 2026-09-21 acceptance above: the same end-to-end path over
+    a synthetic Level-2 MVA exact-session snapshot (full-universe ``records`` map included, so the
+    loader's discard of it is exercised too)."""
+    session = "2026-09-21"
+    evidence_dir = tmp_path / "synthetic-evidence"
+    evidence_dir.mkdir()
+    snapshot = _p3f9b(session, requested_at=f"{session}T18:40:00+07:00")
+    snapshot["records"] = {"AAA": {"session": session}, "BBB": {"session": session}}
+    (evidence_dir / "p3f9b_mva_exact_session_snapshot.json").write_text(json.dumps(snapshot), encoding="utf-8")
+    _assert_retained_resume_skips_working_dates_probe(
+        tmp_path / "root", monkeypatch,
+        session=session,
+        now=datetime(2026, 9, 21, 19, 0, tzinfo=VN_TZ),
+        evidence_dir=evidence_dir,
+    )

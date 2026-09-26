@@ -68,7 +68,10 @@ from field_temporal_contract import stable_id
 from vnstock_rate_governor import VnstockRateGovernor, get_active_governor, set_active_governor
 from multi_source_market_evidence_contract import (
     DNSE_HEALTH_BROAD_STALE_OR_INCOMPLETE_EOD,
+    DNSE_HEALTH_UNASSESSED_SUPPLEMENTAL_RUNTIME_UNAVAILABLE,
     NATIVE_PRICE_UNIT_SCALE,
+    RESOLUTION_SUPPLEMENTAL_NOT_ATTEMPTED,
+    SUPPLEMENTAL_RUNTIME_NOT_ATTEMPTED_REASON,
     RESOLUTION_ALL_MISSING,
     RESOLUTION_CONFLICT,
     RESOLUTION_CORROBORATED,
@@ -671,8 +674,10 @@ def _default_fetch_single_source():
 
 
 def _default_request_delay() -> float:
-    import vn_stock_pipeline as vsp
-    return vsp.REQUEST_DELAY
+    # The same value as vn_stock_pipeline.REQUEST_DELAY, read from its neutral owner: the
+    # credential-bearing Daily parent never imports the provider adapter, not even for a constant.
+    from vnstock_rate_governor import VNSTOCK_REQUEST_DELAY_SECONDS
+    return VNSTOCK_REQUEST_DELAY_SECONDS
 
 
 def _lineage_hash_for_session(lineage: list[Mapping[str, Any]], session: str) -> str | None:
@@ -746,6 +751,7 @@ def _resolve_multi_source_exact_session_snapshot_core(
     recovery_eligibility_projection: Mapping[str, Any] | None = None,
     residual_yield_sentinel_tickers: Sequence[str] | None = None,
     rate_governor: VnstockRateGovernor,
+    supplemental_runtime_state: Mapping[str, Any] | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     """Implementation for ``resolve_multi_source_exact_session_snapshot`` (see that thin public
     wrapper for the governor install/teardown contract -- this private function always receives
@@ -797,9 +803,31 @@ def _resolve_multi_source_exact_session_snapshot_core(
     (``_kbs_result_warrants_vci_fallback``) applies identically whether or not this gate ran.
     ``None``/empty (the default) skips the gate entirely and preserves this function's
     pre-existing full-fan-out behavior exactly.
+
+    ``supplemental_runtime_state`` (PROVIDER_RUNTIME_ISOLATION_V1): a
+    ``provider_runtime_state`` record. When given and not ``AVAILABLE``, no VCI/KBS request is
+    ever made: every would-be gap-recovery and sentinel observation becomes an explicit
+    ``NOT_APPLICABLE`` stub carrying ``NOT_ATTEMPTED_SUPPLEMENTAL_PROVIDER_RUNTIME_UNAVAILABLE``,
+    the residual-yield probe is recorded as not evaluated, and the DNSE quality sentinel verdict
+    is ``DNSE_QUALITY_UNASSESSED_SUPPLEMENTAL_RUNTIME_UNAVAILABLE`` -- the sentinel never
+    silently disappears. DNSE's own observations are unchanged. ``None`` (the default) keeps the
+    pre-existing behavior exactly.
     """
-    fetch = fetch_single_source or _default_fetch_single_source()
-    delay = request_delay if request_delay is not None else _default_request_delay()
+    runtime_unavailable = (
+        supplemental_runtime_state is not None and supplemental_runtime_state.get("state") != "AVAILABLE"
+    )
+    runtime_unavailable_reason = (
+        f"{SUPPLEMENTAL_RUNTIME_NOT_ATTEMPTED_REASON}:{supplemental_runtime_state.get('state')}"
+        if runtime_unavailable else None
+    )
+    if runtime_unavailable:
+        def fetch(*_args: Any, **_kwargs: Any) -> Any:
+            raise MultiSourceResolverError("SUPPLEMENTAL_FETCH_FORBIDDEN_RUNTIME_UNAVAILABLE")
+        fetch_many = None
+        delay = 0.0
+    else:
+        fetch = fetch_single_source or _default_fetch_single_source()
+        delay = request_delay if request_delay is not None else _default_request_delay()
 
     dnse_records = dnse_snapshot.get("records")
     if not isinstance(dnse_records, Mapping):
@@ -939,6 +967,16 @@ def _resolve_multi_source_exact_session_snapshot_core(
         """
         needs_fallback: list[str] = []
         clean_miss: set[str] = set()
+        if runtime_unavailable:
+            for ticker in tickers:
+                for stub_source in (source, stub_fallback) if stub_fallback else (source,):
+                    per_ticker_observations[ticker].append(build_source_observation(
+                        ticker=ticker, requested_session=target_session, observed_session=None,
+                        source=stub_source, provider_interface=PROVIDER_INTERFACE[stub_source],
+                        retrieved_at=requested_at, status=STATUS_NOT_APPLICABLE,
+                        reason_code=runtime_unavailable_reason,
+                    ))
+            return needs_fallback, clean_miss
         outcomes = fetch_many(
             [(ticker, source, window["start"], window["end"]) for ticker in tickers]
         ) if fetch_many is not None else None
@@ -990,7 +1028,22 @@ def _resolve_multi_source_exact_session_snapshot_core(
 
     residual_gap_sentinel_result: dict[str, Any] | None = None
     sentinel_set_for_gate = {t for t in (residual_yield_sentinel_tickers or ()) if t in missing_set}
-    if sentinel_set_for_gate:
+    if runtime_unavailable:
+        # No probe can be run, so no yield decision exists -- recorded, never inferred.
+        if sentinel_set_for_gate:
+            residual_gap_sentinel_result = {
+                "cohort_version": RESIDUAL_GAP_SENTINEL_VERSION,
+                "cohort_size": len(sentinel_set_for_gate),
+                "tickers": sorted(sentinel_set_for_gate),
+                "primary_source": primary_source,
+                "decision": "NOT_EVALUATED_SUPPLEMENTAL_PROVIDER_RUNTIME_UNAVAILABLE",
+                "runtime_state": supplemental_runtime_state.get("state"),
+                "remaining_eligible_population_count": len(still_missing),
+            }
+        kbs_needs_fallback, _clean_miss_all = _attempt_round(
+            still_missing, primary_source, stub_fallback=fallback_source,
+        )
+    elif sentinel_set_for_gate:
         sentinel_members = [t for t in still_missing if t in sentinel_set_for_gate]
         rest_members = [t for t in still_missing if t not in sentinel_set_for_gate]
         sentinel_needs_fallback, sentinel_clean_miss = _attempt_round(
@@ -1062,6 +1115,13 @@ def _resolve_multi_source_exact_session_snapshot_core(
         )
     for ticker in sentinel_targets_needing_fetch:
         for source in SENTINEL_SOURCES:
+            if runtime_unavailable:
+                per_ticker_observations[ticker].append(build_source_observation(
+                    ticker=ticker, requested_session=target_session, observed_session=None,
+                    source=source, provider_interface=PROVIDER_INTERFACE[source], retrieved_at=requested_at,
+                    status=STATUS_NOT_APPLICABLE, reason_code=runtime_unavailable_reason,
+                ))
+                continue
             outcome = fetch(ticker, source, window["start"], window["end"])
             status, reason, native, lineage = _classify_recovery_outcome(
                 outcome=outcome, source=source, ticker=ticker, target_session=target_session,
@@ -1087,12 +1147,20 @@ def _resolve_multi_source_exact_session_snapshot_core(
         RESOLUTION_CONFLICT: 0, RESOLUTION_CORROBORATED_NON_DNSE: 0, RESOLUTION_ALL_MISSING: 0,
     }
     for record in resolutions.values():
-        resolution_counts[record["resolution"]] += 1
+        resolution_counts[record["resolution"]] = resolution_counts.get(record["resolution"], 0) + 1
 
     dnse_quality_sentinel = None
     if sentinel_cohort is not None:
         sentinel_observations = {t: per_ticker_observations[t] for t in sentinel_set if t in per_ticker_observations}
         health = classify_dnse_provider_health(sentinel_observations)
+        if runtime_unavailable:
+            # The sentinel was not run; its absence is itself the verdict (never "healthy").
+            health = {
+                **health,
+                "state": DNSE_HEALTH_UNASSESSED_SUPPLEMENTAL_RUNTIME_UNAVAILABLE,
+                "supplemental_runtime_state": supplemental_runtime_state.get("state"),
+                "supplemental_runtime_reason_code": supplemental_runtime_state.get("reason_code"),
+            }
         dnse_quality_sentinel = {
             "cohort_version": SENTINEL_COHORT_VERSION,
             "cohort_size": len(sentinel_set),
@@ -1137,7 +1205,7 @@ def _resolve_multi_source_exact_session_snapshot_core(
         "recovery_attempts": recovery_attempts,
         "recovery_successes": recovery_successes,
         "resolution_counts": resolution_counts,
-        "resolved_exact_session_count": sum(1 for r in resolutions.values() if r["resolution"] != RESOLUTION_ALL_MISSING),
+        "resolved_exact_session_count": sum(1 for r in resolutions.values() if r["resolved_source"] is not None),
         "cross_source_conflict_count": sum(1 for r in resolutions.values() if r["cross_source_conflict"]),
         "dnse_quality_sentinel": dnse_quality_sentinel,
         "recovery_throughput": recovery_runtime_guard.diagnostic() if recovery_runtime_guard is not None else None,
@@ -1154,6 +1222,8 @@ def _resolve_multi_source_exact_session_snapshot_core(
             for ticker in all_tickers
         },
     }
+    if runtime_unavailable:
+        evidence["supplemental_recovery_state"] = runtime_unavailable_reason
     evidence["vnstock_rate_governor"] = rate_governor.diagnostic()
     evidence["evidence_sha256"] = stable_id(evidence)
     evidence["evidence_identity"] = f"multi_source_exact_session_market_evidence:{evidence['evidence_sha256']}"
@@ -1181,6 +1251,7 @@ def resolve_multi_source_exact_session_snapshot(
     recovery_eligibility_projection: Mapping[str, Any] | None = None,
     residual_yield_sentinel_tickers: Sequence[str] | None = None,
     rate_governor: VnstockRateGovernor | None = None,
+    supplemental_runtime_state: Mapping[str, Any] | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     """Public entrypoint: installs/owns the shared Vnstock rate governor, then delegates to
     ``_resolve_multi_source_exact_session_snapshot_core`` for Passes 2-5. See that function for
@@ -1211,6 +1282,7 @@ def resolve_multi_source_exact_session_snapshot(
             recovery_eligibility_projection=recovery_eligibility_projection,
             residual_yield_sentinel_tickers=residual_yield_sentinel_tickers,
             rate_governor=governor,
+            supplemental_runtime_state=supplemental_runtime_state,
         )
     finally:
         if owns_governor:
@@ -1259,9 +1331,11 @@ def _project_to_p3f9_shape(
                         if row.get("session") != target_session
                     ],
                 }
-            records[ticker]["multi_source_recovery_attempted"] = list(RECOVERY_SOURCES)
+            runtime_not_attempted = resolution["resolution"] == RESOLUTION_SUPPLEMENTAL_NOT_ATTEMPTED
+            records[ticker]["multi_source_recovery_attempted"] = [] if runtime_not_attempted else list(RECOVERY_SOURCES)
             records[ticker]["multi_source_recovery_result"] = (
                 "DEGRADED_DNSE_QUARANTINED_UNRESOLVED_SOURCE_CONFLICT" if quarantined
+                else "SUPPLEMENTAL_RECOVERY_NOT_ATTEMPTED_RUNTIME_UNAVAILABLE" if runtime_not_attempted
                 else "ALL_SOURCES_MISSING"
             )
             records[ticker]["multi_source_resolution_outcome"] = resolution["resolution"]
@@ -1379,6 +1453,9 @@ def _project_to_p3f9_shape(
 # ---------------------------------------------------------------------------
 DEGRADED_RECOVERY_NOT_TRIGGERED = "NOT_TRIGGERED"
 DEGRADED_RECOVERY_COMPLETED = "COMPLETED"
+# PROVIDER_RUNTIME_ISOLATION_V1: the sentinel could not run, so whether degraded recovery was
+# needed is unknown -- never NOT_TRIGGERED (which asserts the sentinel found DNSE healthy enough).
+DEGRADED_RECOVERY_NOT_EVALUABLE = "NOT_EVALUABLE_SUPPLEMENTAL_PROVIDER_RUNTIME_UNAVAILABLE"
 
 
 class _ProviderAwareMemoizingFetch:
@@ -1653,6 +1730,7 @@ def _resolve_exact_session_with_autorecovery_core(
     recovery_eligibility_projection: Mapping[str, Any] | None = None,
     residual_yield_sentinel_tickers: Sequence[str] | None = None,
     rate_governor: VnstockRateGovernor,
+    supplemental_runtime_state: Mapping[str, Any] | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     """Implementation for ``resolve_exact_session_with_autorecovery`` (see that thin public
     wrapper for the shared-governor install/teardown contract -- this private function always
@@ -1696,8 +1774,16 @@ def _resolve_exact_session_with_autorecovery_core(
     coverage sufficiency remains the caller's own, unchanged, MIN_EXACT_SESSION_COVERAGE_RATIO
     gate (docs brief: "Preserve the existing 0.20 coverage threshold").
     """
-    real_fetch = fetch_single_source or _default_fetch_single_source()
-    delay = request_delay if request_delay is not None else _default_request_delay()
+    runtime_unavailable = (
+        supplemental_runtime_state is not None and supplemental_runtime_state.get("state") != "AVAILABLE"
+    )
+    if runtime_unavailable:
+        def real_fetch(*_args: Any, **_kwargs: Any) -> Any:
+            raise MultiSourceResolverError("SUPPLEMENTAL_FETCH_FORBIDDEN_RUNTIME_UNAVAILABLE")
+        delay = 0.0
+    else:
+        real_fetch = fetch_single_source or _default_fetch_single_source()
+        delay = request_delay if request_delay is not None else _default_request_delay()
     provider_policies = _recovery_provider_policies(delay)
     runtime_guard = _DailyRecoveryRuntimeGuard(
         request_delay=delay, provider_policies=provider_policies, rate_governor=rate_governor,
@@ -1711,17 +1797,20 @@ def _resolve_exact_session_with_autorecovery_core(
         recovery_window_days=recovery_window_days, fetch_single_source=memoized_fetcher.fetch,
         fetch_many=memoized_fetcher.fetch_many,
         request_delay=0.0, sleep_fn=_no_sleep, max_recovery_candidates=max_recovery_candidates,
-        sentinel_cohort=sentinel_cohort, recovery_runtime_guard=runtime_guard,
+        sentinel_cohort=sentinel_cohort,
+        # No request can happen when the runtime is unavailable, so no runtime forecast applies.
+        recovery_runtime_guard=None if runtime_unavailable else runtime_guard,
         recovery_eligibility_projection=recovery_eligibility_projection,
         residual_yield_sentinel_tickers=residual_yield_sentinel_tickers,
         rate_governor=rate_governor,
+        supplemental_runtime_state=supplemental_runtime_state,
     )
     sentinel = evidence.get("dnse_quality_sentinel")
     health_state = sentinel["health"]["state"] if sentinel else None
 
     if health_state != DNSE_HEALTH_BROAD_STALE_OR_INCOMPLETE_EOD:
         recovery_info = {
-            "mode": DEGRADED_RECOVERY_NOT_TRIGGERED,
+            "mode": DEGRADED_RECOVERY_NOT_EVALUABLE if runtime_unavailable else DEGRADED_RECOVERY_NOT_TRIGGERED,
             "topology": "DNSE_GAPS_KBS_FIRST_VCI_ON_KBS_MISSING_FAILED_OR_UNUSABLE_PLUS_SMALL_VCI_KBS_SENTINEL",
             "expanded_ticker_count": 0,
             "expanded_recovery_attempts": {source: 0 for source in RECOVERY_SOURCES},
@@ -1771,7 +1860,9 @@ def _resolve_exact_session_with_autorecovery_core(
         RESOLUTION_CONFLICT: 0, RESOLUTION_CORROBORATED_NON_DNSE: 0, RESOLUTION_ALL_MISSING: 0,
     }
     for resolution in quarantined_resolutions.values():
-        evidence["resolution_counts"][resolution["resolution"]] += 1
+        evidence["resolution_counts"][resolution["resolution"]] = (
+            evidence["resolution_counts"].get(resolution["resolution"], 0) + 1
+        )
     # "Resolved" means a justified value exists (resolved_source is not None) -- for the ORIGINAL,
     # non-quarantined resolve_ticker this is exactly equivalent to "resolution != ALL_MISSING"
     # (resolved_source is None only in that one branch), but under quarantine a SOURCE_CONFLICT
@@ -1814,6 +1905,7 @@ def resolve_exact_session_with_autorecovery(
     recovery_eligibility_projection: Mapping[str, Any] | None = None,
     residual_yield_sentinel_tickers: Sequence[str] | None = None,
     rate_governor: VnstockRateGovernor | None = None,
+    supplemental_runtime_state: Mapping[str, Any] | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     """Public entrypoint: installs/owns the ONE shared Vnstock rate governor for this whole
     invocation (Passes 3-6 alike, healthy or degraded day), then delegates to
@@ -1838,6 +1930,7 @@ def resolve_exact_session_with_autorecovery(
             recovery_eligibility_projection=recovery_eligibility_projection,
             residual_yield_sentinel_tickers=residual_yield_sentinel_tickers,
             rate_governor=governor,
+            supplemental_runtime_state=supplemental_runtime_state,
         )
     finally:
         if owns_governor:

@@ -21,6 +21,8 @@ import hashlib
 import json
 from typing import Any, Mapping
 
+import session_bar_integrity
+import tactical_reference_window as reference_window
 from technical_structure_context import (
     MAX_LOOKBACK_SESSIONS,
     SWING_N,
@@ -88,6 +90,7 @@ def _insufficient_record(ticker: str, reason: str, depth: int) -> dict[str, Any]
         "rsi_divergence": {"status": "NOT_AVAILABLE", "reason": reason},
         "moving_averages": {str(n): {"status": "NOT_AVAILABLE", "reason": reason} for n in MA_LENGTHS},
         "macd": {"status": "NOT_AVAILABLE", "reason": reason},
+        "reference_window": {"status": "NOT_AVAILABLE", "reason": reason, "ma_20": None, "momentum_20d": None},
         "authority_boundary": _MOMENTUM_AUTHORITY_BOUNDARY,
     }
 
@@ -215,7 +218,9 @@ def _rsi_divergence_context(closes: list[float], sessions: list[str], rsi_series
 # ── Moving averages ────────────────────────────────────────────────────────
 
 def _ma(values: list[float]) -> float:
-    return sum(values) / len(values)
+    # One arithmetic-mean definition shared with the descriptive/classifier ``ma_20``
+    # (TACTICAL_REFERENCE_WINDOW_CORRECTIVE_V1), so MA20 here and there are the same value.
+    return reference_window.trailing_mean(values)
 
 
 def _ma_slope(closes: list[float], length: int) -> dict[str, Any]:
@@ -347,9 +352,19 @@ def _classify_ticker(
         pf_record=pf_record, recovery_override=recovery_override, target_session=target_session,
     )
     history_record = {"observations": winning_record.get("observations")} if history_source == "RETAINED_TECHNICAL_HISTORY_RECOVERY" else winning_record
-    sessions, closes = _closes(history_record)
+    # Nothing dated after the target session. Duplicate bars were already resolved by
+    # session_bar_integrity inside resolve_target_session_observations (exact copies collapsed,
+    # conflicting records refused), so this series and the structural series are the same one.
+    series_rows = sorted(
+        (row for row in (history_record or {}).get("observations") or []
+         if isinstance(row, Mapping) and row.get("session") and str(row["session"]) <= target_session),
+        key=lambda row: str(row["session"]),
+    )
+    sessions, closes = _closes({"observations": series_rows})
     if not sessions or sessions[-1] != target_session:
-        record = _insufficient_record(ticker, "RETAINED_CLOSE_SERIES_MISSING_OR_NOT_CURRENT_SESSION", len(closes))
+        reason = (session_bar_integrity.REFUSAL_REASON if history_source == "SESSION_BAR_CONFLICT_REFUSED"
+                  else "RETAINED_CLOSE_SERIES_MISSING_OR_NOT_CURRENT_SESSION")
+        record = _insufficient_record(ticker, reason, len(closes))
         record["technical_history_lineage"] = {
             "source": history_source, "recovery_artifact_identity": recovery_identity,
             "recovery_payload_sha256": recovery_override.get("payload_sha256") if isinstance(recovery_override, Mapping) else None,
@@ -363,6 +378,16 @@ def _classify_ticker(
 
     rsi_context, rsi_series = _rsi_context(closes, sessions)
     ma_context = _moving_average_context(closes)
+    # The authoritative ma_20/momentum_20d, from the exact function the descriptive research (and
+    # therefore watchlist_tactical_entry_classifier) uses, over the same resolved observations.
+    reference = reference_window.reference_values(
+        [
+            {"date": row.get("session"), "close": row.get("close"), "volume": row.get("volume"),
+             "price_basis": row.get("price_basis"), "transformation_identity": row.get("transformation_identity")}
+            for row in (history_record or {}).get("observations") or [] if isinstance(row, Mapping) and row.get("session")
+        ],
+        as_of_session=target_session,
+    )
 
     return {
         "ticker": ticker, "eligibility": {"status": "ELIGIBLE"}, "close_history_depth": depth,
@@ -376,6 +401,7 @@ def _classify_ticker(
         "rsi_divergence": _rsi_divergence_context(closes, sessions, rsi_series),
         "moving_averages": ma_context,
         "moving_average_ordering": _ma_ordering(ma_context),
+        "reference_window": reference,
         "macd": _macd_context(closes, sessions),
         "authority_boundary": _MOMENTUM_AUTHORITY_BOUNDARY,
     }

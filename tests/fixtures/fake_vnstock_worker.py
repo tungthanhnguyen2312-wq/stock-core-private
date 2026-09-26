@@ -17,6 +17,19 @@ the process exits(1) before ever emitting a ``ready`` message.
 
 Malformed-response simulation (acceptance case M): ticker prefix ``__RAW_GARBAGE__`` writes a
 non-JSON line to stdout instead of a well-formed response.
+
+PROVIDER_RUNTIME_ISOLATION_V1 additions (all opt-in through explicit, non-secret env variables
+the parent forwards as ``extra`` environment):
+    ``FAKE_WORKER_STARTUP_KIND=<kind>``  typed startup ``worker_error`` (e.g.
+                                         PROVIDER_PACKAGE_NOT_INSTALLED / PROVIDER_IMPORT_FAILED),
+                                         then exit(1) -- mirrors vnstock_worker_process.py.
+    ``FAKE_WORKER_STARTUP_HANG=1``       never becomes ready (startup timeout).
+    ``FAKE_WORKER_READY_GARBAGE=1``      a non-JSON line before READY (protocol violation).
+    ``FAKE_WORKER_REPORT_ENV=1``         the READY ``runtime`` object also reports this process's
+                                         environment, interpreter flags and cwd.
+    ticker ``AUTH_*``                    failed outcome carrying an explicit HTTP 401 error.
+    ticker ``RATELIMIT_*``               failed outcome carrying an HTTP 429 count.
+The READY message always carries a fake ``runtime`` object (no real distribution is inspected).
 """
 from __future__ import annotations
 
@@ -77,6 +90,12 @@ def _canned_outcome(ticker: str, provider: str) -> dict:
     if ticker.startswith("REJECT_"):
         base.update(status="failed", transient_failure=False, errors=[f"{provider}:permanent_test_failure"])
         return base
+    if ticker.startswith("AUTH_"):
+        base.update(status="failed", transient_failure=False, errors=[f"{provider}:http_error:401"])
+        return base
+    if ticker.startswith("RATELIMIT_"):
+        base.update(status="failed", transient_failure=True, http_429_count=1, errors=[f"{provider}:rate_limited:429"])
+        return base
     if ticker.startswith("MALFORMED_"):
         base.update(status="failed", transient_failure=False, errors=[f"{provider}:invalid_schema_test"])
         return base
@@ -110,9 +129,39 @@ def _process_fetch(message: dict) -> None:
 def main() -> int:
     if os.environ.get("FAKE_WORKER_STARTUP_FAIL") == "1":
         return 1
+    startup_kind = os.environ.get("FAKE_WORKER_STARTUP_KIND")
+    if startup_kind:
+        _emit({
+            "protocol_version": PROTOCOL_VERSION, "type": MSG_WORKER_ERROR, "request_id": None,
+            "failure_class": "WORKER_STARTUP_FAILURE", "startup_failure_kind": startup_kind,
+            "message": f"fake:{startup_kind}", "missing_packages": ["vnstock", "vnai"]
+            if startup_kind == "PROVIDER_PACKAGE_NOT_INSTALLED" else [],
+            "exception_type": "ModuleNotFoundError" if startup_kind == "PROVIDER_IMPORT_FAILED" else None,
+        })
+        return 1
+    if os.environ.get("FAKE_WORKER_STARTUP_HANG") == "1":
+        time.sleep(60)
+        return 1
+    if os.environ.get("FAKE_WORKER_READY_GARBAGE") == "1":
+        with _WRITE_LOCK:
+            sys.stdout.write("{not json before ready\n")
+            sys.stdout.flush()
 
+    runtime = {
+        "python_version": "fake",
+        "python_implementation": "fake",
+        "provider_distributions": {"vnstock": "fake-0", "vnai": "fake-0"},
+    }
+    if os.environ.get("FAKE_WORKER_REPORT_ENV") == "1":
+        runtime["environment"] = dict(os.environ)
+        runtime["flags"] = {
+            "no_user_site": sys.flags.no_user_site,
+            "ignore_environment": sys.flags.ignore_environment,
+            "utf8_mode": sys.flags.utf8_mode,
+        }
+        runtime["cwd"] = os.getcwd()
     pool = ThreadPoolExecutor(max_workers=8, thread_name_prefix="fake-vnstock-worker")
-    _emit({"protocol_version": PROTOCOL_VERSION, "type": MSG_READY, "request_id": None})
+    _emit({"protocol_version": PROTOCOL_VERSION, "type": MSG_READY, "request_id": None, "runtime": runtime})
 
     attempts = {"count": 0}
     try:

@@ -264,6 +264,7 @@ def session_artifact_paths(root: Path, session: str) -> dict[str, Path]:
         "dnse_only_exact_session_snapshot": ops / f"p3f9b-market-wide-exact-session-scaleout-{nodash}" / "dnse_only_exact_session_snapshot.json",
         "multi_source_market_evidence": ops / f"p3f9b-market-wide-exact-session-scaleout-{nodash}" / "multi_source_exact_session_market_evidence.json",
         "multi_source_recovery_abort": ops / f"p3f9b-market-wide-exact-session-scaleout-{nodash}" / "multi_source_exact_session_recovery_runtime_budget_abort.json",
+        "supplemental_provider_block": ops / f"p3f9b-market-wide-exact-session-scaleout-{nodash}" / "supplemental_provider_block.json",
         "breadth_foundation": ops / f"current-market-universe-breadth-foundation-v1-{nodash}" / "current_market_universe_breadth_foundation_artifact.json",
         "universe_resolution": ops / f"current-universe-status-and-session-coverage-resolution-v1-{nodash}" / "current_universe_status_and_session_coverage_resolution_artifact.json",
         "liquidity_research": ops / f"market-wide-current-liquidity-research-v1-{nodash}" / "market_wide_current_liquidity_research_artifact.json",
@@ -1123,7 +1124,37 @@ def run_cmd(execution_root: Path, cmd: list[str]) -> None:
     subprocess.run([sys.executable] + cmd, cwd=str(execution_root), check=True)
 
 
-def _canonical_snapshot_gate_satisfied(snapshot_path: Path, evidence_path: Path) -> bool:
+SUPPLEMENTAL_BLOCK_CONTRACT = "supplemental_provider_block/v1"
+SUPPLEMENTAL_BLOCK_KIND_RUNTIME = "SUPPLEMENTAL_PROVIDER_RUNTIME_UNAVAILABLE"
+SUPPLEMENTAL_BLOCK_KIND_QUALITY = "DNSE_QUALITY_LICENSE_NOT_QUALIFIED"
+
+
+class SupplementalProviderBlocked(RuntimeError):
+    """PROVIDER_RUNTIME_ISOLATION_V1 governed block: the session's DNSE evidence was retained but
+    ordinary Daily may not continue -- either the supplemental provider runtime was unavailable
+    (``kind == SUPPLEMENTAL_PROVIDER_RUNTIME_UNAVAILABLE``) or it ran and the DNSE quality license
+    does not qualify (``kind == DNSE_QUALITY_LICENSE_NOT_QUALIFIED``, e.g. owner decision D2's
+    ``UNASSESSED_NO_SECONDARY_OBSERVATION``). Deliberately not a ValueError, so no generic
+    ValueError handler can absorb it."""
+
+    def __init__(
+        self, *, kind: str, session: str, runtime_state: Mapping[str, Any],
+        quality_license: Mapping[str, Any] | None, diagnostic_path: Path,
+    ):
+        self.kind = kind
+        self.session = session
+        self.runtime_state = dict(runtime_state)
+        self.quality_license = dict(quality_license) if quality_license else None
+        self.diagnostic_path = diagnostic_path
+        license_value = (self.quality_license or {}).get("license")
+        super().__init__(
+            f"{kind}:session={session}:provider_runtime_state={self.runtime_state.get('state')}"
+            f":provider_runtime_reason={self.runtime_state.get('reason_code')}"
+            f":dnse_quality_license={license_value}:diagnostic={diagnostic_path}"
+        )
+
+
+def _canonical_snapshot_gate_satisfied(snapshot_path: Path, evidence_path: Path, session: str | None = None) -> bool:
     """Is an existing on-disk canonical exact-session snapshot safe to reuse unconditionally?
 
     Corrective fix for the P0 idempotency-escape defect: the OLD ensure_exact_session_snapshot
@@ -1131,39 +1162,72 @@ def _canonical_snapshot_gate_satisfied(snapshot_path: Path, evidence_path: Path)
     merely found the file present would reuse a possibly-degraded-and-never-verified snapshot
     with no re-verification at all. This function makes that reuse decision explicit by loading
     the sibling multi-source evidence artifact (written alongside the snapshot -- see
-    multi_source_market_evidence key in session_artifact_paths) and checking its retained DNSE
-    quality sentinel verdict against the snapshot's OWN self-declared
-    ``degraded_provider_recovery`` marker (see multi_source_exact_session_resolver.
-    resolve_exact_session_with_autorecovery).
+    multi_source_market_evidence key in session_artifact_paths) and re-deriving its DNSE quality
+    license (multi_source_market_evidence_contract.dnse_quality_license) against the snapshot's
+    OWN self-declared ``degraded_provider_recovery`` marker.
 
-    Missing or unreadable companion evidence is treated as "nothing to disprove trust with", not
-    as "untrustworthy" -- a bare snapshot fixture (this module's own existing tests, or any
-    artifact that predates the multi-source evidence artifact entirely) is reused exactly as
-    before this fix. A companion evidence file that DOES show DNSE_BROAD_STALE_OR_INCOMPLETE_EOD,
-    with no corresponding COMPLETED recovery marker on the snapshot itself, is exactly the
-    pre-corrective idempotency-escape shape (a projection written before the sentinel check ever
-    ran, or before this fix existed at all) -- never silently reused.
+    PROVIDER_RUNTIME_ISOLATION_V1: reuse requires a license that qualifies for ordinary Daily
+    (owner decision D2 -- an UNASSESSED license, e.g. a pre-V1 snapshot written through the
+    uncorroborated-sentinel route, is never reused), and companion evidence for a different
+    session never licenses this one. The license is always recomputed from the retained sentinel
+    evidence, never read from a stored label. An unreadable companion evidence file is refused.
+
+    A missing companion evidence file, or evidence that predates the DNSE quality sentinel
+    entirely, is legacy "nothing to disprove trust with" -- a bare snapshot fixture (this
+    module's own existing tests, or any artifact that predates the multi-source evidence artifact
+    entirely) is reused exactly as before.
     """
     if not evidence_path.is_file():
         return True
     try:
         evidence = json.loads(evidence_path.read_text(encoding="utf-8"))
     except (OSError, ValueError):
-        return True
-    sentinel = evidence.get("dnse_quality_sentinel") if isinstance(evidence, Mapping) else None
-    if not isinstance(sentinel, Mapping):
-        return True
-    from multi_source_market_evidence_contract import DNSE_HEALTH_BROAD_STALE_OR_INCOMPLETE_EOD
-    health = sentinel.get("health") or {}
-    if health.get("state") != DNSE_HEALTH_BROAD_STALE_OR_INCOMPLETE_EOD:
+        return False
+    if not isinstance(evidence, Mapping):
+        return False
+    if session is not None and evidence.get("target_session") not in (None, session):
+        return False
+    if not isinstance(evidence.get("dnse_quality_sentinel"), Mapping):
         return True
     try:
         snapshot = json.loads(snapshot_path.read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return False
-    from multi_source_exact_session_resolver import DEGRADED_RECOVERY_COMPLETED
+    from multi_source_market_evidence_contract import dnse_quality_license
+
     recovery = snapshot.get("degraded_provider_recovery") if isinstance(snapshot, Mapping) else None
-    return isinstance(recovery, Mapping) and recovery.get("mode") == DEGRADED_RECOVERY_COMPLETED
+    marker = recovery.get("mode") if isinstance(recovery, Mapping) else None
+    return bool(dnse_quality_license(evidence, degraded_recovery_mode=marker)["qualifies_for_ordinary_daily"])
+
+
+def _write_supplemental_block(
+    path: Path, *, kind: str, session: str, dnse_snapshot: Mapping[str, Any], runtime_state: Mapping[str, Any],
+    quality_license: Mapping[str, Any] | None, evidence: Mapping[str, Any] | None,
+) -> None:
+    """Write-once governed-block diagnostic. Never a reusable canonical snapshot: it lives at its
+    own path, and the canonical projection/evidence files are not written for a blocked run."""
+    diagnostic = {
+        "schema_version": "1.0.0",
+        "contract_version": SUPPLEMENTAL_BLOCK_CONTRACT,
+        "artifact_type": "SUPPLEMENTAL_PROVIDER_GOVERNED_BLOCK",
+        "block_kind": kind,
+        "target_session": session,
+        "requested_at": dnse_snapshot.get("requested_at"),
+        "dnse_source_snapshot_identity": dnse_snapshot.get("snapshot_identity"),
+        "dnse_raw_evidence_status": "RETAINED_UNCHANGED_DNSE_ONLY_SNAPSHOT",
+        "provider_runtime": dict(runtime_state),
+        "dnse_quality_license": dict(quality_license) if quality_license else None,
+        "multi_source_evidence": dict(evidence) if evidence is not None else None,
+        "ordinary_daily": "BLOCKED",
+        "publication": "NOT_ATTEMPTED",
+        "degraded_publication": "NOT_IMPLEMENTED_V1",
+        "runtime_database_mutated": False,
+    }
+    diagnostic["block_sha256"] = stable_id(diagnostic)
+    diagnostic["block_identity"] = f"supplemental_provider_block:{diagnostic['block_sha256']}"
+    if not path.exists():
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(diagnostic, ensure_ascii=False, sort_keys=True, indent=2) + "\n", encoding="utf-8")
 
 
 def ensure_exact_session_snapshot(
@@ -1225,12 +1289,14 @@ def ensure_exact_session_snapshot(
     p3f9b_snapshot = paths["exact_session_snapshot"]
     evidence_path = paths["multi_source_market_evidence"]
     if p3f9b_snapshot.exists():
-        if not _canonical_snapshot_gate_satisfied(p3f9b_snapshot, evidence_path):
+        if not _canonical_snapshot_gate_satisfied(p3f9b_snapshot, evidence_path, session):
             raise ValueError(
                 "P3F9B_EXISTING_SNAPSHOT_PROVIDER_HEALTH_GATE_UNRESOLVED:session=" + session
-                + ":retained snapshot reflects an unresolved DNSE_BROAD_STALE_OR_INCOMPLETE_EOD "
-                  "verdict with no completed degraded-provider-recovery marker -- never reused "
-                  "as-is; caller must redirect to a fresh attempt root."
+                + ":retained snapshot's companion evidence does not carry a DNSE quality license "
+                  "that qualifies for ordinary Daily (e.g. an unresolved "
+                  "DNSE_BROAD_STALE_OR_INCOMPLETE_EOD with no completed degraded-provider-recovery "
+                  "marker, or an unassessed/uncorroborated sentinel) -- never reused as-is; caller "
+                  "must redirect to a fresh attempt root."
             )
         return p3f9b_snapshot
     import mva_exact_session_snapshot as snapshotter
@@ -1301,19 +1367,34 @@ def ensure_exact_session_snapshot(
     # function's own responsibility below, exactly mirroring what owns_governor=True would have
     # done. Otherwise this process's vnstock_rate_governor "active governor" pointer would keep
     # referencing a shut-down VnstockWorkerFetcher after this function returns.
-    from vnstock_rate_governor import get_active_governor, set_active_governor
-    from vnstock_worker_client import VnstockWorkerFetcher
+    #
+    # PROVIDER_RUNTIME_ISOLATION_V1: the worker is obtained only through the governed factory
+    # (tracked owner policy -> dedicated provider interpreter -> readiness handshake). A runtime
+    # that is not AVAILABLE is never contacted: the resolver records every recovery and sentinel
+    # observation as explicitly not attempted, and this function ends in a governed block after
+    # retaining the DNSE-only snapshot and a block diagnostic.
+    import provider_runtime_state as runtime_contract
+    import vnstock_worker_client as worker_client
+    from multi_source_market_evidence_contract import dnse_quality_license
+    from vnstock_rate_governor import VnstockRateGovernor, get_active_governor, set_active_governor
+    from vnstock_worker_protocol import VnstockWorkerFailure
 
-    worker_fetcher = VnstockWorkerFetcher(session=session)
+    block_path = paths["supplemental_provider_block"]
+    runtime = worker_client.open_provider_runtime(session=session)
     previous_active_governor = get_active_governor()
     try:
+        if runtime.available:
+            fetch_single_source, rate_governor, runtime_state_arg = runtime.fetcher.fetch, runtime.fetcher, None
+        else:
+            fetch_single_source, rate_governor, runtime_state_arg = None, VnstockRateGovernor(), runtime.state
         evidence, projected = resolver.resolve_exact_session_with_autorecovery(
             dnse_snapshot=dnse_snapshot, target_session=session, requested_at=dnse_snapshot["requested_at"],
             sentinel_cohort=sentinel["tickers"],
             recovery_eligibility_projection=recovery_eligibility,
             residual_yield_sentinel_tickers=residual_sentinel["tickers"],
-            fetch_single_source=worker_fetcher.fetch,
-            rate_governor=worker_fetcher,
+            fetch_single_source=fetch_single_source,
+            rate_governor=rate_governor,
+            supplemental_runtime_state=runtime_state_arg,
         )
     except resolver.DailyRecoveryRuntimeBudgetExceeded as exc:
         # Preserve the deterministic throughput/timeout/retry diagnostic while refusing to
@@ -1345,17 +1426,57 @@ def ensure_exact_session_snapshot(
             + f":budget_seconds={exc.diagnostic['runtime_budget_seconds']:.1f}"
             + f":diagnostic={abort_path}"
         ) from exc
+    except VnstockWorkerFailure as exc:
+        # A mid-operation worker failure: a governed runtime block with its exact state, never a
+        # generic pipeline failure and never a partially trusted sentinel.
+        failed_state = runtime_contract.runtime_state_from_worker_failure(
+            exc.failure_class, exc.diagnostics, phase=runtime_contract.PHASE_OPERATION, policy=runtime.policy,
+        )
+        _write_supplemental_block(
+            block_path, kind=SUPPLEMENTAL_BLOCK_KIND_RUNTIME, session=session, dnse_snapshot=dnse_snapshot,
+            runtime_state=failed_state, quality_license=None, evidence=None,
+        )
+        raise SupplementalProviderBlocked(
+            kind=SUPPLEMENTAL_BLOCK_KIND_RUNTIME, session=session, runtime_state=failed_state,
+            quality_license=None, diagnostic_path=block_path,
+        ) from exc
     finally:
         # Deterministic worker shutdown regardless of success, a converted budget-exceeded
-        # ValueError, or any other exception (e.g. a vnstock_worker_protocol.VnstockWorkerFailure)
-        # propagating out of resolve_exact_session_with_autorecovery above.
-        worker_fetcher.shutdown()
+        # ValueError, or any other exception propagating out of the resolver above.
+        runtime.shutdown()
         set_active_governor(previous_active_governor)
+
+    runtime_state = runtime.final_state()
+    quality_license = dnse_quality_license(evidence)
+    evidence["provider_runtime"] = runtime_state
+    evidence["dnse_quality_license"] = quality_license
+    evidence.pop("evidence_sha256", None)
+    evidence.pop("evidence_identity", None)
+    evidence["evidence_sha256"] = stable_id(evidence)
+    evidence["evidence_identity"] = f"multi_source_exact_session_market_evidence:{evidence['evidence_sha256']}"
+    runtime_ok = runtime_state.get("state") == runtime_contract.AVAILABLE
+    if not runtime_ok or not quality_license["qualifies_for_ordinary_daily"]:
+        kind = SUPPLEMENTAL_BLOCK_KIND_RUNTIME if not runtime_ok else SUPPLEMENTAL_BLOCK_KIND_QUALITY
+        _write_supplemental_block(
+            block_path, kind=kind, session=session, dnse_snapshot=dnse_snapshot,
+            runtime_state=runtime_state, quality_license=quality_license, evidence=evidence,
+        )
+        raise SupplementalProviderBlocked(
+            kind=kind, session=session, runtime_state=runtime_state,
+            quality_license=quality_license, diagnostic_path=block_path,
+        )
+
     if not evidence_path.exists():
         evidence_path.parent.mkdir(parents=True, exist_ok=True)
         evidence_path.write_text(
             json.dumps(evidence, ensure_ascii=False, sort_keys=True, indent=2) + "\n", encoding="utf-8",
         )
+    projected["provider_runtime_state"] = runtime_state.get("state")
+    projected["dnse_quality_license"] = {
+        "license": quality_license["license"],
+        "qualifies_for_ordinary_daily": quality_license["qualifies_for_ordinary_daily"],
+        "reason_code": quality_license["reason_code"],
+    }
 
     # DAILY_ACTIVITY_AWARE_ADAPTIVE_GAP_RECOVERY_V1 (2026-09-04): make the semantically-correct
     # current-equity/recovery-eligible coverage explicitly visible on the artifact itself, without

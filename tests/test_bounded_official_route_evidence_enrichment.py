@@ -5,6 +5,8 @@ import hashlib
 import json
 from pathlib import Path
 
+import pytest
+
 from bounded_official_route_evidence_enrichment import (
     BRANDING_ONLY,
     CONTRACT_VERSION,
@@ -26,8 +28,21 @@ ROOT = Path(__file__).resolve().parents[1]
 REGISTRY_PATH = ROOT / "config" / "official_source_registry.json"
 
 
+_SCRATCH_EVIDENCE_DIR: Path | None = None
+
+
+@pytest.fixture(autouse=True)
+def _scratch_evidence_dir(tmp_path):
+    # execute_bounded_enrichment creates its evidence directory even for offline replay; never
+    # let a test create or write it under the repository's operations-review.
+    global _SCRATCH_EVIDENCE_DIR
+    _SCRATCH_EVIDENCE_DIR = tmp_path / "evidence"
+    yield
+    _SCRATCH_EVIDENCE_DIR = None
+
+
 def _artifact() -> dict:
-    return execute_bounded_enrichment(live_network=False)
+    return execute_bounded_enrichment(live_network=False, evidence_dir=_SCRATCH_EVIDENCE_DIR)
 
 
 def _record(ticker: str) -> dict:

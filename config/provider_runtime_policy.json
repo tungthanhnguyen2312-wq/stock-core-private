@@ -1,0 +1,15 @@
+{
+  "schema_version": "1.0.0",
+  "contract_version": "provider_runtime_policy/v1",
+  "description": "Owner-controlled launch policy for optional provider runtimes (PROVIDER_RUNTIME_ISOLATION_V1). Read by provider_runtime_state.load_provider_policy; never changed automatically and never derived from network or package-index conditions. A missing or invalid file reads as SECURITY_REVIEW_BLOCKED.",
+  "providers": {
+    "VNSTOCK_KBS_VCI": {
+      "policy": "SECURITY_REVIEW_BLOCKED",
+      "reason": "Owner decision D1 (PROVIDER_RUNTIME_ISOLATION_V1): the vnstock/vnai provider runtime used by the KBS/VCI supplemental lane stays blocked while its package-index security review is unresolved. An already-installed package does not bypass this policy.",
+      "evidence_ref": "PyPI Simple API (PEP 792) reported project-status 'quarantined' with no installable files for vnstock and vnai, observed 2026-09-25 (docs/CI_AND_DEPENDENCY_TIERS.md). Index status only; no other conclusion is drawn.",
+      "set_by": "OWNER_DECISION_D1_PROVIDER_RUNTIME_ISOLATION_V1",
+      "set_at": "2026-09-25",
+      "allowed_provider_env": []
+    }
+  }
+}

@@ -29,6 +29,7 @@ import inspect
 import re
 import sqlite3
 import sys
+import types
 import unittest
 from datetime import datetime, timezone
 from pathlib import Path
@@ -57,6 +58,27 @@ LEGACY_NAIVE = "2026-08-05 14:32"                        # pre-fix format alread
 BARE_NOW_RE = re.compile(r"datetime\.now\(\)")            # empty parens only -- not datetime.now(timezone.utc)
 
 
+def _inert_vnstock_interface() -> dict[str, types.ModuleType]:
+    """``sys.modules`` entries for the two vnstock names ``meta_sync.sync_fundamentals`` imports.
+
+    The function imports ``Finance``/``Company`` lazily only to build the lambdas it hands to
+    ``call_api``, which these tests mock -- so the timestamp contract never touches the provider.
+    The placeholders let that contract run without the optional provider runtime
+    (requirements-providers.txt); they emulate no provider behavior and fail loudly if used.
+    """
+
+    def _placeholder(name: str) -> type:
+        def _refuse(*_args, **_kwargs):
+            raise AssertionError(f"INERT_PROVIDER_INTERFACE_CALLED: vnstock {name} must not be used by this test")
+
+        return type(name, (), {"__init__": _refuse})
+
+    modules = {name: types.ModuleType(name) for name in ("vnstock", "vnstock.api", "vnstock.api.financial", "vnstock.api.company")}
+    modules["vnstock.api.financial"].Finance = _placeholder("Finance")
+    modules["vnstock.api.company"].Company = _placeholder("Company")
+    return modules
+
+
 class MetadataUpdatedTests(unittest.TestCase):
     """meta_sync.py: metadata.updated -- the one field upgraded to full ISO+offset because it
     feeds two real freshness/observation-date readers (traced, not assumed)."""
@@ -70,8 +92,15 @@ class MetadataUpdatedTests(unittest.TestCase):
 
     def _run_with_frozen_clock(self, iso_value, tickers=("ABC",), refresh=False):
         with mock.patch.object(meta_sync, "vn_now_iso", return_value=iso_value), \
-             mock.patch.object(meta_sync, "call_api", return_value=None):
+             mock.patch.object(meta_sync, "call_api", return_value=None), \
+             mock.patch.dict(sys.modules, _inert_vnstock_interface()):
             meta_sync.sync_fundamentals(self.conn, list(tickers), refresh=refresh)
+
+    def test_inert_vnstock_interface_refuses_any_provider_use(self):
+        stub = _inert_vnstock_interface()
+        for module, name in (("vnstock.api.financial", "Finance"), ("vnstock.api.company", "Company")):
+            with self.assertRaisesRegex(AssertionError, "INERT_PROVIDER_INTERFACE_CALLED"):
+                getattr(stub[module], name)(source="KBS", symbol="ABC")
 
     def test_write_path_uses_vn_now_iso_not_host_clock(self):
         self._run_with_frozen_clock(FIXED_VN_ISO)

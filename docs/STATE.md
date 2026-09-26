@@ -1,5 +1,18 @@
 # Stock Lookup — Operational State
 
+**Provider runtime isolation V1 (candidate branch `claude/provider-runtime-isolation-v1`, not on `main`):**
+`PROVIDER_RUNTIME_ISOLATION_V1 = IMPLEMENTED_LOCAL_CANDIDATE / SYNTHETIC_VALIDATION_ONLY / AWAITING_OWNER_REVIEW`.
+It is stacked on the CI hermetic tier candidate (PR #3, `522cc46`) and implements owner decisions
+D1–D4 (`docs/DECISIONS.md` 2026-09-25):
+- D1: the provider policy is `SECURITY_REVIEW_BLOCKED`, so no provider worker is spawned.
+- D2: an uncorroborated DNSE sentinel no longer licenses ordinary Daily.
+- D3: the worker runs only under a dedicated `STOCKLOOKUP_PROVIDER_PYTHON`, with no fallback.
+- D4: there is no degraded publication.
+Once merged, and while D1 stands, every ordinary Daily ends at
+`BLOCKED_SUPPLEMENTAL_PROVIDER_RUNTIME` with the DNSE evidence retained. M1 live acceptance
+therefore stays pending until the owner explicitly allows a configured provider runtime. No
+Daily, provider call, retained-evidence validation or publication was run for this candidate.
+
 **M1 live-acceptance corrective (promoted 2026-09-25):**
 `CURRENT_DECISION_SURFACE_CONVERGENCE_V1 = ACTIVE / CORRECTIVE_PROMOTED / LIVE_ACCEPTANCE_PENDING_NEXT_ORDINARY_DAILY`.
 

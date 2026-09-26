@@ -52,6 +52,7 @@ from canonical_post_close_pipeline import (
     CanonicalPostCloseError,
     NORMAL_DAILY_ENABLE_CURRENT_FOREIGN_FLOW_LIVE,
     PreCutoffArtifactError,
+    SupplementalProviderBlockError,
     acquire_and_materialize,
     assert_post_close_eligible,
     build_decision_packet,
@@ -126,6 +127,16 @@ STAGE_BLOCKED_POST_ACQUISITION = "BLOCKED_POST_ACQUISITION_SESSION_MISMATCH"
 # stays reserved for CanonicalPostCloseError -- acquire_and_materialize's own deliberate,
 # evidence-based refusals (thin coverage, session mismatch, missing snapshot, ...).
 STAGE_FAILED_ACQUISITION_PIPELINE = "FAILED_ACQUISITION_PIPELINE"
+# PROVIDER_RUNTIME_ISOLATION_V1 governed blocks (never FAILED_ACQUISITION_PIPELINE, never
+# "not ready -- rerun later"): the retained DNSE evidence stands, but ordinary Daily may not
+# complete until the owner changes the provider policy/runtime (runtime block) or a rerun obtains
+# a qualifying DNSE quality license (quality block). No degraded publication exists in V1, and a
+# blocked run never satisfies M1 live acceptance (see M1_LIVE_ACCEPTANCE_ELIGIBLE below).
+STAGE_BLOCKED_SUPPLEMENTAL_PROVIDER_RUNTIME = "BLOCKED_SUPPLEMENTAL_PROVIDER_RUNTIME"
+STAGE_BLOCKED_DNSE_QUALITY_UNLICENSED = "BLOCKED_DNSE_QUALITY_UNLICENSED"
+SUPPLEMENTAL_PROVIDER_BLOCK_STAGES = frozenset({
+    STAGE_BLOCKED_SUPPLEMENTAL_PROVIDER_RUNTIME, STAGE_BLOCKED_DNSE_QUALITY_UNLICENSED,
+})
 STAGE_BLOCKED_INPUT_REGISTRATION = "BLOCKED_INPUT_REGISTRATION"
 STAGE_BLOCKED_DAILY_PRODUCER = "BLOCKED_DAILY_PRODUCER"
 STAGE_BLOCKED_RUNTIME_RELEASE = "BLOCKED_RUNTIME_RELEASE"
@@ -145,6 +156,29 @@ POST_ACQUISITION_NOT_READY_STAGES = frozenset({
     STAGE_BLOCKED_ACQUISITION, STAGE_BLOCKED_POST_ACQUISITION,
 })
 NOT_READY_STAGES = PRE_ACQUISITION_NOT_READY_STAGES | POST_ACQUISITION_NOT_READY_STAGES
+
+OPERATING_MODE_ORDINARY_DAILY = "ORDINARY_DAILY"
+
+
+def m1_live_acceptance_eligible(record_or_stage: Mapping[str, Any] | str) -> bool:
+    """Only a completed ordinary Daily can be offered to M1 live acceptance.
+
+    Does not redefine M1 acceptance; it states the precondition PROVIDER_RUNTIME_ISOLATION_V1
+    must not weaken: a record from a blocked/degraded run (any refusal stage, including the
+    supplemental-provider blocks) or a record without a qualifying DNSE quality license is never
+    eligible.
+    """
+    if isinstance(record_or_stage, str):
+        return False
+    if record_or_stage.get("daily_operation_state") not in (STATE_LOCAL_COMPLETE, STATE_PUBLISHED):
+        return False
+    acquisition = record_or_stage.get("acquisition") if isinstance(record_or_stage.get("acquisition"), Mapping) else {}
+    license_ = acquisition.get("dnse_quality_license") if isinstance(acquisition.get("dnse_quality_license"), Mapping) else {}
+    return (
+        record_or_stage.get("operating_mode") == OPERATING_MODE_ORDINARY_DAILY
+        and acquisition.get("provider_runtime_state") == "AVAILABLE"
+        and license_.get("qualifies_for_ordinary_daily") is True
+    )
 
 
 class CanonicalDailyOperationError(CanonicalPostCloseError):
@@ -425,6 +459,20 @@ def format_owner_daily_status(
             "Publication: NOT ATTEMPTED",
             "Action: rerun at/after the stabilization floor",
         ]
+    elif exc.stage in SUPPLEMENTAL_PROVIDER_BLOCK_STAGES:
+        block = exc.local_state.get("supplemental_provider") if isinstance(exc.local_state.get("supplemental_provider"), Mapping) else {}
+        runtime = block.get("provider_runtime") if isinstance(block.get("provider_runtime"), Mapping) else {}
+        license_ = block.get("dnse_quality_license") if isinstance(block.get("dnse_quality_license"), Mapping) else {}
+        lines += [
+            f"Status: {exc.stage}",
+            f"Session: {session}",
+            f"Provider runtime: {runtime.get('state')} ({runtime.get('reason_code')})",
+            f"DNSE quality license: {license_.get('license') or 'NOT_ASSESSED'}",
+            "DNSE evidence: RETAINED",
+            "Publication: BLOCKED (no degraded publication)",
+            "M1 live acceptance: NOT_SATISFIED_BY_THIS_RUN",
+            "Action: owner provider-runtime/quality decision required; see config/provider_runtime_policy.json",
+        ]
     elif exc.stage in POST_ACQUISITION_NOT_READY_STAGES:
         reasons = ",".join(phase_b.get("reason_codes") or []) or str(exc)
         lines += [
@@ -661,6 +709,24 @@ def run_canonical_daily_operation(
 
     try:
         acquisition = _acquire()
+    except SupplementalProviderBlockError as exc:
+        # A governed block -- not routine data lag, not a pipeline defect.
+        stage = (
+            STAGE_BLOCKED_SUPPLEMENTAL_PROVIDER_RUNTIME
+            if exc.kind == "SUPPLEMENTAL_PROVIDER_RUNTIME_UNAVAILABLE" else STAGE_BLOCKED_DNSE_QUALITY_UNLICENSED
+        )
+        raise CanonicalDailyOperationError(stage, str(exc), local_state={
+            "phase_a": phase_a,
+            "supplemental_provider": {
+                "block_kind": exc.kind,
+                "provider_runtime": exc.runtime_state,
+                "dnse_quality_license": exc.quality_license,
+                "diagnostic_path": str(exc.diagnostic_path) if exc.diagnostic_path else None,
+                "dnse_raw_evidence": "RETAINED",
+                "publication": "NOT_ATTEMPTED",
+                "m1_live_acceptance_eligible": False,
+            },
+        }) from exc
     except CanonicalPostCloseError as exc:
         # A deliberate, evidence-based refusal (thin/partial coverage, session mismatch, missing
         # snapshot after acquisition, pre-cutoff artifact, ...) -- genuinely "not ready yet".
@@ -1090,6 +1156,13 @@ def run_canonical_daily_operation(
         "post_handoff_presentation_projection": post_handoff_presentation_projection,
         "post_handoff_runtime_restage": post_handoff_runtime_restage,
     }
+    # PROVIDER_RUNTIME_ISOLATION_V1: both axes, stamped by the acquisition boundary. Added only when
+    # the snapshot carries them, so an idempotent replay of a pre-V1 operation keeps its immutable
+    # record byte-identical (and such a replay is then not M1-eligible).
+    if snapshot.get("provider_runtime_state") is not None:
+        record["acquisition"]["provider_runtime_state"] = snapshot.get("provider_runtime_state")
+        record["acquisition"]["dnse_quality_license"] = snapshot.get("dnse_quality_license")
+        record["operating_mode"] = OPERATING_MODE_ORDINARY_DAILY
     persistable = {k: v for k, v in record.items() if k not in {
         "producer_result", "decision_packet", "prospective", "prospective_decision_snapshot_detail", "enrichment",
         "tactical_reversal_shadow_collection", "post_handoff_observers", "post_handoff_prospective_decision_feedback",

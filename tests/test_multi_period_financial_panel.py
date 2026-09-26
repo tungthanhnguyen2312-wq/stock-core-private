@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import copy
 import json
+import tempfile
 import unittest
+from pathlib import Path
 
 from multi_period_financial_panel import (
     CONTRACT_VERSION,
@@ -600,7 +602,9 @@ class TestMultiPeriodFinancialPanel(unittest.TestCase):
     def test_phase3_readiness_preserves_independent_price_liquidity_gates(self):
         """Phase 3 entry readiness report confirms negative gates on raw as-traded prices and liquidity."""
         from tools.run_p2_closeout_financial_panel import run_phase_2_closeout
-        res = run_phase_2_closeout()
+        # Write the closeout outputs to scratch, never over the retained operations-review copy.
+        with tempfile.TemporaryDirectory() as scratch:
+            res = run_phase_2_closeout(output_dir=Path(scratch))
         self.assertEqual(res["phase_2_verdict"], "P2_CLOSEOUT_COMPLETE")
         p3_ready = res["phase_3_readiness"]
         self.assertEqual(p3_ready["overall_status"], "PHASE3_ENTRY_READY_FOR_BOUNDED_REVIEW")

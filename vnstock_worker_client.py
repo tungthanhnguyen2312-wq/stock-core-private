@@ -27,6 +27,16 @@ provider genuinely had nothing."
 
 Not a security sandbox -- see ``vnstock_worker_process.py``'s own docstring for the exact scope
 of what process separation here does and does not provide.
+
+PROVIDER_RUNTIME_ISOLATION_V1 (owner decisions D1/D3): a fetcher can only be constructed with an
+explicit ``provider_runtime_state.ProviderPolicy`` that allows launch and an explicitly supplied
+provider interpreter -- there is no default to ``sys.executable``. The worker runs under that
+interpreter with ``provider_runtime_state.WORKER_INTERPRETER_FLAGS`` and an explicitly constructed
+environment (``provider_runtime_state.build_provider_environment``): DNSE/Livespeed/Finhay
+credentials and other secret-shaped variables of the parent are never forwarded. Production
+callers obtain a fetcher only through ``open_provider_runtime``, which applies the tracked owner
+policy (``SECURITY_REVIEW_BLOCKED`` spawns nothing), resolves ``STOCKLOOKUP_PROVIDER_PYTHON``, and
+runs the readiness handshake before any provider request.
 """
 from __future__ import annotations
 
@@ -37,8 +47,11 @@ import sys
 import tempfile
 import threading
 import uuid
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Mapping
+
+import provider_runtime_state as runtime_contract
 
 # vnstock_rate_governor is a pure accounting/policy module (threading/time/collections only --
 # no vnstock/vnai import anywhere in it), so importing it here does not reintroduce a parent-side
@@ -54,6 +67,10 @@ from vnstock_worker_protocol import (
     MSG_WORKER_ERROR,
     PROTOCOL_VERSION,
     PURPOSE_GAP_RECOVERY,
+    STARTUP_KIND_EXITED_BEFORE_READY,
+    STARTUP_KIND_SPAWN_FAILED,
+    STARTUP_KIND_STARTUP_EXCEPTION,
+    STARTUP_KIND_STARTUP_TIMEOUT,
     VnstockWorkerAdapterError,
     VnstockWorkerFailure,
     VnstockWorkerProcessExitError,
@@ -92,18 +109,35 @@ class VnstockWorkerFetcher:
     def __init__(
         self,
         *,
+        python_executable: str,
+        policy: runtime_contract.ProviderPolicy,
         session: str | None = None,
         worker_script: Path | None = None,
-        python_executable: str | None = None,
         request_timeout: float = DEFAULT_REQUEST_TIMEOUT_SECONDS,
         startup_timeout: float = DEFAULT_STARTUP_TIMEOUT_SECONDS,
         shutdown_timeout: float = DEFAULT_SHUTDOWN_TIMEOUT_SECONDS,
         env: dict[str, str] | None = None,
+        parent_environ: Mapping[str, str] | None = None,
         worker_cwd: Path | str | None = None,
     ):
+        # D1: a blocked policy can never produce a spawnable fetcher (zero provider processes).
+        if not isinstance(policy, runtime_contract.ProviderPolicy) or not policy.allows_launch:
+            raise runtime_contract.ProviderRuntimeContractError("PROVIDER_POLICY_DOES_NOT_ALLOW_LAUNCH")
+        # D3: the provider interpreter is always explicit -- never a silent sys.executable default.
+        if not isinstance(python_executable, str) or not python_executable.strip():
+            raise runtime_contract.ProviderRuntimeContractError("PROVIDER_INTERPRETER_REQUIRED")
+        self._policy = policy
         self._session = session
         self._worker_script = worker_script or _WORKER_SCRIPT
-        self._python_executable = python_executable or sys.executable
+        self._python_executable = python_executable
+        # The environment the worker's allow-listed variables are read from (default: os.environ at
+        # spawn time). ``env`` (below) holds explicit extra variables, e.g. a test fixture's control
+        # switch; both pass the same credential deny-rules when the environment is built.
+        self._parent_environ = parent_environ
+        self._runtime_info: dict[str, Any] | None = None
+        self._outcome_stats = runtime_contract.empty_outcome_stats()
+        # Set by shutdown(): the worker's exit after a deliberate shutdown is not a failure.
+        self._shutting_down = False
         self._request_timeout = request_timeout
         self._startup_timeout = startup_timeout
         self._shutdown_timeout = shutdown_timeout
@@ -155,16 +189,22 @@ class VnstockWorkerFetcher:
             try:
                 import os
 
-                popen_env = {**os.environ, **self._env} if self._env else None
+                # Explicit construction -- never a blind copy of the parent environment.
+                popen_env = runtime_contract.build_provider_environment(
+                    self._parent_environ if self._parent_environ is not None else os.environ,
+                    allowed_provider_env=self._policy.allowed_provider_env,
+                    extra=self._env,
+                )
                 self._process = subprocess.Popen(
-                    [self._python_executable, "-u", str(self._worker_script)],
+                    [self._python_executable, *runtime_contract.WORKER_INTERPRETER_FLAGS, str(self._worker_script)],
                     stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                     text=True, encoding="utf-8", bufsize=1, env=popen_env,
                     cwd=str(self._worker_cwd),
                 )
             except OSError as exc:
                 failure = VnstockWorkerStartupError(
-                    f"WORKER_PROCESS_SPAWN_FAILED:{exc}", diagnostics={"exception": str(exc)},
+                    f"WORKER_PROCESS_SPAWN_FAILED:{exc}",
+                    diagnostics={"exception": str(exc), "startup_failure_kind": STARTUP_KIND_SPAWN_FAILED},
                 )
                 self._failed_exc = failure
                 raise failure from exc
@@ -182,7 +222,10 @@ class VnstockWorkerFetcher:
         if not self._ready_event.wait(timeout=self._startup_timeout):
             failure = VnstockWorkerStartupError(
                 "WORKER_DID_NOT_BECOME_READY_WITHIN_TIMEOUT",
-                diagnostics={"startup_timeout_seconds": self._startup_timeout},
+                diagnostics={
+                    "startup_timeout_seconds": self._startup_timeout,
+                    "startup_failure_kind": STARTUP_KIND_STARTUP_TIMEOUT,
+                },
             )
             self._fail(failure)
             raise failure
@@ -212,8 +255,11 @@ class VnstockWorkerFetcher:
             # Stream ended (EOF) -- if we were not already torn down deliberately and requests
             # were (or could still be) pending, this is an unexpected process exit.
             if self._failed_exc is None and not self._ready_event.is_set():
-                self._fail(VnstockWorkerStartupError("WORKER_EXITED_BEFORE_BECOMING_READY"))
-            elif self._failed_exc is None:
+                self._fail(VnstockWorkerStartupError(
+                    "WORKER_EXITED_BEFORE_BECOMING_READY",
+                    diagnostics={"startup_failure_kind": STARTUP_KIND_EXITED_BEFORE_READY},
+                ))
+            elif self._failed_exc is None and not self._shutting_down:
                 exit_status = self._process.wait(timeout=5) if self._process else None
                 self._fail(
                     VnstockWorkerProcessExitError(
@@ -225,11 +271,28 @@ class VnstockWorkerFetcher:
     def _dispatch(self, message: dict[str, Any]) -> None:
         msg_type = message.get("type")
         if msg_type == MSG_READY:
+            runtime = message.get("runtime")
+            self._runtime_info = dict(runtime) if isinstance(runtime, dict) else None
             self._ready_event.set()
             return
         if msg_type == MSG_SHUTDOWN_ACK:
             return
         request_id = message.get("request_id")
+        if (
+            msg_type == MSG_WORKER_ERROR and request_id is None and not self._ready_event.is_set()
+            and message.get("failure_class") == "WORKER_STARTUP_FAILURE"
+        ):
+            # The worker's own typed startup report (provider package absent / import failed /
+            # startup exception) -- a startup failure, never a protocol violation.
+            self._fail(VnstockWorkerStartupError(
+                f"WORKER_STARTUP_FAILURE:{message.get('startup_failure_kind')}:{message.get('message')}",
+                diagnostics={
+                    "startup_failure_kind": message.get("startup_failure_kind") or STARTUP_KIND_STARTUP_EXCEPTION,
+                    "missing_packages": message.get("missing_packages") or [],
+                    "exception_type": message.get("exception_type"),
+                },
+            ))
+            return
         if not isinstance(request_id, str) or not request_id:
             self._fail(
                 VnstockWorkerProtocolError(
@@ -250,6 +313,11 @@ class VnstockWorkerFetcher:
             )
             return
         if msg_type == MSG_FETCH_RESULT:
+            with self._diagnostics_lock:
+                runtime_contract.record_outcome_stats(
+                    self._outcome_stats, status=str(message.get("status")),
+                    errors=message.get("errors") or [], http_429_count=int(message.get("http_429_count") or 0),
+                )
             outcome = WorkerFetchOutcome(
                 status=message["status"],
                 data=(
@@ -337,6 +405,26 @@ class VnstockWorkerFetcher:
             raise payload
         return payload
 
+    # -- readiness / runtime state --------------------------------------------------------------
+
+    def start(self) -> None:
+        """Spawn the worker and complete the readiness handshake now (pre-flight probe); raises
+        the same ``VnstockWorkerFailure`` a first fetch would."""
+        self._ensure_started()
+
+    @property
+    def failure(self) -> VnstockWorkerFailure | None:
+        return self._failed_exc
+
+    @property
+    def runtime_info(self) -> dict[str, Any] | None:
+        """Interpreter/package versions from the READY message (None before a successful start)."""
+        return dict(self._runtime_info) if self._runtime_info is not None else None
+
+    def outcome_stats(self) -> dict[str, int]:
+        with self._diagnostics_lock:
+            return dict(self._outcome_stats)
+
     # -- public transport API (drop-in for vn_stock_pipeline.fetch_single_source) --------------
 
     def fetch(
@@ -418,6 +506,7 @@ class VnstockWorkerFetcher:
         block and must not have a cleanup failure mask a real exception from the try body."""
         if not self._started:
             return
+        self._shutting_down = True
         with self._lifecycle_lock:
             process = self._process
         if process is None:
@@ -452,3 +541,104 @@ class VnstockWorkerFetcher:
                     pass
             if self._reader_thread is not None:
                 self._reader_thread.join(timeout=self._shutdown_timeout)
+
+
+# ---------------------------------------------------------------------------------------------
+# Governed factory (PROVIDER_RUNTIME_ISOLATION_V1) -- the only production way to obtain a fetcher.
+# ---------------------------------------------------------------------------------------------
+
+
+@dataclass
+class ProviderRuntimeHandle:
+    """Pre-flight runtime state plus, only when ``AVAILABLE``, a started fetcher."""
+
+    state: dict[str, Any]
+    fetcher: VnstockWorkerFetcher | None
+    policy: runtime_contract.ProviderPolicy
+    _final_state: dict[str, Any] | None = None
+
+    @property
+    def available(self) -> bool:
+        return self.fetcher is not None and self.state.get("state") == runtime_contract.AVAILABLE
+
+    def unavailable_error(self) -> runtime_contract.SupplementalProviderRuntimeUnavailable:
+        return runtime_contract.SupplementalProviderRuntimeUnavailable(self.state)
+
+    def final_state(self) -> dict[str, Any]:
+        """Operation-phase state: a mid-operation worker failure, an explicit auth/rate-limit
+        signal, or the unchanged pre-flight state."""
+        if self._final_state is not None:
+            return dict(self._final_state)
+        if self.fetcher is None:
+            return dict(self.state)
+        failure = self.fetcher.failure
+        if failure is not None:
+            return runtime_contract.runtime_state_from_worker_failure(
+                failure.failure_class, failure.diagnostics,
+                phase=runtime_contract.PHASE_OPERATION, policy=self.policy,
+            )
+        return runtime_contract.classify_observed_runtime(
+            self.state, self.fetcher.outcome_stats(), policy=self.policy,
+        )
+
+    def shutdown(self) -> None:
+        """Freeze the operation-phase state first, then tear the worker down."""
+        if self.fetcher is not None:
+            if self._final_state is None:
+                self._final_state = self.final_state()
+            self.fetcher.shutdown()
+
+
+def open_provider_runtime(
+    *,
+    session: str | None = None,
+    policy: runtime_contract.ProviderPolicy | None = None,
+    environ: Mapping[str, str] | None = None,
+    core_executable: str | None = None,
+    worker_script: Path | None = None,
+    request_timeout: float = DEFAULT_REQUEST_TIMEOUT_SECONDS,
+    startup_timeout: float = DEFAULT_STARTUP_TIMEOUT_SECONDS,
+    shutdown_timeout: float = DEFAULT_SHUTDOWN_TIMEOUT_SECONDS,
+    extra_env: dict[str, str] | None = None,
+) -> ProviderRuntimeHandle:
+    """Apply the owner policy, resolve the provider interpreter and run the readiness handshake.
+
+    Order (each step fail-closed, none spawning anything before the policy allows it):
+      1. ``SECURITY_REVIEW_BLOCKED`` policy (default; also any missing/invalid policy file)
+         -> state ``SECURITY_REVIEW_BLOCKED``, zero processes started;
+      2. ``STOCKLOOKUP_PROVIDER_PYTHON`` unset / not a file / identical to the core interpreter
+         -> ``NOT_CONFIGURED``, zero processes started;
+      3. spawn + READY handshake -> ``AVAILABLE`` (with reported versions) or the precise
+         startup failure state (``NOT_INSTALLED``, ``IMPORT_FAILED``, ``STARTUP_FAILED``,
+         ``STARTUP_TIMEOUT``, ``PROTOCOL_VIOLATION``, ``PROCESS_CRASHED``, ...).
+    Never raises for an unavailable runtime; the caller decides what the state blocks.
+    """
+    import os
+
+    policy = policy if policy is not None else runtime_contract.load_provider_policy()
+    if not policy.allows_launch:
+        return ProviderRuntimeHandle(runtime_contract.policy_block_record(policy), None, policy)
+    parent_environ = environ if environ is not None else os.environ
+    interpreter, not_configured = runtime_contract.resolve_provider_interpreter(
+        parent_environ, core_executable=core_executable or sys.executable, policy=policy,
+    )
+    if interpreter is None:
+        return ProviderRuntimeHandle(not_configured or {}, None, policy)
+    fetcher = VnstockWorkerFetcher(
+        python_executable=interpreter, policy=policy, session=session, worker_script=worker_script,
+        request_timeout=request_timeout, startup_timeout=startup_timeout, shutdown_timeout=shutdown_timeout,
+        env=extra_env, parent_environ=parent_environ,
+    )
+    try:
+        fetcher.start()
+    except VnstockWorkerFailure as exc:
+        fetcher.shutdown()
+        state = runtime_contract.runtime_state_from_worker_failure(
+            exc.failure_class, exc.diagnostics, phase=runtime_contract.PHASE_PREFLIGHT, policy=policy,
+        )
+        return ProviderRuntimeHandle(state, None, policy)
+    state = runtime_contract.runtime_state_record(
+        runtime_contract.AVAILABLE, runtime_contract.REASON_READY_HANDSHAKE, policy=policy,
+        interpreter_configured=True, runtime_info=fetcher.runtime_info or {},
+    )
+    return ProviderRuntimeHandle(state, fetcher, policy)
