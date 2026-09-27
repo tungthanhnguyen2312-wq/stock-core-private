@@ -69,28 +69,34 @@ def _default_request_get(*args: Any, **kwargs: Any) -> Any:
     return requests.get(*args, **kwargs)
 
 
-def _retry_after_seconds(response: Any) -> float | None:
-    """Return a usable numeric Retry-After value without retaining headers.
+def _retry_after_seconds(response: Any, *, allow_http_date: bool = False) -> float | None:
+    """Return a usable Retry-After delay without retaining headers.
 
     The bulk caller applies its own configured sleep cap.  This boundary only
     exposes a finite, non-negative delta-seconds value, never an arbitrary
     response-header collection or a provider quota claim.
     """
     headers = getattr(response, "headers", None)
+    raw = None
     try:
         raw = headers.get("Retry-After") if headers is not None else None
         value = float(str(raw).strip())
     except (AttributeError, TypeError, ValueError):
-        return None
+        if not allow_http_date or raw is None:
+            return None
+        from datetime import datetime, timezone
+        from email.utils import parsedate_to_datetime
+
+        try:
+            when = parsedate_to_datetime(str(raw))
+            if when.tzinfo is None:
+                when = when.replace(tzinfo=timezone.utc)
+            value = max(0.0, (when - datetime.now(timezone.utc)).total_seconds())
+        except (TypeError, ValueError, OverflowError):
+            return None
     if not math.isfinite(value) or value < 0:
         return None
     return value
-
-
-def _decode_json(raw: bytes) -> Any:
-    import json
-
-    return json.loads(raw.decode("utf-8"))
 
 
 def fetch_capability_raw(
@@ -113,9 +119,9 @@ def fetch_capability_raw(
 
     ``retain_raw_bytes`` (RECOVERY_REPLAY raw-retention contract): additionally
     return ``raw_bytes`` -- the exact HTTP response body bytes as received, for
-    every HTTP response (any status) -- plus ``content_type``, and decode
-    ``body`` from exactly those bytes. A 200 whose bytes are not JSON is
-    ``ok = False`` / ``response_body_not_json`` with the bytes still returned.
+    every HTTP response (any status) -- plus ``content_type``. The recovery
+    caller persists and verifies those bytes before decoding them. This branch
+    deliberately does not call ``response.json()`` or otherwise parse the body.
     Request headers, the signature and credentials are never returned. The
     default (``False``) behaviour is byte-for-byte unchanged for every other
     caller.
@@ -151,23 +157,19 @@ def fetch_capability_raw(
             return result
         if status_code == 429:
             result.update(ok=False, error_code="rate_limited")
-            retry_after = _retry_after_seconds(response)
+            retry_after = _retry_after_seconds(response, allow_http_date=retain_raw_bytes)
             if retry_after is not None:
                 result["retry_after_seconds"] = retry_after
             return result
         if status_code != 200:
             result.update(ok=False, error_code=f"http_status_{status_code}")
-            try:
-                result["body"] = _decode_json(result["raw_bytes"]) if retain_raw_bytes else response.json()
-            except Exception:
-                result["body_text_preview"] = str(getattr(response, "text", "") or "")[:2000]
+            if not retain_raw_bytes:
+                try:
+                    result["body"] = response.json()
+                except Exception:
+                    result["body_text_preview"] = str(getattr(response, "text", "") or "")[:2000]
             return result
         if retain_raw_bytes:
-            try:
-                result["body"] = _decode_json(result["raw_bytes"])
-            except Exception:
-                result.update(ok=False, error_code="response_body_not_json")
-                return result
             result["ok"] = True
             return result
         result["ok"] = True

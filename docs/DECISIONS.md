@@ -24,8 +24,9 @@ Fixes:
   - Conflict-resolution contract: never auto-resolved, re-requested or overwritten. The owner
     resolves it by starting fresh isolated roots; the blocked state root is kept.
 - **Exact bytes.** The governed `dnse_bulk_market_data.fetch_capability_raw` gains an opt-in
-  `retain_raw_bytes`. It returns the exact response body bytes plus content type, and decodes the
-  body from those bytes. The default behaviour and credential handling are unchanged.
+  `retain_raw_bytes`. It returns the exact response body bytes plus content type without parsing;
+  recovery parses only after durable retention and verification. The default behaviour and
+  credential handling are unchanged.
   - Recovery writes the `.body` bytes write-once, fsyncs, re-reads and verifies length and SHA-256.
     Only then does it write a completion-marked envelope, and only then parse from the retained
     bytes and advance the journal.
@@ -46,9 +47,19 @@ Fixes:
   - The algorithm is `recovery_foreign_flow_chain/v1`: `sha256(canonical_json({"chain_contract",
     "page_sha256": [ordered]}))`.
   - Only a verified, terminal, complete chain normalizes to VALUE.
+- **Crash accounting and stale output.** OHLC and foreign-flow calls are reserved in their journals
+  before crossing the network boundary, so a crash can consume budget conservatively but cannot
+  reset the hard ceiling. Reserved OHLC attempt numbers are never reused after a missing-raw crash;
+  every retained retry is verified before a later result is reused. Analyze-only applies the
+  same verification before computing completion. A prior completed reconstruction is retired and run state set to
+  `IN_PROGRESS` before any new live or analyze-only run begins. Frozen plan identity, candidate hash,
+  request parameters and chain cursor lineage are reverified on resume, including incomplete
+  foreign-flow chains before any cursor is used again. A rejected first foreign-flow page cannot
+  stand in for a complete terminal chain. If a later run finds a broken or incomplete chain,
+  its earlier normalized VALUE observation is retired from the active isolated store path.
 - **Sequencing (one authoritative gate):**
   1. implementation corrective;
-  2. exact-head independent review;
+  2. exact-head implementation self-review and readiness validation;
   3. isolated 2026-09-25 recovery on that reviewed exact RC, before merge;
   4. analyze/review the package;
   5. merge PR #8 only if no implementation blocker appears;
@@ -57,7 +68,12 @@ Fixes:
   The recovery is an acceptance exercise and does not promote the ordinary-Daily corrective.
   `STATE`, `ROADMAP` and `ROADMAP_STATE` agree.
 
-**Nothing ran:** no provider call, Daily, live recovery, merge or authority promotion.
+**Offline acceptance rehearsal:** a mocked 1,683-candidate run crashed after 900 OHLC calls and
+resumed without repeating 898 verified responses. An incomplete foreign-flow chain yielded
+`PARTIAL_UNRESOLVED`; a fresh isolated run completed all 11 chains, an identical rerun made zero
+calls, and altered raw evidence yielded `BLOCKED_INTEGRITY` with no current reconstruction.
+The production candidate database and worktree were unchanged. No live provider call, Daily,
+live recovery, merge or authority promotion occurred.
 
 ## 2026-09-26 - DNSE-first Daily and recovery infrastructure corrective (M1; branch, not promoted)
 

@@ -103,7 +103,10 @@ def main(
 
     existing_plan = rr._load_json(layout.plan_path) if layout.plan_path.is_file() else None
     try:
+        if layout.plan_path.is_file() and not isinstance(existing_plan, Mapping):
+            raise rr.RecoveryPlanError("FROZEN_PLAN_UNREADABLE")
         if isinstance(existing_plan, Mapping):
+            rr.validate_frozen_plan(existing_plan)
             requested = rr.build_plan(
                 target_session=target, candidates=existing_plan["acquisition_attempt_cohort"]["tickers"],
                 candidate_source=existing_plan["acquisition_attempt_cohort"]["source"],
@@ -160,9 +163,24 @@ def main(
     pacer = rr.Pacer(plan["controls"]["min_start_interval_seconds"], clock=clock, sleep=sleep)
     previous_state = rr._load_json(layout.run_state_path) if layout.run_state_path.is_file() else None
     if args.analyze_only:
+        # Retire a prior completion claim before reading journals. Even a crash during this new
+        # analysis cannot leave a stale COMPLETE reconstruction in the current output slot.
+        writer.retire(layout.reconstruction_path, str(time.time_ns()))
+        writer.write_json_atomic(layout.run_state_path, {
+            "operating_mode": rr.OPERATING_MODE, "target_session": target,
+            "plan_identity": plan["artifact_identity"], "acquisition_status": "IN_PROGRESS",
+            "complete": False, "network_calls_this_run": 0,
+        })
         stop_reason = (previous_state or {}).get("stop_reason") if isinstance(previous_state, Mapping) else None
         network_calls = 0
         journals = {t: rr._load_json(layout.journal_path(t)) or {} for t in plan["acquisition_attempt_cohort"]["tickers"]}
+        for ticker, journal in journals.items():
+            if not journal:
+                continue
+            error = rr.journal_integrity_error(layout, journal, ticker, target)
+            if error:
+                rr._block(journal, error)
+                writer.write_json_atomic(layout.journal_path(ticker), journal)
     else:
         if not args.acknowledge_live_provider_calls:
             summary.update(status="REFUSED", reason="LIVE_PROVIDER_CALLS_NOT_ACKNOWLEDGED", provider_calls=0)
@@ -181,6 +199,12 @@ def main(
                 summary.update(status="REFUSED", reason="DNSE_CREDENTIAL_INJECTION_REQUIRED", provider_calls=0)
                 _emit(summary)
                 return 2
+        writer.retire(layout.reconstruction_path, str(time.time_ns()))
+        writer.write_json_atomic(layout.run_state_path, {
+            "operating_mode": rr.OPERATING_MODE, "target_session": target,
+            "plan_identity": plan["artifact_identity"], "acquisition_status": "IN_PROGRESS",
+            "complete": False, "network_calls_this_run": 0,
+        })
         acquisition = rr.acquire_ohlc(
             plan=plan, layout=layout, writer=writer, fetcher=fetcher, api_key=credentials[0],
             api_secret=credentials[1], pacer=pacer, counters=counters, now_iso=now_iso,
@@ -195,11 +219,11 @@ def main(
             )
             stop_reason = stop_reason or ff["stop_reason"]
     chains = rr.load_chains(plan, layout)
-    run_status = rr.overall_status(plan, journals, chains, stop_reason)
     foreign_flow = None
     if plan["foreign_flow"]["cohort"]:
         foreign_flow = rr.normalize_foreign_flow(plan=plan, layout=layout, writer=writer)
         writer.write_json_atomic(layout.foreign_flow_path, foreign_flow)
+    run_status = rr.overall_status(plan, journals, chains, stop_reason, foreign_flow)
     quality = rr.build_quality_report(plan, journals, run_status)
     writer.write_json_atomic(layout.quality_path, quality)
     reconstruction = rr.build_reconstruction(

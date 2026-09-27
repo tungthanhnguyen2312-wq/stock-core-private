@@ -359,6 +359,7 @@ def ohlc_request_query(ticker: str, target_session: str) -> dict[str, Any]:
 
 def ohlc_request_identity(ticker: str, target_session: str) -> str:
     return "dnse_ohlc_1d:" + sha256_text(canonical_json({
+        "request_contract_version": PLAN_CONTRACT, "raw_envelope_contract_version": RAW_CONTRACT,
         "provider": "DNSE", "capability": "ohlc", "endpoint": "/price/ohlc", "target_session": target_session,
         "query": ohlc_request_query(ticker, target_session),
     }))[:32]
@@ -436,9 +437,10 @@ def build_plan(
             "records": overlay,
         },
         "request_contract": {
+            "contract_version": PLAN_CONTRACT, "raw_envelope_contract_version": RAW_CONTRACT,
             "provider": "DNSE", "capability": "ohlc", "endpoint": "/price/ohlc", "resolution": "1D",
             "type": "STOCK", "lookback_calendar_days": OHLC_LOOKBACK_CALENDAR_DAYS,
-            "request_identity_scheme": "sha256(provider,capability,endpoint,target_session,query)",
+            "request_identity_scheme": "sha256(request_contract_version,raw_envelope_contract_version,provider,capability,endpoint,target_session,query)",
         },
         "controls": {
             "max_in_flight": 1,
@@ -474,6 +476,25 @@ def plan_matches(existing: Mapping[str, Any], requested: Mapping[str, Any]) -> l
             requested.get("acquisition_attempt_cohort") or {}).get("candidate_sha256"):
         diffs.append("acquisition_attempt_cohort")
     return diffs
+
+
+def validate_frozen_plan(plan: Mapping[str, Any]) -> None:
+    """Refuse a truncated or edited plan before any resume or provider call."""
+    try:
+        cohort = plan["acquisition_attempt_cohort"]
+        tickers = cohort["tickers"]
+        if plan["contract_version"] != PLAN_CONTRACT or not isinstance(tickers, list):
+            raise ValueError("contract or ticker list")
+        if tickers != sorted(set(tickers)) or cohort["candidate_count"] != len(tickers):
+            raise ValueError("candidate list")
+        if cohort["candidate_sha256"] != sha256_text(canonical_json(tickers)):
+            raise ValueError("candidate hash")
+        verified = _identity(plan, prefix="recovery_acquisition_plan", exclude=("created_at",))
+        if (verified["artifact_sha256"] != plan["artifact_sha256"]
+                or verified["artifact_identity"] != plan["artifact_identity"]):
+            raise ValueError("plan identity")
+    except (KeyError, TypeError, ValueError) as exc:
+        raise RecoveryPlanError("FROZEN_PLAN_INTEGRITY_INVALID:" + str(exc)) from exc
 
 
 # =================================================================================================
@@ -699,6 +720,8 @@ def load_verified_attempt(
         raise RawIntegrityError("RAW_ENVELOPE_MALFORMED")
     if envelope.get("contract_version") != RAW_ENVELOPE_CONTRACT:
         raise RawIntegrityError("RAW_ENVELOPE_CONTRACT_MISMATCH")
+    if envelope.get("operating_mode") != OPERATING_MODE or envelope.get("provider") != "DNSE":
+        raise RawIntegrityError("RAW_ENVELOPE_MODE_OR_PROVIDER_MISMATCH")
     if envelope.get("completion_marker") != RAW_COMPLETION_MARKER:
         raise RawIntegrityError("RAW_COMPLETION_MARKER_MISSING")
     for key in ("request_identity", "target_session", "ticker", "capability", "endpoint", "page_index", "page_cursor"):
@@ -795,6 +818,7 @@ RUN_STOPPED_BUDGET = STOP_BUDGET
 def overall_status(
     plan: Mapping[str, Any], journals: Mapping[str, Mapping[str, Any]],
     chains: Mapping[str, Mapping[str, Any]] | None = None, stop_reason: str | None = None,
+    foreign_flow_result: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Deterministic overall state. COMPLETE only when every candidate (and every foreign-flow chain)
     reached a valid classified outcome with verified evidence and nothing stopped acquisition."""
@@ -814,11 +838,18 @@ def overall_status(
     for ticker in (plan.get("foreign_flow") or {}).get("cohort") or []:
         chain = (chains or {}).get(ticker) or {}
         state = chain.get("state") or TICKER_PENDING
+        normalized = ((foreign_flow_result or {}).get("records") or {}).get(ticker) or {}
         if state == TICKER_INTEGRITY:
             ff_integrity.append({"ticker": ticker, "code": chain.get("failure")})
+        elif normalized.get("status") == "CHAIN_INTEGRITY_FAILED":
+            ff_integrity.append({"ticker": ticker, "code": normalized.get("failure")})
+        elif state == FF_COMPLETE and normalized.get("status") != "COMPLETE_CHAIN_VALUE_NORMALIZED":
+            ff_unresolved.append({"ticker": ticker, "failure": normalized.get("failure") or normalized.get("status")})
         elif state == TICKER_UNRESOLVED:
             ff_unresolved.append({"ticker": ticker, "failure": chain.get("failure")})
-        elif state not in (FF_COMPLETE, TICKER_CLASSIFIED):
+        elif state == TICKER_CLASSIFIED:
+            ff_unresolved.append({"ticker": ticker, "failure": chain.get("failure") or "NO_COMPLETE_CHAIN"})
+        elif state != FF_COMPLETE:
             ff_pending.append(ticker)
     if integrity or ff_integrity or stop_reason == STOP_INTEGRITY:
         status = RUN_BLOCKED_INTEGRITY
@@ -898,6 +929,7 @@ def _new_journal(ticker: str, plan: Mapping[str, Any]) -> dict[str, Any]:
         "ticker": ticker, "target_session": target, "request_identity": identity,
         "request_range": ohlc_request_query(ticker, target),
         "attempts": [], "state": TICKER_PENDING, "disposition": NOT_ATTEMPTED,
+        "reserved_calls": 0,
         "retry_state": {"transient_retries_used": 0, "exhausted": False},
         "conflict": None,
     }
@@ -926,11 +958,53 @@ def _block(journal: dict[str, Any], code: str) -> None:
     journal["state"], journal["disposition"], journal["conflict"] = TICKER_INTEGRITY, UNKNOWN, code
 
 
-def verify_journal_attempt(layout: RecoveryLayout, journal: Mapping[str, Any], attempt: Mapping[str, Any]) -> tuple[dict[str, Any], Any]:
-    return load_verified_attempt(
-        layout.state_root / attempt["raw_stem"], expected=_ohlc_expected(journal, attempt["attempt"]),
+def verify_journal_attempt(layout: RecoveryLayout, journal: Mapping[str, Any], attempt: Mapping[str, Any],
+                           *, final: bool = False) -> tuple[dict[str, Any], Any]:
+    number = attempt.get("attempt")
+    if isinstance(number, bool) or not isinstance(number, int) or number < 1 \
+            or attempt.get("raw_stem") != layout.rel(layout.raw_stem(journal["ticker"], journal["request_identity"], number)):
+        raise RawIntegrityError("JOURNAL_ATTEMPT_PATH_OR_NUMBER_MISMATCH")
+    envelope, body = load_verified_attempt(
+        layout.state_root / attempt["raw_stem"], expected=_ohlc_expected(journal, number),
         journal_envelope_sha256=attempt.get("envelope_sha256"), journal_body_sha256=attempt.get("body_sha256"),
     )
+    if envelope.get("attempt") != attempt.get("attempt"):
+        raise RawIntegrityError("JOURNAL_ATTEMPT_NUMBER_MISMATCH")
+    verdict = classify_ohlc_response(response_from_retained(envelope, body), journal["target_session"])
+    if verdict["disposition"] != attempt.get("disposition") \
+            or (final and verdict["disposition"] != journal.get("disposition")):
+        raise RawIntegrityError("JOURNAL_DISPOSITION_MISMATCH")
+    return envelope, body
+
+
+def journal_integrity_error(layout: RecoveryLayout, journal: Mapping[str, Any], ticker: str,
+                            target: str) -> str | None:
+    """Verify a frozen journal and every retained attempt before reuse or analysis."""
+    if (journal.get("contract_version") != JOURNAL_CONTRACT or journal.get("operating_mode") != OPERATING_MODE
+            or journal.get("ticker") != ticker or journal.get("target_session") != target
+            or journal.get("request_identity") != ohlc_request_identity(ticker, target)
+            or journal.get("request_range") != ohlc_request_query(ticker, target)):
+        return "JOURNAL_REQUEST_CONTRACT_MISMATCH"
+    if journal.get("state") == TICKER_INTEGRITY:
+        return None  # preserve the first integrity finding as evidence; never auto-resolve it
+    try:
+        attempts = journal.get("attempts") or []
+        prior_number = 0
+        for index, recorded in enumerate(attempts):
+            number = recorded.get("attempt")
+            if isinstance(number, bool) or not isinstance(number, int) or number <= prior_number:
+                raise RawIntegrityError("JOURNAL_ATTEMPT_ORDER_INVALID")
+            verify_journal_attempt(layout, journal, recorded,
+                                   final=index == len(attempts) - 1
+                                   and journal.get("state") in (TICKER_CLASSIFIED, TICKER_UNRESOLVED))
+            prior_number = number
+        if journal.get("state") in (TICKER_CLASSIFIED, TICKER_UNRESOLVED) and not attempts:
+            raise RawIntegrityError("TERMINAL_JOURNAL_WITHOUT_ATTEMPT")
+        if journal.get("state") == TICKER_CLASSIFIED and journal.get("disposition") not in VALID_CLASSIFIED_DISPOSITIONS:
+            raise RawIntegrityError("JOURNAL_CLASSIFIED_DISPOSITION_INVALID")
+    except (RawIntegrityError, AttributeError, TypeError, KeyError) as exc:
+        return exc.code if isinstance(exc, RawIntegrityError) else "JOURNAL_ATTEMPT_MALFORMED"
+    return None
 
 
 def acquire_ohlc(
@@ -951,32 +1025,36 @@ def acquire_ohlc(
     for ticker in tickers:
         existing = _load_json(layout.journal_path(ticker))
         journals[ticker] = dict(existing) if isinstance(existing, Mapping) else _new_journal(ticker, plan)
-        counters.calls += sum(1 for a in journals[ticker].get("attempts", []) if a.get("network_call"))
+        counters.calls += max(int(journals[ticker].get("reserved_calls", 0)),
+                              sum(1 for a in journals[ticker].get("attempts", []) if a.get("network_call")))
         counters.transient_retries += int((journals[ticker].get("retry_state") or {}).get("transient_retries_used", 0))
 
     for ticker in tickers:
         journal = journals[ticker]
-        if journal.get("request_identity") != ohlc_request_identity(ticker, target):
-            _block(journal, "JOURNAL_REQUEST_IDENTITY_MISMATCH")
+        error = journal_integrity_error(layout, journal, ticker, target)
+        if error:
+            _block(journal, error)
             writer.write_json_atomic(layout.journal_path(ticker), journal)
             continue
         if journal["state"] == TICKER_INTEGRITY:
             continue  # never auto-resolved (CONFLICT_RESOLUTION_CONTRACT)
         if journal["state"] in (TICKER_CLASSIFIED, TICKER_UNRESOLVED):
             last = (journal.get("attempts") or [None])[-1]
-            try:
-                if last is None:
-                    raise RawIntegrityError("TERMINAL_JOURNAL_WITHOUT_ATTEMPT")
-                verify_journal_attempt(layout, journal, last)
+            if last is not None:
                 reused_without_network += 1
-            except RawIntegrityError as exc:
-                _block(journal, exc.code)
-                writer.write_json_atomic(layout.journal_path(ticker), journal)
             continue
         if stop is not None:
             continue
         while journal["state"] in (TICKER_PENDING, TICKER_RETRYABLE):
-            attempt_no = len(journal["attempts"]) + 1
+            last_recorded = int(journal["attempts"][-1]["attempt"]) if journal["attempts"] else 0
+            reserved = int(journal.get("reserved_calls", 0))
+            # Inspect every reserved but unjournaled slot before requesting again. A completed
+            # orphan can be adopted; a slot with no bytes represents a call whose outcome was
+            # lost in the crash and must never be reused or silently refunded.
+            orphan_no = next((n for n in range(last_recorded + 1, reserved + 1)
+                              if envelope_path(layout.raw_stem(ticker, journal["request_identity"], n)).exists()
+                              or body_path(layout.raw_stem(ticker, journal["request_identity"], n)).exists()), None)
+            attempt_no = orphan_no if orphan_no is not None else max(last_recorded, reserved) + 1
             stem = layout.raw_stem(ticker, journal["request_identity"], attempt_no)
             expected = _ohlc_expected(journal, attempt_no)
             adopted = envelope_path(stem).exists() or body_path(stem).exists()
@@ -991,7 +1069,9 @@ def acquire_ohlc(
                     _block(journal, "INVALID_ORPHAN:" + exc.code)
                     break
                 envelope_sha = sha256_bytes(envelope_path(stem).read_bytes())
-                counters.calls += 1  # the crashed process really spent this call
+                if int(journal.get("reserved_calls", 0)) < attempt_no:
+                    journal["reserved_calls"] = attempt_no
+                    counters.calls += 1  # externally planted orphan from a spent call
                 network_call = True
             else:
                 if counters.calls >= controls["call_budget"]:
@@ -1003,10 +1083,14 @@ def acquire_ohlc(
                     if previous.get("disposition") == RATE_LIMITED and previous.get("retry_after_seconds") is not None:
                         retry_after = min(float(previous["retry_after_seconds"]), controls["retry_after_cap_seconds"])
                 pacer.wait_turn(retry_after)
+                # Reserve durably before crossing the network boundary. A crash before raw retention
+                # consumes budget conservatively, rather than allowing unlimited unjournaled calls.
+                journal["reserved_calls"] = attempt_no
+                writer.write_json_atomic(layout.journal_path(ticker), journal)
+                counters.calls += 1
                 started_at = now_iso()
                 query = ohlc_request_query(ticker, target)
                 response = dict(fetcher("ohlc", api_key=api_key, api_secret=api_secret, symbol=None, query=query))
-                counters.calls += 1
                 network_calls_this_run += 1
                 network_call = True
                 acquired_at = now_iso()
@@ -1080,6 +1164,15 @@ def _ff_query(ticker: str, target_session: str, cursor: str | None) -> dict[str,
     return request_query(ticker, target_session, cursor=cursor)
 
 
+def ff_request_identity(ticker: str, target_session: str, page_index: int, cursor: str | None) -> str:
+    return "dnse_foreign_trading:" + sha256_text(canonical_json({
+        "request_contract_version": CHAIN_CONTRACT, "raw_envelope_contract_version": RAW_CONTRACT,
+        "provider": "DNSE", "capability": "foreign_trading",
+        "endpoint": f"/price/{ticker}/foreign-trading", "target_session": target_session,
+        "page_index": page_index, "query": _ff_query(ticker, target_session, cursor),
+    }))[:32]
+
+
 def chain_sha256(page_body_sha256: Sequence[str]) -> str:
     """The one canonical chain-hash algorithm (``recovery_foreign_flow_chain/v1``):
     SHA-256 of ``canonical_json({"chain_contract": CHAIN_CONTRACT, "page_sha256": [ordered page body
@@ -1106,7 +1199,7 @@ def _refresh_chain_identity(chain: dict[str, Any]) -> None:
 
 def _ff_expected(chain: Mapping[str, Any], page_index: int, cursor: str | None) -> dict[str, Any]:
     ticker = chain["ticker"]
-    return {"request_identity": f"dnse_foreign_trading:{ticker}:{chain['target_session']}:page{page_index}",
+    return {"request_identity": ff_request_identity(ticker, chain["target_session"], page_index, cursor),
             "target_session": chain["target_session"], "ticker": ticker, "capability": "foreign_trading",
             "endpoint": f"/price/{ticker}/foreign-trading", "page_index": page_index, "page_cursor": cursor,
             "query": _ff_query(ticker, chain["target_session"], cursor)}
@@ -1115,16 +1208,50 @@ def _ff_expected(chain: Mapping[str, Any], page_index: int, cursor: str | None) 
 def verify_chain(layout: RecoveryLayout, chain: Mapping[str, Any]) -> list[tuple[dict[str, Any], Any]]:
     """Re-verify every retained page (bytes, hashes, lineage) and the chain hash; raise on any defect."""
     verified = []
+    if chain.get("request_scope") != {k: v for k, v in _ff_query(chain["ticker"], chain["target_session"], None).items()
+                                       if k != "nextPageToken"}:
+        raise RawIntegrityError("CHAIN_REQUEST_SCOPE_MISMATCH")
+    expected_cursor = None
     for index, page in enumerate(chain.get("pages") or []):
         if page.get("page_index") != index:
             raise RawIntegrityError("CHAIN_PAGE_INDEX_GAP")
+        if page.get("raw_stem") != layout.rel(layout.ff_raw_stem(chain["ticker"], index)):
+            raise RawIntegrityError("CHAIN_PAGE_PATH_MISMATCH")
+        if page.get("page_cursor") != expected_cursor:
+            raise RawIntegrityError("CHAIN_CURSOR_LINEAGE_BROKEN")
         envelope, parsed = load_verified_attempt(
-            layout.state_root / page["raw_stem"], expected=_ff_expected(chain, index, page.get("page_cursor")),
+            layout.state_root / page["raw_stem"], expected=_ff_expected(chain, index, expected_cursor),
             journal_envelope_sha256=page.get("envelope_sha256"), journal_body_sha256=page.get("body_sha256"),
         )
+        if envelope.get("attempt") != 1:
+            raise RawIntegrityError("CHAIN_PAGE_ATTEMPT_MISMATCH")
+        if not isinstance(parsed, Mapping) or not isinstance(parsed.get("foreigners"), list):
+            raise RawIntegrityError("CHAIN_PAGE_MALFORMED")
+        raw_next = parsed.get("nextPageToken")
+        expected_cursor = raw_next if isinstance(raw_next, str) and raw_next else None
+        if page.get("next_cursor") != expected_cursor:
+            raise RawIntegrityError("CHAIN_NEXT_CURSOR_MISMATCH")
+        if expected_cursor is None and index != len(chain["pages"]) - 1:
+            raise RawIntegrityError("CHAIN_PAGES_AFTER_TERMINAL_CURSOR")
         verified.append((envelope, parsed))
-    recorded = (chain.get("chain_identity") or {}).get("chain_sha256")
-    if recorded != chain_sha256([p.get("body_sha256") for p in chain.get("pages") or []]):
+    identity = chain.get("chain_identity") or {}
+    hashes = [p.get("body_sha256") for p in chain.get("pages") or []]
+    if any(not isinstance(p.get("envelope_sha256"), str) or not isinstance(p.get("body_sha256"), str)
+           or not isinstance(p.get("body_length"), int) for p in chain.get("pages") or []):
+        raise RawIntegrityError("CHAIN_PAGE_HASH_OR_LENGTH_MISSING")
+    if identity.get("chain_contract") != CHAIN_CONTRACT or identity.get("page_sha256") != hashes \
+            or identity.get("page_count") != len(hashes):
+        raise RawIntegrityError("CHAIN_IDENTITY_METADATA_MISMATCH")
+    proven_terminal = bool(verified and expected_cursor is None)
+    if bool(chain.get("terminal_cursor_reached")) != bool(identity.get("terminal_cursor_reached")) \
+            or (chain.get("state") == FF_COMPLETE and not proven_terminal) \
+            or (chain.get("state") == FF_COMPLETE and not chain.get("terminal_cursor_reached")):
+        raise RawIntegrityError("CHAIN_TERMINAL_CURSOR_PROOF_MISMATCH")
+    if identity.get("request_identity") != {
+            "ticker": chain.get("ticker"), "target_session": chain.get("target_session"),
+            "capability": "foreign_trading", "request_scope": chain.get("request_scope")}:
+        raise RawIntegrityError("CHAIN_REQUEST_IDENTITY_MISMATCH")
+    if identity.get("chain_sha256") != chain_sha256(hashes):
         raise RawIntegrityError("CHAIN_SHA256_MISMATCH")
     return verified
 
@@ -1147,6 +1274,7 @@ def acquire_foreign_flow(
             "contract_version": JOURNAL_CONTRACT, "operating_mode": OPERATING_MODE, "ticker": ticker,
             "target_session": target, "capability": "foreign_trading", "pages": [], "state": FF_PENDING,
             "terminal_cursor_reached": False, "failure": None, "attempts": 0,
+            "pending_retry_after_seconds": 0.0,
             "request_scope": {k: v for k, v in _ff_query(ticker, target, None).items() if k != "nextPageToken"},
         }
         counters.ff_calls += int(chain.get("attempts", 0))
@@ -1154,17 +1282,28 @@ def acquire_foreign_flow(
     for ticker, chain in chains.items():
         if chain["state"] == TICKER_INTEGRITY:
             continue
-        if chain["state"] in (FF_COMPLETE, TICKER_CLASSIFIED, TICKER_UNRESOLVED):
+        if chain.get("ticker") != ticker or chain.get("target_session") != target \
+                or chain.get("contract_version") != JOURNAL_CONTRACT \
+                or chain.get("operating_mode") != OPERATING_MODE \
+                or chain.get("capability") != "foreign_trading" \
+                or chain.get("request_scope") != {k: v for k, v in _ff_query(ticker, target, None).items()
+                                                  if k != "nextPageToken"}:
+            chain["state"], chain["failure"] = TICKER_INTEGRITY, "CHAIN_REQUEST_CONTRACT_MISMATCH"
+            writer.write_json_atomic(layout.ff_journal_path(ticker), chain)
+            continue
+        if chain.get("pages"):
             try:
                 verify_chain(layout, chain)
             except RawIntegrityError as exc:
                 chain["state"], chain["failure"] = TICKER_INTEGRITY, exc.code
                 writer.write_json_atomic(layout.ff_journal_path(ticker), chain)
+                continue
+        if chain["state"] in (FF_COMPLETE, TICKER_CLASSIFIED, TICKER_UNRESOLVED):
             continue
         if stop is not None:
             continue
         transient_attempts = 0
-        pending_delay = 0.0
+        pending_delay = float(chain.get("pending_retry_after_seconds") or 0.0)
         while True:
             pages = chain["pages"]
             if pages and not pages[-1].get("next_cursor"):
@@ -1184,6 +1323,9 @@ def acquire_foreign_flow(
                     chain["state"], chain["failure"] = TICKER_INTEGRITY, "INVALID_ORPHAN:" + exc.code
                     break
                 envelope_sha = sha256_bytes(envelope_path(stem).read_bytes())
+                if int(chain.get("attempts", 0)) <= len(pages):
+                    chain["attempts"] = int(chain.get("attempts", 0)) + 1
+                    counters.ff_calls += 1
                 if not envelope.get("ok"):
                     chain["state"], chain["failure"] = TICKER_INTEGRITY, "ORPHAN_PAGE_NOT_A_SUCCESS_RESPONSE"
                     break
@@ -1193,11 +1335,14 @@ def acquire_foreign_flow(
                     break
                 pacer.wait_turn(pending_delay)
                 pending_delay = 0.0
+                chain["pending_retry_after_seconds"] = 0.0
+                # Reserve before the network boundary so a crash cannot reset the hard call ceiling.
+                chain["attempts"] = int(chain.get("attempts", 0)) + 1
+                writer.write_json_atomic(layout.ff_journal_path(ticker), chain)
+                counters.ff_calls += 1
                 started_at = now_iso()
                 query = expected["query"]
                 response = dict(fetcher("foreign_trading", api_key=api_key, api_secret=api_secret, symbol=ticker, query=query))
-                counters.ff_calls += 1
-                chain["attempts"] = int(chain.get("attempts", 0)) + 1
                 acquired_at = now_iso()
                 if not response.get("ok"):
                     verdict = classify_ohlc_response(response, target)
@@ -1206,11 +1351,13 @@ def acquire_foreign_flow(
                         break
                     if verdict["disposition"] == RATE_LIMITED:
                         counters.consecutive_429 += 1
+                        ra = response.get("retry_after_seconds")
+                        pending_delay = min(float(ra), plan["controls"]["retry_after_cap_seconds"]) if ra is not None else 0.0
+                        chain["pending_retry_after_seconds"] = pending_delay
+                        writer.write_json_atomic(layout.ff_journal_path(ticker), chain)
                         if counters.consecutive_429 >= plan["controls"]["stop_after_consecutive_429"]:
                             stop = STOP_RATE_LIMIT
                             break
-                        ra = response.get("retry_after_seconds")
-                        pending_delay = min(float(ra), plan["controls"]["retry_after_cap_seconds"]) if ra is not None else 0.0
                         continue
                     counters.consecutive_429 = 0
                     if verdict["disposition"] == TRANSPORT_FAILURE:
@@ -1275,15 +1422,23 @@ def normalize_foreign_flow(
     for ticker, chain in load_chains(plan, layout).items():
         identity = chain.get("chain_identity")
         base = {"chain_identity": identity, "value": None}
+        store_path = observation_path(layout.runtime_root, ticker)
+        def retire_stale_value() -> None:
+            # A later blocked/incomplete run must not leave an earlier normalized VALUE
+            # observation available at the active isolated store path.
+            writer.retire(store_path, str(time.time_ns()))
         if not chain.get("pages") and chain.get("state") == FF_PENDING:
+            retire_stale_value()
             records[ticker] = {**base, "status": "NOT_ATTEMPTED"}
             continue
         try:
             verified = verify_chain(layout, chain)
         except RawIntegrityError as exc:
+            retire_stale_value()
             records[ticker] = {**base, "status": "CHAIN_INTEGRITY_FAILED", "failure": exc.code}
             continue
         if chain.get("state") != FF_COMPLETE or not chain.get("terminal_cursor_reached"):
+            retire_stale_value()
             records[ticker] = {**base, "status": "NON_TERMINAL_CHAIN_NOT_NORMALIZED", "chain_state": chain.get("state"),
                                "failure": chain.get("failure"), "pages": len(chain.get("pages") or [])}
             continue
@@ -1296,6 +1451,7 @@ def normalize_foreign_flow(
         try:
             observation = normalize_exact_raw_sequence(ticker=ticker, reference_session=target, pages=pages)
         except ValueError as exc:
+            retire_stale_value()
             records[ticker] = {**base, "status": "CHAIN_NOT_NORMALIZABLE", "failure": str(exc)}
             continue
         writer.guard(observation_path(layout.runtime_root, ticker))

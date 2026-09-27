@@ -10,7 +10,7 @@
 - `CURRENT_DECISION_SURFACE_CONVERGENCE_V1` stays `ACTIVE`. The one immediate sequence (identical in
   `docs/STATE.md` and `docs/ROADMAP_STATE.json`, corrected 2026-09-27):
   1. implementation corrective (PR #8);
-  2. exact-head independent review of that RC;
+  2. exact-head implementation self-review and readiness validation of that RC;
   3. run the isolated 2026-09-25 RECOVERY_REPLAY on that reviewed exact RC, before merge;
   4. analyze/review the recovered 2026-09-25 package;
   5. only if live recovery exposes no implementation blocker, promote/merge PR #8;

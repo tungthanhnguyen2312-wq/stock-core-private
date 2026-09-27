@@ -570,15 +570,15 @@ def test_governed_fetch_boundary_returns_exact_bytes_without_credentials():
     result = bulk.fetch_capability_raw("ohlc", api_key="k-synthetic", api_secret="s-synthetic",
                                        query={"symbol": "AAA"}, request_get=request_get, retain_raw_bytes=True)
     assert result["ok"] is True and result["raw_bytes"] == exact
-    assert result["body"] == json.loads(exact)
+    assert "body" not in result  # the fetch boundary must not parse before durable raw retention
     assert result["content_type"] == "application/json"
     text = json.dumps({k: v for k, v in result.items() if k != "raw_bytes"})
     assert "s-synthetic" not in text and "X-Signature" not in text and "k-synthetic" not in text
-    # Non-JSON 200 bytes are retained and reported, never silently parsed.
+    # Even non-JSON 200 bytes are passed through unchanged; retention verification rejects them.
     Response.content = b"<html>maintenance</html>"
     broken = bulk.fetch_capability_raw("ohlc", api_key="k", api_secret="s", query={}, request_get=request_get,
                                        retain_raw_bytes=True)
-    assert broken["ok"] is False and broken["error_code"] == "response_body_not_json"
+    assert broken["ok"] is True and "body" not in broken
     assert broken["raw_bytes"] == b"<html>maintenance</html>"
     # Default callers are unchanged: no raw_bytes key.
     Response.content = exact
@@ -593,6 +593,115 @@ def test_governed_recovery_fetcher_asks_the_boundary_for_exact_bytes(monkeypatch
     monkeypatch.setattr(bulk, "fetch_capability_raw", lambda capability, **kw: captured.update(kw, capability=capability) or {})
     rr.governed_recovery_fetcher()("ohlc", api_key="k", api_secret="s", symbol=None, query={"symbol": "AAA"})
     assert captured["retain_raw_bytes"] is True and captured["capability"] == "ohlc"
+
+
+def test_http_date_retry_after_is_exposed_only_for_recovery_opt_in():
+    import dnse_bulk_market_data as bulk
+    from datetime import timezone
+    from email.utils import format_datetime
+
+    class Response:
+        status_code = 429
+        content = b'{"message":"slow down"}'
+        headers = {"Retry-After": format_datetime(datetime.now(timezone.utc) + timedelta(seconds=90))}
+
+    request = lambda *_a, **_k: Response()
+    recovery = bulk.fetch_capability_raw("ohlc", api_key="k", api_secret="s", query={},
+                                         request_get=request, retain_raw_bytes=True)
+    ordinary = bulk.fetch_capability_raw("ohlc", api_key="k", api_secret="s", query={}, request_get=request)
+    assert 0 < recovery["retry_after_seconds"] <= 90
+    assert "retry_after_seconds" not in ordinary and "raw_bytes" not in ordinary
+
+
+def test_network_call_is_reserved_before_a_crash_and_counts_on_resume(tmp_path):
+    env = Env(tmp_path, ["AAA"])
+    env.run(None, "--plan-only", "--no-foreign-flow", "--call-budget", "2")
+
+    def crash_after_call(*_a, **_k):
+        raise RuntimeError("simulated process death before raw write")
+
+    with pytest.raises(RuntimeError, match="simulated process death"):
+        env.run(crash_after_call, "--no-foreign-flow", "--call-budget", "2")
+    assert env.journal("AAA")["reserved_calls"] == 1
+    assert env.journal("AAA")["attempts"] == []
+
+    fake = FakeDnse({"AAA": [ok(_ohlc_body(HISTORY))]})
+    code, summary = env.run(fake, "--no-foreign-flow", "--call-budget", "2")
+    assert code == 0 and summary["counters"]["calls"] == 2
+    assert len(fake.calls) == 1 and env.journal("AAA")["reserved_calls"] == 2
+    assert env.journal("AAA")["attempts"][0]["attempt"] == 2
+
+
+def test_spent_call_cannot_be_reissued_past_budget_after_crash(tmp_path):
+    env = Env(tmp_path, ["AAA"])
+    env.run(None, "--plan-only", "--no-foreign-flow", "--call-budget", "1")
+    with pytest.raises(RuntimeError):
+        env.run(lambda *_a, **_k: (_ for _ in ()).throw(RuntimeError("crash")),
+                "--no-foreign-flow", "--call-budget", "1")
+    code, summary = env.run(_no_network, "--no-foreign-flow", "--call-budget", "1")
+    assert code == 3 and summary["stop_reason"] == rr.STOP_BUDGET
+    assert summary["counters"]["calls"] == 1
+
+
+def test_completion_claim_is_retired_before_a_new_run_can_crash(tmp_path, monkeypatch):
+    env = Env(tmp_path, ["AAA"])
+    assert env.run(FakeDnse({"AAA": [ok(_ohlc_body(HISTORY))]}), "--no-foreign-flow")[0] == 0
+    assert (env.output / "recovery_session_market_reconstruction.json").exists()
+
+    def crash(**_kwargs):
+        raise RuntimeError("simulated second-run crash")
+
+    monkeypatch.setattr(rr, "acquire_ohlc", crash)
+    with pytest.raises(RuntimeError, match="second-run crash"):
+        env.run(_no_network, "--no-foreign-flow")
+    assert not (env.output / "recovery_session_market_reconstruction.json").exists()
+    state = json.loads((env.state / "run_state.json").read_text(encoding="utf-8"))
+    assert state["complete"] is False and state["acquisition_status"] == "IN_PROGRESS"
+
+
+def test_frozen_plan_identity_and_candidate_hash_are_verified_on_resume(tmp_path):
+    env = Env(tmp_path, ["AAA", "BBB"])
+    env.run(None, "--plan-only", "--no-foreign-flow")
+    path = env.state / "acquisition_plan.json"
+    plan = json.loads(path.read_text(encoding="utf-8"))
+    plan["metadata_overlay"]["records"]["AAA"]["industry"] = "CHANGED"
+    path.write_text(json.dumps(plan), encoding="utf-8")
+    code, summary = env.run(_no_network, "--no-foreign-flow")
+    assert code == 2 and summary["reason"].startswith("FROZEN_PLAN_INTEGRITY_INVALID")
+
+
+def test_terminal_journal_disposition_must_match_verified_raw(tmp_path):
+    env = Env(tmp_path, ["AAA"])
+    env.run(FakeDnse({"AAA": [ok(_ohlc_body(HISTORY))]}), "--no-foreign-flow")
+    path = env.state / "journal" / "dnse_ohlc" / "AAA.json"
+    journal = json.loads(path.read_text(encoding="utf-8"))
+    journal["disposition"] = rr.PRIOR_SESSION_ONLY
+    path.write_text(json.dumps(journal), encoding="utf-8")
+    code, summary = env.run(_no_network, "--no-foreign-flow")
+    assert code == 5 and summary["status"] == rr.RUN_BLOCKED_INTEGRITY
+    assert env.journal("AAA")["conflict"] == "JOURNAL_DISPOSITION_MISMATCH"
+
+
+def test_resume_verifies_prior_retry_evidence_before_reusing_terminal_success(tmp_path):
+    env = Env(tmp_path, ["AAA"])
+    fake = FakeDnse({"AAA": [err(503, "http_status_503"), ok(_ohlc_body(HISTORY))]})
+    assert env.run(fake, "--no-foreign-flow")[0] == 0
+    first = env.state / env.journal("AAA")["attempts"][0]["raw_stem"]
+    rr.body_path(first).write_bytes(b"changed prior retry")
+    code, summary = env.run(_no_network, "--no-foreign-flow")
+    assert code == 5 and summary["status"] == rr.RUN_BLOCKED_INTEGRITY
+    assert not (env.output / "recovery_session_market_reconstruction.json").exists()
+
+
+def test_analyze_only_rechecks_raw_before_claiming_complete(tmp_path):
+    env = Env(tmp_path, ["AAA"])
+    assert env.run(FakeDnse({"AAA": [ok(_ohlc_body(HISTORY))]}), "--no-foreign-flow")[0] == 0
+    body = rr.body_path(_stem(env, "AAA"))
+    body.write_bytes(b"tampered after completion")
+    code, summary = env.run(_no_network, "--no-foreign-flow", "--analyze-only")
+    assert code == 5 and summary["status"] == rr.RUN_BLOCKED_INTEGRITY
+    assert not (env.output / "recovery_session_market_reconstruction.json").exists()
+    assert env.journal("AAA")["state"] == rr.TICKER_INTEGRITY
 
 
 # ---------------------------------------------------------------------------------------------
@@ -610,6 +719,48 @@ def test_chain_hash_algorithm_is_deterministic_order_and_length_sensitive():
     assert rr.chain_sha256(pages[:2]) != rr.chain_sha256(pages)
 
 
+def test_foreign_flow_request_identity_binds_cursor_and_contract():
+    first = rr.ff_request_identity("FPT", TARGET, 0, None)
+    assert first != rr.ff_request_identity("FPT", TARGET, 1, "c1")
+    assert first != rr.ff_request_identity("HPG", TARGET, 0, None)
+    assert first != rr.ff_request_identity("FPT", "2026-09-24", 0, None)
+
+
+def test_foreign_flow_chain_refuses_broken_cursor_lineage(tmp_path):
+    env = Env(tmp_path, ["FPT", "HPG"])
+    env.run(FakeDnse({"FPT": _standard_ohlc()["FPT"], "HPG": _standard_ohlc()["HPG"]}, _standard_ff()))
+    path = env.state / "journal" / "dnse_foreign_trading" / "FPT.json"
+    chain = json.loads(path.read_text(encoding="utf-8"))
+    chain["pages"][1]["page_cursor"] = "wrong"
+    path.write_text(json.dumps(chain), encoding="utf-8")
+    code, summary = env.run(_no_network)
+    assert code == 5 and summary["status"] == rr.RUN_BLOCKED_INTEGRITY
+    assert env.output_json("recovery_foreign_flow_value.json")["records"]["FPT"]["status"] == "CHAIN_INTEGRITY_FAILED"
+
+
+def test_pending_foreign_flow_chain_is_verified_before_cursor_reuse(tmp_path, monkeypatch):
+    monkeypatch.setattr(runner, "_foreign_flow_cohort", lambda enabled: ["FPT"] if enabled else [])
+    env = Env(tmp_path, ["FPT"])
+    page = _ff_page("FPT", [(f"{TARGET} 14:45:00", 900, 400)], "c1")
+
+    def crash_on_second_page(capability, **kwargs):
+        if capability == "ohlc":
+            return ok(_ohlc_body(HISTORY))
+        if kwargs["query"].get("nextPageToken") == "c1":
+            raise RuntimeError("crash before second page")
+        return page
+
+    with pytest.raises(RuntimeError, match="crash before second page"):
+        env.run(crash_on_second_page)
+    path = env.state / "journal" / "dnse_foreign_trading" / "FPT.json"
+    chain = json.loads(path.read_text(encoding="utf-8"))
+    assert chain["state"] == rr.FF_PENDING and len(chain["pages"]) == 1
+    chain["pages"][0]["next_cursor"] = "forged"
+    path.write_text(json.dumps(chain), encoding="utf-8")
+    code, summary = env.run(_no_network)
+    assert code == 5 and summary["status"] == rr.RUN_BLOCKED_INTEGRITY
+
+
 def test_incomplete_chain_retains_its_chain_hash_but_never_normalizes(tmp_path):
     env = Env(tmp_path, ["FPT", "HPG"])
     ff = {"FPT": [_ff_page("FPT", [(f"{TARGET} 14:45:00", 900, 400)], "c1"), err(400, "http_status_400")],
@@ -623,6 +774,15 @@ def test_incomplete_chain_retains_its_chain_hash_but_never_normalizes(tmp_path):
     out = env.output_json("recovery_foreign_flow_value.json")["records"]["FPT"]
     assert out["status"] == "NON_TERMINAL_CHAIN_NOT_NORMALIZED" and out["value"] is None
     assert out["chain_identity"]["chain_sha256"] == identity["chain_sha256"]
+
+
+def test_first_foreign_flow_page_rejection_cannot_claim_complete(tmp_path):
+    env = Env(tmp_path, ["FPT", "HPG"])
+    ff = {"FPT": [err(400, "http_status_400")], "HPG": _standard_ff()["HPG"]}
+    code, summary = env.run(FakeDnse({"FPT": _standard_ohlc()["FPT"],
+                                      "HPG": _standard_ohlc()["HPG"]}, ff))
+    assert code == 4 and summary["status"] == rr.RUN_PARTIAL_UNRESOLVED
+    assert not (env.output / "recovery_session_market_reconstruction.json").exists()
 
 
 def test_complete_chain_carries_its_chain_hash_and_normalizes(tmp_path):
@@ -639,6 +799,8 @@ def test_complete_chain_carries_its_chain_hash_and_normalizes(tmp_path):
 def test_tampered_foreign_flow_page_blocks_integrity_and_never_normalizes(tmp_path):
     env = Env(tmp_path, ["FPT", "HPG"])
     env.run(FakeDnse({"FPT": _standard_ohlc()["FPT"], "HPG": _standard_ohlc()["HPG"]}, _standard_ff()))
+    value_store = env.runtime / "data" / "dnse-foreign-flow" / "observations" / "FPT.json"
+    assert value_store.exists()
     page = env.state / "raw" / "dnse_foreign_trading" / "FPT" / "page_0001.body"
     page.write_bytes(page.read_bytes() + b" ")
 
@@ -647,6 +809,7 @@ def test_tampered_foreign_flow_page_blocks_integrity_and_never_normalizes(tmp_pa
     assert summary["run_status"]["foreign_flow"]["integrity_blocked"][0]["ticker"] == "FPT"
     out = env.output_json("recovery_foreign_flow_value.json")["records"]["FPT"]
     assert out["status"] == "CHAIN_INTEGRITY_FAILED"
+    assert not value_store.exists()
 
 
 def test_plan_is_frozen_and_changed_controls_refuse_resume(tmp_path):
@@ -692,6 +855,42 @@ def test_non_terminal_foreign_flow_chain_is_never_normalized(tmp_path):
     assert out["records"]["FPT"]["value"] is None
     assert not (env.runtime / "data" / "dnse-foreign-flow" / "observations" / "FPT.json").exists()
     assert out["records"]["HPG"]["status"] == "COMPLETE_CHAIN_VALUE_NORMALIZED"
+
+
+def test_foreign_flow_retry_after_is_preserved_across_a_stopped_run(tmp_path):
+    env = Env(tmp_path, ["FPT", "HPG"])
+    ohlc = {"FPT": _standard_ohlc()["FPT"], "HPG": _standard_ohlc()["HPG"]}
+    throttled = FakeDnse(ohlc, {"FPT": [err(429, "rate_limited", retry_after_seconds=7)],
+                               "HPG": _standard_ff()["HPG"]})
+    code, summary = env.run(throttled)
+    assert code == 3 and summary["stop_reason"] == rr.STOP_RATE_LIMIT
+    chain = json.loads((env.state / "journal" / "dnse_foreign_trading" / "FPT.json").read_text(encoding="utf-8"))
+    assert chain["attempts"] == 3 and chain["pending_retry_after_seconds"] == 7
+    slept_before = len(env.sleeps)
+    healthy = FakeDnse(ohlc, _standard_ff())
+    code, summary = env.run(healthy)
+    assert code == 0 and summary["status"] == rr.RUN_COMPLETE
+    assert any(s >= 7 for s in env.sleeps[slept_before:])
+    assert not any(capability == "ohlc" for capability, _, _ in healthy.calls)
+
+
+def test_foreign_flow_call_reservation_survives_a_crash(tmp_path):
+    env = Env(tmp_path, ["FPT", "HPG"])
+    ohlc = {"FPT": _standard_ohlc()["FPT"], "HPG": _standard_ohlc()["HPG"]}
+    fake = FakeDnse(ohlc, _standard_ff())
+
+    def crash_on_foreign_flow(capability, **kwargs):
+        if capability == "foreign_trading":
+            raise RuntimeError("foreign-flow crash before raw write")
+        return fake(capability, **kwargs)
+
+    with pytest.raises(RuntimeError, match="foreign-flow crash"):
+        env.run(crash_on_foreign_flow, "--foreign-flow-call-budget", "1")
+    chain = json.loads((env.state / "journal" / "dnse_foreign_trading" / "FPT.json").read_text(encoding="utf-8"))
+    assert chain["attempts"] == 1
+    code, summary = env.run(_no_network, "--foreign-flow-call-budget", "1")
+    assert code == 3 and summary["counters"]["foreign_flow_calls"] == 1
+    assert summary["stop_reason"] == rr.STOP_BUDGET
 
 
 def test_foreign_flow_page_limit_leaves_the_chain_non_terminal(tmp_path, monkeypatch):
@@ -775,6 +974,24 @@ def test_recovery_roots_near_production_paths_are_refused(tmp_path):
                                  read_only_roots=[tmp_path / "src"])
     ok_roots = rr.assert_isolated_roots({"output_root": tmp_path / "rec" / "output", **good}, production_roots=[producer])
     assert set(ok_roots) == {"output_root", "runtime_root", "state_root"}
+
+
+def test_symlink_alias_into_production_is_refused(tmp_path):
+    import os
+
+    production = tmp_path / "production"
+    production.mkdir()
+    alias = tmp_path / "alias"
+    try:
+        os.symlink(production, alias, target_is_directory=True)
+    except OSError:
+        pytest.skip("directory symlink creation is unavailable on this host")
+    with pytest.raises(rr.RecoveryIsolationError, match="OVERLAPS_PRODUCTION_ROOT"):
+        rr.assert_isolated_roots({"output_root": alias / "out", "runtime_root": tmp_path / "r",
+                                  "state_root": tmp_path / "s"}, production_roots=[production])
+    writer = rr.RecoveryWriter({"output_root": (tmp_path / "safe").resolve()})
+    with pytest.raises(rr.RecoveryIsolationError):
+        writer.write_json_atomic(alias / "out" / "artifact.json", {})
 
 
 def test_real_producer_checkout_is_always_a_production_root(tmp_path):
