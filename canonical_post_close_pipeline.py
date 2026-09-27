@@ -50,7 +50,7 @@ from daily_research_session_operations import (
     validate_coherence,
 )
 from multi_source_exact_session_resolver import DEGRADED_RECOVERY_COMPLETED
-from multi_source_market_evidence_contract import DNSE_HEALTH_BROAD_STALE_OR_INCOMPLETE_EOD, dnse_quality_license
+from multi_source_market_evidence_contract import DNSE_HEALTH_BROAD_STALE_OR_INCOMPLETE_EOD
 from vn_time import VN_TZ, vn_now
 
 ROOT = Path(__file__).resolve().parent
@@ -325,7 +325,7 @@ def _provider_contribution_counts(snapshot: Mapping[str, Any]) -> dict[str, int]
 
 def assert_post_close_eligible(
     snapshot: Mapping[str, Any], session: str, *, now: datetime | None = None,
-    artifact_root: Path | None = None,
+    artifact_root: Path | None = None, historical_compatibility: bool = False,
 ) -> None:
     """The 6-point contract an *existing* same-session P3F9B snapshot must satisfy before this
     pipeline may reuse it as canonical post-close evidence, rather than treating mere same-session
@@ -352,6 +352,10 @@ def assert_post_close_eligible(
     with every caller/test that predates this point and never wrote a companion evidence file.
     """
     now = now or vn_now()
+    # 0. a RECOVERY_REPLAY artifact (tools/run_recovery_replay.py) is never ordinary post-close
+    # evidence, even if it was copied next to ordinary artifacts.
+    if level2.is_recovery_replay_artifact(snapshot):
+        raise PreCutoffArtifactError("EXISTING_ARTIFACT_IS_RECOVERY_REPLAY_NOT_ORDINARY_DAILY:" + session)
     # 1. session identity
     if snapshot.get("resolved_completed_session") != session or snapshot.get("retained_snapshot_session") != session:
         raise PreCutoffArtifactError("EXISTING_ARTIFACT_SESSION_IDENTITY_MISMATCH:" + session)
@@ -389,38 +393,44 @@ def assert_post_close_eligible(
         )
     # 6. provider-health gate: an existing snapshot that reflects an unresolved DNSE broad
     # degradation is never eligible for reuse, even though points 1-5 above all pass.
+    # 2026-09-26: the same shared policy as the Level-2 reuse gate
+    # (level2.core_daily_reuse_refusal) -- Core-Daily proceed predicate re-derived from retained
+    # evidence, D2 unchanged, companion evidence mandatory for post-corrective snapshots, and a
+    # DNSE-primary snapshot is re-evaluated once the supplemental runtime is launchable.
     if artifact_root is not None:
         evidence_path = level2.session_artifact_paths(artifact_root, session)["multi_source_market_evidence"]
-        if evidence_path.is_file():
+        evidence_present = evidence_path.is_file()
+        evidence: Any = None
+        if evidence_present:
             try:
                 evidence = json.loads(evidence_path.read_text(encoding="utf-8"))
             except (OSError, ValueError):
                 evidence = None
-            if not isinstance(evidence, Mapping):
-                # PROVIDER_RUNTIME_ISOLATION_V1: unreadable companion evidence proves nothing.
-                raise PreCutoffArtifactError(
-                    f"EXISTING_ARTIFACT_DNSE_QUALITY_EVIDENCE_UNREADABLE:session={session}"
-                )
-            sentinel = evidence.get("dnse_quality_sentinel")
-            if evidence.get("target_session") not in (None, session):
-                # PROVIDER_RUNTIME_ISOLATION_V1: another session's evidence never licenses this one.
-                raise PreCutoffArtifactError(
-                    f"EXISTING_ARTIFACT_DNSE_QUALITY_EVIDENCE_SESSION_MISMATCH:session={session}"
-                )
-            if isinstance(sentinel, Mapping):
-                # PROVIDER_RUNTIME_ISOLATION_V1: the license is re-derived from the retained
-                # sentinel evidence against the snapshot's own degraded-recovery marker; an
-                # unresolved BROAD_STALE and (owner decision D2) any UNASSESSED license both refuse
-                # reuse, so a cached snapshot can never upgrade an unassessed session.
-                recovery = snapshot.get("degraded_provider_recovery")
-                marker = recovery.get("mode") if isinstance(recovery, Mapping) else None
-                if not dnse_quality_license(evidence, degraded_recovery_mode=marker)["qualifies_for_ordinary_daily"]:
-                    raise PreCutoffArtifactError(
-                        f"EXISTING_ARTIFACT_DNSE_PROVIDER_HEALTH_GATE_NOT_SATISFIED:session={session}"
-                    )
+        recovery = snapshot.get("degraded_provider_recovery")
+        marker = recovery.get("mode") if isinstance(recovery, Mapping) else None
+        refusal = level2.core_daily_reuse_refusal(
+            snapshot, evidence, session, evidence_present=evidence_present, degraded_recovery_mode=marker,
+            historical_compatibility=historical_compatibility,
+        )
+        if refusal == "COMPANION_EVIDENCE_UNREADABLE":
+            raise PreCutoffArtifactError(f"EXISTING_ARTIFACT_DNSE_QUALITY_EVIDENCE_UNREADABLE:session={session}")
+        if refusal == "COMPANION_EVIDENCE_SESSION_MISMATCH":
+            raise PreCutoffArtifactError(f"EXISTING_ARTIFACT_DNSE_QUALITY_EVIDENCE_SESSION_MISMATCH:session={session}")
+        if refusal == "COMPANION_EVIDENCE_MISSING":
+            raise PreCutoffArtifactError(f"EXISTING_ARTIFACT_DNSE_QUALITY_EVIDENCE_MISSING:session={session}")
+        if refusal is not None:
+            raise PreCutoffArtifactError(
+                f"EXISTING_ARTIFACT_DNSE_PROVIDER_HEALTH_GATE_NOT_SATISFIED:session={session}:{refusal}"
+            )
+    elif not (historical_compatibility and not level2.requires_companion_evidence(snapshot)):
+        # 2026-09-26 PR8 corrective: without an artifact root the companion evidence cannot be
+        # checked, which never means "trusted" on the ordinary path.
+        raise PreCutoffArtifactError(f"EXISTING_ARTIFACT_DNSE_QUALITY_EVIDENCE_NOT_CHECKED:session={session}")
 
 
-def resolve_acquisition_root(root: Path, session: str, *, now: datetime | None = None) -> tuple[Path, dict[str, Any]]:
+def resolve_acquisition_root(
+    root: Path, session: str, *, now: datetime | None = None, historical_compatibility: bool = False,
+) -> tuple[Path, dict[str, Any]]:
     """Decide where THIS run's DNSE acquisition/materialization chain should read and write.
 
     Defaults to `root` (Level-2's own static per-session paths), exactly as before this fix, when
@@ -447,7 +457,10 @@ def resolve_acquisition_root(root: Path, session: str, *, now: datetime | None =
                 if not isinstance(candidate, Mapping):
                     continue
                 try:
-                    assert_post_close_eligible(candidate, session, now=now, artifact_root=candidate_root)
+                    assert_post_close_eligible(
+                        candidate, session, now=now, artifact_root=candidate_root,
+                        historical_compatibility=historical_compatibility,
+                    )
                 except PreCutoffArtifactError:
                     continue
                 return candidate_root, candidate
@@ -467,7 +480,9 @@ def resolve_acquisition_root(root: Path, session: str, *, now: datetime | None =
             }
         return root, {"redirected": False, "reason": "NO_EXISTING_ARTIFACT_FOR_SESSION"}
     try:
-        assert_post_close_eligible(existing, session, now=now, artifact_root=root)
+        assert_post_close_eligible(
+            existing, session, now=now, artifact_root=root, historical_compatibility=historical_compatibility,
+        )
     except PreCutoffArtifactError as exc:
         retained = retained_attempt_root()
         if retained is not None:
@@ -501,9 +516,12 @@ def resolve_acquisition_root(root: Path, session: str, *, now: datetime | None =
 def acquire_and_materialize(
     root: Path, session: str, runtime_root: Path, *, workers: int = 12, now: datetime | None = None,
     retained_evidence_root: Path | None = None, output_root: Path | None = None,
-    no_new_provider_acquisition: bool = False,
+    no_new_provider_acquisition: bool = False, historical_compatibility: bool = False,
 ) -> dict[str, Any]:
     """Stage 1-3: DNSE acquisition, runtime materialization, current-session analytics.
+
+    ``historical_compatibility`` (explicit non-ordinary historical replay only) is the single path
+    that may still reuse a genuinely pre-V1 companion-less snapshot; ordinary Daily never sets it.
 
     Wholly delegates to daily_session_level2_package -- this pipeline adds no second research
     engine. The exact-session P3F9B snapshot is acquired and its coverage validated FIRST, before
@@ -541,16 +559,20 @@ def acquire_and_materialize(
             "FAILED_PREFLIGHT_RESUME:NO_NEW_PROVIDER_ACQUISITION_COMPONENTS_REQUIRED:"
             + ",".join(resume_plan["provider_required_components"])
         )
-    artifact_root, eligibility = resolve_acquisition_root(output_root, session, now=now)
+    artifact_root, eligibility = resolve_acquisition_root(
+        output_root, session, now=now, historical_compatibility=historical_compatibility,
+    )
     paths = level2.session_artifact_paths(artifact_root, session)
     try:
         level2.ensure_exact_session_snapshot(
-        artifact_root, session, runtime_root, workers=workers, now=now, execution_root=root,
+            artifact_root, session, runtime_root, workers=workers, now=now, execution_root=root,
+            **({"historical_compatibility": True} if historical_compatibility else {}),
         )
     except level2.SupplementalProviderBlocked as exc:
         raise SupplementalProviderBlockError(
             "REFUSE_CANONICAL_POST_CLOSE:" + str(exc)
-            + ":DNSE evidence retained; ordinary Daily blocked (no degraded publication in V1).",
+            + ":DNSE evidence retained; ordinary Daily blocked (DNSE quality license not qualified, or the "
+              "supplemental runtime failed mid-operation).",
             kind=exc.kind, runtime_state=exc.runtime_state, quality_license=exc.quality_license,
             diagnostic_path=exc.diagnostic_path,
         ) from exc

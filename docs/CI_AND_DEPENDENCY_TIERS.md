@@ -271,18 +271,27 @@ Owner decisions D1–D4 are recorded in `docs/DECISIONS.md` (2026-09-25).
   `UNAVAILABLE_CAUSE_UNKNOWN`. It is operational metadata only.
 - **DNSE quality license** (`dnse_quality_license/v1`). It is a separate axis from evidence
   currency.
-  - It qualifies for ordinary Daily only as `CORROBORATED_HEALTHY`,
-    `ISOLATED_CONFLICT_RESOLVED`, `BROAD_STALE_RECOVERED` or `NOT_REQUIRED_NO_DNSE_EXACT_BAR`.
-  - `UNASSESSED_NO_SECONDARY_OBSERVATION` (D2), `UNASSESSED_SUPPLEMENTAL_RUNTIME_UNAVAILABLE`
-    and `DATA_QUALITY_FAILED` never qualify.
+  - `qualifies_for_ordinary_daily` (qualified source health) is true only for
+    `CORROBORATED_HEALTHY`, `ISOLATED_CONFLICT_RESOLVED`, `BROAD_STALE_RECOVERED` or
+    `NOT_REQUIRED_NO_DNSE_EXACT_BAR`.
+  - `qualifies_for_core_daily` (2026-09-26 DNSE-first rebaseline; the Core-Daily proceed
+    predicate) adds only `UNASSESSED_SUPPLEMENTAL_RUNTIME_UNAVAILABLE`, on the explicit
+    `DNSE_PRIMARY_UNCORROBORATED` basis. `dnse_values_corroborated` stays false for it.
+  - `UNASSESSED_NO_SECONDARY_OBSERVATION` (D2), `DATA_QUALITY_FAILED` and `NOT_EVALUATED` never
+    qualify for either.
 - **Daily outcome.**
-  - An unavailable runtime ends at `BLOCKED_SUPPLEMENTAL_PROVIDER_RUNTIME`. A live runtime whose
-    license does not qualify ends at `BLOCKED_DNSE_QUALITY_UNLICENSED`. Both exit 1, and neither
-    is "not ready" or a pipeline failure.
+  - Since the DNSE-first corrective, a runtime that is unavailable at preflight no longer blocks:
+    Core Daily proceeds on the DNSE-primary basis with every supplemental-dependent field
+    `NOT_ATTEMPTED`. A runtime that fails mid-operation ends at
+    `BLOCKED_SUPPLEMENTAL_PROVIDER_RUNTIME`. A license that does not satisfy
+    `qualifies_for_core_daily` ends at `BLOCKED_DNSE_QUALITY_UNLICENSED`. Both exit 1, and
+    neither is "not ready" or a pipeline failure.
   - DNSE evidence is retained, and a `supplemental_provider_block.json` diagnostic records both
     axes.
-  - Nothing is published: there is no degraded path (D4). A blocked run never satisfies M1 live
-    acceptance.
+  - A blocked run publishes nothing and never satisfies M1 live acceptance.
+- **Recovery.** `tests/test_recovery_replay.py` and `tests/test_dnse_first_daily_semantics.py` are
+  hermetic (fake DNSE fetcher, temporary roots, no provider call) and belong to the focused CI
+  selection.
 - **Tests.** `tests/test_provider_runtime_isolation.py` is hermetic: it uses the fake worker and
   an explicit test-only ALLOW policy. The real worker script is spawned only to prove that an
   interpreter without vnstock/vnai reports `NOT_INSTALLED` without executing any provider code.

@@ -60,10 +60,17 @@ def _make_snapshot(session, *, requested_at, exact, total, **extra):
     }
 
 
-def _write_snapshot(paths, session, **kwargs):
+def _write_snapshot(paths, session, *, companion=True, **kwargs):
+    """A retained snapshot plus -- like every real acquisition since 2026-09-03 -- its companion
+    multi-source evidence (a corroborated sentinel). ``companion=False`` models a companion-less
+    snapshot, which ordinary reuse must refuse (PR8 corrective)."""
+    from _provider_runtime_fixtures import healthy_sentinel_evidence
+
     snapshot = _make_snapshot(session, **kwargs)
     paths["exact_session_snapshot"].parent.mkdir(parents=True, exist_ok=True)
     paths["exact_session_snapshot"].write_text(json.dumps(snapshot), encoding="utf-8")
+    if companion:
+        paths["multi_source_market_evidence"].write_text(json.dumps(healthy_sentinel_evidence(session)), encoding="utf-8")
     return snapshot
 
 
@@ -959,17 +966,19 @@ def test_degraded_but_recovery_completed_artifact_is_reused_without_redirect(tmp
     assert info["reused_existing_eligible_artifact"] is True
 
 
-def test_assert_post_close_eligible_skips_provider_health_check_without_artifact_root(tmp_path):
-    """Backward compatibility: omitting artifact_root (any pre-existing caller/test that predates
-    this point) never activates the new check, even when a companion evidence file exists and
-    would otherwise fail it."""
+def test_assert_post_close_eligible_without_artifact_root_refuses_on_the_ordinary_path(tmp_path):
+    """PR8 corrective (supersedes the old "skip without artifact_root" compatibility): when the
+    companion evidence cannot be checked, ordinary reuse is refused. Only the explicit, non-ordinary
+    historical-compatibility mode may accept a genuinely pre-V1 snapshot this way."""
     session = "2026-09-03"
     paths = level2.session_artifact_paths(tmp_path, session)
     snapshot = _write_snapshot(paths, session, requested_at=f"{session}T19:05:00+07:00", exact=772, total=1683)
     _write_degraded_companion_evidence(paths)
 
     now = datetime(2026, 9, 3, 20, 0, tzinfo=VN_TZ)
-    cpc.assert_post_close_eligible(snapshot, session, now=now)  # no artifact_root -- must not raise
+    with pytest.raises(cpc.PreCutoffArtifactError, match="QUALITY_EVIDENCE_NOT_CHECKED"):
+        cpc.assert_post_close_eligible(snapshot, session, now=now)
+    cpc.assert_post_close_eligible(snapshot, session, now=now, historical_compatibility=True)
 
 
 def test_redirected_attempt_propagates_artifact_and_execution_roots(tmp_path, monkeypatch):

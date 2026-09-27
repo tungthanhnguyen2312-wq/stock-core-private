@@ -1,6 +1,200 @@
 # Decisions & Architectural Decision Records
 
+## 2026-09-27 - PR #8 recovery-integrity blocking corrective (M1; same branch, not promoted)
+
+An independent Codex promotion review of PR #8 at `69b8dba` returned `PROMOTION_REVIEW_FAIL`. The
+reviewed PASS areas are unchanged:
+- the Core-Daily/corroboration split and `DATA_QUALITY_FAILED` blocking;
+- sentinel re-evaluation and M1 mode gating;
+- recovery isolation, temporal and denominator semantics;
+- posture policy;
+- Vnstock stays unlaunched.
+
+Fixes:
+- **Run state.** A raw conflict never counts as `COMPLETE`, and "terminal" is not a synonym for
+  "successful".
+  - Only `EXACT_SESSION_OBSERVED`, `PRIOR_SESSION_ONLY`, `PROVIDER_REJECTED` and `NO_HISTORY` are
+    classified outcomes. Every other outcome is a defect or unresolved state: raw conflict, invalid
+    orphan, unverifiable raw, `UNKNOWN`, exhausted transient, rate-limit stop, auth failure, not
+    attempted, or an incomplete foreign-flow chain.
+  - Overall states: `COMPLETE` 0, `PARTIAL_RETRYABLE` 3, `PARTIAL_UNRESOLVED` 4,
+    `BLOCKED_INTEGRITY` 5, `BLOCKED_AUTH` 6.
+  - Only `COMPLETE` writes `recovery_session_market_reconstruction.json`. Every other state writes
+    only `recovery_partial_diagnostic.json` and moves a stale completion claim aside.
+  - Conflict-resolution contract: never auto-resolved, re-requested or overwritten. The owner
+    resolves it by starting fresh isolated roots; the blocked state root is kept.
+- **Exact bytes.** The governed `dnse_bulk_market_data.fetch_capability_raw` gains an opt-in
+  `retain_raw_bytes`. It returns the exact response body bytes plus content type without parsing;
+  recovery parses only after durable retention and verification. The default behaviour and
+  credential handling are unchanged.
+  - Recovery writes the `.body` bytes write-once, fsyncs, re-reads and verifies length and SHA-256.
+    Only then does it write a completion-marked envelope, and only then parse from the retained
+    bytes and advance the journal.
+  - Raw JSON is never regenerated from a Python object.
+  - A fetch without exact bytes is an integrity stop.
+- **Orphans fail closed.** Adoption requires all of the following to hold: contract version,
+  completion marker, exact request identity, target session, symbol, endpoint, request parameters,
+  status metadata, `acquired_at`, the body file, its length, its SHA-256, and a parse under the
+  response contract. Anything else is `BLOCKED_INTEGRITY` and never a terminal `UNKNOWN`.
+- **Companion evidence.** Ordinary post-close and Level-2 reuse refuse any companion-less snapshot,
+  including a legacy-shaped one. The only compatibility path is `historical_compatibility`: set
+  only by `run_canonical_daily_operation` for `DIAGNOSTIC_OVERRIDE` with
+  `no_new_provider_acquisition`, and only for a genuinely pre-V1 snapshot. Recovery and
+  post-corrective snapshots are refused even there.
+- **Foreign-flow chain identity.** Every chain, complete or not, retains:
+  - the ordered page SHA-256 list and `chain_sha256`;
+  - the page count, terminal-cursor status, request/session identity and `acquired_at` range.
+  - The algorithm is `recovery_foreign_flow_chain/v1`: `sha256(canonical_json({"chain_contract",
+    "page_sha256": [ordered]}))`.
+  - Only a verified, terminal, complete chain normalizes to VALUE.
+- **Crash accounting and stale output.** OHLC and foreign-flow calls are reserved in their journals
+  before crossing the network boundary, so a crash can consume budget conservatively but cannot
+  reset the hard ceiling. Reserved OHLC attempt numbers are never reused after a missing-raw crash;
+  every retained retry is verified before a later result is reused. Analyze-only applies the
+  same verification before computing completion. A prior completed reconstruction is retired and run state set to
+  `IN_PROGRESS` before any new live or analyze-only run begins. Frozen plan identity, candidate hash,
+  request parameters and chain cursor lineage are reverified on resume, including incomplete
+  foreign-flow chains before any cursor is used again. A rejected first foreign-flow page cannot
+  stand in for a complete terminal chain. If a later run finds a broken or incomplete chain,
+  its earlier normalized VALUE observation is retired from the active isolated store path.
+- **Sequencing (one authoritative gate):**
+  1. implementation corrective;
+  2. exact-head implementation self-review and readiness validation;
+  3. isolated 2026-09-25 recovery on that reviewed exact RC, before merge;
+  4. analyze/review the package;
+  5. merge PR #8 only if no implementation blocker appears;
+  6. the next valid ordinary Daily;
+  7. M1 live acceptance.
+  The recovery is an acceptance exercise and does not promote the ordinary-Daily corrective.
+  `STATE`, `ROADMAP` and `ROADMAP_STATE` agree.
+
+**Offline acceptance rehearsal:** a mocked 1,683-candidate run crashed after 900 OHLC calls and
+resumed without repeating 898 verified responses. An incomplete foreign-flow chain yielded
+`PARTIAL_UNRESOLVED`; a fresh isolated run completed all 11 chains, an identical rerun made zero
+calls, and altered raw evidence yielded `BLOCKED_INTEGRITY` with no current reconstruction.
+The production candidate database and worktree were unchanged. No live provider call, Daily,
+live recovery, merge or authority promotion occurred.
+
+## 2026-09-26 - DNSE-first Daily and recovery infrastructure corrective (M1; branch, not promoted)
+
+Owner rebaseline inside the ACTIVE `CURRENT_DECISION_SURFACE_CONVERGENCE_V1`. Branch
+`claude/dnse-first-daily-recovery-corrective-v1` from `main` = `785fe072`; Draft PR. Not merged.
+
+**Owner decisions (recorded, explicit):**
+- DNSE/Livespeed remains the primary market-data direction.
+- `VNSTOCK_KBS_VCI` becomes `OPTIONAL_SUPPLEMENTAL / DEFERRED_NON_CRITICAL` for current M1
+  execution.
+  - Its containment/runtime infrastructure is preserved: PR #6 `ad685ac` and PR #7 `785fe07` are
+    merged, and Windows containment is implemented, host-provisioned and qualified 18/18.
+  - No Vnstock terms acceptance, no Vnstock runtime authorization, no source-authority promotion.
+- Supplemental runtime unavailability must not globally invalidate an otherwise-qualified DNSE Core
+  Daily. Missing supplemental evidence stays explicitly unavailable, and `DATA_QUALITY_FAILED` stays
+  fail-closed.
+
+**Amendment of the 2026-09-25 D1–D4 record (that record is kept, not erased):**
+- D1 (policy `SECURITY_REVIEW_BLOCKED`, no worker spawn) and D3 (dedicated interpreter, no
+  core-Python fallback) are unchanged.
+- D2 is unchanged. A live runtime that returns no secondary observation
+  (`UNASSESSED_NO_SECONDARY_OBSERVATION`) still blocks. The owner did not amend it, so it is kept;
+  under the current policy the runtime is never live, so the case does not arise.
+- **D4's operational consequence is amended.** The old consequence was "every ordinary Daily ends at
+  `BLOCKED_SUPPLEMENTAL_PROVIDER_RUNTIME`". Now a runtime that is unavailable at preflight lets
+  Core Daily proceed on the explicit `DNSE_PRIMARY_UNCORROBORATED` basis. This is not a degraded
+  publication of corroborated data: the values are labelled uncorroborated end to end.
+
+**Implementation:**
+- **Three predicates, never aliased** (`dnse_quality_license`):
+  - `qualifies_for_ordinary_daily` keeps its meaning of qualified source health.
+    `ORDINARY_DAILY_QUALIFYING_LICENSES` is unchanged.
+  - `qualifies_for_core_daily` is the operational proceed predicate:
+    `CORE_DAILY_PROCEED_LICENSES` = the qualified set plus
+    `UNASSESSED_SUPPLEMENTAL_RUNTIME_UNAVAILABLE`.
+  - `dnse_values_corroborated` is true only for the corroborated/resolved licenses, so it is false
+    for every `UNASSESSED_*` state.
+  - A runtime-unavailable sentinel contradicted by an `AVAILABLE` runtime record is `NOT_EVALUATED`.
+  - The license is still never relabelled `CORROBORATED_HEALTHY`.
+- **Acquisition boundary.** `ensure_exact_session_snapshot` gates on `qualifies_for_core_daily`.
+  - A mid-operation worker failure still blocks: partially attempted observations cannot honestly
+    be restated as not attempted.
+  - The snapshot carries an explicit `supplemental_provider_capability` block and
+    `companion_evidence_required`.
+- **One shared reuse policy** (`level2.core_daily_reuse_refusal`), used by both the Level-2 gate and
+  post-close eligibility:
+  - `RECOVERY_REPLAY` artifacts are refused.
+  - A post-corrective snapshot without companion evidence is refused. Missing evidence is never
+    "trusted"; only pre-V1 bare snapshots keep the legacy reading.
+  - A DNSE-primary snapshot is not reused once the supplemental runtime is launchable (policy
+    allows it and an interpreter is configured; a non-spawning check), so OHLC reuse cannot
+    suppress a new quality/corroboration attempt.
+- **M1** (`m1_live_acceptance_eligible`) requires:
+  - `ORDINARY_DAILY` and a completed Core Daily;
+  - a recorded runtime state;
+  - a license that satisfies the core-daily predicate, re-derived from its name (a stored boolean
+    cannot smuggle `DATA_QUALITY_FAILED` through).
+  - It no longer requires an `AVAILABLE` supplemental runtime.
+  - It refuses `RECOVERY_REPLAY`, `DIAGNOSTIC_OVERRIDE` (any daily_analysis_pipeline override
+    flag), idempotent replays and any recovery marker.
+  - `run_canonical_daily_operation` refuses `operating_mode = RECOVERY_REPLAY`.
+- **Posture policy unchanged.** `research_action_posture` thresholds and mapping are not touched;
+  the existing `NO_CURRENT_EVIDENCE` and unavailable-axis semantics absorb missing data.
+- **`RECOVERY_REPLAY`** (`recovery_replay.py`, `tools/run_recovery_replay.py`; a distinct contract
+  boundary, not an extension of `stocklookup.ps1 daily`):
+  - **Isolation, fail-closed.** Output, runtime and state roots are explicit, absolute and
+    non-overlapping. They must be outside the producer checkout, production runtime roots, the
+    read-only candidate source, any git work tree and any production namespace. Every write goes
+    through `RecoveryWriter`. Live calls need `--acknowledge-live-provider-calls`.
+  - **Frozen plan.** The target session is explicit and never hard-coded. Candidates come from the
+    governed runtime metadata, read-only, and form the `ACQUISITION_ATTEMPT_COHORT` only (never a
+    market denominator).
+  - **Request controls.** One request in flight, at least 1.0 s between starts, and a hard call
+    budget (default candidates + 85; 1,768 for 1,683). `Retry-After` is honored. Acquisition
+    stops for review after 3 consecutive 429s and stops on an authentication failure.
+    400 / no-history / prior-session-only / exact results are never retried.
+  - **Journal and raw.** Each ticker has a journal (request identity, range, attempts, HTTP status,
+    `acquired_at`, raw path and SHA-256, disposition, terminal/retry state). Raw responses are
+    written once, before interpretation, with the real `acquired_at` (never backdated).
+    - Validated raw is reused on resume without a network call.
+    - An orphan raw file from a crash is adopted and counted against the budget.
+    - Conflicting bytes stop only that ticker.
+  - **Dispositions.** `EXACT_SESSION_OBSERVED`, `PRIOR_SESSION_ONLY`, `PROVIDER_REJECTED`,
+    `NO_HISTORY`, `TRANSPORT_FAILURE`, `RATE_LIMITED`, `UNKNOWN` (+ `NOT_ATTEMPTED`).
+  - **Deliverable.** `recovery_session_market_reconstruction/v1`, with
+    `operating_mode = RECOVERY_REPLAY`, `temporal_claim = SESSION_MARKET_RECONSTRUCTION_ONLY`,
+    `pit_friday_decision_reconstruction = false`, `m1_live_acceptance_eligible = false` and
+    `publication = FORBIDDEN`.
+    - It contains: session OHLC/returns, same-provider relative volume, latest-20 technical context
+      (the promoted `session_bar_integrity` + `tactical_reference_window`), and descriptive breadth
+      over the reported observed cohort.
+    - Exclusions are explicit and nothing is imputed.
+    - It builds no Integrated Decision, Daily brief, `research_action_posture`, AI handoff,
+      Dashboard, cockpit or Action Center (`assert_no_forbidden_products`).
+  - **Overlays.** Exchange/industry labels and any non-session-locked retained artifact are
+    `CURRENT_RESEARCH_OVERLAY_ACQUIRED_OR_RETAINED_LATER`. `KNOWN_AS_OF_<session>` is never emitted.
+    The retained official-universe artifact is not a target-session PIT snapshot, and
+    `ACTIVE_UNIVERSE` stays UNKNOWN.
+  - **Foreign flow.** The 11-name cohort is followed to the terminal cursor. Raw pages are hashed,
+    and a non-terminal chain never normalizes. VALUE-only output (`DNSE_RETROSPECTIVE_VALUE_ONLY`,
+    `is_actionable = false`) goes to the isolated recovery store only; the production current
+    foreign-flow store is never written. The Flow-Price observer is retrospective and descriptive.
+- **Validation.** Hermetic tests `tests/test_dnse_first_daily_semantics.py` and
+  `tests/test_recovery_replay.py`, with the updated `tests/test_provider_runtime_isolation.py`. An
+  offline mocked rehearsal of the exact tomorrow command used the real read-only candidate list
+  (1,683), scratch roots and a simulated crash at call 400:
+  - resume completed within budget (1,741 OHLC calls including 58 transient retries, plus 11
+    foreign-flow calls);
+  - an identical rerun made 0 calls;
+  - `--analyze-only` made 0 calls.
+
+**Authority:** none promoted. This is an explicit, narrow operational-semantic change: the Core-Daily
+proceed predicate for an unavailable OPTIONAL_SUPPLEMENTAL runtime. RAW_AS_TRADED, PIT, liquidity,
+sizing, valuation, recommendation, execution, backtest and ACTIVE_UNIVERSE are unchanged.
+**Nothing ran:** no live provider call, Daily, 2026-09-25 recovery, publication or production write.
+
 ## 2026-09-26 - WINDOWS_PROVIDER_RUNTIME_OS_CONTAINMENT_AND_ATTESTATION_V1 (implemented; elevated provisioning owner-blocked)
+
+*Reconciled 2026-09-26: the owner provisioned the host, qualification passed 18/18, and PR #7 merged as
+`785fe07`. Further Vnstock operationalization is DEFERRED_NON_CRITICAL (see the DNSE-first entry above).
+The text below is the original record.*
 
 Owner-directed provider-runtime operationalization under active M1. Not an analytical milestone.
 Started from `main` = `ad685ac` (the owner's merge of PR #6). M1 stays the single `ACTIVE` milestone.

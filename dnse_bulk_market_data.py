@@ -69,19 +69,31 @@ def _default_request_get(*args: Any, **kwargs: Any) -> Any:
     return requests.get(*args, **kwargs)
 
 
-def _retry_after_seconds(response: Any) -> float | None:
-    """Return a usable numeric Retry-After value without retaining headers.
+def _retry_after_seconds(response: Any, *, allow_http_date: bool = False) -> float | None:
+    """Return a usable Retry-After delay without retaining headers.
 
     The bulk caller applies its own configured sleep cap.  This boundary only
     exposes a finite, non-negative delta-seconds value, never an arbitrary
     response-header collection or a provider quota claim.
     """
     headers = getattr(response, "headers", None)
+    raw = None
     try:
         raw = headers.get("Retry-After") if headers is not None else None
         value = float(str(raw).strip())
     except (AttributeError, TypeError, ValueError):
-        return None
+        if not allow_http_date or raw is None:
+            return None
+        from datetime import datetime, timezone
+        from email.utils import parsedate_to_datetime
+
+        try:
+            when = parsedate_to_datetime(str(raw))
+            if when.tzinfo is None:
+                when = when.replace(tzinfo=timezone.utc)
+            value = max(0.0, (when - datetime.now(timezone.utc)).total_seconds())
+        except (TypeError, ValueError, OverflowError):
+            return None
     if not math.isfinite(value) or value < 0:
         return None
     return value
@@ -96,6 +108,7 @@ def fetch_capability_raw(
     query: Mapping[str, Any] | None = None,
     request_get: Callable[..., Any] | None = None,
     timeout: tuple[float, float] = (5.0, 15.0),
+    retain_raw_bytes: bool = False,
 ) -> dict[str, Any]:
     """Issue exactly one signed, read-only GET call and return its full body.
 
@@ -103,6 +116,15 @@ def fetch_capability_raw(
     error, or transport failure) -- never raises. ``result["body"]`` is
     present only when ``ok`` is true and is the provider's response exactly
     as received (after JSON decoding), with no truncation or redaction.
+
+    ``retain_raw_bytes`` (RECOVERY_REPLAY raw-retention contract): additionally
+    return ``raw_bytes`` -- the exact HTTP response body bytes as received, for
+    every HTTP response (any status) -- plus ``content_type``. The recovery
+    caller persists and verifies those bytes before decoding them. This branch
+    deliberately does not call ``response.json()`` or otherwise parse the body.
+    Request headers, the signature and credentials are never returned. The
+    default (``False``) behaviour is byte-for-byte unchanged for every other
+    caller.
     """
     path = resolve_endpoint(capability, symbol)
     headers = auth_headers(api_key, api_secret, "GET", path)
@@ -122,21 +144,33 @@ def fetch_capability_raw(
         result["elapsed_ms"] = round((time.monotonic() - started) * 1000, 1)
         status_code = int(response.status_code)
         result["http_status"] = status_code
+        if retain_raw_bytes:
+            raw = getattr(response, "content", None)
+            result["raw_bytes"] = bytes(raw) if raw is not None else b""
+            headers = getattr(response, "headers", None)
+            try:
+                result["content_type"] = headers.get("Content-Type") if headers is not None else None
+            except AttributeError:
+                result["content_type"] = None
         if status_code in (401, 403):
             result.update(ok=False, error_code="authentication_failed")
             return result
         if status_code == 429:
             result.update(ok=False, error_code="rate_limited")
-            retry_after = _retry_after_seconds(response)
+            retry_after = _retry_after_seconds(response, allow_http_date=retain_raw_bytes)
             if retry_after is not None:
                 result["retry_after_seconds"] = retry_after
             return result
         if status_code != 200:
             result.update(ok=False, error_code=f"http_status_{status_code}")
-            try:
-                result["body"] = response.json()
-            except Exception:
-                result["body_text_preview"] = str(getattr(response, "text", "") or "")[:2000]
+            if not retain_raw_bytes:
+                try:
+                    result["body"] = response.json()
+                except Exception:
+                    result["body_text_preview"] = str(getattr(response, "text", "") or "")[:2000]
+            return result
+        if retain_raw_bytes:
+            result["ok"] = True
             return result
         result["ok"] = True
         result["body"] = response.json()

@@ -283,6 +283,8 @@ def main(argv=None, runner=subprocess.run) -> int:
         return 2
     if args.canonical_post_close:
         from canonical_daily_operation import (
+            OPERATING_MODE_DIAGNOSTIC,
+            OPERATING_MODE_ORDINARY_DAILY,
             CanonicalDailyOperationError,
             NOT_READY_STAGES,
             format_owner_daily_status,
@@ -295,6 +297,12 @@ def main(argv=None, runner=subprocess.run) -> int:
         if not args.offline and args.working_dates_path is None and not args.allow_provider_probe:
             probe = True
         instant = parse_requested_at(args.requested_at) if args.requested_at else vn_now()
+        # Any diagnostic/override flag makes this a DIAGNOSTIC_OVERRIDE operation, which can never be
+        # offered to M1 live acceptance (canonical_daily_operation.m1_live_acceptance_eligible).
+        diagnostic_override = bool(
+            args.retained_evidence_root or args.output_root or args.out_dir or args.no_new_provider_acquisition
+            or args.requested_at or args.working_dates_path or args.offline
+        )
         try:
             result = run_canonical_daily_operation(
                 SCRIPT_DIR,
@@ -310,6 +318,7 @@ def main(argv=None, runner=subprocess.run) -> int:
                 retained_evidence_root=Path(preflight["roots"]["retained_evidence_root"]),
                 operation_output_root=Path(preflight["roots"]["output_root"]),
                 no_new_provider_acquisition=args.no_new_provider_acquisition,
+                operating_mode=OPERATING_MODE_DIAGNOSTIC if diagnostic_override else OPERATING_MODE_ORDINARY_DAILY,
             )
         except CanonicalDailyOperationError as exc:
             print(f"DAILY_OPERATION_STATE={exc.stage}", file=sys.stderr)

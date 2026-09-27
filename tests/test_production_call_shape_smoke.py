@@ -181,6 +181,20 @@ def _run_offline_production_shape(
             assert root == repo_root and runtime == runtime_root
             assert kwargs["no_new_provider_acquisition"] is True
             snapshot = _snapshot(session)
+            # A real retained snapshot always has its companion multi-source evidence; ordinary
+            # post-close reuse refuses a companion-less one (PR #8 corrective).
+            # (Inline: tests/_provider_runtime_fixtures imports the worker client this smoke forbids.)
+            import daily_session_level2_package as level2
+
+            evidence_path = level2.session_artifact_paths(retained_root, session)["multi_source_market_evidence"]
+            evidence_path.parent.mkdir(parents=True, exist_ok=True)
+            evidence_path.write_text(json.dumps({
+                "target_session": session, "dnse_exact_session_count": 889,
+                "dnse_quality_sentinel": {"cohort_tickers": ["AAA"], "health": {
+                    "state": "DNSE_EXACT_AND_CORROBORATED", "dnse_assessed_count": 1, "corroborated_count": 1,
+                    "conflict_count": 0, "uncorroborated_count": 0}},
+                "degraded_provider_recovery": {"mode": "NOT_TRIGGERED"}, "records": {},
+            }), encoding="utf-8")
             return {
                 "snapshot": snapshot,
                 "resolved_completed_session": session,
