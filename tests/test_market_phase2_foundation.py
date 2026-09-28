@@ -18,7 +18,7 @@ def raw(symbol="AAA", payload=None):
 class Phase2FoundationTests(unittest.TestCase):
     def test_canonical_dnse_board_semantics_are_explicit(self):
         self.assertEqual(DNSE_BOARD_SEMANTICS, {
-            "G1": "ROUND_LOT", "G4": "ODD_LOT",
+            "G1": "ROUND_LOT", "G3": "ROUND_LOT", "G4": "ODD_LOT",
             "T1": "PUT_THROUGH_ROUND_LOT", "T3": "PUT_THROUGH_ROUND_LOT",
             "T4": "PUT_THROUGH_ODD_LOT", "T6": "PUT_THROUGH_ODD_LOT",
         })

@@ -28,6 +28,9 @@ PIT_HISTORICAL_ONLY = FeatureStatus.HISTORICAL_ONLY.value
 # from board quantities or an authority promotion for volume composition.
 DNSE_BOARD_SEMANTICS: dict[str, str] = {
     "G1": "ROUND_LOT",
+    # G3 is the round-lot post-close board.  The four-way shared vocabulary retains
+    # its lot/route partition; the closure contract records the post-close phase.
+    "G3": "ROUND_LOT",
     "G4": "ODD_LOT",
     "T1": "PUT_THROUGH_ROUND_LOT",
     "T3": "PUT_THROUGH_ROUND_LOT",

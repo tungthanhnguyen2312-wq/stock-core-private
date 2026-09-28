@@ -249,7 +249,7 @@ class ScanCompletenessTests(unittest.TestCase):
         result = basis.scan_completeness(boards_seen=["G1", "G4"], pages_fetched=4, page_cap=4, exhausted=True)
         self.assertEqual(result["state"], basis.COMPLETE)
         self.assertFalse(result["lower_bound_only"])
-        self.assertEqual(result["boards_confirmed_absent"], ["T1", "T3", "T4", "T6"])
+        self.assertEqual(result["boards_confirmed_absent"], ["G3", "T1", "T3", "T4", "T6"])
         self.assertEqual(result["boards_unscanned"], [])
 
     def test_unexhausted_scan_never_confirms_absence(self) -> None:
