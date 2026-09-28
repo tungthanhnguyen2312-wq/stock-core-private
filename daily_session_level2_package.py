@@ -302,6 +302,8 @@ def session_artifact_paths(root: Path, session: str) -> dict[str, Path]:
         "tactical_confirmation_invalidation_boundaries": ops / f"integrated-investment-decision-product-v1-{nodash}" / "tactical_confirmation_invalidation_boundaries_artifact.json",
         "technical_structure_context": ops / f"integrated-investment-decision-product-v1-{nodash}" / "technical_structure_context_artifact.json",
         "tactical_setup_tags": ops / f"integrated-investment-decision-product-v1-{nodash}" / "tactical_setup_tags_artifact.json",
+        "operational_fundamental_context_integration": ops / f"integrated-investment-decision-product-v1-{nodash}" / "operational_fundamental_context_integration_artifact.json",
+        "current_research_entity_applicability": ops / f"integrated-investment-decision-product-v1-{nodash}" / "current_research_entity_applicability_artifact.json",
         "financial_analysis_product": ops / f"financial-analysis-product-v2-{nodash}" / "financial_analysis_product_artifact.json",
         "current_valuation_evaluated": ops / f"financial-analysis-product-v2-{nodash}" / "current_research_valuation_context_artifact.json",
     }

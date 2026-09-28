@@ -1,5 +1,17 @@
 # Stock Lookup — Architecture & Roadmap
 
+**Roadmap sync: Current Research chain integration (2026-09-28):**
+- `CURRENT_RESEARCH_CHAIN_PROMOTION_REVIEW_INTEGRATION_V1` = `ACTIVE / IMPLEMENTATION_INTEGRATED /
+  AWAITING_INDEPENDENT_EXACT_HEAD_REVIEW`.
+  - The exact-head readiness review passed.
+  - The chain through `f1e715c` is integrated onto `main` `d08778b` on
+    `feature/current-research-chain-integration-v1-20260928`.
+  - `eefcb04` and the chain's stale governance hunks are excluded.
+- It is not complete, and no authority is promoted. Merge happens only on explicit owner approval
+  after the independent review and acceptance of the posture deltas (`docs/DECISIONS.md`
+  2026-09-28).
+- The strategic sequence below is unchanged and not queued.
+
 **Roadmap sync after M1 live acceptance (2026-09-28):**
 - `CURRENT_DECISION_SURFACE_CONVERGENCE_V1` = `COMPLETE / LIVE_ACCEPTED_2026_09_28`, accepted on the
   genuine 2026-09-28 ordinary Daily (`canonical_daily_operation:8c430382…`, `LOCAL_COMPLETE`,

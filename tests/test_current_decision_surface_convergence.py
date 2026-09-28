@@ -193,7 +193,15 @@ def test_evidence_currency_is_part_of_decision_identity():
 
 # ── Opportunity priority: wired, orthogonal ────────────────────────────────────────────────────
 
-_PRIORITY_ONLY_FIELDS = {"opportunity_priority", "priority_posture_reconciliation", "evidence_axes", "source_identities"}
+_PRIORITY_ONLY_FIELDS = {"opportunity_priority", "priority_posture_reconciliation", "evidence_axes", "source_identities",
+                         "current_research_decision_input"}
+
+
+def _without_priority_tier(decision_input: dict) -> dict:
+    """The decision input restates priority only as why_interesting.research_priority_tier."""
+    payload = json.loads(json.dumps(decision_input))
+    payload["synthesis"]["why_interesting"].pop("research_priority_tier")
+    return payload
 
 
 def test_priority_is_orthogonal_to_posture_currency_trigger_invalidation_and_decision_identity():
@@ -214,6 +222,8 @@ def test_priority_is_orthogonal_to_posture_currency_trigger_invalidation_and_dec
         assert axes_changed <= {"OPPORTUNITY_PRIORITY"}
         src_changed = {k for k in a["source_identities"] if a["source_identities"][k] != b["source_identities"][k]}
         assert src_changed <= {"priority_queue_record_identity"}
+        assert (_without_priority_tier(a["current_research_decision_input"])
+                == _without_priority_tier(b["current_research_decision_input"]))
     assert Counter(r["research_action_posture"] for r in without["records"].values()) == Counter(
         r["research_action_posture"] for r in with_priority["records"].values())
 

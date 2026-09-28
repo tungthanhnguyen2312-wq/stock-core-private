@@ -11,11 +11,10 @@ WHAT THIS IS
     It answers one question precisely: for each (provider, statement_family) shape retained
     market-wide, is there enough evidence -- provider-owned schema/library-contract evidence
     *and* consistent, multi-issuer, multi-magnitude official-anchor reconciliation -- to grant a
-    GENERALIZED currency/scale semantic to every fact of that shape? The answer, checked against
-    the full retained evidence base, is no for every shape tested (see `SEMANTIC_BASIS_UNRESOLVED`
-    below); this module still earns a narrower, per-fact `PROVIDER_EXACT_RESEARCH_USABLE` tier for
-    the individual facts that are independently reconciled against a qualified official citation,
-    with zero generalization to any other fact.
+    GENERALIZED currency/scale semantic to every fact of that shape? The 2026-09-27
+    currency-aware reconciliation qualifies VCI balance_sheet for non-authoritative VND-unit
+    research input only. Other shapes remain unresolved or not applicable. Per-fact value
+    agreement is a separate question; the shape verdict does not erase a canonical conflict.
 
 WHY BOTH LEGS ARE REQUIRED, NOT EITHER
     Leg 1 (schema/library-contract evidence) is necessary but not sufficient: KBS's own adapter
@@ -35,11 +34,10 @@ WHY THE ONE SHAPE WITH REAL RECONCILIATION EVIDENCE STILL FAILS
     (FPT, HPG, NVL, PAN, POW, QNS; magnitudes spanning 8.86T-114.6T VND) agree digit-for-digit on
     `shareholders_equity`, and 5 of 7 tested (adding NVL/PAN/POW/QNS after the citation-mapping fix
     in `canonical_fact_store.load_official_citations`) agree on `cash_and_cash_equivalents`. But
-    PVD and VNM *disagree* on the same shape and metric -- PVD by ~25,250x (a real, unexplained
-    contradiction, not rounding), VNM by ~2.7%. A shape with real, reproducible counter-examples in
-    its own tested sample is not "consistent reconciliation"; it fails the bar the milestone sets
-    ("no single-ticker proof may become market-wide authority") applied honestly to a small-sample
-    proof with visible contradictions.
+    PVD and VNM still disagree on individual equity values. PVD's official citation is USD,
+    so it is ineligible for a VND-unit reconciliation without an FX contract. VNM is a
+    same-scale value deviation, not a unit-scale contradiction; its fact remains conflicted.
+    Neither is described as an independently reconciled provider value.
 
     Every other shape (KBS income_statement/cash_flow; VCI income_statement/cash_flow) has zero
     reachable reconciliation at all: the only retained official citations are annual, the only
@@ -61,10 +59,11 @@ from __future__ import annotations
 
 import json
 from collections import defaultdict
+from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
-from canonical_financial_facts import METRIC_REGISTRY, STATUS_QUALIFIED
+from canonical_financial_facts import METRIC_REGISTRY, STATUS_PROVIDER_REPORTED, STATUS_QUALIFIED
 from field_temporal_contract import stable_id
 
 CONTRACT_VERSION = "provider_financial_semantic_basis/v1"
@@ -182,6 +181,7 @@ KBS_FINANCE_INFO_SCHEMA_EVIDENCE: dict[str, Any] = {
 
 VCI_FINANCE_SCHEMA_EVIDENCE: dict[str, Any] = {
     "provider": "VCI",
+    "native_units_vnd_compatible": True,
     "library": "vnstock", "library_version": "4.0.4",
     "endpoint_contract": "vnstock.explorer.vci.financial.Finance (VCI IQ finance-report API)",
     "source_citation": "vnstock/explorer/vci/financial.py (full module: zero occurrences of "
@@ -232,7 +232,7 @@ IDENTITIES_BY_STATEMENT_FAMILY = {k: tuple(sorted(v)) for k, v in IDENTITIES_BY_
 #: Both are read off the milestone brief ("prefer anchors spanning materially different magnitudes
 #: and more than one issuer"); they gate eligibility only -- see `NO_DISAGREEMENT_TOLERANCE` below
 #: for the actual pass/fail rule, which is stricter than either of these.
-MIN_DISCRIMINATING_ISSUERS = 2
+MIN_DISCRIMINATING_ISSUERS = 5
 MIN_DISCRIMINATING_MAGNITUDE_RATIO = 5.0
 
 #: The qualification rule is zero-tolerance: any reproducible disagreement inside a shape's own
@@ -240,6 +240,39 @@ MIN_DISCRIMINATING_MAGNITUDE_RATIO = 5.0
 #: deliberately stricter than a majority vote -- see module docstring for the PVD/VNM evidence this
 #: exists to catch.
 NO_DISAGREEMENT_TOLERANCE = 0
+
+EXACT_OR_DISPLAY_ROUNDED = "EXACT_OR_DISPLAY_ROUNDED"
+SCALE_CONTRADICTION = "SCALE_CONTRADICTION"
+SAME_SCALE_VALUE_DEVIATION = "SAME_SCALE_VALUE_DEVIATION"
+UNEXPLAINED_DEVIATION = "UNEXPLAINED_DEVIATION"
+ANCHOR_INELIGIBLE_CURRENCY_MISMATCH_NO_FX_CONTRACT = "ANCHOR_INELIGIBLE_CURRENCY_MISMATCH_NO_FX_CONTRACT"
+ANCHOR_INELIGIBLE_SCOPE_CONFLICT = "ANCHOR_INELIGIBLE_SCOPE_CONFLICT"
+
+
+def _anchor_class(provider_value: Any, official_value: Any) -> tuple[str, float | None]:
+    """Classify a same-currency anchor without guessing an FX or unit conversion."""
+    try:
+        provider = Decimal(str(provider_value))
+        official = Decimal(str(official_value))
+    except (InvalidOperation, TypeError, ValueError):
+        return UNEXPLAINED_DEVIATION, None
+    if not provider.is_finite() or not official.is_finite() or official == 0:
+        return UNEXPLAINED_DEVIATION, None
+    if official == official.to_integral_value():
+        digits = str(abs(int(official)))
+        zeros = min(6, len(digits) - len(digits.rstrip("0")))
+        tolerance = Decimal("0.5") * 10 ** zeros
+    else:
+        tolerance = Decimal(0)
+    ratio = provider / official
+    if abs(provider - official) <= tolerance:
+        return EXACT_OR_DISPLAY_ROUNDED, float(ratio)
+    if any(abs(ratio / (Decimal(10) ** power) - 1) <= Decimal("0.01")
+           for power in (-9, -6, -3, 3, 6, 9)):
+        return SCALE_CONTRADICTION, float(ratio)
+    if Decimal("0.5") <= ratio <= Decimal(2):
+        return SAME_SCALE_VALUE_DEVIATION, float(ratio)
+    return UNEXPLAINED_DEVIATION, float(ratio)
 
 
 def _canonical_json(value: Any) -> str:
@@ -260,70 +293,85 @@ def _fact_shape(fact: Mapping[str, Any]) -> tuple[Any, Any]:
     return (fact.get("provider"), fact.get("statement_family"))
 
 
-def reconcile_official_anchors(facts_by_ticker: Mapping[str, Sequence[Mapping[str, Any]]]) -> dict[str, Any]:
-    """Group every retained fact by (provider, statement_family) and record, per shape, which
-    facts independently agree with a qualified official citation (`status == qualified`) and which
-    ones reproducibly disagree (`official_citation_disagrees` conflict). Pure aggregation over
-    caller-supplied facts; makes no network call and reads no file itself.
+def reconcile_official_anchors(
+    facts_by_ticker: Mapping[str, Sequence[Mapping[str, Any]]],
+    official_citations: Mapping[tuple, Mapping[str, Any]] | None = None,
+) -> dict[str, Any]:
+    """Classify exact-identity official anchors without changing canonical fact status.
+
+    ``official_citations`` is the existing stock-metric FY→Q4 keyed citation map. A
+    disagreement embedded in a canonical fact is never enough to infer citation currency.
     """
-    agree: dict[tuple, list[dict[str, Any]]] = defaultdict(list)
-    disagree: dict[tuple, list[dict[str, Any]]] = defaultdict(list)
-    tested: dict[tuple, set[str]] = defaultdict(set)
-
-    for ticker, facts in facts_by_ticker.items():
+    classified: dict[tuple, list[dict[str, Any]]] = defaultdict(list)
+    for ticker, facts in sorted(facts_by_ticker.items()):
         for fact in facts:
-            shape = _fact_shape(fact)
-            has_citation_check = fact.get("status") == STATUS_QUALIFIED or any(
-                c.get("kind") == "official_citation_disagrees" for c in (fact.get("conflicts") or [])
-            )
-            if not has_citation_check:
+            conflicts = [c for c in (fact.get("conflicts") or [])
+                         if c.get("kind") == "official_citation_disagrees"]
+            if fact.get("status") != STATUS_QUALIFIED and not conflicts:
                 continue
-            tested[shape].add(str(ticker).upper())
-            if fact.get("status") == STATUS_QUALIFIED:
-                agree[shape].append(dict(fact))
+            key = (str(ticker).upper(), fact.get("canonical_metric"), str(fact.get("reporting_period")))
+            citation = (official_citations or {}).get(key)
+            if citation is None:
+                # Legacy callers may still inspect the fact's own exact agreement, but
+                # cannot reclassify a conflicted fact without its citation currency.
+                if fact.get("status") != STATUS_QUALIFIED:
+                    continue
+                citation = {"value": fact.get("value"), "currency": fact.get("currency"),
+                            "citation_id": fact.get("citation_id")}
+            scope = fact.get("statement_scope")
+            citation_scope = citation.get("statement_scope")
+            if citation.get("currency") != "VND":
+                category, ratio = ANCHOR_INELIGIBLE_CURRENCY_MISMATCH_NO_FX_CONTRACT, None
+            elif (citation_scope not in (None, "unknown", "UNKNOWN")
+                  and scope not in (None, "unknown", "UNKNOWN") and scope != citation_scope):
+                category, ratio = ANCHOR_INELIGIBLE_SCOPE_CONFLICT, None
             else:
-                disagree[shape].append(dict(fact))
-
-    shapes = sorted(set(agree) | set(disagree), key=str)
+                category, ratio = _anchor_class(fact.get("value"), citation.get("value"))
+            classified[_fact_shape(fact)].append({
+                "ticker": key[0], "canonical_metric": key[1], "reporting_period": key[2],
+                "provider_value": fact.get("value"), "official_value": citation.get("value"),
+                "citation_id": citation.get("citation_id"), "citation_currency": citation.get("currency"),
+                "statement_scope": scope, "citation_scope": citation_scope,
+                "classification": category, "provider_to_official_ratio": ratio,
+                "canonical_fact_status_unchanged": fact.get("status"),
+            })
     per_shape: dict[str, Any] = {}
-    for shape in shapes:
-        agreeing = agree.get(shape, [])
-        disagreeing = disagree.get(shape, [])
-        agreeing_values = [abs(float(f["value"])) for f in agreeing if isinstance(f.get("value"), (int, float))]
+    for shape, anchors in sorted(classified.items(), key=lambda item: str(item[0])):
+        anchors.sort(key=lambda row: (row["ticker"], row["canonical_metric"], row["reporting_period"]))
+        agreeing = [row for row in anchors if row["classification"] == EXACT_OR_DISPLAY_ROUNDED]
+        deviations = [row for row in anchors if row["classification"] == SAME_SCALE_VALUE_DEVIATION]
+        blocking = [row for row in anchors if row["classification"] in {SCALE_CONTRADICTION, UNEXPLAINED_DEVIATION}]
+        values = [abs(float(row["provider_value"])) for row in agreeing]
         per_shape[str(shape)] = {
             "provider": shape[0], "statement_family": shape[1],
-            "tested_issuer_count": len(tested[shape]),
-            "agree_count": len(agreeing),
-            "disagree_count": len(disagreeing),
-            "agreeing_tickers": sorted({f["ticker"] for f in agreeing}),
-            "disagreeing_tickers": sorted({f["ticker"] for f in disagreeing}),
-            "agreeing_metrics": sorted({f["canonical_metric"] for f in agreeing}),
-            "agreeing_periods": sorted({f["reporting_period"] for f in agreeing}),
-            "magnitude_min": min(agreeing_values) if agreeing_values else None,
-            "magnitude_max": max(agreeing_values) if agreeing_values else None,
-            "disagreements": [
-                {
-                    "ticker": f["ticker"], "canonical_metric": f["canonical_metric"],
-                    "reporting_period": f["reporting_period"],
-                    "provider_value": f.get("value"),
-                    "official_value": next(
-                        (c.get("official_value") for c in f.get("conflicts", [])
-                         if c.get("kind") == "official_citation_disagrees"), None),
-                }
-                for f in disagreeing
-            ],
+            "tested_issuer_count": len({row["ticker"] for row in anchors}),
+            "eligible_issuer_count": len({row["ticker"] for row in anchors if row["classification"] not in
+                                          {ANCHOR_INELIGIBLE_CURRENCY_MISMATCH_NO_FX_CONTRACT, ANCHOR_INELIGIBLE_SCOPE_CONFLICT}}),
+            "agree_count": len(agreeing), "disagree_count": len(blocking),
+            "same_scale_value_deviation_count": len(deviations),
+            "scale_contradiction_count": sum(row["classification"] == SCALE_CONTRADICTION for row in anchors),
+            "unexplained_deviation_count": sum(row["classification"] == UNEXPLAINED_DEVIATION for row in anchors),
+            "ineligible_currency_count": sum(row["classification"] == ANCHOR_INELIGIBLE_CURRENCY_MISMATCH_NO_FX_CONTRACT for row in anchors),
+            "agreeing_tickers": sorted({row["ticker"] for row in agreeing}),
+            "disagreeing_tickers": sorted({row["ticker"] for row in blocking}),
+            "agreeing_metrics": sorted({row["canonical_metric"] for row in agreeing}),
+            "agreeing_periods": sorted({row["reporting_period"] for row in agreeing}),
+            "magnitude_min": min(values) if values else None,
+            "magnitude_max": max(values) if values else None,
+            "classification_counts": {category: sum(row["classification"] == category for row in anchors)
+                                      for category in (EXACT_OR_DISPLAY_ROUNDED, SCALE_CONTRADICTION,
+                                                       SAME_SCALE_VALUE_DEVIATION, UNEXPLAINED_DEVIATION,
+                                                       ANCHOR_INELIGIBLE_CURRENCY_MISMATCH_NO_FX_CONTRACT,
+                                                       ANCHOR_INELIGIBLE_SCOPE_CONFLICT)},
+            "anchors": anchors, "disagreements": blocking,
+            "value_deviations": deviations,
         }
-    return {
-        "contract_version": CONTRACT_VERSION, "artifact_type": "OFFICIAL_ANCHOR_RECONCILIATION",
-        "shapes": per_shape,
-    }
+    return {"contract_version": CONTRACT_VERSION,
+            "artifact_type": "OFFICIAL_ANCHOR_RECONCILIATION", "shapes": per_shape}
 
 
 def _is_consistent(shape_reconciliation: Mapping[str, Any]) -> bool:
-    """A shape is 'consistent reconciliation' only with zero disagreements in its own tested
-    sample -- see `NO_DISAGREEMENT_TOLERANCE`. Meeting the discriminating-anchor minimums without
-    also meeting this is still not consistent; the two checks are independent and both required.
-    """
+    """Value deviations on the same scale are reported, not scale contradictions."""
     return shape_reconciliation.get("disagree_count", 0) <= NO_DISAGREEMENT_TOLERANCE
 
 
@@ -345,7 +393,8 @@ def evaluate_semantic_basis_contract(
     """One `provider_financial_semantic_basis/v1` contract row for one (provider, statement_family)
     shape. Never infers scale/currency from magnitude alone (`resolve_currency_and_scale`'s own
     rule, reused here at the shape level): a shape reaches `PROVIDER_ABSOLUTE_RESEARCH_QUALIFIED`
-    only with schema evidence *and* zero-disagreement, discriminating, multi-issuer reconciliation.
+    only with schema evidence *and* no scale/unexplained contradiction across a
+    discriminating, multi-issuer VND anchor set.
     """
     schema = SCHEMA_EVIDENCE_BY_PROVIDER.get(provider)
     recon = dict(reconciliation or {})
@@ -369,18 +418,18 @@ def evaluate_semantic_basis_contract(
         verdict = NOT_APPLICABLE
         currency = scale = statement_scope = "NOT_APPLICABLE"
         reason = f"endpoint reachable in principle but empirically returns no data market-wide: {empty_reason}"
-    elif has_schema and consistent and discriminating:
+    elif has_schema and schema.get("native_units_vnd_compatible") is True and consistent and discriminating:
         verdict = PROVIDER_ABSOLUTE_RESEARCH_QUALIFIED
         currency, scale, statement_scope = "VND", "units", "REQUIRES_PER_FACT_MINORITY_INTEREST_EVIDENCE"
-        reason = "provider-owned schema/library-contract evidence plus zero-disagreement, " \
-                 "discriminating, multi-issuer official-anchor reconciliation"
+        reason = "VCI adapter retains full native units; at least five exact/display-rounded VND " \
+                 "issuers span discriminating magnitudes, with no scale or unexplained contradiction; " \
+                 "same-scale value deviations remain unreconciled"
     elif recon.get("disagree_count"):
         verdict = SEMANTIC_BASIS_UNRESOLVED
         currency = scale = statement_scope = "UNKNOWN_FAIL_CLOSED"
-        reason = (f"{recon['disagree_count']} of {recon['disagree_count'] + recon.get('agree_count', 0)} "
-                  "tested official-anchor comparisons disagree within this shape's own sample "
-                  "(see reconciliation.disagreements) -- a single-issuer proof (or a proof with a live "
-                  "counter-example) may not become market-wide authority")
+        reason = (f"{recon['disagree_count']} eligible anchors contradict scale or remain unexplained "
+                  "(see reconciliation.disagreements); same-scale value deviations do not prove "
+                  "individual value agreement")
     elif has_schema and has_duration_evidence and not has_any_agreement:
         verdict = PROVIDER_METADATA_PARTIAL
         currency = scale = statement_scope = "UNKNOWN_FAIL_CLOSED"
@@ -408,6 +457,8 @@ def evaluate_semantic_basis_contract(
                                     "never a single cherry-picked identity",
         "currency": currency,
         "scale": scale,
+        "multiplier_to_vnd": 1 if verdict == PROVIDER_ABSOLUTE_RESEARCH_QUALIFIED else None,
+        "normalized_unit": "VND" if verdict == PROVIDER_ABSOLUTE_RESEARCH_QUALIFIED else None,
         "statement_scope": statement_scope,
         "period_basis": period_basis,
         "qualification_evidence": {
@@ -471,7 +522,8 @@ def build_semantic_basis_registry(reconciliation: Mapping[str, Any]) -> dict[str
 # Two independent routes, evaluated generically (no ticker literal anywhere):
 #   (a) shape route: the fact's own (provider, statement_family) shape reached
 #       PROVIDER_ABSOLUTE_RESEARCH_QUALIFIED in the registry -> every compatible-period fact of
-#       that exact shape qualifies. Never true today (see module docstring); wired for the future.
+#       that exact shape qualifies for research use only. VCI balance_sheet is the one
+#       retained shape currently meeting this test.
 #   (b) per-fact route: this exact fact was independently reconciled against a qualified official
 #       citation (`status == qualified`, `authority == official_citation_agreement`), *and* its own
 #       statement_scope is independently evidenced (not `unknown`) -- belt-and-suspenders against a
@@ -486,6 +538,16 @@ def classify_provider_exact_research_usable(
     `PROVIDER_EXACT_RESEARCH_USABLE`. Pure; reads only the fields on `fact` and the shape verdict
     in `registry` (if supplied). Returns `{"eligible": bool, "reason": str, ...}`.
     """
+    if fact.get("status") == "conflicted" or fact.get("conflicts") or fact.get("source_conflicts"):
+        return {"eligible": False, "route": None,
+                "reason": "conflicted canonical fact cannot inherit a shape-level monetary basis",
+                "tier": None}
+    if (fact.get("status") not in {STATUS_PROVIDER_REPORTED, STATUS_QUALIFIED}
+            or not isinstance(fact.get("value"), (int, float))
+            or isinstance(fact.get("value"), bool)):
+        return {"eligible": False, "route": None,
+                "reason": "canonical fact has no usable provider-reported or qualified value",
+                "tier": None}
     shape_key = f"{fact.get('provider')}:{fact.get('statement_family')}"
     shape_contract = (registry or {}).get("contracts", {}).get(shape_key)
     if shape_contract and shape_contract.get("verdict") == PROVIDER_ABSOLUTE_RESEARCH_QUALIFIED:

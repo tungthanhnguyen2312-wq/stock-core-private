@@ -541,6 +541,101 @@ def resolve_layered_entity_classification(
     )
 
 
+CURRENT_RESEARCH_ENTITY_APPLICABILITY_CONTRACT = "current_research_entity_applicability/v1"
+APPLICABILITY_RESOLVED = "RESOLVED"
+APPLICABILITY_UNRESOLVED = "UNRESOLVED"
+APPLICABILITY_CONFLICT = "CONFLICT"
+
+
+def layered_entity_authority_identity(
+    seed_path: Path | str | None = None,
+    promoted_path: Path | str | None = None,
+    scaleout_promoted_path: Path | str | None = None,
+    legacy_recovery_path: Path | str | None = None,
+) -> str:
+    """Content identity of the four layered authority files; an absent file is recorded as None."""
+    files = {
+        "seed": Path(seed_path) if seed_path else DEFAULT_SEED_PROFILES_PATH,
+        "promoted": Path(promoted_path) if promoted_path else DEFAULT_PROMOTED_CLASSIFICATIONS_PATH,
+        "legacy_recovery": Path(legacy_recovery_path) if legacy_recovery_path else DEFAULT_LEGACY_RECOVERY_CLASSIFICATIONS_PATH,
+        "scaleout_promoted": Path(scaleout_promoted_path) if scaleout_promoted_path else DEFAULT_SCALEOUT_PROMOTED_CLASSIFICATIONS_PATH,
+    }
+    digests = {name: hashlib.sha256(path.read_bytes()).hexdigest() if path.is_file() else None
+               for name, path in files.items()}
+    return "layered_entity_authority:" + hashlib.sha256(_canonical_json(digests).encode("utf-8")).hexdigest()
+
+
+def resolve_current_research_entity_applicability(
+    tickers: Sequence[str],
+    *,
+    seed_path: Path | str | None = None,
+    promoted_path: Path | str | None = None,
+    scaleout_promoted_path: Path | str | None = None,
+    legacy_recovery_path: Path | str | None = None,
+) -> dict[str, Any]:
+    """One governed current-state entity class per ticker, scoped to Current Research use.
+
+    This is Layered Authority Topology B resolved once for a whole ticker denominator. It
+    names nothing the four tracked tiers do not already name: an absent or non-qualified record
+    stays UNRESOLVED and a cross-tier disagreement stays CONFLICT. The result is current-state
+    applicability only; it is never historical/PIT entity identity.
+    """
+    seeds = load_seed_profiles(seed_path)
+    promoted = load_promoted_entity_classifications(promoted_path)
+    scaleout = load_scaleout_promoted_entity_classifications(scaleout_promoted_path)
+    legacy_recovery = load_legacy_recovery_entity_classifications(legacy_recovery_path)
+    records: dict[str, dict[str, Any]] = {}
+    for ticker in sorted({str(item).upper().strip() for item in tickers if str(item).strip()}):
+        result = resolve_layered_entity_classification(
+            ticker, seed_profiles=seeds, promoted_records=promoted,
+            scaleout_promoted_records=scaleout, legacy_recovery_records=legacy_recovery,
+        )
+        positive = result.is_positive_authority and result.resolved_entity_class != EntityClass.UNKNOWN
+        if positive:
+            status, reasons = APPLICABILITY_RESOLVED, []
+        elif result.classification_status == ClassificationStatus.CONFLICT:
+            status, reasons = APPLICABILITY_CONFLICT, ["ENTITY_CLASS_CONFLICT"]
+        elif result.authority_tier == "unknown":
+            status, reasons = APPLICABILITY_UNRESOLVED, ["ENTITY_CLASS_UNRESOLVED"]
+        else:
+            status, reasons = APPLICABILITY_UNRESOLVED, ["ENTITY_CLASSIFICATION_NOT_QUALIFIED"]
+        records[ticker] = {
+            "entity_class": result.resolved_entity_class.value if positive else EntityClass.UNKNOWN.value,
+            "applicability_status": status,
+            "authority_tier": result.authority_tier,
+            "classification_status": result.classification_status.value,
+            "reason_codes": reasons,
+        }
+    artifact: dict[str, Any] = {
+        "schema_version": SCHEMA_VERSION,
+        "contract_version": CURRENT_RESEARCH_ENTITY_APPLICABILITY_CONTRACT,
+        "authority_identity": layered_entity_authority_identity(
+            seed_path, promoted_path, scaleout_promoted_path, legacy_recovery_path),
+        "authority_scope": AUTHORITY_SCOPE_CURRENT_STATE,
+        "historical_pit_authority": HISTORICAL_PIT_NOT_ESTABLISHED,
+        "use_scope": "CURRENT_RESEARCH_APPLICABILITY_ONLY",
+        "records": records,
+        "coverage": {
+            "ticker_denominator": len(records),
+            "applicability_status": {state: sum(row["applicability_status"] == state for row in records.values())
+                                     for state in (APPLICABILITY_RESOLVED, APPLICABILITY_UNRESOLVED, APPLICABILITY_CONFLICT)},
+            "authority_tier": {tier: sum(row["authority_tier"] == tier for row in records.values())
+                               for tier in sorted({row["authority_tier"] for row in records.values()})},
+            "entity_class": {entity: sum(row["entity_class"] == entity for row in records.values())
+                             for entity in sorted({row["entity_class"] for row in records.values()})},
+        },
+    }
+    digest = hashlib.sha256(_canonical_json(artifact).encode("utf-8")).hexdigest()
+    artifact["artifact_sha256"] = digest
+    artifact["artifact_identity"] = f"{CURRENT_RESEARCH_ENTITY_APPLICABILITY_CONTRACT}:{digest}"
+    return artifact
+
+
+def entity_applicability_content_identity(artifact: Mapping[str, Any]) -> str:
+    payload = {key: value for key, value in artifact.items() if key not in {"artifact_sha256", "artifact_identity"}}
+    return f"{CURRENT_RESEARCH_ENTITY_APPLICABILITY_CONTRACT}:{hashlib.sha256(_canonical_json(payload).encode('utf-8')).hexdigest()}"
+
+
 def load_layered_entity_profiles(
     seed_path: Path | str | None = None,
     promoted_path: Path | str | None = None,

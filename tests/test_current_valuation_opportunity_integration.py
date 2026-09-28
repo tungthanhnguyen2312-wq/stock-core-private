@@ -54,6 +54,11 @@ def feature_record(ticker, *, entity="corporate", profit="PROFITABLE", ni=100.0,
         "roa_eop_proxy": _blocked("CROSS_PROVIDER_OR_DURATION_INCOMPATIBLE"),
         "roe_eop_proxy": _blocked("CROSS_PROVIDER_OR_DURATION_INCOMPATIBLE"),
     }
+    # These synthetic TTM valuation fixtures declare the same VND-unit research
+    # basis as their cap fixture. Retained provider TTM rows without that evidence
+    # remain UNKNOWN and blocked in the real replay.
+    for name in ("net_income_ttm_sum", "revenue_ttm_sum"):
+        features[name]["scale"] = "units"
     ready = [item for item in features.values() if item["status"] in {"READY_RESEARCH", "READY_RESEARCH_PROXY", "PARTIAL_RESEARCH"}]
     return {
         "ticker": ticker, "entity_type": entity,
@@ -81,6 +86,7 @@ def valuation_record(ticker, *, entity="corporate", market_cap=8000.0, pe=None, 
         "value": share_value, "share_concept": "current_common_shares_outstanding" if official else "ISSUED_SHARES",
         "research_proxy_eligible": research_proxy or official,
         "authoritative_current_market_cap_eligible": False,
+        "retained_evidence": {"unit": "shares"},
     }
     def metric(status, value=None, blockers=None, applicability="APPLICABLE"):
         return {"status": status, "value": value, "applicability": applicability, "blocked_reasons": blockers or [],
@@ -89,7 +95,11 @@ def valuation_record(ticker, *, entity="corporate", market_cap=8000.0, pe=None, 
     ev_na = "NOT_APPLICABLE" if entity in {"bank", "securities", "insurance", "finance_company"} else "APPLICABLE"
     return {
         "ticker": ticker, "entity_class": entity, "share_basis_input": share,
-        "price_input": {"status": "PRICE_READY", "value": 8.0, "session": DECISION},
+        "price_input": {"status": "PRICE_READY", "value": 8.0, "session": DECISION,
+                        "price_unit": "vnd_per_share",
+                        "price_representation": {
+                            "contract_id": "DNSE:ohlc_1D:VN_LISTED_EQUITY:kvnd_to_vnd/v1",
+                            "canonical_unit": "vnd_per_share"}},
         "metrics": {
             "market_cap": metric("RESEARCH_USABLE" if market_cap is not None else "BLOCKED", market_cap,
                                  [] if market_cap is not None else ["SHARE_AUTHORITY_OR_PROXY_UNAVAILABLE"]),
@@ -208,8 +218,20 @@ def test_compatible_ttm_valuation_and_share_basis_proxy_explicit():
     assert row["methods"][PE_TTM]["share_basis"] == CURRENT_SHARE_RESEARCH_PROXY
 
 
+def test_unproven_ttm_monetary_basis_remains_blocked_with_typed_market_cap():
+    features = feature_record("AAA")
+    features["features"]["net_income_ttm_sum"]["scale"] = "UNKNOWN"
+    features["features"]["revenue_ttm_sum"]["scale"] = "UNKNOWN"
+    row = evaluate_ticker_valuation(ticker="AAA", feature_record=features,
+                                    valuation_record=valuation_record("AAA"))
+    assert row["methods"][PE_TTM]["status"] == INPUT_BLOCKED
+    assert row["methods"][PS_TTM]["status"] == INPUT_BLOCKED
+    assert row["methods"][PE_TTM]["value"] is None
+    assert row["methods"][PS_TTM]["value"] is None
+
+
 def test_qualified_ttm_is_preferred_with_lineage_and_conflict_retained():
-    qualified = {"features": {"net_income_ttm": {"fitness": "READY", "value": 500, "method": "four_consecutive_compatible_standalone_quarters/v2", "period_identity": ["2025-Q1", "2025-Q2", "2025-Q3", "2025-Q4"], "provider_source_provenance": [{"provider": "KBS"}], "currency": "VND", "scale": "ONE", "reason_codes": []}, "revenue_ttm": {"fitness": "READY", "value": 4000, "method": "four_consecutive_compatible_standalone_quarters/v2", "period_identity": ["2025-Q1", "2025-Q2", "2025-Q3", "2025-Q4"], "provider_source_provenance": [{"provider": "KBS"}], "currency": "VND", "scale": "ONE", "reason_codes": []}}}
+    qualified = {"features": {"net_income_ttm": {"fitness": "READY", "value": 500, "method": "four_consecutive_compatible_standalone_quarters/v2", "period_identity": ["2025-Q1", "2025-Q2", "2025-Q3", "2025-Q4"], "provider_source_provenance": [{"provider": "KBS"}], "currency": "VND", "scale": "units", "reason_codes": []}, "revenue_ttm": {"fitness": "READY", "value": 4000, "method": "four_consecutive_compatible_standalone_quarters/v2", "period_identity": ["2025-Q1", "2025-Q2", "2025-Q3", "2025-Q4"], "provider_source_provenance": [{"provider": "KBS"}], "currency": "VND", "scale": "units", "reason_codes": []}}}
     row = evaluate_ticker_valuation(ticker="AAA", feature_record=feature_record("AAA", ttm_ni=400), valuation_record=valuation_record("AAA"), financial_analysis_record=qualified, financial_analysis_context_identity="fa:1")
     method = row["methods"][PE_TTM]
     assert method["status"] == "RESEARCH_USABLE" and method["value"] == pytest.approx(16)

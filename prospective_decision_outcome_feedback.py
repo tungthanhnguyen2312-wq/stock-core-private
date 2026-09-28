@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import Any, Mapping, Sequence
 
 import daily_session_level2_package as level2
+import fundamental_signal_consumption_contract as fundamental_signals
 import integrated_decision_prospective_feedback as forward_bridge
 import prospective_decision_retention as retention
 
@@ -377,6 +378,8 @@ def _feedback_record(*, artifact: Mapping[str, Any], source_path: str, temporal:
         "decision_session": artifact.get("session"), "research_action_posture": record.get("research_action_posture", FIELD_NOT_RETAINED),
         "opportunity_priority": priority, "coherence_state": coherence,
         "fundamental_state": _state(record, "fundamental_state"),
+        # The fundamental decision-policy epoch the T0 decision was made under (never rewritten).
+        "fundamental_decision_policy_version": fundamental_signals.policy_epoch(record),
         "valuation_state": _state(record, "valuation_context_summary", "status"),
         "tactical_structure_state": _state(record, "market_structure_state"),
         "momentum_state": _state(record, "momentum_context", "status"),
@@ -397,14 +400,25 @@ def _median(values: Sequence[float]) -> float | None:
     return statistics.median(values) if values else None
 
 
+def _by_policy_epoch(groups: Mapping[str, Sequence[Mapping[str, Any]]]) -> dict[tuple[str, str], list[Mapping[str, Any]]]:
+    """Split every outcome group by fundamental decision-policy epoch: decisions made under
+    different fundamental policies are never pooled or compared (NOT_COMPARABLE_POLICY_CHANGE)."""
+    split: dict[tuple[str, str], list[Mapping[str, Any]]] = defaultdict(list)
+    for value, members in groups.items():
+        for item in members:
+            split[(str(item.get("fundamental_decision_policy_version")), value)].append(item)
+    return split
+
+
 def _summary(groups: Mapping[str, Sequence[Mapping[str, Any]]], *, dimension: str) -> dict[str, Any]:
     rows: list[dict[str, Any]] = []
-    for value, members in sorted(groups.items()):
+    for (epoch, value), members in sorted(_by_policy_epoch(groups).items()):
         mature = [
             item for item in members
             if (item["forward_outcomes"]["horizons"].get("forward_close_return_5") or {}).get("status") == forward_bridge.MATURE
         ]
-        row = {"dimension": dimension, "value": value, "sample_size": len(members), "mature_T5_sample_size": len(mature)}
+        row = {"dimension": dimension, "value": value, "fundamental_decision_policy_version": epoch,
+               "sample_size": len(members), "mature_T5_sample_size": len(mature)}
         if mature:
             returns = [item["forward_outcomes"]["horizons"]["forward_close_return_5"]["return"] for item in mature]
             excursions = [item["forward_outcomes"]["close_path_by_horizon"]["close_excursion_5"] for item in mature]
@@ -415,7 +429,8 @@ def _summary(groups: Mapping[str, Sequence[Mapping[str, Any]]], *, dimension: st
                 "median_CLOSE_MAE_T5": _median([item["CLOSE_MAE"] for item in excursions if item.get("status") == forward_bridge.MATURE]),
             })
         rows.append(row)
-    return {"groups": rows, "authority_boundary": "DESCRIPTIVE_SAMPLE_STATISTICS_NOT_CALIBRATION_OR_CAUSAL_RANKING"}
+    return {"groups": rows, "authority_boundary": "DESCRIPTIVE_SAMPLE_STATISTICS_NOT_CALIBRATION_OR_CAUSAL_RANKING",
+            "cross_policy_epoch_comparison": fundamental_signals.NOT_COMPARABLE_POLICY_CHANGE}
 
 
 def _false_negatives(records: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]:

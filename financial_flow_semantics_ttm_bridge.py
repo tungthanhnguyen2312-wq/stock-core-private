@@ -13,6 +13,7 @@ import json
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
+from financial_analysis_engine_v2 import sign_transition
 from market_wide_current_fundamental_research import (
     INCOME_STATEMENT_PERIOD_SEMANTICS_VERSION,
     KBS_KQKD_QUARTER_SEMANTICS,
@@ -21,6 +22,8 @@ from market_wide_current_fundamental_research import (
 CONTRACT_VERSION = "financial_flow_semantics_and_ttm_bridge/v2"
 FLOW_BASES = ("STANDALONE_QUARTER", "CUMULATIVE_YTD", "FULL_YEAR", "UNKNOWN")
 FLOW_METRICS = ("revenue", "profit_before_tax", "net_income", "operating_cash_flow", "depreciation_and_amortization")
+#: Flows whose sign is profit versus loss: a positive base turning negative is PROFIT_TO_LOSS.
+EARNINGS_FLOW_METRICS = frozenset({"profit_before_tax", "net_income"})
 SUPPORTED_ENTITY_TYPES = frozenset({"corporate"})
 
 
@@ -121,6 +124,15 @@ def _same_representation(a: Mapping[str, Any], b: Mapping[str, Any]) -> bool:
     return all(a.get(field) == b.get(field) for field in fields)
 
 
+def _combined_status(inputs: Sequence[Mapping[str, Any]]) -> Any:
+    """The weakest source status among a quarter's operands: a quarter derived from a `partial`
+    fact is itself partial, never relabelled as the stronger operand's status."""
+    statuses = {item.get("status") for item in inputs}
+    if len(statuses) == 1:
+        return next(iter(statuses))
+    return "partial" if "partial" in statuses else "provider_reported"
+
+
 def _quarter_record(fact: Mapping[str, Any], semantic: Mapping[str, Any], value: float,
                     method: str, inputs: Sequence[Mapping[str, Any]], quarter_override: int | None = None) -> dict[str, Any]:
     return {
@@ -128,8 +140,10 @@ def _quarter_record(fact: Mapping[str, Any], semantic: Mapping[str, Any], value:
         "reporting_period": fact.get("reporting_period"), "fiscal_year": _year(fact.get("reporting_period")),
         "quarter": quarter_override or (_period_key(fact.get("reporting_period")) or (None, None))[1],
         "value": value, "provider": fact.get("provider"), "statement_scope": fact.get("statement_scope"),
+        "statement_family": fact.get("statement_family"),
         "currency": fact.get("currency"), "scale": fact.get("scale"),
-        "source_file": fact.get("source_file"), "source_status": fact.get("status"),
+        "source_file": fact.get("source_file"), "source_sha256": fact.get("source_sha256"),
+        "source_status": _combined_status(inputs),
         "flow_period_basis": "STANDALONE_QUARTER", "derivation_method": method,
         "derived": method != "DIRECT_STANDALONE_QUARTER", "operands": [item.get("fact_id") for item in inputs],
         "semantic_evidence": semantic.get("evidence"),
@@ -232,7 +246,7 @@ def _best_ttm(quarters: Sequence[Mapping[str, Any]]) -> dict[str, Any] | None:
     return max(concrete, key=lambda item: (str(item["as_of_period"]), tuple(item["source_periods"])), default=None)
 
 
-def _growth(feature: str, series: Mapping[str, Mapping[str, Any]], *, basis: str) -> dict[str, Any]:
+def _growth(feature: str, series: Mapping[str, Mapping[str, Any]], *, basis: str, earnings: bool = False) -> dict[str, Any]:
     current = series[max(series)] if series else None
     key = _period_key(current.get("reporting_period")) if current else None
     if not key:
@@ -252,19 +266,21 @@ def _growth(feature: str, series: Mapping[str, Mapping[str, Any]], *, basis: str
     result: dict[str, Any] = {"status": "AVAILABLE", "basis": basis,
                               "source_periods": [prior["reporting_period"], current["reporting_period"]],
                               "source_fact_ids": list(prior.get("source_fact_ids") or []) + list(current.get("source_fact_ids") or [])}
-    if old <= 0:
-        result["semantic_transition"] = (
-            "LOSS_TO_PROFIT" if old < 0 < new else "PROFIT_TO_LOSS" if old > 0 > new
-            else "LOSS_NARROWED" if old < 0 and new > old else "LOSS_WIDENED" if old < 0
-            else "ZERO_BASE"
-        )
-        result["warnings"] = ["GROWTH_BASE_NON_POSITIVE"]
-    else:
-        result["value"] = new / old - 1
+    _classify(result, old, new, earnings=earnings)
     return result
 
 
-def _ttm_yoy(series: Mapping[str, Mapping[str, Any]]) -> dict[str, Any]:
+def _classify(result: dict[str, Any], old: float, new: float, *, earnings: bool) -> None:
+    """A sign transition (engine vocabulary, never a growth rate) or an ordinary growth value."""
+    transition = sign_transition(old, new, earnings=earnings)
+    if transition:
+        result["semantic_transition"] = transition
+        result["warnings"] = ["GROWTH_BASE_NON_POSITIVE" if old <= 0 else "EARNINGS_SIGN_CHANGED_PROFIT_TO_LOSS"]
+    else:
+        result["value"] = new / old - 1
+
+
+def _ttm_yoy(series: Mapping[str, Mapping[str, Any]], *, earnings: bool = False) -> dict[str, Any]:
     current_rows = list(series.values())
     current = _ttm(current_rows)
     if not current:
@@ -281,16 +297,13 @@ def _ttm_yoy(series: Mapping[str, Mapping[str, Any]]) -> dict[str, Any]:
     result: dict[str, Any] = {"status": "AVAILABLE", "basis": "TTM_YOY",
                               "source_periods": [row["reporting_period"] for row in prior_rows] + current["source_periods"],
                               "source_fact_ids": [fact_id for row in prior_rows + current_window for fact_id in row.get("source_fact_ids") or []]}
-    if old <= 0:
-        result["semantic_transition"] = "LOSS_TO_PROFIT" if old < 0 < new else "PROFIT_TO_LOSS" if old > 0 > new else "ZERO_BASE"
-        result["warnings"] = ["GROWTH_BASE_NON_POSITIVE"]
-    else:
-        result["value"] = new / old - 1
+    _classify(result, old, new, earnings=earnings)
     return result
 
 
-def _best_growth(quarters: Sequence[Mapping[str, Any]], *, basis: str) -> dict[str, Any]:
-    candidates = [_growth("flow_growth", series, basis=basis) if basis != "TTM_YOY" else _ttm_yoy(series)
+def _best_growth(quarters: Sequence[Mapping[str, Any]], *, basis: str, earnings: bool = False) -> dict[str, Any]:
+    candidates = [_growth("flow_growth", series, basis=basis, earnings=earnings) if basis != "TTM_YOY"
+                  else _ttm_yoy(series, earnings=earnings)
                   for series in _series_by_representation(quarters).values()]
     available = [item for item in candidates if item["status"] == "AVAILABLE"]
     if available:
@@ -455,23 +468,29 @@ def facts_from_structured_semantic_rows(rows: Sequence[Mapping[str, Any]]) -> di
 
 
 def engine_rows_from_artifact(artifact: Mapping[str, Any]) -> list[dict[str, Any]]:
-    """Expose bridge-qualified quarters in the existing V2 row contract, without values from unqualified facts."""
+    """Expose bridge-qualified quarters in the existing V2 row contract, without values from unqualified facts.
+
+    Each row keeps its operands' own source status, statement family and retained payload
+    provenance. The engine joins on semantic identity, never on ``source_file``, so the real file
+    stays provenance; the adapter is named by ``lineage_method`` (FINANCIAL_V2_ANALYSIS_INPUT_
+    INTEGRITY_V1: an adapter file name here split bridge quarters from raw quarters of the same
+    statement, and a blanket ``provider_reported`` let `partial` operands past the engine gate).
+    """
     rows: list[dict[str, Any]] = []
     for record in (artifact.get("records") or {}).values():
         for row in record.get("standalone_quarters", []):
+            operands = [str(item) for item in row.get("source_fact_ids") or []]
             rows.append({"ticker": row.get("ticker"), "canonical_metric": row.get("canonical_metric"),
                          "reported_value": row.get("value"), "native_period_label": row.get("reporting_period"),
                          "period_end": row.get("reporting_period"), "period_semantic_state": "STANDALONE_QUARTER",
-                         "source_status": "provider_reported", "lineage_complete": True, "source_conflicts": [],
-                         "statement_scope": row.get("statement_scope"),
+                         "source_status": row.get("source_status"), "lineage_complete": True, "source_conflicts": [],
+                         "statement_scope": row.get("statement_scope"), "statement_family": row.get("statement_family"),
                          "normalized_candidate_unit": {"currency": row.get("currency"), "scale": row.get("scale")},
-                         # Source-file names distinguish retained payload instances, not a
-                         # financial representation.  The bridge has already enforced the
-                         # provider/scope/currency/scale contract, so use its stable adapter
-                         # identity while retaining every source hash/fact id below.
-                         "source_lineage": {"provider": row.get("provider"), "source_file": "qualified_standalone_flow_bridge/v2",
-                                            "source_sha256": (row.get("source_sha256s") or [None])[0],
-                                            "fact_id": ":".join(str(item) for item in row.get("source_fact_ids") or []) or "bridge"},
+                         "source_lineage": {"provider": row.get("provider"), "source_file": row.get("source_file"),
+                                            "source_sha256": row.get("source_sha256") or (row.get("source_sha256s") or [None])[0],
+                                            "fact_id": ":".join(operands) or None,
+                                            "lineage_method": f"{CONTRACT_VERSION}:{row.get('derivation_method')}",
+                                            "operand_fact_ids": operands},
                          "bridge_qualified": True})
     return rows
 
@@ -490,9 +509,9 @@ def build_ticker_record(*, ticker: str, entity_type: str | None,
     # YTD bridge remains callable for its historical contract but is not a current input.
     ytd_bridge: dict[str, dict[str, Any]] = {}
     growth = {metric: {
-        "qoq": _best_growth(series, basis="QOQ"),
-        "same_quarter_yoy": _best_growth(series, basis="SAME_QUARTER_YOY"),
-        "ttm_yoy": _best_growth(series, basis="TTM_YOY"),
+        "qoq": _best_growth(series, basis="QOQ", earnings=metric in EARNINGS_FLOW_METRICS),
+        "same_quarter_yoy": _best_growth(series, basis="SAME_QUARTER_YOY", earnings=metric in EARNINGS_FLOW_METRICS),
+        "ttm_yoy": _best_growth(series, basis="TTM_YOY", earnings=metric in EARNINGS_FLOW_METRICS),
     } for metric, series in sorted(by_metric.items())}
     derived: dict[str, Any] = {}
     revenue, pbt, income, cfo = ttm.get("revenue"), ttm.get("profit_before_tax"), ttm.get("net_income"), ttm.get("operating_cash_flow")

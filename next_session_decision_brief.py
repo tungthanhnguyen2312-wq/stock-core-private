@@ -25,6 +25,7 @@ from pathlib import Path
 from typing import Any, Mapping
 
 import daily_session_level2_package
+import fundamental_signal_consumption_contract as fundamental_signals
 from correlation_concentration_guard import CONTRACT_VERSION as CORRELATION_CONCENTRATION_GUARD_CONTRACT_VERSION
 from daily_research_session_operations import frozen_input_identities, load_registry, registered_session_selection
 from field_temporal_contract import stable_id
@@ -424,6 +425,11 @@ def _classify_posture_transition(previous: Mapping[str, Any] | None, current: Ma
         return "UPTREND_TO_BREAKDOWN"
     if prev_posture == curr_posture:
         return "POSTURE_UNCHANGED"
+    # A posture change whose fundamental_state changed across two fundamental decision-policy
+    # epochs cannot be told apart from the policy change itself: never an issuer/market transition.
+    if (not fundamental_signals.epochs_comparable(previous, current)
+            and previous.get("fundamental_state") != current.get("fundamental_state")):
+        return fundamental_signals.NOT_COMPARABLE_POLICY_CHANGE
     if prev_posture == "WAIT_FOR_CONFIRMATION" and curr_posture == "INITIATE_ON_BREAKOUT":
         return "WAIT_TO_INITIATE"
     if prev_posture == "EARLY_WATCH" and curr_posture == "INITIATE_ON_BREAKOUT":
@@ -496,6 +502,8 @@ def _posture_transition(*, root: Path, current_session: str, previous_session: s
             "current_tactical_phase": (curr_rec or {}).get("tactical_phase"),
             "previous_decision_identity": (prev_rec or {}).get("decision_identity"),
             "current_decision_identity": (curr_rec or {}).get("decision_identity"),
+            "previous_fundamental_policy_epoch": fundamental_signals.policy_epoch(prev_rec) if prev_rec else None,
+            "current_fundamental_policy_epoch": fundamental_signals.policy_epoch(curr_rec) if curr_rec else None,
         }
     return _section(
         availability=AVAILABLE,

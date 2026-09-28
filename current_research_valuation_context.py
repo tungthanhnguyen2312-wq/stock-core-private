@@ -5,20 +5,25 @@ semantics. It does not invent DCF, fair-value, consensus, target prices, or prob
 """
 from __future__ import annotations
 
+import calendar
 from collections import defaultdict
+from datetime import date
+import re
 from statistics import median
 from typing import Any, Mapping, Sequence
 
 from current_market_sector_leadership_context import _percentile
 import monetary_basis_contract as basis_contract
-from market_wide_current_valuation_input_scaleout import RESEARCH_SHARE_AUTHORITIES, _applicability
-from opportunity_axis_freshness import UNAVAILABLE, axis_is_research_usable, classify_axis_freshness
+from market_wide_current_valuation_input_scaleout import RESEARCH_SHARE_AUTHORITIES, _applicability, _market_cap_monetary_basis
+from operational_fundamental_context_integration import MAX_COMPLETED_QUARTER_LAG
+from opportunity_axis_freshness import UNAVAILABLE, axis_is_research_usable, classify_axis_freshness, completed_quarter_lag
 from sector_relative_research_context import MIN_COHORT_MEMBERS
 
 CONTRACT_VERSION = "current_research_valuation_context/v1"
 PE_TTM = "P/E_TTM"
 PS_TTM = "P/S_TTM"
 PB = "P/B"
+PB_CURRENT_RESEARCH = "P/B_CURRENT_RESEARCH"
 PE_EXISTING = "P/E"
 PS_EXISTING = "P/S"
 EV_EBITDA = "EV/EBITDA"
@@ -35,7 +40,7 @@ EV_EBITDA_CALC_READY = "EV/EBITDA_CALC_READY"
 TTM_METHODS = (PE_TTM, PS_TTM)
 EXISTING_MULTIPLES = (PE_EXISTING, PS_EXISTING, PB, EV_SALES, EV_EBITDA)
 CALCULATION_READINESS_METHODS = (EV_EBITDA_CALC_READY,)
-RELATIVE_METHODS = (PE_TTM, PS_TTM, PE_EXISTING, PS_EXISTING, PB, EV_SALES, EV_EBITDA, EV_EBITDA_CALC_READY)
+RELATIVE_METHODS = (PE_TTM, PS_TTM, PE_EXISTING, PS_EXISTING, PB, PB_CURRENT_RESEARCH, EV_SALES, EV_EBITDA, EV_EBITDA_CALC_READY)
 APPLICABLE = "APPLICABLE"
 NOT_APPLICABLE = "NOT_APPLICABLE"
 INPUT_BLOCKED = "INPUT_BLOCKED"
@@ -91,11 +96,10 @@ def _known_basis(value: Any) -> bool:
 
 
 def _ttm_monetary_basis(*, currency: Any, scale: Any, feature_id: str, provider: Any) -> dict[str, Any]:
-    """A qualified-financial-analysis-v2 TTM feature's basis: never official, at most
-    RESEARCH_CONTRACT_QUALIFIED (see `provider_financial_semantic_basis.py` -- no
-    (provider, statement_family) shape reaches market-wide-generalized currency/scale
-    today, so this is `UNKNOWN` for every ticker until a real shape or per-fact
-    citation-backed proof exists; the code path stays correct for when one does).
+    """TTM flow basis is never official and lacks retained unit-scale proof.
+
+    The VCI balance-sheet stock verdict does not qualify income-statement flows.
+    Retained TTM inputs remain UNKNOWN without their own monetary proof.
     """
     return basis_contract.build_basis(
         currency=currency, scale=scale,
@@ -171,12 +175,35 @@ def _monetary_basis_compatible(ttm: Mapping[str, Any], market_cap: Mapping[str, 
     return basis_contract.compatible(ttm_basis, _market_cap_basis_envelope(market_cap))
 
 
-def _entity(feature_record: Mapping[str, Any] | None, valuation_record: Mapping[str, Any] | None) -> str:
-    for source in (valuation_record, feature_record):
-        entity = (source or {}).get("entity_class") or (source or {}).get("entity_type")
-        if isinstance(entity, str) and entity and entity != "unknown":
-            return entity
-    return "unknown"
+def _entity(feature_record: Mapping[str, Any] | None, valuation_record: Mapping[str, Any] | None,
+            entity_applicability: Mapping[str, Any] | None = None) -> tuple[str, dict[str, Any]]:
+    """Resolve method applicability's entity class from every supplied surface.
+
+    The upstream valuation lane's class comes from its own narrower issuer panel, so it is often
+    ``unknown`` for issuers the governed current-state authority already classifies. Any known
+    class may resolve; two known classes that disagree fail closed as a conflict.
+    """
+    upstream = (valuation_record or {}).get("entity_class") or (valuation_record or {}).get("entity_type")
+    feature = (feature_record or {}).get("entity_class") or (feature_record or {}).get("entity_type")
+    governed_status = (entity_applicability or {}).get("applicability_status")
+    governed = (entity_applicability or {}).get("entity_class") if governed_status == "RESOLVED" else None
+    known = {
+        source: value for source, value in (
+            ("UPSTREAM_VALUATION_LANE", upstream), ("FEATURE_STORE_RECORD", feature),
+            ("GOVERNED_CURRENT_STATE_AUTHORITY", governed),
+        ) if isinstance(value, str) and value and value != "unknown"
+    }
+    detail = {
+        "upstream_valuation_lane_entity_class": upstream if isinstance(upstream, str) and upstream else "unknown",
+        "governed_applicability_status": governed_status or "NOT_SUPPLIED",
+        "governed_authority_tier": (entity_applicability or {}).get("authority_tier"),
+        "authority_scope": "CURRENT_STATE_ONLY", "historical_pit_authority": "NOT_ESTABLISHED",
+    }
+    if governed_status == "CONFLICT" or len(set(known.values())) > 1:
+        return "unknown", {**detail, "status": "CONFLICT", "sources": sorted(known), "reason_codes": ["ENTITY_CLASS_CONFLICT"]}
+    if known:
+        return next(iter(known.values())), {**detail, "status": "RESOLVED", "sources": sorted(known), "reason_codes": []}
+    return "unknown", {**detail, "status": "UNRESOLVED", "sources": [], "reason_codes": ["ENTITY_CLASS_UNRESOLVED"]}
 
 
 def _method_applicability(entity: str, method_id: str) -> str:
@@ -186,7 +213,7 @@ def _method_applicability(entity: str, method_id: str) -> str:
         mapped = _applicability(entity, "P/E")
     elif method_id in {PS_TTM, PS_EXISTING}:
         mapped = _applicability(entity, "P/S")
-    elif method_id == PB:
+    elif method_id in {PB, PB_CURRENT_RESEARCH}:
         mapped = _applicability(entity, "P/B")
     elif method_id == EV_EBITDA:
         mapped = _applicability(entity, "EV/EBITDA")
@@ -309,6 +336,7 @@ def _existing_method(method_id: str, metric: Mapping[str, Any], *, entity: str, 
         "price_representation": metric.get("price_representation"),
         "monetary_compatibility": metric.get("monetary_compatibility"),
         "price_session": metric.get("price_session"),
+        "monetary_basis": metric.get("monetary_basis"),
     }
     source_status = metric.get("status")
     if applicability == NOT_APPLICABLE or source_status == "NOT_APPLICABLE":
@@ -343,9 +371,29 @@ def _latest_readiness_period(calculation_readiness_record: Mapping[str, Any] | N
     return latest if isinstance(latest, Mapping) else None
 
 
+def readiness_period_blocker(reporting_period: Any, decision_session: str | None) -> str | None:
+    """Temporal fitness of a readiness denominator's reporting period for a decision session.
+
+    A current enterprise value divided by a fundamental from years earlier is not a current
+    valuation. The bound is the one the operational fundamental bridge already applies
+    (``operational_fundamental_context_integration.MAX_COMPLETED_QUARTER_LAG``); a period that ends
+    after the decision session is never admitted. ``None`` session keeps the legacy (ungated) call.
+    """
+    if not decision_session:
+        return None
+    lag, _, blocker = completed_quarter_lag(reporting_period, decision_session)
+    if blocker == "FINANCIAL_SOURCE_PERIOD_UNRESOLVED":
+        return "CALCULATION_READINESS_PERIOD_UNRESOLVED"
+    if blocker:
+        return "CALCULATION_READINESS_PERIOD_AFTER_DECISION_SESSION"
+    if lag > MAX_COMPLETED_QUARTER_LAG:
+        return "CALCULATION_READINESS_PERIOD_STALE"
+    return None
+
+
 def _calculation_readiness_method(
     *, capability: str, method_id: str, applicability_method_id: str, entity: str,
-    calculation_readiness_record: Mapping[str, Any] | None,
+    calculation_readiness_record: Mapping[str, Any] | None, decision_session: str | None = None,
 ) -> dict[str, Any]:
     """A method sourced directly from `market_wide_calculation_readiness.py`'s per-period
     verdict -- never re-deriving the formula, only projecting its already-computed value.
@@ -354,6 +402,10 @@ def _calculation_readiness_method(
     as the pre-existing `EV_EBITDA` method) rather than a second, independent entity-class
     call, so the two EV/EBITDA method identities can never silently disagree on WHICH entities
     the metric applies to -- only on whether a usable number exists for one that does.
+
+    The engine's denominator is ONE reporting period (quarterly payloads, never annualised --
+    multiplying a quarter would manufacture a TTM figure), so a usable value is labelled as a
+    single-period ratio: comparable only within a same-period peer cohort, not to a TTM multiple.
     """
     applicability = _method_applicability(entity, applicability_method_id)
     period = _latest_readiness_period(calculation_readiness_record)
@@ -361,6 +413,7 @@ def _calculation_readiness_method(
         "period_basis": period.get("reporting_period") if period else None,
         "source": "market_wide_calculation_readiness/v1",
         "required_semantics": "SIGN_AWARE_CROSS_STATEMENT_COHERENT_CALCULATION_READINESS",
+        "denominator_period_semantics": "SINGLE_REPORTING_PERIOD_NOT_ANNUALIZED",
     }
     if applicability == NOT_APPLICABLE:
         return _method_shell(method_id, applicability=NOT_APPLICABLE, status=NOT_APPLICABLE,
@@ -376,6 +429,10 @@ def _calculation_readiness_method(
     if verdict.get("readiness") != "ready" or not _numeric(verdict.get("value")):
         return _method_shell(method_id, applicability=applicability, status=INPUT_BLOCKED,
                              blockers=list(verdict.get("blocked_by") or ["CALCULATION_READINESS_NOT_READY"]), extra=extra)
+    period_blocker = readiness_period_blocker(extra["period_basis"], decision_session)
+    if period_blocker:
+        return _method_shell(method_id, applicability=applicability, status=INPUT_BLOCKED,
+                             blockers=[period_blocker], extra={**extra, "decision_session": decision_session})
     return _method_shell(
         method_id, applicability=applicability, status="RESEARCH_USABLE", value=verdict["value"],
         extra={**extra, "readiness_status": verdict.get("status"),
@@ -388,7 +445,8 @@ def _calculation_readiness_method(
                "own_history_status": "UNAVAILABLE_LATEST_PERIOD_ONLY_PIPELINE",
                "limitations": ["CURRENT_RESEARCH_ONLY", "NOT_AUTHORITATIVE", "NOT_FOR_TARGET_PRICE",
                                "PROVIDER_REPORTED_PRICE_BASIS_NOT_INDEPENDENTLY_VERIFIED",
-                               "OWN_HISTORY_UNAVAILABLE_LATEST_PERIOD_ONLY_PIPELINE"]},
+                               "OWN_HISTORY_UNAVAILABLE_LATEST_PERIOD_ONLY_PIPELINE",
+                               "SINGLE_REPORTING_PERIOD_DENOMINATOR_NOT_TTM"]},
     )
 
 
@@ -464,16 +522,128 @@ def _calculation_readiness_reconciliation(
     return out
 
 
+def _book_value_method(
+    *, ticker: str, entity: str, share_class: str, market_cap: Mapping[str, Any],
+    equity_rows: Sequence[Mapping[str, Any]] | None, decision_session: str | None,
+    verdict: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    """Current-research P/B using a pinned VCI unit verdict and one typed equity stock."""
+    applicability = _method_applicability(entity, PB_CURRENT_RESEARCH)
+    extra: dict[str, Any] = {"share_basis": share_class,
+                             "equity_definition": "TOTAL_OWNERS_EQUITY_AS_REPORTED_INCLUDES_NCI_WHERE_PRESENT",
+                             "period_basis": "POINT_IN_TIME_BALANCE_SHEET",
+                             "source": "FINANCIAL_V2_PINNED_SEMANTIC_ROWS",
+                             "monetary_basis_verdict_identity": (verdict or {}).get("artifact_identity"),
+                             "market_cap_monetary_basis": _market_cap_basis_envelope(market_cap)}
+    if applicability == NOT_APPLICABLE:
+        return _method_shell(PB_CURRENT_RESEARCH, applicability=NOT_APPLICABLE, status=NOT_APPLICABLE,
+                             blockers=["SECTOR_ENTITY_METHOD_NOT_SUPPORTED"], extra=extra)
+    if applicability == INPUT_BLOCKED:
+        return _method_shell(PB_CURRENT_RESEARCH, applicability=INPUT_BLOCKED, status=INPUT_BLOCKED,
+                             blockers=["ENTITY_CLASS_UNRESOLVED"], extra=extra)
+    contract = ((verdict or {}).get("semantic_basis_registry") or {}).get("contracts", {}).get("VCI:balance_sheet") or {}
+    if (contract.get("verdict") != "PROVIDER_ABSOLUTE_RESEARCH_QUALIFIED"
+            or contract.get("currency") != "VND" or contract.get("scale") != "units"
+            or contract.get("multiplier_to_vnd") != 1):
+        return _method_shell(PB_CURRENT_RESEARCH, applicability=applicability, status=INPUT_BLOCKED,
+                             blockers=["MONETARY_BASIS_VERDICT_UNAVAILABLE"], extra=extra)
+    if market_cap.get("status") not in {"RESEARCH_USABLE", "READY"} or not _numeric(market_cap.get("value")):
+        return _method_shell(PB_CURRENT_RESEARCH, applicability=applicability, status=INPUT_BLOCKED,
+                             blockers=["MARKET_CAP_RESEARCH_INPUT_UNAVAILABLE"], extra=extra)
+    if share_class == SHARE_UNAVAILABLE:
+        return _method_shell(PB_CURRENT_RESEARCH, applicability=applicability, status=INPUT_BLOCKED,
+                             blockers=["SHARE_BASIS_UNAVAILABLE"], extra=extra)
+    if not decision_session:
+        return _method_shell(PB_CURRENT_RESEARCH, applicability=applicability, status=INPUT_BLOCKED,
+                             blockers=["BOOK_EQUITY_DECISION_SESSION_UNAVAILABLE"], extra=extra)
+    day = date.fromisoformat(decision_session[:10])
+    quarter = (day.month - 1) // 3 + 1
+    session_index = day.year * 4 + quarter
+    candidates: dict[str, list[Mapping[str, Any]]] = defaultdict(list)
+    for row in equity_rows or ():
+        period = str(row.get("native_period_label") or "")
+        if (row.get("canonical_metric") == "shareholders_equity"
+                and (row.get("source_lineage") or {}).get("provider") == "VCI"
+                and row.get("period_semantic_state") == "POINT_IN_TIME_BALANCE_SHEET"
+                and re.fullmatch(r"\d{4}-Q[1-4]", period)
+                and row.get("period_end") and str(row["period_end"]) <= decision_session[:10]):
+            candidates[period].append(row)
+    if not candidates:
+        return _method_shell(PB_CURRENT_RESEARCH, applicability=applicability, status=INPUT_BLOCKED,
+                             blockers=["BOOK_EQUITY_UNAVAILABLE"], extra=extra)
+    chosen = None
+    chosen_period = None
+    latest_period = max(candidates)
+    for period in sorted(candidates, reverse=True):
+        if readiness_period_blocker(period, decision_session):
+            continue
+        rows = candidates[period]
+        usable = [row for row in rows if (row.get("source_status") == "provider_reported"
+                  and row.get("lineage_complete") is True and not row.get("source_conflicts")
+                  and _numeric(row.get("reported_value"))
+                  and (row.get("source_lineage") or {}).get("source_sha256")
+                  and (row.get("source_lineage") or {}).get("source_file"))]
+        if len(rows) == 1 and len(usable) == 1:
+            chosen, chosen_period = usable[0], period
+            break
+    if chosen is None:
+        reason = "BOOK_EQUITY_PERIOD_STALE" if all(readiness_period_blocker(period, decision_session)
+                                                     for period in candidates) else "BOOK_EQUITY_SOURCE_CONFLICT_OR_INCOMPLETE"
+        return _method_shell(PB_CURRENT_RESEARCH, applicability=applicability, status=INPUT_BLOCKED,
+                             blockers=[reason], extra=extra)
+    lag = session_index - (int(chosen_period[:4]) * 4 + int(chosen_period[-1]))
+    equity_basis = basis_contract.build_basis(
+        currency="VND", scale="units", basis_status=basis_contract.RESEARCH_CONTRACT_QUALIFIED,
+        multiplier_to_vnd=1, normalized_unit="VND",
+        basis_source=f"{verdict['artifact_identity']}:VCI:balance_sheet")
+    extra.update({"book_period": chosen_period, "book_period_lag_quarters": lag,
+                  "input_periods": [chosen_period], "statement_scope": chosen.get("statement_scope"),
+                  "equity_monetary_basis": equity_basis,
+                  "equity_lineage": dict(chosen.get("source_lineage") or {}),
+                  "equity_source_status": chosen.get("source_status"),
+                  "ttm_compatibility_class": f"VCI_TOTAL_OWNERS_EQUITY_CURRENT_RESEARCH:{chosen.get('statement_scope')}"})
+    warning = ["LATEST_BALANCE_SHEET_PERIOD_UNUSABLE_EARLIER_PERIOD_USED"] if chosen_period != latest_period else []
+    if chosen["reported_value"] <= 0:
+        return _method_shell(PB_CURRENT_RESEARCH, applicability=applicability, status="PB_NOT_MEANINGFUL",
+                             blockers=["NON_POSITIVE_BOOK_EQUITY"], extra={**extra, "warnings": warning})
+    compatible, blocker = basis_contract.compatible(equity_basis, _market_cap_basis_envelope(market_cap))
+    if not compatible:
+        return _method_shell(PB_CURRENT_RESEARCH, applicability=applicability, status=INPUT_BLOCKED,
+                             blockers=[blocker or "MONETARY_BASIS_INCOMPATIBLE"], extra=extra)
+    exact_anchor = any(anchor.get("ticker") == ticker and anchor.get("canonical_metric") == "shareholders_equity"
+                       and anchor.get("reporting_period") == chosen_period
+                       and anchor.get("classification") == "EXACT_OR_DISPLAY_ROUNDED"
+                       for anchor in ((verdict.get("source_reconciliation") or {}).get("shapes") or {}).get("('VCI', 'balance_sheet')", {}).get("anchors", []))
+    limitations = ["CURRENT_RESEARCH_ONLY", "NOT_AUTHORITATIVE", "NOT_FOR_TARGET_PRICE",
+                   "NCI_NOT_DEDUCTED", "SHARE_BASIS=" + share_class]
+    if not exact_anchor:
+        limitations.append("PROVIDER_EQUITY_VALUE_NOT_INDEPENDENTLY_RECONCILED")
+    value = (basis_contract.normalize_value(market_cap["value"], _market_cap_basis_envelope(market_cap)) /
+             basis_contract.normalize_value(chosen["reported_value"], equity_basis))
+    return _method_shell(PB_CURRENT_RESEARCH, applicability=applicability, status="RESEARCH_USABLE",
+                         value=value, extra={**extra, "formula": "research_usable_market_cap / VCI_total_owners_equity",
+                                             "warnings": warning, "limitations": limitations})
+
+
 def evaluate_ticker_valuation(*, ticker: str, feature_record: Mapping[str, Any] | None,
                               valuation_record: Mapping[str, Any] | None,
                               financial_analysis_record: Mapping[str, Any] | None = None,
                               financial_analysis_context_identity: str | None = None,
-                              calculation_readiness_record: Mapping[str, Any] | None = None) -> dict[str, Any]:
-    entity = _entity(feature_record, valuation_record)
+                              calculation_readiness_record: Mapping[str, Any] | None = None,
+                              entity_applicability: Mapping[str, Any] | None = None,
+                              decision_session: str | None = None,
+                              book_equity_rows: Sequence[Mapping[str, Any]] | None = None,
+                              monetary_basis_verdict: Mapping[str, Any] | None = None) -> dict[str, Any]:
+    entity, entity_detail = _entity(feature_record, valuation_record, entity_applicability)
     share = (valuation_record or {}).get("share_basis_input") or {}
     share_class = share_basis_class(share)
     metrics = (valuation_record or {}).get("metrics") or {}
-    market_cap = metrics.get(MARKET_CAP) or {}
+    market_cap = dict(metrics.get(MARKET_CAP) or {})
+    if valuation_record and market_cap and valuation_record.get("price_input") and valuation_record.get("share_basis_input"):
+        cap_basis = _market_cap_monetary_basis((valuation_record or {}).get("price_input") or {}, share)
+        market_cap.update({"monetary_basis": cap_basis, "monetary_basis_status": cap_basis["basis_status"],
+                           "monetary_basis_source": cap_basis["basis_source"],
+                           "currency": cap_basis["currency"], "scale": cap_basis["native_scale"]})
     ttm_ni = _select_ttm(old=_feature(feature_record, "net_income_ttm_sum"),
                          qualified=_qualified_ttm("net_income_ttm", financial_analysis_record, financial_analysis_context_identity))
     ttm_rev = _select_ttm(old=_feature(feature_record, "revenue_ttm_sum"),
@@ -488,11 +658,16 @@ def evaluate_ticker_valuation(*, ticker: str, feature_record: Mapping[str, Any] 
         PE_EXISTING: _existing_method(PE_EXISTING, metrics.get("P/E") or {}, entity=entity, share_class=share_class),
         PS_EXISTING: _existing_method(PS_EXISTING, metrics.get("P/S") or {}, entity=entity, share_class=share_class),
         PB: _existing_method(PB, metrics.get("P/B") or {}, entity=entity, share_class=share_class),
+        PB_CURRENT_RESEARCH: _book_value_method(
+            ticker=ticker, entity=entity, share_class=share_class, market_cap=market_cap,
+            equity_rows=book_equity_rows, decision_session=decision_session,
+            verdict=monetary_basis_verdict),
         EV_SALES: _existing_method(EV_SALES, metrics.get("EV/Sales") or {}, entity=entity, share_class=share_class),
         EV_EBITDA: _ev_ebitda(entity, metrics.get("EV/EBITDA")),
         EV_EBITDA_CALC_READY: _calculation_readiness_method(
             capability="ev_ebitda", method_id=EV_EBITDA_CALC_READY, applicability_method_id=EV_EBITDA,
-            entity=entity, calculation_readiness_record=calculation_readiness_record),
+            entity=entity, calculation_readiness_record=calculation_readiness_record,
+            decision_session=decision_session),
         MARKET_CAP: _existing_method(MARKET_CAP, market_cap, entity=entity, share_class=share_class),
     }
     readiness_reconciliation = _calculation_readiness_reconciliation(methods, calculation_readiness_record)
@@ -514,7 +689,7 @@ def evaluate_ticker_valuation(*, ticker: str, feature_record: Mapping[str, Any] 
     # not a wiring/join task. Reported as a named, honest residual rather than fabricated.
     fcf_yield_ttm = {"status": "BLOCKED", "value": None, "blocker_reason_codes": ["FCF_TTM_NOT_RETAINED_STANDALONE_QUARTER_PROXY_ONLY"]}
     return {
-        "ticker": ticker, "entity_class": entity, "share_basis": share_class,
+        "ticker": ticker, "entity_class": entity, "entity_applicability": entity_detail, "share_basis": share_class,
         "share_authority": share.get("authority"), "share_status": share.get("status"),
         "share_concept": share.get("share_concept"),
         "authoritative_current_market_cap_eligible": bool(share.get("authoritative_current_market_cap_eligible")),
@@ -541,10 +716,21 @@ def evaluate_ticker_valuation(*, ticker: str, feature_record: Mapping[str, Any] 
     }
 
 
+#: A statement scope the source never labelled. Two such rows are not proven to share a
+#: consolidated/separate basis, so they never enter a cross-issuer peer cohort; the row's own
+#: value stays usable (FINANCIAL_V2_ANALYSIS_INPUT_INTEGRITY_V1).
+UNPROVEN_STATEMENT_SCOPES = frozenset({None, "", "unknown", "UNKNOWN"})
+SCOPE_NOT_PEER_COMPARABLE = "STATEMENT_SCOPE_UNKNOWN_NOT_PEER_COMPARABLE"
+
+
+def _scope_blocks_peers(method: Mapping[str, Any]) -> bool:
+    return "statement_scope" in method and method.get("statement_scope") in UNPROVEN_STATEMENT_SCOPES
+
+
 def _peer_key(row: Mapping[str, Any], method: Mapping[str, Any]) -> tuple[Any, ...] | None:
     if method.get("status") not in {"RESEARCH_USABLE", "READY"} or not _numeric(method.get("value")):
         return None
-    if method.get("applicability") != APPLICABLE:
+    if method.get("applicability") != APPLICABLE or _scope_blocks_peers(method):
         return None
     periods = tuple(method.get("input_periods") or [])
     latest = periods[-1] if periods else method.get("period_basis")
@@ -574,7 +760,9 @@ def attach_peer_relative(rows: Mapping[str, Mapping[str, Any]]) -> dict[str, Any
             if key is None:
                 relatives[method_id] = {
                     "status": "NOT_COMPARABLE",
-                    "reason": method.get("status") if method.get("status") != "RESEARCH_USABLE" else "INCOMPATIBLE_OR_UNAVAILABLE_BASIS",
+                    "reason": (method.get("status") if method.get("status") != "RESEARCH_USABLE"
+                               else SCOPE_NOT_PEER_COMPARABLE if _scope_blocks_peers(method)
+                               else "INCOMPATIBLE_OR_UNAVAILABLE_BASIS"),
                     "peer_count": 0, "peer_median": None, "percentile": None,
                     "premium_or_discount_to_peer_median": None,
                     "methodology": "same_method_same_basis_peer_cohort/v1",
@@ -659,7 +847,7 @@ def attach_fundamental_peers(feature_records: Mapping[str, Mapping[str, Any]],
     """Same-method fundamental relative context; ROE/ROA stay excluded unless method identity matches."""
     cohorts: dict[tuple[Any, ...], list[tuple[str, float]]] = defaultdict(list)
     for ticker, record in feature_records.items():
-        entity = _entity(record, (valuation_rows.get(ticker) if valuation_rows else None))
+        entity = _entity(record, (valuation_rows.get(ticker) if valuation_rows else None))[0]
         envelope = {"entity_class": entity}
         for feature_id in FUNDAMENTAL_PEER_FEATURES:
             feature = _feature(record, feature_id)
@@ -668,7 +856,7 @@ def attach_fundamental_peers(feature_records: Mapping[str, Mapping[str, Any]],
                 cohorts[key].append((ticker, float(feature["value"])))
     out: dict[str, dict[str, Any]] = {}
     for ticker, record in feature_records.items():
-        entity = _entity(record, (valuation_rows.get(ticker) if valuation_rows else None))
+        entity = _entity(record, (valuation_rows.get(ticker) if valuation_rows else None))[0]
         envelope = {"entity_class": entity}
         relatives: dict[str, Any] = {}
         for feature_id in FUNDAMENTAL_PEER_FEATURES:
@@ -741,7 +929,7 @@ def _engine_peer_key(cohort_id: str, feature: Mapping[str, Any], feature_id: str
         return None
     periods = tuple(feature.get("period_identity") or [])
     latest = periods[-1] if periods else None
-    if not latest:
+    if not latest or not feature.get("scope") or any(scope in UNPROVEN_STATEMENT_SCOPES for scope in feature["scope"]):
         return None
     return (feature_id, cohort_id, feature.get("method"), tuple(feature.get("scope") or []),
             feature.get("currency"), feature.get("scale"), latest)
@@ -777,8 +965,11 @@ def attach_engine_fundamental_peers(engine_records: Mapping[str, Mapping[str, An
             feature = _engine_feature(record, feature_id)
             key = _engine_peer_key(cohort_id, feature, feature_id)
             if key is None:
+                scope_unproven = (feature.get("fitness") == "READY" and _numeric(feature.get("value"))
+                                  and any(scope in UNPROVEN_STATEMENT_SCOPES for scope in (feature.get("scope") or [None])))
                 relatives[feature_id] = {
-                    "status": "NOT_COMPARABLE", "reason": list(feature.get("reason_codes") or ["FEATURE_NOT_COMPARABLE"]),
+                    "status": "NOT_COMPARABLE",
+                    "reason": [SCOPE_NOT_PEER_COMPARABLE] if scope_unproven else list(feature.get("reason_codes") or ["FEATURE_NOT_COMPARABLE"]),
                     "peer_count": 0, "cohort_id": cohort_id, "cohort_level": cohort_level,
                     "method": feature.get("method"), "minimum_peer_count": MIN_COHORT_MEMBERS,
                 }
@@ -886,6 +1077,12 @@ def valuation_axis(*, ticker: str, decision_session: str, valuation_artifact: Ma
             "ttm_source_conflict": method.get("ttm_source_conflict"),
             "ttm_monetary_basis": method.get("ttm_monetary_basis"),
             "market_cap_monetary_basis": method.get("market_cap_monetary_basis"),
+            "equity_monetary_basis": method.get("equity_monetary_basis"),
+            "book_period": method.get("book_period"),
+            "book_period_lag_quarters": method.get("book_period_lag_quarters"),
+            "equity_definition": method.get("equity_definition"),
+            "statement_scope": method.get("statement_scope"),
+            "limitations": method.get("limitations"),
             "peer_relative": (row.get("peer_relative") or {}).get(method_id),
             "availability_state": method_availability_state(method, (row.get("peer_relative") or {}).get(method_id)),
         }

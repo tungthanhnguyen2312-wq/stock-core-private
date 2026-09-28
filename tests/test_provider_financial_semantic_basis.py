@@ -77,8 +77,8 @@ def test_agreement_elsewhere_never_qualifies_a_ticker_with_no_evidence_of_its_ow
 
 def test_shape_route_only_fires_when_the_shape_itself_is_qualified():
     fake_registry = {"contracts": {"VCI:balance_sheet": {"verdict": pfsb.PROVIDER_ABSOLUTE_RESEARCH_QUALIFIED}}}
-    matching = {"provider": "VCI", "statement_family": "balance_sheet", "status": "provider_reported"}
-    other_shape = {"provider": "KBS", "statement_family": "income_statement", "status": "provider_reported"}
+    matching = {"provider": "VCI", "statement_family": "balance_sheet", "status": "provider_reported", "value": 100}
+    other_shape = {"provider": "KBS", "statement_family": "income_statement", "status": "provider_reported", "value": 100}
     assert pfsb.classify_provider_exact_research_usable(matching, registry=fake_registry)["eligible"] is True
     assert pfsb.classify_provider_exact_research_usable(other_shape, registry=fake_registry)["eligible"] is False
 
@@ -131,10 +131,7 @@ def test_single_issuer_agreement_is_not_discriminating():
     assert contract["verdict"] != pfsb.PROVIDER_ABSOLUTE_RESEARCH_QUALIFIED
 
 
-def test_real_vci_balance_sheet_reconciliation_has_disagreement_and_stays_unresolved():
-    """Real, already-observed evidence: 6 issuers agree on VCI balance-sheet shareholders_equity
-    (8.86T-114.6T VND) but PVD and VNM disagree on the same shape/metric. This is the concrete case
-    the milestone's 'no single-ticker proof may become market-wide authority' guards against."""
+def test_vci_balance_sheet_scale_qualified_without_claiming_every_value_agrees():
     facts_by_ticker = {
         "FPT": [_agreeing_fact(ticker="FPT", value=43_748_040_747_539)],
         "HPG": [_agreeing_fact(ticker="HPG", value=114_647_457_983_699)],
@@ -145,13 +142,21 @@ def test_real_vci_balance_sheet_reconciliation_has_disagreement_and_stays_unreso
         "PVD": [_disagreeing_fact(ticker="PVD", provider_value=16_052_342_324_403, official_value=635_711_153)],
         "VNM": [_disagreeing_fact(ticker="VNM", provider_value=36_174_402_829_663, official_value=37_165_930_000_000)],
     }
-    recon = pfsb.reconcile_official_anchors(facts_by_ticker)
+    citations = {(ticker, "shareholders_equity", "2024-Q4"):
+                 {"value": (635_711_153 if ticker == "PVD" else 37_165_930_000_000 if ticker == "VNM"
+                            else facts[0]["value"]),
+                  "currency": "USD" if ticker == "PVD" else "VND"}
+                 for ticker, facts in facts_by_ticker.items()}
+    recon = pfsb.reconcile_official_anchors(facts_by_ticker, citations)
     shape = recon["shapes"]["('VCI', 'balance_sheet')"]
-    assert shape["agree_count"] == 6 and shape["disagree_count"] == 2
-    assert pfsb._is_discriminating(shape) is True  # would pass the discriminating bar alone
-    assert pfsb._is_consistent(shape) is False      # but fails on consistency
+    assert shape["agree_count"] == 6 and shape["disagree_count"] == 0
+    assert shape["ineligible_currency_count"] == 1
+    assert shape["same_scale_value_deviation_count"] == 1
+    assert pfsb._is_discriminating(shape) is True
+    assert pfsb._is_consistent(shape) is True
     contract = pfsb.evaluate_semantic_basis_contract(provider="VCI", statement_family="balance_sheet", reconciliation=shape)
-    assert contract["verdict"] == pfsb.SEMANTIC_BASIS_UNRESOLVED
+    assert contract["verdict"] == pfsb.PROVIDER_ABSOLUTE_RESEARCH_QUALIFIED
+    assert contract["multiplier_to_vnd"] == 1
 
 
 # ---------------------------------------------------------------------------

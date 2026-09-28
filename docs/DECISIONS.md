@@ -1,5 +1,127 @@
 # Decisions & Architectural Decision Records
 
+## 2026-09-28 - Current Research chain integrated after M1 (`CURRENT_RESEARCH_CHAIN_PROMOTION_REVIEW_INTEGRATION_V1`; awaiting independent exact-head review, not promoted)
+
+**Decision.** The validated local Current Research analytical chain (analytical head
+`f1e715c796019ab74e948676b6dcf857611b47af`, forked from `6c40644`) is integrated onto the post-M1
+canonical `main` `d08778b1c02a8490741c238f9678955df5be8f26` on a new branch
+(`feature/current-research-chain-integration-v1-20260928`) as one clean checkpoint. The historical
+source branch `feature/financial-v2-analysis-input-integrity-v1` is not moved or rewritten. The
+milestone is `ACTIVE / IMPLEMENTATION_INTEGRATED / AWAITING_INDEPENDENT_EXACT_HEAD_REVIEW`. It is
+not complete, no analytical authority is promoted, and nothing merges without explicit owner approval.
+
+**Exact-head readiness review first (`PROMOTION_READINESS_PASS`).** Before any change, the delta
+`6c40644..f1e715c` was reviewed against `d08778b`:
+- Topology is linear: `ffc75d7 → 36e8525 → df6c018 → 4c46328 → 488eaf1 → 66d0fc0 → 5729c52 →
+  f1e715c`, then docs-only `eefcb04`.
+- Since the fork, `main` changed only `config/daily_research_session_input_registry.json` (the
+  2026-09-28 retained session) and governance docs. No later `main` commit implements, supersedes or
+  contradicts any analytical hunk. The only file overlap is the four governance docs.
+- The posture policy branches and thresholds are unchanged. `decide_research_action_posture` gains
+  only a wording input for branch 1's explanation. `research_action_posture` stays the sole action
+  authority, `research_stance` secondary and `OPPORTUNITY_PRIORITY` orthogonal (excluded from
+  `decision_identity`). `evidence_currency` and its WAIT gate are unchanged.
+- The Daily wiring stays local and fails closed per component. The operational fundamental bridge
+  and the governed entity applicability reuse the pinned Financial V2 authority and add two
+  retained artifacts under the existing session directory. There is no provider call, network path,
+  new entrypoint or runtime-store read.
+- Authority boundaries hold:
+  - VCI `balance_sheet` gains only a pinned, research-only monetary-basis shape verdict
+    (`official_financial = false`).
+  - Research P/B is labelled total-equity/NCI-not-deducted and is never exact or
+    common-shareholder P/B.
+  - Market cap is size context, never valuation.
+  - Entity applicability is `CURRENT_STATE_ONLY` / PIT `NOT_ESTABLISHED`.
+  - Sizing/execution stay `BLOCKED`, RAW_AS_TRADED stays NOT PROMOTED, and no score, target price
+    or probability is introduced.
+- The chain still fixes live defects on `main`:
+  - Financial V2 series keyed on `source_file` (gross margin / FCF proxy 0 market-wide).
+  - An Integrated Decision fundamental reader whose vocabulary the engine never emits.
+  - Market cap counted as valuation, and peer verdicts that never reached the decision.
+
+**What was integrated.** 50 files, byte-identical to `f1e715c`: every analytical source, test, tool
+and spec file of the chain, plus the pinned tracked verdict
+`operations-review/provider-financial-monetary-basis-verdict-v1-20260927/provider_financial_monetary_basis_verdict.json`.
+None of these files changed on `main` since the fork, so a path-level port equals a reconciled
+cherry-pick.
+
+| Commit | Capability |
+|---|---|
+| `ffc75d7` | Current Research capability map |
+| `36e8525` | Entity-aware operational fundamental context |
+| `df6c018` | Decision convergence (`current_research_decision_input/v1`, Daily bridge binding, governed entity applicability, market cap as size) |
+| `4c46328` | Research P/B with pinned VCI balance-sheet monetary basis |
+| `488eaf1` | Financial V2 input integrity (semantic join, partial relabel, composed lineage) |
+| `66d0fc0` | `fundamental_signal_consumption/v1` |
+| `5729c52` | Signal policy hardening (only CURRENT votes; NWC evidence-only; `PROFIT_TO_LOSS`) |
+| `f1e715c` | Promotion hardening (five-state availability, level-only risk, one vote per balance-sheet observation, YoY/TTM-only transitions, entity gate, fiscal knowledge time, `fundamental_decision_policy_version` in `decision_identity` with `NOT_COMPARABLE_POLICY_CHANGE` across epochs) |
+
+**Deliberately excluded.**
+- `eefcb04`: a pre-rebaseline North Star copy, superseded by the 2026-09-28 rebaseline.
+- Every chain hunk in `docs/STATE.md`, `docs/ROADMAP.md`, `docs/ROADMAP_STATE.json` and
+  `docs/DECISIONS.md`. They describe M1 as `ACTIVE`. They also record six `COMPLETE_LOCAL` entries,
+  which is not a valid roadmap state, and the chain-local `CURRENT_RESEARCH_FUNDAMENTAL_CHAIN_PROMOTION_REVIEW_V1`,
+  which is superseded by this ID.
+- `LEGACY_FINANCIAL_REFRESH_DEPENDENCY_MIGRATION_V1` is not recorded, because this job does not
+  queue a next milestone. Its finding stands as context: financial statement freshness now bounds
+  the current fundamental direction.
+- The chain's per-milestone measurements and proof identities stay in the source commits' messages
+  and in `docs/ANALYTICS_AND_DECISION_FEATURE_SPEC.md`.
+- `docs/NORTH_STAR.md`, `docs/AI_RULES.md` and the M1 closeout records are unchanged.
+
+**Validation on the integration tree.**
+- **Tests.**
+  - Chain test files (15): 428 passed.
+  - Every test file importing a touched module, plus roadmap tests (76 files), without retained
+    evidence: 1,800 passed on the integration tree vs 1,625 on a clean `main` worktree. The 36
+    failures and 26 errors have identical IDs on both (retained evidence absent from a fresh
+    worktree).
+  - The 13 affected files re-run read-only against the Producer checkout's retained evidence
+    (`STOCKLOOKUP_RETAINED_EVIDENCE_ROOT`, write guard active): the failure/error IDs are identical
+    to `main` except one. `test_canonical_post_close_pipeline.py::test_enrichment_components_stamp_requested_session`
+    still pinned the pre-chain result keys. `df6c018` added the
+    `operational_fundamental_binding` resolution record, and its retained-evidence tier never ran
+    in the chain's worktree. The test now admits that record and asserts that every enrichment
+    entry carries the `status` that `build_tiered_bundle` projects; it passes. The production
+    consumer already reads only `status`, which both binding branches set.
+  - Roadmap/doc tests: 149 passed. `stocklookup_roadmap --check`: ON_TRACK.
+  - `py_compile`: 48 files. `git diff --check`: clean.
+- **Real Daily Integrated Decision assembly.** Run on retained 2026-09-24 inputs through the chain's
+  `run_current_research_decision_convergence_proof.py assemble` harness: identical staged inputs,
+  write-guard violations 0, network audit events 0, provider calls 0.
+  - The integration tree reproduces the chain's own `f1e715c` proof run exactly
+    (`integrated_investment_decision_product/v1:880ca5a3…`; `decision_identity` equal on
+    1,683/1,683).
+  - Versus `main` `d08778b` (`…:9e3e6473…`) over the full 1,683 denominator:
+    - `research_action_posture` changes 140, and every one coincides with a `fundamental_state`
+      change. `evidence_currency` and `tactical_phase` changes are 0.
+
+      | Posture transition | Count |
+      |---|---|
+      | `WAIT_FOR_CONFIRMATION → INSUFFICIENT_CURRENT_RESEARCH` | 114 |
+      | `INSUFFICIENT_CURRENT_RESEARCH → WAIT_FOR_CONFIRMATION` | 7 |
+      | `WAIT_FOR_CONFIRMATION → HOLD` | 5 |
+      | `HOLD → WAIT_FOR_CONFIRMATION` | 3 |
+      | `AVOID → EARLY_WATCH` | 2 |
+      | `EARLY_WATCH → AVOID` | 2 |
+      | `WAIT_FOR_CONFIRMATION → AVOID` | 2 |
+      | `WAIT_FOR_CONFIRMATION → ACCUMULATE_ON_RETEST` | 1 |
+      | `WAIT_FOR_CONFIRMATION → EARLY_WATCH` | 1 |
+      | `ACCUMULATE_ON_RETEST → WAIT_FOR_CONFIRMATION` | 1 |
+      | `INITIATE_ON_BREAKOUT → WAIT_FOR_CONFIRMATION` | 1 |
+      | `AVOID → HOLD_DO_NOT_ADD` | 1 |
+
+    - `fundamental_state` changed on 799 records.
+    - Valuation: P/E and P/S values are unchanged. Three EV/EBITDA values (C92, CMT, DLT) now fail
+      closed as `CALCULATION_READINESS_PERIOD_STALE`. Research P/B is present on 738 records
+      (was 6).
+  - The chain's own official-scope attribution (125 postures vs `488eaf1`, none unexplained)
+    stands in its proof `fundamental_promotion_hardening_proof/v1:8ba1d7bc…`.
+
+**Still required before promotion.** An independent exact-head review of the integration head, CI
+on the PR, and the owner's explicit acceptance of the posture deltas. Promotion or merge happens
+only on owner approval.
+
 ## 2026-09-28 - M1 closeout: `CURRENT_DECISION_SURFACE_CONVERGENCE_V1` = COMPLETE / LIVE_ACCEPTED_2026_09_28
 
 **Decision.** M1 is closed as `COMPLETE / LIVE_ACCEPTED_2026_09_28`, recorded at canonical Producer

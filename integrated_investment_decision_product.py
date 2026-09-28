@@ -29,10 +29,18 @@ import json
 from collections import Counter
 from typing import Any, Mapping, Sequence
 
+import current_research_decision_input as decision_input
 import financial_analysis_product_projection as fa_product_projection
+import fundamental_signal_consumption_contract as fundamental_signals
+import operational_fundamental_context_integration as operational_fundamental
 
 CONTRACT_VERSION = "integrated_investment_decision_product/v1"
 MILESTONE = "INTEGRATED_INVESTMENT_DECISION_PRODUCT_V1"
+
+# Size context (market capitalisation) is reported separately and never counts as valuation
+# evidence on its own; see evaluate_valuation_context.
+_SIZE_CONTEXT_METHODS = ("market_cap",)
+LIQUIDITY_RESEARCH_CONTRACT = "market_wide_current_liquidity_research/v1"
 
 # The one shape evaluate_fundamental_direction()/build_ticker_integrated_decision() actually
 # read: financial_analysis_product_projection's compact, flat financial_analysis_product_
@@ -68,12 +76,14 @@ RESEARCH_ACTION_POSTURES = frozenset({
 })
 
 # ── Fundamental Direction Taxonomy ───────────────────────────────────────────
-FUNDAMENTAL_IMPROVING = "IMPROVING"
-FUNDAMENTAL_STABLE = "STABLE"
-FUNDAMENTAL_MIXED = "MIXED"
-FUNDAMENTAL_DETERIORATING = "DETERIORATING"
-FUNDAMENTAL_TURNAROUND = "TURNAROUND"
-FUNDAMENTAL_INSUFFICIENT = "INSUFFICIENT"
+# Owned by the fundamental signal consumption contract, which derives it from explicit
+# level/direction/transition components (INTEGRATED_FUNDAMENTAL_STATE_CONSUMPTION_RECONCILIATION_V1).
+FUNDAMENTAL_IMPROVING = fundamental_signals.FUNDAMENTAL_IMPROVING
+FUNDAMENTAL_STABLE = fundamental_signals.FUNDAMENTAL_STABLE
+FUNDAMENTAL_MIXED = fundamental_signals.FUNDAMENTAL_MIXED
+FUNDAMENTAL_DETERIORATING = fundamental_signals.FUNDAMENTAL_DETERIORATING
+FUNDAMENTAL_TURNAROUND = fundamental_signals.FUNDAMENTAL_TURNAROUND
+FUNDAMENTAL_INSUFFICIENT = fundamental_signals.FUNDAMENTAL_INSUFFICIENT
 
 FUNDAMENTAL_STATES = frozenset({
     FUNDAMENTAL_IMPROVING,
@@ -348,8 +358,10 @@ def decision_identity(record: Mapping[str, Any]) -> str:
     """Feedback-ready deterministic identity for one ticker decision record.
 
     Includes ``evidence_currency`` (a decision on different evidence currency is a different
-    decision state). Deliberately excludes every OPPORTUNITY_PRIORITY input: priority is an
-    orthogonal inspection axis and must never move the security decision identity.
+    decision state) and ``fundamental_decision_policy_version`` (the same fundamental_state label
+    under another fundamental policy is a different decision state, never a comparable one).
+    Deliberately excludes every OPPORTUNITY_PRIORITY input: priority is an orthogonal inspection
+    axis and must never move the security decision identity.
     """
     source_identities = dict(record.get("source_identities") or {})
     source_identities.pop("priority_queue_record_identity", None)
@@ -360,6 +372,7 @@ def decision_identity(record: Mapping[str, Any]) -> str:
         "research_action_posture": record.get("research_action_posture"),
         "evidence_currency": record.get("evidence_currency"),
         "fundamental_state": record.get("fundamental_state"),
+        "fundamental_decision_policy_version": record.get("fundamental_decision_policy_version"),
         "tactical_phase": record.get("tactical_phase"),
         "trigger_state": (record.get("trigger") or {}).get("trigger_state"),
         "trigger_type": (record.get("trigger") or {}).get("trigger_type"),
@@ -373,89 +386,46 @@ def decision_identity(record: Mapping[str, Any]) -> str:
 
 # ── Fundamental Direction Evaluator ───────────────────────────────────────────
 
-def evaluate_fundamental_direction(fa_context: Mapping[str, Any] | None) -> tuple[str, list[str], list[str]]:
-    """Determine compact fundamental state and specific support/counter points."""
-    if not isinstance(fa_context, Mapping) or fa_context.get("status") in (None, "ABSENT", "NOT_SUPPLIED"):
-        return FUNDAMENTAL_INSUFFICIENT, [], ["FUNDAMENTAL_CONTEXT_ABSENT"]
+def evaluate_fundamental_synthesis(fa_context: Mapping[str, Any] | None, *, decision_session: str | None = None,
+                                   dialect: str | None = None) -> dict[str, Any]:
+    """The multi-dimensional fundamental synthesis for one producer record.
 
-    supports: list[str] = []
-    counters: list[str] = []
+    ``fundamental_signal_consumption_contract`` maps the producer's own vocabulary to separate
+    level, direction and transition components (with applicability and fitness) and derives the
+    compatible ``fundamental_state`` from their dimension votes under the standing policy: a
+    current loss-to-profit transition on a same-quarter YoY or TTM basis is TURNAROUND; more adverse than
+    favorable votes with loss-making, contracting growth or a worsening capital structure is
+    DETERIORATING; favorable only is IMPROVING (growth, margins or short-term liquidity ratio
+    improving) or STABLE; both is MIXED. ``decision_session`` gates freshness: only a CURRENT
+    period votes; a stale period stays visible research evidence and never votes, and a period
+    after the session never enters (FUNDAMENTAL_SIGNAL_POLICY_HARDENING_V1). ``evidence_
+    availability`` says whether qualified fundamental evidence exists, apart from the direction.
+    """
+    return fundamental_signals.evaluate(fa_context, decision_session=decision_session, dialect=dialect)
 
-    prof = fa_context.get("profitability_state")
-    turnaround = fa_context.get("earnings_turnaround_state")
-    margin = fa_context.get("margin_state")
-    growth = fa_context.get("growth_state")
-    cash = fa_context.get("cash_conversion_state")
-    balance = fa_context.get("balance_sheet_state")
-    leverage = fa_context.get("leverage_state")
-    wc_traj = fa_context.get("working_capital_trajectory_state")
-    gm_traj = fa_context.get("gross_margin_trajectory_state")
 
-    # Specialist states
-    bank_asset = fa_context.get("bank_asset_quality_state")
-    bank_fund = fa_context.get("bank_funding_state")
-    sec_brokerage = fa_context.get("brokerage_mix_trajectory_state")
+def evaluate_fundamental_direction(fa_context: Mapping[str, Any] | None, *,
+                                   decision_session: str | None = None) -> tuple[str, list[str], list[str]]:
+    """Compact fundamental state and its support/counter reason codes (see the synthesis above)."""
+    synthesis = evaluate_fundamental_synthesis(fa_context, decision_session=decision_session)
+    return (synthesis["fundamental_state"], list(synthesis["supporting_reason_codes"]),
+            list(synthesis["contradicting_reason_codes"]))
 
-    if prof == "PROFITABLE":
-        supports.append("PROFITABLE_CORE_OPERATIONS")
-    elif prof == "LOSS_MAKING":
-        counters.append("OBSERVED_LOSS_MAKING")
-    elif prof == "TURNAROUND_CONTEXT" or turnaround == "TURNAROUND":
-        supports.append("EARNINGS_TURNAROUND_DETECTED")
 
-    if margin == "MARGIN_EXPANDING" or gm_traj == "IMPROVING":
-        supports.append("MARGIN_EXPANSION")
-    elif margin == "MARGIN_COMPRESSING" or gm_traj == "WORSENING":
-        counters.append("MARGIN_COMPRESSION")
+def operational_fundamental_bridge_eligible(financial_record: Mapping[str, Any] | None, *,
+                                            decision_session: str | None = None) -> bool:
+    """Whether the operational fundamental bridge may be consulted for this Financial V2 record.
 
-    if growth in ("ACCELERATING", "EXPANDING"):
-        supports.append("REVENUE_GROWTH_EXPANDING")
-    elif growth == "CONTRACTING":
-        counters.append("REVENUE_CONTRACTION")
-
-    if cash == "HEALTHY":
-        supports.append("POSITIVE_CASH_CONVERSION_PROXY")
-    elif cash == "WEAK":
-        counters.append("WEAK_CASH_CONVERSION_PROXY")
-
-    if balance == "STRENGTHENING":
-        supports.append("BALANCE_SHEET_STRENGTHENING")
-    elif balance == "DETERIORATING":
-        counters.append("BALANCE_SHEET_DETERIORATING")
-
-    if leverage == "SAFE":
-        supports.append("CONSERVATIVE_LEVERAGE")
-    elif leverage == "STRESSED":
-        counters.append("ELEVATED_LEVERAGE_STRESS")
-
-    if wc_traj == "IMPROVING":
-        supports.append("WORKING_CAPITAL_IMPROVING")
-    elif wc_traj == "WORSENING":
-        counters.append("WORKING_CAPITAL_WORSENING")
-
-    if bank_asset in ("STRONG", "IMPROVING"):
-        supports.append(f"BANK_ASSET_QUALITY_{bank_asset}")
-    elif bank_asset in ("WEAK", "DETERIORATING"):
-        counters.append(f"BANK_ASSET_QUALITY_{bank_asset}")
-
-    if sec_brokerage == "BROKERAGE_MIX_RISING":
-        supports.append("SECURITIES_BROKERAGE_MIX_EXPANDING")
-
-    # Synthesize fundamental_state
-    if prof == "TURNAROUND_CONTEXT" or turnaround == "TURNAROUND":
-        state = FUNDAMENTAL_TURNAROUND
-    elif len(counters) > len(supports) and (prof == "LOSS_MAKING" or growth == "CONTRACTING" or balance == "DETERIORATING"):
-        state = FUNDAMENTAL_DETERIORATING
-    elif len(supports) > 0 and len(counters) == 0:
-        state = FUNDAMENTAL_IMPROVING if (growth in ("ACCELERATING", "EXPANDING") or margin == "MARGIN_EXPANDING" or wc_traj == "IMPROVING") else FUNDAMENTAL_STABLE
-    elif len(supports) > 0 and len(counters) > 0:
-        state = FUNDAMENTAL_MIXED
-    elif prof == "PROFITABLE":
-        state = FUNDAMENTAL_STABLE
-    else:
-        state = FUNDAMENTAL_INSUFFICIENT
-
-    return state, supports, counters
+    Only an INSUFFICIENT direction with no conflicting/blocked Financial V2 evidence qualifies:
+    a proxy never overrides a stronger financial read or a stronger conflict. The Daily binding
+    selects its candidates with this same predicate and session, so selection and consumption
+    cannot drift.
+    """
+    financial = financial_record or {}
+    state, _supports, _counters = evaluate_fundamental_direction(financial, decision_session=decision_session)
+    return (state == FUNDAMENTAL_INSUFFICIENT
+            and financial.get("status") not in {"CONFLICTED", "BLOCKED"}
+            and not financial.get("conflicting_evidence"))
 
 
 # ── Financial Composite Context Evaluator (section 14) ────────────────────────
@@ -463,6 +433,8 @@ def evaluate_fundamental_direction(fa_context: Mapping[str, Any] | None) -> tupl
 def evaluate_financial_composite_context(
     *, fund_state: str, fund_supports: Sequence[str], fund_counters: Sequence[str],
     val_summary: Mapping[str, Any] | None, val_supports: Sequence[str], val_counters: Sequence[str],
+    fundamental_evidence_availability: str | None = None,
+    fundamental_risk_level: str | None = None,
 ) -> dict[str, Any]:
     """Join earnings trajectory + profitability + balance sheet + cash quality (already
     synthesized into `fund_state` by `evaluate_fundamental_direction`, UNCHANGED) with
@@ -476,7 +448,10 @@ def evaluate_financial_composite_context(
     MIXED, since "cheap/expensive" and "improving/deteriorating" are evidence a research
     reader must be able to tell apart (section 17), not two votes to blend into one score.
     Valuation cheapness never upgrades a deteriorating fundamental read, and never manufactures
-    TURNAROUND_EVIDENCE or INSUFFICIENT_EVIDENCE by itself.
+    TURNAROUND_EVIDENCE or INSUFFICIENT_EVIDENCE by itself. ``INSUFFICIENT_EVIDENCE`` names an
+    insufficient current direction; ``fundamental_evidence_availability`` (the five-state
+    availability) says separately what fundamental evidence is known, and ``fundamental_risk_level``
+    the qualified level evidence -- an improving direction is never read as a healthy level.
     """
     val_summary = val_summary or {}
     supporting = list(dict.fromkeys(list(fund_supports) + list(val_supports)))
@@ -507,6 +482,8 @@ def evaluate_financial_composite_context(
         "contradicting_reason_codes": contradicting[:10],
         "joined_axes": {
             "fundamental_state": fund_state,
+            "fundamental_evidence_availability": fundamental_evidence_availability,
+            "fundamental_risk_level": fundamental_risk_level,
             "valuation_peer_relative_state": val_summary.get("peer_relative_state"),
             "valuation_own_history_state": val_summary.get("own_history_state"),
         },
@@ -563,6 +540,14 @@ def evaluate_corporate_intelligence_context(
 
 # ── Evidence-axis inventory and qualitative coherence ─────────────────────────
 
+#: The FUNDAMENTAL axis blocker for an insufficient current direction, by what evidence is known.
+FUNDAMENTAL_EVIDENCE_AVAILABILITY_BLOCKERS = {
+    fundamental_signals.ABSENT: "FUNDAMENTAL_CONTEXT_ABSENT",
+    fundamental_signals.STALE_ONLY: "FUNDAMENTAL_STALE_EVIDENCE_ONLY_NO_CURRENT_DIRECTION",
+    fundamental_signals.CURRENT_NON_DIRECTIONAL: "FUNDAMENTAL_CURRENT_DIRECTION_INSUFFICIENT",
+    fundamental_signals.NOT_APPLICABLE_ENTITY: "FUNDAMENTAL_ENTITY_NOT_DECISION_APPLICABLE",
+}
+
 def _axis(
     *, state: Any, fitness: Any, supporting: Sequence[str] = (), contradicting: Sequence[str] = (),
     blockers: Sequence[str] = (), method: str, lineage: Mapping[str, Any] | None = None,
@@ -598,6 +583,8 @@ def build_evidence_axes(
     market_context_provided: bool, priority_record: Mapping[str, Any] | None,
     portfolio_summary: Mapping[str, Any], source_artifact_identities: Mapping[str, Any] | None = None,
     corporate_intelligence_summary: Mapping[str, Any] | None = None,
+    operational_fundamental_context: Mapping[str, Any] | None = None,
+    fundamental_synthesis: Mapping[str, Any] | None = None,
 ) -> dict[str, dict[str, Any]]:
     """Expose standing decision evidence as distinct, source-preserving axes.
 
@@ -608,6 +595,9 @@ def build_evidence_axes(
     financial_status = financial.get("status") or (
         "AVAILABLE" if fund_state != FUNDAMENTAL_INSUFFICIENT else "UNAVAILABLE"
     )
+    operational_used = (operational_fundamental_context or {}).get("status") == "RESEARCH_USABLE" and fund_state != FUNDAMENTAL_INSUFFICIENT
+    if operational_used:
+        financial_status = "RESEARCH_PROXY_CONTEXT"
     valuation_status = val_summary.get("status") or valuation.get("status") or "UNAVAILABLE"
     technical_fitness = "AVAILABLE" if tactical.get("eligible") else "INSUFFICIENT_EVIDENCE"
     momentum_fitness = (momentum.get("eligibility") or {}).get("status") or momentum.get("status") or "UNAVAILABLE"
@@ -619,22 +609,61 @@ def build_evidence_axes(
     sector_fitness = "AVAILABLE" if market_context_provided and sector_context not in (None, "IN_LINE") else (
         "PARTIAL" if market_context_provided else "UNAVAILABLE"
     )
+    derivation = (fundamental_synthesis or {}).get("derivation") or {}
+    evidence = (fundamental_synthesis or {}).get("evidence_availability") or {}
+    availability = (fundamental_synthesis or {}).get("fundamental_evidence_availability")
+    risk = (fundamental_synthesis or {}).get("fundamental_risk_level") or {}
+    fundamental_context = {
+        "synthesis_contract": fundamental_signals.CONTRACT_VERSION,
+        "signal_policy": fundamental_synthesis.get("signal_policy"),
+        "fundamental_decision_policy_version": fundamental_synthesis.get("fundamental_decision_policy_version"),
+        "evidence_availability": evidence.get("state"),
+        "fundamental_evidence_availability": availability,
+        "directional_sufficiency": evidence.get("directional_sufficiency"),
+        "risk_level": risk.get("state"),
+        "adverse_level_dimensions": list(risk.get("adverse_level_dimensions") or []),
+        "favorable_votes": list(derivation.get("favorable_votes") or []),
+        "adverse_votes": list(derivation.get("adverse_votes") or []),
+        "folded_votes": list((derivation.get("vote_grouping") or {}).get("folded_votes") or []),
+        "stale_research_evidence": list(fundamental_synthesis.get("stale_research_evidence") or []),
+        "research_observations": sorted(fundamental_synthesis.get("research_observations") or {}),
+        "turnaround_triggered": bool((derivation.get("turnaround") or {}).get("triggered")),
+    } if fundamental_synthesis is not None else None
+    # A directional INSUFFICIENT with known evidence is never an absent fundamental context: the
+    # blocker names what is actually missing (FUNDAMENTAL_EVIDENCE_AVAILABILITY_BLOCKERS).
+    if fund_state != FUNDAMENTAL_INSUFFICIENT:
+        fundamental_blockers: list[str] = []
+    elif availability in FUNDAMENTAL_EVIDENCE_AVAILABILITY_BLOCKERS:
+        fundamental_blockers = [FUNDAMENTAL_EVIDENCE_AVAILABILITY_BLOCKERS[availability]]
+    elif evidence.get("state") == fundamental_signals.AVAILABLE:
+        fundamental_blockers = ["FUNDAMENTAL_CURRENT_DIRECTION_INSUFFICIENT"]
+    else:
+        fundamental_blockers = ["FUNDAMENTAL_CONTEXT_ABSENT"]
 
     return {
         "FUNDAMENTAL": _axis(
             state=fund_state, fitness=financial_status, supporting=fund_supports, contradicting=fund_counters,
-            blockers=["FUNDAMENTAL_CONTEXT_ABSENT"] if fund_state == FUNDAMENTAL_INSUFFICIENT else [],
-            method="financial_analysis_product_integration/v1",
-            lineage={"source_artifact_identity": identities.get("financial_analysis") or financial.get("source_context_identity") or financial.get("artifact_identity")},
+            blockers=fundamental_blockers,
+            method=(operational_fundamental.CONTRACT_VERSION if operational_used else "financial_analysis_product_integration/v1"),
+            lineage={"source_artifact_identity": (
+                identities.get("operational_fundamental_integration") if operational_used else
+                identities.get("financial_analysis") or financial.get("source_context_identity") or financial.get("artifact_identity")),
+                **({"source_financial_analysis_identity": identities.get("financial_analysis"),
+                    "source_feature_ids": sorted((operational_fundamental_context or {}).get("usable_features") or {})}
+                   if operational_used else {})},
+            context=fundamental_context,
         ),
         "VALUATION": _axis(
             state=valuation_status, fitness=valuation_status, supporting=val_supports, contradicting=val_counters,
-            blockers=val_uncertainties,
+            # Monetary-basis uncertainties stay first; an unavailable valuation additionally names
+            # its own method-level causes, so the reason is never left to be reverse-engineered.
+            blockers=list(val_uncertainties) + list(val_summary.get("unavailable_reason_codes") or []),
             method="current_research_valuation_context/v1",
             lineage={"source_artifact_identity": identities.get("current_valuation") or valuation.get("artifact_identity")},
             context={
                 "peer_relative_state": val_summary.get("peer_relative_state"),
                 "own_history_state": val_summary.get("own_history_state"),
+                "size_context_status": (val_summary.get("size_context") or {}).get("status"),
                 "method_statuses": {
                     str(method_id): (method or {}).get("status")
                     for method_id, method in (valuation.get("methods") or {}).items()
@@ -809,7 +838,8 @@ def evaluate_evidence_axis_coherence(evidence_axes: Mapping[str, Mapping[str, An
 def _evidence_axis_available(axis_name: str, axis: Mapping[str, Any] | None) -> bool:
     """Availability is feature-local and never an action-policy gate."""
     axis = axis or {}
-    if axis_name == "FUNDAMENTAL" and axis.get("state") == FUNDAMENTAL_INSUFFICIENT:
+    if (axis_name == "FUNDAMENTAL" and axis.get("state") == FUNDAMENTAL_INSUFFICIENT
+            and (axis.get("context") or {}).get("evidence_availability") != fundamental_signals.AVAILABLE):
         return False
     fitness = axis.get("fitness")
     if isinstance(fitness, Mapping):
@@ -943,7 +973,9 @@ def evaluate_valuation_context(
 
     methods = val_rec.get("methods") or {}
     pe_item = methods.get("P/E") or methods.get("P/E_TTM") or {}
-    pb_item = methods.get("P/B") or {}
+    research_pb = methods.get("P/B_CURRENT_RESEARCH") or {}
+    research_pb_used = research_pb.get("status") in {"RESEARCH_USABLE", "READY"}
+    pb_item = research_pb if research_pb_used else (methods.get("P/B") or {})
     ps_item = methods.get("P/S") or methods.get("P/S_TTM") or {}
     # EV/EBITDA_CALC_READY (MARKET_WIDE_FUNDAMENTAL_VALUATION_ANALYTICAL_PRODUCT_V1) is the
     # genuinely computable EV/EBITDA method; the older "EV/EBITDA" method_id is retained for
@@ -956,9 +988,20 @@ def evaluate_valuation_context(
     ps_val = val_rec.get("ps") or ps_item.get("value")
     ev_ebitda_val = ev_ebitda_item.get("value") if ev_ebitda_item.get("status") in {"RESEARCH_USABLE", "READY"} else None
 
+    # current_research_valuation_context.attach_peer_relative (the only producer the Daily path
+    # feeds here) writes the synthesized verdict at the row's top level as
+    # ``relative_research_state`` plus per-method ``peer_relative`` detail; only the
+    # opportunity-axis view wraps it as ``peer_relative_context``. Reading solely the wrapped key
+    # meant a real producer verdict never reached this record. The producer's own verdict is
+    # passed through, never re-thresholded here.
     peer_rel = (val_rec.get("peer_relative_context") or {})
-    rel_state = peer_rel.get("relative_research_state")
+    rel_state = peer_rel.get("relative_research_state") if peer_rel else val_rec.get("relative_research_state")
     peer_pctl = peer_rel.get("peer_relative_percentile") or pe_item.get("peer_percentile") or pb_item.get("peer_percentile") or ps_item.get("peer_percentile")
+    peer_basis = {
+        method_id: {"percentile": detail.get("percentile"), "peer_count": detail.get("peer_count")}
+        for method_id, detail in sorted((val_rec.get("peer_relative") or {}).items())
+        if isinstance(detail, Mapping) and detail.get("status") == "READY_RESEARCH_ONLY" and method_id not in _SIZE_CONTEXT_METHODS
+    }
 
     # Own-history context from FA V2
     hist_ctx = fa_context.get("history_context") or {}
@@ -980,6 +1023,9 @@ def evaluate_valuation_context(
     elif rel_state == "EXPENSIVE_RELATIVE_RESEARCH":
         peer_interpretation = "EXPENSIVE_VS_PEERS"
         counters.append("EXPENSIVE_RELATIVE_RESEARCH_PEER_VALUATION")
+    elif rel_state == "IN_LINE_RELATIVE_RESEARCH":
+        peer_interpretation = "MID_RANGE_VS_PEERS"
+        supports.append("VALUATION_IN_LINE_WITH_PEERS")
 
     # Own history interpretation. `financial_analysis_engine_v2._history_entry()` (the sole
     # producer of this shape, passed through verbatim by financial_analysis_product_projection)
@@ -1013,28 +1059,73 @@ def evaluate_valuation_context(
     exact_status = val_rec.get("status")
     if exact_status == "INPUT_BLOCKED":
         uncertainties.append("EXACT_VALUATION_INPUT_BLOCKED_MONETARY_BASIS")
+    if research_pb_used and pb_val is not None:
+        # The book-value multiple here is the research P/B over total owners' equity as reported
+        # (non-controlling interests not deducted): never an exact or common-shareholder P/B.
+        uncertainties.append("P_B_IS_RESEARCH_TOTAL_EQUITY_NCI_NOT_DEDUCTED_NOT_COMMON_SHAREHOLDER")
+    if ev_ebitda_val is not None and ev_ebitda_item.get("denominator_period_semantics") == "SINGLE_REPORTING_PERIOD_NOT_ANNUALIZED":
+        # Readiness-engine EV/EBITDA divides by one reporting period's EBITDA; it is comparable
+        # within a same-period peer cohort only, never to a TTM multiple.
+        uncertainties.append("EV_EBITDA_SINGLE_REPORTING_PERIOD_NOT_TTM")
 
-    has_usable_metrics = (
-        val_rec.get("research_usable") is True
-        or val_rec.get("has_usable_method") is True
-        or (val_rec.get("usable_relative_method_count") or 0) > 0
-        or any(m.get("status") in ("RESEARCH_USABLE", "READY") for m in methods.values() if isinstance(m, Mapping))
-        or pe_val is not None
-        or pb_val is not None
-        or ps_val is not None
-    )
+    method_rows = {key: item for key, item in methods.items() if isinstance(item, Mapping)}
+    if method_rows:
+        # Market capitalisation is size context, never a valuation multiple -- the same invariant
+        # attach_peer_relative already enforces for relative state. A row whose only usable
+        # method is market cap has no price-to-fundamental relationship to interpret.
+        has_usable_metrics = (
+            any(item.get("status") in ("RESEARCH_USABLE", "READY")
+                for key, item in method_rows.items() if key not in _SIZE_CONTEXT_METHODS)
+            or any(item.get("status") == "PE_NOT_MEANINGFUL" for item in method_rows.values())
+            or val_rec.get("pe_not_meaningful") is True
+        )
+    else:
+        # Compact records without per-method detail keep their own declared usability.
+        has_usable_metrics = (
+            val_rec.get("research_usable") is True
+            or val_rec.get("has_usable_method") is True
+            or (val_rec.get("usable_relative_method_count") or 0) > 0
+            or pe_val is not None
+            or pb_val is not None
+            or ps_val is not None
+        )
+    size_method = next((method_rows[key] for key in _SIZE_CONTEXT_METHODS if key in method_rows), None)
+    status = "AVAILABLE" if (peer_interpretation != "NOT_APPLICABLE" or has_usable_metrics) else "UNAVAILABLE"
+    unavailable_reasons: list[str] = []
+    if status == "UNAVAILABLE":
+        # A blocked size input (no exact-session price, no qualified share basis) blocks every
+        # price-based multiple, so its own causes are named alongside the method-level ones.
+        unavailable_reasons = sorted({
+            str(code) for key, item in method_rows.items()
+            if item.get("status") not in ("NOT_APPLICABLE", "RESEARCH_USABLE", "READY")
+            for code in (item.get("blocker_reason_codes") or [])
+        } | {"VALUATION_NO_USABLE_RELATIVE_METHOD" if method_rows else "VALUATION_CONTEXT_NOT_PROVIDED"})
 
     summary = {
-        "status": "AVAILABLE" if (peer_interpretation != "NOT_APPLICABLE" or has_usable_metrics) else "UNAVAILABLE",
+        "status": status,
         "peer_relative_state": peer_interpretation,
         "own_history_state": own_history_interpretation,
         "peer_percentile": peer_pctl,
+        "peer_relative_basis": peer_basis,
         "share_basis": share_basis,
         "pe_multiple": pe_val,
         "pb_multiple": pb_val,
+        # Which P/B ``pb_multiple`` is, with that method's own limitations carried verbatim.
+        "pb_basis": ({"method": "P/B_CURRENT_RESEARCH", "equity_definition": research_pb.get("equity_definition"),
+                      "limitations": list(research_pb.get("limitations") or []),
+                      "claim": "RESEARCH_ONLY_NOT_EXACT_NOT_COMMON_SHAREHOLDER"}
+                     if research_pb_used and pb_val is not None else
+                     {"method": (None if pb_val is None else "P/B" if (methods.get("P/B") or {}).get("value") == pb_val
+                                 else "UNSPECIFIED_SOURCE"), "claim": None}),
         "ps_multiple": ps_val,
         "ev_ebitda_multiple": ev_ebitda_val,
         "earnings_state": val_rec.get("earnings_state"),
+        "size_context": {
+            "status": ("AVAILABLE" if (size_method or {}).get("status") in ("RESEARCH_USABLE", "READY")
+                       else "UNAVAILABLE" if size_method is not None else "NOT_PROVIDED"),
+            "method": "market_cap", "role": "SIZE_CONTEXT_NOT_A_VALUATION_MULTIPLE",
+        },
+        "unavailable_reason_codes": unavailable_reasons,
         "limitations": uncertainties,
         "valuation_method_reconciliation": val_rec.get("valuation_method_reconciliation") or {},
     }
@@ -1086,6 +1177,20 @@ def evaluate_participation(
 
 # ── Research Action Posture Decision Policy ───────────────────────────────────
 
+#: Branch-1 wording by fundamental evidence availability (the posture itself is unchanged): no
+#: current technical evidence AND no current fundamental direction, whatever evidence is known.
+_INSUFFICIENT_RESEARCH_REASON = {
+    fundamental_signals.ABSENT: ("Insufficient technical price series and fundamental analysis data to establish a current "
+                                 "research stance."),
+    fundamental_signals.STALE_ONLY: ("Insufficient technical price series, and fundamental evidence is stale-only research "
+                                     "context (known, visible, never a current direction); no current research stance."),
+    fundamental_signals.CURRENT_NON_DIRECTIONAL: ("Insufficient technical price series, and current fundamental evidence "
+                                                  "establishes no direction; no current research stance."),
+    fundamental_signals.NOT_APPLICABLE_ENTITY: ("Insufficient technical price series, and the entity family is not "
+                                                "decision-applicable for fundamental signals (its evidence stays research "
+                                                "context); no current research stance."),
+}
+
 def decide_research_action_posture(
     *,
     ticker: str,
@@ -1102,8 +1207,13 @@ def decide_research_action_posture(
     part_counters: list[str],
     participation_summary: Mapping[str, Any] | None = None,
     market_sector_summary: Mapping[str, Any] | None = None,
+    fundamental_evidence_availability: str | None = None,
 ) -> tuple[str, str, str]:
     """Pure deterministic research policy mapping explicit evidence into research_action_posture.
+
+    ``fundamental_evidence_availability`` only words the insufficient-research explanation: an
+    insufficient current direction with known (stale, non-directional or entity-gated) evidence is
+    never described as missing fundamental data. It never moves a posture.
 
     Returns:
         (posture, why_now, missing_evidence_decision_effect)
@@ -1151,7 +1261,8 @@ def decide_research_action_posture(
 
     # 1. INSUFFICIENT CURRENT RESEARCH
     if not eligible and fundamental_state == FUNDAMENTAL_INSUFFICIENT:
-        why = f"{ticker}: Insufficient technical price series and fundamental analysis data to establish a current research stance."
+        why = f"{ticker}: " + _INSUFFICIENT_RESEARCH_REASON.get(
+            fundamental_evidence_availability, _INSUFFICIENT_RESEARCH_REASON[fundamental_signals.ABSENT])
         return POSTURE_INSUFFICIENT, why, EFFECT_BLOCKS_DECISION
 
     # 2. REAL ADVERSE EVIDENCE -> REDUCE / AVOID
@@ -1298,12 +1409,17 @@ def build_ticker_integrated_decision(
     corporate_intelligence_record: Mapping[str, Any] | None = None,
     producer_artifact_identities: Mapping[str, Any] | None = None,
     technical_coverage_disposition_record: Mapping[str, Any] | None = None,
+    operational_fundamental_context_record: Mapping[str, Any] | None = None,
+    liquidity_research_record: Mapping[str, Any] | None = None,
+    entity_applicability_record: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Assemble one complete, self-contained integrated investment decision record.
 
     ``technical_coverage_disposition_record`` is this ticker's retained same-session technical
     coverage disposition (see ``resolve_evidence_currency``); absent, evidence currency fails
-    closed to NO_CURRENT_EVIDENCE.
+    closed to NO_CURRENT_EVIDENCE. ``liquidity_research_record`` and
+    ``entity_applicability_record`` only feed the descriptive Current Research decision input;
+    neither can move posture.
     """
     tactical = tactical_record or {}
     financial = financial_record or {}
@@ -1313,8 +1429,26 @@ def build_ticker_integrated_decision(
     momentum = momentum_record or {}
     confirmation = tactical_confirmation_record or {}
 
-    # 1. Fundamental
-    fund_state, fund_supp, fund_count = evaluate_fundamental_direction(financial)
+    # 1. Fundamental: explicit level/direction/transition components, freshness-gated against the
+    # decision session; fundamental_state is derived from them and they stay on the record.
+    fund_synthesis = evaluate_fundamental_synthesis(financial, decision_session=as_of_session)
+    applied_operational_context = None
+    # The bridge is consulted only where Financial V2 leaves the direction insufficient and not
+    # conflicted; a record supplied for any other ticker is ignored and never attached.
+    bridge_consulted = (operational_fundamental_context_record is not None
+                        and operational_fundamental_bridge_eligible(financial, decision_session=as_of_session))
+    if bridge_consulted and operational_fundamental_context_record.get("status") == "RESEARCH_USABLE":
+        candidate = evaluate_fundamental_synthesis(
+            operational_fundamental_context_record, decision_session=as_of_session,
+            dialect=fundamental_signals.DIALECT_OPERATIONAL_BRIDGE,
+        )
+        if candidate["fundamental_state"] != FUNDAMENTAL_INSUFFICIENT:
+            # The Financial V2 evidence the bridge supplements stays visible (never a vote here).
+            fund_synthesis = {**candidate, "financial_v2_research_evidence": fundamental_signals.research_evidence(fund_synthesis)}
+            applied_operational_context = operational_fundamental_context_record
+    fund_state = fund_synthesis["fundamental_state"]
+    fund_supp = list(fund_synthesis["supporting_reason_codes"])
+    fund_count = list(fund_synthesis["contradicting_reason_codes"])
 
     # 2. Tactical
     tac_phase, tac_supp, tac_count = evaluate_tactical_phase(tactical)
@@ -1327,6 +1461,8 @@ def build_ticker_integrated_decision(
     financial_composite_context = evaluate_financial_composite_context(
         fund_state=fund_state, fund_supports=fund_supp, fund_counters=fund_count,
         val_summary=val_summary, val_supports=val_supp, val_counters=val_count,
+        fundamental_evidence_availability=fund_synthesis.get("fundamental_evidence_availability"),
+        fundamental_risk_level=(fund_synthesis.get("fundamental_risk_level") or {}).get("state"),
     )
 
     # 4. Participation
@@ -1389,6 +1525,7 @@ def build_ticker_integrated_decision(
         part_counters=part_count,
         participation_summary=part_summary,
         market_sector_summary=mkt_summary,
+        fundamental_evidence_availability=fund_synthesis.get("fundamental_evidence_availability"),
     )
     # 7b. Evidence-currency gate (CURRENT_DECISION_SURFACE_CONVERGENCE_V1, the only posture
     # correction authorized there). WAIT_FOR_CONFIRMATION means evidence exists and a defined
@@ -1463,6 +1600,8 @@ def build_ticker_integrated_decision(
         market_context_provided=market_context_provided, priority_record=priority_queue_record,
         portfolio_summary=portfolio_summary, source_artifact_identities=producer_artifact_identities,
         corporate_intelligence_summary=corporate_intelligence_summary,
+        operational_fundamental_context=applied_operational_context,
+        fundamental_synthesis=fund_synthesis,
     )
     evidence_axis_coherence = evaluate_evidence_axis_coherence(evidence_axes)
 
@@ -1488,6 +1627,15 @@ def build_ticker_integrated_decision(
         # Orthogonal inspection axis; never part of the action label or decision_identity.
         "opportunity_priority": opportunity_priority_view(priority_queue_record),
         "fundamental_state": fund_state,
+        # The fundamental decision-policy epoch; part of decision_identity. A state compared
+        # across epochs is NOT_COMPARABLE_POLICY_CHANGE, never an issuer/market transition.
+        "fundamental_decision_policy_version": fundamental_signals.DECISION_POLICY_VERSION,
+        # What fundamental evidence is known, apart from whether a current direction exists.
+        "fundamental_evidence_availability": fund_synthesis.get("fundamental_evidence_availability"),
+        # Qualified level evidence only; never derived from the direction.
+        "fundamental_risk_level": fund_synthesis.get("fundamental_risk_level"),
+        # The components fundamental_state is derived from, never collapsed into it.
+        "fundamental_synthesis": fund_synthesis,
         "tactical_phase": tac_phase,
         "market_structure_state": tactical.get("market_structure_state", "INSUFFICIENT_HISTORY"),
         "breakout_state_v3": tactical.get("breakout_state_v3", "NO_VALID_PIVOT"),
@@ -1544,6 +1692,21 @@ def build_ticker_integrated_decision(
         },
     }
     record["decision_identity"] = decision_identity(record)
+    if bridge_consulted:
+        record["operational_fundamental_context"] = copy.deepcopy(dict(operational_fundamental_context_record))
+        record["source_identities"]["operational_fundamental_integration_identity"] = (
+            (producer_artifact_identities or {}).get("operational_fundamental_integration")
+        )
+        record["decision_identity"] = decision_identity(record)
+    # CURRENT_RESEARCH_DECISION_CONVERGENCE_V1: a pure restatement of the record's own evidence,
+    # built last so it can neither move posture nor enter decision_identity.
+    record["current_research_decision_input"] = decision_input.build_ticker_decision_input(
+        session=as_of_session, record=record, financial_record=financial, valuation_record=valuation,
+        disposition_record=technical_coverage_disposition_record,
+        sector_context=((market.get("ticker_contexts") or {}).get(ticker) if market_context_provided else None),
+        liquidity_record=liquidity_research_record, entity_applicability_record=entity_applicability_record,
+        operational_context=operational_fundamental_context_record if bridge_consulted else None,
+    )
     return record
 
 
@@ -1566,6 +1729,9 @@ def build_artifact(
     tactical_boundaries_artifact: Mapping[str, Any] | None = None,
     corporate_intelligence_artifact: Mapping[str, Any] | None = None,
     technical_coverage_disposition_artifact: Mapping[str, Any] | None = None,
+    operational_fundamental_integration_artifact: Mapping[str, Any] | None = None,
+    liquidity_research_artifact: Mapping[str, Any] | None = None,
+    entity_applicability_artifact: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build the market-wide integrated investment decision product artifact.
 
@@ -1573,6 +1739,9 @@ def build_artifact(
     (strictly session/identity checked). ``priority_queue_artifact``, when supplied, must be the
     same session's ``daily_opportunity_decision_queue/v1``; it only populates the orthogonal
     OPPORTUNITY_PRIORITY inspection fields and can never change posture or decision identity.
+    ``liquidity_research_artifact`` (same-session descriptive liquidity research) and
+    ``entity_applicability_artifact`` (governed current-state entity applicability) feed only the
+    per-ticker Current Research decision input.
     """
     fa_contract = (financial_analysis_artifact or {}).get("contract_version")
     if fa_contract is not None and fa_contract != FINANCIAL_ANALYSIS_COMPACT_CONTRACT:
@@ -1582,6 +1751,49 @@ def build_artifact(
         )
     tac_records = technical_structure_artifact.get("records") or {}
     fa_records = (financial_analysis_artifact or {}).get("records") or {}
+    operational_records: Mapping[str, Any] = {}
+    if operational_fundamental_integration_artifact is not None:
+        integration = operational_fundamental_integration_artifact
+        authority = integration.get("authority_boundary") or {}
+        if (integration.get("contract_version") != operational_fundamental.CONTRACT_VERSION
+                or integration.get("session") != session
+                or operational_fundamental.content_identity(integration).get("artifact_identity") != integration.get("artifact_identity")
+                or (integration.get("source_artifact_identities") or {}).get("financial_analysis") != (financial_analysis_artifact or {}).get("artifact_identity")
+                or not (integration.get("source_artifact_identities") or {}).get("fundamental_feature_store")
+                or authority.get("current_research_only") is not True
+                or authority.get("source_authority_tier") != "OPERATIONAL_PROVIDER_RESEARCH_ONLY"
+                or authority.get("authoritative_financial_eligible") is not False
+                or authority.get("pit_backtest_eligible") is not False
+                or authority.get("valuation_authority") is not False
+                or authority.get("execution_authority") is not False
+                or authority.get("is_actionable") is not False):
+            raise IntegratedDecisionProductError("OPERATIONAL_FUNDAMENTAL_INTEGRATION_CONTRACT_INVALID")
+        operational_records = integration.get("records") or {}
+        if set(operational_records) != set(integration.get("cohort_tickers") or []):
+            raise IntegratedDecisionProductError("OPERATIONAL_FUNDAMENTAL_COHORT_MISMATCH")
+    liquidity_records: Mapping[str, Any] = {}
+    if liquidity_research_artifact is not None:
+        if liquidity_research_artifact.get("contract_version") != LIQUIDITY_RESEARCH_CONTRACT:
+            raise IntegratedDecisionProductError("LIQUIDITY_RESEARCH_CONTRACT_MISMATCH")
+        if liquidity_research_artifact.get("resolved_completed_session") != session:
+            raise IntegratedDecisionProductError(
+                "LIQUIDITY_RESEARCH_SESSION_MISMATCH:expected="
+                f"{session}:observed={liquidity_research_artifact.get('resolved_completed_session')}"
+            )
+        liquidity_records = liquidity_research_artifact.get("records") or {}
+    applicability_records: Mapping[str, Any] = {}
+    if entity_applicability_artifact is not None:
+        import entity_classification_contract as entity_contract
+        if (entity_applicability_artifact.get("contract_version") != entity_contract.CURRENT_RESEARCH_ENTITY_APPLICABILITY_CONTRACT
+                or entity_contract.entity_applicability_content_identity(entity_applicability_artifact)
+                != entity_applicability_artifact.get("artifact_identity")
+                or entity_applicability_artifact.get("historical_pit_authority") != "NOT_ESTABLISHED"):
+            raise IntegratedDecisionProductError("ENTITY_APPLICABILITY_CONTRACT_INVALID")
+        applicability_records = entity_applicability_artifact.get("records") or {}
+        if (operational_fundamental_integration_artifact is not None
+                and (operational_fundamental_integration_artifact.get("source_artifact_identities") or {}).get("entity_applicability")
+                not in (None, entity_applicability_artifact.get("artifact_identity"))):
+            raise IntegratedDecisionProductError("OPERATIONAL_FUNDAMENTAL_ENTITY_APPLICABILITY_IDENTITY_MISMATCH")
     val_records = (current_valuation_artifact or {}).get("records") or {}
     rvol_records = (relative_volume_artifact or {}).get("records") or {}
     legacy_records = (legacy_decision_artifact or {}).get("records") or {}
@@ -1605,6 +1817,8 @@ def build_artifact(
     all_tickers = sorted(set(tac_records.keys()) | set(fa_records.keys()))
     if not all_tickers:
         raise IntegratedDecisionProductError("EMPTY_UNIVERSE_IN_INPUT_ARTIFACTS")
+    if not set(operational_records) <= set(all_tickers):
+        raise IntegratedDecisionProductError("OPERATIONAL_FUNDAMENTAL_TICKER_OUTSIDE_UNIVERSE")
 
     records: dict[str, Any] = {}
     posture_counts: dict[str, int] = {}
@@ -1624,6 +1838,7 @@ def build_artifact(
     inval_avail = 0
     val_avail = 0
     fund_avail = 0
+    fund_direction = 0
     tac_avail = 0
     part_avail = 0
     mkt_avail = 1 if market_sector_artifact else 0
@@ -1674,8 +1889,13 @@ def build_artifact(
                 "tactical_confirmation": (tactical_confirmation_artifact or {}).get("artifact_identity"),
                 "tactical_boundaries": (tactical_boundaries_artifact or {}).get("artifact_identity"),
                 "corporate_intelligence": (corporate_intelligence_artifact or {}).get("artifact_identity"),
+                **({"operational_fundamental_integration": operational_fundamental_integration_artifact.get("artifact_identity")}
+                   if operational_fundamental_integration_artifact is not None else {}),
             },
             technical_coverage_disposition_record=disposition_records.get(ticker),
+            operational_fundamental_context_record=operational_records.get(ticker),
+            liquidity_research_record=liquidity_records.get(ticker),
+            entity_applicability_record=applicability_records.get(ticker),
         )
         records[ticker] = dec
         currency_counts[evidence_currency_class(dec["evidence_currency"])] += 1
@@ -1719,8 +1939,11 @@ def build_artifact(
             inval_avail += 1
         if (dec.get("valuation_context_summary") or {}).get("status") == "AVAILABLE":
             val_avail += 1
-        if dec["fundamental_state"] != FUNDAMENTAL_INSUFFICIENT:
+        # Qualified fundamental evidence, apart from a sufficient current direction.
+        if ((dec.get("fundamental_synthesis") or {}).get("evidence_availability") or {}).get("state") == fundamental_signals.AVAILABLE:
             fund_avail += 1
+        if dec["fundamental_state"] != FUNDAMENTAL_INSUFFICIENT:
+            fund_direction += 1
         if (tac_rec or {}).get("eligible"):
             tac_avail += 1
         if (dec.get("participation") or {}).get("status") == "AVAILABLE":
@@ -1759,6 +1982,7 @@ def build_artifact(
         "invalidation_available": inval_avail,
         "valuation_context_available": val_avail,
         "fundamental_context_available": fund_avail,
+        "fundamental_direction_sufficient": fund_direction,
         "tactical_context_available": tac_avail,
         "participation_context_available": part_avail,
         "market_sector_context_available": len(all_tickers) if mkt_avail else 0,
@@ -1782,6 +2006,20 @@ def build_artifact(
     }
     if coverage["no_current_evidence_wait_count"]:
         raise IntegratedDecisionProductError("INVARIANT_VIOLATION:NO_CURRENT_EVIDENCE_WAIT_FOR_CONFIRMATION")
+    if operational_fundamental_integration_artifact is not None:
+        coverage["operational_fundamental_integration_cohort"] = len(operational_records)
+        coverage["operational_fundamental_integration_usable"] = sum(
+            (record.get("evidence_axes") or {}).get("FUNDAMENTAL", {}).get("method") == operational_fundamental.CONTRACT_VERSION
+            for record in records.values()
+        )
+    coverage["fundamental_signal_consumption"] = fundamental_signals.coverage(
+        [record.get("fundamental_synthesis") or {} for record in records.values()])
+    coverage["fundamental_decision_policy_version"] = fundamental_signals.DECISION_POLICY_VERSION
+    coverage["fundamental_evidence_availability"] = dict(sorted(Counter(
+        str(record.get("fundamental_evidence_availability")) for record in records.values()).items()))
+    coverage["fundamental_risk_level"] = dict(sorted(Counter(
+        str((record.get("fundamental_risk_level") or {}).get("state")) for record in records.values()).items()))
+    coverage["current_research_decision_input"] = decision_input.coverage(records)
 
     payload: dict[str, Any] = {
         "schema_version": "integrated_investment_decision_product/1.0.0",
@@ -1804,12 +2042,20 @@ def build_artifact(
             "technical_coverage_disposition": (
                 (technical_coverage_disposition_artifact or {}).get("artifact_identity") if disposition_records else None
             ),
+            **({"operational_fundamental_integration": operational_fundamental_integration_artifact.get("artifact_identity")}
+               if operational_fundamental_integration_artifact is not None else {}),
+            **({"liquidity_research": liquidity_research_artifact.get("artifact_identity")}
+               if liquidity_research_artifact is not None else {}),
+            **({"entity_applicability": entity_applicability_artifact.get("artifact_identity")}
+               if entity_applicability_artifact is not None else {}),
         },
         "decision_authority": {
             "primary_action_decision_field": "research_action_posture",
             "evidence_currency_field": "evidence_currency",
             "evidence_currency_source_contract": EVIDENCE_CURRENCY_SOURCE_CONTRACT,
             "opportunity_priority_role": "ORTHOGONAL_INSPECTION_AXIS_NEVER_ALTERS_POSTURE_OR_DECISION_IDENTITY",
+            "current_research_decision_input_contract": decision_input.CONTRACT_VERSION,
+            "evidence_class_role": "RESEARCH_COVERAGE_CLASS_NEVER_AN_ACTION_POSTURE",
         },
         "authority_boundary": {
             "is_actionable": False,

@@ -4,9 +4,13 @@ from collections import Counter
 import hashlib, json
 from pathlib import Path
 from typing import Any, Mapping, Sequence
+import fundamental_signal_consumption_contract as fundamental_signals
 import prospective_decision_retention as retention
 
-CONTRACT_VERSION="multi_session_signal_velocity/v1.2"
+# v1.3 (CURRENT_RESEARCH_FUNDAMENTAL_PROMOTION_HARDENING_V1): a fundamental_trajectory change
+# between two records produced under different fundamental decision-policy epochs is
+# NOT_COMPARABLE_POLICY_CHANGE, never an improving/deteriorating transition.
+CONTRACT_VERSION="multi_session_signal_velocity/v1.3"
 RESEARCH_TIER="PIT_SAFE_RETAINED_SESSION_TRANSITION_RESEARCH_ONLY"
 AXES=("price_momentum","structural_repair","participation_confirmation","setup_maturation","market_support","sector_support","fundamental_trajectory")
 
@@ -75,12 +79,19 @@ def _axis(record:Mapping[str,Any],name:str)->dict[str,Any]:
         c=market.get("context") or {}; field="market_regime" if name=="market_support" else "sector_leadership"; raw=c.get(field) or (record.get("market_sector_context") or {}).get(field)
         return {"state":_state(raw,{"SUPPORT":"SUPPORTIVE","LEADING":"SUPPORTIVE","ADVERSE":"ADVERSE","LAGGING":"ADVERSE","MIXED":"MIXED"}),"source_field":"MARKET_SECTOR.context."+field,"source_identity":market.get("lineage",{}).get("source_artifact_identity"),"source_state":raw}
     raw=fundamental.get("state") or record.get("fundamental_state")
-    return {"state":_state(raw,{"IMPROV":"IMPROVING","REPAIR":"IMPROVING","DETERIORAT":"DETERIORATING","WEAK":"DETERIORATING"}),"source_field":"FUNDAMENTAL.state","source_identity":fundamental.get("lineage",{}).get("source_artifact_identity"),"source_state":raw}
+    return {"state":_state(raw,{"IMPROV":"IMPROVING","REPAIR":"IMPROVING","DETERIORAT":"DETERIORATING","WEAK":"DETERIORATING"}),"source_field":"FUNDAMENTAL.state","source_identity":fundamental.get("lineage",{}).get("source_artifact_identity"),"source_state":raw,"policy_epoch":fundamental_signals.policy_epoch(record)}
 
 RANK={"price_momentum":{"DETERIORATING":0,"NEUTRAL":1,"IMPROVING":2},"structural_repair":{"ADVERSE":0,"NEUTRAL":1,"REPAIRING":2,"CONSTRUCTIVE":3},"participation_confirmation":{"DETERIORATING":0,"DIVERGENT":1,"NEUTRAL":1,"IMPROVING":2},"setup_maturation":{"INVALID":0,"NEUTRAL":1,"BUILDING":2,"EARLY":3,"CONFIRMED":4},"market_support":{"ADVERSE":0,"MIXED":1,"NEUTRAL":1,"SUPPORTIVE":2},"sector_support":{"ADVERSE":0,"MIXED":1,"NEUTRAL":1,"SUPPORTIVE":2},"fundamental_trajectory":{"DETERIORATING":0,"NEUTRAL":1,"IMPROVING":2}}
 def _trajectory(name:str,history:Sequence[Mapping[str,Any]])->dict[str,Any]:
-    valid_rows=[x for x in history if x["state"]!="UNAVAILABLE"]; valid=[x["state"] for x in valid_rows]; changes=[RANK[name][b]-RANK[name][a] for a,b in zip(valid,valid[1:])]; last=changes[-1] if changes else None
-    direction="IMPROVING" if last and last>0 else "DETERIORATING" if last and last<0 else "UNCHANGED" if last==0 else "NOT_COMPARABLE"
+    valid_rows=[x for x in history if x["state"]!="UNAVAILABLE"]
+    # Only observations under the latest policy epoch are compared: a state produced under an
+    # earlier fundamental decision policy is never a comparable prior (only fundamental axes carry one).
+    epoch=valid_rows[-1].get("policy_epoch") if valid_rows else None
+    policy_break=bool(epoch) and any(x.get("policy_epoch")!=epoch for x in valid_rows)
+    last_break=bool(epoch) and len(valid_rows)>1 and valid_rows[-2].get("policy_epoch")!=epoch
+    if policy_break: valid_rows=[x for x in valid_rows if x.get("policy_epoch")==epoch]
+    valid=[x["state"] for x in valid_rows]; changes=[RANK[name][b]-RANK[name][a] for a,b in zip(valid,valid[1:])]; last=changes[-1] if changes else None
+    direction=fundamental_signals.NOT_COMPARABLE_POLICY_CHANGE if last_break else "IMPROVING" if last and last>0 else "DETERIORATING" if last and last<0 else "UNCHANGED" if last==0 else "NOT_COMPARABLE"
     def persist(window:list[int])->str:
         if len(window)<2:return "INSUFFICIENT_HISTORY"
         if all(x>0 for x in window):return "IMPROVEMENT_PERSISTENT"
@@ -90,7 +101,7 @@ def _trajectory(name:str,history:Sequence[Mapping[str,Any]])->dict[str,Any]:
     p3=persist(changes[-2:])
     recent=changes[-3:]
     pattern="REVERSING" if len(changes)>1 and changes[-1]*changes[-2]<0 else "CONTINUING_IMPROVEMENT" if len(recent)>=2 and sum(x>0 for x in recent)>=2 and not any(x<0 for x in recent) else "CONTINUING_DETERIORATION" if len(recent)>=2 and sum(x<0 for x in recent)>=2 and not any(x>0 for x in recent) else "MIXED" if p3=="MIXED" else "STALLED" if p3=="NO_CLEAR_DIRECTION" else "INSUFFICIENT_HISTORY"
-    return {"latest_transition":direction,"recent_direction":direction,"valid_observation_count":len(valid),"retained_session_span":{"first":valid_rows[0].get("session") if valid_rows else None,"last":valid_rows[-1].get("session") if valid_rows else None},"unavailable_observation_count":len(history)-len(valid),"continuity_state":"CONTIGUOUS_RETAINED_OBSERVATIONS" if len(valid)==len(history) else "GAPS_OR_UNAVAILABLE_OBSERVATIONS","window_3_state":p3,"window_5_state":persist(changes[-4:]),"persistence":p3,"trajectory_pattern":pattern,"acceleration_state":"NOT_EVALUABLE_CATEGORICAL_ONLY","improving_transitions":sum(x>0 for x in changes),"deteriorating_transitions":sum(x<0 for x in changes),"unchanged_transitions":sum(x==0 for x in changes),"recent_reversal":bool(len(changes)>1 and changes[-1]*changes[-2]<0)}
+    return {"latest_transition":direction,"recent_direction":direction,"valid_observation_count":len(valid),"policy_epoch_excluded_observation_count":len([x for x in history if x["state"]!="UNAVAILABLE"])-len(valid),"retained_session_span":{"first":valid_rows[0].get("session") if valid_rows else None,"last":valid_rows[-1].get("session") if valid_rows else None},"unavailable_observation_count":len(history)-len(valid),"continuity_state":"CONTIGUOUS_RETAINED_OBSERVATIONS" if len(valid)==len(history) else "GAPS_OR_UNAVAILABLE_OBSERVATIONS","window_3_state":p3,"window_5_state":persist(changes[-4:]),"persistence":p3,"trajectory_pattern":pattern,"acceleration_state":"NOT_EVALUABLE_CATEGORICAL_ONLY","improving_transitions":sum(x>0 for x in changes),"deteriorating_transitions":sum(x<0 for x in changes),"unchanged_transitions":sum(x==0 for x in changes),"recent_reversal":bool(len(changes)>1 and changes[-1]*changes[-2]<0)}
 
 def _overall(axes:Mapping[str,Any],quality:str)->tuple[str,list[str],list[str]]:
     if quality=="INSUFFICIENT_RETAINED_EVIDENCE":return "INSUFFICIENT_EVIDENCE",[],[]

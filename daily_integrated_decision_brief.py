@@ -347,6 +347,8 @@ def build_watchlist_record(*, ticker: str, current: Mapping[str, Any] | None, ta
         }),
         "valuation": {
             "status": val.get("status"), "pe_multiple": val.get("pe_multiple"), "pb_multiple": val.get("pb_multiple"),
+            # Which P/B pb_multiple is (a research total-equity P/B is never an exact claim).
+            "pb_basis": val.get("pb_basis"),
             "ps_multiple": val.get("ps_multiple"), "ev_ebitda_multiple": val.get("ev_ebitda_multiple"),
             "peer_relative_state": val.get("peer_relative_state"),
             "own_history_state": val.get("own_history_state"),

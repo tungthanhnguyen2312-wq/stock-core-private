@@ -90,6 +90,7 @@ def load_industry_by_ticker(authority: input_authority.FinancialV2InputAuthority
 
 def build_engine_artifact(
     *, root: Path, requested_at: str, authority: input_authority.FinancialV2InputAuthority | None = None,
+    semantic_rows_out: list[dict] | None = None,
 ) -> dict[str, Any]:
     """Build the raw ``financial_analysis_context/v2`` engine artifact from the pinned
     Financial V2 input authority.
@@ -101,6 +102,8 @@ def build_engine_artifact(
     """
     authority = authority or input_authority.resolve(root)
     rows, semantics_artifact = load_semantic_rows(authority)
+    if semantic_rows_out is not None:
+        semantic_rows_out.extend(rows)
     classification = load_classification_diagnostics(authority)
     records, feature_store_artifact = scaleout.load_feature_store(
         authority.feature_store_artifact_path, authority.feature_store_records_path,
@@ -130,6 +133,8 @@ def build_engine_artifact(
         period_semantics_identity=semantics_artifact["artifact_identity"], requested_at=requested_at,
         classification_diagnostics_identity=classification.get("diagnostics_identity"),
         qualified_flow_artifact=qualified_flow_artifact,
+        # The pinned semantics artifact's own retained time: every period label in it was known then.
+        period_semantics_knowledge_time=semantics_artifact.get("requested_at"),
     )
 
 
@@ -225,6 +230,8 @@ def build_evaluated_valuation_artifact(
     *, engine_artifact: Mapping[str, Any], raw_valuation_artifact: Mapping[str, Any] | None,
     product_tickers: Sequence[str], requested_at: str,
     calculation_readiness_context: Mapping[str, Any] | None = None,
+    entity_applicability_artifact: Mapping[str, Any] | None = None,
+    semantic_rows: Sequence[Mapping[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Evaluate the raw ``market_wide_current_valuation_input_scaleout`` per-ticker records
     into the ``current_research_valuation_context/v1`` shape (``methods``, ``peer_relative_
@@ -236,9 +243,27 @@ def build_evaluated_valuation_artifact(
     ``derive_market_wide_current_valuation_input_scaleout.py`` produces each session is NOT
     itself the shape the decision engine needs; it must first pass through
     ``evaluate_ticker_valuation``/``attach_peer_relative``.
+
+    ``entity_applicability_artifact`` is the governed current-state entity applicability
+    (``entity_classification_contract.resolve_current_research_entity_applicability``). The raw
+    valuation lane derives its own class from a much narrower issuer panel; without the governed
+    record a classified issuer's methods stay entity-``unknown`` and never reach a peer cohort.
     """
     engine_records = engine_artifact.get("records") or {}
     valuation_records = (raw_valuation_artifact or {}).get("records") or {}
+    applicability_records = (entity_applicability_artifact or {}).get("records") or {}
+    from collections import defaultdict
+    import provider_financial_monetary_basis_verdict as monetary_verdict
+    equity_by_ticker: dict[str, list[Mapping[str, Any]]] = defaultdict(list)
+    for row in semantic_rows or ():
+        if (row.get("canonical_metric") == "shareholders_equity"
+                and (row.get("source_lineage") or {}).get("provider") == "VCI"
+                and row.get("period_semantic_state") == "POINT_IN_TIME_BALANCE_SHEET"):
+            equity_by_ticker[str(row.get("ticker"))].append(row)
+    try:
+        verdict = monetary_verdict.resolve(Path(__file__).resolve().parent)
+    except monetary_verdict.MonetaryBasisVerdictUnavailable:
+        verdict = None  # component-local fail-closed; the decision still builds
     rows = {
         ticker: valuation_context.evaluate_ticker_valuation(
             ticker=ticker, feature_record=None,
@@ -246,6 +271,11 @@ def build_evaluated_valuation_artifact(
             financial_analysis_record=engine_records.get(ticker),
             financial_analysis_context_identity=engine_artifact.get("artifact_identity"),
             calculation_readiness_record=((calculation_readiness_context or {}).get("records") or {}).get(ticker),
+            entity_applicability=applicability_records.get(ticker),
+            # The readiness context names its own decision session; a denominator period stale
+            # against it is never a current valuation input.
+            decision_session=(calculation_readiness_context or {}).get("decision_session"),
+            book_equity_rows=equity_by_ticker.get(ticker), monetary_basis_verdict=verdict,
         )
         for ticker in product_tickers
     }
@@ -258,6 +288,8 @@ def build_evaluated_valuation_artifact(
         "source_calculation_readiness_identity": (calculation_readiness_context or {}).get("artifact_identity"),
         "records": rows,
     }
+    if entity_applicability_artifact is not None:
+        payload["source_entity_applicability_identity"] = entity_applicability_artifact.get("artifact_identity")
     payload.update(_identity(payload))
     return payload
 
