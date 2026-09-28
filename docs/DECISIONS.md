@@ -1,5 +1,95 @@
 # Decisions & Architectural Decision Records
 
+## 2026-09-28 - M1 closeout: `CURRENT_DECISION_SURFACE_CONVERGENCE_V1` = COMPLETE / LIVE_ACCEPTED_2026_09_28
+
+**Decision.** M1 is closed as `COMPLETE / LIVE_ACCEPTED_2026_09_28`, recorded at canonical Producer
+`main` = `66943d884461209cd6261db6f1b8a40a2986cf5a`. This is a documentation/governance closeout.
+It is not a new analytical milestone and changes no code, threshold or authority.
+
+**Evidence.** Owner-supplied acceptance facts from the actual 2026-09-28 production run and resume
+were reconciled against local retained artifacts before being recorded: the owner journal, the
+canonical daily operation record, both 2026-09-28 run results and the governed publication
+completion attestation. All facts matched.
+- Genuine `ORDINARY_DAILY` for session 2026-09-28, `is_idempotent_replay = false`, on code `main` =
+  `6c40644` (the PR #8 merge); retained-session commit `66943d8`.
+- `canonical_daily_operation:8c43038212aa04c3bbbb102c99bc1f47730fcb8de44636e636f3d0dc435b2ac9` =
+  `LOCAL_COMPLETE`. `canonical_daily_operation.m1_live_acceptance_eligible` re-evaluated on the
+  retained record returns `True`. License `UNASSESSED_SUPPLEMENTAL_RUNTIME_UNAVAILABLE` on the
+  `DNSE_PRIMARY_UNCORROBORATED` basis (`qualifies_for_core_daily = true`,
+  `dnse_values_corroborated = false`).
+- T0 `prospective_decision_snapshot:d30d69ad…d65896` `RETAINED`.
+- Dashboard `PUBLISHED`, release source `145fd039…`, public byte identity `PASS`, attestation
+  `governed_publication_attestation:a831bc02…a2276`, content `governed_publication_content:088c2b2a…cc447`,
+  build `2026-09-28-0e478ff-e74231e6c5`.
+- AI handoff `ALREADY_PUBLISHED_VERIFIED` (remote `03b41118…`, `handoff_build_13b23dda…`); Action
+  Center `READY`; presentation `BOUND`.
+- Owner journal `COMPLETE / PASS`, `failure = null`, final resume run `4bb5c85a653741589e1886218571964f`.
+- The first run's Dashboard stage stopped at `GITHUB_SOURCE_UPDATED` (`BLOCKED_CI_DISPATCH`). The
+  resume reported the analytical kernel `ALREADY_COMPLETED / RESUMED` and completed publication.
+  Exactly one canonical daily operation exists for the session; no second analytical Daily was run.
+Full identities are in `docs/STATE.md` and `docs/ROADMAP_STATE.json` (`live_acceptance`).
+
+**Gate sequence.** All seven gates of the 2026-09-27 record below closed. PR #8 merged on 2026-09-27
+as `6c406447e5e9d86c2e4485d0cfa860c865d52e8f`; that record's "not promoted" heading is historical as of
+its date. Every earlier dated entry that describes M1 as `ACTIVE`, not closed, or awaiting live
+acceptance is a historical record as of its own date and is kept unchanged.
+
+**No authority promotion (explicit).**
+- DNSE/Livespeed remains the primary market-data direction.
+- `OPTIONAL_SUPPLEMENTAL` Vnstock/KBS/VCI remains `DEFERRED_NON_CRITICAL / SECURITY_REVIEW_BLOCKED`.
+- RAW_AS_TRADED remains NOT PROMOTED.
+- Liquidity/sizing authority remains blocked.
+- `ACTIVE_UNIVERSE` remains UNKNOWN.
+- Valuation authority boundaries are unchanged.
+
+**Next execution gate (verified, recorded, not started).** The validated local Current Research
+chain was checked in the local repository rather than trusted from the earlier report.
+`f1e715c796019ab74e948676b6dcf857611b47af` resolves to a commit on the unpushed branch
+`feature/financial-v2-analysis-input-integrity-v1`. That branch forks from `6c40644` and is linear:
+`ffc75d7 → 36e8525 → df6c018 → 4c46328 → 488eaf1 → 66d0fc0 → 5729c52 → f1e715c`. A docs-only
+`eefcb04` on top is a pre-rebaseline North Star copy. The branch is one commit behind `main`; that
+commit touches only the session input registry.
+`CURRENT_RESEARCH_CHAIN_PROMOTION_REVIEW_INTEGRATION_V1` is recorded `NEXT / NOT_STARTED`. Its
+first action is an exact-head promotion/readiness review, not implementation. The chain's own
+unpromoted roadmap ID `CURRENT_RESEARCH_FUNDAMENTAL_CHAIN_PROMOTION_REVIEW_V1` is superseded by this
+main-recorded ID. Its chain-local `LEGACY_FINANCIAL_REFRESH_DEPENDENCY_MIGRATION_V1` record is
+reconciled during the review. The chain is not promoted or merged here.
+
+## 2026-09-28 - North Star strategic rebaseline: investor horizons and analytical reference frameworks
+
+**Decision.** `docs/NORTH_STAR.md` enters `main` (ported from the owner's strategic branch
+`docs/north-star-roadmap-20260928-v1`, commits `6514cbd` and `a5c6ffa`; that branch is left
+untouched) and is rebaselined. It stays `STRATEGIC_INTENT / NON-EXECUTION-AUTHORITY` and never
+overrides `STATE.md`, `ROADMAP_STATE.json`, `ROADMAP.md`, `DECISIONS.md` or `AI_RULES.md`
+(`AI_RULES.md` rule 4a). `docs/PRODUCT_NORTH_STAR.md` (2026-09-13) remains the product
+operating-model reference.
+
+- **Investor horizons.** `LONG_TERM_INVESTOR` and `SHORT_TERM_INVESTOR` are two human research
+  lenses over one shared evidence/feature/decision foundation. They are not separate data stacks and
+  not separate authority. `research_action_posture` stays the single cross-surface action authority.
+  The Long-Term lens covers business economics, financial quality, growth quality, capital
+  allocation, competitive position, valuation lenses, scenario/downside and the long-term thesis.
+  The Short-Term lens reuses the existing governed tactical engines; no second technical system is
+  built.
+- **CFA/CMA.** These are analytical reference frameworks for method design only. No
+  `CFA_ENGINE`, `CMA_ENGINE`, `CFA_SCORE`, `CMA_SCORE`, credential-as-authority, or universal stock
+  score. Generic concepts only; no curriculum text.
+- **Method-lens outputs.** No forced /100 score. Method-native scoring is allowed only where the
+  method itself defines a deterministic score with explicit handling of missing components.
+  Valuation lenses expose applicability, readiness, input basis, assumptions, missing inputs,
+  qualified result/range, sensitivity, provenance and limitations. No fabricated target price,
+  probability or false precision.
+- **Business-economics evidence.** No new vocabulary. The existing governed semantics are reused:
+  `FACT` / `INFERENCE` / `HYPOTHESIS` claim types; `feature_input_fitness_contract/v1` tiers;
+  `DERIVED_PROXY`; scenario `conditional_assumptions` with
+  `probability_status = UNKNOWN_UNCALIBRATED`; and `UNKNOWN`. Inputs such as cost split, unit
+  economics, mix or elasticity stay missing when no retained source states them. AI must not
+  manufacture them.
+- **Roadmap placement.** No CFA/CMA milestone is inserted, and Investor Horizons do not move ahead
+  of the post-M1 gate. The Long-Term and Short-Term lenses live inside the Personal Investment
+  Decision Workbench stage. Forecasting, business economics and multi-method intrinsic valuation
+  are capability dependencies of the financial, valuation and Workbench stages.
+
 ## 2026-09-27 - PR #8 recovery-integrity blocking corrective (M1; same branch, not promoted)
 
 An independent Codex promotion review of PR #8 at `69b8dba` returned `PROMOTION_REVIEW_FAIL`. The

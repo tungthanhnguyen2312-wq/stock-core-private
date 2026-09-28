@@ -15,6 +15,13 @@
    its execution. Commit, push, publish, deploy, or an authority promotion requires explicit
    authorization.
 
+4a. `docs/NORTH_STAR.md` is strategic product/program intent, not execution authority. Read it only
+    for architecture, program-priority, product-roadmap, or owner rebaseline work. Do not load or
+    paste it into normal bounded milestone prompts. `STATE.md` and `ROADMAP_STATE.json` remain the
+    current execution-state authority; `NORTH_STAR.md` never overrides them, `ROADMAP.md`,
+    `DECISIONS.md` or this file. Analytical reference frameworks it names (for example CFA/CMA-style
+    concepts) guide method design only and are never an authority layer, engine or score.
+
 ## Market-data doctrine
 
 5. **MARKET-WIDE INGEST-FIRST:** retain immutable, provenance-bearing raw observations before
