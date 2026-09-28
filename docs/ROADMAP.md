@@ -1,6 +1,39 @@
 # Stock Lookup — Architecture & Roadmap
 
+**Roadmap sync after M1 live acceptance (2026-09-28):**
+- `CURRENT_DECISION_SURFACE_CONVERGENCE_V1` = `COMPLETE / LIVE_ACCEPTED_2026_09_28`, accepted on the
+  genuine 2026-09-28 ordinary Daily (`canonical_daily_operation:8c430382…`, `LOCAL_COMPLETE`,
+  `m1_live_acceptance_eligible = true`; Dashboard `PUBLISHED` with public byte identity `PASS`; AI
+  handoff published and verified; Action Center `READY`; presentation `BOUND`; owner journal
+  `COMPLETE / PASS`). Checkpoint: canonical Producer `main` =
+  `66943d884461209cd6261db6f1b8a40a2986cf5a`. Full evidence: `docs/STATE.md` and
+  `docs/ROADMAP_STATE.json`.
+- The seven-gate sequence of the 2026-09-26 sync below is closed: PR #8 was reviewed, the isolated
+  2026-09-25 recovery completed and was reviewed, PR #8 merged 2026-09-27 as `6c40644`, and the
+  2026-09-28 ordinary Daily passed live acceptance.
+- No authority was promoted: DNSE/Livespeed stays primary; the optional Vnstock/KBS/VCI supplemental
+  runtime stays `DEFERRED_NON_CRITICAL / SECURITY_REVIEW_BLOCKED`; RAW_AS_TRADED, liquidity/sizing,
+  `ACTIVE_UNIVERSE` and valuation authority boundaries are unchanged.
+- **Next execution gate:** `CURRENT_RESEARCH_CHAIN_PROMOTION_REVIEW_INTEGRATION_V1` =
+  `NEXT / NOT_STARTED`. First action: an exact-head promotion/readiness review (not implementation)
+  of the locally verified Current Research chain, analytical checkpoint
+  `f1e715c796019ab74e948676b6dcf857611b47af` (unpushed branch
+  `feature/financial-v2-analysis-input-integrity-v1`, forked from `6c40644`). Merge only on explicit
+  owner approval.
+- **Strategic sequence after that gate** (intent only, from `docs/NORTH_STAR.md`; not queued, each
+  needs owner authorization): missed-session continuity → financial evidence currency / legacy
+  source migration → Personal Investment Decision Workbench (Long-Term and Short-Term investor
+  lenses over one shared foundation) → corporate/event research and RAG → portfolio/risk context →
+  prospective decision journal → outcome calibration → historical PIT/execution maturity.
+  Forecasting, business-economics evidence and multi-method intrinsic valuation are capability
+  dependencies inside the financial, valuation and Workbench stages, not standalone milestones.
+  CFA/CMA-style bodies of knowledge are analytical reference frameworks for method design only; no
+  CFA/CMA engine, score or milestone exists.
+- `docs/NORTH_STAR.md` is `STRATEGIC_INTENT / NON-EXECUTION-AUTHORITY`; it never overrides
+  `docs/STATE.md`, `docs/ROADMAP_STATE.json`, this file, `docs/DECISIONS.md` or `docs/AI_RULES.md`.
+
 **Roadmap sync for the DNSE-first rebaseline (2026-09-26):**
+*(Historical as of 2026-09-26; its gate sequence closed on 2026-09-28 -- see the sync above.)*
 - Owner decision: DNSE/Livespeed stays primary. `VNSTOCK_KBS_VCI` is `OPTIONAL_SUPPLEMENTAL /
   DEFERRED_NON_CRITICAL` for current M1 execution. No Vnstock terms acceptance, runtime
   authorization or source-authority promotion.
@@ -21,6 +54,7 @@
 - The provider-runtime operationalization step in the entry below is superseded by this sync.
 
 **Roadmap sync after M1 stabilization promotion (2026-09-26):**
+*(Historical as of 2026-09-26; M1 is `COMPLETE / LIVE_ACCEPTED_2026_09_28`.)*
 - The cumulative stabilization RC (PR #4) is promoted to Producer `main` at merge commit
   `9575cb04c899696a02b22ba9dfcfed9a4961cf2d`. Lineage: `cde156e` → cumulative RC → `d0cf678`
   → `9575cb04`. PR #3 (`522cc46`) is superseded by PR #4.
@@ -45,6 +79,8 @@ replay on `46adbc0` (Dashboard `60afab5c`, `PUBLISHED`, public-byte `PASS`). Own
 crash-recovery corrective `c7216d3` = implementation complete / test validated; next ordinary
 Daily observation pending, not an ACTIVE writer. See `docs/STATE.md` and `docs/DECISIONS.md`.
 
+*(Historical heading, kept verbatim: M1 was recorded `ACTIVE` until 2026-09-28 and is now
+`COMPLETE / LIVE_ACCEPTED_2026_09_28`. The bounded contract below is the accepted M1 contract.)*
 **Active milestone -- `CURRENT_DECISION_SURFACE_CONVERGENCE_V1` = `ACTIVE` (implementation, corrective chain and 2026-09-26 stabilization RC promoted to Producer `main`; live acceptance awaits a qualifying ordinary Daily; since the 2026-09-26 DNSE-first rebaseline that no longer requires provider-runtime operationalization, only promotion of the DNSE-first corrective; see `docs/STATE.md`). Bounded contract:**
 
 - **Decision authority.** `research_action_posture` is the single cross-surface action-decision

@@ -1,8 +1,71 @@
 # Stock Lookup — Operational State
 
+**M1 closed -- live accepted on the 2026-09-28 ordinary Daily (2026-09-28, governance closeout):**
+`CURRENT_DECISION_SURFACE_CONVERGENCE_V1 = COMPLETE / LIVE_ACCEPTED_2026_09_28`.
+Canonical Producer `main` = `66943d884461209cd6261db6f1b8a40a2986cf5a`
+(`daily: retain 2026-09-28 completed session`, over the PR #8 merge `6c40644`).
+Every earlier dated entry below that calls M1 `ACTIVE`, "not closed" or "live acceptance pending"
+is a historical record as of its own date and is superseded by this entry.
+
+- **Gate sequence closed.** PR #8 (DNSE-first Core Daily + isolated `RECOVERY_REPLAY`, including the
+  2026-09-27 recovery-integrity corrective) reached exact head `65e845e`. The isolated 2026-09-25
+  recovery completed, and its retained analysis is bound to `code_head = 65e845e` (recovery only:
+  never M1, publication `FORBIDDEN`). PR #8 was merged on 2026-09-27 as
+  `6c406447e5e9d86c2e4485d0cfa860c865d52e8f` (merge record: "reviewed and live-accepted"). The next
+  ordinary Daily ran on 2026-09-28, and M1 live acceptance passed on it.
+- **Acceptance evidence (2026-09-28, reconciled against the retained journal, operation record,
+  run results and publication attestation):**
+  - Session `2026-09-28`, genuine `ORDINARY_DAILY`, `is_idempotent_replay = false`.
+  - `canonical_daily_operation:8c43038212aa04c3bbbb102c99bc1f47730fcb8de44636e636f3d0dc435b2ac9`,
+    `LOCAL_COMPLETE`, `m1_live_acceptance_eligible = true` (re-evaluated read-only on the record).
+    DNSE license `UNASSESSED_SUPPLEMENTAL_RUNTIME_UNAVAILABLE` on the explicit
+    `DNSE_PRIMARY_UNCORROBORATED` basis; provider runtime `SECURITY_REVIEW_BLOCKED`.
+  - T0 `prospective_decision_snapshot:d30d69ad686e1943e42bc831f7f8fbbdd6f25eab69affc937a3b11d583d65896`
+    `RETAINED`.
+  - Dashboard: release source `145fd0396d2b5d1e051a368afcb78c0e1413c4cd`, `PUBLISHED`, public byte
+    identity `PASS`, attestation
+    `governed_publication_attestation:a831bc022265fa20c5e0429b1b6b620db6c85d9a7ffeba0a393cdbfca8d2a276`,
+    content
+    `governed_publication_content:088c2b2aaa0244e8d358e790e9cf092553acdd73f029f692a81bd05f8ccfd447`,
+    build `2026-09-28-0e478ff-e74231e6c5`.
+  - AI handoff `ALREADY_PUBLISHED_VERIFIED`, remote `03b41118d7257f17d7f17b92dc6086a826072512`,
+    `handoff_build_13b23dda1217da719b65e62eb27f96459a5203e29df21fbd8f1eee6869d4f242`.
+  - Action Center `READY`
+    (`personal_investment_decision_action_center/v1:f9b3038a5466bd7999e9c3c0970e222b2059f2a80ba1a80ec806f8d3159b6b0f`);
+    presentation `BOUND`.
+  - Owner journal `stage = COMPLETE`, `status = PASS`, `failure = null`; final resume run
+    `4bb5c85a653741589e1886218571964f`.
+  - The first run completed the analytical kernel, retained Producer state `66943d8` and published
+    the AI handoff, but its Dashboard stage stopped at `GITHUB_SOURCE_UPDATED`
+    (`BLOCKED_CI_DISPATCH`: several in-progress Dashboard CI runs for one SHA). The resume reported
+    the kernel `ALREADY_COMPLETED / RESUMED` and completed publication. No second analytical Daily
+    was run.
+- **No authority promotion.** DNSE/Livespeed remains primary. The `OPTIONAL_SUPPLEMENTAL`
+  Vnstock/KBS/VCI runtime remains `DEFERRED_NON_CRITICAL / SECURITY_REVIEW_BLOCKED`. RAW_AS_TRADED
+  remains NOT PROMOTED. Liquidity/sizing authority remains blocked. `ACTIVE_UNIVERSE` remains
+  UNKNOWN. Valuation authority boundaries are unchanged. `research_action_posture` thresholds and
+  mapping are unchanged.
+- **Next execution gate (recorded, not started):**
+  `CURRENT_RESEARCH_CHAIN_PROMOTION_REVIEW_INTEGRATION_V1 = NEXT / NOT_STARTED`. Its first action is
+  an exact-head promotion/readiness review of the validated local Current Research chain, not
+  implementation. Verified locally on 2026-09-28: analytical checkpoint
+  `f1e715c796019ab74e948676b6dcf857611b47af` on the unpushed branch
+  `feature/financial-v2-analysis-input-integrity-v1`, forked from `6c40644`
+  (`ffc75d7 → 36e8525 → df6c018 → 4c46328 → 488eaf1 → 66d0fc0 → 5729c52 → f1e715c`). The branch head
+  `eefcb04` adds only a pre-rebaseline copy of the North Star docs. The chain's own docs/state edits
+  must be reconciled with this closeout during the review. Promotion or merge needs explicit owner
+  approval. See `docs/ROADMAP_STATE.json` and `docs/DECISIONS.md` 2026-09-28.
+- **Strategic intent.** `docs/NORTH_STAR.md` was rebaselined (investor horizons, analytical
+  reference frameworks). It is `STRATEGIC_INTENT / NON-EXECUTION-AUTHORITY` and never overrides this
+  file, `docs/ROADMAP_STATE.json`, `docs/ROADMAP.md`, `docs/DECISIONS.md` or `docs/AI_RULES.md`.
+- **Nothing ran for this closeout.** Docs only: no Daily, provider call, runtime mutation, code
+  change, merge or authority promotion.
+
 **DNSE-first Daily and recovery infrastructure corrective (2026-09-26, owner rebaseline):**
 `CURRENT_DECISION_SURFACE_CONVERGENCE_V1 = ACTIVE / DNSE_FIRST_CORRECTIVE_IN_REVIEW / LIVE_ACCEPTANCE_PENDING_QUALIFYING_ORDINARY_DAILY`.
 M1 is **not** closed and not marked complete.
+*(Historical as of 2026-09-26. Superseded 2026-09-28: PR #8 merged as `6c40644` on 2026-09-27 and
+M1 is `COMPLETE / LIVE_ACCEPTED_2026_09_28`; see the entry above.)*
 
 - **Owner decision.** DNSE/Livespeed remains the primary market-data direction. `VNSTOCK_KBS_VCI` is
   `OPTIONAL_SUPPLEMENTAL / DEFERRED_NON_CRITICAL` for current M1 execution.
@@ -72,7 +135,7 @@ M1 is **not** closed and not marked complete.
 *(Reconciled 2026-09-26: PR #7 is merged as `785fe07`; the earlier "promotion review and merge
 pending" wording is superseded. Further Vnstock operationalization is DEFERRED_NON_CRITICAL under
 the owner rebaseline above.)* It started from `main` = `ad685ac` (the owner's merge of PR #6). M1
-stays ACTIVE.
+stays ACTIVE. *(Historical as of 2026-09-26; M1 is `COMPLETE / LIVE_ACCEPTED_2026_09_28`.)*
 
 - **Implemented.** `provider_os_enforcement.production_backend()` now has a real Windows backend
   (`provider_windows_os_backend.py`, `stocklookup-windows-os-enforcement`) and a named-pipe egress
@@ -117,6 +180,7 @@ stays ACTIVE.
 M1 is **not** closed. It stays ACTIVE until a qualifying ordinary Daily passes live acceptance.
 *(Superseded 2026-09-26 by the DNSE-first rebaseline above: provider-runtime operationalization is
 no longer required for a qualifying ordinary Daily once the corrective is promoted.)*
+*(Historical as of 2026-09-26; M1 is `COMPLETE / LIVE_ACCEPTED_2026_09_28`.)*
 
 - **Promoted.** PR #4 (`M1_STABILIZATION_INTEGRATION_RC_V1`) merged to Producer `main` as merge
   commit `9575cb04c899696a02b22ba9dfcfed9a4961cf2d`. Its parents are `cde156e` and the RC head
@@ -4708,13 +4772,14 @@ Real two-session replay (`tools/run_daily_integrated_decision_brief_replay.py`, 
 
 ## 1. Executive Program State
 
-> **Current-state pointer (2026-09-26):** the entries in this section are dated historical
-> snapshots. For the current state, see the top of this file (M1 stabilization promotion) and
-> `docs/ROADMAP_STATE.json`:
-> - `CURRENT_DECISION_SURFACE_CONVERGENCE_V1` is the only ACTIVE milestone.
+> **Current-state pointer (2026-09-28; supersedes the 2026-09-26 pointer):** the entries in this
+> section are dated historical snapshots. For the current state, see the top of this file (M1
+> closeout) and `docs/ROADMAP_STATE.json`:
+> - `CURRENT_DECISION_SURFACE_CONVERGENCE_V1` is `COMPLETE / LIVE_ACCEPTED_2026_09_28`; no
+>   milestone is ACTIVE.
+> - `queued_next` = `CURRENT_RESEARCH_CHAIN_PROMOTION_REVIEW_INTEGRATION_V1` (`NEXT / NOT_STARTED`).
 > - `TACTICAL_MARKET_STRUCTURE_AND_BREAKOUT_V3` and `INTEGRATED_INVESTMENT_DECISION_PRODUCT_V1`
 >   are COMPLETE.
-> - `queued_next` is empty.
 
 **Corporate Intelligence catalyst/event/risk decision axis V1 (2026-09-05):** `CORPORATE_INTELLIGENCE_CATALYST_EVENT_RISK_DECISION_INTEGRATION_V1 = COMPLETE / PARTIAL_BY_EVIDENCE`, commit `8d62313` on top of `3d95749`, local-only/unpushed. Owner explicitly authorized this exact milestone despite `queued_next=[]`. New `current_corporate_intelligence_axis.py` normalizes the existing, previously-uncoordinated corporate-event stack (`current_corporate_event_context.py`, `market_wide_current_corporate_intelligence.py`, `bitemporal_semantic_contract.py`) into one canonical event taxonomy, a 7-value status ladder, deterministic catalyst/risk/mixed/informational classification, and materiality that fails closed to `POTENTIALLY_MATERIAL` (never `MATERIAL`, since no compatible amount-vs-denominator comparison exists in retained evidence). It activates `current_corporate_event_context`'s existing but previously-unused `supplemental_events` parameter to surface the retained HPG/VNM/VCB issuer chains, without modifying that shared component. Wired additively into `integrated_investment_decision_product.py` as a 9th `CORPORATE_INTELLIGENCE` evidence axis, built with its own local try/except in `canonical_post_close_pipeline.py` so a corporate-evidence failure cannot cascade into the whole Integrated Decision build (proven live); `decide_research_action_posture`'s signature is unchanged (verified by direct inspection). Independently discovered and documented, not fixed: `current_official_event_context`'s retained artifact has had `research_session` frozen at `2026-08-21` since before this milestone, so the pre-existing `corporate_event_context` enrichment component has been silently degrading to a frozen prior-as-of artifact every day since -- this new axis surfaces that staleness explicitly per ticker (`evidence_session_stale`) instead of hiding it. Real market-wide replay: 1,507 denominator, 1,103 tickers with retained evidence, 4,453 deduplicated events, 0 active-catalyst/active-risk tickers as of the frozen evidence session (reported honestly, not manufactured). `prospective_decision_retention.py` tracks the new axis's T0 completeness without retrofitting legacy snapshots. 51 new tests in the new module plus 18 targeted additions across 4 adjacent files; a broader `export_ai_bundle.py` sweep's 32 failures were independently verified pre-existing and unrelated (temporary single-file revert to clean HEAD reproduced identical failures). No provider, PIT, liquidity, sizing, universal score, probability, or authority-promotion change; `research_action_posture` is unchanged. Artifact: `operations-review/corporate-intelligence-catalyst-event-risk-decision-integration-v1-20260905/`.
 
@@ -4943,10 +5008,11 @@ Frozen pre-open artifact for the actual configured 11-ticker production cohort (
 
 ## 4. Current Critical Path & Exact Next Action
 
-> **Current-state pointer (2026-09-26):** the "exact next action" statements below are dated
-> historical snapshots and are superseded. The current next gate is provider-runtime
-> operationalization, then a qualifying safe ordinary Daily, then M1 live acceptance (top of this
-> file and `docs/ROADMAP_STATE.json`).
+> **Current-state pointer (2026-09-28; supersedes the 2026-09-26 pointer):** the "exact next
+> action" statements below are dated historical snapshots and are superseded. M1 is
+> `COMPLETE / LIVE_ACCEPTED_2026_09_28`. The current next gate is
+> `CURRENT_RESEARCH_CHAIN_PROMOTION_REVIEW_INTEGRATION_V1` (`NEXT / NOT_STARTED`), starting with an
+> exact-head promotion/readiness review (top of this file and `docs/ROADMAP_STATE.json`).
 
 ### Core analytical product completion (2026-09-02 rebaseline)
 
