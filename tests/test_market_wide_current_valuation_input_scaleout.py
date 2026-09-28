@@ -159,13 +159,15 @@ def test_market_cap_monetary_basis_present_even_when_blocked():
     assert basis["basis_status"] == "UNKNOWN"
 
 
-def test_market_cap_monetary_basis_becomes_known_only_once_both_price_and_share_scale_are_proven(monkeypatch):
+def test_market_cap_monetary_basis_uses_applied_dnse_contract_and_share_count():
     import market_wide_current_valuation_input_scaleout as scaleout
-    monkeypatch.setattr(scaleout, "KNOWN_PRICE_SCALE_TOKENS", frozenset({"PROVEN_TOKEN_FOR_TEST"}))
-    proven_price = {"currency": "VND", "native_price_scale_token": "PROVEN_TOKEN_FOR_TEST"}
-    audited_share = {"authority": "qualified_current_common_shares"}
-    basis = scaleout._market_cap_monetary_basis(proven_price, audited_share)
-    assert basis["basis_status"] != "UNKNOWN"
+    proven_price = {"currency": "VND", "price_unit": "vnd_per_share",
+                    "price_representation": {"contract_id": "DNSE:ohlc_1D:VN_LISTED_EQUITY:kvnd_to_vnd/v1",
+                                             "canonical_unit": "vnd_per_share"}}
+    counted_share = {"authority": "provider_reported_lagged", "share_concept": "ISSUED_SHARES",
+                     "value": 100, "retained_evidence": {"unit": "shares"}}
+    basis = scaleout._market_cap_monetary_basis(proven_price, counted_share)
+    assert basis["basis_status"] == "RESEARCH_CONTRACT_QUALIFIED"
     assert basis["currency"] == "VND"
     assert basis["native_scale"] == "units"
     assert basis["normalized_unit"] == "VND"
@@ -173,7 +175,7 @@ def test_market_cap_monetary_basis_becomes_known_only_once_both_price_and_share_
     # Proving only one side is still not enough.
     half_proven = scaleout._market_cap_monetary_basis(proven_price, {"authority": "provider_reported_lagged"})
     assert half_proven["basis_status"] == "UNKNOWN"
-    other_half = scaleout._market_cap_monetary_basis({"currency": "VND", "native_price_scale_token": None}, audited_share)
+    other_half = scaleout._market_cap_monetary_basis({"currency": "VND"}, counted_share)
     assert other_half["basis_status"] == "UNKNOWN"
 
 

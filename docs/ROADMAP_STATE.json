@@ -1,7 +1,7 @@
 {
   "schema_version": "stocklookup_roadmap_execution_state/1.0.0",
   "roadmap_id": "stock-core-private",
-  "roadmap_version": "2026.09.28.1",
+  "roadmap_version": "2026.09.28.2",
   "narrative_authority": {
     "strategic_roadmap": "docs/ROADMAP.md",
     "operational_narrative": "docs/STATE.md",
@@ -15,12 +15,10 @@
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "CURRENT_DECISION_SURFACE_CONVERGENCE_V1",
-    "state": "COMPLETE"
+    "milestone": "CURRENT_RESEARCH_CHAIN_PROMOTION_REVIEW_INTEGRATION_V1",
+    "state": "ACTIVE"
   },
-  "queued_next": [
-    "CURRENT_RESEARCH_CHAIN_PROMOTION_REVIEW_INTEGRATION_V1"
-  ],
+  "queued_next": [],
   "milestones": [
     {
       "milestone_id": "FLOW_PRICE_CANONICAL_SOURCE_BACKFILL_AND_PRESENTATION_CORRECTIVE_V1",
@@ -2075,14 +2073,42 @@
     },
     {
       "milestone_id": "CURRENT_RESEARCH_CHAIN_PROMOTION_REVIEW_INTEGRATION_V1",
-      "state": "NEXT",
-      "narrative_disposition": "NEXT / NOT_STARTED / EXACT_HEAD_PROMOTION_READINESS_REVIEW_FIRST",
-      "starting_checkpoint": null,
+      "state": "ACTIVE",
+      "narrative_disposition": "IMPLEMENTATION_INTEGRATED / AWAITING_INDEPENDENT_EXACT_HEAD_REVIEW / NOT_PROMOTED",
+      "starting_checkpoint": "d08778b1c02a8490741c238f9678955df5be8f26",
       "checkpoint": null,
       "candidate_checkpoint": "f1e715c796019ab74e948676b6dcf857611b47af",
       "candidate_branch": "feature/financial-v2-analysis-input-integrity-v1",
       "candidate_branch_head": "eefcb044001b60e6381b2cbf253a48138ec0646d",
       "candidate_fork_point": "6c406447e5e9d86c2e4485d0cfa860c865d52e8f",
+      "integration": {
+        "readiness_review": "PROMOTION_READINESS_PASS (2026-09-28, exact-head review of 6c40644..f1e715c against main d08778b; no semantic, data or authority blocker)",
+        "integration_branch": "feature/current-research-chain-integration-v1-20260928",
+        "integration_base": "d08778b1c02a8490741c238f9678955df5be8f26",
+        "integrated_source_head": "f1e715c796019ab74e948676b6dcf857611b47af",
+        "integrated_commits": [
+          "ffc75d7",
+          "36e8525",
+          "df6c018",
+          "4c46328",
+          "488eaf1",
+          "66d0fc0",
+          "5729c52",
+          "f1e715c"
+        ],
+        "integration_method": "path-level port of the 50 analytical/test/tool/spec/pinned-verdict files, byte-identical to f1e715c (none changed on main since the fork); one checkpoint commit; plus one retained-evidence-tier test reconciliation in tests/test_canonical_post_close_pipeline.py",
+        "excluded": [
+          "eefcb04 (docs-only pre-rebaseline North Star copy)",
+          "chain hunks in docs/STATE.md, docs/ROADMAP.md, docs/ROADMAP_STATE.json, docs/DECISIONS.md (stale M1 ACTIVE claims; COMPLETE_LOCAL entries; superseded chain-local CURRENT_RESEARCH_FUNDAMENTAL_CHAIN_PROMOTION_REVIEW_V1; unqueued LEGACY_FINANCIAL_REFRESH_DEPENDENCY_MIGRATION_V1)"
+        ],
+        "validation": "Chain tests 428 passed. Adjacent 76 files: failure/error IDs identical to a clean main worktree (+175 passing). Retained-evidence re-run of the 13 affected files: identical to main except one chain-caused retained-tier test gap (test_enrichment_components_stamp_requested_session did not admit df6c018's operational_fundamental_binding resolution record), fixed with a status-invariant regression assertion; passes. Roadmap/doc tests 149 passed; roadmap --check ON_TRACK; py_compile 48; diff --check clean. Real Daily Integrated Decision assembly on retained 2026-09-24 inputs (write guard 0, network 0): integration reproduces the chain's f1e715c proof identity 880ca5a3... exactly; vs main d08778b over 1,683: 140 posture changes (114 WAIT_FOR_CONFIRMATION -> INSUFFICIENT_CURRENT_RESEARCH), each with a fundamental_state change; evidence_currency/tactical changes 0; P/E and P/S unchanged; 3 EV/EBITDA fail closed on stale periods; research P/B 6 -> 738. See docs/DECISIONS.md 2026-09-28.",
+        "remaining_gates": [
+          "independent exact-head review of the integration head",
+          "Producer CI on the PR",
+          "owner acceptance of the posture deltas",
+          "owner merge decision"
+        ]
+      },
       "candidate_lineage": [
         "ffc75d7 Current Research capability map projection",
         "36e8525 entity-aware operational fundamental research context",
@@ -2101,9 +2127,11 @@
       "authority_effect": "NONE_PENDING_OWNER_PROMOTION_DECISION",
       "owner_authorized": true,
       "source_doc": "Owner directive M1 GOVERNANCE CLOSEOUT + NORTH STAR STRATEGIC REBASELINE (2026-09-28), section C: record as the next execution item once the local checkpoint lineage is verified. docs/DECISIONS.md 2026-09-28 M1 closeout entry.",
-      "state_history": [],
+      "state_history": [
+        "NEXT"
+      ],
       "owner_override": null,
-      "notes": "NEXT / NOT_STARTED; recorded only by the 2026-09-28 M1 closeout. Queued does not mean started. FIRST ACTION: an exact-head promotion/readiness review of the chain, NOT implementation. Lineage verified locally on 2026-09-28: f1e715c resolves to a commit; the unpushed branch forks from main 6c40644 and carries ffc75d7 -> 36e8525 -> df6c018 -> 4c46328 -> 488eaf1 -> 66d0fc0 -> 5729c52 -> f1e715c, plus eefcb04 (docs-only: a pre-rebaseline copy of docs/NORTH_STAR.md and AI_RULES rule 4a, superseded by the 2026-09-28 North Star rebaseline; drop or reconcile it, never merge it over main). The branch is 1 commit behind main (66943d8 touches only config/daily_research_session_input_registry.json). The chain also edits docs/STATE.md, docs/ROADMAP.md, docs/ROADMAP_STATE.json and docs/DECISIONS.md; its own unpromoted ROADMAP_STATE records six COMPLETE_LOCAL entries, a chain-local CURRENT_RESEARCH_FUNDAMENTAL_CHAIN_PROMOTION_REVIEW_V1 (NEXT, superseded by this main-recorded milestone ID) and LEGACY_FINANCIAL_REFRESH_DEPENDENCY_MIGRATION_V1 (BLOCKED behind it). Reconciling those docs against the M1 closeout is part of the review. Review scope: exact-head review, full-suite failure attribution, CI, same-session before/after replay, draft PR to main, and the owner's explicit acceptance of the retained posture deltas (chain-reported: 125 official postures vs 488eaf1; valuation value-level diff reported zero across the chain). Promotion/merge only on explicit owner approval. No new features, provider call, Daily or authority promotion."
+      "notes": "ACTIVE / IMPLEMENTATION_INTEGRATED / AWAITING_INDEPENDENT_EXACT_HEAD_REVIEW (2026-09-28). The exact-head readiness review passed and the chain through f1e715c is integrated onto main d08778b on feature/current-research-chain-integration-v1-20260928 (see integration and docs/DECISIONS.md 2026-09-28). Not complete; no analytical authority promoted; merge only on explicit owner approval. Earlier note follows. NEXT / NOT_STARTED; recorded only by the 2026-09-28 M1 closeout. Queued does not mean started. FIRST ACTION: an exact-head promotion/readiness review of the chain, NOT implementation. Lineage verified locally on 2026-09-28: f1e715c resolves to a commit; the unpushed branch forks from main 6c40644 and carries ffc75d7 -> 36e8525 -> df6c018 -> 4c46328 -> 488eaf1 -> 66d0fc0 -> 5729c52 -> f1e715c, plus eefcb04 (docs-only: a pre-rebaseline copy of docs/NORTH_STAR.md and AI_RULES rule 4a, superseded by the 2026-09-28 North Star rebaseline; drop or reconcile it, never merge it over main). The branch is 1 commit behind main (66943d8 touches only config/daily_research_session_input_registry.json). The chain also edits docs/STATE.md, docs/ROADMAP.md, docs/ROADMAP_STATE.json and docs/DECISIONS.md; its own unpromoted ROADMAP_STATE records six COMPLETE_LOCAL entries, a chain-local CURRENT_RESEARCH_FUNDAMENTAL_CHAIN_PROMOTION_REVIEW_V1 (NEXT, superseded by this main-recorded milestone ID) and LEGACY_FINANCIAL_REFRESH_DEPENDENCY_MIGRATION_V1 (BLOCKED behind it). Reconciling those docs against the M1 closeout is part of the review. Review scope: exact-head review, full-suite failure attribution, CI, same-session before/after replay, draft PR to main, and the owner's explicit acceptance of the retained posture deltas (chain-reported: 125 official postures vs 488eaf1; valuation value-level diff reported zero across the chain). Promotion/merge only on explicit owner approval. No new features, provider call, Daily or authority promotion."
     },
     {
       "milestone_id": "APPROVED_PROVIDER_BUILD_AND_EXECUTION_BOUNDARY_V1",

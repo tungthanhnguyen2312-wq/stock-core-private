@@ -16,6 +16,16 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 import asymmetric_dislocation_research as adr
+import fundamental_signal_consumption_contract as contract
+
+# Qualified LEVEL evidence (CURRENT_RESEARCH_FUNDAMENTAL_PROMOTION_HARDENING_V1): viable economics
+# must be evidenced by a level, never inferred from the direction.
+VIABLE = {"state": contract.NO_QUALIFIED_ADVERSE_LEVEL, "constructive_current_level_without_adverse": True,
+          "adverse_level_dimensions": [], "constructive_level_dimensions": ["PROFITABILITY"]}
+LOSS_MAKING_CURRENT = {"state": contract.ADVERSE_LEVEL_CURRENT, "constructive_current_level_without_adverse": False,
+                       "adverse_level_dimensions": ["PROFITABILITY"], "constructive_level_dimensions": []}
+LOSS_MAKING_STALE = {"state": contract.ADVERSE_LEVEL_KNOWN_NOT_CURRENT, "constructive_current_level_without_adverse": False,
+                     "adverse_level_dimensions": ["PROFITABILITY"], "constructive_level_dimensions": []}
 
 
 def _record(
@@ -31,9 +41,13 @@ def _record(
     corp_active_risk=0,
     invalidation_status="UNAVAILABLE",
     decision_identity="decision:fixture",
+    risk_level=None,
+    evidence_availability=None,
 ) -> dict:
     return {
         "fundamental_state": fundamental_state,
+        **({"fundamental_risk_level": risk_level} if risk_level is not None else {}),
+        **({"fundamental_evidence_availability": evidence_availability} if evidence_availability is not None else {}),
         "evidence_axes": {
             "FUNDAMENTAL": {"fitness": "AVAILABLE", "supporting_reason_codes": [], "contradicting_reason_codes": []},
             "TACTICAL_STRUCTURE": {"fitness": "AVAILABLE", "supporting_reason_codes": [], "contradicting_reason_codes": []},
@@ -62,6 +76,7 @@ def test_cheap_strong_economics_severe_price_dislocation_is_quality_dislocation(
     rec = _record(
         fundamental_state="STABLE", own_history_state="LOW_VS_OWN_HISTORY",
         valuation_status="AVAILABLE", tactical_phase="BREAKDOWN", market_structure_state="DOWNTREND",
+        risk_level=VIABLE,
     )
     out = adr.build_ticker_record(ticker="AAA", session="2026-09-09", integrated_record=rec)
     assert out["primary_research_state"] == adr.QUALITY_DISLOCATION
@@ -142,6 +157,7 @@ def test_financial_sector_applicability_is_explicit_and_non_gating():
     rec = _record(
         fundamental_state="STABLE", own_history_state="LOW_VS_OWN_HISTORY",
         valuation_status="AVAILABLE", tactical_phase="BREAKDOWN", market_structure_state="DOWNTREND",
+        risk_level=VIABLE,
     )
     out = adr.build_ticker_record(ticker="BANK1", session="2026-09-09", integrated_record=rec, entity_family="bank")
     # Same generic classification path as any other family -- no new bank-specific formula.
@@ -236,8 +252,8 @@ def test_ordering_is_stable_and_lexicographic():
     product = {
         "session": "2026-09-09",
         "records": {
-            "ZQD": _record(fundamental_state="STABLE", own_history_state="LOW_VS_OWN_HISTORY", tactical_phase="BREAKDOWN", market_structure_state="DOWNTREND"),
-            "AQD": _record(fundamental_state="STABLE", own_history_state="LOW_VS_OWN_HISTORY", tactical_phase="BREAKDOWN", market_structure_state="DOWNTREND"),
+            "ZQD": _record(fundamental_state="STABLE", own_history_state="LOW_VS_OWN_HISTORY", tactical_phase="BREAKDOWN", market_structure_state="DOWNTREND", risk_level=VIABLE),
+            "AQD": _record(fundamental_state="STABLE", own_history_state="LOW_VS_OWN_HISTORY", tactical_phase="BREAKDOWN", market_structure_state="DOWNTREND", risk_level=VIABLE),
             "TEF": _record(fundamental_state="TURNAROUND", valuation_status="UNAVAILABLE"),
             "DSP": _record(fundamental_state="INSUFFICIENT", valuation_status="UNAVAILABLE", tactical_phase="BREAKDOWN", market_structure_state="DOWNTREND", corp_state="RISK_PRESENT", corp_active_risk=1),
         },
@@ -249,3 +265,87 @@ def test_ordering_is_stable_and_lexicographic():
     # QUALITY_DISLOCATION tier ranks above TURNAROUND_EVIDENCE_FORMING above DISTRESS_SPECULATIVE;
     # within the same tier, AQD sorts before ZQD alphabetically.
     assert [c["ticker"] for c in first] == ["AQD", "ZQD", "TEF", "DSP"]
+
+
+# ── CURRENT_RESEARCH_FUNDAMENTAL_PROMOTION_HARDENING_V1: survivability from level evidence ──────
+
+def test_loss_making_with_improving_direction_cheap_and_breakdown_is_never_quality_dislocation():
+    for state, recovery in (("IMPROVING", {}), ("STABLE", {}), ("MIXED", {"corp_state": "CATALYST_PRESENT"})):
+        rec = _record(fundamental_state=state, own_history_state="LOW_VS_OWN_HISTORY", valuation_status="AVAILABLE",
+                      tactical_phase="BREAKDOWN", market_structure_state="DOWNTREND", risk_level=LOSS_MAKING_CURRENT,
+                      **recovery)
+        out = adr.build_ticker_record(ticker="LMI", session="2026-09-09", integrated_record=rec)
+        assert out["primary_research_state"] != adr.QUALITY_DISLOCATION, state
+        assert out["primary_research_state"] == adr.DISTRESS_SPECULATIVE
+        survivability = out["economic_survivability_context"]
+        assert survivability["survivability"] == "ADVERSE_LEVEL_EVIDENCED"
+        assert survivability["survivability_inferred_from_direction"] is False
+
+
+def test_direction_alone_never_evidences_viable_economics():
+    rec = _record(fundamental_state="IMPROVING", own_history_state="LOW_VS_OWN_HISTORY", valuation_status="AVAILABLE",
+                  tactical_phase="BREAKDOWN", market_structure_state="DOWNTREND")  # no level evidence at all
+    out = adr.build_ticker_record(ticker="DIR", session="2026-09-09", integrated_record=rec)
+    assert out["primary_research_state"] == adr.NO_QUALIFIED_DISLOCATION
+    assert "CHEAP_PRICE_DISLOCATION_VIABLE_ECONOMICS_NOT_ESTABLISHED" in out["reason_codes"]
+    assert out["economic_survivability_context"]["viable_economics_evidenced"] is False
+
+
+def test_stale_adverse_level_stays_known_adverse_history_not_unknown_survivability():
+    rec = _record(fundamental_state="INSUFFICIENT", own_history_state="LOW_VS_OWN_HISTORY", valuation_status="AVAILABLE",
+                  tactical_phase="INSUFFICIENT", risk_level=LOSS_MAKING_STALE, evidence_availability=contract.STALE_ONLY)
+    out = adr.build_ticker_record(ticker="STL", session="2026-09-09", integrated_record=rec)
+    survivability = out["economic_survivability_context"]
+    assert survivability["survivability"] == "ADVERSE_HISTORY_KNOWN"
+    assert survivability["fundamental_evidence_availability"] == contract.STALE_ONLY
+    assert "FUNDAMENTAL_EVIDENCE_UNAVAILABLE" not in out["missing_evidence_flags"]
+    assert out["primary_research_state"] == adr.VALUE_TRAP_RISK
+    breakdown = _record(fundamental_state="INSUFFICIENT", valuation_status="UNAVAILABLE", tactical_phase="BREAKDOWN",
+                        market_structure_state="DOWNTREND", risk_level=LOSS_MAKING_STALE)
+    out = adr.build_ticker_record(ticker="STB", session="2026-09-09", integrated_record=breakdown)
+    assert out["primary_research_state"] == adr.DISTRESS_SPECULATIVE
+    assert "PRICE_BREAKDOWN_WITH_KNOWN_ADVERSE_LEVEL" in out["reason_codes"]
+
+
+def test_unknown_survivability_only_when_no_level_can_be_established():
+    rec = _record(fundamental_state="INSUFFICIENT", own_history_state="LOW_VS_OWN_HISTORY", valuation_status="AVAILABLE",
+                  tactical_phase="INSUFFICIENT", evidence_availability=contract.ABSENT)
+    out = adr.build_ticker_record(ticker="UNK", session="2026-09-09", integrated_record=rec)
+    assert out["economic_survivability_context"]["survivability"] == "UNKNOWN_SURVIVABILITY"
+    assert "FUNDAMENTAL_EVIDENCE_UNAVAILABLE" in out["missing_evidence_flags"]
+
+
+def test_survivability_reads_the_level_from_a_retained_synthesis_never_the_direction():
+    import integrated_investment_decision_product as iidp
+    compact = {"contract_version": "financial_analysis_compact/v1", "status": "AVAILABLE",
+               "analysis_family": "INDUSTRIAL_FINANCIAL_ANALYSIS", "issuer_type": "corporate",
+               "profitability_state": "LOSS_MAKING", "balance_sheet_state": "STRENGTHENING", "leverage_state": "IMPROVING",
+               "current_ratio_trajectory_state": "CURRENT_RATIO_IMPROVING",
+               "feature_fitness": {f: {"fitness": "READY", "as_of_period": "2026-Q2", "reason_codes": []}
+                                   for f in ("net_income_sign", "equity_to_assets_direction", "debt_to_equity_direction",
+                                             "current_ratio_direction")}}
+    decision = iidp.build_ticker_integrated_decision(
+        ticker="AAA", as_of_session="2026-09-24", tactical_record=None, financial_record=compact,
+        valuation_record=None, relative_volume_record=None, market_sector_record=None)
+    assert decision["fundamental_risk_level"]["state"] == contract.ADVERSE_LEVEL_CURRENT
+    out = adr.build_ticker_record(ticker="AAA", session="2026-09-24", integrated_record=decision)
+    assert out["economic_survivability_context"]["adverse_level_evidenced"] is True
+    assert out["economic_survivability_context"]["viable_economics_evidenced"] is False
+
+
+def test_known_non_current_constructive_level_is_never_flagged_as_unavailable_evidence():
+    stale_profitable = {"state": contract.NO_QUALIFIED_ADVERSE_LEVEL, "constructive_current_level_without_adverse": False,
+                        "adverse_level_dimensions": [], "constructive_level_dimensions": ["PROFITABILITY"]}
+    rec = _record(fundamental_state="INSUFFICIENT", own_history_state="LOW_VS_OWN_HISTORY", valuation_status="AVAILABLE",
+                  tactical_phase="INSUFFICIENT", risk_level=stale_profitable, evidence_availability=contract.STALE_ONLY)
+    out = adr.build_ticker_record(ticker="SCP", session="2026-09-09", integrated_record=rec)
+    assert "FUNDAMENTAL_EVIDENCE_UNAVAILABLE" not in out["missing_evidence_flags"]
+    assert "FUNDAMENTAL_CURRENT_DIRECTION_INSUFFICIENT" in out["missing_evidence_flags"]
+    assert out["economic_survivability_context"]["survivability"] == "NO_ADVERSE_LEVEL_NOT_CURRENT_CONSTRUCTIVE"
+    assert out["primary_research_state"] != adr.QUALITY_DISLOCATION
+    # Stale direction evidence without any level: known evidence, survivability not established.
+    rec = _record(fundamental_state="INSUFFICIENT", valuation_status="AVAILABLE", tactical_phase="INSUFFICIENT",
+                  evidence_availability=contract.STALE_ONLY)
+    out = adr.build_ticker_record(ticker="SDR", session="2026-09-09", integrated_record=rec)
+    assert out["missing_evidence_flags"] == ["FUNDAMENTAL_CURRENT_DIRECTION_INSUFFICIENT", "SURVIVABILITY_LEVEL_NOT_ESTABLISHED"]
+    assert out["primary_research_state"] == adr.INSUFFICIENT_EVIDENCE

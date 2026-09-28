@@ -26,8 +26,12 @@ from collections import Counter
 from typing import Any, Mapping, Sequence
 
 from field_temporal_contract import stable_id
+import fundamental_signal_consumption_contract as fundamental_signals
 
 CONTRACT_VERSION = "asymmetric_dislocation_research/v1"
+#: CURRENT_RESEARCH_FUNDAMENTAL_PROMOTION_HARDENING_V1: survivability is read from what
+#: fundamental evidence is known and from qualified LEVEL evidence, never from the direction.
+SURVIVABILITY_RULE = "survivability_from_evidence_availability_and_qualified_level_evidence/v1"
 MILESTONE = "ASYMMETRIC_DISLOCATION_RESEARCH_V1"
 ARTIFACT_TYPE = "asymmetric_dislocation_research"
 
@@ -102,21 +106,50 @@ def content_identity(artifact: Mapping[str, Any]) -> dict[str, str]:
 #    classification -- they only read and interpret already-governed fields. ─────
 
 def evaluate_economic_survivability(integrated_record: Mapping[str, Any]) -> dict[str, Any]:
-    """Balance-sheet/leverage/cash-flow/profitability survivability, reused verbatim
-    from `fundamental_state` (financial_analysis_product_integration/v1). Severe or
-    continuing deterioration is surfaced explicitly so it can never be hidden by a
-    cheap valuation reading elsewhere in the record."""
+    """Survivability from what fundamental evidence is known and from qualified LEVEL evidence.
+
+    ``state`` is the direction (``fundamental_state``) reused verbatim, and severe or continuing
+    deterioration stays explicit so a cheap valuation can never hide it. Survivability itself is
+    NOT inferred from the direction: an improving balance-sheet direction says nothing about a
+    loss-making level. ``fundamental_risk_level`` is qualified level evidence only; known adverse
+    history that is not current stays known, never unknown. Viable economics are evidenced only by
+    a current constructive level with no adverse level; survivability is unknown only when the
+    evidence contract cannot establish a level at all.
+    """
     fund_state = integrated_record.get("fundamental_state") or "INSUFFICIENT"
     fund_axis = ((integrated_record.get("evidence_axes") or {}).get("FUNDAMENTAL") or {})
     composite = integrated_record.get("financial_composite_context") or {}
+    availability = fundamental_signals.evidence_availability_of_record(integrated_record)
+    risk = fundamental_signals.risk_level_of_record(integrated_record)
+    level = risk.get("state") or fundamental_signals.LEVEL_UNKNOWN
+    adverse = level in (fundamental_signals.ADVERSE_LEVEL_CURRENT, fundamental_signals.ADVERSE_LEVEL_KNOWN_NOT_CURRENT)
+    viable = (level == fundamental_signals.NO_QUALIFIED_ADVERSE_LEVEL
+              and bool(risk.get("constructive_current_level_without_adverse")))
+    if adverse:
+        survivability = ("ADVERSE_LEVEL_EVIDENCED" if level == fundamental_signals.ADVERSE_LEVEL_CURRENT
+                         else "ADVERSE_HISTORY_KNOWN")
+    elif viable:
+        survivability = "VIABLE_ECONOMICS_EVIDENCED"
+    elif level == fundamental_signals.NO_QUALIFIED_ADVERSE_LEVEL:
+        survivability = "NO_ADVERSE_LEVEL_NOT_CURRENT_CONSTRUCTIVE"
+    else:
+        survivability = "UNKNOWN_SURVIVABILITY"
     return {
         "state": fund_state,
         "fitness": fund_axis.get("fitness", "UNAVAILABLE"),
         "financial_composite_state": composite.get("financial_composite_state"),
         "severe_deterioration_evidenced": fund_state == "DETERIORATING",
+        "fundamental_evidence_availability": availability,
+        "fundamental_risk_level": level,
+        "adverse_level_dimensions": list(risk.get("adverse_level_dimensions") or []),
+        "survivability": survivability,
+        "adverse_level_evidenced": adverse,
+        "viable_economics_evidenced": viable,
+        "survivability_inferred_from_direction": False,
         "supporting_reason_codes": list(fund_axis.get("supporting_reason_codes") or []),
         "contradicting_reason_codes": list(fund_axis.get("contradicting_reason_codes") or []),
-        "method": "financial_analysis_product_integration/v1 (reused verbatim via fundamental_state)",
+        "method": ("financial_analysis_product_integration/v1 direction (verbatim via fundamental_state) + "
+                   + fundamental_signals.RISK_LEVEL_RULE + " + " + SURVIVABILITY_RULE),
     }
 
 
@@ -146,6 +179,7 @@ def evaluate_valuation_dislocation(integrated_record: Mapping[str, Any]) -> dict
         "own_history_state": own_hist,
         "pe_multiple": val.get("pe_multiple"),
         "pb_multiple": val.get("pb_multiple"),
+        "pb_basis": val.get("pb_basis"),
         "ps_multiple": val.get("ps_multiple"),
         "ev_ebitda_multiple": val.get("ev_ebitda_multiple"),
         "limitations": list(val.get("limitations") or []),
@@ -260,6 +294,7 @@ def evaluate_risk_invalidation(
         "distance_to_invalidation_pct": inval.get("distance_to_invalidation_pct"),
         "narrative_reason": condition.get("narrative_reason"),
         "severe_fundamental_deterioration_evidenced": survivability["severe_deterioration_evidenced"],
+        "adverse_fundamental_level_evidenced": survivability["adverse_level_evidenced"],
         "material_corporate_risk_active": material_risk_active,
         "cost_basis_irrelevant_to_classification": True,
         "method": "tactical_confirmation_invalidation_boundaries/v1 (reused verbatim)",
@@ -336,17 +371,31 @@ def classify_dislocation(
     if valuation["status"] == "UNAVAILABLE":
         missing_evidence.append("VALUATION_EVIDENCE_UNAVAILABLE")
     fund_state = survivability["state"]
+    adverse_level = bool(survivability.get("adverse_level_evidenced"))
+    viable = bool(survivability.get("viable_economics_evidenced"))
+    level_unknown = survivability.get("fundamental_risk_level", fundamental_signals.LEVEL_UNKNOWN) == fundamental_signals.LEVEL_UNKNOWN
+    # Survivability cannot be established only when neither a direction nor any qualified level is
+    # known. An insufficient direction is not absent evidence: FUNDAMENTAL_EVIDENCE_UNAVAILABLE is
+    # reserved for records with no qualified fundamental evidence (or an entity the contract does
+    # not decide); known evidence without a direction or level is named as such.
+    fundamental_unknown = fund_state not in FUNDAMENTAL_STATES_KNOWN and level_unknown
     if fund_state not in FUNDAMENTAL_STATES_KNOWN:
-        missing_evidence.append("FUNDAMENTAL_EVIDENCE_UNAVAILABLE")
+        if fundamental_unknown and survivability.get("fundamental_evidence_availability") in (
+                fundamental_signals.ABSENT, fundamental_signals.NOT_APPLICABLE_ENTITY, None):
+            missing_evidence.append("FUNDAMENTAL_EVIDENCE_UNAVAILABLE")
+        else:
+            missing_evidence.append("FUNDAMENTAL_CURRENT_DIRECTION_INSUFFICIENT")
+            if level_unknown:
+                missing_evidence.append("SURVIVABILITY_LEVEL_NOT_ESTABLISHED")
 
     # TURNAROUND and DETERIORATING are themselves strong, explicit, self-sufficient
     # survivability reads (an earnings/margin/cash-flow inflection or an active
-    # deterioration signal says something real on its own); STABLE/IMPROVING/MIXED are
-    # comparatively uninformative about dislocation without a valuation or market
-    # signal to pair with, and INSUFFICIENT means survivability itself is unknown.
-    fund_is_self_sufficient = fund_state in {"TURNAROUND", "DETERIORATING"}
+    # deterioration signal says something real on its own), and so is a known adverse level;
+    # STABLE/IMPROVING/MIXED are comparatively uninformative about dislocation without a
+    # valuation or market signal to pair with.
+    fund_is_self_sufficient = fund_state in {"TURNAROUND", "DETERIORATING"} or adverse_level
     critical_axis_missing = (not fund_is_self_sufficient) and (
-        valuation["status"] == "UNAVAILABLE" or fund_state not in FUNDAMENTAL_STATES_KNOWN
+        valuation["status"] == "UNAVAILABLE" or fundamental_unknown
     )
     if critical_axis_missing and _no_countervailing_evidence(market, risk):
         return INSUFFICIENT_EVIDENCE, ["INSUFFICIENT_EVIDENCE_ACROSS_REUSED_AXES"], missing_evidence
@@ -369,7 +418,20 @@ def classify_dislocation(
     if fund_state == "TURNAROUND":
         return _finish(TURNAROUND_EVIDENCE_FORMING, reason_codes + ["EXPLICIT_FINANCIAL_TURNAROUND_EVIDENCE"])
 
+    def _not_viable(codes: list[str]) -> tuple[str, list[str], list[str]] | None:
+        """Cheap + price dislocation without evidenced viable economics is never a quality
+        dislocation: a known adverse level reads as distress; an unestablished level stays unqualified."""
+        if not (valuation["state"] == "CHEAP" and market["genuine_price_dislocation"]) or viable:
+            return None
+        if adverse_level:
+            return _finish(DISTRESS_SPECULATIVE,
+                           codes + ["PRICE_BREAKDOWN_WITH_KNOWN_ADVERSE_LEVEL_DESPITE_NON_DETERIORATING_DIRECTION"])
+        return _finish(NO_QUALIFIED_DISLOCATION, codes + ["CHEAP_PRICE_DISLOCATION_VIABLE_ECONOMICS_NOT_ESTABLISHED"])
+
     if fund_state in {"STABLE", "IMPROVING"}:
+        blocked = _not_viable(reason_codes)
+        if blocked:
+            return blocked
         if valuation["state"] == "CHEAP" and market["genuine_price_dislocation"]:
             return _finish(QUALITY_DISLOCATION, reason_codes + ["CHEAP_VALUATION_WITH_VIABLE_ECONOMICS_AND_PRICE_DISLOCATION"])
         if market["reversal_or_basing_evidenced"] and recovery["state"] == "RECOVERY_EVIDENCE_PRESENT":
@@ -379,6 +441,10 @@ def classify_dislocation(
         return _finish(NO_QUALIFIED_DISLOCATION, reason_codes)
 
     if fund_state == "MIXED":
+        if recovery["state"] == "RECOVERY_EVIDENCE_PRESENT":
+            blocked = _not_viable(reason_codes)
+            if blocked:
+                return blocked
         if valuation["state"] == "CHEAP" and market["genuine_price_dislocation"] and recovery["state"] == "RECOVERY_EVIDENCE_PRESENT":
             return _finish(QUALITY_DISLOCATION, reason_codes + ["CHEAP_VALUATION_WITH_MIXED_FUNDAMENTALS_CORROBORATED_BY_RECOVERY_EVIDENCE"])
         if market["reversal_or_basing_evidenced"] and recovery["state"] == "RECOVERY_EVIDENCE_PRESENT":
@@ -387,9 +453,20 @@ def classify_dislocation(
             reason_codes.append("OVERSOLD_ALONE_NOT_SUFFICIENT")
         return _finish(NO_QUALIFIED_DISLOCATION, reason_codes)
 
-    # fund_state == "INSUFFICIENT": reached only when a countervailing market/risk
-    # signal exists (the top gate already returned INSUFFICIENT_EVIDENCE otherwise).
-    if market["distribution_or_breakdown_evidenced"] and risk["material_corporate_risk_active"]:
+    # fund_state == "INSUFFICIENT": no current direction. A known adverse level (current, or
+    # known history that is not current) is weak survivability, never unknown survivability.
+    if adverse_level:
+        if valuation["state"] == "CHEAP" and not market["distribution_or_breakdown_evidenced"]:
+            return _finish(VALUE_TRAP_RISK, reason_codes + ["CHEAP_VALUATION_WITH_KNOWN_ADVERSE_LEVEL_AND_NO_CURRENT_DIRECTION"])
+        if market["distribution_or_breakdown_evidenced"]:
+            codes = reason_codes + ["PRICE_BREAKDOWN_WITH_KNOWN_ADVERSE_LEVEL"]
+            if risk["material_corporate_risk_active"]:
+                codes.append("MATERIAL_CORPORATE_RISK_ACTIVE")
+            return _finish(DISTRESS_SPECULATIVE, codes)
+        return _finish(NO_QUALIFIED_DISLOCATION, reason_codes + ["KNOWN_ADVERSE_LEVEL_WITHOUT_CURRENT_DIRECTION"])
+    # Otherwise reached only when a countervailing market/risk signal exists (the top gate
+    # already returned INSUFFICIENT_EVIDENCE when survivability cannot be established at all).
+    if market["distribution_or_breakdown_evidenced"] and risk["material_corporate_risk_active"] and not viable:
         return _finish(DISTRESS_SPECULATIVE, reason_codes + ["PRICE_BREAKDOWN_WITH_UNKNOWN_SURVIVABILITY_AND_ACTIVE_MATERIAL_RISK"])
     if market["oversold_only"]:
         reason_codes.append("OVERSOLD_ALONE_NOT_SUFFICIENT")

@@ -1,5 +1,35 @@
 # Stock Lookup — Operational State
 
+**Current Research chain integrated after M1 (2026-09-28):**
+`CURRENT_RESEARCH_CHAIN_PROMOTION_REVIEW_INTEGRATION_V1 = ACTIVE / IMPLEMENTATION_INTEGRATED /
+AWAITING_INDEPENDENT_EXACT_HEAD_REVIEW`. It is not complete, and no analytical authority is promoted.
+M1 stays `COMPLETE / LIVE_ACCEPTED_2026_09_28` (entry below, unchanged).
+
+- **Readiness review: `PROMOTION_READINESS_PASS`.** The review covered the exact-head delta
+  `6c40644..f1e715c` against canonical `main` `d08778b1c02a8490741c238f9678955df5be8f26`. Since
+  the fork, `main` changed no analytical file. The chain leaves the posture branches and thresholds
+  unchanged, adds no provider or network path, and promotes no authority.
+- **Integrated.** The branch `feature/current-research-chain-integration-v1-20260928` (from
+  `d08778b`) carries the chain `ffc75d7 → 36e8525 → df6c018 → 4c46328 → 488eaf1 → 66d0fc0 →
+  5729c52 → f1e715c`. It is ported as 50 files byte-identical to `f1e715c` in one checkpoint. The
+  source branch is untouched.
+- **Excluded.** `eefcb04` (a pre-rebaseline North Star copy) and every chain hunk in this file,
+  `ROADMAP.md`, `ROADMAP_STATE.json` and `DECISIONS.md`. `NORTH_STAR.md` and `AI_RULES.md` are
+  unchanged.
+- **Behaviour this brings to the next Daily once merged:**
+  - The operational fundamental bridge and governed entity applicability are bound.
+  - `current_research_decision_input/v1` is added.
+  - Research P/B is labelled.
+  - Market cap is size context only.
+  - Financial V2 series join on semantic observation identity.
+  - `fundamental_signal_consumption/v1`, with only CURRENT periods voting.
+  - `fundamental_decision_policy_version` enters `decision_identity`. Fundamental-state changes
+    across policy epochs read `NOT_COMPARABLE_POLICY_CHANGE`.
+  - Posture deltas are listed in `docs/DECISIONS.md` 2026-09-28.
+- **Remaining gates:** an independent exact-head review of the integration head, CI on the PR, the
+  owner's acceptance of the posture deltas, and the owner's merge decision. No Daily, provider call,
+  runtime write or merge happened.
+
 **M1 closed -- live accepted on the 2026-09-28 ordinary Daily (2026-09-28, governance closeout):**
 `CURRENT_DECISION_SURFACE_CONVERGENCE_V1 = COMPLETE / LIVE_ACCEPTED_2026_09_28`.
 Canonical Producer `main` = `66943d884461209cd6261db6f1b8a40a2986cf5a`
@@ -4778,6 +4808,8 @@ Real two-session replay (`tools/run_daily_integrated_decision_brief_replay.py`, 
 > - `CURRENT_DECISION_SURFACE_CONVERGENCE_V1` is `COMPLETE / LIVE_ACCEPTED_2026_09_28`; no
 >   milestone is ACTIVE.
 > - `queued_next` = `CURRENT_RESEARCH_CHAIN_PROMOTION_REVIEW_INTEGRATION_V1` (`NEXT / NOT_STARTED`).
+>   *(Later on 2026-09-28: that milestone is `ACTIVE / IMPLEMENTATION_INTEGRATED /
+>   AWAITING_INDEPENDENT_EXACT_HEAD_REVIEW`; `queued_next` is empty. See the top of this file.)*
 > - `TACTICAL_MARKET_STRUCTURE_AND_BREAKOUT_V3` and `INTEGRATED_INVESTMENT_DECISION_PRODUCT_V1`
 >   are COMPLETE.
 
@@ -5013,6 +5045,9 @@ Frozen pre-open artifact for the actual configured 11-ticker production cohort (
 > `COMPLETE / LIVE_ACCEPTED_2026_09_28`. The current next gate is
 > `CURRENT_RESEARCH_CHAIN_PROMOTION_REVIEW_INTEGRATION_V1` (`NEXT / NOT_STARTED`), starting with an
 > exact-head promotion/readiness review (top of this file and `docs/ROADMAP_STATE.json`).
+> *(Later on 2026-09-28: the review passed and the chain is integrated on
+> `feature/current-research-chain-integration-v1-20260928`, awaiting an independent exact-head
+> review; see the top of this file.)*
 
 ### Core analytical product completion (2026-09-02 rebaseline)
 

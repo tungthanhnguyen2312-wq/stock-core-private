@@ -15,11 +15,14 @@ from collections import Counter, defaultdict
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
+import canonical_financial_facts as canonical_facts
 import financial_analysis_engine_v2 as engine
 import financial_flow_semantics_ttm_bridge as qualified_flow
 
 FEATURE_STORE_CONTRACT = "market_wide_fundamental_feature_store/v1"
 GENERIC = "UNCLASSIFIED_GENERIC_FINANCIAL_ANALYSIS"
+COMPOSED_LINEAGE_METHOD = "exact_component_observation_linkage/v1"
+_BINDABLE_MISSING_LINEAGE = frozenset({"provider", "source_sha256", "source_file"})
 _FEATURE_MAP = {
     "profit_state": "net_income_sign", "net_margin": "net_margin",
     "operating_cash_flow_sign": "operating_cash_flow_sign", "cfo_to_net_income": "cfo_to_net_income",
@@ -96,6 +99,94 @@ def _refresh_states(record: dict[str, Any]) -> None:
     record.update(engine._evidence(record["ticker"], features, record["states"]))
 
 
+def _usable_component(row: Mapping[str, Any]) -> bool:
+    lineage = row.get("source_lineage") or {}
+    value = row.get("reported_value")
+    return (row.get("source_status") == "provider_reported" and row.get("lineage_complete") is True
+            and not row.get("source_conflicts") and isinstance(value, (int, float)) and not isinstance(value, bool)
+            and all(lineage.get(key) not in (None, "", "unknown") for key in ("provider", "source_file", "source_sha256", "fact_id")))
+
+
+def _composed_binding(row: Mapping[str, Any], components: Sequence[Sequence[Mapping[str, Any]]]) -> tuple[dict[str, Any] | None, str]:
+    """Bind one composed fact's lineage to its components, or name why it stays unbound."""
+    lineage = row.get("source_lineage") or {}
+    value = row.get("reported_value")
+    if (row.get("source_status") != "provider_reported" or row.get("source_conflicts")
+            or not isinstance(value, (int, float)) or isinstance(value, bool)):
+        return None, "COMPOSED_FACT_NOT_PROVIDER_REPORTED"
+    if row.get("lineage_complete") is True:
+        return None, "COMPOSED_FACT_LINEAGE_ALREADY_COMPLETE"
+    if "derived_metric" not in (row.get("source_warnings") or []) or not set(row.get("missing_lineage_fields") or []) <= _BINDABLE_MISSING_LINEAGE:
+        return None, "COMPOSED_FACT_LINEAGE_GAP_NOT_DERIVATION_ONLY"
+    if any(len(found) != 1 for found in components):
+        return None, "COMPOSED_FACT_COMPONENT_ABSENT_OR_DUPLICATED"
+    parts = [found[0] for found in components]
+    if not all(_usable_component(part) for part in parts):
+        return None, "COMPOSED_FACT_COMPONENT_NOT_USABLE"
+    shared = {(part["source_lineage"]["provider"], part["source_lineage"]["source_file"], part["source_lineage"]["source_sha256"],
+               part.get("statement_family"), part.get("statement_scope"), part.get("period_semantic_state"),
+               json.dumps(part.get("normalized_candidate_unit") or {}, sort_keys=True)) for part in parts}
+    if len(shared) != 1:
+        return None, "COMPOSED_FACT_COMPONENTS_NOT_ONE_REPRESENTATION"
+    provider, source_file, source_sha256, family, scope, semantic, unit = next(iter(shared))
+    if (row.get("statement_family"), row.get("statement_scope"), row.get("period_semantic_state"),
+            json.dumps(row.get("normalized_candidate_unit") or {}, sort_keys=True)) != (family, scope, semantic, unit):
+        return None, "COMPOSED_FACT_REPRESENTATION_DIFFERS_FROM_COMPONENTS"
+    observations = sorted(item for part in parts for item in (part["source_lineage"].get("source_observation_ids") or []))
+    if not observations or sorted(lineage.get("source_observation_ids") or []) != observations:
+        return None, "COMPOSED_FACT_OBSERVATION_LINKAGE_NOT_EXACT"
+    if float(sum(float(part["reported_value"]) for part in parts)) != float(value):
+        return None, "COMPOSED_FACT_VALUE_NOT_REPRODUCED_BY_COMPONENTS"
+    bound = dict(row)
+    bound["lineage_complete"] = True
+    bound["missing_lineage_fields"] = []
+    bound["source_lineage"] = {**lineage, "provider": provider, "source_file": source_file, "source_sha256": source_sha256,
+                               "lineage_method": COMPOSED_LINEAGE_METHOD,
+                               "operand_fact_ids": [part["source_lineage"]["fact_id"] for part in parts]}
+    bound["lineage_binding"] = {"method": COMPOSED_LINEAGE_METHOD, "status": "BOUND",
+                                "original_missing_lineage_fields": sorted(row.get("missing_lineage_fields") or [])}
+    return bound, "BOUND"
+
+
+def bind_composed_fact_lineage(rows: Sequence[Mapping[str, Any]]) -> tuple[list[Mapping[str, Any]], dict[str, Any]]:
+    """Restore the lineage a registry-derived fact loses in the semantic projection.
+
+    ``canonical_financial_facts`` sums a composed metric (e.g. ``total_interest_bearing_debt`` =
+    short- + long-term interest-bearing debt) from components of one period, but the derived fact
+    has no single raw observation, so the projection leaves its provider/file/sha empty and the
+    engine's lineage gate rejects it. It binds only by exact linkage: every component is present
+    once and usable, all share one provider, payload, statement family, scope, period semantic and
+    unit with the composed fact, the composed fact's observation ids are exactly the components'
+    union, and the component values reproduce its value. Anything else stays unbound (fail closed).
+    No value is computed; only lineage already implied by the linkage is restated.
+    """
+    definitions = {metric: tuple(definition["derived_from"]) for metric, definition in canonical_facts.METRIC_REGISTRY.items()
+                   if definition.get("derivation") == "sum" and definition.get("derived_from")}
+    component_metrics = {name for names in definitions.values() for name in names}
+    index: dict[tuple[str, str, str, str], list[Mapping[str, Any]]] = defaultdict(list)
+    for row in rows:
+        if row.get("canonical_metric") in component_metrics:
+            index[(str(row.get("ticker")), str(row.get("canonical_metric")), str(row.get("native_period_label")),
+                   str(row.get("period_semantic_state")))].append(row)
+    output: list[Mapping[str, Any]] = []
+    outcomes: Counter[str] = Counter()
+    by_metric: Counter[str] = Counter()
+    for row in rows:
+        metric = row.get("canonical_metric")
+        if metric not in definitions:
+            output.append(row)
+            continue
+        components = [index.get((str(row.get("ticker")), name, str(row.get("native_period_label")),
+                                 str(row.get("period_semantic_state"))), []) for name in definitions[metric]]
+        bound, outcome = _composed_binding(row, components)
+        outcomes[outcome] += 1
+        if bound is not None:
+            by_metric[str(metric)] += 1
+        output.append(bound if bound is not None else row)
+    return output, {"method": COMPOSED_LINEAGE_METHOD, "composed_metrics": sorted(definitions),
+                    "bound_by_metric": dict(sorted(by_metric.items())), "outcomes": dict(sorted(outcomes.items()))}
+
+
 def _bridge_fact(row: Mapping[str, Any]) -> dict[str, Any]:
     """Adapt one `structured_financial_period_semantics` row back into the raw-canonical-fact
     field names `financial_flow_semantics_ttm_bridge.flow_semantics`/`_usable`/`_compatible`
@@ -151,7 +242,12 @@ def build_scaleout(*, semantic_rows: Sequence[Mapping[str, Any]], feature_record
                    feature_store_artifact: Mapping[str, Any], period_semantics_identity: str,
                    requested_at: str, legacy_records: Mapping[str, Mapping[str, Any]] | None = None,
                    classification_diagnostics_identity: str | None = None,
-                   qualified_flow_artifact: Mapping[str, Any] | None = None) -> dict[str, Any]:
+                   qualified_flow_artifact: Mapping[str, Any] | None = None,
+                   period_semantics_knowledge_time: str | None = None) -> dict[str, Any]:
+    """``period_semantics_knowledge_time`` is the retained time of the pinned period-semantics
+    artifact: every fact in it was known by then. Lineage only (it computes nothing); the
+    fundamental consumption contract uses it to tell a non-calendar fiscal label known by a
+    decision session from possible future information."""
     names = sorted(feature_records)
     issuer_types = {ticker: feature_records[ticker].get("entity_type") for ticker in names}
     legacy_records = {ticker: record for ticker, record in (legacy_records or {}).items() if ticker in feature_records}
@@ -166,11 +262,12 @@ def build_scaleout(*, semantic_rows: Sequence[Mapping[str, Any]], feature_record
             raise FinancialAnalysisScaleoutError("QUALIFIED_FLOW_IDENTITY_MISMATCH")
         qualified_rows = qualified_flow.engine_rows_from_artifact(qualified_flow_artifact)
         qualified_coverage = ((qualified_flow_artifact.get("coverage") or {}).get("qualified_flow_before_after"))
-    # Flow rows are admitted only through the bridge when supplied.  P-I-T rows remain
-    # untouched, which locks working-capital and explicit-debt coverage.
+    # Flow rows are admitted only through the bridge when supplied.  P-I-T rows keep their own
+    # semantic facts; a registry-composed fact only regains the lineage its components prove.
+    bound_rows, composed_lineage = bind_composed_fact_lineage(semantic_rows)
     bridge_metrics = set(qualified_flow.FLOW_METRICS)
-    engine_rows = ([row for row in semantic_rows if row.get("canonical_metric") not in bridge_metrics] + qualified_rows
-                   if qualified_flow_artifact is not None else list(semantic_rows))
+    engine_rows = ([row for row in bound_rows if row.get("canonical_metric") not in bridge_metrics] + qualified_rows
+                   if qualified_flow_artifact is not None else list(bound_rows))
     artifact = engine.build_artifact(
         tickers=names, rows=engine_rows, issuer_types=issuer_types,
         source_identities={
@@ -180,6 +277,7 @@ def build_scaleout(*, semantic_rows: Sequence[Mapping[str, Any]], feature_record
             "feature_store_artifact_identity": feature_store_artifact.get("artifact_identity"),
             "classification_diagnostics_identity": classification_diagnostics_identity,
             "qualified_flow_artifact_identity": qualified_flow_artifact.get("artifact_identity") if qualified_flow_artifact else None,
+            **({"period_semantics_knowledge_time": period_semantics_knowledge_time} if period_semantics_knowledge_time else {}),
         }, requested_at=requested_at,
     )
     for ticker, record in artifact["records"].items():
@@ -232,6 +330,7 @@ def build_scaleout(*, semantic_rows: Sequence[Mapping[str, Any]], feature_record
             for name in sorted(next(iter(artifact["records"].values()))["states"])
         },
         "qualified_flow_before_after": copy.deepcopy(qualified_coverage),
+        "composed_fact_lineage": composed_lineage,
     })
     artifact["scaleout"] = {"feature_source_priority": ["QUALIFIED_FLOW_TTM_AND_GROWTH", "PERIOD_SEMANTIC_FACTS", "SAFE_FEATURE_STORE_FEATURE"], "feature_store_proxy_cannot_make_ready": True, "legacy_523_regression_ticker_count": len(legacy_records), "qualified_flow_replaced_raw_flow_rows": qualified_flow_artifact is not None}
     artifact.update(engine.content_identity(artifact))

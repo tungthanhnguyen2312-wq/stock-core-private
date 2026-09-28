@@ -792,8 +792,12 @@ def build_enrichment_components(
 
     def _integrated_investment_decision_product():
         from integrated_investment_decision_product import build_artifact as build
+        import canonical_current_product_projections as product_projections
         import canonical_daily_financial_v2_materialization as fin_v2_material
+        import entity_classification_contract as entity_contract
         import financial_v2_current_input_authority as fin_v2_authority
+        import integrated_investment_decision_product as integrated_contract
+        import operational_fundamental_context_integration as operational_fundamental
         import market_structure_breakout_product_projection as msb_proj
         import market_wide_relative_volume_research as rvol_research
         import tactical_confirmation_context as confirmation_context
@@ -917,7 +921,9 @@ def build_enrichment_components(
         # tools/run_integrated_investment_decision_replay.py's own proven wiring, the one place both
         # correct shapes are established end to end.
         fin_authority = fin_v2_authority.resolve(retained_evidence_root)
-        engine_artifact = fin_v2_material.build_engine_artifact(root=retained_evidence_root, requested_at=requested_at, authority=fin_authority)
+        semantic_rows: list[dict] = []
+        engine_artifact = fin_v2_material.build_engine_artifact(root=retained_evidence_root, requested_at=requested_at, authority=fin_authority,
+                                                               semantic_rows_out=semantic_rows)
         financial_session_artifact = fin_v2_material.build_session_artifact(
             root=retained_evidence_root, decision_session=session, product_tickers=daily_denominator,
             requested_at=requested_at, authority=fin_authority, engine_artifact=engine_artifact,
@@ -928,13 +934,63 @@ def build_enrichment_components(
                 product_tickers=daily_denominator, requested_at=requested_at,
             ) if runtime_root is not None else None
         )
+        # CURRENT_RESEARCH_DECISION_CONVERGENCE_V1: one governed current-state entity
+        # applicability (layered seed/promoted/legacy-recovery/scale-out authority) for the whole
+        # Daily denominator. Valuation method applicability, the operational fundamental bridge and
+        # the decision input all read this same resolution instead of the raw valuation lane's
+        # narrower issuer panel. It is current-state only, never PIT entity identity.
+        entity_applicability = entity_contract.resolve_current_research_entity_applicability(daily_denominator)
         evaluated_valuation = fin_v2_material.build_evaluated_valuation_artifact(
             engine_artifact=engine_artifact, raw_valuation_artifact=raw_val,
             product_tickers=daily_denominator, requested_at=requested_at,
             calculation_readiness_context=readiness_context,
+            entity_applicability_artifact=entity_applicability,
+            semantic_rows=semantic_rows,
         )
         _write_json(paths["financial_analysis_product"], financial_session_artifact)
         _write_json(paths["current_valuation_evaluated"], evaluated_valuation)
+        _write_json(paths["current_research_entity_applicability"], entity_applicability)
+        # Ordinary-Daily binding of the entity-aware operational fundamental bridge. It consumes
+        # the SAME feature-store build the Daily Producer retains (same pinned semantics
+        # authority, requested_at-independent identity) and is consulted only where Financial V2
+        # leaves the direction insufficient. Any failure is component-local: the Integrated
+        # Decision then builds without the bridge rather than trusting an unverified source.
+        operational_integration = None
+        try:
+            feature_store_result = product_projections.materialize_current_fundamental_feature_store_context(
+                root=retained_evidence_root, requested_at=requested_at,
+            )
+            if feature_store_result.get("status") != "MATERIALIZED":
+                raise CanonicalPostCloseError(
+                    "FUNDAMENTAL_FEATURE_STORE_UNAVAILABLE:" + str(feature_store_result.get("reason_code")))
+            fa_product = financial_session_artifact["financial_analysis_product"]
+            candidates = sorted(
+                ticker for ticker, fa_record in (fa_product.get("records") or {}).items()
+                if integrated_contract.operational_fundamental_bridge_eligible(fa_record, decision_session=session)
+            )
+            operational_integration = operational_fundamental.build_daily_artifact(
+                session=session, candidate_tickers=candidates,
+                feature_store_artifact=feature_store_result["artifact"],
+                entity_applicability_artifact=entity_applicability,
+                financial_analysis_identity=fa_product.get("artifact_identity"),
+            )
+            _write_json(paths["operational_fundamental_context_integration"], operational_integration)
+            results["operational_fundamental_binding"] = {
+                "status": "BOUND", "artifact_identity": operational_integration["artifact_identity"],
+                "feature_store_identity": feature_store_result["artifact"].get("artifact_identity"),
+                "candidates": operational_integration["coverage"]["candidates"],
+                "research_usable": operational_integration["coverage"]["research_usable"],
+            }
+        except Exception as exc:  # noqa: BLE001 -- component-local: the decision builds without the bridge
+            operational_integration = None
+            results["operational_fundamental_binding"] = {"status": "UNAVAILABLE", "reason": f"{type(exc).__name__}:{exc}"}
+        # Same-session descriptive liquidity research feeds only the decision input's liquidity
+        # dimension. A missing or other-session artifact is simply unavailable, never substituted.
+        liquidity_research = _load(paths["liquidity_research"]) or _load(retained_paths["liquidity_research"])
+        if not (isinstance(liquidity_research, Mapping)
+                and liquidity_research.get("contract_version") == integrated_contract.LIQUIDITY_RESEARCH_CONTRACT
+                and liquidity_research.get("resolved_completed_session") == session):
+            liquidity_research = None
         # Corporate Intelligence axis (CORPORATE_INTELLIGENCE_CATALYST_EVENT_RISK_DECISION_
         # INTEGRATION_V1). Built independently, with its own local try/except -- exactly the
         # tactical_boundaries pattern above -- so a corporate-evidence failure never cascades
@@ -992,6 +1048,9 @@ def build_enrichment_components(
             tactical_confirmation_artifact=confirmation,
             tactical_boundaries_artifact=tactical_boundaries,
             corporate_intelligence_artifact=corporate_intelligence_artifact,
+            operational_fundamental_integration_artifact=operational_integration,
+            liquidity_research_artifact=liquidity_research,
+            entity_applicability_artifact=entity_applicability,
         )
         if res.get("session") != session:
             raise CanonicalPostCloseError(f"INTEGRATED_DECISION_SESSION_MISMATCH:expected={session}:observed={res.get('session')}")

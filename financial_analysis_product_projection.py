@@ -145,8 +145,15 @@ def _compact(engine: Mapping[str, Any], ticker: str, record: Mapping[str, Any]) 
         "warnings": list(record.get("warnings") or []),
         "lineage_ref": lineage["artifact_identity"],
         "lineage": lineage,
+        # A computed feature also names its own latest source period, so a consumer can label a
+        # stale-but-valid feature instead of treating every feature as current. Its categorical
+        # sign-transition class and growth basis (never a value) let a consumer keep a negative-base
+        # transition distinct from ordinary growth and name the exact feature behind a state.
         "feature_fitness": {
-            key: {"fitness": feature.get("fitness"), "reason_codes": list(feature.get("reason_codes") or [])}
+            key: {"fitness": feature.get("fitness"), "reason_codes": list(feature.get("reason_codes") or []),
+                  **({"as_of_period": str(feature["period_identity"][-1])} if feature.get("period_identity") else {}),
+                  **({"semantic_transition": str(feature["semantic_transition"])} if feature.get("semantic_transition") else {}),
+                  **({"growth_basis": str(feature["growth_basis"])} if feature.get("growth_basis") else {})}
             for key, feature in sorted((record.get("features") or {}).items()) if isinstance(feature, Mapping)
         },
         "is_actionable": False,

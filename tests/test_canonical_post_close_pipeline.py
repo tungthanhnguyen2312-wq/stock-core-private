@@ -362,9 +362,15 @@ def test_enrichment_components_stamp_requested_session(tmp_path):
     roots = enrichment_roots(session, tmp_path)
     results = cpc.build_enrichment_components(roots["retained_evidence_root"], session, **roots)
     field_by_name = {"financial_momentum": "session", "corporate_event_context": "research_session", "historical_context": "session", "integrated_investment_decision_product": "session"}
-    # The Integrated Decision step also reports how it resolved the opportunity-priority queue;
-    # that is a resolution record, not a component artifact.
-    assert set(field_by_name) <= set(results) <= set(field_by_name) | {"opportunity_priority_queue"}
+    # The Integrated Decision step also reports how it resolved the opportunity-priority queue and
+    # the operational fundamental bridge binding; those are resolution records, not component
+    # artifacts.
+    resolution_records = {"opportunity_priority_queue", "operational_fundamental_binding"}
+    assert set(field_by_name) <= set(results) <= set(field_by_name) | resolution_records
+    # build_tiered_bundle projects every enrichment entry as row["status"]; a resolution record
+    # without one would fail the tiered bundle after the decision is already built.
+    assert all(isinstance(row, dict) and isinstance(row.get("status"), str) for row in results.values())
+    assert results["operational_fundamental_binding"]["status"] in {"BOUND", "UNAVAILABLE"}
     # corporate_event_context intentionally does NOT stamp the requested `session`: since
     # CORPORATE_EVENT_CANONICAL_DATA_REFRESH_AND_LEDGER_CONSOLIDATION_V1, it binds to retained
     # official_event_context's own evidence session instead of fabricating today's date over

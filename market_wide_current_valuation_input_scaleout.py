@@ -573,29 +573,32 @@ def _map_p3f_method(metric: str, method: Mapping[str, Any], *, research: bool, a
 
 
 def _market_cap_monetary_basis(price: Mapping[str, Any], share: Mapping[str, Any]) -> dict[str, Any]:
-    """Honest currency/scale for `current_session_close * share_basis_value`.
+    """Label the existing VND cap product when both retained factors have typed units.
 
-    Never inferred from magnitude. Both factors must independently prove their absolute
-    scale before their product can: the retained price observation must name a token in
-    `KNOWN_PRICE_SCALE_TOKENS` (empty today -- see that constant), and the share count
-    must come from an audited/official citation (`QUALIFIED_SHARE_COUNT_AUTHORITIES`),
-    not an unlabeled provider field. Currency reuses the price leg's existing VND
-    assumption -- a jurisdictional fact about which exchange this instrument trades on,
-    unrelated to the unresolved absolute-scale question.
+    The DNSE representation contract already multiplies the native K-VND close by 1000;
+    this function never multiplies the resulting market cap again. A share count is not
+    evidence of current common outstanding shares, so this is research basis only.
     """
-    price_scale_token = price.get("native_price_scale_token")
-    price_scale_known = price_scale_token in KNOWN_PRICE_SCALE_TOKENS
-    share_authority = str(share.get("authority") or "")
-    share_scale_known = share_authority in QUALIFIED_SHARE_COUNT_AUTHORITIES
-    both_known = price_scale_known and share_scale_known
+    representation = price.get("price_representation") or {}
+    price_known = (representation.get("contract_id") ==
+                   "DNSE:ohlc_1D:VN_LISTED_EQUITY:kvnd_to_vnd/v1"
+                   and representation.get("canonical_unit") == "vnd_per_share"
+                   and price.get("price_unit") == "vnd_per_share")
+    share_count = ((share.get("retained_evidence") or {}).get("unit") == "shares"
+                   and isinstance(share.get("value"), (int, float))
+                   and not isinstance(share.get("value"), bool) and share["value"] > 0)
+    qualified = price_known and share_count
     return basis_contract.build_basis(
-        currency=price.get("currency"),
-        scale=basis_contract.BASE_UNIT_SCALE_LABEL if both_known else None,
-        multiplier_to_vnd=1 if both_known else None,
-        normalized_unit="VND" if both_known else None,
+        currency="VND" if qualified else price.get("currency"),
+        scale=basis_contract.BASE_UNIT_SCALE_LABEL if qualified else None,
+        basis_status=basis_contract.RESEARCH_CONTRACT_QUALIFIED if qualified else basis_contract.UNKNOWN,
+        multiplier_to_vnd=1 if qualified else None,
+        normalized_unit="VND" if qualified else None,
         basis_source=(
-            f"price.native_price_scale_token={price_scale_token!r} (proven={price_scale_known}); "
-            f"share.authority={share_authority!r} (audited_citation={share_scale_known})"
+            f"price_representation={representation.get('contract_id')!r}; "
+            f"share_basis={share.get('share_concept')!r}; "
+            f"share_authority={share.get('authority')!r}; "
+            f"share_unit={(share.get('retained_evidence') or {}).get('unit')!r}"
         ),
     )
 

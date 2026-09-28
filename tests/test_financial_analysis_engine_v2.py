@@ -182,12 +182,33 @@ def test_free_cash_flow_proxy_preserves_positive_and_zero_capex_signs():
     assert zero["features"]["free_cash_flow_proxy"]["value"] == 100
 
 
-def test_free_cash_flow_proxy_requires_same_source_provider_scope_period_and_standalone_semantics():
+def test_free_cash_flow_proxy_joins_on_semantic_identity_not_source_file():
+    # Two retained payload files of one provider, scope, unit and statement family are one
+    # representation: the pair joins and both files stay in provenance.
+    result = context([row("operating_cash_flow", 100, source="AAA_cash_one", sha="sha-1"),
+                      row("capital_expenditure", -40, source="AAA_cash_two", sha="sha-2")])
+    feature = result["features"]["free_cash_flow_proxy"]
+    assert feature["fitness"] == "READY" and feature["value"] == 60
+    assert [item["source_file"] for item in feature["provider_source_provenance"]] == ["AAA_cash_one", "AAA_cash_two"]
+    assert [item["source_sha256"] for item in feature["provider_source_provenance"]] == ["sha-1", "sha-2"]
+
+
+def test_free_cash_flow_proxy_requires_same_provider_scope_period_family_unit_and_standalone_semantics():
+    def with_family(item, family):
+        item["statement_family"] = family
+        return item
+
+    def with_unit(item, currency):
+        item["normalized_candidate_unit"] = {"currency": currency, "scale": "units"}
+        return item
+
     cases = [
         [row("operating_cash_flow", 100, provider="KBS", source="AAA_cash"),
          row("capital_expenditure", -40, provider="VCI", source="AAA_cash")],
-        [row("operating_cash_flow", 100, source="AAA_cash_one"),
-         row("capital_expenditure", -40, source="AAA_cash_two")],
+        [with_family(row("operating_cash_flow", 100, source="AAA_cash"), "cash_flow"),
+         with_family(row("capital_expenditure", -40, source="AAA_cash"), "income_statement")],
+        [with_unit(row("operating_cash_flow", 100, source="AAA_cash"), "VND"),
+         with_unit(row("capital_expenditure", -40, source="AAA_cash"), "USD")],
         [row("operating_cash_flow", 100, source="AAA_cash", scope="consolidated"),
          row("capital_expenditure", -40, source="AAA_cash", scope="standalone")],
         [row("operating_cash_flow", 100, "2026-Q1", source="AAA_cash"),
@@ -274,7 +295,7 @@ def test_ttm_currency_scale_surface_a_real_known_agreed_basis():
 
 def test_ttm_currency_disagreement_across_quarters_never_silently_sums():
     # A currency-mismatched quarter cannot even join the same series: `_source_key`
-    # buckets by (ticker, provider, source_file, statement_scope, currency, scale), so
+    # buckets by (ticker, provider, statement_scope, currency, scale, statement_family), so
     # a lone VND quarter among three USD ones leaves no single bucket with four
     # consecutive quarters -- the TTM sum blocks outright rather than ever combining
     # incompatible bases (belt-and-suspenders on top of `agree()`'s own unanimity rule,

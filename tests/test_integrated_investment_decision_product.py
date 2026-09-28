@@ -82,13 +82,24 @@ def _sample_financial_record(
     status: str = "AVAILABLE",
     profitability_state: str = "PROFITABLE",
     margin_state: str = "MARGIN_EXPANDING",
-    growth_state: str = "EXPANDING",
+    growth_state: str = "GROWING",
     balance_sheet_state: str = "STRENGTHENING",
-    leverage_state: str = "SAFE",
-    working_capital_trajectory_state: str = "IMPROVING",
+    leverage_state: str = "IMPROVING",
+    working_capital_trajectory_state: str = "WORKING_CAPITAL_IMPROVING",
+    as_of_period: str = "2026-Q2",
 ) -> dict:
+    """A compact Financial V2 record in the engine's own vocabulary.
+
+    Every state names the source feature and period the fundamental signal contract reads;
+    2026-Q2 is the last completed quarter for the 2026-08-28 decision session used here.
+    """
+    sources = ("net_income_sign", "net_margin", "net_margin_direction", "revenue_qoq", "revenue_same_quarter_yoy",
+               "net_income_qoq", "net_income_same_quarter_yoy", "cfo_to_net_income", "equity_to_assets_direction",
+               "debt_to_equity_direction", "net_working_capital_direction")
     return {
         "status": status,
+        "analysis_family": "INDUSTRIAL_FINANCIAL_ANALYSIS",
+        "issuer_type": "corporate",
         "profitability_state": profitability_state,
         "margin_state": margin_state,
         "growth_state": growth_state,
@@ -96,9 +107,11 @@ def _sample_financial_record(
         "leverage_state": leverage_state,
         "working_capital_trajectory_state": working_capital_trajectory_state,
         "cash_conversion_state": "HEALTHY",
-        "earnings_turnaround_state": None,
+        "earnings_turnaround_state": "UNAVAILABLE",
         "capital_efficiency_context": {},
         "history_context": {},
+        "feature_fitness": {feature: {"fitness": "READY", "reason_codes": [], "as_of_period": as_of_period}
+                            for feature in sources},
     }
 
 
@@ -131,7 +144,7 @@ class TestPolicyRegressions:
     def test_case_a_exact_execution_unavailable_does_not_force_wait(self) -> None:
         """A: Strong technical/fundamental support + exact execution unavailable -> NOT automatically WAIT/AVOID."""
         tac = _sample_tactical_record(market_structure_state="UPTREND", breakout_state_v3="BREAKOUT", trigger_state="TRIGGERED")
-        fin = _sample_financial_record(profitability_state="PROFITABLE", growth_state="EXPANDING")
+        fin = _sample_financial_record(profitability_state="PROFITABLE", growth_state="GROWING")
         dec = iidp.build_ticker_integrated_decision(
             ticker="HPG",
             as_of_session="2026-08-28",
@@ -166,7 +179,7 @@ class TestPolicyRegressions:
         """C: P/E unavailable + strong fundamental trajectory + valid breakout -> P/E missing alone does not block posture."""
         val_blocked = {"status": "INPUT_BLOCKED", "earnings_state": "PE_NOT_MEANINGFUL", "research_usable": False}
         tac = _sample_tactical_record(breakout_state_v3="BREAKOUT", trigger_state="TRIGGERED")
-        fin = _sample_financial_record(growth_state="ACCELERATING")
+        fin = _sample_financial_record(growth_state="GROWING")
         dec = iidp.build_ticker_integrated_decision(
             ticker="FPT",
             as_of_session="2026-08-28",
@@ -212,7 +225,7 @@ class TestPolicyRegressions:
             distance_to_pivot_pct=0.15,
             trigger_state="TRIGGERED",
         )
-        fin = _sample_financial_record(profitability_state="PROFITABLE", growth_state="EXPANDING")
+        fin = _sample_financial_record(profitability_state="PROFITABLE", growth_state="GROWING")
         dec = iidp.build_ticker_integrated_decision(
             ticker="PNJ",
             as_of_session="2026-08-28",

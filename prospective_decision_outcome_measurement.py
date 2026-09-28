@@ -263,6 +263,7 @@ def evaluate_case(envelope: Mapping[str, Any], completed_sessions: Sequence[Mapp
                "decision_identity_at_t0": _t0_value(case, "decision_identity", FIELD_NOT_RETAINED),
                "research_action_posture_at_t0": _t0_value(case, "research_action_posture", FIELD_NOT_RETAINED),
                "policy_version_at_t0": _t0_value(case, "policy_version", FIELD_NOT_RETAINED),
+               "fundamental_decision_policy_version_at_t0": _t0_value(case, "fundamental_decision_policy_version", FIELD_NOT_RETAINED),
                "event_ordering": _ordering(confirmation, invalidation), "horizons": horizons,
                "close_path": {name: _path(item, t0_price, later, case["ticker"]) for name, item in horizons.items()},
                "benchmark_relative": {name: _benchmark(item, t0, later) for name, item in horizons.items()},
@@ -345,7 +346,12 @@ def cohort_observation_summary(outcomes: Sequence[Mapping[str, Any]]) -> dict[st
         for label, field in axes.items():
             values = row.get(field)
             values = values if isinstance(values, list) else [values]
-            for value in values: groups[(label, str(value))].append(row)
+            for value in values:
+                # A fundamental state is only ever pooled within one fundamental decision-policy epoch.
+                epoch = row.get("fundamental_decision_policy_version_at_t0", FIELD_NOT_RETAINED)
+                key = (f"{value}@{epoch}"
+                       if label == "fundamental_state" and epoch != FIELD_NOT_RETAINED else str(value))
+                groups[(label, key)].append(row)
     rows = []
     for (axis, value), members in sorted(groups.items()):
         matured = {h: [item["horizons"][h]["return"] for item in members if item["horizons"][h]["status"] == "MATURE"] for h in HORIZONS}

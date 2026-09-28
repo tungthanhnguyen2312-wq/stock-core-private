@@ -126,13 +126,99 @@ def _row_usable(row: Mapping[str, Any], semantic: str | None = None) -> bool:
     )
 
 
-def _source_key(row: Mapping[str, Any]) -> tuple[str, str, str, str, str, str]:
-    lineage = row["source_lineage"]
+#: Fields that identify one analytical observation series (FINANCIAL_V2_ANALYSIS_INPUT_INTEGRITY_V1).
+#: ``source_file`` is deliberately absent: it names one retained payload instance and stays
+#: provenance on every feature, never the business identity of a fact.
+SERIES_KEY_FIELDS = ("ticker", "provider", "statement_scope", "currency", "scale", "statement_family")
+OBSERVATION_KEY_CONTRACT = "financial_v2_semantic_observation_key/v1"
+
+
+def _representation_key(row: Mapping[str, Any]) -> tuple[str, str, str, str, str]:
+    """Issuer, reporting provider, statement scope and monetary unit of one observation.
+
+    Same-period arithmetic across statements (cash conversion, end-of-period returns) joins on
+    this; a scope, currency or scale difference never joins.
+    """
     unit = row.get("normalized_candidate_unit") or {}
     return (
-        str(row.get("ticker")), str(lineage.get("provider")), str(lineage.get("source_file")),
+        str(row.get("ticker")), str((row.get("source_lineage") or {}).get("provider")),
         str(row.get("statement_scope")), str(unit.get("currency")), str(unit.get("scale")),
     )
+
+
+def _source_key(row: Mapping[str, Any]) -> tuple[str, str, str, str, str, str]:
+    """Series key for same-statement arithmetic: the representation plus the statement family.
+
+    Keying on ``source_file`` split a bridge-qualified quarter (adapter file name) from a raw
+    quarter of the very same retained statement, which blocked gross margin and the FCF proxy
+    market-wide once the flow bridge was activated.
+    """
+    return (*_representation_key(row), str(row.get("statement_family")))
+
+
+def _period_label(row: Mapping[str, Any]) -> str:
+    return str(row.get("native_period_label") or row.get("period_end"))
+
+
+def _series_index(rows: Sequence[Mapping[str, Any]], metric: str, semantic: str,
+                  key: Any = None) -> dict[tuple[str, ...], dict[str, Mapping[str, Any]]]:
+    """``{series key: {period label: row}}`` over usable rows, one row per semantic observation.
+
+    Two usable rows with one series key, metric, period and period semantic are the same
+    observation reported twice. Equal values collapse to the lowest fact id, so the result never
+    depends on input order; different values are an unreconciled revision, and that period is
+    left out of the series (fail closed) instead of being resolved by whichever row came last.
+    """
+    key = key or _source_key
+    observed: dict[tuple[str, ...], dict[str, list[Mapping[str, Any]]]] = defaultdict(lambda: defaultdict(list))
+    for row in rows:
+        if _row_usable(row, semantic) and row.get("canonical_metric") == metric:
+            observed[key(row)][_period_label(row)].append(row)
+    index: dict[tuple[str, ...], dict[str, Mapping[str, Any]]] = defaultdict(dict)
+    for series_key, periods in observed.items():
+        for label, candidates in periods.items():
+            if len({float(item["reported_value"]) for item in candidates}) == 1:
+                index[series_key][label] = min(
+                    candidates, key=lambda item: str((item.get("source_lineage") or {}).get("fact_id")))
+    return index
+
+
+def _observation_integrity(rows: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    """Per-issuer record of repeated semantic observations: collapsed duplicates and the
+    conflicting ones every series leaves out."""
+    observed: dict[tuple[str, ...], list[Mapping[str, Any]]] = defaultdict(list)
+    for row in rows:
+        semantic = normalize_period_semantic(row.get("period_semantic_state"))
+        if semantic != UNKNOWN and _row_usable(row, semantic):
+            observed[(str(row.get("canonical_metric")), _period_label(row), semantic, *_source_key(row))].append(row)
+    duplicates = conflicts = 0
+    excluded: list[dict[str, Any]] = []
+    for identity, candidates in sorted(observed.items()):
+        if len(candidates) < 2:
+            continue
+        if len({float(item["reported_value"]) for item in candidates}) == 1:
+            duplicates += 1
+            continue
+        conflicts += 1
+        excluded.append({"canonical_metric": identity[0], "period": identity[1], "period_semantic": identity[2],
+                         "observation_count": len(candidates),
+                         "source_files": sorted({str((item.get("source_lineage") or {}).get("source_file")) for item in candidates}),
+                         "reason_code": "SEMANTIC_OBSERVATION_VALUE_CONFLICT_UNRECONCILED"})
+    return {"contract_version": OBSERVATION_KEY_CONTRACT, "series_key_fields": list(SERIES_KEY_FIELDS),
+            "source_file_role": "PROVENANCE_ONLY",
+            "duplicate_observations_collapsed": duplicates, "conflicting_observations_excluded": conflicts,
+            "conflicts": excluded[:20]}
+
+
+def _provenance(row: Mapping[str, Any]) -> dict[str, Any]:
+    """Source provenance of one input. An adapted row (bridge-qualified quarter, component-linked
+    composed fact) also names how its lineage was established and its operand fact ids."""
+    lineage = row.get("source_lineage") or {}
+    entry = {key: lineage.get(key) for key in ("provider", "source_file", "source_sha256", "fact_id")}
+    if lineage.get("lineage_method"):
+        entry["lineage_method"] = lineage["lineage_method"]
+        entry["operand_fact_ids"] = list(lineage.get("operand_fact_ids") or [])
+    return entry
 
 
 def _feature(feature_id: str, *, value: Any = None, fitness: str = "BLOCKED_BY_EVIDENCE",
@@ -148,12 +234,7 @@ def _feature(feature_id: str, *, value: Any = None, fitness: str = "BLOCKED_BY_E
         "feature_id": feature_id, "value": value, "fitness": fitness, "method": method,
         "growth_basis": growth_basis, "semantic_transition": semantic_transition,
         "period_identity": [str(row.get("native_period_label") or row.get("period_end")) for row in inputs],
-        "provider_source_provenance": [
-            {"provider": (row.get("source_lineage") or {}).get("provider"),
-             "source_file": (row.get("source_lineage") or {}).get("source_file"),
-             "source_sha256": (row.get("source_lineage") or {}).get("source_sha256"),
-             "fact_id": (row.get("source_lineage") or {}).get("fact_id")} for row in inputs
-        ],
+        "provider_source_provenance": [_provenance(row) for row in inputs],
         "scope": sorted({str(row.get("statement_scope")) for row in inputs}),
         "currency": currency,
         "scale": scale,
@@ -171,12 +252,8 @@ def _not_applicable(feature_id: str) -> dict[str, Any]:
                     reason_codes=["ENTITY_TYPE_NOT_SUPPORTED_THIS_MILESTONE"])
 
 
-def _groups(rows: Sequence[Mapping[str, Any]], metric: str, semantic: str) -> dict[tuple[str, str, str, str, str, str], dict[str, Mapping[str, Any]]]:
-    grouped: dict[tuple[str, str, str, str, str, str], dict[str, Mapping[str, Any]]] = defaultdict(dict)
-    for row in rows:
-        if _row_usable(row, semantic) and row.get("canonical_metric") == metric:
-            grouped[_source_key(row)][str(row.get("native_period_label") or row.get("period_end"))] = row
-    return grouped
+def _groups(rows: Sequence[Mapping[str, Any]], metric: str, semantic: str) -> dict[tuple[str, ...], dict[str, Mapping[str, Any]]]:
+    return _series_index(rows, metric, semantic)
 
 
 def _best_series(rows: Sequence[Mapping[str, Any]], metric: str, semantic: str) -> dict[str, Mapping[str, Any]]:
@@ -200,16 +277,8 @@ def _same_period_pair(rows: Sequence[Mapping[str, Any]], numerator: str, denomin
 
 def _cross_statement_same_representation_pair(rows: Sequence[Mapping[str, Any]], numerator: str, denominator: str,
                                                semantic: str) -> tuple[Mapping[str, Any], Mapping[str, Any]] | None:
-    def index(metric: str) -> dict[tuple[str, str, str, str, str], dict[str, Mapping[str, Any]]]:
-        result: dict[tuple[str, str, str, str, str], dict[str, Mapping[str, Any]]] = defaultdict(dict)
-        for row in rows:
-            if _row_usable(row, semantic) and row.get("canonical_metric") == metric:
-                unit = row.get("normalized_candidate_unit") or {}
-                key = (str(row.get("ticker")), str((row.get("source_lineage") or {}).get("provider")),
-                       str(row.get("statement_scope")), str(unit.get("currency")), str(unit.get("scale")))
-                result[key][str(row.get("native_period_label") or row.get("period_end"))] = row
-        return result
-    left, right = index(numerator), index(denominator)
+    left = _series_index(rows, numerator, semantic, key=_representation_key)
+    right = _series_index(rows, denominator, semantic, key=_representation_key)
     candidates = [(period, left[key][period], right[key][period]) for key in set(left) & set(right)
                   for period in set(left[key]) & set(right[key])]
     return max(candidates, key=lambda item: item[0])[1:] if candidates else None
@@ -223,6 +292,24 @@ def _ratio(feature_id: str, pair: tuple[Mapping[str, Any], Mapping[str, Any]] | 
         return _blocked(feature_id, "ZERO_DENOMINATOR")
     return _feature(feature_id, value=numerator["reported_value"] / denominator["reported_value"], fitness="READY",
                     method=method, inputs=[numerator, denominator])
+
+
+def sign_transition(old: float, new: float, *, earnings: bool) -> str | None:
+    """Categorical sign transition between two compatible periods, or ``None`` for ordinary growth.
+
+    A non-positive base never yields a growth rate: loss-to-profit, loss narrowed or widened, or
+    zero base. For an earnings flow a positive base turning negative is PROFIT_TO_LOSS, never a
+    growth value below -100% (FUNDAMENTAL_SIGNAL_POLICY_HARDENING_V1). The caller has already
+    paired the periods on one semantic series (metric, provider, scope, unit, period semantics)
+    in temporal order; this only names the sign relationship.
+    """
+    if old < 0:
+        return "LOSS_TO_PROFIT" if new > 0 else "LOSS_NARROWED" if new > old else "LOSS_WIDENED"
+    if old == 0:
+        return "ZERO_BASE"
+    if earnings and new < 0:
+        return "PROFIT_TO_LOSS"
+    return None
 
 
 def _growth(feature_id: str, series: Mapping[str, Mapping[str, Any]], *, basis: str,
@@ -244,17 +331,17 @@ def _growth(feature_id: str, series: Mapping[str, Mapping[str, Any]], *, basis: 
     else:
         return _blocked(feature_id, "UNSUPPORTED_GROWTH_BASIS", growth_basis=basis)
     old, new = prior["reported_value"], current["reported_value"]
-    if old <= 0:
-        transition = (
-            "LOSS_TO_PROFIT" if old < 0 < new else "PROFIT_TO_LOSS" if old > 0 > new
-            else "LOSS_NARROWED" if old < 0 and new > old else "LOSS_WIDENED" if old < 0
-            else "ZERO_BASE"
-        )
+    transition = sign_transition(old, new, earnings=earnings)
+    if transition:
         return _feature(feature_id, fitness="READY", method="compatible_period_sign_transition/v2",
                         inputs=[prior, current], growth_basis=basis, semantic_transition=transition,
-                        warnings=["GROWTH_BASE_NON_POSITIVE"])
+                        warnings=[_sign_transition_warning(old)])
     return _feature(feature_id, value=new / old - 1, fitness="READY", method="compatible_period_growth/v2",
                     inputs=[prior, current], growth_basis=basis)
+
+
+def _sign_transition_warning(old: float) -> str:
+    return "GROWTH_BASE_NON_POSITIVE" if old <= 0 else "EARNINGS_SIGN_CHANGED_PROFIT_TO_LOSS"
 
 
 def _ttm_sum(series: Mapping[str, Mapping[str, Any]], feature_id: str) -> tuple[dict[str, Any], list[Mapping[str, Any]]]:
@@ -276,7 +363,7 @@ def _ttm_sum(series: Mapping[str, Mapping[str, Any]], feature_id: str) -> tuple[
                     growth_basis="TTM"), concrete
 
 
-def _ttm_yoy(feature_id: str, series: Mapping[str, Mapping[str, Any]]) -> dict[str, Any]:
+def _ttm_yoy(feature_id: str, series: Mapping[str, Mapping[str, Any]], *, earnings: bool = False) -> dict[str, Any]:
     current, inputs = _ttm_sum(series, feature_id + "_current_ttm")
     if current["fitness"] != "READY" or not inputs:
         return _blocked(feature_id, "MISSING_CONSECUTIVE_STANDALONE_QUARTER_INPUTS", growth_basis="TTM")
@@ -290,10 +377,13 @@ def _ttm_yoy(feature_id: str, series: Mapping[str, Mapping[str, Any]]) -> dict[s
         prior_inputs.append(prior)
     old = sum(row["reported_value"] for row in prior_inputs)
     new = current["value"]
-    if old <= 0:
+    # A TTM loss that narrowed or widened is its own transition (it was ZERO_BASE before
+    # FUNDAMENTAL_SIGNAL_POLICY_HARDENING_V1), exactly as for a single compatible quarter.
+    transition = sign_transition(old, new, earnings=earnings)
+    if transition:
         return _feature(feature_id, fitness="READY", method="compatible_ttm_sign_transition/v2",
-                        inputs=prior_inputs + inputs, growth_basis="TTM", warnings=["GROWTH_BASE_NON_POSITIVE"],
-                        semantic_transition="LOSS_TO_PROFIT" if old < 0 < new else "PROFIT_TO_LOSS" if old > 0 > new else "ZERO_BASE")
+                        inputs=prior_inputs + inputs, growth_basis="TTM", warnings=[_sign_transition_warning(old)],
+                        semantic_transition=transition)
     return _feature(feature_id, value=new / old - 1, fitness="READY", method="compatible_ttm_yoy/v2",
                     inputs=prior_inputs + inputs, growth_basis="TTM")
 
@@ -499,17 +589,8 @@ def _same_provider_eop_proxy(rows: Sequence[Mapping[str, Any]], numerator_metric
     This is deliberately an *EOP proxy*.  It must never be relabelled as an average-balance
     ROA/ROE/turnover measure simply because both inputs share a quarter label.
     """
-    def index(metric: str, semantic: str) -> dict[tuple[str, str, str, str, str], dict[str, Mapping[str, Any]]]:
-        result: dict[tuple[str, str, str, str, str], dict[str, Mapping[str, Any]]] = defaultdict(dict)
-        for row in rows:
-            if _row_usable(row, semantic) and row.get("canonical_metric") == metric:
-                unit = row.get("normalized_candidate_unit") or {}
-                key = (str(row.get("ticker")), str((row.get("source_lineage") or {}).get("provider")),
-                       str(row.get("statement_scope")), str(unit.get("currency")), str(unit.get("scale")))
-                result[key][str(row.get("native_period_label") or row.get("period_end"))] = row
-        return result
-    flows = index(numerator_metric, FLOW_STANDALONE)
-    stocks = index(denominator_metric, PIT)
+    flows = _series_index(rows, numerator_metric, FLOW_STANDALONE, key=_representation_key)
+    stocks = _series_index(rows, denominator_metric, PIT, key=_representation_key)
     candidates = []
     for key in set(flows) & set(stocks):
         for label in set(flows[key]) & set(stocks[key]):
@@ -535,16 +616,8 @@ def _avg_balance_series(rows: Sequence[Mapping[str, Any]], flow_metric: str,
     average-balance-return feature below and its own-history context so both read one
     traversal instead of two.
     """
-    def index(metric: str, semantic: str) -> dict[tuple[str, str, str, str, str], dict[str, Mapping[str, Any]]]:
-        result: dict[tuple[str, str, str, str, str], dict[str, Mapping[str, Any]]] = defaultdict(dict)
-        for row in rows:
-            if _row_usable(row, semantic) and row.get("canonical_metric") == metric:
-                unit = row.get("normalized_candidate_unit") or {}
-                key = (str(row.get("ticker")), str((row.get("source_lineage") or {}).get("provider")),
-                       str(row.get("statement_scope")), str(unit.get("currency")), str(unit.get("scale")))
-                result[key][str(row.get("native_period_label") or row.get("period_end"))] = row
-        return result
-    flows, balances = index(flow_metric, FLOW_STANDALONE), index(balance_metric, PIT)
+    flows = _series_index(rows, flow_metric, FLOW_STANDALONE, key=_representation_key)
+    balances = _series_index(rows, balance_metric, PIT, key=_representation_key)
     best_series: dict[str, tuple[Mapping[str, Any], Mapping[str, Any], Mapping[str, Any]]] = {}
     for key in set(flows) & set(balances):
         series: dict[str, tuple[Mapping[str, Any], Mapping[str, Any], Mapping[str, Any]]] = {}
@@ -595,16 +668,8 @@ def _ratio_series(rows: Sequence[Mapping[str, Any]], numerator_metric: str, nume
     same-provider/scope/currency/scale source key -- the own-history basis for a same-
     period ratio feature (a margin, a P-I-T stock ratio, or a cross-semantic EOP proxy).
     """
-    def index(metric: str, semantic: str) -> dict[tuple[str, str, str, str, str], dict[str, Mapping[str, Any]]]:
-        result: dict[tuple[str, str, str, str, str], dict[str, Mapping[str, Any]]] = defaultdict(dict)
-        for row in rows:
-            if _row_usable(row, semantic) and row.get("canonical_metric") == metric:
-                unit = row.get("normalized_candidate_unit") or {}
-                key = (str(row.get("ticker")), str((row.get("source_lineage") or {}).get("provider")),
-                       str(row.get("statement_scope")), str(unit.get("currency")), str(unit.get("scale")))
-                result[key][str(row.get("native_period_label") or row.get("period_end"))] = row
-        return result
-    numerators, denominators = index(numerator_metric, numerator_semantic), index(denominator_metric, denominator_semantic)
+    numerators = _series_index(rows, numerator_metric, numerator_semantic, key=_representation_key)
+    denominators = _series_index(rows, denominator_metric, denominator_semantic, key=_representation_key)
     best_series: dict[str, float] = {}
     for key in set(numerators) & set(denominators):
         series: dict[str, float] = {}
@@ -1225,8 +1290,7 @@ def build_ticker_context(ticker: str, rows: Sequence[Mapping[str, Any]], *, issu
             if numerator["fitness"] != "READY" or denominator["fitness"] != "READY" or not numerator_inputs or not denominator_inputs:
                 return _blocked(feature_id, "MISSING_COMPATIBLE_TTM_INPUTS")
             n_row, d_row = numerator_inputs[-1], denominator_inputs[-1]
-            n_key, d_key = _source_key(n_row), _source_key(d_row)
-            if n_key[0] != d_key[0] or n_key[1] != d_key[1] or n_key[3:] != d_key[3:]:
+            if _representation_key(n_row) != _representation_key(d_row):
                 return _blocked(feature_id, "TTM_PROVIDER_SCOPE_CURRENCY_SCALE_INCOMPATIBLE")
             if denominator["value"] == 0:
                 return _blocked(feature_id, "ZERO_DENOMINATOR")
@@ -1247,7 +1311,7 @@ def build_ticker_context(ticker: str, rows: Sequence[Mapping[str, Any]], *, issu
             "revenue_ytd_yoy": _growth("revenue_ytd_yoy", revenue_ytd, basis="YTD_YOY"),
             "net_income_ytd_yoy": _growth("net_income_ytd_yoy", income_ytd, basis="YTD_YOY", earnings=True),
             "revenue_ttm": revenue_ttm, "profit_before_tax_ttm": pbt_ttm, "net_income_ttm": income_ttm, "operating_cash_flow_ttm": ocf_ttm,
-            "revenue_ttm_yoy": _ttm_yoy("revenue_ttm_yoy", revenue), "profit_before_tax_ttm_yoy": _ttm_yoy("profit_before_tax_ttm_yoy", pbt), "net_income_ttm_yoy": _ttm_yoy("net_income_ttm_yoy", income), "operating_cash_flow_ttm_yoy": _ttm_yoy("operating_cash_flow_ttm_yoy", ocf),
+            "revenue_ttm_yoy": _ttm_yoy("revenue_ttm_yoy", revenue), "profit_before_tax_ttm_yoy": _ttm_yoy("profit_before_tax_ttm_yoy", pbt, earnings=True), "net_income_ttm_yoy": _ttm_yoy("net_income_ttm_yoy", income, earnings=True), "operating_cash_flow_ttm_yoy": _ttm_yoy("operating_cash_flow_ttm_yoy", ocf),
             "ttm_net_margin": ttm_ratio("ttm_net_margin", income_ttm, income_ttm_inputs, revenue_ttm, revenue_ttm_inputs, "same_provider_ttm_net_margin/v2"),
             "ttm_pbt_margin": ttm_ratio("ttm_pbt_margin", pbt_ttm, pbt_ttm_inputs, revenue_ttm, revenue_ttm_inputs, "same_provider_ttm_pbt_margin/v2"),
             "operating_cash_flow_sign": _feature("operating_cash_flow_sign", value=_latest(ocf)["reported_value"], fitness="READY", method="latest_compatible_standalone_cfo_sign/v2", inputs=[_latest(ocf)]) if _latest(ocf) else _blocked("operating_cash_flow_sign", "MISSING_STANDALONE_OPERATING_CASH_FLOW"),
@@ -1335,6 +1399,7 @@ def build_ticker_context(ticker: str, rows: Sequence[Mapping[str, Any]], *, issu
             "period_coverage": dict(sorted(Counter(normalize_period_semantic(row.get("period_semantic_state")) for row in rows).items())),
             "states": states, "features": {key: features[key] for key in sorted(features)},
             "history_context": dict(history_context),
+            "input_integrity": _observation_integrity(rows),
             **evidence, "warnings": warnings, "valuation_hints": valuation_hints,
             "source_identities": dict(source_identities),
             "leverage_basis": ("EXPLICIT_SAME_PROVIDER_SHORT_AND_LONG_TERM_BORROWINGS"
@@ -1380,6 +1445,12 @@ def build_artifact(*, tickers: Sequence[str], rows: Sequence[Mapping[str, Any]],
             "feature_proxy_counts": dict(sorted(Counter(feature["feature_id"] for feature in all_features if feature["fitness"] == "RESEARCH_PROXY").items())),
             "state_distribution": {name: dict(sorted(Counter(record["states"][name] for record in records.values()).items())) for name in sorted(next(iter(records.values()))["states"]) } if records else {},
             "evidence_coverage": {name: sum(bool(record[name]) for record in records.values()) for name in ("positive_evidence", "negative_evidence", "conflicting_evidence", "missing_dimensions")},
+            "input_integrity": {
+                "contract_version": OBSERVATION_KEY_CONTRACT, "series_key_fields": list(SERIES_KEY_FIELDS),
+                "duplicate_observations_collapsed": sum(record["input_integrity"]["duplicate_observations_collapsed"] for record in records.values()),
+                "conflicting_observations_excluded": sum(record["input_integrity"]["conflicting_observations_excluded"] for record in records.values()),
+                "tickers_with_conflicting_observations": sum(bool(record["input_integrity"]["conflicting_observations_excluded"]) for record in records.values()),
+            },
             "history_context_coverage": {
                 feature_id: dict(sorted(Counter(record["history_context"][feature_id]["status"] for record in records.values()).items()))
                 for feature_id in HISTORY_CONTEXT_FEATURES

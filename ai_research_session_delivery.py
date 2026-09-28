@@ -154,6 +154,10 @@ def project_integrated_decision_for_ai_delivery(record: Any, *, integrated_ident
         "valuation_methods": _valuation_methods_for_delivery(record),
         "valuation_method_reconciliation": copy.deepcopy(record.get("valuation_method_reconciliation")),
         "source_identities": copy.deepcopy(record.get("source_identities")),
+        # CURRENT_RESEARCH_DECISION_CONVERGENCE_V1: the Producer's per-dimension explanation of
+        # what is available, proxy, qualified, blocked or non-applicable and why -- passed
+        # through so AI never reverse-engineers a disappeared metric.
+        "current_research_decision_input": copy.deepcopy(record.get("current_research_decision_input")),
         "is_actionable": False,
         "research_support_not_execution_instruction": True,
         "no_target_price": True,
@@ -231,6 +235,9 @@ def _decision_card(ticker: str, record: Mapping[str, Any], daily_brief: Mapping[
         "evidence_quality": {
             "evidence_axis_coherence": copy.deepcopy(delivered.get("evidence_axis_coherence")),
             "missing_evidence_decision_effect": copy.deepcopy(delivered.get("missing_evidence_decision_effect")),
+            "current_research_evidence_class": (delivered.get("current_research_decision_input") or {}).get("evidence_class"),
+            "missing_primary_factors": copy.deepcopy(
+                ((delivered.get("current_research_decision_input") or {}).get("synthesis") or {}).get("missing_primary_factors")),
         },
         "what_would_change_the_view": {
             "why_now": copy.deepcopy(delivered.get("why_now")),
