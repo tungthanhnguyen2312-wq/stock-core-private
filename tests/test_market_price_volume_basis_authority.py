@@ -107,6 +107,7 @@ class BoardSemanticRegressionTests(unittest.TestCase):
             basis_authority.board_semantics_snapshot(),
             {
                 "G1": "ROUND_LOT",
+                "G3": "ROUND_LOT",
                 "G4": "ODD_LOT",
                 "T1": "PUT_THROUGH_ROUND_LOT",
                 "T3": "PUT_THROUGH_ROUND_LOT",

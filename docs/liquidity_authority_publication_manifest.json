@@ -1,0 +1,43 @@
+{
+  "schema_version": "liquidity_authority_publication_manifest/v1",
+  "milestone": "AUTHORITY_CLOSURE_LIQUIDITY_FOUNDATION_V1",
+  "canonical_base": "36b89f32a82a786d043237c4159c8b469d8985c5",
+  "reviewed_checkpoint": "978f6464426f9ee37c281f187e73178c65beee96",
+  "publication_disposition": "CODE_CONTRACTS_SYNTHETIC_TESTS_AND_DERIVED_COUNTS_ONLY",
+  "raw_exchange_response_bodies_published": false,
+  "source_routes": {
+    "HOSE": "HOSE_PUBLIC_MARKET_API_SECURITIES_TRADINGRESULT",
+    "HNX_AND_UPCOM": "HNX_PUBLIC_ISSUER_REPORT_THONG_TIN_TONG_HOP"
+  },
+  "bounded_private_evidence_summary": {
+    "discovery_requests": 15,
+    "cohort_requests": 113,
+    "successful_cohort_requests": 113,
+    "official_series_cohort": {
+      "total": 93,
+      "HOSE": 39,
+      "HNX": 28,
+      "UPCOM": 26
+    },
+    "current_session_measurement": {
+      "officially_reconciled": 86,
+      "qualified_per_exchange_unit_contract": 866,
+      "raw_counter_only": 0
+    },
+    "old_ceiling_reproduction": {
+      "adtv20_exact": 0,
+      "adtv20_coverage_restricted": 42,
+      "adtv20_semantics_unqualified": 1641,
+      "tail_conflicts_recounted": 752,
+      "fhsc_rows_for_2026_08_06": 0
+    }
+  },
+  "authority_boundary": {
+    "historical_liquidity_research": "OFFICIAL_SERIES_COHORT_ONLY",
+    "adtv20_matched_all_vnd": "OFFICIAL_SERIES_COHORT_ONLY",
+    "adv20_matched_all_shares": "PARTIAL_AS_TRADED_NOT_CORPORATE_ACTION_NORMALIZED",
+    "execution_capacity": "BLOCKED",
+    "position_sizing": "BLOCKED",
+    "pit_backtest": "BLOCKED"
+  }
+}
