@@ -110,6 +110,14 @@ def test_ocr_qualification_api_exposes_scoped_unit_evidence_and_preserves_legacy
     assert CONTRACT_VERSION == "financial_statement_scoped_unit_resolution/v1"
 
 
+def test_financial_position_heading_routes_only_to_balance_sheet():
+    tokens = [
+        {"text": value, "raw_token_order": index}
+        for index, value in enumerate("Báo cáo tình hình tài chính hợp nhất giữa niên độ".split())
+    ]
+    assert ocr._statement_family(tokens) == "balance_sheet"
+
+
 def test_no_ticker_specific_logic_in_scoped_resolver():
     source = inspect.getsource(__import__("financial_statement_unit_resolution"))
     assert "ticker ==" not in source and '"NVL"' not in source and '"FPT"' not in source

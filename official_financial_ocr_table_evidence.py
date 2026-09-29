@@ -54,7 +54,11 @@ DEBT_COMPONENT_LABEL_TERMS = {
     "long_term_borrowings_or_finance_leases": ("vay", "dai", "han"),
 }
 _FAMILY_ANCHORS = {
-    "balance_sheet": (("bang can", "ke toan"), ("balance", "sheet")),
+    # Circular 200 uses both the older ``Bảng cân đối kế toán`` heading and
+    # the current ``Báo cáo tình hình tài chính`` heading.  The latter is a
+    # statement-family cue only; row, unit, column and citation checks remain
+    # independently fail-closed below.
+    "balance_sheet": (("bang can", "ke toan"), ("bao cao tinh hinh", "tai chinh"), ("balance", "sheet")),
     "income_statement": (("bao cao ket qua", "kinh doanh"), ("income", "statement")),
     "cash_flow": (("bao cao luu chuyen", "tien"), ("cash", "flow")),
 }
