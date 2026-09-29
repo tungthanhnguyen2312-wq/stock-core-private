@@ -1,12 +1,35 @@
 # Stock Lookup — Operational State
 
-**Official-exchange liquidity, market-wide operationalization (2026-09-29):**
-`OFFICIAL_EXCHANGE_LIQUIDITY_MARKET_WIDE_OPERATIONALIZATION_V1 = ACTIVE / LOCAL_CHECKPOINT /
-MARKET_WIDE_LIQUIDITY_OPERATIONALIZATION_PARTIAL`. It is the only active execution item and is not
-merged. Canonical `main` is `170b2cfbcf77d7ec4f5ca823f5f78e4787795339` (Producer CI #111 SUCCESS).
-`AUTHORITY_CLOSURE_LIQUIDITY_FOUNDATION_V1` is closed `COMPLETE` (PR #13 merged to that commit).
-`CURRENT_RESEARCH_CHAIN_PROMOTION_REVIEW_INTEGRATION_V1` is closed `COMPLETE` (PR #12, `36b89f3`,
-CI #109 SUCCESS). Detail: [`liquidity_market_wide_operationalization.md`](liquidity_market_wide_operationalization.md).
+**Prospective RAW/PIT price authority (2026-09-29):**
+`PROSPECTIVE_RAW_PIT_AUTHORITY_V1 = ACTIVE / LOCAL_CHECKPOINT / PROSPECTIVE_PIT_OPERATIONAL /
+HISTORICAL_PIT_PARTIAL`. It is the only active execution item and is not merged. Canonical `main` is
+`ac9b8cf5473191fb054782e441e1f5145897c0c3` (Producer CI #113 SUCCESS).
+`OFFICIAL_EXCHANGE_LIQUIDITY_MARKET_WIDE_OPERATIONALIZATION_V1` is closed `COMPLETE` (PR #14 merged;
+terminal scope `MARKET_WIDE_LIQUIDITY_OPERATIONALIZATION_PARTIAL`: current-session liquidity 952, exact
+ADTV20/ADV20 457, HOSE 403/403, HNX/UPCoM bulk rights-gated, execution/sizing/PIT blocked). A suspected Daily
+temporal-determinism defect was investigated on retained 2026-09-28 inputs under controlled execution clocks and was
+`NOT_REPRODUCED / NO_CHANGE`; no clock code or tests were added for it. Detail:
+[`prospective_raw_pit_authority.md`](prospective_raw_pit_authority.md).
+
+- **Use-specific, never one boolean.** Prospective as-known price evidence is OPERATIONAL (18,514 post-close bars over 21
+  sessions with hashed known-time receipts). Prospective raw-as-traded is qualified only for the 6,026 bars equal to the
+  official HOSE series. Historical raw is PARTIAL and HOSE-scoped (research grade).
+- **Basis, empirically.** HOSE `tradingresult` is unadjusted across 46 tested tickers/events (HPG bonus 2026-05-25,
+  VCB cash 2026-07-23 among them); the DNSE series re-fetched later is re-based, and 603 same-day DNSE bars (3.4%) were
+  later found non-final. DNSE-only same-day bars are therefore never called raw.
+- **Still BLOCKED.** Factor chain (0 qualified: no ratio/cash terms or publication time in the 4,438 explicit
+  ex-dates), PIT-adjusted history, PIT backtest, execution replay. `ACTIVE_UNIVERSE` stays UNKNOWN. HNX/UPCoM bulk
+  acquisition is not authorized.
+- **Daily.** A component-local `prospective_market_snapshot_manifest` is retained privately; its absence blocks only
+  PIT/as-known use.
+- **No successor started.** Candidates: `FINANCIAL_EVIDENCE_ZERO_ACTIVE_VNSTOCK_V1`,
+  `LIQUIDITY_EXECUTION_CAPACITY_AND_SIZING_V1`.
+
+**Official-exchange liquidity, market-wide operationalization (2026-09-29; COMPLETE, PR #14 merged to `ac9b8cf`):**
+`OFFICIAL_EXCHANGE_LIQUIDITY_MARKET_WIDE_OPERATIONALIZATION_V1 = COMPLETE /
+MARKET_WIDE_LIQUIDITY_OPERATIONALIZATION_PARTIAL`. `AUTHORITY_CLOSURE_LIQUIDITY_FOUNDATION_V1` is closed `COMPLETE`
+(PR #13). `CURRENT_RESEARCH_CHAIN_PROMOTION_REVIEW_INTEGRATION_V1` is closed `COMPLETE` (PR #12, `36b89f3`, CI #109 SUCCESS).
+Detail: [`liquidity_market_wide_operationalization.md`](liquidity_market_wide_operationalization.md).
 
 - **Rights gate first.** HOSE bounded internal acquisition is authorized (robots allow-all, no
   restrictive terms found). HNX and UPCoM bulk acquisition is not authorized
@@ -25,7 +48,7 @@ CI #109 SUCCESS). Detail: [`liquidity_market_wide_operationalization.md`](liquid
 - **Boundaries unchanged.** EXECUTION_CAPACITY, POSITION_SIZING and PIT_BACKTEST stay BLOCKED;
   RAW_AS_TRADED is not promoted; no Vnstock/KBS/VCI call, production DB write, Dashboard or AI
   publication.
-- **Recommended next (not started, not queued):** `PROSPECTIVE_RAW_PIT_AUTHORITY_V1`.
+- **Recommended next at that time:** `PROSPECTIVE_RAW_PIT_AUTHORITY_V1` (now active, above).
 
 *(Superseded 2026-09-29: this chain merged to canonical `main` as PR #12, `36b89f3`, and is closed COMPLETE; see the block above.)*
 

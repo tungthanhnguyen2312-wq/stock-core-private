@@ -15,7 +15,7 @@
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "OFFICIAL_EXCHANGE_LIQUIDITY_MARKET_WIDE_OPERATIONALIZATION_V1",
+    "milestone": "PROSPECTIVE_RAW_PIT_AUTHORITY_V1",
     "state": "ACTIVE"
   },
   "queued_next": [],
@@ -2202,15 +2202,17 @@
     },
     {
       "milestone_id": "OFFICIAL_EXCHANGE_LIQUIDITY_MARKET_WIDE_OPERATIONALIZATION_V1",
-      "state": "ACTIVE",
-      "narrative_disposition": "LOCAL_CHECKPOINT / MARKET_WIDE_LIQUIDITY_OPERATIONALIZATION_PARTIAL / HNX_UPCOM_BLOCKED_ON_EXTERNAL_APPROVAL",
+      "state": "COMPLETE",
+      "narrative_disposition": "COMPLETE / MERGED_TO_MAIN_PR_14_2026_09_29 / MARKET_WIDE_LIQUIDITY_OPERATIONALIZATION_PARTIAL / HNX_UPCOM_BLOCKED_ON_EXTERNAL_APPROVAL",
       "starting_checkpoint": "170b2cfbcf77d7ec4f5ca823f5f78e4787795339",
-      "checkpoint": null,
+      "checkpoint": "a382a50fea4809bc569c5377956b2c394b1ffc5c",
       "candidate_branch": "feature/liquidity-market-wide-operationalization-v1-20260929",
       "dependencies": [
         "AUTHORITY_CLOSURE_LIQUIDITY_FOUNDATION_V1"
       ],
-      "unlocks": [],
+      "unlocks": [
+        "PROSPECTIVE_RAW_PIT_AUTHORITY_V1"
+      ],
       "authority_effect": "RESEARCH_SCOPED_ONLY / EXECUTION_CAPACITY_POSITION_SIZING_PIT_BACKTEST_STILL_BLOCKED",
       "owner_authorized": true,
       "source_doc": "Owner directive OFFICIAL_EXCHANGE_LIQUIDITY_MARKET_WIDE_OPERATIONALIZATION_V1 (2026-09-29); docs/liquidity_market_wide_operationalization.md",
@@ -2244,16 +2246,38 @@
         "current_session_liquidity_eligible": 952
       },
       "external_dependency": "HNX written permission or an information-service agreement covering automated retrieval of per-symbol end-of-day trading statistics for HNX and UPCoM, and stating whether internal research retention and derived-figure publication are permitted.",
-      "recommended_next": "PROSPECTIVE_RAW_PIT_AUTHORITY_V1 (not started; not queued)",
-      "notes": "ACTIVE 2026-09-29. Acquisition-rights gate: HOSE bounded internal acquisition authorized (robots allow-all, no restrictive terms found); HNX/UPCoM bulk acquisition NOT authorized. 364 planned HOSE requests all OK (0 retries, cap 400); 93 prior series reused. HOSE ADTV20/ADV20 exact for 403/403. Daily: additive qualified_research sub-block in the LIQUIDITY decision-input dimension; postures, decision identities and evidence classes identical over 1,683. Raw exchange bodies never published; no Dashboard/AI publication; no Vnstock/KBS/VCI call. Not merged; merge only on explicit owner approval."
+      "notes": "COMPLETE 2026-09-29: merged to canonical main as PR #14 (merge commit ac9b8cf5473191fb054782e441e1f5145897c0c3, reviewed checkpoint a382a50, Producer CI #112 and #113 SUCCESS). Acquisition-rights gate: HOSE bounded internal acquisition authorized (robots allow-all, no restrictive terms found); HNX/UPCoM bulk acquisition NOT authorized. 364 planned HOSE requests all OK (0 retries, cap 400); 93 prior series reused. HOSE ADTV20/ADV20 exact for 403/403. Daily: additive qualified_research sub-block in the LIQUIDITY decision-input dimension; postures, decision identities and evidence classes identical over 1,683. Raw exchange bodies never published; no Dashboard/AI publication; no Vnstock/KBS/VCI call. Terminal scope: current-session liquidity 952; exact ADTV20/ADV20 457; HOSE 403/403; HNX/UPCoM bulk rights-gated; execution, sizing and PIT still blocked. A suspected Daily temporal-determinism defect was investigated against retained 2026-09-28 inputs under controlled execution clocks and was NOT_REPRODUCED / NO_CHANGE; no clock code or tests were added for it.",
+      "merge_commit": "ac9b8cf5473191fb054782e441e1f5145897c0c3"
+    },
+    {
+      "milestone_id": "PROSPECTIVE_RAW_PIT_AUTHORITY_V1",
+      "state": "ACTIVE",
+      "narrative_disposition": "LOCAL_CHECKPOINT_PENDING / PROSPECTIVE_PIT_OPERATIONAL / HISTORICAL_PIT_PARTIAL",
+      "starting_checkpoint": "ac9b8cf5473191fb054782e441e1f5145897c0c3",
+      "checkpoint": null,
+      "candidate_branch": "feature/prospective-raw-pit-authority-v1-20260929",
+      "dependencies": [
+        "OFFICIAL_EXCHANGE_LIQUIDITY_MARKET_WIDE_OPERATIONALIZATION_V1"
+      ],
+      "unlocks": [],
+      "authority_effect": "USE_SCOPED_PROSPECTIVE_PRICE_EVIDENCE_ONLY / PIT_BACKTEST_EXECUTION_REPLAY_FACTOR_CHAIN_STILL_BLOCKED",
+      "owner_authorized": true,
+      "source_doc": "Owner directive PROSPECTIVE_RAW_PIT_AUTHORITY_V1 (2026-09-29); docs/prospective_raw_pit_authority.md",
+      "state_history": [
+        "ACTIVE"
+      ],
+      "owner_override": null,
+      "terminal_disposition": "PROSPECTIVE_PIT_OPERATIONAL / HISTORICAL_PIT_PARTIAL",
+      "external_dependency": "HNX/UPCoM official series permission; a documented HOSE basis statement; an official listing-status route for ACTIVE_UNIVERSE.",
+      "notes": "ACTIVE 2026-09-29. Provider-neutral prospective snapshot contract, 21 retained sessions of hashed known-time DNSE receipts (18,514 bars), 6,026 bars verified against the unadjusted official HOSE series, empirical HOSE basis test across 46 tickers/events, and a component-local Daily receipt manifest. Factor chain 0 qualified; PIT backtest, execution replay and PIT-adjusted history stay BLOCKED; ACTIVE_UNIVERSE stays UNKNOWN. One bounded HOSE probe (14 requests, 0 retries). No Owner Daily, provider runtime, production DB write or publication. Not merged; merge only on explicit owner approval. No successor started."
     }
   ],
   "blocked_capabilities": [
     {
       "capability": "RAW_AS_TRADED_AND_HISTORICAL_PIT",
-      "state": "NOT_PROMOTED",
-      "reason": "docs/STATE.md Section 3 Invariant 1 (Price Basis Invariant): RAW_AS_TRADED is NOT PROMOTED; bounded REST OHLC remains ADJUSTED_RETROSPECTIVE. HISTORICAL_PIT_RAW_AS_TRADED_AND_CORPORATE_ACTION_EVIDENCE_V1 = OUTCOME_D (2026-08-24): retained VSDC event evidence has a record date but no explicit ex-date and no pre-event raw snapshot pair.",
-      "reopen_gate": "An explicit official ex-date plus matching pre-event raw price snapshot evidence for the same ticker/event window.",
+      "state": "PARTIALLY_PROMOTED_USE_SCOPED",
+      "reason": "Superseded in part 2026-09-29 (PROSPECTIVE_RAW_PIT_AUTHORITY_V1): prospective as-known price evidence is OPERATIONAL, prospective raw-as-traded is qualified only for bars equal to the official HOSE series, and historical raw is PARTIAL for HOSE (empirical, research grade). Still BLOCKED: corporate-action factor chain (0 qualified events), PIT-adjusted history, PIT backtest, execution replay. Earlier state: docs/STATE.md Section 3 Invariant 1 (Price Basis Invariant): RAW_AS_TRADED is NOT PROMOTED; bounded REST OHLC remains ADJUSTED_RETROSPECTIVE. HISTORICAL_PIT_RAW_AS_TRADED_AND_CORPORATE_ACTION_EVIDENCE_V1 = OUTCOME_D (2026-08-24): retained VSDC event evidence has a record date but no explicit ex-date and no pre-event raw snapshot pair.",
+      "reopen_gate": "A qualified factor chain (official terms, explicit ex-date, executed lifecycle, publication cutoff), PIT universe membership, and sufficient prospective history depth.",
       "reference_checkpoint": null
     },
     {

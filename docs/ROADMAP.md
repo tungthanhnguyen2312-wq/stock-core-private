@@ -1,16 +1,20 @@
 # Stock Lookup — Architecture & Roadmap
 
-**Roadmap sync: official-exchange liquidity operationalization (2026-09-29):**
-- `OFFICIAL_EXCHANGE_LIQUIDITY_MARKET_WIDE_OPERATIONALIZATION_V1` = `ACTIVE / LOCAL_CHECKPOINT /
-  PARTIAL`, the only active execution item. It is not merged, and no successor is started.
-- `AUTHORITY_CLOSURE_LIQUIDITY_FOUNDATION_V1` = `COMPLETE` (PR #13 merged to `main` `170b2cf`, CI #111
-  SUCCESS). `CURRENT_RESEARCH_CHAIN_PROMOTION_REVIEW_INTEGRATION_V1` = `COMPLETE` (PR #12, `36b89f3`).
-- Scope reached: HOSE liquidity research is exact for all 403 tickers, with a retained HNX 28 / UPCoM
-  26 cohort. HNX/UPCoM bulk retrieval (1,047 tickers) is blocked on an external HNX approval.
-  Sizing, execution and PIT stay blocked.
-- Recommended next, not queued and each needing owner authorization: `PROSPECTIVE_RAW_PIT_AUTHORITY_V1`,
-  then `LIQUIDITY_EXECUTION_CAPACITY_AND_SIZING_V1`, then `FINANCIAL_EVIDENCE_ZERO_ACTIVE_VNSTOCK_V1`.
-  Chosen by blocker: point-in-time liquidity knowledge is common to PIT_BACKTEST and sizing.
+**Roadmap sync: prospective RAW/PIT price authority (2026-09-29):**
+- `PROSPECTIVE_RAW_PIT_AUTHORITY_V1` = `ACTIVE / LOCAL_CHECKPOINT / PROSPECTIVE_PIT_OPERATIONAL /
+  HISTORICAL_PIT_PARTIAL`, the only active execution item. It is not merged, and no successor is started.
+- `OFFICIAL_EXCHANGE_LIQUIDITY_MARKET_WIDE_OPERATIONALIZATION_V1` = `COMPLETE` (PR #14 merged to `main` `ac9b8cf`, CI #113
+  SUCCESS; terminal `MARKET_WIDE_LIQUIDITY_OPERATIONALIZATION_PARTIAL`). `AUTHORITY_CLOSURE_LIQUIDITY_FOUNDATION_V1` =
+  `COMPLETE` (PR #13). `CURRENT_RESEARCH_CHAIN_PROMOTION_REVIEW_INTEGRATION_V1` = `COMPLETE` (PR #12).
+- Scope reached: prospective as-known price evidence operational; prospective raw-as-traded qualified for official-agreed
+  bars; historical raw partial for HOSE. Factor chain, PIT-adjusted history, PIT backtest and execution replay stay blocked.
+- Successor not chosen, not queued, each needing owner authorization: `FINANCIAL_EVIDENCE_ZERO_ACTIVE_VNSTOCK_V1`,
+  `LIQUIDITY_EXECUTION_CAPACITY_AND_SIZING_V1`. The North Star sequence is unchanged.
+
+**Roadmap sync: official-exchange liquidity operationalization (2026-09-29; now COMPLETE):**
+- `OFFICIAL_EXCHANGE_LIQUIDITY_MARKET_WIDE_OPERATIONALIZATION_V1` = `COMPLETE / PARTIAL` (PR #14).
+- HOSE liquidity research is exact for all 403 tickers, with a retained HNX 28 / UPCoM 26 cohort. HNX/UPCoM bulk retrieval
+  (1,047 tickers) is blocked on an external HNX approval. Sizing, execution and PIT stay blocked.
 
 *(Superseded 2026-09-29: the chain merged as PR #12 and is COMPLETE; see the block above.)*
 
