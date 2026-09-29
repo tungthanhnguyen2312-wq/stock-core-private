@@ -2,28 +2,43 @@
 
 Same ticker + metric + period + scope:
 
-* EXACT_MATCH — official becomes qualified factual authority; legacy remains a
+* EXACT_MATCH — official becomes qualified factual authority only when the
+  official row has already passed value-level qualification; legacy remains a
   visible research proxy and is never deleted or relabelled official.
 * TRUE_CONFLICT — fail closed for that key; retain both provenances.
-* Different period or consolidated/standalone scope — NOT_COMPARABLE.
+* Different period, metric, or consolidated/standalone scope — NOT_COMPARABLE.
 * Missing official — not negative evidence; legacy research proxy remains.
+* Both absent — no usable evidence.
+* DOCUMENT_METADATA_QUALIFIED is never value-level factual authority.
 """
 from __future__ import annotations
 
 from typing import Any, Mapping
 
+from canonical_financial_facts import STATUS_QUALIFIED
+from canonical_financial_qualification_policy import QUALIFIED as POLICY_QUALIFIED
 from financial_evidence_currency_contract import (
     CONTRACT_VERSION,
     LEGACY_PROVIDER_LABEL,
     LEGACY_SOURCE_STATUS,
     canonical_stock_period_alias,
 )
+from official_financial_filing_evidence import METADATA_QUALIFIED
 
 EXACT_MATCH = "EXACT_MATCH"
 TRUE_CONFLICT = "TRUE_CONFLICT"
 NOT_COMPARABLE = "NOT_COMPARABLE"
 OFFICIAL_ONLY = "OFFICIAL_ONLY"
 LEGACY_ONLY = "LEGACY_ONLY"
+BOTH_ABSENT = "BOTH_ABSENT"
+
+# Existing value-level official states. DOCUMENT_METADATA_QUALIFIED is not among them.
+_VALUE_LEVEL_OFFICIAL_STATES = frozenset({
+    "QUALIFIED",  # financial_evidence_currency_refresh._qualify_extracted_fact
+    POLICY_QUALIFIED,  # canonical_financial_qualification_policy
+    STATUS_QUALIFIED,  # canonical_financial_facts
+    "CANONICAL_QUALIFIED",  # official_financial_value_evidence
+})
 
 ALLOWED_USES_OFFICIAL_QUALIFIED = (
     "CURRENT_RESEARCH_FACTUAL_AUTHORITY",
@@ -46,6 +61,43 @@ def _int(value: Any) -> int | None:
         if number != int(number):
             return None
         return int(number)
+
+
+def official_is_value_qualified(record: Mapping[str, Any] | None) -> bool:
+    """True only after value-level official qualification.
+
+    DOCUMENT_METADATA_QUALIFIED is document-level and is never sufficient.
+    Numeric agreement with a legacy row does not establish this state.
+    """
+    if not isinstance(record, Mapping):
+        return False
+    states = {
+        str(record.get("qualification_state") or ""),
+        str(record.get("qualification_status") or ""),
+        str(record.get("canonical_qualification") or ""),
+        str(record.get("metadata_qualification") or ""),
+    }
+    if METADATA_QUALIFIED in states and not (states & _VALUE_LEVEL_OFFICIAL_STATES):
+        return False
+    if not (states & _VALUE_LEVEL_OFFICIAL_STATES):
+        return False
+    if str(record.get("currency") or "") != "VND":
+        return False
+    scale = record.get("unit_scale") if record.get("unit_scale") is not None else record.get("scale")
+    if not scale:
+        return False
+    if not str(record.get("statement_scope") or ""):
+        return False
+    if not str(record.get("reporting_period") or ""):
+        return False
+    if not (
+        record.get("document_sha256")
+        or record.get("citation_id")
+        or record.get("source_span")
+        or record.get("citation")
+    ):
+        return False
+    return True
 
 
 def _normalized(record: Mapping[str, Any] | None) -> int | None:
@@ -76,9 +128,9 @@ def compare_official_and_legacy(
     if official is None and legacy is None:
         return {
             "contract_version": CONTRACT_VERSION,
-            "status": LEGACY_ONLY,
+            "status": BOTH_ABSENT,
             "reason": "BOTH_ABSENT",
-            "allowed_uses": ALLOWED_USES_LEGACY_PROXY,
+            "allowed_uses": ALLOWED_USES_CONFLICTED,
             "official_becomes_factual_authority": False,
             "legacy_relabelled_official": False,
             "legacy_deleted": False,
@@ -95,17 +147,14 @@ def compare_official_and_legacy(
             "legacy_source_status": legacy.get("status") or LEGACY_SOURCE_STATUS,
             "legacy_label": LEGACY_PROVIDER_LABEL,
         }
+    value_qualified = official_is_value_qualified(official)
     if legacy is None:
-        qualified = str(official.get("qualification_state") or official.get("qualification_status") or "") in {
-            "QUALIFIED", "qualified", "OFFICIAL_FACT_QUALIFIED", "CANONICAL_QUALIFIED",
-            "DOCUMENT_METADATA_QUALIFIED",
-        }
         return {
             "contract_version": CONTRACT_VERSION,
             "status": OFFICIAL_ONLY,
             "reason": "NO_LEGACY_ROW",
-            "allowed_uses": ALLOWED_USES_OFFICIAL_QUALIFIED if qualified else (),
-            "official_becomes_factual_authority": qualified,
+            "allowed_uses": ALLOWED_USES_OFFICIAL_QUALIFIED if value_qualified else ALLOWED_USES_CONFLICTED,
+            "official_becomes_factual_authority": value_qualified,
             "legacy_relabelled_official": False,
             "legacy_deleted": False,
         }
@@ -129,7 +178,7 @@ def compare_official_and_legacy(
 
     official_scope = str(official.get("statement_scope") or "")
     legacy_scope = str(legacy.get("statement_scope") or "")
-    if official_scope and legacy_scope and official_scope != legacy_scope:
+    if not official_scope or not legacy_scope or official_scope != legacy_scope:
         return {
             "contract_version": CONTRACT_VERSION,
             "status": NOT_COMPARABLE,
@@ -144,7 +193,7 @@ def compare_official_and_legacy(
 
     official_metric = str(official.get("canonical_metric") or "")
     legacy_metric = str(legacy.get("canonical_metric") or "")
-    if official_metric and legacy_metric and official_metric != legacy_metric:
+    if not official_metric or not legacy_metric or official_metric != legacy_metric:
         return {
             "contract_version": CONTRACT_VERSION,
             "status": NOT_COMPARABLE,
@@ -171,8 +220,10 @@ def compare_official_and_legacy(
             "contract_version": CONTRACT_VERSION,
             "status": EXACT_MATCH,
             "reason": "DIGIT_FOR_DIGIT_AFTER_SCALE",
-            "allowed_uses": ALLOWED_USES_OFFICIAL_QUALIFIED,
-            "official_becomes_factual_authority": True,
+            "allowed_uses": (
+                ALLOWED_USES_OFFICIAL_QUALIFIED if value_qualified else ALLOWED_USES_LEGACY_PROXY
+            ),
+            "official_becomes_factual_authority": value_qualified,
             "legacy_relabelled_official": False,
             "legacy_deleted": False,
             "legacy_source_status": LEGACY_SOURCE_STATUS,

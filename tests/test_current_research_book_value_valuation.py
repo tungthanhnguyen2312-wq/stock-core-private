@@ -122,3 +122,29 @@ def test_pb_fail_closed_on_negative_stale_conflict_entity_and_basis() -> None:
     incompatible = deepcopy(_cap())
     incompatible["monetary_basis"] = basis.build_basis(currency="USD", scale="units", basis_source="bad")
     assert _pb(cap=incompatible)["status"] == "INPUT_BLOCKED"
+
+
+def test_pb_does_not_replace_legacy_on_scope_period_or_missing_scope() -> None:
+    from official_legacy_precedence import NOT_COMPARABLE
+    from tests.test_financial_evidence_currency_refresh import _fact, _pb_official
+
+    baseline = _pb(rows=[_equity(period="2025-Q4")])
+    same_period_scope = _pb_official([
+        _fact("AAA", "shareholders_equity", "2025", 9_000_000, statement_scope="standalone"),
+    ])
+    assert same_period_scope["formula"] == "research_usable_market_cap / VCI_total_owners_equity"
+    assert abs(same_period_scope["value"] - baseline["value"]) < 1e-12
+    same_period_metric = _pb_official([_fact("AAA", "total_equity", "2025", 9_000_000)])
+    assert same_period_metric["official_legacy_precedence"] == NOT_COMPARABLE
+    assert same_period_metric["formula"] == "research_usable_market_cap / VCI_total_owners_equity"
+    different_period = _pb_official([_fact("AAA", "shareholders_equity", "2024", 9_000_000)])
+    assert different_period["official_legacy_precedence"] == NOT_COMPARABLE
+    missing_scope = _pb_official([_fact("AAA", "shareholders_equity", "2025", 9_000_000, statement_scope=None)])
+    assert valuation._official_equity_row(
+        [_fact("AAA", "shareholders_equity", "2025", 9_000_000, statement_scope=None)], "AAA",
+    ) is None
+    assert missing_scope["formula"] == "research_usable_market_cap / VCI_total_owners_equity"
+    exact = _pb_official([_fact("AAA", "shareholders_equity", "2025", 1_000_000)])
+    assert exact["formula"] == "research_usable_market_cap / official_total_owners_equity"
+    conflicted = _pb_official([_fact("AAA", "shareholders_equity", "2025", 2_000_000)])
+    assert conflicted["status"] == "INPUT_BLOCKED"

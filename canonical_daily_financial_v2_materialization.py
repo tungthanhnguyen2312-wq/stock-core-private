@@ -46,13 +46,19 @@ class CanonicalFinancialV2MaterializationError(ValueError):
 
 
 def _official_equity_overlay(root: Path) -> list[dict[str, Any]]:
+    from financial_evidence_currency_refresh import (
+        OfficialOverlayArtifactError,
+        load_public_official_fact_rows,
+    )
     try:
-        from financial_evidence_currency_refresh import load_public_official_fact_rows
-        return [row for row in load_public_official_fact_rows(root)
-                if row.get("qualification_state") == "QUALIFIED"
-                and row.get("canonical_metric") in {"shareholders_equity", "total_equity"}]
-    except Exception:
-        return []
+        rows = load_public_official_fact_rows(root)
+    except OfficialOverlayArtifactError as exc:
+        raise CanonicalFinancialV2MaterializationError(
+            f"OFFICIAL_OVERLAY_MALFORMED:{exc}"
+        ) from exc
+    return [row for row in rows
+            if row.get("qualification_state") == "QUALIFIED"
+            and row.get("canonical_metric") in {"shareholders_equity", "total_equity"}]
 
 
 def _canonical(value: Any) -> str:
@@ -274,7 +280,14 @@ def build_evaluated_valuation_artifact(
         verdict = monetary_verdict.resolve(Path(__file__).resolve().parent)
     except monetary_verdict.MonetaryBasisVerdictUnavailable:
         verdict = None  # component-local fail-closed; the decision still builds
-    official_equity_facts = _official_equity_overlay(Path(__file__).resolve().parent)
+    official_overlay_eligibility = None
+    try:
+        official_equity_facts = _official_equity_overlay(Path(__file__).resolve().parent)
+    except CanonicalFinancialV2MaterializationError as exc:
+        if "OFFICIAL_OVERLAY_MALFORMED" not in str(exc):
+            raise
+        official_equity_facts = []
+        official_overlay_eligibility = "OFFICIAL_OVERLAY_MALFORMED_INELIGIBLE"
     rows = {
         ticker: valuation_context.evaluate_ticker_valuation(
             ticker=ticker, feature_record=None,
@@ -302,6 +315,8 @@ def build_evaluated_valuation_artifact(
     }
     if entity_applicability_artifact is not None:
         payload["source_entity_applicability_identity"] = entity_applicability_artifact.get("artifact_identity")
+    if official_overlay_eligibility is not None:
+        payload["official_overlay_eligibility"] = official_overlay_eligibility
     payload.update(_identity(payload))
     return payload
 

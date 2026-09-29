@@ -71,6 +71,13 @@ PUBLIC_REPORT = "cohort_report.json"
 LANDING_RUN_MANIFEST = "currency_refresh_run_manifest.json"
 
 
+class OfficialOverlayArtifactError(ValueError):
+    """Present public overlay is unreadable, schema-invalid, or identity-corrupt.
+
+    Missing overlay is expected absence and is not this error.
+    """
+
+
 def _now() -> str:
     return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
@@ -830,30 +837,47 @@ def load_public_official_fact_rows(root: Path | str) -> list[dict[str, Any]]:
     path = Path(root) / PUBLIC_ARTIFACT_DIR / PUBLIC_FACTS
     if not path.is_file():
         return []
-    rows = []
-    for line in path.read_text(encoding="utf-8").splitlines():
-        if line.strip():
-            rows.append(json.loads(line))
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError as exc:
+        raise OfficialOverlayArtifactError(f"OFFICIAL_OVERLAY_UNREADABLE:{path}") from exc
+    rows: list[dict[str, Any]] = []
+    for index, line in enumerate(text.splitlines(), start=1):
+        if not line.strip():
+            continue
+        try:
+            record = json.loads(line)
+        except json.JSONDecodeError as exc:
+            raise OfficialOverlayArtifactError(
+                f"OFFICIAL_OVERLAY_MALFORMED_JSON:line={index}"
+            ) from exc
+        if not isinstance(record, dict):
+            raise OfficialOverlayArtifactError(
+                f"OFFICIAL_OVERLAY_SCHEMA_ERROR:line={index}:not_object"
+            )
+        ticker = str(record.get("ticker") or "").upper()
+        metric = str(record.get("canonical_metric") or "")
+        period = str(record.get("reporting_period") or "")
+        if record.get("qualification_state") == "QUALIFIED" and not (ticker and metric and period):
+            raise OfficialOverlayArtifactError(
+                f"OFFICIAL_OVERLAY_IDENTITY_CORRUPT:line={index}"
+            )
+        rows.append(record)
     return rows
 
 
 def load_public_official_citations(root: Path | str) -> dict[tuple[str, str, str], dict[str, Any]]:
-    """Additive overlay consumed by canonical_fact_store; never overwrites legacy rows."""
-    path = Path(root) / PUBLIC_ARTIFACT_DIR / PUBLIC_FACTS
+    """Additive overlay consumed by canonical_fact_store; never overwrites legacy rows.
+
+    Missing overlay is empty. A present malformed overlay raises OfficialOverlayArtifactError.
+    """
     citations: dict[tuple[str, str, str], dict[str, Any]] = {}
-    if not path.is_file():
-        return citations
-    for line in path.read_text(encoding="utf-8").splitlines():
-        if not line.strip():
-            continue
-        record = json.loads(line)
+    for record in load_public_official_fact_rows(root):
         if record.get("qualification_state") != "QUALIFIED":
             continue
         ticker = str(record.get("ticker") or "").upper()
         metric = str(record.get("canonical_metric") or "")
         period = str(record.get("reporting_period") or "")
-        if not (ticker and metric and period):
-            continue
         citations[(ticker, metric, period)] = {
             "citation_id": record.get("citation_id") or record.get("table_id") or _hash(record),
             "evidence_id": record.get("document_sha256"),

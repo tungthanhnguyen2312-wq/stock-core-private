@@ -229,11 +229,8 @@ def load_official_citations(runtime_root: Path | str) -> dict[tuple, dict[str, A
             if (metric in stock_metrics or financial_identity_is_stock_metric(metric)) and period.isdigit():
                 citations.setdefault((ticker, metric, f"{period}-Q4"),
                                      {**entry, "period_alias": "annual_year_end_is_q4_end"})
-    try:
-        from financial_evidence_currency_refresh import load_public_official_citations
-        overlay = load_public_official_citations(runtime_root)
-    except Exception:
-        overlay = {}
+    from financial_evidence_currency_refresh import load_public_official_citations
+    overlay = load_public_official_citations(runtime_root)
     for (ticker, metric, period), entry in overlay.items():
         citations[(ticker, metric, period)] = dict(entry)
         if (metric in stock_metrics or financial_identity_is_stock_metric(metric)) and period.isdigit():

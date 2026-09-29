@@ -523,18 +523,28 @@ def _calculation_readiness_reconciliation(
 
 
 def _official_equity_row(official_equity_facts: Sequence[Mapping[str, Any]] | None, ticker: str) -> Mapping[str, Any] | None:
-    """Newest qualified official equity for the same issuer; FY aliases to Q4, H1 to Q2."""
+    """Newest value-qualified official equity with explicit consolidated scope.
+
+    Missing statement_scope is not treated as consolidated. Currency, scale, period,
+    and citation must already be established by the value-level official contract.
+    """
+    from official_legacy_precedence import official_is_value_qualified
+
     best = None
     for fact in official_equity_facts or ():
         if str(fact.get("ticker") or "").upper() != ticker:
             continue
         if fact.get("canonical_metric") not in {"shareholders_equity", "total_equity"}:
             continue
-        if fact.get("qualification_state") != "QUALIFIED":
+        if not official_is_value_qualified(fact):
             continue
-        if fact.get("statement_scope") not in (None, "consolidated"):
+        if fact.get("statement_scope") != "consolidated":
             continue
         if fact.get("currency") != "VND" or not fact.get("unit_scale"):
+            continue
+        if not (fact.get("document_sha256") or fact.get("citation_id") or fact.get("source_span") or fact.get("citation")):
+            continue
+        if not fact.get("reporting_period"):
             continue
         if best is None or str(fact.get("knowledge_available_at") or "") > str(best.get("knowledge_available_at") or ""):
             best = fact
@@ -631,19 +641,11 @@ def _book_value_method(
     formula = "research_usable_market_cap / VCI_total_owners_equity"
     if official is not None:
         from official_legacy_precedence import EXACT_MATCH, TRUE_CONFLICT, compare_official_and_legacy
-        official_period = str(official.get("reporting_period") or "")
-        legacy_period = chosen_period
-        if official_period.isdigit():
-            official_period_q = f"{official_period}-Q4"
-        elif official_period == "2026-H1":
-            official_period_q = "2026-Q2"
-        else:
-            official_period_q = official_period
         compared = compare_official_and_legacy(
             {**dict(official), "statement_family": "balance_sheet",
              "normalized_value": official.get("normalized_value") or official.get("value"),
              "already_normalized": True},
-            {"canonical_metric": "shareholders_equity", "reporting_period": legacy_period,
+            {"canonical_metric": "shareholders_equity", "reporting_period": chosen_period,
              "statement_family": "balance_sheet", "statement_scope": chosen.get("statement_scope"),
              "normalized_value": chosen["reported_value"], "already_normalized": True},
         )
@@ -651,10 +653,11 @@ def _book_value_method(
         extra["official_equity_period"] = official.get("reporting_period")
         extra["legacy_equity_visible"] = True
         extra["legacy_source_status"] = "provider_reported"
-        if compared["status"] == TRUE_CONFLICT and official_period_q == chosen_period:
+        extra["official_becomes_factual_authority"] = compared.get("official_becomes_factual_authority")
+        if compared["status"] == TRUE_CONFLICT:
             return _method_shell(PB_CURRENT_RESEARCH, applicability=applicability, status=INPUT_BLOCKED,
                                  blockers=["OFFICIAL_LEGACY_TRUE_CONFLICT"], extra={**extra, "warnings": warning})
-        if compared["status"] == EXACT_MATCH or official_period_q == chosen_period:
+        if compared["status"] == EXACT_MATCH and compared.get("official_becomes_factual_authority"):
             official_value = official.get("normalized_value") or official.get("value")
             if _numeric(official_value) and official_value > 0:
                 equity_value = official_value

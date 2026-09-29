@@ -22,9 +22,11 @@ from financial_evidence_currency_contract import (
 )
 from financial_evidence_currency_refresh import (
     BoundedHttpBudget,
+    OfficialOverlayArtifactError,
     extract_from_retained_pdf,
     financial_v2_pin_decision,
     image_only_disposition,
+    load_public_official_citations,
     parse_index_document_links,
     restatement_envelope,
     run_refresh,
@@ -32,7 +34,18 @@ from financial_evidence_currency_refresh import (
 from official_financial_filing_evidence import METADATA_BLOCKED, METADATA_QUALIFIED, qualify_document_metadata
 from official_financial_period_identity import recognize_statement_period, recognize_unit_scale
 from official_financial_value_evidence import qualify_value_evidence
-from official_legacy_precedence import EXACT_MATCH, LEGACY_ONLY, NOT_COMPARABLE, TRUE_CONFLICT, compare_official_and_legacy
+from official_legacy_precedence import (
+    BOTH_ABSENT,
+    EXACT_MATCH,
+    LEGACY_ONLY,
+    NOT_COMPARABLE,
+    OFFICIAL_ONLY,
+    TRUE_CONFLICT,
+    compare_official_and_legacy,
+    official_is_value_qualified,
+)
+import canonical_daily_financial_v2_materialization as fin_v2_material
+import canonical_fact_store as fact_store
 from official_source_registry import ADMITTED, admit, load_registry
 import official_document_acquisition as acquirer
 import current_research_valuation_context as valuation
@@ -167,20 +180,82 @@ def test_corporate_bank_securities_metric_semantics():
     assert "short_term_interest_bearing_debt" not in core_metrics_for("VCB")
 
 
+def _legacy(**overrides):
+    row = {"canonical_metric": "shareholders_equity", "reporting_period": "2025-Q4",
+           "statement_family": "balance_sheet", "statement_scope": "consolidated",
+           "normalized_value": 1000, "already_normalized": True}
+    row.update(overrides)
+    return row
+
+
 def test_exact_match_true_conflict_period_and_scope():
     official = _fact()
-    legacy = {"canonical_metric": "shareholders_equity", "reporting_period": "2025-Q4",
-              "statement_family": "balance_sheet", "statement_scope": "consolidated",
-              "normalized_value": 1000, "already_normalized": True}
-    assert compare_official_and_legacy(official, legacy)["status"] == EXACT_MATCH
-    assert compare_official_and_legacy(official, {**legacy, "normalized_value": 999})["status"] == TRUE_CONFLICT
-    assert compare_official_and_legacy(official, {**legacy, "reporting_period": "2024-Q4"})["status"] == NOT_COMPARABLE
-    assert compare_official_and_legacy(official, {**legacy, "statement_scope": "standalone"})["status"] == NOT_COMPARABLE
+    legacy = _legacy()
+    matched = compare_official_and_legacy(official, legacy)
+    assert matched["status"] == EXACT_MATCH
+    assert matched["official_becomes_factual_authority"] is True
+    assert matched["legacy_relabelled_official"] is False
+    conflicted = compare_official_and_legacy(official, {**legacy, "normalized_value": 999})
+    assert conflicted["status"] == TRUE_CONFLICT
+    assert conflicted["official_becomes_factual_authority"] is False
+    period = compare_official_and_legacy(official, {**legacy, "reporting_period": "2024-Q4"})
+    assert period["status"] == NOT_COMPARABLE
+    assert period["reason"] == "PERIOD_DIFFERENCE"
+    assert period["official_becomes_factual_authority"] is False
+    scope = compare_official_and_legacy(official, {**legacy, "statement_scope": "standalone"})
+    assert scope["status"] == NOT_COMPARABLE
+    assert scope["reason"] == "SCOPE_DIFFERENCE"
+    assert scope["official_becomes_factual_authority"] is False
+    metric = compare_official_and_legacy(official, {**legacy, "canonical_metric": "total_equity"})
+    assert metric["status"] == NOT_COMPARABLE
+    assert metric["reason"] == "METRIC_DIFFERENCE"
+    assert metric["official_becomes_factual_authority"] is False
     missing = compare_official_and_legacy(None, legacy)
     assert missing["status"] == LEGACY_ONLY
     assert missing["reason"] == "MISSING_OFFICIAL_NOT_NEGATIVE_EVIDENCE"
     assert missing["legacy_deleted"] is False
     assert missing["legacy_relabelled_official"] is False
+
+
+def test_both_absent_is_fail_closed_and_not_legacy_proxy():
+    result = compare_official_and_legacy(None, None)
+    assert result["status"] == BOTH_ABSENT
+    assert result["reason"] == "BOTH_ABSENT"
+    assert result["allowed_uses"] == ()
+    assert result["official_becomes_factual_authority"] is False
+    assert result["legacy_relabelled_official"] is False
+    assert result["legacy_deleted"] is False
+
+
+def test_metadata_qualification_is_not_value_level_authority():
+    metadata_only = _fact(qualification_state=METADATA_QUALIFIED, qualification_status=METADATA_QUALIFIED)
+    assert official_is_value_qualified(metadata_only) is False
+    official_only = compare_official_and_legacy(metadata_only, None)
+    assert official_only["status"] == OFFICIAL_ONLY
+    assert official_only["official_becomes_factual_authority"] is False
+    assert official_only["allowed_uses"] == ()
+    matched = compare_official_and_legacy(metadata_only, _legacy())
+    assert matched["status"] == EXACT_MATCH
+    assert matched["official_becomes_factual_authority"] is False
+    assert matched["legacy_relabelled_official"] is False
+    assert matched["allowed_uses"] == ("CURRENT_RESEARCH_PROXY_ONLY",)
+
+
+def test_value_qualified_official_only_and_exact_match_promote_authority():
+    official = _fact()
+    assert official_is_value_qualified(official) is True
+    official_only = compare_official_and_legacy(official, None)
+    assert official_only["status"] == OFFICIAL_ONLY
+    assert official_only["official_becomes_factual_authority"] is True
+    assert official_only["allowed_uses"] == (
+        "CURRENT_RESEARCH_FACTUAL_AUTHORITY",
+        "VALUATION_INPUT_WHERE_METRIC_PERMITS",
+    )
+    matched = compare_official_and_legacy(official, _legacy())
+    assert matched["status"] == EXACT_MATCH
+    assert matched["official_becomes_factual_authority"] is True
+    assert matched["legacy_relabelled_official"] is False
+    assert matched["legacy_deleted"] is False
 
 
 def test_restatement_append_only_forbids_backdating():
@@ -295,25 +370,61 @@ def test_issuer_ir_index_page_is_admitted_on_existing_host():
     assert "EVF" not in acquirer.TICKERS
 
 
-def test_official_equity_supersedes_matching_vci_and_conflicts_fail_closed():
+def _pb_official(official_facts, *, period="2025-Q4", value=1_000_000):
     from tests.test_current_research_book_value_valuation import _cap, _equity
     verdict = __import__("provider_financial_monetary_basis_verdict").resolve(ROOT)
-    rows = [_equity(period="2025-Q4", value=1_000_000)]
-    official = [_fact("AAA", "shareholders_equity", "2025", 1_000_000)]
-    matched = valuation._book_value_method(
+    return valuation._book_value_method(
         ticker="AAA", entity="corporate", share_class="CURRENT_SHARE_RESEARCH_PROXY",
-        market_cap=_cap(), equity_rows=rows, decision_session="2026-09-24",
-        verdict=verdict, official_equity_facts=official,
+        market_cap=_cap(), equity_rows=[_equity(period=period, value=value)],
+        decision_session="2026-09-24", verdict=verdict, official_equity_facts=official_facts,
     )
+
+
+def test_official_equity_supersedes_matching_vci_and_conflicts_fail_closed():
+    matched = _pb_official([_fact("AAA", "shareholders_equity", "2025", 1_000_000)])
     assert matched["status"] == "RESEARCH_USABLE"
     assert matched["formula"] == "research_usable_market_cap / official_total_owners_equity"
-    conflicted = valuation._book_value_method(
-        ticker="AAA", entity="corporate", share_class="CURRENT_SHARE_RESEARCH_PROXY",
-        market_cap=_cap(), equity_rows=rows, decision_session="2026-09-24",
-        verdict=verdict, official_equity_facts=[_fact("AAA", "shareholders_equity", "2025", 2_000_000)],
-    )
+    assert matched["official_becomes_factual_authority"] is True
+    conflicted = _pb_official([_fact("AAA", "shareholders_equity", "2025", 2_000_000)])
     assert conflicted["status"] == "INPUT_BLOCKED"
     assert "OFFICIAL_LEGACY_TRUE_CONFLICT" in conflicted["blocker_reason_codes"]
+
+
+def test_pb_same_period_does_not_authorize_official_on_scope_or_metric_difference():
+    baseline = _pb_official([])
+    different_scope = _pb_official([
+        _fact("AAA", "shareholders_equity", "2025", 9_000_000, statement_scope="standalone"),
+    ])
+    assert different_scope["status"] == "RESEARCH_USABLE"
+    assert different_scope["formula"] == "research_usable_market_cap / VCI_total_owners_equity"
+    assert abs(different_scope["value"] - baseline["value"]) < 1e-12
+    different_metric = _pb_official([
+        _fact("AAA", "total_equity", "2025", 9_000_000),
+    ])
+    assert different_metric["status"] == "RESEARCH_USABLE"
+    assert different_metric["formula"] == "research_usable_market_cap / VCI_total_owners_equity"
+    assert different_metric["official_legacy_precedence"] == NOT_COMPARABLE
+    assert different_metric["official_becomes_factual_authority"] is False
+    assert abs(different_metric["value"] - baseline["value"]) < 1e-12
+    different_period = _pb_official([
+        _fact("AAA", "shareholders_equity", "2024", 9_000_000),
+    ])
+    assert different_period["status"] == "RESEARCH_USABLE"
+    assert different_period["formula"] == "research_usable_market_cap / VCI_total_owners_equity"
+    assert different_period["official_legacy_precedence"] == NOT_COMPARABLE
+    exact = _pb_official([_fact("AAA", "shareholders_equity", "2025", 1_000_000)])
+    assert exact["formula"] == "research_usable_market_cap / official_total_owners_equity"
+    conflicted = _pb_official([_fact("AAA", "shareholders_equity", "2025", 2_000_000)])
+    assert conflicted["status"] == "INPUT_BLOCKED"
+
+
+def test_official_equity_missing_scope_is_not_treated_as_consolidated():
+    missing_scope = _fact("AAA", "shareholders_equity", "2025", 9_000_000, statement_scope=None)
+    assert official_is_value_qualified(missing_scope) is False
+    assert valuation._official_equity_row([missing_scope], "AAA") is None
+    method = _pb_official([missing_scope])
+    assert method["formula"] == "research_usable_market_cap / VCI_total_owners_equity"
+    assert "official_legacy_precedence" not in method
 
 
 def test_missing_official_does_not_change_legacy_pb():
@@ -361,3 +472,44 @@ def test_no_raw_pdf_is_tracked_in_public_artifact_dir():
         return
     for path in public.rglob("*"):
         assert path.suffix.lower() not in {".pdf", ".xlsx", ".xls", ".png", ".jpg"}
+
+
+def test_malformed_present_overlay_fails_closed_and_missing_overlay_is_empty(tmp_path: Path):
+    overlay_dir = tmp_path / "derived" / "financial-evidence-currency-refresh-v1"
+    overlay_dir.mkdir(parents=True)
+    (overlay_dir / "qualified_official_facts.jsonl").write_text("{not json\n", encoding="utf-8")
+    with pytest.raises(OfficialOverlayArtifactError, match="OFFICIAL_OVERLAY_MALFORMED_JSON"):
+        load_public_official_citations(tmp_path)
+    with pytest.raises(OfficialOverlayArtifactError, match="OFFICIAL_OVERLAY_MALFORMED_JSON"):
+        fact_store.load_official_citations(tmp_path)
+    with pytest.raises(fin_v2_material.CanonicalFinancialV2MaterializationError, match="OFFICIAL_OVERLAY_MALFORMED"):
+        fin_v2_material._official_equity_overlay(tmp_path)
+    identity = overlay_dir / "qualified_official_facts.jsonl"
+    identity.write_text(
+        json.dumps({"qualification_state": "QUALIFIED", "value": 1}) + "\n",
+        encoding="utf-8",
+    )
+    with pytest.raises(OfficialOverlayArtifactError, match="OFFICIAL_OVERLAY_IDENTITY_CORRUPT"):
+        load_public_official_citations(tmp_path)
+    missing = load_public_official_citations(tmp_path / "absent-root")
+    assert missing == {}
+    empty_root = tmp_path / "empty-overlay"
+    (empty_root / "derived" / "financial-evidence-currency-refresh-v1").mkdir(parents=True)
+    (empty_root / "derived" / "financial-evidence-currency-refresh-v1" / "qualified_official_facts.jsonl").write_text(
+        "", encoding="utf-8",
+    )
+    assert load_public_official_citations(empty_root) == {}
+    assert fact_store.load_official_citations(empty_root) == {}
+
+
+def test_evaluated_valuation_keeps_daily_with_explicit_malformed_overlay_state(monkeypatch):
+    def boom(_root):
+        raise fin_v2_material.CanonicalFinancialV2MaterializationError("OFFICIAL_OVERLAY_MALFORMED:test")
+    monkeypatch.setattr(fin_v2_material, "_official_equity_overlay", boom)
+    engine = {"artifact_identity": "financial_analysis_context/v2:test", "records": {"AAA": {}}}
+    valuation_artifact = fin_v2_material.build_evaluated_valuation_artifact(
+        engine_artifact=engine, raw_valuation_artifact=None,
+        product_tickers=["AAA"], requested_at="2026-09-29T15:00:00+07:00",
+    )
+    assert valuation_artifact["official_overlay_eligibility"] == "OFFICIAL_OVERLAY_MALFORMED_INELIGIBLE"
+    assert "AAA" in valuation_artifact["records"]
