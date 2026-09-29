@@ -17,7 +17,7 @@ import pytest
 
 import provider_build_manifest as build_manifest
 import provider_worker_containment as containment
-from _provider_build_fixtures import isolated_base, protocol_runtime
+from _provider_build_fixtures import _approved_endpoint, isolated_base, protocol_runtime
 
 ROOT = Path(__file__).resolve().parents[1]
 FAKE_SECRET = "fixture-credential-value-7f3a9c"  # not a real key; must never appear in diagnostics
@@ -115,7 +115,7 @@ def test_approved_endpoints_without_the_os_egress_gate_fail(tmp_path):
         manifest["network"]["egress_gateway"] = None
         manifest["os_containment"]["egress_gateway_verified"] = False
 
-    runtime = protocol_runtime(tmp_path / "rt", style="governed", mutate_manifest=mutate)
+    runtime = protocol_runtime(tmp_path / "rt", style="protocol", endpoints=[_approved_endpoint()], mutate_manifest=mutate)
     assert runtime.manifest["network"]["endpoints"]
     failures = build_manifest.egress_gateway_violations(runtime.manifest, approved=True)
     assert any("mandatory OS egress gateway" in str(item.get("error")) for item in failures)

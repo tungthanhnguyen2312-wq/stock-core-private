@@ -276,11 +276,11 @@ def payloads_from_vci_frame(frame: Any) -> list[dict[str, Any]]:
 
 def fetch_vci_events(ticker: str) -> tuple[list[dict[str, Any]], str]:
     """Explicit live fetch entry point; no alternate provider is available."""
+    require_governed_provider_execution("corporate_events_sync.fetch_vci_events")
     version = importlib.metadata.version("vnstock")
     if version != QUALIFIED_VNSTOCK_VERSION:
         raise CorporateEventsContractError(f"unqualified vnstock version: {version}")
-    require_governed_provider_execution("corporate_events_sync.fetch_vci_events")
-    from vnstock.api.company import Company
+    raise RuntimeError("RETIRED_PROVIDER:corporate_events_sync.fetch_vci_events")
 
     frame = Company(source=QUALIFIED_PROVIDER, symbol=_ticker(ticker), random_agent=False, show_log=False).events()
     return payloads_from_vci_frame(frame), version

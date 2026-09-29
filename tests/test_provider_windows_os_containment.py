@@ -496,6 +496,11 @@ def test_worker_bundle_includes_the_gateway_client_and_the_draft_manifest_binds_
     bound = {item["relative_path"]: item for item in manifest["worker"]["source_files"]}
     for relative in build_manifest.WORKER_SOURCE_FILES:
         assert bound[relative] == build_manifest.file_identity(ROOT / relative, relative), relative
+    for relative in ("vnstock_worker_process.py", "vnstock_worker_protocol.py",
+                     "vnstock_rate_governor.py", "vn_stock_pipeline.py"):
+        assert relative in bound
+        assert not (ROOT / relative).exists()
+    assert manifest["worker"]["entrypoint"] == "vnstock_worker_process.py"
     assert manifest["status"] == build_manifest.STATUS_DRAFT and manifest["launch_authorized"] is False
 
 

@@ -11,7 +11,8 @@ permissions:
 
 # Hermetic core tier (docs/CI_AND_DEPENDENCY_TIERS.md):
 # - installs ONLY requirements.txt + requirements-test.txt under constraints.txt; the optional
-#   provider runtime (requirements-providers.txt: vnstock/vnai/anthropic) is never installed;
+#   remaining provider file (requirements-providers.txt: anthropic) is never installed;
+#   Vnstock/VNAI live acquisition is retired;
 # - tests/provider_import_block/sitecustomize.py (via PYTHONPATH) refuses vnstock/vnai in every
 #   interpreter of the job, subprocesses included, so a hidden provider import fails loudly;
 # - no secrets, no provider calls, no retained evidence (operations-review/ and data/ are
@@ -35,12 +36,8 @@ env:
     tests/test_ai_handoff_source_freshness_matrix.py
     tests/test_ai_handoff_publication.py
     tests/test_tactical_reversal_shadow_collection_operationalization.py
-    tests/test_vnstock_worker_client.py
-    tests/test_vnstock_exact_session_worker_equivalence.py
-    tests/test_vnstock_worker_import_containment.py
     tests/test_multi_source_exact_session_resolver.py
     tests/test_multi_source_market_evidence_contract.py
-    tests/test_vnstock_rate_governor.py
     tests/test_macro_vcb_adapter.py
     tests/test_macro_sjc_adapter.py
     tests/test_macro_sync_source_fetchers.py
@@ -55,7 +52,7 @@ env:
     tests/test_producer_sync_timestamp_contract.py::MetadataUpdatedTests
     tests/test_producer_sync_timestamp_contract.py::FreshnessGateCompatibilityTests
     tests/test_producer_sync_timestamp_contract.py::UntouchedDataAsOfIsWallClockIndependentTests
-    tests/test_provider_runtime_isolation.py
+    tests/test_zero_active_vnstock.py
     tests/test_provider_build_boundary.py
     tests/test_provider_fail_closed_boundary.py
     tests/test_provider_os_enforcement.py

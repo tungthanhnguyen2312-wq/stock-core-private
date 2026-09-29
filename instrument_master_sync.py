@@ -199,7 +199,7 @@ def payload_from_symbols_by_exchange_frame(frame: Any) -> dict[str, Any]:
 def fetch_current_payload() -> dict[str, Any]:
     """Fetch the current VCI listing universe through Vnstock's public API."""
     require_governed_provider_execution("instrument_master_sync.fetch_current_payload")
-    from vnstock.api.listing import Listing
+    raise RuntimeError("RETIRED_PROVIDER:instrument_master_sync.fetch_current_payload")
 
     frame = Listing(source=SOURCE_NAME, random_agent=False, show_log=False).symbols_by_exchange()
     return payload_from_symbols_by_exchange_frame(frame)

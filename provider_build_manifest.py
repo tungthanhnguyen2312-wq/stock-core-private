@@ -148,10 +148,11 @@ LINEAGE_ENDPOINT_MAP = {"KBS": KBS_HISTORY_ROUTE, "VCI": VCI_HISTORY_ROUTE}
 # hash-verified by the parent and again by the worker.
 WORKER_ENTRYPOINT = "vnstock_worker_process.py"
 WORKER_ADAPTER_MODULE = "vn_stock_pipeline"
+# Historical Vnstock worker/pipeline sources are retired and absent. Generic containment
+# modules remain so a later explicitly authorized family can reuse the launch contract.
 WORKER_SOURCE_FILES = (
-    "vnstock_worker_process.py", "vnstock_worker_protocol.py", "vnstock_rate_governor.py",
     "provider_build_manifest.py", "provider_worker_containment.py", "provider_execution_guard.py",
-    "provider_runtime_state.py", "vn_stock_pipeline.py", "market_data_lineage.py", "runtime_paths.py",
+    "provider_runtime_state.py", "market_data_lineage.py", "runtime_paths.py",
     "vn_time.py", "provider_egress_gateway.py",
 )
 # Import-cache stubs the worker installs before vnstock is first imported (see

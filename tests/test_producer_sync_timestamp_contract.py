@@ -47,7 +47,6 @@ import market_wide_current_shares_resolver as shares_resolver  # noqa: E402
 import meta_sync  # noqa: E402
 import news_sync  # noqa: E402
 import shareholders_sync  # noqa: E402
-import vn_stock_pipeline  # noqa: E402
 import vn_time  # noqa: E402
 from freshness_history import RULES, freshness_envelope, parse_timestamp  # noqa: E402
 
@@ -91,23 +90,21 @@ class MetadataUpdatedTests(unittest.TestCase):
         self.conn.close()
 
     def _run_with_frozen_clock(self, iso_value, tickers=("ABC",), refresh=False):
-        # sync_fundamentals is an UNSUPPORTED_LEGACY_PROVIDER_OPERATION outside a governed worker
-        # (APPROVED_PROVIDER_BUILD_AND_EXECUTION_BOUNDARY_V1; see
-        # test_the_real_sync_fundamentals_refuses_before_importing_the_provider). This contract
-        # exercises only its write-path timestamp with inert provider interfaces and a mocked
-        # call_api, so the guard is neutralised here explicitly -- never the provider itself.
+        # Live KBS/VCI acquisition is retired. Neutralising the guard still cannot reach a
+        # provider import or write metadata.updated; the timestamp readers below cover retained rows.
         with mock.patch.object(meta_sync, "vn_now_iso", return_value=iso_value), \
              mock.patch.object(meta_sync, "call_api", return_value=None), \
              mock.patch.object(meta_sync, "require_governed_provider_execution"), \
              mock.patch.dict(sys.modules, _inert_vnstock_interface()):
-            meta_sync.sync_fundamentals(self.conn, list(tickers), refresh=refresh)
+            with self.assertRaisesRegex(RuntimeError, "RETIRED_PROVIDER:meta_sync.sync_fundamentals"):
+                meta_sync.sync_fundamentals(self.conn, list(tickers), refresh=refresh)
 
     def test_the_real_sync_fundamentals_refuses_before_importing_the_provider(self):
         import provider_execution_guard as guard
 
         with mock.patch.dict(sys.modules, _inert_vnstock_interface()), \
              mock.patch.object(meta_sync, "call_api", side_effect=AssertionError("provider call attempted")):
-            with self.assertRaises(guard.UnsupportedLegacyProviderOperation) as raised:
+            with self.assertRaises(guard.RetiredProviderOperation) as raised:
                 meta_sync.sync_fundamentals(self.conn, ["ABC"])
         self.assertIn("meta_sync.sync_fundamentals", str(raised.exception))
         self.assertEqual(self.conn.execute("SELECT COUNT(*) FROM metadata").fetchone()[0], 0)
@@ -120,15 +117,12 @@ class MetadataUpdatedTests(unittest.TestCase):
 
     def test_write_path_uses_vn_now_iso_not_host_clock(self):
         self._run_with_frozen_clock(FIXED_VN_ISO)
-        row = self.conn.execute("SELECT updated FROM metadata WHERE ticker='ABC'").fetchone()
-        self.assertEqual(row[0], FIXED_VN_ISO)
+        self.assertEqual(self.conn.execute("SELECT COUNT(*) FROM metadata").fetchone()[0], 0)
 
     def test_repeated_calls_for_the_same_frozen_instant_are_identical(self):
         self._run_with_frozen_clock(FIXED_VN_ISO, tickers=("ABC",))
-        first = self.conn.execute("SELECT updated FROM metadata WHERE ticker='ABC'").fetchone()[0]
         self._run_with_frozen_clock(FIXED_VN_ISO, tickers=("ABC",), refresh=True)
-        second = self.conn.execute("SELECT updated FROM metadata WHERE ticker='ABC'").fetchone()[0]
-        self.assertEqual(first, second)
+        self.assertEqual(self.conn.execute("SELECT COUNT(*) FROM metadata").fetchone()[0], 0)
 
     def test_source_no_longer_calls_bare_datetime_now(self):
         source = inspect.getsource(meta_sync.sync_fundamentals)
@@ -197,9 +191,9 @@ class OperationalGeneratedAtBehavioralTests(unittest.TestCase):
         self.assertNotRegex(source, BARE_NOW_RE)
 
     def test_bctc_sync_normalize_report_scraped_at_uses_frozen_vn_time(self):
-        with mock.patch.object(bctc_sync, "vn_now", return_value=FIXED_VN):
+        with mock.patch.object(bctc_sync, "vn_now_iso", return_value=FIXED_VN_ISO):
             out = bctc_sync.normalize_report(pd.DataFrame({"a": [1]}), "abc", "balance", "VCI")
-        self.assertEqual(out.iloc[0]["scraped_at"], "2026-08-08 10:00")
+        self.assertEqual(out.iloc[0]["scraped_at"], FIXED_VN_ISO)
 
     def test_bctc_sync_upsert_meta_updated_uses_frozen_vn_time(self):
         with mock.patch.object(bctc_sync, "vn_now", return_value=FIXED_VN):
@@ -232,16 +226,6 @@ class OperationalGeneratedAtBehavioralTests(unittest.TestCase):
         source = inspect.getsource(ai_analyzer)
         self.assertIn('stamp = vn_now().strftime("%Y%m%d")', source)
 
-    def test_vn_stock_pipeline_set_meta_updated_uses_frozen_vn_time(self):
-        conn = sqlite3.connect(":memory:")
-        try:
-            vn_stock_pipeline.init_db(conn)
-            with mock.patch.object(vn_stock_pipeline, "vn_now", return_value=FIXED_VN):
-                vn_stock_pipeline.set_meta(conn, "ABC", "done", 100)
-            row = conn.execute("SELECT updated FROM meta WHERE ticker='ABC'").fetchone()
-            self.assertEqual(row[0], "2026-08-08 10:00")
-        finally:
-            conn.close()
 
     def test_shareholders_sync_normalize_updated_at_uses_frozen_vn_time(self):
         df = pd.DataFrame({"share_holder": ["Nguyen Van A"], "quantity": [1000],
@@ -292,28 +276,6 @@ class UntouchedDataAsOfIsWallClockIndependentTests(unittest.TestCase):
     """Occurrences classified DATA_AS_OF / SOURCE_OBSERVED_AT / FRESHNESS_INPUT were
     deliberately left untouched. Proves rerunning does not manufacture a newer data_as_of, and
     that the "now" used at test time cannot leak into a content-derived date."""
-
-    def test_vn_stock_pipeline_ohlcv_date_is_derived_from_source_column_not_wall_clock(self):
-        df = pd.DataFrame({"time": ["2026-08-01", "2026-08-02"], "open": [1, 2], "high": [1, 2],
-                            "low": [1, 2], "close": [1, 2], "volume": [100, 200]})
-        with mock.patch.object(vn_stock_pipeline, "vn_now", return_value=FIXED_VN):
-            first = vn_stock_pipeline.normalize(df.copy(), "ABC", "VCI")
-        later_instant = FIXED_VN.replace(year=FIXED_VN.year + 1)
-        with mock.patch.object(vn_stock_pipeline, "vn_now", return_value=later_instant):
-            second = vn_stock_pipeline.normalize(df.copy(), "ABC", "VCI")
-        self.assertListEqual(list(first["date"]), ["2026-08-01", "2026-08-02"])
-        self.assertListEqual(list(first["date"]), list(second["date"]))
-
-    def test_vn_stock_pipeline_fetch_window_boundary_resolved_by_the_session_boundary_milestone(self):
-        """cmd_backfill/cmd_update's `today` was FRESHNESS_INPUT, deliberately left unpatched by
-        this milestone (a fetch-window boundary, not a cosmetic timestamp) and flagged as the
-        named next milestone. That milestone ("VN Stock Fetch-Window Session-Boundary Contract")
-        has since resolved it via vn_time.vn_today() (VN_CIVIL_DATE contract) -- superseding the
-        prior assertion that the bare pattern was still present. Full contract/safety coverage
-        lives in tests/test_vn_stock_pipeline_session_boundary_contract.py, not duplicated here."""
-        source = inspect.getsource(vn_stock_pipeline.cmd_backfill) + inspect.getsource(vn_stock_pipeline.cmd_update)
-        self.assertNotRegex(source, BARE_NOW_RE)
-        self.assertIn("vn_today()", source)
 
     def test_macro_sync_untouched_entirely_no_diff_this_milestone(self):
         """macro_sync.py's freshness engine already separates content-derived `date` from

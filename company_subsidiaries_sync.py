@@ -280,7 +280,7 @@ def fetch_current_payload(ticker: str, source_name: str) -> dict[str, Any]:
     """Fetch only the current provider response through Vnstock's public API."""
     source = _source_name(source_name)
     require_governed_provider_execution("company_subsidiaries_sync.fetch_current_payload")
-    from vnstock.api.company import Company
+    raise RuntimeError("RETIRED_PROVIDER:company_subsidiaries_sync.fetch_current_payload")
 
     company = Company(source=source, symbol=ticker, random_agent=False, show_log=False)
     if source == "VCI":

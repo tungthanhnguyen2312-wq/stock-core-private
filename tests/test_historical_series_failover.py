@@ -1,14 +1,11 @@
 from __future__ import annotations
 
 from datetime import date, timedelta
-from types import SimpleNamespace
 
-import pandas as pd
 import pytest
 
 import historical_series_failover as history
 from tools import run_market_wide_current_technical_coverage_scaleout as runner
-from vnstock_rate_governor import get_active_governor
 
 
 TARGET = "2026-08-28"
@@ -96,68 +93,14 @@ def test_future_and_duplicate_provider_observations_fail_closed(rows, reason):
     assert series["fitness"]["TECHNICAL_CLOSE_HISTORY"] == "BLOCKED"
 
 
-def test_vnstock_adapter_reverses_only_the_explicit_source_scale_for_snapshot_compatibility():
-    frame = pd.DataFrame([
-        {"date": row["session"], "open": row["open"] * 1000, "high": row["high"] * 1000,
-         "low": row["low"] * 1000, "close": row["close"] * 1000, "volume": row["volume"]}
-        for row in _rows()
-    ])
-    frame.attrs["unit_scale"] = 1000
-    outcome = SimpleNamespace(status="success", data=frame, lineage=[], request_attempts=1, retry_count=0)
-    series = history.vnstock_provider_series(
-        ticker="HPG", provider="KBS", target_session=TARGET, requested_at="test",
-        requested_start="2026-07-01", requested_end=TARGET, fetch=lambda *_args: outcome,
-    )
-    assert history.series_target_close(series, TARGET) == 100.0
-    assert series["native_representation"] == "KBS_NATIVE_SCALE"
-
-
-def test_kbs_query_uses_exclusive_end_boundary_without_changing_logical_target_end():
-    frame = pd.DataFrame([{"date": TARGET, "open": 100000, "high": 101000, "low": 99000, "close": 100000, "volume": 1}])
-    frame.attrs["unit_scale"] = 1000
-    outcome = SimpleNamespace(status="success", data=frame, lineage=[], request_attempts=1, retry_count=0)
-    calls = []
-
-    def fetch(*args):
-        calls.append(args)
-        return outcome
-
-    series = history.vnstock_provider_series(
-        ticker="HPG", provider="KBS", target_session=TARGET, requested_at="test",
-        requested_start="2026-07-01", requested_end=TARGET, fetch=fetch,
-    )
-    assert calls == [("HPG", "KBS", "2026-07-01", "2026-08-29")]
-    assert series["requested_end"] == TARGET
-    assert series["provider_requested_end"] == "2026-08-29"
-
-
-def test_clean_kbs_missing_does_not_spend_vci_and_governor_is_active(monkeypatch):
+def test_dnse_missing_does_not_attempt_a_retired_provider():
     dnse_record = {"ticker": "HPG", "state": "FETCH_FAILED", "reason": "DNSE_TIMEOUT", "attempt_count": 1}
-    calls = []
-
-    def fake_series(**kwargs):
-        provider = kwargs["provider"]
-        calls.append((provider, get_active_governor() is not None))
-        if provider == "KBS":
-            return history.build_provider_series(
-                ticker="HPG", provider="KBS", target_session=TARGET, requested_at="test",
-                requested_start="2026-07-01", requested_end=TARGET, rows=[], status="CLEAN_MISSING", reason="CLEAN_MISSING",
-            )
-        raise AssertionError("VCI must not run after a clean KBS historical miss")
-
-    governor = runner.VnstockRateGovernor()
-    prior = runner.set_active_governor(governor)
-    monkeypatch.setattr(runner, "vnstock_provider_series", fake_series)
-    try:
-        record = runner._feature_safe_record(
-            ticker="HPG", dnse_record=dnse_record, snapshot_record=_snapshot(), target_session=TARGET,
-            retrieved_at="test", start="2026-07-01", end=TARGET,
-        )
-    finally:
-        runner.set_active_governor(prior)
-    assert calls == [("KBS", True)]
+    record = runner._feature_safe_record(
+        ticker="HPG", dnse_record=dnse_record, snapshot_record=_snapshot(), target_session=TARGET,
+        retrieved_at="test", start="2026-07-01", end=TARGET,
+    )
     assert record["state"] == "INSUFFICIENT_HISTORY_AFTER_EXTENDED_LOOKBACK"
-    assert record["reason"] == "KBS_CLEAN_MISSING_NO_INCREMENTAL_VCI_FALLBACK"
+    assert record["reason"] == "DNSE_HISTORY_UNAVAILABLE_NO_ACTIVE_FAILOVER"
 
 
 def test_provider_fitness_matrix_keeps_method_level_limits_explicit():

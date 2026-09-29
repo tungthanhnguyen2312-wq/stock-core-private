@@ -151,6 +151,18 @@ def assemble(args: argparse.Namespace) -> None:
     producer_root = Path(args.producer_root).resolve()
     work_root = Path(args.work_root).resolve()
     session = args.session
+    if os.environ.get("STOCKLOOKUP_PROVIDER_PYTHON"):
+        raise SystemExit("PROVIDER_INTERPRETER_MUST_BE_UNCONFIGURED_FOR_RETAINED_ACCEPTANCE")
+    if any(name.split(".", 1)[0] in {"vnstock", "vnai"} for name in sys.modules):
+        raise SystemExit("PROVIDER_MODULE_ALREADY_IMPORTED")
+
+    class _NoRetiredProviderImport:
+        def find_spec(self, fullname: str, path: Any = None, target: Any = None) -> Any:
+            if fullname.split(".", 1)[0] in {"vnstock", "vnai"}:
+                raise ImportError("RETIRED_PROVIDER_IMPORT_FORBIDDEN:" + fullname)
+            return None
+
+    sys.meta_path.insert(0, _NoRetiredProviderImport())
     guard = _write_guard()
     protected = [producer_root / "operations-review", producer_root / "data",
                  code_root / "operations-review", code_root / "data",
@@ -214,6 +226,9 @@ def assemble(args: argparse.Namespace) -> None:
         raise SystemExit("CANONICAL_EVIDENCE_WRITE_REFUSED:" + ";".join(violations))
     if decision.get("status") != "BUILT":
         raise SystemExit(f"INTEGRATED_DECISION_NOT_BUILT:{decision.get('status')}:{decision.get('reason')}")
+    loaded_retired = sorted(name for name in sys.modules if name.split(".", 1)[0] in {"vnstock", "vnai"})
+    if loaded_retired:
+        raise SystemExit("RETIRED_PROVIDER_MODULE_LOADED:" + ",".join(loaded_retired))
     iid = decision["artifact"]
     write(outputs / "integrated_investment_decision_product.json", iid)
     extra: dict[str, Any] = {}
@@ -247,7 +262,8 @@ def assemble(args: argparse.Namespace) -> None:
         "captured_identities": extra,
         "write_guard": {"protected_roots": guard.protected_roots(), "violations": violations},
         "network_audit_events": dict(sorted(network.items())),
-        "provider_calls": sum(network.values()), "runtime_store_reads": 0, "publication": "NONE",
+        "provider_calls": sum(network.values()), "retired_provider_imports": len(loaded_retired),
+        "vnstock_worker_processes": 0, "runtime_store_reads": 0, "publication": "NONE",
     }
     write(outputs / "assembly_result.json", result)
     print(json.dumps({"integrated_identity": result["integrated_identity"],

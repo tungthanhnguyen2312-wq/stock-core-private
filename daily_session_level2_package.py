@@ -1348,7 +1348,8 @@ def ensure_exact_session_snapshot(
     A single thin/lagging DNSE day (17/1683 on 2026-09-03 -- see the same-day investigation this
     milestone's own brief cites) then stopped canonical Daily globally even though this project's
     own existing VCI/KBS acquisition capability (vn_stock_pipeline.py) could independently supply
-    most of the same session. This function now runs the same DNSE acquisition in-process (Pass 1,
+    most of the same session. 2026-09-29 supersession: supplemental VCI/KBS acquisition is retired;
+    the historical multi-source discussion below is provenance only. This function now runs the same DNSE acquisition in-process (Pass 1,
     byte-identical mva_exact_session_snapshot.materialize_snapshot() logic, unchanged), retains
     it unmodified as a standalone diagnostic artifact ("DNSE_PROVIDER_COVERAGE" -- see
     dnse_only_exact_session_snapshot key), then recovers only DNSE's own gaps through VCI/KBS via
@@ -1452,49 +1453,24 @@ def ensure_exact_session_snapshot(
         dnse_snapshot=dnse_snapshot, candidate_metadata=candidate_metadata, target_session=session,
     )
 
-    # VNSTOCK_EXACT_SESSION_WORKER_ISOLATION_AND_SENTINEL_EQUIVALENCE_V1 (2026-09-12): KBS/VCI
-    # transport (and therefore the vnstock/vnai imports it needs) now runs inside one bounded
-    # worker subprocess for this operation, never in this process -- see
-    # vnstock_worker_client.VnstockWorkerFetcher's own docstring. This resolver call's own
-    # source-ordering/fallback/sentinel/conflict-resolution/quarantine policy is completely
-    # unchanged; only WHERE the leaf fetch_single_source call physically executes moved. The
-    # worker is started lazily (only once resolver internals actually need a KBS/VCI fetch) and
-    # is always torn down deterministically here, success or failure alike.
-    #
-    # Passing an explicit (non-None) rate_governor makes resolve_exact_session_with_autorecovery
-    # treat it as caller-owned (owns_governor=False in its own wrapper), so it deliberately does
-    # NOT restore the module-global active governor afterward -- that restoration is this
-    # function's own responsibility below, exactly mirroring what owns_governor=True would have
-    # done. Otherwise this process's vnstock_rate_governor "active governor" pointer would keep
-    # referencing a shut-down VnstockWorkerFetcher after this function returns.
-    #
-    # PROVIDER_RUNTIME_ISOLATION_V1: the worker is obtained only through the governed factory
-    # (tracked owner policy -> dedicated provider interpreter -> readiness handshake). A runtime
-    # that is not AVAILABLE is never contacted: the resolver records every recovery and sentinel
-    # observation as explicitly not attempted, and this function ends in a governed block after
-    # retaining the DNSE-only snapshot and a block diagnostic.
+    # The optional KBS/VCI family is retired. Preserve explicit NOT_ATTEMPTED observations
+    # and DNSE_PRIMARY_UNCORROBORATED semantics without opening a worker/runtime.
     import provider_runtime_state as runtime_contract
-    import vnstock_worker_client as worker_client
     from multi_source_market_evidence_contract import dnse_quality_license
-    from vnstock_rate_governor import VnstockRateGovernor, get_active_governor, set_active_governor
-    from vnstock_worker_protocol import VnstockWorkerFailure
 
     block_path = paths["supplemental_provider_block"]
-    runtime = worker_client.open_provider_runtime(session=session)
-    previous_active_governor = get_active_governor()
+    runtime_state = runtime_contract.runtime_state_record(
+        runtime_contract.SECURITY_REVIEW_BLOCKED, "OPTIONAL_SUPPLEMENTAL_PROVIDER_RETIRED",
+        policy=runtime_contract.load_provider_policy(),
+    )
     try:
-        if runtime.available:
-            fetch_single_source, rate_governor, runtime_state_arg = runtime.fetcher.fetch, runtime.fetcher, None
-        else:
-            fetch_single_source, rate_governor, runtime_state_arg = None, VnstockRateGovernor(), runtime.state
         evidence, projected = resolver.resolve_exact_session_with_autorecovery(
             dnse_snapshot=dnse_snapshot, target_session=session, requested_at=dnse_snapshot["requested_at"],
             sentinel_cohort=sentinel["tickers"],
             recovery_eligibility_projection=recovery_eligibility,
             residual_yield_sentinel_tickers=residual_sentinel["tickers"],
-            fetch_single_source=fetch_single_source,
-            rate_governor=rate_governor,
-            supplemental_runtime_state=runtime_state_arg,
+            fetch_single_source=None,
+            supplemental_runtime_state=runtime_state,
         )
     except resolver.DailyRecoveryRuntimeBudgetExceeded as exc:
         # Preserve the deterministic throughput/timeout/retry diagnostic while refusing to
@@ -1526,27 +1502,7 @@ def ensure_exact_session_snapshot(
             + f":budget_seconds={exc.diagnostic['runtime_budget_seconds']:.1f}"
             + f":diagnostic={abort_path}"
         ) from exc
-    except VnstockWorkerFailure as exc:
-        # A mid-operation worker failure: a governed runtime block with its exact state, never a
-        # generic pipeline failure and never a partially trusted sentinel.
-        failed_state = runtime_contract.runtime_state_from_worker_failure(
-            exc.failure_class, exc.diagnostics, phase=runtime_contract.PHASE_OPERATION, policy=runtime.policy,
-        )
-        _write_supplemental_block(
-            block_path, kind=SUPPLEMENTAL_BLOCK_KIND_RUNTIME, session=session, dnse_snapshot=dnse_snapshot,
-            runtime_state=failed_state, quality_license=None, evidence=None,
-        )
-        raise SupplementalProviderBlocked(
-            kind=SUPPLEMENTAL_BLOCK_KIND_RUNTIME, session=session, runtime_state=failed_state,
-            quality_license=None, diagnostic_path=block_path,
-        ) from exc
-    finally:
-        # Deterministic worker shutdown regardless of success, a converted budget-exceeded
-        # ValueError, or any other exception propagating out of the resolver above.
-        runtime.shutdown()
-        set_active_governor(previous_active_governor)
-
-    runtime_state = runtime.final_state()
+    # No worker lifecycle exists: the supplemental provider was retired by design.
     # The runtime record is attached BEFORE the license is derived, so the license can refuse a
     # sentinel/runtime contradiction (see dnse_quality_license).
     evidence["provider_runtime"] = runtime_state

@@ -11,8 +11,8 @@ Stock Lookup's test suite mixes three kinds of tests that need different environ
   gitignored and therefore absent from a clean clone. The marker names every evidence path the
   test needs, so the dependency is declared rather than discovered by a ``FileNotFoundError``.
 * **Provider-runtime tier** -- ``@pytest.mark.provider_runtime("<module>", ...)``. The test
-  needs a real optional provider package from ``requirements-providers.txt`` (``vnstock`` /
-  ``vnai``) to be importable.
+  needs a real optional provider package. Vnstock/VNAI are retired and must not be required;
+  Anthropic remains the only declared optional provider package.
 
 Missing retained evidence is governed by ``STOCKLOOKUP_RETAINED_EVIDENCE_POLICY``:
 

@@ -64,7 +64,7 @@ def _write_snapshot(paths, session, *, companion=True, **kwargs):
     """A retained snapshot plus -- like every real acquisition since 2026-09-03 -- its companion
     multi-source evidence (a corroborated sentinel). ``companion=False`` models a companion-less
     snapshot, which ordinary reuse must refuse (PR8 corrective)."""
-    from _provider_runtime_fixtures import healthy_sentinel_evidence
+    from _retained_source_fixtures import healthy_sentinel_evidence
 
     snapshot = _make_snapshot(session, **kwargs)
     paths["exact_session_snapshot"].parent.mkdir(parents=True, exist_ok=True)
@@ -255,6 +255,7 @@ def test_module_never_references_legacy_vci_kbs_route():
 
 def test_canonical_post_close_flag_never_invokes_legacy_step_runner(tmp_path, monkeypatch):
     import daily_analysis_pipeline as dap
+    import daily_execution_environment as environment
     calls = []
 
     def fake_runner(command, cwd, env, check):
@@ -280,6 +281,12 @@ def test_canonical_post_close_flag_never_invokes_legacy_step_runner(tmp_path, mo
     )
     runtime = tmp_path / "runtime"
     runtime.mkdir()
+    monkeypatch.setattr(environment, "preflight_canonical_daily", lambda *_a, **_k: {
+        "status": "PASS", "session": "2026-08-25",
+        "roots": {"runtime_root": str(runtime), "retained_evidence_root": str(tmp_path), "output_root": str(tmp_path)},
+        "producer_release": {"qualified": True, "head": "fixture", "origin_main": "fixture"},
+        "resume_plan": {"provider_required_components": []},
+    })
     rc = dap.main(
         ["--runtime-root", str(runtime), "--session", "2026-08-25", "--canonical-post-close", "--offline"],
         runner=fake_runner,
@@ -685,6 +692,10 @@ def test_prospective_collection_after_producer_and_does_not_revise_authority(tmp
 
 # --- 12. rerun with identical session evidence is idempotent ---
 
+@pytest.mark.retained_evidence(
+    "operations-review/market-wide-current-descriptive-research-v1-20260825/market_wide_current_descriptive_research_artifact.json",
+    "operations-review/p3f9b-market-wide-exact-session-scaleout-20260825/p3f9b_mva_exact_session_snapshot.json",
+)
 def test_registration_and_freeze_idempotent_on_rerun(tmp_path):
     session = "2026-08-25"
     registry_path = _registry_copy_at(tmp_path)
@@ -698,6 +709,10 @@ def test_registration_and_freeze_idempotent_on_rerun(tmp_path):
     assert freeze2["status"] == "ALREADY_COMPLETED"
 
 
+@pytest.mark.retained_evidence(
+    "operations-review/market-wide-current-descriptive-research-v1-20260825/market_wide_current_descriptive_research_artifact.json",
+    "operations-review/p3f9b-market-wide-exact-session-scaleout-20260825/p3f9b_mva_exact_session_snapshot.json",
+)
 def test_not_session_locked_keys_are_excluded_from_the_frozen_mutation_check(tmp_path):
     """Regression guard for OFFICIAL_CORPORATE_EVENT_INCREMENTAL_ACQUISITION_AND_FRESHNESS_V1:
     official_universe and event_context are explicitly documented elsewhere in this codebase

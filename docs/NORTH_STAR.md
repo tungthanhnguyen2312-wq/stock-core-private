@@ -51,7 +51,7 @@ qualified evidence/data
 - One meaningful milestone at a time; no parallel roadmap branches unless there is a real architectural dependency.
 - Production Daily, recovery replay, and historical backfill must remain operationally distinct.
 - Policy changes must be versioned so outcome/velocity systems do not mistake code changes for issuer changes.
-- `vnstock`/legacy VCI/KBS runtime dependency is migration debt, not the target provider architecture. DNSE/Livespeed remains the primary market-data direction.
+- The active `vnstock`/VNAI/VCI/KBS runtime is retired; historical provider-reported evidence remains a lineage-labeled research proxy. DNSE/Livespeed remains the primary market-data direction.
 - Analytical knowledge frameworks guide method design; they never become authority layers (section 7).
 
 ## 3. Current strategic maturity snapshot

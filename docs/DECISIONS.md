@@ -1,5 +1,24 @@
 # Decisions & Architectural Decision Records
 
+## 2026-09-29 - Retire active Vnstock family, retain research evidence (`FINANCIAL_EVIDENCE_ZERO_ACTIVE_VNSTOCK_V1`)
+
+**Decision.** The `VNSTOCK_KBS_VCI` family is permanently `RETIRED_PROVIDER` for active acquisition.
+Canonical Daily and current technical/history acquisition are DNSE-only; absent DNSE evidence
+blocks its dependent use rather than silently selecting KBS/VCI. The Vnstock-specific worker,
+client, protocol, rate governor and legacy price pipeline are removed. Historical operation IDs
+fail closed before a third-party import. Provider-neutral isolation/security contracts remain.
+
+**Evidence boundary.** Existing pinned KBS/VCI financial facts and event evidence remain readable
+with explicit provider lineage as historical research proxies. No source, fact, valuation,
+liquidity, PIT, sizing or execution authority is promoted; no historical evidence or Git history
+is deleted. Official financial currency is a separate future decision, not this change.
+
+**Closure gate.** Proven. Zero-active static import-graph and requirements checks are clean.
+Retained 2026-09-28 Current Research is byte-identical across all 1,683 governed records
+(`integrated_investment_decision_product/v1:03f51230a1cb4492653cb41ea47f40950a32b8948aaec011da778b8489fb0c32`),
+with zero provider calls, zero Vnstock/VNAI imports and zero worker spawns. Official financial
+currency remains a separate future decision.
+
 ## 2026-09-29 - Scoped execution capacity and private research sizing (`LIQUIDITY_EXECUTION_CAPACITY_AND_SIZING_V1`; policy-unbound partial)
 
 **Decision.** Replace the stale global execution/sizing boolean with use-specific authority. Current-session Level-1

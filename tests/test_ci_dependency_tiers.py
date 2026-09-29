@@ -57,12 +57,12 @@ def test_provider_lock_is_a_candidate_contract_separated_from_core():
     assert vdt.provider_lock_violations(ROOT) == []
 
 
-def test_core_tier_declares_no_provider_package_and_providers_keep_vnstock():
+def test_active_dependency_tiers_declare_no_vnstock_or_vnai():
     core, test, providers, _ = _tracked_texts()
     core_names = set(vdt.parse_requirement_names(core)) | set(vdt.parse_requirement_names(test))
     assert not core_names & {"vnstock", "vnai", "anthropic"}
     assert {"pandas", "numpy", "requests", "pyarrow", "openpyxl", "pytest"} <= core_names
-    assert {"vnstock", "anthropic"} <= set(vdt.parse_requirement_names(providers))
+    assert set(vdt.parse_requirement_names(providers)) == {"anthropic"}
 
 
 def test_every_constraint_is_an_exact_pin_and_covers_the_core_closure():
@@ -78,7 +78,7 @@ def test_every_constraint_is_an_exact_pin_and_covers_the_core_closure():
         ("pandas>=2\nvnstock>=4\n", "pytest\n", "vnstock\n", "pandas==2.3.3\npytest==9.1.1\nvnstock==4.0.8\n", "PROVIDER_PACKAGE_IN_CORE_TIER"),
         ("pandas>=2\n", "pytest\nanthropic\n", "vnstock\n", "pandas==2.3.3\npytest==9.1.1\nanthropic==1\n", "PROVIDER_PACKAGE_IN_CORE_TIER"),
         ("pandas>=2\nnumpy\n", "pytest\n", "vnstock\n", "pandas==2.3.3\npytest==9.1.1\n", "CORE_REQUIREMENT_NOT_PINNED"),
-        ("pandas>=2\n", "pytest\n", "anthropic\n", "pandas==2.3.3\npytest==9.1.1\n", "PROVIDER_REQUIREMENT_UNDECLARED"),
+        ("pandas>=2\n", "pytest\n", "vnstock\n", "pandas==2.3.3\npytest==9.1.1\n", "RETIRED_PROVIDER_REQUIREMENT_ACTIVE"),
         ("pandas>=2\n", "pytest\n", "vnstock\n", "pandas==2.3.3\npytest==9.1.1\nvnai==2.6.1\n", "PROVIDER_PACKAGE_CONSTRAINED"),
         ("pandas>=2\n", "pytest\n", "vnstock\nrandom-lib\n", "pandas==2.3.3\npytest==9.1.1\n", "UNCLASSIFIED_PROVIDER_REQUIREMENT"),
         ("pandas>=2\n", "pytest\n", "vnstock\n", "pandas>=2.3\npytest==9.1.1\n", "DEPENDENCY_FILE_UNPARSEABLE"),

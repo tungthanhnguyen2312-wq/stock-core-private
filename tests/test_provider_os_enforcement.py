@@ -18,7 +18,6 @@ import pytest
 import provider_build_manifest as build_manifest
 import provider_os_enforcement as os_enforcement
 import provider_runtime_state as rt
-import vnstock_worker_client as worker_client
 from _provider_build_fixtures import FAKE_PRODUCTION_BACKEND_ID, protocol_runtime
 
 LIVE_MODES = (build_manifest.LAUNCH_MODE_GATE_C, build_manifest.LAUNCH_MODE_GATE_D,
@@ -40,21 +39,6 @@ class _Process:
 
 def _utc(value: datetime) -> str:
     return value.strftime("%Y-%m-%dT%H:%M:%SZ")
-
-
-def _count_worker_spawns(monkeypatch):
-    """Record every Popen whose argv runs a provider worker entrypoint; delegate everything else
-    (venv creation, the ``-I -S`` probe) to the real Popen."""
-    calls = []
-    real_popen = worker_client.subprocess.Popen
-
-    def counting(argv, *args, **kwargs):
-        if any(str(item).endswith(("vnstock_worker_process.py", "fake_vnstock_worker.py")) for item in list(argv)):
-            calls.append(list(argv))
-        return real_popen(argv, *args, **kwargs)
-
-    monkeypatch.setattr(worker_client.subprocess, "Popen", counting)
-    return calls
 
 
 def _real_build(manifest):
@@ -194,18 +178,7 @@ def test_a_manifest_binding_the_fixture_verifier_is_never_live(tmp_path):
     assert exc.value.reason_code == build_manifest.R_OS_CONTAINMENT_FAKE_EVIDENCE
 
 
-def test_open_provider_runtime_for_a_live_mode_spawns_nothing(tmp_path, monkeypatch):
-    calls = _count_worker_spawns(monkeypatch)
-    runtime = protocol_runtime(tmp_path / "rt", launch_mode=build_manifest.LAUNCH_MODE_GATE_C, mutate_manifest=_real_build)
-    handle = runtime.open_provider_runtime()
-    assert not handle.available
-    assert handle.state["state"] == rt.SECURITY_REVIEW_BLOCKED
-    assert handle.state["reason_code"] == build_manifest.R_OS_ENFORCEMENT_UNAVAILABLE
-    assert calls == []
-
-
 def test_a_live_launch_cannot_fall_back_to_plain_popen(gate_b_launch, monkeypatch):
-    calls = _count_worker_spawns(monkeypatch)
     live = _as_live(gate_b_launch)
     with pytest.raises(os_enforcement.OSEnforcementUnavailable) as exc:
         os_enforcement.backend_for_launch(live)
@@ -215,11 +188,6 @@ def test_a_live_launch_cannot_fall_back_to_plain_popen(gate_b_launch, monkeypatc
         os_enforcement.backend_for_launch(drifted)  # the requirement is recomputed from manifest + mode
     with pytest.raises(os_enforcement.OSEnforcementUnavailable):
         os_enforcement.OfflineFakeDirectPopenBackend().spawn_contained(live)
-    fetcher = worker_client.VnstockWorkerFetcher(python_executable=gate_b_launch.interpreter, policy=gate_b_launch.policy, launch=live)
-    with pytest.raises(worker_client.VnstockWorkerStartupError) as failure:
-        fetcher.start()
-    assert failure.value.diagnostics["reason_code"] == build_manifest.R_OS_ENFORCEMENT_UNAVAILABLE
-    assert calls == []
 
 
 def test_live_issuance_without_a_production_backend_is_refused(live_launch):  # 23
@@ -245,19 +213,6 @@ def test_offline_fake_attestation_is_issued_for_gate_b_only(gate_b_launch):
         assert os_enforcement.accept_attestation(trusted, launch=live)  # never accepted for a live launch
         with pytest.raises((os_enforcement.OSEnforcementAttestationRejected, os_enforcement.OSEnforcementUnavailable)):
             os_enforcement.issue_attestation(backend, live, _Process(SPAWNED_PID), worker_facts=facts)
-
-
-def test_offline_fake_backend_runs_gate_b_end_to_end(tmp_path):
-    handle = protocol_runtime(tmp_path / "rt").open_provider_runtime()
-    try:
-        assert handle.available, handle.state
-        enforcement = handle.fetcher.worker_diagnostics()["os_enforcement"]
-        assert enforcement["backend_id"] == os_enforcement.OFFLINE_FAKE_BACKEND_ID
-        assert enforcement["requirement"] == build_manifest.OS_ENFORCEMENT_OFFLINE_FAKE
-        assert enforcement["authorizes_live_launch"] is False
-        assert enforcement["failures"] == []
-    finally:
-        handle.shutdown()
 
 
 # --- issuance boundary (4, 5) ---------------------------------------------------------------------

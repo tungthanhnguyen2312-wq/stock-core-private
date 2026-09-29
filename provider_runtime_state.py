@@ -92,8 +92,9 @@ PHASES = (PHASE_PREFLIGHT, PHASE_OPERATION)
 # Policy vocabulary.
 # ---------------------------------------------------------------------------------------------
 POLICY_SECURITY_REVIEW_BLOCKED = "SECURITY_REVIEW_BLOCKED"
+POLICY_RETIRED_PROVIDER = "RETIRED_PROVIDER"
 POLICY_ALLOW_CONFIGURED_PROVIDER_RUNTIME = "ALLOW_CONFIGURED_PROVIDER_RUNTIME"
-POLICY_VALUES = (POLICY_SECURITY_REVIEW_BLOCKED, POLICY_ALLOW_CONFIGURED_PROVIDER_RUNTIME)
+POLICY_VALUES = (POLICY_SECURITY_REVIEW_BLOCKED, POLICY_RETIRED_PROVIDER, POLICY_ALLOW_CONFIGURED_PROVIDER_RUNTIME)
 DEFAULT_POLICY = POLICY_SECURITY_REVIEW_BLOCKED
 
 # ---------------------------------------------------------------------------------------------
@@ -371,7 +372,9 @@ def runtime_state_record(
 def policy_block_record(policy: ProviderPolicy) -> dict[str, Any]:
     reason = (
         policy.load_reason_code
-        if policy.load_reason_code is not None else REASON_POLICY_SECURITY_REVIEW_BLOCKED
+        if policy.load_reason_code is not None else
+        ("OPTIONAL_SUPPLEMENTAL_PROVIDER_RETIRED" if policy.policy == POLICY_RETIRED_PROVIDER
+         else REASON_POLICY_SECURITY_REVIEW_BLOCKED)
     )
     return runtime_state_record(
         SECURITY_REVIEW_BLOCKED, reason, policy=policy,

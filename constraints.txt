@@ -8,9 +8,9 @@
 # CPython 3.13 on ubuntu-latest), i.e. the set the core suite was last validated against; the
 # same set was re-validated from a clean clone without vnstock/vnai on CPython 3.13.
 #
-# Deliberately NOT pinned here: requirements-providers.txt (vnstock, vnai, anthropic) -- vnstock
-# and vnai currently have no installable distribution on PyPI to verify a pin against, and they
-# must never block the core install. pip itself is also not pinned (CI upgrades it first).
+# Deliberately NOT pinned here: requirements-providers.txt (anthropic only). Vnstock/VNAI live
+# acquisition is retired and must never return to this pin set or the core install. pip itself
+# is also not pinned (CI upgrades it first).
 # Update procedure: change a pin only together with a green core CI run on the new set.
 
 # --- requirements.txt (core runtime) ---

@@ -10,7 +10,6 @@ import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-import vn_stock_pipeline as pipeline
 from market_data_lineage import build_ohlcv_lineage_records, init_ohlcv_lineage_schema, upsert_ohlcv_lineage
 from tools.qualify_price_basis import _series
 
@@ -45,9 +44,3 @@ class MarketDataLineageTests(unittest.TestCase):
             conn.commit()
             self.assertEqual(_series(conn, "HPG")[0]["provider_version"], "legacy_version_unknown")
             conn.close()
-
-    def test_source_scale_remains_provider_specific(self):
-        raw = pd.DataFrame({"time": ["2026-07-30"], "open": [21.8], "high": [22.0], "low": [20.5],
-                            "close": [21.8], "volume": [100]})
-        self.assertEqual(pipeline.normalize(raw, "HPG", "VCI").attrs["unit_scale"], 1000)
-        self.assertEqual(pipeline.normalize(raw, "HPG", "KBS").attrs["unit_scale"], 1000)

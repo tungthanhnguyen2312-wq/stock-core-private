@@ -226,7 +226,7 @@ def fetch_current_payload(group: str) -> dict[str, Any]:
     """Fetch one VCI current membership list after fail-closed group validation."""
     scope = resolve_group(group)
     require_governed_provider_execution("index_constituents_sync.fetch_current_payload")
-    from vnstock.api.listing import Listing
+    raise RuntimeError("RETIRED_PROVIDER:index_constituents_sync.fetch_current_payload")
 
     series = Listing(source=SOURCE_NAME, random_agent=False, show_log=False).symbols_by_group(
         group=scope["requested_group"]

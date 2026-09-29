@@ -1,7 +1,7 @@
 {
   "schema_version": "stocklookup_roadmap_execution_state/1.0.0",
   "roadmap_id": "stock-core-private",
-  "roadmap_version": "2026.09.29.2",
+  "roadmap_version": "2026.09.29.3",
   "narrative_authority": {
     "strategic_roadmap": "docs/ROADMAP.md",
     "operational_narrative": "docs/STATE.md",
@@ -9,14 +9,14 @@
     "ai_rules": "docs/AI_RULES.md",
     "note": "This file is the machine-readable EXECUTION-STATE authority: which milestone is current/active/next/blocked, what checkpoint proves each completed milestone, and whether recorded state contradicts Git/worktree reality. It does not restate or supersede the narrative docs' technical content and is not a substitute for reading them. Where this file and a narrative doc appear to disagree, that is a conflict to surface to the owner (AGENTS.md 'Default lightweight bootstrap' rule), never an automatic override in either direction."
   },
-  "implementation_lineage_head": "160f26ef7dc33b0052467977def874ba8d95f01e",
+  "implementation_lineage_head": "3137441656019e4b7974978f034915d361b5c307",
   "last_updated_checkpoint": "HEAD",
   "known_operational_diff_allowlist": [
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "LIQUIDITY_EXECUTION_CAPACITY_AND_SIZING_V1",
-    "state": "ACTIVE"
+    "milestone": "FINANCIAL_EVIDENCE_ZERO_ACTIVE_VNSTOCK_V1",
+    "state": "COMPLETE"
   },
   "queued_next": [],
   "milestones": [
@@ -2275,10 +2275,10 @@
     },
     {
       "milestone_id": "LIQUIDITY_EXECUTION_CAPACITY_AND_SIZING_V1",
-      "state": "ACTIVE",
+      "state": "COMPLETE",
       "narrative_disposition": "IMPLEMENTED / RETAINED_ACCEPTANCE_PASS / POLICY_UNBOUND_PARTIAL",
       "starting_checkpoint": "160f26ef7dc33b0052467977def874ba8d95f01e",
-      "checkpoint": null,
+      "checkpoint": "3137441656019e4b7974978f034915d361b5c307",
       "candidate_branch": "feature/liquidity-execution-capacity-sizing-v1-20260929",
       "dependencies": [
         "OFFICIAL_EXCHANGE_LIQUIDITY_MARKET_WIDE_OPERATIONALIZATION_V1",
@@ -2305,7 +2305,24 @@
         "exchange_unresolved": 179
       },
       "external_dependency": "An explicit owner-authorized participation rate and governed-session liquidation horizon; qualified exchange board-lot rules for share envelopes; HNX/UPCoM acquisition permission for broader ADTV coverage.",
-      "notes": "Engine and private binding paths implemented. Canonical participation and liquidation horizon remain intentionally UNBOUND, so the retained 2026-09-28 real run is policy-blocked while synthetic bound-policy tests prove exact Decimal capacity and private min-cap behavior. No provider call, Daily, crawl, production DB write or public private-data publication. No successor started."
+      "notes": "Closed on merged PR #16 / canonical main 3137441656019e4b7974978f034915d361b5c307 with actual partial result. Engine and private binding paths implemented. Canonical participation and liquidation horizon remain intentionally UNBOUND, so the retained 2026-09-28 real run is policy-blocked while synthetic bound-policy tests prove exact Decimal capacity and private min-cap behavior. Live sizing, execution, backtest and replay remain blocked. No provider call, Daily, crawl, production DB write or public private-data publication. The separately authorized Vnstock retirement successor is now active."
+    },
+    {
+      "milestone_id": "FINANCIAL_EVIDENCE_ZERO_ACTIVE_VNSTOCK_V1",
+      "state": "COMPLETE",
+      "narrative_disposition": "ZERO_ACTIVE_VNSTOCK_DEPENDENCY_COMPLETE / RETAINED_SESSION_EQUIVALENCE_PASS",
+      "starting_checkpoint": "3137441656019e4b7974978f034915d361b5c307",
+      "checkpoint": "HEAD",
+      "candidate_branch": "feature/zero-active-vnstock-v1-20260929",
+      "dependencies": ["LIQUIDITY_EXECUTION_CAPACITY_AND_SIZING_V1"],
+      "unlocks": [],
+      "authority_effect": "NONE / RETAINED_PROVIDER_FACTS_REMAIN_LEGACY_RESEARCH_PROXY / OFFICIAL_FINANCIAL_CURRENCY_NOT_COMPLETE",
+      "owner_authorized": true,
+      "source_doc": "Owner directive FINANCIAL_EVIDENCE_ZERO_ACTIVE_VNSTOCK_V1 (2026-09-29)",
+      "state_history": ["ACTIVE", "COMPLETE"],
+      "owner_override": "OWNER_DIRECTIVE_2026_09_29_FINANCIAL_EVIDENCE_ZERO_ACTIVE_VNSTOCK_V1",
+      "terminal_disposition": "ACTIVE_VNSTOCK_RUNTIME_RETIRED / VNSTOCK_WORKER_REMOVED / NEW_KBS_VCI_ACQUISITION_RETIRED / RETAINED_KBS_VCI_RESEARCH_PROXY_PRESERVED / OFFICIAL_FINANCIAL_CURRENCY_NOT_COMPLETE",
+      "notes": "COMPLETE 2026-09-29. Active Vnstock/VNAI runtime retired; Vnstock-specific worker/client/protocol/governor/pipeline removed; new KBS/VCI acquisition retired. Generic provider security infrastructure retained. Historical KBS 31,389 and VCI 94,836 provider-reported facts remain readable as labeled research proxies and were not promoted to official. Retained 2026-09-28 Current Research is byte-identical for 1,683 records (integrated_investment_decision_product/v1:03f51230a1cb4492653cb41ea47f40950a32b8948aaec011da778b8489fb0c32). No successor started; recommended later item FINANCIAL_EVIDENCE_CURRENCY_AND_OFFICIAL_STATEMENT_REFRESH_V1."
     }
   ],
   "blocked_capabilities": [
@@ -2353,9 +2370,9 @@
     },
     {
       "capability": "SUPPLEMENTAL_PROVIDER_RUNTIME_OPERATION",
-      "state": "SECURITY_REVIEW_BLOCKED",
-      "reason": "2026-09-28: M1 closed (LIVE_ACCEPTED_2026_09_28) on the DNSE_PRIMARY_UNCORROBORATED basis without this capability; it stays SECURITY_REVIEW_BLOCKED / DEFERRED_NON_CRITICAL and was not operationalized. 2026-09-26 owner rebaseline (DNSE_FIRST_DAILY_AND_RECOVERY_INFRASTRUCTURE_CORRECTIVE): DNSE/Livespeed stays primary; VNSTOCK_KBS_VCI is OPTIONAL_SUPPLEMENTAL / DEFERRED_NON_CRITICAL for current M1 execution. No Vnstock terms acceptance, no Vnstock runtime authorization, no source-authority promotion. The merged containment/runtime-boundary infrastructure is preserved as reusable security infrastructure. The policy stays SECURITY_REVIEW_BLOCKED (D1) and D3 (dedicated STOCKLOOKUP_PROVIDER_PYTHON, no core-Python fallback) is unchanged; no Vnstock worker is ever spawned under it. Amended D4 consequence (the historical D4 record is kept): once the DNSE-first corrective is promoted, an unavailable supplemental runtime no longer ends ordinary Daily at BLOCKED_SUPPLEMENTAL_PROVIDER_RUNTIME; Core Daily proceeds on the explicit DNSE_PRIMARY_UNCORROBORATED basis with every supplemental-dependent field NOT_ATTEMPTED/UNAVAILABLE, and this capability no longer blocks M1 live acceptance. PR #6 (ad685ac) and PR #7 (785fe07) are merged: Windows OS containment implemented, host-provisioned, qualified 18/18 (report sha256 26358a995ef37d7fac5da2c569c9214b2c1404f985375326de8e821da1099a13). provider_runtime_state is operational metadata only; runtime availability never promotes any authority. Prior reason: PROVIDER_RUNTIME_ISOLATION_V1 code is promoted (main 9575cb04) and APPROVED_PROVIDER_BUILD_AND_EXECUTION_BOUNDARY_V1 pre-approval infrastructure is implemented, but the optional KBS/VCI provider runtime (vnstock/vnai, provider family VNSTOCK_KBS_VCI) is not operationally approved: owner decision D1 keeps config/provider_runtime_policy.json at SECURITY_REVIEW_BLOCKED (a missing/invalid policy reads the same; approved_build_manifest pin fields remain null), the tracked build manifest stays DRAFT with launch_authorized=false, and no provider worker is spawned. Every ordinary Daily ends at BLOCKED_SUPPLEMENTAL_PROVIDER_RUNTIME with DNSE evidence retained and nothing published (D4: no degraded publication). D3: the worker runs only under a dedicated STOCKLOOKUP_PROVIDER_PYTHON interpreter, with no fallback to core Python. This blocks M1 live acceptance. provider_runtime_state is operational metadata only (authority_effect NONE_OPERATIONAL_METADATA_ONLY): runtime availability never promotes source, market-data, RAW_AS_TRADED, PIT, liquidity or any other authority by side effect. 2026-09-26: the Windows production OS-enforcement backend and named-pipe egress gateway are implemented (WINDOWS_PROVIDER_RUNTIME_OS_CONTAINMENT_AND_ATTESTATION_V1); the host is provisioned and the containment qualification PASSED 18/18 (report sha256 26358a995ef37d7fac5da2c569c9214b2c1404f985375326de8e821da1099a13). Promotion of PR #7, runtime install, terms decision, manifest approval and policy transition still follow.",
-      "reopen_gate": "DEFERRED_NON_CRITICAL: only an explicit future owner decision to operationalize the OPTIONAL_SUPPLEMENTAL runtime (approved pinned manifest, owner terms decision, ALLOW_CONFIGURED_PROVIDER_RUNTIME, dedicated interpreter, bounded live qualification). Never reopened by an installed package, a package-index change, a candidate lock or a core-interpreter fallback. ",
+      "state": "RETIRED_PROVIDER",
+      "reason": "2026-09-29 supersession: ACTIVE Vnstock/VNAI/KBS/VCI runtime retired and worker removed; retained provider-reported KBS/VCI research evidence preserved without official promotion. Historical prior state follows (not current): 2026-09-28: M1 closed (LIVE_ACCEPTED_2026_09_28) on the DNSE_PRIMARY_UNCORROBORATED basis without this capability; it stays SECURITY_REVIEW_BLOCKED / DEFERRED_NON_CRITICAL and was not operationalized. 2026-09-26 owner rebaseline (DNSE_FIRST_DAILY_AND_RECOVERY_INFRASTRUCTURE_CORRECTIVE): DNSE/Livespeed stays primary; VNSTOCK_KBS_VCI is OPTIONAL_SUPPLEMENTAL / DEFERRED_NON_CRITICAL for current M1 execution. No Vnstock terms acceptance, no Vnstock runtime authorization, no source-authority promotion. The merged containment/runtime-boundary infrastructure is preserved as reusable security infrastructure. The policy stays SECURITY_REVIEW_BLOCKED (D1) and D3 (dedicated STOCKLOOKUP_PROVIDER_PYTHON, no core-Python fallback) is unchanged; no Vnstock worker is ever spawned under it. Amended D4 consequence (the historical D4 record is kept): once the DNSE-first corrective is promoted, an unavailable supplemental runtime no longer ends ordinary Daily at BLOCKED_SUPPLEMENTAL_PROVIDER_RUNTIME; Core Daily proceeds on the explicit DNSE_PRIMARY_UNCORROBORATED basis with every supplemental-dependent field NOT_ATTEMPTED/UNAVAILABLE, and this capability no longer blocks M1 live acceptance. PR #6 (ad685ac) and PR #7 (785fe07) are merged: Windows OS containment implemented, host-provisioned, qualified 18/18 (report sha256 26358a995ef37d7fac5da2c569c9214b2c1404f985375326de8e821da1099a13). provider_runtime_state is operational metadata only; runtime availability never promotes any authority. Prior reason: PROVIDER_RUNTIME_ISOLATION_V1 code is promoted (main 9575cb04) and APPROVED_PROVIDER_BUILD_AND_EXECUTION_BOUNDARY_V1 pre-approval infrastructure is implemented, but the optional KBS/VCI provider runtime (vnstock/vnai, provider family VNSTOCK_KBS_VCI) is not operationally approved: owner decision D1 keeps config/provider_runtime_policy.json at SECURITY_REVIEW_BLOCKED (a missing/invalid policy reads the same; approved_build_manifest pin fields remain null), the tracked build manifest stays DRAFT with launch_authorized=false, and no provider worker is spawned. Every ordinary Daily ends at BLOCKED_SUPPLEMENTAL_PROVIDER_RUNTIME with DNSE evidence retained and nothing published (D4: no degraded publication). D3: the worker runs only under a dedicated STOCKLOOKUP_PROVIDER_PYTHON interpreter, with no fallback to core Python. This blocks M1 live acceptance. provider_runtime_state is operational metadata only (authority_effect NONE_OPERATIONAL_METADATA_ONLY): runtime availability never promotes source, market-data, RAW_AS_TRADED, PIT, liquidity or any other authority by side effect. 2026-09-26: the Windows production OS-enforcement backend and named-pipe egress gateway are implemented (WINDOWS_PROVIDER_RUNTIME_OS_CONTAINMENT_AND_ATTESTATION_V1); the host is provisioned and the containment qualification PASSED 18/18 (report sha256 26358a995ef37d7fac5da2c569c9214b2c1404f985375326de8e821da1099a13). Promotion of PR #7, runtime install, terms decision, manifest approval and policy transition still follow.",
+      "reopen_gate": "None for VNSTOCK_KBS_VCI: permanently retired. Any unrelated future provider requires a separate explicit owner decision, new family and independent security approval.",
       "reference_checkpoint": "9575cb04c899696a02b22ba9dfcfed9a4961cf2d"
     }
   ]
