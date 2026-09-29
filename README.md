@@ -8,6 +8,27 @@ Contributions are welcome, especially reproducible bug reports, tests, documenta
 
 ---
 
+## How Stock Lookup Fits the Vietnam Equity OSS Ecosystem
+
+Stock Lookup overlaps with many public projects at the **idea level**: it analyzes Vietnamese equities, uses market/fundamental data, computes quantitative features, and can feed AI-assisted research. Those ideas are not unique, and this project does not claim otherwise.
+
+Representative public projects in the same broad ecosystem include data-access/normalization libraries such as [vnstock](https://github.com/thinh-vu/vnstock), [VietFin](https://github.com/vietfin/vietfin), and [vnquant](https://github.com/phamdinhkhanh/vnquant); data-engineering/dashboard projects such as [Vietnam Stock Analysis Pipeline](https://github.com/thinh661/Vietnam_Stock_Analysis_Pipeline); and higher-level AI/research systems such as [TradingAgent-VN](https://github.com/meth04/TradingAgent-VN). Commercial/data-platform ecosystems such as FiinQuant also cover broad analytics and trading workflows.
+
+Stock Lookup's intended differentiation is narrower and architectural:
+
+- **Evidence before inference**: retained source evidence, provenance, content identities, and temporal metadata are first-class inputs to downstream analysis.
+- **Use-specific fitness**: a missing or unqualified field blocks only the uses that depend on it; it does not automatically erase otherwise valid research.
+- **Point-in-time and knowledge-time semantics**: observation time, acquisition time, knowledge availability, price basis, and historical/PIT qualification are kept distinct.
+- **Deterministic numerical authority**: Python engines own formalizable metrics and gates; AI is used for explanation, synthesis, and counter-thesis rather than silently becoming numerical or factual authority.
+- **Operational mode separation**: ordinary current-session analysis, historical backfill, and forensic recovery are different contracts rather than one permissive pipeline.
+- **Explicit uncertainty**: `UNKNOWN`, `NOT_APPLICABLE`, proxy/research tiers, and fail-closed reason codes are valid outputs.
+
+These properties are **not a claim of global uniqueness or superiority**. They describe the engineering priorities of this repository. The public ecosystem changes continuously, and repository search cannot prove that no other project implements similar controls.
+
+See [docs/ECOSYSTEM_POSITIONING.md](docs/ECOSYSTEM_POSITIONING.md) for the comparison methodology, representative projects reviewed, and claims we intentionally do not make.
+
+---
+
 ## 1. Core Authority Model & Architectural Principles
 
 1. **Evidence-First Provenance**: Every data point, financial metric, and price observation is bound to an immutable raw payload hash, request identity, provider timestamp, and schema version. Missing or unverified semantics are marked `UNKNOWN` rather than guessed.
@@ -111,14 +132,20 @@ For development and governance, consult the following authoritative documents:
 # Core runtime + test tier, deterministic (exactly what CI installs):
 python -m pip install -r requirements.txt -r requirements-test.txt -c constraints.txt
 
-# Optional provider runtime (vnstock/vnai for the KBS/VCI supplemental lane, anthropic):
+# Optional / legacy provider runtime only (security-gated; not the default architecture):
 python -m pip install -r requirements.txt -r requirements-providers.txt -c constraints.txt
 ```
-Production provider functionality still requires `requirements-providers.txt`. While PyPI lists
-`vnstock`/`vnai` as quarantined (no installable distribution), that runtime cannot be rebuilt
-from PyPI, but the core install and hermetic CI do not depend on it. Tests are tiered as
-hermetic, `retained_evidence` (strict locally, skipped with an explicit reason on a clean clone)
-and `provider_runtime`. See [docs/CI_AND_DEPENDENCY_TIERS.md](docs/CI_AND_DEPENDENCY_TIERS.md).
+Some legacy supplemental KBS/VCI acquisition workflows still reference `vnstock`/`vnai` through
+`requirements-providers.txt`. Those paths are transitional, security-gated, and are **not** the
+target provider architecture or the default source-authority path. DNSE/Livespeed remains the
+primary market-data direction; core installation, hermetic CI, and DNSE-first Daily do not require
+`vnstock`/`vnai`. The presence of those packages in an optional requirements file is not runtime
+authorization or source-authority approval.
+
+While PyPI lists `vnstock`/`vnai` as quarantined (no installable distribution), that optional
+runtime cannot be rebuilt from PyPI. Tests remain tiered as hermetic, `retained_evidence`
+(strict locally, skipped with an explicit reason on a clean clone), and `provider_runtime`.
+See [docs/CI_AND_DEPENDENCY_TIERS.md](docs/CI_AND_DEPENDENCY_TIERS.md) and [docs/STATE.md](docs/STATE.md).
 
 ### Running Deterministic Unit Tests
 ```powershell
