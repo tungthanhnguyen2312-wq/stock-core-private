@@ -1,0 +1,283 @@
+{
+  "acquisition": {
+    "carried_prior_responses": 113,
+    "final_outcomes": {
+      "OK": 364
+    },
+    "fresh_responses": 364,
+    "hard_request_budget": 400,
+    "http_requests_made": 364,
+    "limits": {
+      "attempts_per_planned_request": 1,
+      "background_daemon": false,
+      "dnse_live_calls": false,
+      "foreground_only": true,
+      "max_retries_per_request": 1,
+      "retry_classes": [
+        "HTTP_429",
+        "HTTP_502",
+        "HTTP_503",
+        "HTTP_504",
+        "URLError",
+        "TimeoutError"
+      ],
+      "unbounded_pagination": false,
+      "vnstock_kbs_vci_calls": false
+    },
+    "not_authorized_not_planned": {
+      "HNX": 271,
+      "UPCOM": 776
+    },
+    "plan_identity": "official_exchange_liquidity_acquisition_plan:2c01bcd1d5125a513208a45f8043175280482c7855557187d9d5dbe5029eb37f",
+    "planned_by_exchange": {
+      "HOSE": 364
+    },
+    "planned_requests": 364,
+    "request_ledger_sha256": "161b7bc0f2c28402c484ec95f73632f8ad762b9f204158f519d353e420174f97",
+    "response_bytes_total": 13391874,
+    "retries_used": 0,
+    "retry_allowance": 36
+  },
+  "acquisition_rights": {
+    "HNX": {
+      "decision": "PUBLIC_ACQUISITION_NOT_AUTHORIZED",
+      "external_approval_needed": "Written permission or an information-service agreement from HNX (Sở Giao dịch Chứng khoán Hà Nội) covering automated retrieval of per-symbol end-of-day trading statistics for HNX and UPCoM, and stating whether internal research retention and derived-figure publication are permitted.",
+      "internal_retention": "ONLY_EVIDENCE_ALREADY_RETAINED_BY_THE_PRIOR_BOUNDED_QUALIFICATION_PROBE",
+      "redistribution": "NOT_ESTABLISHED_RAW_BODIES_NEVER_PUBLISHED"
+    },
+    "HOSE": {
+      "decision": "AUTHORIZED_BOUNDED_INTERNAL_RESEARCH_ACQUISITION",
+      "external_approval_needed": null,
+      "internal_retention": "PERMITTED_PRIVATE_LOCAL_ONLY",
+      "redistribution": "NOT_ESTABLISHED_RAW_BODIES_NEVER_PUBLISHED"
+    },
+    "UPCOM": {
+      "decision": "PUBLIC_ACQUISITION_NOT_AUTHORIZED",
+      "external_approval_needed": "Written permission or an information-service agreement from HNX (Sở Giao dịch Chứng khoán Hà Nội) covering automated retrieval of per-symbol end-of-day trading statistics for HNX and UPCoM, and stating whether internal research retention and derived-figure publication are permitted.",
+      "internal_retention": "ONLY_EVIDENCE_ALREADY_RETAINED_BY_THE_PRIOR_BOUNDED_QUALIFICATION_PROBE",
+      "redistribution": "NOT_ESTABLISHED_RAW_BODIES_NEVER_PUBLISHED"
+    }
+  },
+  "adtv20_exact_by_exchange": {
+    "HNX": 28,
+    "HOSE": 403,
+    "UPCOM": 26
+  },
+  "adv20_exact_by_exchange": {
+    "HNX": 28,
+    "HOSE": 403,
+    "UPCOM": 26
+  },
+  "artifact_identity": "official_exchange_liquidity_research:f35f882c860af8a2d01b3b31ec7a3f74a9f9607a1f71f736d320c0f9a22a696b",
+  "authority_boundary": {
+    "EXECUTION_CAPACITY": "BLOCKED",
+    "PIT_BACKTEST": "BLOCKED",
+    "POSITION_SIZING": "BLOCKED",
+    "RAW_AS_TRADED": "NOT_PROMOTED",
+    "hnx_evidence_generalized_to_hose": false,
+    "knowledge_time_basis": "RETROSPECTIVE_RETRIEVAL_OF_OFFICIAL_POST_SESSION_PUBLICATION",
+    "market_wide_promotion": false,
+    "raw_exchange_bodies_published": false,
+    "vnstock_kbs_vci_used": false
+  },
+  "board_unit_states": {
+    "HNX": {
+      "G1": "QUALIFIED_BY_EXACT_OFFICIAL_RECONCILIATION",
+      "G3": "QUALIFIED_BY_EXACT_OFFICIAL_RECONCILIATION",
+      "G4": "QUALIFIED_BY_EXACT_OFFICIAL_RECONCILIATION",
+      "T1": "SCALE_CONFIRMED_CUMULATIVE_QUANTITY_TRUNCATED_LOWER_BOUND_ONLY",
+      "T3": "OBSERVED_EXACT_BELOW_THRESHOLD",
+      "T4": "OBSERVED_EXACT_BELOW_THRESHOLD",
+      "T6": "NOT_OBSERVED_ACTIVE_IN_EVIDENCE"
+    },
+    "HOSE": {
+      "G1": "QUALIFIED_BY_EXACT_OFFICIAL_RECONCILIATION",
+      "G3": "NOT_OBSERVED_ACTIVE_IN_EVIDENCE",
+      "G4": "QUALIFIED_BY_EXACT_OFFICIAL_RECONCILIATION",
+      "T1": "SCALE_CONFIRMED_CUMULATIVE_QUANTITY_TRUNCATED_LOWER_BOUND_ONLY",
+      "T3": "SCALE_CONFIRMED_CUMULATIVE_QUANTITY_TRUNCATED_LOWER_BOUND_ONLY",
+      "T4": "QUALIFIED_BY_EXACT_OFFICIAL_RECONCILIATION",
+      "T6": "SCALE_CONFIRMED_CUMULATIVE_QUANTITY_TRUNCATED_LOWER_BOUND_ONLY"
+    },
+    "UPCOM": {
+      "G1": "QUALIFIED_BY_EXACT_OFFICIAL_RECONCILIATION",
+      "G3": "NOT_OBSERVED_ACTIVE_IN_EVIDENCE",
+      "G4": "QUALIFIED_BY_EXACT_OFFICIAL_RECONCILIATION",
+      "T1": "SCALE_CONFIRMED_CUMULATIVE_QUANTITY_TRUNCATED_LOWER_BOUND_ONLY",
+      "T3": "NOT_OBSERVED_ACTIVE_IN_EVIDENCE",
+      "T4": "QUALIFIED_BY_EXACT_OFFICIAL_RECONCILIATION",
+      "T6": "NOT_OBSERVED_ACTIVE_IN_EVIDENCE"
+    }
+  },
+  "canonical_base": "170b2cfbcf77d7ec4f5ca823f5f78e4787795339",
+  "coverage_by_exchange_and_class": {
+    "HNX": {
+      "EXACT_20_SESSION_WINDOW": 28,
+      "PUBLIC_ACQUISITION_NOT_AUTHORIZED": 271
+    },
+    "HOSE": {
+      "EXACT_20_SESSION_WINDOW": 403
+    },
+    "UPCOM": {
+      "EXACT_20_SESSION_WINDOW": 26,
+      "PUBLIC_ACQUISITION_NOT_AUTHORIZED": 776
+    }
+  },
+  "coverage_labels": {
+    "HNX:ZERO_TRADING_VALID": 11,
+    "HOSE:ZERO_TRADING_VALID": 86,
+    "UPCOM:ZERO_TRADING_VALID": 15
+  },
+  "current_session_basis_counts": {
+    "HNX:DNSE_UNIT_CONTRACT_APPLIED_NOT_INDIVIDUALLY_RECONCILED": 192,
+    "HNX:OFFICIAL_EXCHANGE_RECONCILED_ABSOLUTE_UNITS": 25,
+    "HOSE:OFFICIAL_EXCHANGE_RECONCILED_ABSOLUTE_UNITS": 392,
+    "UPCOM:DNSE_UNIT_CONTRACT_APPLIED_NOT_INDIVIDUALLY_RECONCILED": 319,
+    "UPCOM:OFFICIAL_EXCHANGE_RECONCILED_ABSOLUTE_UNITS": 24
+  },
+  "denominators": {
+    "current_official_presence_denominator": {
+      "by_exchange": {
+        "HNX": 299,
+        "HOSE": 403,
+        "UPCOM": 802
+      },
+      "count": 1504,
+      "note": "current official exchange-list presence; ACTIVE_UNIVERSE authority remains UNKNOWN and is not manufactured"
+    },
+    "exchange_resolution_counts": {
+      "AGREE": 1444,
+      "CONFLICT": 12,
+      "OFFICIAL_ONLY": 60,
+      "UNRESOLVED": 167
+    },
+    "exchange_resolved_subset": {
+      "by_exchange": {
+        "HNX": 299,
+        "HOSE": 403,
+        "UPCOM": 802
+      },
+      "count": 1504
+    },
+    "governed_universe": 1683,
+    "source_supported_subset": {
+      "by_exchange": {
+        "HNX": 28,
+        "HOSE": 403,
+        "UPCOM": 26
+      },
+      "count": 457,
+      "definition": "exchange-resolved AND (route authorized for bounded internal acquisition OR series already retained)"
+    }
+  },
+  "dimension_counts": {
+    "ADTV_RESEARCH": {
+      "HNX:BLOCKED": 271,
+      "HNX:ELIGIBLE": 28,
+      "HOSE:ELIGIBLE": 403,
+      "UNROUTED:BLOCKED": 179,
+      "UPCOM:BLOCKED": 776,
+      "UPCOM:ELIGIBLE": 26
+    },
+    "ADV_VOLUME_RESEARCH": {
+      "HNX:BLOCKED": 271,
+      "HNX:PARTIAL": 28,
+      "HOSE:PARTIAL": 403,
+      "UNROUTED:BLOCKED": 179,
+      "UPCOM:BLOCKED": 776,
+      "UPCOM:PARTIAL": 26
+    },
+    "CURRENT_SESSION_LIQUIDITY_RESEARCH": {
+      "HNX:BLOCKED": 82,
+      "HNX:ELIGIBLE": 217,
+      "HOSE:BLOCKED": 11,
+      "HOSE:ELIGIBLE": 392,
+      "UNROUTED:BLOCKED": 179,
+      "UPCOM:BLOCKED": 459,
+      "UPCOM:ELIGIBLE": 343
+    },
+    "EXECUTION_CAPACITY": {
+      "HNX:BLOCKED": 299,
+      "HOSE:BLOCKED": 403,
+      "UNROUTED:BLOCKED": 179,
+      "UPCOM:BLOCKED": 802
+    },
+    "HISTORICAL_LIQUIDITY_RESEARCH": {
+      "HNX:BLOCKED": 271,
+      "HNX:ELIGIBLE": 28,
+      "HOSE:ELIGIBLE": 403,
+      "UNROUTED:BLOCKED": 179,
+      "UPCOM:BLOCKED": 776,
+      "UPCOM:ELIGIBLE": 26
+    },
+    "PIT_BACKTEST": {
+      "HNX:BLOCKED": 299,
+      "HOSE:BLOCKED": 403,
+      "UNROUTED:BLOCKED": 179,
+      "UPCOM:BLOCKED": 802
+    },
+    "POSITION_SIZING": {
+      "HNX:BLOCKED": 299,
+      "HOSE:BLOCKED": 403,
+      "UNROUTED:BLOCKED": 179,
+      "UPCOM:BLOCKED": 802
+    }
+  },
+  "dnse_ohlc_v_equals_g1_shares_on_reconciled": {
+    "HNX:False:g1_active=False": 6,
+    "HNX:True:g1_active=True": 22,
+    "HOSE:False:g1_active=False": 35,
+    "HOSE:True:g1_active=True": 368,
+    "UPCOM:False:g1_active=False": 4,
+    "UPCOM:True:g1_active=True": 22
+  },
+  "execution_capacity_readiness": {
+    "ADTV20": {
+      "AVAILABLE_DATA": 457,
+      "DATA_NOT_QUALIFIED": 1226
+    },
+    "ADV20": {
+      "AVAILABLE_DATA": 457,
+      "DATA_NOT_QUALIFIED": 1226
+    },
+    "CURRENT_LIQUIDITY": {
+      "AVAILABLE_DATA": 952,
+      "DATA_NOT_QUALIFIED": 731
+    },
+    "DAYS_TO_LIQUIDATE_POLICY": {
+      "POLICY_NOT_DEFINED": 1683
+    },
+    "MARKET_IMPACT_MODEL": {
+      "POLICY_NOT_DEFINED": 1683
+    },
+    "ORDER_SIZE_INPUT": {
+      "USER_INPUT_REQUIRED": 1683
+    },
+    "PARTICIPATION_RATE_POLICY": {
+      "POLICY_NOT_DEFINED": 1683
+    },
+    "POINT_IN_TIME_LIQUIDITY_KNOWLEDGE": {
+      "PIT_REQUIRED": 1683
+    },
+    "PORTFOLIO_CAPITAL_HOLDINGS_RISK_BUDGET": {
+      "USER_INPUT_REQUIRED": 1683
+    },
+    "PRICE_LIMIT_INTRADAY_CONSTRAINTS": {
+      "POLICY_NOT_DEFINED": 1683
+    },
+    "VOLATILITY_BASIS": {
+      "DATA_NOT_QUALIFIED": 1683
+    }
+  },
+  "milestone": "OFFICIAL_EXCHANGE_LIQUIDITY_MARKET_WIDE_OPERATIONALIZATION_V1",
+  "per_ticker_official_values_published": false,
+  "publication_disposition": "CODE_CONTRACTS_SYNTHETIC_TESTS_HASHES_AND_DERIVED_COUNTS_ONLY",
+  "raw_exchange_response_bodies_published": false,
+  "rights_reviewed_on": "2026-09-29",
+  "schema_version": "official_exchange_liquidity_market_wide_publication_manifest/v1",
+  "session": "2026-09-28",
+  "unrouted_by_class": {
+    "EXCHANGE_IDENTITY_CONFLICT": 12,
+    "SOURCE_NOT_SUPPORTED": 167
+  }
+}

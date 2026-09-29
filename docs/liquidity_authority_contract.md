@@ -6,6 +6,8 @@ Status: `AUTHORITY_CLOSURE_LIQUIDITY_FOUNDATION_V1` (2026-09-28). The terminal d
 `tools/run_liquidity_authority_closure.py` (`plan` / `probe` / `build`). Evidence:
 `operations-review/liquidity-authority-closure-v1-20260928/`.
 
+Market-wide operationalization of this contract: [`liquidity_market_wide_operationalization.md`](liquidity_market_wide_operationalization.md).
+
 ## Sources
 
 | Source | Route | Grain | Components | Units |

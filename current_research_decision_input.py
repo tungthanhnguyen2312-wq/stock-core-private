@@ -370,7 +370,42 @@ def _corporate(record: Mapping[str, Any]) -> dict[str, Any]:
     }
 
 
-def _liquidity(record: Mapping[str, Any], liquidity_record: Mapping[str, Any] | None) -> dict[str, Any]:
+_OFFICIAL_LIQUIDITY_USES = ("CURRENT_SESSION_LIQUIDITY_RESEARCH", "HISTORICAL_LIQUIDITY_RESEARCH", "ADV_VOLUME_RESEARCH", "ADTV_RESEARCH")
+
+
+def _official_liquidity(official_record: Mapping[str, Any] | None) -> dict[str, Any]:
+    """Qualified official-exchange liquidity research for one ticker (research scope only).
+
+    Absence, an unauthorized exchange or a partial window blocks only the liquidity-dependent use it
+    names; it never changes another dimension, the evidence class or the posture.
+    """
+    if not isinstance(official_record, Mapping):
+        return {"state": BLOCKED, "authority": NO_AUTHORITY, "reason_codes": ["OFFICIAL_LIQUIDITY_RESEARCH_NOT_SUPPLIED"]}
+    view = official_record.get("research_view") or {}
+    fitness = view.get("fitness") or {}
+    adtv_ok = fitness.get("ADTV_RESEARCH") == "ELIGIBLE"
+    any_usable = any(fitness.get(use) in ("ELIGIBLE", "PARTIAL") for use in _OFFICIAL_LIQUIDITY_USES)
+    refs = official_record.get("evidence_refs") or {}
+    return {
+        "state": AVAILABLE if adtv_ok else (PARTIAL if any_usable else BLOCKED),
+        "authority": RESEARCH_QUALIFIED if adtv_ok else NO_AUTHORITY,
+        "scope": "OFFICIAL_EXCHANGE_RESEARCH_SCOPED_RETROSPECTIVE_KNOWLEDGE_TIME",
+        "route_exchange": official_record.get("route_exchange"),
+        "window_coverage": view.get("window_coverage"),
+        "current_session": view.get("current_session"),
+        "adtv20_matched_all_vnd": view.get("adtv20_matched_all_vnd"),
+        "adv20_matched_all_shares": view.get("adv20_matched_all_shares"),
+        "current_value_to_adtv20": view.get("current_value_to_adtv20"),
+        "current_volume_to_adv20": view.get("current_volume_to_adv20"),
+        "evidence_currency": view.get("evidence_currency"),
+        "fitness": dict(fitness),
+        "evidence_refs": {"source": refs.get("source"), "response_sha256": [r.get("sha256") for r in refs.get("responses") or []]},
+        "reason_codes": _codes(view.get("reason_codes")),
+    }
+
+
+def _liquidity(record: Mapping[str, Any], liquidity_record: Mapping[str, Any] | None,
+               official_record: Mapping[str, Any] | None = None) -> dict[str, Any]:
     liquidity = liquidity_record or {}
     contract = liquidity.get("liquidity_research_contract") if isinstance(liquidity.get("liquidity_research_contract"), Mapping) else {}
     disposition = liquidity.get("disposition")
@@ -379,9 +414,13 @@ def _liquidity(record: Mapping[str, Any], liquidity_record: Mapping[str, Any] | 
     capacity = (contract.get("EXECUTION_CAPACITY") or {}).get("state") or "BLOCKED"
     sizing = (contract.get("POSITION_SIZING") or {}).get("state") or "BLOCKED"
     execution_qualified = capacity == "ELIGIBLE" and sizing == "ELIGIBLE"
+    qualified = _official_liquidity(official_record) if official_record is not None else None
+    qualified_state = (qualified or {}).get("state")
     return {
-        "state": AVAILABLE if research_available else BLOCKED,
-        "authority": CURRENT_DESCRIPTIVE_ONLY if research_available else NO_AUTHORITY,
+        "state": AVAILABLE if (research_available or qualified_state == AVAILABLE) else (PARTIAL if qualified_state == PARTIAL else BLOCKED),
+        "authority": (CURRENT_DESCRIPTIVE_ONLY if research_available else
+                      (qualified["authority"] if qualified_state == AVAILABLE else NO_AUTHORITY)),
+        **({"qualified_research": qualified} if qualified is not None else {}),
         "research": {"state": AVAILABLE if research_available else BLOCKED,
                      "disposition": disposition or "NOT_SUPPLIED",
                      "reason_codes": [] if research_available else _codes([disposition or "LIQUIDITY_RESEARCH_NOT_SUPPLIED"])},
@@ -422,6 +461,7 @@ def build_ticker_decision_input(
     liquidity_record: Mapping[str, Any] | None = None,
     entity_applicability_record: Mapping[str, Any] | None = None,
     operational_context: Mapping[str, Any] | None = None,
+    official_liquidity_record: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Restate one Integrated Decision record's evidence as the Current Research decision input."""
     entity_record = entity_applicability_record or {}
@@ -439,7 +479,7 @@ def build_ticker_decision_input(
         "FUNDAMENTAL": _fundamental(record, financial_record, operational_context, entity, session),
         "VALUATION": _valuation(record, valuation_record, entity),
         "CORPORATE": _corporate(record),
-        "LIQUIDITY": _liquidity(record, liquidity_record),
+        "LIQUIDITY": _liquidity(record, liquidity_record, official_liquidity_record),
     }
     klass = evidence_class(dimensions)
     posture = record.get("research_action_posture")

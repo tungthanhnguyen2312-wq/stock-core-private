@@ -1,5 +1,34 @@
 # Stock Lookup — Operational State
 
+**Official-exchange liquidity, market-wide operationalization (2026-09-29):**
+`OFFICIAL_EXCHANGE_LIQUIDITY_MARKET_WIDE_OPERATIONALIZATION_V1 = ACTIVE / LOCAL_CHECKPOINT /
+MARKET_WIDE_LIQUIDITY_OPERATIONALIZATION_PARTIAL`. It is the only active execution item and is not
+merged. Canonical `main` is `170b2cfbcf77d7ec4f5ca823f5f78e4787795339` (Producer CI #111 SUCCESS).
+`AUTHORITY_CLOSURE_LIQUIDITY_FOUNDATION_V1` is closed `COMPLETE` (PR #13 merged to that commit).
+`CURRENT_RESEARCH_CHAIN_PROMOTION_REVIEW_INTEGRATION_V1` is closed `COMPLETE` (PR #12, `36b89f3`,
+CI #109 SUCCESS). Detail: [`liquidity_market_wide_operationalization.md`](liquidity_market_wide_operationalization.md).
+
+- **Rights gate first.** HOSE bounded internal acquisition is authorized (robots allow-all, no
+  restrictive terms found). HNX and UPCoM bulk acquisition is not authorized
+  (`PUBLIC_ACQUISITION_NOT_AUTHORIZED`: no robots or terms authorizing it, fee-based data packages,
+  publish-only-after-contact notice), so no market crawl was made. The named external dependency is
+  HNX written permission or an information-service agreement.
+- **Acquisition.** 364 planned HOSE requests, 364 OK, 0 retries, cap 400; 93 prior series reused.
+  Raw bodies stay private and are never staged for Git.
+- **Coverage.** Exact ADTV20/ADV20 for 457 of 1,683 governed tickers (HOSE 403 of 403, HNX 28 of 299,
+  UPCoM 26 of 802 by retained cohort). Current-session liquidity is eligible for 952. 1,047 HNX/UPCoM
+  tickers are `PUBLIC_ACQUISITION_NOT_AUTHORIZED` and 179 cannot be routed. `ACTIVE_UNIVERSE` stays UNKNOWN.
+- **Daily.** An additive `qualified_research` sub-block in the LIQUIDITY dimension of
+  `current_research_decision_input/v1`. Over the retained 2026-09-28 session, postures, decision
+  identities, evidence classes and all other dimensions are identical for 1,683 tickers. Missing
+  liquidity blocks only liquidity-dependent uses.
+- **Boundaries unchanged.** EXECUTION_CAPACITY, POSITION_SIZING and PIT_BACKTEST stay BLOCKED;
+  RAW_AS_TRADED is not promoted; no Vnstock/KBS/VCI call, production DB write, Dashboard or AI
+  publication.
+- **Recommended next (not started, not queued):** `PROSPECTIVE_RAW_PIT_AUTHORITY_V1`.
+
+*(Superseded 2026-09-29: this chain merged to canonical `main` as PR #12, `36b89f3`, and is closed COMPLETE; see the block above.)*
+
 **Current Research chain integrated after M1 (2026-09-28):**
 `CURRENT_RESEARCH_CHAIN_PROMOTION_REVIEW_INTEGRATION_V1 = ACTIVE / IMPLEMENTATION_INTEGRATED /
 AWAITING_INDEPENDENT_EXACT_HEAD_REVIEW`. It is not complete, and no analytical authority is promoted.

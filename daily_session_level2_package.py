@@ -268,6 +268,7 @@ def session_artifact_paths(root: Path, session: str) -> dict[str, Path]:
         "breadth_foundation": ops / f"current-market-universe-breadth-foundation-v1-{nodash}" / "current_market_universe_breadth_foundation_artifact.json",
         "universe_resolution": ops / f"current-universe-status-and-session-coverage-resolution-v1-{nodash}" / "current_universe_status_and_session_coverage_resolution_artifact.json",
         "liquidity_research": ops / f"market-wide-current-liquidity-research-v1-{nodash}" / "market_wide_current_liquidity_research_artifact.json",
+        "official_liquidity": ops / f"official-exchange-liquidity-research-v1-{nodash}" / "official_exchange_liquidity_research_artifact.json",
         "technical_recovery": ops / f"market-wide-current-technical-coverage-scaleout-v1-{nodash}" / "market_wide_current_technical_coverage_recovery_artifact.json",
         "descriptive_research": ops / f"market-wide-current-descriptive-research-v1-{nodash}" / "market_wide_current_descriptive_research_artifact.json",
         "screening_foundation": ops / f"current-market-screening-opportunity-comparison-foundation-v1-{nodash}" / "current_market_screening_opportunity_comparison_foundation_artifact.json",

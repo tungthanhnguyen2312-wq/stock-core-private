@@ -176,6 +176,13 @@ def assemble(args: argparse.Namespace) -> None:
     output_root = work_root / "output-root"
     outputs = work_root / "outputs"
     manifest = stage_session_inputs(level2, producer_root, artifact_root, session)
+    if getattr(args, "official_liquidity", None):
+        # Optional operator-acquired official-exchange liquidity artifact: byte-copied into the isolated
+        # artifact root only (canonical retained evidence is never written).
+        staged = level2.session_artifact_paths(artifact_root, session)["official_liquidity"]
+        staged.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(args.official_liquidity, staged)
+        manifest["official_liquidity"] = {"relative_path": "(operator supplied)", "sha256": sha256_file(staged), "bytes": staged.stat().st_size}
     readiness = retained_readiness_context(level2, fin_v2_material, producer_root, session)
 
     def retained_readiness(*, runtime_root: Any, decision_session: str, raw_valuation_artifact: Any,
@@ -475,6 +482,7 @@ def main() -> None:
     one.add_argument("--producer-root", required=True)
     one.add_argument("--work-root", required=True)
     one.add_argument("--session", default=DEFAULT_SESSION)
+    one.add_argument("--official-liquidity", default=None, help="optional official_exchange_liquidity_research artifact to stage for this assembly")
     both = sub.add_parser("prove")
     both.add_argument("--producer-root", required=True)
     both.add_argument("--baseline-code-root", required=True)
