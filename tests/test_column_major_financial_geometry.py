@@ -113,6 +113,29 @@ def test_current_prior_reversal_preserves_explicit_direction_not_left_right_assu
     assert bands["bands"]["current_period_value"]["x0"] > bands["bands"]["comparative_period_value"]["x0"]
 
 
+def test_h1_period_uses_explicit_vietnamese_current_prior_headers_without_year_fallback():
+    tokens = _period_header_fixture([("Ma so", 50), ("Thuyet minh", 75), ("Ky truoc", 110), ("Ky nay", 180)])
+    bands = structural.discover_column_bands(
+        structural.reconstruct_physical_lines(tokens)["lines"], "2026-H1", statement_family="income_statement",
+    )
+    assert bands is not None
+    assert bands["header_evidence"]["period_header_class"] == "CURRENT_PRIOR"
+    assert bands["current_period_label"] == "Ky nay"
+    assert bands["comparative_period_label"] == "Ky truoc"
+    assert bands["bands"]["current_period_value"]["x0"] > bands["bands"]["comparative_period_value"]["x0"]
+
+
+def test_h1_balance_sheet_uses_explicit_vietnamese_closing_opening_headers():
+    tokens = _period_header_fixture([("Ma so", 50), ("Thuyet minh", 75), ("So cuoi ky", 110), ("So dau ky", 180)])
+    bands = structural.discover_column_bands(
+        structural.reconstruct_physical_lines(tokens)["lines"], "2026-H1", statement_family="balance_sheet",
+    )
+    assert bands is not None
+    assert bands["header_evidence"]["period_header_class"] == "CLOSING_OPENING_BALANCE"
+    assert bands["current_period_label"] == "So cuoi ky"
+    assert bands["comparative_period_label"] == "So dau ky"
+
+
 def test_current_prior_fused_tokens_feed_the_existing_ocr_row_geometry_path():
     tokens = _period_header_fixture([("Code", 50), ("Note", 75), ("Prior year", 110), ("Current year", 180)])
     for token in tokens:

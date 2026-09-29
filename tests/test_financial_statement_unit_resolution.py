@@ -118,6 +118,14 @@ def test_financial_position_heading_routes_only_to_balance_sheet():
     assert ocr._statement_family(tokens) == "balance_sheet"
 
 
+def test_punctuation_split_cash_flow_heading_routes_without_altering_raw_value_text():
+    tokens = [
+        {"text": value, "raw_token_order": index}
+        for index, value in enumerate("BAO CAO LU'U CHUYEN TIEN TE HOP NHAT".split())
+    ]
+    assert ocr._statement_family(tokens) == "cash_flow"
+
+
 def test_no_ticker_specific_logic_in_scoped_resolver():
     source = inspect.getsource(__import__("financial_statement_unit_resolution"))
     assert "ticker ==" not in source and '"NVL"' not in source and '"FPT"' not in source

@@ -1,5 +1,15 @@
 # Stock Lookup — Architecture & Roadmap
 
+**Roadmap sync: Cohort-1 OCR geometry and metadata recovery (2026-09-29):**
+- `FINANCIAL_EVIDENCE_COHORT1_OCR_GEOMETRY_AND_METADATA_RECOVERY_V1` = `PARTIAL /
+  PARTIAL_QUALIFIED_H1_CANDIDATES_NO_CANONICAL_INGRESS`, rooted at canonical
+  `31ca5027c9fc78cbad17d1a2da71bd1f933c21a7` (Producer CI #125 SUCCESS). Retained HPG,
+  PNJ, PVD and VRE H1 image-only statement pages only; 31 bounded primary OCR reads produce
+  six fully geometry/unit/scope-qualified candidate rows for PNJ/PVD/VRE. HPG stays blocked
+  on unit evidence. Existing audited-only panel ingress excludes reviewed interim filings;
+  no precedence result, Financial V2 pin rebuild, valuation or posture change occurs.
+- No successor is queued or started.
+
 **Roadmap sync: Cohort-1 triggered OCR (2026-09-29):**
 - `FINANCIAL_EVIDENCE_COHORT1_TRIGGERED_OCR_V1` = `PARTIAL /
   PARTIAL_OCR_GEOMETRY_AND_METADATA_BLOCKERS`, dependent on the currency refresh and rooted at

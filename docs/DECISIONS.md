@@ -1,5 +1,21 @@
 # Decisions & Architectural Decision Records
 
+## 2026-09-29 - Cohort-1 OCR geometry and metadata recovery (`FINANCIAL_EVIDENCE_COHORT1_OCR_GEOMETRY_AND_METADATA_RECOVERY_V1`)
+
+**Decision.** Extend the bounded local TSV route only with deterministic H1 header binding,
+page-local explicit scope recovery, and heading-only apostrophe normalization. Numeric OCR is
+not repaired. A recovered row still requires exact code, current column, explicit page unit and
+explicit consolidated scope.
+
+**Result.** `PARTIAL`. Thirty-one primary reads (18 unique retained statement pages) are below
+the global cap of 40. PNJ, PVD and VRE each have revenue and parent-income rows that satisfy
+the full OCR value contract. HPG remains blocked by its unit header. The existing panel adapter
+requires audited source status, so reviewed H1 candidates are deliberately not ingressed;
+precedence replay cannot run because its retained panel fixture is unavailable. No authority,
+pin, valuation or posture is changed.
+
+**Boundary.** No network, acquisition, raw PDF/image/TSV tracking, Vnstock, Daily or successor.
+
 ## 2026-09-29 - Cohort-1 triggered retained-PDF OCR (`FINANCIAL_EVIDENCE_COHORT1_TRIGGERED_OCR_V1`)
 
 **Decision.** Trigger the already-installed local TSV OCR only for bounded, visually identified
