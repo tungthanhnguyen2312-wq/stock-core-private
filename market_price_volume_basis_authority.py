@@ -338,9 +338,10 @@ def _volume_value_capability_rows() -> list[dict[str, Any]]:
 
     rows.append(_row(
         "DNSE_OHLC_DAILY_VOLUME_MATCHED_SHADOW", VOLUME_VALUE_BASIS_DOMAIN,
-        data_acquired=True, data_semantics_qualified=False,
-        scope={"source": "DNSE", "endpoint": "/price/ohlc", "field": "v", "exchange": "HOSE_ONLY",
-               "instrument_class": "VN_LISTED_EQUITY", "board_scope": "unknown_by_canonical_contract"},
+        data_acquired=True, data_semantics_qualified=True,
+        scope={"source": "DNSE", "endpoint": "/price/ohlc", "field": "v", "exchange": "HOSE_HNX_UPCOM_AS_RECONCILED_2026_09_28",
+               "instrument_class": "VN_LISTED_EQUITY",
+               "board_scope": "G1_REGULAR_ROUND_LOT_ORDER_MATCHING_ONLY: v equals the G1 quantity x 10 shares; excludes G3 post-close, G4 odd lot and all put-through"},
         source_modules=[
             "market_volume_value_semantic_contract.field_contract",
             "dnse_fhsc_volume_basis.reconcile_volume_rows",
@@ -352,7 +353,13 @@ def _volume_value_capability_rows() -> list[dict[str, Any]]:
             "canonical_field_contract_prohibited_uses": dnse_field_contract["prohibited_uses"],
             "shadow_finding": "DNSE_OHLC_VOLUME_MATCHED_EMPIRICAL",
             "shadow_scaleout_candidate": "DNSE_MATCHED_VOLUME_SEMANTICS_HOSE_SCALEOUT_VALIDATED",
-            "shadow_scope": "HOSE only; HNX/UPCOM unresolved after the bounded 24-call FHSC budget was exhausted (8 HTTP 429 responses)",
+            "shadow_scope": "superseded 2026-09-29: the 2026-09 FHSC shadow was HOSE only (HNX/UPCOM unresolved after 8 HTTP 429 responses); "
+                            "official-exchange reconciliation now covers all three exchanges (see official_exchange_reconciliation)",
+            "official_exchange_reconciliation": {
+                "milestone": "OFFICIAL_EXCHANGE_LIQUIDITY_MARKET_WIDE_OPERATIONALIZATION_V1", "session": "2026-09-28",
+                "ohlc_v_equals_g1_shares_on_g1_active_reconciled_tickers": {"HOSE": "368/368", "HNX": "22/22", "UPCOM": "22/22"},
+                "meaning": "the field is qualified as G1 regular round-lot order matching in shares; it is not the order-matching total (no G3, G4 or put-through)",
+            },
             "market_capability_taxonomy_dnse_usability_state": dnse_matched_taxonomy["usability_state"],
             "note": (
                 "The canonical live field contract (market_volume_value_semantic_contract, v1.1.0) "
@@ -364,8 +371,8 @@ def _volume_value_capability_rows() -> list[dict[str, Any]]:
         fitness={
             CURRENT_DESCRIPTIVE_RESEARCH: _fitness(ELIGIBLE, reason="DISPLAY and PROVIDER_SCOPED_ANALYTICS are explicitly eligible uses on the canonical field contract", cites=["market_volume_value_semantic_contract.FIELD_CONTRACTS"]),
             CURRENT_VALUATION_RESEARCH: _fitness(NOT_APPLICABLE, reason="current valuation input in this repository is price x shares; volume is not a valuation-multiple input", cites=["current_valuation_input_authority"]),
-            LIQUIDITY_RESEARCH: _fitness(BLOCKED, reason="MARKET_LIQUIDITY is an explicit prohibited use on the canonical field contract; market composition (put-through/odd-lot share) is not qualified", cites=["market_volume_value_semantic_contract.FIELD_CONTRACTS", "market_data_source_authority.DNSE_MARKET_VOLUME_BASIS"]),
-            ADV_ADTV_RESEARCH: _fitness(BLOCKED, reason="an average/turnover over an unqualified-composition field inherits the same composition blocker", cites=["market_volume_value_semantic_contract.FIELD_CONTRACTS"]),
+            LIQUIDITY_RESEARCH: _fitness(BLOCKED, reason="MARKET_LIQUIDITY is an explicit prohibited use on the canonical field contract; the field is G1-only round-lot matching (excludes G3, odd lot and put-through), so market liquidity is served by the official exchange series (official_liquidity_market_wide), not by this field", cites=["market_volume_value_semantic_contract.FIELD_CONTRACTS", "market_data_source_authority.DNSE_MARKET_VOLUME_BASIS"]),
+            ADV_ADTV_RESEARCH: _fitness(BLOCKED, reason="an average over G1-only round-lot volume is not the order-matching ADV/ADTV (G3, odd lot excluded); ADTV20 is taken from the official series", cites=["market_volume_value_semantic_contract.FIELD_CONTRACTS"]),
             POSITION_SIZING: _fitness(BLOCKED, reason="EXECUTION_SIZING is an explicit prohibited use on the canonical field contract", cites=["market_volume_value_semantic_contract.FIELD_CONTRACTS"]),
             HISTORICAL_RETURN_RESEARCH: _fitness(NOT_APPLICABLE, reason="a volume field is not a return input", cites=["market_volume_value_semantic_contract.FIELD_CONTRACTS"]),
             PIT: _fitness(NOT_APPLICABLE, reason="P0-B closure applies unconditionally to volume authority independent of PIT price status", cites=["docs/STATE.md P0-B"]),

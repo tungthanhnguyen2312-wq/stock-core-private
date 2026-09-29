@@ -1,7 +1,7 @@
 {
   "schema_version": "stocklookup_roadmap_execution_state/1.0.0",
   "roadmap_id": "stock-core-private",
-  "roadmap_version": "2026.09.28.2",
+  "roadmap_version": "2026.09.29.1",
   "narrative_authority": {
     "strategic_roadmap": "docs/ROADMAP.md",
     "operational_narrative": "docs/STATE.md",
@@ -15,7 +15,7 @@
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "CURRENT_RESEARCH_CHAIN_PROMOTION_REVIEW_INTEGRATION_V1",
+    "milestone": "OFFICIAL_EXCHANGE_LIQUIDITY_MARKET_WIDE_OPERATIONALIZATION_V1",
     "state": "ACTIVE"
   },
   "queued_next": [],
@@ -2073,10 +2073,10 @@
     },
     {
       "milestone_id": "CURRENT_RESEARCH_CHAIN_PROMOTION_REVIEW_INTEGRATION_V1",
-      "state": "ACTIVE",
-      "narrative_disposition": "IMPLEMENTATION_INTEGRATED / AWAITING_INDEPENDENT_EXACT_HEAD_REVIEW / NOT_PROMOTED",
+      "state": "COMPLETE",
+      "narrative_disposition": "COMPLETE / MERGED_TO_MAIN_PR_12_2026_09_28 / NO_AUTHORITY_PROMOTION",
       "starting_checkpoint": "d08778b1c02a8490741c238f9678955df5be8f26",
-      "checkpoint": null,
+      "checkpoint": "36b89f32a82a786d043237c4159c8b469d8985c5",
       "candidate_checkpoint": "f1e715c796019ab74e948676b6dcf857611b47af",
       "candidate_branch": "feature/financial-v2-analysis-input-integrity-v1",
       "candidate_branch_head": "eefcb044001b60e6381b2cbf253a48138ec0646d",
@@ -2128,10 +2128,12 @@
       "owner_authorized": true,
       "source_doc": "Owner directive M1 GOVERNANCE CLOSEOUT + NORTH STAR STRATEGIC REBASELINE (2026-09-28), section C: record as the next execution item once the local checkpoint lineage is verified. docs/DECISIONS.md 2026-09-28 M1 closeout entry.",
       "state_history": [
-        "NEXT"
+        "NEXT",
+        "ACTIVE"
       ],
       "owner_override": null,
-      "notes": "ACTIVE / IMPLEMENTATION_INTEGRATED / AWAITING_INDEPENDENT_EXACT_HEAD_REVIEW (2026-09-28). The exact-head readiness review passed and the chain through f1e715c is integrated onto main d08778b on feature/current-research-chain-integration-v1-20260928 (see integration and docs/DECISIONS.md 2026-09-28). Not complete; no analytical authority promoted; merge only on explicit owner approval. Earlier note follows. NEXT / NOT_STARTED; recorded only by the 2026-09-28 M1 closeout. Queued does not mean started. FIRST ACTION: an exact-head promotion/readiness review of the chain, NOT implementation. Lineage verified locally on 2026-09-28: f1e715c resolves to a commit; the unpushed branch forks from main 6c40644 and carries ffc75d7 -> 36e8525 -> df6c018 -> 4c46328 -> 488eaf1 -> 66d0fc0 -> 5729c52 -> f1e715c, plus eefcb04 (docs-only: a pre-rebaseline copy of docs/NORTH_STAR.md and AI_RULES rule 4a, superseded by the 2026-09-28 North Star rebaseline; drop or reconcile it, never merge it over main). The branch is 1 commit behind main (66943d8 touches only config/daily_research_session_input_registry.json). The chain also edits docs/STATE.md, docs/ROADMAP.md, docs/ROADMAP_STATE.json and docs/DECISIONS.md; its own unpromoted ROADMAP_STATE records six COMPLETE_LOCAL entries, a chain-local CURRENT_RESEARCH_FUNDAMENTAL_CHAIN_PROMOTION_REVIEW_V1 (NEXT, superseded by this main-recorded milestone ID) and LEGACY_FINANCIAL_REFRESH_DEPENDENCY_MIGRATION_V1 (BLOCKED behind it). Reconciling those docs against the M1 closeout is part of the review. Review scope: exact-head review, full-suite failure attribution, CI, same-session before/after replay, draft PR to main, and the owner's explicit acceptance of the retained posture deltas (chain-reported: 125 official postures vs 488eaf1; valuation value-level diff reported zero across the chain). Promotion/merge only on explicit owner approval. No new features, provider call, Daily or authority promotion."
+      "notes": "ACTIVE / IMPLEMENTATION_INTEGRATED / AWAITING_INDEPENDENT_EXACT_HEAD_REVIEW (2026-09-28). The exact-head readiness review passed and the chain through f1e715c is integrated onto main d08778b on feature/current-research-chain-integration-v1-20260928 (see integration and docs/DECISIONS.md 2026-09-28). Not complete; no analytical authority promoted; merge only on explicit owner approval. Earlier note follows. NEXT / NOT_STARTED; recorded only by the 2026-09-28 M1 closeout. Queued does not mean started. FIRST ACTION: an exact-head promotion/readiness review of the chain, NOT implementation. Lineage verified locally on 2026-09-28: f1e715c resolves to a commit; the unpushed branch forks from main 6c40644 and carries ffc75d7 -> 36e8525 -> df6c018 -> 4c46328 -> 488eaf1 -> 66d0fc0 -> 5729c52 -> f1e715c, plus eefcb04 (docs-only: a pre-rebaseline copy of docs/NORTH_STAR.md and AI_RULES rule 4a, superseded by the 2026-09-28 North Star rebaseline; drop or reconcile it, never merge it over main). The branch is 1 commit behind main (66943d8 touches only config/daily_research_session_input_registry.json). The chain also edits docs/STATE.md, docs/ROADMAP.md, docs/ROADMAP_STATE.json and docs/DECISIONS.md; its own unpromoted ROADMAP_STATE records six COMPLETE_LOCAL entries, a chain-local CURRENT_RESEARCH_FUNDAMENTAL_CHAIN_PROMOTION_REVIEW_V1 (NEXT, superseded by this main-recorded milestone ID) and LEGACY_FINANCIAL_REFRESH_DEPENDENCY_MIGRATION_V1 (BLOCKED behind it). Reconciling those docs against the M1 closeout is part of the review. Review scope: exact-head review, full-suite failure attribution, CI, same-session before/after replay, draft PR to main, and the owner's explicit acceptance of the retained posture deltas (chain-reported: 125 official postures vs 488eaf1; valuation value-level diff reported zero across the chain). Promotion/merge only on explicit owner approval. No new features, provider call, Daily or authority promotion.",
+      "closure_2026_09_29": "Closed 2026-09-29 by governance reconciliation: the integration branch merged to canonical main as PR #12 (merge commit 36b89f32a82a786d043237c4159c8b469d8985c5, Producer CI #109 SUCCESS). The 'remaining_gates' above are historical; the gate history was not re-audited here and no analytical authority was promoted by this closure."
     },
     {
       "milestone_id": "APPROVED_PROVIDER_BUILD_AND_EXECUTION_BOUNDARY_V1",
@@ -2174,6 +2176,76 @@
       ],
       "owner_override": "OWNER_DIRECTIVE_2026_09_26_WINDOWS_PROVIDER_RUNTIME_OS_CONTAINMENT_AND_ATTESTATION_V1",
       "notes": "2026-09-26 state reconciliation: PR #7 MERGED to main as 785fe072ca9ad86ce4e3c0ff53b0d8f69cd90f44 (the earlier 'promotion review and merge pending' wording is superseded). The Windows OS containment backend is implemented, host-provisioned and qualified 18/18 (report sha256 26358a995ef37d7fac5da2c569c9214b2c1404f985375326de8e821da1099a13) and is preserved as reusable security infrastructure. The Vnstock runtime itself stays uninstalled, unapproved and unlaunched: no terms acceptance, no manifest approval, policy SECURITY_REVIEW_BLOCKED. Under the owner rebaseline the remaining operationalization is DEFERRED_NON_CRITICAL (not an M1 prerequisite). Earlier note follows. BLOCKED on one owner elevated provisioning run (the agent cannot elevate; account/ACL/firewall changes are the owner's). Implementation is committed on branch claude/windows-provider-os-containment-v1 (implementation commit = the local checkpoint that adds this entry). Implemented: production backend provider_windows_os_backend.py (stocklookup-windows-os-enforcement / provider_os_enforcement_backend/v1): dedicated StockLookupProvider standard account via CreateProcessWithLogonW with an owner-scope DPAPI logon secret; per-launch Job Local\\StockLookupProvider-<launch_id> created, limits read back, worker created suspended, assigned, membership verified through the Job handle, then resumed (conhost classified; measured: conhost does not consume the active-process limit, venv worker limit = 2); kernel AccessCheck effective-access ACL verification with a worker logon token; worker-SID Defender Firewall outbound block-all read back per launch against the provisioned firewall-policy digest; manifest-bound containment qualification evidence. Named-pipe egress gateway provider_egress_gateway.py (no CONNECT/tunnel/generic fetch; manifest endpoint contract; redirects refused; hard 20 rpm by refusal; telemetry DENY; lineage ledger). Worker forwards allow-listed requests to the gateway and has no direct sockets. Contract amendments: WINDOWS_NAMED_PIPE gateway transport (no host/port) in the manifest validator and attestation checker. Provisioning: tools/provision_provider_os_containment.ps1 (-Plan default, -Apply elevated, idempotent, conflict-refusing, post-verified). Verification: tools/run_provider_os_containment_qualification.py (L1-L18 as the worker; report SHA-256 = os_containment.verification_evidence_sha256). Not done: provider venv (the dependency lock forbids install before an approved manifest pins it), STOCKLOOKUP_PROVIDER_PYTHON not bound, vnai terms agreement owner decision outstanding (never manufactured), Gates C/D/E not run, no live provider call, no Daily, no 2026-09-25 recovery. Authority promoted: NONE. Policy stays SECURITY_REVIEW_BLOCKED; manifest stays DRAFT. M1 stays the single ACTIVE milestone. [2026-09-26 later: owner elevated -Apply provisioned the host (after two APPLY correctives: f1325b5 verifier SID pipeline pollution; ccb0ffa Users-membership idempotency + controlled silent-drop DNS check). Non-elevated containment qualification as the worker: status PASS, 18/18 (L11 basis SILENT_DROP_OWNER_CONTROL_ANSWERED_TCP53_REFUSED; IPv6 basis HOST_HAS_NO_IPV6_ROUTE_RULE_SCOPE_ANY). Backend find_qualification_report + host_record_violations: none; live firewall digest == record; production_backend() = stocklookup-windows-os-enforcement. Evidence (retained under C:\\ProgramData\\StockLookup\\provider-runtime, not tracked): containment_qualification_20260926T125849Z.json sha256 26358a995ef37d7fac5da2c569c9214b2c1404f985375326de8e821da1099a13; provisioning record sha256 a64626904fe1173e42c45ff648b569b83476f7352dff2880a14f8ddba3fb3060 (provisioned_at 2026-09-26T12:58:01Z, provisioner_sha256 6ec6ef6d51b6ec682696d57a7c58b3259dc23505bfb7ecb11fd822a860479797 = committed script at ccb0ffa); worker StockLookupProvider S-1-5-21-270160003-185743851-2814889227-1005; firewall_policy_sha256 8de29d54427b2b2ba4a9e60ca7daeb8ea4da06e6005cc1854ece95198247f4ee; gateway_module_sha256 6634310deac6242f41312abbe6b9d74dfed8507ab626f7daf8825eca99a185d7; backend_module_sha256 64df9255c0e58c21549a00032e8e9886988a91e03c511d13268caec0c4895fe3. The draft manifest os_containment block is NOT edited: verification_evidence_sha256/restricted_identity_sid/OWNER_VERIFIED are bound when the owner authors the approved manifest together with runtime.platform and the named-pipe egress_gateway (they must agree). State stays BLOCKED: COMPLETE only after independent promotion review and merge of PR #7. Residual (not scored): the worker reaches loopback and the host's own LAN address, and names via the DNS Client service. No provider call, no Daily, no recovery.]"
+    },
+    {
+      "milestone_id": "AUTHORITY_CLOSURE_LIQUIDITY_FOUNDATION_V1",
+      "state": "COMPLETE",
+      "narrative_disposition": "COMPLETE / MERGED_TO_MAIN_PR_13_2026_09_29 / LIQUIDITY_AUTHORITY_PARTIALLY_PROMOTABLE",
+      "starting_checkpoint": "36b89f32a82a786d043237c4159c8b469d8985c5",
+      "checkpoint": "ed2575a16661c5ff0d6a236ec8bad931718c6e9a",
+      "merge_commit": "170b2cfbcf77d7ec4f5ca823f5f78e4787795339",
+      "dependencies": [
+        "CURRENT_DECISION_SURFACE_CONVERGENCE_V1"
+      ],
+      "unlocks": [
+        "OFFICIAL_EXCHANGE_LIQUIDITY_MARKET_WIDE_OPERATIONALIZATION_V1"
+      ],
+      "authority_effect": "RESEARCH_SCOPED_OFFICIAL_LIQUIDITY_CONTRACT / EXECUTION_SIZING_PIT_STILL_BLOCKED",
+      "owner_authorized": true,
+      "source_doc": "docs/liquidity_authority_contract.md; docs/liquidity_authority_publication.md",
+      "state_history": [
+        "NEXT",
+        "ACTIVE"
+      ],
+      "owner_override": null,
+      "notes": "COMPLETE 2026-09-29: merged to canonical main as PR #13 (merge commit 170b2cfbcf77d7ec4f5ca823f5f78e4787795339, reviewed checkpoint ed2575a, Producer CI #111 SUCCESS). Delivered the provider-neutral liquidity_authority_contract/v1 and the official HOSE/HNX per-session source adapter, qualified the DNSE board units per exchange by exact official reconciliation on a 93-ticker cohort, and closed the FHSC-anchor ceiling for that cohort. Raw official response bodies stay private."
+    },
+    {
+      "milestone_id": "OFFICIAL_EXCHANGE_LIQUIDITY_MARKET_WIDE_OPERATIONALIZATION_V1",
+      "state": "ACTIVE",
+      "narrative_disposition": "LOCAL_CHECKPOINT / MARKET_WIDE_LIQUIDITY_OPERATIONALIZATION_PARTIAL / HNX_UPCOM_BLOCKED_ON_EXTERNAL_APPROVAL",
+      "starting_checkpoint": "170b2cfbcf77d7ec4f5ca823f5f78e4787795339",
+      "checkpoint": null,
+      "candidate_branch": "feature/liquidity-market-wide-operationalization-v1-20260929",
+      "dependencies": [
+        "AUTHORITY_CLOSURE_LIQUIDITY_FOUNDATION_V1"
+      ],
+      "unlocks": [],
+      "authority_effect": "RESEARCH_SCOPED_ONLY / EXECUTION_CAPACITY_POSITION_SIZING_PIT_BACKTEST_STILL_BLOCKED",
+      "owner_authorized": true,
+      "source_doc": "Owner directive OFFICIAL_EXCHANGE_LIQUIDITY_MARKET_WIDE_OPERATIONALIZATION_V1 (2026-09-29); docs/liquidity_market_wide_operationalization.md",
+      "state_history": [
+        "ACTIVE"
+      ],
+      "owner_override": null,
+      "terminal_disposition": "MARKET_WIDE_LIQUIDITY_OPERATIONALIZATION_PARTIAL",
+      "coverage": {
+        "governed_universe": 1683,
+        "current_official_presence_denominator": 1504,
+        "exchange_resolved": 1504,
+        "acquisition_authorized_and_retained": {
+          "HOSE": 403,
+          "HNX": 28,
+          "UPCOM": 26
+        },
+        "public_acquisition_not_authorized": {
+          "HNX": 271,
+          "UPCOM": 776
+        },
+        "unrouted": {
+          "SOURCE_NOT_SUPPORTED": 167,
+          "EXCHANGE_IDENTITY_CONFLICT": 12
+        },
+        "adtv20_exact": {
+          "HOSE": 403,
+          "HNX": 28,
+          "UPCOM": 26
+        },
+        "current_session_liquidity_eligible": 952
+      },
+      "external_dependency": "HNX written permission or an information-service agreement covering automated retrieval of per-symbol end-of-day trading statistics for HNX and UPCoM, and stating whether internal research retention and derived-figure publication are permitted.",
+      "recommended_next": "PROSPECTIVE_RAW_PIT_AUTHORITY_V1 (not started; not queued)",
+      "notes": "ACTIVE 2026-09-29. Acquisition-rights gate: HOSE bounded internal acquisition authorized (robots allow-all, no restrictive terms found); HNX/UPCoM bulk acquisition NOT authorized. 364 planned HOSE requests all OK (0 retries, cap 400); 93 prior series reused. HOSE ADTV20/ADV20 exact for 403/403. Daily: additive qualified_research sub-block in the LIQUIDITY decision-input dimension; postures, decision identities and evidence classes identical over 1,683. Raw exchange bodies never published; no Dashboard/AI publication; no Vnstock/KBS/VCI call. Not merged; merge only on explicit owner approval."
     }
   ],
   "blocked_capabilities": [
@@ -2187,9 +2259,9 @@
     {
       "capability": "LIQUIDITY_AND_POSITION_SIZING_AUTHORITY",
       "state": "BLOCKED",
-      "reason": "docs/STATE.md Section 3 Invariant 2: QUALIFIED_LIQUIDITY_INPUTS = NO and POSITION_SIZING_IS_SAFE = NO. LIQUIDITY_EVIDENCE_CEILING_CLOSEOUT_AND_STATE_SYNC_V1 (2026-09-08) confirms the evidence ceiling is now terminal, not merely a corpus-depth gap: DNSE Trades Phase-A acquisition is complete (24,894/24,900 units, 6 remaining HTTP-500 failures) and the governed T20 composite corpus is fully present (20/20 sessions) for target 2026-09-04, but exact ADTV20 stays 0/1,683 because the FHSC secondary matched-value anchor cohort (806 of 1,683) has a confirmed, real-network-verified permanent gap on 2026-08-06 (FHSC_20260806_PROVIDER_EVIDENCE_UNAVAILABLE) and 877 governed tickers were never FHSC-anchored at all. 42 tickers reach COVERAGE_RESTRICTED (exact on 19/20 sessions); 1,641 remain SEMANTICS_UNQUALIFIED. 752 FHSC-vs-DNSE G1 tail conflicts remain UNEXPLAINED_BUT_LOCALIZED. Terminal disposition: MARKET_WIDE_HISTORICAL_MATCHED_LIQUIDITY_AND_ADTV = COMPLETE / PARTIAL_BY_EVIDENCE / EVIDENCE_CEILING_REACHED.",
-      "reopen_gate": "New FHSC (or another independently qualified secondary matched-value) evidence that actually covers 2026-08-06 for the anchor cohort, or qualified generic matched-share semantics that remove the need for a secondary anchor entirely, plus resolution of the 877-ticker never-anchored population; execution or sizing would still require separately authorized downstream models. Not reopened merely by re-running the existing acquisition against already-exhausted retained/live evidence.",
-      "reference_checkpoint": "0a0fd2d3cf39ff8bf8d3783c3ad494c540f67752"
+      "reason": "Superseded in part 2026-09-29 (AUTHORITY_CLOSURE_LIQUIDITY_FOUNDATION_V1, OFFICIAL_EXCHANGE_LIQUIDITY_MARKET_WIDE_OPERATIONALIZATION_V1): official HOSE/HNX per-session series qualify current-session, historical, ADV (PARTIAL) and ADTV20 research use for HOSE 403/403 and a retained HNX 28 / UPCoM 26 cohort; HNX/UPCoM bulk retrieval is not authorized. EXECUTION_CAPACITY, POSITION_SIZING and PIT_BACKTEST remain BLOCKED (no participation-rate, days-to-liquidate or market-impact policy; no point-in-time liquidity knowledge). Earlier state (2026-09-08): docs/STATE.md Section 3 Invariant 2: QUALIFIED_LIQUIDITY_INPUTS = NO and POSITION_SIZING_IS_SAFE = NO. LIQUIDITY_EVIDENCE_CEILING_CLOSEOUT_AND_STATE_SYNC_V1 (2026-09-08) confirms the evidence ceiling is now terminal, not merely a corpus-depth gap: DNSE Trades Phase-A acquisition is complete (24,894/24,900 units, 6 remaining HTTP-500 failures) and the governed T20 composite corpus is fully present (20/20 sessions) for target 2026-09-04, but exact ADTV20 stays 0/1,683 because the FHSC secondary matched-value anchor cohort (806 of 1,683) has a confirmed, real-network-verified permanent gap on 2026-08-06 (FHSC_20260806_PROVIDER_EVIDENCE_UNAVAILABLE) and 877 governed tickers were never FHSC-anchored at all. 42 tickers reach COVERAGE_RESTRICTED (exact on 19/20 sessions); 1,641 remain SEMANTICS_UNQUALIFIED. 752 FHSC-vs-DNSE G1 tail conflicts remain UNEXPLAINED_BUT_LOCALIZED. Terminal disposition: MARKET_WIDE_HISTORICAL_MATCHED_LIQUIDITY_AND_ADTV = COMPLETE / PARTIAL_BY_EVIDENCE / EVIDENCE_CEILING_REACHED.",
+      "reopen_gate": "Sizing/execution: governed participation-rate, days-to-liquidate and market-impact policies plus point-in-time liquidity knowledge (prospective as-known-at retention of the official series). HNX/UPCoM coverage: HNX written permission or information-service agreement.",
+      "reference_checkpoint": "ed2575a16661c5ff0d6a236ec8bad931718c6e9a"
     },
     {
       "capability": "ACTIVE_UNIVERSE_AUTHORITY",

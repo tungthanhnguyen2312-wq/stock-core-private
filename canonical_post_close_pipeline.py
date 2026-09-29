@@ -991,6 +991,14 @@ def build_enrichment_components(
                 and liquidity_research.get("contract_version") == integrated_contract.LIQUIDITY_RESEARCH_CONTRACT
                 and liquidity_research.get("resolved_completed_session") == session):
             liquidity_research = None
+        # Official-exchange liquidity research (OFFICIAL_EXCHANGE_LIQUIDITY_MARKET_WIDE_OPERATIONALIZATION_V1)
+        # is operator-acquired and offline here: same-session, self-verifying, else simply absent. Its absence
+        # blocks only the liquidity dimension's qualified sub-block and never the Daily.
+        official_liquidity = _load(paths["official_liquidity"]) or _load(retained_paths["official_liquidity"])
+        if not (isinstance(official_liquidity, Mapping)
+                and official_liquidity.get("contract_version") == integrated_contract.OFFICIAL_LIQUIDITY_RESEARCH_CONTRACT
+                and official_liquidity.get("resolved_completed_session") == session):
+            official_liquidity = None
         # Corporate Intelligence axis (CORPORATE_INTELLIGENCE_CATALYST_EVENT_RISK_DECISION_
         # INTEGRATION_V1). Built independently, with its own local try/except -- exactly the
         # tactical_boundaries pattern above -- so a corporate-evidence failure never cascades
@@ -1050,6 +1058,7 @@ def build_enrichment_components(
             corporate_intelligence_artifact=corporate_intelligence_artifact,
             operational_fundamental_integration_artifact=operational_integration,
             liquidity_research_artifact=liquidity_research,
+            official_liquidity_artifact=official_liquidity,
             entity_applicability_artifact=entity_applicability,
         )
         if res.get("session") != session:

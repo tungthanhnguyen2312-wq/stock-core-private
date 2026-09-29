@@ -41,6 +41,7 @@ MILESTONE = "INTEGRATED_INVESTMENT_DECISION_PRODUCT_V1"
 # evidence on its own; see evaluate_valuation_context.
 _SIZE_CONTEXT_METHODS = ("market_cap",)
 LIQUIDITY_RESEARCH_CONTRACT = "market_wide_current_liquidity_research/v1"
+OFFICIAL_LIQUIDITY_RESEARCH_CONTRACT = "official_exchange_liquidity_research/v1"
 
 # The one shape evaluate_fundamental_direction()/build_ticker_integrated_decision() actually
 # read: financial_analysis_product_projection's compact, flat financial_analysis_product_
@@ -1412,6 +1413,7 @@ def build_ticker_integrated_decision(
     operational_fundamental_context_record: Mapping[str, Any] | None = None,
     liquidity_research_record: Mapping[str, Any] | None = None,
     entity_applicability_record: Mapping[str, Any] | None = None,
+    official_liquidity_record: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Assemble one complete, self-contained integrated investment decision record.
 
@@ -1705,6 +1707,7 @@ def build_ticker_integrated_decision(
         disposition_record=technical_coverage_disposition_record,
         sector_context=((market.get("ticker_contexts") or {}).get(ticker) if market_context_provided else None),
         liquidity_record=liquidity_research_record, entity_applicability_record=entity_applicability_record,
+        official_liquidity_record=official_liquidity_record,
         operational_context=operational_fundamental_context_record if bridge_consulted else None,
     )
     return record
@@ -1732,6 +1735,7 @@ def build_artifact(
     operational_fundamental_integration_artifact: Mapping[str, Any] | None = None,
     liquidity_research_artifact: Mapping[str, Any] | None = None,
     entity_applicability_artifact: Mapping[str, Any] | None = None,
+    official_liquidity_artifact: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build the market-wide integrated investment decision product artifact.
 
@@ -1771,6 +1775,22 @@ def build_artifact(
         operational_records = integration.get("records") or {}
         if set(operational_records) != set(integration.get("cohort_tickers") or []):
             raise IntegratedDecisionProductError("OPERATIONAL_FUNDAMENTAL_COHORT_MISMATCH")
+    official_liquidity_records: Mapping[str, Any] = {}
+    if official_liquidity_artifact is not None:
+        import liquidity_authority_contract as liquidity_contract
+        if (official_liquidity_artifact.get("contract_version") != OFFICIAL_LIQUIDITY_RESEARCH_CONTRACT
+                or liquidity_contract.content_identity(official_liquidity_artifact, kind="official_exchange_liquidity_research").get("artifact_identity")
+                != official_liquidity_artifact.get("artifact_identity")):
+            raise IntegratedDecisionProductError("OFFICIAL_LIQUIDITY_RESEARCH_CONTRACT_INVALID")
+        if official_liquidity_artifact.get("resolved_completed_session") != session:
+            raise IntegratedDecisionProductError(
+                "OFFICIAL_LIQUIDITY_RESEARCH_SESSION_MISMATCH:expected="
+                f"{session}:observed={official_liquidity_artifact.get('resolved_completed_session')}"
+            )
+        boundary = official_liquidity_artifact.get("authority_boundary") or {}
+        if any(boundary.get(key) != "BLOCKED" for key in ("EXECUTION_CAPACITY", "POSITION_SIZING", "PIT_BACKTEST")):
+            raise IntegratedDecisionProductError("OFFICIAL_LIQUIDITY_RESEARCH_AUTHORITY_BOUNDARY_VIOLATED")
+        official_liquidity_records = official_liquidity_artifact.get("records") or {}
     liquidity_records: Mapping[str, Any] = {}
     if liquidity_research_artifact is not None:
         if liquidity_research_artifact.get("contract_version") != LIQUIDITY_RESEARCH_CONTRACT:
@@ -1896,6 +1916,7 @@ def build_artifact(
             operational_fundamental_context_record=operational_records.get(ticker),
             liquidity_research_record=liquidity_records.get(ticker),
             entity_applicability_record=applicability_records.get(ticker),
+            official_liquidity_record=official_liquidity_records.get(ticker),
         )
         records[ticker] = dec
         currency_counts[evidence_currency_class(dec["evidence_currency"])] += 1
@@ -2046,6 +2067,8 @@ def build_artifact(
                if operational_fundamental_integration_artifact is not None else {}),
             **({"liquidity_research": liquidity_research_artifact.get("artifact_identity")}
                if liquidity_research_artifact is not None else {}),
+            **({"official_exchange_liquidity_research": official_liquidity_artifact.get("artifact_identity")}
+               if official_liquidity_artifact is not None else {}),
             **({"entity_applicability": entity_applicability_artifact.get("artifact_identity")}
                if entity_applicability_artifact is not None else {}),
         },

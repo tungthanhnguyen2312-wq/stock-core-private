@@ -1,5 +1,42 @@
 # Decisions & Architectural Decision Records
 
+## 2026-09-29 - Official-exchange liquidity, market-wide operationalization (`OFFICIAL_EXCHANGE_LIQUIDITY_MARKET_WIDE_OPERATIONALIZATION_V1`; PARTIAL, local checkpoint)
+
+**Decision.** Operationalize the merged provider-neutral liquidity contract over the governed
+universe on the strongest safe scope, and wire its research output into the Daily. Canonical
+`main` `170b2cfbcf77d7ec4f5ca823f5f78e4787795339` (CI #111 SUCCESS). The foundation milestone is closed
+COMPLETE on verified merge; the chain milestone (merged as PR #12) is closed COMPLETE so this is the
+only active item. Detail: `docs/liquidity_market_wide_operationalization.md`.
+
+**Rights before network.** Access, automated bulk acquisition, internal retention and redistribution
+were judged separately per exchange. HOSE: robots allow-all and no restrictive terms found, so
+bounded internal acquisition is authorized. HNX/UPCoM: no robots file, a publish-only-after-contact
+notice and fee-based data packages, so bulk acquisition is not authorized and was not performed.
+The gap is classified `PUBLIC_ACQUISITION_NOT_AUTHORIZED` with a named external dependency, not
+worked around. Raw responses stay private; public Git carries code, contracts, synthetic tests, hashes
+and counts.
+
+**Acquisition.** The plan was frozen before any request (364 HOSE page-1 requests, cap 400, one retry only
+for transient classes, foreground, resumable ledger). Result: 364 requests, 364 OK, 0 retries. The 93
+series retained by the foundation probe were reused.
+
+**Result.** Exact ADTV20/ADV20 for 457 of 1,683 (HOSE 403 of 403). Current-session liquidity
+eligible for 952. The Daily gains an additive `qualified_research` block in the LIQUIDITY dimension;
+a read-only assembly of the retained 2026-09-28 Daily shows identical postures, decision identities and
+evidence classes for 1,683 tickers. Missing liquidity blocks only liquidity-dependent uses.
+
+**Corrections.** The DNSE daily-OHLC volume registry row was wrong about scope and composition: `v`
+is G1 × 10 shares on all three exchanges (368/368, 22/22, 22/22) and is not an ADV/ADTV input.
+`ROADMAP_STATE.json` had no record of the foundation milestone and its `LIQUIDITY_AND_POSITION_SIZING_AUTHORITY`
+reason still described the superseded FHSC ceiling; both are corrected.
+
+**Not decided.** No sizing, execution or PIT authority; no HNX/UPCoM crawl; no legacy `gtgd20`
+consumer migrated (each is classified and drift-guarded); no Vnstock, KBS or VCI call. Next milestone is
+recommended, not started.
+
+**Observation, out of scope.** The operational fundamental binding of the Daily assembly depends on the wall
+clock (82 versus 69 usable when a run crossed 00:00 UTC). It is unrelated to liquidity and unchanged here.
+
 ## 2026-09-28 - Current Research chain integrated after M1 (`CURRENT_RESEARCH_CHAIN_PROMOTION_REVIEW_INTEGRATION_V1`; awaiting independent exact-head review, not promoted)
 
 **Decision.** The validated local Current Research analytical chain (analytical head
