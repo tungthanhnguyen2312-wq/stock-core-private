@@ -1,5 +1,28 @@
 # Decisions & Architectural Decision Records
 
+## 2026-09-29 - Prospective RAW/PIT price authority (`PROSPECTIVE_RAW_PIT_AUTHORITY_V1`; PROSPECTIVE_PIT_OPERATIONAL / HISTORICAL_PIT_PARTIAL, local checkpoint)
+
+**Decision.** Authority is use-specific across ten dimensions and never one RAW/PIT boolean. Prospective as-known price
+evidence is operational; prospective raw-as-traded is qualified only where an independent official series agrees;
+historical raw is partial and HOSE-scoped. Factor chain, PIT-adjusted history, PIT backtest and execution replay stay blocked.
+
+**Why.**
+- Possession, source basis and revision are separate claims. A hashed receipt proves possession at a known time only.
+- The retained Daily snapshots give 21 sessions of known-time DNSE bars. Compared with the same sessions re-fetched later,
+  282 revised pairs (44 tickers) match the unadjusted official HOSE series at T0 (so the later DNSE series is re-based),
+  while 603 pairs (3.4% of 17,646) show the T0 bar itself was not final. A same-day DNSE bar is therefore never called
+  raw without official agreement.
+- HOSE `tradingresult` is empirically unadjusted across 46 tested tickers/events (HPG 2026-05-25, VCB 2026-07-23); its basis
+  is undocumented, so the verdict is route/field/window-scoped and research grade only.
+- The old "missing ex-date" blocker is superseded (4,438 explicit official ex-dates), but 0 events carry ratio/cash terms or
+  publication time, so the factor chain stays at 0. Observed re-basing ratios are never used as factors.
+- Historical Trades-derived OHLC fails closed: no complete tick corpus exists locally and pages are capped.
+
+**Consequences.** New `prospective_market_snapshot_contract`, `prospective_pit_evidence_analysis`, `raw_pit_authority_matrix`,
+runners and a component-local Daily receipt manifest. One bounded HOSE probe (14 requests, 0 retries). `ACTIVE_UNIVERSE`
+stays UNKNOWN. A suspected Daily temporal-determinism defect was `NOT_REPRODUCED / NO_CHANGE` under controlled clocks;
+no clock code was added. No Owner Daily, provider runtime, production DB write or publication; not merged.
+
 ## 2026-09-29 - Official-exchange liquidity, market-wide operationalization (`OFFICIAL_EXCHANGE_LIQUIDITY_MARKET_WIDE_OPERATIONALIZATION_V1`; PARTIAL, local checkpoint)
 
 **Decision.** Operationalize the merged provider-neutral liquidity contract over the governed

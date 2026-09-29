@@ -828,6 +828,19 @@ def build_enrichment_components(
         opp = _load(paths["opportunity_prioritization"])
         if not desc or not p3f9b:
             raise CanonicalPostCloseError("REQUIRED_INPUT_MISSING")
+        # PROSPECTIVE_RAW_PIT_AUTHORITY_V1: retain the session's hashed, known-time price-receipt manifest
+        # (private/local evidence root only). Component-local by design: any failure leaves the manifest
+        # absent, blocks only PIT/as-known use, and never fails the Daily or the Integrated Decision.
+        try:
+            import prospective_market_snapshot_contract as pit_snapshot_contract
+            pit_manifest = pit_snapshot_contract.build_session_manifest(p3f9b, session=session)
+            _write_json(paths["prospective_market_snapshot_manifest"], pit_manifest)
+            results["prospective_market_snapshot"] = {
+                "status": "RETAINED", "artifact_identity": pit_manifest["artifact_identity"],
+                "snapshots": pit_manifest["summary"]["snapshots"],
+                "by_capture_timing": pit_manifest["summary"]["by_capture_timing"], "skipped": pit_manifest["skipped"]}
+        except Exception as exc:  # noqa: BLE001 -- PIT retention is optional for Current Research
+            results["prospective_market_snapshot"] = {"status": "UNAVAILABLE", "reason": f"{type(exc).__name__}:{exc}"}
         # The Level-2 materializer may have preserved an invalid historical recovery artifact at
         # its canonical path while writing its validated same-session replacement into the one
         # explicit ``-revalidated`` namespace.  Never bypass that resolver by loading the

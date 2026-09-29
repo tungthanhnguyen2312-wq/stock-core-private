@@ -307,6 +307,7 @@ def session_artifact_paths(root: Path, session: str) -> dict[str, Path]:
         "current_research_entity_applicability": ops / f"integrated-investment-decision-product-v1-{nodash}" / "current_research_entity_applicability_artifact.json",
         "financial_analysis_product": ops / f"financial-analysis-product-v2-{nodash}" / "financial_analysis_product_artifact.json",
         "current_valuation_evaluated": ops / f"financial-analysis-product-v2-{nodash}" / "current_research_valuation_context_artifact.json",
+        "prospective_market_snapshot_manifest": ops / f"prospective-market-snapshot-v1-{nodash}" / "prospective_market_snapshot_manifest.json",
     }
 
 

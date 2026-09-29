@@ -1,0 +1,436 @@
+{
+  "artifact_identity": "prospective_raw_pit_authority:f6891057ee0988f2e22f1798b6bfd5195d939d805d673da3220cde50a99fbf65",
+  "authority_boundary": {
+    "active_universe_promoted": false,
+    "execution_authority": false,
+    "per_ticker_official_prices_published": false,
+    "pit_backtest_authority": false,
+    "production_db_written": false,
+    "provider_calls_by_build": 0,
+    "raw_exchange_bodies_published": false
+  },
+  "authority_matrix": {
+    "after": {
+      "CORPORATE_ACTION_EVENT_AUTHORITY": {
+        "blockers": [
+          {
+            "engineering_can_create": true,
+            "external_permission_or_data_required": false,
+            "missing_evidence": "ratio / cash amount / issue terms per event",
+            "note": "official announcement documents must be acquired and parsed",
+            "only_future_calendar_time_can_create": false
+          },
+          {
+            "engineering_can_create": false,
+            "external_permission_or_data_required": false,
+            "missing_evidence": "publication (knowledge) time of each announcement",
+            "note": "only prospective retention at publication time creates it",
+            "only_future_calendar_time_can_create": true
+          },
+          {
+            "engineering_can_create": true,
+            "external_permission_or_data_required": false,
+            "missing_evidence": "HOSE-listed event calendar",
+            "note": "retained index covers HNX/UPCoM; HOSE tickers have 69 events",
+            "only_future_calendar_time_can_create": false
+          }
+        ],
+        "scope": "4438 official events with an explicit ex-date (HNX rights event index, retained 2026-09-05); 0 carry ratio/cash terms; 0 carry publication time",
+        "state": "PARTIAL_EX_DATE_QUALIFIED_TERMS_AND_PUBLICATION_TIME_MISSING"
+      },
+      "CORPORATE_ACTION_FACTOR_CHAIN": {
+        "blockers": [
+          {
+            "engineering_can_create": true,
+            "external_permission_or_data_required": false,
+            "missing_evidence": "official terms + explicit ex-date + executed-lifecycle evidence + publication cutoff for one event",
+            "note": "observed re-basing ratios are consistency evidence only and are never used as the factor",
+            "only_future_calendar_time_can_create": true
+          }
+        ],
+        "scope": "0 qualified events",
+        "state": "BLOCKED"
+      },
+      "CURRENT_SESSION_PRICE_RESEARCH": {
+        "blockers": [],
+        "scope": "exact-session bars linked to a hashed known-time receipt; official HOSE agreement on the latest session",
+        "state": "QUALIFIED_WITH_PROSPECTIVE_LINEAGE"
+      },
+      "EXECUTION_REPLAY_ELIGIBILITY": {
+        "blockers": [
+          {
+            "engineering_can_create": true,
+            "external_permission_or_data_required": false,
+            "missing_evidence": "participation-rate, days-to-liquidate and market-impact policy",
+            "note": "",
+            "only_future_calendar_time_can_create": false
+          },
+          {
+            "engineering_can_create": false,
+            "external_permission_or_data_required": true,
+            "missing_evidence": "complete historical trade ticks",
+            "note": "local corpus holds only page-capped samples; completeness unprovable",
+            "only_future_calendar_time_can_create": false
+          }
+        ],
+        "scope": "execution capacity/sizing policy and tick-level raw trades not established",
+        "state": "BLOCKED"
+      },
+      "HISTORICAL_RAW_AS_TRADED_PRICE": {
+        "blockers": [
+          {
+            "engineering_can_create": false,
+            "external_permission_or_data_required": true,
+            "missing_evidence": "documented raw basis statement from HOSE",
+            "note": "",
+            "only_future_calendar_time_can_create": false
+          },
+          {
+            "engineering_can_create": false,
+            "external_permission_or_data_required": true,
+            "missing_evidence": "HNX/UPCoM and pre-retention DNSE history",
+            "note": "information loss for pre-2026-08-20 non-HOSE sessions, not engineering debt",
+            "only_future_calendar_time_can_create": false
+          }
+        ],
+        "scope": "HOSE tradingresult series retained for 403 tickers; empirically unadjusted across 46 tested events; research grade only (basis undocumented by the source)",
+        "state": "PARTIAL_HOSE_EMPIRICAL_SCOPED"
+      },
+      "PIT_BACKTEST_ELIGIBILITY": {
+        "blockers": [
+          {
+            "engineering_can_create": false,
+            "external_permission_or_data_required": true,
+            "missing_evidence": "PIT-qualified universe membership (ACTIVE_UNIVERSE)",
+            "note": "official listing-status route, not another cohort widening",
+            "only_future_calendar_time_can_create": false
+          },
+          {
+            "engineering_can_create": false,
+            "external_permission_or_data_required": false,
+            "missing_evidence": "sufficient prospective history depth",
+            "note": "",
+            "only_future_calendar_time_can_create": true
+          },
+          {
+            "engineering_can_create": true,
+            "external_permission_or_data_required": false,
+            "missing_evidence": "qualified factor chain",
+            "note": "",
+            "only_future_calendar_time_can_create": true
+          }
+        ],
+        "scope": "requires factor chain, PIT universe (ACTIVE_UNIVERSE UNKNOWN), PIT features and history depth",
+        "state": "BLOCKED"
+      },
+      "POINT_IN_TIME_ADJUSTED_HISTORY": {
+        "blockers": [
+          {
+            "engineering_can_create": true,
+            "external_permission_or_data_required": false,
+            "missing_evidence": "qualified factor chain versioned by knowledge time",
+            "note": "",
+            "only_future_calendar_time_can_create": true
+          }
+        ],
+        "scope": "contract and readiness only (pit_price_reconstruction_contract); needs a qualified factor chain",
+        "state": "BLOCKED"
+      },
+      "PROSPECTIVE_AS_KNOWN_PRICE_EVIDENCE": {
+        "blockers": [
+          {
+            "engineering_can_create": true,
+            "external_permission_or_data_required": false,
+            "missing_evidence": "automated Daily wiring of the receipt manifest",
+            "note": "component-local hook added; Daily never fails on it",
+            "only_future_calendar_time_can_create": false
+          }
+        ],
+        "scope": "21 retained sessions, 18514 post-close same-session bars; possession at known time only, not a never-revised claim",
+        "state": "OPERATIONAL"
+      },
+      "PROSPECTIVE_RAW_AS_TRADED_PRICE": {
+        "blockers": [
+          {
+            "engineering_can_create": false,
+            "external_permission_or_data_required": true,
+            "missing_evidence": "independent official series for HNX/UPCoM",
+            "note": "HNX written permission or information-service agreement",
+            "only_future_calendar_time_can_create": false
+          }
+        ],
+        "scope": "6026 DNSE post-close bars whose values equal the official HOSE series (empirically unadjusted); HOSE-listed tickers only; HNX/UPCoM stay as-known-only (bulk acquisition not authorized)",
+        "state": "QUALIFIED_SCOPED_CROSS_SOURCE"
+      },
+      "RETROSPECTIVE_ADJUSTED_RESEARCH_HISTORY": {
+        "blockers": [],
+        "scope": "DNSE series re-fetched later is re-based after the fact: 282 bar pairs where the unadjusted official series equals the value known at T0; 603 same-day bars were later found non-final; never labelled raw or point-in-time",
+        "state": "RESEARCH_ONLY_ADJUSTED_RETROSPECTIVE"
+      }
+    },
+    "before": {
+      "CORPORATE_ACTION_EVENT_AUTHORITY": "EX_DATE_UNQUALIFIED_OUTCOME_D",
+      "CORPORATE_ACTION_FACTOR_CHAIN": "BLOCKED",
+      "CURRENT_SESSION_PRICE_RESEARCH": "DESCRIPTIVE_QUALIFIED_ONLY",
+      "EXECUTION_REPLAY_ELIGIBILITY": "BLOCKED",
+      "HISTORICAL_RAW_AS_TRADED_PRICE": "NOT_PROMOTED",
+      "PIT_BACKTEST_ELIGIBILITY": "BLOCKED",
+      "POINT_IN_TIME_ADJUSTED_HISTORY": "BLOCKED",
+      "PROSPECTIVE_AS_KNOWN_PRICE_EVIDENCE": "EXPERIMENT_SHADOW_ONLY",
+      "PROSPECTIVE_RAW_AS_TRADED_PRICE": "NOT_PROMOTED",
+      "RETROSPECTIVE_ADJUSTED_RESEARCH_HISTORY": "RESEARCH_ONLY_ADJUSTED_RETROSPECTIVE"
+    },
+    "changed": [
+      "CURRENT_SESSION_PRICE_RESEARCH",
+      "PROSPECTIVE_AS_KNOWN_PRICE_EVIDENCE",
+      "PROSPECTIVE_RAW_AS_TRADED_PRICE",
+      "HISTORICAL_RAW_AS_TRADED_PRICE",
+      "CORPORATE_ACTION_EVENT_AUTHORITY"
+    ],
+    "contract_version": "raw_pit_authority_matrix/v1",
+    "dimensions": [
+      "CURRENT_SESSION_PRICE_RESEARCH",
+      "PROSPECTIVE_AS_KNOWN_PRICE_EVIDENCE",
+      "PROSPECTIVE_RAW_AS_TRADED_PRICE",
+      "HISTORICAL_RAW_AS_TRADED_PRICE",
+      "CORPORATE_ACTION_EVENT_AUTHORITY",
+      "CORPORATE_ACTION_FACTOR_CHAIN",
+      "POINT_IN_TIME_ADJUSTED_HISTORY",
+      "RETROSPECTIVE_ADJUSTED_RESEARCH_HISTORY",
+      "PIT_BACKTEST_ELIGIBILITY",
+      "EXECUTION_REPLAY_ELIGIBILITY"
+    ]
+  },
+  "canonical_base": "ac9b8cf5473191fb054782e441e1f5145897c0c3",
+  "corporate_action_events": {
+    "by_event_type": {
+      "AGM": {
+        "events": 2575,
+        "execution_or_payment_date": 1428,
+        "explicit_ex_date": 2574,
+        "price_share_affecting": 0,
+        "published_at": 0,
+        "ratio_or_cash_terms": 0,
+        "record_date": 2574
+      },
+      "BONUS": {
+        "events": 60,
+        "execution_or_payment_date": 0,
+        "explicit_ex_date": 60,
+        "price_share_affecting": 60,
+        "published_at": 0,
+        "ratio_or_cash_terms": 0,
+        "record_date": 60
+      },
+      "CASH_DIVIDEND": {
+        "events": 1308,
+        "execution_or_payment_date": 1301,
+        "explicit_ex_date": 1306,
+        "price_share_affecting": 1308,
+        "published_at": 0,
+        "ratio_or_cash_terms": 0,
+        "record_date": 1306
+      },
+      "OTHER": {
+        "events": 320,
+        "execution_or_payment_date": 57,
+        "explicit_ex_date": 318,
+        "price_share_affecting": 0,
+        "published_at": 0,
+        "ratio_or_cash_terms": 0,
+        "record_date": 320
+      },
+      "RIGHTS": {
+        "events": 41,
+        "execution_or_payment_date": 7,
+        "explicit_ex_date": 40,
+        "price_share_affecting": 41,
+        "published_at": 0,
+        "ratio_or_cash_terms": 0,
+        "record_date": 41
+      },
+      "STOCK_DIVIDEND": {
+        "events": 140,
+        "execution_or_payment_date": 1,
+        "explicit_ex_date": 140,
+        "price_share_affecting": 140,
+        "published_at": 0,
+        "ratio_or_cash_terms": 0,
+        "record_date": 140
+      }
+    },
+    "events": 4444,
+    "ex_date_inferred_from_record_date": 0,
+    "explicit_ex_date": 4438,
+    "planned_issuance_treated_as_executed": 0,
+    "publication_time_retained": 0,
+    "ratio_or_cash_terms": 0,
+    "sources": {
+      "hnx_official_rights_event_index/v1": 4442,
+      "hose_public_event_hpg/v1": 2
+    }
+  },
+  "event_window_tests": [
+    {
+      "event_type": "STOCK_BONUS_ISSUE",
+      "ex_date": "2026-05-25",
+      "ex_date_source": "DNSE bounded authority (provider evidence, not official)",
+      "observed_rebasing_ratio": 0.90892,
+      "official_sessions_retained": 100,
+      "post_ex_close_equal": true,
+      "ticker": "HPG",
+      "verdict": "HOSE_UNADJUSTED_DNSE_REBASED_ACROSS_EVENT"
+    },
+    {
+      "event_type": "CASH_DIVIDEND",
+      "ex_date": "2026-07-23",
+      "ex_date_source": "DNSE bounded authority (provider evidence, not official)",
+      "observed_rebasing_ratio": 0.99174,
+      "official_sessions_retained": 60,
+      "post_ex_close_equal": true,
+      "ticker": "VCB",
+      "verdict": "HOSE_UNADJUSTED_DNSE_REBASED_ACROSS_EVENT"
+    }
+  ],
+  "milestone": "PROSPECTIVE_RAW_PIT_AUTHORITY_V1",
+  "per_ticker_official_prices_published": false,
+  "probe": {
+    "final_outcomes": {
+      "OK": 14
+    },
+    "hard_budget": 20,
+    "ledger_sha256": "0a592f86c7fcca1a0af479faf16849268a777da1753303ccc13106e83b7ad555",
+    "plan_sha256": "19930c2eaf07a1f8ee1ffe68d792f9de355269dabaa132dbfad3d43c3ec93ac2",
+    "requests": 14,
+    "retries_used": 0
+  },
+  "probe_revision_t0_vs_t1": {
+    "by_classification": {
+      "NEVER_REVISED_OBSERVED_SAMPLE": 200
+    },
+    "scope": "HOSE tradingresult O/H/L/C, retained T0 (2026-09-28) vs T1 (2026-09-29 probe); an interval of hours, not a long-run claim",
+    "tested_ticker_sessions": 200,
+    "tested_tickers": 10
+  },
+  "prospective_bars": {
+    "as_known_only": 12488,
+    "post_close_same_session": 18514,
+    "raw_as_traded_qualified_cross_source": 6026
+  },
+  "publication_disposition": "CODE_CONTRACTS_SYNTHETIC_TESTS_HASHES_AND_DERIVED_COUNTS_ONLY",
+  "raw_exchange_response_bodies_published": false,
+  "revision_history": {
+    "inconsistent_pairs_by_day": {
+      "2026-08-27": 380,
+      "2026-08-28": 378,
+      "2026-09-03": 16,
+      "2026-09-11": 24,
+      "2026-09-14": 24,
+      "2026-09-15": 145
+    },
+    "official_verified_rebasing_pairs": 282,
+    "official_verified_rebasing_tickers": 44,
+    "pairs_by_kind": {
+      "CONSISTENT_RATIO": 1127,
+      "IDENTICAL": 15552,
+      "INCONSISTENT": 967
+    },
+    "t0_bar_not_final_pairs": 603,
+    "three_way_by_pair_kind": {
+      "CONSISTENT_RATIO|OFFICIAL_EQUALS_NEITHER": 22,
+      "CONSISTENT_RATIO|OFFICIAL_EQUALS_T0_NOT_T1": 279,
+      "CONSISTENT_RATIO|OFFICIAL_EQUALS_T1_NOT_T0": 148,
+      "INCONSISTENT|OFFICIAL_EQUALS_NEITHER": 45,
+      "INCONSISTENT|OFFICIAL_EQUALS_T0_NOT_T1": 3,
+      "INCONSISTENT|OFFICIAL_EQUALS_T1_NOT_T0": 455
+    },
+    "three_way_on_revised_pairs": {
+      "OFFICIAL_EQUALS_NEITHER": 67,
+      "OFFICIAL_EQUALS_T0_NOT_T1": 282,
+      "OFFICIAL_EQUALS_T1_NOT_T0": 603
+    },
+    "unresolved_pairs": 67
+  },
+  "schema_version": "prospective_raw_pit_publication_manifest/v1",
+  "snapshot_store": {
+    "dnse": {
+      "by_allowed_use": {
+        "CURRENT_SESSION_PRICE_RESEARCH": 18514,
+        "PROSPECTIVE_AS_KNOWN_PRICE_EVIDENCE": 18514,
+        "PROSPECTIVE_RAW_AS_TRADED_PRICE": 6026,
+        "REVISION_DETECTION_BASELINE": 18514
+      },
+      "by_capture_timing": {
+        "PROSPECTIVE_SAME_SESSION_CAPTURE": 18514
+      },
+      "by_empirical_basis_test": {
+        "EMPIRICAL_NOT_TESTED": 18514
+      },
+      "by_qualification_state": {
+        "PROSPECTIVE_QUALIFIED": 18514
+      },
+      "by_source_basis_claim": {
+        "SOURCE_BASIS_UNDOCUMENTED": 18514
+      },
+      "file_sha256": "3497db3dc7c003d5cec683c834775459b79c80fbdbfc23c6579fc20349fba968",
+      "identity_chain_sha256": "ea68cf980232fac3697b7efd9dfc577083fe3026a34a5c7356a7d0b1a1441583",
+      "snapshots": 18514,
+      "withheld_reason_counts": {
+        "RAW_AS_TRADED_REQUIRES_INDEPENDENT_CROSS_SOURCE_AGREEMENT": 12488
+      }
+    },
+    "hose": {
+      "by_allowed_use": {
+        "CURRENT_SESSION_PRICE_RESEARCH": 368,
+        "PROSPECTIVE_AS_KNOWN_PRICE_EVIDENCE": 368,
+        "REVISION_DETECTION_BASELINE": 8047
+      },
+      "by_capture_timing": {
+        "CAPTURE_TIMING_UNKNOWN": 10,
+        "PROSPECTIVE_SAME_SESSION_CAPTURE": 403,
+        "RETROSPECTIVE_ACQUISITION": 8327
+      },
+      "by_empirical_basis_test": {
+        "EMPIRICAL_NOT_TESTED": 7820,
+        "EMPIRICAL_UNADJUSTED_ACROSS_EVENT": 920
+      },
+      "by_qualification_state": {
+        "NOT_QUALIFIED": 693,
+        "PROSPECTIVE_QUALIFIED": 368,
+        "RETAINED_KNOWN_TIME_BASELINE_ONLY": 7679
+      },
+      "by_source_basis_claim": {
+        "SOURCE_BASIS_UNDOCUMENTED": 8740
+      },
+      "file_sha256": "935a55429b10ee4d617315b20049082b1e402230e7f138b96bae5b8e0cc6a5d9",
+      "identity_chain_sha256": "74e8f8bfe47dde8e8b5cf77795bce4158fdf3cd40cfb1cd3f6d86a1be7593501",
+      "snapshots": 8740,
+      "withheld_reason_counts": {
+        "NOT_PROSPECTIVE_SAME_SESSION_CAPTURE": 7679,
+        "RAW_AS_TRADED_REQUIRES_INDEPENDENT_CROSS_SOURCE_AGREEMENT": 368,
+        "RAW_AS_TRADED_REQUIRES_PROSPECTIVE_CAPTURE": 7679,
+        "SNAPSHOT_NOT_PARSED_OR_NO_TRADED_PRICE": 693
+      }
+    }
+  },
+  "terminal_disposition": "PROSPECTIVE_PIT_OPERATIONAL / HISTORICAL_PIT_PARTIAL",
+  "trades_derived_ohlc": {
+    "fail_closed_at_page_cap": [
+      "PAGE_AT_CAP_TRUNCATION_NOT_EXCLUDED"
+    ],
+    "fail_closed_without_completeness_proof": [
+      "SESSION_COMPLETENESS_NOT_PROVEN"
+    ],
+    "historical_tick_corpus_locally_available": false,
+    "local_trade_page_sample": "one page-capped canonical smoke parquet (SSI 2026-06-17: 100 rows at the DNSE page cap)",
+    "same_session_trades_latest_vs_official": {
+      "compared": 368,
+      "high_equal": 368,
+      "last_match_equals_close": 368,
+      "low_equal": 368,
+      "official_no_matched_trading": 35,
+      "open_equal": 368
+    },
+    "verdict": "HISTORICAL_TRADES_DERIVED_OHLC_NOT_AVAILABLE_LOCALLY_FAIL_CLOSED"
+  }
+}
