@@ -44,10 +44,12 @@ class RegistryShapeTests(unittest.TestCase):
         with self.assertRaises(fitness.FeatureInputFitnessError):
             fitness.is_standing_blocked("NOT_A_REAL_FAMILY")
 
-    def test_execution_liquidity_is_standing_blocked(self) -> None:
+    def test_execution_liquidity_is_use_specific_and_live_uses_stay_blocked(self) -> None:
         blocked, reason = fitness.is_standing_blocked(fitness.EXECUTION_LIQUIDITY)
-        self.assertTrue(blocked)
-        self.assertIn("LIQUIDITY_AND_POSITION_SIZING_AUTHORITY", reason)
+        self.assertFalse(blocked)
+        self.assertIsNone(reason)
+        self.assertTrue(fitness.is_standing_blocked(fitness.LIVE_POSITION_SIZING)[0])
+        self.assertTrue(fitness.is_standing_blocked(fitness.PIT_BACKTEST)[0])
 
     def test_current_session_price_is_not_standing_blocked(self) -> None:
         blocked, reason = fitness.is_standing_blocked(fitness.CURRENT_SESSION_PRICE)
@@ -59,7 +61,8 @@ class RegistryShapeTests(unittest.TestCase):
         self.assertEqual(snap["contract_version"], fitness.CONTRACT_VERSION)
         self.assertEqual(set(snap["registry"]), set(fitness.USE_CASE_FAMILIES))
         self.assertEqual(snap["authority_effect"], "NONE")
-        self.assertIn(fitness.EXECUTION_LIQUIDITY, snap["standing_blocked_families"])
+        self.assertNotIn(fitness.EXECUTION_LIQUIDITY, snap["standing_blocked_families"])
+        self.assertIn(fitness.LIVE_POSITION_SIZING, snap["standing_blocked_families"])
 
     def test_financial_scaleout_families_are_explicit_and_keep_their_existing_authorities(self) -> None:
         expected = {

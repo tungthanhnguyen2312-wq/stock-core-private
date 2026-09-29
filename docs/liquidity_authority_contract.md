@@ -62,11 +62,15 @@ exactly.
 | HISTORICAL_LIQUIDITY_RESEARCH | ELIGIBLE with an official series and an exact 20-session window. PARTIAL if the window is incomplete. BLOCKED if the series is not acquired. |
 | ADTV_RESEARCH | ELIGIBLE when `ADTV20_MATCHED_ALL_VND` is an `EXACT_WINDOW`. PARTIAL if coverage-restricted. BLOCKED otherwise. |
 | ADV_VOLUME_RESEARCH | At most PARTIAL: official shares are as-traded, and no ex-date authority can rule out a share-count event in the window. |
-| EXECUTION_CAPACITY, POSITION_SIZING, PIT_BACKTEST | Always BLOCKED (`assert_fail_closed`). |
+| Historical `EXECUTION_CAPACITY`, `POSITION_SIZING`, `PIT_BACKTEST` cells | Retained as the foundation milestone's fail-closed historical matrix; never rewritten as if that earlier contract already had a governed policy. |
+| `CURRENT_SESSION_EXECUTION_CAPACITY_RESEARCH` | Scoped `ELIGIBLE/PARTIAL` only through `execution_capacity_research_envelope/v1`, exact ADTV20 and an explicit bound policy. |
+| `CURRENT_SESSION_RISK_SIZE_RESEARCH` | Private scoped `ELIGIBLE/PARTIAL` through `research_size_envelope/v1`. |
+| Live sizing/allocation, historical replay, PIT backtest, execution replay | Always `BLOCKED`. |
 
 Knowledge time is `RETROSPECTIVE_RETRIEVAL_OF_OFFICIAL_POST_SESSION_PUBLICATION`. The official
 series supports "as of today" research. It does not show what was known at a past decision time.
-PIT, RAW_AS_TRADED, execution and sizing are unchanged.
+Historical PIT, live execution and live sizing are unchanged. Current-session research envelopes are
+defined separately in [`liquidity_execution_capacity_and_sizing.md`](liquidity_execution_capacity_and_sizing.md).
 `sizing_readiness_envelope()` lists what sizing still needs: a participation-rate policy, a max
 days-to-liquidate policy, a market-impact model, the order size, an intraday/price-limit profile
 and point-in-time liquidity knowledge. It emits no size.

@@ -1,9 +1,40 @@
 # Stock Lookup — Operational State
 
+**Liquidity execution-capacity and private research sizing (2026-09-29):**
+`LIQUIDITY_EXECUTION_CAPACITY_AND_SIZING_V1 = ACTIVE / IMPLEMENTED / RETAINED_ACCEPTANCE_PASS /
+POLICY_UNBOUND_PARTIAL`. It is the only active execution item. Canonical `main` is
+`160f26ef7dc33b0052467977def874ba8d95f01e` (PR #15 merged; Producer CI #115 SUCCESS).
+`PROSPECTIVE_RAW_PIT_AUTHORITY_V1` is closed `COMPLETE` at that merge, with terminal disposition
+`PROSPECTIVE_PIT_OPERATIONAL / HISTORICAL_PIT_PARTIAL`.
+
+- New public contracts are `execution_capacity_policy/v1` and
+  `execution_capacity_research_envelope/v1`. The Level-1 notional formula is exact Decimal
+  `ADTV20_MATCHED_ALL_VND × max_participation_of_adtv20 × max_days_to_liquidate`; shares are
+  emitted only when current price and a qualified exchange lot rule are present.
+- No owner-authorized participation rate or liquidation horizon exists. Canonical policy
+  `EXECUTION_CAPACITY_POLICY_UNBOUND_V1` therefore remains `UNBOUND`; real retained 2026-09-28
+  output is 0 AVAILABLE / 0 PARTIAL / 1,683 BLOCKED, including 457 `POLICY_UNBOUND`, while
+  synthetic bound-policy tests prove the engine and lot rounding. No arbitrary default is active.
+- Private `research_size_envelope/v1` reuses the existing portfolio-aware risk and concentration
+  engine and takes the minimum of qualified risk, liquidity and concentration caps. It remains
+  research-only: `execution_qualified_quantity_status = NOT_QUALIFIED`.
+- Authority is now use-specific. `CURRENT_SESSION_EXECUTION_CAPACITY_RESEARCH` and private
+  `CURRENT_SESSION_RISK_SIZE_RESEARCH` may be scoped `ELIGIBLE/PARTIAL`. `LIVE_POSITION_SIZING`,
+  `PORTFOLIO_CAPITAL_ALLOCATION`, `HISTORICAL_PIT_SIZE_REPLAY`, `PIT_BACKTEST` and
+  `EXECUTION_REPLAY` remain `BLOCKED`. `ACTIVE_UNIVERSE = UNKNOWN` does not block a currently
+  identified qualified ticker, but still blocks survivorship-safe historical/market-wide uses.
+- Retained acceptance reconstructed current research inputs from 1,683 existing 2026-09-28
+  Integrated Decision records (none retained that nested input) with no provider call: current
+  liquidity eligible 952, exact ADTV20 457, HNX/UPCoM rights-gated 1,047, exchange unresolved
+  179. All 1,683 postures, decision identities, evidence classes and non-liquidity dimensions are
+  unchanged; only the non-voting liquidity envelope is additive.
+- Detail: [`liquidity_execution_capacity_and_sizing.md`](liquidity_execution_capacity_and_sizing.md).
+  No successor milestone is started.
+
 **Prospective RAW/PIT price authority (2026-09-29):**
-`PROSPECTIVE_RAW_PIT_AUTHORITY_V1 = ACTIVE / LOCAL_CHECKPOINT / PROSPECTIVE_PIT_OPERATIONAL /
-HISTORICAL_PIT_PARTIAL`. It is the only active execution item and is not merged. Canonical `main` is
-`ac9b8cf5473191fb054782e441e1f5145897c0c3` (Producer CI #113 SUCCESS).
+`PROSPECTIVE_RAW_PIT_AUTHORITY_V1 = COMPLETE / MERGED_PR_15 / PROSPECTIVE_PIT_OPERATIONAL /
+HISTORICAL_PIT_PARTIAL`. Canonical merge is `160f26ef7dc33b0052467977def874ba8d95f01e`
+(reviewed checkpoint `ff81b44418e181033e8798eb5b0d72fc35698e61`; Producer CI #115 SUCCESS).
 `OFFICIAL_EXCHANGE_LIQUIDITY_MARKET_WIDE_OPERATIONALIZATION_V1` is closed `COMPLETE` (PR #14 merged;
 terminal scope `MARKET_WIDE_LIQUIDITY_OPERATIONALIZATION_PARTIAL`: current-session liquidity 952, exact
 ADTV20/ADV20 457, HOSE 403/403, HNX/UPCoM bulk rights-gated, execution/sizing/PIT blocked). A suspected Daily
@@ -22,8 +53,8 @@ temporal-determinism defect was investigated on retained 2026-09-28 inputs under
   acquisition is not authorized.
 - **Daily.** A component-local `prospective_market_snapshot_manifest` is retained privately; its absence blocks only
   PIT/as-known use.
-- **No successor started.** Candidates: `FINANCIAL_EVIDENCE_ZERO_ACTIVE_VNSTOCK_V1`,
-  `LIQUIDITY_EXECUTION_CAPACITY_AND_SIZING_V1`.
+- **Successor.** `LIQUIDITY_EXECUTION_CAPACITY_AND_SIZING_V1` is now active under the owner directive;
+  `FINANCIAL_EVIDENCE_ZERO_ACTIVE_VNSTOCK_V1` remains only a candidate.
 
 **Official-exchange liquidity, market-wide operationalization (2026-09-29; COMPLETE, PR #14 merged to `ac9b8cf`):**
 `OFFICIAL_EXCHANGE_LIQUIDITY_MARKET_WIDE_OPERATIONALIZATION_V1 = COMPLETE /
@@ -45,10 +76,11 @@ Detail: [`liquidity_market_wide_operationalization.md`](liquidity_market_wide_op
   `current_research_decision_input/v1`. Over the retained 2026-09-28 session, postures, decision
   identities, evidence classes and all other dimensions are identical for 1,683 tickers. Missing
   liquidity blocks only liquidity-dependent uses.
-- **Boundaries unchanged.** EXECUTION_CAPACITY, POSITION_SIZING and PIT_BACKTEST stay BLOCKED;
-  RAW_AS_TRADED is not promoted; no Vnstock/KBS/VCI call, production DB write, Dashboard or AI
-  publication.
-- **Recommended next at that time:** `PROSPECTIVE_RAW_PIT_AUTHORITY_V1` (now active, above).
+- **Historical boundary at this milestone.** Broad/live EXECUTION_CAPACITY, POSITION_SIZING and
+  PIT_BACKTEST were blocked here. The active sizing milestone above now opens only the named
+  current-session research envelopes. Broad/market-wide/historical RAW_AS_TRADED remains not
+  promoted; the separately merged prospective cross-source subset is scoped-qualified only.
+- **Recommended next at that time:** `PROSPECTIVE_RAW_PIT_AUTHORITY_V1` (now complete, above).
 
 *(Superseded 2026-09-29: this chain merged to canonical `main` as PR #12, `36b89f3`, and is closed COMPLETE; see the block above.)*
 
@@ -331,10 +363,11 @@ no longer required for a qualifying ordinary Daily once the corrective is promot
 - Action policy is unchanged. On the retained 2026-09-16 duplicate session, every posture change
   traces to the integrity semantics alone (see `docs/DECISIONS.md` 2026-09-26).
 
-**Authority boundaries (unchanged):**
-- `RAW_AS_TRADED` = NOT PROMOTED.
-- Historical PIT authority, liquidity/sizing authority and `ACTIVE_UNIVERSE` authority are not
-  promoted (Section 3 Invariants 1–3).
+**Authority boundaries at that historical checkpoint (superseded in part by the 2026-09-29 entries above):**
+- Broad/historical `RAW_AS_TRADED` was not promoted; the later prospective official-agreement
+  subset is scoped-qualified only.
+- Historical PIT, live sizing/allocation and `ACTIVE_UNIVERSE` authority remain unpromoted. The
+  later current-session capacity and private risk-size envelopes are use-scoped only.
 - Valuation and recommendation authority are unchanged.
 - `research_action_posture` remains the sole action authority, and `research_stance` stays
   secondary.
@@ -5066,8 +5099,16 @@ Frozen pre-open artifact for the actual configured 11-ticker production cohort (
 
 ## 3. Active Blockers & Invariant Governance Rules
 
-1. **Price Basis Invariant**: `RAW_AS_TRADED` is **NOT PROMOTED**. Bounded REST OHLC remains `ADJUSTED_RETROSPECTIVE`. Unpromoted price fields fail closed for point-in-time backtesting.
-2. **Liquidity & Turnover Invariant**: `QUALIFIED_LIQUIDITY_INPUTS = NO` and `POSITION_SIZING_IS_SAFE = NO`. Volume data is restricted to display and within-series analytics (`legacy.rel_vol`); it must never drive execution sizing or market liquidity metrics.
+1. **Price Basis Invariant**: broad, market-wide and historical `RAW_AS_TRADED` is **NOT PROMOTED**.
+   The prospective cross-source subset is qualified only for scoped research where retained DNSE
+   same-session bars equal the official HOSE series. Bounded retrospective REST OHLC remains
+   `ADJUSTED_RETROSPECTIVE`; unpromoted fields fail closed for PIT backtesting.
+2. **Liquidity & Turnover Invariant**: official `ADTV20_MATCHED_ALL_VND` is qualified for 457
+   tickers and current-session liquidity for 952. It may drive only the policy-bounded
+   `CURRENT_SESSION_EXECUTION_CAPACITY_RESEARCH` envelope and private
+   `CURRENT_SESSION_RISK_SIZE_RESEARCH`. Canonical policy is currently UNBOUND. Live position
+   sizing/allocation, execution, market impact and historical/PIT replay remain blocked. Legacy
+   proxy volume/value fields never feed the new path.
 3. **Active Universe Invariant**: `ACTIVE_UNIVERSE` remains `UNKNOWN` for all instruments because DNSE feeds do not carry official exchange or listing-status proof.
 4. **Temporal Freshness Invariant**: Freshness is determined by domain rules and market session calendars (`freshness_history.py`); naive `date < today => stale` is strictly prohibited.
 5. **No Speculative Inference**: Ex-dates must never be inferred from record dates; debt fields must never be invented; missing independent measurements cannot be turned into evidence.

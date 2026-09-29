@@ -338,6 +338,7 @@ def _build_portfolio_sections(
                 "current_weight": row.get("current_weight"),
                 "current_weight_status": row.get("current_weight_status"),
                 "binding_constraint": row.get("binding_constraint"),
+                "research_size_envelope": row.get("research_size_envelope"),
                 "evidence": _evidence_block(ticker, integrated_record, session=session, coverage_records=coverage_records),
             })
         elif position_state == "CURRENT_POSITION_UNRESOLVED":

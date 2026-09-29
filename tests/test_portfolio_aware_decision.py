@@ -71,14 +71,14 @@ def make_security_decision(ticker, posture, *, trigger_level=None, invalidation_
 
 
 def decide(ticker, snapshot, decision, *, prices=None, sector_by_ticker=None, position_lanes=None,
-           excluded_tickers=None, position_lane=None, reward_boundary=None):
+           excluded_tickers=None, position_lane=None, reward_boundary=None, execution_capacity_envelope=None):
     state = pad.derive_portfolio_state(
         portfolio_snapshot=snapshot, prices=prices, sector_by_ticker=sector_by_ticker,
         position_lanes=position_lanes, excluded_tickers=excluded_tickers,
     )
     return pad.build_ticker_portfolio_aware_decision(
         ticker=ticker, portfolio_state=state, security_decision=decision, position_lane=position_lane,
-        reward_boundary=reward_boundary,
+        reward_boundary=reward_boundary, execution_capacity_envelope=execution_capacity_envelope,
     )
 
 
@@ -94,9 +94,24 @@ def test_01_new_position_sizes_a_fresh_add():
     assert record["portfolio_constraint_completeness"] == "FULL"
     assert record["portfolio_risk_quantity_ceiling"] == 200000  # 100e6*0.01/5
     assert record["binding_constraint"] == "NONE"
-    assert record["execution_qualified_quantity_status"] == "NOT_EVALUATED"
+    assert record["execution_qualified_quantity_status"] == "NOT_QUALIFIED"
     assert record["execution_qualified_quantity"] is None
     assert record["portfolio_risk_sizing"]["portfolio_risk_quantity_ceiling"] == 200000
+
+
+def test_01b_bound_capacity_is_combined_inside_existing_private_sizing_engine():
+    snapshot = make_snapshot(account={"cash_available": "100000000", "net_asset_value": "100000000"})
+    decision = make_security_decision("AAA", "INITIATE_ON_BREAKOUT", trigger_level=50, invalidation_level=45)
+    capacity = {"state": "AVAILABLE", "capacity_shares_lot_rounded": 1200, "policy_identity": "policy:test",
+                "artifact_identity": "execution_capacity_research_envelope:test", "reason_codes": []}
+    record = decide("AAA", snapshot, decision, sector_by_ticker={"AAA": "TECHNOLOGY"},
+                    execution_capacity_envelope=capacity)
+    envelope = record["research_size_envelope"]
+    assert envelope["liquidity_cap_shares"] == 1200
+    assert envelope["research_size_envelope_shares"] == 1200
+    assert envelope["binding_constraint"] == "LIQUIDITY_CAP"
+    assert envelope["completeness"] == "FULL"
+    assert envelope["execution_qualified_quantity_status"] == "NOT_QUALIFIED"
 
 
 # ── 2. Existing position with add room ──────────────────────────────────────────
@@ -418,7 +433,7 @@ def test_17_execution_qualified_quantity_is_always_not_qualified():
         decision = make_security_decision("AAA", posture, trigger_level=50, invalidation_level=45)
         record = decide("AAA", snapshot, decision, sector_by_ticker={"AAA": "TECHNOLOGY"})
         assert record["execution_qualified_quantity"] is None
-        assert record["execution_qualified_quantity_status"] == "NOT_EVALUATED"
+        assert record["execution_qualified_quantity_status"] == "NOT_QUALIFIED"
         assert record["authority_boundary"]["is_actionable"] is False
 
 

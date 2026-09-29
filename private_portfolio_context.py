@@ -328,6 +328,11 @@ POLICY_FIELDS = {
     "min_net_reward_risk_for_margin": ("minnetrewardriskformargin", "minrewardriskratiomargin", "tylethuongruitoithieuchomargin"),
     "strong_net_reward_risk_for_max_margin": ("strongnetrewardriskformaxmargin", "strongrewardriskratiomargin", "tylethuongruimanhchomargintoida"),
     "max_financing_cost_fraction_of_gross_upside": ("maxfinancingcostfractionofgrossupside", "maxfinancingcostfractionupside", "tylechiphilaivaytoidatrenloinhuan"),
+    # LIQUIDITY_EXECUTION_CAPACITY_AND_SIZING_V1: optional owner bindings.  Absence is
+    # deliberately UNBOUND; no participation or liquidation-horizon default is invented.
+    "max_participation_of_adtv20": ("maxparticipationofadtv20", "maxadtvparticipation", "tylethamgiadtv20toida"),
+    "max_days_to_liquidate": ("maxdaystoliquidate", "daystoliquidate", "songaythoatvithetoida"),
+    "min_adtv20_vnd": ("minadtv20vnd", "minimumadtv20vnd", "adtv20toithieuvnd"),
 }
 
 # Monetary fields are VND because the workbook field contract says so.  The
@@ -373,6 +378,9 @@ POLICY_FIELD_SEMANTICS = {
     "min_net_reward_risk_for_margin": "RATIO",
     "strong_net_reward_risk_for_max_margin": "RATIO",
     "max_financing_cost_fraction_of_gross_upside": "UNIT_FRACTION",
+    "max_participation_of_adtv20": "UNIT_FRACTION_GREATER_THAN_ZERO_MAX_ONE_OR_UNBOUND",
+    "max_days_to_liquidate": "GOVERNED_SESSIONS_INTEGER_ONE_TO_TWENTY_OR_UNBOUND",
+    "min_adtv20_vnd": "VND_NON_NEGATIVE_OR_UNBOUND",
 }
 # V1 -> V2 (PORTFOLIO_AWARE_DECISION_AND_RISK_SIZING_V1, 2026-09-09): five new probe/tactical-
 # margin defaults added below. The version string itself must change, not just the dict content
@@ -381,7 +389,7 @@ POLICY_FIELD_SEMANTICS = {
 # never silently gain five new effective-policy fields under an unchanged version string. A
 # fresh ``import_workbook()`` re-run against the same, unchanged real workbook now lands in a new
 # V2 layout directory instead of conflicting with the frozen V1 one.
-SYSTEM_DEFAULT_POLICY_VERSION = "SYSTEM_DEFAULT_POLICY_V2"
+SYSTEM_DEFAULT_POLICY_VERSION = "SYSTEM_DEFAULT_POLICY_V3"
 SYSTEM_DEFAULT_POLICY_FIELDS = {
     "risk_budget_per_investment_decision_to_nav": "0.01",
     "max_single_position_weight": "0.30",
@@ -398,6 +406,12 @@ SYSTEM_DEFAULT_POLICY_FIELDS = {
     "min_net_reward_risk_for_margin": "2.0",
     "strong_net_reward_risk_for_max_margin": "3.0",
     "max_financing_cost_fraction_of_gross_upside": "0.20",
+    # V3 fields are part of the versioned schema but are intentionally not defaults.  The
+    # effective-policy provenance records UNAVAILABLE_NO_OWNER_OR_SYSTEM_DEFAULT until the owner
+    # explicitly binds them.
+    "max_participation_of_adtv20": None,
+    "max_days_to_liquidate": None,
+    "min_adtv20_vnd": None,
 }
 
 

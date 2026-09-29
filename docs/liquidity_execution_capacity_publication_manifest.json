@@ -1,0 +1,58 @@
+{
+  "schema_version": "liquidity_execution_capacity_publication_manifest/v1",
+  "milestone": "LIQUIDITY_EXECUTION_CAPACITY_AND_SIZING_V1",
+  "session": "2026-09-28",
+  "canonical_base": "160f26ef7dc33b0052467977def874ba8d95f01e",
+  "canonical_policy": {
+    "policy_version": "EXECUTION_CAPACITY_POLICY_UNBOUND_V1",
+    "policy_identity": "execution_capacity_policy:9aad31694ea245a6ee9ae306e98142b6fd23c5643f20c00356ebda06a3d4081f",
+    "status": "UNBOUND",
+    "unbound_fields": [
+      "max_participation_of_adtv20",
+      "max_days_to_liquidate"
+    ]
+  },
+  "source_artifact_identities": {
+    "official_exchange_liquidity_research": "official_exchange_liquidity_research:f35f882c860af8a2d01b3b31ec7a3f74a9f9607a1f71f736d320c0f9a22a696b",
+    "integrated_investment_decision_product": "integrated_investment_decision_product/v1:1517dc71cdc3ac33ef2d65945c89121d1c4bc1d53c05afe70e91ed1e32d13917",
+    "retained_acceptance": "liquidity_execution_capacity_retained_acceptance:1a661541730550a44305cbc6d350cf36ad3ff5adc2636ac7d9f5a7149546a891"
+  },
+  "counts": {
+    "total_governed_records": 1683,
+    "current_liquidity_eligible": 952,
+    "adtv20_exact": 457,
+    "capacity_available": 0,
+    "capacity_partial": 0,
+    "capacity_blocked": 1683,
+    "policy_unbound": 457,
+    "zero_capacity_valid": 0,
+    "missing_adtv": 1226,
+    "rights_gated": 1047,
+    "exchange_unresolved": 179,
+    "share_quantity_unavailable_due_lot_rule": 0
+  },
+  "current_research_additive_acceptance": {
+    "execution_capacity_research_present": 1683,
+    "retained_records_with_prior_current_research_input": 0,
+    "rebuilt_current_research_capacity_mismatch": 0,
+    "research_action_posture_changed": 0,
+    "decision_identity_changed": 0,
+    "evidence_class_changed": 0,
+    "non_liquidity_dimensions_changed": 0
+  },
+  "authority_effect": {
+    "CURRENT_SESSION_EXECUTION_CAPACITY_RESEARCH": "SCOPED_ELIGIBLE_OR_PARTIAL_BY_RECORD_AND_POLICY",
+    "CURRENT_SESSION_RISK_SIZE_RESEARCH": "PRIVATE_SCOPED_ELIGIBLE_OR_PARTIAL",
+    "LIVE_POSITION_SIZING": "BLOCKED",
+    "PORTFOLIO_CAPITAL_ALLOCATION": "BLOCKED",
+    "HISTORICAL_PIT_SIZE_REPLAY": "BLOCKED",
+    "PIT_BACKTEST": "BLOCKED",
+    "EXECUTION_REPLAY": "BLOCKED"
+  },
+  "publication_disposition": "CODE_CONTRACTS_SYNTHETIC_TESTS_HASHES_AND_DERIVED_COUNTS_ONLY",
+  "provider_calls": 0,
+  "raw_exchange_response_bodies_published": false,
+  "per_ticker_liquidity_or_private_values_published": false,
+  "private_owner_values_published": false,
+  "terminal_disposition": "LIQUIDITY_EXECUTION_CAPACITY_AND_SIZING_PARTIAL"
+}

@@ -84,7 +84,9 @@ above a cap.
 | `max_ticker_financing_cost` | Maximum ticker-attributed financing cost. |
 | `max_account_margin_cost` | Maximum account-level/unallocated margin cost. |
 
-`SYSTEM_DEFAULT_POLICY_V1` supplies only an absent field with these deterministic
+`SYSTEM_DEFAULT_POLICY_V3` preserves the deterministic V2 defaults and adds the execution-capacity
+policy fields as explicit `UNBOUND` values unless supplied by the owner. The established defaults
+include:
 values: risk budget `0.01` NAV, maximum single position `0.30` NAV, maximum
 sector `0.45` NAV, maximum gross exposure `1.15` NAV, maximum margin debt
 `0.15` NAV, minimum cash reserve `0.05` NAV, and maximum new-leverage margin

@@ -1,5 +1,31 @@
 # Decisions & Architectural Decision Records
 
+## 2026-09-29 - Scoped execution capacity and private research sizing (`LIQUIDITY_EXECUTION_CAPACITY_AND_SIZING_V1`; policy-unbound partial)
+
+**Decision.** Replace the stale global execution/sizing boolean with use-specific authority. Current-session Level-1
+capacity research may consume exact official `ADTV20_MATCHED_ALL_VND` under an explicit policy; private current-session
+risk-size research may combine it with the already-existing risk and concentration engine. Live position sizing,
+portfolio allocation, historical size replay, PIT backtest and execution replay remain blocked.
+
+**Policy.** `execution_capacity_policy/v1` validates participation, governed-session horizon, optional minimum ADTV and
+qualified lot rules. No owner-authorized participation/horizon or qualified repository lot rule exists, so canonical
+policy is UNBOUND. `SYSTEM_DEFAULT_POLICY_V3` preserves V2 defaults and adds the owner-overridable capacity fields as
+unbound with provenance; it does not activate a new default.
+
+**Public result.** `execution_capacity_research_envelope/v1` uses exact Decimal arithmetic and is additive under the
+Daily LIQUIDITY qualified-research block. Retained 2026-09-28 acceptance: 1,683 records, current liquidity 952, exact
+ADTV20 457, capacity 0 AVAILABLE / 0 PARTIAL / 1,683 BLOCKED, policy-unbound 457, rights-gated 1,047, unresolved 179.
+All postures, decision identities, evidence classes and non-liquidity dimensions remain unchanged.
+
+**Private result.** `research_size_envelope/v1` takes the minimum of qualified existing risk, concentration and new
+liquidity caps. Missing/degenerate explicit IID invalidation fails only that cap; ATR is never substituted. The private
+Action Center and decision packet carry the envelope additively. Execution quantity remains `NOT_QUALIFIED`.
+
+**Boundaries.** No provider call, live Daily, HNX/UPCoM crawl, production DB write, public private-data publication,
+broker action, optimizer/Kelly/Markowitz allocation, market-impact model, fill probability or historical promotion.
+Broad/historical RAW_AS_TRADED remains unpromoted; the merged prospective official-agreement subset stays separately
+qualified for scoped research.
+
 ## 2026-09-29 - Prospective RAW/PIT price authority (`PROSPECTIVE_RAW_PIT_AUTHORITY_V1`; PROSPECTIVE_PIT_OPERATIONAL / HISTORICAL_PIT_PARTIAL, local checkpoint)
 
 **Decision.** Authority is use-specific across ten dimensions and never one RAW/PIT boolean. Prospective as-known price
