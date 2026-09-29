@@ -1,7 +1,7 @@
 {
   "schema_version": "stocklookup_roadmap_execution_state/1.0.0",
   "roadmap_id": "stock-core-private",
-  "roadmap_version": "2026.09.29.5",
+  "roadmap_version": "2026.09.29.6",
   "narrative_authority": {
     "strategic_roadmap": "docs/ROADMAP.md",
     "operational_narrative": "docs/STATE.md",
@@ -15,11 +15,28 @@
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "FINANCIAL_EVIDENCE_COHORT1_OCR_GEOMETRY_AND_METADATA_RECOVERY_V1",
+    "milestone": "FINANCIAL_EVIDENCE_REVIEWED_INTERIM_CANONICAL_INGRESS_V1",
     "state": "PARTIAL"
   },
   "queued_next": [],
   "milestones": [
+    {
+      "milestone_id": "FINANCIAL_EVIDENCE_REVIEWED_INTERIM_CANONICAL_INGRESS_V1",
+      "state": "PARTIAL",
+      "narrative_disposition": "REVIEWED_INTERIM_FACT_AUTHORITY_ONLY / RESEARCH_AUTHORITY_UNCHANGED",
+      "terminal_disposition": "FINANCIAL_EVIDENCE_REVIEWED_INTERIM_CANONICAL_INGRESS_PARTIAL_IDENTITY_CORRECTED",
+      "starting_checkpoint": "7eb3d66b006c267a6b4d34416b7569929fe00c59",
+      "checkpoint": "HEAD",
+      "candidate_branch": "feature/reviewed-interim-canonical-ingress-v1-20260929",
+      "dependencies": ["FINANCIAL_EVIDENCE_COHORT1_OCR_GEOMETRY_AND_METADATA_RECOVERY_V1"],
+      "unlocks": [],
+      "authority_effect": "REVIEWED_INTERIM_OFFICIAL_FACTS_QUALIFIED_FOR_EXACT_TICKER_METRIC_PERIOD_SCOPE / ANNUAL_ONLY_RESEARCH_UNCHANGED / NO_FINANCIAL_V2_PIN_BUMP / NO_TTM_FROM_H1",
+      "owner_authorized": true,
+      "source_doc": "Owner directive FINANCIAL_EVIDENCE_REVIEWED_INTERIM_CANONICAL_INGRESS_V1 (2026-09-29)",
+      "state_history": ["ACTIVE", "PARTIAL"],
+      "owner_override": "OWNER_DIRECTIVE_2026_09_29_FINANCIAL_EVIDENCE_REVIEWED_INTERIM_CANONICAL_INGRESS_V1",
+      "notes": "PARTIAL 2026-09-29 (identity corrective on PR #21: line 60=net_income, line 61=attributable_net_income, each needing an explicit row label; labels not legible in retained OCR so no net-income fact is emitted; HISTORICAL_NET_INCOME_SEMANTIC_RECONCILIATION_REQUIRED for pre-existing line-61 net_income official facts, e.g. HPG 2022/2023). Superseded detail below where it says four facts / net income. One assurance contract (official_financial_assurance_evidence: audited|reviewed) replaces the audited-only OCR panel adapter; reviewed is proven only from the retained document's own Bao cao soat xet page (title + VSRE 2410 engagement + consolidated + interim wording), never from a caller string, filename or period convention. PNJ, PVD and VRE H1 2026 each prove reviewed on page 5. Candidates regenerate identically; two VND facts (PNJ and VRE revenue) enter the existing qualified_official_facts overlay as factually QUALIFIED with research_status partial / RESEARCH_PERIOD_NOT_ANNUAL. PVD's two USD facts stay candidates (overlay is VND-only, no FX invented). No Q2/annual alias for duration metrics, no TTM from H1, knowledge time = first-observed 2026-09-29T11:31:14Z. Retained 2026-09-29 assembly: 1,683 tickers, 0 posture/fundamental/valuation deltas, byte-identical products. Financial V2 pin 2026-09-05.1 unchanged; HPG still unit-blocked; no network, Daily, Vnstock or successor."
+    },
     {
       "milestone_id": "FINANCIAL_EVIDENCE_COHORT1_OCR_GEOMETRY_AND_METADATA_RECOVERY_V1",
       "state": "PARTIAL",

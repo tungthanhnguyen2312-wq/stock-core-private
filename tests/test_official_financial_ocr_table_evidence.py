@@ -104,9 +104,12 @@ def test_fpt_income_page_is_deterministic_and_qualifies_only_exact_numeric_cells
     assert first["pages"][0]["positioned_token_provenance"] == "OCR_TSV_POSITIONED_TOKEN"
     assert first["pages"][0]["ocr_derived_text_evidence"]["tokens"] == second["pages"][0]["ocr_derived_text_evidence"]["tokens"]
     result = qualify_table_facts(first, ticker="FPT", reporting_period="2025")
-    assert {row["canonical_metric"]: row["value"] for row in result["qualified_facts"]} == {
-        "revenue": 70_112_825_100_710, "net_income": 9_376_127_629_501,
-    }
+    # Lines 60/61 are distinct concepts (net_income / attributable_net_income) and each needs a
+    # legible row label; FPT's wrapped OCR labels do not prove either, so only revenue qualifies.
+    assert {row["canonical_metric"]: row["value"] for row in result["qualified_facts"]} == {"revenue": 70_112_825_100_710}
+    assert {row["canonical_metric"]: row["reason"] for row in result["blocked_candidates"]
+            if row["canonical_metric"] in {"net_income", "attributable_net_income"}} == {
+        "net_income": "ROW_LABEL_DOES_NOT_SUPPORT_METRIC", "attributable_net_income": "ROW_LABEL_DOES_NOT_SUPPORT_METRIC"}
     for row in result["qualified_facts"]:
         assert row["source_lineage"]["row_object"]["column_bands"]["bands"]["label"]
         assert row["source_lineage"]["source_image_evidence"]["rendered_image_sha256"]
@@ -178,5 +181,5 @@ def test_panel_adapter_requires_qualified_metadata_and_complete_row_lineage():
     result = qualify_table_facts(materialization, ticker="FPT", reporting_period="2025")
     facts = panel_facts_from_qualified_ocr(result, entity_type="corporate", statement_scope="consolidated",
                                             audit_or_review_status="audited", knowledge_available_at=_record()["observed_at"], observed_at=_record()["observed_at"])
-    assert {fact["canonical_metric"] for fact in facts} == {"revenue", "net_income"}
+    assert {fact["canonical_metric"] for fact in facts} == {"revenue"}
     assert all(fact["source_lineage"]["citation_id"] and fact["qualification_state"] == "QUALIFIED" for fact in facts)

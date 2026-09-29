@@ -1,5 +1,35 @@
 # Stock Lookup — Operational State
 
+**Reviewed-interim canonical ingress (2026-09-29):**
+`FINANCIAL_EVIDENCE_REVIEWED_INTERIM_CANONICAL_INGRESS_V1 = PARTIAL /
+FINANCIAL_EVIDENCE_REVIEWED_INTERIM_CANONICAL_INGRESS_PARTIAL_IDENTITY_CORRECTED`, rooted at canonical
+`7eb3d66b006c267a6b4d34416b7569929fe00c59` (Producer CI #127 SUCCESS, run 36572633626).
+FACT AUTHORITY: a reviewed interim official fact may now be QUALIFIED for its exact
+ticker/metric/period/scope. RESEARCH AUTHORITY: unchanged; annual-only Financial V2 / corporate
+research still marks every non-annual fact `RESEARCH_PERIOD_NOT_ANNUAL` (research_status `partial`).
+The OCR panel adapter's audited-only gate is replaced by one contract
+(`official_financial_assurance_evidence.ALLOWED_ASSURANCE_STATUSES = {audited, reviewed}`);
+`reviewed` is accepted only with evidence recognized from the retained document's own
+`BAO CAO SOAT XET` page (title, VSRE 2410 engagement, consolidated and interim wording). PNJ,
+PVD and VRE each prove it on PDF page 5. Reviewed is never relabelled audited. Six H1 candidates
+regenerate deterministically; **identity corrective (same PR):** line 60 is `net_income` (total profit
+after tax) and line 61 is `attributable_net_income` (registry id; `parent_attributable_net_income`
+was stale contract vocabulary and is corrected), each requiring an explicit row label. The OCR row
+labels for lines 60/61 are not legible enough to prove either identity (PNJ wrapped fragments bleed
+across rows; PVD/VRE labels sit outside the label band), so both fail closed and NO net-income fact
+is emitted. Only PNJ and VRE revenue (VND) enter the existing `qualified_official_facts.jsonl`
+overlay; PVD's USD revenue remains a candidate because the overlay is VND-only (no FX is invented).
+`HISTORICAL_NET_INCOME_SEMANTIC_RECONCILIATION_REQUIRED`: pre-existing official annual facts (HPG
+2022/2023 via the p3f13 line-61 correction; annual OCR-path facts) label line 61 as `net_income`;
+they are preserved unchanged and need a separate reconciliation. Period stays `2026-H1` (interim, duration): no Q2 or annual alias,
+no TTM, no P/E or P/S from H1. `knowledge_available_at` is the first-observed retention time
+`2026-09-29T11:31:14Z`. Precedence: OFFICIAL_ONLY (no exact-key legacy row exists for an H1 flow).
+Retained 2026-09-29 assembly over 1,683 tickers: 0 posture, fundamental-state or valuation deltas,
+all products byte-identical; Financial V2 pin `2026-09-05.1` unchanged. HPG remains unit-blocked.
+No network, acquisition, Vnstock, Daily or successor. Public-safe report:
+`derived/financial-evidence-currency-refresh-v1/reviewed_interim_canonical_ingress_report.json`;
+rebuild with `tools/run_reviewed_interim_canonical_ingress.py --write`.
+
 **Cohort-1 OCR geometry and metadata recovery (2026-09-29):**
 `FINANCIAL_EVIDENCE_COHORT1_OCR_GEOMETRY_AND_METADATA_RECOVERY_V1 = PARTIAL /
 PARTIAL_QUALIFIED_H1_CANDIDATES_NO_CANONICAL_INGRESS`, rooted at canonical

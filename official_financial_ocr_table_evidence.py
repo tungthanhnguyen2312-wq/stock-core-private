@@ -19,6 +19,8 @@ import fitz
 from PIL import Image
 
 from annual_financial_ocr_materialization import DEFAULT_ENGINE, parse_accounting_integer, sha256_file
+from official_financial_assurance_evidence import REVIEWED, validate_assurance_claim
+from official_financial_period_identity import period_bounds
 from official_financial_structural_table import match_geometry_ambiguous_line_code_cell, match_geometry_table_row
 from financial_statement_unit_resolution import declaration_from_tokens, resolve_unit_for_scope
 
@@ -39,10 +41,31 @@ STANDARD_FACT_RULES = (
     ("total_assets", "balance_sheet", "270"),
     ("shareholders_equity", "balance_sheet", "400"),
     ("revenue", "income_statement", "10"),
-    # Consolidated parent-attributable earnings, never line 60 total profit.
-    ("net_income", "income_statement", "61"),
+    # Two distinct canonical concepts (canonical_financial_facts.METRIC_REGISTRY): line 60 is total
+    # profit after tax (net_income); line 61 is profit attributable to the parent
+    # (attributable_net_income). Line 61 must never be labelled net_income.
+    ("net_income", "income_statement", "60"),
+    ("attributable_net_income", "income_statement", "61"),
     ("operating_cash_flow", "cash_flow", "20"),
 )
+# Line code alone is not identity: the matched row's own label must support the concept.
+# ``any_of`` phrases are normalized (accent-free) label substrings; ``forbidden`` phrases block.
+ROW_LABEL_CONTRACT = {
+    "net_income": {"any_of": ("loi nhuan sau thue", "profit after tax"),
+                   "forbidden": ("cong ty me", "chu so huu", "co dong", "parent", "khong kiem soat")},
+    "attributable_net_income": {"any_of": ("cong ty me", "of the parent", "parent company"),
+                                "forbidden": ("khong kiem soat", "non controlling", "non-controlling")},
+}
+
+
+def row_label_supports_metric(metric: str, label: str) -> bool:
+    contract = ROW_LABEL_CONTRACT.get(metric)
+    if contract is None:
+        return True
+    normalized = _normalize(label)
+    return any(term in normalized for term in contract["any_of"]) and not any(term in normalized for term in contract["forbidden"])
+
+
 DEBT_COMPONENT_RULES = (
     ("short_term_borrowings", "balance_sheet", "320"),
     ("long_term_borrowings_or_finance_leases", "balance_sheet", "338"),
@@ -416,6 +439,10 @@ def qualify_table_facts(materialization: Mapping[str, Any], *, ticker: str, repo
         else:
             blocked.append({"canonical_metric": metric, "line_code": code, "statement_family": family, "state": "BLOCKED", "reason": "ROW_NOT_UNIQUE_OR_NOT_GEOMETRICALLY_RESOLVED", "match_count": len(matches)})
             return None
+        if not row_label_supports_metric(metric, str((match.get("row_object") or {}).get("reconstructed_label") or match.get("line_text") or "")):
+            blocked.append({"canonical_metric": metric, "line_code": code, "statement_family": family, "state": "BLOCKED",
+                            "reason": "ROW_LABEL_DOES_NOT_SUPPORT_METRIC"})
+            return None
         table_id = f"ocr-page:{materialization['document_sha256']}:{match['page']}:{family}"
         unit = ({"state": "QUALIFIED", "scope_level": "legacy_caller_contract", "currency": currency,
                  "unit_scale": unit_scale, "unit_label": currency, "evidence": None}
@@ -475,6 +502,7 @@ def qualify_table_facts(materialization: Mapping[str, Any], *, ticker: str, repo
 def panel_facts_from_qualified_ocr(
     qualification: Mapping[str, Any], *, entity_type: str, statement_scope: str,
     audit_or_review_status: str, knowledge_available_at: str, observed_at: str,
+    assurance_evidence: Mapping[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
     """Adapt already-qualified OCR geometry facts to the existing P3-F13 ingress shape.
 
@@ -482,14 +510,28 @@ def panel_facts_from_qualified_ocr(
     exact row evidence come only from ``qualification``.  It never re-parses or
     repairs OCR text, and refuses incomplete metadata before an ingress candidate
     can be constructed.
+
+    Assurance is one explicit contract (``official_financial_assurance_evidence``): only
+    ``audited`` or ``reviewed`` may ingress, and ``reviewed`` additionally requires the
+    retained-document evidence that proves it.  The status is preserved on every fact.
     """
-    if statement_scope != "consolidated" or audit_or_review_status != "audited":
+    if statement_scope != "consolidated":
         raise ValueError("OCR_DOCUMENT_METADATA_NOT_QUALIFIED")
     ticker = str(qualification.get("ticker") or "").upper()
     document_sha = str(qualification.get("document_sha256") or "")
     period = str(qualification.get("reporting_period") or "")
     if not ticker or not document_sha or not period:
         raise ValueError("OCR_QUALIFICATION_IDENTITY_MISSING")
+    assurance = validate_assurance_claim(audit_or_review_status, assurance_evidence, document_sha256=document_sha)
+    try:
+        period_start, period_end = period_bounds(period)
+    except ValueError as error:
+        raise ValueError("OCR_PERIOD_NOT_SUPPORTED") from error
+    annual = period.isdigit()
+    if audit_or_review_status == REVIEWED and annual:
+        raise ValueError("REVIEWED_STATUS_REQUIRES_INTERIM_PERIOD")
+    if not str(knowledge_available_at) or str(knowledge_available_at)[:10] <= period_end:
+        raise ValueError("KNOWLEDGE_TIME_NOT_AFTER_PERIOD_END")
     output: list[dict[str, Any]] = []
     instantaneous = {"cash_and_equivalents", "total_assets", "shareholders_equity", "total_interest_bearing_debt"}
     for fact in qualification.get("qualified_facts") or []:
@@ -511,8 +553,9 @@ def panel_facts_from_qualified_ocr(
             "issuer_identity": ticker, "entity_type": entity_type, "applicability_state": "APPLICABLE",
             "authority_tier": "promoted_corporate_evidence", "canonical_metric": metric,
             "value": fact["value"], "currency": fact["currency"], "unit_scale": fact["unit_scale"],
-            "reporting_period": period, "period_type": "annual", "period_start": f"{period}-01-01",
-            "period_end": f"{period}-12-31", "statement_scope": statement_scope,
+            "reporting_period": period, "period_type": "annual" if annual else "interim",
+            "period_start": period_start, "period_end": period_end, "statement_scope": statement_scope,
+            "audit_or_review_status": audit_or_review_status,
             "statement_family": fact["statement_family"],
             "temporal_nature": "instant" if metric in instantaneous else "duration",
             "qualification_state": "QUALIFIED", "is_positive_authority": True,
@@ -528,6 +571,7 @@ def panel_facts_from_qualified_ocr(
                 "source_page": lineage.get("source_page"), "line_code": lineage.get("line_code"),
                 "row_object": row, "source_image_evidence": source_image,
                 "ocr_derived_text_evidence": ocr, "unit_evidence": lineage.get("unit_evidence"),
+                "assurance_evidence": assurance,
                 "extraction_method": "image_only_tsv_ocr_geometry"},
         })
     return output

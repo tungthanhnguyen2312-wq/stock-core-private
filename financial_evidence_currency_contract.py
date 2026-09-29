@@ -45,7 +45,7 @@ ENTITY_FAMILY: dict[str, str] = {
 }
 
 CORPORATE_CORE_METRICS: tuple[str, ...] = (
-    "revenue", "net_income", "parent_attributable_net_income",
+    "revenue", "net_income", "attributable_net_income",
     "shareholders_equity", "total_assets", "cash_and_cash_equivalents",
     "operating_cash_flow", "short_term_interest_bearing_debt",
     "long_term_interest_bearing_debt",
