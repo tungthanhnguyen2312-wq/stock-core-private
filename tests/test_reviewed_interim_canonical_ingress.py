@@ -222,3 +222,73 @@ def test_overlay_loader_accepts_rows_and_keeps_missing_overlay_empty(tmp_path):
     (directory / PUBLIC_FACTS).write_text("".join(json.dumps(row) + "\n" for row in _rows()), encoding="utf-8")
     loaded = load_public_official_fact_rows(tmp_path)
     assert [row["audit_or_review_status"] for row in loaded] == ["reviewed"]
+
+
+# ---- net_income vs attributable_net_income identity corrective --------------------------------
+from canonical_financial_facts import METRIC_REGISTRY  # noqa: E402
+import financial_evidence_currency_contract as currency_contract  # noqa: E402
+from official_financial_ocr_table_evidence import STANDARD_FACT_RULES, row_label_supports_metric  # noqa: E402
+
+LINE60_LABEL = "Lợi nhuận sau thuế thu nhập doanh nghiệp"
+LINE61_LABEL = "Lợi nhuận sau thuế của công ty mẹ"
+
+
+def test_line_60_maps_to_total_net_income_and_line_61_to_attributable():
+    rules = {code: metric for metric, family, code in STANDARD_FACT_RULES if family == "income_statement" and code in {"60", "61"}}
+    assert rules == {"60": "net_income", "61": "attributable_net_income"}
+    assert "net_income" in METRIC_REGISTRY and "attributable_net_income" in METRIC_REGISTRY
+    assert METRIC_REGISTRY["net_income"] is not METRIC_REGISTRY["attributable_net_income"]
+
+
+def test_explicit_row_label_is_required_for_each_identity():
+    assert row_label_supports_metric("net_income", LINE60_LABEL)
+    assert not row_label_supports_metric("net_income", LINE61_LABEL)
+    assert row_label_supports_metric("attributable_net_income", LINE61_LABEL)
+    assert not row_label_supports_metric("attributable_net_income", LINE60_LABEL)
+    assert not row_label_supports_metric("attributable_net_income", "")
+    assert not row_label_supports_metric("attributable_net_income", "Lợi nhuận sau thuế của cổ đông không kiểm soát")
+    assert not row_label_supports_metric("net_income", "")
+
+
+def _line_fact(metric: str, code: str) -> list[dict]:
+    qualification = _qualification(metric=metric)
+    qualification["qualified_facts"][0]["source_lineage"]["line_code"] = code
+    return panel_facts_from_qualified_ocr(
+        qualification, entity_type="corporate", statement_scope="consolidated", audit_or_review_status="reviewed",
+        assurance_evidence=_reviewed_evidence(), knowledge_available_at=OBSERVED, observed_at=OBSERVED)
+
+
+def test_line_61_can_never_emit_net_income_into_the_overlay():
+    rows, blocked = overlay_rows_from_panel_facts(_line_fact("net_income", "61"))
+    assert rows == [] and blocked[0]["reasons"] == ["METRIC_LINE_CODE_IDENTITY_CONFLICT"]
+    rows, blocked = overlay_rows_from_panel_facts(_line_fact("attributable_net_income", "60"))
+    assert rows == [] and blocked[0]["reasons"] == ["METRIC_LINE_CODE_IDENTITY_CONFLICT"]
+    for metric, code in (("net_income", "60"), ("attributable_net_income", "61")):
+        rows, blocked = overlay_rows_from_panel_facts(_line_fact(metric, code))
+        assert len(rows) == 1 and not blocked
+
+
+def test_net_income_and_attributable_are_distinct_keys_and_metric_difference_in_precedence():
+    rows, _ = overlay_rows_from_panel_facts(_line_fact("attributable_net_income", "61"))
+    legacy = {"canonical_metric": "net_income", "reporting_period": "2026-H1", "statement_scope": "consolidated",
+              "statement_family": "income_statement", "value": rows[0]["normalized_value"], "unit_scale": 1}
+    result = precedence_row(rows[0], legacy)
+    assert result["status"] == NOT_COMPARABLE and result["reason"] == "METRIC_DIFFERENCE"
+    assert result["official_becomes_factual_authority"] is False
+    assert authority_projection(rows[0])["research_reason_codes"] == ["RESEARCH_PERIOD_NOT_ANNUAL"]
+
+
+def test_current_overlay_has_no_net_income_sourced_from_line_61():
+    path = ROOT / PUBLIC_ARTIFACT_DIR / PUBLIC_FACTS
+    rows = [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+    assert all((row["canonical_metric"], str(row.get("line_code"))) not in ingress_module.LINE_CODE_IDENTITY_CONFLICTS for row in rows)
+    assert all(row["period_type"] == "interim" and row["audit_or_review_status"] == "reviewed" for row in rows)
+
+
+def test_core_metric_vocabulary_has_no_orphans():
+    assert set(currency_contract.CORPORATE_CORE_METRICS) <= set(METRIC_REGISTRY)
+    # Specialist (bank/securities) ids are a separate, explicitly enumerated vocabulary, not corporate aliases.
+    specialist = {"net_profit_parent", "total_equity", "customer_loans_net", "customer_deposits", "provision_for_credit_losses",
+                  "brokerage_revenue", "total_operating_revenue"}
+    orphans = (set(currency_contract.BANK_CORE_METRICS) | set(currency_contract.SECURITIES_CORE_METRICS)) - set(METRIC_REGISTRY)
+    assert orphans == specialist

@@ -25,6 +25,9 @@ MILESTONE_ID = "FINANCIAL_EVIDENCE_REVIEWED_INTERIM_CANONICAL_INGRESS_V1"
 CONTRACT_VERSION = "reviewed_interim_canonical_ingress/v1"
 OVERLAY_CURRENCY = "VND"
 PROVIDER_LABEL = "official_issuer_ir"
+# Circular-200 income statement: line 60 total profit after tax (net_income); line 61 profit
+# attributable to the parent (attributable_net_income).  Crossed pairs are never emitted.
+LINE_CODE_IDENTITY_CONFLICTS = frozenset({("net_income", "61"), ("attributable_net_income", "60")})
 
 
 def _hash(value: Any) -> str:
@@ -57,6 +60,8 @@ def overlay_rows_from_panel_facts(panel_facts: Sequence[Mapping[str, Any]]) -> t
             reasons.append("CURRENCY_NOT_VND_OVERLAY_UNSUPPORTED")
         if not (lineage.get("document_sha256") and lineage.get("citation_id")):
             reasons.append("CITATION_MISSING")
+        if (fact.get("canonical_metric"), str(lineage.get("line_code"))) in LINE_CODE_IDENTITY_CONFLICTS:
+            reasons.append("METRIC_LINE_CODE_IDENTITY_CONFLICT")
         identity = {"ticker": fact.get("issuer_identity"), "metric": fact.get("canonical_metric"),
                     "period": fact.get("reporting_period"), "currency": fact.get("currency"),
                     "value": fact.get("value")}

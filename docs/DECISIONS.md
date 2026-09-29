@@ -10,8 +10,14 @@ convention is never proof. A fully evidenced reviewed interim fact enters the ex
 overlay and is factually QUALIFIED; the canonical qualification policy still reports
 `RESEARCH_PERIOD_NOT_ANNUAL`, so annual-only Financial V2/corporate research is unchanged.
 
-**Result.** `COMPLETE`. PNJ, PVD and VRE prove reviewed on page 5; four VND facts (PNJ/VRE revenue
-and parent net income) are emitted. PVD's USD facts are not emitted (VND-only overlay; no FX is
+**Identity corrective.** Line 60 = `net_income`, line 61 = `attributable_net_income` (the registry id;
+`parent_attributable_net_income` was stale vocabulary), each needing an explicit row label; a crossed
+line/metric pair is refused. Labels are not legible in the retained OCR, so no net-income fact is
+emitted. Historical official facts that label line 61 `net_income` are preserved and flagged
+`HISTORICAL_NET_INCOME_SEMANTIC_RECONCILIATION_REQUIRED`.
+
+**Result.** `PARTIAL`. PNJ, PVD and VRE prove reviewed on page 5; two VND facts (PNJ/VRE revenue)
+are emitted. PVD's USD facts are not emitted (VND-only overlay; no FX is
 invented). H1 flows get no Q2/annual alias and no TTM; knowledge time is first-observed, never
 period end. Precedence runs only on an exact ticker/metric/period/scope key. The retained
 2026-09-29 assembly has zero posture, fundamental-state or valuation deltas; the Financial V2 pin

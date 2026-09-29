@@ -1,7 +1,7 @@
 {
-  "artifact_sha256": "aafe48a47c090ed4c388d4c3c5845665e744cdb05d026eabd85e3660a313f58e",
-  "candidate_fact_count": 6,
-  "canonical_fact_count": 4,
+  "artifact_sha256": "33a883e6216a345360b1b701fcbf0aa3d9fef022b5893dba62196a5775b7ccc6",
+  "candidate_fact_count": 3,
+  "canonical_fact_count": 2,
   "contract_version": "reviewed_interim_canonical_ingress/v1",
   "documents": [
     {
@@ -50,6 +50,20 @@
           "statement_family": "balance_sheet"
         },
         {
+          "canonical_metric": "net_income",
+          "line_code": "60",
+          "reason": "ROW_LABEL_DOES_NOT_SUPPORT_METRIC",
+          "state": "BLOCKED",
+          "statement_family": "income_statement"
+        },
+        {
+          "canonical_metric": "attributable_net_income",
+          "line_code": "61",
+          "reason": "ROW_LABEL_DOES_NOT_SUPPORT_METRIC",
+          "state": "BLOCKED",
+          "statement_family": "income_statement"
+        },
+        {
           "canonical_metric": "operating_cash_flow",
           "line_code": "20",
           "raw_value": "1.991.053.934.²37",
@@ -87,38 +101,9 @@
           "source_page": 10,
           "source_unit_scale": 1,
           "value": 25709196846401
-        },
-        {
-          "currency": "VND",
-          "line_code": "61",
-          "metric": "net_income",
-          "source_page": 10,
-          "source_unit_scale": 1,
-          "value": 728529788872
         }
       ],
       "canonical_facts": [
-        {
-          "audit_or_review_status": "reviewed",
-          "citation_id": "ff4837430b96761212c540e78e8f319c477447156f0d6c15b1b58bbaaae6519e",
-          "currency": "VND",
-          "factual_reason_codes": [],
-          "factual_status": "qualified",
-          "line_code": "61",
-          "metric": "net_income",
-          "period": "2026-H1",
-          "period_end": "2026-06-30",
-          "period_start": "2026-01-01",
-          "period_type": "interim",
-          "research_reason_codes": [
-            "RESEARCH_PERIOD_NOT_ANNUAL"
-          ],
-          "research_status": "partial",
-          "scope": "consolidated",
-          "source_page": 10,
-          "source_unit_scale": 1,
-          "value": 728529788872
-        },
         {
           "audit_or_review_status": "reviewed",
           "citation_id": "198a6d723a8618091c22d313d2392ec30e581486d6dc15d83fef018b883abcb3",
@@ -194,6 +179,20 @@
           "statement_family": "balance_sheet"
         },
         {
+          "canonical_metric": "net_income",
+          "line_code": "60",
+          "reason": "ROW_LABEL_DOES_NOT_SUPPORT_METRIC",
+          "state": "BLOCKED",
+          "statement_family": "income_statement"
+        },
+        {
+          "canonical_metric": "attributable_net_income",
+          "line_code": "61",
+          "reason": "ROW_LABEL_DOES_NOT_SUPPORT_METRIC",
+          "state": "BLOCKED",
+          "statement_family": "income_statement"
+        },
+        {
           "canonical_metric": "operating_cash_flow",
           "line_code": "20",
           "match_count": 0,
@@ -231,32 +230,11 @@
           "source_page": 8,
           "source_unit_scale": 1,
           "value": 245730824
-        },
-        {
-          "currency": "USD",
-          "line_code": "61",
-          "metric": "net_income",
-          "source_page": 8,
-          "source_unit_scale": 1,
-          "value": 17920760
         }
       ],
       "canonical_facts": [],
       "document_sha256": "a7360d2fc9a8a67a1535820813cda2bb8ef288466cd36c949e050c2f2a1b290a",
       "ingress_blocked": [
-        {
-          "key": {
-            "currency": "USD",
-            "metric": "net_income",
-            "period": "2026-H1",
-            "ticker": "PVD",
-            "value": 17920760
-          },
-          "reasons": [
-            "CURRENCY_NOT_VND_OVERLAY_UNSUPPORTED"
-          ],
-          "state": "BLOCKED"
-        },
         {
           "key": {
             "currency": "USD",
@@ -321,6 +299,20 @@
           "statement_family": "balance_sheet"
         },
         {
+          "canonical_metric": "net_income",
+          "line_code": "60",
+          "reason": "ROW_LABEL_DOES_NOT_SUPPORT_METRIC",
+          "state": "BLOCKED",
+          "statement_family": "income_statement"
+        },
+        {
+          "canonical_metric": "attributable_net_income",
+          "line_code": "61",
+          "reason": "ROW_LABEL_DOES_NOT_SUPPORT_METRIC",
+          "state": "BLOCKED",
+          "statement_family": "income_statement"
+        },
+        {
           "canonical_metric": "operating_cash_flow",
           "line_code": "20",
           "match_count": 0,
@@ -358,38 +350,9 @@
           "source_page": 11,
           "source_unit_scale": 1000000,
           "value": 4667489000000
-        },
-        {
-          "currency": "VND",
-          "line_code": "61",
-          "metric": "net_income",
-          "source_page": 11,
-          "source_unit_scale": 1000000,
-          "value": 3214788000000
         }
       ],
       "canonical_facts": [
-        {
-          "audit_or_review_status": "reviewed",
-          "citation_id": "9450121321fb97aaf62ba7c1e686387584b006bd6f930d894362d0835767ab72",
-          "currency": "VND",
-          "factual_reason_codes": [],
-          "factual_status": "qualified",
-          "line_code": "61",
-          "metric": "net_income",
-          "period": "2026-H1",
-          "period_end": "2026-06-30",
-          "period_start": "2026-01-01",
-          "period_type": "interim",
-          "research_reason_codes": [
-            "RESEARCH_PERIOD_NOT_ANNUAL"
-          ],
-          "research_status": "partial",
-          "scope": "consolidated",
-          "source_page": 11,
-          "source_unit_scale": 1000000,
-          "value": 3214788000000
-        },
         {
           "audit_or_review_status": "reviewed",
           "citation_id": "3631037ecfad507fd1c48db913435b197879b38df26b527d03de90fe5b12de76",
@@ -433,6 +396,18 @@
     "OFFICIAL_ONLY"
   ],
   "raw_pdf_or_image_bytes_committed": false,
+  "semantic_identity": {
+    "historical_affected_known": [
+      "HPG 2022 net_income=line61 (p3f13 semantic correction)",
+      "HPG 2023 net_income=line61 (p3f13 semantic correction)",
+      "annual OCR-path facts emitted by the pre-corrective STANDARD_FACT_RULES (line 61 as net_income); exhaustive count not audited"
+    ],
+    "historical_authority": "HISTORICAL_NET_INCOME_SEMANTIC_RECONCILIATION_REQUIRED",
+    "historical_rows_rewritten": false,
+    "line_60": "net_income (total profit after tax); requires explicit row label",
+    "line_61": "attributable_net_income (parent-attributable); requires explicit row label",
+    "line_61_as_net_income": "FORBIDDEN"
+  },
   "valuation": {
     "pb_effect": "NONE",
     "pe_ttm_from_h1": false,

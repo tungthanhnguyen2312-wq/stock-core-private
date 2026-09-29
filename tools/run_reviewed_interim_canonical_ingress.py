@@ -110,6 +110,16 @@ def run(*, landing_root: Path) -> dict[str, Any]:
         "canonical_fact_count": len(overlay_rows),
         "precedence_statuses": sorted({row["status"] for row in precedence}),
         "financial_v2_pin": {"authority_version": "2026-09-05.1", "changed": False},
+        "semantic_identity": {
+            "line_60": "net_income (total profit after tax); requires explicit row label",
+            "line_61": "attributable_net_income (parent-attributable); requires explicit row label",
+            "line_61_as_net_income": "FORBIDDEN",
+            "historical_authority": "HISTORICAL_NET_INCOME_SEMANTIC_RECONCILIATION_REQUIRED",
+            "historical_affected_known": ["HPG 2022 net_income=line61 (p3f13 semantic correction)",
+                                          "HPG 2023 net_income=line61 (p3f13 semantic correction)",
+                                          "annual OCR-path facts emitted by the pre-corrective STANDARD_FACT_RULES (line 61 as net_income); exhaustive count not audited"],
+            "historical_rows_rewritten": False,
+        },
         "valuation": {"pe_ttm_from_h1": False, "ps_ttm_from_h1": False, "pb_effect": "NONE"},
     }
     report["artifact_sha256"] = _hash(report)

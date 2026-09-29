@@ -1,9 +1,9 @@
 # Stock Lookup — Architecture & Roadmap
 
 **Roadmap sync: Reviewed-interim canonical ingress (2026-09-29):**
-- `FINANCIAL_EVIDENCE_REVIEWED_INTERIM_CANONICAL_INGRESS_V1` = `COMPLETE`, rooted at
+- `FINANCIAL_EVIDENCE_REVIEWED_INTERIM_CANONICAL_INGRESS_V1` = `PARTIAL`, rooted at
   `7eb3d66b006c267a6b4d34416b7569929fe00c59`. Reviewed interim official facts may be factually
-  QUALIFIED (four PNJ/VRE H1 2026 VND facts in the existing official overlay); annual-only
+  QUALIFIED (two PNJ/VRE H1 2026 VND revenue facts; net-income identity fails closed pending legible row labels); annual-only
   Financial V2/current corporate research authority, the `2026-09-05.1` pin, valuation methods
   and postures are unchanged. No successor is queued or started.
 

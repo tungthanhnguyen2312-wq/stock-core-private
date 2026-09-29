@@ -41,10 +41,31 @@ STANDARD_FACT_RULES = (
     ("total_assets", "balance_sheet", "270"),
     ("shareholders_equity", "balance_sheet", "400"),
     ("revenue", "income_statement", "10"),
-    # Consolidated parent-attributable earnings, never line 60 total profit.
-    ("net_income", "income_statement", "61"),
+    # Two distinct canonical concepts (canonical_financial_facts.METRIC_REGISTRY): line 60 is total
+    # profit after tax (net_income); line 61 is profit attributable to the parent
+    # (attributable_net_income). Line 61 must never be labelled net_income.
+    ("net_income", "income_statement", "60"),
+    ("attributable_net_income", "income_statement", "61"),
     ("operating_cash_flow", "cash_flow", "20"),
 )
+# Line code alone is not identity: the matched row's own label must support the concept.
+# ``any_of`` phrases are normalized (accent-free) label substrings; ``forbidden`` phrases block.
+ROW_LABEL_CONTRACT = {
+    "net_income": {"any_of": ("loi nhuan sau thue", "profit after tax"),
+                   "forbidden": ("cong ty me", "chu so huu", "co dong", "parent", "khong kiem soat")},
+    "attributable_net_income": {"any_of": ("cong ty me", "of the parent", "parent company"),
+                                "forbidden": ("khong kiem soat", "non controlling", "non-controlling")},
+}
+
+
+def row_label_supports_metric(metric: str, label: str) -> bool:
+    contract = ROW_LABEL_CONTRACT.get(metric)
+    if contract is None:
+        return True
+    normalized = _normalize(label)
+    return any(term in normalized for term in contract["any_of"]) and not any(term in normalized for term in contract["forbidden"])
+
+
 DEBT_COMPONENT_RULES = (
     ("short_term_borrowings", "balance_sheet", "320"),
     ("long_term_borrowings_or_finance_leases", "balance_sheet", "338"),
@@ -417,6 +438,10 @@ def qualify_table_facts(materialization: Mapping[str, Any], *, ticker: str, repo
             cell_evidence = cell_resolution.get("cell_evidence")
         else:
             blocked.append({"canonical_metric": metric, "line_code": code, "statement_family": family, "state": "BLOCKED", "reason": "ROW_NOT_UNIQUE_OR_NOT_GEOMETRICALLY_RESOLVED", "match_count": len(matches)})
+            return None
+        if not row_label_supports_metric(metric, str((match.get("row_object") or {}).get("reconstructed_label") or match.get("line_text") or "")):
+            blocked.append({"canonical_metric": metric, "line_code": code, "statement_family": family, "state": "BLOCKED",
+                            "reason": "ROW_LABEL_DOES_NOT_SUPPORT_METRIC"})
             return None
         table_id = f"ocr-page:{materialization['document_sha256']}:{match['page']}:{family}"
         unit = ({"state": "QUALIFIED", "scope_level": "legacy_caller_contract", "currency": currency,
