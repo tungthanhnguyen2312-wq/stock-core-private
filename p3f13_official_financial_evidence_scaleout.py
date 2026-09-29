@@ -199,8 +199,9 @@ def apply_canonical_identity_corrections(panel: Mapping[str, Any]) -> list[dict[
     They must no longer replace line-60 ``net_income`` with line-61 while keeping
     metric ``net_income``. Current authority is applied by semantic metric relabel.
     """
-    from historical_net_income_semantic_correction import apply_to_facts
+    from historical_net_income_semantic_correction import apply_to_facts, load_semantic_correction_artifacts
 
+    loaded = load_semantic_correction_artifacts(ROOT)
     corrections = []
     applied_keys = set()
     for issuer in panel.get("issuers", []):
@@ -226,7 +227,11 @@ def apply_canonical_identity_corrections(panel: Mapping[str, Any]) -> list[dict[
     if applied_keys != expected_keys:
         raise ValueError("CANONICAL_IDENTITY_CORRECTION_EVIDENCE_NOT_FOUND")
     for issuer in panel.get("issuers", []):
-        applied = apply_to_facts(issuer.get("facts") or [])
+        applied = apply_to_facts(
+            issuer.get("facts") or [],
+            correction_facts=loaded["facts"],
+            correction_records=loaded["corrections"],
+        )
         issuer["facts"] = list(applied["current_facts"])
         issuer["superseded_facts"] = list(applied["superseded_facts"])
     return corrections

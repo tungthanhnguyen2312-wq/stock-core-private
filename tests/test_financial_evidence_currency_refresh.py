@@ -502,10 +502,10 @@ def test_malformed_present_overlay_fails_closed_and_missing_overlay_is_empty(tmp
         "", encoding="utf-8",
     )
     assert load_public_official_citations(empty_root) == {}
-    from historical_net_income_semantic_correction import current_authority_fact_rows
     loaded = fact_store.load_official_citations(empty_root)
-    expected = {(row["ticker"], row["canonical_metric"], row["reporting_period"]) for row in current_authority_fact_rows()}
-    assert expected <= set(loaded)
+    assert ("GAS", "net_income", "2025") not in loaded
+    assert ("HPG", "net_income", "2022") not in loaded
+    assert ("FPT", "net_income", "2025") not in loaded
 
 
 def test_evaluated_valuation_keeps_daily_with_explicit_malformed_overlay_state(monkeypatch):

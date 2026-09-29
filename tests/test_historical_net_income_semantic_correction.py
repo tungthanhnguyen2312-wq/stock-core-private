@@ -26,9 +26,15 @@ from historical_net_income_semantic_correction import (
     FINANCIAL_V2_PIN,
     MILESTONE_ID,
     PARENT_ATTRIBUTABLE_INCOME_REQUIRED,
+    PUBLIC_CORRECTIONS,
+    PUBLIC_DIR,
+    PUBLIC_FACTS,
+    SEMANTIC_CORRECTION_EVIDENCE_IDENTITY_MISMATCH,
+    SEMANTIC_CORRECTION_EXACT_KEY_CONFLICT,
     SEMANTIC_IDENTITY_UNRESOLVED,
     SEMANTIC_INTENT_UNRESOLVED,
     SUPERSEDED,
+    SemanticCorrectionArtifactError,
     TOTAL_NET_INCOME_REQUIRED,
     UNAVAILABLE,
     apply_to_citation_mapping,
@@ -41,16 +47,35 @@ from historical_net_income_semantic_correction import (
     classify_consumers,
     correction_id_for,
     current_authority_fact_rows,
-    is_wrong_class_a_net_income,
+    load_semantic_correction_artifacts,
     precedence_official_attributable_vs_provider_net_income,
+    render_jsonl,
     unresolved_consumer_fail_closed,
 )
+from semantic_evidence_bridge import load_verified_financial_identities
 from official_financial_ocr_table_evidence import STANDARD_FACT_RULES, row_label_supports_metric
 from official_legacy_precedence import NOT_COMPARABLE
 from financial_evidence_currency_refresh import financial_v2_pin_decision
 
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def _contract_overlay() -> dict:
+    return {
+        "correction_facts": current_authority_fact_rows(),
+        "correction_records": build_all_correction_records(),
+    }
+
+
+def _write_artifacts(root: Path, *, facts=None, corrections=None) -> Path:
+    directory = root / PUBLIC_DIR
+    directory.mkdir(parents=True)
+    if facts is not None:
+        (directory / PUBLIC_FACTS).write_text(render_jsonl(facts), encoding="utf-8")
+    if corrections is not None:
+        (directory / PUBLIC_CORRECTIONS).write_text(render_jsonl(corrections), encoding="utf-8")
+    return directory
 
 
 def test_canonical_registry_keeps_total_and_attributable_distinct():
@@ -98,7 +123,7 @@ def test_append_only_correction_and_old_evidence_immutable():
         },
     }
     frozen = json.dumps(original, sort_keys=True)
-    applied = apply_to_facts([original])
+    applied = apply_to_facts([original], **_contract_overlay())
     assert json.dumps(original, sort_keys=True) == frozen
     assert applied["superseded_facts"][0]["qualification_state"] == SUPERSEDED
     assert applied["superseded_facts"][0]["value"] == 8_483_510_554_031
@@ -143,7 +168,7 @@ def test_exact_key_dedup_and_no_numeric_copying():
         "statement_scope": "consolidated", "value": 8_444_429_054_516,
         "source_lineage": {"document_sha256": CLASS_A[0]["document_sha256"], "line_code": "60", "citation_id": "x"},
     }
-    applied = apply_to_facts([line60])
+    applied = apply_to_facts([line60], **_contract_overlay())
     net = [row for row in applied["current_facts"] if row["canonical_metric"] == "net_income" and row["reporting_period"] == "2022"]
     attr = [row for row in applied["current_facts"] if row["canonical_metric"] == "attributable_net_income" and row["reporting_period"] == "2022"]
     assert len(net) == 1 and net[0]["value"] == 8_444_429_054_516
@@ -152,7 +177,7 @@ def test_exact_key_dedup_and_no_numeric_copying():
     conflict = dict(line60)
     conflict["value"] = 1
     with pytest.raises(ValueError, match="EXACT_KEY_DUPLICATE"):
-        apply_to_facts([line60, conflict])
+        apply_to_facts([line60, conflict], **_contract_overlay())
 
 
 def test_missing_line60_stays_missing_when_label_fails():
@@ -164,7 +189,7 @@ def test_missing_line60_stays_missing_when_label_fails():
         "statement_scope": "consolidated", "value": 9_376_127_629_501,
         "source_lineage": {"document_sha256": entry["document_sha256"], "citation_id": entry["wrong"]["citation_id"],
                            "line_code": "61"},
-    }])
+    }], **_contract_overlay())
     attr = [row for row in applied["current_facts"] if row["canonical_metric"] == "attributable_net_income"]
     assert attr == []
     net = [row for row in applied["current_facts"] if row["canonical_metric"] == "net_income" and row["reporting_period"] == "2025"]
@@ -188,7 +213,7 @@ def test_class_d_facts_are_not_relabelled():
         {"ticker": "PVD", "canonical_metric": "net_income", "reporting_period": "2022",
          "statement_scope": "consolidated", "value": -6_653_052},
     ]
-    applied = apply_to_facts(facts)
+    applied = apply_to_facts(facts, **_contract_overlay())
     assert applied["superseded_facts"] == []
     current = {(row["ticker"], row["reporting_period"], row["canonical_metric"], row["value"]) for row in applied["current_facts"]
                if row["ticker"] in {"VRE", "PVD"}}
@@ -255,19 +280,161 @@ def test_deterministic_rebuild_identity():
     assert first["v1_covers"] == "exactly four confirmed Class-A facts"
 
 
-def test_loader_applies_current_authority_overlay(tmp_path: Path):
-    loaded = apply_to_citation_mapping({})
+def test_pure_transforms_do_not_authorize_class_a_from_constants():
+    assert apply_to_citation_mapping({}) == {}
+    assert apply_to_verified_identities({}) == {}
+    assert apply_to_facts([])["current_facts"] == []
+    assert apply_to_facts([])["added_facts"] == []
+    overlay = _contract_overlay()
+    loaded = apply_to_citation_mapping({}, **overlay)
     assert loaded[("HPG", "net_income", "2022")]["value"] == 8_444_429_054_516
     assert loaded[("HPG", "attributable_net_income", "2022")]["value"] == 8_483_510_554_031
     assert loaded[("FPT", "net_income", "2025")]["value"] == 11_232_339_450_734
     assert ("FPT", "attributable_net_income", "2025") not in loaded
     assert loaded[("GAS", "attributable_net_income", "2025")]["value"] == 11_414_339_911_686
     wrong_kept_out = apply_to_citation_mapping({
-        ("FPT", "net_income", "2025"): {"value": 9_376_127_629_501, "citation_id": "x"},
-    })
+        ("FPT", "net_income", "2025"): {
+            "value": 9_376_127_629_501, "citation_id": CLASS_A[2]["wrong"]["citation_id"],
+            "document_sha256": CLASS_A[2]["document_sha256"],
+        },
+    }, **overlay)
     assert wrong_kept_out[("FPT", "net_income", "2025")]["value"] == 11_232_339_450_734
+    verified = apply_to_verified_identities({}, **overlay)
+    assert len(verified) == 7
+    assert ("FPT", "attributable_net_income", "2025") not in verified
+
+
+def test_empty_runtime_root_has_no_semantic_correction_facts(tmp_path: Path):
+    citations = load_official_citations(tmp_path)
+    assert ("GAS", "net_income", "2025") not in citations
+    assert ("HPG", "net_income", "2022") not in citations
+    assert ("FPT", "net_income", "2025") not in citations
+    keys = {(ticker, metric) for ticker, metric, _period in citations if ticker in {"HPG", "FPT", "GAS"}}
+    assert keys == set()
+    verified = load_verified_financial_identities(tmp_path)
+    assert verified["by_key"] == {}
+    loaded = load_semantic_correction_artifacts(tmp_path)
+    assert loaded == {"facts": [], "corrections": []}
+
+
+def test_runtime_root_without_semantic_correction_artifact_injects_nothing(tmp_path: Path):
+    directory = tmp_path / PUBLIC_DIR
+    directory.mkdir(parents=True)
+    (directory / "qualified_official_facts.jsonl").write_text("", encoding="utf-8")
+    citations = load_official_citations(tmp_path)
+    assert ("GAS", "net_income", "2025") not in citations
+    assert load_semantic_correction_artifacts(tmp_path) == {"facts": [], "corrections": []}
+
+
+def test_valid_correction_artifact_authorizes_qualified_facts(tmp_path: Path):
+    _write_artifacts(tmp_path, facts=current_authority_fact_rows(), corrections=build_all_correction_records())
     citations = load_official_citations(tmp_path)
     assert citations[("GAS", "net_income", "2025")]["value"] == 11_571_631_226_008
+    assert citations[("GAS", "attributable_net_income", "2025")]["value"] == 11_414_339_911_686
+    assert citations[("HPG", "net_income", "2022")]["value"] == 8_444_429_054_516
+    assert citations[("HPG", "attributable_net_income", "2023")]["value"] == 6_835_064_334_356
+    assert citations[("FPT", "net_income", "2025")]["value"] == 11_232_339_450_734
+    assert ("FPT", "attributable_net_income", "2025") not in citations
+    loaded = load_semantic_correction_artifacts(tmp_path)
+    assert len(loaded["facts"]) == 7
+    assert len(loaded["corrections"]) == 8
+
+
+def test_malformed_present_correction_artifact_fails_closed(tmp_path: Path):
+    directory = tmp_path / PUBLIC_DIR
+    directory.mkdir(parents=True)
+    (directory / PUBLIC_FACTS).write_text("{not json\n", encoding="utf-8")
+    with pytest.raises(SemanticCorrectionArtifactError, match="SEMANTIC_CORRECTION_ARTIFACT_MALFORMED_JSON"):
+        load_semantic_correction_artifacts(tmp_path)
+    with pytest.raises(SemanticCorrectionArtifactError, match="SEMANTIC_CORRECTION_ARTIFACT_MALFORMED_JSON"):
+        load_official_citations(tmp_path)
+    (directory / PUBLIC_FACTS).write_text(json.dumps({"qualification_state": "QUALIFIED", "value": 1}) + "\n", encoding="utf-8")
+    with pytest.raises(SemanticCorrectionArtifactError, match="SEMANTIC_CORRECTION_ARTIFACT_SCHEMA_ERROR"):
+        load_semantic_correction_artifacts(tmp_path)
+
+
+def test_correction_artifact_with_wrong_document_sha_or_citation_fails(tmp_path: Path):
+    facts = current_authority_fact_rows()
+    tampered = dict(facts[0])
+    tampered["document_sha256"] = "0" * 64
+    _write_artifacts(tmp_path, facts=[tampered], corrections=build_all_correction_records())
+    with pytest.raises(SemanticCorrectionArtifactError, match=SEMANTIC_CORRECTION_EVIDENCE_IDENTITY_MISMATCH):
+        load_semantic_correction_artifacts(tmp_path)
+    facts[0] = dict(facts[0])
+    facts[0]["citation_id"] = "1" * 64
+    _write_artifacts(tmp_path / "citation", facts=facts, corrections=build_all_correction_records())
+    with pytest.raises(SemanticCorrectionArtifactError, match=SEMANTIC_CORRECTION_EVIDENCE_IDENTITY_MISMATCH):
+        load_semantic_correction_artifacts(tmp_path / "citation")
+
+
+def test_exact_key_value_conflict_fails_closed():
+    overlay = _contract_overlay()
+    with pytest.raises(SemanticCorrectionArtifactError, match=SEMANTIC_CORRECTION_EXACT_KEY_CONFLICT):
+        apply_to_citation_mapping({
+            ("HPG", "net_income", "2022"): {
+                "value": 1, "citation_id": "other",
+                "document_sha256": CLASS_A[0]["document_sha256"],
+            },
+        }, **overlay)
+    with pytest.raises(SemanticCorrectionArtifactError, match=SEMANTIC_CORRECTION_EXACT_KEY_CONFLICT):
+        apply_to_verified_identities({
+            ("HPG", "net_income", "2022"): {"value": 1, "citation_id": "other"},
+        }, **overlay)
+
+
+def test_idempotent_same_value_key_does_not_duplicate():
+    overlay = _contract_overlay()
+    existing = {
+        ("HPG", "net_income", "2022"): {
+            "value": 8_444_429_054_516,
+            "citation_id": CLASS_A[0]["line60"]["citation_id"],
+            "document_sha256": CLASS_A[0]["document_sha256"],
+        },
+    }
+    merged = apply_to_citation_mapping(existing, **overlay)
+    assert [key for key in merged if key == ("HPG", "net_income", "2022")] == [("HPG", "net_income", "2022")]
+    assert merged[("HPG", "net_income", "2022")]["value"] == 8_444_429_054_516
+    applied = apply_to_facts([{
+        "ticker": "HPG", "canonical_metric": "net_income", "reporting_period": "2022",
+        "statement_scope": "consolidated", "value": 8_444_429_054_516,
+        "document_sha256": CLASS_A[0]["document_sha256"],
+        "citation_id": CLASS_A[0]["line60"]["citation_id"],
+        "source_lineage": {
+            "document_sha256": CLASS_A[0]["document_sha256"],
+            "citation_id": CLASS_A[0]["line60"]["citation_id"],
+            "line_code": "60",
+        },
+    }], **overlay)
+    net = [row for row in applied["current_facts"] if row["canonical_metric"] == "net_income" and row["reporting_period"] == "2022"]
+    assert len(net) == 1
+
+
+def test_governed_evidence_context_still_authorizes_hpg_fpt_gas():
+    citations = load_official_citations(ROOT)
+    assert citations[("HPG", "net_income", "2022")]["value"] == 8_444_429_054_516
+    assert citations[("HPG", "attributable_net_income", "2022")]["value"] == 8_483_510_554_031
+    assert citations[("HPG", "net_income", "2023")]["value"] == 6_800_388_315_081
+    assert citations[("HPG", "attributable_net_income", "2023")]["value"] == 6_835_064_334_356
+    assert citations[("FPT", "net_income", "2025")]["value"] == 11_232_339_450_734
+    assert ("FPT", "attributable_net_income", "2025") not in citations
+    assert citations[("GAS", "net_income", "2025")]["value"] == 11_571_631_226_008
+    assert citations[("GAS", "attributable_net_income", "2025")]["value"] == 11_414_339_911_686
+    verified = load_verified_financial_identities(ROOT)["by_key"]
+    assert verified[("HPG", "net_income", "2022")]["value"] == 8_444_429_054_516
+    assert verified[("GAS", "net_income", "2025")]["value"] == 11_571_631_226_008
+    assert ("FPT", "attributable_net_income", "2025") not in verified
+
+
+def test_unrelated_same_value_fact_is_not_superseded():
+    overlay = _contract_overlay()
+    unrelated = {
+        ("HPG", "net_income", "2022"): {
+            "value": 8_483_510_554_031, "citation_id": "unrelated",
+            "document_sha256": "f" * 64,
+        },
+    }
+    with pytest.raises(SemanticCorrectionArtifactError, match=SEMANTIC_CORRECTION_EXACT_KEY_CONFLICT):
+        apply_to_citation_mapping(unrelated, **overlay)
 
 
 def test_no_line61_remains_current_net_income_for_class_a():
@@ -282,7 +449,7 @@ def test_no_line61_remains_current_net_income_for_class_a():
             },
         }
         for entry in CLASS_A
-    ])
+    ], **_contract_overlay())
     current_net = [
         row for row in applied["current_facts"]
         if row["canonical_metric"] == "net_income" and (row["ticker"], row["reporting_period"]) in {(e["ticker"], e["reporting_period"]) for e in CLASS_A}

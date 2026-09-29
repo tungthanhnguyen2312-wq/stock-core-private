@@ -385,6 +385,15 @@ class SemanticEvidenceBridgeTests(unittest.TestCase):
             enriched = bridge.enrich_canonical_records(canonical, root)
             self.assertEqual(enriched, canonical)
 
+    def test_verified_identities_empty_root_does_not_emit_semantic_correction_facts(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            verified = bridge.load_verified_financial_identities(root)
+            self.assertEqual(verified["by_key"], {})
+            self.assertEqual(verified["status"], "unavailable")
+            from historical_net_income_semantic_correction import apply_to_verified_identities
+            self.assertEqual(apply_to_verified_identities({}), {})
+
 
 if __name__ == "__main__":
     unittest.main()

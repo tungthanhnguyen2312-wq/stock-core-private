@@ -1,5 +1,5 @@
 {
-  "artifact_sha256": "82664e5596903a930b88ac3894689fa3fc1ccef9f991f5566f2a44b37fb25410",
+  "artifact_sha256": "2f95f8c4351c5d898a007e7bb057ba895fc7279a98cec9a6ec16a730b5d84cfc",
   "canonical_semantics": {
     "attributable_net_income": "profit after tax attributable to owners/shareholders of parent",
     "line_60": "net_income only with qualifying identity evidence",
@@ -619,7 +619,7 @@
   "retained_daily": {
     "financial_v2_pin": "2026-09-05.1",
     "live_daily_run": false,
-    "note": "Official citations JSONL already stored HPG 2022/2023 line-60 totals; FPT/GAS line-61-as-net_income lived in OCR/P2C2 panels. Overlay adds current-authority FPT/GAS totals and HPG/GAS attributable facts. Market/technical/liquidity/PIT/sizing loaders do not consume these income identities.",
+    "note": "Full retained 2026-09-29 bounded assembly vs BASE 42e756e: 1,683 tickers; integrated decision, operational fundamental integration, evaluated valuation and Financial V2 product identities byte-identical; 0 posture/fundamental-state/valuation/unrelated/unexplained deltas. Current authority is evidence-gated on public semantic_metric_relabel_*.jsonl. Market/technical/liquidity/PIT/sizing loaders do not consume these income identities.",
     "session": "2026-09-29",
     "unexplained_drift_count": 0
   },

@@ -10,7 +10,12 @@ immutable. Current authority is corrected by append-only `SEMANTIC_METRIC_RELABE
 to owners of the parent) remain distinct concepts. V1 covers exactly four confirmed Class-A
 facts: HPG 2022, HPG 2023, FPT 2025, GAS 2025. Class-D PVD 2022/2023, VNM 2024, AAA 2024 and
 VRE 2025 stay `SEMANTIC_IDENTITY_UNRESOLVED`. No corpus-wide reconciliation is claimed.
-Financial V2 pin `2026-09-05.1` is unchanged. No live Daily, merge, deploy or successor.
+Financial V2 pin `2026-09-05.1` is unchanged. Same-PR authority corrective: current-authority
+rows enter only from the public `semantic_metric_relabel_*.jsonl` artifacts under the supplied
+root; CLASS_A constants are a frozen validation contract, not an authority source. Full retained
+2026-09-29 bounded assembly (1,683 tickers, BASE `42e756e` vs corrected PR #22 head) has 0 posture,
+fundamental-state, valuation, unrelated-ticker or unexplained deltas; Daily integrated products
+are byte-identical. No live Daily, merge, deploy or successor.
 Public-safe report: `derived/financial-evidence-currency-refresh-v1/historical_net_income_semantic_correction_report.json`.
 
 **Reviewed-interim canonical ingress (2026-09-29):**

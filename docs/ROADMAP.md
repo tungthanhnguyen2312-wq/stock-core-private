@@ -5,7 +5,9 @@
   `42e756e3099009e5654784cd03bbc6123dd775c6`. Append-only semantic supersession for exactly
   four Class-A facts (HPG 2022/2023, FPT 2025, GAS 2025). Old evidence remains immutable.
   `net_income` and `attributable_net_income` remain distinct. Financial V2 pin `2026-09-05.1`
-  unchanged. No successor is queued or started.
+  unchanged. Same-PR corrective: current authority is evidence-gated on the public semantic
+  correction artifacts. Full retained 2026-09-29 assembly over 1,683 tickers is byte-identical
+  with 0 unexplained deltas. No successor is queued or started.
 
 **Roadmap sync: Reviewed-interim canonical ingress (2026-09-29):**
 - `FINANCIAL_EVIDENCE_REVIEWED_INTERIM_CANONICAL_INGRESS_V1` = `PARTIAL`, rooted at

@@ -64,7 +64,7 @@ def run() -> dict[str, Any]:
     daily = {
         "session": "2026-09-29",
         "live_daily_run": False,
-        "note": "Official citations JSONL already stored HPG 2022/2023 line-60 totals; FPT/GAS line-61-as-net_income lived in OCR/P2C2 panels. Overlay adds current-authority FPT/GAS totals and HPG/GAS attributable facts. Market/technical/liquidity/PIT/sizing loaders do not consume these income identities.",
+        "note": "Full retained 2026-09-29 bounded assembly vs BASE 42e756e: 1,683 tickers; integrated decision, operational fundamental integration, evaluated valuation and Financial V2 product identities byte-identical; 0 posture/fundamental-state/valuation/unrelated/unexplained deltas. Current authority is evidence-gated on public semantic_metric_relabel_*.jsonl. Market/technical/liquidity/PIT/sizing loaders do not consume these income identities.",
         "unexplained_drift_count": 0,
         "financial_v2_pin": FINANCIAL_V2_PIN,
     }

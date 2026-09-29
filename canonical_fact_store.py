@@ -239,8 +239,16 @@ def load_official_citations(runtime_root: Path | str) -> dict[tuple, dict[str, A
             citations[(ticker, metric, f"{period}-Q4")] = dict(entry)
         if metric in stock_metrics and period == "2026-H1":
             citations[(ticker, metric, "2026-Q2")] = dict(entry)
-    from historical_net_income_semantic_correction import apply_to_citation_mapping
-    return apply_to_citation_mapping(citations)
+    from historical_net_income_semantic_correction import (
+        apply_to_citation_mapping,
+        load_semantic_correction_artifacts,
+    )
+    loaded = load_semantic_correction_artifacts(runtime_root)
+    return apply_to_citation_mapping(
+        citations,
+        correction_facts=loaded["facts"],
+        correction_records=loaded["corrections"],
+    )
 
 
 def _applicability_for(ticker: str, observations: Sequence[Mapping[str, Any]],

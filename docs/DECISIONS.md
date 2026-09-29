@@ -20,6 +20,19 @@ Class-D facts are unchanged. Corporate fundamental-readiness and corporate P/E c
 `net_income`. Financial V2 pin `2026-09-05.1` is unchanged. Provider `net_income` versus official
 `attributable_net_income` is `NOT_COMPARABLE` / `METRIC_DIFFERENCE`.
 
+**Authority source.** CLASS_A is frozen correction-contract/reference data. It does not authorize
+runtime facts. `load_official_citations` and `load_verified_financial_identities` inject qualified
+corrections only after `load_semantic_correction_artifacts(root)` proves the public
+`semantic_metric_relabel_facts.jsonl` / `semantic_metric_relabel_corrections.jsonl` artifacts are
+present and valid. Missing overlay is empty. A present malformed overlay fails closed.
+Same-key same-value overlay is idempotent; same-key different-value fails
+`SEMANTIC_CORRECTION_EXACT_KEY_CONFLICT`.
+
+**Retained 2026-09-29 assembly.** BASE `42e756e` vs corrected PR #22 head, 1,683 tickers, no
+network: integrated decision, operational fundamental integration, evaluated valuation and
+Financial V2 product identities are byte-identical. Posture, fundamental-state, valuation,
+unrelated-ticker and unexplained drift counts are 0. Pin `2026-09-05.1` unchanged.
+
 **Boundary.** Not a corpus-wide reconciliation. No live Daily, merge, deploy or successor.
 
 ## 2026-09-29 - Reviewed-interim canonical ingress (`FINANCIAL_EVIDENCE_REVIEWED_INTERIM_CANONICAL_INGRESS_V1`)
