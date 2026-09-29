@@ -458,8 +458,8 @@ def test_no_vnstock_vnai_in_refresh_modules():
 
 def test_roadmap_current_milestone_is_the_authorized_ocr_continuation():
     state = json.loads((ROOT / "docs" / "ROADMAP_STATE.json").read_text(encoding="utf-8"))
-    assert state["current"]["milestone"] == "FINANCIAL_EVIDENCE_COHORT1_OCR_GEOMETRY_AND_METADATA_RECOVERY_V1"
-    assert state["current"]["state"] == "PARTIAL"
+    assert state["current"]["milestone"] == "FINANCIAL_EVIDENCE_REVIEWED_INTERIM_CANONICAL_INGRESS_V1"
+    assert state["current"]["state"] == "COMPLETE"
     assert state["queued_next"] == []
     ids = [row["milestone_id"] for row in state["milestones"]]
     assert MILESTONE_ID in ids
