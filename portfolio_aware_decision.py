@@ -20,7 +20,7 @@ never mutates ``research_action_posture``, never invents a stop price or a price
 emits a forced-liquidation instruction, and never fabricates a positive expected utility for new
 margin. It reuses ``current_portfolio_risk_envelope/v1``'s existing boundary rather than building
 a second risk engine: ``execution_qualified_quantity`` stays ``NOT_QUALIFIED`` unconditionally,
-because exact liquidity/execution authority is not established anywhere in this repository.
+because scoped ADTV research does not establish live execution authority.
 
 Owner profile: CORE_LONG_TERM_WITH_TACTICAL_OVERLAY. A long-term core position and an unrelated
 tactical opportunity in the same, or a different, ticker are not in conflict: existing exposure
@@ -38,12 +38,14 @@ from pathlib import Path
 from typing import Any, Mapping, Sequence
 
 import empirical_setup_outcome_calibration as _empirical_calibration
+import execution_capacity_research as _execution_capacity
 import exchange_industry_classification as _industry_classification
 import owner_research_exclusions as _owner_research_exclusions
 import private_portfolio_context as _private_portfolio_context
 
 CONTRACT_VERSION = "portfolio_aware_decision/v1"
 RISK_SIZING_CONTRACT_VERSION = "portfolio_risk_sizing/v1"
+RESEARCH_SIZE_ENVELOPE_CONTRACT_VERSION = "research_size_envelope/v1"
 MARGIN_ECONOMICS_CONTRACT_VERSION = "margin_economics/v1"
 PORTFOLIO_STATE_CONTRACT = "portfolio_state/v1"
 MILESTONE = "PORTFOLIO_AWARE_DECISION_AND_RISK_SIZING_V1"
@@ -321,6 +323,8 @@ def derive_portfolio_state(
             "margin_available_maximum": None,
             "annual_margin_rate_percent": None,
             "effective_policy": {},
+            "capacity_policy_fields": {},
+            "capacity_policy_provenance": {},
             "sector_weights": {},
             "gross_exposure_weight": None,
             "investment_accounts_aggregate_status": "NOT_PROVIDED",
@@ -330,6 +334,10 @@ def derive_portfolio_state(
     account_fields = ((portfolio_snapshot.get("account_snapshot") or {}).get("fields")) or {}
     policy = portfolio_snapshot.get("portfolio_policy") or {}
     effective_policy = {key: _num(value) for key, value in (policy.get("effective_fields") or {}).items()}
+    capacity_fields = {
+        key: (policy.get("effective_fields") or {}).get(key)
+        for key in ("max_participation_of_adtv20", "max_days_to_liquidate", "min_adtv20_vnd")
+    }
 
     # PRIVATE_MULTI_BROKER_INVESTMENT_ACCOUNT_CONTEXT_V1: when the owner has multiple brokerage
     # accounts and their as-of dates/currency are mutually consistent (aggregate `status ==
@@ -454,6 +462,8 @@ def derive_portfolio_state(
         "margin_available_maximum": margin_max,
         "annual_margin_rate_percent": annual_margin_rate_percent,
         "effective_policy": effective_policy,
+        "capacity_policy_fields": capacity_fields,
+        "capacity_policy_provenance": policy.get("field_provenance") or {},
         "sector_weights": sector_weights,
         "gross_exposure_weight": gross_exposure_weight,
         "investment_accounts_aggregate_status": investment_accounts_aggregate.get("status", "NOT_PROVIDED"),
@@ -533,6 +543,74 @@ def _compute_risk_sizing(*, entry_price: float | None, invalidation_price: float
     risk_budget_quantity = max(0, math.floor(risk_budget_amount / per_share_downside))
     return {"status": "AVAILABLE", "per_share_downside": per_share_downside,
             "risk_budget_amount": risk_budget_amount, "risk_budget_quantity": risk_budget_quantity}
+
+
+def _research_size_envelope(
+    *, risk_sizing: Mapping[str, Any], execution_capacity_envelope: Mapping[str, Any] | None,
+    single_constraint: Mapping[str, Any], sector_constraint: Mapping[str, Any],
+    gross_constraint: Mapping[str, Any], sizing_policy_version: str,
+    portfolio_state_identity: str | None, security_decision_identity: str | None,
+) -> dict[str, Any]:
+    """Combine the existing risk/concentration engine with the qualified Level-1 cap.
+
+    This is a private research envelope.  It never upgrades its minimum to an executable order
+    quantity and it never invents a stop from ATR or any other volatility field.
+    """
+    risk_cap = risk_sizing.get("risk_budget_quantity") if risk_sizing.get("status") == "AVAILABLE" else None
+    capacity = execution_capacity_envelope or {}
+    liquidity_cap = capacity.get("capacity_shares_lot_rounded")
+    if capacity.get("state") not in ("AVAILABLE", "PARTIAL"):
+        liquidity_cap = None
+    concentration_components = {
+        "SINGLE_POSITION": single_constraint.get("remaining_quantity"),
+        "SECTOR": sector_constraint.get("remaining_quantity"),
+        "GROSS_EXPOSURE": gross_constraint.get("remaining_quantity"),
+    }
+    concentration_values = [(name, value) for name, value in concentration_components.items() if value is not None]
+    concentration_cap = min((value for _, value in concentration_values), default=None)
+    concentration_binding = next((name for name, value in concentration_values if value == concentration_cap), None)
+    candidates = [("RISK_CAP", risk_cap), ("LIQUIDITY_CAP", liquidity_cap), ("CONCENTRATION_CAP", concentration_cap)]
+    qualified = [(name, int(value)) for name, value in candidates if value is not None]
+    final_quantity = min((value for _, value in qualified), default=None)
+    binding = next((name for name, value in qualified if value == final_quantity), "NONE")
+    available_categories = sum(value is not None for _, value in candidates)
+    completeness = ("FULL" if available_categories == 3 and len(concentration_values) == len(concentration_components)
+                    else ("PARTIAL" if available_categories else "INSUFFICIENT"))
+    reasons: list[str] = []
+    if risk_cap is None:
+        reasons.append(risk_sizing.get("status") or "RISK_CAP_UNAVAILABLE")
+    if liquidity_cap is None:
+        reasons.extend(capacity.get("reason_codes") or ["LIQUIDITY_CAP_UNAVAILABLE"])
+    if concentration_cap is None:
+        reasons.append("CONCENTRATION_CAP_UNAVAILABLE")
+    elif len(concentration_values) != len(concentration_components):
+        reasons.append("CONCENTRATION_COMPONENTS_NOT_FULLY_EVALUATED")
+    body = {
+        "schema_version": "1.0.0",
+        "contract_version": RESEARCH_SIZE_ENVELOPE_CONTRACT_VERSION,
+        "state": "AVAILABLE" if completeness == "FULL" else ("PARTIAL" if qualified else "BLOCKED"),
+        "authority": "PRIVATE_CURRENT_SESSION_RISK_SIZE_RESEARCH",
+        "risk_cap_shares": risk_cap,
+        "liquidity_cap_shares": liquidity_cap,
+        "concentration_cap_shares": concentration_cap,
+        "concentration_binding_component": concentration_binding,
+        "other_qualified_caps": {},
+        "research_size_envelope_shares": final_quantity,
+        "binding_constraint": binding,
+        "completeness": completeness,
+        "reason_codes": list(dict.fromkeys(reasons)),
+        "policy_identity": capacity.get("policy_identity"),
+        "sizing_policy_version": sizing_policy_version,
+        "source_identities": {
+            "execution_capacity_envelope": capacity.get("artifact_identity"),
+            "portfolio_state": portfolio_state_identity,
+            "security_decision": security_decision_identity,
+        },
+        "execution_qualified_quantity": None,
+        "execution_qualified_quantity_status": "NOT_QUALIFIED",
+        "limitations": ["RESEARCH_ONLY", "NOT_LIVE_POSITION_SIZING", "NOT_PORTFOLIO_ALLOCATION", "NOT_EXECUTION_INSTRUCTION"],
+    }
+    return {**body, **_identity("research_size_envelope", body)}
 
 
 def _probe_eligible(*, posture: str, invalidation_price: float | None, entry_price: float | None) -> bool:
@@ -987,8 +1065,8 @@ def _not_evaluated_record(*, ticker: str, security_decision: Mapping[str, Any], 
             "sizing_mode": SIZING_MODE_NOT_APPLICABLE,
         },
         "execution_qualified_quantity": None,
-        "execution_qualified_quantity_status": "NOT_EVALUATED",
-        "execution_qualified_quantity_reason": "EXACT_LIQUIDITY_INPUTS_NOT_QUALIFIED",
+        "execution_qualified_quantity_status": "NOT_QUALIFIED",
+        "execution_qualified_quantity_reason": "CURRENT_SESSION_RESEARCH_ENVELOPE_IS_NOT_EXECUTION_AUTHORITY",
         "cash_funding_capacity": {"status": "UNAVAILABLE", "cash_available": None, "cash_reserve_floor": None,
                                    "deployable_cash": None, "max_cash_fundable_quantity": None},
         "margin_account_context": {"current_margin_debt": None, "margin_available_minimum": None,
@@ -1027,6 +1105,7 @@ def build_ticker_portfolio_aware_decision(
     *, ticker: str, portfolio_state: Mapping[str, Any], security_decision: Mapping[str, Any] | None,
     position_lane: str | None = None, reward_boundary: float | None = None,
     calibration_artifact: Mapping[str, Any] | None = None, empirical_reward_horizon: str = "T5",
+    execution_capacity_envelope: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build one ticker's ``portfolio_aware_decision/v1`` record.
 
@@ -1258,6 +1337,17 @@ def build_ticker_portfolio_aware_decision(
         "constraints_evaluated": constraints_evaluated,
         "constraints_not_evaluated": constraints_not_evaluated,
     }
+    research_size_envelope = _research_size_envelope(
+        risk_sizing=risk_sizing,
+        execution_capacity_envelope=execution_capacity_envelope,
+        single_constraint=single_constraint,
+        sector_constraint=sector_constraint,
+        gross_constraint=gross_constraint,
+        sizing_policy_version=_private_portfolio_context.SYSTEM_DEFAULT_POLICY_VERSION,
+        portfolio_state_identity=(portfolio_state.get("source_identities") or {}).get("portfolio_snapshot_identity"),
+        security_decision_identity=security_decision.get("decision_identity"),
+    )
+    portfolio_risk_sizing["research_size_envelope"] = research_size_envelope
     portfolio_risk_sizing.update(_identity("portfolio_risk_sizing", portfolio_risk_sizing))
 
     record: dict[str, Any] = {
@@ -1282,9 +1372,10 @@ def build_ticker_portfolio_aware_decision(
         "risk_sizing_status": risk_sizing.get("status"),
         "risk_sizing_context": risk_sizing,
         "portfolio_risk_sizing": portfolio_risk_sizing,
+        "research_size_envelope": research_size_envelope,
         "execution_qualified_quantity": None,
-        "execution_qualified_quantity_status": "NOT_EVALUATED",
-        "execution_qualified_quantity_reason": "EXACT_LIQUIDITY_INPUTS_NOT_QUALIFIED",
+        "execution_qualified_quantity_status": "NOT_QUALIFIED",
+        "execution_qualified_quantity_reason": "CURRENT_SESSION_RESEARCH_ENVELOPE_IS_NOT_EXECUTION_AUTHORITY",
         "cash_funding_capacity": cash_funding_capacity,
         "margin_account_context": margin_account_context,
         "margin_economics": margin_economics,
@@ -1328,10 +1419,34 @@ def build_artifact(
     integrated_decision_artifact: Mapping[str, Any], position_lanes_by_ticker: Mapping[str, str] | None = None,
     reward_boundary_by_ticker: Mapping[str, float] | None = None,
     calibration_artifact: Mapping[str, Any] | None = None, empirical_reward_horizon: str = "T5",
+    execution_capacity_by_ticker: Mapping[str, Mapping[str, Any]] | None = None,
+    official_liquidity_artifact: Mapping[str, Any] | None = None,
+    capacity_price_by_ticker: Mapping[str, Any] | None = None,
+    capacity_price_identity: str | None = None,
 ) -> dict[str, Any]:
     records_in = integrated_decision_artifact.get("records") or {}
     lanes_by_ticker = position_lanes_by_ticker or {}
     reward_boundaries = reward_boundary_by_ticker or {}
+    capacity_by_ticker = dict(execution_capacity_by_ticker or {})
+    if official_liquidity_artifact is not None:
+        if official_liquidity_artifact.get("contract_version") != "official_exchange_liquidity_research/v1":
+            raise ValueError("OFFICIAL_LIQUIDITY_CONTRACT_MISMATCH")
+        if official_liquidity_artifact.get("resolved_completed_session") != session:
+            raise ValueError("OFFICIAL_LIQUIDITY_SESSION_MISMATCH")
+        policy = _execution_capacity.policy_from_private_context(
+            effective_policy=portfolio_state.get("capacity_policy_fields") or {},
+            field_provenance=portfolio_state.get("capacity_policy_provenance") or {},
+            sizing_policy_version=_private_portfolio_context.SYSTEM_DEFAULT_POLICY_VERSION,
+        )
+        official_records = official_liquidity_artifact.get("records") or {}
+        for ticker in records_in:
+            if ticker not in capacity_by_ticker:
+                capacity_by_ticker[ticker] = _execution_capacity.build_envelope(
+                    ticker=ticker, session=session, official_liquidity_record=official_records.get(ticker),
+                    policy=policy, current_price=(capacity_price_by_ticker or {}).get(ticker),
+                    price_identity=capacity_price_identity,
+                    source_liquidity_identity=official_liquidity_artifact.get("artifact_identity"),
+                )
     records: dict[str, Any] = {}
     action_counts: dict[str, int] = {}
     binding_counts: dict[str, int] = {}
@@ -1343,6 +1458,7 @@ def build_artifact(
             ticker=ticker, portfolio_state=portfolio_state, security_decision=records_in[ticker],
             position_lane=lanes_by_ticker.get(ticker), reward_boundary=_num(reward_boundaries.get(ticker)),
             calibration_artifact=calibration_artifact, empirical_reward_horizon=empirical_reward_horizon,
+            execution_capacity_envelope=capacity_by_ticker.get(ticker),
         )
         records[ticker] = record
         action = record["portfolio_action_research"]
@@ -1381,6 +1497,7 @@ def build_artifact(
         "source_artifact_identities": {
             "portfolio_state_identity": (portfolio_state.get("source_identities") or {}).get("portfolio_snapshot_identity"),
             "integrated_investment_decision_product_identity": integrated_decision_artifact.get("artifact_identity"),
+            "official_exchange_liquidity_research_identity": (official_liquidity_artifact or {}).get("artifact_identity"),
         },
         "authority_boundary": {
             "is_actionable": False,
@@ -1412,7 +1529,7 @@ def public_console_summary(artifact: Mapping[str, Any]) -> dict[str, Any]:
         "by_margin_economics_status": coverage.get("by_margin_economics_status"),
         "by_margin_research_band": coverage.get("by_margin_research_band"),
         "execution_qualified_count": 0,
-        "execution_qualified_quantity_status": "NOT_QUALIFIED_EXACT_LIQUIDITY_AUTHORITY_ABSENT",
+        "execution_qualified_quantity_status": "NOT_QUALIFIED_LIVE_EXECUTION_AUTHORITY_ABSENT",
         "source_artifact_identities": artifact.get("source_artifact_identities"),
     }
 
@@ -1426,6 +1543,7 @@ def build_private_overlay_or_skip(
     sector_by_ticker: Mapping[str, Any] | None = None, governed_sector_snapshot: Mapping[str, Any] | None = None,
     position_lanes: Mapping[str, Mapping[str, Any]] | None = None, excluded_tickers: Sequence[str] | None = None,
     position_lanes_by_ticker: Mapping[str, str] | None = None, reward_boundary_by_ticker: Mapping[str, float] | None = None,
+    official_liquidity_artifact: Mapping[str, Any] | None = None, capacity_price_identity: str | None = None,
 ) -> dict[str, Any] | None:
     """Shows the intended shape of a future local Daily integration: PUBLIC Current Research
     Daily -> Integrated Investment Decision -> (if private portfolio context exists) build a
@@ -1445,6 +1563,8 @@ def build_private_overlay_or_skip(
         session=session, requested_at=requested_at, portfolio_state=portfolio_state,
         integrated_decision_artifact=integrated_decision_artifact, position_lanes_by_ticker=position_lanes_by_ticker,
         reward_boundary_by_ticker=reward_boundary_by_ticker,
+        official_liquidity_artifact=official_liquidity_artifact, capacity_price_by_ticker=prices,
+        capacity_price_identity=capacity_price_identity,
     )
 
 
@@ -1541,6 +1661,15 @@ def evaluate_from_retained_artifacts(
     status = _private_portfolio_context.portfolio_status(portfolio_root=portfolio_root)
     portfolio_snapshot = status.get("snapshot") if status.get("status") == "READY" else None
     prices = load_descriptive_prices(repo_root, resolved_session)
+    nodash = resolved_session.replace("-", "")
+    descriptive_path = (repo_root / "operations-review" /
+                        f"market-wide-current-descriptive-research-v1-{nodash}" /
+                        "market_wide_current_descriptive_research_artifact.json")
+    price_identity = json.loads(descriptive_path.read_text(encoding="utf-8")).get("artifact_identity") if descriptive_path.is_file() else None
+    official_path = (repo_root / "operations-review" /
+                     f"official-exchange-liquidity-research-v1-{nodash}" /
+                     "official_exchange_liquidity_research_artifact.json")
+    official_liquidity = json.loads(official_path.read_text(encoding="utf-8")) if official_path.is_file() else None
     governed_sector_snapshot = load_governed_sector_snapshot(repo_root, explicit_path=sector_snapshot_path)
     # Persisted owner research exclusions (research_exclusions.json under the private portfolio
     # root) apply on every evaluation without needing a repeated --exclude flag; an explicit
@@ -1556,6 +1685,8 @@ def evaluate_from_retained_artifacts(
     return build_artifact(
         session=resolved_session, requested_at=requested_at, portfolio_state=portfolio_state,
         integrated_decision_artifact=integrated_decision_artifact, position_lanes_by_ticker=position_lanes_by_ticker,
+        official_liquidity_artifact=official_liquidity, capacity_price_by_ticker=prices,
+        capacity_price_identity=price_identity,
     )
 
 

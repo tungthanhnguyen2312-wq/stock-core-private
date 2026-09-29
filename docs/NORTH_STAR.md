@@ -113,7 +113,9 @@ As of 2026-09-28 (the authoritative record is `docs/STATE.md` / `docs/ROADMAP_ST
 
 ### 5.4 Historical PIT and market basis
 
-- RAW_AS_TRADED is not promoted.
+- Broad, market-wide and historical RAW_AS_TRADED authority is not promoted. A qualified
+  prospective cross-source subset is promoted only for scoped research where a retained DNSE
+  same-session bar agrees with the independent official HOSE series.
 - ACTIVE_UNIVERSE remains incomplete.
 - Historical reconstruction is useful but not equivalent to evidence known on the historical date.
 - Execution-grade liquidity, turnover, sizing, leverage, and backtesting remain fail-closed where inputs are unqualified.

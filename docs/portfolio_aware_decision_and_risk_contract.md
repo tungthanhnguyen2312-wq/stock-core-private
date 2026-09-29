@@ -23,9 +23,11 @@ portfolio-level sell instruction.
 `current_portfolio_risk_envelope.py` remains the standing public, explicit-portfolio
 concentration/risk boundary and is not duplicated: it already reports
 `position_sizing_status: "BLOCKED"` and `blocked_risk_dimensions` for VaR/CVaR/leverage/execution
-because exact liquidity/PIT/policy authority is not established anywhere in this repository. This
+because scoped current-session ADTV research does not establish live execution authority. This
 module reuses that exact boundary rather than building a second risk engine:
-`execution_qualified_quantity` stays unconditionally `NOT_QUALIFIED` here too.
+`execution_qualified_quantity` stays unconditionally `NOT_QUALIFIED` here too. The later
+`research_size_envelope/v1` may use a scoped Level-1 liquidity cap, but that research cap never
+becomes an executable quantity.
 
 `private_portfolio_context.py` (Foundation) is consumed read-only: this module never re-parses
 the owner workbook and never writes to the ledger/snapshot/policy/manifest directories
@@ -110,9 +112,10 @@ taxonomy for a blocked outcome.
 constraints actually cleared vs. were never evaluated, so a sector-unevaluated add is reported as
 `*_WITHIN_EVALUATED_CONSTRAINTS`, never conflated with a fully-qualified `*_WITHIN_RISK_CEILING`.
 
-`execution_qualified_quantity` is always `None` / `NOT_QUALIFIED`: given the project's current
-authority, exact liquidity/execution inputs are unqualified, so the risk ceiling never silently
-promotes to an execution instruction, matching `current_portfolio_risk_envelope/v1`'s own boundary.
+`execution_qualified_quantity` is always `None` / `NOT_QUALIFIED`. A nested
+`research_size_envelope/v1` takes the minimum of qualified existing risk/concentration caps and the
+policy-bounded current-session Level-1 liquidity cap. Missing liquidity or invalidation makes that
+envelope partial; it never silently promotes to an execution instruction.
 
 ## Margin economics (`margin_economics/v1`, tactical trades only)
 
@@ -170,8 +173,10 @@ system never permanently chooses MIN or MAX by policy.
 
 Added additively to `private_portfolio_context.py`'s existing `portfolio_policy/v1` field set
 (same owner-workbook-override -> system-default resolution every other policy field already uses).
-Adding fields required bumping `SYSTEM_DEFAULT_POLICY_VERSION` from `SYSTEM_DEFAULT_POLICY_V1` to
-`SYSTEM_DEFAULT_POLICY_V2` — `_import_layout()` folds that version string into its own identity, so
+Adding the original margin fields required bumping `SYSTEM_DEFAULT_POLICY_VERSION` from
+`SYSTEM_DEFAULT_POLICY_V1` to `SYSTEM_DEFAULT_POLICY_V2`. The later liquidity-capacity fields bump
+it to `SYSTEM_DEFAULT_POLICY_V3`; participation, liquidation horizon and minimum ADTV remain
+unbound absent owner input. `_import_layout()` folds that version string into its own identity, so
 an already-materialized immutable `portfolio_snapshot_v1.json` at a V1 layout directory is never
 silently mutated to carry five new fields under an unchanged version string; a fresh
 `import_workbook()` re-run against the same, unchanged real workbook lands in a new, additional V2

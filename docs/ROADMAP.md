@@ -1,15 +1,26 @@
 # Stock Lookup — Architecture & Roadmap
 
+**Roadmap sync: liquidity execution-capacity and private research sizing (2026-09-29):**
+- `LIQUIDITY_EXECUTION_CAPACITY_AND_SIZING_V1` = `ACTIVE / IMPLEMENTED /
+  RETAINED_ACCEPTANCE_PASS / POLICY_UNBOUND_PARTIAL`, the only active item, from canonical main
+  `160f26e` (PR #15, CI #115 SUCCESS).
+- `PROSPECTIVE_RAW_PIT_AUTHORITY_V1` = `COMPLETE` on verified merge `160f26e`; its terminal state is
+  `PROSPECTIVE_PIT_OPERATIONAL / HISTORICAL_PIT_PARTIAL`.
+- Current-session public capacity research and private current-session risk-size research are
+  use-scoped. Live sizing/allocation, historical replay, PIT backtest and execution replay stay
+  blocked. Canonical participation and liquidation-horizon policy remains explicitly UNBOUND.
+- No successor milestone is started.
+
 **Roadmap sync: prospective RAW/PIT price authority (2026-09-29):**
-- `PROSPECTIVE_RAW_PIT_AUTHORITY_V1` = `ACTIVE / LOCAL_CHECKPOINT / PROSPECTIVE_PIT_OPERATIONAL /
-  HISTORICAL_PIT_PARTIAL`, the only active execution item. It is not merged, and no successor is started.
+- `PROSPECTIVE_RAW_PIT_AUTHORITY_V1` = `COMPLETE / MERGED_PR_15 / PROSPECTIVE_PIT_OPERATIONAL /
+  HISTORICAL_PIT_PARTIAL` at canonical merge `160f26e`.
 - `OFFICIAL_EXCHANGE_LIQUIDITY_MARKET_WIDE_OPERATIONALIZATION_V1` = `COMPLETE` (PR #14 merged to `main` `ac9b8cf`, CI #113
   SUCCESS; terminal `MARKET_WIDE_LIQUIDITY_OPERATIONALIZATION_PARTIAL`). `AUTHORITY_CLOSURE_LIQUIDITY_FOUNDATION_V1` =
   `COMPLETE` (PR #13). `CURRENT_RESEARCH_CHAIN_PROMOTION_REVIEW_INTEGRATION_V1` = `COMPLETE` (PR #12).
 - Scope reached: prospective as-known price evidence operational; prospective raw-as-traded qualified for official-agreed
   bars; historical raw partial for HOSE. Factor chain, PIT-adjusted history, PIT backtest and execution replay stay blocked.
-- Successor not chosen, not queued, each needing owner authorization: `FINANCIAL_EVIDENCE_ZERO_ACTIVE_VNSTOCK_V1`,
-  `LIQUIDITY_EXECUTION_CAPACITY_AND_SIZING_V1`. The North Star sequence is unchanged.
+- The owner subsequently authorized `LIQUIDITY_EXECUTION_CAPACITY_AND_SIZING_V1`; the prior
+  candidate wording is superseded by the active sync above.
 
 **Roadmap sync: official-exchange liquidity operationalization (2026-09-29; now COMPLETE):**
 - `OFFICIAL_EXCHANGE_LIQUIDITY_MARKET_WIDE_OPERATIONALIZATION_V1` = `COMPLETE / PARTIAL` (PR #14).

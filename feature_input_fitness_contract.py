@@ -89,6 +89,13 @@ TACTICAL_STRUCTURE = "TACTICAL_STRUCTURE"
 MOMENTUM = "MOMENTUM"
 PARTICIPATION = "PARTICIPATION"
 EXECUTION_LIQUIDITY = "EXECUTION_LIQUIDITY"
+CURRENT_SESSION_EXECUTION_CAPACITY_RESEARCH = "CURRENT_SESSION_EXECUTION_CAPACITY_RESEARCH"
+CURRENT_SESSION_RISK_SIZE_RESEARCH = "CURRENT_SESSION_RISK_SIZE_RESEARCH"
+LIVE_POSITION_SIZING = "LIVE_POSITION_SIZING"
+PORTFOLIO_CAPITAL_ALLOCATION = "PORTFOLIO_CAPITAL_ALLOCATION"
+HISTORICAL_PIT_SIZE_REPLAY = "HISTORICAL_PIT_SIZE_REPLAY"
+PIT_BACKTEST = "PIT_BACKTEST"
+EXECUTION_REPLAY = "EXECUTION_REPLAY"
 
 USE_CASE_FAMILIES: tuple[str, ...] = (
     CURRENT_SESSION_PRICE, CURRENT_SESSION_RETURN, MARKET_BREADTH, CURRENT_SESSION_VOLUME,
@@ -100,6 +107,9 @@ USE_CASE_FAMILIES: tuple[str, ...] = (
     FINANCIAL_FREE_CASH_FLOW_PROXY, ENTERPRISE_VALUE, EV_SALES,
     FUNDAMENTAL_PEER_RELATIVE, FUNDAMENTAL_OWN_HISTORY, FINANCIAL_POINT_IN_TIME_BACKTEST,
     TACTICAL_STRUCTURE, MOMENTUM, PARTICIPATION, EXECUTION_LIQUIDITY,
+    CURRENT_SESSION_EXECUTION_CAPACITY_RESEARCH, CURRENT_SESSION_RISK_SIZE_RESEARCH,
+    LIVE_POSITION_SIZING, PORTFOLIO_CAPITAL_ALLOCATION, HISTORICAL_PIT_SIZE_REPLAY,
+    PIT_BACKTEST, EXECUTION_REPLAY,
 )
 
 #: Standing, market-wide blockers this module reflects but never re-derives -- see
@@ -107,10 +117,9 @@ USE_CASE_FAMILIES: tuple[str, ...] = (
 #: every ticker/session until an explicit owner-approved reopening changes that upstream record;
 #: this module does not itself decide when that happens.
 _STANDING_BLOCKED_FAMILIES: dict[str, str] = {
-    EXECUTION_LIQUIDITY: (
-        "docs/ROADMAP_STATE.json blocked_capabilities.LIQUIDITY_AND_POSITION_SIZING_AUTHORITY: "
-        "QUALIFIED_LIQUIDITY_INPUTS=NO and POSITION_SIZING_IS_SAFE=NO market-wide."
-    ),
+    family: "Stronger live/historical authority remains blocked; current-session research envelopes do not widen it."
+    for family in (LIVE_POSITION_SIZING, PORTFOLIO_CAPITAL_ALLOCATION, HISTORICAL_PIT_SIZE_REPLAY,
+                   PIT_BACKTEST, EXECUTION_REPLAY)
 }
 
 
@@ -396,14 +405,39 @@ FAMILY_REGISTRY: dict[str, dict[str, Any]] = {
         notes="tactical_confirmation_context.participation_state() only ever reads acceleration_status=='READY'; every other RELATIVE_VOLUME status becomes INSUFFICIENT_EVIDENCE for this family, never a fabricated neutral reading.",
     ),
     EXECUTION_LIQUIDITY: _entry(
-        description="Position-sizing/execution-capacity fitness.",
+        description="Legacy alias for use-specific current-session execution-capacity research fitness.",
         required_dimensions=("adv_window_completeness", "matched_traded_value_authority"),
-        fitness_tiers=("BLOCKED",),
-        authoritative_module="docs/ROADMAP_STATE.json#blocked_capabilities",
-        authoritative_functions=(),
-        known_blockers=("QUALIFIED_LIQUIDITY_INPUTS=NO", "POSITION_SIZING_IS_SAFE=NO"),
-        notes="Standing market-wide block; not a per-ticker computation. See _STANDING_BLOCKED_FAMILIES.",
+        fitness_tiers=("ELIGIBLE_CURRENT_RESEARCH_ENVELOPE", "PARTIAL_CURRENT_RESEARCH", "BLOCKED"),
+        authoritative_module="execution_capacity_research",
+        authoritative_functions=("build_envelope", "use_specific_authority"),
+        notes="Current-session research only. Live execution, allocation, PIT backtest and execution replay stay separately blocked.",
     ),
+    CURRENT_SESSION_EXECUTION_CAPACITY_RESEARCH: _entry(
+        description="Policy-bounded Level-1 current-session capacity research from exact official ADTV20.",
+        required_dimensions=("adtv20_exact_window", "execution_capacity_policy", "knowledge_time"),
+        fitness_tiers=("ELIGIBLE_CURRENT_RESEARCH_ENVELOPE", "PARTIAL_CURRENT_RESEARCH", "BLOCKED"),
+        authoritative_module="execution_capacity_research",
+        authoritative_functions=("build_envelope",),
+    ),
+    CURRENT_SESSION_RISK_SIZE_RESEARCH: _entry(
+        description="Private current-session research size envelope over existing risk, concentration and liquidity caps.",
+        required_dimensions=("private_nav", "risk_policy", "explicit_invalidation", "execution_capacity_envelope"),
+        fitness_tiers=("ELIGIBLE_CURRENT_RESEARCH_ENVELOPE", "PARTIAL_CURRENT_RESEARCH", "BLOCKED"),
+        authoritative_module="portfolio_aware_decision",
+        authoritative_functions=("build_ticker_portfolio_aware_decision",),
+    ),
+    **{
+        family: _entry(
+            description=f"Fail-closed stronger authority: {family}.",
+            required_dimensions=("point_in_time_authority", "execution_model", "explicit_owner_authority"),
+            fitness_tiers=("BLOCKED",),
+            authoritative_module="execution_capacity_research",
+            authoritative_functions=("use_specific_authority",),
+            known_blockers=("PIT_OR_LIVE_EXECUTION_AUTHORITY_NOT_ESTABLISHED",),
+        )
+        for family in (LIVE_POSITION_SIZING, PORTFOLIO_CAPITAL_ALLOCATION, HISTORICAL_PIT_SIZE_REPLAY,
+                       PIT_BACKTEST, EXECUTION_REPLAY)
+    },
 }
 
 

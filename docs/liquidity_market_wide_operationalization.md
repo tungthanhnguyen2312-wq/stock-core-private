@@ -8,7 +8,9 @@ Public counts and hashes: [`liquidity_market_wide_publication_manifest.json`](li
 
 The pipeline is operational over the maximum honestly qualified scope. That scope is HOSE in full and
 a retained HNX/UPCoM cohort. It is not the whole market, because bulk HNX/UPCoM retrieval is not
-authorized. It grants no sizing, execution-capacity or PIT authority.
+authorized. At this milestone it granted no sizing, execution-capacity or PIT authority. The later
+[`LIQUIDITY_EXECUTION_CAPACITY_AND_SIZING_V1`](liquidity_execution_capacity_and_sizing.md) opens only
+policy-bounded current-session research envelopes; live and historical authority remains blocked.
 
 ## 1. Acquisition-rights gate
 

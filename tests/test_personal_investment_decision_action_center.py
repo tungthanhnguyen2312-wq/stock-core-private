@@ -46,11 +46,11 @@ def _asymmetric_artifact(states: dict[str, str]) -> dict:
     }
 
 
-def _portfolio_row(ticker: str, position_state: str, *, portfolio_action_research: str = "HOLD_EXISTING_NO_ACTION", posture: str = "HOLD") -> dict:
+def _portfolio_row(ticker: str, position_state: str, *, portfolio_action_research: str = "HOLD_EXISTING_NO_ACTION", posture: str = "HOLD", research_size_envelope: dict | None = None) -> dict:
     return {
         "ticker": ticker, "position_state": position_state, "portfolio_action_research": portfolio_action_research,
         "security_research_action_posture": posture, "current_weight": 0.1, "current_weight_status": "AVAILABLE",
-        "binding_constraint": "NONE",
+        "binding_constraint": "NONE", "research_size_envelope": research_size_envelope,
     }
 
 
@@ -87,6 +87,17 @@ def test_confirmed_holding_reaches_a_valid_action_surface():
     assert holdings[0]["action"] in ac.HOLDING_ACTIONS
     assert holdings[0]["action"] == "HOLD"
     assert "evidence" in holdings[0] and holdings[0]["evidence"]["why_now"]
+
+
+def test_private_research_size_envelope_is_additive_on_private_holding_only():
+    private_envelope = {"contract_version": "research_size_envelope/v1", "research_size_envelope_shares": 1200,
+                        "binding_constraint": "LIQUIDITY_CAP", "completeness": "FULL",
+                        "execution_qualified_quantity_status": "NOT_QUALIFIED"}
+    integrated = _integrated_artifact({"AAA": _integrated_record("AAA", "HOLD")})
+    portfolio = _portfolio_artifact({"AAA": _portfolio_row("AAA", "HELD", research_size_envelope=private_envelope)})
+    artifact = _build(integrated=integrated, portfolio=portfolio)
+    assert artifact["portfolio"]["holdings"][0]["research_size_envelope"] == private_envelope
+    assert "research_size_envelope" not in artifact["decision_surface_index"]["rows"][0]
 
 
 def test_avoid_posture_on_a_held_position_surfaces_as_exit_review_not_bare_hold():

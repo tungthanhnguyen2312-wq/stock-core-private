@@ -15,6 +15,7 @@ from collections import Counter
 import re
 from typing import Any, Iterable, Mapping
 
+import execution_capacity_research as execution_capacity
 import fundamental_signal_consumption_contract as fundamental_signals
 from operational_fundamental_context_integration import MAX_COMPLETED_QUARTER_LAG
 from opportunity_axis_freshness import STALE_BUT_RESEARCH_USABLE, classify_financial_period_freshness
@@ -386,6 +387,12 @@ def _official_liquidity(official_record: Mapping[str, Any] | None) -> dict[str, 
     adtv_ok = fitness.get("ADTV_RESEARCH") == "ELIGIBLE"
     any_usable = any(fitness.get(use) in ("ELIGIBLE", "PARTIAL") for use in _OFFICIAL_LIQUIDITY_USES)
     refs = official_record.get("evidence_refs") or {}
+    capacity = execution_capacity.build_envelope(
+        ticker=official_record.get("ticker") or "UNKNOWN",
+        session=((view.get("current_session") or {}).get("session") or "UNKNOWN"),
+        official_liquidity_record=official_record,
+        policy=execution_capacity.canonical_unbound_policy(),
+    )
     return {
         "state": AVAILABLE if adtv_ok else (PARTIAL if any_usable else BLOCKED),
         "authority": RESEARCH_QUALIFIED if adtv_ok else NO_AUTHORITY,
@@ -399,6 +406,7 @@ def _official_liquidity(official_record: Mapping[str, Any] | None) -> dict[str, 
         "current_volume_to_adv20": view.get("current_volume_to_adv20"),
         "evidence_currency": view.get("evidence_currency"),
         "fitness": dict(fitness),
+        "execution_capacity_research": capacity,
         "evidence_refs": {"source": refs.get("source"), "response_sha256": [r.get("sha256") for r in refs.get("responses") or []]},
         "reason_codes": _codes(view.get("reason_codes")),
     }
