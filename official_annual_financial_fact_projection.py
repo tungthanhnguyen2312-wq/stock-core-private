@@ -18,6 +18,7 @@ VERSION = "1.0.0"
 _METADATA = {
     "operating_cash_flow": ("cash_flow", "Net cash used in operating activities"),
     "net_income": ("income_statement", "Net profit after corporate income tax"),
+    "attributable_net_income": ("income_statement", "Profit after tax attributable to owners of the parent"),
     "cash_and_equivalents": ("balance_sheet", "Cash and cash equivalents"),
     "total_interest_bearing_debt": ("balance_sheet", "Interest-bearing debt"),
     "shareholders_equity": ("balance_sheet", "Total equity"),

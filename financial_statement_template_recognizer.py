@@ -44,7 +44,8 @@ from financial_statement_unit_resolution import parse_explicit_unit_declaration
 
 SCHEMA_VERSION = "1.0.0"
 CONTRACT_VERSION = "financial_statement_template_recognizer/v1"
-CANONICAL_NET_INCOME_SEMANTIC = "net_income_attributable_to_parent"
+CANONICAL_NET_INCOME_SEMANTIC = "net_income"
+CANONICAL_ATTRIBUTABLE_NET_INCOME_SEMANTIC = "attributable_net_income"
 
 
 def normalize_monetary_display_value(parsed_display_value: int, currency: str | None, unit_scale: int | None) -> int:
@@ -59,9 +60,12 @@ def normalize_monetary_display_value(parsed_display_value: int, currency: str | 
 
 
 def net_income_line_codes_for_scope(statement_scope: str | None) -> tuple[str, ...]:
-    """Return only the evidence line codes allowed for canonical net_income."""
-    if statement_scope in {"separate", "unconsolidated"}:
-        return ("61", "60")
+    """Canonical net_income is total profit after tax (line 60). Line 61 is attributable_net_income."""
+    return ("60",)
+
+
+def attributable_net_income_line_codes_for_scope(statement_scope: str | None) -> tuple[str, ...]:
+    """Canonical attributable_net_income is parent-attributable profit after tax (line 61)."""
     return ("61",)
 
 
@@ -379,16 +383,29 @@ GENERIC_METRIC_RULES: dict[str, dict[str, Any]] = {
     },
     "net_income": {
         "statement_type": StatementType.INCOME_STATEMENT,
-        "standard_line_code": "61",  # Strictly profit attributable to parent company shareholders
+        "standard_line_code": "60",
         "label_anchors": (
+            "loi nhuan sau thue thu nhap doanh nghiep",
+            "loi nhuan sau thue tndn",
             "loi nhuan sau thue",
-            "loi nhuan",
+            "net profit after tax",
+            "profit after tax",
+        ),
+        "source_label": "Lợi nhuận sau thuế thu nhập doanh nghiệp",
+    },
+    "attributable_net_income": {
+        "statement_type": StatementType.INCOME_STATEMENT,
+        "standard_line_code": "61",
+        "label_anchors": (
             "co dong cua cong ty me",
             "co dong cong ty me",
             "cong ty me",
+            "shareholders of the parent",
+            "of the parent",
+            "parent company",
         ),
         "source_label": "Lợi nhuận sau thuế của cổ đông Công ty mẹ",
-        "unconsolidated_fallback_line_code": "60",
+        "optional": True,
     },
     "operating_cash_flow": {
         "statement_type": StatementType.CASH_FLOW,
@@ -620,7 +637,7 @@ def extract_generic_financial_statement_facts(
     selected_metrics = (
         set(required_metrics)
         if required_metrics is not None
-        else set(GENERIC_METRIC_RULES) | {"total_interest_bearing_debt"}
+        else {name for name, spec in GENERIC_METRIC_RULES.items() if not spec.get("optional")} | {"total_interest_bearing_debt"}
     )
     unknown_metrics = selected_metrics.difference(GENERIC_METRIC_RULES).difference({"total_interest_bearing_debt"})
     if unknown_metrics:
@@ -674,15 +691,8 @@ def extract_generic_financial_statement_facts(
         st_pages = statements_by_type[st_type]
 
         match_res = _find_line_item_on_pages(st_pages, target_code, anchors, col_layout)
-        
-        # Line 60 is total consolidated PAT; canonical corporate net_income is parent
-        # attributable line 61.  The narrow line-60 fallback remains available only
-        # when an explicit separate/unconsolidated statement scope proves it applies.
-        if match_res is None and metric_name == "net_income" and "60" in net_income_line_codes_for_scope(statement_scope) and "unconsolidated_fallback_line_code" in spec:
-            fallback_code = spec["unconsolidated_fallback_line_code"]
-            fallback_anchors = ("loi nhuan sau thue thu nhap doanh nghiep", "loi nhuan sau thue tndn", "loi nhuan sau thue")
-            match_res = _find_line_item_on_pages(st_pages, fallback_code, fallback_anchors, col_layout)
-
+        if match_res is None and spec.get("optional"):
+            continue
         if match_res is None:
             raise ValueError(f"METRIC_NOT_FOUND: Could not extract {metric_name} (code {target_code}) from {st_type}")
 

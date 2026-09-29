@@ -1,5 +1,18 @@
 # Stock Lookup — Operational State
 
+**Historical net-income semantic correction overlay (2026-09-29):**
+`HISTORICAL_NET_INCOME_SEMANTIC_CORRECTION_OVERLAY_V1 = COMPLETE /
+HISTORICAL_NET_INCOME_SEMANTIC_CORRECTION_OVERLAY_COMPLETE`, rooted at canonical
+`42e756e3099009e5654784cd03bbc6123dd775c6` (Producer CI #130 SUCCESS, run 36594234878).
+Corrective authority governance, not a new architecture lane. Old retained evidence remains
+immutable. Current authority is corrected by append-only `SEMANTIC_METRIC_RELABEL` supersession.
+`net_income` (total profit after tax) and `attributable_net_income` (profit after tax attributable
+to owners of the parent) remain distinct concepts. V1 covers exactly four confirmed Class-A
+facts: HPG 2022, HPG 2023, FPT 2025, GAS 2025. Class-D PVD 2022/2023, VNM 2024, AAA 2024 and
+VRE 2025 stay `SEMANTIC_IDENTITY_UNRESOLVED`. No corpus-wide reconciliation is claimed.
+Financial V2 pin `2026-09-05.1` is unchanged. No live Daily, merge, deploy or successor.
+Public-safe report: `derived/financial-evidence-currency-refresh-v1/historical_net_income_semantic_correction_report.json`.
+
 **Reviewed-interim canonical ingress (2026-09-29):**
 `FINANCIAL_EVIDENCE_REVIEWED_INTERIM_CANONICAL_INGRESS_V1 = PARTIAL /
 FINANCIAL_EVIDENCE_REVIEWED_INTERIM_CANONICAL_INGRESS_PARTIAL_IDENTITY_CORRECTED`, rooted at canonical

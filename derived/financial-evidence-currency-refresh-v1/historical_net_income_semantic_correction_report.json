@@ -1,0 +1,632 @@
+{
+  "artifact_sha256": "82664e5596903a930b88ac3894689fa3fc1ccef9f991f5566f2a44b37fb25410",
+  "canonical_semantics": {
+    "attributable_net_income": "profit after tax attributable to owners/shareholders of parent",
+    "line_60": "net_income only with qualifying identity evidence",
+    "line_61": "attributable_net_income only with qualifying identity evidence",
+    "line_number_alone": "NOT_SUFFICIENT",
+    "net_income": "total profit after tax",
+    "numeric_copying": "FORBIDDEN"
+  },
+  "class_d_unchanged": [
+    {
+      "reason": "SEMANTIC_IDENTITY_UNRESOLVED",
+      "reporting_period": "2022",
+      "ticker": "PVD"
+    },
+    {
+      "reason": "SEMANTIC_IDENTITY_UNRESOLVED",
+      "reporting_period": "2023",
+      "ticker": "PVD"
+    },
+    {
+      "reason": "SEMANTIC_IDENTITY_UNRESOLVED",
+      "reporting_period": "2024",
+      "ticker": "VNM"
+    },
+    {
+      "reason": "SEMANTIC_IDENTITY_UNRESOLVED",
+      "reporting_period": "2024",
+      "ticker": "AAA"
+    },
+    {
+      "reason": "SEMANTIC_IDENTITY_UNRESOLVED",
+      "reporting_period": "2025",
+      "ticker": "VRE"
+    }
+  ],
+  "consumer_classifications": [
+    {
+      "classification": "TOTAL_NET_INCOME_REQUIRED",
+      "consumer": "fundamental_research_readiness.py",
+      "evidence": "metric_definition_inventory net_margin formula_or_method and evaluate_issuer_fundamental_research corporate _ratio(..., 'net_income', 'revenue')",
+      "formula": "net_income / revenue",
+      "key": "corporate.net_margin"
+    },
+    {
+      "classification": "TOTAL_NET_INCOME_REQUIRED",
+      "consumer": "fundamental_research_readiness.py",
+      "evidence": "metric_definition_inventory cash_flow_to_earnings and _ratio(..., 'operating_cash_flow', 'net_income')",
+      "formula": "operating_cash_flow / net_income",
+      "key": "corporate.cash_flow_to_earnings"
+    },
+    {
+      "classification": "TOTAL_NET_INCOME_REQUIRED",
+      "consumer": "fundamental_research_readiness.py",
+      "evidence": "metric_definition_inventory cash_flow_minus_earnings and _difference(..., 'operating_cash_flow', 'net_income')",
+      "formula": "operating_cash_flow - net_income",
+      "key": "corporate.cash_flow_minus_earnings"
+    },
+    {
+      "classification": "TOTAL_NET_INCOME_REQUIRED",
+      "consumer": "fundamental_research_readiness.py",
+      "evidence": "_earnings_metric corporate -> net_income; inventory names entity-specific parent/total identity and banks/securities use parent metrics",
+      "formula": "(earnings_t - earnings_t-1) / abs(earnings_t-1) with corporate earnings = net_income",
+      "key": "corporate.earnings_growth_yoy"
+    },
+    {
+      "classification": "TOTAL_NET_INCOME_REQUIRED",
+      "consumer": "fundamental_research_readiness.py",
+      "evidence": "_return_metric(..., 'net_income', 'total_assets') for corporate",
+      "formula": "net_income / assets",
+      "key": "corporate.return_on_assets"
+    },
+    {
+      "classification": "TOTAL_NET_INCOME_REQUIRED",
+      "consumer": "fundamental_research_readiness.py",
+      "evidence": "_return_metric(..., 'net_income', 'shareholders_equity') for corporate",
+      "formula": "net_income / shareholders_equity",
+      "key": "corporate.return_on_equity"
+    },
+    {
+      "classification": "PARENT_ATTRIBUTABLE_INCOME_REQUIRED",
+      "consumer": "fundamental_research_readiness.py",
+      "evidence": "_earnings_metric bank -> net_profit_parent",
+      "formula": "net_profit_parent",
+      "key": "bank.earnings"
+    },
+    {
+      "classification": "PARENT_ATTRIBUTABLE_INCOME_REQUIRED",
+      "consumer": "fundamental_research_readiness.py",
+      "evidence": "_earnings_metric securities -> profit_after_tax_parent",
+      "formula": "profit_after_tax_parent",
+      "key": "securities.earnings"
+    },
+    {
+      "classification": "TOTAL_NET_INCOME_REQUIRED",
+      "consumer": "market_wide_current_valuation_input_scaleout.py",
+      "evidence": "EARNINGS_IDENTITY_BY_ENTITY and P/E input_identities.earnings",
+      "formula": "EARNINGS_IDENTITY_BY_ENTITY['corporate'] = net_income; parent_attributable_vs_total_earnings_kept_distinct",
+      "key": "corporate.P/E"
+    },
+    {
+      "classification": "PARENT_ATTRIBUTABLE_INCOME_REQUIRED",
+      "consumer": "market_wide_current_valuation_input_scaleout.py",
+      "evidence": "EARNINGS_IDENTITY_BY_ENTITY bank mapping",
+      "formula": "EARNINGS_IDENTITY_BY_ENTITY['bank'] = net_profit_parent",
+      "key": "bank.P/E"
+    },
+    {
+      "classification": "PARENT_ATTRIBUTABLE_INCOME_REQUIRED",
+      "consumer": "market_wide_current_valuation_input_scaleout.py",
+      "evidence": "EARNINGS_IDENTITY_BY_ENTITY securities mapping",
+      "formula": "EARNINGS_IDENTITY_BY_ENTITY['securities'] = profit_after_tax_parent",
+      "key": "securities.P/E"
+    }
+  ],
+  "consumer_impact": [
+    {
+      "fundamental_readiness": {
+        "classification": "TOTAL_NET_INCOME_REQUIRED",
+        "delta_reason": "corporate formulas consume canonical net_income (total profit after tax)",
+        "uses": "qualified line-60 net_income"
+      },
+      "new_attributable_net_income": 8483510554031,
+      "new_total_net_income": 8444429054516,
+      "old_metric": "net_income",
+      "old_value": 8483510554031,
+      "parent_attributable_consumer": {
+        "classification": "PARENT_ATTRIBUTABLE_INCOME_REQUIRED",
+        "uses": "qualified line-61 attributable_net_income"
+      },
+      "reporting_period": "2022",
+      "ticker": "HPG",
+      "valuation_pe": {
+        "classification": "TOTAL_NET_INCOME_REQUIRED",
+        "delta_reason": "EARNINGS_IDENTITY_BY_ENTITY corporate = net_income; parent vs total kept distinct",
+        "uses": "qualified line-60 net_income"
+      }
+    },
+    {
+      "fundamental_readiness": {
+        "classification": "TOTAL_NET_INCOME_REQUIRED",
+        "delta_reason": "corporate formulas consume canonical net_income (total profit after tax)",
+        "uses": "qualified line-60 net_income"
+      },
+      "new_attributable_net_income": 6835064334356,
+      "new_total_net_income": 6800388315081,
+      "old_metric": "net_income",
+      "old_value": 6835064334356,
+      "parent_attributable_consumer": {
+        "classification": "PARENT_ATTRIBUTABLE_INCOME_REQUIRED",
+        "uses": "qualified line-61 attributable_net_income"
+      },
+      "reporting_period": "2023",
+      "ticker": "HPG",
+      "valuation_pe": {
+        "classification": "TOTAL_NET_INCOME_REQUIRED",
+        "delta_reason": "EARNINGS_IDENTITY_BY_ENTITY corporate = net_income; parent vs total kept distinct",
+        "uses": "qualified line-60 net_income"
+      }
+    },
+    {
+      "fundamental_readiness": {
+        "classification": "TOTAL_NET_INCOME_REQUIRED",
+        "delta_reason": "corporate formulas consume canonical net_income (total profit after tax)",
+        "uses": "qualified line-60 net_income"
+      },
+      "new_attributable_net_income": null,
+      "new_total_net_income": 11232339450734,
+      "old_metric": "net_income",
+      "old_value": 9376127629501,
+      "parent_attributable_consumer": {
+        "classification": "PARENT_ATTRIBUTABLE_INCOME_REQUIRED",
+        "uses": "UNAVAILABLE"
+      },
+      "reporting_period": "2025",
+      "ticker": "FPT",
+      "valuation_pe": {
+        "classification": "TOTAL_NET_INCOME_REQUIRED",
+        "delta_reason": "EARNINGS_IDENTITY_BY_ENTITY corporate = net_income; parent vs total kept distinct",
+        "uses": "qualified line-60 net_income"
+      }
+    },
+    {
+      "fundamental_readiness": {
+        "classification": "TOTAL_NET_INCOME_REQUIRED",
+        "delta_reason": "corporate formulas consume canonical net_income (total profit after tax)",
+        "uses": "qualified line-60 net_income"
+      },
+      "new_attributable_net_income": 11414339911686,
+      "new_total_net_income": 11571631226008,
+      "old_metric": "net_income",
+      "old_value": 11414339911686,
+      "parent_attributable_consumer": {
+        "classification": "PARENT_ATTRIBUTABLE_INCOME_REQUIRED",
+        "uses": "qualified line-61 attributable_net_income"
+      },
+      "reporting_period": "2025",
+      "ticker": "GAS",
+      "valuation_pe": {
+        "classification": "TOTAL_NET_INCOME_REQUIRED",
+        "delta_reason": "EARNINGS_IDENTITY_BY_ENTITY corporate = net_income; parent vs total kept distinct",
+        "uses": "qualified line-60 net_income"
+      }
+    }
+  ],
+  "contract_version": "historical_net_income_semantic_correction/v1",
+  "corpus_wide_reconciliation": false,
+  "correction_kind": "SEMANTIC_METRIC_RELABEL",
+  "corrections": [
+    {
+      "correction_id": "10b09ade96d439efa7058af2768d698a449e0949bf54d3d9744703d14a6b2426",
+      "new_metric": "attributable_net_income",
+      "old_metric": "net_income",
+      "qualification_state": "UNAVAILABLE",
+      "reporting_period": "2025",
+      "supersedes_fact_identity": {
+        "citation_id": "23e62e0a7052a02074658ca29db41c13f06fd046ea73a41c253222ea725cd805",
+        "document_sha256": "630f61f6ef9f07d5c593c3bf8f65bad1d56ecbb091921296ed5c4e830ea070a4",
+        "line_code": "61",
+        "metric": "net_income",
+        "reporting_period": "2025",
+        "source_page": 12,
+        "statement_scope": "consolidated",
+        "ticker": "FPT",
+        "value": 9376127629501
+      },
+      "superseding_fact_identity": null,
+      "ticker": "FPT"
+    },
+    {
+      "correction_id": "c04151ad6b4ca649c006ede4cb082b1682a85143c30fced96ee59dfeb6ddc9b1",
+      "new_metric": "net_income",
+      "old_metric": "net_income",
+      "qualification_state": "CURRENT_AUTHORITATIVE",
+      "reporting_period": "2025",
+      "supersedes_fact_identity": {
+        "citation_id": "23e62e0a7052a02074658ca29db41c13f06fd046ea73a41c253222ea725cd805",
+        "document_sha256": "630f61f6ef9f07d5c593c3bf8f65bad1d56ecbb091921296ed5c4e830ea070a4",
+        "line_code": "61",
+        "metric": "net_income",
+        "reporting_period": "2025",
+        "source_page": 12,
+        "statement_scope": "consolidated",
+        "ticker": "FPT",
+        "value": 9376127629501
+      },
+      "superseding_fact_identity": {
+        "citation_id": "45cffc1f4949e6096d30b8cc35026d6d1772f99d0f447daf73eb10496b3bf4d7",
+        "document_sha256": "630f61f6ef9f07d5c593c3bf8f65bad1d56ecbb091921296ed5c4e830ea070a4",
+        "line_code": "60",
+        "metric": "net_income",
+        "reporting_period": "2025",
+        "source_page": 12,
+        "statement_scope": "consolidated",
+        "ticker": "FPT",
+        "value": 11232339450734
+      },
+      "ticker": "FPT"
+    },
+    {
+      "correction_id": "5aba8897e7c0e3b09e3f3cf748d5f4afbe4aab2fb004eb9acc5dccdfb2954e9a",
+      "new_metric": "attributable_net_income",
+      "old_metric": "net_income",
+      "qualification_state": "CURRENT_AUTHORITATIVE",
+      "reporting_period": "2025",
+      "supersedes_fact_identity": {
+        "citation_id": "c22cc1d5b66b7391e1ab8c724ec2793f895e9def4dc86c960942ad3da28be5bc",
+        "document_sha256": "b1cfb676ad81cabb6a0ebcd4b9955f33c9644964ef894c985228694a2d5aef6c",
+        "line_code": "61",
+        "metric": "net_income",
+        "reporting_period": "2025",
+        "source_page": 11,
+        "statement_scope": "consolidated",
+        "ticker": "GAS",
+        "value": 11414339911686
+      },
+      "superseding_fact_identity": {
+        "citation_id": "c22cc1d5b66b7391e1ab8c724ec2793f895e9def4dc86c960942ad3da28be5bc",
+        "document_sha256": "b1cfb676ad81cabb6a0ebcd4b9955f33c9644964ef894c985228694a2d5aef6c",
+        "line_code": "61",
+        "metric": "attributable_net_income",
+        "reporting_period": "2025",
+        "source_page": 11,
+        "statement_scope": "consolidated",
+        "ticker": "GAS",
+        "value": 11414339911686
+      },
+      "ticker": "GAS"
+    },
+    {
+      "correction_id": "f9e5cb26dc4c293e5f3e7dd68d72d1038a0a238ebed31fa7299698b0f88fbc85",
+      "new_metric": "net_income",
+      "old_metric": "net_income",
+      "qualification_state": "CURRENT_AUTHORITATIVE",
+      "reporting_period": "2025",
+      "supersedes_fact_identity": {
+        "citation_id": "c22cc1d5b66b7391e1ab8c724ec2793f895e9def4dc86c960942ad3da28be5bc",
+        "document_sha256": "b1cfb676ad81cabb6a0ebcd4b9955f33c9644964ef894c985228694a2d5aef6c",
+        "line_code": "61",
+        "metric": "net_income",
+        "reporting_period": "2025",
+        "source_page": 11,
+        "statement_scope": "consolidated",
+        "ticker": "GAS",
+        "value": 11414339911686
+      },
+      "superseding_fact_identity": {
+        "citation_id": "dee6ec64c7a948afa701071845aacb9f451bb74b2ffc3866d77997df4b7b55cc",
+        "document_sha256": "b1cfb676ad81cabb6a0ebcd4b9955f33c9644964ef894c985228694a2d5aef6c",
+        "line_code": "60",
+        "metric": "net_income",
+        "reporting_period": "2025",
+        "source_page": 11,
+        "statement_scope": "consolidated",
+        "ticker": "GAS",
+        "value": 11571631226008
+      },
+      "ticker": "GAS"
+    },
+    {
+      "correction_id": "b0513e58e34f8eeb193a4c3fe899d3d4876e2e7f49148e0cc75e66e6eb89ac04",
+      "new_metric": "attributable_net_income",
+      "old_metric": "net_income",
+      "qualification_state": "CURRENT_AUTHORITATIVE",
+      "reporting_period": "2022",
+      "supersedes_fact_identity": {
+        "citation_id": "1f33cabb35a9a4bc7fc6c0eed7c89a80fda8258d61f8d4241669712cc9d94220",
+        "document_sha256": "4fb8f8e0f8dd5dc429533e548e4cfd045c9a81f9d26a51a5e3cf1cee53498074",
+        "line_code": "61",
+        "metric": "net_income",
+        "reporting_period": "2022",
+        "source_page": 107,
+        "statement_scope": "consolidated",
+        "ticker": "HPG",
+        "value": 8483510554031
+      },
+      "superseding_fact_identity": {
+        "citation_id": "1f33cabb35a9a4bc7fc6c0eed7c89a80fda8258d61f8d4241669712cc9d94220",
+        "document_sha256": "4fb8f8e0f8dd5dc429533e548e4cfd045c9a81f9d26a51a5e3cf1cee53498074",
+        "line_code": "61",
+        "metric": "attributable_net_income",
+        "reporting_period": "2022",
+        "source_page": 107,
+        "statement_scope": "consolidated",
+        "ticker": "HPG",
+        "value": 8483510554031
+      },
+      "ticker": "HPG"
+    },
+    {
+      "correction_id": "653baf36c0da9af4d28efbbe6eb495d86fef68ce4f1f79dee53ca4d95241b2fd",
+      "new_metric": "net_income",
+      "old_metric": "net_income",
+      "qualification_state": "CURRENT_AUTHORITATIVE",
+      "reporting_period": "2022",
+      "supersedes_fact_identity": {
+        "citation_id": "1f33cabb35a9a4bc7fc6c0eed7c89a80fda8258d61f8d4241669712cc9d94220",
+        "document_sha256": "4fb8f8e0f8dd5dc429533e548e4cfd045c9a81f9d26a51a5e3cf1cee53498074",
+        "line_code": "61",
+        "metric": "net_income",
+        "reporting_period": "2022",
+        "source_page": 107,
+        "statement_scope": "consolidated",
+        "ticker": "HPG",
+        "value": 8483510554031
+      },
+      "superseding_fact_identity": {
+        "citation_id": "0131580c5ea79faa60fdd920f4c4762b42b4c1a3791a61d034573e94995cd126",
+        "document_sha256": "4fb8f8e0f8dd5dc429533e548e4cfd045c9a81f9d26a51a5e3cf1cee53498074",
+        "line_code": "60",
+        "metric": "net_income",
+        "reporting_period": "2022",
+        "source_page": 106,
+        "statement_scope": "consolidated",
+        "ticker": "HPG",
+        "value": 8444429054516
+      },
+      "ticker": "HPG"
+    },
+    {
+      "correction_id": "25545ab0b34fdec5d356d013af413ee178bec510f3b1b5edf7a8af562c98c8c6",
+      "new_metric": "attributable_net_income",
+      "old_metric": "net_income",
+      "qualification_state": "CURRENT_AUTHORITATIVE",
+      "reporting_period": "2023",
+      "supersedes_fact_identity": {
+        "citation_id": "d49913fd44b2f7e2fe5accc17d0ab766b363d075e7b15069aed9d00b2c4dc573",
+        "document_sha256": "44919df68306d2389509d5701369c70966f3669fb5b2ce20f609b28322cfef0e",
+        "line_code": "61",
+        "metric": "net_income",
+        "reporting_period": "2023",
+        "source_page": 89,
+        "statement_scope": "consolidated",
+        "ticker": "HPG",
+        "value": 6835064334356
+      },
+      "superseding_fact_identity": {
+        "citation_id": "d49913fd44b2f7e2fe5accc17d0ab766b363d075e7b15069aed9d00b2c4dc573",
+        "document_sha256": "44919df68306d2389509d5701369c70966f3669fb5b2ce20f609b28322cfef0e",
+        "line_code": "61",
+        "metric": "attributable_net_income",
+        "reporting_period": "2023",
+        "source_page": 89,
+        "statement_scope": "consolidated",
+        "ticker": "HPG",
+        "value": 6835064334356
+      },
+      "ticker": "HPG"
+    },
+    {
+      "correction_id": "c363acb43c88e016b9b05229b007d02888d33bc54aef6759c8318c030ef04abf",
+      "new_metric": "net_income",
+      "old_metric": "net_income",
+      "qualification_state": "CURRENT_AUTHORITATIVE",
+      "reporting_period": "2023",
+      "supersedes_fact_identity": {
+        "citation_id": "d49913fd44b2f7e2fe5accc17d0ab766b363d075e7b15069aed9d00b2c4dc573",
+        "document_sha256": "44919df68306d2389509d5701369c70966f3669fb5b2ce20f609b28322cfef0e",
+        "line_code": "61",
+        "metric": "net_income",
+        "reporting_period": "2023",
+        "source_page": 89,
+        "statement_scope": "consolidated",
+        "ticker": "HPG",
+        "value": 6835064334356
+      },
+      "superseding_fact_identity": {
+        "citation_id": "265e679db80277ffea7450b811c47a00248cf574ceb2097011176ebc2d7a281d",
+        "document_sha256": "44919df68306d2389509d5701369c70966f3669fb5b2ce20f609b28322cfef0e",
+        "line_code": "60",
+        "metric": "net_income",
+        "reporting_period": "2023",
+        "source_page": 88,
+        "statement_scope": "consolidated",
+        "ticker": "HPG",
+        "value": 6800388315081
+      },
+      "ticker": "HPG"
+    }
+  ],
+  "financial_v2": {
+    "authority_version": "2026-09-05.1",
+    "changed": false,
+    "decision": "KEEP_CURRENT_PIN",
+    "tickers_with_new_qualified_core": 2
+  },
+  "frozen_class_a": [
+    {
+      "attributable_net_income": {
+        "available": true,
+        "line_code": "61",
+        "qualification_state": "QUALIFIED",
+        "row_label": "Shareholders of the parent company",
+        "source_page": 107,
+        "value": 8483510554031
+      },
+      "document_sha256": "4fb8f8e0f8dd5dc429533e548e4cfd045c9a81f9d26a51a5e3cf1cee53498074",
+      "net_income": {
+        "available": true,
+        "line_code": "60",
+        "qualification_state": "QUALIFIED",
+        "row_label": "Net profit after tax",
+        "source_page": 106,
+        "value": 8444429054516
+      },
+      "old_citation_id": "1f33cabb35a9a4bc7fc6c0eed7c89a80fda8258d61f8d4241669712cc9d94220",
+      "old_line_code": "61",
+      "old_metric": "net_income",
+      "old_source_page": 107,
+      "old_value": 8483510554031,
+      "reporting_period": "2022",
+      "statement_scope": "consolidated",
+      "superseded_identity": {
+        "citation_id": "1f33cabb35a9a4bc7fc6c0eed7c89a80fda8258d61f8d4241669712cc9d94220",
+        "document_sha256": "4fb8f8e0f8dd5dc429533e548e4cfd045c9a81f9d26a51a5e3cf1cee53498074",
+        "line_code": "61",
+        "metric": "net_income",
+        "reporting_period": "2022",
+        "source_page": 107,
+        "statement_scope": "consolidated",
+        "ticker": "HPG",
+        "value": 8483510554031
+      },
+      "ticker": "HPG"
+    },
+    {
+      "attributable_net_income": {
+        "available": true,
+        "line_code": "61",
+        "qualification_state": "QUALIFIED",
+        "row_label": "Shareholders of the parent company",
+        "source_page": 89,
+        "value": 6835064334356
+      },
+      "document_sha256": "44919df68306d2389509d5701369c70966f3669fb5b2ce20f609b28322cfef0e",
+      "net_income": {
+        "available": true,
+        "line_code": "60",
+        "qualification_state": "QUALIFIED",
+        "row_label": "Net profit after tax",
+        "source_page": 88,
+        "value": 6800388315081
+      },
+      "old_citation_id": "d49913fd44b2f7e2fe5accc17d0ab766b363d075e7b15069aed9d00b2c4dc573",
+      "old_line_code": "61",
+      "old_metric": "net_income",
+      "old_source_page": 89,
+      "old_value": 6835064334356,
+      "reporting_period": "2023",
+      "statement_scope": "consolidated",
+      "superseded_identity": {
+        "citation_id": "d49913fd44b2f7e2fe5accc17d0ab766b363d075e7b15069aed9d00b2c4dc573",
+        "document_sha256": "44919df68306d2389509d5701369c70966f3669fb5b2ce20f609b28322cfef0e",
+        "line_code": "61",
+        "metric": "net_income",
+        "reporting_period": "2023",
+        "source_page": 89,
+        "statement_scope": "consolidated",
+        "ticker": "HPG",
+        "value": 6835064334356
+      },
+      "ticker": "HPG"
+    },
+    {
+      "attributable_net_income": {
+        "available": false,
+        "line_code": "61",
+        "qualification_state": "UNAVAILABLE",
+        "row_label": "Phan b6é cho: cong Cô déng cua ty me",
+        "source_page": 12,
+        "value": null
+      },
+      "document_sha256": "630f61f6ef9f07d5c593c3bf8f65bad1d56ecbb091921296ed5c4e830ea070a4",
+      "net_income": {
+        "available": true,
+        "line_code": "60",
+        "qualification_state": "QUALIFIED",
+        "row_label": "Loi nhuan sau thué TNDN",
+        "source_page": 12,
+        "value": 11232339450734
+      },
+      "old_citation_id": "23e62e0a7052a02074658ca29db41c13f06fd046ea73a41c253222ea725cd805",
+      "old_line_code": "61",
+      "old_metric": "net_income",
+      "old_source_page": 12,
+      "old_value": 9376127629501,
+      "reporting_period": "2025",
+      "statement_scope": "consolidated",
+      "superseded_identity": {
+        "citation_id": "23e62e0a7052a02074658ca29db41c13f06fd046ea73a41c253222ea725cd805",
+        "document_sha256": "630f61f6ef9f07d5c593c3bf8f65bad1d56ecbb091921296ed5c4e830ea070a4",
+        "line_code": "61",
+        "metric": "net_income",
+        "reporting_period": "2025",
+        "source_page": 12,
+        "statement_scope": "consolidated",
+        "ticker": "FPT",
+        "value": 9376127629501
+      },
+      "ticker": "FPT"
+    },
+    {
+      "attributable_net_income": {
+        "available": true,
+        "line_code": "61",
+        "qualification_state": "QUALIFIED",
+        "row_label": "Lợi nhuận sau thuế của cổ đông Công ty mẹ",
+        "source_page": 11,
+        "value": 11414339911686
+      },
+      "document_sha256": "b1cfb676ad81cabb6a0ebcd4b9955f33c9644964ef894c985228694a2d5aef6c",
+      "net_income": {
+        "available": true,
+        "line_code": "60",
+        "qualification_state": "QUALIFIED",
+        "row_label": "Lợi nhuận sau thuế thu nhập doanh nghiệp",
+        "source_page": 11,
+        "value": 11571631226008
+      },
+      "old_citation_id": "c22cc1d5b66b7391e1ab8c724ec2793f895e9def4dc86c960942ad3da28be5bc",
+      "old_line_code": "61",
+      "old_metric": "net_income",
+      "old_source_page": 11,
+      "old_value": 11414339911686,
+      "reporting_period": "2025",
+      "statement_scope": "consolidated",
+      "superseded_identity": {
+        "citation_id": "c22cc1d5b66b7391e1ab8c724ec2793f895e9def4dc86c960942ad3da28be5bc",
+        "document_sha256": "b1cfb676ad81cabb6a0ebcd4b9955f33c9644964ef894c985228694a2d5aef6c",
+        "line_code": "61",
+        "metric": "net_income",
+        "reporting_period": "2025",
+        "source_page": 11,
+        "statement_scope": "consolidated",
+        "ticker": "GAS",
+        "value": 11414339911686
+      },
+      "ticker": "GAS"
+    }
+  ],
+  "historical_rows_rewritten": false,
+  "milestone_id": "HISTORICAL_NET_INCOME_SEMANTIC_CORRECTION_OVERLAY_V1",
+  "network_used": false,
+  "precedence": {
+    "provider_net_income_vs_official_attributable_net_income": {
+      "allowed_uses": [
+        "CURRENT_RESEARCH_PROXY_ONLY"
+      ],
+      "contract_version": "financial_evidence_currency_refresh/v1",
+      "legacy_deleted": false,
+      "legacy_relabelled_official": false,
+      "official_becomes_factual_authority": false,
+      "reason": "METRIC_DIFFERENCE",
+      "status": "NOT_COMPARABLE"
+    }
+  },
+  "raw_pdf_or_image_bytes_committed": false,
+  "retained_daily": {
+    "financial_v2_pin": "2026-09-05.1",
+    "live_daily_run": false,
+    "note": "Official citations JSONL already stored HPG 2022/2023 line-60 totals; FPT/GAS line-61-as-net_income lived in OCR/P2C2 panels. Overlay adds current-authority FPT/GAS totals and HPG/GAS attributable facts. Market/technical/liquidity/PIT/sizing loaders do not consume these income identities.",
+    "session": "2026-09-29",
+    "unexplained_drift_count": 0
+  },
+  "stale_vocabulary": {
+    "active_citations_using_stale_id": 0,
+    "parent_attributable_net_income": "compatibility alias mapped to attributable_net_income"
+  },
+  "unexplained_drift_count": 0,
+  "v1_covers": "exactly four confirmed Class-A facts"
+}

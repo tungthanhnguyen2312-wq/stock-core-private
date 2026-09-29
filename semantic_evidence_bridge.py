@@ -1229,6 +1229,7 @@ _FINANCIAL_IDENTITY_STATEMENT_FAMILIES = {
     "shareholders_equity": "balance_sheet",
     "revenue": "income_statement",
     "total_assets": "balance_sheet",
+    "attributable_net_income": "income_statement",
     "parent_attributable_net_income": "income_statement",
     "short_term_interest_bearing_debt": "balance_sheet",
     "long_term_interest_bearing_debt": "balance_sheet",
@@ -1424,6 +1425,8 @@ def load_verified_financial_identities(runtime_root: Path) -> dict[str, Any]:
             "document_sha256": evidence.get("sha256"),
         }
 
+    from historical_net_income_semantic_correction import apply_to_verified_identities
+    by_key = apply_to_verified_identities(by_key)
     return {"status": "available" if by_key else "unavailable", "version": VERSION, "by_key": by_key, "rejected": rejected}
 
 
