@@ -1,5 +1,13 @@
 # Stock Lookup — Architecture & Roadmap
 
+**Roadmap sync: Cohort-1 triggered OCR (2026-09-29):**
+- `FINANCIAL_EVIDENCE_COHORT1_TRIGGERED_OCR_V1` = `PARTIAL /
+  PARTIAL_OCR_GEOMETRY_AND_METADATA_BLOCKERS`, dependent on the currency refresh and rooted at
+  canonical `0df516a8bc23a4d1e1163d122c5c765530b552b2` (Producer CI #123 SUCCESS).
+  Retained HPG/PNJ/PVD/VRE H1 image-only statement pages only; 11 completed OCR pages, no new
+  qualified CORE fact, no Financial V2 pin rebuild, valuation change or posture delta.
+- No successor is queued or started.
+
 **Roadmap sync: official financial evidence currency refresh (2026-09-29):**
 - `FINANCIAL_EVIDENCE_CURRENCY_AND_OFFICIAL_STATEMENT_REFRESH_V1` = `PARTIAL /
   FRAMEWORK_COMPLETE_COHORT_EXTERNAL_AND_PARSER_BLOCKERS`, from canonical

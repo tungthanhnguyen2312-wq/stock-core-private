@@ -1,0 +1,20 @@
+{
+  "contract_version": "financial_evidence_cohort1_triggered_ocr/v1",
+  "milestone_id": "FINANCIAL_EVIDENCE_COHORT1_TRIGGERED_OCR_V1",
+  "network_used": false,
+  "raw_pdf_or_image_bytes_committed": false,
+  "ocr_page_budget": {"per_document": 40, "total": 120},
+  "documents_attempted": [
+    {"ticker": "HPG", "period": "2026-H1", "document_class": "reviewed_interim_financial_statements", "document_sha256": "9a2881a88ac8ca4cc5cd948b0fafa031ff30fd0332a372f362477a8a6b0c9968", "pages_total": 67, "pages_ocrd_completed": [9, 10], "statement_pages_visually_found": [9, 10, 12, 13], "currency": "UNQUALIFIED", "unit": "UNQUALIFIED", "scope": "UNQUALIFIED", "qualified_core_facts": [], "blocker": "UNIT_SCALE_BLOCKED_AND_ROW_NOT_UNIQUE_OR_NOT_GEOMETRICALLY_RESOLVED"},
+    {"ticker": "PNJ", "period": "2026-H1", "document_class": "reviewed_interim_financial_statements", "document_sha256": "db877169e7c19b4b81d60b37d5aab8f9938129a66b582c2229ffffebdca2a43d", "pages_total": 54, "pages_ocrd_completed": [8, 9, 10, 11], "statement_pages_visually_found": [8, 9, 10, 11], "currency": "VND", "unit": 1, "scope": "UNQUALIFIED", "qualified_core_facts": [], "blocker": "ROW_NOT_UNIQUE_OR_NOT_GEOMETRICALLY_RESOLVED"},
+    {"ticker": "PVD", "period": "2026-H1", "document_class": "reviewed_interim_financial_statements", "document_sha256": "a7360d2fc9a8a67a1535820813cda2bb8ef288466cd36c949e050c2f2a1b290a", "pages_total": 113, "pages_ocrd_completed": [6, 7, 8, 9], "statement_pages_visually_found": [6, 7, 8, 9], "currency": "UNQUALIFIED", "unit": "UNQUALIFIED", "scope": "UNQUALIFIED", "qualified_core_facts": [], "blocker": "OCR_UNIT_HEADER_CONFLICTS_WITH_VISUAL_TABLE_HEADER_AND_ROW_NOT_UNIQUE_OR_NOT_GEOMETRICALLY_RESOLVED"},
+    {"ticker": "VRE", "period": "2026-H1", "document_class": "reviewed_interim_financial_statements", "document_sha256": "7e9b9e39901a028972fff80bc1a4f9f5cab4c1526ce4029f9b853ccff6aeaac0", "pages_total": 48, "pages_ocrd_completed": [7], "statement_pages_visually_found": [7, 8, 10, 11, 12, 13], "currency": "VND", "unit": 1, "scope": "UNQUALIFIED", "qualified_core_facts": [], "blocker": "ROW_NOT_UNIQUE_OR_NOT_GEOMETRICALLY_RESOLVED"}
+  ],
+  "ocr_pages_completed": 11,
+  "new_qualified_core_fact_count": 0,
+  "tickers_with_new_qualified_core_fact": [],
+  "precedence_counts": {"EXACT_MATCH": 0, "TRUE_CONFLICT": 0, "NOT_COMPARABLE": 0, "OFFICIAL_ONLY": 0},
+  "financial_v2_pin": {"authority_version": "2026-09-05.1", "changed": false},
+  "valuation_effect": {"official_pb_input_gains": [], "official_pe_ttm": false, "official_ps_ttm": false, "ev_ebitda_dcf_unchanged": true},
+  "terminal_disposition": "PARTIAL_OCR_GEOMETRY_AND_METADATA_BLOCKERS"
+}

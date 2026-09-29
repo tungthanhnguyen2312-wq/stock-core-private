@@ -456,13 +456,14 @@ def test_no_vnstock_vnai_in_refresh_modules():
         assert "import vnai" not in source
 
 
-def test_roadmap_current_milestone_is_this_refresh():
+def test_roadmap_current_milestone_is_the_authorized_ocr_continuation():
     state = json.loads((ROOT / "docs" / "ROADMAP_STATE.json").read_text(encoding="utf-8"))
-    assert state["current"]["milestone"] == MILESTONE_ID
+    assert state["current"]["milestone"] == "FINANCIAL_EVIDENCE_COHORT1_TRIGGERED_OCR_V1"
     assert state["current"]["state"] == "PARTIAL"
     assert state["queued_next"] == []
     ids = [row["milestone_id"] for row in state["milestones"]]
     assert MILESTONE_ID in ids
+    assert "FINANCIAL_EVIDENCE_COHORT1_TRIGGERED_OCR_V1" in ids
     assert "FINANCIAL_EVIDENCE_ZERO_ACTIVE_VNSTOCK_V1" in ids
 
 

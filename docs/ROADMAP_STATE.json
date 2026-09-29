@@ -1,7 +1,7 @@
 {
   "schema_version": "stocklookup_roadmap_execution_state/1.0.0",
   "roadmap_id": "stock-core-private",
-  "roadmap_version": "2026.09.29.4",
+  "roadmap_version": "2026.09.29.5",
   "narrative_authority": {
     "strategic_roadmap": "docs/ROADMAP.md",
     "operational_narrative": "docs/STATE.md",
@@ -15,11 +15,28 @@
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "FINANCIAL_EVIDENCE_CURRENCY_AND_OFFICIAL_STATEMENT_REFRESH_V1",
+    "milestone": "FINANCIAL_EVIDENCE_COHORT1_TRIGGERED_OCR_V1",
     "state": "PARTIAL"
   },
   "queued_next": [],
   "milestones": [
+    {
+      "milestone_id": "FINANCIAL_EVIDENCE_COHORT1_TRIGGERED_OCR_V1",
+      "state": "PARTIAL",
+      "narrative_disposition": "PARTIAL_OCR_GEOMETRY_AND_METADATA_BLOCKERS",
+      "terminal_disposition": "FINANCIAL_EVIDENCE_COHORT1_TRIGGERED_OCR_PARTIAL",
+      "starting_checkpoint": "0df516a8bc23a4d1e1163d122c5c765530b552b2",
+      "checkpoint": "HEAD",
+      "candidate_branch": "feature/financial-evidence-cohort1-triggered-ocr-v1-20260929",
+      "dependencies": ["FINANCIAL_EVIDENCE_CURRENCY_AND_OFFICIAL_STATEMENT_REFRESH_V1"],
+      "unlocks": [],
+      "authority_effect": "ADDITIVE_OFFICIAL_FACTS_ONLY_WHERE_EXISTING_VALUE_QUALIFICATION_PASSES / NO_FINANCIAL_V2_PIN_BUMP",
+      "owner_authorized": true,
+      "source_doc": "Owner directive FINANCIAL_EVIDENCE_COHORT1_TRIGGERED_OCR_V1 (2026-09-29)",
+      "state_history": ["ACTIVE", "PARTIAL"],
+      "owner_override": "OWNER_DIRECTIVE_2026_09_29_FINANCIAL_EVIDENCE_COHORT1_TRIGGERED_OCR_V1",
+      "notes": "PARTIAL 2026-09-29. Retained-only H1 image OCR for HPG/PNJ/PVD/VRE; 11 completed page reads, no new CORE fact. Generic balance-sheet heading recognition accepts Báo cáo tình hình tài chính. Qualification blocked on OCR unit ambiguity/conflict or non-unique geometry. No network, Vnstock, Daily, Financial V2 pin or successor."
+    },
     {
       "milestone_id": "FLOW_PRICE_CANONICAL_SOURCE_BACKFILL_AND_PRESENTATION_CORRECTIVE_V1",
       "state": "PARTIAL_BY_EVIDENCE",

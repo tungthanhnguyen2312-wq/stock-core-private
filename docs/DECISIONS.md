@@ -1,5 +1,23 @@
 # Decisions & Architectural Decision Records
 
+## 2026-09-29 - Cohort-1 triggered retained-PDF OCR (`FINANCIAL_EVIDENCE_COHORT1_TRIGGERED_OCR_V1`)
+
+**Decision.** Trigger the already-installed local TSV OCR only for bounded, visually identified
+H1 2026 consolidated-statement pages in the retained official HPG, PNJ, PVD and VRE PDFs.
+OCR text remains candidate evidence; no number is repaired or promoted without the existing
+exact row, current-period column, unit/currency, consolidated scope and citation checks.
+
+**Result.** `PARTIAL`. Eleven completed page reads remain within the 40-per-document and
+120-total caps. The generic recognizer now accepts the standard Vietnamese `Báo cáo tình hình
+tài chính` balance-sheet heading. PNJ had VND base-unit page evidence but no uniquely geometry-
+resolved CORE row; PVD's OCR unit read conflicted with the visual table header; HPG's unit read
+was ambiguous; VRE likewise had no uniquely geometry-resolved row. No official fact, legacy
+precedence result, P/B input, fundamental state, posture or Financial V2 pin changed.
+
+**Boundary.** No PDF/image bytes, OCR raster, raw OCR corpus or scratch files are tracked; only
+hashes, page numbers, method and blockers are public. No network, acquisition, live Owner Daily,
+provider call or Vnstock activity occurred. No successor is started.
+
 ## 2026-09-29 - Bounded official financial evidence currency refresh (`FINANCIAL_EVIDENCE_CURRENCY_AND_OFFICIAL_STATEMENT_REFRESH_V1`)
 
 **Decision.** Refresh official financial evidence for a frozen 14-name cohort (HPG, VNM, FPT,

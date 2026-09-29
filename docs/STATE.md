@@ -1,5 +1,18 @@
 # Stock Lookup — Operational State
 
+**Cohort-1 triggered OCR (2026-09-29):**
+`FINANCIAL_EVIDENCE_COHORT1_TRIGGERED_OCR_V1 = PARTIAL /
+PARTIAL_OCR_GEOMETRY_AND_METADATA_BLOCKERS`, a bounded continuation of
+`FINANCIAL_EVIDENCE_CURRENCY_AND_OFFICIAL_STATEMENT_REFRESH_V1`, from canonical
+`0df516a8bc23a4d1e1163d122c5c765530b552b2` (Producer CI #123 SUCCESS).
+Only retained H1 2026 official issuer PDFs for HPG, PNJ, PVD and VRE were inspected;
+no network, acquisition, Daily, Vnstock path or Financial V2 pin change occurred. The
+private OCR used 11 completed statement-page reads (per-document cap 40; total cap 120).
+No CORE value passed the existing page/table/column/unit/scope qualification contract, so
+there are 0 new facts, 0 P/B gains, 0 precedence rows and 0 posture deltas. The retained
+document-level evidence and blockers are in
+`derived/financial-evidence-currency-refresh-v1/cohort1_triggered_ocr_report.json`.
+
 **Official financial evidence currency refresh (2026-09-29):**
 `FINANCIAL_EVIDENCE_CURRENCY_AND_OFFICIAL_STATEMENT_REFRESH_V1 = PARTIAL /
 FRAMEWORK_COMPLETE_COHORT_EXTERNAL_AND_PARSER_BLOCKERS`. Canonical starting `main` is
