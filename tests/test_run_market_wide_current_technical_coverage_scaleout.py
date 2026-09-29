@@ -304,8 +304,10 @@ def test_run_all_never_reuses_a_checkpoint_from_a_different_session(tmp_path, mo
     _checkpoint_path(out).write_text(json.dumps({
         "target_session": "2026-08-18", "baseline_identity": "stale", "p3f9b_snapshot_identity": "stale",
         "records": {
-            "AAA": {"ticker": "AAA", "state": "RECOVERED_COMPLETE_TECHNICAL_HISTORY", "observations": []},
-            "BBB": {"ticker": "BBB", "state": "RECOVERED_COMPLETE_TECHNICAL_HISTORY", "observations": []},
+            "AAA": {"ticker": "AAA", "state": "RECOVERED_COMPLETE_TECHNICAL_HISTORY", "observations": [],
+                    "historical_series": {"provider": "DNSE"}, "attempted_provider_series": {"DNSE": {}}},
+            "BBB": {"ticker": "BBB", "state": "RECOVERED_COMPLETE_TECHNICAL_HISTORY", "observations": [],
+                    "historical_series": {"provider": "DNSE"}, "attempted_provider_series": {"DNSE": {}}},
         },
     }), encoding="utf-8")
 
@@ -349,8 +351,10 @@ def test_run_all_with_fully_satisfied_checkpoint_makes_no_provider_calls(tmp_pat
     _checkpoint_path(out).write_text(json.dumps({
         "target_session": TARGET, "baseline_identity": baseline_identity, "p3f9b_snapshot_identity": p3f9b_snapshot_identity,
         "records": {
-            "AAA": {"ticker": "AAA", "state": "RECOVERED_COMPLETE_TECHNICAL_HISTORY", "observations": []},
-            "BBB": {"ticker": "BBB", "state": "RECOVERED_COMPLETE_TECHNICAL_HISTORY", "observations": []},
+            "AAA": {"ticker": "AAA", "state": "RECOVERED_COMPLETE_TECHNICAL_HISTORY", "observations": [],
+                    "historical_series": {"provider": "DNSE"}, "attempted_provider_series": {"DNSE": {}}},
+            "BBB": {"ticker": "BBB", "state": "RECOVERED_COMPLETE_TECHNICAL_HISTORY", "observations": [],
+                    "historical_series": {"provider": "DNSE"}, "attempted_provider_series": {"DNSE": {}}},
         },
     }), encoding="utf-8")
 

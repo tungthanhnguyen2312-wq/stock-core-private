@@ -4,7 +4,7 @@ Read-only. Checks the tracked dependency surfaces:
 
 * ``requirements.txt``            -- CORE runtime (hermetic core / CI tier)
 * ``requirements-test.txt``       -- CORE test
-* ``requirements-providers.txt``  -- OPTIONAL provider runtime (vnstock/vnai, anthropic)
+* ``requirements-providers.txt``  -- optional non-retired providers (anthropic)
 * ``constraints.txt``             -- exact pins for the core + test closure
 
     python tools/verify_dependency_tiers.py              static checks of the tracked files
@@ -103,8 +103,8 @@ def static_violations(
         for name in names:
             if name not in pins:
                 violations.append(f"CORE_REQUIREMENT_NOT_PINNED: {name} ({tier}) has no exact pin in constraints.txt")
-    if "vnstock" not in providers:
-        violations.append("PROVIDER_REQUIREMENT_UNDECLARED: vnstock must stay declared in requirements-providers.txt")
+    for name in sorted(set(providers) & {"vnstock", "vnai"}):
+        violations.append(f"RETIRED_PROVIDER_REQUIREMENT_ACTIVE: {name}")
     for name in sorted(set(providers) - PROVIDER_DISTRIBUTIONS):
         violations.append(f"UNCLASSIFIED_PROVIDER_REQUIREMENT: {name} is not a known provider distribution")
     for name in sorted(set(pins) & PROVIDER_DISTRIBUTIONS):

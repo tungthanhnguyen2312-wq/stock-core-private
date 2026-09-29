@@ -1,5 +1,13 @@
 # CI and dependency tiers
 
+**2026-09-29 supersession — `FINANCIAL_EVIDENCE_ZERO_ACTIVE_VNSTOCK_V1`.**
+`requirements-providers.txt` no longer declares Vnstock or VNAI. The former worker and price
+pipeline are removed; `VNSTOCK_KBS_VCI` policy is `RETIRED_PROVIDER`. The archived candidate
+lock/manifest remain provenance only, not an installable or launchable capability. Anthropic
+remains a separate optional dependency. The historic descriptions below document the 2026-09-25
+CI split and must not be read as current runtime instructions. The current zero-active contract
+is tested by `tests/test_zero_active_vnstock.py` and `tools/audit_zero_active_vnstock.py`.
+
 Milestone: `CI_HERMETIC_DEPENDENCY_AND_EVIDENCE_TIER_V1` (2026-09-25). Scope: CI and test
 infrastructure only. No production analytical, provider or authority behavior changed.
 
@@ -24,7 +32,7 @@ deselect matched nothing.
 | `requirements.txt` | core runtime | yes |
 | `requirements-test.txt` | core test | yes |
 | `constraints.txt` | exact pins for the core + test closure | yes (`-c`) |
-| `requirements-providers.txt` | optional provider runtime | **no** |
+| `requirements-providers.txt` | optional remaining provider (anthropic); Vnstock/VNAI retired | **no** |
 
 Reproducible core install (the one CI runs):
 

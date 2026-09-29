@@ -120,7 +120,7 @@ def call_api(fn, label):
 def sync_exchange_industry(conn, universe):
     """2 request cho TOÀN BỘ thị trường (ưu tiên bulk để tiết kiệm quota)."""
     require_governed_provider_execution("meta_sync.sync_exchange_industry")
-    from vnstock.api.listing import Listing
+    raise RuntimeError("RETIRED_PROVIDER:meta_sync.sync_exchange_industry")
     uni = set(universe)
 
     ex = call_api(lambda: Listing(source="VCI", random_agent=True).symbols_by_exchange(),
@@ -153,7 +153,7 @@ def sync_exchange_industry(conn, universe):
 def sync_foreign_room(conn, tickers):
     """price_board nhận LIST -> batch {PRICE_BOARD_BATCH} mã/request thay vì 1686 request lẻ."""
     require_governed_provider_execution("meta_sync.sync_foreign_room")
-    from vnstock.api.trading import Trading
+    raise RuntimeError("RETIRED_PROVIDER:meta_sync.sync_foreign_room")
     n_ok = 0
     for i in range(0, len(tickers), PRICE_BOARD_BATCH):
         chunk = tickers[i:i + PRICE_BOARD_BATCH]
@@ -217,8 +217,7 @@ def sync_fundamentals(conn, tickers, refresh=False):
     """Phần NẶNG: ~3 request/mã x ~1686 mã ≈ 2 giờ. Resumable: bỏ qua mã đã có `updated`
     (trừ khi --refresh). Metadata cơ bản đổi chậm -> chạy lại MỖI QUÝ là đủ."""
     require_governed_provider_execution("meta_sync.sync_fundamentals")
-    from vnstock.api.financial import Finance
-    from vnstock.api.company import Company
+    raise RuntimeError("RETIRED_PROVIDER:meta_sync.sync_fundamentals")
 
     done = {r[0] for r in conn.execute("SELECT ticker FROM metadata WHERE updated IS NOT NULL")}
     todo = tickers if refresh else [t for t in tickers if t not in done]
@@ -289,7 +288,7 @@ def sync_ratio_only(conn, tickers, limit=0):
     Dùng khi thêm cột mới (dividend_yield) mà không muốn --refresh toàn bộ.
     Resume tự nhiên: chỉ cào mã dividend_yield còn NULL."""
     require_governed_provider_execution("meta_sync.sync_ratio_only")
-    from vnstock.api.financial import Finance
+    raise RuntimeError("RETIRED_PROVIDER:meta_sync.sync_ratio_only")
     todo = [r[0] for r in conn.execute(
         "SELECT ticker FROM metadata WHERE updated IS NOT NULL AND dividend_yield IS NULL")]
     todo = [t for t in todo if t in set(tickers)]

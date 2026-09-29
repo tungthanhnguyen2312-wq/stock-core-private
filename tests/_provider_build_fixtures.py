@@ -29,7 +29,6 @@ from typing import Any, Mapping
 
 import provider_build_manifest as build_manifest
 import provider_runtime_state as runtime_contract
-import vnstock_worker_client as worker_client
 
 ROOT = Path(__file__).resolve().parents[1]
 FAKE_WORKER = Path(__file__).with_name("fixtures") / "fake_vnstock_worker.py"
@@ -426,9 +425,9 @@ def cached_fake_venv(*, owner_profile: str) -> Path:
 
 
 def _worker_sources(entrypoint: str) -> list[dict[str, Any]]:
-    files = list(build_manifest.WORKER_SOURCE_FILES)
-    if entrypoint not in files:
-        files.append(entrypoint)
+    # Generic manifest/containment fixtures bind only files that still exist. The retired
+    # production worker is deliberately absent; no test fixture may restore it.
+    files = [entrypoint, "provider_build_manifest.py", "provider_runtime_state.py"]
     return [build_manifest.file_identity(ROOT / relative, relative) for relative in files]
 
 
@@ -488,36 +487,11 @@ class FakeProviderRuntime:
         kwargs.update(overrides)
         return build_manifest.authorize_provider_launch(**kwargs)
 
-    def fetcher(self, **overrides: Any) -> worker_client.VnstockWorkerFetcher:
-        launch = overrides.pop("launch", None) or self.authorize()
-        kwargs: dict[str, Any] = {
-            "python_executable": self.interpreter,
-            "policy": self.policy,
-            "launch": launch,
-            "request_timeout": 10.0,
-            "startup_timeout": 15.0,
-            "shutdown_timeout": 5.0,
-        }
-        kwargs.update(overrides)
-        return worker_client.VnstockWorkerFetcher(**kwargs)
+    def fetcher(self, **overrides: Any) -> Any:
+        raise RuntimeError("RETIRED_PROVIDER: no Vnstock worker exists")
 
-    def open_provider_runtime(self, **overrides: Any) -> worker_client.ProviderRuntimeHandle:
-        kwargs: dict[str, Any] = {
-            "policy": self.policy,
-            "environ": self.parent_environ(),
-            "core_executable": str(Path("/nonexistent/core/python")),
-            "worker_script": ROOT / self.manifest["worker"]["entrypoint"],
-            "manifest_path": self.manifest_path,
-            "revocation_registry_path": self.registry_path,
-            "launch_mode": self.launch_mode,
-            "producer_root": ROOT,
-            "extra_env": self.extra_env or None,
-            "startup_timeout": 15.0,
-            "request_timeout": 10.0,
-            "shutdown_timeout": 5.0,
-        }
-        kwargs.update(overrides)
-        return worker_client.open_provider_runtime(**kwargs)
+    def open_provider_runtime(self, **overrides: Any) -> Any:
+        raise RuntimeError("RETIRED_PROVIDER: no Vnstock worker exists")
 
     def write_registry(self, payload: Mapping[str, Any]) -> None:
         self.registry_path.write_text(json.dumps(payload, ensure_ascii=False, indent=1, sort_keys=True), encoding="utf-8")

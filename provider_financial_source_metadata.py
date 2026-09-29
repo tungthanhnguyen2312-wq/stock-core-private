@@ -66,7 +66,7 @@ def raw_response_path(root: Path | str, request: Mapping[str, Any], response_has
 def fetch_raw_once(request: Mapping[str, Any]) -> dict[str, Any]:
     """Perform exactly one public KBS request and retain the unparsed body in the result."""
     require_governed_provider_execution("provider_financial_source_metadata.fetch_raw_once")
-    from vnstock.explorer.kbs.financial import Finance
+    raise RuntimeError("RETIRED_PROVIDER:provider_financial_source_metadata.fetch_raw_once")
 
     client = Finance(symbol=str(request["ticker"]), period="year", show_log=False)
     retrieved_at = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
@@ -136,7 +136,7 @@ def metadata_rows(request: Mapping[str, Any], raw: Mapping[str, Any], *, raw_has
 def adapter_dataframe_from_raw(request: Mapping[str, Any], raw: Mapping[str, Any]) -> pd.DataFrame:
     """Apply the installed adapter's parser to retained raw JSON, without another request."""
     require_governed_provider_execution("provider_financial_source_metadata.adapter_dataframe_from_raw")
-    from vnstock.explorer.kbs.financial import Finance
+    raise RuntimeError("RETIRED_PROVIDER:provider_financial_source_metadata.adapter_dataframe_from_raw")
     if request["statement_family"] == "income_statement":
         report_key = "Kết quả kinh doanh"
     else:

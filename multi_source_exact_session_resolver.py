@@ -1,4 +1,8 @@
-"""Multi-source exact-session market evidence resolver (DNSE + VCI + KBS).
+"""DNSE-only active exact-session resolver; historical multi-source replay core is retained.
+
+2026-09-29 supersession: public resolver entrypoints reject supplemental fetch injection and
+always mark VCI/KBS NOT_ATTEMPTED_BY_DESIGN. The detailed multi-source policy below describes
+retained historical research/test replay, not active Daily acquisition.
 
 CURRENT RESEARCH / DAILY PRODUCT MODE only -- never Audit/PIT/Execution Mode. Serves
 canonical Daily's product-critical resilience requirement: a single-provider (DNSE)
@@ -65,7 +69,6 @@ from pathlib import Path
 from typing import Any, Callable, Mapping, Sequence
 
 from field_temporal_contract import stable_id
-from vnstock_rate_governor import VnstockRateGovernor, get_active_governor, set_active_governor
 from multi_source_market_evidence_contract import (
     DNSE_HEALTH_BROAD_STALE_OR_INCOMPLETE_EOD,
     DNSE_HEALTH_UNASSESSED_SUPPLEMENTAL_RUNTIME_UNAVAILABLE,
@@ -90,6 +93,8 @@ from multi_source_market_evidence_contract import (
 
 DNSE_EXACT_SESSION_DISPOSITION = "EXACT_SESSION_RETAINED"
 # All qualified secondary sources, kept in established observation/tie-break order.
+ACTIVE_RECOVERY_SOURCES: tuple[str, ...] = ()
+# Read-only historical/test replay vocabulary; public acquisition never selects either source.
 RECOVERY_SOURCES = ("VCI", "KBS")
 # The small provider-health classifier always checks both independently. Its source order is
 # deliberately separate from market-wide routing: a sentinel is corroboration, not a recovery
@@ -99,6 +104,17 @@ SENTINEL_SOURCES = ("VCI", "KBS")
 # retries/timeouts and materially lower p95. This is Current Research routing only; it neither
 # changes SOURCE_PREFERENCE_ORDER nor promotes either source beyond its existing contract.
 MARKET_WIDE_RECOVERY_SOURCE_ORDER = ("KBS", "VCI")
+
+
+class _RetiredSupplementalGovernor:
+    """No-launch accounting for historical resolver artifact compatibility."""
+
+    def estimated_minimum_seconds_for(self, _requests: int) -> float:
+        return 0.0
+
+    def diagnostic(self) -> dict[str, Any]:
+        return {"contract_version": "retired_supplemental_provider/v1", "attempts": 0,
+                "state": "RETIRED_PROVIDER", "network_calls": 0}
 DEFAULT_RECOVERY_WINDOW_CALENDAR_DAYS = 15
 ARTIFACT_TYPE = "MULTI_SOURCE_EXACT_SESSION_MARKET_EVIDENCE"
 
@@ -464,7 +480,7 @@ class _DailyRecoveryRuntimeGuard:
     def __init__(self, *, request_delay: float, runtime_budget_seconds: float = DAILY_RECOVERY_RUNTIME_BUDGET_SECONDS,
                  clock: Callable[[], float] = time.monotonic,
                  provider_policies: Mapping[str, _ProviderSchedulePolicy] | None = None,
-                 rate_governor: VnstockRateGovernor | None = None):
+                 rate_governor: Any = None):
         self._clock = clock
         self._started = clock()
         self.request_delay = float(request_delay)
@@ -694,8 +710,7 @@ def _require_fetch_boundary(fetch_single_source: Callable[..., Any] | None) -> C
 def _default_request_delay() -> float:
     # The same value as vn_stock_pipeline.REQUEST_DELAY, read from its neutral owner: the
     # credential-bearing Daily parent never imports the provider adapter, not even for a constant.
-    from vnstock_rate_governor import VNSTOCK_REQUEST_DELAY_SECONDS
-    return VNSTOCK_REQUEST_DELAY_SECONDS
+    return 0.0
 
 
 def _lineage_hash_for_session(lineage: list[Mapping[str, Any]], session: str) -> str | None:
@@ -768,7 +783,7 @@ def _resolve_multi_source_exact_session_snapshot_core(
     recovery_runtime_guard: _DailyRecoveryRuntimeGuard | None = None,
     recovery_eligibility_projection: Mapping[str, Any] | None = None,
     residual_yield_sentinel_tickers: Sequence[str] | None = None,
-    rate_governor: VnstockRateGovernor,
+    rate_governor: Any = None,
     supplemental_runtime_state: Mapping[str, Any] | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     """Implementation for ``resolve_multi_source_exact_session_snapshot`` (see that thin public
@@ -831,6 +846,7 @@ def _resolve_multi_source_exact_session_snapshot_core(
     silently disappears. DNSE's own observations are unchanged. ``None`` (the default) keeps the
     pre-existing behavior exactly.
     """
+    rate_governor = rate_governor or _RetiredSupplementalGovernor()
     runtime_unavailable = (
         supplemental_runtime_state is not None and supplemental_runtime_state.get("state") != "AVAILABLE"
     )
@@ -1268,30 +1284,18 @@ def resolve_multi_source_exact_session_snapshot(
     recovery_runtime_guard: _DailyRecoveryRuntimeGuard | None = None,
     recovery_eligibility_projection: Mapping[str, Any] | None = None,
     residual_yield_sentinel_tickers: Sequence[str] | None = None,
-    rate_governor: VnstockRateGovernor | None = None,
+    rate_governor: Any = None,
     supplemental_runtime_state: Mapping[str, Any] | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
-    """Public entrypoint: installs/owns the shared Vnstock rate governor, then delegates to
-    ``_resolve_multi_source_exact_session_snapshot_core`` for Passes 2-5. See that function for
-    the full behavioral contract of every other parameter; this wrapper only owns the governor's
-    lifecycle (DAILY_GLOBAL_VNSTOCK_RATE_GOVERNOR_V1, 2026-09-04).
-
-    ``rate_governor``: every VCI/KBS request Passes 3-5 make shares this one process-wide budget
-    (see vnstock_rate_governor.py), installed as the module-global active governor for the
-    duration of this call. When omitted (the default), a fresh governor is created here and torn
-    down (restoring whatever was active before) once this call returns or raises -- so a
-    standalone caller (e.g. tools/run_multi_source_exact_session_resolver.py, or a test) is
-    automatically protected with its own clean budget, never inheriting or leaking state across
-    calls. When given explicitly (resolve_exact_session_with_autorecovery's own case), this
-    function installs and uses it but leaves it active for the caller to tear down -- so a
-    wrapper that also runs its own further VCI/KBS phase (Pass 6, degraded-provider market-wide
-    recovery) shares the identical budget, never a fresh quota.
-    """
-    owns_governor = rate_governor is None
-    governor = rate_governor or VnstockRateGovernor()
-    previous_governor = set_active_governor(governor)
-    try:
-        return _resolve_multi_source_exact_session_snapshot_core(
+    """Active DNSE-only resolver. Historical multi-source replay lives in the private core."""
+    if fetch_single_source is not None or fetch_many is not None:
+        raise MultiSourceResolverError("RETIRED_PROVIDER_FETCH_INJECTION_FORBIDDEN")
+    if supplemental_runtime_state is not None and supplemental_runtime_state.get("state") == "AVAILABLE":
+        raise MultiSourceResolverError("RETIRED_PROVIDER_CANNOT_BE_AVAILABLE")
+    supplemental_runtime_state = supplemental_runtime_state or {
+        "state": "SECURITY_REVIEW_BLOCKED", "reason_code": "OPTIONAL_SUPPLEMENTAL_PROVIDER_RETIRED"}
+    governor = _RetiredSupplementalGovernor()
+    return _resolve_multi_source_exact_session_snapshot_core(
             dnse_snapshot=dnse_snapshot, target_session=target_session, requested_at=requested_at,
             recovery_window_days=recovery_window_days, fetch_single_source=fetch_single_source,
             fetch_many=fetch_many, request_delay=request_delay, sleep_fn=sleep_fn,
@@ -1302,9 +1306,6 @@ def resolve_multi_source_exact_session_snapshot(
             rate_governor=governor,
             supplemental_runtime_state=supplemental_runtime_state,
         )
-    finally:
-        if owns_governor:
-            set_active_governor(previous_governor)
 
 
 def _project_to_p3f9_shape(
@@ -1747,7 +1748,7 @@ def _resolve_exact_session_with_autorecovery_core(
     max_recovery_candidates: int | None = None,
     recovery_eligibility_projection: Mapping[str, Any] | None = None,
     residual_yield_sentinel_tickers: Sequence[str] | None = None,
-    rate_governor: VnstockRateGovernor,
+    rate_governor: Any = None,
     supplemental_runtime_state: Mapping[str, Any] | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     """Implementation for ``resolve_exact_session_with_autorecovery`` (see that thin public
@@ -1792,6 +1793,7 @@ def _resolve_exact_session_with_autorecovery_core(
     coverage sufficiency remains the caller's own, unchanged, MIN_EXACT_SESSION_COVERAGE_RATIO
     gate (docs brief: "Preserve the existing 0.20 coverage threshold").
     """
+    rate_governor = rate_governor or _RetiredSupplementalGovernor()
     runtime_unavailable = (
         supplemental_runtime_state is not None and supplemental_runtime_state.get("state") != "AVAILABLE"
     )
@@ -1810,7 +1812,7 @@ def _resolve_exact_session_with_autorecovery_core(
         real_fetch, provider_policies=provider_policies, sleep_fn=sleep_fn, runtime_guard=runtime_guard,
     )
 
-    evidence, projected = resolve_multi_source_exact_session_snapshot(
+    evidence, projected = _resolve_multi_source_exact_session_snapshot_core(
         dnse_snapshot=dnse_snapshot, target_session=target_session, requested_at=requested_at,
         recovery_window_days=recovery_window_days, fetch_single_source=memoized_fetcher.fetch,
         fetch_many=memoized_fetcher.fetch_many,
@@ -1922,25 +1924,18 @@ def resolve_exact_session_with_autorecovery(
     max_recovery_candidates: int | None = None,
     recovery_eligibility_projection: Mapping[str, Any] | None = None,
     residual_yield_sentinel_tickers: Sequence[str] | None = None,
-    rate_governor: VnstockRateGovernor | None = None,
+    rate_governor: Any = None,
     supplemental_runtime_state: Mapping[str, Any] | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
-    """Public entrypoint: installs/owns the ONE shared Vnstock rate governor for this whole
-    invocation (Passes 3-6 alike, healthy or degraded day), then delegates to
-    ``_resolve_exact_session_with_autorecovery_core``. See that function for the full
-    behavioral contract of every other parameter (DAILY_GLOBAL_VNSTOCK_RATE_GOVERNOR_V1,
-    2026-09-04).
-
-    ``rate_governor``: when omitted (the default -- the real product path via
-    daily_session_level2_package.ensure_exact_session_snapshot), a fresh governor is created
-    and torn down here once this call returns or raises, restoring whatever was active before.
-    A caller may inject its own (real-clock or fake-clock, for deterministic tests) instead.
-    """
-    owns_governor = rate_governor is None
-    governor = rate_governor or VnstockRateGovernor()
-    previous_governor = set_active_governor(governor)
-    try:
-        return _resolve_exact_session_with_autorecovery_core(
+    """Active DNSE-only autorecovery; no supplemental source can be injected."""
+    if fetch_single_source is not None:
+        raise MultiSourceResolverError("RETIRED_PROVIDER_FETCH_INJECTION_FORBIDDEN")
+    if supplemental_runtime_state is not None and supplemental_runtime_state.get("state") == "AVAILABLE":
+        raise MultiSourceResolverError("RETIRED_PROVIDER_CANNOT_BE_AVAILABLE")
+    supplemental_runtime_state = supplemental_runtime_state or {
+        "state": "SECURITY_REVIEW_BLOCKED", "reason_code": "OPTIONAL_SUPPLEMENTAL_PROVIDER_RETIRED"}
+    governor = _RetiredSupplementalGovernor()
+    return _resolve_exact_session_with_autorecovery_core(
             dnse_snapshot=dnse_snapshot, target_session=target_session, requested_at=requested_at,
             sentinel_cohort=sentinel_cohort, recovery_window_days=recovery_window_days,
             fetch_single_source=fetch_single_source, request_delay=request_delay, sleep_fn=sleep_fn,
@@ -1950,6 +1945,3 @@ def resolve_exact_session_with_autorecovery(
             rate_governor=governor,
             supplemental_runtime_state=supplemental_runtime_state,
         )
-    finally:
-        if owns_governor:
-            set_active_governor(previous_governor)

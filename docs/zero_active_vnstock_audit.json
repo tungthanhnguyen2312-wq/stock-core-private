@@ -1,0 +1,62 @@
+{
+  "active_dependency_count": 0,
+  "active_kbs_vci_acquisition_path_count": 0,
+  "active_recovery_sources": [],
+  "active_vnai_import_count": 0,
+  "active_vnstock_import_count": 0,
+  "canonical_base_sha": "3137441656019e4b7974978f034915d361b5c307",
+  "checked_entrypoints": [
+    "stocklookup",
+    "tools.run_owner_daily",
+    "canonical_daily_operation",
+    "canonical_post_close_pipeline",
+    "daily_session_level2_package",
+    "canonical_daily_financial_v2_materialization",
+    "current_research_decision_input",
+    "current_research_valuation_context",
+    "current_corporate_event_context",
+    "official_liquidity_market_wide",
+    "prospective_pit_evidence_analysis",
+    "dnse_prospective_pit_shadow",
+    "execution_capacity_research",
+    "portfolio_aware_decision",
+    "tools.run_market_wide_current_technical_coverage_scaleout",
+    "tools.run_market_data_historical_series_failover",
+    "tools.run_multi_source_exact_session_resolver"
+  ],
+  "content_identity": "zero_active_vnstock_audit/v1:e9cec12fa8df094f9b653b9506ec995cd8f78a7cdd6ad1cc5c871a7893522af7",
+  "contract_version": "zero_active_vnstock_audit/v1",
+  "findings": [],
+  "forbidden_import_findings": [],
+  "provider_requirements_state": {
+    "declared_names": [
+      "anthropic"
+    ],
+    "file": "requirements-providers.txt",
+    "vnstock_or_vnai_declared": []
+  },
+  "reachable_first_party_modules": 294,
+  "retained_historical_lineage_count": {
+    "KBS": 31389,
+    "VCI": 94836
+  },
+  "retained_session_acceptance": {
+    "acceptance_content_identity": "zero_active_vnstock_retained_acceptance/v1:732547442c666d8c49236bcb2b749b3afffc5505679dd85a4f1ab1c3890143dd",
+    "after_integrated_identity": "integrated_investment_decision_product/v1:03f51230a1cb4492653cb41ea47f40950a32b8948aaec011da778b8489fb0c32",
+    "baseline_integrated_identity": "integrated_investment_decision_product/v1:03f51230a1cb4492653cb41ea47f40950a32b8948aaec011da778b8489fb0c32",
+    "governed_denominator": 1683,
+    "session": "2026-09-28",
+    "verdict": "PASS"
+  },
+  "retained_summary_identity": "market_wide_structured_financial_period_semantics/v1:ca7c2a28a9dd9e00774dcd10c2b9aa993a0fc4664e551236408287c830ad4457",
+  "retired_family_state": "RETIRED_PROVIDER",
+  "retired_runtime_files": [
+    "vnstock_worker_process.py",
+    "vnstock_worker_client.py",
+    "vnstock_worker_protocol.py",
+    "vnstock_rate_governor.py",
+    "vn_stock_pipeline.py"
+  ],
+  "retired_runtime_files_present": [],
+  "runtime_policy_state": "RETIRED_PROVIDER"
+}

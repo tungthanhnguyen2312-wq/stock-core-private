@@ -71,7 +71,7 @@ def scan_trading_status(tickers):
     """Quét trading_status toàn thị trường qua price_board bulk (batch 50/request).
     Trả về dict ticker -> raw_status; mã lỗi mạng bị bỏ qua lần này (chạy lại sẽ có)."""
     require_governed_provider_execution("blacklist_sync.scan_trading_status")
-    from vnstock.api.trading import Trading
+    raise RuntimeError("RETIRED_PROVIDER:blacklist_sync.scan_trading_status")
     status = {}
     for i in range(0, len(tickers), PRICE_BOARD_BATCH):
         chunk = tickers[i:i + PRICE_BOARD_BATCH]

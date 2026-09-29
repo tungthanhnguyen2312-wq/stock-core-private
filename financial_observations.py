@@ -100,7 +100,7 @@ def append_observations(path: Path, observations: Iterable[Mapping[str, Any]]) -
 
 def ingest_pilot(runtime_root: Path, tickers: Mapping[str,str], *, retrieved_at: str | None = None) -> dict[str, Any]:
     require_governed_provider_execution("financial_observations.ingest_pilot")
-    from vnstock.api.financial import Finance
+    raise RuntimeError("RETIRED_PROVIDER:financial_observations.ingest_pilot")
     retrieved_at=retrieved_at or datetime.now(timezone.utc).isoformat(); version=importlib.metadata.version("vnstock"); collected=[]
     for ticker, entity in tickers.items():
         for method in METHODS:

@@ -17,14 +17,11 @@ import provider_build_manifest as build_manifest
 import provider_execution_guard as guard
 import provider_runtime_state as rt
 import provider_worker_containment as containment
-import vn_stock_pipeline as pipeline
-import vnstock_rate_governor as rate_governor
 from _provider_build_fixtures import (
     FAKE_ENDPOINT_HOST,
     FAKE_WORKER,
     MODE_OFFLINE_FAKE,
     build_fake_provider_runtime,
-    governed_runtime,
     protocol_runtime,
 )
 
@@ -52,7 +49,7 @@ def test_tracked_manifest_is_draft_and_not_launchable():
     assert manifest["launch_authorized"] is False
     assert manifest["approval"] is None
     policy = rt.load_provider_policy()
-    assert policy.policy == rt.POLICY_SECURITY_REVIEW_BLOCKED
+    assert policy.policy == rt.POLICY_RETIRED_PROVIDER
     assert policy.approved_manifest_sha256 is None and policy.decision_id is None
 
 
@@ -207,19 +204,11 @@ def test_owner_ceiling_caps_the_free_tier_binding_at_20_rpm():
                 "max_fraction_of_tier_minute_limit": build_manifest.MAX_FRACTION_OF_TIER_MINUTE_LIMIT,
                 "governor_effective_rpm": rpm, "planned_session_request_budget": 0}
 
-    assert build_manifest.OWNER_APPROVED_GOVERNOR_CEILING_RPM == rate_governor.OWNER_APPROVED_GOVERNOR_CEILING_RPM == 20
+    assert build_manifest.OWNER_APPROVED_GOVERNOR_CEILING_RPM == 20
     assert build_manifest.rate_binding_violations(binding(20), credential) == []
     for rpm in (21, 45):  # 45 = the free tier's 75% share, which the owner ceiling forbids
         codes = {item["code"] for item in build_manifest.rate_binding_violations(binding(rpm), credential)}
         assert codes == {build_manifest.R_GOVERNOR_EXCEEDS_APPROVED}
-
-
-def test_worker_governor_refuses_a_contract_above_the_owner_ceiling():
-    free_minute = build_manifest.REVIEWED_VENDOR_TIER_LIMITS[build_manifest.TIER_FREE]["min"]
-    with pytest.raises(rate_governor.RateContractViolation, match="EXCEEDS_OWNER_CEILING"):
-        rate_governor.governor_from_rate_contract({"governor_effective_rpm": 45, "tier_limits": {"min": free_minute}})
-    governor = rate_governor.governor_from_rate_contract({"governor_effective_rpm": 20, "tier_limits": {"min": free_minute}})
-    assert governor.limit == 20
 
 
 def test_free_tier_fixture_launch_is_bound_at_the_owner_ceiling(tmp_path):
@@ -322,28 +311,16 @@ def test_approved_fake_http_endpoint_passes_policy_check(tmp_path):
 
 
 def test_core_python_manual_provider_execution_fails_fast():
-    with pytest.raises(guard.GovernedProviderExecutionRequired):
+    with pytest.raises(guard.RetiredProviderOperation):
         guard.require_governed_provider_execution("vn_stock_pipeline._quote")
-    with pytest.raises(guard.UnsupportedLegacyProviderOperation):
+    with pytest.raises(guard.RetiredProviderOperation):
         guard.require_governed_provider_execution("vn_stock_pipeline.cli.update")
-    assert pipeline.main(["update"]) == pipeline.EXIT_REFUSED_UNGOVERNED_PROVIDER
 
 
 def test_resolver_no_longer_silently_imports_provider():
     from multi_source_exact_session_resolver import _require_fetch_boundary
     with pytest.raises(rt.SupplementalProviderRuntimeUnavailable):
         _require_fetch_boundary(None)
-
-
-def test_direct_worker_launch_under_wrong_interpreter_fails(tmp_path):
-    result = subprocess.run(
-        [sys.executable, "-s", "-E", "-X", "utf8", "-u", "-B", str(ROOT / "vnstock_worker_process.py")],
-        capture_output=True, text=True, timeout=20,
-        env={"PATH": os.environ.get("PATH", ""), "SYSTEMROOT": os.environ.get("SYSTEMROOT", "")},
-        cwd=str(tmp_path),
-    )
-    assert result.returncode != 0
-    assert "vnstock" not in sys.modules
 
 
 def test_harmless_retained_data_readers_remain_importable():
@@ -354,65 +331,7 @@ def test_harmless_retained_data_readers_remain_importable():
     assert meta_sync is not None and index_constituents_sync is not None
 
 
-# --- revocation of an active worker ----------------------------------------------------------
-
-
-def test_active_fake_worker_detects_revocation_at_controlled_boundary(tmp_path):
-    runtime = protocol_runtime(tmp_path / "rt")
-    fetcher = runtime.fetcher()
-    try:
-        outcome = fetcher.fetch("EXACT_AAA", "KBS", "2026-09-01", "2026-09-10")
-        assert outcome.status == "success"
-        runtime.revoke(reason="TEST_ACTIVE_REVOKE", epoch=2)
-        with pytest.raises(Exception) as exc:
-            fetcher.fetch("EXACT_BBB", "KBS", "2026-09-01", "2026-09-10")
-        assert "REVOKED" in type(exc.value).__name__ or "REVOKED" in str(exc.value)
-        diag = fetcher.worker_diagnostics()
-        assert diag["revocation"]["revoked"] is True
-        assert diag["revocation"]["reason"] == "TEST_ACTIVE_REVOKE" or diag["revocation"]["registry_epoch"] == 2
-    finally:
-        fetcher.shutdown()
-
-
-# --- existing security invariants ------------------------------------------------------------
-
-
-def test_dnse_livespeed_finhay_credentials_are_not_forwarded(tmp_path):
-    runtime = protocol_runtime(tmp_path / "rt", extra_env={"FAKE_WORKER_REPORT_ENV": "1"})
-    parent = runtime.parent_environ(
-        DNSE_API_KEY="synthetic-dnse", LIVESPEED_API_KEY="synthetic-ls", FINHAY_API_KEY="synthetic-fh",
-    )
-    handle = runtime.open_provider_runtime(environ=parent)
-    try:
-        assert handle.available
-        child = handle.fetcher.runtime_info["environment"]
-        assert "DNSE_API_KEY" not in child
-        assert "LIVESPEED_API_KEY" not in child
-        assert "FINHAY_API_KEY" not in child
-        dumped = json.dumps(child)
-        assert "synthetic-dnse" not in dumped
-    finally:
-        handle.shutdown()
-
-
-def test_no_core_interpreter_fallback_and_unresolved_quality_conflict_fail_closed():
-    import vnstock_worker_client as worker_client
-    env = {"PATH": os.environ.get("PATH", ""), rt.PROVIDER_PYTHON_ENV: sys.executable}
-    handle = worker_client.open_provider_runtime(
-        session="2026-09-10", environ=env, core_executable=sys.executable,
-        policy=rt.ProviderPolicy(
-            provider_family=rt.PROVIDER_FAMILY_VNSTOCK_KBS_VCI,
-            policy=rt.POLICY_ALLOW_CONFIGURED_PROVIDER_RUNTIME, reason="x", source="TEST",
-        ),
-    )
-    assert handle.state["state"] == rt.NOT_CONFIGURED
-    assert handle.state["reason_code"] == rt.REASON_INTERPRETER_IS_CORE
-
-
-def test_kbs_lineage_records_the_reviewed_data_day_route():
-    assert pipeline.KBS_STOCK_HISTORY_ROUTE.endswith("/stocks/{symbol}/data_day")
-    assert build_manifest.KBS_HISTORY_ROUTE == pipeline.KBS_STOCK_HISTORY_ROUTE
-    assert "investment/history" not in pipeline.KBS_STOCK_HISTORY_ROUTE
+# --- retired operation registry --------------------------------------------------------------
 
 
 def test_nineteen_guarded_operations_are_registered():
@@ -425,38 +344,3 @@ def test_nineteen_guarded_operations_are_registered():
 
 def test_qualification_mode_is_explicitly_offline_fake():
     assert MODE_OFFLINE_FAKE == "OFFLINE_FAKE_PROVIDER_QUALIFICATION"
-
-
-def test_governed_worker_self_attests_before_provider_adapter_import(tmp_path):
-    # Real worker + fake packages whose vnai.setup() also reads owner-profile secrets: the worker
-    # self-attests, imports the adapter (tzdata present), then fails closed on the unexpected
-    # owner-profile denials. The declared telemetry/process denials are expected, not failures.
-    runtime = governed_runtime(tmp_path)
-    handle = runtime.open_provider_runtime(startup_timeout=25.0)
-    try:
-        assert handle.state["reason_code"] == rt.REASON_STARTUP_CONTAINMENT_VIOLATION, handle.state
-        assert handle.state["state"] == rt.SECURITY_REVIEW_BLOCKED
-        assert not handle.available
-        detail = handle.state.get("detail") or {}
-        assert detail.get("exception_type") is None
-        assert "vnstock.api.quote" in detail.get("provider_modules_loaded", [])
-        events = detail.get("containment_events") or []
-        assert events and {item.get("reason_code") for item in events} == {containment.FILESYSTEM_DENIED_ROOT}
-        targets = " ".join(str(item.get("target")) for item in events)
-        assert "api_key.json" in targets and "secrets.env" in targets
-    finally:
-        handle.shutdown()
-
-
-@pytest.mark.skipif(os.name != "nt", reason="POSIX interpreters fall back to the system tz database")
-def test_governed_worker_without_tzdata_fails_adapter_import(tmp_path):
-    # Proves the fake tzdata models a real requirement rather than hiding one: remove it and the
-    # real worker cannot import its adapter on Windows.
-    runtime = governed_runtime(tmp_path, include_tzdata=False, vnai_probes_owner_profile=False)
-    handle = runtime.open_provider_runtime(startup_timeout=25.0)
-    try:
-        assert handle.state["state"] == rt.IMPORT_FAILED, handle.state
-        assert handle.state["reason_code"] == rt.REASON_IMPORT_FAILED
-        assert (handle.state.get("detail") or {}).get("exception_type") == "ZoneInfoNotFoundError"
-    finally:
-        handle.shutdown()

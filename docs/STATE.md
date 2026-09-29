@@ -1,8 +1,27 @@
 # Stock Lookup — Operational State
 
+**Active Vnstock dependency retirement (2026-09-29):**
+`FINANCIAL_EVIDENCE_ZERO_ACTIVE_VNSTOCK_V1 = COMPLETE / ZERO_ACTIVE_VNSTOCK_DEPENDENCY_COMPLETE`.
+Canonical base remains `main` `3137441656019e4b7974978f034915d361b5c307` (PR #16 merged; Producer CI
+#117 SUCCESS). The previous `LIQUIDITY_EXECUTION_CAPACITY_AND_SIZING_V1` is closed
+`LIQUIDITY_EXECUTION_CAPACITY_AND_SIZING_PARTIAL`: engine and scoped research contracts exist,
+but participation/horizon remain UNBOUND and live sizing, execution and historical replay are blocked.
+
+ACTIVE Vnstock/VNAI runtime is retired. The Vnstock-specific worker, client, protocol, rate
+governor and legacy price pipeline are removed. New KBS/VCI acquisition is retired. Daily and
+technical acquisition use DNSE only and report unavailable DNSE evidence without a KBS/VCI live
+fallback. Generic provider security contracts remain. Retained KBS (31,389) and VCI (94,836)
+provider-reported financial facts remain readable as historical research proxies with their prior
+research-only authority; they have not become official or been deleted. Official financial
+currency is not complete. Retained 2026-09-28 Current Research acceptance is byte-identical for
+all 1,683 governed records
+(`integrated_investment_decision_product/v1:03f51230a1cb4492653cb41ea47f40950a32b8948aaec011da778b8489fb0c32`).
+No successor has started. The recommended later item is
+`FINANCIAL_EVIDENCE_CURRENCY_AND_OFFICIAL_STATEMENT_REFRESH_V1`.
+
 **Liquidity execution-capacity and private research sizing (2026-09-29):**
-`LIQUIDITY_EXECUTION_CAPACITY_AND_SIZING_V1 = ACTIVE / IMPLEMENTED / RETAINED_ACCEPTANCE_PASS /
-POLICY_UNBOUND_PARTIAL`. It is the only active execution item. Canonical `main` is
+`LIQUIDITY_EXECUTION_CAPACITY_AND_SIZING_V1 = CLOSED / IMPLEMENTED / RETAINED_ACCEPTANCE_PASS /
+LIQUIDITY_EXECUTION_CAPACITY_AND_SIZING_PARTIAL`. Its starting canonical `main` was
 `160f26ef7dc33b0052467977def874ba8d95f01e` (PR #15 merged; Producer CI #115 SUCCESS).
 `PROSPECTIVE_RAW_PIT_AUTHORITY_V1` is closed `COMPLETE` at that merge, with terminal disposition
 `PROSPECTIVE_PIT_OPERATIONAL / HISTORICAL_PIT_PARTIAL`.
@@ -53,8 +72,8 @@ temporal-determinism defect was investigated on retained 2026-09-28 inputs under
   acquisition is not authorized.
 - **Daily.** A component-local `prospective_market_snapshot_manifest` is retained privately; its absence blocks only
   PIT/as-known use.
-- **Successor.** `LIQUIDITY_EXECUTION_CAPACITY_AND_SIZING_V1` is now active under the owner directive;
-  `FINANCIAL_EVIDENCE_ZERO_ACTIVE_VNSTOCK_V1` remains only a candidate.
+- **Successor at that time.** The owner then authorized `LIQUIDITY_EXECUTION_CAPACITY_AND_SIZING_V1`
+  (now closed PARTIAL, above). `FINANCIAL_EVIDENCE_ZERO_ACTIVE_VNSTOCK_V1` is the current active item.
 
 **Official-exchange liquidity, market-wide operationalization (2026-09-29; COMPLETE, PR #14 merged to `ac9b8cf`):**
 `OFFICIAL_EXCHANGE_LIQUIDITY_MARKET_WIDE_OPERATIONALIZATION_V1 = COMPLETE /

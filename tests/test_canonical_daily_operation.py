@@ -53,7 +53,7 @@ def _acquired(tmp_path: Path, session: str = SESSION, *, reused: bool = False, c
         # Every real acquisition retains its companion multi-source evidence; ordinary post-close
         # reuse refuses a companion-less snapshot (PR8 corrective).
         import daily_session_level2_package as level2
-        from _provider_runtime_fixtures import healthy_sentinel_evidence
+        from _retained_source_fixtures import healthy_sentinel_evidence
 
         evidence_path = level2.session_artifact_paths(tmp_path, session)["multi_source_market_evidence"]
         evidence_path.parent.mkdir(parents=True, exist_ok=True)

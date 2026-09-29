@@ -261,7 +261,7 @@ def normalize(df, ticker, source):
 def _provider_payload(ticker, source):
     """Fetch one provider payload while keeping unsupported/network distinct."""
     require_governed_provider_execution("shareholders_sync._provider_payload")
-    from vnstock.api.company import Company
+    raise RuntimeError("RETIRED_PROVIDER:shareholders_sync._provider_payload")
 
     for attempt in range(1, MAX_RETRY + 1):
         try:

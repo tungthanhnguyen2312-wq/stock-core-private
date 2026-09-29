@@ -1,8 +1,8 @@
-"""Bounded qualification and retained replay for feature-safe history failover.
+"""Bounded DNSE-only qualification and retained replay for feature-safe history.
 
 This is an operations-review runner, not a provider adapter and not a database writer.
-It retains only provider-attributable historical series, exercises the existing DNSE and
-Vnstock adapters, and records why a series can (or cannot) serve Current Research.
+It retains provider-attributable history and records why DNSE can (or cannot) serve Current
+Research. KBS/VCI live acquisition and its adapter are retired.
 """
 from __future__ import annotations
 
@@ -26,14 +26,11 @@ from dnse_bulk_market_data import fetch_capability_raw
 from dnse_secrets_env import ensure_credentials_loaded
 from historical_series_failover import (
     CONTRACT_VERSION, PROVIDER_ENDPOINT, PROVIDER_INTERFACE, build_provider_series,
-    provider_fitness_matrix, select_feature_safe_series, vnstock_provider_series,
+    provider_fitness_matrix, select_feature_safe_series,
 )
 from market_wide_current_technical_coverage_scaleout import content_identity as recovery_identity
 from mva_exact_session_snapshot import EXACT_SESSION_OHLC_LOOKBACK_CALENDAR_DAYS, _observation_rows
-# APPROVED_PROVIDER_BUILD_AND_EXECUTION_BOUNDARY_V1: KBS/VCI history goes through the governed,
-# attested provider worker (never a module-level `from vn_stock_pipeline import fetch_single_source`
-# under this interpreter). An unavailable runtime is recorded per series as PROVIDER_RUNTIME_UNAVAILABLE.
-from vnstock_worker_client import GovernedProviderHistoryFetch
+# Historical KBS/VCI records remain readable, but the current runner never calls them.
 
 
 MILESTONE = "MARKET_DATA_HISTORICAL_SERIES_REDUNDANCY_AND_FEATURE_SAFE_FAILOVER_V1"
@@ -88,16 +85,6 @@ def _dnse_series(*, ticker: str, target_session: str, start: str, end: str, cred
         native_representation="DNSE_PROVIDER_NATIVE_RAW", price_representation="DNSE_PROVIDER_NATIVE_RAW",
         price_basis="CURRENT_RESEARCH_DNSE_REST_ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED",
         volume_basis="DNSE_PROVIDER_NATIVE_VOLUME_SEMANTICS_UNQUALIFIED",
-    )
-
-
-def _vnstock_series(*, ticker: str, provider: str, target_session: str, start: str, end: str,
-                    fetch: GovernedProviderHistoryFetch) -> dict[str, Any]:
-    # vnstock_provider_series calls the governed worker boundary; the worker's own contract-derived
-    # rate governor covers every KBS and VCI request of this invocation.
-    return vnstock_provider_series(
-        ticker=ticker, provider=provider, target_session=target_session, requested_at=datetime.now(VN_TZ).isoformat(),
-        requested_start=start, requested_end=end, fetch=fetch,
     )
 
 
@@ -173,38 +160,23 @@ def qualify(*, root: Path, out: Path, target_session: str) -> dict[str, Any]:
         credentials = credentials_for_request()
         if not credentials:
             raise RuntimeError("DNSE_CREDENTIAL_INJECTION_REQUIRED")
-        provider_fetch = GovernedProviderHistoryFetch(session=target_session)
         results: dict[str, Any] = {}
-        try:
-            for ticker in COHORT:
-                series = {"DNSE": _dnse_series(ticker=ticker, target_session=target_session, start=start, end=end, credentials=credentials)}
-                # Qualification intentionally exercises both existing Vnstock interfaces.  Production
-                # routing remains KBS-before-VCI and does not make VCI calls after KBS CLEAN_MISSING.
-                series["KBS"] = _vnstock_series(ticker=ticker, provider="KBS", target_session=target_session, start=start, end=end, fetch=provider_fetch)
-                series["VCI"] = _vnstock_series(ticker=ticker, provider="VCI", target_session=target_session, start=start, end=end, fetch=provider_fetch)
-                anchor = (snapshot.get("records") or {}).get(ticker) or {}
-                primary = select_feature_safe_series(
-                    ticker=ticker, target_session=target_session, feature_family="TECHNICAL_CLOSE_HISTORY",
-                    snapshot_record=anchor, provider_series=series,
-                )
-                fallback = select_feature_safe_series(
-                    ticker=ticker, target_session=target_session, feature_family="TECHNICAL_CLOSE_HISTORY",
-                    snapshot_record=anchor, provider_series={key: value for key, value in series.items() if key != "DNSE"},
-                    provider_order=("KBS", "VCI"),
-                )
-                results[ticker] = {
-                    "ticker": ticker, "exact_session_anchor_available": bool(anchor.get("observations")),
-                    "provider_series": {key: _compact_series(value) for key, value in series.items()},
-                    "fitness_matrix": provider_fitness_matrix(series),
-                    "primary_selection": primary, "fallback_simulation_without_dnse": fallback,
-                }
-            diagnostic = provider_fetch.worker_governor_diagnostic() or {
-                "source": "VNSTOCK_WORKER_GOVERNOR_DIAGNOSTIC_UNAVAILABLE",
-                "provider_runtime": provider_fetch.runtime_state(),
+        for ticker in COHORT:
+            series = {"DNSE": _dnse_series(ticker=ticker, target_session=target_session, start=start, end=end, credentials=credentials)}
+            anchor = (snapshot.get("records") or {}).get(ticker) or {}
+            primary = select_feature_safe_series(
+                ticker=ticker, target_session=target_session, feature_family="TECHNICAL_CLOSE_HISTORY",
+                snapshot_record=anchor, provider_series=series,
+            )
+            fallback = {"selected_provider": None, "fitness": "BLOCKED", "blocked_reason": "RETIRED_PROVIDER_FAMILY"}
+            results[ticker] = {
+                "ticker": ticker, "exact_session_anchor_available": bool(anchor.get("observations")),
+                "provider_series": {key: _compact_series(value) for key, value in series.items()},
+                "fitness_matrix": provider_fitness_matrix(series),
+                "primary_selection": primary, "fallback_simulation_without_dnse": fallback,
             }
-        finally:
-            provider_fetch.close()
-        diagnostic["scope"] = "ONE_BOUNDED_QUALIFICATION_INVOCATION"
+        diagnostic = {"contract_version": "retired_supplemental_provider/v1",
+                      "state": "RETIRED_PROVIDER", "network_calls": 0, "attempts": 0}
     finally:
         for key, value in original.items():
             if value is None:
@@ -213,7 +185,7 @@ def qualify(*, root: Path, out: Path, target_session: str) -> dict[str, Any]:
                 os.environ[key] = value
 
     provider_summary: dict[str, Any] = {}
-    for provider in ("DNSE", "KBS", "VCI"):
+    for provider in ("DNSE",):
         rows = [item["provider_series"][provider] for item in results.values()]
         latencies = [row.get("request_accounting", {}).get("latency_seconds") for row in rows]
         latencies = [value for value in latencies if isinstance(value, (int, float))]
@@ -242,9 +214,7 @@ def qualify(*, root: Path, out: Path, target_session: str) -> dict[str, Any]:
     _write(out / "provider_historical_capability_matrix.json", {
         "milestone": MILESTONE, "contract_version": CONTRACT_VERSION, "target_session": target_session,
         "providers": provider_summary, "vnstock_rate_governor": diagnostic,
-        "qualification_outcome": "PARTIAL_BY_EVIDENCE" if any(
-            provider_summary[key]["exact_session_compatible_selected"] for key in ("KBS", "VCI")
-        ) else "NOT_QUALIFIED_BY_THIS_COHORT",
+        "qualification_outcome": "DNSE_ONLY_ACTIVE_ACQUISITION",
         "authority_boundary": qualification["authority_boundary"],
     })
     _write(out / "historical_series_fitness_matrix.json", {

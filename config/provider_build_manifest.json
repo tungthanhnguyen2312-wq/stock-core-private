@@ -9,7 +9,7 @@
   "selected_closure": "UNRESOLVED",
   "sha256": "9c0e13aeaf3d8056652f9fd464eb69fa67cb140360f568dc5b4b28f0d4b6319d"
  },
- "description": "DRAFT provider build approval manifest (APPROVED_PROVIDER_BUILD_AND_EXECUTION_BOUNDARY_V1, pre-approval foundation). NOTHING HERE IS APPROVED: status DRAFT, launch_authorized false, approval null, no runtime, no approved endpoint, credential/rate/terms/telemetry/OS containment unresolved. The owner fills these only by an explicit decision, then pins this file's canonical SHA-256 in config/provider_runtime_policy.json. The tracked policy stays SECURITY_REVIEW_BLOCKED.",
+ "description": "RETIRED historical Vnstock/KBS/VCI candidate manifest, retained for provenance only. DRAFT and launch_authorized false; deleted worker sources cannot be rebuilt or launched. The tracked provider family policy is RETIRED_PROVIDER. Generic build-manifest infrastructure remains reusable for other explicitly authorized families.",
  "environment": {
   "allowed_names": [
    "COMSPEC",
@@ -309,9 +309,14 @@
     "size": 11654
    },
    {
+    "relative_path": "vn_stock_pipeline.py",
+    "sha256": "e550c541676f4ba689361e8207c082f210045cab6006095079bfd7761129cb0a",
+    "size": 40446
+   },
+   {
     "relative_path": "provider_build_manifest.py",
-    "sha256": "b669f5bda271706fb1b3c7e4f86362ab0a312e88a1456cffd3e62b640381ef67",
-    "size": 121969
+    "sha256": "27e8a03fff575aa9b07836091a020303c1e5ca1ed7cb408796d587bb94102900",
+    "size": 122031
    },
    {
     "relative_path": "provider_worker_containment.py",
@@ -320,18 +325,13 @@
    },
    {
     "relative_path": "provider_execution_guard.py",
-    "sha256": "a24b0b8d64f6ce3f1d15f517e39fec771f9b6616abfbd8613f10523b7ecedc0d",
-    "size": 15981
+    "sha256": "8c42fa294fdbb9a77c8528851286a77a3aa28fef1f14191d9406a64235a0bafb",
+    "size": 16992
    },
    {
     "relative_path": "provider_runtime_state.py",
-    "sha256": "0c82db077df55aac494b2da5f141586ab8e1a6da274ad7c26f9eac3206af7c32",
-    "size": 28620
-   },
-   {
-    "relative_path": "vn_stock_pipeline.py",
-    "sha256": "e550c541676f4ba689361e8207c082f210045cab6006095079bfd7761129cb0a",
-    "size": 40446
+    "sha256": "20727e87d0b1f12aaafa5f557c0b10405bf0dd2f933a8207aef672311969bde3",
+    "size": 28799
    },
    {
     "relative_path": "market_data_lineage.py",

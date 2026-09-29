@@ -20,8 +20,7 @@ import canonical_post_close_pipeline as cpc
 import daily_session_level2_package as level2
 import multi_source_market_evidence_contract as contract
 import provider_runtime_state as rt
-import vnstock_worker_client as worker_client
-from _provider_runtime_fixtures import healthy_sentinel_evidence, unavailable_handle
+from _retained_source_fixtures import healthy_sentinel_evidence
 from vn_time import VN_TZ
 
 TARGET = "2026-09-10"
@@ -140,23 +139,16 @@ def _patch_pass1(monkeypatch, snapshot: dict, *, handle=None) -> list:
     monkeypatch.setattr(dnse_access, "credentials_for_request", lambda *a, **k: ("synthetic", "synthetic"))
     monkeypatch.setattr(snapshotter, "materialize_snapshot", lambda **_kw: json.loads(json.dumps(snapshot)))
     opened: list = []
-    if handle is not None:
-        def _open(**kw):
-            opened.append(kw)
-            return handle
-        monkeypatch.setattr(worker_client, "open_provider_runtime", _open)
     return opened
 
 
 @pytest.mark.parametrize("state", [rt.NOT_CONFIGURED, rt.NOT_INSTALLED])
 def test_unconfigured_provider_interpreter_never_falls_back_and_daily_proceeds(tmp_path, monkeypatch, state):
-    """No core-interpreter fallback: the handle carries no fetcher, the resolver never fetches."""
-    handle = unavailable_handle(state=state, reason="synthetic")
-    assert handle.fetcher is None
-    _patch_pass1(monkeypatch, _dnse_snapshot({"A": True, "B": False}), handle=handle)
+    """Retired supplemental capability is independent of interpreter configuration."""
+    _patch_pass1(monkeypatch, _dnse_snapshot({"A": True, "B": False}))
     path = level2.ensure_exact_session_snapshot(tmp_path, TARGET, tmp_path / "runtime")
     written = json.loads(path.read_text(encoding="utf-8"))
-    assert written["provider_runtime_state"] == state
+    assert written["provider_runtime_state"] == rt.SECURITY_REVIEW_BLOCKED
     assert written["dnse_quality_license"]["core_daily_basis"] == "DNSE_PRIMARY_UNCORROBORATED"
     assert written["dnse_quality_license"]["dnse_values_corroborated"] is False
     assert written["records"]["B"]["disposition"] != "EXACT_SESSION_RETAINED"

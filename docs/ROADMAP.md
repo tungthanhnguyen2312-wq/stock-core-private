@@ -1,15 +1,28 @@
 # Stock Lookup — Architecture & Roadmap
 
+**Roadmap sync: retire active Vnstock dependency (2026-09-29):**
+- `FINANCIAL_EVIDENCE_ZERO_ACTIVE_VNSTOCK_V1` = `COMPLETE / ZERO_ACTIVE_VNSTOCK_DEPENDENCY_COMPLETE`,
+  from canonical `3137441656019e4b7974978f034915d361b5c307` (PR #16 merged, Producer CI #117 SUCCESS).
+- `LIQUIDITY_EXECUTION_CAPACITY_AND_SIZING_V1` is closed with actual result
+  `LIQUIDITY_EXECUTION_CAPACITY_AND_SIZING_PARTIAL`: scoped engine/contracts exist but policy is
+  UNBOUND and live/historical sizing or execution is blocked.
+- ACTIVE Vnstock runtime is retired; the Vnstock-specific worker is removed; new Vnstock/KBS/VCI
+  acquisition is retired. Retained KBS/VCI research evidence stays readable as a labeled legacy
+  research proxy. Official financial currency is not complete.
+- Retained 2026-09-28 acceptance: 1,683 records, byte-identical Integrated Decision.
+- `FINANCIAL_EVIDENCE_CURRENCY_AND_OFFICIAL_STATEMENT_REFRESH_V1` is only a recommended future
+  successor, not active or implemented.
+
 **Roadmap sync: liquidity execution-capacity and private research sizing (2026-09-29):**
-- `LIQUIDITY_EXECUTION_CAPACITY_AND_SIZING_V1` = `ACTIVE / IMPLEMENTED /
-  RETAINED_ACCEPTANCE_PASS / POLICY_UNBOUND_PARTIAL`, the only active item, from canonical main
+- `LIQUIDITY_EXECUTION_CAPACITY_AND_SIZING_V1` = `CLOSED / IMPLEMENTED /
+  RETAINED_ACCEPTANCE_PASS / POLICY_UNBOUND_PARTIAL`, from prior canonical main
   `160f26e` (PR #15, CI #115 SUCCESS).
 - `PROSPECTIVE_RAW_PIT_AUTHORITY_V1` = `COMPLETE` on verified merge `160f26e`; its terminal state is
   `PROSPECTIVE_PIT_OPERATIONAL / HISTORICAL_PIT_PARTIAL`.
 - Current-session public capacity research and private current-session risk-size research are
   use-scoped. Live sizing/allocation, historical replay, PIT backtest and execution replay stay
   blocked. Canonical participation and liquidation-horizon policy remains explicitly UNBOUND.
-- No successor milestone is started.
+- The successor decommission milestone above is now active.
 
 **Roadmap sync: prospective RAW/PIT price authority (2026-09-29):**
 - `PROSPECTIVE_RAW_PIT_AUTHORITY_V1` = `COMPLETE / MERGED_PR_15 / PROSPECTIVE_PIT_OPERATIONAL /

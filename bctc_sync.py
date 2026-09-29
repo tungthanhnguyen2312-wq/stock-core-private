@@ -95,7 +95,7 @@ def load_config(path: Path | None = None) -> dict:
 
 def _finance(symbol: str, source: str):
     require_governed_provider_execution("bctc_sync._finance")
-    from vnstock.api.financial import Finance
+    raise RuntimeError("RETIRED_PROVIDER:bctc_sync._finance")
 
     return Finance(source=source, symbol=symbol)
 

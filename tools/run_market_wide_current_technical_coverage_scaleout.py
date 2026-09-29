@@ -25,31 +25,11 @@ from market_wide_current_technical_coverage_scaleout import (
 from mva_exact_session_snapshot import EXACT_SESSION_OHLC_LOOKBACK_CALENDAR_DAYS
 from historical_series_failover import (
     build_provider_series,
-    is_runtime_unavailable_series,
     recovery_record_from_selection,
     select_feature_safe_series,
     snapshot_target_close,
-    vnstock_provider_series,
 )
-import provider_runtime_state as runtime_contract
-import vnstock_worker_client as worker_client
-from vnstock_rate_governor import VnstockRateGovernor, set_active_governor
-
-# PROVIDER_RUNTIME_ISOLATION_V1: this process holds DNSE credentials, so it never imports the
-# provider adapter (vn_stock_pipeline / vnstock / vnai). Every KBS/VCI history request goes through
-# the same isolated provider worker boundary canonical Daily uses (see _ProviderHistoryFetch).
-SUPPLEMENTAL_HISTORY_RUNTIME_UNAVAILABLE = "SUPPLEMENTAL_HISTORY_RUNTIME_UNAVAILABLE"
-
-
-# The governed OHLC boundary now lives in vnstock_worker_client (shared by every operator tool);
-# this name is kept for the existing callers and tests.
-_ProviderHistoryFetch = worker_client.GovernedProviderHistoryFetch
-
-
-def _provider_boundary_not_supplied(*_args, **_kwargs):
-    raise runtime_contract.SupplementalProviderRuntimeUnavailable(runtime_contract.runtime_state_record(
-        runtime_contract.NOT_CONFIGURED, "PROVIDER_FETCH_BOUNDARY_NOT_SUPPLIED",
-    ))
+SUPPLEMENTAL_HISTORY_RUNTIME_UNAVAILABLE = "SUPPLEMENTAL_PROVIDER_NOT_ATTEMPTED_BY_DESIGN"
 
 
 BASELINE = ROOT / "operations-review/market-wide-current-descriptive-research-v1-20260823/market_wide_current_descriptive_research_artifact.json"
@@ -96,20 +76,8 @@ def _dnse_series(*, record: Mapping, ticker: str, target_session: str, retrieved
 
 
 def _feature_safe_record(*, ticker: str, dnse_record: Mapping, snapshot_record: Mapping,
-                         target_session: str, retrieved_at: str, start: str, end: str,
-                         fetch: Callable | None = None) -> dict:
-    """Keep DNSE primary; call KBS then VCI only when a compatible close history is absent.
-
-    A clean KBS no-data result deliberately stops here: retained qualification treats it as no
-    incremental historical yield, not a reason to burn VCI traffic. Transport/malformed/target-
-    close-mismatch outcomes can still justify VCI because they are not a clean capability miss.
-    An unavailable provider runtime also stops here (VCI shares the same runtime) and is recorded
-    as ``SUPPLEMENTAL_HISTORY_RUNTIME_UNAVAILABLE``.
-
-    ``fetch`` is the isolated provider boundary (``_ProviderHistoryFetch``); omitted, every
-    secondary request is recorded as runtime-unavailable -- there is no in-process fallback.
-    """
-    fetch = fetch or _provider_boundary_not_supplied
+                         target_session: str, retrieved_at: str, start: str, end: str) -> dict:
+    """Select DNSE only; an unavailable series never triggers retired-source failover."""
     series = {
         "DNSE": _dnse_series(record=dnse_record, ticker=ticker, target_session=target_session,
                               retrieved_at=retrieved_at, start=start, end=end),
@@ -132,49 +100,22 @@ def _feature_safe_record(*, ticker: str, dnse_record: Mapping, snapshot_record: 
         snapshot_record=snapshot_record, provider_series=series,
     )
     if selection.get("fitness") != "READY":
-        series["KBS"] = vnstock_provider_series(
-            ticker=ticker, provider="KBS", target_session=target_session, requested_at=retrieved_at,
-            requested_start=start, requested_end=end, fetch=fetch,
-        )
-        selection = select_feature_safe_series(
-            ticker=ticker, target_session=target_session, feature_family="TECHNICAL_CLOSE_HISTORY",
-            snapshot_record=snapshot_record, provider_series=series,
-        )
-        if selection.get("fitness") != "READY" and is_runtime_unavailable_series(series["KBS"]):
-            selection = {**selection, "blocked_reason": SUPPLEMENTAL_HISTORY_RUNTIME_UNAVAILABLE}
-        elif selection.get("fitness") != "READY" and series["KBS"].get("reason") != "CLEAN_MISSING":
-            series["VCI"] = vnstock_provider_series(
-                ticker=ticker, provider="VCI", target_session=target_session, requested_at=retrieved_at,
-                requested_start=start, requested_end=end, fetch=fetch,
-            )
-            selection = select_feature_safe_series(
-                ticker=ticker, target_session=target_session, feature_family="TECHNICAL_CLOSE_HISTORY",
-                snapshot_record=snapshot_record, provider_series=series,
-            )
-        elif selection.get("fitness") != "READY":
-            selection = {**selection, "blocked_reason": "KBS_CLEAN_MISSING_NO_INCREMENTAL_VCI_FALLBACK"}
+        selection = {**selection, "blocked_reason": "DNSE_HISTORY_UNAVAILABLE_NO_ACTIVE_FAILOVER"}
     return recovery_record_from_selection(selection=selection, provider_series=series)
 
 
 def _recover_records(
     *, snapshot: Mapping, tickers: list[str], on_record: Callable[[str, dict], None] | None = None,
 ) -> tuple[list[dict], dict]:
-    """Fetch a cohort under one invocation-scoped Vnstock governor.
-
-    DNSE remains the primary request.  KBS and VCI are called only by the feature-safe
-    selector, and therefore never contribute a mixed-provider series or a volume feature.
+    """Fetch a cohort from DNSE only; no retired supplemental provider is launched.
 
     ``on_record``, when given, is called with ``(ticker, record)`` immediately after each
-    ticker is fetched -- before moving on to the next one -- so a caller can durably persist
-    incremental progress without splitting this invocation's single governor scope.
+    ticker is fetched -- before moving on to the next one -- for resumable progress.
     """
     target = datetime.fromisoformat(snapshot["resolved_completed_session"]).replace(tzinfo=VN_TZ)
     start = target - timedelta(days=EXACT_SESSION_OHLC_LOOKBACK_CALENDAR_DAYS)
     end = target + timedelta(days=1) - timedelta(seconds=1)
     original = {key: os.environ.get(key) for pair in CREDENTIAL_ENV_PAIRS for key in pair}
-    governor = VnstockRateGovernor()
-    previous_governor = set_active_governor(governor)
-    provider_fetch = _ProviderHistoryFetch(session=snapshot["resolved_completed_session"])
     try:
         ensure_credentials_loaded()
         credentials = credentials_for_request()
@@ -197,26 +138,18 @@ def _recover_records(
                 ticker=ticker, dnse_record=dnse_record,
                 snapshot_record=(snapshot.get("records") or {}).get(ticker) or {},
                 target_session=snapshot["resolved_completed_session"], retrieved_at=retrieved_at,
-                start=start.date().isoformat(), end=target.date().isoformat(), fetch=provider_fetch,
+                start=start.date().isoformat(), end=target.date().isoformat(),
             )
             full_record = {**record, "raw_response_body": response.get("body") if response.get("ok") else None}
             records.append(full_record)
             if on_record is not None:
                 on_record(ticker, full_record)
-        diagnostic = governor.diagnostic()
-        diagnostic.update({
-            "provider_runtime": provider_fetch.runtime_state(),
-            "provider_worker_governor": provider_fetch.worker_governor_diagnostic(),
-            "scope": "ONE_HISTORICAL_RECOVERY_INVOCATION",
-            "runtime_budget_seconds": HISTORICAL_FALLBACK_RUNTIME_BUDGET_SECONDS,
-            "projected_maximum_governor_seconds": round(
-                governor.estimated_minimum_seconds_for(len(tickers) * 2), 3
-            ),
-        })
+        diagnostic = {
+            "contract_version": "retired_supplemental_provider/v1", "state": "RETIRED_PROVIDER",
+            "attempts": 0, "network_calls": 0, "source": "DNSE_ONLY_ACTIVE_ACQUISITION",
+        }
         return records, diagnostic
     finally:
-        provider_fetch.close()
-        set_active_governor(previous_governor)
         for key, value in original.items():
             if value is None:
                 os.environ.pop(key, None)
@@ -274,20 +207,20 @@ def _load_checkpoint(
             or payload.get("p3f9b_snapshot_identity") != p3f9b_snapshot_identity):
         return {}
     records = payload.get("records")
-    return dict(records) if isinstance(records, dict) else {}
+    if not isinstance(records, dict):
+        return {}
+    return {ticker: record for ticker, record in records.items()
+            if (record.get("historical_series") or {}).get("provider") == "DNSE"
+            and set(record.get("attempted_provider_series") or {}) <= {"DNSE"}}
 
 
 def run_all(*, baseline: Mapping, snapshot: Mapping, out: Path) -> None:
-    """Materialize all recovery candidates in a single governed process.
-
-    Daily uses this rather than launching one process per ten tickers.  It makes the rate
-    governor genuinely global for every KBS/VCI outbound call in the recovery invocation.
+    """Materialize all recovery candidates using only DNSE extended history.
 
     Resumable across a hard interruption (killed process, closed window, uncaught exception):
     each candidate's record is checkpointed to a sibling ``*_checkpoint.json`` immediately
     after it is fetched, so a re-run of this exact command skips whatever was already
-    completed and only spends provider budget on the remaining candidates -- still under one
-    governor for whichever candidates this invocation itself still has to fetch. The
+    completed and only spends DNSE request budget on the remaining candidates. The
     checkpoint is a distinct filename the Daily resolver never looks for (it only ever opens
     the final ``*_recovery_artifact.json``), so a partial checkpoint can never be mistaken for
     a complete, authoritative artifact. The final artifact is written -- and the checkpoint
@@ -300,9 +233,8 @@ def run_all(*, baseline: Mapping, snapshot: Mapping, out: Path) -> None:
     candidates = recovery_candidates(baseline_artifact=baseline, p3f9b_snapshot=snapshot)
     if not candidates:
         records, diagnostic = [], {
-            "contract_version": "vnstock_rate_governor/v1", "scope": "ONE_HISTORICAL_RECOVERY_INVOCATION",
-            "attempts": 0, "cache_hits": 0, "runtime_budget_seconds": HISTORICAL_FALLBACK_RUNTIME_BUDGET_SECONDS,
-            "projected_maximum_governor_seconds": 0.0,
+            "contract_version": "retired_supplemental_provider/v1", "state": "RETIRED_PROVIDER",
+            "attempts": 0, "network_calls": 0,
         }
     else:
         target_session = snapshot["resolved_completed_session"]
@@ -326,10 +258,8 @@ def run_all(*, baseline: Mapping, snapshot: Mapping, out: Path) -> None:
             _, diagnostic = _recover_records(snapshot=snapshot, tickers=remaining, on_record=_persist)
         else:
             diagnostic = {
-                "contract_version": "vnstock_rate_governor/v1", "scope": "ONE_HISTORICAL_RECOVERY_INVOCATION",
-                "attempts": 0, "cache_hits": len(checkpoint_records),
-                "runtime_budget_seconds": HISTORICAL_FALLBACK_RUNTIME_BUDGET_SECONDS,
-                "projected_maximum_governor_seconds": 0.0,
+                "contract_version": "retired_supplemental_provider/v1", "state": "RETIRED_PROVIDER",
+                "attempts": 0, "network_calls": 0, "cache_hits": len(checkpoint_records),
             }
         records = [checkpoint_records[ticker] for ticker in candidates]
     artifact = build_recovery_artifact(
@@ -353,7 +283,11 @@ def consolidate(*, baseline: Mapping, snapshot: Mapping, out: Path, batch_size: 
         path = _batch_path(out, batch)
         if not path.exists():
             raise ValueError(f"MISSING_RECOVERY_BATCH:{batch}")
-        batches.append(_load(path))
+        retained_batch = _load(path)
+        if any(set((record.get("attempted_provider_series") or {})) - {"DNSE"}
+               for record in retained_batch.get("records") or []):
+            raise ValueError("RETIRED_PROVIDER_BATCH_NOT_ACTIVE_INPUT")
+        batches.append(retained_batch)
     artifact = build_recovery_artifact(baseline_artifact=baseline, p3f9b_snapshot=snapshot, batch_records=batches)
     output = out / "market_wide_current_technical_coverage_recovery_artifact.json"
     # Zero recovery candidates means run_batch() never ran, so `out` itself was never created (its

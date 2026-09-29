@@ -21,7 +21,7 @@ from daily_session_level2_package import (
     write_level2_package,
 )
 from vn_time import VN_TZ
-from _provider_runtime_fixtures import available_handle, healthy_sentinel_evidence
+from _retained_source_fixtures import healthy_sentinel_evidence
 
 ROOT = Path(__file__).resolve().parents[1]
 NAMED_TRIAGE = ROOT / "operations-review/full-universe-entry-candidate-triage-20260824/full_universe_entry_candidate_triage_20260824.json"
@@ -98,17 +98,14 @@ def _patch_resolved_acquisition(session: str, *, resolved_session: str | None = 
         calls.append({"stage": "resolver", "target_session": target_session})
         projected = dict(dnse_snapshot)
         projected["resolved_completed_session"] = resolved_session
-        # PROVIDER_RUNTIME_ISOLATION_V1: ordinary Daily requires a qualifying DNSE quality
-        # license, so the faked resolver returns a corroborated sentinel verdict.
-        return healthy_sentinel_evidence(target_session), projected
-
-    import vnstock_worker_client
+        evidence = healthy_sentinel_evidence(target_session)
+        evidence["dnse_quality_sentinel"]["health"] = {
+            "state": "DNSE_QUALITY_UNASSESSED_SUPPLEMENTAL_RUNTIME_UNAVAILABLE"}
+        return evidence, projected
 
     @contextmanager
     def _candidates_and_available_runtime():
-        # An AVAILABLE provider runtime (stub fetcher; the resolver itself is faked below).
-        with patch.object(snapshotter, "canonical_candidates", fake_canonical_candidates), \
-             patch.object(vnstock_worker_client, "open_provider_runtime", lambda **_kw: available_handle()):
+        with patch.object(snapshotter, "canonical_candidates", fake_canonical_candidates):
             yield
 
     patches = [
@@ -116,7 +113,7 @@ def _patch_resolved_acquisition(session: str, *, resolved_session: str | None = 
         patch.object(dnse_secrets_env, "ensure_credentials_loaded", fake_ensure_credentials_loaded),
         patch.object(dnse_access, "credentials_for_request", fake_credentials_for_request),
         patch.object(snapshotter, "materialize_snapshot", fake_materialize_snapshot),
-        patch.object(resolver, "resolve_multi_source_exact_session_snapshot", fake_resolve),
+        patch.object(resolver, "resolve_exact_session_with_autorecovery", fake_resolve),
     ]
     return patches, calls
 
@@ -619,6 +616,7 @@ def test_technical_recovery_regenerated_cache_is_reused_on_second_invocation(tmp
     mocked_run_cmd_second.assert_not_called()
 
 
+@pytest.mark.retained_evidence("operations-review/full-universe-entry-candidate-triage-20260824/full_universe_entry_candidate_triage_20260824.json")
 def test_named_20260824_triage_file_is_2026_08_21_session():
     import json
     artifact = json.loads(NAMED_TRIAGE.read_text(encoding="utf-8"))
@@ -626,6 +624,7 @@ def test_named_20260824_triage_file_is_2026_08_21_session():
     assert artifact["artifact_identity"].startswith("full_universe_entry_candidate_triage:4b527330")
 
 
+@pytest.mark.retained_evidence("operations-review/full-universe-entry-candidate-triage-20260825")
 def test_2026_08_25_has_authorized_exact_session_triage():
     registry = load_registry(ROOT)
     status = session_triage_status(ROOT, "2026-08-25", registry)
@@ -661,6 +660,7 @@ def test_explicit_historical_session_is_not_overridden_by_clock():
     assert resolved["resolution_mode"] == "EXPLICIT_SESSION"
 
 
+@pytest.mark.retained_evidence("operations-review/full-universe-entry-candidate-triage-20260825")
 def test_canonical_2026_08_25_is_eligible_without_fake_outputs():
     now = datetime(2026, 8, 26, 16, 0, tzinfo=VN_TZ)
     status = evaluate_canonical_daily_producer(ROOT, "2026-08-25", now=now)

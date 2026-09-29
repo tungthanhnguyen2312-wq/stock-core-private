@@ -43,10 +43,12 @@ CONTRACT_VERSION = "provider_execution_guard/v1"
 
 TREATMENT_GOVERNED_WORKER_ONLY = "GOVERNED_WORKER_ONLY"
 TREATMENT_UNSUPPORTED_LEGACY = "UNSUPPORTED_LEGACY_PROVIDER_OPERATION"
-TREATMENTS = (TREATMENT_GOVERNED_WORKER_ONLY, TREATMENT_UNSUPPORTED_LEGACY)
+TREATMENT_RETIRED_PROVIDER = "RETIRED_PROVIDER"
+TREATMENTS = (TREATMENT_GOVERNED_WORKER_ONLY, TREATMENT_UNSUPPORTED_LEGACY, TREATMENT_RETIRED_PROVIDER)
 
 REASON_GOVERNED_WORKER_REQUIRED = "PROVIDER_EXECUTION_REQUIRES_ATTESTED_GOVERNED_WORKER"
 REASON_UNSUPPORTED_LEGACY = "UNSUPPORTED_LEGACY_PROVIDER_OPERATION"
+REASON_RETIRED_PROVIDER = "RETIRED_PROVIDER"
 REASON_OPERATION_NOT_REGISTERED = "PROVIDER_OPERATION_NOT_REGISTERED"
 
 _GOVERNED_GUIDANCE = (
@@ -134,6 +136,13 @@ _OPERATIONS: tuple[GuardedOperation, ...] = (
     _unsupported("financial_observations.ingest_pilot", "financial_observations.py"),
 )
 OPERATIONS: Mapping[str, GuardedOperation] = {entry.operation: entry for entry in _OPERATIONS}
+# These historical operation identifiers remain auditable, but no attestation or future
+# policy flip may reactivate the retired Vnstock/KBS/VCI family.
+OPERATIONS = {
+    name: GuardedOperation(name, TREATMENT_RETIRED_PROVIDER, entry.boundary_file,
+                           "The Vnstock/KBS/VCI acquisition family is permanently retired; retained evidence remains readable.")
+    for name, entry in OPERATIONS.items()
+}
 if len(OPERATIONS) != len(_OPERATIONS):  # pragma: no cover - a registration typo, caught at import
     raise RuntimeError("PROVIDER_EXECUTION_GUARD_DUPLICATE_OPERATION")
 
@@ -155,6 +164,15 @@ class UnsupportedLegacyProviderOperation(ProviderExecutionGuardError):
         self.operation = operation
         self.guidance = guidance
         super().__init__(f"{REASON_UNSUPPORTED_LEGACY}:{operation}: {guidance}")
+
+
+class RetiredProviderOperation(UnsupportedLegacyProviderOperation):
+    reason_code = REASON_RETIRED_PROVIDER
+
+    def __init__(self, operation: str, guidance: str):
+        self.operation = operation
+        self.guidance = guidance
+        ProviderExecutionGuardError.__init__(self, f"{REASON_RETIRED_PROVIDER}:{operation}: {guidance}")
 
 
 class GovernedProviderExecutionRequired(ProviderExecutionGuardError,
@@ -295,6 +313,8 @@ def require_governed_provider_execution(operation_id: str) -> WorkerAttestation:
     Call it before the provider import it protects.
     """
     entry = operation(operation_id)
+    if entry.treatment == TREATMENT_RETIRED_PROVIDER:
+        raise RetiredProviderOperation(entry.operation, entry.guidance)
     if entry.treatment == TREATMENT_UNSUPPORTED_LEGACY:
         raise UnsupportedLegacyProviderOperation(entry.operation, entry.guidance)
     attestation = current_worker_attestation()

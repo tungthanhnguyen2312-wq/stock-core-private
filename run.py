@@ -26,8 +26,6 @@ ROOT = Path(__file__).resolve().parent
 # Task → danh sách lệnh (mỗi lệnh là argv, không qua shell). Nguồn: docs/CLI_REFERENCE.md.
 # Task nhiều bước dừng ngay khi một bước lỗi.
 TASKS: dict[str, dict] = {
-    "prices":       {"cmds": [["vn_stock_pipeline.py", "update"]],
-                     "help": "Cập nhật OHLCV hằng ngày (chạy sau 15h giờ VN)"},
     "macro":        {"cmds": [["macro_sync.py"]],
                      "help": "Đồng bộ dữ liệu vĩ mô thế giới + VN"},
     "news":         {"cmds": [["news_sync.py"]],
@@ -36,17 +34,6 @@ TASKS: dict[str, dict] = {
                      "help": "Mixer chỉ báo → screen_snapshot.csv + market_breadth.csv (chạy CUỐI chuỗi dữ liệu)"},
     "candles":      {"cmds": [["candle_scan.py"]],
                      "help": "Quét mẫu nến 1D/1W/1M + SMC → data/*.json(.js) — cục bộ, 0 request"},
-    "daily":        {"cmds": [["vn_stock_pipeline.py", "update"], ["macro_sync.py"], ["news_sync.py"],
-                              ["vn_indicators.py"], ["candle_scan.py"]],
-                     "help": "Chuỗi hằng ngày đúng thứ tự: prices → macro → news → indicators → candles"},
-    "blacklist":    {"cmds": [["blacklist_sync.py"], ["meta_sync.py", "--blacklist-only"]],
-                     "help": "Cập nhật blacklist (1 lần/tuần): blacklist_sync → meta_sync --blacklist-only"},
-    "metadata":     {"cmds": [["meta_sync.py"]],
-                     "help": "Đồng bộ metadata cơ bản (~2-2.5h, tự resume; thêm --refresh sau mùa BCTC)"},
-    "shareholders": {"cmds": [["shareholders_sync.py"]],
-                     "help": "Cào cổ đông lớn (~45-50 phút, 1 lần/tháng, tự resume)"},
-    "bctc-sync":    {"cmds": [["bctc_sync.py", "scrape", "--file", "tickers_bctc.txt", "--refresh"]],
-                     "help": "Cào BCTC quý mới → data_bctc/ (1 lần/quý)"},
     "bctc-process": {"cmds": [["bctc_processor.py"]],
                      "help": "Chuẩn hóa BCTC → financial_snapshot.csv/.parquet (sau bctc-sync)"},
     "analyze":      {"cmds": [["stock_analyzer.py", "--strategy", "all"]],

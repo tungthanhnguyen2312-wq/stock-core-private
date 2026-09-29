@@ -130,7 +130,7 @@ def classify_exception(exc: BaseException) -> tuple[str, str]:
 def _default_fetcher(ticker: str, source: str, family: str, period: str = "quarter") -> Any:
     """The authorized statement path, exactly as `bctc_sync._finance` builds it."""
     require_governed_provider_execution("missing_payload_reconciliation._default_fetcher")
-    from vnstock.api.financial import Finance
+    raise RuntimeError("RETIRED_PROVIDER:missing_payload_reconciliation._default_fetcher")
 
     return getattr(Finance(source=source, symbol=ticker), family)(period=period)
 

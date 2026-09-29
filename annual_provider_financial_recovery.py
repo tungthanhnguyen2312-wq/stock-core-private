@@ -193,7 +193,7 @@ def reconcile_annual_facts(annual_facts: Iterable[Mapping[str, Any]],
 def acquire_annual_once(plan: Iterable[Mapping[str, str]]) -> list[dict[str, Any]]:
     """Issue the plan literally: no retry/failover/delay and no secret-bearing logging."""
     require_governed_provider_execution("annual_provider_financial_recovery.acquire_annual_once")
-    from vnstock.api.financial import Finance
+    raise RuntimeError("RETIRED_PROVIDER:annual_provider_financial_recovery.acquire_annual_once")
     results = []
     for request in plan:
         ticker, provider, family = request["ticker"], request["provider"], request["statement_family"]

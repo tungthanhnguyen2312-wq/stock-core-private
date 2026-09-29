@@ -178,7 +178,7 @@ def steps(args: argparse.Namespace, tickers: list[str]) -> list[tuple[str, list[
         return str(SCRIPT_DIR / name)
 
     if not args.skip_price_update:
-        result.append(("price_update", [py, producer_script("vn_stock_pipeline.py"), "update"]))
+        raise RuntimeError("RETIRED_PROVIDER:legacy_price_update; use stocklookup.ps1 daily for DNSE acquisition")
     if not args.skip_macro:
         result.append(("macro_sync", [py, producer_script("macro_sync.py")]))
     if not args.skip_news:
