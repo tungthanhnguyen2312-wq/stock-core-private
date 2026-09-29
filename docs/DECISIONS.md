@@ -1,5 +1,25 @@
 # Decisions & Architectural Decision Records
 
+## 2026-09-29 - Reviewed-interim canonical ingress (`FINANCIAL_EVIDENCE_REVIEWED_INTERIM_CANONICAL_INGRESS_V1`)
+
+**Decision.** Fact authority and research authority stay separate. Assurance is one explicit
+contract, `{audited, reviewed}`; reviewed is a distinct state that is never upgraded to audited and
+is valid only with evidence recognized from the retained document itself (review-report title,
+VSRE 2410 engagement, consolidated and interim wording). A caller string, filename or period
+convention is never proof. A fully evidenced reviewed interim fact enters the existing official
+overlay and is factually QUALIFIED; the canonical qualification policy still reports
+`RESEARCH_PERIOD_NOT_ANNUAL`, so annual-only Financial V2/corporate research is unchanged.
+
+**Result.** `COMPLETE`. PNJ, PVD and VRE prove reviewed on page 5; four VND facts (PNJ/VRE revenue
+and parent net income) are emitted. PVD's USD facts are not emitted (VND-only overlay; no FX is
+invented). H1 flows get no Q2/annual alias and no TTM; knowledge time is first-observed, never
+period end. Precedence runs only on an exact ticker/metric/period/scope key. The retained
+2026-09-29 assembly has zero posture, fundamental-state or valuation deltas; the Financial V2 pin
+`2026-09-05.1` is unchanged.
+
+**Boundary.** Not an annual-research promotion and not a broad "interim financial authority"
+promotion. No network, acquisition, raw PDF/image tracking, Vnstock, Daily or successor.
+
 ## 2026-09-29 - Cohort-1 OCR geometry and metadata recovery (`FINANCIAL_EVIDENCE_COHORT1_OCR_GEOMETRY_AND_METADATA_RECOVERY_V1`)
 
 **Decision.** Extend the bounded local TSV route only with deterministic H1 header binding,

@@ -1,5 +1,12 @@
 # Stock Lookup — Architecture & Roadmap
 
+**Roadmap sync: Reviewed-interim canonical ingress (2026-09-29):**
+- `FINANCIAL_EVIDENCE_REVIEWED_INTERIM_CANONICAL_INGRESS_V1` = `COMPLETE`, rooted at
+  `7eb3d66b006c267a6b4d34416b7569929fe00c59`. Reviewed interim official facts may be factually
+  QUALIFIED (four PNJ/VRE H1 2026 VND facts in the existing official overlay); annual-only
+  Financial V2/current corporate research authority, the `2026-09-05.1` pin, valuation methods
+  and postures are unchanged. No successor is queued or started.
+
 **Roadmap sync: Cohort-1 OCR geometry and metadata recovery (2026-09-29):**
 - `FINANCIAL_EVIDENCE_COHORT1_OCR_GEOMETRY_AND_METADATA_RECOVERY_V1` = `PARTIAL /
   PARTIAL_QUALIFIED_H1_CANDIDATES_NO_CANONICAL_INGRESS`, rooted at canonical
