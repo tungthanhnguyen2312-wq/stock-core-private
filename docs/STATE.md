@@ -1,5 +1,20 @@
 # Stock Lookup — Operational State
 
+**Cohort-1 OCR geometry and metadata recovery (2026-09-29):**
+`FINANCIAL_EVIDENCE_COHORT1_OCR_GEOMETRY_AND_METADATA_RECOVERY_V1 = PARTIAL /
+PARTIAL_QUALIFIED_H1_CANDIDATES_NO_CANONICAL_INGRESS`, rooted at canonical
+`31ca5027c9fc78cbad17d1a2da71bd1f933c21a7` (Producer CI #125 SUCCESS).  The retained
+HPG/PNJ/PVD/VRE H1 PDFs only were re-materialized locally (31 primary reads, global cap 40;
+18 unique statement pages). Generic geometry now binds H1 to explicit Vietnamese
+current/prior or closing/opening headers, recovers page-local consolidated scope, and
+normalizes only heading-internal OCR apostrophes. Six rows (revenue and parent income for
+PNJ, PVD and VRE) pass row/column/unit/scope checks; HPG remains blocked by its OCR unit
+header. They are not canonical facts: the existing panel adapter requires an audited status,
+while these documents are reviewed interim filings; retained precedence fixtures are absent.
+No network, acquisition, Vnstock, Daily, Financial V2 pin, valuation or posture change
+occurred. Public-safe report:
+`derived/financial-evidence-currency-refresh-v1/cohort1_ocr_geometry_metadata_recovery_report.json`.
+
 **Cohort-1 triggered OCR (2026-09-29):**
 `FINANCIAL_EVIDENCE_COHORT1_TRIGGERED_OCR_V1 = PARTIAL /
 PARTIAL_OCR_GEOMETRY_AND_METADATA_BLOCKERS`, a bounded continuation of

@@ -848,10 +848,10 @@ def _semantic_header_spans(header_lines: Sequence[Mapping[str, Any]], *, phrases
 def _semantic_period_header_candidates(lines: Sequence[Mapping[str, Any]], *, target_period: str,
                                        statement_family: str | None) -> list[dict[str, Any]]:
     """Find one table-local non-year period pair before feeding the existing band engine."""
-    try:
-        target_year = int(target_period)
-    except (TypeError, ValueError):
+    target_match = re.match(r"^(20[0-3][0-9])(?:-(?:H1|Q[1-4]))?$", str(target_period))
+    if target_match is None:
         return []
+    target_year = int(target_match.group(1))
     all_tokens = [token for line in lines for token in line["tokens"]]
     page_form_code_header = bool(re.search(r"form\s*b\s*0[1-3]", _normalize_text(" ".join(str(token["text"]) for token in all_tokens))))
     heights = sorted(max(0.1, float(token["bottom"]) - float(token["top"])) for token in all_tokens)
@@ -882,14 +882,14 @@ def _semantic_period_header_candidates(lines: Sequence[Mapping[str, Any]], *, ta
                 candidates.append({"header_class": "EXPLICIT_FULL_DATE", "header_lines": group,
                                    "current": current_dates[0], "comparative": comparative_dates[0]})
         if family == "balance_sheet":
-            closing = _semantic_header_spans(group, phrases=("closing balance", "so cuoi nam", "cuoi nam"), header_class="CLOSING_BALANCE")
-            opening = _semantic_header_spans(group, phrases=("opening balance", "so dau nam", "dau nam"), header_class="OPENING_BALANCE")
+            closing = _semantic_header_spans(group, phrases=("closing balance", "so cuoi nam", "cuoi nam", "so cuoi ky", "cuoi ky"), header_class="CLOSING_BALANCE")
+            opening = _semantic_header_spans(group, phrases=("opening balance", "so dau nam", "dau nam", "so dau ky", "dau ky"), header_class="OPENING_BALANCE")
             if len(closing) == 1 and len(opening) == 1:
                 candidates.append({"header_class": "CLOSING_OPENING_BALANCE", "header_lines": group,
                                    "current": closing[0], "comparative": opening[0]})
         if family in {"balance_sheet", "income_statement", "cash_flow"}:
-            current = _semantic_header_spans(group, phrases=("current year", "this year", "nam nay", "current"), header_class="CURRENT_PERIOD")
-            prior = _semantic_header_spans(group, phrases=("previous year", "prior year", "last year", "nam truoc", "prior"), header_class="COMPARATIVE_PERIOD")
+            current = _semantic_header_spans(group, phrases=("current year", "this year", "nam nay", "ky nay", "current"), header_class="CURRENT_PERIOD")
+            prior = _semantic_header_spans(group, phrases=("previous year", "prior year", "last year", "nam truoc", "ky truoc", "prior"), header_class="COMPARATIVE_PERIOD")
             if len(current) == 1 and len(prior) == 1:
                 candidates.append({"header_class": "CURRENT_PRIOR", "header_lines": group,
                                    "current": current[0], "comparative": prior[0]})
@@ -932,13 +932,14 @@ def _contains_nonyear_period_header_evidence(lines: Sequence[Mapping[str, Any]])
 def _with_period_binding_tokens(lines: Sequence[Mapping[str, Any]], *, candidate: Mapping[str, Any],
                                 target_period: str) -> list[dict[str, Any]]:
     """Inject ephemeral, positioned binding markers for the existing year-band engine."""
-    try:
-        comparative_marker = str(int(target_period) - 1)
-    except (TypeError, ValueError):
+    target_match = re.match(r"^(20[0-3][0-9])(?:-(?:H1|Q[1-4]))?$", str(target_period))
+    if target_match is None:
         return []
+    current_marker = target_match.group(1)
+    comparative_marker = str(int(current_marker) - 1)
     source_orders = set(candidate["current"]["source_token_orders"] + candidate["comparative"]["source_token_orders"])
     markers_by_line: dict[int, list[tuple[str, Mapping[str, Any]]]] = {}
-    markers_by_line.setdefault(int(candidate["current"]["header_line_id"]), []).append((target_period, candidate["current"]))
+    markers_by_line.setdefault(int(candidate["current"]["header_line_id"]), []).append((current_marker, candidate["current"]))
     markers_by_line.setdefault(int(candidate["comparative"]["header_line_id"]), []).append((comparative_marker, candidate["comparative"]))
     result: list[dict[str, Any]] = []
     for line in lines:
@@ -972,8 +973,11 @@ def discover_column_bands(lines: Sequence[Mapping[str, Any]], target_period: str
         return None
     if len(semantic_candidates) == 1:
         candidate = semantic_candidates[0]
+        target_match = re.match(r"^(20[0-3][0-9])(?:-(?:H1|Q[1-4]))?$", str(target_period))
+        if target_match is None:
+            return None
         resolved = _discover_column_bands_with_year(
-            _with_period_binding_tokens(lines, candidate=candidate, target_period=target_period), target_period,
+            _with_period_binding_tokens(lines, candidate=candidate, target_period=target_period), target_match.group(1),
         )
         if resolved is None:
             return None

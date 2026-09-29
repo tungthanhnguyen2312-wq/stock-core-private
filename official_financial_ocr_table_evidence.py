@@ -70,7 +70,12 @@ def _hash(value: Any) -> str:
 
 def _normalize(value: str) -> str:
     import unicodedata
-    return " ".join("".join(ch for ch in unicodedata.normalize("NFKD", value.lower()) if not unicodedata.combining(ch)).split())
+    # OCR commonly inserts apostrophes inside Vietnamese words (for example
+    # ``LU'U``).  Normalize punctuation only for statement/scope headings;
+    # values and their raw OCR text never pass through this helper.
+    folded = "".join(ch for ch in unicodedata.normalize("NFKD", value.lower()) if not unicodedata.combining(ch))
+    folded = re.sub(r"(?<=[a-z0-9])['’](?=[a-z0-9])", "", folded)
+    return " ".join(re.sub(r"[^a-z0-9]+", " ", folded.replace("đ", "d")).split())
 
 
 def _parse_tsv(raw: bytes, *, page_number: int, image_sha256: str) -> list[dict[str, Any]]:
@@ -152,17 +157,38 @@ def _statement_family(tokens: Sequence[Mapping[str, Any]]) -> str | None:
     return matches[0] if len(matches) == 1 else None
 
 
+def _is_explicit_statement_continuation(tokens: Sequence[Mapping[str, Any]]) -> bool:
+    text = _normalize(" ".join(str(token["text"]) for token in sorted(tokens, key=lambda token: int(token["raw_token_order"]))))
+    return "tiep theo" in text or "continued" in text
+
+
 def _pages_by_statement_family(materialization: Mapping[str, Any]) -> dict[str, list[dict[str, Any]]]:
-    pages: dict[str, list[dict[str, Any]]] = {}
-    for raw_page in materialization.get("pages") or []:
+    staged = []
+    for raw_page in sorted(materialization.get("pages") or [], key=lambda item: int(item.get("page_number", 0))):
         payload = raw_page.get("ocr_derived_text_evidence") or {}
         tokens = payload.get("tokens") or []
-        family = _statement_family(tokens)
+        staged.append((raw_page, payload, tokens, _statement_family(tokens)))
+    known = {int(raw_page["page_number"]): family for raw_page, _, _, family in staged if family}
+    pages: dict[str, list[dict[str, Any]]] = {}
+    for raw_page, payload, tokens, direct_family in staged:
+        number = int(raw_page["page_number"])
+        family = direct_family
+        continued_from_page = None
+        # A page without a statement title is admissible only when it says that it
+        # continues and the immediately preceding selected page has one unique,
+        # already-recognized family.  This never bridges a page gap or a family
+        # ambiguity.
+        if family is None and _is_explicit_statement_continuation(tokens):
+            predecessor = known.get(number - 1)
+            if predecessor:
+                family, continued_from_page = predecessor, number - 1
+                known[number] = family
         if family:
-            pages.setdefault(family, []).append({"page_number": raw_page["page_number"], "document_sha256": materialization["document_sha256"],
+            pages.setdefault(family, []).append({"page_number": number, "document_sha256": materialization["document_sha256"],
                 "statement_family": family, "positioned_token_provenance": raw_page.get("positioned_token_provenance"),
                 "positioned_tokens": tokens, "source_image_evidence": raw_page.get("source_image_evidence"),
-                "primary_ocr_evidence": {"engine_version": payload.get("engine_version"), "config": payload.get("config")}})
+                "primary_ocr_evidence": {"engine_version": payload.get("engine_version"), "config": payload.get("config")},
+                "continued_from_page": continued_from_page})
     return pages
 
 
@@ -171,13 +197,89 @@ def resolve_scoped_unit_evidence(materialization: Mapping[str, Any]) -> dict[str
     declarations = []
     for family, pages in _pages_by_statement_family(materialization).items():
         for page in pages:
-            declarations.extend(declaration_from_tokens(
+            page_declarations = declaration_from_tokens(
                 tokens=page["positioned_tokens"], document_sha256=str(materialization["document_sha256"]),
                 page_number=int(page["page_number"]), statement_family=family,
                 table_id=f"ocr-page:{materialization['document_sha256']}:{page['page_number']}:{family}",
-            ))
+            )
+            declarations.extend(page_declarations)
+            if page_declarations or page.get("continued_from_page") is None:
+                continue
+            predecessor = [item for item in declarations if item.get("document_sha256") == materialization["document_sha256"]
+                           and item.get("statement_family") == family and int(item.get("page_number", -1)) == int(page["continued_from_page"])]
+            semantics = {(item.get("currency"), item.get("unit_scale")) for item in predecessor}
+            if len(semantics) == 1 and predecessor:
+                inherited = sorted(predecessor, key=lambda item: str(item.get("evidence_id", "")))[0]
+                declarations.append({**inherited, "scope_level": "statement_page", "page_number": int(page["page_number"]),
+                                     "table_id": None, "continuation_of_page": int(page["continued_from_page"]),
+                                     "evidence_id": _hash({"continuation": inherited["evidence_id"], "page": page["page_number"]})})
     return {"contract_version": "financial_statement_scoped_unit_resolution/v1",
             "document_sha256": materialization["document_sha256"], "declarations": declarations}
+
+
+def resolve_scoped_statement_scope_evidence(materialization: Mapping[str, Any]) -> dict[str, Any]:
+    """Recover only an explicit consolidated/separate title on each OCR table page.
+
+    A scope marker in prose is not enough: the marker must occur in the heading
+    region of the same recognized statement page.  Continuation pages are kept
+    distinct, so a title on one page cannot silently authorize another page.
+    """
+    declarations = []
+    for family, pages in _pages_by_statement_family(materialization).items():
+        for page in pages:
+            tokens = list(page["positioned_tokens"])
+            if not tokens:
+                continue
+            top = min(float(token.get("top", 0.0)) for token in tokens)
+            bottom = max(float(token.get("bottom", top)) for token in tokens)
+            heading_limit = top + max(1.0, (bottom - top) * 0.35)
+            heading = [token for token in tokens if float(token.get("top", top)) <= heading_limit]
+            normalized = _normalize(" ".join(str(token.get("text", "")) for token in heading))
+            markers = []
+            if "hop nhat" in normalized or "consolidated" in normalized:
+                markers.append("consolidated")
+            if "bao cao rieng" in normalized or "separate" in normalized:
+                markers.append("separate")
+            if len(markers) != 1:
+                if page.get("continued_from_page") is not None:
+                    predecessor = [item for item in declarations if item.get("statement_family") == family
+                                   and int(item.get("page_number", -1)) == int(page["continued_from_page"])]
+                    scopes = {item.get("statement_scope") for item in predecessor}
+                    if len(scopes) == 1 and predecessor:
+                        inherited = sorted(predecessor, key=lambda item: str(item.get("evidence_id", "")))[0]
+                        declarations.append({**inherited, "page_number": int(page["page_number"]),
+                                             "continuation_of_page": int(page["continued_from_page"]),
+                                             "evidence_id": _hash({"continuation": inherited["evidence_id"], "page": page["page_number"]})})
+                continue
+            marker = markers[0]
+            marker_tokens = [token for token in heading if _normalize(str(token.get("text", ""))) in {"hop", "nhat", "consolidated", "rieng", "separate"}]
+            declarations.append({
+                "statement_scope": marker, "scope_level": "statement_page",
+                "document_sha256": materialization["document_sha256"], "page_number": int(page["page_number"]),
+                "statement_family": family,
+                "source_span": {"token_ids": [str(token.get("token_id", "")) for token in marker_tokens],
+                                "raw_token_order": [int(token.get("raw_token_order", 0)) for token in marker_tokens]},
+                "evidence_text": " ".join(str(token.get("text", "")) for token in heading),
+                "evidence_id": _hash({"document_sha256": materialization["document_sha256"], "page_number": page["page_number"],
+                                      "statement_family": family, "statement_scope": marker,
+                                      "raw_token_order": [int(token.get("raw_token_order", 0)) for token in marker_tokens]}),
+            })
+    return {"contract_version": "financial_statement_scoped_scope_resolution/v1",
+            "document_sha256": materialization["document_sha256"], "declarations": declarations}
+
+
+def resolve_statement_scope_for_page(scope_evidence: Mapping[str, Any], *, document_sha256: str,
+                                     page_number: int, statement_family: str) -> dict[str, Any]:
+    """Resolve one exact statement page's explicit scope marker, failing on conflict."""
+    declarations = [dict(item) for item in scope_evidence.get("declarations") or [] if
+                    item.get("document_sha256") == document_sha256 and int(item.get("page_number", -1)) == page_number
+                    and item.get("statement_family") == statement_family and item.get("scope_level") == "statement_page"]
+    scopes = {item.get("statement_scope") for item in declarations}
+    if len(scopes) != 1:
+        return {"state": "STATEMENT_SCOPE_BLOCKED", "reason": "SCOPED_STATEMENT_SCOPE_MISSING_OR_CONFLICTING",
+                "evidence": sorted(declarations, key=lambda item: str(item.get("evidence_id", "")))}
+    evidence = sorted(declarations, key=lambda item: str(item.get("evidence_id", "")))[0]
+    return {"state": "QUALIFIED", "statement_scope": evidence["statement_scope"], "evidence": evidence}
 
 
 def _code_crop_bbox(locator: Mapping[str, Any], source_image: Mapping[str, Any]) -> dict[str, int]:
@@ -294,7 +396,8 @@ def resolve_ambiguous_debt_line_code_cells(
 
 def qualify_table_facts(materialization: Mapping[str, Any], *, ticker: str, reporting_period: str, currency: str = "VND", unit_scale: int = 1,
                         line_code_cell_resolution: Mapping[str, Any] | None = None,
-                        scoped_unit_evidence: Mapping[str, Any] | None = None) -> dict[str, Any]:
+                        scoped_unit_evidence: Mapping[str, Any] | None = None,
+                        scoped_statement_scope_evidence: Mapping[str, Any] | None = None) -> dict[str, Any]:
     """Produce qualified and blocked candidates; no panel mutation occurs here."""
     qualified: list[dict[str, Any]] = []
     blocked: list[dict[str, Any]] = []
@@ -323,6 +426,14 @@ def qualify_table_facts(materialization: Mapping[str, Any], *, ticker: str, repo
             blocked.append({"canonical_metric": metric, "line_code": code, "statement_family": family,
                             "state": "BLOCKED", "reason": "UNIT_SCALE_BLOCKED", "unit_resolution": unit})
             return None
+        scope = None if scoped_statement_scope_evidence is None else resolve_statement_scope_for_page(
+            scoped_statement_scope_evidence, document_sha256=str(materialization["document_sha256"]),
+            page_number=int(match["page"]), statement_family=family,
+        )
+        if scope is not None and (scope["state"] != "QUALIFIED" or scope["statement_scope"] != "consolidated"):
+            blocked.append({"canonical_metric": metric, "line_code": code, "statement_family": family,
+                            "state": "BLOCKED", "reason": "STATEMENT_SCOPE_BLOCKED", "scope_resolution": scope})
+            return None
         try:
             value = parse_accounting_integer(match["current_raw"])[0] * int(unit["unit_scale"])
         except ValueError:
@@ -334,7 +445,7 @@ def qualify_table_facts(materialization: Mapping[str, Any], *, ticker: str, repo
         lineage = {"document_sha256": materialization["document_sha256"], "source_page": match["page"], "line_code": code,
                    "row_object": match["row_object"], "source_image_evidence": next(page["source_image_evidence"] for page in pages_by_family[family] if page["page_number"] == match["page"]),
                    "ocr_derived_text_evidence": {"materialization_id": materialization["materialization_id"], "current_raw": match["current_raw"], "comparative_raw": match["comparative_raw"]},
-                   "table_id": table_id, "unit_evidence": unit}
+                   "table_id": table_id, "unit_evidence": unit, "statement_scope_evidence": scope}
         if cell_evidence:
             lineage["line_code_cell_evidence"] = cell_evidence
         return {"canonical_metric": metric, "value": value, "currency": unit["currency"], "unit_scale": unit["unit_scale"], "reporting_period": reporting_period, "statement_family": family, "qualification_state": "QUALIFIED", "reason_codes": reason_codes, "source_lineage": lineage}

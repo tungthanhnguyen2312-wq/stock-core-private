@@ -1,0 +1,18 @@
+{
+  "contract_version": "financial_evidence_cohort1_ocr_geometry_metadata_recovery/v1",
+  "milestone_id": "FINANCIAL_EVIDENCE_COHORT1_OCR_GEOMETRY_AND_METADATA_RECOVERY_V1",
+  "canonical_base": "31ca5027c9fc78cbad17d1a2da71bd1f933c21a7",
+  "network_used": false,
+  "raw_pdf_or_image_bytes_committed": false,
+  "ocr_page_budget": {"total_cap": 40, "primary_reads_completed": 31, "unique_statement_pages": 18},
+  "documents": [
+    {"ticker": "HPG", "period": "2026-H1", "document_sha256": "9a2881a88ac8ca4cc5cd948b0fafa031ff30fd0332a372f362477a8a6b0c9968", "pages": [9, 10, 12, 13], "scope": "consolidated", "unit": "BLOCKED", "qualified_candidate_facts": [], "blockers": ["UNIT_SCALE_BLOCKED", "ROW_NOT_UNIQUE_OR_NOT_GEOMETRICALLY_RESOLVED"]},
+    {"ticker": "PNJ", "period": "2026-H1", "document_sha256": "db877169e7c19b4b81d60b37d5aab8f9938129a66b582c2229ffffebdca2a43d", "pages": [8, 9, 10, 11], "scope": "consolidated", "currency": "VND", "unit_scale": 1, "qualified_candidate_facts": [{"metric": "revenue", "value": 25709196846401, "source_page": 10, "line_code": "10"}, {"metric": "net_income", "value": 728529788872, "source_page": 10, "line_code": "61"}]},
+    {"ticker": "PVD", "period": "2026-H1", "document_sha256": "a7360d2fc9a8a67a1535820813cda2bb8ef288466cd36c949e050c2f2a1b290a", "pages": [6, 7, 8, 9], "scope": "consolidated", "currency": "USD", "unit_scale": 1, "qualified_candidate_facts": [{"metric": "revenue", "value": 245730824, "source_page": 8, "line_code": "10"}, {"metric": "net_income", "value": 17920760, "source_page": 8, "line_code": "61"}]},
+    {"ticker": "VRE", "period": "2026-H1", "document_sha256": "7e9b9e39901a028972fff80bc1a4f9f5cab4c1526ce4029f9b853ccff6aeaac0", "pages": [7, 8, 10, 11, 12, 13], "scope": "consolidated", "currency": "VND", "unit_scale": 1000000, "qualified_candidate_facts": [{"metric": "revenue", "value": 4667489000000, "source_page": 11, "line_code": "10"}, {"metric": "net_income", "value": 3214788000000, "source_page": 11, "line_code": "61"}]}
+  ],
+  "qualified_candidate_fact_count": 6,
+  "canonical_ingress": {"attempted": false, "reason": "REVIEWED_INTERIM_STATUS_DOES_NOT_SATISFY_EXISTING_AUDITED_OCR_PANEL_ADAPTER", "precedence": "NOT_RUN_RETAINED_PANEL_FIXTURES_UNAVAILABLE"},
+  "financial_v2_pin": {"authority_version": "2026-09-05.1", "changed": false},
+  "terminal_disposition": "PARTIAL_QUALIFIED_H1_CANDIDATES_NO_CANONICAL_INGRESS"
+}

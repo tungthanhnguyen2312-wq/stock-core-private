@@ -15,7 +15,11 @@ from official_financial_ocr_table_evidence import (
     panel_facts_from_qualified_ocr,
     qualify_table_facts,
     resolve_ambiguous_debt_line_code_cells,
+    resolve_scoped_statement_scope_evidence,
+    resolve_scoped_unit_evidence,
+    resolve_statement_scope_for_page,
 )
+from financial_statement_unit_resolution import resolve_unit_for_scope
 from official_financial_structural_table import match_geometry_ambiguous_line_code_cell, match_geometry_table_row
 
 
@@ -44,6 +48,53 @@ def test_shared_row_match_refuses_native_or_mixed_tokens():
     page = {"page_number": 1, "positioned_tokens": [{"text": "10", "x0": 1, "x1": 2, "top": 1, "bottom": 2,
              "raw_token_order": 0, "provenance": "NATIVE_PDF_POSITIONED_TOKEN"}]}
     assert match_geometry_table_row(page, line_code="10", target_period="2025") is None
+
+
+def test_explicit_consolidated_scope_is_page_scoped_and_required_when_supplied():
+    def token(text, order, top=10):
+        return {"text": text, "token_id": str(order), "raw_token_order": order, "top": top, "bottom": top + 1,
+                "x0": order * 5, "x1": order * 5 + 2, "tsv_hierarchy": {}}
+    materialization = {"document_sha256": DOCUMENT_SHA, "pages": [
+        {"page_number": 1, "positioned_token_provenance": "OCR_TSV_POSITIONED_TOKEN",
+         "ocr_derived_text_evidence": {"tokens": [token(value, index) for index, value in enumerate(
+             "CONSOLIDATED INCOME STATEMENT Code Current year Prior year".split())]}},
+        {"page_number": 2, "positioned_token_provenance": "OCR_TSV_POSITIONED_TOKEN",
+         "ocr_derived_text_evidence": {"tokens": [
+             *[token(value, index, 10) for index, value in enumerate("INCOME STATEMENT Code Current year Prior year".split())],
+             token("consolidated", 90, 300), token("note", 91, 300),
+         ]}},
+    ]}
+    evidence = resolve_scoped_statement_scope_evidence(materialization)
+    assert [item["page_number"] for item in evidence["declarations"]] == [1]
+    resolved = resolve_statement_scope_for_page(evidence, document_sha256=DOCUMENT_SHA, page_number=1,
+                                                statement_family="income_statement")
+    assert resolved["state"] == "QUALIFIED" and resolved["statement_scope"] == "consolidated"
+    missing = resolve_statement_scope_for_page(evidence, document_sha256=DOCUMENT_SHA, page_number=2,
+                                               statement_family="income_statement")
+    assert missing["state"] == "STATEMENT_SCOPE_BLOCKED"
+
+
+def test_immediate_explicit_continuation_inherits_only_predecessor_scope_and_unit():
+    def token(text, order, top=10):
+        return {"text": text, "token_id": str(order), "raw_token_order": order, "top": top, "bottom": top + 1,
+                "x0": order * 5, "x1": order * 5 + 2,
+                "tsv_hierarchy": {"block_num": 1, "par_num": 1, "line_num": 1}}
+    materialization = {"document_sha256": DOCUMENT_SHA, "pages": [
+        {"page_number": 1, "positioned_token_provenance": "OCR_TSV_POSITIONED_TOKEN",
+         "ocr_derived_text_evidence": {"tokens": [token(value, index) for index, value in enumerate(
+             "CONSOLIDATED INCOME STATEMENT Code Unit: VND".split())]}},
+        {"page_number": 2, "positioned_token_provenance": "OCR_TSV_POSITIONED_TOKEN",
+         "ocr_derived_text_evidence": {"tokens": [token(value, index) for index, value in enumerate(
+             "Continued Code Current year Prior year".split())]}},
+    ]}
+    scope = resolve_scoped_statement_scope_evidence(materialization)
+    resolved_scope = resolve_statement_scope_for_page(scope, document_sha256=DOCUMENT_SHA, page_number=2,
+                                                       statement_family="income_statement")
+    assert resolved_scope["state"] == "QUALIFIED" and resolved_scope["evidence"]["continuation_of_page"] == 1
+    units = resolve_scoped_unit_evidence(materialization)
+    resolved_unit = resolve_unit_for_scope(units["declarations"], document_sha256=DOCUMENT_SHA, page_number=2,
+                                           statement_family="income_statement", table_id="ocr-page:x:2:income_statement")
+    assert (resolved_unit["state"], resolved_unit["currency"], resolved_unit["evidence"]["continuation_of_page"]) == ("QUALIFIED", "VND", 1)
 
 
 def test_fpt_income_page_is_deterministic_and_qualifies_only_exact_numeric_cells():
