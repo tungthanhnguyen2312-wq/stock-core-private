@@ -522,10 +522,30 @@ def _calculation_readiness_reconciliation(
     return out
 
 
+def _official_equity_row(official_equity_facts: Sequence[Mapping[str, Any]] | None, ticker: str) -> Mapping[str, Any] | None:
+    """Newest qualified official equity for the same issuer; FY aliases to Q4, H1 to Q2."""
+    best = None
+    for fact in official_equity_facts or ():
+        if str(fact.get("ticker") or "").upper() != ticker:
+            continue
+        if fact.get("canonical_metric") not in {"shareholders_equity", "total_equity"}:
+            continue
+        if fact.get("qualification_state") != "QUALIFIED":
+            continue
+        if fact.get("statement_scope") not in (None, "consolidated"):
+            continue
+        if fact.get("currency") != "VND" or not fact.get("unit_scale"):
+            continue
+        if best is None or str(fact.get("knowledge_available_at") or "") > str(best.get("knowledge_available_at") or ""):
+            best = fact
+    return best
+
+
 def _book_value_method(
     *, ticker: str, entity: str, share_class: str, market_cap: Mapping[str, Any],
     equity_rows: Sequence[Mapping[str, Any]] | None, decision_session: str | None,
     verdict: Mapping[str, Any] | None,
+    official_equity_facts: Sequence[Mapping[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Current-research P/B using a pinned VCI unit verdict and one typed equity stock."""
     applicability = _method_applicability(entity, PB_CURRENT_RESEARCH)
@@ -606,6 +626,47 @@ def _book_value_method(
     if chosen["reported_value"] <= 0:
         return _method_shell(PB_CURRENT_RESEARCH, applicability=applicability, status="PB_NOT_MEANINGFUL",
                              blockers=["NON_POSITIVE_BOOK_EQUITY"], extra={**extra, "warnings": warning})
+    official = _official_equity_row(official_equity_facts, ticker)
+    equity_value = chosen["reported_value"]
+    formula = "research_usable_market_cap / VCI_total_owners_equity"
+    if official is not None:
+        from official_legacy_precedence import EXACT_MATCH, TRUE_CONFLICT, compare_official_and_legacy
+        official_period = str(official.get("reporting_period") or "")
+        legacy_period = chosen_period
+        if official_period.isdigit():
+            official_period_q = f"{official_period}-Q4"
+        elif official_period == "2026-H1":
+            official_period_q = "2026-Q2"
+        else:
+            official_period_q = official_period
+        compared = compare_official_and_legacy(
+            {**dict(official), "statement_family": "balance_sheet",
+             "normalized_value": official.get("normalized_value") or official.get("value"),
+             "already_normalized": True},
+            {"canonical_metric": "shareholders_equity", "reporting_period": legacy_period,
+             "statement_family": "balance_sheet", "statement_scope": chosen.get("statement_scope"),
+             "normalized_value": chosen["reported_value"], "already_normalized": True},
+        )
+        extra["official_legacy_precedence"] = compared["status"]
+        extra["official_equity_period"] = official.get("reporting_period")
+        extra["legacy_equity_visible"] = True
+        extra["legacy_source_status"] = "provider_reported"
+        if compared["status"] == TRUE_CONFLICT and official_period_q == chosen_period:
+            return _method_shell(PB_CURRENT_RESEARCH, applicability=applicability, status=INPUT_BLOCKED,
+                                 blockers=["OFFICIAL_LEGACY_TRUE_CONFLICT"], extra={**extra, "warnings": warning})
+        if compared["status"] == EXACT_MATCH or official_period_q == chosen_period:
+            official_value = official.get("normalized_value") or official.get("value")
+            if _numeric(official_value) and official_value > 0:
+                equity_value = official_value
+                formula = "research_usable_market_cap / official_total_owners_equity"
+                extra["source"] = "OFFICIAL_QUALIFIED_EQUITY"
+                extra["equity_source_status"] = "qualified"
+                extra["equity_lineage"] = {
+                    "provider": "official_issuer_ir",
+                    "document_sha256": official.get("document_sha256"),
+                    "source_sha256": official.get("document_sha256"),
+                    "source_file": official.get("source_locator"),
+                }
     compatible, blocker = basis_contract.compatible(equity_basis, _market_cap_basis_envelope(market_cap))
     if not compatible:
         return _method_shell(PB_CURRENT_RESEARCH, applicability=applicability, status=INPUT_BLOCKED,
@@ -616,12 +677,12 @@ def _book_value_method(
                        for anchor in ((verdict.get("source_reconciliation") or {}).get("shapes") or {}).get("('VCI', 'balance_sheet')", {}).get("anchors", []))
     limitations = ["CURRENT_RESEARCH_ONLY", "NOT_AUTHORITATIVE", "NOT_FOR_TARGET_PRICE",
                    "NCI_NOT_DEDUCTED", "SHARE_BASIS=" + share_class]
-    if not exact_anchor:
+    if not exact_anchor and formula.endswith("VCI_total_owners_equity"):
         limitations.append("PROVIDER_EQUITY_VALUE_NOT_INDEPENDENTLY_RECONCILED")
     value = (basis_contract.normalize_value(market_cap["value"], _market_cap_basis_envelope(market_cap)) /
-             basis_contract.normalize_value(chosen["reported_value"], equity_basis))
+             basis_contract.normalize_value(equity_value, equity_basis))
     return _method_shell(PB_CURRENT_RESEARCH, applicability=applicability, status="RESEARCH_USABLE",
-                         value=value, extra={**extra, "formula": "research_usable_market_cap / VCI_total_owners_equity",
+                         value=value, extra={**extra, "formula": formula,
                                              "warnings": warning, "limitations": limitations})
 
 
@@ -633,7 +694,8 @@ def evaluate_ticker_valuation(*, ticker: str, feature_record: Mapping[str, Any] 
                               entity_applicability: Mapping[str, Any] | None = None,
                               decision_session: str | None = None,
                               book_equity_rows: Sequence[Mapping[str, Any]] | None = None,
-                              monetary_basis_verdict: Mapping[str, Any] | None = None) -> dict[str, Any]:
+                              monetary_basis_verdict: Mapping[str, Any] | None = None,
+                              official_equity_facts: Sequence[Mapping[str, Any]] | None = None) -> dict[str, Any]:
     entity, entity_detail = _entity(feature_record, valuation_record, entity_applicability)
     share = (valuation_record or {}).get("share_basis_input") or {}
     share_class = share_basis_class(share)
@@ -661,7 +723,7 @@ def evaluate_ticker_valuation(*, ticker: str, feature_record: Mapping[str, Any] 
         PB_CURRENT_RESEARCH: _book_value_method(
             ticker=ticker, entity=entity, share_class=share_class, market_cap=market_cap,
             equity_rows=book_equity_rows, decision_session=decision_session,
-            verdict=monetary_basis_verdict),
+            verdict=monetary_basis_verdict, official_equity_facts=official_equity_facts),
         EV_SALES: _existing_method(EV_SALES, metrics.get("EV/Sales") or {}, entity=entity, share_class=share_class),
         EV_EBITDA: _ev_ebitda(entity, metrics.get("EV/EBITDA")),
         EV_EBITDA_CALC_READY: _calculation_readiness_method(

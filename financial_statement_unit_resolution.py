@@ -36,6 +36,9 @@ def _norm(value: str) -> str:
 def parse_explicit_unit_declaration(text: str) -> dict[str, Any] | None:
     """Parse one labelled declaration, preserving currency and scale separately."""
     normalized = _norm(text)
+    if re.fullmatch(r"vnd(\s+vnd)+", normalized) or re.search(r"\bvnd(\s+vnd)+\b", normalized):
+        return {"currency": "VND", "unit_scale": 1, "unit_label": "VND",
+                "evidence_text": str(text).strip()}
     if not re.search(r"\b(don\s*vi(?:\s*tinh)?|unit|currency)\b", normalized):
         return None
     currencies = set(re.findall(r"\b(?:vnd|usd)\b", normalized))

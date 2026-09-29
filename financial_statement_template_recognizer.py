@@ -233,10 +233,10 @@ def recognize_period_column_layout(
     for line in lines[:30]:  # Look inside the top 30 lines for the column header row
         l_norm = _normalize_text(line)
         if statement_type == StatementType.BALANCE_SHEET:
-            if any(k in l_norm for k in ("so cuoi nam", "so dau nam", "31/12", "01/01", "closing balance", "opening balance", "cuoi nam", "dau nam")):
+            if any(k in l_norm for k in ("so cuoi nam", "so dau nam", "31/12", "01/01", "30/06", "30/6", "so cuoi ky", "so dau ky", "cuoi ky", "dau ky", "closing balance", "opening balance", "cuoi nam", "dau nam")):
                 header_lines.append(line.strip())
         else:
-            if any(k in l_norm for k in ("nam nay", "nam truoc", "current year", "previous year", target_year, prior_year)):
+            if any(k in l_norm for k in ("nam nay", "nam truoc", "quy nay", "quy truoc", "6 thang", "current year", "previous year", "current period", "previous period", target_year, prior_year, "2026", "2025")):
                 header_lines.append(line.strip())
 
     if not header_lines:
@@ -303,6 +303,21 @@ def recognize_period_column_layout(
                 comparative_period_label=f"31/12/{prior_year}",
                 header_evidence=combined_header,
             )
+
+        year = target_year[:4] if len(target_year) >= 4 and target_year[:4].isdigit() else ""
+        if year:
+            pos_interim = max(header_norm.find(f"30/06/{year}"), header_norm.find(f"30/6/{year}"),
+                              header_norm.find("30/06/2026"), header_norm.find("30/6/2026"))
+            pos_yearend = max(header_norm.find(f"31/12/{int(year)-1}"), header_norm.find("31/12/2025"))
+            if pos_interim != -1 and pos_yearend != -1:
+                return PeriodColumnLayout(
+                    statement_type=statement_type,
+                    target_period=target_period,
+                    target_column_index=0 if pos_interim < pos_yearend else 1,
+                    current_period_label=f"30/06/{year}",
+                    comparative_period_label=f"31/12/{int(year)-1}",
+                    header_evidence=combined_header,
+                )
 
     # Standard Case 2: Income Statement / Cash Flow - "Năm nay" before "Năm trước"
     if statement_type in {StatementType.INCOME_STATEMENT, StatementType.CASH_FLOW}:

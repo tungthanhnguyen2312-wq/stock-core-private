@@ -117,6 +117,14 @@ def document_metadata(pages: list[Mapping[str, Any]], ticker: str) -> dict[str, 
             issuer = " ".join(words[:len(words)//2])
     stated_ticker, ticker_page, ticker_text = match(r"mã chứng khoán là\s+([A-Z]{3,5})", minimum_page=int(issuer_page or 1))
     period, period_page, period_text = match(r"năm tài chính kết thúc ngày 31 tháng 12 năm\s+(20\d{2})", minimum_page=int(issuer_page or 1))
+    if period is None:
+        from official_financial_period_identity import recognize_statement_period
+        recognized = recognize_statement_period("\n".join(text_by_page.values()))
+        if recognized.get("period") and recognized.get("status") == "EXPLICIT":
+            period = recognized["period"]
+            period_text = recognized.get("evidence")
+            period_page = next((page for page, text in text_by_page.items()
+                                if period_text and period_text[:40] in text), issuer_page)
     scope_page, scope_text = first("báo cáo tài chính hợp nhất")
     audit_page, audit_text = first("báo cáo kiểm toán độc lập")
     currency_page, currency_text = first("Đơn vị tính: VND")
@@ -137,7 +145,11 @@ def document_metadata(pages: list[Mapping[str, Any]], ticker: str) -> dict[str, 
         "issuer_identity": _claim(issuer, issuer_page, issuer_text) if issuer_page else _claim(None, None, None, "UNKNOWN"),
         "ticker": _claim(stated_ticker, ticker_page, ticker_text) if ticker_page else _claim(None, None, None, "UNKNOWN"),
         "reporting_period": _claim(period, period_page, period_text) if period_page else _claim(None, None, None, "UNKNOWN"),
-        "periodicity": _claim("annual", period_page, period_text) if period_page else _claim(None, None, None, "UNKNOWN"),
+        "periodicity": _claim(
+            "annual" if period and re.fullmatch(r"20\d{2}", str(period)) else
+            ("interim" if period else None),
+            period_page, period_text,
+        ) if period_page else _claim(None, None, None, "UNKNOWN"),
         "statement_scope": _claim("consolidated", scope_page, scope_text) if scope_page else _claim(None, None, None, "UNKNOWN"),
         "audit_or_review_status": _claim("audited", audit_page, audit_text) if audit_page else _claim(None, None, None, "UNKNOWN"),
         "currency": _claim("VND", currency_page, currency_text) if currency_page else _claim(None, None, None, "UNKNOWN"),
@@ -150,8 +162,14 @@ def document_metadata(pages: list[Mapping[str, Any]], ticker: str) -> dict[str, 
 
 def _fragment(page: Mapping[str, Any], kind: str) -> dict[str, Any] | None:
     text = str(page["page_text"]); upper = text.upper(); number = int(page["page_number"])
-    code = {"balance_sheet": "B01-DN/HN", "income_statement": "B02-DN/HN", "cash_flow": "B03-DN/HN"}[kind]
-    if code not in upper: return None
+    codes = {
+        "balance_sheet": ("B01-DN/HN", "B01A-DN/HN", "B 01A - DN/HN", "B 01 - DN/HN", "B01A - DN/HN"),
+        "income_statement": ("B02-DN/HN", "B02A-DN/HN", "B 02A - DN/HN", "B 02 - DN/HN", "B02A - DN/HN"),
+        "cash_flow": ("B03-DN/HN", "B03A-DN/HN", "B 03A - DN/HN", "B 03 - DN/HN", "B03A - DN/HN"),
+    }[kind]
+    code = next((item for item in codes if item in upper), None)
+    if code is None:
+        return None
     units = [i for i in range(len(text)) if text.startswith("Đơn vị tính:", i)]
     if kind == "balance_sheet":
         start = units[-1] if units else 0; body = f"{code}\nBẢNG CÂN ĐỐI KẾ TOÁN HỢP NHẤT\n" + text[start:]
@@ -212,7 +230,7 @@ def extract_candidates(*, document: Mapping[str, Any], pages: list[Mapping[str, 
         return official_financial_structural_table.build_structural_candidates(document=document, pages=pages)
     claims = metadata["metadata_claims"]
     reporting_period = str(claims["reporting_period"]["value"] or "")
-    if not re.fullmatch(r"20\d{2}", reporting_period):
+    if not re.fullmatch(r"20\d{2}(?:-H1|-Q2)?", reporting_period):
         return [], [{"state": "OFFICIAL_FACT_CANDIDATE_BLOCKED", "reason": "REPORTING_PERIOD_UNPROVEN"}]
     family_metrics = {"balance_sheet": ("total_assets", "shareholders_equity", "cash_and_equivalents", "total_interest_bearing_debt"), "income_statement": ("revenue", "net_income"), "cash_flow": ("operating_cash_flow",)}
     extracted = []
@@ -242,7 +260,13 @@ def build_artifact(*, document: Mapping[str, Any], path: Path) -> dict[str, Any]
         period = candidate["fiscal_period"]
         instant = candidate["canonical_metric"] in {"total_assets", "shareholders_equity", "cash_and_equivalents", "total_interest_bearing_debt"}
         knowledge_available_at = document["retrieved_at"]
-        panel_facts.append({"issuer_identity": candidate["ticker"], "entity_type": "corporate", "applicability_state": "APPLICABLE", "authority_tier": "promoted_corporate_evidence", "canonical_metric": candidate["canonical_metric"], "value": candidate["normalized_value"], "currency": candidate["currency"], "unit_scale": candidate["unit_scale"], "reporting_period": period, "period_type": "annual", "period_start": f"{period}-01-01", "period_end": f"{period}-12-31", "statement_scope": candidate["statement_scope"], "statement_family": candidate["statement_family"], "temporal_nature": "instant" if instant else "duration", "qualification_state": "QUALIFIED", "is_positive_authority": True, "knowledge_available_at": knowledge_available_at, "observed_at": knowledge_available_at, "reason_codes": ["OFFICIAL_DOCUMENT_PAGE_TABLE_CITED"], "reconciliation_status": "NOT_COMPARED_TO_PROVIDER", "temporal_envelope": {"as_of": period, "domain": "financial_statement", "field_id": f"pdf-page:{candidate['document_sha256']}:{candidate['canonical_metric']}:{period}", "field_name": candidate["canonical_metric"], "freshness_status": "historical", "knowledge_available_at": knowledge_available_at, "observed_at": knowledge_available_at, "pit_eligible": True, "pit_status": "QUALIFIED", "quality_status": "qualified", "value": candidate["normalized_value"]}, "source_lineage": {"provider": "official_issuer_ir", "authority_tier": "promoted_corporate_evidence", "document_sha256": candidate["document_sha256"], "citation_id": candidate["table_id"], "evidence_id": candidate["table_id"], "source_page": candidate["page_number"], "source_span": candidate["source_span"], "table_heading": candidate["table_heading"], "period_column_label": candidate["period_column_label"], "extraction_method": candidate["extraction_method"], "reconciliation_status": "NOT_COMPARED_TO_PROVIDER"}})
+        from official_financial_period_identity import period_bounds as _period_bounds
+        try:
+            period_start, period_end = _period_bounds(period)
+            period_type = "annual" if re.fullmatch(r"20\d{2}", str(period)) else "interim"
+        except ValueError:
+            period_start, period_end, period_type = None, None, "annual" if re.fullmatch(r"20\d{2}", str(period)) else "interim"
+        panel_facts.append({"issuer_identity": candidate["ticker"], "entity_type": "corporate", "applicability_state": "APPLICABLE", "authority_tier": "promoted_corporate_evidence", "canonical_metric": candidate["canonical_metric"], "value": candidate["normalized_value"], "currency": candidate["currency"], "unit_scale": candidate["unit_scale"], "reporting_period": period, "period_type": period_type, "period_start": period_start, "period_end": period_end, "statement_scope": candidate["statement_scope"], "statement_family": candidate["statement_family"], "temporal_nature": "instant" if instant else "duration", "qualification_state": "QUALIFIED", "is_positive_authority": True, "knowledge_available_at": knowledge_available_at, "observed_at": knowledge_available_at, "reason_codes": ["OFFICIAL_DOCUMENT_PAGE_TABLE_CITED"], "reconciliation_status": "NOT_COMPARED_TO_PROVIDER", "temporal_envelope": {"as_of": period, "domain": "financial_statement", "field_id": f"pdf-page:{candidate['document_sha256']}:{candidate['canonical_metric']}:{period}", "field_name": candidate["canonical_metric"], "freshness_status": "historical", "knowledge_available_at": knowledge_available_at, "observed_at": knowledge_available_at, "pit_eligible": True, "pit_status": "QUALIFIED", "quality_status": "qualified", "value": candidate["normalized_value"]}, "source_lineage": {"provider": "official_issuer_ir", "authority_tier": "promoted_corporate_evidence", "document_sha256": candidate["document_sha256"], "citation_id": candidate["table_id"], "evidence_id": candidate["table_id"], "source_page": candidate["page_number"], "source_span": candidate["source_span"], "table_heading": candidate["table_heading"], "period_column_label": candidate["period_column_label"], "extraction_method": candidate["extraction_method"], "reconciliation_status": "NOT_COMPARED_TO_PROVIDER"}})
     output = {"schema_version": VERSION, "document": {k: document[k] for k in ("document_id", "ticker", "sha256", "official_url", "retrieved_at")}, "page_count": len(pages), "text_layer_status": "USABLE_NATIVE_TEXT" if any(p["status"] == "TEXT_AVAILABLE" for p in pages) else "IMAGE_ONLY_OR_SCANNED", "page_evidence": pages, "document_metadata": metadata, "tables": tables, "fact_candidates": candidates, "p3f13_panel_facts": panel_facts, "blocked_candidates": rejected, "authority": {"network_used": False, "provider_used": False, "production_db_mutated": False, "value_or_recommendation_activated": False}}
     if not tables and str(document.get("entity_type", "corporate")) == "corporate":
         # Additive only: the exact-form document_metadata claims above stay exactly what

@@ -45,6 +45,16 @@ class CanonicalFinancialV2MaterializationError(ValueError):
     pass
 
 
+def _official_equity_overlay(root: Path) -> list[dict[str, Any]]:
+    try:
+        from financial_evidence_currency_refresh import load_public_official_fact_rows
+        return [row for row in load_public_official_fact_rows(root)
+                if row.get("qualification_state") == "QUALIFIED"
+                and row.get("canonical_metric") in {"shareholders_equity", "total_equity"}]
+    except Exception:
+        return []
+
+
 def _canonical(value: Any) -> str:
     return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False)
 
@@ -264,6 +274,7 @@ def build_evaluated_valuation_artifact(
         verdict = monetary_verdict.resolve(Path(__file__).resolve().parent)
     except monetary_verdict.MonetaryBasisVerdictUnavailable:
         verdict = None  # component-local fail-closed; the decision still builds
+    official_equity_facts = _official_equity_overlay(Path(__file__).resolve().parent)
     rows = {
         ticker: valuation_context.evaluate_ticker_valuation(
             ticker=ticker, feature_record=None,
@@ -276,6 +287,7 @@ def build_evaluated_valuation_artifact(
             # against it is never a current valuation input.
             decision_session=(calculation_readiness_context or {}).get("decision_session"),
             book_equity_rows=equity_by_ticker.get(ticker), monetary_basis_verdict=verdict,
+            official_equity_facts=official_equity_facts,
         )
         for ticker in product_tickers
     }

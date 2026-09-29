@@ -1,5 +1,18 @@
 # Stock Lookup — Architecture & Roadmap
 
+**Roadmap sync: official financial evidence currency refresh (2026-09-29):**
+- `FINANCIAL_EVIDENCE_CURRENCY_AND_OFFICIAL_STATEMENT_REFRESH_V1` = `PARTIAL /
+  FRAMEWORK_COMPLETE_COHORT_EXTERNAL_AND_PARSER_BLOCKERS`, from canonical
+  `f5fdd44204a01e2465e7bb1ec625331056e9350f` (2026-09-29 Daily retain; Producer CI #120 SUCCESS).
+  Live pass: 21 HTTP, 9 private PDFs, 0 new qualified CORE facts; pin `2026-09-05.1` unchanged.
+- `FINANCIAL_EVIDENCE_ZERO_ACTIVE_VNSTOCK_V1` remains `COMPLETE / ZERO_ACTIVE_VNSTOCK_DEPENDENCY_COMPLETE`.
+- Frozen Cohort-1: HPG VNM FPT PNJ PAN PVD NVL POW SSI GAS VRE VCB QNS EVF. Periods: FY2025 and
+  H1/Q2 2026 only. Q3 2026 out of scope. HTTP cap 40. Private raw landing on C: only.
+- Official facts integrate into existing `canonical_financial_facts` / qualification policy /
+  valuation P/B. Legacy KBS/VCI rows remain research proxies. Financial V2 pin stays
+  `2026-09-05.1` unless the five-ticker new-CORE threshold is met and a pin is actually rebuilt.
+- No successor is queued or started.
+
 **Roadmap sync: retire active Vnstock dependency (2026-09-29):**
 - `FINANCIAL_EVIDENCE_ZERO_ACTIVE_VNSTOCK_V1` = `COMPLETE / ZERO_ACTIVE_VNSTOCK_DEPENDENCY_COMPLETE`,
   from canonical `3137441656019e4b7974978f034915d361b5c307` (PR #16 merged, Producer CI #117 SUCCESS).
@@ -8,10 +21,9 @@
   UNBOUND and live/historical sizing or execution is blocked.
 - ACTIVE Vnstock runtime is retired; the Vnstock-specific worker is removed; new Vnstock/KBS/VCI
   acquisition is retired. Retained KBS/VCI research evidence stays readable as a labeled legacy
-  research proxy. Official financial currency is not complete.
+  research proxy.
 - Retained 2026-09-28 acceptance: 1,683 records, byte-identical Integrated Decision.
-- `FINANCIAL_EVIDENCE_CURRENCY_AND_OFFICIAL_STATEMENT_REFRESH_V1` is only a recommended future
-  successor, not active or implemented.
+- The official-currency successor above is now the sole active execution milestone.
 
 **Roadmap sync: liquidity execution-capacity and private research sizing (2026-09-29):**
 - `LIQUIDITY_EXECUTION_CAPACITY_AND_SIZING_V1` = `CLOSED / IMPLEMENTED /
