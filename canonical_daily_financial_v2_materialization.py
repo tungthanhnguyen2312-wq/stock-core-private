@@ -45,6 +45,22 @@ class CanonicalFinancialV2MaterializationError(ValueError):
     pass
 
 
+def _official_equity_overlay(root: Path) -> list[dict[str, Any]]:
+    from financial_evidence_currency_refresh import (
+        OfficialOverlayArtifactError,
+        load_public_official_fact_rows,
+    )
+    try:
+        rows = load_public_official_fact_rows(root)
+    except OfficialOverlayArtifactError as exc:
+        raise CanonicalFinancialV2MaterializationError(
+            f"OFFICIAL_OVERLAY_MALFORMED:{exc}"
+        ) from exc
+    return [row for row in rows
+            if row.get("qualification_state") == "QUALIFIED"
+            and row.get("canonical_metric") in {"shareholders_equity", "total_equity"}]
+
+
 def _canonical(value: Any) -> str:
     return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False)
 
@@ -264,6 +280,14 @@ def build_evaluated_valuation_artifact(
         verdict = monetary_verdict.resolve(Path(__file__).resolve().parent)
     except monetary_verdict.MonetaryBasisVerdictUnavailable:
         verdict = None  # component-local fail-closed; the decision still builds
+    official_overlay_eligibility = None
+    try:
+        official_equity_facts = _official_equity_overlay(Path(__file__).resolve().parent)
+    except CanonicalFinancialV2MaterializationError as exc:
+        if "OFFICIAL_OVERLAY_MALFORMED" not in str(exc):
+            raise
+        official_equity_facts = []
+        official_overlay_eligibility = "OFFICIAL_OVERLAY_MALFORMED_INELIGIBLE"
     rows = {
         ticker: valuation_context.evaluate_ticker_valuation(
             ticker=ticker, feature_record=None,
@@ -276,6 +300,7 @@ def build_evaluated_valuation_artifact(
             # against it is never a current valuation input.
             decision_session=(calculation_readiness_context or {}).get("decision_session"),
             book_equity_rows=equity_by_ticker.get(ticker), monetary_basis_verdict=verdict,
+            official_equity_facts=official_equity_facts,
         )
         for ticker in product_tickers
     }
@@ -290,6 +315,8 @@ def build_evaluated_valuation_artifact(
     }
     if entity_applicability_artifact is not None:
         payload["source_entity_applicability_identity"] = entity_applicability_artifact.get("artifact_identity")
+    if official_overlay_eligibility is not None:
+        payload["official_overlay_eligibility"] = official_overlay_eligibility
     payload.update(_identity(payload))
     return payload
 

@@ -1,9 +1,31 @@
 # Stock Lookup — Operational State
 
+**Official financial evidence currency refresh (2026-09-29):**
+`FINANCIAL_EVIDENCE_CURRENCY_AND_OFFICIAL_STATEMENT_REFRESH_V1 = PARTIAL /
+FRAMEWORK_COMPLETE_COHORT_EXTERNAL_AND_PARSER_BLOCKERS`. Canonical starting `main` is
+`f5fdd44204a01e2465e7bb1ec625331056e9350f` (2026-09-29 Daily retain; Producer CI #120 SUCCESS).
+`FINANCIAL_EVIDENCE_ZERO_ACTIVE_VNSTOCK_V1` remains `COMPLETE /
+ZERO_ACTIVE_VNSTOCK_DEPENDENCY_COMPLETE`. No successor is queued.
+
+Bounded live pass: 21 HTTP requests (cap 40), 9 PDFs retained privately (~98.8 MB; budget 5 GB),
+0 new qualified CORE facts, Financial V2 pin unchanged at `2026-09-05.1`. Exact per-issuer
+blockers are in `derived/financial-evidence-currency-refresh-v1/cohort_report.json`.
+
+Bounded Cohort-1 is frozen at HPG, VNM, FPT, PNJ, PAN, PVD, NVL, POW, SSI, GAS, VRE, VCB, QNS,
+EVF. Target periods are FY2025 audited consolidated annual statements and H1 2026 reviewed
+consolidated statements (or Q2 2026 where entity-family reporting requires it). Q3 2026 is out
+of scope. Official facts qualify only with digit-for-digit support plus currency, scale, scope,
+period and citation. Retained KBS/VCI facts stay `LEGACY RESEARCH PROXY` / `provider_reported`
+and are never deleted or relabelled official. Missing official evidence is not negative
+evidence. Financial V2 pin remains `2026-09-05.1` unless the five-ticker new-CORE threshold is
+met and a deterministic pin rebuild is actually performed. P/E and P/S TTM are not claimed from
+FY2025 + H1 alone. EV/EBITDA, DCF, DDM, FCFE, RNAV and SOTP stay at their current blockers.
+
 **Active Vnstock dependency retirement (2026-09-29):**
 `FINANCIAL_EVIDENCE_ZERO_ACTIVE_VNSTOCK_V1 = COMPLETE / ZERO_ACTIVE_VNSTOCK_DEPENDENCY_COMPLETE`.
-Canonical base remains `main` `3137441656019e4b7974978f034915d361b5c307` (PR #16 merged; Producer CI
-#117 SUCCESS). The previous `LIQUIDITY_EXECUTION_CAPACITY_AND_SIZING_V1` is closed
+Canonical base at completion was `main` `3137441656019e4b7974978f034915d361b5c307` (PR #16 merged;
+Producer CI #117 SUCCESS); current canonical `main` is the 2026-09-29 Daily retain above. The
+previous `LIQUIDITY_EXECUTION_CAPACITY_AND_SIZING_V1` is closed
 `LIQUIDITY_EXECUTION_CAPACITY_AND_SIZING_PARTIAL`: engine and scoped research contracts exist,
 but participation/horizon remain UNBOUND and live sizing, execution and historical replay are blocked.
 
@@ -12,12 +34,8 @@ governor and legacy price pipeline are removed. New KBS/VCI acquisition is retir
 technical acquisition use DNSE only and report unavailable DNSE evidence without a KBS/VCI live
 fallback. Generic provider security contracts remain. Retained KBS (31,389) and VCI (94,836)
 provider-reported financial facts remain readable as historical research proxies with their prior
-research-only authority; they have not become official or been deleted. Official financial
-currency is not complete. Retained 2026-09-28 Current Research acceptance is byte-identical for
-all 1,683 governed records
-(`integrated_investment_decision_product/v1:03f51230a1cb4492653cb41ea47f40950a32b8948aaec011da778b8489fb0c32`).
-No successor has started. The recommended later item is
-`FINANCIAL_EVIDENCE_CURRENCY_AND_OFFICIAL_STATEMENT_REFRESH_V1`.
+research-only authority; they have not become official or been deleted. The official-currency
+successor above is now active.
 
 **Liquidity execution-capacity and private research sizing (2026-09-29):**
 `LIQUIDITY_EXECUTION_CAPACITY_AND_SIZING_V1 = CLOSED / IMPLEMENTED / RETAINED_ACCEPTANCE_PASS /

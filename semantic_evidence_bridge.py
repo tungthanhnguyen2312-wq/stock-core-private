@@ -1227,6 +1227,18 @@ _FINANCIAL_IDENTITY_STATEMENT_FAMILIES = {
     "cash_and_equivalents": "balance_sheet",
     "total_interest_bearing_debt": "balance_sheet",
     "shareholders_equity": "balance_sheet",
+    "revenue": "income_statement",
+    "total_assets": "balance_sheet",
+    "parent_attributable_net_income": "income_statement",
+    "short_term_interest_bearing_debt": "balance_sheet",
+    "long_term_interest_bearing_debt": "balance_sheet",
+    "total_equity": "balance_sheet",
+    "net_profit_parent": "income_statement",
+    "customer_loans_net": "balance_sheet",
+    "customer_deposits": "balance_sheet",
+    "provision_for_credit_losses": "income_statement",
+    "brokerage_revenue": "income_statement",
+    "total_operating_revenue": "income_statement",
 }
 _SUPPORTED_FINANCIAL_IDENTITIES = frozenset(_FINANCIAL_IDENTITY_STATEMENT_FAMILIES)
 _REQUIRED_FINANCIAL_IDENTITY_FIELDS = ("citation_id", "ticker", "metric", "reporting_frequency", "reporting_period",

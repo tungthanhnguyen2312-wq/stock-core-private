@@ -1,7 +1,7 @@
 {
   "schema_version": "stocklookup_roadmap_execution_state/1.0.0",
   "roadmap_id": "stock-core-private",
-  "roadmap_version": "2026.09.29.3",
+  "roadmap_version": "2026.09.29.4",
   "narrative_authority": {
     "strategic_roadmap": "docs/ROADMAP.md",
     "operational_narrative": "docs/STATE.md",
@@ -15,8 +15,8 @@
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "FINANCIAL_EVIDENCE_ZERO_ACTIVE_VNSTOCK_V1",
-    "state": "COMPLETE"
+    "milestone": "FINANCIAL_EVIDENCE_CURRENCY_AND_OFFICIAL_STATEMENT_REFRESH_V1",
+    "state": "PARTIAL"
   },
   "queued_next": [],
   "milestones": [
@@ -2322,7 +2322,24 @@
       "state_history": ["ACTIVE", "COMPLETE"],
       "owner_override": "OWNER_DIRECTIVE_2026_09_29_FINANCIAL_EVIDENCE_ZERO_ACTIVE_VNSTOCK_V1",
       "terminal_disposition": "ACTIVE_VNSTOCK_RUNTIME_RETIRED / VNSTOCK_WORKER_REMOVED / NEW_KBS_VCI_ACQUISITION_RETIRED / RETAINED_KBS_VCI_RESEARCH_PROXY_PRESERVED / OFFICIAL_FINANCIAL_CURRENCY_NOT_COMPLETE",
-      "notes": "COMPLETE 2026-09-29. Active Vnstock/VNAI runtime retired; Vnstock-specific worker/client/protocol/governor/pipeline removed; new KBS/VCI acquisition retired. Generic provider security infrastructure retained. Historical KBS 31,389 and VCI 94,836 provider-reported facts remain readable as labeled research proxies and were not promoted to official. Retained 2026-09-28 Current Research is byte-identical for 1,683 records (integrated_investment_decision_product/v1:03f51230a1cb4492653cb41ea47f40950a32b8948aaec011da778b8489fb0c32). No successor started; recommended later item FINANCIAL_EVIDENCE_CURRENCY_AND_OFFICIAL_STATEMENT_REFRESH_V1."
+      "notes": "COMPLETE 2026-09-29. Active Vnstock/VNAI runtime retired; Vnstock-specific worker/client/protocol/governor/pipeline removed; new KBS/VCI acquisition retired. Generic provider security infrastructure retained. Historical KBS 31,389 and VCI 94,836 provider-reported facts remain readable as labeled research proxies and were not promoted to official. Retained 2026-09-28 Current Research is byte-identical for 1,683 records (integrated_investment_decision_product/v1:03f51230a1cb4492653cb41ea47f40950a32b8948aaec011da778b8489fb0c32). Successor FINANCIAL_EVIDENCE_CURRENCY_AND_OFFICIAL_STATEMENT_REFRESH_V1 is now the sole active execution milestone."
+    },
+    {
+      "milestone_id": "FINANCIAL_EVIDENCE_CURRENCY_AND_OFFICIAL_STATEMENT_REFRESH_V1",
+      "state": "PARTIAL",
+      "narrative_disposition": "FRAMEWORK_COMPLETE_COHORT_EXTERNAL_AND_PARSER_BLOCKERS",
+      "terminal_disposition": "FINANCIAL_EVIDENCE_CURRENCY_AND_OFFICIAL_STATEMENT_REFRESH_PARTIAL",
+      "starting_checkpoint": "f5fdd44204a01e2465e7bb1ec625331056e9350f",
+      "checkpoint": "HEAD",
+      "candidate_branch": "feature/financial-evidence-currency-v1-20260929",
+      "dependencies": ["FINANCIAL_EVIDENCE_ZERO_ACTIVE_VNSTOCK_V1"],
+      "unlocks": [],
+      "authority_effect": "OFFICIAL_FACTS_ONLY_WHERE_CITATION_QUALIFICATION_PASSES / NO_MARKET_WIDE_OFFICIAL_AUTHORITY / NO_HISTORICAL_FINANCIAL_PIT / NO_UNIVERSAL_VALUATION / NO_PROVIDER_PROXY_PROMOTION",
+      "owner_authorized": true,
+      "source_doc": "Owner directive FINANCIAL_EVIDENCE_CURRENCY_AND_OFFICIAL_STATEMENT_REFRESH_V1 (2026-09-29)",
+      "state_history": ["ACTIVE", "PARTIAL"],
+      "owner_override": "OWNER_DIRECTIVE_2026_09_29_FINANCIAL_EVIDENCE_CURRENCY_AND_OFFICIAL_STATEMENT_REFRESH_V1",
+      "notes": "PARTIAL 2026-09-29. Framework/integration/tests complete. Bounded live acquisition: 21 HTTP requests, 9 PDFs retained privately (~98.8 MB), 0 new qualified CORE facts. Financial V2 pin remains 2026-09-05.1. EVF has no admitted IR host. PAN storage-host only. GAS/POW/SSI index 404. Several 200 indexes yielded no FY2025/H1 locator. HPG/PNJ/PVD/VRE target PDFs are image-only (OCR not default-triggered). NVL Q2 has native text but lossy encoding blocked CORE extraction. No successor queued."
     }
   ],
   "blocked_capabilities": [

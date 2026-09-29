@@ -1,5 +1,40 @@
 # Decisions & Architectural Decision Records
 
+## 2026-09-29 - Bounded official financial evidence currency refresh (`FINANCIAL_EVIDENCE_CURRENCY_AND_OFFICIAL_STATEMENT_REFRESH_V1`)
+
+**Decision.** Refresh official financial evidence for a frozen 14-name cohort (HPG, VNM, FPT,
+PNJ, PAN, PVD, NVL, POW, SSI, GAS, VRE, VCB, QNS, EVF) targeting FY2025 audited consolidated
+annual statements and H1 2026 reviewed consolidated statements (or Q2 2026 where the
+entity-family reporting form requires it). Q3 2026 is out of scope. Official qualification
+requires digit-for-digit support plus currency, scale, scope, period and citation. Legacy
+KBS/VCI provider-reported facts remain visible research proxies and are never deleted or
+relabelled official. Same ticker/metric/period/scope: `EXACT_MATCH` promotes official
+authority; `TRUE_CONFLICT` fails closed; different period or scope is `NOT_COMPARABLE`;
+missing official is not negative evidence.
+
+**Acquisition.** Reuse `official_document_acquisition` and the approved issuer-IR registry.
+HTTP cap 40, concurrency 1, max two retained target documents per issuer, private landing
+`C:\Projects\StockLookup\data-landing\official-financial-filings-v1\` with a 5 GB new-bytes
+budget. EVF has no admitted issuer-IR host and is route-discovery only. HNX RSS is a bounded
+fallback only; HNX/UPCoM bulk crawl, HOSE listed-org SPA as an FS crawler, Vnstock/KBS/VCI
+runtime, EODHD and FiinGroup are forbidden. Raw PDF/Excel/HTML stays private.
+
+**Integration.** Official facts overlay `canonical_fact_store.load_official_citations` and may
+supersede VCI book equity for `P/B_CURRENT_RESEARCH` when qualified for the same
+ticker/period/scope. Financial V2 pin `2026-09-05.1` is left unchanged unless five Cohort-1
+tickers obtain at least one new qualified CORE fact and a deterministic pin rebuild is
+actually performed. P/E and P/S TTM are not claimed from FY2025 + H1 alone. EV/EBITDA, DCF,
+DDM, FCFE, RNAV and SOTP remain blocked.
+
+**Result.** `PARTIAL`. Framework, official-vs-legacy precedence, citation overlay, P/B official
+equity path, TTM-not-from-FY+H1, and pin-threshold tests are complete. Live Cohort-1
+acquisition used 21 HTTP requests and retained 9 private PDFs (~98.8 MB). Zero new qualified
+CORE facts. Financial V2 pin stays `2026-09-05.1`. Posture delta count 0.
+
+**Non-goal.** The owner-supplied SSI Research forecast table is not ingested. Future
+capability name only: `THIRD_PARTY_ANALYST_FORECAST_EVIDENCE` as non-authoritative
+forecast/claim evidence, not a canonical financial fact. That lane is not opened.
+
 ## 2026-09-29 - Retire active Vnstock family, retain research evidence (`FINANCIAL_EVIDENCE_ZERO_ACTIVE_VNSTOCK_V1`)
 
 **Decision.** The `VNSTOCK_KBS_VCI` family is permanently `RETIRED_PROVIDER` for active acquisition.

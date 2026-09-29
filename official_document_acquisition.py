@@ -34,7 +34,7 @@ DOCUMENT_CLASSES = ("audited_annual_financial_statements", "reviewed_interim_fin
 # required by the targeted multi-period issuer-document pilot; keeping this finite set
 # preserves the acquisition boundary while allowing the immediately preceding comparison
 # year to be requested.
-PERIODS = frozenset({"2022", "2023", "2024", "2025", "2026"})
+PERIODS = frozenset({"2022", "2023", "2024", "2025", "2026", "2026-H1", "2026-Q2"})
 # The Novaland FY2024 audited consolidated PDF is 23,761,801 bytes.  The bounded
 # 32 MiB ceiling admits that known issuer filing without opening unbounded retention.
 CONNECT_TIMEOUT_SECONDS, READ_TIMEOUT_SECONDS, MAX_RESPONSE_BYTES = 5, 15, 32 * 1024 * 1024
