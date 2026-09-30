@@ -11,9 +11,11 @@ WHAT THIS MODULE DECIDES (pure functions; no network, no file IO)
       ``liquidity_authority_contract``), the Daily research view, and the sizing-readiness matrix.
 
 WHAT IT NEVER DECIDES
-    Promotion beyond the merged contract. EXECUTION_CAPACITY, POSITION_SIZING and PIT_BACKTEST stay
-    BLOCKED. Missing ADTV blocks only the liquidity-dependent use; it never marks a stock
-    insufficient. A missing session is never zero-filled and never forward-filled.
+    Promotion of live EXECUTION_CAPACITY, POSITION_SIZING, PIT_BACKTEST, EXECUTION_REPLAY or
+    market-wide RAW_AS_TRADED. Current-session research envelopes are a separate use. Missing ADTV
+    blocks only the liquidity-dependent use; it never marks a stock insufficient. A missing session
+    is never zero-filled and never forward-filled. Artifact summaries count scoped eligibility;
+    per-record fitness remains authoritative.
 """
 from __future__ import annotations
 
@@ -43,6 +45,10 @@ MISSING_SESSION = "MISSING_SESSION"
 HTTP_OR_SOURCE_FAILURE = "HTTP_OR_SOURCE_FAILURE"
 SEMANTIC_CONFLICT = "SEMANTIC_CONFLICT"
 PUBLIC_ACQUISITION_NOT_AUTHORIZED = "PUBLIC_ACQUISITION_NOT_AUTHORIZED"
+SCOPED_ELIGIBLE = "SCOPED_ELIGIBLE"
+SCOPED_PARTIAL = "SCOPED_PARTIAL"
+PER_RECORD = "PER_RECORD"
+AS_TRADED_NOT_CA_NORMALIZED = "AS_TRADED_NOT_CA_NORMALIZED"
 COVERAGE_CLASSES = (
     EXACT_20_SESSION_WINDOW, PARTIAL_WINDOW, SOURCE_NOT_SUPPORTED, TICKER_NOT_FOUND, EXCHANGE_IDENTITY_CONFLICT,
     TRANSFERRED_LISTING, ZERO_TRADING_VALID, MISSING_SESSION, HTTP_OR_SOURCE_FAILURE, SEMANTIC_CONFLICT,
@@ -399,6 +405,67 @@ def build_record(*, row: Mapping[str, Any], slot: Mapping[str, Any] | None, dnse
         "evidence_refs": {"source": (slot or {}).get("source"), "responses": [{k: r.get(k) for k in ("sha256", "retrieved_at", "url", "rows")} for r in responses],
                           "sessions_retained": len((slot or {}).get("rows") or {}), "oldest": (slot or {}).get("oldest"), "newest": (slot or {}).get("newest")},
         "current_session_reconciliation": ({k: recon[k] for k in ("verdict", "matched_verdict", "put_through_verdict") if k in recon} if recon else None),
+    }
+
+
+def fitness_state(record: Mapping[str, Any], dimension: str) -> str | None:
+    """Per-record fitness is authoritative; the research_view projection is a fallback."""
+    cell = (record.get("fitness") or {}).get(dimension)
+    if isinstance(cell, Mapping) and cell.get("state"):
+        return str(cell["state"])
+    if isinstance(cell, str) and cell:
+        return cell
+    view = ((record.get("research_view") or {}).get("fitness") or {}).get(dimension)
+    if isinstance(view, Mapping) and view.get("state"):
+        return str(view["state"])
+    if isinstance(view, str) and view:
+        return view
+    return None
+
+
+def artifact_authority_summary(records: Mapping[str, Mapping[str, Any]]) -> dict[str, Any]:
+    """Scoped artifact summary. Counts only; never overrides a ticker-level fitness cell."""
+    n = len(records)
+    values = list(records.values())
+
+    def _count(dimension: str, states: set[str]) -> int:
+        return sum(fitness_state(record, dimension) in states for record in values)
+
+    rights_gated = sum(
+        (record.get("coverage") or {}).get("coverage_class") == PUBLIC_ACQUISITION_NOT_AUTHORIZED
+        for record in values
+    )
+    current_eligible = _count(contract.CURRENT_SESSION_LIQUIDITY_RESEARCH, {contract.ELIGIBLE})
+    adtv_eligible = _count(contract.ADTV_RESEARCH, {contract.ELIGIBLE})
+    adv_partial = _count(contract.ADV_VOLUME_RESEARCH, {contract.ELIGIBLE, contract.PARTIAL})
+    return {
+        "CURRENT_SESSION_LIQUIDITY_RESEARCH": {
+            "state": SCOPED_ELIGIBLE, "eligible_count": current_eligible, "denominator": n,
+        },
+        "HISTORICAL_LIQUIDITY_RESEARCH": {
+            "state": SCOPED_ELIGIBLE,
+            "eligible_count": _count(contract.HISTORICAL_LIQUIDITY_RESEARCH, {contract.ELIGIBLE}),
+            "denominator": n,
+        },
+        "ADTV_RESEARCH": {"state": SCOPED_ELIGIBLE, "eligible_count": adtv_eligible, "denominator": n},
+        "ADV_VOLUME_RESEARCH": {
+            "state": SCOPED_PARTIAL, "eligible_count": adv_partial,
+            "basis": AS_TRADED_NOT_CA_NORMALIZED, "denominator": n,
+        },
+        "QUALIFIED_LIQUIDITY_INPUTS": {"state": PER_RECORD, "qualified_count": adtv_eligible, "denominator": n},
+        "CURRENT_SESSION_EXECUTION_CAPACITY_RESEARCH": "SCOPED_ELIGIBLE_OR_PARTIAL_BY_RECORD_AND_POLICY",
+        "CURRENT_SESSION_RISK_SIZE_RESEARCH": "PRIVATE_SCOPED_ELIGIBLE_OR_PARTIAL",
+        "EXECUTION_CAPACITY": contract.BLOCKED,
+        "POSITION_SIZING": contract.BLOCKED,
+        "LIVE_POSITION_SIZING": contract.BLOCKED,
+        "PORTFOLIO_CAPITAL_ALLOCATION": contract.BLOCKED,
+        "HISTORICAL_PIT_SIZE_REPLAY": contract.BLOCKED,
+        "PIT_BACKTEST": contract.BLOCKED,
+        "EXECUTION_REPLAY": contract.BLOCKED,
+        "RAW_AS_TRADED": "NOT_PROMOTED",
+        "per_record_fitness_is_authoritative": True,
+        "artifact_summary_cannot_override_per_record_fitness": True,
+        "hnx_upcom_bulk_public_acquisition_not_authorized_count": rights_gated,
     }
 
 

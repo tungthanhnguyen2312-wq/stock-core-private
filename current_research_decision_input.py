@@ -374,16 +374,34 @@ def _corporate(record: Mapping[str, Any]) -> dict[str, Any]:
 _OFFICIAL_LIQUIDITY_USES = ("CURRENT_SESSION_LIQUIDITY_RESEARCH", "HISTORICAL_LIQUIDITY_RESEARCH", "ADV_VOLUME_RESEARCH", "ADTV_RESEARCH")
 
 
+def _official_fitness_state(official_record: Mapping[str, Any], use: str) -> str | None:
+    """Per-record fitness is authoritative; research_view.fitness is a string projection."""
+    cell = (official_record.get("fitness") or {}).get(use)
+    if isinstance(cell, Mapping) and cell.get("state"):
+        return str(cell["state"])
+    if isinstance(cell, str) and cell:
+        return cell
+    view = ((official_record.get("research_view") or {}).get("fitness") or {}).get(use)
+    if isinstance(view, Mapping) and view.get("state"):
+        return str(view["state"])
+    if isinstance(view, str) and view:
+        return view
+    return None
+
+
 def _official_liquidity(official_record: Mapping[str, Any] | None) -> dict[str, Any]:
     """Qualified official-exchange liquidity research for one ticker (research scope only).
 
     Absence, an unauthorized exchange or a partial window blocks only the liquidity-dependent use it
-    names; it never changes another dimension, the evidence class or the posture.
+    names; it never changes another dimension, the evidence class or the posture. Per-record fitness
+    is the authority for each named use; an artifact-level summary cannot widen it.
     """
     if not isinstance(official_record, Mapping):
         return {"state": BLOCKED, "authority": NO_AUTHORITY, "reason_codes": ["OFFICIAL_LIQUIDITY_RESEARCH_NOT_SUPPLIED"]}
     view = official_record.get("research_view") or {}
-    fitness = view.get("fitness") or {}
+    fitness = {use: _official_fitness_state(official_record, use) for use in _OFFICIAL_LIQUIDITY_USES}
+    for key, value in ((view.get("fitness") or {}) if isinstance(view.get("fitness"), Mapping) else {}).items():
+        fitness.setdefault(key, value if not isinstance(value, Mapping) else value.get("state"))
     adtv_ok = fitness.get("ADTV_RESEARCH") == "ELIGIBLE"
     any_usable = any(fitness.get(use) in ("ELIGIBLE", "PARTIAL") for use in _OFFICIAL_LIQUIDITY_USES)
     refs = official_record.get("evidence_refs") or {}
@@ -424,10 +442,21 @@ def _liquidity(record: Mapping[str, Any], liquidity_record: Mapping[str, Any] | 
     execution_qualified = capacity == "ELIGIBLE" and sizing == "ELIGIBLE"
     qualified = _official_liquidity(official_record) if official_record is not None else None
     qualified_state = (qualified or {}).get("state")
+    if qualified is None:
+        dim_state = AVAILABLE if research_available else BLOCKED
+        dim_authority = CURRENT_DESCRIPTIVE_ONLY if research_available else NO_AUTHORITY
+    else:
+        dim_state = (
+            AVAILABLE if qualified_state == AVAILABLE else
+            (PARTIAL if qualified_state == PARTIAL else (AVAILABLE if research_available else BLOCKED))
+        )
+        dim_authority = (
+            RESEARCH_QUALIFIED if qualified.get("authority") == RESEARCH_QUALIFIED else
+            (CURRENT_DESCRIPTIVE_ONLY if research_available else NO_AUTHORITY)
+        )
     return {
-        "state": AVAILABLE if (research_available or qualified_state == AVAILABLE) else (PARTIAL if qualified_state == PARTIAL else BLOCKED),
-        "authority": (CURRENT_DESCRIPTIVE_ONLY if research_available else
-                      (qualified["authority"] if qualified_state == AVAILABLE else NO_AUTHORITY)),
+        "state": dim_state,
+        "authority": dim_authority,
         **({"qualified_research": qualified} if qualified is not None else {}),
         "research": {"state": AVAILABLE if research_available else BLOCKED,
                      "disposition": disposition or "NOT_SUPPLIED",
@@ -576,4 +605,30 @@ def coverage(records: Mapping[str, Mapping[str, Any]]) -> dict[str, Any]:
             for item in inputs).items())),
         "action_posture_gated_by_current_evidence": sum(
             (item.get("synthesis") or {}).get("action_posture_gated_by_current_evidence") is True for item in inputs),
+        "qualified_liquidity": _qualified_liquidity_coverage(inputs),
+    }
+
+
+def _qualified_liquidity_coverage(inputs: list[Mapping[str, Any]]) -> dict[str, Any]:
+    qualified = [((item.get("dimensions") or {}).get("LIQUIDITY") or {}).get("qualified_research") for item in inputs]
+    supplied = [item for item in qualified if isinstance(item, Mapping)]
+    envelopes = [item.get("execution_capacity_research") or {} for item in supplied]
+    return {
+        "official_supplied": len(supplied),
+        "current_session_liquidity_research_eligible": sum(
+            (item.get("fitness") or {}).get("CURRENT_SESSION_LIQUIDITY_RESEARCH") == "ELIGIBLE" for item in supplied
+        ),
+        "adtv_research_eligible": sum((item.get("fitness") or {}).get("ADTV_RESEARCH") == "ELIGIBLE" for item in supplied),
+        "adv_volume_research_partial": sum(
+            (item.get("fitness") or {}).get("ADV_VOLUME_RESEARCH") in ("ELIGIBLE", "PARTIAL") for item in supplied
+        ),
+        "execution_capacity_state_distribution": dict(sorted(Counter(
+            str(envelope.get("state")) for envelope in envelopes).items())),
+        "policy_unbound": sum("POLICY_UNBOUND" in (envelope.get("reason_codes") or []) for envelope in envelopes),
+        "live_position_sizing": BLOCKED,
+        "pit_backtest": BLOCKED,
+        "execution_replay": BLOCKED,
+        "raw_as_traded": "NOT_PROMOTED",
+        "adv_volume_basis": "AS_TRADED_NOT_CA_NORMALIZED",
+        "per_record_fitness_is_authoritative": True,
     }

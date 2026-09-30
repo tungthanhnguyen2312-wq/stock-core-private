@@ -223,6 +223,42 @@ def test_official_liquidity_enriches_only_the_liquidity_dimension():
     assert unauthorized["qualified_research"]["fitness"]["EXECUTION_CAPACITY"] == "BLOCKED"
 
 
+def test_descriptive_eligible_does_not_override_official_adtv_fitness():
+    exact = _record(_slot())
+    descriptive = {"disposition": "CURRENT_SESSION_DESCRIPTIVE_ELIGIBLE",
+                   "liquidity_research_contract": {"EXECUTION_CAPACITY": {"state": "BLOCKED"}, "POSITION_SIZING": {"state": "BLOCKED"}}}
+    both = decision_input._liquidity({}, descriptive, exact)
+    assert both["authority"] == decision_input.RESEARCH_QUALIFIED
+    assert both["research"]["state"] == decision_input.AVAILABLE
+    assert both["qualified_research"]["fitness"]["ADTV_RESEARCH"] == "ELIGIBLE"
+    assert both["execution"]["state"] == decision_input.BLOCKED
+    unauthorized = _record(None, row=_frame_row("BBB", official.HNX))
+    mixed_blocked = decision_input._liquidity({}, descriptive, unauthorized)
+    assert mixed_blocked["qualified_research"]["fitness"]["ADTV_RESEARCH"] == "BLOCKED"
+    assert mixed_blocked["research"]["state"] == decision_input.AVAILABLE
+    assert mixed_blocked["authority"] == decision_input.CURRENT_DESCRIPTIVE_ONLY
+
+
+def test_artifact_summary_cannot_override_per_record_fitness():
+    exact = _record(_slot())
+    blocked = _record(None, row=_frame_row("BBB", official.HNX))
+    summary = w.artifact_authority_summary({"AAA": exact, "BBB": blocked})
+    assert summary["ADTV_RESEARCH"]["state"] == w.SCOPED_ELIGIBLE
+    assert summary["ADTV_RESEARCH"]["eligible_count"] == 1
+    assert summary["CURRENT_SESSION_LIQUIDITY_RESEARCH"]["eligible_count"] == 0
+    assert summary["ADV_VOLUME_RESEARCH"]["state"] == w.SCOPED_PARTIAL
+    assert summary["ADV_VOLUME_RESEARCH"]["basis"] == w.AS_TRADED_NOT_CA_NORMALIZED
+    assert summary["QUALIFIED_LIQUIDITY_INPUTS"]["state"] == w.PER_RECORD
+    assert summary["EXECUTION_CAPACITY"] == c.BLOCKED
+    assert summary["PIT_BACKTEST"] == c.BLOCKED
+    assert summary["LIVE_POSITION_SIZING"] == c.BLOCKED
+    assert summary["RAW_AS_TRADED"] == "NOT_PROMOTED"
+    assert summary["artifact_summary_cannot_override_per_record_fitness"] is True
+    assert w.fitness_state(blocked, c.ADTV_RESEARCH) == c.BLOCKED
+    assert w.fitness_state(exact, c.ADTV_RESEARCH) == c.ELIGIBLE
+    assert blocked["coverage"]["coverage_class"] == w.PUBLIC_ACQUISITION_NOT_AUTHORIZED
+
+
 def test_missing_official_liquidity_does_not_change_evidence_class():
     dims_with = {"MARKET": {"state": "AVAILABLE"}, "TECHNICAL": {"state": "AVAILABLE"}, "FUNDAMENTAL": {"state": "AVAILABLE"}, "VALUATION": {"state": "AVAILABLE"},
                  "LIQUIDITY": decision_input._liquidity({}, None, None)}

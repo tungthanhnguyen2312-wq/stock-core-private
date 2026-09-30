@@ -212,9 +212,14 @@ def build_artifact(args: argparse.Namespace) -> dict[str, Any]:
         "dnse_ohlc_v_equals_g1_shares_on_reconciled": dict(sorted(ohlc_equal.items())),
         "coverage": tables, "execution_capacity_readiness": readiness,
         "records": records,
-        "authority_boundary": {"EXECUTION_CAPACITY": "BLOCKED", "POSITION_SIZING": "BLOCKED", "PIT_BACKTEST": "BLOCKED", "RAW_AS_TRADED": "NOT_PROMOTED",
-                               "market_wide_promotion": False, "hnx_evidence_generalized_to_hose": False, "vnstock_kbs_vci_used": False,
-                               "raw_exchange_bodies_published": False, "knowledge_time_basis": contract.KNOWLEDGE_TIME_BASIS},
+        "authority_boundary": {
+            **wide.artifact_authority_summary(records),
+            "market_wide_promotion": False,
+            "hnx_evidence_generalized_to_hose": False,
+            "vnstock_kbs_vci_used": False,
+            "raw_exchange_bodies_published": False,
+            "knowledge_time_basis": contract.KNOWLEDGE_TIME_BASIS,
+        },
     }
     return {**artifact, **contract.content_identity(artifact, kind="official_exchange_liquidity_research")}
 

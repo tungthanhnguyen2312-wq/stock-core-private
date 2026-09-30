@@ -93,6 +93,11 @@ volume, ADV20, ADTV20, current value to ADTV20 and current volume to ADV20 ratio
 evidence currency, per-use fitness, reason codes and response-hash references. The ratio numerator is
 the exact official row (or the qualified DNSE unit contract), and the 20-session window includes the
 current session. The volume ratio is labelled as-traded and not corporate-action normalized.
+Official per-use fitness is authoritative for the matching use. The descriptive
+`market_wide_current_liquidity_research` artifact remains for board-composition display; its
+artifact summary reports scoped descriptive coverage and does not claim a global
+`ADTV_RESEARCH=BLOCKED` or `QUALIFIED_LIQUIDITY_INPUTS=false` product state. Same-session official
+evidence is required; an other-session official artifact is not substituted.
 
 Missing official evidence blocks only the liquidity-dependent use. It never changes another
 dimension, the evidence class, the posture or `decision_identity`. A read-only assembly of the
