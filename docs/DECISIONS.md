@@ -8541,3 +8541,35 @@ return; no execution sizing (`execution_qualified_quantity` remains fail-closed 
 any portfolio risk ceiling); no network/provider/DB write; no source/PIT/RAW/liquidity/execution
 authority promotion; no Dashboard or AI-handoff change. No successor is queued. Local checkpoint
 only; not pushed, merged, deployed, or published.
+
+## 2026-09-30 - Owner Daily Progress Telemetry V1
+
+**DECISION**: `OWNER_DAILY_PROGRESS_TELEMETRY_V1 = COMPLETE_OWNER_DAILY_PROGRESS_TELEMETRY_OFFLINE_ACCEPTED`.
+Add exactly one small operational contract, `owner_daily_progress/v1`, to the foreground Owner
+Daily boundary. It owns neither analytical inputs nor artifact identities. Its external JSONL
+sidecar is named by the existing PowerShell launcher timestamp alongside the `.log` and
+`.result.json`; the Owner result's additive `telemetry` object is therefore outside research
+identity construction.
+
+1. Request work, observed coverage, and phase progress are non-interchangeable. Snapshot callbacks
+   emit only after completed futures: `completed/attempted` describes request work, whereas
+   `EXACT_SESSION_RETAINED/candidate_count` describes observed coverage. Level-2 liquidity emits
+   batch `0..N` plus consolidation work without claiming those batches are qualified coverage.
+2. Telemetry is defensive and dependency-free. Process/peak RSS, direct-child RSS where known,
+   bounded output-directory size, elapsed/rate, and C: free disk are best effort. Recursive child
+   tree RSS and exact network payload bytes are explicitly unknown; the latter is always
+   `PAYLOAD_BYTES_NOT_OBSERVABLE`, never inferred from tickers. A bad writer/sampler/terminal emits
+   `TELEMETRY_DEGRADED` and cannot fail Daily.
+3. ETA exists only with a positive known total, completed work, and meaningful elapsed sample;
+   otherwise it is `ETA UNKNOWN`. Human output is compact, append-only, safe for redirected logs,
+   and throttled at the owner sink. No daemon, terminal redraw framework, new dependency, provider
+   call, retry, concurrency change, acquisition-order change, or request-budget change was added.
+
+**OFFLINE VALIDATION**: focused tests cover schema, denominator/percent clamping, known and
+unknown ETA, writer/resource failure containment, JSONL immediate read-after-write, callback
+identity compatibility, no extra fetches, structured batch progress, launcher argument wiring,
+and additive-only Owner result metadata. The public-safe fixture report is
+`derived/owner-daily-progress-telemetry-v1/validation_report.json`. The 2026-09-30
+official-liquidity corrective is regression-bounded: governed universe planning remains 403 HOSE,
+retry 40/cap 400, `UNAVAILABLE_REQUEST_BUDGET`, HNX/UPCoM 0, and Daily HTTP 0. No live Daily,
+provider/network call, publication, push, merge, deploy, or PR action occurred.

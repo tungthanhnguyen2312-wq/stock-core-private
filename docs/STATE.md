@@ -5640,3 +5640,35 @@ Owner override `OWNER_AUTHORIZATION_2026_09_09_DAILY_BRIEF_PRESEAL_CORRECTIVE_RC
 ### Empirical Setup Outcome Calibration V1 (2026-09-09, Complete / Calibration Pipeline Ready / Empirical Sample Insufficient)
 
 `EMPIRICAL_SETUP_OUTCOME_CALIBRATION_V1 = COMPLETE / CALIBRATION_PIPELINE_READY / EMPIRICAL_SAMPLE_INSUFFICIENT` (owner override `OWNER_AUTHORIZATION_2026_09_09_EMPIRICAL_SETUP_OUTCOME_CALIBRATION_V1`, commit `bc3c293b1675ad652f40eded245752c33fdc32dd`, base `dcd713c3bbb25d440a9ae21b7988e71e816b4f85`). New `empirical_setup_outcome_calibration.py` (`empirical_setup_outcome_calibration/v1`) turns the existing, deliberately non-calibrated prospective outcome corpus into deterministic empirical setup distributions -- `immutable T0 decision snapshot -> later observed completed sessions -> matured outcome -> comparable cohort -> empirical calibration` -- reusing three existing modules end to end rather than building a parallel backtest engine: `prospective_decision_outcome_feedback.build_feedback_artifact()` for corpus discovery/temporal qualification/per-(ticker, T0 session) forward-outcome computation; `integrated_decision_prospective_feedback`'s session-counted forward-return/close-excursion primitives, called directly for the one new horizon (T60) the shared Daily-brief-facing bridge does not compute, without mutating its own `FORWARD_HORIZONS` contract; `prospective_decision_retention.evaluate_serialized_close_condition` for invalidation-hit and (only when an explicit T0 target genuinely exists) target-hit event detection. Adds per-observation R-multiples (forward return in units of the T0 decision's own retained entry/invalidation downside fraction), versioned comparable-cohort keys (contract versions, posture/tactical/invalidation-method family, horizon, optional regime stratification), the `INSUFFICIENT_SAMPLE`/`DESCRIPTIVE_ONLY`/`CALIBRATED_RESEARCH` sample-adequacy ladder (20/5 and 50/10 observation/distinct-session thresholds), and deterministic median/quantile distributions plus Wilson confidence intervals (never a fitted distribution, never a probability claim below `CALIBRATED_RESEARCH`). Adds a bounded, optional Portfolio V2 research hook (`calibration_artifact` parameter on `portfolio_aware_decision.py`'s builders): attaches `empirical_reward_context` only when a matching cohort reaches `CALIBRATED_RESEARCH` -- never a target price/forecast/expected return/execution authority, never auto-fed into `margin_economics` (its `reward_boundary` stays untouched), and every execution/sizing field is byte-identical whether or not the hook fires. The existing 2.0/3.0 net-reward/risk margin thresholds are unchanged; no threshold optimization, Kelly sizing, or CVaR/probability-based sizing is implemented. 38 new focused tests (no-look-ahead exact session counting, T60 maturation, pending future depth, MFE/MAE close proxies, R-multiples with/without T0 invalidation, invalidation/target-hit ordering both directions, target-absent -> `NOT_EVALUATED`, cohort/version incompatibility, all three sample-adequacy boundaries including the distinct-session requirement, Wilson-interval correctness, deterministic/idempotent aggregation, V2-hook non-effect on execution/margin authority) all pass; zero regression across 172 tests in the touched/adjacent prospective and Integrated Decision suites. Real retained corpus (read-only): 2 genuine T0-qualified Integrated Decision sessions (2026-09-03, 2026-09-08; a third, 2026-09-09, is genuine only via the separate immutable-snapshot lineage), 1,683 tickers each, 5,049 observations, 100 cohorts -- all `INSUFFICIENT_SAMPLE`, correctly, since fewer than 5 distinct T0 sessions exist yet; future Daily sessions will naturally mature the retained observations. `py_compile`, `git diff --check`, and `tools/stocklookup_roadmap.py --check` (drift `PASS`) all clean. No Daily run, provider/network acquisition, retrospective T0 reconstruction, fabricated target/probability, Dashboard/AI publication, private workbook read, liquidity/execution/PIT authority promotion, or empirical threshold optimization. No successor is queued.
+
+### Owner Daily Progress Telemetry V1 (2026-09-30, Complete / Offline Accepted)
+
+`OWNER_DAILY_PROGRESS_TELEMETRY_V1 = COMPLETE_OWNER_DAILY_PROGRESS_TELEMETRY_OFFLINE_ACCEPTED`.
+`owner_daily_progress/v1` is foreground operational observability only: the Windows launcher owns one
+timestamp for `.log`, `.result.json`, and the external
+`run-logs/stock_lookup_daily_YYYYMMDD_HHMMSS.progress.jsonl` sidecar. The Owner result receives
+an additive `telemetry` summary only; no research artifact, authority input, source selection,
+request budget, acquisition order, worker count, or content identity consumes it.
+
+Its three meanings remain separate: phase progress is the existing Owner phase `n/9`; request
+progress is completed exact-session futures over the attempted-request denominator; observed
+coverage is exact-session observations over the canonical candidate denominator. A completed
+request is never restated as qualified coverage. Current-liquidity reports deterministic batch
+`0..N` then consolidate work, not a fabricated liquidity-coverage percentage. Unknown denominators
+and insufficient elapsed samples produce `ETA UNKNOWN`.
+
+Resource telemetry uses dependency-free process RSS/peak RSS, direct active-child RSS where its
+PID is known, bounded current-run output-directory size, and `shutil.disk_usage(C:)`; recursive
+child-tree RSS is explicitly unknown. Network payload bytes remain
+`null/PAYLOAD_BYTES_NOT_OBSERVABLE`; run-output bytes are a distinct bounded filesystem metric.
+All telemetry/resource/write failures degrade as `TELEMETRY_DEGRADED` and never alter Daily outcome.
+Offline fixtures prove callback-on/off snapshot bytes and identity are identical and telemetry
+causes zero additional provider/network calls.
+
+Authority remains unchanged: `RAW_AS_TRADED = NOT_PROMOTED`, `PIT_BACKTEST = BLOCKED`,
+`EXECUTION_REPLAY = BLOCKED`, `LIVE_POSITION_SIZING = BLOCKED`, and
+`PORTFOLIO_CAPITAL_ALLOCATION = BLOCKED`. The 2026-09-30 official-liquidity corrective remains
+unchanged: absent same-session retained series yields governed universe planning,
+`UNAVAILABLE_REQUEST_BUDGET`, 403 HOSE planned requests, retry allowance 40, cap 400,
+HNX/UPCoM 0, and Daily HTTP 0. No live Owner Daily, provider call, push, publication, deploy, or
+PR action occurred.

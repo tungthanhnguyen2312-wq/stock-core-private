@@ -14,7 +14,7 @@ import subprocess
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any, Callable, Mapping
 
 from daily_producer_pipeline import DailyProducerError, completed_session_gate
 from daily_research_session_operations import load_registry
@@ -40,6 +40,16 @@ UNAVAILABLE_REQUIRED_INPUT = "UNAVAILABLE_REQUIRED_INPUT"
 
 ROOT_DEFAULT = Path(__file__).resolve().parent
 FALLBACK_RECOVERY_BASELINE = Path("operations-review/market-wide-current-descriptive-research-v1-20260824/market_wide_current_descriptive_research_artifact.json")
+
+
+def _emit_progress(progress_callback: Callable[[Mapping[str, Any]], None] | None, payload: Mapping[str, Any]) -> None:
+    """Best-effort observer hook; no observer defect may affect Daily materialization."""
+    if progress_callback is None:
+        return
+    try:
+        progress_callback(payload)
+    except Exception:
+        pass
 
 
 def _prior_completed_descriptive(
@@ -1331,6 +1341,7 @@ def ensure_exact_session_snapshot(
     *,
     execution_root: Path | None = None,
     historical_compatibility: bool = False,
+    progress_callback: Callable[[Mapping[str, Any]], None] | None = None,
 ) -> Path:
     """Idempotently acquire the resolved exact-session snapshot for ``session`` under
     ``artifact_root``.
@@ -1399,6 +1410,15 @@ def ensure_exact_session_snapshot(
                   "evaluation is now possible) -- never reused as-is; caller must redirect to a fresh "
                   "attempt root."
             )
+        retained = _load(p3f9b_snapshot) or {}
+        _emit_progress(progress_callback, {
+            "component": "DNSE exact-session", "subtask": "retained_snapshot_reuse",
+            "progress_kind": "REQUESTS", "completed": retained.get("attempted_candidate_count"),
+            "total": retained.get("attempted_candidate_count"),
+            "qualified_count": retained.get("exact_session_observed_count"),
+            "coverage_denominator": retained.get("candidate_count"), "status": "REUSED",
+            "downloaded_bytes": None, "downloaded_bytes_reason": "PAYLOAD_BYTES_NOT_OBSERVABLE",
+        })
         return p3f9b_snapshot
     import mva_exact_session_snapshot as snapshotter
     import multi_source_exact_session_resolver as resolver
@@ -1414,6 +1434,14 @@ def ensure_exact_session_snapshot(
         # upstream (canonical_daily_operation.py counts calls to acquire_and_materialize, not
         # DNSE requests underneath it).
         dnse_snapshot = json.loads(dnse_only_path.read_text(encoding="utf-8"))
+        _emit_progress(progress_callback, {
+            "component": "DNSE exact-session", "subtask": "pass_1_reuse",
+            "progress_kind": "REQUESTS", "completed": dnse_snapshot.get("attempted_candidate_count"),
+            "total": dnse_snapshot.get("attempted_candidate_count"),
+            "qualified_count": dnse_snapshot.get("exact_session_observed_count"),
+            "coverage_denominator": dnse_snapshot.get("candidate_count"), "status": "REUSED",
+            "downloaded_bytes": None, "downloaded_bytes_reason": "PAYLOAD_BYTES_NOT_OBSERVABLE",
+        })
     else:
         candidates = snapshotter.canonical_candidates(runtime_root)
         status = ensure_credentials_loaded()
@@ -1423,6 +1451,7 @@ def ensure_exact_session_snapshot(
         dnse_snapshot = snapshotter.materialize_snapshot(
             candidates=candidates, requested_at=instant, target_session=session,
             api_key=creds[0], api_secret=creds[1], workers=workers,
+            **({"progress_callback": progress_callback} if progress_callback is not None else {}),
         )
         snapshotter.write_snapshot(dnse_snapshot, dnse_only_path)
 
@@ -1644,6 +1673,48 @@ def materialize_official_liquidity_component(
     )
 
 
+def _materialize_liquidity_batches(
+    execution_root: Path, p3f9b_snapshot: Path, liq_dir: Path, session: str, workers: int,
+    progress_callback: Callable[[Mapping[str, Any]], None] | None,
+) -> None:
+    """Run existing deterministic liquidity batches while exposing only their work counters."""
+    snapshot_data = json.loads(p3f9b_snapshot.read_text(encoding="utf-8"))
+    num_candidates = len(snapshot_data.get("records", {}))
+    num_batches = math.ceil(num_candidates / 100)
+    _emit_progress(progress_callback, {
+        "component": "Current liquidity", "subtask": "batch_materialization",
+        "progress_kind": "BATCHES", "completed": 0, "total": num_batches,
+        "candidate_denominator": num_candidates, "status": "BEGIN",
+    })
+    for i in range(num_batches):
+        run_cmd(execution_root, [
+            "tools/run_market_wide_current_liquidity_research.py",
+            "--universe-snapshot", str(p3f9b_snapshot), "--out-dir", str(liq_dir),
+            "--session", session, "--batch-index", str(i), "--batch-size", "100", "--workers", str(workers),
+        ])
+        _emit_progress(progress_callback, {
+            "component": "Current liquidity", "subtask": "batch_materialization",
+            "progress_kind": "BATCHES", "completed": i + 1, "total": num_batches,
+            "current_item": f"batch {i}", "candidate_denominator": num_candidates,
+            "status": "COMPLETED" if i + 1 == num_batches else "IN_PROGRESS",
+        })
+    _emit_progress(progress_callback, {
+        "component": "Current liquidity", "subtask": "consolidate",
+        "progress_kind": "BATCHES", "completed": num_batches, "total": num_batches,
+        "candidate_denominator": num_candidates, "status": "BEGIN",
+    })
+    run_cmd(execution_root, [
+        "tools/run_market_wide_current_liquidity_research.py",
+        "--universe-snapshot", str(p3f9b_snapshot), "--out-dir", str(liq_dir),
+        "--session", session, "--consolidate",
+    ])
+    _emit_progress(progress_callback, {
+        "component": "Current liquidity", "subtask": "consolidate",
+        "progress_kind": "BATCHES", "completed": num_batches, "total": num_batches,
+        "candidate_denominator": num_candidates, "status": "END",
+    })
+
+
 def materialize_independent_components(
     artifact_root: Path,
     session: str,
@@ -1653,6 +1724,7 @@ def materialize_independent_components(
     *,
     execution_root: Path | None = None,
     retained_evidence_root: Path | None = None,
+    progress_callback: Callable[[Mapping[str, Any]], None] | None = None,
 ) -> None:
     """Materialize a session into ``artifact_root`` using ``execution_root`` tools.
 
@@ -1666,6 +1738,7 @@ def materialize_independent_components(
     retained_paths = session_artifact_paths(retained_evidence_root, session)
     p3f9b_snapshot = ensure_exact_session_snapshot(
         artifact_root, session, runtime_root, workers, now, execution_root=execution_root,
+        **({"progress_callback": progress_callback} if progress_callback is not None else {}),
     )
     breadth_out = paths["breadth_foundation"]
     if not breadth_out.exists():
@@ -1686,20 +1759,9 @@ def materialize_independent_components(
     liq_out = paths["liquidity_research"]
     liq_dir = liq_out.parent
     if not liq_out.exists():
-        snapshot_data = json.loads(p3f9b_snapshot.read_text(encoding="utf-8"))
-        num_candidates = len(snapshot_data.get("records", {}))
-        num_batches = math.ceil(num_candidates / 100)
-        for i in range(num_batches):
-            run_cmd(execution_root, [
-                "tools/run_market_wide_current_liquidity_research.py",
-                "--universe-snapshot", str(p3f9b_snapshot), "--out-dir", str(liq_dir),
-                "--session", session, "--batch-index", str(i), "--batch-size", "100", "--workers", str(workers),
-            ])
-        run_cmd(execution_root, [
-            "tools/run_market_wide_current_liquidity_research.py",
-            "--universe-snapshot", str(p3f9b_snapshot), "--out-dir", str(liq_dir),
-            "--session", session, "--consolidate",
-        ])
+        _materialize_liquidity_batches(
+            execution_root, p3f9b_snapshot, liq_dir, session, workers, progress_callback,
+        )
     # Official HOSE liquidity is a sibling of descriptive DNSE liquidity: bind a
     # same-session artifact here, before Integrated Decision. Daily never crawls.
     try:

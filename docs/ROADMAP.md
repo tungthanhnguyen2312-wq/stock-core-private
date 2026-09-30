@@ -1467,3 +1467,13 @@ authorization, is production cutover itself: registering the refreshed official-
 into the canonical Daily input path and rehearsing/publishing an actual Dashboard release bound to
 it. This milestone performs neither; see `docs/STATE.md` for the full local replay evidence and
 `docs/DECISIONS.md` for the reconciliation decisions.
+
+### Owner Daily Progress Telemetry V1 (Complete / Offline Accepted)
+
+`OWNER_DAILY_PROGRESS_TELEMETRY_V1 = COMPLETE_OWNER_DAILY_PROGRESS_TELEMETRY_OFFLINE_ACCEPTED`.
+This is a bounded operational UX milestone, not an analytical pillar or source/authority change.
+It adds foreground-only `owner_daily_progress/v1` events for the existing nine Owner phases,
+exact-session futures, and deterministic Level-2 liquidity batches. It records request work and
+observed coverage under distinct denominators, while unknown work uses `ETA UNKNOWN`. The sidecar
+is external to Producer artifacts and its result metadata is operational only. The next
+recommendation remains **NOT STARTED**; a future owner decision is required for any further work.

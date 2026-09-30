@@ -1,0 +1,36 @@
+{
+  "authority_effect": "NONE_OPERATIONAL_OBSERVABILITY_ONLY",
+  "console_example": "[00:02:14] | [2/9] | DNSE exact-session | req 8/16 50.0% | exact 7/20 35.0% | RAM 128.00 MB peak 128.00 MB | OUT 26.70 MB | FREE C: 68.92 GB | elapsed 00:00:08 | ETA 00:00:08",
+  "contract_version": "owner_daily_progress/v1",
+  "event_count": 2,
+  "extra_provider_network_calls": 0,
+  "identity_effect": "NONE_CALLBACK_ON_OFF_SNAPSHOT_IDENTITY_COMPATIBLE",
+  "known_denominator_example": {
+    "completed": 8,
+    "coverage_denominator": 20,
+    "coverage_percent": 35.0,
+    "eta_state": "KNOWN",
+    "observed_coverage": 7,
+    "percent": 50.0,
+    "total": 16
+  },
+  "network_payload_bytes": {
+    "downloaded_bytes": null,
+    "reason": "PAYLOAD_BYTES_NOT_OBSERVABLE"
+  },
+  "offline_only": true,
+  "public_safe": true,
+  "resource_fields": {
+    "child_rss_bytes": null,
+    "disk_free_bytes": 74000000000,
+    "peak_rss_bytes": 134217728,
+    "recursive_child_tree_rss_bytes": null,
+    "run_output_bytes": 28000000
+  },
+  "schema_version": "owner_daily_progress_telemetry_validation_report/v1",
+  "telemetry_failure_containment": true,
+  "unknown_denominator_example": {
+    "eta_state": "UNKNOWN",
+    "percent": null
+  }
+}

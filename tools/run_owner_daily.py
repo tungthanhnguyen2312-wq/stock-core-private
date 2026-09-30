@@ -44,6 +44,7 @@ from governed_publication_completion import (  # noqa: E402
     verify_existing_publication_completion,
 )
 import owner_daily_journal as journal  # noqa: E402
+from owner_daily_progress import OwnerDailyProgress, PROGRESS_PATH_ENV  # noqa: E402
 
 DEFAULT_WEB_DIR = CANONICAL_WEB_ROOT
 
@@ -440,11 +441,27 @@ def _bind_written_publication_attestation(
     return bound
 
 
-def _run_daily(root: Path, runtime_root: Path) -> None:
-    result = subprocess.run([sys.executable, "-u", "daily_analysis_pipeline.py", "--runtime-root", str(runtime_root),
-                             "--canonical-post-close"], cwd=root, check=False)
-    if result.returncode:
-        raise OwnerDailyError("Canonical Daily", f"CANONICAL_DAILY_EXIT_{result.returncode}",
+def _run_daily(root: Path, runtime_root: Path, *, telemetry: OwnerDailyProgress | None = None) -> None:
+    """Run the canonical child unchanged, exposing only its directly known PID to telemetry."""
+    env = os.environ.copy()
+    if telemetry is not None and telemetry.progress_path is not None:
+        env[PROGRESS_PATH_ENV] = str(telemetry.progress_path)
+    process = subprocess.Popen(
+        [sys.executable, "-u", "daily_analysis_pipeline.py", "--runtime-root", str(runtime_root),
+         "--canonical-post-close"],
+        cwd=root, env=env,
+    )
+    if telemetry is not None:
+        telemetry.set_child_pid(process.pid)
+        telemetry.emit(phase_index=2, progress_kind="PIPELINE", component="Canonical Daily",
+                       subtask="child_process", status="CHILD_STARTED")
+    try:
+        returncode = process.wait()
+    finally:
+        if telemetry is not None:
+            telemetry.set_child_pid(None)
+    if returncode:
+        raise OwnerDailyError("Canonical Daily", f"CANONICAL_DAILY_EXIT_{returncode}",
                               "Read the log; no state or AI publication was attempted.")
 
 
@@ -1136,7 +1153,8 @@ def _verify_action_center_ready(session: str, *, root: Path | None = None) -> di
 def run_workflow(*, root: Path = ROOT, runtime_root: Path = DEFAULT_RUNTIME,
                  handoff_repo: Path = DEFAULT_HANDOFF_REPO, dashboard_web_dir: Path = DEFAULT_WEB_DIR,
                  publish_dashboard: bool = True, dashboard_complete_publication: bool = True,
-                 replay_completed_session: str | None = None) -> dict[str, Any]:
+                 replay_completed_session: str | None = None,
+                 telemetry: OwnerDailyProgress | None = None) -> dict[str, Any]:
     root, runtime_root, handoff_repo = root.resolve(), runtime_root.resolve(), handoff_repo.resolve()
     dashboard_web_dir = dashboard_web_dir.resolve()
 
@@ -1190,6 +1208,8 @@ def run_workflow(*, root: Path = ROOT, runtime_root: Path = DEFAULT_RUNTIME,
         # A replay/verified auto-resume may carry the governed Daily registry as its sole pending
         # diff (kernel completed, then interrupted before `commit_daily_state`); a fresh Daily
         # passes completed_session=None and keeps the strict clean-checkout contract.
+        if telemetry is not None:
+            telemetry.emit(phase_index=1, progress_kind="PIPELINE", status="BEGIN")
         producer = preflight_repository(root, expected_name="stock-core-private", expected_remote_fragment="stock-core-private",
                                         completed_session=replay_completed_session, runtime_root=runtime_root)
         # The Consumer checkout whose code Daily and the release path execute is governed before
@@ -1200,15 +1220,31 @@ def run_workflow(*, root: Path = ROOT, runtime_root: Path = DEFAULT_RUNTIME,
         # Daily now instead of failing Dashboard publication after the whole Daily.
         dashboard_preflight = (preflight_dashboard_repository(dashboard_web_dir) if publish_dashboard
                                else {"status": "SKIPPED", "reason": "DASHBOARD_PUBLICATION_DISABLED"})
+        if telemetry is not None:
+            telemetry.emit(phase_index=1, progress_kind="PIPELINE", status="END")
 
+        if telemetry is not None:
+            telemetry.emit(phase_index=2, progress_kind="PIPELINE", status="BEGIN")
         if replay_completed_session:
-            completion = verify_daily_completion(root, runtime_root, session=replay_completed_session)
             daily_status = "ALREADY_COMPLETED / RESUMED" if auto_resumed else "ALREADY_COMPLETED / REUSED"
         else:
-            _run_daily(root, runtime_root)
-            completion = verify_daily_completion(root, runtime_root)
+            _run_daily(root, runtime_root, telemetry=telemetry) if telemetry is not None else _run_daily(root, runtime_root)
             daily_status = "COMPLETED"
+        if telemetry is not None:
+            telemetry.emit(phase_index=2, progress_kind="PIPELINE", status="END")
+
+        if telemetry is not None:
+            telemetry.emit(phase_index=3, progress_kind="PIPELINE", status="BEGIN")
+        completion = verify_daily_completion(root, runtime_root, session=replay_completed_session) if replay_completed_session else verify_daily_completion(root, runtime_root)
+        if not replay_completed_session:
             _journal_advance_strict(root, run_id, journal.SESSION_RESOLVED, resolved_session=str(completion["session"]))
+        if telemetry is not None:
+            telemetry.set_session(str(completion["session"]))
+            operation_directory = (completion.get("record") or {}).get("operation_directory")
+            if operation_directory:
+                candidate = Path(operation_directory)
+                telemetry.set_run_output_paths([candidate if candidate.is_absolute() else root / candidate])
+            telemetry.emit(phase_index=3, progress_kind="PIPELINE", status="END")
         _journal_advance_strict(root, run_id, journal.LOCAL_COMPLETE, resolved_session=str(completion["session"]))
 
         # Section 4.B: `commit_daily_state` is already its own independent verification -- it
@@ -1216,8 +1252,12 @@ def run_workflow(*, root: Path = ROOT, runtime_root: Path = DEFAULT_RUNTIME,
         # (never a duplicate commit) when the registry already reflects this session as retained.
         # Calling it unconditionally on resume both re-verifies and skips redundant Git mutation
         # in one already-governed step; see PRODUCER_STATE_RETAINED's existing tests.
+        if telemetry is not None:
+            telemetry.emit(phase_index=4, progress_kind="PIPELINE", status="BEGIN")
         producer_state = commit_daily_state(root, str(completion["session"]))
         _journal_advance_strict(root, run_id, journal.PRODUCER_STATE_RETAINED)
+        if telemetry is not None:
+            telemetry.emit(phase_index=4, progress_kind="PIPELINE", status="END")
 
         # Presentation binding (Signal Velocity / Flow-Price additively joined into the
         # Workspace/Screener presentation) happens inside canonical_daily_operation.py itself,
@@ -1254,6 +1294,8 @@ def run_workflow(*, root: Path = ROOT, runtime_root: Path = DEFAULT_RUNTIME,
         # proves this exact session PUBLISHED on the current Dashboard origin/main SHA with
         # public-byte identity PASS. Local build_info session equality is never enough, and
         # journal DASHBOARD_PUBLISHED is never consulted.
+        if telemetry is not None:
+            telemetry.emit(phase_index=6, progress_kind="PUBLICATION", status="BEGIN")
         if not publish_dashboard:
             dashboard = {"status": "SKIPPED", "expected_session": session, "observed_session": None,
                         "reason": "DASHBOARD_PUBLICATION_DISABLED"}
@@ -1266,6 +1308,9 @@ def run_workflow(*, root: Path = ROOT, runtime_root: Path = DEFAULT_RUNTIME,
                 producer_run_identity=completion["record"]["daily_producer_run_identity"],
                 complete_publication=dashboard_complete_publication,
             )
+        if telemetry is not None:
+            telemetry.emit(phase_index=6, progress_kind="PUBLICATION", status="END",
+                           reason="DASHBOARD_PUBLICATION_DISABLED" if not publish_dashboard else None)
         if dashboard["status"] in {"READY", "SKIPPED"}:
             _journal_advance_strict(root, run_id, journal.DASHBOARD_PUBLISHED, detail={"status": dashboard["status"]})
 
@@ -1273,17 +1318,28 @@ def run_workflow(*, root: Path = ROOT, runtime_root: Path = DEFAULT_RUNTIME,
         # pointer before republishing; `publish_ai_handoff` is itself already idempotent
         # (NO_OP_ALREADY_PUBLISHED), but this additionally skips its `git fetch`/remote-verify
         # network round trip entirely once independently proven.
+        if telemetry is not None:
+            telemetry.emit(phase_index=5, progress_kind="PUBLICATION", status="BEGIN")
         verified_handoff = _verify_ai_handoff_published(handoff_repo, session)
         handoff = ({"publication": {"status": "ALREADY_PUBLISHED_VERIFIED"}, "remote": verified_handoff}
                   if verified_handoff is not None else publish_ai_handoff(root, handoff_repo, completion))
         _journal_advance_strict(root, run_id, journal.AI_HANDOFF_PUBLISHED,
                          detail={"remote_sha": (handoff.get("remote") or {}).get("remote_sha")})
+        if telemetry is not None:
+            telemetry.emit(phase_index=5, progress_kind="PUBLICATION", status="END")
+            telemetry.emit(phase_index=7, progress_kind="PUBLICATION", status="BEGIN")
+            telemetry.emit(phase_index=7, progress_kind="PUBLICATION", status="END",
+                           reason="REMOTE_VERIFICATION_RETAINED_IN_GOVERNED_HANDOFF_RESULT")
 
         # Section 4.F: same pattern for the local-only Action Center artifact.
+        if telemetry is not None:
+            telemetry.emit(phase_index=8, progress_kind="PIPELINE", status="BEGIN")
         verified_action_center = _verify_action_center_ready(session)
         action_center = verified_action_center if verified_action_center is not None else materialize_action_center(root, session)
         if action_center["status"] != "PARTIAL":
             _journal_advance_strict(root, run_id, journal.ACTION_CENTER_READY, detail={"status": action_center["status"]})
+        if telemetry is not None:
+            telemetry.emit(phase_index=8, progress_kind="PIPELINE", status="END")
 
         dashboard_failed = dashboard["status"] not in {"READY", "SKIPPED"}
         if action_center["status"] == "PARTIAL" or dashboard_failed:
@@ -1294,7 +1350,11 @@ def run_workflow(*, root: Path = ROOT, runtime_root: Path = DEFAULT_RUNTIME,
                     "producer_preflight": producer, "dashboard_preflight": dashboard_preflight, "consumer_preflight": consumer_preflight, "producer_state": producer_state,
                     "dashboard": dashboard, "ai_handoff": handoff, "action_center": action_center,
                     "journal_run_id": run_id}
+        if telemetry is not None:
+            telemetry.emit(phase_index=9, progress_kind="PIPELINE", status="BEGIN")
         action_center["view_open"] = open_action_center_view(str(action_center["view_path"]))
+        if telemetry is not None:
+            telemetry.emit(phase_index=9, progress_kind="PIPELINE", status="END")
         # OWNER_COMPLETE_ATTESTATION: the durable, single terminal record of every identity a
         # PASS is supposed to attest -- see CANONICAL_DAILY_OWNER_PUBLICATION_RESUME_AND_
         # PRESENTATION_JOIN_V1 section 11. Observer/presentation availability itself never needs
@@ -1394,6 +1454,8 @@ def main(argv: list[str] | None = None) -> int:
                              "(faster, but only proves the source push, not PUBLISHED).")
     parser.add_argument("--replay-completed-session", default=None, help="Validate/publish an already completed session without acquisition.")
     parser.add_argument("--result-path", type=Path, required=True)
+    parser.add_argument("--progress-path", type=Path, default=None,
+                        help="External operational JSONL sidecar; failures are non-fatal telemetry degradation.")
     args = parser.parse_args(argv)
     try:
         validate_result_path(args.result_path, root=ROOT)
@@ -1402,6 +1464,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"OWNER_DAILY_RESULT_PATH_REJECTED={exc.reason}", file=sys.stderr)
         print(f"HINT: {exc.hint}", file=sys.stderr)
         return 1
+    telemetry = OwnerDailyProgress(args.progress_path)
     result: dict[str, Any]
     code = 0
     reraise: BaseException | None = None
@@ -1410,7 +1473,8 @@ def main(argv: list[str] | None = None) -> int:
                               dashboard_web_dir=args.dashboard_web_dir,
                               publish_dashboard=not args.no_publish_dashboard,
                               dashboard_complete_publication=not args.no_complete_publication,
-                              replay_completed_session=args.replay_completed_session)
+                              replay_completed_session=args.replay_completed_session,
+                              telemetry=telemetry)
         if result["status"] in ("PARTIAL", "BLOCKED"):
             code = 3
     except OwnerDailyError as exc:
@@ -1435,6 +1499,9 @@ def main(argv: list[str] | None = None) -> int:
                   "hint": "An unexpected error interrupted Daily outside any known gate. Read the "
                           "log for the traceback; already-completed work upstream of the "
                           "interrupted step is reused, not redone, on rerun."}
+    # This owner result is external operational metadata.  It is deliberately never supplied to
+    # analytical builders or any content identity, and a broken telemetry sidecar never prevents it.
+    result["telemetry"] = telemetry.summary()
     args.result_path.parent.mkdir(parents=True, exist_ok=True)
     args.result_path.write_text(json.dumps(result, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     print("OWNER_DAILY_RESULT=" + str(args.result_path))

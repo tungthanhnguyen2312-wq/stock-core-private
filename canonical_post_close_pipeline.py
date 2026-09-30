@@ -33,7 +33,7 @@ import subprocess
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any, Callable, Mapping
 
 import daily_session_level2_package as level2
 import release_session_contract
@@ -521,6 +521,7 @@ def acquire_and_materialize(
     retained_evidence_root: Path | None = None, output_root: Path | None = None,
     no_new_provider_acquisition: bool = False, historical_compatibility: bool = False,
     enable_official_liquidity_rollforward: bool = False,
+    progress_callback: Callable[[Mapping[str, Any]], None] | None = None,
 ) -> dict[str, Any]:
     """Stage 1-3: DNSE acquisition, runtime materialization, current-session analytics.
 
@@ -567,10 +568,23 @@ def acquire_and_materialize(
         output_root, session, now=now, historical_compatibility=historical_compatibility,
     )
     paths = level2.session_artifact_paths(artifact_root, session)
+    if progress_callback is not None:
+        try:
+            progress_callback({
+                "component": "Canonical Daily", "subtask": "exact_session_acquisition",
+                "progress_kind": "PIPELINE", "status": "BEGIN",
+                "run_output_paths": [str(path.parent) for path in paths.values() if isinstance(path, Path)],
+            })
+        except Exception:
+            pass
     try:
+        ensure_kwargs: dict[str, Any] = {}
+        if progress_callback is not None:
+            ensure_kwargs["progress_callback"] = progress_callback
         level2.ensure_exact_session_snapshot(
             artifact_root, session, runtime_root, workers=workers, now=now, execution_root=root,
             **({"historical_compatibility": True} if historical_compatibility else {}),
+            **ensure_kwargs,
         )
     except level2.SupplementalProviderBlocked as exc:
         raise SupplementalProviderBlockError(
@@ -607,6 +621,8 @@ def acquire_and_materialize(
     materialize_kwargs: dict[str, Any] = dict(
         workers=workers, now=now, execution_root=root,
     )
+    if progress_callback is not None:
+        materialize_kwargs["progress_callback"] = progress_callback
     if explicit_retained_evidence_root:
         materialize_kwargs["retained_evidence_root"] = retained_evidence_root
     level2.materialize_independent_components(

@@ -303,11 +303,15 @@ def main(argv=None, runner=subprocess.run) -> int:
             args.retained_evidence_root or args.output_root or args.out_dir or args.no_new_provider_acquisition
             or args.requested_at or args.working_dates_path or args.offline
         )
+        # The Owner launcher supplies this explicit sidecar path through its foreground child
+        # environment.  The callback is optional and operational only; no CLI/prod result
+        # contract changes when no owner progress path was supplied.
+        from owner_daily_progress import progress_from_environment
+        owner_progress = progress_from_environment(session=intended_session)
+        progress_callback = owner_progress.callback(phase_index=2, phase_name="Canonical Daily") if owner_progress else None
         try:
-            result = run_canonical_daily_operation(
-                SCRIPT_DIR,
-                root,
-                intended_session,
+            operation_args = (SCRIPT_DIR, root, intended_session)
+            operation_kwargs = dict(
                 now=instant,
                 workers=args.workers,
                 complete_publication=args.complete_publication,
@@ -320,6 +324,9 @@ def main(argv=None, runner=subprocess.run) -> int:
                 no_new_provider_acquisition=args.no_new_provider_acquisition,
                 operating_mode=OPERATING_MODE_DIAGNOSTIC if diagnostic_override else OPERATING_MODE_ORDINARY_DAILY,
             )
+            if progress_callback is not None:
+                operation_kwargs["progress_callback"] = progress_callback
+            result = run_canonical_daily_operation(*operation_args, **operation_kwargs)
         except CanonicalDailyOperationError as exc:
             print(f"DAILY_OPERATION_STATE={exc.stage}", file=sys.stderr)
             print(f"[daily_analysis] {exc.stage}: {exc}", file=sys.stderr)
