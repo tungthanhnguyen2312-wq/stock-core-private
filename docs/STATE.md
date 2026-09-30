@@ -155,6 +155,10 @@ temporal-determinism defect was investigated on retained 2026-09-28 inputs under
 `NOT_REPRODUCED / NO_CHANGE`; no clock code or tests were added for it. Detail:
 [`prospective_raw_pit_authority.md`](prospective_raw_pit_authority.md).
 
+**Historical real official factor-chain qualification (2026-09-30):**
+`HISTORICAL_RAW_PIT_REAL_FACTOR_CHAIN_QUALIFICATION_V1 = PARTIAL / OFFICIAL_EVIDENCE_ACQUIRED_NO_QUALIFIED_FACTOR_CHAIN`.
+The retained index rebuild freezes VBB bonus (2026-06-26), KLB stock dividend (2025-09-24), and VBB stock dividend (2025-06-27): all 41 `RIGHTS` records are excluded as `EVENT_TYPE_NOT_SUPPORTED_BY_EXISTING_FACTOR_MECHANIC`. Retained HOSE listing is applied, while ticker-level official-document-route and HOSE price-event coverage are explicitly unresolved and neutral; no universe key is used as a route proxy. Eight locator queries and two governed HNX requests retained 1,202,844 bytes. Both retained documents bind to frozen candidates: VBB's source page directly establishes its ex-date, 100:10 ratio, and `2026-06-19T08:39:00+07:00` publication timestamp, but only a record-date-confirmed lifecycle; KLB's scanned official listing-change decision establishes the stock-dividend issuance and exact registered-share counts, but no event-linked terms document or qualified historical publication cutoff. VBB's 2025 stock-dividend candidate has no exact retained document binding. Therefore real `FACTOR_CHAIN_QUALIFIED = 0`; no price window was requested; PIT series, PIT_BACKTEST, EXECUTION_REPLAY, and `ACTIVE_UNIVERSE = UNKNOWN` are unchanged. The before/after retained prospective publication manifest comparison is identity-equal: 18,514 known-time bars and 6,026 official-agreement bars, without receipt recomputation.
+
 - **Use-specific, never one boolean.** Prospective as-known price evidence is OPERATIONAL (18,514 post-close bars over 21
   sessions with hashed known-time receipts). Prospective raw-as-traded is qualified only for the 6,026 bars equal to the
   official HOSE series. Historical raw is PARTIAL and HOSE-scoped (research grade).

@@ -2393,6 +2393,22 @@
       "notes": "COMPLETE 2026-09-29. Active Vnstock/VNAI runtime retired; Vnstock-specific worker/client/protocol/governor/pipeline removed; new KBS/VCI acquisition retired. Generic provider security infrastructure retained. Historical KBS 31,389 and VCI 94,836 provider-reported facts remain readable as labeled research proxies and were not promoted to official. Retained 2026-09-28 Current Research is byte-identical for 1,683 records (integrated_investment_decision_product/v1:03f51230a1cb4492653cb41ea47f40950a32b8948aaec011da778b8489fb0c32). Successor FINANCIAL_EVIDENCE_CURRENCY_AND_OFFICIAL_STATEMENT_REFRESH_V1 is now the sole active execution milestone."
     },
     {
+      "milestone_id": "HISTORICAL_RAW_PIT_REAL_FACTOR_CHAIN_QUALIFICATION_V1",
+      "state": "PARTIAL",
+      "narrative_disposition": "PARTIAL_OFFICIAL_EVIDENCE_ACQUIRED_NO_QUALIFIED_FACTOR_CHAIN",
+      "terminal_disposition": "PARTIAL_OFFICIAL_EVIDENCE_ACQUIRED_NO_QUALIFIED_FACTOR_CHAIN",
+      "starting_checkpoint": "ff5fb859b7b217d7a86701f4df96272929bcc4d8",
+      "checkpoint": "HEAD",
+      "candidate_branch": "feature/historical-raw-pit-real-factor-v1-20260930",
+      "dependencies": ["PROSPECTIVE_RAW_PIT_AUTHORITY_V1"],
+      "unlocks": [],
+      "authority_effect": "NONE / EVENT_SCOPED_OFFICIAL_EVIDENCE_ONLY / PIT_BACKTEST_EXECUTION_REPLAY_ACTIVE_UNIVERSE_UNCHANGED",
+      "owner_authorized": true,
+      "source_doc": "Owner directive HISTORICAL_RAW_PIT_REAL_FACTOR_CHAIN_QUALIFICATION_V1 (2026-09-30)",
+      "state_history": ["ACTIVE", "PARTIAL"],
+      "notes": "Bounded official discovery used 8 locator queries and 2 registry-admitted HNX document requests (1,202,844 retained bytes, no retries). The retained-index rebuild freezes VBB bonus 2026-06-26, KLB stock dividend 2025-09-24, VBB stock dividend 2025-06-27; all 41 RIGHTS records are excluded as EVENT_TYPE_NOT_SUPPORTED_BY_EXISTING_FACTOR_MECHANIC. Retained HOSE listing is used; ticker-level official-document routes and price-event coverage remain explicitly unresolved and neutral, never inferred from universe keys. Both acquired HNX documents bind to frozen candidates. VBB supplies explicit ex-date, 100:10 ratio and source page publication time 2026-06-19T08:39:00+07:00, but lifecycle is only record-date-confirmed. KLB supplies executed stock-dividend share counts, but no event-linked terms or qualifying historical publication cutoff; selected VBB 2025 has no exact retained document binding. No event reaches ledger-linked FACTOR_CHAIN_QUALIFIED; no raw price window was requested; PIT series, PIT_BACKTEST, EXECUTION_REPLAY and ACTIVE_UNIVERSE remain blocked/unknown. Before/after retained prospective identities are equal: 18,514 known-time bars and 6,026 scoped cross-source qualified bars, without receipt recomputation. Evidence: operations-review/historical-raw-pit-real-factor-chain-qualification-v1-20260930/. No successor started."
+    },
+    {
       "milestone_id": "FINANCIAL_EVIDENCE_CURRENCY_AND_OFFICIAL_STATEMENT_REFRESH_V1",
       "state": "PARTIAL",
       "narrative_disposition": "FRAMEWORK_COMPLETE_COHORT_EXTERNAL_AND_PARSER_BLOCKERS",

@@ -114,7 +114,7 @@ _CUES = {
         "số lượng chứng khoán thay đổi"),
     "ex_date": ("ngày giao dịch không hưởng quyền", "ex-dividend date", "ex-rights date",
                 "ngày gdkhq"),
-    "record_date": ("record date:", "ngày đăng ký cuối cùng", "record date", "ngày chốt danh sách"),
+    "record_date": ("record date:", "ngày đăng ký cuối cùng:", "ngày đăng ký cuối cùng", "record date", "ngày chốt danh sách"),
     "payment_date": ("ngày thanh toán", "ngày chi trả", "payment date"),
     "listing_effective_date": ("ngày thay đổi niêm yết có hiệu lực",),
     "trading_date": ("ngày giao dịch của chứng khoán thay đổi niêm yết",
@@ -408,13 +408,15 @@ def classify_retained_document(document: Mapping[str, Any], payload: bytes) -> d
 
     is_vsdc = authority == "Vietnam Securities Depository and Clearing Corporation"
     is_issuer_ir = source_id == "issuer_ir"
-    if not is_vsdc and not is_issuer_ir:
+    is_hnx_exchange = source_id == "hnx"
+    if not is_vsdc and not is_issuer_ir and not is_hnx_exchange:
         raise ValueError("document_classification_unsupported_or_ambiguous")
 
     normalized = extract_text(payload, media_type)
     lowered = normalized.lower()
 
     declared_type = str(document.get("document_type") or "")
+    acquisition_type = str(document.get("document_class") or "")
     document_type: str
     basis: str
     cue: str
@@ -447,7 +449,7 @@ def classify_retained_document(document: Mapping[str, Any], payload: bytes) -> d
             cue = listing_transfer_cue
         else:
             raise ValueError("document_classification_unsupported_or_ambiguous")
-    else:
+    elif is_issuer_ir:
         # Issuer-IR sites recite an exchange listing-change notice in a standard three-part
         # disclosure: the recital ("... về việc giao dịch chứng khoán thay đổi niêm yết"), a
         # labelled "Tổ chức niêm yết:" (listed organisation) row, and a labelled
@@ -465,6 +467,28 @@ def classify_retained_document(document: Mapping[str, Any], payload: bytes) -> d
             raise ValueError("document_classification_unsupported_or_ambiguous")
         # The document's own stated code is the identity check here, not the caller's claim:
         # refuse rather than file a listing-change notice under the wrong ticker.
+        code_match = re.search(re.escape(code_label) + r"\s*([a-z0-9]{2,10})", lowered)
+        stated_ticker = code_match.group(1).upper() if code_match else None
+        if stated_ticker and stated_ticker != ticker:
+            raise ValueError("document_ticker_conflicts_with_document_text")
+    else:
+        # HNX exchange pages and HNX-hosted notices are admitted by the source
+        # registry before they reach this extractor.  Their manifest class is not
+        # factual evidence on its own: require the page's own entitlement or
+        # listing-change language and, where present, its stated security code.
+        ex_right_cue = "ngày giao dịch không hưởng quyền"
+        listing_change_cue = "thay đổi đăng ký giao dịch"
+        code_label = "mã cổ phiếu:"
+        if acquisition_type == "ex_right_notice" and ex_right_cue in lowered:
+            document_type = "ex_right_notice"
+            basis = "document_internal_hnx_ex_right_notice_cue"
+            cue = ex_right_cue
+        elif acquisition_type == "listing_change_notice" and listing_change_cue in lowered:
+            document_type = "listing_change_notice"
+            basis = "document_internal_hnx_listing_change_notice_cue"
+            cue = listing_change_cue
+        else:
+            raise ValueError("document_classification_unsupported_or_ambiguous")
         code_match = re.search(re.escape(code_label) + r"\s*([a-z0-9]{2,10})", lowered)
         stated_ticker = code_match.group(1).upper() if code_match else None
         if stated_ticker and stated_ticker != ticker:
@@ -496,7 +520,7 @@ def classify_retained_document(document: Mapping[str, Any], payload: bytes) -> d
 
 
 def extract_explicit_stock_dividend_ratio(text: str) -> dict[str, Any]:
-    """Return an entitlement ratio only when two explicit VSDC wordings agree."""
+    """Return a ratio only when independently explicit official wordings agree."""
     normalized = normalize_text(text)
     rate_matches = re.findall(r"(?:execution|payment) rate\s*:\s*([0-9.,]+)\s*:\s*([0-9.,]+)",
                               normalized, flags=re.I)
@@ -504,23 +528,42 @@ def extract_explicit_stock_dividend_ratio(text: str) -> dict[str, Any]:
         r"shareholders (?:are )?entitled to\s*([0-9.,]+)\s+new shares?\s+for every\s*"
         r"([0-9.,]+)\s+shares?",
         normalized, flags=re.I)
-    if len(rate_matches) != 1 or len(wording_matches) != 1:
+    if len(rate_matches) == 1 and len(wording_matches) == 1:
+        old, new = (parse_vietnamese_number(value) for value in rate_matches[0])
+        wording_new, wording_old = (parse_vietnamese_number(value) for value in wording_matches[0])
+        if (None in (old, new, wording_old, wording_new) or not old or not new
+                or old != wording_old or new != wording_new):
+            return {"state": "unavailable", "reason": "execution_rate_wordings_conflict"}
+        return {
+            "state": "available",
+            "stock_ratio": round(float(new) / float(old), 10),
+            "ratio_basis": "new_shares_per_existing_share",
+            "citations": [
+                {"field": "stock_ratio", "cue": "explicit entitlement rate",
+                 "excerpt": f"Rate: {rate_matches[0][0]}:{rate_matches[0][1]}"},
+                {"field": "stock_ratio", "cue": "explicit entitlement wording",
+                 "excerpt": (f"Shareholders are entitled to {wording_matches[0][0]} new shares "
+                             f"for every {wording_matches[0][1]} shares")},
+            ],
+        }
+    vietnamese_rate = re.findall(r"tỷ lệ thực hiện\s*:\s*([0-9.,]+)\s*:\s*([0-9.,]+)", normalized, flags=re.I)
+    vietnamese_formula = re.findall(r"(?:x|nhân)\s*([0-9.,]+)\s*/\s*([0-9.,]+)\s*=", normalized, flags=re.I)
+    if len(vietnamese_rate) != 1 or len(vietnamese_formula) != 1:
         return {"state": "unavailable", "reason": "execution_rate_missing_or_ambiguous"}
-    old, new = (parse_vietnamese_number(value) for value in rate_matches[0])
-    wording_new, wording_old = (parse_vietnamese_number(value) for value in wording_matches[0])
-    if (None in (old, new, wording_old, wording_new) or not old or not new
-            or old != wording_old or new != wording_new):
+    old, new = (parse_vietnamese_number(value) for value in vietnamese_rate[0])
+    formula_new, formula_old = (parse_vietnamese_number(value) for value in vietnamese_formula[0])
+    if (None in (old, new, formula_old, formula_new) or not old or not new
+            or old != formula_old or new != formula_new):
         return {"state": "unavailable", "reason": "execution_rate_wordings_conflict"}
     return {
         "state": "available",
         "stock_ratio": round(float(new) / float(old), 10),
         "ratio_basis": "new_shares_per_existing_share",
         "citations": [
-            {"field": "stock_ratio", "cue": "explicit entitlement rate",
-             "excerpt": f"Rate: {rate_matches[0][0]}:{rate_matches[0][1]}"},
-            {"field": "stock_ratio", "cue": "explicit entitlement wording",
-             "excerpt": (f"Shareholders are entitled to {wording_matches[0][0]} new shares "
-                         f"for every {wording_matches[0][1]} shares")},
+            {"field": "stock_ratio", "cue": "explicit Vietnamese entitlement rate",
+             "excerpt": f"Tỷ lệ thực hiện: {vietnamese_rate[0][0]}:{vietnamese_rate[0][1]}"},
+            {"field": "stock_ratio", "cue": "explicit Vietnamese entitlement calculation",
+             "excerpt": f"x {vietnamese_formula[0][0]}/{vietnamese_formula[0][1]} ="},
         ],
     }
 

@@ -1,7 +1,7 @@
 import json, tempfile, unittest
 from pathlib import Path
 from unittest.mock import patch
-from official_document_acquisition import EVENTS, MANIFEST, TICKERS, _response_failure, acquire, canonical_url, import_offline_event
+from official_document_acquisition import BOUNDED_ADDITIONAL_TICKER_SCOPE_EXCEEDED, EVENTS, MANIFEST, TICKERS, _response_failure, acquire, canonical_url, import_offline_event
 
 PDF=b"%PDF-1.4\nfixture\n"
 HTML=b"<html><body>official notice</body></html>"
@@ -92,6 +92,23 @@ class AcquisitionTests(unittest.TestCase):
   self.assertEqual(future["outcomes"][0]["state"],"unsupported_request")
  def test_index_observed_dtp_is_a_finite_supported_ticker(self):
   self.assertIn("DTP",TICKERS)
+ def test_explicit_bounded_additional_ticker_is_admitted_without_widening_default_scope(self):
+  denied=acquire([self.spec(ticker="VBB")],self.root,fetcher=self.fetch)
+  admitted=acquire([self.spec(ticker="VBB")],self.root,fetcher=self.fetch,additional_allowed_tickers=("VBB",))
+  self.assertEqual(denied["outcomes"][0]["state"],"unsupported_request")
+  self.assertEqual(admitted["outcomes"][0]["state"],"retained")
+ def test_additional_ticker_scope_is_finite_and_rejects_invalid_extensions(self):
+  for scope in ((), ("VBB","VBB"), ("VBB","KLB","MZG","AAA"), ("V-BB",), ("HPG",)):
+   with self.subTest(scope=scope):
+    with self.assertRaisesRegex(ValueError,BOUNDED_ADDITIONAL_TICKER_SCOPE_EXCEEDED):
+     acquire([],self.root,additional_allowed_tickers=scope)
+ def test_additional_ticker_request_must_be_in_explicit_scope_before_http(self):
+  result=acquire([self.spec(ticker="KLB")],self.root,fetcher=lambda *_a,**_k:self.fail("scope rejection must precede HTTP"),additional_allowed_tickers=("VBB",))
+  self.assertEqual(result["outcomes"][0]["state"],BOUNDED_ADDITIONAL_TICKER_SCOPE_EXCEEDED)
+ def test_registry_still_independently_refuses_an_explicitly_scoped_ticker(self):
+  denied={**FIXTURE_REGISTRY,"sources":[{**FIXTURE_REGISTRY["sources"][0],"activation":"pending"},FIXTURE_REGISTRY["sources"][1]]}
+  result=acquire([self.spec(ticker="VBB")],self.root,fetcher=self.fetch,registry=denied,additional_allowed_tickers=("VBB",))
+  self.assertEqual(result["outcomes"][0]["state"],"refused_by_source_registry")
  def test_declared_rss_discovery_input_is_retained_as_xml_but_not_evidence(self):
   rss=b'<?xml version="1.0"?><rss><channel><title>HNX</title></channel></rss>'
   spec={"ticker":"DTP","source_id":"hnx","canonical_url":"https://hnx.example/feed.rss","document_class":"disclosure_rss_feed","reporting_period":"2026","source_authority":"exchange","observed_at":"2026-09-15T00:00:00Z"}

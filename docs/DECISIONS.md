@@ -175,6 +175,14 @@ broker action, optimizer/Kelly/Markowitz allocation, market-impact model, fill p
 Broad/historical RAW_AS_TRADED remains unpromoted; the merged prospective official-agreement subset stays separately
 qualified for scoped research.
 
+## 2026-09-30 - Historical real official factor-chain qualification V1
+
+`HISTORICAL_RAW_PIT_REAL_FACTOR_CHAIN_QUALIFICATION_V1 = PARTIAL / OFFICIAL_EVIDENCE_ACQUIRED_NO_QUALIFIED_FACTOR_CHAIN`.
+
+1. Candidate ranking is derived from the retained official event index joined to the retained exchange universe. It freezes VBB 2026-06-26 bonus, KLB 2025-09-24 stock dividend, and VBB 2025-06-27 stock dividend. It excludes all 41 `RIGHTS` rows as `EVENT_TYPE_NOT_SUPPORTED_BY_EXISTING_FACTOR_MECHANIC`; retained HOSE listing is used, but ticker-level official-document routes and HOSE price-event coverage remain explicitly unresolved rather than being inferred from universe keys.
+2. The governed source registry admitted exactly two document requests. Their source-record bindings land in the frozen cohort: VBB's HNX ex-right notice supplies explicit ex-date, ratio and source-native publication timestamp, but planned/record-date evidence remains below executed; KLB's HNX listing-change decision is executed-lifecycle evidence with exact share counts, but has no event-linked terms or qualifying publication cutoff. The selected VBB 2025 stock-dividend event has no exact retained document binding.
+3. No observed price ratio was used, no document was backdated from retrieval time or HTTP metadata, and no event was manually promoted. The retained prospective publication manifest was compared at the exact content/identity level before and after this correction: 18,514 known-time and 6,026 scoped cross-source bars are unchanged without receipt recomputation. With zero real factor-chain qualification, no raw price event window was requested. Global PIT/backtest/replay and active-universe authority remain unchanged.
+
 ## 2026-09-29 - Prospective RAW/PIT price authority (`PROSPECTIVE_RAW_PIT_AUTHORITY_V1`; PROSPECTIVE_PIT_OPERATIONAL / HISTORICAL_PIT_PARTIAL, local checkpoint)
 
 **Decision.** Authority is use-specific across ten dimensions and never one RAW/PIT boolean. Prospective as-known price
