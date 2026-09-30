@@ -1,7 +1,7 @@
 {
   "schema_version": "stocklookup_roadmap_execution_state/1.0.0",
   "roadmap_id": "stock-core-private",
-  "roadmap_version": "2026.09.30.1",
+  "roadmap_version": "2026.09.30.2",
   "narrative_authority": {
     "strategic_roadmap": "docs/ROADMAP.md",
     "operational_narrative": "docs/STATE.md",
@@ -15,11 +15,28 @@
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "DAILY_LIQUIDITY_AUTHORITY_WIRING_RECONCILIATION_V1",
-    "state": "COMPLETE"
+    "milestone": "DAILY_OFFICIAL_LIQUIDITY_ROLLFORWARD_V1",
+    "state": "PARTIAL"
   },
   "queued_next": [],
   "milestones": [
+    {
+      "milestone_id": "DAILY_OFFICIAL_LIQUIDITY_ROLLFORWARD_V1",
+      "state": "PARTIAL",
+      "narrative_disposition": "PARTIAL_REQUEST_BUDGET_CEILING / LIVE_ACCEPTANCE_PENDING_2026_09_30_COMPLETED_SESSION",
+      "terminal_disposition": "DAILY_OFFICIAL_LIQUIDITY_ROLLFORWARD_PARTIAL_REQUEST_BUDGET_CEILING",
+      "starting_checkpoint": "84ee248251705fdab1c9152e65ec1fc7f75e8bb6",
+      "checkpoint": "HEAD",
+      "candidate_branch": "feature/daily-official-liquidity-rollforward-v1-20260930",
+      "dependencies": ["DAILY_LIQUIDITY_AUTHORITY_WIRING_RECONCILIATION_V1"],
+      "unlocks": [],
+      "authority_effect": "DAILY_SAME_SESSION_OFFICIAL_BIND_ONLY / NO_HNX_UPCOM_BULK / NO_REQUEST_CEILING_RAISE / NO_LIVE_SIZING_OR_PIT_PROMOTION",
+      "owner_authorized": true,
+      "source_doc": "Owner directive DAILY_OFFICIAL_LIQUIDITY_ROLLFORWARD_V1 (2026-09-30)",
+      "state_history": ["ACTIVE", "PARTIAL"],
+      "owner_override": "OWNER_DIRECTIVE_2026_09_30_DAILY_OFFICIAL_LIQUIDITY_ROLLFORWARD_V1",
+      "notes": "PARTIAL 2026-09-30. Root cause: official liquidity was operator-initiated and never scheduled in ordinary Daily; canonical_post_close_pipeline only loaded an already-written same-session artifact. Daily now binds same-session official_exchange_liquidity_research/v1 before Integrated Decision and fail-closes other-session/malformed/missing/rights/budget. Full HOSE rollforward from retained 2026-09-28 newest needs 403 requests + 40 retry vs existing 400 cap (UNAVAILABLE_REQUEST_BUDGET; no hidden batches). HNX/UPCoM planned requests 0. Retained 2026-09-28 replay: 0 HTTP, 952/457/457, 0 AVAILABLE / 1683 BLOCKED capacity, 457 POLICY_UNBOUND, 0 posture/decision/unexplained. Live official qualification not run: 2026-09-30 session not completed (LIVE_ACCEPTANCE_PENDING_2026_09_30_COMPLETED_SESSION); 2026-09-29 was not substituted as today. No successor queued."
+    },
     {
       "milestone_id": "DAILY_LIQUIDITY_AUTHORITY_WIRING_RECONCILIATION_V1",
       "state": "COMPLETE",

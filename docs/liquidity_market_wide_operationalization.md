@@ -86,7 +86,17 @@ boards keep the truncation caveat (value exact, volume a lower bound).
 
 ## 6. Daily integration
 
-`official_exchange_liquidity_research/v1` is read offline by the post-close pipeline (same session,
+Ordinary Daily (`DAILY_OFFICIAL_LIQUIDITY_ROLLFORWARD_V1`) binds a same-session
+`official_exchange_liquidity_research/v1` artifact before Integrated Decision. Other-session,
+malformed, missing, rights-gated, or over-budget states are component-local
+(`AVAILABLE` / `UNAVAILABLE_SESSION` / `MALFORMED_ARTIFACT` / `UNAVAILABLE_SOURCE` /
+`UNAVAILABLE_RIGHTS` / `UNAVAILABLE_REQUEST_BUDGET`) and never fail Core Daily. A new-session
+full HOSE refresh from the 2026-09-28 retained series needs 403 page-1 requests plus 40 retry
+allowance against the existing 400 ceiling, so Daily does not auto-broaden. HNX/UPCoM bulk
+stays not planned. Network acquisition remains the established paced foreground runner when a
+frozen plan fits the cap.
+
+`official_exchange_liquidity_research/v1` is consumed by the post-close pipeline (same session,
 self-verifying identity, authority boundary re-checked). It adds a `qualified_research` sub-block to
 the LIQUIDITY dimension of `current_research_decision_input/v1`: current-session matched value and
 volume, ADV20, ADTV20, current value to ADTV20 and current volume to ADV20 ratios, window coverage,
@@ -157,7 +167,9 @@ claim, and only prospective, as-known-at retention of the official series can su
 
 ## Operator runbook
 
-Acquisition is operator-initiated and never part of the ordinary Daily. `--retained-root` is the
+Ordinary Daily binds an already-valid same-session official artifact. A HOSE refresh that fits
+the existing 400-request ceiling uses this runner with `--session`. Over-budget plans stay
+`UNAVAILABLE_REQUEST_BUDGET` and are not hidden-batched. `--retained-root` is the
 `operations-review` root holding the retained official universe and DNSE batches; `--prior-closure-dir` is
 the retained foundation-milestone evidence directory.
 

@@ -64,7 +64,8 @@ def _prior_series(args: argparse.Namespace) -> dict[str, dict[str, Any]]:
 def plan_command(args: argparse.Namespace) -> dict[str, Any]:
     inputs = _frame_inputs(args)
     retained = _prior_series(args)
-    plan = wide.plan_acquisition(inputs["frame"], retained, target_session=TARGET_SESSION, hard_request_budget=HARD_REQUEST_BUDGET)
+    session = getattr(args, "session", TARGET_SESSION)
+    plan = wide.plan_acquisition(inputs["frame"], retained, target_session=session, hard_request_budget=HARD_REQUEST_BUDGET)
     plan = {**plan, "inputs": {"official_universe_identity": inputs["universe"].get("artifact_identity"), "official_universe_file_sha256": inputs["universe_sha256"],
                                "dnse_batch_files": inputs["batch_identities"]},
             "denominators": wide.universe_denominators(inputs["frame"], retained_tickers=retained)}
@@ -173,16 +174,17 @@ def build_artifact(args: argparse.Namespace) -> dict[str, Any]:
     inputs = _frame_inputs(args)
     frame, resolved = inputs["frame"], inputs["resolved"]
     series, ledger = closure._official_series(output)
+    session = getattr(args, "session", TARGET_SESSION)
     hose_dates = {s for slot in series.values() if slot["exchange"] == official.HOSE for s in slot["rows"]}
     hnx_dates = {s for slot in series.values() if slot["exchange"] != official.HOSE for s in slot["rows"]}
     base = load_governed_trading_session_calendar(closure.GOVERNED_CALENDAR)
     ledger_identity = "probe_request_ledger:" + closure._sha256_file(output / "probe" / "request_ledger.jsonl")
     extension = contract.extend_governed_calendar(base, hose_sessions=hose_dates, hnx_sessions=hnx_dates, evidence_identity=ledger_identity)
     calendar = extension["calendar"]
-    qualified = wide.reconcile_and_qualify(series, resolved, inputs["ohlc"], target_session=TARGET_SESSION)
+    qualified = wide.reconcile_and_qualify(series, resolved, inputs["ohlc"], target_session=session)
     units, recon = qualified["units"], qualified["reconciliations"]
     records = {ticker: wide.build_record(row=row, slot=series.get(ticker), dnse_item=resolved.get(ticker), recon=recon.get(ticker), units=units,
-                                         calendar=calendar, target_session=TARGET_SESSION) for ticker, row in sorted(frame.items())}
+                                         calendar=calendar, target_session=session) for ticker, row in sorted(frame.items())}
     tables = wide.coverage_tables(records)
     plan = closure._load(output / "probe" / "acquisition_plan.json")
     summary = closure._load(output / "probe" / "probe_summary.json")
@@ -197,7 +199,7 @@ def build_artifact(args: argparse.Namespace) -> dict[str, Any]:
     retained_tickers = {t for t, s in series.items() if s["rows"] and not s["parse_failures"]}
     artifact = {
         "schema_version": "1.0.0", "contract_version": wide.CONTRACT_VERSION, "milestone": wide.MILESTONE,
-        "resolved_completed_session": TARGET_SESSION,
+        "resolved_completed_session": session,
         "inputs": {"acquisition_plan_identity": plan["artifact_identity"], "probe_request_ledger": ledger_identity, "probe_summary": summary,
                    "official_universe_identity": inputs["universe"].get("artifact_identity"), "official_universe_file_sha256": inputs["universe_sha256"],
                    "dnse_batch_files": inputs["batch_identities"], "base_governed_calendar": base.identity},
@@ -230,7 +232,8 @@ def build_command(args: argparse.Namespace) -> dict[str, Any]:
     if args.verify_determinism and build_artifact(args)["artifact_sha256"] != artifact["artifact_sha256"]:
         raise SystemExit("BUILD_NOT_DETERMINISTIC")
     atomic_write_json(output / "official_exchange_liquidity_research_artifact.json", artifact)
-    readiness = {"contract_version": "execution_capacity_readiness/v1", "milestone": wide.MILESTONE, "resolved_completed_session": TARGET_SESSION,
+    session = getattr(args, "session", TARGET_SESSION)
+    readiness = {"contract_version": "execution_capacity_readiness/v1", "milestone": wide.MILESTONE, "resolved_completed_session": session,
                  "source_artifact_identity": artifact["artifact_identity"], "summary": artifact["execution_capacity_readiness"],
                  "records": {t: wide.execution_capacity_readiness(r) for t, r in artifact["records"].items()},
                  "position_sizing": "BLOCKED", "execution_capacity": "BLOCKED"}
@@ -291,12 +294,16 @@ def manifest_command(args: argparse.Namespace) -> dict[str, Any]:
 def _args(argv: list[str] | None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("command", choices=("plan", "probe", "build", "manifest"))
+    parser.add_argument("--session", default=TARGET_SESSION, help="target completed session YYYY-MM-DD")
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT)
     parser.add_argument("--retained-root", type=Path, required=True, help="operations-review root holding the retained official universe and DNSE batches")
     parser.add_argument("--prior-closure-dir", type=Path, required=True, help="retained AUTHORITY_CLOSURE_LIQUIDITY_FOUNDATION_V1 evidence directory")
     parser.add_argument("--verify-determinism", action="store_true")
     parser.add_argument("--manifest-path", type=Path, default=ROOT / "docs" / "liquidity_market_wide_publication_manifest.json")
-    return parser.parse_args(argv)
+    args = parser.parse_args(argv)
+    if args.output_dir == DEFAULT_OUTPUT and args.session != TARGET_SESSION:
+        args.output_dir = OPS / f"official-exchange-liquidity-research-v1-{args.session.replace('-', '')}"
+    return args
 
 
 def main(argv: list[str] | None = None) -> int:

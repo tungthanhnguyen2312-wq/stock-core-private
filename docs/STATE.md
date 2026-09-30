@@ -1,5 +1,23 @@
 # Stock Lookup — Operational State
 
+**Daily official liquidity rollforward (2026-09-30):**
+`DAILY_OFFICIAL_LIQUIDITY_ROLLFORWARD_V1 = PARTIAL_REQUEST_BUDGET_CEILING /
+LIVE_ACCEPTANCE_PENDING_2026_09_30_COMPLETED_SESSION`, rooted at canonical
+`84ee248251705fdab1c9152e65ec1fc7f75e8bb6` (PR #24 merged; Producer CI #138 SUCCESS,
+run 36664425134). Root cause of 2026-09-29 official absence:
+`OPERATOR_ONLY_OFFICIAL_ACQUISITION_NEVER_SCHEDULED_IN_DAILY`. Daily now binds a
+same-session `official_exchange_liquidity_research/v1` artifact before Integrated
+Decision, fail-closed on other-session, malformed, missing, rights, or request-budget
+states. Full HOSE rollforward from the 2026-09-28 retained series needs 403 page-1
+requests plus 40 retry allowance against the existing 400 ceiling, so a new session
+does not auto-broaden. HNX/UPCoM bulk stays 0. Retained 2026-09-28 replay: 0 HTTP,
+952 current-session eligible, 457 ADTV eligible, 457 ADV partial, 0 AVAILABLE / 1,683
+BLOCKED execution-capacity with 457 `POLICY_UNBOUND`. Live official qualification,
+Owner Daily, and 2026-09-29-as-today acceptance were not run (10:25 ICT, session
+2026-09-30 not completed). Public-safe counts:
+[`daily_official_liquidity_rollforward_publication_manifest.json`](daily_official_liquidity_rollforward_publication_manifest.json).
+No successor is queued or started.
+
 **Daily liquidity authority wiring reconciliation (2026-09-30):**
 `DAILY_LIQUIDITY_AUTHORITY_WIRING_RECONCILIATION_V1 = COMPLETE /
 DAILY_LIQUIDITY_AUTHORITY_WIRING_RECONCILIATION_COMPLETE`, rooted at canonical

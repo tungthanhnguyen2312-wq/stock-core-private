@@ -51,6 +51,7 @@ from canonical_dashboard_runtime_release import (
 from canonical_post_close_pipeline import (
     CanonicalPostCloseError,
     NORMAL_DAILY_ENABLE_CURRENT_FOREIGN_FLOW_LIVE,
+    NORMAL_DAILY_ENABLE_OFFICIAL_LIQUIDITY_ROLLFORWARD,
     PreCutoffArtifactError,
     SupplementalProviderBlockError,
     acquire_and_materialize,
@@ -758,6 +759,9 @@ def run_canonical_daily_operation(
                 output_root=operation_output_root,
                 no_new_provider_acquisition=no_new_provider_acquisition,
             )
+        kwargs["enable_official_liquidity_rollforward"] = (
+            NORMAL_DAILY_ENABLE_OFFICIAL_LIQUIDITY_ROLLFORWARD and not no_new_provider_acquisition
+        )
         return acquire(root, resolved_session, runtime_root, **kwargs)
 
     try:

@@ -1,5 +1,26 @@
 # Decisions & Architectural Decision Records
 
+## 2026-09-30 - Daily official liquidity rollforward (`DAILY_OFFICIAL_LIQUIDITY_ROLLFORWARD_V1`)
+
+**Decision.** Same-session official HOSE liquidity is a Daily dependency, not an
+operator-only sidecar. Daily binds a valid same-session
+`official_exchange_liquidity_research/v1` artifact before Integrated Decision
+consumes it. Acquisition stays in the established paced foreground runner. HNX/UPCoM
+bulk stays `PUBLIC_ACQUISITION_NOT_AUTHORIZED`. The existing 400-request ceiling is
+not raised. An over-budget plan is `UNAVAILABLE_REQUEST_BUDGET` and is not split into
+hidden batches. A failed official component never fails Core Daily and never
+substitutes another session.
+
+**Result.** `PARTIAL_REQUEST_BUDGET_CEILING / LIVE_ACCEPTANCE_PENDING_2026_09_30_COMPLETED_SESSION`.
+Root cause of 2026-09-29 absence: official acquisition was operator-initiated and never
+scheduled in ordinary Daily. Retained 2026-09-28 replay binds the existing artifact with
+0 HTTP and reconstructs 952 / 457 / 457. A 2026-09-29 incremental plan needs 403 HOSE
+requests + 40 retry allowance against cap 400. Live official qualification was not run
+because the 2026-09-30 session is not completed.
+
+**Boundary.** No live Daily, no 2026-09-29-as-today acceptance, no merge, deploy,
+Dashboard publish, production DB write or successor.
+
 ## 2026-09-30 - Daily liquidity authority wiring reconciliation (`DAILY_LIQUIDITY_AUTHORITY_WIRING_RECONCILIATION_V1`)
 
 **Decision.** Liquidity authority is use-specific and per-record. An artifact summary

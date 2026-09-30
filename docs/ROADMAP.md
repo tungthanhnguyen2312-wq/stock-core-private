@@ -1,5 +1,14 @@
 # Stock Lookup — Architecture & Roadmap
 
+**Roadmap sync: Daily official liquidity rollforward (2026-09-30):**
+- `DAILY_OFFICIAL_LIQUIDITY_ROLLFORWARD_V1` = `PARTIAL_REQUEST_BUDGET_CEILING /
+  LIVE_ACCEPTANCE_PENDING_2026_09_30_COMPLETED_SESSION`, rooted at
+  `84ee248251705fdab1c9152e65ec1fc7f75e8bb6` (PR #24 merged; Producer CI #138 SUCCESS).
+  Same-session official liquidity is now a fail-closed Daily component bound before
+  Integrated Decision. A new-session full HOSE refresh needs 403 requests against the
+  existing 400 cap and is not auto-broadened. Live qualification is pending the
+  completed 2026-09-30 session. No successor is queued or started.
+
 **Roadmap sync: Daily liquidity authority wiring reconciliation (2026-09-30):**
 - `DAILY_LIQUIDITY_AUTHORITY_WIRING_RECONCILIATION_V1` = `COMPLETE`, rooted at
   `caf413456b60f8af7a13e16e375880310718d619` (Producer CI #136 SUCCESS).
