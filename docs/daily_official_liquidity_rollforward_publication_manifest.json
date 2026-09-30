@@ -1,0 +1,52 @@
+{
+  "schema_version": "daily_official_liquidity_rollforward_publication_manifest/v1",
+  "milestone": "DAILY_OFFICIAL_LIQUIDITY_ROLLFORWARD_V1",
+  "canonical_base": "84ee248251705fdab1c9152e65ec1fc7f75e8bb6",
+  "producer_ci": {
+    "run_number": 138,
+    "run_id": 36664425134,
+    "status": "completed",
+    "conclusion": "success",
+    "head_sha": "84ee248251705fdab1c9152e65ec1fc7f75e8bb6"
+  },
+  "root_cause": "OPERATOR_ONLY_OFFICIAL_ACQUISITION_NEVER_SCHEDULED_IN_DAILY",
+  "live_acceptance": "LIVE_ACCEPTANCE_PENDING_2026_09_30_COMPLETED_SESSION",
+  "terminal_disposition": "DAILY_OFFICIAL_LIQUIDITY_ROLLFORWARD_PARTIAL_REQUEST_BUDGET_CEILING / LIVE_ACCEPTANCE_PENDING_2026_09_30_COMPLETED_SESSION",
+  "governed_request_ceiling": 400,
+  "minimum_request_count_for_new_session_after_2026_09_28": 403,
+  "planned_hose_request_count_for_2026_09_29": 403,
+  "planned_hnx_upcom_request_count": 0,
+  "retry_allowance_for_403": 40,
+  "retained_reuse_when_newest_equals_target": "contract-valid only",
+  "retained_2026_09_28": {
+    "official_identity": "official_exchange_liquidity_research:f35f882c860af8a2d01b3b31ec7a3f74a9f9607a1f71f736d320c0f9a22a696b",
+    "iid_identity": "integrated_investment_decision_product/v1:1517dc71cdc3ac33ef2d65945c89121d1c4bc1d53c05afe70e91ed1e32d13917",
+    "http_requests_made": 0,
+    "current_session_eligible": 952,
+    "adtv_eligible": 457,
+    "adv_partial": 457,
+    "execution_capacity_AVAILABLE": 0,
+    "execution_capacity_PARTIAL": 0,
+    "execution_capacity_BLOCKED": 1683,
+    "policy_unbound": 457,
+    "rights_gated": 1047,
+    "exchange_unresolved": 179,
+    "posture_delta_count": 0,
+    "decision_identity_delta_count": 0,
+    "non_liquidity_drift_count": 0,
+    "unexplained_drift_count": 0
+  },
+  "authority_effect": {
+    "CURRENT_SESSION_LIQUIDITY_RESEARCH": "SCOPED_ELIGIBLE",
+    "ADTV_RESEARCH": "SCOPED_ELIGIBLE",
+    "ADV_VOLUME_RESEARCH": "SCOPED_PARTIAL_AS_TRADED_NOT_CA_NORMALIZED",
+    "LIVE_POSITION_SIZING": "BLOCKED",
+    "PIT_BACKTEST": "BLOCKED",
+    "EXECUTION_REPLAY": "BLOCKED",
+    "RAW_AS_TRADED": "NOT_PROMOTED"
+  },
+  "provider_calls": 0,
+  "raw_exchange_response_bodies_published": false,
+  "per_ticker_liquidity_or_private_values_published": false,
+  "original_retained_daily_mutated": false
+}

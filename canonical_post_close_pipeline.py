@@ -60,6 +60,9 @@ CONTRACT_VERSION = "canonical_post_close_pipeline/v1"
 # productionized DNSE current-foreign-flow path for the exact qualified session. The shared
 # helper default below stays False so the diagnostic CLI remains explicit-opt-in.
 NORMAL_DAILY_ENABLE_CURRENT_FOREIGN_FLOW_LIVE = True
+# Ordinary Daily binds/plans same-session official HOSE liquidity before Integrated
+# Decision. Diagnostic CLI stays opt-in. A failed refresh never fails Core Daily.
+NORMAL_DAILY_ENABLE_OFFICIAL_LIQUIDITY_ROLLFORWARD = True
 
 # Registry input class -> daily_session_level2_package.session_artifact_paths() key. Every
 # REQUIRED registry key must resolve; market_flow_positioning is intentionally omitted -- Level-2
@@ -517,6 +520,7 @@ def acquire_and_materialize(
     root: Path, session: str, runtime_root: Path, *, workers: int = 12, now: datetime | None = None,
     retained_evidence_root: Path | None = None, output_root: Path | None = None,
     no_new_provider_acquisition: bool = False, historical_compatibility: bool = False,
+    enable_official_liquidity_rollforward: bool = False,
 ) -> dict[str, Any]:
     """Stage 1-3: DNSE acquisition, runtime materialization, current-session analytics.
 
@@ -628,6 +632,29 @@ def acquire_and_materialize(
         raise CanonicalPostCloseError(
             "REFUSE_CANONICAL_POST_CLOSE:TRIAGE_NOT_EXACT_SESSION_CLEAN:session=" + session
         )
+    # Official HOSE liquidity is materialized with descriptive DNSE liquidity
+    # inside Level-2. Read the component status here; never crawl from this pipeline.
+    official_rollforward: dict[str, Any]
+    try:
+        import daily_official_liquidity_rollforward as official_rollforward_mod
+        status_payload, status_error = official_rollforward_mod.load_official_payload(
+            official_rollforward_mod.status_path(artifact_root, session)
+        )
+        official_rollforward = (
+            dict(status_payload)
+            if isinstance(status_payload, dict)
+            else {
+                "status": status_error or official_rollforward_mod.UNAVAILABLE_SOURCE,
+                "reason_code": status_error or official_rollforward_mod.UNAVAILABLE_SOURCE,
+                "target_session": session,
+            }
+        )
+    except Exception as exc:  # noqa: BLE001 -- official refresh must not destroy Daily
+        official_rollforward = {
+            "status": "UNAVAILABLE_SOURCE",
+            "reason_code": f"{type(exc).__name__}:{exc}",
+            "target_session": session,
+        }
     return {
         "snapshot": snapshot,
         "resolved_completed_session": snapshot.get("resolved_completed_session"),
@@ -635,6 +662,7 @@ def acquire_and_materialize(
         "provider_contribution_counts": _provider_contribution_counts(snapshot),
         "triage_status": {"status": level2.EXACT_SESSION_CLEAN, "identity": triage_artifact.get("artifact_identity")},
         "triage_build_result": triage_build_result,
+        "official_liquidity_rollforward": official_rollforward,
         "paths": paths,
         "artifact_root": artifact_root,
         "eligibility": eligibility,
@@ -1004,14 +1032,22 @@ def build_enrichment_components(
                 and liquidity_research.get("contract_version") == integrated_contract.LIQUIDITY_RESEARCH_CONTRACT
                 and liquidity_research.get("resolved_completed_session") == session):
             liquidity_research = None
-        # Official-exchange liquidity research (OFFICIAL_EXCHANGE_LIQUIDITY_MARKET_WIDE_OPERATIONALIZATION_V1)
-        # is operator-acquired and offline here: same-session, self-verifying, else simply absent. Its absence
-        # blocks only the liquidity dimension's qualified sub-block and never the Daily.
-        official_liquidity = _load(paths["official_liquidity"]) or _load(retained_paths["official_liquidity"])
-        if not (isinstance(official_liquidity, Mapping)
-                and official_liquidity.get("contract_version") == integrated_contract.OFFICIAL_LIQUIDITY_RESEARCH_CONTRACT
-                and official_liquidity.get("resolved_completed_session") == session):
-            official_liquidity = None
+        # Official-exchange liquidity is materialized before this consumer. Same-session
+        # only; malformed/other-session/budget/source failures stay component-local and never
+        # substitute a prior session or fail the Daily.
+        import daily_official_liquidity_rollforward as official_rollforward
+        official_resolved = official_rollforward.load_for_daily_consumer(
+            session=session,
+            candidate_paths=(paths["official_liquidity"], retained_paths["official_liquidity"]),
+            allow_network=False,
+        )
+        official_liquidity = official_resolved.get("artifact")
+        official_component = official_resolved.get("component") or {}
+        results["official_liquidity_component"] = {
+            "status": official_component.get("status") or official_rollforward.UNAVAILABLE_SOURCE,
+            "reason_code": official_component.get("reason_code"),
+            "artifact_identity": None if official_liquidity is None else official_liquidity.get("artifact_identity"),
+        }
         # Corporate Intelligence axis (CORPORATE_INTELLIGENCE_CATALYST_EVENT_RISK_DECISION_
         # INTEGRATION_V1). Built independently, with its own local try/except -- exactly the
         # tactical_boundaries pattern above -- so a corporate-evidence failure never cascades
@@ -1822,11 +1858,15 @@ def build_tiered_bundle(
 def run_canonical_post_close(
     root: Path, runtime_root: Path, session: str, *, workers: int = 12, now: datetime | None = None,
     enable_current_foreign_flow_live: bool = False,
+    enable_official_liquidity_rollforward: bool = False,
 ) -> dict[str, Any]:
     if not isinstance(session, str) or not session.strip():
         raise CanonicalPostCloseError("REFUSE_CANONICAL_POST_CLOSE:EXPLICIT_SESSION_REQUIRED")
     now = now or vn_now()
-    acquisition = acquire_and_materialize(root, session, runtime_root, workers=workers, now=now)
+    acquisition = acquire_and_materialize(
+        root, session, runtime_root, workers=workers, now=now,
+        enable_official_liquidity_rollforward=enable_official_liquidity_rollforward,
+    )
     artifact_root = acquisition["artifact_root"]
     register_session_inputs(root, session, artifact_root=artifact_root)
     validate_and_freeze_completed_session(root, session)

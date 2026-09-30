@@ -1597,6 +1597,44 @@ def ensure_exact_session_snapshot(
     return p3f9b_snapshot
 
 
+def _prior_completed_official_liquidity(
+    retained_evidence_root: Path, session: str, *, registry_root: Path | None = None,
+) -> Path | None:
+    """Exact prior completed-session official path from the registry; never glob."""
+    try:
+        registry = load_registry(registry_root or retained_evidence_root)
+    except (OSError, ValueError, json.JSONDecodeError):
+        return None
+    prior = sorted(name for name in (registry.get("completed_sessions") or {}) if str(name) < session)
+    for name in reversed(prior):
+        path = session_artifact_paths(retained_evidence_root, name)["official_liquidity"]
+        if path.is_file():
+            return path
+    return None
+
+
+def materialize_official_liquidity_component(
+    artifact_root: Path,
+    session: str,
+    *,
+    retained_evidence_root: Path,
+    execution_root: Path,
+    allow_network: bool = False,
+) -> dict[str, Any]:
+    """Bind same-session official liquidity before Integrated Decision, fail closed otherwise."""
+    import daily_official_liquidity_rollforward as rollforward
+    prior = _prior_completed_official_liquidity(
+        retained_evidence_root, session, registry_root=execution_root,
+    )
+    return rollforward.materialize_same_session_official_liquidity(
+        session=session,
+        artifact_root=artifact_root,
+        retained_evidence_root=retained_evidence_root,
+        allow_network=allow_network,
+        prior_official_dir=None if prior is None else prior.parent,
+    )
+
+
 def materialize_independent_components(
     artifact_root: Path,
     session: str,
@@ -1653,6 +1691,17 @@ def materialize_independent_components(
             "--universe-snapshot", str(p3f9b_snapshot), "--out-dir", str(liq_dir),
             "--session", session, "--consolidate",
         ])
+    # Official HOSE liquidity is a sibling of descriptive DNSE liquidity: bind a
+    # same-session artifact here, before Integrated Decision. Daily never crawls.
+    try:
+        materialize_official_liquidity_component(
+            artifact_root, session,
+            retained_evidence_root=retained_evidence_root,
+            execution_root=execution_root,
+            allow_network=False,
+        )
+    except Exception:  # noqa: BLE001 -- official refresh must not destroy Daily
+        pass
     tech_out = paths["technical_recovery"]
     tech_dir = tech_out.parent
     baseline_desc = _prior_completed_descriptive(
