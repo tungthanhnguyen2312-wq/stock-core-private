@@ -39,7 +39,14 @@ UNAVAILABLE_REQUEST_BUDGET = "UNAVAILABLE_REQUEST_BUDGET"
 UNAVAILABLE_SESSION = "UNAVAILABLE_SESSION"
 MALFORMED_ARTIFACT = "MALFORMED_ARTIFACT"
 
+# Required in every artifact, including the retained pre-extension 2026-09-28 one.
 LIVE_BLOCKED_KEYS = ("EXECUTION_CAPACITY", "POSITION_SIZING", "PIT_BACKTEST")
+# Extended boundary: absent tolerated (older retained artifacts), promoted rejected.
+EXTENDED_BLOCKED_KEYS = (
+    "LIVE_POSITION_SIZING", "PORTFOLIO_CAPITAL_ALLOCATION", "HISTORICAL_PIT_SIZE_REPLAY", "EXECUTION_REPLAY",
+)
+NOT_PROMOTED_KEYS = ("RAW_AS_TRADED",)
+BUDGET_EXCEEDED_ERROR = "GOVERNED_REQUEST_BUDGET_EXCEEDED"
 STATUS_FILENAME = "daily_official_liquidity_component_status.json"
 IDENTITY_EXCLUDED = frozenset({"retrieved_at", "status_path", "artifact_path", "artifact_sha256", "artifact_identity"})
 
@@ -105,7 +112,11 @@ def evaluate_candidate_artifact(payload: Any, *, session: str) -> dict[str, Any]
     if identity.get("artifact_identity") != payload.get("artifact_identity"):
         return {"status": MALFORMED_ARTIFACT, "reason_code": "OFFICIAL_LIQUIDITY_ARTIFACT_MALFORMED", "artifact": None}
     boundary = payload.get("authority_boundary") or {}
-    if not isinstance(boundary, Mapping) or any(boundary.get(key) != "BLOCKED" for key in LIVE_BLOCKED_KEYS):
+    if not isinstance(boundary, Mapping) or (
+        any(boundary.get(key) != "BLOCKED" for key in LIVE_BLOCKED_KEYS)
+        or any(boundary.get(key) != "NOT_PROMOTED" for key in NOT_PROMOTED_KEYS)
+        or any(key in boundary and boundary[key] != "BLOCKED" for key in EXTENDED_BLOCKED_KEYS)
+    ):
         return {"status": MALFORMED_ARTIFACT, "reason_code": "OFFICIAL_LIQUIDITY_ARTIFACT_MALFORMED", "artifact": None}
     if not isinstance(payload.get("records"), Mapping):
         return {"status": MALFORMED_ARTIFACT, "reason_code": "OFFICIAL_LIQUIDITY_ARTIFACT_MALFORMED", "artifact": None}
@@ -251,15 +262,6 @@ def plan_within_budget(plan: Mapping[str, Any]) -> bool:
     return planned + retry <= budget
 
 
-def _frame_from_universe(
-    universe: Mapping[str, Any], dnse_resolved: Mapping[str, Mapping[str, Any]] | None = None,
-) -> dict[str, dict[str, Any]]:
-    records = universe.get("records")
-    if not isinstance(records, Mapping):
-        raise OfficialLiquidityRollforwardError("OFFICIAL_UNIVERSE_RECORDS_MISSING")
-    return wide.frame_universe(records, dnse_resolved or {})
-
-
 def load_retained_series(prior_official_dir: Path | None) -> dict[str, dict[str, Any]]:
     """Parse already-retained probe bytes. Missing prior evidence is an empty reuse set."""
     if prior_official_dir is None:
@@ -272,6 +274,13 @@ def load_retained_series(prior_official_dir: Path | None) -> dict[str, dict[str,
     return series
 
 
+def governed_request_budget(requested: int) -> int:
+    """Callers may narrow the governed ceiling, never widen it."""
+    if isinstance(requested, bool) or not isinstance(requested, int) or requested < 0 or requested > HARD_REQUEST_BUDGET:
+        raise OfficialLiquidityRollforwardError(BUDGET_EXCEEDED_ERROR)
+    return requested
+
+
 def plan_daily_rollforward(
     frame: Mapping[str, Mapping[str, Any]],
     retained: Mapping[str, Mapping[str, Any]],
@@ -280,6 +289,7 @@ def plan_daily_rollforward(
     hard_request_budget: int = HARD_REQUEST_BUDGET,
 ) -> dict[str, Any]:
     """Freeze the HOSE-only request list. Over-budget plans are returned, never executed."""
+    hard_request_budget = governed_request_budget(hard_request_budget)
     requests: list[dict[str, Any]] = []
     reused: list[dict[str, Any]] = []
     blocked: dict[str, list[str]] = defaultdict(list)
@@ -472,7 +482,7 @@ def materialize_same_session_official_liquidity(
     universe: Mapping[str, Any] | None = None,  # noqa: ARG001 -- retained for call-site compatibility
     retained_series: Mapping[str, Mapping[str, Any]] | None = None,  # noqa: ARG001
     execute_request: Any = None,  # noqa: ARG001 -- Daily never dispatches HTTP
-    hard_request_budget: int = HARD_REQUEST_BUDGET,  # noqa: ARG001
+    hard_request_budget: int = HARD_REQUEST_BUDGET,
 ) -> dict[str, Any]:
     """Bind or plan same-session official liquidity. Never raises into Core Daily.
 
@@ -484,6 +494,7 @@ def materialize_same_session_official_liquidity(
     retained_evidence_root = Path(retained_evidence_root or artifact_root)
     dest = official_artifact_path(artifact_root, session)
     try:
+        governed_request_budget(hard_request_budget)
         candidates: list[tuple[str, Path | None, Any]] = []
         for label, path in (
             ("attempt", dest),
@@ -538,19 +549,22 @@ def materialize_same_session_official_liquidity(
         loaded_prior = prior_artifact
         if loaded_prior is None and universe is not None:
             frame = _frame_from_universe(universe)
-            series = retained_series or {}
+            series = dict(retained_series or {})
             plan = plan_daily_rollforward(
                 frame, series, target_session=session, hard_request_budget=hard_request_budget,
             )
+            planned = int(plan.get("planned_requests") or 0)
+            reused_count = len(plan.get("reused") or [])
+            hose_count = hose_planned_request_count(plan)
             if not plan_within_budget(plan):
                 return _write_component(
                     artifact_root, session,
                     build_component_status(
                         session=session, status=UNAVAILABLE_REQUEST_BUDGET,
-                        reason_code=BUDGET_CEILING, planned_requests=int(plan.get("planned_requests") or 0),
-                        planned_hose_requests=hose_planned_request_count(plan),
+                        reason_code=BUDGET_CEILING, planned_requests=planned,
+                        planned_hose_requests=hose_count,
                         planned_hnx_upcom_requests=0, http_requests_made=0,
-                        reused_retained_count=len(plan.get("reused") or []),
+                        reused_retained_count=reused_count,
                         allow_network=allow_network,
                         extra={"retry_allowance": plan.get("retry_allowance")},
                     ),
@@ -561,19 +575,23 @@ def materialize_same_session_official_liquidity(
                     build_component_status(
                         session=session, status=UNAVAILABLE_RIGHTS,
                         reason_code="HNX_UPCOM_BULK_REQUESTS_NOT_AUTHORIZED",
-                        planned_requests=int(plan.get("planned_requests") or 0),
+                        planned_requests=planned,
                         allow_network=allow_network, http_requests_made=0,
                     ),
                 )
+            # Daily never becomes a crawler. execute_request is accepted for call-site
+            # compatibility and is never invoked. Live refresh stays on the operator runner.
+            reason = (
+                "LIVE_REFRESH_USES_ESTABLISHED_RUNNER_WHEN_PLAN_FITS_BUDGET"
+                if allow_network else "OFFICIAL_LIQUIDITY_REFRESH_NOT_AUTHORIZED_THIS_INVOCATION"
+            )
             return _write_component(
                 artifact_root, session,
                 build_component_status(
-                    session=session, status=UNAVAILABLE_SOURCE,
-                    reason_code="AUTHORIZED_PROBE_NOT_EXECUTED_FROM_DAILY_ASSEMBLY",
-                    planned_requests=int(plan.get("planned_requests") or 0),
-                    planned_hose_requests=hose_planned_request_count(plan),
-                    http_requests_made=0,
-                    reused_retained_count=len(plan.get("reused") or []),
+                    session=session, status=UNAVAILABLE_SOURCE, reason_code=reason,
+                    plan_identity=plan.get("plan_identity"),
+                    planned_requests=planned, planned_hose_requests=hose_count,
+                    http_requests_made=0, reused_retained_count=reused_count,
                     allow_network=allow_network,
                 ),
             )

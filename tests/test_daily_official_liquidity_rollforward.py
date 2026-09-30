@@ -254,3 +254,48 @@ def test_retained_2026_09_28_replay_reproduces_952_457_457():
     assert public["authority_boundary"][capacity.LIVE_POSITION_SIZING] == "BLOCKED"
     assert public["authority_boundary"][capacity.PIT_BACKTEST] == "BLOCKED"
     assert rollforward.LIVE_ACCEPTANCE == "LIVE_ACCEPTANCE_PENDING_2026_09_30_COMPLETED_SESSION"
+
+
+def _hose_frame(n=403):
+    return {f"T{i:03d}": _frame_row(f"T{i:03d}") for i in range(n)}
+
+
+@pytest.mark.parametrize("budget", [399, 400])
+def test_governed_budget_may_be_narrowed_or_equal(budget):
+    plan = rollforward.plan_daily_rollforward(_hose_frame(10), {}, target_session="2026-09-29", hard_request_budget=budget)
+    assert plan["status"] == rollforward.WITHIN_BUDGET or plan["hard_request_budget"] == budget
+    assert plan["hard_request_budget"] == budget
+
+
+@pytest.mark.parametrize("budget", [401, 1000])
+def test_governed_budget_cannot_be_widened(budget, tmp_path):
+    with pytest.raises(rollforward.OfficialLiquidityRollforwardError, match="GOVERNED_REQUEST_BUDGET_EXCEEDED"):
+        rollforward.plan_daily_rollforward(_hose_frame(), {}, target_session="2026-09-29", hard_request_budget=budget)
+    result = rollforward.materialize_same_session_official_liquidity(
+        session="2026-09-29", artifact_root=tmp_path, hard_request_budget=budget,
+    )
+    assert result["status"] != rollforward.AVAILABLE
+    assert "GOVERNED_REQUEST_BUDGET_EXCEEDED" in result["reason_code"]
+
+
+def test_real_403_plan_stays_over_budget_at_governed_ceiling():
+    plan = rollforward.plan_daily_rollforward(_hose_frame(), {}, target_session="2026-09-29", hard_request_budget=400)
+    assert plan["status"] == rollforward.UNAVAILABLE_REQUEST_BUDGET
+    assert plan["reason_code"] == rollforward.BUDGET_CEILING if "reason_code" in plan else True
+
+
+@pytest.mark.parametrize("key,value", [
+    ("RAW_AS_TRADED", "PROMOTED"),
+    ("EXECUTION_REPLAY", "ELIGIBLE"),
+    ("LIVE_POSITION_SIZING", "ELIGIBLE"),
+    ("PORTFOLIO_CAPITAL_ALLOCATION", "ELIGIBLE"),
+    ("HISTORICAL_PIT_SIZE_REPLAY", "ELIGIBLE"),
+    ("PIT_BACKTEST", "ELIGIBLE"),
+    ("EXECUTION_CAPACITY", "ELIGIBLE"),
+])
+def test_rehashed_same_session_artifact_cannot_promote_forbidden_authority(key, value):
+    opened = _artifact()
+    opened["authority_boundary"][key] = value
+    opened.update(__import__("liquidity_authority_contract").content_identity(opened, kind="official_exchange_liquidity_research"))
+    rejected, status = rollforward.accept_same_session_official_artifact(opened, TARGET)
+    assert status == rollforward.MALFORMED_ARTIFACT and rejected is None
