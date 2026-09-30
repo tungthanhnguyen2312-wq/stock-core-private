@@ -1621,17 +1621,26 @@ def materialize_official_liquidity_component(
     execution_root: Path,
     allow_network: bool = False,
 ) -> dict[str, Any]:
-    """Bind same-session official liquidity before Integrated Decision, fail closed otherwise."""
+    """Bind same-session official liquidity before Integrated Decision, fail closed otherwise.
+
+    The governed official-universe input supplies request-routing only.  It is an
+    accepted current-as-of-build source and does not turn a prior liquidity
+    artifact into current-session authority or promote ``ACTIVE_UNIVERSE``.
+    """
     import daily_official_liquidity_rollforward as rollforward
     prior = _prior_completed_official_liquidity(
         retained_evidence_root, session, registry_root=execution_root,
     )
+    planning_universe = _load(session_artifact_paths(retained_evidence_root, session)["official_universe"])
+    retained_series = rollforward.load_retained_series(None if prior is None else prior.parent)
     return rollforward.materialize_same_session_official_liquidity(
         session=session,
         artifact_root=artifact_root,
         retained_evidence_root=retained_evidence_root,
         allow_network=allow_network,
         prior_official_dir=None if prior is None else prior.parent,
+        universe=planning_universe,
+        retained_series=retained_series,
     )
 
 

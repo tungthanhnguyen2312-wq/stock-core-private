@@ -1039,6 +1039,10 @@ def build_enrichment_components(
         official_resolved = official_rollforward.load_for_daily_consumer(
             session=session,
             candidate_paths=(paths["official_liquidity"], retained_paths["official_liquidity"]),
+            component_status_paths=(
+                official_rollforward.status_path(paths["official_liquidity"]),
+                official_rollforward.status_path(retained_paths["official_liquidity"]),
+            ),
             allow_network=False,
         )
         official_liquidity = official_resolved.get("artifact")

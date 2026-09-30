@@ -1,17 +1,23 @@
 # Stock Lookup — Architecture & Roadmap
 
-**Roadmap sync: Daily official liquidity rollforward closeout (2026-09-30):**
-- `DAILY_OFFICIAL_LIQUIDITY_ROLLFORWARD_V1` = `COMPLETE /
-  COMPLETE_CORE_DAILY_LIVE_ACCEPTED_LIQUIDITY_FAIL_CLOSED`. The retained ordinary
+**Roadmap sync: Daily official liquidity rollforward corrective (2026-09-30):**
+- `DAILY_OFFICIAL_LIQUIDITY_ROLLFORWARD_V1` = `PARTIAL /
+  CORE_DAILY_LIVE_ACCEPTED_OFFICIAL_LIQUIDITY_LIVE_FAIL_CLOSED_SOURCE_ABSENT /
+  ROLLFORWARD_PLANNING_STATUS_CORRECTED_OFFLINE`. The retained ordinary
   Daily is `PASS` / `COMPLETED` for exact session `2026-09-30` on
   `5292a8518221a383a5a4977eff522fd31d4b9600` (Producer CI #143 SUCCESS). Its
   official component correctly fail-closed `UNAVAILABLE_SOURCE /
   OFFICIAL_ARTIFACT_ABSENT` with 0 planned/requested/retried HTTP calls; no stale
   official artifact was substituted and no HNX/UPCoM acquisition occurred. The prior
-  403-HOSE-plus-40-retry planning result remains a policy ceiling against cap 400, not
-  the observed cause of this Daily's failure-closed component. Descriptive liquidity
-  is 848; official qualified current liquidity/ADTV/ADV are 0; sizing, PIT, execution
-  replay and RAW promotion remain blocked. No successor is queued or started.
+  artifact was outside the canonical session namespace, so the materializer had no
+  planning seed and the consumer later collapsed the outcome to generic source absence.
+  Corrected offline behavior uses the governed official route universe solely to plan:
+  `UNAVAILABLE_REQUEST_BUDGET`, 403 HOSE requests, retry 40, hard cap 400, and 0
+  HNX/UPCoM or HTTP calls; materialized status now survives consumer loading. This is
+  not a rewritten claim about the live Daily. Descriptive liquidity is 848; official
+  qualified current liquidity/ADTV/ADV are 0; sizing, PIT, execution replay and RAW
+  promotion remain blocked. Future live acceptance is required on a completed session;
+  no successor is started.
 
 **Roadmap sync: Daily liquidity authority wiring reconciliation (2026-09-30):**
 - `DAILY_LIQUIDITY_AUTHORITY_WIRING_RECONCILIATION_V1` = `COMPLETE`, rooted at

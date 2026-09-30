@@ -11,24 +11,35 @@ not raised. An over-budget plan is `UNAVAILABLE_REQUEST_BUDGET` and is not split
 hidden batches. A failed official component never fails Core Daily and never
 substitutes another session.
 
-**Result.** `COMPLETE_CORE_DAILY_LIVE_ACCEPTED_LIQUIDITY_FAIL_CLOSED`. The retained
+**Result.** `CORE_DAILY_LIVE_ACCEPTED_OFFICIAL_LIQUIDITY_LIVE_FAIL_CLOSED_SOURCE_ABSENT /
+ROLLFORWARD_PLANNING_STATUS_CORRECTED_OFFLINE`. The retained
 ordinary Daily for exact session `2026-09-30` completed `PASS` on Producer commit
 `5292a8518221a383a5a4977eff522fd31d4b9600` (CI #143 SUCCESS). The component's actual
 outcome is `UNAVAILABLE_SOURCE / OFFICIAL_ARTIFACT_ABSENT`, with 0 planned requests,
 0 HTTP requests, 0 retries, no retained-artifact reuse and no bound artifact identity.
 It is therefore not correct to label this observed run `UNAVAILABLE_REQUEST_BUDGET`.
-The retained planning conclusion remains unchanged: full HOSE requires 403 page-1
-requests plus 40 retry allowance against cap 400, with no hidden batching; HNX/UPCoM
-remain `PUBLIC_ACQUISITION_NOT_AUTHORIZED`. Final same-session Dashboard publication
-is attested `PUBLISHED` / public-byte `PASS`, and AI handoff is `READY_FOR_AI`.
+Its seed gap is now corrected offline: `2026-09-28` was in `completed_sessions`, but
+the qualified artifact was not in the canonical session-artifact namespace or registry
+binding. Prior lookup returned `None`; no governed universe was supplied to planning;
+and consumer reconstruction discarded a materialized non-AVAILABLE component result.
+The corrected path passes the existing governed official exchange-route universe only
+to the request planner, with prior series as optional historical context. Offline replay
+of the exact 2026-09-30 boundary returns `UNAVAILABLE_REQUEST_BUDGET`, 403 HOSE page-1
+requests, retry allowance 40, hard cap 400, zero HNX/UPCoM calls and zero HTTP. The
+consumer preserves its self-verifying materialized status. This leaves the request-budget
+rebaseline unchanged: no hidden batching, no policy widening and no authority promotion.
+Final same-session Dashboard publication is attested `PUBLISHED` / public-byte `PASS`,
+and AI handoff is `READY_FOR_AI`.
 
 **Boundary.** The core result does not promote official liquidity authority: official
 current liquidity/ADTV/ADV are 0 for this Daily; descriptive liquidity is 848;
 `RAW_AS_TRADED` is not promoted; PIT, execution replay and live position sizing remain
 blocked. The blank Dashboard fields in the earlier `LOCAL_COMPLETE` console handoff
 preceded governed publication; the final result and publication attestation are the
-authoritative reporting boundary. No merge, push, deploy, production DB write or
-successor is authorized by this closeout.
+authoritative reporting boundary. The corrected planner requires live acceptance on a
+future completed session; it does not rewrite the historical source-absent Daily. No
+merge, push, deploy, production DB write, request-ceiling decision or successor is
+authorized by this closeout.
 
 ## 2026-09-30 - Daily liquidity authority wiring reconciliation (`DAILY_LIQUIDITY_AUTHORITY_WIRING_RECONCILIATION_V1`)
 

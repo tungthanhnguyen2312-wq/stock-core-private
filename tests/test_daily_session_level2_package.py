@@ -42,6 +42,42 @@ def _prime_materialization_outputs(paths: dict[str, Path]) -> None:
         _write_json(paths[key], {})
 
 
+def test_official_liquidity_plans_from_governed_universe_without_prior_artifact(tmp_path):
+    """A missing historical artifact cannot erase the deterministic request-budget gate."""
+    retained = tmp_path / "retained"
+    session = "2026-09-30"
+    universe_path = level2.session_artifact_paths(retained, session)["official_universe"]
+    _write_json(universe_path, {
+        "artifact_identity": "current_official_market_universe:test-route-seed",
+        "records": {
+            f"T{i:03d}": {
+                "stocklookup_candidate": True,
+                "current_universe_status": "OFFICIAL_CURRENT_EXCHANGE_SECURITY",
+                "exchange_or_market": "HOSE",
+                "qualification": "TEST_GOVERNED_ROUTE",
+            }
+            for i in range(403)
+        },
+    })
+    assert level2._prior_completed_official_liquidity(retained, session, registry_root=retained) is None
+
+    component = level2.materialize_official_liquidity_component(
+        tmp_path / "attempt", session,
+        retained_evidence_root=retained,
+        execution_root=retained,
+        allow_network=False,
+    )
+
+    assert component["status"] == "UNAVAILABLE_REQUEST_BUDGET"
+    assert component["reason_code"] == "DAILY_OFFICIAL_LIQUIDITY_ROLLFORWARD_PARTIAL_REQUEST_BUDGET_CEILING"
+    assert component["planning_seed"] == "GOVERNED_OFFICIAL_UNIVERSE"
+    assert component["planned_requests"] == component["planned_hose_requests"] == 403
+    assert component["planned_hnx_upcom_requests"] == component["http_requests_made"] == 0
+    assert component["retry_allowance"] == 40
+    assert component["hard_request_budget"] == 400
+    assert component["plan_identity"]
+
+
 def test_run_cmd_executes_relative_tool_from_explicit_execution_root(tmp_path):
     execution_root = tmp_path / "producer"
     execution_root.mkdir()

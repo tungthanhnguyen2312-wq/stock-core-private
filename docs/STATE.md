@@ -1,20 +1,35 @@
 # Stock Lookup — Operational State
 
-**Daily official liquidity rollforward closeout (2026-09-30):**
-`DAILY_OFFICIAL_LIQUIDITY_ROLLFORWARD_V1 = COMPLETE /
-COMPLETE_CORE_DAILY_LIVE_ACCEPTED_LIQUIDITY_FAIL_CLOSED`. The retained ordinary
+**Daily official liquidity rollforward corrective (2026-09-30):**
+`DAILY_OFFICIAL_LIQUIDITY_ROLLFORWARD_V1 = PARTIAL /
+CORE_DAILY_LIVE_ACCEPTED_OFFICIAL_LIQUIDITY_LIVE_FAIL_CLOSED_SOURCE_ABSENT /
+ROLLFORWARD_PLANNING_STATUS_CORRECTED_OFFLINE`. The retained ordinary
 Daily is `PASS` / `COMPLETED` for exact session `2026-09-30` on Producer commit
 `5292a8518221a383a5a4977eff522fd31d4b9600` (Producer CI #143 SUCCESS, run
 `36703136572`). Its official-liquidity component correctly reports
 `UNAVAILABLE_SOURCE / OFFICIAL_ARTIFACT_ABSENT`: no same-session official artifact
 was bound, `planned_requests=0`, `http_requests_made=0`, `retries_used=0`, and no
-HNX/UPCoM acquisition occurred. This is a source-absence fail-closed outcome, not an
-observed `UNAVAILABLE_REQUEST_BUDGET` outcome. The retained planning conclusion is
-unchanged: a new HOSE refresh needs 403 page-1 requests plus 40 retry allowance and
-therefore cannot widen the existing 400 cap or split into hidden batches. Descriptive
-current-session liquidity remains 848; official qualified current liquidity, ADTV and
-ADV counts are all 0 for this Daily. `RAW_AS_TRADED=NOT_PROMOTED`, `PIT_BACKTEST`,
-`EXECUTION_REPLAY`, and `LIVE_POSITION_SIZING` remain `BLOCKED`.
+HNX/UPCoM acquisition occurred. That historical live result remains immutable: it is
+a source-absence fail-closed outcome, not an observed `UNAVAILABLE_REQUEST_BUDGET`.
+
+The planning gap was corrective: the completed-session registry includes `2026-09-28`,
+but its qualified official artifact was retained only in the historical operational
+worktree, not at the canonical `session_artifact_paths(...)["official_liquidity"]`
+location or in a registry binding. `_prior_completed_official_liquidity()` therefore
+returned `None`; the materializer received neither a prior artifact nor a universe
+seed, and the consumer then recomputed generic `OFFICIAL_ARTIFACT_ABSENT` rather than
+preserving a materialized component status. The corrected offline path uses the
+already-governed `current_official_market_universe` only to form the source-request
+plan (never as `ACTIVE_UNIVERSE` authority). With no target-session retained series it
+deterministically returns `UNAVAILABLE_REQUEST_BUDGET`, 403 HOSE primary requests,
+retry allowance 40, cap 400, HNX/UPCoM 0, and HTTP 0; the consumer preserves that
+component status. The 403-vs-400 rebaseline remains
+`COMPLETE_NO_CODE_CHANGE_POLICY_CEILING_CONFIRMED`; no ceiling, scope, or authority
+changed. Descriptive current-session liquidity remains 848; official qualified current
+liquidity, ADTV and ADV counts are all 0 for the historical Daily.
+`RAW_AS_TRADED=NOT_PROMOTED`, `PIT_BACKTEST`, `EXECUTION_REPLAY`, and
+`LIVE_POSITION_SIZING` remain `BLOCKED`. A future completed session needs live
+acceptance of this corrected planning boundary; no successor is started.
 
 The final Dashboard record is `READY / PUBLISHED` for the same session, release
 `2352767134aae20e6b13646cf6b5fae15a9c7b8f`, public-byte identity `PASS`, Dashboard

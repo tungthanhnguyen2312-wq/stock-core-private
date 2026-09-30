@@ -121,8 +121,45 @@ def test_request_ceiling_is_enforced_without_hidden_batches(tmp_path):
         execute_request=lambda req: calls.append(req["symbol"]),
     )
     assert result["status"] == rollforward.UNAVAILABLE_REQUEST_BUDGET
+    assert result["planned_requests"] == 403
+    assert result["planned_hose_requests"] == 403
+    assert result["planned_hnx_upcom_requests"] == 0
+    assert result["retry_allowance"] == 40
+    assert result["hard_request_budget"] == 400
     assert result["http_requests_made"] == 0
     assert calls == []
+
+
+def test_consumer_preserves_materialized_budget_status(tmp_path):
+    universe = {
+        "records": {
+            f"T{i:03d}": {
+                "stocklookup_candidate": True,
+                "current_universe_status": "OFFICIAL_CURRENT_EXCHANGE_SECURITY",
+                "exchange_or_market": "HOSE",
+                "qualification": "TEST_GOVERNED_ROUTE",
+            }
+            for i in range(403)
+        }
+    }
+    materialized = rollforward.materialize_same_session_official_liquidity(
+        session="2026-09-30", artifact_root=tmp_path, universe=universe,
+        retained_series={}, allow_network=False,
+    )
+    consumed = rollforward.load_for_daily_consumer(
+        session="2026-09-30",
+        candidate_paths=(rollforward.official_artifact_path(tmp_path, "2026-09-30"),),
+        component_status_paths=(rollforward.status_path(tmp_path, "2026-09-30"),),
+        allow_network=False,
+    )
+    component = consumed["component"]
+    assert materialized["status"] == rollforward.UNAVAILABLE_REQUEST_BUDGET
+    assert component["status"] == rollforward.UNAVAILABLE_REQUEST_BUDGET
+    assert component["reason_code"] == rollforward.BUDGET_CEILING
+    assert component["planned_requests"] == component["planned_hose_requests"] == 403
+    assert component["planned_hnx_upcom_requests"] == component["http_requests_made"] == 0
+    assert component["retry_allowance"] == 40
+    assert component["plan_identity"]
 
 
 def test_per_record_fitness_and_descriptive_never_override_official():
