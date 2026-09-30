@@ -32,6 +32,7 @@ class _Sampler:
     def sample(self):
         return {
             "rss_bytes": 134_217_728,
+            "peak_rss_bytes": 134_217_728,
             "child_rss_bytes": None,
             "recursive_child_tree_rss_bytes": None,
             "disk_free_bytes": 74_000_000_000,
@@ -49,15 +50,19 @@ def build_report() -> dict:
             wall_clock=lambda: datetime(2026, 9, 30, 17, 2, 14, tzinfo=timezone.utc),
             human_sink=lines.append, throttle_seconds=999,
         )
+        telemetry.emit(
+            phase_index=2, component="DNSE exact-session", subtask="futures_completed", progress_kind="REQUESTS",
+            completed=0, total=16, qualified_count=0, coverage_denominator=20, status="BEGIN",
+        )
         clock.value = 8.0
         known = telemetry.emit(
-            phase_index=2, component="DNSE exact-session", progress_kind="REQUESTS",
+            phase_index=2, component="DNSE exact-session", subtask="futures_completed", progress_kind="REQUESTS",
             completed=8, total=16, qualified_count=7, coverage_denominator=20,
             status="IN_PROGRESS", downloaded_bytes=None,
             downloaded_bytes_reason="PAYLOAD_BYTES_NOT_OBSERVABLE",
         )
         unknown = telemetry.emit(
-            phase_index=6, component="GitHub publication", progress_kind="PUBLICATION",
+            phase_index=6, component="AI handoff build", progress_kind="PUBLICATION",
             status="BEGIN",
         )
         blocking_parent = Path(temporary) / "blocked"
@@ -82,7 +87,7 @@ def build_report() -> dict:
                 "percent": unknown["percent"], "eta_state": unknown["eta_state"],
             },
             "resource_fields": {
-                "peak_rss_bytes": known["peak_rss_bytes"], "disk_free_bytes": known["disk_free_bytes"],
+                "writer_peak_rss_bytes": known["peak_rss_bytes"], "disk_free_bytes": known["disk_free_bytes"],
                 "run_output_bytes": known["run_output_bytes"], "child_rss_bytes": known["child_rss_bytes"],
                 "recursive_child_tree_rss_bytes": known["recursive_child_tree_rss_bytes"],
             },

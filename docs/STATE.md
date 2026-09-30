@@ -5648,22 +5648,39 @@ Owner override `OWNER_AUTHORIZATION_2026_09_09_DAILY_BRIEF_PRESEAL_CORRECTIVE_RC
 timestamp for `.log`, `.result.json`, and the external
 `run-logs/stock_lookup_daily_YYYYMMDD_HHMMSS.progress.jsonl` sidecar. The Owner result receives
 an additive `telemetry` summary only; no research artifact, authority input, source selection,
-request budget, acquisition order, worker count, or content identity consumes it.
+request budget, acquisition order, worker count, or content identity consumes it. One explicit
+`run_id`, wall-clock start stamp, and same-host monotonic origin are passed from Owner parent to
+Daily child. `elapsed_seconds` is therefore Owner-run elapsed across both processes, while
+`work_elapsed_seconds`, rate, and ETA reset at a deterministic task `BEGIN`.
 
 Its three meanings remain separate: phase progress is the existing Owner phase `n/9`; request
 progress is completed exact-session futures over the attempted-request denominator; observed
 coverage is exact-session observations over the canonical candidate denominator. A completed
 request is never restated as qualified coverage. Current-liquidity reports deterministic batch
 `0..N` then consolidate work, not a fabricated liquidity-coverage percentage. Unknown denominators
-and insufficient elapsed samples produce `ETA UNKNOWN`.
+and insufficient elapsed samples produce `ETA UNKNOWN`. The displayed nine phases are monotonic in
+the existing execution order: preflight, Canonical Daily, verification, Producer state, Dashboard
+publication, AI handoff build, remote verification, Action Center, then owner view.
 
-Resource telemetry uses dependency-free process RSS/peak RSS, direct active-child RSS where its
-PID is known, bounded current-run output-directory size, and `shutil.disk_usage(C:)`; recursive
-child-tree RSS is explicitly unknown. Network payload bytes remain
-`null/PAYLOAD_BYTES_NOT_OBSERVABLE`; run-output bytes are a distinct bounded filesystem metric.
-All telemetry/resource/write failures degrade as `TELEMETRY_DEGRADED` and never alter Daily outcome.
-Offline fixtures prove callback-on/off snapshot bytes and identity are identical and telemetry
-causes zero additional provider/network calls.
+Resource telemetry is cached: expensive sampling occurs only on the first event, task `BEGIN`,
+`END`/`FAILED`, bounded-task completion, final summary, or after five seconds. All other events
+reuse the last sample, with no timer, sleep, daemon, or reduced event count. Windows RSS setup is
+lazy module-cached and each event truthfully reports its own `writer_role`, `writer_pid`, current
+RSS, and OS-reported/observed single-process peak. The final aggregate is named
+`peak_observed_single_process_rss_bytes`; it is not a combined process-tree figure. The child owns
+the JSONL while canonical Daily runs; parent writes `CHILD_STARTING` before `Popen`, waits without
+sidecar appends, then resumes after exit. Recursive/process-tree RSS is explicitly unknown.
+
+`run_output_bytes` is the recursively measured size of the one registered current exact-session
+artifact directory, sampled only under that cache rule. It excludes static retained evidence,
+the repository root, global `operations-review`, and total StockLookup disk usage. Registered
+output roots are defensively de-duplicated. Network payload bytes remain
+`null/PAYLOAD_BYTES_NOT_OBSERVABLE`. Reused snapshots render as `reused N` plus coverage, never
+as fresh request work. A malformed JSONL line is skipped while later valid lines remain summarized;
+an unsafe sidecar path inside the Producer checkout is disabled with
+`TELEMETRY_DEGRADED/UNSAFE_PROGRESS_PATH`, never created. All telemetry/resource/write failures
+remain non-fatal. Offline fixtures prove callback-on/off snapshot bytes and identity are identical
+and telemetry causes zero additional provider/network calls.
 
 Authority remains unchanged: `RAW_AS_TRADED = NOT_PROMOTED`, `PIT_BACKTEST = BLOCKED`,
 `EXECUTION_REPLAY = BLOCKED`, `LIVE_POSITION_SIZING = BLOCKED`, and

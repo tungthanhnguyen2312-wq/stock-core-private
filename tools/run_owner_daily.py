@@ -44,7 +44,7 @@ from governed_publication_completion import (  # noqa: E402
     verify_existing_publication_completion,
 )
 import owner_daily_journal as journal  # noqa: E402
-from owner_daily_progress import OwnerDailyProgress, PROGRESS_PATH_ENV  # noqa: E402
+from owner_daily_progress import OwnerDailyProgress, PROGRESS_PATH_ENV, safe_progress_path  # noqa: E402
 
 DEFAULT_WEB_DIR = CANONICAL_WEB_ROOT
 
@@ -442,10 +442,15 @@ def _bind_written_publication_attestation(
 
 
 def _run_daily(root: Path, runtime_root: Path, *, telemetry: OwnerDailyProgress | None = None) -> None:
-    """Run the canonical child unchanged, exposing only its directly known PID to telemetry."""
+    """Run the canonical child with explicit sequential sidecar-writer ownership."""
     env = os.environ.copy()
     if telemetry is not None and telemetry.progress_path is not None:
         env[PROGRESS_PATH_ENV] = str(telemetry.progress_path)
+        env.update(telemetry.child_environment())
+        # This is the final parent append before Popen. While the child runs it is the
+        # only intentional sidecar writer; the parent only waits and retains its PID locally.
+        telemetry.emit(phase_index=2, progress_kind="PIPELINE", component="Canonical Daily",
+                       subtask="child_process", status="CHILD_STARTING")
     process = subprocess.Popen(
         [sys.executable, "-u", "daily_analysis_pipeline.py", "--runtime-root", str(runtime_root),
          "--canonical-post-close"],
@@ -453,8 +458,6 @@ def _run_daily(root: Path, runtime_root: Path, *, telemetry: OwnerDailyProgress 
     )
     if telemetry is not None:
         telemetry.set_child_pid(process.pid)
-        telemetry.emit(phase_index=2, progress_kind="PIPELINE", component="Canonical Daily",
-                       subtask="child_process", status="CHILD_STARTED")
     try:
         returncode = process.wait()
     finally:
@@ -1295,7 +1298,7 @@ def run_workflow(*, root: Path = ROOT, runtime_root: Path = DEFAULT_RUNTIME,
         # public-byte identity PASS. Local build_info session equality is never enough, and
         # journal DASHBOARD_PUBLISHED is never consulted.
         if telemetry is not None:
-            telemetry.emit(phase_index=6, progress_kind="PUBLICATION", status="BEGIN")
+            telemetry.emit(phase_index=5, progress_kind="PUBLICATION", status="BEGIN")
         if not publish_dashboard:
             dashboard = {"status": "SKIPPED", "expected_session": session, "observed_session": None,
                         "reason": "DASHBOARD_PUBLICATION_DISABLED"}
@@ -1309,7 +1312,7 @@ def run_workflow(*, root: Path = ROOT, runtime_root: Path = DEFAULT_RUNTIME,
                 complete_publication=dashboard_complete_publication,
             )
         if telemetry is not None:
-            telemetry.emit(phase_index=6, progress_kind="PUBLICATION", status="END",
+            telemetry.emit(phase_index=5, progress_kind="PUBLICATION", status="END",
                            reason="DASHBOARD_PUBLICATION_DISABLED" if not publish_dashboard else None)
         if dashboard["status"] in {"READY", "SKIPPED"}:
             _journal_advance_strict(root, run_id, journal.DASHBOARD_PUBLISHED, detail={"status": dashboard["status"]})
@@ -1319,14 +1322,14 @@ def run_workflow(*, root: Path = ROOT, runtime_root: Path = DEFAULT_RUNTIME,
         # (NO_OP_ALREADY_PUBLISHED), but this additionally skips its `git fetch`/remote-verify
         # network round trip entirely once independently proven.
         if telemetry is not None:
-            telemetry.emit(phase_index=5, progress_kind="PUBLICATION", status="BEGIN")
+            telemetry.emit(phase_index=6, progress_kind="PUBLICATION", status="BEGIN")
         verified_handoff = _verify_ai_handoff_published(handoff_repo, session)
         handoff = ({"publication": {"status": "ALREADY_PUBLISHED_VERIFIED"}, "remote": verified_handoff}
                   if verified_handoff is not None else publish_ai_handoff(root, handoff_repo, completion))
         _journal_advance_strict(root, run_id, journal.AI_HANDOFF_PUBLISHED,
                          detail={"remote_sha": (handoff.get("remote") or {}).get("remote_sha")})
         if telemetry is not None:
-            telemetry.emit(phase_index=5, progress_kind="PUBLICATION", status="END")
+            telemetry.emit(phase_index=6, progress_kind="PUBLICATION", status="END")
             telemetry.emit(phase_index=7, progress_kind="PUBLICATION", status="BEGIN")
             telemetry.emit(phase_index=7, progress_kind="PUBLICATION", status="END",
                            reason="REMOTE_VERIFICATION_RETAINED_IN_GOVERNED_HANDOFF_RESULT")
@@ -1464,7 +1467,10 @@ def main(argv: list[str] | None = None) -> int:
         print(f"OWNER_DAILY_RESULT_PATH_REJECTED={exc.reason}", file=sys.stderr)
         print(f"HINT: {exc.hint}", file=sys.stderr)
         return 1
-    telemetry = OwnerDailyProgress(args.progress_path)
+    safe_sidecar = safe_progress_path(args.progress_path, root=ROOT)
+    telemetry = OwnerDailyProgress(safe_sidecar)
+    if args.progress_path is not None and safe_sidecar is None:
+        telemetry.report_degraded("UNSAFE_PROGRESS_PATH")
     result: dict[str, Any]
     code = 0
     reraise: BaseException | None = None

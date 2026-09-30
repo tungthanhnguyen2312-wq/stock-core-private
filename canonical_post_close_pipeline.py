@@ -573,7 +573,10 @@ def acquire_and_materialize(
             progress_callback({
                 "component": "Canonical Daily", "subtask": "exact_session_acquisition",
                 "progress_kind": "PIPELINE", "status": "BEGIN",
-                "run_output_paths": [str(path.parent) for path in paths.values() if isinstance(path, Path)],
+                # The exact-session directory is a single current-run/session root. Do not
+                # register every Level-2 path: that list duplicates directories and includes
+                # retained/static evidence unrelated to this run.
+                "run_output_paths": [str(paths["exact_session_snapshot"].parent)],
             })
         except Exception:
             pass

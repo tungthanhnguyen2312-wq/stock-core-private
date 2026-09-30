@@ -8555,15 +8555,23 @@ identity construction.
    emit only after completed futures: `completed/attempted` describes request work, whereas
    `EXACT_SESSION_RETAINED/candidate_count` describes observed coverage. Level-2 liquidity emits
    batch `0..N` plus consolidation work without claiming those batches are qualified coverage.
-2. Telemetry is defensive and dependency-free. Process/peak RSS, direct-child RSS where known,
-   bounded output-directory size, elapsed/rate, and C: free disk are best effort. Recursive child
-   tree RSS and exact network payload bytes are explicitly unknown; the latter is always
-   `PAYLOAD_BYTES_NOT_OBSERVABLE`, never inferred from tickers. A bad writer/sampler/terminal emits
-   `TELEMETRY_DEGRADED` and cannot fail Daily.
-3. ETA exists only with a positive known total, completed work, and meaningful elapsed sample;
-   otherwise it is `ETA UNKNOWN`. Human output is compact, append-only, safe for redirected logs,
-   and throttled at the owner sink. No daemon, terminal redraw framework, new dependency, provider
-   call, retry, concurrency change, acquisition-order change, or request-budget change was added.
+2. Telemetry is defensive and dependency-free. A parent-created `run_id` and monotonic run origin
+   cross the explicit child environment, so Owner elapsed does not restart at process entry. Each
+   event identifies its writing process; `peak_rss_bytes` is that writer's observed/OS-reported
+   single-process peak, and the final `peak_observed_single_process_rss_bytes` is never presented
+   as a process-tree total. Recursive tree RSS and exact network payload bytes are explicitly
+   unknown; the latter is always `PAYLOAD_BYTES_NOT_OBSERVABLE`, never inferred from tickers.
+3. Expensive resources are cached for five seconds and forced only at first/BEGIN/END/FAILED/final
+   bounded-task events and final summary. `run_output_bytes` covers one deduplicated current
+   exact-session artifact root, never retained/static evidence, the repository, or global
+   `operations-review`. Parent writes `CHILD_STARTING` before `Popen` then waits without sidecar
+   appends, making the child the sole intended JSONL writer during Canonical Daily. Malformed JSONL
+   lines and unsafe in-checkout sidecar paths degrade telemetry without failing Daily.
+4. ETA exists only with a positive known total, completed work, and meaningful *work* elapsed
+   sample; otherwise it is `ETA UNKNOWN`. Reused retained data renders as reuse rather than fresh
+   request work. Human output is compact, append-only, safe for redirected logs, and throttled at
+   the owner sink. No daemon, terminal redraw framework, new dependency, provider call, retry,
+   concurrency change, acquisition-order change, or request-budget change was added.
 
 **OFFLINE VALIDATION**: focused tests cover schema, denominator/percent clamping, known and
 unknown ETA, writer/resource failure containment, JSONL immediate read-after-write, callback

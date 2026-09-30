@@ -141,6 +141,27 @@ def materialize_snapshot(*, candidates: list[str], requested_at: datetime, api_k
     attempted = candidates if request_limit is None else candidates[:max(0, request_limit)]
     records: dict[str, Any] = {}
     completed = observed = retries = failed = malformed = missing = rejected = transport_failed = 0
+    if progress_callback is not None:
+        try:
+            progress_callback({
+                "component": "DNSE exact-session",
+                "subtask": "futures_completed",
+                "progress_kind": "REQUESTS",
+                "completed": 0,
+                "total": len(attempted),
+                "success_count": 0,
+                "retry_count": 0,
+                "failure_count": 0,
+                "qualified_count": 0,
+                "coverage_denominator": len(candidates),
+                "status": "BEGIN",
+                "downloaded_bytes": None,
+                "downloaded_bytes_reason": "PAYLOAD_BYTES_NOT_OBSERVABLE",
+                "disposition_counts": {"NOT_ATTEMPTED": len(candidates)},
+            })
+        except Exception:
+            # The callback is operational only; a broken sink cannot affect acquisition.
+            pass
     with ThreadPoolExecutor(max_workers=workers) as pool:
         futures = {pool.submit(one, ticker): ticker for ticker in attempted}
         for future in as_completed(futures):

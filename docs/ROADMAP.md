@@ -1474,6 +1474,8 @@ it. This milestone performs neither; see `docs/STATE.md` for the full local repl
 This is a bounded operational UX milestone, not an analytical pillar or source/authority change.
 It adds foreground-only `owner_daily_progress/v1` events for the existing nine Owner phases,
 exact-session futures, and deterministic Level-2 liquidity batches. It records request work and
-observed coverage under distinct denominators, while unknown work uses `ETA UNKNOWN`. The sidecar
+observed coverage under distinct denominators, while unknown work uses `ETA UNKNOWN`. The final
+corrective uses a shared parent/child run identity and monotonic origin, cached resource sampling,
+one bounded current exact-session output root, and sequential JSONL writer ownership. The sidecar
 is external to Producer artifacts and its result metadata is operational only. The next
 recommendation remains **NOT STARTED**; a future owner decision is required for any further work.
