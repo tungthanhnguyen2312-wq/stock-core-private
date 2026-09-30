@@ -1,22 +1,29 @@
 # Stock Lookup — Operational State
 
-**Daily official liquidity rollforward (2026-09-30):**
-`DAILY_OFFICIAL_LIQUIDITY_ROLLFORWARD_V1 = PARTIAL_REQUEST_BUDGET_CEILING /
-LIVE_ACCEPTANCE_PENDING_2026_09_30_COMPLETED_SESSION`, rooted at canonical
-`84ee248251705fdab1c9152e65ec1fc7f75e8bb6` (PR #24 merged; Producer CI #138 SUCCESS,
-run 36664425134). Root cause of 2026-09-29 official absence:
-`OPERATOR_ONLY_OFFICIAL_ACQUISITION_NEVER_SCHEDULED_IN_DAILY`. Daily now binds a
-same-session `official_exchange_liquidity_research/v1` artifact before Integrated
-Decision, fail-closed on other-session, malformed, missing, rights, or request-budget
-states. Full HOSE rollforward from the 2026-09-28 retained series needs 403 page-1
-requests plus 40 retry allowance against the existing 400 ceiling, so a new session
-does not auto-broaden. HNX/UPCoM bulk stays 0. Retained 2026-09-28 replay: 0 HTTP,
-952 current-session eligible, 457 ADTV eligible, 457 ADV partial, 0 AVAILABLE / 1,683
-BLOCKED execution-capacity with 457 `POLICY_UNBOUND`. Live official qualification,
-Owner Daily, and 2026-09-29-as-today acceptance were not run (10:25 ICT, session
-2026-09-30 not completed). Public-safe counts:
-[`daily_official_liquidity_rollforward_publication_manifest.json`](daily_official_liquidity_rollforward_publication_manifest.json).
-No successor is queued or started.
+**Daily official liquidity rollforward closeout (2026-09-30):**
+`DAILY_OFFICIAL_LIQUIDITY_ROLLFORWARD_V1 = COMPLETE /
+COMPLETE_CORE_DAILY_LIVE_ACCEPTED_LIQUIDITY_FAIL_CLOSED`. The retained ordinary
+Daily is `PASS` / `COMPLETED` for exact session `2026-09-30` on Producer commit
+`5292a8518221a383a5a4977eff522fd31d4b9600` (Producer CI #143 SUCCESS, run
+`36703136572`). Its official-liquidity component correctly reports
+`UNAVAILABLE_SOURCE / OFFICIAL_ARTIFACT_ABSENT`: no same-session official artifact
+was bound, `planned_requests=0`, `http_requests_made=0`, `retries_used=0`, and no
+HNX/UPCoM acquisition occurred. This is a source-absence fail-closed outcome, not an
+observed `UNAVAILABLE_REQUEST_BUDGET` outcome. The retained planning conclusion is
+unchanged: a new HOSE refresh needs 403 page-1 requests plus 40 retry allowance and
+therefore cannot widen the existing 400 cap or split into hidden batches. Descriptive
+current-session liquidity remains 848; official qualified current liquidity, ADTV and
+ADV counts are all 0 for this Daily. `RAW_AS_TRADED=NOT_PROMOTED`, `PIT_BACKTEST`,
+`EXECUTION_REPLAY`, and `LIVE_POSITION_SIZING` remain `BLOCKED`.
+
+The final Dashboard record is `READY / PUBLISHED` for the same session, release
+`2352767134aae20e6b13646cf6b5fae15a9c7b8f`, public-byte identity `PASS`, Dashboard
+CI run `36703277851` SUCCESS and Deploy Pages run `36703321455` SUCCESS. Its local
+console handoff fields were blank because that `LOCAL_COMPLETE` handoff precedes
+governed publication; the final result/attestation is authoritative. AI handoff is
+`PUBLISHED_READY_FOR_AI` at `5b0af419414a5c73e871286fa87c6fa8f26bbb45`; the private
+Action Center is exact-session and research-only (no execution order). No successor
+is queued or started.
 
 **Daily liquidity authority wiring reconciliation (2026-09-30):**
 `DAILY_LIQUIDITY_AUTHORITY_WIRING_RECONCILIATION_V1 = COMPLETE /

@@ -1,13 +1,17 @@
 # Stock Lookup — Architecture & Roadmap
 
-**Roadmap sync: Daily official liquidity rollforward (2026-09-30):**
-- `DAILY_OFFICIAL_LIQUIDITY_ROLLFORWARD_V1` = `PARTIAL_REQUEST_BUDGET_CEILING /
-  LIVE_ACCEPTANCE_PENDING_2026_09_30_COMPLETED_SESSION`, rooted at
-  `84ee248251705fdab1c9152e65ec1fc7f75e8bb6` (PR #24 merged; Producer CI #138 SUCCESS).
-  Same-session official liquidity is now a fail-closed Daily component bound before
-  Integrated Decision. A new-session full HOSE refresh needs 403 requests against the
-  existing 400 cap and is not auto-broadened. Live qualification is pending the
-  completed 2026-09-30 session. No successor is queued or started.
+**Roadmap sync: Daily official liquidity rollforward closeout (2026-09-30):**
+- `DAILY_OFFICIAL_LIQUIDITY_ROLLFORWARD_V1` = `COMPLETE /
+  COMPLETE_CORE_DAILY_LIVE_ACCEPTED_LIQUIDITY_FAIL_CLOSED`. The retained ordinary
+  Daily is `PASS` / `COMPLETED` for exact session `2026-09-30` on
+  `5292a8518221a383a5a4977eff522fd31d4b9600` (Producer CI #143 SUCCESS). Its
+  official component correctly fail-closed `UNAVAILABLE_SOURCE /
+  OFFICIAL_ARTIFACT_ABSENT` with 0 planned/requested/retried HTTP calls; no stale
+  official artifact was substituted and no HNX/UPCoM acquisition occurred. The prior
+  403-HOSE-plus-40-retry planning result remains a policy ceiling against cap 400, not
+  the observed cause of this Daily's failure-closed component. Descriptive liquidity
+  is 848; official qualified current liquidity/ADTV/ADV are 0; sizing, PIT, execution
+  replay and RAW promotion remain blocked. No successor is queued or started.
 
 **Roadmap sync: Daily liquidity authority wiring reconciliation (2026-09-30):**
 - `DAILY_LIQUIDITY_AUTHORITY_WIRING_RECONCILIATION_V1` = `COMPLETE`, rooted at

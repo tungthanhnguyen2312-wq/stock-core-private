@@ -11,15 +11,24 @@ not raised. An over-budget plan is `UNAVAILABLE_REQUEST_BUDGET` and is not split
 hidden batches. A failed official component never fails Core Daily and never
 substitutes another session.
 
-**Result.** `PARTIAL_REQUEST_BUDGET_CEILING / LIVE_ACCEPTANCE_PENDING_2026_09_30_COMPLETED_SESSION`.
-Root cause of 2026-09-29 absence: official acquisition was operator-initiated and never
-scheduled in ordinary Daily. Retained 2026-09-28 replay binds the existing artifact with
-0 HTTP and reconstructs 952 / 457 / 457. A 2026-09-29 incremental plan needs 403 HOSE
-requests + 40 retry allowance against cap 400. Live official qualification was not run
-because the 2026-09-30 session is not completed.
+**Result.** `COMPLETE_CORE_DAILY_LIVE_ACCEPTED_LIQUIDITY_FAIL_CLOSED`. The retained
+ordinary Daily for exact session `2026-09-30` completed `PASS` on Producer commit
+`5292a8518221a383a5a4977eff522fd31d4b9600` (CI #143 SUCCESS). The component's actual
+outcome is `UNAVAILABLE_SOURCE / OFFICIAL_ARTIFACT_ABSENT`, with 0 planned requests,
+0 HTTP requests, 0 retries, no retained-artifact reuse and no bound artifact identity.
+It is therefore not correct to label this observed run `UNAVAILABLE_REQUEST_BUDGET`.
+The retained planning conclusion remains unchanged: full HOSE requires 403 page-1
+requests plus 40 retry allowance against cap 400, with no hidden batching; HNX/UPCoM
+remain `PUBLIC_ACQUISITION_NOT_AUTHORIZED`. Final same-session Dashboard publication
+is attested `PUBLISHED` / public-byte `PASS`, and AI handoff is `READY_FOR_AI`.
 
-**Boundary.** No live Daily, no 2026-09-29-as-today acceptance, no merge, deploy,
-Dashboard publish, production DB write or successor.
+**Boundary.** The core result does not promote official liquidity authority: official
+current liquidity/ADTV/ADV are 0 for this Daily; descriptive liquidity is 848;
+`RAW_AS_TRADED` is not promoted; PIT, execution replay and live position sizing remain
+blocked. The blank Dashboard fields in the earlier `LOCAL_COMPLETE` console handoff
+preceded governed publication; the final result and publication attestation are the
+authoritative reporting boundary. No merge, push, deploy, production DB write or
+successor is authorized by this closeout.
 
 ## 2026-09-30 - Daily liquidity authority wiring reconciliation (`DAILY_LIQUIDITY_AUTHORITY_WIRING_RECONCILIATION_V1`)
 
