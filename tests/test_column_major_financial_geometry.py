@@ -4,6 +4,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
 from official_financial_pdf_page_evidence import build_artifact
 import official_financial_structural_table as structural
 
@@ -75,7 +77,7 @@ def test_column_bands_require_explicit_two_period_header_and_keep_code_note_dist
     assert structural.discover_column_bands(structural.reconstruct_physical_lines(no_header)["lines"], "2024") is None
     reversed_header = [dict(token) for token in _geometry_fixture()]
     reversed_header[0]["text"] = "Code Note 2023 2024"
-    reversed_match = structural._geometry_column_major_match({"page_number": 1, "document_sha256": "x", "positioned_tokens": reversed_header}, "net_income", "2024")
+    reversed_match = structural._geometry_column_major_match({"page_number": 1, "document_sha256": "x", "positioned_tokens": reversed_header}, "attributable_net_income", "2024")
     assert reversed_match is not None
     assert (reversed_match["current_raw"], reversed_match["comparative_raw"]) == ("9,000", "12,000")
 
@@ -160,14 +162,14 @@ def test_malformed_single_or_competing_period_headers_fail_closed_without_year_f
 
 def test_geometry_rejects_a_line_code_lookalike_in_note_band_and_preserves_raw_fragments():
     page = {"page_number": 1, "document_sha256": "x", "positioned_tokens": _geometry_fixture()}
-    match = structural._geometry_column_major_match(page, "net_income", "2024")
+    match = structural._geometry_column_major_match(page, "attributable_net_income", "2024")
     assert match is not None
     assert match["row_object"]["line_code"] == "61"
     assert match["row_object"]["note_reference"] == "40"
     assert match["row_object"]["raw_label_fragments"] == ["Shareholders of the parent company"]
     altered = [dict(token) for token in _geometry_fixture()]
     next(token for token in altered if token["text"] == "61")["x0"] = 75  # note band, not code band
-    assert structural._geometry_column_major_match({"page_number": 1, "document_sha256": "x", "positioned_tokens": altered}, "net_income", "2024") is None
+    assert structural._geometry_column_major_match({"page_number": 1, "document_sha256": "x", "positioned_tokens": altered}, "attributable_net_income", "2024") is None
 
 
 def _hpg_artifacts() -> dict[str, dict]:
@@ -185,9 +187,11 @@ def _hpg_artifacts() -> dict[str, dict]:
 
 
 def test_hpg_2022_and_2023_independently_qualify_geometry_cited_target_facts():
+    if not MANIFEST.is_file():
+        pytest.skip("retained HPG official evidence is not present in this worktree")
     expected = {
-        "2022": {"revenue": 141_409_274_460_632, "net_income": 8_483_510_554_031, "operating_cash_flow": 12_277_636_676_507},
-        "2023": {"revenue": 118_953_027_893_654, "net_income": 6_835_064_334_356, "operating_cash_flow": 8_643_030_777_026},
+        "2022": {"revenue": 141_409_274_460_632, "net_income": 8_444_429_054_516, "operating_cash_flow": 12_277_636_676_507},
+        "2023": {"revenue": 118_953_027_893_654, "net_income": 6_800_388_315_081, "operating_cash_flow": 8_643_030_777_026},
     }
     for period, values in expected.items():
         candidates = {row["canonical_metric"]: row for row in _hpg_artifacts()[period]["fact_candidates"]}
@@ -201,6 +205,8 @@ def test_hpg_2022_and_2023_independently_qualify_geometry_cited_target_facts():
 
 
 def test_hpg_existing_official_collisions_remain_explicit_and_never_ingress():
+    if not MANIFEST.is_file():
+        pytest.skip("retained HPG official evidence is not present in this worktree")
     import p3f13_official_financial_evidence_scaleout as p3f13
 
     candidates = [candidate for artifact in _hpg_artifacts().values() for candidate in artifact["fact_candidates"]]

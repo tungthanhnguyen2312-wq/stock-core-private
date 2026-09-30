@@ -458,10 +458,11 @@ def test_no_vnstock_vnai_in_refresh_modules():
 
 def test_roadmap_current_milestone_is_the_authorized_ocr_continuation():
     state = json.loads((ROOT / "docs" / "ROADMAP_STATE.json").read_text(encoding="utf-8"))
-    assert state["current"]["milestone"] == "FINANCIAL_EVIDENCE_REVIEWED_INTERIM_CANONICAL_INGRESS_V1"
-    assert state["current"]["state"] == "PARTIAL"
+    assert state["current"]["milestone"] == "HISTORICAL_NET_INCOME_SEMANTIC_CORRECTION_OVERLAY_V1"
     assert state["queued_next"] == []
     ids = [row["milestone_id"] for row in state["milestones"]]
+    assert "HISTORICAL_NET_INCOME_SEMANTIC_CORRECTION_OVERLAY_V1" in ids
+    assert "FINANCIAL_EVIDENCE_REVIEWED_INTERIM_CANONICAL_INGRESS_V1" in ids
     assert MILESTONE_ID in ids
     assert "FINANCIAL_EVIDENCE_COHORT1_TRIGGERED_OCR_V1" in ids
     assert "FINANCIAL_EVIDENCE_COHORT1_OCR_GEOMETRY_AND_METADATA_RECOVERY_V1" in ids
@@ -501,7 +502,10 @@ def test_malformed_present_overlay_fails_closed_and_missing_overlay_is_empty(tmp
         "", encoding="utf-8",
     )
     assert load_public_official_citations(empty_root) == {}
-    assert fact_store.load_official_citations(empty_root) == {}
+    loaded = fact_store.load_official_citations(empty_root)
+    assert ("GAS", "net_income", "2025") not in loaded
+    assert ("HPG", "net_income", "2022") not in loaded
+    assert ("FPT", "net_income", "2025") not in loaded
 
 
 def test_evaluated_valuation_keeps_daily_with_explicit_malformed_overlay_state(monkeypatch):

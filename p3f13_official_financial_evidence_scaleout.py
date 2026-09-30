@@ -97,7 +97,7 @@ def _make_corp_fact(*, ticker: str, metric: str, value: int, period: int | str, 
     stmt_family = (
         "balance_sheet"
         if metric in ("cash_and_equivalents", "shareholders_equity", "total_assets", "total_interest_bearing_debt")
-        else ("income_statement" if metric in ("revenue", "net_income") else "cash_flow")
+        else ("income_statement" if metric in ("revenue", "net_income", "attributable_net_income") else "cash_flow")
     )
     temporal_nature = "instant" if stmt_family == "balance_sheet" else "duration"
     return {
@@ -194,6 +194,14 @@ def apply_normalization_corrections(panel: Mapping[str, Any]) -> list[dict[str, 
 
 
 def apply_canonical_identity_corrections(panel: Mapping[str, Any]) -> list[dict[str, Any]]:
+    """Preserve the HPG line-code correction records as provenance.
+
+    They must no longer replace line-60 ``net_income`` with line-61 while keeping
+    metric ``net_income``. Current authority is applied by semantic metric relabel.
+    """
+    from historical_net_income_semantic_correction import apply_to_facts, load_semantic_correction_artifacts
+
+    loaded = load_semantic_correction_artifacts(ROOT)
     corrections = []
     applied_keys = set()
     for issuer in panel.get("issuers", []):
@@ -207,15 +215,25 @@ def apply_canonical_identity_corrections(panel: Mapping[str, Any]) -> list[dict[
                 raise ValueError("CANONICAL_IDENTITY_CORRECTION_TARGET_MISMATCH")
             if (fact.get("value"), fact.get("currency"), fact.get("unit_scale")) != (correction["old_value"], correction["currency"], correction["unit_scale"]):
                 raise ValueError("CANONICAL_IDENTITY_CORRECTION_OLD_VALUE_MISMATCH")
-            fact["value"] = correction["correct_value"]
-            fact.setdefault("temporal_envelope", {})["value"] = correction["correct_value"]
-            lineage.update({"citation": f"Issuer PDF page {correction['correct_source_page']}; audited consolidated FY{correction['reporting_period']}; {correction['correct_row_label']} (line {correction['correct_line_code']}).", "citation_id": correction["correct_citation_id"], "source_page": correction["correct_source_page"], "line_code": correction["correct_line_code"], "raw_row_label": correction["correct_row_label"], "evidence_id": f"evidence:{key[0]}:{correction['correct_source_page']}"})
-            lineage["canonical_identity_correction"] = {**correction, "superseded_citation_id": key[1], "document_sha256": key[0]}
-            corrections.append({**correction, "document_sha256": key[0], "superseded_citation_id": key[1], "new_citation_id": correction["correct_citation_id"]})
+            lineage["historical_canonical_identity_correction"] = {
+                **correction, "superseded_citation_id": key[1], "document_sha256": key[0],
+                "current_authority": "SUPERSEDED_BY_SEMANTIC_METRIC_RELABEL",
+            }
+            corrections.append({**correction, "document_sha256": key[0], "superseded_citation_id": key[1],
+                                "new_citation_id": correction["correct_citation_id"],
+                                "status": "HISTORICAL_PROVENANCE"})
             applied_keys.add(key)
     expected_keys = {key for key, correction in GOVERNED_FACT_CORRECTIONS.items() if correction["kind"] == "CANONICAL_IDENTITY_LINE_CODE_CORRECTION"}
     if applied_keys != expected_keys:
         raise ValueError("CANONICAL_IDENTITY_CORRECTION_EVIDENCE_NOT_FOUND")
+    for issuer in panel.get("issuers", []):
+        applied = apply_to_facts(
+            issuer.get("facts") or [],
+            correction_facts=loaded["facts"],
+            correction_records=loaded["corrections"],
+        )
+        issuer["facts"] = list(applied["current_facts"])
+        issuer["superseded_facts"] = list(applied["superseded_facts"])
     return corrections
 
 

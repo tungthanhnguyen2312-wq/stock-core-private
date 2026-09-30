@@ -82,7 +82,8 @@ _METRIC_STATEMENT: dict[str, StatementType] = {name: spec["statement_type"] for 
 #: exact-form AAA path (which never imports this module) is unaffected.
 _ENGLISH_ANCHORS: dict[str, tuple[str, ...]] = {
     "revenue": ("net revenue", "revenue"),
-    "net_income": ("net profit after tax", "profit after tax attributable to parent", "shareholders of the parent company", "net profit"),
+    "net_income": ("net profit after tax", "net profit"),
+    "attributable_net_income": ("profit after tax attributable to parent", "shareholders of the parent company", "of the parent"),
     "operating_cash_flow": (
         "net cash flows from operating activities",
         "net cash generated from operating activities",

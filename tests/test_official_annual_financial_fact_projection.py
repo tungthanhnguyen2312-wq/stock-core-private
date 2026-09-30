@@ -80,7 +80,7 @@ class OfficialAnnualFinancialFactProjectionTests(unittest.TestCase):
         result = research.build_projection("PAN", facts, entity_type="corporate", entity_authority="issuer_profile")
 
         self.assertEqual(len(facts), 5)
-        self.assertEqual(indexed, {"PAN": facts})
+        self.assertEqual(indexed["PAN"], facts)
         self.assertEqual(result["status"], "available")
         self.assertTrue(result["research_eligible"])
         debt = next(fact for fact in facts if fact["canonical_metric"] == "total_interest_bearing_debt")

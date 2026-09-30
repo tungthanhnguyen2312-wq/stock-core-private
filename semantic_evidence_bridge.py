@@ -1229,6 +1229,7 @@ _FINANCIAL_IDENTITY_STATEMENT_FAMILIES = {
     "shareholders_equity": "balance_sheet",
     "revenue": "income_statement",
     "total_assets": "balance_sheet",
+    "attributable_net_income": "income_statement",
     "parent_attributable_net_income": "income_statement",
     "short_term_interest_bearing_debt": "balance_sheet",
     "long_term_interest_bearing_debt": "balance_sheet",
@@ -1348,11 +1349,30 @@ def load_verified_financial_identities(runtime_root: Path) -> dict[str, Any]:
     Returns {"status": ..., "version": VERSION, "by_key": {(ticker, metric,
     reporting_period): verified_entry}, "rejected": [...]}. Fails closed per record.
     """
+    from historical_net_income_semantic_correction import (
+        apply_to_verified_identities,
+        load_semantic_correction_artifacts,
+    )
+
+    def _with_semantic_correction(mapping: dict[tuple, dict[str, Any]]) -> dict[tuple, dict[str, Any]]:
+        loaded = load_semantic_correction_artifacts(runtime_root)
+        return apply_to_verified_identities(
+            mapping,
+            correction_facts=loaded["facts"],
+            correction_records=loaded["corrections"],
+        )
+
     evidence_by_id = _load_manifest(runtime_root)
     rows = _load_financial_identity_rows(runtime_root)
     rejected: list[dict[str, Any]] = []
     if evidence_by_id is None or rows is None:
-        return {"status": "unavailable", "version": VERSION, "by_key": {}, "rejected": rejected}
+        by_key = _with_semantic_correction({})
+        return {
+            "status": "available" if by_key else "unavailable",
+            "version": VERSION,
+            "by_key": by_key,
+            "rejected": rejected,
+        }
 
     grouped: dict[tuple[str, str, str], list[dict[str, Any]]] = {}
     for raw in rows:
@@ -1424,6 +1444,7 @@ def load_verified_financial_identities(runtime_root: Path) -> dict[str, Any]:
             "document_sha256": evidence.get("sha256"),
         }
 
+    by_key = _with_semantic_correction(by_key)
     return {"status": "available" if by_key else "unavailable", "version": VERSION, "by_key": by_key, "rejected": rejected}
 
 

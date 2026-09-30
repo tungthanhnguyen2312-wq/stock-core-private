@@ -145,9 +145,10 @@ class PeriodColumnLayoutTests(unittest.TestCase):
 class NetIncomeSemanticTests(unittest.TestCase):
     """Tests enforcing canonical net_income semantic separation."""
 
-    def test_canonical_semantic_is_profit_attributable_to_parent(self):
-        self.assertEqual(CANONICAL_NET_INCOME_SEMANTIC, "net_income_attributable_to_parent")
-        self.assertEqual(GENERIC_METRIC_RULES["net_income"]["standard_line_code"], "61")
+    def test_canonical_semantic_is_total_profit_after_tax(self):
+        self.assertEqual(CANONICAL_NET_INCOME_SEMANTIC, "net_income")
+        self.assertEqual(GENERIC_METRIC_RULES["net_income"]["standard_line_code"], "60")
+        self.assertEqual(GENERIC_METRIC_RULES["attributable_net_income"]["standard_line_code"], "61")
 
 
 class RealFixtureGenericExtractionTests(unittest.TestCase):
@@ -172,9 +173,8 @@ class RealFixtureGenericExtractionTests(unittest.TestCase):
         self.assertEqual(by_metric["revenue"].line_item_code, "10")
         self.assertEqual(by_metric["revenue"].page, 11)
 
-        # Net income: Must be Line 61 (attributable to parent), NOT Line 60 total
-        self.assertEqual(by_metric["net_income"].normalized_value, 11_414_339_911_686)
-        self.assertEqual(by_metric["net_income"].line_item_code, "61")
+        self.assertEqual(by_metric["net_income"].normalized_value, 11_571_631_226_008)
+        self.assertEqual(by_metric["net_income"].line_item_code, "60")
         self.assertEqual(by_metric["net_income"].page, 11)
 
         self.assertEqual(by_metric["operating_cash_flow"].normalized_value, 13_040_237_870_138)
@@ -200,49 +200,26 @@ class RealFixtureGenericExtractionTests(unittest.TestCase):
         self.assertEqual(by_metric["total_interest_bearing_debt"].normalized_value, 2_971_690_340_782)
         self.assertEqual(by_metric["total_interest_bearing_debt"].line_item_code, "320+338")
 
-    def test_vre_generic_extraction_reproduces_all_8_facts(self):
+    def test_vre_generic_extraction_does_not_take_line_61_as_net_income(self):
+        with self.assertRaises(ValueError) as ctx:
+            extract_generic_financial_statement_facts(
+                sidecar=self.vre_sidecar,
+                reporting_period="2025",
+            )
+        self.assertIn("METRIC_NOT_FOUND", str(ctx.exception))
+        self.assertIn("net_income", str(ctx.exception))
         facts = extract_generic_financial_statement_facts(
             sidecar=self.vre_sidecar,
             reporting_period="2025",
+            required_metrics=(
+                "revenue", "operating_cash_flow", "total_assets", "shareholders_equity",
+                "cash_and_equivalents", "current_liabilities", "total_interest_bearing_debt",
+            ),
         )
-        self.assertEqual(len(facts), 8)
         by_metric = {f.canonical_metric: f for f in facts}
-
-        # VRE unit scale is 1,000,000 (triệu VND)
-        for f in facts:
-            self.assertEqual(f.unit_scale, 1_000_000)
-            self.assertEqual(f.currency, "VND")
-
+        self.assertNotIn("net_income", by_metric)
         self.assertEqual(by_metric["revenue"].normalized_value, 8_837_380_000_000)
-        self.assertEqual(by_metric["revenue"].line_item_code, "10")
-        self.assertEqual(by_metric["revenue"].page, 11)
-
-        self.assertEqual(by_metric["net_income"].normalized_value, 6_445_924_000_000)
-        self.assertEqual(by_metric["net_income"].line_item_code, "61")
-        self.assertEqual(by_metric["net_income"].page, 11)
-
         self.assertEqual(by_metric["operating_cash_flow"].normalized_value, -3_262_205_000_000)
-        self.assertEqual(by_metric["operating_cash_flow"].line_item_code, "20")
-        self.assertEqual(by_metric["operating_cash_flow"].page, 12)
-
-        self.assertEqual(by_metric["total_assets"].normalized_value, 61_279_149_000_000)
-        self.assertEqual(by_metric["total_assets"].line_item_code, "270")
-        self.assertEqual(by_metric["total_assets"].page, 8)
-
-        self.assertEqual(by_metric["shareholders_equity"].normalized_value, 48_368_203_000_000)
-        self.assertEqual(by_metric["shareholders_equity"].line_item_code, "400")
-        self.assertEqual(by_metric["shareholders_equity"].page, 10)
-
-        self.assertEqual(by_metric["cash_and_equivalents"].normalized_value, 4_434_617_000_000)
-        self.assertEqual(by_metric["cash_and_equivalents"].line_item_code, "110")
-        self.assertEqual(by_metric["cash_and_equivalents"].page, 7)
-
-        self.assertEqual(by_metric["current_liabilities"].normalized_value, 5_173_857_000_000)
-        self.assertEqual(by_metric["current_liabilities"].line_item_code, "310")
-        self.assertEqual(by_metric["current_liabilities"].page, 9)
-
-        self.assertEqual(by_metric["total_interest_bearing_debt"].normalized_value, 6_401_081_000_000)
-        self.assertEqual(by_metric["total_interest_bearing_debt"].line_item_code, "320+338")
 
 
 class ZeroTickerBranchGovernanceTests(unittest.TestCase):

@@ -1,7 +1,7 @@
 {
   "schema_version": "stocklookup_roadmap_execution_state/1.0.0",
   "roadmap_id": "stock-core-private",
-  "roadmap_version": "2026.09.29.6",
+  "roadmap_version": "2026.09.29.7",
   "narrative_authority": {
     "strategic_roadmap": "docs/ROADMAP.md",
     "operational_narrative": "docs/STATE.md",
@@ -15,11 +15,28 @@
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "FINANCIAL_EVIDENCE_REVIEWED_INTERIM_CANONICAL_INGRESS_V1",
-    "state": "PARTIAL"
+    "milestone": "HISTORICAL_NET_INCOME_SEMANTIC_CORRECTION_OVERLAY_V1",
+    "state": "COMPLETE"
   },
   "queued_next": [],
   "milestones": [
+    {
+      "milestone_id": "HISTORICAL_NET_INCOME_SEMANTIC_CORRECTION_OVERLAY_V1",
+      "state": "COMPLETE",
+      "narrative_disposition": "FOUR_CLASS_A_FACTS_RECONCILED / NO_CORPUS_WIDE_RECONCILIATION",
+      "terminal_disposition": "HISTORICAL_NET_INCOME_SEMANTIC_CORRECTION_OVERLAY_COMPLETE",
+      "starting_checkpoint": "42e756e3099009e5654784cd03bbc6123dd775c6",
+      "checkpoint": "HEAD",
+      "candidate_branch": "feature/historical-net-income-semantic-correction-v1-20260929",
+      "dependencies": ["FINANCIAL_EVIDENCE_REVIEWED_INTERIM_CANONICAL_INGRESS_V1"],
+      "unlocks": [],
+      "authority_effect": "APPEND_ONLY_SEMANTIC_SUPERSESSION / NET_INCOME_AND_ATTRIBUTABLE_NET_INCOME_REMAIN_DISTINCT / NO_FINANCIAL_V2_PIN_BUMP",
+      "owner_authorized": true,
+      "source_doc": "Owner directive HISTORICAL_NET_INCOME_SEMANTIC_CORRECTION_OVERLAY_V1 (2026-09-29)",
+      "state_history": ["ACTIVE", "COMPLETE"],
+      "owner_override": "OWNER_DIRECTIVE_2026_09_29_HISTORICAL_NET_INCOME_SEMANTIC_CORRECTION_OVERLAY_V1",
+      "notes": "COMPLETE 2026-09-29. Append-only SEMANTIC_METRIC_RELABEL for exactly four Class-A facts (HPG 2022, HPG 2023, FPT 2025, GAS 2025). Old evidence remains immutable. Current authority: line 60 + explicit total-profit-after-tax label = net_income; line 61 + explicit parent-attributable label = attributable_net_income. FPT 2025 line-61 parent label remains garbled under the PR #21 row-label contract so attributable_net_income is unavailable; line-60 net_income is restored. Class-D PVD 2022/2023, VNM 2024, AAA 2024, VRE 2025 unchanged as SEMANTIC_IDENTITY_UNRESOLVED. parent_attributable_net_income is a compatibility alias. Same-PR authority corrective: CLASS_A is a frozen validation contract only; current-authority rows load from public semantic_metric_relabel_*.jsonl under the supplied root (missing=empty, malformed=fail closed, exact-key value conflict=SEMANTIC_CORRECTION_EXACT_KEY_CONFLICT). Full retained 2026-09-29 bounded assembly over 1,683 tickers vs BASE 42e756e is byte-identical (0 posture/fundamental-state/valuation/unrelated/unexplained deltas). Financial V2 pin 2026-09-05.1 unchanged. No live Daily, merge, deploy or successor."
+    },
     {
       "milestone_id": "FINANCIAL_EVIDENCE_REVIEWED_INTERIM_CANONICAL_INGRESS_V1",
       "state": "PARTIAL",

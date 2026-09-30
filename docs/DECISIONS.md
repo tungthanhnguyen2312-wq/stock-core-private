@@ -1,5 +1,40 @@
 # Decisions & Architectural Decision Records
 
+## 2026-09-29 - Historical net-income semantic correction overlay (`HISTORICAL_NET_INCOME_SEMANTIC_CORRECTION_OVERLAY_V1`)
+
+**Decision.** Canonical `net_income` is total profit after tax. Canonical
+`attributable_net_income` is profit after tax attributable to owners of the parent. Ordinary
+consolidated mapping is line 60 plus an explicit total-profit-after-tax label, and line 61 plus
+an explicit parent-attributable label. Line number alone is not identity. Values are never copied
+between the two metrics. Historical retained rows are not rewritten. Current authority is
+corrected by append-only `SEMANTIC_METRIC_RELABEL` supersession. The prior HPG
+`CANONICAL_IDENTITY_LINE_CODE_CORRECTION` records remain as provenance and no longer replace
+line-60 `net_income` with line-61 while keeping metric `net_income`.
+
+**Result.** `COMPLETE` for exactly four Class-A facts. HPG 2022/2023 restore qualified line-60
+`net_income` and qualify line-61 `attributable_net_income`. FPT 2025 supersedes line-61-as-net_income
+and restores qualified line-60 `net_income`; the PR #21 row-label contract does not qualify the
+garbled line-61 parent label, so `attributable_net_income` stays unavailable. GAS 2025 relabels the
+parent line to `attributable_net_income` and separately qualifies independent line-60 `net_income`.
+Class-D facts are unchanged. Corporate fundamental-readiness and corporate P/E consume total
+`net_income`. Financial V2 pin `2026-09-05.1` is unchanged. Provider `net_income` versus official
+`attributable_net_income` is `NOT_COMPARABLE` / `METRIC_DIFFERENCE`.
+
+**Authority source.** CLASS_A is frozen correction-contract/reference data. It does not authorize
+runtime facts. `load_official_citations` and `load_verified_financial_identities` inject qualified
+corrections only after `load_semantic_correction_artifacts(root)` proves the public
+`semantic_metric_relabel_facts.jsonl` / `semantic_metric_relabel_corrections.jsonl` artifacts are
+present and valid. Missing overlay is empty. A present malformed overlay fails closed.
+Same-key same-value overlay is idempotent; same-key different-value fails
+`SEMANTIC_CORRECTION_EXACT_KEY_CONFLICT`.
+
+**Retained 2026-09-29 assembly.** BASE `42e756e` vs corrected PR #22 head, 1,683 tickers, no
+network: integrated decision, operational fundamental integration, evaluated valuation and
+Financial V2 product identities are byte-identical. Posture, fundamental-state, valuation,
+unrelated-ticker and unexplained drift counts are 0. Pin `2026-09-05.1` unchanged.
+
+**Boundary.** Not a corpus-wide reconciliation. No live Daily, merge, deploy or successor.
+
 ## 2026-09-29 - Reviewed-interim canonical ingress (`FINANCIAL_EVIDENCE_REVIEWED_INTERIM_CANONICAL_INGRESS_V1`)
 
 **Decision.** Fact authority and research authority stay separate. Assurance is one explicit

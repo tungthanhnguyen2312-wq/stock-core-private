@@ -188,6 +188,8 @@ def load_official_citations(runtime_root: Path | str) -> dict[tuple, dict[str, A
         "shareholders_equity": "shareholders_equity",
         "revenue": "revenue",
         "net_income": "net_income",
+        "attributable_net_income": "attributable_net_income",
+        "parent_attributable_net_income": "attributable_net_income",
         "operating_cash_flow": "operating_cash_flow",
         # The official-evidence panel's own fact rows and citation files spell this balance-sheet
         # line "cash_and_equivalents"; canonical_financial_facts.METRIC_REGISTRY spells the same
@@ -237,7 +239,16 @@ def load_official_citations(runtime_root: Path | str) -> dict[tuple, dict[str, A
             citations[(ticker, metric, f"{period}-Q4")] = dict(entry)
         if metric in stock_metrics and period == "2026-H1":
             citations[(ticker, metric, "2026-Q2")] = dict(entry)
-    return citations
+    from historical_net_income_semantic_correction import (
+        apply_to_citation_mapping,
+        load_semantic_correction_artifacts,
+    )
+    loaded = load_semantic_correction_artifacts(runtime_root)
+    return apply_to_citation_mapping(
+        citations,
+        correction_facts=loaded["facts"],
+        correction_records=loaded["corrections"],
+    )
 
 
 def _applicability_for(ticker: str, observations: Sequence[Mapping[str, Any]],
