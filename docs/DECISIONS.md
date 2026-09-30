@@ -1,5 +1,28 @@
 # Decisions & Architectural Decision Records
 
+## 2026-09-30 - Daily liquidity authority wiring reconciliation (`DAILY_LIQUIDITY_AUTHORITY_WIRING_RECONCILIATION_V1`)
+
+**Decision.** Liquidity authority is use-specific and per-record. An artifact summary
+may only count scoped eligibility. It must not emit one global `ADTV_RESEARCH=BLOCKED`
+or `QUALIFIED_LIQUIDITY_INPUTS=false` boolean after official qualified rows exist.
+Official `official_exchange_liquidity_research/v1` per-use fitness wins for the exact
+matching use. Descriptive DNSE board-composition remains for display/provenance.
+Live `POSITION_SIZING`, `EXECUTION_CAPACITY`, `PIT_BACKTEST`, `EXECUTION_REPLAY` and
+market-wide `RAW_AS_TRADED` stay blocked. Canonical participation and liquidation
+horizon remain UNBOUND; that is policy absence, not data absence.
+
+**Result.** `COMPLETE`. Descriptive artifact summaries are scoped. Official artifact
+summaries count 952 current-session eligible and 457 ADTV eligible / ADV partial.
+Execution-capacity consumes qualified ADTV and still yields 0 AVAILABLE / 1,683
+BLOCKED with 457 `POLICY_UNBOUND` and 1,047 HNX/UPCoM rights-gated. Retained
+2026-09-29 Daily CRDI liquidity is unchanged vs nested (0 posture, decision,
+non-liquidity, unexplained). Same-session official evidence for 2026-09-29 is
+absent; that Daily remains fail-closed rather than mixed with 2026-09-28 official
+rows. Original retained Daily package is not mutated.
+
+**Boundary.** No live Daily, merge, deploy, Dashboard publish, production DB write
+or successor.
+
 ## 2026-09-29 - Historical net-income semantic correction overlay (`HISTORICAL_NET_INCOME_SEMANTIC_CORRECTION_OVERLAY_V1`)
 
 **Decision.** Canonical `net_income` is total profit after tax. Canonical

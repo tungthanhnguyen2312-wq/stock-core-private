@@ -1,7 +1,7 @@
 {
   "schema_version": "stocklookup_roadmap_execution_state/1.0.0",
   "roadmap_id": "stock-core-private",
-  "roadmap_version": "2026.09.29.7",
+  "roadmap_version": "2026.09.30.1",
   "narrative_authority": {
     "strategic_roadmap": "docs/ROADMAP.md",
     "operational_narrative": "docs/STATE.md",
@@ -15,11 +15,28 @@
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "HISTORICAL_NET_INCOME_SEMANTIC_CORRECTION_OVERLAY_V1",
+    "milestone": "DAILY_LIQUIDITY_AUTHORITY_WIRING_RECONCILIATION_V1",
     "state": "COMPLETE"
   },
   "queued_next": [],
   "milestones": [
+    {
+      "milestone_id": "DAILY_LIQUIDITY_AUTHORITY_WIRING_RECONCILIATION_V1",
+      "state": "COMPLETE",
+      "narrative_disposition": "SCOPED_SUMMARY_AND_PER_RECORD_PRECEDENCE_RECONCILED / SAME_SESSION_OFFICIAL_ABSENT_ON_2026_09_29",
+      "terminal_disposition": "DAILY_LIQUIDITY_AUTHORITY_WIRING_RECONCILIATION_COMPLETE",
+      "starting_checkpoint": "caf413456b60f8af7a13e16e375880310718d619",
+      "checkpoint": "HEAD",
+      "candidate_branch": "feature/daily-liquidity-authority-wiring-v1-20260930",
+      "dependencies": ["LIQUIDITY_EXECUTION_CAPACITY_AND_SIZING_V1"],
+      "unlocks": [],
+      "authority_effect": "SCOPED_ARTIFACT_SUMMARY_ONLY / PER_RECORD_FITNESS_AUTHORITATIVE / NO_LIVE_SIZING_OR_PIT_PROMOTION / NO_RAW_AS_TRADED_PROMOTION",
+      "owner_authorized": true,
+      "source_doc": "Owner directive DAILY_LIQUIDITY_AUTHORITY_WIRING_RECONCILIATION_V1 (2026-09-30)",
+      "state_history": ["ACTIVE", "COMPLETE"],
+      "owner_override": "OWNER_DIRECTIVE_2026_09_30_DAILY_LIQUIDITY_AUTHORITY_WIRING_RECONCILIATION_V1",
+      "notes": "COMPLETE 2026-09-30. Root cause: market_wide_current_liquidity_research emitted a pre-promotion artifact-global ADTV/ADV BLOCKED and QUALIFIED_LIQUIDITY_INPUTS=false boundary, while official_exchange_liquidity_research/v1 already had per-record CURRENT_SESSION_LIQUIDITY_RESEARCH ELIGIBLE 952 and ADTV_RESEARCH ELIGIBLE 457 (ADV PARTIAL 457, as-traded). Daily 2026-09-29 bound only the descriptive artifact (868 eligible) because no same-session official artifact exists at the Daily path; 2026-09-28 IID 1517dc71 also had 0 official qualified_research. Corrective: scoped artifact summaries; official per-use fitness wins for the matching use; execution-capacity engine consumes qualified ADTV with UNBOUND policy (0 AVAILABLE / 0 PARTIAL / 1683 BLOCKED, 457 POLICY_UNBOUND, 1047 rights-gated). Retained 2026-09-29 CRDI liquidity vs nested is identical (0 posture/decision/liquidity/non-liquidity/unexplained). Original retained Daily package not mutated. No live Daily, merge, deploy or successor."
+    },
     {
       "milestone_id": "HISTORICAL_NET_INCOME_SEMANTIC_CORRECTION_OVERLAY_V1",
       "state": "COMPLETE",

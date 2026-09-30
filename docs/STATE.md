@@ -1,5 +1,27 @@
 # Stock Lookup — Operational State
 
+**Daily liquidity authority wiring reconciliation (2026-09-30):**
+`DAILY_LIQUIDITY_AUTHORITY_WIRING_RECONCILIATION_V1 = COMPLETE /
+DAILY_LIQUIDITY_AUTHORITY_WIRING_RECONCILIATION_COMPLETE`, rooted at canonical
+`caf413456b60f8af7a13e16e375880310718d619` (Producer CI #136 SUCCESS, run 36658995623).
+The descriptive `market_wide_current_liquidity_research` artifact-global
+`ADTV_RESEARCH=BLOCKED` / `ADV_VOLUME_RESEARCH=BLOCKED` /
+`QUALIFIED_LIQUIDITY_INPUTS=false` labels were a pre-promotion summary, not the
+current per-record official contract. Official `official_exchange_liquidity_research/v1`
+already qualifies `CURRENT_SESSION_LIQUIDITY_RESEARCH` for 952 tickers and
+`ADTV_RESEARCH` for 457 (ADV 457 PARTIAL, as-traded / not corporate-action
+normalized). Daily 2026-09-29 bound only the same-session descriptive artifact
+(868 eligible) because no 2026-09-29 official artifact exists at the Daily path;
+that absence is fail-closed, not a reason to keep a global false. Artifact
+summaries are now scoped counts. Official per-use fitness wins for the matching
+use. Live sizing, PIT backtest, execution replay and RAW_AS_TRADED stay blocked.
+Canonical participation/horizon policy remains UNBOUND: 0 AVAILABLE / 1,683
+BLOCKED with 457 `POLICY_UNBOUND`. Retained 2026-09-29 CRDI liquidity vs nested is
+identical (0 posture / decision / unexplained). Original retained Daily package
+is unchanged. Public-safe counts:
+[`daily_liquidity_authority_wiring_publication_manifest.json`](daily_liquidity_authority_wiring_publication_manifest.json).
+No successor is queued or started.
+
 **Historical net-income semantic correction overlay (2026-09-29):**
 `HISTORICAL_NET_INCOME_SEMANTIC_CORRECTION_OVERLAY_V1 = COMPLETE /
 HISTORICAL_NET_INCOME_SEMANTIC_CORRECTION_OVERLAY_COMPLETE`, rooted at canonical
@@ -171,7 +193,8 @@ The retained index rebuild freezes VBB bonus (2026-06-26), KLB stock dividend (2
 - **Daily.** A component-local `prospective_market_snapshot_manifest` is retained privately; its absence blocks only
   PIT/as-known use.
 - **Successor at that time.** The owner then authorized `LIQUIDITY_EXECUTION_CAPACITY_AND_SIZING_V1`
-  (now closed PARTIAL, above). `FINANCIAL_EVIDENCE_ZERO_ACTIVE_VNSTOCK_V1` is the current active item.
+  (now closed PARTIAL, above). `FINANCIAL_EVIDENCE_ZERO_ACTIVE_VNSTOCK_V1` was the then-current
+  active item; current execution state is `DAILY_LIQUIDITY_AUTHORITY_WIRING_RECONCILIATION_V1`.
 
 **Official-exchange liquidity, market-wide operationalization (2026-09-29; COMPLETE, PR #14 merged to `ac9b8cf`):**
 `OFFICIAL_EXCHANGE_LIQUIDITY_MARKET_WIDE_OPERATIONALIZATION_V1 = COMPLETE /

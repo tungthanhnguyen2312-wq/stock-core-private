@@ -62,6 +62,7 @@ exactly.
 | HISTORICAL_LIQUIDITY_RESEARCH | ELIGIBLE with an official series and an exact 20-session window. PARTIAL if the window is incomplete. BLOCKED if the series is not acquired. |
 | ADTV_RESEARCH | ELIGIBLE when `ADTV20_MATCHED_ALL_VND` is an `EXACT_WINDOW`. PARTIAL if coverage-restricted. BLOCKED otherwise. |
 | ADV_VOLUME_RESEARCH | At most PARTIAL: official shares are as-traded, and no ex-date authority can rule out a share-count event in the window. |
+| Artifact summary | Scoped counts only. Per-record fitness is authoritative and cannot be widened by an artifact-level `SCOPED_ELIGIBLE` label. |
 | Historical `EXECUTION_CAPACITY`, `POSITION_SIZING`, `PIT_BACKTEST` cells | Retained as the foundation milestone's fail-closed historical matrix; never rewritten as if that earlier contract already had a governed policy. |
 | `CURRENT_SESSION_EXECUTION_CAPACITY_RESEARCH` | Scoped `ELIGIBLE/PARTIAL` only through `execution_capacity_research_envelope/v1`, exact ADTV20 and an explicit bound policy. |
 | `CURRENT_SESSION_RISK_SIZE_RESEARCH` | Private scoped `ELIGIBLE/PARTIAL` through `research_size_envelope/v1`. |

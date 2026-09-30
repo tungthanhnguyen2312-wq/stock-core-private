@@ -10,6 +10,43 @@ import dnse_trades_liquidity_basis as basis
 
 CONTRACT_VERSION = "market_wide_current_liquidity_research/v1"
 MILESTONE = "MARKET_WIDE_CURRENT_LIQUIDITY_RESEARCH_SCALEOUT_V1"
+OFFICIAL_LIQUIDITY_OWNER = "official_exchange_liquidity_research/v1"
+DESCRIPTIVE_ONLY = "DESCRIPTIVE_ONLY"
+PER_RECORD = "PER_RECORD"
+AS_TRADED_NOT_CA_NORMALIZED = "AS_TRADED_NOT_CA_NORMALIZED"
+
+
+def artifact_authority_boundary(*, eligible_count: int, universe_count: int) -> dict[str, Any]:
+    """Artifact summary for this descriptive DNSE board-composition dataset.
+
+    Per-record fitness remains authoritative. This artifact does not emit ADTV/ADV; those uses
+    are owned by official_exchange_liquidity_research/v1 and are never a single global boolean.
+    """
+    return {
+        "CURRENT_SESSION_LIQUIDITY_RESEARCH": {
+            "state": DESCRIPTIVE_ONLY,
+            "scope": "SCOPED",
+            "eligible_count": eligible_count,
+            "denominator": universe_count,
+            "authority": "CURRENT_SESSION_DNSE_BOARD_COMPOSITION_ONLY",
+        },
+        "ADTV_RESEARCH": {"state": PER_RECORD, "in_this_artifact": False, "owned_by": OFFICIAL_LIQUIDITY_OWNER},
+        "ADV_VOLUME_RESEARCH": {
+            "state": PER_RECORD, "in_this_artifact": False, "owned_by": OFFICIAL_LIQUIDITY_OWNER,
+            "basis": AS_TRADED_NOT_CA_NORMALIZED,
+        },
+        "QUALIFIED_LIQUIDITY_INPUTS": {"state": PER_RECORD, "owned_by": OFFICIAL_LIQUIDITY_OWNER},
+        "POSITION_SIZING": "BLOCKED",
+        "EXECUTION_CAPACITY": "BLOCKED",
+        "LIVE_POSITION_SIZING": "BLOCKED",
+        "PIT_BACKTEST": "BLOCKED",
+        "EXECUTION_REPLAY": "BLOCKED",
+        "RAW_AS_TRADED": "NOT_PROMOTED",
+        "gross_trade_amount": "NON_AUTHORITATIVE_SCALE_BASIS_UNRESOLVED",
+        "derived_price_times_shares": "NOT_COMPUTED",
+        "per_record_fitness_is_authoritative": True,
+        "artifact_summary_cannot_override_per_record_fitness": True,
+    }
 
 
 def _canon(value: Any) -> str:
@@ -79,8 +116,10 @@ def build_artifact(*, candidates: list[str], trades: Mapping[str, Mapping[str, A
     artifact: dict[str, Any] = {"schema_version": "1.0.0", "contract_version": CONTRACT_VERSION, "milestone": MILESTONE,
         "requested_at": requested_at, "universe": {"canonical_candidate_count": len(candidates), "authority": "runtime_metadata_ticker_sorted_v1"},
         "coverage": {"disposition_counts": dict(sorted(counts.items())), "reconciled_count": len(records), "eligible_current_session_count": len(eligible), "unattempted_without_disposition": 0},
-        "records": records, "authority_boundary": {"CURRENT_SESSION_LIQUIDITY_RESEARCH": "DESCRIPTIVE_ONLY", "QUALIFIED_LIQUIDITY_INPUTS": False,
-        "ADV_VOLUME_RESEARCH": "BLOCKED", "ADTV_RESEARCH": "BLOCKED", "POSITION_SIZING": "BLOCKED", "EXECUTION_CAPACITY": "BLOCKED", "PIT_BACKTEST": "BLOCKED", "RAW_AS_TRADED": "NOT_PROMOTED", "gross_trade_amount": "NON_AUTHORITATIVE_SCALE_BASIS_UNRESOLVED", "derived_price_times_shares": "NOT_COMPUTED"}}
+        "records": records,
+        "authority_boundary": artifact_authority_boundary(
+            eligible_count=len(eligible), universe_count=len(records),
+        )}
     identity = content_identity(artifact)
     artifact["artifact_sha256"] = identity["artifact_sha256"]
     artifact["artifact_identity"] = identity["artifact_identity"]

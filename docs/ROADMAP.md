@@ -1,5 +1,15 @@
 # Stock Lookup — Architecture & Roadmap
 
+**Roadmap sync: Daily liquidity authority wiring reconciliation (2026-09-30):**
+- `DAILY_LIQUIDITY_AUTHORITY_WIRING_RECONCILIATION_V1` = `COMPLETE`, rooted at
+  `caf413456b60f8af7a13e16e375880310718d619` (Producer CI #136 SUCCESS).
+  Artifact-level liquidity labels now report scoped coverage. Per-record official
+  fitness is authoritative for `CURRENT_SESSION_LIQUIDITY_RESEARCH` (952) and
+  `ADTV_RESEARCH` (457). ADV remains as-traded / not CA-normalized. Live sizing,
+  PIT, execution replay and RAW_AS_TRADED stay blocked. UNBOUND policy remains
+  explicit. Retained 2026-09-29 Daily package is not rewritten. No successor is
+  queued or started.
+
 **Roadmap sync: Historical net-income semantic correction overlay (2026-09-29):**
 - `HISTORICAL_NET_INCOME_SEMANTIC_CORRECTION_OVERLAY_V1` = `COMPLETE`, rooted at
   `42e756e3099009e5654784cd03bbc6123dd775c6`. Append-only semantic supersession for exactly
