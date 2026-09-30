@@ -63,16 +63,22 @@ def bridge_index_event(event: Mapping[str, Any]) -> dict[str, Any]:
 
 
 def select_candidates(events: Iterable[Mapping[str, Any]], *, reference_tickers: Iterable[str],
-                      cutoff_date: str, limit: int = 3) -> dict[str, Any]:
+                      cutoff_date: str, limit: int = 3,
+                      listing_by_ticker: Mapping[str, Mapping[str, Any]] | None = None,
+                      admitted_route_tickers: Iterable[str] = ()) -> dict[str, Any]:
     """Select at most ``limit`` current, past, ex-date-bearing share events.
 
-    Stock dividends rank before bonuses and rights, then the newest ex-date wins.
-    A future execution/payment date is never read as evidence of execution and is
-    excluded from this completed-event cohort.
+    The retained index supplies the event facts.  When a retained official listing
+    collection is supplied, HOSE membership is a selection preference only; it is
+    never treated as a listing-status or PIT-universe assertion.  The optional
+    admitted-route set is likewise a request-admission preference, not evidence.
+    A future execution/payment date is never read as evidence of execution.
     """
     if not 1 <= limit <= 3:
         raise ValueError("candidate_limit_must_be_between_1_and_3")
     universe = {str(ticker).upper() for ticker in reference_tickers}
+    listings = {str(ticker).upper(): value for ticker, value in (listing_by_ticker or {}).items()}
+    admitted_routes = {str(ticker).upper() for ticker in admitted_route_tickers}
     eligible: list[Mapping[str, Any]] = []
     excluded: list[dict[str, Any]] = []
     for event in events:
@@ -96,11 +102,20 @@ def select_candidates(events: Iterable[Mapping[str, Any]], *, reference_tickers:
             excluded.append({"ticker": ticker, "event_id": event.get("event_id"), "reason": "future_execution_date_not_treated_as_executed"})
         else:
             eligible.append(event)
-    ranked = sorted(eligible, key=lambda row: (
-        _TYPE_RANK[str(row.get("event_type"))],
-        "".join(chr(255 - ord(char)) for char in str(row.get("ex_date"))),
-        str(row.get("ticker")), str(row.get("event_id")),
-    ))
+    def rank(row: Mapping[str, Any]) -> tuple[Any, ...]:
+        ticker = str(row.get("ticker") or "").upper()
+        listing = listings.get(ticker, {})
+        hose = str(listing.get("exchange_or_market") or "").upper() == "HOSE"
+        has_route = ticker in admitted_routes
+        in_snapshot_horizon = "2026-08-24" <= str(row.get("ex_date")) <= "2026-09-24"
+        return (
+            0 if hose else 1,
+            "".join(chr(255 - ord(char)) for char in str(row.get("ex_date"))),
+            0 if has_route else 1,
+            0 if in_snapshot_horizon else 1,
+            ticker, str(row.get("event_id")),
+        )
+    ranked = sorted(eligible, key=rank)
     candidates = [bridge_index_event(event) for event in ranked[:limit]]
     return {
         "selection_contract": "real_official_corporate_action_factor_evidence_candidate_selection/v1",
@@ -109,7 +124,7 @@ def select_candidates(events: Iterable[Mapping[str, Any]], *, reference_tickers:
         "reference_collection_ticker_count": len(universe),
         "eligible_event_count": len(eligible),
         "selected_count": len(candidates),
-        "selection_order": "event_type_stock_dividend_then_bonus_then_rights__newest_ex_date__ticker__event_id",
+        "selection_order": "supported_share_affecting__hose_listed__newest_ex_date__admitted_route__prospective_snapshot_horizon__ticker__event_id",
         "candidates": candidates,
         "excluded_completed_event_reasons": excluded,
     }

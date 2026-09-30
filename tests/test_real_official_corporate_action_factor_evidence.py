@@ -14,7 +14,7 @@ class CandidateSelectionTests(unittest.TestCase):
         self.assertEqual(classification, "OTHER_EVIDENCE_GAP")
         self.assertIn("explicit_official_ex_date_present", reasons)
 
-    def test_selection_prefers_stock_dividend_and_refuses_future_execution_as_executed(self):
+    def test_selection_is_date_ranked_and_refuses_future_execution_as_executed(self):
         selected = select_candidates([
             _event("D11", "STOCK_DIVIDEND", "2026-08-21", execution_date="2026-11-19"),
             _event("IPA", "BONUS", "2026-08-21"),
@@ -22,7 +22,7 @@ class CandidateSelectionTests(unittest.TestCase):
             _event("NAG", "STOCK_DIVIDEND", "2026-08-19"),
             _event("HCC", "STOCK_DIVIDEND", "2026-08-19"),
         ], reference_tickers={"D11", "IPA", "VC3", "NAG", "HCC"}, cutoff_date="2026-09-15")
-        self.assertEqual([row["ticker"] for row in selected["candidates"]], ["VC3", "HCC", "NAG"])
+        self.assertEqual([row["ticker"] for row in selected["candidates"]], ["VC3", "IPA", "HCC"])
         self.assertIn("future_execution_date_not_treated_as_executed",
                       {row["reason"] for row in selected["excluded_completed_event_reasons"]})
         for row in selected["candidates"]:
@@ -30,6 +30,16 @@ class CandidateSelectionTests(unittest.TestCase):
             self.assertEqual(row["ledger_qualification"], "NOT_EVALUATED_NOT_LEDGER_OBSERVATION")
             self.assertEqual(row["factor_chain_classification"], "OTHER_EVIDENCE_GAP")
             self.assertEqual(row["pit_series_status"], "NOT_EVALUATED_NO_REAL_FACTOR_CHAIN_QUALIFIED")
+
+    def test_retained_hose_listing_precedes_newer_non_hose_event(self):
+        selected = select_candidates(
+            [_event("HNX", "STOCK_DIVIDEND", "2026-08-27"), _event("HOS", "BONUS", "2026-06-26")],
+            reference_tickers={"HNX", "HOS"}, cutoff_date="2026-09-29",
+            listing_by_ticker={"HNX": {"exchange_or_market": "HNX_LISTED"}, "HOS": {"exchange_or_market": "HOSE"}},
+            admitted_route_tickers={"HNX", "HOS"},
+        )
+        self.assertEqual([row["ticker"] for row in selected["candidates"]], ["HOS", "HNX"])
+        self.assertIn("hose_listed", selected["selection_order"])
 
 
 if __name__ == "__main__":

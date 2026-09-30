@@ -175,6 +175,14 @@ broker action, optimizer/Kelly/Markowitz allocation, market-impact model, fill p
 Broad/historical RAW_AS_TRADED remains unpromoted; the merged prospective official-agreement subset stays separately
 qualified for scoped research.
 
+## 2026-09-30 - Historical real official factor-chain qualification V1
+
+`HISTORICAL_RAW_PIT_REAL_FACTOR_CHAIN_QUALIFICATION_V1 = PARTIAL / OFFICIAL_EVIDENCE_ACQUIRED_NO_QUALIFIED_FACTOR_CHAIN`.
+
+1. Candidate ranking is derived from the retained official event index joined to the retained exchange universe. It froze VBB 2026-06-26 bonus, KLB 2025-09-24 stock dividend, and VBB 2025-06-27 stock dividend; HPG was not selected because the retained index does not resolve the referred 2026-05 event.
+2. The governed source registry admitted exactly two document requests. VBB's HNX ex-right notice supplied explicit ex-date, ratio and source-native publication timestamp, but planned/record-date evidence remains below executed. KLB's HNX listing-change decision is executed-lifecycle evidence with exact share counts, but cannot safely be linked to the retained index event and has no qualifying publication cutoff.
+3. No observed price ratio was used, no document was backdated from retrieval time or HTTP metadata, and no event was manually promoted. With zero real factor-chain qualification, no raw price event window was requested. Global PIT/backtest/replay and active-universe authority remain unchanged.
+
 ## 2026-09-29 - Prospective RAW/PIT price authority (`PROSPECTIVE_RAW_PIT_AUTHORITY_V1`; PROSPECTIVE_PIT_OPERATIONAL / HISTORICAL_PIT_PARTIAL, local checkpoint)
 
 **Decision.** Authority is use-specific across ten dimensions and never one RAW/PIT boolean. Prospective as-known price

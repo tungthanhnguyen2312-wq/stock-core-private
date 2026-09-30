@@ -81,6 +81,10 @@
 - The owner subsequently authorized `LIQUIDITY_EXECUTION_CAPACITY_AND_SIZING_V1`; the prior
   candidate wording is superseded by the active sync above.
 
+**Historical real official factor-chain qualification V1 (2026-09-30):**
+`HISTORICAL_RAW_PIT_REAL_FACTOR_CHAIN_QUALIFICATION_V1 = PARTIAL / OFFICIAL_EVIDENCE_ACQUIRED_NO_QUALIFIED_FACTOR_CHAIN`.
+Eight bounded locator queries and two registry-admitted HNX document acquisitions retained one VBB ex-right notice and one KLB listing-change decision. VBB establishes an explicit 2026-06-26 ex-date, 100:10 bonus ratio, and an exact official page publication time, but is not executed. KLB establishes a completed stock-dividend listing change with exact share counts, but does not establish event-linked terms or a qualifying historical publication cutoff. No event reached `FACTOR_CHAIN_QUALIFIED`; no raw price window was requested. Prospective PIT evidence, global PIT backtest/execution replay, and `ACTIVE_UNIVERSE = UNKNOWN` are unchanged.
+
 **Roadmap sync: official-exchange liquidity operationalization (2026-09-29; now COMPLETE):**
 - `OFFICIAL_EXCHANGE_LIQUIDITY_MARKET_WIDE_OPERATIONALIZATION_V1` = `COMPLETE / PARTIAL` (PR #14).
 - HOSE liquidity research is exact for all 403 tickers, with a retained HNX 28 / UPCoM 26 cohort. HNX/UPCoM bulk retrieval

@@ -92,6 +92,11 @@ class AcquisitionTests(unittest.TestCase):
   self.assertEqual(future["outcomes"][0]["state"],"unsupported_request")
  def test_index_observed_dtp_is_a_finite_supported_ticker(self):
   self.assertIn("DTP",TICKERS)
+ def test_explicit_bounded_additional_ticker_is_admitted_without_widening_default_scope(self):
+  denied=acquire([self.spec(ticker="VBB")],self.root,fetcher=self.fetch)
+  admitted=acquire([self.spec(ticker="VBB")],self.root,fetcher=self.fetch,additional_allowed_tickers=("VBB",))
+  self.assertEqual(denied["outcomes"][0]["state"],"unsupported_request")
+  self.assertEqual(admitted["outcomes"][0]["state"],"retained")
  def test_declared_rss_discovery_input_is_retained_as_xml_but_not_evidence(self):
   rss=b'<?xml version="1.0"?><rss><channel><title>HNX</title></channel></rss>'
   spec={"ticker":"DTP","source_id":"hnx","canonical_url":"https://hnx.example/feed.rss","document_class":"disclosure_rss_feed","reporting_period":"2026","source_authority":"exchange","observed_at":"2026-09-15T00:00:00Z"}

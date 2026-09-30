@@ -149,11 +149,12 @@ def _declared_max_redirects(registry: Mapping[str, Any]) -> int:
     return int(declared) if isinstance(declared, int) and declared >= 0 else MAX_REDIRECTS
 
 
-def _validate_spec(spec: Mapping[str, Any], allowed_types: frozenset[str]) -> tuple[str, str, str, str, str]:
+def _validate_spec(spec: Mapping[str, Any], allowed_types: frozenset[str], *,
+                   allowed_tickers: frozenset[str] = TICKERS) -> tuple[str, str, str, str, str]:
     ticker, document_class, period = str(spec.get("ticker", "")).upper(), str(spec.get("document_class", "")), str(spec.get("reporting_period", ""))
     source_id = str(spec.get("source_id", ""))
     if not source_id: raise ValueError("missing_source_id")
-    if ticker not in TICKERS or document_class not in allowed_types or period not in PERIODS: raise ValueError("unsupported_request")
+    if ticker not in allowed_tickers or document_class not in allowed_types or period not in PERIODS: raise ValueError("unsupported_request")
     return ticker, document_class, period, canonical_url(str(spec.get("canonical_url", ""))), source_id
 
 
@@ -245,7 +246,8 @@ def acquire(requests_: Iterable[Mapping[str, Any]], destination: Path, *, fetche
             timeout_seconds: int = READ_TIMEOUT_SECONDS, max_attempts: int = 2, observed_at: str | None = None,
             sleep: Callable[[float], None] = time.sleep, connect_timeout_seconds: int = CONNECT_TIMEOUT_SECONDS,
             max_response_bytes: int = MAX_RESPONSE_BYTES, registry: Mapping[str, Any] | None = None,
-            clock: Callable[[], float] = time.monotonic) -> dict[str, Any]:
+            clock: Callable[[], float] = time.monotonic,
+            additional_allowed_tickers: Iterable[str] = ()) -> dict[str, Any]:
     """Retain official documents, one request at a time, each admitted by the source registry.
 
     Nothing here reaches the network until `official_source_registry.admit()` has approved that
@@ -256,10 +258,11 @@ def acquire(requests_: Iterable[Mapping[str, Any]], destination: Path, *, fetche
     if not 1 <= timeout_seconds <= 30 or not 1 <= max_attempts <= 2 or max_response_bytes < 1024: raise ValueError("bounded_retry_or_timeout_invalid")
     registry = registry if registry is not None else load_registry()
     allowed_types = declared_document_types(registry)
+    allowed_tickers = frozenset({*TICKERS, *(str(ticker).upper() for ticker in additional_allowed_tickers)})
     last_request_at: dict[str, float] = {}
     root = Path(destination); root.mkdir(parents=True, exist_ok=True); manifest_path = root / MANIFEST; records = _load(manifest_path)["records"]; outcomes = []
     for spec in requests_:
-        try: ticker, document_class, period, url, source_id = _validate_spec(spec, allowed_types)
+        try: ticker, document_class, period, url, source_id = _validate_spec(spec, allowed_types, allowed_tickers=allowed_tickers)
         except ValueError as exc: outcomes.append({"state": str(exc), "ticker": str(spec.get("ticker", "")).upper()}); continue
         cached = _cached(root, records, ticker, url)
         if cached: outcomes.append({"ticker": ticker, "document_id": cached["document_id"], "state": "cached_valid"}); continue

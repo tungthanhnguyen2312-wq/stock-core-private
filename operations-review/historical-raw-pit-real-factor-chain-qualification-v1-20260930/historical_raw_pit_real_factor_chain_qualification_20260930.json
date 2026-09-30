@@ -1,0 +1,359 @@
+{
+  "artifact_identity": "historical_raw_pit_real_factor_chain_qualification:111e6b8ab10b6653691fbcef1967ac2cddc3ea9fb50231a677501140a24ba655",
+  "artifact_sha256": "111e6b8ab10b6653691fbcef1967ac2cddc3ea9fb50231a677501140a24ba655",
+  "authority_boundary": {
+    "active_universe": "UNKNOWN",
+    "execution_replay_eligible": false,
+    "market_wide_raw_as_traded_promoted": false,
+    "observed_market_ratio_used_as_factor": false,
+    "pit_backtest_eligible": false,
+    "real_factor_chain_qualified_count": 0
+  },
+  "candidate_selection": {
+    "candidate_limit": 3,
+    "candidates": [
+      {
+        "bridge_contract": "hnx_rights_event_index_ex_date_bridge/v1",
+        "bridge_scope": "EXPLICIT_EX_DATE_ONLY_NOT_LEDGER_OBSERVATION",
+        "classification": "OTHER_EVIDENCE_GAP",
+        "event_id": "current_official_event:f327de652eb9b1a6bc0c95fedcfc902e5b89f66f51c6f914c039d80db52429b7",
+        "event_type": "BONUS",
+        "ex_date": "2026-06-26",
+        "exact_blocker_codes": [
+          "explicit_official_ex_date_present",
+          "missing_documentary_stock_ratio_or_share_counts",
+          "missing_documentary_executed_lifecycle_evidence",
+          "missing_documentary_publication_cutoff"
+        ],
+        "execution_date": null,
+        "execution_status": "NOT_EXECUTED_NO_DOCUMENTARY_EVIDENCE",
+        "factor_chain_classification": "OTHER_EVIDENCE_GAP",
+        "factor_status": "NOT_QUALIFIED",
+        "knowledge_cutoff_status": "MISSING_DOCUMENTARY_PUBLICATION_CUTOFF",
+        "ledger_observation_emitted": false,
+        "ledger_qualification": "NOT_EVALUATED_NOT_LEDGER_OBSERVATION",
+        "official_ex_date_status": "EXPLICIT_OFFICIAL",
+        "pit_raw_input_status": "NOT_REQUESTED_NO_REAL_FACTOR_CHAIN_QUALIFIED",
+        "pit_series_status": "NOT_EVALUATED_NO_REAL_FACTOR_CHAIN_QUALIFIED",
+        "ratio_share_evidence_status": "MISSING_OFFICIAL_DOCUMENTARY_EVIDENCE",
+        "reason_codes": [
+          "explicit_official_ex_date_present",
+          "missing_documentary_stock_ratio_or_share_counts",
+          "missing_documentary_executed_lifecycle_evidence",
+          "missing_documentary_publication_cutoff"
+        ],
+        "record_date": "2026-06-29",
+        "source_contract": "hnx_official_rights_event_index/v1",
+        "source_document_identities": {
+          "index_source_record_identity": "cc0fd92646b2e985a6c00495a85ce04d723eb2f77b04d082dea580c177e822ac:VBB:BONUS:2026-06-26:2026-06-29::1",
+          "retained_detail_document_ids": []
+        },
+        "source_identity": "cc0fd92646b2e985a6c00495a85ce04d723eb2f77b04d082dea580c177e822ac",
+        "source_record_identity": "cc0fd92646b2e985a6c00495a85ce04d723eb2f77b04d082dea580c177e822ac:VBB:BONUS:2026-06-26:2026-06-29::1",
+        "source_url": "https://hnx.vn",
+        "ticker": "VBB"
+      },
+      {
+        "bridge_contract": "hnx_rights_event_index_ex_date_bridge/v1",
+        "bridge_scope": "EXPLICIT_EX_DATE_ONLY_NOT_LEDGER_OBSERVATION",
+        "classification": "OTHER_EVIDENCE_GAP",
+        "event_id": "current_official_event:5e2fdad60bccdd3d99a870903f7b9aebe58eab8519d1aadbeba28bee0c8bca84",
+        "event_type": "RIGHTS",
+        "ex_date": "2025-11-12",
+        "exact_blocker_codes": [
+          "explicit_official_ex_date_present",
+          "missing_documentary_stock_ratio_or_share_counts",
+          "missing_documentary_executed_lifecycle_evidence",
+          "missing_documentary_publication_cutoff"
+        ],
+        "execution_date": null,
+        "execution_status": "NOT_EXECUTED_NO_DOCUMENTARY_EVIDENCE",
+        "factor_chain_classification": "OTHER_EVIDENCE_GAP",
+        "factor_status": "NOT_QUALIFIED",
+        "knowledge_cutoff_status": "MISSING_DOCUMENTARY_PUBLICATION_CUTOFF",
+        "ledger_observation_emitted": false,
+        "ledger_qualification": "NOT_EVALUATED_NOT_LEDGER_OBSERVATION",
+        "official_ex_date_status": "EXPLICIT_OFFICIAL",
+        "pit_raw_input_status": "NOT_REQUESTED_NO_REAL_FACTOR_CHAIN_QUALIFIED",
+        "pit_series_status": "NOT_EVALUATED_NO_REAL_FACTOR_CHAIN_QUALIFIED",
+        "ratio_share_evidence_status": "MISSING_OFFICIAL_DOCUMENTARY_EVIDENCE",
+        "reason_codes": [
+          "explicit_official_ex_date_present",
+          "missing_documentary_stock_ratio_or_share_counts",
+          "missing_documentary_executed_lifecycle_evidence",
+          "missing_documentary_publication_cutoff"
+        ],
+        "record_date": "2025-11-13",
+        "source_contract": "hnx_official_rights_event_index/v1",
+        "source_document_identities": {
+          "index_source_record_identity": "d09f7c4883f56ff15aa256ce7fff298c655b2a8e5c20fcea03c6924a5728a14c:VBB:RIGHTS:2025-11-12:2025-11-13::1",
+          "retained_detail_document_ids": []
+        },
+        "source_identity": "d09f7c4883f56ff15aa256ce7fff298c655b2a8e5c20fcea03c6924a5728a14c",
+        "source_record_identity": "d09f7c4883f56ff15aa256ce7fff298c655b2a8e5c20fcea03c6924a5728a14c:VBB:RIGHTS:2025-11-12:2025-11-13::1",
+        "source_url": "https://hnx.vn",
+        "ticker": "VBB"
+      },
+      {
+        "bridge_contract": "hnx_rights_event_index_ex_date_bridge/v1",
+        "bridge_scope": "EXPLICIT_EX_DATE_ONLY_NOT_LEDGER_OBSERVATION",
+        "classification": "OTHER_EVIDENCE_GAP",
+        "event_id": "current_official_event:bf27b7eb850b8d132c5f965488ebcf6dac1afb2a539ce44d14185e56abf9f4d8",
+        "event_type": "RIGHTS",
+        "ex_date": "2025-10-02",
+        "exact_blocker_codes": [
+          "explicit_official_ex_date_present",
+          "missing_documentary_stock_ratio_or_share_counts",
+          "missing_documentary_executed_lifecycle_evidence",
+          "missing_documentary_publication_cutoff"
+        ],
+        "execution_date": null,
+        "execution_status": "NOT_EXECUTED_NO_DOCUMENTARY_EVIDENCE",
+        "factor_chain_classification": "OTHER_EVIDENCE_GAP",
+        "factor_status": "NOT_QUALIFIED",
+        "knowledge_cutoff_status": "MISSING_DOCUMENTARY_PUBLICATION_CUTOFF",
+        "ledger_observation_emitted": false,
+        "ledger_qualification": "NOT_EVALUATED_NOT_LEDGER_OBSERVATION",
+        "official_ex_date_status": "EXPLICIT_OFFICIAL",
+        "pit_raw_input_status": "NOT_REQUESTED_NO_REAL_FACTOR_CHAIN_QUALIFIED",
+        "pit_series_status": "NOT_EVALUATED_NO_REAL_FACTOR_CHAIN_QUALIFIED",
+        "ratio_share_evidence_status": "MISSING_OFFICIAL_DOCUMENTARY_EVIDENCE",
+        "reason_codes": [
+          "explicit_official_ex_date_present",
+          "missing_documentary_stock_ratio_or_share_counts",
+          "missing_documentary_executed_lifecycle_evidence",
+          "missing_documentary_publication_cutoff"
+        ],
+        "record_date": "2025-10-03",
+        "source_contract": "hnx_official_rights_event_index/v1",
+        "source_document_identities": {
+          "index_source_record_identity": "dd5ba0b2604b6f221d620a2b707a02a9e39510c62d13572b6a096047ad3bdee6:MZG:RIGHTS:2025-10-02:2025-10-03::1",
+          "retained_detail_document_ids": []
+        },
+        "source_identity": "dd5ba0b2604b6f221d620a2b707a02a9e39510c62d13572b6a096047ad3bdee6",
+        "source_record_identity": "dd5ba0b2604b6f221d620a2b707a02a9e39510c62d13572b6a096047ad3bdee6:MZG:RIGHTS:2025-10-02:2025-10-03::1",
+        "source_url": "https://hnx.vn",
+        "ticker": "MZG"
+      }
+    ],
+    "cutoff_date": "2026-09-29",
+    "eligible_event_count": 237,
+    "excluded_completed_event_reasons": [
+      {
+        "event_id": "current_official_event:9e424ee7484639145eb1ae694071cc7bd3c5485c2cd34403f98b0210abbd9327",
+        "reason": "future_execution_date_not_treated_as_executed",
+        "ticker": "D11"
+      },
+      {
+        "event_id": "current_official_event:0bfdc041994103d23f687a2a01dcf88fe4993443828940ed0d5de154fbb33484",
+        "reason": "missing_explicit_ex_date",
+        "ticker": "G20"
+      }
+    ],
+    "reference_collection_ticker_count": 1703,
+    "selected_count": 3,
+    "selection_contract": "real_official_corporate_action_factor_evidence_candidate_selection/v1",
+    "selection_order": "supported_share_affecting__hose_listed__newest_ex_date__admitted_route__prospective_snapshot_horizon__ticker__event_id"
+  },
+  "contract_version": "historical_raw_pit_real_factor_chain_qualification/v1",
+  "event_outcomes": {
+    "KLB:2025-09-24:STOCK_DIVIDEND": {
+      "execution_evidence": {
+        "citation": "HNX listing-change decision states stock-dividend issuance, 216,888,648 additional registered shares, 582,170,526 total registered shares, effective 2025-10-27",
+        "document_id": "9043002fc71e5231833ccee2350540fb3f4640e8212bc9df194ef3e6bf0d92e5",
+        "page": 2
+      },
+      "factor_chain": {
+        "classification": "OTHER_EVIDENCE_GAP",
+        "reason_codes": [
+          "missing_event_linked_official_ratio_terms",
+          "missing_historical_publication_cutoff"
+        ],
+        "status": "NOT_QUALIFIED"
+      },
+      "pit_price_series": "NOT_EVALUATED_NO_REAL_FACTOR_CHAIN_QUALIFIED"
+    },
+    "VBB:2025-06-27:STOCK_DIVIDEND": {
+      "factor_chain": {
+        "classification": "OTHER_EVIDENCE_GAP",
+        "reason_codes": [
+          "no_exact_admitted_official_detail_locator_within_discovery_budget"
+        ],
+        "status": "NOT_QUALIFIED"
+      },
+      "pit_price_series": "NOT_EVALUATED_NO_REAL_FACTOR_CHAIN_QUALIFIED"
+    },
+    "VBB:2026-06-26:BONUS": {
+      "factor_chain": {
+        "classification": "NOT_EXECUTED",
+        "reason_codes": [
+          "lifecycle_not_executed",
+          "no_share_change_identity_for_ledger_link"
+        ],
+        "status": "NOT_QUALIFIED"
+      },
+      "knowledge_cutoff": {
+        "close_price_execution_eligibility": "NOT_ESTABLISHED",
+        "eod_resolution_rule": "EXACT_TIMESTAMP_CUTOFF",
+        "historical_reconstruction_scope": "FROM_QUALIFIED_SOURCE_PUBLICATION",
+        "knowledge_available_at": "2026-06-19T08:39:00+07:00",
+        "knowledge_available_research_session": null,
+        "knowledge_time_status": "KNOWLEDGE_RESOLVED_SOURCE_PUBLICATION",
+        "warnings": [
+          "SESSION_RESOLUTION_UNAVAILABLE"
+        ]
+      },
+      "knowledge_cutoff_citation": {
+        "document_id": "d47f20f8d47d5c5229e5c2634506a5e2d0acb391df907206d4be145d3530a450",
+        "field": "news-public-time",
+        "value": "2026-06-19T08:39:00+07:00"
+      },
+      "ledger": {
+        "adjustment_authority": "official_corporate_action_ledger",
+        "adjustment_factor_counts": {},
+        "adjustment_policy_version": "1.0.0",
+        "authority_state": "outside_production_authority",
+        "duplicate_observations": [],
+        "entries": [],
+        "entry_count": 0,
+        "ledger_version": "1.0.0",
+        "lifecycle_counts": {},
+        "qualified_event_count": 0,
+        "replay_fingerprint": "3d23c872cd6ac2d6f89cc6784d1903268aef48781a134277ada3def46823c800",
+        "schema_version": "1.0.0",
+        "superseded_entry_ids": [],
+        "unlinked_observations": [
+          {
+            "document_id": "d47f20f8d47d5c5229e5c2634506a5e2d0acb391df907206d4be145d3530a450",
+            "observation_id": "69f39867e0764ed357a28d0fe50c67ac142e055457f585083648e9f32f2d84df",
+            "reason": "no share-change identity; cannot be linked to an event"
+          }
+        ]
+      },
+      "official_terms_observation": {
+        "absent_fields": {
+          "approval_date": "no field cue present in the document",
+          "depository_acceptance_date": "direct_label_missing_or_ambiguous",
+          "direct_event_reference": "direct_dividend_event_reference_missing_or_ambiguous",
+          "isin": "direct_label_missing_or_ambiguous",
+          "listing_effective_date": "no field cue present in the document",
+          "payment_date": "no field cue present in the document",
+          "registered_securities_added": "direct_label_missing_or_ambiguous",
+          "registered_securities_total": "direct_label_missing_or_ambiguous",
+          "registration_effective_date": "direct_label_missing_or_ambiguous",
+          "shares_after": "the Before / Change / After column headers are not present in order",
+          "shares_before": "the Before / Change / After column headers are not present in order",
+          "shares_issued": "the Before / Change / After column headers are not present in order",
+          "trading_date": "no field cue present in the document"
+        },
+        "announcement_date": "2026-06-19T08:39:00+07:00",
+        "approval_date": null,
+        "cash_amount_per_share": null,
+        "citations": [
+          {
+            "cue": "ngày giao dịch không hưởng quyền",
+            "excerpt": "Ngày giao dịch không hưởng quyền: 26/06/2026 3. Lý do và mục đích: * Trả cổ phiếu thưởng cho cổ đông hiện hữu: - Tỷ lệ thực hiện: 100:10 (Cổ đông sở hữu 100 cổ ",
+            "field": "ex_date"
+          },
+          {
+            "cue": "ngày đăng ký cuối cùng:",
+            "excerpt": "Ngày đăng ký cuối cùng: 29/06/2026 2. Ngày giao dịch không hưởng quyền: 26/06/2026 3. Lý do và mục đích: * Trả cổ phiếu thưởng cho cổ đông hiện hữu: - Tỷ lệ thự",
+            "field": "record_date"
+          },
+          {
+            "cue": "explicit Vietnamese entitlement rate",
+            "excerpt": "Tỷ lệ thực hiện: 100:10",
+            "field": "stock_ratio"
+          },
+          {
+            "cue": "explicit Vietnamese entitlement calculation",
+            "excerpt": "x 10/100 =",
+            "field": "stock_ratio"
+          }
+        ],
+        "content_sha256": "87be986daf4cf4577aa5faa07d531a39ea254ffc56bf6db672c2f087872a9453",
+        "depository_acceptance_date": null,
+        "direct_event_reference": null,
+        "discovery_provenance": "bounded_search_locator_query_1_of_5",
+        "document_classification": {
+          "acquisition_document_class": "ex_right_notice",
+          "basis": "document_internal_hnx_ex_right_notice_cue",
+          "citation": {
+            "cue": "ngày giao dịch không hưởng quyền",
+            "excerpt": "Ngày giao dịch không hưởng quyền: 26/06/2026 3. Lý do và mục đích: * Trả cổ phiếu thưởng cho cổ đông hiện hữu: - Tỷ lệ thực hiện: 100:10 (Cổ đông sở hữu 100 cổ phiếu sẽ được nhận t"
+          },
+          "document_type": "ex_right_notice",
+          "state": "classified"
+        },
+        "document_id": "d47f20f8d47d5c5229e5c2634506a5e2d0acb391df907206d4be145d3530a450",
+        "document_type": "ex_right_notice",
+        "event_type": "bonus_shares",
+        "event_type_reason": "multiple cues (bonus_shares, cancellation); share-issuance cue preferred",
+        "ex_date": "2026-06-26",
+        "extractor_version": "1.0.0",
+        "isin": null,
+        "lifecycle_ceiling": "record_date_confirmed",
+        "lifecycle_reason": "the document states a confirmed record date",
+        "lifecycle_state": "record_date_confirmed",
+        "listing_effective_date": null,
+        "observation_id": "69f39867e0764ed357a28d0fe50c67ac142e055457f585083648e9f32f2d84df",
+        "observed_at": "2026-09-30T00:20:50.145261Z",
+        "payment_date": null,
+        "payment_or_execution_date": null,
+        "published_at": "2026-06-19T08:39:00+07:00",
+        "ratio_basis": "new_shares_per_existing_share",
+        "record_date": "2026-06-29",
+        "registered_securities_added": null,
+        "registered_securities_total": null,
+        "registration_effective_date": null,
+        "rights_ratio": null,
+        "schema_version": "1.0.0",
+        "shares_after": null,
+        "shares_before": null,
+        "shares_issued": null,
+        "source_authority": "exchange",
+        "source_id": "hnx",
+        "source_url": "https://hnx.vn/vi-vn/m-tin-tuc-hnx/tintuc-620442-0.html",
+        "stock_ratio": 0.1,
+        "subscription_price": null,
+        "ticker": "VBB",
+        "trading_date": null,
+        "warnings": []
+      },
+      "pit_price_series": "NOT_EVALUATED_NO_REAL_FACTOR_CHAIN_QUALIFIED"
+    }
+  },
+  "milestone": "HISTORICAL_RAW_PIT_REAL_FACTOR_CHAIN_QUALIFICATION_V1",
+  "official_documents": [
+    {
+      "canonical_url": "https://hnx.vn/vi-vn/m-tin-tuc-hnx/tintuc-620442-0.html",
+      "content_length": 15132,
+      "document_class": "ex_right_notice",
+      "document_id": "d47f20f8d47d5c5229e5c2634506a5e2d0acb391df907206d4be145d3530a450",
+      "observed_at": "2026-09-30T00:20:50.145261Z",
+      "sha256": "87be986daf4cf4577aa5faa07d531a39ea254ffc56bf6db672c2f087872a9453",
+      "ticker": "VBB"
+    },
+    {
+      "canonical_url": "https://owa.hnx.vn/ftp/cims/2025/10_W4/000000015524532_KLB.pdf",
+      "content_length": 1187712,
+      "document_class": "listing_change_notice",
+      "document_id": "9043002fc71e5231833ccee2350540fb3f4640e8212bc9df194ef3e6bf0d92e5",
+      "observed_at": "2026-09-30T00:21:00.670900Z",
+      "sha256": "7dd194a5d30ff8dd3a049cf8f7766ba7aaa7923c2ec0d9e59477b387886e6e47",
+      "ticker": "KLB"
+    }
+  ],
+  "prospective_regression": {
+    "cross_source_qualified_bar_count": 6026,
+    "known_time_bar_count": 18514,
+    "status": "UNCHANGED_RETAINED_IDENTITIES_NOT_RECOMPUTED"
+  },
+  "request_ledger": {
+    "discovery_queries": 8,
+    "new_bytes_retained": 1202844,
+    "official_http_document_requests": 2,
+    "official_http_retries": 0
+  },
+  "terminal_disposition": "PARTIAL_OFFICIAL_EVIDENCE_ACQUIRED_NO_QUALIFIED_FACTOR_CHAIN"
+}
