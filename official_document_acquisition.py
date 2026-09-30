@@ -41,6 +41,8 @@ CONNECT_TIMEOUT_SECONDS, READ_TIMEOUT_SECONDS, MAX_RESPONSE_BYTES = 5, 15, 32 * 
 MAX_REDIRECTS = 5
 REQUEST_HEADERS = {"Accept": "application/pdf,text/html;q=0.9", "User-Agent": "StockLookupOfficialEvidence/1.1"}
 DISCOVERY_RSS_MEDIA_TYPE = "application/rss+xml"
+BOUNDED_ADDITIONAL_TICKER_SCOPE_EXCEEDED = "BOUNDED_ADDITIONAL_TICKER_SCOPE_EXCEEDED"
+_TICKER_IDENTITY = re.compile(r"[A-Z][A-Z0-9]{0,9}")
 
 
 def canonical_url(url: str) -> str:
@@ -158,6 +160,23 @@ def _validate_spec(spec: Mapping[str, Any], allowed_types: frozenset[str], *,
     return ticker, document_class, period, canonical_url(str(spec.get("canonical_url", ""))), source_id
 
 
+def _bounded_additional_ticker_scope(tickers: Iterable[str] | None) -> frozenset[str]:
+    """Validate the explicitly requested, finite extension to ``TICKERS``.
+
+    ``None`` means no extension and preserves the historical default scope.  An
+    explicitly supplied empty, duplicate, malformed, default-scope-overlapping,
+    or larger-than-three extension fails before any registry or HTTP action.
+    """
+    if tickers is None:
+        return frozenset()
+    values = tuple(tickers)
+    normalized = tuple(value.strip().upper() if isinstance(value, str) else "" for value in values)
+    if (not normalized or len(normalized) > 3 or any(not _TICKER_IDENTITY.fullmatch(value) for value in normalized)
+            or len(set(normalized)) != len(normalized) or any(value in TICKERS for value in normalized)):
+        raise ValueError(BOUNDED_ADDITIONAL_TICKER_SCOPE_EXCEEDED)
+    return frozenset(normalized)
+
+
 def fetch_http(url: str, *, temporary_path: Path, timeout_seconds: int = READ_TIMEOUT_SECONDS,
                connect_timeout_seconds: int = CONNECT_TIMEOUT_SECONDS, max_response_bytes: int = MAX_RESPONSE_BYTES,
                admit_hop: Callable[[str], bool] | None = None, max_redirects: int = MAX_REDIRECTS) -> tuple[int, Mapping[str, str], bytes, str]:
@@ -247,7 +266,7 @@ def acquire(requests_: Iterable[Mapping[str, Any]], destination: Path, *, fetche
             sleep: Callable[[float], None] = time.sleep, connect_timeout_seconds: int = CONNECT_TIMEOUT_SECONDS,
             max_response_bytes: int = MAX_RESPONSE_BYTES, registry: Mapping[str, Any] | None = None,
             clock: Callable[[], float] = time.monotonic,
-            additional_allowed_tickers: Iterable[str] = ()) -> dict[str, Any]:
+            additional_allowed_tickers: Iterable[str] | None = None) -> dict[str, Any]:
     """Retain official documents, one request at a time, each admitted by the source registry.
 
     Nothing here reaches the network until `official_source_registry.admit()` has approved that
@@ -258,10 +277,16 @@ def acquire(requests_: Iterable[Mapping[str, Any]], destination: Path, *, fetche
     if not 1 <= timeout_seconds <= 30 or not 1 <= max_attempts <= 2 or max_response_bytes < 1024: raise ValueError("bounded_retry_or_timeout_invalid")
     registry = registry if registry is not None else load_registry()
     allowed_types = declared_document_types(registry)
-    allowed_tickers = frozenset({*TICKERS, *(str(ticker).upper() for ticker in additional_allowed_tickers)})
+    additional_scope = _bounded_additional_ticker_scope(additional_allowed_tickers)
+    allowed_tickers = frozenset({*TICKERS, *additional_scope})
     last_request_at: dict[str, float] = {}
     root = Path(destination); root.mkdir(parents=True, exist_ok=True); manifest_path = root / MANIFEST; records = _load(manifest_path)["records"]; outcomes = []
     for spec in requests_:
+        requested_ticker = str(spec.get("ticker", "")).upper()
+        if (additional_allowed_tickers is not None and requested_ticker not in TICKERS
+                and requested_ticker not in additional_scope):
+            outcomes.append({"state": BOUNDED_ADDITIONAL_TICKER_SCOPE_EXCEEDED, "ticker": requested_ticker})
+            continue
         try: ticker, document_class, period, url, source_id = _validate_spec(spec, allowed_types, allowed_tickers=allowed_tickers)
         except ValueError as exc: outcomes.append({"state": str(exc), "ticker": str(spec.get("ticker", "")).upper()}); continue
         cached = _cached(root, records, ticker, url)
