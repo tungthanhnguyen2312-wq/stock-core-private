@@ -9,6 +9,17 @@
   existing 400 cap and is not auto-broadened. Live qualification is pending the
   completed 2026-09-30 session. No successor is queued or started.
 
+**Roadmap sync: Official-liquidity request-budget rebaseline (2026-09-30):**
+- `OFFICIAL_LIQUIDITY_REQUEST_BUDGET_REBASELINE_V1` =
+  `COMPLETE_NO_CODE_CHANGE_POLICY_CEILING_CONFIRMED` on canonical
+  `10e9810de494133bcd0c46c35b4cba80723a5e71` (Producer CI #141, run 36688527437,
+  4/4 green). Retained-only analysis proves 403 irreducible one-symbol HOSE primary
+  calls for a new session and zero retained-current reuse. The 40 retry calls are a
+  conservative reservation, while the runner's actual cap is absolute 400; rebasing
+  retries cannot make 403 primaries legal. There is no admitted batch request or
+  evidence-based subset. The owner must decide a governed ceiling or explicitly
+  authorized scope; `DAILY_OFFICIAL_LIQUIDITY_ROLLFORWARD_V1` remains `PARTIAL`.
+
 **Roadmap sync: Daily liquidity authority wiring reconciliation (2026-09-30):**
 - `DAILY_LIQUIDITY_AUTHORITY_WIRING_RECONCILIATION_V1` = `COMPLETE`, rooted at
   `caf413456b60f8af7a13e16e375880310718d619` (Producer CI #136 SUCCESS).

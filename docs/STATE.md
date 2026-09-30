@@ -18,6 +18,20 @@ Owner Daily, and 2026-09-29-as-today acceptance were not run (10:25 ICT, session
 [`daily_official_liquidity_rollforward_publication_manifest.json`](daily_official_liquidity_rollforward_publication_manifest.json).
 No successor is queued or started.
 
+**Official-liquidity request-budget rebaseline (2026-09-30):**
+`OFFICIAL_LIQUIDITY_REQUEST_BUDGET_REBASELINE_V1 =
+COMPLETE_NO_CODE_CHANGE_POLICY_CEILING_CONFIRMED` on canonical
+`10e9810de494133bcd0c46c35b4cba80723a5e71` (Producer CI #141, run 36688527437,
+4/4 green). Retained offline evidence proves that a later-session full-HOSE exact-window
+refresh has 403 irreducible primary requests: the 2026-09-28 artifact has zero series
+current for a new target, and each retained HOSE page-1 response is one symbol's 20 rows.
+The 40-call retry allowance is conservative preflight reservation; the runner separately
+enforces an absolute 400-call cap, but this cannot admit 403 primaries. No duplicate,
+batching, rights, or existing use-specific scope reduction exists. The blocker remains
+an owner policy decision on the ceiling or an explicitly authorized scope contract. No live
+qualification occurred; the existing Daily milestone remains `PARTIAL` and its live
+acceptance remains pending.
+
 **Daily liquidity authority wiring reconciliation (2026-09-30):**
 `DAILY_LIQUIDITY_AUTHORITY_WIRING_RECONCILIATION_V1 = COMPLETE /
 DAILY_LIQUIDITY_AUTHORITY_WIRING_RECONCILIATION_COMPLETE`, rooted at canonical

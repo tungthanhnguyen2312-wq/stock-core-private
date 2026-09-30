@@ -21,6 +21,30 @@ because the 2026-09-30 session is not completed.
 **Boundary.** No live Daily, no 2026-09-29-as-today acceptance, no merge, deploy,
 Dashboard publish, production DB write or successor.
 
+## 2026-09-30 - Official-liquidity request-budget rebaseline (`OFFICIAL_LIQUIDITY_REQUEST_BUDGET_REBASELINE_V1`)
+
+**Decision.** `COMPLETE_NO_CODE_CHANGE_POLICY_CEILING_CONFIRMED`. Retained-only
+reconstruction on canonical `10e9810de494133bcd0c46c35b4cba80723a5e71` proves the
+new-session plan has 403 distinct HOSE page-1 primary requests and zero current retained
+series. The retained HOSE route is one-symbol: all 403 page-1 responses have exactly 20
+rows, and every row echoes only its requested symbol. The prior 364-call market-wide run
+was possible only because it carried 59 HOSE entries (39 distinct page-1 symbols, plus
+watchlist depth) and 28 HNX / 26 UPCoM entries already current for 2026-09-28.
+
+**Result.** The plan's 40-call retry allowance is a conservative reservation, not a
+permission to exceed the cap. The runner may retry a transient request only while its
+actual HTTP counter is below 400, so its cap is absolute. Removing the reservation cannot
+make a 403-primary plan legal. No duplicate route, retained-current reuse, admitted
+multi-symbol response, or pre-existing use-specific subset was found. In particular,
+the 11 HOSE records without a DNSE active board are not an excludable subset: board
+absence is neither official zero trading nor a restriction on their exact ADTV use.
+The owner must choose a governed ceiling or an explicitly authorized evidence-based
+scope contract. HNX/UPCoM new requests remain 0; no authority changes.
+
+**Boundary.** No code change, no live source qualification, Daily, Dashboard, database
+write, provider probing, policy widening, or successor. `DAILY_OFFICIAL_LIQUIDITY_ROLLFORWARD_V1`
+remains `PARTIAL / LIVE_ACCEPTANCE_PENDING_2026_09_30_COMPLETED_SESSION`.
+
 ## 2026-09-30 - Daily liquidity authority wiring reconciliation (`DAILY_LIQUIDITY_AUTHORITY_WIRING_RECONCILIATION_V1`)
 
 **Decision.** Liquidity authority is use-specific and per-record. An artifact summary
