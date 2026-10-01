@@ -1,5 +1,71 @@
 # Stock Lookup — Architecture & Roadmap
 
+
+## 2026-10-01 capability rebaseline
+
+This section supersedes older "next milestone" pointers where they conflict with the
+machine-readable execution state. It does not erase historical milestone records.
+
+The October 1 ordinary Owner Daily live-acceptance gate is closed after PR #31 merged
+with Producer CI #167 SUCCESS. Roadmap selection now returns to product capability
+progress rather than telemetry/acceptance work.
+
+### Capability sequence
+
+1. **R1 — Roadmap & Public Repository Rebaseline**
+   - synchronize STATE / ROADMAP_STATE / SYSTEM_MAP / README;
+   - expose a clear public GitHub front door;
+   - define a call-graph-driven repository-layout migration plan;
+   - do not mass-move implementation modules.
+   - State: COMPLETE / PR_READY.
+
+2. **R2 — Current Research Coverage & Decision Fitness**
+   - measure full-universe usable coverage across current price, tactical, fundamental,
+     valuation, corporate/event and integrated-decision dimensions;
+   - classify why a ticker is unavailable, blocked, stale, proxy, not applicable or usable;
+   - rank only blockers that materially reduce decision quality;
+   - avoid another generic audit.
+   - State: NEXT after R1 merge.
+
+3. **R3 — Fundamental + Current Valuation Depth**
+   - expand research-usable financial coverage and method-compatible peer/history context;
+   - improve share/denominator handling without mislabelling proxies as exact authority;
+   - keep sector applicability explicit.
+
+4. **R4 — Corporate Intelligence + Forward Driver Model**
+   - convert official events, filings and research evidence into dated driver/catalyst/risk
+     inputs;
+   - support earnings revisions, segment drivers and expectation / variant-perception research.
+
+5. **R5 — Intrinsic / Scenario Valuation**
+   - governed forecast assumptions;
+   - sector-appropriate FCFF/FCFE/DDM/residual-income/RNAV/SOTP where applicable;
+   - explicit sensitivity and bear/base/bull assumptions;
+   - no fabricated probability or target-price authority.
+
+6. **R6 — Prospective Learning & Calibration**
+   - retain T0 research decisions and evaluate 5/10/20-session outcomes, MFE/MAE and
+     false-positive/false-negative patterns;
+   - calibrate policies from prospective evidence rather than ad-hoc thresholds.
+
+7. **R7 — Portfolio / PIT / Execution Authority**
+   - historical RAW_AS_TRADED and corporate-action PIT where new evidence supports it;
+   - execution-grade ADTV/ADV, sizing, leverage, portfolio allocation and PIT backtesting;
+   - do not reopen evidence-ceiling lanes without genuinely new evidence.
+
+### Sequencing rules
+
+- R2–R6 do not wait for R7.
+- Missing higher authority blocks only dependent uses.
+- Research proxies remain labelled proxies and may support Current Research where their
+  method and provenance are explicit.
+- Product-critical analytical capability outranks presentation-only expansion.
+- Repository layout migration is attached to useful capability work; it is not a standalone
+  multi-week rewrite.
+- One meaningful milestone at a time. Git merge, deploy, publication, production writes and
+  authority promotion remain separate action classes unless explicitly authorized.
+
+
 **Roadmap sync: future-dated Current Research freshness (2026-10-01):**
 `CURRENT_RESEARCH_FUTURE_DATED_FRESHNESS_GUARD_V1 = COMPLETE`, owner-authorized
 independent corrective while new-session telemetry live acceptance was time-gated.
