@@ -64,6 +64,7 @@ def main():
     parser.add_argument('--coherence-acceptance', action='store_true')
     parser.add_argument('--participation-acceptance', action='store_true')
     parser.add_argument('--fundamental-thesis-acceptance', action='store_true')
+    parser.add_argument('--unchanged-decision-acceptance', action='store_true')
     parser.add_argument('--engine-input', type=Path)
     args = parser.parse_args()
     retained, checkpoint, output = (p.resolve() for p in (args.retained_root, args.checkpoint_output, args.output_root))
@@ -118,9 +119,10 @@ def main():
         liquidity_research_artifact=load(paths['liquidity_research']),
         entity_applicability_artifact=load(paths['current_research_entity_applicability']))
     bindings = {}
-    if args.fundamental_thesis_acceptance:
+    if args.fundamental_thesis_acceptance or args.unchanged_decision_acceptance:
         bridge = kwargs['operational_fundamental_integration_artifact']
-        assert bridge['source_artifact_identities']['financial_analysis'] == prior_wrapper['financial_analysis_product']['artifact_identity']
+        if args.fundamental_thesis_acceptance:
+            assert bridge['source_artifact_identities']['financial_analysis'] == prior_wrapper['financial_analysis_product']['artifact_identity']
         old_identity = bridge['artifact_identity']
         bridge['source_artifact_identities']['financial_analysis'] = wrapper['financial_analysis_product']['artifact_identity']
         bridge.update(operational.content_identity(bridge))
@@ -128,6 +130,8 @@ def main():
     after = product.build_artifact(**kwargs)
     assert after == product.build_artifact(**kwargs), 'NONDETERMINISTIC'
     assert set(before['records']) == set(after['records'])
+    if args.unchanged_decision_acceptance:
+        assert after == before, 'UNEXPECTED_INTEGRATED_DECISION_EFFECT'
     allowed = ('market_sector_context.market_breadth', 'evidence_axes.MARKET_SECTOR.context.market_breadth',
                'current_research_decision_input.dimensions.MARKET.market_breadth')
     if args.coherence_acceptance:

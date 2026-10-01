@@ -341,6 +341,22 @@ def _delivery_financial_context(context: Mapping[str, Any] | None, ticker: str) 
     return compact
 
 
+def project_current_scenario_for_ai_delivery(record: Any, *, source_identity: str | None = None) -> Any:
+    """Retain declared case roles; generic nested compaction must not erase conditions."""
+    if not isinstance(record, Mapping):
+        return None
+    result = _selected_fields(record, ("ticker", "scenario_disposition", "probability_status", "time_horizon",
+        "confirmation_trigger", "invalidation", "key_driver_conflicts", "authority_limitations"))
+    for case in ("bear_case", "base_case", "bull_case"):
+        result[case] = copy.deepcopy(record.get(case))
+    result["scenario_driver_states"] = {
+        name: {"status": driver.get("status"), "limitations": copy.deepcopy(driver.get("limitations") or [])}
+        for name, driver in (record.get("scenario_drivers") or {}).items() if isinstance(driver, Mapping)}
+    result["source_artifact_identity"] = source_identity
+    result["is_actionable"] = False
+    return result
+
+
 def _compact_context(ticker: str, operation: Mapping[str, Any], inputs: Mapping[str, Any],
                      financial_analysis_product_context: Mapping[str, Any] | None = None,
                      integrated_overlay: Mapping[str, Any] | None = None) -> dict[str, Any]:
@@ -357,7 +373,8 @@ def _compact_context(ticker: str, operation: Mapping[str, Any], inputs: Mapping[
         "is_actionable": False,
         "current_decision_state": _slim(_records(inputs.get("tactical")).get(ticker)),
         "strategy_fit": _slim(_records(operation.get("strategy")).get(ticker)),
-        "scenario": _slim(_records(operation.get("scenario")).get(ticker)),
+        "scenario": project_current_scenario_for_ai_delivery(_records(operation.get("scenario")).get(ticker),
+            source_identity=(operation.get("scenario") or {}).get("artifact_identity")),
         "peer_context": _slim(_records(operation.get("peer")).get(ticker)),
         "fundamental_context": _slim(_records(inputs.get("fundamental")).get(ticker)),
         "valuation_context": _valuation_handoff(_records(inputs.get("valuation")).get(ticker)),

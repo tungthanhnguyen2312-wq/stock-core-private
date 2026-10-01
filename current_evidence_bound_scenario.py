@@ -53,16 +53,16 @@ def _drivers(tactical: Mapping[str, Any], peer: Mapping[str, Any] | None, fundam
     flow_available = bool((flow or {}).get("coverage", {}).get("available_dimensions", 0))
     flow_status = "UNAVAILABLE" if not flow_available else "CONTRADICTORY" if any("DIVERGENCE" in item or "SELL_PRESSURE" in item for item in relationships) else "SUPPORTIVE" if any("CONFIRMATION" in item or "BUY_SUPPORT" in item for item in relationships) else "AVAILABLE"
     return {
-        "MARKET_CONTEXT": _driver("SUPPORTIVE" if tactical.get("market_state") else "UNAVAILABLE", {"market_state": tactical.get("market_state")}),
+        "MARKET_CONTEXT": _driver("AVAILABLE_DESCRIPTIVE" if tactical.get("market_state") else "UNAVAILABLE", {"market_state": tactical.get("market_state")}),
         "MARKET_FLOW_CONTEXT": _driver(flow_status, flow or {"status": "FLOW_UNAVAILABLE"}, ["Flow/positioning is provider-scoped descriptive context; it is not causality, intent, or execution evidence."]),
         "MACRO_CONTEXT": _driver("AVAILABLE" if (macro_context or {}).get("status") == "AVAILABLE" else "UNAVAILABLE", macro_context or {"status": "UNAVAILABLE"}, ["Macro is independent descriptive context, not causal proof or probability."]),
-        "TECHNICAL": _driver("SUPPORTIVE" if technical_ready else "UNAVAILABLE", {"ticker_structure_state": tactical.get("ticker_structure_state"), "signals": tactical.get("signals")}, list((tactical.get("data_quality") or {}).get("warnings") or [])),
-        "TACTICAL": _driver("SUPPORTIVE" if entry_state else "UNAVAILABLE", {"entry_state": entry_state, "confirmation_trigger": tactical.get("confirmation_trigger"), "invalidation": tactical.get("invalidation"), "rule_id": tactical.get("rule_id")}),
-        "PEER_RELATIVE": _driver("SUPPORTIVE" if peer_technical.get("status") == "AVAILABLE" else "UNAVAILABLE", {"peer_membership": (peer or {}).get("peer_membership"), "technical_peer_context": peer_technical, "expectations_context": (peer or {}).get("expectations_context")}, list((peer or {}).get("data_gaps") or [])),
-        "FUNDAMENTAL": _driver("SUPPORTIVE" if fund_context else "UNAVAILABLE", {"trajectory": fund_context, "authority_tier": (fundamental or {}).get("authority_tier")}, list(fund_context.get("data_limitations") or [])),
+        "TECHNICAL": _driver("AVAILABLE_DESCRIPTIVE" if technical_ready else "UNAVAILABLE", {"ticker_structure_state": tactical.get("ticker_structure_state"), "signals": tactical.get("signals")}, list((tactical.get("data_quality") or {}).get("warnings") or [])),
+        "TACTICAL": _driver("AVAILABLE_DESCRIPTIVE" if entry_state else "UNAVAILABLE", {"entry_state": entry_state, "confirmation_trigger": tactical.get("confirmation_trigger"), "invalidation": tactical.get("invalidation"), "rule_id": tactical.get("rule_id")}),
+        "PEER_RELATIVE": _driver("AVAILABLE_DESCRIPTIVE" if peer_technical.get("status") == "AVAILABLE" else "UNAVAILABLE", {"peer_membership": (peer or {}).get("peer_membership"), "technical_peer_context": peer_technical, "expectations_context": (peer or {}).get("expectations_context")}, list((peer or {}).get("data_gaps") or [])),
+        "FUNDAMENTAL": _driver("AVAILABLE_DESCRIPTIVE" if fund_context.get("trajectory_status") in {"AVAILABLE", "OFFICIAL_METRIC_CONTEXT_ONLY"} else "UNAVAILABLE", {"trajectory": fund_context, "authority_tier": (fundamental or {}).get("authority_tier")}, list(fund_context.get("data_limitations") or [])),
         "VALUATION_CONTEXT": _driver("UNAVAILABLE", {"strict_current_valuation": valuation or {}, "peer_valuation": valuation_context}, ["Strict current valuation is blocked or non-discriminating; shadow proxy is not target-price authority."]),
         "CATALYST_OR_EVENT": _driver("AVAILABLE" if catalyst and catalyst.get("status") in {"OBSERVED_CATALYST", "OBSERVED_CATALYST_OR_EVENT", "PENDING_OR_HISTORICAL_EVENT_CONTEXT"} else "UNAVAILABLE", catalyst or {"status": "NO_QUALIFIED_CATALYST_EVIDENCE"}),
-        "DATA_QUALITY": _driver("SUPPORTIVE" if technical_ready else "CONTRADICTORY", tactical.get("data_quality") or {}, list((tactical.get("data_quality") or {}).get("warnings") or [])),
+        "DATA_QUALITY": _driver("AVAILABLE_DESCRIPTIVE" if technical_ready else "UNAVAILABLE", tactical.get("data_quality") or {}, list((tactical.get("data_quality") or {}).get("warnings") or [])),
     }
 
 
@@ -80,7 +80,7 @@ def _cases(ticker: str, disposition: str, tactical: Mapping[str, Any], drivers: 
     case_status = "CONDITIONAL" if disposition != "SCENARIO_INSUFFICIENT_DATA" else "INSUFFICIENT_EVIDENCE"
     common = {"case_status": case_status, "time_horizon": horizon, "probability_status": "UNKNOWN_UNCALIBRATED", "evidence_authority": "RETAINED_CURRENT_DETERMINISTIC_RESEARCH_ONLY", "data_gaps": gaps, "authority_limitations": ["Conditional scenario, not prediction or probability.", "No target, expected return, recommendation, ranking, or sizing."]}
     return {
-        "BEAR": common | {"case_id": _case_id(ticker, "BEAR", source_ids), "observed_support": counter, "required_confirmations": [invalidation] if invalidation else [], "counter_evidence": support, "invalidation": invalidation, "case_conditions": ["Existing tactical invalidation or deterioration condition is met."], "driver_states": {name: value["status"] for name, value in drivers.items()}},
+        "BEAR": common | {"case_id": _case_id(ticker, "BEAR", source_ids), "observed_support": counter, "required_confirmations": [invalidation] if invalidation else [], "counter_evidence": support, "invalidation": None, "invalidation_status": "BEAR_INVALIDATION_NOT_DECLARED_BY_SOURCE", "case_conditions": ["Existing tactical invalidation or deterioration condition is met."], "driver_states": {name: value["status"] for name, value in drivers.items()}},
         "BASE": common | {"case_id": _case_id(ticker, "BASE", source_ids), "current_state": state, "continuation_conditions": [f"Current tactical state remains {state} without a new confirmation or invalidation."], "transition_to_bull_conditions": [confirmation] if confirmation else [], "transition_to_bear_conditions": [invalidation] if invalidation else [], "evidence_for": support, "evidence_against": counter, "limitations": ["Reference/current-continuation case; not most probable."]},
         "BULL": common | {"case_id": _case_id(ticker, "BULL", source_ids), "observed_support": support, "required_confirmations": [confirmation] if confirmation else [], "counter_evidence": counter, "invalidation": invalidation, "case_conditions": ["Existing tactical confirmation trigger is met.", "Any available peer/fundamental driver remains non-contradictory."], "driver_states": {name: value["status"] for name, value in drivers.items()}},
     }
@@ -112,7 +112,10 @@ def build(*, descriptive: Mapping[str, Any], tactical: Mapping[str, Any], peer_r
     for record in records.values():
         if record["bull_case"]["required_confirmations"]: patterns["BULL_CASE_REQUIRES_TECHNICAL_CONFIRMATION"] += 1
         if record["scenario_drivers"]["FUNDAMENTAL"]["status"] == "SUPPORTIVE": patterns["BULL_CASE_FUNDAMENTAL_SUPPORT_AVAILABLE"] += 1
-        else: patterns["BULL_CASE_FUNDAMENTAL_UNCERTAINTY"] += 1
+        else:
+            patterns["BULL_CASE_FUNDAMENTAL_UNCERTAINTY"] += 1
+            if record["scenario_drivers"]["FUNDAMENTAL"]["status"] == "AVAILABLE_DESCRIPTIVE":
+                patterns["BULL_CASE_FUNDAMENTAL_DESCRIPTIVE_CONTEXT_AVAILABLE"] += 1
         if record["current_state"]["entry_state"] in {"DISTRIBUTION_RISK", "BREAKDOWN_RISK", "DOWNTREND"}: patterns["BEAR_CASE_DISTRIBUTION_RISK"] += 1
         if record["current_state"]["entry_state"] in {"BASE_BUILDING", "SIDEWAYS_NEUTRAL"}: patterns["BASE_CASE_CONTINUED_CONSOLIDATION"] += 1
         if record["key_driver_conflicts"]: patterns["CONFLICTED_SCENARIO_EVIDENCE"] += 1

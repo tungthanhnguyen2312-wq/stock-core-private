@@ -3,7 +3,9 @@
 Owner override: `CURRENT_RESEARCH_DECISION_QUALITY_AND_FRESHNESS_PROGRAM_20261001`.
 Base: `59580f6cda300dce8013af284d2ce11e026e3029`.
 Branch: `program/current-research-decision-quality-20261001`.
-This is a program checkpoint, not a declaration that every Current Research gap is solved.
+Final disposition: COMPLETE / OWNER_REVIEW_READY after packages 14–15.
+Autonomous package selection stops at the owner-directed coherent review boundary.
+This is not a declaration that every future Current Research evidence gap is solved.
 PR #28 and #29 remain independent pending-owner-merge corrections.
 
 ## Retained corpus findings
@@ -514,3 +516,68 @@ Product: `integrated_investment_decision_product/v1:5beb6b031b3ad40b130303be4141
 Program remains ACTIVE; this package is not a stop point. The next bounded real scenario
 measurement found presence-as-support labels and duplicated bear confirmation/invalidation,
 so the existing scenario path is the next substantive package.
+
+## Package 15 — scenario roles and shared case retention
+
+The exact canonical September 30 inputs reproduce the retained scenario artifact
+verbatim under the pinned package-14 producer before the changed build is evaluated.
+Before: market 1,683, technical/tactical 848, peer 1,307 and fundamental 523 contexts
+were labelled SUPPORTIVE from availability alone. Fundamental availability comprises
+494 provider trajectories, 13 official-metric-only contexts and 16 explicitly unavailable
+trajectories. Data-quality absence was CONTRADICTORY for 835 records. These are
+availability facts rather than inferred bullish support or bearish observations.
+
+The existing producer now uses AVAILABLE_DESCRIPTIVE for declared available contexts;
+missing/unknown trajectory statuses fail closed locally. The 16 explicitly unavailable
+fundamental contexts become UNAVAILABLE; 15 READY scenarios become PARTIAL while one
+was already insufficient. READY 497 / PARTIAL 351 / INSUFFICIENT 835; no denominator
+changes. All source measurements, context, case IDs, top-level source confirmation,
+invalidation, horizon, probabilities and authority remain intact. The 835 false
+data-quality conflicts become gaps rather than opposing evidence.
+
+848 Bear cases previously used the same source condition for both confirmation and
+invalidation. Source invalidation remains the Bear confirmation and the unchanged Bull
+invalidation; Bear invalidation is now explicitly undeclared. No reciprocal condition
+is invented. Generic nested compaction previously erased cases in the full-universe
+companion. A source-preserving projector now retains all three cases verbatim, source
+identity, driver availability and the non-actionable boundary. Primary cards already
+retain full cases; both projections are verified for all 1,683 records.
+
+All strategy eligibility/statuses are unchanged. The existing 1,507-name legacy lane
+policy moves ALV and DDG from PRIORITY_NOW to SETUP_WATCH because their scenario became
+PARTIAL; all other priority effects are precisely attributed source-identity changes
+or local scenario status. No priority distribution is optimized. The separate canonical
+IID replay is exactly equal to package 14, including its artifact and 1,683 decision
+identities, postures, WHY, counters, phases, triggers and invalidations.
+
+Full retained builds are deterministic, 1,683 in/out, zero unexplained changes, source
+bytes unchanged and zero provider calls. Scenario derivative:
+`current_evidence_bound_scenario:0bf82d541f269d8d30add19800948feaa3cfc73963aa6eb0493f3321a10492e4`.
+Thirteen new adversarial cases; focused scenario/delivery/rule suite 40 PASS;
+five canonical wiring checks PASS. Reusable acceptance lives in
+`tools/replay_current_research_scenario_roles.py`; unchanged IID proof uses
+`tools/replay_current_research_market_context.py --unchanged-decision-acceptance`.
+Machine-specific commands, exact external paths, final tests and CI are in the existing
+consolidated operator handoff.
+
+## Final review boundary
+
+Major retained evidence classes now preserve their qualified role, freshness, source
+and limitations through the existing research/decision/delivery paths. Two substantive
+packages were accepted in this resume. Additional retained-corpus value is lower: no
+qualified current corporate catalyst/risk activation, no newly registered completed
+October 1 session, and no justification to reopen external authority gates. One growth
+reason-code wording candidate remains (DTE has an earnings feature behind a revenue
+reason); the numerical observation is preserved and no vote/posture defect is established.
+It does not justify extending the program with another semantic micro-package.
+Program COMPLETE / OWNER_REVIEW_READY; PR #30 awaits owner review, without merge or
+publication. October 1 live telemetry remains NEW_SESSION_LIVE_ACCEPTANCE_PENDING.
+Final broader affected tier: 387 PASS in 131.59 seconds; five canonical wiring checks
+PASS. Compilation, roadmap drift and diff checks PASS. Older unmarked August private
+fixture tests were mistakenly selected by the tier filter: 24 failures and six setup
+errors were missing-file failures, not analytical failures. They are excluded from
+the final local gate, not repaired/reacquired; the exact September 30 canonical builder
+replay supplies the changed integration acceptance. Final-head CI is verified once
+after the final push and recorded in the consolidated operator handoff.
+No RAW_AS_TRADED, PIT, execution, sizing, allocation, active-universe, reverse valuation
+or wider HNX/UPCoM liquidity authority is promoted. No successor is queued.

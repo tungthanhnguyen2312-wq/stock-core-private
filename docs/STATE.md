@@ -1,7 +1,27 @@
 # Stock Lookup — Operational State
 
 **Current Research decision-quality program (2026-10-01):**
-`CURRENT_RESEARCH_DECISION_QUALITY_AND_FRESHNESS_PROGRAM_20261001 = ACTIVE`.
+`CURRENT_RESEARCH_DECISION_QUALITY_AND_FRESHNESS_PROGRAM_20261001 = COMPLETE / OWNER_REVIEW_READY`.
+The owner-directed review boundary is reached after packages 14 and 15; autonomous
+package selection stops, PR #30 awaits owner review, and no successor is queued.
+This completes the bounded integration program, not every future evidence capability.
+Package 14 retains 1,472 qualified fundamental thesis envelopes, 1,390 descriptive
+feature observations and 718 divergent qualified dimensions. The 207 absent-context
+codes become gaps instead of negative evidence; genuine adverse codes, votes, states,
+postures and WHY remain unchanged. All 1,683 decision identities change only through
+verified explanatory-source bindings; original retained inputs remain byte-identical.
+Package 15 separates scenario availability from directional support, removes 835
+missing-data conflicts and 848 duplicated Bear confirmation/invalidation conditions,
+and preserves all three cases in primary and full-universe AI delivery. Explicitly
+unavailable fundamentals narrow 15 scenarios to PARTIAL; ALV and DDG move from
+PRIORITY_NOW to SETUP_WATCH under the unchanged legacy lane policy. Strategy eligibility
+and the entire accepted integrated decision artifact remain unchanged. Both full
+1,683-record replays are deterministic with zero drops or unexplained changes.
+The remaining retained-corpus candidate is low-value wording; qualified current
+corporate catalysts/risks remain zero. October 1 has no registered completed session;
+live telemetry acceptance remains pending without polling or a substitute replay.
+Authority, request cap/retry, provider acquisition and publication changes remain NONE.
+The paragraphs below retain the program's accepted package history.
 The owner explicitly authorizes multiple coherent work packages despite the empty
 queued roadmap. Independent branch `program/current-research-decision-quality-20261001`
 starts from `59580f6cda300dce8013af284d2ce11e026e3029`. Retained 2026-09-30
