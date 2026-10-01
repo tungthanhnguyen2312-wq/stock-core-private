@@ -13,6 +13,8 @@ from __future__ import annotations
 
 from collections import Counter
 import copy
+import hashlib
+import json
 from datetime import date
 import re
 from typing import Any, Iterable, Mapping
@@ -656,3 +658,211 @@ def _qualified_liquidity_coverage(inputs: list[Mapping[str, Any]]) -> dict[str, 
         "adv_volume_basis": "AS_TRADED_NOT_CA_NORMALIZED",
         "per_record_fitness_is_authoritative": True,
     }
+
+
+# ── Current Research coverage / decision-fitness read model ──────────────────
+
+DECISION_FITNESS_CONTRACT_VERSION = "current_research_coverage_decision_fitness/v1"
+
+FITNESS_FULL = "FULL_MULTI_FACTOR_CURRENT_RESEARCH"
+FITNESS_PARTIAL = "PARTIAL_MULTI_FACTOR_CURRENT_RESEARCH"
+FITNESS_LIMITED = "LIMITED_SINGLE_LANE_CURRENT_RESEARCH"
+FITNESS_BLOCKED = "BLOCKED_CURRENT_RESEARCH"
+FITNESS_OUTSIDE_SCOPE = "OUTSIDE_CURRENT_RESEARCH_SCOPE"
+DECISION_FITNESS_STATES = (
+    FITNESS_FULL, FITNESS_PARTIAL, FITNESS_LIMITED, FITNESS_BLOCKED, FITNESS_OUTSIDE_SCOPE,
+)
+
+
+def _decision_fitness_state(item: Mapping[str, Any]) -> str:
+    """Map the existing evidence class to a product-level coverage state.
+
+    This is a read model only. It never changes research_action_posture and never
+    promotes a dimension authority. A posture explicitly gated by missing current
+    evidence remains BLOCKED even if other dimensions are present.
+    """
+    evidence_class = item.get("evidence_class")
+    gated = (item.get("synthesis") or {}).get("action_posture_gated_by_current_evidence") is True
+    if evidence_class == CLASS_OUT_OF_SCOPE:
+        return FITNESS_OUTSIDE_SCOPE
+    if evidence_class == CLASS_INSUFFICIENT or gated:
+        return FITNESS_BLOCKED
+    if evidence_class == CLASS_FULL:
+        return FITNESS_FULL
+    if evidence_class == CLASS_PARTIAL:
+        return FITNESS_PARTIAL
+    if evidence_class in {CLASS_TECHNICAL, CLASS_FINANCIAL}:
+        return FITNESS_LIMITED
+    return FITNESS_BLOCKED
+
+
+def build_ticker_decision_fitness(item: Mapping[str, Any]) -> dict[str, Any]:
+    """Return one deterministic coverage/fitness view over a decision-input record."""
+    if item.get("contract_version") != CONTRACT_VERSION:
+        raise ValueError("CURRENT_RESEARCH_DECISION_INPUT_CONTRACT_REQUIRED")
+    dimensions = item.get("dimensions")
+    if not isinstance(dimensions, Mapping) or any(name not in dimensions for name in DIMENSIONS):
+        raise ValueError("CURRENT_RESEARCH_DECISION_INPUT_DIMENSIONS_INVALID")
+
+    state = _decision_fitness_state(item)
+    missing_primary = {
+        name: list((dimensions.get(name) or {}).get("reason_codes") or [])
+        for name in PRIMARY_FACTORS
+        if (dimensions.get(name) or {}).get("state") != AVAILABLE
+    }
+    proxy_dimensions = [
+        name for name in DIMENSIONS
+        if (dimensions.get(name) or {}).get("authority") == RESEARCH_PROXY
+    ]
+    return {
+        "contract_version": DECISION_FITNESS_CONTRACT_VERSION,
+        "ticker": item.get("ticker"),
+        "session": item.get("session"),
+        "decision_fitness_state": state,
+        "research_usable": state in {FITNESS_FULL, FITNESS_PARTIAL, FITNESS_LIMITED},
+        "evidence_class": item.get("evidence_class"),
+        "dimension_states": {
+            name: (dimensions.get(name) or {}).get("state") for name in DIMENSIONS
+        },
+        "dimension_authorities": {
+            name: (dimensions.get(name) or {}).get("authority") for name in DIMENSIONS
+        },
+        "missing_primary_factors": missing_primary,
+        "proxy_dimensions": proxy_dimensions,
+        "research_action_posture": (item.get("synthesis") or {}).get("research_action_posture"),
+        "action_posture_gated_by_current_evidence": (
+            (item.get("synthesis") or {}).get("action_posture_gated_by_current_evidence") is True
+        ),
+        "authority_boundary": {
+            "read_model_only": True,
+            "does_not_change_research_action_posture": True,
+            "does_not_promote_dimension_authority": True,
+            "no_score_rank_target_or_probability": True,
+            "is_actionable": False,
+        },
+    }
+
+
+def decision_fitness_coverage(records: Mapping[str, Mapping[str, Any]]) -> dict[str, Any]:
+    """Aggregate market-wide coverage using only existing Current Research decision inputs."""
+    views: dict[str, dict[str, Any]] = {}
+    dimension_state: dict[str, Counter[str]] = {name: Counter() for name in DIMENSIONS}
+    dimension_authority: dict[str, Counter[str]] = {name: Counter() for name in DIMENSIONS}
+    gap_reason_counts: Counter[tuple[str, str]] = Counter()
+    non_applicable_reason_counts: Counter[tuple[str, str]] = Counter()
+
+    for ticker, record in sorted(records.items()):
+        item = record.get("current_research_decision_input") or record
+        view = build_ticker_decision_fitness(item)
+        views[ticker] = view
+        dimensions = item.get("dimensions") or {}
+        for name in DIMENSIONS:
+            dim = dimensions.get(name) or {}
+            state = str(dim.get("state"))
+            authority = str(dim.get("authority"))
+            dimension_state[name][state] += 1
+            dimension_authority[name][authority] += 1
+            reasons = [str(code) for code in dim.get("reason_codes") or [] if isinstance(code, str)]
+            if state in {PARTIAL, BLOCKED}:
+                for code in set(reasons):
+                    gap_reason_counts[(name, code)] += 1
+            elif state == NON_APPLICABLE:
+                for code in set(reasons):
+                    non_applicable_reason_counts[(name, code)] += 1
+
+    fitness_counts = Counter(view["decision_fitness_state"] for view in views.values())
+    evidence_class_counts = Counter(view["evidence_class"] for view in views.values())
+    posture_counts = Counter(str(view.get("research_action_posture")) for view in views.values())
+    primary_gap_combinations = Counter(
+        "+".join(sorted(view["missing_primary_factors"])) or "NONE"
+        for view in views.values()
+    )
+    gap_prevalence = [
+        {"dimension": dimension, "reason_code": reason, "affected_tickers": count}
+        for (dimension, reason), count in sorted(
+            gap_reason_counts.items(), key=lambda item: (-item[1], item[0][0], item[0][1])
+        )
+    ]
+    non_applicable_prevalence = [
+        {"dimension": dimension, "reason_code": reason, "affected_tickers": count}
+        for (dimension, reason), count in sorted(
+            non_applicable_reason_counts.items(), key=lambda item: (-item[1], item[0][0], item[0][1])
+        )
+    ]
+    return {
+        "contract_version": DECISION_FITNESS_CONTRACT_VERSION,
+        "denominator": COVERAGE_DENOMINATOR,
+        "denominator_count": len(views),
+        "decision_fitness_distribution": dict(sorted(fitness_counts.items())),
+        "research_usable_count": sum(
+            fitness_counts[state] for state in (FITNESS_FULL, FITNESS_PARTIAL, FITNESS_LIMITED)
+        ),
+        "blocked_current_research_count": fitness_counts[FITNESS_BLOCKED],
+        "outside_scope_count": fitness_counts[FITNESS_OUTSIDE_SCOPE],
+        "evidence_class_distribution": dict(sorted(evidence_class_counts.items())),
+        "dimension_state_distribution": {
+            name: dict(sorted(dimension_state[name].items())) for name in DIMENSIONS
+        },
+        "dimension_authority_distribution": {
+            name: dict(sorted(dimension_authority[name].items())) for name in DIMENSIONS
+        },
+        "dimension_available_count": {
+            name: dimension_state[name][AVAILABLE] for name in DIMENSIONS
+        },
+        "proxy_dimension_count": {
+            name: dimension_authority[name][RESEARCH_PROXY] for name in DIMENSIONS
+        },
+        "research_action_posture_distribution": dict(sorted(posture_counts.items())),
+        "action_posture_gated_by_current_evidence_count": sum(
+            view["action_posture_gated_by_current_evidence"] for view in views.values()
+        ),
+        "primary_factor_gap_combination_distribution": dict(sorted(primary_gap_combinations.items())),
+        "gap_reason_prevalence": gap_prevalence,
+        "non_applicable_reason_prevalence": non_applicable_prevalence,
+        "interpretation_boundary": {
+            "counts_are_descriptive_not_priority_scores": True,
+            "missing_high_authority_is_local_to_dependent_use": True,
+            "research_proxy_remains_proxy": True,
+            "historical_pit_and_execution_authority_not_inferred": True,
+        },
+    }
+
+
+def build_decision_fitness_artifact(*, integrated_decision_artifact: Mapping[str, Any],
+                                    requested_at: str | None = None) -> dict[str, Any]:
+    """Build a deterministic read-model artifact from an Integrated Decision artifact."""
+    records = integrated_decision_artifact.get("records")
+    session = integrated_decision_artifact.get("session")
+    if not isinstance(records, Mapping) or not records:
+        raise ValueError("INTEGRATED_DECISION_RECORDS_REQUIRED")
+    if not isinstance(session, str) or not session:
+        raise ValueError("INTEGRATED_DECISION_SESSION_REQUIRED")
+    coverage_view = decision_fitness_coverage(records)
+    per_ticker = {
+        ticker: build_ticker_decision_fitness(record.get("current_research_decision_input") or record)
+        for ticker, record in sorted(records.items())
+    }
+    payload: dict[str, Any] = {
+        "schema_version": "current_research_coverage_decision_fitness/1.0.0",
+        "contract_version": DECISION_FITNESS_CONTRACT_VERSION,
+        "session": session,
+        "requested_at": requested_at,
+        "source_artifact_identity": integrated_decision_artifact.get("artifact_identity"),
+        "coverage": coverage_view,
+        "records": per_ticker,
+        "authority_boundary": {
+            "read_model_only": True,
+            "does_not_change_research_action_posture": True,
+            "does_not_promote_dimension_authority": True,
+            "historical_pit_authority": False,
+            "execution_authority": False,
+            "no_score_rank_target_or_probability": True,
+            "is_actionable": False,
+        },
+    }
+    canonical = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"),
+                           allow_nan=False).encode("utf-8")
+    digest = hashlib.sha256(canonical).hexdigest()
+    payload["artifact_sha256"] = digest
+    payload["artifact_identity"] = f"current_research_coverage_decision_fitness:{digest}"
+    return payload
