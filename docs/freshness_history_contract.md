@@ -14,6 +14,13 @@ latest completed weekday trading session for market domains (weekends stay
 current when the Friday session is latest); a holiday calendar can be injected by
 the caller when available.
 
+A source date after the domain's reference anchor is `unknown` and non-actionable,
+with `stale_reason = source_date_after_reference_anchor`. This includes today's
+market observations before the completed-session anchor advances. Future source
+dates are preserved, never coerced into the reference date; valid sibling inputs
+retain their independent freshness. This calendar guard grants no historical PIT
+or execution authority.
+
 Daily prices/breadth, technical/candlestick outputs, and AI reports use their
 market-data timestamp. Technical and AI outputs inherit a non-current dependency.
 Forward-generated `screen_snapshot.csv`, `screen_snapshot_live.csv`,

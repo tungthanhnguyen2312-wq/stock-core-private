@@ -1,5 +1,20 @@
 # Stock Lookup — Operational State
 
+**Current Research future-dated freshness guard (2026-10-01):**
+`CURRENT_RESEARCH_FUTURE_DATED_FRESHNESS_GUARD_V1 = COMPLETE` under the owner's
+autonomous independent-work override while telemetry live acceptance is time-gated.
+The shared freshness envelope previously labelled negative-age observations current/actionable.
+It now preserves their dates and reports `unknown / source_date_after_reference_anchor`,
+non-actionable. Market domains keep the existing completed-session anchor; all other
+cadences, valid observations, source tiers and analytical thresholds are unchanged.
+Offline replay of all 17 retained 2026-09-30 runtime macro series is identical to base
+`59580f6`: context identity `d0045da8120a7799efe12856c0ae341e4146c1ab547de1e08679c95aab1d5c11`,
+12 current / 5 stale-or-expiring. No acquisition, runtime/DB write or authority promotion.
+Owner Daily Windows RSS fix is separately submitted as PR #28 from checkpoint `4116e0f`;
+its four CI checks passed. `NEW_SESSION_LIVE_ACCEPTANCE_PENDING` remains time-gated.
+See [acceptance handoff](internal/current_research_future_freshness_acceptance.md).
+
+
 **Daily official liquidity rollforward corrective (2026-09-30):**
 `DAILY_OFFICIAL_LIQUIDITY_ROLLFORWARD_V1 = PARTIAL /
 CORE_DAILY_LIVE_ACCEPTED_OFFICIAL_LIQUIDITY_LIVE_FAIL_CLOSED_SOURCE_ABSENT /

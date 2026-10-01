@@ -1,5 +1,22 @@
 # Decisions & Architectural Decision Records
 
+## 2026-10-01 - Current Research future-dated freshness guard
+
+Owner resume autonomy authorizes this independent bounded corrective despite
+`queued_next=[]`, while `NEW_SESSION_LIVE_ACCEPTANCE_PENDING` is time-gated.
+The existing shared `freshness_envelope` erroneously treated negative age as current
+and actionable. Negative age now returns the existing unknown/non-actionable state
+with `source_date_after_reference_anchor`, before cadence/historical classification.
+Reference anchors and cadence rules stay unchanged; no source date/value is rewritten.
+This fixes freshness interpretation, not analytical thresholds or source/PIT authority.
+
+Acceptance covers all existing domain rules, pre-close market anchoring, and partial
+macro degradation without invalidating a valid sibling series. The 17-series retained
+2026-09-30 runtime macro snapshot yields identical context/identity against base
+`59580f6`; no network or retained-input mutation occurs. Owner Daily RSS correction
+remains a separate PR #28. No merge, Daily live run, publication or DB write.
+
+
 ## 2026-09-30 - Daily official liquidity rollforward (`DAILY_OFFICIAL_LIQUIDITY_ROLLFORWARD_V1`)
 
 **Decision.** Same-session official HOSE liquidity is a Daily dependency, not an
