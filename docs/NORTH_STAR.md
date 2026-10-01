@@ -1,5 +1,20 @@
 # Stock Lookup North Star
 
+
+## 2026-10-01 execution rebaseline
+
+The October 1 ordinary Owner Daily live-acceptance gate is closed. PR #31 merged after
+Producer CI #167 SUCCESS. The machine-readable roadmap now sets
+`CURRENT_RESEARCH_COVERAGE_AND_DECISION_FITNESS_V1` as NEXT.
+
+The strategic order from this point is:
+
+`Decision Fitness → Fundamental/Current Valuation Depth → Corporate/Forward Drivers → Intrinsic/Scenario Valuation → Prospective Calibration → Portfolio/PIT/Execution Authority`.
+
+Older dated maturity snapshots and "NEXT" references below are historical planning
+context unless they agree with `docs/ROADMAP_STATE.json`.
+
+
 Status: STRATEGIC_INTENT / NON-EXECUTION-AUTHORITY
 
 Date: 2026-09-28 (rebaselined 2026-09-28 after M1 live acceptance)
