@@ -1,5 +1,33 @@
 # Decisions & Architectural Decision Records
 
+
+## 2026-10-01 — Capability roadmap rebaseline and incremental repository packaging
+
+**Decision:** After the October 1 Owner Daily live-acceptance gate, roadmap selection
+returns to Current Research decision quality. The immediate successor is
+`CURRENT_RESEARCH_COVERAGE_AND_DECISION_FITNESS_V1`, followed by fundamental/current
+valuation depth, corporate/forward-driver research, intrinsic/scenario valuation,
+prospective calibration, and only then the higher-authority PIT/execution lane when new
+evidence exists.
+
+**Reasoning:** Recent work proved production continuity and significantly improved
+research semantics, but a flat list of small corrective milestones makes it harder to
+see whether product decision quality is actually improving. Capability-level sequencing
+keeps missing authority local to dependent uses and prevents blocked historical/execution
+lanes from stalling useful Current Research.
+
+**Repository presentation decision:** The historically flat Producer root is recognized
+technical debt. Improve the public GitHub front door immediately, but migrate code only
+through bounded, call-graph-verified capability slices. Do not perform a wholesale
+`src/` rewrite and do not classify modules as legacy by filename. Daily orchestration
+moves late because it binds many paths and consumers.
+
+**Authority effect:** NONE. This decision changes sequencing, documentation and repository
+maintenance policy only; it does not change analytical thresholds, provider authority,
+financial semantics, market-data authority, PIT eligibility, sizing, execution, runtime
+artifacts or production databases.
+
+
 ## 2026-10-01 - Current Research future-dated freshness guard
 
 Owner resume autonomy authorizes this independent bounded corrective despite
