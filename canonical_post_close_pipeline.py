@@ -30,6 +30,7 @@ import copy
 import hashlib
 import json
 import subprocess
+from owner_daily_progress import run_observed_subprocess
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -1469,7 +1470,7 @@ def run_post_handoff_prospective_outcome_feedback(
         "--root", str(root), "--output", str(output),
     ]
     try:
-        result = subprocess.run(cmd, cwd=str(root), capture_output=True, text=True)
+        result = run_observed_subprocess(cmd, session=session, cwd=str(root), capture_output=True, text=True)
     except OSError as exc:
         return {"status": "UNAVAILABLE", "session": session, "reason": f"{type(exc).__name__}:{exc}"}
     if result.returncode != 0:
@@ -1645,7 +1646,7 @@ def run_prospective_collection(
     ]
     if packet_path.is_file():
         cmd += ["--decision-packet-path", str(packet_path)]
-    result = subprocess.run(cmd, cwd=str(root), capture_output=True, text=True)
+    result = run_observed_subprocess(cmd, session=session, cwd=str(root), capture_output=True, text=True)
     if result.returncode != 0:
         return {"status": "UNAVAILABLE", "reason": (result.stderr or result.stdout).strip()[-2000:]}
     snapshot = _load(output)
@@ -1662,7 +1663,7 @@ def run_prospective_collection(
         sys.executable, "tools/run_prospective_decision_outcome_feedback.py",
         "--root", str(root), "--output", str(feedback_output),
     ]
-    feedback_result = subprocess.run(feedback_cmd, cwd=str(root), capture_output=True, text=True)
+    feedback_result = run_observed_subprocess(feedback_cmd, component="Prospective decision feedback", session=session, cwd=str(root), capture_output=True, text=True)
     feedback = (
         {"status": "COLLECTED", "path": str(feedback_output), "artifact": _load(feedback_output)}
         if feedback_result.returncode == 0
@@ -1711,7 +1712,7 @@ def run_tactical_reversal_shadow_collection(
         "--retained-evidence-root", str(artifact_root), "--store-root", str(store_root), "--session", session,
     ]
     try:
-        result = subprocess.run(cmd, cwd=str(root), capture_output=True, text=True)
+        result = run_observed_subprocess(cmd, session=session, cwd=str(root), capture_output=True, text=True)
     except OSError as exc:
         return {"status": SHADOW_COLLECTION_FAILED, "session": session, "reason": f"{type(exc).__name__}:{exc}"}
     if result.returncode != 0:

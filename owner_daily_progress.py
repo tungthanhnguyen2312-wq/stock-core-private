@@ -12,6 +12,7 @@ import json
 import os
 from pathlib import Path
 import shutil
+import subprocess
 import time
 from typing import Any, Callable, Mapping
 import uuid
@@ -254,6 +255,9 @@ class OwnerDailyProgress:
         self.degraded_reasons: list[str] = []
         self._last_human_at: float | None = None
         self._last_human_percent: float | None = None
+        self._display_peak = 0
+        self._display_resource_band = None
+        self._display_counters = (0, 0)
         self._resource_cache: dict[str, int | None] | None = None
         self._last_resource_sample_at: float | None = None
         self._work_started: dict[tuple[int, str, str, str], float] = {}
@@ -334,43 +338,55 @@ class OwnerDailyProgress:
             self._record_resources(self._resource_cache)
         return dict(self._resource_cache or {})
 
+    def _console_alerts(self, event: Mapping[str, Any]) -> tuple[bool, bool]:
+        peak = event.get("peak_rss_bytes") or 0
+        disk = event.get("disk_free_bytes")
+        band = (peak >= 4 * 1024**3, disk is not None and disk < 10 * 1024**3)
+        boundary = event.get("status") in {"BEGIN", "END", "FAILED", "WARN", "PASS", "FAIL"}
+        resources = boundary or (any(band) and band != self._display_resource_band)
+        resources = resources or peak >= self._display_peak + 512 * 1024**2
+        counters = (event.get("retry_count") or 0, event.get("failure_count") or 0)
+        return resources, boundary or counters != self._display_counters
+
     def _human_line(self, event: Mapping[str, Any]) -> str:
-        phase = f"[{event['phase_index']}/{event['phase_total']}]"
-        parts = [f"[{self.wall_clock().astimezone().strftime('%H:%M:%S')}]", phase, str(event["component"])]
+        resources, counters_changed = self._console_alerts(event)
+        parts = [f"[{self.wall_clock().astimezone().strftime('%H:%M:%S')}]",
+                 f"[{event['phase_index']}/{event['phase_total']}] {event['component']}"]
+        subtask = event.get("subtask")
+        if subtask and event.get("progress_kind") == "PIPELINE":
+            parts.append(str(subtask).replace("_", " "))
         completed, total, value = event.get("completed"), event.get("total"), event.get("percent")
-        if event.get("status") == "REUSED":
-            parts.append(f"reused {completed if completed is not None else '?'}")
-        elif event.get("progress_kind") == "BATCHES" and total:
-            parts.append(f"batch {completed}/{total} {value:.1f}%" if value is not None else f"batch {completed}/{total}")
+        reused = event.get("status") == "REUSED"
+        if reused:
+            parts.extend(["snapshot ready", f"candidates {total or completed}", "downstream reuse"])
         elif total:
-            parts.append(f"req {completed}/{total} {value:.1f}%" if value is not None else f"req {completed}/{total}")
-        else:
-            parts.append("progress UNKNOWN")
+            label = "batch" if event.get("progress_kind") == "BATCHES" else "requests"
+            parts.append(f"{label} {completed}/{total}" + (f" {value:.1f}%" if value is not None else ""))
         if event.get("qualified_count") is not None and event.get("coverage_denominator"):
-            parts.append("exact {}/{} {:.1f}%".format(
-                event["qualified_count"], event["coverage_denominator"], event.get("coverage_percent") or 0.0,
-            ))
-        if any(event.get(name) is not None for name in ("success_count", "retry_count", "failure_count")):
-            parts.append("ok {} retry {} fail {}".format(
-                event.get("success_count") if event.get("success_count") is not None else "?",
-                event.get("retry_count") if event.get("retry_count") is not None else "?",
-                event.get("failure_count") if event.get("failure_count") is not None else "?",
-            ))
-        rss, peak = _format_bytes(event.get("rss_bytes")), _format_bytes(event.get("peak_rss_bytes"))
-        if rss:
-            parts.append("RAM " + rss + (" peak " + peak if peak else ""))
-        run_size = _format_bytes(event.get("run_output_bytes"))
-        if run_size:
-            parts.append("OUT " + run_size)
-        free = _format_bytes(event.get("disk_free_bytes"))
-        if free:
-            parts.append("FREE C: " + free)
-        parts.append("elapsed " + _format_duration(event.get("elapsed_seconds")))
-        parts.append("ETA " + _format_duration(event.get("eta_seconds")) if event.get("eta_state") != "UNKNOWN" else "ETA UNKNOWN")
+            parts.append("exact-session coverage {}/{} ({:.1f}%)".format(
+                event["qualified_count"], event["coverage_denominator"], event.get("coverage_percent") or 0.0))
+        status = event.get("status")
+        parts.append("DONE" if status == "END" else ("RUNNING" if status in {None, "BEGIN", "IN_PROGRESS", "CHILD_STARTING"} else str(status)))
+        if counters_changed and any(event.get(name) is not None for name in ("success_count", "retry_count", "failure_count")):
+            parts.append("ok {} retry {} fail {}".format(*[(event.get(key) if event.get(key) is not None else "?")
+                           for key in ("success_count", "retry_count", "failure_count")]))
+        if resources:
+            for key, label in (("rss_bytes", "RAM"), ("peak_rss_bytes", "peak RAM"),
+                               ("run_output_bytes", "OUT"), ("disk_free_bytes", "FREE C:")):
+                value_bytes = _format_bytes(event.get(key))
+                if value_bytes:
+                    parts.append(label + " " + value_bytes)
+            self._display_peak = event.get("peak_rss_bytes") or self._display_peak
+            disk = event.get("disk_free_bytes")
+            self._display_resource_band = (self._display_peak >= 4 * 1024**3, disk is not None and disk < 10 * 1024**3)
+        self._display_counters = (event.get("retry_count") or 0, event.get("failure_count") or 0)
+        parts.append("elapsed " + _format_duration(event.get("work_elapsed_seconds")))
+        if event.get("eta_state") == "KNOWN" and not reused:
+            parts.append("ETA " + _format_duration(event.get("eta_seconds")))
         return " | ".join(parts)
 
     def _should_write_human(self, event: Mapping[str, Any], now: float) -> bool:
-        if event.get("progress_kind") == "PIPELINE" or event.get("status") in {"BEGIN", "END", "FAILED", "REUSED"}:
+        if any(self._console_alerts(event)) or event.get("status") in {"BEGIN", "END", "FAILED", "REUSED", "RUNNING"}:
             return True
         if self._last_human_at is None or now - self._last_human_at >= self.throttle_seconds:
             return True
@@ -557,3 +573,46 @@ def progress_from_environment(*, session: str | None = None) -> OwnerDailyProgre
         run_started_at=os.environ.get(RUN_STARTED_AT_ENV) or None,
         writer_role="DAILY_CHILD",
     )
+
+
+def run_observed_subprocess(command: list[str], *, component: str | None = None, session: str | None = None, **kwargs: Any) -> subprocess.CompletedProcess:
+    """Foreground wait at 30-second intervals; no thread or additional sidecar writer.
+
+    Only commands without special input/timeout contracts use this adapter. Captured
+    pipes are drained by communicate exactly as subprocess.run does.
+    """
+    if session is None and "--session" in command:
+        index = command.index("--session")
+        if index + 1 < len(command):
+            session = command[index + 1]
+    try:
+        telemetry = progress_from_environment(session=session)
+    except Exception:
+        telemetry = None
+    if telemetry is None:
+        return subprocess.run(command, **kwargs)
+    name = component or Path(command[1]).stem.removeprefix("run_").replace("_", " ").capitalize()
+    def emit(status: str) -> None:
+        telemetry.emit(phase_index=2, component=name, subtask="child subprocess",
+                       progress_kind="PIPELINE", status=status)
+    capture = kwargs.pop("capture_output", False)
+    check = kwargs.pop("check", False)
+    if capture:
+        kwargs.update(stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    emit("BEGIN")
+    with subprocess.Popen(command, **kwargs) as child:
+        while True:
+            try:
+                stdout, stderr = child.communicate(timeout=30)
+                break
+            except subprocess.TimeoutExpired:
+                emit("RUNNING")
+            except BaseException:
+                child.kill()
+                child.wait()
+                raise
+        result = subprocess.CompletedProcess(command, child.returncode, stdout, stderr)
+    emit("END" if result.returncode == 0 else "FAILED")
+    if check:
+        result.check_returncode()
+    return result

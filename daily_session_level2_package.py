@@ -11,6 +11,7 @@ import argparse
 import json
 import math
 import subprocess
+from owner_daily_progress import run_observed_subprocess
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -1135,7 +1136,7 @@ def run_cmd(execution_root: Path, cmd: list[str]) -> None:
     the relative ``tools/...`` commands below.
     """
     print(f"--> {' '.join(cmd)}")
-    subprocess.run([sys.executable] + cmd, cwd=str(execution_root), check=True)
+    run_observed_subprocess([sys.executable] + cmd, cwd=str(execution_root), check=True)
 
 
 SUPPLEMENTAL_BLOCK_CONTRACT = "supplemental_provider_block/v1"

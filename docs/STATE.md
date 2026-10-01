@@ -1,5 +1,36 @@
 # Stock Lookup — Operational State
 
+**Owner Daily live acceptance closeout (2026-10-01):**
+`NEW_SESSION_LIVE_ACCEPTANCE_PASS`. Retained ordinary Daily result/progress/log
+`stock_lookup_daily_20261001_161943` in the operator external run-logs directory
+prove session 2026-10-01, PASS / COMPLETED and all nine phase BEGIN/END pairs.
+Dashboard READY / PUBLISHED / public-byte PASS; AI READY_FOR_AI; Action Center READY.
+Producer checkpoint `8742d469700256f7b7b68d2193c13244b8fc84d4`;
+AI handoff `c02395a23979376884f837a5a00a45acf73efda5`.
+All 1,727 events contain positive Windows RSS and peak >= current; maximum observed
+single-process peak 3,424,890,880 bytes. One run identity, sequential parent/child/parent
+writers and monotonic elapsed times; no duplicate run/writer is evidenced by this record.
+Telemetry READY with no warnings, NONE_OPERATIONAL_OBSERVABILITY_ONLY. No telemetry
+failure changed analytical output; no authority promotion occurred.
+`LIVE_SESSION_NO_NATURAL_FUTURE_DATED_OBSERVATION`: retained live evidence does not
+establish natural exercise of the freshness guard; no artificial observation introduced.
+Console corrective retains full JSONL resource fields, separates request completion
+from coverage, clarifies downstream reuse and LOCAL_COMPLETE, and adds named foreground
+30-second subprocess heartbeats. No Daily rerun, provider-scope, liquidity, RAW_AS_TRADED,
+PIT_BACKTEST, EXECUTION_REPLAY, LIVE_POSITION_SIZING or PORTFOLIO_CAPITAL_ALLOCATION change.
+No analytical successor opened.
+Validation: 24 focused telemetry/console tests, 152 Owner Daily telemetry/launcher/
+workflow/journal/delegation tests, and six targeted subprocess/handoff tests passed.
+Expanded Canonical/roadmap checks passed 87 tests with one retained August fixture
+failure; that missing-DNSE-quality guard mismatch reproduces on the original HEAD.
+A second expanded pipeline fixture expects provider-unavailable but sees FUTURE_SESSION,
+also reproduced on original HEAD. These analytical fixtures were not changed.
+py_compile, roadmap drift validation and git diff --check passed. Resource console
+thresholds are display-only: <10 GiB free disk, >=4 GiB observed process peak, or
+>=512 MiB increase since the last resource display; unchanged counters are suppressed.
+The retained journal run `6eeac4971abc42e8a9bb6ffbbf2e55cf` is COMPLETE at 2026-10-01
+and agrees with the result's operation and publication identities.
+
 **Current Research decision-quality program (2026-10-01):**
 `CURRENT_RESEARCH_DECISION_QUALITY_AND_FRESHNESS_PROGRAM_20261001 = COMPLETE / OWNER_REVIEW_READY`.
 The owner-directed review boundary is reached after packages 14 and 15; autonomous
@@ -18,8 +49,8 @@ PRIORITY_NOW to SETUP_WATCH under the unchanged legacy lane policy. Strategy eli
 and the entire accepted integrated decision artifact remain unchanged. Both full
 1,683-record replays are deterministic with zero drops or unexplained changes.
 The remaining retained-corpus candidate is low-value wording; qualified current
-corporate catalysts/risks remain zero. October 1 has no registered completed session;
-live telemetry acceptance remains pending without polling or a substitute replay.
+corporate catalysts/risks remain zero. October 1 is registered and completed; retained normal Daily evidence closes
+`NEW_SESSION_LIVE_ACCEPTANCE_PASS` without another Daily or substitute replay.
 Authority, request cap/retry, provider acquisition and publication changes remain NONE.
 The paragraphs below retain the program's accepted package history.
 The owner explicitly authorizes multiple coherent work packages despite the empty
@@ -54,7 +85,7 @@ Full replay has 1,683 in/out, zero unexplained changes and 20 retained inputs un
 fundamental/valuation interpretation or authority gates change. See
 [program checkpoint](internal/current_research_decision_quality_program.md).
 PR #28 and PR #29 are merged into main as independent corrections; this program does not duplicate or widen them.
-New-session telemetry live acceptance remains externally time-gated.
+New-session telemetry live acceptance passed on the retained October 1 normal Daily.
 
 Packages 11–13 retain counted market breadth and participation provenance in the
 existing decision/shared delivery route. Breadth observes 848 of 1,507 official names,
@@ -70,8 +101,7 @@ retains DNSE field/session/cohort/method/limitations; Boolean/non-finite/negativ
 cannot become evidence. All 1,683 per-ticker identities, postures, triggers,
 invalidations and authority remain unchanged; all replay inputs are byte-identical.
 Program remains ACTIVE. The bounded corpus has zero active corporate catalysts/risks;
-no integration is manufactured. October 1 is not registered as a completed session,
-so telemetry live acceptance remains pending without polling.
+no integration is manufactured. October 1 is now registered as a completed session; live acceptance is PASS.
 
 The resumed financial-peer package consumes the canonical Financial V2 wrapper through
 an identity/session/nested-product-verified join. The existing peer producer preserves
@@ -114,7 +144,7 @@ No authority, provider, cap/retry, publication or acquisition change. Program re
 
 **Current Research future-dated freshness guard (2026-10-01):**
 `CURRENT_RESEARCH_FUTURE_DATED_FRESHNESS_GUARD_V1 = COMPLETE` under the owner's
-autonomous independent-work override while telemetry live acceptance is time-gated.
+autonomous independent-work override while telemetry live acceptance was time-gated.
 The shared freshness envelope previously labelled negative-age observations current/actionable.
 It now preserves their dates and reports `unknown / source_date_after_reference_anchor`,
 non-actionable. Market domains keep the existing completed-session anchor; all other
@@ -123,7 +153,7 @@ Offline replay of all 17 retained 2026-09-30 runtime macro series is identical t
 `59580f6`: context identity `d0045da8120a7799efe12856c0ae341e4146c1ab547de1e08679c95aab1d5c11`,
 12 current / 5 stale-or-expiring. No acquisition, runtime/DB write or authority promotion.
 Owner Daily Windows RSS fix was merged via PR #28 from checkpoint `4116e0f`;
-its four CI checks passed. `NEW_SESSION_LIVE_ACCEPTANCE_PENDING` remains time-gated.
+its four CI checks passed. `NEW_SESSION_LIVE_ACCEPTANCE_PASS` is supported by retained October 1 normal Daily.
 See [acceptance handoff](internal/current_research_future_freshness_acceptance.md).
 
 

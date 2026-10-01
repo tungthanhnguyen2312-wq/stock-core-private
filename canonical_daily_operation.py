@@ -417,6 +417,8 @@ def print_daily_operation_handoff(record: Mapping[str, Any]) -> None:
         print(f"FINAL_RESOLVED: {coverage.get('exact_session_retained_count')} / {coverage.get('total_candidates')}")
         print(f"MISSING: {(coverage.get('total_candidates') or 0) - (coverage.get('exact_session_retained_count') or 0)}")
     print(f"DAILY_OPERATION_STATE={record.get('daily_operation_state')}")
+    if record.get("daily_operation_state") == STATE_LOCAL_COMPLETE:
+        print("CANONICAL_DAILY_LOCAL_COMPLETE - wrapper publication/verification phases still pending")
     print(f"SESSION={record.get('session')}")
     print(f"SESSION_GATE={record.get('session_gate_semantic') or record.get('session_gate')}")
     print(f"DAILY_PRODUCER={record.get('daily_producer_status')}")
