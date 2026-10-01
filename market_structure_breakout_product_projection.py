@@ -49,6 +49,21 @@ def _project_ticker(ticker: str, record: Mapping[str, Any], session: str) -> dic
     brk_v1 = record.get("breakout_context") or {}
     rv = record.get("relative_volume") or {}
     eligibility = record.get("eligibility") or {}
+    # Preserve the direction already defined by the V3 producer. A BOS can be
+    # bearish; a structural invalidation can invalidate a bearish thesis above
+    # resistance. Unknown methods/directions must not become bullish defaults.
+    trigger_operator = None
+    if trigger.get("status") == "AVAILABLE":
+        if trigger.get("trigger_type") in {"PIVOT_BREAKOUT_TRIGGER", "RETEST_BROKEN_PIVOT"}:
+            trigger_operator = ">"
+        elif trigger.get("trigger_type") == "CONFIRMED_BOS_TRIGGER":
+            trigger_operator = {"BULLISH_BOS_DETECTED_BY_RULE": ">", "BEARISH_BOS_DETECTED_BY_RULE": "<"}.get(bos.get("bos_state"))
+    invalidation_operator = None
+    if invalid.get("status") == "AVAILABLE":
+        invalidation_operator = {
+            "CONFIRMED_SWING_LOW_BY_RULE_OR_V1_SUPPORT_FALLBACK": "<",
+            "CONFIRMED_SWING_HIGH_BY_RULE_OR_V1_RESISTANCE_FALLBACK": ">",
+        }.get(invalid.get("invalidation_method"))
 
     return {
         "ticker": ticker,
@@ -81,10 +96,13 @@ def _project_ticker(ticker: str, record: Mapping[str, Any], session: str) -> dic
         "breakout_state_v3": brk_v3.get("breakout_state"),
         # Trigger / Invalidation
         "trigger_type": trigger.get("trigger_type"),
+        "trigger_close_comparison_operator": trigger_operator,
         "trigger_level": trigger.get("trigger_level"),
         "trigger_state": trigger.get("trigger_state"),
         "distance_to_trigger_pct": trigger.get("distance_to_trigger_pct"),
         "invalidation_level": invalid.get("invalidation_level"),
+        "invalidation_method": invalid.get("invalidation_method"),
+        "invalidation_close_comparison_operator": invalidation_operator,
         "distance_to_invalidation_pct": invalid.get("distance_to_invalidation_pct"),
         # Metadata
         "high_low_basis": (record.get("high_low_basis") or {}).get("status"),

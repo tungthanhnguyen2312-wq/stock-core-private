@@ -77,6 +77,8 @@ def _condition_operator(operator: Any) -> str | None:
         "FUTURE_CLOSE_GT_RESISTANCE_LEVEL": ">",
         "FUTURE_CLOSE_LT_RESISTANCE_LEVEL": "<",
         "FUTURE_CLOSE_LT_SUPPORT_LEVEL": "<",
+        "FUTURE_CLOSE_GT_STRUCTURAL_LEVEL": ">",
+        "FUTURE_CLOSE_LT_STRUCTURAL_LEVEL": "<",
     }.get(operator)
 
 
@@ -95,7 +97,7 @@ def serialize_boundary_condition(
     level = raw.get("baseline_value")
     fixed_close = (
         raw.get("status") == "READY"
-        and raw.get("source_metric") in {"support", "resistance"}
+        and raw.get("source_metric") in {"support", "resistance", "trigger_level", "invalidation_level"}
         and operator is not None
         and isinstance(level, (int, float))
     )
@@ -139,6 +141,38 @@ def serialize_boundary_condition(
         "authority_boundary": "RETAINED_RESEARCH_BOUNDARY_NOT_EXECUTION_OR_STOP_LOSS",
     }
     return _identity(payload, "retained_strategy_boundary_condition:", "condition_identity")
+
+
+def serialize_structural_condition(
+    record: Mapping[str, Any], *, role: str, session: str,
+    source_identity: str | None,
+) -> dict[str, Any]:
+    """Serialize the projected V3 measurement using the standing close evaluator.
+
+    The producer projection owns direction. Never borrow a watchlist rule,
+    infer direction from price distance, or reconstruct an old retained T0.
+    """
+    import math
+    level = record.get(f"{role}_level")
+    operator = record.get(f"{role}_close_comparison_operator")
+    qualified = (
+        record.get("eligible") is True and record.get("as_of_session") == session
+        and bool(source_identity) and operator in {">", "<"}
+        and isinstance(level, (int, float)) and not isinstance(level, bool)
+        and math.isfinite(level) and level > 0
+    )
+    boundary = {
+        "status": "READY" if qualified else "UNAVAILABLE",
+        "source_metric": f"{role}_level",
+        "comparison_operator": "FUTURE_CLOSE_GT_STRUCTURAL_LEVEL" if operator == ">" else "FUTURE_CLOSE_LT_STRUCTURAL_LEVEL" if operator == "<" else None,
+        "baseline_value": level if qualified else None,
+        "boundary_type": record.get("trigger_type") if role == "trigger" else record.get("invalidation_method"),
+        "method": "market_structure_breakout_product_projection/v1",
+        "evidence_lineage": {"as_of_session": record.get("as_of_session"), "source_artifact_identity": source_identity},
+        "warnings": [] if qualified else ["STRUCTURAL_CONDITION_INPUT_UNQUALIFIED"],
+        "reason": "Fixed T0 structural close boundary; analytical research only.",
+    }
+    return serialize_boundary_condition(boundary, role=role, source_strategy_identity=source_identity)
 
 
 def _axis_completeness(record: Mapping[str, Any]) -> dict[str, Any]:

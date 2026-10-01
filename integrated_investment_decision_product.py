@@ -1407,6 +1407,7 @@ def build_ticker_integrated_decision(
     tactical_confirmation_record: Mapping[str, Any] | None = None,
     tactical_boundaries_record: Mapping[str, Any] | None = None,
     tactical_boundaries_identity: str | None = None,
+    structural_condition_source_identity: str | None = None,
     corporate_intelligence_record: Mapping[str, Any] | None = None,
     producer_artifact_identities: Mapping[str, Any] | None = None,
     technical_coverage_disposition_record: Mapping[str, Any] | None = None,
@@ -1548,19 +1549,22 @@ def build_ticker_integrated_decision(
         priority_queue_record, posture=posture, tactical=tactical, why_now=why_now,
     )
 
-    # 8. Trigger & Invalidation.  The condition serialization is deliberately
-    # delegated to the standing tactical boundary contract.  It preserves its
-    # own operator/reference semantics (or the fact that it is narrative or
-    # dynamic), and does not create a second trigger/invalidation engine.
-    from prospective_decision_retention import serialize_boundary_condition
+    # 8. Trigger & Invalidation. V3 levels and their conditions share the same
+    # source. Preserve the separate watchlist strategy verbatim without attaching
+    # its potentially different level/direction to a V3 structural measurement.
+    from prospective_decision_retention import serialize_boundary_condition, serialize_structural_condition
     boundaries = tactical_boundaries_record or {}
+    structural_identity = structural_condition_source_identity
     trigger = {
         "trigger_type": tactical.get("trigger_type", "NO_TRIGGER"),
         "trigger_level": tactical.get("trigger_level"),
         "trigger_state": tactical.get("trigger_state", "NOT_AVAILABLE"),
         "distance_to_trigger_pct": tactical.get("distance_to_trigger_pct"),
         "warning": "TRIGGER_IS_RESEARCH_MEASUREMENT_NOT_EXECUTION_AUTHORITY",
-        "condition": serialize_boundary_condition(
+        "condition": serialize_structural_condition(
+            tactical, role="trigger", session=as_of_session, source_identity=structural_identity,
+        ),
+        "watchlist_condition": serialize_boundary_condition(
             boundaries.get("confirmation_boundary") if isinstance(boundaries, Mapping) else None,
             role="trigger", source_strategy_identity=tactical_boundaries_identity,
         ),
@@ -1570,7 +1574,10 @@ def build_ticker_integrated_decision(
         "invalidation_method": tactical.get("invalidation_method") or "CONFIRMED_SWING_LEVEL_OR_SUPPORT_FALLBACK",
         "distance_to_invalidation_pct": tactical.get("distance_to_invalidation_pct"),
         "warning": "STRUCTURAL_INVALIDATION_LEVEL_NOT_A_STOP_LOSS",
-        "condition": serialize_boundary_condition(
+        "condition": serialize_structural_condition(
+            tactical, role="invalidation", session=as_of_session, source_identity=structural_identity,
+        ),
+        "watchlist_condition": serialize_boundary_condition(
             boundaries.get("technical_invalidation_boundary") if isinstance(boundaries, Mapping) else None,
             role="invalidation", source_strategy_identity=tactical_boundaries_identity,
         ),
@@ -1754,6 +1761,19 @@ def build_artifact(
             f"{FINANCIAL_ANALYSIS_COMPACT_CONTRACT}:got={fa_contract}"
         )
     tac_records = technical_structure_artifact.get("records") or {}
+    # A claimed identity alone does not qualify a new fixed T0 condition. Keep
+    # other research axes visible while failing closed on this dependent use.
+    import market_structure_breakout_product_projection as structural_projection
+    structural_condition_identity = None
+    if (technical_structure_artifact.get("contract_version") == structural_projection.CONTRACT_VERSION
+            and technical_structure_artifact.get("session") == session):
+        try:
+            verified = structural_projection.content_identity(technical_structure_artifact)
+            if (verified["artifact_identity"] == technical_structure_artifact.get("artifact_identity")
+                    and verified["artifact_sha256"] == technical_structure_artifact.get("artifact_sha256")):
+                structural_condition_identity = verified["artifact_identity"]
+        except (TypeError, ValueError):
+            pass
     fa_records = (financial_analysis_artifact or {}).get("records") or {}
     operational_records: Mapping[str, Any] = {}
     if operational_fundamental_integration_artifact is not None:
@@ -1897,6 +1917,7 @@ def build_artifact(
             tactical_confirmation_record=tactical_confirmation_records.get(ticker),
             tactical_boundaries_record=tactical_boundaries_records.get(ticker),
             tactical_boundaries_identity=(tactical_boundaries_artifact or {}).get("artifact_identity"),
+            structural_condition_source_identity=structural_condition_identity,
             corporate_intelligence_record=corporate_intelligence_records.get(ticker),
             producer_artifact_identities={
                 "technical_structure": technical_structure_artifact.get("artifact_identity"),

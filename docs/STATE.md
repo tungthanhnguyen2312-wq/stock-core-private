@@ -1,5 +1,22 @@
 # Stock Lookup — Operational State
 
+**Current Research decision-quality program (2026-10-01):**
+`CURRENT_RESEARCH_DECISION_QUALITY_AND_FRESHNESS_PROGRAM_20261001 = ACTIVE`.
+The owner explicitly authorizes multiple coherent work packages despite the empty
+queued roadmap. Independent branch `program/current-research-decision-quality-20261001`
+starts from `59580f6cda300dce8013af284d2ce11e026e3029`. Retained 2026-09-30
+evidence is read-only. Initial corpus measurement finds V3 displayed structural
+levels paired with older watchlist conditions: 30/42 evaluable trigger conditions
+and 35/37 evaluable invalidation conditions reference different levels. The compact
+projection also omits the producer's invalidation method. The corrected projection
+preserves method/direction, the integrated product separates structural and watchlist
+conditions, and the shared Daily/AI projector retains both. Full retained replay keeps
+all 1,683 tickers and all postures; 388 structural triggers and 845 invalidations are
+evaluable with exact level alignment. 174 focused/adjacent tests pass. Research policy
+and authority gates remain unchanged. See [program checkpoint](internal/current_research_decision_quality_program.md).
+PR #28 and #29 remain independent pending-owner-merge corrections, not dependencies.
+New-session telemetry live acceptance remains externally time-gated.
+
 **Daily official liquidity rollforward corrective (2026-09-30):**
 `DAILY_OFFICIAL_LIQUIDITY_ROLLFORWARD_V1 = PARTIAL /
 CORE_DAILY_LIVE_ACCEPTED_OFFICIAL_LIQUIDITY_LIVE_FAIL_CLOSED_SOURCE_ABSENT /

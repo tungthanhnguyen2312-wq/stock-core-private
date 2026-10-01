@@ -123,9 +123,11 @@ def project_integrated_decision_for_ai_delivery(record: Any, *, integrated_ident
         return None
     trigger = _selected_fields(record.get("trigger"), (
         "trigger_type", "trigger_level", "trigger_state", "distance_to_trigger_pct",
+        "condition", "watchlist_condition",
     ))
     invalidation = _selected_fields(record.get("invalidation"), (
         "invalidation_level", "invalidation_method", "distance_to_invalidation_pct",
+        "condition", "watchlist_condition",
     ))
     return {
         "ticker": record.get("ticker"),
