@@ -2,6 +2,21 @@
 
 > Navigation aid only. docs/STATE.md, docs/ROADMAP.md, docs/DECISIONS.md and docs/ROADMAP_STATE.json remain authority.
 
+
+## Repository navigation status — 2026-10-01
+
+The runtime topology below is authoritative as a navigation aid, but the filesystem is still historically flat. The public root currently contains hundreds of implementation modules; this is recognized layout debt, not evidence that those modules are unused.
+
+Repository cleanup follows the governed strangler plan in [REPOSITORY_LAYOUT_MIGRATION.md](REPOSITORY_LAYOUT_MIGRATION.md):
+
+- do not perform a wholesale `src/` migration;
+- do not classify a module as legacy by filename;
+- move only coherent capability families with known call graphs and focused parity tests;
+- keep production entry points truthful throughout migration;
+- reduce the root gradually alongside product-critical roadmap work.
+
+The October 1 Owner Daily live-acceptance gate is complete and PR #31 is merged. The next product milestone is Current Research Coverage & Decision Fitness; repository-layout work must not displace that capability work.
+
 ## Canonical Pipeline Flow
 
 ```

@@ -1,135 +1,139 @@
-# Stock Lookup — Producer Architecture & Governance
+# Stock Lookup
 
-**Stock Lookup** is actively developed, evidence-first open-source infrastructure for deterministic quantitative analytics and auditable financial intelligence on Vietnamese equities (HOSE, HNX, UPCoM). It is not an AI stock-prediction application.
+**Evidence-first research and decision-support infrastructure for Vietnamese equities.**
 
-The platform enforces strict computational determinism, immutable provenance tracking, and explicit fail-closed semantic gating. Numerical authority, risk boundaries, and financial facts are computed exclusively by pure, deterministic Python/vectorized engines; AI systems provide explanation, research synthesis, and counter-theses without altering numerical authority.
+Stock Lookup turns market data, financial evidence, corporate events, valuation context, technical structure, and risk inputs into deterministic research products for HOSE, HNX, and UPCoM securities.
 
-Contributions are welcome, especially reproducible bug reports, tests, documentation improvements, and bounded engineering changes. See the [MIT License](LICENSE), [CONTRIBUTING.md](CONTRIBUTING.md), and [SECURITY.md](SECURITY.md).
+It is designed around one rule:
 
----
+> **Facts and numerical calculations come from retained evidence and deterministic engines. AI explains, synthesizes, challenges, and surfaces uncertainty — it does not become data authority.**
 
-## 1. Core Authority Model & Architectural Principles
+## What the project does
 
-1. **Evidence-First Provenance**: Every data point, financial metric, and price observation is bound to an immutable raw payload hash, request identity, provider timestamp, and schema version. Missing or unverified semantics are marked `UNKNOWN` rather than guessed.
-2. **Deterministic Numerical Authority**: Calculations (OHLC aggregation, corporate action adjustments, moving averages, relative volume, volatility) are vectorized and pure. Floating point values, dates, and JSON serializations are deterministic and byte-stable.
-3. **Fail-Closed Semantic Gating**: Downstream applications (strategy evaluation, portfolio sizing, valuation, backtesting) require explicit feature-level qualification. An unqualified field (e.g. unpromoted price basis or unevidenced volume unit) fails closed for dependent consumers without rejecting the underlying raw record.
-4. **Separation of Concerns**:
-   - **Producer (`stock-core-private`)**: Owns raw ingestion contracts, canonical reconciliation, temporal provenance, quality exception queues, and vectorized feature generation.
-   - **Consumer / Dashboard**: Downstream consumer workspaces responsible for visualization, reporting, and interactive decision support.
-   - **Evidence Lake (`operations-review/`)**: Retained raw captures, forensic audit logs, multi-session WebSocket recordings, and milestone closeout reports.
-
----
-
-## 2. High-Level Pipeline Architecture
-
-```
-┌───────────────────────────────┐
-│     Dynamic Market Universe   │ (3,250 instruments: 1,660 listed equity candidates,
-└──────────────┬────────────────┘  1,590 unclassified security groups)
-               │
-               ▼
-┌───────────────────────────────┐
-│       Immutable Raw Lake      │ (Daily OHLC, trades history, foreign trading,
-└──────────────┬────────────────┘  official corporate filings)
-               │
-               ▼
-┌───────────────────────────────┐
-│  Quality & Canonicalization   │ (Field-level validation, corporate-action ledger,
-└──────────────┬────────────────┘  instrument master reconciliation)
-               │
-               ▼
-┌───────────────────────────────┐
-│    Temporal & PIT Boundary    │ (field_temporal_contract.py: 6 freshness states,
-└──────────────┬────────────────┘  strict knowledge cutoff & price-basis gating)
-               │
-               ▼
-┌───────────────────────────────┐
-│    Vectorized Feature Store   │ (market_feature_store.py: cross-sectional & historical
-└──────────────┬────────────────┘  features with bound TemporalField envelopes)
-               │
-               ▼
-┌───────────────────────────────┐
-│  Strategy & Risk Evaluation   │ (Declarative feature requirements, fail-closed
-└──────────────┬────────────────┘  risk/liquidity boundaries)
-               │
-               ▼
-┌───────────────────────────────┐
-│  Human Decision / Dashboard   │ (Auditable research packets & executive summaries)
-└───────────────────────────────┘
+```text
+Market / financial / corporate evidence
+        ↓
+Raw retention + provenance
+        ↓
+Canonical + temporal + fitness semantics
+        ↓
+Deterministic research engines
+        ↓
+Market / technical / fundamental / valuation / event context
+        ↓
+Integrated research decision + trigger / invalidation
+        ↓
+AI research handoff
+        ↓
+Human decision + Dashboard
+        ↓
+Prospective outcome feedback
 ```
 
----
+The current production workflow is operated through the canonical Owner Daily path and publishes governed research artifacts to downstream AI and Dashboard consumers.
 
-## 3. Current System Capabilities
+## Core principles
 
-- **Canonical Universe Hierarchy ([canonical_universe_tiers.py](canonical_universe_tiers.py))**: Deterministic instrument reconciliation (C.1) and tier classification DAG (C.2).
-- **Field-Level Temporal Semantics ([field_temporal_contract.py](field_temporal_contract.py))**: Explicit freshness states (`current`, `expiring`, `stale`, `historical`, `missing`, `unknown`) and PIT qualification gating bound directly to field values.
-- **Corporate Action Ledger & Multi-Event Extraction ([official_corporate_action_ledger.py](official_corporate_action_ledger.py))**: Additive and multiplicative factor trees from official filing authority (P0-A.2).
-- **Vectorized Market Feature Store ([market_feature_store.py](market_feature_store.py))**: Vectorized technical and statistical feature generation with bound temporal metadata.
-- **Fail-Closed Volume & Value Semantic Boundary ([market_volume_value_semantic_contract.py](market_volume_value_semantic_contract.py))**: Strict enforcement of permitted downstream uses.
-- **Market-Wide Research Artifacts ([market_analysis_artifact.py](market_analysis_artifact.py))**: Deterministic cross-sectional research artifact generator across candidate universes.
+- **Evidence first.** Unknown, stale, proxy, blocked, and qualified states remain explicit.
+- **Deterministic numerical authority.** Formalizable calculations are implemented in Python and validated with reproducible tests.
+- **Feature-level fitness.** Missing authority blocks only the dependent use case; it does not invalidate unrelated research.
+- **Point-in-time discipline.** Current research, historical reconstruction, and PIT/backtest authority are separate modes.
+- **Sector-aware analysis.** Banks, securities firms, industrial companies, and other sectors are not forced into one financial template.
+- **AI is a research layer.** AI may explain and challenge a thesis, but it may not invent financial facts, ex-dates, probabilities, or target-price authority.
+- **Human approval remains final.** Research posture is not an execution order.
 
----
+## Public project map
 
-## 4. Known Boundaries & Explicit Limitations
+| Area | Entry point |
+|---|---|
+| Product direction | [docs/PRODUCT_NORTH_STAR.md](docs/PRODUCT_NORTH_STAR.md) |
+| Strategic roadmap | [docs/NORTH_STAR.md](docs/NORTH_STAR.md) |
+| Current operational state | [docs/STATE.md](docs/STATE.md) |
+| Machine-readable execution state | [docs/ROADMAP_STATE.json](docs/ROADMAP_STATE.json) |
+| Roadmap history / dependencies | [docs/ROADMAP.md](docs/ROADMAP.md) |
+| Architecture decisions | [docs/DECISIONS.md](docs/DECISIONS.md) |
+| Concrete runtime topology | [docs/SYSTEM_MAP.md](docs/SYSTEM_MAP.md) |
+| Analytics & decision feature contract | [docs/ANALYTICS_AND_DECISION_FEATURE_SPEC.md](docs/ANALYTICS_AND_DECISION_FEATURE_SPEC.md) |
+| CI / dependency tiers | [docs/CI_AND_DEPENDENCY_TIERS.md](docs/CI_AND_DEPENDENCY_TIERS.md) |
+| Repository layout migration | [docs/REPOSITORY_LAYOUT_MIGRATION.md](docs/REPOSITORY_LAYOUT_MIGRATION.md) |
 
-- **Price Basis (`RAW_AS_TRADED`)**: `NOT_PROMOTED`. Multi-session WebSocket capture (P0-A.3E Part A) is complete across Sessions 1–4, but event-window qualification (Part B) remains fail-closed pending qualified official ex-date notices. Unpromoted prices fail closed for point-in-time backtesting.
-- **Liquidity & Sizing Prohibitions**: `QUALIFIED_LIQUIDITY_INPUTS = NO` and `POSITION_SIZING_IS_SAFE = NO`. Volume candidate $C_5 = 10 \times G_1$ is validated as an empirical shadow candidate (99.81%), but unit interpretation remains unevidenced. Market liquidity, market turnover, and position sizing are strictly prohibited.
-- **Active Universe Qualification**: `ACTIVE_UNIVERSE` remains `UNKNOWN` (fail-closed) for all instruments pending verified exchange-mapping and listing-status official evidence.
-- **Traded Value Input**: Daily traded value is `OBSERVED_ABSENT` from DNSE daily OHLC feeds; derived $p \times v$ has no independent daily anchor.
+## Canonical runtime path
 
----
+```text
+stocklookup.ps1
+  └─ stocklookup.py
+      └─ Owner Daily workflow
+          ├─ governed session resolution
+          ├─ market-data acquisition / reuse
+          ├─ canonical research materialization
+          ├─ tactical + financial + valuation integration
+          ├─ integrated decision products
+          ├─ AI handoff publication
+          └─ Dashboard release + verification
+```
 
-## 5. Authoritative Documentation Map
+The authoritative module-level flow is documented in [docs/SYSTEM_MAP.md](docs/SYSTEM_MAP.md).
 
-For development and governance, consult the following authoritative documents:
+## Current execution boundary
 
-| Document | Purpose | Audience |
-|----------|---------|----------|
-| [docs/STATE.md](docs/STATE.md) | Current project phase, active blockers, completed gates, and immediate next action. | Human & AI Operators |
-| [docs/ROADMAP.md](docs/ROADMAP.md) | Architectural phase structure, milestone matrix, dependencies, and deferred tracks. | Human & AI Operators |
-| [docs/DECISIONS.md](docs/DECISIONS.md) | Chronological architectural decision records with formal rationales. | Human & AI Operators |
-| [AGENTS.md](AGENTS.md) | Agent working rules, scope boundaries, and execution protocols. | AI Executors |
-| [docs/AI_RULES.md](docs/AI_RULES.md) | Engineering safety policies, market data doctrine, and fail-closed rules. | AI Executors & Reviewers |
-| [LICENSE](LICENSE) | MIT Open Source License terms. | Public & Contributors |
-| [CONTRIBUTING.md](CONTRIBUTING.md) | Contribution and maintainer guidelines. | Public & Contributors |
-| [SECURITY.md](SECURITY.md) | Security vulnerability reporting protocol. | Public & Contributors |
-| [docs/internal/](docs/internal/) | Consolidated AI-agent context, workspace audits, and validation reports. | Internal & AI Agents |
-| [docs/archive/](docs/archive/) | Historical changelogs, manifests, and past decision archives. | Reference & Historical |
-| `operations-review/` | Retained forensic reports, closeout records, and empirical validation artifacts. | Reference & Audit |
+The October 1, 2026 ordinary Owner Daily live-acceptance gate is complete. The production PR that closes that gate passed Producer CI and was merged to `main`.
 
----
+The next roadmap priority is **Current Research Coverage & Decision Fitness**: measure which securities currently have usable price, tactical, fundamental, valuation, corporate/event, and integrated-decision context; then prioritize the gaps that materially reduce decision quality.
 
-## 6. Development & Verification
+Higher-authority lanes such as full historical RAW_AS_TRADED, PIT backtesting, execution-grade liquidity, and live position sizing remain separate and must not block unrelated Current Research.
 
-### Prerequisites
+## Repository structure
+
+The repository is historically flat and currently contains many top-level Python modules. That is recognized technical debt, not the target package layout.
+
+The migration policy is **incremental and call-graph-driven**:
+
+- no wholesale `src/` rewrite;
+- no module is called legacy based on its filename;
+- capability families move only when their production consumers/tests are understood;
+- migration occurs alongside useful capability work, with parity validation;
+- the public root is gradually reduced toward a small front-door surface.
+
+See [docs/REPOSITORY_LAYOUT_MIGRATION.md](docs/REPOSITORY_LAYOUT_MIGRATION.md).
+
+## Development
+
+### Requirements
+
 - Python 3.11+ (Python 3.13 supported)
-- Windows users: enable `core.longpaths` (`git config --global core.longpaths true`)
+- On Windows, long paths are recommended:
+  `git config --global core.longpaths true`
 
-### Dependencies & Test Tiers
+### Install core + test dependencies
+
 ```bash
-# Core runtime + test tier, deterministic (exactly what CI installs):
 python -m pip install -r requirements.txt -r requirements-test.txt -c constraints.txt
-
-# Optional provider runtime (vnstock/vnai for the KBS/VCI supplemental lane, anthropic):
-python -m pip install -r requirements.txt -r requirements-providers.txt -c constraints.txt
-```
-Production provider functionality still requires `requirements-providers.txt`. While PyPI lists
-`vnstock`/`vnai` as quarantined (no installable distribution), that runtime cannot be rebuilt
-from PyPI, but the core install and hermetic CI do not depend on it. Tests are tiered as
-hermetic, `retained_evidence` (strict locally, skipped with an explicit reason on a clean clone)
-and `provider_runtime`. See [docs/CI_AND_DEPENDENCY_TIERS.md](docs/CI_AND_DEPENDENCY_TIERS.md).
-
-### Running Deterministic Unit Tests
-```powershell
-# Run core deterministic test suite:
-python -m pytest tests/test_market_analysis_artifact.py tests/test_field_temporal_contract.py tests/test_canonical_universe_tiers.py tests/test_market_volume_value_semantic_contract.py tests/test_official_corporate_action_pillar.py
-
-# Verify syntax & compilation:
-python -m py_compile market_analysis_artifact.py field_temporal_contract.py market_data_contracts.py market_feature_store.py
-
-# Check git formatting:
-git diff --check
 ```
 
-> **Disclaimer**: Data and analysis outputs generated by this platform are for quantitative research and decision support only, not investment recommendations.
+Optional provider runtimes are intentionally separated from the hermetic core tier. See [docs/CI_AND_DEPENDENCY_TIERS.md](docs/CI_AND_DEPENDENCY_TIERS.md).
+
+### Run focused verification
+
+```bash
+python -m pytest -q tests/test_production_call_shape_smoke.py
+python -m py_compile stocklookup.py canonical_daily_operation.py daily_producer_pipeline.py
+python tools/stocklookup_roadmap.py --check
+```
+
+CI contains separate structural, hermetic regression, retained-evidence, and production call-shape checks.
+
+## Contributing
+
+Contributions are welcome when they are reproducible and bounded. Start with:
+
+- [CONTRIBUTING.md](CONTRIBUTING.md)
+- [SECURITY.md](SECURITY.md)
+- [AGENTS.md](AGENTS.md) for AI-agent execution rules
+
+## License
+
+MIT — see [LICENSE](LICENSE).
+
+---
+
+**Research disclaimer:** Stock Lookup produces quantitative research and decision-support outputs. It does not provide personalized investment advice or autonomous trade execution.

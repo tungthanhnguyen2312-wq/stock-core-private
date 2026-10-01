@@ -1,7 +1,7 @@
 {
   "schema_version": "stocklookup_roadmap_execution_state/1.0.0",
   "roadmap_id": "stock-core-private",
-  "roadmap_version": "2026.10.01.4",
+  "roadmap_version": "2026.10.01.5",
   "narrative_authority": {
     "strategic_roadmap": "docs/ROADMAP.md",
     "operational_narrative": "docs/STATE.md",
@@ -9,17 +9,62 @@
     "ai_rules": "docs/AI_RULES.md",
     "note": "This file is the machine-readable EXECUTION-STATE authority: which milestone is current/active/next/blocked, what checkpoint proves each completed milestone, and whether recorded state contradicts Git/worktree reality. It does not restate or supersede the narrative docs' technical content and is not a substitute for reading them. Where this file and a narrative doc appear to disagree, that is a conflict to surface to the owner (AGENTS.md 'Default lightweight bootstrap' rule), never an automatic override in either direction."
   },
-  "implementation_lineage_head": "3137441656019e4b7974978f034915d361b5c307",
+  "implementation_lineage_head": "8f9bea29ce91f2d2e766e8e7c2c3012b693693f7",
   "last_updated_checkpoint": "HEAD",
   "known_operational_diff_allowlist": [
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "CURRENT_RESEARCH_DECISION_QUALITY_AND_FRESHNESS_PROGRAM_20261001",
+    "milestone": "ROADMAP_AND_PUBLIC_REPOSITORY_REBASELINE_V1",
     "state": "COMPLETE"
   },
-  "queued_next": [],
+  "queued_next": [
+    "CURRENT_RESEARCH_COVERAGE_AND_DECISION_FITNESS_V1"
+  ],
   "milestones": [
+    {
+      "milestone_id": "ROADMAP_AND_PUBLIC_REPOSITORY_REBASELINE_V1",
+      "state": "COMPLETE",
+      "terminal_disposition": "COMPLETE_PR_READY",
+      "starting_checkpoint": "8f9bea29ce91f2d2e766e8e7c2c3012b693693f7",
+      "checkpoint": "4651fd6673f8fea82f706117a34b34d181b964dd",
+      "candidate_branch": "docs/roadmap-public-rebaseline-20261001-v1",
+      "dependencies": [
+        "OWNER_DAILY_PROGRESS_TELEMETRY_V1"
+      ],
+      "unlocks": [
+        "CURRENT_RESEARCH_COVERAGE_AND_DECISION_FITNESS_V1"
+      ],
+      "authority_effect": "NONE / GOVERNANCE_AND_PUBLIC_REPOSITORY_PRESENTATION_ONLY",
+      "owner_authorized": true,
+      "source_doc": "Owner directive: execute full post-PR31 roadmap/public-repository rebaseline (2026-10-01)",
+      "state_history": [
+        "ACTIVE",
+        "COMPLETE"
+      ],
+      "owner_override": "OWNER_DIRECTIVE_2026_10_01_EXECUTE_FULL_REBASELINE",
+      "notes": "PR #31 merged to main at 8f9bea29ce91f2d2e766e8e7c2c3012b693693f7 after Producer CI #167 SUCCESS. NEW_SESSION_LIVE_ACCEPTANCE_PASS is closed. README/public navigation simplified; repository-layout debt is governed by docs/REPOSITORY_LAYOUT_MIGRATION.md. No analytical code, thresholds, provider authority, production DB, runtime artifact, deploy, PIT, liquidity, sizing or execution authority changed. No wholesale src migration."
+    },
+    {
+      "milestone_id": "CURRENT_RESEARCH_COVERAGE_AND_DECISION_FITNESS_V1",
+      "state": "NEXT",
+      "terminal_disposition": "NOT_STARTED",
+      "starting_checkpoint": null,
+      "checkpoint": null,
+      "candidate_branch": null,
+      "dependencies": [
+        "ROADMAP_AND_PUBLIC_REPOSITORY_REBASELINE_V1"
+      ],
+      "unlocks": [],
+      "authority_effect": "NONE_EXPECTED / MEASUREMENT_AND_GAP_PRIORITIZATION",
+      "owner_authorized": true,
+      "source_doc": "2026-10-01 capability rebaseline",
+      "state_history": [
+        "NEXT"
+      ],
+      "owner_override": "OWNER_DIRECTIVE_2026_10_01_EXECUTE_FULL_REBASELINE",
+      "notes": "Measure full-universe usable coverage for current price, tactical, fundamental, valuation, corporate/event and integrated-decision context. Classify unavailable/blocked/stale/proxy/not-applicable/usable states and prioritize only gaps that materially reduce decision quality. Do not open a generic audit or historical/PIT/execution lane by default."
+    },
     {
       "milestone_id": "CURRENT_RESEARCH_DECISION_QUALITY_AND_FRESHNESS_PROGRAM_20261001",
       "state": "COMPLETE",
