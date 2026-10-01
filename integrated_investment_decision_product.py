@@ -683,6 +683,7 @@ def build_evidence_axes(
             context={
                 "market_structure_state": tactical.get("market_structure_state"),
                 "breakout_state_v3": tactical.get("breakout_state_v3"),
+                "pivot_retest_confirmed": tactical.get("pivot_retest_confirmed"),
                 "bos_state": tactical.get("bos_state"),
                 "choch_state": tactical.get("choch_state"),
             },
@@ -896,7 +897,10 @@ def evaluate_tactical_phase(tactical_rec: Mapping[str, Any] | None) -> tuple[str
         supports.append("EXTENDED_ABOVE_PIVOT")
 
     if trig == "TRIGGERED":
-        supports.append(f"TRIGGER_FIRED_{trig_type}")
+        if trig_type == "CONFIRMED_BOS_TRIGGER" and bos == "BEARISH_BOS_DETECTED_BY_RULE":
+            counters.append("BEARISH_BOS_TRIGGER_FIRED")
+        else:
+            supports.append(f"TRIGGER_FIRED_{trig_type}")
 
     if range_st == "RANGE_COMPRESSION":
         supports.append("VOLATILITY_RANGE_COMPRESSION")
@@ -938,7 +942,7 @@ def evaluate_tactical_phase(tactical_rec: Mapping[str, Any] | None) -> tuple[str
             phase = TACTICAL_EARLY_REVERSAL
         else:
             phase = TACTICAL_BREAKOUT_CONFIRMED
-    elif trig_type == "RETEST_BROKEN_PIVOT" or (ms == "UPTREND" and brk_v3 == "TESTING_PIVOT"):
+    elif tactical_rec.get("pivot_retest_confirmed") is True and ms in ("UPTREND", "EARLY_BULLISH_REVERSAL"):
         phase = TACTICAL_RETEST_AFTER_BREAKOUT
     elif brk_v3 == "TESTING_PIVOT" or trig == "APPROACHING" or (base_st == "IN_BASE" and range_st == "RANGE_COMPRESSION"):
         phase = TACTICAL_BREAKOUT_SETUP
@@ -1312,7 +1316,7 @@ def decide_research_action_posture(
         return POSTURE_INITIATE_ON_BREAKOUT, why, EFFECT_DOES_NOT_BLOCK
 
     # 5. RETEST OF BROKEN PIVOT -> ACCUMULATE_ON_RETEST
-    if (tactical_phase == TACTICAL_RETEST_AFTER_BREAKOUT or brk_v3 == "TESTING_PIVOT" or trig_type == "RETEST_BROKEN_PIVOT") and ms in ("UPTREND", "EARLY_BULLISH_REVERSAL"):
+    if tactical_rec.get("pivot_retest_confirmed") is True and ms in ("UPTREND", "EARLY_BULLISH_REVERSAL"):
         if dist_inv is not None and dist_inv > 0 and fundamental_state != FUNDAMENTAL_DETERIORATING:
             if is_bearish_market:
                 why = f"{ticker}: Constructive retest of pivot, but defensive market regime requires confirmation."

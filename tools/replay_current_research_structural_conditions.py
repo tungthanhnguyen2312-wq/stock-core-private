@@ -15,6 +15,7 @@ import daily_session_level2_package as paths_module
 import integrated_investment_decision_product as product
 import market_structure_breakout_product_projection as projection
 import market_wide_relative_volume_research as participation
+import technical_structure_context as structure_module
 from canonical_post_close_pipeline import resolve_current_session_priority_queue
 
 
@@ -71,7 +72,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--retained-root", type=Path, required=True)
     parser.add_argument("--output-root", type=Path, required=True)
-    parser.add_argument("--session", required=True)
+    parser.add_argument("--session", choices=["2026-09-30"], required=True)
     parser.add_argument("--delivery-only", action="store_true")
     args = parser.parse_args()
     retained = args.retained_root.resolve(); output = args.output_root.resolve()
@@ -91,8 +92,17 @@ def main():
     structure = load(paths["technical_structure_context"])
     old_projection = load(paths["market_structure_breakout_v3_projection"])
     stamp = before.get("requested_at") or f"{args.session}T15:00:00+07:00"
-    new_projection = projection.build_artifact(technical_structure=structure, requested_at=stamp)
     snapshot = load(paths["exact_session_snapshot"])
+    structure_kwargs = dict(current_descriptive=load(paths["descriptive_research"]), p3f9b_snapshot=snapshot,
+        technical_history_recovery_artifact=load(paths["technical_recovery"]), requested_at=structure["requested_at"])
+    baseline_structure_namespace = {"__name__": "retained_base_structure"}
+    baseline_structure_source = subprocess.check_output(["git", "show", "e49c976:technical_structure_context.py"], text=True, encoding="utf-8")
+    exec(compile(baseline_structure_source, "retained_base_structure", "exec"), baseline_structure_namespace)
+    assert baseline_structure_namespace["build_artifact"](**structure_kwargs)["artifact_identity"] == structure["artifact_identity"]
+    new_structure = structure_module.build_artifact(**structure_kwargs)
+    for ticker, record in structure["records"].items():
+        assert all(path == "breakout_state_v3.prior_close_above_pivot" for path in changed_paths(record, new_structure["records"][ticker])), ticker
+    new_projection = projection.build_artifact(technical_structure=new_structure, requested_at=stamp)
     relative_volume = participation.build_artifact(candidates=sorted(snapshot["records"]), records=snapshot["records"], session=args.session, requested_at=stamp)
     operations_dir = retained / "operations-review" / "daily-research-session-operations-v1" / args.session
     # Exactly one frozen bundle is required; never recursively discover substitutes.
@@ -138,13 +148,23 @@ def main():
         print("BASELINE_SOURCE_DIFFERENCES", before.get("source_artifacts"), reproduced.get("source_artifacts"))
         raise ValueError(f"BASELINE_IDENTITY_MISMATCH:{reproduced['artifact_identity']}:{before['artifact_identity']}")
     kwargs["technical_structure_artifact"] = new_projection
+    checkpoint_namespace = {"__name__": "previous_checkpoint_product"}
+    checkpoint_source = subprocess.check_output(["git", "show", "e49c976:integrated_investment_decision_product.py"], text=True, encoding="utf-8")
+    exec(compile(checkpoint_source, "previous_checkpoint_product", "exec"), checkpoint_namespace)
+    projection_namespace = {"__name__": "previous_checkpoint_projection"}
+    projection_source = subprocess.check_output(["git", "show", "e49c976:market_structure_breakout_product_projection.py"], text=True, encoding="utf-8")
+    exec(compile(projection_source, "previous_checkpoint_projection", "exec"), projection_namespace)
+    checkpoint_kwargs = {**kwargs, "technical_structure_artifact": projection_namespace["build_artifact"](technical_structure=structure, requested_at=stamp)}
+    package_before = checkpoint_namespace["build_artifact"](**checkpoint_kwargs)
+    assert package_before["artifact_identity"] == "integrated_investment_decision_product/v1:41d270a249602dbdb70c8fb7e875ed6e371236ba5f20c27c22c1141c3adfdf96"
     started = time.perf_counter()
     after = product.build_artifact(**kwargs)
     corrected_elapsed = time.perf_counter() - started
     assert product.build_artifact(**kwargs)["artifact_identity"] == after["artifact_identity"]
     assert set(before["records"]) == set(after["records"])
-    invariant_fields = ["research_action_posture", "fundamental_state", "tactical_phase", "evidence_currency", "exact_capabilities_unavailable"]
+    invariant_fields = ["fundamental_state", "evidence_currency", "exact_capabilities_unavailable"]
     attributed_changes = Counter()
+    unexpected_changes = Counter()
     allowed = (
         "trigger.condition.", "trigger.watchlist_condition", "invalidation.condition.",
         "invalidation.watchlist_condition", "invalidation.invalidation_method", "decision_identity",
@@ -169,10 +189,30 @@ def main():
         "current_research_decision_input.synthesis.weak_reason_codes",
         "market_sector_context.", "evidence_axes.MARKET_SECTOR.context.",
         "evidence_axes.MARKET_SECTOR.blocker_reason_codes",
+        "research_action_posture", "tactical_phase", "why_now",
+        "evidence_axes.TACTICAL_STRUCTURE.state",
+        "evidence_axes.TACTICAL_STRUCTURE.context.pivot_retest_confirmed",
+        "evidence_axes.TACTICAL_STRUCTURE.supporting_reason_codes", "evidence_axes.TACTICAL_STRUCTURE.contradicting_reason_codes",
+        "current_research_decision_input.dimensions.TECHNICAL.components.trend.tactical_phase",
+        "current_research_decision_input.synthesis.research_action_posture",
+        "priority_posture_reconciliation.integrated_posture", "priority_posture_reconciliation.integrated_posture_reason",
+        "technical_support",
     )
     for ticker, old in before["records"].items():
         new = after["records"][ticker]
-        assert new["counter_thesis"] == [code for code in old["counter_thesis"] if code != "RATIOS_ELEVATED_VS_OWN_HISTORICAL_RANGE"], ticker
+        previous = package_before["records"][ticker]
+        tactical = new_projection["records"].get(ticker) or {}
+        if previous["research_action_posture"] != new["research_action_posture"]:
+            assert previous["research_action_posture"] == "ACCUMULATE_ON_RETEST" and new["research_action_posture"] == "EARLY_WATCH", ticker
+            assert tactical.get("breakout_state_v3") == "TESTING_PIVOT" and tactical.get("pivot_retest_confirmed") is False, ticker
+        if previous["tactical_phase"] != new["tactical_phase"]:
+            assert {previous["tactical_phase"], new["tactical_phase"]} == {"RETEST_AFTER_BREAKOUT", "BREAKOUT_SETUP"}, ticker
+            assert tactical.get("breakout_state_v3") == "TESTING_PIVOT", ticker
+        assert [code for code in new["counter_thesis"] if code != "BEARISH_BOS_TRIGGER_FIRED"] == [code for code in old["counter_thesis"] if code != "RATIOS_ELEVATED_VS_OWN_HISTORICAL_RANGE"], ticker
+        bearish_trigger = tactical.get("bos_state") == "BEARISH_BOS_DETECTED_BY_RULE" and tactical.get("trigger_type") == "CONFIRMED_BOS_TRIGGER" and tactical.get("trigger_state") == "TRIGGERED"
+        assert ("BEARISH_BOS_TRIGGER_FIRED" in new["counter_thesis"]) == bearish_trigger, ticker
+        old_support = previous["evidence_axes"]["TACTICAL_STRUCTURE"]["supporting_reason_codes"]
+        assert new["evidence_axes"]["TACTICAL_STRUCTURE"]["supporting_reason_codes"] == [c for c in old_support if not (bearish_trigger and c == "TRIGGER_FIRED_CONFIRMED_BOS_TRIGGER")], ticker
         for key, removed in [("supporting_reason_codes", "RATIOS_LOW_VS_OWN_HISTORICAL_RANGE"),
                              ("contradicting_reason_codes", "RATIOS_ELEVATED_VS_OWN_HISTORICAL_RANGE")]:
             assert new["financial_composite_context"][key] == [code for code in old["financial_composite_context"][key] if code != removed], (ticker, key)
@@ -189,7 +229,7 @@ def main():
             assert old["current_research_decision_input"]["dimensions"]["VALUATION"]["evidence_class"] == "PE_NOT_MEANINGFUL_ONLY", ticker
             assert old["valuation_context_summary"]["status"] == "AVAILABLE" and new["valuation_context_summary"]["status"] == "PARTIAL", ticker
         changes = list(changed_paths(old, after["records"][ticker]))
-        assert all(path.startswith(allowed) for path in changes), (ticker, changes)
+        unexpected_changes.update(path for path in changes if not path.startswith(allowed))
         attributed_changes.update(changes)
         assert old["authority_boundary"] == after["records"][ticker]["authority_boundary"]
         for field in invariant_fields:
@@ -199,6 +239,7 @@ def main():
             assert old[role]["condition"] == new["watchlist_condition"], (ticker, role, "watchlist preservation")
             if new["condition"]["status"] == "MACHINE_EVALUABLE":
                 assert new["condition"]["reference_level"] == new[f"{role}_level"]
+    assert not unexpected_changes, dict(unexpected_changes)
     assert all(hashlib.sha256(Path(path).read_bytes()).hexdigest() == digest for path, digest in hashes.items())
     summary = {"session": args.session, "input_denominator": len(before["records"]), "output_denominator": len(after["records"]),
         "baseline_identity": before["artifact_identity"], "output_identity": after["artifact_identity"],
@@ -229,6 +270,17 @@ def main():
         for label, artifact in [("before", before), ("after", after)]}
     summary["distributions"]["sector_leadership_status"] = dict(Counter(
         r["market_sector_context"]["sector_leadership_status"] for r in after["records"].values()))
+    summary["pivot_retest_package"] = {
+        "baseline_identity": package_before["artifact_identity"],
+        "posture_changes": sum(r["research_action_posture"] != after["records"][t]["research_action_posture"] for t,r in package_before["records"].items()),
+        "phase_changes": sum(r["tactical_phase"] != after["records"][t]["tactical_phase"] for t,r in package_before["records"].items()),
+        "postures_before": dict(Counter(r["research_action_posture"] for r in package_before["records"].values())),
+        "phases_before": dict(Counter(r["tactical_phase"] for r in package_before["records"].values())),
+        "bearish_trigger_counters_added": sum("BEARISH_BOS_TRIGGER_FIRED" in r["counter_thesis"] for r in after["records"].values()),
+        "material_changed": sum(any(r[field] != after["records"][t][field] for field in
+            ("research_action_posture", "tactical_phase", "technical_support", "counter_thesis"))
+            for t,r in package_before["records"].items()),
+    }
     summary["distributions"]["fundamental_freshness"] = dict(Counter(
         ((r["current_research_decision_input"]["dimensions"]["FUNDAMENTAL"].get("freshness") or {}).get("freshness_status"))
         for r in after["records"].values()))
@@ -238,7 +290,7 @@ def main():
     for ticker in ["HPG", "VCB", "SSI", "POW", "AAA"]:
         summary["traces"][ticker] = {label: {field: artifact["records"][ticker].get(field) for field in ["research_action_posture", "trigger", "invalidation"]} for label,artifact in [("before",before),("after",after)]}
     output.mkdir(parents=True, exist_ok=True)
-    for name,value in [("replay_summary.json",summary),("integrated_investment_decision_product_artifact.json",after),("market_structure_breakout_v3_projection_artifact.json",new_projection)]:
+    for name,value in [("replay_summary.json",summary),("integrated_investment_decision_product_artifact.json",after),("market_structure_breakout_v3_projection_artifact.json",new_projection),("technical_structure_context_artifact.json",new_structure)]:
         (output/name).write_text(json.dumps(value, ensure_ascii=False, sort_keys=True, indent=2)+"\n",encoding="utf-8")
     print(json.dumps({key: summary[key] for key in ["input_denominator", "output_denominator", "baseline_reproduced_exactly", "decision_identities_changed"]}, ensure_ascii=False))
 

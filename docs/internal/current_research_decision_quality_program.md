@@ -69,7 +69,7 @@ non-evaluable by the fixed-close evaluator.
 
 The base implementation exactly reproduces the retained integrated identity:
 `integrated_investment_decision_product/v1:cd0c92321fbef001be15477b876f46f3f1ab82961ce28b091daeb43a168d620f`.
-The corrected replay identity is:
+The first five packages' replay identity is:
 `integrated_investment_decision_product/v1:41d270a249602dbdb70c8fb7e875ed6e371236ba5f20c27c22c1141c3adfdf96`.
 
 | Measurement | Before | After |
@@ -87,7 +87,7 @@ The corrected replay identity is:
 The old count of 100 includes evaluable watchlist conditions on records without a
 displayed V3 trigger. It is not the old count of structurally coherent triggers.
 Every corrected evaluable condition equals its displayed structural level.
-Research postures, fundamental states, financial composite states, peer-relative
+Through that five-package checkpoint, research postures, fundamental states, financial composite states, peer-relative
 valuation, tactical phases, evidence currency and exact-capability blockers are
 unchanged across all 1,683 records. Every counter-thesis item is unchanged except
 the exact spurious `RATIOS_ELEVATED_VS_OWN_HISTORICAL_RANGE` tag removed from 471 records.
@@ -116,7 +116,7 @@ verification ensures the latter is reproduced rather than silently substituted.
 
 ## Verification and second pass
 
-236 focused/adjacent tests plus six canonical integration checks pass, covering source tampering, future/stale sessions,
+303 focused/adjacent tests plus six canonical integration checks pass, covering source tampering, future/stale sessions,
 incompatible contracts, missing direction/levels, non-finite values, bearish
 comparators, watchlist divergence, downstream non-escalation and retention isolation.
 Python compilation and whitespace checks pass. Retained input bytes and the
@@ -183,3 +183,75 @@ so no parallel delivery surface is added. Replay attributes only the summary/axi
 fields and resulting content identities to this correction. The 26 populated
 valuation peer cohorts contain 1,290 method members and no measured mixed
 statement-scope/basis cohort; no speculative peer-rule change was made.
+
+## Resumed tactical consistency package
+
+The producer already computed whether the previous close was above the current
+pivot, but discarded the measurement. The integration assumed every uptrend
+TESTING_PIVOT was a retest of broken support, including 30 of 32 phase-labelled
+retests with no retained close above the current pivot since its swing high.
+The accumulation branch also accepted TESTING_PIVOT without a breakout witness.
+
+The existing technical producer now retains `prior_close_above_pivot`. The existing
+projection qualifies `pivot_retest_confirmed` only for an AVAILABLE TESTING_PIVOT
+measurement with a true Boolean witness. The integrated phase and accumulation
+branches require that witness and constructive structure. Unwitnessed resistance
+approaches remain BREAKOUT_SETUP / EARLY_WATCH with their existing pivot confirmation
+and invalidation conditions; no generic WAIT/AVOID is introduced for missing proof.
+Failed breakouts and downtrends retain their standing adverse policy. The proof is
+visible in the existing tactical evidence axis and therefore in shared AI delivery.
+No pivot, proximity threshold, new classifier, or historical T0 is manufactured.
+
+The same tactical synthesis incorrectly treated 92 triggered bearish BOS observations
+as supporting evidence under TRIGGER_FIRED_CONFIRMED_BOS_TRIGGER. They now carry
+BEARISH_BOS_TRIGGER_FIRED in opposing evidence and counter-thesis. Bullish BOS support
+is unchanged; mixed pivot-breakout/bearish-BOS evidence keeps both actual directions.
+
+| Measurement | Five-package checkpoint | Resumed tactical package |
+|---|---:|---:|
+| Integrated denominator | 1,683 | 1,683 |
+| ACCUMULATE_ON_RETEST | 48 | 5 |
+| EARLY_WATCH | 175 | 218 |
+| RETEST_AFTER_BREAKOUT | 32 | 5 |
+| BREAKOUT_SETUP | 258 | 285 |
+| Bearish BOS triggers mislabelled as support | 92 | 0 |
+| Material changed / unchanged records | — | 140 / 1,543 |
+
+Exactly 43 postures change ACCUMULATE_ON_RETEST → EARLY_WATCH. Thirty-three phase
+changes comprise 30 unsupported retests → setup and three witnessed early-bullish
+tests → retest. All other posture counts stay unchanged. Fundamental states,
+financial composite states, valuation, evidence currency, entity counts, market
+regime/coherence and stronger authority blockers stay unchanged. Counter-thesis
+changes versus the preceding checkpoint add only the exact bearish-trigger code.
+All identity changes are deterministic source/condition/proof consequences, never
+rewrites of retained identities.
+
+The runner reproduces both the retained technical producer and original integrated
+base exactly, then separately reproduces the preceding five-package identity.
+It verifies every material transition against the newly-qualified producer witness,
+every other changed field against precise allowlists, all 20 retained input hashes,
+and all fixed-level/watchlist preservation checks. Final identity:
+`integrated_investment_decision_product/v1:a2caac22ad63b0fd5ecdadb12255bfff2abcb8db3b897e0cfe926fe92d76d12c`.
+Use the same reproduction commands above with an external output directory. The
+runner is bounded explicitly to the governed 2026-09-30 diagnostic session. The
+new producer output also appears as technical_structure_context_artifact.json.
+
+Representative AAN/ASP change accumulation/retest → early-watch/setup; BTP keeps
+WAIT but corrects retest → setup. HPG/VCB/SSI/AAA/F88 remain AVOID with explicit
+bearish evidence; POW remains INITIATE_ON_BREAKOUT. All shared delivery records
+preserve the corrected phase, opposing reasons, conditions and proof.
+
+The measured integrated build is 4.85 seconds for original base and 5.29 seconds
+for corrected code in one ordered replay: not a benchmark or evidence of Daily
+degradation. The previous-close comparison was already computed by the producer;
+retaining/consuming its Boolean adds no acquisition, per-ticker I/O or worker.
+
+Next candidate: canonical Financial V2 already stores 1,676 READY_RESEARCH_ONLY
+financial peer comparisons for 431 corporate issuers (all CURRENT under the standing
+period policy). That wrapper field is not consumed by the integrated financial
+context. Its engine-peer denominator is 1,492, versus the product denominator of
+1,683; a future qualified join must retain all product tickers and explicitly keep
+missing/specialist comparisons unavailable. Preserve method/cohort/period/minimum
+count/freshness, source identity and proxy distinction. Never reinterpret financial
+percentiles as valuation or create new direction votes. This candidate is mapped,
+not implemented; the program remains ACTIVE for continuation.

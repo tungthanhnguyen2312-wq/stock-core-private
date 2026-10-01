@@ -24,9 +24,15 @@ product identities remain unchanged by this hardening. A further source-status p
 removes 845 unsupported IN_LINE sector labels: 838 observed leadership states remain
 unchanged, while 10 data-limited and 835 unavailable sector contexts retain their
 reasons, group provenance and coverage alongside qualified market breadth. No
-posture or market-regime change occurs; 236 focused/adjacent tests and six canonical
-integration checks pass. Research policy
-and authority gates remain unchanged. See [program checkpoint](internal/current_research_decision_quality_program.md).
+posture or market-regime change occurs in those packages. The resumed tactical pass
+requires a witnessed previous close above pivot for RETEST_AFTER_BREAKOUT and
+ACCUMULATE_ON_RETEST. It changes 43 unsupported accumulation labels to EARLY_WATCH,
+corrects 33 phase labels, and puts 92 bearish BOS triggers in counter-evidence.
+Five witnessed retests remain; 140 material records change, 1,543 remain unchanged.
+Full replay has 1,683 in/out, zero unexplained changes and 20 retained inputs unchanged.
+303 focused/adjacent tests and six canonical integration checks pass. No thresholds,
+fundamental/valuation interpretation or authority gates change. See
+[program checkpoint](internal/current_research_decision_quality_program.md).
 PR #28 and #29 remain independent pending-owner-merge corrections, not dependencies.
 New-session telemetry live acceptance remains externally time-gated.
 

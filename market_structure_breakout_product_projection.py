@@ -94,6 +94,9 @@ def _project_ticker(ticker: str, record: Mapping[str, Any], session: str) -> dic
         "pivot_method": pivot.get("pivot_method"),
         "distance_to_pivot_pct": pivot.get("distance_to_pivot_pct"),
         "breakout_state_v3": brk_v3.get("breakout_state"),
+        "pivot_retest_confirmed": (brk_v3.get("status") == "AVAILABLE"
+                                   and brk_v3.get("breakout_state") == "TESTING_PIVOT"
+                                   and brk_v3.get("prior_close_above_pivot") is True),
         # Trigger / Invalidation
         "trigger_type": trigger.get("trigger_type"),
         "trigger_close_comparison_operator": trigger_operator,

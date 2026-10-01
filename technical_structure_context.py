@@ -502,6 +502,7 @@ def _breakout_state_v3(closes: list[float], pivot_ctx: dict[str, Any]) -> dict[s
     return {
         "status": "AVAILABLE", "breakout_state": state,
         "distance_to_pivot_pct": dist_pct,
+        "prior_close_above_pivot": prior_was_above,
         "warning": "BREAKOUT_STATE_IS_MEASUREMENT_NOT_BUY_SIGNAL",
         "blocked": {
             "break_distance_atr": "NOT_AVAILABLE_HIGH_LOW_BASIS_NOT_COMPATIBLE",
