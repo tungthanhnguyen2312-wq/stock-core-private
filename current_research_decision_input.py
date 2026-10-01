@@ -12,6 +12,7 @@ authority; those boundaries are restated explicitly rather than inferred.
 from __future__ import annotations
 
 from collections import Counter
+import copy
 import re
 from typing import Any, Iterable, Mapping
 
@@ -260,6 +261,7 @@ def _fundamental(record: Mapping[str, Any], financial: Mapping[str, Any] | None,
         "freshness": freshness,
         "metrics": {"qualified": qualified if available else [], "proxy": proxy if available else [],
                     "non_applicable": non_applicable, "blocked": blocked},
+        **({"financial_peer_context": copy.deepcopy(record["financial_peer_context"])} if "financial_peer_context" in record else {}),
         "reason_codes": reasons,
     }
 

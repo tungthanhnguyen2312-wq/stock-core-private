@@ -145,6 +145,7 @@ def project_integrated_decision_for_ai_delivery(record: Any, *, integrated_ident
         "invalidation": invalidation,
         "evidence_axis_coherence": copy.deepcopy(record.get("evidence_axis_coherence")),
         "evidence_axes": copy.deepcopy(record.get("evidence_axes")),
+        **({"financial_peer_context": copy.deepcopy(record["financial_peer_context"])} if "financial_peer_context" in record else {}),
         "financial_composite_context": copy.deepcopy(record.get("financial_composite_context")),
         "corporate_intelligence_context": copy.deepcopy(record.get("corporate_intelligence_context")),
         "material_uncertainties": copy.deepcopy(record.get("material_uncertainties")),

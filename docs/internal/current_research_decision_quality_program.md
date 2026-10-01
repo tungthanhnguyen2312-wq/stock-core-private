@@ -254,4 +254,60 @@ context. Its engine-peer denominator is 1,492, versus the product denominator of
 missing/specialist comparisons unavailable. Preserve method/cohort/period/minimum
 count/freshness, source identity and proxy distinction. Never reinterpret financial
 percentiles as valuation or create new direction votes. This candidate is mapped,
-not implemented; the program remains ACTIVE for continuation.
+now completed by package 7 below; the program remains ACTIVE for continuation.
+
+## Package 7: financial-peer evidence into decision and shared delivery
+
+The canonical Financial V2 wrapper already produced financial peers, but Daily supplied
+only its nested compact financial product to the Integrated Decision. The qualified
+comparisons stopped at the wrapper. The existing producer now preserves its comparison
+basis (entity, provider, method, period semantics, scope, currency/scale, fitness and
+warnings) and partitions provider/entity/semantic differences explicitly. No new formula,
+metric, classifier or peer engine is added. The retained numeric results and every
+producer blocker reproduce unchanged against the exact retained engine identity.
+
+The product adapter verifies canonical wrapper content identity, exact decision session,
+nested compact content identity and engine linkage once. Each product ticker retains an
+explicit peer context. Comparable current observations expose subject value, median,
+tie-aware percentile, cohort, method and basis. Unavailable/proxy/specialist/stale/future
+observations retain their status and exact reasons without creating negative evidence.
+The peer context is added after posture/coherence and reaches the existing fundamental
+evidence axis, Current Research dimension and shared AI/Daily projection verbatim. It
+never adds votes, valuation-history labels, quality verdicts or actionable authority.
+
+| Measurement | Package 6 | Package 7 |
+|---|---:|---:|
+| Governed decision records | 1,683 | 1,683 |
+| Corporate records with consumed qualified financial-peer context | 0 | 431 |
+| Usable financial comparisons consumed | 0 | 1,676 |
+| PARTIAL / BLOCKED / UNAVAILABLE / NOT_APPLICABLE contexts | — | 431 / 962 / 207 / 83 |
+| Posture / counter-thesis / WHY text changes | — | 0 / 0 / 0 |
+| Records with no usable peer enrichment | — | 1,252 |
+| Silent drops / unexplained changes | — | 0 / 0 |
+
+AVAILABLE is zero because every eligible issuer still lacks at least one of the six
+curated comparison metrics. Producer peers cover 1,492 engine tickers; the product
+intersection is 1,476. Sixteen engine-only names are outside the governed decision
+denominator. Missing product context remains explicit, never a selection filter.
+
+ACC's margins lie above their same-basis peer medians while its adverse tactical AVOID
+posture remains unchanged. AAA's below-median margins likewise do not force a posture.
+HPG retains mixed above/below comparisons, F88/AAM their weak or absent evidence,
+VCB/SSI corporate non-applicability, and small/period-incompatible cohorts their exact
+producer blockers. Adversarial cases cover favorable ranks with failed confirmation,
+unfavorable ranks with reversal, providers/periods/entities/scope/methods, missing peers,
+small cohorts, stale/future periods, proxy distinction, wrapper tampering and delivery.
+
+Replay tool: `tools/replay_current_research_financial_peers.py`, bounded to 2026-09-30,
+uses external checkpoint/engine/output paths. It reuses the accepted package-6 projection,
+verifies no-input product compatibility, qualifies existing peers, builds twice, verifies
+precise per-record changed-path allowlists, and hashes all accepted retained inputs.
+Final product identity:
+`integrated_investment_decision_product/v1:e6aae60ff024441b7ff4c35d05af6905accf02f01dd4bec8b143ae561d6ffd14`.
+Evidence-source identities change deterministically; retained identities are never rewritten.
+
+Validation: 21 new adversarial tests; 185 focused/adjacent tests; prior 128-test
+materialization/integrated/delivery gate; six canonical wiring checks. Python compilation,
+roadmap and whitespace checks pass. No new provider acquisition, publication, database
+write, liquidity/PIT/RAW_AS_TRADED/sizing promotion, cap/retry change or specialist expansion.
+The same owner-authorized program continues with a bounded second pass.

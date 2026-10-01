@@ -36,6 +36,19 @@ fundamental/valuation interpretation or authority gates change. See
 PR #28 and #29 remain independent pending-owner-merge corrections, not dependencies.
 New-session telemetry live acceptance remains externally time-gated.
 
+The resumed financial-peer package consumes the canonical Financial V2 wrapper through
+an identity/session/nested-product-verified join. The existing peer producer preserves
+provider, entity, method, scope, units and period semantics in its comparison basis;
+incompatible providers or specialist families never pool. Retained replay confirms
+431 corporate issuers with 1,676 current comparisons, all 1,683 decision records retained.
+Context status is PARTIAL 431 / BLOCKED 962 / UNAVAILABLE 207 / NOT_APPLICABLE 83
+(AVAILABLE 0: at least one curated metric remains blocked for every eligible issuer).
+Structured fundamental evidence and shared AI delivery preserve numerical comparisons,
+cohorts, exact blockers, periodic freshness and source identities. Posture, counter-thesis,
+WHY text, fundamental synthesis and valuation are unchanged; ranks never become votes.
+185 focused/adjacent tests, the earlier 128-test materialization/integration gate and six
+canonical wiring checks pass. Authority changes remain NONE; program remains ACTIVE.
+
 **Daily official liquidity rollforward corrective (2026-09-30):**
 `DAILY_OFFICIAL_LIQUIDITY_ROLLFORWARD_V1 = PARTIAL /
 CORE_DAILY_LIVE_ACCEPTED_OFFICIAL_LIQUIDITY_LIVE_FAIL_CLOSED_SOURCE_ABSENT /

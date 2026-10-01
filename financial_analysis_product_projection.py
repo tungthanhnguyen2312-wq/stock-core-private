@@ -8,8 +8,10 @@ recomputes ratios or promotes a proxy to READY.
 from __future__ import annotations
 
 from collections import Counter
+import copy
 import hashlib
 import json
+import math
 from typing import Any, Mapping, Sequence
 
 ENGINE_CONTRACT = "financial_analysis_context/v2"
@@ -267,3 +269,100 @@ def context_for_ticker(context: Mapping[str, Any] | None, ticker: str) -> dict[s
     if value.get("contract_version") != COMPACT_CONTRACT:
         raise FinancialAnalysisProductProjectionError("FINANCIAL_ANALYSIS_COMPACT_CONTRACT_REQUIRED")
     return dict(value)
+
+
+def financial_peer_contexts(*, materialization: Mapping[str, Any] | None,
+                           product: Mapping[str, Any] | None, session: str) -> dict[str, dict[str, Any]]:
+    """Join the existing canonical peers once; descriptive evidence never feeds policy.
+
+    Legacy peers lacking their comparison basis remain visible as blocked observations.
+    Financial freshness uses the existing periodic-evidence window, never Daily age.
+    """
+    if materialization is None:
+        return {}
+    from opportunity_axis_freshness import classify_financial_period_freshness
+    from operational_fundamental_context_integration import MAX_COMPLETED_QUARTER_LAG
+    from sector_relative_research_context import MIN_COHORT_MEMBERS
+    from current_research_valuation_context import ENGINE_PEER_FEATURES
+    contract = "canonical_daily_financial_v2_materialization/v1"
+    expected = _identity(materialization, contract)
+    nested = materialization.get("financial_analysis_product")
+    if (materialization.get("contract_version") != contract
+            or materialization.get("artifact_identity") != expected["artifact_identity"]
+            or materialization.get("artifact_sha256") != expected["artifact_sha256"]
+            or materialization.get("decision_session") != session
+            or not isinstance(nested, Mapping) or product is None
+            or nested != product
+            or materialization.get("financial_content_identity") != product.get("artifact_identity")
+            or materialization.get("financial_v2_engine_identity") != product.get("source_context_identity")):
+        raise FinancialAnalysisProductProjectionError("FINANCIAL_PEER_MATERIALIZATION_BINDING_INVALID")
+    validate_product_context(product)
+    raw_peers = materialization.get("engine_fundamental_peer_context")
+    if not isinstance(raw_peers, Mapping):
+        raise FinancialAnalysisProductProjectionError("FINANCIAL_PEER_RECORDS_INVALID")
+    result = {}
+    for ticker, compact in product["records"].items():
+        corporate = compact.get("issuer_type") == "corporate"
+        metrics = {}
+        for metric, source in (raw_peers.get(ticker) or {}).items():
+            if metric not in ENGINE_PEER_FEATURES or not isinstance(source, Mapping):
+                continue
+            entry = copy.deepcopy(dict(source))
+            freshness = classify_financial_period_freshness(
+                source_period=entry.get("as_of_period"), decision_session=session,
+                maximum_completed_quarter_lag=MAX_COMPLETED_QUARTER_LAG)
+            entry["freshness"] = freshness
+            entry["metric_id"] = metric
+            # Preserve the exact producer reason even when the consumer blocks use.
+            entry["source_status"] = entry.get("status")
+            blockers = []
+            basis = entry.get("comparability_basis") or {}
+            if not corporate:
+                blockers.append("CORPORATE_PEER_NOT_APPLICABLE")
+            if entry.get("status") == "READY_RESEARCH_ONLY":
+                feature = (compact.get("feature_fitness") or {}).get(metric) or {}
+                if (basis.get("issuer_type") != "corporate" or basis.get("fitness") != "READY"
+                        or feature.get("fitness") != "READY" or not basis.get("scope")
+                        or any(s in {"unknown", "None", "UNKNOWN"} for s in basis["scope"])
+                        or len(basis.get("providers") or []) != 1
+                        or str(basis["providers"][0]).lower() in {"none", "unknown", ""}
+                        or not basis.get("period_semantics")
+                        or any(s not in {"STANDALONE_QUARTER", "POINT_IN_TIME_BALANCE_SHEET"}
+                               for s in basis["period_semantics"])
+                        or not entry.get("method") or basis.get("method") != entry.get("method")
+                        or not entry.get("cohort_id")):
+                    blockers.append("FINANCIAL_PEER_COMPARABILITY_BASIS_UNPROVEN")
+                if (not basis.get("period_identity") or basis["period_identity"][-1] != entry.get("as_of_period")
+                        or feature.get("as_of_period") != entry.get("as_of_period")):
+                    blockers.append("FINANCIAL_PEER_PERIOD_MISMATCH")
+                count = entry.get("peer_count")
+                if (not isinstance(count, int) or isinstance(count, bool) or count < MIN_COHORT_MEMBERS
+                        or entry.get("minimum_peer_count") != MIN_COHORT_MEMBERS):
+                    blockers.append("FINANCIAL_PEER_COHORT_TOO_SMALL")
+                numbers = [entry.get(k) for k in ("subject_value", "peer_median", "percentile")]
+                if (any(not isinstance(v, (float, int)) or isinstance(v, bool) or not math.isfinite(v) for v in numbers)
+                        or not 0 <= entry.get("percentile", -1) <= 1):
+                    blockers.append("FINANCIAL_PEER_NUMERIC_OBSERVATION_INVALID")
+                if freshness["freshness_status"] != "CURRENT":
+                    blockers.extend(freshness["reason_codes"])
+                    blockers.append("FINANCIAL_PEER_NOT_CURRENT")
+                if blockers:
+                    entry["status"] = "BLOCKED"
+                else:
+                    value, median = entry["subject_value"], entry["peer_median"]
+                    entry["relative_position"] = "ABOVE_PEER_MEDIAN" if value > median else "BELOW_PEER_MEDIAN" if value < median else "AT_PEER_MEDIAN"
+            entry["consumer_blocker_reason_codes"] = blockers
+            entry["is_actionable"] = False
+            metrics[metric] = entry
+        usable = sum(e["status"] == "READY_RESEARCH_ONLY" for e in metrics.values())
+        status = ("NOT_APPLICABLE" if compact.get("issuer_type") in {"bank", "securities", "insurance", "finance_company"}
+                  else "UNAVAILABLE" if not metrics else "AVAILABLE" if usable == len(metrics)
+                  else "PARTIAL" if usable else "BLOCKED")
+        result[ticker] = {"status": status, "metrics": metrics, "usable_metric_count": usable,
+                          "reason_codes": ([] if metrics else ["FINANCIAL_PEER_CONTEXT_ABSENT"]),
+                          "source_materialization_identity": materialization["artifact_identity"],
+                          "source_financial_engine_identity": materialization["financial_v2_engine_identity"],
+                          "decision_session": session, "issuer_type": compact.get("issuer_type"),
+                          "interpretation": "DESCRIPTIVE_FINANCIAL_COMPARISON_ONLY_NO_QUALITY_OR_VALUATION_JUDGMENT",
+                          "is_actionable": False, "no_authority_promotion": True}
+    return result

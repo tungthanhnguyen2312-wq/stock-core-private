@@ -989,15 +989,36 @@ def _engine_feature(record: Mapping[str, Any] | None, feature_id: str) -> Mappin
     return item if isinstance(item, Mapping) else {}
 
 
-def _engine_peer_key(cohort_id: str, feature: Mapping[str, Any], feature_id: str) -> tuple[Any, ...] | None:
+def _engine_peer_basis(feature: Mapping[str, Any], issuer_type: str) -> dict[str, Any]:
+    providers = sorted({str(p.get("provider")) for p in feature.get("provider_source_provenance") or []})
+    return {"issuer_type": issuer_type, "providers": providers, "method": feature.get("method"),
+            "scope": list(feature.get("scope") or []), "currency": feature.get("currency"),
+            "scale": feature.get("scale"), "period_semantics": list(feature.get("period_semantics") or []),
+            "period_identity": list(feature.get("period_identity") or []), "fitness": feature.get("fitness"),
+            "source_tier": feature.get("source_tier"), "warnings": list(feature.get("warnings") or [])}
+
+
+def _engine_peer_key(cohort_id: str, feature: Mapping[str, Any], feature_id: str,
+                     issuer_type: str = "corporate") -> tuple[Any, ...] | None:
     if feature.get("fitness") != "READY" or not _numeric(feature.get("value")):
+        return None
+    import math
+    if not math.isfinite(feature["value"]) or not feature.get("method"):
         return None
     periods = tuple(feature.get("period_identity") or [])
     latest = periods[-1] if periods else None
     if not latest or not feature.get("scope") or any(scope in UNPROVEN_STATEMENT_SCOPES for scope in feature["scope"]):
         return None
+    basis = _engine_peer_basis(feature, issuer_type)
+    if (issuer_type != "corporate" or len(basis["providers"]) != 1
+            or not basis_contract.known(basis["providers"][0])
+            or not basis["period_semantics"]
+            or any(s not in {"STANDALONE_QUARTER", "POINT_IN_TIME_BALANCE_SHEET"}
+                   for s in basis["period_semantics"])):
+        return None
     return (feature_id, cohort_id, feature.get("method"), tuple(feature.get("scope") or []),
-            feature.get("currency"), feature.get("scale"), latest)
+            feature.get("currency"), feature.get("scale"), latest, issuer_type,
+            tuple(basis["providers"]), tuple(basis["period_semantics"]))
 
 
 def attach_engine_fundamental_peers(engine_records: Mapping[str, Mapping[str, Any]],
@@ -1019,7 +1040,7 @@ def attach_engine_fundamental_peers(engine_records: Mapping[str, Mapping[str, An
         cohort_id, cohort_level = _engine_cohort(ticker, record or {}, industry_by_ticker)
         cohort_of[ticker] = (cohort_id, cohort_level)
         for feature_id in ENGINE_PEER_FEATURES:
-            key = _engine_peer_key(cohort_id, _engine_feature(record, feature_id), feature_id)
+            key = _engine_peer_key(cohort_id, _engine_feature(record, feature_id), feature_id, record.get("issuer_type"))
             if key is not None:
                 cohorts[key].append(float(_engine_feature(record, feature_id)["value"]))
     out: dict[str, dict[str, Any]] = {}
@@ -1028,7 +1049,7 @@ def attach_engine_fundamental_peers(engine_records: Mapping[str, Mapping[str, An
         relatives: dict[str, Any] = {}
         for feature_id in ENGINE_PEER_FEATURES:
             feature = _engine_feature(record, feature_id)
-            key = _engine_peer_key(cohort_id, feature, feature_id)
+            key = _engine_peer_key(cohort_id, feature, feature_id, record.get("issuer_type"))
             if key is None:
                 scope_unproven = (feature.get("fitness") == "READY" and _numeric(feature.get("value"))
                                   and any(scope in UNPROVEN_STATEMENT_SCOPES for scope in (feature.get("scope") or [None])))
@@ -1055,6 +1076,8 @@ def attach_engine_fundamental_peers(engine_records: Mapping[str, Mapping[str, An
                 "method": feature.get("method"), "as_of_period": (feature.get("period_identity") or [None])[-1],
                 "percentile_formula": "(below + 0.5 * equal) / n", "minimum_peer_count": MIN_COHORT_MEMBERS,
             }
+        for feature_id, relative in relatives.items():
+            relative["comparability_basis"] = _engine_peer_basis(_engine_feature(record, feature_id), record.get("issuer_type"))
         out[ticker] = relatives
     return out
 

@@ -230,7 +230,8 @@ def test_deterministic_identity_same_inputs_same_output():
 def _engine_feature(value, *, fitness="READY", method="same_provider_same_period_gross_margin/v2",
                     period="2026-Q2", scope=("consolidated",), currency="unknown", scale="unknown"):
     return {"fitness": fitness, "value": value, "method": method, "period_identity": [period, period],
-           "scope": list(scope), "currency": currency, "scale": scale, "reason_codes": [] if fitness == "READY" else ["X"]}
+           "scope": list(scope), "currency": currency, "scale": scale, "reason_codes": [] if fitness == "READY" else ["X"],
+           "provider_source_provenance": [{"provider": "KBS"}], "period_semantics": ["STANDALONE_QUARTER"]}
 
 
 def _engine_record(gross_margin=None, *, issuer_type="corporate", **overrides):

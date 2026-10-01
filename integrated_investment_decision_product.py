@@ -1413,6 +1413,7 @@ def build_ticker_integrated_decision(
     liquidity_research_record: Mapping[str, Any] | None = None,
     entity_applicability_record: Mapping[str, Any] | None = None,
     official_liquidity_record: Mapping[str, Any] | None = None,
+    financial_peer_context: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Assemble one complete, self-contained integrated investment decision record.
 
@@ -1623,6 +1624,8 @@ def build_ticker_integrated_decision(
         fundamental_synthesis=fund_synthesis,
     )
     evidence_axis_coherence = evaluate_evidence_axis_coherence(evidence_axes)
+    if financial_peer_context is not None:
+        evidence_axes["FUNDAMENTAL"].setdefault("context", {})["financial_peer_context"] = copy.deepcopy(dict(financial_peer_context))
 
     # Legacy stance comparison
     legacy_stance = None
@@ -1710,6 +1713,9 @@ def build_ticker_integrated_decision(
             "unknown_is_local_does_not_force_global_wait": True,
         },
     }
+    if financial_peer_context is not None:
+        record["financial_peer_context"] = copy.deepcopy(dict(financial_peer_context))
+        record["source_identities"]["financial_peer_materialization_identity"] = financial_peer_context.get("source_materialization_identity")
     record["decision_identity"] = decision_identity(record)
     if bridge_consulted:
         record["operational_fundamental_context"] = copy.deepcopy(dict(operational_fundamental_context_record))
@@ -1753,6 +1759,7 @@ def build_artifact(
     liquidity_research_artifact: Mapping[str, Any] | None = None,
     entity_applicability_artifact: Mapping[str, Any] | None = None,
     official_liquidity_artifact: Mapping[str, Any] | None = None,
+    financial_peer_materialization_artifact: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build the market-wide integrated investment decision product artifact.
 
@@ -1785,6 +1792,8 @@ def build_artifact(
         except (TypeError, ValueError):
             pass
     fa_records = (financial_analysis_artifact or {}).get("records") or {}
+    financial_peers = fa_product_projection.financial_peer_contexts(
+        materialization=financial_peer_materialization_artifact, product=financial_analysis_artifact, session=session)
     operational_records: Mapping[str, Any] = {}
     if operational_fundamental_integration_artifact is not None:
         integration = operational_fundamental_integration_artifact
@@ -1948,6 +1957,7 @@ def build_artifact(
             liquidity_research_record=liquidity_records.get(ticker),
             entity_applicability_record=applicability_records.get(ticker),
             official_liquidity_record=official_liquidity_records.get(ticker),
+            financial_peer_context=financial_peers.get(ticker),
         )
         records[ticker] = dec
         currency_counts[evidence_currency_class(dec["evidence_currency"])] += 1
