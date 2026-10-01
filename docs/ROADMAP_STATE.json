@@ -27,7 +27,7 @@
       "state": "COMPLETE",
       "terminal_disposition": "COMPLETE_PR_READY",
       "starting_checkpoint": "8f9bea29ce91f2d2e766e8e7c2c3012b693693f7",
-      "checkpoint": "HEAD",
+      "checkpoint": "4651fd6673f8fea82f706117a34b34d181b964dd",
       "candidate_branch": "docs/roadmap-public-rebaseline-20261001-v1",
       "dependencies": [
         "OWNER_DAILY_PROGRESS_TELEMETRY_V1"
@@ -55,9 +55,7 @@
       "dependencies": [
         "ROADMAP_AND_PUBLIC_REPOSITORY_REBASELINE_V1"
       ],
-      "unlocks": [
-        "FUNDAMENTAL_AND_CURRENT_VALUATION_DEPTH_V1"
-      ],
+      "unlocks": [],
       "authority_effect": "NONE_EXPECTED / MEASUREMENT_AND_GAP_PRIORITIZATION",
       "owner_authorized": true,
       "source_doc": "2026-10-01 capability rebaseline",
