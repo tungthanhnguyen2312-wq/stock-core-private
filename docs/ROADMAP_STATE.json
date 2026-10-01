@@ -70,7 +70,7 @@
       "state": "COMPLETE",
       "terminal_disposition": "COMPLETE_PR_READY",
       "starting_checkpoint": "29c095b8c161b4134833538714632fcbee483898",
-      "checkpoint": "4bf02bfd059d1a52ff55345a5e9de3c4ab20bb29",
+      "checkpoint": "d9aac27630099777c731532f82abc7f1477f268f",
       "candidate_branch": "feature/current-research-coverage-decision-fitness-v1",
       "dependencies": [
         "ROADMAP_AND_PUBLIC_REPOSITORY_REBASELINE_V1"
@@ -87,7 +87,7 @@
         "COMPLETE"
       ],
       "owner_override": "OWNER_DIRECTIVE_2026_10_01_EXECUTE_FULL_REBASELINE",
-      "notes": "Reuses current_research_decision_input/v1; adds deterministic per-ticker decision-fitness read model, market-wide dimension/authority distributions, gap prevalence, no-network CLI and focused CI test. No action-posture or authority change."
+      "notes": "Reuses current_research_decision_input/v1; adds deterministic per-ticker decision-fitness read model, market-wide dimension/authority distributions, gap prevalence, no-network CLI and focused CI tests including real CLI execution from repo root. No action-posture or authority change."
     },
     {
       "milestone_id": "CURRENT_RESEARCH_DECISION_QUALITY_AND_FRESHNESS_PROGRAM_20261001",
