@@ -16,15 +16,17 @@
   ],
   "current": {
     "milestone": "PROSPECTIVE_EVIDENCE_CONTINUITY_DIAGNOSTICS_V1",
-    "state": "ACTIVE"
+    "state": "COMPLETE"
   },
-  "queued_next": [],
+  "queued_next": [
+    "CURRENT_CORPORATE_EVIDENCE_CURRENCY_V1"
+  ],
   "milestones": [
     {
       "milestone_id": "PROSPECTIVE_EVIDENCE_CONTINUITY_DIAGNOSTICS_V1",
-      "state": "ACTIVE",
+      "state": "COMPLETE",
       "starting_checkpoint": "fbc488352720694fc9735b56ce2962024bfd9544",
-      "checkpoint": null,
+      "checkpoint": "f17ced71d03de097ba091c82967ed33c53bec429",
       "candidate_branch": "program/research-evidence-continuity-20261002",
       "dependencies": [
         "PROSPECTIVE_LEARNING_AND_CALIBRATION_V1"
@@ -35,10 +37,31 @@
       "source_doc": "docs/internal/POST_R1_R7_SYSTEM_REVIEW_20261002.md",
       "state_history": [
         "NEXT",
-        "ACTIVE"
+        "ACTIVE",
+        "COMPLETE"
       ],
       "owner_override": "OWNER_DIRECTIVE_2026_10_02_AUTONOMOUS_RELEASE_AND_ROADMAP_ADVANCE",
-      "notes": "Extend canonical prospective corpus health; consolidate duplicate offline health view; distinguish absent T0, pending sessions, future-close gaps and basis incompatibility. No threshold, policy, source or authority change."
+      "notes": "Extend canonical prospective corpus health; consolidate duplicate offline health view; distinguish absent T0, pending sessions, future-close gaps and basis incompatibility. No threshold, policy, source or authority change. Retained acceptance: docs/internal/PROSPECTIVE_CONTINUITY_ACCEPTANCE.json; 30,294 genuine decisions, 138 source files unchanged, exact R6 outcome counts preserved. Released through PR #36.",
+      "terminal_disposition": "COMPLETE_VALIDATED"
+    },
+    {
+      "milestone_id": "CURRENT_CORPORATE_EVIDENCE_CURRENCY_V1",
+      "state": "NEXT",
+      "starting_checkpoint": "f17ced71d03de097ba091c82967ed33c53bec429",
+      "checkpoint": null,
+      "candidate_branch": null,
+      "dependencies": [
+        "PROSPECTIVE_EVIDENCE_CONTINUITY_DIAGNOSTICS_V1"
+      ],
+      "unlocks": [],
+      "authority_effect": "NONE / CURRENT_RESEARCH_EVIDENCE_ONLY",
+      "owner_authorized": true,
+      "source_doc": "docs/internal/POST_R1_R7_SYSTEM_REVIEW_20261002.md",
+      "state_history": [
+        "NEXT"
+      ],
+      "owner_override": "OWNER_DIRECTIVE_2026_10_02_AUTONOMOUS_RELEASE_AND_ROADMAP_ADVANCE",
+      "notes": "Inspect admitted route contracts and implement a bounded request/byte acquisition plan before invoking existing official corporate acquisition. Preserve actual knowledge time; never repair historical T0 from current evidence."
     },
     {
       "milestone_id": "PORTFOLIO_PIT_AND_EXECUTION_AUTHORITY_V1",
@@ -395,7 +418,7 @@
         "PARTIAL"
       ],
       "owner_override": "OWNER_DIRECTIVE_2026_09_29_FINANCIAL_EVIDENCE_COHORT1_TRIGGERED_OCR_V1",
-      "notes": "PARTIAL 2026-09-29. Retained-only H1 image OCR for HPG/PNJ/PVD/VRE; 11 completed page reads, no new CORE fact. Generic balance-sheet heading recognition accepts BÃ¡o cÃ¡o tÃ¬nh hÃ¬nh tÃ i chÃ­nh. Qualification blocked on OCR unit ambiguity/conflict or non-unique geometry. No network, Vnstock, Daily, Financial V2 pin or successor."
+      "notes": "PARTIAL 2026-09-29. Retained-only H1 image OCR for HPG/PNJ/PVD/VRE; 11 completed page reads, no new CORE fact. Generic balance-sheet heading recognition accepts B\u00c3\u00a1o c\u00c3\u00a1o t\u00c3\u00acnh h\u00c3\u00acnh t\u00c3\u00a0i ch\u00c3\u00adnh. Qualification blocked on OCR unit ambiguity/conflict or non-unique geometry. No network, Vnstock, Daily, Financial V2 pin or successor."
     },
     {
       "milestone_id": "FLOW_PRICE_CANONICAL_SOURCE_BACKFILL_AND_PRESENTATION_CORRECTIVE_V1",
