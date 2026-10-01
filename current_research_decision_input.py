@@ -349,6 +349,7 @@ def _valuation(record: Mapping[str, Any], valuation_record: Mapping[str, Any] | 
         "not_meaningful_methods": not_meaningful,
         "non_applicable_methods": non_applicable,
         "blocked_methods": blocked,
+        **({"intrinsic_scenario_valuation": copy.deepcopy(record["intrinsic_scenario_valuation"])} if "intrinsic_scenario_valuation" in record else {}),
         "peer_relative_state": peer_state,
         "share_basis": summary.get("share_basis") or valuation_record.get("share_basis"),
         "size_context": {"state": AVAILABLE if size_available else "UNAVAILABLE",

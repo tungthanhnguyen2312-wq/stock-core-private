@@ -203,9 +203,9 @@ class TestClassifyFeedbackTaxonomy:
         result = classify_feedback_taxonomy(self._outcome(posture=FIELD_NOT_RETAINED, stance="AVOID_NEW_ENTRY", t5_return=0.05, confirmed=True))
         assert result["label"] == "TACTICAL_SIGNAL_NOT_INTEGRATED"
 
-    def test_policy_too_defensive_on_wait_with_favorable_unconfirmed_move(self):
+    def test_price_rise_alone_does_not_establish_policy_too_defensive(self):
         result = classify_feedback_taxonomy(self._outcome(posture="WAIT_FOR_CONFIRMATION", t5_return=0.02))
-        assert result["label"] == "POLICY_TOO_DEFENSIVE"
+        assert result["label"] == "INSUFFICIENT_OUTCOME_EVIDENCE"
 
     def test_a_price_rise_after_avoid_does_not_automatically_prove_it_wrong(self):
         """Section 11: without confirmation and without a favorable move, AVOID stays unlabeled

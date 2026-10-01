@@ -15,7 +15,17 @@ Repository cleanup follows the governed strangler plan in [REPOSITORY_LAYOUT_MIG
 - keep production entry points truthful throughout migration;
 - reduce the root gradually alongside product-critical roadmap work.
 
-The October 1 Owner Daily live-acceptance gate is complete and PR #31 is merged. The next product milestone is Current Research Coverage & Decision Fitness; repository-layout work must not displace that capability work.
+The October 1 Owner Daily live-acceptance gate is complete and PR #31 is merged. R2 and R4 are complete, R3 remains terminal for its current source set, and R5 is locally complete. R6 Prospective Learning & Calibration is locally COMPLETE; R7 Portfolio / PIT / Execution Authority is locally COMPLETE for capability implementation, with stronger authority still pending evidence/owner approval; the successor is owner roadmap review/rebaseline, with no automatic milestone; repository-layout work must not displace capability work.
+
+## R7 authority-readiness navigation
+
+See [contract](portfolio_pit_execution_authority_contract.md) and [acceptance](internal/R7_PORTFOLIO_PIT_EXECUTION_ACCEPTANCE.json).
+`raw_pit_authority_matrix` owns the consumer matrix/dossier and final non-voting PORTFOLIO_FIT adapter.
+`portfolio_aware_decision`, `current_portfolio_risk_envelope` and `current_portfolio_risk_research`
+reuse the existing governed risk/minimum-cap, exposure and window engines. `vnm_shadow_backtest`
+reuses the isolated VNM replay engine through explicit authority gates; no generic or live order path
+is added. `tools/run_portfolio_pit_execution_acceptance.py` is an offline exact-manifest review tool,
+not another production entrypoint. Source registries and promoted authority are unchanged.
 
 ## Canonical Pipeline Flow
 
@@ -33,6 +43,23 @@ stocklookup.ps1
               ├─> AI Handoff Publication (ai_handoff_publication.py / next_session_decision_brief.py)
               └─> Dashboard Release (dashboard_release_publisher.py / publish_dashboard.py)
 ```
+
+## Canonical prospective learning path (R6)
+
+NEW Integrated products serialize the existing research-action policy version. Canonical Daily
+seals `prospective_decision_retention/v1` full T0 decisions and exact prices, binds their product,
+snapshot and operation identities in the handoff, then runs its unchanged non-blocking
+`prospective_decision_outcome_feedback/v3` observer. Both genuine T0 families use one qualified
+completed-session chain through `integrated_decision_prospective_feedback/v3`.
+`empirical_setup_outcome_calibration/v2` reuses outcomes/serialized conditions for T5/T10/T20/T60
+cohorts, calibration eligibility and deterministic human-review-only policy candidates.
+The existing read-only CLI materializes derived research artifacts on demand. No second store,
+Daily entrypoint, automatic policy writer or background loop is created.
+
+Workspace admission/durable-store/learning-ledger and older shadow rollforward remain readable
+under their own provenance/human-review contracts; they cannot be retroactively converted into
+Integrated T0 authority. See the [current contract](empirical_setup_outcome_calibration_contract.md)
+and [acceptance](internal/R6_PROSPECTIVE_LEARNING_ACCEPTANCE.json).
 
 ## Stage Map
 
@@ -122,3 +149,12 @@ CORPORATE dimension; `forward_driver_coverage` aggregates over the decision deno
 This is a non-voting research explanation. The source axis/identities and all action policy
 remain unchanged. See [the contract](ANALYTICS_AND_DECISION_FEATURE_SPEC.md#forward-driver-explanatory-contract-r4-2026-10-01)
 and [retained acceptance](internal/R4_FORWARD_DRIVER_ACCEPTANCE.json).
+
+
+## Governed Current Research intrinsic/scenario valuation — R5
+
+`canonical_post_close_pipeline.build_enrichment_components` supplies retained canonical semantic rows, governed entity applicability and the decision session to `canonical_daily_financial_v2_materialization.build_evaluated_valuation_artifact`. The existing `current_research_valuation_context` attaches `current_research_intrinsic_scenario/v1` after the unchanged peer-relative evaluation. `intrinsic_valuation.py` owns the single assumption/input readiness boundary, existing FCFF/Net-Net evaluation and the existing reverse FCFF solver. Governed production assumptions reside in `config/current_research_valuation_assumptions.json` (empty, with no generated defaults).
+
+`integrated_investment_decision_product` binds R4 forward-driver explanations, adds the verified projection to its VALUATION evidence context and exposes it through `current_research_decision_input`. The existing opportunity re-evaluation preserves a verified projection. These fields do not vote in posture or replace relative valuation. Contract and ticker/session identity failures block only the intrinsic context. Product wrapper/content hashes bind the added fields; decision identities and posture policy remain unchanged.
+
+`tools/replay_intrinsic_scenario_valuation.py` reads only explicit canonical October 1 paths plus the pinned Financial V2 semantic authority. It writes local scratch outputs, checks the 1,683-ticker denominator, deterministic models, additive-field allowlist, existing decision fitness/identities/postures and input byte hashes. [Portable acceptance](internal/R5_INTRINSIC_SCENARIO_ACCEPTANCE.json) is reviewable without private source copies. [Method contract](intrinsic_sector_valuation_contract.md) defines conditional calculations, native output units, missing-input/implementation/applicability states and reopen gates. No acquisition or ordinary Daily is required for this replay.

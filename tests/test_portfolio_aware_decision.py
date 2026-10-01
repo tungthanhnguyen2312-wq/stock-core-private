@@ -530,7 +530,11 @@ def test_21b_empirical_reward_context_attaches_without_changing_execution_or_mar
             "target": {"status": calib.NOT_EVALUATED, "hit": None, "event_session": None, "sessions_to_target": None, "reason": "TEST"},
             "target_invalidation_ordering": calib.NOT_EVALUATED,
             "observation_identity": f"empirical_setup_observation:test:{ticker}:{session}",
-            "authority_boundary": {},
+            "authority_boundary": {"no_retroactive_t0_reconstruction": True},
+            "t0_decision_identity": f"decision:{ticker}:{session}",
+            "source_type": "QUALIFIED_LEGACY_INTEGRATED_T0", "t0_source_artifact_identity": f"source:{session}",
+            "t0_contract_versions": {"integrated_decision_contract": "integrated_investment_decision_product/v1", "research_action_policy_version": "v1", "fundamental_policy_version": "test/v1"},
+            "feature_versions_at_t0": {"TACTICAL": "test_tactical/v1"},
         }
         for session in range(10) for ticker in range(5)
     ]

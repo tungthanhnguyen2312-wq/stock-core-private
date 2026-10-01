@@ -63,6 +63,7 @@ def make_feedback_record(
     trigger_invalidation_outcome = outcome_feedback._trigger_invalidation(decision_record, snapshots=snapshots, chain=chain)
     return {
         **decision_record, "decision_session": t0_session, "feedback_identity": f"feedback:{ticker}:{t0_session}",
+        "temporal_qualification": {"status": outcome_feedback.GENUINE},
         "t0_snapshot_identity": None, "tactical_structure_state": tactical_state, "market_sector_state": market_regime,
         "forward_outcomes": forward_outcomes, "trigger_invalidation_outcome": trigger_invalidation_outcome,
     }
@@ -152,8 +153,8 @@ def test_r_multiple_unavailable_without_t0_invalidation():
     observation = calib.build_observation(record, chain=chain, snapshots=snapshots)
     t5 = observation["horizons"]["T5"]
     assert t5["r_multiple"] is None
-    assert t5["r_multiple_status"] == "UNAVAILABLE_NO_T0_INVALIDATION"
-    assert observation["r_multiple_denominator_status"] == "UNAVAILABLE_NO_T0_INVALIDATION"
+    assert t5["r_multiple_status"] == "UNAVAILABLE_NO_QUALIFIED_T0_DOWNSIDE_BOUNDARY"
+    assert observation["r_multiple_denominator_status"] == "UNAVAILABLE_NO_QUALIFIED_T0_DOWNSIDE_BOUNDARY"
 
 
 # ── 4. Invalidation-hit ordering ────────────────────────────────────────────────────────────
@@ -194,6 +195,7 @@ def test_target_hit_before_invalidation():
     prices = {"AAA": series}
     snapshots = make_snapshots(chain, prices)
     record = make_feedback_record(ticker="AAA", t0_session=t0, posture="INITIATE_ON_BREAKOUT", entry=100.0, invalidation_level=90.0, chain=chain, snapshots=snapshots)
+    record["target_condition_at_t0"] = make_condition(115.0, ">", "target")
     observation = calib.build_observation(record, chain=chain, snapshots=snapshots, target_level=115.0, target_direction="ABOVE")
     assert observation["target"]["status"] == "EVALUATED"
     assert observation["target"]["hit"] is True
@@ -210,6 +212,7 @@ def test_invalidation_hit_before_target():
     prices = {"AAA": series}
     snapshots = make_snapshots(chain, prices)
     record = make_feedback_record(ticker="AAA", t0_session=t0, posture="INITIATE_ON_BREAKOUT", entry=100.0, invalidation_level=90.0, chain=chain, snapshots=snapshots)
+    record["target_condition_at_t0"] = make_condition(115.0, ">", "target")
     observation = calib.build_observation(record, chain=chain, snapshots=snapshots, target_level=115.0, target_direction="ABOVE")
     assert observation["target_invalidation_ordering"] == "INVALIDATION_BEFORE_TARGET"
 
@@ -261,7 +264,10 @@ def _mature_observation(ticker: str, t0_session: str, *, forward_return: float =
         "target": {"status": calib.NOT_EVALUATED, "hit": None, "event_session": None, "sessions_to_target": None, "reason": "TEST"},
         "target_invalidation_ordering": calib.NOT_EVALUATED,
         "observation_identity": f"empirical_setup_observation:test:{ticker}:{t0_session}",
-        "authority_boundary": {},
+        "authority_boundary": {"no_retroactive_t0_reconstruction": True},
+        "source_type": "QUALIFIED_LEGACY_INTEGRATED_T0", "t0_source_artifact_identity": f"source:{t0_session}",
+        "t0_contract_versions": {"integrated_decision_contract": "integrated_investment_decision_product/v1", "research_action_policy_version": "v1", "fundamental_policy_version": "test/v1"},
+        "feature_versions_at_t0": {"TACTICAL": "test_tactical/v1"},
     }
 
 
@@ -302,7 +308,7 @@ def test_50_observations_10_sessions_reaches_calibrated_research_with_wilson_int
     assert t5["sample_adequacy"] == calib.CALIBRATED_RESEARCH
     assert t5["empirical_positive_return_rate"]["status"] == "AVAILABLE"
     assert 0.0 <= t5["empirical_positive_return_rate"]["lower"] <= t5["empirical_positive_return_rate"]["point_estimate"] <= t5["empirical_positive_return_rate"]["upper"] <= 1.0
-    assert t5["uncertainty_note"] == "EMPIRICAL_RESEARCH_ESTIMATE_NOT_UNIVERSAL_PROBABILITY"
+    assert t5["uncertainty_note"] == "OBSERVED_PROSPECTIVE_CORPUS_FREQUENCY_NOT_FORECAST"
 
 
 def test_wilson_interval_matches_known_reference_values():

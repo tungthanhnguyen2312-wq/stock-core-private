@@ -40,3 +40,51 @@ def build(*,portfolio:Mapping[str,Any],descriptive:Mapping[str,Any],tactical:Map
  a={'schema_version':'1.0.0','contract_version':CONTRACT_VERSION,'portfolio_id':portfolio['portfolio_id'],'portfolio_kind':portfolio.get('portfolio_kind','EXPLICIT_USER_PORTFOLIO'),'base_currency':portfolio.get('base_currency','UNSPECIFIED'),'session':descriptive['session'],'input_identity':'portfolio_input:'+stable_id(portfolio),'source_artifact_identities':{'descriptive':descriptive.get('artifact_identity'),'tactical':tactical.get('artifact_identity'),'peer_relative':peer_relative.get('artifact_identity'),'fundamental':fundamental.get('artifact_identity'),'valuation':valuation.get('artifact_identity'),'scenario':scenario.get('artifact_identity'),'strategy':strategy.get('artifact_identity'),'corporate_intelligence':corporate_intelligence.get('artifact_identity'),'macro':(macro_context or {}).get('macro_artifact_identity'),'market_flow_positioning':(market_flow_positioning or {}).get('artifact_identity')},'positions':rows,'total_evaluable_exposure':total,'unevaluable_exposure':0,'concentration':{'single_name':single,'entity_class':entity,'strategy_coverage':strategy_cov,'strategy_overlap_state':_sum(rows,'strategy_state'),'tactical_state':tactical_s},'market_flow_context':{'foreign_net_selling_weight':sum(x['weight'] for x in rows if x['foreign_flow_state']=='NET_FOREIGN_SELL'),'active_sell_skew_weight':sum(x['weight'] for x in rows if x['active_order_state']=='ACTIVE_SELL_SKEW'),'put_through_dominant_weight':sum(x['weight'] for x in rows if x['traded_value_state']=='PUT_THROUGH_DOMINANT'),'flow_context_unavailable_weight':sum(x['weight'] for x in rows if x['foreign_flow_state']=='FOREIGN_FLOW_UNAVAILABLE' and x['active_order_state']=='UNAVAILABLE'),'status':'DESCRIPTIVE_EXPLICIT_PORTFOLIO_CONTEXT_ONLY'},'macro_context':macro_context or {'status':'UNAVAILABLE','reason':'NO_MACRO_CONTEXT_BOUND','macro_exposure':'NOT_EVALUATED'},'scenario_risk':_sum(rows,'scenario_state'),'fundamental_context':{'authority':_sum(rows,'fundamental_authority'),'alignment':_sum(rows,'fundamental_alignment')},'event_context':_sum(rows,'event_state'),'data_quality_context':_sum(rows,'technical_quality'),'descriptive_volatility_context':{'weighted_average_descriptive_volatility':sum(x['weight']*x['volatility'] for x in rows if isinstance(x['volatility'],(int,float))),'status':'DESCRIPTIVE_NOT_PORTFOLIO_VOLATILITY'},'user_limit_results':breaches,'blocked_risk_dimensions':blocked,'position_sizing_status':'BLOCKED','portfolio_fit_contract':{'status':'AVAILABLE','method':'candidate sector/strategy/tactical overlap only; no candidate weight or recommendation'},'authority_boundary':{'explicit_holdings_required':True,'watchlist_not_portfolio':True,'no_sizing_or_optimal_allocation':True,'probability_weighted_risk_not_emitted':True,'flow_context_descriptive_only':True},'is_actionable':False};a.update(identity(a));return a
 def portfolio_fit(artifact:Mapping[str,Any],candidate:Mapping[str,Any])->dict[str,Any]:
  rows=artifact['positions'];return {'ticker':candidate['ticker'],'same_entity_class_exposure':artifact['concentration']['entity_class'].get(candidate.get('entity_class','unknown'),0),'same_strategy_exposure':{s:artifact['concentration']['strategy_coverage'].get(s,0) for s in candidate.get('eligible_strategy_ids',[])},'same_tactical_state_exposure':artifact['concentration']['tactical_state'].get(candidate.get('tactical_state'),0),'status':'PORTFOLIO_FIT_DATA_LIMITED' if candidate.get('strategy_state')=='DATA_LIMITED' else 'ADDS_SECTOR_CONCENTRATION' if artifact['concentration']['entity_class'].get(candidate.get('entity_class','unknown'),0)>0 else 'LOW_INCREMENTAL_DIVERSIFICATION','is_actionable':False}
+
+
+def governed_portfolio_research(*, portfolio: Mapping[str, Any] | None, contexts: Mapping[str, Any]) -> dict[str, Any]:
+ """Strict explicit-value adapter of build(); no portfolio optimizer or inferred cash.
+
+ Reuses the existing exposure/concentration engine. Risk windows must still be
+ qualified by current_portfolio_risk_research; this adapter does not turn a
+ weighted descriptive volatility into covariance or portfolio volatility.
+ """
+ import math
+ p = dict(portfolio or {})
+ if not p.get('input_identity') or not p.get('positions') or not p.get('monetary_unit'):
+  return {'state': 'UNAVAILABLE', 'reason_codes': ['EXPLICIT_PORTFOLIO_INPUT_NOT_BOUND'], 'metrics': None, 'is_actionable': False}
+ positions = sorted((dict(row, ticker=str(row.get('ticker') or '').upper()) for row in p['positions']), key=lambda row: row['ticker'])
+ p['positions'] = positions
+ if len({x.get('ticker') for x in positions}) != len(positions):
+  raise ValueError('DUPLICATE_PORTFOLIO_POSITION')
+ for row in positions:
+  value = row.get('explicit_market_value')
+  if not row['ticker'] or isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value) or value < 0 or row.get('monetary_unit') != p['monetary_unit']:
+   raise ValueError('EXPLICIT_COMPARABLE_LONG_MARKET_VALUE_REQUIRED')
+  if row.get('explicit_weight') is not None:
+   raise ValueError('WEIGHTS_AND_MARKET_VALUES_CANNOT_BE_MIXED')
+ context = dict(contexts)
+ context.setdefault('macro_context', None)
+ context.setdefault('market_flow_positioning', None)
+ artifact = build(portfolio=p, **context)
+ invested = artifact['total_evaluable_exposure']
+ def number(key):
+  x = p.get(key)
+  return float(x) if not isinstance(x, bool) and isinstance(x, (int, float)) and math.isfinite(x) and x >= 0 else None
+ capital, cash = number('capital'), number('cash')
+ sectors = defaultdict(float)
+ sector_complete = all(row.get('sector_identity') and row.get('sector') for row in positions)
+ if sector_complete:
+  for row in positions: sectors[row['sector']] += row['explicit_market_value'] / invested
+ return {'contract_version': 'governed_explicit_portfolio_research/v1', 'state': 'PARTIAL',
+         'input_identity': p['input_identity'], 'exposure_engine_identity': artifact['artifact_identity'],
+         'metrics': {'invested_value': invested, 'capital': capital, 'cash': cash,
+                     'capital_usage': invested / capital if capital else None,
+                     'cash_fraction_of_capital': cash / capital if cash is not None and capital else None,
+                     'gross_exposure': invested / capital if capital else None, 'net_exposure': invested / capital if capital else None,
+                     'single_name_concentration': artifact['concentration']['single_name'],
+                     'sector_concentration': dict(sorted(sectors.items())) if sector_complete else None},
+         'cash_usage': {'state': 'UNAVAILABLE', 'reason': 'NO_PROPOSED_TRADE_OR_CASH_LEDGER_BOUND'},
+         'volatility_correlation': {'state': 'UNAVAILABLE', 'reason': 'QUALIFIED_COMMON_BASIS_AND_WINDOWS_REQUIRED'},
+         'optimizer': {'state': 'UNAVAILABLE', 'reason': 'NO_GOVERNED_OBJECTIVE'},
+         'authority_effect': 'NONE', 'is_actionable': False}

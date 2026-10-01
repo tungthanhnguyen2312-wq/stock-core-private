@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import statistics
 from collections import Counter, defaultdict
 from pathlib import Path
@@ -16,8 +17,8 @@ from typing import Any, Mapping, Sequence
 from durable_prospective_research_case_store import DurableProspectiveResearchCaseStore
 
 
-CONTRACT_VERSION = "prospective_decision_outcome/v2"
-METHOD_VERSION = "prospective_decision_outcome_measurement/v2"
+CONTRACT_VERSION = "prospective_decision_outcome/v3"
+METHOD_VERSION = "prospective_decision_outcome_measurement/v3"
 # v2 (DAILY_INTEGRATED_DECISION_BRIEF_AND_PROSPECTIVE_FEEDBACK_V1) adds T10, the product-critical
 # session-counted horizon docs/ANALYTICS_AND_DECISION_FEATURE_SPEC.md Section 6.3 calls for. T5/T20
 # semantics are byte-identical; T60 is kept (never deleted to force a 5/10/20-only schema). Every
@@ -118,10 +119,11 @@ def _price(row: Mapping[str, Any], ticker: str) -> Mapping[str, Any] | None:
 
 
 def _compatible(t0_price: Mapping[str, Any], later_price: Mapping[str, Any] | None) -> bool:
+    def valid(value):
+        return isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value) and value > 0
     return bool(later_price and t0_price.get("price_basis_identity") and
                 t0_price.get("price_basis_identity") == later_price.get("price_basis_identity") and
-                isinstance(t0_price.get("close"), (int, float)) and t0_price["close"] != 0 and
-                isinstance(later_price.get("close"), (int, float)))
+                valid(t0_price.get("close")) and valid(later_price.get("close")))
 
 
 def _return(t0_price: Mapping[str, Any], later_price: Mapping[str, Any]) -> float:
@@ -214,15 +216,15 @@ def _horizon(name: str, count: int, t0_price: Mapping[str, Any] | None, later: S
 def _path(horizon: Mapping[str, Any], t0_price: Mapping[str, Any] | None, later: Sequence[Mapping[str, Any]], ticker: str) -> dict[str, Any]:
     if horizon["status"] != "MATURE" or not t0_price:
         return {"status": horizon["status"], "MAX_FAVORABLE_CLOSE_RETURN": None, "MAX_ADVERSE_CLOSE_RETURN": None,
-                "mfe": UNAVAILABLE_HIGH_LOW, "mae": UNAVAILABLE_HIGH_LOW, "semantics": "RESEARCH_PROXY_ONLY"}
+                "mfe": UNAVAILABLE_HIGH_LOW, "mae": UNAVAILABLE_HIGH_LOW, "semantics": "RESEARCH_PROXY_ONLY", "favorable_semantics": "CLOSE_ONLY_FAVORABLE_EXCURSION", "adverse_semantics": "CLOSE_ONLY_ADVERSE_EXCURSION"}
     returns = [_return(t0_price, _price(row, ticker)) for row in later[:horizon["required_completed_future_sessions"]]
                if _compatible(t0_price, _price(row, ticker))]
     if len(returns) != horizon["required_completed_future_sessions"]:
         return {"status": "PRICE_BASIS_INCOMPATIBLE", "MAX_FAVORABLE_CLOSE_RETURN": None, "MAX_ADVERSE_CLOSE_RETURN": None,
-                "mfe": UNAVAILABLE_HIGH_LOW, "mae": UNAVAILABLE_HIGH_LOW, "semantics": "RESEARCH_PROXY_ONLY"}
+                "mfe": UNAVAILABLE_HIGH_LOW, "mae": UNAVAILABLE_HIGH_LOW, "semantics": "RESEARCH_PROXY_ONLY", "favorable_semantics": "CLOSE_ONLY_FAVORABLE_EXCURSION", "adverse_semantics": "CLOSE_ONLY_ADVERSE_EXCURSION"}
     return {"status": "MATURE", "MAX_FAVORABLE_CLOSE_RETURN": max(returns), "MAX_ADVERSE_CLOSE_RETURN": min(returns),
             "mfe": UNAVAILABLE_HIGH_LOW, "mae": UNAVAILABLE_HIGH_LOW, "close_path_mfe_proxy": max(returns), "close_path_mae_proxy": min(returns),
-            "semantics": "RESEARCH_PROXY_ONLY"}
+            "semantics": "RESEARCH_PROXY_ONLY", "favorable_semantics": "CLOSE_ONLY_FAVORABLE_EXCURSION", "adverse_semantics": "CLOSE_ONLY_ADVERSE_EXCURSION"}
 
 
 def _benchmark(horizon: Mapping[str, Any], t0: Mapping[str, Any], later: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
@@ -234,7 +236,9 @@ def _benchmark(horizon: Mapping[str, Any], t0: Mapping[str, Any], later: Sequenc
     future = (row.get("benchmarks") or {}).get(benchmark.get("identity")) if isinstance(row.get("benchmarks"), Mapping) else None
     if not isinstance(initial, Mapping) or not isinstance(future, Mapping) or not _compatible(initial, future):
         return {"status": "BENCHMARK_RELATIVE_UNAVAILABLE", "return": None, "benchmark_identity": benchmark.get("identity")}
-    return {"status": "MATURE", "return": horizon["return"] - _return(initial, future), "benchmark_identity": benchmark.get("identity")}
+    return {"status": "MATURE", "return": horizon["return"] - _return(initial, future), "benchmark_identity": benchmark.get("identity"),
+            "t0_price_identity": initial.get("source_identity"), "future_price_identity": future.get("source_identity"),
+            "price_basis_identity": initial.get("price_basis_identity")}
 
 
 def evaluate_case(envelope: Mapping[str, Any], completed_sessions: Sequence[Mapping[str, Any]], *, evaluation_as_of_session: str | None = None) -> dict[str, Any]:
@@ -315,13 +319,13 @@ def classify_feedback_taxonomy(outcome: Mapping[str, Any]) -> dict[str, Any]:
         elif effective in _RETEST_LIKE:
             label = "ADVERSE_OUTCOME_AFTER_INITIATION" if (invalidated or adverse) else "SUCCESSFUL_RETEST" if (confirmed or favorable) else "INSUFFICIENT_OUTCOME_EVIDENCE"
         elif effective in _WATCH_LIKE:
-            label = "FALSE_POSITIVE_EARLY_REVERSAL" if (invalidated or adverse) else "GOOD_EARLY_WATCH" if (confirmed or favorable) else "INSUFFICIENT_OUTCOME_EVIDENCE"
+            label = "FALSE_POSITIVE_EARLY_REVERSAL" if (invalidated and confirmed and outcome.get("event_ordering") == "CONFIRMED_BEFORE_INVALIDATED") else "GOOD_EARLY_WATCH" if (confirmed and favorable and not invalidated) else "INSUFFICIENT_OUTCOME_EVIDENCE"
         elif effective in _EXTENDED_LIKE:
             label = "EXTENSION_WARNING_CORRECT" if (adverse or invalidated) else "INSUFFICIENT_OUTCOME_EVIDENCE"
         elif effective in _DEFENSIVE_LIKE:
-            if favorable and confirmed:
+            if favorable and confirmed and not invalidated:
                 label = "TACTICAL_SIGNAL_NOT_INTEGRATED" if posture_missing else "MISSED_BREAKOUT"
-            elif favorable and not invalidated:
+            elif favorable and not invalidated and outcome.get("qualified_tactical_signal_at_t0") is True:
                 label = "TACTICAL_SIGNAL_NOT_INTEGRATED" if posture_missing else "POLICY_TOO_DEFENSIVE" if effective in _WAIT_LIKE else "POSSIBLE_FALSE_NEGATIVE"
             else:
                 label = "INSUFFICIENT_OUTCOME_EVIDENCE"

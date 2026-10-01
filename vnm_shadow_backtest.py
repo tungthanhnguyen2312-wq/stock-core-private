@@ -22,6 +22,91 @@ def _signal(snapshot:Mapping[str,Any])->dict[str,Any]|None:
  if not isinstance(snapshot.get("snapshot_id"),str) or not isinstance(snapshot.get("knowledge_cutoff"),str):return None
  return {"ticker":"VNM","snapshot_id":snapshot["snapshot_id"],"knowledge_cutoff":snapshot["knowledge_cutoff"],"state":snapshot["state"],"signal_version":SIGNAL_VERSION,"input_vintage":snapshot.get("input_vintage",{}),"input_lineage":snapshot.get("input_lineage",[])}
 def _qualified(row:Mapping[str,Any])->bool:return row.get("price_basis")=="raw_historical" and row.get("volume_qualification")=="qualified" and isinstance(row.get("raw_close"),(int,float)) and row["raw_close"]>0 and isinstance(row.get("volume"),(int,float)) and row["volume"]>0 and all(isinstance(row.get(k),str) and row[k] for k in ("price_source_id","citation_id","source_hash"))
+
+def replay_return_semantics(entry: float, exit: float, costs: Mapping[str, Any] | None) -> dict[str, Any]:
+ """Existing round-trip bps method; missing costs are unavailable, never zero."""
+ from vnm_execution_contract import _costs
+ import math
+ if any(isinstance(x, bool) or not isinstance(x, (int, float)) or not math.isfinite(x) or x <= 0 for x in (entry, exit)):
+  return {"gross_return": None, "net_return": None, "reason_codes": ["INVALID_PRICE"]}
+ gross = float(exit) / float(entry) - 1
+ try:
+  c = _costs(costs)
+ except ValueError:
+  return {"gross_return": gross, "net_return": None, "reason_codes": ["GOVERNED_FEES_TAXES_SLIPPAGE_MODEL_MISSING_OR_INVALID"]}
+ net = (1 + gross) * (1 - sum(c.values()) / 10000) ** 2 - 1
+ return {"gross_return": gross, "net_return": net, "reason_codes": []}
+
+
+def run_authority_gated_replay(*, snapshot: Mapping[str, Any], raw_sessions: list[Mapping[str, Any]],
+                              evidence: Mapping[str, Mapping[str, Any]], costs: Mapping[str, Any] | None = None,
+                              max_holding_sessions: int | None = None, leveraged: bool = False, short: bool = False) -> dict[str, Any]:
+ """R7 dry-run adapter of this existing isolated VNM engine, not a general backtester.
+
+ Features used for the T0 signal are checked at T0. Each future fill uses its own
+ qualification context at its own session close; never copied backward into T0.
+ The legacy fixed-holding exit remains explicit, with no inferred stop or policy.
+ """
+ from raw_pit_authority_matrix import use_case_readiness
+ from vnm_execution_contract import _row_reason, _costs
+ from field_temporal_contract import stable_id
+ ticker = snapshot.get("ticker")
+ cutoff = snapshot.get("knowledge_cutoff")
+ session = str(cutoff or "")[:10]
+ gate = use_case_readiness(use_case="EXECUTION_REPLAY", ticker=ticker, session=session, evidence=evidence,
+                          knowledge_cutoff=cutoff, leveraged=leveraged, short=short)
+ reasons = list(gate["blocker_reason_codes"])
+ if ticker != "VNM": reasons.append("EXISTING_REPLAY_ENGINE_VNM_ONLY")
+ if leveraged or short: reasons.append("EXISTING_REPLAY_ENGINE_LONG_UNLEVERED_ONLY")
+ if isinstance(max_holding_sessions, bool) or not isinstance(max_holding_sessions, int) or not 1 <= max_holding_sessions <= MAX_HOLDING_SESSIONS:
+  reasons.append("EXPLICIT_SUPPORTED_HOLDING_POLICY_REQUIRED")
+ signal = _signal(snapshot)
+ if signal is None: reasons.append("EXISTING_SIGNAL_RULE_NOT_SATISFIED")
+ body = {"contract_version": "authority_gated_vnm_replay/v1", "ticker": ticker, "decision_session": session,
+         "knowledge_cutoff": cutoff, "signal_identity": snapshot.get("snapshot_id"), "eligibility": gate,
+         "mode": "DRY_RUN_RESEARCH_ONLY", "state": "BLOCKED_BY_EVIDENCE", "trade": None,
+         "gross_return": None, "net_return": None, "authority_effect": "NONE", "live_orders": 0}
+ rows = sorted(raw_sessions, key=lambda r: str(r.get("trading_date", "")))
+ if len({r.get("trading_date") for r in rows}) != len(rows): reasons.append("DUPLICATE_FILL_SESSION")
+ if not reasons:
+  valid = []
+  for row in rows:
+   if str(row.get("trading_date", "")) <= session: continue
+   if str(row.get("fill_knowledge_cutoff", ""))[:10] != row.get("trading_date"):
+    reasons.append("FILL_CUTOFF_MUST_BELONG_TO_FILL_SESSION")
+   fill_gate = use_case_readiness(use_case="EXECUTION_REPLAY", ticker=ticker, session=row.get("trading_date"),
+              evidence=row.get("authority_evidence") or {}, knowledge_cutoff=row.get("fill_knowledge_cutoff"))
+   if fill_gate["state"] != "EXECUTION_USABLE" or _row_reason(row):
+    reasons.append("FILL_SESSION_AUTHORITY_OR_RAW_PRICE_UNQUALIFIED:" + str(row.get("trading_date")))
+   else:
+    band = row['authority_evidence']['PRICE_BAND']
+    if not band['lower_price'] <= row['raw_close'] <= band['upper_price']:
+     reasons.append("FILL_PRICE_OUTSIDE_QUALIFIED_SESSION_BAND")
+    else: valid.append(row)
+  if not reasons:
+   # Cost model qualification is separate from otherwise valid gross replay.
+   net_rows = [evidence.get(f) or {} for f in ("FEES_TAXES", "SLIPPAGE_IMPACT")]
+   from raw_pit_authority_matrix import authority_row
+   net_qualified = all(authority_row(feature=f, use_case="EXECUTION_REPLAY", ticker=ticker, session=session,
+                        evidence=e, knowledge_cutoff=cutoff)["fitness"] == "EXECUTION_USABLE"
+                       for f,e in zip(("FEES_TAXES", "SLIPPAGE_IMPACT"), net_rows))
+   governed_costs = costs if net_qualified and costs and costs.get("policy_identity") and all(e.get("policy_identity") == costs["policy_identity"] for e in net_rows) else None
+   try: _costs(governed_costs)
+   except ValueError: governed_costs = None
+   entry = resolve_vnm_fill(signal=signal, raw_sessions=valid, costs=governed_costs, gross_research_only=governed_costs is None)
+   exit_row, exit_reason = _exit(valid, entry.get("fill_date") or "9999", max_holding_sessions)
+   if entry["state"] != "available" or exit_reason:
+    reasons.append(entry.get("reason") or exit_reason)
+   else:
+    returns = replay_return_semantics(entry["raw_fill_price"], exit_row["raw_close"], governed_costs)
+    body.update(state="GROSS_RESEARCH_AVAILABLE" if returns["net_return"] is None else "GROSS_AND_NET_RESEARCH_AVAILABLE",
+                gross_return=returns["gross_return"], net_return=returns["net_return"],
+                trade={"entry": entry, "exit": dict(exit_row), "exit_semantics": "EXISTING_FIXED_QUALIFIED_HOLDING_SESSION_LIMIT",
+                       "holding_sessions": max_holding_sessions, "ca_treatment": "EXPLICIT_QUALIFIED_FACTOR_LINEAGE_REQUIRED",
+                       "cost_semantics": "EXISTING_MULTIPLICATIVE_ROUND_TRIP_BPS_METHOD"})
+    reasons.extend(returns["reason_codes"])
+ body["reason_codes"] = sorted(set(reasons))
+ return {**body, "replay_identity": "authority_gated_vnm_replay:" + stable_id(body)}
 def _exit(sessions:list[Mapping[str,Any]],entry_date:str,max_holding:int)->tuple[Mapping[str,Any] | None, str | None]:
  eligible=[r for r in sorted(sessions,key=lambda x:str(x.get("trading_date",""))) if str(r.get("trading_date",""))>entry_date and _qualified(r)]
  if len(eligible)<max_holding:return None,"exit_session_unavailable_within_holding_period"
@@ -45,7 +130,7 @@ def run_shadow_backtest(*,snapshots:list[Mapping[str,Any]],raw_sessions:list[Map
   if reason:unavailable.append({"snapshot_id":signal["snapshot_id"],"reason":reason});continue
   bench,reason=_benchmark(benchmark_sessions,entry["fill_date"],exit_row["trading_date"])
   if reason:unavailable.append({"snapshot_id":signal["snapshot_id"],"reason":reason});continue
-  total_bps=sum(entry["cost_assumptions"][k] for k in ("commission_bps","slippage_bps","tax_bps"));gross=float(exit_row["raw_close"])/entry["raw_fill_price"]-1;net=(1+gross)*(1-total_bps/10000)**2-1
+  returns=replay_return_semantics(entry["raw_fill_price"],float(exit_row["raw_close"]),costs);gross=returns["gross_return"];net=returns["net_return"]
   trade={"trade_id":"vnm-shadow-"+_hash({"signal":signal["snapshot_id"],"entry":entry["execution_id"],"exit":exit_row["trading_date"],"version":VERSION}),"signal_id":signal["snapshot_id"],"knowledge_cutoff":signal["knowledge_cutoff"],"signal_version":SIGNAL_VERSION,"input_vintage":signal["input_vintage"],"entry":entry,"exit":{"fill_date":exit_row["trading_date"],"raw_fill_price":float(exit_row["raw_close"]),"price_source_lineage":{k:exit_row[k] for k in ("price_source_id","citation_id","source_hash")}},"gross_return":gross,"net_return":net,"benchmark_return":bench,"holding_sessions":max_holding_sessions}
   trades.append(trade);last_exit=exit_row["trading_date"]
  if not trades:return {**_empty("no_qualified_shadow_trades"),"unavailable_signals":unavailable}

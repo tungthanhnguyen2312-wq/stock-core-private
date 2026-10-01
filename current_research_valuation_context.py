@@ -753,7 +753,13 @@ def evaluate_ticker_valuation(*, ticker: str, feature_record: Mapping[str, Any] 
     # it) -- adding one would be new engine surface inside the regression-locked FA V2 core,
     # not a wiring/join task. Reported as a named, honest residual rather than fabricated.
     fcf_yield_ttm = {"status": "BLOCKED", "value": None, "blocker_reason_codes": ["FCF_TTM_NOT_RETAINED_STANDALONE_QUARTER_PROXY_ONLY"]}
+    intrinsic_projection = {}
+    if "intrinsic_scenario_valuation" in (valuation_record or {}):
+        from intrinsic_valuation import consume_current_projection
+        intrinsic_projection["intrinsic_scenario_valuation"] = consume_current_projection(
+            valuation_record["intrinsic_scenario_valuation"], ticker=ticker, session=decision_session)
     return {
+        **intrinsic_projection,
         "ticker": ticker, "entity_class": entity, "entity_applicability": entity_detail, "share_basis": share_class,
         "share_authority": share.get("authority"), "share_status": share.get("status"),
         "share_concept": share.get("share_concept"),
@@ -1177,6 +1183,7 @@ def valuation_axis(*, ticker: str, decision_session: str, valuation_artifact: Ma
         for method_id, method in (row.get("methods") or {}).items()
     }
     return {
+        **({"intrinsic_scenario_valuation": copy.deepcopy(row["intrinsic_scenario_valuation"])} if "intrinsic_scenario_valuation" in row else {}),
         "valuation_summary": _valuation_display_summary(methods_view),
         "readiness": readiness,
         "freshness": dict(freshness),
@@ -1211,3 +1218,28 @@ def freshness_for_valuation(*, decision_session: str, valuation_artifact: Mappin
         source_session=source_session_for_valuation(valuation_artifact),
         source_artifact_identity=(valuation_artifact or {}).get("artifact_identity"),
     )
+
+
+
+def attach_intrinsic_scenario_valuation(rows, inputs, *, assumption_config_identity=None):
+    """Add conditional intrinsic/reverse context; preserve every relative method and verdict."""
+    import copy
+    import intrinsic_valuation as intrinsic
+    result = copy.deepcopy(rows)
+    for ticker, row in result.items():
+        invalid_config = isinstance(assumption_config_identity, str) and ":INVALID:" in assumption_config_identity
+        data = {**inputs[ticker], "assumption_sets": {}} if invalid_config else inputs[ticker]
+        projection = intrinsic.build_current_scenario_valuation(data)
+        projection["assumption_config_identity"] = assumption_config_identity
+        if invalid_config:
+            projection["limitations"].append("GOVERNED_ASSUMPTION_CONFIG_UNAVAILABLE_OR_INVALID")
+            for method in projection["methods"].values():
+                for case in method["cases"].values():
+                    if case["readiness"] != "NOT_APPLICABLE":
+                        case["reason_codes"] = sorted(set(case["reason_codes"]) | {"GOVERNED_ASSUMPTION_CONFIG_UNAVAILABLE_OR_INVALID"})
+                        case.pop("case_identity", None)
+                        case["case_identity"] = intrinsic.CURRENT_SCENARIO_CONTRACT + ":" + intrinsic.scenario_identity(case)
+        projection.pop("projection_identity", None)
+        projection["projection_identity"] = intrinsic.CURRENT_SCENARIO_CONTRACT + ":" + intrinsic.scenario_identity(projection)
+        row["intrinsic_scenario_valuation"] = projection
+    return result

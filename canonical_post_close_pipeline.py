@@ -1006,7 +1006,7 @@ def build_enrichment_components(
             product_tickers=daily_denominator, requested_at=requested_at,
             calculation_readiness_context=readiness_context,
             entity_applicability_artifact=entity_applicability,
-            semantic_rows=semantic_rows,
+            semantic_rows=semantic_rows, decision_session=session,
         )
         _write_json(paths["financial_analysis_product"], financial_session_artifact)
         _write_json(paths["current_valuation_evaluated"], evaluated_valuation)

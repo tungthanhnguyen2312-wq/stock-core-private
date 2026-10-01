@@ -103,7 +103,7 @@ def test_horizons_close_excursions_policy_diagnostics_and_identity_are_determini
     assert close5["CLOSE_MFE"] == pytest.approx(0.05) and close5["CLOSE_MAE"] == pytest.approx(0.01)
     assert "MFE" not in row["forward_outcomes"]["close_path"]
     assert row["outcome_classification"]["label"] == "WAIT_MISSED_UPSIDE"
-    assert first["false_negative_cases"]
+    assert first["false_negative_cases"] == []  # price rise alone is descriptive, not a policy failure
     assert row["trigger_invalidation_outcome"]["trigger"]["status"].startswith("T0_TRIGGER_EVENT_NOT_EVALUABLE")
     assert original == _record(chain[0])  # feedback did not mutate the decision source shape
     assert first["policy_diagnostic_candidates"][0]["policy_mutated"] is False

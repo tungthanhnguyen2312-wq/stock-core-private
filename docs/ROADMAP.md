@@ -25,7 +25,7 @@ progress rather than telemetry/acceptance work.
    - classify why a ticker is unavailable, blocked, stale, proxy, not applicable or usable;
    - rank only blockers that materially reduce decision quality;
    - avoid another generic audit.
-   - State: COMPLETE / PR_READY.
+   - State: COMPLETE / MERGED (PR #33).
 
 3. **R3 — Fundamental + Current Valuation Depth**
    - expand research-usable financial coverage and method-compatible peer/history context;
@@ -40,28 +40,43 @@ progress rather than telemetry/acceptance work.
    - convert official events, filings and research evidence into dated driver/catalyst/risk
      inputs;
    - support earnings revisions, segment drivers and expectation / variant-perception research.
-   - State: COMPLETE / LOCAL_CHECKPOINT / READY_FOR_OWNER_PUSH_REVIEW.
+   - State: COMPLETE / MERGED (PR #34, main 95c9e6f).
    - V1 implements dated provenance-bound explanatory event drivers only; absent forecasts,
      earnings revisions and segment-driver evidence remain unavailable.
    - Retained October 1 acceptance: 244 tickers / 258 qualified PARTIAL driver observations;
      zero posture, decision-identity or unexplained changes. See the portable acceptance report.
 
 5. **R5 — Intrinsic / Scenario Valuation**
-   - State: NEXT after validated R4 local completion; not started.
+   - State: COMPLETE / LOCAL_CHECKPOINT, owner-authorized at merged main 95c9e6f.
+   - Existing FCFF/Net-Net/reverse machinery now uses governed conditional assumptions, explicit readiness and additive non-voting integration. Retained 1,683-ticker numeric coverage remains zero; no evidence is manufactured.
+   - See [portable R5 acceptance](internal/R5_INTRINSIC_SCENARIO_ACCEPTANCE.json) and [method reopen gates](intrinsic_sector_valuation_contract.md).
    - governed forecast assumptions;
    - sector-appropriate FCFF/FCFE/DDM/residual-income/RNAV/SOTP where applicable;
    - explicit sensitivity and bear/base/bull assumptions;
    - no fabricated probability or target-price authority.
 
 6. **R6 — Prospective Learning & Calibration**
-   - retain T0 research decisions and evaluate 5/10/20-session outcomes, MFE/MAE and
-     false-positive/false-negative patterns;
-   - calibrate policies from prospective evidence rather than ad-hoc thresholds.
+   - State: COMPLETE / LOCAL_CHECKPOINT on owner-authorized R5 stack 397c05c.
+   - Existing immutable T0/outcome/empirical modules form the canonical prospective loop;
+     close-only excursions, serialized ordering, comparable policy cohorts and human-review
+     candidates remain explicit. No automatic live-policy change.
+   - Retained 30,294 decisions / 18 sessions: T5 mature 8,134, T10 mature 4,356, T20 mature zero.
+     All 1,952 cohorts insufficient; review-eligible cohorts and actual candidates zero.
+   - Existing sample floors unchanged; NEW versioned T0 and qualified future sessions must
+     accumulate. Historical missing policy versions cannot be backfilled.
+   - See [portable acceptance](internal/R6_PROSPECTIVE_LEARNING_ACCEPTANCE.json) and
+     [canonical contract](empirical_setup_outcome_calibration_contract.md).
 
 7. **R7 — Portfolio / PIT / Execution Authority**
-   - historical RAW_AS_TRADED and corporate-action PIT where new evidence supports it;
-   - execution-grade ADTV/ADV, sizing, leverage, portfolio allocation and PIT backtesting;
-   - do not reopen evidence-ceiling lanes without genuinely new evidence.
+   - State: locally COMPLETE for capability implementation on exact R6 `938641c`.
+   - Terminal: CAPABILITY_COMPLETE / AUTHORITY_PROMOTION_PENDING_EVIDENCE_OR_OWNER_APPROVAL.
+   - One feature/use/scope readiness matrix, strict adapters of existing sizing/exposure/risk
+     engines and authority-gated dry-run adapter of the existing VNM replay engine.
+   - Current denominator 1,683; canonical capital, sizing and stronger PIT/backtest/replay/live
+     eligibility remain unavailable. No authority or policy promotion; no source acquisition.
+   - See [contract](portfolio_pit_execution_authority_contract.md), [acceptance](internal/R7_PORTFOLIO_PIT_EXECUTION_ACCEPTANCE.json)
+     and [owner dossier](internal/R7_EXECUTION_AUTHORITY_PROMOTION_DOSSIER.md).
+   - Successor: OWNER_ROADMAP_REVIEW_REBASELINE; no automatic next milestone and no R8.
 
 ### Sequencing rules
 

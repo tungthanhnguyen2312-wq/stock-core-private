@@ -1,0 +1,967 @@
+{
+  "all_preexisting_analytical_fields_unchanged": true,
+  "architecture": "Single extended intrinsic_valuation engine, legacy FCFF/Net-Net calculators and existing reverse solver, governed assumptions, additive non-voting canonical valuation/IID/Current Research consumers.",
+  "authority_effect": "NONE",
+  "changed_decision_identities": 0,
+  "changed_product_identities": 2,
+  "contract_version": "intrinsic_scenario_valuation_acceptance/v1",
+  "current_research_fitness_unchanged": true,
+  "deterministic_models": true,
+  "evaluated_valuation_identity_after": "canonical_daily_financial_v2_materialization/v1:7ff5144f4c6c27fc43489ff045779f71e52da6f9172bda59de6be677330fa5d5",
+  "evaluated_valuation_identity_before": "canonical_daily_financial_v2_materialization/v1:ca82cdca12b220121083d47bb9ef2a959e95108bc2fc0baa28213547d1d8e1ef",
+  "fabricated_assumptions": 0,
+  "final_code_model_revalidation": {
+    "all_source_hashes_unchanged": true,
+    "denominator": 1683,
+    "evaluated_records_identical": true
+  },
+  "identity_reason": "Standing product hashes include explanatory records/coverage and updated evaluated-valuation source binding. Per-decision source identities exclude the artifact wrapper; original per-record identities remain unchanged.",
+  "implementation_methods": [
+    "FCFF_STEADY_STATE_PERPETUITY_V1",
+    "NET_NET_COMPONENT_REALIZATION_V1",
+    "EXISTING_REVERSE_FCFF_V1"
+  ],
+  "local_checkpoint_scope": "One local commit only; no push/PR/merge, production/runtime write, acquisition, Daily rerun, deploy, publication or R6 execution.",
+  "not_implemented_calculators": [
+    "FCFE",
+    "DDM",
+    "RESIDUAL_INCOME",
+    "RNAV",
+    "SOTP"
+  ],
+  "original_retained_product_identity": "integrated_investment_decision_product/v1:407c747ebb99ca8b7b4635b1d98a91992b371fbcbeabb79b2425bdd305034ccf",
+  "posture_changes": 0,
+  "probability_claims": 0,
+  "product_identity_after": "integrated_investment_decision_product/v1:d2f4f8a5c8da8e67dc6ee75eee3c563bc8482d517ccb40822f3ec9d5ae170441",
+  "product_identity_before": "integrated_investment_decision_product/v1:625173442a36b670e91a992a9fd43692be97c4395ac7676b2c7f3d084f48a2de",
+  "r3_ceiling": "PARTIAL_BY_EVIDENCE / TERMINAL_FOR_CURRENT_SOURCE_SET; no acquisition gates reopened",
+  "r5_state": "COMPLETE_LOCAL_CHECKPOINT",
+  "r6_state": "NEXT / NOT_STARTED / OWNER_AUTHORIZATION_REQUIRED",
+  "readiness_after": {
+    "assumption_source_distribution": {},
+    "bear_base_bull_availability": {
+      "BASE": 0,
+      "BEAR": 0,
+      "BULL": 0
+    },
+    "blocker_prevalence": {
+      "DDM": {
+        "ASSUMPTION_MONETARY_BASIS_INCOMPATIBLE:forecast_dividend": 1469,
+        "ENTITY_APPLICABILITY_UNRESOLVED": 214,
+        "GOVERNED_ASSUMPTION_MISSING:cost_of_equity": 1469,
+        "GOVERNED_ASSUMPTION_MISSING:forecast_dividend": 1469,
+        "PERIOD_END_SHARE_DENOMINATOR_UNQUALIFIED": 1469,
+        "REQUIRED_CANONICAL_INPUT_MISSING:qualified_dividend_per_share": 1469
+      },
+      "FCFE": {
+        "ASSUMPTION_MONETARY_BASIS_INCOMPATIBLE:forecast_fcfe": 1469,
+        "ENTITY_APPLICABILITY_UNRESOLVED": 214,
+        "GOVERNED_ASSUMPTION_MISSING:cost_of_equity": 1469,
+        "GOVERNED_ASSUMPTION_MISSING:forecast_fcfe": 1469,
+        "PERIOD_END_SHARE_DENOMINATOR_UNQUALIFIED": 1469,
+        "REQUIRED_CANONICAL_INPUT_MISSING:qualified_equity_cash_flow": 1469
+      },
+      "FCFF_DCF": {
+        "ASSUMPTION_MONETARY_BASIS_INCOMPATIBLE:forecast_fcff": 1386,
+        "CANONICAL_SCOPE_OR_QUALITY_UNQUALIFIED:capital_expenditure": 1340,
+        "CANONICAL_SCOPE_OR_QUALITY_UNQUALIFIED:cash_and_equivalents": 930,
+        "CANONICAL_SCOPE_OR_QUALITY_UNQUALIFIED:operating_cash_flow": 1340,
+        "CANONICAL_SCOPE_OR_QUALITY_UNQUALIFIED:total_debt": 1382,
+        "CASH_FLOW_DURATION_NOT_QUALIFIED:capital_expenditure": 290,
+        "CASH_FLOW_DURATION_NOT_QUALIFIED:operating_cash_flow": 290,
+        "ENTITY_APPLICABILITY_UNRESOLVED": 214,
+        "FINANCIAL_COMPONENT_ECONOMICS_INVALID:capital_expenditure": 26,
+        "FINANCIAL_LINEAGE_MISSING:capital_expenditure": 1040,
+        "FINANCIAL_LINEAGE_MISSING:cash_and_equivalents": 174,
+        "FINANCIAL_LINEAGE_MISSING:operating_cash_flow": 997,
+        "FINANCIAL_LINEAGE_MISSING:total_debt": 1382,
+        "FINANCIAL_PERIOD_INVALID_OR_FUTURE:capital_expenditure": 2,
+        "FINANCIAL_PERIOD_INVALID_OR_FUTURE:cash_and_equivalents": 2,
+        "FINANCIAL_PERIOD_INVALID_OR_FUTURE:operating_cash_flow": 2,
+        "FINANCIAL_PERIOD_INVALID_OR_FUTURE:total_debt": 2,
+        "FINANCIAL_PERIOD_SCOPE_OR_UNIT_INCOMPATIBLE": 286,
+        "FINANCIAL_SOURCE_CONFLICT:capital_expenditure": 38,
+        "FINANCIAL_SOURCE_CONFLICT:cash_and_equivalents": 7,
+        "FINANCIAL_SOURCE_CONFLICT:operating_cash_flow": 54,
+        "GOVERNED_ASSUMPTION_MISSING:forecast_fcff": 1386,
+        "GOVERNED_ASSUMPTION_MISSING:terminal_growth": 1386,
+        "GOVERNED_ASSUMPTION_MISSING:wacc": 1386,
+        "MONETARY_BASIS_UNQUALIFIED:capital_expenditure": 1382,
+        "MONETARY_BASIS_UNQUALIFIED:cash_and_equivalents": 1382,
+        "MONETARY_BASIS_UNQUALIFIED:operating_cash_flow": 1382,
+        "MONETARY_BASIS_UNQUALIFIED:total_debt": 1382,
+        "ORDINARY_CORPORATE_METHOD_NOT_QUALIFIED_FOR_FINANCIAL_FAMILY": 83,
+        "PERIOD_END_SHARE_DENOMINATOR_UNQUALIFIED": 1386,
+        "REQUIRED_CANONICAL_INPUT_MISSING:capital_expenditure": 4,
+        "REQUIRED_CANONICAL_INPUT_MISSING:cash_and_equivalents": 4,
+        "REQUIRED_CANONICAL_INPUT_MISSING:operating_cash_flow": 4,
+        "REQUIRED_CANONICAL_INPUT_MISSING:total_debt": 4
+      },
+      "NET_NET": {
+        "CANONICAL_SCOPE_OR_QUALITY_UNQUALIFIED:cash_and_equivalents": 930,
+        "CANONICAL_SCOPE_OR_QUALITY_UNQUALIFIED:current_assets": 930,
+        "ENTITY_APPLICABILITY_UNRESOLVED": 214,
+        "FINANCIAL_LINEAGE_MISSING:cash_and_equivalents": 174,
+        "FINANCIAL_LINEAGE_MISSING:current_assets": 174,
+        "FINANCIAL_PERIOD_INVALID_OR_FUTURE:cash_and_equivalents": 2,
+        "FINANCIAL_PERIOD_INVALID_OR_FUTURE:current_assets": 2,
+        "FINANCIAL_SOURCE_CONFLICT:cash_and_equivalents": 7,
+        "FINANCIAL_SOURCE_CONFLICT:current_assets": 7,
+        "GOVERNED_ASSUMPTION_MISSING:cash_realization_ratio": 1386,
+        "GOVERNED_ASSUMPTION_MISSING:inventory_realization_ratio": 1386,
+        "GOVERNED_ASSUMPTION_MISSING:receivables_realization_ratio": 1386,
+        "MONETARY_BASIS_UNQUALIFIED:cash_and_equivalents": 1382,
+        "MONETARY_BASIS_UNQUALIFIED:current_assets": 1382,
+        "ORDINARY_CORPORATE_METHOD_NOT_QUALIFIED_FOR_FINANCIAL_FAMILY": 83,
+        "PERIOD_END_SHARE_DENOMINATOR_UNQUALIFIED": 1386,
+        "REQUIRED_CANONICAL_INPUT_MISSING:cash_and_equivalents": 4,
+        "REQUIRED_CANONICAL_INPUT_MISSING:current_assets": 4,
+        "REQUIRED_CANONICAL_INPUT_MISSING:inventory": 1386,
+        "REQUIRED_CANONICAL_INPUT_MISSING:receivables": 1386,
+        "REQUIRED_CANONICAL_INPUT_MISSING:total_liabilities": 1386
+      },
+      "RESIDUAL_INCOME": {
+        "ASSUMPTION_MONETARY_BASIS_INCOMPATIBLE:forecast_residual_income": 1469,
+        "CANONICAL_SCOPE_OR_QUALITY_UNQUALIFIED:attributable_net_income": 1015,
+        "ENTITY_APPLICABILITY_UNRESOLVED": 214,
+        "FINANCIAL_LINEAGE_MISSING:attributable_net_income": 79,
+        "FINANCIAL_PERIOD_INVALID_OR_FUTURE:attributable_net_income": 2,
+        "FINANCIAL_SOURCE_CONFLICT:attributable_net_income": 1,
+        "GOVERNED_ASSUMPTION_MISSING:cost_of_equity": 1469,
+        "GOVERNED_ASSUMPTION_MISSING:forecast_residual_income": 1469,
+        "MONETARY_BASIS_UNQUALIFIED:attributable_net_income": 1465,
+        "PERIOD_END_SHARE_DENOMINATOR_UNQUALIFIED": 1469,
+        "REQUIRED_CANONICAL_INPUT_MISSING:attributable_net_income": 4,
+        "REQUIRED_CANONICAL_INPUT_MISSING:common_equity_book_value": 1469
+      },
+      "REVERSE_FCFF": {
+        "ASSUMPTION_MONETARY_BASIS_INCOMPATIBLE:forecast_fcff": 1386,
+        "CANONICAL_SCOPE_OR_QUALITY_UNQUALIFIED:capital_expenditure": 1340,
+        "CANONICAL_SCOPE_OR_QUALITY_UNQUALIFIED:cash_and_equivalents": 930,
+        "CANONICAL_SCOPE_OR_QUALITY_UNQUALIFIED:operating_cash_flow": 1340,
+        "CANONICAL_SCOPE_OR_QUALITY_UNQUALIFIED:total_debt": 1382,
+        "CASH_FLOW_DURATION_NOT_QUALIFIED:capital_expenditure": 290,
+        "CASH_FLOW_DURATION_NOT_QUALIFIED:operating_cash_flow": 290,
+        "CURRENT_PRICE_PERIOD_SHARE_OR_UNIT_COMPARISON_UNQUALIFIED": 1386,
+        "ENTITY_APPLICABILITY_UNRESOLVED": 214,
+        "FINANCIAL_COMPONENT_ECONOMICS_INVALID:capital_expenditure": 26,
+        "FINANCIAL_LINEAGE_MISSING:capital_expenditure": 1040,
+        "FINANCIAL_LINEAGE_MISSING:cash_and_equivalents": 174,
+        "FINANCIAL_LINEAGE_MISSING:operating_cash_flow": 997,
+        "FINANCIAL_LINEAGE_MISSING:total_debt": 1382,
+        "FINANCIAL_PERIOD_INVALID_OR_FUTURE:capital_expenditure": 2,
+        "FINANCIAL_PERIOD_INVALID_OR_FUTURE:cash_and_equivalents": 2,
+        "FINANCIAL_PERIOD_INVALID_OR_FUTURE:operating_cash_flow": 2,
+        "FINANCIAL_PERIOD_INVALID_OR_FUTURE:total_debt": 2,
+        "FINANCIAL_PERIOD_SCOPE_OR_UNIT_INCOMPATIBLE": 286,
+        "FINANCIAL_SOURCE_CONFLICT:capital_expenditure": 38,
+        "FINANCIAL_SOURCE_CONFLICT:cash_and_equivalents": 7,
+        "FINANCIAL_SOURCE_CONFLICT:operating_cash_flow": 54,
+        "GOVERNED_ASSUMPTION_MISSING:forecast_fcff": 1386,
+        "GOVERNED_ASSUMPTION_MISSING:growth_lower": 1386,
+        "GOVERNED_ASSUMPTION_MISSING:growth_upper": 1386,
+        "GOVERNED_ASSUMPTION_MISSING:wacc": 1386,
+        "MONETARY_BASIS_UNQUALIFIED:capital_expenditure": 1382,
+        "MONETARY_BASIS_UNQUALIFIED:cash_and_equivalents": 1382,
+        "MONETARY_BASIS_UNQUALIFIED:operating_cash_flow": 1382,
+        "MONETARY_BASIS_UNQUALIFIED:total_debt": 1382,
+        "ORDINARY_CORPORATE_METHOD_NOT_QUALIFIED_FOR_FINANCIAL_FAMILY": 83,
+        "PERIOD_END_SHARE_DENOMINATOR_UNQUALIFIED": 1386,
+        "REQUIRED_CANONICAL_INPUT_MISSING:capital_expenditure": 4,
+        "REQUIRED_CANONICAL_INPUT_MISSING:cash_and_equivalents": 4,
+        "REQUIRED_CANONICAL_INPUT_MISSING:operating_cash_flow": 4,
+        "REQUIRED_CANONICAL_INPUT_MISSING:total_debt": 4
+      },
+      "RNAV": {
+        "ASSUMPTION_MONETARY_BASIS_INCOMPATIBLE:component_values": 1386,
+        "ENTITY_APPLICABILITY_UNRESOLVED": 214,
+        "GOVERNED_ASSUMPTION_MISSING:component_values": 1386,
+        "ORDINARY_CORPORATE_METHOD_NOT_QUALIFIED_FOR_FINANCIAL_FAMILY": 83,
+        "PERIOD_END_SHARE_DENOMINATOR_UNQUALIFIED": 1386,
+        "REPRODUCIBLE_COMPONENT_CATALOG_REQUIRED:reproducible_asset_components": 1386,
+        "REQUIRED_CANONICAL_INPUT_MISSING:reproducible_asset_components": 1386
+      },
+      "SOTP": {
+        "ASSUMPTION_MONETARY_BASIS_INCOMPATIBLE:component_values": 1386,
+        "ENTITY_APPLICABILITY_UNRESOLVED": 214,
+        "GOVERNED_ASSUMPTION_MISSING:component_values": 1386,
+        "ORDINARY_CORPORATE_METHOD_NOT_QUALIFIED_FOR_FINANCIAL_FAMILY": 83,
+        "PERIOD_END_SHARE_DENOMINATOR_UNQUALIFIED": 1386,
+        "REPRODUCIBLE_COMPONENT_CATALOG_REQUIRED:reproducible_segment_components": 1386,
+        "REQUIRED_CANONICAL_INPUT_MISSING:reproducible_segment_components": 1386
+      }
+    },
+    "current_price_comparison_available": 0,
+    "denominator": 1683,
+    "entity_family_counts": {
+      "bank": 28,
+      "corporate": 1386,
+      "finance_company": 1,
+      "insurance": 13,
+      "securities": 41,
+      "unknown": 214
+    },
+    "method_by_entity_family": {
+      "bank": {
+        "DDM": {
+          "BLOCKED": 28
+        },
+        "FCFE": {
+          "BLOCKED": 28
+        },
+        "FCFF_DCF": {
+          "NOT_APPLICABLE": 28
+        },
+        "NET_NET": {
+          "NOT_APPLICABLE": 28
+        },
+        "RESIDUAL_INCOME": {
+          "BLOCKED": 28
+        },
+        "REVERSE_FCFF": {
+          "NOT_APPLICABLE": 28
+        },
+        "RNAV": {
+          "NOT_APPLICABLE": 28
+        },
+        "SOTP": {
+          "NOT_APPLICABLE": 28
+        }
+      },
+      "corporate": {
+        "DDM": {
+          "BLOCKED": 1386
+        },
+        "FCFE": {
+          "BLOCKED": 1386
+        },
+        "FCFF_DCF": {
+          "BLOCKED": 1386
+        },
+        "NET_NET": {
+          "BLOCKED": 1386
+        },
+        "RESIDUAL_INCOME": {
+          "BLOCKED": 1386
+        },
+        "REVERSE_FCFF": {
+          "BLOCKED": 1386
+        },
+        "RNAV": {
+          "BLOCKED": 1386
+        },
+        "SOTP": {
+          "BLOCKED": 1386
+        }
+      },
+      "finance_company": {
+        "DDM": {
+          "BLOCKED": 1
+        },
+        "FCFE": {
+          "BLOCKED": 1
+        },
+        "FCFF_DCF": {
+          "NOT_APPLICABLE": 1
+        },
+        "NET_NET": {
+          "NOT_APPLICABLE": 1
+        },
+        "RESIDUAL_INCOME": {
+          "BLOCKED": 1
+        },
+        "REVERSE_FCFF": {
+          "NOT_APPLICABLE": 1
+        },
+        "RNAV": {
+          "NOT_APPLICABLE": 1
+        },
+        "SOTP": {
+          "NOT_APPLICABLE": 1
+        }
+      },
+      "insurance": {
+        "DDM": {
+          "BLOCKED": 13
+        },
+        "FCFE": {
+          "BLOCKED": 13
+        },
+        "FCFF_DCF": {
+          "NOT_APPLICABLE": 13
+        },
+        "NET_NET": {
+          "NOT_APPLICABLE": 13
+        },
+        "RESIDUAL_INCOME": {
+          "BLOCKED": 13
+        },
+        "REVERSE_FCFF": {
+          "NOT_APPLICABLE": 13
+        },
+        "RNAV": {
+          "NOT_APPLICABLE": 13
+        },
+        "SOTP": {
+          "NOT_APPLICABLE": 13
+        }
+      },
+      "securities": {
+        "DDM": {
+          "BLOCKED": 41
+        },
+        "FCFE": {
+          "BLOCKED": 41
+        },
+        "FCFF_DCF": {
+          "NOT_APPLICABLE": 41
+        },
+        "NET_NET": {
+          "NOT_APPLICABLE": 41
+        },
+        "RESIDUAL_INCOME": {
+          "BLOCKED": 41
+        },
+        "REVERSE_FCFF": {
+          "NOT_APPLICABLE": 41
+        },
+        "RNAV": {
+          "NOT_APPLICABLE": 41
+        },
+        "SOTP": {
+          "NOT_APPLICABLE": 41
+        }
+      },
+      "unknown": {
+        "DDM": {
+          "BLOCKED": 214
+        },
+        "FCFE": {
+          "BLOCKED": 214
+        },
+        "FCFF_DCF": {
+          "BLOCKED": 214
+        },
+        "NET_NET": {
+          "BLOCKED": 214
+        },
+        "RESIDUAL_INCOME": {
+          "BLOCKED": 214
+        },
+        "REVERSE_FCFF": {
+          "BLOCKED": 214
+        },
+        "RNAV": {
+          "BLOCKED": 214
+        },
+        "SOTP": {
+          "BLOCKED": 214
+        }
+      }
+    },
+    "method_readiness": {
+      "DDM": {
+        "BLOCKED": 1683
+      },
+      "FCFE": {
+        "BLOCKED": 1683
+      },
+      "FCFF_DCF": {
+        "BLOCKED": 1600,
+        "NOT_APPLICABLE": 83
+      },
+      "NET_NET": {
+        "BLOCKED": 1600,
+        "NOT_APPLICABLE": 83
+      },
+      "RESIDUAL_INCOME": {
+        "BLOCKED": 1683
+      },
+      "REVERSE_FCFF": {
+        "BLOCKED": 1600,
+        "NOT_APPLICABLE": 83
+      },
+      "RNAV": {
+        "BLOCKED": 1600,
+        "NOT_APPLICABLE": 83
+      },
+      "SOTP": {
+        "BLOCKED": 1600,
+        "NOT_APPLICABLE": 83
+      }
+    },
+    "reverse_implied_only_tickers": 0,
+    "sensitivity_available": 0,
+    "tickers_with_at_least_one_scenario_valued_method": 0,
+    "tickers_with_no_intrinsic_method": 1683
+  },
+  "readiness_before": {
+    "blocker_prevalence": {
+      "DDM": {
+        "ASSUMPTION_MONETARY_BASIS_INCOMPATIBLE:forecast_dividend": 1469,
+        "ENTITY_APPLICABILITY_UNRESOLVED": 214,
+        "GOVERNED_ASSUMPTION_MISSING:cost_of_equity": 1469,
+        "GOVERNED_ASSUMPTION_MISSING:forecast_dividend": 1469,
+        "PERIOD_END_SHARE_DENOMINATOR_UNQUALIFIED": 1469,
+        "REQUIRED_CANONICAL_INPUT_MISSING:qualified_dividend_per_share": 1469
+      },
+      "FCFE": {
+        "ASSUMPTION_MONETARY_BASIS_INCOMPATIBLE:forecast_fcfe": 1469,
+        "ENTITY_APPLICABILITY_UNRESOLVED": 214,
+        "GOVERNED_ASSUMPTION_MISSING:cost_of_equity": 1469,
+        "GOVERNED_ASSUMPTION_MISSING:forecast_fcfe": 1469,
+        "PERIOD_END_SHARE_DENOMINATOR_UNQUALIFIED": 1469,
+        "REQUIRED_CANONICAL_INPUT_MISSING:qualified_equity_cash_flow": 1469
+      },
+      "FCFF_DCF": {
+        "ASSUMPTION_MONETARY_BASIS_INCOMPATIBLE:forecast_fcff": 1386,
+        "CANONICAL_SCOPE_OR_QUALITY_UNQUALIFIED:capital_expenditure": 1340,
+        "CANONICAL_SCOPE_OR_QUALITY_UNQUALIFIED:cash_and_equivalents": 930,
+        "CANONICAL_SCOPE_OR_QUALITY_UNQUALIFIED:operating_cash_flow": 1340,
+        "CANONICAL_SCOPE_OR_QUALITY_UNQUALIFIED:total_debt": 1382,
+        "CASH_FLOW_DURATION_NOT_QUALIFIED:capital_expenditure": 290,
+        "CASH_FLOW_DURATION_NOT_QUALIFIED:operating_cash_flow": 290,
+        "ENTITY_APPLICABILITY_UNRESOLVED": 214,
+        "FINANCIAL_COMPONENT_ECONOMICS_INVALID:capital_expenditure": 26,
+        "FINANCIAL_LINEAGE_MISSING:capital_expenditure": 1040,
+        "FINANCIAL_LINEAGE_MISSING:cash_and_equivalents": 174,
+        "FINANCIAL_LINEAGE_MISSING:operating_cash_flow": 997,
+        "FINANCIAL_LINEAGE_MISSING:total_debt": 1382,
+        "FINANCIAL_PERIOD_INVALID_OR_FUTURE:capital_expenditure": 2,
+        "FINANCIAL_PERIOD_INVALID_OR_FUTURE:cash_and_equivalents": 2,
+        "FINANCIAL_PERIOD_INVALID_OR_FUTURE:operating_cash_flow": 2,
+        "FINANCIAL_PERIOD_INVALID_OR_FUTURE:total_debt": 2,
+        "FINANCIAL_PERIOD_SCOPE_OR_UNIT_INCOMPATIBLE": 286,
+        "FINANCIAL_SOURCE_CONFLICT:capital_expenditure": 38,
+        "FINANCIAL_SOURCE_CONFLICT:cash_and_equivalents": 7,
+        "FINANCIAL_SOURCE_CONFLICT:operating_cash_flow": 54,
+        "GOVERNED_ASSUMPTION_MISSING:forecast_fcff": 1386,
+        "GOVERNED_ASSUMPTION_MISSING:terminal_growth": 1386,
+        "GOVERNED_ASSUMPTION_MISSING:wacc": 1386,
+        "MONETARY_BASIS_UNQUALIFIED:capital_expenditure": 1382,
+        "MONETARY_BASIS_UNQUALIFIED:cash_and_equivalents": 1382,
+        "MONETARY_BASIS_UNQUALIFIED:operating_cash_flow": 1382,
+        "MONETARY_BASIS_UNQUALIFIED:total_debt": 1382,
+        "ORDINARY_CORPORATE_METHOD_NOT_QUALIFIED_FOR_FINANCIAL_FAMILY": 83,
+        "PERIOD_END_SHARE_DENOMINATOR_UNQUALIFIED": 1386,
+        "REQUIRED_CANONICAL_INPUT_MISSING:capital_expenditure": 4,
+        "REQUIRED_CANONICAL_INPUT_MISSING:cash_and_equivalents": 4,
+        "REQUIRED_CANONICAL_INPUT_MISSING:operating_cash_flow": 4,
+        "REQUIRED_CANONICAL_INPUT_MISSING:total_debt": 4
+      },
+      "NET_NET": {
+        "CANONICAL_SCOPE_OR_QUALITY_UNQUALIFIED:cash_and_equivalents": 930,
+        "CANONICAL_SCOPE_OR_QUALITY_UNQUALIFIED:current_assets": 930,
+        "ENTITY_APPLICABILITY_UNRESOLVED": 214,
+        "FINANCIAL_LINEAGE_MISSING:cash_and_equivalents": 174,
+        "FINANCIAL_LINEAGE_MISSING:current_assets": 174,
+        "FINANCIAL_PERIOD_INVALID_OR_FUTURE:cash_and_equivalents": 2,
+        "FINANCIAL_PERIOD_INVALID_OR_FUTURE:current_assets": 2,
+        "FINANCIAL_SOURCE_CONFLICT:cash_and_equivalents": 7,
+        "FINANCIAL_SOURCE_CONFLICT:current_assets": 7,
+        "GOVERNED_ASSUMPTION_MISSING:cash_realization_ratio": 1386,
+        "GOVERNED_ASSUMPTION_MISSING:inventory_realization_ratio": 1386,
+        "GOVERNED_ASSUMPTION_MISSING:receivables_realization_ratio": 1386,
+        "MONETARY_BASIS_UNQUALIFIED:cash_and_equivalents": 1382,
+        "MONETARY_BASIS_UNQUALIFIED:current_assets": 1382,
+        "ORDINARY_CORPORATE_METHOD_NOT_QUALIFIED_FOR_FINANCIAL_FAMILY": 83,
+        "PERIOD_END_SHARE_DENOMINATOR_UNQUALIFIED": 1386,
+        "REQUIRED_CANONICAL_INPUT_MISSING:cash_and_equivalents": 4,
+        "REQUIRED_CANONICAL_INPUT_MISSING:current_assets": 4,
+        "REQUIRED_CANONICAL_INPUT_MISSING:inventory": 1386,
+        "REQUIRED_CANONICAL_INPUT_MISSING:receivables": 1386,
+        "REQUIRED_CANONICAL_INPUT_MISSING:total_liabilities": 1386
+      },
+      "RESIDUAL_INCOME": {
+        "ASSUMPTION_MONETARY_BASIS_INCOMPATIBLE:forecast_residual_income": 1469,
+        "CANONICAL_SCOPE_OR_QUALITY_UNQUALIFIED:attributable_net_income": 1015,
+        "ENTITY_APPLICABILITY_UNRESOLVED": 214,
+        "FINANCIAL_LINEAGE_MISSING:attributable_net_income": 79,
+        "FINANCIAL_PERIOD_INVALID_OR_FUTURE:attributable_net_income": 2,
+        "FINANCIAL_SOURCE_CONFLICT:attributable_net_income": 1,
+        "GOVERNED_ASSUMPTION_MISSING:cost_of_equity": 1469,
+        "GOVERNED_ASSUMPTION_MISSING:forecast_residual_income": 1469,
+        "MONETARY_BASIS_UNQUALIFIED:attributable_net_income": 1465,
+        "PERIOD_END_SHARE_DENOMINATOR_UNQUALIFIED": 1469,
+        "REQUIRED_CANONICAL_INPUT_MISSING:attributable_net_income": 4,
+        "REQUIRED_CANONICAL_INPUT_MISSING:common_equity_book_value": 1469
+      },
+      "REVERSE_FCFF": {
+        "ASSUMPTION_MONETARY_BASIS_INCOMPATIBLE:forecast_fcff": 1386,
+        "CANONICAL_SCOPE_OR_QUALITY_UNQUALIFIED:capital_expenditure": 1340,
+        "CANONICAL_SCOPE_OR_QUALITY_UNQUALIFIED:cash_and_equivalents": 930,
+        "CANONICAL_SCOPE_OR_QUALITY_UNQUALIFIED:operating_cash_flow": 1340,
+        "CANONICAL_SCOPE_OR_QUALITY_UNQUALIFIED:total_debt": 1382,
+        "CASH_FLOW_DURATION_NOT_QUALIFIED:capital_expenditure": 290,
+        "CASH_FLOW_DURATION_NOT_QUALIFIED:operating_cash_flow": 290,
+        "CURRENT_PRICE_PERIOD_SHARE_OR_UNIT_COMPARISON_UNQUALIFIED": 1386,
+        "ENTITY_APPLICABILITY_UNRESOLVED": 214,
+        "FINANCIAL_COMPONENT_ECONOMICS_INVALID:capital_expenditure": 26,
+        "FINANCIAL_LINEAGE_MISSING:capital_expenditure": 1040,
+        "FINANCIAL_LINEAGE_MISSING:cash_and_equivalents": 174,
+        "FINANCIAL_LINEAGE_MISSING:operating_cash_flow": 997,
+        "FINANCIAL_LINEAGE_MISSING:total_debt": 1382,
+        "FINANCIAL_PERIOD_INVALID_OR_FUTURE:capital_expenditure": 2,
+        "FINANCIAL_PERIOD_INVALID_OR_FUTURE:cash_and_equivalents": 2,
+        "FINANCIAL_PERIOD_INVALID_OR_FUTURE:operating_cash_flow": 2,
+        "FINANCIAL_PERIOD_INVALID_OR_FUTURE:total_debt": 2,
+        "FINANCIAL_PERIOD_SCOPE_OR_UNIT_INCOMPATIBLE": 286,
+        "FINANCIAL_SOURCE_CONFLICT:capital_expenditure": 38,
+        "FINANCIAL_SOURCE_CONFLICT:cash_and_equivalents": 7,
+        "FINANCIAL_SOURCE_CONFLICT:operating_cash_flow": 54,
+        "GOVERNED_ASSUMPTION_MISSING:forecast_fcff": 1386,
+        "GOVERNED_ASSUMPTION_MISSING:growth_lower": 1386,
+        "GOVERNED_ASSUMPTION_MISSING:growth_upper": 1386,
+        "GOVERNED_ASSUMPTION_MISSING:wacc": 1386,
+        "MONETARY_BASIS_UNQUALIFIED:capital_expenditure": 1382,
+        "MONETARY_BASIS_UNQUALIFIED:cash_and_equivalents": 1382,
+        "MONETARY_BASIS_UNQUALIFIED:operating_cash_flow": 1382,
+        "MONETARY_BASIS_UNQUALIFIED:total_debt": 1382,
+        "ORDINARY_CORPORATE_METHOD_NOT_QUALIFIED_FOR_FINANCIAL_FAMILY": 83,
+        "PERIOD_END_SHARE_DENOMINATOR_UNQUALIFIED": 1386,
+        "REQUIRED_CANONICAL_INPUT_MISSING:capital_expenditure": 4,
+        "REQUIRED_CANONICAL_INPUT_MISSING:cash_and_equivalents": 4,
+        "REQUIRED_CANONICAL_INPUT_MISSING:operating_cash_flow": 4,
+        "REQUIRED_CANONICAL_INPUT_MISSING:total_debt": 4
+      },
+      "RNAV": {
+        "ASSUMPTION_MONETARY_BASIS_INCOMPATIBLE:component_values": 1386,
+        "ENTITY_APPLICABILITY_UNRESOLVED": 214,
+        "GOVERNED_ASSUMPTION_MISSING:component_values": 1386,
+        "ORDINARY_CORPORATE_METHOD_NOT_QUALIFIED_FOR_FINANCIAL_FAMILY": 83,
+        "PERIOD_END_SHARE_DENOMINATOR_UNQUALIFIED": 1386,
+        "REPRODUCIBLE_COMPONENT_CATALOG_REQUIRED:reproducible_asset_components": 1386,
+        "REQUIRED_CANONICAL_INPUT_MISSING:reproducible_asset_components": 1386
+      },
+      "SOTP": {
+        "ASSUMPTION_MONETARY_BASIS_INCOMPATIBLE:component_values": 1386,
+        "ENTITY_APPLICABILITY_UNRESOLVED": 214,
+        "GOVERNED_ASSUMPTION_MISSING:component_values": 1386,
+        "ORDINARY_CORPORATE_METHOD_NOT_QUALIFIED_FOR_FINANCIAL_FAMILY": 83,
+        "PERIOD_END_SHARE_DENOMINATOR_UNQUALIFIED": 1386,
+        "REPRODUCIBLE_COMPONENT_CATALOG_REQUIRED:reproducible_segment_components": 1386,
+        "REQUIRED_CANONICAL_INPUT_MISSING:reproducible_segment_components": 1386
+      }
+    },
+    "denominator": 1683,
+    "entity_family_counts": {
+      "bank": 28,
+      "corporate": 1386,
+      "finance_company": 1,
+      "insurance": 13,
+      "securities": 41,
+      "unknown": 214
+    },
+    "method_by_entity_family": {
+      "bank": {
+        "DDM": {
+          "BLOCKED": 28
+        },
+        "FCFE": {
+          "BLOCKED": 28
+        },
+        "FCFF_DCF": {
+          "NOT_APPLICABLE": 28
+        },
+        "NET_NET": {
+          "NOT_APPLICABLE": 28
+        },
+        "RESIDUAL_INCOME": {
+          "BLOCKED": 28
+        },
+        "REVERSE_FCFF": {
+          "NOT_APPLICABLE": 28
+        },
+        "RNAV": {
+          "NOT_APPLICABLE": 28
+        },
+        "SOTP": {
+          "NOT_APPLICABLE": 28
+        }
+      },
+      "corporate": {
+        "DDM": {
+          "BLOCKED": 1386
+        },
+        "FCFE": {
+          "BLOCKED": 1386
+        },
+        "FCFF_DCF": {
+          "BLOCKED": 1386
+        },
+        "NET_NET": {
+          "BLOCKED": 1386
+        },
+        "RESIDUAL_INCOME": {
+          "BLOCKED": 1386
+        },
+        "REVERSE_FCFF": {
+          "BLOCKED": 1386
+        },
+        "RNAV": {
+          "BLOCKED": 1386
+        },
+        "SOTP": {
+          "BLOCKED": 1386
+        }
+      },
+      "finance_company": {
+        "DDM": {
+          "BLOCKED": 1
+        },
+        "FCFE": {
+          "BLOCKED": 1
+        },
+        "FCFF_DCF": {
+          "NOT_APPLICABLE": 1
+        },
+        "NET_NET": {
+          "NOT_APPLICABLE": 1
+        },
+        "RESIDUAL_INCOME": {
+          "BLOCKED": 1
+        },
+        "REVERSE_FCFF": {
+          "NOT_APPLICABLE": 1
+        },
+        "RNAV": {
+          "NOT_APPLICABLE": 1
+        },
+        "SOTP": {
+          "NOT_APPLICABLE": 1
+        }
+      },
+      "insurance": {
+        "DDM": {
+          "BLOCKED": 13
+        },
+        "FCFE": {
+          "BLOCKED": 13
+        },
+        "FCFF_DCF": {
+          "NOT_APPLICABLE": 13
+        },
+        "NET_NET": {
+          "NOT_APPLICABLE": 13
+        },
+        "RESIDUAL_INCOME": {
+          "BLOCKED": 13
+        },
+        "REVERSE_FCFF": {
+          "NOT_APPLICABLE": 13
+        },
+        "RNAV": {
+          "NOT_APPLICABLE": 13
+        },
+        "SOTP": {
+          "NOT_APPLICABLE": 13
+        }
+      },
+      "securities": {
+        "DDM": {
+          "BLOCKED": 41
+        },
+        "FCFE": {
+          "BLOCKED": 41
+        },
+        "FCFF_DCF": {
+          "NOT_APPLICABLE": 41
+        },
+        "NET_NET": {
+          "NOT_APPLICABLE": 41
+        },
+        "RESIDUAL_INCOME": {
+          "BLOCKED": 41
+        },
+        "REVERSE_FCFF": {
+          "NOT_APPLICABLE": 41
+        },
+        "RNAV": {
+          "NOT_APPLICABLE": 41
+        },
+        "SOTP": {
+          "NOT_APPLICABLE": 41
+        }
+      },
+      "unknown": {
+        "DDM": {
+          "BLOCKED": 214
+        },
+        "FCFE": {
+          "BLOCKED": 214
+        },
+        "FCFF_DCF": {
+          "BLOCKED": 214
+        },
+        "NET_NET": {
+          "BLOCKED": 214
+        },
+        "RESIDUAL_INCOME": {
+          "BLOCKED": 214
+        },
+        "REVERSE_FCFF": {
+          "BLOCKED": 214
+        },
+        "RNAV": {
+          "BLOCKED": 214
+        },
+        "SOTP": {
+          "BLOCKED": 214
+        }
+      }
+    },
+    "method_readiness": {
+      "DDM": {
+        "BLOCKED": 1683
+      },
+      "FCFE": {
+        "BLOCKED": 1683
+      },
+      "FCFF_DCF": {
+        "BLOCKED": 1600,
+        "NOT_APPLICABLE": 83
+      },
+      "NET_NET": {
+        "BLOCKED": 1600,
+        "NOT_APPLICABLE": 83
+      },
+      "RESIDUAL_INCOME": {
+        "BLOCKED": 1683
+      },
+      "REVERSE_FCFF": {
+        "BLOCKED": 1600,
+        "NOT_APPLICABLE": 83
+      },
+      "RNAV": {
+        "BLOCKED": 1600,
+        "NOT_APPLICABLE": 83
+      },
+      "SOTP": {
+        "BLOCKED": 1600,
+        "NOT_APPLICABLE": 83
+      }
+    }
+  },
+  "reopen_gates": {
+    "DDM": "Qualified common-dividend-per-share evidence, shares, own cost-of-equity/dividend-forecast assumptions and separately validated DDM implementation.",
+    "ENTITY": "Qualified retained entity evidence; unresolved family is not monetary or forecast proof.",
+    "FCFE": "Qualified equity-cash-flow inputs, shares, own cost-of-equity/forecast assumptions and separately validated FCFE implementation.",
+    "FCFF_DCF": "Qualified same-period/scope OCF, CapEx, interest-bearing debt and cash with declared money basis; qualified period-end shares; explicit provenance-bound FCFF/WACC/terminal-growth assumptions.",
+    "NET_NET": "Qualified cash/receivables/inventory/total liabilities/current assets with compatible period/scope/money/share basis and explicit component-realization assumptions.",
+    "RESIDUAL_INCOME": "Qualified common-equity book value/attributable earnings/shares, own cost-of-equity/residual-income assumptions and separately validated residual-income implementation.",
+    "REVERSE_FCFF": "Qualified FCFF/WACC/admissible bounds and same-session price/share/unit proof with a valid market-EV bridge; output remains model implication.",
+    "RNAV": "Explicit reproducible asset components with values/period/scope/units/provenance, qualified shares/component assumptions and separately validated sector-appropriate RNAV implementation.",
+    "SOTP": "Explicit reproducible segment components with values/period/scope/units/provenance, qualified shares/component assumptions and separately validated sector-appropriate SOTP implementation."
+  },
+  "retained_sources_unchanged": true,
+  "session": "2026-10-01",
+  "source_byte_hashes": {
+    "corporate": "c5ea89310c5176801f49cc720a9fb19984043eefd98e1eea9402ca95be1e0979",
+    "entities": "c2a30c4b1ef8c613f545fd8b51014823bef8d35a2db04afcdd51887218352b73",
+    "financial": "bd236476dc0392e126eceda76536bc3ef3716b577902eb9fbf28f64ab4d312a2",
+    "governed_config": "7525984e2fa8a1d2812614b8dc66e07e29c7b74b661fccafe27308277aa52e16",
+    "integrated": "a70d3c1a444d4b3d793833f2cdaed24acc5e640f4c28b5892c76bf78d3feff00",
+    "raw_valuation": "eb7a767ff6aaeefa9e2994103da59f55c0a87d24634983734877d2df02c3bba3",
+    "semantic_facts": "47a4e6d11df339267ba9d4107b34efc1c4c1f563f5fd08e8a2edda23cc5c2e5f",
+    "semantic_metadata": "8da0ceb342635cbc3836915c1898bec912a41212b87e08626fda5d55bfa7a178",
+    "valuation": "70f4003f615d2d4ce30b97bdf6ffbf862c51911b4765a632a18ff44b6325791c"
+  },
+  "source_path_contract": "Explicit canonical paths in tools/replay_intrinsic_scenario_valuation.py; retained financial authority pin 2026-09-05.1. Hash keys bind exact inputs; governed_config is the tracked empty configuration, not a retained source modification.",
+  "top_blocker_reasons": {
+    "DDM": [
+      [
+        "ASSUMPTION_MONETARY_BASIS_INCOMPATIBLE:forecast_dividend",
+        1469
+      ],
+      [
+        "GOVERNED_ASSUMPTION_MISSING:cost_of_equity",
+        1469
+      ],
+      [
+        "GOVERNED_ASSUMPTION_MISSING:forecast_dividend",
+        1469
+      ],
+      [
+        "PERIOD_END_SHARE_DENOMINATOR_UNQUALIFIED",
+        1469
+      ],
+      [
+        "REQUIRED_CANONICAL_INPUT_MISSING:qualified_dividend_per_share",
+        1469
+      ]
+    ],
+    "FCFE": [
+      [
+        "ASSUMPTION_MONETARY_BASIS_INCOMPATIBLE:forecast_fcfe",
+        1469
+      ],
+      [
+        "GOVERNED_ASSUMPTION_MISSING:cost_of_equity",
+        1469
+      ],
+      [
+        "GOVERNED_ASSUMPTION_MISSING:forecast_fcfe",
+        1469
+      ],
+      [
+        "PERIOD_END_SHARE_DENOMINATOR_UNQUALIFIED",
+        1469
+      ],
+      [
+        "REQUIRED_CANONICAL_INPUT_MISSING:qualified_equity_cash_flow",
+        1469
+      ]
+    ],
+    "FCFF_DCF": [
+      [
+        "ASSUMPTION_MONETARY_BASIS_INCOMPATIBLE:forecast_fcff",
+        1386
+      ],
+      [
+        "GOVERNED_ASSUMPTION_MISSING:forecast_fcff",
+        1386
+      ],
+      [
+        "GOVERNED_ASSUMPTION_MISSING:terminal_growth",
+        1386
+      ],
+      [
+        "GOVERNED_ASSUMPTION_MISSING:wacc",
+        1386
+      ],
+      [
+        "PERIOD_END_SHARE_DENOMINATOR_UNQUALIFIED",
+        1386
+      ]
+    ],
+    "NET_NET": [
+      [
+        "GOVERNED_ASSUMPTION_MISSING:cash_realization_ratio",
+        1386
+      ],
+      [
+        "GOVERNED_ASSUMPTION_MISSING:inventory_realization_ratio",
+        1386
+      ],
+      [
+        "GOVERNED_ASSUMPTION_MISSING:receivables_realization_ratio",
+        1386
+      ],
+      [
+        "PERIOD_END_SHARE_DENOMINATOR_UNQUALIFIED",
+        1386
+      ],
+      [
+        "REQUIRED_CANONICAL_INPUT_MISSING:inventory",
+        1386
+      ]
+    ],
+    "RESIDUAL_INCOME": [
+      [
+        "ASSUMPTION_MONETARY_BASIS_INCOMPATIBLE:forecast_residual_income",
+        1469
+      ],
+      [
+        "GOVERNED_ASSUMPTION_MISSING:cost_of_equity",
+        1469
+      ],
+      [
+        "GOVERNED_ASSUMPTION_MISSING:forecast_residual_income",
+        1469
+      ],
+      [
+        "PERIOD_END_SHARE_DENOMINATOR_UNQUALIFIED",
+        1469
+      ],
+      [
+        "REQUIRED_CANONICAL_INPUT_MISSING:common_equity_book_value",
+        1469
+      ]
+    ],
+    "REVERSE_FCFF": [
+      [
+        "ASSUMPTION_MONETARY_BASIS_INCOMPATIBLE:forecast_fcff",
+        1386
+      ],
+      [
+        "CURRENT_PRICE_PERIOD_SHARE_OR_UNIT_COMPARISON_UNQUALIFIED",
+        1386
+      ],
+      [
+        "GOVERNED_ASSUMPTION_MISSING:forecast_fcff",
+        1386
+      ],
+      [
+        "GOVERNED_ASSUMPTION_MISSING:growth_lower",
+        1386
+      ],
+      [
+        "GOVERNED_ASSUMPTION_MISSING:growth_upper",
+        1386
+      ]
+    ],
+    "RNAV": [
+      [
+        "ASSUMPTION_MONETARY_BASIS_INCOMPATIBLE:component_values",
+        1386
+      ],
+      [
+        "GOVERNED_ASSUMPTION_MISSING:component_values",
+        1386
+      ],
+      [
+        "PERIOD_END_SHARE_DENOMINATOR_UNQUALIFIED",
+        1386
+      ],
+      [
+        "REPRODUCIBLE_COMPONENT_CATALOG_REQUIRED:reproducible_asset_components",
+        1386
+      ],
+      [
+        "REQUIRED_CANONICAL_INPUT_MISSING:reproducible_asset_components",
+        1386
+      ]
+    ],
+    "SOTP": [
+      [
+        "ASSUMPTION_MONETARY_BASIS_INCOMPATIBLE:component_values",
+        1386
+      ],
+      [
+        "GOVERNED_ASSUMPTION_MISSING:component_values",
+        1386
+      ],
+      [
+        "PERIOD_END_SHARE_DENOMINATOR_UNQUALIFIED",
+        1386
+      ],
+      [
+        "REPRODUCIBLE_COMPONENT_CATALOG_REQUIRED:reproducible_segment_components",
+        1386
+      ],
+      [
+        "REQUIRED_CANONICAL_INPUT_MISSING:reproducible_segment_components",
+        1386
+      ]
+    ]
+  },
+  "unexplained_analytical_changes": 0,
+  "validation": {
+    "adjacent_regressions": "267 passed, 1 independently proven baseline assertion deselected",
+    "baseline_failure": {
+      "axis": "CONSERVATIVE",
+      "baseline_scenario_module_and_test_identical": true,
+      "expected": "SUPPORTED",
+      "node": "tests/test_current_research_scenario_context.py::CurrentScenarioArtifactTests::test_representative_real_cases",
+      "observed": "CONDITIONALLY_SUPPORTED",
+      "reproduced_starting_commit": "95c9e6fd5aa1ff381bb9569360c6fe5961f37337",
+      "ticker": "AAM",
+      "unrelated_code_not_modified": true
+    },
+    "final_affected_valuation_decision_regressions": "236 passed, including 57 R5 adversarial/unit cases",
+    "git_diff_check": "PASS",
+    "py_compile": "PASS: all six modified implementation modules plus replay helper and R5 tests",
+    "retained_replay": "PASS:1683, deterministic/additive-only/decision-fitness/source-hash checks",
+    "roadmap_check": "ON_TRACK / DRIFT PASS; precommit warnings describe current R5 tracked edits and inherited literal HEAD checkpoint sentinels. R5 dependency satisfied; R6 NEXT and not authorized."
+  }
+}

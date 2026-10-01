@@ -1,5 +1,12 @@
 # Decisions & Architectural Decision Records
 
+## 2026-10-02 — cumulative R5–R7 release ownership
+
+The owner delegates stack review, ordinary commits/push/PR/green-CI merge, main synchronization, post-release system review and sequential evidence-based roadmap execution. This session authorization supersedes historical per-milestone stop pointers only for this job. Source governance, immutable evidence, single-writer and broker/production safety boundaries remain binding.
+
+The release branch preserves the exact linear checkpoints 397c05c → 938641c → 285313d from remote main 95c9e6f. Producer is an older Daily branch with untracked data and is preserved until safe synchronization. Cumulative review rejects conflicting latest-period share denominators and requires a Boolean true executed lifecycle; hash order and truthy planned labels cannot establish facts. No authority is promoted.
+
+
 
 ## 2026-10-01 — Capability roadmap rebaseline and incremental repository packaging
 

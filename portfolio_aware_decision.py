@@ -545,6 +545,63 @@ def _compute_risk_sizing(*, entry_price: float | None, invalidation_price: float
             "risk_budget_amount": risk_budget_amount, "risk_budget_quantity": risk_budget_quantity}
 
 
+def governed_research_sizing(inputs: Mapping[str, Any] | None = None) -> dict[str, Any]:
+    """R7 strict adapter around the existing risk/minimum-cap engine; no policy defaults.
+
+    Price, capital and invalidation use explicitly identical monetary units. The
+    existing private portfolio default resolver is intentionally not invoked here.
+    An absent risk denominator cannot fall through to an unrelated liquidity cap.
+    """
+    i = dict(inputs or {})
+    reasons = []
+    values = {}
+    for field in ("capital", "risk_budget_fraction", "entry_price", "invalidation_price"):
+        value = i.get(field)
+        try:
+            number = float(value) if not isinstance(value, bool) else float("nan")
+        except (TypeError, ValueError, OverflowError):
+            number = float("nan")
+        if not math.isfinite(number) or number <= 0:
+            reasons.append("MISSING_OR_INVALID_" + field.upper())
+        else:
+            values[field] = number
+    if not i.get("input_identity") or not i.get("policy_identity"):
+        reasons.append("EXPLICIT_GOVERNED_INPUT_AND_POLICY_IDENTITY_REQUIRED")
+    if i.get("price_fitness") != "CURRENT_RESEARCH_ELIGIBLE" or not i.get("price_identity"):
+        reasons.append("CURRENT_QUALIFIED_RESEARCH_PRICE_REQUIRED")
+    if not i.get("monetary_unit") or len({i.get(k) for k in ("capital_unit", "price_unit", "invalidation_unit")}) != 1 or i.get("capital_unit") != i.get("monetary_unit"):
+        reasons.append("MONETARY_UNITS_NOT_EXPLICITLY_COMPARABLE")
+    if values.get("risk_budget_fraction", 0) > 1:
+        reasons.append("RISK_BUDGET_OUT_OF_DOMAIN")
+    if values.get("invalidation_price", 0) >= values.get("entry_price", 0):
+        reasons.append("LONG_RESEARCH_INVALIDATION_DISTANCE_NOT_POSITIVE")
+    if not i.get("invalidation_identity"):
+        reasons.append("DETERMINISTIC_INVALIDATION_IDENTITY_REQUIRED")
+    risk = _compute_risk_sizing(entry_price=values.get("entry_price"), invalidation_price=values.get("invalidation_price"),
+                                effective_nav=values.get("capital"), risk_budget_fraction=values.get("risk_budget_fraction")) if not reasons else {"status": "BLOCKED", "risk_budget_quantity": None}
+    constraints = {}
+    for name in ("single_name", "sector", "gross_exposure"):
+        c = (i.get("concentration_constraints") or {}).get(name) or {}
+        q = c.get("remaining_quantity")
+        valid = c.get("policy_identity") == i.get("policy_identity") and isinstance(q, int) and not isinstance(q, bool) and q >= 0
+        constraints[name] = {"remaining_quantity": q if valid else None}
+    envelope = _research_size_envelope(risk_sizing=risk, execution_capacity_envelope=i.get("execution_capacity_research"),
+                                      single_constraint=constraints["single_name"], sector_constraint=constraints["sector"],
+                                      gross_constraint=constraints["gross_exposure"], sizing_policy_version=i.get("policy_identity"),
+                                      portfolio_state_identity=i.get("input_identity"), security_decision_identity=i.get("price_identity"))
+    # An envelope may contain other caps, but cannot be reported as risk size without risk.
+    theoretical = envelope.get("research_size_envelope_shares") if not reasons else None
+    body = {"contract_version": "governed_portfolio_research_sizing/v1", "method": "EXISTING_RISK_BUDGET_OVER_INVALIDATION_DISTANCE_AND_EXISTING_MINIMUM_CAP_ENGINE",
+            "theoretical_risk_size_research": {"state": envelope["state"] if theoretical is not None else "BLOCKED", "quantity": theoretical,
+                                               "binding_constraint": envelope["binding_constraint"] if theoretical is not None else None},
+            "execution_eligible_size": {"state": "BLOCKED_BY_EVIDENCE", "quantity": None,
+                                         "reason_codes": ["EXISTING_CONTRACT_DOES_NOT_GRANT_EXECUTION_SIZE", "SEPARATE_OWNER_AUTHORITY_PROMOTION_REQUIRED"]},
+            "risk_sizing": risk, "research_envelope": envelope,
+            "reason_codes": sorted(set(reasons + envelope["reason_codes"])), "input_identity": i.get("input_identity"),
+            "policy_identity": i.get("policy_identity"), "is_actionable": False, "authority_effect": "NONE"}
+    return {**body, **_identity("governed_portfolio_research_sizing", body)}
+
+
 def _research_size_envelope(
     *, risk_sizing: Mapping[str, Any], execution_capacity_envelope: Mapping[str, Any] | None,
     single_constraint: Mapping[str, Any], sector_constraint: Mapping[str, Any],

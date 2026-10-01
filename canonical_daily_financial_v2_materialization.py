@@ -248,6 +248,7 @@ def build_evaluated_valuation_artifact(
     calculation_readiness_context: Mapping[str, Any] | None = None,
     entity_applicability_artifact: Mapping[str, Any] | None = None,
     semantic_rows: Sequence[Mapping[str, Any]] | None = None,
+    decision_session: str | None = None,
 ) -> dict[str, Any]:
     """Evaluate the raw ``market_wide_current_valuation_input_scaleout`` per-ticker records
     into the ``current_research_valuation_context/v1`` shape (``methods``, ``peer_relative_
@@ -305,6 +306,24 @@ def build_evaluated_valuation_artifact(
         for ticker in product_tickers
     }
     rows = valuation_context.attach_peer_relative(rows)
+    # R5 reuses the canonical semantic input chain and the governed entity resolution.
+    # Missing assumptions remain component-local; no relative verdict or policy is replaced.
+    import intrinsic_valuation as intrinsic
+    model_session = decision_session or (calculation_readiness_context or {}).get("decision_session")
+    if model_session is not None:
+        assumptions, config_identity = intrinsic.load_governed_assumption_config(
+            Path(__file__).resolve().parent / "config/current_research_valuation_assumptions.json")
+        intrinsic_inputs = intrinsic.inputs_from_semantic_rows(
+            semantic_rows or (), tickers=set(product_tickers), session=model_session,
+            entities=applicability_records, assumptions=assumptions)
+        for ticker, data in intrinsic_inputs.items():
+            price = (valuation_records.get(ticker) or {}).get("price_input")
+            if isinstance(price, Mapping):
+                # Pass declared unit/share basis only; missing declarations never get defaults.
+                data["price_input"] = {**price, "fitness": "READY" if price.get("status") == "PRICE_READY" else "BLOCKED",
+                                       "source_identity": price.get("source_snapshot_identity")}
+        rows = valuation_context.attach_intrinsic_scenario_valuation(rows, intrinsic_inputs,
+                                                                     assumption_config_identity=config_identity)
     payload: dict[str, Any] = {
         "contract_version": valuation_context.CONTRACT_VERSION,
         "requested_at": requested_at,

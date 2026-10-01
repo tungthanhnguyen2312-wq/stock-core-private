@@ -356,6 +356,9 @@ def content_identity(artifact: Mapping[str, Any]) -> dict[str, str]:
     return {"artifact_sha256": digest, "artifact_identity": f"{CONTRACT_VERSION}:{digest}"}
 
 
+RESEARCH_ACTION_POLICY_VERSION = "v1"  # Standing decision-identity policy; no threshold change.
+
+
 def decision_identity(record: Mapping[str, Any]) -> str:
     """Feedback-ready deterministic identity for one ticker decision record.
 
@@ -370,7 +373,7 @@ def decision_identity(record: Mapping[str, Any]) -> str:
     fields = {
         "ticker": record.get("ticker"),
         "as_of_session": record.get("as_of_session"),
-        "policy_version": "v1",
+        "policy_version": RESEARCH_ACTION_POLICY_VERSION,
         "research_action_posture": record.get("research_action_posture"),
         "evidence_currency": record.get("evidence_currency"),
         "fundamental_state": record.get("fundamental_state"),
@@ -668,6 +671,7 @@ def build_evidence_axes(
             method="current_research_valuation_context/v1",
             lineage={"source_artifact_identity": identities.get("current_valuation") or valuation.get("artifact_identity")},
             context={
+                **({"intrinsic_scenario_valuation": copy.deepcopy(valuation["intrinsic_scenario_valuation"])} if "intrinsic_scenario_valuation" in valuation else {}),
                 "peer_relative_state": val_summary.get("peer_relative_state"),
                 "own_history_state": val_summary.get("own_history_state"),
                 "size_context_status": (val_summary.get("size_context") or {}).get("status"),
@@ -1595,6 +1599,13 @@ def build_ticker_integrated_decision(
         corporate_intelligence_record, as_of_session=as_of_session, ticker=ticker,
     )
 
+    # Non-voting R5 projection. Forward events are evidence for review, never numeric forecasts.
+    if "intrinsic_scenario_valuation" in valuation:
+        import intrinsic_valuation as intrinsic
+        valuation = {**valuation, "intrinsic_scenario_valuation": intrinsic.bind_forward_driver_explanation(
+            valuation["intrinsic_scenario_valuation"], corporate_intelligence_summary.get("forward_driver_context"),
+            ticker=ticker, session=as_of_session)}
+
     # 7. Posture & Why Now
     posture, why_now, missing_effect = decide_research_action_posture(
         ticker=ticker,
@@ -1738,6 +1749,7 @@ def build_ticker_integrated_decision(
         "priority_posture_reconciliation": priority_posture,
         "fundamental_support": fund_supp,
         "technical_support": tac_supp,
+        **({"intrinsic_scenario_valuation": copy.deepcopy(valuation["intrinsic_scenario_valuation"])} if "intrinsic_scenario_valuation" in valuation else {}),
         "valuation_context_summary": val_summary,
         "financial_composite_context": financial_composite_context,
         "valuation_methods": valuation.get("methods") or {},
@@ -1806,7 +1818,8 @@ def build_ticker_integrated_decision(
         official_liquidity_record=official_liquidity_record,
         operational_context=operational_fundamental_context_record if bridge_consulted else None,
     )
-    return record
+    from raw_pit_authority_matrix import attach_current_readiness
+    return attach_current_readiness(record)
 
 
 # ── Full Product Artifact Builder ─────────────────────────────────────────────
@@ -2143,6 +2156,10 @@ def build_artifact(
     coverage["forward_driver_context"] = forward_driver_coverage([
         rec["corporate_intelligence_context"]["forward_driver_context"] for rec in records.values()
     ])
+    if any("intrinsic_scenario_valuation" in rec for rec in records.values()):
+        import intrinsic_valuation as intrinsic
+        coverage["intrinsic_scenario_valuation"] = intrinsic.current_scenario_coverage(
+            [rec["intrinsic_scenario_valuation"] for rec in records.values() if "intrinsic_scenario_valuation" in rec])
     if coverage["no_current_evidence_wait_count"]:
         raise IntegratedDecisionProductError("INVARIANT_VIOLATION:NO_CURRENT_EVIDENCE_WAIT_FOR_CONFIRMATION")
     if operational_fundamental_integration_artifact is not None:
@@ -2163,6 +2180,7 @@ def build_artifact(
     payload: dict[str, Any] = {
         "schema_version": "integrated_investment_decision_product/1.0.0",
         "contract_version": CONTRACT_VERSION,
+        "research_action_policy_version": RESEARCH_ACTION_POLICY_VERSION,
         "milestone": MILESTONE,
         "requested_at": requested_at,
         "session": session,

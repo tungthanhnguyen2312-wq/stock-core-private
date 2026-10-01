@@ -1,0 +1,1428 @@
+{
+  "accumulation_gate": "NEW_IMMUTABLE_T0_WITH_KNOWN_POLICY_AND_FEATURE_VERSIONS; 50_MATURE_OBSERVATIONS_FROM_10_DISTINCT_T0_SESSIONS_PER_COMPARABLE_HORIZON; QUALIFIED_PRICE_BASIS; PREDECLARED_GOVERNED_REVIEW_RULE",
+  "authority_effect": "NONE",
+  "automatic_policy_change": false,
+  "before_after": {
+    "before_horizon_coverage": {
+      "close_excursions": {
+        "CLOSE_MFE_CLOSE_MAE_ONLY": true,
+        "intraday_mfe_mae": "NOT_CLAIMED"
+      },
+      "horizons": {
+        "forward_close_return_1": {
+          "CLOSE_PRICE_NOT_RETAINED": 15699,
+          "MATURE": 9718,
+          "PENDING_NOT_ENOUGH_FUTURE_SESSIONS": 3366,
+          "PRICE_BASIS_INCOMPATIBLE": 1511
+        },
+        "forward_close_return_10": {
+          "CLOSE_PRICE_NOT_RETAINED": 5705,
+          "MATURE": 3641,
+          "PENDING_NOT_ENOUGH_FUTURE_SESSIONS": 20196,
+          "PRICE_BASIS_INCOMPATIBLE": 752
+        },
+        "forward_close_return_20": {
+          "PENDING_NOT_ENOUGH_FUTURE_SESSIONS": 30294
+        },
+        "forward_close_return_3": {
+          "CLOSE_PRICE_NOT_RETAINED": 12305,
+          "MATURE": 8062,
+          "PENDING_NOT_ENOUGH_FUTURE_SESSIONS": 8415,
+          "PRICE_BASIS_INCOMPATIBLE": 1512
+        },
+        "forward_close_return_5": {
+          "CLOSE_PRICE_NOT_RETAINED": 10372,
+          "MATURE": 7401,
+          "PENDING_NOT_ENOUGH_FUTURE_SESSIONS": 11781,
+          "PRICE_BASIS_INCOMPATIBLE": 740
+        }
+      }
+    },
+    "before_qualified_denominator_numeric_only": {
+      "AVAILABLE": 4088,
+      "UNAVAILABLE_DEGENERATE_DOWNSIDE": 10834,
+      "UNAVAILABLE_NO_T0_ENTRY_REFERENCE": 15160,
+      "UNAVAILABLE_NO_T0_INVALIDATION": 212
+    },
+    "before_sample_adequacy": {
+      "T10": {
+        "DESCRIPTIVE_ONLY": 19,
+        "INSUFFICIENT_SAMPLE": 26
+      },
+      "T20": {
+        "INSUFFICIENT_SAMPLE": 45
+      },
+      "T5": {
+        "CALIBRATED_RESEARCH": 19,
+        "DESCRIPTIVE_ONLY": 1,
+        "INSUFFICIENT_SAMPLE": 25
+      },
+      "T60": {
+        "INSUFFICIENT_SAMPLE": 45
+      }
+    },
+    "decision_identity_changes": 0,
+    "explanations": [
+      "ONE_SHARED_GOVERNED_COMPLETED_SESSION_CHAIN_FOR_LEGACY_AND_IMMUTABLE_CASES",
+      "MISSING_OR_INVALID_T0_CLOSE_DISTINGUISHED_BEFORE_PENDING_DEPTH",
+      "FIXED_T0_CONDITION_AND_PRICE_BASIS_FITNESS_REQUIRED",
+      "UNKNOWN_T0_POLICY_VERSIONS_PARTITIONED_WITHOUT_BACKFILL"
+    ],
+    "outcome_deltas": {
+      "T1": {
+        "return_value_changes": 757,
+        "status_transitions": {
+          "CLOSE_PRICE_NOT_RETAINED -> CLOSE_PRICE_NOT_RETAINED": 15699,
+          "MATURE -> CLOSE_PRICE_NOT_RETAINED": 1,
+          "MATURE -> MATURE": 9701,
+          "MATURE -> PRICE_BASIS_INCOMPATIBLE": 16,
+          "PENDING_NOT_ENOUGH_FUTURE_SESSIONS -> CLOSE_PRICE_NOT_RETAINED": 1774,
+          "PENDING_NOT_ENOUGH_FUTURE_SESSIONS -> MATURE": 740,
+          "PENDING_NOT_ENOUGH_FUTURE_SESSIONS -> PENDING_NOT_ENOUGH_FUTURE_SESSIONS": 852,
+          "PRICE_BASIS_INCOMPATIBLE -> PRICE_BASIS_INCOMPATIBLE": 1511
+        }
+      },
+      "T10": {
+        "return_value_changes": 715,
+        "status_transitions": {
+          "CLOSE_PRICE_NOT_RETAINED -> CLOSE_PRICE_NOT_RETAINED": 5705,
+          "MATURE -> MATURE": 3641,
+          "PENDING_NOT_ENOUGH_FUTURE_SESSIONS -> CLOSE_PRICE_NOT_RETAINED": 10855,
+          "PENDING_NOT_ENOUGH_FUTURE_SESSIONS -> MATURE": 715,
+          "PENDING_NOT_ENOUGH_FUTURE_SESSIONS -> PENDING_NOT_ENOUGH_FUTURE_SESSIONS": 8626,
+          "PRICE_BASIS_INCOMPATIBLE -> PRICE_BASIS_INCOMPATIBLE": 752
+        }
+      },
+      "T20": {
+        "return_value_changes": 0,
+        "status_transitions": {
+          "PENDING_NOT_ENOUGH_FUTURE_SESSIONS -> CLOSE_PRICE_NOT_RETAINED": 15578,
+          "PENDING_NOT_ENOUGH_FUTURE_SESSIONS -> PENDING_NOT_ENOUGH_FUTURE_SESSIONS": 14716
+        }
+      },
+      "T3": {
+        "return_value_changes": 754,
+        "status_transitions": {
+          "CLOSE_PRICE_NOT_RETAINED -> CLOSE_PRICE_NOT_RETAINED": 12305,
+          "MATURE -> MATURE": 8062,
+          "PENDING_NOT_ENOUGH_FUTURE_SESSIONS -> CLOSE_PRICE_NOT_RETAINED": 5080,
+          "PENDING_NOT_ENOUGH_FUTURE_SESSIONS -> MATURE": 754,
+          "PENDING_NOT_ENOUGH_FUTURE_SESSIONS -> PENDING_NOT_ENOUGH_FUTURE_SESSIONS": 2578,
+          "PENDING_NOT_ENOUGH_FUTURE_SESSIONS -> PRICE_BASIS_INCOMPATIBLE": 3,
+          "PRICE_BASIS_INCOMPATIBLE -> PRICE_BASIS_INCOMPATIBLE": 1512
+        }
+      },
+      "T5": {
+        "return_value_changes": 733,
+        "status_transitions": {
+          "CLOSE_PRICE_NOT_RETAINED -> CLOSE_PRICE_NOT_RETAINED": 10372,
+          "MATURE -> MATURE": 7401,
+          "PENDING_NOT_ENOUGH_FUTURE_SESSIONS -> CLOSE_PRICE_NOT_RETAINED": 6749,
+          "PENDING_NOT_ENOUGH_FUTURE_SESSIONS -> MATURE": 733,
+          "PENDING_NOT_ENOUGH_FUTURE_SESSIONS -> PENDING_NOT_ENOUGH_FUTURE_SESSIONS": 4288,
+          "PENDING_NOT_ENOUGH_FUTURE_SESSIONS -> PRICE_BASIS_INCOMPATIBLE": 11,
+          "PRICE_BASIS_INCOMPATIBLE -> PRICE_BASIS_INCOMPATIBLE": 740
+        }
+      }
+    },
+    "posture_changes": 0,
+    "same_genuine_t0_case_set": true,
+    "unexplained_t0_changes": 0
+  },
+  "calibration_review_eligible_cohort_count": 0,
+  "cohort_summary": {
+    "adequacy_state_counts_by_horizon": {
+      "T10": {
+        "INSUFFICIENT_SAMPLE": 488
+      },
+      "T20": {
+        "INSUFFICIENT_SAMPLE": 488
+      },
+      "T5": {
+        "INSUFFICIENT_SAMPLE": 488
+      },
+      "T60": {
+        "INSUFFICIENT_SAMPLE": 488
+      }
+    },
+    "artifact_identity": "empirical_setup_outcome_calibration_artifact:fe737f9273b0d9eb3cdcb8b90bb5d327663081499f3a4e5e3f06b94c6d6e31b1",
+    "calibrated_research_cohort_count": 0,
+    "calibration_eligibility_distribution": {
+      "INSUFFICIENT_PROSPECTIVE_EVIDENCE": 1952
+    },
+    "cohort_count": 1952,
+    "contract_version": "empirical_setup_outcome_calibration/v2",
+    "human_review_candidate_count": 0,
+    "observation_count": 30294,
+    "source_artifact_identities": {
+      "prospective_decision_outcome_feedback_identity": "prospective_decision_outcome_feedback:15388f3419b3baefbee5e5f2d6525fca9c24443a5dc80c978e19d71478e74f3f"
+    },
+    "status": "EVALUATED",
+    "t0_session_count": 18
+  },
+  "contract_version": "r6_prospective_learning_retained_acceptance/v1",
+  "deterministic_replay": {
+    "artifact_identity": "empirical_setup_outcome_calibration_artifact:fe737f9273b0d9eb3cdcb8b90bb5d327663081499f3a4e5e3f06b94c6d6e31b1",
+    "reversed_input_order_identity_equal": true
+  },
+  "disposition": "CALIBRATION_CAPABILITY_COMPLETE / EVIDENCE_ACCUMULATION_PENDING",
+  "human_review_candidate_count": 0,
+  "implementation_source_sha256": {
+    "empirical_setup_outcome_calibration.py": "550dd432703f821af9b3d019f7565cfe044c92582af3f53bd8151f67ff0c55b7",
+    "integrated_decision_prospective_feedback.py": "111b4a5965caa7f352e0dd785ed69e3bc20352fd5f28a58ed21aca336c38a359",
+    "integrated_investment_decision_product.py": "f61f82ec0a3f4a130ab0022795b2f7384adf05bbe3a62cb5e458da31586d21db",
+    "prospective_decision_outcome_feedback.py": "dce1ae36dbba14d7179373cf78d3af645c8f174fbe5f3b337adf709119af7ed0",
+    "prospective_decision_outcome_measurement.py": "19e3bb43d62e6a14b44ee9a110e123e0941a1cb66eaef279722c838f56ec1322",
+    "prospective_decision_retention.py": "954067e60046afe3ccecaa02f77547bf16cabf26fc67f918eb834e6793b4f764",
+    "tools/run_empirical_setup_outcome_calibration.py": "bf981828b756e2852b472d9d45765d9b43064033ee55673836c81f28f5ddeb3b"
+  },
+  "inventory": {
+    "attribution_limitations": [
+      "ASSOCIATION_NOT_CAUSATION",
+      "INTRINSIC_UNAVAILABLE_IS_NOT_BEARISH",
+      "OPTIONAL_CONTEXT_NOT_AN_ADMISSION_GATE"
+    ],
+    "confirmation_evaluability": {
+      "BOUNDARY_NOT_EVALUABLE": 29410,
+      "CONFIRMED": 583,
+      "NOT_CONFIRMED_YET": 301
+    },
+    "distinct_contract_policy_versions": 2,
+    "event_ordering": {
+      "CONFIRMED_BEFORE_INVALIDATED": 30,
+      "CONFIRMED_ONLY": 45,
+      "INVALIDATED_BEFORE_CONFIRMED": 36,
+      "INVALIDATED_ONLY": 99,
+      "NEITHER_YET": 2,
+      "NOT_EVALUABLE": 30082
+    },
+    "genuine_t0_case_count": 30294,
+    "genuine_t0_target_boundary_count": 0,
+    "horizon_evidence_states": {
+      "T10": {
+        "MATURE": 4356,
+        "NOT_RETAINED_AT_T0": 15578,
+        "OUTCOME_DATA_UNAVAILABLE": 982,
+        "RETAINED_BUT_NOT_YET_MATURE": 8626,
+        "SEMANTICALLY_INCOMPATIBLE": 752
+      },
+      "T20": {
+        "NOT_RETAINED_AT_T0": 15578,
+        "RETAINED_BUT_NOT_YET_MATURE": 14716
+      },
+      "T5": {
+        "MATURE": 8134,
+        "NOT_RETAINED_AT_T0": 15578,
+        "OUTCOME_DATA_UNAVAILABLE": 1543,
+        "RETAINED_BUT_NOT_YET_MATURE": 4288,
+        "SEMANTICALLY_INCOMPATIBLE": 751
+      },
+      "T60": {
+        "NOT_RETAINED_AT_T0": 15578,
+        "RETAINED_BUT_NOT_YET_MATURE": 14716
+      }
+    },
+    "horizon_status_counts": {
+      "T10": {
+        "CLOSE_PRICE_NOT_RETAINED": 16560,
+        "MATURE": 4356,
+        "PENDING_NOT_ENOUGH_FUTURE_SESSIONS": 8626,
+        "PRICE_BASIS_INCOMPATIBLE": 752
+      },
+      "T20": {
+        "CLOSE_PRICE_NOT_RETAINED": 15578,
+        "PENDING_NOT_ENOUGH_FUTURE_SESSIONS": 14716
+      },
+      "T5": {
+        "CLOSE_PRICE_NOT_RETAINED": 17121,
+        "MATURE": 8134,
+        "PENDING_NOT_ENOUGH_FUTURE_SESSIONS": 4288,
+        "PRICE_BASIS_INCOMPATIBLE": 751
+      },
+      "T60": {
+        "CLOSE_PRICE_NOT_RETAINED": 15578,
+        "PENDING_NOT_ENOUGH_FUTURE_SESSIONS": 14716
+      }
+    },
+    "immutable_t0_case_count": 26928,
+    "immutable_t0_session_count": 16,
+    "invalidation_evaluability": {
+      "BOUNDARY_NOT_EVALUABLE": 29763,
+      "INVALIDATED": 304,
+      "NOT_INVALIDATED_YET": 227
+    },
+    "posture_distribution": {
+      "ACCUMULATE_ON_RETEST": 913,
+      "AVOID": 8181,
+      "EARLY_WATCH": 3209,
+      "HOLD": 259,
+      "HOLD_DO_NOT_ADD": 570,
+      "INITIATE_ON_BREAKOUT": 607,
+      "INSUFFICIENT_CURRENT_RESEARCH": 4919,
+      "WAIT_FOR_CONFIRMATION": 11636
+    },
+    "qualified_legacy_t0_session_count": 2,
+    "qualified_t0_downside_denominator_count": 264,
+    "r4_attribution_retained_count": 0,
+    "r5_attribution_retained_count": 0,
+    "setup_distribution": {
+      "DOWNTREND": 6677,
+      "EARLY_BEARISH_REVERSAL": 3076,
+      "EARLY_BULLISH_REVERSAL": 2919,
+      "FIELD_NOT_RETAINED_AT_T0": 14765,
+      "INSUFFICIENT_HISTORY": 178,
+      "UPTREND": 2679
+    },
+    "source_contract_policy_distribution": {
+      "{\"fundamental_policy_version\":\"FIELD_NOT_RETAINED_AT_T0\",\"integrated_decision_contract\":\"integrated_investment_decision_product/v1\",\"research_action_policy_version\":\"FIELD_NOT_RETAINED_AT_T0\"}": 25245,
+      "{\"fundamental_policy_version\":\"fundamental_promotion_hardening/v1\",\"integrated_decision_contract\":\"integrated_investment_decision_product/v1\",\"research_action_policy_version\":\"FIELD_NOT_RETAINED_AT_T0\"}": 5049
+    },
+    "source_type_distribution": {
+      "IMMUTABLE_INTEGRATED_T0": 26928,
+      "QUALIFIED_LEGACY_INTEGRATED_T0": 3366
+    },
+    "t0_session_count": 18,
+    "taxonomy_distribution": {
+      "ADVERSE_OUTCOME_AFTER_INITIATION": 467,
+      "EXTENSION_WARNING_CORRECT": 224,
+      "FALSE_POSITIVE_BREAKOUT": 22,
+      "FALSE_POSITIVE_EARLY_REVERSAL": 1,
+      "GOOD_EARLY_WATCH": 7,
+      "GOOD_ENTRY_SIGNAL": 110,
+      "INSUFFICIENT_OUTCOME_EVIDENCE": 29209,
+      "MISSED_BREAKOUT": 37,
+      "SUCCESSFUL_RETEST": 217
+    },
+    "temporal_source_inventory": {
+      "artifact_inventory": [
+        {
+          "artifact_identity": "integrated_investment_decision_product/v1:f6b4ef9531a1970faa592054136f0faafe1354b6b8efe2205aedb858aeb11fd6",
+          "artifact_observed_at": "2026-08-25T15:00:00+07:00",
+          "artifact_path": "operations-review/canonical-post-close-v1/2026-08-25/enrichment/integrated_investment_decision_product.json",
+          "classification": "CURRENT_VIEW_OF_OLD_SESSION",
+          "contract_version": "integrated_investment_decision_product/v1",
+          "decision_session": "2026-08-25",
+          "record_count": 1683,
+          "temporal_qualification": {
+            "artifact_observed_at": "2026-08-25T15:00:00+07:00",
+            "contract_version": "retained_integrated_decision_temporal_qualification/v1",
+            "decision_artifact_identity": "integrated_investment_decision_product/v1:f6b4ef9531a1970faa592054136f0faafe1354b6b8efe2205aedb858aeb11fd6",
+            "decision_session": "2026-08-25",
+            "proof_reason_codes": [
+              "CANONICAL_HANDOFF_BINDING_MISSING"
+            ],
+            "status": "CURRENT_VIEW_OF_OLD_SESSION"
+          }
+        },
+        {
+          "artifact_identity": "integrated_investment_decision_product/v1:e3501185dff827739dc2e52e5a8d4ccc1e133ea651896ba7fc095d053c19cb21",
+          "artifact_observed_at": "2026-08-25T15:00:00+07:00",
+          "artifact_path": "operations-review/integrated-investment-decision-product-v1-20260825/integrated_investment_decision_product_artifact.json",
+          "classification": "UNKNOWN_TEMPORAL_STATUS",
+          "contract_version": "integrated_investment_decision_product/v1",
+          "decision_session": "2026-08-25",
+          "record_count": 1683,
+          "temporal_qualification": {
+            "artifact_observed_at": "2026-08-25T15:00:00+07:00",
+            "contract_version": "retained_integrated_decision_temporal_qualification/v1",
+            "decision_artifact_identity": "integrated_investment_decision_product/v1:e3501185dff827739dc2e52e5a8d4ccc1e133ea651896ba7fc095d053c19cb21",
+            "decision_session": "2026-08-25",
+            "proof_reason_codes": [
+              "NO_CANONICAL_HANDOFF_BINDING"
+            ],
+            "status": "UNKNOWN_TEMPORAL_STATUS"
+          }
+        },
+        {
+          "artifact_identity": "integrated_investment_decision_product/v1:5964fc4990d78c2a4179b0d022119d9a4187446932d9d55434088cd08e743e88",
+          "artifact_observed_at": "2026-09-03T15:00:00+07:00",
+          "artifact_path": "operations-review/canonical-post-close-v1/2026-09-03/enrichment/integrated_investment_decision_product.json",
+          "classification": "CURRENT_VIEW_OF_OLD_SESSION",
+          "contract_version": "integrated_investment_decision_product/v1",
+          "decision_session": "2026-09-03",
+          "record_count": 1683,
+          "temporal_qualification": {
+            "artifact_observed_at": "2026-09-03T15:00:00+07:00",
+            "contract_version": "retained_integrated_decision_temporal_qualification/v1",
+            "decision_artifact_identity": "integrated_investment_decision_product/v1:5964fc4990d78c2a4179b0d022119d9a4187446932d9d55434088cd08e743e88",
+            "decision_session": "2026-09-03",
+            "proof_reason_codes": [
+              "NONCANONICAL_COPY_OF_BOUND_ARTIFACT"
+            ],
+            "status": "CURRENT_VIEW_OF_OLD_SESSION"
+          }
+        },
+        {
+          "artifact_identity": "integrated_investment_decision_product/v1:5964fc4990d78c2a4179b0d022119d9a4187446932d9d55434088cd08e743e88",
+          "artifact_observed_at": "2026-09-03T15:00:00+07:00",
+          "artifact_path": "operations-review/canonical-post-close-v1/2026-09-03/post-close-attempt-080034/operations-review/integrated-investment-decision-product-v1-20260903/integrated_investment_decision_product_artifact.json",
+          "classification": "GENUINE_PROSPECTIVE_DECISION",
+          "contract_version": "integrated_investment_decision_product/v1",
+          "decision_session": "2026-09-03",
+          "record_count": 1683,
+          "temporal_qualification": {
+            "artifact_observed_at": "2026-09-03T15:00:00+07:00",
+            "canonical_handoff_path": "operations-review/canonical-post-close-v1/2026-09-03/session_handoff_bundle.json",
+            "contract_version": "retained_integrated_decision_temporal_qualification/v1",
+            "daily_session_operation_identity": "daily_research_session_operation:26f8f2bab940a11c5e3b18ed82d9f9f763556026c071c056a64f15d4cd33ff5d",
+            "decision_artifact_identity": "integrated_investment_decision_product/v1:5964fc4990d78c2a4179b0d022119d9a4187446932d9d55434088cd08e743e88",
+            "decision_session": "2026-09-03",
+            "operation_manifest_path": "operations-review/daily-research-session-operations-v1/2026-09-03/26f8f2bab940a11c5e3b18ed82d9f9f763556026c071c056a64f15d4cd33ff5d/run_manifest.json",
+            "proof_reason_codes": [
+              "CANONICAL_HANDOFF_BINDS_ARTIFACT_IDENTITY",
+              "RETAINED_DAILY_OPERATION_BINDS_SAME_COMPLETED_SESSION",
+              "ARTIFACT_OBSERVED_TIME_IS_SAME_SESSION"
+            ],
+            "status": "GENUINE_PROSPECTIVE_DECISION"
+          }
+        },
+        {
+          "artifact_identity": "integrated_investment_decision_product/v1:41efa6f04cf64bbf40e51947486759bc1ace209b46fec6aa809ae39289bf1956",
+          "artifact_observed_at": "2026-09-04T15:00:00+07:00",
+          "artifact_path": "operations-review/canonical-post-close-v1/2026-09-04/enrichment/integrated_investment_decision_product.json",
+          "classification": "CURRENT_VIEW_OF_OLD_SESSION",
+          "contract_version": "integrated_investment_decision_product/v1",
+          "decision_session": "2026-09-04",
+          "record_count": 1683,
+          "temporal_qualification": {
+            "artifact_observed_at": "2026-09-04T15:00:00+07:00",
+            "contract_version": "retained_integrated_decision_temporal_qualification/v1",
+            "decision_artifact_identity": "integrated_investment_decision_product/v1:41efa6f04cf64bbf40e51947486759bc1ace209b46fec6aa809ae39289bf1956",
+            "decision_session": "2026-09-04",
+            "proof_reason_codes": [
+              "CANONICAL_HANDOFF_BINDING_MISSING"
+            ],
+            "status": "CURRENT_VIEW_OF_OLD_SESSION"
+          }
+        },
+        {
+          "artifact_identity": "integrated_investment_decision_product/v1:6312f2b09b08adf3150e3f6ee19a8f0129a73e6c8ea11d1cf3b1638a3c6f035e",
+          "artifact_observed_at": "2026-09-04T15:00:00+07:00",
+          "artifact_path": "operations-review/integrated-investment-decision-product-v1-20260904/integrated_investment_decision_product_artifact.json",
+          "classification": "EXCLUDE_TEMPORAL_PROVENANCE_UNQUALIFIED",
+          "contract_version": "integrated_investment_decision_product/v1",
+          "decision_session": "2026-09-04",
+          "record_count": 1683,
+          "temporal_qualification": {
+            "artifact_observed_at": "2026-09-04T15:00:00+07:00",
+            "canonical_handoff_path": "operations-review/canonical-post-close-v1/2026-09-04/session_handoff_bundle.json",
+            "contract_version": "retained_integrated_decision_temporal_qualification/v1",
+            "daily_session_operation_identity": "daily_research_session_operation:da72cffb2811612e9e4a2d3afb71db51dfaace31a3398cd47d95b48538aef18d",
+            "decision_artifact_identity": "integrated_investment_decision_product/v1:6312f2b09b08adf3150e3f6ee19a8f0129a73e6c8ea11d1cf3b1638a3c6f035e",
+            "decision_session": "2026-09-04",
+            "operation_manifest_path": "operations-review/daily-research-session-operations-v1/2026-09-04/da72cffb2811612e9e4a2d3afb71db51dfaace31a3398cd47d95b48538aef18d/run_manifest.json",
+            "proof_reason_codes": [
+              "HANDOFF_ARTIFACT_IDENTITY_MISMATCH"
+            ],
+            "status": "EXCLUDE_TEMPORAL_PROVENANCE_UNQUALIFIED"
+          }
+        },
+        {
+          "artifact_identity": "integrated_investment_decision_product/v1:e2d66ca2b8bc927e8e9814ab021304faaf42ae49237b399f83850220c697c3dc",
+          "artifact_observed_at": "2026-09-08T15:00:00+07:00",
+          "artifact_path": "operations-review/canonical-post-close-v1/2026-09-08/enrichment/integrated_investment_decision_product.json",
+          "classification": "CURRENT_VIEW_OF_OLD_SESSION",
+          "contract_version": "integrated_investment_decision_product/v1",
+          "decision_session": "2026-09-08",
+          "record_count": 1683,
+          "temporal_qualification": {
+            "artifact_observed_at": "2026-09-08T15:00:00+07:00",
+            "contract_version": "retained_integrated_decision_temporal_qualification/v1",
+            "decision_artifact_identity": "integrated_investment_decision_product/v1:e2d66ca2b8bc927e8e9814ab021304faaf42ae49237b399f83850220c697c3dc",
+            "decision_session": "2026-09-08",
+            "proof_reason_codes": [
+              "NONCANONICAL_COPY_OF_BOUND_ARTIFACT"
+            ],
+            "status": "CURRENT_VIEW_OF_OLD_SESSION"
+          }
+        },
+        {
+          "artifact_identity": "integrated_investment_decision_product/v1:e2d66ca2b8bc927e8e9814ab021304faaf42ae49237b399f83850220c697c3dc",
+          "artifact_observed_at": "2026-09-08T15:00:00+07:00",
+          "artifact_path": "operations-review/integrated-investment-decision-product-v1-20260908/integrated_investment_decision_product_artifact.json",
+          "classification": "GENUINE_PROSPECTIVE_DECISION",
+          "contract_version": "integrated_investment_decision_product/v1",
+          "decision_session": "2026-09-08",
+          "record_count": 1683,
+          "temporal_qualification": {
+            "artifact_observed_at": "2026-09-08T15:00:00+07:00",
+            "canonical_handoff_path": "operations-review/canonical-post-close-v1/2026-09-08/session_handoff_bundle.json",
+            "contract_version": "retained_integrated_decision_temporal_qualification/v1",
+            "daily_session_operation_identity": "daily_research_session_operation:cfd7b4143e03fb224bdce5a3e0fd9d65db8fc1ea92fc2e3cac723312cdeaf063",
+            "decision_artifact_identity": "integrated_investment_decision_product/v1:e2d66ca2b8bc927e8e9814ab021304faaf42ae49237b399f83850220c697c3dc",
+            "decision_session": "2026-09-08",
+            "operation_manifest_path": "operations-review/daily-research-session-operations-v1/2026-09-08/cfd7b4143e03fb224bdce5a3e0fd9d65db8fc1ea92fc2e3cac723312cdeaf063/run_manifest.json",
+            "proof_reason_codes": [
+              "CANONICAL_HANDOFF_BINDS_ARTIFACT_IDENTITY",
+              "RETAINED_DAILY_OPERATION_BINDS_SAME_COMPLETED_SESSION",
+              "ARTIFACT_OBSERVED_TIME_IS_SAME_SESSION"
+            ],
+            "status": "GENUINE_PROSPECTIVE_DECISION"
+          }
+        },
+        {
+          "artifact_identity": "integrated_investment_decision_product/v1:21e8014c0afb1bbbcc04acfa8a98e926186e839868b7d34e235be870bd11e3c6",
+          "artifact_observed_at": "2026-09-09T15:00:00+07:00",
+          "artifact_path": "operations-review/canonical-post-close-v1/2026-09-09/enrichment/integrated_investment_decision_product.json",
+          "classification": "CURRENT_VIEW_OF_OLD_SESSION",
+          "contract_version": "integrated_investment_decision_product/v1",
+          "decision_session": "2026-09-09",
+          "record_count": 1683,
+          "temporal_qualification": {
+            "artifact_observed_at": "2026-09-09T15:00:00+07:00",
+            "contract_version": "retained_integrated_decision_temporal_qualification/v1",
+            "decision_artifact_identity": "integrated_investment_decision_product/v1:21e8014c0afb1bbbcc04acfa8a98e926186e839868b7d34e235be870bd11e3c6",
+            "decision_session": "2026-09-09",
+            "proof_reason_codes": [
+              "NONCANONICAL_COPY_OF_BOUND_ARTIFACT"
+            ],
+            "status": "CURRENT_VIEW_OF_OLD_SESSION"
+          }
+        },
+        {
+          "artifact_identity": "integrated_investment_decision_product/v1:75eb42e997e33f1217b0ce56b37e5779cf043e109f9b4220593f9c227b18147b",
+          "artifact_observed_at": "2026-09-10T15:00:00+07:00",
+          "artifact_path": "operations-review/canonical-post-close-v1/2026-09-10/enrichment/integrated_investment_decision_product.json",
+          "classification": "CURRENT_VIEW_OF_OLD_SESSION",
+          "contract_version": "integrated_investment_decision_product/v1",
+          "decision_session": "2026-09-10",
+          "record_count": 1683,
+          "temporal_qualification": {
+            "artifact_observed_at": "2026-09-10T15:00:00+07:00",
+            "contract_version": "retained_integrated_decision_temporal_qualification/v1",
+            "decision_artifact_identity": "integrated_investment_decision_product/v1:75eb42e997e33f1217b0ce56b37e5779cf043e109f9b4220593f9c227b18147b",
+            "decision_session": "2026-09-10",
+            "proof_reason_codes": [
+              "NONCANONICAL_COPY_OF_BOUND_ARTIFACT"
+            ],
+            "status": "CURRENT_VIEW_OF_OLD_SESSION"
+          }
+        },
+        {
+          "artifact_identity": "integrated_investment_decision_product/v1:717165a74dbcafbb44a1fb7e5ff949395ae253f28eebf6fa8dd3bbd8ef33e984",
+          "artifact_observed_at": "2026-09-11T15:00:00+07:00",
+          "artifact_path": "operations-review/canonical-post-close-v1/2026-09-11/enrichment/integrated_investment_decision_product.json",
+          "classification": "CURRENT_VIEW_OF_OLD_SESSION",
+          "contract_version": "integrated_investment_decision_product/v1",
+          "decision_session": "2026-09-11",
+          "record_count": 1683,
+          "temporal_qualification": {
+            "artifact_observed_at": "2026-09-11T15:00:00+07:00",
+            "contract_version": "retained_integrated_decision_temporal_qualification/v1",
+            "decision_artifact_identity": "integrated_investment_decision_product/v1:717165a74dbcafbb44a1fb7e5ff949395ae253f28eebf6fa8dd3bbd8ef33e984",
+            "decision_session": "2026-09-11",
+            "proof_reason_codes": [
+              "NONCANONICAL_COPY_OF_BOUND_ARTIFACT"
+            ],
+            "status": "CURRENT_VIEW_OF_OLD_SESSION"
+          }
+        },
+        {
+          "artifact_identity": "integrated_investment_decision_product/v1:28cc9a26260c82dba510ea5216cc867465eb76e7b8ef1058954caf5abaafe8fa",
+          "artifact_observed_at": "2026-09-14T15:00:00+07:00",
+          "artifact_path": "operations-review/canonical-post-close-v1/2026-09-14/enrichment/integrated_investment_decision_product.json",
+          "classification": "CURRENT_VIEW_OF_OLD_SESSION",
+          "contract_version": "integrated_investment_decision_product/v1",
+          "decision_session": "2026-09-14",
+          "record_count": 1683,
+          "temporal_qualification": {
+            "artifact_observed_at": "2026-09-14T15:00:00+07:00",
+            "contract_version": "retained_integrated_decision_temporal_qualification/v1",
+            "decision_artifact_identity": "integrated_investment_decision_product/v1:28cc9a26260c82dba510ea5216cc867465eb76e7b8ef1058954caf5abaafe8fa",
+            "decision_session": "2026-09-14",
+            "proof_reason_codes": [
+              "NONCANONICAL_COPY_OF_BOUND_ARTIFACT"
+            ],
+            "status": "CURRENT_VIEW_OF_OLD_SESSION"
+          }
+        },
+        {
+          "artifact_identity": "integrated_investment_decision_product/v1:7655b481f1e2681bc432f5f916dc6a8c5a8846f55228b4c57111af2ebef805a9",
+          "artifact_observed_at": "2026-09-15T15:00:00+07:00",
+          "artifact_path": "operations-review/canonical-post-close-v1/2026-09-15/enrichment/integrated_investment_decision_product.json",
+          "classification": "CURRENT_VIEW_OF_OLD_SESSION",
+          "contract_version": "integrated_investment_decision_product/v1",
+          "decision_session": "2026-09-15",
+          "record_count": 1683,
+          "temporal_qualification": {
+            "artifact_observed_at": "2026-09-15T15:00:00+07:00",
+            "contract_version": "retained_integrated_decision_temporal_qualification/v1",
+            "decision_artifact_identity": "integrated_investment_decision_product/v1:7655b481f1e2681bc432f5f916dc6a8c5a8846f55228b4c57111af2ebef805a9",
+            "decision_session": "2026-09-15",
+            "proof_reason_codes": [
+              "NONCANONICAL_COPY_OF_BOUND_ARTIFACT"
+            ],
+            "status": "CURRENT_VIEW_OF_OLD_SESSION"
+          }
+        },
+        {
+          "artifact_identity": "integrated_investment_decision_product/v1:7ac49c56b46f44f23ebf64a6212cef9399fe10b4edf8c6044fe8792dee366984",
+          "artifact_observed_at": "2026-09-16T15:00:00+07:00",
+          "artifact_path": "operations-review/canonical-post-close-v1/2026-09-16/enrichment/integrated_investment_decision_product.json",
+          "classification": "CURRENT_VIEW_OF_OLD_SESSION",
+          "contract_version": "integrated_investment_decision_product/v1",
+          "decision_session": "2026-09-16",
+          "record_count": 1683,
+          "temporal_qualification": {
+            "artifact_observed_at": "2026-09-16T15:00:00+07:00",
+            "contract_version": "retained_integrated_decision_temporal_qualification/v1",
+            "decision_artifact_identity": "integrated_investment_decision_product/v1:7ac49c56b46f44f23ebf64a6212cef9399fe10b4edf8c6044fe8792dee366984",
+            "decision_session": "2026-09-16",
+            "proof_reason_codes": [
+              "NONCANONICAL_COPY_OF_BOUND_ARTIFACT"
+            ],
+            "status": "CURRENT_VIEW_OF_OLD_SESSION"
+          }
+        },
+        {
+          "artifact_identity": "integrated_investment_decision_product/v1:3aacbc7d73a555b0108faf0e26c77e3c8929920f1948a97a0a8b3dc31a83d8ee",
+          "artifact_observed_at": "2026-09-17T15:00:00+07:00",
+          "artifact_path": "operations-review/canonical-post-close-v1/2026-09-17/enrichment/integrated_investment_decision_product.json",
+          "classification": "CURRENT_VIEW_OF_OLD_SESSION",
+          "contract_version": "integrated_investment_decision_product/v1",
+          "decision_session": "2026-09-17",
+          "record_count": 1683,
+          "temporal_qualification": {
+            "artifact_observed_at": "2026-09-17T15:00:00+07:00",
+            "contract_version": "retained_integrated_decision_temporal_qualification/v1",
+            "decision_artifact_identity": "integrated_investment_decision_product/v1:3aacbc7d73a555b0108faf0e26c77e3c8929920f1948a97a0a8b3dc31a83d8ee",
+            "decision_session": "2026-09-17",
+            "proof_reason_codes": [
+              "NONCANONICAL_COPY_OF_BOUND_ARTIFACT"
+            ],
+            "status": "CURRENT_VIEW_OF_OLD_SESSION"
+          }
+        },
+        {
+          "artifact_identity": "integrated_investment_decision_product/v1:808df7a8f95078362ebc4b1725cbddeb10855d51bb27b812c8f30ec130564426",
+          "artifact_observed_at": "2026-09-18T15:00:00+07:00",
+          "artifact_path": "operations-review/canonical-post-close-v1/2026-09-18/enrichment/integrated_investment_decision_product.json",
+          "classification": "CURRENT_VIEW_OF_OLD_SESSION",
+          "contract_version": "integrated_investment_decision_product/v1",
+          "decision_session": "2026-09-18",
+          "record_count": 1683,
+          "temporal_qualification": {
+            "artifact_observed_at": "2026-09-18T15:00:00+07:00",
+            "contract_version": "retained_integrated_decision_temporal_qualification/v1",
+            "decision_artifact_identity": "integrated_investment_decision_product/v1:808df7a8f95078362ebc4b1725cbddeb10855d51bb27b812c8f30ec130564426",
+            "decision_session": "2026-09-18",
+            "proof_reason_codes": [
+              "NONCANONICAL_COPY_OF_BOUND_ARTIFACT"
+            ],
+            "status": "CURRENT_VIEW_OF_OLD_SESSION"
+          }
+        },
+        {
+          "artifact_identity": "integrated_investment_decision_product/v1:37675f99f328669ecf112ef74e10beb9430cb85a051b8a7893fc49758531956c",
+          "artifact_observed_at": "2026-09-21T15:00:00+07:00",
+          "artifact_path": "operations-review/canonical-post-close-v1/2026-09-21/enrichment/integrated_investment_decision_product.json",
+          "classification": "CURRENT_VIEW_OF_OLD_SESSION",
+          "contract_version": "integrated_investment_decision_product/v1",
+          "decision_session": "2026-09-21",
+          "record_count": 1683,
+          "temporal_qualification": {
+            "artifact_observed_at": "2026-09-21T15:00:00+07:00",
+            "contract_version": "retained_integrated_decision_temporal_qualification/v1",
+            "decision_artifact_identity": "integrated_investment_decision_product/v1:37675f99f328669ecf112ef74e10beb9430cb85a051b8a7893fc49758531956c",
+            "decision_session": "2026-09-21",
+            "proof_reason_codes": [
+              "NONCANONICAL_COPY_OF_BOUND_ARTIFACT"
+            ],
+            "status": "CURRENT_VIEW_OF_OLD_SESSION"
+          }
+        },
+        {
+          "artifact_identity": "integrated_investment_decision_product/v1:ba5dffb244417fc64817b1a9213cf493e602ee24fbe07a9f3ecc02273ba9b2b1",
+          "artifact_observed_at": "2026-09-22T15:00:00+07:00",
+          "artifact_path": "operations-review/canonical-post-close-v1/2026-09-22/enrichment/integrated_investment_decision_product.json",
+          "classification": "CURRENT_VIEW_OF_OLD_SESSION",
+          "contract_version": "integrated_investment_decision_product/v1",
+          "decision_session": "2026-09-22",
+          "record_count": 1683,
+          "temporal_qualification": {
+            "artifact_observed_at": "2026-09-22T15:00:00+07:00",
+            "contract_version": "retained_integrated_decision_temporal_qualification/v1",
+            "decision_artifact_identity": "integrated_investment_decision_product/v1:ba5dffb244417fc64817b1a9213cf493e602ee24fbe07a9f3ecc02273ba9b2b1",
+            "decision_session": "2026-09-22",
+            "proof_reason_codes": [
+              "NONCANONICAL_COPY_OF_BOUND_ARTIFACT"
+            ],
+            "status": "CURRENT_VIEW_OF_OLD_SESSION"
+          }
+        },
+        {
+          "artifact_identity": "integrated_investment_decision_product/v1:8a4f4af31374a631f3a7157769c3cb173b4b46ff3948fd9d5304ad493ff98862",
+          "artifact_observed_at": "2026-09-23T15:00:00+07:00",
+          "artifact_path": "operations-review/canonical-post-close-v1/2026-09-23/enrichment/integrated_investment_decision_product.json",
+          "classification": "CURRENT_VIEW_OF_OLD_SESSION",
+          "contract_version": "integrated_investment_decision_product/v1",
+          "decision_session": "2026-09-23",
+          "record_count": 1683,
+          "temporal_qualification": {
+            "artifact_observed_at": "2026-09-23T15:00:00+07:00",
+            "contract_version": "retained_integrated_decision_temporal_qualification/v1",
+            "decision_artifact_identity": "integrated_investment_decision_product/v1:8a4f4af31374a631f3a7157769c3cb173b4b46ff3948fd9d5304ad493ff98862",
+            "decision_session": "2026-09-23",
+            "proof_reason_codes": [
+              "NONCANONICAL_COPY_OF_BOUND_ARTIFACT"
+            ],
+            "status": "CURRENT_VIEW_OF_OLD_SESSION"
+          }
+        },
+        {
+          "artifact_identity": "integrated_investment_decision_product/v1:4b96273010269a7e370ab0abacb53f0351d75c53c3e57dcd64925763a10eed19",
+          "artifact_observed_at": "2026-09-24T15:00:00+07:00",
+          "artifact_path": "operations-review/canonical-post-close-v1/2026-09-24/enrichment/integrated_investment_decision_product.json",
+          "classification": "CURRENT_VIEW_OF_OLD_SESSION",
+          "contract_version": "integrated_investment_decision_product/v1",
+          "decision_session": "2026-09-24",
+          "record_count": 1683,
+          "temporal_qualification": {
+            "artifact_observed_at": "2026-09-24T15:00:00+07:00",
+            "contract_version": "retained_integrated_decision_temporal_qualification/v1",
+            "decision_artifact_identity": "integrated_investment_decision_product/v1:4b96273010269a7e370ab0abacb53f0351d75c53c3e57dcd64925763a10eed19",
+            "decision_session": "2026-09-24",
+            "proof_reason_codes": [
+              "NONCANONICAL_COPY_OF_BOUND_ARTIFACT"
+            ],
+            "status": "CURRENT_VIEW_OF_OLD_SESSION"
+          }
+        },
+        {
+          "artifact_identity": "integrated_investment_decision_product/v1:1517dc71cdc3ac33ef2d65945c89121d1c4bc1d53c05afe70e91ed1e32d13917",
+          "artifact_observed_at": "2026-09-28T15:00:00+07:00",
+          "artifact_path": "operations-review/canonical-post-close-v1/2026-09-28/enrichment/integrated_investment_decision_product.json",
+          "classification": "CURRENT_VIEW_OF_OLD_SESSION",
+          "contract_version": "integrated_investment_decision_product/v1",
+          "decision_session": "2026-09-28",
+          "record_count": 1683,
+          "temporal_qualification": {
+            "artifact_observed_at": "2026-09-28T15:00:00+07:00",
+            "contract_version": "retained_integrated_decision_temporal_qualification/v1",
+            "decision_artifact_identity": "integrated_investment_decision_product/v1:1517dc71cdc3ac33ef2d65945c89121d1c4bc1d53c05afe70e91ed1e32d13917",
+            "decision_session": "2026-09-28",
+            "proof_reason_codes": [
+              "NONCANONICAL_COPY_OF_BOUND_ARTIFACT"
+            ],
+            "status": "CURRENT_VIEW_OF_OLD_SESSION"
+          }
+        },
+        {
+          "artifact_identity": "integrated_investment_decision_product/v1:21b97ff0911b61b6af3db0d46ad7f7624164c45535f7426e8dbcebe1274b7492",
+          "artifact_observed_at": "2026-09-29T15:00:00+07:00",
+          "artifact_path": "operations-review/canonical-post-close-v1/2026-09-29/enrichment/integrated_investment_decision_product.json",
+          "classification": "CURRENT_VIEW_OF_OLD_SESSION",
+          "contract_version": "integrated_investment_decision_product/v1",
+          "decision_session": "2026-09-29",
+          "record_count": 1683,
+          "temporal_qualification": {
+            "artifact_observed_at": "2026-09-29T15:00:00+07:00",
+            "contract_version": "retained_integrated_decision_temporal_qualification/v1",
+            "decision_artifact_identity": "integrated_investment_decision_product/v1:21b97ff0911b61b6af3db0d46ad7f7624164c45535f7426e8dbcebe1274b7492",
+            "decision_session": "2026-09-29",
+            "proof_reason_codes": [
+              "NONCANONICAL_COPY_OF_BOUND_ARTIFACT"
+            ],
+            "status": "CURRENT_VIEW_OF_OLD_SESSION"
+          }
+        },
+        {
+          "artifact_identity": "integrated_investment_decision_product/v1:cd0c92321fbef001be15477b876f46f3f1ab82961ce28b091daeb43a168d620f",
+          "artifact_observed_at": "2026-09-30T15:00:00+07:00",
+          "artifact_path": "operations-review/canonical-post-close-v1/2026-09-30/enrichment/integrated_investment_decision_product.json",
+          "classification": "CURRENT_VIEW_OF_OLD_SESSION",
+          "contract_version": "integrated_investment_decision_product/v1",
+          "decision_session": "2026-09-30",
+          "record_count": 1683,
+          "temporal_qualification": {
+            "artifact_observed_at": "2026-09-30T15:00:00+07:00",
+            "contract_version": "retained_integrated_decision_temporal_qualification/v1",
+            "decision_artifact_identity": "integrated_investment_decision_product/v1:cd0c92321fbef001be15477b876f46f3f1ab82961ce28b091daeb43a168d620f",
+            "decision_session": "2026-09-30",
+            "proof_reason_codes": [
+              "NONCANONICAL_COPY_OF_BOUND_ARTIFACT"
+            ],
+            "status": "CURRENT_VIEW_OF_OLD_SESSION"
+          }
+        },
+        {
+          "artifact_identity": "integrated_investment_decision_product/v1:407c747ebb99ca8b7b4635b1d98a91992b371fbcbeabb79b2425bdd305034ccf",
+          "artifact_observed_at": "2026-10-01T15:00:00+07:00",
+          "artifact_path": "operations-review/canonical-post-close-v1/2026-10-01/enrichment/integrated_investment_decision_product.json",
+          "classification": "CURRENT_VIEW_OF_OLD_SESSION",
+          "contract_version": "integrated_investment_decision_product/v1",
+          "decision_session": "2026-10-01",
+          "record_count": 1683,
+          "temporal_qualification": {
+            "artifact_observed_at": "2026-10-01T15:00:00+07:00",
+            "contract_version": "retained_integrated_decision_temporal_qualification/v1",
+            "decision_artifact_identity": "integrated_investment_decision_product/v1:407c747ebb99ca8b7b4635b1d98a91992b371fbcbeabb79b2425bdd305034ccf",
+            "decision_session": "2026-10-01",
+            "proof_reason_codes": [
+              "NONCANONICAL_COPY_OF_BOUND_ARTIFACT"
+            ],
+            "status": "CURRENT_VIEW_OF_OLD_SESSION"
+          }
+        }
+      ],
+      "handoff_snapshot_inventory": [
+        {
+          "canonical_handoff_path": "operations-review/canonical-post-close-v1/2026-08-26/session_handoff_bundle.json",
+          "session": "2026-08-26",
+          "snapshot_identity": null,
+          "snapshot_reason": null,
+          "snapshot_status": null
+        },
+        {
+          "canonical_handoff_path": "operations-review/canonical-post-close-v1/2026-08-27/session_handoff_bundle.json",
+          "session": "2026-08-27",
+          "snapshot_identity": null,
+          "snapshot_reason": null,
+          "snapshot_status": null
+        },
+        {
+          "canonical_handoff_path": "operations-review/canonical-post-close-v1/2026-08-28/session_handoff_bundle.json",
+          "session": "2026-08-28",
+          "snapshot_identity": null,
+          "snapshot_reason": null,
+          "snapshot_status": null
+        },
+        {
+          "canonical_handoff_path": "operations-review/canonical-post-close-v1/2026-09-03/session_handoff_bundle.json",
+          "session": "2026-09-03",
+          "snapshot_identity": null,
+          "snapshot_reason": null,
+          "snapshot_status": null
+        },
+        {
+          "canonical_handoff_path": "operations-review/canonical-post-close-v1/2026-09-04/session_handoff_bundle.json",
+          "session": "2026-09-04",
+          "snapshot_identity": null,
+          "snapshot_reason": null,
+          "snapshot_status": null
+        },
+        {
+          "canonical_handoff_path": "operations-review/canonical-post-close-v1/2026-09-07/session_handoff_bundle.json",
+          "session": "2026-09-07",
+          "snapshot_identity": null,
+          "snapshot_reason": null,
+          "snapshot_status": "UNAVAILABLE"
+        },
+        {
+          "canonical_handoff_path": "operations-review/canonical-post-close-v1/2026-09-08/session_handoff_bundle.json",
+          "session": "2026-09-08",
+          "snapshot_identity": null,
+          "snapshot_reason": null,
+          "snapshot_status": "UNAVAILABLE"
+        },
+        {
+          "canonical_handoff_path": "operations-review/canonical-post-close-v1/2026-09-09/session_handoff_bundle.json",
+          "session": "2026-09-09",
+          "snapshot_identity": "prospective_decision_snapshot:29933b20fff98d5de98e1b3770c34e0896a5bf87fbc4d937c6fe8e996b058a63",
+          "snapshot_reason": null,
+          "snapshot_status": "RETAINED"
+        },
+        {
+          "canonical_handoff_path": "operations-review/canonical-post-close-v1/2026-09-10/session_handoff_bundle.json",
+          "session": "2026-09-10",
+          "snapshot_identity": "prospective_decision_snapshot:5cf80549f4b71dcbf2c408040da2ba579b9563177825e26cda80f2004ff7c2f4",
+          "snapshot_reason": null,
+          "snapshot_status": "RETAINED"
+        },
+        {
+          "canonical_handoff_path": "operations-review/canonical-post-close-v1/2026-09-11/session_handoff_bundle.json",
+          "session": "2026-09-11",
+          "snapshot_identity": "prospective_decision_snapshot:1e2e10581a828c305c5df8a7d4c7720e54f984548122ad4fbf2873374a8b27a0",
+          "snapshot_reason": null,
+          "snapshot_status": "RETAINED"
+        },
+        {
+          "canonical_handoff_path": "operations-review/canonical-post-close-v1/2026-09-14/session_handoff_bundle.json",
+          "session": "2026-09-14",
+          "snapshot_identity": "prospective_decision_snapshot:18f72bc8d073d55dbee82d92723f271cbda0c2aa578a345329a08f111c2942ae",
+          "snapshot_reason": null,
+          "snapshot_status": "RETAINED"
+        },
+        {
+          "canonical_handoff_path": "operations-review/canonical-post-close-v1/2026-09-15/session_handoff_bundle.json",
+          "session": "2026-09-15",
+          "snapshot_identity": "prospective_decision_snapshot:cb716b767aa238f6be936d67db992c418f33b95336d36227efbfd91137cbcbf1",
+          "snapshot_reason": null,
+          "snapshot_status": "RETAINED"
+        },
+        {
+          "canonical_handoff_path": "operations-review/canonical-post-close-v1/2026-09-16/session_handoff_bundle.json",
+          "session": "2026-09-16",
+          "snapshot_identity": "prospective_decision_snapshot:b761b2c5fffd86202d3d99a952a7251736984e3cbe28d1584278f2f0e8812713",
+          "snapshot_reason": null,
+          "snapshot_status": "RETAINED"
+        },
+        {
+          "canonical_handoff_path": "operations-review/canonical-post-close-v1/2026-09-17/session_handoff_bundle.json",
+          "session": "2026-09-17",
+          "snapshot_identity": "prospective_decision_snapshot:a049a34d9b9d2100ba992acf6aaf97ce4ba1a248c4a630a1c5428879f6d55a47",
+          "snapshot_reason": null,
+          "snapshot_status": "RETAINED"
+        },
+        {
+          "canonical_handoff_path": "operations-review/canonical-post-close-v1/2026-09-18/session_handoff_bundle.json",
+          "session": "2026-09-18",
+          "snapshot_identity": "prospective_decision_snapshot:7cc74c68b25f1072a9816f2d97073345f1a27be66907daea9ab7c444157c35af",
+          "snapshot_reason": null,
+          "snapshot_status": "RETAINED"
+        },
+        {
+          "canonical_handoff_path": "operations-review/canonical-post-close-v1/2026-09-21/session_handoff_bundle.json",
+          "session": "2026-09-21",
+          "snapshot_identity": "prospective_decision_snapshot:54bb3729e544ecd00272032ac3a7a753054a941cba50bba17e53477beb512984",
+          "snapshot_reason": null,
+          "snapshot_status": "RETAINED"
+        },
+        {
+          "canonical_handoff_path": "operations-review/canonical-post-close-v1/2026-09-22/session_handoff_bundle.json",
+          "session": "2026-09-22",
+          "snapshot_identity": "prospective_decision_snapshot:5e89d11705ce341e838a2a36e22f4d8b83e37aaf3b9a94b4487956115a9397af",
+          "snapshot_reason": null,
+          "snapshot_status": "RETAINED"
+        },
+        {
+          "canonical_handoff_path": "operations-review/canonical-post-close-v1/2026-09-23/session_handoff_bundle.json",
+          "session": "2026-09-23",
+          "snapshot_identity": "prospective_decision_snapshot:4cfc63881a492e74c55ee794b68347e74ae87cddd178283b67968b4f6c6e3f60",
+          "snapshot_reason": null,
+          "snapshot_status": "RETAINED"
+        },
+        {
+          "canonical_handoff_path": "operations-review/canonical-post-close-v1/2026-09-24/session_handoff_bundle.json",
+          "session": "2026-09-24",
+          "snapshot_identity": "prospective_decision_snapshot:00753d16daeb1acb42f139485647454ea271ac0c9057fce906d2acf55d68348a",
+          "snapshot_reason": null,
+          "snapshot_status": "RETAINED"
+        },
+        {
+          "canonical_handoff_path": "operations-review/canonical-post-close-v1/2026-09-28/session_handoff_bundle.json",
+          "session": "2026-09-28",
+          "snapshot_identity": "prospective_decision_snapshot:d30d69ad686e1943e42bc831f7f8fbbdd6f25eab69affc937a3b11d583d65896",
+          "snapshot_reason": null,
+          "snapshot_status": "RETAINED"
+        },
+        {
+          "canonical_handoff_path": "operations-review/canonical-post-close-v1/2026-09-29/session_handoff_bundle.json",
+          "session": "2026-09-29",
+          "snapshot_identity": "prospective_decision_snapshot:910e0d36ae0f625f681e122603d39dd9d7d7a78646c80e0c16576bf692fe44a0",
+          "snapshot_reason": null,
+          "snapshot_status": "RETAINED"
+        },
+        {
+          "canonical_handoff_path": "operations-review/canonical-post-close-v1/2026-09-30/session_handoff_bundle.json",
+          "session": "2026-09-30",
+          "snapshot_identity": "prospective_decision_snapshot:cb678f46551102bb406f17c0013740654216a616f4cbb8f970612741f37ea574",
+          "snapshot_reason": null,
+          "snapshot_status": "RETAINED"
+        },
+        {
+          "canonical_handoff_path": "operations-review/canonical-post-close-v1/2026-10-01/session_handoff_bundle.json",
+          "session": "2026-10-01",
+          "snapshot_identity": "prospective_decision_snapshot:8be63debc2d88f2333c2d0583c940626943588e09ecabe0fe47de1685cae3c33",
+          "snapshot_reason": null,
+          "snapshot_status": "RETAINED"
+        }
+      ],
+      "immutable_snapshot_inventory": [
+        {
+          "canonical_handoff_path": "operations-review/canonical-post-close-v1/2026-09-09/session_handoff_bundle.json",
+          "classification": "GENUINE_PROSPECTIVE_DECISION",
+          "daily_session_operation_identity": "daily_research_session_operation:38d25aa5a5b96e4acb8265520652e35545076d3ed5906df22ae5bb5315555a1a",
+          "decision_count": 1683,
+          "operation_manifest_path": "operations-review/daily-research-session-operations-v1/2026-09-09/38d25aa5a5b96e4acb8265520652e35545076d3ed5906df22ae5bb5315555a1a/run_manifest.json",
+          "proof_reason_codes": [
+            "IMMUTABLE_SNAPSHOT_CONTENT_IDENTITY_VALID",
+            "CANONICAL_HANDOFF_BINDS_SNAPSHOT_AND_SOURCE_DECISION",
+            "RETAINED_DAILY_OPERATION_BINDS_SAME_COMPLETED_SESSION"
+          ],
+          "session": "2026-09-09",
+          "snapshot_identity": "prospective_decision_snapshot:29933b20fff98d5de98e1b3770c34e0896a5bf87fbc4d937c6fe8e996b058a63",
+          "snapshot_path": "operations-review/prospective-decision-retention-v1/2026-09-09/29933b20fff98d5de98e1b3770c34e0896a5bf87fbc4d937c6fe8e996b058a63/prospective_decision_snapshot.json",
+          "source_decision_artifact_identity": "integrated_investment_decision_product/v1:21e8014c0afb1bbbcc04acfa8a98e926186e839868b7d34e235be870bd11e3c6"
+        },
+        {
+          "canonical_handoff_path": "operations-review/canonical-post-close-v1/2026-09-10/session_handoff_bundle.json",
+          "classification": "GENUINE_PROSPECTIVE_DECISION",
+          "daily_session_operation_identity": "daily_research_session_operation:048d3bfc7cb032fe76616344b326acf67507dc3116af237bd7baf93a8dd3bd7e",
+          "decision_count": 1683,
+          "operation_manifest_path": "operations-review/daily-research-session-operations-v1/2026-09-10/048d3bfc7cb032fe76616344b326acf67507dc3116af237bd7baf93a8dd3bd7e/run_manifest.json",
+          "proof_reason_codes": [
+            "IMMUTABLE_SNAPSHOT_CONTENT_IDENTITY_VALID",
+            "CANONICAL_HANDOFF_BINDS_SNAPSHOT_AND_SOURCE_DECISION",
+            "RETAINED_DAILY_OPERATION_BINDS_SAME_COMPLETED_SESSION"
+          ],
+          "session": "2026-09-10",
+          "snapshot_identity": "prospective_decision_snapshot:5cf80549f4b71dcbf2c408040da2ba579b9563177825e26cda80f2004ff7c2f4",
+          "snapshot_path": "operations-review/prospective-decision-retention-v1/2026-09-10/5cf80549f4b71dcbf2c408040da2ba579b9563177825e26cda80f2004ff7c2f4/prospective_decision_snapshot.json",
+          "source_decision_artifact_identity": "integrated_investment_decision_product/v1:75eb42e997e33f1217b0ce56b37e5779cf043e109f9b4220593f9c227b18147b"
+        },
+        {
+          "canonical_handoff_path": "operations-review/canonical-post-close-v1/2026-09-11/session_handoff_bundle.json",
+          "classification": "GENUINE_PROSPECTIVE_DECISION",
+          "daily_session_operation_identity": "daily_research_session_operation:643d1f93ea5f6a289d85dc850cb0069f8cf28922c4476ed20112b9255f5d5b03",
+          "decision_count": 1683,
+          "operation_manifest_path": "operations-review/daily-research-session-operations-v1/2026-09-11/643d1f93ea5f6a289d85dc850cb0069f8cf28922c4476ed20112b9255f5d5b03/run_manifest.json",
+          "proof_reason_codes": [
+            "IMMUTABLE_SNAPSHOT_CONTENT_IDENTITY_VALID",
+            "CANONICAL_HANDOFF_BINDS_SNAPSHOT_AND_SOURCE_DECISION",
+            "RETAINED_DAILY_OPERATION_BINDS_SAME_COMPLETED_SESSION"
+          ],
+          "session": "2026-09-11",
+          "snapshot_identity": "prospective_decision_snapshot:1e2e10581a828c305c5df8a7d4c7720e54f984548122ad4fbf2873374a8b27a0",
+          "snapshot_path": "operations-review/prospective-decision-retention-v1/2026-09-11/1e2e10581a828c305c5df8a7d4c7720e54f984548122ad4fbf2873374a8b27a0/prospective_decision_snapshot.json",
+          "source_decision_artifact_identity": "integrated_investment_decision_product/v1:717165a74dbcafbb44a1fb7e5ff949395ae253f28eebf6fa8dd3bbd8ef33e984"
+        },
+        {
+          "canonical_handoff_path": null,
+          "classification": "EXCLUDE_TEMPORAL_PROVENANCE_UNQUALIFIED",
+          "daily_session_operation_identity": "daily_research_session_operation:5e5db7b46737b2170bb64880042eb581bd159dfebdcb7eb1372885822dafb4f1",
+          "decision_count": 1683,
+          "operation_manifest_path": "operations-review/daily-research-session-operations-v1/2026-09-11/5e5db7b46737b2170bb64880042eb581bd159dfebdcb7eb1372885822dafb4f1/run_manifest.json",
+          "proof_reason_codes": [
+            "CANONICAL_HANDOFF_SNAPSHOT_BINDING_MISSING"
+          ],
+          "session": "2026-09-11",
+          "snapshot_identity": "prospective_decision_snapshot:70d8cae93a0d3a23b9a9a4c3c7a8f76e7a2baa77e2775ad420b2765975fc9b94",
+          "snapshot_path": "operations-review/prospective-decision-retention-v1/2026-09-11/70d8cae93a0d3a23b9a9a4c3c7a8f76e7a2baa77e2775ad420b2765975fc9b94/prospective_decision_snapshot.json",
+          "source_decision_artifact_identity": "integrated_investment_decision_product/v1:717165a74dbcafbb44a1fb7e5ff949395ae253f28eebf6fa8dd3bbd8ef33e984"
+        },
+        {
+          "canonical_handoff_path": null,
+          "classification": "EXCLUDE_TEMPORAL_PROVENANCE_UNQUALIFIED",
+          "daily_session_operation_identity": "daily_research_session_operation:26ad00758478835c231e8c39b47248bf959819a5959cf5cb052d7d20d1b5ee80",
+          "decision_count": 1683,
+          "operation_manifest_path": "operations-review/daily-research-session-operations-v1/2026-09-11/26ad00758478835c231e8c39b47248bf959819a5959cf5cb052d7d20d1b5ee80/run_manifest.json",
+          "proof_reason_codes": [
+            "CANONICAL_HANDOFF_SNAPSHOT_BINDING_MISSING"
+          ],
+          "session": "2026-09-11",
+          "snapshot_identity": "prospective_decision_snapshot:c11780cd798d0a27f6bf6ec7374fc1664549960ec56a2bd75c03602a19d924ee",
+          "snapshot_path": "operations-review/prospective-decision-retention-v1/2026-09-11/c11780cd798d0a27f6bf6ec7374fc1664549960ec56a2bd75c03602a19d924ee/prospective_decision_snapshot.json",
+          "source_decision_artifact_identity": "integrated_investment_decision_product/v1:717165a74dbcafbb44a1fb7e5ff949395ae253f28eebf6fa8dd3bbd8ef33e984"
+        },
+        {
+          "canonical_handoff_path": "operations-review/canonical-post-close-v1/2026-09-14/session_handoff_bundle.json",
+          "classification": "GENUINE_PROSPECTIVE_DECISION",
+          "daily_session_operation_identity": "daily_research_session_operation:7ae3e33c06106dfa41cd0ed11182c7e7c8fe59bc3cbe7245b2b7635bc20a2b5a",
+          "decision_count": 1683,
+          "operation_manifest_path": "operations-review/daily-research-session-operations-v1/2026-09-14/7ae3e33c06106dfa41cd0ed11182c7e7c8fe59bc3cbe7245b2b7635bc20a2b5a/run_manifest.json",
+          "proof_reason_codes": [
+            "IMMUTABLE_SNAPSHOT_CONTENT_IDENTITY_VALID",
+            "CANONICAL_HANDOFF_BINDS_SNAPSHOT_AND_SOURCE_DECISION",
+            "RETAINED_DAILY_OPERATION_BINDS_SAME_COMPLETED_SESSION"
+          ],
+          "session": "2026-09-14",
+          "snapshot_identity": "prospective_decision_snapshot:18f72bc8d073d55dbee82d92723f271cbda0c2aa578a345329a08f111c2942ae",
+          "snapshot_path": "operations-review/prospective-decision-retention-v1/2026-09-14/18f72bc8d073d55dbee82d92723f271cbda0c2aa578a345329a08f111c2942ae/prospective_decision_snapshot.json",
+          "source_decision_artifact_identity": "integrated_investment_decision_product/v1:28cc9a26260c82dba510ea5216cc867465eb76e7b8ef1058954caf5abaafe8fa"
+        },
+        {
+          "canonical_handoff_path": "operations-review/canonical-post-close-v1/2026-09-15/session_handoff_bundle.json",
+          "classification": "GENUINE_PROSPECTIVE_DECISION",
+          "daily_session_operation_identity": "daily_research_session_operation:2026166fdb3fdea24d3b6c38847cca3bb28d1e35cecdad38ba2a91d3caa106bf",
+          "decision_count": 1683,
+          "operation_manifest_path": "operations-review/daily-research-session-operations-v1/2026-09-15/2026166fdb3fdea24d3b6c38847cca3bb28d1e35cecdad38ba2a91d3caa106bf/run_manifest.json",
+          "proof_reason_codes": [
+            "IMMUTABLE_SNAPSHOT_CONTENT_IDENTITY_VALID",
+            "CANONICAL_HANDOFF_BINDS_SNAPSHOT_AND_SOURCE_DECISION",
+            "RETAINED_DAILY_OPERATION_BINDS_SAME_COMPLETED_SESSION"
+          ],
+          "session": "2026-09-15",
+          "snapshot_identity": "prospective_decision_snapshot:cb716b767aa238f6be936d67db992c418f33b95336d36227efbfd91137cbcbf1",
+          "snapshot_path": "operations-review/prospective-decision-retention-v1/2026-09-15/cb716b767aa238f6be936d67db992c418f33b95336d36227efbfd91137cbcbf1/prospective_decision_snapshot.json",
+          "source_decision_artifact_identity": "integrated_investment_decision_product/v1:7655b481f1e2681bc432f5f916dc6a8c5a8846f55228b4c57111af2ebef805a9"
+        },
+        {
+          "canonical_handoff_path": "operations-review/canonical-post-close-v1/2026-09-16/session_handoff_bundle.json",
+          "classification": "GENUINE_PROSPECTIVE_DECISION",
+          "daily_session_operation_identity": "daily_research_session_operation:f0b5478667fb8ec6b5ef51447265a5ad377b60e6567b742f074aafb3491e92f6",
+          "decision_count": 1683,
+          "operation_manifest_path": "operations-review/daily-research-session-operations-v1/2026-09-16/f0b5478667fb8ec6b5ef51447265a5ad377b60e6567b742f074aafb3491e92f6/run_manifest.json",
+          "proof_reason_codes": [
+            "IMMUTABLE_SNAPSHOT_CONTENT_IDENTITY_VALID",
+            "CANONICAL_HANDOFF_BINDS_SNAPSHOT_AND_SOURCE_DECISION",
+            "RETAINED_DAILY_OPERATION_BINDS_SAME_COMPLETED_SESSION"
+          ],
+          "session": "2026-09-16",
+          "snapshot_identity": "prospective_decision_snapshot:b761b2c5fffd86202d3d99a952a7251736984e3cbe28d1584278f2f0e8812713",
+          "snapshot_path": "operations-review/prospective-decision-retention-v1/2026-09-16/b761b2c5fffd86202d3d99a952a7251736984e3cbe28d1584278f2f0e8812713/prospective_decision_snapshot.json",
+          "source_decision_artifact_identity": "integrated_investment_decision_product/v1:7ac49c56b46f44f23ebf64a6212cef9399fe10b4edf8c6044fe8792dee366984"
+        },
+        {
+          "canonical_handoff_path": "operations-review/canonical-post-close-v1/2026-09-17/session_handoff_bundle.json",
+          "classification": "GENUINE_PROSPECTIVE_DECISION",
+          "daily_session_operation_identity": "daily_research_session_operation:caaad572e738d607a5fbb0a356b8a3b5ae80d87a3ab3561568c997e66bf2a87d",
+          "decision_count": 1683,
+          "operation_manifest_path": "operations-review/daily-research-session-operations-v1/2026-09-17/caaad572e738d607a5fbb0a356b8a3b5ae80d87a3ab3561568c997e66bf2a87d/run_manifest.json",
+          "proof_reason_codes": [
+            "IMMUTABLE_SNAPSHOT_CONTENT_IDENTITY_VALID",
+            "CANONICAL_HANDOFF_BINDS_SNAPSHOT_AND_SOURCE_DECISION",
+            "RETAINED_DAILY_OPERATION_BINDS_SAME_COMPLETED_SESSION"
+          ],
+          "session": "2026-09-17",
+          "snapshot_identity": "prospective_decision_snapshot:a049a34d9b9d2100ba992acf6aaf97ce4ba1a248c4a630a1c5428879f6d55a47",
+          "snapshot_path": "operations-review/prospective-decision-retention-v1/2026-09-17/a049a34d9b9d2100ba992acf6aaf97ce4ba1a248c4a630a1c5428879f6d55a47/prospective_decision_snapshot.json",
+          "source_decision_artifact_identity": "integrated_investment_decision_product/v1:3aacbc7d73a555b0108faf0e26c77e3c8929920f1948a97a0a8b3dc31a83d8ee"
+        },
+        {
+          "canonical_handoff_path": "operations-review/canonical-post-close-v1/2026-09-18/session_handoff_bundle.json",
+          "classification": "GENUINE_PROSPECTIVE_DECISION",
+          "daily_session_operation_identity": "daily_research_session_operation:8a857ca4204136e42982dd2d1b953ebb857f3a6599837d7b0d20b3a820c3b95f",
+          "decision_count": 1683,
+          "operation_manifest_path": "operations-review/daily-research-session-operations-v1/2026-09-18/8a857ca4204136e42982dd2d1b953ebb857f3a6599837d7b0d20b3a820c3b95f/run_manifest.json",
+          "proof_reason_codes": [
+            "IMMUTABLE_SNAPSHOT_CONTENT_IDENTITY_VALID",
+            "CANONICAL_HANDOFF_BINDS_SNAPSHOT_AND_SOURCE_DECISION",
+            "RETAINED_DAILY_OPERATION_BINDS_SAME_COMPLETED_SESSION"
+          ],
+          "session": "2026-09-18",
+          "snapshot_identity": "prospective_decision_snapshot:7cc74c68b25f1072a9816f2d97073345f1a27be66907daea9ab7c444157c35af",
+          "snapshot_path": "operations-review/prospective-decision-retention-v1/2026-09-18/7cc74c68b25f1072a9816f2d97073345f1a27be66907daea9ab7c444157c35af/prospective_decision_snapshot.json",
+          "source_decision_artifact_identity": "integrated_investment_decision_product/v1:808df7a8f95078362ebc4b1725cbddeb10855d51bb27b812c8f30ec130564426"
+        },
+        {
+          "canonical_handoff_path": "operations-review/canonical-post-close-v1/2026-09-21/session_handoff_bundle.json",
+          "classification": "GENUINE_PROSPECTIVE_DECISION",
+          "daily_session_operation_identity": "daily_research_session_operation:a522dc96bddeba8649e2c3a5369bbcc0872d91f8accb0c4a2e61e392abef0379",
+          "decision_count": 1683,
+          "operation_manifest_path": "operations-review/daily-research-session-operations-v1/2026-09-21/a522dc96bddeba8649e2c3a5369bbcc0872d91f8accb0c4a2e61e392abef0379/run_manifest.json",
+          "proof_reason_codes": [
+            "IMMUTABLE_SNAPSHOT_CONTENT_IDENTITY_VALID",
+            "CANONICAL_HANDOFF_BINDS_SNAPSHOT_AND_SOURCE_DECISION",
+            "RETAINED_DAILY_OPERATION_BINDS_SAME_COMPLETED_SESSION"
+          ],
+          "session": "2026-09-21",
+          "snapshot_identity": "prospective_decision_snapshot:54bb3729e544ecd00272032ac3a7a753054a941cba50bba17e53477beb512984",
+          "snapshot_path": "operations-review/prospective-decision-retention-v1/2026-09-21/54bb3729e544ecd00272032ac3a7a753054a941cba50bba17e53477beb512984/prospective_decision_snapshot.json",
+          "source_decision_artifact_identity": "integrated_investment_decision_product/v1:37675f99f328669ecf112ef74e10beb9430cb85a051b8a7893fc49758531956c"
+        },
+        {
+          "canonical_handoff_path": "operations-review/canonical-post-close-v1/2026-09-22/session_handoff_bundle.json",
+          "classification": "GENUINE_PROSPECTIVE_DECISION",
+          "daily_session_operation_identity": "daily_research_session_operation:020ef7a3aee10c047fdcf5369834c2e4abe5ffb1c33c6eab83691262335c54c6",
+          "decision_count": 1683,
+          "operation_manifest_path": "operations-review/daily-research-session-operations-v1/2026-09-22/020ef7a3aee10c047fdcf5369834c2e4abe5ffb1c33c6eab83691262335c54c6/run_manifest.json",
+          "proof_reason_codes": [
+            "IMMUTABLE_SNAPSHOT_CONTENT_IDENTITY_VALID",
+            "CANONICAL_HANDOFF_BINDS_SNAPSHOT_AND_SOURCE_DECISION",
+            "RETAINED_DAILY_OPERATION_BINDS_SAME_COMPLETED_SESSION"
+          ],
+          "session": "2026-09-22",
+          "snapshot_identity": "prospective_decision_snapshot:5e89d11705ce341e838a2a36e22f4d8b83e37aaf3b9a94b4487956115a9397af",
+          "snapshot_path": "operations-review/prospective-decision-retention-v1/2026-09-22/5e89d11705ce341e838a2a36e22f4d8b83e37aaf3b9a94b4487956115a9397af/prospective_decision_snapshot.json",
+          "source_decision_artifact_identity": "integrated_investment_decision_product/v1:ba5dffb244417fc64817b1a9213cf493e602ee24fbe07a9f3ecc02273ba9b2b1"
+        },
+        {
+          "canonical_handoff_path": "operations-review/canonical-post-close-v1/2026-09-23/session_handoff_bundle.json",
+          "classification": "GENUINE_PROSPECTIVE_DECISION",
+          "daily_session_operation_identity": "daily_research_session_operation:7439b0318106e937b03e314b64d3211294591f4846918f84f0a35567fe4836cf",
+          "decision_count": 1683,
+          "operation_manifest_path": "operations-review/daily-research-session-operations-v1/2026-09-23/7439b0318106e937b03e314b64d3211294591f4846918f84f0a35567fe4836cf/run_manifest.json",
+          "proof_reason_codes": [
+            "IMMUTABLE_SNAPSHOT_CONTENT_IDENTITY_VALID",
+            "CANONICAL_HANDOFF_BINDS_SNAPSHOT_AND_SOURCE_DECISION",
+            "RETAINED_DAILY_OPERATION_BINDS_SAME_COMPLETED_SESSION"
+          ],
+          "session": "2026-09-23",
+          "snapshot_identity": "prospective_decision_snapshot:4cfc63881a492e74c55ee794b68347e74ae87cddd178283b67968b4f6c6e3f60",
+          "snapshot_path": "operations-review/prospective-decision-retention-v1/2026-09-23/4cfc63881a492e74c55ee794b68347e74ae87cddd178283b67968b4f6c6e3f60/prospective_decision_snapshot.json",
+          "source_decision_artifact_identity": "integrated_investment_decision_product/v1:8a4f4af31374a631f3a7157769c3cb173b4b46ff3948fd9d5304ad493ff98862"
+        },
+        {
+          "canonical_handoff_path": "operations-review/canonical-post-close-v1/2026-09-24/session_handoff_bundle.json",
+          "classification": "GENUINE_PROSPECTIVE_DECISION",
+          "daily_session_operation_identity": "daily_research_session_operation:25ac1ea3044b88c2a9f272a471b7fadc13f6b21e158fd0abb5e171344a975f22",
+          "decision_count": 1683,
+          "operation_manifest_path": "operations-review/daily-research-session-operations-v1/2026-09-24/25ac1ea3044b88c2a9f272a471b7fadc13f6b21e158fd0abb5e171344a975f22/run_manifest.json",
+          "proof_reason_codes": [
+            "IMMUTABLE_SNAPSHOT_CONTENT_IDENTITY_VALID",
+            "CANONICAL_HANDOFF_BINDS_SNAPSHOT_AND_SOURCE_DECISION",
+            "RETAINED_DAILY_OPERATION_BINDS_SAME_COMPLETED_SESSION"
+          ],
+          "session": "2026-09-24",
+          "snapshot_identity": "prospective_decision_snapshot:00753d16daeb1acb42f139485647454ea271ac0c9057fce906d2acf55d68348a",
+          "snapshot_path": "operations-review/prospective-decision-retention-v1/2026-09-24/00753d16daeb1acb42f139485647454ea271ac0c9057fce906d2acf55d68348a/prospective_decision_snapshot.json",
+          "source_decision_artifact_identity": "integrated_investment_decision_product/v1:4b96273010269a7e370ab0abacb53f0351d75c53c3e57dcd64925763a10eed19"
+        },
+        {
+          "canonical_handoff_path": "operations-review/canonical-post-close-v1/2026-09-28/session_handoff_bundle.json",
+          "classification": "GENUINE_PROSPECTIVE_DECISION",
+          "daily_session_operation_identity": "daily_research_session_operation:c08d9953b190161b5a954a081cc66f7ed107262d4d578740f6b60d6e3809b987",
+          "decision_count": 1683,
+          "operation_manifest_path": "operations-review/daily-research-session-operations-v1/2026-09-28/c08d9953b190161b5a954a081cc66f7ed107262d4d578740f6b60d6e3809b987/run_manifest.json",
+          "proof_reason_codes": [
+            "IMMUTABLE_SNAPSHOT_CONTENT_IDENTITY_VALID",
+            "CANONICAL_HANDOFF_BINDS_SNAPSHOT_AND_SOURCE_DECISION",
+            "RETAINED_DAILY_OPERATION_BINDS_SAME_COMPLETED_SESSION"
+          ],
+          "session": "2026-09-28",
+          "snapshot_identity": "prospective_decision_snapshot:d30d69ad686e1943e42bc831f7f8fbbdd6f25eab69affc937a3b11d583d65896",
+          "snapshot_path": "operations-review/prospective-decision-retention-v1/2026-09-28/d30d69ad686e1943e42bc831f7f8fbbdd6f25eab69affc937a3b11d583d65896/prospective_decision_snapshot.json",
+          "source_decision_artifact_identity": "integrated_investment_decision_product/v1:1517dc71cdc3ac33ef2d65945c89121d1c4bc1d53c05afe70e91ed1e32d13917"
+        },
+        {
+          "canonical_handoff_path": "operations-review/canonical-post-close-v1/2026-09-29/session_handoff_bundle.json",
+          "classification": "GENUINE_PROSPECTIVE_DECISION",
+          "daily_session_operation_identity": "daily_research_session_operation:b74abe76bd354747c22cbed8c2b2fb785630fef9536c3b57d592958742dcfa42",
+          "decision_count": 1683,
+          "operation_manifest_path": "operations-review/daily-research-session-operations-v1/2026-09-29/b74abe76bd354747c22cbed8c2b2fb785630fef9536c3b57d592958742dcfa42/run_manifest.json",
+          "proof_reason_codes": [
+            "IMMUTABLE_SNAPSHOT_CONTENT_IDENTITY_VALID",
+            "CANONICAL_HANDOFF_BINDS_SNAPSHOT_AND_SOURCE_DECISION",
+            "RETAINED_DAILY_OPERATION_BINDS_SAME_COMPLETED_SESSION"
+          ],
+          "session": "2026-09-29",
+          "snapshot_identity": "prospective_decision_snapshot:910e0d36ae0f625f681e122603d39dd9d7d7a78646c80e0c16576bf692fe44a0",
+          "snapshot_path": "operations-review/prospective-decision-retention-v1/2026-09-29/910e0d36ae0f625f681e122603d39dd9d7d7a78646c80e0c16576bf692fe44a0/prospective_decision_snapshot.json",
+          "source_decision_artifact_identity": "integrated_investment_decision_product/v1:21b97ff0911b61b6af3db0d46ad7f7624164c45535f7426e8dbcebe1274b7492"
+        },
+        {
+          "canonical_handoff_path": "operations-review/canonical-post-close-v1/2026-09-30/session_handoff_bundle.json",
+          "classification": "GENUINE_PROSPECTIVE_DECISION",
+          "daily_session_operation_identity": "daily_research_session_operation:2e3b62033b487141738db16b68529445c70b1a473e0f35de70fe5e9d97d966ba",
+          "decision_count": 1683,
+          "operation_manifest_path": "operations-review/daily-research-session-operations-v1/2026-09-30/2e3b62033b487141738db16b68529445c70b1a473e0f35de70fe5e9d97d966ba/run_manifest.json",
+          "proof_reason_codes": [
+            "IMMUTABLE_SNAPSHOT_CONTENT_IDENTITY_VALID",
+            "CANONICAL_HANDOFF_BINDS_SNAPSHOT_AND_SOURCE_DECISION",
+            "RETAINED_DAILY_OPERATION_BINDS_SAME_COMPLETED_SESSION"
+          ],
+          "session": "2026-09-30",
+          "snapshot_identity": "prospective_decision_snapshot:cb678f46551102bb406f17c0013740654216a616f4cbb8f970612741f37ea574",
+          "snapshot_path": "operations-review/prospective-decision-retention-v1/2026-09-30/cb678f46551102bb406f17c0013740654216a616f4cbb8f970612741f37ea574/prospective_decision_snapshot.json",
+          "source_decision_artifact_identity": "integrated_investment_decision_product/v1:cd0c92321fbef001be15477b876f46f3f1ab82961ce28b091daeb43a168d620f"
+        },
+        {
+          "canonical_handoff_path": "operations-review/canonical-post-close-v1/2026-10-01/session_handoff_bundle.json",
+          "classification": "GENUINE_PROSPECTIVE_DECISION",
+          "daily_session_operation_identity": "daily_research_session_operation:6420b228b3700bfbbee6d8b3793443d8c206874e44d6a123fbb483669118d35b",
+          "decision_count": 1683,
+          "operation_manifest_path": "operations-review/daily-research-session-operations-v1/2026-10-01/6420b228b3700bfbbee6d8b3793443d8c206874e44d6a123fbb483669118d35b/run_manifest.json",
+          "proof_reason_codes": [
+            "IMMUTABLE_SNAPSHOT_CONTENT_IDENTITY_VALID",
+            "CANONICAL_HANDOFF_BINDS_SNAPSHOT_AND_SOURCE_DECISION",
+            "RETAINED_DAILY_OPERATION_BINDS_SAME_COMPLETED_SESSION"
+          ],
+          "session": "2026-10-01",
+          "snapshot_identity": "prospective_decision_snapshot:8be63debc2d88f2333c2d0583c940626943588e09ecabe0fe47de1685cae3c33",
+          "snapshot_path": "operations-review/prospective-decision-retention-v1/2026-10-01/8be63debc2d88f2333c2d0583c940626943588e09ecabe0fe47de1685cae3c33/prospective_decision_snapshot.json",
+          "source_decision_artifact_identity": "integrated_investment_decision_product/v1:407c747ebb99ca8b7b4635b1d98a91992b371fbcbeabb79b2425bdd305034ccf"
+        }
+      ],
+      "qualified_session_chain": [
+        "2026-09-03",
+        "2026-09-04",
+        "2026-09-08",
+        "2026-09-09",
+        "2026-09-10",
+        "2026-09-11",
+        "2026-09-14",
+        "2026-09-15",
+        "2026-09-16",
+        "2026-09-17",
+        "2026-09-18",
+        "2026-09-21",
+        "2026-09-22",
+        "2026-09-23",
+        "2026-09-24",
+        "2026-09-28",
+        "2026-09-29",
+        "2026-09-30",
+        "2026-10-01"
+      ],
+      "retained_snapshot_sessions": [
+        "2026-09-03",
+        "2026-09-08",
+        "2026-09-09",
+        "2026-09-10",
+        "2026-09-11",
+        "2026-09-14",
+        "2026-09-15",
+        "2026-09-16",
+        "2026-09-17",
+        "2026-09-18",
+        "2026-09-21",
+        "2026-09-22",
+        "2026-09-23",
+        "2026-09-24",
+        "2026-09-28",
+        "2026-09-29",
+        "2026-09-30",
+        "2026-10-01"
+      ],
+      "temporal_gate": "LEGACY_CANONICAL_HANDOFF_OR_IMMUTABLE_T0_SNAPSHOT_PLUS_RETAINED_DAILY_OPERATION"
+    },
+    "unique_ticker_count": 1683
+  },
+  "mutation_check": {
+    "baseline_hashes_unchanged": true,
+    "changed_source_files": [],
+    "unchanged": true
+  },
+  "policy_candidate_dispositions": {
+    "NO_GOVERNED_POLICY_CANDIDATE_TO_COMPARE": 1952
+  },
+  "sample_adequacy_policy": {
+    "authority": "RESEARCH_POLICY_THRESHOLD_NOT_FACTUAL_AUTHORITY",
+    "calibrated_research_from": {
+      "distinct_t0_sessions": 10,
+      "observations": 50
+    },
+    "descriptive_only_from": {
+      "distinct_t0_sessions": 5,
+      "observations": 20
+    },
+    "insufficient_sample_below": {
+      "distinct_t0_sessions": 5,
+      "observations": 20
+    },
+    "policy_version": "empirical_setup_outcome_calibration/v1"
+  },
+  "source_file_count": 138,
+  "source_hashes": {
+    "operations-review/canonical-post-close-v1/2026-08-25/enrichment/integrated_investment_decision_product.json": "37bbaf12f61d0692c7f7b9bfa8a5bf626e3ef5defb4f32585e4158d883ff472e",
+    "operations-review/canonical-post-close-v1/2026-08-26/session_handoff_bundle.json": "7c147e75cb61dbcb443069441602383a600a0c5904ea1e7b197da8fbb039d19a",
+    "operations-review/canonical-post-close-v1/2026-08-27/session_handoff_bundle.json": "0ee2d087d0f8def1a97e9a84384431721090c3bbd4275a2eb500af3f3d360c4a",
+    "operations-review/canonical-post-close-v1/2026-08-28/session_handoff_bundle.json": "d99a98c78e0b691687ec756f700b4bb43b91e7634e97d3d940bfdc648f1b3f7d",
+    "operations-review/canonical-post-close-v1/2026-09-03/enrichment/integrated_investment_decision_product.json": "b86c359bb59c0a8d3861ccfda954cb426187a34257daadc37a71505161bb700a",
+    "operations-review/canonical-post-close-v1/2026-09-03/post-close-attempt-080034/operations-review/integrated-investment-decision-product-v1-20260903/integrated_investment_decision_product_artifact.json": "b86c359bb59c0a8d3861ccfda954cb426187a34257daadc37a71505161bb700a",
+    "operations-review/canonical-post-close-v1/2026-09-03/session_handoff_bundle.json": "8b93f878e38aad1bcc684ccda44b6084e542f0d680a817fcb53f01272d52208f",
+    "operations-review/canonical-post-close-v1/2026-09-04/enrichment/integrated_investment_decision_product.json": "abade69452bc3f585da5ddace10d65bb96d3fdc1f682d87759b5b683094694e7",
+    "operations-review/canonical-post-close-v1/2026-09-04/session_handoff_bundle.json": "0d62bebf75f35c533b9f2505369355682dd6aaaf2ea5f8c4d56c69bb1675cfe7",
+    "operations-review/canonical-post-close-v1/2026-09-07/session_handoff_bundle.json": "c9b6bea7fc97c2a3f3aa007fca957f9a1d5623f6e8793d6863ff3c83691172c8",
+    "operations-review/canonical-post-close-v1/2026-09-08/enrichment/integrated_investment_decision_product.json": "eafa5c60894ed4b08d03103df2d958d667727ee406ea537401893dec451dfbb8",
+    "operations-review/canonical-post-close-v1/2026-09-08/session_handoff_bundle.json": "f4b2353a59550fd88ab11806eba891c7afbe0aa1dddea9bc7e9aee76dd5a210e",
+    "operations-review/canonical-post-close-v1/2026-09-09/enrichment/integrated_investment_decision_product.json": "8c65a609b496de7330574ac660fe1180337dfb07c0bc39e895b0bc1d617de81f",
+    "operations-review/canonical-post-close-v1/2026-09-09/session_handoff_bundle.json": "40f67728af9be44d069fad0582daf65344673f71f82475a14049de29bb9f4119",
+    "operations-review/canonical-post-close-v1/2026-09-10/enrichment/integrated_investment_decision_product.json": "4ea4a600782bd21eef5b50b6161f53bc9fcecf8a479859c2b8b2772725bdccce",
+    "operations-review/canonical-post-close-v1/2026-09-10/session_handoff_bundle.json": "1d80d37485e9abe7f11fbe6507590430df3f2152f85057da12ad261037d6751d",
+    "operations-review/canonical-post-close-v1/2026-09-11/enrichment/integrated_investment_decision_product.json": "b35ed2877d9cbfebcde9d5a25505e1e2b543e943f6c940cfe4c7e0ca82acdc69",
+    "operations-review/canonical-post-close-v1/2026-09-11/session_handoff_bundle.json": "2a9af0c12b268650f134fa6677cfc0af40551637e25c53bb77f0b5676f323879",
+    "operations-review/canonical-post-close-v1/2026-09-14/enrichment/integrated_investment_decision_product.json": "b6ec4d95eaefe13d1f1c5b7dea90e9d8dea84974eeb2f6e2231ffaaf6ec275f4",
+    "operations-review/canonical-post-close-v1/2026-09-14/session_handoff_bundle.json": "91c8a87fd81d4c16e87dfb29c1e5d38c6f43a219b705926b3e7c8a3f1c37564e",
+    "operations-review/canonical-post-close-v1/2026-09-15/enrichment/integrated_investment_decision_product.json": "ae016c13d0fe3dae67742c1379580df757997c27828d7f1c4d16ce2443a4d887",
+    "operations-review/canonical-post-close-v1/2026-09-15/session_handoff_bundle.json": "ebabe91abcc1047e24e9083ca0d04300a31bd8833d0770eb518b980a4083bf31",
+    "operations-review/canonical-post-close-v1/2026-09-16/enrichment/integrated_investment_decision_product.json": "0e090f35887119b8f46615b248088a627b53e180f0eccb7558c9df3a69342c15",
+    "operations-review/canonical-post-close-v1/2026-09-16/session_handoff_bundle.json": "547c550928980966fc10c1221d85f670beb66c6ebaaa8cf5503a83715f2873bc",
+    "operations-review/canonical-post-close-v1/2026-09-17/enrichment/integrated_investment_decision_product.json": "88e7b35769a7b49e7a13798aade18dcf60bd3e70d80f3dc21ae79d6c21352697",
+    "operations-review/canonical-post-close-v1/2026-09-17/session_handoff_bundle.json": "f921195f15fd2de42da6e06df20ae2b61d6e7c5886d4ac557eb8ccf6f5f10b7b",
+    "operations-review/canonical-post-close-v1/2026-09-18/enrichment/integrated_investment_decision_product.json": "b8035671544bf5d7eda30e6abb9e8fa7e8d24aa7124e672af889f4d2808e3dfb",
+    "operations-review/canonical-post-close-v1/2026-09-18/session_handoff_bundle.json": "374115748059abab1eeddfd86388f3312f1ab3a9dc035f0021de2b3a49b6b2f0",
+    "operations-review/canonical-post-close-v1/2026-09-21/enrichment/integrated_investment_decision_product.json": "92f902f3670026008dd154a6836d3a0b60b7c90bbde376a96e53d328bc9b402b",
+    "operations-review/canonical-post-close-v1/2026-09-21/session_handoff_bundle.json": "7b351508059bbca5286ee5de8a6c0d78f2cf4d96e5f92016894398e68e24d721",
+    "operations-review/canonical-post-close-v1/2026-09-22/enrichment/integrated_investment_decision_product.json": "cfcc0e6807ec007923ce81cdd3adb4e44b61cc72252290b723f3ee418f910994",
+    "operations-review/canonical-post-close-v1/2026-09-22/session_handoff_bundle.json": "6cf42f5bdf8cd35d9fc6f245ecae11dc83c28e1d74b47375d7c9dec4f79cb96f",
+    "operations-review/canonical-post-close-v1/2026-09-23/enrichment/integrated_investment_decision_product.json": "5c03e21e560be0626510f1c351b23d82b8a15a06bca19da44b003e32e38cd343",
+    "operations-review/canonical-post-close-v1/2026-09-23/session_handoff_bundle.json": "9c73f742b9f4909efa7eefa04ce9da27c655d0445c357e0cff1336560b9a5d2f",
+    "operations-review/canonical-post-close-v1/2026-09-24/enrichment/integrated_investment_decision_product.json": "c582cf4c5e07660d6595802ebe8a70efa10c09f95259dd04e8c9fb517e69249f",
+    "operations-review/canonical-post-close-v1/2026-09-24/session_handoff_bundle.json": "59bb6a1a1004d55ec4ee1555f1d71a6b1df360526d242652ea7857825123041f",
+    "operations-review/canonical-post-close-v1/2026-09-28/enrichment/integrated_investment_decision_product.json": "6d503c8057da43710c651728180ecc76fd6a0f930dbdca834deff6523a12faae",
+    "operations-review/canonical-post-close-v1/2026-09-28/session_handoff_bundle.json": "d6e6d95e3f5fa12fc80d0029ec821ece2f90cc284955080391fee64d1152ad06",
+    "operations-review/canonical-post-close-v1/2026-09-29/enrichment/integrated_investment_decision_product.json": "25908f43605b6a90099776f04eef94feaec77ba2143f2f7240a8196b38418877",
+    "operations-review/canonical-post-close-v1/2026-09-29/session_handoff_bundle.json": "6fd3275bf395fd564ea063a9493d9da1d7476d6bf1de68a35125737be7728490",
+    "operations-review/canonical-post-close-v1/2026-09-30/enrichment/integrated_investment_decision_product.json": "655b59d8dcd7e929314fc5d7c96da20e26de1edd557631ba0feecb92c2ff6436",
+    "operations-review/canonical-post-close-v1/2026-09-30/session_handoff_bundle.json": "0b096dd93e24d44ee035730c8cb6932073715e0c0f42c2e957427fff20aa3954",
+    "operations-review/canonical-post-close-v1/2026-10-01/enrichment/integrated_investment_decision_product.json": "a70d3c1a444d4b3d793833f2cdaed24acc5e640f4c28b5892c76bf78d3feff00",
+    "operations-review/canonical-post-close-v1/2026-10-01/session_handoff_bundle.json": "bdde3c68ca899c948aba14b06ef19093211b4c6cf40de419fa60dae2d0fdf6b7",
+    "operations-review/daily-research-session-operations-v1/2026-08-21/1941b0a273dd74ba76fbd17bce8a1bcc2526c0280c914b6b7c1a1c4a702af2b7/run_manifest.json": "e4b9bb057af6f4c012e5616ce25dc8448ba0f41fe508a736591caea334aba209",
+    "operations-review/daily-research-session-operations-v1/2026-08-21/2a1663e71bd582b9b6861409e7d7a831298c61cca340fb753798fc9357509675/run_manifest.json": "48b16c4ca727b35ad1bce8e9f8d3b6df90d15dc7a52c9d4ff42b36128c53f6a2",
+    "operations-review/daily-research-session-operations-v1/2026-08-21/39830bea57cd2a1a606e28be2dfd88439ecc8f39e9a86309a395a65d16456848/run_manifest.json": "463f305ffe41438f3d35a9f901e779f7e87f55b653ce5591b5f45b61d307f027",
+    "operations-review/daily-research-session-operations-v1/2026-08-21/469d39618f67b0f7a000232091a528896c0349d54d43cf2392e1f5f7f53a8cfe/run_manifest.json": "91b21ed7702129c8c6d7736bb01ac70e68aecbf8d9971b9142e4d9d0a948fce6",
+    "operations-review/daily-research-session-operations-v1/2026-08-21/743e9d705a01ddaee6d871507d7a4f4e143a6faeaae65fa6d1800a3dc48e1b95/run_manifest.json": "17a7ee89f01f27984a277d1ad0f47e68881124123bfcf55835f157ad64112aef",
+    "operations-review/daily-research-session-operations-v1/2026-08-21/7873c0d67099575b075e9411e676fe89d654a59e992a17b7551047677ccf280e/run_manifest.json": "715bac30f5afac0eb69f4c8cbb4d1ec75aa48c0785410664586197ff91edc306",
+    "operations-review/daily-research-session-operations-v1/2026-08-21/7d62d50160d0802ddcb73f0b1f4b6130eb2c8b419779743bb847a0dd4285a497/run_manifest.json": "85587b297ce38d7a9585bb8a7090ac82ac0aea95da823c91cb27c1931490ba87",
+    "operations-review/daily-research-session-operations-v1/2026-08-21/8b1532ac83459ba13b229f5ac4588204a88a2e316f72c783b7a22c4afee1a081/run_manifest.json": "e8cadcdae6d6a025bd278690ce3a6671fe8e551019fa47ddd07310f6b69454c6",
+    "operations-review/daily-research-session-operations-v1/2026-08-21/901a8bfe877ae59033f94d036c3684b6b03dc57c5d3ee93927f3103c5c206dbc/run_manifest.json": "db6b665b1a65bcd6673ed84bb33ce6a76a767259c84c3e9f32a85a6bfb80d81a",
+    "operations-review/daily-research-session-operations-v1/2026-08-21/9d15473167a28aedf8d7af48711f31df1fea06a1112be045fd33057582b26c69/run_manifest.json": "d9af0df6e8c07b96e1ec19a2c3abd1f3adaaebcbeffe3c0d665c2dfba53fd2de",
+    "operations-review/daily-research-session-operations-v1/2026-08-21/a0fdc1c942e0060e330585feb1e1290bd13ff4300c98507ce404898723a93ca8/run_manifest.json": "b6f8662fb0506b3689fcd8abbcb0e405c2b557c44863e1b0bf5282e25463d3ca",
+    "operations-review/daily-research-session-operations-v1/2026-08-21/a15797658a103603ec7ac375413cbaae4a357daec392f49179f60f6decdaaab4/run_manifest.json": "ae56188c9f61a054a5bc81f04360d76c5732048af298b7115bd721b28bc2f29a",
+    "operations-review/daily-research-session-operations-v1/2026-08-21/be78b7eae41ffef112a65a1bacbbc2723b547fb334b5e7a4ef11482366356345/run_manifest.json": "1760f00bde16adf40cf6a1eec2f7d4671146c6ee0b8cf0fd3b6eef58792b1c89",
+    "operations-review/daily-research-session-operations-v1/2026-08-21/e4920ed8612d4623aaffbcf56072d977c9a80e38b07c829bcd0efa468208c8a5/run_manifest.json": "06867b6823cd379b56563f801cc4adf673adacd31bb6f2be4dca8c7d6b0e370b",
+    "operations-review/daily-research-session-operations-v1/2026-08-21/f7f1b9301a007a1ae4d71a7cdb19b8d8cd3dc072b36cdd743b20018269e2b00e/run_manifest.json": "793f8870866b0a4f15c35b81b0568597b838839742a488ab4821048b4e81693d",
+    "operations-review/daily-research-session-operations-v1/2026-08-24/4c6ee6fcfc170824ac4c7ca1fb495cf7774aaebaf7d48975bd681d7e34ab80aa/run_manifest.json": "63796a4e77c4ef413f5acd4f373e04bc289a4865d0be7dc052f83db3c37a17ca",
+    "operations-review/daily-research-session-operations-v1/2026-08-25/377cdcc60a2b61a19ba3cb44ef6760d6ae226f33631e20d54ba561f06095537c/run_manifest.json": "54753ae19273d374a728cb27e6138292ef36dd36bbfbb25cb146231cf41c6c0a",
+    "operations-review/daily-research-session-operations-v1/2026-08-26/1883a16b50f0ef2d8e367391811ad164c1742532b7d4ae3c72fe6e3c218c30e0/run_manifest.json": "06336a5c1d1b2c4544994d6ba4fe73fe1b0040407e27782aed0af8d2ac4a7102",
+    "operations-review/daily-research-session-operations-v1/2026-08-27/6ab35ded43635415095703ecb9558f9ed33ccb33c98ebb5a1ba9ff16f1fed24e/run_manifest.json": "0fbfebd4d9dad5d208eda7427afa735f4078f065db6e99ae6ea72406d79628b6",
+    "operations-review/daily-research-session-operations-v1/2026-08-28/271b6f3f151a3516112190609f7e70947bddb0370bd2494ffa7d377de371ab9a/run_manifest.json": "030f1b8b175e2335aabc38a21fd630301905ca62b214e8703c01cd3f9b1d25a4",
+    "operations-review/daily-research-session-operations-v1/2026-08-28/385893ce2d5831233f71206ef7653077bec5990533b02498d4be4ceb16c6bfaa/run_manifest.json": "766c5c4d71bfb963620a14b70f6671a947bf0c2165561d847efaac3167398f16",
+    "operations-review/daily-research-session-operations-v1/2026-08-28/3de4b2992200bf71c5213d5db53e32406d2ade7a2059ba584e86fc7c5c47eb4d/run_manifest.json": "b158f6b4e390a69085ba48b7f8f4ad45d43b1ffe789b01a1c1ded033d2d0ba4a",
+    "operations-review/daily-research-session-operations-v1/2026-08-28/4526232cea2220ae89fc1a2fca4695ff17e00415e5bd0a51547688e2f2046074/run_manifest.json": "17eb3a88ec6ca116511fdc896795cf506e014f7f65910ce70b8b3647876185fb",
+    "operations-review/daily-research-session-operations-v1/2026-08-28/712c7aeaf4b734875008edc3275fe7199e318ff85fa88ead8f61453f009c2e1f/run_manifest.json": "6cff19d4981672b044253ef0dc03fe8f58818c67ed23ef0ce4e7ee2109ddc527",
+    "operations-review/daily-research-session-operations-v1/2026-08-28/9d7679e048cc78fc55b0c91b3b2df09ec7cb17e8794ca7b6837d51ede1a214d6/run_manifest.json": "b0f0acac4ee498f7b0de61a64009c18538dd74823db9aef8ec942a14eed591ef",
+    "operations-review/daily-research-session-operations-v1/2026-08-28/b6352fa60ed64ee8218c1e6ee2ea7cba03d1aca22ab8034c5bb3414a045f3da6/run_manifest.json": "3a1dbe9769f675deeeb1fc2657405922712e4c24d7a8328ca9c32bb6263aa994",
+    "operations-review/daily-research-session-operations-v1/2026-08-28/b7ba39d61e8f68a889d47031596f790020a914a29ca55f8160b8280c0d2a20d7/run_manifest.json": "d1109f69c7d15267f8a8f87b6056cb1832ead1d783d5822cc5f9642615a8fa91",
+    "operations-review/daily-research-session-operations-v1/2026-08-28/c9a35cafed4c9b79e57ba9c3afcdd12f18cad32d68f7d33cc6880d6d028a8d0f/run_manifest.json": "dbe9eedde28530183bc50d511a6db47ef25a24293b9351395590745213aede22",
+    "operations-review/daily-research-session-operations-v1/2026-08-28/cad6d0ec22b32a82342796b06201f61d8b25afdbf86f19635fa1eeda5d168fe1/run_manifest.json": "705e63c3f3e5d324249686165e710c6f3b26a0c75be1967b956353ca7abf9f54",
+    "operations-review/daily-research-session-operations-v1/2026-08-28/e3694bda237c407be59efd0a2668d0b9e7d71476c03f71092bf9370f060baa0a/run_manifest.json": "455a369267d333acee8fe2c987080b0f07ffe118fa602e5a469742ef011ea7ef",
+    "operations-review/daily-research-session-operations-v1/2026-08-28/fe5e88f836f98c01b36f3d7534d704589ecd76b3ba1a6a2fdbe253f1d18fdd93/run_manifest.json": "1477aeec0783a2ee3d8d13e50f55f020174d154d77a9613120a3c498d80ab4a7",
+    "operations-review/daily-research-session-operations-v1/2026-09-03/26f8f2bab940a11c5e3b18ed82d9f9f763556026c071c056a64f15d4cd33ff5d/run_manifest.json": "390206e9b408c62fe813b8b732ae4fc27022d1722c70ac655d5a8da7be8e64c6",
+    "operations-review/daily-research-session-operations-v1/2026-09-04/8d6a3f248288279d9afaabd46ca44f4dc7827761904f5a718033eee8e14c041c/run_manifest.json": "354687a6a5d32215b4939846e27152b1c6561af7174a91a978c619fd231338e9",
+    "operations-review/daily-research-session-operations-v1/2026-09-04/da72cffb2811612e9e4a2d3afb71db51dfaace31a3398cd47d95b48538aef18d/run_manifest.json": "96988998634eb3743527c407da8aefa7e5dfd3344fe0723eb742bf24d2500782",
+    "operations-review/daily-research-session-operations-v1/2026-09-07/bc7880a9c7a21f0333aa49ca3006532bccdc48119272863aa52396c8213bcfd8/run_manifest.json": "681dc3b5436180406974e08ff99e5ed23caf5db12030a102d45e0999366833a9",
+    "operations-review/daily-research-session-operations-v1/2026-09-08/cfd7b4143e03fb224bdce5a3e0fd9d65db8fc1ea92fc2e3cac723312cdeaf063/run_manifest.json": "b670074fccfb71a63671983882e059088541693e535860ea3a8108d7ede4ed2e",
+    "operations-review/daily-research-session-operations-v1/2026-09-09/38d25aa5a5b96e4acb8265520652e35545076d3ed5906df22ae5bb5315555a1a/run_manifest.json": "4041f53ab455ba4e7141210aa7cf4c3cd2722370533d0a8d27c27a7fc771de69",
+    "operations-review/daily-research-session-operations-v1/2026-09-10/048d3bfc7cb032fe76616344b326acf67507dc3116af237bd7baf93a8dd3bd7e/run_manifest.json": "3bf769f152f287b7dbf661fca11663325a878ec22e0b73e80cba128d2f58e5f2",
+    "operations-review/daily-research-session-operations-v1/2026-09-11/26ad00758478835c231e8c39b47248bf959819a5959cf5cb052d7d20d1b5ee80/run_manifest.json": "19e01521a54f5ab2f0fcb608bd6925d0c9f8d3f0d0516fa1cb4f46250181a81d",
+    "operations-review/daily-research-session-operations-v1/2026-09-11/5e5db7b46737b2170bb64880042eb581bd159dfebdcb7eb1372885822dafb4f1/run_manifest.json": "12bcc68368852aca7d851ade92961840f7ba29e6e28dd626fe50885d9f85f046",
+    "operations-review/daily-research-session-operations-v1/2026-09-11/643d1f93ea5f6a289d85dc850cb0069f8cf28922c4476ed20112b9255f5d5b03/run_manifest.json": "09842545516bde42b610ba8479bf96c88f757143ab87e1cf9d09914f1273e60a",
+    "operations-review/daily-research-session-operations-v1/2026-09-14/7ae3e33c06106dfa41cd0ed11182c7e7c8fe59bc3cbe7245b2b7635bc20a2b5a/run_manifest.json": "3648033d2f29b5c9303f79bf8a0bfbee238b36615ab1f472b3bdd3b342ce734a",
+    "operations-review/daily-research-session-operations-v1/2026-09-15/2026166fdb3fdea24d3b6c38847cca3bb28d1e35cecdad38ba2a91d3caa106bf/run_manifest.json": "e3cf56d65f556dcbd8e5692daf31e3f93fbc7f8203f56cf3ea7e64b6cd28daab",
+    "operations-review/daily-research-session-operations-v1/2026-09-16/f0b5478667fb8ec6b5ef51447265a5ad377b60e6567b742f074aafb3491e92f6/run_manifest.json": "58cfc4158d5303f8a978a2f992f6d00de399ece07f61823e9cb5d654d50bff92",
+    "operations-review/daily-research-session-operations-v1/2026-09-17/caaad572e738d607a5fbb0a356b8a3b5ae80d87a3ab3561568c997e66bf2a87d/run_manifest.json": "b9fabda11960698ac7c52ebcf6d28ca2452812b1594403481760d4b8538bb256",
+    "operations-review/daily-research-session-operations-v1/2026-09-18/8a857ca4204136e42982dd2d1b953ebb857f3a6599837d7b0d20b3a820c3b95f/run_manifest.json": "c86a5795b37baec664e29d41465f74bf360ee488cbc2d6651d67aec80fa7652c",
+    "operations-review/daily-research-session-operations-v1/2026-09-21/a522dc96bddeba8649e2c3a5369bbcc0872d91f8accb0c4a2e61e392abef0379/run_manifest.json": "bcb92bdc08f1d625f8fe456cf819dc9bbb319a0f4e3a6542c397c25b116985de",
+    "operations-review/daily-research-session-operations-v1/2026-09-22/020ef7a3aee10c047fdcf5369834c2e4abe5ffb1c33c6eab83691262335c54c6/run_manifest.json": "ca6c63c390ad0a49ecd974159d7b5814fa70cd31f18b9e604c6012917c10fa26",
+    "operations-review/daily-research-session-operations-v1/2026-09-23/7439b0318106e937b03e314b64d3211294591f4846918f84f0a35567fe4836cf/run_manifest.json": "74aebdbfb8badd52a29d967347740050d2a81f9f66b976c1e0cff781667a0d8e",
+    "operations-review/daily-research-session-operations-v1/2026-09-24/25ac1ea3044b88c2a9f272a471b7fadc13f6b21e158fd0abb5e171344a975f22/run_manifest.json": "aa9579ff6aa90a67791c9a6c933f71f34e9d326ced102037e535572d7df030f8",
+    "operations-review/daily-research-session-operations-v1/2026-09-28/c08d9953b190161b5a954a081cc66f7ed107262d4d578740f6b60d6e3809b987/run_manifest.json": "51de7329a198688350d95f7ac2b7151e3155f94338f34867bdfbdd1a3ee1a170",
+    "operations-review/daily-research-session-operations-v1/2026-09-29/b74abe76bd354747c22cbed8c2b2fb785630fef9536c3b57d592958742dcfa42/run_manifest.json": "2da17886669d3fa0bf20f1ac678332de1043d9f23b65331633810711048f31ec",
+    "operations-review/daily-research-session-operations-v1/2026-09-30/2e3b62033b487141738db16b68529445c70b1a473e0f35de70fe5e9d97d966ba/run_manifest.json": "a00544ac76b13a896430cb978d8fcaba015038cf4106f39b6dfa4bd1df054e91",
+    "operations-review/daily-research-session-operations-v1/2026-10-01/6420b228b3700bfbbee6d8b3793443d8c206874e44d6a123fbb483669118d35b/run_manifest.json": "c37d4af7cdd50bed8968b158ffd2728c9258ccf5cd39ecb73c40d10a0db53029",
+    "operations-review/integrated-investment-decision-product-v1-20260825/integrated_investment_decision_product_artifact.json": "50ec8b848aefa864771ead8ad3717b3a55b95eec4d446c6456597e936362a9fb",
+    "operations-review/integrated-investment-decision-product-v1-20260904/integrated_investment_decision_product_artifact.json": "55927093bd2e95c38d1fa0691c75dcb6724a49630bf32a7e236e1658924a764b",
+    "operations-review/integrated-investment-decision-product-v1-20260908/integrated_investment_decision_product_artifact.json": "eafa5c60894ed4b08d03103df2d958d667727ee406ea537401893dec451dfbb8",
+    "operations-review/p3f9b-market-wide-exact-session-scaleout-20260903/p3f9b_mva_exact_session_snapshot.json": "f6baa9ad5400b349899e66c5671ad73aa793849ee9dc1d7a3e7c37e4c99bdd34",
+    "operations-review/p3f9b-market-wide-exact-session-scaleout-20260904/p3f9b_mva_exact_session_snapshot.json": "5993d08c26a8dcb8d57695db10944ac8c5181a1fd95f8e9fb7903c4255e79209",
+    "operations-review/p3f9b-market-wide-exact-session-scaleout-20260908/p3f9b_mva_exact_session_snapshot.json": "9b9ca0112bb3effa1e44648b5464fcfaf97cb02766eff8989ae3e06298b6c280",
+    "operations-review/p3f9b-market-wide-exact-session-scaleout-20260909/p3f9b_mva_exact_session_snapshot.json": "f9612e758df57407f4417285481ae88f228ea1d6b781e583def915c55f8a2846",
+    "operations-review/p3f9b-market-wide-exact-session-scaleout-20260910/p3f9b_mva_exact_session_snapshot.json": "45a1b5f731a8d3a3d96cfcddc3079975c24097b8100069e849c67d1b3679fc2c",
+    "operations-review/p3f9b-market-wide-exact-session-scaleout-20260911/p3f9b_mva_exact_session_snapshot.json": "f218d3e52a7e12a961d6c9b5fbf61589ef32e9fd3c2cf87b28a9e35b37cea380",
+    "operations-review/p3f9b-market-wide-exact-session-scaleout-20260914/p3f9b_mva_exact_session_snapshot.json": "8fe08fb8f95a7c4d5656cd9ae5b8a8eac35c5c9b40045f09c7ec71a55cff4a09",
+    "operations-review/p3f9b-market-wide-exact-session-scaleout-20260915/p3f9b_mva_exact_session_snapshot.json": "d7eaaf0141fa35067f8f8bc7a4a47106f4f602f33ef4c5cf0f84d576859653e7",
+    "operations-review/p3f9b-market-wide-exact-session-scaleout-20260916/p3f9b_mva_exact_session_snapshot.json": "1806bf3608e6a4219b9bbd85a2cd2e3d15da23ce3e344b3f8ba524c874827b24",
+    "operations-review/p3f9b-market-wide-exact-session-scaleout-20260917/p3f9b_mva_exact_session_snapshot.json": "bbb5ae5be81d479828977efb6730b8a78c9a7d5e1104c3c8f56e110a0fb5d30b",
+    "operations-review/p3f9b-market-wide-exact-session-scaleout-20260918/p3f9b_mva_exact_session_snapshot.json": "dcf2a2aef6b2105ac9815e3e5335620bfd0a639b22bb739cca15002ebf6449ee",
+    "operations-review/p3f9b-market-wide-exact-session-scaleout-20260921/p3f9b_mva_exact_session_snapshot.json": "caba0f6e5e38f556cfa41c4f9e5bbbc009b3c66e18cfd6ff52178e758bca76b7",
+    "operations-review/p3f9b-market-wide-exact-session-scaleout-20260922/p3f9b_mva_exact_session_snapshot.json": "28d6bc48f9dc07489f82343a10fb75931b60c65a65ee3457ec8998a0b548e8c5",
+    "operations-review/p3f9b-market-wide-exact-session-scaleout-20260923/p3f9b_mva_exact_session_snapshot.json": "5f6d9c17e5a96c7c44bb42d86d52852b383b02a3f324ca927649e17264c085b2",
+    "operations-review/p3f9b-market-wide-exact-session-scaleout-20260924/p3f9b_mva_exact_session_snapshot.json": "5b1a2f771fd7c9a495ff2b012c0ec21f7d0037ab258421df95955eef79116091",
+    "operations-review/p3f9b-market-wide-exact-session-scaleout-20260928/p3f9b_mva_exact_session_snapshot.json": "f57671eed56fb3090b2a5558ce205f986cc41944ca1057ec7c259431a388cb77",
+    "operations-review/p3f9b-market-wide-exact-session-scaleout-20260929/p3f9b_mva_exact_session_snapshot.json": "6849c5c13ec502c82e472cdf053cdf4078c5c3120e8d812b7bbff958456dd474",
+    "operations-review/p3f9b-market-wide-exact-session-scaleout-20260930/p3f9b_mva_exact_session_snapshot.json": "d377cc87f6cb8698f448f4a71895defd4b0323e4acc9c1e3052a449460b5fe00",
+    "operations-review/p3f9b-market-wide-exact-session-scaleout-20261001/p3f9b_mva_exact_session_snapshot.json": "82f00beec185253ba7f3be2401ead8ba88669998cdb3ae1601b270abeb05a9a0",
+    "operations-review/prospective-decision-retention-v1/2026-09-09/29933b20fff98d5de98e1b3770c34e0896a5bf87fbc4d937c6fe8e996b058a63/prospective_decision_snapshot.json": "fa53edea215a73dc7dc44caf139dbf05894c4fd27d1ec286d2167cc92206675d",
+    "operations-review/prospective-decision-retention-v1/2026-09-10/5cf80549f4b71dcbf2c408040da2ba579b9563177825e26cda80f2004ff7c2f4/prospective_decision_snapshot.json": "a3809c43d7ef4990266d31bc7cce51e30986dad60f707f3e58f26376dca5493b",
+    "operations-review/prospective-decision-retention-v1/2026-09-11/1e2e10581a828c305c5df8a7d4c7720e54f984548122ad4fbf2873374a8b27a0/prospective_decision_snapshot.json": "ca5c6da10e7aa77cd7c4447774c29f765e15c94d8d240af1dd50a8339d0439a4",
+    "operations-review/prospective-decision-retention-v1/2026-09-11/70d8cae93a0d3a23b9a9a4c3c7a8f76e7a2baa77e2775ad420b2765975fc9b94/prospective_decision_snapshot.json": "2d90129ab008666146d51b96eb361d79089e4269f14a2c7c5a1653b9afb6676e",
+    "operations-review/prospective-decision-retention-v1/2026-09-11/c11780cd798d0a27f6bf6ec7374fc1664549960ec56a2bd75c03602a19d924ee/prospective_decision_snapshot.json": "2c8ca6e53c3ef7c1ff9b5c3c80af777a3efa800724e33f465e7a5fc0b3deedec",
+    "operations-review/prospective-decision-retention-v1/2026-09-14/18f72bc8d073d55dbee82d92723f271cbda0c2aa578a345329a08f111c2942ae/prospective_decision_snapshot.json": "d3a2d81b22468c62af4cf48df857095099b308ee17b848c325efd1590e4f5144",
+    "operations-review/prospective-decision-retention-v1/2026-09-15/cb716b767aa238f6be936d67db992c418f33b95336d36227efbfd91137cbcbf1/prospective_decision_snapshot.json": "c82dd9e229dade9dfd12977b065dccdadb05fb8db4aa3714708a7549ba4cf6e3",
+    "operations-review/prospective-decision-retention-v1/2026-09-16/b761b2c5fffd86202d3d99a952a7251736984e3cbe28d1584278f2f0e8812713/prospective_decision_snapshot.json": "dea900aa6bcb3ad2050988b4a580eca6859c28bc5defb04210f75b461211f41c",
+    "operations-review/prospective-decision-retention-v1/2026-09-17/a049a34d9b9d2100ba992acf6aaf97ce4ba1a248c4a630a1c5428879f6d55a47/prospective_decision_snapshot.json": "3dca880deaf6238f935f483c755d7464f8721b2f52b5d7f23097734318dcc872",
+    "operations-review/prospective-decision-retention-v1/2026-09-18/7cc74c68b25f1072a9816f2d97073345f1a27be66907daea9ab7c444157c35af/prospective_decision_snapshot.json": "db0be4fb36218bf7c46f0d05a7fc6cf0c5f808acc7ac9a265098e11a059bbb17",
+    "operations-review/prospective-decision-retention-v1/2026-09-21/54bb3729e544ecd00272032ac3a7a753054a941cba50bba17e53477beb512984/prospective_decision_snapshot.json": "f145642fe7ed18cf5e0fe83fd8fa5cf6dfeb3a78e1e7f1fe2cb951a832942f68",
+    "operations-review/prospective-decision-retention-v1/2026-09-22/5e89d11705ce341e838a2a36e22f4d8b83e37aaf3b9a94b4487956115a9397af/prospective_decision_snapshot.json": "b0fdf68fd3cb38b6d936441acc5c0f73db6ce1bab907eb3f321ef2e93831b4fb",
+    "operations-review/prospective-decision-retention-v1/2026-09-23/4cfc63881a492e74c55ee794b68347e74ae87cddd178283b67968b4f6c6e3f60/prospective_decision_snapshot.json": "d0840875b2cc7965721d27b0ac2e3ab3956553517a9ed284395f2d44a9b8adda",
+    "operations-review/prospective-decision-retention-v1/2026-09-24/00753d16daeb1acb42f139485647454ea271ac0c9057fce906d2acf55d68348a/prospective_decision_snapshot.json": "d01216dd042c75333574e15c68d50385ec1e4ba3822d3467f2290d2fcf75bfa2",
+    "operations-review/prospective-decision-retention-v1/2026-09-28/d30d69ad686e1943e42bc831f7f8fbbdd6f25eab69affc937a3b11d583d65896/prospective_decision_snapshot.json": "b55ff6e49611f8bc63be0332b505af025f6bb40ad662b78703459f5197273e03",
+    "operations-review/prospective-decision-retention-v1/2026-09-29/910e0d36ae0f625f681e122603d39dd9d7d7a78646c80e0c16576bf692fe44a0/prospective_decision_snapshot.json": "f9a53e59120987474a8fe7a9e09f5f7cc1243765dfa07dbf144935d2af5ef2fa",
+    "operations-review/prospective-decision-retention-v1/2026-09-30/cb678f46551102bb406f17c0013740654216a616f4cbb8f970612741f37ea574/prospective_decision_snapshot.json": "8c33b28596b31ed30aff390eeba45da366b52c807e2802093a34bf60ab1cdd3e",
+    "operations-review/prospective-decision-retention-v1/2026-10-01/8be63debc2d88f2333c2d0583c940626943588e09ecabe0fe47de1685cae3c33/prospective_decision_snapshot.json": "3474aef6ca93c4ebf228bc3b24fb67195fc6391992a8286e3ed2bb1f7d9838de"
+  },
+  "stack_base": "397c05cf6e47d4bdc5a0a471102dfcb8ac383956"
+}
