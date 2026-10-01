@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 import json
+import os
 from pathlib import Path
 
 import pytest
@@ -14,6 +15,26 @@ from tools import run_owner_daily as owner_daily
 
 
 VN = timezone(timedelta(hours=7))
+
+
+@pytest.mark.skipif(os.name != "nt", reason="Windows native process memory API")
+def test_native_windows_rss_is_observable_for_current_and_opened_process():
+    current_rss, current_peak = progress._memory_for_pid(os.getpid())
+    assert current_rss is not None and current_rss > 0
+    assert current_peak is not None and current_peak >= current_rss
+    # Exercise the real pointer-sized OpenProcess/CloseHandle path as well as the
+    # pseudo-handle path, without creating a subprocess or acquiring any data.
+    kernel32, psapi = progress._windows_apis()
+    handle = kernel32.OpenProcess(0x1000 | 0x0010, False, os.getpid())
+    assert handle
+    try:
+        counters = progress.PROCESS_MEMORY_COUNTERS_EX()
+        counters.cb = progress.ctypes.sizeof(counters)
+        assert psapi.GetProcessMemoryInfo(handle, progress.ctypes.byref(counters), counters.cb)
+        assert counters.WorkingSetSize > 0
+        assert counters.PeakWorkingSetSize >= counters.WorkingSetSize
+    finally:
+        assert kernel32.CloseHandle(handle)
 
 
 class FakeClock:
