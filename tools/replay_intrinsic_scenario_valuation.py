@@ -164,7 +164,11 @@ def main():
                   authority_effect="NONE")
     (output / "acceptance_report.json").write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     (output / "evaluated_valuation_after.json").write_text(json.dumps(evaluated, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    (output / "integrated_after.json").write_text(json.dumps(after, indent=2, sort_keys=True, ensure_ascii=False) + "\n", encoding="utf-8")
+    # Full-universe decisions are large: stream without allocating an additional
+    # complete Unicode document and encoded byte copy alongside the product.
+    with (output / "integrated_after.json").open("w", encoding="utf-8") as handle:
+        json.dump(after, handle, indent=2, sort_keys=True, ensure_ascii=False)
+        handle.write("\n")
     print(json.dumps({k: report[k] for k in ("posture_changes", "changed_decision_identities", "unexplained_analytical_changes", "product_identity_after")}))
     print(json.dumps(coverage["method_readiness"]))
 
