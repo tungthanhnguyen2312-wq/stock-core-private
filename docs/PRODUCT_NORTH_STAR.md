@@ -1,5 +1,16 @@
 # Stock Lookup — Product North Star
 
+
+## Current execution pointer — 2026-10-01
+
+The product North Star is unchanged. Operational sequencing has been rebaselined after
+the successful October 1 Owner Daily live-acceptance gate. The current machine-readable
+NEXT milestone is `CURRENT_RESEARCH_COVERAGE_AND_DECISION_FITNESS_V1`.
+
+Repository presentation/layout work is maintenance, not a new product authority layer.
+See [REPOSITORY_LAYOUT_MIGRATION.md](REPOSITORY_LAYOUT_MIGRATION.md).
+
+
 > **Authority relationship (read this first).** This document is the durable strategic
 > navigation / operating-model reference. It does **not** replace any existing authority
 > document and must never be read as doing so:
