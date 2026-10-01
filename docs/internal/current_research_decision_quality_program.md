@@ -311,3 +311,34 @@ materialization/integrated/delivery gate; six canonical wiring checks. Python co
 roadmap and whitespace checks pass. No new provider acquisition, publication, database
 write, liquidity/PIT/RAW_AS_TRADED/sizing promotion, cap/retry change or specialist expansion.
 The same owner-authorized program continues with a bounded second pass.
+
+## Package 8: corporate evidence availability and qualification
+
+The Current Research corporate dimension treated every supplied summary as
+research-qualified, even when the producer declared NO_QUALIFIED_CORPORATE_EVENT or
+UNRESOLVED_EVIDENCE. The retained product has 404 no-event and 29 unresolved summaries
+mislabelled in its `exact_or_qualified_dimensions`. Presence of a producer record is not
+presence of qualified evidence. The existing dimension now respects producer fitness
+and classification: no-event is BLOCKED/NONE; unresolved is PARTIAL descriptive context.
+Informational/classified evidence remains usable, with its actual stale session preserved.
+Missing/invalid/future evidence sessions cannot claim current qualification. No new
+catalyst classification, event recency window or posture inference is introduced.
+
+Full replay: 433 explanatory corrections, 1,250 unchanged records. Corporate dimension
+counts change PARTIAL 1,507 / BLOCKED 176 to PARTIAL 1,103 / BLOCKED 580. All 1,683
+per-ticker decision identities, postures, WHY text, counter-theses, peer comparisons,
+fundamental/valuation synthesis and source events remain unchanged. The product identity
+changes only for corrected explanatory dimensions and coverage:
+`integrated_investment_decision_product/v1:7f05c3a73598d8b0921e43ed1a8abba270ea792abeeabb2be649fd995485d90b`.
+
+The existing replay runner accepts `--corporate-qualification-checkpoint` pointing to
+the accepted package-7 external output. It reproduces historical baseline using that
+checkpoint's own projection namespace, builds the live full product twice, and checks
+precise changed-path and per-record source-status assertions. No private source is copied
+into a checkout or rewritten. Shared AI delivery carries the corrected dimension verbatim.
+
+Eleven new tests cover no-event, unresolved, current informative/catalyst/risk/mixed,
+stale, missing/invalid/future sessions, unavailable fitness, identity and delivery.
+171 focused/adjacent tests pass. One existing supplemental private-evidence test cannot
+run in the clean worktree and is excluded; no baseline evidence is repaired/recreated.
+Authority promotion NONE; no acquisition/publication or cap/retry/scope change.

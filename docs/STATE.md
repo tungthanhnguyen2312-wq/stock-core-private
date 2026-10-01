@@ -49,6 +49,16 @@ WHY text, fundamental synthesis and valuation are unchanged; ranks never become 
 185 focused/adjacent tests, the earlier 128-test materialization/integration gate and six
 canonical wiring checks pass. Authority changes remain NONE; program remains ACTIVE.
 
+The bounded corporate-fitness pass corrects 404 no-qualified-event dimensions from
+PARTIAL/research-qualified to BLOCKED/no authority, and 29 unresolved classifications
+retain PARTIAL descriptive evidence without a qualified claim. Source observations,
+events, stale labels and blockers remain visible. Missing/invalid/future sessions cannot
+claim current corporate qualification. Full retained replay keeps 1,683 records, 431
+peer-eligible corporations and all per-ticker decision identities; zero posture,
+counter-thesis or WHY-text change. Corporate dimensions now PARTIAL 1,103 / BLOCKED 580.
+171 focused/adjacent tests pass; one absent private retained-evidence baseline test is
+excluded rather than repaired or repeated. No authority is promoted; program continues.
+
 **Daily official liquidity rollforward corrective (2026-09-30):**
 `DAILY_OFFICIAL_LIQUIDITY_ROLLFORWARD_V1 = PARTIAL /
 CORE_DAILY_LIVE_ACCEPTED_OFFICIAL_LIQUIDITY_LIVE_FAIL_CLOSED_SOURCE_ABSENT /
