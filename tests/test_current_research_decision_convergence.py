@@ -546,7 +546,14 @@ def _patch_daily_enrichment(monkeypatch: pytest.MonkeyPatch, tmp_path: Path, *, 
             "artifact_identity": "liquidity:fixture",
             "records": {"COR": {"disposition": "CURRENT_SESSION_DESCRIPTIVE_ELIGIBLE", "liquidity_research_contract": {}}}},
     }
-    fa_product = {"artifact_identity": FA_IDENTITY, "records": {"BNK": {"status": "ABSENT"}, "COR": _financial()}}
+    import financial_analysis_product_projection as fa_projection
+    fa_product = {"contract_version": fa_projection.INTEGRATION_CONTRACT, "source_context_identity": "engine:fixture",
+                  "records": {"BNK": {"status": "ABSENT"}, "COR": _financial()}}
+    fa_product.update(fa_projection._identity(fa_product))
+    fa_wrapper = {"contract_version": fin_material.CONTRACT_VERSION, "decision_session": SESSION,
+                  "financial_analysis_product": fa_product, "financial_content_identity": fa_product["artifact_identity"],
+                  "financial_v2_engine_identity": "engine:fixture", "engine_fundamental_peer_context": {}}
+    fa_wrapper.update(fin_material._identity(fa_wrapper))
     real_build = iidp.build_artifact
 
     def capture_build(**kwargs):
@@ -567,7 +574,7 @@ def _patch_daily_enrichment(monkeypatch: pytest.MonkeyPatch, tmp_path: Path, *, 
     monkeypatch.setattr(confirmation, "build_artifact", lambda **k: {"artifact_identity": "confirmation:fixture", "records": {}})
     monkeypatch.setattr(fin_authority, "resolve", lambda root: object())
     monkeypatch.setattr(fin_material, "build_engine_artifact", lambda **k: {"artifact_identity": "engine:fixture"})
-    monkeypatch.setattr(fin_material, "build_session_artifact", lambda **k: {"financial_analysis_product": fa_product})
+    monkeypatch.setattr(fin_material, "build_session_artifact", lambda **k: fa_wrapper)
     monkeypatch.setattr(fin_material, "build_evaluated_valuation_artifact", capture_valuation)
     monkeypatch.setattr(ccp, "materialize_current_fundamental_feature_store_context",
                         lambda **k: ({"status": "MATERIALIZED", "artifact": store} if feature_store_status == "MATERIALIZED"
@@ -589,6 +596,7 @@ def test_ordinary_daily_enrichment_binds_operational_fundamental_context(monkeyp
     assert results["operational_fundamental_binding"]["status"] == "BOUND"
     assert results["operational_fundamental_binding"]["candidates"] == 1
     kwargs = captured["integrated"]
+    assert kwargs["financial_peer_materialization_artifact"]["financial_analysis_product"] == kwargs["financial_analysis_artifact"]
     integration = kwargs["operational_fundamental_integration_artifact"]
     assert integration["cohort_tickers"] == ["BNK"] and integration["binding_mode"] == bridge.DAILY_BINDING_MODE
     assert kwargs["entity_applicability_artifact"]["artifact_identity"] == captured["valuation"]["entity_applicability_artifact"]["artifact_identity"]

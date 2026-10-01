@@ -556,6 +556,8 @@ class TestGovernanceAndStructure:
             trigger_type="PIVOT_BREAKOUT_TRIGGER",
         )
         rvol = {
+            "session": "2026-08-28",
+            "cohort_denominator": 10,
             "status": "AVAILABLE",
             "volume_acceleration_ratio": 0.45,
             "relative_volume_percentile": 0.15,
@@ -582,7 +584,9 @@ class TestGovernanceAndStructure:
             trigger_type="PIVOT_BREAKOUT_TRIGGER",
         )
         mkt = {
-            "market": {"current_breadth_state": "DETERIORATING_BREADTH"},
+            "session": "2026-08-28",
+            "market": {"current_breadth_state": "DETERIORATING_BREADTH", "session": "2026-08-28",
+                       "official_universe_count": 10, "exact_session_observed_count": 8, "missing_current_session_count": 2},
             "ticker_contexts": {"HPG": {"sector_leadership_context": {"leadership_state": "LEADING"}}},
         }
         dec = iidp.build_ticker_integrated_decision(
@@ -863,24 +867,23 @@ class TestEvidenceAxisCoherence:
 
 # ── MARKET_WIDE_FUNDAMENTAL_VALUATION_ANALYTICAL_PRODUCT_V1 (section 13 fix + section 14) ──
 
-class TestOwnHistoryPercentileFieldNameFix:
-    """`financial_analysis_engine_v2._history_entry()` (the sole real producer of this shape)
-    names the field `percentile`, never `percentile_in_history` -- the old key name never
-    matched a single real record, so this axis silently never activated in production."""
+class TestFinancialHistoryCannotBecomeValuationHistory:
+    """Financial-ratio history is preserved in its own axis, never read as valuation history."""
 
-    def test_low_own_history_percentile_now_activates_support(self):
+    def test_low_financial_history_percentile_cannot_activate_valuation_support(self):
         fa_context = _sample_financial_record()
         fa_context["history_context"] = {"gross_margin": {"status": "AVAILABLE", "percentile": 0.10}}
         summary, supports, counters, _ = iidp.evaluate_valuation_context(_sample_valuation_record(), fa_context)
-        assert summary["own_history_state"] == "LOW_VS_OWN_HISTORY"
-        assert "RATIOS_LOW_VS_OWN_HISTORICAL_RANGE" in supports
+        assert summary["own_history_state"] == "UNAVAILABLE"
+        assert "RATIOS_LOW_VS_OWN_HISTORICAL_RANGE" not in supports
+        assert summary["peer_relative_state"] == "CHEAP_VS_PEERS"
 
-    def test_high_own_history_percentile_now_activates_counter(self):
+    def test_high_financial_history_percentile_cannot_activate_valuation_counter(self):
         fa_context = _sample_financial_record()
         fa_context["history_context"] = {"gross_margin": {"status": "AVAILABLE", "percentile": 0.90}}
         summary, supports, counters, _ = iidp.evaluate_valuation_context(_sample_valuation_record(), fa_context)
-        assert summary["own_history_state"] == "HIGH_VS_OWN_HISTORY"
-        assert "RATIOS_ELEVATED_VS_OWN_HISTORICAL_RANGE" in counters
+        assert summary["own_history_state"] == "UNAVAILABLE"
+        assert "RATIOS_ELEVATED_VS_OWN_HISTORICAL_RANGE" not in counters
 
     def test_insufficient_history_status_never_counted_as_a_percentile(self):
         fa_context = _sample_financial_record()

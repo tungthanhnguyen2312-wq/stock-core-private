@@ -1,5 +1,117 @@
 # Stock Lookup — Operational State
 
+**Current Research decision-quality program (2026-10-01):**
+`CURRENT_RESEARCH_DECISION_QUALITY_AND_FRESHNESS_PROGRAM_20261001 = COMPLETE / OWNER_REVIEW_READY`.
+The owner-directed review boundary is reached after packages 14 and 15; autonomous
+package selection stops, PR #30 awaits owner review, and no successor is queued.
+This completes the bounded integration program, not every future evidence capability.
+Package 14 retains 1,472 qualified fundamental thesis envelopes, 1,390 descriptive
+feature observations and 718 divergent qualified dimensions. The 207 absent-context
+codes become gaps instead of negative evidence; genuine adverse codes, votes, states,
+postures and WHY remain unchanged. All 1,683 decision identities change only through
+verified explanatory-source bindings; original retained inputs remain byte-identical.
+Package 15 separates scenario availability from directional support, removes 835
+missing-data conflicts and 848 duplicated Bear confirmation/invalidation conditions,
+and preserves all three cases in primary and full-universe AI delivery. Explicitly
+unavailable fundamentals narrow 15 scenarios to PARTIAL; ALV and DDG move from
+PRIORITY_NOW to SETUP_WATCH under the unchanged legacy lane policy. Strategy eligibility
+and the entire accepted integrated decision artifact remain unchanged. Both full
+1,683-record replays are deterministic with zero drops or unexplained changes.
+The remaining retained-corpus candidate is low-value wording; qualified current
+corporate catalysts/risks remain zero. October 1 has no registered completed session;
+live telemetry acceptance remains pending without polling or a substitute replay.
+Authority, request cap/retry, provider acquisition and publication changes remain NONE.
+The paragraphs below retain the program's accepted package history.
+The owner explicitly authorizes multiple coherent work packages despite the empty
+queued roadmap. Independent branch `program/current-research-decision-quality-20261001`
+starts from `59580f6cda300dce8013af284d2ce11e026e3029`. Retained 2026-09-30
+evidence is read-only. Initial corpus measurement finds V3 displayed structural
+levels paired with older watchlist conditions: 30/42 evaluable trigger conditions
+and 35/37 evaluable invalidation conditions reference different levels. The compact
+projection also omits the producer's invalidation method. The corrected projection
+preserves method/direction, the integrated product separates structural and watchlist
+conditions, and the shared Daily/AI projector retains both. Full retained replay keeps
+all 1,683 tickers and all postures; 388 structural triggers and 845 invalidations are
+evaluable with exact level alignment. The second pass aligns 74 valuation
+diagnosis-only summaries with the existing PARTIAL dimension semantics, retaining
+their negative-earnings diagnosis and blocked-method reasons. A further comparability pass
+removes 1,195 valuation-history labels derived from financial-ratio percentiles,
+including 471 spurious valuation counter-theses. Financial histories, peer-relative
+valuation, composite states and postures remain intact. Adversarial outcome checks
+now reject Boolean/non-finite/non-positive levels and closes, and reject a structural
+condition evaluated from a different T0 session. Valid retained conditions and
+product identities remain unchanged by this hardening. A further source-status pass
+removes 845 unsupported IN_LINE sector labels: 838 observed leadership states remain
+unchanged, while 10 data-limited and 835 unavailable sector contexts retain their
+reasons, group provenance and coverage alongside qualified market breadth. No
+posture or market-regime change occurs in those packages. The resumed tactical pass
+requires a witnessed previous close above pivot for RETEST_AFTER_BREAKOUT and
+ACCUMULATE_ON_RETEST. It changes 43 unsupported accumulation labels to EARLY_WATCH,
+corrects 33 phase labels, and puts 92 bearish BOS triggers in counter-evidence.
+Five witnessed retests remain; 140 material records change, 1,543 remain unchanged.
+Full replay has 1,683 in/out, zero unexplained changes and 20 retained inputs unchanged.
+303 focused/adjacent tests and six canonical integration checks pass. No thresholds,
+fundamental/valuation interpretation or authority gates change. See
+[program checkpoint](internal/current_research_decision_quality_program.md).
+PR #28 and PR #29 are merged into main as independent corrections; this program does not duplicate or widen them.
+New-session telemetry live acceptance remains externally time-gated.
+
+Packages 11–13 retain counted market breadth and participation provenance in the
+existing decision/shared delivery route. Breadth observes 848 of 1,507 official names,
+explicitly PARTIAL with 659 missing; all 1,683 decisions retain that denominator and
+source lineage. Sector coverage (838 available / 10 data-limited / 835 unavailable)
+and participation coverage (853 available / 830 unavailable) remain unchanged.
+Missing/inconsistent denominators, stale/future sessions and unqualified observations
+fail closed locally. No flow artifact is selected for this governed session.
+The subsequent thesis pass corrects 97 constructive-fundamental/adverse-technical
+coherence summaries and five unsupported supportive-participation WHY claims. Source
+confirmation remains directional, including confirmed bearish structure. Participation
+retains DNSE field/session/cohort/method/limitations; Boolean/non-finite/negative values
+cannot become evidence. All 1,683 per-ticker identities, postures, triggers,
+invalidations and authority remain unchanged; all replay inputs are byte-identical.
+Program remains ACTIVE. The bounded corpus has zero active corporate catalysts/risks;
+no integration is manufactured. October 1 is not registered as a completed session,
+so telemetry live acceptance remains pending without polling.
+
+The resumed financial-peer package consumes the canonical Financial V2 wrapper through
+an identity/session/nested-product-verified join. The existing peer producer preserves
+provider, entity, method, scope, units and period semantics in its comparison basis;
+incompatible providers or specialist families never pool. Retained replay confirms
+431 corporate issuers with 1,676 current comparisons, all 1,683 decision records retained.
+Context status is PARTIAL 431 / BLOCKED 962 / UNAVAILABLE 207 / NOT_APPLICABLE 83
+(AVAILABLE 0: at least one curated metric remains blocked for every eligible issuer).
+Structured fundamental evidence and shared AI delivery preserve numerical comparisons,
+cohorts, exact blockers, periodic freshness and source identities. Posture, counter-thesis,
+WHY text, fundamental synthesis and valuation are unchanged; ranks never become votes.
+185 focused/adjacent tests, the earlier 128-test materialization/integration gate and six
+canonical wiring checks pass. Authority changes remain NONE; program remains ACTIVE.
+
+The bounded corporate-fitness pass corrects 404 no-qualified-event dimensions from
+PARTIAL/research-qualified to BLOCKED/no authority, and 29 unresolved classifications
+retain PARTIAL descriptive evidence without a qualified claim. Source observations,
+events, stale labels and blockers remain visible. Missing/invalid/future sessions cannot
+claim current corporate qualification. Full retained replay keeps 1,683 records, 431
+peer-eligible corporations and all per-ticker decision identities; zero posture,
+counter-thesis or WHY-text change. Corporate dimensions now PARTIAL 1,103 / BLOCKED 580.
+171 focused/adjacent tests pass; one absent private retained-evidence baseline test is
+excluded rather than repaired or repeated. No authority is promoted; program continues.
+
+The research-only fundamental pass preserves structured non-voting observation provenance
+in the existing component view: working-capital direction 1,160 / level 1,276, cash-flow
+proxy direction 284, resilience composite 2. Period, fitness, source feature, semantics
+and the producer's policy reason survive into shared delivery. Unsupported/future/blocked
+context cannot appear as a bare usable observation. Replay enriches 1,276 records,
+leaves 407 unchanged, and preserves all fundamental votes/states, counters, postures and
+per-ticker decision identities. 157 focused/adjacent tests pass; authority promotion NONE.
+
+The peer-period follow-through uses the retained feature comparison-basis period when
+a blocked or insufficient-cohort display entry omits it. 3,458 observations across
+981 records gain accurate period/freshness labels; 702 records are unchanged. Comparison
+fitness, the 431 eligible denominator, decision identities, votes and postures stay
+unchanged. Final resumed regression tier: 309 tests pass, then 179 focused/adjacent
+tests pass after this metadata correction (including two new small-cohort period tests).
+No authority, provider, cap/retry, publication or acquisition change. Program remains ACTIVE.
+
 **Current Research future-dated freshness guard (2026-10-01):**
 `CURRENT_RESEARCH_FUTURE_DATED_FRESHNESS_GUARD_V1 = COMPLETE` under the owner's
 autonomous independent-work override while telemetry live acceptance is time-gated.
@@ -10,7 +122,7 @@ cadences, valid observations, source tiers and analytical thresholds are unchang
 Offline replay of all 17 retained 2026-09-30 runtime macro series is identical to base
 `59580f6`: context identity `d0045da8120a7799efe12856c0ae341e4146c1ab547de1e08679c95aab1d5c11`,
 12 current / 5 stale-or-expiring. No acquisition, runtime/DB write or authority promotion.
-Owner Daily Windows RSS fix is separately submitted as PR #28 from checkpoint `4116e0f`;
+Owner Daily Windows RSS fix was merged via PR #28 from checkpoint `4116e0f`;
 its four CI checks passed. `NEW_SESSION_LIVE_ACCEPTANCE_PENDING` remains time-gated.
 See [acceptance handoff](internal/current_research_future_freshness_acceptance.md).
 

@@ -24,6 +24,7 @@ Guiding Principles
 from __future__ import annotations
 
 import copy
+import math
 import hashlib
 import json
 from collections import Counter
@@ -607,7 +608,7 @@ def build_evidence_axes(
     priority = priority_record or {}
     priority_fitness = priority.get("data_quality_status") or ("AVAILABLE" if priority_record else "UNAVAILABLE")
     sector_context = (market_summary.get("sector_leadership") if market_context_provided else None)
-    sector_fitness = "AVAILABLE" if market_context_provided and sector_context not in (None, "IN_LINE") else (
+    sector_fitness = "AVAILABLE" if market_context_provided and sector_context not in (None, "IN_LINE", "UNKNOWN") else (
         "PARTIAL" if market_context_provided else "UNAVAILABLE"
     )
     derivation = (fundamental_synthesis or {}).get("derivation") or {}
@@ -629,6 +630,7 @@ def build_evidence_axes(
         "stale_research_evidence": list(fundamental_synthesis.get("stale_research_evidence") or []),
         "research_observations": sorted(fundamental_synthesis.get("research_observations") or {}),
         "turnaround_triggered": bool((derivation.get("turnaround") or {}).get("triggered")),
+        "thesis_context": copy.deepcopy(fundamental_synthesis.get("thesis_context")),
     } if fundamental_synthesis is not None else None
     # A directional INSUFFICIENT with known evidence is never an absent fundamental context: the
     # blocker names what is actually missing (FUNDAMENTAL_EVIDENCE_AVAILABILITY_BLOCKERS).
@@ -683,6 +685,7 @@ def build_evidence_axes(
             context={
                 "market_structure_state": tactical.get("market_structure_state"),
                 "breakout_state_v3": tactical.get("breakout_state_v3"),
+                "pivot_retest_confirmed": tactical.get("pivot_retest_confirmed"),
                 "bos_state": tactical.get("bos_state"),
                 "choch_state": tactical.get("choch_state"),
             },
@@ -723,10 +726,11 @@ def build_evidence_axes(
         "MARKET_SECTOR": _axis(
             state=market_summary.get("market_regime") if market_context_provided else "UNAVAILABLE",
             fitness=sector_fitness,
-            blockers=[] if market_context_provided else ["MARKET_SECTOR_CONTEXT_NOT_PROVIDED"],
+            blockers=list(market_summary.get("sector_leadership_reason_codes") or []) if market_context_provided else ["MARKET_SECTOR_CONTEXT_NOT_PROVIDED"],
             method="current_market_sector_leadership_context/v1",
             lineage={"source_artifact_identity": identities.get("market_sector")},
-            context={"market_regime": market_summary.get("market_regime"), "sector_leadership": sector_context},
+            context={"market_regime": market_summary.get("market_regime"), "sector_leadership": sector_context,
+                     **{key: market_summary.get(key) for key in ("market_breadth", "sector_leadership_status", "sector_leadership_reason_codes", "sector_group_key", "sector_group_coverage_ratio")}},
         ),
         "OPPORTUNITY_PRIORITY": _axis(
             # The standing Daily decision queue names this governed lane field
@@ -803,6 +807,11 @@ def evaluate_evidence_axis_coherence(evidence_axes: Mapping[str, Mapping[str, An
     elif fundamental.get("state") == FUNDAMENTAL_DETERIORATING and technical_phase in _CONSTRUCTIVE_TACTICAL_PHASES:
         state = EVIDENCE_AXIS_COHERENCE_CONTRADICTED
         reasons.append("FUNDAMENTALS_DETERIORATING_WHILE_TECHNICAL_STRUCTURE_IS_CONSTRUCTIVE")
+    elif technical_phase in (TACTICAL_BREAKDOWN, TACTICAL_DISTRIBUTION_RISK) and fundamental.get("state") in (
+        FUNDAMENTAL_IMPROVING, FUNDAMENTAL_STABLE, FUNDAMENTAL_TURNAROUND
+    ):
+        state = EVIDENCE_AXIS_COHERENCE_MIXED
+        reasons.append("CONSTRUCTIVE_FUNDAMENTALS_WITH_ADVERSE_TECHNICAL_STRUCTURE")
     elif technical_phase in _CONSTRUCTIVE_TACTICAL_PHASES and (
         market_regime in _ADVERSE_MARKET_REGIMES or sector_state in _WEAK_SECTOR_STATES
     ):
@@ -895,7 +904,10 @@ def evaluate_tactical_phase(tactical_rec: Mapping[str, Any] | None) -> tuple[str
         supports.append("EXTENDED_ABOVE_PIVOT")
 
     if trig == "TRIGGERED":
-        supports.append(f"TRIGGER_FIRED_{trig_type}")
+        if trig_type == "CONFIRMED_BOS_TRIGGER" and bos == "BEARISH_BOS_DETECTED_BY_RULE":
+            counters.append("BEARISH_BOS_TRIGGER_FIRED")
+        else:
+            supports.append(f"TRIGGER_FIRED_{trig_type}")
 
     if range_st == "RANGE_COMPRESSION":
         supports.append("VOLATILITY_RANGE_COMPRESSION")
@@ -937,7 +949,7 @@ def evaluate_tactical_phase(tactical_rec: Mapping[str, Any] | None) -> tuple[str
             phase = TACTICAL_EARLY_REVERSAL
         else:
             phase = TACTICAL_BREAKOUT_CONFIRMED
-    elif trig_type == "RETEST_BROKEN_PIVOT" or (ms == "UPTREND" and brk_v3 == "TESTING_PIVOT"):
+    elif tactical_rec.get("pivot_retest_confirmed") is True and ms in ("UPTREND", "EARLY_BULLISH_REVERSAL"):
         phase = TACTICAL_RETEST_AFTER_BREAKOUT
     elif brk_v3 == "TESTING_PIVOT" or trig == "APPROACHING" or (base_st == "IN_BASE" and range_st == "RANGE_COMPRESSION"):
         phase = TACTICAL_BREAKOUT_SETUP
@@ -1004,9 +1016,6 @@ def evaluate_valuation_context(
         if isinstance(detail, Mapping) and detail.get("status") == "READY_RESEARCH_ONLY" and method_id not in _SIZE_CONTEXT_METHODS
     }
 
-    # Own-history context from FA V2
-    hist_ctx = fa_context.get("history_context") or {}
-
     peer_interpretation = "NOT_APPLICABLE"
     if isinstance(peer_pctl, (int, float)):
         if peer_pctl <= 0.33:
@@ -1028,24 +1037,12 @@ def evaluate_valuation_context(
         peer_interpretation = "MID_RANGE_VS_PEERS"
         supports.append("VALUATION_IN_LINE_WITH_PEERS")
 
-    # Own history interpretation. `financial_analysis_engine_v2._history_entry()` (the sole
-    # producer of this shape, passed through verbatim by financial_analysis_product_projection)
-    # names this field "percentile", never "percentile_in_history" -- the prior key name never
-    # matched a single real record, so this axis silently never activated. Confirmed by reading
-    # both producers; fixed to read the field that is actually emitted.
+    # Financial V2 history contains operating/balance-sheet ratios, not historical
+    # price-to-fundamental multiples. Its percentiles cannot measure valuation
+    # cheapness or expensiveness, nor be averaged across incompatible metrics.
+    # The standing valuation producer retains current methods only. Keep the
+    # financial history in its own context and fail closed on valuation history.
     own_history_interpretation = "UNAVAILABLE"
-    if hist_ctx:
-        pctls = [v.get("percentile") for v in hist_ctx.values() if isinstance(v, Mapping) and isinstance(v.get("percentile"), (int, float))]
-        if pctls:
-            avg_pctl = sum(pctls) / len(pctls)
-            if avg_pctl <= 0.33:
-                own_history_interpretation = "LOW_VS_OWN_HISTORY"
-                supports.append("RATIOS_LOW_VS_OWN_HISTORICAL_RANGE")
-            elif avg_pctl >= 0.67:
-                own_history_interpretation = "HIGH_VS_OWN_HISTORY"
-                counters.append("RATIOS_ELEVATED_VS_OWN_HISTORICAL_RANGE")
-            else:
-                own_history_interpretation = "MID_VS_OWN_HISTORY"
 
     # Monetary basis and availability checks
     share_basis = val_rec.get("share_basis")
@@ -1070,6 +1067,11 @@ def evaluate_valuation_context(
         uncertainties.append("EV_EBITDA_SINGLE_REPORTING_PERIOD_NOT_TTM")
 
     method_rows = {key: item for key, item in methods.items() if isinstance(item, Mapping)}
+    pe_not_meaningful = (
+        any(item.get("status") == "PE_NOT_MEANINGFUL" for item in method_rows.values())
+        or val_rec.get("pe_not_meaningful") is True
+        or val_rec.get("earnings_state") == "PE_NOT_MEANINGFUL"
+    )
     if method_rows:
         # Market capitalisation is size context, never a valuation multiple -- the same invariant
         # attach_peer_relative already enforces for relative state. A row whose only usable
@@ -1077,8 +1079,6 @@ def evaluate_valuation_context(
         has_usable_metrics = (
             any(item.get("status") in ("RESEARCH_USABLE", "READY")
                 for key, item in method_rows.items() if key not in _SIZE_CONTEXT_METHODS)
-            or any(item.get("status") == "PE_NOT_MEANINGFUL" for item in method_rows.values())
-            or val_rec.get("pe_not_meaningful") is True
         )
     else:
         # Compact records without per-method detail keep their own declared usability.
@@ -1091,9 +1091,13 @@ def evaluate_valuation_context(
             or ps_val is not None
         )
     size_method = next((method_rows[key] for key in _SIZE_CONTEXT_METHODS if key in method_rows), None)
-    status = "AVAILABLE" if (peer_interpretation != "NOT_APPLICABLE" or has_usable_metrics) else "UNAVAILABLE"
+    # A real negative-earnings diagnosis is retained context, not an available
+    # price-to-fundamental multiple. Match the standing decision-input distinction
+    # without blocking another usable method or changing research posture.
+    status = ("AVAILABLE" if (peer_interpretation != "NOT_APPLICABLE" or has_usable_metrics)
+              else "PARTIAL" if pe_not_meaningful else "UNAVAILABLE")
     unavailable_reasons: list[str] = []
-    if status == "UNAVAILABLE":
+    if status != "AVAILABLE":
         # A blocked size input (no exact-session price, no qualified share basis) blocks every
         # price-based multiple, so its own causes are named alongside the method-level ones.
         unavailable_reasons = sorted({
@@ -1106,6 +1110,7 @@ def evaluate_valuation_context(
         "status": status,
         "peer_relative_state": peer_interpretation,
         "own_history_state": own_history_interpretation,
+        "own_history_reason_codes": ["COMPARABLE_VALUATION_HISTORY_NOT_RETAINED"],
         "peer_percentile": peer_pctl,
         "peer_relative_basis": peer_basis,
         "share_basis": share_basis,
@@ -1135,9 +1140,39 @@ def evaluate_valuation_context(
 
 # ── Participation Evaluator ───────────────────────────────────────────────────
 
+def evaluate_market_breadth(source: Mapping[str, Any], session: str) -> dict[str, Any]:
+    """Preserve the observed cohort; qualify only same-session, counted breadth."""
+    observed = source.get("market") or {}
+    reasons = []
+    if source.get("session") != session or observed.get("session") != session:
+        reasons.append("MARKET_BREADTH_SESSION_MISMATCH_OR_UNKNOWN")
+    counts = [observed.get(k) for k in (
+        "official_universe_count", "exact_session_observed_count", "missing_current_session_count")]
+    valid_counts = all(isinstance(n, int) and not isinstance(n, bool) and n >= 0 for n in counts)
+    if not valid_counts or counts[0] <= 0 or counts[1] <= 0 or counts[1] + counts[2] != counts[0]:
+        reasons.append("MARKET_BREADTH_DENOMINATOR_MISSING_OR_INCONSISTENT")
+    if observed.get("status", "AVAILABLE") not in {"AVAILABLE", "PARTIAL"}:
+        reasons.append("MARKET_BREADTH_PROVIDER_STATUS_UNQUALIFIED")
+    if not observed.get("current_breadth_state"):
+        reasons.append("MARKET_BREADTH_STATE_UNAVAILABLE")
+    status = "BLOCKED" if reasons else ("PARTIAL" if counts[2] or observed.get("status") == "PARTIAL" else "AVAILABLE")
+    return {
+        "status": status,
+        "market_regime": observed.get("current_breadth_state") if not reasons else "UNKNOWN",
+        "reason_codes": reasons,
+        "source_artifact_identity": source.get("artifact_identity"),
+        "source_session": source.get("session"),
+        "input_lineage": copy.deepcopy(source.get("input_lineage") or {}),
+        "observation": copy.deepcopy(observed),
+        "use": "OBSERVED_COHORT_CONTEXT_ONLY" if not reasons else "NO_CURRENT_BREADTH_USE",
+        "limitations": ["PARTIAL_COHORT_NOT_ALL_MARKET", "NO_FORECAST_CAUSALITY_OR_EXECUTION_AUTHORITY"],
+    }
+
+
 def evaluate_participation(
     tactical_rec: Mapping[str, Any] | None,
     rvol_rec: Mapping[str, Any] | None,
+    *, session: str | None = None,
 ) -> tuple[dict[str, Any], list[str], list[str]]:
     """Determine participation confirmation / acceleration evidence."""
     supports: list[str] = []
@@ -1147,6 +1182,27 @@ def evaluate_participation(
     rvol_rec = rvol_rec or {}
     pctl = rvol_rec.get("relative_volume_percentile")
     accel = rvol_rec.get("volume_acceleration_ratio")
+    reasons: list[str] = []
+    def numeric(value: Any, *, upper: float | None = None) -> float | None:
+        if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value) or value < 0:
+            return None
+        return value if upper is None or value <= upper else None
+    rv_scoped, pctl, accel = numeric(rv_scoped), numeric(pctl, upper=1), numeric(accel)
+    if session is not None and rvol_rec and rvol_rec.get("session") != session:
+        reasons.append("PARTICIPATION_SESSION_MISMATCH_OR_UNKNOWN")
+        pctl = accel = None
+    if rvol_rec.get("status") in {"BLOCKED", "UNAVAILABLE", "UNKNOWN"}:
+        reasons.append("PARTICIPATION_SOURCE_UNQUALIFIED")
+        pctl = accel = None
+    if rvol_rec.get("percentile_status") not in (None, "READY"):
+        pctl = None
+    if pctl is not None:
+        denominator = rvol_rec.get("cohort_denominator")
+        if isinstance(denominator, bool) or not isinstance(denominator, int) or denominator <= 0:
+            reasons.append("PARTICIPATION_PERCENTILE_DENOMINATOR_MISSING_OR_INVALID")
+            pctl = None
+    if rvol_rec.get("acceleration_status") not in (None, "READY"):
+        accel = None
 
     if isinstance(accel, (int, float)):
         if accel >= 1.5:
@@ -1172,6 +1228,8 @@ def evaluate_participation(
         "volume_acceleration_ratio": accel,
         "authority_tier": "DERIVED_PROXY",
         "warning": "DIMENSIONLESS_VOLUME_COMPARISON_NOT_ADV_OR_EXECUTION_CAPACITY",
+        "source_observation": copy.deepcopy(dict(rvol_rec)) if rvol_rec else None,
+        "reason_codes": reasons,
     }
     return summary, supports, counters
 
@@ -1314,11 +1372,14 @@ def decide_research_action_posture(
             return POSTURE_WAIT_FOR_CONFIRMATION, why, EFFECT_DOES_NOT_BLOCK
 
         lead_note = " with supportive sector leadership" if is_sector_leader else ""
-        why = f"{ticker}: Valid structural breakout trigger fired at pivot level with non-conflicting fundamentals and supportive participation{lead_note}; actionable initiation setup."
+        participation_note = ("supportive participation" if part_supports else
+                              "no observed participation contradiction" if part_available else
+                              "participation evidence unavailable")
+        why = f"{ticker}: Valid structural breakout trigger fired at pivot level with non-conflicting fundamentals and {participation_note}{lead_note}; actionable initiation setup."
         return POSTURE_INITIATE_ON_BREAKOUT, why, EFFECT_DOES_NOT_BLOCK
 
     # 5. RETEST OF BROKEN PIVOT -> ACCUMULATE_ON_RETEST
-    if (tactical_phase == TACTICAL_RETEST_AFTER_BREAKOUT or brk_v3 == "TESTING_PIVOT" or trig_type == "RETEST_BROKEN_PIVOT") and ms in ("UPTREND", "EARLY_BULLISH_REVERSAL"):
+    if tactical_rec.get("pivot_retest_confirmed") is True and ms in ("UPTREND", "EARLY_BULLISH_REVERSAL"):
         if dist_inv is not None and dist_inv > 0 and fundamental_state != FUNDAMENTAL_DETERIORATING:
             if is_bearish_market:
                 why = f"{ticker}: Constructive retest of pivot, but defensive market regime requires confirmation."
@@ -1407,6 +1468,7 @@ def build_ticker_integrated_decision(
     tactical_confirmation_record: Mapping[str, Any] | None = None,
     tactical_boundaries_record: Mapping[str, Any] | None = None,
     tactical_boundaries_identity: str | None = None,
+    structural_condition_source_identity: str | None = None,
     corporate_intelligence_record: Mapping[str, Any] | None = None,
     producer_artifact_identities: Mapping[str, Any] | None = None,
     technical_coverage_disposition_record: Mapping[str, Any] | None = None,
@@ -1414,6 +1476,7 @@ def build_ticker_integrated_decision(
     liquidity_research_record: Mapping[str, Any] | None = None,
     entity_applicability_record: Mapping[str, Any] | None = None,
     official_liquidity_record: Mapping[str, Any] | None = None,
+    financial_peer_context: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Assemble one complete, self-contained integrated investment decision record.
 
@@ -1468,7 +1531,7 @@ def build_ticker_integrated_decision(
     )
 
     # 4. Participation
-    part_summary, part_supp, part_count = evaluate_participation(tactical, rvol)
+    part_summary, part_supp, part_count = evaluate_participation(tactical, rvol, session=as_of_session)
 
     # 5. Market / Sector Context
     # current_market_sector_leadership_context/v1's real shape (the artifact canonical_post_close_
@@ -1480,11 +1543,27 @@ def build_ticker_integrated_decision(
     # this artifact), which made market_regime/sector_leadership silently constant defaults in
     # production regardless of the real session's breadth/leadership.
     ticker_sector_ctx = ((market.get("ticker_contexts") or {}).get(ticker) or {}).get("sector_leadership_context") or {}
+    breadth = evaluate_market_breadth(market, as_of_session)
+    if market.get("session") != as_of_session:
+        ticker_sector_ctx = {"status": "BLOCKED", "reason": "SECTOR_CONTEXT_SESSION_MISMATCH_OR_UNKNOWN"}
     mkt_summary = {
-        "market_regime": (market.get("market") or {}).get("current_breadth_state") or "NEUTRAL_MIXED",
-        "sector_leadership": ticker_sector_ctx.get("leadership_state") or "IN_LINE",
+        "market_regime": breadth["market_regime"],
+        "market_breadth": breadth,
+        # Absence is not an observed neutral sector. Keep the qualified market
+        # breadth while preserving the ticker's separate sector coverage gate.
+        "sector_leadership": (ticker_sector_ctx.get("leadership_state")
+                              if ticker_sector_ctx.get("status") in (None, "AVAILABLE") else None) or "UNKNOWN",
+        "sector_leadership_status": ticker_sector_ctx.get("status") or ("AVAILABLE" if ticker_sector_ctx.get("leadership_state") else "UNAVAILABLE"),
+        "sector_leadership_reason_codes": list(dict.fromkeys(
+            ([ticker_sector_ctx["reason"]] if ticker_sector_ctx.get("reason") else [])
+            + list(((market.get("ticker_contexts") or {}).get(ticker) or {}).get("coverage_limitations") or [])
+            + (["SECTOR_LEADERSHIP_CONTEXT_NOT_PROVIDED"] if not ticker_sector_ctx else []))),
+        "sector_group_key": ticker_sector_ctx.get("group_key"),
+        "sector_group_coverage_ratio": ticker_sector_ctx.get("group_coverage_ratio"),
         "authority_tier": "CURRENT_RESEARCH_DESCRIPTIVE",
     }
+    if mkt_summary["sector_leadership"] == "UNKNOWN" and not mkt_summary["sector_leadership_reason_codes"]:
+        mkt_summary["sector_leadership_reason_codes"] = ["SECTOR_LEADERSHIP_" + mkt_summary["sector_leadership_status"]]
     market_context_provided = isinstance(market_sector_record, Mapping)
 
     # 6. Portfolio Context
@@ -1548,19 +1627,22 @@ def build_ticker_integrated_decision(
         priority_queue_record, posture=posture, tactical=tactical, why_now=why_now,
     )
 
-    # 8. Trigger & Invalidation.  The condition serialization is deliberately
-    # delegated to the standing tactical boundary contract.  It preserves its
-    # own operator/reference semantics (or the fact that it is narrative or
-    # dynamic), and does not create a second trigger/invalidation engine.
-    from prospective_decision_retention import serialize_boundary_condition
+    # 8. Trigger & Invalidation. V3 levels and their conditions share the same
+    # source. Preserve the separate watchlist strategy verbatim without attaching
+    # its potentially different level/direction to a V3 structural measurement.
+    from prospective_decision_retention import serialize_boundary_condition, serialize_structural_condition
     boundaries = tactical_boundaries_record or {}
+    structural_identity = structural_condition_source_identity
     trigger = {
         "trigger_type": tactical.get("trigger_type", "NO_TRIGGER"),
         "trigger_level": tactical.get("trigger_level"),
         "trigger_state": tactical.get("trigger_state", "NOT_AVAILABLE"),
         "distance_to_trigger_pct": tactical.get("distance_to_trigger_pct"),
         "warning": "TRIGGER_IS_RESEARCH_MEASUREMENT_NOT_EXECUTION_AUTHORITY",
-        "condition": serialize_boundary_condition(
+        "condition": serialize_structural_condition(
+            tactical, role="trigger", session=as_of_session, source_identity=structural_identity,
+        ),
+        "watchlist_condition": serialize_boundary_condition(
             boundaries.get("confirmation_boundary") if isinstance(boundaries, Mapping) else None,
             role="trigger", source_strategy_identity=tactical_boundaries_identity,
         ),
@@ -1570,7 +1652,10 @@ def build_ticker_integrated_decision(
         "invalidation_method": tactical.get("invalidation_method") or "CONFIRMED_SWING_LEVEL_OR_SUPPORT_FALLBACK",
         "distance_to_invalidation_pct": tactical.get("distance_to_invalidation_pct"),
         "warning": "STRUCTURAL_INVALIDATION_LEVEL_NOT_A_STOP_LOSS",
-        "condition": serialize_boundary_condition(
+        "condition": serialize_structural_condition(
+            tactical, role="invalidation", session=as_of_session, source_identity=structural_identity,
+        ),
+        "watchlist_condition": serialize_boundary_condition(
             boundaries.get("technical_invalidation_boundary") if isinstance(boundaries, Mapping) else None,
             role="invalidation", source_strategy_identity=tactical_boundaries_identity,
         ),
@@ -1587,7 +1672,8 @@ def build_ticker_integrated_decision(
 
     # 10. Multi-axis synthesis
     all_counter_thesis = list(dict.fromkeys(fund_count + tac_count + val_count + part_count))
-    all_uncertainties = list(dict.fromkeys(val_uncert + (tactical.get("blockers") or [])))
+    all_uncertainties = list(dict.fromkeys(val_uncert + (tactical.get("blockers") or [])
+                                         + list(fund_synthesis.get("evidence_gap_reason_codes") or [])))
 
     # Evidence axes are a strictly additive description of the already-computed inputs above.
     # They are intentionally built after posture, trigger and invalidation so they cannot silently
@@ -1606,6 +1692,8 @@ def build_ticker_integrated_decision(
         fundamental_synthesis=fund_synthesis,
     )
     evidence_axis_coherence = evaluate_evidence_axis_coherence(evidence_axes)
+    if financial_peer_context is not None:
+        evidence_axes["FUNDAMENTAL"].setdefault("context", {})["financial_peer_context"] = copy.deepcopy(dict(financial_peer_context))
 
     # Legacy stance comparison
     legacy_stance = None
@@ -1693,6 +1781,9 @@ def build_ticker_integrated_decision(
             "unknown_is_local_does_not_force_global_wait": True,
         },
     }
+    if financial_peer_context is not None:
+        record["financial_peer_context"] = copy.deepcopy(dict(financial_peer_context))
+        record["source_identities"]["financial_peer_materialization_identity"] = financial_peer_context.get("source_materialization_identity")
     record["decision_identity"] = decision_identity(record)
     if bridge_consulted:
         record["operational_fundamental_context"] = copy.deepcopy(dict(operational_fundamental_context_record))
@@ -1736,6 +1827,7 @@ def build_artifact(
     liquidity_research_artifact: Mapping[str, Any] | None = None,
     entity_applicability_artifact: Mapping[str, Any] | None = None,
     official_liquidity_artifact: Mapping[str, Any] | None = None,
+    financial_peer_materialization_artifact: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build the market-wide integrated investment decision product artifact.
 
@@ -1754,7 +1846,22 @@ def build_artifact(
             f"{FINANCIAL_ANALYSIS_COMPACT_CONTRACT}:got={fa_contract}"
         )
     tac_records = technical_structure_artifact.get("records") or {}
+    # A claimed identity alone does not qualify a new fixed T0 condition. Keep
+    # other research axes visible while failing closed on this dependent use.
+    import market_structure_breakout_product_projection as structural_projection
+    structural_condition_identity = None
+    if (technical_structure_artifact.get("contract_version") == structural_projection.CONTRACT_VERSION
+            and technical_structure_artifact.get("session") == session):
+        try:
+            verified = structural_projection.content_identity(technical_structure_artifact)
+            if (verified["artifact_identity"] == technical_structure_artifact.get("artifact_identity")
+                    and verified["artifact_sha256"] == technical_structure_artifact.get("artifact_sha256")):
+                structural_condition_identity = verified["artifact_identity"]
+        except (TypeError, ValueError):
+            pass
     fa_records = (financial_analysis_artifact or {}).get("records") or {}
+    financial_peers = fa_product_projection.financial_peer_contexts(
+        materialization=financial_peer_materialization_artifact, product=financial_analysis_artifact, session=session)
     operational_records: Mapping[str, Any] = {}
     if operational_fundamental_integration_artifact is not None:
         integration = operational_fundamental_integration_artifact
@@ -1897,6 +2004,7 @@ def build_artifact(
             tactical_confirmation_record=tactical_confirmation_records.get(ticker),
             tactical_boundaries_record=tactical_boundaries_records.get(ticker),
             tactical_boundaries_identity=(tactical_boundaries_artifact or {}).get("artifact_identity"),
+            structural_condition_source_identity=structural_condition_identity,
             corporate_intelligence_record=corporate_intelligence_records.get(ticker),
             producer_artifact_identities={
                 "technical_structure": technical_structure_artifact.get("artifact_identity"),
@@ -1917,6 +2025,7 @@ def build_artifact(
             liquidity_research_record=liquidity_records.get(ticker),
             entity_applicability_record=applicability_records.get(ticker),
             official_liquidity_record=official_liquidity_records.get(ticker),
+            financial_peer_context=financial_peers.get(ticker),
         )
         records[ticker] = dec
         currency_counts[evidence_currency_class(dec["evidence_currency"])] += 1

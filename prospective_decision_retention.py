@@ -7,14 +7,15 @@ already-produced decision record at T0 under a content-addressed path, binds it
 to the completed Daily operation, and leaves every later outcome observation in
 a separate downstream artifact.
 
-It deliberately serializes only conditions already emitted by
-``tactical_confirmation_invalidation_boundaries``.  It neither creates a
+It serializes conditions already emitted by tactical watchlist boundaries or
+the verified structural product projection. It neither creates a
 second strategy engine nor turns a research boundary into an execution order.
 """
 from __future__ import annotations
 
 import hashlib
 import json
+import math
 from collections import Counter
 from pathlib import Path
 from typing import Any, Mapping, Sequence
@@ -77,6 +78,8 @@ def _condition_operator(operator: Any) -> str | None:
         "FUTURE_CLOSE_GT_RESISTANCE_LEVEL": ">",
         "FUTURE_CLOSE_LT_RESISTANCE_LEVEL": "<",
         "FUTURE_CLOSE_LT_SUPPORT_LEVEL": "<",
+        "FUTURE_CLOSE_GT_STRUCTURAL_LEVEL": ">",
+        "FUTURE_CLOSE_LT_STRUCTURAL_LEVEL": "<",
     }.get(operator)
 
 
@@ -95,9 +98,10 @@ def serialize_boundary_condition(
     level = raw.get("baseline_value")
     fixed_close = (
         raw.get("status") == "READY"
-        and raw.get("source_metric") in {"support", "resistance"}
+        and raw.get("source_metric") in {"support", "resistance", "trigger_level", "invalidation_level"}
         and operator is not None
         and isinstance(level, (int, float))
+        and not isinstance(level, bool) and math.isfinite(level) and level > 0
     )
     if fixed_close:
         status = "MACHINE_EVALUABLE"
@@ -139,6 +143,37 @@ def serialize_boundary_condition(
         "authority_boundary": "RETAINED_RESEARCH_BOUNDARY_NOT_EXECUTION_OR_STOP_LOSS",
     }
     return _identity(payload, "retained_strategy_boundary_condition:", "condition_identity")
+
+
+def serialize_structural_condition(
+    record: Mapping[str, Any], *, role: str, session: str,
+    source_identity: str | None,
+) -> dict[str, Any]:
+    """Serialize the projected V3 measurement using the standing close evaluator.
+
+    The producer projection owns direction. Never borrow a watchlist rule,
+    infer direction from price distance, or reconstruct an old retained T0.
+    """
+    level = record.get(f"{role}_level")
+    operator = record.get(f"{role}_close_comparison_operator")
+    qualified = (
+        record.get("eligible") is True and record.get("as_of_session") == session
+        and bool(source_identity) and operator in {">", "<"}
+        and isinstance(level, (int, float)) and not isinstance(level, bool)
+        and math.isfinite(level) and level > 0
+    )
+    boundary = {
+        "status": "READY" if qualified else "UNAVAILABLE",
+        "source_metric": f"{role}_level",
+        "comparison_operator": "FUTURE_CLOSE_GT_STRUCTURAL_LEVEL" if operator == ">" else "FUTURE_CLOSE_LT_STRUCTURAL_LEVEL" if operator == "<" else None,
+        "baseline_value": level if qualified else None,
+        "boundary_type": record.get("trigger_type") if role == "trigger" else record.get("invalidation_method"),
+        "method": "market_structure_breakout_product_projection/v1",
+        "evidence_lineage": {"as_of_session": record.get("as_of_session"), "source_artifact_identity": source_identity},
+        "warnings": [] if qualified else ["STRUCTURAL_CONDITION_INPUT_UNQUALIFIED"],
+        "reason": "Fixed T0 structural close boundary; analytical research only.",
+    }
+    return serialize_boundary_condition(boundary, role=role, source_strategy_identity=source_identity)
 
 
 def _axis_completeness(record: Mapping[str, Any]) -> dict[str, Any]:
@@ -425,17 +460,24 @@ def evaluate_serialized_close_condition(
         return {"status": "NOT_MACHINE_EVALUABLE", "event_session": None, "condition_identity": condition.get("condition_identity"), "reason_codes": list(condition.get("reason_codes") or [])}
     if start_session not in chain:
         return {"status": "TEMPORAL_PROVENANCE_UNQUALIFIED", "event_session": None, "condition_identity": condition.get("condition_identity"), "reason_codes": ["T0_SESSION_NOT_IN_GOVERNED_CHAIN"]}
+    if (condition.get("source_method") == "market_structure_breakout_product_projection/v1"
+            and (condition.get("source_lineage") or {}).get("as_of_session") != start_session):
+        return {"status": "TEMPORAL_PROVENANCE_UNQUALIFIED", "event_session": None, "condition_identity": condition.get("condition_identity"), "reason_codes": ["STRUCTURAL_CONDITION_T0_SESSION_MISMATCH"]}
     level, operator = condition.get("reference_level"), condition.get("operator")
-    if not isinstance(level, (int, float)) or operator not in {">", "<"}:
+    if (not isinstance(level, (int, float)) or isinstance(level, bool)
+            or not math.isfinite(level) or level <= 0 or operator not in {">", "<"}):
         return {"status": "NOT_MACHINE_EVALUABLE", "event_session": None, "condition_identity": condition.get("condition_identity"), "reason_codes": ["SERIALIZED_CONDITION_INCOMPLETE"]}
     observed = 0
     for session in chain[chain.index(start_session) + 1:]:
         row = ((snapshots.get(session) or {}).get("records") or {}).get(ticker) or {}
         matches = [item for item in (row.get("observations") or []) if isinstance(item, Mapping) and item.get("session") == session]
-        if len(matches) != 1 or not isinstance(matches[0].get("close"), (int, float)):
+        if len(matches) != 1:
+            continue
+        close = matches[0].get("close")
+        if (not isinstance(close, (int, float)) or isinstance(close, bool)
+                or not math.isfinite(close) or close <= 0):
             continue
         observed += 1
-        close = matches[0]["close"]
         if (operator == ">" and close > level) or (operator == "<" and close < level):
             return {"status": "SATISFIED", "event_session": session, "condition_identity": condition.get("condition_identity"), "reason_codes": ["SERIALIZED_FIXED_T0_LEVEL_SATISFIED"]}
     return {"status": "NOT_SATISFIED_YET" if observed else "PRICE_SERIES_UNQUALIFIED", "event_session": None, "condition_identity": condition.get("condition_identity"), "reason_codes": ["NO_LATER_RETAINED_CLOSE" if not observed else "NO_LATER_CLOSE_SATISFIED_FIXED_T0_LEVEL"]}

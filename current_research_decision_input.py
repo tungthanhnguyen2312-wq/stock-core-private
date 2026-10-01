@@ -12,6 +12,8 @@ authority; those boundaries are restated explicitly rather than inferred.
 from __future__ import annotations
 
 from collections import Counter
+import copy
+from datetime import date
 import re
 from typing import Any, Iterable, Mapping
 
@@ -86,6 +88,7 @@ def _market(record: Mapping[str, Any], disposition: Mapping[str, Any] | None, se
         "price_basis": {"current_research_use": "EXACT_SESSION_DESCRIPTIVE_ONLY",
                         "raw_as_traded": "NOT_PROMOTED", "historical_pit": "BLOCKED"},
         "market_regime": market_axis.get("state") if market_axis.get("fitness") not in (None, "UNAVAILABLE") else None,
+        "market_breadth": copy.deepcopy((market_axis.get("context") or {}).get("market_breadth")),
         "reason_codes": [] if exact else _codes(
             [disposition.get("disposition") or "TECHNICAL_COVERAGE_DISPOSITION_NOT_SUPPLIED", disposition.get("reason_code")]),
     }
@@ -260,6 +263,7 @@ def _fundamental(record: Mapping[str, Any], financial: Mapping[str, Any] | None,
         "freshness": freshness,
         "metrics": {"qualified": qualified if available else [], "proxy": proxy if available else [],
                     "non_applicable": non_applicable, "blocked": blocked},
+        **({"financial_peer_context": copy.deepcopy(record["financial_peer_context"])} if "financial_peer_context" in record else {}),
         "reason_codes": reasons,
     }
 
@@ -357,17 +361,37 @@ def _valuation(record: Mapping[str, Any], valuation_record: Mapping[str, Any] | 
 def _corporate(record: Mapping[str, Any]) -> dict[str, Any]:
     context = record.get("corporate_intelligence_context") or {}
     provided = context.get("state") not in (None, "NOT_PROVIDED")
-    stale = context.get("evidence_session_stale") is True
+    source_session = context.get("evidence_session")
+    temporal = "NOT_PROVIDED"
+    if provided:
+        try:
+            source_day = date.fromisoformat(source_session)
+            decision_day = date.fromisoformat(record.get("as_of_session"))
+            temporal = ("FUTURE_INFORMATION_PROHIBITED" if source_day > decision_day else
+                        "STALE_EVIDENCE_SESSION" if source_day < decision_day else "CURRENT_EVIDENCE_SESSION")
+        except (TypeError, ValueError):
+            temporal = "SOURCE_SESSION_ABSENT_OR_INVALID"
+    temporal_usable = temporal in {"STALE_EVIDENCE_SESSION", "CURRENT_EVIDENCE_SESSION"}
+    source_available = context.get("fitness") in {"AVAILABLE", "CURRENT_RESEARCH_ONLY"}
+    no_event = context.get("state") == "NO_QUALIFIED_CORPORATE_EVENT"
+    unresolved = context.get("state") == "UNRESOLVED_EVIDENCE"
+    usable = provided and source_available and temporal_usable and not no_event
+    qualified = usable and not unresolved
+    reasons = _codes(context.get("blocker_reason_codes"),
+                     ["NO_QUALIFIED_CORPORATE_EVENT"] if provided and no_event else [],
+                     ["CORPORATE_EVENT_CLASSIFICATION_UNRESOLVED"] if provided and unresolved else [],
+                     [temporal] if provided and not temporal_usable else [],
+                     ["CORPORATE_SOURCE_FITNESS_UNAVAILABLE"] if provided and not source_available and not no_event else [])
     return {
-        "state": (PARTIAL if stale else AVAILABLE) if provided else BLOCKED,
-        "authority": RESEARCH_QUALIFIED if provided else NO_AUTHORITY,
+        "state": (PARTIAL if temporal == "STALE_EVIDENCE_SESSION" or unresolved else AVAILABLE) if usable else BLOCKED,
+        "authority": RESEARCH_QUALIFIED if qualified else CURRENT_DESCRIPTIVE_ONLY if usable else NO_AUTHORITY,
         "context_state": context.get("state"),
-        "temporal_status": ("STALE_EVIDENCE_SESSION" if stale else "CURRENT_EVIDENCE_SESSION") if provided else "NOT_PROVIDED",
+        "temporal_status": temporal,
         "evidence_session": context.get("evidence_session"),
         "material_event_count": context.get("material_event_count"),
         "active_catalyst_count": context.get("active_catalyst_count"),
         "active_risk_count": context.get("active_risk_count"),
-        "reason_codes": _codes(context.get("blocker_reason_codes")),
+        "reason_codes": reasons,
     }
 
 

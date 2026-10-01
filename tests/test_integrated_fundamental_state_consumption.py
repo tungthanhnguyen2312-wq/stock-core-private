@@ -354,7 +354,8 @@ def test_missing_metric_does_not_erase_unrelated_valid_evidence() -> None:
 
 def test_absent_financial_context_stays_insufficient_with_its_reason() -> None:
     state, supports, counters = iidp.evaluate_fundamental_direction({"status": "ABSENT"}, decision_session=SESSION)
-    assert (state, supports, counters) == (iidp.FUNDAMENTAL_INSUFFICIENT, [], ["FUNDAMENTAL_CONTEXT_ABSENT"])
+    assert (state, supports, counters) == (iidp.FUNDAMENTAL_INSUFFICIENT, [], [])
+    assert contract.evaluate({"status": "ABSENT"}, decision_session=SESSION)["evidence_gap_reason_codes"] == ["FUNDAMENTAL_CONTEXT_ABSENT"]
 
 
 # ── Real producer vocabulary (engine -> compact projection -> contract) ──────────────────────

@@ -1118,6 +1118,7 @@ def build_enrichment_components(
             requested_at=requested_at,
             technical_structure_artifact=tactical_projection,
             financial_analysis_artifact=financial_session_artifact["financial_analysis_product"],
+            financial_peer_materialization_artifact=financial_session_artifact,
             current_valuation_artifact=evaluated_valuation,
             relative_volume_artifact=relative_volume,
             market_sector_artifact=mkt,

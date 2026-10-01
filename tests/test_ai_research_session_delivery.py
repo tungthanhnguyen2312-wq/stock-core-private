@@ -188,6 +188,39 @@ def test_integrated_delivery_without_brief_preserves_standalone_semantics():
     assert len(delivery["full_universe"].splitlines()) == 1
 
 
+def test_conditions_survive_primary_companion_and_cockpit_without_reinterpretation():
+    integrated = _integrated_delivery_fixture()
+    record = integrated["records"]["AAA"]
+    for role, operator in [("trigger", "<"), ("invalidation", ">")]:
+        record[role]["condition"] = {
+            "status": "MACHINE_EVALUABLE", "operator": operator,
+            "reference_level": 100.0, "reason_codes": ["EXISTING_READY_FIXED_T0_CLOSE_BOUNDARY"],
+            "source_strategy_identity": "verified:projection",
+        }
+        record[role]["watchlist_condition"] = {
+            "status": "NOT_MACHINE_EVALUABLE", "reason_codes": ["FUTURE_STRATEGY_MEASUREMENT_REQUIRED"],
+        }
+    operation = _operation()
+    inputs = {"descriptive": {"records": {"AAA": {}}}, "tactical": {"records": {"AAA": {}}},
+              "fundamental": {"records": {}}, "valuation": {"records": {}},
+              "integrated_investment_decision_product": integrated}
+    delivery = build_delivery(operation, inputs)
+    primary = json.loads(delivery["primary"])["ticker_research_contexts"]["AAA"]["integrated_decision_v1"]
+    companion = json.loads(delivery["full_universe"])["integrated_decision_v1"]
+    projection = json.loads(delivery["projection"])
+    # All surfaces use the same standing projection, including the cockpit card.
+    for view in [primary, companion]:
+        for role in ["trigger", "invalidation"]:
+            assert view[role]["condition"] == record[role]["condition"]
+            assert view[role]["watchlist_condition"] == record[role]["watchlist_condition"]
+        assert view["is_actionable"] is False
+    card = projection["decision_card_v1"]["AAA"]
+    assert card["entry_trigger"]["condition"] == record["trigger"]["condition"]
+    assert card["invalidation"]["condition"] == record["invalidation"]["condition"]
+    assert card["entry_trigger"]["watchlist_condition"] == record["trigger"]["watchlist_condition"]
+    assert card["authority_boundary"]["is_actionable"] is False
+
+
 def _card(ticker, action="WAIT"):
     return {
         "ticker": ticker,

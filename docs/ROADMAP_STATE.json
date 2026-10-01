@@ -1,7 +1,7 @@
 {
   "schema_version": "stocklookup_roadmap_execution_state/1.0.0",
   "roadmap_id": "stock-core-private",
-  "roadmap_version": "2026.10.01.1",
+  "roadmap_version": "2026.10.01.4",
   "narrative_authority": {
     "strategic_roadmap": "docs/ROADMAP.md",
     "operational_narrative": "docs/STATE.md",
@@ -15,11 +15,30 @@
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "CURRENT_RESEARCH_FUTURE_DATED_FRESHNESS_GUARD_V1",
+    "milestone": "CURRENT_RESEARCH_DECISION_QUALITY_AND_FRESHNESS_PROGRAM_20261001",
     "state": "COMPLETE"
   },
   "queued_next": [],
   "milestones": [
+    {
+      "milestone_id": "CURRENT_RESEARCH_DECISION_QUALITY_AND_FRESHNESS_PROGRAM_20261001",
+      "state": "COMPLETE",
+      "terminal_disposition": "COMPLETE_OWNER_REVIEW_READY",
+      "starting_checkpoint": "59580f6cda300dce8013af284d2ce11e026e3029",
+      "checkpoint": "HEAD",
+      "candidate_branch": "program/current-research-decision-quality-20261001",
+      "dependencies": [],
+      "unlocks": [],
+      "authority_effect": "NONE / CURRENT_RESEARCH_SEMANTIC_INTEGRATION_ONLY",
+      "owner_authorized": true,
+      "source_doc": "Owner directive CURRENT_RESEARCH_DECISION_QUALITY_AND_FRESHNESS_PROGRAM_20261001 (2026-10-01)",
+      "state_history": [
+        "ACTIVE",
+        "COMPLETE"
+      ],
+      "owner_override": "OWNER_DIRECTIVE_2026_10_01_LONG_RUNNING_CURRENT_RESEARCH_PROGRAM",
+      "notes": "Explicit multi-work-package owner override with empty queued_next. Full retained 2026-09-30 denominator 1683; read-only retained inputs. Structural-condition alignment, invalidation method/direction propagation and shared AI/Daily condition retention accepted: 303 focused/adjacent tests plus six canonical integration checks; exact baseline reproduction; 1683 in/out; 388 triggers and 845 invalidations evaluable; second-pass 74 diagnosis-only valuation summaries corrected from AVAILABLE to PARTIAL with reasons retained; 1195 cross-domain valuation-history labels removed, including exactly 471 spurious valuation counter-theses; financial histories, peer-relative valuation and composite states preserved; no posture or authority changes. Adversarial standing-close checks reject invalid numeric inputs and structural T0-session mismatch; retained product identity unchanged. 845 unsupported neutral sector labels replaced with UNKNOWN; source status/reasons/group coverage preserved, 838 observed sector states and market breadth unchanged. Strategy-priority substitution rejected as semantically incompatible. Resumed tactical package: 43 unsupported accumulation labels become EARLY_WATCH; 33 phase corrections; 92 bearish BOS triggers moved from support to counter-evidence; 140 material records changed, 1543 unchanged; 20 retained inputs unchanged. No thresholds or authority changes. Package 7 integrates qualified financial peers through identity/session/nested-product validation: 431 corporate issuers, 1676 current comparisons, 1683 in/out; PARTIAL 431 / BLOCKED 962 / UNAVAILABLE 207 / NOT_APPLICABLE 83; posture/counter-thesis/WHY text unchanged. Provider/entity/period/scope/method partitions preserved; 21 new adversarial tests, 185 adjacent tests, earlier 128-test materialization gate and six canonical checks pass. Program continues with bounded second-pass input selection. Program remains active for qualified-input selection. PR28/29 are merged into main as independent corrections; no authority promotion or new-session polling. Package 8 corrects 404 no-qualified-event and 29 unresolved corporate qualification labels: 433 explanatory changes, 1250 unchanged, corporate PARTIAL 1103 / BLOCKED 580; all 1683 decision identities and postures unchanged. 171 adjacent tests pass; private absent-baseline supplemental test excluded. Missing/future corporate sessions fail closed locally. No authority promotion. Package 9 preserves non-voting fundamental observation period/fitness/proxy/source-feature/semantic/policy provenance: 1276 enriched / 407 unchanged; working-capital direction 1160, level 1276, cash-flow proxy direction 284, resilience 2. All votes/states/decision identities/postures unchanged; 157 focused tests pass. Program remains ACTIVE. Package 10 preserves known blocked-peer basis periods/freshness: 3458 observations (3286 not-comparable, 172 small-cohort) across 981 records; 702 unchanged; comparison fitness/431 eligible/decision identities/postures unchanged. Broader resumed tier 309 tests passes; final metadata tier 179 passes. No authority promotion; context checkpoint with program ACTIVE. Packages 11-13: counted breadth (848/1507, PARTIAL) retained in all 1683 IID/shared delivery records; sector 838 available/10 data-limited/835 unavailable and participation 853 available/830 unavailable unchanged. No governed flow input. Correct 97 contradictory thesis-coherence summaries and five unsupported participation WHY claims; preserve provider/session/cohort/method participation provenance. All per-ticker identities, postures, phases, triggers, invalidations and authority unchanged; deterministic replays and unchanged source bytes. 51 new adversarial cases. Zero current active corporate catalysts/risks; October 1 telemetry acceptance remains pending without polling. Program ACTIVE at bounded review checkpoint. Packages 14-15 accepted: 1472 fundamental thesis envelopes, 1390 descriptive observations, 718 qualified divergent dimensions; 207 missing-context counter codes become gaps, genuine adverse evidence unchanged. All 1683 explanatory source-bound decision identities change mechanically, with zero posture/WHY/state/authority effect. Scenario presence-as-support corrected, 835 missing-data conflicts removed, 848 duplicated Bear confirmation/invalidation conditions separated, all cases preserved in both delivery paths. Fifteen explicitly unavailable fundamental scenarios become PARTIAL; ALV/DDG legacy priority moves to SETUP_WATCH under existing policy, strategy eligibility unchanged. Canonical IID exactly equals package-14 acceptance. Deterministic 1683 replays, source bytes unchanged, no provider calls. Owner-directed coherent review boundary reached: remaining retained candidates have lower marginal value; program COMPLETE / OWNER_REVIEW_READY, PR30 awaits owner review, no merge or successor. October 1 unregistered completed session; live telemetry remains pending without polling."
+    },
     {
       "milestone_id": "CURRENT_RESEARCH_FUTURE_DATED_FRESHNESS_GUARD_V1",
       "state": "COMPLETE",
@@ -33,9 +52,12 @@
       "authority_effect": "NONE / FRESHNESS_LABEL_CORRECTION_ONLY",
       "owner_authorized": true,
       "source_doc": "Owner resume autonomous roadmap directive (2026-10-01)",
-      "state_history": ["ACTIVE", "COMPLETE"],
+      "state_history": [
+        "ACTIVE",
+        "COMPLETE"
+      ],
       "owner_override": "OWNER_DIRECTIVE_2026_10_01_AUTONOMOUS_INDEPENDENT_CURRENT_RESEARCH_WORK",
-      "notes": "Owner-authorized independent corrective despite queued_next=[] while telemetry live acceptance is time-gated. Negative observation age now yields unknown / source_date_after_reference_anchor / non-actionable across the existing domain cadences. Market domains use the existing completed-session anchor. Future observations remain retained; unrelated inputs, cadences, source tiers and analytical thresholds are unchanged. All 17 retained 2026-09-30 runtime macro series replay identically to base 59580f6, same macro_presentation_context identity d0045da8120a7799efe12856c0ae341e4146c1ab547de1e08679c95aab1d5c11 (12 current, 5 stale/expiring). Focused/adjacent tests pass. No provider acquisition, runtime/DB write or authority promotion. Owner telemetry RSS repair is separately submitted as PR #28; NEW_SESSION_LIVE_ACCEPTANCE_PENDING remains an external time gate."
+      "notes": "Owner-authorized independent corrective despite queued_next=[] while telemetry live acceptance is time-gated. Negative observation age now yields unknown / source_date_after_reference_anchor / non-actionable across the existing domain cadences. Market domains use the existing completed-session anchor. Future observations remain retained; unrelated inputs, cadences, source tiers and analytical thresholds are unchanged. All 17 retained 2026-09-30 runtime macro series replay identically to base 59580f6, same macro_presentation_context identity d0045da8120a7799efe12856c0ae341e4146c1ab547de1e08679c95aab1d5c11 (12 current, 5 stale/expiring). Focused/adjacent tests pass. No provider acquisition, runtime/DB write or authority promotion. Owner telemetry RSS repair was merged via PR #28; NEW_SESSION_LIVE_ACCEPTANCE_PENDING remains an external time gate."
     },
     {
       "milestone_id": "DAILY_OFFICIAL_LIQUIDITY_ROLLFORWARD_V1",
@@ -45,12 +67,19 @@
       "starting_checkpoint": "84ee248251705fdab1c9152e65ec1fc7f75e8bb6",
       "checkpoint": "5292a8518221a383a5a4977eff522fd31d4b9600",
       "candidate_branch": "feature/daily-official-liquidity-rollforward-v1-20260930",
-      "dependencies": ["DAILY_LIQUIDITY_AUTHORITY_WIRING_RECONCILIATION_V1"],
+      "dependencies": [
+        "DAILY_LIQUIDITY_AUTHORITY_WIRING_RECONCILIATION_V1"
+      ],
       "unlocks": [],
       "authority_effect": "DAILY_SAME_SESSION_OFFICIAL_BIND_ONLY / NO_HNX_UPCOM_BULK / NO_REQUEST_CEILING_RAISE / NO_LIVE_SIZING_OR_PIT_PROMOTION",
       "owner_authorized": true,
       "source_doc": "Owner directive DAILY_OFFICIAL_LIQUIDITY_ROLLFORWARD_V1 (2026-09-30)",
-      "state_history": ["ACTIVE", "PARTIAL", "COMPLETE", "PARTIAL"],
+      "state_history": [
+        "ACTIVE",
+        "PARTIAL",
+        "COMPLETE",
+        "PARTIAL"
+      ],
       "owner_override": "OWNER_DIRECTIVE_2026_09_30_DAILY_OFFICIAL_LIQUIDITY_ROLLFORWARD_V1",
       "notes": "Corrective closeout 2026-09-30. Historical retained ordinary Daily remains PASS/COMPLETED for exact session 2026-09-30 on producer commit 5292a8518221a383a5a4977eff522fd31d4b9600 (Producer CI #143 SUCCESS, run 36703136572). Its official component actual outcome remains UNAVAILABLE_SOURCE / OFFICIAL_ARTIFACT_ABSENT, 0 planned requests, 0 HTTP requests, 0 retries, 0 retained reuse and no bound artifact identity; no stale-session substitution or HNX/UPCoM acquisition. Root cause: the registry includes 2026-09-28 but its qualified official artifact is outside the canonical session_artifact_paths official_liquidity namespace and has no registry binding, so _prior_completed_official_liquidity returned None; the materializer received no planning universe and the consumer reconstructed generic source absence. Corrected offline: the already-governed current_official_market_universe is a request-routing seed only (ACTIVE_UNIVERSE remains unpromoted); without target-current retained series it yields UNAVAILABLE_REQUEST_BUDGET, 403 HOSE primary requests, retry allowance 40, hard cap 400, HNX/UPCoM 0 and HTTP 0. Consumer preserves the self-verifying materialized component status. The 403-vs-400 rebaseline remains COMPLETE_NO_CODE_CHANGE_POLICY_CEILING_CONFIRMED; no ceiling, scope or authority changes. Final Dashboard is READY/PUBLISHED at 2352767134aae20e6b13646cf6b5fae15a9c7b8f, public-byte PASS, Dashboard CI 36703277851 SUCCESS and Deploy Pages 36703321455 SUCCESS. AI handoff remote 5b0af419414a5c73e871286fa87c6fa8f26bbb45 is READY_FOR_AI. Descriptive liquidity=848; historical Daily official qualified current liquidity/ADTV/ADV=0; RAW_AS_TRADED not promoted; PIT_BACKTEST, EXECUTION_REPLAY and LIVE_POSITION_SIZING remain BLOCKED. A future completed session requires live acceptance of the corrected planning boundary. OWNER_DAILY_PROGRESS_TELEMETRY_V1 remains OWNER_REQUESTED_FOLLOW_UP / NOT_STARTED; queued_next remains empty."
     },
@@ -67,7 +96,10 @@
       "authority_effect": "NONE_OPERATIONAL_OBSERVABILITY_ONLY / NO_SOURCE_REQUEST_BUDGET_CONCURRENCY_ORDER_OR_IDENTITY_EFFECT",
       "owner_authorized": true,
       "source_doc": "Owner directive OWNER_DAILY_PROGRESS_TELEMETRY_V1 (2026-09-30)",
-      "state_history": ["ACTIVE", "COMPLETE"],
+      "state_history": [
+        "ACTIVE",
+        "COMPLETE"
+      ],
       "owner_override": "OWNER_DIRECTIVE_2026_09_30_OWNER_DAILY_PROGRESS_TELEMETRY_V1",
       "notes": "COMPLETE offline acceptance. One external owner_daily_progress/v1 JSONL sidecar records existing Owner phase lifecycle, exact-session request futures, deterministic Level-2 batch work and best-effort resources. Request work and observed coverage retain distinct denominators. Network payload bytes and recursive child-tree RSS remain explicit unknowns; sidecar/resource/terminal failures degrade only as TELEMETRY_DEGRADED. Snapshot callback-on/off output and identity are byte-identical; telemetry makes zero additional provider/network calls. The owner result telemetry object is additive external operational metadata only. No live Daily, provider call, push, merge, deploy, publication or PR action. DAILY_OFFICIAL_LIQUIDITY_ROLLFORWARD_V1 remains PARTIAL with its corrected governed-universe planning invariant unchanged: UNAVAILABLE_REQUEST_BUDGET, 403 HOSE, retry 40, cap 400, HNX/UPCoM 0 and Daily HTTP 0. Next recommendation is NOT STARTED."
     },
@@ -79,12 +111,17 @@
       "starting_checkpoint": "caf413456b60f8af7a13e16e375880310718d619",
       "checkpoint": "HEAD",
       "candidate_branch": "feature/daily-liquidity-authority-wiring-v1-20260930",
-      "dependencies": ["LIQUIDITY_EXECUTION_CAPACITY_AND_SIZING_V1"],
+      "dependencies": [
+        "LIQUIDITY_EXECUTION_CAPACITY_AND_SIZING_V1"
+      ],
       "unlocks": [],
       "authority_effect": "SCOPED_ARTIFACT_SUMMARY_ONLY / PER_RECORD_FITNESS_AUTHORITATIVE / NO_LIVE_SIZING_OR_PIT_PROMOTION / NO_RAW_AS_TRADED_PROMOTION",
       "owner_authorized": true,
       "source_doc": "Owner directive DAILY_LIQUIDITY_AUTHORITY_WIRING_RECONCILIATION_V1 (2026-09-30)",
-      "state_history": ["ACTIVE", "COMPLETE"],
+      "state_history": [
+        "ACTIVE",
+        "COMPLETE"
+      ],
       "owner_override": "OWNER_DIRECTIVE_2026_09_30_DAILY_LIQUIDITY_AUTHORITY_WIRING_RECONCILIATION_V1",
       "notes": "COMPLETE 2026-09-30. Root cause: market_wide_current_liquidity_research emitted a pre-promotion artifact-global ADTV/ADV BLOCKED and QUALIFIED_LIQUIDITY_INPUTS=false boundary, while official_exchange_liquidity_research/v1 already had per-record CURRENT_SESSION_LIQUIDITY_RESEARCH ELIGIBLE 952 and ADTV_RESEARCH ELIGIBLE 457 (ADV PARTIAL 457, as-traded). Daily 2026-09-29 bound only the descriptive artifact (868 eligible) because no same-session official artifact exists at the Daily path; 2026-09-28 IID 1517dc71 also had 0 official qualified_research. Corrective: scoped artifact summaries; official per-use fitness wins for the matching use; execution-capacity engine consumes qualified ADTV with UNBOUND policy (0 AVAILABLE / 0 PARTIAL / 1683 BLOCKED, 457 POLICY_UNBOUND, 1047 rights-gated). Retained 2026-09-29 CRDI liquidity vs nested is identical (0 posture/decision/liquidity/non-liquidity/unexplained). Original retained Daily package not mutated. No live Daily, merge, deploy or successor."
     },
@@ -96,12 +133,17 @@
       "starting_checkpoint": "42e756e3099009e5654784cd03bbc6123dd775c6",
       "checkpoint": "HEAD",
       "candidate_branch": "feature/historical-net-income-semantic-correction-v1-20260929",
-      "dependencies": ["FINANCIAL_EVIDENCE_REVIEWED_INTERIM_CANONICAL_INGRESS_V1"],
+      "dependencies": [
+        "FINANCIAL_EVIDENCE_REVIEWED_INTERIM_CANONICAL_INGRESS_V1"
+      ],
       "unlocks": [],
       "authority_effect": "APPEND_ONLY_SEMANTIC_SUPERSESSION / NET_INCOME_AND_ATTRIBUTABLE_NET_INCOME_REMAIN_DISTINCT / NO_FINANCIAL_V2_PIN_BUMP",
       "owner_authorized": true,
       "source_doc": "Owner directive HISTORICAL_NET_INCOME_SEMANTIC_CORRECTION_OVERLAY_V1 (2026-09-29)",
-      "state_history": ["ACTIVE", "COMPLETE"],
+      "state_history": [
+        "ACTIVE",
+        "COMPLETE"
+      ],
       "owner_override": "OWNER_DIRECTIVE_2026_09_29_HISTORICAL_NET_INCOME_SEMANTIC_CORRECTION_OVERLAY_V1",
       "notes": "COMPLETE 2026-09-29. Append-only SEMANTIC_METRIC_RELABEL for exactly four Class-A facts (HPG 2022, HPG 2023, FPT 2025, GAS 2025). Old evidence remains immutable. Current authority: line 60 + explicit total-profit-after-tax label = net_income; line 61 + explicit parent-attributable label = attributable_net_income. FPT 2025 line-61 parent label remains garbled under the PR #21 row-label contract so attributable_net_income is unavailable; line-60 net_income is restored. Class-D PVD 2022/2023, VNM 2024, AAA 2024, VRE 2025 unchanged as SEMANTIC_IDENTITY_UNRESOLVED. parent_attributable_net_income is a compatibility alias. Same-PR authority corrective: CLASS_A is a frozen validation contract only; current-authority rows load from public semantic_metric_relabel_*.jsonl under the supplied root (missing=empty, malformed=fail closed, exact-key value conflict=SEMANTIC_CORRECTION_EXACT_KEY_CONFLICT). Full retained 2026-09-29 bounded assembly over 1,683 tickers vs BASE 42e756e is byte-identical (0 posture/fundamental-state/valuation/unrelated/unexplained deltas). Financial V2 pin 2026-09-05.1 unchanged. No live Daily, merge, deploy or successor."
     },
@@ -113,12 +155,17 @@
       "starting_checkpoint": "7eb3d66b006c267a6b4d34416b7569929fe00c59",
       "checkpoint": "HEAD",
       "candidate_branch": "feature/reviewed-interim-canonical-ingress-v1-20260929",
-      "dependencies": ["FINANCIAL_EVIDENCE_COHORT1_OCR_GEOMETRY_AND_METADATA_RECOVERY_V1"],
+      "dependencies": [
+        "FINANCIAL_EVIDENCE_COHORT1_OCR_GEOMETRY_AND_METADATA_RECOVERY_V1"
+      ],
       "unlocks": [],
       "authority_effect": "REVIEWED_INTERIM_OFFICIAL_FACTS_QUALIFIED_FOR_EXACT_TICKER_METRIC_PERIOD_SCOPE / ANNUAL_ONLY_RESEARCH_UNCHANGED / NO_FINANCIAL_V2_PIN_BUMP / NO_TTM_FROM_H1",
       "owner_authorized": true,
       "source_doc": "Owner directive FINANCIAL_EVIDENCE_REVIEWED_INTERIM_CANONICAL_INGRESS_V1 (2026-09-29)",
-      "state_history": ["ACTIVE", "PARTIAL"],
+      "state_history": [
+        "ACTIVE",
+        "PARTIAL"
+      ],
       "owner_override": "OWNER_DIRECTIVE_2026_09_29_FINANCIAL_EVIDENCE_REVIEWED_INTERIM_CANONICAL_INGRESS_V1",
       "notes": "PARTIAL 2026-09-29 (identity corrective on PR #21: line 60=net_income, line 61=attributable_net_income, each needing an explicit row label; labels not legible in retained OCR so no net-income fact is emitted; HISTORICAL_NET_INCOME_SEMANTIC_RECONCILIATION_REQUIRED for pre-existing line-61 net_income official facts, e.g. HPG 2022/2023). Superseded detail below where it says four facts / net income. One assurance contract (official_financial_assurance_evidence: audited|reviewed) replaces the audited-only OCR panel adapter; reviewed is proven only from the retained document's own Bao cao soat xet page (title + VSRE 2410 engagement + consolidated + interim wording), never from a caller string, filename or period convention. PNJ, PVD and VRE H1 2026 each prove reviewed on page 5. Candidates regenerate identically; two VND facts (PNJ and VRE revenue) enter the existing qualified_official_facts overlay as factually QUALIFIED with research_status partial / RESEARCH_PERIOD_NOT_ANNUAL. PVD's two USD facts stay candidates (overlay is VND-only, no FX invented). No Q2/annual alias for duration metrics, no TTM from H1, knowledge time = first-observed 2026-09-29T11:31:14Z. Retained 2026-09-29 assembly: 1,683 tickers, 0 posture/fundamental/valuation deltas, byte-identical products. Financial V2 pin 2026-09-05.1 unchanged; HPG still unit-blocked; no network, Daily, Vnstock or successor."
     },
@@ -130,12 +177,17 @@
       "starting_checkpoint": "31ca5027c9fc78cbad17d1a2da71bd1f933c21a7",
       "checkpoint": "HEAD",
       "candidate_branch": "feature/financial-ocr-geometry-metadata-recovery-v1-20260929",
-      "dependencies": ["FINANCIAL_EVIDENCE_COHORT1_TRIGGERED_OCR_V1"],
+      "dependencies": [
+        "FINANCIAL_EVIDENCE_COHORT1_TRIGGERED_OCR_V1"
+      ],
       "unlocks": [],
       "authority_effect": "QUALIFIED_OCR_VALUE_CANDIDATES_ONLY / REVIEWED_INTERIM_NOT_INGRESSED / NO_FINANCIAL_V2_PIN_BUMP",
       "owner_authorized": true,
       "source_doc": "Owner directive FINANCIAL_EVIDENCE_COHORT1_OCR_GEOMETRY_AND_METADATA_RECOVERY_V1 (2026-09-29)",
-      "state_history": ["ACTIVE", "PARTIAL"],
+      "state_history": [
+        "ACTIVE",
+        "PARTIAL"
+      ],
       "owner_override": "OWNER_DIRECTIVE_2026_09_29_FINANCIAL_EVIDENCE_COHORT1_OCR_GEOMETRY_AND_METADATA_RECOVERY_V1",
       "notes": "PARTIAL 2026-09-29. Retained-only H1 TSV OCR for HPG/PNJ/PVD/VRE: 31 bounded primary reads, 18 unique statement pages, explicit page-local consolidated scope and unit evidence. Six candidate rows (PNJ/PVD/VRE revenue and parent income) pass geometry/value qualification. HPG is blocked by OCR unit evidence. Existing panel ingress is audited-only and no retained precedence fixture is available, so no canonical fact, Financial V2 pin, valuation, Daily, Vnstock or successor changes."
     },
@@ -147,12 +199,17 @@
       "starting_checkpoint": "0df516a8bc23a4d1e1163d122c5c765530b552b2",
       "checkpoint": "HEAD",
       "candidate_branch": "feature/financial-evidence-cohort1-triggered-ocr-v1-20260929",
-      "dependencies": ["FINANCIAL_EVIDENCE_CURRENCY_AND_OFFICIAL_STATEMENT_REFRESH_V1"],
+      "dependencies": [
+        "FINANCIAL_EVIDENCE_CURRENCY_AND_OFFICIAL_STATEMENT_REFRESH_V1"
+      ],
       "unlocks": [],
       "authority_effect": "ADDITIVE_OFFICIAL_FACTS_ONLY_WHERE_EXISTING_VALUE_QUALIFICATION_PASSES / NO_FINANCIAL_V2_PIN_BUMP",
       "owner_authorized": true,
       "source_doc": "Owner directive FINANCIAL_EVIDENCE_COHORT1_TRIGGERED_OCR_V1 (2026-09-29)",
-      "state_history": ["ACTIVE", "PARTIAL"],
+      "state_history": [
+        "ACTIVE",
+        "PARTIAL"
+      ],
       "owner_override": "OWNER_DIRECTIVE_2026_09_29_FINANCIAL_EVIDENCE_COHORT1_TRIGGERED_OCR_V1",
       "notes": "PARTIAL 2026-09-29. Retained-only H1 image OCR for HPG/PNJ/PVD/VRE; 11 completed page reads, no new CORE fact. Generic balance-sheet heading recognition accepts Báo cáo tình hình tài chính. Qualification blocked on OCR unit ambiguity/conflict or non-unique geometry. No network, Vnstock, Daily, Financial V2 pin or successor."
     },
@@ -2450,12 +2507,17 @@
       "starting_checkpoint": "3137441656019e4b7974978f034915d361b5c307",
       "checkpoint": "HEAD",
       "candidate_branch": "feature/zero-active-vnstock-v1-20260929",
-      "dependencies": ["LIQUIDITY_EXECUTION_CAPACITY_AND_SIZING_V1"],
+      "dependencies": [
+        "LIQUIDITY_EXECUTION_CAPACITY_AND_SIZING_V1"
+      ],
       "unlocks": [],
       "authority_effect": "NONE / RETAINED_PROVIDER_FACTS_REMAIN_LEGACY_RESEARCH_PROXY / OFFICIAL_FINANCIAL_CURRENCY_NOT_COMPLETE",
       "owner_authorized": true,
       "source_doc": "Owner directive FINANCIAL_EVIDENCE_ZERO_ACTIVE_VNSTOCK_V1 (2026-09-29)",
-      "state_history": ["ACTIVE", "COMPLETE"],
+      "state_history": [
+        "ACTIVE",
+        "COMPLETE"
+      ],
       "owner_override": "OWNER_DIRECTIVE_2026_09_29_FINANCIAL_EVIDENCE_ZERO_ACTIVE_VNSTOCK_V1",
       "terminal_disposition": "ACTIVE_VNSTOCK_RUNTIME_RETIRED / VNSTOCK_WORKER_REMOVED / NEW_KBS_VCI_ACQUISITION_RETIRED / RETAINED_KBS_VCI_RESEARCH_PROXY_PRESERVED / OFFICIAL_FINANCIAL_CURRENCY_NOT_COMPLETE",
       "notes": "COMPLETE 2026-09-29. Active Vnstock/VNAI runtime retired; Vnstock-specific worker/client/protocol/governor/pipeline removed; new KBS/VCI acquisition retired. Generic provider security infrastructure retained. Historical KBS 31,389 and VCI 94,836 provider-reported facts remain readable as labeled research proxies and were not promoted to official. Retained 2026-09-28 Current Research is byte-identical for 1,683 records (integrated_investment_decision_product/v1:03f51230a1cb4492653cb41ea47f40950a32b8948aaec011da778b8489fb0c32). Successor FINANCIAL_EVIDENCE_CURRENCY_AND_OFFICIAL_STATEMENT_REFRESH_V1 is now the sole active execution milestone."
@@ -2468,12 +2530,17 @@
       "starting_checkpoint": "ff5fb859b7b217d7a86701f4df96272929bcc4d8",
       "checkpoint": "HEAD",
       "candidate_branch": "feature/historical-raw-pit-real-factor-v1-20260930",
-      "dependencies": ["PROSPECTIVE_RAW_PIT_AUTHORITY_V1"],
+      "dependencies": [
+        "PROSPECTIVE_RAW_PIT_AUTHORITY_V1"
+      ],
       "unlocks": [],
       "authority_effect": "NONE / EVENT_SCOPED_OFFICIAL_EVIDENCE_ONLY / PIT_BACKTEST_EXECUTION_REPLAY_ACTIVE_UNIVERSE_UNCHANGED",
       "owner_authorized": true,
       "source_doc": "Owner directive HISTORICAL_RAW_PIT_REAL_FACTOR_CHAIN_QUALIFICATION_V1 (2026-09-30)",
-      "state_history": ["ACTIVE", "PARTIAL"],
+      "state_history": [
+        "ACTIVE",
+        "PARTIAL"
+      ],
       "notes": "Bounded official discovery used 8 locator queries and 2 registry-admitted HNX document requests (1,202,844 retained bytes, no retries). The retained-index rebuild freezes VBB bonus 2026-06-26, KLB stock dividend 2025-09-24, VBB stock dividend 2025-06-27; all 41 RIGHTS records are excluded as EVENT_TYPE_NOT_SUPPORTED_BY_EXISTING_FACTOR_MECHANIC. Retained HOSE listing is used; ticker-level official-document routes and price-event coverage remain explicitly unresolved and neutral, never inferred from universe keys. Both acquired HNX documents bind to frozen candidates. VBB supplies explicit ex-date, 100:10 ratio and source page publication time 2026-06-19T08:39:00+07:00, but lifecycle is only record-date-confirmed. KLB supplies executed stock-dividend share counts, but no event-linked terms or qualifying historical publication cutoff; selected VBB 2025 has no exact retained document binding. No event reaches ledger-linked FACTOR_CHAIN_QUALIFIED; no raw price window was requested; PIT series, PIT_BACKTEST, EXECUTION_REPLAY and ACTIVE_UNIVERSE remain blocked/unknown. Before/after retained prospective identities are equal: 18,514 known-time bars and 6,026 scoped cross-source qualified bars, without receipt recomputation. Evidence: operations-review/historical-raw-pit-real-factor-chain-qualification-v1-20260930/. No successor started."
     },
     {
@@ -2484,12 +2551,17 @@
       "starting_checkpoint": "f5fdd44204a01e2465e7bb1ec625331056e9350f",
       "checkpoint": "HEAD",
       "candidate_branch": "feature/financial-evidence-currency-v1-20260929",
-      "dependencies": ["FINANCIAL_EVIDENCE_ZERO_ACTIVE_VNSTOCK_V1"],
+      "dependencies": [
+        "FINANCIAL_EVIDENCE_ZERO_ACTIVE_VNSTOCK_V1"
+      ],
       "unlocks": [],
       "authority_effect": "OFFICIAL_FACTS_ONLY_WHERE_CITATION_QUALIFICATION_PASSES / NO_MARKET_WIDE_OFFICIAL_AUTHORITY / NO_HISTORICAL_FINANCIAL_PIT / NO_UNIVERSAL_VALUATION / NO_PROVIDER_PROXY_PROMOTION",
       "owner_authorized": true,
       "source_doc": "Owner directive FINANCIAL_EVIDENCE_CURRENCY_AND_OFFICIAL_STATEMENT_REFRESH_V1 (2026-09-29)",
-      "state_history": ["ACTIVE", "PARTIAL"],
+      "state_history": [
+        "ACTIVE",
+        "PARTIAL"
+      ],
       "owner_override": "OWNER_DIRECTIVE_2026_09_29_FINANCIAL_EVIDENCE_CURRENCY_AND_OFFICIAL_STATEMENT_REFRESH_V1",
       "notes": "PARTIAL 2026-09-29. Framework/integration/tests complete. Bounded live acquisition: 21 HTTP requests, 9 PDFs retained privately (~98.8 MB), 0 new qualified CORE facts. Financial V2 pin remains 2026-09-05.1. EVF has no admitted IR host. PAN storage-host only. GAS/POW/SSI index 404. Several 200 indexes yielded no FY2025/H1 locator. HPG/PNJ/PVD/VRE target PDFs are image-only (OCR not default-triggered). NVL Q2 has native text but lossy encoding blocked CORE extraction. No successor queued."
     }
