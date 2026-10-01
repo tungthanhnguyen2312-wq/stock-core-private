@@ -31,6 +31,8 @@ def main():
     parser.add_argument("--session", choices=["2026-09-30"], required=True)
     parser.add_argument("--corporate-qualification-checkpoint", type=Path,
                         help="Accepted package-7 output; qualify corporate availability against this exact product.")
+    parser.add_argument("--fundamental-context-checkpoint", type=Path,
+                        help="Accepted package-8 output; preserve research-only fundamental observation basis.")
     args = parser.parse_args()
     retained, checkpoint, output = args.retained_root.resolve(), args.checkpoint_output.resolve(), args.output_root.resolve()
     if output == retained or retained in output.parents or output == checkpoint or checkpoint in output.parents:
@@ -96,18 +98,35 @@ def main():
     source = subprocess.check_output(["git", "show", "103f7ef:current_research_decision_input.py"], text=True, encoding="utf-8")
     exec(compile(source, "accepted_peer_checkpoint_dimension", "exec"), prior_dimension.__dict__)
     live_dimension = product.decision_input
+    live_fundamental = product.fundamental_signals
+    prior_fundamental = types.ModuleType("accepted_fundamental_checkpoint")
+    source = subprocess.check_output(["git", "show", "6691bd2:fundamental_signal_consumption_contract.py"], text=True, encoding="utf-8")
+    exec(compile(source, "accepted_fundamental_checkpoint", "exec"), prior_fundamental.__dict__)
     try:
         product.decision_input = prior_dimension
+        product.fundamental_signals = prior_fundamental
         assert product.build_artifact(**kwargs)["artifact_identity"] == expected
         kwargs["financial_peer_materialization_artifact"] = upgraded
         peer_checkpoint_product = product.build_artifact(**kwargs)
     finally:
         product.decision_input = live_dimension
+        product.fundamental_signals = live_fundamental
     if args.corporate_qualification_checkpoint:
         before = load(args.corporate_qualification_checkpoint / "integrated_investment_decision_product_artifact.json")
         expected = "integrated_investment_decision_product/v1:e6aae60ff024441b7ff4c35d05af6905accf02f01dd4bec8b143ae561d6ffd14"
         assert before["artifact_identity"] == product.content_identity(before)["artifact_identity"] == expected
         assert peer_checkpoint_product["artifact_identity"] == expected
+    if args.fundamental_context_checkpoint:
+        if not args.corporate_qualification_checkpoint:
+            raise ValueError("PACKAGE_9_REQUIRES_ACCEPTED_PACKAGE_7_AND_8_CHECKPOINTS")
+        before = load(args.fundamental_context_checkpoint / "integrated_investment_decision_product_artifact.json")
+        expected = "integrated_investment_decision_product/v1:7f05c3a73598d8b0921e43ed1a8abba270ea792abeeabb2be649fd995485d90b"
+        assert before["artifact_identity"] == product.content_identity(before)["artifact_identity"] == expected
+        try:
+            product.fundamental_signals = prior_fundamental
+            assert product.build_artifact(**kwargs)["artifact_identity"] == expected
+        finally:
+            product.fundamental_signals = live_fundamental
     kwargs["financial_peer_materialization_artifact"] = upgraded
     after = product.build_artifact(**kwargs)
     assert product.build_artifact(**kwargs)["artifact_identity"] == after["artifact_identity"]
@@ -135,13 +154,18 @@ def main():
     for ticker, old in before["records"].items():
         new = after["records"][ticker]
         diff = set(changed_paths(old, new))
-        assert diff <= allowed, (ticker, diff - allowed)
+        if args.fundamental_context_checkpoint:
+            assert all(path.endswith(".context_only_observations") and path.startswith((
+                "fundamental_synthesis.dimensions.", "current_research_decision_input.dimensions.FUNDAMENTAL.components.dimensions."))
+                       for path in diff), (ticker, diff)
+        else:
+            assert diff <= allowed, (ticker, diff - allowed)
         changes.update(diff)
         if args.corporate_qualification_checkpoint:
             assert new["decision_identity"] == old["decision_identity"]
             assert new["financial_peer_context"] == old["financial_peer_context"]
             assert new["corporate_intelligence_context"] == old["corporate_intelligence_context"]
-            if diff:
+            if diff and not args.fundamental_context_checkpoint:
                 state = new["corporate_intelligence_context"]["state"]
                 cell = new["current_research_decision_input"]["dimensions"]["CORPORATE"]
                 assert state in {"NO_QUALIFIED_CORPORATE_EVENT", "UNRESOLVED_EVIDENCE"}, ticker
@@ -155,10 +179,22 @@ def main():
             assert ctx["issuer_type"] == "corporate"
             usable_issuers.append(ticker)
             explanation_changed += 1
-        for field in ("research_action_posture", "counter_thesis", "why_now", "fundamental_synthesis",
+        for field in ("research_action_posture", "counter_thesis", "why_now",
                       "valuation_context_summary", "financial_composite_context", "evidence_currency",
                       "exact_capabilities_unavailable", "authority_boundary", "evidence_axis_coherence"):
             assert new[field] == old[field], (ticker, field)
+        if not args.fundamental_context_checkpoint:
+            assert new["fundamental_synthesis"] == old["fundamental_synthesis"]
+        else:
+            stripped = copy.deepcopy(new["fundamental_synthesis"])
+            for dimension in stripped["dimensions"].values():
+                dimension.pop("context_only_observations", None)
+            assert stripped == old["fundamental_synthesis"]
+            for dimension in new["fundamental_synthesis"]["dimensions"].values():
+                observations = dimension.get("context_only_observations") or {}
+                assert set(observations) == set(dimension.get("context_only") or {})
+                assert all(o["decision_eligible"] is False and o["qualification"] in {"READY", "RESEARCH_PROXY"}
+                           for o in observations.values())
         view = project_integrated_decision_for_ai_delivery(new, integrated_identity=after["artifact_identity"])
         assert view["financial_peer_context"] == ctx
         assert view["is_actionable"] is False
@@ -183,6 +219,15 @@ def main():
         summary["decision_identities_unchanged"] = True
         summary["corporate_dimensions_before"] = dict(Counter(r["current_research_decision_input"]["dimensions"]["CORPORATE"]["state"] for r in before["records"].values()))
         summary["corporate_dimensions_after"] = dict(Counter(r["current_research_decision_input"]["dimensions"]["CORPORATE"]["state"] for r in after["records"].values()))
+    if args.fundamental_context_checkpoint:
+        summary.pop("corporate_qualification_changed_records")
+        changed = sum(before["records"][t] != r for t, r in after["records"].items())
+        summary["fundamental_context_enriched_records"] = changed
+        summary["unchanged_records"] = len(after["records"]) - changed
+        summary["research_only_observation_counts"] = dict(Counter(
+            key for r in after["records"].values() for dimension in r["fundamental_synthesis"]["dimensions"].values()
+            for key in dimension.get("context_only_observations") or {}))
+        summary["fundamental_votes_states_counters_unchanged"] = True
     representatives = ["ACC", "HPG", "AAA", "F88", "VCB", "SSI", "AAM"]
     small = next((t for t, r in after["records"].items() if r["financial_peer_context"]["issuer_type"] == "corporate"
                   and any(m["status"] == "INSUFFICIENT_PEER_COUNT" for m in r["financial_peer_context"]["metrics"].values())), None)
@@ -201,6 +246,7 @@ def main():
                   "fundamental_state": after["records"][t]["fundamental_state"],
                   "corporate_dimension_before": before["records"][t]["current_research_decision_input"]["dimensions"]["CORPORATE"],
                   "corporate_dimension_after": after["records"][t]["current_research_decision_input"]["dimensions"]["CORPORATE"],
+                  "fundamental_components": after["records"][t]["current_research_decision_input"]["dimensions"]["FUNDAMENTAL"]["components"],
                   "financial_peer_context": after["records"][t]["financial_peer_context"]} for t in representatives if t in after["records"]}
     output.mkdir(parents=True, exist_ok=True)
     for name, value in [("financial_peer_replay_summary.json", summary), ("financial_peer_representative_traces.json", traces),

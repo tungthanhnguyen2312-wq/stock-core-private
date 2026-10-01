@@ -342,3 +342,28 @@ stale, missing/invalid/future sessions, unavailable fitness, identity and delive
 171 focused/adjacent tests pass. One existing supplemental private-evidence test cannot
 run in the clean worktree and is excluded; no baseline evidence is repaired/recreated.
 Authority promotion NONE; no acquisition/publication or cap/retry/scope change.
+
+## Package 9: research-only fundamental observation provenance
+
+Qualified working-capital and cash-flow amount trajectories reached the component view
+as bare values without their fitness/period or the producer's reason for never voting.
+The existing fundamental signal contract now retains `context_only_observations` beside
+its unchanged legacy `context_only` values: source feature, producer value, period,
+qualification/proxy, freshness, semantic definition and non-voting policy reason.
+The existing Current Research components and shared AI projector carry this structure.
+Future/unresolved-period/blocked observations cannot leak into the bare context view.
+No direction vote, counter code, financial formula or policy epoch changes.
+
+Full replay: 1,276 records enriched / 407 unchanged; working-capital direction 1,160,
+working-capital level 1,276, free-cash-flow proxy direction 284, resilience composite 2.
+All 1,683 decision identities, votes, states, postures, WHY text, counter-theses, peer
+comparisons and corporate corrections remain unchanged. Existing producer policies
+explicitly keep amount trajectories out of quality/action judgments.
+Final product:
+`integrated_investment_decision_product/v1:1a5d74eb50d35ebcc99ef3f14160bb76c0935700310a9ff83c6d53e47841247e`.
+
+Seven new tests and 157 focused/adjacent regressions pass. The existing replay runner's
+`--fundamental-context-checkpoint` points at the accepted package-8 external output;
+historical checkpoint namespaces reproduce baseline identities without any retained
+source mutation. Live builds are deterministic and every changed field is an additive
+observation structure at the owning synthesis and its existing consumer component.

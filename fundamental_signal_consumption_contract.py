@@ -874,6 +874,25 @@ def _observation(signal: Mapping[str, Any]) -> dict[str, Any]:
     return {**_history(signal), "non_vote_reason": signal.get("non_vote_reason")}
 
 
+def _evidence_only_observation(signal: Mapping[str, Any]) -> dict[str, Any]:
+    """Preserve why a qualified observation is research context rather than a vote."""
+    spec = SIGNALS[signal["signal_id"]]
+    return {**_history(signal), "signal_id": signal["signal_id"],
+            "producer_field": signal["producer_field"], "producer_value": signal["producer_value"],
+            "qualification": signal["fitness"]["qualification"],
+            "source_features": list(signal["fitness"]["source_features"]),
+            "policy_class": signal["policy_class"], "consumption_class": signal["consumption_class"],
+            "role": EVIDENCE_ONLY, "decision_eligible": False,
+            "semantic": spec["semantic"], "policy_reason": spec["policy_reason"],
+            "reason_codes": list(signal["reason_codes"]), "no_quality_or_action_inference": True}
+
+
+def _usable_evidence_only(signal: Mapping[str, Any]) -> bool:
+    return (signal["role"] == EVIDENCE_ONLY and signal["research_usable"]
+            and signal["fitness"]["qualification"] in _USABLE_FEATURE_FITNESS
+            and signal["applicability"] != NON_APPLICABLE)
+
+
 def _group_votes(resolved: Mapping[tuple[str, str], Mapping[str, Any]],
                  signals: Sequence[Mapping[str, Any]]) -> tuple[set[tuple[str, str]], list[dict[str, Any]]]:
     """One vote per balance-sheet observation (``VOTE_GROUPS``); no weight, no score.
@@ -1135,9 +1154,12 @@ def synthesize(signals: Sequence[Mapping[str, Any]], *, dialect: str | None,
         if observed:
             entry["research_observations"] = dict(sorted(observed.items()))
         context = {s["signal_id"]: s.get("observed") or s["value"] for s in present
-                   if s["dimension"] == dimension and s["role"] == EVIDENCE_ONLY and s["applicability"] != NON_APPLICABLE}
+                   if s["dimension"] == dimension and _usable_evidence_only(s)}
         if context:
             entry["context_only"] = dict(sorted(context.items()))
+            entry["context_only_observations"] = {
+                s["signal_id"]: _evidence_only_observation(s) for s in sorted(present, key=lambda s: s["signal_id"])
+                if s["signal_id"] in context}
         if entry:
             dimensions[dimension] = entry
     voting = [s for s in signals if s["decision_eligible"]]
@@ -1187,7 +1209,7 @@ def synthesize(signals: Sequence[Mapping[str, Any]], *, dialect: str | None,
         "historical_context": {s["signal_id"]: _history(s) for s in sorted(stale_evidence, key=lambda s: s["signal_id"])
                                if s["axis"] in (DIRECTION, TRANSITION)},
         "research_observations": {s["signal_id"]: _observation(s) for s in sorted(observations, key=lambda s: s["signal_id"])},
-        "context_only": ids(lambda s: s["role"] == EVIDENCE_ONLY and s["value"] not in (UNAVAILABLE, UNKNOWN)
+        "context_only": ids(lambda s: _usable_evidence_only(s) and s["value"] not in (UNAVAILABLE, UNKNOWN)
                             and s["applicability"] == APPLICABLE),
         "stale_research_evidence": sorted(s["signal_id"] for s in stale_evidence),
         "evidence_freshness": {s["signal_id"]: s["fitness"]["freshness"]

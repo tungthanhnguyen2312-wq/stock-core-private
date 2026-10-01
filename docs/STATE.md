@@ -59,6 +59,14 @@ counter-thesis or WHY-text change. Corporate dimensions now PARTIAL 1,103 / BLOC
 171 focused/adjacent tests pass; one absent private retained-evidence baseline test is
 excluded rather than repaired or repeated. No authority is promoted; program continues.
 
+The research-only fundamental pass preserves structured non-voting observation provenance
+in the existing component view: working-capital direction 1,160 / level 1,276, cash-flow
+proxy direction 284, resilience composite 2. Period, fitness, source feature, semantics
+and the producer's policy reason survive into shared delivery. Unsupported/future/blocked
+context cannot appear as a bare usable observation. Replay enriches 1,276 records,
+leaves 407 unchanged, and preserves all fundamental votes/states, counters, postures and
+per-ticker decision identities. 157 focused/adjacent tests pass; authority promotion NONE.
+
 **Daily official liquidity rollforward corrective (2026-09-30):**
 `DAILY_OFFICIAL_LIQUIDITY_ROLLFORWARD_V1 = PARTIAL /
 CORE_DAILY_LIVE_ACCEPTED_OFFICIAL_LIQUIDITY_LIVE_FAIL_CLOSED_SOURCE_ABSENT /
