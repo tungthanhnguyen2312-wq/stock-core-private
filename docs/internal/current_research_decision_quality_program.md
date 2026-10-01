@@ -41,6 +41,11 @@ direction, reference level, reasons or separate watchlist rule needed to interpr
    watchlist conditions verbatim, including reasons and lineage. Other projected
    fields remain unchanged. No additional copied decision layer or card surface
    is introduced.
+4. Second-pass valuation consistency: 74 records whose only valuation context is
+   a P/E-not-meaningful diagnosis were labelled AVAILABLE by the summary/axis,
+   while the standing decision-input dimension correctly reported PARTIAL.
+   The owning summary now reports PARTIAL and preserves blocked-method reasons.
+   Another usable multiple remains AVAILABLE; research posture is unchanged.
 
 These are fixed T0 analytical close boundaries. They are not live orders, stops,
 an execution engine, or a new historical T0 reconstruction. Existing immutable
@@ -52,7 +57,7 @@ non-evaluable by the fixed-close evaluator.
 The base implementation exactly reproduces the retained integrated identity:
 `integrated_investment_decision_product/v1:cd0c92321fbef001be15477b876f46f3f1ab82961ce28b091daeb43a168d620f`.
 The corrected replay identity is:
-`integrated_investment_decision_product/v1:493278b55883a0a8a091d7ccae5b83488dd96ae6d9490e8106c294ed6910f9d2`.
+`integrated_investment_decision_product/v1:bbe1eadf8d2c03fc3e5a40187a3c01b2d9d16c76b0a7144eeeba554b909d86dd`.
 
 | Measurement | Before | After |
 |---|---:|---:|
@@ -61,6 +66,7 @@ The corrected replay identity is:
 | Evaluable structural invalidations | 37 watchlist conditions | 845 V3 conditions |
 | Delivered integrated denominator | 1,683 | 1,683 |
 | Serialized trigger/invalidation conditions preserved in delivery | 0 / 0 | 1,683 / 1,683 |
+| Summary/axis falsely AVAILABLE for P/E-diagnosis-only context | 74 | 0 |
 
 The old count of 100 includes evaluable watchlist conditions on records without a
 displayed V3 trigger. It is not the old count of structurally coherent triggers.
@@ -90,7 +96,7 @@ verification ensures the latter is reproduced rather than silently substituted.
 
 ## Verification and second pass
 
-174 focused/adjacent tests pass, covering source tampering, future/stale sessions,
+179 focused/adjacent tests plus six canonical integration checks pass, covering source tampering, future/stale sessions,
 incompatible contracts, missing direction/levels, non-finite values, bearish
 comparators, watchlist divergence, downstream non-escalation and retention isolation.
 Python compilation and whitespace checks pass. Retained input bytes and the
@@ -111,3 +117,8 @@ historical/informational or unresolved context explicitly. No corporate freshnes
 change was justified by this corpus. Stronger liquidity, PIT, RAW_AS_TRADED and
 sizing authority remain gated. New-session telemetry acceptance remains an external
 time gate and is not polled by this program.
+
+The fourth correction changes exactly 74 valuation summary/axis statuses, their
+blocked reasons and downstream missing-factor explanations. Overall summary states
+are 761 AVAILABLE / 74 PARTIAL / 848 UNAVAILABLE, versus 835 AVAILABLE / 848
+UNAVAILABLE before. No diagnosis is discarded and no alternate method is blocked.

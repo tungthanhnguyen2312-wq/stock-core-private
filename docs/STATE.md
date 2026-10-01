@@ -12,7 +12,10 @@ projection also omits the producer's invalidation method. The corrected projecti
 preserves method/direction, the integrated product separates structural and watchlist
 conditions, and the shared Daily/AI projector retains both. Full retained replay keeps
 all 1,683 tickers and all postures; 388 structural triggers and 845 invalidations are
-evaluable with exact level alignment. 174 focused/adjacent tests pass. Research policy
+evaluable with exact level alignment. The second pass aligns 74 valuation
+diagnosis-only summaries with the existing PARTIAL dimension semantics, retaining
+their negative-earnings diagnosis and blocked-method reasons. 179 focused/adjacent
+tests and six canonical integration checks pass. Research policy
 and authority gates remain unchanged. See [program checkpoint](internal/current_research_decision_quality_program.md).
 PR #28 and #29 remain independent pending-owner-merge corrections, not dependencies.
 New-session telemetry live acceptance remains externally time-gated.

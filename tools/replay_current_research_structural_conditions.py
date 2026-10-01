@@ -156,8 +156,16 @@ def main():
         "current_research_decision_input.synthesis.confirms.condition_identity",
         "current_research_decision_input.synthesis.invalidates.condition_identity",
         "current_research_decision_input.synthesis.invalidates.method",
+        "valuation_context_summary.status", "valuation_context_summary.unavailable_reason_codes",
+        "evidence_axes.VALUATION.state", "evidence_axes.VALUATION.fitness", "evidence_axes.VALUATION.blocker_reason_codes",
+        "current_research_decision_input.dimensions.VALUATION.reason_codes",
+        "current_research_decision_input.synthesis.missing_primary_factors.VALUATION",
     )
     for ticker, old in before["records"].items():
+        new = after["records"][ticker]
+        if old["valuation_context_summary"]["status"] != new["valuation_context_summary"]["status"]:
+            assert old["current_research_decision_input"]["dimensions"]["VALUATION"]["evidence_class"] == "PE_NOT_MEANINGFUL_ONLY", ticker
+            assert old["valuation_context_summary"]["status"] == "AVAILABLE" and new["valuation_context_summary"]["status"] == "PARTIAL", ticker
         changes = list(changed_paths(old, after["records"][ticker]))
         assert all(path.startswith(allowed) for path in changes), (ticker, changes)
         attributed_changes.update(changes)
@@ -186,6 +194,9 @@ def main():
         json.dumps(r.get("entity_class") or r.get("entity_type") or r.get("issuer_type"), sort_keys=True)
         for r in kwargs["entity_applicability_artifact"]["records"].values()))
     summary["distributions"]["fundamental_state"] = dict(Counter(r["fundamental_state"] for r in after["records"].values()))
+    summary["distributions"]["valuation_summary_status"] = {label: dict(Counter(
+        r["valuation_context_summary"]["status"] for r in artifact["records"].values()))
+        for label, artifact in [("before", before), ("after", after)]}
     summary["distributions"]["fundamental_freshness"] = dict(Counter(
         ((r["current_research_decision_input"]["dimensions"]["FUNDAMENTAL"].get("freshness") or {}).get("freshness_status"))
         for r in after["records"].values()))

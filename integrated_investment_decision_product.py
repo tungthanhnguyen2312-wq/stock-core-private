@@ -1070,6 +1070,11 @@ def evaluate_valuation_context(
         uncertainties.append("EV_EBITDA_SINGLE_REPORTING_PERIOD_NOT_TTM")
 
     method_rows = {key: item for key, item in methods.items() if isinstance(item, Mapping)}
+    pe_not_meaningful = (
+        any(item.get("status") == "PE_NOT_MEANINGFUL" for item in method_rows.values())
+        or val_rec.get("pe_not_meaningful") is True
+        or val_rec.get("earnings_state") == "PE_NOT_MEANINGFUL"
+    )
     if method_rows:
         # Market capitalisation is size context, never a valuation multiple -- the same invariant
         # attach_peer_relative already enforces for relative state. A row whose only usable
@@ -1077,8 +1082,6 @@ def evaluate_valuation_context(
         has_usable_metrics = (
             any(item.get("status") in ("RESEARCH_USABLE", "READY")
                 for key, item in method_rows.items() if key not in _SIZE_CONTEXT_METHODS)
-            or any(item.get("status") == "PE_NOT_MEANINGFUL" for item in method_rows.values())
-            or val_rec.get("pe_not_meaningful") is True
         )
     else:
         # Compact records without per-method detail keep their own declared usability.
@@ -1091,9 +1094,13 @@ def evaluate_valuation_context(
             or ps_val is not None
         )
     size_method = next((method_rows[key] for key in _SIZE_CONTEXT_METHODS if key in method_rows), None)
-    status = "AVAILABLE" if (peer_interpretation != "NOT_APPLICABLE" or has_usable_metrics) else "UNAVAILABLE"
+    # A real negative-earnings diagnosis is retained context, not an available
+    # price-to-fundamental multiple. Match the standing decision-input distinction
+    # without blocking another usable method or changing research posture.
+    status = ("AVAILABLE" if (peer_interpretation != "NOT_APPLICABLE" or has_usable_metrics)
+              else "PARTIAL" if pe_not_meaningful else "UNAVAILABLE")
     unavailable_reasons: list[str] = []
-    if status == "UNAVAILABLE":
+    if status != "AVAILABLE":
         # A blocked size input (no exact-session price, no qualified share basis) blocks every
         # price-based multiple, so its own causes are named alongside the method-level ones.
         unavailable_reasons = sorted({
