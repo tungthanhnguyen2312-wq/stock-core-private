@@ -24,6 +24,7 @@ Guiding Principles
 from __future__ import annotations
 
 import copy
+import math
 import hashlib
 import json
 from collections import Counter
@@ -1170,6 +1171,7 @@ def evaluate_market_breadth(source: Mapping[str, Any], session: str) -> dict[str
 def evaluate_participation(
     tactical_rec: Mapping[str, Any] | None,
     rvol_rec: Mapping[str, Any] | None,
+    *, session: str | None = None,
 ) -> tuple[dict[str, Any], list[str], list[str]]:
     """Determine participation confirmation / acceleration evidence."""
     supports: list[str] = []
@@ -1179,6 +1181,27 @@ def evaluate_participation(
     rvol_rec = rvol_rec or {}
     pctl = rvol_rec.get("relative_volume_percentile")
     accel = rvol_rec.get("volume_acceleration_ratio")
+    reasons: list[str] = []
+    def numeric(value: Any, *, upper: float | None = None) -> float | None:
+        if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value) or value < 0:
+            return None
+        return value if upper is None or value <= upper else None
+    rv_scoped, pctl, accel = numeric(rv_scoped), numeric(pctl, upper=1), numeric(accel)
+    if session is not None and rvol_rec and rvol_rec.get("session") != session:
+        reasons.append("PARTICIPATION_SESSION_MISMATCH_OR_UNKNOWN")
+        pctl = accel = None
+    if rvol_rec.get("status") in {"BLOCKED", "UNAVAILABLE", "UNKNOWN"}:
+        reasons.append("PARTICIPATION_SOURCE_UNQUALIFIED")
+        pctl = accel = None
+    if rvol_rec.get("percentile_status") not in (None, "READY"):
+        pctl = None
+    if pctl is not None:
+        denominator = rvol_rec.get("cohort_denominator")
+        if isinstance(denominator, bool) or not isinstance(denominator, int) or denominator <= 0:
+            reasons.append("PARTICIPATION_PERCENTILE_DENOMINATOR_MISSING_OR_INVALID")
+            pctl = None
+    if rvol_rec.get("acceleration_status") not in (None, "READY"):
+        accel = None
 
     if isinstance(accel, (int, float)):
         if accel >= 1.5:
@@ -1204,6 +1227,8 @@ def evaluate_participation(
         "volume_acceleration_ratio": accel,
         "authority_tier": "DERIVED_PROXY",
         "warning": "DIMENSIONLESS_VOLUME_COMPARISON_NOT_ADV_OR_EXECUTION_CAPACITY",
+        "source_observation": copy.deepcopy(dict(rvol_rec)) if rvol_rec else None,
+        "reason_codes": reasons,
     }
     return summary, supports, counters
 
@@ -1505,7 +1530,7 @@ def build_ticker_integrated_decision(
     )
 
     # 4. Participation
-    part_summary, part_supp, part_count = evaluate_participation(tactical, rvol)
+    part_summary, part_supp, part_count = evaluate_participation(tactical, rvol, session=as_of_session)
 
     # 5. Market / Sector Context
     # current_market_sector_leadership_context/v1's real shape (the artifact canonical_post_close_

@@ -22,6 +22,7 @@ def main():
     parser.add_argument('--structural-checkpoint', type=Path, required=True)
     parser.add_argument('--output-root', type=Path, required=True)
     parser.add_argument('--coherence-acceptance', action='store_true')
+    parser.add_argument('--participation-acceptance', action='store_true')
     args = parser.parse_args()
     retained, checkpoint, output = (p.resolve() for p in (args.retained_root, args.checkpoint_output, args.output_root))
     if any(output == p or p in output.parents for p in (retained, checkpoint, Path(__file__).resolve().parents[1])):
@@ -66,6 +67,8 @@ def main():
         allowed = ('evidence_axis_coherence', 'why_now',
                    'current_research_decision_input.synthesis.why_interesting.evidence_axis_coherence',
                    'priority_posture_reconciliation.integrated_posture_reason')
+    if args.participation_acceptance:
+        allowed = ('participation.source_observation', 'participation.reason_codes')
     changes = Counter()
     delivery = {}
     for ticker, record in after['records'].items():

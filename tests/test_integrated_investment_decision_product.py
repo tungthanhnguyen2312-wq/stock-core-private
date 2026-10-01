@@ -556,6 +556,8 @@ class TestGovernanceAndStructure:
             trigger_type="PIVOT_BREAKOUT_TRIGGER",
         )
         rvol = {
+            "session": "2026-08-28",
+            "cohort_denominator": 10,
             "status": "AVAILABLE",
             "volume_acceleration_ratio": 0.45,
             "relative_volume_percentile": 0.15,

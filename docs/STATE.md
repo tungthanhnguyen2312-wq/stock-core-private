@@ -36,6 +36,23 @@ fundamental/valuation interpretation or authority gates change. See
 PR #28 and #29 remain independent pending-owner-merge corrections, not dependencies.
 New-session telemetry live acceptance remains externally time-gated.
 
+Packages 11–13 retain counted market breadth and participation provenance in the
+existing decision/shared delivery route. Breadth observes 848 of 1,507 official names,
+explicitly PARTIAL with 659 missing; all 1,683 decisions retain that denominator and
+source lineage. Sector coverage (838 available / 10 data-limited / 835 unavailable)
+and participation coverage (853 available / 830 unavailable) remain unchanged.
+Missing/inconsistent denominators, stale/future sessions and unqualified observations
+fail closed locally. No flow artifact is selected for this governed session.
+The subsequent thesis pass corrects 97 constructive-fundamental/adverse-technical
+coherence summaries and five unsupported supportive-participation WHY claims. Source
+confirmation remains directional, including confirmed bearish structure. Participation
+retains DNSE field/session/cohort/method/limitations; Boolean/non-finite/negative values
+cannot become evidence. All 1,683 per-ticker identities, postures, triggers,
+invalidations and authority remain unchanged; all replay inputs are byte-identical.
+Program remains ACTIVE. The bounded corpus has zero active corporate catalysts/risks;
+no integration is manufactured. October 1 is not registered as a completed session,
+so telemetry live acceptance remains pending without polling.
+
 The resumed financial-peer package consumes the canonical Financial V2 wrapper through
 an identity/session/nested-product-verified join. The existing peer producer preserves
 provider, entity, method, scope, units and period semantics in its comparison basis;

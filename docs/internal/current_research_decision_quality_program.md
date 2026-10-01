@@ -440,3 +440,35 @@ delivery gate pass. Full replay retains 1,683 records, is deterministic, permits
 coherence/WHY and their existing consumer copies, and preserves every per-ticker identity,
 posture, trigger, invalidation, counter and authority. Inputs remain byte-identical.
 Product: `integrated_investment_decision_product/v1:fb138e9ee3c55e720710a21570d7a0fb25a14fe8ae3a4e61a2cec2180b28c4fb`.
+
+## Package 13: qualified participation provenance
+
+Participation values reached IID without the producer's provider/field/session/cohort,
+method status, history count and explicit execution/sizing limitations. The owning
+consumer now preserves its exact source observation and local qualification reasons;
+shared delivery already copies participation verbatim. Boolean, non-finite, negative,
+out-of-range percentiles and uncounted percentiles cannot become numerical evidence.
+Stale/future/missing source session and UNKNOWN/BLOCKED/UNAVAILABLE source status fail
+closed for dependent participation; independently qualified measurements stay local.
+
+Full retained replay enriches all 1,683 records, preserving all valid measurements,
+support/counter reasons, phases, confirmation, coherence, WHY, postures and per-ticker
+identities. Coverage stays AVAILABLE 853 / NOT_AVAILABLE 830; 853 DNSE observations
+retain their cohort denominator. Source bytes unchanged; deterministic and zero drops.
+Product: `integrated_investment_decision_product/v1:bb635569cf7aa8de9f5fc370568c85db4d066a66e665c5c620e9a4e7715f967b`.
+Nineteen new qualification cases; 171 focused/adjacent tests pass. No acquisition,
+publication, cap/retry change, liquidity/execution/sizing or other authority promotion.
+
+The subsequent bounded corporate review finds INFORMATIONAL_ONLY 1,074,
+NO_QUALIFIED_CORPORATE_EVENT 404, NOT_PROVIDED 176, UNRESOLVED_EVIDENCE 29;
+active catalysts 0 / active risks 0 / current classified catalyst-risk records 0.
+The corpus does not justify manufacturing that preferred next integration package.
+
+Final packages 11–13 gate: 387 broader hermetic tests pass, plus five canonical wiring
+checks. One selected canonical failure-isolation case requires absent August 25 private
+retained inputs; it is left unavailable, alongside the empirical August 20 runner noted
+above. No evidence restoration/acquisition is attempted. Compilation, roadmap ON_TRACK
+and diff checks pass. Cumulative package-10 comparison verifies all 28 retained inputs
+byte-identical and zero changes to identity/posture/phase/trigger/invalidation/fundamental/
+valuation/counters/authority; only the documented provenance, 97 coherence summaries and
+five WHY explanations change. Program remains active at a coherent review boundary.
