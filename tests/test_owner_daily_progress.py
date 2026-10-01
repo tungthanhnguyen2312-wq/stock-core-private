@@ -102,7 +102,7 @@ def test_event_schema_percent_and_eta_known_are_operational_only(tmp_path):
     assert event["percent"] == 50.0 and event["coverage_percent"] == 35.0
     assert event["eta_state"] == "KNOWN" and event["eta_seconds"] == 8.0
     assert json.loads(sidecar.read_text(encoding="utf-8").splitlines()[-1]) == event
-    assert "req 8/16 50.0%" in lines[-1] and "exact 7/20 35.0%" in lines[-1]
+    assert "requests 8/16 50.0%" in lines[-1] and "exact-session coverage 7/20 (35.0%)" in lines[-1]
 
 
 def test_unknown_or_zero_denominators_and_overcomplete_display_are_safe(tmp_path):
@@ -319,7 +319,7 @@ def test_reused_snapshot_is_not_rendered_as_request_work(tmp_path):
     emitter, _sidecar, lines = _emitter(tmp_path, clock)
     emitter.emit(phase_index=2, component="DNSE exact-session", progress_kind="REQUESTS",
                  completed=100, total=100, qualified_count=98, coverage_denominator=100, status="REUSED")
-    assert "reused 100" in lines[-1]
+    assert "candidates 100" in lines[-1]
     assert "req 100/100" not in lines[-1]
 
 
@@ -432,3 +432,89 @@ def test_post_close_registers_only_the_current_exact_session_output_root(tmp_pat
     assert begin["run_output_paths"] == [str(paths["exact_session_snapshot"].parent)]
     assert str(paths["official_universe"].parent) not in begin["run_output_paths"]
 
+
+
+def test_compact_heartbeat_retains_resource_sidecar_and_surfaces_threshold(tmp_path):
+    clock = FakeClock(); sampler = FakeSampler(disk=20 * 1024**3)
+    emitter, sidecar, lines = _emitter(tmp_path, clock, sampler)
+    emitter.emit(phase_index=2, component="Prospective decision feedback", status="BEGIN")
+    clock.value = 30
+    event = emitter.emit(phase_index=2, component="Prospective decision feedback", status="RUNNING")
+    assert "RUNNING" in lines[-1] and "elapsed 00:00:30" in lines[-1]
+    assert all(word not in lines[-1] for word in ("RAM", "FREE", "OUT", "ETA", "UNKNOWN", "retry"))
+    assert json.loads(sidecar.read_text().splitlines()[-1])["rss_bytes"] == event["rss_bytes"] == 20
+    sampler.disk = 9 * 1024**3; clock.value = 60
+    emitter.emit(phase_index=2, component="Prospective decision feedback", status="RUNNING")
+    assert "FREE" in lines[-1] and "RAM" in lines[-1]
+    clock.value = 90
+    emitter.emit(phase_index=2, component="Prospective decision feedback", status="RUNNING")
+    assert "FREE" not in lines[-1]
+
+
+def test_completion_percentage_is_requests_and_reuse_is_coverage(tmp_path):
+    clock = FakeClock(); emitter, _, lines = _emitter(tmp_path, clock)
+    kwargs = dict(phase_index=2, component="DNSE exact-session", progress_kind="REQUESTS",
+                  completed=1683, total=1683, qualified_count=852, coverage_denominator=1683)
+    emitter.emit(**kwargs, status="END")
+    assert "requests 1683/1683 100.0%" in lines[-1]
+    assert "exact-session coverage 852/1683 (50.6%)" in lines[-1] and "DONE" in lines[-1]
+    emitter.emit(**kwargs, status="REUSED")
+    assert "snapshot ready" in lines[-1] and "downstream reuse" in lines[-1]
+    assert "requests" not in lines[-1] and "ETA" not in lines[-1]
+
+
+def test_named_foreground_subprocess_heartbeat_preserves_captured_result(tmp_path, monkeypatch):
+    clock = FakeClock(); emitter, _, lines = _emitter(tmp_path, clock)
+    monkeypatch.setattr(progress, "progress_from_environment", lambda **_kwargs: emitter)
+    class Child:
+        returncode = 0
+        calls = 0
+        def __enter__(self): return self
+        def __exit__(self, *args): pass
+        def communicate(self, timeout):
+            assert timeout == 30
+            self.calls += 1
+            if self.calls == 1:
+                clock.value = 30
+                raise progress.subprocess.TimeoutExpired("fixture", timeout)
+            return "retained stdout", "retained stderr"
+    monkeypatch.setattr(progress.subprocess, "Popen", lambda *a, **k: Child())
+    result = progress.run_observed_subprocess(["python", "fixture.py"], component="Prospective decision feedback",
+                                             capture_output=True, text=True)
+    assert result.stdout == "retained stdout" and result.stderr == "retained stderr" and result.returncode == 0
+    assert any("Prospective decision feedback" in line and "RUNNING" in line for line in lines)
+    assert "DONE" in lines[-1]
+
+
+def test_local_complete_checkpoint_is_distinct_from_owner_terminal(capsys):
+    from canonical_daily_operation import print_daily_operation_handoff
+    print_daily_operation_handoff({"daily_operation_state": "LOCAL_COMPLETE", "session": "2026-10-01"})
+    output = capsys.readouterr().out
+    assert "DAILY_OPERATION_STATE=LOCAL_COMPLETE" in output
+    assert "CANONICAL_DAILY_LOCAL_COMPLETE - wrapper publication/verification phases still pending" in output
+
+
+def test_retry_changes_and_failure_surface_without_repeating_healthy_counters(tmp_path):
+    clock = FakeClock(); emitter, _, lines = _emitter(tmp_path, clock, FakeSampler(disk=20 * 1024**3))
+    kwargs = dict(phase_index=2, component="DNSE exact-session", progress_kind="REQUESTS", total=100,
+                  success_count=1, failure_count=0)
+    emitter.emit(**kwargs, completed=1, retry_count=0, status="BEGIN")
+    clock.value = 30
+    emitter.emit(**kwargs, completed=2, retry_count=0, status="RUNNING")
+    assert "retry" not in lines[-1]
+    emitter.emit(**kwargs, completed=3, retry_count=1, status="IN_PROGRESS")
+    assert "retry 1" in lines[-1]
+    emitter.emit(**kwargs, completed=4, retry_count=1, status="FAILED")
+    assert "FAILED" in lines[-1] and "RAM" in lines[-1] and "retry 1" in lines[-1]
+
+
+def test_subprocess_without_telemetry_uses_original_runner(monkeypatch):
+    monkeypatch.setattr(progress, "progress_from_environment", lambda **_kwargs: None)
+    expected = progress.subprocess.CompletedProcess(["fixture"], 7, "stdout", "stderr")
+    calls = []
+    def runner(command, **kwargs):
+        calls.append((command, kwargs))
+        return expected
+    monkeypatch.setattr(progress.subprocess, "run", runner)
+    assert progress.run_observed_subprocess(["fixture"], capture_output=True, text=True) is expected
+    assert calls == [(["fixture"], {"capture_output": True, "text": True})]

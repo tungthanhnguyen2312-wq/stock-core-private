@@ -2,10 +2,15 @@
 
 **Roadmap sync: future-dated Current Research freshness (2026-10-01):**
 `CURRENT_RESEARCH_FUTURE_DATED_FRESHNESS_GUARD_V1 = COMPLETE`, owner-authorized
-independent corrective while new-session telemetry live acceptance is time-gated.
+independent corrective while new-session telemetry live acceptance was time-gated.
 Future source dates now fail closed against the existing domain reference anchor;
 the 17-series retained macro context and identity are unchanged. No authority promotion.
-Owner Daily RSS repair is separately submitted as PR #28; no merge or live acceptance.
+Owner Daily RSS repair merged through PR #28. Retained October 1 normal Daily closes
+`NEW_SESSION_LIVE_ACCEPTANCE_PASS`: PASS / COMPLETED, all nine Owner phases,
+positive Windows RSS, coherent Dashboard/AI/Action Center outcomes, telemetry-only
+authority effect. `LIVE_SESSION_NO_NATURAL_FUTURE_DATED_OBSERVATION` records the
+unexercised natural freshness case. Console ergonomics corrected locally without
+another Daily, analytical changes, authority promotion or a successor milestone.
 
 
 **Roadmap sync: Daily official liquidity rollforward corrective (2026-09-30):**
