@@ -23,7 +23,7 @@ from typing import Any, Callable, Mapping, Sequence
 
 CONTRACT_VERSION = "prospective_decision_snapshot/v1"
 CONDITION_CONTRACT_VERSION = "retained_strategy_boundary_condition/v1"
-HEALTH_CONTRACT_VERSION = "prospective_decision_corpus_health/v1"
+HEALTH_CONTRACT_VERSION = "prospective_decision_corpus_health/v2"
 SNAPSHOT_PREFIX = "prospective_decision_snapshot:"
 RECORD_PREFIX = "prospective_decision_snapshot_record:"
 
@@ -507,6 +507,73 @@ def evaluate_serialized_close_condition(
     return {"status": "NOT_SATISFIED_YET" if observed and not incomplete else "PRICE_SERIES_UNQUALIFIED", "event_session": None, "condition_identity": condition.get("condition_identity"), "reason_codes": ["NO_LATER_RETAINED_CLOSE" if not observed else "NO_LATER_CLOSE_SATISFIED_FIXED_T0_LEVEL"]}
 
 
+def _maturity_diagnosis(horizon: Mapping[str, Any]) -> str:
+    """Describe existing outcome fitness; never evaluate prices or infer maturity."""
+    fitness = horizon.get("series_fitness")
+    status = horizon.get("status")
+    if status == "T0_SESSION_NOT_IN_GOVERNED_CHAIN":
+        return "T0_SESSION_NOT_QUALIFIED"
+    if fitness in {"T0_CLOSE_NOT_RETAINED", "START_CLOSE_NOT_RETAINED"}:
+        return "T0_CLOSE_NOT_RETAINED"
+    if fitness == "T0_CLOSE_VALUE_INVALID":
+        return "T0_CLOSE_INVALID"
+    if status == "PENDING_NOT_ENOUGH_FUTURE_SESSIONS":
+        return "PENDING_COMPLETED_SESSION_DEPTH"
+    if status == "PRICE_BASIS_INCOMPATIBLE":
+        return "PRICE_SERIES_INCOMPATIBLE"
+    if status == "CLOSE_PRICE_NOT_RETAINED":
+        return "FUTURE_CLOSE_NOT_RETAINED" if fitness == "EXACT_CLOSE_MISSING" else "FUTURE_CLOSE_INVALID" if fitness == "CLOSE_VALUE_INVALID" else "UNRESOLVED_CLOSE_GAP"
+    return "MATURE_ENDPOINT_RETURN" if status == "MATURE" else "UNKNOWN_OUTCOME_FITNESS"
+
+
+def _maturity_health(records: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    from integrated_decision_prospective_feedback import FORWARD_HORIZONS
+    grouped: dict[str, list[Mapping[str, Any]]] = {}
+    seen = set()
+    excluded = 0
+    for row in records:
+        if (row.get("temporal_qualification") or {}).get("status") != GENUINE:
+            excluded += 1
+            continue
+        key = (row.get("ticker"), row.get("decision_session"), row.get("decision_identity"))
+        if any(not isinstance(value, str) or not value for value in key):
+            raise ValueError("CORPUS_HEALTH_DECISION_BINDING_REQUIRED")
+        if key in seen:
+            raise ValueError("CORPUS_HEALTH_DUPLICATE_DECISION")
+        seen.add(key)
+        grouped.setdefault(key[1], []).append(row)
+    sessions = []
+    totals: dict[str, Counter[str]] = {}
+    for session, entries in sorted(grouped.items()):
+        horizons: dict[str, dict[str, Any]] = {}
+        names = sorted(set(FORWARD_HORIZONS) | {name for row in entries for name in (row.get("forward_outcomes") or {}).get("horizons", {})})
+        for name in names:
+            diagnoses: Counter[str] = Counter()
+            states: Counter[str] = Counter()
+            endpoint_gaps: Counter[str] = Counter()
+            for row in entries:
+                h = ((row.get("forward_outcomes") or {}).get("horizons") or {}).get(name) or {}
+                h = h if isinstance(h, Mapping) else {}
+                diagnosis = _maturity_diagnosis(h)
+                diagnoses[diagnosis] += 1
+                states[str(h.get("maturation_state") or "UNKNOWN")] += 1
+                endpoint = h.get("future_session")
+                if diagnosis in {"FUTURE_CLOSE_NOT_RETAINED", "FUTURE_CLOSE_INVALID", "PRICE_SERIES_INCOMPATIBLE"} and isinstance(endpoint, str) and endpoint:
+                    endpoint_gaps[endpoint] += 1
+            totals.setdefault(name, Counter()).update(diagnoses)
+            horizons[name] = {"decision_count": len(entries), "diagnosis_counts": dict(sorted(diagnoses.items())),
+                              "maturation_state_counts": dict(sorted(states.items())),
+                              "affected_future_sessions": dict(sorted(endpoint_gaps.items()))}
+        sessions.append({"session": session, "decision_count": len(entries), "horizons": horizons,
+            "evidence_axis_snapshot_complete": dict(sorted(Counter(str((r.get("evidence_axes") or {}).get("status", FIELD_NOT_RETAINED)) for r in entries).items())),
+            "trigger_condition_evaluable": dict(sorted(Counter(str(((r.get("trigger") or {}).get("condition") or {}).get("status", FIELD_NOT_RETAINED)) for r in entries).items())),
+            "invalidation_condition_evaluable": dict(sorted(Counter(str(((r.get("invalidation") or {}).get("condition") or {}).get("status", FIELD_NOT_RETAINED)) for r in entries).items()))})
+    return {"admitted_decision_count": len(seen), "excluded_temporal_record_count": excluded,
+            "sessions": sessions, "horizon_diagnosis_counts": {name: dict(sorted(counts.items())) for name, counts in sorted(totals.items())},
+            "interpretation": "EXISTING_ENDPOINT_FITNESS_ONLY_NOT_CALIBRATION_ELIGIBILITY_OR_COMPLETE_PATH_FITNESS",
+            "no_historical_t0_backfill": True, "authority_effect": "NONE"}
+
+
 def build_corpus_health(
     *, snapshot_inventory: Mapping[str, Any], feedback_artifact: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
@@ -535,8 +602,10 @@ def build_corpus_health(
             "outcome_artifact_exists": False,
             "reason_codes": [str(handoff.get("snapshot_status")), str(handoff.get("snapshot_reason"))],
         })
+    maturity = _maturity_health((feedback_artifact or {}).get("feedback_records") or [])
     return _identity({
         "schema_version": "1.0.0", "contract_version": HEALTH_CONTRACT_VERSION,
         "sessions": sorted(rows, key=lambda row: (str(row["session"]), str(row["snapshot_identity"]))),
+        "outcome_maturity": maturity,
         "authority_boundary": "OPERATIONS_HEALTH_ONLY_NO_POLICY_OR_DECISION_INPUT",
     }, "prospective_decision_corpus_health:", "artifact_identity")

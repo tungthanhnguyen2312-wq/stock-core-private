@@ -17,6 +17,10 @@ Repository cleanup follows the governed strangler plan in [REPOSITORY_LAYOUT_MIG
 
 The October 1 Owner Daily live-acceptance gate is complete and PR #31 is merged. R2 and R4 are complete, R3 remains terminal for its current source set, and R5 is locally complete. R6 Prospective Learning & Calibration is locally COMPLETE; R7 Portfolio / PIT / Execution Authority is locally COMPLETE for capability implementation, with stronger authority still pending evidence/owner approval; the successor is owner roadmap review/rebaseline, with no automatic milestone; repository-layout work must not displace capability work.
 
+## Evidence-continuity navigation — 2026-10-02
+
+R5–R7 merged in PR #35. The [post-release system review](internal/POST_R1_R7_SYSTEM_REVIEW_20261002.md) selects prospective evidence continuity first. `prospective_decision_retention.build_corpus_health` owns the single v2 operational health verdict, including horizon-specific source-fitness diagnosis by genuine T0 session. `prospective_decision_outcome_feedback` embeds it; the existing offline retention/maturation runner copies that exact verdict. Neither consumer recomputes maturity, reconstructs T0 nor changes sample floors or policy. Retention, numerical outcomes and action authority remain unchanged.
+
 ## R7 authority-readiness navigation
 
 See [contract](portfolio_pit_execution_authority_contract.md) and [acceptance](internal/R7_PORTFOLIO_PIT_EXECUTION_ACCEPTANCE.json).

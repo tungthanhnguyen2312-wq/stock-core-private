@@ -1,5 +1,10 @@
 # Stock Lookup — Operational State
 
+**2026-10-02 current execution:** R5–R7 released to main through PR #35 at `fbc488352720694fc9735b56ce2962024bfd9544`; all four exact-head CI jobs passed. Producer synchronized safely, untracked data preserved. R1/R2/R4 complete; R3 remains terminal by evidence; R5/R6/R7 capability complete. Retained intrinsic values, calibration-review cohorts and stronger authority candidates remain zero. Historical LOCAL_CHECKPOINT/owner-stop statements below describe their original sessions, not this delegated release. [Release validation](internal/R5_R7_RELEASE_VALIDATION.json) and [system review/new program](internal/POST_R1_R7_SYSTEM_REVIEW_20261002.md) record actual results and limits.
+
+The owner-authorized successor `PROSPECTIVE_EVIDENCE_CONTINUITY_DIAGNOSTICS_V1` is ACTIVE in the sequential evidence-continuity/currency program. It extends existing corpus health and consolidates the offline consumer; no competing learning framework or action authority. Later corporate currency and valuation input work remain conditional proposals pending bounded evidence feasibility assessment. No live Daily, production write or authority promotion occurred.
+
+
 **R7 Portfolio / PIT / Execution Authority (2026-10-02): COMPLETE / LOCAL_CHECKPOINT.**
 `PORTFOLIO_PIT_AND_EXECUTION_AUTHORITY_V1 = CAPABILITY_COMPLETE / AUTHORITY_PROMOTION_PENDING_EVIDENCE_OR_OWNER_APPROVAL` on the exact owner-authorized local R6 checkpoint `938641cff02095f10db1658ad3134d71f871fcec`. The R5/R6 worktrees and checkpoints are preserved. One deterministic feature/use/ticker/session matrix preserves source status, identity, basis, knowledge time, applicability and original fitness. Strict research sizing, explicit exposure aggregation and risk-window readiness reuse the existing portfolio/risk/liquidity engines. The existing isolated VNM engine supplies authority-gated dry-run replay; no competing backtester, policy default, order route or authority registry is introduced.
 
