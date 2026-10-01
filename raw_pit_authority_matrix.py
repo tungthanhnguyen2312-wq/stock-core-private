@@ -109,7 +109,7 @@ def authority_row(*, feature: str, use_case: str, ticker: str, session: str,
         if feature in {"CA_TIMING", "CA_FACTOR_LINEAGE"} and use_case in HISTORICAL_USES:
             if not e.get("explicit_ex_date"):
                 reasons.append("EX_DATE_NOT_EXPLICIT_RECORD_DATE_NOT_SUBSTITUTE")
-            if not e.get("executed_lifecycle"):
+            if e.get("executed_lifecycle") is not True:
                 reasons.append("EXECUTED_LIFECYCLE_UNPROVEN_PLANS_NOT_EXECUTION")
             if feature == "CA_FACTOR_LINEAGE" and not e.get("qualified_factor_chain_identity"):
                 reasons.append("QUALIFIED_FACTOR_CHAIN_MISSING")

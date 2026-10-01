@@ -25,7 +25,7 @@ progress rather than telemetry/acceptance work.
    - classify why a ticker is unavailable, blocked, stale, proxy, not applicable or usable;
    - rank only blockers that materially reduce decision quality;
    - avoid another generic audit.
-   - State: COMPLETE / PR_READY.
+   - State: COMPLETE / MERGED (PR #33).
 
 3. **R3 — Fundamental + Current Valuation Depth**
    - expand research-usable financial coverage and method-compatible peer/history context;

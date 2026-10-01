@@ -390,8 +390,12 @@ def inputs_from_semantic_rows(rows, *, tickers, session, entities, assumptions=N
         share_candidates = candidates.get((ticker, "shares_outstanding")) or []
         if share_candidates:
             raw_share = max(share_candidates, key=lambda pair: pair[0])[1]
+            latest_shares = [r for rank, r in share_candidates
+                             if rank[0] == str(raw_share.get("period_end") or "")]
+            share_conflicts = (len({scenario_identity(r) for r in latest_shares}) > 1
+                               or any(r.get("source_conflicts") for r in latest_shares))
             # The name shares_outstanding alone never proves a period-end denominator basis.
-            if (raw_share.get("share_basis") == "PERIOD_END_OUTSTANDING" and raw_share.get("lineage_complete")
+            if (not share_conflicts and raw_share.get("share_basis") == "PERIOD_END_OUTSTANDING" and raw_share.get("lineage_complete")
                     and raw_share.get("research_semantic_state") == "RESEARCH_SEMANTIC_READY"):
                 share = dict(value=raw_share.get("normalized_candidate_value"), semantics="period_end",
                              period_identity={"period": raw_share.get("native_period_label"),

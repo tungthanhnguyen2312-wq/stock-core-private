@@ -77,6 +77,15 @@ def test_research_liquidity_not_execution():
     assert gate_row('CURRENT_LIQUIDITY', e, 'CURRENT_RESEARCH')['fitness'] == 'RESEARCH_USABLE'
 
 
+@pytest.mark.parametrize('feature', ['CA_TIMING', 'CA_FACTOR_LINEAGE'])
+@pytest.mark.parametrize('lifecycle', ['PLANNED', 'false', 1, ['EXECUTED']])
+def test_truthy_lifecycle_is_not_executed_evidence(feature, lifecycle):
+    e = evidence(feature); e['executed_lifecycle'] = lifecycle
+    row = gate_row(feature, e)
+    assert row['fitness'] == 'BLOCKED_BY_EVIDENCE'
+    assert 'EXECUTED_LIFECYCLE_UNPROVEN_PLANS_NOT_EXECUTION' in row['blocker_reason_codes']
+
+
 def test_adtv_not_adv_and_partial_preserves_source_status():
     e = evidence('ADV', 'CURRENT_RESEARCH'); e['metric'] = 'value_vnd'
     assert 'ADV_REQUIRES_SHARE_VOLUME_NOT_ADTV' in gate_row('ADV', e, 'CURRENT_RESEARCH')['blocker_reason_codes']

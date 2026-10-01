@@ -1,7 +1,7 @@
 {
   "schema_version": "stocklookup_roadmap_execution_state/1.0.0",
   "roadmap_id": "stock-core-private",
-  "roadmap_version": "2026.10.02.2",
+  "roadmap_version": "2026.10.02.3",
   "narrative_authority": {
     "strategic_roadmap": "docs/ROADMAP.md",
     "operational_narrative": "docs/STATE.md",
@@ -25,7 +25,7 @@
       "state": "COMPLETE",
       "terminal_disposition": "CAPABILITY_COMPLETE / AUTHORITY_PROMOTION_PENDING_EVIDENCE_OR_OWNER_APPROVAL",
       "starting_checkpoint": "938641cff02095f10db1658ad3134d71f871fcec",
-      "checkpoint": "HEAD",
+      "checkpoint": "285313d0c230617ffffbf106897f75b21f0b6c6b",
       "candidate_branch": "feature/portfolio-pit-execution-authority-r7",
       "dependencies": [
         "PROSPECTIVE_LEARNING_AND_CALIBRATION_V1"
@@ -372,7 +372,7 @@
         "PARTIAL"
       ],
       "owner_override": "OWNER_DIRECTIVE_2026_09_29_FINANCIAL_EVIDENCE_COHORT1_TRIGGERED_OCR_V1",
-      "notes": "PARTIAL 2026-09-29. Retained-only H1 image OCR for HPG/PNJ/PVD/VRE; 11 completed page reads, no new CORE fact. Generic balance-sheet heading recognition accepts Báo cáo tình hình tài chính. Qualification blocked on OCR unit ambiguity/conflict or non-unique geometry. No network, Vnstock, Daily, Financial V2 pin or successor."
+      "notes": "PARTIAL 2026-09-29. Retained-only H1 image OCR for HPG/PNJ/PVD/VRE; 11 completed page reads, no new CORE fact. Generic balance-sheet heading recognition accepts BÃ¡o cÃ¡o tÃ¬nh hÃ¬nh tÃ i chÃ­nh. Qualification blocked on OCR unit ambiguity/conflict or non-unique geometry. No network, Vnstock, Daily, Financial V2 pin or successor."
     },
     {
       "milestone_id": "FLOW_PRICE_CANONICAL_SOURCE_BACKFILL_AND_PRESENTATION_CORRECTIVE_V1",

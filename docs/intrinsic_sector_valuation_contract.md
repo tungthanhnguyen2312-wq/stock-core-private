@@ -61,4 +61,4 @@ Reopen only with qualified retained inputs and explicitly governed assumptions:
 - RNAV/SOTP: reproducible qualified component catalogs, component assumptions and separately validated sector-appropriate implementation.
 - Unresolved entities: qualified entity evidence, independently of monetary/forecast readiness.
 
-These are evidence gates, not permission to acquire anything in R5. R3 remains PARTIAL_BY_EVIDENCE / TERMINAL_FOR_CURRENT_SOURCE_SET; its existing reopen gates remain closed. R6 is NEXT and not started.
+These are evidence gates, not permission to acquire anything in R5. R3 remains PARTIAL_BY_EVIDENCE / TERMINAL_FOR_CURRENT_SOURCE_SET; its existing reopen gates remain closed. R6 and R7 are capability complete on the preserved cumulative stack; current release and successor status belongs to ROADMAP_STATE.json.

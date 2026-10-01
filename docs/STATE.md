@@ -41,7 +41,7 @@ R5 subsequently received the explicit owner authorization for local stacked R6 d
 
 
 **Current Research coverage & decision fitness (2026-10-01):**
-`CURRENT_RESEARCH_COVERAGE_AND_DECISION_FITNESS_V1 = COMPLETE / PR_READY`.
+`CURRENT_RESEARCH_COVERAGE_AND_DECISION_FITNESS_V1 = COMPLETE / MERGED_PR_33`.
 The milestone reuses the existing `current_research_decision_input/v1` denominator and
 dimension states instead of creating a parallel qualification framework. It adds a
 read-only deterministic fitness projection, market-wide dimension/authority distributions,

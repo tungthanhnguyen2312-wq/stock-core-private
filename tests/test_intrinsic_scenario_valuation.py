@@ -295,3 +295,23 @@ def test_invalid_config_identity_cannot_preserve_numeric_assumptions():
     projection = result["TEST"]["intrinsic_scenario_valuation"]
     assert not projection["cross_method_dispersion"]
     assert projection["methods"]["FCFF_DCF"]["readiness"] == "BLOCKED"
+
+
+@pytest.mark.parametrize("conflict", ["different_value", "source_flag"])
+def test_semantic_share_conflicts_never_select_a_denominator(conflict):
+    row = dict(ticker="TEST", canonical_metric="shares_outstanding", period_end="2025-12-31",
+               share_basis="PERIOD_END_OUTSTANDING", lineage_complete=True,
+               research_semantic_state="RESEARCH_SEMANTIC_READY", normalized_candidate_value=10,
+               native_period_label="2025", native_period_type="annual", statement_scope="consolidated",
+               source_lineage={"fact_id": "shares:qualified"})
+    entities = {"TEST": {"entity_class": "corporate", "applicability_status": "RESOLVED"}}
+    def adapt(rows):
+        return model.inputs_from_semantic_rows(rows, tickers={"TEST"}, session="2026-10-01", entities=entities)["TEST"]
+    assert adapt([row, copy.deepcopy(row)])["share_count"]["value"] == 10
+    other = copy.deepcopy(row)
+    if conflict == "different_value":
+        other["normalized_candidate_value"] = 20
+    else:
+        other["source_conflicts"] = ["SOURCE_CONFLICT"]
+    assert adapt([row, other])["share_count"] == {}
+    assert adapt([row, other]) == adapt([other, row])
