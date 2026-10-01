@@ -31,14 +31,23 @@ progress rather than telemetry/acceptance work.
    - expand research-usable financial coverage and method-compatible peer/history context;
    - improve share/denominator handling without mislabelling proxies as exact authority;
    - keep sector applicability explicit.
-   - State: NEXT after R2 merge.
+   - State: PARTIAL_BY_EVIDENCE / TERMINAL_FOR_CURRENT_SOURCE_SET (machine DEFERRED).
+   - Owner accepts the retained evidence ceiling; reopen only for genuinely new retained TTM
+     inputs, comparable EBITDA/EV semantics, or qualified entity evidence. R4 is separately
+     authorized; this sequencing override does not mark R3 COMPLETE.
 
 4. **R4 — Corporate Intelligence + Forward Driver Model**
    - convert official events, filings and research evidence into dated driver/catalyst/risk
      inputs;
    - support earnings revisions, segment drivers and expectation / variant-perception research.
+   - State: COMPLETE / LOCAL_CHECKPOINT / READY_FOR_OWNER_PUSH_REVIEW.
+   - V1 implements dated provenance-bound explanatory event drivers only; absent forecasts,
+     earnings revisions and segment-driver evidence remain unavailable.
+   - Retained October 1 acceptance: 244 tickers / 258 qualified PARTIAL driver observations;
+     zero posture, decision-identity or unexplained changes. See the portable acceptance report.
 
 5. **R5 — Intrinsic / Scenario Valuation**
+   - State: NEXT after validated R4 local completion; not started.
    - governed forecast assumptions;
    - sector-appropriate FCFF/FCFE/DDM/residual-income/RNAV/SOTP where applicable;
    - explicit sensitivity and bear/base/bull assumptions;

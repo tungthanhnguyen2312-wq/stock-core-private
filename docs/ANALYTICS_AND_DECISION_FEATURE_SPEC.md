@@ -631,3 +631,54 @@ This spec does not promote:
 
 Those remain the `docs/ROADMAP_STATE.json` `blocked_capabilities` register and
 `docs/STATE.md` Section 3 invariants.
+
+
+## Forward-driver explanatory contract (R4, 2026-10-01)
+
+`forward_driver_context/v1` is owned by `current_corporate_intelligence_axis.py`.
+The production chain is typed retained observations (`corporate_action_events.py`)
+→ official ledger reconciliation (`official_corporate_action_ledger.py`) → retained
+market-wide event adapters (`market_wide_current_corporate_intelligence.py`) → deduplicated,
+conflict-checked `current_corporate_event_context.py` → classified corporate axis →
+`integrated_investment_decision_product.evaluate_corporate_intelligence_context` →
+Corporate Intelligence evidence-axis context and Current Research CORPORATE dimension.
+R4 consumes the classified axis; it does not reread documents or rebuild those sources.
+
+Each driver preserves ticker, decision/evidence sessions, exact event identity, source
+identities/tier, canonical type/subtype/status and original status, all five labelled known
+dates, original and decision-session freshness, temporal fitness/warnings, materiality,
+conflicts, warnings, reasons and limitations. Missing dates remain null; malformed raw dates
+remain visible with a local blocker. Record date never fills ex-date. Scheduled future execution
+is valid planned context; a future observed announcement or executed/completed execution is
+blocked. Dates alone never prove execution. Categories describe distributions, capital
+structure, governance or other event context; other taxonomy types remain UNCLASSIFIED_DRIVER.
+
+Qualification requires existing OFFICIAL_QUALIFIED source evidence, nonempty event/source
+identity, compatible ticker, usable source and temporal fitness, resolved status/classification,
+known valid dates, no conflicts, and ACTIVE or RESOLVED_RECENT freshness under the existing
+90-day rule. Recency is evaluated at the decision session using the standing date precedence
+(ex-date, execution date, record date, announcement date); no date is inferred. Earlier evidence
+sessions remain explicitly PARTIAL; future/missing/invalid sessions fail closed. Historical or
+unresolved observations remain visible with blockers and cannot inflate qualified coverage.
+Qualification is dated research context, not directional thesis support or exact authority.
+
+V1 retains INFORMATIONAL and MIXED only from the existing explicit classification; otherwise
+its direction is UNKNOWN. POTENTIAL_CATALYST/POTENTIAL_RISK and bare event types cannot establish
+SUPPORTIVE/ADVERSE. Conflicts force UNKNOWN. Pending/recent/historical/unresolved relevance
+labels describe timing, not price effect. No driver votes, scores, thresholds, probabilities,
+targets, strategy/valuation/portfolio inputs or posture changes are introduced. No evidence is
+promoted and no proxy or non-applicable dimension is relabelled.
+
+The Integrated Decision coverage includes the canonical denominator, qualified/no-qualified
+ticker and observation counts, type/category/status/freshness/fitness/temporal/materiality/
+direction distributions, and blocker prevalence (unique tickers per reason). Distributions
+count all retained observations, including blocked observations; qualified counts are separate.
+The per-context identity hashes the complete deterministic projection. Existing per-decision
+identities exclude this explanatory projection and retain the original source identity. The
+standing product content identity includes the new record and coverage fields and must change.
+
+`tools/replay_forward_driver_context.py` takes exact retained input paths, verifies content
+identities and corporate source binding, reproduces preexisting summaries/dimensions through
+the production join, asserts the exact additive allowlist, and writes only to a separate scratch
+directory. `tests/test_forward_driver_context.py` guards this contract in Producer CI. See
+`docs/internal/R4_FORWARD_DRIVER_ACCEPTANCE.json` for the portable retained acceptance report.

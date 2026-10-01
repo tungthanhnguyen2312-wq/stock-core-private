@@ -545,3 +545,162 @@ def build_artifact(
     }
     artifact.update(content_identity(artifact))
     return artifact
+
+
+FORWARD_DRIVER_VERSION = "forward_driver_context/v1"
+_FORWARD_CATEGORIES = {
+    "DIVIDEND": "DISTRIBUTION_CONTEXT",
+    "BONUS_ISSUE": "CAPITAL_STRUCTURE_CONTEXT",
+    "RIGHTS_ISSUE": "CAPITAL_STRUCTURE_CONTEXT",
+    "MANAGEMENT_GOVERNANCE": "GOVERNANCE_CONTEXT",
+    "OTHER_MATERIAL_EVENT": "OTHER_EVENT_CONTEXT",
+}
+_FORWARD_DATES = ("announcement_date", "record_date", "ex_date", "effective_date", "execution_date")
+
+
+def _driver_date(value: Any) -> date | None:
+    """Only canonical ISO calendar dates; no truncation or semantic substitution."""
+    if not isinstance(value, str) or len(value) != 10:
+        return None
+    try:
+        parsed = date.fromisoformat(value)
+        return parsed if parsed.isoformat() == value else None
+    except ValueError:
+        return None
+
+
+def build_forward_driver_context(record: Mapping[str, Any] | None, *,
+                                 as_of_session: str, ticker: str | None = None) -> dict[str, Any]:
+    """Non-voting explanatory projection of retained, classified corporate events.
+
+    Qualification means source-qualified, temporally usable current research context,
+    never directional thesis support or event-driven eligibility. Earlier source sessions
+    remain PARTIAL. Resolved historical evidence is retained but not a qualified forward
+    driver. Reuses the standing recency window; dates never prove execution on their own.
+    V1 has no contract supporting SUPPORTIVE/ADVERSE direction from a bare event type.
+    """
+    source = record or {}
+    source_session = source.get("research_session")
+    source_day, decision_day = _driver_date(source_session), _driver_date(as_of_session)
+    session_fitness = ("SOURCE_SESSION_ABSENT_OR_INVALID" if not source_day or not decision_day else
+                       "FUTURE_INFORMATION_PROHIBITED" if source_day > decision_day else
+                       "STALE_EVIDENCE_SESSION" if source_day < decision_day else "CURRENT_EVIDENCE_SESSION")
+    session_usable = session_fitness in {"STALE_EVIDENCE_SESSION", "CURRENT_EVIDENCE_SESSION"}
+    drivers = []
+    identity_payloads: dict[str, set[str]] = {}
+    for event in source.get("events") or []:
+        identity_payloads.setdefault(str(event.get("event_id")), set()).add(
+            json.dumps(event, sort_keys=True, ensure_ascii=False))
+    for raw in source.get("events") or []:
+        event = copy.deepcopy(raw)
+        reasons = set(event.get("reason_codes") or [])
+        blockers = set()
+        dates = {key: event.get(key) for key in _FORWARD_DATES}
+        parsed = {key: _driver_date(value) for key, value in dates.items()}
+        if any(value is not None and parsed[key] is None for key, value in dates.items()):
+            blockers.add("FORWARD_DRIVER_DATE_MALFORMED")
+        if not any(parsed.values()):
+            blockers.add("FORWARD_DRIVER_KNOWN_DATE_ABSENT")
+        if source.get("fitness") not in {"AVAILABLE", "CURRENT_RESEARCH_ONLY"}:
+            blockers.add("FORWARD_DRIVER_SOURCE_FITNESS_UNAVAILABLE")
+        if len(identity_payloads.get(str(event.get("event_id")), set())) > 1:
+            blockers.add("FORWARD_DRIVER_IDENTITY_CONFLICT")
+        if not session_usable:
+            blockers.add(session_fitness)
+        # Scheduled future dates are valid plans, but future announcements/execution
+        # cannot establish already-known/executed evidence at this decision session.
+        if decision_day and (parsed["announcement_date"] and parsed["announcement_date"] > decision_day or
+                             event.get("status") in {"EXECUTED", "COMPLETED"} and
+                             parsed["execution_date"] and parsed["execution_date"] > decision_day):
+            blockers.add("FORWARD_DRIVER_FUTURE_OBSERVATION")
+        if event.get("ticker") != (source.get("ticker") or ticker):
+            blockers.add("FORWARD_DRIVER_TICKER_MISMATCH")
+        identities = sorted(set(str(v) for v in event.get("source_identities") or [] if v))
+        if not event.get("event_id") or not identities or not event.get("source"):
+            blockers.add("FORWARD_DRIVER_PROVENANCE_INCOMPLETE")
+        if event.get("evidence_tier") != "OFFICIAL_QUALIFIED":
+            blockers.add("FORWARD_DRIVER_SOURCE_NOT_QUALIFIED")
+        if event.get("conflicts"):
+            blockers.add("FORWARD_DRIVER_CONFLICTING_EVIDENCE")
+        if event.get("status") not in CANONICAL_STATUSES or event.get("status") == STATUS_UNKNOWN:
+            blockers.add("FORWARD_DRIVER_STATUS_UNRESOLVED")
+        if event.get("temporal_fitness") not in {"READY", "PARTIAL"}:
+            blockers.add("FORWARD_DRIVER_TEMPORAL_FITNESS_UNAVAILABLE")
+        if event.get("classification") in {"INSUFFICIENT_EVIDENCE", "UNRESOLVED"}:
+            blockers.add("FORWARD_DRIVER_CLASSIFICATION_UNRESOLVED")
+        # Exactly the standing freshness date precedence, without filling absent fields.
+        event_day = next((parsed[key] for key in ("ex_date", "execution_date", "record_date", "announcement_date")
+                          if parsed[key]), None)
+        freshness = canonical_freshness(event.get("original_event_status"), as_of=decision_day,
+                                        event_date=event_day) if decision_day else FRESHNESS_UNKNOWN
+        if freshness not in {FRESHNESS_ACTIVE, FRESHNESS_RESOLVED_RECENT}:
+            blockers.add("FORWARD_DRIVER_NOT_CURRENT_OR_RECENT")
+        direction = ("INFORMATIONAL" if event.get("classification") == "INFORMATIONAL" else
+                     "MIXED" if event.get("classification") == "MIXED" else "UNKNOWN")
+        if event.get("conflicts"):
+            direction = "UNKNOWN"
+        reasons.add("FORWARD_DRIVER_NON_VOTING_EXPLANATORY_CONTEXT")
+        reasons.add("EXISTING_INFORMATIONAL_CLASSIFICATION" if direction == "INFORMATIONAL" else
+                    "EXISTING_MIXED_CLASSIFICATION" if direction == "MIXED" else "DIRECTION_NOT_ESTABLISHED")
+        qualified = not blockers
+        fitness = ("PARTIAL" if session_fitness == "STALE_EVIDENCE_SESSION" or
+                   event.get("temporal_fitness") == "PARTIAL" else "AVAILABLE") if qualified else "BLOCKED"
+        driver = dict(ticker=source.get("ticker") or ticker, as_of_session=as_of_session,
+                      evidence_session=source_session, event_identity=event.get("event_id"),
+                      event_type=event.get("event_type"), event_subtype=event.get("event_subtype"),
+                      status=event.get("status"), original_event_status=event.get("original_event_status"),
+                      known_dates=dates, evidence_tier=event.get("evidence_tier"),
+                      source=event.get("source"), source_identities=identities,
+                      source_freshness=event.get("freshness"), freshness=freshness,
+                      temporal_fitness=event.get("temporal_fitness"), session_fitness=session_fitness,
+                      materiality=event.get("materiality"),
+                      driver_category=_FORWARD_CATEGORIES.get(event.get("event_type"), "UNCLASSIFIED_DRIVER"),
+                      relevance=("PENDING_EVENT_CONTEXT" if freshness == FRESHNESS_ACTIVE else
+                                 "RECENT_RESOLVED_CONTEXT" if freshness == FRESHNESS_RESOLVED_RECENT else
+                                 "HISTORICAL_CONTEXT" if freshness == FRESHNESS_RESOLVED_HISTORICAL else "UNRESOLVED_CONTEXT"),
+                      warnings=sorted(set(event.get("warnings") or [])),
+                      temporal_fitness_warnings=sorted(set(event.get("temporal_fitness_warnings") or [])),
+                      direction=direction, qualified=qualified, fitness=fitness,
+                      reason_codes=sorted(reasons), blocker_reason_codes=sorted(blockers),
+                      conflicts=event.get("conflicts") or [],
+                      limitations=sorted(set(event.get("limitations") or []) | {
+                          "NO_DIRECTIONAL_THESIS_VOTE", "NO_POSTURE_EFFECT", "CURRENT_RESEARCH_ONLY",
+                          "DATES_DO_NOT_ESTABLISH_EXECUTION", "NO_PRICE_IMPACT_OR_PROBABILITY"}))
+        drivers.append(driver)
+    drivers.sort(key=lambda item: json.dumps(item, sort_keys=True, ensure_ascii=False))
+    payload = dict(contract_version=FORWARD_DRIVER_VERSION, ticker=source.get("ticker") or ticker,
+                   as_of_session=as_of_session, evidence_session=source_session,
+                   session_fitness=session_fitness, drivers=drivers,
+                   qualified_driver_count=sum(d["qualified"] for d in drivers),
+                   blocker_reason_codes=sorted({b for d in drivers for b in d["blocker_reason_codes"]} |
+                                              ({"NO_QUALIFIED_FORWARD_DRIVER"} if not any(d["qualified"] for d in drivers) else set())),
+                   authority_effect="NONE", applicability="CURRENT_RESEARCH_EXPLANATION_ONLY")
+    payload["context_identity"] = FORWARD_DRIVER_VERSION + ":" + hashlib.sha256(
+        json.dumps(payload, sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode("utf-8")).hexdigest()
+    return payload
+
+
+def forward_driver_coverage(contexts: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    """One context per canonical decision ticker; distributions count retained drivers.
+
+    Blocker prevalence counts tickers, not repeated events. Qualification is separately
+    distributed, so historical/unresolved observations never inflate forward coverage.
+    """
+    drivers = [d for context in contexts for d in context.get("drivers") or []]
+    qualified = sum(bool(context.get("qualified_driver_count")) for context in contexts)
+    coverage = dict(denominator=len(contexts), tickers_with_qualified_driver=qualified,
+                    no_qualified_driver_count=len(contexts) - qualified,
+                    total_retained_drivers=len(drivers),
+                    qualified_driver_count=sum(d["qualified"] for d in drivers))
+    for label, field in (("driver_type", "event_type"), ("driver_category", "driver_category"), ("canonical_status", "status"),
+                         ("freshness", "freshness"), ("fitness", "fitness"),
+                         ("temporal_fitness", "temporal_fitness"), ("materiality", "materiality"),
+                         ("direction", "direction")):
+        counts = Counter(d.get(field) or "UNKNOWN" for d in drivers)
+        if label == "direction":
+            for value in ("SUPPORTIVE", "ADVERSE", "MIXED", "INFORMATIONAL", "UNKNOWN"):
+                counts.setdefault(value, 0)
+        coverage[label + "_distribution"] = dict(sorted(counts.items()))
+    coverage["blocker_prevalence"] = dict(sorted(Counter(
+        reason for context in contexts for reason in set(context.get("blocker_reason_codes") or [])).items()))
+    return coverage

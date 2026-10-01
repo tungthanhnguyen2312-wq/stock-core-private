@@ -497,7 +497,7 @@ def evaluate_financial_composite_context(
 # ── Corporate Intelligence context (Section 13: additive only) ───────────────
 
 def evaluate_corporate_intelligence_context(
-    corporate_intelligence_record: Mapping[str, Any] | None, *, as_of_session: str,
+    corporate_intelligence_record: Mapping[str, Any] | None, *, as_of_session: str, ticker: str | None = None,
 ) -> dict[str, Any]:
     """Thin join over one current_corporate_intelligence_axis/v1 per-ticker record.
 
@@ -507,7 +507,9 @@ def evaluate_corporate_intelligence_context(
     from an earlier session than today's decision (mission Section 10: freshness must be
     explicit, never silently re-labelled current).
     """
+    from current_corporate_intelligence_axis import build_forward_driver_context
     record = corporate_intelligence_record or {}
+    forward = build_forward_driver_context(record, as_of_session=as_of_session, ticker=ticker)
     if not record:
         return {
             "state": "NOT_PROVIDED", "fitness": "NOT_PROVIDED",
@@ -516,6 +518,7 @@ def evaluate_corporate_intelligence_context(
             "active_catalyst_count": 0, "active_risk_count": 0, "mixed_or_unresolved_count": 0,
             "material_event_count": 0, "freshest_material_event": None, "event_identities": [],
             "evidence_session": None, "evidence_session_stale": None, "limitations": [],
+            "forward_driver_context": forward,
         }
     evidence_session = record.get("research_session")
     stale = bool(evidence_session) and evidence_session != as_of_session
@@ -534,6 +537,7 @@ def evaluate_corporate_intelligence_context(
         "material_event_count": record.get("material_event_count", 0),
         "freshest_material_event": record.get("freshest_material_event"),
         "event_identities": list(record.get("event_identities") or []),
+        "forward_driver_context": forward,
         "evidence_session": evidence_session,
         "evidence_session_stale": stale,
         "limitations": list(record.get("limitations") or []),
@@ -773,6 +777,7 @@ def build_evidence_axes(
                 "material_event_count": (corporate_intelligence_summary or {}).get("material_event_count"),
                 "freshest_material_event": (corporate_intelligence_summary or {}).get("freshest_material_event"),
                 "evidence_session_stale": (corporate_intelligence_summary or {}).get("evidence_session_stale"),
+                "forward_driver_context": copy.deepcopy((corporate_intelligence_summary or {}).get("forward_driver_context")),
             },
         ),
     }
@@ -1587,7 +1592,7 @@ def build_ticker_integrated_decision(
     # into decide_research_action_posture below -- no automatic posture change merely because
     # a catalyst/risk exists).
     corporate_intelligence_summary = evaluate_corporate_intelligence_context(
-        corporate_intelligence_record, as_of_session=as_of_session,
+        corporate_intelligence_record, as_of_session=as_of_session, ticker=ticker,
     )
 
     # 7. Posture & Why Now
@@ -2134,6 +2139,10 @@ def build_artifact(
         "opportunity_priority_available_count": priority_available,
         "position_context_distribution": dict(sorted(position_counts.items())),
     }
+    from current_corporate_intelligence_axis import forward_driver_coverage
+    coverage["forward_driver_context"] = forward_driver_coverage([
+        rec["corporate_intelligence_context"]["forward_driver_context"] for rec in records.values()
+    ])
     if coverage["no_current_evidence_wait_count"]:
         raise IntegratedDecisionProductError("INVARIANT_VIOLATION:NO_CURRENT_EVIDENCE_WAIT_FOR_CONFIRMATION")
     if operational_fundamental_integration_artifact is not None:
