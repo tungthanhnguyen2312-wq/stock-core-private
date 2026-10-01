@@ -387,6 +387,7 @@ def _corporate(record: Mapping[str, Any]) -> dict[str, Any]:
     return {
         "state": (PARTIAL if temporal == "STALE_EVIDENCE_SESSION" or unresolved else AVAILABLE) if usable else BLOCKED,
         "authority": RESEARCH_QUALIFIED if qualified else CURRENT_DESCRIPTIVE_ONLY if usable else NO_AUTHORITY,
+        "forward_driver_context": copy.deepcopy(context.get("forward_driver_context")),
         "context_state": context.get("state"),
         "temporal_status": temporal,
         "evidence_session": context.get("evidence_session"),

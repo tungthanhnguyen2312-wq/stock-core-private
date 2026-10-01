@@ -28,6 +28,7 @@ env:
     tests/test_session_registry_gap_reconciliation.py
     tests/test_session_comparison_semantics.py
     tests/test_next_session_decision_brief_comparison_metadata.py
+    tests/test_forward_driver_context.py
     tests/test_current_research_decision_fitness.py
     tests/test_daily_producer_pipeline.py::test_completed_session_gate_uses_governed_ledger_not_clock_inference
     tests/test_daily_producer_pipeline.py::test_completed_session_gate_refuses_incomplete_session

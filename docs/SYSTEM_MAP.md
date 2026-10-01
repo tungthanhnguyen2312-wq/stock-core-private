@@ -111,3 +111,14 @@ stocklookup.ps1
 - **Responsibility:** Atomic validation, staging, and publishing of canonical runtime artifacts and projection models to the web dashboard distribution repository.
 - **Primary Entry Module:** [`dashboard_release_publisher.py`](../dashboard_release_publisher.py) / [`publish_dashboard.py`](../publish_dashboard.py)
 - **Key Output Contract:** Published dashboard bundle (`decision_workspace_cards.json`, `screener_master_projection.json`, `bundle_manifest.json`).
+
+
+### Corporate Intelligence forward-driver context (R4)
+
+`current_corporate_intelligence_axis.build_forward_driver_context` projects the retained
+classified event axis into `forward_driver_context/v1`. The Integrated Decision corporate
+join attaches it to the corporate summary, evidence-axis context and Current Research
+CORPORATE dimension; `forward_driver_coverage` aggregates over the decision denominator.
+This is a non-voting research explanation. The source axis/identities and all action policy
+remain unchanged. See [the contract](ANALYTICS_AND_DECISION_FEATURE_SPEC.md#forward-driver-explanatory-contract-r4-2026-10-01)
+and [retained acceptance](internal/R4_FORWARD_DRIVER_ACCEPTANCE.json).

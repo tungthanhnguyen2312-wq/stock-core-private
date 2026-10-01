@@ -11,10 +11,25 @@ in Producer CI. No ticker posture, analytical threshold, source/provider authori
 financial/valuation semantic, PIT, liquidity/sizing/execution authority, production DB,
 runtime artifact or publication behavior changes.
 
-The next capability after owner merge is
-`FUNDAMENTAL_AND_CURRENT_VALUATION_DEPTH_V1`. Its purpose is to improve research-usable
-fundamental and valuation depth using the measured R2 gaps, not to reopen a generic
-qualification audit.
+R3 is owner-accepted `PARTIAL_BY_EVIDENCE / TERMINAL_FOR_CURRENT_SOURCE_SET`,
+not COMPLETE or FAILED; machine sequencing records DEFERRED. The retained 1,683-ticker
+measurements and explicit reopen gates are in [the portable closeout](internal/R3_EVIDENCE_CEILING_CLOSEOUT.md).
+R4 is independently authorized by the owner against completed R2; it does not imply R3 completion.
+
+**R4 Corporate Intelligence + Forward Driver Model: COMPLETE / LOCAL_CHECKPOINT / READY_FOR_OWNER_PUSH_REVIEW.** additive `forward_driver_context/v1`
+projects retained dated event/provenance/fitness/status/materiality/direction into the existing
+Corporate Intelligence evidence axis and Current Research input. Retained October 1 replay:
+1,103 event-bearing records enriched, 580 explicit absence contexts; 258 qualified observations
+across 244 tickers, all PARTIAL because the evidence session is September 5. Corporate states
+remain AVAILABLE 0 / PARTIAL 1,103 / BLOCKED 580 / NON_APPLICABLE 0. All 1,683 preexisting record
+fields, decision identities and postures remain unchanged; zero unexplained changes and source
+bytes unchanged. Product content identity changes to bind the added explanations. No authority
+promotion or policy change. See [the contract](ANALYTICS_AND_DECISION_FEATURE_SPEC.md#forward-driver-explanatory-contract-r4-2026-10-01)
+and [acceptance report](internal/R4_FORWARD_DRIVER_ACCEPTANCE.json).
+
+R4 completion is proved by deterministic retained replay and 270 passing focused/adjacent tests;
+py_compile, roadmap and diff checks pass. R5
+`INTRINSIC_AND_SCENARIO_VALUATION_V1` is queued for owner review, not started.
 
 
 

@@ -1,0 +1,169 @@
+{
+  "R3_preservation": {
+    "clean_worktree_preserved": true,
+    "nine_previously_hashed_retained_inputs_unchanged": true,
+    "scratch_report_sha256": "eba291608ee7c7b74ebc93192859fe63c040177bfe0c2bf02bb037bd5ca15597",
+    "scratch_report_unchanged": true
+  },
+  "authority_effect": "NONE",
+  "corporate_dimension_after": {
+    "AVAILABLE": 0,
+    "BLOCKED": 580,
+    "NON_APPLICABLE": 0,
+    "PARTIAL": 1103
+  },
+  "corporate_dimension_before": {
+    "AVAILABLE": 0,
+    "BLOCKED": 580,
+    "NON_APPLICABLE": 0,
+    "PARTIAL": 1103
+  },
+  "decision_fitness_coverage_unchanged": true,
+  "decision_identities_changed": 0,
+  "denominator": 1683,
+  "freshness_projection_reason": "Existing recency rule evaluated at October 1 instead of retained September 5; original source freshness preserved per driver.",
+  "next_action": "READY_FOR_OWNER_PUSH_REVIEW",
+  "posture_changes": 0,
+  "preexisting_record_fields_unchanged": 1683,
+  "product_identity_after": "integrated_investment_decision_product/v1:625173442a36b670e91a992a9fd43692be97c4395ac7676b2c7f3d084f48a2de",
+  "product_identity_before": "integrated_investment_decision_product/v1:407c747ebb99ca8b7b4635b1d98a91992b371fbcbeabb79b2425bdd305034ccf",
+  "product_identity_reason": "Standing content identity hashes all explanatory record/coverage additions; decision identity excludes them and retains original source identities.",
+  "qualified_driver_after": {
+    "blocker_prevalence": {
+      "FORWARD_DRIVER_CLASSIFICATION_UNRESOLVED": 712,
+      "FORWARD_DRIVER_KNOWN_DATE_ABSENT": 3,
+      "FORWARD_DRIVER_NOT_CURRENT_OR_RECENT": 1102,
+      "FORWARD_DRIVER_SOURCE_NOT_QUALIFIED": 7,
+      "FORWARD_DRIVER_STATUS_UNRESOLVED": 695,
+      "FORWARD_DRIVER_TEMPORAL_FITNESS_UNAVAILABLE": 3,
+      "NO_QUALIFIED_FORWARD_DRIVER": 1439
+    },
+    "canonical_status_distribution": {
+      "APPROVED": 121,
+      "EXECUTED": 2724,
+      "PLANNED": 1,
+      "UNKNOWN": 1601
+    },
+    "denominator": 1683,
+    "direction_distribution": {
+      "ADVERSE": 0,
+      "INFORMATIONAL": 2764,
+      "MIXED": 7,
+      "SUPPORTIVE": 0,
+      "UNKNOWN": 1676
+    },
+    "driver_category_distribution": {
+      "CAPITAL_STRUCTURE_CONTEXT": 242,
+      "DISTRIBUTION_CONTEXT": 1309,
+      "GOVERNANCE_CONTEXT": 2575,
+      "OTHER_EVENT_CONTEXT": 321
+    },
+    "driver_type_distribution": {
+      "BONUS_ISSUE": 201,
+      "DIVIDEND": 1309,
+      "MANAGEMENT_GOVERNANCE": 2575,
+      "OTHER_MATERIAL_EVENT": 321,
+      "RIGHTS_ISSUE": 41
+    },
+    "fitness_distribution": {
+      "BLOCKED": 4189,
+      "PARTIAL": 258
+    },
+    "freshness_distribution": {
+      "ACTIVE": 164,
+      "RESOLVED_HISTORICAL": 2562,
+      "RESOLVED_RECENT": 120,
+      "UNKNOWN": 1601
+    },
+    "materiality_distribution": {
+      "NON_MATERIAL": 2575,
+      "POTENTIALLY_MATERIAL": 1549,
+      "UNKNOWN_MATERIALITY": 323
+    },
+    "no_qualified_driver_count": 1439,
+    "qualified_driver_count": 258,
+    "temporal_fitness_distribution": {
+      "READY": 4444,
+      "VALID_TIME_INSUFFICIENT": 3
+    },
+    "tickers_with_qualified_driver": 244,
+    "total_retained_drivers": 4447
+  },
+  "qualified_driver_before": "NOT_EXPOSED",
+  "records_additively_projected": 1683,
+  "records_with_retained_events_enriched": 1103,
+  "records_without_events_with_explicit_absence": 580,
+  "retained_distributions_after": {
+    "event_type": {
+      "BONUS_ISSUE": 201,
+      "DIVIDEND": 1309,
+      "MANAGEMENT_GOVERNANCE": 2575,
+      "OTHER_MATERIAL_EVENT": 321,
+      "RIGHTS_ISSUE": 41
+    },
+    "freshness": {
+      "ACTIVE": 164,
+      "RESOLVED_HISTORICAL": 2562,
+      "RESOLVED_RECENT": 120,
+      "UNKNOWN": 1601
+    },
+    "materiality": {
+      "NON_MATERIAL": 2575,
+      "POTENTIALLY_MATERIAL": 1549,
+      "UNKNOWN_MATERIALITY": 323
+    },
+    "status": {
+      "APPROVED": 121,
+      "EXECUTED": 2724,
+      "PLANNED": 1,
+      "UNKNOWN": 1601
+    }
+  },
+  "retained_distributions_before": {
+    "event_type": {
+      "BONUS_ISSUE": 201,
+      "DIVIDEND": 1309,
+      "MANAGEMENT_GOVERNANCE": 2575,
+      "OTHER_MATERIAL_EVENT": 321,
+      "RIGHTS_ISSUE": 41
+    },
+    "freshness": {
+      "ACTIVE": 164,
+      "RESOLVED_HISTORICAL": 2479,
+      "RESOLVED_RECENT": 203,
+      "UNKNOWN": 1601
+    },
+    "materiality": {
+      "NON_MATERIAL": 2575,
+      "POTENTIALLY_MATERIAL": 1549,
+      "UNKNOWN_MATERIALITY": 323
+    },
+    "status": {
+      "APPROVED": 121,
+      "EXECUTED": 2724,
+      "PLANNED": 1,
+      "UNKNOWN": 1601
+    }
+  },
+  "session": "2026-10-01",
+  "source_byte_hashes": {
+    "canonical_integrated_product": "a70d3c1a444d4b3d793833f2cdaed24acc5e640f4c28b5892c76bf78d3feff00",
+    "classified_corporate_axis": "c5ea89310c5176801f49cc720a9fb19984043eefd98e1eea9402ca95be1e0979"
+  },
+  "source_bytes_unchanged": true,
+  "source_resolution": {
+    "binding": "Corporate identity equals the completed canonical product source_artifacts.corporate_intelligence; no source discovery or rebuild.",
+    "canonical_integrated_product": "operations-review/canonical-post-close-v1/2026-10-01/enrichment/integrated_investment_decision_product.json",
+    "classified_corporate_axis": "operations-review/current-corporate-intelligence-axis-v1/current_corporate_intelligence_axis_artifact.json"
+  },
+  "unexplained_changes": 0,
+  "validation": {
+    "deterministic_replay_twice_equal": true,
+    "focused_and_adjacent_tests_passed": 270,
+    "git_diff_check": "PASS",
+    "new_focused_tests_passed": 53,
+    "py_compile": "PASS",
+    "retained_fixture_root": "Existing tests read exact retained paths from the original checkout through transient test-module ROOT/OPERATIONS bindings; no copied or changed source inputs.",
+    "roadmap_check": "PASS (six inherited stale-HEAD warnings and expected precommit dirty-worktree warnings)"
+  }
+}
