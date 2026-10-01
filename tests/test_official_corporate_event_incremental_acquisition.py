@@ -347,3 +347,83 @@ def test_downstream_current_corporate_event_context_consumes_the_freshly_materia
     )
     assert downstream["research_session"] == "2026-09-05"
     assert downstream["records"]["HPG"]["events"]
+
+
+# Retained-success integrity and no-overwrite crash recovery (entirely offline).
+def test_verify_successful_acquisition_replays_both_sources(tmp_path, monkeypatch):
+    attempt = _acquire(tmp_path, monkeypatch, session="2026-09-05")
+    result = incremental.verify_successful_acquisition(tmp_path, "2026-09-05")
+    assert result["integrity_verification"] == "VERIFIED"
+    assert result["attempt"] == attempt
+    assert result["attempt_identity"].startswith("sha256:")
+
+
+@pytest.mark.parametrize("source", ["hnx", "hose"])
+@pytest.mark.parametrize("missing", [False, True])
+def test_verified_reuse_rejects_corrupt_or_missing_raw(tmp_path, monkeypatch, source, missing):
+    attempt = _acquire(tmp_path, monkeypatch, session="2026-09-05")
+    capture = attempt[f"{source}_captures"][0]
+    raw = tmp_path / incremental.RAW_STORE_RELATIVE / capture["relative_path"]
+    if missing:
+        raw.unlink()
+    else:
+        raw.write_bytes(b"corrupt")
+    with pytest.raises(incremental.IncrementalAcquisitionError, match="CAPTURE_SHA256_MISMATCH"):
+        incremental.verify_successful_acquisition(tmp_path, "2026-09-05")
+
+
+@pytest.mark.parametrize("field", ["hnx_artifact_identity", "hose_captures", "acquisition_session"])
+def test_verified_reuse_rejects_manifest_source_mismatch(tmp_path, monkeypatch, field):
+    attempt = _acquire(tmp_path, monkeypatch, session="2026-09-05")
+    attempt[field] = "tampered"
+    incremental._write(tmp_path / incremental.SESSIONS_RELATIVE / "2026-09-05" / incremental.ATTEMPT_FILENAME, attempt)
+    with pytest.raises(incremental.IncrementalAcquisitionError, match="MISMATCH"):
+        incremental.verify_successful_acquisition(tmp_path, "2026-09-05")
+
+
+def _materialization_fixture(tmp_path, monkeypatch):
+    import current_official_event_context as context_module
+    _acquire(tmp_path, monkeypatch, session="2026-09-05")
+    universe = tmp_path / "universe.json"
+    universe.write_text("{}", encoding="utf-8")
+    context = {"artifact_identity": "fixture:context", "coverage": {}, "research_session": "2026-09-05"}
+    monkeypatch.setattr(context_module, "build_artifact", lambda **kwargs: context)
+    monkeypatch.setattr(context_module, "replay", lambda artifact: None)
+    def network_forbidden(*args, **kwargs):
+        raise AssertionError("materialization must never fetch")
+    monkeypatch.setattr(hnx_module, "fetch", network_forbidden)
+    monkeypatch.setattr(incremental.hose_module, "fetch", network_forbidden)
+    return universe
+
+
+def test_matching_materialization_reuses_bytes_and_timestamp(tmp_path, monkeypatch):
+    universe = _materialization_fixture(tmp_path, monkeypatch)
+    first = incremental.materialize_current_official_event_context(tmp_path, acquisition_session="2026-09-05", official_universe_path=universe)
+    path = tmp_path / first["output_path"]
+    before = (path.read_bytes(), path.stat().st_mtime_ns)
+    second = incremental.materialize_current_official_event_context(tmp_path, acquisition_session="2026-09-05", official_universe_path=universe)
+    assert first["materialization_reused"] is False
+    assert second["materialization_reused"] is True
+    assert second["artifact_identity"] == first["artifact_identity"]
+    assert (path.read_bytes(), path.stat().st_mtime_ns) == before
+
+
+def test_missing_materialization_recovers_offline_without_raw_mutation(tmp_path, monkeypatch):
+    universe = _materialization_fixture(tmp_path, monkeypatch)
+    raw_root = tmp_path / incremental.RAW_STORE_RELATIVE
+    before = {p: (p.read_bytes(), p.stat().st_mtime_ns) for p in raw_root.rglob("*") if p.is_file()}
+    result = incremental.materialize_current_official_event_context(tmp_path, acquisition_session="2026-09-05", official_universe_path=universe)
+    assert (tmp_path / result["output_path"]).is_file()
+    assert all((p.read_bytes(), p.stat().st_mtime_ns) == value for p, value in before.items())
+
+
+def test_conflicting_materialization_fails_closed_without_overwriting(tmp_path, monkeypatch):
+    universe = _materialization_fixture(tmp_path, monkeypatch)
+    first = incremental.materialize_current_official_event_context(tmp_path, acquisition_session="2026-09-05", official_universe_path=universe)
+    path = tmp_path / first["output_path"]
+    path.write_text('{"artifact_identity":"corrupt"}', encoding="utf-8")
+    before = path.read_bytes()
+    with pytest.raises(incremental.IncrementalAcquisitionError, match="CURRENT_CONTEXT_IMMUTABLE_CONFLICT"):
+        incremental.materialize_current_official_event_context(tmp_path, acquisition_session="2026-09-05", official_universe_path=universe)
+    assert path.read_bytes() == before
+    assert not list(path.parent.glob(".context-*"))

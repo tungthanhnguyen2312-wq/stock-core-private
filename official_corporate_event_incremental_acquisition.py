@@ -252,6 +252,67 @@ def acquire(root: Path, *, session: str | None = None, execute: bool = True, hos
     return attempt
 
 
+def verify_successful_acquisition(root: Path, acquisition_session: str) -> dict[str, Any]:
+    """Verify the exact retained manifest, source identities and immutable captures offline."""
+    from datetime import date
+
+    if date.fromisoformat(acquisition_session).isoformat() != acquisition_session:
+        raise IncrementalAcquisitionError("INVALID_ACQUISITION_SESSION")
+    session_dir = _session_dir(root, acquisition_session)
+    attempt = _load(session_dir / ATTEMPT_FILENAME)
+    if attempt is None or attempt.get("disposition") != SUCCESS:
+        raise IncrementalAcquisitionError(f"ACQUISITION_SESSION_NOT_SUCCESSFUL:{acquisition_session}")
+    if attempt.get("acquisition_session") != acquisition_session:
+        raise IncrementalAcquisitionError("ACQUISITION_SESSION_IDENTITY_MISMATCH")
+    raw_root = (root / RAW_STORE_RELATIVE).resolve()
+    artifacts = {}
+    for source, module in (("hnx", hnx_module), ("hose", hose_module)):
+        artifact = _load(session_dir / f"{source}_artifact.json")
+        if artifact is None:
+            raise IncrementalAcquisitionError(f"ACQUISITION_SESSION_ARTIFACTS_MISSING:{acquisition_session}")
+        if (artifact.get("artifact_identity") != attempt.get(f"{source}_artifact_identity")
+                or artifact.get("captures") != attempt.get(f"{source}_captures")):
+            raise IncrementalAcquisitionError(f"ACQUISITION_MANIFEST_SOURCE_MISMATCH:{source}")
+        for capture in artifact["captures"]:
+            path = (raw_root / capture["relative_path"]).resolve()
+            if not path.is_relative_to(raw_root):
+                raise IncrementalAcquisitionError("CAPTURE_PATH_OUTSIDE_RAW_STORE")
+        try:
+            module.replay(artifact, destination=raw_root)
+        except (ValueError, KeyError, OSError) as exc:
+            raise IncrementalAcquisitionError(f"RETAINED_SOURCE_INTEGRITY_FAILURE:{source}:{exc}") from exc
+        artifacts[source] = artifact
+    return {"attempt": attempt, "hnx": artifacts["hnx"], "hose": artifacts["hose"],
+            "integrity_verification": "VERIFIED",
+            "attempt_identity": "sha256:" + hashlib.sha256(_canonical(attempt)).hexdigest()}
+
+
+def _retain_context(path: Path, context: Mapping[str, Any]) -> bool:
+    """Exclusive creation under the one-writer contract; never overwrite a retained context."""
+    import os
+    import tempfile
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    encoded = (json.dumps(context, ensure_ascii=False, indent=2, sort_keys=True) + "\n").encode("utf-8")
+    # Publish complete bytes atomically with no replacement, including accidental competing creation.
+    descriptor, temporary = tempfile.mkstemp(prefix=".context-", dir=path.parent)
+    try:
+        with os.fdopen(descriptor, "wb") as handle:
+            handle.write(encoded)
+            handle.flush()
+            os.fsync(handle.fileno())
+        try:
+            os.link(temporary, path)
+            return False
+        except FileExistsError:
+            existing = _load(path)
+            if existing != context:
+                raise IncrementalAcquisitionError("CURRENT_CONTEXT_IMMUTABLE_CONFLICT")
+            return True
+    finally:
+        Path(temporary).unlink(missing_ok=True)
+
+
 def materialize_current_official_event_context(
     root: Path, *, acquisition_session: str | None = None, official_universe_path: Path | None = None,
 ) -> dict[str, Any]:
@@ -265,8 +326,8 @@ def materialize_current_official_event_context(
     attempt actually retained, never a later session's newly-discovered evidence, structurally
     ruling out future-knowledge leakage rather than merely checking for it after the fact (mission
     Sections 14-15). Writes to the exact directory-naming convention
-    daily_session_level2_package._latest_official_event_context_dir() already scans for, so the
-    canonical Daily pipeline picks up the latest one with zero additional wiring changes."""
+    compatibility discovery helpers scan for. Canonical consumers must bind an explicit selection;
+    materialization alone does not establish historical or market-session eligibility."""
     import current_official_event_context as event_context_module
 
     if acquisition_session is not None:
@@ -279,11 +340,9 @@ def materialize_current_official_event_context(
         if latest is None:
             raise IncrementalAcquisitionError("NO_SUCCESSFUL_ACQUISITION_SESSION_RETAINED")
         session = latest["acquisition_session"]
-    session_dir = _session_dir(root, session)
-    hnx_artifact = _load(session_dir / "hnx_artifact.json")
-    hose_artifact = _load(session_dir / "hose_artifact.json")
-    if hnx_artifact is None or hose_artifact is None:
-        raise IncrementalAcquisitionError(f"ACQUISITION_SESSION_ARTIFACTS_MISSING:{session}")
+    verified = verify_successful_acquisition(root, session)
+    hnx_artifact = verified["hnx"]
+    hose_artifact = verified["hose"]
     hnx_bridge = _hnx_bridge(hnx_artifact)
 
     official_universe_path = official_universe_path or (
@@ -302,6 +361,8 @@ def materialize_current_official_event_context(
     nodash = session.replace("-", "")
     out_dir = root / "operations-review" / f"current-official-event-context-integration-v1-{nodash}"
     out_path = out_dir / "current_official_event_context_artifact.json"
-    _write(out_path, context)
-    return {"acquisition_session": session, "output_path": str(out_path.relative_to(root)).replace("\\", "/"),
+    reused = _retain_context(out_path, context)
+    return {"materialization_reused": reused, "integrity_verification": "VERIFIED",
+            "acquisition_attempt_identity": verified["attempt_identity"],
+            "acquisition_session": session, "output_path": str(out_path.relative_to(root)).replace("\\", "/"),
             "artifact_identity": context["artifact_identity"], "coverage": context["coverage"]}
