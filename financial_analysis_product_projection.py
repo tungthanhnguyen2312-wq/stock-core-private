@@ -308,6 +308,12 @@ def financial_peer_contexts(*, materialization: Mapping[str, Any] | None,
             if metric not in ENGINE_PEER_FEATURES or not isinstance(source, Mapping):
                 continue
             entry = copy.deepcopy(dict(source))
+            basis = entry.get("comparability_basis") or {}
+            # Blocked/small-cohort producer views omit the display period, but the
+            # exact feature basis may still know it. Absence of comparison fitness
+            # does not erase known periodic evidence or make a blocked metric usable.
+            if not entry.get("as_of_period") and basis.get("period_identity"):
+                entry["as_of_period"] = basis["period_identity"][-1]
             freshness = classify_financial_period_freshness(
                 source_period=entry.get("as_of_period"), decision_session=session,
                 maximum_completed_quarter_lag=MAX_COMPLETED_QUARTER_LAG)
@@ -316,7 +322,6 @@ def financial_peer_contexts(*, materialization: Mapping[str, Any] | None,
             # Preserve the exact producer reason even when the consumer blocks use.
             entry["source_status"] = entry.get("status")
             blockers = []
-            basis = entry.get("comparability_basis") or {}
             if not corporate:
                 blockers.append("CORPORATE_PEER_NOT_APPLICABLE")
             if entry.get("status") == "READY_RESEARCH_ONLY":

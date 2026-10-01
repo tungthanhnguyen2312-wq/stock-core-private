@@ -367,3 +367,28 @@ Seven new tests and 157 focused/adjacent regressions pass. The existing replay r
 historical checkpoint namespaces reproduce baseline identities without any retained
 source mutation. Live builds are deterministic and every changed field is an additive
 observation structure at the owning synthesis and its existing consumer component.
+
+## Package 10: known periods of blocked peer comparisons
+
+The peer producer intentionally omits its display `as_of_period` on blocked or
+insufficient-cohort comparisons, but retains the underlying feature's period in the
+comparison basis. The adapter previously labelled that evidence period unavailable.
+It now copies the last retained basis period into the display/freshness envelope when
+the display field is absent. It never reconstructs a report date or upgrades fitness.
+
+Full replay corrects period metadata on 3,458 observations across 981 issuers:
+3,286 NOT_COMPARABLE and 172 INSUFFICIENT_PEER_COUNT. 702 decision records are unchanged.
+All comparison status/cohort counts, the 431 eligible denominator, fundamental policies,
+corporate corrections, postures and per-ticker decision identities remain unchanged.
+Known stale periods stay stale. Two additional tests prove small cohorts retain current
+or stale basis periods while remaining ineligible for comparisons. 179 focused/adjacent
+tests pass after the correction; the prior broader resumed tier passed 309 tests.
+
+Final product identity:
+`integrated_investment_decision_product/v1:cac6a6ad515bac4417c782965b29b3df469e64d7428e25699cc033c324ccbea7`.
+The existing replay runner adds `--peer-period-checkpoint` for accepted package-9 output;
+historical projection namespaces reproduce each required checkpoint and live output is
+deterministic. Exact changed-path checks permit only period/freshness metadata, and
+normalizing those fields back gives the identical prior context. All retained inputs
+remain byte-identical. No acquisition, duplicate publication, source-authority promotion,
+cap/retry change or HNX/UPCoM expansion occurs. Program remains ACTIVE for continuation.

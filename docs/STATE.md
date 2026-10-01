@@ -67,6 +67,14 @@ context cannot appear as a bare usable observation. Replay enriches 1,276 record
 leaves 407 unchanged, and preserves all fundamental votes/states, counters, postures and
 per-ticker decision identities. 157 focused/adjacent tests pass; authority promotion NONE.
 
+The peer-period follow-through uses the retained feature comparison-basis period when
+a blocked or insufficient-cohort display entry omits it. 3,458 observations across
+981 records gain accurate period/freshness labels; 702 records are unchanged. Comparison
+fitness, the 431 eligible denominator, decision identities, votes and postures stay
+unchanged. Final resumed regression tier: 309 tests pass, then 179 focused/adjacent
+tests pass after this metadata correction (including two new small-cohort period tests).
+No authority, provider, cap/retry, publication or acquisition change. Program remains ACTIVE.
+
 **Daily official liquidity rollforward corrective (2026-09-30):**
 `DAILY_OFFICIAL_LIQUIDITY_ROLLFORWARD_V1 = PARTIAL /
 CORE_DAILY_LIVE_ACCEPTED_OFFICIAL_LIQUIDITY_LIVE_FAIL_CLOSED_SOURCE_ABSENT /

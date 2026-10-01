@@ -169,3 +169,18 @@ def test_wrapper_binding_fails_closed(change):
         resign(wrapper)
     with pytest.raises(projection.FinancialAnalysisProductProjectionError):
         join(wrapper, compact)
+
+
+@pytest.mark.parametrize("period,freshness", [("2026-Q1", "CURRENT"), ("2024-Q1", "STALE_BUT_RESEARCH_USABLE")])
+def test_insufficient_cohort_retains_known_basis_period_without_becoming_comparable(period, freshness):
+    wrapper, compact, records = inputs(period=period)
+    wrapper["engine_fundamental_peer_context"] = peers.attach_engine_fundamental_peers({"T0": records["T0"]})
+    assert "as_of_period" not in wrapper["engine_fundamental_peer_context"]["T0"]["gross_margin"]
+    resign(wrapper)
+    context = join(wrapper, compact)["T0"]
+    metric = context["metrics"]["gross_margin"]
+    assert metric["as_of_period"] == period
+    assert metric["freshness"]["freshness_status"] == freshness
+    assert metric["status"] == "INSUFFICIENT_PEER_COUNT"
+    assert metric["peer_count"] == 1 and context["usable_metric_count"] == 0
+    assert "relative_position" not in metric
