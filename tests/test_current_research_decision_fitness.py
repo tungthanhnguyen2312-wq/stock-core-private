@@ -1,6 +1,10 @@
 from __future__ import annotations
 
 import copy
+import json
+from pathlib import Path
+import subprocess
+import sys
 
 import pytest
 
@@ -129,3 +133,35 @@ def test_decision_fitness_rejects_wrong_contract():
     item["contract_version"] = "wrong/v1"
     with pytest.raises(ValueError, match="CURRENT_RESEARCH_DECISION_INPUT_CONTRACT_REQUIRED"):
         m.build_ticker_decision_fitness(item)
+
+
+def test_decision_fitness_cli_runs_from_repo_root(tmp_path):
+    source = {
+        "session": "2026-10-01",
+        "artifact_identity": "integrated_investment_decision_product:test",
+        "records": {"AAA": _record(_item("AAA", m.CLASS_FULL))},
+    }
+    input_path = tmp_path / "integrated.json"
+    output_path = tmp_path / "fitness.json"
+    input_path.write_text(json.dumps(source), encoding="utf-8")
+
+    root = Path(__file__).resolve().parents[1]
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "tools/build_current_research_decision_fitness.py",
+            "--input", str(input_path),
+            "--output", str(output_path),
+            "--requested-at", "2026-10-01T18:00:00+07:00",
+        ],
+        cwd=root,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert completed.returncode == 0, completed.stderr
+    artifact = json.loads(output_path.read_text(encoding="utf-8"))
+    assert artifact["coverage"]["denominator_count"] == 1
+    assert artifact["coverage"]["research_usable_count"] == 1
+    assert "ARTIFACT_IDENTITY=current_research_coverage_decision_fitness:" in completed.stdout
