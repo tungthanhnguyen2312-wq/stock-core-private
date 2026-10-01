@@ -17,7 +17,7 @@ progress rather than telemetry/acceptance work.
    - expose a clear public GitHub front door;
    - define a call-graph-driven repository-layout migration plan;
    - do not mass-move implementation modules.
-   - State: COMPLETE / PR_READY.
+   - State: COMPLETE / MERGED (PR #32).
 
 2. **R2 — Current Research Coverage & Decision Fitness**
    - measure full-universe usable coverage across current price, tactical, fundamental,
@@ -25,12 +25,13 @@ progress rather than telemetry/acceptance work.
    - classify why a ticker is unavailable, blocked, stale, proxy, not applicable or usable;
    - rank only blockers that materially reduce decision quality;
    - avoid another generic audit.
-   - State: NEXT after R1 merge.
+   - State: COMPLETE / PR_READY.
 
 3. **R3 — Fundamental + Current Valuation Depth**
    - expand research-usable financial coverage and method-compatible peer/history context;
    - improve share/denominator handling without mislabelling proxies as exact authority;
    - keep sector applicability explicit.
+   - State: NEXT after R2 merge.
 
 4. **R4 — Corporate Intelligence + Forward Driver Model**
    - convert official events, filings and research evidence into dated driver/catalyst/risk
