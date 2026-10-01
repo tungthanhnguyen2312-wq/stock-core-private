@@ -28,3 +28,16 @@ Remaining implementation, not an external blocker:
 6. Push PR, validate CI, merge, sync main, then perform owner ten-question bottleneck ranking and useful subsequent milestone.
 
 Main remains c96c95ca4826709663b4788aab6edc1481e36229. Branch remains feature/corporate-currency-daily-rollforward-20261002 atop inspection checkpoint dcb2fe21d7475a08511f671f642444af31461be8. No historical registry, decision packet, prospective case, runtime publication, or posture was changed. Authority effect remains NONE / CURRENT_RESEARCH_EVIDENCE_ONLY. Standing autonomous release authorization persists.
+
+
+## Continuation implementation: rollforward selection result
+
+The next implementation commit adds corporate_currency_rollforward.py and its offline tests. It is not wired into Daily yet; the full milestone remains incomplete.
+
+CorporateCurrencyRollforwardResult is a frozen dataclass carrying immutable receipt bytes, captured current context bytes, and a separate frozen-market selection copy. Consumers can obtain independent decoded values without changing the result or consulting latest. rollforward verifies and reuses the exact current civil-date SUCCESS, recovers missing materialization, or invokes the existing bounded acquisition engine once. Explicit prior-descriptive fallback requires a caller-provided governed maximum age; absent policy disables fallback. Prior source is explicitly stale. Corrupt current SUCCESS fails locally without refetch or silent fallback. Live acquisition refuses a historical injected civil date; knowledge observation advances to actual completion time after a real acquisition.
+
+Receipt includes both temporal lanes, target session and actual knowledge observation/date, attempted versus reuse/recovery/failure action, verified selected source/context/byte identities and portable paths, current failure attempt identity/path, resource counts/policy identity, prior reference, age/freshness, historical-use prohibition, and authority NONE / CURRENT_RESEARCH_EVIDENCE_ONLY. No decision/posture fields are generated.
+
+Validation: 69 focused tests passed (14 new rollforward cases plus the previous 55 acquisition/budget cases). Compile and diff checks passed. The helper reused real retained PR37 evidence with acquisition explicitly forbidden: exact attempt c32b0d39dd88896c78d328dc80aa33ee4c5aee7025743d8a361980c0794c17c0, exact context 6bc4608b7d2b3f1d9a414ddeed383e56c658baec2d6400677a6de6a0cf23e5f8, 31 verified captures, 3,216,925 retained bytes, 186 observations /174 names. No network, new evidence, raw rewrite, production Daily, registry, T0, product, or posture mutation.
+
+Exact next code action: integrate rollforward once inside canonical_post_close_pipeline.acquire_and_materialize after snapshot validation and before independent components; explicitly pass result into canonical_daily_operation and enrichment. Bind completed registry's actual frozen optional selection separately, keep missing historical selections absent, and add knowledge-date overlay output/product consumption. Then complete full dual-lane offline Daily, registry and R4 acceptance, CI coverage/suite, docs closeout, PR release and post-merge bottleneck ranking. No PR or new CI run exists yet; main remains c96c95ca4826709663b4788aab6edc1481e36229. Execution capacity checkpoint; no external blocker and no approval request.
