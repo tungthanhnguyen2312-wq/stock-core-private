@@ -113,6 +113,13 @@ def freshness_envelope(*, domain: str, as_of_date: Any, generated_at: Any,
         age = (expected - observed.date()).days
     else:
         age = (ref.date() - observed.date()).days
+    # A negative age is future evidence, not an exceptionally fresh observation.
+    # Market domains use the completed-session anchor above; other domains use
+    # their calendar cadence. Preserve the supplied dates without imputing a value
+    # or reclassifying unrelated inputs.
+    if age < 0:
+        envelope.update(stale_reason="source_date_after_reference_anchor")
+        return envelope
     if rule.historical:
         # Reporting periods are evidence, not a promise of continuously current values.
         status = "historical" if age >= 0 else "unknown"

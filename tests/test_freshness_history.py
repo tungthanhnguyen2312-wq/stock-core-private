@@ -1,13 +1,35 @@
 from datetime import datetime, timezone
 import unittest
 
-from freshness_history import freshness_envelope
+from freshness_history import RULES, freshness_envelope
 
 
 REF = datetime(2026, 7, 26, 12, tzinfo=timezone.utc)
 
 
 class FreshnessHistoryTests(unittest.TestCase):
+    def test_future_observations_fail_closed_across_domain_cadences(self):
+        for domain in RULES:
+            with self.subTest(domain=domain):
+                result = freshness_envelope(
+                    domain=domain, as_of_date="2026-07-27", generated_at="2026-07-26",
+                    source="test", reference_at=REF, completeness="complete",
+                )
+                self.assertEqual(result["freshness_status"], "unknown")
+                self.assertEqual(result["stale_reason"], "source_date_after_reference_anchor")
+                self.assertEqual(result["as_of_date"], "2026-07-27")
+                self.assertFalse(result["is_actionable"])
+
+    def test_market_date_after_completed_session_is_not_current(self):
+        reference = datetime.fromisoformat("2026-10-01T07:00:00+07:00")
+        for domain in ("daily_market", "technical", "screening", "valuation", "market_flow", "integrated_decision"):
+            result = freshness_envelope(
+                domain=domain, as_of_date="2026-10-01", generated_at=reference,
+                source="test", reference_at=reference,
+            )
+            self.assertEqual(result["freshness_status"], "unknown")
+            self.assertFalse(result["is_actionable"])
+
     def test_daily_weekend_and_determinism(self):
         one = freshness_envelope(domain="daily_market", as_of_date="2026-07-24", generated_at="2026-07-24", source="test", reference_at=REF)
         two = freshness_envelope(domain="daily_market", as_of_date="2026-07-24", generated_at="2026-07-24", source="test", reference_at=REF)

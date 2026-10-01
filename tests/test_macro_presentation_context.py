@@ -60,6 +60,23 @@ def test_mixed_fresh_and_stale_is_partial():
     assert artifact["status"] == "PARTIAL"
 
 
+def test_future_series_degrades_only_its_own_context_and_quality_count():
+    snapshot = _snapshot([
+        _row("us_fedfunds", period="2026-09-11"),
+        _row("dxy", period="2026-09-12"),
+    ])
+    artifact = mpc.build(snapshot, generated_at="2026-09-11T09:00:00+07:00")
+    assert artifact["status"] == "PARTIAL"
+    assert artifact["quality"]["current_count"] == 1
+    assert artifact["quality"]["unknown_or_missing_count"] == 1
+    future = artifact["indicators"]["dxy"]
+    assert future["freshness"]["freshness_status"] == "unknown"
+    assert future["freshness"]["stale_reason"] == "source_date_after_reference_anchor"
+    assert future["value"] == 1.23  # Retained observation is preserved, never imputed.
+    assert artifact["indicators"]["us_fedfunds"]["freshness"]["freshness_status"] == "current"
+    assert artifact["is_actionable"] is False
+
+
 def test_annual_series_is_not_misjudged_stale_against_quarterly_cadence():
     # ~250 days old: would be "stale" under a 92+35-day quarterly rule but is normal for
     # an annual series under its own dedicated macro_annual cadence.
