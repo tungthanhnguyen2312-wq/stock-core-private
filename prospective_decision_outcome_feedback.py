@@ -19,10 +19,11 @@ from typing import Any, Mapping, Sequence
 import daily_session_level2_package as level2
 import fundamental_signal_consumption_contract as fundamental_signals
 import integrated_decision_prospective_feedback as forward_bridge
+import prospective_decision_outcome_measurement as outcome_measurement
 import prospective_decision_retention as retention
 
 
-CONTRACT_VERSION = "prospective_decision_outcome_feedback/v2"
+CONTRACT_VERSION = "prospective_decision_outcome_feedback/v3"
 TEMPORAL_CONTRACT_VERSION = "retained_integrated_decision_temporal_qualification/v1"
 OUTCOME_POLICY_VERSION = "prospective_outcome_diagnostic_policy/v1"
 FIELD_NOT_RETAINED = "FIELD_NOT_RETAINED_AT_T0"
@@ -96,7 +97,7 @@ def _handoff_bundles(root: Path, operations: Mapping[str, Mapping[str, Any]]) ->
     rows: list[dict[str, Any]] = []
     if not base.is_dir():
         return rows
-    for path in sorted(base.glob("*/**/session_handoff_bundle.json")):
+    for path in sorted(base.glob("*/session_handoff_bundle.json")):
         bundle = _load_json(path)
         if not bundle:
             continue
@@ -122,8 +123,10 @@ def _handoff_bundles(root: Path, operations: Mapping[str, Mapping[str, Any]]) ->
 
 def _artifact_paths(root: Path) -> list[Path]:
     operations = root / "operations-review"
-    found = set(operations.glob("**/integrated_investment_decision_product_artifact.json"))
-    found.update((operations / "canonical-post-close-v1").glob("**/enrichment/integrated_investment_decision_product.json"))
+    # Bounded legacy namespaces plus exact canonical handoff references; no recursive review scan.
+    found = set(operations.glob("*/integrated_investment_decision_product_artifact.json"))
+    found.update((operations / "canonical-post-close-v1").glob("*/enrichment/integrated_investment_decision_product.json"))
+    found.update(link["artifact_path"] for link in _handoff_bundles(root, _operation_manifests(root)))
     return sorted(found)
 
 
@@ -175,7 +178,7 @@ def _qualify_linked_artifact(link: Mapping[str, Any], artifact: Mapping[str, Any
     }
 
 
-def discover_prospective_corpus(root: str | Path) -> dict[str, Any]:
+def discover_prospective_corpus(root: str | Path, *, payload_projection=None) -> dict[str, Any]:
     """Inventory every retained integrated-decision artifact without promoting copies or replays."""
     repository = Path(root)
     operations = _operation_manifests(repository)
@@ -185,6 +188,10 @@ def discover_prospective_corpus(root: str | Path) -> dict[str, Any]:
     inventory: list[dict[str, Any]] = []
     genuine: list[dict[str, Any]] = []
     for path in _artifact_paths(repository):
+        link = links.get(path.resolve())
+        # Modern working views cannot be T0 authorities; their immutable snapshots are read below.
+        if link is not None and link.get("prospective_snapshot_identity"):
+            continue
         artifact = _load_json(path)
         if not artifact:
             continue
@@ -227,7 +234,7 @@ def discover_prospective_corpus(root: str | Path) -> dict[str, Any]:
         }
         inventory.append(row)
         if classification == GENUINE:
-            genuine.append({"artifact": artifact, "artifact_path": rel, "temporal": temporal})
+            genuine.append({"artifact": payload_projection(artifact) if payload_projection else artifact, "artifact_path": rel, "temporal": temporal})
     return {
         "contract_version": TEMPORAL_CONTRACT_VERSION,
         "inventory": sorted(inventory, key=lambda row: (str(row["decision_session"]), row["artifact_path"])),
@@ -275,14 +282,62 @@ def _snapshot_t0_price_observations(candidates: Sequence[Mapping[str, Any]]) -> 
     return snapshots
 
 
+def _project_decision_for_feedback(record):
+    keys = ("ticker", "as_of_session", "decision_identity", "research_action_posture", "policy_version",
+            "fundamental_decision_policy_version", "evidence_axis_coherence", "priority_posture_reconciliation",
+            "fundamental_state", "valuation_context_summary", "market_structure_state", "momentum_context",
+            "participation", "market_sector_context", "trigger", "invalidation", "source_identities",
+            "scenario_condition_context", "benchmark", "known_at", "target_condition_at_t0", "qualified_tactical_signal_at_t0", "forward_driver_context_at_t0", "intrinsic_scenario_at_t0")
+    projected = {key: record[key] for key in keys if key in record}
+    if "evidence_axes" in record:
+        projected["evidence_axes"] = {key: {f: axis.get(f) for f in ("state", "fitness", "lineage", "method")}
+                                      for key, axis in (record.get("evidence_axes") or {}).items() if isinstance(axis, Mapping)}
+    corporate = record.get("corporate_intelligence_context") or {}
+    if "forward_driver_context" in corporate:
+        driver = corporate["forward_driver_context"]
+        projected["forward_driver_context_at_t0"] = {key: driver.get(key) for key in ("contract_version", "context_identity", "session_fitness", "qualified_driver_count", "drivers")}
+    if "intrinsic_scenario_valuation" in record:
+        model = record["intrinsic_scenario_valuation"]
+        projected["intrinsic_scenario_at_t0"] = {"projection_identity": model.get("projection_identity"),
+            "method_readiness": {name: row.get("readiness") for name, row in (model.get("methods") or {}).items()},
+            "authority_effect": model.get("authority_effect")}
+    return projected
+
+
+def _project_snapshot_for_feedback(snapshot):
+    return {**{key: value for key, value in snapshot.items() if key != "records"}, "records": {
+        ticker: {**{key: value for key, value in retained.items() if key != "integrated_decision_at_t0"},
+                 "integrated_decision_at_t0": _project_decision_for_feedback(retained["integrated_decision_at_t0"])}
+        for ticker, retained in snapshot["records"].items()}}
+
+
+def _project_artifact_for_feedback(artifact):
+    return {**{key: value for key, value in artifact.items() if key != "records"},
+            "records": {ticker: _project_decision_for_feedback(row) for ticker, row in artifact["records"].items()}}
+
+
 def _modern_snapshot_candidates(root: str | Path) -> dict[str, Any]:
-    discovery = retention.discover_snapshots(root)
+    discovery = retention.discover_snapshots(root, payload_projection=_project_snapshot_for_feedback)
     genuine = discovery["genuine_snapshots"]
     chain = sorted({row["snapshot"].get("session") for row in genuine if isinstance(row["snapshot"].get("session"), str)})
     # Prefer the immutable T0 price copy for each prospective session.  A
-    # later session can only mature when its own canonical T0 snapshot exists.
+    # completed market observations can mature cases even when no decision snapshot exists.
     snapshots = _snapshot_t0_price_observations(genuine)
     return {"discovery": discovery, "genuine": genuine, "chain": chain, "snapshots": snapshots}
+
+
+def resolve_completed_market_observations(root):
+    """Every qualified completed Daily session, independently of T0 case admission."""
+    repository = Path(root)
+    operations = _operation_manifests(repository)
+    qualified = []
+    for link in _handoff_bundles(repository, operations):
+        manifest = (link.get("operation") or {}).get("manifest") or {}
+        if (link["producer_completed"] and link["resolved_completed_session"] == link["session"] and
+            manifest.get("market_session") == link["session"] and manifest.get("generation_context") == _GENUINE_CONTEXT):
+            qualified.append(link["session"])
+    chain = sorted(set(qualified))
+    return chain, retained_session_snapshots(repository, chain)
 
 
 def _compact_axes(record: Mapping[str, Any]) -> dict[str, Any]:
@@ -291,7 +346,7 @@ def _compact_axes(record: Mapping[str, Any]) -> dict[str, Any]:
         return {"status": FIELD_NOT_RETAINED, "axis_states": {}}
     return {
         "status": "RETAINED", "axis_states": {
-            str(name): {"state": value.get("state"), "fitness": value.get("fitness"), "lineage": value.get("lineage")}
+            str(name): {"state": value.get("state"), "fitness": value.get("fitness"), "lineage": value.get("lineage"), "method": value.get("method", FIELD_NOT_RETAINED)}
             for name, value in sorted(axes.items()) if isinstance(value, Mapping)
         },
     }
@@ -354,6 +409,26 @@ def _trigger_invalidation(
     }
 
 
+def feedback_diagnostics(record, *, chain, snapshots, horizon_sessions=5):
+    start = record["as_of_session"]
+    prefix = chain[:chain.index(start) + horizon_sessions + 1] if start in chain else []
+    events = _trigger_invalidation(record, snapshots=snapshots, chain=prefix)
+    converted = {}
+    for name, role in (("trigger", "confirmation"), ("invalidation", "invalidation")):
+        event = events[name]
+        status = event.get("status")
+        position = prefix.index(event["event_session"]) - prefix.index(start) if event.get("event_session") in prefix else None
+        converted[role] = {**event, "status": ("CONFIRMED" if role == "confirmation" else "INVALIDATED") if status == "SATISFIED" else
+                           ("NOT_CONFIRMED_YET" if role == "confirmation" else "NOT_INVALIDATED_YET") if status == "NOT_SATISFIED_YET" else "BOUNDARY_NOT_EVALUABLE",
+                           "sessions_to_event": position}
+    ordering = "NOT_EVALUABLE" if any(e["status"] == "BOUNDARY_NOT_EVALUABLE" for e in converted.values()) else outcome_measurement._ordering(converted["confirmation"], converted["invalidation"])
+    if (converted["confirmation"].get("sessions_to_event") is not None and
+        converted["confirmation"].get("sessions_to_event") == converted["invalidation"].get("sessions_to_event")):
+        ordering = "SAME_SESSION_ORDER_UNRESOLVED"
+    return {"confirmation": converted["confirmation"], "invalidation": converted["invalidation"], "event_ordering": ordering,
+            "basis_horizon": f"T{horizon_sessions}", "completed_session_window": list(prefix[prefix.index(start)+1:]) if start in prefix else []}
+
+
 def _feedback_record(*, artifact: Mapping[str, Any], source_path: str, temporal: Mapping[str, Any], record: Mapping[str, Any],
                      snapshots: Mapping[str, Mapping[str, Any]], chain: Sequence[str],
                      t0_snapshot: Mapping[str, Any] | None = None, t0_snapshot_record: Mapping[str, Any] | None = None) -> dict[str, Any]:
@@ -379,7 +454,7 @@ def _feedback_record(*, artifact: Mapping[str, Any], source_path: str, temporal:
         "opportunity_priority": priority, "coherence_state": coherence,
         "fundamental_state": _state(record, "fundamental_state"),
         # The fundamental decision-policy epoch the T0 decision was made under (never rewritten).
-        "fundamental_decision_policy_version": fundamental_signals.policy_epoch(record),
+        "fundamental_decision_policy_version": record.get("fundamental_decision_policy_version", FIELD_NOT_RETAINED),
         "valuation_state": _state(record, "valuation_context_summary", "status"),
         "tactical_structure_state": _state(record, "market_structure_state"),
         "momentum_state": _state(record, "momentum_context", "status"),
@@ -392,7 +467,28 @@ def _feedback_record(*, artifact: Mapping[str, Any], source_path: str, temporal:
         "temporal_qualification": dict(temporal), "forward_outcomes": outcome,
         "trigger_invalidation_outcome": _trigger_invalidation(record, snapshots=snapshots, chain=chain),
     }
-    feedback["outcome_classification"] = _outcome_label(record, outcome)
+    feedback["t0_contract_versions"] = dict((t0_snapshot_record or {}).get("t0_contract_versions") or {
+        "integrated_decision_contract": artifact.get("contract_version", FIELD_NOT_RETAINED),
+        "research_action_policy_version": artifact.get("research_action_policy_version", record.get("policy_version", FIELD_NOT_RETAINED)),
+        "fundamental_policy_version": record.get("fundamental_decision_policy_version", FIELD_NOT_RETAINED),
+    })
+    feedback["source_type"] = "IMMUTABLE_INTEGRATED_T0" if t0_snapshot else "QUALIFIED_LEGACY_INTEGRATED_T0"
+    feedback["known_at"] = (t0_snapshot_record or {}).get("known_at", record.get("known_at", FIELD_NOT_RETAINED))
+    feedback["source_identities_at_t0"] = dict(record.get("source_identities") or {})
+    feedback["scenario_condition_context_at_t0"] = record.get("scenario_condition_context", FIELD_NOT_RETAINED)
+    feedback["forward_driver_context_at_t0"] = record.get("forward_driver_context_at_t0", FIELD_NOT_RETAINED)
+    feedback["intrinsic_scenario_at_t0"] = record.get("intrinsic_scenario_at_t0", FIELD_NOT_RETAINED)
+    feedback["target_condition_at_t0"] = record.get("target_condition_at_t0", FIELD_NOT_RETAINED)
+    feedback["benchmark"] = record.get("benchmark", FIELD_NOT_RETAINED)
+    feedback["feedback_diagnostics"] = feedback_diagnostics(record, chain=chain, snapshots=snapshots)
+    t5 = (outcome.get("horizons") or {}).get("forward_close_return_5") or {}
+    signal = record.get("qualified_tactical_signal_at_t0") or {}
+    shim = {"research_action_posture_at_t0": feedback["research_action_posture"], "research_stance_at_t0": FIELD_NOT_RETAINED,
+            "horizons": {"T5": {"status": t5.get("status"), "return": t5.get("return")}},
+            **feedback["feedback_diagnostics"],
+            "qualified_tactical_signal_at_t0": isinstance(signal, Mapping) and signal.get("status") == "CONFIRMED" and bool(signal.get("source_identity"))}
+    feedback["feedback_taxonomy"] = outcome_measurement.classify_feedback_taxonomy(shim)
+    feedback["outcome_classification"] = _outcome_label(record, outcome)  # legacy descriptive price label, never a false-negative verdict
     return _identity(feedback, "prospective_decision_feedback_record:", "feedback_identity")
 
 
@@ -438,7 +534,8 @@ def _false_negatives(records: Sequence[Mapping[str, Any]]) -> list[dict[str, Any
     conservative = {"WAIT_FOR_CONFIRMATION", "EARLY_WATCH", "INSUFFICIENT_CURRENT_RESEARCH", "AVOID"}
     for item in records:
         h5 = item["forward_outcomes"]["horizons"].get("forward_close_return_5") or {}
-        if item["research_action_posture"] not in conservative or h5.get("status") != forward_bridge.MATURE:
+        if (item["research_action_posture"] not in conservative or h5.get("status") != forward_bridge.MATURE or
+            (item.get("feedback_taxonomy") or {}).get("label") not in {"MISSED_BREAKOUT", "POSSIBLE_FALSE_NEGATIVE", "POLICY_TOO_DEFENSIVE", "TACTICAL_SIGNAL_NOT_INTEGRATED"}):
             continue
         if h5.get("return", 0.0) < OUTCOME_POLICY_CONSTANTS["material_upside_return_greater_than_or_equal_to"]:
             continue
@@ -461,12 +558,19 @@ def _failed_setups(records: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]
     return findings
 
 
-def build_feedback_artifact(root: str | Path) -> dict[str, Any]:
+def build_feedback_artifact(root: str | Path, *, resolved_context: dict | None = None) -> dict[str, Any]:
     """Build a deterministic retained-only feedback artifact for the local corpus."""
-    corpus = discover_prospective_corpus(root)
+    corpus = discover_prospective_corpus(root, payload_projection=_project_artifact_for_feedback)
     modern = _modern_snapshot_candidates(root)
     legacy_chain = corpus["qualified_session_chain"]
     legacy_snapshots = retained_session_snapshots(root, legacy_chain)
+    completed_chain, completed_snapshots = resolve_completed_market_observations(root)
+    # Fixture/legacy qualified snapshots already prove completion under the standing contract.
+    # Actual market handoffs admit observations even when that session has no T0 case.
+    chain = sorted(set(completed_chain) | set(legacy_chain) | set(modern["chain"]))
+    snapshots = {**completed_snapshots, **legacy_snapshots, **modern["snapshots"]}
+    if resolved_context is not None:
+        resolved_context.update(chain=chain, snapshots=snapshots)
     records: list[dict[str, Any]] = []
     # Modern snapshots are the sole T0 source for future runs.  Their full
     # decision content, condition serialization and T0 close facts were sealed
@@ -478,7 +582,7 @@ def build_feedback_artifact(root: str | Path) -> dict[str, Any]:
         source = snapshot.get("source_integrated_decision_artifact") or {}
         artifact = {
             "session": snapshot.get("session"), "artifact_identity": source.get("artifact_identity"),
-            "requested_at": None,
+            "contract_version": source.get("contract_version", FIELD_NOT_RETAINED), "requested_at": None,
         }
         temporal = {
             "contract_version": TEMPORAL_CONTRACT_VERSION, "status": GENUINE,
@@ -497,7 +601,7 @@ def build_feedback_artifact(root: str | Path) -> dict[str, Any]:
                 continue
             records.append(_feedback_record(
                 artifact=artifact, source_path=inventory["snapshot_path"], temporal=temporal,
-                record=decision, snapshots=modern["snapshots"], chain=modern["chain"],
+                record=decision, snapshots=snapshots, chain=chain,
                 t0_snapshot=snapshot, t0_snapshot_record=retained,
             ))
     # Legacy candidates retain their prior conservative qualification.  They
@@ -507,7 +611,7 @@ def build_feedback_artifact(root: str | Path) -> dict[str, Any]:
         for ticker, decision in sorted((artifact.get("records") or {}).items()):
             if not isinstance(decision, Mapping) or decision.get("ticker") != ticker:
                 continue
-            records.append(_feedback_record(artifact=artifact, source_path=candidate["artifact_path"], temporal=candidate["temporal"], record=decision, snapshots=legacy_snapshots, chain=legacy_chain))
+            records.append(_feedback_record(artifact=artifact, source_path=candidate["artifact_path"], temporal=candidate["temporal"], record=decision, snapshots=snapshots, chain=chain))
     records.sort(key=lambda row: (str(row["decision_session"]), str(row["ticker"]), str(row["decision_identity"])))
     by_posture: dict[str, list[dict[str, Any]]] = defaultdict(list)
     by_coherence: dict[str, list[dict[str, Any]]] = defaultdict(list)
@@ -543,7 +647,7 @@ def build_feedback_artifact(root: str | Path) -> dict[str, Any]:
     artifact = {
         "schema_version": "1.0.0", "contract_version": CONTRACT_VERSION, "outcome_policy_constants": OUTCOME_POLICY_CONSTANTS,
         "prospective_corpus": {"candidate_artifact_count": len(corpus["inventory"]), "genuine_artifact_count": len(corpus["genuine_artifacts"]), "immutable_snapshot_count": len(modern["discovery"]["inventory"]), "genuine_immutable_snapshot_count": len(modern["genuine"]), "genuine_decision_count": len(records), "unique_sessions": sorted(set(legacy_chain) | set(modern["chain"])), "unique_tickers": len({row["ticker"] for row in records}), "classification_counts": corpus["classification_counts"], "snapshot_classification_counts": modern["discovery"]["classification_counts"]},
-        "temporal_qualification": {"artifact_inventory": corpus["inventory"], "immutable_snapshot_inventory": modern["discovery"]["inventory"], "handoff_snapshot_inventory": modern["discovery"]["handoff_snapshot_inventory"], "qualified_session_chain": sorted(set(legacy_chain) | set(modern["chain"])), "retained_snapshot_sessions": sorted(set(legacy_snapshots) | set(modern["snapshots"])), "temporal_gate": "LEGACY_CANONICAL_HANDOFF_OR_IMMUTABLE_T0_SNAPSHOT_PLUS_RETAINED_DAILY_OPERATION"},
+        "temporal_qualification": {"artifact_inventory": corpus["inventory"], "immutable_snapshot_inventory": modern["discovery"]["inventory"], "handoff_snapshot_inventory": modern["discovery"]["handoff_snapshot_inventory"], "qualified_session_chain": chain, "retained_snapshot_sessions": sorted(set(legacy_snapshots) | set(modern["snapshots"])), "temporal_gate": "LEGACY_CANONICAL_HANDOFF_OR_IMMUTABLE_T0_SNAPSHOT_PLUS_RETAINED_DAILY_OPERATION"},
         "feedback_records": records, "forward_outcome_coverage": {"horizons": horizon_coverage, "close_excursions": {"CLOSE_MFE_CLOSE_MAE_ONLY": True, "intraday_mfe_mae": "NOT_CLAIMED"}},
         "posture_outcome_summary": _summary(by_posture, dimension="research_action_posture"),
         "coherence_outcome_summary": _summary(by_coherence, dimension="evidence_axis_coherence"),

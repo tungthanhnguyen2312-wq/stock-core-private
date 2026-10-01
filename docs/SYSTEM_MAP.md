@@ -15,7 +15,7 @@ Repository cleanup follows the governed strangler plan in [REPOSITORY_LAYOUT_MIG
 - keep production entry points truthful throughout migration;
 - reduce the root gradually alongside product-critical roadmap work.
 
-The October 1 Owner Daily live-acceptance gate is complete and PR #31 is merged. R2 and R4 are complete, R3 remains terminal for its current source set, and R5 is locally complete. R6 Prospective Learning & Calibration is NEXT and NOT STARTED; repository-layout work must not displace capability work.
+The October 1 Owner Daily live-acceptance gate is complete and PR #31 is merged. R2 and R4 are complete, R3 remains terminal for its current source set, and R5 is locally complete. R6 Prospective Learning & Calibration is locally COMPLETE; R7 Portfolio / PIT / Execution Authority is NEXT and NOT STARTED; repository-layout work must not displace capability work.
 
 ## Canonical Pipeline Flow
 
@@ -33,6 +33,23 @@ stocklookup.ps1
               ├─> AI Handoff Publication (ai_handoff_publication.py / next_session_decision_brief.py)
               └─> Dashboard Release (dashboard_release_publisher.py / publish_dashboard.py)
 ```
+
+## Canonical prospective learning path (R6)
+
+NEW Integrated products serialize the existing research-action policy version. Canonical Daily
+seals `prospective_decision_retention/v1` full T0 decisions and exact prices, binds their product,
+snapshot and operation identities in the handoff, then runs its unchanged non-blocking
+`prospective_decision_outcome_feedback/v3` observer. Both genuine T0 families use one qualified
+completed-session chain through `integrated_decision_prospective_feedback/v3`.
+`empirical_setup_outcome_calibration/v2` reuses outcomes/serialized conditions for T5/T10/T20/T60
+cohorts, calibration eligibility and deterministic human-review-only policy candidates.
+The existing read-only CLI materializes derived research artifacts on demand. No second store,
+Daily entrypoint, automatic policy writer or background loop is created.
+
+Workspace admission/durable-store/learning-ledger and older shadow rollforward remain readable
+under their own provenance/human-review contracts; they cannot be retroactively converted into
+Integrated T0 authority. See the [current contract](empirical_setup_outcome_calibration_contract.md)
+and [acceptance](internal/R6_PROSPECTIVE_LEARNING_ACCEPTANCE.json).
 
 ## Stage Map
 

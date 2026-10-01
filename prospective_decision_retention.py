@@ -18,7 +18,7 @@ import json
 import math
 from collections import Counter
 from pathlib import Path
-from typing import Any, Mapping, Sequence
+from typing import Any, Callable, Mapping, Sequence
 
 
 CONTRACT_VERSION = "prospective_decision_snapshot/v1"
@@ -247,6 +247,12 @@ def build_snapshot(
             "canonical_operation_identity": operation_identity,
             "source_decision_artifact_identity": artifact_identity,
             "prospective_snapshot_contract_version": CONTRACT_VERSION,
+            "t0_contract_versions": {
+                "integrated_decision_contract": integrated_artifact.get("contract_version", FIELD_NOT_RETAINED),
+                "research_action_policy_version": integrated_artifact.get("research_action_policy_version", FIELD_NOT_RETAINED),
+                "fundamental_policy_version": decision.get("fundamental_decision_policy_version", FIELD_NOT_RETAINED),
+            },
+            "known_at": decision.get("known_at", FIELD_NOT_RETAINED),
             "evidence_axis_snapshot": _axis_completeness(decision),
             "trigger_condition": dict((decision.get("trigger") or {}).get("condition") or {
                 "status": FIELD_NOT_RETAINED, "reason_codes": [FIELD_NOT_RETAINED],
@@ -340,7 +346,7 @@ def _operation_manifests(root: Path) -> dict[str, dict[str, Any]]:
 def _handoff_by_snapshot(root: Path) -> dict[str, dict[str, Any]]:
     result: dict[str, dict[str, Any]] = {}
     base = root / "operations-review" / "canonical-post-close-v1"
-    for path in sorted(base.glob("*/**/session_handoff_bundle.json")) if base.is_dir() else []:
+    for path in sorted(base.glob("*/session_handoff_bundle.json")) if base.is_dir() else []:
         bundle = _load(path)
         snapshot = (bundle or {}).get("prospective_decision_snapshot") or {}
         identity = snapshot.get("identity") if isinstance(snapshot, Mapping) else None
@@ -352,7 +358,7 @@ def _handoff_by_snapshot(root: Path) -> dict[str, dict[str, Any]]:
 def _handoff_snapshot_inventory(root: Path) -> list[dict[str, Any]]:
     base = root / "operations-review" / "canonical-post-close-v1"
     rows: list[dict[str, Any]] = []
-    for path in sorted(base.glob("*/**/session_handoff_bundle.json")) if base.is_dir() else []:
+    for path in sorted(base.glob("*/session_handoff_bundle.json")) if base.is_dir() else []:
         bundle = _load(path) or {}
         declared = bundle.get("prospective_decision_snapshot") or {}
         rows.append({
@@ -364,7 +370,7 @@ def _handoff_snapshot_inventory(root: Path) -> list[dict[str, Any]]:
     return rows
 
 
-def discover_snapshots(root: str | Path) -> dict[str, Any]:
+def discover_snapshots(root: str | Path, *, payload_projection: Callable[[Mapping[str, Any]], Mapping[str, Any]] | None = None) -> dict[str, Any]:
     """Inventory immutable snapshots and admit only canonical-operation-bound ones."""
     repository = Path(root)
     operations = _operation_manifests(repository)
@@ -421,7 +427,7 @@ def discover_snapshots(root: str | Path) -> dict[str, Any]:
         }
         inventory.append(row)
         if status == GENUINE:
-            genuine.append({"snapshot": snapshot, "inventory": row})
+            genuine.append({"snapshot": payload_projection(snapshot) if payload_projection else snapshot, "inventory": row})
     return {
         "contract_version": CONTRACT_VERSION,
         "inventory": inventory,
@@ -455,7 +461,7 @@ def evaluate_serialized_close_condition(
     This is a generic comparison over the retained condition, not a trigger
     generator; dynamic strategy measurements remain explicitly non-evaluable.
     """
-    condition = condition or {}
+    condition = condition if isinstance(condition, Mapping) else {}
     if condition.get("status") != "MACHINE_EVALUABLE":
         return {"status": "NOT_MACHINE_EVALUABLE", "event_session": None, "condition_identity": condition.get("condition_identity"), "reason_codes": list(condition.get("reason_codes") or [])}
     if start_session not in chain:
@@ -467,20 +473,38 @@ def evaluate_serialized_close_condition(
     if (not isinstance(level, (int, float)) or isinstance(level, bool)
             or not math.isfinite(level) or level <= 0 or operator not in {">", "<"}):
         return {"status": "NOT_MACHINE_EVALUABLE", "event_session": None, "condition_identity": condition.get("condition_identity"), "reason_codes": ["SERIALIZED_CONDITION_INCOMPLETE"]}
+    body = dict(condition)
+    identity = body.pop("condition_identity", None)
+    if identity != "retained_strategy_boundary_condition:" + _hash(body):
+        return {"status": "NOT_MACHINE_EVALUABLE", "event_session": None, "condition_identity": identity, "reason_codes": ["SERIALIZED_CONDITION_IDENTITY_INVALID"]}
+    from integrated_decision_prospective_feedback import retained_session_price_observations, _compatible_close_series, _qualified_close
+    observations = retained_session_price_observations(snapshots, ticker)
+    t0 = observations.get(start_session)
+    if not t0 or not _qualified_close(t0.get("close")):
+        return {"status": "PRICE_SERIES_UNQUALIFIED", "event_session": None, "condition_identity": identity, "reason_codes": ["T0_PRICE_BASIS_NOT_RETAINED"]}
     observed = 0
+    incomplete = False
     for session in chain[chain.index(start_session) + 1:]:
         row = ((snapshots.get(session) or {}).get("records") or {}).get(ticker) or {}
         matches = [item for item in (row.get("observations") or []) if isinstance(item, Mapping) and item.get("session") == session]
         if len(matches) != 1:
+            incomplete = True
+            continue
+        if not _compatible_close_series(t0, matches[0]):
+            incomplete = True
             continue
         close = matches[0].get("close")
         if (not isinstance(close, (int, float)) or isinstance(close, bool)
                 or not math.isfinite(close) or close <= 0):
+            incomplete = True
             continue
         observed += 1
         if (operator == ">" and close > level) or (operator == "<" and close < level):
+            if incomplete:
+                return {"status": "PRICE_SERIES_UNQUALIFIED", "event_session": None, "condition_identity": identity,
+                        "reason_codes": ["FIRST_EVENT_ORDER_UNPROVEN_AFTER_MISSING_OR_INCOMPATIBLE_PRICE"]}
             return {"status": "SATISFIED", "event_session": session, "condition_identity": condition.get("condition_identity"), "reason_codes": ["SERIALIZED_FIXED_T0_LEVEL_SATISFIED"]}
-    return {"status": "NOT_SATISFIED_YET" if observed else "PRICE_SERIES_UNQUALIFIED", "event_session": None, "condition_identity": condition.get("condition_identity"), "reason_codes": ["NO_LATER_RETAINED_CLOSE" if not observed else "NO_LATER_CLOSE_SATISFIED_FIXED_T0_LEVEL"]}
+    return {"status": "NOT_SATISFIED_YET" if observed and not incomplete else "PRICE_SERIES_UNQUALIFIED", "event_session": None, "condition_identity": condition.get("condition_identity"), "reason_codes": ["NO_LATER_RETAINED_CLOSE" if not observed else "NO_LATER_CLOSE_SATISFIED_FIXED_T0_LEVEL"]}
 
 
 def build_corpus_health(

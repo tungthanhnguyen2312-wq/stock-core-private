@@ -1,5 +1,21 @@
 # Stock Lookup — Operational State
 
+**R6 Prospective Learning & Calibration (2026-10-02): COMPLETE / LOCAL_CHECKPOINT.**
+`PROSPECTIVE_LEARNING_AND_CALIBRATION_V1 = CALIBRATION_CAPABILITY_COMPLETE / EVIDENCE_ACCUMULATION_PENDING` on the owner-authorized local R5 stack (`397c05cf6e47d4bdc5a0a471102dfcb8ac383956`). The R5 worktree is preserved. Canonical immutable Integrated T0 retention, existing post-handoff outcomes and the empirical aggregator now share one governed completed-session chain, horizon-bounded conditions, actual T0 policy/feature cohorts, explicit eligibility and human-review-only candidates. No second framework or persistence layer is introduced.
+
+Retained October 1 corpus: 30,294 genuine observations / 18 T0 sessions / 1,683 tickers. Sixteen immutable sessions contribute 26,928 decisions; two qualified legacy sessions contribute 3,366. T5: 8,134 mature / 4,288 pending / 17,121 missing price / 751 incompatible. T10: 4,356 mature / 8,626 pending / 16,560 missing price / 752 incompatible. T20/T60: zero mature / 14,716 pending / 15,578 missing T0 close. Missing T0, pending depth, unavailable future prices and incompatible semantics remain distinct. Qualified T0 downside denominators: 264; genuine targets and historical R4/R5 attribution contexts: zero.
+
+All 1,952 comparable cohorts are INSUFFICIENT_SAMPLE; review-eligible cohorts and actual candidates are zero. No governed comparison registry was supplied. The old aggregator's 19 CALIBRATED_RESEARCH labels did not establish comparable T0 policy authority: historical missing policy versions now partition by source, never backfill. Unchanged research presentation floors: 20 mature observations / 5 distinct T0 sessions for descriptive evidence, 50 / 10 for calibrated research. Accumulation requires NEW T0 with known policy/feature versions, compatible prices, matured horizons and a predeclared governed rule before human calibration review.
+
+Future ordinary Daily already seals T0 before handoff and runs its non-blocking feedback observer afterward; that sequence is unchanged. The bounded producer metadata change serializes the existing research-action policy v1 and copies actual source versions into NEW snapshots. Historical snapshots remain unchanged; R4/R5 absence never blocks retention or outcomes. The existing CLI produces prospective cohorts/review evidence on demand, with no background loop.
+
+[Portable acceptance](internal/R6_PROSPECTIVE_LEARNING_ACCEPTANCE.json) records inventory, taxonomy, before/after transitions, source SHA256 and deterministic replay. [Current contract](empirical_setup_outcome_calibration_contract.md) records canonical/legacy boundaries and accumulation gates. Zero historical decision/posture changes, live policy changes or authority effects. Future product hashes may change under the existing content-hash contract to bind policy metadata; decision-identity semantics are unchanged.
+
+Validation: 432 focused/integrated regressions and 25 retained-fixture learning-ledger/store/rollforward regressions pass, including 47 R6 adversarial cases. Fixture access used a read-only guard and unchanged source hashes. One supplemental Daily assertion (`test_omitted_session_without_working_dates_fails_closed`: PROVIDER_EVIDENCE_UNAVAILABLE versus FUTURE_SESSION) reproduces after loading exact R5 baseline Daily modules and is excluded from the final tier; no unrelated code changes. Nine private/provider-tier cases are deselected in the hermetic tier. Source-byte checks, reversed-input retained replay, py_compile, roadmap and diff checks pass. Focused hermetic prospective/R6 regressions are registered in Producer CI.
+
+`PORTFOLIO_PIT_AND_EXECUTION_AUTHORITY_V1` (R7) is NEXT / NOT STARTED and not owner-authorized. No acquisition, live Daily, production/runtime write, deploy/publication, source promotion, PIT/liquidity/sizing/execution change, push, PR or merge occurs in R6.
+
+
 **R5 Intrinsic / Scenario Valuation (2026-10-01): COMPLETE / LOCAL_CHECKPOINT.**
 `INTRINSIC_AND_SCENARIO_VALUATION_V1` extends the existing intrinsic evaluator and reverse solver through one governed assumption contract and an additive non-voting valuation projection. Supported conditional calculators are the existing FCFF steady-state perpetuity, component-realization Net-Net and bounded reverse FCFF. FCFE/DDM/residual-income/RNAV/SOTP expose exact evidence readiness and absent-implementation status without fabricating outputs. Financial-sector issuers are not forced through ordinary corporate variants. Explicit source, period/scope, monetary unit and period-end share fitness are required; R4 drivers remain explanatory.
 
@@ -9,7 +25,7 @@ Retained replay proves unchanged source hashes, zero fabricated assumptions, pro
 
 Validation: 267 focused/adjacent regressions passed with one independently reproduced baseline scenario assertion excluded; 236 final affected valuation/decision tests pass, including 57 R5 adversarial model tests. The excluded AAM expectation (SUPPORTED versus CONDITIONALLY_SUPPORTED) reproduces using the exact starting-commit scenario code and unchanged retained fixtures; no unrelated policy was changed. Deterministic full retained replay, py_compile, roadmap and diff checks pass. R5 tests are included in Producer CI.
 
-`PROSPECTIVE_LEARNING_AND_CALIBRATION_V1` is NEXT, NOT STARTED and not owner-authorized. No acquisition, Daily rerun, production/runtime write, source promotion, PIT/liquidity/sizing/execution change, push, PR or deployment occurs in R5.
+R5 subsequently received the explicit owner authorization for local stacked R6 described above. Its retained valuation ceiling and authority effects are unchanged. No acquisition, Daily rerun, production/runtime write, source promotion, PIT/liquidity/sizing/execution change, push, PR or deployment occurs in R5.
 
 
 **Current Research coverage & decision fitness (2026-10-01):**

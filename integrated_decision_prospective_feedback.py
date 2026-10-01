@@ -23,13 +23,14 @@ reusing its horizon/taxonomy machinery directly rather than duplicating it, per 
 from __future__ import annotations
 
 import json
+import math
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
 import session_bar_integrity
 from prospective_decision_outcome_measurement import FIELD_NOT_RETAINED, PENDING, classify_feedback_taxonomy
 
-CONTRACT_VERSION = "integrated_decision_prospective_feedback/v2"
+CONTRACT_VERSION = "integrated_decision_prospective_feedback/v3"
 # The close-return bridge is deliberately session-counted.  The prospective
 # diagnostics layer consumes the exact same mapping rather than maintaining a
 # second horizon vocabulary.
@@ -148,6 +149,10 @@ def _compatible_close_series(start: Mapping[str, Any], end: Mapping[str, Any]) -
     return not (start_transform or end_transform) or bool(start_transform and start_transform == end_transform)
 
 
+def _qualified_close(value):
+    return isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value) and value > 0
+
+
 def _forward_horizon(*, as_of_session: str, horizon_sessions: int, chain: Sequence[str], observations: Mapping[str, Mapping[str, Any]]) -> dict[str, Any]:
     start = observations.get(as_of_session)
     base = {
@@ -161,6 +166,10 @@ def _forward_horizon(*, as_of_session: str, horizon_sessions: int, chain: Sequen
     }
     if as_of_session not in chain:
         return {**base, "status": SESSION_NOT_RETAINED}
+    if start is None:
+        return {**base, "status": PRICE_NOT_RETAINED, "series_fitness": "T0_CLOSE_NOT_RETAINED"}
+    if not _qualified_close(start.get("close")):
+        return {**base, "status": PRICE_NOT_RETAINED, "series_fitness": "T0_CLOSE_VALUE_INVALID"}
     index = chain.index(as_of_session)
     target_index = index + horizon_sessions
     if target_index >= len(chain):
@@ -174,7 +183,7 @@ def _forward_horizon(*, as_of_session: str, horizon_sessions: int, chain: Sequen
             "series_lineage": _series_lineage(t0_row, future_row),
         }
     t0_close, future_close = t0_row.get("close"), future_row.get("close")
-    if not isinstance(t0_close, (int, float)) or not isinstance(future_close, (int, float)) or t0_close == 0:
+    if not _qualified_close(t0_close) or not _qualified_close(future_close):
         return {
             **base, "status": PRICE_NOT_RETAINED, "future_session": future_session,
             "end_session": future_session, "series_fitness": "CLOSE_VALUE_INVALID",
@@ -201,6 +210,7 @@ def _close_excursion(*, as_of_session: str, horizon: Mapping[str, Any], chain: S
         return {
             "status": horizon.get("status"), "CLOSE_MFE": None, "CLOSE_MAE": None,
             "semantics": "CLOSE_ONLY_NOT_INTRADAY_MFE_MAE",
+            "favorable_semantics": "CLOSE_ONLY_FAVORABLE_EXCURSION", "adverse_semantics": "CLOSE_ONLY_ADVERSE_EXCURSION",
         }
     start = observations.get(as_of_session)
     if start is None or as_of_session not in chain:
@@ -209,10 +219,11 @@ def _close_excursion(*, as_of_session: str, horizon: Mapping[str, Any], chain: S
     returns: list[float] = []
     for session in chain[index + 1:index + horizon["required_completed_future_sessions"] + 1]:
         row = observations.get(session)
-        if row is None or not _compatible_close_series(start, row) or not isinstance(row.get("close"), (int, float)):
+        if row is None or not _compatible_close_series(start, row) or not _qualified_close(row.get("close")):
             return {"status": PRICE_BASIS_INCOMPATIBLE if row else PRICE_NOT_RETAINED, "CLOSE_MFE": None, "CLOSE_MAE": None, "semantics": "CLOSE_ONLY_NOT_INTRADAY_MFE_MAE"}
         returns.append(row["close"] / start["close"] - 1)
-    return {"status": MATURE, "CLOSE_MFE": max(returns), "CLOSE_MAE": min(returns), "semantics": "CLOSE_ONLY_NOT_INTRADAY_MFE_MAE"}
+    return {"status": MATURE, "CLOSE_MFE": max(returns), "CLOSE_MAE": min(returns), "semantics": "CLOSE_ONLY_NOT_INTRADAY_MFE_MAE",
+            "favorable_semantics": "CLOSE_ONLY_FAVORABLE_EXCURSION", "adverse_semantics": "CLOSE_ONLY_ADVERSE_EXCURSION"}
 
 
 def evaluate_decision_forward_outcome(*, decision_record: Mapping[str, Any], p3f9b_snapshot: Mapping[str, Any] | None,
@@ -239,7 +250,7 @@ def evaluate_decision_forward_outcome(*, decision_record: Mapping[str, Any], p3f
             if step_index >= len(governed_chain):
                 break
             step_row = observations.get(governed_chain[step_index])
-            if step_row and isinstance(step_row.get("close"), (int, float)) and step_row.get("price_basis") == t0_row.get("price_basis"):
+            if step_row and _qualified_close(step_row.get("close")) and _compatible_close_series(t0_row, step_row):
                 close_path_returns.append(step_row["close"] / t0_row["close"] - 1)
     if index is None:
         close_path_status = SESSION_NOT_RETAINED

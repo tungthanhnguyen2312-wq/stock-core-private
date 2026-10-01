@@ -56,12 +56,19 @@ progress rather than telemetry/acceptance work.
    - no fabricated probability or target-price authority.
 
 6. **R6 — Prospective Learning & Calibration**
-   - State: NEXT / NOT STARTED; execution requires explicit owner authorization.
-   - retain T0 research decisions and evaluate 5/10/20-session outcomes, MFE/MAE and
-     false-positive/false-negative patterns;
-   - calibrate policies from prospective evidence rather than ad-hoc thresholds.
+   - State: COMPLETE / LOCAL_CHECKPOINT on owner-authorized R5 stack 397c05c.
+   - Existing immutable T0/outcome/empirical modules form the canonical prospective loop;
+     close-only excursions, serialized ordering, comparable policy cohorts and human-review
+     candidates remain explicit. No automatic live-policy change.
+   - Retained 30,294 decisions / 18 sessions: T5 mature 8,134, T10 mature 4,356, T20 mature zero.
+     All 1,952 cohorts insufficient; review-eligible cohorts and actual candidates zero.
+   - Existing sample floors unchanged; NEW versioned T0 and qualified future sessions must
+     accumulate. Historical missing policy versions cannot be backfilled.
+   - See [portable acceptance](internal/R6_PROSPECTIVE_LEARNING_ACCEPTANCE.json) and
+     [canonical contract](empirical_setup_outcome_calibration_contract.md).
 
 7. **R7 — Portfolio / PIT / Execution Authority**
+   - State: NEXT / NOT STARTED; requires separate explicit owner authorization.
    - historical RAW_AS_TRADED and corporate-action PIT where new evidence supports it;
    - execution-grade ADTV/ADV, sizing, leverage, portfolio allocation and PIT backtesting;
    - do not reopen evidence-ceiling lanes without genuinely new evidence.

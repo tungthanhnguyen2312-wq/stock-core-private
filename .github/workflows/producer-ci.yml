@@ -28,6 +28,12 @@ env:
     tests/test_session_registry_gap_reconciliation.py
     tests/test_session_comparison_semantics.py
     tests/test_next_session_decision_brief_comparison_metadata.py
+    tests/test_prospective_learning_calibration_r6.py
+    tests/test_prospective_decision_retention.py
+    tests/test_empirical_setup_outcome_calibration.py
+    tests/test_prospective_decision_outcome_measurement.py
+    tests/test_prospective_decision_outcome_feedback.py
+    tests/test_integrated_decision_prospective_feedback.py
     tests/test_intrinsic_scenario_valuation.py
     tests/test_forward_driver_context.py
     tests/test_current_research_decision_fitness.py

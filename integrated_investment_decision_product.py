@@ -356,6 +356,9 @@ def content_identity(artifact: Mapping[str, Any]) -> dict[str, str]:
     return {"artifact_sha256": digest, "artifact_identity": f"{CONTRACT_VERSION}:{digest}"}
 
 
+RESEARCH_ACTION_POLICY_VERSION = "v1"  # Standing decision-identity policy; no threshold change.
+
+
 def decision_identity(record: Mapping[str, Any]) -> str:
     """Feedback-ready deterministic identity for one ticker decision record.
 
@@ -370,7 +373,7 @@ def decision_identity(record: Mapping[str, Any]) -> str:
     fields = {
         "ticker": record.get("ticker"),
         "as_of_session": record.get("as_of_session"),
-        "policy_version": "v1",
+        "policy_version": RESEARCH_ACTION_POLICY_VERSION,
         "research_action_posture": record.get("research_action_posture"),
         "evidence_currency": record.get("evidence_currency"),
         "fundamental_state": record.get("fundamental_state"),
@@ -2176,6 +2179,7 @@ def build_artifact(
     payload: dict[str, Any] = {
         "schema_version": "integrated_investment_decision_product/1.0.0",
         "contract_version": CONTRACT_VERSION,
+        "research_action_policy_version": RESEARCH_ACTION_POLICY_VERSION,
         "milestone": MILESTONE,
         "requested_at": requested_at,
         "session": session,

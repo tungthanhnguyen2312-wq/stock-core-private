@@ -1,7 +1,7 @@
 {
   "schema_version": "stocklookup_roadmap_execution_state/1.0.0",
   "roadmap_id": "stock-core-private",
-  "roadmap_version": "2026.10.01.8",
+  "roadmap_version": "2026.10.02.1",
   "narrative_authority": {
     "strategic_roadmap": "docs/ROADMAP.md",
     "operational_narrative": "docs/STATE.md",
@@ -15,13 +15,32 @@
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "INTRINSIC_AND_SCENARIO_VALUATION_V1",
+    "milestone": "PROSPECTIVE_LEARNING_AND_CALIBRATION_V1",
     "state": "COMPLETE"
   },
   "queued_next": [
-    "PROSPECTIVE_LEARNING_AND_CALIBRATION_V1"
+    "PORTFOLIO_PIT_AND_EXECUTION_AUTHORITY_V1"
   ],
   "milestones": [
+    {
+      "milestone_id": "PORTFOLIO_PIT_AND_EXECUTION_AUTHORITY_V1",
+      "state": "NEXT",
+      "terminal_disposition": "NOT_STARTED",
+      "starting_checkpoint": null,
+      "checkpoint": null,
+      "candidate_branch": null,
+      "dependencies": [
+        "PROSPECTIVE_LEARNING_AND_CALIBRATION_V1"
+      ],
+      "unlocks": [],
+      "authority_effect": "NONE_YET / SEPARATE_USE_CASE_AUTHORITY_REQUIRED",
+      "owner_authorized": false,
+      "source_doc": "Owner R6 terminal queue directive; separate R7 start authorization required",
+      "state_history": [
+        "NEXT"
+      ],
+      "notes": "Queued only after local R6 capability completion. NOT STARTED. Evidence-ceiling lanes remain closed without genuinely new retained evidence. No R7 work or authority promotion in R6."
+    },
     {
       "milestone_id": "FUNDAMENTAL_AND_CURRENT_VALUATION_DEPTH_V1",
       "state": "DEFERRED",
@@ -71,7 +90,7 @@
       "state": "COMPLETE",
       "terminal_disposition": "COMPLETE_LOCAL_CHECKPOINT / GOVERNED_ARCHITECTURE_COMPLETE_RETAINED_NUMERIC_INPUTS_BLOCKED",
       "starting_checkpoint": "95c9e6fd5aa1ff381bb9569360c6fe5961f37337",
-      "checkpoint": "HEAD",
+      "checkpoint": "397c05cf6e47d4bdc5a0a471102dfcb8ac383956",
       "candidate_branch": "feature/intrinsic-scenario-valuation-r5-v2",
       "dependencies": [
         "CORPORATE_INTELLIGENCE_AND_FORWARD_DRIVER_MODEL_V1"
@@ -87,27 +106,32 @@
         "ACTIVE",
         "COMPLETE"
       ],
-      "notes": "Owner authorized R5 at merged main 95c9e6f. Existing intrinsic and reverse engines extended through one governed assumption contract; canonical valuation/IID/Current Research integration is additive and non-voting. Retained denominator 1683: FCFF/Net-Net/reverse/RNAV/SOTP BLOCKED 1600 and NOT_APPLICABLE 83; FCFE/DDM/residual income BLOCKED 1683, unchanged before/after. Numeric scenarios/reverse-only/sensitivity/comparisons/assumption sources zero. Zero decision-identity/posture/unexplained deltas and unchanged retained source bytes. Supported methods validated with explicit qualified fixtures; other calculators fail closed. Portable acceptance docs/internal/R5_INTRINSIC_SCENARIO_ACCEPTANCE.json. R3 ceilings remain closed. R6 NEXT, not authorized or started. One local checkpoint; no push/PR/deploy/production write/acquisition.",
+      "notes": "Owner authorized R5 at merged main 95c9e6f. Existing intrinsic and reverse engines extended through one governed assumption contract; canonical valuation/IID/Current Research integration is additive and non-voting. Retained denominator 1683: FCFF/Net-Net/reverse/RNAV/SOTP BLOCKED 1600 and NOT_APPLICABLE 83; FCFE/DDM/residual income BLOCKED 1683, unchanged before/after. Numeric scenarios/reverse-only/sensitivity/comparisons/assumption sources zero. Zero decision-identity/posture/unexplained deltas and unchanged retained source bytes. Supported methods validated with explicit qualified fixtures; other calculators fail closed. Portable acceptance docs/internal/R5_INTRINSIC_SCENARIO_ACCEPTANCE.json. R3 ceilings remain closed. At the R5 checkpoint R6 was NEXT; its later owner-authorized local completion is recorded separately. One local checkpoint; no push/PR/deploy/production write/acquisition.",
       "owner_override": "OWNER_DIRECTIVE_2026_10_01_START_R5_AT_95c9e6f"
     },
     {
       "milestone_id": "PROSPECTIVE_LEARNING_AND_CALIBRATION_V1",
-      "state": "NEXT",
-      "terminal_disposition": "NOT_STARTED",
-      "starting_checkpoint": null,
-      "checkpoint": null,
-      "candidate_branch": null,
+      "state": "COMPLETE",
+      "terminal_disposition": "CALIBRATION_CAPABILITY_COMPLETE / EVIDENCE_ACCUMULATION_PENDING",
+      "starting_checkpoint": "397c05cf6e47d4bdc5a0a471102dfcb8ac383956",
+      "checkpoint": "HEAD",
+      "candidate_branch": "feature/prospective-learning-calibration-r6",
       "dependencies": [
         "INTRINSIC_AND_SCENARIO_VALUATION_V1"
       ],
-      "unlocks": [],
-      "authority_effect": "NONE_EXPECTED / PROSPECTIVE_RESEARCH_ONLY",
-      "owner_authorized": false,
-      "source_doc": "R5 owner directive: queue R6 only, do not start",
-      "state_history": [
-        "NEXT"
+      "unlocks": [
+        "PORTFOLIO_PIT_AND_EXECUTION_AUTHORITY_V1"
       ],
-      "notes": "R5 capability prerequisite satisfied locally. Explicit owner authorization is required before starting R6; no R6 work performed."
+      "authority_effect": "NONE / PROSPECTIVE_RESEARCH_ONLY",
+      "owner_authorized": true,
+      "source_doc": "Owner R6 local-stack authorization 2026-10-01 at 397c05c",
+      "state_history": [
+        "NEXT",
+        "ACTIVE",
+        "COMPLETE"
+      ],
+      "notes": "Owner-authorized local stack at R5 397c05c. Reuse immutable T0, shared completed sessions, existing outcomes/empirical aggregator, actual policy cohorts, review eligibility and human-only candidates. Retained 30294 decisions / 18 T0 sessions / 1683 tickers; T5 mature 8134 / T10 4356 / T20 0. All 1952 cohorts insufficient; zero review eligibility or actual candidates. Historical policy versions never backfilled; unchanged 20/5 and 50/10 sample floors. Daily retention already connected; existing v1 policy serialized for NEW T0. Deterministic replay and unchanged source bytes. 457 focused/adjacent tests pass; one supplemental baseline Daily assertion independently reproduced and excluded. No policy/authority change, acquisition, live Daily, production write, push/PR/deploy or R7. Portable acceptance docs/internal/R6_PROSPECTIVE_LEARNING_ACCEPTANCE.json.",
+      "owner_override": "OWNER_DIRECTIVE_2026_10_01_START_R6_ON_LOCAL_R5"
     },
     {
       "milestone_id": "ROADMAP_AND_PUBLIC_REPOSITORY_REBASELINE_V1",
