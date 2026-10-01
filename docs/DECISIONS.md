@@ -1,5 +1,9 @@
 # Decisions & Architectural Decision Records
 
+## 2026-10-02 — governed current corporate currency continuation
+
+Owner explicitly resumes the sequential program and authorizes bounded admitted-source acquisition and normal releases. Use one shared synchronous HNX/HOSE budget, preserving complete accepted bytes, failure receipts, successful-session immutability and caller-controlled retries. No new crawler/provider. The full UPCoM rights index requires 327 pages; retained two-request evidence supports explicit ex-date filtering, so the current window is named and every page/row reconciled instead of truncating or raising ceilings. HNX disclosures remain disabled. Current calendar evidence is ANNOUNCED, never inferred EXECUTED/APPROVED; explicit source lifecycles remain separately supported. All materialization stays scratch-local with actual known time. See [validation](internal/CURRENT_CORPORATE_CURRENCY_VALIDATION_20261002.md).
+
 ## 2026-10-02 — post-release evidence-continuity rebaseline
 
 R5–R7 is actually on main (PR #35, `fbc4883`), with exact-head CI green and cumulative retained identity/immutability evidence. The 16-axis system review ranks evidence currency and prospective continuity above more calculators, stronger authority promotion or wholesale architecture changes. The owner delegated roadmap selection and sequential execution; `PROSPECTIVE_EVIDENCE_CONTINUITY_DIAGNOSTICS_V1` starts under that explicit override. Extend the existing canonical health producer and consolidate its offline consumer; no new framework, sample-floor change or historical backfill. See [review](internal/POST_R1_R7_SYSTEM_REVIEW_20261002.md).

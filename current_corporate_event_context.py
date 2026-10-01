@@ -113,15 +113,13 @@ def classify_event_status(event: Mapping[str, Any], *, as_of: date) -> tuple[str
     lifecycle = str(event.get("status") or event.get("lifecycle_status") or "")
     if lifecycle == "CANCELLED" or event.get("event_state") == "CANCELLED":
         return CANCELLED, "SOURCE_STATUS_CANCELLED"
-    if lifecycle in PLANNED_STATUSES and not event.get("execution_date"):
-        return PLANNED_NOT_EXECUTED, "PLANNED_OR_APPROVED_WITHOUT_EXECUTION_EVIDENCE"
+    if lifecycle in PLANNED_STATUSES:
+        return PLANNED_NOT_EXECUTED, "PLANNED_OR_APPROVED_WITHOUT_EXECUTED_LIFECYCLE"
     ex_date = _parse_date(event.get("ex_date"))
     execution = _parse_date(event.get("execution_date"))
     record = _parse_date(event.get("record_date"))
     if lifecycle == "EXECUTED":
         return EXECUTED, "SOURCE_STATUS_EXECUTED_WITH_RETAINED_EXECUTION_EVIDENCE"
-    if execution is not None and execution <= as_of:
-        return EXECUTED, "EXECUTION_DATE_ON_OR_BEFORE_AS_OF"
     if execution is not None and execution > as_of:
         return CONFIRMED_UPCOMING, "EXECUTION_DATE_AFTER_AS_OF"
     if ex_date is None:

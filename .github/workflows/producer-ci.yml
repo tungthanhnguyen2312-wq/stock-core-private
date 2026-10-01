@@ -23,6 +23,12 @@ env:
   CORE_INSTALL: python -m pip install -r requirements.txt -r requirements-test.txt -c constraints.txt
   HERMETIC_MARKERS: not retained_evidence and not provider_runtime
   FOCUSED_SELECTION: >-
+    tests/test_current_corporate_event_context.py
+    tests/test_current_corporate_intelligence_axis.py
+    tests/test_official_acquisition_budget.py
+    tests/test_official_corporate_event_incremental_acquisition.py
+    tests/test_hose_public_xhr_and_periodic_series_recon.py
+    tests/test_hnx_enumerable_universe_kllh_event_disclosure_scaleout.py
     tests/test_ci_dependency_tiers.py
     tests/test_canonical_daily_operation.py
     tests/test_session_registry_gap_reconciliation.py

@@ -1,0 +1,130 @@
+{
+  "attempt": {
+    "acquired_at": "2026-10-02T05:32:20+07:00",
+    "acquisition_session": "2026-10-02",
+    "budget_usage": {
+      "contract_version": "official_acquisition_budget/v1",
+      "downloaded_bytes": 3466786,
+      "elapsed_seconds": 9.586326,
+      "limits": {
+        "max_pages_per_surface": 16,
+        "max_requests": 64,
+        "max_response_bytes": 8388608,
+        "max_seconds": 180,
+        "max_total_bytes": 33554432,
+        "request_timeout_seconds": 30
+      },
+      "reason": "PAGE_BUDGET_EXHAUSTED",
+      "request_count": 9,
+      "requests": [
+        {
+          "cumulative_bytes": 135230,
+          "elapsed_seconds": 0.520797,
+          "page": null,
+          "request_number": 1,
+          "requested_url": "https://hnx.vn/vi-vn/cophieu-etfs/chung-khoan-ny.html",
+          "response_bytes": 135230,
+          "status": "RETURNED",
+          "surface": "hnx_listed_list_landing"
+        },
+        {
+          "cumulative_bytes": 545771,
+          "elapsed_seconds": 1.029284,
+          "page": 1,
+          "request_number": 2,
+          "requested_url": "https://hnx.vn/ModuleIssuer/List/ListSearch_Datas",
+          "response_bytes": 410541,
+          "status": "RETURNED",
+          "surface": "hnx_listed_list_bulk"
+        },
+        {
+          "cumulative_bytes": 735229,
+          "elapsed_seconds": 1.376148,
+          "page": null,
+          "request_number": 3,
+          "requested_url": "https://hnx.vn/vi-vn/cophieu-etfs/chung-khoan-uc.html",
+          "response_bytes": 189458,
+          "status": "RETURNED",
+          "surface": "upcom_list_landing"
+        },
+        {
+          "cumulative_bytes": 1716519,
+          "elapsed_seconds": 2.743263,
+          "page": 1,
+          "request_number": 4,
+          "requested_url": "https://hnx.vn/ModuleIssuer/UC_Issuer/ListSearch_Datas",
+          "response_bytes": 981290,
+          "status": "RETURNED",
+          "surface": "upcom_list_bulk"
+        },
+        {
+          "cumulative_bytes": 1814139,
+          "elapsed_seconds": 3.069961,
+          "page": null,
+          "request_number": 5,
+          "requested_url": "https://hnx.vn/vi-vn/thong-tin-cong-bo-ny-hnx.html",
+          "response_bytes": 97620,
+          "status": "RETURNED",
+          "surface": "hnx_listed_rights_landing"
+        },
+        {
+          "cumulative_bytes": 2946906,
+          "elapsed_seconds": 5.54359,
+          "page": 1,
+          "request_number": 6,
+          "requested_url": "https://hnx.vn/ModuleArticles/ArticlesCPEtfs/NextPageTinCPNY_LTHQ",
+          "response_bytes": 1132767,
+          "status": "RETURNED",
+          "surface": "hnx_listed_rights"
+        },
+        {
+          "cumulative_bytes": 3358373,
+          "elapsed_seconds": 7.475544,
+          "page": 2,
+          "request_number": 7,
+          "requested_url": "https://hnx.vn/ModuleArticles/ArticlesCPEtfs/NextPageTinCPNY_LTHQ",
+          "response_bytes": 411467,
+          "status": "RETURNED",
+          "surface": "hnx_listed_rights"
+        },
+        {
+          "cumulative_bytes": 3453372,
+          "elapsed_seconds": 7.891173,
+          "page": null,
+          "request_number": 8,
+          "requested_url": "https://hnx.vn/vi-vn/thong-tin-cong-bo-up-hnx.html",
+          "response_bytes": 94999,
+          "status": "RETURNED",
+          "surface": "upcom_rights_landing"
+        },
+        {
+          "cumulative_bytes": 3466786,
+          "elapsed_seconds": 9.584581,
+          "page": 1,
+          "request_number": 9,
+          "requested_url": "https://hnx.vn/ModuleArticles/ArticlesCPEtfs/NextPageTHQUpCoM",
+          "response_bytes": 13414,
+          "status": "RETURNED",
+          "surface": "upcom_rights"
+        }
+      ],
+      "terminal_state": "EXHAUSTED"
+    },
+    "contract_version": "official_corporate_event_incremental_acquisition/v1",
+    "disposition": "FAILURE",
+    "error_message": "PAGE_BUDGET_EXHAUSTED",
+    "error_type": "AcquisitionBudgetExceeded",
+    "failure_kind": "BUDGET_TERMINATED",
+    "prior_session_referenced": null,
+    "schema_version": "1.0.0"
+  },
+  "authority_effect": "NONE",
+  "contract_version": "current_corporate_currency_acceptance/v1",
+  "input_sha256": {
+    "operations-review/current-market-universe-breadth-foundation-v1-20261001/current_market_universe_breadth_foundation_artifact.json": "95df6cdbfb8631dd8edd47b8993d79b1d0d9905bf05726f257de27e2a71aea59",
+    "operations-review/current-official-market-universe-integration-v1-20260824/current_official_market_universe_artifact.json": "a12b6e66ef19d03386f4cb600a07b00d4e849b93857676ea8174dff1e546e885"
+  },
+  "live_daily_runs": 0,
+  "production_writes": 0,
+  "source_inputs_unchanged": true
+}

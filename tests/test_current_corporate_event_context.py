@@ -122,7 +122,7 @@ class CurrentCorporateEventContextTests(unittest.TestCase):
         self.assertEqual(past["records"]["AAA"]["events"][0]["event_status"], events.DATA_LIMITED)
         executed = _build([_raw(ex_date="2026-06-01", record_date="2026-06-02",
                                 execution_date="2026-06-20", event_state="PAST")])
-        self.assertEqual(executed["records"]["AAA"]["events"][0]["event_status"], events.EXECUTED)
+        self.assertEqual(executed["records"]["AAA"]["events"][0]["event_status"], events.DATA_LIMITED)
 
     def test_conflicting_dates_fail_closed(self) -> None:
         artifact = _build([
@@ -247,3 +247,17 @@ class LedgerBoundaryTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ScheduledDateLifecycleTests(unittest.TestCase):
+    def test_past_schedule_never_proves_execution(self):
+        from datetime import date
+        for lifecycle in ('PLANNED', 'APPROVED', ''):
+            with self.subTest(lifecycle=lifecycle):
+                status, _ = events.classify_event_status(dict(status=lifecycle, execution_date='2026-09-01', ex_date='2026-09-02'), as_of=date(2026,10,2))
+                self.assertNotEqual(status, events.EXECUTED)
+
+    def test_explicit_source_lifecycle_still_passes(self):
+        from datetime import date
+        status, _ = events.classify_event_status(dict(status='EXECUTED', execution_date='2026-09-01'), as_of=date(2026,10,2))
+        self.assertEqual(status, events.EXECUTED)
