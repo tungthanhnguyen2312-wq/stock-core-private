@@ -108,7 +108,7 @@ verification ensures the latter is reproduced rather than silently substituted.
 
 ## Verification and second pass
 
-181 focused/adjacent tests plus six canonical integration checks pass, covering source tampering, future/stale sessions,
+222 focused/adjacent tests plus six canonical integration checks pass, covering source tampering, future/stale sessions,
 incompatible contracts, missing direction/levels, non-finite values, bearish
 comparators, watchlist divergence, downstream non-escalation and retention isolation.
 Python compilation and whitespace checks pass. Retained input bytes and the
@@ -142,3 +142,24 @@ all records: the producer does not retain comparable valuation history. Exactly
 367 false supporting tags and 471 false opposing tags are removed, with no other
 supporting/opposing financial-composite reason changed. The explanatory unavailable
 reason is explicit; financial-ratio histories themselves are not deleted or altered.
+
+The adversarial outcome pass hardens the standing close evaluator used by the new
+structural conditions. Boolean, non-finite and non-positive levels/closes cannot
+produce an event. A structural condition's retained as-of session must match the
+evaluation T0; moving it to an earlier start cannot introduce its level before it
+was known. An invalid observation blocks only that observation, allowing a later
+qualified close. Existing watchlist conditions without structural session lineage
+keep their standing temporal contract. Feedback preserves the temporal blocker,
+and calibration continues to use the same evaluator. These are counterfactual
+integration checks, not claims of malformed retained prices or live outcomes.
+The full retained replay identity remains
+`integrated_investment_decision_product/v1:af56722c6e8e1c34ae8b90efe3c5583cca1fe711aa2b1ef4c38439d2012bfea5`.
+
+The research-priority second pass found no justified strategy substitution: its
+FUNDAMENTAL_IMPROVEMENT rule requires revenue and earnings both expanding, while
+the integrated Financial V2 direction combines different qualified dimensions.
+All 22 eligible records retain comparable revenue/earnings pairs; 21 end in
+2026-Q2 and ITD ends in 2025-Q4, within the governed four-quarter financial window.
+Only five of these 22 have the integrated IMPROVING state. The difference does not
+justify lowering requirements or replacing one measurement with another. No
+strategy/priority code or authority was changed on this hypothesis.

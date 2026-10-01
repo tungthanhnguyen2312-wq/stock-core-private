@@ -7,14 +7,15 @@ already-produced decision record at T0 under a content-addressed path, binds it
 to the completed Daily operation, and leaves every later outcome observation in
 a separate downstream artifact.
 
-It deliberately serializes only conditions already emitted by
-``tactical_confirmation_invalidation_boundaries``.  It neither creates a
+It serializes conditions already emitted by tactical watchlist boundaries or
+the verified structural product projection. It neither creates a
 second strategy engine nor turns a research boundary into an execution order.
 """
 from __future__ import annotations
 
 import hashlib
 import json
+import math
 from collections import Counter
 from pathlib import Path
 from typing import Any, Mapping, Sequence
@@ -100,6 +101,7 @@ def serialize_boundary_condition(
         and raw.get("source_metric") in {"support", "resistance", "trigger_level", "invalidation_level"}
         and operator is not None
         and isinstance(level, (int, float))
+        and not isinstance(level, bool) and math.isfinite(level) and level > 0
     )
     if fixed_close:
         status = "MACHINE_EVALUABLE"
@@ -152,7 +154,6 @@ def serialize_structural_condition(
     The producer projection owns direction. Never borrow a watchlist rule,
     infer direction from price distance, or reconstruct an old retained T0.
     """
-    import math
     level = record.get(f"{role}_level")
     operator = record.get(f"{role}_close_comparison_operator")
     qualified = (
@@ -459,17 +460,24 @@ def evaluate_serialized_close_condition(
         return {"status": "NOT_MACHINE_EVALUABLE", "event_session": None, "condition_identity": condition.get("condition_identity"), "reason_codes": list(condition.get("reason_codes") or [])}
     if start_session not in chain:
         return {"status": "TEMPORAL_PROVENANCE_UNQUALIFIED", "event_session": None, "condition_identity": condition.get("condition_identity"), "reason_codes": ["T0_SESSION_NOT_IN_GOVERNED_CHAIN"]}
+    if (condition.get("source_method") == "market_structure_breakout_product_projection/v1"
+            and (condition.get("source_lineage") or {}).get("as_of_session") != start_session):
+        return {"status": "TEMPORAL_PROVENANCE_UNQUALIFIED", "event_session": None, "condition_identity": condition.get("condition_identity"), "reason_codes": ["STRUCTURAL_CONDITION_T0_SESSION_MISMATCH"]}
     level, operator = condition.get("reference_level"), condition.get("operator")
-    if not isinstance(level, (int, float)) or operator not in {">", "<"}:
+    if (not isinstance(level, (int, float)) or isinstance(level, bool)
+            or not math.isfinite(level) or level <= 0 or operator not in {">", "<"}):
         return {"status": "NOT_MACHINE_EVALUABLE", "event_session": None, "condition_identity": condition.get("condition_identity"), "reason_codes": ["SERIALIZED_CONDITION_INCOMPLETE"]}
     observed = 0
     for session in chain[chain.index(start_session) + 1:]:
         row = ((snapshots.get(session) or {}).get("records") or {}).get(ticker) or {}
         matches = [item for item in (row.get("observations") or []) if isinstance(item, Mapping) and item.get("session") == session]
-        if len(matches) != 1 or not isinstance(matches[0].get("close"), (int, float)):
+        if len(matches) != 1:
+            continue
+        close = matches[0].get("close")
+        if (not isinstance(close, (int, float)) or isinstance(close, bool)
+                or not math.isfinite(close) or close <= 0):
             continue
         observed += 1
-        close = matches[0]["close"]
         if (operator == ">" and close > level) or (operator == "<" and close < level):
             return {"status": "SATISFIED", "event_session": session, "condition_identity": condition.get("condition_identity"), "reason_codes": ["SERIALIZED_FIXED_T0_LEVEL_SATISFIED"]}
     return {"status": "NOT_SATISFIED_YET" if observed else "PRICE_SERIES_UNQUALIFIED", "event_session": None, "condition_identity": condition.get("condition_identity"), "reason_codes": ["NO_LATER_RETAINED_CLOSE" if not observed else "NO_LATER_CLOSE_SATISFIED_FIXED_T0_LEVEL"]}

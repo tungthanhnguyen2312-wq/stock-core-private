@@ -3,6 +3,7 @@ import pytest
 import integrated_investment_decision_product as product
 import market_structure_breakout_product_projection as projection
 import prospective_decision_retention as retention
+import prospective_decision_outcome_feedback as feedback
 from ai_research_session_delivery import project_integrated_decision_for_ai_delivery
 
 
@@ -71,6 +72,60 @@ def test_existing_close_evaluator_observes_bearish_direction_without_new_engine(
     result = retention.evaluate_serialized_close_condition(condition=condition, ticker="TEST", start_session="2026-09-30",
         chain=["2026-09-30", "2026-10-01"], snapshots={"2026-10-01": {"records": {"TEST": {"observations": [{"session": "2026-10-01", "close": 99.0}]}}}})
     assert result["status"] == "SATISFIED"
+
+
+@pytest.mark.parametrize("value", [True, False, float("inf"), float("-inf"), float("nan"), 0, -1])
+def test_close_evaluator_rejects_unqualified_numeric_observations(value):
+    condition = retention.serialize_structural_condition(projected(), role="trigger", session="2026-09-30", source_identity="projection:verified")
+    result = retention.evaluate_serialized_close_condition(condition, ticker="TEST", start_session="2026-09-30",
+        chain=["2026-09-30", "2026-10-01"], snapshots={"2026-10-01": {"records": {"TEST": {"observations": [{"session": "2026-10-01", "close": value}]}}}})
+    assert result["status"] == "PRICE_SERIES_UNQUALIFIED"
+    assert result["event_session"] is None
+
+
+@pytest.mark.parametrize("value", [True, float("inf"), float("nan"), 0, -1])
+def test_close_evaluator_does_not_trust_a_machine_evaluable_label(value):
+    condition = retention.serialize_structural_condition(projected(), role="trigger", session="2026-09-30", source_identity="projection:verified")
+    condition["reference_level"] = value
+    result = retention.evaluate_serialized_close_condition(condition, ticker="TEST", start_session="2026-09-30",
+        chain=["2026-09-30", "2026-10-01"], snapshots={})
+    assert result["status"] == "NOT_MACHINE_EVALUABLE"
+    legacy = retention.serialize_boundary_condition({"status": "READY", "source_metric": "resistance",
+        "comparison_operator": "FUTURE_CLOSE_GT_RESISTANCE_LEVEL", "baseline_value": value},
+        role="trigger", source_strategy_identity="watchlist:verified")
+    assert legacy["status"] == "NOT_MACHINE_EVALUABLE"
+
+
+@pytest.mark.parametrize("start", ["2026-09-29", "2026-10-01"])
+def test_structural_condition_cannot_be_rebased_to_a_different_t0(start):
+    condition = retention.serialize_structural_condition(projected(), role="trigger", session="2026-09-30", source_identity="projection:verified")
+    result = retention.evaluate_serialized_close_condition(condition, ticker="TEST", start_session=start,
+        chain=["2026-09-29", "2026-09-30", "2026-10-01", "2026-10-02"], snapshots={
+            day: {"records": {"TEST": {"observations": [{"session": day, "close": 101.0}]}}}
+            for day in ["2026-09-30", "2026-10-01", "2026-10-02"]})
+    assert result["status"] == "TEMPORAL_PROVENANCE_UNQUALIFIED"
+    assert result["reason_codes"] == ["STRUCTURAL_CONDITION_T0_SESSION_MISMATCH"]
+    assert result["event_session"] is None
+
+
+def test_invalid_close_blocks_only_that_observation():
+    condition = retention.serialize_structural_condition(projected(), role="trigger", session="2026-09-30", source_identity="projection:verified")
+    result = retention.evaluate_serialized_close_condition(condition, ticker="TEST", start_session="2026-09-30",
+        chain=["2026-09-30", "2026-10-01", "2026-10-02"], snapshots={
+            day: {"records": {"TEST": {"observations": [{"session": day, "close": close}]}}}
+            for day, close in [("2026-10-01", float("inf")), ("2026-10-02", 101.0)]})
+    assert result["status"] == "SATISFIED"
+    assert result["event_session"] == "2026-10-02"
+
+
+def test_feedback_preserves_temporal_blocker_without_an_outcome_event():
+    condition = retention.serialize_structural_condition(projected(), role="trigger", session="2026-09-30", source_identity="projection:verified")
+    result = feedback._trigger_invalidation({"ticker": "TEST", "as_of_session": "2026-09-29", "trigger": {"condition": condition}},
+        chain=["2026-09-29", "2026-09-30"], snapshots={"2026-09-30": {"records": {"TEST": {"observations": [{"session": "2026-09-30", "close": 101.0}]}}}})
+    assert result["trigger"]["status"] == "TEMPORAL_PROVENANCE_UNQUALIFIED"
+    assert result["trigger"]["event_session"] is None
+    assert result["invalidation"]["status"] == "NOT_MACHINE_EVALUABLE"
+    assert result["authority_boundary"] == "SERIALIZED_EXISTING_STRATEGY_CONDITIONS_NOT_TRADE_EXECUTION"
 
 
 @pytest.mark.parametrize("tamper", [None, "identity", "session", "contract"])
