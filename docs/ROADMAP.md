@@ -68,10 +68,15 @@ progress rather than telemetry/acceptance work.
      [canonical contract](empirical_setup_outcome_calibration_contract.md).
 
 7. **R7 — Portfolio / PIT / Execution Authority**
-   - State: NEXT / NOT STARTED; requires separate explicit owner authorization.
-   - historical RAW_AS_TRADED and corporate-action PIT where new evidence supports it;
-   - execution-grade ADTV/ADV, sizing, leverage, portfolio allocation and PIT backtesting;
-   - do not reopen evidence-ceiling lanes without genuinely new evidence.
+   - State: locally COMPLETE for capability implementation on exact R6 `938641c`.
+   - Terminal: CAPABILITY_COMPLETE / AUTHORITY_PROMOTION_PENDING_EVIDENCE_OR_OWNER_APPROVAL.
+   - One feature/use/scope readiness matrix, strict adapters of existing sizing/exposure/risk
+     engines and authority-gated dry-run adapter of the existing VNM replay engine.
+   - Current denominator 1,683; canonical capital, sizing and stronger PIT/backtest/replay/live
+     eligibility remain unavailable. No authority or policy promotion; no source acquisition.
+   - See [contract](portfolio_pit_execution_authority_contract.md), [acceptance](internal/R7_PORTFOLIO_PIT_EXECUTION_ACCEPTANCE.json)
+     and [owner dossier](internal/R7_EXECUTION_AUTHORITY_PROMOTION_DOSSIER.md).
+   - Successor: OWNER_ROADMAP_REVIEW_REBASELINE; no automatic next milestone and no R8.
 
 ### Sequencing rules
 

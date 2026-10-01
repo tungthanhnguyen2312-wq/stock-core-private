@@ -29,6 +29,7 @@ env:
     tests/test_session_comparison_semantics.py
     tests/test_next_session_decision_brief_comparison_metadata.py
     tests/test_prospective_learning_calibration_r6.py
+    tests/test_portfolio_pit_execution_authority_r7.py
     tests/test_prospective_decision_retention.py
     tests/test_empirical_setup_outcome_calibration.py
     tests/test_prospective_decision_outcome_measurement.py

@@ -1,6 +1,6 @@
 ﻿"""Fail-closed VNM signal-to-fill execution contract; never a backtest."""
 from __future__ import annotations
-import argparse, hashlib, json
+import argparse, hashlib, json, math
 from datetime import date
 from typing import Any, Mapping
 
@@ -23,14 +23,14 @@ def _costs(costs: Mapping[str,Any]) -> dict[str,float]:
     result={}
     for name in ("commission_bps","slippage_bps","tax_bps"):
         value=costs.get(name)
-        if not isinstance(value,(int,float)) or isinstance(value,bool) or value < 0 or value > 1000: raise ValueError("unsupported_cost_parameter:"+name)
+        if not isinstance(value,(int,float)) or isinstance(value,bool) or not math.isfinite(value) or value < 0 or value > 1000: raise ValueError("unsupported_cost_parameter:"+name)
         result[name]=float(value)
     return result
-def resolve_vnm_fill(*, signal: Mapping[str,Any], raw_sessions: list[Mapping[str,Any]], costs: Mapping[str,Any], max_session_lag: int=MAX_SESSION_LAG) -> dict[str,Any]:
+def resolve_vnm_fill(*, signal: Mapping[str,Any], raw_sessions: list[Mapping[str,Any]], costs: Mapping[str,Any] | None, max_session_lag: int=MAX_SESSION_LAG, gross_research_only: bool=False) -> dict[str,Any]:
     """Select the first qualified raw-price session strictly after the signal cutoff."""
     if not isinstance(signal,Mapping) or signal.get("ticker") != "VNM": return _unavailable(signal if isinstance(signal,Mapping) else {},"unsupported_or_missing_signal")
     if signal.get("state") not in {"available","partial"}: return _unavailable(signal,"signal_unavailable")
-    try: cutoff=_day(signal.get("knowledge_cutoff")); cost_values=_costs(costs)
+    try: cutoff=_day(signal.get("knowledge_cutoff")); cost_values={} if gross_research_only and costs is None else _costs(costs)
     except ValueError as exc: return _unavailable(signal,str(exc))
     if not isinstance(max_session_lag,int) or isinstance(max_session_lag,bool) or not 1 <= max_session_lag <= MAX_SESSION_LAG: return _unavailable(signal,"unsupported_session_lag")
     rows=sorted((row for row in raw_sessions if isinstance(row,Mapping)),key=lambda row:str(row.get("trading_date","")))
@@ -50,8 +50,8 @@ def _safe_after(value: Any, cutoff: date) -> bool:
 def _row_reason(row: Mapping[str,Any]) -> str|None:
     if row.get("price_basis") != "raw_historical": return "price_basis_not_qualified_raw"
     price=row.get("raw_close"); volume=row.get("volume")
-    if not isinstance(price,(int,float)) or isinstance(price,bool) or price<=0: return "raw_price_missing_or_invalid"
-    if not isinstance(volume,(int,float)) or isinstance(volume,bool) or volume<=0: return "volume_missing_or_not_tradable"
+    if not isinstance(price,(int,float)) or isinstance(price,bool) or not math.isfinite(price) or price<=0: return "raw_price_missing_or_invalid"
+    if not isinstance(volume,(int,float)) or isinstance(volume,bool) or not math.isfinite(volume) or volume<=0: return "volume_missing_or_not_tradable"
     if row.get("volume_qualification") != "qualified": return "volume_basis_unqualified"
     if not all(isinstance(row.get(k),str) and row[k] for k in ("price_source_id","citation_id","source_hash")): return "price_lineage_missing"
     return None

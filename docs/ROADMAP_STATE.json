@@ -1,7 +1,7 @@
 {
   "schema_version": "stocklookup_roadmap_execution_state/1.0.0",
   "roadmap_id": "stock-core-private",
-  "roadmap_version": "2026.10.02.1",
+  "roadmap_version": "2026.10.02.2",
   "narrative_authority": {
     "strategic_roadmap": "docs/ROADMAP.md",
     "operational_narrative": "docs/STATE.md",
@@ -15,31 +15,32 @@
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "PROSPECTIVE_LEARNING_AND_CALIBRATION_V1",
+    "milestone": "PORTFOLIO_PIT_AND_EXECUTION_AUTHORITY_V1",
     "state": "COMPLETE"
   },
-  "queued_next": [
-    "PORTFOLIO_PIT_AND_EXECUTION_AUTHORITY_V1"
-  ],
+  "queued_next": [],
   "milestones": [
     {
       "milestone_id": "PORTFOLIO_PIT_AND_EXECUTION_AUTHORITY_V1",
-      "state": "NEXT",
-      "terminal_disposition": "NOT_STARTED",
-      "starting_checkpoint": null,
-      "checkpoint": null,
-      "candidate_branch": null,
+      "state": "COMPLETE",
+      "terminal_disposition": "CAPABILITY_COMPLETE / AUTHORITY_PROMOTION_PENDING_EVIDENCE_OR_OWNER_APPROVAL",
+      "starting_checkpoint": "938641cff02095f10db1658ad3134d71f871fcec",
+      "checkpoint": "HEAD",
+      "candidate_branch": "feature/portfolio-pit-execution-authority-r7",
       "dependencies": [
         "PROSPECTIVE_LEARNING_AND_CALIBRATION_V1"
       ],
       "unlocks": [],
-      "authority_effect": "NONE_YET / SEPARATE_USE_CASE_AUTHORITY_REQUIRED",
-      "owner_authorized": false,
-      "source_doc": "Owner R6 terminal queue directive; separate R7 start authorization required",
+      "authority_effect": "NONE / CAPABILITY_IMPLEMENTATION_ONLY / STRONGER_AUTHORITY_PENDING_EVIDENCE_OR_OWNER_APPROVAL",
+      "owner_authorized": true,
+      "source_doc": "Owner R7 implementation-only authorization 2026-10-02 at 938641c",
       "state_history": [
-        "NEXT"
+        "NEXT",
+        "ACTIVE",
+        "COMPLETE"
       ],
-      "notes": "Queued only after local R6 capability completion. NOT STARTED. Evidence-ceiling lanes remain closed without genuinely new retained evidence. No R7 work or authority promotion in R6."
+      "notes": "Local R7 capability complete on exact R6 checkpoint. Feature/use/scope consumer matrix, strict existing-engine research adapters, VNM dry-run gating, non-voting PORTFOLIO_FIT context and deterministic retained acceptance. Current denominator 1683; capital/sizing/PIT/backtest/replay/live eligibility and promotion candidates remain unavailable. Source registries, policy and promoted authority unchanged. No external/runtime action. Successor is owner roadmap review/rebaseline, not an automatically started milestone.",
+      "owner_override": "OWNER_DIRECTIVE_2026_10_02_START_R7_ON_LOCAL_R6"
     },
     {
       "milestone_id": "FUNDAMENTAL_AND_CURRENT_VALUATION_DEPTH_V1",
@@ -114,7 +115,7 @@
       "state": "COMPLETE",
       "terminal_disposition": "CALIBRATION_CAPABILITY_COMPLETE / EVIDENCE_ACCUMULATION_PENDING",
       "starting_checkpoint": "397c05cf6e47d4bdc5a0a471102dfcb8ac383956",
-      "checkpoint": "HEAD",
+      "checkpoint": "938641cff02095f10db1658ad3134d71f871fcec",
       "candidate_branch": "feature/prospective-learning-calibration-r6",
       "dependencies": [
         "INTRINSIC_AND_SCENARIO_VALUATION_V1"
@@ -2776,5 +2777,6 @@
       "reopen_gate": "None for VNSTOCK_KBS_VCI: permanently retired. Any unrelated future provider requires a separate explicit owner decision, new family and independent security approval.",
       "reference_checkpoint": "9575cb04c899696a02b22ba9dfcfed9a4961cf2d"
     }
-  ]
+  ],
+  "successor_disposition": "OWNER_ROADMAP_REVIEW_REBASELINE"
 }

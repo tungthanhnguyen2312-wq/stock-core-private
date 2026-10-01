@@ -15,7 +15,17 @@ Repository cleanup follows the governed strangler plan in [REPOSITORY_LAYOUT_MIG
 - keep production entry points truthful throughout migration;
 - reduce the root gradually alongside product-critical roadmap work.
 
-The October 1 Owner Daily live-acceptance gate is complete and PR #31 is merged. R2 and R4 are complete, R3 remains terminal for its current source set, and R5 is locally complete. R6 Prospective Learning & Calibration is locally COMPLETE; R7 Portfolio / PIT / Execution Authority is NEXT and NOT STARTED; repository-layout work must not displace capability work.
+The October 1 Owner Daily live-acceptance gate is complete and PR #31 is merged. R2 and R4 are complete, R3 remains terminal for its current source set, and R5 is locally complete. R6 Prospective Learning & Calibration is locally COMPLETE; R7 Portfolio / PIT / Execution Authority is locally COMPLETE for capability implementation, with stronger authority still pending evidence/owner approval; the successor is owner roadmap review/rebaseline, with no automatic milestone; repository-layout work must not displace capability work.
+
+## R7 authority-readiness navigation
+
+See [contract](portfolio_pit_execution_authority_contract.md) and [acceptance](internal/R7_PORTFOLIO_PIT_EXECUTION_ACCEPTANCE.json).
+`raw_pit_authority_matrix` owns the consumer matrix/dossier and final non-voting PORTFOLIO_FIT adapter.
+`portfolio_aware_decision`, `current_portfolio_risk_envelope` and `current_portfolio_risk_research`
+reuse the existing governed risk/minimum-cap, exposure and window engines. `vnm_shadow_backtest`
+reuses the isolated VNM replay engine through explicit authority gates; no generic or live order path
+is added. `tools/run_portfolio_pit_execution_acceptance.py` is an offline exact-manifest review tool,
+not another production entrypoint. Source registries and promoted authority are unchanged.
 
 ## Canonical Pipeline Flow
 

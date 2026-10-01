@@ -163,6 +163,33 @@ def _sector_value(sector_context: Mapping[str, Any] | None, ticker: str) -> str 
     return ((record.get("sector_leadership_context") or {}).get("group_key"))
 
 
+def qualified_window_readiness(*, price_snapshot: Mapping[str, Any], tickers: list[str]) -> dict[str, Any]:
+    """R7 inventory adapter of the existing window/volatility engine, no portfolio inference.
+
+    The existing descriptive adjusted basis/window contract stays research only.
+    No currency scale is needed or inferred for these within-series returns.
+    """
+    session = price_snapshot.get("resolved_completed_session") or price_snapshot.get("target_session")
+    sessions = _session_calendar(price_snapshot, session)
+    records = price_snapshot.get("records") or {}
+    result = {}
+    for ticker in sorted(set(tickers)):
+        source = records.get(ticker) or {}
+        closes, duplicate_sessions, problems = _price_index(source, as_of_session=session)
+        if any(isinstance(o.get("close"), bool) for o in source.get("observations") or []):
+            problems = [*problems, "BOOLEAN_PRICE_NOT_QUALIFIED"]
+        windows = {}
+        for lookback in STANDARD_RISK_LOOKBACKS:
+            window = _window_for(ticker=ticker, lookback=lookback, sessions=sessions, close_index=closes,
+                                 duplicate_sessions=duplicate_sessions, input_problems=problems)
+            windows[str(lookback)] = {"window_status": window["status"], "volatility_context": _volatility_context(window)}
+        result[ticker] = windows
+    return {"contract_version": "current_portfolio_risk_window_readiness/v1", "session": session,
+            "source_identity": price_snapshot.get("snapshot_identity"), "price_basis": PRICE_BASIS,
+            "records": result, "correlation": "REQUIRES_QUALIFIED_COMMON_WINDOW_AND_EXISTING_JOINT_NUMERICAL_GUARD",
+            "portfolio_volatility": "UNAVAILABLE_WITHOUT_EXPLICIT_HOLDINGS", "authority_effect": "NONE", "is_actionable": False}
+
+
 def _pairwise(
     *, ticker_i: str, ticker_j: str, lookback: int, as_of_session: str,
     first: Mapping[str, Any], second: Mapping[str, Any], same_sector: bool | None,

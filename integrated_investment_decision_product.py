@@ -1818,7 +1818,8 @@ def build_ticker_integrated_decision(
         official_liquidity_record=official_liquidity_record,
         operational_context=operational_fundamental_context_record if bridge_consulted else None,
     )
-    return record
+    from raw_pit_authority_matrix import attach_current_readiness
+    return attach_current_readiness(record)
 
 
 # ── Full Product Artifact Builder ─────────────────────────────────────────────
