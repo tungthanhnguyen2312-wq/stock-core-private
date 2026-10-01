@@ -420,3 +420,23 @@ unavailable historical private-fixture test (the empirical breadth runner reads 
 absent August 20 artifact). That unrelated baseline is not repaired or repeatedly run.
 October 1 is not a registered completed session; live telemetry acceptance remains pending.
 Program stays ACTIVE; the next bounded review targets thesis/counter/confirmation coherence.
+
+## Package 12: directional thesis/confirmation coherence
+
+The accepted corpus exposed 53 ALIGNED summaries with bearish breakdown/distribution
+structure: CONFIRMED describes agreement with the observed direction, including bearish
+confirmation, not a constructive thesis. The existing qualitative coherence consumer
+now retains MIXED for constructive fundamentals versus adverse technical structure.
+97 records corrected (53 ALIGNED and 44 PARTIALLY_ALIGNED); 1,586 unchanged.
+Distribution: ALIGNED 54 / MIXED 143 / PARTIALLY_ALIGNED 392 / CONTRADICTED 259 /
+INSUFFICIENT_EVIDENCE 835. Source confirmation, momentum, participation and counters
+remain unchanged. No new signal or action policy is introduced.
+
+Five breakout WHY explanations (KGM, NTC, SCL, VCC, VIP) had asserted supportive
+participation without a support reason. They now say no observed participation
+contradiction. Missing participation has its own wording and still does not block an
+otherwise valid breakout. Sixteen new adversarial cases and the 141-test focused/shared
+delivery gate pass. Full replay retains 1,683 records, is deterministic, permits only
+coherence/WHY and their existing consumer copies, and preserves every per-ticker identity,
+posture, trigger, invalidation, counter and authority. Inputs remain byte-identical.
+Product: `integrated_investment_decision_product/v1:fb138e9ee3c55e720710a21570d7a0fb25a14fe8ae3a4e61a2cec2180b28c4fb`.

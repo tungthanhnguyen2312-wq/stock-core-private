@@ -805,6 +805,11 @@ def evaluate_evidence_axis_coherence(evidence_axes: Mapping[str, Mapping[str, An
     elif fundamental.get("state") == FUNDAMENTAL_DETERIORATING and technical_phase in _CONSTRUCTIVE_TACTICAL_PHASES:
         state = EVIDENCE_AXIS_COHERENCE_CONTRADICTED
         reasons.append("FUNDAMENTALS_DETERIORATING_WHILE_TECHNICAL_STRUCTURE_IS_CONSTRUCTIVE")
+    elif technical_phase in (TACTICAL_BREAKDOWN, TACTICAL_DISTRIBUTION_RISK) and fundamental.get("state") in (
+        FUNDAMENTAL_IMPROVING, FUNDAMENTAL_STABLE, FUNDAMENTAL_TURNAROUND
+    ):
+        state = EVIDENCE_AXIS_COHERENCE_MIXED
+        reasons.append("CONSTRUCTIVE_FUNDAMENTALS_WITH_ADVERSE_TECHNICAL_STRUCTURE")
     elif technical_phase in _CONSTRUCTIVE_TACTICAL_PHASES and (
         market_regime in _ADVERSE_MARKET_REGIMES or sector_state in _WEAK_SECTOR_STATES
     ):
@@ -1341,7 +1346,10 @@ def decide_research_action_posture(
             return POSTURE_WAIT_FOR_CONFIRMATION, why, EFFECT_DOES_NOT_BLOCK
 
         lead_note = " with supportive sector leadership" if is_sector_leader else ""
-        why = f"{ticker}: Valid structural breakout trigger fired at pivot level with non-conflicting fundamentals and supportive participation{lead_note}; actionable initiation setup."
+        participation_note = ("supportive participation" if part_supports else
+                              "no observed participation contradiction" if part_available else
+                              "participation evidence unavailable")
+        why = f"{ticker}: Valid structural breakout trigger fired at pivot level with non-conflicting fundamentals and {participation_note}{lead_note}; actionable initiation setup."
         return POSTURE_INITIATE_ON_BREAKOUT, why, EFFECT_DOES_NOT_BLOCK
 
     # 5. RETEST OF BROKEN PIVOT -> ACCUMULATE_ON_RETEST

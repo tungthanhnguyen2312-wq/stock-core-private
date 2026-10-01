@@ -21,6 +21,7 @@ def main():
     parser.add_argument('--checkpoint-output', type=Path, required=True)
     parser.add_argument('--structural-checkpoint', type=Path, required=True)
     parser.add_argument('--output-root', type=Path, required=True)
+    parser.add_argument('--coherence-acceptance', action='store_true')
     args = parser.parse_args()
     retained, checkpoint, output = (p.resolve() for p in (args.retained_root, args.checkpoint_output, args.output_root))
     if any(output == p or p in output.parents for p in (retained, checkpoint, Path(__file__).resolve().parents[1])):
@@ -61,6 +62,10 @@ def main():
     assert set(before['records']) == set(after['records'])
     allowed = ('market_sector_context.market_breadth', 'evidence_axes.MARKET_SECTOR.context.market_breadth',
                'current_research_decision_input.dimensions.MARKET.market_breadth')
+    if args.coherence_acceptance:
+        allowed = ('evidence_axis_coherence', 'why_now',
+                   'current_research_decision_input.synthesis.why_interesting.evidence_axis_coherence',
+                   'priority_posture_reconciliation.integrated_posture_reason')
     changes = Counter()
     delivery = {}
     for ticker, record in after['records'].items():
@@ -84,7 +89,11 @@ def main():
         sector_status=dict(Counter(r['market_sector_context']['sector_leadership_status'] for r in after['records'].values())),
         participation_status=dict(Counter(r['participation']['status'] for r in after['records'].values())),
         flow_selection=selected_flow, flow_status='NO_GOVERNED_SESSION_INPUT' if selected_flow is None else 'SELECTED',
-        provider_calls=0, authority_effect='NONE', posture_changes=0, why_changes=0, counter_changes=0,
+        provider_calls=0, authority_effect='NONE', posture_changes=0,
+        why_changes=sum(before['records'][t]['why_now'] != r['why_now'] for t,r in after['records'].items()),
+        coherence_changes=sum(before['records'][t]['evidence_axis_coherence'] != r['evidence_axis_coherence'] for t,r in after['records'].items()),
+        coherence_before=dict(Counter(r['evidence_axis_coherence']['state'] for r in before['records'].values())),
+        coherence_after=dict(Counter(r['evidence_axis_coherence']['state'] for r in after['records'].values())), counter_changes=0,
         retained_input_hashes_unchanged=hashes)
     for path, digest in hashes.items():
         assert hashlib.sha256(Path(path).read_bytes()).hexdigest() == digest, path
