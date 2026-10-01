@@ -46,6 +46,12 @@ direction, reference level, reasons or separate watchlist rule needed to interpr
    while the standing decision-input dimension correctly reported PARTIAL.
    The owning summary now reports PARTIAL and preserves blocked-method reasons.
    Another usable multiple remains AVAILABLE; research posture is unchanged.
+5. Financial history is not valuation history. The retained historical percentiles
+   belong to current ratio, equity-to-assets, gross margin and net margin. Averaging
+   them produced valuation-history labels on 1,195 records and a spurious valuation
+   counter-thesis on 471. These cross-domain inferences are removed; the actual
+   financial history remains in its own unchanged source. Comparable historical
+   valuation inputs are not retained by the current-method-only producer.
 
 These are fixed T0 analytical close boundaries. They are not live orders, stops,
 an execution engine, or a new historical T0 reconstruction. Existing immutable
@@ -57,7 +63,7 @@ non-evaluable by the fixed-close evaluator.
 The base implementation exactly reproduces the retained integrated identity:
 `integrated_investment_decision_product/v1:cd0c92321fbef001be15477b876f46f3f1ab82961ce28b091daeb43a168d620f`.
 The corrected replay identity is:
-`integrated_investment_decision_product/v1:bbe1eadf8d2c03fc3e5a40187a3c01b2d9d16c76b0a7144eeeba554b909d86dd`.
+`integrated_investment_decision_product/v1:af56722c6e8e1c34ae8b90efe3c5583cca1fe711aa2b1ef4c38439d2012bfea5`.
 
 | Measurement | Before | After |
 |---|---:|---:|
@@ -67,18 +73,24 @@ The corrected replay identity is:
 | Delivered integrated denominator | 1,683 | 1,683 |
 | Serialized trigger/invalidation conditions preserved in delivery | 0 / 0 | 1,683 / 1,683 |
 | Summary/axis falsely AVAILABLE for P/E-diagnosis-only context | 74 | 0 |
+| Financial percentiles misread as valuation history | 1,195 | 0 |
+| Spurious valuation-history counter-thesis | 471 | 0 |
 
 The old count of 100 includes evaluable watchlist conditions on records without a
 displayed V3 trigger. It is not the old count of structurally coherent triggers.
 Every corrected evaluable condition equals its displayed structural level.
-Research postures, fundamental states, tactical phases, evidence currency,
-counter-thesis and exact-capability blockers are unchanged across all 1,683 records.
+Research postures, fundamental states, financial composite states, peer-relative
+valuation, tactical phases, evidence currency and exact-capability blockers are
+unchanged across all 1,683 records. Every counter-thesis item is unchanged except
+the exact spurious `RATIOS_ELEVATED_VS_OWN_HISTORICAL_RANGE` tag removed from 471 records.
 All decision identities change deterministically because source/condition provenance
 changes, including unavailable conditions. No retained identity is rewritten.
 
 HPG, VCB, SSI, POW and AAA are retained representative traces in the local replay
-summary. For example, HPG's bearish invalidation preserves its swing-high method
-and above-level direction; POW retains its bullish support invalidation direction.
+summary. HPG's bearish invalidation preserves its swing-high method and above-level
+direction; POW retains its bullish support invalidation direction. HPG and POW's
+high current-ratio/equity-to-assets percentiles no longer imply expensive valuation;
+AAA's low financial percentiles no longer imply cheap own-history valuation.
 
 The reusable replay is `tools/replay_current_research_structural_conditions.py`:
 
@@ -96,7 +108,7 @@ verification ensures the latter is reproduced rather than silently substituted.
 
 ## Verification and second pass
 
-179 focused/adjacent tests plus six canonical integration checks pass, covering source tampering, future/stale sessions,
+181 focused/adjacent tests plus six canonical integration checks pass, covering source tampering, future/stale sessions,
 incompatible contracts, missing direction/levels, non-finite values, bearish
 comparators, watchlist divergence, downstream non-escalation and retention isolation.
 Python compilation and whitespace checks pass. Retained input bytes and the
@@ -104,7 +116,8 @@ retained Daily product remain unchanged. No provider calls, publication, databas
 write or authority promotion occurs in the replay.
 
 The final replay attributes every changed record field to condition serialization,
-method propagation or their downstream identity/status references: zero unexplained
+method propagation, diagnosis availability, removal of cross-domain historical
+inference or their downstream identity/status/reason references: zero unexplained
 changes. Entity distribution stays 1,386 corporate, 28 bank, 41 securities, 13
 insurance, one finance company and 214 unknown. Eighteen exact retained inputs
 are byte-verified before/after. One sequential build observation is 11.56 seconds
@@ -122,3 +135,10 @@ The fourth correction changes exactly 74 valuation summary/axis statuses, their
 blocked reasons and downstream missing-factor explanations. Overall summary states
 are 761 AVAILABLE / 74 PARTIAL / 848 UNAVAILABLE, versus 835 AVAILABLE / 848
 UNAVAILABLE before. No diagnosis is discarded and no alternate method is blocked.
+
+The further comparability pass keeps all peer-relative interpretations and financial
+composite states unchanged. Valuation own-history states become UNAVAILABLE for
+all records: the producer does not retain comparable valuation history. Exactly
+367 false supporting tags and 471 false opposing tags are removed, with no other
+supporting/opposing financial-composite reason changed. The explanatory unavailable
+reason is explicit; financial-ratio histories themselves are not deleted or altered.

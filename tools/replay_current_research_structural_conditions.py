@@ -143,7 +143,7 @@ def main():
     corrected_elapsed = time.perf_counter() - started
     assert product.build_artifact(**kwargs)["artifact_identity"] == after["artifact_identity"]
     assert set(before["records"]) == set(after["records"])
-    invariant_fields = ["research_action_posture", "fundamental_state", "tactical_phase", "evidence_currency", "counter_thesis", "exact_capabilities_unavailable"]
+    invariant_fields = ["research_action_posture", "fundamental_state", "tactical_phase", "evidence_currency", "exact_capabilities_unavailable"]
     attributed_changes = Counter()
     allowed = (
         "trigger.condition.", "trigger.watchlist_condition", "invalidation.condition.",
@@ -160,9 +160,23 @@ def main():
         "evidence_axes.VALUATION.state", "evidence_axes.VALUATION.fitness", "evidence_axes.VALUATION.blocker_reason_codes",
         "current_research_decision_input.dimensions.VALUATION.reason_codes",
         "current_research_decision_input.synthesis.missing_primary_factors.VALUATION",
+        "valuation_context_summary.own_history_state", "valuation_context_summary.own_history_reason_codes",
+        "evidence_axes.VALUATION.context.own_history_state", "evidence_axes.VALUATION.supporting_reason_codes",
+        "evidence_axes.VALUATION.contradicting_reason_codes", "counter_thesis",
+        "financial_composite_context.joined_axes.valuation_own_history_state",
+        "financial_composite_context.supporting_reason_codes", "financial_composite_context.contradicting_reason_codes",
+        "current_research_decision_input.synthesis.constructive_reason_codes",
+        "current_research_decision_input.synthesis.weak_reason_codes",
     )
     for ticker, old in before["records"].items():
         new = after["records"][ticker]
+        assert new["counter_thesis"] == [code for code in old["counter_thesis"] if code != "RATIOS_ELEVATED_VS_OWN_HISTORICAL_RANGE"], ticker
+        for key, removed in [("supporting_reason_codes", "RATIOS_LOW_VS_OWN_HISTORICAL_RANGE"),
+                             ("contradicting_reason_codes", "RATIOS_ELEVATED_VS_OWN_HISTORICAL_RANGE")]:
+            assert new["financial_composite_context"][key] == [code for code in old["financial_composite_context"][key] if code != removed], (ticker, key)
+        assert new["financial_composite_context"]["financial_composite_state"] == old["financial_composite_context"]["financial_composite_state"], ticker
+        assert new["valuation_context_summary"]["peer_relative_state"] == old["valuation_context_summary"]["peer_relative_state"], ticker
+        assert new["valuation_context_summary"]["own_history_state"] == "UNAVAILABLE", ticker
         if old["valuation_context_summary"]["status"] != new["valuation_context_summary"]["status"]:
             assert old["current_research_decision_input"]["dimensions"]["VALUATION"]["evidence_class"] == "PE_NOT_MEANINGFUL_ONLY", ticker
             assert old["valuation_context_summary"]["status"] == "AVAILABLE" and new["valuation_context_summary"]["status"] == "PARTIAL", ticker
@@ -197,6 +211,11 @@ def main():
     summary["distributions"]["valuation_summary_status"] = {label: dict(Counter(
         r["valuation_context_summary"]["status"] for r in artifact["records"].values()))
         for label, artifact in [("before", before), ("after", after)]}
+    summary["distributions"]["valuation_own_history_state"] = {label: dict(Counter(
+        r["valuation_context_summary"]["own_history_state"] for r in artifact["records"].values()))
+        for label, artifact in [("before", before), ("after", after)]}
+    summary["spurious_valuation_history_counters_removed"] = sum(
+        "RATIOS_ELEVATED_VS_OWN_HISTORICAL_RANGE" in r["counter_thesis"] for r in before["records"].values())
     summary["distributions"]["fundamental_freshness"] = dict(Counter(
         ((r["current_research_decision_input"]["dimensions"]["FUNDAMENTAL"].get("freshness") or {}).get("freshness_status"))
         for r in after["records"].values()))

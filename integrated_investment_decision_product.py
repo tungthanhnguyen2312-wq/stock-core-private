@@ -1004,9 +1004,6 @@ def evaluate_valuation_context(
         if isinstance(detail, Mapping) and detail.get("status") == "READY_RESEARCH_ONLY" and method_id not in _SIZE_CONTEXT_METHODS
     }
 
-    # Own-history context from FA V2
-    hist_ctx = fa_context.get("history_context") or {}
-
     peer_interpretation = "NOT_APPLICABLE"
     if isinstance(peer_pctl, (int, float)):
         if peer_pctl <= 0.33:
@@ -1028,24 +1025,12 @@ def evaluate_valuation_context(
         peer_interpretation = "MID_RANGE_VS_PEERS"
         supports.append("VALUATION_IN_LINE_WITH_PEERS")
 
-    # Own history interpretation. `financial_analysis_engine_v2._history_entry()` (the sole
-    # producer of this shape, passed through verbatim by financial_analysis_product_projection)
-    # names this field "percentile", never "percentile_in_history" -- the prior key name never
-    # matched a single real record, so this axis silently never activated. Confirmed by reading
-    # both producers; fixed to read the field that is actually emitted.
+    # Financial V2 history contains operating/balance-sheet ratios, not historical
+    # price-to-fundamental multiples. Its percentiles cannot measure valuation
+    # cheapness or expensiveness, nor be averaged across incompatible metrics.
+    # The standing valuation producer retains current methods only. Keep the
+    # financial history in its own context and fail closed on valuation history.
     own_history_interpretation = "UNAVAILABLE"
-    if hist_ctx:
-        pctls = [v.get("percentile") for v in hist_ctx.values() if isinstance(v, Mapping) and isinstance(v.get("percentile"), (int, float))]
-        if pctls:
-            avg_pctl = sum(pctls) / len(pctls)
-            if avg_pctl <= 0.33:
-                own_history_interpretation = "LOW_VS_OWN_HISTORY"
-                supports.append("RATIOS_LOW_VS_OWN_HISTORICAL_RANGE")
-            elif avg_pctl >= 0.67:
-                own_history_interpretation = "HIGH_VS_OWN_HISTORY"
-                counters.append("RATIOS_ELEVATED_VS_OWN_HISTORICAL_RANGE")
-            else:
-                own_history_interpretation = "MID_VS_OWN_HISTORY"
 
     # Monetary basis and availability checks
     share_basis = val_rec.get("share_basis")
@@ -1113,6 +1098,7 @@ def evaluate_valuation_context(
         "status": status,
         "peer_relative_state": peer_interpretation,
         "own_history_state": own_history_interpretation,
+        "own_history_reason_codes": ["COMPARABLE_VALUATION_HISTORY_NOT_RETAINED"],
         "peer_percentile": peer_pctl,
         "peer_relative_basis": peer_basis,
         "share_basis": share_basis,

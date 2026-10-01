@@ -15,7 +15,11 @@ all 1,683 tickers and all postures; 388 structural triggers and 845 invalidation
 evaluable with exact level alignment. The second pass aligns 74 valuation
 diagnosis-only summaries with the existing PARTIAL dimension semantics, retaining
 their negative-earnings diagnosis and blocked-method reasons. 179 focused/adjacent
-tests and six canonical integration checks pass. Research policy
+tests and six canonical integration checks pass. A further comparability pass
+removes 1,195 valuation-history labels derived from financial-ratio percentiles,
+including 471 spurious valuation counter-theses. Financial histories, peer-relative
+valuation, composite states and postures remain intact; 181 focused/adjacent tests
+now pass. Research policy
 and authority gates remain unchanged. See [program checkpoint](internal/current_research_decision_quality_program.md).
 PR #28 and #29 remain independent pending-owner-merge corrections, not dependencies.
 New-session telemetry live acceptance remains externally time-gated.

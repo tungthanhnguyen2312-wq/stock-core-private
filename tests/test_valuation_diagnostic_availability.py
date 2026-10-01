@@ -1,4 +1,5 @@
 import integrated_investment_decision_product as product
+import copy
 from ai_research_session_delivery import project_integrated_decision_for_ai_delivery
 
 
@@ -59,3 +60,29 @@ def test_absent_diagnostic_and_all_blocked_methods_remain_unavailable():
     record["methods"].pop("P/E_TTM")
     summary, _, _, _ = product.evaluate_valuation_context(record, None)
     assert summary["status"] == "UNAVAILABLE"
+
+
+def test_financial_history_and_valuation_peer_context_keep_separate_semantics():
+    financial = {"history_context": {
+        "current_ratio": {"status": "AVAILABLE", "percentile": 1.0},
+        "equity_to_assets": {"status": "AVAILABLE", "percentile": 1.0},
+        "gross_margin": {"status": "AVAILABLE", "percentile": 0.0},
+    }}
+    original = copy.deepcopy(financial)
+    value = valuation()
+    value["relative_research_state"] = "ATTRACTIVE_RELATIVE_RESEARCH"
+    summary, supports, counters, _ = product.evaluate_valuation_context(value, financial)
+    assert summary["peer_relative_state"] == "CHEAP_VS_PEERS"
+    assert summary["own_history_state"] == "UNAVAILABLE"
+    assert summary["own_history_reason_codes"] == ["COMPARABLE_VALUATION_HISTORY_NOT_RETAINED"]
+    assert not any("OWN_HISTORICAL_RANGE" in code for code in supports + counters)
+    assert financial == original
+
+
+def test_metric_name_and_percentile_alone_do_not_qualify_valuation_history():
+    # Even an asserted P/E key has no comparable price/period/method lineage
+    # in the Financial V2 history contract. A numeric percentile is not proof.
+    financial = {"history_context": {"P/E": {"status": "AVAILABLE", "percentile": 0.1}}}
+    summary, supports, counters, _ = product.evaluate_valuation_context(valuation(), financial)
+    assert summary["own_history_state"] == "UNAVAILABLE"
+    assert not any("OWN_HISTORICAL_RANGE" in code for code in supports + counters)
