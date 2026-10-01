@@ -392,3 +392,31 @@ deterministic. Exact changed-path checks permit only period/freshness metadata, 
 normalizing those fields back gives the identical prior context. All retained inputs
 remain byte-identical. No acquisition, duplicate publication, source-authority promotion,
 cap/retry change or HNX/UPCoM expansion occurs. Program remains ACTIVE for continuation.
+
+## Package 11: counted market breadth in decision context
+
+Bounded canonical-path measurement found market and sector labels already consumed,
+but the market observation denominator and qualification stopped at the sector artifact.
+The retained source observes 848 of 1,507 official members (659 missing, coverage
+0.5627073656270737), MIXED_BREADTH. Sector status already survives: AVAILABLE 838 /
+DATA_LIMITED 10 / UNAVAILABLE 835. Participation AVAILABLE 853 / NOT_AVAILABLE 830.
+The governed session has no selected market-flow artifact: foreign, proprietary,
+active-order, foreign-room and value-composition dimensions are unprovided, not neutral.
+No new flow acquisition or inferred integration is performed.
+
+The owning IID consumer now preserves the complete counted observation, source identity,
+input lineage, session, limitations and PARTIAL status in market context, the evidence
+axis and Current Research dimension. Shared delivery retains these structures verbatim.
+Missing/inconsistent denominators, stale/future sessions and UNKNOWN/BLOCKED provider
+status cannot supply a current market constraint. Stale sector labels are locally blocked.
+Observed breadth remains contextual and never a forecast, cause or execution entitlement.
+
+Full retained replay: 1,683 in/out, deterministic, zero drops/unexplained changes;
+all 1,683 enriched, all per-ticker identities/postures/WHY/counters/phase/authority unchanged.
+Source bytes unchanged. Product identity:
+`integrated_investment_decision_product/v1:6d91e50f4d27d27047302faa397a6acb82b25c9f97e948bb1c2b81b3b4884208`.
+Sixteen new adversarial tests pass; combined adjacent gate has 150 passes and one
+unavailable historical private-fixture test (the empirical breadth runner reads its
+absent August 20 artifact). That unrelated baseline is not repaired or repeatedly run.
+October 1 is not a registered completed session; live telemetry acceptance remains pending.
+Program stays ACTIVE; the next bounded review targets thesis/counter/confirmation coherence.

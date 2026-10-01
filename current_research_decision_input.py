@@ -88,6 +88,7 @@ def _market(record: Mapping[str, Any], disposition: Mapping[str, Any] | None, se
         "price_basis": {"current_research_use": "EXACT_SESSION_DESCRIPTIVE_ONLY",
                         "raw_as_traded": "NOT_PROMOTED", "historical_pit": "BLOCKED"},
         "market_regime": market_axis.get("state") if market_axis.get("fitness") not in (None, "UNAVAILABLE") else None,
+        "market_breadth": copy.deepcopy((market_axis.get("context") or {}).get("market_breadth")),
         "reason_codes": [] if exact else _codes(
             [disposition.get("disposition") or "TECHNICAL_COVERAGE_DISPOSITION_NOT_SUPPLIED", disposition.get("reason_code")]),
     }

@@ -728,7 +728,7 @@ def build_evidence_axes(
             method="current_market_sector_leadership_context/v1",
             lineage={"source_artifact_identity": identities.get("market_sector")},
             context={"market_regime": market_summary.get("market_regime"), "sector_leadership": sector_context,
-                     **{key: market_summary.get(key) for key in ("sector_leadership_status", "sector_leadership_reason_codes", "sector_group_key", "sector_group_coverage_ratio")}},
+                     **{key: market_summary.get(key) for key in ("market_breadth", "sector_leadership_status", "sector_leadership_reason_codes", "sector_group_key", "sector_group_coverage_ratio")}},
         ),
         "OPPORTUNITY_PRIORITY": _axis(
             # The standing Daily decision queue names this governed lane field
@@ -1133,6 +1133,35 @@ def evaluate_valuation_context(
 
 # ── Participation Evaluator ───────────────────────────────────────────────────
 
+def evaluate_market_breadth(source: Mapping[str, Any], session: str) -> dict[str, Any]:
+    """Preserve the observed cohort; qualify only same-session, counted breadth."""
+    observed = source.get("market") or {}
+    reasons = []
+    if source.get("session") != session or observed.get("session") != session:
+        reasons.append("MARKET_BREADTH_SESSION_MISMATCH_OR_UNKNOWN")
+    counts = [observed.get(k) for k in (
+        "official_universe_count", "exact_session_observed_count", "missing_current_session_count")]
+    valid_counts = all(isinstance(n, int) and not isinstance(n, bool) and n >= 0 for n in counts)
+    if not valid_counts or counts[0] <= 0 or counts[1] <= 0 or counts[1] + counts[2] != counts[0]:
+        reasons.append("MARKET_BREADTH_DENOMINATOR_MISSING_OR_INCONSISTENT")
+    if observed.get("status", "AVAILABLE") not in {"AVAILABLE", "PARTIAL"}:
+        reasons.append("MARKET_BREADTH_PROVIDER_STATUS_UNQUALIFIED")
+    if not observed.get("current_breadth_state"):
+        reasons.append("MARKET_BREADTH_STATE_UNAVAILABLE")
+    status = "BLOCKED" if reasons else ("PARTIAL" if counts[2] or observed.get("status") == "PARTIAL" else "AVAILABLE")
+    return {
+        "status": status,
+        "market_regime": observed.get("current_breadth_state") if not reasons else "UNKNOWN",
+        "reason_codes": reasons,
+        "source_artifact_identity": source.get("artifact_identity"),
+        "source_session": source.get("session"),
+        "input_lineage": copy.deepcopy(source.get("input_lineage") or {}),
+        "observation": copy.deepcopy(observed),
+        "use": "OBSERVED_COHORT_CONTEXT_ONLY" if not reasons else "NO_CURRENT_BREADTH_USE",
+        "limitations": ["PARTIAL_COHORT_NOT_ALL_MARKET", "NO_FORECAST_CAUSALITY_OR_EXECUTION_AUTHORITY"],
+    }
+
+
 def evaluate_participation(
     tactical_rec: Mapping[str, Any] | None,
     rvol_rec: Mapping[str, Any] | None,
@@ -1480,8 +1509,12 @@ def build_ticker_integrated_decision(
     # this artifact), which made market_regime/sector_leadership silently constant defaults in
     # production regardless of the real session's breadth/leadership.
     ticker_sector_ctx = ((market.get("ticker_contexts") or {}).get(ticker) or {}).get("sector_leadership_context") or {}
+    breadth = evaluate_market_breadth(market, as_of_session)
+    if market.get("session") != as_of_session:
+        ticker_sector_ctx = {"status": "BLOCKED", "reason": "SECTOR_CONTEXT_SESSION_MISMATCH_OR_UNKNOWN"}
     mkt_summary = {
-        "market_regime": (market.get("market") or {}).get("current_breadth_state") or "NEUTRAL_MIXED",
+        "market_regime": breadth["market_regime"],
+        "market_breadth": breadth,
         # Absence is not an observed neutral sector. Keep the qualified market
         # breadth while preserving the ticker's separate sector coverage gate.
         "sector_leadership": (ticker_sector_ctx.get("leadership_state")

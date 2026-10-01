@@ -582,7 +582,9 @@ class TestGovernanceAndStructure:
             trigger_type="PIVOT_BREAKOUT_TRIGGER",
         )
         mkt = {
-            "market": {"current_breadth_state": "DETERIORATING_BREADTH"},
+            "session": "2026-08-28",
+            "market": {"current_breadth_state": "DETERIORATING_BREADTH", "session": "2026-08-28",
+                       "official_universe_count": 10, "exact_session_observed_count": 8, "missing_current_session_count": 2},
             "ticker_contexts": {"HPG": {"sector_leadership_context": {"leadership_state": "LEADING"}}},
         }
         dec = iidp.build_ticker_integrated_decision(
