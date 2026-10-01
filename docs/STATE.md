@@ -1,6 +1,23 @@
 # Stock Lookup — Operational State
 
 
+**Current Research coverage & decision fitness (2026-10-01):**
+`CURRENT_RESEARCH_COVERAGE_AND_DECISION_FITNESS_V1 = COMPLETE / PR_READY`.
+The milestone reuses the existing `current_research_decision_input/v1` denominator and
+dimension states instead of creating a parallel qualification framework. It adds a
+read-only deterministic fitness projection, market-wide dimension/authority distributions,
+explicit gap-reason prevalence, and a no-network CLI. The new focused tests are included
+in Producer CI. No ticker posture, analytical threshold, source/provider authority,
+financial/valuation semantic, PIT, liquidity/sizing/execution authority, production DB,
+runtime artifact or publication behavior changes.
+
+The next capability after owner merge is
+`FUNDAMENTAL_AND_CURRENT_VALUATION_DEPTH_V1`. Its purpose is to improve research-usable
+fundamental and valuation depth using the measured R2 gaps, not to reopen a generic
+qualification audit.
+
+
+
 **Roadmap + public repository rebaseline (2026-10-01):**
 `ROADMAP_AND_PUBLIC_REPOSITORY_REBASELINE_V1 = COMPLETE / PR_READY` on the
 owner-authorized post-PR-31 branch. PR #31 merged to `main` at
