@@ -1,5 +1,13 @@
 # Stock Lookup — Architecture & Roadmap
 
+**Roadmap sync: future-dated Current Research freshness (2026-10-01):**
+`CURRENT_RESEARCH_FUTURE_DATED_FRESHNESS_GUARD_V1 = COMPLETE`, owner-authorized
+independent corrective while new-session telemetry live acceptance is time-gated.
+Future source dates now fail closed against the existing domain reference anchor;
+the 17-series retained macro context and identity are unchanged. No authority promotion.
+Owner Daily RSS repair is separately submitted as PR #28; no merge or live acceptance.
+
+
 **Roadmap sync: Daily official liquidity rollforward corrective (2026-09-30):**
 - `DAILY_OFFICIAL_LIQUIDITY_ROLLFORWARD_V1` = `PARTIAL /
   CORE_DAILY_LIVE_ACCEPTED_OFFICIAL_LIQUIDITY_LIVE_FAIL_CLOSED_SOURCE_ABSENT /

@@ -1,7 +1,7 @@
 {
   "schema_version": "stocklookup_roadmap_execution_state/1.0.0",
   "roadmap_id": "stock-core-private",
-  "roadmap_version": "2026.09.30.5",
+  "roadmap_version": "2026.10.01.1",
   "narrative_authority": {
     "strategic_roadmap": "docs/ROADMAP.md",
     "operational_narrative": "docs/STATE.md",
@@ -15,11 +15,28 @@
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "OWNER_DAILY_PROGRESS_TELEMETRY_V1",
+    "milestone": "CURRENT_RESEARCH_FUTURE_DATED_FRESHNESS_GUARD_V1",
     "state": "COMPLETE"
   },
   "queued_next": [],
   "milestones": [
+    {
+      "milestone_id": "CURRENT_RESEARCH_FUTURE_DATED_FRESHNESS_GUARD_V1",
+      "state": "COMPLETE",
+      "narrative_disposition": "FUTURE_DATE_FAIL_CLOSED / RETAINED_MACRO_IDENTITY_PRESERVED",
+      "terminal_disposition": "FUTURE_DATED_FRESHNESS_GUARD_COMPLETE",
+      "starting_checkpoint": "59580f6cda300dce8013af284d2ce11e026e3029",
+      "checkpoint": "HEAD",
+      "candidate_branch": "feature/current-research-future-freshness-20261001",
+      "dependencies": [],
+      "unlocks": [],
+      "authority_effect": "NONE / FRESHNESS_LABEL_CORRECTION_ONLY",
+      "owner_authorized": true,
+      "source_doc": "Owner resume autonomous roadmap directive (2026-10-01)",
+      "state_history": ["ACTIVE", "COMPLETE"],
+      "owner_override": "OWNER_DIRECTIVE_2026_10_01_AUTONOMOUS_INDEPENDENT_CURRENT_RESEARCH_WORK",
+      "notes": "Owner-authorized independent corrective despite queued_next=[] while telemetry live acceptance is time-gated. Negative observation age now yields unknown / source_date_after_reference_anchor / non-actionable across the existing domain cadences. Market domains use the existing completed-session anchor. Future observations remain retained; unrelated inputs, cadences, source tiers and analytical thresholds are unchanged. All 17 retained 2026-09-30 runtime macro series replay identically to base 59580f6, same macro_presentation_context identity d0045da8120a7799efe12856c0ae341e4146c1ab547de1e08679c95aab1d5c11 (12 current, 5 stale/expiring). Focused/adjacent tests pass. No provider acquisition, runtime/DB write or authority promotion. Owner telemetry RSS repair is separately submitted as PR #28; NEW_SESSION_LIVE_ACCEPTANCE_PENDING remains an external time gate."
+    },
     {
       "milestone_id": "DAILY_OFFICIAL_LIQUIDITY_ROLLFORWARD_V1",
       "state": "PARTIAL",
