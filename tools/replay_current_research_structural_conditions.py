@@ -167,6 +167,8 @@ def main():
         "financial_composite_context.supporting_reason_codes", "financial_composite_context.contradicting_reason_codes",
         "current_research_decision_input.synthesis.constructive_reason_codes",
         "current_research_decision_input.synthesis.weak_reason_codes",
+        "market_sector_context.", "evidence_axes.MARKET_SECTOR.context.",
+        "evidence_axes.MARKET_SECTOR.blocker_reason_codes",
     )
     for ticker, old in before["records"].items():
         new = after["records"][ticker]
@@ -177,6 +179,12 @@ def main():
         assert new["financial_composite_context"]["financial_composite_state"] == old["financial_composite_context"]["financial_composite_state"], ticker
         assert new["valuation_context_summary"]["peer_relative_state"] == old["valuation_context_summary"]["peer_relative_state"], ticker
         assert new["valuation_context_summary"]["own_history_state"] == "UNAVAILABLE", ticker
+        sector = ((kwargs["market_sector_artifact"].get("ticker_contexts") or {}).get(ticker) or {}).get("sector_leadership_context") or {}
+        assert new["market_sector_context"]["sector_leadership"] == (sector.get("leadership_state") or "UNKNOWN"), ticker
+        assert new["market_sector_context"]["market_regime"] == old["market_sector_context"]["market_regime"], ticker
+        assert new["evidence_axes"]["MARKET_SECTOR"]["fitness"] == old["evidence_axes"]["MARKET_SECTOR"]["fitness"], ticker
+        assert new["market_sector_context"]["sector_group_key"] == sector.get("group_key"), ticker
+        assert new["market_sector_context"]["sector_group_coverage_ratio"] == sector.get("group_coverage_ratio"), ticker
         if old["valuation_context_summary"]["status"] != new["valuation_context_summary"]["status"]:
             assert old["current_research_decision_input"]["dimensions"]["VALUATION"]["evidence_class"] == "PE_NOT_MEANINGFUL_ONLY", ticker
             assert old["valuation_context_summary"]["status"] == "AVAILABLE" and new["valuation_context_summary"]["status"] == "PARTIAL", ticker
@@ -216,6 +224,11 @@ def main():
         for label, artifact in [("before", before), ("after", after)]}
     summary["spurious_valuation_history_counters_removed"] = sum(
         "RATIOS_ELEVATED_VS_OWN_HISTORICAL_RANGE" in r["counter_thesis"] for r in before["records"].values())
+    summary["distributions"]["sector_leadership"] = {label: dict(Counter(
+        r["market_sector_context"]["sector_leadership"] for r in artifact["records"].values()))
+        for label, artifact in [("before", before), ("after", after)]}
+    summary["distributions"]["sector_leadership_status"] = dict(Counter(
+        r["market_sector_context"]["sector_leadership_status"] for r in after["records"].values()))
     summary["distributions"]["fundamental_freshness"] = dict(Counter(
         ((r["current_research_decision_input"]["dimensions"]["FUNDAMENTAL"].get("freshness") or {}).get("freshness_status"))
         for r in after["records"].values()))

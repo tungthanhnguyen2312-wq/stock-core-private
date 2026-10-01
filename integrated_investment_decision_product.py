@@ -607,7 +607,7 @@ def build_evidence_axes(
     priority = priority_record or {}
     priority_fitness = priority.get("data_quality_status") or ("AVAILABLE" if priority_record else "UNAVAILABLE")
     sector_context = (market_summary.get("sector_leadership") if market_context_provided else None)
-    sector_fitness = "AVAILABLE" if market_context_provided and sector_context not in (None, "IN_LINE") else (
+    sector_fitness = "AVAILABLE" if market_context_provided and sector_context not in (None, "IN_LINE", "UNKNOWN") else (
         "PARTIAL" if market_context_provided else "UNAVAILABLE"
     )
     derivation = (fundamental_synthesis or {}).get("derivation") or {}
@@ -723,10 +723,11 @@ def build_evidence_axes(
         "MARKET_SECTOR": _axis(
             state=market_summary.get("market_regime") if market_context_provided else "UNAVAILABLE",
             fitness=sector_fitness,
-            blockers=[] if market_context_provided else ["MARKET_SECTOR_CONTEXT_NOT_PROVIDED"],
+            blockers=list(market_summary.get("sector_leadership_reason_codes") or []) if market_context_provided else ["MARKET_SECTOR_CONTEXT_NOT_PROVIDED"],
             method="current_market_sector_leadership_context/v1",
             lineage={"source_artifact_identity": identities.get("market_sector")},
-            context={"market_regime": market_summary.get("market_regime"), "sector_leadership": sector_context},
+            context={"market_regime": market_summary.get("market_regime"), "sector_leadership": sector_context,
+                     **{key: market_summary.get(key) for key in ("sector_leadership_status", "sector_leadership_reason_codes", "sector_group_key", "sector_group_coverage_ratio")}},
         ),
         "OPPORTUNITY_PRIORITY": _axis(
             # The standing Daily decision queue names this governed lane field
@@ -1476,9 +1477,21 @@ def build_ticker_integrated_decision(
     ticker_sector_ctx = ((market.get("ticker_contexts") or {}).get(ticker) or {}).get("sector_leadership_context") or {}
     mkt_summary = {
         "market_regime": (market.get("market") or {}).get("current_breadth_state") or "NEUTRAL_MIXED",
-        "sector_leadership": ticker_sector_ctx.get("leadership_state") or "IN_LINE",
+        # Absence is not an observed neutral sector. Keep the qualified market
+        # breadth while preserving the ticker's separate sector coverage gate.
+        "sector_leadership": (ticker_sector_ctx.get("leadership_state")
+                              if ticker_sector_ctx.get("status") in (None, "AVAILABLE") else None) or "UNKNOWN",
+        "sector_leadership_status": ticker_sector_ctx.get("status") or ("AVAILABLE" if ticker_sector_ctx.get("leadership_state") else "UNAVAILABLE"),
+        "sector_leadership_reason_codes": list(dict.fromkeys(
+            ([ticker_sector_ctx["reason"]] if ticker_sector_ctx.get("reason") else [])
+            + list(((market.get("ticker_contexts") or {}).get(ticker) or {}).get("coverage_limitations") or [])
+            + (["SECTOR_LEADERSHIP_CONTEXT_NOT_PROVIDED"] if not ticker_sector_ctx else []))),
+        "sector_group_key": ticker_sector_ctx.get("group_key"),
+        "sector_group_coverage_ratio": ticker_sector_ctx.get("group_coverage_ratio"),
         "authority_tier": "CURRENT_RESEARCH_DESCRIPTIVE",
     }
+    if mkt_summary["sector_leadership"] == "UNKNOWN" and not mkt_summary["sector_leadership_reason_codes"]:
+        mkt_summary["sector_leadership_reason_codes"] = ["SECTOR_LEADERSHIP_" + mkt_summary["sector_leadership_status"]]
     market_context_provided = isinstance(market_sector_record, Mapping)
 
     # 6. Portfolio Context

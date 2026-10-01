@@ -20,8 +20,12 @@ including 471 spurious valuation counter-theses. Financial histories, peer-relat
 valuation, composite states and postures remain intact. Adversarial outcome checks
 now reject Boolean/non-finite/non-positive levels and closes, and reject a structural
 condition evaluated from a different T0 session. Valid retained conditions and
-product identities remain unchanged by this hardening; 222 focused/adjacent tests
-and six canonical integration checks pass. Research policy
+product identities remain unchanged by this hardening. A further source-status pass
+removes 845 unsupported IN_LINE sector labels: 838 observed leadership states remain
+unchanged, while 10 data-limited and 835 unavailable sector contexts retain their
+reasons, group provenance and coverage alongside qualified market breadth. No
+posture or market-regime change occurs; 236 focused/adjacent tests and six canonical
+integration checks pass. Research policy
 and authority gates remain unchanged. See [program checkpoint](internal/current_research_decision_quality_program.md).
 PR #28 and #29 remain independent pending-owner-merge corrections, not dependencies.
 New-session telemetry live acceptance remains externally time-gated.

@@ -52,6 +52,13 @@ direction, reference level, reasons or separate watchlist rule needed to interpr
    counter-thesis on 471. These cross-domain inferences are removed; the actual
    financial history remains in its own unchanged source. Comparable historical
    valuation inputs are not retained by the current-method-only producer.
+6. The standing close evaluator rejects invalid numeric levels/observations and
+   structural conditions evaluated from a different retained T0 session. It adds
+   no outcome engine or reconstructed historical snapshot.
+7. Missing sector leadership is UNKNOWN, not an observed IN_LINE state. The
+   integrated summary and evidence axis retain upstream status, reasons, group
+   classification key and coverage. Qualified market-wide breadth stays usable
+   independently of the ticker's sector coverage gate.
 
 These are fixed T0 analytical close boundaries. They are not live orders, stops,
 an execution engine, or a new historical T0 reconstruction. Existing immutable
@@ -63,7 +70,7 @@ non-evaluable by the fixed-close evaluator.
 The base implementation exactly reproduces the retained integrated identity:
 `integrated_investment_decision_product/v1:cd0c92321fbef001be15477b876f46f3f1ab82961ce28b091daeb43a168d620f`.
 The corrected replay identity is:
-`integrated_investment_decision_product/v1:af56722c6e8e1c34ae8b90efe3c5583cca1fe711aa2b1ef4c38439d2012bfea5`.
+`integrated_investment_decision_product/v1:41d270a249602dbdb70c8fb7e875ed6e371236ba5f20c27c22c1141c3adfdf96`.
 
 | Measurement | Before | After |
 |---|---:|---:|
@@ -75,6 +82,7 @@ The corrected replay identity is:
 | Summary/axis falsely AVAILABLE for P/E-diagnosis-only context | 74 | 0 |
 | Financial percentiles misread as valuation history | 1,195 | 0 |
 | Spurious valuation-history counter-thesis | 471 | 0 |
+| Unsupported neutral sector leadership labels | 845 | 0 |
 
 The old count of 100 includes evaluable watchlist conditions on records without a
 displayed V3 trigger. It is not the old count of structurally coherent triggers.
@@ -108,7 +116,7 @@ verification ensures the latter is reproduced rather than silently substituted.
 
 ## Verification and second pass
 
-222 focused/adjacent tests plus six canonical integration checks pass, covering source tampering, future/stale sessions,
+236 focused/adjacent tests plus six canonical integration checks pass, covering source tampering, future/stale sessions,
 incompatible contracts, missing direction/levels, non-finite values, bearish
 comparators, watchlist divergence, downstream non-escalation and retention isolation.
 Python compilation and whitespace checks pass. Retained input bytes and the
@@ -152,7 +160,7 @@ qualified close. Existing watchlist conditions without structural session lineag
 keep their standing temporal contract. Feedback preserves the temporal blocker,
 and calibration continues to use the same evaluator. These are counterfactual
 integration checks, not claims of malformed retained prices or live outcomes.
-The full retained replay identity remains
+At that outcome-hardening checkpoint, the full retained replay identity remained
 `integrated_investment_decision_product/v1:af56722c6e8e1c34ae8b90efe3c5583cca1fe711aa2b1ef4c38439d2012bfea5`.
 
 The research-priority second pass found no justified strategy substitution: its
@@ -163,3 +171,15 @@ All 22 eligible records retain comparable revenue/earnings pairs; 21 end in
 Only five of these 22 have the integrated IMPROVING state. The difference does not
 justify lowering requirements or replacing one measurement with another. No
 strategy/priority code or authority was changed on this hypothesis.
+
+The next retained-source pass removes unsupported IN_LINE labels on 845 records
+(835 UNAVAILABLE, 10 DATA_LIMITED). All 838 observed leadership states remain
+unchanged (22 LEADING, 764 MIXED, 52 WEAKENING). Market breadth, axis fitness,
+postures and coherence states remain unchanged. The new status/reason/group fields
+retain the producer's classification basis, including descriptive industry and
+entity-class fallback groups; they do not promote a group into official sector
+authority. The shared AI projector already carries this corrected evidence axis,
+so no parallel delivery surface is added. Replay attributes only the summary/axis
+fields and resulting content identities to this correction. The 26 populated
+valuation peer cohorts contain 1,290 method members and no measured mixed
+statement-scope/basis cohort; no speculative peer-rule change was made.
