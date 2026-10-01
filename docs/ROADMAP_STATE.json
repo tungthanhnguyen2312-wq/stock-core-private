@@ -15,12 +15,10 @@
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "PROSPECTIVE_EVIDENCE_CONTINUITY_DIAGNOSTICS_V1",
-    "state": "COMPLETE"
+    "milestone": "CURRENT_CORPORATE_EVIDENCE_CURRENCY_V1",
+    "state": "ACTIVE"
   },
-  "queued_next": [
-    "CURRENT_CORPORATE_EVIDENCE_CURRENCY_V1"
-  ],
+  "queued_next": [],
   "milestones": [
     {
       "milestone_id": "PROSPECTIVE_EVIDENCE_CONTINUITY_DIAGNOSTICS_V1",
@@ -46,10 +44,10 @@
     },
     {
       "milestone_id": "CURRENT_CORPORATE_EVIDENCE_CURRENCY_V1",
-      "state": "NEXT",
-      "starting_checkpoint": "f17ced71d03de097ba091c82967ed33c53bec429",
+      "state": "ACTIVE",
+      "starting_checkpoint": "22ce3147e0b373ba8b447e23ba0032bf727db6d5",
       "checkpoint": null,
-      "candidate_branch": null,
+      "candidate_branch": "feature/current-corporate-currency-budget-20261002",
       "dependencies": [
         "PROSPECTIVE_EVIDENCE_CONTINUITY_DIAGNOSTICS_V1"
       ],
@@ -58,7 +56,8 @@
       "owner_authorized": true,
       "source_doc": "docs/internal/POST_R1_R7_SYSTEM_REVIEW_20261002.md",
       "state_history": [
-        "NEXT"
+        "NEXT",
+        "ACTIVE"
       ],
       "owner_override": "OWNER_DIRECTIVE_2026_10_02_AUTONOMOUS_RELEASE_AND_ROADMAP_ADVANCE",
       "notes": "Inspect admitted route contracts and implement a bounded request/byte acquisition plan before invoking existing official corporate acquisition. Preserve actual knowledge time; never repair historical T0 from current evidence."

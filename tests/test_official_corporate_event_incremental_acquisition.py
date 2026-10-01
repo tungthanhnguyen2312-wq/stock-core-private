@@ -236,6 +236,7 @@ def test_latest_successful_session_is_none_when_nothing_retained(tmp_path):
 
 # --- 7. canonical current_official_event_context materialization ---
 
+@pytest.mark.retained_evidence("operations-review/current-official-market-universe-integration-v1-20260824/current_official_market_universe_artifact.json")
 def test_materialize_current_official_event_context_from_latest_session(tmp_path, monkeypatch):
     _acquire(tmp_path, monkeypatch, session="2026-09-05")
     official_universe_path = (
@@ -257,6 +258,7 @@ def test_materialize_current_official_event_context_from_latest_session(tmp_path
         assert event["record_date"] != event.get("ex_date") or event.get("ex_date") is None
 
 
+@pytest.mark.retained_evidence("operations-review/current-official-market-universe-integration-v1-20260824/current_official_market_universe_artifact.json")
 def test_materialize_writes_to_the_directory_the_latest_pointer_resolver_scans_for(tmp_path, monkeypatch):
     import daily_session_level2_package as level2
 
@@ -287,6 +289,7 @@ def test_materialize_rejects_an_unsuccessful_or_unknown_session(tmp_path, monkey
 
 # --- 8. genuine historical temporal replay: zero future-event leak across two real sessions ---
 
+@pytest.mark.retained_evidence("operations-review/current-official-market-universe-integration-v1-20260824/current_official_market_universe_artifact.json")
 def test_earlier_session_materialization_never_sees_a_later_sessions_new_event(tmp_path, monkeypatch):
     """The strongest available proof for mission Sections 14-15: acquire an earlier session with
     one HPG rights event, then a later session where that event's own ex_date has moved (the kind
@@ -320,6 +323,7 @@ def test_earlier_session_materialization_never_sees_a_later_sessions_new_event(t
 
 # --- 9. downstream pass-through: the canonical Daily pipeline picks up the fresh artifact ---
 
+@pytest.mark.retained_evidence("operations-review/current-official-market-universe-integration-v1-20260824/current_official_market_universe_artifact.json")
 def test_downstream_current_corporate_event_context_consumes_the_freshly_materialized_artifact(tmp_path, monkeypatch):
     """Downstream pass-through proof (mission Section 16): the very next consumer,
     current_corporate_event_context.build_artifact() -- the same function canonical_post_close_

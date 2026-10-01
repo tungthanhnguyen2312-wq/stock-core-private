@@ -6,6 +6,7 @@ import copy
 import json
 import tempfile
 import unittest
+import pytest
 from datetime import date
 from pathlib import Path
 
@@ -102,14 +103,14 @@ class CanonicalTaxonomyTests(unittest.TestCase):
 
 class CanonicalStatusTests(unittest.TestCase):
     def test_confirmed_upcoming_is_approved_not_executed(self) -> None:
-        self.assertEqual(axis.canonical_status("CONFIRMED_UPCOMING"), axis.APPROVED)
+        self.assertEqual(axis.canonical_status("CONFIRMED_UPCOMING"), axis.ANNOUNCED)
 
     def test_planned_not_executed_is_planned(self) -> None:
         self.assertEqual(axis.canonical_status("PLANNED_NOT_EXECUTED"), axis.PLANNED)
 
     def test_executed_variants_map_to_executed(self) -> None:
         self.assertEqual(axis.canonical_status("EXECUTED"), axis.EXECUTED)
-        self.assertEqual(axis.canonical_status("CONFIRMED_RECENT"), axis.EXECUTED)
+        self.assertEqual(axis.canonical_status("CONFIRMED_RECENT"), axis.ANNOUNCED)
 
     def test_conflicting_and_data_limited_are_unknown_not_a_ladder_rung(self) -> None:
         self.assertEqual(axis.canonical_status("CONFLICTING_EVIDENCE"), axis.STATUS_UNKNOWN)
@@ -287,7 +288,7 @@ class ClassifyEventTests(unittest.TestCase):
         raw = {"event_id": "e1", "ticker": "AAA", "event_type": "CASH_DIVIDEND", "event_status": "CONFIRMED_UPCOMING"}
         result = axis.classify_event(raw, as_of=date(2026, 8, 21))
         self.assertEqual(result["original_event_status"], "CONFIRMED_UPCOMING")
-        self.assertEqual(result["status"], axis.APPROVED)
+        self.assertEqual(result["status"], axis.ANNOUNCED)
         self.assertNotEqual(result["original_event_status"], result["status"])
 
 
@@ -301,7 +302,7 @@ class TickerAxisAggregationTests(unittest.TestCase):
 
     def test_single_active_catalyst_sets_catalyst_present(self) -> None:
         event = axis.classify_event(
-            {"event_id": "e1", "ticker": "AAA", "event_type": "SHARE_REPURCHASE", "event_status": "CONFIRMED_RECENT"},
+            {"event_id": "e1", "ticker": "AAA", "event_type": "SHARE_REPURCHASE", "event_status": "EXECUTED", "ex_date": "2026-08-20"},
             as_of=date(2026, 8, 21),
         )
         record = axis._ticker_axis("AAA", SESSION, [event])
@@ -310,7 +311,7 @@ class TickerAxisAggregationTests(unittest.TestCase):
 
     def test_catalyst_and_risk_together_is_mixed_evidence(self) -> None:
         catalyst = axis.classify_event(
-            {"event_id": "e1", "ticker": "AAA", "event_type": "SHARE_REPURCHASE", "event_status": "CONFIRMED_RECENT"},
+            {"event_id": "e1", "ticker": "AAA", "event_type": "SHARE_REPURCHASE", "event_status": "EXECUTED", "ex_date": "2026-08-20"},
             as_of=date(2026, 8, 21),
         )
         risk = axis.classify_event(
@@ -399,6 +400,7 @@ class BuildArtifactIntegrationTests(unittest.TestCase):
         self.assertEqual(artifact["coverage"]["governance_coverage"], 0)
         self.assertEqual(artifact["ownership_context"]["status"], "UNAVAILABLE")
 
+    @pytest.mark.retained_evidence("operations-review/catalyst-event-research-context-v1-20260820/catalyst_event_research_context_artifact.json", "operations-review/vnm-2024-cash-dividend-official-evidence/source-manifest.json", "operations-review/non-cash-corporate-action-official-evidence/source-manifest.json")
     def test_supplemental_retained_events_activate_the_real_hpg_vnm_vcb_evidence(self) -> None:
         """Live-evidence check (not synthetic): with include_supplemental_events, HPG/VNM/VCB's
         retained issuer/VSDC chains must surface even though none of the three carry an
@@ -462,3 +464,12 @@ class ExportAttachmentTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class CalendarDoesNotEstablishLifecycleTests(unittest.TestCase):
+    def test_recent_date_cannot_activate_executed_buyback_catalyst(self):
+        raw = dict(event_id='calendar-only',ticker='AAA',event_type='SHARE_REPURCHASE',event_status='CONFIRMED_RECENT',ex_date='2026-08-20')
+        result = axis.classify_event(raw, as_of=date(2026,8,21))
+        self.assertEqual(result['status'], axis.ANNOUNCED)
+        self.assertNotEqual(result['classification'], axis.POTENTIAL_CATALYST)
+        self.assertEqual(result['original_event_status'], 'CONFIRMED_RECENT')

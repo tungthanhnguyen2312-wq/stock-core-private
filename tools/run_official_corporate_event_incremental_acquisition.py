@@ -33,10 +33,16 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--skip-acquisition", action="store_true",
                          help="Materialize only, from whatever session is already the latest successful retained attempt. "
                               "Performs no network access at all.")
+    parser.add_argument("--root", type=Path, default=ROOT, help="Explicit acquisition/retention root; use scratch for validation.")
+    parser.add_argument("--hnx-rights-window-start", help="Explicit inclusive ex-date window, ISO date; requires end.")
+    parser.add_argument("--hnx-rights-window-end", help="Explicit inclusive ex-date window, ISO date; requires start.")
     args = parser.parse_args(argv)
+    if bool(args.hnx_rights_window_start) != bool(args.hnx_rights_window_end):
+        parser.error("Both HNX rights-window dates are required")
+    window = (args.hnx_rights_window_start, args.hnx_rights_window_end) if args.hnx_rights_window_start else None
 
     if not args.skip_acquisition:
-        attempt = acquire(ROOT, session=args.session)
+        attempt = acquire(args.root, session=args.session, hnx_rights_window=window)
         print(json.dumps({
             "acquisition_session": attempt["acquisition_session"],
             "disposition": attempt["disposition"],
@@ -47,7 +53,7 @@ def main(argv: list[str] | None = None) -> int:
             return 1
 
     try:
-        result = materialize_current_official_event_context(ROOT)
+        result = materialize_current_official_event_context(args.root)
     except IncrementalAcquisitionError as exc:
         print(f"MATERIALIZATION_FAILED: {exc}", file=sys.stderr)
         return 1

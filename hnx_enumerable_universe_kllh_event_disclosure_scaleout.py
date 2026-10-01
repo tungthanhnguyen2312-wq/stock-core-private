@@ -12,11 +12,13 @@ import json
 import re
 import tempfile
 from collections import Counter
-from datetime import UTC, datetime
+from datetime import UTC, datetime, date
 from pathlib import Path
 from typing import Any, Mapping
 from urllib.parse import urlencode
-from urllib.request import Request, urlopen
+from urllib.request import Request
+
+from official_acquisition_budget import AcquisitionBudget, AcquisitionBudgetExceeded
 
 CONTRACT_VERSION = "hnx_enumerable_universe_kllh_event_and_disclosure_scaleout/v1"
 BASE = "https://hnx.vn"
@@ -78,7 +80,9 @@ def _atomic(path: Path, data: bytes) -> None:
     candidate.replace(path)
 
 
-def fetch(url: str, *, body: Mapping[str, str] | None = None) -> dict[str, Any]:
+def fetch(url: str, *, body: Mapping[str, str] | None = None, _budget: AcquisitionBudget | None = None) -> dict[str, Any]:
+    if _budget is None:
+        return AcquisitionBudget().request(fetch, url, surface="hnx_direct", body=body)
     observed_at = _now()
     try:
         data = urlencode(body).encode() if body is not None else None
@@ -86,13 +90,18 @@ def fetch(url: str, *, body: Mapping[str, str] | None = None) -> dict[str, Any]:
             "Accept": "application/json,text/html", "User-Agent": "StockLookup-HNX-Enumerable-Universe/1.0",
             **({"Content-Type": "application/x-www-form-urlencoded"} if data else {}),
         })
-        with urlopen(request, timeout=30) as response:
-            payload = response.read()
+        with _budget.open(request) as response:
+            payload = _budget.read(response)
             return {"requested_url": url, "official_url": response.geturl(), "retrieved_at": observed_at,
                     "http_status": response.status, "content_type": response.headers.get_content_type(), "data": payload}
+    except AcquisitionBudgetExceeded:
+        raise
     except Exception as exc:
         return {"requested_url": url, "official_url": url, "retrieved_at": observed_at, "http_status": None,
                 "content_type": None, "data": b"", "error": type(exc).__name__}
+
+
+fetch.bounded_transport = True
 
 
 def retain(*, response: Mapping[str, Any], destination: Path, surface: str, page: int | None,
@@ -142,9 +151,9 @@ def _last_page(document: str, total: int, returned_rows: int) -> int:
     raise ValueError("SOURCE_TERMINAL_PAGE_MISSING")
 
 
-def _post_pages(*, endpoint: str, surface: str, destination: Path, base_body: Mapping[str, str]) -> tuple[list[tuple[str, dict[str, Any]]], list[dict[str, Any]], int]:
+def _post_pages(*, endpoint: str, surface: str, destination: Path, base_body: Mapping[str, str], budget: AcquisitionBudget, fetcher) -> tuple[list[tuple[str, dict[str, Any]]], list[dict[str, Any]], int]:
     first_body = {**base_body, "pNumPage": "1"}
-    first_response = fetch(BASE + endpoint, body=first_body)
+    first_response = budget.request(fetcher, BASE + endpoint, surface=surface, page=1, body=first_body)
     if first_response["http_status"] != 200:
         raise ValueError(f"SOURCE_FETCH_FAILED:{surface}:1")
     first_document = _content(first_response["data"])
@@ -152,9 +161,10 @@ def _post_pages(*, endpoint: str, surface: str, destination: Path, base_body: Ma
     first_rows = _rows(first_document)
     last_page = _last_page(first_document, total, len(first_rows))
     responses = [(first_document, retain(response=first_response, destination=destination, surface=surface, page=1, request_body=first_body))]
+    budget.check_page(last_page, surface=surface)
     for page in range(2, last_page + 1):
         body = {**base_body, "pNumPage": str(page)}
-        response = fetch(BASE + endpoint, body=body)
+        response = budget.request(fetcher, BASE + endpoint, surface=surface, page=page, body=body)
         if response["http_status"] != 200:
             raise ValueError(f"SOURCE_FETCH_FAILED:{surface}:{page}")
         document = _content(response["data"])
@@ -226,19 +236,28 @@ def _read_stocklookup_tickers(path: Path) -> set[str]:
 
 
 def build(*, destination: Path, stocklookup_universe: Path, execute: bool = True,
-          include_disclosures: bool = True) -> dict[str, Any]:
+          include_disclosures: bool = True, budget: AcquisitionBudget | None = None, fetcher=None,
+          rights_window: tuple[str, str] | None = None) -> dict[str, Any]:
     if not execute:
         raise ValueError("LIVE_HNX_ACQUISITION_REQUIRES_EXECUTE_TRUE")
+    budget = budget or AcquisitionBudget()
+    fetcher = fetcher or fetch
+    date_from = date_to = ""
+    if rights_window is not None:
+        start, end = (date.fromisoformat(day) for day in rights_window)
+        if start > end:
+            raise ValueError("RIGHTS_WINDOW_REVERSED")
+        date_from, date_to = start.strftime("%d/%m/%Y"), end.strftime("%d/%m/%Y")
     captures: list[dict[str, Any]] = []
     universe: list[dict[str, Any]] = []
     list_totals: dict[str, int] = {}
     for market, (landing, endpoint, code) in LISTS.items():
-        landing_response = fetch(BASE + landing)
+        landing_response = budget.request(fetcher, BASE + landing, surface=f"{market.lower()}_list_landing")
         if landing_response["http_status"] != 200:
             raise ValueError(f"LIST_LANDING_FETCH_FAILED:{market}")
         captures.append(retain(response=landing_response, destination=destination, surface=f"{market.lower()}_list_landing", page=None, request_body=None))
         body = {"p_issearch": "0", "p_keysearch": "", "p_market_code": code, "p_orderby": "", "p_ordertype": "", "p_currentpage": "1", "p_record_on_page": "1000"}
-        response = fetch(BASE + endpoint, body=body)
+        response = budget.request(fetcher, BASE + endpoint, surface=f"{market.lower()}_list_bulk", page=1, body=body)
         if response["http_status"] != 200:
             raise ValueError(f"LIST_BULK_FETCH_FAILED:{market}")
         document = _content(response["data"])
@@ -256,12 +275,12 @@ def build(*, destination: Path, stocklookup_universe: Path, execute: bool = True
     events: list[dict[str, Any]] = []
     event_totals: dict[str, int] = {}
     for market, (landing, endpoint) in RIGHTS.items():
-        landing_response = fetch(BASE + landing)
+        landing_response = budget.request(fetcher, BASE + landing, surface=f"{market.lower()}_rights_landing")
         if landing_response["http_status"] != 200:
             raise ValueError(f"RIGHTS_LANDING_FETCH_FAILED:{market}")
         captures.append(retain(response=landing_response, destination=destination, surface=f"{market.lower()}_rights_landing", page=None, request_body=None))
-        responses, page_captures, total = _post_pages(endpoint=endpoint, surface=f"{market.lower()}_rights", destination=destination,
-            base_body={"pAction": "0", "pNhomTin": "", "pTieuDeTin": "", "pMaChungKhoan": "", "pFromDate": "", "pToDate": "", "pOrderBy": "", "pNumRecord": "1000"})
+        responses, page_captures, total = _post_pages(endpoint=endpoint, surface=f"{market.lower()}_rights", destination=destination, budget=budget, fetcher=fetcher,
+            base_body={"pAction": "0", "pNhomTin": "", "pTieuDeTin": "", "pMaChungKhoan": "", "pFromDate": date_from, "pToDate": date_to, "pOrderBy": "", "pNumRecord": "1000"})
         captures.extend(page_captures); event_totals[market] = total
         events.extend(event for document, capture in responses for event in parse_events(document, market=market, capture=capture))
 
@@ -278,15 +297,17 @@ def build(*, destination: Path, stocklookup_universe: Path, execute: bool = True
         # acquisition wrapper explicitly opts out rather than silently truncating or working
         # around the real page-count growth.
         for market, (landing, endpoint) in DISCLOSURES.items():
-            landing_response = fetch(BASE + landing)
+            landing_response = budget.request(fetcher, BASE + landing, surface=f"{market.lower()}_disclosure_landing")
             if landing_response["http_status"] != 200:
                 raise ValueError(f"DISCLOSURE_LANDING_FETCH_FAILED:{market}")
             captures.append(retain(response=landing_response, destination=destination, surface=f"{market.lower()}_disclosure_landing", page=None, request_body=None))
-            responses, page_captures, total = _post_pages(endpoint=endpoint, surface=f"{market.lower()}_disclosures", destination=destination,
+            responses, page_captures, total = _post_pages(endpoint=endpoint, surface=f"{market.lower()}_disclosures", destination=destination, budget=budget, fetcher=fetcher,
                 base_body={"pAction": "0", "pNhomTin": "", "pTieuDeTin": "", "pMaChungKhoan": "", "pFromDate": "", "pToDate": "", "pOrderBy": "", "pNumRecord": "1000"})
             captures.extend(page_captures); disclosure_totals[market] = total
             disclosures.extend(row for document, capture in responses for row in parse_disclosures(document, market=market, capture=capture))
 
+    if rights_window is not None and any(not row["ex_date"] or not rights_window[0] <= row["ex_date"] <= rights_window[1] for row in events):
+        raise ValueError("RIGHTS_WINDOW_DATE_BINDING_FAILED")
     if len(events) != sum(event_totals.values()) or len(disclosures) != sum(disclosure_totals.values()):
         raise ValueError("PAGINATED_SOURCE_ACCOUNTING_MISMATCH")
     stocklookup = _read_stocklookup_tickers(stocklookup_universe)
@@ -297,7 +318,9 @@ def build(*, destination: Path, stocklookup_universe: Path, execute: bool = True
     artifact = {"schema_version": "1.0.0", "contract_version": CONTRACT_VERSION, "captures": captures,
                 "hnx_official_equity_universe": {"dataset": "hnx_official_equity_universe/v1", "records": universe,
                     "scope": "CURRENT_HNX_LISTED_AND_UPCOM_ISSUER_LIST_SURFACES", "instrument_class_boundary": "COMMON_EQUITY_CANDIDATE_ONLY_NOT_A_SECURITY_MASTER_OR_COMMON_SHARES_AUTHORITY"},
-                "rights_event_index": {"dataset": "hnx_official_rights_event_index/v1", "records": events, "source_totals": event_totals},
+                "rights_event_index": {"dataset": "hnx_official_rights_event_index/v1", "records": events, "source_totals": event_totals,
+                    "scope": "EX_DATE_WINDOW" if rights_window else "FULL_RETAINED_INDEX",
+                    "requested_ex_date_window": list(rights_window) if rights_window else None},
                 "disclosure_index": {"dataset": "hnx_official_disclosure_index/v1", "records": disclosures, "source_totals": disclosure_totals, "attempted": include_disclosures},
                 "coverage": {"listed_source_total": list_totals["HNX_LISTED"], "upcom_source_total": list_totals["UPCOM"],
                     "common_equity_candidates": len(universe), "non_common_equity": 0, "instrument_class_unresolved": 0,

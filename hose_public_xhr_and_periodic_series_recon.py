@@ -12,7 +12,9 @@ import tempfile
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Mapping
-from urllib.request import Request, urlopen
+from urllib.request import Request
+
+from official_acquisition_budget import AcquisitionBudget, AcquisitionBudgetExceeded
 
 from vn_time import vn_today
 
@@ -71,16 +73,23 @@ def _atomic(path: Path, data: bytes) -> None:
     candidate.replace(path)
 
 
-def fetch(url: str) -> dict[str, Any]:
+def fetch(url: str, *, _budget: AcquisitionBudget | None = None) -> dict[str, Any]:
+    if _budget is None:
+        return AcquisitionBudget().request(fetch, url, surface="hose_direct")
     retrieved_at = _now()
     try:
         request = Request(url, headers={"Accept": "application/json,application/rss+xml", "User-Agent": "StockLookup-HOSE-Public-XHR/1.0"})
-        with urlopen(request, timeout=30) as response:
+        with _budget.open(request) as response:
             return {"requested_url": url, "official_url": response.geturl(), "retrieved_at": retrieved_at,
-                    "http_status": response.status, "content_type": response.headers.get_content_type(), "data": response.read()}
+                    "http_status": response.status, "content_type": response.headers.get_content_type(), "data": _budget.read(response)}
+    except AcquisitionBudgetExceeded:
+        raise
     except Exception as exc:
         return {"requested_url": url, "official_url": url, "retrieved_at": retrieved_at, "http_status": None,
                 "content_type": None, "data": b"", "error": type(exc).__name__}
+
+
+fetch.bounded_transport = True
 
 
 def retain(*, response: Mapping[str, Any], destination: Path, surface: str) -> dict[str, Any]:
@@ -151,12 +160,13 @@ def _hnx_tickers(path: Path) -> set[str]:
 
 
 def build(*, destination: Path, stocklookup_universe: Path, hnx_universe: Path, fetcher=fetch,
-          as_of_date: str | None = None) -> dict[str, Any]:
+          as_of_date: str | None = None, budget: AcquisitionBudget | None = None) -> dict[str, Any]:
+    budget = budget or AcquisitionBudget()
     resolved_as_of_date = as_of_date or vn_today()
     public_xhr = {**PUBLIC_XHR, **_disclosure_urls(resolved_as_of_date)}
     captures: dict[str, dict[str, Any]] = {}
     for surface, url in public_xhr.items():
-        response = fetcher(url)
+        response = budget.request(fetcher, url, surface=surface, page=1 if "pageIndex=" in url else None)
         if response.get("http_status") != 200 or not response.get("data"):
             raise ValueError(f"PUBLIC_XHR_FETCH_FAILED:{surface}")
         captures[surface] = retain(response=response, destination=destination, surface=surface)

@@ -162,8 +162,8 @@ _RAW_EVENT_TYPE_MAP.update({
 # additive projection of a richer field; original_event_status is always preserved verbatim
 # on the classified event (mission Section 7: never silently rewrite the historical event).
 _EVENT_STATUS_TO_CANONICAL = {
-    "CONFIRMED_UPCOMING": APPROVED,
-    "CONFIRMED_RECENT": EXECUTED,
+    "CONFIRMED_UPCOMING": ANNOUNCED,
+    "CONFIRMED_RECENT": ANNOUNCED,
     "EXECUTED": EXECUTED,
     "PLANNED_NOT_EXECUTED": PLANNED,
     "CANCELLED": CANCELLED,

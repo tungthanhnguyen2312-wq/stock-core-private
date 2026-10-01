@@ -60,7 +60,7 @@ def _event(*, ticker: str, raw_type: str | None, ex_date: str | None, record_dat
             "days_since_ex_date": -delta if delta is not None and delta < 0 else None, "source": source, "source_identity": source_identity,
             "source_url": source_url, "official_observed_at": observed_at, "qualification": qualification,
             "materiality_status": materiality, "publication_availability": "UNKNOWN_NOT_RETAINED", "pit_suitability": "LIMITED_PUBLICATION_TIME_UNKNOWN",
-            "warnings": warnings + ["No event impact, probability, score, target, or recommendation is derived."]}
+            "warnings": warnings + ["Source execution/payment dates are calendar observations, not proof of executed lifecycle.", "No event impact, probability, score, target, or recommendation is derived."]}
     item["event_id"] = "current_official_event:" + hashlib.sha256(_canonical(item)).hexdigest()
     return item
 
@@ -71,10 +71,12 @@ def build_artifact(*, official_universe: Mapping[str, Any], hnx: Mapping[str, An
     current = {ticker for ticker, row in official_universe.get("records", {}).items() if row.get("stocklookup_candidate") and row.get("current_universe_status") in {"OFFICIAL_CURRENT_EXCHANGE_SECURITY", "OFFICIAL_CURRENT_STOCK_LIST_CANDIDATE"}}
     if len(current) != official_universe.get("reconciliation", {}).get("official_total_match"): raise ValueError("OFFICIAL_CURRENT_DENOMINATOR_MISMATCH")
     hnx_capture, hose_capture = _captures(hnx), _captures(hose)
+    rights_scope = hnx.get("rights_scope") or {}
+    window_warning = (["HNX retained rights index is scoped to inclusive ex-dates " + " through ".join(rights_scope["requested_ex_date_window"]) + "; outside-window evidence remains unresolved."] if rights_scope.get("requested_ex_date_window") else [])
     all_events: list[dict[str, Any]] = []
     for row in hnx.get("datasets", {}).get("hnx_official_rights_event_index/v1", []):
         identity = str(row.get("source_identity")); capture = hnx_capture.get(identity, {})
-        all_events.append(_event(ticker=str(row.get("ticker")).upper(), raw_type=row.get("event_type"), ex_date=row.get("ex_date"), record_date=row.get("record_date"), execution_date=row.get("execution_date"), source="hnx_official_rights_event_index/v1", source_identity=identity, source_url=row.get("source_url"), observed_at=capture.get("retrieved_at"), qualification=str(row.get("qualification") or "UNKNOWN"), warnings=["AGM is informational/governance context and never a price-adjustment instruction."] if row.get("event_type") == "AGM" else [], session=session))
+        all_events.append(_event(ticker=str(row.get("ticker")).upper(), raw_type=row.get("event_type"), ex_date=row.get("ex_date"), record_date=row.get("record_date"), execution_date=row.get("execution_date"), source="hnx_official_rights_event_index/v1", source_identity=identity, source_url=row.get("source_url"), observed_at=capture.get("retrieved_at"), qualification=str(row.get("qualification") or "UNKNOWN"), warnings=window_warning + (["AGM is informational/governance context and never a price-adjustment instruction."] if row.get("event_type") == "AGM" else []), session=session))
     for row in hose.get("datasets", {}).get("hose_public_event_hpg/v1", []):
         identity = str(row.get("source_identity")); capture = hose_capture.get(identity, {})
         all_events.append(_event(ticker=str(row.get("ticker")).upper(), raw_type="CASH_DIVIDEND" if row.get("event_type_raw") else None, ex_date=_iso_timestamp(row.get("ex_date")), record_date=_iso_timestamp(row.get("record_date")), execution_date=None, source="hose_public_event_hpg/v1", source_identity=identity, source_url=None, observed_at=capture.get("retrieved_at"), qualification=str(row.get("qualification") or "UNKNOWN"), warnings=["HOSE public event-index detail remains scoped; no economics or price mutation is inferred."], session=session))
@@ -95,6 +97,7 @@ def build_artifact(*, official_universe: Mapping[str, Any], hnx: Mapping[str, An
     ci_events = [item for item in scoped if item["event_state"] in CURRENT_STATES and item["qualification"] == "EX_DATE_OFFICIAL_QUALIFIED"]
     counts, types = Counter(item["event_state"] for item in scoped), Counter(item["event_type"] for item in scoped)
     artifact = {"schema_version": "1.0.0", "contract_version": CONTRACT_VERSION, "research_session": research_session,
+                "source_coverage_scopes": {"hnx_rights": rights_scope, "hose_events": "HPG_PUBLIC_EVENT_INDEX_ONLY"},
                 "source_artifact_identities": {"official_universe": official_universe["artifact_identity"], "hnx": hnx["artifact_identity"], "hose": hose["artifact_identity"]},
                 "current_official_universe": {"count": len(current), "scope": "STOCKLOOKUP_CANDIDATES_WITH_RETAINED_CURRENT_OFFICIAL_EXCHANGE_PRESENCE"},
                 "records": {ticker: {"ticker": ticker, "qualified_official_events_available": bool(events), "events": events,

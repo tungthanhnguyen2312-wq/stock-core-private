@@ -30,6 +30,7 @@ from typing import Any, Mapping, Sequence
 import hnx_enumerable_universe_kllh_event_disclosure_scaleout as hnx_module
 import hose_public_xhr_and_periodic_series_recon as hose_module
 from vn_time import vn_now_iso, vn_today
+from official_acquisition_budget import AcquisitionBudget, AcquisitionBudgetExceeded
 
 CONTRACT_VERSION = "official_corporate_event_incremental_acquisition/v1"
 RAW_STORE_RELATIVE = Path("operations-review") / "official-corporate-event-raw-store"
@@ -155,6 +156,7 @@ def _hnx_bridge(hnx_artifact: Mapping[str, Any]) -> dict[str, Any]:
     separate reparse-only path, which happens to already emit the "datasets" shape)."""
     return _self_verified({
         "captures": hnx_artifact["captures"],
+        "rights_scope": {key: hnx_artifact["rights_event_index"].get(key) for key in ("scope", "requested_ex_date_window")},
         "datasets": {
             "hnx_official_equity_universe/v1": hnx_artifact["hnx_official_equity_universe"]["records"],
             "hnx_official_rights_event_index/v1": hnx_artifact["rights_event_index"]["records"],
@@ -163,7 +165,8 @@ def _hnx_bridge(hnx_artifact: Mapping[str, Any]) -> dict[str, Any]:
 
 
 def acquire(root: Path, *, session: str | None = None, execute: bool = True, hose_fetcher=None,
-            include_hnx_disclosures: bool = False) -> dict[str, Any]:
+            include_hnx_disclosures: bool = False, budget: AcquisitionBudget | None = None,
+            hnx_rights_window: tuple[str, str] | None = None) -> dict[str, Any]:
     """One bounded acquisition attempt over the existing, approved HNX + HOSE public source
     contracts -- no new provider, no crawler, no retry loop (mission Section 12). Raw evidence is
     retained content-addressed and immutable by the underlying modules' own writers; this function
@@ -192,18 +195,24 @@ def acquire(root: Path, *, session: str | None = None, execute: bool = True, hos
         # decides whether and when to call again, this function never loops or retries itself).
         raise IncrementalAcquisitionError(f"ACQUISITION_SESSION_ALREADY_RETAINED:{resolved_session}")
 
+    if existing is not None:
+        # Explicit caller retry may replace the latest pointer, never erase the prior failure.
+        digest = hashlib.sha256(_canonical(existing)).hexdigest()
+        _write(session_dir / "attempt_history" / f"{digest}.json", existing)
+    budget = budget or AcquisitionBudget()
     prior = latest_successful_session(root)
     attempt: dict[str, Any] = {
         "schema_version": "1.0.0",
         "contract_version": CONTRACT_VERSION,
         "acquisition_session": resolved_session,
         "acquired_at": acquired_at,
+        "hnx_rights_window": list(hnx_rights_window) if hnx_rights_window else None,
         "prior_session_referenced": prior.get("acquisition_session") if prior else None,
     }
     try:
         stocklookup_universe = resolve_stocklookup_universe(root)
         hnx_artifact = hnx_module.build(destination=raw_root, stocklookup_universe=stocklookup_universe,
-                                         execute=execute, include_disclosures=include_hnx_disclosures)
+                                         execute=execute, include_disclosures=include_hnx_disclosures, budget=budget, rights_window=hnx_rights_window)
         _write(session_dir / "hnx_artifact.json", hnx_artifact)
         hnx_bridge = _hnx_bridge(hnx_artifact)
         hnx_bridge_path = session_dir / "hnx_universe_bridge.json"
@@ -211,10 +220,17 @@ def acquire(root: Path, *, session: str | None = None, execute: bool = True, hos
         hose_artifact = hose_module.build(
             destination=raw_root, stocklookup_universe=stocklookup_universe,
             hnx_universe=hnx_bridge_path, as_of_date=resolved_session,
-            fetcher=hose_fetcher or hose_module.fetch,
+            fetcher=hose_fetcher or hose_module.fetch, budget=budget,
         )
+        _write(session_dir / "hose_artifact.json", hose_artifact)
+        budget.check_time()
     except Exception as exc:  # noqa: BLE001 -- deliberately broad: retain the failure explicitly rather than raising uncaught or retrying
-        attempt.update({"disposition": FAILURE, "error_type": type(exc).__name__, "error_message": str(exc)})
+        attempt.update({"disposition": FAILURE, "error_type": type(exc).__name__, "error_message": str(exc),
+                        "failure_kind": "BUDGET_TERMINATED" if isinstance(exc, AcquisitionBudgetExceeded) else
+                            "IMMUTABLE_RETENTION_CONFLICT" if "IMMUTABLE_CONTENT_CONFLICT" in str(exc) else
+                            "PARSE_FAILURE" if isinstance(exc, (json.JSONDecodeError, UnicodeError)) else
+                            "SOURCE_FAILURE" if "FETCH_FAILED" in str(exc) else "SEMANTIC_VALIDATION_FAILURE",
+                        "budget_usage": budget.report()})
         _write(session_dir / ATTEMPT_FILENAME, attempt)
         return attempt
 
@@ -222,6 +238,7 @@ def acquire(root: Path, *, session: str | None = None, execute: bool = True, hos
     hose_changes = compare_captures((prior or {}).get("hose_captures"), hose_artifact["captures"])
     attempt.update({
         "disposition": SUCCESS,
+        "budget_usage": budget.report(),
         "hnx_artifact_identity": hnx_artifact["artifact_identity"],
         "hose_artifact_identity": hose_artifact["artifact_identity"],
         "hnx_captures": hnx_artifact["captures"],
@@ -232,7 +249,6 @@ def acquire(root: Path, *, session: str | None = None, execute: bool = True, hos
         "stocklookup_universe_path": str(stocklookup_universe.relative_to(root)).replace("\\", "/"),
     })
     _write(session_dir / ATTEMPT_FILENAME, attempt)
-    _write(session_dir / "hose_artifact.json", hose_artifact)
     return attempt
 
 
