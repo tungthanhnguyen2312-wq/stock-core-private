@@ -67,10 +67,22 @@ def _windows_apis() -> tuple[Any, Any] | None:
         return None
     if _WINDOWS_APIS is None:
         try:
-            _WINDOWS_APIS = (
-                ctypes.WinDLL("kernel32", use_last_error=True),
-                ctypes.WinDLL("psapi", use_last_error=True),
-            )
+            kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+            psapi = ctypes.WinDLL("psapi", use_last_error=True)
+            # ctypes defaults to 32-bit integer arguments/results. HANDLE is pointer-sized;
+            # truncating the current pseudo-handle or OpenProcess result on 64-bit Windows
+            # makes GetProcessMemoryInfo fail even for our own process.
+            kernel32.GetCurrentProcess.argtypes = []
+            kernel32.GetCurrentProcess.restype = ctypes.c_void_p
+            kernel32.OpenProcess.argtypes = [ctypes.c_ulong, ctypes.c_int, ctypes.c_ulong]
+            kernel32.OpenProcess.restype = ctypes.c_void_p
+            kernel32.CloseHandle.argtypes = [ctypes.c_void_p]
+            kernel32.CloseHandle.restype = ctypes.c_int
+            psapi.GetProcessMemoryInfo.argtypes = [
+                ctypes.c_void_p, ctypes.POINTER(PROCESS_MEMORY_COUNTERS_EX), ctypes.c_ulong,
+            ]
+            psapi.GetProcessMemoryInfo.restype = ctypes.c_int
+            _WINDOWS_APIS = (kernel32, psapi)
         except Exception:
             _WINDOWS_API_UNAVAILABLE = True
             return None
