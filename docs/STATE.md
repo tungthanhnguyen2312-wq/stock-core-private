@@ -53,7 +53,7 @@ Full replay has 1,683 in/out, zero unexplained changes and 20 retained inputs un
 303 focused/adjacent tests and six canonical integration checks pass. No thresholds,
 fundamental/valuation interpretation or authority gates change. See
 [program checkpoint](internal/current_research_decision_quality_program.md).
-PR #28 and #29 remain independent pending-owner-merge corrections, not dependencies.
+PR #28 and PR #29 are merged into main as independent corrections; this program does not duplicate or widen them.
 New-session telemetry live acceptance remains externally time-gated.
 
 Packages 11–13 retain counted market breadth and participation provenance in the
@@ -111,6 +111,21 @@ fitness, the 431 eligible denominator, decision identities, votes and postures s
 unchanged. Final resumed regression tier: 309 tests pass, then 179 focused/adjacent
 tests pass after this metadata correction (including two new small-cohort period tests).
 No authority, provider, cap/retry, publication or acquisition change. Program remains ACTIVE.
+
+**Current Research future-dated freshness guard (2026-10-01):**
+`CURRENT_RESEARCH_FUTURE_DATED_FRESHNESS_GUARD_V1 = COMPLETE` under the owner's
+autonomous independent-work override while telemetry live acceptance is time-gated.
+The shared freshness envelope previously labelled negative-age observations current/actionable.
+It now preserves their dates and reports `unknown / source_date_after_reference_anchor`,
+non-actionable. Market domains keep the existing completed-session anchor; all other
+cadences, valid observations, source tiers and analytical thresholds are unchanged.
+Offline replay of all 17 retained 2026-09-30 runtime macro series is identical to base
+`59580f6`: context identity `d0045da8120a7799efe12856c0ae341e4146c1ab547de1e08679c95aab1d5c11`,
+12 current / 5 stale-or-expiring. No acquisition, runtime/DB write or authority promotion.
+Owner Daily Windows RSS fix was merged via PR #28 from checkpoint `4116e0f`;
+its four CI checks passed. `NEW_SESSION_LIVE_ACCEPTANCE_PENDING` remains time-gated.
+See [acceptance handoff](internal/current_research_future_freshness_acceptance.md).
+
 
 **Daily official liquidity rollforward corrective (2026-09-30):**
 `DAILY_OFFICIAL_LIQUIDITY_ROLLFORWARD_V1 = PARTIAL /
