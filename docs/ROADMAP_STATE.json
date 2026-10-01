@@ -1,7 +1,7 @@
 {
   "schema_version": "stocklookup_roadmap_execution_state/1.0.0",
   "roadmap_id": "stock-core-private",
-  "roadmap_version": "2026.10.01.5",
+  "roadmap_version": "2026.10.01.6",
   "narrative_authority": {
     "strategic_roadmap": "docs/ROADMAP.md",
     "operational_narrative": "docs/STATE.md",
@@ -9,19 +9,39 @@
     "ai_rules": "docs/AI_RULES.md",
     "note": "This file is the machine-readable EXECUTION-STATE authority: which milestone is current/active/next/blocked, what checkpoint proves each completed milestone, and whether recorded state contradicts Git/worktree reality. It does not restate or supersede the narrative docs' technical content and is not a substitute for reading them. Where this file and a narrative doc appear to disagree, that is a conflict to surface to the owner (AGENTS.md 'Default lightweight bootstrap' rule), never an automatic override in either direction."
   },
-  "implementation_lineage_head": "8f9bea29ce91f2d2e766e8e7c2c3012b693693f7",
+  "implementation_lineage_head": "29c095b8c161b4134833538714632fcbee483898",
   "last_updated_checkpoint": "HEAD",
   "known_operational_diff_allowlist": [
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "ROADMAP_AND_PUBLIC_REPOSITORY_REBASELINE_V1",
+    "milestone": "CURRENT_RESEARCH_COVERAGE_AND_DECISION_FITNESS_V1",
     "state": "COMPLETE"
   },
   "queued_next": [
-    "CURRENT_RESEARCH_COVERAGE_AND_DECISION_FITNESS_V1"
+    "FUNDAMENTAL_AND_CURRENT_VALUATION_DEPTH_V1"
   ],
   "milestones": [
+    {
+      "milestone_id": "FUNDAMENTAL_AND_CURRENT_VALUATION_DEPTH_V1",
+      "state": "NEXT",
+      "terminal_disposition": "NOT_STARTED",
+      "starting_checkpoint": null,
+      "checkpoint": null,
+      "candidate_branch": null,
+      "dependencies": [
+        "CURRENT_RESEARCH_COVERAGE_AND_DECISION_FITNESS_V1"
+      ],
+      "unlocks": [],
+      "authority_effect": "NONE_EXPECTED / PRODUCT_CRITICAL_RESEARCH_DEPTH",
+      "owner_authorized": true,
+      "source_doc": "2026-10-01 capability rebaseline",
+      "state_history": [
+        "NEXT"
+      ],
+      "owner_override": "OWNER_DIRECTIVE_2026_10_01_EXECUTE_FULL_REBASELINE",
+      "notes": "Use R2 measured gaps to expand research-usable fundamental and current valuation depth. Preserve proxy/exact distinctions, sector applicability, and current-research vs PIT/execution boundaries. Do not reopen a generic data audit."
+    },
     {
       "milestone_id": "ROADMAP_AND_PUBLIC_REPOSITORY_REBASELINE_V1",
       "state": "COMPLETE",
@@ -47,23 +67,27 @@
     },
     {
       "milestone_id": "CURRENT_RESEARCH_COVERAGE_AND_DECISION_FITNESS_V1",
-      "state": "NEXT",
-      "terminal_disposition": "NOT_STARTED",
-      "starting_checkpoint": null,
-      "checkpoint": null,
-      "candidate_branch": null,
+      "state": "COMPLETE",
+      "terminal_disposition": "COMPLETE_PR_READY",
+      "starting_checkpoint": "29c095b8c161b4134833538714632fcbee483898",
+      "checkpoint": "d9aac27630099777c731532f82abc7f1477f268f",
+      "candidate_branch": "feature/current-research-coverage-decision-fitness-v1",
       "dependencies": [
         "ROADMAP_AND_PUBLIC_REPOSITORY_REBASELINE_V1"
       ],
-      "unlocks": [],
-      "authority_effect": "NONE_EXPECTED / MEASUREMENT_AND_GAP_PRIORITIZATION",
+      "unlocks": [
+        "FUNDAMENTAL_AND_CURRENT_VALUATION_DEPTH_V1"
+      ],
+      "authority_effect": "NONE / READ_MODEL_AND_GAP_PREVALENCE_ONLY",
       "owner_authorized": true,
       "source_doc": "2026-10-01 capability rebaseline",
       "state_history": [
-        "NEXT"
+        "NEXT",
+        "ACTIVE",
+        "COMPLETE"
       ],
       "owner_override": "OWNER_DIRECTIVE_2026_10_01_EXECUTE_FULL_REBASELINE",
-      "notes": "Measure full-universe usable coverage for current price, tactical, fundamental, valuation, corporate/event and integrated-decision context. Classify unavailable/blocked/stale/proxy/not-applicable/usable states and prioritize only gaps that materially reduce decision quality. Do not open a generic audit or historical/PIT/execution lane by default."
+      "notes": "Reuses current_research_decision_input/v1; adds deterministic per-ticker decision-fitness read model, market-wide dimension/authority distributions, gap prevalence, no-network CLI and focused CI tests including real CLI execution from repo root. No action-posture or authority change."
     },
     {
       "milestone_id": "CURRENT_RESEARCH_DECISION_QUALITY_AND_FRESHNESS_PROGRAM_20261001",
