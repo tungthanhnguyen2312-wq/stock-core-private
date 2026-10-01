@@ -73,6 +73,7 @@ stocklookup.ps1
 - **Responsibility:** Deterministic multi-axis research computation across descriptive metrics, breadth, sector leadership, corporate intelligence, screening opportunities, and daily producer operations.
 - **Primary Entry Module:** [`daily_producer_pipeline.py`](../daily_producer_pipeline.py) / [`daily_research_session_operations.py`](../daily_research_session_operations.py)
 - **Key Output Contract:** `daily_research_session_operation/v1` (`daily_research_session_operations_artifact.json`, `ai_research_session_bundle.json`).
+- **Decision-fitness diagnostic:** `current_research_decision_input.py` now exposes `current_research_coverage_decision_fitness/v1`, a read-only market-wide coverage/gap projection over the existing Integrated Decision input contract. CLI: `tools/build_current_research_decision_fitness.py`. It does not recompute analytical axes or alter posture/authority.
 
 ### 6. Tactical (Tactical and Behavioral Engine V2)
 - **Responsibility:** Evaluates nine-state entry classification, close-only technical structure, multi-label setup tags, and confirmation/invalidation price boundaries.
