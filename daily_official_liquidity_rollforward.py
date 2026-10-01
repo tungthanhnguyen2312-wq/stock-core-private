@@ -433,9 +433,17 @@ def load_for_daily_consumer(
     *,
     session: str,
     candidate_paths: Sequence[Path],
+    component_status_paths: Sequence[Path] = (),
     allow_network: bool = False,
     prior_artifact: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
+    """Resolve a same-session artifact, preserving a valid materialized status.
+
+    The materializer owns the request-plan result.  A consumer may re-read an
+    official artifact to bind a valid same-session result, but it must not
+    replace a materialized budget/rights/source outcome with a generic absent
+    artifact result.
+    """
     candidates: list[tuple[str, Any]] = []
     for path in candidate_paths:
         payload, error = read_json_object(Path(path))
@@ -451,9 +459,50 @@ def load_for_daily_consumer(
         candidates.append((str(path), payload))
     if not candidates:
         candidates = [("absent", None)]
-    return resolve_for_daily(
+    resolved = resolve_for_daily(
         session=session, candidates=candidates, allow_network=allow_network, prior_artifact=prior_artifact,
     )
+    if resolved.get("artifact") is not None or (resolved.get("component") or {}).get("status") == MALFORMED_ARTIFACT:
+        return resolved
+
+    for path in component_status_paths:
+        payload, error = read_json_object(Path(path))
+        if error == UNAVAILABLE_SOURCE:
+            continue
+        if error == MALFORMED_ARTIFACT or not _valid_component_status(payload, session=session):
+            component = build_component_status(
+                session=session,
+                status=MALFORMED_ARTIFACT,
+                reason_code="OFFICIAL_LIQUIDITY_COMPONENT_STATUS_MALFORMED",
+                allow_network=allow_network,
+                http_requests_made=0,
+            )
+            return {"artifact": None, "component": component, "execute_probe": False}
+        if payload.get("status") != AVAILABLE:
+            return {"artifact": None, "component": dict(payload), "execute_probe": False}
+    return resolved
+
+
+def _valid_component_status(payload: Any, *, session: str) -> bool:
+    if not isinstance(payload, Mapping):
+        return False
+    if payload.get("contract_version") != STATUS_CONTRACT or payload.get("target_session") != session:
+        return False
+    if payload.get("status") not in {
+        AVAILABLE, PARTIAL, UNAVAILABLE_SOURCE, UNAVAILABLE_RIGHTS,
+        UNAVAILABLE_REQUEST_BUDGET, UNAVAILABLE_SESSION, MALFORMED_ARTIFACT,
+    }:
+        return False
+    claimed_identity = payload.get("component_identity")
+    claimed_sha256 = payload.get("component_sha256")
+    if not isinstance(claimed_identity, str) or not isinstance(claimed_sha256, str):
+        return False
+    body = {key: value for key, value in payload.items() if key not in {"component_identity", "component_sha256"}}
+    try:
+        expected = component_identity(body)
+    except (TypeError, ValueError, KeyError):
+        return False
+    return claimed_identity == expected.get("artifact_identity") and claimed_sha256 == expected.get("artifact_sha256")
 
 
 def _write_component(root: Path, session: str, body: Mapping[str, Any]) -> dict[str, Any]:
@@ -479,8 +528,8 @@ def materialize_same_session_official_liquidity(
     allow_network: bool = False,
     prior_official_dir: Path | None = None,
     prior_artifact: Mapping[str, Any] | None = None,
-    universe: Mapping[str, Any] | None = None,  # noqa: ARG001 -- retained for call-site compatibility
-    retained_series: Mapping[str, Mapping[str, Any]] | None = None,  # noqa: ARG001
+    universe: Mapping[str, Any] | None = None,
+    retained_series: Mapping[str, Mapping[str, Any]] | None = None,
     execute_request: Any = None,  # noqa: ARG001 -- Daily never dispatches HTTP
     hard_request_budget: int = HARD_REQUEST_BUDGET,
 ) -> dict[str, Any]:
@@ -565,8 +614,13 @@ def materialize_same_session_official_liquidity(
                         planned_hose_requests=hose_count,
                         planned_hnx_upcom_requests=0, http_requests_made=0,
                         reused_retained_count=reused_count,
+                        plan_identity=plan.get("plan_identity"),
                         allow_network=allow_network,
-                        extra={"retry_allowance": plan.get("retry_allowance")},
+                        extra={
+                            "retry_allowance": plan.get("retry_allowance"),
+                            "planning_seed": "GOVERNED_OFFICIAL_UNIVERSE",
+                            "planning_universe_identity": universe.get("artifact_identity"),
+                        },
                     ),
                 )
             if hnx_upcom_planned_request_count(plan):

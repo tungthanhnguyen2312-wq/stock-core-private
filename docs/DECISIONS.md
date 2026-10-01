@@ -11,15 +11,35 @@ not raised. An over-budget plan is `UNAVAILABLE_REQUEST_BUDGET` and is not split
 hidden batches. A failed official component never fails Core Daily and never
 substitutes another session.
 
-**Result.** `PARTIAL_REQUEST_BUDGET_CEILING / LIVE_ACCEPTANCE_PENDING_2026_09_30_COMPLETED_SESSION`.
-Root cause of 2026-09-29 absence: official acquisition was operator-initiated and never
-scheduled in ordinary Daily. Retained 2026-09-28 replay binds the existing artifact with
-0 HTTP and reconstructs 952 / 457 / 457. A 2026-09-29 incremental plan needs 403 HOSE
-requests + 40 retry allowance against cap 400. Live official qualification was not run
-because the 2026-09-30 session is not completed.
+**Result.** `CORE_DAILY_LIVE_ACCEPTED_OFFICIAL_LIQUIDITY_LIVE_FAIL_CLOSED_SOURCE_ABSENT /
+ROLLFORWARD_PLANNING_STATUS_CORRECTED_OFFLINE`. The retained
+ordinary Daily for exact session `2026-09-30` completed `PASS` on Producer commit
+`5292a8518221a383a5a4977eff522fd31d4b9600` (CI #143 SUCCESS). The component's actual
+outcome is `UNAVAILABLE_SOURCE / OFFICIAL_ARTIFACT_ABSENT`, with 0 planned requests,
+0 HTTP requests, 0 retries, no retained-artifact reuse and no bound artifact identity.
+It is therefore not correct to label this observed run `UNAVAILABLE_REQUEST_BUDGET`.
+Its seed gap is now corrected offline: `2026-09-28` was in `completed_sessions`, but
+the qualified artifact was not in the canonical session-artifact namespace or registry
+binding. Prior lookup returned `None`; no governed universe was supplied to planning;
+and consumer reconstruction discarded a materialized non-AVAILABLE component result.
+The corrected path passes the existing governed official exchange-route universe only
+to the request planner, with prior series as optional historical context. Offline replay
+of the exact 2026-09-30 boundary returns `UNAVAILABLE_REQUEST_BUDGET`, 403 HOSE page-1
+requests, retry allowance 40, hard cap 400, zero HNX/UPCoM calls and zero HTTP. The
+consumer preserves its self-verifying materialized status. This leaves the request-budget
+rebaseline unchanged: no hidden batching, no policy widening and no authority promotion.
+Final same-session Dashboard publication is attested `PUBLISHED` / public-byte `PASS`,
+and AI handoff is `READY_FOR_AI`.
 
-**Boundary.** No live Daily, no 2026-09-29-as-today acceptance, no merge, deploy,
-Dashboard publish, production DB write or successor.
+**Boundary.** The core result does not promote official liquidity authority: official
+current liquidity/ADTV/ADV are 0 for this Daily; descriptive liquidity is 848;
+`RAW_AS_TRADED` is not promoted; PIT, execution replay and live position sizing remain
+blocked. The blank Dashboard fields in the earlier `LOCAL_COMPLETE` console handoff
+preceded governed publication; the final result and publication attestation are the
+authoritative reporting boundary. The corrected planner requires live acceptance on a
+future completed session; it does not rewrite the historical source-absent Daily. No
+merge, push, deploy, production DB write, request-ceiling decision or successor is
+authorized by this closeout.
 
 ## 2026-09-30 - Daily liquidity authority wiring reconciliation (`DAILY_LIQUIDITY_AUTHORITY_WIRING_RECONCILIATION_V1`)
 
@@ -8521,3 +8541,43 @@ return; no execution sizing (`execution_qualified_quantity` remains fail-closed 
 any portfolio risk ceiling); no network/provider/DB write; no source/PIT/RAW/liquidity/execution
 authority promotion; no Dashboard or AI-handoff change. No successor is queued. Local checkpoint
 only; not pushed, merged, deployed, or published.
+
+## 2026-09-30 - Owner Daily Progress Telemetry V1
+
+**DECISION**: `OWNER_DAILY_PROGRESS_TELEMETRY_V1 = COMPLETE_OWNER_DAILY_PROGRESS_TELEMETRY_OFFLINE_ACCEPTED`.
+Add exactly one small operational contract, `owner_daily_progress/v1`, to the foreground Owner
+Daily boundary. It owns neither analytical inputs nor artifact identities. Its external JSONL
+sidecar is named by the existing PowerShell launcher timestamp alongside the `.log` and
+`.result.json`; the Owner result's additive `telemetry` object is therefore outside research
+identity construction.
+
+1. Request work, observed coverage, and phase progress are non-interchangeable. Snapshot callbacks
+   emit only after completed futures: `completed/attempted` describes request work, whereas
+   `EXACT_SESSION_RETAINED/candidate_count` describes observed coverage. Level-2 liquidity emits
+   batch `0..N` plus consolidation work without claiming those batches are qualified coverage.
+2. Telemetry is defensive and dependency-free. A parent-created `run_id` and monotonic run origin
+   cross the explicit child environment, so Owner elapsed does not restart at process entry. Each
+   event identifies its writing process; `peak_rss_bytes` is that writer's observed/OS-reported
+   single-process peak, and the final `peak_observed_single_process_rss_bytes` is never presented
+   as a process-tree total. Recursive tree RSS and exact network payload bytes are explicitly
+   unknown; the latter is always `PAYLOAD_BYTES_NOT_OBSERVABLE`, never inferred from tickers.
+3. Expensive resources are cached for five seconds and forced only at first/BEGIN/END/FAILED/final
+   bounded-task events and final summary. `run_output_bytes` covers one deduplicated current
+   exact-session artifact root, never retained/static evidence, the repository, or global
+   `operations-review`. Parent writes `CHILD_STARTING` before `Popen` then waits without sidecar
+   appends, making the child the sole intended JSONL writer during Canonical Daily. Malformed JSONL
+   lines and unsafe in-checkout sidecar paths degrade telemetry without failing Daily.
+4. ETA exists only with a positive known total, completed work, and meaningful *work* elapsed
+   sample; otherwise it is `ETA UNKNOWN`. Reused retained data renders as reuse rather than fresh
+   request work. Human output is compact, append-only, safe for redirected logs, and throttled at
+   the owner sink. No daemon, terminal redraw framework, new dependency, provider call, retry,
+   concurrency change, acquisition-order change, or request-budget change was added.
+
+**OFFLINE VALIDATION**: focused tests cover schema, denominator/percent clamping, known and
+unknown ETA, writer/resource failure containment, JSONL immediate read-after-write, callback
+identity compatibility, no extra fetches, structured batch progress, launcher argument wiring,
+and additive-only Owner result metadata. The public-safe fixture report is
+`derived/owner-daily-progress-telemetry-v1/validation_report.json`. The 2026-09-30
+official-liquidity corrective is regression-bounded: governed universe planning remains 403 HOSE,
+retry 40/cap 400, `UNAVAILABLE_REQUEST_BUDGET`, HNX/UPCoM 0, and Daily HTTP 0. No live Daily,
+provider/network call, publication, push, merge, deploy, or PR action occurred.

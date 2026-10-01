@@ -1,7 +1,7 @@
 {
   "schema_version": "stocklookup_roadmap_execution_state/1.0.0",
   "roadmap_id": "stock-core-private",
-  "roadmap_version": "2026.09.30.2",
+  "roadmap_version": "2026.09.30.5",
   "narrative_authority": {
     "strategic_roadmap": "docs/ROADMAP.md",
     "operational_narrative": "docs/STATE.md",
@@ -15,27 +15,44 @@
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "DAILY_OFFICIAL_LIQUIDITY_ROLLFORWARD_V1",
-    "state": "PARTIAL"
+    "milestone": "OWNER_DAILY_PROGRESS_TELEMETRY_V1",
+    "state": "COMPLETE"
   },
   "queued_next": [],
   "milestones": [
     {
       "milestone_id": "DAILY_OFFICIAL_LIQUIDITY_ROLLFORWARD_V1",
       "state": "PARTIAL",
-      "narrative_disposition": "PARTIAL_REQUEST_BUDGET_CEILING / LIVE_ACCEPTANCE_PENDING_2026_09_30_COMPLETED_SESSION",
-      "terminal_disposition": "DAILY_OFFICIAL_LIQUIDITY_ROLLFORWARD_PARTIAL_REQUEST_BUDGET_CEILING",
+      "narrative_disposition": "CORE_DAILY_LIVE_ACCEPTED / OFFICIAL_LIQUIDITY_LIVE_FAIL_CLOSED_SOURCE_ABSENT / ROLLFORWARD_PLANNING_STATUS_CORRECTED_OFFLINE",
+      "terminal_disposition": "PARTIAL_CORE_DAILY_LIVE_ACCEPTED_OFFICIAL_LIQUIDITY_SOURCE_ABSENT_PLANNING_CORRECTED_OFFLINE",
       "starting_checkpoint": "84ee248251705fdab1c9152e65ec1fc7f75e8bb6",
-      "checkpoint": "HEAD",
+      "checkpoint": "5292a8518221a383a5a4977eff522fd31d4b9600",
       "candidate_branch": "feature/daily-official-liquidity-rollforward-v1-20260930",
       "dependencies": ["DAILY_LIQUIDITY_AUTHORITY_WIRING_RECONCILIATION_V1"],
       "unlocks": [],
       "authority_effect": "DAILY_SAME_SESSION_OFFICIAL_BIND_ONLY / NO_HNX_UPCOM_BULK / NO_REQUEST_CEILING_RAISE / NO_LIVE_SIZING_OR_PIT_PROMOTION",
       "owner_authorized": true,
       "source_doc": "Owner directive DAILY_OFFICIAL_LIQUIDITY_ROLLFORWARD_V1 (2026-09-30)",
-      "state_history": ["ACTIVE", "PARTIAL"],
+      "state_history": ["ACTIVE", "PARTIAL", "COMPLETE", "PARTIAL"],
       "owner_override": "OWNER_DIRECTIVE_2026_09_30_DAILY_OFFICIAL_LIQUIDITY_ROLLFORWARD_V1",
-      "notes": "PARTIAL 2026-09-30. Root cause: official liquidity was operator-initiated and never scheduled in ordinary Daily; canonical_post_close_pipeline only loaded an already-written same-session artifact. Daily now binds same-session official_exchange_liquidity_research/v1 before Integrated Decision and fail-closes other-session/malformed/missing/rights/budget. Full HOSE rollforward from retained 2026-09-28 newest needs 403 requests + 40 retry vs existing 400 cap (UNAVAILABLE_REQUEST_BUDGET; no hidden batches). HNX/UPCoM planned requests 0. Retained 2026-09-28 replay: 0 HTTP, 952/457/457, 0 AVAILABLE / 1683 BLOCKED capacity, 457 POLICY_UNBOUND, 0 posture/decision/unexplained. Live official qualification not run: 2026-09-30 session not completed (LIVE_ACCEPTANCE_PENDING_2026_09_30_COMPLETED_SESSION); 2026-09-29 was not substituted as today. No successor queued."
+      "notes": "Corrective closeout 2026-09-30. Historical retained ordinary Daily remains PASS/COMPLETED for exact session 2026-09-30 on producer commit 5292a8518221a383a5a4977eff522fd31d4b9600 (Producer CI #143 SUCCESS, run 36703136572). Its official component actual outcome remains UNAVAILABLE_SOURCE / OFFICIAL_ARTIFACT_ABSENT, 0 planned requests, 0 HTTP requests, 0 retries, 0 retained reuse and no bound artifact identity; no stale-session substitution or HNX/UPCoM acquisition. Root cause: the registry includes 2026-09-28 but its qualified official artifact is outside the canonical session_artifact_paths official_liquidity namespace and has no registry binding, so _prior_completed_official_liquidity returned None; the materializer received no planning universe and the consumer reconstructed generic source absence. Corrected offline: the already-governed current_official_market_universe is a request-routing seed only (ACTIVE_UNIVERSE remains unpromoted); without target-current retained series it yields UNAVAILABLE_REQUEST_BUDGET, 403 HOSE primary requests, retry allowance 40, hard cap 400, HNX/UPCoM 0 and HTTP 0. Consumer preserves the self-verifying materialized component status. The 403-vs-400 rebaseline remains COMPLETE_NO_CODE_CHANGE_POLICY_CEILING_CONFIRMED; no ceiling, scope or authority changes. Final Dashboard is READY/PUBLISHED at 2352767134aae20e6b13646cf6b5fae15a9c7b8f, public-byte PASS, Dashboard CI 36703277851 SUCCESS and Deploy Pages 36703321455 SUCCESS. AI handoff remote 5b0af419414a5c73e871286fa87c6fa8f26bbb45 is READY_FOR_AI. Descriptive liquidity=848; historical Daily official qualified current liquidity/ADTV/ADV=0; RAW_AS_TRADED not promoted; PIT_BACKTEST, EXECUTION_REPLAY and LIVE_POSITION_SIZING remain BLOCKED. A future completed session requires live acceptance of the corrected planning boundary. OWNER_DAILY_PROGRESS_TELEMETRY_V1 remains OWNER_REQUESTED_FOLLOW_UP / NOT_STARTED; queued_next remains empty."
+    },
+    {
+      "milestone_id": "OWNER_DAILY_PROGRESS_TELEMETRY_V1",
+      "state": "COMPLETE",
+      "narrative_disposition": "OPERATIONAL_OBSERVABILITY_ONLY / OFFLINE_ACCEPTED",
+      "terminal_disposition": "COMPLETE_OWNER_DAILY_PROGRESS_TELEMETRY_OFFLINE_ACCEPTED",
+      "starting_checkpoint": "1ae4e6f939970b320ccf85de113633f81697b421",
+      "checkpoint": "HEAD",
+      "candidate_branch": "feature/owner-daily-progress-telemetry-v1-20260930",
+      "dependencies": [],
+      "unlocks": [],
+      "authority_effect": "NONE_OPERATIONAL_OBSERVABILITY_ONLY / NO_SOURCE_REQUEST_BUDGET_CONCURRENCY_ORDER_OR_IDENTITY_EFFECT",
+      "owner_authorized": true,
+      "source_doc": "Owner directive OWNER_DAILY_PROGRESS_TELEMETRY_V1 (2026-09-30)",
+      "state_history": ["ACTIVE", "COMPLETE"],
+      "owner_override": "OWNER_DIRECTIVE_2026_09_30_OWNER_DAILY_PROGRESS_TELEMETRY_V1",
+      "notes": "COMPLETE offline acceptance. One external owner_daily_progress/v1 JSONL sidecar records existing Owner phase lifecycle, exact-session request futures, deterministic Level-2 batch work and best-effort resources. Request work and observed coverage retain distinct denominators. Network payload bytes and recursive child-tree RSS remain explicit unknowns; sidecar/resource/terminal failures degrade only as TELEMETRY_DEGRADED. Snapshot callback-on/off output and identity are byte-identical; telemetry makes zero additional provider/network calls. The owner result telemetry object is additive external operational metadata only. No live Daily, provider call, push, merge, deploy, publication or PR action. DAILY_OFFICIAL_LIQUIDITY_ROLLFORWARD_V1 remains PARTIAL with its corrected governed-universe planning invariant unchanged: UNAVAILABLE_REQUEST_BUDGET, 403 HOSE, retry 40, cap 400, HNX/UPCoM 0 and Daily HTTP 0. Next recommendation is NOT STARTED."
     },
     {
       "milestone_id": "DAILY_LIQUIDITY_AUTHORITY_WIRING_RECONCILIATION_V1",

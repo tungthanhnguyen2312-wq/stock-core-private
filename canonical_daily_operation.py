@@ -641,6 +641,7 @@ def run_canonical_daily_operation(
     operation_output_root: Path | None = None,
     no_new_provider_acquisition: bool = False,
     operating_mode: str = OPERATING_MODE_ORDINARY_DAILY,
+    progress_callback: Callable[[Mapping[str, Any]], None] | None = None,
 ) -> dict[str, Any]:
     """Foreground one-shot daily operation. Tests must inject ``now`` / ``requested_at``.
 
@@ -751,6 +752,8 @@ def run_canonical_daily_operation(
         nonlocal acquisition_calls
         acquisition_calls += 1
         kwargs: dict[str, Any] = {"workers": workers, "now": instant}
+        if progress_callback is not None:
+            kwargs["progress_callback"] = progress_callback
         if historical_compatibility:
             kwargs["historical_compatibility"] = True
         if explicit_retained_evidence_root or operation_output_root != root or no_new_provider_acquisition:
@@ -765,6 +768,14 @@ def run_canonical_daily_operation(
         return acquire(root, resolved_session, runtime_root, **kwargs)
 
     try:
+        if progress_callback is not None:
+            try:
+                progress_callback({
+                    "component": "Canonical Daily", "subtask": "market_acquisition",
+                    "progress_kind": "PIPELINE", "status": "BEGIN",
+                })
+            except Exception:
+                pass
         acquisition = _acquire()
     except SupplementalProviderBlockError as exc:
         # A governed block -- not routine data lag, not a pipeline defect.
@@ -800,6 +811,19 @@ def run_canonical_daily_operation(
 
     if acquisition_calls != 1:
         raise CanonicalDailyOperationError(STAGE_BLOCKED_ACQUISITION, "DUPLICATE_MARKET_ACQUISITION")
+
+    if progress_callback is not None:
+        try:
+            progress_callback({
+                "component": "Canonical Daily", "subtask": "market_acquisition",
+                "progress_kind": "PIPELINE", "status": "END",
+                "qualified_count": ((acquisition.get("snapshot") or {}).get("exact_session_observed_count")
+                                    if isinstance(acquisition, Mapping) else None),
+                "coverage_denominator": ((acquisition.get("snapshot") or {}).get("candidate_count")
+                                       if isinstance(acquisition, Mapping) else None),
+            })
+        except Exception:
+            pass
 
     snapshot = acquisition.get("snapshot") if isinstance(acquisition, Mapping) else None
     if not isinstance(snapshot, Mapping):

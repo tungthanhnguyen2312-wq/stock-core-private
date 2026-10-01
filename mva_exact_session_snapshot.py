@@ -86,7 +86,8 @@ def _observation_rows(body: Mapping[str, Any], *, requested_session: str, query:
 def materialize_snapshot(*, candidates: list[str], requested_at: datetime, api_key: str, api_secret: str,
                          target_session: str | None = None,
                          fetcher: Callable[..., dict[str, Any]] = fetch_capability_raw, workers: int = 8,
-                         request_limit: int | None = None) -> dict[str, Any]:
+                         request_limit: int | None = None,
+                         progress_callback: Callable[[Mapping[str, Any]], None] | None = None) -> dict[str, Any]:
     """Fetch each canonical candidate through one generic DNSE path, no fallback."""
     observed_at = requested_at.astimezone(VN_TZ) if requested_at.tzinfo else requested_at.replace(tzinfo=VN_TZ)
     if target_session is None:
@@ -105,22 +106,24 @@ def materialize_snapshot(*, candidates: list[str], requested_at: datetime, api_k
     query_base = {"resolution": "1D", "from": int(start.timestamp()), "to": int(end.timestamp()), "type": "STOCK"}
     retrieved_at = observed_at.isoformat()
 
-    def one(ticker: str) -> tuple[str, dict[str, Any]]:
+    def one(ticker: str) -> tuple[str, dict[str, Any], int]:
         query = {"symbol": ticker, **query_base}
+        retries = 0
         response = fetcher("ohlc", api_key=api_key, api_secret=api_secret, symbol=None, query=query)
         if not response.get("ok"):
             err = str(response.get("error_code", "FETCH_FAILED"))
             if err == "rate_limited" or err.startswith("request_failed_"):
                 import time
                 time.sleep(0.2)
+                retries = 1
                 response = fetcher("ohlc", api_key=api_key, api_secret=api_secret, symbol=None, query=query)
         if not response.get("ok"):
             err = str(response.get("error_code", "FETCH_FAILED"))
             disp = "TRANSPORT_FAILED" if (err == "rate_limited" or err.startswith("request_failed_")) else "PROVIDER_REJECTED"
-            return ticker, {"status": "FETCH_FAILED", "reason": err, "disposition": disp, "observations": [], "request": query}
+            return ticker, {"status": "FETCH_FAILED", "reason": err, "disposition": disp, "observations": [], "request": query}, retries
         body = response.get("body")
         if not isinstance(body, Mapping):
-            return ticker, {"status": "MALFORMED_RESPONSE", "reason": "BODY_NOT_OBJECT", "disposition": "MALFORMED", "observations": [], "request": query}
+            return ticker, {"status": "MALFORMED_RESPONSE", "reason": "BODY_NOT_OBJECT", "disposition": "MALFORMED", "observations": [], "request": query}, retries
         rows, problem = _observation_rows(body, requested_session=target, query=query, retrieved_at=retrieved_at)
         payload_hash = hashlib.sha256(json.dumps(body, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")).hexdigest()
         if problem is None:
@@ -133,15 +136,82 @@ def materialize_snapshot(*, candidates: list[str], requested_at: datetime, api_k
             disp = "MALFORMED"
             status = problem
         return ticker, {"status": status, "reason": problem, "disposition": disp, "observations": rows,
-                        "payload_hash": payload_hash, "request": query, "provider_endpoint": response.get("endpoint")}
+                        "payload_hash": payload_hash, "request": query, "provider_endpoint": response.get("endpoint")}, retries
 
     attempted = candidates if request_limit is None else candidates[:max(0, request_limit)]
     records: dict[str, Any] = {}
+    completed = observed = retries = failed = malformed = missing = rejected = transport_failed = 0
+    if progress_callback is not None:
+        try:
+            progress_callback({
+                "component": "DNSE exact-session",
+                "subtask": "futures_completed",
+                "progress_kind": "REQUESTS",
+                "completed": 0,
+                "total": len(attempted),
+                "success_count": 0,
+                "retry_count": 0,
+                "failure_count": 0,
+                "qualified_count": 0,
+                "coverage_denominator": len(candidates),
+                "status": "BEGIN",
+                "downloaded_bytes": None,
+                "downloaded_bytes_reason": "PAYLOAD_BYTES_NOT_OBSERVABLE",
+                "disposition_counts": {"NOT_ATTEMPTED": len(candidates)},
+            })
+        except Exception:
+            # The callback is operational only; a broken sink cannot affect acquisition.
+            pass
     with ThreadPoolExecutor(max_workers=workers) as pool:
         futures = {pool.submit(one, ticker): ticker for ticker in attempted}
         for future in as_completed(futures):
-            ticker, result = future.result()
+            ticker, result, retry_count = future.result()
             records[ticker] = result
+            completed += 1
+            retries += retry_count
+            disposition = result.get("disposition")
+            if result.get("status") == "OBSERVED":
+                observed += 1
+            elif disposition == "SESSION_MISSING":
+                missing += 1
+            elif disposition == "MALFORMED":
+                malformed += 1
+                failed += 1
+            elif disposition == "PROVIDER_REJECTED":
+                rejected += 1
+                failed += 1
+            elif disposition == "TRANSPORT_FAILED":
+                transport_failed += 1
+                failed += 1
+            if progress_callback is not None:
+                try:
+                    progress_callback({
+                        "component": "DNSE exact-session",
+                        "subtask": "futures_completed",
+                        "progress_kind": "REQUESTS",
+                        "completed": completed,
+                        "total": len(attempted),
+                        "current_item": ticker,
+                        "success_count": observed,
+                        "retry_count": retries,
+                        "failure_count": failed,
+                        "qualified_count": observed,
+                        "coverage_denominator": len(candidates),
+                        "status": "IN_PROGRESS" if completed < len(attempted) else "COMPLETED",
+                        "downloaded_bytes": None,
+                        "downloaded_bytes_reason": "PAYLOAD_BYTES_NOT_OBSERVABLE",
+                        "disposition_counts": {
+                            "EXACT_SESSION_RETAINED": observed,
+                            "SESSION_MISSING": missing,
+                            "MALFORMED": malformed,
+                            "PROVIDER_REJECTED": rejected,
+                            "TRANSPORT_FAILED": transport_failed,
+                            "NOT_ATTEMPTED": len(candidates) - len(attempted),
+                        },
+                    })
+                except Exception:
+                    # The callback is operational only; a broken sink cannot affect acquisition.
+                    pass
     for ticker in candidates:
         records.setdefault(ticker, {"status": "NOT_ATTEMPTED_BOUNDED_PROVIDER_WINDOW", "reason": "EXPLICIT_PARTIAL_MATERIALIZATION", "disposition": "NOT_ATTEMPTED", "observations": [], "request": None})
     records = {ticker: records[ticker] for ticker in sorted(records)}

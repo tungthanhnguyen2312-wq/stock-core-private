@@ -1741,7 +1741,9 @@ def test_external_result_path_is_accepted_and_written_unchanged(tmp_path, monkey
     monkeypatch.setattr(workflow, "run_workflow", lambda **_k: {"status": "PASS", "session": SESSION})
     target = tmp_path / "owner-daily-run-logs" / "run.result.json"
     assert workflow.main(["--result-path", str(target)]) == 0
-    assert json.loads(target.read_text(encoding="utf-8")) == {"status": "PASS", "session": SESSION}
+    written = json.loads(target.read_text(encoding="utf-8"))
+    assert written.pop("telemetry")["authority_effect"] == "NONE_OPERATIONAL_OBSERVABILITY_ONLY"
+    assert written == {"status": "PASS", "session": SESSION}
     assert list(checkout.iterdir()) == []
 
 

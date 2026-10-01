@@ -19,6 +19,7 @@ New-Item -ItemType Directory -Force -Path $logDir | Out-Null
 $stamp = Get-Date -Format 'yyyyMMdd_HHmmss'
 $log = Join-Path $logDir "stock_lookup_daily_$stamp.log"
 $result = Join-Path $logDir "stock_lookup_daily_$stamp.result.json"
+$progress = Join-Path $logDir "stock_lookup_daily_$stamp.progress.jsonl"
 $python = 'C:\Program Files\Python313\python.exe'
 if (-not (Test-Path $python)) { $python = 'python' }
 
@@ -30,13 +31,13 @@ Write-Host '[1/9] Repository preflight'
 Write-Host '[2/9] Canonical Daily'
 Write-Host '[3/9] Daily completion verification'
 Write-Host '[4/9] Producer state publication'
-Write-Host '[5/9] AI handoff build'
-Write-Host '[6/9] GitHub publication'
+Write-Host '[5/9] Dashboard publication'
+Write-Host '[6/9] AI handoff build'
 Write-Host '[7/9] Remote verification'
 Write-Host '[8/9] Personal Action Center'
 Write-Host '[9/9] Open owner view'
 
-$arguments = @('-u', $entry, '--runtime-root', $runtime, '--result-path', $result)
+$arguments = @('-u', $entry, '--runtime-root', $runtime, '--result-path', $result, '--progress-path', $progress)
 if ($ReplayCompletedSession) { $arguments += @('--replay-completed-session', $ReplayCompletedSession) }
 # M1_LIVE_ACCEPTANCE_CORRECTIVE_V1: under Windows PowerShell 5.1, `2>&1` wraps every native stderr
 # line in an ErrorRecord, and with the script-wide 'Stop' preference the FIRST such line became a

@@ -1,13 +1,23 @@
 # Stock Lookup — Architecture & Roadmap
 
-**Roadmap sync: Daily official liquidity rollforward (2026-09-30):**
-- `DAILY_OFFICIAL_LIQUIDITY_ROLLFORWARD_V1` = `PARTIAL_REQUEST_BUDGET_CEILING /
-  LIVE_ACCEPTANCE_PENDING_2026_09_30_COMPLETED_SESSION`, rooted at
-  `84ee248251705fdab1c9152e65ec1fc7f75e8bb6` (PR #24 merged; Producer CI #138 SUCCESS).
-  Same-session official liquidity is now a fail-closed Daily component bound before
-  Integrated Decision. A new-session full HOSE refresh needs 403 requests against the
-  existing 400 cap and is not auto-broadened. Live qualification is pending the
-  completed 2026-09-30 session. No successor is queued or started.
+**Roadmap sync: Daily official liquidity rollforward corrective (2026-09-30):**
+- `DAILY_OFFICIAL_LIQUIDITY_ROLLFORWARD_V1` = `PARTIAL /
+  CORE_DAILY_LIVE_ACCEPTED_OFFICIAL_LIQUIDITY_LIVE_FAIL_CLOSED_SOURCE_ABSENT /
+  ROLLFORWARD_PLANNING_STATUS_CORRECTED_OFFLINE`. The retained ordinary
+  Daily is `PASS` / `COMPLETED` for exact session `2026-09-30` on
+  `5292a8518221a383a5a4977eff522fd31d4b9600` (Producer CI #143 SUCCESS). Its
+  official component correctly fail-closed `UNAVAILABLE_SOURCE /
+  OFFICIAL_ARTIFACT_ABSENT` with 0 planned/requested/retried HTTP calls; no stale
+  official artifact was substituted and no HNX/UPCoM acquisition occurred. The prior
+  artifact was outside the canonical session namespace, so the materializer had no
+  planning seed and the consumer later collapsed the outcome to generic source absence.
+  Corrected offline behavior uses the governed official route universe solely to plan:
+  `UNAVAILABLE_REQUEST_BUDGET`, 403 HOSE requests, retry 40, hard cap 400, and 0
+  HNX/UPCoM or HTTP calls; materialized status now survives consumer loading. This is
+  not a rewritten claim about the live Daily. Descriptive liquidity is 848; official
+  qualified current liquidity/ADTV/ADV are 0; sizing, PIT, execution replay and RAW
+  promotion remain blocked. Future live acceptance is required on a completed session;
+  no successor is started.
 
 **Roadmap sync: Daily liquidity authority wiring reconciliation (2026-09-30):**
 - `DAILY_LIQUIDITY_AUTHORITY_WIRING_RECONCILIATION_V1` = `COMPLETE`, rooted at
@@ -1457,3 +1467,15 @@ authorization, is production cutover itself: registering the refreshed official-
 into the canonical Daily input path and rehearsing/publishing an actual Dashboard release bound to
 it. This milestone performs neither; see `docs/STATE.md` for the full local replay evidence and
 `docs/DECISIONS.md` for the reconciliation decisions.
+
+### Owner Daily Progress Telemetry V1 (Complete / Offline Accepted)
+
+`OWNER_DAILY_PROGRESS_TELEMETRY_V1 = COMPLETE_OWNER_DAILY_PROGRESS_TELEMETRY_OFFLINE_ACCEPTED`.
+This is a bounded operational UX milestone, not an analytical pillar or source/authority change.
+It adds foreground-only `owner_daily_progress/v1` events for the existing nine Owner phases,
+exact-session futures, and deterministic Level-2 liquidity batches. It records request work and
+observed coverage under distinct denominators, while unknown work uses `ETA UNKNOWN`. The final
+corrective uses a shared parent/child run identity and monotonic origin, cached resource sampling,
+one bounded current exact-session output root, and sequential JSONL writer ownership. The sidecar
+is external to Producer artifacts and its result metadata is operational only. The next
+recommendation remains **NOT STARTED**; a future owner decision is required for any further work.
