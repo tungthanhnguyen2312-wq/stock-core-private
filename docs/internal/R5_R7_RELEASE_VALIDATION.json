@@ -1,0 +1,55 @@
+{
+  "contract_version": "r5_r7_release_validation/v1",
+  "base_main": "95c9e6fd5aa1ff381bb9569360c6fe5961f37337",
+  "preserved_checkpoints": [
+    "397c05cf6e47d4bdc5a0a471102dfcb8ac383956",
+    "938641cff02095f10db1658ad3134d71f871fcec",
+    "285313d0c230617ffffbf106897f75b21f0b6c6b"
+  ],
+  "review_fixes": [
+    "Conflicting latest-period shares cannot be selected by hash rank",
+    "Executed CA lifecycle requires explicit Boolean true",
+    "Full-universe retained valuation export streams JSON"
+  ],
+  "local_tests": {
+    "initial_cumulative": 349,
+    "post_hardening_R5_R7": 112,
+    "producer_ci_selection_passed": 1248,
+    "platform_skipped": 16,
+    "retained_provider_deselected": 6,
+    "subtests_passed": 27,
+    "offline_production_smoke": 5,
+    "compiled_changed_python_files": 27
+  },
+  "ci": {
+    "head": "546a4651025310d608f15c02c65fffdb81ade0e3",
+    "run": 36930987841,
+    "all_four_jobs": "SUCCESS"
+  },
+  "retained_R6": {
+    "acceptance": "docs/internal/R6_PROSPECTIVE_LEARNING_ACCEPTANCE.json",
+    "source_hashes_verified": 138,
+    "changed_sources": 0,
+    "six_calculation_modules_identical_to_R6_checkpoint": true,
+    "fresh_full_factory": "INTERRUPTED_MEMORY_PRESSURE_REUSED_ORIGINAL_ACCEPTANCE_WITH_HASH_REVERIFICATION"
+  },
+  "retained_R7": {
+    "acceptance_identity": "portfolio_pit_execution_retained_acceptance:f9cb9d61d35c02e6350c9b15df7bdc9e947f065c6efeef66c784e4a13d02712b",
+    "matrix_rows": 1179090,
+    "reversed_manifest_replay": "PASS",
+    "source_files_verified": 31,
+    "posture_changes": 0,
+    "decision_identity_changes": 0,
+    "unexplained_changes": 0
+  },
+  "retained_R5": {
+    "semantic_and_identity_replay": "PASS",
+    "first_export": "ENVIRONMENT_MEMORY_ERROR",
+    "streamed_export_rerun": "PASS"
+  },
+  "authority_promotions": 0,
+  "production_writes": 0,
+  "live_daily_runs": 0,
+  "roadmap_check": "PASS",
+  "diff_check": "PASS"
+}

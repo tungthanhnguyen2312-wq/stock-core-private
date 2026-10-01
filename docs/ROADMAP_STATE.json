@@ -1,7 +1,7 @@
 {
   "schema_version": "stocklookup_roadmap_execution_state/1.0.0",
   "roadmap_id": "stock-core-private",
-  "roadmap_version": "2026.10.02.3",
+  "roadmap_version": "2026.10.02.4",
   "narrative_authority": {
     "strategic_roadmap": "docs/ROADMAP.md",
     "operational_narrative": "docs/STATE.md",
@@ -15,11 +15,54 @@
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "PORTFOLIO_PIT_AND_EXECUTION_AUTHORITY_V1",
+    "milestone": "PROSPECTIVE_EVIDENCE_CONTINUITY_DIAGNOSTICS_V1",
     "state": "COMPLETE"
   },
-  "queued_next": [],
+  "queued_next": [
+    "CURRENT_CORPORATE_EVIDENCE_CURRENCY_V1"
+  ],
   "milestones": [
+    {
+      "milestone_id": "PROSPECTIVE_EVIDENCE_CONTINUITY_DIAGNOSTICS_V1",
+      "state": "COMPLETE",
+      "starting_checkpoint": "fbc488352720694fc9735b56ce2962024bfd9544",
+      "checkpoint": "f17ced71d03de097ba091c82967ed33c53bec429",
+      "candidate_branch": "program/research-evidence-continuity-20261002",
+      "dependencies": [
+        "PROSPECTIVE_LEARNING_AND_CALIBRATION_V1"
+      ],
+      "unlocks": [],
+      "authority_effect": "NONE / OPERATIONAL_EVIDENCE_FITNESS_DIAGNOSTICS_ONLY",
+      "owner_authorized": true,
+      "source_doc": "docs/internal/POST_R1_R7_SYSTEM_REVIEW_20261002.md",
+      "state_history": [
+        "NEXT",
+        "ACTIVE",
+        "COMPLETE"
+      ],
+      "owner_override": "OWNER_DIRECTIVE_2026_10_02_AUTONOMOUS_RELEASE_AND_ROADMAP_ADVANCE",
+      "notes": "Extend canonical prospective corpus health; consolidate duplicate offline health view; distinguish absent T0, pending sessions, future-close gaps and basis incompatibility. No threshold, policy, source or authority change. Retained acceptance: docs/internal/PROSPECTIVE_CONTINUITY_ACCEPTANCE.json; 30,294 genuine decisions, 138 source files unchanged, exact R6 outcome counts preserved. Released through PR #36.",
+      "terminal_disposition": "COMPLETE_VALIDATED"
+    },
+    {
+      "milestone_id": "CURRENT_CORPORATE_EVIDENCE_CURRENCY_V1",
+      "state": "NEXT",
+      "starting_checkpoint": "f17ced71d03de097ba091c82967ed33c53bec429",
+      "checkpoint": null,
+      "candidate_branch": null,
+      "dependencies": [
+        "PROSPECTIVE_EVIDENCE_CONTINUITY_DIAGNOSTICS_V1"
+      ],
+      "unlocks": [],
+      "authority_effect": "NONE / CURRENT_RESEARCH_EVIDENCE_ONLY",
+      "owner_authorized": true,
+      "source_doc": "docs/internal/POST_R1_R7_SYSTEM_REVIEW_20261002.md",
+      "state_history": [
+        "NEXT"
+      ],
+      "owner_override": "OWNER_DIRECTIVE_2026_10_02_AUTONOMOUS_RELEASE_AND_ROADMAP_ADVANCE",
+      "notes": "Inspect admitted route contracts and implement a bounded request/byte acquisition plan before invoking existing official corporate acquisition. Preserve actual knowledge time; never repair historical T0 from current evidence."
+    },
     {
       "milestone_id": "PORTFOLIO_PIT_AND_EXECUTION_AUTHORITY_V1",
       "state": "COMPLETE",
@@ -39,8 +82,9 @@
         "ACTIVE",
         "COMPLETE"
       ],
-      "notes": "Local R7 capability complete on exact R6 checkpoint. Feature/use/scope consumer matrix, strict existing-engine research adapters, VNM dry-run gating, non-voting PORTFOLIO_FIT context and deterministic retained acceptance. Current denominator 1683; capital/sizing/PIT/backtest/replay/live eligibility and promotion candidates remain unavailable. Source registries, policy and promoted authority unchanged. No external/runtime action. Successor is owner roadmap review/rebaseline, not an automatically started milestone.",
-      "owner_override": "OWNER_DIRECTIVE_2026_10_02_START_R7_ON_LOCAL_R6"
+      "notes": "Local R7 capability complete on exact R6 checkpoint. Feature/use/scope consumer matrix, strict existing-engine research adapters, VNM dry-run gating, non-voting PORTFOLIO_FIT context and deterministic retained acceptance. Current denominator 1683; capital/sizing/PIT/backtest/replay/live eligibility and promotion candidates remain unavailable. Source registries, policy and promoted authority unchanged. No external/runtime action. Successor is owner roadmap review/rebaseline, not an automatically started milestone. Cumulative release merged PR #35 on 2026-10-02; checkpoint provenance and evidence ceilings preserved.",
+      "owner_override": "OWNER_DIRECTIVE_2026_10_02_START_R7_ON_LOCAL_R6",
+      "merge_commit": "fbc488352720694fc9735b56ce2962024bfd9544"
     },
     {
       "milestone_id": "FUNDAMENTAL_AND_CURRENT_VALUATION_DEPTH_V1",
@@ -89,7 +133,7 @@
     {
       "milestone_id": "INTRINSIC_AND_SCENARIO_VALUATION_V1",
       "state": "COMPLETE",
-      "terminal_disposition": "COMPLETE_LOCAL_CHECKPOINT / GOVERNED_ARCHITECTURE_COMPLETE_RETAINED_NUMERIC_INPUTS_BLOCKED",
+      "terminal_disposition": "COMPLETE_MERGED_PR_35 / GOVERNED_ARCHITECTURE_COMPLETE_RETAINED_NUMERIC_INPUTS_BLOCKED",
       "starting_checkpoint": "95c9e6fd5aa1ff381bb9569360c6fe5961f37337",
       "checkpoint": "397c05cf6e47d4bdc5a0a471102dfcb8ac383956",
       "candidate_branch": "feature/intrinsic-scenario-valuation-r5-v2",
@@ -107,8 +151,9 @@
         "ACTIVE",
         "COMPLETE"
       ],
-      "notes": "Owner authorized R5 at merged main 95c9e6f. Existing intrinsic and reverse engines extended through one governed assumption contract; canonical valuation/IID/Current Research integration is additive and non-voting. Retained denominator 1683: FCFF/Net-Net/reverse/RNAV/SOTP BLOCKED 1600 and NOT_APPLICABLE 83; FCFE/DDM/residual income BLOCKED 1683, unchanged before/after. Numeric scenarios/reverse-only/sensitivity/comparisons/assumption sources zero. Zero decision-identity/posture/unexplained deltas and unchanged retained source bytes. Supported methods validated with explicit qualified fixtures; other calculators fail closed. Portable acceptance docs/internal/R5_INTRINSIC_SCENARIO_ACCEPTANCE.json. R3 ceilings remain closed. At the R5 checkpoint R6 was NEXT; its later owner-authorized local completion is recorded separately. One local checkpoint; no push/PR/deploy/production write/acquisition.",
-      "owner_override": "OWNER_DIRECTIVE_2026_10_01_START_R5_AT_95c9e6f"
+      "notes": "Owner authorized R5 at merged main 95c9e6f. Existing intrinsic and reverse engines extended through one governed assumption contract; canonical valuation/IID/Current Research integration is additive and non-voting. Retained denominator 1683: FCFF/Net-Net/reverse/RNAV/SOTP BLOCKED 1600 and NOT_APPLICABLE 83; FCFE/DDM/residual income BLOCKED 1683, unchanged before/after. Numeric scenarios/reverse-only/sensitivity/comparisons/assumption sources zero. Zero decision-identity/posture/unexplained deltas and unchanged retained source bytes. Supported methods validated with explicit qualified fixtures; other calculators fail closed. Portable acceptance docs/internal/R5_INTRINSIC_SCENARIO_ACCEPTANCE.json. R3 ceilings remain closed. At the R5 checkpoint R6 was NEXT; its later owner-authorized local completion is recorded separately. One local checkpoint; no push/PR/deploy/production write/acquisition. Cumulative release merged PR #35 on 2026-10-02; checkpoint provenance and evidence ceilings preserved.",
+      "owner_override": "OWNER_DIRECTIVE_2026_10_01_START_R5_AT_95c9e6f",
+      "merge_commit": "fbc488352720694fc9735b56ce2962024bfd9544"
     },
     {
       "milestone_id": "PROSPECTIVE_LEARNING_AND_CALIBRATION_V1",
@@ -131,13 +176,14 @@
         "ACTIVE",
         "COMPLETE"
       ],
-      "notes": "Owner-authorized local stack at R5 397c05c. Reuse immutable T0, shared completed sessions, existing outcomes/empirical aggregator, actual policy cohorts, review eligibility and human-only candidates. Retained 30294 decisions / 18 T0 sessions / 1683 tickers; T5 mature 8134 / T10 4356 / T20 0. All 1952 cohorts insufficient; zero review eligibility or actual candidates. Historical policy versions never backfilled; unchanged 20/5 and 50/10 sample floors. Daily retention already connected; existing v1 policy serialized for NEW T0. Deterministic replay and unchanged source bytes. 457 focused/adjacent tests pass; one supplemental baseline Daily assertion independently reproduced and excluded. No policy/authority change, acquisition, live Daily, production write, push/PR/deploy or R7. Portable acceptance docs/internal/R6_PROSPECTIVE_LEARNING_ACCEPTANCE.json.",
-      "owner_override": "OWNER_DIRECTIVE_2026_10_01_START_R6_ON_LOCAL_R5"
+      "notes": "Owner-authorized local stack at R5 397c05c. Reuse immutable T0, shared completed sessions, existing outcomes/empirical aggregator, actual policy cohorts, review eligibility and human-only candidates. Retained 30294 decisions / 18 T0 sessions / 1683 tickers; T5 mature 8134 / T10 4356 / T20 0. All 1952 cohorts insufficient; zero review eligibility or actual candidates. Historical policy versions never backfilled; unchanged 20/5 and 50/10 sample floors. Daily retention already connected; existing v1 policy serialized for NEW T0. Deterministic replay and unchanged source bytes. 457 focused/adjacent tests pass; one supplemental baseline Daily assertion independently reproduced and excluded. No policy/authority change, acquisition, live Daily, production write, push/PR/deploy or R7. Portable acceptance docs/internal/R6_PROSPECTIVE_LEARNING_ACCEPTANCE.json. Cumulative release merged PR #35 on 2026-10-02; checkpoint provenance and evidence ceilings preserved.",
+      "owner_override": "OWNER_DIRECTIVE_2026_10_01_START_R6_ON_LOCAL_R5",
+      "merge_commit": "fbc488352720694fc9735b56ce2962024bfd9544"
     },
     {
       "milestone_id": "ROADMAP_AND_PUBLIC_REPOSITORY_REBASELINE_V1",
       "state": "COMPLETE",
-      "terminal_disposition": "COMPLETE_PR_READY",
+      "terminal_disposition": "COMPLETE_MERGED_PR_32",
       "starting_checkpoint": "8f9bea29ce91f2d2e766e8e7c2c3012b693693f7",
       "checkpoint": "4651fd6673f8fea82f706117a34b34d181b964dd",
       "candidate_branch": "docs/roadmap-public-rebaseline-20261001-v1",
@@ -160,7 +206,7 @@
     {
       "milestone_id": "CURRENT_RESEARCH_COVERAGE_AND_DECISION_FITNESS_V1",
       "state": "COMPLETE",
-      "terminal_disposition": "COMPLETE_PR_READY",
+      "terminal_disposition": "COMPLETE_MERGED_PR_33",
       "starting_checkpoint": "29c095b8c161b4134833538714632fcbee483898",
       "checkpoint": "d9aac27630099777c731532f82abc7f1477f268f",
       "candidate_branch": "feature/current-research-coverage-decision-fitness-v1",
@@ -186,7 +232,7 @@
       "state": "COMPLETE",
       "terminal_disposition": "COMPLETE_OWNER_REVIEW_READY",
       "starting_checkpoint": "59580f6cda300dce8013af284d2ce11e026e3029",
-      "checkpoint": "HEAD",
+      "checkpoint": "36469b7bc1a9dd6eb1fe0010a8b7066029d774e5",
       "candidate_branch": "program/current-research-decision-quality-20261001",
       "dependencies": [],
       "unlocks": [],
@@ -206,7 +252,7 @@
       "narrative_disposition": "FUTURE_DATE_FAIL_CLOSED / RETAINED_MACRO_IDENTITY_PRESERVED",
       "terminal_disposition": "FUTURE_DATED_FRESHNESS_GUARD_COMPLETE",
       "starting_checkpoint": "59580f6cda300dce8013af284d2ce11e026e3029",
-      "checkpoint": "HEAD",
+      "checkpoint": "4c0c7cb97789ec3a7a634b0176c1e4852bf7424c",
       "candidate_branch": "feature/current-research-future-freshness-20261001",
       "dependencies": [],
       "unlocks": [],
@@ -250,7 +296,7 @@
       "narrative_disposition": "OPERATIONAL_OBSERVABILITY_ONLY / OFFLINE_ACCEPTED",
       "terminal_disposition": "COMPLETE_OWNER_DAILY_PROGRESS_TELEMETRY_OFFLINE_ACCEPTED",
       "starting_checkpoint": "1ae4e6f939970b320ccf85de113633f81697b421",
-      "checkpoint": "HEAD",
+      "checkpoint": "3d272a0a3c2c379bd38904c1691d44dd622c2a62",
       "candidate_branch": "feature/owner-daily-progress-telemetry-v1-20260930",
       "dependencies": [],
       "unlocks": [],
@@ -270,7 +316,7 @@
       "narrative_disposition": "SCOPED_SUMMARY_AND_PER_RECORD_PRECEDENCE_RECONCILED / SAME_SESSION_OFFICIAL_ABSENT_ON_2026_09_29",
       "terminal_disposition": "DAILY_LIQUIDITY_AUTHORITY_WIRING_RECONCILIATION_COMPLETE",
       "starting_checkpoint": "caf413456b60f8af7a13e16e375880310718d619",
-      "checkpoint": "HEAD",
+      "checkpoint": "91c142073bb2af2446240e46f9ec4eadac360601",
       "candidate_branch": "feature/daily-liquidity-authority-wiring-v1-20260930",
       "dependencies": [
         "LIQUIDITY_EXECUTION_CAPACITY_AND_SIZING_V1"
@@ -292,7 +338,7 @@
       "narrative_disposition": "FOUR_CLASS_A_FACTS_RECONCILED / NO_CORPUS_WIDE_RECONCILIATION",
       "terminal_disposition": "HISTORICAL_NET_INCOME_SEMANTIC_CORRECTION_OVERLAY_COMPLETE",
       "starting_checkpoint": "42e756e3099009e5654784cd03bbc6123dd775c6",
-      "checkpoint": "HEAD",
+      "checkpoint": "4225845d60213b944853c2749cec2a379f3345cc",
       "candidate_branch": "feature/historical-net-income-semantic-correction-v1-20260929",
       "dependencies": [
         "FINANCIAL_EVIDENCE_REVIEWED_INTERIM_CANONICAL_INGRESS_V1"
@@ -314,7 +360,7 @@
       "narrative_disposition": "REVIEWED_INTERIM_FACT_AUTHORITY_ONLY / RESEARCH_AUTHORITY_UNCHANGED",
       "terminal_disposition": "FINANCIAL_EVIDENCE_REVIEWED_INTERIM_CANONICAL_INGRESS_PARTIAL_IDENTITY_CORRECTED",
       "starting_checkpoint": "7eb3d66b006c267a6b4d34416b7569929fe00c59",
-      "checkpoint": "HEAD",
+      "checkpoint": "6a5ca50b35e6fe86c51de90f0b38c0c1c82fc499",
       "candidate_branch": "feature/reviewed-interim-canonical-ingress-v1-20260929",
       "dependencies": [
         "FINANCIAL_EVIDENCE_COHORT1_OCR_GEOMETRY_AND_METADATA_RECOVERY_V1"
@@ -336,7 +382,7 @@
       "narrative_disposition": "PARTIAL_QUALIFIED_H1_CANDIDATES_NO_CANONICAL_INGRESS",
       "terminal_disposition": "FINANCIAL_EVIDENCE_COHORT1_OCR_GEOMETRY_METADATA_RECOVERY_PARTIAL",
       "starting_checkpoint": "31ca5027c9fc78cbad17d1a2da71bd1f933c21a7",
-      "checkpoint": "HEAD",
+      "checkpoint": "ad02245a2b040fb5b4e0595d27a6fd3db19b98ba",
       "candidate_branch": "feature/financial-ocr-geometry-metadata-recovery-v1-20260929",
       "dependencies": [
         "FINANCIAL_EVIDENCE_COHORT1_TRIGGERED_OCR_V1"
@@ -358,7 +404,7 @@
       "narrative_disposition": "PARTIAL_OCR_GEOMETRY_AND_METADATA_BLOCKERS",
       "terminal_disposition": "FINANCIAL_EVIDENCE_COHORT1_TRIGGERED_OCR_PARTIAL",
       "starting_checkpoint": "0df516a8bc23a4d1e1163d122c5c765530b552b2",
-      "checkpoint": "HEAD",
+      "checkpoint": "2ffbfc2c7e922921aa968975dd7dd8a10000c64e",
       "candidate_branch": "feature/financial-evidence-cohort1-triggered-ocr-v1-20260929",
       "dependencies": [
         "FINANCIAL_EVIDENCE_CURRENCY_AND_OFFICIAL_STATEMENT_REFRESH_V1"
@@ -372,7 +418,7 @@
         "PARTIAL"
       ],
       "owner_override": "OWNER_DIRECTIVE_2026_09_29_FINANCIAL_EVIDENCE_COHORT1_TRIGGERED_OCR_V1",
-      "notes": "PARTIAL 2026-09-29. Retained-only H1 image OCR for HPG/PNJ/PVD/VRE; 11 completed page reads, no new CORE fact. Generic balance-sheet heading recognition accepts BÃ¡o cÃ¡o tÃ¬nh hÃ¬nh tÃ i chÃ­nh. Qualification blocked on OCR unit ambiguity/conflict or non-unique geometry. No network, Vnstock, Daily, Financial V2 pin or successor."
+      "notes": "PARTIAL 2026-09-29. Retained-only H1 image OCR for HPG/PNJ/PVD/VRE; 11 completed page reads, no new CORE fact. Generic balance-sheet heading recognition accepts B\u00c3\u00a1o c\u00c3\u00a1o t\u00c3\u00acnh h\u00c3\u00acnh t\u00c3\u00a0i ch\u00c3\u00adnh. Qualification blocked on OCR unit ambiguity/conflict or non-unique geometry. No network, Vnstock, Daily, Financial V2 pin or successor."
     },
     {
       "milestone_id": "FLOW_PRICE_CANONICAL_SOURCE_BACKFILL_AND_PRESENTATION_CORRECTIVE_V1",
@@ -2666,7 +2712,7 @@
       "state": "COMPLETE",
       "narrative_disposition": "ZERO_ACTIVE_VNSTOCK_DEPENDENCY_COMPLETE / RETAINED_SESSION_EQUIVALENCE_PASS",
       "starting_checkpoint": "3137441656019e4b7974978f034915d361b5c307",
-      "checkpoint": "HEAD",
+      "checkpoint": "875bc8310d46b55f931d3a9ba5b270ff289a4346",
       "candidate_branch": "feature/zero-active-vnstock-v1-20260929",
       "dependencies": [
         "LIQUIDITY_EXECUTION_CAPACITY_AND_SIZING_V1"
@@ -2689,7 +2735,7 @@
       "narrative_disposition": "PARTIAL_OFFICIAL_EVIDENCE_ACQUIRED_NO_QUALIFIED_FACTOR_CHAIN",
       "terminal_disposition": "PARTIAL_OFFICIAL_EVIDENCE_ACQUIRED_NO_QUALIFIED_FACTOR_CHAIN",
       "starting_checkpoint": "ff5fb859b7b217d7a86701f4df96272929bcc4d8",
-      "checkpoint": "HEAD",
+      "checkpoint": "965d7b732aa4607cc28005ede7b64f3df9a9d5f3",
       "candidate_branch": "feature/historical-raw-pit-real-factor-v1-20260930",
       "dependencies": [
         "PROSPECTIVE_RAW_PIT_AUTHORITY_V1"
@@ -2710,7 +2756,7 @@
       "narrative_disposition": "FRAMEWORK_COMPLETE_COHORT_EXTERNAL_AND_PARSER_BLOCKERS",
       "terminal_disposition": "FINANCIAL_EVIDENCE_CURRENCY_AND_OFFICIAL_STATEMENT_REFRESH_PARTIAL",
       "starting_checkpoint": "f5fdd44204a01e2465e7bb1ec625331056e9350f",
-      "checkpoint": "HEAD",
+      "checkpoint": "40e2dff0355eca848758852df899e5f462e325bf",
       "candidate_branch": "feature/financial-evidence-currency-v1-20260929",
       "dependencies": [
         "FINANCIAL_EVIDENCE_ZERO_ACTIVE_VNSTOCK_V1"

@@ -207,3 +207,75 @@ def test_pending_and_insufficient_depth_are_distinct():
     assert retention.maturity_state(horizon_status="PENDING_NOT_ENOUGH_FUTURE_SESSIONS", later_completed_sessions=0, required_sessions=1) == "PENDING"
     assert retention.maturity_state(horizon_status="PENDING_NOT_ENOUGH_FUTURE_SESSIONS", later_completed_sessions=1, required_sessions=5) == "INSUFFICIENT_FUTURE_DEPTH"
     assert retention.maturity_state(horizon_status="PRICE_BASIS_INCOMPATIBLE", later_completed_sessions=5, required_sessions=5) == "PRICE_SERIES_UNQUALIFIED"
+
+
+@pytest.mark.parametrize('status,fitness,diagnosis', [
+    ('CLOSE_PRICE_NOT_RETAINED', 'T0_CLOSE_NOT_RETAINED', 'T0_CLOSE_NOT_RETAINED'),
+    ('CLOSE_PRICE_NOT_RETAINED', 'T0_CLOSE_VALUE_INVALID', 'T0_CLOSE_INVALID'),
+    ('PENDING_NOT_ENOUGH_FUTURE_SESSIONS', 'PENDING_FUTURE_SESSION', 'PENDING_COMPLETED_SESSION_DEPTH'),
+    ('CLOSE_PRICE_NOT_RETAINED', 'EXACT_CLOSE_MISSING', 'FUTURE_CLOSE_NOT_RETAINED'),
+    ('CLOSE_PRICE_NOT_RETAINED', 'CLOSE_VALUE_INVALID', 'FUTURE_CLOSE_INVALID'),
+    ('PRICE_BASIS_INCOMPATIBLE', 'INCOMPATIBLE_PRICE_SERIES', 'PRICE_SERIES_INCOMPATIBLE'),
+    ('T0_SESSION_NOT_IN_GOVERNED_CHAIN', None, 'T0_SESSION_NOT_QUALIFIED'),
+    ('T0_SESSION_NOT_IN_GOVERNED_CHAIN', 'START_CLOSE_NOT_RETAINED', 'T0_SESSION_NOT_QUALIFIED'),
+    ('MATURE', 'COMPATIBLE_RETAINED_CLOSE_SERIES', 'MATURE_ENDPOINT_RETURN'),
+    ('CLOSE_PRICE_NOT_RETAINED', None, 'UNRESOLVED_CLOSE_GAP'),
+    ('UNKNOWN', None, 'UNKNOWN_OUTCOME_FITNESS'),
+])
+def test_health_preserves_distinct_outcome_gap_causes(status, fitness, diagnosis):
+    assert retention._maturity_diagnosis({'status': status, 'series_fitness': fitness}) == diagnosis
+
+
+def _health_record(ticker='FPT', session='2026-01-02', identity='decision:FPT:1'):
+    return {'ticker': ticker, 'decision_session': session, 'decision_identity': identity,
+            'temporal_qualification': {'status': retention.GENUINE},
+            'forward_outcomes': {'horizons': {'forward_close_return_5': {
+                'status': 'CLOSE_PRICE_NOT_RETAINED', 'series_fitness': 'EXACT_CLOSE_MISSING',
+                'future_session': '2026-01-09', 'maturation_state': 'PRICE_SERIES_UNQUALIFIED'}}}}
+
+
+def test_health_reconciles_horizon_denominators_and_exact_future_gaps_without_mutation():
+    records = [_health_record(), _health_record('HPG', identity='decision:HPG:1')]
+    before = copy.deepcopy(records)
+    health = retention.build_corpus_health(snapshot_inventory={}, feedback_artifact={'feedback_records': records})
+    maturity = health['outcome_maturity']
+    assert maturity['admitted_decision_count'] == 2
+    assert maturity['sessions'][0]['horizons']['forward_close_return_5']['affected_future_sessions'] == {'2026-01-09': 2}
+    for horizon in maturity['sessions'][0]['horizons'].values():
+        assert sum(horizon['diagnosis_counts'].values()) == horizon['decision_count'] == 2
+    assert health == retention.build_corpus_health(snapshot_inventory={}, feedback_artifact={'feedback_records': records[::-1]})
+    assert records == before
+    assert maturity['no_historical_t0_backfill'] is True
+
+
+def test_health_keeps_unqualified_snapshot_and_legacy_outcome_scopes_separate():
+    inventory = {'inventory': [{'session': '2026-01-02', 'classification': 'ORPHAN', 'snapshot_identity': 'orphan:1', 'decision_count': 10}],
+                 'handoff_snapshot_inventory': [{'session': '2026-01-05', 'snapshot_status': 'NOT_RETAINED'}]}
+    health = retention.build_corpus_health(snapshot_inventory=inventory, feedback_artifact={'feedback_records': [_health_record()]})
+    assert len(health['sessions']) == 2
+    assert all(not row['identity_qualified'] for row in health['sessions'])
+    assert health['outcome_maturity']['admitted_decision_count'] == 1
+    assert health['outcome_maturity']['sessions'][0]['decision_count'] == 1
+
+
+def test_health_excludes_rebuilt_t0_and_rejects_duplicate_decisions():
+    row = _health_record(); excluded = copy.deepcopy(row)
+    excluded['temporal_qualification']['status'] = 'RETROSPECTIVELY_REBUILT'
+    out = retention._maturity_health([excluded])
+    assert out['admitted_decision_count'] == 0 and out['excluded_temporal_record_count'] == 1
+    with pytest.raises(ValueError, match='DUPLICATE_DECISION'):
+        retention._maturity_health([row, copy.deepcopy(row)])
+    row['decision_identity'] = None
+    with pytest.raises(ValueError, match='DECISION_BINDING_REQUIRED'):
+        retention._maturity_health([row])
+
+
+def test_health_consumer_reuses_canonical_verdict_and_malformed_horizon_is_unknown():
+    from tools.run_prospective_decision_retention_outcome_maturation import _health
+    row = _health_record(); row['forward_outcomes']['horizons']['forward_close_return_5'] = ['malformed']
+    health = retention.build_corpus_health(snapshot_inventory={}, feedback_artifact={'feedback_records': [row]})
+    assert health['outcome_maturity']['horizon_diagnosis_counts']['forward_close_return_5'] == {'UNKNOWN_OUTCOME_FITNESS': 1}
+    consumer = _health({'prospective_corpus_health': health})
+    assert consumer == health
+    consumer['outcome_maturity']['sessions'].clear()
+    assert health['outcome_maturity']['sessions']

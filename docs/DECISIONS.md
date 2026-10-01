@@ -1,5 +1,10 @@
 # Decisions & Architectural Decision Records
 
+## 2026-10-02 — post-release evidence-continuity rebaseline
+
+R5–R7 is actually on main (PR #35, `fbc4883`), with exact-head CI green and cumulative retained identity/immutability evidence. The 16-axis system review ranks evidence currency and prospective continuity above more calculators, stronger authority promotion or wholesale architecture changes. The owner delegated roadmap selection and sequential execution; `PROSPECTIVE_EVIDENCE_CONTINUITY_DIAGNOSTICS_V1` starts under that explicit override. Extend the existing canonical health producer and consolidate its offline consumer; no new framework, sample-floor change or historical backfill. See [review](internal/POST_R1_R7_SYSTEM_REVIEW_20261002.md).
+
+
 ## 2026-10-02 — cumulative R5–R7 release ownership
 
 The owner delegates stack review, ordinary commits/push/PR/green-CI merge, main synchronization, post-release system review and sequential evidence-based roadmap execution. This session authorization supersedes historical per-milestone stop pointers only for this job. Source governance, immutable evidence, single-writer and broker/production safety boundaries remain binding.

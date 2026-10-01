@@ -157,3 +157,9 @@ in addition to its immutable full artifact/evidence outputs. Acceptance verifies
 SHA256 hashes before/after, stable genuine case/decision/posture sets, outcome transitions and
 reversed-input deterministic identity. Derived artifacts belong in explicit research/scratch paths;
 source inputs and production/runtime stores remain untouched.
+
+## Post-release continuity diagnosis — 2026-10-02
+
+`prospective_decision_corpus_health/v2` adds operational session/horizon diagnosis through the existing retention producer. Snapshot identity/absence inventory remains separate from genuine legacy/immutable outcome coverage. Every admitted decision contributes exactly one count per shared feedback horizon, with unavailable horizons labelled UNKNOWN rather than omitted. Missing/invalid T0, pending completed-session depth, future-close absence/invalidity and price-series incompatibility remain distinct. Exact affected future endpoint sessions are retained only when the upstream outcome actually supplied them. Endpoint maturity never proves complete close-path fitness or calibration eligibility.
+
+The feedback artifact embeds this health verdict, and the existing offline maturation runner consumes the same object. Diagnostic content changes health/feedback wrapper hashes; T0/decision identities, source bytes, numerical returns, classifications, cohort thresholds and action policy do not change. No historical T0 backfill, automatic repair/acquisition, policy writer or authority promotion occurs.

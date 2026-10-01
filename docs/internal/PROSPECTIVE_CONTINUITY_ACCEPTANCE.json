@@ -1,0 +1,62 @@
+{
+  "authority_effect": "NONE",
+  "canonical_health_identity": "prospective_decision_corpus_health:503d4ff02e1f90ac0274d75521f6013a2fe85fb121da9754770d530d01dcf08a",
+  "contract_version": "prospective_continuity_acceptance/v1",
+  "genuine_decisions": 30294,
+  "horizon_diagnosis_counts": {
+    "forward_close_return_1": {
+      "FUTURE_CLOSE_NOT_RETAINED": 1896,
+      "MATURE_ENDPOINT_RETURN": 10441,
+      "PENDING_COMPLETED_SESSION_DEPTH": 852,
+      "PRICE_SERIES_INCOMPATIBLE": 1527,
+      "T0_CLOSE_NOT_RETAINED": 15578
+    },
+    "forward_close_return_10": {
+      "FUTURE_CLOSE_NOT_RETAINED": 982,
+      "MATURE_ENDPOINT_RETURN": 4356,
+      "PENDING_COMPLETED_SESSION_DEPTH": 8626,
+      "PRICE_SERIES_INCOMPATIBLE": 752,
+      "T0_CLOSE_NOT_RETAINED": 15578
+    },
+    "forward_close_return_20": {
+      "PENDING_COMPLETED_SESSION_DEPTH": 14716,
+      "T0_CLOSE_NOT_RETAINED": 15578
+    },
+    "forward_close_return_3": {
+      "FUTURE_CLOSE_NOT_RETAINED": 1807,
+      "MATURE_ENDPOINT_RETURN": 8816,
+      "PENDING_COMPLETED_SESSION_DEPTH": 2578,
+      "PRICE_SERIES_INCOMPATIBLE": 1515,
+      "T0_CLOSE_NOT_RETAINED": 15578
+    },
+    "forward_close_return_5": {
+      "FUTURE_CLOSE_NOT_RETAINED": 1543,
+      "MATURE_ENDPOINT_RETURN": 8134,
+      "PENDING_COMPLETED_SESSION_DEPTH": 4288,
+      "PRICE_SERIES_INCOMPATIBLE": 751,
+      "T0_CLOSE_NOT_RETAINED": 15578
+    }
+  },
+  "maturity_coverage_equal_to_R6": {
+    "T10": {
+      "CLOSE_PRICE_NOT_RETAINED": 16560,
+      "MATURE": 4356,
+      "PENDING_NOT_ENOUGH_FUTURE_SESSIONS": 8626,
+      "PRICE_BASIS_INCOMPATIBLE": 752
+    },
+    "T20": {
+      "CLOSE_PRICE_NOT_RETAINED": 15578,
+      "PENDING_NOT_ENOUGH_FUTURE_SESSIONS": 14716
+    },
+    "T5": {
+      "CLOSE_PRICE_NOT_RETAINED": 17121,
+      "MATURE": 8134,
+      "PENDING_NOT_ENOUGH_FUTURE_SESSIONS": 4288,
+      "PRICE_BASIS_INCOMPATIBLE": 751
+    }
+  },
+  "no_t0_or_outcome_reconstruction": true,
+  "source_bytes_unchanged": true,
+  "source_count": 138,
+  "t0_sessions": 18
+}

@@ -9,7 +9,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
-from collections import Counter, defaultdict
+from collections import Counter
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -106,35 +106,9 @@ def _legacy_compatibility(artifact: Mapping[str, Any]) -> dict[str, Any]:
 
 
 def _health(artifact: Mapping[str, Any]) -> dict[str, Any]:
-    grouped: dict[str, list[Mapping[str, Any]]] = defaultdict(list)
-    for row in artifact.get("feedback_records") or []:
-        grouped[str(row.get("decision_session"))].append(row)
-    snapshots = {row.get("session"): row for row in (artifact.get("temporal_qualification", {}).get("immutable_snapshot_inventory") or [])}
-    handoffs = {row.get("session"): row for row in (artifact.get("temporal_qualification", {}).get("handoff_snapshot_inventory") or [])}
-    sessions = sorted(set(grouped) | {str(key) for key in snapshots if key} | {str(key) for key in handoffs if key})
-    rows = []
-    for session in sessions:
-        entries = grouped.get(session, [])
-        snapshot = snapshots.get(session) or {}
-        handoff = handoffs.get(session) or {}
-        horizons = Counter()
-        for entry in entries:
-            for item in (entry.get("forward_outcomes", {}).get("horizons", {}) or {}).values():
-                if isinstance(item, Mapping):
-                    horizons[str(item.get("maturation_state"))] += 1
-        rows.append({
-            "session": session,
-            "canonical_prospective_snapshot_exists": bool(snapshot),
-            "identity_qualified": snapshot.get("classification") == retention.GENUINE if snapshot else any((row.get("temporal_qualification") or {}).get("status") == feedback.GENUINE for row in entries),
-            "decision_count": len(entries) or snapshot.get("decision_count"),
-            "evidence_axis_snapshot_complete": dict(sorted(Counter((row.get("evidence_axes") or {}).get("status") for row in entries).items())),
-            "trigger_condition_evaluable": dict(sorted(Counter(((row.get("trigger") or {}).get("condition") or {}).get("status", retention.FIELD_NOT_RETAINED) for row in entries).items())),
-            "invalidation_condition_evaluable": dict(sorted(Counter(((row.get("invalidation") or {}).get("condition") or {}).get("status", retention.FIELD_NOT_RETAINED) for row in entries).items())),
-            "forward_horizons": dict(sorted(horizons.items())),
-            "outcome_artifact_exists": any(row.get("t0_snapshot_identity") for row in entries),
-            "reason_codes": snapshot.get("proof_reason_codes") or [str(handoff.get("snapshot_status") or "LEGACY_ARTIFACT_NO_MODERN_SNAPSHOT"), str(handoff.get("snapshot_reason") or "NO_MODERN_PROSPECTIVE_SNAPSHOT_FIELD")],
-        })
-    return {"contract_version": retention.HEALTH_CONTRACT_VERSION, "sessions": rows, "authority_boundary": "OPERATIONAL_HEALTH_ONLY"}
+    """Use the same health verdict as canonical feedback; do not rebuild its scope."""
+    import copy
+    return copy.deepcopy(artifact["prospective_corpus_health"])
 
 
 def _report(artifact: Mapping[str, Any], root_cause: Mapping[str, Any], health: Mapping[str, Any]) -> str:
