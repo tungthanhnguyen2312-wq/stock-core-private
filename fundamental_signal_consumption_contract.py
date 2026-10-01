@@ -52,6 +52,7 @@ CURRENT_RESEARCH_FUNDAMENTAL_PROMOTION_HARDENING_V1 adds, without new data or th
 from __future__ import annotations
 
 from collections import Counter
+import copy
 import calendar
 from datetime import date
 import re
@@ -1249,7 +1250,8 @@ def evaluate(record: Mapping[str, Any] | None, *, decision_session: str | None =
                                            and record.get("status") in (None, "ABSENT", "NOT_SUPPLIED")):
         result = synthesize([], dialect=None, decision_session=decision_session,
                             status=(record or {}).get("status") if isinstance(record, Mapping) else None)
-        result["contradicting_reason_codes"] = ["FUNDAMENTAL_CONTEXT_ABSENT"]
+        result["evidence_gap_reason_codes"] = ["FUNDAMENTAL_CONTEXT_ABSENT"]
+        result["thesis_context"] = thesis_context(result, {})
         return result
     if dialect is None:
         bridge = record.get("source") == DIALECT_OPERATIONAL_BRIDGE or (
@@ -1260,7 +1262,73 @@ def evaluate(record: Mapping[str, Any] | None, *, decision_session: str | None =
         signals, entity = operational_bridge_signals(record, decision_session=decision_session), ENTITY_DECISION_APPLICABLE
     else:
         signals, entity = financial_v2_signals(record, decision_session=decision_session), entity_decision_applicability(record)
-    return synthesize(signals, dialect=dialect, decision_session=decision_session, status=record.get("status"), entity=entity)
+    for signal in signals:
+        signal["fitness"]["source_feature_context"] = {
+            name: source_feature_context(record, name, dialect)
+            for name in signal["fitness"]["source_features"]}
+    result = synthesize(signals, dialect=dialect, decision_session=decision_session, status=record.get("status"), entity=entity)
+    result["evidence_gap_reason_codes"] = []
+    result["thesis_context"] = thesis_context(result, record)
+    return result
+
+
+def source_feature_context(record: Mapping[str, Any], name: str, dialect: str) -> Any:
+    if dialect != DIALECT_OPERATIONAL_BRIDGE:
+        return copy.deepcopy(_ff(record, name).get("source_feature_context"))
+    feature = (record.get("usable_features") or {}).get(name)
+    if not isinstance(feature, Mapping):
+        return None
+    return {**{key: copy.deepcopy(feature.get(key)) for key in (
+                "feature_id", "method", "value", "input_periods", "duration_semantics", "scope",
+                "compatibility_class", "compatibility_rule_version", "research_fitness", "authority_tier")},
+            "source_fact_refs": [{key: copy.deepcopy(item.get(key)) for key in (
+                "provider", "fact_id", "source_sha256", "source_observation_ids")}
+                for item in feature.get("provider_source_lineage") or [] if isinstance(item, Mapping)]}
+
+
+def thesis_context(synthesis: Mapping[str, Any], record: Mapping[str, Any]) -> dict[str, Any]:
+    """Evidence relationships only; reuse qualification and direction, never add votes."""
+    support_codes = set(synthesis.get("supporting_reason_codes") or [])
+    counter_codes = set(synthesis.get("contradicting_reason_codes") or [])
+    evidence = {}
+    support, counter, descriptive, history = [], [], [], []
+    for signal in synthesis.get("signals") or []:
+        if not signal.get("research_usable"):
+            continue
+        identity = signal["signal_id"]
+        evidence[identity] = copy.deepcopy(signal)
+        if signal.get("decision_eligible") and signal.get("reason_code") in support_codes:
+            support.append(identity)
+        elif signal.get("decision_eligible") and signal.get("reason_code") in counter_codes:
+            counter.append(identity)
+        elif signal["fitness"].get("freshness") == STALE_BUT_RESEARCH_USABLE:
+            history.append(identity)
+        else:
+            descriptive.append(identity)
+    features = {}
+    for name, fitness in (record.get("feature_fitness") or {}).items():
+        if fitness.get("fitness") not in _USABLE_FEATURE_FITNESS:
+            continue
+        metadata = fitness.get("source_feature_context")
+        if not isinstance(metadata, Mapping):
+            continue
+        freshness = classify_financial_period_freshness(source_period=fitness.get("as_of_period"), decision_session=synthesis.get("decision_session"), maximum_completed_quarter_lag=MAX_COMPLETED_QUARTER_LAG)
+        features[name] = {"fitness": fitness.get("fitness"), "as_of_period": fitness.get("as_of_period"),
+                          "freshness": freshness, "source_feature_context": copy.deepcopy(metadata),
+                          "use": "DESCRIPTIVE_SOURCE_MEASUREMENT_NO_ADDITIONAL_VOTE" if freshness.get("freshness_status") in (CURRENT, STALE_BUT_RESEARCH_USABLE) else "BLOCKED_SOURCE_OBSERVATION"}
+    relationships = []
+    if support and counter:
+        relationships.append({"reason_code": "QUALIFIED_FUNDAMENTAL_DIMENSIONS_DIVERGE",
+                              "supporting_evidence_ids": sorted(support), "opposing_evidence_ids": sorted(counter)})
+    return {"contract_version": "fundamental_thesis_context/v1", "evidence": evidence,
+            "supporting_evidence_ids": sorted(support), "opposing_evidence_ids": sorted(counter),
+            "descriptive_evidence_ids": sorted(descriptive), "historical_evidence_ids": sorted(history),
+            "feature_observations": features, "relationships": relationships,
+            "evidence_gaps": copy.deepcopy(synthesis.get("missing") or []),
+            "gap_reason_codes": list(synthesis.get("evidence_gap_reason_codes") or []),
+            "risk_level": copy.deepcopy(synthesis.get("fundamental_risk_level") or {}),
+            "source_context_identity": record.get("source_context_identity"),
+            "no_additional_votes_or_posture_effect": True, "is_actionable": False}
 
 
 def research_evidence(synthesis: Mapping[str, Any]) -> dict[str, Any]:
@@ -1278,6 +1346,7 @@ def research_evidence(synthesis: Mapping[str, Any]) -> dict[str, Any]:
         "historical_context": synthesis.get("historical_context") or {},
         "research_observations": synthesis.get("research_observations") or {},
         "evidence_freshness": synthesis.get("evidence_freshness") or {},
+        "thesis_context": copy.deepcopy(synthesis.get("thesis_context")),
     }
 
 

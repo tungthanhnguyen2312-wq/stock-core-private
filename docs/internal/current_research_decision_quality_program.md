@@ -472,3 +472,45 @@ and diff checks pass. Cumulative package-10 comparison verifies all 28 retained 
 byte-identical and zero changes to identity/posture/phase/trigger/invalidation/fundamental/
 valuation/counters/authority; only the documented provenance, 97 coherence summaries and
 five WHY explanations change. Program remains active at a coherent review boundary.
+
+## Package 14: qualified fundamental risk-to-thesis evidence
+
+Before measurement over 1,683 records: financial context 1,476; usable trajectories
+1,294; missing signal provider/method/duration context 1,472; absent financial context
+misplaced in counter-thesis 207. Current qualified adverse signals already reach counters
+with zero losses, and counters have zero duplicate strings. The existing financial
+engine and its vote policy remain the sole owners of measurement and direction.
+
+The compact projection retains feature identity/value/method/provider fact references,
+period range/duration/scope and unresolved monetary basis. The consumption contract
+keeps a structured thesis envelope: current supporting/opposing evidence, non-voting
+observations, separately labelled history, source measurements, gaps and existing risk
+levels. Supporting and opposing dimensions remain together without a score. Individual
+revenue/earnings measurements remain visible when the existing engine has no consensus;
+no new labels or votes are assigned. Specialist operational-source facts preserve their
+own method/duration/provider/proxy status. Shared IID/Daily/AI evidence axes receive the
+same envelope. Raw statement labels are not exposed.
+
+207 FUNDAMENTAL_CONTEXT_ABSENT codes move from negative counter evidence into explicit
+uncertainties/gaps. All genuine current negative codes remain unchanged. Full replay:
+1,683 in/out, deterministic, zero drops/unexplained changes; qualified evidence envelopes
+1,472, descriptive feature observations 1,390, divergent qualified dimensions 718.
+Dominant adverse codes are BALANCE_SHEET_DETERIORATING 526, CURRENT_RATIO_WORSENING 464,
+DEBT_TO_EQUITY_INCREASING 409, OBSERVED_LOSS_MAKING 182, MARGIN_COMPRESSION 101,
+REVENUE_CONTRACTION 94. These are observations, never additional votes.
+
+WHY, posture, phase, fundamental state, risk-level state, entity applicability, valuation,
+triggers/invalidation and authority unchanged. All 1,683 decision identities change
+through the verified explanatory-source binding. Retained identities/bytes are untouched;
+all 28 checked original inputs verified byte-identical. The replay reprojects the pinned
+engine into an external derivative and updates verified wrapper/bridge identities;
+engine results, peer comparisons and operational bridge records are unchanged.
+Precise normalization reverses only new metadata/envelopes, identity bindings and the
+absence-code move, then requires exact equality with every accepted prior record.
+
+Sixteen new adversarial cases plus adjacent financial/decision/delivery/materialization
+suites: 228 PASS. Compilation, roadmap ON_TRACK and diff checks pass.
+Product: `integrated_investment_decision_product/v1:5beb6b031b3ad40b130303be4141c09437ae4f3388a7e93bf33d3e239c2f0318`.
+Program remains ACTIVE; this package is not a stop point. The next bounded real scenario
+measurement found presence-as-support labels and duplicated bear confirmation/invalidation,
+so the existing scenario path is the next substantive package.

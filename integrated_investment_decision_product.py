@@ -630,6 +630,7 @@ def build_evidence_axes(
         "stale_research_evidence": list(fundamental_synthesis.get("stale_research_evidence") or []),
         "research_observations": sorted(fundamental_synthesis.get("research_observations") or {}),
         "turnaround_triggered": bool((derivation.get("turnaround") or {}).get("triggered")),
+        "thesis_context": copy.deepcopy(fundamental_synthesis.get("thesis_context")),
     } if fundamental_synthesis is not None else None
     # A directional INSUFFICIENT with known evidence is never an absent fundamental context: the
     # blocker names what is actually missing (FUNDAMENTAL_EVIDENCE_AVAILABILITY_BLOCKERS).
@@ -1671,7 +1672,8 @@ def build_ticker_integrated_decision(
 
     # 10. Multi-axis synthesis
     all_counter_thesis = list(dict.fromkeys(fund_count + tac_count + val_count + part_count))
-    all_uncertainties = list(dict.fromkeys(val_uncert + (tactical.get("blockers") or [])))
+    all_uncertainties = list(dict.fromkeys(val_uncert + (tactical.get("blockers") or [])
+                                         + list(fund_synthesis.get("evidence_gap_reason_codes") or [])))
 
     # Evidence axes are a strictly additive description of the already-computed inputs above.
     # They are intentionally built after posture, trigger and invalidation so they cannot silently

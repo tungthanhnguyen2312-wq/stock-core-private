@@ -153,6 +153,12 @@ def _compact(engine: Mapping[str, Any], ticker: str, record: Mapping[str, Any]) 
         # transition distinct from ordinary growth and name the exact feature behind a state.
         "feature_fitness": {
             key: {"fitness": feature.get("fitness"), "reason_codes": list(feature.get("reason_codes") or []),
+                  "source_feature_context": {
+                      **{field: copy.deepcopy(feature.get(field)) for field in ("feature_id", "value", "method", "scope", "period_semantics", "period_identity", "currency", "scale", "source_tier", "warnings")},
+                      "source_context_identity": engine.get("artifact_identity"),
+                      "source_fact_refs": [{field: copy.deepcopy(item.get(field)) for field in ("provider", "source_sha256", "fact_id", "source_observation_ids")}
+                                           for item in feature.get("provider_source_provenance") or [] if isinstance(item, Mapping)],
+                  },
                   **({"as_of_period": str(feature["period_identity"][-1])} if feature.get("period_identity") else {}),
                   **({"semantic_transition": str(feature["semantic_transition"])} if feature.get("semantic_transition") else {}),
                   **({"growth_basis": str(feature["growth_basis"])} if feature.get("growth_basis") else {})}
