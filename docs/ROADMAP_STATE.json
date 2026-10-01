@@ -16,9 +16,11 @@
   ],
   "current": {
     "milestone": "CURRENT_CORPORATE_EVIDENCE_CURRENCY_V1",
-    "state": "ACTIVE"
+    "state": "COMPLETE"
   },
-  "queued_next": [],
+  "queued_next": [
+    "CURRENT_CORPORATE_CURRENCY_DAILY_ROLLFORWARD_V1"
+  ],
   "milestones": [
     {
       "milestone_id": "PROSPECTIVE_EVIDENCE_CONTINUITY_DIAGNOSTICS_V1",
@@ -44,9 +46,9 @@
     },
     {
       "milestone_id": "CURRENT_CORPORATE_EVIDENCE_CURRENCY_V1",
-      "state": "ACTIVE",
+      "state": "COMPLETE",
       "starting_checkpoint": "22ce3147e0b373ba8b447e23ba0032bf727db6d5",
-      "checkpoint": null,
+      "checkpoint": "1ae44e84eec1c588d4ef4fda91756da17ed5e044",
       "candidate_branch": "feature/current-corporate-currency-budget-20261002",
       "dependencies": [
         "PROSPECTIVE_EVIDENCE_CONTINUITY_DIAGNOSTICS_V1"
@@ -57,10 +59,31 @@
       "source_doc": "docs/internal/POST_R1_R7_SYSTEM_REVIEW_20261002.md",
       "state_history": [
         "NEXT",
-        "ACTIVE"
+        "ACTIVE",
+        "COMPLETE"
       ],
       "owner_override": "OWNER_DIRECTIVE_2026_10_02_AUTONOMOUS_RELEASE_AND_ROADMAP_ADVANCE",
-      "notes": "Inspect admitted route contracts and implement a bounded request/byte acquisition plan before invoking existing official corporate acquisition. Preserve actual knowledge time; never repair historical T0 from current evidence."
+      "notes": "Shared 64-request/32-MiB/8-MiB-response/180-second/16-page budget; explicit ex-date-window option, immutable failure history, calendar lifecycle correction. Full index deliberately stopped; scoped current window succeeded in 31 requests / 3,216,925 bytes. 31 raw hashes replayed; 160 explanatory drivers / 153 tickers in 1,507 retained official names. No production or authority promotion. Portable acceptance and scope: docs/internal/CURRENT_CORPORATE_CURRENCY_VALIDATION_20261002.md.",
+      "terminal_disposition": "CAPABILITY_COMPLETE_CURRENT_WINDOW_VALIDATED"
+    },
+    {
+      "milestone_id": "CURRENT_CORPORATE_CURRENCY_DAILY_ROLLFORWARD_V1",
+      "state": "NEXT",
+      "starting_checkpoint": "1ae44e84eec1c588d4ef4fda91756da17ed5e044",
+      "checkpoint": null,
+      "candidate_branch": null,
+      "dependencies": [
+        "CURRENT_CORPORATE_EVIDENCE_CURRENCY_V1"
+      ],
+      "unlocks": [],
+      "authority_effect": "NONE / CURRENT_RESEARCH_EVIDENCE_ONLY",
+      "owner_authorized": true,
+      "owner_override": "OWNER_DIRECTIVE_2026_10_02_AUTONOMOUS_RELEASE_AND_ROADMAP_ADVANCE",
+      "source_doc": "docs/internal/CURRENT_CORPORATE_CURRENCY_VALIDATION_20261002.md",
+      "state_history": [
+        "NEXT"
+      ],
+      "notes": "Actual Daily call graph currently only loads latest materialized context; it does not invoke the incremental corporate acquisition runner. Reuse that bounded runner in the canonical stage, one same-civil-date eligible attempt, successful-session reuse, explicit unavailable/budget verdict on failure. Never use new evidence to repair historical T0 or run Daily merely for validation."
     },
     {
       "milestone_id": "PORTFOLIO_PIT_AND_EXECUTION_AUTHORITY_V1",
