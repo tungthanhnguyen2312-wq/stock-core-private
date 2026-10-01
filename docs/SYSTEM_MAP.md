@@ -15,7 +15,7 @@ Repository cleanup follows the governed strangler plan in [REPOSITORY_LAYOUT_MIG
 - keep production entry points truthful throughout migration;
 - reduce the root gradually alongside product-critical roadmap work.
 
-The October 1 Owner Daily live-acceptance gate is complete and PR #31 is merged. The next product milestone is Current Research Coverage & Decision Fitness; repository-layout work must not displace that capability work.
+The October 1 Owner Daily live-acceptance gate is complete and PR #31 is merged. R2 and R4 are complete, R3 remains terminal for its current source set, and R5 is locally complete. R6 Prospective Learning & Calibration is NEXT and NOT STARTED; repository-layout work must not displace capability work.
 
 ## Canonical Pipeline Flow
 
@@ -122,3 +122,12 @@ CORPORATE dimension; `forward_driver_coverage` aggregates over the decision deno
 This is a non-voting research explanation. The source axis/identities and all action policy
 remain unchanged. See [the contract](ANALYTICS_AND_DECISION_FEATURE_SPEC.md#forward-driver-explanatory-contract-r4-2026-10-01)
 and [retained acceptance](internal/R4_FORWARD_DRIVER_ACCEPTANCE.json).
+
+
+## Governed Current Research intrinsic/scenario valuation — R5
+
+`canonical_post_close_pipeline.build_enrichment_components` supplies retained canonical semantic rows, governed entity applicability and the decision session to `canonical_daily_financial_v2_materialization.build_evaluated_valuation_artifact`. The existing `current_research_valuation_context` attaches `current_research_intrinsic_scenario/v1` after the unchanged peer-relative evaluation. `intrinsic_valuation.py` owns the single assumption/input readiness boundary, existing FCFF/Net-Net evaluation and the existing reverse FCFF solver. Governed production assumptions reside in `config/current_research_valuation_assumptions.json` (empty, with no generated defaults).
+
+`integrated_investment_decision_product` binds R4 forward-driver explanations, adds the verified projection to its VALUATION evidence context and exposes it through `current_research_decision_input`. The existing opportunity re-evaluation preserves a verified projection. These fields do not vote in posture or replace relative valuation. Contract and ticker/session identity failures block only the intrinsic context. Product wrapper/content hashes bind the added fields; decision identities and posture policy remain unchanged.
+
+`tools/replay_intrinsic_scenario_valuation.py` reads only explicit canonical October 1 paths plus the pinned Financial V2 semantic authority. It writes local scratch outputs, checks the 1,683-ticker denominator, deterministic models, additive-field allowlist, existing decision fitness/identities/postures and input byte hashes. [Portable acceptance](internal/R5_INTRINSIC_SCENARIO_ACCEPTANCE.json) is reviewable without private source copies. [Method contract](intrinsic_sector_valuation_contract.md) defines conditional calculations, native output units, missing-input/implementation/applicability states and reopen gates. No acquisition or ordinary Daily is required for this replay.

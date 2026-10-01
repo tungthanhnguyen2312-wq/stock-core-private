@@ -1,5 +1,16 @@
 # Stock Lookup — Operational State
 
+**R5 Intrinsic / Scenario Valuation (2026-10-01): COMPLETE / LOCAL_CHECKPOINT.**
+`INTRINSIC_AND_SCENARIO_VALUATION_V1` extends the existing intrinsic evaluator and reverse solver through one governed assumption contract and an additive non-voting valuation projection. Supported conditional calculators are the existing FCFF steady-state perpetuity, component-realization Net-Net and bounded reverse FCFF. FCFE/DDM/residual-income/RNAV/SOTP expose exact evidence readiness and absent-implementation status without fabricating outputs. Financial-sector issuers are not forced through ordinary corporate variants. Explicit source, period/scope, monetary unit and period-end share fitness are required; R4 drivers remain explanatory.
+
+Retained ordinary October 1 denominator 1,683 is unchanged: corporate 1,386, financial families 83 and unresolved 214. Before/after FCFF/Net-Net/reverse/RNAV/SOTP each BLOCKED 1,600 / NOT_APPLICABLE 83; FCFE/DDM/residual-income each BLOCKED 1,683. READY/PARTIAL/qualified-but-not-implemented counts are zero in this source set. Scenario-valued tickers, reverse-only tickers, available cases, sensitivities, current-price comparisons and supplied assumption-source counts are all zero. Canonical inputs lack qualified monetary/share/forecast contracts; no defaults are introduced.
+
+Retained replay proves unchanged source hashes, zero fabricated assumptions, probability claims, unexplained analytical changes, decision-identity changes and posture changes. Evaluated-valuation and integrated-product hashes change only under their existing content contracts for the additive context/source-wrapper binding. [Portable acceptance](internal/R5_INTRINSIC_SCENARIO_ACCEPTANCE.json) records exact method/family/reason distributions and identity deltas. [Intrinsic contract](intrinsic_sector_valuation_contract.md) records formulas, governance and evidence-based reopen gates. R3's retained source-set ceiling remains closed.
+
+Validation: 267 focused/adjacent regressions passed with one independently reproduced baseline scenario assertion excluded; 236 final affected valuation/decision tests pass, including 57 R5 adversarial model tests. The excluded AAM expectation (SUPPORTED versus CONDITIONALLY_SUPPORTED) reproduces using the exact starting-commit scenario code and unchanged retained fixtures; no unrelated policy was changed. Deterministic full retained replay, py_compile, roadmap and diff checks pass. R5 tests are included in Producer CI.
+
+`PROSPECTIVE_LEARNING_AND_CALIBRATION_V1` is NEXT, NOT STARTED and not owner-authorized. No acquisition, Daily rerun, production/runtime write, source promotion, PIT/liquidity/sizing/execution change, push, PR or deployment occurs in R5.
+
 
 **Current Research coverage & decision fitness (2026-10-01):**
 `CURRENT_RESEARCH_COVERAGE_AND_DECISION_FITNESS_V1 = COMPLETE / PR_READY`.
@@ -16,7 +27,7 @@ not COMPLETE or FAILED; machine sequencing records DEFERRED. The retained 1,683-
 measurements and explicit reopen gates are in [the portable closeout](internal/R3_EVIDENCE_CEILING_CLOSEOUT.md).
 R4 is independently authorized by the owner against completed R2; it does not imply R3 completion.
 
-**R4 Corporate Intelligence + Forward Driver Model: COMPLETE / LOCAL_CHECKPOINT / READY_FOR_OWNER_PUSH_REVIEW.** additive `forward_driver_context/v1`
+**R4 Corporate Intelligence + Forward Driver Model: COMPLETE / MERGED (PR #34, main 95c9e6f).** additive `forward_driver_context/v1`
 projects retained dated event/provenance/fitness/status/materiality/direction into the existing
 Corporate Intelligence evidence axis and Current Research input. Retained October 1 replay:
 1,103 event-bearing records enriched, 580 explicit absence contexts; 258 qualified observations
@@ -28,8 +39,7 @@ promotion or policy change. See [the contract](ANALYTICS_AND_DECISION_FEATURE_SP
 and [acceptance report](internal/R4_FORWARD_DRIVER_ACCEPTANCE.json).
 
 R4 completion is proved by deterministic retained replay and 270 passing focused/adjacent tests;
-py_compile, roadmap and diff checks pass. R5
-`INTRINSIC_AND_SCENARIO_VALUATION_V1` is queued for owner review, not started.
+py_compile, roadmap and diff checks pass. R5 was subsequently explicitly owner-authorized at merged main `95c9e6fd5aa1ff381bb9569360c6fe5961f37337`; its current terminal state is recorded above.
 
 
 

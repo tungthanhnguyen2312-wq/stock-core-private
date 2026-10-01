@@ -668,6 +668,7 @@ def build_evidence_axes(
             method="current_research_valuation_context/v1",
             lineage={"source_artifact_identity": identities.get("current_valuation") or valuation.get("artifact_identity")},
             context={
+                **({"intrinsic_scenario_valuation": copy.deepcopy(valuation["intrinsic_scenario_valuation"])} if "intrinsic_scenario_valuation" in valuation else {}),
                 "peer_relative_state": val_summary.get("peer_relative_state"),
                 "own_history_state": val_summary.get("own_history_state"),
                 "size_context_status": (val_summary.get("size_context") or {}).get("status"),
@@ -1595,6 +1596,13 @@ def build_ticker_integrated_decision(
         corporate_intelligence_record, as_of_session=as_of_session, ticker=ticker,
     )
 
+    # Non-voting R5 projection. Forward events are evidence for review, never numeric forecasts.
+    if "intrinsic_scenario_valuation" in valuation:
+        import intrinsic_valuation as intrinsic
+        valuation = {**valuation, "intrinsic_scenario_valuation": intrinsic.bind_forward_driver_explanation(
+            valuation["intrinsic_scenario_valuation"], corporate_intelligence_summary.get("forward_driver_context"),
+            ticker=ticker, session=as_of_session)}
+
     # 7. Posture & Why Now
     posture, why_now, missing_effect = decide_research_action_posture(
         ticker=ticker,
@@ -1738,6 +1746,7 @@ def build_ticker_integrated_decision(
         "priority_posture_reconciliation": priority_posture,
         "fundamental_support": fund_supp,
         "technical_support": tac_supp,
+        **({"intrinsic_scenario_valuation": copy.deepcopy(valuation["intrinsic_scenario_valuation"])} if "intrinsic_scenario_valuation" in valuation else {}),
         "valuation_context_summary": val_summary,
         "financial_composite_context": financial_composite_context,
         "valuation_methods": valuation.get("methods") or {},
@@ -2143,6 +2152,10 @@ def build_artifact(
     coverage["forward_driver_context"] = forward_driver_coverage([
         rec["corporate_intelligence_context"]["forward_driver_context"] for rec in records.values()
     ])
+    if any("intrinsic_scenario_valuation" in rec for rec in records.values()):
+        import intrinsic_valuation as intrinsic
+        coverage["intrinsic_scenario_valuation"] = intrinsic.current_scenario_coverage(
+            [rec["intrinsic_scenario_valuation"] for rec in records.values() if "intrinsic_scenario_valuation" in rec])
     if coverage["no_current_evidence_wait_count"]:
         raise IntegratedDecisionProductError("INVARIANT_VIOLATION:NO_CURRENT_EVIDENCE_WAIT_FOR_CONFIRMATION")
     if operational_fundamental_integration_artifact is not None:

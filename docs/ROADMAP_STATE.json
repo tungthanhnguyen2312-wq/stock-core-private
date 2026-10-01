@@ -1,7 +1,7 @@
 {
   "schema_version": "stocklookup_roadmap_execution_state/1.0.0",
   "roadmap_id": "stock-core-private",
-  "roadmap_version": "2026.10.01.7",
+  "roadmap_version": "2026.10.01.8",
   "narrative_authority": {
     "strategic_roadmap": "docs/ROADMAP.md",
     "operational_narrative": "docs/STATE.md",
@@ -15,11 +15,11 @@
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "CORPORATE_INTELLIGENCE_AND_FORWARD_DRIVER_MODEL_V1",
+    "milestone": "INTRINSIC_AND_SCENARIO_VALUATION_V1",
     "state": "COMPLETE"
   },
   "queued_next": [
-    "INTRINSIC_AND_SCENARIO_VALUATION_V1"
+    "PROSPECTIVE_LEARNING_AND_CALIBRATION_V1"
   ],
   "milestones": [
     {
@@ -46,9 +46,9 @@
     {
       "milestone_id": "CORPORATE_INTELLIGENCE_AND_FORWARD_DRIVER_MODEL_V1",
       "state": "COMPLETE",
-      "terminal_disposition": "COMPLETE_LOCAL_CHECKPOINT / READY_FOR_OWNER_PUSH_REVIEW",
+      "terminal_disposition": "COMPLETE / MERGED_PR_34",
       "starting_checkpoint": "8072f2499b3752427da2af39a70005e487d84f47",
-      "checkpoint": "HEAD",
+      "checkpoint": "b5093dc84ade7ed86aecebdf4882d24c322f3da5",
       "candidate_branch": "feature/corporate-forward-driver-r4",
       "dependencies": [
         "CURRENT_RESEARCH_COVERAGE_AND_DECISION_FITNESS_V1"
@@ -64,26 +64,50 @@
         "COMPLETE"
       ],
       "owner_override": "OWNER_ACCEPTED_R3_TERMINAL_EVIDENCE_CEILING_2026_10_01",
-      "notes": "Owner explicitly accepts terminal R3 source-set ceiling and authorizes R4 independently of R3 completion; R2 is the completed execution prerequisite. Retained October 1 replay: 1683 denominator; 244 tickers / 258 qualified PARTIAL observations, 1103 event-bearing records enriched, 580 explicit absence contexts. All preexisting record fields and decision identities/postures unchanged; product identity binds explanatory additions. 270 tests pass. See docs/internal/R4_FORWARD_DRIVER_ACCEPTANCE.json. No authority promotion; local checkpoint only."
+      "notes": "Owner explicitly accepts terminal R3 source-set ceiling and authorizes R4 independently of R3 completion; R2 is the completed execution prerequisite. Retained October 1 replay: 1683 denominator; 244 tickers / 258 qualified PARTIAL observations, 1103 event-bearing records enriched, 580 explicit absence contexts. All preexisting record fields and decision identities/postures unchanged; product identity binds explanatory additions. 270 tests pass. See docs/internal/R4_FORWARD_DRIVER_ACCEPTANCE.json. No authority promotion; Merged PR #34 at 95c9e6fd5aa1ff381bb9569360c6fe5961f37337; confirmed starting point for R5."
     },
     {
       "milestone_id": "INTRINSIC_AND_SCENARIO_VALUATION_V1",
+      "state": "COMPLETE",
+      "terminal_disposition": "COMPLETE_LOCAL_CHECKPOINT / GOVERNED_ARCHITECTURE_COMPLETE_RETAINED_NUMERIC_INPUTS_BLOCKED",
+      "starting_checkpoint": "95c9e6fd5aa1ff381bb9569360c6fe5961f37337",
+      "checkpoint": "HEAD",
+      "candidate_branch": "feature/intrinsic-scenario-valuation-r5-v2",
+      "dependencies": [
+        "CORPORATE_INTELLIGENCE_AND_FORWARD_DRIVER_MODEL_V1"
+      ],
+      "unlocks": [
+        "PROSPECTIVE_LEARNING_AND_CALIBRATION_V1"
+      ],
+      "authority_effect": "NONE / CONDITIONAL_NON_VOTING_CURRENT_RESEARCH_ONLY",
+      "owner_authorized": true,
+      "source_doc": "Owner R5 authorization at verified merged main 95c9e6f",
+      "state_history": [
+        "NEXT",
+        "ACTIVE",
+        "COMPLETE"
+      ],
+      "notes": "Owner authorized R5 at merged main 95c9e6f. Existing intrinsic and reverse engines extended through one governed assumption contract; canonical valuation/IID/Current Research integration is additive and non-voting. Retained denominator 1683: FCFF/Net-Net/reverse/RNAV/SOTP BLOCKED 1600 and NOT_APPLICABLE 83; FCFE/DDM/residual income BLOCKED 1683, unchanged before/after. Numeric scenarios/reverse-only/sensitivity/comparisons/assumption sources zero. Zero decision-identity/posture/unexplained deltas and unchanged retained source bytes. Supported methods validated with explicit qualified fixtures; other calculators fail closed. Portable acceptance docs/internal/R5_INTRINSIC_SCENARIO_ACCEPTANCE.json. R3 ceilings remain closed. R6 NEXT, not authorized or started. One local checkpoint; no push/PR/deploy/production write/acquisition.",
+      "owner_override": "OWNER_DIRECTIVE_2026_10_01_START_R5_AT_95c9e6f"
+    },
+    {
+      "milestone_id": "PROSPECTIVE_LEARNING_AND_CALIBRATION_V1",
       "state": "NEXT",
       "terminal_disposition": "NOT_STARTED",
       "starting_checkpoint": null,
       "checkpoint": null,
       "candidate_branch": null,
       "dependencies": [
-        "CORPORATE_INTELLIGENCE_AND_FORWARD_DRIVER_MODEL_V1"
+        "INTRINSIC_AND_SCENARIO_VALUATION_V1"
       ],
       "unlocks": [],
-      "authority_effect": "NONE_EXPECTED / GOVERNED_RESEARCH_SCENARIOS_ONLY",
+      "authority_effect": "NONE_EXPECTED / PROSPECTIVE_RESEARCH_ONLY",
       "owner_authorized": false,
-      "source_doc": "Owner R4 directive: queue R5, do not start",
+      "source_doc": "R5 owner directive: queue R6 only, do not start",
       "state_history": [
         "NEXT"
       ],
-      "notes": "NEXT only after validated R4 local completion. Queuing is not execution authorization; no R5 work performed."
+      "notes": "R5 capability prerequisite satisfied locally. Explicit owner authorization is required before starting R6; no R6 work performed."
     },
     {
       "milestone_id": "ROADMAP_AND_PUBLIC_REPOSITORY_REBASELINE_V1",

@@ -1,0 +1,5 @@
+{
+  "contract_version": "current_research_valuation_assumption/v1",
+  "governance": "Explicit supplied assumptions only; no defaults or forecasts generated from historical observations or event labels.",
+  "assumption_sets": {}
+}
