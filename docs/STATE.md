@@ -1,5 +1,33 @@
 # Stock Lookup — Operational State
 
+
+**Roadmap + public repository rebaseline (2026-10-01):**
+`ROADMAP_AND_PUBLIC_REPOSITORY_REBASELINE_V1 = COMPLETE / PR_READY` on the
+owner-authorized post-PR-31 branch. PR #31 merged to `main` at
+`8f9bea29ce91f2d2e766e8e7c2c3012b693693f7` after Producer CI #167 completed
+SUCCESS. The retained ordinary Owner Daily for 2026-10-01 therefore closes the
+new-session live-acceptance gate: `NEW_SESSION_LIVE_ACCEPTANCE_PASS`.
+No Codex/background process is required to determine that gate; GitHub Actions is the
+CI authority for the pushed PR head.
+
+The execution roadmap is rebaselined around large capabilities rather than chains of
+micro-checkpoints. The next milestone is
+`CURRENT_RESEARCH_COVERAGE_AND_DECISION_FITNESS_V1`: measure market-wide usable
+coverage across current price, tactical, fundamental, valuation, corporate/event and
+integrated-decision context, then identify the gaps that materially reduce decision
+quality. Historical RAW_AS_TRADED, PIT backtesting, execution-grade liquidity and live
+position sizing remain separate higher-authority lanes and must not globally block
+Current Research.
+
+The public repository front door is also rebaselined. README now presents product
+purpose, architecture, authority boundaries and navigation before implementation detail.
+The historically flat root (551 Python files on the 2026-10-01 baseline) is recognized
+technical debt. It will be reduced incrementally under
+`docs/REPOSITORY_LAYOUT_MIGRATION.md`; no wholesale `src/` rewrite, filename-based
+legacy classification, analytical change, production DB write, deployment or authority
+promotion is part of this milestone.
+
+
 **Owner Daily live acceptance closeout (2026-10-01):**
 `NEW_SESSION_LIVE_ACCEPTANCE_PASS`. Retained ordinary Daily result/progress/log
 `stock_lookup_daily_20261001_161943` in the operator external run-logs directory
