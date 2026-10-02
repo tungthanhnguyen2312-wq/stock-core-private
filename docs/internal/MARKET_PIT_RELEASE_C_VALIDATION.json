@@ -14,7 +14,7 @@
   "final_malformed_timestamp_and_affected_regressions": {
     "passed": 149
   },
-  "implementation_checkpoint": "f7034b89c45699e20abacc83b29eb3e91ff2bdca",
+  "implementation_checkpoint": "a5141c2b426e14535b0e67041e8de01b4853911e",
   "latest_focused_market_ca_r7_daily_smoke": {
     "passed": 161
   },
