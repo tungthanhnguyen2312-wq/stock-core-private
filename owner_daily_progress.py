@@ -9,9 +9,11 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 import ctypes
 import json
+import math
 import os
 from pathlib import Path
 import shutil
+import statistics
 import subprocess
 import time
 from typing import Any, Callable, Mapping
@@ -37,6 +39,50 @@ PHASES = {
     8: "Personal Action Center",
     9: "Open owner view",
 }
+PHASES_VI = dict(enumerate((
+    "Kiểm tra kho mã & môi trường", "Chạy Daily chuẩn", "Xác minh hoàn tất Daily",
+    "Công bố trạng thái Producer", "Công bố Dashboard", "Tạo gói bàn giao AI",
+    "Xác minh từ xa", "Trung tâm Hành động Cá nhân", "Mở màn hình dành cho chủ sở hữu",
+), 1))
+STRUCTURED_CONSOLE_ENV = "STOCK_LOOKUP_OWNER_STRUCTURED_CONSOLE"
+
+
+def recent_phase_estimates(log_root: Path, *, limit: int = 30, minimum_samples: int = 3) -> dict[int, float]:
+    """Bounded P50 of successful ordinary Daily phases; replay is not timing evidence.
+
+    Read only the most recent result names and their same-name bounded JSONL sidecars.
+    Never traverse retained artifacts or infer progress from heartbeats.
+    """
+    samples: dict[int, list[float]] = {i: [] for i in PHASES}
+    for path in sorted(log_root.glob("stock_lookup_daily_*.result.json"), reverse=True)[:limit]:
+        try:
+            if path.stat().st_size > 2 * 1024**2:
+                continue
+            result = json.loads(path.read_text(encoding="utf-8"))
+            if result.get("status") != "PASS" or "REUSED" in str(result.get("daily_status", "")):
+                continue
+            sidecar = path.with_name(path.name.replace(".result.json", ".progress.jsonl"))
+            if sidecar.stat().st_size > 16 * 1024**2:
+                continue
+            durations = {}
+            with sidecar.open(encoding="utf-8") as handle:
+                for line in handle:
+                    event = json.loads(line)
+                    phase = event.get("phase_index")
+                    duration = event.get("work_elapsed_seconds")
+                    if (event.get("writer_role") == "OWNER_PARENT" and event.get("status") == "END"
+                            and phase in PHASES and event.get("component") == PHASES[phase]
+                            and isinstance(duration, (int, float)) and not isinstance(duration, bool)
+                            and math.isfinite(duration) and duration >= 0
+                            and (not result.get("session") or event.get("session") == result["session"])
+                            and (not (result.get("telemetry") or {}).get("run_id")
+                                 or event.get("run_id") == result["telemetry"]["run_id"])):
+                        durations[phase] = float(duration)
+            for phase, duration in durations.items():
+                samples[phase].append(duration)
+        except (OSError, ValueError, TypeError, AttributeError):
+            continue
+    return {i: statistics.median(values) for i, values in samples.items() if len(values) >= minimum_samples}
 
 
 class PROCESS_MEMORY_COUNTERS_EX(ctypes.Structure):
@@ -261,6 +307,26 @@ class OwnerDailyProgress:
         self._resource_cache: dict[str, int | None] | None = None
         self._last_resource_sample_at: float | None = None
         self._work_started: dict[tuple[int, str, str, str], float] = {}
+        self.phase_estimates: dict[int, float] = {}
+        self._human_buckets: dict[tuple[int, str, str, str], int] = {}
+        self._human_counter_history: dict[tuple[int, str, str, str], tuple[Any, Any]] = {}
+        self._disk_warning = False
+        self.active_phase = 1
+
+    def start_view(self, estimates: Mapping[int, float]) -> None:
+        self.phase_estimates = dict(estimates)
+        if self.human_sink is None:
+            return
+        if os.environ.get(STRUCTURED_CONSOLE_ENV) == "1":
+            self.human_sink("OWNER_DAILY_PRESENTATION=" + json.dumps({
+                "session": self.session, "phase_estimates": self.phase_estimates,
+            }, ensure_ascii=False))
+        else:
+            self.human_sink("=" * 60 + "\n STOCK LOOKUP DAILY\n Ngày: " + (self.session or "đang xác định") + "\n" + "=" * 60)
+            for phase, label in PHASES_VI.items():
+                estimate = self.phase_estimates.get(phase)
+                self.human_sink(f"[{phase}/9] {label} | CHỜ | ETA: " +
+                                ("~" + _format_duration(estimate) if estimate is not None else "đang ước tính"))
 
     def set_session(self, session: str | None) -> None:
         if session:
@@ -348,53 +414,75 @@ class OwnerDailyProgress:
         counters = (event.get("retry_count") or 0, event.get("failure_count") or 0)
         return resources, boundary or counters != self._display_counters
 
+    @staticmethod
+    def _owner_phase(event: Mapping[str, Any]) -> bool:
+        return (event.get("writer_role") == "OWNER_PARENT" and not event.get("subtask")
+                and event.get("component") == PHASES.get(event.get("phase_index")))
+
+    @staticmethod
+    def _acquisition(event: Mapping[str, Any]) -> bool:
+        return (event.get("phase_index") == 2 and event.get("progress_kind") == "REQUESTS"
+                and "DNSE" in str(event.get("component", "")).upper()
+                and isinstance(event.get("total"), int) and event["total"] > 0)
+
     def _human_line(self, event: Mapping[str, Any]) -> str:
-        resources, counters_changed = self._console_alerts(event)
-        parts = [f"[{self.wall_clock().astimezone().strftime('%H:%M:%S')}]",
-                 f"[{event['phase_index']}/{event['phase_total']}] {event['component']}"]
-        subtask = event.get("subtask")
-        if subtask and event.get("progress_kind") == "PIPELINE":
-            parts.append(str(subtask).replace("_", " "))
-        completed, total, value = event.get("completed"), event.get("total"), event.get("percent")
-        reused = event.get("status") == "REUSED"
-        if reused:
-            parts.extend(["snapshot ready", f"candidates {total or completed}", "downstream reuse"])
-        elif total:
-            label = "batch" if event.get("progress_kind") == "BATCHES" else "requests"
-            parts.append(f"{label} {completed}/{total}" + (f" {value:.1f}%" if value is not None else ""))
-        if event.get("qualified_count") is not None and event.get("coverage_denominator"):
-            parts.append("exact-session coverage {}/{} ({:.1f}%)".format(
-                event["qualified_count"], event["coverage_denominator"], event.get("coverage_percent") or 0.0))
+        phase = event["phase_index"]
         status = event.get("status")
-        parts.append("DONE" if status == "END" else ("RUNNING" if status in {None, "BEGIN", "IN_PROGRESS", "CHILD_STARTING"} else str(status)))
-        if counters_changed and any(event.get(name) is not None for name in ("success_count", "retry_count", "failure_count")):
-            parts.append("ok {} retry {} fail {}".format(*[(event.get(key) if event.get(key) is not None else "?")
-                           for key in ("success_count", "retry_count", "failure_count")]))
-        if resources:
-            for key, label in (("rss_bytes", "RAM"), ("peak_rss_bytes", "peak RAM"),
-                               ("run_output_bytes", "OUT"), ("disk_free_bytes", "FREE C:")):
-                value_bytes = _format_bytes(event.get(key))
-                if value_bytes:
-                    parts.append(label + " " + value_bytes)
-            self._display_peak = event.get("peak_rss_bytes") or self._display_peak
-            disk = event.get("disk_free_bytes")
-            self._display_resource_band = (self._display_peak >= 4 * 1024**3, disk is not None and disk < 10 * 1024**3)
-        self._display_counters = (event.get("retry_count") or 0, event.get("failure_count") or 0)
-        parts.append("elapsed " + _format_duration(event.get("work_elapsed_seconds")))
-        if event.get("eta_state") == "KNOWN" and not reused:
-            parts.append("ETA " + _format_duration(event.get("eta_seconds")))
+        done = status == "END" and self._owner_phase(event)
+        state = "XONG" if done else ("LỖI" if status in {"FAILED", "FAIL"} else
+                ("CẢNH BÁO" if status == "WARN" else "ĐANG CHẠY"))
+        parts = [f"[{phase}/9] {PHASES_VI.get(phase, 'Daily')}", state]
+        if done:
+            parts.append("Thời gian: " + _format_duration(event.get("work_elapsed_seconds")))
+        else:
+            measured = event.get("eta_seconds") if self._acquisition(event) and event.get("eta_state") == "KNOWN" else None
+            reference = self.phase_estimates.get(phase) if self._owner_phase(event) else None
+            remaining = max(reference - (event.get("work_elapsed_seconds") or 0), 0) if reference is not None else None
+            estimate = measured if measured is not None else (remaining if remaining else None)
+            parts.append("ETA: " + ("~" + _format_duration(estimate) if estimate is not None else "đang ước tính"))
+        if self._acquisition(event):
+            if status == "REUSED":
+                parts.append("DNSE: dùng lại dữ liệu phiên đã hoàn tất")
+            else:
+                parts.append("DNSE exact-session")
+                if event.get("completed") is not None:
+                    parts.append(f"Yêu cầu: {event['completed']}/{event['total']} ({event.get('percent') or 0:.1f}%)")
+                if event.get("qualified_count") is not None and event.get("coverage_denominator"):
+                    parts.append(f"Nến đúng phiên: {event['qualified_count']}/{event['coverage_denominator']} ({event.get('coverage_percent') or 0:.1f}%)")
+                counters = []
+                for key, label in (("success_count", "Thành công"), ("retry_count", "Retry"), ("failure_count", "Lỗi")):
+                    if event.get(key) is not None:
+                        counters.append(f"{label}: {event[key]}")
+                if counters:
+                    parts.append("; ".join(counters))
+        disk = event.get("disk_free_bytes")
+        if isinstance(disk, int) and disk < 10 * 1024**3:
+            parts.append("CẢNH BÁO: dung lượng đĩa thấp")
         return " | ".join(parts)
 
     def _should_write_human(self, event: Mapping[str, Any], now: float) -> bool:
-        if any(self._console_alerts(event)) or event.get("status") in {"BEGIN", "END", "FAILED", "REUSED", "RUNNING"}:
+        disk = event.get("disk_free_bytes")
+        warning = isinstance(disk, int) and disk < 10 * 1024**3
+        crossed_warning = warning and not self._disk_warning
+        self._disk_warning = warning
+        if crossed_warning:
             return True
-        if self._last_human_at is None or now - self._last_human_at >= self.throttle_seconds:
+        if self._owner_phase(event):
+            return event.get("status") in {"BEGIN", "END", "FAILED", "WARN", "FAIL"}
+        if not self._acquisition(event):
+            return False
+        key = self._task_key(event["phase_index"], event["component"], event.get("subtask"), event["progress_kind"])
+        bucket = int((event.get("percent") or 0) // 5)
+        previous = self._human_buckets.get(key, -1)
+        boundary = event.get("status") in {"BEGIN", "END", "FAILED", "WARN", "REUSED", "COMPLETED"}
+        changed = bucket > previous
+        counters = (event.get("retry_count"), event.get("failure_count"))
+        counter_changed = key in self._human_counter_history and counters != self._human_counter_history[key]
+        self._human_counter_history[key] = counters
+        if boundary or changed or counter_changed:
+            self._human_buckets[key] = bucket
             return True
-        value = event.get("percent")
-        if (value is not None and self._last_human_percent is not None
-                and abs(value - self._last_human_percent) >= 5.0):
-            return True
-        return event.get("completed") == event.get("total") and event.get("total") is not None
+        return False
 
     def emit(self, *, phase_index: int, phase_name: str | None = None, component: str | None = None,
              subtask: str | None = None, progress_kind: str = "OTHER", completed: int | None = None,
@@ -464,11 +552,17 @@ class OwnerDailyProgress:
             }
             if extra:
                 event["extra"] = dict(extra)
+            if self._owner_phase(event) and status == "BEGIN":
+                self.active_phase = phase_index
             self.event_count += 1
             self._write(event)
             if self.human_sink is not None and self._should_write_human(event, now):
                 try:
-                    self.human_sink(self._human_line(event))
+                    if os.environ.get(STRUCTURED_CONSOLE_ENV) == "1":
+                        presentation = dict(event, owner_phase=self._owner_phase(event), owner_line=self._human_line(event))
+                        self.human_sink("OWNER_DAILY_PROGRESS=" + json.dumps(presentation, ensure_ascii=False))
+                    else:
+                        self.human_sink(self._human_line(event))
                     self._last_human_at = now
                     self._last_human_percent = event["percent"]
                 except Exception as exc:

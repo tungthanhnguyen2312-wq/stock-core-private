@@ -25,6 +25,8 @@ env:
   FOCUSED_SELECTION: >-
     tests/test_pre_daily_consumer_and_m1_brief_guards.py
     tests/test_owner_daily_workflow.py
+    tests/test_owner_daily_progress.py
+    tests/test_owner_daily_launcher.py
     tests/test_canonical_market_bars.py
     tests/test_market_wide_historical_research_context.py
     tests/test_session_bar_integrity.py

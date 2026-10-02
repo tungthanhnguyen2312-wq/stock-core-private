@@ -44,7 +44,7 @@ from governed_publication_completion import (  # noqa: E402
     verify_existing_publication_completion,
 )
 import owner_daily_journal as journal  # noqa: E402
-from owner_daily_progress import OwnerDailyProgress, PROGRESS_PATH_ENV, safe_progress_path  # noqa: E402
+from owner_daily_progress import OwnerDailyProgress, PHASES, PROGRESS_PATH_ENV, safe_progress_path, recent_phase_estimates  # noqa: E402
 
 DEFAULT_WEB_DIR = CANONICAL_WEB_ROOT
 
@@ -1471,7 +1471,8 @@ def main(argv: list[str] | None = None) -> int:
         print(f"HINT: {exc.hint}", file=sys.stderr)
         return 1
     safe_sidecar = safe_progress_path(args.progress_path, root=ROOT)
-    telemetry = OwnerDailyProgress(safe_sidecar)
+    telemetry = OwnerDailyProgress(safe_sidecar, session=args.replay_completed_session)
+    telemetry.start_view(recent_phase_estimates(args.result_path.parent))
     if args.progress_path is not None and safe_sidecar is None:
         telemetry.report_degraded("UNSAFE_PROGRESS_PATH")
     result: dict[str, Any]
@@ -1489,6 +1490,9 @@ def main(argv: list[str] | None = None) -> int:
     except OwnerDailyError as exc:
         code = 1
         result = {"status": "FAILED", "failed_step": exc.step, "reason": exc.reason, "hint": exc.hint}
+        phase = next((i for i, name in PHASES.items() if name == exc.step), 1)
+        telemetry.emit(phase_index=phase, status="FAILED", reason=exc.reason)
+        result["resume_completed_session"] = bool(_auto_resumable_session(ROOT, args.runtime_root, intended_session=telemetry.session))
     except KeyboardInterrupt as exc:
         # The owner (or the console itself) cut the run short. Record what we can before the
         # interrupt propagates, so this is never a bare log with no matching result.json.
@@ -1497,6 +1501,8 @@ def main(argv: list[str] | None = None) -> int:
                   "hint": "The run was stopped (Ctrl+C or console close) before reaching a known gate. "
                           "Read the log for the last completed step, then rerun; already-completed "
                           "work upstream of the interrupted step is reused, not redone."}
+        telemetry.emit(phase_index=telemetry.active_phase, status="FAILED", reason=result["reason"])
+        result["resume_completed_session"] = bool(_auto_resumable_session(ROOT, args.runtime_root, intended_session=telemetry.session))
         reraise = exc
     except Exception as exc:  # noqa: BLE001 -- last resort so a bug here still leaves a result.
         # Keep the traceback visible in the tee'd log exactly as an uncaught exception normally
@@ -1508,6 +1514,8 @@ def main(argv: list[str] | None = None) -> int:
                   "hint": "An unexpected error interrupted Daily outside any known gate. Read the "
                           "log for the traceback; already-completed work upstream of the "
                           "interrupted step is reused, not redone, on rerun."}
+        telemetry.emit(phase_index=telemetry.active_phase, status="FAILED", reason=result["reason"])
+        result["resume_completed_session"] = bool(_auto_resumable_session(ROOT, args.runtime_root, intended_session=telemetry.session))
     # This owner result is external operational metadata.  It is deliberately never supplied to
     # analytical builders or any content identity, and a broken telemetry sidecar never prevents it.
     result["telemetry"] = telemetry.summary()
