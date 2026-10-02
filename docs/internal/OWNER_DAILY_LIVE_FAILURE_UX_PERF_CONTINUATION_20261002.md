@@ -149,16 +149,49 @@ These are bounded discovery measurements, not whole-feedback or ordinary Daily t
 No acquisition, Daily, publication, P0/P1 replay or historical T0 rebuild was run.
 Benchmark helper/cache remain ignored scratch, not another strategic document.
 
+## P2B — RELEASED: tactical index and observation read deduplication
+
+Milestone: `OWNER_DAILY_P2B_TACTICAL_SHADOW_IO_DEDUP_V1`. Starting main/origin/main:
+`d956057e8706ec04e29dd392073820abe8ce3f9d`. No signal rule, threshold, observation or outcome
+identity/content, shadow authority, posture or evidence-mode change; no outcome-contract change.
+
+- **Run-scoped index.** `TacticalArtifactIndex` (frozen, read-only `session -> exact artifact path`) is built once
+  by `build_tactical_artifact_index` and passed explicitly through `collect_session`, `mature_all`, `main` and the
+  historical-mapping runner. Exact declared-session lookup only; no latest/mtime fallback; ambiguity still raises
+  at construction; unparseable artifacts are still skipped at discovery and still raise on load. No global or
+  persistent cache. Calling without an index keeps the previous behavior.
+- **Single observation read.** `ProspectiveShadowObservationStore.iter_validated_observations` streams one file at
+  a time, identity-verified exactly as `load_observation` (misfiled ids still validate via their canonical path;
+  repeated ids yield once). `list_observation_ids` uses it (2 reads/file -> 1). `mature_all` streams, persists
+  with `persist_outcome_update(..., validated_observation=)` (no reload; mismatched object falls back to the
+  fail-closed reload) and keeps only the status fields `build_collection_status` reads instead of all
+  observations and outcomes. Matured ids remain sorted.
+- **Known behavioral nuance:** a malformed/tampered observation file now raises when reached in the stream, so
+  outcome updates for earlier valid observations may already be appended (valid, content-addressed, idempotent);
+  previously the validation pass raised before any write. Error codes are unchanged.
+- **Counters:** `build_tactical_artifact_index(metrics=)`, `load_tactical_artifact(metrics=)` and per-store
+  `read_metrics`; the tests also count `Path.read_text` directly.
+
+Measured (synthetic hermetic corpus: 24 sessions x 300 tickers, 7,200 observations, 6,900 outcome updates; the
+real retained 24 artifacts / ~25k observations are not in the cloud checkout, so no real-corpus timing is claimed).
+One final `main` run, old vs new: classifier JSON parses 722 -> 50 (24 index + 26 loads; mature_all alone 648 ->
+48); observation file reads 28,800 -> 7,500 (the remainder is `persist_observation` read-back during collection);
+outcome reads 6,900 -> 6,900 (P2E); wall 4.06s -> 2.76s; peak RSS 196 -> 130 MB. Store trees (observations +
+outcome_updates) and stdout JSON are byte-identical (same tree SHA-256).
+
+Tests: 63 collection/operationalization tests pass (incl. a verbatim legacy-procedure oracle asserting identical
+outcome bytes, status and CLI output, idempotent rerun, tamper/malformed/misfiled cases, parse/read counts).
+`test_canonical_daily_operation.py` has two retained-fixture errors that reproduce on the unmodified baseline.
+
 ## Checkpoint disposition and exact remaining slices
 
-`P2A_RELEASED_COMPLETE`: implementation, validation, PR #46 merge, green PR/main CI
-and main synchronization complete. Stop here. P0/P1 stay complete. Do not repeat Claude's read-only profile or
-start another P2 slice without owner authorization. The exact remaining order is:
+P0/P1/P2A/P2B are released. Do not repeat Claude's read-only profile or start another P2 slice without owner
+authorization. D was not released before P2B started. Remaining, in order:
 
-B. tactical index/read deduplication
 C. settled feedback contribution cache
-D. single IID serialization + atomic byte copy
-E. tactical outcome persistence redesign
+D. single IID serialization + atomic byte copy (not released)
+E. tactical outcome persistence redesign (outcome identity includes `evaluation_as_of_session` /
+   `retained_future_session_count`; the persist read-back is also E's)
 F. telemetry sizing cleanup
 
 The only durable continuation is this file. Keep distinct pre/post temporal admission,
