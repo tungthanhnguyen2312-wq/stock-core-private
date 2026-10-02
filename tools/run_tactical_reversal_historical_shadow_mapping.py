@@ -34,7 +34,8 @@ from run_tactical_reversal_prospective_shadow_collection import collect_session,
 
 
 def run(*, retained_evidence_root: Path, store_root: Path, retained_at: str | None = None) -> dict[str, Any]:
-    sessions = collection.discover_retained_tactical_sessions(retained_evidence_root)
+    index = collection.build_tactical_artifact_index(retained_evidence_root)
+    sessions = index.sessions
     if not sessions:
         return {"blocker": "NO_RETAINED_TACTICAL_ARTIFACTS_FOUND"}
 
@@ -42,11 +43,11 @@ def run(*, retained_evidence_root: Path, store_root: Path, retained_at: str | No
     for session in sessions:
         result = collect_session(
             retained_evidence_root=retained_evidence_root, store_root=store_root,
-            session=session, retained_at=retained_at,
+            session=session, retained_at=retained_at, index=index,
         )
         per_session.append({"session": session, "ticker_count": result.get("ticker_count"), "evidence_mode": result.get("evidence_mode")})
 
-    maturation = mature_all(retained_evidence_root=retained_evidence_root, store_root=store_root)
+    maturation = mature_all(retained_evidence_root=retained_evidence_root, store_root=store_root, index=index)
 
     store = collection.ProspectiveShadowObservationStore(store_root)
     observations = [store.load_observation(oid) for oid in store.list_observation_ids()]

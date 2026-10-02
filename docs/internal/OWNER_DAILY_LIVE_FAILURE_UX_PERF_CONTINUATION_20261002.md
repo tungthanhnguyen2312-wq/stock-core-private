@@ -149,6 +149,40 @@ These are bounded discovery measurements, not whole-feedback or ordinary Daily t
 No acquisition, Daily, publication, P0/P1 replay or historical T0 rebuild was run.
 Benchmark helper/cache remain ignored scratch, not another strategic document.
 
+## P2B — RELEASED: tactical index and observation read deduplication
+
+Milestone: `OWNER_DAILY_P2B_TACTICAL_SHADOW_IO_DEDUP_V1`. Starting main/origin/main:
+`d956057e8706ec04e29dd392073820abe8ce3f9d`. No signal rule, threshold, observation or outcome
+identity/content, shadow authority, posture or evidence-mode change; no outcome-contract change.
+
+- **Run-scoped index.** `TacticalArtifactIndex` (frozen, read-only `session -> exact artifact path`) is built once
+  by `build_tactical_artifact_index` and passed explicitly through `collect_session`, `mature_all`, `main` and the
+  historical-mapping runner. Exact declared-session lookup only; no latest/mtime fallback; ambiguity still raises
+  at construction; unparseable artifacts are still skipped at discovery and still raise on load. No global or
+  persistent cache. Calling without an index keeps the previous behavior.
+- **Single observation read.** `ProspectiveShadowObservationStore.iter_validated_observations` streams one file at
+  a time, identity-verified exactly as `load_observation` (misfiled ids still validate via their canonical path;
+  repeated ids yield once). `list_observation_ids` uses it (2 reads/file -> 1). `mature_all` streams, persists
+  with `persist_outcome_update(..., validated_observation=)` (no reload; mismatched object falls back to the
+  fail-closed reload) and keeps only the status fields `build_collection_status` reads instead of all
+  observations and outcomes. Matured ids remain sorted.
+- **Known behavioral nuance:** a malformed/tampered observation file now raises when reached in the stream, so
+  outcome updates for earlier valid observations may already be appended (valid, content-addressed, idempotent);
+  previously the validation pass raised before any write. Error codes are unchanged.
+- **Counters:** `build_tactical_artifact_index(metrics=)`, `load_tactical_artifact(metrics=)` and per-store
+  `read_metrics`; the tests also count `Path.read_text` directly.
+
+Measured (synthetic hermetic corpus: 24 sessions x 300 tickers, 7,200 observations, 6,900 outcome updates; the
+real retained 24 artifacts / ~25k observations are not in the cloud checkout, so no real-corpus timing is claimed).
+One final `main` run, old vs new: classifier JSON parses 722 -> 50 (24 index + 26 loads; mature_all alone 648 ->
+48); observation file reads 28,800 -> 7,500 (the remainder is `persist_observation` read-back during collection);
+outcome reads 6,900 -> 6,900 (P2E); wall 4.06s -> 2.76s; peak RSS 196 -> 130 MB. Store trees (observations +
+outcome_updates) and stdout JSON are byte-identical (same tree SHA-256).
+
+Tests: 63 collection/operationalization tests pass (incl. a verbatim legacy-procedure oracle asserting identical
+outcome bytes, status and CLI output, idempotent rerun, tamper/malformed/misfiled cases, parse/read counts).
+`test_canonical_daily_operation.py` has two retained-fixture errors that reproduce on the unmodified baseline.
+
 ## P2D — single IID serialization + atomic byte copy
 
 Milestone: `OWNER_DAILY_P2D_SINGLE_IID_SERIALIZATION_V1`.
@@ -157,6 +191,8 @@ Starting main: `d956057e8706ec04e29dd392073820abe8ce3f9d`.
 Release branch: `perf/single-iid-serialization-20261002`.
 Validated code HEAD: `25f56f77e7cb3ae9d74a9df1034b5382ab66ed39`.
 Release gate: all four PR CI jobs green, exact-head merge, main verification and synchronization.
+Concurrent main advanced to `3b01325f6ea47a3db39a15429440242b791d6a5f` with P2B released.
+Only this continuation conflicted; its P2B release record and implementation were preserved.
 Final merge/head are recorded by PR #49. This record enters main with that gated release.
 
 Removed only the second IID `_write_json` call in enrichment `_attempt`. The Integrated
@@ -202,12 +238,14 @@ Helper/fixture bytes remain ignored scratch. Unrelated untracked `data/` preserv
 ## Checkpoint disposition and exact remaining slices
 
 `P2D_RELEASED_COMPLETE` upon the gated PR #49 merge/main sync. D is COMPLETE in this
-release. P0/P1/P2A stay RELEASED COMPLETE. This is the final pre-reset job; stop here.
-Do not start another milestone or repeat Claude's profile. Remaining order is unchanged:
+release. P0/P1/P2A stay RELEASED COMPLETE; P2B was concurrently released by its own work.
+This is the final pre-reset job; stop here. Do not start another milestone or repeat
+Claude's profile. Original B/C/E/F ordering is preserved: B is already COMPLETE;
+remaining, in order:
 
-B. tactical index/read deduplication
 C. settled feedback contribution cache
-E. tactical outcome persistence redesign
+E. tactical outcome persistence redesign (outcome identity includes `evaluation_as_of_session` /
+   `retained_future_session_count`; the persist read-back is also E's)
 F. telemetry sizing cleanup
 
 The only durable continuation is this file. Preserve distinct pre/post temporal admission,
