@@ -9,14 +9,14 @@
     "ai_rules": "docs/AI_RULES.md",
     "note": "This file is the machine-readable EXECUTION-STATE authority: which milestone is current/active/next/blocked, what checkpoint proves each completed milestone, and whether recorded state contradicts Git/worktree reality. It does not restate or supersede the narrative docs' technical content and is not a substitute for reading them. Where this file and a narrative doc appear to disagree, that is a conflict to surface to the owner (AGENTS.md 'Default lightweight bootstrap' rule), never an automatic override in either direction."
   },
-  "implementation_lineage_head": "HEAD",
-  "last_updated_checkpoint": "HEAD",
+  "implementation_lineage_head": "abc2f2aba34e2d9a86ab8f2fca697d1aadd8d5d1",
+  "last_updated_checkpoint": "abc2f2aba34e2d9a86ab8f2fca697d1aadd8d5d1",
   "known_operational_diff_allowlist": [
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
     "milestone": "MARKET_BAR_BASIS_AND_MULTITIMEFRAME_V1",
-    "state": "ACTIVE"
+    "state": "COMPLETE"
   },
   "queued_next": [],
   "milestones": [
@@ -2841,9 +2841,9 @@
     },
     {
       "milestone_id": "MARKET_BAR_BASIS_AND_MULTITIMEFRAME_V1",
-      "state": "ACTIVE",
+      "state": "COMPLETE",
       "starting_checkpoint": "389cf8c193eb9d35869ce210e5ad0228e5f86f58",
-      "checkpoint": null,
+      "checkpoint": "abc2f2aba34e2d9a86ab8f2fca697d1aadd8d5d1",
       "candidate_branch": "feature/market-bar-multitimeframe-20261002",
       "dependencies": [
         "PIT_MINIMUM_VIABLE_EVIDENCE_CLOSURE_V1"
@@ -2854,9 +2854,11 @@
       "owner_override": "OWNER_DIRECTIVE_2026_10_02_MARKET_BAR_BASIS_AND_MULTITIMEFRAME_V1",
       "source_doc": "Owner directive 2026-10-02; docs/market_bar_basis_multitimeframe_contract.md",
       "state_history": [
-        "ACTIVE"
+        "ACTIVE",
+        "COMPLETE"
       ],
-      "notes": "Explicit override starts first documented analytical proposal only. D/W/M canonical projection over existing observations; no acquisition, source requalification, indicator expansion or later proposal."
+      "notes": "Canonical D/W/M and one verified non-voting CurrentResearch projection complete. 1560 tests +30 subtests pass. Actual retained market builder:1683 candidates; D/completed W/M=1453/898/560. VNM/HPG/ALT595 historical rows +21 prospective VNM versions;24 complete W/4 M in cohort. Three real financial/tactical adapters show zero other decision-field deltas. Full financial double-build host MemoryError is documented; bounded adapter succeeds. Volume UNKNOWN, real PIT factors0, September calendar unknown, no source/authority/threshold/T0 effects. No automatic successor.",
+      "terminal_disposition": "MARKET_BAR_BASIS_AND_MULTITIMEFRAME_COMPLETE"
     }
   ],
   "blocked_capabilities": [
@@ -2910,5 +2912,5 @@
       "reference_checkpoint": "9575cb04c899696a02b22ba9dfcfed9a4961cf2d"
     }
   ],
-  "successor_disposition": "OWNER_AUTHORIZED_FIRST_ANALYTICAL_PROPOSAL"
+  "successor_disposition": "WAITING_OWNER_AUTHORIZATION_FOR_LATER_ANALYTICAL_PROPOSAL"
 }
