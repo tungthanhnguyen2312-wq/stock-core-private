@@ -1700,7 +1700,7 @@ def resolve_operation_bound_integrated_decision(repo_root: Path, session: str, d
         except OSError:
             outcomes.append("UNREADABLE")
             continue
-        except json.JSONDecodeError:
+        except (json.JSONDecodeError, UnicodeError):
             outcomes.append("MALFORMED")
             continue
         if not isinstance(artifact, dict):

@@ -961,7 +961,7 @@ def _retained_builder_copy(source: Path) -> Path:
     return view
 
 
-@pytest.mark.parametrize("damage", ["empty", "malformed", "absent"])
+@pytest.mark.parametrize("damage", ["empty", "malformed", "absent", "invalid_utf8"])
 def test_m1_guard_uses_operation_bound_copy_when_working_view_is_damaged(tmp_path, damage):
     """2026-10-02 live failure: the enrichment view was truncated to 0 bytes while the exact retained
     artifact the sealed operation declares was intact."""
@@ -971,6 +971,8 @@ def test_m1_guard_uses_operation_bound_copy_when_working_view_is_damaged(tmp_pat
         view.write_bytes(b"")
     elif damage == "malformed":
         view.write_text('{"records": ', encoding="utf-8")
+    elif damage == "invalid_utf8":
+        view.write_bytes(b'\xff')
     else:
         view.unlink()
     result = workflow.verify_retained_daily_brief_for_handoff(source, SESSION, root=_root(source))
