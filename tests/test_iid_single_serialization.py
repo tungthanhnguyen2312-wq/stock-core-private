@@ -183,7 +183,8 @@ def test_actual_enrichment_serializes_once_and_retains_both_p2a_summaries(tmp_pa
     monkeypatch.setattr(pipeline, "_write_json", write)
     monkeypatch.setattr(pipeline, "_copy_iid_working_view", promote)
     monkeypatch.setattr(feedback, "_load_json", no_iid_parse)
-    result = pipeline.build_enrichment_components(tmp_path, SESSION)["integrated_investment_decision_product"]
+    result = pipeline.build_enrichment_components(tmp_path, SESSION, artifact_root=tmp_path,
+                                                  output_root=tmp_path)["integrated_investment_decision_product"]
     assert manifest.read_bytes() == manifest_bytes
     if failure:
         assert result["status"] != "BUILT" and result["reason"]

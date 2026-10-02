@@ -226,6 +226,8 @@ bounded reads, canonical write failures, bad source/receipt/session/identity/con
 partial copy/atomic replacement/fsync failures and temp cleanup. Existing P0 zero-byte,
 truncation/atomic-write and AI handoff resolver/publication regressions passed. The existing
 CI selection adds only the new directly relevant test file.
+CI's write-quarantine guard required explicit artifact/output roots on the new synthetic
+enrichment call; both are the same isolated temporary root. The fixture was corrected.
 
 Cheap bounded synthetic fixture: 2,161,128 bytes. Old logical path: 2 file serializations;
 new: 1 file serialization + streaming byte copy. All four old/new canonical/view SHA-256:
