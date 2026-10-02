@@ -156,11 +156,11 @@ def test_consumer_wrong_branch_origin_or_path_is_refused(tmp_path):
         workflow.preflight_consumer_repository(clone, producer_root=producer)
 
 
-def test_consumer_path_is_exactly_the_one_canonical_daily_executes():
+def test_consumer_path_is_exactly_the_one_canonical_daily_executes(tmp_path):
     source = Path(canonical_daily_operation.__file__).read_text(encoding="utf-8")
     assert '_git_head(root.parent / "ai-core-private")' in source
-    assert workflow.consumer_root_for(Path(r"C:\Projects\StockLookup\stock-core-private")) == \
-        Path(r"C:\Projects\StockLookup\ai-core-private").resolve()
+    assert workflow.consumer_root_for(tmp_path / "stock-core-private") == \
+        (tmp_path / "ai-core-private").resolve()
 
 
 def _workflow_stubs(monkeypatch, order: list[str], seen_heads: list[str]) -> None:
@@ -949,3 +949,68 @@ def test_the_writer_and_the_verifier_share_one_wrapper_identity_rule():
     import daily_research_session_operations as operations
     assert "brief_retention_identity" in inspect.getsource(operations._integrated_brief_retention_artifact)
     assert "brief_retention_identity" in inspect.getsource(workflow.resolve_m1_handoff_authority)
+
+
+def _retained_builder_copy(source: Path) -> Path:
+    """The Integrated Decision builder's own retained copy, beside the enrichment working view."""
+    view = next(_root(source).rglob("integrated_investment_decision_product.json"))
+    copy = (_root(source) / "operations-review" / f"integrated-investment-decision-product-v1-{SESSION.replace('-', '')}"
+            / "integrated_investment_decision_product_artifact.json")
+    copy.parent.mkdir(parents=True, exist_ok=True)
+    copy.write_bytes(view.read_bytes())
+    return view
+
+
+@pytest.mark.parametrize("damage", ["empty", "malformed", "absent", "invalid_utf8"])
+def test_m1_guard_uses_operation_bound_copy_when_working_view_is_damaged(tmp_path, damage):
+    """2026-10-02 live failure: the enrichment view was truncated to 0 bytes while the exact retained
+    artifact the sealed operation declares was intact."""
+    source = _operation(tmp_path)
+    view = _retained_builder_copy(source)
+    if damage == "empty":
+        view.write_bytes(b"")
+    elif damage == "malformed":
+        view.write_text('{"records": ', encoding="utf-8")
+    elif damage == "invalid_utf8":
+        view.write_bytes(b'\xff')
+    else:
+        view.unlink()
+    result = workflow.verify_retained_daily_brief_for_handoff(source, SESSION, root=_root(source))
+    assert result["status"] == "M1_BRIEF_AND_INDEX_VERIFIED"
+
+
+def test_m1_guard_never_falls_back_to_another_session_or_latest(tmp_path):
+    source = _operation(tmp_path)
+    view = _retained_builder_copy(source)
+    other = view.parents[2] / "2026-09-23" / "enrichment"
+    other.mkdir(parents=True)
+    (other / view.name).write_bytes(view.read_bytes())
+    view.write_bytes(b"")
+    (view.parents[2].parent / f"integrated-investment-decision-product-v1-{SESSION.replace('-', '')}"
+     / "integrated_investment_decision_product_artifact.json").unlink()
+    with pytest.raises(workflow.OwnerDailyError, match="^M1_CANONICAL_INTEGRATED_DECISION_UNAVAILABLE$"):
+        workflow.verify_retained_daily_brief_for_handoff(source, SESSION, root=_root(source))
+
+
+def test_m1_guard_refuses_a_retained_copy_of_another_identity(tmp_path):
+    source = _operation(tmp_path)
+    view = _retained_builder_copy(source)
+    view.write_bytes(b"")
+    copy = (view.parents[2].parent / f"integrated-investment-decision-product-v1-{SESSION.replace('-', '')}"
+            / "integrated_investment_decision_product_artifact.json")
+    _rewrite_json(copy, lambda a: a.update(artifact_identity="integrated_investment_decision_product/v1:other"))
+    with pytest.raises(workflow.OwnerDailyError, match="^M1_CANONICAL_INTEGRATED_DECISION_IDENTITY_MISMATCH$"):
+        workflow.verify_retained_daily_brief_for_handoff(source, SESSION, root=_root(source))
+
+
+def test_pipeline_json_write_is_atomic_and_byte_identical(tmp_path, monkeypatch):
+    import canonical_post_close_pipeline as pipeline
+    target = tmp_path / "a" / "x.json"
+    value = {"b": [1, {"é": 2}], "a": None}
+    pipeline._write_json(target, value)
+    assert target.read_bytes() == (json.dumps(value, ensure_ascii=False, indent=2, sort_keys=True) + "\n").encode()
+    monkeypatch.setattr(pipeline.json, "dump", lambda *a, **k: (_ for _ in ()).throw(MemoryError()))
+    with pytest.raises(MemoryError):
+        pipeline._write_json(target, {"new": 1})
+    assert json.loads(target.read_text(encoding="utf-8")) == {"a": None, "b": [1, {"é": 2}]}
+    assert not list(target.parent.glob("*.tmp"))

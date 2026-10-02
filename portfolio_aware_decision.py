@@ -1658,6 +1658,65 @@ def load_integrated_decision_artifact(repo_root: Path, session: str) -> dict[str
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+class IntegratedDecisionResolutionError(Exception):
+    """The operation-declared Integrated Decision could not be resolved; ``reason`` is the machine code."""
+
+    def __init__(self, reason: str) -> None:
+        super().__init__(reason)
+        self.reason = reason
+
+
+def operation_bound_integrated_decision_candidates(repo_root: Path, session: str) -> list[Path]:
+    """The exact, session-addressed retained locations of one session's Integrated Decision.
+
+    Never a "latest" scan and never another session's path. The canonical post-close enrichment
+    view comes first; the Integrated Decision builder's own retained artifact is the second copy.
+    """
+    ops = repo_root / "operations-review"
+    return [
+        ops / "canonical-post-close-v1" / session / "enrichment" / "integrated_investment_decision_product.json",
+        ops / f"integrated-investment-decision-product-v1-{session.replace('-', '')}" / "integrated_investment_decision_product_artifact.json",
+    ]
+
+
+def resolve_operation_bound_integrated_decision(repo_root: Path, session: str, declared_identity: str) -> tuple[dict[str, Any], Path]:
+    """Read the Integrated Decision a completed operation declares by ``declared_identity``.
+
+    Each exact candidate is tried in order; a missing, empty, truncated or malformed copy is skipped
+    and a copy of another session or identity is refused, so a damaged mutable working view can never
+    hide the retained artifact the operation is bound to. Read-only: nothing is rebuilt or repaired.
+    Raises ``IntegratedDecisionResolutionError`` (machine reason) when no candidate carries it.
+    """
+    outcomes: list[str] = []
+    for path in operation_bound_integrated_decision_candidates(repo_root, session):
+        try:
+            if not path.is_file():
+                outcomes.append("MISSING")
+                continue
+            if path.stat().st_size == 0:
+                outcomes.append("EMPTY")
+                continue
+            artifact = json.loads(path.read_text(encoding="utf-8"))
+        except OSError:
+            outcomes.append("UNREADABLE")
+            continue
+        except (json.JSONDecodeError, UnicodeError):
+            outcomes.append("MALFORMED")
+            continue
+        if not isinstance(artifact, dict):
+            outcomes.append("MALFORMED")
+        elif artifact.get("session") != session:
+            outcomes.append("SESSION_MISMATCH")
+        elif artifact.get("artifact_identity") != declared_identity:
+            outcomes.append("IDENTITY_MISMATCH")
+        else:
+            return artifact, path
+    mismatch = [o for o in outcomes if o in ("SESSION_MISMATCH", "IDENTITY_MISMATCH")]
+    if mismatch:
+        raise IntegratedDecisionResolutionError("IDENTITY_MISMATCH")
+    raise IntegratedDecisionResolutionError("UNAVAILABLE:" + ",".join(outcomes))
+
+
 def load_descriptive_prices(repo_root: Path, session: str) -> dict[str, float]:
     """Best-effort current-session close prices from the same session's retained descriptive
     research artifact (the same field ``current_portfolio_risk_envelope.py`` already reads:

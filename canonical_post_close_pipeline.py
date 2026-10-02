@@ -209,8 +209,21 @@ def _load(path: Path) -> dict[str, Any] | None:
 
 
 def _write_json(path: Path, value: Mapping[str, Any]) -> None:
+    """Atomic, streaming write, byte-identical to ``json.dumps(..., indent=2, sort_keys=True)``.
+
+    ``write_text(json.dumps(...))`` truncated the destination before encoding a multi-gigabyte
+    string, so a failure left a 0-byte retained file (2026-10-02 live Daily). A sibling temp file
+    replaced into place keeps any prior complete file intact on failure.
+    """
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(value, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    temp = path.with_name(path.name + ".tmp")
+    try:
+        with temp.open("w", encoding="utf-8", newline="") as handle:
+            json.dump(value, handle, ensure_ascii=False, indent=2, sort_keys=True)
+            handle.write("\n")
+        temp.replace(path)
+    finally:
+        temp.unlink(missing_ok=True)
 
 
 def evaluate_dashboard_runtime_readiness(runtime_root: Path, session: str) -> dict[str, Any]:

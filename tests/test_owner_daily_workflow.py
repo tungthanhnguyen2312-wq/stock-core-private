@@ -526,10 +526,12 @@ def _git(path: Path, *args: str) -> None:
 
 def _clone_with_origin(tmp_path: Path) -> tuple[Path, Path]:
     origin = tmp_path / "stock-core-private.git"
-    subprocess.run(["git", "init", "--bare", "-q", str(origin)], check=True)
+    subprocess.run(["git", "init", "--bare", "-q", "--initial-branch=main", str(origin)], check=True)
     seed = tmp_path / "seed"; seed.mkdir(); _git(seed, "init", "-q"); _git(seed, "config", "user.email", "test@example.com"); _git(seed, "config", "user.name", "Test")
     (seed / "README.md").write_text("seed\n"); _git(seed, "add", "README.md"); _git(seed, "commit", "-qm", "seed"); _git(seed, "branch", "-M", "main"); _git(seed, "remote", "add", "origin", str(origin)); _git(seed, "push", "-u", "origin", "main")
     root = tmp_path / "stock-core-private"; subprocess.run(["git", "clone", "-q", str(origin), str(root)], check=True); _git(root, "checkout", "-q", "main")
+    _git(root, "config", "user.email", "test@example.com")
+    _git(root, "config", "user.name", "Test")
     return root, origin
 
 
