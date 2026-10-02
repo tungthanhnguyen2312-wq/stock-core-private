@@ -33,6 +33,7 @@ def official(**changes):
     {"price_unit": "UNKNOWN"}, {"price_unit": "VND_1000"}, {"provider": "DNSE"}, {"source_id": "UNADMITTED"},
     {"receipt_identity": None}, {"knowledge_available_at": "2026-10-02T08:00:00Z"},
     {"knowledge_available_at": "2026-10-01T07:00:00Z"},
+    {"knowledge_available_at": 123}, {"knowledge_available_at": {"date": "2026-10-01"}},
     {"source_basis_claim": contract.SOURCE_DOCUMENTS_ADJUSTED}])
 def test_malformed_or_wrong_scope_official_never_raw(change):
     row = contract.build_session_manifest(snapshot(), session=SESSION, official_series=official(**change))["records"][0]

@@ -4,12 +4,16 @@
     "canonical_post_close_pipeline.py": "573064c16d061155bad015cf95f14c068cb9bd37e6424f69e11ccdcb0f938c38",
     "market_only_pit_eligibility.py": "ed14fc44863d96fe5931af896efa9d02349f93d6593215fcbf725fce1b8b740e",
     "prospective_market_evidence_retention.py": "93f062728a4a6e4f596d7ef8cd1438f8cdc19ecb2960473d4d5c68863d786c63",
+    "prospective_market_snapshot_contract.py": "8287749558d837f31413aac70fdad0fdcd73b0affba7d917fc59f0eb18fefa84",
     "tools/run_market_only_pit_acceptance.py": "fe73cf518334472cfdeb0ce0e647f5a4df17be0fd4595d8b12ecd916ac010e07",
     "vnm_shadow_backtest.py": "b1e499a1a77f075b8f81103a5e82de0a01682b23c1dca654c2396126f5bc3a22"
   },
   "compile": "PASS",
   "contract_version": "market_pit_release_c_validation/v1",
   "diff_check": "PASS",
+  "final_malformed_timestamp_and_affected_regressions": {
+    "passed": 149
+  },
   "implementation_checkpoint": "f7034b89c45699e20abacc83b29eb3e91ff2bdca",
   "latest_focused_market_ca_r7_daily_smoke": {
     "passed": 161
