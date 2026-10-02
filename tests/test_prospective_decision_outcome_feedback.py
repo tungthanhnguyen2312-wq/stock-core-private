@@ -318,3 +318,102 @@ def test_pre_post_handoff_and_later_session_preserve_earlier_temporal_truth(tmp_
     later = feedback.discover_prospective_corpus(root)
     assert [row for row in later["inventory"] if row["decision_session"] in chain] == earlier
     assert later == feedback.discover_prospective_corpus(root, use_summary_cache=False)
+
+
+@pytest.mark.parametrize("mutation", ["snapshot", "decision", "condition", "policy", "corrupt", "oversize"])
+def test_settled_cache_invalidates_dependency_and_binding(tmp_path, monkeypatch, mutation):
+    chain = [f"2026-01-{n:02d}" for n in range(1, 23)]
+    snapshots = {s: _snapshot(s, 100 + i) for i, s in enumerate(chain)}
+    kwargs = dict(artifact={"session": chain[0]}, source_path="retained.json", temporal={"status": feedback.GENUINE}, record=_record(chain[0]))
+    cache = feedback.SettledFeedbackCache(tmp_path, chain, snapshots)
+    full = cache.evaluate(**kwargs)
+    cache.finish()
+    metrics = {}
+    assert feedback.SettledFeedbackCache(tmp_path, chain, snapshots, metrics=metrics).evaluate(**kwargs) == full
+    assert metrics == {"settled_hits": 1}
+    if mutation == "snapshot":
+        snapshots[chain[3]]["records"]["FPT"]["observations"][0]["close"] += 1
+    elif mutation == "decision":
+        kwargs["record"]["decision_identity"] += "changed"
+    elif mutation == "condition":
+        kwargs["record"]["trigger"]["trigger_level"] += 1
+    elif mutation == "policy":
+        monkeypatch.setattr(feedback, "OUTCOME_POLICY_CONSTANTS", {**feedback.OUTCOME_POLICY_CONSTANTS, "version": "bumped"})
+    elif mutation == "corrupt":
+        (tmp_path / feedback._SETTLED_CACHE_PATH).write_text("{bad", encoding="utf-8")
+    else:
+        monkeypatch.setattr(feedback, "_SETTLED_MAX_BYTES", 1)
+    metrics = {}
+    changed = feedback.SettledFeedbackCache(tmp_path, chain, snapshots, metrics=metrics).evaluate(**kwargs)
+    assert metrics == {"settled_misses": 1}
+    assert changed == feedback._feedback_record(chain=chain, snapshots=snapshots, **kwargs)
+
+
+@pytest.mark.parametrize("role", ["trigger", "invalidation"])
+def test_open_condition_never_settles(tmp_path, role):
+    import prospective_decision_retention as retention
+    chain = [f"2026-01-{n:02d}" for n in range(1, 23)]
+    snapshots = {s: _snapshot(s, 100) for s in chain}
+    record = _record(chain[0])
+    record[role]["condition"] = retention.serialize_boundary_condition(
+        {"status": "READY", "source_metric": "resistance", "baseline_value": 200,
+         "comparison_operator": "FUTURE_CLOSE_GT_RESISTANCE_LEVEL"}, role=role, source_strategy_identity="strategy:1")
+    kwargs = dict(artifact={"session": chain[0]}, source_path="retained.json", temporal={}, record=record)
+    cache = feedback.SettledFeedbackCache(tmp_path, chain, snapshots)
+    cache.evaluate(**kwargs)
+    assert cache.retained == {}
+
+
+@pytest.mark.parametrize("price", [100, None])
+def test_settled_extension_and_terminal_unqualified_parity(tmp_path, price):
+    chain = [f"2026-01-{n:02d}" for n in range(1, 23)]
+    snapshots = {s: _snapshot(s, price) for s in chain}
+    kwargs = dict(artifact={"session": chain[0]}, source_path="retained.json", temporal={}, record=_record(chain[0]))
+    cache = feedback.SettledFeedbackCache(tmp_path, chain, snapshots)
+    row = cache.evaluate(**kwargs)
+    cache.finish()
+    chain.append("2026-01-23")
+    snapshots[chain[-1]] = _snapshot(chain[-1], 900)
+    metrics = {}
+    warm = feedback.SettledFeedbackCache(tmp_path, chain, snapshots, metrics=metrics).evaluate(**kwargs)
+    assert metrics == {"settled_hits": 1}
+    assert feedback._canon(row) == feedback._canon(warm) == feedback._canon(feedback._feedback_record(chain=chain, snapshots=snapshots, **kwargs))
+
+
+def test_pending_horizons_and_absent_t0_not_settled(tmp_path):
+    chain = ["2026-01-01", "2026-01-02"]
+    snapshots = {s: _snapshot(s, 100) for s in chain}
+    cache = feedback.SettledFeedbackCache(tmp_path, chain, snapshots)
+    for start in [chain[0], "2025-01-01"]:
+        cache.evaluate(artifact={"session": start}, source_path="a", temporal={}, record=_record(start))
+    assert cache.retained == {}
+
+
+def test_full_artifact_settled_warm_equals_oracle(tmp_path):
+    root, _ = _fixture_root(tmp_path, sessions=23)
+    full = feedback.build_feedback_artifact(root, use_settled_cache=False)
+    cold = feedback.build_feedback_artifact(root)
+    metrics = {}
+    warm = feedback.build_feedback_artifact(root, cache_metrics=metrics)
+    assert metrics["settled_hits"] == 3
+    assert feedback._canon(full) == feedback._canon(cold) == feedback._canon(warm)
+
+
+def test_satisfied_conditions_terminal_but_incomplete_future_not_terminal(tmp_path):
+    import prospective_decision_retention as retention
+    chain = [f"2026-01-{n:02d}" for n in range(1, 23)]
+    snapshots = {s: _snapshot(s, 100) for s in chain}
+    record = _record(chain[0])
+    for role in ("trigger", "invalidation"):
+        record[role]["condition"] = retention.serialize_boundary_condition(
+            {"status": "READY", "source_metric": "resistance", "baseline_value": 90,
+             "comparison_operator": "FUTURE_CLOSE_GT_RESISTANCE_LEVEL"}, role=role, source_strategy_identity="s")
+    cache = feedback.SettledFeedbackCache(tmp_path, chain, snapshots)
+    kwargs = dict(artifact={"session": chain[0]}, source_path="a", temporal={}, record=record)
+    row = cache.evaluate(**kwargs)
+    assert len(cache.retained) == 1
+    assert row["trigger_invalidation_outcome"]["trigger"]["event_session"] == chain[1]
+    snapshots[chain[1]]["records"] = {}
+    cache = feedback.SettledFeedbackCache(tmp_path, chain, snapshots)
+    cache.evaluate(**kwargs)
+    assert cache.retained == {}
