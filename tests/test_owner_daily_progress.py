@@ -552,3 +552,31 @@ def test_subprocess_without_telemetry_uses_original_runner(monkeypatch):
     monkeypatch.setattr(progress.subprocess, "run", runner)
     assert progress.run_observed_subprocess(["fixture"], capture_output=True, text=True) is expected
     assert calls == [(["fixture"], {"capture_output": True, "text": True})]
+
+
+def test_periodic_sampler_never_walks_output_tree(tmp_path, monkeypatch):
+    calls = []
+    monkeypatch.setattr(progress, "_path_size", lambda paths: calls.append(paths) or 123)
+    sampler = progress.ResourceSampler(disk_path=tmp_path, run_output_paths=(tmp_path,))
+    for _ in range(10):
+        sample = sampler.sample()
+        assert sample["disk_free_bytes"] is not None
+        assert sample["run_output_bytes"] is None
+    assert not calls
+    sampler.sample_output_size()
+    assert sampler.sample()["run_output_bytes"] == 123
+    assert len(calls) == 1
+
+
+def test_phase_boundary_sizing_configurable(tmp_path, monkeypatch):
+    calls = []
+    monkeypatch.setattr(progress, "_path_size", lambda paths: calls.append(paths) or 123)
+    sampler = progress.ResourceSampler(disk_path=tmp_path, run_output_paths=(tmp_path,))
+    emitter = progress.OwnerDailyProgress(tmp_path / "diagnostics.jsonl", sampler=sampler, human_sink=None)
+    emitter._resources(0, force=True)
+    for t in (6, 12, 18):
+        emitter._resources(t)
+    assert len(calls) == 1
+    sampler.size_outputs_at_boundaries = False
+    emitter._resources(24, force=True)
+    assert len(calls) == 1

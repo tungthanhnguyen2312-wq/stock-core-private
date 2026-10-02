@@ -231,12 +231,19 @@ class ResourceSampler:
     disk_path: Path = Path("C:\\")
     child_pid: int | None = None
     run_output_paths: tuple[Path, ...] = ()
+    size_outputs_at_boundaries: bool = True
+    run_output_bytes: int | None = None
 
     def set_child_pid(self, pid: int | None) -> None:
         self.child_pid = pid
 
     def set_run_output_paths(self, paths: list[str | Path] | tuple[str | Path, ...]) -> None:
         self.run_output_paths = _deduplicated_paths(paths)
+        self.run_output_bytes = None
+
+    def sample_output_size(self) -> None:
+        """Explicit diagnostic/phase-boundary sizing, never periodic sampling."""
+        self.run_output_bytes = _path_size(self.run_output_paths)
 
     def sample(self) -> dict[str, int | None]:
         try:
@@ -250,7 +257,7 @@ class ResourceSampler:
             "child_rss_bytes": None,
             "recursive_child_tree_rss_bytes": None,
             "disk_free_bytes": disk_free,
-            "run_output_bytes": _path_size(self.run_output_paths),
+            "run_output_bytes": self.run_output_bytes,
         }
 
 
@@ -399,6 +406,8 @@ class OwnerDailyProgress:
             or now - self._last_resource_sample_at >= RESOURCE_SAMPLE_INTERVAL_SECONDS
         )
         if refresh:
+            if force and isinstance(self.sampler, ResourceSampler) and self.sampler.size_outputs_at_boundaries:
+                self.sampler.sample_output_size()
             self._resource_cache = dict(self.sampler.sample())
             self._last_resource_sample_at = now
             self._record_resources(self._resource_cache)
