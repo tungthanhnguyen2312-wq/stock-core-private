@@ -29,10 +29,13 @@ from __future__ import annotations
 import copy
 import hashlib
 import json
+import os
 import subprocess
+import tempfile
 from owner_daily_progress import run_observed_subprocess
 import sys
 from datetime import datetime
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable, Mapping
 
@@ -208,7 +211,35 @@ def _load(path: Path) -> dict[str, Any] | None:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-def _write_json(path: Path, value: Mapping[str, Any]) -> None:
+@dataclass(frozen=True)
+class _IIDWriteReceipt:
+    path: Path
+    session: str
+    contract_version: str
+    artifact_identity: str
+    artifact_sha256: str
+    size: int
+    mtime_ns: int
+    serialized_sha256: str
+
+
+class _ReceiptWriter:
+    """Hash exactly the UTF-8 chunks already sent to the canonical JSON writer."""
+    def __init__(self, handle):
+        self.handle = handle
+        self.digest = hashlib.sha256()
+        self.size = 0
+
+    def write(self, text: str) -> int:
+        data = text.encode("utf-8")
+        if self.handle.write(data) != len(data):
+            raise OSError("INTEGRATED_DECISION_CANONICAL_SHORT_WRITE")
+        self.digest.update(data)
+        self.size += len(data)
+        return len(text)
+
+
+def _write_json(path: Path, value: Mapping[str, Any], *, capture_iid_receipt: bool = False) -> _IIDWriteReceipt | None:
     """Atomic, streaming write, byte-identical to ``json.dumps(..., indent=2, sort_keys=True)``.
 
     ``write_text(json.dumps(...))`` truncated the destination before encoding a multi-gigabyte
@@ -218,12 +249,66 @@ def _write_json(path: Path, value: Mapping[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     temp = path.with_name(path.name + ".tmp")
     try:
-        with temp.open("w", encoding="utf-8", newline="") as handle:
-            json.dump(value, handle, ensure_ascii=False, indent=2, sort_keys=True)
-            handle.write("\n")
+        with temp.open("wb" if capture_iid_receipt else "w",
+                       **({} if capture_iid_receipt else {"encoding": "utf-8", "newline": ""})) as handle:
+            writer = _ReceiptWriter(handle) if capture_iid_receipt else handle
+            json.dump(value, writer, ensure_ascii=False, indent=2, sort_keys=True)
+            writer.write("\n")
+            if capture_iid_receipt:
+                handle.flush()
+                os.fsync(handle.fileno())
         temp.replace(path)
+        if capture_iid_receipt:
+            stat = path.stat()
+            if stat.st_size != writer.size:
+                raise CanonicalPostCloseError("INTEGRATED_DECISION_CANONICAL_WRITE_SIZE_MISMATCH")
+            return _IIDWriteReceipt(path.resolve(), value.get("session"), value.get("contract_version"),
+                                    value.get("artifact_identity"), value.get("artifact_sha256"),
+                                    writer.size, stat.st_mtime_ns, writer.digest.hexdigest())
     finally:
         temp.unlink(missing_ok=True)
+
+
+def _copy_iid_working_view(source: Path, destination: Path, *, session: str,
+                           artifact: Mapping[str, Any], receipt: _IIDWriteReceipt | None) -> None:
+    """Promote only the exact bytes emitted by this successful current IID build."""
+    contract = "integrated_investment_decision_product/v1"
+    identity = artifact.get("artifact_identity")
+    digest = artifact.get("artifact_sha256")
+    if (receipt is None or receipt.path != source.resolve() or receipt.session != session
+            or artifact.get("session") != session or receipt.contract_version != contract
+            or artifact.get("contract_version") != contract or not isinstance(digest, str) or not digest
+            or identity != contract + ":" + digest or receipt.artifact_identity != identity
+            or receipt.artifact_sha256 != digest):
+        raise CanonicalPostCloseError("INTEGRATED_DECISION_CANONICAL_WRITE_RECEIPT_MISMATCH")
+    before = source.stat()
+    if receipt.size <= 0 or (before.st_size, before.st_mtime_ns) != (receipt.size, receipt.mtime_ns):
+        raise CanonicalPostCloseError("INTEGRATED_DECISION_CANONICAL_SOURCE_CHANGED_OR_EMPTY")
+    if source.resolve() == destination.resolve():
+        raise CanonicalPostCloseError("INTEGRATED_DECISION_WORKING_VIEW_EQUALS_CANONICAL_SOURCE")
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    temporary = None
+    try:
+        copied = 0
+        serialized_digest = hashlib.sha256()
+        with source.open("rb") as incoming, tempfile.NamedTemporaryFile(
+                dir=destination.parent, prefix=".iid-copy-", suffix=".tmp", delete=False) as outgoing:
+            temporary = Path(outgoing.name)
+            for block in iter(lambda: incoming.read(1024 * 1024), b""):
+                if outgoing.write(block) != len(block):
+                    raise OSError("INTEGRATED_DECISION_WORKING_VIEW_SHORT_WRITE")
+                serialized_digest.update(block)
+                copied += len(block)
+            outgoing.flush()
+            os.fsync(outgoing.fileno())
+        after = source.stat()
+        if (copied != receipt.size or serialized_digest.hexdigest() != receipt.serialized_sha256
+                or (after.st_size, after.st_mtime_ns) != (before.st_size, before.st_mtime_ns)):
+            raise CanonicalPostCloseError("INTEGRATED_DECISION_CANONICAL_SOURCE_BYTES_MISMATCH")
+        os.replace(temporary, destination)
+    finally:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
 
 
 def evaluate_dashboard_runtime_readiness(runtime_root: Path, session: str) -> dict[str, Any]:
@@ -868,14 +953,19 @@ def build_enrichment_components(
         __import__("official_corporate_event_incremental_acquisition")._retain_context(out, overlay)
         results["current_corporate_knowledge_overlay"] = {"status": "AVAILABLE" if overlay["official_event_context"] else "UNAVAILABLE", "artifact": overlay, "path": out}
 
+    iid_write_receipt: _IIDWriteReceipt | None = None
+
     def _attempt(name: str, level2_key: str, fn) -> None:
         try:
             artifact = fn()
             out = enrichment_output_path(output_root, session, name)
-            _write_json(out, artifact)
             if name == "integrated_investment_decision_product":
+                _copy_iid_working_view(paths["integrated_investment_decision_product"], out,
+                                       session=session, artifact=artifact, receipt=iid_write_receipt)
                 from prospective_decision_outcome_feedback import retain_iid_classification_summary
                 retain_iid_classification_summary(output_root, out, artifact)
+            else:
+                _write_json(out, artifact)
             results[name] = {"status": "BUILT", "artifact": artifact, "path": out}
             return
         except Exception as exc:  # noqa: BLE001 -- deliberately broad: component-local isolation
@@ -943,6 +1033,7 @@ def build_enrichment_components(
                      ca_events=events)
 
     def _integrated_investment_decision_product():
+        nonlocal iid_write_receipt
         from integrated_investment_decision_product import build_artifact as build
         import canonical_current_product_projections as product_projections
         import canonical_daily_financial_v2_materialization as fin_v2_material
@@ -1235,7 +1326,11 @@ def build_enrichment_components(
         )
         if res.get("session") != session:
             raise CanonicalPostCloseError(f"INTEGRATED_DECISION_SESSION_MISMATCH:expected={session}:observed={res.get('session')}")
-        _write_json(paths["integrated_investment_decision_product"], res)
+        if (res.get("contract_version") != integrated_contract.CONTRACT_VERSION
+                or not isinstance(res.get("artifact_sha256"), str) or not res["artifact_sha256"]
+                or res.get("artifact_identity") != integrated_contract.CONTRACT_VERSION + ":" + res["artifact_sha256"]):
+            raise CanonicalPostCloseError("INTEGRATED_DECISION_BUILDER_IDENTITY_OR_CONTRACT_MISMATCH")
+        iid_write_receipt = _write_json(paths["integrated_investment_decision_product"], res, capture_iid_receipt=True)
         from prospective_decision_outcome_feedback import retain_iid_classification_summary
         retain_iid_classification_summary(output_root, paths["integrated_investment_decision_product"], res)
         return res
