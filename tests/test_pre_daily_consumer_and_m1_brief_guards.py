@@ -156,11 +156,11 @@ def test_consumer_wrong_branch_origin_or_path_is_refused(tmp_path):
         workflow.preflight_consumer_repository(clone, producer_root=producer)
 
 
-def test_consumer_path_is_exactly_the_one_canonical_daily_executes():
+def test_consumer_path_is_exactly_the_one_canonical_daily_executes(tmp_path):
     source = Path(canonical_daily_operation.__file__).read_text(encoding="utf-8")
     assert '_git_head(root.parent / "ai-core-private")' in source
-    assert workflow.consumer_root_for(Path(r"C:\Projects\StockLookup\stock-core-private")) == \
-        Path(r"C:\Projects\StockLookup\ai-core-private").resolve()
+    assert workflow.consumer_root_for(tmp_path / "stock-core-private") == \
+        (tmp_path / "ai-core-private").resolve()
 
 
 def _workflow_stubs(monkeypatch, order: list[str], seen_heads: list[str]) -> None:
