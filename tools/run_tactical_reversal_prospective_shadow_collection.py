@@ -45,15 +45,20 @@ def _future_rows(ticker: str, sessions: list[str], artifacts_by_session: dict[st
 
 def collect_session(
     *, retained_evidence_root: Path, store_root: Path, session: str, retained_at: str | None = None,
+    index: collection.TacticalArtifactIndex | None = None,
 ) -> dict[str, Any]:
-    sessions = collection.discover_retained_tactical_sessions(retained_evidence_root)
+    if index is None:
+        index = collection.build_tactical_artifact_index(retained_evidence_root)
+    sessions = index.sessions
     if session not in sessions:
         return {"blocker": "RETAINED_TACTICAL_ARTIFACT_NOT_FOUND_FOR_SESSION", "session": session}
 
-    current_artifact = collection.load_tactical_artifact(retained_evidence_root, session=session)
-    index = sessions.index(session)
-    prior_session = sessions[index - 1] if index > 0 else None
-    prior_artifact = collection.load_tactical_artifact(retained_evidence_root, session=prior_session) if prior_session else None
+    current_artifact = collection.load_tactical_artifact(retained_evidence_root, session=session, index=index)
+    position = sessions.index(session)
+    prior_session = sessions[position - 1] if position > 0 else None
+    prior_artifact = (
+        collection.load_tactical_artifact(retained_evidence_root, session=prior_session, index=index) if prior_session else None
+    )
 
     store = collection.ProspectiveShadowObservationStore(store_root)
     persisted = []
@@ -72,7 +77,25 @@ def collect_session(
     }
 
 
-def mature_all(*, retained_evidence_root: Path, store_root: Path) -> dict[str, Any]:
+def _status_projection(observation: dict[str, Any]) -> dict[str, Any]:
+    """The only observation fields ``build_collection_status`` reads (bounded retention)."""
+    return {
+        "observation_id": observation["observation_id"],
+        "evidence_mode": observation["evidence_mode"],
+        "source_rule_id": observation["source_rule_id"],
+        "candidate_a": {"eligible": observation["candidate_a"]["eligible"]},
+        "candidate_b": {"eligible": observation["candidate_b"]["eligible"]},
+    }
+
+
+def _outcome_status_projection(outcome: dict[str, Any]) -> dict[str, Any]:
+    """The only outcome fields ``build_collection_status`` reads."""
+    return {"horizons": {name: {"status": outcome["horizons"][name]["status"]} for name in collection.HORIZONS}}
+
+
+def mature_all(
+    *, retained_evidence_root: Path, store_root: Path, index: collection.TacticalArtifactIndex | None = None,
+) -> dict[str, Any]:
     """Recompute every observation's outcome against currently-retained future sessions.
 
     Loads every retained tactical artifact exactly once (not once per observation/session
@@ -82,28 +105,36 @@ def mature_all(*, retained_evidence_root: Path, store_root: Path) -> dict[str, A
     outcome is therefore always superseded by this run's recomputation whenever any future
     session exists, making a separate "fall back to a previously-persisted outcome" pass
     unnecessary rather than merely an optimization).
+
+    The session index is discovered once (or supplied by the caller) and observations are
+    streamed one file at a time -- each validated once, matured, persisted without a reload
+    and released; only the small status projections ``build_collection_status`` needs are
+    retained. Outcome-update content and identities are unchanged.
     """
-    sessions = collection.discover_retained_tactical_sessions(retained_evidence_root)
+    if index is None:
+        index = collection.build_tactical_artifact_index(retained_evidence_root)
+    sessions = index.sessions
     latest = sessions[-1] if sessions else None
     artifacts_by_session = {
-        session: collection.load_tactical_artifact(retained_evidence_root, session=session) for session in sessions
+        session: collection.load_tactical_artifact(retained_evidence_root, session=session, index=index)
+        for session in sessions
     }
     store = collection.ProspectiveShadowObservationStore(store_root)
     outcomes_by_id: dict[str, Any] = {}
     matured = []
-    all_observations = []
-    for observation_id in store.list_observation_ids():
-        observation = store.load_observation(observation_id)
-        all_observations.append(observation)
+    status_observations = []
+    for observation_id, observation in store.iter_validated_observations():
+        status_observations.append(_status_projection(observation))
         future_sessions = [item for item in sessions if item > observation["trigger_session"]]
         if not future_sessions:
             continue
         rows = _future_rows(observation["ticker"], future_sessions, artifacts_by_session)
         outcome = collection.mature_outcome(observation, rows, evaluation_as_of_session=latest)
-        store.persist_outcome_update(observation_id, outcome)
-        outcomes_by_id[observation_id] = outcome
+        store.persist_outcome_update(observation_id, outcome, validated_observation=observation)
+        outcomes_by_id[observation_id] = _outcome_status_projection(outcome)
         matured.append(observation_id)
-    status = collection.build_collection_status(all_observations, outcomes_by_id)
+    matured.sort()
+    status = collection.build_collection_status(status_observations, outcomes_by_id)
     return {"matured_observation_ids": matured, "collection_status": status}
 
 
@@ -116,7 +147,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--skip-collect", action="store_true", help="Only mature existing observations.")
     args = parser.parse_args(argv)
 
-    sessions = collection.discover_retained_tactical_sessions(args.retained_evidence_root)
+    index = collection.build_tactical_artifact_index(args.retained_evidence_root)
+    sessions = index.sessions
     if not sessions:
         print(json.dumps({"blocker": "NO_RETAINED_TACTICAL_ARTIFACTS_FOUND"}, indent=2))
         return 1
@@ -126,9 +158,11 @@ def main(argv: list[str] | None = None) -> int:
         target_session = args.session or sessions[-1]
         result["collection"] = collect_session(
             retained_evidence_root=args.retained_evidence_root, store_root=args.store_root,
-            session=target_session, retained_at=args.retained_at,
+            session=target_session, retained_at=args.retained_at, index=index,
         )
-    result["maturation"] = mature_all(retained_evidence_root=args.retained_evidence_root, store_root=args.store_root)
+    result["maturation"] = mature_all(
+        retained_evidence_root=args.retained_evidence_root, store_root=args.store_root, index=index,
+    )
     print(json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True))
     return 0
 

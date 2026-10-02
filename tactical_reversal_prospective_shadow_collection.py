@@ -36,8 +36,10 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Mapping, Sequence
+from types import MappingProxyType
+from typing import Any, Iterator, Mapping, MutableMapping, Sequence
 
 import tactical_reversal_shadow_probe_policy as shadow
 from tactical_reversal_probe_policy_counterfactual_evaluation import CONFIRMATION_RULE_IDS
@@ -109,7 +111,14 @@ def evidence_mode_for_session(trigger_session: str) -> str:
 # retained, never by calendar arithmetic and never synthesized.
 # --------------------------------------------------------------------------------------
 
-def _discover_retained_tactical_index(retained_evidence_root: Path | str) -> dict[str, Path]:
+def _bump(metrics: MutableMapping[str, int] | None, key: str) -> None:
+    if metrics is not None:
+        metrics[key] = metrics.get(key, 0) + 1
+
+
+def _discover_retained_tactical_index(
+    retained_evidence_root: Path | str, *, metrics: MutableMapping[str, int] | None = None,
+) -> dict[str, Path]:
     """Session -> the one retained artifact path that declares it.
 
     Keyed by the artifact's own declared ``session`` field, never guessed from its
@@ -120,6 +129,10 @@ def _discover_retained_tactical_index(retained_evidence_root: Path | str) -> dic
     ``"session": "2026-08-21"``). Guessing the path from the session string would silently
     miss that artifact entirely. Two directories that ever declare the same session is
     treated as ambiguous retained evidence and raises rather than silently picking one.
+
+    Each call parses every retained classifier artifact once; callers that need more than
+    one lookup per run build a ``TacticalArtifactIndex`` once and pass it through.
+    ``metrics`` (optional, caller-owned) counts those parses under ``classifier_index_parses``.
     """
     root = Path(retained_evidence_root) / "operations-review"
     index: dict[str, Path] = {}
@@ -127,6 +140,7 @@ def _discover_retained_tactical_index(retained_evidence_root: Path | str) -> dic
         return index
     for path in sorted(root.glob(TACTICAL_ARTIFACT_GLOB)):
         try:
+            _bump(metrics, "classifier_index_parses")
             data = json.loads(path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError):
             continue
@@ -141,15 +155,47 @@ def _discover_retained_tactical_index(retained_evidence_root: Path | str) -> dic
     return index
 
 
-def discover_retained_tactical_sessions(retained_evidence_root: Path | str) -> list[str]:
+@dataclass(frozen=True)
+class TacticalArtifactIndex:
+    """Read-only, run-scoped ``session -> exact retained artifact path`` map.
+
+    Built once per run by ``build_tactical_artifact_index`` and passed explicitly; it is not
+    process-global, never persisted, and carries no authority of its own -- the artifact
+    behind a path is still parsed and used exactly as before. Lookup is by exact declared
+    session only (no latest-file or mtime fallback).
+    """
+    paths: Mapping[str, Path]
+
+    @property
+    def sessions(self) -> list[str]:
+        return sorted(self.paths)
+
+
+def build_tactical_artifact_index(
+    retained_evidence_root: Path | str, *, metrics: MutableMapping[str, int] | None = None,
+) -> TacticalArtifactIndex:
+    return TacticalArtifactIndex(MappingProxyType(_discover_retained_tactical_index(retained_evidence_root, metrics=metrics)))
+
+
+def discover_retained_tactical_sessions(
+    retained_evidence_root: Path | str, *, index: TacticalArtifactIndex | None = None,
+) -> list[str]:
     """Sorted distinct session identifiers for every genuinely retained tactical artifact."""
-    return sorted(_discover_retained_tactical_index(retained_evidence_root))
+    if index is None:
+        index = build_tactical_artifact_index(retained_evidence_root)
+    return index.sessions
 
 
-def load_tactical_artifact(retained_evidence_root: Path | str, *, session: str) -> Mapping[str, Any] | None:
-    path = _discover_retained_tactical_index(retained_evidence_root).get(session)
+def load_tactical_artifact(
+    retained_evidence_root: Path | str, *, session: str,
+    index: TacticalArtifactIndex | None = None, metrics: MutableMapping[str, int] | None = None,
+) -> Mapping[str, Any] | None:
+    if index is None:
+        index = build_tactical_artifact_index(retained_evidence_root, metrics=metrics)
+    path = index.paths.get(session)
     if path is None or not path.is_file():
         return None
+    _bump(metrics, "classifier_artifact_loads")
     return json.loads(path.read_text(encoding="utf-8"))
 
 
@@ -287,6 +333,8 @@ class ProspectiveShadowObservationStore:
         self.outcomes_dir = self.root / "outcome_updates"
         self.observations_dir.mkdir(parents=True, exist_ok=True)
         self.outcomes_dir.mkdir(parents=True, exist_ok=True)
+        # Per-instance counter of T0 observation file reads (test/measurement seam only).
+        self.read_metrics: dict[str, int] = {"observation_file_reads": 0}
 
     @staticmethod
     def _path_for(key: str, directory: Path) -> Path:
@@ -337,23 +385,58 @@ class ProspectiveShadowObservationStore:
         path = self._path_for(observation_id, self.observations_dir)
         if not path.exists():
             raise ProspectiveShadowCollectionError("OBSERVATION_NOT_FOUND")
-        observation = self._read_json(path)
+        observation = self._read_observation_file(path)
         if not observation_identity_valid(observation) or observation.get("observation_id") != observation_id:
             raise ProspectiveShadowCollectionError("OBSERVATION_CONTENT_IDENTITY_INVALID")
         return observation
 
-    def list_observation_ids(self) -> list[str]:
-        ids = []
-        for path in sorted(self.observations_dir.glob("*.json")):
-            raw = self._read_json(path).get("observation_id")
-            if isinstance(raw, str):
-                self.load_observation(raw)
-                ids.append(raw)
-        return sorted(set(ids))
+    def _read_observation_file(self, path: Path) -> dict[str, Any]:
+        self.read_metrics["observation_file_reads"] += 1
+        return self._read_json(path)
 
-    def persist_outcome_update(self, observation_id: str, outcome: Mapping[str, Any]) -> dict[str, Any]:
-        """Idempotently append one content-addressed outcome snapshot for a session."""
-        self.load_observation(observation_id)  # fail closed if the T0 envelope is missing/invalid
+    def iter_validated_observations(self) -> Iterator[tuple[str, dict[str, Any]]]:
+        """Stream ``(observation_id, validated observation)`` one file at a time.
+
+        Each observation file is read once and identity-verified exactly as
+        ``load_observation`` would; the caller releases each yielded object. An observation
+        whose declared id does not hash to its own filename is validated through
+        ``load_observation`` (the canonical path for that id), and a repeated id is yielded
+        once -- both identical to the previous ``list_observation_ids`` +
+        ``load_observation`` sequence. Order is filename order; callers needing id order sort
+        the ids. Malformed/tampered files raise the same errors, at the point they are reached.
+        """
+        seen: set[str] = set()
+        for path in sorted(self.observations_dir.glob("*.json")):
+            value = self._read_observation_file(path)
+            raw = value.get("observation_id")
+            if not isinstance(raw, str):
+                continue
+            if self._path_for(raw, self.observations_dir) == path:
+                if not observation_identity_valid(value):
+                    raise ProspectiveShadowCollectionError("OBSERVATION_CONTENT_IDENTITY_INVALID")
+                observation = value
+            else:
+                observation = self.load_observation(raw)
+            if raw in seen:
+                continue
+            seen.add(raw)
+            yield raw, observation
+
+    def list_observation_ids(self) -> list[str]:
+        return sorted(observation_id for observation_id, _ in self.iter_validated_observations())
+
+    def persist_outcome_update(
+        self, observation_id: str, outcome: Mapping[str, Any], *,
+        validated_observation: Mapping[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """Idempotently append one content-addressed outcome snapshot for a session.
+
+        ``validated_observation`` lets a caller that already loaded and identity-verified this
+        exact T0 envelope in the same pass skip the redundant reload; a missing or different
+        object falls back to the fail-closed ``load_observation``.
+        """
+        if validated_observation is None or validated_observation.get("observation_id") != observation_id:
+            self.load_observation(observation_id)  # fail closed if the T0 envelope is missing/invalid
         if outcome.get("observation_id") != observation_id:
             raise ProspectiveShadowCollectionError("OUTCOME_OBSERVATION_ID_MISMATCH")
         path = self._path_for(outcome["outcome_update_id"], self.outcomes_dir)
