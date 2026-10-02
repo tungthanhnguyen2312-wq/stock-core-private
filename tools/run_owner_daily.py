@@ -554,7 +554,7 @@ def resolve_m1_handoff_authority(source: Path, session: str, *, root: Path | Non
     import integrated_investment_decision_product as integrated_contract
     from ai_research_session_delivery import project_integrated_decision_delivery_overlay
     from daily_research_session_operations import BRIEF_RETENTION_CONTRACT, brief_retention_identity
-    from portfolio_aware_decision import load_integrated_decision_artifact
+    from portfolio_aware_decision import IntegratedDecisionResolutionError, resolve_operation_bound_integrated_decision
 
     outputs = manifest.get("outputs") if isinstance(manifest.get("outputs"), Mapping) else {}
     integrated_identity = outputs.get("integrated_investment_decision_product")
@@ -567,10 +567,13 @@ def resolve_m1_handoff_authority(source: Path, session: str, *, root: Path | Non
     if root is None:
         raise _handoff_brief_error("M1_CANONICAL_ROOT_NOT_SUPPLIED")
 
-    # Declared Integrated Decision: the retained artifact, read by the governed loader.
+    # Declared Integrated Decision: the exact retained artifact the sealed operation is bound to
+    # (resolved by its declared identity over the session-addressed retained copies, never "latest").
     try:
-        integrated = load_integrated_decision_artifact(Path(root), session)
-    except (OSError, json.JSONDecodeError):
+        integrated, _integrated_path = resolve_operation_bound_integrated_decision(Path(root), session, integrated_identity)
+    except IntegratedDecisionResolutionError as exc:
+        if exc.reason == "IDENTITY_MISMATCH":
+            raise _handoff_brief_error("M1_CANONICAL_INTEGRATED_DECISION_IDENTITY_MISMATCH") from None
         raise _handoff_brief_error("M1_CANONICAL_INTEGRATED_DECISION_UNAVAILABLE") from None
     records = integrated.get("records") if isinstance(integrated, Mapping) else None
     if (not isinstance(records, Mapping) or integrated.get("session") != session
