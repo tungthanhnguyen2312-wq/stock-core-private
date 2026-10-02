@@ -1,0 +1,16 @@
+{
+  "contract_version": "market_pit_release_b_validation/v1",
+  "candidate_head": "HEAD",
+  "producer_ci_equivalent": {"passed": 1470, "skipped": 16, "deselected": 11, "subtests_passed": 30},
+  "latest_focused_acquisition_contract": {"passed": 116, "deselected": 7},
+  "offline_production_call_shape": {"passed": 7},
+  "wider_affected_selection": {"passed": 170, "missing_private_universe_fixture_failures": 2, "deselected": 2},
+  "unrelated_code_changes": 0,
+  "compile": "PASS",
+  "diff_check": "PASS",
+  "roadmap_drift": "PASS_EXPECTED_PRECOMMIT_DIRTY_WARNING",
+  "retained_acceptance": "MARKET_PIT_RELEASE_B_ACCEPTANCE.json",
+  "authority_promotions": 0,
+  "acquisition_requests": 0,
+  "production_writes": 0
+}

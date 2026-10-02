@@ -54,6 +54,35 @@ class AtomicWriteError(RuntimeError):
     """Raised when an atomic write, validation, or replacement fails."""
 
 
+def retain_immutable_bytes(target_path: Path | str, content: bytes) -> bool:
+    """Publish complete bytes without replacement. Return True on exact-byte reuse.
+
+    A mismatch, including corrupt existing bytes, fails closed. The hard link makes
+    concurrent creation exclusive without exposing partially written files.
+    """
+    target = Path(target_path)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    if target.exists():
+        if target.read_bytes() != content:
+            raise AtomicWriteError(f"IMMUTABLE_BYTES_CONFLICT:{target}")
+        return True
+    descriptor, temporary = tempfile.mkstemp(prefix=".immutable-", dir=target.parent)
+    try:
+        with os.fdopen(descriptor, "wb") as handle:
+            handle.write(content)
+            handle.flush()
+            os.fsync(handle.fileno())
+        try:
+            os.link(temporary, target)
+            return False
+        except FileExistsError:
+            if target.read_bytes() != content:
+                raise AtomicWriteError(f"IMMUTABLE_BYTES_CONFLICT:{target}")
+            return True
+    finally:
+        Path(temporary).unlink(missing_ok=True)
+
+
 def validate_json_file(path: Path) -> None:
     """Validator: ensure file exists and parses as valid JSON."""
     try:

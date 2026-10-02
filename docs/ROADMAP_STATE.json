@@ -38,7 +38,7 @@
         "NEXT",
         "ACTIVE"
       ],
-      "notes": "Owner-authorized program resumed from verified Release A main in a fresh worktree. Release B/C code remains unimplemented in this continuation checkpoint; exact seams, retained authority baseline and next atomic capability are in the durable handoff. No new authority or data-rights decision."
+      "notes": "Release B implemented: immutable market receipt versions retained after snapshot validation, selected universe and corporate observations retained independently, scoped RAW comparison hardened. Exact-input offline acceptance: 852 prices/volumes, 1701 universe rows, 188 corporate observations, zero active historical memberships/factors. Release B validation/release in progress; Release C remains required. No new data rights or authority promotion."
     },
     {
       "milestone_id": "PROSPECTIVE_EVIDENCE_CONTINUITY_DIAGNOSTICS_V1",
@@ -461,7 +461,7 @@
         "PARTIAL"
       ],
       "owner_override": "OWNER_DIRECTIVE_2026_09_29_FINANCIAL_EVIDENCE_COHORT1_TRIGGERED_OCR_V1",
-      "notes": "PARTIAL 2026-09-29. Retained-only H1 image OCR for HPG/PNJ/PVD/VRE; 11 completed page reads, no new CORE fact. Generic balance-sheet heading recognition accepts BÃƒÆ’Ã‚Â¡o cÃƒÆ’Ã‚Â¡o tÃƒÆ’Ã‚Â¬nh hÃƒÆ’Ã‚Â¬nh tÃƒÆ’Ã‚Â i chÃƒÆ’Ã‚Â­nh. Qualification blocked on OCR unit ambiguity/conflict or non-unique geometry. No network, Vnstock, Daily, Financial V2 pin or successor."
+      "notes": "PARTIAL 2026-09-29. Retained-only H1 image OCR for HPG/PNJ/PVD/VRE; 11 completed page reads, no new CORE fact. Generic balance-sheet heading recognition accepts BÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡o cÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡o tÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¬nh hÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¬nh tÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â i chÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­nh. Qualification blocked on OCR unit ambiguity/conflict or non-unique geometry. No network, Vnstock, Daily, Financial V2 pin or successor."
     },
     {
       "milestone_id": "FLOW_PRICE_CANONICAL_SOURCE_BACKFILL_AND_PRESENTATION_CORRECTIVE_V1",

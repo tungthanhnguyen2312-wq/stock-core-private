@@ -1,5 +1,23 @@
 # Market-data PIT program: Release A merged continuation
 
+## Current Release B continuation (supersedes the initial checkpoint below)
+
+Release B implementation is complete on this branch, pending exact-head CI and merge.
+Read [the contract](../market_pit_foundation_contract.md) and
+[offline acceptance](MARKET_PIT_RELEASE_B_ACCEPTANCE.json) for the final implemented
+boundary. Market receipt retention now runs immediately after validation, before
+optional work; selected universe/corporate source observations retain immutably.
+Focused acquisition/contract tests: 116 passed. The broader affected selection has
+170 passes and two undeclared private-universe-fixture failures. No unrelated code
+was changed. Producer CI-equivalent passed: 1,470 tests, 16 skipped, 11 deselected,
+30 subtests. Latest focused contract/acquisition rerun: 116 passed, 7 deselected.
+Offline production call-shape: 7 passed. Compile/diff pass; roadmap drift passes
+with only the expected precommit dirty-worktree warning. Exact-head release results
+will be recorded in Release C closeout.
+Release C remains authorized after Release B merges into verified main.
+
+The following text records the **initial docs-only checkpoint**, not current code state.
+
 Disposition: CHECKPOINT_READY_FOR_CONTINUATION. Release A is fully released;
 Release B/C remain required engineering, not external blockers or owner-review gates.
 This is a context-capacity checkpoint at the owner-preferred Release A merge boundary.
