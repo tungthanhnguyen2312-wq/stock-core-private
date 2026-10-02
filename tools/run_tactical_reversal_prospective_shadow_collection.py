@@ -128,7 +128,7 @@ def mature_all(
     inputs = {"tactical_sessions": {session: collection._hash(artifact) for session, artifact in artifacts_by_session.items()}}
     transaction = outcome_session_writer(store.root, latest, inputs) if latest is not None else nullcontext(None)
     with transaction as writer:
-        for observation_id, observation in store.iter_validated_observations():
+        for observation_id, observation in store.iter_validated_observations(strict=True):
             if writer is not None:
                 writer.record_observation(observation)
             status_observations.append(_status_projection(observation))

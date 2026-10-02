@@ -737,6 +737,10 @@ class SettledFeedbackCache:
     def evaluate(self, **kwargs):
         if not self.enabled:
             return _feedback_record(chain=self.chain, snapshots=self.snapshots, **kwargs)
+        start = kwargs["record"].get("as_of_session")
+        if start not in self.chain or self.chain.index(start) + max(forward_bridge.FORWARD_HORIZONS.values()) >= len(self.chain):
+            self._bump("settled_misses")
+            return _feedback_record(chain=self.chain, snapshots=self.snapshots, **kwargs)
         inputs = dict(kwargs)
         # Feedback only reads the T0 container identity; never rehash every ticker
         # in that container once per decision. The selected record is bound below.
@@ -776,7 +780,7 @@ class SettledFeedbackCache:
         return row
 
     def finish(self):
-        if not self.enabled:
+        if not self.enabled or self.retained == self.entries:
             return
         temporary = None
         try:

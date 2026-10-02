@@ -417,3 +417,15 @@ def test_satisfied_conditions_terminal_but_incomplete_future_not_terminal(tmp_pa
     cache = feedback.SettledFeedbackCache(tmp_path, chain, snapshots)
     cache.evaluate(**kwargs)
     assert cache.retained == {}
+
+
+def test_settled_cache_prunes_entries_without_changing_full_output(tmp_path, monkeypatch):
+    root, _ = _fixture_root(tmp_path, sessions=23)
+    monkeypatch.setattr(feedback, "_SETTLED_MAX_ENTRIES", 1)
+    cold = feedback.build_feedback_artifact(root)
+    metrics = {}
+    warm = feedback.build_feedback_artifact(root, cache_metrics=metrics)
+    assert metrics["settled_hits"] == 1
+    assert warm == cold == feedback.build_feedback_artifact(root, use_settled_cache=False)
+    cache = json.loads((root / feedback._SETTLED_CACHE_PATH).read_text(encoding="utf-8"))
+    assert len(cache["entries"]) == 1

@@ -138,3 +138,27 @@ def test_legacy_compaction_write_failure_falls_back_to_originals(tmp_path, monke
     monkeypatch.setattr(storage, "_atomic_json", fail)
     index = store.build_outcome_store_index()
     assert len(index.latest) == (len(_SESSIONS) - 1) * 6
+
+
+def test_mixed_equal_session_uses_original_v1_filename_tiebreak(tmp_path):
+    _corpus(tmp_path / "ev")
+    _populate(tmp_path / "ev", tmp_path / "store")
+    _legacy_mature_all(retained_evidence_root=tmp_path / "ev", store_root=tmp_path / "store")
+    store = collection.ProspectiveShadowObservationStore(tmp_path / "store")
+    oid, observation = next(store.iter_validated_observations())
+    competing = collection.mature_outcome(observation, [], evaluation_as_of_session=_SESSIONS[-1])
+    store.persist_outcome_update(oid, competing, validated_observation=observation)
+    old = store.build_outcome_store_index()
+    runner.mature_all(retained_evidence_root=tmp_path / "ev", store_root=tmp_path / "store")
+    mixed = store.build_outcome_store_index()
+    assert mixed.latest == old.latest
+    assert mixed.history(oid) == old.history(oid)
+
+
+def test_missing_id_observation_cannot_publish_empty_or_partial_shard(tmp_path):
+    _corpus(tmp_path / "ev")
+    _populate(tmp_path / "ev", tmp_path / "store")
+    (tmp_path / "store" / "observations" / "zzzzz.json").write_text('{"ticker":"BROKEN"}', encoding="utf-8")
+    with pytest.raises(collection.ProspectiveShadowCollectionError, match="OBSERVATION_CONTENT_IDENTITY_INVALID"):
+        runner.mature_all(retained_evidence_root=tmp_path / "ev", store_root=tmp_path / "store")
+    assert not list((tmp_path / "store" / "outcome_sessions").glob("*/*.json"))

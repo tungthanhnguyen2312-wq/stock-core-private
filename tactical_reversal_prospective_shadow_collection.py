@@ -394,7 +394,7 @@ class ProspectiveShadowObservationStore:
         self.read_metrics["observation_file_reads"] += 1
         return self._read_json(path)
 
-    def iter_validated_observations(self) -> Iterator[tuple[str, dict[str, Any]]]:
+    def iter_validated_observations(self, *, strict: bool = False) -> Iterator[tuple[str, dict[str, Any]]]:
         """Stream ``(observation_id, validated observation)`` one file at a time.
 
         Each observation file is read once and identity-verified exactly as
@@ -409,6 +409,8 @@ class ProspectiveShadowObservationStore:
         for path in sorted(self.observations_dir.glob("*.json")):
             value = self._read_observation_file(path)
             raw = value.get("observation_id")
+            if strict and (not isinstance(raw, str) or not observation_identity_valid(value)):
+                raise ProspectiveShadowCollectionError("OBSERVATION_CONTENT_IDENTITY_INVALID")
             if not isinstance(raw, str):
                 continue
             if self._path_for(raw, self.observations_dir) == path:

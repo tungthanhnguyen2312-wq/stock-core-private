@@ -39,6 +39,12 @@ def _digest(path):
     return digest.hexdigest(), size
 
 
+def _rank(row):
+    # V1 resolves equal evaluation sessions in sorted content-addressed filename
+    # order. Preserve that tie-break across shard/legacy discovery order.
+    return (str(row.get("evaluation_as_of_session")), hashlib.sha256(row["outcome_update_id"].encode("utf-8")).hexdigest())
+
+
 def _valid(row):
     body = dict(row)
     identity = body.pop("outcome_update_id", None)
@@ -137,31 +143,36 @@ def _legacy_compaction(root, metrics, legacy_root=None):
     originals = sorted(((legacy_root or root) / "outcome_updates").glob("*.json"))
     if len(originals) > MAX_ROWS:
         raise _error("OUTCOME_STORE_INDEX_LIMIT")
-    fingerprint = hashlib.sha256()
-    for path in originals:
-        before = path.stat()
-        sha, size = _digest(path)
-        after = path.stat()
-        if (before.st_size, before.st_mtime_ns) != (after.st_size, after.st_mtime_ns):
-            raise _error("LEGACY_OUTCOME_CHANGED_DURING_READ")
-        fingerprint.update(_canon([path.name, sha, size]).encode("utf-8"))
-        metrics["legacy_validation_files_opened"] += 1
-        metrics["legacy_validation_bytes"] += size
-    identity = fingerprint.hexdigest()
     if not originals:
         return None
     directory = root / "_derived_outcome_index"
     directory.mkdir(parents=True, exist_ok=True)
     shard, manifest_path = directory / "legacy.ndjson", directory / "manifest.json"
+    candidate = None
     try:
         manifest = _read_manifest(manifest_path)
-        if (manifest.get("contract_version") == LEGACY_CACHE_VERSION and manifest.get("source_sha256") == identity
+        if (manifest.get("contract_version") == LEGACY_CACHE_VERSION
                 and manifest.get("outcome_count") == len(originals)
                 and _digest(shard) == (manifest.get("sha256"), manifest.get("byte_count"))):
-            metrics["legacy_compaction_hits"] += 1
-            return shard
+            candidate = manifest
     except (OSError, ValueError, TypeError):
         pass
+    identity = None
+    if candidate is not None:
+        fingerprint = hashlib.sha256()
+        for path in originals:
+            before = path.stat()
+            sha, size = _digest(path)
+            after = path.stat()
+            if (before.st_size, before.st_mtime_ns) != (after.st_size, after.st_mtime_ns):
+                raise _error("LEGACY_OUTCOME_CHANGED_DURING_READ")
+            fingerprint.update(_canon([path.name, sha, size]).encode("utf-8"))
+            metrics["legacy_validation_files_opened"] += 1
+            metrics["legacy_validation_bytes"] += size
+        identity = fingerprint.hexdigest()
+        if candidate.get("source_sha256") == identity:
+            metrics["legacy_compaction_hits"] += 1
+            return shard
     temp = None
     try:
         digest, size = hashlib.sha256(), 0
@@ -169,9 +180,16 @@ def _legacy_compaction(root, metrics, legacy_root=None):
             temp = Path(out.name)
             check = hashlib.sha256()
             for path in originals:
-                if path.stat().st_size > MAX_ROW_BYTES:
+                before = path.stat()
+                if before.st_size > MAX_ROW_BYTES:
                     raise _error("OUTCOME_ROW_OVERSIZED")
-                data = path.read_bytes()
+                with path.open("rb") as source:
+                    data = source.read(MAX_ROW_BYTES + 1)
+                after = path.stat()
+                if len(data) > MAX_ROW_BYTES or (before.st_size, before.st_mtime_ns) != (after.st_size, after.st_mtime_ns):
+                    raise _error("LEGACY_OUTCOME_CHANGED_DURING_READ")
+                metrics["legacy_validation_files_opened"] += 1
+                metrics["legacy_validation_bytes"] += len(data)
                 check.update(_canon([path.name, hashlib.sha256(data).hexdigest(), len(data)]).encode("utf-8"))
                 row = json.loads(data)
                 metrics["legacy_json_parses"] += 1
@@ -181,8 +199,9 @@ def _legacy_compaction(root, metrics, legacy_root=None):
                 out.write(line)
                 digest.update(line)
                 size += len(line)
-            if check.hexdigest() != identity:
+            if identity is not None and check.hexdigest() != identity:
                 raise _error("LEGACY_OUTCOME_CHANGED_DURING_READ")
+            identity = check.hexdigest()
             out.flush()
             os.fsync(out.fileno())
         os.replace(temp, shard)
@@ -257,7 +276,7 @@ class OutcomeStoreIndex:
                     observation = row["observation_id"]
                     self.locations.setdefault(observation, []).append((path, offset, len(line)))
                     old = self.latest.get(observation)
-                    if old is None or str(row["evaluation_as_of_session"]) >= str(old["evaluation_as_of_session"]):
+                    if old is None or _rank(row) >= _rank(old):
                         latest_bytes += len(line) - latest_sizes.get(observation, 0)
                         latest_sizes[observation] = len(line)
                         if latest_bytes > MAX_LATEST_BYTES:
@@ -277,4 +296,4 @@ class OutcomeStoreIndex:
             if not _valid(row) or row.get("observation_id") != observation_id:
                 raise _error("OUTCOME_INDEX_SOURCE_CHANGED")
             rows.append(row)
-        return sorted(rows, key=lambda row: str(row.get("evaluation_as_of_session")))
+        return sorted(rows, key=_rank)
