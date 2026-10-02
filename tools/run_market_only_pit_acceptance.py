@@ -11,6 +11,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from tools.run_portfolio_pit_execution_acceptance import Inputs
 import market_only_pit_eligibility as eligibility
 import prospective_market_snapshot_contract as market
+from completed_market_session_gate import pit_calendar_at_cutoff, build_working_dates_calendar_receipt
 
 INPUT_IDS = {"dnse_snapshots", "hose_snapshots", "raw_pit_authority", "current_universe", "real_ca_outcome",
              "prospective_20260929", "prospective_20260930", "prospective_20261001"}
@@ -36,7 +37,7 @@ def listing_continuity_acceptance(*, source_root: Path, acquisition_session: str
             "idempotence":"PASS","scope":"NEW_SOURCE_OBSERVATIONS_AT_ACTUAL_RECEIPT_TIME_NO_HISTORICAL_BACKFILL"}
 
 
-def run(*, manifest: dict, roots: dict[str, Path], calendar_path: Path) -> dict:
+def run(*, manifest: dict, roots: dict[str, Path], calendar_path: Path, calendar_receipts: tuple = ()) -> dict:
     subset = {"inputs":[e for e in manifest["inputs"] if e["id"] in INPUT_IDS]}
     if {e["id"] for e in subset["inputs"]} != INPUT_IDS:
         raise ValueError("EXACT_RETAINED_INPUT_SET_INCOMPLETE")
@@ -72,12 +73,14 @@ def run(*, manifest: dict, roots: dict[str, Path], calendar_path: Path) -> dict:
             if day not in earliest or market._utc(known,"known") < market._utc(earliest[day],"known"):
                 earliest[day] = known
         for day, cutoff in sorted(earliest.items()):
+            cutoff_sessions = pit_calendar_at_cutoff(sessions, calendar_receipts, session=day, knowledge_cutoff=cutoff)
             args = dict(ticker=ticker,session=day,knowledge_cutoff=cutoff,market_versions=rows,
-                        calendar_sessions=sessions,universe_versions=membership_by_ticker[ticker])
+                        calendar_sessions=cutoff_sessions,universe_versions=membership_by_ticker[ticker])
             evaluated.append(eligibility.evaluate(requirements=eligibility.existing_vnm_requirements(),**args))
             replay_evaluated.append(eligibility.evaluate(requirements=eligibility.existing_vnm_requirements(replay_inputs=True),**args))
-    signal_coverage = eligibility.contiguous_coverage(evaluated,calendar_sessions=sessions)
-    gross_coverage = eligibility.contiguous_coverage(replay_evaluated,calendar_sessions=sessions)
+    windows = [sessions] + [r["sessions"] for r in calendar_receipts]
+    signal_coverage = eligibility.contiguous_coverage(evaluated,calendar_sessions=sessions,calendar_windows=windows)
+    gross_coverage = eligibility.contiguous_coverage(replay_evaluated,calendar_sessions=sessions,calendar_windows=windows)
     raw_counts = Counter(r["instrument"].get("exchange") or "UNKNOWN_LEGACY_INSTRUMENT_FIELD" for r in dnse if market.USE_PROSPECTIVE_RAW_AS_TRADED_PRICE in r["qualification"]["allowed_uses"])
     by_exchange = Counter(r["instrument"].get("exchange") or "UNKNOWN" for r in versions.values())
     eligible = sum(r["state"] == "ELIGIBLE" for r in replay_evaluated)
@@ -91,6 +94,7 @@ def run(*, manifest: dict, roots: dict[str, Path], calendar_path: Path) -> dict:
         raise ValueError("CALENDAR_SOURCE_MUTATED")
     body = {"contract_version":"market_only_pit_retained_acceptance/v1", "input_sha256":inputs.hashes,
             "calendar_sha256":market.sha256_hex(calendar_bytes),"calendar_scope":calendar["source"],
+            "additional_calendar_receipt_identities":[r["artifact_identity"] for r in calendar_receipts],
             "cutoff_semantics":"ACTUAL_RECEIPT_TIME_DATA_FEASIBILITY_NOT_EMITTED_T0_SIGNAL",
             "inventory":{"prospective_dnse_receipts":len(dnse),"official_hose_receipts":len(hose),"later_daily_receipts":len(later),
                          "unique_market_receipt_versions":len(versions),"tickers":len(grouped),
@@ -113,13 +117,29 @@ def main():
     parser.add_argument("--primary-root",type=Path,required=True)
     parser.add_argument("--raw-pit-root",type=Path,required=True)
     parser.add_argument("--calendar",type=Path,default=Path("config/governed_trading_session_calendar_v1.json"))
+    parser.add_argument("--calendar-receipt",type=Path,action="append",default=[])
     parser.add_argument("--report",type=Path,required=True)
     parser.add_argument("--listing-source-root",type=Path)
     parser.add_argument("--listing-acquisition-session")
     parser.add_argument("--listing-attempt-identity")
     parser.add_argument("--output-root",type=Path)
     args = parser.parse_args()
-    report = run(manifest=json.loads(args.manifest.read_text(encoding="utf-8")),roots={"primary":args.primary_root,"raw_pit":args.raw_pit_root},calendar_path=args.calendar)
+    calendar_bytes = {p:p.read_bytes() for p in args.calendar_receipt}
+    calendar_receipts = []
+    for path, body in calendar_bytes.items():
+        receipt = json.loads(body)
+        raw_path = path.parent.parent / "raw" / receipt["payload_sha256"]
+        raw = raw_path.read_bytes()
+        rebuilt = build_working_dates_calendar_receipt(raw, retrieved_at=receipt["retrieved_at"],
+            documentation_sha256=receipt["documentation_sha256"],
+            documentation_retrieved_at=receipt["documentation_retrieved_at"])
+        if receipt != rebuilt:
+            raise ValueError("CALENDAR_RAW_SOURCE_BINDING_INVALID")
+        calendar_receipts.append(receipt)
+    report = run(manifest=json.loads(args.manifest.read_text(encoding="utf-8")),roots={"primary":args.primary_root,"raw_pit":args.raw_pit_root},calendar_path=args.calendar,
+                 calendar_receipts=tuple(calendar_receipts))
+    if any(p.read_bytes() != b for p,b in calendar_bytes.items()):
+        raise ValueError("CALENDAR_RECEIPT_MUTATED")
     if args.listing_source_root:
         if not all((args.listing_acquisition_session,args.listing_attempt_identity,args.output_root)):
             raise ValueError("EXACT_LISTING_SELECTION_AND_OUTPUT_ROOT_REQUIRED")

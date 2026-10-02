@@ -43,6 +43,7 @@ from datetime import datetime, time
 from pathlib import Path
 from typing import Any, Callable, Mapping, Sequence
 import json
+import hashlib
 
 from field_temporal_contract import canonical_json, stable_id
 from vn_time import VN_TZ, vn_now
@@ -96,6 +97,78 @@ AUTHORITY_BOUNDARIES = {
 }
 
 _WORKING_DATE_KEYS = ("workingDates", "working_dates", "workingdates")
+
+
+def build_working_dates_calendar_receipt(raw_bytes: bytes, *, retrieved_at: str,
+                                        documentation_sha256: str, documentation_retrieved_at: str) -> dict:
+    """Retain the documented DNSE forward window, separately from market completion.
+
+    Neither a later receipt nor this source's unspecified exchange scope repairs
+    historical calendar gaps. Raw dates are preserved; no weekday/holiday rule.
+    """
+    import prospective_market_snapshot_contract as market
+    payload = json.loads(raw_bytes)
+    dates = payload.get("workingDates") if isinstance(payload, dict) else None
+    if not isinstance(dates, list) or not dates or dates != sorted(set(dates)):
+        raise ValueError("EXPLICIT_SORTED_WORKING_DATES_REQUIRED")
+    from datetime import date
+    for day in dates:
+        if not isinstance(day, str) or date.fromisoformat(day).isoformat() != day:
+            raise ValueError("EXACT_ISO_SESSION_REQUIRED")
+    known = market._utc(retrieved_at, "retrieved_at")
+    doc_known = market._utc(documentation_retrieved_at, "documentation_retrieved_at")
+    if not isinstance(documentation_sha256, str) or len(documentation_sha256) != 64 or any(c not in "0123456789abcdef" for c in documentation_sha256):
+        raise ValueError("DOCUMENTATION_HASH_REQUIRED")
+    if dates[0] < known.astimezone(VN_TZ).date().isoformat():
+        raise ValueError("FORWARD_CALENDAR_CANNOT_ESTABLISH_HISTORY")
+    normalized = normalize_working_dates_evidence(payload, retrieved_at=retrieved_at)
+    body = {"contract_version": "dnse_working_dates_calendar_receipt/v1",
+            "source": {"provider": "DNSE", "route": "/market/working-dates",
+                       "field": "workingDates", "scope": "DNSE_SECURITIES_MARKET_EXCHANGES_UNSPECIFIED"},
+            "retrieved_at": retrieved_at, "knowledge_available_at": max(known, doc_known).isoformat(),
+            "payload_sha256": hashlib.sha256(raw_bytes).hexdigest(), "payload_bytes": len(raw_bytes),
+            "documentation_sha256": documentation_sha256, "documentation_retrieved_at": documentation_retrieved_at,
+            "sessions": dates, "window_start": normalized["window_start"], "window_end": normalized["window_end"],
+            "non_trading_semantics": "NOT_RETURNED_AS_WORKING_DATE_WITHIN_OBSERVED_FORWARD_WINDOW; HOLIDAY_REASON_UNSPECIFIED",
+            "allowed_uses": ["DNSE_FORWARD_WORKING_DATE_IDENTITY"],
+            "limitations": ["NO_HISTORICAL_COVERAGE", "NO_EXCHANGE_SPECIFIC_CALENDAR_PROOF", "NO_SESSION_COMPLETION_PROOF",
+                            "NO_PRICE_RAW_VOLUME_OR_ACTIVE_MEMBERSHIP_AUTHORITY"]}
+    body.update(market.content_identity(body, kind="dnse_working_dates_calendar_receipt"))
+    return body
+
+
+def pit_calendar_at_cutoff(base_sessions, receipts, *, session: str, knowledge_cutoff: str):
+    """Use one known, exact source window; never stitch across an uncovered interval."""
+    import prospective_market_snapshot_contract as market
+    cutoff = market._utc(knowledge_cutoff, "knowledge_cutoff")
+    available = []
+    for receipt in receipts:
+        expected = market.content_identity(receipt, kind="dnse_working_dates_calendar_receipt")
+        dates = receipt.get("sessions", [])
+        if (receipt.get("contract_version") != "dnse_working_dates_calendar_receipt/v1" or
+            receipt.get("artifact_identity") != expected["artifact_identity"] or
+            receipt.get("artifact_sha256") != expected["artifact_sha256"] or
+            receipt.get("source") != {"provider":"DNSE", "route":"/market/working-dates", "field":"workingDates",
+                                      "scope":"DNSE_SECURITIES_MARKET_EXCHANGES_UNSPECIFIED"} or
+            not dates or dates != sorted(set(dates)) or
+            receipt.get("window_start") != dates[0] or receipt.get("window_end") != dates[-1] or
+            receipt.get("allowed_uses") != ["DNSE_FORWARD_WORKING_DATE_IDENTITY"] or
+            market._utc(receipt.get("knowledge_available_at"), "calendar_known_at") !=
+                max(market._utc(receipt.get("retrieved_at"), "retrieved_at"),
+                    market._utc(receipt.get("documentation_retrieved_at"), "documentation_retrieved_at"))):
+            raise ValueError("CALENDAR_RECEIPT_INTEGRITY_INVALID")
+        if (receipt["window_start"] <= session <= receipt["window_end"] and
+            market._utc(receipt["knowledge_available_at"], "calendar_known_at") <= cutoff):
+            available.append(receipt)
+    if not available:
+        return list(base_sessions)
+    latest = max(market._utc(r["knowledge_available_at"], "calendar_known_at") for r in available)
+    candidates = [r for r in available if market._utc(r["knowledge_available_at"], "calendar_known_at") == latest]
+    if len({r["artifact_identity"] for r in candidates}) != 1:
+        raise ValueError("CALENDAR_RECEIPTS_CONFLICT_AT_KNOWLEDGE_TIME")
+    # The whole chosen forward window is independent of the older governed ledger.
+    # Returning it alone also prevents an SMA50 window from jumping the September gap.
+    return list(candidates[0]["sessions"])
 
 
 class CompletedSessionGateError(ValueError):

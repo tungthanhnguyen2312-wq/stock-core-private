@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html>
+
+<script>
+    var _languagecodeInPortal = 'VI_VN';
+
+    var _language_datepicker_in_layout = _languagecodeInPortal;
+    if (_language_datepicker_in_layout == 'VI_VN') {
+        _language_datepicker_in_layout = "vi";
+    }
+    else {
+        _language_datepicker_in_layout = "en";
+    }
+</script>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" /> 
+    <link rel="shortcut icon" href="/Content/img/icon_HNX.ico" />
+    <title>Ng&#224;y đăng k&#253; cuối c&#249;ng trả cổ phiếu thưởng cho cổ đ&#244;ng hiện hữu</title>
+    <script src="/Scripts/modernizr-2.5.3.js"></script>
+
+
+    <script src="/Scripts/MobileScripts/jquery-1.11.2.min.js"></script>
+    <script src="/Scripts/MobileScripts/jquery-ui-1.11.2.min.js"></script>
+    <script src="/Scripts/MobileScripts/jquery.unobtrusive-ajax.min.js"></script>
+
+    <script src="/Content/datepicker/jquery.ui.datepicker-vi.js?v1.0"></script>
+    <link href="/Content/datepicker/ui-lightness/jquery-ui-1.10.4.custom.min.css" rel="stylesheet" />
+    <link href="/Content/font.css" rel="stylesheet" />
+    <script src="/Scripts/jquery-validate-data.js?v=1.5.8.16"></script>
+    <link href="/Content/MobileCSS/Style.css?v=1.5.8.16" rel="stylesheet" />
+    <script>
+        $(function () {
+            $(".btn-menu-expand").on("click", function (e) {
+                $(".menu-left-popup").toggle("slide", { direction: "left" }, 200);
+            });
+
+            $(document).on("click", function (e) {
+                var container = $('.menu-container'), popupmenu = $('.menu-left-popup');
+
+                if (container.has(e.target).length <= 0 && popupmenu.is(e.target)) {
+                    $(".menu-left-popup").toggle("slide", { direction: "left" }, 200);
+                }
+            });
+
+            $(".am-clicksubmenu").on("click", function (e) {
+                if ($(this).parent().hasClass("active")) {
+                    $(".menu-left li.active").removeClass("active");
+                }
+                else {
+                    $(".menu-left li.active").removeClass("active");
+                    $(this).parent().addClass("active");
+                }
+            });
+
+            $('#txtGStockSearch').on("keypress", function (e) {
+                e = window.event || e;
+                if (e.keyCode == 13) {
+                    var _stock_code = this.value.trim();
+                    if (_stock_code != "") {
+                        window.location.href = "/m-tim-kiem-" + _stock_code + ".html";
+                    }
+                    else {
+                        this.value = "";
+                    }
+                }
+            });
+
+            $("#btnGStockSearch").on("click", function () {
+                var _stock_code = $('#txtGStockSearch').val().trim();
+                if (_stock_code != "") {
+                    window.location.href = "/m-tim-kiem-" + _stock_code + ".html";
+                }
+                else {
+                    $('#txtGStockSearch').val("");
+                }
+            });
+
+
+            $.ajax({
+                url: '/Home/MobileSearchAutocompleteStockCode',
+                type: 'POST',
+                data: {},
+                sync: false, cache: false, traditional: true,
+                success: function (data) {
+                    var lts = data.lst;
+                    $('#txtGStockSearch').autocomplete({
+                        autoFocus: true,
+                        source: function (request, response) {
+                            var matcher = new RegExp("" + $.ui.autocomplete.escapeRegex(request.term.toUpperCase()), "i");
+                            response($.grep(lts, function (item) {
+                                return matcher.test(item.STOCK_CODE);
+                            }));
+                        },
+                        select: function (event, ui) {
+                          
+                                window.location.href = "/m-tim-kiem-" + ui.item.STOCK_CODE + ".html";
+                           
+                           
+                        },
+                        focus: function (event, ui) {
+                            //this.value = ui.item.STOCK_CODE;
+                            var arrResult = $("ul .ui-corner-all");
+                            for (var i = 0; i < arrResult.length; i++) {
+                                var label = $.trim($(arrResult[i]).text().split("-")[0]);
+                                if (label == ui.item.STOCK_CODE) {
+                                    $(".clsLiActive").removeClass("clsLiActive")
+                                    $(arrResult[i]).addClass("clsLiActive");
+                                    break;
+                                }
+                            }
+                            event.preventDefault();
+                        },
+                        open: function (event, ui) {
+                            $("ul").scrollTop(0);
+                            event.preventDefault();
+                        },
+                    });
+                }
+            });
+
+            $.ui.autocomplete.prototype._renderItem = function (ul, item) {
+
+
+                
+
+                var re = new RegExp("" + this.term.toUpperCase());
+
+
+                if (item.MARKETCODE == "CB") {
+                    var t = ("<label style=\"color: red;\">" + item.STOCK_CODE + "</label> ");
+                }else{
+                    var t = ("<label style=\"color: red;\">" + item.STOCK_CODE + "</label> - " + item.NAME );
+                }
+
+                
+                t = t.replace(re, "<b>" + this.term.toUpperCase() + "</b></span>");
+
+                return $("<li></li>")
+                        .data("item.autocomplete", item)
+                        .append("<a>" + t + "</a>")
+                        .appendTo(ul);
+            };
+        });
+
+    </script>
+
+
+    <style>
+        #txtGStockSearch {
+            position: relative;
+        }
+
+        .ui-autocomplete {
+            position: fixed;
+            top: 45px !important;
+            left: 0 !important;
+            max-height: 80%;
+            overflow-y: auto;
+        }
+
+        .btn-menu-expand, .btn-search {
+            z-index: 1;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="wrapper">
+        <div id="wrapper-header">
+            <div class="menu-head">
+                <button type="button" class="btn-menu-expand"><span class="fa fa-bar"></span></button>
+                <input type="text" placeholder="M&#227; CK/Sản phẩm" id="txtGStockSearch" />
+                <button type="button" class="btn-search" id="btnGStockSearch"><span class="fa fa-search"></span></button>
+            </div>
+        </div>
+        <!-- #header -->
+        <div id="wrapper-content">
+            <div class="content">
+                
+
+<div class="content-news">
+    <div class="main-header">
+        <div class="mh-big">Tin tức từ HNX</div>
+    </div>
+
+        <div class="news-container">
+            <div class="news-title">Ng&#224;y đăng k&#253; cuối c&#249;ng trả cổ phiếu thưởng cho cổ đ&#244;ng hiện hữu</div>
+            <div class="news-public-time">19/06/2026 08:39 </div>
+            <div class="news-content">Thông báo ngày đăng ký cuối cùng lập danh sách cổ đông đối với cổ phiếu VBB của Ngân hàng TMCP Việt Nam Thương Tín như sau:<br/>1. Ngày đăng ký cuối cùng: 29/06/2026<br/>2. Ngày giao dịch không hưởng quyền: 26/06/2026<br/>3. Lý do và mục đích: <br/> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;* Trả cổ phiếu thưởng cho cổ đông hiện hữu: <br/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;- Tỷ lệ thực hiện: 100:10 (Cổ đông sở hữu 100 cổ phiếu sẽ được nhận thêm 10 cổ phiếu mới)<br/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;- Phương án làm tròn, phương án xử lý cổ phiếu lẻ: + Số cổ phiếu phát hành được tính theo số nguyên, phần thập phân sẽ không được làm tròn thành 01 cổ phiếu. <br/>+ Số cổ phiếu lẻ phát sinh theo hàng thập phân (nếu có) sẽ được hủy bỏ.<br/>-     Ví dụ: Cổ đông A đang sở hữu 115 cổ phiếu, với tỷ lệ phát hành 10%, cổ đông A được nhận 115 x 10/100= 11,5 cổ phiếu. Theo nguyên tắc làm tròn đến hàng đơn vị, số cổ phiếu cổ đông A được nhận là 11 cổ phiếu, số cổ phiếu lẻ hàng thập phân phát sinh 0,5 cổ phiếu sẽ được hủy bỏ.<br/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;- Địa điểm thực hiện: <br/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+ Chứng khoán chưa lưu ký: Người sở hữu làm thủ tục nhận cổ phiếu phát hành tăng vốn từ nguồn vốn chủ sở hữu tại Văn phòng HĐQT Vietbank, Lầu 11, Tòa nhà Lim 2, số 62A Cách Mạng Tháng 8, Phường Xuân Hòa, TP.HCM trong giờ hành chính và xuất trình: <br/>*     Đối với cổ đông cá nhân: CCCD/CC đối với cổ đông có quốc tịch Việt Nam; Hộ chiếu/ giấy tờ có giá trị thay thế hộ chiếu đối với cổ đông không có quốc tịch Việt Nam. <br/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+ Chứng khoán chưa lưu ký: *     Đối với cổ đông tổ chức: CCCD/CC đối với người đại diện theo pháp luật, đại diện theo ủy quyền là cá nhân có quốc tịch Việt Nam; Hộ chiếu hoặc giấy tờ có giá trị thay thế hộ chiếu đối với người đại diện theo pháp luật, đại diện theo ủy quyền là cá nhân không có quốc tịch Việt Nam; Giấy tờ xác thực đối với người đại diện theo pháp luật, văn bản ủy quyền của tổ chức ủy quyền phù hợp theo quy định đối với trường hợp đại diện theo ủy quyền.<br/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+ Chứng khoán lưu ký: Người sở hữu (cổ đông) làm thủ tục nhận cổ phiếu phát hành tăng vốn từ nguồn vốn chủ sở hữu tại các Thành viên lưu ký nơi mở tài khoản lưu ký.</div>
+            <div class="news-file-attach">
+            </div>
+        </div>
+</div>
+            </div>
+        </div>
+        <!-- #content -->
+        <div id="wrapper-footer">
+            <!-- #footer -->
+            <p style="padding: 10px; border-top: 2px solid #cacaca; font-size: 14px;">&#169; 2009 Bản quyển thuộc &quot;Sở Giao dịch Chứng kho&#225;n H&#224; Nội&quot;. Ph&#225;t triển bởi <a target="_blank" href="http://www.navisoft.com.vn/" style="color: orange;">Navisoft.</a></p>
+        </div>
+    </div>
+    <!-- #wrapper -->
+
+    <div class="menu-left-popup">
+        
+
+<div class="menu-container">
+    <div class="menu-left-logo">
+        <a class="left-logo">
+            <img src="/Content/MobileImages/logo.png?v=1.5.8.16" /></a>
+            <a href="/Home/Language?culture=en-GB&returnUrl=Home/MobileIndex" class="lang-en"></a>
+    </div>
+
+    <ul class="menu-left">
+        <li><a href="/trang-chu-mobile.html">Trang chủ</a></li>
+        <li class="">
+            <a class="am-clicksubmenu" href="javascript:;">Ni&#234;m yết<span class="am-btnsubmenu fa fa-angle"></span></a>
+            <ul class="ul-small">
+                <li><a href="/m-niem-yet/du-lieu-thi-truong.html" class="">Dữ liệu thị trường</a></li>
+                <li><a href="/m-niem-yet/chi-so.html" class="">Chỉ số</a></li>
+                <li><a href="/m-niem-yet/tin-tuc.html" class="">Tin tức</a></li>
+            </ul>
+        </li>
+        <li class="">
+            <a class="am-clicksubmenu" href="javascript:;" style="text-transform: none;">UPCoM<span class="am-btnsubmenu fa fa-angle"></span></a>
+            <ul class="ul-small">
+                <li><a href="/m-upcom/du-lieu-thi-truong.html" class="">Dữ liệu thị trường</a></li>
+                <li><a href="/m-upcom/chi-so.html" class="">Chỉ số</a></li>
+                <li><a href="/m-upcom/tin-tuc.html" class="">Tin tức</a></li>
+            </ul>
+        </li>
+        <li class="">
+            <a class="am-clicksubmenu" href="javascript:;">Tr&#225;i phiếu<span class="am-btnsubmenu fa fa-angle"></span></a>
+            <ul>
+                <li><a href="/m-trai-phieu/thong-tin-giao-dich.html" class="">Th&#244;ng tin giao dịch</a></li>
+                <li><a href="/m-trai-phieu/lich-phat-hanh.html" class="">Lịch ph&#225;t h&#224;nh</a></li>
+                <li><a href="/m-trai-phieu/dau-thau-va-ket-qua-dau-thau.html" class="">Đấu thầu v&#224; kết quả đấu thầu</a></li>
+                <li><a href="/m-trai-phieu/duong-cong-loi-suat.html" class="">Đường cong Spot Rate</a></li>
+                <li><a href="/m-trai-phieu/chi-so.html" class="">Chỉ số</a></li>
+            </ul>
+        </li>
+
+        <li class="">
+            <a class="am-clicksubmenu" href="javascript:;">Chứng kho&#225;n Ph&#225;i sinh<span class="am-btnsubmenu fa fa-angle"></span></a>
+            <ul>
+                <li><a href="/m-phai-sinh/hop-dong-tuong-lai-cscp.html" class="">HĐTL Chỉ số cổ phiếu</a></li>
+                <li><a href="/m-phai-sinh/hop-dong-tuong-lai-tpcp.html" class="">HĐTL Tr&#225;i phiếu ch&#237;nh phủ</a></li>
+                
+                
+            </ul>
+        </li>
+
+
+
+
+
+
+        <li class="">
+            <a class="am-clicksubmenu" href="javascript:;">Đấu gi&#225;<span class="am-btnsubmenu fa fa-angle"></span></a>
+            <ul class="ul-small">
+                <li><a href="/m-dau-gia/lich-dau-gia.html" class="">Lịch đấu gi&#225;</a></li>
+                <li><a href="/m-dau-gia/ket-qua-dau-gia.html" class="">Kết quả đấu gi&#225;</a></li>
+                <li><a href="/m-dau-gia/tin-tuc.html" class="">Th&#244;ng tin c&#244;ng bố</a></li>
+            </ul>
+        </li>
+
+
+
+
+
+        <li class="">
+            <a class="am-clicksubmenu" href="javascript:;">Sản phẩm c&#225;c-bon<span class="am-btnsubmenu fa fa-angle"></span></a>
+            <ul>
+                <li><a href="/m-cac-bon/han-ngach.html" class="">Hạn ngạch ph&#225;t thải</a></li>
+                <li><a href="/m-cac-bon/tin-chi.html" class="">T&#237;n chỉ</a></li>
+                
+            </ul>
+        </li>
+
+
+
+
+
+
+
+
+        <li>
+            <a href="/m-tin-tuc-hnx.html">Tin tức</a>
+        </li>
+        <li>
+            <a href="/home/Desktop">Phi&#234;n bản Desktop</a>
+        </li>
+    </ul>
+</div>
+
+    </div>
+</body>
+</html>

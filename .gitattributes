@@ -22,3 +22,5 @@
 # Retained provider/documentation bytes are hash-bound evidence, never source text.
 operations-review/**/raw/* -text
 operations-review/**/official-documentation/* -text
+# This closure's exact HTTP bodies include upstream CRLF/trailing spaces.
+operations-review/pit-minimum-viable-evidence-closure-v1-20261002/raw/* binary

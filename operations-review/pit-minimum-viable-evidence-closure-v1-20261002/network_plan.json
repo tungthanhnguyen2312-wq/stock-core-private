@@ -1,0 +1,23 @@
+{
+  "source": [
+    "DNSE vendor SDK/documentation",
+    "DNSE OpenAPI",
+    "HNX official issuer profiles"
+  ],
+  "capability": [
+    "OHLC v documentation",
+    "working_dates forward calendar",
+    "VBB/KLB status and exact CA adjacency"
+  ],
+  "scope": "Vendor README and client source; one working_dates receipt; VBB/KLB search and profile only; up to five exact adjacent first-party documents if linked; no broad discovery",
+  "request_cap": 12,
+  "byte_cap": 8388608,
+  "page_cap": 1,
+  "response_cap": 2097152,
+  "time_cap_seconds": 120,
+  "request_timeout_seconds": 12,
+  "output": ".stocklookup\\scratch\\evidence-closure",
+  "retries": 0,
+  "redirects": 0,
+  "writer": "foreground acquire_closure.py"
+}
