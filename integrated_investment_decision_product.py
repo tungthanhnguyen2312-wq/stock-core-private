@@ -1824,6 +1824,53 @@ def build_ticker_integrated_decision(
 
 # ── Full Product Artifact Builder ─────────────────────────────────────────────
 
+def market_bar_context_records(artifact, *, session, requested_at):
+    """Verify once per product; this optional context never enters decision policy."""
+    import market_wide_historical_research_context as history
+    import prospective_market_snapshot_contract as market
+    from canonical_market_bars import CONTRACT_VERSION as bar_contract
+    if artifact is None:
+        return {}
+    try:
+        cutoff = market._utc(requested_at, "product_cutoff")
+        identity = history.content_identity(artifact)
+        if (artifact.get("contract_version") != history.CONTRACT_VERSION or artifact.get("session") != session
+                or any(artifact.get(k) != v for k, v in identity.items())):
+            raise ValueError("MARKET_BAR_CONTEXT_IDENTITY_OR_SESSION_INVALID")
+        contexts = {}
+        for ticker, record in artifact.get("records", {}).items():
+            projection = record.get("multi_timeframe")
+            if not projection:
+                continue
+            try:
+                projection_cutoff = market._utc(projection.get("knowledge_cutoff"), "bar_cutoff")
+                if (projection.get("contract_version") != "market_bar_research_projection/v1"
+                        or projection.get("target_session") != session or projection.get("non_voting") is not True
+                        or projection_cutoff > cutoff
+                        or any(projection.get(k) != v for k,v in market.content_identity(projection,kind="market_bar_research_projection").items())):
+                    raise ValueError("MARKET_BAR_PROJECTION_INVALID")
+                for tf in ("1D", "1W", "1M"):
+                    for name in ("latest_observed", "latest_completed"):
+                        bar = projection[tf].get(name)
+                        if bar is None:
+                            continue
+                        if (bar.get("contract_version") != bar_contract or bar.get("timeframe") != tf
+                                or bar.get("instrument", {}).get("ticker") != ticker
+                                or bar.get("last_trading_session", session) > session
+                                or market._utc(bar.get("knowledge_available_at"), "bar_known") > projection_cutoff
+                                or market._utc(bar.get("knowledge_cutoff"), "bar_cutoff") > projection_cutoff
+                                or any(bar.get(k) != v for k,v in market.content_identity(bar,kind="canonical_market_bar").items())):
+                            raise ValueError("MARKET_BAR_INVALID")
+                contexts[ticker] = {"status":"AVAILABLE", "non_voting":True,
+                    "source_artifact_identity":artifact["artifact_identity"], "projection":projection}
+            except (ValueError, TypeError, KeyError):
+                contexts[ticker] = {"status":"UNAVAILABLE", "reason":"MARKET_BAR_PROJECTION_INVALID", "non_voting":True}
+        return contexts
+    except (ValueError, TypeError, KeyError):
+        return {ticker:{"status":"UNAVAILABLE", "reason":"MARKET_BAR_CONTEXT_IDENTITY_OR_SESSION_INVALID", "non_voting":True}
+                for ticker in (artifact.get("records") or {})}
+
+
 def build_artifact(
     *,
     session: str,
@@ -1846,6 +1893,7 @@ def build_artifact(
     entity_applicability_artifact: Mapping[str, Any] | None = None,
     official_liquidity_artifact: Mapping[str, Any] | None = None,
     financial_peer_materialization_artifact: Mapping[str, Any] | None = None,
+    historical_context_artifact: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build the market-wide integrated investment decision product artifact.
 
@@ -1863,6 +1911,7 @@ def build_artifact(
             "INCOMPATIBLE_FINANCIAL_ANALYSIS_CONTRACT:expected="
             f"{FINANCIAL_ANALYSIS_COMPACT_CONTRACT}:got={fa_contract}"
         )
+    market_bars = market_bar_context_records(historical_context_artifact, session=session, requested_at=requested_at)
     tac_records = technical_structure_artifact.get("records") or {}
     # A claimed identity alone does not qualify a new fixed T0 condition. Keep
     # other research axes visible while failing closed on this dependent use.
@@ -2045,6 +2094,9 @@ def build_artifact(
             official_liquidity_record=official_liquidity_records.get(ticker),
             financial_peer_context=financial_peers.get(ticker),
         )
+        if historical_context_artifact is not None:
+            dec["market_sector_context"]["multi_timeframe"] = market_bars.get(ticker, {
+                "status":"UNAVAILABLE", "reason":"MARKET_BAR_CONTEXT_NOT_AVAILABLE", "non_voting":True})
         records[ticker] = dec
         currency_counts[evidence_currency_class(dec["evidence_currency"])] += 1
         if dec["evidence_currency_gate"].get("applied"):

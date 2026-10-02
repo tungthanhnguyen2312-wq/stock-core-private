@@ -1,7 +1,11 @@
-# Future analytical proposals — document only
+# Analytical proposals and completed bar foundation
 
-These proposals are not NEXT, active implementation, new authority, thresholds or
-strategy tuning. Reuse existing deterministic technical/flow/decision engines and
+The first foundation, `MARKET_BAR_BASIS_AND_MULTITIMEFRAME_V1`, is COMPLETE under
+the explicit October 2, 2026 owner override; see the
+[contract and retained acceptance](../market_bar_basis_multitimeframe_contract.md).
+The remaining proposals are document only, not NEXT or active implementation.
+None grants new authority, thresholds or strategy tuning.
+Reuse existing deterministic technical/flow/decision engines and
 the comprehensive [North Star](../NORTH_STAR.md). `research_action_posture` remains
 the standing action authority. Exact evidence/use gates precede every new consumer.
 

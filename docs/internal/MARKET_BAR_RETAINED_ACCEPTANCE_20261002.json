@@ -1,0 +1,374 @@
+{
+  "all_assertions_passed": true,
+  "attached_current_research_count": 3,
+  "authority_effect": "NONE",
+  "ca_crossing_period": {
+    "artifact_identity": "canonical_market_bar:fa4aba92c322b29e6f9f8f592af81293662718ad03ce81a200192e256c36e76e",
+    "artifact_sha256": "fa4aba92c322b29e6f9f8f592af81293662718ad03ce81a200192e256c36e76e",
+    "calendar_identity": null,
+    "calendar_scope": null,
+    "close": 13.5,
+    "constituent_bar_identities": [
+      "canonical_market_bar:25baf526d8ea80ea64b0e6d34dc155cd3418c3af0ec972ff64d0343d15a501b2",
+      "canonical_market_bar:b9e095a7f90d763b49e9d14968001813062345e320cd40913a6254bce60adb9d"
+    ],
+    "constituent_count": 2,
+    "constituent_factor_chains": [],
+    "constituent_observation_identities": [
+      "retained_daily_observation:6ad5ba9ca18d2ea21b4651c205336da8c2b93236a088675f35fbc28ade2cfae8",
+      "retained_daily_observation:b9b9877f749429c4205b228c40ea2ddef6510446c063a6748a860f786c8f6370"
+    ],
+    "constituent_sessions": [
+      "2026-09-15",
+      "2026-09-28"
+    ],
+    "constituent_volume_values": [
+      100,
+      100
+    ],
+    "contract_version": "canonical_market_bar/v1",
+    "corporate_action_crossing": {
+      "comparability": "NOT_ESTABLISHED",
+      "event_identities": [
+        "current_official_event:77743a13964d36877248696e22bddac2e55f7daba99ae80afefde2fd79278be4"
+      ],
+      "factor_chain_state": "NOT_ESTABLISHED",
+      "state": "EVENTS_OBSERVED"
+    },
+    "expected_sessions": [],
+    "finality": "DERIVED_FROM_SOURCE_OBSERVATIONS_NOT_PROVIDER_FINALITY_PROOF",
+    "first_trading_session": "2026-09-15",
+    "fitness": {
+      "allowed_uses": [
+        "CURRENT_RESEARCH_PRICE_CONTEXT"
+      ],
+      "continuous_indicator_use": "NOT_ESTABLISHED",
+      "historical_pit_eligible": false,
+      "non_voting": true,
+      "volume": "UNIT_UNDOCUMENTED"
+    },
+    "high": 13.5,
+    "instrument": {
+      "board": null,
+      "exchange": null,
+      "ticker": "ALT"
+    },
+    "knowledge_available_at": "2026-10-01T22:39:02+00:00",
+    "knowledge_cutoff": "2026-10-02T06:00:00Z",
+    "last_trading_session": "2026-09-28",
+    "low": 12.29,
+    "open": 12.29,
+    "period_completeness": "CALENDAR_SCOPE_UNKNOWN",
+    "period_end": "2026-09-30",
+    "period_start": "2026-09-01",
+    "price_basis": "RETROSPECTIVE_ADJUSTED",
+    "price_unit": "SOURCE_PRICE_UNIT_UNDOCUMENTED",
+    "source_identities": [
+      "p3f9_exact_session_snapshot:33f40a74ee802137bebf26b1e59dad7fc1d32294a2816f4e701ba5d7db6787dc"
+    ],
+    "source_price_bases": [
+      "CURRENT_DESCRIPTIVE_DNSE_REST_ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED"
+    ],
+    "status": "AVAILABLE",
+    "timeframe": "1M",
+    "turnover": null,
+    "turnover_unit": null,
+    "volume": 200,
+    "volume_basis": "UNKNOWN",
+    "volume_unit": "UNKNOWN",
+    "warnings": [
+      "CALENDAR_SCOPE_UNKNOWN",
+      "CORPORATE_ACTION_CROSSING"
+    ]
+  },
+  "contract_version": "market_bar_retained_acceptance/v1",
+  "historical_cohort_count": 3,
+  "historical_daily_rows": {
+    "ALT": 97,
+    "HPG": 249,
+    "VNM": 249
+  },
+  "historical_t0_writes": 0,
+  "inputs_sha256": {
+    "calendar": "05dc601456370117918771fa10817891ae09e03e01c556aac0eb1f1574e71a2b",
+    "current_product": "a70d3c1a444d4b3d793833f2cdaed24acc5e640f4c28b5892c76bf78d3feff00",
+    "events": "0aaa072716e56657f3fc1223a1a50eaed020f041c308f24fd66626ff80245cb2",
+    "price_snapshot": "82f00beec185253ba7f3be2401ead8ba88669998cdb3ae1601b270abeb05a9a0",
+    "prospective": "3497db3dc7c003d5cec683c834775459b79c80fbdbfc23c6579fc20349fba968"
+  },
+  "inputs_unchanged": true,
+  "knowledge_cutoff": "2026-10-02T06:00:00Z",
+  "network_provider_calls": {
+    "network": 0,
+    "provider": 0,
+    "vnstock_import": 0
+  },
+  "posture_or_decision_field_deltas": 0,
+  "projections": {
+    "ALT": {
+      "1D": {
+        "available_periods": 97,
+        "blocker": null,
+        "complete_periods": 0,
+        "latest_completed": null,
+        "latest_observed": {
+          "artifact_identity": "canonical_market_bar:e3e8599a79202444436736fd3a62cd51f3b8e4b59c2cb6b15b80b59544f1f5cf",
+          "constituent_count": 1,
+          "knowledge_available_at": "2026-10-01T09:19:50.765598+00:00",
+          "period_completeness": "DAILY_OBSERVATION",
+          "period_end": "2026-09-28",
+          "period_start": "2026-09-28",
+          "price_basis": "RETROSPECTIVE_ADJUSTED",
+          "volume_unit": "UNKNOWN"
+        },
+        "period_count": 97,
+        "status": "AVAILABLE"
+      },
+      "1M": {
+        "available_periods": 12,
+        "blocker": "NO_COMPLETE_CALENDAR_QUALIFIED_PERIOD",
+        "complete_periods": 0,
+        "latest_completed": null,
+        "latest_observed": {
+          "artifact_identity": "canonical_market_bar:fa4aba92c322b29e6f9f8f592af81293662718ad03ce81a200192e256c36e76e",
+          "constituent_count": 2,
+          "knowledge_available_at": "2026-10-01T22:39:02+00:00",
+          "period_completeness": "CALENDAR_SCOPE_UNKNOWN",
+          "period_end": "2026-09-30",
+          "period_start": "2026-09-01",
+          "price_basis": "RETROSPECTIVE_ADJUSTED",
+          "volume_unit": "UNKNOWN"
+        },
+        "period_count": 12,
+        "status": "AVAILABLE"
+      },
+      "1W": {
+        "available_periods": 40,
+        "blocker": "NO_COMPLETE_CALENDAR_QUALIFIED_PERIOD",
+        "complete_periods": 0,
+        "latest_completed": null,
+        "latest_observed": {
+          "artifact_identity": "canonical_market_bar:c03361006f1f7439f96f979093d2a78c3b21e070bfe6a11a12dfdaa0edfe551a",
+          "constituent_count": 1,
+          "knowledge_available_at": "2026-10-01T22:39:02+00:00",
+          "period_completeness": "PARTIAL_CURRENT_PERIOD",
+          "period_end": "2026-10-04",
+          "period_start": "2026-09-28",
+          "price_basis": "RETROSPECTIVE_ADJUSTED",
+          "volume_unit": "UNKNOWN"
+        },
+        "period_count": 40,
+        "status": "AVAILABLE"
+      }
+    },
+    "HPG": {
+      "1D": {
+        "available_periods": 249,
+        "blocker": null,
+        "complete_periods": 0,
+        "latest_completed": null,
+        "latest_observed": {
+          "artifact_identity": "canonical_market_bar:46a5b801689204c871c90d6499d90225140e08fa4ef6a22ff4bacf742e7ac3e3",
+          "constituent_count": 1,
+          "knowledge_available_at": "2026-10-01T09:19:50.765598+00:00",
+          "period_completeness": "DAILY_OBSERVATION",
+          "period_end": "2026-10-01",
+          "period_start": "2026-10-01",
+          "price_basis": "RETROSPECTIVE_ADJUSTED",
+          "volume_unit": "UNKNOWN"
+        },
+        "period_count": 249,
+        "status": "AVAILABLE"
+      },
+      "1M": {
+        "available_periods": 13,
+        "blocker": null,
+        "complete_periods": 2,
+        "latest_completed": {
+          "artifact_identity": "canonical_market_bar:a9c7b1f5214d6e5032a4c2d648bcd6583ee12aee5b4b7bab916c22cd76ce39b8",
+          "constituent_count": 20,
+          "knowledge_available_at": "2026-10-01T09:19:50.765598+00:00",
+          "period_completeness": "COMPLETE",
+          "period_end": "2026-08-31",
+          "period_start": "2026-08-01",
+          "price_basis": "RETROSPECTIVE_ADJUSTED",
+          "volume_unit": "UNKNOWN"
+        },
+        "latest_observed": {
+          "artifact_identity": "canonical_market_bar:a1d2e5b4d53e4f9b7f1d1e7a81cb90eb2131bc4ae811945bee2e179cf01962e3",
+          "constituent_count": 1,
+          "knowledge_available_at": "2026-10-01T09:19:50.765598+00:00",
+          "period_completeness": "PARTIAL_CURRENT_PERIOD",
+          "period_end": "2026-10-31",
+          "period_start": "2026-10-01",
+          "price_basis": "RETROSPECTIVE_ADJUSTED",
+          "volume_unit": "UNKNOWN"
+        },
+        "period_count": 13,
+        "status": "AVAILABLE"
+      },
+      "1W": {
+        "available_periods": 52,
+        "blocker": null,
+        "complete_periods": 12,
+        "latest_completed": {
+          "artifact_identity": "canonical_market_bar:317bcfcf378a81c7969583a71d3d419c092b328592533ecbf24bed263b9df5e6",
+          "constituent_count": 5,
+          "knowledge_available_at": "2026-10-01T09:19:50.765598+00:00",
+          "period_completeness": "COMPLETE",
+          "period_end": "2026-08-30",
+          "period_start": "2026-08-24",
+          "price_basis": "RETROSPECTIVE_ADJUSTED",
+          "volume_unit": "UNKNOWN"
+        },
+        "latest_observed": {
+          "artifact_identity": "canonical_market_bar:6dcfa75e11829b92fb9bbea42c9383d5b454abe7a10a415b15d2f077aef2e71b",
+          "constituent_count": 4,
+          "knowledge_available_at": "2026-10-01T09:19:50.765598+00:00",
+          "period_completeness": "PARTIAL_CURRENT_PERIOD",
+          "period_end": "2026-10-04",
+          "period_start": "2026-09-28",
+          "price_basis": "RETROSPECTIVE_ADJUSTED",
+          "volume_unit": "UNKNOWN"
+        },
+        "period_count": 52,
+        "status": "AVAILABLE"
+      }
+    },
+    "VNM": {
+      "1D": {
+        "available_periods": 249,
+        "blocker": null,
+        "complete_periods": 0,
+        "latest_completed": null,
+        "latest_observed": {
+          "artifact_identity": "canonical_market_bar:615c9bfdb4b91cb92b1ba9fa03e6b04a460e23d8b6c2a2bfb9d0832ebe86dcd5",
+          "constituent_count": 1,
+          "knowledge_available_at": "2026-10-01T09:19:50.765598+00:00",
+          "period_completeness": "DAILY_OBSERVATION",
+          "period_end": "2026-10-01",
+          "period_start": "2026-10-01",
+          "price_basis": "RETROSPECTIVE_ADJUSTED",
+          "volume_unit": "UNKNOWN"
+        },
+        "period_count": 249,
+        "status": "AVAILABLE"
+      },
+      "1M": {
+        "available_periods": 13,
+        "blocker": null,
+        "complete_periods": 2,
+        "latest_completed": {
+          "artifact_identity": "canonical_market_bar:003c74f57993f53844bfa1fe8bb815a764d0218a35e960d9dbd221c80c7396dc",
+          "constituent_count": 20,
+          "knowledge_available_at": "2026-10-01T09:19:50.765598+00:00",
+          "period_completeness": "COMPLETE",
+          "period_end": "2026-08-31",
+          "period_start": "2026-08-01",
+          "price_basis": "RETROSPECTIVE_ADJUSTED",
+          "volume_unit": "UNKNOWN"
+        },
+        "latest_observed": {
+          "artifact_identity": "canonical_market_bar:50d0ec372702b7849921b3925d248e8ec08587858e25178fd1d908579502f473",
+          "constituent_count": 1,
+          "knowledge_available_at": "2026-10-01T09:19:50.765598+00:00",
+          "period_completeness": "PARTIAL_CURRENT_PERIOD",
+          "period_end": "2026-10-31",
+          "period_start": "2026-10-01",
+          "price_basis": "RETROSPECTIVE_ADJUSTED",
+          "volume_unit": "UNKNOWN"
+        },
+        "period_count": 13,
+        "status": "AVAILABLE"
+      },
+      "1W": {
+        "available_periods": 52,
+        "blocker": null,
+        "complete_periods": 12,
+        "latest_completed": {
+          "artifact_identity": "canonical_market_bar:85ecc265aa5370d7dcf03e983565f31f604f421df616b676c2fa2647476d0fb1",
+          "constituent_count": 5,
+          "knowledge_available_at": "2026-10-01T09:19:50.765598+00:00",
+          "period_completeness": "COMPLETE",
+          "period_end": "2026-08-30",
+          "period_start": "2026-08-24",
+          "price_basis": "RETROSPECTIVE_ADJUSTED",
+          "volume_unit": "UNKNOWN"
+        },
+        "latest_observed": {
+          "artifact_identity": "canonical_market_bar:0ba32584f4113a5ac7285588e580559f1666976766e5604a770b7c3ee7c862f8",
+          "constituent_count": 4,
+          "knowledge_available_at": "2026-10-01T09:19:50.765598+00:00",
+          "period_completeness": "PARTIAL_CURRENT_PERIOD",
+          "period_end": "2026-10-04",
+          "period_start": "2026-09-28",
+          "price_basis": "RETROSPECTIVE_ADJUSTED",
+          "volume_unit": "UNKNOWN"
+        },
+        "period_count": 52,
+        "status": "AVAILABLE"
+      }
+    },
+    "VNM_PROSPECTIVE": {
+      "1D": {
+        "available_periods": 20,
+        "blocker": null,
+        "complete_periods": 0,
+        "latest_completed": null,
+        "latest_observed": {
+          "artifact_identity": "canonical_market_bar:dbc04ebfad5d05c77ae2e2a25c564fffe8b0d72fa8108fbb0990ec6a11613cf4",
+          "constituent_count": 1,
+          "knowledge_available_at": "2026-09-28T09:39:55.021234+00:00",
+          "period_completeness": "DAILY_OBSERVATION",
+          "period_end": "2026-09-28",
+          "period_start": "2026-09-28",
+          "price_basis": "RAW_AS_TRADED",
+          "volume_unit": "UNKNOWN"
+        },
+        "period_count": 20,
+        "status": "AVAILABLE"
+      },
+      "1M": {
+        "available_periods": 1,
+        "blocker": "NO_COMPLETE_CALENDAR_QUALIFIED_PERIOD",
+        "complete_periods": 0,
+        "latest_completed": null,
+        "latest_observed": {
+          "artifact_identity": "canonical_market_bar:602625506f9b4079f3154ca4174d5761dee7abcedb37a3deafa16950c3c2645c",
+          "constituent_count": 16,
+          "knowledge_available_at": "2026-09-28T09:39:55.021234+00:00",
+          "period_completeness": "CALENDAR_SCOPE_UNKNOWN",
+          "period_end": "2026-09-30",
+          "period_start": "2026-09-01",
+          "price_basis": "RAW_AS_TRADED",
+          "volume_unit": "UNKNOWN"
+        },
+        "period_count": 2,
+        "status": "AVAILABLE"
+      },
+      "1W": {
+        "available_periods": 5,
+        "blocker": "NO_COMPLETE_CALENDAR_QUALIFIED_PERIOD",
+        "complete_periods": 0,
+        "latest_completed": null,
+        "latest_observed": {
+          "artifact_identity": "canonical_market_bar:80b67902ba355ceadbf59452436585ca443349357e6d94655c1d016dc3eb87df",
+          "constituent_count": 1,
+          "knowledge_available_at": "2026-09-28T09:39:55.021234+00:00",
+          "period_completeness": "PARTIAL_CURRENT_PERIOD",
+          "period_end": "2026-10-04",
+          "period_start": "2026-09-28",
+          "price_basis": "RAW_AS_TRADED",
+          "volume_unit": "UNKNOWN"
+        },
+        "period_count": 6,
+        "status": "AVAILABLE"
+      }
+    }
+  },
+  "prospective_corpus_rows_parsed_once": 18514,
+  "prospective_vnm_versions": 21,
+  "qualified_factor_series_count": 0,
+  "session": "2026-10-01",
+  "source_candidate_count": 1683
+}

@@ -1,0 +1,38 @@
+{
+  "adapter_tickers": [
+    "VNM",
+    "HPG",
+    "ALT"
+  ],
+  "all_assertions_passed": true,
+  "attached_count": 3,
+  "canonical_source_hashes": {
+    "historical_t0": "a70d3c1a444d4b3d793833f2cdaed24acc5e640f4c28b5892c76bf78d3feff00",
+    "price_snapshot": "82f00beec185253ba7f3be2401ead8ba88669998cdb3ae1601b270abeb05a9a0"
+  },
+  "contract_version": "market_bar_pipeline_acceptance/v1",
+  "current_research_coverage": {
+    "1D": 1453,
+    "1M": 560,
+    "1W": 898
+  },
+  "full_financial_double_build_probe": "HOST_MEMORYERROR_AFTER_MARKET_BUILDER_SUCCEEDED; BOUNDED_ADAPTER_USES_UNCHANGED_SCRATCH_FINANCIAL_ARTIFACT",
+  "historical_candidate_count": 1683,
+  "historical_t0_writes": 0,
+  "inputs_sha256": {
+    "financial_scratch": "bd236476dc0392e126eceda76536bc3ef3716b577902eb9fbf28f64ab4d312a2",
+    "historical_scratch": "db5ee5b3a15bbd05c29e83238553e02303ac6ac347a34f633c99dd2cf099d4e2",
+    "tactical_scratch": "3c975584211040f419e094709767f17c5deaf8731b38bbc9b3545c82f856ba3b"
+  },
+  "inputs_unchanged": true,
+  "network_provider_calls": {
+    "network": 0,
+    "provider": 0,
+    "vnstock_import": 0
+  },
+  "parent_financial_identity": "canonical_daily_financial_v2_materialization/v1:7478f1e31ea3b3a4393ec26f0e1ca44b629a5842640ab919408a29965d130cfc",
+  "parent_tactical_identity": "market_structure_breakout_product_projection/v1:ad483a7cda0eb2948a6649c1e0c8a391ee115f48bbe8bbf2a0dab222642919f2",
+  "posture_and_decision_field_deltas": 0,
+  "product_requested_at": "2026-10-01T16:19:50.765598+07:00",
+  "scope": "FULL_RETAINED_MARKET_BUILDER_AND_BOUNDED_REAL_FINANCIAL_TACTICAL_PRODUCT_ADAPTER"
+}

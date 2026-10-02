@@ -1,7 +1,7 @@
 {
   "schema_version": "stocklookup_roadmap_execution_state/1.0.0",
   "roadmap_id": "stock-core-private",
-  "roadmap_version": "2026.10.02.6",
+  "roadmap_version": "2026.10.02.7",
   "narrative_authority": {
     "strategic_roadmap": "docs/ROADMAP.md",
     "operational_narrative": "docs/STATE.md",
@@ -9,13 +9,13 @@
     "ai_rules": "docs/AI_RULES.md",
     "note": "This file is the machine-readable EXECUTION-STATE authority: which milestone is current/active/next/blocked, what checkpoint proves each completed milestone, and whether recorded state contradicts Git/worktree reality. It does not restate or supersede the narrative docs' technical content and is not a substitute for reading them. Where this file and a narrative doc appear to disagree, that is a conflict to surface to the owner (AGENTS.md 'Default lightweight bootstrap' rule), never an automatic override in either direction."
   },
-  "implementation_lineage_head": "HEAD",
-  "last_updated_checkpoint": "HEAD",
+  "implementation_lineage_head": "abc2f2aba34e2d9a86ab8f2fca697d1aadd8d5d1",
+  "last_updated_checkpoint": "abc2f2aba34e2d9a86ab8f2fca697d1aadd8d5d1",
   "known_operational_diff_allowlist": [
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "PIT_MINIMUM_VIABLE_EVIDENCE_CLOSURE_V1",
+    "milestone": "MARKET_BAR_BASIS_AND_MULTITIMEFRAME_V1",
     "state": "COMPLETE"
   },
   "queued_next": [],
@@ -2838,6 +2838,27 @@
       "owner_override": "OWNER_DIRECTIVE_2026_10_02_PIT_MINIMUM_VIABLE_EVIDENCE_CLOSURE_V1",
       "notes": "All four bounded evidence gates closed explicitly. DNSE OHLC volume units remain undocumented; current HNX/HOSE status lacks effective membership windows. Retained 257 forward working dates Oct2 2026-Oct1 2027 and integrated existing acceptance with actual known-time/no-gap-stitching guards. Three real CA candidates remain NOT_QUALIFIED with named terms/publication/lifecycle gaps. 11 requests /627318 bytes; no retries/followed redirects. Actual eligibility remains 0 with identical exclusions; SMA50 still50; 31 listing captures and original CA/market hashes unchanged. Stronger authority unchanged; no automatic successor.",
       "terminal_disposition": "PIT_MINIMUM_VIABLE_EVIDENCE_CLOSURE_COMPLETE"
+    },
+    {
+      "milestone_id": "MARKET_BAR_BASIS_AND_MULTITIMEFRAME_V1",
+      "state": "COMPLETE",
+      "starting_checkpoint": "389cf8c193eb9d35869ce210e5ad0228e5f86f58",
+      "checkpoint": "abc2f2aba34e2d9a86ab8f2fca697d1aadd8d5d1",
+      "candidate_branch": "feature/market-bar-multitimeframe-20261002",
+      "dependencies": [
+        "PIT_MINIMUM_VIABLE_EVIDENCE_CLOSURE_V1"
+      ],
+      "unlocks": [],
+      "authority_effect": "NONE / NON_VOTING_CURRENT_RESEARCH_ONLY",
+      "owner_authorized": true,
+      "owner_override": "OWNER_DIRECTIVE_2026_10_02_MARKET_BAR_BASIS_AND_MULTITIMEFRAME_V1",
+      "source_doc": "Owner directive 2026-10-02; docs/market_bar_basis_multitimeframe_contract.md",
+      "state_history": [
+        "ACTIVE",
+        "COMPLETE"
+      ],
+      "notes": "Canonical D/W/M and one verified non-voting CurrentResearch projection complete. 1560 tests +30 subtests pass. Actual retained market builder:1683 candidates; D/completed W/M=1453/898/560. VNM/HPG/ALT595 historical rows +21 prospective VNM versions;24 complete W/4 M in cohort. Three real financial/tactical adapters show zero other decision-field deltas. Full financial double-build host MemoryError is documented; bounded adapter succeeds. Volume UNKNOWN, real PIT factors0, September calendar unknown, no source/authority/threshold/T0 effects. No automatic successor.",
+      "terminal_disposition": "MARKET_BAR_BASIS_AND_MULTITIMEFRAME_COMPLETE"
     }
   ],
   "blocked_capabilities": [
@@ -2891,5 +2912,5 @@
       "reference_checkpoint": "9575cb04c899696a02b22ba9dfcfed9a4961cf2d"
     }
   ],
-  "successor_disposition": "EVIDENCE_CLOSED_FUTURE_TIME_AND_EXTERNAL_GATES_REMAIN"
+  "successor_disposition": "WAITING_OWNER_AUTHORIZATION_FOR_LATER_ANALYTICAL_PROPOSAL"
 }

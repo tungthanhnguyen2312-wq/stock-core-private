@@ -912,14 +912,19 @@ def build_enrichment_components(
 
     def _historical_context():
         from market_wide_historical_research_context import build_artifact as build
+        from canonical_market_bars import governed_calendar_projection
         universe_resolution = _load(paths["universe_resolution"])
         p3f9b_snapshot = _load(paths["exact_session_snapshot"])
         technical_recovery = _load(paths["technical_recovery"])
         strategy = _load(paths["strategy"])
+        event_artifact = _load(retained_paths["official_event_context"]) or {}
+        events = [e for record in event_artifact.get("records", {}).values() for e in record.get("events", [])]
         if not universe_resolution or not p3f9b_snapshot:
             raise CanonicalPostCloseError("REQUIRED_INPUT_MISSING")
         return build(universe_resolution_artifact=universe_resolution, p3f9b_snapshot=p3f9b_snapshot,
-                     technical_history_recovery_artifact=technical_recovery, strategy_artifact=strategy)
+                     technical_history_recovery_artifact=technical_recovery, strategy_artifact=strategy,
+                     market_calendar=governed_calendar_projection(_load(Path(__file__).parent / "config/governed_trading_session_calendar_v1.json")),
+                     ca_events=events)
 
     def _integrated_investment_decision_product():
         from integrated_investment_decision_product import build_artifact as build
@@ -1190,10 +1195,13 @@ def build_enrichment_components(
         results["opportunity_priority_queue"] = priority_resolution
         res = build(
             session=session,
-            requested_at=requested_at,
+            # The additive bar context needs the actual retained acquisition cutoff.
+            # Existing feature builders above keep their standing calculation inputs.
+            requested_at=p3f9b.get("requested_at") or requested_at,
             technical_structure_artifact=tactical_projection,
             financial_analysis_artifact=financial_session_artifact["financial_analysis_product"],
             financial_peer_materialization_artifact=financial_session_artifact,
+            historical_context_artifact=results.get("historical_context", {}).get("artifact"),
             current_valuation_artifact=evaluated_valuation,
             relative_volume_artifact=relative_volume,
             market_sector_artifact=mkt,
