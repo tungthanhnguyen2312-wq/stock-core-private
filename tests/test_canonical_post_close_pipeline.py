@@ -140,6 +140,8 @@ def test_omitted_session_without_working_dates_fails_closed(capsys, tmp_path, mo
     import daily_execution_environment as environment
     runtime = tmp_path / "runtime"
     runtime.mkdir()
+    # Omitted means no selected retained session in this isolated Phase-A fixture.
+    monkeypatch.setattr(level2, "resolve_level2_session", lambda session: {"session": session})
     # This test isolates the established Phase-A working-dates refusal.  The new environment
     # guard is separately exercised by test_daily_execution_environment.py and must not make
     # this fixture depend on the checkout that happens to run pytest.

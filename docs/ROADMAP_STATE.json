@@ -1,7 +1,7 @@
 {
   "schema_version": "stocklookup_roadmap_execution_state/1.0.0",
   "roadmap_id": "stock-core-private",
-  "roadmap_version": "2026.10.02.6",
+  "roadmap_version": "2026.10.02.7",
   "narrative_authority": {
     "strategic_roadmap": "docs/ROADMAP.md",
     "operational_narrative": "docs/STATE.md",
@@ -15,8 +15,8 @@
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "PIT_MINIMUM_VIABLE_EVIDENCE_CLOSURE_V1",
-    "state": "COMPLETE"
+    "milestone": "MARKET_BAR_BASIS_AND_MULTITIMEFRAME_V1",
+    "state": "ACTIVE"
   },
   "queued_next": [],
   "milestones": [
@@ -2838,6 +2838,25 @@
       "owner_override": "OWNER_DIRECTIVE_2026_10_02_PIT_MINIMUM_VIABLE_EVIDENCE_CLOSURE_V1",
       "notes": "All four bounded evidence gates closed explicitly. DNSE OHLC volume units remain undocumented; current HNX/HOSE status lacks effective membership windows. Retained 257 forward working dates Oct2 2026-Oct1 2027 and integrated existing acceptance with actual known-time/no-gap-stitching guards. Three real CA candidates remain NOT_QUALIFIED with named terms/publication/lifecycle gaps. 11 requests /627318 bytes; no retries/followed redirects. Actual eligibility remains 0 with identical exclusions; SMA50 still50; 31 listing captures and original CA/market hashes unchanged. Stronger authority unchanged; no automatic successor.",
       "terminal_disposition": "PIT_MINIMUM_VIABLE_EVIDENCE_CLOSURE_COMPLETE"
+    },
+    {
+      "milestone_id": "MARKET_BAR_BASIS_AND_MULTITIMEFRAME_V1",
+      "state": "ACTIVE",
+      "starting_checkpoint": "389cf8c193eb9d35869ce210e5ad0228e5f86f58",
+      "checkpoint": null,
+      "candidate_branch": "feature/market-bar-multitimeframe-20261002",
+      "dependencies": [
+        "PIT_MINIMUM_VIABLE_EVIDENCE_CLOSURE_V1"
+      ],
+      "unlocks": [],
+      "authority_effect": "NONE / NON_VOTING_CURRENT_RESEARCH_ONLY",
+      "owner_authorized": true,
+      "owner_override": "OWNER_DIRECTIVE_2026_10_02_MARKET_BAR_BASIS_AND_MULTITIMEFRAME_V1",
+      "source_doc": "Owner directive 2026-10-02; docs/market_bar_basis_multitimeframe_contract.md",
+      "state_history": [
+        "ACTIVE"
+      ],
+      "notes": "Explicit override starts first documented analytical proposal only. D/W/M canonical projection over existing observations; no acquisition, source requalification, indicator expansion or later proposal."
     }
   ],
   "blocked_capabilities": [
@@ -2891,5 +2910,5 @@
       "reference_checkpoint": "9575cb04c899696a02b22ba9dfcfed9a4961cf2d"
     }
   ],
-  "successor_disposition": "EVIDENCE_CLOSED_FUTURE_TIME_AND_EXTERNAL_GATES_REMAIN"
+  "successor_disposition": "OWNER_AUTHORIZED_FIRST_ANALYTICAL_PROPOSAL"
 }

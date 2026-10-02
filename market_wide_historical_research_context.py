@@ -666,6 +666,8 @@ def build_artifact(
     p3f9b_snapshot: Mapping[str, Any],
     technical_history_recovery_artifact: Mapping[str, Any] | None = None,
     strategy_artifact: Mapping[str, Any] | None = None,
+    market_calendar: Mapping[str, Any] | None = None,
+    ca_events: Sequence[Mapping[str, Any]] = (),
 ) -> dict[str, Any]:
     _verify_hashed_identity(universe_resolution_artifact, label="UNIVERSE_RESOLUTION_ARTIFACT")
     _verify_p3f9b_identity(p3f9b_snapshot)
@@ -756,6 +758,17 @@ def build_artifact(
             "in_current_descriptive_scope": True,
             **context,
         }
+        from canonical_market_bars import research_projection
+        cutoff = p3f9b_snapshot.get("requested_at")
+        if cutoff:
+            try:
+                records[ticker]["multi_timeframe"] = research_projection(observations,ticker=ticker,target_session=target_session,
+                    knowledge_cutoff=cutoff,source_identity=recovery_identity if isinstance(override, Mapping) and override.get("state") == "RECOVERED_COMPLETE_TECHNICAL_HISTORY" else p3f9b_snapshot["snapshot_identity"],
+                    calendar_evidence=market_calendar,ca_events=[e for e in ca_events if e.get("ticker") == ticker])
+            except (ValueError, TypeError):
+                records[ticker]["multi_timeframe"]={"status":"UNAVAILABLE","reason":"BAR_INPUT_INTEGRITY_OR_SEMANTICS_INVALID","non_voting":True}
+        else:
+            records[ticker]["multi_timeframe"]={"status":"UNAVAILABLE","reason":"EXPLICIT_KNOWLEDGE_CUTOFF_MISSING","non_voting":True}
 
     in_scope = [record for record in records.values() if record["in_current_descriptive_scope"]]
     status_counts = Counter(record["context_status"] for record in records.values())

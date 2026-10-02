@@ -7,6 +7,7 @@ from datetime import date, timedelta
 from pathlib import Path
 
 import pytest
+from _test_tiers import retained_evidence_root
 
 from field_temporal_contract import stable_id as p3f9b_stable_id
 from market_wide_current_technical_coverage_scaleout import content_identity as recovery_content_identity
@@ -23,7 +24,7 @@ from polymorphic_current_strategy_classification import content_identity as stra
 
 TARGET = "2026-08-24"
 ROOT = Path(__file__).resolve().parents[1]
-OPS = ROOT / "operations-review"
+OPS = retained_evidence_root(ROOT) / "operations-review"
 
 PROTECTED_DESCRIPTIVE_ID = "market_wide_current_descriptive_research:ab08cf56fa4678b86296fc5c1f4cbaf108ec66b2e776d6d4070880bbc0b77ce1"
 PROTECTED_TACTICAL_ID = "watchlist_tactical_entry_classifier:3fc4ed10d487a543887ddd66dc70cd8b5df4907654b302b25f604707e16f75f1"
@@ -284,6 +285,8 @@ def test_strategy_session_mismatch_is_rejected():
         )
 
 
+@pytest.mark.retained_evidence("operations-review/p3f9b-market-wide-exact-session-scaleout-20260824/p3f9b_mva_exact_session_snapshot.json",
+    "operations-review/market-wide-current-technical-coverage-scaleout-v1-20260824/market_wide_current_technical_coverage_recovery_artifact.json")
 def test_real_retained_snapshot_pilot_and_representative_structural_states():
     snapshot = json.loads(
         (OPS / "p3f9b-market-wide-exact-session-scaleout-20260824/p3f9b_mva_exact_session_snapshot.json").read_text(encoding="utf-8")
@@ -329,6 +332,7 @@ def test_real_retained_snapshot_pilot_and_representative_structural_states():
     assert "BASE" in seen or "EARLY_REVERSAL" in seen
 
 
+@pytest.mark.retained_evidence("operations-review/market-wide-historical-research-context-v1-20260824/market_wide_historical_research_context_artifact.json")
 def test_real_market_wide_artifact_replays_and_keeps_authority_closed():
     path = (
         OPS
@@ -357,6 +361,13 @@ def test_real_market_wide_artifact_replays_and_keeps_authority_closed():
     assert am["cross_sectional_historical_comparison"]["status"] == "BLOCKED"
 
 
+@pytest.mark.retained_evidence("operations-review/market-wide-current-descriptive-research-v1-20260824/market_wide_current_descriptive_research_artifact.json",
+    "operations-review/watchlist-tactical-entry-decision-v1-20260824/watchlist_tactical_entry_classifier_artifact.json",
+    "operations-review/current-official-market-universe-integration-v1-20260824/current_official_market_universe_artifact.json",
+    "operations-review/p3f9b-market-wide-exact-session-scaleout-20260824/p3f9b_mva_exact_session_snapshot.json",
+    "operations-review/daily-research-session-operations-v1/2026-08-24/4c6ee6fcfc170824ac4c7ca1fb495cf7774aaebaf7d48975bd681d7e34ab80aa/daily_opportunity_decision_queue_artifact.json",
+    "operations-review/current-decision-prospective-learning-v1-20260824/current_decision_prospective_snapshot_20260821.json",
+    "operations-review/opportunity-decision-prospective-freeze-v1/2026-08-24/4c6ee6fcfc170824ac4c7ca1fb495cf7774aaebaf7d48975bd681d7e34ab80aa/opportunity_decision_prospective_freeze.json")
 def test_governed_2026_08_24_and_2026_08_21_identities_unchanged():
     descriptive = json.loads(
         (OPS / "market-wide-current-descriptive-research-v1-20260824/market_wide_current_descriptive_research_artifact.json").read_text(encoding="utf-8")
