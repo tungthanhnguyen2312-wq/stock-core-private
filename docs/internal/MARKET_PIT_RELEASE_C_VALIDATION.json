@@ -10,7 +10,7 @@
   "compile": "PASS",
   "contract_version": "market_pit_release_c_validation/v1",
   "diff_check": "PASS",
-  "implementation_checkpoint": "HEAD",
+  "implementation_checkpoint": "f7034b89c45699e20abacc83b29eb3e91ff2bdca",
   "latest_focused_market_ca_r7_daily_smoke": {
     "passed": 161
   },
@@ -31,6 +31,7 @@
   "representative_genuine_replays": 0,
   "retained_acceptance": "MARKET_PIT_RELEASE_C_ACCEPTANCE.json",
   "roadmap_drift": "PASS",
+  "roadmap_postcommit": "ALL_CHECKS_PASS",
   "roadmap_precommit_findings": "EXPECTED_DIRTY_WORKTREE_AND_TEMPORARY_HEAD_SENTINEL_WARNINGS_RESOLVED_BY_COMMIT",
   "single_writer": "PASS",
   "source_acquisitions": 0,
