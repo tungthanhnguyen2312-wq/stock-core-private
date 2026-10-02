@@ -58,6 +58,11 @@ if mode == "pass":
     with open(result_path, "w", encoding="utf-8") as fh:
         json.dump({"status": "PASS", "session": "2026-09-24", "daily_status": "COMPLETED"}, fh)
     sys.exit(0)
+if mode == "partial":
+    with open(result_path, "w", encoding="utf-8") as fh:
+        json.dump({"status": "PARTIAL", "session": "2026-10-02", "resume_completed_session": True,
+                   "action_center": {"status": "PARTIAL", "reason": "OWNER_PROFILE_UNAVAILABLE"}}, fh)
+    sys.exit(3)
 sys.exit(7)  # crash_without_result
 '''
 
@@ -138,6 +143,15 @@ def test_a_high_volume_stderr_stream_neither_hangs_nor_loses_lines(tmp_path):
     assert sum(1 for line in logged.splitlines() if line.startswith("FLOOD_STDERR_")) == 3000
     # No result file -> never reported as success, even though the fixture exited 0.
     assert completed.returncode == 1 and "Trạng thái: INTERRUPTED" in completed.stdout
+
+
+@windows_powershell
+def test_partial_completion_reports_component_reason_and_completed_session_resume(tmp_path):
+    completed, _ = _run_launcher(tmp_path, "partial")
+    assert completed.returncode == 3
+    assert "DAILY CHƯA HOÀN TẤT" in completed.stdout
+    assert "Mã lỗi: OWNER_PROFILE_UNAVAILABLE" in completed.stdout
+    assert "phiên đã hoàn tất: CÓ" in completed.stdout
 
 
 def test_launcher_scopes_continue_to_the_native_call_and_keeps_the_canonical_route():

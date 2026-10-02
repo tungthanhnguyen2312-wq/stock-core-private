@@ -127,10 +127,16 @@ if ($summary -and $summary.status -eq 'PASS' -and $exitCode -eq 0) {
     }
 } else {
     Write-Owner ' DAILY CHƯA HOÀN TẤT'
+    if ($summary.action_center.status -eq 'PARTIAL') { $currentPhase = 8 }
+    elseif ($summary.dashboard.status -eq 'FAILED') { $currentPhase = 5 }
     Write-Owner (' Bước lỗi: [{0}/9] {1}' -f $currentPhase, $labels[$currentPhase - 1])
     $explanation = if ($currentPhase -eq 6) { 'Không thể xác minh gói bàn giao AI của phiên đã hoàn tất.' } else { 'Bước xử lý chưa vượt qua kiểm tra bắt buộc. Xem log chi tiết.' }
     Write-Owner (' Lý do: ' + $explanation)
-    $reason = if ($summary) { $summary.reason } else { 'NO_RESULT_FILE_WRITTEN' }
+    $reason = if ($summary.reason) { $summary.reason }
+        elseif ($summary.action_center.reason) { $summary.action_center.reason }
+        elseif ($summary.dashboard.reason) { $summary.dashboard.reason }
+        elseif ($summary) { 'OWNER_DAILY_' + $summary.status }
+        else { 'NO_RESULT_FILE_WRITTEN' }
     Write-Owner (' Mã lỗi: ' + $reason)
     $resume = if ($summary.resume_completed_session) { 'CÓ' } else { 'KHÔNG' }
     Write-Owner (' Có thể tiếp tục từ phiên đã hoàn tất: ' + $resume)

@@ -1487,6 +1487,8 @@ def main(argv: list[str] | None = None) -> int:
                               telemetry=telemetry)
         if result["status"] in ("PARTIAL", "BLOCKED"):
             code = 3
+            result["resume_completed_session"] = bool(_auto_resumable_session(
+                ROOT, args.runtime_root, intended_session=result.get("session") or telemetry.session))
     except OwnerDailyError as exc:
         code = 1
         result = {"status": "FAILED", "failed_step": exc.step, "reason": exc.reason, "hint": exc.hint}
