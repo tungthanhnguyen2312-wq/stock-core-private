@@ -252,3 +252,66 @@ F. telemetry sizing cleanup
 
 The only durable continuation is this file. Preserve distinct pre/post temporal admission,
 unchanged policy/authority and clean-full-rebuild equivalence for later owner-approved slices.
+
+
+## Owner-authorized C/E/F/R continuation — 2026-10-03 (ACTIVE)
+
+The previous stop-after-P2D instruction is superseded by the owner's explicit full
+technical/release authorization for `OWNER_DAILY_PERFORMANCE_AND_PROSPECTIVE_RETENTION_CLOSEOUT_V1`.
+Starting main/origin/main: `238edce670ea02da42e81e8ad3062dad23a4f151`.
+One branch: `perf/owner-daily-performance-retention-20261003`.
+One dedicated workspace-relative worktree: `../worktrees/owner-daily-performance-retention-20261003`.
+Implementation checkpoint: `a4ee8b0f197946a2a62d2d37de090659b1361227` (before this operational record).
+
+C uses `settled_prospective_feedback_contribution/v1` within the ignored derived
+`settled_prospective_feedback_cache/v1` container. Bounds: 8,192 contributions / 64 MiB.
+Complete bounded 20-session price/diagnostic window plus terminal condition proof;
+never age alone or an arbitrary open-condition cutoff. `NOT_SATISFIED_YET` and unresolved
+future first-event order remain uncached. Conditions may settle at a proven first event,
+structural non-evaluability, immutable T0 price failure or immutable structural T0 mismatch.
+Current projected decision/content, container headers, conditions, versions/policies and
+exact dependency sequence/snapshot identities/content digests bind reuse. A terminal
+chain extension can reuse; dependency mutation cannot. `use_settled_cache=False` remains
+the exact full-rebuild oracle. Cache failure/pruning never changes output authority.
+
+E uses `tactical_prospective_shadow_outcome_store/v2`: canonical NDJSON plus a sealed
+session manifest, streamed/fsynced in temporary bytes and promoted after the complete
+validated pass. Outcome objects and outcome_update_id semantics are unchanged. Failed
+or malformed late observations publish nothing. Same-session identical runs reuse;
+conflicts fail closed. V1 loose files are never deleted/rewritten. V1/V2/mixed readers
+retain the V1 filename tie-break, deduplicate exact identities and expose an explicit
+bounded run index (300,000 rows, 50,000 latest observations, 128 MiB encoded latest rows,
+8 MiB per outcome row). Derived legacy compaction is disposable and content-validated;
+corruption/unwritable derived state falls back to originals. Legacy source bytes are
+validated once per index construction; warm reuse suppresses loose JSON decoding.
+Normal maturation does not load historical outcome files at all. Historical queries
+reuse exact indexed offsets. The benchmark's explicit source/output separation keeps
+all derived writes in scratch.
+
+F keeps periodic disk-free/process-memory JSONL sampling, but output-tree recursion
+only occurs at configurable phase boundaries or explicit diagnostic sizing. Existing
+Vietnamese/redirected UI and detailed telemetry remain unchanged.
+
+R replaces whole-snapshot compact hashing with deterministic JSONEncoder.iterencode
+batches, pretty serialization with a same-directory temporary streaming writer plus
+fsync/atomic promotion, and existing-destination read_text comparison with bounded
+raw byte hashing/size. Native pretty newline behavior is preserved. Full T0 content
+remains retained. The engineering memory failure is the additional giant canonical,
+pretty and comparison strings alongside the large Integrated Decision object graph;
+the exact allocation site of the original MemoryError is not claimed. No October 2
+T0 was fabricated or registered. Acceptance is structural/exact, not an arbitrary RSS cap.
+
+Validation so far: 187 integrated directly affected tests passed; Producer's local
+CI-equivalent selection passed 1,956 tests / 30 subtests, 16 Windows platform skips,
+14 deselected before final focused follow-up cases. Seven offline production smoke
+checks passed. Host pip check passed; the existing global installation has ten version
+pin drifts and two importable retired provider packages. It was not mutated. Clean
+remote CI remains the release dependency check.
+
+Benchmarks and PR/main release control are still in progress. Full completed-price
+feedback inventory was stopped at measured helper RSS 6,275,387,392 bytes / available
+system memory 511,578,112 bytes, before any T0 write or publication. Use a bounded
+100-decision / three real immutable-price-session feedback sample instead; do not
+claim a whole-feedback real-corpus wall time. Retention validation uses one complete
+real September 9 snapshot (91,663,871 source bytes). All benchmark output is explicitly
+NON_AUTHORITATIVE_RETAINED_REPLAY_DIAGNOSTIC under ignored scratch.
