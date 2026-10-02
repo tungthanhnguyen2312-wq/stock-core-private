@@ -80,15 +80,19 @@ The acceptance helper initially assumed a `remote.status` field in the reused AI
 the actual launcher had already returned PASS. Saved-result verification was corrected to
 the existing `ALREADY_PUBLISHED_VERIFIED` contract plus exact remote session/SHA; no new run needed.
 
-## P2A — feedback IID classification-summary cache release
+## P2A — RELEASED: feedback IID classification-summary cache
 
 Milestone: `OWNER_DAILY_P2A_FEEDBACK_IID_SUMMARY_CACHE_V1`.
 Release PR: https://github.com/tungthanhnguyen2312-wq/stock-core-private/pull/46
 Starting synchronized main/origin/main: `9914d4f80fafdd1c41e07470b259d39a933927bc`.
 Release branch: `perf/feedback-iid-summary-cache-20261002`.
 Validated code HEAD: `f8af02017252a52debeb4c1eff5902b6d1034c67` (before this continuation-only update).
-Final release HEAD/main are the exact head and merge commits recorded by PR #46;
-release completion requires all four CI jobs green, merge verification and local main sync.
+Released branch HEAD: `b58db05263450419ffb6ee5bf9f572a80f8b3c37`.
+Merged code/main checkpoint: `9c9ec3123ab71c5347727ad433c0da0a734b72cf`.
+PR #46 merged on 2026-10-02; all four PR CI jobs and all four main CI jobs passed.
+Main CI run: https://github.com/tungthanhnguyen2312-wq/stock-core-private/actions/runs/37013903555
+Local main/origin/main verified equal at the merged code checkpoint; only unrelated
+untracked `data/` remained. This final release-record update changes documentation only.
 
 Contract: `integrated_decision_classification_summary/v1`, in the versioned
 `integrated_decision_classification_summary_cache/v1` container at ignored derived path
@@ -147,8 +151,8 @@ Benchmark helper/cache remain ignored scratch, not another strategic document.
 
 ## Checkpoint disposition and exact remaining slices
 
-P2A implementation and validation complete; release through PR #46, green CI and main sync.
-Stop after that release. P0/P1 stay complete. Do not repeat Claude's read-only profile or
+`P2A_RELEASED_COMPLETE`: implementation, validation, PR #46 merge, green PR/main CI
+and main synchronization complete. Stop here. P0/P1 stay complete. Do not repeat Claude's read-only profile or
 start another P2 slice without owner authorization. The exact remaining order is:
 
 B. tactical index/read deduplication
