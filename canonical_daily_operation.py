@@ -871,6 +871,8 @@ def run_canonical_daily_operation(
         registration = register_session_inputs(
             root, resolved_session, artifact_root=artifact_root,
             retained_evidence_root=retained_evidence_root,
+            **({"corporate_frozen_inputs": acquisition["corporate_frozen_inputs"]}
+               if acquisition.get("corporate_frozen_inputs") is not None else {}),
         )
         freeze = validate_and_freeze_completed_session(root, resolved_session)
     except CanonicalPostCloseError as exc:
@@ -1059,6 +1061,8 @@ def run_canonical_daily_operation(
         root, runtime_root, resolved_session,
         producer_run_dir=producer_result.get("run_dir"), output_root=operation_output_root,
         integrated_investment_decision_product=integrated_delivery,
+        **({"current_corporate_knowledge_overlay": enrichment["current_corporate_knowledge_overlay"]["artifact"]}
+           if not historical_compatibility and enrichment.get("current_corporate_knowledge_overlay") else {}),
     )
     # Overlay the already-promoted runtime-served Workspace/Screener bytes with the enriched
     # presentation projection above -- so the same-session Signal Velocity/Flow-Price that

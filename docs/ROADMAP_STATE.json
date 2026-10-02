@@ -15,12 +15,10 @@
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "CURRENT_CORPORATE_EVIDENCE_CURRENCY_V1",
-    "state": "COMPLETE"
+    "milestone": "CURRENT_CORPORATE_CURRENCY_DAILY_ROLLFORWARD_V1",
+    "state": "ACTIVE"
   },
-  "queued_next": [
-    "CURRENT_CORPORATE_CURRENCY_DAILY_ROLLFORWARD_V1"
-  ],
+  "queued_next": [],
   "milestones": [
     {
       "milestone_id": "PROSPECTIVE_EVIDENCE_CONTINUITY_DIAGNOSTICS_V1",
@@ -68,10 +66,10 @@
     },
     {
       "milestone_id": "CURRENT_CORPORATE_CURRENCY_DAILY_ROLLFORWARD_V1",
-      "state": "NEXT",
+      "state": "ACTIVE",
       "starting_checkpoint": "1ae44e84eec1c588d4ef4fda91756da17ed5e044",
       "checkpoint": null,
-      "candidate_branch": null,
+      "candidate_branch": "feature/corporate-currency-daily-rollforward-20261002",
       "dependencies": [
         "CURRENT_CORPORATE_EVIDENCE_CURRENCY_V1"
       ],
@@ -79,11 +77,12 @@
       "authority_effect": "NONE / CURRENT_RESEARCH_EVIDENCE_ONLY",
       "owner_authorized": true,
       "owner_override": "OWNER_DIRECTIVE_2026_10_02_AUTONOMOUS_RELEASE_AND_ROADMAP_ADVANCE",
-      "source_doc": "docs/internal/CURRENT_CORPORATE_CURRENCY_VALIDATION_20261002.md",
+      "source_doc": "docs/internal/CORPORATE_CURRENCY_DAILY_ROLLFORWARD_INTEGRITY_SLICE_20261002.md",
       "state_history": [
-        "NEXT"
+        "NEXT",
+        "ACTIVE"
       ],
-      "notes": "Actual Daily call graph currently only loads latest materialized context; it does not invoke the incremental corporate acquisition runner. Reuse that bounded runner in the canonical stage, one same-civil-date eligible attempt, successful-session reuse, explicit unavailable/budget verdict on failure. Never use new evidence to repair historical T0 or run Daily merely for validation."
+      "notes": "Owner-authorized Release A integration active: bounded rollforward, immutable captured optional inputs, timestamp knowledge cutoff, separate current explanatory product/brief. Release validation and merge remain required. Subsequent B/C program is authorized but must start from released main."
     },
     {
       "milestone_id": "PORTFOLIO_PIT_AND_EXECUTION_AUTHORITY_V1",
@@ -440,7 +439,7 @@
         "PARTIAL"
       ],
       "owner_override": "OWNER_DIRECTIVE_2026_09_29_FINANCIAL_EVIDENCE_COHORT1_TRIGGERED_OCR_V1",
-      "notes": "PARTIAL 2026-09-29. Retained-only H1 image OCR for HPG/PNJ/PVD/VRE; 11 completed page reads, no new CORE fact. Generic balance-sheet heading recognition accepts B\u00c3\u00a1o c\u00c3\u00a1o t\u00c3\u00acnh h\u00c3\u00acnh t\u00c3\u00a0i ch\u00c3\u00adnh. Qualification blocked on OCR unit ambiguity/conflict or non-unique geometry. No network, Vnstock, Daily, Financial V2 pin or successor."
+      "notes": "PARTIAL 2026-09-29. Retained-only H1 image OCR for HPG/PNJ/PVD/VRE; 11 completed page reads, no new CORE fact. Generic balance-sheet heading recognition accepts BÃ¡o cÃ¡o tÃ¬nh hÃ¬nh tÃ i chÃ­nh. Qualification blocked on OCR unit ambiguity/conflict or non-unique geometry. No network, Vnstock, Daily, Financial V2 pin or successor."
     },
     {
       "milestone_id": "FLOW_PRICE_CANONICAL_SOURCE_BACKFILL_AND_PRESENTATION_CORRECTIVE_V1",

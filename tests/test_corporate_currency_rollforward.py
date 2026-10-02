@@ -7,6 +7,40 @@ import corporate_currency_rollforward as r
 NOW = datetime.fromisoformat("2026-10-02T12:00:00+07:00")
 
 
+@pytest.mark.parametrize("observed,published,eligible", [
+    ("2026-10-02T11:59:59+07:00", None, True),
+    ("2026-10-02T12:00:00+07:00", None, True),
+    ("2026-10-02T05:00:00+00:00", None, True),
+    ("2026-10-02T12:00:00.000001+07:00", None, False),
+    ("2026-10-02T11:00:00+07:00", "2026-10-02T12:00:01+07:00", False),
+    ("2026-10-02T12:00:00", None, False),
+    (None, None, False),
+    ("malformed", None, False),
+])
+def test_event_knowledge_timestamp_cutoff(observed, published, eligible):
+    context = {"all_current_universe_event_records": [
+        {"official_observed_at": observed, "published_at": published}]}
+    assert r.context_known_by(context, NOW) is eligible
+
+
+def test_later_retrieval_cannot_enter_earlier_same_date_context(tmp_path, monkeypatch):
+    kwargs, calls = seams(tmp_path, monkeypatch)
+    materialize = kwargs["materialize_fn"]
+    def later_capture(root, acquisition_session):
+        result = materialize(root, acquisition_session)
+        path = root / result["output_path"]
+        context = json.loads(path.read_bytes())
+        context["all_current_universe_event_records"] = [
+            {"official_observed_at": "2026-10-02T12:00:01+07:00"}]
+        path.write_text(json.dumps(context), encoding="utf-8")
+        return result
+    kwargs["materialize_fn"] = later_capture
+    result = run(tmp_path, kwargs)
+    assert result.current_context() is None
+    assert result.receipt()["failure_reason"] == "FUTURE_OR_UNQUALIFIED_EVENT_KNOWLEDGE_TIME"
+    assert calls == []
+
+
 def seams(tmp_path, monkeypatch, *, retained=True, failure=None, prior=None, materialized=True):
     attempt = dict(disposition="SUCCESS", acquisition_session="2026-10-02", acquired_at="2026-10-02T05:38:59+07:00")
     monkeypatch.setattr(r.acquisition, "_load", lambda path: attempt if retained else None)
@@ -20,7 +54,8 @@ def seams(tmp_path, monkeypatch, *, retained=True, failure=None, prior=None, mat
         return dict(attempt=chosen, attempt_identity="attempt:"+session)
     def materialize(root, acquisition_session):
         path = root / (acquisition_session+".json")
-        path.write_text(json.dumps(dict(artifact_identity="context:"+acquisition_session)), encoding="utf-8")
+        path.write_text(json.dumps(dict(artifact_identity="context:"+acquisition_session,
+                                       all_current_universe_event_records=[])), encoding="utf-8")
         return dict(output_path=path.name, artifact_identity="context:"+acquisition_session, materialization_reused=materialized)
     import current_official_event_context
     monkeypatch.setattr(current_official_event_context, "replay", lambda value: None)

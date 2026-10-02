@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 import hashlib
 import json
+import copy
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -20,6 +21,81 @@ VN = ZoneInfo("Asia/Ho_Chi_Minh")
 
 def _bytes(value):
     return json.dumps(value, sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+
+
+def context_known_by(context: dict, cutoff: datetime) -> bool:
+    """All retained event observations must exist by an explicit aware cutoff.
+
+    Acquisition start and the directory date are not knowledge-time proof.
+    Missing observation time fails closed; absent publication time is not inferred.
+    """
+    if cutoff.tzinfo is None:
+        raise ValueError("KNOWLEDGE_TIME_MUST_BE_TIMEZONE_AWARE")
+    events = context.get("all_current_universe_event_records")
+    if not isinstance(events, list):
+        return False
+    excluded = context.get("excluded_noncurrent_or_official_only_event_records", [])
+    if not isinstance(excluded, list):
+        return False
+    events = events + excluded
+    for event in events:
+        if not isinstance(event, dict):
+            return False
+        observed = event.get("official_observed_at")
+        if not observed:
+            return False
+        for value in (observed, event.get("published_at")):
+            if value is None:
+                continue
+            try:
+                stamp = datetime.fromisoformat(value)
+            except (TypeError, ValueError):
+                return False
+            if stamp.tzinfo is None or stamp > cutoff:
+                return False
+    return True
+
+
+def current_product_projection(frozen_product: dict, overlay: dict) -> dict:
+    """Add explanatory knowledge to a separate current product, never its T0.
+
+    The frozen product is copied intact, including action posture and source
+    identities. The current projection gets a distinct identity and temporal lane.
+    """
+    from current_official_event_context import _verify
+    _verify(overlay, "CURRENT_CORPORATE_KNOWLEDGE_OVERLAY")
+    if overlay.get("historical_use_allowed") is not False or overlay.get("non_voting") is not True:
+        raise ValueError("CURRENT_OVERLAY_AUTHORITY_BOUNDARY_INVALID")
+    target = (overlay.get("receipt") or {}).get("target_market_session")
+    product_session = frozen_product.get("as_of_session") or frozen_product.get("session")
+    if product_session != target:
+        raise ValueError("CURRENT_OVERLAY_MARKET_SESSION_MISMATCH")
+    product = copy.deepcopy(frozen_product)
+    product["frozen_market_session_product_identity"] = frozen_product.get("artifact_identity")
+    product["temporal_lane"] = "FROZEN_MARKET_SESSION_DECISION_PLUS_CURRENT_KNOWLEDGE_CORPORATE_OVERLAY"
+    product["current_corporate_knowledge_overlay"] = copy.deepcopy(overlay)
+    records = ((overlay.get("official_event_context") or {}).get("records") or {})
+    for ticker, card in (product.get("cards") or {}).items():
+        card["current_corporate_knowledge"] = {
+            "source_overlay_identity": overlay["artifact_identity"],
+            "knowledge_observed_at": (overlay.get("receipt") or {}).get("knowledge_observed_at"),
+            "freshness_state": (overlay.get("receipt") or {}).get("freshness_state"),
+            "events": copy.deepcopy((records.get(ticker) or {}).get("events") or []),
+            "forward_driver_context": copy.deepcopy((overlay.get("forward_driver_contexts") or {}).get(ticker)),
+            "status": ("UNAVAILABLE" if overlay.get("official_event_context") is None else
+                       "AVAILABLE" if ticker in records else "NO_RETAINED_EVENT_CONTEXT"),
+            "non_voting": True, "historical_use_allowed": False,
+        }
+    product.pop("artifact_identity", None)
+    product.pop("artifact_sha256", None)
+    if product.get("contract_version") == "investment_decision_workspace_projection/v1":
+        from investment_decision_workspace_projection import content_identity
+    elif product.get("contract_version") == "daily_integrated_decision_brief/v1":
+        from daily_integrated_decision_brief import content_identity
+    else:
+        raise ValueError("CURRENT_OVERLAY_PRODUCT_CONTRACT_UNSUPPORTED")
+    product.update(content_identity(product))
+    return product
 
 
 @dataclass(frozen=True)
@@ -34,6 +110,16 @@ class CorporateCurrencyRollforwardResult:
 
     def current_context(self):
         return json.loads(self.current_context_bytes) if self.current_context_bytes else None
+
+    def bind_frozen_market_selection(self, selection: dict | None, failure_reason: str | None = None):
+        receipt = self.receipt()
+        if receipt.get("frozen_market_context") == selection and failure_reason is None:
+            return self
+        receipt["frozen_market_context"] = selection
+        if failure_reason is not None:
+            receipt["frozen_market_selection_failure"] = failure_reason
+        return CorporateCurrencyRollforwardResult(_bytes(receipt), self.current_context_bytes,
+                                                  _bytes(selection) if selection else None)
 
 
 def rollforward(root: Path, *, target_market_session: str, observed_at: datetime,
@@ -89,6 +175,8 @@ def rollforward(root: Path, *, target_market_session: str, observed_at: datetime
             raise ValueError("SELECTED_CONTEXT_IDENTITY_MISMATCH")
         import current_official_event_context
         current_official_event_context.replay(context)
+        if not context_known_by(context, observed):
+            raise ValueError("FUTURE_OR_UNQUALIFIED_EVENT_KNOWLEDGE_TIME")
         return verified, result, raw, known
 
     try:

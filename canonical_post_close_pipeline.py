@@ -617,14 +617,38 @@ def acquire_and_materialize(
             f"{degraded_note}"
         )
     corporate_rollforward = None
+    corporate_frozen_inputs = None
     if enable_corporate_currency_rollforward:
         from corporate_currency_rollforward import rollforward
-        frozen = frozen_optional_session_inputs(root, session).get("event_context")
+        corporate_frozen_inputs = capture_corporate_session_inputs(root, retained_evidence_root, session)
+        frozen = corporate_frozen_inputs.get("event_context")
         corporate_rollforward = rollforward(
             retained_evidence_root, target_market_session=session, observed_at=now,
             allow_acquisition=not no_new_provider_acquisition and not historical_compatibility,
             frozen_market_selection=frozen,
         )
+        # A NEW decision may freeze this exact current selection only when all
+        # knowledge was already available at its existing governed cutoff.
+        # Completed sessions keep their actual lock, including absent optionals.
+        registry = _load(root / "config" / "daily_research_session_input_registry.json") or {}
+        completed = (registry.get("completed_sessions") or {}).get(session) or {}
+        frozen_selection_failure = None
+        if completed.get("status") != "COMPLETED_RETAINED_EVIDENCE":
+            from corporate_currency_rollforward import context_known_by
+            from official_corporate_event_incremental_acquisition import _retain_context
+            current = corporate_rollforward.current_context()
+            acquired_at = corporate_rollforward.receipt().get("acquired_at")
+            cutoff = datetime.fromisoformat(f"{session}T15:00:00+07:00")
+            if current and acquired_at and datetime.fromisoformat(acquired_at) <= cutoff and context_known_by(current, cutoff):
+                out = root / "operations-review" / "corporate-daily-frozen-inputs-v1" / session / (current["artifact_sha256"] + ".json")
+                try:
+                    _retain_context(out, current)
+                    corporate_frozen_inputs["event_context"] = {"path": _rel(root, out), "artifact_identity": current["artifact_identity"]}
+                except Exception as exc:
+                    corporate_frozen_inputs.pop("event_context", None)
+                    frozen_selection_failure = f"{type(exc).__name__}:{exc}"
+        corporate_rollforward = corporate_rollforward.bind_frozen_market_selection(
+            corporate_frozen_inputs.get("event_context"), frozen_selection_failure)
     materialize_kwargs: dict[str, Any] = dict(
         workers=workers, now=now, execution_root=root,
     )
@@ -687,6 +711,7 @@ def acquire_and_materialize(
         "triage_build_result": triage_build_result,
         "official_liquidity_rollforward": official_rollforward,
         "corporate_currency_rollforward": corporate_rollforward,
+        "corporate_frozen_inputs": corporate_frozen_inputs,
         "paths": paths,
         "artifact_root": artifact_root,
         "eligibility": eligibility,
@@ -789,6 +814,21 @@ def build_enrichment_components(
         overlay = {"contract_version": "current_corporate_knowledge_overlay/v1",
                    "receipt": receipt, "official_event_context": corporate_currency_rollforward.current_context(),
                    "non_voting": True, "historical_use_allowed": False}
+        try:
+            from current_corporate_intelligence_axis import build_artifact, build_forward_driver_context, forward_driver_coverage
+            current = overlay["official_event_context"]
+            universe = _load(retained_evidence_root / "operations-review" / "current-official-market-universe-integration-v1-20260824" / "current_official_market_universe_artifact.json")
+            if not current or not universe or universe.get("artifact_identity") != (current.get("source_artifact_identities") or {}).get("official_universe"):
+                raise ValueError("SELECTED_CURRENT_CONTEXT_UNIVERSE_LINEAGE_UNAVAILABLE")
+            axis = build_artifact(official_universe=universe, official_event_context=current,
+                                  root=retained_evidence_root, research_session=current["research_session"],
+                                  include_supplemental_events=False)
+            drivers = {ticker: build_forward_driver_context(record, as_of_session=receipt["acquisition_civil_date"])
+                       for ticker, record in axis["records"].items()}
+            overlay.update(corporate_intelligence_axis=axis, forward_driver_contexts=drivers,
+                           forward_driver_coverage=forward_driver_coverage(list(drivers.values())))
+        except Exception as exc:
+            overlay["corporate_intelligence_unavailable_reason"] = f"{type(exc).__name__}:{exc}"
         overlay = __import__("official_corporate_event_incremental_acquisition")._self_verified(
             overlay, "current_corporate_knowledge_overlay")
         out = output_root / "operations-review" / "current-corporate-knowledge-overlay-v1" / receipt["acquisition_civil_date"] / (overlay["artifact_sha256"] + ".json")
@@ -841,7 +881,8 @@ def build_enrichment_components(
         # current_research_risk_register.py/current_research_decision_packet.py see the same
         # evidence current_corporate_intelligence_axis.py already does.
         evidence_session = official_event_context.get("research_session")
-        supplemental = load_supplemental_retained_events(retained_evidence_root, evidence_session) if evidence_session else None
+        supplemental = (load_supplemental_retained_events(retained_evidence_root, evidence_session)
+                        if evidence_session and corporate_currency_rollforward is None else None)
         return build(
             official_universe=official_universe,
             official_event_context=official_event_context,
@@ -1109,7 +1150,8 @@ def build_enrichment_components(
             from current_corporate_intelligence_axis import build_artifact as build_corporate_intelligence_axis
             official_universe_ci = _load(retained_paths["official_universe"])
             official_event_context_ci = _load(retained_paths["official_event_context"])
-            market_wide_ci = _load(retained_paths["corporate_intelligence"])
+            market_wide_ci = (_load(retained_paths["corporate_intelligence"])
+                              if corporate_currency_rollforward is None else None)
             if official_universe_ci and official_event_context_ci:
                 corporate_intelligence_artifact = build_corporate_intelligence_axis(
                     official_universe=official_universe_ci,
@@ -1117,6 +1159,7 @@ def build_enrichment_components(
                     root=retained_evidence_root,
                     research_session=official_event_context_ci.get("research_session"),
                     market_wide_current_corporate_intelligence=market_wide_ci,
+                    **({"include_supplemental_events": False} if corporate_currency_rollforward is not None else {}),
                 )
         except Exception:
             corporate_intelligence_artifact = None
@@ -1349,6 +1392,7 @@ def run_post_handoff_presentation_projection(
     root: Path, runtime_root: Path, session: str, *,
     producer_run_dir: Path | None = None, output_root: Path | None = None,
     integrated_investment_decision_product: Mapping[str, Any] | None = None,
+    current_corporate_knowledge_overlay: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Additive, presentation-only re-join of the current-product projections (Investment
     Decision Workspace / Screener Master Projection) now that post-handoff observers (Signal
@@ -1393,10 +1437,16 @@ def run_post_handoff_presentation_projection(
         registry = load_registry(root)
         registry_inputs, _metadata = resolve_inputs(root, session, registry)
         presentation_dir = output_root / "operations-review" / "post-handoff-presentation-projection-v1" / session
+        if current_corporate_knowledge_overlay is not None:
+            presentation_dir = (output_root / "operations-review" / "current-corporate-product-projection-v1"
+                                / current_corporate_knowledge_overlay["receipt"]["acquisition_civil_date"]
+                                / current_corporate_knowledge_overlay["artifact_sha256"] / session)
         result = materialize_and_write_current_product_projections(
             root=root, session=session, operation_dir=presentation_dir, registry_inputs=registry_inputs,
             requested_at=vn_now().isoformat(timespec="seconds"), runtime_root_override=runtime_root,
             integrated_investment_decision_product=integrated,
+            **({"current_corporate_knowledge_overlay": current_corporate_knowledge_overlay}
+               if current_corporate_knowledge_overlay is not None else {}),
         )
     except Exception as exc:
         return {"status": "UNAVAILABLE", "session": session, "reason": f"{type(exc).__name__}:{exc}"}
@@ -1417,6 +1467,19 @@ def run_post_handoff_presentation_projection(
             return {"status": "UNAVAILABLE", "session": session,
                     "reason": "PRESENTATION_PROJECTION_LINEAGE_DIVERGED_FROM_SEALED_PRODUCER_WORKSPACE"}
         lineage_status = "VERIFIED_AGAINST_SEALED_PRODUCER_WORKSPACE"
+    current_brief = None
+    if current_corporate_knowledge_overlay is not None and lineage is not None:
+        try:
+            from corporate_currency_rollforward import current_product_projection
+            frozen_brief = _load(lineage["operation_dir"] / "daily_integrated_decision_brief_artifact.json")
+            if frozen_brief is not None:
+                projected_brief = current_product_projection(frozen_brief, current_corporate_knowledge_overlay)
+                brief_path = presentation_dir / "current_knowledge_daily_integrated_decision_brief.json"
+                _write_json(brief_path, projected_brief)
+                current_brief = {"path": _rel(root, brief_path), "artifact_identity": projected_brief["artifact_identity"],
+                                 "frozen_brief_identity": frozen_brief["artifact_identity"]}
+        except Exception as exc:
+            current_brief = {"status": "UNAVAILABLE", "reason": f"{type(exc).__name__}:{exc}"}
     return {
         "status": "COLLECTED", "session": session,
         "contract_version": "post_handoff_presentation_projection/v1",
@@ -1426,6 +1489,8 @@ def run_post_handoff_presentation_projection(
         "screener_master_projection_artifact_identity": (result.get("screener_master_projection") or {}).get("artifact_identity"),
         "signal_velocity_source_identity": new_source_artifacts.get("signal_velocity"),
         "flow_price_divergence_shadow_source_identity": new_source_artifacts.get("flow_price_divergence_shadow"),
+        "current_knowledge_brief": current_brief,
+        "current_corporate_knowledge_overlay_identity": (current_corporate_knowledge_overlay or {}).get("artifact_identity"),
         "lineage_status": lineage_status,
         "authority_boundary": "PRESENTATION_ONLY_JOIN_NOT_A_DECISION_INPUT_NO_ANALYTICAL_RECOMPUTATION_NO_POLICY_MUTATION",
     }
@@ -1535,9 +1600,45 @@ def frozen_optional_session_inputs(root: Path, session: str, *, registry_path: P
     return frozen
 
 
+def capture_corporate_session_inputs(root: Path, retained_root: Path, session: str) -> dict:
+    """Capture optional market inputs once, before downstream materialization.
+
+    Completed sessions retain their original lock. New sessions use immutable
+    content-addressed copies; later discovery cannot change this invocation.
+    Event knowledge is bounded by the existing Integrated Decision 15:00 cutoff.
+    """
+    registry_path = root / "config" / "daily_research_session_input_registry.json"
+    registry = _load(registry_path) or {}
+    completed = (registry.get("completed_sessions") or {}).get(session) or {}
+    if completed.get("status") == "COMPLETED_RETAINED_EVIDENCE":
+        return frozen_optional_session_inputs(root, session)
+    from corporate_currency_rollforward import context_known_by
+    from official_corporate_event_incremental_acquisition import _retain_context
+    from current_official_event_context import _verify
+    cutoff = datetime.fromisoformat(f"{session}T15:00:00+07:00")
+    paths = level2.session_artifact_paths(retained_root, session)
+    selected = {}
+    for key in OPTIONAL_REGISTRY_KEYS:
+        try:
+            artifact = _load(paths[REGISTRY_KEY_TO_LEVEL2_KEY[key]])
+            if not artifact:
+                continue
+            _verify(artifact, "CAPTURED_OPTIONAL_INPUT")
+            if key == "event_context" and not context_known_by(artifact, cutoff):
+                continue
+            out = root / "operations-review" / "corporate-daily-frozen-inputs-v1" / session / (artifact["artifact_sha256"] + ".json")
+            _retain_context(out, artifact)
+        except (ValueError, KeyError, OSError):
+            # Optional source outage/integrity failure does not stop other lanes.
+            continue
+        selected[key] = {"path": _rel(root, out), "artifact_identity": artifact["artifact_identity"]}
+    return selected
+
+
 def register_session_inputs(
     root: Path, session: str, *, registry_path: Path | None = None, artifact_root: Path | None = None,
     retained_evidence_root: Path | None = None,
+    corporate_frozen_inputs: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Write config/daily_research_session_input_registry.json's sessions[session] entry.
 
@@ -1560,6 +1661,16 @@ def register_session_inputs(
     retained_paths = level2.session_artifact_paths(retained_evidence_root or root, session)
     selection: dict[str, dict[str, str]] = {}
     for registry_key, level2_key in REGISTRY_KEY_TO_LEVEL2_KEY.items():
+        if corporate_frozen_inputs is not None and registry_key in OPTIONAL_REGISTRY_KEYS:
+            entry = corporate_frozen_inputs.get(registry_key)
+            if entry is not None:
+                artifact = _load(root / entry["path"])
+                if not artifact or artifact.get("artifact_identity") != entry["artifact_identity"]:
+                    raise CanonicalPostCloseError("CAPTURED_OPTIONAL_INPUT_MUTATION_REJECTED:" + registry_key)
+                from current_official_event_context import _verify
+                _verify(artifact, "CAPTURED_OPTIONAL_INPUT")
+                selection[registry_key] = dict(entry)
+            continue
         artifact_path = retained_paths[level2_key] if level2_key in RETAINED_LEVEL2_INPUT_KEYS else paths[level2_key]
         artifact = _load(artifact_path)
         if artifact is None or not isinstance(artifact.get("artifact_identity"), str):
@@ -1946,9 +2057,11 @@ def run_canonical_post_close(
     acquisition = acquire_and_materialize(
         root, session, runtime_root, workers=workers, now=now,
         enable_official_liquidity_rollforward=enable_official_liquidity_rollforward,
+        enable_corporate_currency_rollforward=enable_corporate_currency_rollforward,
     )
     artifact_root = acquisition["artifact_root"]
-    register_session_inputs(root, session, artifact_root=artifact_root)
+    register_session_inputs(root, session, artifact_root=artifact_root,
+                           corporate_frozen_inputs=acquisition.get("corporate_frozen_inputs"))
     validate_and_freeze_completed_session(root, session)
     # The rich Integrated Decision is an already-governed, exact-session
     # enrichment surface.  Build it before the immutable Daily operation so
@@ -1957,6 +2070,8 @@ def run_canonical_post_close(
     # the producer nor the delivery layer performs a "latest" lookup.
     enrichment = build_enrichment_components(
         root, session, artifact_root=artifact_root, runtime_root=runtime_root,
+        **({"corporate_currency_rollforward": acquisition["corporate_currency_rollforward"]}
+           if acquisition.get("corporate_currency_rollforward") is not None else {}),
     )
     integrated_delivery = (enrichment.get("integrated_investment_decision_product") or {}).get("artifact")
     if not isinstance(integrated_delivery, Mapping) or integrated_delivery.get("session") != session:

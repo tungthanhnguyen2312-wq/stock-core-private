@@ -663,6 +663,7 @@ def materialize_and_write_current_product_projections(
     requested_at: str,
     runtime_root_override: Path | None = None,
     integrated_investment_decision_product: Mapping[str, Any] | None = None,
+    current_corporate_knowledge_overlay: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Top-level entry point: materialize both current products and write them into
     ``operation_dir`` (the same Daily Research Session Operation directory
@@ -705,6 +706,9 @@ def materialize_and_write_current_product_projections(
             runtime_root_override=runtime_root_override,
         )
         workspace = workspace_bundle["workspace"]
+        if current_corporate_knowledge_overlay is not None:
+            from corporate_currency_rollforward import current_product_projection
+            workspace = current_product_projection(workspace, current_corporate_knowledge_overlay)
         snapshot_root = Path(runtime_root_override) if runtime_root_override is not None else runtime_root(root)
         snapshot_path = snapshot_root / "screen_snapshot.csv"
         screener_master = materialize_current_screener_master_projection(

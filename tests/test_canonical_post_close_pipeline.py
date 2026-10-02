@@ -679,6 +679,29 @@ def test_daily_producer_runs_only_after_registration(tmp_path, monkeypatch):
     assert order.index("freeze") < order.index("daily_producer")
 
 
+def test_post_close_propagates_single_corporate_selection(tmp_path, monkeypatch):
+    order = []
+    _patch_full_pipeline_stages(monkeypatch, order, tmp_path)
+    selected = object()
+    seen = {}
+    acquire = cpc.acquire_and_materialize
+    enrich = cpc.build_enrichment_components
+    def acquisition(*args, **kwargs):
+        seen["enabled"] = kwargs["enable_corporate_currency_rollforward"]
+        result = acquire(*args, **kwargs)
+        result["corporate_currency_rollforward"] = selected
+        return result
+    def enrichment(*args, **kwargs):
+        seen["selection"] = kwargs["corporate_currency_rollforward"]
+        return enrich(*args, **kwargs)
+    monkeypatch.setattr(cpc, "acquire_and_materialize", acquisition)
+    monkeypatch.setattr(cpc, "build_enrichment_components", enrichment)
+    cpc.run_canonical_post_close(tmp_path, tmp_path / "runtime", "2026-08-26",
+                                enable_corporate_currency_rollforward=True)
+    assert seen == {"enabled": True, "selection": selected}
+    assert order.count("acquire") == order.count("enrich") == 1
+
+
 # --- 11. prospective collection occurs after Daily Producer and does not change its authority ---
 
 def test_prospective_collection_after_producer_and_does_not_revise_authority(tmp_path, monkeypatch):
@@ -707,6 +730,31 @@ def test_registration_and_freeze_idempotent_on_rerun(tmp_path):
     assert freeze1["status"] == "ALREADY_COMPLETED"
     freeze2 = cpc.validate_and_freeze_completed_session(ROOT, session, registry_path=registry_path)
     assert freeze2["status"] == "ALREADY_COMPLETED"
+
+
+def test_new_corporate_selection_is_captured_before_latest_changes(tmp_path, monkeypatch):
+    import official_corporate_event_incremental_acquisition as incremental
+    session = "2026-10-01"
+    paths = {value: tmp_path / (key + ".json") for key, value in cpc.REGISTRY_KEY_TO_LEVEL2_KEY.items()}
+    monkeypatch.setattr(cpc.level2, "session_artifact_paths", lambda *_: paths)
+    for key in cpc.REQUIRED_REGISTRY_KEYS:
+        paths[cpc.REGISTRY_KEY_TO_LEVEL2_KEY[key]].write_text(json.dumps({"artifact_identity": key + ":identity"}), encoding="utf-8")
+    registry_path = tmp_path / "config" / "daily_research_session_input_registry.json"
+    registry_path.parent.mkdir()
+    registry_path.write_text('{"sessions":{},"completed_sessions":{}}', encoding="utf-8")
+    artifact = incremental._self_verified({"all_current_universe_event_records": [
+        {"official_observed_at": "2026-10-01T14:59:59+07:00"}]}, "current_official_event_context")
+    latest = paths["official_event_context"]
+    latest.write_text(json.dumps(artifact), encoding="utf-8")
+    selection = cpc.capture_corporate_session_inputs(tmp_path, tmp_path, session)
+    captured = (tmp_path / selection["event_context"]["path"]).read_bytes()
+    later = incremental._self_verified({"all_current_universe_event_records": [
+        {"official_observed_at": "2026-10-01T15:00:01+07:00"}]}, "current_official_event_context")
+    latest.write_text(json.dumps(later), encoding="utf-8")
+    registered = cpc.register_session_inputs(tmp_path, session, corporate_frozen_inputs=selection)
+    assert registered["selection"]["event_context"] == selection["event_context"]
+    assert (tmp_path / selection["event_context"]["path"]).read_bytes() == captured
+    assert cpc.capture_corporate_session_inputs(tmp_path, tmp_path, session) == {}
 
 
 def test_completed_optional_selection_cannot_advance_or_ignore_corrupt_lock(tmp_path, monkeypatch):
@@ -1578,6 +1626,52 @@ def test_corporate_rollforward_runs_once_after_snapshot_before_materialization(t
     assert acquired["triage_status"]["status"] == level2.EXACT_SESSION_CLEAN
 
 
+def test_current_post_handoff_brief_consumes_overlay_without_rewriting_frozen_brief(tmp_path, monkeypatch):
+    import canonical_current_product_projections as ccpp
+    import daily_research_session_operations as operations
+    import daily_integrated_decision_brief as brief_module
+    import official_corporate_event_incremental_acquisition as incremental
+    import corporate_currency_rollforward as corporate
+    session = "2026-10-01"
+    sealed = tmp_path / "sealed"
+    sealed.mkdir()
+    brief = {"contract_version": brief_module.CONTRACT_VERSION, "session": session,
+             "research_action_posture": "WAIT"}
+    brief.update(brief_module.content_identity(brief))
+    source = sealed / "daily_integrated_decision_brief_artifact.json"
+    source.write_text(json.dumps(brief), encoding="utf-8")
+    before = source.read_bytes()
+    sources = {"opportunity_context": "opp:1", "security_decision_context": "decision:1",
+               "integrated_investment_decision_product": "integrated:1"}
+    monkeypatch.setattr(cpc, "_sealed_workspace_lineage", lambda *_: {
+        "operation_dir": sealed, "artifact_identity": "workspace:frozen", "source_artifacts": sources})
+    monkeypatch.setattr(operations, "load_registry", lambda *_: {})
+    monkeypatch.setattr(operations, "resolve_inputs", lambda *_: ({}, {}))
+    overlay = incremental._self_verified({"receipt": {"target_market_session": session,
+        "acquisition_civil_date": "2026-10-02"}, "non_voting": True,
+        "historical_use_allowed": False}, "current_corporate_knowledge_overlay")
+    def materialize(**kwargs):
+        assert kwargs["current_corporate_knowledge_overlay"] is overlay
+        product = {"contract_version": "investment_decision_workspace_projection/v1",
+                   "as_of_session": session, "source_artifacts": sources, "cards": {}}
+        projected = corporate.current_product_projection(product, overlay)
+        out = kwargs["operation_dir"]
+        out.mkdir(parents=True)
+        (out / "investment_decision_workspace_projection.json").write_text(json.dumps(projected), encoding="utf-8")
+        return {"status": "MATERIALIZED", "workspace": projected}
+    monkeypatch.setattr(ccpp, "materialize_and_write_current_product_projections", materialize)
+    result = cpc.run_post_handoff_presentation_projection(tmp_path, tmp_path / "runtime", session,
+        producer_run_dir=tmp_path / "producer", integrated_investment_decision_product={"session": session},
+        current_corporate_knowledge_overlay=overlay)
+    assert result["status"] == "COLLECTED"
+    current = json.loads((tmp_path / result["current_knowledge_brief"]["path"]).read_bytes())
+    assert current["current_corporate_knowledge_overlay"] == overlay
+    assert current["research_action_posture"] == "WAIT"
+    assert current["frozen_market_session_product_identity"] == brief["artifact_identity"]
+    assert source.read_bytes() == before
+    assert "current-corporate-product-projection-v1/2026-10-02" in result["current_knowledge_brief"]["path"]
+
+
 def test_knowledge_overlay_has_separate_namespace_and_preserves_market_packet(tmp_path):
     import corporate_currency_rollforward as corporate
     session = "2026-10-01"
@@ -1587,7 +1681,8 @@ def test_knowledge_overlay_has_separate_namespace_and_preserves_market_packet(tm
     receipt = {"acquisition_civil_date": "2026-10-02", "target_market_session": session,
                "refresh_action": "REUSED_CURRENT_SUCCESS", "historical_use_allowed": False}
     result = corporate.CorporateCurrencyRollforwardResult(json.dumps(receipt).encode(), b'{"artifact_identity":"selected"}', None)
-    enriched = cpc.build_enrichment_components(tmp_path, session, corporate_currency_rollforward=result)
+    enriched = cpc.build_enrichment_components(tmp_path, session, artifact_root=tmp_path,
+                                              output_root=tmp_path, corporate_currency_rollforward=result)
     overlay = enriched["current_corporate_knowledge_overlay"]
     assert overlay["status"] == "AVAILABLE"
     assert "current-corporate-knowledge-overlay-v1/2026-10-02" in overlay["path"].as_posix()
