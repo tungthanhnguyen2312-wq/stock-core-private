@@ -133,8 +133,8 @@ def _read_manifest(path):
     return value
 
 
-def _legacy_compaction(root, metrics):
-    originals = sorted((root / "outcome_updates").glob("*.json"))
+def _legacy_compaction(root, metrics, legacy_root=None):
+    originals = sorted(((legacy_root or root) / "outcome_updates").glob("*.json"))
     if len(originals) > MAX_ROWS:
         raise _error("OUTCOME_STORE_INDEX_LIMIT")
     fingerprint = hashlib.sha256()
@@ -201,8 +201,9 @@ class OutcomeStoreIndex:
     Warm discovery parses compact rows through a small number of streaming files.
     Historical per-observation reads seek directly to indexed rows.
     """
-    def __init__(self, root, metrics=None):
+    def __init__(self, root, metrics=None, *, legacy_root=None):
         self.root = Path(root)
+        legacy_root = Path(legacy_root) if legacy_root is not None else self.root
         self.metrics = metrics if metrics is not None else {}
         for key in ("legacy_validation_files_opened", "legacy_validation_bytes", "legacy_json_parses", "legacy_compaction_hits", "shard_files_opened", "shard_rows_parsed"):
             self.metrics.setdefault(key, 0)
@@ -211,12 +212,12 @@ class OutcomeStoreIndex:
         latest_sizes = {}
         shards = []
         try:
-            legacy = _legacy_compaction(self.root, self.metrics)
+            legacy = _legacy_compaction(self.root, self.metrics, legacy_root)
             if legacy is not None:
                 shards.append((legacy, None))
         except OSError:
             # Derived-state write/read failure cannot hide original retained outcomes.
-            originals = sorted((self.root / "outcome_updates").glob("*.json"))
+            originals = sorted((legacy_root / "outcome_updates").glob("*.json"))
             if len(originals) > MAX_ROWS:
                 raise _error("OUTCOME_STORE_INDEX_LIMIT")
             shards.extend((path, "legacy") for path in originals)

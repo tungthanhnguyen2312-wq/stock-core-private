@@ -664,6 +664,13 @@ _SETTLED_MAX_BYTES = 64 * 1024 * 1024
 _SETTLED_MAX_ENTRIES = 8192
 
 
+def _settled_hash(value):
+    # Contributions and selected projected inputs are bounded per-record objects.
+    # Container/snapshot hashing remains streaming; use the standing fast encoder
+    # for these small cache bindings rather than walking every scalar in Python.
+    return hashlib.sha256(_canon(value).encode("utf-8")).hexdigest()
+
+
 class SettledFeedbackCache:
     """Run-scoped derived contributions, validated against current dependency content.
 
@@ -730,13 +737,20 @@ class SettledFeedbackCache:
     def evaluate(self, **kwargs):
         if not self.enabled:
             return _feedback_record(chain=self.chain, snapshots=self.snapshots, **kwargs)
+        inputs = dict(kwargs)
+        # Feedback only reads the T0 container identity; never rehash every ticker
+        # in that container once per decision. The selected record is bound below.
+        if isinstance(inputs.get("artifact"), Mapping):
+            inputs["artifact"] = {k: v for k, v in inputs["artifact"].items() if k != "records"}
+        if isinstance(inputs.get("t0_snapshot"), Mapping):
+            inputs["t0_snapshot"] = {k: v for k, v in inputs["t0_snapshot"].items() if k != "records"}
         binding = {"contract_version": SETTLED_CONTRACT_VERSION,
                    "feedback_contract": CONTRACT_VERSION, "forward_contract": forward_bridge.CONTRACT_VERSION,
                    "condition_contract": retention.CONDITION_CONTRACT_VERSION,
                    "outcome_contract": outcome_measurement.CONTRACT_VERSION,
                    "policy": OUTCOME_POLICY_CONSTANTS, "horizons": forward_bridge.FORWARD_HORIZONS,
-                   "inputs": kwargs}
-        key = retention._hash(binding)
+                   "inputs": inputs}
+        key = _settled_hash(binding)
         entry = self.entries.get(key)
         try:
             if isinstance(entry, dict):
@@ -744,7 +758,7 @@ class SettledFeedbackCache:
                 through = entry["proof"]["terminal_through_session"]
                 if (entry.get("binding_sha256") == key and through in self.chain
                         and entry["proof"] == self._proof(through)
-                        and entry["contribution_identity"] == retention._hash(body)
+                        and entry["contribution_identity"] == _settled_hash(body)
                         and self._terminal(entry["feedback"]) == through):
                     self.retained[key] = entry
                     self._bump("settled_hits")
@@ -757,7 +771,7 @@ class SettledFeedbackCache:
         if through is not None:
             entry = {"contract_version": SETTLED_CONTRACT_VERSION, "binding_sha256": key,
                      "proof": self._proof(through), "feedback": row}
-            entry["contribution_identity"] = retention._hash(entry)
+            entry["contribution_identity"] = _settled_hash(entry)
             self.retained[key] = entry
         return row
 
