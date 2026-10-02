@@ -71,6 +71,7 @@ env:
     tests/test_ai_handoff_source_freshness_matrix.py
     tests/test_ai_handoff_publication.py
     tests/test_tactical_reversal_shadow_collection_operationalization.py
+    tests/test_tactical_outcome_store_v2.py
     tests/test_multi_source_exact_session_resolver.py
     tests/test_multi_source_market_evidence_contract.py
     tests/test_macro_vcb_adapter.py

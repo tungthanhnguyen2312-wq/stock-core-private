@@ -443,37 +443,18 @@ class ProspectiveShadowObservationStore:
         self._write_new_json(path, outcome)
         return self._read_json(path)
 
-    def load_outcome_updates(self, observation_id: str) -> list[dict[str, Any]]:
-        rows = []
-        for path in sorted(self.outcomes_dir.glob("*.json")):
-            event = self._read_json(path)
-            if event.get("observation_id") == observation_id:
-                rows.append(event)
-        return sorted(rows, key=lambda item: str(item.get("evaluation_as_of_session")))
+    def build_outcome_store_index(self, *, metrics=None):
+        from tactical_prospective_outcome_store import OutcomeStoreIndex
+        return OutcomeStoreIndex(self.root, metrics=metrics)
 
-    def latest_outcome_update(self, observation_id: str) -> dict[str, Any] | None:
-        updates = self.load_outcome_updates(observation_id)
-        return updates[-1] if updates else None
+    def load_outcome_updates(self, observation_id: str, *, index=None) -> list[dict[str, Any]]:
+        return (index or self.build_outcome_store_index()).history(observation_id)
 
-    def latest_outcome_updates_by_observation(self) -> dict[str, dict[str, Any]]:
-        """Read every outcome-update file exactly once and return each observation's latest.
+    def latest_outcome_update(self, observation_id: str, *, index=None) -> dict[str, Any] | None:
+        return (index or self.build_outcome_store_index()).latest.get(observation_id)
 
-        ``load_outcome_updates``/``latest_outcome_update`` re-scan the entire outcomes
-        directory per observation_id -- correct but O(observations x outcome files), which
-        becomes prohibitive once a store holds many thousands of each (e.g. a bulk
-        historical-mapping run). This reads the directory once regardless of how many
-        distinct observations it covers.
-        """
-        latest: dict[str, dict[str, Any]] = {}
-        for path in sorted(self.outcomes_dir.glob("*.json")):
-            event = self._read_json(path)
-            observation_id = event.get("observation_id")
-            if not isinstance(observation_id, str):
-                continue
-            current = latest.get(observation_id)
-            if current is None or str(event.get("evaluation_as_of_session")) >= str(current.get("evaluation_as_of_session")):
-                latest[observation_id] = event
-        return latest
+    def latest_outcome_updates_by_observation(self, *, index=None) -> dict[str, dict[str, Any]]:
+        return dict((index or self.build_outcome_store_index()).latest)
 
 
 # --------------------------------------------------------------------------------------
