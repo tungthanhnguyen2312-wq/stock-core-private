@@ -80,34 +80,82 @@ The acceptance helper initially assumed a `remote.status` field in the reused AI
 the actual launcher had already returned PASS. Saved-result verification was corrected to
 the existing `ALREADY_PUBLISHED_VERIFIED` contract plus exact remote session/SHA; no new run needed.
 
-## P2 — NOT STARTED; next bounded milestone portion
+## P2A — feedback IID classification-summary cache release
 
-Only after P1 release and live terminal validation.
-Profile existing feedback (~11m36 pre / ~10m01 post), tactical reversal shadow (~13m13),
-huge serialization/copy, and `_path_size` output-tree sampling. No broad retained-corpus scan.
-Preserve distinct pre/post temporal views, thresholds, postures and authority.
-Incremental contribution/content-addressed reuse must equal a clean full rebuild with no later
-knowledge admitted backward. No daemon/hidden worker/polling loops or authority weakening.
-Avoid second huge JSON serialization: one retained serialization plus atomic byte copy where
-actual artifact bytes are required. P0 prevents truncation; duplicate serialization still remains.
-Resource sizing still recursively samples registered output roots every five seconds; P1 only hides
-console clutter. P2 must measure and remove that high-frequency tree cost while retaining safety gates.
-No new before/after feedback or shadow timings have been claimed.
+Milestone: `OWNER_DAILY_P2A_FEEDBACK_IID_SUMMARY_CACHE_V1`.
+Release PR: https://github.com/tungthanhnguyen2312-wq/stock-core-private/pull/46
+Starting synchronized main/origin/main: `9914d4f80fafdd1c41e07470b259d39a933927bc`.
+Release branch: `perf/feedback-iid-summary-cache-20261002`.
+Validated code HEAD: `f8af02017252a52debeb4c1eff5902b6d1034c67` (before this continuation-only update).
+Final release HEAD/main are the exact head and merge commits recorded by PR #46;
+release completion requires all four CI jobs green, merge verification and local main sync.
 
-## Checkpoint disposition and exact next action
+Contract: `integrated_decision_classification_summary/v1`, in the versioned
+`integrated_decision_classification_summary_cache/v1` container at ignored derived path
+`operations-review/prospective-decision-outcome-feedback-v1/_artifact_summary_cache.json`.
+Entries contain source relative path, size, mtime_ns, current raw-byte SHA-256, four IID
+header fields, record count and deterministic summary identity. Maximum 2,048 entries /
+8 MiB; sorted deterministic serialization, fsync and same-directory atomic replacement.
+Cache failures preserve analytical behavior and previous cache bytes; corrupt entries
+fall back to the existing loader. Historical IID evidence is never rewritten.
 
-`CHECKPOINT_READY_FOR_CONTINUATION`: P0 and P1 complete; P2 remains required.
-The account's weekly window is 95% consumed (5% remaining, no credits), so no large history
-refactor was started. Do not rerun P0 restoration, acquisition, T0 retention or publication.
-The only durable continuation file is this file; temporary acceptance helpers are ignored scratch.
+The cache is non-authoritative. Size/mtime/path alone cannot validate a source: warm
+reuse streams and hashes its current bytes with bounded memory and checks metadata
+stability. Same-size/same-mtime malformed replacement therefore cannot survive on an
+old summary. Exact handoff identity/session and operation identity/session/output IID
+identity, where declared, remain binding; conflicts force the original full parse and
+qualification. Existing qualification policy is unchanged. There is no latest fallback,
+other-session substitution, T0 promotion or policy/authority change.
 
-Start P2 on a new code branch from clean synchronized main. Read only the directly relevant
-existing collectors (`prospective_decision_outcome_feedback.py`, `integrated_decision_prospective_feedback.py`,
-`tactical_reversal_prospective_shadow_collection.py`), their callers in `canonical_post_close_pipeline.py`,
-and `owner_daily_progress.py`. Use exact bounded retained input paths selected by their contracts,
-profiling instrumentation and synthetic fixtures; do not recursively inspect operations-review.
-Measure history reads/repeated contributions, large serialization/copy and output-root sampling
-before choosing caches. Keep pre/post admission distinct. Prove incremental == full rebuild,
-temporal immutability, unchanged shadow/policy/authority, byte-equivalent artifact writes and no
-high-frequency recursive sizing. Release each coherent change through PR/green CI/main sync.
-Update exactly this one continuation with measured before/after and remaining work at the next checkpoint.
+Cold encounters perform exactly one original IID JSON parse, derive the small summary,
+and reuse that parsed artifact for the same call. Warm classification-only encounters
+perform zero IID JSON parses. Legacy GENUINE cases still load the real record payload.
+Both existing IID write locations emit summaries from their in-memory artifacts without
+another IID serialization or parse. Source-byte hashing adds streaming I/O; this release
+avoids decoding and the large object graph, not all reads. Modern immutable-snapshot
+handoffs retain their existing early skip. Pre/post feedback builders remain separate.
+`use_summary_cache=False` and external `cache_metrics` provide the full-parse oracle and
+parse/byte counters without changing feedback output fields or identity.
+
+Validation: 155 hermetic feedback/retention/measurement/bridge/canonical-pipeline tests
+passed, 6 retained/provider cases deselected. The feedback file contains 27 passing
+cases including the required 20-case acceptance matrix: exact cold/warm/full canonical
+output bytes and artifact identity; linked classification-only read suppression; genuine
+payload reads; missing/empty/malformed/current source and size/mtime invalidation;
+same-stat corruption; resealed wrong identity/session; handoff/operation conflicts;
+atomic-write failure; corrupt/oversized cache; in-memory emission; pre/post equivalence;
+and later-session preservation of earlier temporal inventory. Unrelated untracked `data/`
+was preserved. CI uses the existing selected feedback file; no workflow expansion.
+
+Bounded real retained validation used only the September 30 mutable copy at
+`operations-review/canonical-post-close-v1/2026-09-30/enrichment/integrated_investment_decision_product.json`.
+Its source is 171,551,405 bytes, classified CURRENT_VIEW_OF_OLD_SESSION.
+An initial probe selected the immutable-linked original, which correctly retained its
+existing early skip and yielded no inventory; that probe is not a performance claim.
+Fresh-process measurements on the classification-only mutable copy:
+
+| Mode | Wall seconds | Peak RSS bytes | Full IID parses | IID bytes parsed |
+| --- | ---: | ---: | ---: | ---: |
+| Cold | 4.453715 | 966,352,896 | 1 | 171,551,405 |
+| Warm | 0.405221 | 118,857,728 | 0 | 0 |
+
+Avoided: 1 full IID parse / 171,551,405 decoded bytes. Both corpus canonical SHA-256:
+`e1e281292631d4b6a3fe576af664c2de4201f3272a7ed8129f2e5629d8e87ef7`.
+These are bounded discovery measurements, not whole-feedback or ordinary Daily timings.
+No acquisition, Daily, publication, P0/P1 replay or historical T0 rebuild was run.
+Benchmark helper/cache remain ignored scratch, not another strategic document.
+
+## Checkpoint disposition and exact remaining slices
+
+P2A implementation and validation complete; release through PR #46, green CI and main sync.
+Stop after that release. P0/P1 stay complete. Do not repeat Claude's read-only profile or
+start another P2 slice without owner authorization. The exact remaining order is:
+
+B. tactical index/read deduplication
+C. settled feedback contribution cache
+D. single IID serialization + atomic byte copy
+E. tactical outcome persistence redesign
+F. telemetry sizing cleanup
+
+The only durable continuation is this file. Keep distinct pre/post temporal admission,
+unchanged policy/authority and clean-full-rebuild equivalence for later approved slices.
