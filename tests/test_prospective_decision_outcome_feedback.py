@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 
 import pytest
@@ -138,3 +139,182 @@ def test_runner_writes_required_immutable_evidence_views(tmp_path: Path):
         "product_feedback_gap_matrix.json",
     ):
         assert (evidence_dir / name).is_file()
+
+
+def _classification_fixture(tmp_path):
+    root, chain = _fixture_root(tmp_path, sessions=2)
+    path = root / "operations-review/integrated-artifacts" / chain[0] / "integrated_investment_decision_product_artifact.json"
+    value = json.loads(path.read_text())
+    value["requested_at"] = "legacy-unqualified-time"
+    _write(path, value)
+    return root, chain, path
+
+
+def test_full_cold_warm_feedback_bytes_identity_and_parse_counts(tmp_path, monkeypatch):
+    root, chain, path = _classification_fixture(tmp_path)
+    full = feedback.build_feedback_artifact(root, use_summary_cache=False)
+    cold_metrics, warm_metrics = {}, {}
+    cold = feedback.build_feedback_artifact(root, cache_metrics=cold_metrics)
+    original = feedback._load_json
+    reads = []
+
+    def observe(source):
+        reads.append(source.resolve())
+        return original(source)
+
+    monkeypatch.setattr(feedback, "_load_json", observe)
+    warm = feedback.build_feedback_artifact(root, cache_metrics=warm_metrics)
+    assert feedback._canon(full) == feedback._canon(cold) == feedback._canon(warm)
+    assert full["artifact_identity"] == warm["artifact_identity"]
+    assert cold_metrics["full_iid_parses"] == 3
+    assert warm_metrics["full_iid_parses"] == 1
+    assert warm_metrics["summary_hits"] == 2
+    assert path.resolve() not in reads
+    genuine_path = path.parent.parent / chain[1] / path.name
+    assert reads.count(genuine_path.resolve()) == 1
+
+
+@pytest.mark.parametrize("damage", ["empty", "malformed", "missing", "size", "mtime", "same-stat-malformed"])
+def test_current_source_damage_and_metadata_invalidate_summary(tmp_path, damage):
+    root, _, path = _classification_fixture(tmp_path)
+    feedback.discover_prospective_corpus(root)
+    before = path.stat()
+    if damage == "empty":
+        path.write_bytes(b"")
+    elif damage == "malformed":
+        path.write_text("{broken")
+    elif damage == "missing":
+        path.unlink()
+    elif damage == "size":
+        path.write_bytes(path.read_bytes() + b" ")
+    elif damage == "mtime":
+        os.utime(path, ns=(before.st_atime_ns, before.st_mtime_ns + 1_000_000_000))
+    else:
+        path.write_bytes(b"!" + path.read_bytes()[1:])
+        os.utime(path, ns=(before.st_atime_ns, before.st_mtime_ns))
+    metrics = {}
+    cached = feedback.discover_prospective_corpus(root, cache_metrics=metrics)
+    assert cached == feedback.discover_prospective_corpus(root, use_summary_cache=False)
+    assert metrics["full_iid_parses"] == 2  # invalidated linked source plus genuine payload
+
+
+@pytest.mark.parametrize("field", ["session", "artifact_identity"])
+def test_even_resealed_conflicting_summary_cannot_override_handoff(tmp_path, field):
+    root, _, path = _classification_fixture(tmp_path)
+    feedback.discover_prospective_corpus(root)
+    cache_path = root / feedback._SUMMARY_CACHE_PATH
+    cache = json.loads(cache_path.read_text())
+    entry = cache["entries"][feedback._relative(root, path)]
+    entry["header"][field] = "another-session-or-identity"
+    entry.pop("summary_identity")
+    feedback._identity(entry, "iid-summary:", "summary_identity")
+    _write(cache_path, cache)
+    metrics = {}
+    assert feedback.discover_prospective_corpus(root, cache_metrics=metrics) == feedback.discover_prospective_corpus(root, use_summary_cache=False)
+    assert metrics["full_iid_parses"] == 2
+
+
+@pytest.mark.parametrize("declaration", ["handoff_identity", "handoff_session", "operation_session", "operation_identity", "operation_output"])
+def test_changed_exact_declaration_falls_back_without_altering_qualification(tmp_path, declaration):
+    root, chain, path = _classification_fixture(tmp_path)
+    feedback.discover_prospective_corpus(root)
+    if declaration.startswith("handoff"):
+        authority = root / "operations-review/canonical-post-close-v1" / chain[0] / "session_handoff_bundle.json"
+        value = json.loads(authority.read_text())
+        value["integrated_investment_decision_product_identity" if declaration == "handoff_identity" else "session"] = "another-session"
+    else:
+        authority = root / "operations-review/daily-research-session-operations-v1" / chain[0] / "run/run_manifest.json"
+        value = json.loads(authority.read_text())
+        if declaration == "operation_output":
+            value["outputs"] = {"integrated_investment_decision_product": {"artifact_identity": "conflict"}}
+        else:
+            value["market_session" if declaration == "operation_session" else "operation_identity"] = "another-session"
+    _write(authority, value)
+    metrics = {}
+    cached = feedback.discover_prospective_corpus(root, cache_metrics=metrics)
+    assert cached == feedback.discover_prospective_corpus(root, use_summary_cache=False)
+    if declaration != "operation_identity":
+        assert metrics["full_iid_parses"] == 2
+    assert not any(row["artifact_path"] == feedback._relative(root, path) for row in cached["genuine_artifacts"])
+
+
+@pytest.mark.parametrize("corruption", ["malformed", "schema", "identity", "header", "oversized"])
+def test_cache_corruption_is_optional_and_truthfully_reparsed(tmp_path, corruption):
+    root, _, path = _classification_fixture(tmp_path)
+    expected = feedback.discover_prospective_corpus(root)
+    cache_path = root / feedback._SUMMARY_CACHE_PATH
+    value = json.loads(cache_path.read_text())
+    if corruption == "malformed":
+        cache_path.write_text("{broken")
+    elif corruption == "oversized":
+        cache_path.write_bytes(b" " * (feedback._SUMMARY_CACHE_MAX_BYTES + 1))
+    else:
+        if corruption == "schema":
+            value["contract_version"] = "old/version"
+        else:
+            entry = value["entries"][feedback._relative(root, path)]
+            if corruption == "identity":
+                entry["summary_identity"] = "wrong"
+            else:
+                entry["header"] = []
+                entry.pop("summary_identity")
+                feedback._identity(entry, "iid-summary:", "summary_identity")
+        _write(cache_path, value)
+    metrics = {}
+    assert feedback.discover_prospective_corpus(root, cache_metrics=metrics) == expected
+    assert metrics["full_iid_parses"] >= 2
+
+
+def test_atomic_cache_replace_failure_preserves_previous_bytes_and_output(tmp_path, monkeypatch):
+    root, _, path = _classification_fixture(tmp_path)
+    feedback.discover_prospective_corpus(root)
+    cache_path = root / feedback._SUMMARY_CACHE_PATH
+    previous = cache_path.read_bytes()
+    path.write_bytes(path.read_bytes() + b" ")
+
+    def fail_replace(*args):
+        raise OSError("injected atomic replace failure")
+
+    monkeypatch.setattr(feedback.os, "replace", fail_replace)
+    assert feedback.discover_prospective_corpus(root) == feedback.discover_prospective_corpus(root, use_summary_cache=False)
+    assert cache_path.read_bytes() == previous
+    assert not list(cache_path.parent.glob(".iid-summary-*.tmp"))
+
+
+def test_writer_emits_from_memory_without_iid_parse(tmp_path, monkeypatch):
+    root, _, path = _classification_fixture(tmp_path)
+    artifact = json.loads(path.read_text())
+    original = feedback._load_json
+
+    def no_iid_parse(source):
+        assert source != path
+        return original(source)
+
+    monkeypatch.setattr(feedback, "_load_json", no_iid_parse)
+    feedback.retain_iid_classification_summary(root, path, artifact)
+    metrics = {}
+    feedback.discover_prospective_corpus(root, cache_metrics=metrics)
+    assert metrics["summary_hits"] == 1
+
+
+def test_pre_post_handoff_and_later_session_preserve_earlier_temporal_truth(tmp_path):
+    root, chain, path = _classification_fixture(tmp_path)
+    handoff = root / "operations-review/canonical-post-close-v1" / chain[0] / "session_handoff_bundle.json"
+    saved = handoff.read_bytes()
+    handoff.unlink()
+    # The replay remains classification-only before the exact handoff exists.
+    pre = feedback.build_feedback_artifact(root, use_summary_cache=False)
+    assert feedback._canon(pre) == feedback._canon(feedback.build_feedback_artifact(root))
+    assert feedback._canon(pre) == feedback._canon(feedback.build_feedback_artifact(root))
+    handoff.write_bytes(saved)
+    post = feedback.build_feedback_artifact(root, use_summary_cache=False)
+    assert feedback._canon(post) == feedback._canon(feedback.build_feedback_artifact(root))
+    assert feedback._canon(post) == feedback._canon(feedback.build_feedback_artifact(root))
+    earlier = feedback.discover_prospective_corpus(root)["inventory"]
+    _fixture_root(root, sessions=3)
+    artifact = json.loads(path.read_text())
+    artifact["requested_at"] = "legacy-unqualified-time"
+    _write(path, artifact)
+    later = feedback.discover_prospective_corpus(root)
+    assert [row for row in later["inventory"] if row["decision_session"] in chain] == earlier
+    assert later == feedback.discover_prospective_corpus(root, use_summary_cache=False)

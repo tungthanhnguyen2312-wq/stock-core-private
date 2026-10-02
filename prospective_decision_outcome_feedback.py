@@ -11,7 +11,9 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import statistics
+import tempfile
 from collections import Counter, defaultdict
 from pathlib import Path
 from typing import Any, Mapping, Sequence
@@ -46,6 +48,12 @@ OUTCOME_POLICY_CONSTANTS = {
 }
 REQUIRED_TICKERS = ("FPT", "HPG", "SSI", "QNS", "PVD", "PNJ", "VNM")
 _GENUINE_CONTEXT = "DAILY_PRODUCER_RETAINED_COMPLETED_SESSION"
+SUMMARY_CONTRACT_VERSION = "integrated_decision_classification_summary/v1"
+SUMMARY_CACHE_CONTRACT_VERSION = "integrated_decision_classification_summary_cache/v1"
+_SUMMARY_CACHE_PATH = Path("operations-review/prospective-decision-outcome-feedback-v1/_artifact_summary_cache.json")
+_SUMMARY_CACHE_MAX_BYTES = 8 * 1024 * 1024
+_SUMMARY_CACHE_MAX_ENTRIES = 2048
+_SUMMARY_FIELDS = ("artifact_identity", "session", "requested_at", "contract_version")
 
 
 class ProspectiveFeedbackError(ValueError):
@@ -74,6 +82,130 @@ def _relative(root: Path, path: Path) -> str:
         return path.resolve().relative_to(root.resolve()).as_posix()
     except ValueError:
         return str(path)
+
+
+def _source_fingerprint(path: Path) -> dict[str, Any] | None:
+    """Validate current bytes with bounded memory; file metadata alone is never proof."""
+    try:
+        before = path.stat()
+        digest = hashlib.sha256()
+        with path.open("rb") as source:
+            for block in iter(lambda: source.read(1024 * 1024), b""):
+                digest.update(block)
+        after = path.stat()
+        if (before.st_size, before.st_mtime_ns) != (after.st_size, after.st_mtime_ns):
+            return None
+        return {"size": after.st_size, "mtime_ns": after.st_mtime_ns, "sha256": digest.hexdigest()}
+    except OSError:
+        return None
+
+
+def _read_summary_cache(root: Path) -> dict[str, Any]:
+    try:
+        path = root / _SUMMARY_CACHE_PATH
+        if path.stat().st_size > _SUMMARY_CACHE_MAX_BYTES:
+            return {}
+        cache = _load_json(path)
+        entries = (cache or {}).get("entries")
+        if (cache or {}).get("contract_version") != SUMMARY_CACHE_CONTRACT_VERSION or not isinstance(entries, dict):
+            return {}
+        return entries if len(entries) <= _SUMMARY_CACHE_MAX_ENTRIES else {}
+    except (OSError, UnicodeError):
+        return {}
+
+
+def _write_summary_cache(root: Path, entries: Mapping[str, Any]) -> None:
+    """Best-effort, bounded atomic derived state; analytical results never depend on writes."""
+    temporary = None
+    try:
+        payload = _canon({"contract_version": SUMMARY_CACHE_CONTRACT_VERSION,
+                          "entries": dict(sorted(entries.items())[:_SUMMARY_CACHE_MAX_ENTRIES])}).encode("utf-8")
+        if len(payload) > _SUMMARY_CACHE_MAX_BYTES:
+            return
+        path = root / _SUMMARY_CACHE_PATH
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with tempfile.NamedTemporaryFile(dir=path.parent, prefix=".iid-summary-", suffix=".tmp", delete=False) as out:
+            temporary = Path(out.name)
+            out.write(payload)
+            out.flush()
+            os.fsync(out.fileno())
+        os.replace(temporary, path)
+    except (OSError, TypeError, ValueError):
+        pass
+    finally:
+        if temporary is not None:
+            try:
+                temporary.unlink(missing_ok=True)
+            except OSError:
+                pass
+
+
+def _make_summary(rel: str, fingerprint: Mapping[str, Any], artifact: Mapping[str, Any]) -> dict[str, Any]:
+    return _identity({"contract_version": SUMMARY_CONTRACT_VERSION, "source_path": rel,
+                      "source": dict(fingerprint), "header": {key: artifact.get(key) for key in _SUMMARY_FIELDS},
+                      "record_count": len(artifact.get("records") or {})}, "iid-summary:", "summary_identity")
+
+
+def _valid_summary(entry: Any, rel: str, fingerprint: Any, link: Any) -> bool:
+    if not isinstance(entry, dict) or fingerprint is None:
+        return False
+    unsigned = {key: value for key, value in entry.items() if key != "summary_identity"}
+    try:
+        if entry.get("summary_identity") != _identity(unsigned, "iid-summary:", "summary_identity")["summary_identity"]:
+            return False
+    except (TypeError, ValueError):
+        return False
+    header = entry.get("header")
+    count = entry.get("record_count")
+    if (entry.get("contract_version") != SUMMARY_CONTRACT_VERSION or entry.get("source_path") != rel
+            or entry.get("source") != fingerprint or not isinstance(header, dict)
+            or set(header) != set(_SUMMARY_FIELDS) or type(count) is not int or count < 0):
+        return False
+    if any(value is not None and not isinstance(value, str) for value in header.values()):
+        return False
+    if link is not None:
+        if header["artifact_identity"] != link["artifact_identity"] or header["session"] != link["session"]:
+            return False
+        manifest = (link.get("operation") or {}).get("manifest")
+        if not isinstance(manifest, Mapping):
+            return False
+        if manifest.get("operation_identity") != link["operation_identity"] or manifest.get("market_session") != header["session"]:
+            return False
+        outputs = manifest.get("outputs") or {}
+        if not isinstance(outputs, Mapping):
+            return False
+        declared = outputs.get("integrated_investment_decision_product")
+        if isinstance(declared, Mapping):
+            declared = declared.get("artifact_identity") or declared.get("identity")
+        if declared is not None and declared != header["artifact_identity"]:
+            return False
+    return True
+
+
+def retain_iid_classification_summary(root: str | Path, path: Path, artifact: Mapping[str, Any]) -> None:
+    """Emit from the writer's existing in-memory artifact, without decoding or serializing the IID."""
+    repository = Path(root)
+    fingerprint = _source_fingerprint(path)
+    if fingerprint is None or not artifact:
+        return
+    try:
+        entries = _read_summary_cache(repository)
+        rel = _relative(repository, path)
+        entries[rel] = _make_summary(rel, fingerprint, artifact)
+        _write_summary_cache(repository, entries)
+    except (TypeError, ValueError):
+        pass
+
+
+def _load_iid(path: Path, metrics: dict[str, int] | None) -> dict[str, Any] | None:
+    if metrics is not None:
+        metrics["full_iid_parses"] = metrics.get("full_iid_parses", 0) + 1
+        try:
+            size = path.stat().st_size
+        except OSError:
+            size = 0
+        metrics["full_iid_bytes_parsed"] = metrics.get("full_iid_bytes_parsed", 0) + size
+    return _load_json(path)
 
 
 def _operation_manifests(root: Path) -> dict[str, dict[str, Any]]:
@@ -178,24 +310,53 @@ def _qualify_linked_artifact(link: Mapping[str, Any], artifact: Mapping[str, Any
     }
 
 
-def discover_prospective_corpus(root: str | Path, *, payload_projection=None) -> dict[str, Any]:
+def discover_prospective_corpus(root: str | Path, *, payload_projection=None,
+                                use_summary_cache: bool = True, cache_metrics: dict[str, int] | None = None) -> dict[str, Any]:
     """Inventory every retained integrated-decision artifact without promoting copies or replays."""
     repository = Path(root)
+    if cache_metrics is not None:
+        for key in ("full_iid_parses", "full_iid_bytes_parsed", "summary_hits", "avoided_iid_bytes"):
+            cache_metrics.setdefault(key, 0)
     operations = _operation_manifests(repository)
     handoffs = _handoff_bundles(repository, operations)
     links = {item["artifact_path"]: item for item in handoffs}
     linked_identities = {item["artifact_identity"] for item in handoffs}
     inventory: list[dict[str, Any]] = []
     genuine: list[dict[str, Any]] = []
+    entries = _read_summary_cache(repository) if use_summary_cache else {}
+    retained_entries: dict[str, Any] = {}
     for path in _artifact_paths(repository):
         link = links.get(path.resolve())
         # Modern working views cannot be T0 authorities; their immutable snapshots are read below.
         if link is not None and link.get("prospective_snapshot_identity"):
             continue
-        artifact = _load_json(path)
+        rel = _relative(repository, path)
+        fingerprint = _source_fingerprint(path) if use_summary_cache else None
+        entry = entries.get(rel)
+        summary_hit = use_summary_cache and _valid_summary(entry, rel, fingerprint, link)
+        # A summary can never replace the record payload of a genuine legacy authority.
+        if summary_hit and link is not None and _qualify_linked_artifact(link, entry["header"])["status"] == GENUINE:
+            summary_hit = False
+        if summary_hit:
+            artifact = entry["header"]
+            record_count = entry["record_count"]
+            retained_entries[rel] = entry
+            if cache_metrics is not None:
+                cache_metrics["summary_hits"] = cache_metrics.get("summary_hits", 0) + 1
+                cache_metrics["avoided_iid_bytes"] = cache_metrics.get("avoided_iid_bytes", 0) + fingerprint["size"]
+        else:
+            artifact = _load_iid(path, cache_metrics)
+            if artifact:
+                record_count = len(artifact.get("records") or {})
+                if fingerprint is not None:
+                    try:
+                        current = path.stat()
+                        if (current.st_size, current.st_mtime_ns) == (fingerprint["size"], fingerprint["mtime_ns"]):
+                            retained_entries[rel] = _make_summary(rel, fingerprint, artifact)
+                    except (OSError, TypeError, ValueError):
+                        pass
         if not artifact:
             continue
-        rel = _relative(repository, path)
         link = links.get(path.resolve())
         if link is not None:
             if link.get("prospective_snapshot_identity"):
@@ -229,12 +390,15 @@ def discover_prospective_corpus(root: str | Path, *, payload_projection=None) ->
         row = {
             "artifact_path": rel, "artifact_identity": artifact.get("artifact_identity"),
             "contract_version": artifact.get("contract_version"), "decision_session": artifact.get("session"),
-            "artifact_observed_at": artifact.get("requested_at"), "record_count": len(artifact.get("records") or {}),
+            "artifact_observed_at": artifact.get("requested_at"), "record_count": record_count,
             "classification": classification, "temporal_qualification": temporal,
         }
         inventory.append(row)
         if classification == GENUINE:
             genuine.append({"artifact": payload_projection(artifact) if payload_projection else artifact, "artifact_path": rel, "temporal": temporal})
+        del artifact
+    if use_summary_cache and retained_entries != entries:
+        _write_summary_cache(repository, retained_entries)
     return {
         "contract_version": TEMPORAL_CONTRACT_VERSION,
         "inventory": sorted(inventory, key=lambda row: (str(row["decision_session"]), row["artifact_path"])),
@@ -558,9 +722,11 @@ def _failed_setups(records: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]
     return findings
 
 
-def build_feedback_artifact(root: str | Path, *, resolved_context: dict | None = None) -> dict[str, Any]:
+def build_feedback_artifact(root: str | Path, *, resolved_context: dict | None = None,
+                            use_summary_cache: bool = True, cache_metrics: dict[str, int] | None = None) -> dict[str, Any]:
     """Build a deterministic retained-only feedback artifact for the local corpus."""
-    corpus = discover_prospective_corpus(root, payload_projection=_project_artifact_for_feedback)
+    corpus = discover_prospective_corpus(root, payload_projection=_project_artifact_for_feedback,
+                                        use_summary_cache=use_summary_cache, cache_metrics=cache_metrics)
     modern = _modern_snapshot_candidates(root)
     legacy_chain = corpus["qualified_session_chain"]
     legacy_snapshots = retained_session_snapshots(root, legacy_chain)

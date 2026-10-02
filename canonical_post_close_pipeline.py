@@ -873,6 +873,9 @@ def build_enrichment_components(
             artifact = fn()
             out = enrichment_output_path(output_root, session, name)
             _write_json(out, artifact)
+            if name == "integrated_investment_decision_product":
+                from prospective_decision_outcome_feedback import retain_iid_classification_summary
+                retain_iid_classification_summary(output_root, out, artifact)
             results[name] = {"status": "BUILT", "artifact": artifact, "path": out}
             return
         except Exception as exc:  # noqa: BLE001 -- deliberately broad: component-local isolation
@@ -1233,6 +1236,8 @@ def build_enrichment_components(
         if res.get("session") != session:
             raise CanonicalPostCloseError(f"INTEGRATED_DECISION_SESSION_MISMATCH:expected={session}:observed={res.get('session')}")
         _write_json(paths["integrated_investment_decision_product"], res)
+        from prospective_decision_outcome_feedback import retain_iid_classification_summary
+        retain_iid_classification_summary(output_root, paths["integrated_investment_decision_product"], res)
         return res
 
     _attempt("financial_momentum", "financial_momentum", _financial_momentum)
