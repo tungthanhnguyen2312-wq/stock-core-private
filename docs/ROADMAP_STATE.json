@@ -2822,7 +2822,7 @@
       "state": "COMPLETE",
       "narrative_disposition": "COMPLETE_FOUR_GATES_SOURCE_SCOPED_TERMINAL",
       "starting_checkpoint": "8463a2fc24b87cc38bd8c7a57c0f78685f664e41",
-      "checkpoint": "HEAD",
+      "checkpoint": "86f027da4c8d1b1fb167ea50ebffcb015a3cb16c",
       "candidate_branch": "feature/pit-minimum-evidence-closure-20261002",
       "dependencies": [
         "MARKET_DATA_PIT_FOUNDATION_AND_DAILY_OPERATIONALIZATION_V1"
