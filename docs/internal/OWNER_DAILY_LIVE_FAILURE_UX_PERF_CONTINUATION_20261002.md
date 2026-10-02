@@ -46,9 +46,11 @@ Local evidence under the existing workspace `run-logs/` (one level above Produce
 - `stock_lookup_daily_20261002_resume.result.json`, `.progress.jsonl`, `.log`, `.execution.proof.json`
 Preserve original `stock_lookup_daily_20261002_154250.*`.
 
-## P1 — IMPLEMENTED, RELEASE VALIDATION IN PROGRESS
+## P1 — RELEASED AND LIVE PASS
 
-Branch: `fix/owner-daily-vietnamese-terminal-20261002`, directly above P0 main.
+PR #44: https://github.com/tungthanhnguyen2312-wq/stock-core-private/pull/44
+P1 code merge/main: `1fe92ca64c49a87ac1ceef10295035ac1faddb9d`; local main synced.
+All four PR and main CI jobs green. Source branch `fix/owner-daily-vietnamese-terminal-20261002` retained.
 `stocklookup.ps1 daily` shares the existing Desktop PowerShell launcher; Python orchestration is unchanged.
 Nine Vietnamese rows; UTF-8 console/native/Python/log encoding; BOM on PowerShell source for PS 5.1,
 normal UTF-8 log bytes. Native stderr text and exit codes preserved.
@@ -62,8 +64,21 @@ result names, each result <=2 MiB and same-name sidecar <=16 MiB; session/run bi
 Replay/failed/corrupt/nonfinite timing evidence excluded. No history means `đang ước tính`.
 Denominator ETA uses real measured work; a heartbeat cannot invent ETA. Completed phases show elapsed.
 Vietnamese PASS/FAILED views include total/session/components or phase/explanation/code/resumability/log.
-Tests: 32 progress/real Windows launcher passed; 136 workflow passed; 15 entry-route/smoke checks passed.
-PR CI and clean-main live launcher acceptance remain to finish before P2.
+Tests: 33 progress/real Windows launcher passed; 136 workflow passed; 15 entry-route/smoke checks passed.
+The real production PowerShell launcher (no replacement entry script) ran with explicit
+`-ReplayCompletedSession 2026-10-02 -NoPause` and returned PASS in 15.181 seconds.
+All nine phase rows and Vietnamese final screen validated; UTF-8 console/log decode cleanly;
+no replacement characters, ANSI, raw helper commands or resource clutter in redirected output.
+Daily reused; Producer NO_CHANGE; Dashboard/AI publication and Action Center reused; owner view opened.
+Retained operation/manifest/registry hashes still match the pre-P0 proof. T0 remains unchanged/unavailable.
+Separate harmless Windows PTY fixture exercised cursor-based in-place updates successfully (exit 0).
+Live result/log: workspace `run-logs/stock_lookup_daily_20261002_191840.result.json` and `.log`;
+sidecar `.progress.jsonl`; capture `stock_lookup_daily_20261002_p1_console.txt`;
+acceptance `stock_lookup_daily_20261002_p1_acceptance.proof.json`;
+retention comparison `stock_lookup_daily_20261002_retention.p1.after.json`.
+The acceptance helper initially assumed a `remote.status` field in the reused AI shape;
+the actual launcher had already returned PASS. Saved-result verification was corrected to
+the existing `ALREADY_PUBLISHED_VERIFIED` contract plus exact remote session/SHA; no new run needed.
 
 ## P2 — NOT STARTED; next bounded milestone portion
 
@@ -79,4 +94,20 @@ Resource sizing still recursively samples registered output roots every five sec
 console clutter. P2 must measure and remove that high-frequency tree cost while retaining safety gates.
 No new before/after feedback or shadow timings have been claimed.
 
-Update exactly this one durable continuation with final release/live facts and exact next action.
+## Checkpoint disposition and exact next action
+
+`CHECKPOINT_READY_FOR_CONTINUATION`: P0 and P1 complete; P2 remains required.
+The account's weekly window is 95% consumed (5% remaining, no credits), so no large history
+refactor was started. Do not rerun P0 restoration, acquisition, T0 retention or publication.
+The only durable continuation file is this file; temporary acceptance helpers are ignored scratch.
+
+Start P2 on a new code branch from clean synchronized main. Read only the directly relevant
+existing collectors (`prospective_decision_outcome_feedback.py`, `integrated_decision_prospective_feedback.py`,
+`tactical_reversal_prospective_shadow_collection.py`), their callers in `canonical_post_close_pipeline.py`,
+and `owner_daily_progress.py`. Use exact bounded retained input paths selected by their contracts,
+profiling instrumentation and synthetic fixtures; do not recursively inspect operations-review.
+Measure history reads/repeated contributions, large serialization/copy and output-root sampling
+before choosing caches. Keep pre/post admission distinct. Prove incremental == full rebuild,
+temporal immutability, unchanged shadow/policy/authority, byte-equivalent artifact writes and no
+high-frequency recursive sizing. Release each coherent change through PR/green CI/main sync.
+Update exactly this one continuation with measured before/after and remaining work at the next checkpoint.
