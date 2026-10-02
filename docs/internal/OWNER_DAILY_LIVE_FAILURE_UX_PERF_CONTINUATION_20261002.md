@@ -149,17 +149,66 @@ These are bounded discovery measurements, not whole-feedback or ordinary Daily t
 No acquisition, Daily, publication, P0/P1 replay or historical T0 rebuild was run.
 Benchmark helper/cache remain ignored scratch, not another strategic document.
 
+## P2D — single IID serialization + atomic byte copy
+
+Milestone: `OWNER_DAILY_P2D_SINGLE_IID_SERIALIZATION_V1`.
+Release PR: https://github.com/tungthanhnguyen2312-wq/stock-core-private/pull/49
+Starting main: `d956057e8706ec04e29dd392073820abe8ce3f9d`.
+Release branch: `perf/single-iid-serialization-20261002`.
+Validated code HEAD: `25f56f77e7cb3ae9d74a9df1034b5382ab66ed39`.
+Release gate: all four PR CI jobs green, exact-head merge, main verification and synchronization.
+Final merge/head are recorded by PR #49. This record enters main with that gated release.
+
+Removed only the second IID `_write_json` call in enrichment `_attempt`. The Integrated
+Decision builder still produces its standing content identity, then the canonical retained
+artifact serializes once with exactly the existing UTF-8 / sorted / indent-2 / trailing-LF
+bytes. A private, current-build write receipt captures raw-byte SHA-256 and byte count
+from the chunks being written, plus exact path/session/contract/declared content identity.
+No receipt is reused across builds, no giant JSON is reparsed to authorize copy, and no
+extra full serialization computes the receipt. Existing downstream content-identity checks
+remain unchanged; the builder's contract, session and identity/digest declaration are checked.
+
+The enrichment working view receives actual JSON bytes from that exact successful write.
+Copy streams at most 1 MiB per read into a unique destination-directory temporary file,
+checks source metadata before/after, byte count and raw SHA-256 against the write receipt,
+flushes/fsyncs, closes handles and atomically replaces the view. Source stays untouched.
+Missing/empty/changed/other-session/unbound source, partial copy, fsync or replace failure
+leaves a valid previous view intact and removes the temporary file. The standing optional
+component failure result retains its explicit reason/PRIOR_AS_OF_CONTEXT or UNAVAILABLE
+status; it never reports BUILT after failed promotion. There is no latest substitution,
+symlink/hardlink or pointer-only working view.
+
+Both source and destination P2A summaries still emit from the in-memory artifact, with
+independent correct path/stat metadata and the same raw-byte digest. P2A is not redesigned.
+Operation/manifest declarations, coverage, postures, identity, T0, Brief, AI handoff and
+Current Research authority are unchanged.
+
+Validation: 513 affected hermetic tests passed; 6 retained/provider cases deselected.
+Includes 25 new focused cases covering the actual enrichment path, single serialization,
+copy byte/JSON/content-identity equivalence, preserved declarations and both summaries,
+bounded reads, canonical write failures, bad source/receipt/session/identity/contract,
+partial copy/atomic replacement/fsync failures and temp cleanup. Existing P0 zero-byte,
+truncation/atomic-write and AI handoff resolver/publication regressions passed. The existing
+CI selection adds only the new directly relevant test file.
+
+Cheap bounded synthetic fixture: 2,161,128 bytes. Old logical path: 2 file serializations;
+new: 1 file serialization + streaming byte copy. All four old/new canonical/view SHA-256:
+`7fce011beef18b5d978ab887b69e7ac754d032c9367175e07ca9d2fba6661747`.
+Old 0.039588 s; new 0.046718 s on this tiny fixture, including receipt hashing/fsync.
+This proves invocation/byte equivalence, not a production wall-time speedup or RSS claim.
+No 1.33 GB test artifact, ordinary Daily, acquisition or whole-corpus benchmark was run.
+Helper/fixture bytes remain ignored scratch. Unrelated untracked `data/` preserved.
+
 ## Checkpoint disposition and exact remaining slices
 
-`P2A_RELEASED_COMPLETE`: implementation, validation, PR #46 merge, green PR/main CI
-and main synchronization complete. Stop here. P0/P1 stay complete. Do not repeat Claude's read-only profile or
-start another P2 slice without owner authorization. The exact remaining order is:
+`P2D_RELEASED_COMPLETE` upon the gated PR #49 merge/main sync. D is COMPLETE in this
+release. P0/P1/P2A stay RELEASED COMPLETE. This is the final pre-reset job; stop here.
+Do not start another milestone or repeat Claude's profile. Remaining order is unchanged:
 
 B. tactical index/read deduplication
 C. settled feedback contribution cache
-D. single IID serialization + atomic byte copy
 E. tactical outcome persistence redesign
 F. telemetry sizing cleanup
 
-The only durable continuation is this file. Keep distinct pre/post temporal admission,
-unchanged policy/authority and clean-full-rebuild equivalence for later approved slices.
+The only durable continuation is this file. Preserve distinct pre/post temporal admission,
+unchanged policy/authority and clean-full-rebuild equivalence for later owner-approved slices.
