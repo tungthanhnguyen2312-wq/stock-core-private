@@ -16,10 +16,31 @@
   ],
   "current": {
     "milestone": "CURRENT_CORPORATE_CURRENCY_DAILY_ROLLFORWARD_V1",
-    "state": "ACTIVE"
+    "state": "COMPLETE"
   },
-  "queued_next": [],
+  "queued_next": [
+    "MARKET_DATA_PIT_FOUNDATION_AND_DAILY_OPERATIONALIZATION_V1"
+  ],
   "milestones": [
+    {
+      "milestone_id": "MARKET_DATA_PIT_FOUNDATION_AND_DAILY_OPERATIONALIZATION_V1",
+      "state": "NEXT",
+      "starting_checkpoint": null,
+      "checkpoint": null,
+      "candidate_branch": null,
+      "dependencies": [
+        "CURRENT_CORPORATE_CURRENCY_DAILY_ROLLFORWARD_V1"
+      ],
+      "unlocks": [],
+      "authority_effect": "NONE_UNLESS_EXACT_USE_SCOPED_RETAINED_EVIDENCE_QUALIFIES",
+      "owner_authorized": true,
+      "owner_override": "OWNER_DIRECTIVE_2026_10_02_AUTONOMOUS_RELEASE_AND_ROADMAP_ADVANCE",
+      "source_doc": "docs/internal/CORPORATE_CURRENCY_DAILY_ROLLFORWARD_INTEGRITY_SLICE_20261002.md",
+      "state_history": [
+        "NEXT"
+      ],
+      "notes": "Owner-authorized successor: Release B prospective price/volume, scoped RAW, official universe/listing, corporate action and factor candidate retention in ordinary Daily; bounded historical feasibility closure. Release C strategy-specific market-only PIT eligibility and the existing replay engine, actual eligible window, adversarial anti-lookahead tests and decisive feasibility dossier. Start on a fresh worktree only after Release A merges and final main CI is verified. No provider-wide authority, historical backfill, broker operations, fabricated costs or new replay engine."
+    },
     {
       "milestone_id": "PROSPECTIVE_EVIDENCE_CONTINUITY_DIAGNOSTICS_V1",
       "state": "COMPLETE",
@@ -66,9 +87,9 @@
     },
     {
       "milestone_id": "CURRENT_CORPORATE_CURRENCY_DAILY_ROLLFORWARD_V1",
-      "state": "ACTIVE",
+      "state": "COMPLETE",
       "starting_checkpoint": "1ae44e84eec1c588d4ef4fda91756da17ed5e044",
-      "checkpoint": null,
+      "checkpoint": "d0b31f9693f98ca47387437c69ee002490e8be6d",
       "candidate_branch": "feature/corporate-currency-daily-rollforward-20261002",
       "dependencies": [
         "CURRENT_CORPORATE_EVIDENCE_CURRENCY_V1"
@@ -80,9 +101,11 @@
       "source_doc": "docs/internal/CORPORATE_CURRENCY_DAILY_ROLLFORWARD_INTEGRITY_SLICE_20261002.md",
       "state_history": [
         "NEXT",
-        "ACTIVE"
+        "ACTIVE",
+        "COMPLETE"
       ],
-      "notes": "Owner-authorized Release A integration active: bounded rollforward, immutable captured optional inputs, timestamp knowledge cutoff, separate current explanatory product/brief. Release validation and merge remain required. Subsequent B/C program is authorized but must start from released main."
+      "notes": "Release A implementation validated: immutable invocation selections; timestamp cutoff; separate non-voting current dashboard and brief overlays; completed optional absence preserved. Exact-head PR CI and merge are the release gate. Acceptance and fixture scope are retained in docs/internal/CORPORATE_DAILY_ROLLFORWARD_RELEASE_A_ACCEPTANCE.json. No authority promotion.",
+      "terminal_disposition": "IMPLEMENTATION_VALIDATED_RELEASE_CANDIDATE"
     },
     {
       "milestone_id": "PORTFOLIO_PIT_AND_EXECUTION_AUTHORITY_V1",
@@ -439,7 +462,7 @@
         "PARTIAL"
       ],
       "owner_override": "OWNER_DIRECTIVE_2026_09_29_FINANCIAL_EVIDENCE_COHORT1_TRIGGERED_OCR_V1",
-      "notes": "PARTIAL 2026-09-29. Retained-only H1 image OCR for HPG/PNJ/PVD/VRE; 11 completed page reads, no new CORE fact. Generic balance-sheet heading recognition accepts BÃ¡o cÃ¡o tÃ¬nh hÃ¬nh tÃ i chÃ­nh. Qualification blocked on OCR unit ambiguity/conflict or non-unique geometry. No network, Vnstock, Daily, Financial V2 pin or successor."
+      "notes": "PARTIAL 2026-09-29. Retained-only H1 image OCR for HPG/PNJ/PVD/VRE; 11 completed page reads, no new CORE fact. Generic balance-sheet heading recognition accepts BÃƒÂ¡o cÃƒÂ¡o tÃƒÂ¬nh hÃƒÂ¬nh tÃƒÂ i chÃƒÂ­nh. Qualification blocked on OCR unit ambiguity/conflict or non-unique geometry. No network, Vnstock, Daily, Financial V2 pin or successor."
     },
     {
       "milestone_id": "FLOW_PRICE_CANONICAL_SOURCE_BACKFILL_AND_PRESENTATION_CORRECTIVE_V1",

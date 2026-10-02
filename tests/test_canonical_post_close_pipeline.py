@@ -1626,6 +1626,38 @@ def test_corporate_rollforward_runs_once_after_snapshot_before_materialization(t
     assert acquired["triage_status"]["status"] == level2.EXACT_SESSION_CLEAN
 
 
+@pytest.mark.parametrize("observed,eligible", [
+    ("2026-10-01T15:00:00+07:00", True),
+    ("2026-10-01T15:00:00.000001+07:00", False),
+])
+def test_new_daily_binds_exact_current_context_only_before_decision_cutoff(tmp_path, monkeypatch, observed, eligible):
+    import corporate_currency_rollforward as corporate
+    import official_corporate_event_incremental_acquisition as incremental
+    session = "2026-10-01"
+    paths = level2.session_artifact_paths(tmp_path, session)
+    context = incremental._self_verified({"research_session": session,
+        "all_current_universe_event_records": [{"official_observed_at": observed}]}, "current_official_event_context")
+    result = corporate.CorporateCurrencyRollforwardResult(
+        json.dumps({"acquired_at": "2026-10-01T14:00:00+07:00"}).encode(),
+        json.dumps(context).encode(), None)
+    monkeypatch.setattr(corporate, "rollforward", lambda *_a, **_k: result)
+    monkeypatch.setattr(level2, "ensure_exact_session_snapshot", lambda *_a, **_k:
+        _write_snapshot(paths, session, requested_at="2026-10-01T19:05:00+07:00", exact=500, total=1000))
+    monkeypatch.setattr(level2, "materialize_independent_components", lambda *_a, **_k: None)
+    def triage(*_a, **_k):
+        _write_triage(paths, session)
+        return {"built": True}
+    monkeypatch.setattr(level2, "maybe_build_triage_dependent", triage)
+    acquired = cpc.acquire_and_materialize(tmp_path, session, tmp_path / "runtime",
+        now=datetime(2026, 10, 1, 19, 5, tzinfo=VN_TZ), enable_corporate_currency_rollforward=True)
+    selection = acquired["corporate_frozen_inputs"].get("event_context")
+    assert bool(selection) is eligible
+    assert acquired["corporate_currency_rollforward"].receipt().get("frozen_market_context") == selection
+    assert acquired["corporate_currency_rollforward"].current_context() == context
+    if eligible:
+        assert json.loads((tmp_path / selection["path"]).read_bytes()) == context
+
+
 def test_current_post_handoff_brief_consumes_overlay_without_rewriting_frozen_brief(tmp_path, monkeypatch):
     import canonical_current_product_projections as ccpp
     import daily_research_session_operations as operations
