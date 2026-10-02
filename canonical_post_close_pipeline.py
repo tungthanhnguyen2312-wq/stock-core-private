@@ -2120,6 +2120,8 @@ def run_canonical_post_close(
     post_handoff_presentation_projection = run_post_handoff_presentation_projection(
         root, runtime_root, session, producer_run_dir=producer_result.get("run_dir"),
         integrated_investment_decision_product=integrated_delivery,
+        **({"current_corporate_knowledge_overlay": enrichment["current_corporate_knowledge_overlay"]["artifact"]}
+           if enrichment.get("current_corporate_knowledge_overlay") else {}),
     )
     return {
         "session": session, "acquisition": acquisition, "enrichment": enrichment,
