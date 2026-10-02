@@ -23,6 +23,8 @@ env:
   CORE_INSTALL: python -m pip install -r requirements.txt -r requirements-test.txt -c constraints.txt
   HERMETIC_MARKERS: not retained_evidence and not provider_runtime
   FOCUSED_SELECTION: >-
+    tests/test_market_only_pit_eligibility.py
+    tests/test_market_only_vnm_gross_replay.py
     tests/test_prospective_market_snapshot_contract.py
     tests/test_prospective_market_evidence_retention.py
     tests/test_corporate_currency_rollforward.py

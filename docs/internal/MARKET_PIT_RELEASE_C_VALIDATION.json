@@ -1,0 +1,38 @@
+{
+  "authority_promotions": 0,
+  "code_byte_sha256": {
+    "canonical_post_close_pipeline.py": "573064c16d061155bad015cf95f14c068cb9bd37e6424f69e11ccdcb0f938c38",
+    "market_only_pit_eligibility.py": "ed14fc44863d96fe5931af896efa9d02349f93d6593215fcbf725fce1b8b740e",
+    "prospective_market_evidence_retention.py": "93f062728a4a6e4f596d7ef8cd1438f8cdc19ecb2960473d4d5c68863d786c63",
+    "tools/run_market_only_pit_acceptance.py": "fe73cf518334472cfdeb0ce0e647f5a4df17be0fd4595d8b12ecd916ac010e07",
+    "vnm_shadow_backtest.py": "b1e499a1a77f075b8f81103a5e82de0a01682b23c1dca654c2396126f5bc3a22"
+  },
+  "compile": "PASS",
+  "contract_version": "market_pit_release_c_validation/v1",
+  "diff_check": "PASS",
+  "implementation_checkpoint": "HEAD",
+  "latest_focused_market_ca_r7_daily_smoke": {
+    "passed": 161
+  },
+  "new_receipt_eligibility_gross_adapter_and_offline_smoke": {
+    "passed": 78
+  },
+  "postclose_and_market_contract_selection": {
+    "deselected": 7,
+    "passed": 139
+  },
+  "producer_ci_equivalent": {
+    "deselected": 11,
+    "passed": 1512,
+    "skipped": 16,
+    "subtests_passed": 30
+  },
+  "production_writes": 0,
+  "representative_genuine_replays": 0,
+  "retained_acceptance": "MARKET_PIT_RELEASE_C_ACCEPTANCE.json",
+  "roadmap_drift": "PASS",
+  "roadmap_precommit_findings": "EXPECTED_DIRTY_WORKTREE_AND_TEMPORARY_HEAD_SENTINEL_WARNINGS_RESOLVED_BY_COMMIT",
+  "single_writer": "PASS",
+  "source_acquisitions": 0,
+  "strategic_disposition": "PROSPECTIVE_PIT_PRIMARY / FULL_HISTORICAL_INTEGRATED_PIT_DEFERRED"
+}

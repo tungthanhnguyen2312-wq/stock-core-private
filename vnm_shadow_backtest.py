@@ -38,6 +38,61 @@ def replay_return_semantics(entry: float, exit: float, costs: Mapping[str, Any] 
  return {"gross_return": gross, "net_return": net, "reason_codes": []}
 
 
+def run_market_only_gross_replay(*, snapshot: Mapping[str, Any], entry_observation: Mapping[str, Any],
+                                 exit_observation: Mapping[str, Any], signal_eligibility: Mapping[str, Any],
+                                 entry_eligibility: Mapping[str, Any], exit_eligibility: Mapping[str, Any]) -> dict[str, Any]:
+ """Bounded adapter of this existing signal/return engine; no fill or net assumption.
+
+ Eligible market data alone does not fabricate an emitted T0 feature or signal.
+ Entry/exit are explicitly bound close-to-close research observations, never orders.
+ """
+ from market_only_pit_eligibility import CONTRACT_VERSION, EXISTING_VNM_SIGNAL, _price_ready, _volume_ready
+ import prospective_market_snapshot_contract as market
+ reasons = []
+ signal = _signal(snapshot)
+ if signal is None: reasons.append("EXISTING_SIGNAL_RULE_NOT_SATISFIED")
+ gates = (signal_eligibility, entry_eligibility, exit_eligibility)
+ for gate in gates:
+  if (gate.get("contract_version") != CONTRACT_VERSION or gate.get("state") != "ELIGIBLE" or
+      gate.get("ticker") != "VNM" or gate.get("signal_requirements", {}).get("signal_id") != EXISTING_VNM_SIGNAL):
+   reasons.append("MARKET_ONLY_INPUT_GATE_NOT_ELIGIBLE")
+  if gate.get("artifact_identity") != market.content_identity(gate,kind="market_only_pit_eligibility")["artifact_identity"]:
+   reasons.append("MARKET_INPUT_GATE_IDENTITY_MISMATCH")
+ if signal_eligibility.get("knowledge_cutoff") != snapshot.get("knowledge_cutoff"):
+  reasons.append("SIGNAL_CUTOFF_NOT_BOUND")
+ if snapshot.get("snapshot_id") not in (snapshot.get("market_feature_lineage") or {}).get("signal_snapshot_identities", []):
+  reasons.append("T0_MARKET_FEATURE_LINEAGE_MISSING")
+ lineage = snapshot.get("market_feature_lineage") or {}
+ if (lineage.get("input_snapshot_identities") != signal_eligibility.get("selected_snapshot_identities") or
+     lineage.get("knowledge_cutoff") != snapshot.get("knowledge_cutoff")):
+  reasons.append("T0_FEATURE_INPUTS_NOT_BOUND")
+ try:
+  if market._utc(lineage.get("feature_knowledge_available_at"),"feature_known") > market._utc(snapshot.get("knowledge_cutoff"),"cutoff"):
+   reasons.append("KNOWLEDGE_CUTOFF_VIOLATION")
+ except (AttributeError, TypeError, ValueError): reasons.append("T0_FEATURE_KNOWLEDGE_TIME_MISSING")
+ for observation, gate in ((entry_observation,entry_eligibility),(exit_observation,exit_eligibility)):
+  if (observation.get("snapshot_identity") not in gate.get("selected_snapshot_identities",[]) or
+      observation.get("trading_session") != gate.get("session") or not gate.get("signal_requirements",{}).get("volume_required")):
+   reasons.append("OUTCOME_OBSERVATION_NOT_BOUND")
+  try:
+   if not _price_ready(observation,mode=gate.get("signal_requirements",{}).get("price_mode"),cutoff=market._utc(gate.get("knowledge_cutoff"),"cutoff")) or not _volume_ready(observation):
+    reasons.append("OUTCOME_OBSERVATION_NOT_QUALIFIED")
+  except (AttributeError, TypeError, ValueError): reasons.append("OUTCOME_OBSERVATION_NOT_QUALIFIED")
+ if not (signal_eligibility.get("session", "9999") < entry_eligibility.get("session", "") < exit_eligibility.get("session", "")):
+  reasons.append("FUTURE_OUTCOME_SESSION_ORDER_INVALID")
+ body = {"contract_version":"market_only_vnm_gross_replay/v1", "signal_rule":EXISTING_VNM_SIGNAL,
+         "signal_snapshot_identity":snapshot.get("snapshot_id"), "mode":"GROSS_MARKET_RESEARCH_REPLAY",
+         "state":"EXCLUDED" if reasons else "INFRASTRUCTURE_VALIDATION_ONLY", "gross_return":None,
+         "net_return":None, "execution_state":"UNAVAILABLE", "trade_count":0, "live_orders":0,
+         "outcome_semantics":"EXPLICIT_QUALIFIED_CLOSE_TO_CLOSE_RESEARCH_OBSERVATIONS",
+         "reason_codes":sorted(set(reasons)),"authority_effect":"NONE"}
+ if not reasons:
+  returns = replay_return_semantics(entry_observation["normalized"]["ohlc"]["close"], exit_observation["normalized"]["ohlc"]["close"], None)
+  body.update(gross_return=returns["gross_return"], reason_codes=returns["reason_codes"], trade_count=1)
+ body["result_hash"] = _hash(body)
+ return body
+
+
 def run_authority_gated_replay(*, snapshot: Mapping[str, Any], raw_sessions: list[Mapping[str, Any]],
                               evidence: Mapping[str, Mapping[str, Any]], costs: Mapping[str, Any] | None = None,
                               max_holding_sessions: int | None = None, leveraged: bool = False, short: bool = False) -> dict[str, Any]:

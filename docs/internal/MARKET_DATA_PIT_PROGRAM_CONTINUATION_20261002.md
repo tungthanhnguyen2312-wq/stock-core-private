@@ -1,5 +1,12 @@
 # Market-data PIT program: Release A merged continuation
 
+**Superseded by completed foundation:** B merged in PR #39 with candidate/main CI
+success; C capability, retained window and strategic closure are complete. Use
+[final closeout](MARKET_PIT_PROGRAM_CLOSEOUT_20261002.md),
+[C acceptance](MARKET_PIT_RELEASE_C_ACCEPTANCE.json) and
+[dossier](MARKET_PIT_FEASIBILITY_DOSSIER_20261002.md). Earlier checkpoint text below
+is historical; no B/C implementation restart or R1–R7 audit is required.
+
 ## Current Release B continuation (supersedes the initial checkpoint below)
 
 Release B implementation is complete on this branch, pending exact-head CI and merge.
