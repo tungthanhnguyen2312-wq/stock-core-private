@@ -2,6 +2,12 @@
 
 > Navigation aid only. docs/STATE.md, docs/ROADMAP.md, docs/DECISIONS.md and docs/ROADMAP_STATE.json remain authority.
 
+Prospective market continuity: `prospective_market_snapshot_contract.py` owns price/volume
+fitness and scoped official comparison; `prospective_market_evidence_retention.py` is its
+immutable Daily I/O boundary, using the existing universe verifier/retainer and corporate
+ledger/factor engine. `canonical_post_close_pipeline.acquire_and_materialize` retains
+market receipts before optional work. [Contract](market_pit_foundation_contract.md).
+
 
 ## Repository navigation status — 2026-10-01
 

@@ -10,7 +10,7 @@ OHLC = {"open": 10.0, "high": 10.5, "low": 9.9, "close": 10.2}
 
 def snap(receipt="2026-09-28T09:40:00+00:00", session="2026-09-28", nxt=None, **kw):
     base = dict(provider="P", source_id="S", route="/r", ticker="abc", exchange="HOSE", session=session, receipt_at=receipt,
-                payload_sha256=H, payload_bytes=10, payload_hash_kind="k", next_session=nxt, ohlc=OHLC)
+                payload_sha256=H, payload_bytes=10, payload_hash_kind="canonical_json_of_retained_observation", next_session=nxt, ohlc=OHLC)
     base.update(kw)
     return c.build_snapshot(**base)
 
@@ -135,9 +135,14 @@ def test_session_manifest_links_bars_to_known_time_receipts_and_skips_never_subs
 
 
 def test_session_manifest_raw_fitness_only_with_independent_official_agreement():
-    agree = c.build_session_manifest(_exact_snapshot(), session="2026-09-28", official_series={"AAA": [10.0, 10.5, 9.9, 10.2]})
+    snapshot = _exact_snapshot()
+    snapshot["records"]["AAA"]["observations"][-1].update(exchange="HOSE", price_unit="VND")
+    official = {"ticker": "AAA", "exchange": "HOSE", "session": "2026-09-28", "provider": "HOSE",
+                "source_id": "HOSE_PUBLIC_MARKET_API_SECURITIES_TRADINGRESULT", "receipt_identity": "receipt:x",
+                "knowledge_available_at": "2026-09-28T09:30:00Z", "price_unit": "VND", "ohlc": [10.0,10.5,9.9,10.2]}
+    agree = c.build_session_manifest(snapshot, session="2026-09-28", official_series={"AAA": official})
     assert agree["summary"]["by_allowed_use"][c.USE_PROSPECTIVE_RAW_AS_TRADED_PRICE] == 1
-    differ = c.build_session_manifest(_exact_snapshot(), session="2026-09-28", official_series={"AAA": [10.0, 10.5, 9.9, 10.3]})
+    differ = c.build_session_manifest(snapshot, session="2026-09-28", official_series={"AAA": {**official, "ohlc": [10.0,10.5,9.9,10.3]}})
     assert c.USE_PROSPECTIVE_RAW_AS_TRADED_PRICE not in differ["summary"]["by_allowed_use"]
 
 

@@ -1189,6 +1189,7 @@ def run_canonical_daily_operation(
             "provider_contribution_counts": acquisition.get("provider_contribution_counts"),
         },
         "corporate_currency_rollforward": acquisition["corporate_currency_rollforward"].receipt() if acquisition.get("corporate_currency_rollforward") is not None else None,
+        "prospective_market_evidence": acquisition.get("prospective_market_evidence"),
         "registration": registration,
         "freeze": freeze,
         "daily_producer_status": producer_status,

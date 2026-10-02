@@ -616,6 +616,11 @@ def acquire_and_materialize(
             f"exact={exact}:total={total}:ratio={coverage_ratio:.4f}:floor={MIN_EXACT_SESSION_COVERAGE_RATIO}"
             f"{degraded_note}"
         )
+    # Retain the exact validated receipt before any optional enrichment/acquisition.
+    # Its original retrieved_at is authoritative; now is never substituted on rebuild.
+    import prospective_market_evidence_retention as pit_retention
+    prospective_evidence = {"market": pit_retention.attempt(
+        pit_retention.retain_market, snapshot, session=session, root=output_root)}
     corporate_rollforward = None
     corporate_frozen_inputs = None
     if enable_corporate_currency_rollforward:
@@ -649,6 +654,15 @@ def acquire_and_materialize(
                     frozen_selection_failure = f"{type(exc).__name__}:{exc}"
         corporate_rollforward = corporate_rollforward.bind_frozen_market_selection(
             corporate_frozen_inputs.get("event_context"), frozen_selection_failure)
+        current_context = corporate_rollforward.current_context()
+        if current_context:
+            prospective_evidence["corporate"] = pit_retention.attempt(
+                pit_retention.retain_corporate, current_context, root=output_root)
+    # Explicit selected universe only; no latest directory search or historical active inference.
+    universe_selection = (corporate_frozen_inputs or {}).get("official_universe")
+    universe_path = root / universe_selection["path"] if universe_selection else level2.session_artifact_paths(retained_evidence_root, session)["official_universe"]
+    prospective_evidence["universe"] = pit_retention.attempt(
+        pit_retention.retain_universe, universe_path, root=output_root)
     materialize_kwargs: dict[str, Any] = dict(
         workers=workers, now=now, execution_root=root,
     )
@@ -711,6 +725,7 @@ def acquire_and_materialize(
         "triage_build_result": triage_build_result,
         "official_liquidity_rollforward": official_rollforward,
         "corporate_currency_rollforward": corporate_rollforward,
+        "prospective_market_evidence": prospective_evidence,
         "corporate_frozen_inputs": corporate_frozen_inputs,
         "paths": paths,
         "artifact_root": artifact_root,
@@ -939,19 +954,8 @@ def build_enrichment_components(
         opp = _load(paths["opportunity_prioritization"])
         if not desc or not p3f9b:
             raise CanonicalPostCloseError("REQUIRED_INPUT_MISSING")
-        # PROSPECTIVE_RAW_PIT_AUTHORITY_V1: retain the session's hashed, known-time price-receipt manifest
-        # (private/local evidence root only). Component-local by design: any failure leaves the manifest
-        # absent, blocks only PIT/as-known use, and never fails the Daily or the Integrated Decision.
-        try:
-            import prospective_market_snapshot_contract as pit_snapshot_contract
-            pit_manifest = pit_snapshot_contract.build_session_manifest(p3f9b, session=session)
-            _write_json(paths["prospective_market_snapshot_manifest"], pit_manifest)
-            results["prospective_market_snapshot"] = {
-                "status": "RETAINED", "artifact_identity": pit_manifest["artifact_identity"],
-                "snapshots": pit_manifest["summary"]["snapshots"],
-                "by_capture_timing": pit_manifest["summary"]["by_capture_timing"], "skipped": pit_manifest["skipped"]}
-        except Exception as exc:  # noqa: BLE001 -- PIT retention is optional for Current Research
-            results["prospective_market_snapshot"] = {"status": "UNAVAILABLE", "reason": f"{type(exc).__name__}:{exc}"}
+        # Market receipts are already retained at the validated acquisition seam.
+        # Integrated Decision is a consumer, never a second mutable receipt writer.
         # The Level-2 materializer may have preserved an invalid historical recovery artifact at
         # its canonical path while writing its validated same-session replacement into the one
         # explicit ``-revalidated`` namespace.  Never bypass that resolver by loading the

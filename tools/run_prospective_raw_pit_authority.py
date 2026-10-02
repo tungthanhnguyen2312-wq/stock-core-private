@@ -181,7 +181,7 @@ def build_snapshots(dnse, hose, *, calendar_sessions, unadjusted_tickers):
             agreement = None if not official else analysis.bars_equal(official[0]["ohlc"], bar[:4])
             payload = contract.canonical({"ticker": ticker, "session": target, "bar": list(bar[:5]), "retrieved_at": bar[5]})
             yield "dnse", contract.build_snapshot(
-                provider="DNSE", source_id="DNSE_OHLC_1D_DAILY_EXACT_SESSION_SNAPSHOT", route="/price/ohlc", ticker=ticker, exchange=None,
+                provider="DNSE", source_id="DNSE_OHLC_1D_DAILY_EXACT_SESSION_SNAPSHOT", route="/price/ohlc", ticker=ticker, exchange="HOSE" if official else None,
                 session=target, receipt_at=bar[5], payload_sha256=contract.sha256_hex(payload), payload_bytes=len(payload),
                 payload_hash_kind="canonical_json_of_retained_observation", next_session=nxt,
                 ohlc={"open": bar[0], "high": bar[1], "low": bar[2], "close": bar[3]}, volume_value={"volume": bar[4]},

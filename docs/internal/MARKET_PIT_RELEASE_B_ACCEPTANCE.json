@@ -1,0 +1,68 @@
+{
+  "acquisition_requests": 0,
+  "artifact_identity": "market_pit_foundation_acceptance:be3a2cc6dd2967dc08d88f03dbe0017d432937b1a85b41baeb171e14fe1102d6",
+  "artifact_sha256": "be3a2cc6dd2967dc08d88f03dbe0017d432937b1a85b41baeb171e14fe1102d6",
+  "authority_effect": "NONE",
+  "contract_version": "market_pit_foundation_acceptance/v1",
+  "corporate": {
+    "artifact_identity": "prospective_corporate_observations:ae90aeb7e276ba86e49318207ca9ea52535c3e8f317114a913faf10e83cfc614",
+    "observations": 188,
+    "qualified_factor_count": 0,
+    "status": "RETAINED"
+  },
+  "idempotence": "PASS",
+  "input_sha256": {
+    "corporate": "0aaa072716e56657f3fc1223a1a50eaed020f041c308f24fd66626ff80245cb2",
+    "price": "82f00beec185253ba7f3be2401ead8ba88669998cdb3ae1601b270abeb05a9a0",
+    "universe": "a12b6e66ef19d03386f4cb600a07b00d4e849b93857676ea8174dff1e546e885"
+  },
+  "market": {
+    "artifact_identity": "prospective_market_snapshot_session_manifest:b9e30b78c50c0309d62dd2431087eb325221c7e60fdb6c427033a1cc173a125f",
+    "skipped": {
+      "NO_TARGET_SESSION_OBSERVATION": 831
+    },
+    "status": "RETAINED",
+    "summary": {
+      "by_allowed_use": {
+        "CURRENT_SESSION_PRICE_RESEARCH": 852,
+        "PROSPECTIVE_AS_KNOWN_PRICE_EVIDENCE": 852,
+        "REVISION_DETECTION_BASELINE": 852
+      },
+      "by_capture_timing": {
+        "PROSPECTIVE_SAME_SESSION_CAPTURE": 852
+      },
+      "by_empirical_basis_test": {
+        "EMPIRICAL_NOT_TESTED": 852
+      },
+      "by_qualification_state": {
+        "PROSPECTIVE_QUALIFIED": 852
+      },
+      "by_source_basis_claim": {
+        "SOURCE_BASIS_UNDOCUMENTED": 852
+      },
+      "by_volume_allowed_use": {},
+      "by_volume_unit": {
+        "UNKNOWN": 852
+      },
+      "snapshots": 852,
+      "volume_observations": 852,
+      "withheld_reason_counts": {
+        "RAW_AS_TRADED_REQUIRES_INDEPENDENT_CROSS_SOURCE_AGREEMENT": 852
+      }
+    }
+  },
+  "offline_guard_counters": {
+    "network": 0,
+    "provider": 0,
+    "vnstock_import": 0
+  },
+  "production_writes": 0,
+  "session": "2026-10-01",
+  "source_bytes_unchanged": true,
+  "universe": {
+    "active_membership_qualified": 0,
+    "artifact_identity": "prospective_universe_observations:f7830e3d590c5662fb5755e485bdd8c762affe111c5850904d01b82224b8d65a",
+    "observations": 1701,
+    "status": "RETAINED"
+  }
+}

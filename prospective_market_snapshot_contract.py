@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 from collections import Counter
 from datetime import date, datetime, timedelta, timezone
 from typing import Any, Iterable, Mapping, Sequence
@@ -179,14 +180,19 @@ def build_snapshot(*, provider: str, source_id: str, route: str, ticker: str, ex
         date.fromisoformat(session)
     except ValueError as error:
         raise SnapshotContractError("session_not_iso_date") from error
-    if len(payload_sha256) != 64 or payload_bytes <= 0:
+    if len(payload_sha256) != 64 or any(c not in '0123456789abcdef' for c in payload_sha256) or payload_bytes <= 0:
         raise SnapshotContractError("payload_hash_and_length_required")
+    if payload_hash_kind not in {"canonical_json_of_retained_observation", "exact_http_response_body_sha256"}:
+        raise SnapshotContractError("payload_hash_kind_unsupported")
     received = _utc(receipt_at, "receipt_at")
     ohlc_fields = {key: (ohlc or {}).get(key) for key in ("open", "high", "low", "close", "average")}
-    has_price = all(isinstance(ohlc_fields[k], (int, float)) and ohlc_fields[k] > 0 for k in ("open", "high", "low", "close"))
+    has_price = all(_finite_number(ohlc_fields[k]) and ohlc_fields[k] > 0 for k in ("open", "high", "low", "close"))
     timing, timing_reasons = capture_timing(session, received, next_session=next_session)
     uses, withheld = allowed_uses(timing=timing, source_claim=source_claim, empirical=empirical,
                                   cross_source_agreement=cross_source_agreement, parsed_ok=parsed_ok, has_price=has_price)
+    if USE_PROSPECTIVE_RAW_AS_TRADED_PRICE in uses and exchange != "HOSE":
+        uses.remove(USE_PROSPECTIVE_RAW_AS_TRADED_PRICE)
+        withheld.append("RAW_AGREEMENT_OUTSIDE_QUALIFIED_HOSE_SCOPE")
     record = {
         "contract_version": CONTRACT_VERSION, "schema_version": SCHEMA_VERSION,
         "instrument": {"ticker": ticker.upper(), "exchange": exchange},
@@ -257,6 +263,9 @@ def summarize(snapshots: Iterable[Mapping[str, Any]]) -> dict[str, Any]:
         "by_source_basis_claim": dict(sorted(Counter(r["basis"]["source_basis_claim"] for r in rows).items())),
         "by_empirical_basis_test": dict(sorted(Counter(r["basis"]["empirical_basis_test"] for r in rows).items())),
         "withheld_reason_counts": dict(sorted(Counter(c for r in rows for c in r["qualification"]["withheld_reason_codes"]).items())),
+        "volume_observations": sum(_finite_number(r["normalized"]["volume_value"].get("volume")) for r in rows),
+        "by_volume_unit": dict(sorted(Counter(r.get("volume_qualification", {}).get("unit", "UNKNOWN") for r in rows).items())),
+        "by_volume_allowed_use": dict(sorted(Counter(u for r in rows for u in r.get("volume_qualification", {}).get("allowed_uses", [])).items())),
     }
 
 
@@ -264,11 +273,11 @@ SESSION_MANIFEST_KIND = "prospective_market_snapshot_session_manifest"
 
 
 def build_session_manifest(exact_session_snapshot: Mapping[str, Any], *, session: str, next_session: str | None = None,
-                           official_series: Mapping[str, Sequence[float]] | None = None) -> dict[str, Any]:
+                           official_series: Mapping[str, Mapping[str, Any]] | None = None) -> dict[str, Any]:
     """Session receipt manifest from a Daily exact-session snapshot (component-local, offline, no I/O).
 
     Every ticker whose target-session bar carries a ``retrieved_at`` becomes one hashed, known-time
-    snapshot. ``official_series`` (ticker -> O/H/L/C in the same unit) is the optional independent
+    snapshot. ``official_series`` (ticker -> scoped official receipt mapping) is the optional independent
     cross-source; without it no bar earns PROSPECTIVE_RAW_AS_TRADED_PRICE and raw fitness stays withheld.
     A snapshot for another session, or a missing/naive receipt time, is never substituted.
     """
@@ -285,19 +294,35 @@ def build_session_manifest(exact_session_snapshot: Mapping[str, Any], *, session
         if not bar.get("retrieved_at"):
             skipped["NO_RECEIPT_TIME"] += 1
             continue
-        payload = canonical({"ticker": ticker, "session": session, "open": bar["open"], "high": bar["high"], "low": bar["low"],
-                             "close": bar["close"], "volume": bar.get("volume"), "retrieved_at": bar["retrieved_at"]})
-        official = (official_series or {}).get(ticker)
-        agreement = None if official is None else all(abs(float(x) - float(bar[k])) < 1e-6 for x, k in zip(official, ("open", "high", "low", "close")))
         try:
-            records.append(build_snapshot(
+            # This hash identifies retained observation JSON, never provider response bytes.
+            payload = canonical({"ticker": ticker, "observation": bar})
+            official = (official_series or {}).get(ticker)
+            agreement = official_agreement(bar, official, ticker=ticker, session=session)
+            row = build_snapshot(
                 provider=str(bar.get("provider") or "DNSE"), source_id=str(bar.get("dataset") or "DNSE_OHLC_1D"), route="/price/ohlc",
-                ticker=ticker, exchange=None, session=session, receipt_at=bar["retrieved_at"], payload_sha256=sha256_hex(payload),
+                ticker=ticker, exchange=bar.get("exchange"), session=session, receipt_at=bar["retrieved_at"], payload_sha256=sha256_hex(payload),
                 payload_bytes=len(payload), payload_hash_kind="canonical_json_of_retained_observation", next_session=next_session,
                 ohlc={k: bar[k] for k in ("open", "high", "low", "close")}, volume_value={"volume": bar.get("volume")},
                 board_basis={"unit": bar.get("price_unit"), "price_basis_label": bar.get("price_basis")},
-                source_claim=SOURCE_BASIS_UNDOCUMENTED, cross_source_agreement=agreement))
-        except SnapshotContractError as error:
+                source_claim=bar.get("source_basis_claim", SOURCE_BASIS_UNDOCUMENTED), cross_source_agreement=agreement)
+            volume_unit = bar.get("volume_unit") or "UNKNOWN"
+            volume_basis = bar.get("volume_basis") or "UNKNOWN"
+            volume_uses = []
+            if row["observation"]["prospectively_observed"] and _finite_number(bar.get("volume")) and bar["volume"] >= 0 and volume_unit in {"SHARES", "LOTS", "VALUE", "OTHER"} and volume_basis == "AS_REPORTED":
+                volume_uses = ["PROSPECTIVE_AS_KNOWN_VOLUME_EVIDENCE"]
+            row["volume_qualification"] = {"unit": volume_unit, "basis": volume_basis,
+                "allowed_uses": volume_uses, "normalization": "NONE",
+                "withheld_reason_codes": [] if volume_uses else ["VOLUME_UNIT_BASIS_OR_TIMING_UNQUALIFIED"]}
+            row["instrument"].update({"canonical_instrument_id": bar.get("canonical_instrument_id") if bar.get("instrument_identity_qualified") is True else None,
+                                      "board": bar.get("board") or "UNKNOWN"})
+            row["finality"] = bar.get("finality") or "CLOSED_SESSION_OBSERVATION_NOT_PROVIDER_FINALITY_PROOF"
+            row["normalized"]["volume_value"]["traded_value"] = bar.get("traded_value")
+            row["normalized"]["volume_value"]["traded_value_unit"] = bar.get("traded_value_unit") or "UNKNOWN"
+            row["retained_observation_identity"] = "retained_observation:" + sha256_hex(payload)
+            row["snapshot_identity"] = CONTRACT_VERSION + ":" + sha256_hex(canonical({k:v for k,v in row.items() if k != "snapshot_identity"}))
+            records.append(row)
+        except (SnapshotContractError, KeyError, TypeError, ValueError) as error:
             skipped[f"INVALID:{error}"] += 1
     manifest = {
         "contract_version": SESSION_MANIFEST_KIND + "/v1", "schema_version": SCHEMA_VERSION, "session": session,
@@ -310,3 +335,43 @@ def build_session_manifest(exact_session_snapshot: Mapping[str, Any], *, session
     }
     manifest.update(content_identity(manifest, kind=SESSION_MANIFEST_KIND))
     return manifest
+
+
+def _finite_number(value: Any) -> bool:
+    return isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value)
+
+
+def official_agreement(bar: Mapping[str, Any], official: Any, *, ticker: str, session: str) -> bool | None:
+    """Only an exact independent HOSE receipt with explicit comparable units can qualify RAW.
+
+    Bare arrays deliberately carry insufficient scope. No ticker/exchange/session inference.
+    """
+    if official is None:
+        return None
+    if not isinstance(official, Mapping):
+        return False
+    values = official.get("ohlc")
+    if not isinstance(values, (list, tuple)) or len(values) != 4:
+        return False
+    if (bar.get("exchange") != "HOSE" or official.get("exchange") != "HOSE" or
+        official.get("ticker") != ticker or official.get("session") != session or
+        official.get("source_id") != "HOSE_PUBLIC_MARKET_API_SECURITIES_TRADINGRESULT" or
+        official.get("provider") != "HOSE" or bar.get("provider") == "HOSE" or
+        not official.get("receipt_identity") or not official.get("knowledge_available_at") or
+        not official.get("price_unit") or official["price_unit"] in {"UNKNOWN", "SOURCE_PRICE_UNIT_UNDOCUMENTED"} or
+        official["price_unit"] != bar.get("price_unit") or
+        official.get("source_basis_claim") == SOURCE_DOCUMENTS_ADJUSTED or
+        bar.get("source_basis_claim") == SOURCE_DOCUMENTS_ADJUSTED or
+        str(bar.get("price_basis", "")).upper() == "ADJUSTED" or
+        any(label in str(bar.get("price_basis", "")).upper() for label in ("ADJUSTED_RETROSPECTIVE", "RETROSPECTIVE_ADJUSTED", "PIT_CA_ADJUSTED"))):
+        return False
+    try:
+        # Agreement must itself be available at this receipt, not a future comparison.
+        if _utc(official["knowledge_available_at"], "official_known_at") > _utc(bar["retrieved_at"], "receipt_at"):
+            return False
+        if capture_timing(session, official["knowledge_available_at"], next_session=None)[0] != PROSPECTIVE_SAME_SESSION_CAPTURE:
+            return False
+    except (SnapshotContractError, TypeError):
+        return False
+    return all(_finite_number(x) and _finite_number(bar.get(k)) and x > 0 and abs(x-bar[k]) < 1e-6
+               for x,k in zip(values, ("open", "high", "low", "close")))
