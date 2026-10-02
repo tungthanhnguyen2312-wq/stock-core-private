@@ -709,40 +709,36 @@ def test_registration_and_freeze_idempotent_on_rerun(tmp_path):
     assert freeze2["status"] == "ALREADY_COMPLETED"
 
 
-@pytest.mark.retained_evidence(
-    "operations-review/market-wide-current-descriptive-research-v1-20260825/market_wide_current_descriptive_research_artifact.json",
-    "operations-review/p3f9b-market-wide-exact-session-scaleout-20260825/p3f9b_mva_exact_session_snapshot.json",
-)
-def test_not_session_locked_keys_are_excluded_from_the_frozen_mutation_check(tmp_path):
-    """Regression guard for OFFICIAL_CORPORATE_EVENT_INCREMENTAL_ACQUISITION_AND_FRESHNESS_V1:
-    official_universe and event_context are explicitly documented elsewhere in this codebase
-    (daily_session_level2_package.session_triage_status, daily_research_session_operations' own
-    input-manifest freshness labelling) as ACCEPTED_CURRENT_ASOF_BUILD_NOT_SESSION_LOCKED -- their
-    value is expected to reflect whatever the latest retained build currently is, never a value
-    frozen at the moment a historical session completed. Before this milestone, event_context
-    resolved to one single, never-changing snapshot directory, so re-registering an already-
-    completed historical session never actually observed a changed event_context identity in
-    practice; a real incremental acquisition now legitimately advances it (proven live this
-    milestone: research_session advanced 2026-08-21 -> 2026-09-05), and register_session_inputs()
-    must not reject that as COMPLETED_SESSION_INPUT_MUTATION_REJECTED. A genuinely session-locked
-    REQUIRED key must still be protected."""
-    session = "2026-08-25"
-    registry_path = _registry_copy_at(tmp_path)
-    registry = json.loads(registry_path.read_text(encoding="utf-8"))
-    registry["completed_sessions"][session]["frozen_input_identities"]["event_context"] = (
-        "current_official_event_context:DELIBERATELY_STALE_LOCK_VALUE"
-    )
-    registry_path.write_text(json.dumps(registry), encoding="utf-8")
-    result = cpc.register_session_inputs(ROOT, session, registry_path=registry_path)
-    assert result["status"] == "ALREADY_FROZEN_IDENTICAL"
-
-    registry2 = json.loads(registry_path.read_text(encoding="utf-8"))
-    registry2["completed_sessions"][session]["frozen_input_identities"]["descriptive"] = (
-        "market_wide_current_descriptive_research:DELIBERATELY_WRONG"
-    )
-    registry_path.write_text(json.dumps(registry2), encoding="utf-8")
+def test_completed_optional_selection_cannot_advance_or_ignore_corrupt_lock(tmp_path, monkeypatch):
+    session = "2026-10-01"
+    path = tmp_path / "config" / "daily_research_session_input_registry.json"
+    path.parent.mkdir()
+    import official_corporate_event_incremental_acquisition as incremental
+    old_artifact = incremental._self_verified({"research_session": "2026-10-01"}, "historical-context")
+    old = {"path": "old-context.json", "artifact_identity": old_artifact["artifact_identity"]}
+    (tmp_path / old["path"]).write_text(json.dumps(old_artifact), encoding="utf-8")
+    required = {key: {"path": key+".json", "artifact_identity": key+":identity"} for key in cpc.REQUIRED_REGISTRY_KEYS}
+    for key, entry in required.items():
+        (tmp_path / entry["path"]).write_text(json.dumps({"artifact_identity": entry["artifact_identity"]}), encoding="utf-8")
+    registry = {"sessions": {session: dict(required, event_context=old)},
+                "completed_sessions": {session: {"status": "COMPLETED_RETAINED_EVIDENCE",
+                  "frozen_input_identities": {key: entry["artifact_identity"] for key, entry in dict(required, event_context=old).items()}}}}
+    path.write_text(json.dumps(registry), encoding="utf-8")
+    latest = tmp_path / "current-context.json"
+    latest.write_text(json.dumps({"artifact_identity": "current-overlay"}), encoding="utf-8")
+    paths = {value: tmp_path / (key+".json") for key, value in cpc.REGISTRY_KEY_TO_LEVEL2_KEY.items()}
+    paths["official_event_context"] = latest
+    monkeypatch.setattr(cpc.level2, "session_artifact_paths", lambda *_: paths)
+    before = path.read_bytes()
+    result = cpc.register_session_inputs(tmp_path, session)
+    assert result["selection"]["event_context"] == old
+    assert "official_universe" not in result["selection"]
+    assert latest.read_text(encoding="utf-8") == json.dumps({"artifact_identity": "current-overlay"})
+    assert path.read_bytes() == before
+    registry["completed_sessions"][session]["frozen_input_identities"]["event_context"] = "tampered"
+    path.write_text(json.dumps(registry), encoding="utf-8")
     with pytest.raises(cpc.CanonicalPostCloseError, match="COMPLETED_SESSION_INPUT_MUTATION_REJECTED"):
-        cpc.register_session_inputs(ROOT, session, registry_path=registry_path)
+        cpc.register_session_inputs(tmp_path, session)
 
 
 # --- 13. no Dashboard publication occurs ---
@@ -1551,3 +1547,51 @@ def test_run_post_handoff_presentation_projection_diverged_integrated_identity_i
     )
     assert result["status"] == "UNAVAILABLE"
     assert "LINEAGE_DIVERGED" in result["reason"]
+
+
+def test_corporate_rollforward_runs_once_after_snapshot_before_materialization(tmp_path, monkeypatch):
+    import corporate_currency_rollforward as corporate
+    session = "2026-10-01"
+    paths = level2.session_artifact_paths(tmp_path, session)
+    order = []
+    def ensure(*args, **kwargs):
+        order.append("snapshot")
+        return _write_snapshot(paths, session, requested_at="2026-10-01T19:05:00+07:00", exact=500, total=1000)
+    result = corporate.CorporateCurrencyRollforwardResult(b'{"refresh_action":"REFRESH_FAILED_NO_USABLE_CURRENT_CONTEXT"}', None, None)
+    def refresh(*args, **kwargs):
+        assert kwargs["target_market_session"] == session
+        assert kwargs["observed_at"].date().isoformat() == "2026-10-02"
+        order.append("corporate")
+        return result
+    def materialize(*args, **kwargs):
+        order.append("level2")
+    def triage(*args, **kwargs):
+        _write_triage(paths, session)
+        return {"built": True}
+    monkeypatch.setattr(level2, "ensure_exact_session_snapshot", ensure)
+    monkeypatch.setattr(level2, "materialize_independent_components", materialize)
+    monkeypatch.setattr(level2, "maybe_build_triage_dependent", triage)
+    monkeypatch.setattr(corporate, "rollforward", refresh)
+    acquired = cpc.acquire_and_materialize(tmp_path, session, tmp_path / "runtime", now=datetime(2026,10,2,12,tzinfo=VN_TZ), enable_corporate_currency_rollforward=True)
+    assert order == ["snapshot", "corporate", "level2"]
+    assert acquired["corporate_currency_rollforward"] is result
+    assert acquired["triage_status"]["status"] == level2.EXACT_SESSION_CLEAN
+
+
+def test_knowledge_overlay_has_separate_namespace_and_preserves_market_packet(tmp_path):
+    import corporate_currency_rollforward as corporate
+    session = "2026-10-01"
+    packet = tmp_path / "frozen-packet.json"
+    packet.write_bytes(b'{"research_action_posture":"WAIT","identity":"original"}')
+    before = packet.read_bytes()
+    receipt = {"acquisition_civil_date": "2026-10-02", "target_market_session": session,
+               "refresh_action": "REUSED_CURRENT_SUCCESS", "historical_use_allowed": False}
+    result = corporate.CorporateCurrencyRollforwardResult(json.dumps(receipt).encode(), b'{"artifact_identity":"selected"}', None)
+    enriched = cpc.build_enrichment_components(tmp_path, session, corporate_currency_rollforward=result)
+    overlay = enriched["current_corporate_knowledge_overlay"]
+    assert overlay["status"] == "AVAILABLE"
+    assert "current-corporate-knowledge-overlay-v1/2026-10-02" in overlay["path"].as_posix()
+    assert overlay["artifact"]["non_voting"] is True
+    assert overlay["artifact"]["historical_use_allowed"] is False
+    assert overlay["artifact"]["official_event_context"]["artifact_identity"] == "selected"
+    assert packet.read_bytes() == before

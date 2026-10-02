@@ -767,6 +767,7 @@ def run_canonical_daily_operation(
         kwargs["enable_official_liquidity_rollforward"] = (
             NORMAL_DAILY_ENABLE_OFFICIAL_LIQUIDITY_ROLLFORWARD and not no_new_provider_acquisition
         )
+        kwargs["enable_corporate_currency_rollforward"] = not historical_compatibility
         return acquire(root, resolved_session, runtime_root, **kwargs)
 
     try:
@@ -881,7 +882,8 @@ def run_canonical_daily_operation(
     # This matches canonical_post_close_pipeline and leaves no post-hoc route
     # for attaching a rich-decision delivery surface to a sealed operation.
     enrichment = build_enrichment_components(
-        root, resolved_session, artifact_root=artifact_root, runtime_root=runtime_root,
+        root, resolved_session,
+        **({"corporate_currency_rollforward": acquisition["corporate_currency_rollforward"]} if acquisition.get("corporate_currency_rollforward") is not None else {}), artifact_root=artifact_root, runtime_root=runtime_root,
         retained_evidence_root=retained_evidence_root,
         output_root=operation_output_root,
     )
@@ -1182,6 +1184,7 @@ def run_canonical_daily_operation(
             "degraded_provider_recovery": snapshot.get("degraded_provider_recovery"),
             "provider_contribution_counts": acquisition.get("provider_contribution_counts"),
         },
+        "corporate_currency_rollforward": acquisition["corporate_currency_rollforward"].receipt() if acquisition.get("corporate_currency_rollforward") is not None else None,
         "registration": registration,
         "freeze": freeze,
         "daily_producer_status": producer_status,

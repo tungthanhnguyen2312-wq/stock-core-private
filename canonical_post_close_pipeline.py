@@ -88,15 +88,8 @@ REQUIRED_REGISTRY_KEYS = (
 )
 OPTIONAL_REGISTRY_KEYS = ("official_universe", "event_context")
 
-# daily_session_level2_package.session_triage_status() and daily_research_session_operations'
-# own input-manifest freshness labelling already document these two keys as
-# ACCEPTED_CURRENT_ASOF_BUILD_NOT_SESSION_LOCKED: their value is expected to reflect whatever the
-# latest retained build currently is, never a value frozen at the moment a historical session
-# completed. Before OFFICIAL_CORPORATE_EVENT_INCREMENTAL_ACQUISITION_AND_FRESHNESS_V1, event_context
-# resolved to one single, never-changing snapshot directory, so this tension never surfaced; a real
-# second acquisition now legitimately advances its identity over calendar time, which the mutation
-# check below must not reject as if it were an accidental rewrite of a locked historical session.
-NOT_SESSION_LOCKED_REGISTRY_KEYS = frozenset({"official_universe", "event_context"})
+# Optional current-source observations advance in a separate knowledge overlay.
+# Completed market-session selections, including optional entries, stay frozen.
 
 # These Level-2 keys are governed retained inputs, not outputs of a redirected
 # canonical attempt. They must continue to resolve under the Producer root.
@@ -522,6 +515,7 @@ def acquire_and_materialize(
     retained_evidence_root: Path | None = None, output_root: Path | None = None,
     no_new_provider_acquisition: bool = False, historical_compatibility: bool = False,
     enable_official_liquidity_rollforward: bool = False,
+    enable_corporate_currency_rollforward: bool = False,
     progress_callback: Callable[[Mapping[str, Any]], None] | None = None,
 ) -> dict[str, Any]:
     """Stage 1-3: DNSE acquisition, runtime materialization, current-session analytics.
@@ -622,6 +616,15 @@ def acquire_and_materialize(
             f"exact={exact}:total={total}:ratio={coverage_ratio:.4f}:floor={MIN_EXACT_SESSION_COVERAGE_RATIO}"
             f"{degraded_note}"
         )
+    corporate_rollforward = None
+    if enable_corporate_currency_rollforward:
+        from corporate_currency_rollforward import rollforward
+        frozen = frozen_optional_session_inputs(root, session).get("event_context")
+        corporate_rollforward = rollforward(
+            retained_evidence_root, target_market_session=session, observed_at=now,
+            allow_acquisition=not no_new_provider_acquisition and not historical_compatibility,
+            frozen_market_selection=frozen,
+        )
     materialize_kwargs: dict[str, Any] = dict(
         workers=workers, now=now, execution_root=root,
     )
@@ -683,6 +686,7 @@ def acquire_and_materialize(
         "triage_status": {"status": level2.EXACT_SESSION_CLEAN, "identity": triage_artifact.get("artifact_identity")},
         "triage_build_result": triage_build_result,
         "official_liquidity_rollforward": official_rollforward,
+        "corporate_currency_rollforward": corporate_rollforward,
         "paths": paths,
         "artifact_root": artifact_root,
         "eligibility": eligibility,
@@ -754,6 +758,7 @@ def build_enrichment_components(
     root: Path, session: str, *, artifact_root: Path | None = None, runtime_root: Path | None = None,
     priority_queue_artifact: Mapping[str, Any] | None = None,
     retained_evidence_root: Path | None = None, output_root: Path | None = None,
+    corporate_currency_rollforward=None,
 ) -> dict[str, Any]:
     """Best-effort materialize the three current-research components no orchestrator wires today
     (historical context, financial momentum, corporate event context). Each is fully independent;
@@ -771,7 +776,24 @@ def build_enrichment_components(
     output_root = output_root or root
     paths = level2.session_artifact_paths(artifact_root, session)
     retained_paths = level2.session_artifact_paths(retained_evidence_root, session)
+    registry_file = root / "config" / "daily_research_session_input_registry.json"
+    registry = json.loads(registry_file.read_text(encoding="utf-8")) if registry_file.is_file() else {}
+    completed = (registry.get("completed_sessions") or {}).get(session) or {}
+    if completed.get("status") == "COMPLETED_RETAINED_EVIDENCE":
+        frozen = frozen_optional_session_inputs(root, session)
+        for key, level2_key in (("event_context", "official_event_context"), ("official_universe", "official_universe")):
+            retained_paths[level2_key] = root / frozen[key]["path"] if key in frozen else root / "operations-review" / "historical-optional-unavailable" / key
     results: dict[str, Any] = {}
+    if corporate_currency_rollforward is not None:
+        receipt = corporate_currency_rollforward.receipt()
+        overlay = {"contract_version": "current_corporate_knowledge_overlay/v1",
+                   "receipt": receipt, "official_event_context": corporate_currency_rollforward.current_context(),
+                   "non_voting": True, "historical_use_allowed": False}
+        overlay = __import__("official_corporate_event_incremental_acquisition")._self_verified(
+            overlay, "current_corporate_knowledge_overlay")
+        out = output_root / "operations-review" / "current-corporate-knowledge-overlay-v1" / receipt["acquisition_civil_date"] / (overlay["artifact_sha256"] + ".json")
+        __import__("official_corporate_event_incremental_acquisition")._retain_context(out, overlay)
+        results["current_corporate_knowledge_overlay"] = {"status": "AVAILABLE" if overlay["official_event_context"] else "UNAVAILABLE", "artifact": overlay, "path": out}
 
     def _attempt(name: str, level2_key: str, fn) -> None:
         try:
@@ -1099,7 +1121,7 @@ def build_enrichment_components(
         except Exception:
             corporate_intelligence_artifact = None
         if corporate_intelligence_artifact is not None:
-            _write_json(paths["corporate_intelligence_axis"], corporate_intelligence_artifact)
+            _write_json(enrichment_output_path(output_root, session, "corporate_intelligence_axis"), corporate_intelligence_artifact)
         # CURRENT_DECISION_SURFACE_CONVERGENCE_V1: evidence currency is sourced from this exact
         # session's Level-2 same_session_technical_coverage_disposition/v1 (strict session and
         # content-identity checks live in the Integrated Decision boundary itself).
@@ -1483,6 +1505,36 @@ def run_post_handoff_prospective_outcome_feedback(
     }
 
 
+def frozen_optional_session_inputs(root: Path, session: str, *, registry_path: Path | None = None) -> dict:
+    path = registry_path or root / "config" / "daily_research_session_input_registry.json"
+    if not path.is_file():
+        return {}
+    registry = json.loads(path.read_text(encoding="utf-8"))
+    completed = (registry.get("completed_sessions") or {}).get(session)
+    if not isinstance(completed, Mapping) or completed.get("status") != "COMPLETED_RETAINED_EVIDENCE":
+        return {}
+    selected = (registry.get("sessions") or {}).get(session) or {}
+    lock = completed.get("frozen_input_identities") or {}
+    frozen = {}
+    for key in OPTIONAL_REGISTRY_KEYS:
+        entry = selected.get(key)
+        if entry is None:
+            if key in lock:
+                raise CanonicalPostCloseError("COMPLETED_SESSION_INPUT_MUTATION_REJECTED:" + session)
+            continue
+        artifact = _load(root / entry["path"])
+        if (entry.get("artifact_identity") != lock.get(key)
+                or not artifact or artifact.get("artifact_identity") != lock.get(key)):
+            raise CanonicalPostCloseError("COMPLETED_SESSION_INPUT_MUTATION_REJECTED:" + session)
+        try:
+            from current_official_event_context import _verify
+            _verify(artifact, "FROZEN_OPTIONAL_INPUT")
+        except ValueError as exc:
+            raise CanonicalPostCloseError("COMPLETED_SESSION_INPUT_MUTATION_REJECTED:" + session + ":" + str(exc)) from exc
+        frozen[key] = dict(entry)
+    return frozen
+
+
 def register_session_inputs(
     root: Path, session: str, *, registry_path: Path | None = None, artifact_root: Path | None = None,
     retained_evidence_root: Path | None = None,
@@ -1523,9 +1575,11 @@ def register_session_inputs(
     completed = (registry.get("completed_sessions") or {}).get(session)
     if isinstance(completed, Mapping) and completed.get("status") == "COMPLETED_RETAINED_EVIDENCE":
         lock = completed.get("frozen_input_identities") or {}
-        comparable_selection = {k: v for k, v in selection_identities(selection).items() if k not in NOT_SESSION_LOCKED_REGISTRY_KEYS}
-        comparable_lock = {k: v for k, v in lock.items() if k not in NOT_SESSION_LOCKED_REGISTRY_KEYS}
-        if comparable_selection != comparable_lock:
+        frozen_optional = frozen_optional_session_inputs(root, session, registry_path=path)
+        for key in OPTIONAL_REGISTRY_KEYS:
+            selection.pop(key, None)
+        selection.update(frozen_optional)
+        if selection_identities(selection) != lock:
             raise CanonicalPostCloseError("COMPLETED_SESSION_INPUT_MUTATION_REJECTED:" + session)
         return {"status": "ALREADY_FROZEN_IDENTICAL", "session": session, "selection": selection}
     existing = (registry.get("sessions") or {}).get(session)
@@ -1884,6 +1938,7 @@ def run_canonical_post_close(
     root: Path, runtime_root: Path, session: str, *, workers: int = 12, now: datetime | None = None,
     enable_current_foreign_flow_live: bool = False,
     enable_official_liquidity_rollforward: bool = False,
+    enable_corporate_currency_rollforward: bool = False,
 ) -> dict[str, Any]:
     if not isinstance(session, str) or not session.strip():
         raise CanonicalPostCloseError("REFUSE_CANONICAL_POST_CLOSE:EXPLICIT_SESSION_REQUIRED")

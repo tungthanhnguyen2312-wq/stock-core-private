@@ -108,3 +108,26 @@ def test_captured_selection_survives_later_path_changes(tmp_path, monkeypatch):
 def test_naive_knowledge_time_rejected(tmp_path):
     with pytest.raises(ValueError, match="TIMEZONE_AWARE"):
         r.rollforward(tmp_path, target_market_session="2026-10-01", observed_at=datetime(2026,10,2), allow_acquisition=False)
+
+
+def test_historical_discovery_never_selects_later_context(tmp_path):
+    import daily_session_level2_package as level2
+    ops = tmp_path / "operations-review"
+    for day in ("20261001", "20261002"):
+        path = ops / ("current-official-event-context-integration-v1-"+day)
+        path.mkdir(parents=True)
+        (path / "current_official_event_context_artifact.json").write_text("{}", encoding="utf-8")
+    assert level2.session_artifact_paths(tmp_path, "2026-10-01")["official_event_context"].parent.name.endswith("20261001")
+    assert level2.session_artifact_paths(tmp_path, "2026-09-30")["official_event_context"].parent.name.endswith("UNAVAILABLE")
+    assert level2._latest_official_event_context_dir(ops).endswith("20261002")
+
+
+def test_malformed_retained_manifest_fails_locally_without_acquisition(tmp_path, monkeypatch):
+    kwargs, calls = seams(tmp_path, monkeypatch)
+    def broken(path):
+        raise ValueError("MALFORMED_RETAINED_MANIFEST")
+    monkeypatch.setattr(r.acquisition, "_load", broken)
+    result = run(tmp_path, kwargs)
+    assert result.current_context() is None
+    assert result.receipt()["failure_reason"] == "MALFORMED_RETAINED_MANIFEST"
+    assert not calls

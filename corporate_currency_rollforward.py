@@ -57,8 +57,8 @@ def rollforward(root: Path, *, target_market_session: str, observed_at: datetime
     materialize_fn = materialize_fn or acquisition.materialize_current_official_event_context
     verify_fn = verify_fn or acquisition.verify_successful_acquisition
     manifest_path = root / acquisition.SESSIONS_RELATIVE / civil / acquisition.ATTEMPT_FILENAME
-    attempt = acquisition._load(manifest_path)
-    prior = acquisition.latest_successful_session(root)
+    attempt = None
+    prior = None
     budget = AcquisitionBudget()
     selected = None
     context_bytes = None
@@ -92,6 +92,8 @@ def rollforward(root: Path, *, target_market_session: str, observed_at: datetime
         return verified, result, raw, known
 
     try:
+        attempt = acquisition._load(manifest_path)
+        prior = acquisition.latest_successful_session(root)
         if not attempt or attempt.get("disposition") != acquisition.SUCCESS:
             if not allow_acquisition:
                 raise ValueError("CURRENT_ACQUISITION_DISABLED")
