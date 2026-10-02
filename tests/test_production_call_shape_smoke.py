@@ -145,6 +145,7 @@ def _run_offline_production_shape(
     tmp_path: Path,
     *,
     producer_impl: Any | None = None,
+    corporate_rollforward_fn: Any | None = None,
     trace: dict[str, Any] | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     """Execute the production-default branch with only synthetic side-effect boundaries."""
@@ -195,7 +196,7 @@ def _run_offline_production_shape(
                     "conflict_count": 0, "uncorroborated_count": 0}},
                 "degraded_provider_recovery": {"mode": "NOT_TRIGGERED"}, "records": {},
             }), encoding="utf-8")
-            return {
+            acquired = {
                 "snapshot": snapshot,
                 "resolved_completed_session": session,
                 "coverage": {"exact_session_retained_count": 889, "total_candidates": 1683, "ratio": 889 / 1683},
@@ -203,6 +204,11 @@ def _run_offline_production_shape(
                 "eligibility": {"reused_existing_eligible_artifact": True, "redirected": False},
                 "provider_contribution_counts": {},
             }
+            if corporate_rollforward_fn is not None:
+                events.append("corporate_rollforward")
+                acquired["corporate_currency_rollforward"] = corporate_rollforward_fn(retained_root, session)
+                trace["corporate_selection"] = acquired["corporate_currency_rollforward"]
+            return acquired
 
         def synthetic_register(*_args: Any, **_kwargs: Any) -> dict[str, Any]:
             events.append("register")
@@ -221,12 +227,17 @@ def _run_offline_production_shape(
 
         def synthetic_enrichment(_root: Path, session: str, **_kwargs: Any) -> dict[str, Any]:
             events.append("enrichment")
-            return {"integrated_investment_decision_product": {"status": "BUILT", "artifact": {
+            enriched = {"integrated_investment_decision_product": {"status": "BUILT", "artifact": {
                 "contract_version": "integrated_investment_decision_product/v1",
                 "session": session,
                 "artifact_identity": "integrated_investment_decision_product/v1:production-call-shape-smoke",
                 "records": {},
             }}}
+            if corporate_rollforward_fn is not None:
+                assert _kwargs["corporate_currency_rollforward"] is trace["corporate_selection"]
+                actual = cpc.build_enrichment_components(_root, session, **_kwargs)
+                enriched["current_corporate_knowledge_overlay"] = actual["current_corporate_knowledge_overlay"]
+            return enriched
 
         def synthetic_refresh(*_args: Any, **_kwargs: Any) -> dict[str, Any]:
             events.append("macro_refresh")
@@ -315,7 +326,20 @@ def _run_offline_production_shape(
             "flow_price_divergence_shadow": {"status": "UNAVAILABLE"},
         })
         patch.setattr(cdo, "run_post_handoff_prospective_outcome_feedback", lambda *_a, **_k: {"status": "UNAVAILABLE"})
-        patch.setattr(cdo, "run_post_handoff_presentation_projection", lambda *_a, **_k: {"status": "UNAVAILABLE"})
+        def presentation(*_args: Any, **kwargs: Any) -> dict[str, Any]:
+            if corporate_rollforward_fn is None:
+                return {"status": "UNAVAILABLE"}
+            from corporate_currency_rollforward import current_product_projection
+            import investment_decision_workspace_projection as workspace
+            overlay = kwargs["current_corporate_knowledge_overlay"]
+            frozen = {"contract_version": workspace.CONTRACT_VERSION, "as_of_session": SESSION,
+                      "source_artifacts": {"integrated_investment_decision_product": kwargs["integrated_investment_decision_product"]["artifact_identity"]},
+                      "cards": {"AAA": {"research_action_posture": "WAIT", "decision_identity": "original-T0"}}}
+            frozen.update(workspace.content_identity(frozen))
+            trace["current_projection"] = current_product_projection(frozen, overlay)
+            trace["frozen_projection"] = frozen
+            return {"status": "COLLECTED"}
+        patch.setattr(cdo, "run_post_handoff_presentation_projection", presentation)
         patch.setattr(cdo, "restage_runtime_with_presentation_projection", lambda *_a, **_k: {"status": "UNAVAILABLE"})
         patch.setattr(cdo, "invoke_release_orchestrator_complete_publication", lambda *_a, **_k: pytest.fail("publication must be disabled"))
         patch.setattr(cdo, "_git_head", lambda *_a, **_k: "production-call-shape-smoke")
@@ -347,6 +371,34 @@ def test_production_default_call_shape_is_offline_and_nonblocking(tmp_path: Path
     assert trace["events"].index("macro_refresh") < trace["events"].index("producer")
     assert trace["counters"] == {"network": 0, "provider": 0, "vnstock_import": 0}
     assert Path(record["operation_directory"]).is_relative_to(tmp_path)
+
+
+@pytest.mark.parametrize("retained", [True, False])
+def test_offline_daily_carries_one_corporate_selection_to_current_dashboard(tmp_path, monkeypatch, retained):
+    import corporate_currency_rollforward as corporate
+    from test_corporate_currency_rollforward import seams, NOW
+    kwargs, acquisition_calls = seams(tmp_path, monkeypatch, retained=retained)
+    calls = []
+    def rollforward(retained_root, session):
+        calls.append(session)
+        return corporate.rollforward(retained_root, target_market_session=session,
+            observed_at=NOW, allow_acquisition=False, **kwargs)
+    record, trace = _run_offline_production_shape(tmp_path / "daily", corporate_rollforward_fn=rollforward)
+    assert calls == [SESSION]
+    assert acquisition_calls == []
+    assert trace["counters"] == {"network": 0, "provider": 0, "vnstock_import": 0}
+    assert trace["events"].index("acquire") < trace["events"].index("corporate_rollforward") < trace["events"].index("enrichment")
+    assert record["daily_operation_state"] == cdo.STATE_LOCAL_COMPLETE
+    current = trace["current_projection"]
+    frozen = trace["frozen_projection"]
+    assert "current_corporate_knowledge_overlay" not in frozen
+    assert current["cards"]["AAA"]["research_action_posture"] == "WAIT"
+    assert current["cards"]["AAA"]["decision_identity"] == "original-T0"
+    assert current["current_corporate_knowledge_overlay"]["official_event_context"] == trace["corporate_selection"].current_context()
+    assert current["source_artifacts"] == frozen["source_artifacts"]
+    if not retained:
+        assert record["corporate_currency_rollforward"]["failure_reason"] == "CURRENT_ACQUISITION_DISABLED"
+        assert current["cards"]["AAA"]["current_corporate_knowledge"]["status"] == "UNAVAILABLE"
 
 
 def test_owner_daily_entry_route_remains_canonical() -> None:

@@ -69,6 +69,72 @@ def _snapshot_csv(path: Path, tickers=("AAA", "BBB")) -> None:
     path.write_text(f"ticker,exchange,date\n{rows}\n", encoding="utf-8")
 
 
+def test_current_corporate_projection_keeps_frozen_decision_and_posture(tmp_path):
+    import copy
+    import corporate_currency_rollforward as corporate
+    import official_corporate_event_incremental_acquisition as incremental
+    import investment_decision_workspace_projection as workspace_contract
+    bundle = _materialize_workspace(
+        session=SESSION, registry_inputs=_registry_inputs(), supplementary={},
+        requested_at=f"{SESSION}T18:00:00+07:00", root=tmp_path)
+    frozen = bundle["workspace"]
+    before = copy.deepcopy(frozen)
+    overlay = incremental._self_verified({
+        "receipt": {"target_market_session": SESSION, "acquisition_civil_date": "2026-10-02",
+                    "knowledge_observed_at": "2026-10-02T12:00:00+07:00"},
+        "official_event_context": {"records": {"AAA": {"events": [{"event_id": "later-official-event"}]}}},
+        "non_voting": True, "historical_use_allowed": False}, "current_corporate_knowledge_overlay")
+    projected = corporate.current_product_projection(frozen, overlay)
+    assert frozen == before
+    assert projected["source_artifacts"] == before["source_artifacts"]
+    assert projected["frozen_market_session_product_identity"] == before["artifact_identity"]
+    assert projected["artifact_identity"] != before["artifact_identity"]
+    assert workspace_contract.content_identity(projected)["artifact_identity"] == projected["artifact_identity"]
+    for ticker, card in before["cards"].items():
+        assert {k: v for k, v in projected["cards"][ticker].items()
+                if k != "current_corporate_knowledge"} == card
+    assert projected["cards"]["AAA"]["current_corporate_knowledge"]["events"] == [{"event_id": "later-official-event"}]
+    assert corporate.current_product_projection(frozen, overlay) == projected
+    with pytest.raises(ValueError, match="SESSION_MISMATCH"):
+        corporate.current_product_projection(dict(frozen, as_of_session=OTHER_SESSION), overlay)
+
+
+def test_current_brief_overlay_is_a_separate_product():
+    import corporate_currency_rollforward as corporate
+    import official_corporate_event_incremental_acquisition as incremental
+    import daily_integrated_decision_brief as brief_contract
+    brief = {"contract_version": brief_contract.CONTRACT_VERSION, "session": SESSION,
+             "research_action_posture": "WAIT", "watchlist": [{"ticker": "AAA", "posture": "WAIT"}]}
+    brief.update(brief_contract.content_identity(brief))
+    original = json.dumps(brief, sort_keys=True)
+    overlay = incremental._self_verified({"receipt": {"target_market_session": SESSION},
+        "non_voting": True, "historical_use_allowed": False}, "current_corporate_knowledge_overlay")
+    current = corporate.current_product_projection(brief, overlay)
+    assert json.dumps(brief, sort_keys=True) == original
+    assert current["watchlist"] == brief["watchlist"]
+    assert current["research_action_posture"] == "WAIT"
+    assert current["artifact_identity"] == brief_contract.content_identity(current)["artifact_identity"]
+
+
+def test_explicit_current_overlay_reaches_written_dashboard_workspace(tmp_path, monkeypatch):
+    import official_corporate_event_incremental_acquisition as incremental
+    runtime = tmp_path / "runtime"
+    runtime.mkdir()
+    _snapshot_csv(runtime / "screen_snapshot.csv")
+    monkeypatch.setenv("STOCK_LOOKUP_RUNTIME_ROOT", str(runtime))
+    overlay = incremental._self_verified({"receipt": {"target_market_session": SESSION},
+        "official_event_context": {"records": {"AAA": {"events": [{"event_id": "exact-selected"}]}}},
+        "non_voting": True, "historical_use_allowed": False}, "current_corporate_knowledge_overlay")
+    out = tmp_path / "current-product"
+    result = _materialize_and_write(root=tmp_path, session=SESSION, operation_dir=out,
+        registry_inputs=_registry_inputs(), requested_at=f"{SESSION}T18:00:00+07:00",
+        current_corporate_knowledge_overlay=overlay)
+    assert result["status"] == "MATERIALIZED"
+    workspace = json.loads((out / ccpp.WORKSPACE_ARTIFACT_FILENAME).read_bytes())
+    assert workspace["current_corporate_knowledge_overlay"] == overlay
+    assert workspace["cards"]["AAA"]["current_corporate_knowledge"]["events"] == [{"event_id": "exact-selected"}]
+
+
 # ---------------------------------------------------------------------------
 # resolve_supplementary_inputs -- explicit, deterministic, no search
 # ---------------------------------------------------------------------------

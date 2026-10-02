@@ -844,11 +844,10 @@ def test_official_event_context_resolves_latest_dated_snapshot(tmp_path):
     assert paths["official_event_context"] == newer / "current_official_event_context_artifact.json"
 
 
-def test_official_event_context_falls_back_when_no_dated_snapshot_exists(tmp_path):
-    """No dated snapshot directory (e.g. a fresh tmp_path, as in every other test in this file)
-    must resolve to the one known-retained literal, unchanged from before this fix."""
+def test_official_event_context_unavailable_when_no_dated_snapshot_exists(tmp_path):
+    """Missing retained context cannot manufacture a historical selection."""
     paths = level2.session_artifact_paths(tmp_path, "2026-09-10")
     assert paths["official_event_context"] == (
-        tmp_path / "operations-review" / "current-official-event-context-integration-v1-20260824"
+        tmp_path / "operations-review" / "current-official-event-context-integration-v1-UNAVAILABLE"
         / "current_official_event_context_artifact.json"
     )

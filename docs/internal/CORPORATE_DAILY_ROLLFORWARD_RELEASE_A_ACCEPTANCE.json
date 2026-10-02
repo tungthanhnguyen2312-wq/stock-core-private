@@ -1,0 +1,119 @@
+{
+  "authority_effect": "NONE / CURRENT_RESEARCH_EVIDENCE_ONLY",
+  "capture_count": 31,
+  "context_coverage": {
+    "agm_context": 43,
+    "bonus_context": 4,
+    "cash_dividend_context": 108,
+    "date_incomplete_events": 0,
+    "event_context_records": 186,
+    "event_context_tickers": 174,
+    "ex_date_today_events": 8,
+    "other_context": 24,
+    "past_events": 2,
+    "recent_events": 144,
+    "rights_context": 2,
+    "stock_dividend_context": 5,
+    "unknown_events": 0,
+    "upcoming_events": 32
+  },
+  "context_identity": "current_official_event_context:6bc4608b7d2b3f1d9a414ddeed383e56c658baec2d6400677a6de6a0cf23e5f8",
+  "network_calls": 0,
+  "offline_daily_acceptance": "Hermetic production-default canonical orchestration with injected retained acquisition and side-effect boundaries; snapshot -> one rollforward -> enrichment -> Integrated delivery -> current dashboard projection. Corporate-unavailable variant also completes. Separate post-handoff test proves current brief consumes overlay and sealed brief bytes remain unchanged. Fixture acceptance is not a live trading-session claim.",
+  "offline_guard_counters": {
+    "network": 0,
+    "provider": 0,
+    "vnstock_import": 0
+  },
+  "overlay_driver_coverage": {
+    "blocker_prevalence": {
+      "FORWARD_DRIVER_CLASSIFICATION_UNRESOLVED": 25,
+      "FORWARD_DRIVER_NOT_CURRENT_OR_RECENT": 1,
+      "FORWARD_DRIVER_SOURCE_NOT_QUALIFIED": 1,
+      "FORWARD_DRIVER_STATUS_UNRESOLVED": 1,
+      "NO_QUALIFIED_FORWARD_DRIVER": 1354
+    },
+    "canonical_status_distribution": {
+      "ANNOUNCED": 184,
+      "UNKNOWN": 2
+    },
+    "denominator": 1507,
+    "direction_distribution": {
+      "ADVERSE": 0,
+      "INFORMATIONAL": 158,
+      "MIXED": 0,
+      "SUPPORTIVE": 0,
+      "UNKNOWN": 28
+    },
+    "driver_category_distribution": {
+      "CAPITAL_STRUCTURE_CONTEXT": 11,
+      "DISTRIBUTION_CONTEXT": 108,
+      "GOVERNANCE_CONTEXT": 43,
+      "OTHER_EVENT_CONTEXT": 24
+    },
+    "driver_type_distribution": {
+      "BONUS_ISSUE": 9,
+      "DIVIDEND": 108,
+      "MANAGEMENT_GOVERNANCE": 43,
+      "OTHER_MATERIAL_EVENT": 24,
+      "RIGHTS_ISSUE": 2
+    },
+    "fitness_distribution": {
+      "AVAILABLE": 160,
+      "BLOCKED": 26
+    },
+    "freshness_distribution": {
+      "ACTIVE": 184,
+      "UNKNOWN": 2
+    },
+    "materiality_distribution": {
+      "NON_MATERIAL": 43,
+      "POTENTIALLY_MATERIAL": 119,
+      "UNKNOWN_MATERIALITY": 24
+    },
+    "no_qualified_driver_count": 1354,
+    "qualified_driver_count": 160,
+    "temporal_fitness_distribution": {
+      "READY": 186
+    },
+    "tickers_with_qualified_driver": 153,
+    "total_retained_drivers": 186
+  },
+  "production_effects": "NONE",
+  "raw_hashes_unchanged": true,
+  "receipt": {
+    "acquired_at": "2026-10-02T05:38:59+07:00",
+    "acquisition_attempt_identity": "sha256:c32b0d39dd88896c78d328dc80aa33ee4c5aee7025743d8a361980c0794c17c0",
+    "acquisition_attempt_path": "operations-review/official-corporate-event-acquisition-sessions/2026-10-02/acquisition_attempt.json",
+    "acquisition_attempted": false,
+    "acquisition_civil_date": "2026-10-02",
+    "authority_effect": "NONE / CURRENT_RESEARCH_EVIDENCE_ONLY",
+    "budget_policy_identity": "sha256:a5ad563e029c0fa2f23046705d745f0613850a5cc4a77e13bc55d33cfe08bafa",
+    "contract_version": "corporate_currency_rollforward/v1",
+    "current_research_context": {
+      "artifact_identity": "current_official_event_context:6bc4608b7d2b3f1d9a414ddeed383e56c658baec2d6400677a6de6a0cf23e5f8",
+      "bytes_sha256": "0aaa072716e56657f3fc1223a1a50eaed020f041c308f24fd66626ff80245cb2",
+      "path": "operations-review/current-official-event-context-integration-v1-20261002/current_official_event_context_artifact.json"
+    },
+    "failure_reason": null,
+    "freshness_state": "CURRENT_CIVIL_DATE",
+    "frozen_market_context": null,
+    "historical_use_allowed": false,
+    "integrity_verification": "VERIFIED",
+    "knowledge_observed_at": "2026-10-02T12:00:00+07:00",
+    "page_count": 20,
+    "previous_success_identity": "sha256:c32b0d39dd88896c78d328dc80aa33ee4c5aee7025743d8a361980c0794c17c0",
+    "prior_descriptive_max_age_days": null,
+    "refresh_action": "REUSED_CURRENT_SUCCESS",
+    "refresh_attempt_identity": "sha256:c32b0d39dd88896c78d328dc80aa33ee4c5aee7025743d8a361980c0794c17c0",
+    "refresh_attempt_path": "operations-review/official-corporate-event-acquisition-sessions/2026-10-02/acquisition_attempt.json",
+    "request_count": 31,
+    "retained_byte_count": 3216925,
+    "selected_acquisition_session": "2026-10-02",
+    "selection_lane": "CURRENT_RESEARCH_KNOWLEDGE_OVERLAY",
+    "source_age_seconds": 22861.0,
+    "target_market_session": "2026-10-01"
+  },
+  "retained_bytes": 3216925,
+  "status": "RETAINED_ACCEPTANCE_PASS"
+}
