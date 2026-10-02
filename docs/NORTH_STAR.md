@@ -1,5 +1,16 @@
 # Stock Lookup North Star
 
+## 2026-10-02 PIT foundation strategic closure
+
+The comprehensive evidence-first research and decision-support mission below remains
+unchanged. The market PIT foundation extends provenance and continuity across the
+existing product; technical features remain one lens among fundamentals, financial
+quality, valuation, corporate drivers, macro/sector and portfolio/risk. Strategic
+disposition: `PROSPECTIVE_PIT_PRIMARY / FULL_HISTORICAL_INTEGRATED_PIT_DEFERRED`.
+The [14-capability dossier](internal/MARKET_PIT_FEASIBILITY_DOSSIER_20261002.md) states
+actual evidence/time/rights/economic blockers. Future proposals are document-only;
+older NEXT pointers below are historical context, not current execution authority.
+
 
 ## 2026-10-01 execution rebaseline
 
@@ -352,3 +363,47 @@ Stock Lookup is close to its intended destination when a user can open it before
 - make the final investment decision themselves.
 
 That is the product destination. GitHub polish, public adoption, or monetization are secondary to achieving this research and decision quality.
+
+## 11. Basis, timeframes and thesis evidence architecture
+
+The intended product flow stays broad: acquisition and provenance → temporal/use
+fitness → deterministic technical, fundamental, financial-quality, valuation,
+corporate and macro/sector research → strategy/scenarios/confirmation/invalidation
+→ portfolio/risk → AI research and counter-thesis → human decisions → Daily,
+dashboard and monitoring → prospective T0 → outcomes and calibration.
+
+Every material price, volume, flow, financial, valuation, corporate and macro/sector
+input should carry what it measures, source/dataset/route identity, relevant period
+or timeframe, retrieval and actual knowledge/publication time, basis, freshness,
+use-specific fitness and historical-cutoff legality. Calendar dates, financial period
+ends and later source revisions never substitute for historical availability.
+
+Price modes remain distinct: `RAW_AS_TRADED` supports actual traded observations,
+session morphology, gaps, event reaction, swing/breakout/support levels;
+`PIT_CA_ADJUSTED` is the preferred future comparable continuous basis with raw lineage;
+`RETROSPECTIVE_ADJUSTED` remains a separately labelled research mode. Raw alone does
+not qualify long-window indicators across corporate actions. Volume has its own
+shares/lots/value/other/unknown unit and basis; price qualification cannot qualify it.
+
+1D is tactical context, 1W trend/base context and 1M structural context; year-level
+views have lower priority. Derived weekly/monthly bars and features retain each daily
+constituent and never gain stronger fitness or future inputs. Candle research starts
+with body, range, wicks, close location, gaps, ATR, volume, trend and location context.
+Pattern names are derived labels, not automatic actions; Bearish Engulfing does not
+become SELL. True volume profile requires complete trades/ticks or an explicitly
+qualified granular volume-by-price approximation; daily OHLCV cannot supply it.
+
+Observed flow may support persistence, acceleration, share and price divergence
+analysis. It does not prove institutional motivation. Macro/sector data keep their
+publication, period, revision and freshness roles distinct from issuer price timing.
+
+A future thesis evidence matrix may organize Technical, Volume, Institutional Flow,
+Fundamental, Valuation, Corporate, Macro/Sector, Liquidity/Portfolio and Evidence Quality
+into SUPPORTS, OPPOSES, MIXED, UNKNOWN or NOT_APPLICABLE. Each axis retains horizon,
+freshness and provenance; no universal score or independent action authority is implied.
+Conflict detection and AI synthesis are subordinate to qualified evidence and the
+standing `research_action_posture`.
+
+The six [future program proposals](internal/MARKET_MULTI_TIMEFRAME_TECHNICAL_FLOW_THESIS_PROPOSALS.md)
+extend existing engines and remain document-only. No technical roadmap implementation,
+universal scoring, provider addition or automatic NEXT selection follows this update.

@@ -50,11 +50,17 @@ keeps factor qualification unavailable. There is no second factor framework.
 [Exact-input offline acceptance](internal/MARKET_PIT_RELEASE_B_ACCEPTANCE.json) retains
 852 October 1 price/volume observations without changing source bytes. All price
 receipts are prospective as-known; their volume units are unknown. The selected universe
-has 1,701 observed rows (including official-only/unresolved records), zero active-time
+has 1,701 retained projection rows (including official-only/unresolved records), zero active-time
 qualifications. The October 2 corporate context has 188 rows including two excluded
 observations, zero qualified factors. These are different scopes from the 174-name/186-row
 current candidate corporate overlay. Retained tests ran under socket/HTTP/provider guards.
 This validates infrastructure, not a fabricated new live trading session.
+
+Release C distinguishes the projection denominator from actual known-time source
+observations: only 405 of those old rows have identified source rows and timestamps.
+It separately retains 1,522 newly observed HNX/HOSE listing rows from A's exact verified
+acquisition, with original source receipt times and no historical backfill or active
+membership inference. [Release C contract](market_only_pit_eligibility_contract.md).
 
 Existing bounded source-route evidence closes HOSE historical prices as
 `EMPIRICALLY_UNADJUSTED_SCOPED / SOURCE_BASIS_UNDOCUMENTED`.

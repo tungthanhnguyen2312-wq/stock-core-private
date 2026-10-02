@@ -94,7 +94,40 @@ def retain_universe(source_path: Path, *, root: Path) -> dict[str, Any]:
     projection.update(market.content_identity(projection, kind="prospective_universe_observations"))
     _retain(directory / "observations.json", projection)
     return {"status": "RETAINED", "path": str(directory / "observations.json"), "artifact_identity": projection["artifact_identity"],
-            "observations": len(rows), "active_membership_qualified": 0}
+            "observations": len(rows), "source_observations_with_known_time": sum(bool(r["knowledge_available_at"] and r["source_observation"].get("official_source_row_identity")) for r in rows),
+            "active_membership_qualified": 0}
+
+
+def retain_selected_listing_sources(source_root: Path, *, acquisition_session: str, root: Path) -> dict[str, Any]:
+    """Retain NEW listing observations from A's exact verified acquisition.
+
+    The static current universe can lack HNX receipt timestamps. Never assign its
+    rows a new time: preserve the separately acquired HNX/HOSE source observations.
+    Existing source bridge and universe row semantics own normalization.
+    """
+    from official_corporate_event_incremental_acquisition import verify_successful_acquisition, _hnx_bridge
+    from current_official_market_universe import _source_row, _observed_by_source
+    verified = verify_successful_acquisition(source_root, acquisition_session)
+    sources = {"hnx":_hnx_bridge(verified["hnx"]),"hose":verified["hose"]}
+    records = []
+    for source, dataset, family in (("hnx","hnx_official_equity_universe/v1","HNX_UPCOM"), ("hose","hose_public_stock_master/v1","HOSE")):
+        artifact = sources[source]
+        observed = _observed_by_source(artifact)
+        for raw in artifact.get("datasets",{}).get(dataset,[]):
+            known = observed.get(str(raw.get("source_identity")))
+            if known:
+                market._utc(known,"listing_receipt_at")
+            normalized = _source_row(row=raw,source=family,observed_at=known)
+            records.append({"source_observation":raw,"current_universe_projection":normalized,
+                "knowledge_available_at":known,"active_universe_at_time":"UNKNOWN",
+                "reason_codes":["CURRENT_EXCHANGE_PRESENCE_NOT_ACTIVE_MEMBERSHIP_AT_TIME"]})
+    value = {"contract_version":CONTRACT_VERSION,"acquisition_attempt_identity":verified["attempt_identity"],
+             "source_artifacts":sources,"records":records,"active_membership_qualified":0,"historical_backfill":False}
+    value.update(market.content_identity(value,kind="prospective_listing_source_observations"))
+    path = root / "operations-review/prospective-universe-evidence-v1/listing-sources" / (value["artifact_sha256"]+".json")
+    _retain(path,value)
+    return {"status":"RETAINED","path":str(path),"artifact_identity":value["artifact_identity"],"observations":len(records),
+            "source_observations_with_known_time":sum(bool(r["knowledge_available_at"]) for r in records),"active_membership_qualified":0}
 
 
 def retain_corporate(context: Mapping[str, Any], *, root: Path,

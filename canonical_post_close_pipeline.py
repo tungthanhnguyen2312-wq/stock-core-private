@@ -658,6 +658,11 @@ def acquire_and_materialize(
         if current_context:
             prospective_evidence["corporate"] = pit_retention.attempt(
                 pit_retention.retain_corporate, current_context, root=output_root)
+        selected_acquisition_session = corporate_rollforward.receipt().get("selected_acquisition_session")
+        if selected_acquisition_session:
+            prospective_evidence["listing_sources"] = pit_retention.attempt(
+                pit_retention.retain_selected_listing_sources, retained_evidence_root,
+                acquisition_session=selected_acquisition_session, root=output_root)
     # Explicit selected universe only; no latest directory search or historical active inference.
     universe_selection = (corporate_frozen_inputs or {}).get("official_universe")
     universe_path = root / universe_selection["path"] if universe_selection else level2.session_artifact_paths(retained_evidence_root, session)["official_universe"]

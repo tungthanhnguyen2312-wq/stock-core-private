@@ -1,8 +1,13 @@
 # Stock Lookup — Architecture & Roadmap
 
+## 2026-10-02 market PIT foundation closeout
+
+Release A is released through PR #38; Release B through PR #39 with candidate/main CI verified. Release C capability and retained/strategic closure are complete in this snapshot. Ordinary Daily accumulates immutable market, selected listing and corporate observations; exact signal gates reuse the existing VNM replay primitives. The actual first eligible region is empty; evidence/time/rights gates remain. Strategy: PROSPECTIVE_PIT_PRIMARY / FULL_HISTORICAL_INTEGRATED_PIT_DEFERRED. The comprehensive North Star remains unchanged. [Dossier](internal/MARKET_PIT_FEASIBILITY_DOSSIER_20261002.md) and [six document-only proposals](internal/MARKET_MULTI_TIMEFRAME_TECHNICAL_FLOW_THESIS_PROPOSALS.md); no automatic NEXT. Older sequencing below is historical unless it agrees with ROADMAP_STATE.
+
+
 ## 2026-10-02 post-release evidence-continuity program
 
-R5–R7 merged in PR #35 at `fbc4883`; R1/R2/R4 are complete and R3 is terminal by evidence. The [16-axis system review and ranked program](internal/POST_R1_R7_SYSTEM_REVIEW_20261002.md) supersede earlier automatic successor/owner-stop pointers for this owner-delegated session. First milestone: `PROSPECTIVE_EVIDENCE_CONTINUITY_DIAGNOSTICS_V1` (COMPLETE_VALIDATED, PR #36); canonical learning-health diagnosis now replaces its competing offline calculation. Corporate evidence currency is implemented and retained-validated: bounded official acquisition plus explicit current ex-date window, consumed by existing R4 explanations. Corporate currency Daily rollforward is queued NEXT because Daily currently loads materialized context without invoking incremental acquisition; governed valuation input coverage remains an evidence-dependent candidate. Higher PIT/live authority and root migration are not priorities.
+R5–R7 merged in PR #35 at `fbc4883`; R1/R2/R4 are complete and R3 is terminal by evidence. The [16-axis system review and ranked program](internal/POST_R1_R7_SYSTEM_REVIEW_20261002.md) supersede earlier automatic successor/owner-stop pointers for this owner-delegated session. First milestone: `PROSPECTIVE_EVIDENCE_CONTINUITY_DIAGNOSTICS_V1` (COMPLETE_VALIDATED, PR #36); canonical learning-health diagnosis now replaces its competing offline calculation. Corporate evidence currency is implemented and retained-validated: bounded official acquisition plus explicit current ex-date window, consumed by existing R4 explanations. Corporate currency Daily rollforward is released through PR #38; governed valuation input coverage remains an evidence-dependent candidate. Higher PIT/live authority and root migration are not priorities.
 
 
 

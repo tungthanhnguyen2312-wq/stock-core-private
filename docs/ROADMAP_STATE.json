@@ -1,7 +1,7 @@
 {
   "schema_version": "stocklookup_roadmap_execution_state/1.0.0",
   "roadmap_id": "stock-core-private",
-  "roadmap_version": "2026.10.02.4",
+  "roadmap_version": "2026.10.02.5",
   "narrative_authority": {
     "strategic_roadmap": "docs/ROADMAP.md",
     "operational_narrative": "docs/STATE.md",
@@ -16,29 +16,31 @@
   ],
   "current": {
     "milestone": "MARKET_DATA_PIT_FOUNDATION_AND_DAILY_OPERATIONALIZATION_V1",
-    "state": "ACTIVE"
+    "state": "COMPLETE"
   },
   "queued_next": [],
   "milestones": [
     {
       "milestone_id": "MARKET_DATA_PIT_FOUNDATION_AND_DAILY_OPERATIONALIZATION_V1",
-      "state": "ACTIVE",
+      "state": "COMPLETE",
       "starting_checkpoint": "45dfc94160de95b4a1c5c7c1c08f3a8ebbee84ae",
-      "checkpoint": null,
-      "candidate_branch": "feature/market-data-pit-foundation-20261002",
+      "checkpoint": "a5141c2b426e14535b0e67041e8de01b4853911e",
+      "candidate_branch": "feature/market-only-pit-eligibility-20261002",
       "dependencies": [
         "CURRENT_CORPORATE_CURRENCY_DAILY_ROLLFORWARD_V1"
       ],
       "unlocks": [],
-      "authority_effect": "NONE_UNLESS_EXACT_USE_SCOPED_RETAINED_EVIDENCE_QUALIFIES",
+      "authority_effect": "NONE / IMMUTABLE_PROSPECTIVE_RETENTION_AND_SIGNAL_SPECIFIC_ELIGIBILITY_ONLY",
       "owner_authorized": true,
       "owner_override": "OWNER_DIRECTIVE_2026_10_02_AUTONOMOUS_RELEASE_AND_ROADMAP_ADVANCE",
-      "source_doc": "docs/internal/MARKET_DATA_PIT_PROGRAM_CONTINUATION_20261002.md",
+      "source_doc": "docs/internal/MARKET_PIT_FEASIBILITY_DOSSIER_20261002.md",
       "state_history": [
         "NEXT",
-        "ACTIVE"
+        "ACTIVE",
+        "COMPLETE"
       ],
-      "notes": "Release B implemented: immutable market receipt versions retained after snapshot validation, selected universe and corporate observations retained independently, scoped RAW comparison hardened. Exact-input offline acceptance: 852 prices/volumes, 1701 universe rows, 188 corporate observations, zero active historical memberships/factors. Release B validation/release in progress; Release C remains required. No new data rights or authority promotion."
+      "notes": "Release B merged PR39 at 1d5fc169dd4fc1d2caa26b260355e85c13605fdb; candidate and main four-job CI success. Release C capability/retained/strategic closure complete: 21092 as-known receipt versions, 20149 ticker-session pairs, 24 sessions; first existing-signal eligible region empty, no real replay. 1522 selected current listing source observations preserve actual receipt times. ACTIVE/factors/qualified volume remain zero. PROSPECTIVE_PIT_PRIMARY / FULL_HISTORICAL_INTEGRATED_PIT_DEFERRED. Six future proposals are document-only, no NEXT. Release C release control is bound to its exact candidate tree and attached GitHub PR.",
+      "terminal_disposition": "MARKET_PIT_FOUNDATION_COMPLETE_HISTORICAL_EXTERNAL_GATES_REMAIN"
     },
     {
       "milestone_id": "PROSPECTIVE_EVIDENCE_CONTINUITY_DIAGNOSTICS_V1",
@@ -461,7 +463,7 @@
         "PARTIAL"
       ],
       "owner_override": "OWNER_DIRECTIVE_2026_09_29_FINANCIAL_EVIDENCE_COHORT1_TRIGGERED_OCR_V1",
-      "notes": "PARTIAL 2026-09-29. Retained-only H1 image OCR for HPG/PNJ/PVD/VRE; 11 completed page reads, no new CORE fact. Generic balance-sheet heading recognition accepts BÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡o cÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡o tÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¬nh hÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¬nh tÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â i chÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­nh. Qualification blocked on OCR unit ambiguity/conflict or non-unique geometry. No network, Vnstock, Daily, Financial V2 pin or successor."
+      "notes": "PARTIAL 2026-09-29. Retained-only H1 image OCR for HPG/PNJ/PVD/VRE; 11 completed page reads, no new CORE fact. Generic balance-sheet heading recognition accepts BÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡o cÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡o tÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬nh hÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬nh tÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â i chÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â­nh. Qualification blocked on OCR unit ambiguity/conflict or non-unique geometry. No network, Vnstock, Daily, Financial V2 pin or successor."
     },
     {
       "milestone_id": "FLOW_PRICE_CANONICAL_SOURCE_BACKFILL_AND_PRESENTATION_CORRECTIVE_V1",

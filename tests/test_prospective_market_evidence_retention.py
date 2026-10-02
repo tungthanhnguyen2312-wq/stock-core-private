@@ -33,6 +33,7 @@ def official(**changes):
     {"price_unit": "UNKNOWN"}, {"price_unit": "VND_1000"}, {"provider": "DNSE"}, {"source_id": "UNADMITTED"},
     {"receipt_identity": None}, {"knowledge_available_at": "2026-10-02T08:00:00Z"},
     {"knowledge_available_at": "2026-10-01T07:00:00Z"},
+    {"knowledge_available_at": 123}, {"knowledge_available_at": {"date": "2026-10-01"}},
     {"source_basis_claim": contract.SOURCE_DOCUMENTS_ADJUSTED}])
 def test_malformed_or_wrong_scope_official_never_raw(change):
     row = contract.build_session_manifest(snapshot(), session=SESSION, official_series=official(**change))["records"][0]
@@ -108,6 +109,52 @@ def test_current_universe_retained_without_historical_active_membership(tmp_path
     retained = source.read_bytes()
     retention.retain_universe(source, root=tmp_path)
     assert source.read_bytes() == retained
+    assert result["source_observations_with_known_time"] == 0  # no source row identity in the fixture
+
+
+def test_selected_listing_sources_reuse_existing_bridge_and_never_backdate_static_rows(tmp_path, monkeypatch):
+    import official_corporate_event_incremental_acquisition as acquisition
+    hnx = {"artifact_identity":"hnx:fixture","captures":[{"sha256":"a"*64,"retrieved_at":"2026-10-02T02:00:00Z"}],
+           "hnx_official_equity_universe":{"records":[{"ticker":"AAA","market":"UPCOM","source_identity":"a"*64}]},
+           "rights_event_index":{"records":[]}}
+    hose = {"artifact_identity":"hose:fixture","captures":[{"sha256":"b"*64,"retrieved_at":"2026-10-02T02:05:00Z"}],
+            "datasets":{"hose_public_stock_master/v1":[{"ticker":"BBB","hose_security_id":"1","source_identity":"b"*64}]}}
+    verified = {"hnx":hnx,"hose":hose,"attempt_identity":"attempt:fixture"}
+    calls = []
+    def verify(root,session):
+        calls.append((root,session)); return verified
+    monkeypatch.setattr(acquisition,"verify_successful_acquisition",verify)
+    result = retention.retain_selected_listing_sources(tmp_path,acquisition_session="2026-10-02",root=tmp_path)
+    assert calls == [(tmp_path,"2026-10-02")]
+    assert result["observations"] == result["source_observations_with_known_time"] == 2
+    retained = json.loads(open(result["path"]).read())
+    assert all(r["active_universe_at_time"] == "UNKNOWN" for r in retained["records"])
+    assert all(r["knowledge_available_at"].startswith("2026-10-02") for r in retained["records"])
+    before = open(result["path"],'rb').read()
+    assert retention.retain_selected_listing_sources(tmp_path,acquisition_session="2026-10-02",root=tmp_path)["artifact_identity"] == result["artifact_identity"]
+    assert open(result["path"],'rb').read() == before
+
+
+def test_daily_automatically_retains_exact_selected_listing_receipts(tmp_path,monkeypatch):
+    import canonical_post_close_pipeline as pipeline
+    import daily_session_level2_package as level2
+    import corporate_currency_rollforward as corporate
+    from test_canonical_post_close_pipeline import _write_snapshot, _write_triage
+    paths = level2.session_artifact_paths(tmp_path,SESSION)
+    order = []
+    monkeypatch.setattr(level2,"ensure_exact_session_snapshot",lambda *_a,**_k:_write_snapshot(paths,SESSION,
+        requested_at=SESSION+"T19:00:00+07:00",exact=500,total=1000))
+    result = corporate.CorporateCurrencyRollforwardResult(b'{"selected_acquisition_session":"2026-10-02"}',None,None)
+    monkeypatch.setattr(corporate,"rollforward",lambda *_a,**_k:order.append("corporate") or result)
+    def retain(source_root,**kwargs):
+        assert source_root == tmp_path and kwargs == {"acquisition_session":"2026-10-02","root":tmp_path}
+        order.append("listing_receipts");return {"status":"RETAINED","observations":2,"active_membership_qualified":0}
+    monkeypatch.setattr(retention,"retain_selected_listing_sources",retain)
+    monkeypatch.setattr(level2,"materialize_independent_components",lambda *_a,**_k:order.append("optional_components"))
+    monkeypatch.setattr(level2,"maybe_build_triage_dependent",lambda *_a,**_k:_write_triage(paths,SESSION))
+    acquired = pipeline.acquire_and_materialize(tmp_path,SESSION,tmp_path/"runtime",now=datetime.fromisoformat("2026-10-02T12:00:00+07:00"),enable_corporate_currency_rollforward=True)
+    assert order == ["corporate","listing_receipts","optional_components"]
+    assert acquired["prospective_market_evidence"]["listing_sources"]["observations"] == 2
 
 
 def test_missing_terms_and_later_calendar_correction_never_qualify_factor(tmp_path):

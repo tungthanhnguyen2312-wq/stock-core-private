@@ -8,6 +8,11 @@ immutable Daily I/O boundary, using the existing universe verifier/retainer and 
 ledger/factor engine. `canonical_post_close_pipeline.acquire_and_materialize` retains
 market receipts before optional work. [Contract](market_pit_foundation_contract.md).
 
+`market_only_pit_eligibility.py` owns signal-specific input, contiguous-region and
+D/W/M constituent gates. `vnm_shadow_backtest.py` reuses its existing signal/return
+primitives for bound gross research. `tools/run_market_only_pit_acceptance.py` scans
+exact R7 inputs offline. [Contract](market_only_pit_eligibility_contract.md).
+
 
 ## Repository navigation status — 2026-10-01
 

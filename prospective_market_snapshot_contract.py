@@ -92,6 +92,8 @@ def content_identity(value: Mapping[str, Any], *, kind: str) -> dict[str, str]:
 
 
 def _utc(value: datetime | str, name: str) -> datetime:
+    if not isinstance(value, (datetime, str)):
+        raise SnapshotContractError(f"{name}_datetime_or_iso8601_required")
     if isinstance(value, str):
         try:
             value = datetime.fromisoformat(value.replace("Z", "+00:00"))

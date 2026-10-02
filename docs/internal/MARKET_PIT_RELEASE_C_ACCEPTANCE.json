@@ -1,0 +1,119 @@
+{
+  "acquisition_requests": 0,
+  "artifact_identity": "market_only_pit_retained_acceptance:d2dc79a5791f2505ff917f1ec035fe5cce7fb394d5b3441f06cd699e6bf02ac3",
+  "artifact_sha256": "d2dc79a5791f2505ff917f1ec035fe5cce7fb394d5b3441f06cd699e6bf02ac3",
+  "authority_effect": "NONE",
+  "calendar_scope": {
+    "data_availability_is_not_calendar_validity": true,
+    "evidence_basis": "Retained governed-session review for CANONICAL_TRADES_TOOLCHAIN_RESTORATION_AND_GOVERNED_SESSION_CALENDAR_FIX_V1",
+    "governance": "This is an explicit replay-session ledger. It is not derived from canonical Trades partitions, weekday arithmetic, or an inferred holiday rule.",
+    "kind": "EXPLICIT_GOVERNED_SESSION_EVIDENCE",
+    "scope": "Vietnam listed-equity analytical replay sessions 2026-06-03 through 2026-09-04"
+  },
+  "calendar_sha256": "05dc601456370117918771fa10817891ae09e03e01c556aac0eb1f1574e71a2b",
+  "contract_version": "market_only_pit_retained_acceptance/v1",
+  "cutoff_semantics": "ACTUAL_RECEIPT_TIME_DATA_FEASIBILITY_NOT_EMITTED_T0_SIGNAL",
+  "gross_replay_input_coverage": {
+    "VNM_PIT_AVAILABILITY_TECHNICAL_CONFIRMATION_V1": {
+      "by_exchange": {},
+      "contiguous_regions": [],
+      "earliest": null,
+      "eligible_sessions": 0,
+      "eligible_ticker_sessions": 0,
+      "eligible_tickers": 0,
+      "exclusion_reason_counts": {
+        "ACTIVE_UNIVERSE_UNKNOWN": 20149,
+        "CA_FACTOR_REQUIRED_UNAVAILABLE": 20149,
+        "KNOWLEDGE_CUTOFF_VIOLATION": 8945,
+        "LOOKBACK_WINDOW_INSUFFICIENT": 20149,
+        "PRICE_NOT_PIT_ELIGIBLE": 20149,
+        "SESSION_NOT_IN_GOVERNED_CALENDAR": 15568,
+        "SIGNAL_TICKER_SCOPE_NOT_SUPPORTED": 20126,
+        "VOLUME_NOT_PIT_ELIGIBLE": 20149
+      },
+      "first_contiguous_region": null,
+      "latest": null,
+      "observed_ticker_sessions": 20149
+    }
+  },
+  "input_sha256": {
+    "primary:operations-review/current-official-market-universe-refresh-v1-20260913/current_official_market_universe_artifact.json": "a3274336caa2c6c6f9f7819dd790367a5cef43f4b679da51fc98f289a13de88f",
+    "primary:operations-review/historical-raw-pit-real-factor-chain-qualification-v1-20260930/historical_raw_pit_real_factor_chain_qualification_20260930.json": "8cafb72d57b4b99d1817383b88de9e4a0ff3c086ea401c83f0eb05d829542441",
+    "primary:operations-review/prospective-market-snapshot-v1-20260929/prospective_market_snapshot_manifest.json": "09e6d33a829b860ba2cc90010d96e4ebf07ff12a7b482f4cae4488d84b591663",
+    "primary:operations-review/prospective-market-snapshot-v1-20260930/prospective_market_snapshot_manifest.json": "cd3f00e0e226159db3688610be21f5aa090dcdffe1e28f4f8ecbd3fa412b8c85",
+    "primary:operations-review/prospective-market-snapshot-v1-20261001/prospective_market_snapshot_manifest.json": "9e8ef7768ce41857ea2bcf8b35c1647af7cbbe2200e6d7ff7278d31de89be869",
+    "raw_pit:operations-review/prospective-raw-pit-authority-v1-20260929/dnse_prospective_snapshots.jsonl": "3497db3dc7c003d5cec683c834775459b79c80fbdbfc23c6579fc20349fba968",
+    "raw_pit:operations-review/prospective-raw-pit-authority-v1-20260929/hose_official_snapshots.jsonl": "935a55429b10ee4d617315b20049082b1e402230e7f138b96bae5b8e0cc6a5d9",
+    "raw_pit:operations-review/prospective-raw-pit-authority-v1-20260929/prospective_raw_pit_authority_artifact.json": "03bdb288b81ffc2baf8417bf0452662499858ac188fa7aef4fee98e36950bac0"
+  },
+  "inventory": {
+    "by_exchange": {
+      "UNKNOWN": 21092
+    },
+    "later_daily_receipts": 2578,
+    "legacy_raw_instrument_fields": {
+      "UNKNOWN_LEGACY_INSTRUMENT_FIELD": 6026
+    },
+    "legacy_scoped_raw_receipts": 6026,
+    "observed_earliest": "2026-08-24",
+    "observed_latest": "2026-10-01",
+    "observed_sessions": 24,
+    "official_hose_receipts": 8740,
+    "prospective_dnse_receipts": 18514,
+    "qualified_as_known_price_receipts": 21092,
+    "qualified_volume_receipts": 0,
+    "tickers": 1334,
+    "unique_market_receipt_versions": 21092,
+    "volume_values_retained": 21092
+  },
+  "new_listing_source_continuity": {
+    "acquisition_attempt_identity": "sha256:c32b0d39dd88896c78d328dc80aa33ee4c5aee7025743d8a361980c0794c17c0",
+    "active_membership_qualified": 0,
+    "artifact_identity": "prospective_listing_source_observations:e3591c415d794ce51c18365453694301963ac2370a6359c0e92d7cd79353ddfd",
+    "capture_count": 31,
+    "idempotence": "PASS",
+    "observations": 1522,
+    "scope": "NEW_SOURCE_OBSERVATIONS_AT_ACTUAL_RECEIPT_TIME_NO_HISTORICAL_BACKFILL",
+    "selected_acquisition_session": "2026-10-02",
+    "source_bytes": 3216925,
+    "source_bytes_unchanged": true,
+    "source_observations_with_known_time": 1522,
+    "status": "RETAINED"
+  },
+  "offline_guard_counters": {
+    "network": 0,
+    "provider": 0,
+    "vnstock_import": 0
+  },
+  "production_writes": 0,
+  "representative_replay": {
+    "execution": "UNAVAILABLE",
+    "genuine_research_pairs": 0,
+    "gross_return": null,
+    "net_return": null,
+    "state": "NOT_RUN_NO_ELIGIBLE_MARKET_WINDOW"
+  },
+  "signal_input_coverage": {
+    "VNM_PIT_AVAILABILITY_TECHNICAL_CONFIRMATION_V1": {
+      "by_exchange": {},
+      "contiguous_regions": [],
+      "earliest": null,
+      "eligible_sessions": 0,
+      "eligible_ticker_sessions": 0,
+      "eligible_tickers": 0,
+      "exclusion_reason_counts": {
+        "ACTIVE_UNIVERSE_UNKNOWN": 20149,
+        "CA_FACTOR_REQUIRED_UNAVAILABLE": 20149,
+        "KNOWLEDGE_CUTOFF_VIOLATION": 8945,
+        "LOOKBACK_WINDOW_INSUFFICIENT": 20149,
+        "PRICE_NOT_PIT_ELIGIBLE": 20149,
+        "SESSION_NOT_IN_GOVERNED_CALENDAR": 15568,
+        "SIGNAL_TICKER_SCOPE_NOT_SUPPORTED": 20126
+      },
+      "first_contiguous_region": null,
+      "latest": null,
+      "observed_ticker_sessions": 20149
+    }
+  },
+  "source_bytes_unchanged": true
+}
