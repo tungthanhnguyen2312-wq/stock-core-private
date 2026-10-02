@@ -1,15 +1,18 @@
-[CmdletBinding()]
+﻿[CmdletBinding()]
 param(
     [string]$ReplayCompletedSession,
-    # Isolated-regression seams only. The Desktop "Stock Lookup Daily.cmd" passes none of them, so the
-    # owner route is unchanged: canonical run_owner_daily.py, canonical run-logs, pause before closing.
     [string]$EntryScript,
     [string]$LogDirectory,
-    [switch]$NoPause
+    [switch]$NoPause,
+    [switch]$Diagnostic
 )
-
 $ErrorActionPreference = 'Stop'
-$repo = Split-Path -Parent $PSScriptRoot
+$utf8 = [System.Text.UTF8Encoding]::new($false)
+[Console]::OutputEncoding = $utf8
+[Console]::InputEncoding = $utf8
+$OutputEncoding = $utf8
+$env:PYTHONUTF8 = '1'
+$env:PYTHONIOENCODING = 'utf-8'
 $runtime = 'C:\Projects\StockLookup\dashboard-runtime'
 $logDir = 'C:\Projects\StockLookup\run-logs'
 if ($LogDirectory) { $logDir = $LogDirectory }
@@ -22,106 +25,129 @@ $result = Join-Path $logDir "stock_lookup_daily_$stamp.result.json"
 $progress = Join-Path $logDir "stock_lookup_daily_$stamp.progress.jsonl"
 $python = 'C:\Program Files\Python313\python.exe'
 if (-not (Test-Path $python)) { $python = 'python' }
-
-Write-Host '================================================'
-Write-Host ' STOCK LOOKUP DAILY'
-Write-Host (" Date: " + (Get-Date -Format 'yyyy-MM-dd'))
-Write-Host '================================================'
-Write-Host '[1/9] Repository preflight'
-Write-Host '[2/9] Canonical Daily'
-Write-Host '[3/9] Daily completion verification'
-Write-Host '[4/9] Producer state publication'
-Write-Host '[5/9] Dashboard publication'
-Write-Host '[6/9] AI handoff build'
-Write-Host '[7/9] Remote verification'
-Write-Host '[8/9] Personal Action Center'
-Write-Host '[9/9] Open owner view'
-
+$labels = @('Kiểm tra kho mã & môi trường', 'Chạy Daily chuẩn', 'Xác minh hoàn tất Daily',
+    'Công bố trạng thái Producer', 'Công bố Dashboard', 'Tạo gói bàn giao AI', 'Xác minh từ xa',
+    'Trung tâm Hành động Cá nhân', 'Mở màn hình dành cho chủ sở hữu')
+$interactive = -not [Console]::IsOutputRedirected -and -not $Diagnostic
+$viewReady = $false
+$rowTop = 0
+$currentPhase = 1
+$rows = @()
+$logWriter = [System.IO.StreamWriter]::new($log, $false, $utf8)
+$logWriter.AutoFlush = $true
+function Write-Owner([string]$Text) {
+    [Console]::WriteLine($Text)
+    $logWriter.WriteLine($Text)
+}
+function Format-Duration($Seconds) {
+    if ($null -eq $Seconds) { return 'đang ước tính' }
+    $n = [Math]::Max(0, [Math]::Round([double]$Seconds))
+    return '{0:00}:{1:00}:{2:00}' -f [Math]::Floor($n / 3600), [Math]::Floor(($n % 3600) / 60), ($n % 60)
+}
+function Set-OwnerRow([int]$Index, [string]$Text) {
+    if ($interactive -and $viewReady) {
+        try {
+            $width = [Math]::Max(20, [Console]::WindowWidth - 1)
+            $display = if ($Text.Length -gt $width) { $Text.Substring(0, $width) } else { $Text }
+            [Console]::SetCursorPosition(0, $rowTop + $Index)
+            [Console]::Write($display.PadRight($width))
+            [Console]::SetCursorPosition(0, $rowTop + 14)
+            return
+        } catch { $script:interactive = $false }
+    }
+    [Console]::WriteLine($Text)
+}
+Write-Owner ('=' * 60)
+Write-Owner ' STOCK LOOKUP DAILY'
+Write-Owner (' Ngày: ' + (Get-Date -Format 'yyyy-MM-dd'))
+Write-Owner ('=' * 60)
 $arguments = @('-u', $entry, '--runtime-root', $runtime, '--result-path', $result, '--progress-path', $progress)
 if ($ReplayCompletedSession) { $arguments += @('--replay-completed-session', $ReplayCompletedSession) }
-# M1_LIVE_ACCEPTANCE_CORRECTIVE_V1: under Windows PowerShell 5.1, `2>&1` wraps every native stderr
-# line in an ErrorRecord, and with the script-wide 'Stop' preference the FIRST such line became a
-# terminating NativeCommandError that killed run_owner_daily.py before it could record its own
-# outcome (no result.json, no journal FAILED, no FINAL STATUS -- every Desktop Daily that wrote to
-# stderr since 2026-09-17, including the 2026-09-24 acquisition failure). Stderr is expected native
-# output, not a PowerShell failure: 'Continue' is scoped to this one call, each stderr record is
-# rendered back to its own text so both streams stay visible and logged, and the native exit code
-# alone decides the outcome.
+$priorStructured = $env:STOCK_LOOKUP_OWNER_STRUCTURED_CONSOLE
+$env:STOCK_LOOKUP_OWNER_STRUCTURED_CONSOLE = '1'
 $exitCode = $null
 $scriptPreference = $ErrorActionPreference
+# Native stderr is data under Windows PowerShell 5.1; preserve its text and native exit code.
 $ErrorActionPreference = 'Continue'
 try {
     & $python @arguments 2>&1 | ForEach-Object {
-        if ($_ -is [System.Management.Automation.ErrorRecord]) { $_.ToString() } else { $_ }
-    } | Tee-Object -FilePath $log
+        $text = if ($_ -is [System.Management.Automation.ErrorRecord]) { $_.ToString() } else { [string]$_ }
+        $logWriter.WriteLine($text)
+        if ($text.StartsWith('OWNER_DAILY_PRESENTATION=')) {
+            $presentation = $text.Substring('OWNER_DAILY_PRESENTATION='.Length) | ConvertFrom-Json
+            if ($interactive) {
+                try { $rowTop = [Console]::CursorTop } catch { $interactive = $false }
+            }
+            foreach ($phase in 1..9) {
+                $estimate = $presentation.phase_estimates.([string]$phase)
+                $etaText = if ($null -eq $estimate) { 'đang ước tính' } else { '~' + (Format-Duration $estimate) }
+                $rows += ('[{0}/9] {1} | CHỜ | ETA: {2}' -f $phase, $labels[$phase - 1], $etaText)
+                [Console]::WriteLine($rows[-1])
+            }
+            if ($interactive) { foreach ($unused in 1..5) { [Console]::WriteLine('') } }
+            $viewReady = $true
+        } elseif ($text.StartsWith('OWNER_DAILY_PROGRESS=')) {
+            $event = $text.Substring('OWNER_DAILY_PROGRESS='.Length) | ConvertFrom-Json
+            $currentPhase = [int]$event.phase_index
+            if ($interactive -and $viewReady) {
+                $parts = $event.owner_line -split ' \| '
+                Set-OwnerRow ($currentPhase - 1) (($parts | Select-Object -First 3) -join ' | ')
+                if (-not $event.owner_phase) {
+                    $details = @($parts | Select-Object -Skip 3)
+                    foreach ($index in 0..4) {
+                        $detail = if ($index -lt $details.Count) { '      ' + $details[$index] } else { '' }
+                        Set-OwnerRow (9 + $index) $detail
+                    }
+                }
+            } else { [Console]::WriteLine($event.owner_line) }
+        } elseif ($Diagnostic) { [Console]::WriteLine($text) }
+    }
     $exitCode = $LASTEXITCODE
 } finally {
     $ErrorActionPreference = $scriptPreference
+    $env:STOCK_LOOKUP_OWNER_STRUCTURED_CONSOLE = $priorStructured
 }
-
-function Get-LastLoggedStep([string]$LogPath) {
-    if (-not (Test-Path $LogPath)) { return $null }
-    $lastStep = Get-Content -Path $LogPath -Tail 400 | Where-Object { $_ -like '-->*' } | Select-Object -Last 1
-    if ($lastStep) { return $lastStep }
-    return (Get-Content -Path $LogPath -Tail 1)
+if ($interactive -and $viewReady) {
+    try { [Console]::SetCursorPosition(0, $rowTop + 14) } catch {}
 }
-
-if (Test-Path $result) {
-    $summary = Get-Content -Raw $result | ConvertFrom-Json
-    if ($summary.status -eq 'PASS') {
-        Write-Host ''
-        Write-Host 'FINAL STATUS: PASS' -ForegroundColor Green
-        Write-Host ("SESSION: " + $summary.session)
-        Write-Host ("DAILY: " + $summary.daily_status)
-        Write-Host ("PRODUCER SHA: " + $summary.producer_state.sha)
-        Write-Host ("AI HANDOFF SHA: " + $summary.ai_handoff.remote.remote_sha)
-        Write-Host 'AI_GITHUB_STATUS = READY_FOR_AI'
-        Write-Host ("AI_LATEST_SESSION = " + $summary.ai_handoff.remote.latest_session)
-        Write-Host ("AI_LATEST_POINTER = " + $summary.ai_handoff.remote.latest_pointer)
-        Write-Host ("AI_REMOTE_SHA = " + $summary.ai_handoff.remote.remote_sha)
-        Write-Host ("ACTION_CENTER_STATUS: " + $summary.action_center.status)
-        Write-Host ("ACTION_CENTER_JSON: " + $summary.action_center.json_path)
-        Write-Host ("ACTION_CENTER_VIEW: " + $summary.action_center.view_path)
-        if ($summary.action_center.view_open.status -eq 'READY_VIEW_OPEN_FAILED') {
-            Write-Host ("ACTION_CENTER_VIEW_NOTE: " + $summary.action_center.view_open.reason) -ForegroundColor Yellow
-        }
-    } elseif ($summary.status -eq 'PARTIAL') {
-        Write-Host ''
-        Write-Host 'FINAL STATUS: PARTIAL' -ForegroundColor Yellow
-        Write-Host ("SESSION: " + $summary.session)
-        Write-Host 'AI_GITHUB_STATUS: READY_FOR_AI'
-        Write-Host ("ACTION_CENTER_STATUS: " + $summary.action_center.status)
-        Write-Host ("REASON: " + $summary.action_center.reason)
-    } elseif ($summary.status -eq 'INTERRUPTED') {
-        Write-Host ''
-        Write-Host 'FINAL STATUS: INTERRUPTED' -ForegroundColor Yellow
-        Write-Host ("REASON: " + $summary.reason)
-        if ($summary.hint) { Write-Host ("HINT: " + $summary.hint) }
-        Write-Host ("CURRENT LOG: " + $log)
-        Write-Host ("LAST LOGGED STEP: " + (Get-LastLoggedStep $log))
-    } else {
-        Write-Host ''
-        Write-Host 'FINAL STATUS: FAILED' -ForegroundColor Red
-        Write-Host ("FAILED STEP: " + $summary.failed_step)
-        Write-Host ("REASON: " + $summary.reason)
-        if ($summary.hint) { Write-Host ("HINT: " + $summary.hint) }
+$summary = $null
+if (Test-Path -LiteralPath $result) { $summary = Get-Content -LiteralPath $result -Raw -Encoding UTF8 | ConvertFrom-Json }
+Write-Owner ('=' * 60)
+if ($summary -and $summary.status -eq 'PASS' -and $exitCode -eq 0) {
+    Write-Owner ' HOÀN TẤT DAILY'
+    Write-Owner (' Phiên: ' + $summary.session)
+    Write-Owner (' Tổng thời gian: ' + (Format-Duration $summary.telemetry.elapsed_seconds))
+    Write-Owner ('-' * 60)
+    foreach ($label in @('Daily', 'Dashboard', 'Bàn giao AI', 'Xác minh từ xa', 'Trung tâm Hành động')) {
+        Write-Owner (' ' + $label + ': XONG')
+    }
+    Write-Owner ' Trạng thái: PASS'
+    if ($summary.action_center.view_open.status -eq 'READY_VIEW_OPEN_FAILED') {
+        Write-Owner ' CẢNH BÁO: chưa mở được màn hình, xem log chi tiết.'
     }
 } else {
-    # The python process (or this wrapper's own process tree) was torn down before it could
-    # write its own result.json -- e.g. the console window was closed, or the machine slept.
-    # Never let that look like nothing happened: say so explicitly, with what we can recover.
-    Write-Host ''
-    Write-Host 'FINAL STATUS: INTERRUPTED' -ForegroundColor Yellow
-    Write-Host 'REASON: NO_RESULT_FILE_WRITTEN'
-    Write-Host 'HINT: The run ended before it could record its own outcome (closed window, sleep, or a kill outside this script''s control). This is NOT the same as the failure recorded in any older result file in this folder -- only this run''s own log below is current.'
-    Write-Host ("CURRENT LOG: " + $log)
-    Write-Host ("LAST LOGGED STEP: " + (Get-LastLoggedStep $log))
+    Write-Owner ' DAILY CHƯA HOÀN TẤT'
+    if ($summary.action_center.status -eq 'PARTIAL') { $currentPhase = 8 }
+    elseif ($summary.dashboard.status -eq 'FAILED') { $currentPhase = 5 }
+    Write-Owner (' Bước lỗi: [{0}/9] {1}' -f $currentPhase, $labels[$currentPhase - 1])
+    $explanation = if ($currentPhase -eq 6) { 'Không thể xác minh gói bàn giao AI của phiên đã hoàn tất.' } else { 'Bước xử lý chưa vượt qua kiểm tra bắt buộc. Xem log chi tiết.' }
+    Write-Owner (' Lý do: ' + $explanation)
+    $reason = if ($summary.reason) { $summary.reason }
+        elseif ($summary.action_center.reason) { $summary.action_center.reason }
+        elseif ($summary.dashboard.reason) { $summary.dashboard.reason }
+        elseif ($summary) { 'OWNER_DAILY_' + $summary.status }
+        else { 'NO_RESULT_FILE_WRITTEN' }
+    Write-Owner (' Mã lỗi: ' + $reason)
+    $resume = if ($summary.resume_completed_session) { 'CÓ' } else { 'KHÔNG' }
+    Write-Owner (' Có thể tiếp tục từ phiên đã hoàn tất: ' + $resume)
+    Write-Owner (' Log chi tiết: ' + $log)
+    Write-Owner (' Trạng thái: ' + $(if ($summary) { $summary.status } else { 'INTERRUPTED' }))
 }
-Write-Host ("LOG: " + $log)
-# A non-zero native exit code is always preserved; a zero exit without the run's own result file
-# is still not success.
+Write-Owner ('=' * 60)
+if ($Diagnostic) { Write-Owner (' Log chi tiết: ' + $log) }
+$logWriter.Dispose()
 $finalExitCode = 0
 if ($null -ne $exitCode -and $exitCode -ne 0) { $finalExitCode = $exitCode }
-elseif (-not (Test-Path $result)) { $finalExitCode = 1 }
-if (-not $NoPause) { Read-Host 'Press Enter to close' }
+elseif (-not $summary -or $summary.status -ne 'PASS') { $finalExitCode = 1 }
+if (-not $NoPause) { Read-Host 'Nhấn Enter để đóng' }
 exit $finalExitCode

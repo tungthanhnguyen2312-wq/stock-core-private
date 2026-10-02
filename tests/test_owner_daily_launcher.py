@@ -26,6 +26,20 @@ import json, sys, time
 args = sys.argv[1:]
 result_path = args[args.index("--result-path") + 1]
 mode = MODE
+if mode == "presentation":
+    print("RAW_HELPER_COMMAND --artifact-hash hidden", flush=True)
+    print("OWNER_DAILY_PRESENTATION=" + json.dumps({"session": "2026-10-02", "phase_estimates": {"2": 600}}), flush=True)
+    names = ["Repository preflight", "Canonical Daily", "Daily completion verification", "Producer state publication",
+             "Dashboard publication", "AI handoff build", "Remote verification", "Personal Action Center", "Open owner view"]
+    labels = ["Kiểm tra kho mã & môi trường", "Chạy Daily chuẩn", "Xác minh hoàn tất Daily", "Công bố trạng thái Producer",
+              "Công bố Dashboard", "Tạo gói bàn giao AI", "Xác minh từ xa", "Trung tâm Hành động Cá nhân", "Mở màn hình dành cho chủ sở hữu"]
+    for index, label in enumerate(labels, 1):
+        for status, state in (("BEGIN", "ĐANG CHẠY"), ("END", "XONG")):
+            print("OWNER_DAILY_PROGRESS=" + json.dumps({"phase_index": index, "owner_phase": True,
+                "owner_line": f"[{index}/9] {label} | {state} | Thời gian: 00:00:01"}, ensure_ascii=False), flush=True)
+    with open(result_path, "w", encoding="utf-8") as fh:
+        json.dump({"status": "PASS", "session": "2026-10-02", "telemetry": {"elapsed_seconds": 91}}, fh)
+    sys.exit(0)
 if mode == "stderr_flood":
     for i in range(3000):
         print(f"FLOOD_STDERR_{i:04d}", file=sys.stderr, flush=True)
@@ -44,6 +58,11 @@ if mode == "pass":
     with open(result_path, "w", encoding="utf-8") as fh:
         json.dump({"status": "PASS", "session": "2026-09-24", "daily_status": "COMPLETED"}, fh)
     sys.exit(0)
+if mode == "partial":
+    with open(result_path, "w", encoding="utf-8") as fh:
+        json.dump({"status": "PARTIAL", "session": "2026-10-02", "resume_completed_session": True,
+                   "action_center": {"status": "PARTIAL", "reason": "OWNER_PROFILE_UNAVAILABLE"}}, fh)
+    sys.exit(3)
 sys.exit(7)  # crash_without_result
 '''
 
@@ -54,7 +73,8 @@ def _run_launcher(tmp_path: Path, mode: str) -> tuple[subprocess.CompletedProces
     logs = tmp_path / "logs"
     completed = subprocess.run(
         [POWERSHELL, "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-File", str(LAUNCHER),
-         "-EntryScript", str(entry), "-LogDirectory", str(logs), "-NoPause"],
+         "-EntryScript", str(entry), "-LogDirectory", str(logs), "-NoPause",
+         *([] if mode == "presentation" else ["-Diagnostic"])],
         capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=180,
     )
     return completed, logs
@@ -77,7 +97,7 @@ def test_native_stderr_no_longer_kills_the_orchestrator_and_the_exit_code_is_pre
     assert "NativeCommandError" not in out + completed.stderr
     assert json.loads(next(logs.glob("*.result.json")).read_text(encoding="utf-8"))["status"] == "FAILED"
     # The wrapper reached its own final handling path from that result file.
-    assert "FINAL STATUS: FAILED" in out and "REASON: FIXTURE_EXPECTED_FAILURE" in out
+    assert "DAILY CHƯA HOÀN TẤT" in out and "Mã lỗi: FIXTURE_EXPECTED_FAILURE" in out
     assert [line for line in _log_text(logs).splitlines() if line.startswith("FIXTURE_")] == lines
 
 
@@ -86,15 +106,33 @@ def test_a_run_that_writes_no_result_is_interrupted_with_its_native_exit_code(tm
     completed, logs = _run_launcher(tmp_path, "crash_without_result")
     assert completed.returncode == 7
     assert "FIXTURE_STDOUT_2 after stderr" in completed.stdout
-    assert "FINAL STATUS: INTERRUPTED" in completed.stdout and "NO_RESULT_FILE_WRITTEN" in completed.stdout
+    assert "Trạng thái: INTERRUPTED" in completed.stdout and "NO_RESULT_FILE_WRITTEN" in completed.stdout
     assert not list(logs.glob("*.result.json"))
 
 
 @windows_powershell
 def test_success_after_stderr_output_stays_success(tmp_path):
-    completed, _ = _run_launcher(tmp_path, "pass")
+    completed, logs = _run_launcher(tmp_path, "pass")
     assert completed.returncode == 0
-    assert "FINAL STATUS: PASS" in completed.stdout
+    assert "HOÀN TẤT DAILY" in completed.stdout and "Trạng thái: PASS" in completed.stdout
+    raw = next(logs.glob("*.log")).read_bytes()
+    assert not raw.startswith((b"\xff\xfe", b"\xfe\xff"))
+    assert "HOÀN TẤT DAILY" in raw.decode("utf-8")
+    assert "\x1b" not in completed.stdout
+
+
+@windows_powershell
+def test_redirected_owner_presentation_has_nine_vietnamese_rows_and_no_internal_noise(tmp_path):
+    completed, logs = _run_launcher(tmp_path, "presentation")
+    assert completed.returncode == 0, completed.stdout + completed.stderr
+    rows = [line for line in completed.stdout.splitlines() if " | CHỜ | " in line]
+    assert len(rows) == 9
+    assert [line.split("]")[0] for line in rows] == [f"[{i}/9" for i in range(1, 10)]
+    assert "~00:10:00" in rows[1] and "đang ước tính" in rows[0]
+    assert "Tổng thời gian: 00:01:31" in completed.stdout
+    assert "RAW_HELPER_COMMAND" not in completed.stdout
+    assert "OWNER_DAILY_PROGRESS=" not in completed.stdout and "\x1b" not in completed.stdout
+    assert "RAW_HELPER_COMMAND" in _log_text(logs)
 
 
 @windows_powershell
@@ -104,7 +142,16 @@ def test_a_high_volume_stderr_stream_neither_hangs_nor_loses_lines(tmp_path):
     logged = _log_text(logs)
     assert sum(1 for line in logged.splitlines() if line.startswith("FLOOD_STDERR_")) == 3000
     # No result file -> never reported as success, even though the fixture exited 0.
-    assert completed.returncode == 1 and "FINAL STATUS: INTERRUPTED" in completed.stdout
+    assert completed.returncode == 1 and "Trạng thái: INTERRUPTED" in completed.stdout
+
+
+@windows_powershell
+def test_partial_completion_reports_component_reason_and_completed_session_resume(tmp_path):
+    completed, _ = _run_launcher(tmp_path, "partial")
+    assert completed.returncode == 3
+    assert "DAILY CHƯA HOÀN TẤT" in completed.stdout
+    assert "Mã lỗi: OWNER_PROFILE_UNAVAILABLE" in completed.stdout
+    assert "phiên đã hoàn tất: CÓ" in completed.stdout
 
 
 def test_launcher_scopes_continue_to_the_native_call_and_keeps_the_canonical_route():
@@ -121,5 +168,5 @@ def test_launcher_scopes_continue_to_the_native_call_and_keeps_the_canonical_rou
     assert r"$logDir = 'C:\Projects\StockLookup\run-logs'" in source
     assert '$progress = Join-Path $logDir "stock_lookup_daily_$stamp.progress.jsonl"' in source
     assert "'--progress-path', $progress" in source
-    assert "if (-not $NoPause) { Read-Host 'Press Enter to close' }" in source
+    assert "if (-not $NoPause) { Read-Host 'Nhấn Enter để đóng' }" in source
     assert "exit $finalExitCode" in source

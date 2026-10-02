@@ -46,7 +46,7 @@ class FakeClock:
 
 
 class FakeSampler:
-    def __init__(self, *, rss: int | None = 20, disk: int | None = 30, output: int | None = 40) -> None:
+    def __init__(self, *, rss: int | None = 20, disk: int | None = 20 * 1024**3, output: int | None = 40) -> None:
         self.rss, self.disk, self.output = rss, disk, output
         self.child_pid = None
 
@@ -102,7 +102,7 @@ def test_event_schema_percent_and_eta_known_are_operational_only(tmp_path):
     assert event["percent"] == 50.0 and event["coverage_percent"] == 35.0
     assert event["eta_state"] == "KNOWN" and event["eta_seconds"] == 8.0
     assert json.loads(sidecar.read_text(encoding="utf-8").splitlines()[-1]) == event
-    assert "requests 8/16 50.0%" in lines[-1] and "exact-session coverage 7/20 (35.0%)" in lines[-1]
+    assert "Yêu cầu: 8/16 (50.0%)" in lines[-1] and "Nến đúng phiên: 7/20 (35.0%)" in lines[-1]
 
 
 def test_unknown_or_zero_denominators_and_overcomplete_display_are_safe(tmp_path):
@@ -121,6 +121,40 @@ def test_unknown_or_zero_denominators_and_overcomplete_display_are_safe(tmp_path
 def test_eta_requires_a_meaningful_elapsed_sample():
     assert progress.eta(completed=1, total=10, elapsed_seconds=0.5) == (None, "UNKNOWN", None)
     assert progress.eta(completed=0, total=10, elapsed_seconds=10) == (None, "UNKNOWN", None)
+
+
+def test_initial_eta_uses_bounded_successful_history_median_and_excludes_resume(tmp_path):
+    for index, duration in enumerate((10, 20, 900, 99999)):
+        base = tmp_path / f"stock_lookup_daily_2026100{index + 1}"
+        base.with_suffix(".result.json").write_text(json.dumps({
+            "status": "PASS", "session": "2026-10-02",
+            "daily_status": "ALREADY_COMPLETED / REUSED" if index == 3 else "COMPLETED",
+        }), encoding="utf-8")
+        base.with_suffix(".progress.jsonl").write_text(json.dumps({
+            "writer_role": "OWNER_PARENT", "status": "END", "phase_index": 2,
+            "component": progress.PHASES[2], "session": "2026-10-02", "work_elapsed_seconds": duration,
+        }) + "\n", encoding="utf-8")
+    assert progress.recent_phase_estimates(tmp_path) == {2: 20.0}
+    assert progress.recent_phase_estimates(tmp_path, limit=2) == {}
+
+
+def test_nine_vietnamese_rows_and_sparse_phase_output_without_fake_heartbeat_eta(tmp_path):
+    clock = FakeClock(); emitter, sidecar, lines = _emitter(tmp_path, clock)
+    emitter.start_view({2: 100})
+    rows = [line for line in lines if line.startswith("[")]
+    assert [line.split("]")[0] for line in rows] == [f"[{i}/9" for i in range(1, 10)]
+    assert "ETA: ~00:01:40" in rows[1]
+    assert "đang ước tính" in rows[0]
+    emitter.emit(phase_index=2, status="BEGIN")
+    count = len(lines)
+    for tick in (30, 60, 90):
+        clock.value = tick
+        emitter.emit(phase_index=2, status="RUNNING")
+    assert len(lines) == count
+    emitter.emit(phase_index=2, status="END")
+    assert "XONG" in lines[-1] and "Thời gian: 00:01:30" in lines[-1]
+    assert all("\x1b" not in line and "RAM" not in line for line in lines)
+    assert len(sidecar.read_text(encoding="utf-8").splitlines()) == 5
 
 
 def test_write_and_metric_failures_are_degraded_without_raising(tmp_path):
@@ -319,7 +353,7 @@ def test_reused_snapshot_is_not_rendered_as_request_work(tmp_path):
     emitter, _sidecar, lines = _emitter(tmp_path, clock)
     emitter.emit(phase_index=2, component="DNSE exact-session", progress_kind="REQUESTS",
                  completed=100, total=100, qualified_count=98, coverage_denominator=100, status="REUSED")
-    assert "candidates 100" in lines[-1]
+    assert "dùng lại dữ liệu phiên đã hoàn tất" in lines[-1]
     assert "req 100/100" not in lines[-1]
 
 
@@ -440,15 +474,16 @@ def test_compact_heartbeat_retains_resource_sidecar_and_surfaces_threshold(tmp_p
     emitter.emit(phase_index=2, component="Prospective decision feedback", status="BEGIN")
     clock.value = 30
     event = emitter.emit(phase_index=2, component="Prospective decision feedback", status="RUNNING")
-    assert "RUNNING" in lines[-1] and "elapsed 00:00:30" in lines[-1]
-    assert all(word not in lines[-1] for word in ("RAM", "FREE", "OUT", "ETA", "UNKNOWN", "retry"))
+    assert lines == []
     assert json.loads(sidecar.read_text().splitlines()[-1])["rss_bytes"] == event["rss_bytes"] == 20
     sampler.disk = 9 * 1024**3; clock.value = 60
     emitter.emit(phase_index=2, component="Prospective decision feedback", status="RUNNING")
-    assert "FREE" in lines[-1] and "RAM" in lines[-1]
+    assert "CẢNH BÁO: dung lượng đĩa thấp" in lines[-1]
+    assert all(word not in lines[-1] for word in ("RAM", "FREE", "OUT", "Prospective"))
+    warning_count = len(lines)
     clock.value = 90
     emitter.emit(phase_index=2, component="Prospective decision feedback", status="RUNNING")
-    assert "FREE" not in lines[-1]
+    assert len(lines) == warning_count
 
 
 def test_completion_percentage_is_requests_and_reuse_is_coverage(tmp_path):
@@ -456,11 +491,11 @@ def test_completion_percentage_is_requests_and_reuse_is_coverage(tmp_path):
     kwargs = dict(phase_index=2, component="DNSE exact-session", progress_kind="REQUESTS",
                   completed=1683, total=1683, qualified_count=852, coverage_denominator=1683)
     emitter.emit(**kwargs, status="END")
-    assert "requests 1683/1683 100.0%" in lines[-1]
-    assert "exact-session coverage 852/1683 (50.6%)" in lines[-1] and "DONE" in lines[-1]
+    assert "Yêu cầu: 1683/1683 (100.0%)" in lines[-1]
+    assert "Nến đúng phiên: 852/1683 (50.6%)" in lines[-1] and "ĐANG CHẠY" in lines[-1]
     emitter.emit(**kwargs, status="REUSED")
-    assert "snapshot ready" in lines[-1] and "downstream reuse" in lines[-1]
-    assert "requests" not in lines[-1] and "ETA" not in lines[-1]
+    assert "dùng lại dữ liệu phiên đã hoàn tất" in lines[-1]
+    assert "Yêu cầu:" not in lines[-1]
 
 
 def test_named_foreground_subprocess_heartbeat_preserves_captured_result(tmp_path, monkeypatch):
@@ -482,8 +517,7 @@ def test_named_foreground_subprocess_heartbeat_preserves_captured_result(tmp_pat
     result = progress.run_observed_subprocess(["python", "fixture.py"], component="Prospective decision feedback",
                                              capture_output=True, text=True)
     assert result.stdout == "retained stdout" and result.stderr == "retained stderr" and result.returncode == 0
-    assert any("Prospective decision feedback" in line and "RUNNING" in line for line in lines)
-    assert "DONE" in lines[-1]
+    assert lines == []
 
 
 def test_local_complete_checkpoint_is_distinct_from_owner_terminal(capsys):
@@ -503,9 +537,9 @@ def test_retry_changes_and_failure_surface_without_repeating_healthy_counters(tm
     emitter.emit(**kwargs, completed=2, retry_count=0, status="RUNNING")
     assert "retry" not in lines[-1]
     emitter.emit(**kwargs, completed=3, retry_count=1, status="IN_PROGRESS")
-    assert "retry 1" in lines[-1]
+    assert "Retry: 1" in lines[-1]
     emitter.emit(**kwargs, completed=4, retry_count=1, status="FAILED")
-    assert "FAILED" in lines[-1] and "RAM" in lines[-1] and "retry 1" in lines[-1]
+    assert "LỖI" in lines[-1] and "RAM" not in lines[-1] and "Retry: 1" in lines[-1]
 
 
 def test_subprocess_without_telemetry_uses_original_runner(monkeypatch):
