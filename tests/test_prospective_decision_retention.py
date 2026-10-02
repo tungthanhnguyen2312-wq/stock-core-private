@@ -279,3 +279,84 @@ def test_health_consumer_reuses_canonical_verdict_and_malformed_horizon_is_unkno
     assert consumer == health
     consumer['outcome_maturity']['sessions'].clear()
     assert health['outcome_maturity']['sessions']
+
+
+@pytest.mark.parametrize("value", [None, True, False, 0, -3, 1.25, "Tiếng Việt 😀", {"z": [1, None, True, {"á": "☃"}], "a": -0.0}, {str(n): {"nested": [n, "đ" * 20]} for n in range(10000)}])
+def test_streaming_hash_exact_canonical_oracle(value):
+    import hashlib
+    original = json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False)
+    assert retention._hash(value) == hashlib.sha256(original.encode("utf-8")).hexdigest()
+
+
+def test_streaming_hash_nan_still_rejected():
+    with pytest.raises(ValueError):
+        retention._hash({"nested": [float("nan")]})
+
+
+def test_streamed_snapshot_bytes_and_identities_equal_original(tmp_path, monkeypatch):
+    import hashlib
+    snapshot = _snapshot("2026-01-01", 100)
+    snapshot["unicode"] = "Tiếng Việt 😀"
+    snapshot.pop("snapshot_identity")
+    snapshot["snapshot_identity"] = retention.SNAPSHOT_PREFIX + retention._hash(snapshot)
+    unsigned = {k: v for k, v in snapshot.items() if k != "snapshot_identity"}
+    assert snapshot["snapshot_identity"] == retention.SNAPSHOT_PREFIX + hashlib.sha256(retention._canon(unsigned).encode("utf-8")).hexdigest()
+    for row in snapshot["records"].values():
+        body = {k: v for k, v in row.items() if k != "prospective_snapshot_record_identity"}
+        assert row["prospective_snapshot_record_identity"] == retention.RECORD_PREFIX + hashlib.sha256(retention._canon(body).encode("utf-8")).hexdigest()
+    oracle = tmp_path / "old.json"
+    oracle.write_text(json.dumps(snapshot, ensure_ascii=False, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+    expected = oracle.read_bytes()
+    # Guard the actual new path against whole-object dumps/read_text.
+    monkeypatch.setattr(retention.json, "dumps", lambda *a, **k: pytest.fail("whole-object dumps"))
+    path = retention.write_immutable_snapshot(tmp_path, snapshot)
+    assert path.read_bytes() == expected
+    stat = path.stat()
+    monkeypatch.setattr(Path, "read_text", lambda *a, **k: pytest.fail("whole-existing snapshot read"))
+    assert retention.write_immutable_snapshot(tmp_path, snapshot) == path
+    assert path.stat().st_mtime_ns == stat.st_mtime_ns
+    assert retention.validate_snapshot(snapshot)
+
+
+@pytest.mark.parametrize("failure", ["encode", "fsync", "replace"])
+def test_failed_stream_write_leaves_destination_and_cleans_temp(tmp_path, monkeypatch, failure):
+    snapshot = _snapshot("2026-01-01", 100)
+    path = retention.write_immutable_snapshot(tmp_path, snapshot)
+    original = path.read_bytes()
+    if failure == "encode":
+        def broken(*args, **kwargs):
+            yield b"partial"
+            raise MemoryError("synthetic encoder failure")
+        monkeypatch.setattr(retention, "_json_bytes", broken)
+        expected = MemoryError
+    elif failure == "fsync":
+        def fail(*args):
+            raise OSError("fsync failed")
+        monkeypatch.setattr(retention.os, "fsync", fail)
+        expected = OSError
+    else:
+        snapshot = _snapshot("2026-01-02", 100)
+        def fail(*args):
+            raise OSError("replace failed")
+        monkeypatch.setattr(retention.os, "replace", fail)
+        expected = OSError
+    with pytest.raises(expected):
+        retention.write_immutable_snapshot(tmp_path, snapshot)
+    assert path.read_bytes() == original
+    assert not list((tmp_path / "operations-review" / "prospective-decision-retention-v1").glob("*/*/*.tmp"))
+
+
+def test_large_synthetic_snapshot_uses_bounded_batches_and_no_registration(tmp_path):
+    snapshot = _snapshot("2026-01-01", 100)
+    snapshot["large_nested_evidence"] = [{"n": n, "evidence": "é" * 1000} for n in range(5000)]
+    import hashlib
+    digest = hashlib.sha256()
+    sizes = []
+    for block in retention._json_bytes(snapshot):
+        digest.update(block)
+        sizes.append(len(block))
+    assert max(sizes) <= 64 * 1024
+    assert retention._hash(snapshot) == digest.hexdigest()
+    retention.write_immutable_snapshot(tmp_path, snapshot)
+    assert not (tmp_path / "operations-review" / "canonical-post-close-v1").exists()
+    assert not (tmp_path / "operations-review" / "daily-research-session-operations-v1").exists()

@@ -16,6 +16,8 @@ from __future__ import annotations
 import hashlib
 import json
 import math
+import os
+import tempfile
 from collections import Counter
 from pathlib import Path
 from typing import Any, Callable, Mapping, Sequence
@@ -49,8 +51,36 @@ def _canon(value: Any) -> str:
     return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False)
 
 
+def _json_bytes(value: Any, *, pretty: bool = False):
+    """Bounded encoding batches; canonical bytes match the standing dumps contract.
+
+    Pretty output preserves the old text writer's native newline translation.
+    Canonical identity bytes always use the original compact UTF-8 representation.
+    """
+    encoder = (json.JSONEncoder(ensure_ascii=False, sort_keys=True, indent=2) if pretty else
+               json.JSONEncoder(ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False))
+    buffer = bytearray()
+    for chunk in encoder.iterencode(value):
+        data = (chunk.replace("\n", os.linesep) if pretty else chunk).encode("utf-8")
+        if len(buffer) + len(data) > 64 * 1024:
+            if buffer:
+                yield bytes(buffer)
+                buffer.clear()
+            if len(data) > 64 * 1024:
+                yield data
+                continue
+        buffer.extend(data)
+    if pretty:
+        buffer.extend(os.linesep.encode("utf-8"))
+    if buffer:
+        yield bytes(buffer)
+
+
 def _hash(value: Any) -> str:
-    return hashlib.sha256(_canon(value).encode("utf-8")).hexdigest()
+    digest = hashlib.sha256()
+    for block in _json_bytes(value):
+        digest.update(block)
+    return digest.hexdigest()
 
 
 def _identity(payload: dict[str, Any], prefix: str, field: str) -> dict[str, Any]:
@@ -307,12 +337,35 @@ def snapshot_path(root: str | Path, snapshot: Mapping[str, Any]) -> Path:
 
 def write_immutable_snapshot(root: str | Path, snapshot: Mapping[str, Any]) -> Path:
     path = snapshot_path(root, snapshot)
-    serialized = json.dumps(snapshot, ensure_ascii=False, sort_keys=True, indent=2) + "\n"
-    if path.exists() and path.read_text(encoding="utf-8") != serialized:
-        raise ProspectiveDecisionRetentionError("IMMUTABLE_PROSPECTIVE_SNAPSHOT_CONFLICT:" + str(path))
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(serialized, encoding="utf-8")
-    return path
+    temporary = None
+    try:
+        digest, size = hashlib.sha256(), 0
+        with tempfile.NamedTemporaryFile(dir=path.parent, prefix=".snapshot-", suffix=".tmp", delete=False) as out:
+            temporary = Path(out.name)
+            for block in _json_bytes(snapshot, pretty=True):
+                out.write(block)
+                digest.update(block)
+                size += len(block)
+            out.flush()
+            os.fsync(out.fileno())
+        if path.exists():
+            before = path.stat()
+            existing, existing_size = hashlib.sha256(), 0
+            with path.open("rb") as source:
+                for block in iter(lambda: source.read(1024 * 1024), b""):
+                    existing.update(block)
+                    existing_size += len(block)
+            after = path.stat()
+            if ((before.st_size, before.st_mtime_ns) != (after.st_size, after.st_mtime_ns)
+                    or existing_size != size or existing.digest() != digest.digest()):
+                raise ProspectiveDecisionRetentionError("IMMUTABLE_PROSPECTIVE_SNAPSHOT_CONFLICT:" + str(path))
+            return path
+        os.replace(temporary, path)
+        return path
+    finally:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
 
 
 def validate_snapshot(snapshot: Mapping[str, Any]) -> bool:
