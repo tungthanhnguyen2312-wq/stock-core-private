@@ -192,13 +192,15 @@ def evaluate(*, requirements: SignalRequirements, ticker: str, session: str, kno
     return body
 
 
-def contiguous_coverage(rows: Sequence[Mapping[str, Any]], *, calendar_sessions: Sequence[str]) -> dict[str, Any]:
+def contiguous_coverage(rows: Sequence[Mapping[str, Any]], *, calendar_sessions: Sequence[str],
+                        calendar_windows: Sequence[Sequence[str]] = ()) -> dict[str, Any]:
     """Report observed scope separately from eligible contiguous regions, per signal."""
     result = {}
     groups = defaultdict(list)
     for row in rows:
         groups[row["signal_requirements"]["signal_id"]].append(row)
     index = {s:i for i,s in enumerate(calendar_sessions)}
+    window_indices = [{s:i for i,s in enumerate(window)} for window in calendar_windows] or [index]
     for signal, observations in sorted(groups.items()):
         eligible = [r for r in observations if r["state"] == "ELIGIBLE"]
         pairs = sorted({(r["ticker"],r["session"]) for r in eligible})
@@ -207,7 +209,8 @@ def contiguous_coverage(rows: Sequence[Mapping[str, Any]], *, calendar_sessions:
             days = sorted(s for t,s in pairs if t == ticker)
             current = []
             for day in days:
-                if current and (day not in index or current[-1] not in index or index[day] != index[current[-1]]+1):
+                if current and not any(day in window and current[-1] in window and
+                                       window[day] == window[current[-1]]+1 for window in window_indices):
                     regions.append({"ticker":ticker,"earliest":current[0],"latest":current[-1],"sessions":len(current)})
                     current = []
                 current.append(day)

@@ -1,0 +1,16 @@
+{
+  "source": "DNSE first-party endpoint docs / HNX retained exact event notice",
+  "capability": "OHLC v semantics / VBB BONUS executed-term document adjacency",
+  "scope": [
+    "https://developers.dnse.com.vn/docs/dnse/get-ohlc-history/",
+    "https://hnx.vn/vi-vn/m-tin-tuc-hnx/tintuc-620442-0.html"
+  ],
+  "request_cap": 2,
+  "byte_cap": 4194304,
+  "response_cap": 2097152,
+  "page_cap": 1,
+  "time_cap_seconds": 30,
+  "output": ".stocklookup\\scratch\\evidence-closure",
+  "retries": 0,
+  "redirects": 0
+}

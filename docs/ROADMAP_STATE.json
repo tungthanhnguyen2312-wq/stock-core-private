@@ -1,7 +1,7 @@
 {
   "schema_version": "stocklookup_roadmap_execution_state/1.0.0",
   "roadmap_id": "stock-core-private",
-  "roadmap_version": "2026.10.02.5",
+  "roadmap_version": "2026.10.02.6",
   "narrative_authority": {
     "strategic_roadmap": "docs/ROADMAP.md",
     "operational_narrative": "docs/STATE.md",
@@ -15,7 +15,7 @@
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "MARKET_DATA_PIT_FOUNDATION_AND_DAILY_OPERATIONALIZATION_V1",
+    "milestone": "PIT_MINIMUM_VIABLE_EVIDENCE_CLOSURE_V1",
     "state": "COMPLETE"
   },
   "queued_next": [],
@@ -2816,6 +2816,28 @@
       ],
       "owner_override": "OWNER_DIRECTIVE_2026_09_29_FINANCIAL_EVIDENCE_CURRENCY_AND_OFFICIAL_STATEMENT_REFRESH_V1",
       "notes": "PARTIAL 2026-09-29. Framework/integration/tests complete. Bounded live acquisition: 21 HTTP requests, 9 PDFs retained privately (~98.8 MB), 0 new qualified CORE facts. Financial V2 pin remains 2026-09-05.1. EVF has no admitted IR host. PAN storage-host only. GAS/POW/SSI index 404. Several 200 indexes yielded no FY2025/H1 locator. HPG/PNJ/PVD/VRE target PDFs are image-only (OCR not default-triggered). NVL Q2 has native text but lossy encoding blocked CORE extraction. No successor queued."
+    },
+    {
+      "milestone_id": "PIT_MINIMUM_VIABLE_EVIDENCE_CLOSURE_V1",
+      "state": "COMPLETE",
+      "narrative_disposition": "COMPLETE_FOUR_GATES_SOURCE_SCOPED_TERMINAL",
+      "starting_checkpoint": "8463a2fc24b87cc38bd8c7a57c0f78685f664e41",
+      "checkpoint": "86f027da4c8d1b1fb167ea50ebffcb015a3cb16c",
+      "candidate_branch": "feature/pit-minimum-evidence-closure-20261002",
+      "dependencies": [
+        "MARKET_DATA_PIT_FOUNDATION_AND_DAILY_OPERATIONALIZATION_V1"
+      ],
+      "unlocks": [],
+      "authority_effect": "DNSE_FORWARD_CALENDAR_EVIDENCE_ONLY / NO_STRONGER_AUTHORITY_PROMOTION",
+      "owner_authorized": true,
+      "source_doc": "Owner directive 2026-10-02; docs/internal/PIT_MINIMUM_VIABLE_EVIDENCE_CLOSURE_20261002.md",
+      "state_history": [
+        "ACTIVE",
+        "COMPLETE"
+      ],
+      "owner_override": "OWNER_DIRECTIVE_2026_10_02_PIT_MINIMUM_VIABLE_EVIDENCE_CLOSURE_V1",
+      "notes": "All four bounded evidence gates closed explicitly. DNSE OHLC volume units remain undocumented; current HNX/HOSE status lacks effective membership windows. Retained 257 forward working dates Oct2 2026-Oct1 2027 and integrated existing acceptance with actual known-time/no-gap-stitching guards. Three real CA candidates remain NOT_QUALIFIED with named terms/publication/lifecycle gaps. 11 requests /627318 bytes; no retries/followed redirects. Actual eligibility remains 0 with identical exclusions; SMA50 still50; 31 listing captures and original CA/market hashes unchanged. Stronger authority unchanged; no automatic successor.",
+      "terminal_disposition": "PIT_MINIMUM_VIABLE_EVIDENCE_CLOSURE_COMPLETE"
     }
   ],
   "blocked_capabilities": [
@@ -2869,5 +2891,5 @@
       "reference_checkpoint": "9575cb04c899696a02b22ba9dfcfed9a4961cf2d"
     }
   ],
-  "successor_disposition": "OWNER_ROADMAP_REVIEW_REBASELINE"
+  "successor_disposition": "EVIDENCE_CLOSED_FUTURE_TIME_AND_EXTERNAL_GATES_REMAIN"
 }

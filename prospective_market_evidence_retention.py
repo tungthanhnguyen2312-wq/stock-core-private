@@ -16,6 +16,19 @@ import prospective_market_snapshot_contract as market
 CONTRACT_VERSION = "prospective_market_evidence_retention/v1"
 
 
+def retain_working_dates_calendar(raw_bytes: bytes, *, retrieved_at: str, documentation_sha256: str,
+                                 documentation_retrieved_at: str, root: Path) -> dict:
+    from completed_market_session_gate import build_working_dates_calendar_receipt
+    receipt = build_working_dates_calendar_receipt(raw_bytes, retrieved_at=retrieved_at,
+        documentation_sha256=documentation_sha256, documentation_retrieved_at=documentation_retrieved_at)
+    directory = root / "operations-review" / "prospective-calendar-evidence-v1"
+    retain_immutable_bytes(directory / "raw" / receipt["payload_sha256"], raw_bytes)
+    path = directory / "receipts" / (receipt["artifact_sha256"] + ".json")
+    _retain(path, receipt)
+    return {"path": str(path), "artifact_identity": receipt["artifact_identity"],
+            "session_count": len(receipt["sessions"]), "window_start": receipt["window_start"], "window_end": receipt["window_end"]}
+
+
 def _retain(path: Path, value: Mapping[str, Any]) -> bool:
     return retain_immutable_bytes(path, market.canonical(value))
 
