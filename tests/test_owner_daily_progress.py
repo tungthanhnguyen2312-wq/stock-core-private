@@ -573,10 +573,23 @@ def test_phase_boundary_sizing_configurable(tmp_path, monkeypatch):
     monkeypatch.setattr(progress, "_path_size", lambda paths: calls.append(paths) or 123)
     sampler = progress.ResourceSampler(disk_path=tmp_path, run_output_paths=(tmp_path,))
     emitter = progress.OwnerDailyProgress(tmp_path / "diagnostics.jsonl", sampler=sampler, human_sink=None)
-    emitter._resources(0, force=True)
+    emitter._resources(0, force=True, size_outputs=True)
     for t in (6, 12, 18):
         emitter._resources(t)
     assert len(calls) == 1
     sampler.size_outputs_at_boundaries = False
-    emitter._resources(24, force=True)
+    emitter._resources(24, force=True, size_outputs=True)
     assert len(calls) == 1
+
+
+def test_request_completion_resource_refresh_is_not_tree_size_boundary(tmp_path, monkeypatch):
+    calls = []
+    monkeypatch.setattr(progress, "_path_size", lambda paths: calls.append(paths) or 123)
+    sampler = progress.ResourceSampler(disk_path=tmp_path, run_output_paths=(tmp_path,))
+    emitter = progress.OwnerDailyProgress(tmp_path / "diagnostic.jsonl", sampler=sampler, human_sink=None)
+    for _ in range(10):
+        emitter.emit(phase_index=2, component="DNSE request", progress_kind="REQUESTS", completed=1, total=1, status="END")
+    assert not calls
+    emitter.emit(phase_index=2, status="BEGIN")
+    emitter.emit(phase_index=2, status="END")
+    assert len(calls) == 2

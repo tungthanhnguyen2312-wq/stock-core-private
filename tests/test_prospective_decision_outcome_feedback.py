@@ -320,7 +320,7 @@ def test_pre_post_handoff_and_later_session_preserve_earlier_temporal_truth(tmp_
     assert later == feedback.discover_prospective_corpus(root, use_summary_cache=False)
 
 
-@pytest.mark.parametrize("mutation", ["snapshot", "decision", "condition", "policy", "corrupt", "oversize"])
+@pytest.mark.parametrize("mutation", ["snapshot", "decision", "condition", "policy", "contract", "corrupt", "corrupt_entry", "oversize"])
 def test_settled_cache_invalidates_dependency_and_binding(tmp_path, monkeypatch, mutation):
     chain = [f"2026-01-{n:02d}" for n in range(1, 23)]
     snapshots = {s: _snapshot(s, 100 + i) for i, s in enumerate(chain)}
@@ -339,6 +339,13 @@ def test_settled_cache_invalidates_dependency_and_binding(tmp_path, monkeypatch,
         kwargs["record"]["trigger"]["trigger_level"] += 1
     elif mutation == "policy":
         monkeypatch.setattr(feedback, "OUTCOME_POLICY_CONSTANTS", {**feedback.OUTCOME_POLICY_CONSTANTS, "version": "bumped"})
+    elif mutation == "contract":
+        monkeypatch.setattr(feedback, "CONTRACT_VERSION", "prospective_decision_outcome_feedback/test-bump")
+    elif mutation == "corrupt_entry":
+        path = tmp_path / feedback._SETTLED_CACHE_PATH
+        value = json.loads(path.read_text(encoding="utf-8"))
+        next(iter(value["entries"].values()))["feedback"]["ticker"] = "CORRUPT"
+        path.write_text(json.dumps(value), encoding="utf-8")
     elif mutation == "corrupt":
         (tmp_path / feedback._SETTLED_CACHE_PATH).write_text("{bad", encoding="utf-8")
     else:
@@ -429,3 +436,17 @@ def test_settled_cache_prunes_entries_without_changing_full_output(tmp_path, mon
     assert warm == cold == feedback.build_feedback_artifact(root, use_settled_cache=False)
     cache = json.loads((root / feedback._SETTLED_CACHE_PATH).read_text(encoding="utf-8"))
     assert len(cache["entries"]) == 1
+
+
+def test_structural_non_machine_conditions_settle_with_terminal_horizons(tmp_path):
+    import prospective_decision_retention as retention
+    chain = [f"2026-01-{n:02d}" for n in range(1, 23)]
+    snapshots = {s: _snapshot(s, 100) for s in chain}
+    record = _record(chain[0])
+    for role in ("trigger", "invalidation"):
+        record[role]["condition"] = retention.serialize_boundary_condition({}, role=role, source_strategy_identity=None)
+    cache = feedback.SettledFeedbackCache(tmp_path, chain, snapshots)
+    row = cache.evaluate(artifact={"session": chain[0]}, source_path="a", temporal={}, record=record)
+    assert all(h["status"] == bridge.MATURE for h in row["forward_outcomes"]["horizons"].values())
+    assert row["trigger_invalidation_outcome"]["trigger"]["status"] == "NOT_MACHINE_EVALUABLE"
+    assert len(cache.retained) == 1

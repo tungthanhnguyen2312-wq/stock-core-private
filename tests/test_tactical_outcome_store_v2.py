@@ -148,7 +148,21 @@ def test_mixed_equal_session_uses_original_v1_filename_tiebreak(tmp_path):
     oid, observation = next(store.iter_validated_observations())
     competing = collection.mature_outcome(observation, [], evaluation_as_of_session=_SESSIONS[-1])
     store.persist_outcome_update(oid, competing, validated_observation=observation)
+    # Verbatim V1 reader oracle: filename order, stable evaluation-session tie.
+    legacy_latest = {}
+    legacy_history = []
+    for path in sorted(store.outcomes_dir.glob("*.json")):
+        row = json.loads(path.read_text(encoding="utf-8"))
+        key = row["observation_id"]
+        current = legacy_latest.get(key)
+        if current is None or str(row["evaluation_as_of_session"]) >= str(current["evaluation_as_of_session"]):
+            legacy_latest[key] = row
+        if key == oid:
+            legacy_history.append(row)
+    legacy_history.sort(key=lambda row: str(row["evaluation_as_of_session"]))
     old = store.build_outcome_store_index()
+    assert old.latest == legacy_latest
+    assert old.history(oid) == legacy_history
     runner.mature_all(retained_evidence_root=tmp_path / "ev", store_root=tmp_path / "store")
     mixed = store.build_outcome_store_index()
     assert mixed.latest == old.latest
