@@ -241,7 +241,8 @@ def _benchmark(horizon: Mapping[str, Any], t0: Mapping[str, Any], later: Sequenc
             "price_basis_identity": initial.get("price_basis_identity")}
 
 
-def evaluate_case(envelope: Mapping[str, Any], completed_sessions: Sequence[Mapping[str, Any]], *, evaluation_as_of_session: str | None = None) -> dict[str, Any]:
+def evaluate_case(envelope: Mapping[str, Any], completed_sessions: Sequence[Mapping[str, Any]], *, evaluation_as_of_session: str | None = None,
+                  governed_chain=None) -> dict[str, Any]:
     case = _envelope_case(envelope)
     t0 = _t0(case)
     t0_session = t0.get("completed_session")
@@ -249,6 +250,11 @@ def evaluate_case(envelope: Mapping[str, Any], completed_sessions: Sequence[Mapp
         raise ProspectiveOutcomeError("T0_COMPLETED_SESSION_NOT_RETAINED")
     all_sessions = _completed_sessions(completed_sessions)
     later = [row for row in all_sessions if row["session"] > t0_session and (evaluation_as_of_session is None or row["session"] <= evaluation_as_of_session)]
+    from governed_session_chain import cohort_mode
+    mode = cohort_mode(t0_session, getattr(governed_chain, "first_complete_capture_session", None))
+    if mode == "GOVERNED_CAPTURE_CHAIN":
+        prefix = governed_chain.realized_prefix_after(t0_session, max(HORIZONS.values()))
+        later = [row for row in later if row["session"] in prefix]
     t0_price = t0.get("close") if isinstance(t0.get("close"), Mapping) else None
     horizons = {name: _horizon(name, count, t0_price, later, case["ticker"]) for name, count in HORIZONS.items()}
     completed = horizons["T60"]["status"] == "MATURE"
@@ -368,9 +374,10 @@ def cohort_observation_summary(outcomes: Sequence[Mapping[str, Any]]) -> dict[st
     return {"groups": rows, "authority_boundary": {"descriptive_observations_only": True, "probability_of_success": "NOT_EMITTED", "calibration": "INSUFFICIENT_SAMPLE_FOR_CALIBRATION"}}
 
 
-def build_outcome_artifact(envelopes: Sequence[Mapping[str, Any]], completed_sessions: Sequence[Mapping[str, Any]], *, evaluation_as_of_session: str | None = None) -> dict[str, Any]:
+def build_outcome_artifact(envelopes: Sequence[Mapping[str, Any]], completed_sessions: Sequence[Mapping[str, Any]], *, evaluation_as_of_session: str | None = None,
+                           governed_chain=None) -> dict[str, Any]:
     before = {str(_envelope_case(item)["case_id"]): str(_envelope_case(item)["case_content_identity"]) for item in envelopes}
-    outcomes = [evaluate_case(item, completed_sessions, evaluation_as_of_session=evaluation_as_of_session) for item in envelopes]
+    outcomes = [evaluate_case(item, completed_sessions, evaluation_as_of_session=evaluation_as_of_session, governed_chain=governed_chain) for item in envelopes]
     after = {str(_envelope_case(item)["case_id"]): str(_envelope_case(item)["case_content_identity"]) for item in envelopes}
     if before != after: raise ProspectiveOutcomeError("IMMUTABLE_T0_IDENTITY_CHANGED")
     ordered = sorted(outcomes, key=lambda item: item["case_id"])

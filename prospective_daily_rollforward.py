@@ -126,7 +126,7 @@ def _summary(rows: list[Mapping[str, Any]]) -> dict[str, Any]:
 
 
 def build_learning_ledger(snapshots: Sequence[Mapping[str, Any]], first_attribution: Mapping[str, Any],
-                          retained_completed_sessions: Sequence[str]) -> dict[str, Any]:
+                          retained_completed_sessions: Sequence[str], *, governed_chain=None) -> dict[str, Any]:
     """Create an idempotent ledger. Horizons count retained sessions, not calendar dates."""
     if not _valid_identity(first_attribution, 'first_real_prospective_attribution:', 'artifact_identity'):
         raise ValueError('FIRST_ATTRIBUTION_IDENTITY_INVALID')
@@ -135,6 +135,9 @@ def build_learning_ledger(snapshots: Sequence[Mapping[str, Any]], first_attribut
     for snapshot in sorted(snapshots, key=lambda item: item['research_session']):
         session = snapshot['research_session']
         later = [item for item in sessions if item > session]
+        from governed_session_chain import cohort_mode
+        if cohort_mode(session, getattr(governed_chain, "first_complete_capture_session", None)) == "GOVERNED_CAPTURE_CHAIN":
+            later = governed_chain.realized_prefix_after(session, max(HORIZONS.values()))
         horizons = {}
         for label, required_count in HORIZONS.items():
             target = later[required_count - 1] if len(later) >= required_count else None

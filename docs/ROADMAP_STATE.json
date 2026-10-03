@@ -1,7 +1,7 @@
 {
   "schema_version": "stocklookup_roadmap_execution_state/1.0.0",
   "roadmap_id": "stock-core-private",
-  "roadmap_version": "2026.10.03.2",
+  "roadmap_version": "2026.10.03.3",
   "narrative_authority": {
     "strategic_roadmap": "docs/ROADMAP.md",
     "operational_narrative": "docs/STATE.md",
@@ -15,11 +15,27 @@
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "VOLUME_AND_INSTITUTIONAL_FLOW_CONTEXT_V1",
-    "state": "COMPLETE"
+    "milestone": "PROSPECTIVE_PIT_CAPTURE_COMPLETENESS_V1",
+    "state": "ACTIVE"
   },
   "queued_next": [],
   "milestones": [
+    {
+      "milestone_id": "PROSPECTIVE_PIT_CAPTURE_COMPLETENESS_V1",
+      "state": "ACTIVE",
+      "starting_checkpoint": "799f727d1d783cedcf5327ab8ff9a86478aa9096",
+      "candidate_branch": "feature/prospective-pit-capture-completeness-v1",
+      "dependencies": [],
+      "unlocks": [],
+      "authority_effect": "NONE / CAPTURE_COMPLETENESS_ONLY",
+      "owner_authorized": true,
+      "owner_override": "OWNER_DIRECTIVE_2026_10_03_PROSPECTIVE_CAPTURE_FULL_TECHNICAL_RELEASE_AUTONOMY",
+      "source_doc": "docs/prospective_pit_capture_completeness_contract.md",
+      "state_history": [
+        "ACTIVE"
+      ],
+      "notes": "Future complete Daily captures begin a write-once first marker; old incomplete receipts stay immutable and incomplete. Same-session positive listing, native invariant scope/K2, separate retained official verification, multidimensional RAW, overlapping calendar union and shared contiguous future chain integrated. Offline actual first marker null / complete0 / all depths0; R7 legacy eligibility and protected products/T0 unchanged. CA integration seam only; no evaluation/source/use promotion. FIRST_REAL_POST_RELEASE_CAPTURE_ACCEPTANCE pending. Release requires exact candidate and merge-main four-job CI. Next CONTEXTUAL_TECHNICAL_SEMANTIC_HARDENING_V2 not started, then Thesis Matrix Stage1 not started; queued_next empty."
+    },
     {
       "milestone_id": "VOLUME_AND_INSTITUTIONAL_FLOW_CONTEXT_V1",
       "state": "COMPLETE",
@@ -2969,5 +2985,5 @@
       "reference_checkpoint": "9575cb04c899696a02b22ba9dfcfed9a4961cf2d"
     }
   ],
-  "successor_disposition": "THESIS_EVIDENCE_MATRIX_AND_CONFLICT_ENGINE_V1_STAGE_1_REQUIRES_SEPARATE_OWNER_AUTHORIZATION_NOT_STARTED"
+  "successor_disposition": "CONTEXTUAL_TECHNICAL_SEMANTIC_HARDENING_V2_NOT_STARTED_THEN_THESIS_EVIDENCE_MATRIX_AND_CONFLICT_ENGINE_V1_STAGE_1_NOT_STARTED"
 }

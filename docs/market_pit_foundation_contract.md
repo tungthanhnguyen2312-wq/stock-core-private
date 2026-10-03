@@ -69,3 +69,9 @@ EXTERNAL_DATA_RIGHTS_REQUIRED`; admitted current listing/event routes do not gra
 history rights. No new crawl, commercial provider, adjustment or source promotion occurs.
 The existing [authority findings](prospective_raw_pit_authority.md) and
 [R7 input manifest](internal/R7_RETAINED_INPUT_MANIFEST.json) remain the source baseline.
+
+October 3 successor: [prospective capture completeness](prospective_pit_capture_completeness_contract.md)
+adds immutable companion/listing/calendar/readiness records for future complete
+captures. Old incomplete receipts remain incomplete regardless of elapsed time.
+Stable native scale supports only separately qualified same-series invariant uses;
+it establishes neither economic units, effective ACTIVE membership nor global RAW.

@@ -185,8 +185,6 @@ def test_actual_acquisition_retains_before_optional_outage(tmp_path, monkeypatch
     def ensure(*_a, **_k):
         _write_snapshot(paths, SESSION, requested_at=SESSION+"T19:00:00+07:00", exact=500, total=1000, records=snapshot()["records"])
     def outage(*_a, **_k):
-        manifest = list((tmp_path / "operations-review/prospective-market-evidence-v1" / SESSION / "manifests").glob("*.json"))
-        assert len(manifest) == 1 and json.loads(manifest[0].read_bytes())["summary"]["snapshots"] == 1
         raise RuntimeError("optional outage")
     monkeypatch.setattr(level2, "ensure_exact_session_snapshot", ensure)
     if failure == "corporate":
@@ -197,4 +195,6 @@ def test_actual_acquisition_retains_before_optional_outage(tmp_path, monkeypatch
         with pytest.raises(RuntimeError, match="optional outage"):
             pipeline.acquire_and_materialize(tmp_path, SESSION, tmp_path / "runtime", now=datetime.fromisoformat(SESSION+"T19:00:00+07:00"),
                 enable_corporate_currency_rollforward=failure == "corporate")
+        manifest = list((tmp_path / "operations-review/prospective-market-evidence-v1" / SESSION / "manifests").glob("*.json"))
+        assert len(manifest) == 1 and json.loads(manifest[0].read_bytes())["summary"]["snapshots"] == 1
     assert all(v == 0 for v in counters.values())

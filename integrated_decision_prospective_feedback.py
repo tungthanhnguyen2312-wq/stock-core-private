@@ -52,13 +52,19 @@ def _read_json(path: Path) -> Mapping[str, Any]:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-def governed_session_chain(root: Path) -> list[str]:
+def governed_session_chain(root: Path, *, cohort_session=None, as_of=None) -> Sequence[str]:
     """Sorted, deduplicated set of sessions with a materialized daily research session operation.
 
     Same directory stocklookup.py:_previous() already scans -- deliberately not a different
     definition of "governed session" than what next_session_decision_brief's previous_qualified_
     session already reflects in production.
     """
+    if cohort_session is not None:
+        from prospective_pit_capture_retention import load_marker, load_chain, io_known_at
+        marker = load_marker(root)
+        if marker and cohort_session >= marker["session"]:
+            return load_chain(root, as_of=as_of or io_known_at())
+    # Explicit LEGACY_RETAINED_SESSION_MODE: preserve original manifest semantics.
     sessions: set[str] = set()
     base = root / "operations-review" / "daily-research-session-operations-v1"
     if not base.is_dir():
@@ -170,11 +176,16 @@ def _forward_horizon(*, as_of_session: str, horizon_sessions: int, chain: Sequen
         return {**base, "status": PRICE_NOT_RETAINED, "series_fitness": "T0_CLOSE_NOT_RETAINED"}
     if not _qualified_close(start.get("close")):
         return {**base, "status": PRICE_NOT_RETAINED, "series_fitness": "T0_CLOSE_VALUE_INVALID"}
+    if hasattr(chain, "next_n_sessions"):
+        resolved = chain.next_n_sessions(as_of_session, horizon_sessions)
+        if resolved["state"] != "COMPLETE":
+            return {**base, "status": PENDING if resolved["state"] == "PROJECTED_ONLY" else resolved["state"],
+                    "session_chain_contract": chain.contract_version, "session_window": resolved}
     index = chain.index(as_of_session)
     target_index = index + horizon_sessions
     if target_index >= len(chain):
         return {**base, "status": PENDING}
-    future_session = chain[target_index]
+    future_session = resolved["target"] if hasattr(chain, "next_n_sessions") else chain[target_index]
     t0_row, future_row = start, observations.get(future_session)
     if t0_row is None or future_row is None:
         return {
@@ -217,7 +228,9 @@ def _close_excursion(*, as_of_session: str, horizon: Mapping[str, Any], chain: S
         return {"status": PRICE_NOT_RETAINED, "CLOSE_MFE": None, "CLOSE_MAE": None, "semantics": "CLOSE_ONLY_NOT_INTRADAY_MFE_MAE"}
     index = chain.index(as_of_session)
     returns: list[float] = []
-    for session in chain[index + 1:index + horizon["required_completed_future_sessions"] + 1]:
+    days = (chain.realized_prefix_after(as_of_session, horizon["required_completed_future_sessions"])
+            if hasattr(chain, "realized_prefix_after") else chain[index + 1:index + horizon["required_completed_future_sessions"] + 1])
+    for session in days:
         row = observations.get(session)
         if row is None or not _compatible_close_series(start, row) or not _qualified_close(row.get("close")):
             return {"status": PRICE_BASIS_INCOMPATIBLE if row else PRICE_NOT_RETAINED, "CLOSE_MFE": None, "CLOSE_MAE": None, "semantics": "CLOSE_ONLY_NOT_INTRADAY_MFE_MAE"}
@@ -239,6 +252,11 @@ def evaluate_decision_forward_outcome(*, decision_record: Mapping[str, Any], p3f
     observations = retained_session_price_observations(retained_session_snapshots, ticker)
     if not observations:
         observations = _price_observations(p3f9b_snapshot, ticker)
+    if hasattr(governed_chain, "realized_prefix_after"):
+        # All existing path consumers see the same strict realized prefix. Future
+        # projections and later captures past a missed session cannot be skipped.
+        days = [as_of_session] + governed_chain.realized_prefix_after(as_of_session, max(FORWARD_HORIZONS.values()))
+        observations = {d: r for d, r in observations.items() if d in days}
     horizons = {name: _forward_horizon(as_of_session=as_of_session, horizon_sessions=n, chain=governed_chain, observations=observations) for name, n in FORWARD_HORIZONS.items()}
     max_n = max(FORWARD_HORIZONS.values())
     index = governed_chain.index(as_of_session) if as_of_session in governed_chain else None

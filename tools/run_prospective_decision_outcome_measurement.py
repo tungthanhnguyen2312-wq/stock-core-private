@@ -33,10 +33,14 @@ def _load_sessions(path: str | Path | None) -> list[dict]:
 
 
 def run(*, case_store_root: str | Path | None, completed_session_evidence: str | Path | None = None,
-        evaluation_as_of_session: str | None = None) -> dict:
+        evaluation_as_of_session: str | None = None, capture_evidence_root: str | Path | None = None) -> dict:
     envelopes = load_genuine_case_envelopes(case_store_root)
+    from prospective_pit_capture_retention import load_chain, io_known_at
+    from prospective_pit_capture_retention import load_marker
+    selected_root = Path(capture_evidence_root) if capture_evidence_root else ROOT
+    chain = load_chain(selected_root, as_of=io_known_at()) if load_marker(selected_root) else None
     artifact = build_outcome_artifact(envelopes, _load_sessions(completed_session_evidence),
-                                      evaluation_as_of_session=evaluation_as_of_session)
+                                      evaluation_as_of_session=evaluation_as_of_session, governed_chain=chain)
     artifact["prospective_outcome_context"] = [prospective_outcome_context(artifact, row["case_id"])
                                                 for row in artifact["outcomes"]]
     return artifact
@@ -47,10 +51,11 @@ if __name__ == "__main__":
     parser.add_argument("--case-store-root", help="Explicit durable prospective-case store. Missing means zero real cases.")
     parser.add_argument("--completed-session-evidence", help="JSON list/object of already-retained completed sessions.")
     parser.add_argument("--evaluation-as-of-session")
+    parser.add_argument("--capture-evidence-root", help="Future capture store for the shared governed chain; old cohorts keep legacy semantics.")
     parser.add_argument("--output", help="Optional explicit output path; no default artifact path is used.")
     args = parser.parse_args()
     result = run(case_store_root=args.case_store_root, completed_session_evidence=args.completed_session_evidence,
-                 evaluation_as_of_session=args.evaluation_as_of_session)
+                 evaluation_as_of_session=args.evaluation_as_of_session, capture_evidence_root=args.capture_evidence_root)
     text = json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
     if args.output:
         Path(args.output).write_text(text, encoding="utf-8")

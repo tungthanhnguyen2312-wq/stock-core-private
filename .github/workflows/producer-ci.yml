@@ -37,6 +37,7 @@ env:
     tests/test_market_wide_historical_research_context.py
     tests/test_session_bar_integrity.py
     tests/test_pit_evidence_closure_calendar.py
+    tests/test_prospective_pit_capture.py
     tests/test_market_only_pit_eligibility.py
     tests/test_market_only_vnm_gross_replay.py
     tests/test_prospective_market_snapshot_contract.py

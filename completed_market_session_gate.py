@@ -137,7 +137,7 @@ def build_working_dates_calendar_receipt(raw_bytes: bytes, *, retrieved_at: str,
     return body
 
 
-def pit_calendar_at_cutoff(base_sessions, receipts, *, session: str, knowledge_cutoff: str):
+def _legacy_pit_calendar_at_cutoff(base_sessions, receipts, *, session: str, knowledge_cutoff: str):
     """Use one known, exact source window; never stitch across an uncovered interval."""
     import prospective_market_snapshot_contract as market
     cutoff = market._utc(knowledge_cutoff, "knowledge_cutoff")
@@ -169,6 +169,26 @@ def pit_calendar_at_cutoff(base_sessions, receipts, *, session: str, knowledge_c
     # The whole chosen forward window is independent of the older governed ledger.
     # Returning it alone also prevents an SMA50 window from jumping the September gap.
     return list(candidates[0]["sessions"])
+
+
+def pit_calendar_at_cutoff(base_sessions, receipts, *, session: str, knowledge_cutoff: str,
+                           mode="COHORT_COMPATIBLE"):
+    """Future union coverage; explicit legacy chooser for pre-release cohorts."""
+    from prospective_pit_capture import CAPTURE_START_NOT_BEFORE
+    if mode not in {"COHORT_COMPATIBLE", "LEGACY_RETAINED_SESSION_MODE", "GOVERNED_CAPTURE_CHAIN"}:
+        raise ValueError("CALENDAR_RESOLUTION_MODE_INVALID")
+    if mode == "LEGACY_RETAINED_SESSION_MODE" or (mode == "COHORT_COMPATIBLE" and session < CAPTURE_START_NOT_BEFORE):
+        return _legacy_pit_calendar_at_cutoff(base_sessions, receipts, session=session, knowledge_cutoff=knowledge_cutoff)
+    from governed_session_chain import CalendarCoverage
+    coverage = CalendarCoverage(receipts, cutoff=knowledge_cutoff, base_sessions=base_sessions)
+    component = coverage.component(session)
+    if not component or not coverage.supported(session):
+        return []
+    # This list cannot cross an unsupported source interval. A disagreement
+    # truncates the window instead of inventing continuity through an omission.
+    barriers = sorted(d for d in coverage.conflicted_sessions if d <= session)
+    start = barriers[-1] if barriers else ""
+    return [d for d in component["sessions"] if d > start]
 
 
 class CompletedSessionGateError(ValueError):

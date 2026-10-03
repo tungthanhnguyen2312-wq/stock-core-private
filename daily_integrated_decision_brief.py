@@ -636,7 +636,7 @@ def build_from_session(*, root: Path, session: str, next_session_brief: Mapping[
     opportunity_prioritization_current = _load_json(paths["opportunity_prioritization"])
     financial_analysis_product_current = _load_json(paths["financial_analysis_product"])
     p3f9b_snapshot = _load_json(paths["exact_session_snapshot"])
-    governed_chain = feedback_bridge.governed_session_chain(root)
+    governed_chain = feedback_bridge.governed_session_chain(root, cohort_session=session)
     watchlist_tickers = list(owner_research_focus.broader_watchlist())
     feedback_status = feedback_bridge.build_prospective_feedback_status(
         current_records=integrated_current.get("records") or {}, p3f9b_snapshot=p3f9b_snapshot,

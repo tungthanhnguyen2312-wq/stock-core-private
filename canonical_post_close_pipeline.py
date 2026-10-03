@@ -714,22 +714,28 @@ def acquire_and_materialize(
             f"exact={exact}:total={total}:ratio={coverage_ratio:.4f}:floor={MIN_EXACT_SESSION_COVERAGE_RATIO}"
             f"{degraded_note}"
         )
-    # Retain the exact validated receipt before any optional enrichment/acquisition.
-    # Its original retrieved_at is authoritative; now is never substituted on rebuild.
+    # Retain selected listing evidence before complete market companions. The
+    # original price retrieved_at remains authoritative, including the raw fallback.
     import prospective_market_evidence_retention as pit_retention
-    prospective_evidence = {"market": pit_retention.attempt(
-        pit_retention.retain_market, snapshot, session=session, root=output_root)}
+    prospective_evidence = {}
     corporate_rollforward = None
     corporate_frozen_inputs = None
     if enable_corporate_currency_rollforward:
         from corporate_currency_rollforward import rollforward
         corporate_frozen_inputs = capture_corporate_session_inputs(root, retained_evidence_root, session)
         frozen = corporate_frozen_inputs.get("event_context")
-        corporate_rollforward = rollforward(
-            retained_evidence_root, target_market_session=session, observed_at=now,
-            allow_acquisition=not no_new_provider_acquisition and not historical_compatibility,
-            frozen_market_selection=frozen,
-        )
+        try:
+            corporate_rollforward = rollforward(
+                retained_evidence_root, target_market_session=session, observed_at=now,
+                allow_acquisition=not no_new_provider_acquisition and not historical_compatibility,
+                frozen_market_selection=frozen,
+            )
+        except Exception:
+            # Preserve price evidence even when listing acquisition fails. Such
+            # a run never gets a complete-capture session or a marker.
+            prospective_evidence["market"] = pit_retention.attempt(
+                pit_retention.retain_market, snapshot, session=session, root=output_root)
+            raise
         # A NEW decision may freeze this exact current selection only when all
         # knowledge was already available at its existing governed cutoff.
         # Completed sessions keep their actual lock, including absent optionals.
@@ -766,6 +772,18 @@ def acquire_and_materialize(
     universe_path = root / universe_selection["path"] if universe_selection else level2.session_artifact_paths(retained_evidence_root, session)["official_universe"]
     prospective_evidence["universe"] = pit_retention.attempt(
         pit_retention.retain_universe, universe_path, root=output_root)
+    # Same-session listing evidence is retained first. Market receipts keep their
+    # exact original bytes; exchange/representation arrive in a separate batch.
+    prospective_evidence["market"] = pit_retention.attempt(
+        pit_retention.retain_market, snapshot, session=session, root=output_root)
+    import prospective_pit_capture_retention as capture_retention
+    prospective_evidence["capture"] = pit_retention.attempt(
+        capture_retention.retain_capture_bindings, snapshot, session=session,
+        evidence=prospective_evidence, root=output_root, created_at=capture_retention.io_known_at())
+    prospective_evidence["official_verification"] = pit_retention.attempt(
+        capture_retention.retain_registered_verifications, output_root, session=session,
+        capture_result=prospective_evidence["capture"], registry_root=retained_evidence_root,
+        verification_known_at=capture_retention.io_known_at())
     materialize_kwargs: dict[str, Any] = dict(
         workers=workers, now=now, execution_root=root,
     )
@@ -2256,6 +2274,15 @@ def run_canonical_post_close(
         root, session, producer_result=producer_result, enrichment=enrichment,
         exact_session_snapshot=acquisition.get("snapshot"),
     )
+    import prospective_pit_capture_retention as capture_retention
+    import prospective_market_evidence_retention as pit_retention
+    from completed_market_session_gate import evaluate_completed_market_session_gate
+    capture_known_at = capture_retention.io_known_at()
+    capture_gate = evaluate_completed_market_session_gate(requested_at=capture_known_at,
+        requested_session=session, exact_session_evidence=acquisition.get("snapshot"), allow_provider_probe=False)
+    prospective_capture_readiness = pit_retention.attempt(capture_retention.daily_boundary, root,
+        session=session, gate=capture_gate, evidence=acquisition.get("prospective_market_evidence") or {},
+        known_at=capture_known_at, t0_snapshot_identity=((prospective_snapshot or {}).get("artifact") or {}).get("snapshot_identity"))
     decision_packet = build_decision_packet(
         root, session, opportunity=producer_result["operation"].get("opportunity"), enrichment=enrichment,
         artifact_root=artifact_root,
@@ -2287,6 +2314,7 @@ def run_canonical_post_close(
         "session": session, "acquisition": acquisition, "enrichment": enrichment,
         "producer_result": producer_result, "decision_packet": decision_packet,
         "prospective": prospective, "prospective_snapshot": prospective_snapshot,
+        "prospective_pit_capture_readiness": prospective_capture_readiness,
         "runtime_release": runtime_release, "tiers": tiers,
         "multi_session_signal_velocity": post_handoff["multi_session_signal_velocity"],
         "current_foreign_flow_enrichment": post_handoff["current_foreign_flow_enrichment"],

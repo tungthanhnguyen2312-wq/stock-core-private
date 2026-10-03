@@ -171,3 +171,15 @@ evidence for the September gap, and the named event-linked CA documents. No furt
 automatic milestone, reconstructed history, or representative replay is authorized by
 this closeout. Resume a bounded evidence gate only when its stated new source evidence
 arrives; keep stronger runtime authority fail-closed.
+
+## October 3 dated successor clarification
+
+The acquisition counts, retained evidence and terminal closure above remain the
+historical October 2 facts. The separately owner-authorized
+[capture completeness successor](../prospective_pit_capture_completeness_contract.md)
+corrects the interpretation of "ordinary Daily accumulation": future complete
+captures begin a new first-complete marker and contiguous maturity clock. Calendar
+time cannot supply missing units, listing/exchange bindings, CA or capture
+companions for old receipts. The old signal/gross eligibility and exclusions remain
+identical. The new capability grants capture completeness only; stronger use still
+requires its explicit evidence and authorization gates.
