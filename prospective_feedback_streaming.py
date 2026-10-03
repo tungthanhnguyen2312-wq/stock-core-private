@@ -204,10 +204,33 @@ def _metric(metrics: dict[str, Any] | None, key: str, amount: int | float = 1) -
 # Legacy Integrated Decision artifacts (header scan + record stream)
 # --------------------------------------------------------------------------------------------------
 
-def scan_legacy_artifact(path: Path, metrics: dict[str, Any] | None = None) -> SourceHandle | None:
-    """Header-only pass (``records`` are decoded and discarded). ``None`` mirrors ``_load_json`` failures."""
+def _legacy_receipt_path(state_root: Path, raw_sha: str) -> Path:
+    return state_root / STATE_DIR / "legacy_receipts" / (raw_sha + ".json")
+
+
+def scan_legacy_artifact(path: Path, metrics: dict[str, Any] | None = None, state_root: Path | None = None) -> SourceHandle | None:
+    """Header-only pass (``records`` are decoded and discarded). ``None`` mirrors ``_load_json`` failures.
+
+    With ``state_root`` the header and record count are cached under the SHA-256 of the exact bytes, so an
+    unchanged multi-hundred-MB legacy artifact is hashed (fast) but not decoded again for its header.
+    """
     header: dict[str, Any] = {}
     count = 0
+    if state_root is not None:
+        try:
+            raw = bas.source_hash(path)
+            size_now = path.stat().st_size
+        except OSError:
+            return None
+        _metric(metrics, "stream_sha256_bytes", size_now)
+        cached = _read_state_json(_legacy_receipt_path(state_root, raw))
+        if (cached and cached.get("contract_version") == STREAM_CONTRACT_VERSION and cached.get("source_sha256") == raw
+                and cached.get("size") == size_now and isinstance(cached.get("header"), dict) and isinstance(cached.get("record_count"), int)):
+            handle = SourceHandle(cached["header"])
+            handle["records"] = StreamedRecords(path, cached["record_count"], "legacy")
+            handle.valid, handle.raw_sha256, handle.size, handle.path = True, raw, size_now, Path(path)
+            _metric(metrics, "legacy_receipt_hits")
+            return handle
     try:
         with _HashedStream(path) as stream:
             parser = bas.ObjectStream(stream.text, sorted_required=False)
@@ -227,6 +250,12 @@ def scan_legacy_artifact(path: Path, metrics: dict[str, Any] | None = None) -> S
     handle = SourceHandle(header)
     handle.update({"records": StreamedRecords(path, count, "legacy")})
     handle.valid, handle.raw_sha256, handle.size, handle.path = True, digest, size, Path(path)
+    if state_root is not None and digest == raw and size == size_now:
+        try:
+            _atomic_write_json(_legacy_receipt_path(state_root, digest), {
+                "contract_version": STREAM_CONTRACT_VERSION, "source_sha256": digest, "size": size, "header": header, "record_count": count})
+        except (OSError, ValueError):
+            pass
     return handle
 
 
@@ -720,7 +749,7 @@ def build_streaming_feedback(root: str | Path, output: str | Path, *, state_root
     t = clock()
     corpus = fb.discover_prospective_corpus(
         root, payload_projection=lambda artifact: artifact, use_summary_cache=True, cache_metrics=metrics,
-        artifact_loader=lambda path, m: scan_legacy_artifact(path, m), cache_root=state_root)
+        artifact_loader=lambda path, m: scan_legacy_artifact(path, m, state_root), cache_root=state_root)
     modern_discovery = retention.discover_snapshots(
         root, payload_projection=lambda snapshot: snapshot,
         snapshot_loader=lambda path: load_snapshot_handle(path, state_root, metrics),
@@ -770,8 +799,8 @@ def build_streaming_feedback(root: str | Path, output: str | Path, *, state_root
                                          content_hash=content_hash) if marker else None
 
     # -- Input identity (cheap: hashes already taken during discovery) --------------------------------
+    code = code_digest()
     input_manifest = {
-        "code_digest": code_digest(),
         "contracts": {"feedback": fb.CONTRACT_VERSION, "forward": forward_bridge.CONTRACT_VERSION,
                       "retention": retention.CONTRACT_VERSION, "temporal": fb.TEMPORAL_CONTRACT_VERSION,
                       "policy": fb.OUTCOME_POLICY_CONSTANTS, "horizons": forward_bridge.FORWARD_HORIZONS},
@@ -786,6 +815,8 @@ def build_streaming_feedback(root: str | Path, output: str | Path, *, state_root
         "modern_price_sessions": sorted(modern_prices),
         "future_chain": _future_chain_inputs(root, marker, as_of),
     }
+    # Data identity only: the same retained inputs keep the same digest across code changes, so FEEDBACK_CALL_RELATION
+    # reports what the *evidence* did. Reuse additionally requires an identical code digest (below).
     input_digest = _sha256_bytes(_canon_bytes(input_manifest))
     inputs_summary = {"chain_sessions": chain, "t0_snapshot_identities": sorted(r[0] for r in input_manifest["t0_snapshots"]),
                       "legacy_artifact_paths": sorted(r[0] for r in input_manifest["legacy_artifacts"]),
@@ -795,7 +826,7 @@ def build_streaming_feedback(root: str | Path, output: str | Path, *, state_root
 
     # -- Terminal reuse -----------------------------------------------------------------------------
     existing = read_completion(output)
-    if existing and existing.get("input_digest") == input_digest and existing.get("code_digest") == input_manifest["code_digest"]:
+    if existing and existing.get("input_digest") == input_digest and existing.get("code_digest") == code:
         phases["total_s"] = clock() - started
         return _result(OUTCOME_ALREADY_COMPLETE, output, existing, inputs_summary, relation, metrics, phases)
 
@@ -822,8 +853,7 @@ def build_streaming_feedback(root: str | Path, output: str | Path, *, state_root
                              aggregate=aggregate)
         identity, size, raw_sha, record_count = _assemble(final_tmp, sections, spool_rows, spool_trigger, metrics)
         phases["assemble_s"] = clock() - t
-        outcome = _publish(final_tmp, output, identity, size, raw_sha, aggregate.count, input_digest,
-                           input_manifest["code_digest"], inputs_summary)
+        outcome = _publish(final_tmp, output, identity, size, raw_sha, aggregate.count, input_digest, code, inputs_summary)
     finally:
         spool_rows.remove()
         spool_trigger.remove()
@@ -835,7 +865,7 @@ def build_streaming_feedback(root: str | Path, output: str | Path, *, state_root
     manifest = read_completion(output)
     if manifest is None:
         # An equal-identity artifact written by the original builder has no manifest; adopt it after proof.
-        manifest = _adopt_existing(output, identity, size, raw_sha, aggregate.count, input_digest, input_manifest["code_digest"], inputs_summary)
+        manifest = _adopt_existing(output, identity, size, raw_sha, aggregate.count, input_digest, code, inputs_summary)
     return _result(outcome, output, manifest, inputs_summary, relation, metrics, phases)
 
 
@@ -996,16 +1026,77 @@ def _assemble(final_tmp: Path, sections: Mapping[str, Any], rows: _Spool, trigge
     return identity, size, raw_sha, rows.count
 
 
+class _ArrayStream(bas.ObjectStream):
+    """ObjectStream that can also walk a JSON array element by element (bounded by one element)."""
+
+    def elements(self):
+        self.take("[")
+        if self.peek() == "]":
+            self.take("]")
+            return
+        while True:
+            yield self.value()
+            if self.peek() == "]":
+                self.take("]")
+                return
+            self.take(",")
+
+
+ARRAY_MEMBERS = frozenset({"feedback_records", "trigger_invalidation_outcomes"})
+
+
+def stream_artifact_identity(path: Path) -> str:
+    """Recompute ``artifact_identity`` of a feedback artifact of either layout without materialising it."""
+    digest = hashlib.sha256()
+    digest.update(b"{")
+    first = True
+    with open(path, encoding="utf-8") as source:
+        parser = _ArrayStream(source, sorted_required=True)
+        for key in parser.members():
+            included = key != "artifact_identity"
+            if included:
+                if not first:
+                    digest.update(b",")
+                first = False
+                digest.update(json.dumps(key, ensure_ascii=False).encode("utf-8") + b":")
+            if key in ARRAY_MEMBERS:
+                if included:
+                    digest.update(b"[")
+                for position, element in enumerate(parser.elements()):
+                    if included:
+                        if position:
+                            digest.update(b",")
+                        digest.update(_canon_bytes(element))
+                if included:
+                    digest.update(b"]")
+            else:
+                value = parser.value()
+                if included:
+                    digest.update(_canon_bytes(value))
+        if parser.peek():
+            raise ValueError("FEEDBACK_ARTIFACT_TRAILING_JSON")
+    digest.update(b"}")
+    return ARTIFACT_IDENTITY_PREFIX + digest.hexdigest()
+
+
 def _publish(final_tmp: Path, output: Path, identity: str, size: int, raw_sha: str, record_count: int,
              input_digest: str, code: str, inputs_summary: Mapping[str, Any]) -> str:
-    """Atomic COMPLETE publication; an existing artifact must carry the same identity."""
+    """Atomic COMPLETE publication. An existing artifact is accepted only if it provably carries the same content."""
     if output.exists():
-        existing_identity = _identity_from_header(output)
-        if existing_identity != identity:
-            raise ImmutableOutputConflict("IMMUTABLE_ARTIFACT_CONFLICT:" + str(output))
         completion = read_completion(output)
-        if completion is None:
-            _write_completion(output, identity, output.stat().st_size, bas.source_hash(output), record_count, input_digest, code, inputs_summary)
+        if completion is not None and completion.get("artifact_identity") == identity:
+            return OUTCOME_ALREADY_RETAINED_EQUAL
+        existing_sha = bas.source_hash(output)
+        equal = existing_sha == raw_sha
+        if not equal and _identity_from_header(output) == identity:
+            # A same-identity artifact in another layout (the original builder's indent=2 file): prove it by content.
+            try:
+                equal = stream_artifact_identity(output) == identity
+            except (OSError, ValueError):
+                equal = False
+        if not equal:
+            raise ImmutableOutputConflict("IMMUTABLE_ARTIFACT_CONFLICT:" + str(output))
+        _write_completion(output, identity, output.stat().st_size, existing_sha, record_count, input_digest, code, inputs_summary)
         return OUTCOME_ALREADY_RETAINED_EQUAL
     os.replace(final_tmp, output)
     _write_completion(output, identity, size, raw_sha, record_count, input_digest, code, inputs_summary)

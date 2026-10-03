@@ -60,6 +60,38 @@ class ResourcePolicy:
         return asdict(self)
 
 
+GIB = 1024 ** 3
+ENV_PREFIX = "STOCKLOOKUP_FEEDBACK_"
+
+
+def default_feedback_policy(env: Mapping[str, str] | None = None) -> ResourcePolicy:
+    """Calibrated defaults (see the contract document for the measurements); explicit overrides are for operators and tests."""
+    environment = os.environ if env is None else env
+
+    def number(name: str, default: float) -> float:
+        raw = environment.get(ENV_PREFIX + name)
+        try:
+            return float(raw) if raw not in (None, "") else float(default)
+        except ValueError:
+            return float(default)
+
+    limit = number("MEMORY_LIMIT_BYTES", CALIBRATED_MEMORY_LIMIT_BYTES)
+    return ResourcePolicy(
+        deadline_seconds=number("DEADLINE_SECONDS", CALIBRATED_DEADLINE_SECONDS),
+        memory_limit_bytes=int(limit) if limit > 0 else None,
+        min_available_physical_bytes=int(number("MIN_AVAILABLE_PHYSICAL_BYTES", CALIBRATED_MIN_AVAILABLE_PHYSICAL_BYTES)),
+        min_available_commit_bytes=int(number("MIN_AVAILABLE_COMMIT_BYTES", CALIBRATED_MIN_AVAILABLE_COMMIT_BYTES)),
+        min_free_disk_bytes=int(number("MIN_FREE_DISK_BYTES", CALIBRATED_MIN_FREE_DISK_BYTES)))
+
+
+# Placeholders until the measured calibration is recorded (replaced in the calibration commit).
+CALIBRATED_DEADLINE_SECONDS = 1800.0
+CALIBRATED_MEMORY_LIMIT_BYTES = 3 * GIB
+CALIBRATED_MIN_AVAILABLE_PHYSICAL_BYTES = 1 * GIB
+CALIBRATED_MIN_AVAILABLE_COMMIT_BYTES = 2 * GIB
+CALIBRATED_MIN_FREE_DISK_BYTES = 4 * GIB
+
+
 # --------------------------------------------------------------------------------------------------
 # Host probes
 # --------------------------------------------------------------------------------------------------
@@ -340,6 +372,17 @@ def run_bounded(command: Sequence[str], *, cwd: str | Path, policy: ResourcePoli
         except subprocess.TimeoutExpired:
             outcome = "TIMEOUT"
             _terminate(process, job)
+        except BaseException:
+            # Parent cancellation (KeyboardInterrupt/SystemExit): never leave the child or its tree running.
+            _terminate(process, job)
+            if job is not None:
+                job.close()
+            for cleanup in (log.close, lambda: log_path.unlink(missing_ok=True)):
+                try:
+                    cleanup()
+                except OSError:
+                    pass
+            raise
     except OSError as exc:
         return {"outcome": "LAUNCH_FAILED", "reason_code": COMPUTATION_ERROR, "returncode": None,
                 "wall_seconds": round(time.perf_counter() - started, 3), "detail": f"{type(exc).__name__}:{exc}",

@@ -1797,21 +1797,18 @@ def run_post_handoff_prospective_outcome_feedback(
         output_root / "operations-review" / "prospective-decision-outcome-feedback-post-handoff-v1"
         / session / "prospective_decision_feedback_artifact.json"
     )
-    cmd = [
-        sys.executable, "tools/run_prospective_decision_outcome_feedback.py",
-        "--root", str(root), "--output", str(output),
-    ]
-    try:
-        result = run_observed_subprocess(cmd, session=session, cwd=str(root), capture_output=True, text=True)
-    except OSError as exc:
-        return {"status": "UNAVAILABLE", "session": session, "reason": f"{type(exc).__name__}:{exc}"}
-    if result.returncode != 0:
-        return {"status": "UNAVAILABLE", "session": session, "reason": (result.stderr or result.stdout).strip()[-2000:]}
-    artifact = _load(output)
+    prior_status = (output_root / "operations-review" / "prospective-decision-outcome-feedback-v1" / session
+                    / "prospective_decision_feedback_artifact.json.status.json")
+    bounded = run_bounded_prospective_feedback(root, session, output=output, stage=FEEDBACK_STAGE_POST_HANDOFF, prior_status_path=prior_status)
+    boundary = "RETAINED_ONLY_POST_HANDOFF_MATURITY_REFRESH_NOT_A_CURRENT_DECISION_INPUT"
+    if bounded["status"] != "COLLECTED":
+        return {"status": "UNAVAILABLE", "session": session, "reason_code": bounded.get("reason_code"), "reason": bounded.get("reason"),
+                "stage": FEEDBACK_STAGE_POST_HANDOFF, "resource": bounded.get("resource"), "authority_boundary": boundary,
+                "interpretation": "RESOURCE_OR_DEFECT_STATUS_NOT_FEEDBACK_EVIDENCE"}
     return {
-        "status": "COLLECTED", "session": session, "path": _rel(root, output),
-        "artifact_identity": (artifact or {}).get("artifact_identity"),
-        "authority_boundary": "RETAINED_ONLY_POST_HANDOFF_MATURITY_REFRESH_NOT_A_CURRENT_DECISION_INPUT",
+        "status": "COLLECTED", "session": session, "path": _rel(root, output), "artifact_identity": bounded["artifact_identity"],
+        "stage": FEEDBACK_STAGE_POST_HANDOFF, "outcome": bounded.get("outcome"), "relation": bounded.get("relation"),
+        "resource": bounded.get("resource"), "authority_boundary": boundary,
     }
 
 
@@ -2036,6 +2033,69 @@ def build_decision_packet(
     return packet
 
 
+FEEDBACK_STAGE_PRE_HANDOFF = "PRE_HANDOFF"
+FEEDBACK_STAGE_POST_HANDOFF = "POST_HANDOFF"
+
+
+def run_bounded_prospective_feedback(
+    root: Path, session: str, *, output: Path, stage: str, prior_status_path: Path | None = None,
+    policy: Any = None,
+) -> dict[str, Any]:
+    """Run one optional outcome-feedback child under admission, a TOTAL deadline and a memory ceiling.
+
+    OWNER_DAILY_FEEDBACK_RESOURCE_CONTAINMENT_V1. Fail-soft: every non-success is a bounded UNAVAILABLE
+    result carrying a *resource or defect* reason code, never an investment/feedback state. The parent
+    exchanges only paths and a small status sidecar with the child; the artifact itself is never loaded here.
+    """
+    import feedback_resource_guard as guard
+
+    policy = policy or guard.default_feedback_policy()
+    status_path = output.with_name(output.name + ".status.json")
+    base = {"session": session, "stage": stage, "path": str(output), "policy": policy.as_dict()}
+    try:
+        expected = int(((_load(status_path) or {}).get("artifact_size")) or 0) or 800 * 1024 * 1024
+        admission = guard.admit(policy, output_dir=output.parent, expected_output_bytes=expected)
+    except Exception as exc:  # noqa: BLE001 -- probing must not break Daily
+        admission = {"admitted": True, "reason_code": None, "reasons": ["ADMISSION_PROBE_ERROR:" + type(exc).__name__]}
+    if not admission["admitted"]:
+        return {**base, "status": "UNAVAILABLE", "reason_code": admission["reason_code"], "admission": admission,
+                "reason": "RESOURCE_ADMISSION_REFUSED:" + ",".join(admission["reasons"])}
+    command = [sys.executable, "tools/run_prospective_decision_outcome_feedback.py", "--root", str(root),
+               "--output", str(output), "--result", str(status_path)]
+    if prior_status_path is not None and Path(prior_status_path).is_file():
+        command += ["--prior-result", str(prior_status_path)]
+    telemetry = None
+    try:
+        from owner_daily_progress import progress_from_environment
+        telemetry = progress_from_environment(session=session)
+    except Exception:  # noqa: BLE001
+        telemetry = None
+    component = "Prospective decision feedback" + (" (post-handoff)" if stage == FEEDBACK_STAGE_POST_HANDOFF else "")
+
+    def emit(state: str) -> None:
+        if telemetry is not None:
+            try:
+                telemetry.emit(phase_index=2, component=component, subtask="bounded child subprocess", progress_kind="PIPELINE", status=state)
+            except Exception:  # noqa: BLE001
+                pass
+
+    emit("BEGIN")
+    run = guard.run_bounded(command, cwd=str(root), policy=policy, result_path=status_path)
+    emit("END" if run["outcome"] == "COMPLETED" else "FAILED")
+    child = run.get("child_result") or {}
+    resource = {"wall_seconds": run["wall_seconds"], "peak_process_bytes": run.get("peak_process_bytes"),
+                "child_peak_bytes": child.get("peak_memory_bytes"), "containment": run.get("containment"), "reaped": run.get("reaped")}
+    if run["outcome"] == "COMPLETED" and child.get("status") == "COMPLETED" and child.get("artifact_identity"):
+        return {**base, "status": "COLLECTED", "artifact_identity": child["artifact_identity"], "outcome": child.get("outcome"),
+                "record_count": child.get("record_count"), "artifact_size": child.get("artifact_size"),
+                "input_digest": child.get("input_digest"), "relation": (child.get("relation") or {}).get("relation"),
+                "inputs_summary": child.get("inputs_summary"), "status_path": str(status_path), "resource": resource,
+                "admission": {k: admission.get(k) for k in ("admitted", "available_physical_bytes", "available_commit_bytes", "free_disk_bytes")}}
+    reason_code = run.get("reason_code") or child.get("reason_code") or guard.COMPUTATION_ERROR
+    return {**base, "status": "UNAVAILABLE", "reason_code": reason_code, "resource": resource,
+            "reason": (run.get("stderr_tail") or str(child.get("detail") or run["outcome"]))[-1500:], "child_status": child.get("status")}
+
+
 def run_prospective_collection(
     root: Path, session: str, *, artifact_root: Path | None = None, output_root: Path | None = None,
 ) -> dict[str, Any] | None:
@@ -2069,16 +2129,8 @@ def run_prospective_collection(
         output_root / "operations-review" / "prospective-decision-outcome-feedback-v1" / session
         / "prospective_decision_feedback_artifact.json"
     )
-    feedback_cmd = [
-        sys.executable, "tools/run_prospective_decision_outcome_feedback.py",
-        "--root", str(root), "--output", str(feedback_output),
-    ]
-    feedback_result = run_observed_subprocess(feedback_cmd, component="Prospective decision feedback", session=session, cwd=str(root), capture_output=True, text=True)
-    feedback = (
-        {"status": "COLLECTED", "path": str(feedback_output), "artifact": _load(feedback_output)}
-        if feedback_result.returncode == 0
-        else {"status": "UNAVAILABLE", "reason": (feedback_result.stderr or feedback_result.stdout).strip()[-2000:]}
-    )
+    # Bounded child: the parent keeps only a compact status (identity + path), never the multi-hundred-MB artifact.
+    feedback = run_bounded_prospective_feedback(root, session, output=feedback_output, stage=FEEDBACK_STAGE_PRE_HANDOFF)
     return {"status": "COLLECTED", "stdout": result.stdout, "snapshot": snapshot, "path": str(output), "decision_feedback": feedback}
 
 
@@ -2219,7 +2271,7 @@ def build_tiered_bundle(
             "authority_boundary": "IMMUTABLE_T0_SNAPSHOT_NOT_A_CURRENT_DECISION_INPUT",
         },
         "prospective_cohort_snapshot_identity": ((prospective or {}).get("snapshot") or {}).get("snapshot_id"),
-        "prospective_decision_feedback_identity": (((prospective or {}).get("decision_feedback") or {}).get("artifact") or {}).get("artifact_identity"),
+        "prospective_decision_feedback_identity": ((prospective or {}).get("decision_feedback") or {}).get("artifact_identity"),
         "enrichment_component_status": {name: row["status"] for name, row in enrichment.items()},
         "deeper_bundles": {
             "opportunity_research_bundle": _rel(root, bundle_dir / "opportunity_research_bundle.json"),
@@ -2257,8 +2309,10 @@ def build_tiered_bundle(
             "path": (prospective or {}).get("path"),
         },
         "prospective_decision_feedback": {
-            "identity": (((prospective or {}).get("decision_feedback") or {}).get("artifact") or {}).get("artifact_identity"),
+            "identity": ((prospective or {}).get("decision_feedback") or {}).get("artifact_identity"),
             "path": ((prospective or {}).get("decision_feedback") or {}).get("path"),
+            "status": ((prospective or {}).get("decision_feedback") or {}).get("status", "UNAVAILABLE"),
+            "reason_code": ((prospective or {}).get("decision_feedback") or {}).get("reason_code"),
             "authority_boundary": "DOWNSTREAM_OBSERVATION_ONLY_NOT_A_CURRENT_DECISION_INPUT",
         },
         "prospective_decision_snapshot": tier1["prospective_decision_snapshot"],

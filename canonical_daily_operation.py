@@ -453,6 +453,9 @@ def print_daily_operation_handoff(record: Mapping[str, Any]) -> None:
         print(f"CURRENT_FOREIGN_FLOW_REASON={foreign_flow.get('reason')}")
     print(f"FLOW_PRICE_DIVERGENCE={flow_price.get('status')}")
     print(f"POST_HANDOFF_PROSPECTIVE_DECISION_FEEDBACK={post_handoff_feedback.get('status')}")
+    if post_handoff_feedback.get("reason_code"):
+        # A resource/defect reason, never a feedback or investment state (OWNER_DAILY_FEEDBACK_RESOURCE_CONTAINMENT_V1).
+        print(f"POST_HANDOFF_PROSPECTIVE_DECISION_FEEDBACK_REASON={post_handoff_feedback.get('reason_code')}")
     presentation = record.get("post_handoff_presentation_projection") if isinstance(record.get("post_handoff_presentation_projection"), Mapping) else {}
     print(f"POST_HANDOFF_PRESENTATION_PROJECTION={presentation.get('status')}")
     restage = record.get("post_handoff_runtime_restage") if isinstance(record.get("post_handoff_runtime_restage"), Mapping) else {}
