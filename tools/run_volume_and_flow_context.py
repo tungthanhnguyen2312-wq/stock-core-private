@@ -145,6 +145,8 @@ def main(argv=None):
         report={"contract_version":"volume_and_flow_retained_acceptance/v1","context_contract":context.CONTRACT_VERSION,
             "starting_main":"20b168fe518ee58044010af0e812976ae5ea3ab9","session":args.session,
             "coverage":coverage(artifact),"foreign_retained_sessions":inputs.pop("foreign_sessions"),
+            "foreign_contiguous_windows":{t:next(i["coverage_scope"] for i in r["items"] if i["participant"]=="FOREIGN" and i["required_observations"]==1)
+                for t,r in artifact["records"].items() if any(i["participant"]=="FOREIGN" and i["coverage_scope"]["in_cohort"] for i in r["items"])},
             "source_bindings":inputs,"representative_cases":representative_cases(artifact),
             "aggregates":artifact["aggregates"],"artifact_identity":artifact["artifact_identity"],
             "artifact_sha256":source_hash(args.output),"non_regression":{"denominator":count,
