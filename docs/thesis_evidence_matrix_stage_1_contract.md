@@ -182,3 +182,28 @@ CI jobs and all four merged-main jobs gate release. FIRST_REAL_POST_RELEASE_CAPT
 acceptance remains pending. The exact successor is
 `THESIS_EVIDENCE_MATRIX_AND_CONFLICT_ENGINE_V1_STAGE_2_PRODUCTION_INTEGRATION`;
 it is not started automatically.
+
+## Measured October 2 acceptance
+
+1,683 records cover all decisions; Technical V2 scope is 1,503. LONG technical is
+UNKNOWN for all 1,683 because qualified W/M evidence is absent. LONG states:
+INSUFFICIENT_EVIDENCE 538, CONTESTED 609, ADVERSE 145, NOT_CONFIRMED 391.
+SHORT: INSUFFICIENT_EVIDENCE 1,044, CONTESTED 58, ADVERSE 416, SUPPORTIVE 92,
+NOT_CONFIRMED 73. Genuine observed conflicts: fundamental/valuation 53,
+technical intra-timeframe 50 and technical/macro-sector 8. No semantic warning.
+
+69,192 items are all POST. 29,277 correlated members fold into 39,915 groups per
+lens; no duplicate directional representative. 873 current volume facts and 22
+qualified foreign window facts remain non-directional; the foreign cohort is 11,
+with zero qualified 10/20 windows. Corporate forward stays dormant, materiality
+UNASSESSED. The real T0 view is unavailable; all 19 original T0 files and PIT
+modules remain byte-identical. Source/posture/action changes and every correctness
+violation are zero. Complete captures remain zero and first-real acceptance pending.
+
+The initial full acceptance takes 445.86 seconds; reopening only the new matrix
+for final standalone scope/public verification takes 162.36 seconds. The acceptance
+process peak RSS is 351,678,464 bytes, including run-scoped indexes. The one scratch
+session artifact is 243,984,127 bytes; it contains pointers, typed small facts and
+explanations, without embedding technical/flow source payloads. Each original source
+is parsed once with a 16 MiB member cap. These are whole offline acceptance timings,
+including verification, rather than isolated producer benchmarks.
