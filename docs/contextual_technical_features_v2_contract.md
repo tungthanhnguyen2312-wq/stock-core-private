@@ -116,22 +116,22 @@ verify genuine exact V2 retention, paired V2 flow routing and exclusion of POST
 evidence from T0. The existing PIT capture clock and eligibility ceilings remain
 unchanged. Thesis Matrix Stage 1 is not started.
 
-Retained result: 131 daily ties; owner/descriptive composites HH/HL151, LH/LL294,
-expansion127, contraction158, unresolved equality131, insufficient78, unavailable564.
-Daily setup: bearish break187, continuing deterioration382, failed breakout10,
-reversal36, confirmed improvement8, early repair27, extended38, established trend58,
-range consolidation188, sideways2, unknown567. 430 previously non-bearish repair
+Retained result: 131 daily ties; owner/descriptive composites HH/HL 151, LH/LL 294,
+expansion 127, contraction 158, unresolved equality 131, insufficient 78, unavailable 564.
+Daily setup: bearish break 187, continuing deterioration 382, failed breakout 10,
+reversal 36, confirmed improvement 8, early repair 27, extended 38, established trend 58,
+range consolidation 188, sideways 2, unknown 567. 430 previously non-bearish repair
 cases now receive bearish readings; two unknown-to-sideways defaults are eliminated.
-Weekly898 and monthly560 selected completed periods are stale older observations;
-their other605/943 names have no completed period. MTF has639 single-frame and864
+Weekly 898 and monthly 560 selected completed periods are stale older observations;
+their other 605/943 names have no completed period. MTF has 639 single-frame and 864
 no-eligible-frame contexts. All owner and decision fields remain exact.
 
-Measured offline work: Technical V2 36.792152s, relationship view4.024862s, flow V2
-20.541432s, separate canonical foundation83.342165s. Whole retained acceptance
-628.288521s plus final public-verifier batch audit14.695120s. The process-lifetime
-peak is1,238,355,968 bytes; stage RSS includes the run-scoped V1/V2 indexes and is
-not an isolated producer benchmark. Technical/view/flow batches are97,377,371 /
-46,133,857 /135,112,752 bytes. Final verifiers reopen all1,503 contexts,4,509 views
-and1,683 flow records. Local full standing selection before final guards:2,336
-passed /16 platform skips /37 subtests; final affected333 and production smoke7
+Measured offline work: Technical V2 36.792152s, relationship view 4.024862s, flow V2
+20.541432s, separate canonical foundation 83.342165s. Whole retained acceptance
+628.288521s plus final public-verifier batch audit 14.695120s. The process-lifetime
+peak is 1,238,355,968 bytes; stage RSS includes the run-scoped V1/V2 indexes and is
+not an isolated producer benchmark. Technical/view/flow batches are 97,377,371 /
+46,133,857 /135,112,752 bytes. Final verifiers reopen all 1,503 contexts, 4,509 views
+and 1,683 flow records. Local full standing selection before final guards: 2,336
+passed /16 platform skips /37 subtests; final affected 333 and production smoke 7
 passed. Syntax, diff and roadmap checks pass; exact candidate/main CI gates release.
