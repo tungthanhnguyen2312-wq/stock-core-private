@@ -320,3 +320,11 @@ def test_child_retry_reports_already_retained_without_losing_collected_state(tmp
     first=runtime.run_component(tmp_path,DAY,stage="t0",**kwargs);second=runtime.run_component(tmp_path,DAY,stage="t0",**kwargs)
     assert first["status"]==second["status"]=="COLLECTED" and second["retention"]=="ALREADY_RETAINED" and "retention" not in first
     assert first["artifact_identity"]==second["artifact_identity"] and runtime.summary(second)["retention"]=="ALREADY_RETAINED"
+
+
+def test_production_build_does_not_require_psutil(tmp_path,monkeypatch):
+    import sys
+    monkeypatch.setitem(sys.modules,"psutil",None)
+    args,*_=fixture(tmp_path)
+    result=engine.build(**args,stage="current")
+    assert result["component_status"]=="BUILT" and "peak_rss_bytes" in result["performance"]

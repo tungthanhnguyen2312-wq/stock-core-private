@@ -62,6 +62,20 @@ def annotations(t0,current,items):
     return result
 
 
+def process_memory():
+    """Optional measurement only; psutil is not a declared dependency of the hermetic tier."""
+    try:
+        import psutil
+        info=psutil.Process().memory_info()
+        return info.rss,getattr(info,"peak_wset",info.rss)
+    except ImportError:pass
+    try:
+        import resource
+        peak=resource.getrusage(resource.RUSAGE_SELF).ru_maxrss*1024
+        return peak,peak
+    except ImportError:return None,None
+
+
 def compute(ticker,row,*,session,stage,technical=None,flow=None,bindings=None,sealed_row=None,sealed_technical=None,
             origin="LATE_REBUILD",diagnostic=False,source_pointers=None):
     """One ticker, unchanged adapters/reducers; failures stay outside this function."""
@@ -295,9 +309,8 @@ def build(*,root,output_root,session,stage,decision_path=None,technical_path=Non
             {"kind":"CONFLICT_EXPLOSION","total":sum(conflicts.values()),"kinds":dict(conflicts),"comparison":"NOT_EVALUABLE_WITHOUT_EXPLICIT_PRIOR_PRODUCT"},
             {"kind":"STATE_CHURN_ACROSS_SESSIONS","status":"NOT_EVALUABLE_WITHOUT_EXPLICIT_PRIOR_PRODUCT"},
             {"kind":"AVAILABILITY_EPOCH_TRANSITIONS","current":{"t0":bool(bound),"flow":bool(flow_path)},"comparison":"NOT_EVALUABLE_WITHOUT_EXPLICIT_PRIOR_PRODUCT"}])
-        import psutil
         from prospective_pit_capture_retention import io_known_at
-        info=psutil.Process().memory_info()
+        rss,peak_rss=process_memory()
         status="UNAVAILABLE" if not counts["built_count"]+counts["partial_count"] else "PARTIAL" if counts["unavailable_count"] or counts["partial_count"] else "BUILT"
         manifest=c.seal({"contract_version":"thesis_product_manifest/v1","session":session,"stage":stage,"input_digest":digest,"inputs":inputs,
             "status":status,"counts":dict(counts),"records":len(members),"files":product_hashes,"distributions":dict(distributions),
@@ -307,7 +320,7 @@ def build(*,root,output_root,session,stage,decision_path=None,technical_path=Non
             "comparison_to_prior_session":"NOT_EVALUABLE_WITHOUT_EXPLICIT_PRIOR_PRODUCT","authority_effect":AUTHORITY,
             "origin":origin,"evaluation_scope":"REPLAY_DIAGNOSTIC" if diagnostic else "PRODUCTION_NON_VOTING",
             "created_at":io_known_at(),
-            "performance":{"wall_seconds":time.perf_counter()-started,"rss_bytes":info.rss,"peak_rss_bytes":getattr(info,"peak_wset",info.rss),"source_parse_passes":dict(parses),"source_member_limit_bytes":16*1024*1024}},"thesis_product_manifest/v1")
+            "performance":{"wall_seconds":time.perf_counter()-started,"rss_bytes":rss,"peak_rss_bytes":peak_rss,"source_parse_passes":dict(parses),"source_member_limit_bytes":16*1024*1024}},"thesis_product_manifest/v1")
         atomic_write_json(folder/"manifest.json",manifest)
         complete=c.seal({"contract_version":"thesis_product_complete/v1","session":session,"manifest_identity":manifest["artifact_identity"]},"thesis_product_complete/v1")
         retain_immutable_bytes(folder/"COMPLETE.json",c.canonical(complete).encode())
