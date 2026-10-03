@@ -31,13 +31,17 @@ DAILY_TEMPORAL_STATES = ("CURRENT_SESSION", "STALE_LAST_OBSERVATION", "NO_OBSERV
 PERIOD_TEMPORAL_STATES = ("CURRENT_PERIOD_COMPLETED", "IMMEDIATELY_PREVIOUS_COMPLETED_PERIOD",
     "STALE_OLDER_COMPLETED_PERIOD", "NO_COMPLETED_PERIOD")
 CAUSE_FAMILIES = ("CLOSE_SERIES_STRUCTURE", "OHLC_RANGE", "NATIVE_VOLUME_SERIES", "FOREIGN_VALUE_SERIES")
+SETUP_RULES = tuple("R" + str(i) for i in range(12))
+COMPLETENESS_KNOWLEDGE = ("OBSERVED_CANONICAL_PERIODS", "UNKNOWN_FROM_V1")
+NATIVE_RATIO_STATUS = ("AVAILABLE", "NOT_APPLICABLE_ZERO_VOLUME_REFERENCE", "UNAVAILABLE")
 VOCABULARY_MANIFEST = {"breakout_relation": BREAKOUT_RELATIONS, "failed_breakout": FAILED_BREAKOUT_STATES,
     "pivot_test": PIVOT_TEST_STATES, "range_consolidation": RANGE_STATES, "trend_reading": TREND_READINGS,
     "swing_relation": SWING_RELATIONS, "atomic_swing_relation": ATOMIC_SWING_RELATIONS,
     "setup_state": SETUP_STATES, "setup_conflicts": SETUP_CONFLICTS,
     "primitive_availability": PRIMITIVE_AVAILABILITY, "native_volume_state": NATIVE_VOLUME_STATES,
     "daily_temporal": DAILY_TEMPORAL_STATES, "period_temporal": PERIOD_TEMPORAL_STATES,
-    "common_cause_family": CAUSE_FAMILIES}
+    "common_cause_family": CAUSE_FAMILIES, "setup_rule": SETUP_RULES,
+    "later_period_completeness": COMPLETENESS_KNOWLEDGE, "native_ratio_status": NATIVE_RATIO_STATUS}
 V1_TREND_MAP = {"UP": "UP", "DOWN": "DOWN", "RANGE": "NO_CLEAN_AGREEMENT", "UNKNOWN": "UNKNOWN"}
 V1_RANGE_MAP = {"NEWLY_FORMING": "FORMING", "ESTABLISHED": "ESTABLISHED", "EXPANDING_OR_BREAKING": "EXITED_BY_CLOSE",
     "NO_LONGER_VALID": "FAILED_BREAKOUT_CONTEXT"}
@@ -261,13 +265,21 @@ def verify_view(view):
     from contextual_technical_dispatch import SUPPORTED_VERSIONS
     if view["source"]["technical_contract_version"] not in SUPPORTED_VERSIONS:
         raise ValueError("TECHNICAL_VERSION_UNKNOWN")
+    version = view["source"]["technical_contract_version"]
+    input_kind = "contextual_technical_inputs/" + version.rsplit("/", 1)[1]
+    if any(not isinstance(view["source"].get(key), str) or not view["source"][key].startswith(kind + ":") for key, kind in
+        (("context_identity", version), ("frame_identity", version), ("input_context_identity", input_kind))):
+        raise ValueError("RELATIONSHIP_VIEW_SOURCE_VERSION_BINDING_INVALID")
     for name in ("breakout_relation", "failed_breakout", "pivot_test", "range_consolidation", "trend_reading", "swing_relation", "setup_state"):
         checked(view["concepts"][name], VOCABULARY_MANIFEST[name], name)
     checked(view["concepts"]["native_volume_reference"]["state"], NATIVE_VOLUME_STATES, "native_volume_state")
+    checked(view["concepts"]["native_volume_reference"]["ratio_status"], NATIVE_RATIO_STATUS, "native_ratio_status")
+    checked(view["setup_rule"], SETUP_RULES, "setup_rule")
     for conflict in view["setup_conflicts"]: checked(conflict, SETUP_CONFLICTS, "setup_conflict")
     for status in view["availability"]["primitive_availability"].values():
         checked(status, PRIMITIVE_AVAILABILITY, "primitive_availability")
     checked(view["fitness"]["temporal"]["state"], DAILY_TEMPORAL_STATES if view["timeframe"] == "1D" else PERIOD_TEMPORAL_STATES, "temporal")
+    checked(view["fitness"]["temporal"]["later_period_completeness"]["state"], COMPLETENESS_KNOWLEDGE, "later_period_completeness")
     expected = {name: evidence_keys(view["instrument"]["ticker"], view["as_of_session"], view["timeframe"],
         view["source"]["canonical_source_bar_identity"], name, "NATIVE_VOLUME_SERIES" if name == "native_volume_reference" else "CLOSE_SERIES_STRUCTURE")
         for name in ("breakout_relation", "failed_breakout", "pivot_test", "range_consolidation", "trend_reading", "swing_relation", "setup_state", "native_volume_reference")}

@@ -51,6 +51,39 @@ def memory():
 def counts(values): return dict(sorted(Counter(values).items()))
 
 
+def audit_outputs(technical_path, view_path, flow_path):
+    """Reopen only newly produced batches under the final public verifiers."""
+    contexts, expected_views = {}, {}
+    with Path(technical_path).open(encoding="utf-8") as source:
+        for line in source:
+            row=json.loads(line);c=row["contextual_technical"]
+            dispatch.verify_context(c,ticker=row["ticker"],session=c["as_of_session"])
+            contexts[row["ticker"]]=c["artifact_identity"]
+            expected_views[row["ticker"]]={tf:v["view_identity"] for tf,v in bridge.build_views(c).items()}
+    view_count=0
+    with Path(view_path).open(encoding="utf-8") as source:
+        for line in source:
+            row=json.loads(line)
+            for tf,v in row["relationship_views"].items():
+                bridge.verify_view(v)
+                assert v["source"]["context_identity"]==contexts[row["ticker"]]
+                assert v["view_identity"]==expected_views[row["ticker"]][tf]
+                view_count+=1
+    def record(t,row):
+        flow.verify(row,"volume_flow_instrument/v2")
+        for item in row["items"]:
+            flow.verify(item,flow.ITEM_VERSION)
+            assert item["knowledge_stage"]==flow.POST and item["non_voting"] is True and item["is_actionable"] is False
+            if item["domain"]=="VOLUME":
+                relation=item["technical_participation_relationship"]
+                assert relation["view_identity"]==expected_views[t][item["horizon"].split("/")[0]]
+                bridge.checked(item["participation_measure"],flow.PARTICIPATION_MEASURES,"participation_measure")
+                bridge.checked(item["participation_state"],flow.PARTICIPATION_MEASURES[item["participation_measure"]],"participation_state")
+    meta,digest,record_count=stream_artifact(Path(flow_path),excluded={"artifact_identity","artifact_sha256"},on_record=record)
+    assert digest==meta["artifact_sha256"] and meta["contract_version"]==flow.CONTRACT_VERSION
+    return {"technical_contexts":len(contexts),"relationship_views":view_count,"volume_flow_records":record_count,"status":"PASS"}
+
+
 def observation(old, new, tf):
     a,b=old["timeframes"][tf],new["timeframes"][tf]
     before=a["features"]["structure"].get("values") or {}
@@ -275,6 +308,9 @@ def run(args):
         assert readiness["complete_session_count"]==0 and not any(readiness["counts_at_depth"].values()) and readiness["evaluation_authorized"] is False
         with Path(args.flow_output).open("wb") as output:
             for chunk in retention._json_bytes(artifact,pretty=True):output.write(chunk)
+        moment=time.perf_counter()
+        final_audit=audit_outputs(args.technical_output,args.view_output,args.flow_output)
+        build_seconds["final_batch_verification"]+=time.perf_counter()-moment
         assert before=={k:source_hash(p) for k,p in paths.items()}
         assert t0_hashes=={p.relative_to(root).as_posix():source_hash(p) for p in t0_paths}
         assert calendar_hashes=={p.as_posix():source_hash(p) for p in calendar_paths}
@@ -304,6 +340,7 @@ def run(args):
             "pit_compatibility":{"modules_sha256":modules,"old_receipts":len(receipt_paths),"old_receipt_classification":receipt_counts,"receipt_digest":receipt_digest,
                 "old_calendar_sha256":calendar_hashes,"old_t0_sha256":t0_hashes,"readiness":{k:readiness[k] for k in ("status","first_complete_capture_session","complete_session_count","counts_at_depth","evaluation_authorized")}},
             "first_real_post_release_capture_acceptance":{"status":"PENDING","additional_requirements":["EXACT_GENUINE_TECHNICAL_V2_T0_IDENTITY","NORMAL_V2_VOLUME_FLOW_ROUTING","NO_POST_T0_EVIDENCE_IN_T0_PROJECTION"],"live_daily_run":False},
+            "final_public_verifiers":final_audit,
             "source_hashes":before,"output_artifacts":{p.name:{"bytes":p.stat().st_size,"sha256":source_hash(p)} for p in destinations[1:]},
             "performance":{"stage_seconds":{k:round(v,6) for k,v in build_seconds.items()},"stage_memory":stage_memory,"v1_verification":timings["v1_verification"],
                 "whole_acceptance_seconds":round(time.perf_counter()-started,6),**memory(),"price_corpora_parsed":1,"v1_technical_batches_parsed":1,"v1_volume_flow_corpora_parsed":1,
