@@ -53,8 +53,8 @@ Pre-handoff (`prospective-decision-outcome-feedback-v1/<S>`) runs before session
 (`…-post-handoff-v1/<S>`) runs after the handoff binds `S`'s T0 snapshot. Their effective analytical inputs are **not** identical: post adds
 the session-`S` completed chain member, `S`'s T0 snapshot and the handoff-snapshot inventory row. It is a strict superset
 (`relate()` returns `INCREMENTAL`, `IDENTICAL`, `DISTINCT`, from deterministic input identities — never timing). The incremental delta cannot be
-reduced to "new rows only": growing the chain by one session moves the maturity window of every non-terminal decision, so most existing
-rows legitimately change (measured on a real-scale rehearsal, see the acceptance artifact). Neither call is deleted. Reuse applies where it
+reduced to "new rows only": growing the chain by one session moves the maturity window of every non-terminal decision, so about half of the existing
+rows legitimately change (measured on a real-scale rehearsal: 15,767 of 28,611 shared decisions changed, 12,844 byte-identical, 1,683 new). Neither call is deleted. Reuse applies where it
 is exact: a retry, resume or replay with identical inputs and code returns `ALREADY_COMPLETE` without recomputing or rewriting.
 
 ## 4. Terminal reuse
@@ -68,7 +68,25 @@ is exact: a retry, resume or replay with identical inputs and code returns `ALRE
 
 ## 5. Resource policy (`feedback_resource_guard.py`)
 
-CALIBRATION_TABLE
+Defaults (`default_feedback_policy`, overridable by `STOCKLOOKUP_FEEDBACK_*` for operators/tests), calibrated on the real retained 31,977-row corpus
+(31,977 rows = 19 sessions x 1,683; host 16 GiB RAM, 3-4 GiB available during the run):
+
+| Quantity | Measured | Default | Margin / rationale |
+|---|---|---|---|
+| COLD (no receipts, empty derived state) | 263 s (earlier 340 s) | deadline **1,200 s** | 4.6x; one total deadline per child; production's first run also benefits from the existing summary cache |
+| CHANGED INPUT (INCREMENTAL, +1 session of 505 MB T0) | 100 s | same | receipts/price index reused for all earlier sessions |
+| WARM, new output path (identical inputs) | 134 s (primary), 79 s (reduced) | same | still recomputes rows (output path differs) |
+| TERMINAL REUSE (`ALREADY_COMPLETE`) | 23 s, writes nothing | same | hashing + proof of inputs only |
+| RETRY after mid-stream kill | 47 s (killed) + 96 s rebuild | same | temporaries of the dead writer removed automatically |
+| Child committed peak (Job accounting) | 0.50-0.53 GiB; sampled RSS 0.30-0.33 GiB | ceiling **2 GiB** | 3.8x; growth about +5 MB per session |
+| Parent RSS growth around a call | 20-330 KB | n/a | the artifact is never loaded by the parent |
+| Admission floors | host available 2.8-4.0 GiB during runs | physical 768 MiB, commit 1 GiB, disk 4 GiB + 2x last output | 1.5x / 2x the child peak; output needs spool + final |
+| Legacy builder for comparison | reduced corpus (8,415 rows): 79-122 s, 3.4-3.6 GiB; full corpus: `MemoryError` at 2.9 GiB (54 s) | - | exact identity equal on the reduced corpus |
+| Output | 520 MiB (compact) vs 709 MiB (legacy layout, same rows) | - | 26.6 % smaller |
+
+Pre-corrective Daily of 2026-10-02 (progress telemetry): parent RSS 4.1 GiB at the first feedback and 5.2 GiB at the second (the parent peak of 9.2 GiB
+is reached earlier, in enrichment/T0, and is not caused by feedback); feedback cost 696 s + 601 s of a 4,655 s Daily.
+Estimated Monday: 4,655 - 1,297 + (about 260 + 130) + 2 Thesis children (about 490 s each, measured elsewhere) = about 4,730 s (79 min).
 
 Admission (`admit`) runs before each child: available physical memory, available commit, and free disk (≈ 2 × the last artifact size
 for spool + output). Refusal returns `FEEDBACK_RESOURCE_UNAVAILABLE` (or `FEEDBACK_RESOURCE_DISK_UNAVAILABLE`) and **launches nothing**.
