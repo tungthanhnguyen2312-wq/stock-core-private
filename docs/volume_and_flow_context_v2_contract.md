@@ -94,3 +94,11 @@ verify exact genuine V2 T0 identity, V2 paired routing and no POST→T0 leakage.
 Focused tests, the standing Producer selection and all four exact-candidate and
 merge-main CI jobs gate release. One PR carries the paired migration. The next
 Thesis Matrix Stage 1 gate remains unstarted.
+
+Actual retained coverage: native daily1,252 usable /873 current; five/twenty-point
+trajectories12/2 usable, all stale; W/M rolling and fresh breadth eligible zero.
+Foreign cohort11 names, one/five-observation maturity11/11, ten/twenty0/0;
+outside cohort1,672. Each unqualified participant category has1,683 unavailable
+items. All25,308 V2 items are POST. Explicit V1 bridge covers all1,503 names and
+13,527 POST volume items without consuming repair labels. Frozen foreign primitive
+values/statuses/reasons/units/continuity and cohort membership match exactly.
