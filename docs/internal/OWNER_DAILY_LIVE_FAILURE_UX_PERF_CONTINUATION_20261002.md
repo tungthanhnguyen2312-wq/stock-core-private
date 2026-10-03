@@ -421,4 +421,3 @@ explicit validation limit, not a claimed production timing or a new authority gr
 Next exact gate: owner selection and explicit authorization of an analytical capability
 milestone based on the Data Capability Map. `queued_next = []`; no later program or
 further Daily plumbing is started automatically.
-
