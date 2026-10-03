@@ -43,7 +43,7 @@ class ObjectStream:
         self.peek()
         # Refill is sized from the previous large member and doubles on failure, so a record is
         # re-scanned O(1) times instead of once per 64 KiB chunk.
-        want = min(max(64 * 1024, int(self.hint * 1.25)), self.limit)
+        want = min(max(64 * 1024, int(self.hint * 1.25)), self.limit // 2)  # prefill never pushes a legal member over the limit
         if len(self.buffer) - self.position < want and not self.eof:
             self.fill(want - (len(self.buffer) - self.position))
         while True:

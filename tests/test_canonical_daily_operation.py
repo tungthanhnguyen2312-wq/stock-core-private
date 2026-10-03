@@ -959,6 +959,48 @@ def test_post_handoff_observers_run_after_tiered_bundle_and_land_in_record(tmp_p
     assert cdo.NORMAL_DAILY_ENABLE_CURRENT_FOREIGN_FLOW_LIVE is True
 
 
+def test_heavy_children_run_strictly_one_at_a_time_and_a_feedback_resource_failure_never_blocks_publication(tmp_path, monkeypatch):
+    """OWNER_DAILY_FEEDBACK_RESOURCE_CONTAINMENT_V1: Thesis T0 child -> pre-handoff feedback -> handoff -> observers (Thesis current)
+    -> post-handoff feedback never overlap, and a resource-unavailable post-handoff feedback is reported truthfully while the
+    already-sealed Daily still publishes (fail-soft contract)."""
+    active = {"now": 0, "max": 0}
+    order: list[str] = []
+
+    def heavy(name, result):
+        def run(*a, **k):
+            active["now"] += 1
+            active["max"] = max(active["max"], active["now"])
+            order.append(name)
+            try:
+                return result(*a, **k) if callable(result) else result
+            finally:
+                active["now"] -= 1
+        return run
+
+    unavailable = {"status": "UNAVAILABLE", "reason_code": "FEEDBACK_RESOURCE_TIMEOUT", "session": SESSION,
+                   "interpretation": "RESOURCE_OR_DEFECT_STATUS_NOT_FEEDBACK_EVIDENCE"}
+    monkeypatch.setattr(cdo, "run_thesis_t0_sidecar", heavy("thesis_t0_child", {"status": "UNAVAILABLE", "reason": "TEST"}))
+    record = _run(
+        tmp_path, monkeypatch, complete_publication=True,
+        tiered_bundle_fn=lambda *a, **k: order.append("handoff") or {"session_handoff_bundle": {}, "bundle_dir": tmp_path},
+        post_handoff_observers_fn=heavy("thesis_current_child", lambda *a, **k: {
+            "multi_session_signal_velocity": {"status": "COLLECTED"}, "current_foreign_flow_enrichment": {"status": "UNAVAILABLE"},
+            "flow_price_divergence_shadow": {"status": "COLLECTED"}}),
+        post_handoff_feedback_fn=heavy("post_handoff_feedback_child", unavailable),
+    )
+    # The pre-handoff feedback child is launched from run_prospective_collection, patched by the shared helper above.
+    assert active["max"] == 1 and active["now"] == 0
+    assert order.index("thesis_t0_child") < order.index("handoff") < order.index("thesis_current_child") < order.index("post_handoff_feedback_child")
+    feedback = record["post_handoff_prospective_decision_feedback"]
+    assert feedback["status"] == "UNAVAILABLE" and feedback["reason_code"] == "FEEDBACK_RESOURCE_TIMEOUT"
+    assert record["daily_operation_state"] == "PUBLISHED" and record["publication"]["public_byte_identity"] == "PASS"
+    printed = []
+    monkeypatch.setattr("builtins.print", lambda *a, **k: printed.append(" ".join(str(x) for x in a)))
+    cdo.print_daily_operation_handoff(record)
+    assert "POST_HANDOFF_PROSPECTIVE_DECISION_FEEDBACK=UNAVAILABLE" in printed
+    assert "POST_HANDOFF_PROSPECTIVE_DECISION_FEEDBACK_REASON=FEEDBACK_RESOURCE_TIMEOUT" in printed
+
+
 def test_post_handoff_observer_variance_never_triggers_immutable_conflict_on_replay(tmp_path, monkeypatch):
     """Post-handoff observer/feedback content may genuinely vary run-to-run (a transient
     network hiccup, a newly matured cohort) without that variance meaning the Daily production

@@ -75,7 +75,10 @@ def test_timeout_before_first_output_publishes_nothing_and_changes_no_evidence(w
     result = _run(root, state, out, policy=guard.ResourcePolicy(**{**FAST.as_dict(), "deadline_seconds": 0.4}))
     assert result["status"] == "UNAVAILABLE" and result["reason_code"] == guard.RESOURCE_TIMEOUT and result["resource"]["reaped"] is True
     assert not (out / "feedback.json").exists() and _fingerprint(root) == before
+    status = json.loads((out / "feedback.json.status.json").read_text(encoding="utf-8"))
+    assert status["written_by"] == "PARENT_GUARD" and status["reason_code"] == guard.RESOURCE_TIMEOUT  # latest attempt stays inspectable
     assert _run(root, state, out)["status"] == "COLLECTED"  # no manual cleanup needed
+    assert json.loads((out / "feedback.json.status.json").read_text(encoding="utf-8"))["status"] == "COMPLETED"
 
 
 def test_timeout_mid_stream_leaves_only_recognisable_incomplete_data_and_a_retry_rebuilds(world, tmp_path):

@@ -1356,6 +1356,13 @@ def test_run_post_handoff_observers_forwards_live_foreign_flow_flag(tmp_path, mo
     assert seen["allow_network"] is True
 
 
+def _admit_everything(monkeypatch):
+    """Resource admission is host-dependent (free RAM/disk); these tests exercise the wiring, not the host."""
+    import feedback_resource_guard as guard
+    monkeypatch.setattr(guard, "admit", lambda policy, **k: {"admitted": True, "reason_code": None, "reasons": [], "available_physical_bytes": 1,
+                                                              "available_commit_bytes": 1, "free_disk_bytes": 1})
+
+
 def _completed_bounded(identity="prospective_decision_outcome_feedback:test", **extra):
     def fake_run_bounded(command, *, cwd, policy, result_path):
         output_path = Path(command[command.index("--output") + 1])
@@ -1371,6 +1378,7 @@ def test_run_post_handoff_prospective_outcome_feedback_writes_to_distinct_post_h
     import feedback_resource_guard as guard
     session = "2026-08-25"
     seen = {}
+    _admit_everything(monkeypatch)
     runner = _completed_bounded()
 
     def recording(command, **kwargs):
@@ -1398,6 +1406,7 @@ def test_run_post_handoff_prospective_outcome_feedback_writes_to_distinct_post_h
 def test_run_post_handoff_prospective_outcome_feedback_degrades_on_subprocess_failure(tmp_path, monkeypatch):
     import feedback_resource_guard as guard
 
+    _admit_everything(monkeypatch)
     monkeypatch.setattr(guard, "run_bounded", lambda *a, **k: {
         "outcome": "EXIT_NONZERO", "reason_code": guard.COMPUTATION_ERROR, "returncode": 30, "wall_seconds": 1.0, "containment": "TEST",
         "reaped": True, "peak_process_bytes": 1, "stderr_tail": "boom", "child_result": None})
@@ -1411,6 +1420,7 @@ def test_feedback_timeout_and_admission_refusal_are_resource_reasons_and_launch_
     import feedback_resource_guard as guard
 
     launched = []
+    _admit_everything(monkeypatch)
     monkeypatch.setattr(guard, "run_bounded", lambda *a, **k: launched.append(1) or {
         "outcome": "TIMEOUT", "reason_code": guard.RESOURCE_TIMEOUT, "returncode": -1, "wall_seconds": 9.0, "containment": "TEST",
         "reaped": True, "peak_process_bytes": 5, "stderr_tail": "", "child_result": None})
@@ -1420,6 +1430,8 @@ def test_feedback_timeout_and_admission_refusal_are_resource_reasons_and_launch_
 
     tight = guard.ResourcePolicy(deadline_seconds=5, memory_limit_bytes=1 << 30, min_available_physical_bytes=1 << 62,
                                  min_available_commit_bytes=0, min_free_disk_bytes=0)
+    monkeypatch.undo()  # restore the real admission check and run_bounded for the refusal case
+    monkeypatch.setattr(guard, "run_bounded", lambda *a, **k: launched.append(1) or {})
     launched.clear()
     refused = cpc.run_bounded_prospective_feedback(tmp_path, "2026-10-05", output=tmp_path / "g.json", stage=cpc.FEEDBACK_STAGE_POST_HANDOFF, policy=tight)
     assert refused["status"] == "UNAVAILABLE" and refused["reason_code"] == guard.RESOURCE_UNAVAILABLE == "FEEDBACK_RESOURCE_UNAVAILABLE"
@@ -1441,6 +1453,7 @@ def test_pre_handoff_collection_keeps_only_a_compact_feedback_status_in_the_pare
         return Completed()
 
     monkeypatch.setattr(cpc, "run_observed_subprocess", lambda cmd, **kwargs: fake_collection(cmd))
+    _admit_everything(monkeypatch)
     monkeypatch.setattr(guard, "run_bounded", _completed_bounded())
     collected = cpc.run_prospective_collection(tmp_path, session)
     feedback = collected["decision_feedback"]

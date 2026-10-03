@@ -36,6 +36,8 @@ SOURCE_INTEGRITY = "FEEDBACK_SOURCE_INTEGRITY_FAILED"
 IMMUTABLE_CONFLICT = "FEEDBACK_IMMUTABLE_OUTPUT_CONFLICT"
 RESOURCE_REASONS = frozenset({RESOURCE_TIMEOUT, RESOURCE_MEMORY_LIMIT, RESOURCE_UNAVAILABLE, RESOURCE_DISK})
 
+NT_MEMORY_STATUSES = frozenset({0xC0000017, 0xC0000142, 0xC000009A, 0xC000012D})  # NO_MEMORY, DLL_INIT_FAILED, INSUFFICIENT_RESOURCES, COMMITMENT_LIMIT
+
 EXIT_OK = 0
 EXIT_COMPUTATION_ERROR = 30
 EXIT_SOURCE_INTEGRITY = 31
@@ -358,12 +360,16 @@ def run_bounded(command: Sequence[str], *, cwd: str | Path, policy: ResourcePoli
                 try:
                     import resource
                     if policy.memory_limit_bytes:
-                        resource.setrlimit(resource.RLIMIT_AS, (policy.memory_limit_bytes * 2, policy.memory_limit_bytes * 2))
+                        # RLIMIT_AS bounds *address space* (shared libraries and thread stacks included), a looser proxy for
+                        # committed bytes than the Windows ceiling; the deadline remains the primary bound off Windows.
+                        ceiling = max(policy.memory_limit_bytes * 4, policy.memory_limit_bytes + 3 * GIB)
+                        resource.setrlimit(resource.RLIMIT_AS, (ceiling, ceiling))
                 except (ImportError, ValueError, OSError):
                     pass
-                os.setsid()
 
-            popen_kwargs["preexec_fn"] = limit
+            popen_kwargs["start_new_session"] = True  # own process group => whole-tree kill on timeout/cancel
+            if policy.memory_limit_bytes:
+                popen_kwargs["preexec_fn"] = limit
             process = subprocess.Popen(list(command), **popen_kwargs)
             containment = "POSIX_RLIMIT_AS" if policy.memory_limit_bytes else "DEADLINE_ONLY"
         try:
@@ -412,8 +418,10 @@ def run_bounded(command: Sequence[str], *, cwd: str | Path, policy: ResourcePoli
     elif outcome == "EXIT_NONZERO":
         reason = (child_result or {}).get("reason_code") or EXIT_REASON.get(process.returncode)
         if reason is None:
-            # A hard allocation failure inside the contained child shows as non-zero exit near the ceiling.
-            if peak and policy.memory_limit_bytes and peak >= 0.92 * policy.memory_limit_bytes:
+            # A hard allocation failure inside the contained child shows as a non-zero exit near the ceiling, or as an
+            # NT "no memory"/"initialisation failed" status when the ceiling is below the interpreter's own start-up commit.
+            returncode = (process.returncode or 0) & 0xFFFFFFFF
+            if policy.memory_limit_bytes and ((peak and peak >= 0.92 * policy.memory_limit_bytes) or returncode in NT_MEMORY_STATUSES):
                 reason = RESOURCE_MEMORY_LIMIT
             else:
                 reason = COMPUTATION_ERROR

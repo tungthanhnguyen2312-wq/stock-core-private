@@ -2057,7 +2057,19 @@ def run_bounded_prospective_feedback(
         admission = guard.admit(policy, output_dir=output.parent, expected_output_bytes=expected)
     except Exception as exc:  # noqa: BLE001 -- probing must not break Daily
         admission = {"admitted": True, "reason_code": None, "reasons": ["ADMISSION_PROBE_ERROR:" + type(exc).__name__]}
+    def record_unavailable(reason_code: str, detail: str, resource: Any = None) -> None:
+        """The latest attempt is always inspectable: a killed or refused child cannot write its own status."""
+        try:
+            import prospective_feedback_streaming as streaming
+            guard.write_child_result(status_path, {
+                "status": "UNAVAILABLE", "reason_code": reason_code, "detail": detail[:500], "stage": stage, "written_by": "PARENT_GUARD",
+                "resource": resource, "interpretation": "RESOURCE_OR_DEFECT_STATUS_NOT_FEEDBACK_EVIDENCE",
+                "prior_complete_artifact_identity": ((streaming.read_completion(output) or {}).get("artifact_identity") if output.is_file() else None)})
+        except Exception:  # noqa: BLE001 -- status bookkeeping must never break Daily
+            pass
+
     if not admission["admitted"]:
+        record_unavailable(admission["reason_code"], "RESOURCE_ADMISSION_REFUSED:" + ",".join(admission["reasons"]))
         return {**base, "status": "UNAVAILABLE", "reason_code": admission["reason_code"], "admission": admission,
                 "reason": "RESOURCE_ADMISSION_REFUSED:" + ",".join(admission["reasons"])}
     code_dir = Path(__file__).resolve().parent  # the tool lives with the code, not necessarily under the evidence root
@@ -2095,6 +2107,8 @@ def run_bounded_prospective_feedback(
                 "inputs_summary": child.get("inputs_summary"), "status_path": str(status_path), "resource": resource,
                 "admission": {k: admission.get(k) for k in ("admitted", "available_physical_bytes", "available_commit_bytes", "free_disk_bytes")}}
     reason_code = run.get("reason_code") or child.get("reason_code") or guard.COMPUTATION_ERROR
+    if not child:
+        record_unavailable(reason_code, run.get("outcome") or "", resource)
     return {**base, "status": "UNAVAILABLE", "reason_code": reason_code, "resource": resource,
             "reason": (run.get("stderr_tail") or str(child.get("detail") or run["outcome"]))[-1500:], "child_status": child.get("status")}
 

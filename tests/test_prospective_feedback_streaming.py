@@ -442,3 +442,39 @@ def test_output_disk_write_failure_leaves_no_published_output(corpus, monkeypatc
     assert not output.exists()
     assert [p.name for p in output.parent.iterdir() if not p.name.startswith(streaming.TEMP_PREFIX)] == []
     assert real_replace is os.replace
+
+
+# -- the post-marker (future completed-capture chain) evaluation branch -------------------------------------
+
+class _FutureChain(list):
+    """Minimal GovernedSessionChain stand-in exposing the exact surface the forward bridge uses."""
+    contract_version = "fake_governed_session_chain/v1"
+
+    def realized_prefix_after(self, session, count):
+        index = self.index(session)
+        return list(self[index + 1:index + 1 + count])
+
+    def next_n_sessions(self, session, count):
+        index = self.index(session)
+        if index + count < len(self):
+            return {"state": "COMPLETE", "target": self[index + count]}
+        return {"state": "PROJECTED_ONLY"}
+
+
+def test_post_marker_sessions_use_the_future_chain_exactly_as_the_original_builder_does(corpus, monkeypatch):
+    import prospective_pit_capture_retention as store
+    root, sessions, state, output = corpus
+    marker_session = sessions[3]
+    future = _FutureChain(s for s in sessions if s >= marker_session)
+    monkeypatch.setattr(store, "load_marker", lambda r: {"session": marker_session})
+    monkeypatch.setattr(store, "load_chain", lambda r, as_of: future)
+    expected = _legacy_artifact(root)
+    result = _build(root, output, state)
+    assert result["artifact_identity"] == expected["artifact_identity"]
+    rows = [r for r in expected["feedback_records"] if r["decision_session"] >= marker_session]
+    assert rows and all("session_chain_contract" in r["forward_outcomes"]["horizons"]["forward_close_return_5"] or
+                        r["forward_outcomes"]["horizons"]["forward_close_return_5"]["status"] for r in rows)
+    # With a marker the reuse key also binds the as-of date, so a different day cannot silently reuse the output.
+    summary_a = _build(root, output.with_name("b.json"), state)["input_digest"]
+    monkeypatch.setattr(streaming, "_future_chain_inputs", lambda repository, marker, as_of: {"marker": marker, "as_of_date": "2099-01-01"})
+    assert _build(root, output.with_name("c.json"), state)["input_digest"] != summary_a

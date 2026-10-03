@@ -818,7 +818,7 @@ def build_streaming_feedback(root: str | Path, output: str | Path, *, state_root
     # Data identity only: the same retained inputs keep the same digest across code changes, so FEEDBACK_CALL_RELATION
     # reports what the *evidence* did. Reuse additionally requires an identical code digest (below).
     input_digest = _sha256_bytes(_canon_bytes(input_manifest))
-    inputs_summary = {"chain_sessions": chain, "t0_snapshot_identities": sorted(r[0] for r in input_manifest["t0_snapshots"]),
+    inputs_summary = {"price_source_sessions": sorted(prices.sources), "chain_sessions": chain, "t0_snapshot_identities": sorted(r[0] for r in input_manifest["t0_snapshots"]),
                       "legacy_artifact_paths": sorted(r[0] for r in input_manifest["legacy_artifacts"]),
                       "artifact_inventory_paths": sorted(r[0] for r in input_manifest["artifact_inventory"]),
                       "input_digest": input_digest}
@@ -845,6 +845,7 @@ def build_streaming_feedback(root: str | Path, output: str | Path, *, state_root
             _metric(metrics, "rows")
         spool_rows.close()
         spool_trigger.close()
+        _metric(metrics, "spool_bytes", spool_rows.path.stat().st_size + spool_trigger.path.stat().st_size)
         phases["evaluate_s"] = clock() - t
         settled.finish()
         t = clock()
