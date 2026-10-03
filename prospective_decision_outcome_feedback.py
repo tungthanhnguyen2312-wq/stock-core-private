@@ -311,9 +311,17 @@ def _qualify_linked_artifact(link: Mapping[str, Any], artifact: Mapping[str, Any
 
 
 def discover_prospective_corpus(root: str | Path, *, payload_projection=None,
-                                use_summary_cache: bool = True, cache_metrics: dict[str, int] | None = None) -> dict[str, Any]:
-    """Inventory every retained integrated-decision artifact without promoting copies or replays."""
+                                use_summary_cache: bool = True, cache_metrics: dict[str, int] | None = None,
+                                artifact_loader=None, cache_root: str | Path | None = None) -> dict[str, Any]:
+    """Inventory every retained integrated-decision artifact without promoting copies or replays.
+
+    ``artifact_loader``/``cache_root`` are resource-containment seams: the streaming builder supplies a
+    header-only loader (records stay on disk) and keeps derived caches out of the evidence root. Defaults
+    preserve the original full-load behaviour byte-for-byte.
+    """
     repository = Path(root)
+    cache_repository = Path(cache_root) if cache_root is not None else repository
+    load_artifact = artifact_loader or _load_iid
     if cache_metrics is not None:
         for key in ("full_iid_parses", "full_iid_bytes_parsed", "summary_hits", "avoided_iid_bytes"):
             cache_metrics.setdefault(key, 0)
@@ -323,7 +331,7 @@ def discover_prospective_corpus(root: str | Path, *, payload_projection=None,
     linked_identities = {item["artifact_identity"] for item in handoffs}
     inventory: list[dict[str, Any]] = []
     genuine: list[dict[str, Any]] = []
-    entries = _read_summary_cache(repository) if use_summary_cache else {}
+    entries = _read_summary_cache(cache_repository) if use_summary_cache else {}
     retained_entries: dict[str, Any] = {}
     for path in _artifact_paths(repository):
         link = links.get(path.resolve())
@@ -345,7 +353,7 @@ def discover_prospective_corpus(root: str | Path, *, payload_projection=None,
                 cache_metrics["summary_hits"] = cache_metrics.get("summary_hits", 0) + 1
                 cache_metrics["avoided_iid_bytes"] = cache_metrics.get("avoided_iid_bytes", 0) + fingerprint["size"]
         else:
-            artifact = _load_iid(path, cache_metrics)
+            artifact = load_artifact(path, cache_metrics)
             if artifact:
                 record_count = len(artifact.get("records") or {})
                 if fingerprint is not None:
@@ -398,7 +406,7 @@ def discover_prospective_corpus(root: str | Path, *, payload_projection=None,
             genuine.append({"artifact": payload_projection(artifact) if payload_projection else artifact, "artifact_path": rel, "temporal": temporal})
         del artifact
     if use_summary_cache and retained_entries != entries:
-        _write_summary_cache(repository, retained_entries)
+        _write_summary_cache(cache_repository, retained_entries)
     return {
         "contract_version": TEMPORAL_CONTRACT_VERSION,
         "inventory": sorted(inventory, key=lambda row: (str(row["decision_session"]), row["artifact_path"])),
@@ -702,6 +710,10 @@ class SettledFeedbackCache:
         if self.metrics is not None:
             self.metrics[name] = self.metrics.get(name, 0) + 1
 
+    def _snapshot_content_hash(self, session, snapshot):
+        """Seam for the streaming builder, which hashes the source file instead of a resident object."""
+        return retention._hash(snapshot)
+
     def _proof(self, through):
         prefix = self.chain[:self.chain.index(through) + 1]
         for session in prefix:
@@ -709,7 +721,7 @@ class SettledFeedbackCache:
                 snapshot = self.snapshots.get(session)
                 self.session_proofs[session] = {
                     "snapshot_identity": (snapshot or {}).get("snapshot_identity"),
-                    "content_sha256": retention._hash(snapshot),
+                    "content_sha256": self._snapshot_content_hash(session, snapshot),
                 }
         return {"session_sequence": prefix, "snapshots": {s: self.session_proofs[s] for s in prefix}, "terminal_through_session": through}
 

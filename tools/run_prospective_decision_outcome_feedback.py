@@ -61,12 +61,63 @@ def run(*, root: str | Path = ROOT, output: str | Path | None = None, evidence_d
     return artifact
 
 
+def run_streaming(*, root: str | Path, output: str | Path, result: str | Path | None = None, state_root: str | Path | None = None,
+                  prior_result: str | Path | None = None) -> dict:
+    """Resource-bounded builder: streams every source, publishes atomically, returns a small status (never the artifact)."""
+    import traceback
+    import feedback_resource_guard as guard
+    import prospective_feedback_streaming as streaming
+
+    def finish(payload: dict, code: int) -> int:
+        payload.setdefault("peak_memory_bytes", guard.peak_memory_bytes())
+        guard.write_child_result(result, payload)
+        return code
+
+    prior_summary = None
+    if prior_result is not None:
+        try:
+            prior_summary = (json.loads(Path(prior_result).read_text(encoding="utf-8")) or {}).get("inputs_summary")
+        except (OSError, ValueError):
+            prior_summary = None
+    try:
+        built = streaming.build_streaming_feedback(root, output, state_root=state_root, prior_summary=prior_summary)
+        payload = {"status": "COMPLETED", **{k: v for k, v in built.items() if k != "contract_version"},
+                   "contract_version": built["contract_version"]}
+        return {"exit": finish(payload, guard.EXIT_OK), "payload": payload}
+    except MemoryError:
+        payload = {"status": "RESOURCE_UNAVAILABLE", "reason_code": guard.RESOURCE_MEMORY_LIMIT}
+        return {"exit": finish(payload, guard.EXIT_RESOURCE_MEMORY), "payload": payload}
+    except streaming.FeedbackStreamError as exc:
+        code = {streaming.REASON_SOURCE_INTEGRITY: guard.EXIT_SOURCE_INTEGRITY,
+                streaming.REASON_IMMUTABLE_CONFLICT: guard.EXIT_IMMUTABLE_CONFLICT}.get(exc.code, guard.EXIT_COMPUTATION_ERROR)
+        payload = {"status": "FAILED", "reason_code": exc.code, "detail": str(exc)[:500]}
+        return {"exit": finish(payload, code), "payload": payload}
+    except OSError as exc:
+        import errno
+        if exc.errno in (errno.ENOSPC, getattr(errno, "EDQUOT", -1)):
+            payload = {"status": "RESOURCE_UNAVAILABLE", "reason_code": guard.RESOURCE_DISK, "detail": str(exc)[:300]}
+            return {"exit": finish(payload, guard.EXIT_RESOURCE_DISK), "payload": payload}
+        payload = {"status": "FAILED", "reason_code": guard.COMPUTATION_ERROR, "detail": f"{type(exc).__name__}:{exc}"[:500]}
+        return {"exit": finish(payload, guard.EXIT_COMPUTATION_ERROR), "payload": payload}
+    except Exception as exc:  # noqa: BLE001 -- anything else is a defect, reported as such, never as "no evidence"
+        payload = {"status": "FAILED", "reason_code": guard.COMPUTATION_ERROR,
+                   "detail": f"{type(exc).__name__}:{exc}"[:500], "traceback_tail": traceback.format_exc()[-1500:]}
+        return {"exit": finish(payload, guard.EXIT_COMPUTATION_ERROR), "payload": payload}
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", default=str(ROOT), help="Repository/artifact root to read; never fetched or mutated.")
-    parser.add_argument("--output", help="Optional immutable feedback artifact path.")
-    parser.add_argument("--evidence-dir", help="Optional immutable evidence-package directory.")
+    parser.add_argument("--output", help="Immutable feedback artifact path (streamed, resource-bounded).")
+    parser.add_argument("--evidence-dir", help="Optional immutable evidence-package directory (legacy in-memory builder).")
+    parser.add_argument("--legacy-in-memory", action="store_true", help="Use the original in-memory builder (parity / small corpora only).")
+    parser.add_argument("--result", help="Small JSON status sidecar written by the child for the parent.")
+    parser.add_argument("--state-root", help="Where derived caches/receipts live (default: --root).")
+    parser.add_argument("--prior-result", help="Status sidecar of the earlier call, to report FEEDBACK_CALL_RELATION.")
     args = parser.parse_args()
+    if args.output is not None and args.evidence_dir is None and not args.legacy_in_memory:
+        outcome = run_streaming(root=args.root, output=args.output, result=args.result, state_root=args.state_root, prior_result=args.prior_result)
+        sys.exit(outcome["exit"])
     result = run(root=args.root, output=args.output, evidence_dir=args.evidence_dir)
     if args.output is None and args.evidence_dir is None:
         print(json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True))

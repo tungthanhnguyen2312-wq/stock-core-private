@@ -7,15 +7,18 @@ from field_temporal_contract import _sanitize_for_json
 
 class ObjectStream:
     """Bounded stdlib JSON object reader; never materialize the records container."""
-    def __init__(self, source, *, limit=16 * 1024 * 1024):
-        self.source, self.limit = source, limit
+    def __init__(self, source, *, limit=16 * 1024 * 1024, sorted_required=True):
+        # ``sorted_required=False`` is for projection-only readers that never hash canonical bytes;
+        # duplicate keys are still rejected (fail closed) via the seen-set below.
+        self.source, self.limit, self.sorted_required = source, limit, sorted_required
         self.buffer, self.position, self.eof = "", 0, False
         self.decoder = json.JSONDecoder()
+        self.hint = 0  # characters of the last large member; sizes the next refill so a record is decoded ~once
 
-    def fill(self):
+    def fill(self, size=64 * 1024):
         self.buffer = self.buffer[self.position:]
         self.position = 0
-        chunk = self.source.read(64 * 1024)
+        chunk = self.source.read(size)
         self.eof = not chunk
         self.buffer += chunk
         if len(self.buffer) > self.limit:
@@ -38,20 +41,29 @@ class ObjectStream:
 
     def value(self):
         self.peek()
+        # Refill is sized from the previous large member and doubles on failure, so a record is
+        # re-scanned O(1) times instead of once per 64 KiB chunk.
+        want = min(max(64 * 1024, int(self.hint * 1.25)), self.limit)
+        if len(self.buffer) - self.position < want and not self.eof:
+            self.fill(want - (len(self.buffer) - self.position))
         while True:
             try:
                 value, end = self.decoder.raw_decode(self.buffer, self.position)
                 # A numeric token at a chunk boundary might be only a prefix.
                 numeric_prefix = isinstance(value, (int, float)) and end < len(self.buffer) and self.buffer[end] not in " \t\r\n,]}"
                 if (end == len(self.buffer) or numeric_prefix) and not self.eof:
-                    self.fill()
+                    self.fill(want)
+                    want = min(want * 2, self.limit)
                     continue
+                if end - self.position > 4096:
+                    self.hint = end - self.position
                 self.position = end
                 return value
             except json.JSONDecodeError:
                 if self.eof:
                     raise
-                self.fill()
+                self.fill(want)
+                want = min(want * 2, self.limit)
 
     def members(self):
         self.take("{")
@@ -59,10 +71,16 @@ class ObjectStream:
             self.take("}")
             return
         previous = None
+        seen = set() if not self.sorted_required else None
         while True:
             key = self.value()
-            if not isinstance(key, str) or previous is not None and key <= previous:
-                raise ValueError("ACCEPTANCE_OBJECT_NOT_SORTED_UNIQUE")
+            if self.sorted_required:
+                if not isinstance(key, str) or previous is not None and key <= previous:
+                    raise ValueError("ACCEPTANCE_OBJECT_NOT_SORTED_UNIQUE")
+            else:
+                if not isinstance(key, str) or key in seen:
+                    raise ValueError("ACCEPTANCE_OBJECT_DUPLICATE_OR_NON_STRING_KEY")
+                seen.add(key)
             previous = key
             self.take(":")
             yield key
@@ -71,6 +89,11 @@ class ObjectStream:
                 self.take("}")
                 return
             self.take(",")
+
+
+def canonical_bytes(value):
+    """One-shot canonical UTF-8 bytes; byte-identical to the concatenated retention._json_bytes chunks."""
+    return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False).encode("utf-8")
 
 
 def source_hash(path):
@@ -101,8 +124,12 @@ def stream_artifact(path, *, excluded, on_record, sanitize=False):
     digest.update(b"{")
     metadata, first, count = {}, True, 0
     def encode(value):
-        for chunk in retention._json_bytes(_sanitize_for_json(value) if sanitize else value):
-            digest.update(chunk)
+        if sanitize:
+            for chunk in retention._json_bytes(_sanitize_for_json(value)):
+                digest.update(chunk)
+        else:
+            # Same canonical bytes as retention._json_bytes (verified by test), without the pure-Python iterencode path.
+            digest.update(canonical_bytes(value))
     with path.open(encoding="utf-8") as source:
         parser = ObjectStream(source)
         for key in parser.members():
