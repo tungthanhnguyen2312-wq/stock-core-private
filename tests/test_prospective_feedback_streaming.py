@@ -478,3 +478,13 @@ def test_post_marker_sessions_use_the_future_chain_exactly_as_the_original_build
     summary_a = _build(root, output.with_name("b.json"), state)["input_digest"]
     monkeypatch.setattr(streaming, "_future_chain_inputs", lambda repository, marker, as_of: {"marker": marker, "as_of_date": "2099-01-01"})
     assert _build(root, output.with_name("c.json"), state)["input_digest"] != summary_a
+
+
+def test_equal_content_under_new_code_refreshes_the_manifest_so_the_next_call_reuses(corpus, monkeypatch):
+    root, _s, state, output = corpus
+    first = _build(root, output, state)
+    monkeypatch.setattr(streaming, "code_digest", lambda: "different-code-digest")
+    second = _build(root, output, state)  # same inputs, "new code": recomputed once, content proven equal
+    assert second["outcome"] == streaming.OUTCOME_ALREADY_RETAINED_EQUAL and second["artifact_identity"] == first["artifact_identity"]
+    assert streaming.read_completion(output)["code_digest"] == "different-code-digest"
+    assert _build(root, output, state)["outcome"] == streaming.OUTCOME_ALREADY_COMPLETE  # reuse resumes

@@ -1086,6 +1086,11 @@ def _publish(final_tmp: Path, output: Path, identity: str, size: int, raw_sha: s
     if output.exists():
         completion = read_completion(output)
         if completion is not None and completion.get("artifact_identity") == identity:
+            if completion.get("input_digest") != input_digest or completion.get("code_digest") != code:
+                # Same proven content under new code or a changed-but-equivalent input set: refresh the manifest so the
+                # next identical call reuses the output instead of recomputing it forever.
+                _write_completion(output, identity, completion["artifact_size"], completion["artifact_raw_sha256"], record_count,
+                                  input_digest, code, inputs_summary)
             return OUTCOME_ALREADY_RETAINED_EQUAL
         existing_sha = bas.source_hash(output)
         equal = existing_sha == raw_sha

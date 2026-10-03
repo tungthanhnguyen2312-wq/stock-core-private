@@ -390,6 +390,13 @@ def run_bounded(command: Sequence[str], *, cwd: str | Path, policy: ResourcePoli
                     pass
             raise
     except OSError as exc:
+        if job is not None:
+            job.close()
+        try:
+            log.close()
+            log_path.unlink(missing_ok=True)
+        except OSError:
+            pass
         return {"outcome": "LAUNCH_FAILED", "reason_code": COMPUTATION_ERROR, "returncode": None,
                 "wall_seconds": round(time.perf_counter() - started, 3), "detail": f"{type(exc).__name__}:{exc}",
                 "containment": containment, "reaped": True, "peak_process_bytes": None, "child_result": None, "stderr_tail": ""}

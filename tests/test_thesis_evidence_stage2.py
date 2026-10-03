@@ -215,7 +215,9 @@ def test_monday_thesis_rows_are_independent_of_capture_success(tmp_path):
         marker={"session":DAY},thesis_state={"stage_1":"COMPLETE","stage_1_offline":True,"stage_2":"COMPLETE"},sealed_bindings=bound)
     result=harness.evaluate(**base,thesis_products=products)
     rows={r["capability"]:r for r in result["rows"]}
-    assert len(result["rows"])==41 and rows["thesis_t0_component"]["state"]=="OPEN"
+    assert len([r for r in result["rows"] if not r["capability"].startswith("feedback_")])==41 and rows["thesis_t0_component"]["state"]=="OPEN"
+    # OWNER_DAILY_FEEDBACK_RESOURCE_CONTAINMENT_V1 adds five optional-work rows that can never gate capture or Thesis.
+    assert len([r for r in result["rows"] if r["capability"].startswith("feedback_")])==5
     assert rows["thesis_t0_zero_post"]["state"]=="OPEN" and rows["thesis_t0_exact_snapshot_index_binding"]["state"]=="OPEN"
     assert rows["thesis_retrospective_technical_t0_exclusion"]["state"]=="OPEN"
     absent={r["capability"]:r for r in harness.evaluate(**base)["rows"]}
