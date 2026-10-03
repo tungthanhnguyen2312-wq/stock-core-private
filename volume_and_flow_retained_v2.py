@@ -32,7 +32,7 @@ def trading_date_index(runtime_root):
     return dates
 
 
-def flow_index(runtime_root, session, dates, registry_dates):
+def flow_index(runtime_root, session, dates, registry_dates, calendar_evidence=None):
     result = {}
     for path in sorted(store.observations_root(runtime_root).glob("*.json")):
         payload = json.loads(path.read_text(encoding="utf-8"))
@@ -46,13 +46,13 @@ def flow_index(runtime_root, session, dates, registry_dates):
         observations = sorted([store._value_observation(row) for row in raw if row["session_date"] <= session], key=lambda o:o["session_date"])
         if not observations:
             continue
-        counts = store._streaks_and_counts(observations, exhaustive_dates=dates.get(ticker,set()), registry_dates=registry_dates)
+        counts = store._streaks_and_counts(observations, exhaustive_dates=dates.get(ticker,set()), registry_dates=registry_dates, calendar_evidence=calendar_evidence)
         result[ticker] = {"schema_version": store.SERIES_SCHEMA_VERSION, "ticker": ticker,
             "status": store.STATUS_AVAILABLE, "source": "DNSE", "source_contract_version": store.SOURCE_CONTRACT_VERSION,
             "observations": observations, "latest_session": observations[-1],
             "freshness": store._freshness(observations[-1]["session_date"], session, dates.get(ticker,set())),
             **counts, "window_summaries": {f"{n}_session": store._window_summary(observations, window_size=n,
-                exhaustive_dates=dates.get(ticker,set()), registry_dates=registry_dates) for n in (5,10)}}
+                exhaustive_dates=dates.get(ticker,set()), registry_dates=registry_dates, calendar_evidence=calendar_evidence) for n in (5,10)}}
     return result
 
 
@@ -115,13 +115,16 @@ def collect(*, source_root, runtime_root, session, feature_batch=None, feature_b
         import volume_and_flow_context as producer
     else:
         producer = context
-    if sealed_snapshot is not None and not isinstance(sealed_snapshot, producer.SealedTechnicalBindings):
-        sealed_snapshot = producer.SealedTechnicalBindings(sealed_snapshot)
     v2_consumer = version == dispatch.V2 or allow_legacy_bridge
+    if v2_consumer:
+        from prospective_pit_capture_retention import calendar_evidence_at_cutoff
+        calendar = calendar_evidence_at_cutoff(root, cutoff=source_header["requested_at"])
+    if sealed_snapshot is not None and not (producer._is_sealed_bindings(sealed_snapshot) if v2_consumer else isinstance(sealed_snapshot, producer.SealedTechnicalBindings)):
+        sealed_snapshot = producer.SealedTechnicalBindings(sealed_snapshot)
     views = {t: bridge.build_views(c) for t,c in technical.items()} if v2_consumer else technical
     dates = trading_date_index(runtime_root)
     registry_dates = load_qualified_completed_sessions(paths["input_registry"])
-    flow = flow_index(runtime_root, session, dates, registry_dates)
+    flow = flow_index(runtime_root, session, dates, registry_dates, calendar if v2_consumer else None)
     prepared, tickers = {}, set()
     def price_record(ticker, row):
         tickers.add(ticker)
@@ -133,7 +136,7 @@ def collect(*, source_root, runtime_root, session, feature_batch=None, feature_b
             knowledge_cutoff=source_header["requested_at"], source_identity=recovery["artifact_identity"] if recovered else source_header["snapshot_identity"],
             calendar_evidence=calendar, ca_events=events[ticker])
         prepared[ticker] = producer.volume_items(views[ticker],series=series,exhaustive_dates=dates.get(ticker,()),
-            registry_dates=registry_dates,sealed_snapshot=sealed_snapshot)
+            registry_dates=registry_dates,sealed_snapshot=sealed_snapshot, **({"calendar_evidence": calendar} if v2_consumer else {}))
         if len(prepared)%200 == 0: print("VOLUME_CONTEXT",len(prepared),flush=True)
     meta, digest, count = stream_artifact(paths["exact_session_snapshot"], excluded={"snapshot_identity","snapshot_sha256"},on_record=price_record,sanitize=True)
     if digest != source_header["snapshot_sha256"] or tickers != set(universe["records"]):
@@ -158,7 +161,7 @@ def collect(*, source_root, runtime_root, session, feature_batch=None, feature_b
         if velocity_artifact.get("artifact_identity") != "multi_session_signal_velocity:"+digest:
             raise ValueError("VOLUME_FLOW_VELOCITY_IDENTITY_INVALID")
         velocity = {r["ticker"]:r for r in velocity_artifact["records"] if r["session"] == session}
-    paired_inputs = {"relationship_views": views, "allow_legacy_bridge": allow_legacy_bridge} if v2_consumer else {"technical_contexts": technical}
+    paired_inputs = {"relationship_views": views, "allow_legacy_bridge": allow_legacy_bridge, "calendar_evidence": calendar} if v2_consumer else {"technical_contexts": technical}
     artifact = producer.build_artifact(session=session,tickers=tickers,**paired_inputs,flow_series=flow,
         exhaustive_dates=dates,registry_dates=registry_dates,sectors=sectors,velocity_records=velocity,
         source_artifact_identities=[source_header["snapshot_identity"], recovery["artifact_identity"],

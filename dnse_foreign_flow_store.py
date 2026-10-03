@@ -34,6 +34,9 @@ NO NETWORK I/O, NO SECRETS
 from __future__ import annotations
 
 import json
+from prospective_pit_capture import CAPTURE_START_NOT_BEFORE
+from contextvars import ContextVar
+from contextlib import contextmanager
 import sqlite3
 from datetime import date as _date
 from pathlib import Path
@@ -42,6 +45,18 @@ from typing import Any, Mapping, Sequence
 from atomic_io import atomic_write_file, validate_json_file
 from daily_session_completion_reference import load_qualified_completed_sessions
 from dnse_foreign_flow_capability import PROVIDER, SOURCE_CONTRACT_VERSION
+
+_GOVERNED_CALENDAR = ContextVar("foreign_flow_governed_calendar", default=None)
+
+@contextmanager
+def governed_continuity(calendar_evidence):
+    """Bound the shared proof to a V2 observer without changing frozen V1 code."""
+    token = _GOVERNED_CALENDAR.set(calendar_evidence)
+    try:
+        yield
+    finally:
+        _GOVERNED_CALENDAR.reset(token)
+
 
 STORE_SCHEMA_VERSION = "1.0.0"
 SERIES_SCHEMA_VERSION = "1.0.0"
@@ -208,7 +223,7 @@ def _exhaustive_reference_covers_interval(exhaustive_dates: set[str], candidate_
 
 
 def _prove_continuity(
-    candidate_dates: Sequence[str], *, exhaustive_dates: set[str], registry_dates: frozenset[str],
+    candidate_dates: Sequence[str], *, exhaustive_dates: set[str], registry_dates: frozenset[str], calendar_evidence=None,
 ) -> dict[str, Any]:
     """Decide whether no real trading session could have fallen between any adjacent
     pair in `candidate_dates` (sorted, len >= 2), and name exactly which authority
@@ -228,6 +243,19 @@ def _prove_continuity(
     UNVERIFIABLE, because the registry's silence about an intervening date is not
     proof that date was not a trading day.
     """
+    calendar_evidence = calendar_evidence or _GOVERNED_CALENDAR.get()
+    if candidate_dates and candidate_dates[-1] >= CAPTURE_START_NOT_BEFORE:
+        from governed_session_chain import are_consecutive_governed_sessions
+        proofs = [are_consecutive_governed_sessions(a, b,
+            (calendar_evidence or {}).get("knowledge_cutoff", candidate_dates[-1]+"T23:59:59+07:00"), calendar_evidence)
+            for a, b in zip(candidate_dates, candidate_dates[1:])]
+        state = (PROOF_GAP if any(p["state"] == "FALSE" for p in proofs) else
+                 PROOF_CONTINUOUS if proofs and all(p["state"] == "TRUE" for p in proofs) else PROOF_UNVERIFIABLE)
+        return {"proof_state": state, "source": "governed_calendar_evidence_at_cutoff/v1",
+            "authority_scope": "GOVERNED_KNOWN_AT_CALENDAR_SEGMENTS", "exhaustive": True,
+            "reason": None if state == PROOF_CONTINUOUS else "GOVERNED_CALENDAR_CONTINUITY_"+state,
+            "source_identities": sorted({i for p in proofs for i in p["source_identities"]}),
+            "pair_proofs": proofs}
     if _exhaustive_reference_covers_interval(exhaustive_dates, candidate_dates):
         expected = sorted(d for d in exhaustive_dates if candidate_dates[0] <= d <= candidate_dates[-1])
         if expected == list(candidate_dates):
@@ -263,7 +291,7 @@ def _prove_continuity(
 
 
 def _streaks_and_counts(
-    observations: Sequence[Mapping[str, Any]], *, exhaustive_dates: set[str], registry_dates: frozenset[str],
+    observations: Sequence[Mapping[str, Any]], *, exhaustive_dates: set[str], registry_dates: frozenset[str], calendar_evidence=None,
 ) -> dict[str, Any]:
     positive = negative = neutral = 0
     consecutive_buy = consecutive_sell = 0
@@ -272,7 +300,7 @@ def _streaks_and_counts(
         date = obs["session_date"]
         if prev_date is not None:
             proof = _prove_continuity([prev_date, date], exhaustive_dates=exhaustive_dates,
-                                       registry_dates=registry_dates)
+                                       registry_dates=registry_dates, calendar_evidence=calendar_evidence)
             if proof["proof_state"] != PROOF_CONTINUOUS:
                 # Continuity unproven (a real gap, or simply unknown) -- never fabricate it.
                 consecutive_buy = consecutive_sell = 0
@@ -307,12 +335,13 @@ def _continuity_reference_provenance(proof: Mapping[str, Any]) -> dict[str, Any]
     (never internal implementation detail: no raw date sets, no registry contents)."""
     return {"source": proof["source"], "authority_scope": proof["authority_scope"],
             "exhaustive": proof["exhaustive"], "proof_state": proof["proof_state"],
-            "interval_capability": proof.get("interval_capability")}
+            "interval_capability": proof.get("interval_capability"),
+            **({"source_identities":proof["source_identities"],"pair_proofs":proof["pair_proofs"]} if "pair_proofs" in proof else {})}
 
 
 def _window_summary(
     observations: Sequence[Mapping[str, Any]], *, window_size: int,
-    exhaustive_dates: set[str], registry_dates: frozenset[str],
+    exhaustive_dates: set[str], registry_dates: frozenset[str], calendar_evidence=None,
 ) -> dict[str, Any]:
     """The most recent `window_size` qualified sessions -- but only counted
     "complete" when they are exactly the most recent `window_size` retained
@@ -329,7 +358,7 @@ def _window_summary(
                 "reason": f"only {len(observations)} qualified session(s) retained, need {window_size}"}
     candidate = list(observations[-window_size:])
     candidate_dates = [o["session_date"] for o in candidate]
-    proof = _prove_continuity(candidate_dates, exhaustive_dates=exhaustive_dates, registry_dates=registry_dates)
+    proof = _prove_continuity(candidate_dates, exhaustive_dates=exhaustive_dates, registry_dates=registry_dates, calendar_evidence=calendar_evidence)
     continuity_reference = _continuity_reference_provenance(proof)
     if proof["proof_state"] == PROOF_GAP:
         return {**base, "sessions": candidate_dates, "coverage": "incomplete",
@@ -421,7 +450,7 @@ def _freshness(
 
 def build_series(
     runtime_root: Path | str, ticker: str, *, reference_session_date: str | None = None,
-    qualified_session_registry_path: Path | str | None = None,
+    qualified_session_registry_path: Path | str | None = None, calendar_evidence=None,
 ) -> dict[str, Any]:
     """The canonical per-ticker foreign_flow contract: raw session observations plus
     bounded, fail-closed deterministic summaries. Generic across tickers -- identical
@@ -448,16 +477,22 @@ def build_series(
         load_qualified_completed_sessions(qualified_session_registry_path)
         if qualified_session_registry_path is not None else frozenset()
     )
+    if calendar_evidence is None and qualified_session_registry_path and reference_session_date and reference_session_date >= CAPTURE_START_NOT_BEFORE:
+        from prospective_pit_capture_retention import calendar_evidence_at_cutoff
+        known = [o["observed_at"] for o in observations if o.get("observed_at")]
+        if known:
+            calendar_evidence = calendar_evidence_at_cutoff(Path(qualified_session_registry_path).resolve().parent.parent,
+                cutoff=max(known, key=lambda t: __import__("prospective_market_snapshot_contract")._utc(t,"flow_known_at")))
 
     status = STATUS_AVAILABLE if observations else STATUS_MISSING
     qualified_with_net = [o for o in observations if o["foreign_net_value_vnd"] is not None]
 
-    counts = _streaks_and_counts(observations, exhaustive_dates=exhaustive_dates, registry_dates=registry_dates)
+    counts = _streaks_and_counts(observations, exhaustive_dates=exhaustive_dates, registry_dates=registry_dates, calendar_evidence=calendar_evidence)
     window_summaries = {
         "5_session": _window_summary(qualified_with_net, window_size=5,
-                                      exhaustive_dates=exhaustive_dates, registry_dates=registry_dates),
+                                      exhaustive_dates=exhaustive_dates, registry_dates=registry_dates, calendar_evidence=calendar_evidence),
         "10_session": _window_summary(qualified_with_net, window_size=10,
-                                       exhaustive_dates=exhaustive_dates, registry_dates=registry_dates),
+                                       exhaustive_dates=exhaustive_dates, registry_dates=registry_dates, calendar_evidence=calendar_evidence),
     }
     freshness = _freshness(
         observations[-1]["session_date"] if observations else None,

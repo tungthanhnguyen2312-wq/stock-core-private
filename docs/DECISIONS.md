@@ -1,3 +1,7 @@
+## 2026-10-03 — owner-authorized Monday readiness corrective
+
+The owner authorizes one bounded corrective and release before Thesis Stage 2: one known-at calendar resolver, post-release governed continuity, recoverable first-complete publication, a verified compact T0 index and a read-only first-real acceptance harness. Historical source bytes and September gaps remain unchanged. No live Daily, authority promotion or Thesis production integration occurs. The normal operational target is approximately 16:00 Vietnam time on October 5 under the existing timing gates. First-real capture acceptance stays pending; Stage 2 requires a new owner directive. [Contract](monday_live_readiness_closeout_contract.md).
+
 ## 2026-10-03 — owner-authorized offline Thesis Matrix Stage 1
 
 **2026-10-03 owner-authorized Thesis Evidence Matrix Stage 1.** Build one offline non-voting organizer through `evidence_item/v1`, a closed versioned adapter registry, semantic correlation groups, independent LONG/SHORT lenses and deterministic conflicts. Reuse current source semantics; foreign VALUE is FACTS_ONLY and V2 volume owns participation. Preserve all producers, posture policy, historical T0 and authority. No Daily/Dashboard/handoff/T0-writer import. One retained acceptance and one release PR; Stage 2 production integration requires a new owner directive. [Contract](thesis_evidence_matrix_stage_1_contract.md).

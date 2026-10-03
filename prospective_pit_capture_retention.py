@@ -68,6 +68,9 @@ def load_calendars(root):
     rows = []
     for path in sorted((directory / "receipts").glob("*.json")):
         value = _read(path)
+        from governed_session_chain import verified_calendar
+        verified_calendar(value)
+        if path.stem != value["artifact_sha256"]: raise ValueError("CALENDAR_RECEIPT_PATH_MISMATCH")
         raw = directory / "raw" / value["payload_sha256"]
         # Bounded source body (normally ~257 dates), no date-only fabrication.
         body = raw.read_bytes()
@@ -77,6 +80,13 @@ def load_calendars(root):
             raise ValueError("CALENDAR_RAW_DATES_MISMATCH")
         rows.append(value)
     return rows
+
+
+def calendar_evidence_at_cutoff(root, *, cutoff, static_path=None):
+    from governed_session_chain import governed_calendar_evidence_at_cutoff
+    static_path = Path(static_path) if static_path else Path(root) / "config/governed_trading_session_calendar_v1.json"
+    static = _read(static_path) if static_path.exists() else None
+    return governed_calendar_evidence_at_cutoff(static, load_calendars(root), cutoff=cutoff)
 
 
 def load_marker(root):
@@ -278,12 +288,87 @@ def load_chain(root, *, as_of):
         as_of=as_of, first_complete_capture_session=marker["session"] if marker else None)
 
 
+def verify_complete_session(root, value):
+    """Reverify original evidence at original completion time, never rerun time."""
+    capture.verify(value, "prospective_capture_complete_session")
+    session, known = value["session"], value["completion_known_at"]
+    if session < capture.CAPTURE_START_NOT_BEFORE or value.get("completion_gate_status") != "READY":
+        raise ValueError("RECOVERY_COMPLETE_READY_REQUIRED")
+    coverage = CalendarCoverage(load_calendars(root), cutoff=known)
+    support = coverage.support(session)
+    if support["state"] != "SUPPORTED" or support != value["calendar_support"]:
+        raise ValueError("RECOVERY_CALENDAR_SUPPORT_INVALID")
+    binding = _load_batch_ref(value["capture_binding"], capture.CAPTURE_CONTRACT)
+    listing = _load_batch_ref(value["listing_presence"], capture.LISTING_CONTRACT)
+    manifest = capture.verify(_read(value["market_manifest"]["path"]), market.SESSION_MANIFEST_KIND)
+    if (manifest["artifact_identity"] != value["market_manifest_identity"] or
+        value["market_manifest"]["artifact_identity"] != manifest["artifact_identity"] or
+        binding["artifact_identity"] != value["capture_binding_identity"] or
+        listing["artifact_identity"] != value["listing_presence_identity"] or
+        binding["listing_presence_identity"] != listing["artifact_identity"] or
+        binding["market_manifest_identity"] != manifest["artifact_identity"] or
+        any(v["session"] != session or market._utc(v["created_at"], "created_at") > market._utc(known, "completion_known_at") for v in (binding, listing))):
+        raise ValueError("RECOVERY_BATCH_BINDING_INVALID")
+    receipts = {r["artifact_identity"]: r for p in (Path(value["market_manifest"]["path"]).parent.parent / "receipts").glob("*.json")
+                if (r := retention._verified(p))["artifact_identity"] in manifest["receipt_version_identities"]}
+    if set(receipts) != set(manifest["receipt_version_identities"]): raise ValueError("RECOVERY_RECEIPTS_MISSING")
+    complete = 0
+    for row in binding["records"]:
+        receipt = receipts.get(row["receipt_artifact_identity"])
+        if not receipt or row["source_snapshot_identity"] != value["t0_market_snapshot_identity"]:
+            raise ValueError("RECOVERY_SOURCE_BINDING_INVALID")
+        if market._utc(known, "known") >= market._utc(row["capture_window_close"], "close"):
+            raise ValueError("RECOVERY_CAPTURE_WINDOW_INVALID")
+        if capture.effective_receipt(receipt, [row], known)["capture_state"] == "T0_CAPTURE_COMPLETE":
+            matches = [p for p in listing["records"] if p["artifact_identity"] == row["listing_observation_identity"] and
+                       capture.qualifying_presence(p, ticker=row["ticker"], session=session, cutoff=known)]
+            if len(matches) != 1: raise ValueError("RECOVERY_LISTING_BINDING_INVALID")
+            complete += 1
+    if not complete or complete != value["capture_complete_tickers"]:
+        raise ValueError("RECOVERY_CAPTURE_INCOMPLETE")
+    if value.get("completion_gate"):
+        g = value["completion_gate"]
+        from completed_market_session_gate import stable_id
+        digest = stable_id({k: v for k, v in g.items() if k not in {"gate_identity", "gate_content_identity"}})
+        if (g.get("gate_identity") != "completed_market_session_gate:"+digest or
+            g.get("gate_content_identity") != digest or g["gate_identity"] != value["completion_gate_identity"] or
+            g.get("completion_gate_status") != "READY" or g.get("resolved_session") != session or
+            g.get("exact_session_evidence", {}).get("identity") != value["t0_market_snapshot_identity"]):
+            raise ValueError("RECOVERY_GATE_INVALID")
+    return value
+
+
+def publish_first_marker(root, value):
+    verify_complete_session(root, value)
+    marker_path = Path(root) / STORE / "first_complete_capture_session.json"
+    existing = load_marker(root)
+    if existing:
+        verify_complete_session(root, _read(Path(root) / STORE / "sessions" / (existing["session"]+".json")))
+        if existing["session"] > value["session"] or (existing["session"] == value["session"] and
+            existing["capture_session_identity"] != value["artifact_identity"]):
+            raise ValueError("FIRST_CAPTURE_MARKER_CONFLICT")
+        return "ALREADY_PUBLISHED"
+    for path in (Path(root) / STORE / "sessions").glob("*.json"):
+        if path.stem < value["session"]:
+            prior = verify_complete_session(root, _read(path))
+            if prior["session"] < value["session"]: raise ValueError("EARLIER_COMPLETE_SESSION_EXISTS")
+    marker = capture.identified({"contract_version": "first_complete_capture_session/v1", "session": value["session"],
+        "written_at": value["completion_known_at"], "capture_session_identity": value["artifact_identity"],
+        "policy": "WRITE_ONCE_FIRST_SUCCESSFUL_POST_RELEASE_COMPLETE_CAPTURE", "authority_effect": "NONE"}, "first_complete_capture_session")
+    retention._retain(marker_path, marker)
+    load_marker(root)
+    return "PUBLISHED"
+
+
 def complete_capture_session(root, *, session, gate, evidence, completion_known_at, t0_snapshot_identity=None):
     """Publish only a genuinely Phase-B READY, supported, in-window capture."""
     target = Path(root) / STORE / "sessions" / (session + ".json")
     if target.exists():
-        value = capture.verify(_read(target), "prospective_capture_complete_session")
-        return {"status": "ALREADY_CAPTURED", "path": str(target), "artifact_identity": value["artifact_identity"]}
+        value = verify_complete_session(root, _read(target))
+        if t0_snapshot_identity is not None and t0_snapshot_identity != value.get("t0_decision_snapshot_identity"):
+            raise ValueError("RECOVERY_T0_BINDING_MISMATCH")
+        marker_status = publish_first_marker(root, value)
+        return {"status": "ALREADY_CAPTURED", "path": str(target), "artifact_identity": value["artifact_identity"], "marker_status": marker_status}
     ref = evidence.get("capture") or {}
     if (session < capture.CAPTURE_START_NOT_BEFORE or gate.get("completion_gate_status") != "READY" or
         gate.get("resolved_session") != session or not gate.get("gate_identity") or
@@ -309,6 +394,7 @@ def complete_capture_session(root, *, session, gate, evidence, completion_known_
         raise ValueError("CAPTURE_GATE_SOURCE_OR_TIME_MISMATCH")
     value = capture.identified({"contract_version": "prospective_capture_complete_session/v1", "session": session,
         "completion_known_at": completion_known_at, "completion_gate_identity": gate["gate_identity"], "completion_gate_status": "READY",
+        "completion_gate": dict(gate),
         "calendar_support_identity": support["artifact_identity"], "calendar_support": support,
         "market_manifest_identity": ref["market_manifest"]["artifact_identity"], "market_manifest": ref["market_manifest"],
         "capture_binding_identity": binding["artifact_identity"], "capture_binding": ref["capture_binding"],
@@ -319,20 +405,8 @@ def complete_capture_session(root, *, session, gate, evidence, completion_known_
         "capture_complete_tickers": ref["capture_complete_tickers"], "authority_effect": "NONE / CAPTURE_COMPLETENESS_ONLY"},
         "prospective_capture_complete_session")
     retention._retain(target, value)
-    marker_path = Path(root) / STORE / "first_complete_capture_session.json"
-    if not marker_path.exists():
-        marker = capture.identified({"contract_version": "first_complete_capture_session/v1", "session": session,
-            "written_at": completion_known_at, "capture_session_identity": value["artifact_identity"],
-            "policy": "WRITE_ONCE_FIRST_SUCCESSFUL_POST_RELEASE_COMPLETE_CAPTURE", "authority_effect": "NONE"},
-            "first_complete_capture_session")
-        # Immutable publication never replaces a concurrent first writer.
-        try:
-            retention._retain(marker_path, marker)
-        except Exception:
-            if not marker_path.exists():
-                raise
-            load_marker(root)
-    return {"status": "RETAINED", "path": str(target), "artifact_identity": value["artifact_identity"]}
+    marker_status = publish_first_marker(root, value)
+    return {"status": "RETAINED", "path": str(target), "artifact_identity": value["artifact_identity"], "marker_status": marker_status}
 
 
 class CaptureIndex:

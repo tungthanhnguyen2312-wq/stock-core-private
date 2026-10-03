@@ -83,17 +83,24 @@ class SealedTechnicalBindings:
                 version = dispatch.verify_context(projection, ticker=ticker, session=row["decision_session"])
                 self.bindings[ticker] = (row["decision_session"], version, projection["artifact_identity"])
 
+def _is_sealed_bindings(value):
+    from prospective_t0_seal_index import SealedBindings
+    return isinstance(value, (SealedTechnicalBindings, SealedBindings))
+
 def _stage(view, sealed_snapshot):
-    if sealed_snapshot is not None and not isinstance(sealed_snapshot, SealedTechnicalBindings):
+    if sealed_snapshot is not None and not _is_sealed_bindings(sealed_snapshot):
         sealed_snapshot = SealedTechnicalBindings(sealed_snapshot)
     expected = (view["as_of_session"], dispatch.V2, view["source"]["context_identity"])
     if (view["as_of_session"] >= dispatch.PRODUCTION_V2_START_SESSION and
         view["source"]["technical_contract_version"] == dispatch.V2 and sealed_snapshot is not None and
         sealed_snapshot.bindings.get(view["instrument"]["ticker"]) == expected):
         return T0, sealed_snapshot.snapshot_identity, []
-    return POST, None, ["TECHNICAL_IDENTITY_NOT_SEALED_IN_T0"]
+    reasons = ["TECHNICAL_IDENTITY_NOT_SEALED_IN_T0"]
+    if sealed_snapshot is None and view["as_of_session"] >= dispatch.PRODUCTION_V2_START_SESSION:
+        reasons.append("T0_SEAL_INDEX_UNAVAILABLE")
+    return POST, None, reasons
 
-def volume_items(views, *, series=None, exhaustive_dates=(), registry_dates=(), sealed_snapshot=None):
+def volume_items(views, *, series=None, exhaustive_dates=(), registry_dates=(), sealed_snapshot=None, calendar_evidence=None):
     verify_views(views, views["1D"]["instrument"]["ticker"], views["1D"]["as_of_session"])
     items = []
     for tf in TIMEFRAMES:
@@ -144,7 +151,7 @@ def volume_items(views, *, series=None, exhaustive_dates=(), registry_dates=(), 
                     observed_dates = [b.get("last_trading_session") for b in window]
                     if len(window) > 1 and all(isinstance(day, str) for day in observed_dates):
                         proof = flow_store._prove_continuity(observed_dates,
-                            exhaustive_dates=set(exhaustive_dates), registry_dates=frozenset(registry_dates))
+                            exhaustive_dates=set(exhaustive_dates), registry_dates=frozenset(registry_dates), calendar_evidence=calendar_evidence)
                     else:
                         proof = {"proof_state": "UNVERIFIABLE", "reason": "CANONICAL_OBSERVATION_SESSION_UNAVAILABLE"}
                 else:
@@ -183,7 +190,10 @@ def volume_items(views, *, series=None, exhaustive_dates=(), registry_dates=(), 
 
 def foreign_items(*args, **kwargs):
     result = []
-    for original in frozen.foreign_items(*args, **kwargs):
+    calendar = kwargs.pop("calendar_evidence", None)
+    with flow_store.governed_continuity(calendar):
+        originals = frozen.foreign_items(*args, **kwargs)
+    for original in originals:
         value = {k: v for k, v in original.items() if k not in {"artifact_identity", "artifact_sha256", "technical_relationship"}}
         ticker, session = value["instrument"]["ticker"], value["session"]
         value.update(contract_version=ITEM_VERSION, technical_participation_relationship=None,
@@ -259,19 +269,19 @@ def verify_views(views, ticker, session):
 
 def build_artifact(*, session, tickers, relationship_views, flow_series, canonical_series=None,
     exhaustive_dates=None, registry_dates=(), sectors=None, velocity_records=None, sealed_snapshot=None,
-    source_artifact_identities=(), prepared_volume_items=None, allow_legacy_bridge=False):
+    source_artifact_identities=(), prepared_volume_items=None, allow_legacy_bridge=False, calendar_evidence=None):
     universe, records = sorted(set(tickers)), {}
     if not set(relationship_views) <= set(universe) or not set(flow_series) <= set(universe): raise ValueError("VOLUME_FLOW_INPUT_OUTSIDE_DECLARED_UNIVERSE")
     versions = {verify_views(v, t, session) for t, v in relationship_views.items()}
     if len(versions) > 1: raise ValueError("TECHNICAL_VERSION_MIXED")
     version = next(iter(versions), dispatch.V2)
     if version == dispatch.V1 and not allow_legacy_bridge: raise ValueError("V1_TO_V2_BRIDGE_REQUIRES_EXPLICIT_DIAGNOSTIC")
-    if sealed_snapshot is not None and not isinstance(sealed_snapshot, SealedTechnicalBindings): sealed_snapshot = SealedTechnicalBindings(sealed_snapshot)
+    if sealed_snapshot is not None and not _is_sealed_bindings(sealed_snapshot): sealed_snapshot = SealedTechnicalBindings(sealed_snapshot)
     for ticker in universe:
         views = relationship_views.get(ticker)
         items = list(prepared_volume_items[ticker]) if prepared_volume_items is not None and ticker in prepared_volume_items else volume_items(views,
             series=(canonical_series or {}).get(ticker), exhaustive_dates=(exhaustive_dates or {}).get(ticker, ()), registry_dates=registry_dates,
-            sealed_snapshot=sealed_snapshot) if views else []
+            sealed_snapshot=sealed_snapshot, calendar_evidence=calendar_evidence) if views else []
         for item in items:
             verify(item, ITEM_VERSION)
             tf = item["horizon"].split("/")[0]
@@ -286,7 +296,7 @@ def build_artifact(*, session, tickers, relationship_views, flow_series, canonic
                 if stage != T0 or item["sub_domain"] != "NATIVE_VOLUME_REFERENCE" or snapshot_id not in item["source_artifact_identities"]:
                     raise ValueError("VOLUME_PREPARED_ITEM_NOT_SEALED_T0")
         items += foreign_items(ticker, session, flow_series.get(ticker), in_cohort=ticker in flow_series,
-            exhaustive_dates=(exhaustive_dates or {}).get(ticker, ()), registry_dates=registry_dates, velocity_record=(velocity_records or {}).get(ticker))
+            exhaustive_dates=(exhaustive_dates or {}).get(ticker, ()), registry_dates=registry_dates, velocity_record=(velocity_records or {}).get(ticker), calendar_evidence=calendar_evidence)
         items += [unavailable_participant(ticker, session, p) for p in PARTICIPANTS[1:]]
         records[ticker] = seal({"ticker": ticker, "session": session, "instrument": {"ticker": ticker}, "build_stage": POST,
             "in_current_research_scope": views is not None, "technical_contract_version": version if views else None,

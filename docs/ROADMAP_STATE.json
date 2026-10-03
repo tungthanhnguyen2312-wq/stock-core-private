@@ -1,7 +1,7 @@
 {
   "schema_version": "stocklookup_roadmap_execution_state/1.0.0",
   "roadmap_id": "stock-core-private",
-  "roadmap_version": "2026.10.03.6",
+  "roadmap_version": "2026.10.03.7",
   "narrative_authority": {
     "strategic_roadmap": "docs/ROADMAP.md",
     "operational_narrative": "docs/STATE.md",
@@ -15,11 +15,27 @@
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "THESIS_EVIDENCE_MATRIX_AND_CONFLICT_ENGINE_V1_STAGE_1",
-    "state": "COMPLETE"
+    "milestone": "MONDAY_LIVE_READINESS_BLOCKER_CLOSEOUT_V1",
+    "state": "ACTIVE"
   },
   "queued_next": [],
   "milestones": [
+    {
+      "milestone_id": "MONDAY_LIVE_READINESS_BLOCKER_CLOSEOUT_V1",
+      "state": "ACTIVE",
+      "starting_checkpoint": "97a19163f66f3d3d4f412e8bedeafbb47ea4bd25",
+      "candidate_branch": "fix/monday-live-readiness-closeout-v1",
+      "dependencies": [],
+      "unlocks": [],
+      "owner_authorized": true,
+      "owner_override": "OWNER_DIRECTIVE_2026_10_03_MONDAY_READINESS_CORRECTIVE_FULL_TECHNICAL_RELEASE_AUTONOMY",
+      "authority_effect": "NONE / MONDAY_LIVE_READINESS_ENGINEERING_ONLY",
+      "state_history": [
+        "ACTIVE"
+      ],
+      "source_doc": "docs/monday_live_readiness_closeout_contract.md",
+      "notes": "Owner-authorized corrective before Thesis Stage2. Historical September calendar gap remains unsupported; first-real acceptance pending. Stage1 source/contracts/retained acceptance frozen and offline. Stage2 NOT STARTED."
+    },
     {
       "milestone_id": "THESIS_EVIDENCE_MATRIX_AND_CONFLICT_ENGINE_V1_STAGE_1",
       "state": "COMPLETE",

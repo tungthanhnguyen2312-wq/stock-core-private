@@ -142,6 +142,11 @@ proofs that permit sparse maturation.
 
 ## Normal Daily boundary and readiness
 
+The [Monday readiness corrective](monday_live_readiness_closeout_contract.md) adds
+original-evidence verification and missing-first-marker recovery at this same
+completion boundary. Session records stay immutable; later knowledge cannot repair
+an invalid capture. Canonical W/M and future continuity share known-at calendar evidence.
+
 Selected listing observations are available before companion capture. Corporate
 rollforward failure still retains immutable raw market evidence without making an
 incomplete capture complete. After Phase B and genuine T0 retention, normal Daily
