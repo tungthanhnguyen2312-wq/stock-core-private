@@ -2039,7 +2039,7 @@ FEEDBACK_STAGE_POST_HANDOFF = "POST_HANDOFF"
 
 def run_bounded_prospective_feedback(
     root: Path, session: str, *, output: Path, stage: str, prior_status_path: Path | None = None,
-    policy: Any = None,
+    policy: Any = None, state_root: Path | None = None,
 ) -> dict[str, Any]:
     """Run one optional outcome-feedback child under admission, a TOTAL deadline and a memory ceiling.
 
@@ -2060,10 +2060,13 @@ def run_bounded_prospective_feedback(
     if not admission["admitted"]:
         return {**base, "status": "UNAVAILABLE", "reason_code": admission["reason_code"], "admission": admission,
                 "reason": "RESOURCE_ADMISSION_REFUSED:" + ",".join(admission["reasons"])}
-    command = [sys.executable, "tools/run_prospective_decision_outcome_feedback.py", "--root", str(root),
+    code_dir = Path(__file__).resolve().parent  # the tool lives with the code, not necessarily under the evidence root
+    command = [sys.executable, str(code_dir / "tools" / "run_prospective_decision_outcome_feedback.py"), "--root", str(root),
                "--output", str(output), "--result", str(status_path)]
     if prior_status_path is not None and Path(prior_status_path).is_file():
         command += ["--prior-result", str(prior_status_path)]
+    if state_root is not None:  # offline rehearsal / tests: keep derived caches out of the evidence root
+        command += ["--state-root", str(state_root)]
     telemetry = None
     try:
         from owner_daily_progress import progress_from_environment
@@ -2080,7 +2083,7 @@ def run_bounded_prospective_feedback(
                 pass
 
     emit("BEGIN")
-    run = guard.run_bounded(command, cwd=str(root), policy=policy, result_path=status_path)
+    run = guard.run_bounded(command, cwd=str(code_dir), policy=policy, result_path=status_path)
     emit("END" if run["outcome"] == "COMPLETED" else "FAILED")
     child = run.get("child_result") or {}
     resource = {"wall_seconds": run["wall_seconds"], "peak_process_bytes": run.get("peak_process_bytes"),
