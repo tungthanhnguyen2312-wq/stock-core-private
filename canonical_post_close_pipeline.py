@@ -1685,9 +1685,12 @@ def run_volume_and_flow_context(root: Path, runtime_root: Path, session: str,
                                 signal_velocity: Mapping[str, Any],
                                 snapshot_binding: Mapping[str, Any] | None = None) -> dict[str, Any]:
     """Separate retained-only observer; no sealed decision or policy mutation."""
-    from volume_and_flow_retained import collect
+    from contextual_technical_dispatch import production_version, V2
+    if production_version(session) == V2:
+        from volume_and_flow_retained_v2 import collect
+    else:
+        from volume_and_flow_retained import collect
     from flow_price_divergence_shadow import write_immutable
-    output = root / "operations-review" / "volume-and-flow-context-v1" / session / "volume_and_flow_context.json"
     try:
         velocity = _load(root / signal_velocity["path"]) if signal_velocity.get("status") == "COLLECTED" else None
         sealed = None
@@ -1697,6 +1700,10 @@ def run_volume_and_flow_context(root: Path, runtime_root: Path, session: str,
                 raise ValueError("VOLUME_FLOW_T0_HANDOFF_BINDING_INVALID")
         artifact, _ = collect(source_root=root,runtime_root=runtime_root,session=session,
                               velocity_artifact=velocity,sealed_snapshot=sealed)
+        version = artifact["contract_version"].rsplit("/", 1)[1]
+        if version not in {"v1", "v2"}:
+            raise ValueError("VOLUME_FLOW_VERSION_UNKNOWN")
+        output = root / "operations-review" / ("volume-and-flow-context-" + version) / session / "volume_and_flow_context.json"
         write_immutable(output,artifact)
         return {"status": "COLLECTED", "session": session, "path": _rel(root,output),
                 "contract_version": artifact["contract_version"], "artifact_identity": artifact["artifact_identity"],

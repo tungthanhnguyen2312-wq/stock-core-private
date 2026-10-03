@@ -1,7 +1,7 @@
 {
   "schema_version": "stocklookup_roadmap_execution_state/1.0.0",
   "roadmap_id": "stock-core-private",
-  "roadmap_version": "2026.10.03.3",
+  "roadmap_version": "2026.10.03.4",
   "narrative_authority": {
     "strategic_roadmap": "docs/ROADMAP.md",
     "operational_narrative": "docs/STATE.md",
@@ -9,17 +9,36 @@
     "ai_rules": "docs/AI_RULES.md",
     "note": "This file is the machine-readable EXECUTION-STATE authority: which milestone is current/active/next/blocked, what checkpoint proves each completed milestone, and whether recorded state contradicts Git/worktree reality. It does not restate or supersede the narrative docs' technical content and is not a substitute for reading them. Where this file and a narrative doc appear to disagree, that is a conflict to surface to the owner (AGENTS.md 'Default lightweight bootstrap' rule), never an automatic override in either direction."
   },
-  "implementation_lineage_head": "d4094d68e7f63218f5cd16c044e96a2753702b23",
-  "last_updated_checkpoint": "d4094d68e7f63218f5cd16c044e96a2753702b23",
+  "implementation_lineage_head": "90cc78bf426f19dc67d1fb69388b178d9420cd7d",
+  "last_updated_checkpoint": "90cc78bf426f19dc67d1fb69388b178d9420cd7d",
   "known_operational_diff_allowlist": [
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "PROSPECTIVE_PIT_CAPTURE_COMPLETENESS_V1",
+    "milestone": "CONTEXTUAL_TECHNICAL_V2_AND_VOLUME_FLOW_V2_SEMANTIC_MIGRATION",
     "state": "COMPLETE"
   },
   "queued_next": [],
   "milestones": [
+    {
+      "milestone_id": "CONTEXTUAL_TECHNICAL_V2_AND_VOLUME_FLOW_V2_SEMANTIC_MIGRATION",
+      "state": "COMPLETE",
+      "starting_checkpoint": "bb3dea293ce9c7f757d3bd9e6f1f9fb22af82517",
+      "candidate_branch": "feature/technical-volume-flow-v2-semantic-migration",
+      "dependencies": [],
+      "unlocks": [],
+      "owner_authorized": true,
+      "owner_override": "OWNER_DIRECTIVE_2026_10_03_PAIRED_SEMANTIC_VERSION_MIGRATION_FULL_RELEASE_AUTONOMY",
+      "authority_effect": "NONE / DESCRIPTIVE_SEMANTIC_VERSION_MIGRATION_ONLY",
+      "state_history": [
+        "ACTIVE",
+        "COMPLETE"
+      ],
+      "source_doc": "docs/contextual_technical_features_v2_contract.md",
+      "notes": "Paired semantic migration capability and retained acceptance complete; release gated by all four exact-candidate and merge-main CI jobs. Frozen V1 rebuilds and 1,683 V1 flow records verified; 18 genuine old T0 snapshots /30,294 records verify, original empty October 2 file preserved. October 2 V2 diagnostic: 1,683 decisions /1,503 scope, 131 daily swing ties, 430 bearish corrections, two unknown-to-sideways defaults eliminated; all other decision/policy/owner fields exact. 4,509 neutral views /25,308 POST flow items; explicit V1 bridge 13,527 POST items. Capture marker null /complete0 /NOT_CAPTURED, 908 old receipts unchanged. Local full Producer before final guards 2,336 passed /16 skips /37 subtests; final affected333 and smoke7 passed. FIRST_REAL_POST_RELEASE_CAPTURE_ACCEPTANCE pending with exact genuine V2 T0 and paired routing checks. Thesis Matrix Stage1 NOT started; queued_next empty.",
+      "checkpoint": "90cc78bf426f19dc67d1fb69388b178d9420cd7d",
+      "terminal_disposition": "CONTEXTUAL_TECHNICAL_V2_AND_VOLUME_FLOW_V2_SEMANTIC_MIGRATION_COMPLETE"
+    },
     {
       "milestone_id": "PROSPECTIVE_PIT_CAPTURE_COMPLETENESS_V1",
       "state": "COMPLETE",

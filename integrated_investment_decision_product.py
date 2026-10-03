@@ -1881,7 +1881,7 @@ def attach_contextual_technical(record, context):
     ``context`` must come from contextual.verified_context_records. Standing
     decision identity intentionally excludes this explanatory content.
     """
-    import contextual_technical_features as contextual
+    import contextual_technical_dispatch as contextual
     record["contextual_technical_context"] = context
     record["evidence_axes"]["TACTICAL_STRUCTURE"]["contextual_feature_reference"] = {
         "status": context["status"], "non_voting": True,
@@ -1931,7 +1931,7 @@ def build_artifact(
             f"{FINANCIAL_ANALYSIS_COMPACT_CONTRACT}:got={fa_contract}"
         )
     market_bars = market_bar_context_records(historical_context_artifact, session=session, requested_at=requested_at)
-    import contextual_technical_features as contextual
+    import contextual_technical_dispatch as contextual
     contextual_records = contextual.verified_context_records(historical_context_artifact, session=session,
         knowledge_cutoff=requested_at, verified_bar_contexts=market_bars)
     tac_records = technical_structure_artifact.get("records") or {}
