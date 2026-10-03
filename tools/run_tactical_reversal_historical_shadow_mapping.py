@@ -58,7 +58,8 @@ def run(*, retained_evidence_root: Path, store_root: Path, retained_at: str | No
             f"evidence_mode != BOOTSTRAP_NON_PROSPECTIVE found in a historical-only mapping run"
         )
 
-    outcomes_by_id = store.latest_outcome_updates_by_observation()
+    outcome_index = store.build_outcome_store_index()
+    outcomes_by_id = store.latest_outcome_updates_by_observation(index=outcome_index)
 
     summary = collection.historical_descriptive_summary(observations, outcomes_by_id)
     status = collection.build_collection_status(observations, outcomes_by_id)

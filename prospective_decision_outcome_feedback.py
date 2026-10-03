@@ -656,6 +656,163 @@ def _feedback_record(*, artifact: Mapping[str, Any], source_path: str, temporal:
     return _identity(feedback, "prospective_decision_feedback_record:", "feedback_identity")
 
 
+
+SETTLED_CONTRACT_VERSION = "settled_prospective_feedback_contribution/v1"
+SETTLED_CACHE_VERSION = "settled_prospective_feedback_cache/v1"
+_SETTLED_CACHE_PATH = Path("operations-review/prospective-decision-outcome-feedback-v1/_settled_cache.json")
+_SETTLED_MAX_BYTES = 64 * 1024 * 1024
+_SETTLED_MAX_ENTRIES = 8192
+
+
+def _settled_hash(value):
+    # Contributions and selected projected inputs are bounded per-record objects.
+    # Container/snapshot hashing remains streaming; use the standing fast encoder
+    # for these small cache bindings rather than walking every scalar in Python.
+    return hashlib.sha256(_canon(value).encode("utf-8")).hexdigest()
+
+
+class SettledFeedbackCache:
+    """Run-scoped derived contributions, validated against current dependency content.
+
+    A complete bounded price window is required even for unqualified horizons:
+    the standing close-path and diagnostics contain depth-sensitive fields. Open
+    conditions never settle. Missing future prices alone do not settle a condition.
+    """
+    def __init__(self, root, chain, snapshots, *, enabled=True, metrics=None):
+        self.root, self.chain, self.snapshots = Path(root), list(chain), snapshots
+        self.enabled, self.metrics = enabled, metrics
+        self.entries, self.retained, self.session_proofs = {}, {}, {}
+        if enabled:
+            try:
+                path = self.root / _SETTLED_CACHE_PATH
+                if path.stat().st_size <= _SETTLED_MAX_BYTES:
+                    value = _load_json(path) or {}
+                    entries = value.get("entries")
+                    if value.get("contract_version") == SETTLED_CACHE_VERSION and isinstance(entries, dict) and len(entries) <= _SETTLED_MAX_ENTRIES:
+                        self.entries = entries
+            except (OSError, UnicodeError):
+                pass
+
+    def _bump(self, name):
+        if self.metrics is not None:
+            self.metrics[name] = self.metrics.get(name, 0) + 1
+
+    def _proof(self, through):
+        prefix = self.chain[:self.chain.index(through) + 1]
+        for session in prefix:
+            if session not in self.session_proofs:
+                snapshot = self.snapshots.get(session)
+                self.session_proofs[session] = {
+                    "snapshot_identity": (snapshot or {}).get("snapshot_identity"),
+                    "content_sha256": retention._hash(snapshot),
+                }
+        return {"session_sequence": prefix, "snapshots": {s: self.session_proofs[s] for s in prefix}, "terminal_through_session": through}
+
+    def _terminal(self, row):
+        start = row["forward_outcomes"]["as_of_session"]
+        if start not in self.chain:
+            return None  # a later admission of T0 can change the result
+        index = self.chain.index(start)
+        last = index + max(forward_bridge.FORWARD_HORIZONS.values())
+        if last >= len(self.chain):
+            return None
+        horizons = row["forward_outcomes"]["horizons"]
+        if any(h.get("status") not in {forward_bridge.MATURE, forward_bridge.PRICE_NOT_RETAINED, forward_bridge.PRICE_BASIS_INCOMPATIBLE} for h in horizons.values()):
+            return None
+        for role in ("trigger", "invalidation"):
+            event = row["trigger_invalidation_outcome"][role]
+            status = event.get("status")
+            if status == "SATISFIED" and event.get("event_session") in self.chain:
+                last = max(last, self.chain.index(event["event_session"]))
+            elif status in {"NOT_MACHINE_EVALUABLE", "T0_TRIGGER_EVENT_NOT_EVALUABLE_CONDITION_NOT_RETAINED", "T0_INVALIDATION_EVENT_NOT_EVALUABLE_CONDITION_NOT_RETAINED"}:
+                pass
+            elif status == "TEMPORAL_PROVENANCE_UNQUALIFIED" and "STRUCTURAL_CONDITION_T0_SESSION_MISMATCH" in event.get("reason_codes", []):
+                pass  # immutable T0 mismatch; extension cannot repair it
+            elif status == "PRICE_SERIES_UNQUALIFIED" and "T0_PRICE_BASIS_NOT_RETAINED" in event.get("reason_codes", []):
+                pass  # immutable T0 dependency is part of the proof
+            else:
+                return None
+        return self.chain[last]
+
+    def evaluate(self, **kwargs):
+        if not self.enabled:
+            return _feedback_record(chain=self.chain, snapshots=self.snapshots, **kwargs)
+        start = kwargs["record"].get("as_of_session")
+        if start not in self.chain or self.chain.index(start) + max(forward_bridge.FORWARD_HORIZONS.values()) >= len(self.chain):
+            self._bump("settled_misses")
+            return _feedback_record(chain=self.chain, snapshots=self.snapshots, **kwargs)
+        inputs = dict(kwargs)
+        # Feedback only reads the T0 container identity; never rehash every ticker
+        # in that container once per decision. The selected record is bound below.
+        if isinstance(inputs.get("artifact"), Mapping):
+            inputs["artifact"] = {k: v for k, v in inputs["artifact"].items() if k != "records"}
+        if isinstance(inputs.get("t0_snapshot"), Mapping):
+            inputs["t0_snapshot"] = {k: v for k, v in inputs["t0_snapshot"].items() if k != "records"}
+        binding = {"contract_version": SETTLED_CONTRACT_VERSION,
+                   "feedback_contract": CONTRACT_VERSION, "forward_contract": forward_bridge.CONTRACT_VERSION,
+                   "condition_contract": retention.CONDITION_CONTRACT_VERSION,
+                   "outcome_contract": outcome_measurement.CONTRACT_VERSION,
+                   "outcome_method": outcome_measurement.METHOD_VERSION,
+                   "retention_contract": retention.CONTRACT_VERSION,
+                   "temporal_contract": TEMPORAL_CONTRACT_VERSION,
+                   "policy": OUTCOME_POLICY_CONSTANTS, "horizons": forward_bridge.FORWARD_HORIZONS,
+                   "inputs": inputs}
+        key = _settled_hash(binding)
+        entry = self.entries.get(key)
+        try:
+            if isinstance(entry, dict):
+                body = {k: v for k, v in entry.items() if k != "contribution_identity"}
+                through = entry["proof"]["terminal_through_session"]
+                if (entry.get("binding_sha256") == key and through in self.chain
+                        and entry["proof"] == self._proof(through)
+                        and entry["contribution_identity"] == _settled_hash(body)
+                        and self._terminal(entry["feedback"]) == through):
+                    self.retained[key] = entry
+                    self._bump("settled_hits")
+                    return entry["feedback"]
+        except (KeyError, TypeError, ValueError):
+            pass
+        self._bump("settled_misses")
+        row = _feedback_record(chain=self.chain, snapshots=self.snapshots, **kwargs)
+        through = self._terminal(row)
+        if through is not None:
+            entry = {"contract_version": SETTLED_CONTRACT_VERSION, "binding_sha256": key,
+                     "proof": self._proof(through), "feedback": row}
+            entry["contribution_identity"] = _settled_hash(entry)
+            self.retained[key] = entry
+        return row
+
+    def finish(self):
+        if not self.enabled or self.retained == self.entries:
+            return
+        temporary = None
+        try:
+            entries, size = {}, 128
+            for key, value in sorted(self.retained.items()):
+                added = len(_canon({key: value}).encode("utf-8")) + 1
+                if len(entries) >= _SETTLED_MAX_ENTRIES or size + added > _SETTLED_MAX_BYTES:
+                    continue
+                entries[key], size = value, size + added
+            payload = _canon({"contract_version": SETTLED_CACHE_VERSION, "entries": entries}).encode("utf-8")
+            if len(payload) > _SETTLED_MAX_BYTES:
+                return
+            path = self.root / _SETTLED_CACHE_PATH
+            path.parent.mkdir(parents=True, exist_ok=True)
+            with tempfile.NamedTemporaryFile(dir=path.parent, prefix=".settled-", suffix=".tmp", delete=False) as out:
+                temporary = Path(out.name)
+                out.write(payload)
+                out.flush()
+                os.fsync(out.fileno())
+            os.replace(temporary, path)
+        except (OSError, TypeError, ValueError):
+            pass
+        finally:
+            if temporary is not None:
+                try:
+                    temporary.unlink(missing_ok=True)
+                except OSError:
+                    pass
+
 def _median(values: Sequence[float]) -> float | None:
     return statistics.median(values) if values else None
 
@@ -723,7 +880,8 @@ def _failed_setups(records: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]
 
 
 def build_feedback_artifact(root: str | Path, *, resolved_context: dict | None = None,
-                            use_summary_cache: bool = True, cache_metrics: dict[str, int] | None = None) -> dict[str, Any]:
+                            use_summary_cache: bool = True, use_settled_cache: bool = True,
+                            cache_metrics: dict[str, int] | None = None) -> dict[str, Any]:
     """Build a deterministic retained-only feedback artifact for the local corpus."""
     corpus = discover_prospective_corpus(root, payload_projection=_project_artifact_for_feedback,
                                         use_summary_cache=use_summary_cache, cache_metrics=cache_metrics)
@@ -737,6 +895,7 @@ def build_feedback_artifact(root: str | Path, *, resolved_context: dict | None =
     snapshots = {**completed_snapshots, **legacy_snapshots, **modern["snapshots"]}
     if resolved_context is not None:
         resolved_context.update(chain=chain, snapshots=snapshots)
+    settled = SettledFeedbackCache(root, chain, snapshots, enabled=use_settled_cache, metrics=cache_metrics)
     records: list[dict[str, Any]] = []
     # Modern snapshots are the sole T0 source for future runs.  Their full
     # decision content, condition serialization and T0 close facts were sealed
@@ -765,9 +924,9 @@ def build_feedback_artifact(root: str | Path, *, resolved_context: dict | None =
             decision = retained.get("integrated_decision_at_t0")
             if not isinstance(decision, Mapping) or decision.get("ticker") != ticker:
                 continue
-            records.append(_feedback_record(
+            records.append(settled.evaluate(
                 artifact=artifact, source_path=inventory["snapshot_path"], temporal=temporal,
-                record=decision, snapshots=snapshots, chain=chain,
+                record=decision,
                 t0_snapshot=snapshot, t0_snapshot_record=retained,
             ))
     # Legacy candidates retain their prior conservative qualification.  They
@@ -777,7 +936,8 @@ def build_feedback_artifact(root: str | Path, *, resolved_context: dict | None =
         for ticker, decision in sorted((artifact.get("records") or {}).items()):
             if not isinstance(decision, Mapping) or decision.get("ticker") != ticker:
                 continue
-            records.append(_feedback_record(artifact=artifact, source_path=candidate["artifact_path"], temporal=candidate["temporal"], record=decision, snapshots=snapshots, chain=chain))
+            records.append(settled.evaluate(artifact=artifact, source_path=candidate["artifact_path"], temporal=candidate["temporal"], record=decision))
+    settled.finish()
     records.sort(key=lambda row: (str(row["decision_session"]), str(row["ticker"]), str(row["decision_identity"])))
     by_posture: dict[str, list[dict[str, Any]]] = defaultdict(list)
     by_coherence: dict[str, list[dict[str, Any]]] = defaultdict(list)

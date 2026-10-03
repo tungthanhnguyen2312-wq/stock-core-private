@@ -16,6 +16,7 @@ a bounded status, never raised as an unhandled error.
 """
 from __future__ import annotations
 
+from contextlib import nullcontext
 import argparse
 import json
 import sys
@@ -28,6 +29,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 import tactical_reversal_prospective_shadow_collection as collection  # noqa: E402
+from tactical_prospective_outcome_store import outcome_session_writer  # noqa: E402
 
 
 def _future_rows(ticker: str, sessions: list[str], artifacts_by_session: dict[str, Any]) -> list[dict[str, Any]]:
@@ -123,16 +125,21 @@ def mature_all(
     outcomes_by_id: dict[str, Any] = {}
     matured = []
     status_observations = []
-    for observation_id, observation in store.iter_validated_observations():
-        status_observations.append(_status_projection(observation))
-        future_sessions = [item for item in sessions if item > observation["trigger_session"]]
-        if not future_sessions:
-            continue
-        rows = _future_rows(observation["ticker"], future_sessions, artifacts_by_session)
-        outcome = collection.mature_outcome(observation, rows, evaluation_as_of_session=latest)
-        store.persist_outcome_update(observation_id, outcome, validated_observation=observation)
-        outcomes_by_id[observation_id] = _outcome_status_projection(outcome)
-        matured.append(observation_id)
+    inputs = {"tactical_sessions": {session: collection._hash(artifact) for session, artifact in artifacts_by_session.items()}}
+    transaction = outcome_session_writer(store.root, latest, inputs) if latest is not None else nullcontext(None)
+    with transaction as writer:
+        for observation_id, observation in store.iter_validated_observations(strict=True):
+            if writer is not None:
+                writer.record_observation(observation)
+            status_observations.append(_status_projection(observation))
+            future_sessions = [item for item in sessions if item > observation["trigger_session"]]
+            if not future_sessions:
+                continue
+            rows = _future_rows(observation["ticker"], future_sessions, artifacts_by_session)
+            outcome = collection.mature_outcome(observation, rows, evaluation_as_of_session=latest)
+            writer.append(outcome)
+            outcomes_by_id[observation_id] = _outcome_status_projection(outcome)
+            matured.append(observation_id)
     matured.sort()
     status = collection.build_collection_status(status_observations, outcomes_by_id)
     return {"matured_observation_ids": matured, "collection_status": status}

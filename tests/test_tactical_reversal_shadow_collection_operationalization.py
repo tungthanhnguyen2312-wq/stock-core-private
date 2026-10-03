@@ -439,8 +439,16 @@ class TestOutputEquivalenceWithLegacyProcedure:
         legacy = _legacy_mature_all(retained_evidence_root=tmp_path / "ev", store_root=tmp_path / "legacy")
         new = runner.mature_all(retained_evidence_root=tmp_path / "ev", store_root=tmp_path / "new")
         assert new == legacy
-        assert _tree_bytes(tmp_path / "new") == _tree_bytes(tmp_path / "legacy")
-        assert len(list((tmp_path / "new" / "outcome_updates").glob("*.json"))) == (len(_SESSIONS) - 1) * 6
+        assert _tree_bytes(tmp_path / "new" / "observations") == _tree_bytes(tmp_path / "legacy" / "observations")
+        old_store = collection.ProspectiveShadowObservationStore(tmp_path / "legacy")
+        new_store = collection.ProspectiveShadowObservationStore(tmp_path / "new")
+        old_index = old_store.build_outcome_store_index()
+        new_index = new_store.build_outcome_store_index()
+        assert new_index.latest == old_index.latest
+        for oid in new_index.latest:
+            assert new_index.history(oid) == old_index.history(oid)
+        assert not list((tmp_path / "new" / "outcome_updates").glob("*.json"))
+        assert len(list((tmp_path / "new" / "outcome_sessions").glob("*/manifest.json"))) == 1
 
     def test_matured_ids_sorted_and_posture_authority_untouched(self, tmp_path):
         _corpus(tmp_path / "ev")
@@ -472,4 +480,11 @@ class TestOutputEquivalenceWithLegacyProcedure:
         assert runner.main(["--retained-evidence-root", str(tmp_path / "ev"), "--store-root", str(tmp_path / "new")]) == 0
         printed = json.loads(capsys.readouterr().out)
         assert printed["maturation"] == legacy
-        assert _tree_bytes(tmp_path / "new") == _tree_bytes(tmp_path / "legacy")
+        assert _tree_bytes(tmp_path / "new" / "observations") == _tree_bytes(tmp_path / "legacy" / "observations")
+        old_store = collection.ProspectiveShadowObservationStore(tmp_path / "legacy")
+        new_store = collection.ProspectiveShadowObservationStore(tmp_path / "new")
+        old_index = old_store.build_outcome_store_index()
+        new_index = new_store.build_outcome_store_index()
+        assert new_index.latest == old_index.latest
+        for oid in new_index.latest:
+            assert new_index.history(oid) == old_index.history(oid)

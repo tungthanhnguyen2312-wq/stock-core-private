@@ -231,12 +231,19 @@ class ResourceSampler:
     disk_path: Path = Path("C:\\")
     child_pid: int | None = None
     run_output_paths: tuple[Path, ...] = ()
+    size_outputs_at_boundaries: bool = True
+    run_output_bytes: int | None = None
 
     def set_child_pid(self, pid: int | None) -> None:
         self.child_pid = pid
 
     def set_run_output_paths(self, paths: list[str | Path] | tuple[str | Path, ...]) -> None:
         self.run_output_paths = _deduplicated_paths(paths)
+        self.run_output_bytes = None
+
+    def sample_output_size(self) -> None:
+        """Explicit diagnostic/phase-boundary sizing, never periodic sampling."""
+        self.run_output_bytes = _path_size(self.run_output_paths)
 
     def sample(self) -> dict[str, int | None]:
         try:
@@ -250,7 +257,7 @@ class ResourceSampler:
             "child_rss_bytes": None,
             "recursive_child_tree_rss_bytes": None,
             "disk_free_bytes": disk_free,
-            "run_output_bytes": _path_size(self.run_output_paths),
+            "run_output_bytes": self.run_output_bytes,
         }
 
 
@@ -391,7 +398,7 @@ class OwnerDailyProgress:
         if isinstance(disk, int):
             self.final_disk_free_bytes = disk
 
-    def _resources(self, now: float, *, force: bool = False) -> dict[str, int | None]:
+    def _resources(self, now: float, *, force: bool = False, size_outputs: bool = False) -> dict[str, int | None]:
         refresh = (
             force
             or self._resource_cache is None
@@ -399,6 +406,8 @@ class OwnerDailyProgress:
             or now - self._last_resource_sample_at >= RESOURCE_SAMPLE_INTERVAL_SECONDS
         )
         if refresh:
+            if size_outputs and isinstance(self.sampler, ResourceSampler) and self.sampler.size_outputs_at_boundaries:
+                self.sampler.sample_output_size()
             self._resource_cache = dict(self.sampler.sample())
             self._last_resource_sample_at = now
             self._record_resources(self._resource_cache)
@@ -504,7 +513,11 @@ class OwnerDailyProgress:
             if status == "BEGIN" or task_key not in self._work_started:
                 self._work_started[task_key] = now
             work_elapsed = max(0.0, now - self._work_started[task_key])
-            resources = self._resources(now, force=self._forces_resource_refresh(status, completed, total))
+            owner_boundary = (self.writer_role == "OWNER_PARENT" and not subtask
+                              and resolved_component == PHASES.get(phase_index)
+                              and status in {"BEGIN", "END", "FAILED"})
+            resources = self._resources(now, force=self._forces_resource_refresh(status, completed, total),
+                                        size_outputs=owner_boundary)
             elapsed = max(0.0, now - self.run_started_monotonic)
             eta_seconds, eta_state, rate = eta(completed=completed, total=total, elapsed_seconds=work_elapsed)
             event: dict[str, Any] = {
@@ -628,7 +641,7 @@ class OwnerDailyProgress:
                 self._degrade("PROGRESS_SUMMARY_READ_FAILED:" + type(exc).__name__)
         now = self.clock()
         try:
-            self._resources(now, force=True)
+            self._resources(now, force=True, size_outputs=True)
         except Exception as exc:
             self._degrade("FINAL_RESOURCE_SAMPLE_FAILED:" + type(exc).__name__)
         elapsed = max(0.0, now - self.run_started_monotonic)

@@ -1,7 +1,7 @@
 {
   "schema_version": "stocklookup_roadmap_execution_state/1.0.0",
   "roadmap_id": "stock-core-private",
-  "roadmap_version": "2026.10.02.7",
+  "roadmap_version": "2026.10.03.1",
   "narrative_authority": {
     "strategic_roadmap": "docs/ROADMAP.md",
     "operational_narrative": "docs/STATE.md",
@@ -9,17 +9,36 @@
     "ai_rules": "docs/AI_RULES.md",
     "note": "This file is the machine-readable EXECUTION-STATE authority: which milestone is current/active/next/blocked, what checkpoint proves each completed milestone, and whether recorded state contradicts Git/worktree reality. It does not restate or supersede the narrative docs' technical content and is not a substitute for reading them. Where this file and a narrative doc appear to disagree, that is a conflict to surface to the owner (AGENTS.md 'Default lightweight bootstrap' rule), never an automatic override in either direction."
   },
-  "implementation_lineage_head": "abc2f2aba34e2d9a86ab8f2fca697d1aadd8d5d1",
-  "last_updated_checkpoint": "abc2f2aba34e2d9a86ab8f2fca697d1aadd8d5d1",
+  "implementation_lineage_head": "c5828eae7c717a6855aada1fd2d8d3f051565514",
+  "last_updated_checkpoint": "c5828eae7c717a6855aada1fd2d8d3f051565514",
   "known_operational_diff_allowlist": [
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "MARKET_BAR_BASIS_AND_MULTITIMEFRAME_V1",
+    "milestone": "OWNER_DAILY_PERFORMANCE_AND_PROSPECTIVE_RETENTION_CLOSEOUT_V1",
     "state": "COMPLETE"
   },
   "queued_next": [],
   "milestones": [
+    {
+      "milestone_id": "OWNER_DAILY_PERFORMANCE_AND_PROSPECTIVE_RETENTION_CLOSEOUT_V1",
+      "state": "COMPLETE",
+      "starting_checkpoint": "238edce670ea02da42e81e8ad3062dad23a4f151",
+      "checkpoint": "c5828eae7c717a6855aada1fd2d8d3f051565514",
+      "candidate_branch": "perf/owner-daily-performance-retention-20261003",
+      "dependencies": [],
+      "unlocks": [],
+      "authority_effect": "NONE / DERIVED_CACHE_STORAGE_TELEMETRY_AND_STREAMING_RETENTION_ONLY",
+      "owner_authorized": true,
+      "owner_override": "OWNER_DIRECTIVE_2026_10_03_FULL_TECHNICAL_AND_RELEASE_AUTONOMY",
+      "source_doc": "docs/internal/OWNER_DAILY_LIVE_FAILURE_UX_PERF_CONTINUATION_20261002.md",
+      "state_history": [
+        "ACTIVE",
+        "COMPLETE"
+      ],
+      "notes": "C/E/F/R integrated complete, release-gated through PR #50. Exact cached/full, legacy/V2/mixed, streaming hash/native pretty bytes and failure acceptance passed. Real retained legacy corpus: 176715 outcomes; normal maturation reads no old outcomes. Complete 1683-record /91663871-byte T0 snapshot preserves identity/bytes. No acquisition, publication replay, authority/posture change or October 2 T0 backfill. Whole completed-price feedback validation remains bounded by retained object memory; no whole-feedback production timing claimed. Next analytical capability requires separate owner selection/authorization; queued_next stays empty.",
+      "terminal_disposition": "OWNER_DAILY_PERFORMANCE_AND_PROSPECTIVE_RETENTION_CLOSEOUT_COMPLETE"
+    },
     {
       "milestone_id": "MARKET_DATA_PIT_FOUNDATION_AND_DAILY_OPERATIONALIZATION_V1",
       "state": "COMPLETE",
