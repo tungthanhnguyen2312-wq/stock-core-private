@@ -1,7 +1,7 @@
 {
   "schema_version": "stocklookup_roadmap_execution_state/1.0.0",
   "roadmap_id": "stock-core-private",
-  "roadmap_version": "2026.10.03.3",
+  "roadmap_version": "2026.10.03.4",
   "narrative_authority": {
     "strategic_roadmap": "docs/ROADMAP.md",
     "operational_narrative": "docs/STATE.md",
@@ -15,11 +15,27 @@
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "PROSPECTIVE_PIT_CAPTURE_COMPLETENESS_V1",
-    "state": "COMPLETE"
+    "milestone": "CONTEXTUAL_TECHNICAL_V2_AND_VOLUME_FLOW_V2_SEMANTIC_MIGRATION",
+    "state": "ACTIVE"
   },
   "queued_next": [],
   "milestones": [
+    {
+      "milestone_id": "CONTEXTUAL_TECHNICAL_V2_AND_VOLUME_FLOW_V2_SEMANTIC_MIGRATION",
+      "state": "ACTIVE",
+      "starting_checkpoint": "bb3dea293ce9c7f757d3bd9e6f1f9fb22af82517",
+      "candidate_branch": "feature/technical-volume-flow-v2-semantic-migration",
+      "dependencies": [],
+      "unlocks": [],
+      "owner_authorized": true,
+      "owner_override": "OWNER_DIRECTIVE_2026_10_03_PAIRED_SEMANTIC_VERSION_MIGRATION_FULL_RELEASE_AUTONOMY",
+      "authority_effect": "NONE / DESCRIPTIVE_SEMANTIC_VERSION_MIGRATION_ONLY",
+      "state_history": [
+        "ACTIVE"
+      ],
+      "source_doc": "docs/contextual_technical_features_v2_contract.md",
+      "notes": "Owner explicitly authorizes the combined Technical V2 / Volume & Flow V2 successor, overriding historical next-gate pointers. Frozen V1 and tactical policy; October 2 diagnostic replay only; no live Daily or T0 rewrite. FIRST_REAL_POST_RELEASE_CAPTURE_ACCEPTANCE pending. Thesis Matrix Stage 1 NOT started; queued_next empty."
+    },
     {
       "milestone_id": "PROSPECTIVE_PIT_CAPTURE_COMPLETENESS_V1",
       "state": "COMPLETE",
