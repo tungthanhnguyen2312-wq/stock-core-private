@@ -398,12 +398,88 @@ def run(args) -> dict:
     return report
 
 
+def verify_release(args) -> dict:
+    """One bounded final rehearsal; reuse the expensive unchanged analytical baseline.
+
+    Fresh full-corpus cold/warm/retry and simultaneous reuse run against retained
+    evidence. The former legacy-builder and incremental clone measurements are
+    reused explicitly, not silently restated as newly executed experiments.
+    """
+    from concurrent.futures import ThreadPoolExecutor
+    primary, scratch = args.primary_root.resolve(), args.scratch_root.resolve()
+    if scratch.is_relative_to(primary) or args.report.resolve().is_relative_to(primary):
+        raise ValueError("RELEASE_REHEARSAL_MUST_WRITE_OUTSIDE_EVIDENCE")
+    prior_path = ROOT / "docs/internal/OWNER_DAILY_FEEDBACK_RESOURCE_CONTAINMENT_ACCEPTANCE.json"
+    prior = json.loads(prior_path.read_text(encoding="utf-8"))
+    assert all(prior["gates"].values())
+    scratch.mkdir(parents=True, exist_ok=True)
+    policy = guard.default_feedback_policy()
+    files = protected_files(primary)
+    before = fingerprint(files)
+    started = time.perf_counter()
+    state, output = scratch / "state", scratch / "out/feedback.json"
+    runs = {}
+    for name, target in (("cold", output), ("warm", scratch / "warm/feedback.json")):
+        print("RELEASE_" + name.upper(), flush=True)
+        runs[name] = timed_feedback(name, root=primary, output=target, state=state, stage="PRE_HANDOFF", policy=policy)
+        assert runs[name]["result"]["status"] == "COLLECTED", runs[name]["result"]
+    print("RELEASE_ORACLE_PARITY", flush=True)
+    oracle, current = sections(primary / ORACLE), sections(output)
+    row_parity = oracle["feedback_records"] == current["feedback_records"]
+    trigger_parity = oracle["trigger_invalidation_outcomes"] == current["trigger_invalidation_outcomes"]
+    print("RELEASE_CONCURRENT_REUSE", flush=True)
+    def reuse(name):
+        # Actual independent bounded children; the lease admits one evaluator.
+        return timed_feedback(name, root=primary, output=output, state=state, stage="POST_HANDOFF", policy=policy)
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        futures = [pool.submit(reuse, "reuse-" + str(i)) for i in range(2)]
+        runs["concurrent_reuse"] = [f.result() for f in futures]
+    retry = scratch / "retry/feedback.json"
+    short = guard.ResourcePolicy(**{**policy.as_dict(), "deadline_seconds": max(5, runs["warm"]["wall_seconds"] * 0.6)})
+    print("RELEASE_RETRY_INTERRUPTED", flush=True)
+    runs["interrupted"] = timed_feedback("interrupted", root=primary, output=retry, state=state, stage="POST_HANDOFF", policy=short)
+    assert runs["interrupted"]["result"]["status"] == "UNAVAILABLE" and not retry.exists()
+    print("RELEASE_RETRY_REBUILD", flush=True)
+    runs["retry"] = timed_feedback("retry", root=primary, output=retry, state=state, stage="POST_HANDOFF", policy=policy)
+    flat = [runs[k] for k in ("cold", "warm", "interrupted", "retry")] + runs["concurrent_reuse"]
+    peak = max((r["result"].get("resource") or {}).get("peak_process_bytes") or 0 for r in flat)
+    growth = max(r["processes"].get("parent_rss_growth_bytes") or 0 for r in flat)
+    after = fingerprint(files)
+    gates = {"oracle_rows_identical": row_parity, "oracle_triggers_identical": trigger_parity,
+             "prior_15_gates_retained": all(prior["gates"].values()),
+             "cold_warm_retry_same_identity": len({runs[k]["result"].get("artifact_identity") for k in ("cold", "warm", "retry")}) == 1,
+             "concurrent_reuse_single_complete": all(r["result"].get("outcome") == "ALREADY_COMPLETE" for r in runs["concurrent_reuse"]),
+             "bounded_reaping_confirmed": all((r["result"].get("resource") or {}).get("reaped") is True for r in flat),
+             "retry_resource_timeout": runs["interrupted"]["result"].get("reason_code") == guard.RESOURCE_TIMEOUT,
+             "retry_cleans_dead_writer": not list(retry.parent.glob(".feedback-*")),
+             "protected_bytes_unchanged": before == after,
+             "no_child_memory_regression": peak <= policy.memory_limit_bytes / 2,
+             "parent_stays_compact": growth < 64 * 1024 ** 2,
+             "cold_within_half_deadline": runs["cold"]["wall_seconds"] < policy.deadline_seconds / 2}
+    report = {"contract_version": "owner_daily_feedback_final_release_rehearsal/v1",
+              "classification": "FEEDBACK_RESOURCE_CONTAINMENT_READY" if all(gates.values()) else "FEEDBACK_RESOURCE_CONTAINMENT_BLOCKED",
+              "whole_host_status": "MONDAY_HOST_PREFLIGHT_PENDING", "authority_effect": "NONE / OWNER_DAILY_RESOURCE_CONTAINMENT_ONLY",
+              "calendar_registration_executed": False, "network_provider_calls": 0, "live_daily_runs": 0,
+              "prior_acceptance_sha256": sha(prior_path), "reused_evidence": {
+                  "exact_legacy_identity_parity": prior["parity"]["exact_identity_on_real_reduced_corpus"],
+                  "changed_input_relation": prior["feedback_call_relation"]},
+              "runs": runs, "gates": gates, "failed_gates": [k for k, v in gates.items() if not v],
+              "protected_evidence": {"files": len(files), "bytes": sum(v[0] for v in before.values()), "unchanged": before == after},
+              "summary": {"largest_child_peak_bytes": peak, "max_parent_growth_bytes": growth,
+                          "rehearsal_wall_seconds": round(time.perf_counter() - started, 1)}}
+    args.report.parent.mkdir(parents=True, exist_ok=True)
+    args.report.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return report
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--primary-root", type=Path, required=True)
     parser.add_argument("--scratch-root", type=Path, required=True)
     parser.add_argument("--report", type=Path, required=True)
     parser.add_argument("--calibration", action="store_true", help="generous policy to measure unconstrained cold/warm costs")
+    parser.add_argument("--release-verification", action="store_true", help="bounded final validation, explicitly reuse prior unchanged legacy/incremental evidence")
     parser.add_argument("--exact-parity-through", default="2026-09-11", help="reduced real corpus on which the original in-memory builder can run")
-    outcome = run(parser.parse_args())
+    args = parser.parse_args()
+    outcome = verify_release(args) if args.release_verification else run(args)
     print(json.dumps({"classification": outcome["classification"], "failed_gates": outcome["failed_gates"], "summary": outcome["summary"]}, indent=2))

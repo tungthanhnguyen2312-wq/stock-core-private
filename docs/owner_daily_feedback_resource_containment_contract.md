@@ -11,7 +11,7 @@ never revised or blocked by it.
 
 | # | Cause | Evidence |
 |---|---|---|
-| A | The **parent** Daily process loaded the finished feedback artifact (`_load(feedback_output)`) and kept it inside the `prospective` result for the rest of the run; the post-handoff call loaded it again just to read `artifact_identity`. | 2026-10-02 Daily progress log: parent single-process RSS peak 9.18 GiB across the feedback stages vs 1.57 GiB before them. |
+| A | The **parent** Daily process loaded the finished feedback artifact (`_load(feedback_output)`) and kept it inside the `prospective` result for the rest of the run; the post-handoff call loaded it again just to read `artifact_identity`. | 2026-10-02 Daily progress log: parent whole-report readback costs about 2.1 GiB per artifact; the 9.18 GiB high-water mark already occurred in enrichment/T0 before feedback. |
 | B | The child decoded **every** retained input whole: each exact-session P3F9B snapshot (≈300 MB file → ≈0.9 GiB of objects, one per chain session, all resident), each T0 snapshot twice (parse + `validate_snapshot` re-canonicalisation), and the 1.33 GB 2026-10-02 decision artifact via `read_text` + `json.loads`. | Legacy builder on the real corpus under a 4 GiB Job ceiling: `MemoryError` at 2.9 GiB while reading the 1.33 GB artifact (54 s); one 87 MB T0 snapshot costs 469 MB to load and 11.6 s to validate vs 34 MB / 1.5 s streamed. |
 | C | The whole output was one in-memory object graph (`records` list + `required` + `trigger_invalidation_outcomes` copies), then serialised twice (canonical identity string, then `indent=2` text). | 31,977 rows → 685–743 MB artifacts. |
 | D | `run_observed_subprocess` waited in a `while True: communicate(timeout=30)` loop: **no total deadline**. | `canonical_post_close_pipeline` pre- and post-handoff call sites. |
@@ -61,6 +61,9 @@ is exact: a retry, resume or replay with identical inputs and code returns `ALRE
 
 * `*.complete.json` (completion manifest) = artifact identity, raw SHA-256, size, record count, **input digest** (data only), **code digest**.
 * COMPLETE ⇔ manifest present **and** the artifact's current raw hash equals it. Reuse requires equal input digest *and* code digest.
+* A feedback-only kernel lease covers the complete build, manifest and shared status transaction. Windows uses blocking `LockFileEx`; POSIX uses blocking `flock`. Stable lease files live outside evidence and are never unlinked. Kernel ownership releases on crash/death; no polling or sleep loop is used. The parent total deadline includes lock waiting. Targets and any shared status pointer are locked in deterministic path order.
+* Exactly one same-input contender returns `BUILT`; later contenders verify COMPLETE and return `ALREADY_COMPLETE`. An atomic hard-link creates the artifact without replacing an existing destination; the manifest is written last. A crash after artifact creation is recovered only by proving equal content, then adopting it. Corrupt/conflicting bytes are never replaced.
+* Parent IPC is a UUID attempt-local file; the shared status is published under the same leases as artifact/manifest. A conflicting or failed attempt cannot replace a successful pointer. Parent failure bookkeeping takes only a nonblocking lease and never waits outside the child deadline.
 * Changed input at the same path ⇒ `IMMUTABLE_ARTIFACT_CONFLICT` (as before); at a new path ⇒ a new artifact with a distinct identity.
 * An equal-identity artifact written by the original builder (indent layout, no manifest) is adopted after a streamed identity proof.
 * The existing terminal-only `SettledFeedbackCache` is reused unchanged (its snapshot content proof is read from the file instead of a resident
@@ -94,9 +97,9 @@ Unknown probes do not refuse. There is no daemon and no polling loop: the deadli
 
 * Windows: the child is created suspended, assigned to a Job Object (`KILL_ON_JOB_CLOSE` + `PROCESS_MEMORY` ceiling), then resumed — it
   never allocates uncontained. Peak accounting survives a kill. If the job cannot be created the child runs with the deadline only
-  (`containment = DEADLINE_ONLY`, reported).
-* POSIX: `RLIMIT_AS` (2× the ceiling, address-space based) + a new session for whole-group kill.
-* Timeout, parent cancellation (`KeyboardInterrupt`/`SystemExit`) and launch failure all terminate the whole tree and reap it.
+  (`containment = DEADLINE_ONLY`, `containment_degraded = true`, reported). This has no hard memory ceiling or whole-tree guarantee: only immediate-child reaping is known. A timeout or memory termination in this mode returns `CHILD_REAP_UNCONFIRMED`, never a safely concluded analytical result.
+* POSIX: `RLIMIT_AS` (max of 4× the ceiling or ceiling + 3 GiB, address-space based) + a new session for whole-group kill; Linux process-group accounting excludes non-running zombies.
+* Timeout/cancellation request termination and allow at most five seconds of shared cleanup grace. Windows Job completion-port events confirm the tree is empty without polling. Results expose immediate-child reaping, tree confirmation and degraded containment; unknown/failed reaping returns `UNAVAILABLE / CHILD_REAP_UNCONFIRMED`. Parent success requires confirmed safe reaping. Cancellation records operational status before propagating the cancellation.
 
 ## 6. Reason vocabulary (disjoint)
 
@@ -137,3 +140,7 @@ Deeper reduction (a single rolling feedback artifact, pointer-based rows) is a p
 `tools/run_owner_daily_feedback_rehearsal.py` (offline, read-only against retained evidence). The first-real-session harness reports
 `feedback_pre_handoff`, `feedback_post_handoff`, `feedback_resource_admission`, `feedback_terminal_cache_reuse`,
 `feedback_resource_reason` rows with `gates_capture = false`.
+
+## Final release corrective (2026-10-04)
+
+Claude Code implemented the streaming/resource corrective. Codex independently found and repaired the check-then-replace publication race, took over the same worktree as sole writer, and qualified real concurrent/crashing writers. `FEEDBACK_RESOURCE_CONTAINMENT_READY` is separate from `MONDAY_HOST_PREFLIGHT_PENDING`: the historical 9,853,145,088-byte (~9.18 GiB) enrichment/T0 peak remains untouched. Feedback admission floors are not a host launch gate. Live memory-headroom preflight is required before Monday launch; calendar registration remains unexecuted. Authority effect is `NONE / OWNER_DAILY_RESOURCE_CONTAINMENT_ONLY`.

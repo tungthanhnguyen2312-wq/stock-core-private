@@ -684,8 +684,11 @@ def cleanup_incomplete(directory: Path, *, older_than_seconds: float, now: float
         if entry.name.startswith(TEMP_PREFIX) and entry.suffix in {".spool", ".tmp", ".incomplete"}:
             try:
                 stem_pid = entry.stem.rsplit("-", 1)[-1]
-                dead = stem_pid.isdigit() and int(stem_pid) != os.getpid() and not _pid_alive(int(stem_pid))
-                if dead or now - entry.stat().st_mtime >= older_than_seconds:
+                has_pid = stem_pid.isdigit()
+                dead = has_pid and int(stem_pid) != os.getpid() and not _pid_alive(int(stem_pid))
+                # Another target in this directory can have a live writer. Its
+                # files are never stale merely because their mtime is old.
+                if dead or (not has_pid and now - entry.stat().st_mtime >= older_than_seconds):
                     entry.unlink()
                     removed.append(entry.name)
             except OSError:
@@ -732,7 +735,14 @@ def _future_chain_inputs(repository: Path, marker: Mapping[str, Any] | None, as_
             "calendar_files": {str(p.relative_to(base)).replace("\\", "/"): _json_file_digest(p) for p in calendar_files}}
 
 
-def build_streaming_feedback(root: str | Path, output: str | Path, *, state_root: str | Path | None = None,
+def build_streaming_feedback(root: str | Path, output: str | Path, **kwargs) -> dict[str, Any]:
+    """Serialize the complete build/reuse transaction, including crash recovery."""
+    from feedback_publication_lock import publication_lock
+    with publication_lock(output):
+        return _build_streaming_feedback(root, output, **kwargs)
+
+
+def _build_streaming_feedback(root: str | Path, output: str | Path, *, state_root: str | Path | None = None,
                              metrics: dict[str, Any] | None = None, prior_summary: Mapping[str, Any] | None = None,
                              stale_temp_seconds: float = 6 * 3600) -> dict[str, Any]:
     """Build (or reuse) one feedback artifact. Returns a small structured result; never returns the artifact."""
@@ -826,6 +836,8 @@ def build_streaming_feedback(root: str | Path, output: str | Path, *, state_root
 
     # -- Terminal reuse -----------------------------------------------------------------------------
     existing = read_completion(output)
+    if existing and existing.get("input_digest") != input_digest:
+        raise ImmutableOutputConflict("IMMUTABLE_INPUT_CONFLICT:" + str(output))
     if existing and existing.get("input_digest") == input_digest and existing.get("code_digest") == code:
         phases["total_s"] = clock() - started
         return _result(OUTCOME_ALREADY_COMPLETE, output, existing, inputs_summary, relation, metrics, phases)
@@ -1104,7 +1116,12 @@ def _publish(final_tmp: Path, output: Path, identity: str, size: int, raw_sha: s
             raise ImmutableOutputConflict("IMMUTABLE_ARTIFACT_CONFLICT:" + str(output))
         _write_completion(output, identity, output.stat().st_size, existing_sha, record_count, input_digest, code, inputs_summary)
         return OUTCOME_ALREADY_RETAINED_EQUAL
-    os.replace(final_tmp, output)
+    # The kernel lease coordinates our writers; hard-link creation also refuses
+    # any uncoordinated writer's existing destination. COMPLETE is never replaced.
+    try:
+        os.link(final_tmp, output)
+    except FileExistsError as exc:
+        raise ImmutableOutputConflict("IMMUTABLE_ARTIFACT_CONFLICT:" + str(output)) from exc
     _write_completion(output, identity, size, raw_sha, record_count, input_digest, code, inputs_summary)
     return OUTCOME_BUILT
 

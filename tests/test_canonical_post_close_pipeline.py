@@ -1366,12 +1366,25 @@ def _admit_everything(monkeypatch):
 def _completed_bounded(identity="prospective_decision_outcome_feedback:test", **extra):
     def fake_run_bounded(command, *, cwd, policy, result_path):
         output_path = Path(command[command.index("--output") + 1])
-        assert Path(result_path).name == output_path.name + ".status.json"
+        assert Path(command[command.index("--result") + 1]) == Path(result_path)
+        assert Path(result_path) != Path(command[command.index("--status") + 1])
+        assert Path(command[command.index("--status") + 1]).name == output_path.name + ".status.json"
         return {"outcome": "COMPLETED", "reason_code": None, "returncode": 0, "wall_seconds": 1.5, "containment": "TEST",
                 "reaped": True, "peak_process_bytes": 123, "stderr_tail": "",
                 "child_result": {"status": "COMPLETED", "artifact_identity": identity, "outcome": "BUILT", "record_count": 3,
                                 "relation": {"relation": "INCREMENTAL"}, "peak_memory_bytes": 99, **extra}}
     return fake_run_bounded
+
+
+def test_complete_child_with_unconfirmed_reaping_is_fail_soft_unavailable(tmp_path, monkeypatch):
+    import feedback_resource_guard as guard
+    _admit_everything(monkeypatch)
+    runner = _completed_bounded()
+    def unreaped(*args, **kwargs):
+        return {**runner(*args, **kwargs), "reaped": False}
+    monkeypatch.setattr(guard, "run_bounded", unreaped)
+    result = cpc.run_bounded_prospective_feedback(tmp_path, "2026-10-05", output=tmp_path / "feedback.json", stage=cpc.FEEDBACK_STAGE_PRE_HANDOFF)
+    assert result["status"] == "UNAVAILABLE" and result["reason_code"] == guard.CHILD_REAP_UNCONFIRMED
 
 
 def test_run_post_handoff_prospective_outcome_feedback_writes_to_distinct_post_handoff_path(tmp_path, monkeypatch):

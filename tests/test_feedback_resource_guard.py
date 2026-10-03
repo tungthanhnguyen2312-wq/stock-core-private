@@ -136,6 +136,29 @@ def test_default_policy_is_bounded_and_overridable():
     assert guard.default_feedback_policy({"STOCKLOOKUP_FEEDBACK_DEADLINE_SECONDS": "bad"}).deadline_seconds == policy.deadline_seconds
 
 
+@pytest.mark.skipif(os.name != "nt", reason="Windows degraded containment")
+def test_windows_job_unavailable_exposes_deadline_only_and_unknown_tree(tmp_path, monkeypatch):
+    def unavailable(*args):
+        raise OSError("injected Job Object unavailable")
+    monkeypatch.setattr(guard, "_Job", unavailable)
+    done = guard.run_bounded(_script(tmp_path, "pass"), cwd=tmp_path, policy=SMALL, result_path=tmp_path / "done.json")
+    assert done["outcome"] == "COMPLETED" and done["immediate_child_reaped"]
+    assert done["containment"] == "DEADLINE_ONLY" and done["containment_degraded"]
+    assert done["tree_termination_confirmed"] is None and done["peak_process_bytes"] is None
+    timed = guard.run_bounded(_script(tmp_path, "import threading;threading.Event().wait(300)"), cwd=tmp_path,
+                              policy=_policy(deadline_seconds=1), result_path=tmp_path / "timeout.json")
+    assert timed["outcome"] == "TIMEOUT" and timed["immediate_child_reaped"]
+    assert timed["reason_code"] == guard.CHILD_REAP_UNCONFIRMED and timed["reaped"] is False
+
+
+@pytest.mark.skipif(os.name != "nt", reason="Windows Job accounting")
+def test_unknown_job_tree_accounting_cannot_be_reported_safely_reaped(tmp_path, monkeypatch):
+    monkeypatch.setattr(guard._Job, "wait_empty", lambda *a: False)
+    run = guard.run_bounded(_script(tmp_path, "pass"), cwd=tmp_path, policy=SMALL, result_path=tmp_path / "s.json")
+    assert run["outcome"] == "COMPLETED" and run["immediate_child_reaped"]
+    assert run["reaped"] is False and run["reason_code"] == guard.CHILD_REAP_UNCONFIRMED
+
+
 def test_child_status_writer_is_atomic_and_never_raises(tmp_path):
     guard.write_child_result(tmp_path / "a" / "s.json", {"status": "COMPLETED"})
     assert json.loads((tmp_path / "a" / "s.json").read_text()) == {"status": "COMPLETED"}

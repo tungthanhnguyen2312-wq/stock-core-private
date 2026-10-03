@@ -74,6 +74,7 @@ env:
     tests/test_prospective_decision_outcome_feedback.py
     tests/test_prospective_feedback_streaming.py
     tests/test_feedback_resource_guard.py
+    tests/test_feedback_concurrent_publication.py
     tests/test_feedback_resource_containment_integration.py
     tests/test_feedback_acceptance_rows.py
     tests/test_canonical_post_close_pipeline.py::test_run_post_handoff_prospective_outcome_feedback_writes_to_distinct_post_handoff_path

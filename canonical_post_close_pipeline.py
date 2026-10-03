@@ -2053,7 +2053,7 @@ def run_bounded_prospective_feedback(
     status_path = output.with_name(output.name + ".status.json")
     base = {"session": session, "stage": stage, "path": str(output), "policy": policy.as_dict()}
     try:
-        expected = int(((_load(status_path) or {}).get("artifact_size")) or 0) or 800 * 1024 * 1024
+        expected = int(((guard._read_small_json(status_path) or {}).get("artifact_size")) or 0) or 800 * 1024 * 1024
         admission = guard.admit(policy, output_dir=output.parent, expected_output_bytes=expected)
     except Exception as exc:  # noqa: BLE001 -- probing must not break Daily
         admission = {"admitted": True, "reason_code": None, "reasons": ["ADMISSION_PROBE_ERROR:" + type(exc).__name__]}
@@ -2061,10 +2061,16 @@ def run_bounded_prospective_feedback(
         """The latest attempt is always inspectable: a killed or refused child cannot write its own status."""
         try:
             import prospective_feedback_streaming as streaming
-            guard.write_child_result(status_path, {
-                "status": "UNAVAILABLE", "reason_code": reason_code, "detail": detail[:500], "stage": stage, "written_by": "PARENT_GUARD",
-                "resource": resource, "interpretation": "RESOURCE_OR_DEFECT_STATUS_NOT_FEEDBACK_EVIDENCE",
-                "prior_complete_artifact_identity": ((streaming.read_completion(output) or {}).get("artifact_identity") if output.is_file() else None)})
+            from feedback_publication_lock import publication_locks
+            # Never wait outside the child's total deadline. A live writer owns
+            # the pointer; this attempt's returned result still exposes failure.
+            with publication_locks(output, status_path, blocking=False):
+                prior = guard._read_small_json(status_path) or {}
+                if prior.get("status") != "COMPLETED":
+                    guard.write_child_result(status_path, {
+                        "status": "UNAVAILABLE", "reason_code": reason_code, "detail": detail[:500], "stage": stage, "written_by": "PARENT_GUARD",
+                        "resource": resource, "interpretation": "RESOURCE_OR_DEFECT_STATUS_NOT_FEEDBACK_EVIDENCE",
+                        "prior_complete_artifact_identity": ((streaming.read_completion(output) or {}).get("artifact_identity") if output.is_file() else None)})
         except Exception:  # noqa: BLE001 -- status bookkeeping must never break Daily
             pass
 
@@ -2073,8 +2079,11 @@ def run_bounded_prospective_feedback(
         return {**base, "status": "UNAVAILABLE", "reason_code": admission["reason_code"], "admission": admission,
                 "reason": "RESOURCE_ADMISSION_REFUSED:" + ",".join(admission["reasons"])}
     code_dir = Path(__file__).resolve().parent  # the tool lives with the code, not necessarily under the evidence root
+    import tempfile
+    import uuid
+    attempt_path = Path(tempfile.gettempdir()) / ("feedback-attempt-" + uuid.uuid4().hex + ".json")
     command = [sys.executable, str(code_dir / "tools" / "run_prospective_decision_outcome_feedback.py"), "--root", str(root),
-               "--output", str(output), "--result", str(status_path)]
+               "--output", str(output), "--result", str(attempt_path), "--status", str(status_path)]
     if prior_status_path is not None and Path(prior_status_path).is_file():
         command += ["--prior-result", str(prior_status_path)]
     if state_root is not None:  # offline rehearsal / tests: keep derived caches out of the evidence root
@@ -2095,18 +2104,28 @@ def run_bounded_prospective_feedback(
                 pass
 
     emit("BEGIN")
-    run = guard.run_bounded(command, cwd=str(code_dir), policy=policy, result_path=status_path)
+    try:
+        run = guard.run_bounded(command, cwd=str(code_dir), policy=policy, result_path=attempt_path)
+    finally:
+        try:
+            attempt_path.unlink(missing_ok=True)
+        except OSError:
+            pass
     emit("END" if run["outcome"] == "COMPLETED" else "FAILED")
     child = run.get("child_result") or {}
     resource = {"wall_seconds": run["wall_seconds"], "peak_process_bytes": run.get("peak_process_bytes"),
-                "child_peak_bytes": child.get("peak_memory_bytes"), "containment": run.get("containment"), "reaped": run.get("reaped")}
-    if run["outcome"] == "COMPLETED" and child.get("status") == "COMPLETED" and child.get("artifact_identity"):
+                "child_peak_bytes": child.get("peak_memory_bytes"), "containment": run.get("containment"), "reaped": run.get("reaped"),
+                "immediate_child_reaped": run.get("immediate_child_reaped"),
+                "tree_termination_confirmed": run.get("tree_termination_confirmed"),
+                "containment_degraded": run.get("containment_degraded", False)}
+    if run["outcome"] == "COMPLETED" and run.get("reaped") is True and child.get("status") == "COMPLETED" and child.get("artifact_identity"):
         return {**base, "status": "COLLECTED", "artifact_identity": child["artifact_identity"], "outcome": child.get("outcome"),
                 "record_count": child.get("record_count"), "artifact_size": child.get("artifact_size"),
                 "input_digest": child.get("input_digest"), "relation": (child.get("relation") or {}).get("relation"),
                 "inputs_summary": child.get("inputs_summary"), "status_path": str(status_path), "resource": resource,
                 "admission": {k: admission.get(k) for k in ("admitted", "available_physical_bytes", "available_commit_bytes", "free_disk_bytes")}}
-    reason_code = run.get("reason_code") or child.get("reason_code") or guard.COMPUTATION_ERROR
+    reason_code = (guard.CHILD_REAP_UNCONFIRMED if run.get("reaped") is not True
+                   else run.get("reason_code") or child.get("reason_code") or guard.COMPUTATION_ERROR)
     if not child:
         record_unavailable(reason_code, run.get("outcome") or "", resource)
     return {**base, "status": "UNAVAILABLE", "reason_code": reason_code, "resource": resource,

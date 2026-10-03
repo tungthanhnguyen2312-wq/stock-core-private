@@ -61,7 +61,21 @@ def run(*, root: str | Path = ROOT, output: str | Path | None = None, evidence_d
     return artifact
 
 
-def run_streaming(*, root: str | Path, output: str | Path, result: str | Path | None = None, state_root: str | Path | None = None,
+def run_streaming(*, root: str | Path, output: str | Path, result: str | Path | None = None,
+                  status: str | Path | None = None, **kwargs) -> dict:
+    from feedback_publication_lock import publication_locks
+    if status is None:
+        # Legacy direct callers used --result as the shared status. Coordinate
+        # that pointer too; production explicitly supplies separate attempt IPC.
+        status, result = result, None
+    # The attempt-local IPC file is not a shared pointer. Hold both target and
+    # shared status leases through COMPLETE and status publication.
+    with publication_locks(output, status):
+        return _run_streaming(root=root, output=output, result=result, status=status, **kwargs)
+
+
+def _run_streaming(*, root: str | Path, output: str | Path, result: str | Path | None = None,
+                  status: str | Path | None = None, state_root: str | Path | None = None,
                   prior_result: str | Path | None = None) -> dict:
     """Resource-bounded builder: streams every source, publishes atomically, returns a small status (never the artifact)."""
     import traceback
@@ -70,7 +84,13 @@ def run_streaming(*, root: str | Path, output: str | Path, result: str | Path | 
 
     def finish(payload: dict, code: int) -> int:
         payload.setdefault("peak_memory_bytes", guard.peak_memory_bytes())
+        payload.setdefault("path", str(output))
         guard.write_child_result(result, payload)
+        if status is not None:
+            # A failed/conflicting attempt cannot replace a valid COMPLETE pointer.
+            prior = guard._read_small_json(Path(status)) or {}
+            if code == guard.EXIT_OK or prior.get("status") != "COMPLETED":
+                guard.write_child_result(status, payload)
         return code
 
     prior_summary = None
@@ -112,11 +132,13 @@ if __name__ == "__main__":
     parser.add_argument("--evidence-dir", help="Optional immutable evidence-package directory (legacy in-memory builder).")
     parser.add_argument("--legacy-in-memory", action="store_true", help="Use the original in-memory builder (parity / small corpora only).")
     parser.add_argument("--result", help="Small JSON status sidecar written by the child for the parent.")
+    parser.add_argument("--status", help="Shared status pointer, coordinated with immutable publication.")
     parser.add_argument("--state-root", help="Where derived caches/receipts live (default: --root).")
     parser.add_argument("--prior-result", help="Status sidecar of the earlier call, to report FEEDBACK_CALL_RELATION.")
     args = parser.parse_args()
     if args.output is not None and args.evidence_dir is None and not args.legacy_in_memory:
-        outcome = run_streaming(root=args.root, output=args.output, result=args.result, state_root=args.state_root, prior_result=args.prior_result)
+        outcome = run_streaming(root=args.root, output=args.output, result=args.result, status=args.status,
+                                state_root=args.state_root, prior_result=args.prior_result)
         sys.exit(outcome["exit"])
     result = run(root=args.root, output=args.output, evidence_dir=args.evidence_dir)
     if args.output is None and args.evidence_dir is None:

@@ -23,6 +23,8 @@ from typing import Any, Mapping, Sequence
 
 RESULT_MAX_BYTES = 256 * 1024
 STDERR_TAIL_BYTES = 2000
+REAP_GRACE_SECONDS = 5.0  # bounded cleanup allowance, separate from the work deadline
+CHILD_REAP_UNCONFIRMED = "CHILD_REAP_UNCONFIRMED"
 
 # -- reason-code vocabulary (disjoint classes) ---------------------------------------------------------
 RESOURCE_TIMEOUT = "FEEDBACK_RESOURCE_TIMEOUT"
@@ -237,6 +239,11 @@ class _Job:
         kernel.QueryInformationJobObject.argtypes = [wintypes.HANDLE, ctypes.c_int, ctypes.c_void_p, wintypes.DWORD, ctypes.c_void_p]
         kernel.TerminateJobObject.argtypes = [wintypes.HANDLE, wintypes.UINT]
         kernel.CloseHandle.argtypes = [wintypes.HANDLE]
+        kernel.CreateIoCompletionPort.argtypes = [wintypes.HANDLE, wintypes.HANDLE, ctypes.c_size_t, wintypes.DWORD]
+        kernel.CreateIoCompletionPort.restype = wintypes.HANDLE
+        kernel.GetQueuedCompletionStatus.argtypes = [wintypes.HANDLE, ctypes.POINTER(wintypes.DWORD),
+                                                     ctypes.POINTER(ctypes.c_size_t), ctypes.POINTER(ctypes.c_void_p), wintypes.DWORD]
+        self.port = None
         self.handle = kernel.CreateJobObjectW(None, None)
         if not self.handle:
             raise OSError(ctypes.get_last_error(), "CreateJobObjectW failed")
@@ -250,6 +257,14 @@ class _Job:
             error = ctypes.get_last_error()
             kernel.CloseHandle(self.handle)
             raise OSError(error, "SetInformationJobObject failed")
+        class PORT(ctypes.Structure):
+            _fields_ = [("CompletionKey", ctypes.c_void_p), ("CompletionPort", wintypes.HANDLE)]
+        self.port = kernel.CreateIoCompletionPort(wintypes.HANDLE(-1), None, 0, 1)
+        association = PORT(1, self.port)
+        if not self.port or not kernel.SetInformationJobObject(self.handle, 7, ctypes.byref(association), ctypes.sizeof(association)):
+            error = ctypes.get_last_error()
+            self.close()
+            raise OSError(error, "Job completion port failed")
 
     def assign(self, process_handle: int) -> None:
         if not self.kernel.AssignProcessToJobObject(self.handle, self.wintypes.HANDLE(process_handle)):
@@ -276,6 +291,27 @@ class _Job:
         if self.handle:
             self.kernel.CloseHandle(self.handle)
             self.handle = None
+        if self.port:
+            self.kernel.CloseHandle(self.port)
+            self.port = None
+
+    def wait_empty(self, timeout: float) -> bool:
+        """Wait on Job events, not a sampling/polling loop; death accounting is explicit."""
+        if self.active_processes() == 0:
+            return True
+        end = time.perf_counter() + timeout
+        while True:
+            remaining = end - time.perf_counter()
+            if remaining <= 0:
+                return False
+            message = self.wintypes.DWORD()
+            key = self.ctypes.c_size_t()
+            overlap = self.ctypes.c_void_p()
+            if not self.kernel.GetQueuedCompletionStatus(self.port, self.ctypes.byref(message), self.ctypes.byref(key),
+                                                          self.ctypes.byref(overlap), max(1, int(remaining * 1000))):
+                return False
+            if message.value == 4:  # JOB_OBJECT_MSG_ACTIVE_PROCESS_ZERO
+                return self.active_processes() == 0
 
 
 def _resume_suspended(process: subprocess.Popen) -> None:
@@ -329,6 +365,7 @@ def run_bounded(command: Sequence[str], *, cwd: str | Path, policy: ResourcePoli
     containment = "NONE"
     process: subprocess.Popen | None = None
     outcome = "LAUNCH_FAILED"
+    cleanup_deadline = None
     try:
         popen_kwargs: dict[str, Any] = {"cwd": str(cwd), "stdout": log, "stderr": subprocess.STDOUT, "stdin": subprocess.DEVNULL,
                                         "env": dict(env) if env is not None else None}
@@ -349,7 +386,10 @@ def run_bounded(command: Sequence[str], *, cwd: str | Path, policy: ResourcePoli
                 except OSError:
                     # Could not contain: never run an uncontained suspended child; kill it and run bounded by time only.
                     process.kill()
-                    process.wait()
+                    try:
+                        process.wait(timeout=REAP_GRACE_SECONDS)
+                    except subprocess.TimeoutExpired as exc:
+                        raise OSError(CHILD_REAP_UNCONFIRMED) from exc
                     job.close()
                     job = None
                     popen_kwargs.pop("creationflags", None)
@@ -375,23 +415,15 @@ def run_bounded(command: Sequence[str], *, cwd: str | Path, policy: ResourcePoli
             process = subprocess.Popen(list(command), **popen_kwargs)
             containment = "POSIX_RLIMIT_AS" if policy.memory_limit_bytes else "DEADLINE_ONLY"
         try:
-            process.wait(timeout=policy.deadline_seconds)  # single total deadline; WaitForSingleObject, not a poll loop
+            process.wait(timeout=max(0, policy.deadline_seconds - (time.perf_counter() - started)))
             outcome = "COMPLETED" if process.returncode == 0 else "EXIT_NONZERO"
         except subprocess.TimeoutExpired:
             outcome = "TIMEOUT"
-            _terminate(process, job)
-        except BaseException:
-            # Parent cancellation (KeyboardInterrupt/SystemExit): never leave the child or its tree running.
-            _terminate(process, job)
-            if job is not None:
-                job.close()
-            for cleanup in (log.close, lambda: log_path.unlink(missing_ok=True)):
-                try:
-                    cleanup()
-                except OSError:
-                    pass
-            raise
+            cleanup_deadline = time.perf_counter() + REAP_GRACE_SECONDS
+            _terminate(process, job, timeout=max(0, cleanup_deadline - time.perf_counter()))
     except OSError as exc:
+        if process is not None:
+            _terminate(process, job)
         if job is not None:
             job.close()
         try:
@@ -399,22 +431,52 @@ def run_bounded(command: Sequence[str], *, cwd: str | Path, policy: ResourcePoli
             log_path.unlink(missing_ok=True)
         except OSError:
             pass
-        return {"outcome": "LAUNCH_FAILED", "reason_code": COMPUTATION_ERROR, "returncode": None,
+        return {"outcome": "LAUNCH_FAILED", "reason_code": (CHILD_REAP_UNCONFIRMED if process is not None and process.poll() is None else COMPUTATION_ERROR), "returncode": None,
                 "wall_seconds": round(time.perf_counter() - started, 3), "detail": f"{type(exc).__name__}:{exc}",
-                "containment": containment, "reaped": True, "peak_process_bytes": None, "child_result": None, "stderr_tail": ""}
+                "containment": containment, "reaped": process is None or process.poll() is not None,
+                "peak_process_bytes": None, "child_result": None, "stderr_tail": ""}
+    except BaseException:
+        # Parent cancellation (KeyboardInterrupt/SystemExit): never leave the child or its tree running.
+        cleanup_deadline = time.perf_counter() + REAP_GRACE_SECONDS
+        if process is not None:
+            _terminate(process, job, timeout=max(0, cleanup_deadline - time.perf_counter()))
+        tree_confirmed = (job.wait_empty(max(0, cleanup_deadline - time.perf_counter())) if job is not None
+                          else (_posix_tree_stopped(process.pid) if process is not None and os.name != "nt" else None))
+        immediate_reaped = process is None or process.poll() is not None
+        write_child_result(result_path, {"status": "UNAVAILABLE", "reason_code": (
+            "FEEDBACK_PARENT_CANCELLED" if immediate_reaped and tree_confirmed is True else CHILD_REAP_UNCONFIRMED),
+            "immediate_child_reaped": immediate_reaped, "tree_termination_confirmed": tree_confirmed,
+            "containment": containment})
+        if job is not None:
+            job.close()
+        for cleanup in (log.close, lambda: log_path.unlink(missing_ok=True)):
+            try:
+                cleanup()
+            except OSError:
+                pass
+        raise
     finally:
         try:
             log.close()
         except OSError:
             pass
     reaped = process is not None and process.poll() is not None
+    cleanup_deadline = cleanup_deadline or time.perf_counter() + REAP_GRACE_SECONDS
     if not reaped and process is not None:
-        _terminate(process, job)
+        _terminate(process, job, timeout=max(0, cleanup_deadline - time.perf_counter()))
         reaped = process.poll() is not None
     peak = job.peak_process_bytes() if job is not None else None
-    active = job.active_processes() if job is not None else 0
+    tree_confirmed = None
     if job is not None:
+        if job.active_processes() != 0:
+            job.terminate()  # successful parent exit must not leave heavy descendants
+        tree_confirmed = job.wait_empty(max(0, cleanup_deadline - time.perf_counter()))
         job.close()
+    elif os.name != "nt":
+        tree_confirmed = _posix_tree_stopped(process.pid) if process is not None else True
+        if not tree_confirmed and process is not None:
+            _terminate(process, None, timeout=max(0, cleanup_deadline - time.perf_counter()))
+            tree_confirmed = _posix_tree_stopped(process.pid)
     child_result = _read_small_json(result_path)
     tail = _tail(log_path)
     try:
@@ -436,14 +498,20 @@ def run_bounded(command: Sequence[str], *, cwd: str | Path, policy: ResourcePoli
                 reason = COMPUTATION_ERROR
     elif outcome == "COMPLETED" and (child_result or {}).get("status") not in {"COMPLETED", None}:
         reason = (child_result or {}).get("reason_code")
+    safe = bool(reaped and tree_confirmed is not False)
+    if not safe or (reason in {RESOURCE_TIMEOUT, RESOURCE_MEMORY_LIMIT} and tree_confirmed is not True):
+        reason = CHILD_REAP_UNCONFIRMED
+        safe = False
     return {"outcome": outcome, "reason_code": reason, "returncode": process.returncode if process is not None else None,
-            "wall_seconds": round(time.perf_counter() - started, 3), "containment": containment, "reaped": bool(reaped and not active),
+            "wall_seconds": round(time.perf_counter() - started, 3), "containment": containment, "reaped": safe,
+            "immediate_child_reaped": bool(reaped), "tree_termination_confirmed": tree_confirmed,
+            "containment_degraded": containment == "DEADLINE_ONLY", "reap_grace_seconds": REAP_GRACE_SECONDS,
             "peak_process_bytes": peak, "child_result": child_result, "stderr_tail": tail,
             "policy": policy.as_dict()}
 
 
-def _terminate(process: subprocess.Popen, job: _Job | None) -> None:
-    """Kill the whole contained tree, then reap. Never leaves a zombie or an orphaned grandchild."""
+def _terminate(process: subprocess.Popen, job: _Job | None, *, timeout=REAP_GRACE_SECONDS) -> None:
+    """Request termination and bounded reaping; caller explicitly checks proof."""
     try:
         if job is not None and job.handle:
             job.terminate()
@@ -451,16 +519,39 @@ def _terminate(process: subprocess.Popen, job: _Job | None) -> None:
             process.kill()
         else:
             import signal
-            os.killpg(os.getpgid(process.pid), signal.SIGKILL)
+            os.killpg(process.pid, signal.SIGKILL)
     except (OSError, ProcessLookupError):
         try:
             process.kill()
         except OSError:
             pass
     try:
-        process.wait(timeout=60)
+        process.wait(timeout=timeout)
     except subprocess.TimeoutExpired:
         pass
+
+
+def _posix_tree_stopped(group: int) -> bool:
+    """One accounting read: no live group members; zombies cannot continue work."""
+    proc = Path("/proc")
+    if proc.is_dir():
+        for entry in proc.iterdir():
+            if not entry.name.isdigit():
+                continue
+            try:
+                fields = (entry / "stat").read_text().rsplit(")", 1)[1].split()
+                if int(fields[2]) == group and fields[0] not in {"Z", "X"}:
+                    return False
+            except (OSError, ValueError, IndexError):
+                continue
+        return True
+    try:
+        os.killpg(group, 0)
+        return False
+    except ProcessLookupError:
+        return True
+    except OSError:
+        return False
 
 
 # --------------------------------------------------------------------------------------------------
