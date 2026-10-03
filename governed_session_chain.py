@@ -13,6 +13,57 @@ import prospective_market_snapshot_contract as market
 
 CONTRACT_VERSION = "governed_session_chain/v1"
 CALENDAR_KIND = "dnse_working_dates_calendar_receipt"
+CALENDAR_RESOLVER_VERSION = "governed_calendar_evidence_at_cutoff/v1"
+
+
+def governed_calendar_evidence_at_cutoff(static_calendar=None, receipts=(), *, cutoff,
+                                         scope="DNSE_SECURITIES_MARKET_EXCHANGES_UNSPECIFIED"):
+    """One pure lookup projection; disjoint segments never assert gap coverage."""
+    base = ()
+    if static_calendar:
+        from canonical_market_bars import governed_calendar_projection
+        static = governed_calendar_projection(static_calendar)
+        known = static.get("knowledge_available_at")
+        if not known or market._utc(known, "static_known_at") <= market._utc(cutoff, "cutoff"):
+            base = static["sessions"]
+    coverage = CalendarCoverage(receipts, cutoff=cutoff, base_sessions=base,
+        base_identity=static["artifact_identity"] if base else None,
+        base_known_at=static.get("knowledge_available_at") if base else None,
+        base_source=static["source"] if base else None)
+    if scope != "DNSE_SECURITIES_MARKET_EXCHANGES_UNSPECIFIED":
+        # DNSE's existing receipt cannot establish an exchange-specific calendar.
+        coverage = CalendarCoverage((), cutoff=cutoff)
+    segments = [{**p, "sessions": list(p["sessions"])} for p in coverage.components]
+    gaps = [{"after": a["end"], "before": b["start"], "state": "UNSUPPORTED_CALENDAR_GAP"}
+            for a, b in zip(segments, segments[1:])]
+    body = {"contract_version": CALENDAR_RESOLVER_VERSION, "knowledge_cutoff": cutoff,
+        "source": {"scope": scope}, "sessions": sorted({d for p in segments for d in p["sessions"]}),
+        "segments": segments, "unsupported_gaps": gaps, "overlap_disagreements": coverage.conflicts,
+        "sources": [{**w, "sessions": sorted(w["sessions"])} for w in coverage.windows],
+        "status": "SUPPORTED_SEGMENTS" if segments else "UNAVAILABLE", "authority_effect": "NONE"}
+    body.update(market.content_identity(body, kind="governed_calendar_evidence_at_cutoff"))
+    return body
+
+
+def are_consecutive_governed_sessions(previous, current, cutoff, calendar_evidence):
+    """TRUE/FALSE/UNKNOWN with exact interval provenance; no civil-day fallback."""
+    date.fromisoformat(previous); date.fromisoformat(current)
+    if not calendar_evidence:
+        return {"state": "UNKNOWN", "reason": "CALENDAR_EVIDENCE_UNAVAILABLE", "source_identities": []}
+    expected = market.content_identity(calendar_evidence, kind="governed_calendar_evidence_at_cutoff")
+    if (calendar_evidence.get("contract_version") != CALENDAR_RESOLVER_VERSION or
+        any(calendar_evidence.get(k) != v for k, v in expected.items()) or
+        market._utc(calendar_evidence["knowledge_cutoff"], "calendar_cutoff") > market._utc(cutoff, "cutoff")):
+        raise ValueError("GOVERNED_CALENDAR_PROJECTION_INVALID")
+    part = next((p for p in calendar_evidence["segments"] if p["start"] <= previous <= current <= p["end"]), None)
+    if (not part or previous not in part["sessions"] or current not in part["sessions"] or
+        any(previous <= d <= current for c in calendar_evidence["overlap_disagreements"] for d in c["sessions"])):
+        return {"state": "UNKNOWN", "reason": "UNSUPPORTED_OR_DISPUTED_CALENDAR_INTERVAL", "source_identities": []}
+    days = [d for d in part["sessions"] if previous <= d <= current]
+    return {"state": "TRUE" if previous < current and days == [previous, current] else "FALSE",
+            "reason": None if days == [previous, current] else "INTERVENING_GOVERNED_SESSION",
+            "source_identities": part["source_identities"], "sessions": days,
+            "calendar_identity": calendar_evidence["artifact_identity"]}
 
 
 def verified_calendar(receipt: Mapping[str, Any]) -> None:
@@ -24,6 +75,7 @@ def verified_calendar(receipt: Mapping[str, Any]) -> None:
                                   "scope": "DNSE_SECURITIES_MARKET_EXCHANGES_UNSPECIFIED"} or
         not days or days != sorted(set(days)) or receipt.get("window_start") != days[0] or
         receipt.get("window_end") != days[-1] or receipt.get("allowed_uses") != ["DNSE_FORWARD_WORKING_DATE_IDENTITY"] or
+        days[0] < market._utc(receipt.get("retrieved_at"), "retrieved_at").astimezone(market.VN_TZ).date().isoformat() or
         market._utc(receipt.get("knowledge_available_at"), "calendar_known_at") !=
         max(market._utc(receipt.get("retrieved_at"), "retrieved_at"),
             market._utc(receipt.get("documentation_retrieved_at"), "documentation_retrieved_at"))):
@@ -34,7 +86,7 @@ def verified_calendar(receipt: Mapping[str, Any]) -> None:
 
 
 class CalendarCoverage:
-    def __init__(self, receipts=(), *, cutoff: str, base_sessions=()):
+    def __init__(self, receipts=(), *, cutoff: str, base_sessions=(), base_identity=None, base_known_at=None, base_source=None):
         self.cutoff = cutoff
         instant = market._utc(cutoff, "cutoff")
         windows = []
@@ -43,12 +95,12 @@ class CalendarCoverage:
             if market._utc(receipt["knowledge_available_at"], "known_at") <= instant:
                 windows.append({"start": receipt["window_start"], "end": receipt["window_end"],
                                 "sessions": set(receipt["sessions"]), "identity": receipt["artifact_identity"],
-                                "known_at": receipt["knowledge_available_at"]})
+                                "known_at": receipt["knowledge_available_at"], "source":receipt["source"]})
         if base_sessions:
             base = sorted(set(base_sessions))
             windows.append({"start": base[0], "end": base[-1], "sessions": set(base),
-                            "identity": "legacy_governed_calendar:" + market.sha256_hex(market.canonical(base)),
-                            "known_at": None})
+                            "identity": base_identity or "legacy_governed_calendar:" + market.sha256_hex(market.canonical(base)),
+                            "known_at": base_known_at, "source":base_source})
         self.windows = sorted(windows, key=lambda w: (w["start"], w["end"], w["identity"]))
         self.conflicts = []
         # Index disagreements by exact date instead of retaining all pairwise

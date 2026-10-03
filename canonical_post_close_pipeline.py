@@ -1036,7 +1036,7 @@ def build_enrichment_components(
 
     def _historical_context():
         from market_wide_historical_research_context import build_artifact as build
-        from canonical_market_bars import governed_calendar_projection
+        from prospective_pit_capture_retention import calendar_evidence_at_cutoff
         universe_resolution = _load(paths["universe_resolution"])
         p3f9b_snapshot = _load(paths["exact_session_snapshot"])
         technical_recovery = _load(paths["technical_recovery"])
@@ -1047,7 +1047,9 @@ def build_enrichment_components(
             raise CanonicalPostCloseError("REQUIRED_INPUT_MISSING")
         return build(universe_resolution_artifact=universe_resolution, p3f9b_snapshot=p3f9b_snapshot,
                      technical_history_recovery_artifact=technical_recovery, strategy_artifact=strategy,
-                     market_calendar=governed_calendar_projection(_load(Path(__file__).parent / "config/governed_trading_session_calendar_v1.json")),
+                     market_calendar=calendar_evidence_at_cutoff(retained_evidence_root,
+                         cutoff=p3f9b_snapshot["requested_at"],
+                         static_path=Path(__file__).parent / "config/governed_trading_session_calendar_v1.json"),
                      ca_events=events)
 
     def _integrated_investment_decision_product():
@@ -1387,10 +1389,22 @@ def retain_prospective_decision_snapshot(
             producer_run_identity=producer_result.get("run_identity"), integrated_artifact=integrated,
             exact_session_snapshot=exact_session_snapshot,
         )
-        path = write_immutable_snapshot(output_root or root, snapshot)
+        seal_index = None
+        from contextual_technical_dispatch import PRODUCTION_V2_START_SESSION
+        def index_written(path, file_sha256):
+            nonlocal seal_index
+            from prospective_t0_seal_index import from_snapshot
+            from prospective_pit_capture_retention import io_known_at
+            try:
+                seal_index = {"status": "RETAINED", **from_snapshot(snapshot,path,
+                    created_at=io_known_at(),file_sha256=file_sha256)}
+            except Exception as exc:
+                seal_index = {"status": "UNAVAILABLE", "reason": f"T0_SEAL_INDEX_PUBLICATION_FAILED:{type(exc).__name__}:{exc}"}
+        path = write_immutable_snapshot(output_root or root, snapshot,
+            **({"on_written": index_written} if session >= PRODUCTION_V2_START_SESSION else {}))
     except Exception as exc:
         return {"status": "UNAVAILABLE", "reason": f"PROSPECTIVE_SNAPSHOT_RETENTION_FAILED:{type(exc).__name__}:{exc}"}
-    return {"status": "RETAINED", "artifact": snapshot, "path": path}
+    return {"status": "RETAINED", "artifact": snapshot, "path": path, "seal_index": seal_index}
 
 
 def run_multi_session_signal_velocity_shadow(root: Path, session: str) -> dict[str, Any]:
@@ -1695,9 +1709,19 @@ def run_volume_and_flow_context(root: Path, runtime_root: Path, session: str,
         velocity = _load(root / signal_velocity["path"]) if signal_velocity.get("status") == "COLLECTED" else None
         sealed = None
         if snapshot_binding and snapshot_binding.get("status") == "RETAINED":
-            sealed = _load(root / snapshot_binding["path"])
-            if not sealed or sealed.get("snapshot_identity") != snapshot_binding.get("identity"):
-                raise ValueError("VOLUME_FLOW_T0_HANDOFF_BINDING_INVALID")
+            if production_version(session) == V2:
+                from prospective_t0_seal_index import load_verified
+                index_ref = snapshot_binding.get("seal_index") or {}
+                if index_ref.get("status") == "RETAINED":
+                    try:
+                        sealed = load_verified({**index_ref,"path":str(root/index_ref["path"])},
+                            expected_snapshot_identity=snapshot_binding["identity"],session=session)
+                    except FileNotFoundError:
+                        sealed = None
+            else:
+                sealed = _load(root / snapshot_binding["path"])
+                if not sealed or sealed.get("snapshot_identity") != snapshot_binding.get("identity"):
+                    raise ValueError("VOLUME_FLOW_T0_HANDOFF_BINDING_INVALID")
         artifact, _ = collect(source_root=root,runtime_root=runtime_root,session=session,
                               velocity_artifact=velocity,sealed_snapshot=sealed)
         version = artifact["contract_version"].rsplit("/", 1)[1]
@@ -2150,6 +2174,10 @@ def build_tiered_bundle(
             "reason": (prospective_snapshot or {}).get("reason"),
             "identity": ((prospective_snapshot or {}).get("artifact") or {}).get("snapshot_identity"),
             "path": _rel(root, (prospective_snapshot or {}).get("path")) if (prospective_snapshot or {}).get("path") else None,
+            "seal_index": ({**prospective_snapshot["seal_index"],
+                "path": _rel(root, prospective_snapshot["seal_index"]["path"])}
+                if ((prospective_snapshot or {}).get("seal_index") or {}).get("status") == "RETAINED"
+                else (prospective_snapshot or {}).get("seal_index")),
             "source_integrated_decision_artifact_identity": (((prospective_snapshot or {}).get("artifact") or {}).get("source_integrated_decision_artifact") or {}).get("artifact_identity"),
             "authority_boundary": "IMMUTABLE_T0_SNAPSHOT_NOT_A_CURRENT_DECISION_INPUT",
         },

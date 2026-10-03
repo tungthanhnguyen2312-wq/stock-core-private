@@ -136,9 +136,17 @@ def derive(rows: Sequence[Mapping], *, ticker: str, timeframe: str, period_sessi
     cal_known=cal.get("knowledge_available_at")
     cal_known_ok=not cal_known or market._utc(cal_known,"calendar_known") <= cutoff
     covered=bool(sessions and cal_start <= start <= end <= cal_end and cal_known_ok and cal.get("artifact_identity"))
+    if cal.get("contract_version") == "governed_calendar_evidence_at_cutoff/v1":
+        identity = market.content_identity(cal, kind="governed_calendar_evidence_at_cutoff")
+        if any(cal.get(k) != v for k, v in identity.items()): raise ValueError("CALENDAR_PROJECTION_IDENTITY_INVALID")
+        covered = (market._utc(cal["knowledge_cutoff"], "calendar_cutoff") <= cutoff and
+            any(p["start"] <= start <= end <= p["end"] for p in cal["segments"]) and
+            not any(start <= d <= end for c in cal["overlap_disagreements"] for d in c["sessions"]))
+        cal_known = max((s["known_at"] for s in cal["sources"] if s["known_at"] and s["start"] <= end and start <= s["end"]), default=None)
     expected=[d for d in sessions if start <= d <= end] if covered else []
     observed=[r["first_trading_session"] for r in chosen]
-    if cutoff.astimezone(market.VN_TZ).date().isoformat() <= end and timeframe != "1D":
+    final_session_passed = bool(expected and cutoff >= market._utc(expected[-1]+"T15:30:00+07:00", "final_session_floor"))
+    if (not final_session_passed if covered else cutoff.astimezone(market.VN_TZ).date().isoformat() <= end) and timeframe != "1D":
         completeness="PARTIAL_CURRENT_PERIOD"
     elif not covered: completeness="CALENDAR_SCOPE_UNKNOWN"
     elif observed != expected: completeness="INCOMPLETE_SESSION_COVERAGE"

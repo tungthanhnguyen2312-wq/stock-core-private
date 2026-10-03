@@ -31,6 +31,7 @@ env:
     tests/test_contextual_technical_features.py
     tests/test_technical_volume_flow_v2.py
     tests/test_technical_volume_flow_v2_routing.py
+    tests/test_monday_live_readiness.py
     tests/test_thesis_evidence_matrix.py
     tests/test_thesis_evidence_acceptance.py
     tests/test_contextual_technical_acceptance.py

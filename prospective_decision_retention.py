@@ -335,7 +335,7 @@ def snapshot_path(root: str | Path, snapshot: Mapping[str, Any]) -> Path:
     return Path(root) / "operations-review" / "prospective-decision-retention-v1" / str(snapshot["session"]) / digest / "prospective_decision_snapshot.json"
 
 
-def write_immutable_snapshot(root: str | Path, snapshot: Mapping[str, Any]) -> Path:
+def write_immutable_snapshot(root: str | Path, snapshot: Mapping[str, Any], *, on_written=None) -> Path:
     path = snapshot_path(root, snapshot)
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = None
@@ -360,8 +360,10 @@ def write_immutable_snapshot(root: str | Path, snapshot: Mapping[str, Any]) -> P
             if ((before.st_size, before.st_mtime_ns) != (after.st_size, after.st_mtime_ns)
                     or existing_size != size or existing.digest() != digest.digest()):
                 raise ProspectiveDecisionRetentionError("IMMUTABLE_PROSPECTIVE_SNAPSHOT_CONFLICT:" + str(path))
+            if on_written: on_written(path, digest.hexdigest())
             return path
         os.replace(temporary, path)
+        if on_written: on_written(path, digest.hexdigest())
         return path
     finally:
         if temporary is not None:

@@ -1,5 +1,10 @@
 # Volume and flow context V2
 
+The [Monday readiness corrective](monday_live_readiness_closeout_contract.md) moves
+ordinary V2 T0 lookup to the compact verified seal index and future daily volume/
+foreign maturity to shared governed continuity. Missing index demotes to POST.
+Existing VALUE formulas, V1 source and retained historical artifacts remain frozen.
+
 `volume_and_flow_context/v2` and `volume_and_flow_evidence/v2` are independent
 non-voting research contracts. Authority effect for the paired migration is
 `NONE / DESCRIPTIVE_SEMANTIC_VERSION_MIGRATION_ONLY`. The frozen V1 producer and
