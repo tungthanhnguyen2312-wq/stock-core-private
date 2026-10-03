@@ -3,7 +3,11 @@
 The first foundation, `MARKET_BAR_BASIS_AND_MULTITIMEFRAME_V1`, is COMPLETE under
 the explicit October 2, 2026 owner override; see the
 [contract and retained acceptance](../market_bar_basis_multitimeframe_contract.md).
+The owner-selected `CONTEXTUAL_CANDLE_AND_TECHNICAL_FEATURES_V1` is now COMPLETE;
+see its [single contract and retained acceptance](../contextual_technical_features_contract.md).
 The remaining proposals are document only, not NEXT or active implementation.
+Expected next owner-selection gate: `VOLUME_AND_INSTITUTIONAL_FLOW_CONTEXT_V1`;
+no successor starts automatically.
 None grants new authority, thresholds or strategy tuning.
 Reuse existing deterministic technical/flow/decision engines and
 the comprehensive [North Star](../NORTH_STAR.md). `research_action_posture` remains

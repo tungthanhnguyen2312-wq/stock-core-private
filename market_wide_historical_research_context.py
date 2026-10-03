@@ -758,13 +758,13 @@ def build_artifact(
             "in_current_descriptive_scope": True,
             **context,
         }
-        from canonical_market_bars import research_projection
+        import contextual_technical_features as contextual
         cutoff = p3f9b_snapshot.get("requested_at")
         if cutoff:
             try:
-                records[ticker]["multi_timeframe"] = research_projection(observations,ticker=ticker,target_session=target_session,
+                records[ticker].update(contextual.build_research_projections(observations,ticker=ticker,target_session=target_session,
                     knowledge_cutoff=cutoff,source_identity=recovery_identity if isinstance(override, Mapping) and override.get("state") == "RECOVERED_COMPLETE_TECHNICAL_HISTORY" else p3f9b_snapshot["snapshot_identity"],
-                    calendar_evidence=market_calendar,ca_events=[e for e in ca_events if e.get("ticker") == ticker])
+                    calendar_evidence=market_calendar,ca_events=[e for e in ca_events if e.get("ticker") == ticker]))
             except (ValueError, TypeError):
                 records[ticker]["multi_timeframe"]={"status":"UNAVAILABLE","reason":"BAR_INPUT_INTEGRITY_OR_SEMANTICS_INVALID","non_voting":True}
         else:

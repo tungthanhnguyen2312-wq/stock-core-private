@@ -184,17 +184,22 @@ def derive(rows: Sequence[Mapping], *, ticker: str, timeframe: str, period_sessi
         "warnings":sorted(set(warnings+[w for r in chosen for w in r["warnings"]])),"status":"AVAILABLE" if compatible else "UNAVAILABLE"})
 
 
-def research_projection(rows, *, ticker, target_session, knowledge_cutoff, source_identity, calendar_evidence=None, ca_events=()):
-    """Group once; provide latest D, completed W/M, and honest latest-period fallback."""
+def research_series(rows, *, ticker, target_session, knowledge_cutoff, source_identity, calendar_evidence=None, ca_events=()):
+    """Canonical period series shared by bar and contextual-feature projections."""
     groups={tf:defaultdict(list) for tf in ("1D","1W","1M")}
     for row in rows:
         day=row.get("trading_session",row.get("session"))
         if not day or day > target_session:continue
         for tf in groups:groups[tf][period_bounds(day,tf)[0]].append(row)
+    return {tf:[derive(v,ticker=ticker,timeframe=tf,period_session=start,knowledge_cutoff=knowledge_cutoff,
+        source_identity=source_identity,calendar_evidence=calendar_evidence,ca_events=ca_events)
+        for start,v in sorted(periods.items())] for tf,periods in groups.items()}
+
+
+def project_research_series(series, *, target_session, knowledge_cutoff):
+    """Summarize an internally derived canonical series without recalculating bars."""
     result={"contract_version":"market_bar_research_projection/v1","target_session":target_session,"knowledge_cutoff":knowledge_cutoff,"non_voting":True}
-    for tf,periods in groups.items():
-        bars=[derive(v,ticker=ticker,timeframe=tf,period_session=start,knowledge_cutoff=knowledge_cutoff,
-            source_identity=source_identity,calendar_evidence=calendar_evidence,ca_events=ca_events) for start,v in sorted(periods.items())]
+    for tf,bars in series.items():
         available=[b for b in bars if b["status"] == "AVAILABLE" and RESEARCH in b["fitness"]["allowed_uses"]]
         completed=[b for b in available if b["period_completeness"] == "COMPLETE"]
         result[tf]={"latest_observed":available[-1] if available else None,"latest_completed":completed[-1] if completed else None,
@@ -205,6 +210,13 @@ def research_projection(rows, *, ticker, target_session, knowledge_cutoff, sourc
                                "reason":None if daily and daily['price_basis']==pit.PIT_CA_ADJUSTED else "FACTOR_CHAIN_NOT_QUALIFIED"}
     result.update(market.content_identity(result,kind="market_bar_research_projection"))
     return result
+
+
+def research_projection(rows, *, ticker, target_session, knowledge_cutoff, source_identity, calendar_evidence=None, ca_events=()):
+    """Group once; provide latest D, completed W/M, and honest latest-period fallback."""
+    series=research_series(rows,ticker=ticker,target_session=target_session,knowledge_cutoff=knowledge_cutoff,
+        source_identity=source_identity,calendar_evidence=calendar_evidence,ca_events=ca_events)
+    return project_research_series(series,target_session=target_session,knowledge_cutoff=knowledge_cutoff)
 
 
 def governed_calendar_projection(value: Mapping) -> dict:
