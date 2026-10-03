@@ -254,7 +254,7 @@ The only durable continuation is this file. Preserve distinct pre/post temporal 
 unchanged policy/authority and clean-full-rebuild equivalence for later owner-approved slices.
 
 
-## Owner-authorized C/E/F/R continuation — 2026-10-03 (ACTIVE)
+## Owner-authorized C/E/F/R implementation checkpoint — 2026-10-03 (superseded by terminal acceptance below)
 
 The previous stop-after-P2D instruction is superseded by the owner's explicit full
 technical/release authorization for `OWNER_DAILY_PERFORMANCE_AND_PROSPECTIVE_RETENTION_CLOSEOUT_V1`.
@@ -280,7 +280,7 @@ validated pass. Outcome objects and outcome_update_id semantics are unchanged. F
 or malformed late observations publish nothing. Same-session identical runs reuse;
 conflicts fail closed. V1 loose files are never deleted/rewritten. V1/V2/mixed readers
 retain the V1 filename tie-break, deduplicate exact identities and expose an explicit
-bounded run index (300,000 rows, 50,000 latest observations, 128 MiB encoded latest rows,
+bounded run index (300,000 unique rows, 50,000 latest observations, 128 MiB encoded latest rows,
 8 MiB per outcome row). Derived legacy compaction is disposable and content-validated;
 corruption/unwritable derived state falls back to originals. Legacy source bytes are
 validated once per index construction; warm reuse suppresses loose JSON decoding.
@@ -308,10 +308,117 @@ checks passed. Host pip check passed; the existing global installation has ten v
 pin drifts and two importable retired provider packages. It was not mutated. Clean
 remote CI remains the release dependency check.
 
-Benchmarks and PR/main release control are still in progress. Full completed-price
+At this earlier checkpoint, benchmarks and PR/main release control were in progress. Full completed-price
 feedback inventory was stopped at measured helper RSS 6,275,387,392 bytes / available
 system memory 511,578,112 bytes, before any T0 write or publication. Use a bounded
 100-decision / three real immutable-price-session feedback sample instead; do not
 claim a whole-feedback real-corpus wall time. Retention validation uses one complete
 real September 9 snapshot (91,663,871 source bytes). All benchmark output is explicitly
 NON_AUTHORITATIVE_RETAINED_REPLAY_DIAGNOSTIC under ignored scratch.
+
+
+## Terminal acceptance and single-PR release gate — 2026-10-03
+
+Disposition on governed merge: `OWNER_DAILY_PERFORMANCE_AND_PROSPECTIVE_RETENTION_CLOSEOUT_COMPLETE`.
+Final implementation/acceptance checkpoint: `c5828eae7c717a6855aada1fd2d8d3f051565514`.
+Release PR: https://github.com/tungthanhnguyen2312-wq/stock-core-private/pull/50
+Starting main: `238edce670ea02da42e81e8ad3062dad23a4f151`.
+Final main is the verified merge commit resolved by that PR, then safely fast-forward
+synchronized. Unrelated untracked data remains intact. All four final exact-head CI
+jobs must pass before merge; this document records the release candidate until then.
+
+All C/E/F/R acceptance is complete. Final F refinement separates cheap forced resource
+refreshes (including completed requests) from tree sizing: only OWNER_PARENT phase
+BEGIN/END/FAILED without a subtask, final summary and explicit diagnostics may size.
+Repeated request/child END or completed==total events never trigger a tree walk.
+Final local checks: 45 feedback/cache cases, 10 V2 storage cases (73 integrated tactical cases), 148 Owner workflow/UI/
+offline smoke cases; earlier combined directly affected selection passed 187 cases.
+The local broad Producer selection passed 1,956 tests /30 subtests before final
+follow-up cases. Initial PR CI (run 37076812860) passed four jobs: 1,927 hermetic tests
+/30 subtests, 48 platform skips, 14 deselected; retained accounting 5 passed /9 skipped.
+Implementation CI run 37083528081 passed all four jobs: 1,933 hermetic tests /30
+subtests, 48 platform skips, 14 deselected; retained accounting 5 passed /9 skipped.
+Latest candidate CI is mandatory; earlier green checks do not authorize a changed head.
+Clean remote dependency checks passed. Pre-existing host dependency drift was not changed.
+
+### Actual integrated and bounded benchmark evidence
+
+| Validation | Full/old/cold seconds | Warm/new seconds | Scope/result |
+| --- | ---: | ---: | --- |
+| C synthetic | 3.430184 | 2.423499 | 24 sessions /2,424 decisions; 404 hits /2,020 recomputations |
+| C bounded real | 0.030921 | 0.034026 | 100 real decisions /3 immutable exact price sessions; 0 hits /100 misses |
+| E earlier 10,000 real legacy slice (before read-buffer refinement) | 26.566561 | 7.943088 | 17,200,306 source bytes; warm loose JSON parses 0 |
+| E real maturation/read | 12.268274 | 0.053657 | 24 actual artifacts /1,000 observations /929 outcomes /2 retained V2 files /1,620,950 bytes |
+| R real canonical hash | 0.960383 | 3.799195 | complete real 1,683-record snapshot; exact identity |
+| R real pretty write | 2.525852 | 6.654206 | exact original/native bytes |
+| R synthetic canonical hash | 0.440105 | 1.140320 | exact hash; allocation peak 99,549,133 to 225,480 bytes |
+| E full real legacy | 576.996492 | 2041.840746 | 176,715 originals; exact latest identity digest |
+
+Full real legacy scope: 23562 latest observations;
+original bytes read/validated per pass: 303755463.
+Cold loose JSON parses 176,715; warm loose JSON parses 0. An earlier full warm
+pass took 54.084175s; the final repetition above is reported separately because
+foreground host I/O varies substantially. No stable wall-time speedup is claimed. Each run also reads one derived
+NDJSON shard and decodes its 176,715 rows; those row decodes are not claimed to disappear.
+Legacy byte integrity validation still opens 176,715 originals once per run-scoped index
+construction so same-stat tampering cannot survive. Later historical lookups seek exact
+indexed row offsets; no observation-by-entire-corpus rescan. Normal Daily maturation
+constructs no historical outcome index and reads ZERO historical outcome files: N loose
+outcome write/read-backs become one streamed shard and one manifest. The real slice
+produced 929 unchanged outcomes in 2 retained V2 files, with one shard read /929 row
+decodes /0 legacy opens; original V1 bytes were never deleted or rewritten.
+Full real cold/warm latest identity digest: `91f416fd05b5d1a972a12953e3eba87ae78abb378697603e422fbacf4a173089`.
+Full legacy process-lifetime peak RSS: cold 361418752 bytes,
+warm 417349632 bytes (not incremental allocation measurements).
+
+C synthetic canonical artifact SHA-256: `588c9478e7e22e3cc41f31a8d1a4084ff67cbd6581ce7d0cd07178e1142ca8f0`.
+Full/cold/warm contents and artifact identity are exact; cold 3.080018s.
+These are single-run fixture measurements, not projected ordinary-Daily improvement.
+A previous warm repetition on the same mostly-unsettled fixture was slower than full;
+no universal speedup is claimed. Real sample cold 0.034655s.
+It has no complete 20-session window, so 0 cache hits is correct; no mature evidence was
+invented. Cache keys bind selected records/container headers, not every ticker's complete
+container per decision. Contract/policy/input mutations invalidate; corrupt/oversized
+cache falls back/prunes without changing feedback admission, output bytes or identity.
+
+R source remains September 9, 2026, 1,683 complete records /91,663,871 bytes.
+Canonical identity: `prospective_decision_snapshot:29933b20fff98d5de98e1b3770c34e0896a5bf87fbc4d937c6fe8e996b058a63`.
+Original/old-pretty/new-streamed raw-byte SHA-256: `fa53edea215a73dc7dc44caf139dbf05894c4fd27d1ec286d2167cc92206675d`.
+Exact original bytes match, not merely decoded objects; per-record identities remain
+unchanged. Unicode/nesting/scalars/NaN/large fixtures, identical reuse, conflicts and
+failed-temp preservation pass. Streamed identical reuse 6.931918s.
+Streaming costs Python encoder time but removes whole-snapshot compact/pretty/comparison
+strings. Synthetic transient allocation peak falls from 99,549,133 to 225,480 bytes;
+the bounded real helper process-lifetime peak was 869,842,944 bytes. No isolated real RSS
+reduction is claimed from cumulative peaks, and no arbitrary RSS acceptance cap is used.
+Full T0 content/input graphs remain intact; no thinning, pointer substitution or changed
+knowledge time. The original MemoryError's exact allocating stack was not retained;
+the engineering cause addressed here is giant serialization/comparison allocations
+on top of the already-large retained decision graph.
+
+F: 20 cheap resource samples 0.001434s /ZERO recursive tree walks.
+One explicit diagnostic size 0.137758s /4,117,695 scratch bytes.
+Disk-free/process memory and detailed JSONL remain; Vietnamese/redirected UI tests pass.
+No loop, daemon, background monitor, source request or analytical policy change was added.
+
+The whole completed-price feedback probe was stopped at actual helper RSS 6,275,387,392
+/available memory 511,578,112 bytes, before any T0 write/publication. Whole real feedback
+wall/RSS acceptance is unclaimed; the 100-case /3-session check is a bounded diagnostic.
+That retained-input object-memory limit is documented rather than hidden or fixed by
+thinning T0. A profiler also found oversized read buffers on tiny Windows files; exact-size cold reads
+and bounded warm hashing removed that allocation overhead without weakening integrity.
+The first full legacy probe used two source passes and was replaced with
+single-pass cold derivation; the final full real legacy validation above completed.
+
+Completed-session publication replay: NOT_RUN (unnecessary; publication paths unchanged).
+P0/P1/P2A/P2B/P2D standing regressions pass. October 2 T0 remains unavailable; its original
+zero-byte file remains unchanged. Benchmarks wrote no canonical operation, manifest,
+registry, Dashboard/AI/Action Center or genuine prospective registration. All write-heavy
+benchmark outputs are ignored NON_AUTHORITATIVE_RETAINED_REPLAY_DIAGNOSTIC scratch.
+
+Remaining C/E/F/R implementation debt: NONE. Full completed-price feedback memory is an
+explicit validation limit, not a claimed production timing or a new authority grant.
+Next exact gate: owner selection and explicit authorization of an analytical capability
+milestone based on the Data Capability Map. `queued_next = []`; no later program or
+further Daily plumbing is started automatically.
+
