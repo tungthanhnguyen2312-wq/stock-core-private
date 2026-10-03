@@ -1,7 +1,7 @@
 {
   "schema_version": "stocklookup_roadmap_execution_state/1.0.0",
   "roadmap_id": "stock-core-private",
-  "roadmap_version": "2026.10.03.7",
+  "roadmap_version": "2026.10.03.8",
   "narrative_authority": {
     "strategic_roadmap": "docs/ROADMAP.md",
     "operational_narrative": "docs/STATE.md",
@@ -15,11 +15,27 @@
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "MONDAY_LIVE_READINESS_BLOCKER_CLOSEOUT_V1",
-    "state": "COMPLETE"
+    "milestone": "THESIS_EVIDENCE_MATRIX_AND_CONFLICT_ENGINE_V1_STAGE_2_PRODUCTION_INTEGRATION",
+    "state": "ACTIVE"
   },
   "queued_next": [],
   "milestones": [
+    {
+      "milestone_id": "THESIS_EVIDENCE_MATRIX_AND_CONFLICT_ENGINE_V1_STAGE_2_PRODUCTION_INTEGRATION",
+      "state": "ACTIVE",
+      "starting_checkpoint": "d610db689c1f512b3363e86cdf005c248343f422",
+      "candidate_branch": "feature/thesis-evidence-stage2-production-integration",
+      "dependencies": [],
+      "unlocks": [],
+      "owner_authorized": true,
+      "owner_override": "OWNER_DIRECTIVE_2026_10_03_STAGE_2_PRODUCTION_INTEGRATION_FULL_TECHNICAL_RELEASE_AUTONOMY",
+      "authority_effect": "NONE / NON_VOTING_THESIS_PRODUCTION_PROJECTION_ONLY",
+      "state_history": [
+        "ACTIVE"
+      ],
+      "source_doc": "docs/thesis_evidence_stage_2_production_contract.md",
+      "notes": "Owner authorizes bounded production sidecars, retained offline rehearsal and release. Stage1 adapters/reducers frozen; no live Daily; calendar registration owner-gated; first-real capture pending."
+    },
     {
       "milestone_id": "MONDAY_LIVE_READINESS_BLOCKER_CLOSEOUT_V1",
       "state": "COMPLETE",

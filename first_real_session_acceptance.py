@@ -36,7 +36,7 @@ def capability(name, predicates, *, evidence_present, progressed=False, details=
 
 def evaluate(*, session, cutoff, calendar, capture_record=None, marker=None, readiness=None,
              technical_contexts=None, sealed_bindings=None, flow_records=None, thesis_state=None,
-             valuation=None, liquidity=None, diagnostic=False):
+             valuation=None, liquidity=None, diagnostic=False,thesis_products=None):
     market._utc(cutoff,"cutoff")
     rows=[]
     def add(name,predicates,present,progress=False,details=None):
@@ -89,6 +89,21 @@ def evaluate(*, session, cutoff, calendar, capture_record=None, marker=None, rea
     thesis=thesis_state or {}
     add("thesis_stage_1_presence",{"released_complete":thesis.get("stage_1")=="COMPLETE","offline_boundary":thesis.get("stage_1_offline") is True},thesis,details=thesis)
     add("thesis_stage_2_status",{"installed_complete":thesis.get("stage_2")=="COMPLETE"},thesis.get("stage_2") not in {None,"NOT_STARTED"},details={"status":thesis.get("stage_2","NOT_STARTED")})
+    if thesis.get("stage_2") not in {None,"NOT_STARTED"} or thesis_products:
+        products=thesis_products or {};t0=products.get("t0") or {};current=products.get("current") or {}
+        for stage,data in (("t0",t0),("current",current)):
+            counts=data.get("counts",{});computed=counts.get("built_count",0)+counts.get("partial_count",0)
+            add("thesis_"+stage+"_component",{"computed_component":data.get("status")=="BUILT","no_unavailable_records":counts.get("unavailable_count",0)==0},data,bool(computed),details=data)
+            add("thesis_"+stage+"_record_coverage",{"whole_source_coverage":bool(data.get("records")) and computed==data.get("records")},data,bool(computed),details=counts)
+        add("thesis_t0_exact_snapshot_index_binding",{"verified_snapshot":bool(t0.get("snapshot_identity") and sealed_bindings and t0["snapshot_identity"]==sealed_bindings.snapshot_identity),"verified_index":bool(t0.get("index_identity") and sealed_bindings and t0["index_identity"]==sealed_bindings.index_identity)},t0)
+        add("thesis_t0_zero_post",{"no_post_in_t0":t0.get("post_in_t0")==0,"no_retrospective_item":t0.get("guards",{}).get("retrospective_item_in_t0")==0},t0)
+        for lens,label in (("LONG_TERM_INVESTOR","long"),("SHORT_TERM_INVESTOR","short")):
+            dist=t0.get("distributions",{}).get(lens,{})
+            add("thesis_t0_"+label+"_distribution",{"all_computed_lenses_accounted":bool(dist) and sum(dist.values())==sum(t0.get("counts",{}).get(k,0) for k in ("built_count","partial_count"))},t0,details={"distribution":dist})
+        add("thesis_retrospective_technical_t0_exclusion",{"excluded_retrospective_evidence":t0.get("retrospective_exclusion_count",0)>0,"zero_retrospective_t0":t0.get("guards",{}).get("retrospective_item_in_t0")==0},t0,details={"direction_coverage":t0.get("t0_direction_coverage_by_axis",{})})
+        add("thesis_t0_current_delta",{"separate_bases_for_each_computed_record":bool(current.get("records")) and current.get("separate_basis_count")==sum(current.get("counts",{}).get(k,0) for k in ("built_count","partial_count"))},current)
+        for name,key in (("thesis_flow_facts_only","flow_directional_violation"),("thesis_zero_second_posture","second_posture"),("thesis_zero_action_policy_delta","action_policy_delta")):
+            add(name,{"zero_violation":bool(current) and current.get(key)==0},current)
     add("pit_continuous_price",{"continuous_price_and_membership":bool(tickers) and all(t["pit_component_readiness"]["continuous_price"] and t["pit_component_readiness"]["observed_price_and_membership"] for t in tickers)},readiness,bool(tickers))
     add("raw_as_traded",{"all_names_exact_raw_authorized":bool(tickers) and all("PROSPECTIVE_RAW_AS_TRADED_PRICE" in (t.get("raw_use_state") or {}).get("allowed_uses",[]) for t in tickers)},tickers)
     add("ca",{"qualified_factor_chain_or_nonapplicability":bool(tickers) and all(t.get("ca_comparability")=="QUALIFIED_COMPARABLE" for t in tickers)},readiness,details={"blockers":r.get("ca_blockers",[])})
@@ -101,7 +116,7 @@ def evaluate(*, session, cutoff, calendar, capture_record=None, marker=None, rea
     body.update(market.content_identity(body,kind="first_real_session_acceptance")); return body
 
 
-def collect(root, *, session, cutoff, technical_path=None, flow_path=None, snapshot_binding=None, decision_path=None):
+def collect(root, *, session, cutoff, technical_path=None, flow_path=None, snapshot_binding=None, decision_path=None,thesis_t0_path=None,thesis_current_path=None,thesis_references=None):
     """Explicit artifacts only; large corpora parsed once with bounded members."""
     from bounded_artifact_stream import stream_artifact
     from prospective_t0_seal_index import load_verified
@@ -149,7 +164,7 @@ def collect(root, *, session, cutoff, technical_path=None, flow_path=None, snaps
             dimensions=(row.get("current_research_decision_input") or {}).get("dimensions") or {}
             counts["valuation/"+(dimensions.get("VALUATION") or {}).get("state","UNKNOWN")]+=1
             counts["liquidity/"+((dimensions.get("LIQUIDITY") or {}).get("execution") or {}).get("state","UNKNOWN")]+=1
-        meta,digest,total=stream_artifact(Path(decision_path),excluded={"artifact_identity","artifact_sha256"},on_record=inspect_decision)
+        meta,digest,total=stream_artifact(Path(decision_path),excluded=decisions._IDENTITY_EXCLUDED,on_record=inspect_decision)
         if meta.get("artifact_sha256")!=digest or meta.get("session")!=session or meta.get("contract_version")!="integrated_investment_decision_product/v1":
             raise ValueError("ACCEPTANCE_DECISION_ARTIFACT_INVALID")
         def fitness(name):
@@ -167,7 +182,14 @@ def collect(root, *, session, cutoff, technical_path=None, flow_path=None, snaps
             bound=None
     roadmap=json.loads((Path(__file__).parent/"docs/ROADMAP_STATE.json").read_text(encoding="utf-8"))
     states={m["milestone_id"]:m["state"] for m in roadmap["milestones"]}
+    products={}
+    from thesis_production_runtime import read_product_report
+    for stage,path in (("t0",thesis_t0_path),("current",thesis_current_path)):
+        if path:
+            data=read_product_report(path,expected_identity=((thesis_references or {}).get(stage) or {}).get("artifact_identity"))
+            if data["session"]!=session or data["stage"]!=stage:raise ValueError("ACCEPTANCE_THESIS_SESSION_OR_STAGE_INVALID")
+            if market._utc(data["created_at"],"thesis_known_at")<=market._utc(cutoff,"cutoff"):products[stage]=data
     return evaluate(session=session,cutoff=cutoff,calendar=calendar,capture_record=record,marker=marker,readiness=readiness,
         technical_contexts=contexts,sealed_bindings=bound,flow_records=records,valuation=valuation,liquidity=liquidity,
-        thesis_state={"stage_1":states.get("THESIS_EVIDENCE_MATRIX_AND_CONFLICT_ENGINE_V1_STAGE_1"),"stage_1_offline":True,
+        thesis_products=products,thesis_state={"stage_1":states.get("THESIS_EVIDENCE_MATRIX_AND_CONFLICT_ENGINE_V1_STAGE_1"),"stage_1_offline":True,
                       "stage_2":states.get("THESIS_EVIDENCE_MATRIX_AND_CONFLICT_ENGINE_V1_STAGE_2_PRODUCTION_INTEGRATION","NOT_STARTED")})

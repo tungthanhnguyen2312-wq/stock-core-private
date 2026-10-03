@@ -1686,13 +1686,49 @@ def run_post_handoff_observers(
     tier1["current_foreign_flow_enrichment"] = current_foreign_flow_enrichment
     tier1["flow_price_divergence_shadow"] = flow_price_divergence
     tier1["volume_and_flow_context"] = volume_flow_context
+    thesis_current = None
+    from contextual_technical_dispatch import PRODUCTION_V2_START_SESSION
+    if session >= PRODUCTION_V2_START_SESSION:
+        try:
+            from thesis_production_runtime import run_component, summary, focus_cards
+            decision_path=root/tier1["deeper_bundles"]["integrated_investment_decision_product"] if (tier1.get("deeper_bundles") or {}).get("integrated_investment_decision_product") else enrichment_output_path(root,session,"integrated_investment_decision_product")
+            technical_path = decision_path.parent/"historical_context.json"
+            thesis_current=run_component(root,session,stage="current",snapshot_binding=tier1.get("prospective_decision_snapshot"),
+                output_root=Path(tiers["bundle_dir"]).parents[2],decision_path=decision_path,
+                technical_path=technical_path if technical_path.exists() else None,
+                flow_path=root/volume_flow_context["path"] if volume_flow_context.get("status")=="COLLECTED" else None,
+                observer_identities={"signal_velocity":signal_velocity.get("artifact_identity"),"price_flow":flow_price_divergence.get("artifact_identity"),
+                    "t0_thesis_manifest":(tier1.get("thesis_evidence",{}).get("t0") or {}).get("artifact_identity")})
+            block=tier1.setdefault("thesis_evidence",{})
+            block["current"]=summary(thesis_current)
+            focus=[t for cohort in (tiers.get("opportunity_research_bundle",{}).get("cohort_tickers_by_state") or {}).values() for t in cohort]
+            block["focus_cards"]=focus_cards(root,thesis_current,tickers=focus)
+            block["explanation_policy"]="DETERMINISTIC_REFERENCES_ONLY_NO_NEW_AI_VERDICT"
+        except Exception as exc:
+            thesis_current={"status":"UNAVAILABLE","reason":"THESIS_CURRENT_COMPONENT_FAILED:"+type(exc).__name__+":"+str(exc)}
+            tier1.setdefault("thesis_evidence",{})["current"]=thesis_current
     _write_json(tiers["bundle_dir"] / "session_handoff_bundle.json", tier1)
-    return {
+    result = {
         "multi_session_signal_velocity": signal_velocity,
         "current_foreign_flow_enrichment": current_foreign_flow_enrichment,
         "flow_price_divergence_shadow": flow_price_divergence,
         "volume_and_flow_context": volume_flow_context,
     }
+    if thesis_current is not None:result["thesis_evidence"]=tier1.get("thesis_evidence",{})
+    return result
+
+
+def run_thesis_t0_sidecar(root,session,prospective_snapshot,enrichment,*,output_root=None):
+    """After capture/marker boundary; every Thesis failure remains component-local."""
+    try:
+        from thesis_production_runtime import run_component
+        snapshot=prospective_snapshot or {}
+        binding={"identity":(snapshot.get("artifact") or {}).get("snapshot_identity"),"seal_index":snapshot.get("seal_index")}
+        delivery=enrichment.get("integrated_investment_decision_product") or {}
+        return run_component(root,session,stage="t0",snapshot_binding=binding,output_root=output_root,
+            decision_path=delivery.get("path"),origin="SEAL_TIME")
+    except Exception as exc:
+        return {"status":"UNAVAILABLE","session":session,"reason":"THESIS_T0_COMPONENT_FAILED:"+type(exc).__name__+":"+str(exc)}
 
 
 def run_volume_and_flow_context(root: Path, runtime_root: Path, session: str,
@@ -2107,6 +2143,7 @@ def build_tiered_bundle(
     decision_packet: Mapping[str, Any] | None, prospective: Mapping[str, Any] | None,
     enrichment: Mapping[str, Any], producer_head: str | None, consumer_head: str | None,
     prospective_snapshot: Mapping[str, Any] | None = None,
+    thesis_t0: Mapping[str, Any] | None = None,
     artifact_root: Path | None = None, runtime_release: Mapping[str, Any] | None = None,
     output_root: Path | None = None,
 ) -> dict[str, Any]:
@@ -2200,6 +2237,9 @@ def build_tiered_bundle(
         "authority_boundary": manifest["authority_boundary"],
     }
 
+    if thesis_t0 is not None and thesis_t0.get("status") != "NOT_APPLICABLE":
+        from thesis_production_runtime import summary
+        tier1["thesis_evidence"]={"t0":summary(thesis_t0)}
     decision_queue = _load(level2_paths["opportunity_prioritization"])
     tier2 = {
         **shared_lineage,
@@ -2318,6 +2358,7 @@ def run_canonical_post_close(
     prospective_capture_readiness = pit_retention.attempt(capture_retention.daily_boundary, root,
         session=session, gate=capture_gate, evidence=acquisition.get("prospective_market_evidence") or {},
         known_at=capture_known_at, t0_snapshot_identity=((prospective_snapshot or {}).get("artifact") or {}).get("snapshot_identity"))
+    thesis_t0 = run_thesis_t0_sidecar(root,session,prospective_snapshot,enrichment)
     decision_packet = build_decision_packet(
         root, session, opportunity=producer_result["operation"].get("opportunity"), enrichment=enrichment,
         artifact_root=artifact_root,
@@ -2330,6 +2371,7 @@ def run_canonical_post_close(
         producer_head=producer_head, consumer_head=consumer_head, prospective_snapshot=prospective_snapshot,
         artifact_root=artifact_root,
         runtime_release=runtime_release,
+        **({"thesis_t0":thesis_t0} if thesis_t0.get("status")!="NOT_APPLICABLE" else {}),
     )
     # The tiered bundle above writes the sole binding that qualifies today's
     # immutable T0 snapshot.  Run the shared post-handoff observers only afterwards

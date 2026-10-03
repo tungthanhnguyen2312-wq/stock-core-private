@@ -47,6 +47,7 @@ def write_attestation(
     runtime_restage: Mapping[str, Any] | None = None,
     daily_producer_run_identity: str | None = None,
     canonical_daily_operation_identity: str | None = None,
+    thesis_evidence: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Best-effort: called by ``canonical_daily_operation.py`` only after the already-completed
     Daily Producer result and AI handoff sealing -- a write failure here (disk full, permissions)
@@ -73,6 +74,7 @@ def write_attestation(
         "canonical_daily_operation_identity": canonical_daily_operation_identity,
     }
     path = attestation_path(output_root, session)
+    if thesis_evidence is not None:record["thesis_evidence"]=dict(thesis_evidence)
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_name(path.name + ".tmp")
     tmp.write_text(json.dumps(record, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")

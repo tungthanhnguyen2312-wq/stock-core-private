@@ -37,10 +37,9 @@ def entry(ticker, row):
     if row.get("ticker") != ticker or row.get("prospective_snapshot_record_identity") != retention.RECORD_PREFIX+retention._hash({k:v for k,v in row.items() if k!="prospective_snapshot_record_identity"}):
         raise ValueError("T0_INDEX_RECORD_INVALID")
     context = ((row.get("integrated_decision_at_t0") or {}).get("contextual_technical_context") or {}).get("projection")
-    if not context: return None
-    version = dispatch.verify_context(context,ticker=ticker,session=row["decision_session"])
+    version = dispatch.verify_context(context,ticker=ticker,session=row["decision_session"]) if context else None
     return {"ticker":ticker,"session":row["decision_session"],"technical_contract_version":version,
-            "context_identity":context["artifact_identity"],"snapshot_record_identity":row["prospective_snapshot_record_identity"],
+            "context_identity":context["artifact_identity"] if context else None,"snapshot_record_identity":row["prospective_snapshot_record_identity"],
             "integrated_decision_identity":row["integrated_decision_identity"],
             "source_decision_artifact_identity":row["source_decision_artifact_identity"]}
 
@@ -101,9 +100,30 @@ def recover(path, *, created_at, diagnostic=False):
 
 
 class SealedBindings:
-    def __init__(self,index):
+    def __init__(self,index,receipt_identity=None):
         self.snapshot_identity=index["snapshot_identity"]
-        self.bindings={t:(r["session"],r["technical_contract_version"],r["context_identity"]) for t,r in index["records"].items()}
+        self.identity=self.snapshot_identity
+        self.index_identity=index["artifact_identity"]
+        self.write_receipt_identity=receipt_identity
+        self.records=index["records"]
+        self.source_integrated_decision_artifact=index["source_integrated_decision_artifact"]
+        self.bindings={t:(r["session"],r["technical_contract_version"],r["context_identity"]) for t,r in self.records.items() if r["context_identity"]}
+
+    def contains_integrated_decision(self,ticker,session,decision_identity):
+        row=self.records.get(ticker) or {}
+        return bool(decision_identity and row.get("session")==session and row.get("integrated_decision_identity")==decision_identity)
+
+    def contains_technical_context(self,ticker,session,contract_version,context_identity):
+        return bool(context_identity and self.bindings.get(ticker)==(session,contract_version,context_identity))
+
+    def contains(self,ticker,session,identity):
+        row=self.records.get(ticker) or {}
+        return self.contains_integrated_decision(ticker,session,identity) or bool(identity and row.get("session")==session and row.get("context_identity")==identity)
+
+    def verify(self,item):
+        if item["knowledge_stage"]=="T0_SEALED" and (item["seal_reference"]!=self.identity or not self.contains(
+            item["subject"]["ticker"],item["subject"]["session"],item["source"]["identity"])):
+            raise ValueError("THESIS_T0_SOURCE_NOT_SEALED")
 
 
 def load_verified(ref, *, expected_snapshot_identity, session):
@@ -119,6 +139,8 @@ def load_verified(ref, *, expected_snapshot_identity, session):
         fingerprint(path.parent/index["snapshot_file"]) != receipt["snapshot_fingerprint"]):
         raise ValueError("T0_INDEX_SNAPSHOT_OR_RECEIPT_BINDING_INVALID")
     for t,row in index["records"].items():
-        if row["ticker"] != t or row["session"] != session or row["technical_contract_version"] not in dispatch.SUPPORTED_VERSIONS:
+        if (row["ticker"] != t or row["session"] != session or
+            (row["context_identity"] and row["technical_contract_version"] not in dispatch.SUPPORTED_VERSIONS) or
+            (not row["context_identity"] and row["technical_contract_version"] is not None)):
             raise ValueError("T0_INDEX_ENTRY_INVALID")
-    return SealedBindings(index) if index["evaluation_scope"] != "REPLAY_DIAGNOSTIC" and session >= dispatch.PRODUCTION_V2_START_SESSION else None
+    return SealedBindings(index,receipt["artifact_identity"]) if index["evaluation_scope"] != "REPLAY_DIAGNOSTIC" and session >= dispatch.PRODUCTION_V2_START_SESSION else None
