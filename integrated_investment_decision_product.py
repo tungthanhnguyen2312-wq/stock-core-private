@@ -1871,6 +1871,21 @@ def market_bar_context_records(artifact, *, session, requested_at):
                 for ticker in (artifact.get("records") or {})}
 
 
+def attach_contextual_technical(record, context):
+    """The normal product's non-voting adapter, also used by retained offline proof.
+
+    ``context`` must come from contextual.verified_context_records. Standing
+    decision identity intentionally excludes this explanatory content.
+    """
+    import contextual_technical_features as contextual
+    record["contextual_technical_context"] = context
+    record["evidence_axes"]["TACTICAL_STRUCTURE"]["contextual_feature_reference"] = {
+        "status": context["status"], "non_voting": True,
+        "artifact_identity": context.get("projection", {}).get("artifact_identity"),
+        "authority_effect": contextual.AUTHORITY_EFFECT}
+    return record
+
+
 def build_artifact(
     *,
     session: str,
@@ -1912,6 +1927,9 @@ def build_artifact(
             f"{FINANCIAL_ANALYSIS_COMPACT_CONTRACT}:got={fa_contract}"
         )
     market_bars = market_bar_context_records(historical_context_artifact, session=session, requested_at=requested_at)
+    import contextual_technical_features as contextual
+    contextual_records = contextual.verified_context_records(historical_context_artifact, session=session,
+        knowledge_cutoff=requested_at, verified_bar_contexts=market_bars)
     tac_records = technical_structure_artifact.get("records") or {}
     # A claimed identity alone does not qualify a new fixed T0 condition. Keep
     # other research axes visible while failing closed on this dependent use.
@@ -2097,6 +2115,10 @@ def build_artifact(
         if historical_context_artifact is not None:
             dec["market_sector_context"]["multi_timeframe"] = market_bars.get(ticker, {
                 "status":"UNAVAILABLE", "reason":"MARKET_BAR_CONTEXT_NOT_AVAILABLE", "non_voting":True})
+        if ticker in contextual_records:
+            # Existing Technical/Tactical axis gets an additive, verified reference
+            # after decision/condition identities are finalized. No extra vote.
+            attach_contextual_technical(dec, contextual_records[ticker])
         records[ticker] = dec
         currency_counts[evidence_currency_class(dec["evidence_currency"])] += 1
         if dec["evidence_currency_gate"].get("applied"):
