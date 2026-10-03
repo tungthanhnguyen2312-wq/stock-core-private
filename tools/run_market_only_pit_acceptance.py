@@ -63,6 +63,7 @@ def run(*, manifest: dict, roots: dict[str, Path], calendar_path: Path, calendar
     for row in memberships: membership_by_ticker[row["ticker"]].append(row)
     evaluated = []
     replay_evaluated = []
+    market_index = eligibility.MarketVersionIndex(versions.values())
     for ticker, rows in sorted(grouped.items()):
         # The receipt's actual instant is a candidate data-availability cutoff,
         # not an assertion that a real T0 signal was emitted then.
@@ -74,7 +75,7 @@ def run(*, manifest: dict, roots: dict[str, Path], calendar_path: Path, calendar
                 earliest[day] = known
         for day, cutoff in sorted(earliest.items()):
             cutoff_sessions = pit_calendar_at_cutoff(sessions, calendar_receipts, session=day, knowledge_cutoff=cutoff)
-            args = dict(ticker=ticker,session=day,knowledge_cutoff=cutoff,market_versions=rows,
+            args = dict(ticker=ticker,session=day,knowledge_cutoff=cutoff,market_versions=market_index,
                         calendar_sessions=cutoff_sessions,universe_versions=membership_by_ticker[ticker])
             evaluated.append(eligibility.evaluate(requirements=eligibility.existing_vnm_requirements(),**args))
             replay_evaluated.append(eligibility.evaluate(requirements=eligibility.existing_vnm_requirements(replay_inputs=True),**args))

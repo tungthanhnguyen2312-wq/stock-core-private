@@ -301,16 +301,20 @@ def _working_dates_probe() -> dict[str, Any]:
     if not status.get("configured"):
         raise CanonicalDailyOperationError(STAGE_PROVIDER_EVIDENCE_UNAVAILABLE, "DNSE_CREDENTIAL_INJECTION_REQUIRED")
     api_key, api_secret = credentials_for_request()
-    response = fetch_capability_raw("working_dates", api_key=api_key, api_secret=api_secret, query={})
+    response = fetch_capability_raw("working_dates", api_key=api_key, api_secret=api_secret, query={}, retain_raw_bytes=True)
+    # Timestamp the actual completed I/O, never the earlier operation request.
+    from prospective_pit_capture_retention import io_known_at
+    received_at = io_known_at()
     if not response.get("ok"):
         raise CanonicalDailyOperationError(
             STAGE_PROVIDER_EVIDENCE_UNAVAILABLE,
             "WORKING_DATES_PROBE_FAILED:" + str(response.get("error_code")),
         )
-    body = response.get("body")
+    raw = response.get("raw_bytes")
+    body = json.loads(raw) if isinstance(raw, bytes) and raw else response.get("body")
     if not isinstance(body, dict):
         raise CanonicalDailyOperationError(STAGE_PROVIDER_EVIDENCE_UNAVAILABLE, "WORKING_DATES_PROBE_BODY_NOT_OBJECT")
-    return {"body": body, "retrieved_at": response.get("retrieved_at")}
+    return {"body": body, "raw_bytes": raw, "retrieved_at": response.get("retrieved_at") or received_at}
 
 
 def map_phase_a_stage(gate: Mapping[str, Any]) -> str:
@@ -706,6 +710,10 @@ def run_canonical_daily_operation(
         probe = None
     elif retained_resume_eligible:
         probe = None
+    import prospective_pit_capture_retention as capture_retention
+    import prospective_market_evidence_retention as pit_retention
+    retained_calendar = pit_retention.attempt(
+        capture_retention.retain_existing_calendar_probe, phase_working_dates, root=operation_output_root)
     phase_session = explicit_session
     automatic_non_trading_resolution: dict[str, Any] | None = None
     if phase_session is None:
@@ -1008,6 +1016,12 @@ def run_canonical_daily_operation(
         root, resolved_session, producer_result=producer_result, enrichment=enrichment,
         exact_session_snapshot=snapshot, **prospective_snapshot_kwargs,
     )
+    prospective_evidence = dict(acquisition.get("prospective_market_evidence") or {})
+    prospective_evidence["calendar"] = retained_calendar
+    prospective_capture_readiness = pit_retention.attempt(
+        capture_retention.daily_boundary, operation_output_root, session=resolved_session,
+        gate=phase_b, evidence=prospective_evidence, known_at=capture_retention.io_known_at(),
+        t0_snapshot_identity=((prospective_decision_snapshot or {}).get("artifact") or {}).get("snapshot_identity"))
     decision_packet = build_decision_packet(
         root, resolved_session, opportunity=operation.get("opportunity"), enrichment=enrichment,
         artifact_root=artifact_root,
@@ -1189,7 +1203,10 @@ def run_canonical_daily_operation(
             "provider_contribution_counts": acquisition.get("provider_contribution_counts"),
         },
         "corporate_currency_rollforward": acquisition["corporate_currency_rollforward"].receipt() if acquisition.get("corporate_currency_rollforward") is not None else None,
-        "prospective_market_evidence": acquisition.get("prospective_market_evidence"),
+        "prospective_market_evidence": ({k: v for k, v in acquisition["prospective_market_evidence"].items()
+            if k not in {"capture", "official_verification", "calendar"}} if isinstance(acquisition.get("prospective_market_evidence"), Mapping) else
+            acquisition.get("prospective_market_evidence")),
+        "prospective_pit_capture_readiness": prospective_capture_readiness,
         "registration": registration,
         "freeze": freeze,
         "daily_producer_status": producer_status,
@@ -1258,7 +1275,7 @@ def run_canonical_daily_operation(
     persistable = {k: v for k, v in record.items() if k not in {
         "producer_result", "decision_packet", "prospective", "prospective_decision_snapshot_detail", "enrichment",
         "tactical_reversal_shadow_collection", "post_handoff_observers", "post_handoff_prospective_decision_feedback",
-        "post_handoff_presentation_projection", "post_handoff_runtime_restage",
+        "post_handoff_presentation_projection", "post_handoff_runtime_restage", "prospective_pit_capture_readiness",
     }}
     persistable["lineage"] = {
         "session_gate_phase_a": phase_a.get("gate_identity"),

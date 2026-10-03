@@ -7,6 +7,7 @@ receipt are corruption, while later observations retain an explicit previous ver
 from __future__ import annotations
 
 import json
+from collections import defaultdict
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -52,20 +53,24 @@ def retain_market(exact_snapshot: Mapping[str, Any], *, session: str, root: Path
     receipts = directory / "receipts"
     # Bounded to this exact session, never a recursive retained-source search.
     prior = [_verified(p) for p in sorted(receipts.glob("*.json"))]
+    prior_by_id = {p["receipt_id"]: p for p in prior}
+    prior_by_series = defaultdict(list)
+    for p in prior:
+        prior_by_series[market.canonical(p["series_key"])].append(p)
     identities = []
     for observation in manifest["records"]:
         key = {"instrument": observation["instrument"], "source": observation["source"], "session": session}
         known = observation["acquisition"]["knowledge_available_at_utc"]
         receipt_id = market.sha256_hex(market.canonical({**key, "known_at": known}))
         path = receipts / (receipt_id + ".json")
-        matching = next((p for p in prior if p["receipt_id"] == receipt_id), None)
+        matching = prior_by_id.get(receipt_id)
         if matching:
             if matching["observation"] != observation:
                 raise ValueError("IMMUTABLE_RECEIPT_OBSERVATION_CONFLICT")
             _retain(path, matching)
             retained = matching
         else:
-            predecessors = [p for p in prior if p["series_key"] == key and
+            predecessors = [p for p in prior_by_series[market.canonical(key)] if
                             p["observation"]["acquisition"]["knowledge_available_at_utc"] < known]
             previous = max(predecessors, key=lambda p: (p["observation"]["acquisition"]["knowledge_available_at_utc"], p["receipt_id"]), default=None)
             retained = {"contract_version": CONTRACT_VERSION, "receipt_id": receipt_id, "series_key": key,

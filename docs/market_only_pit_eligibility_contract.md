@@ -66,3 +66,14 @@ not repair the old rows, establish active-time membership, widen the product den
 or enter the earlier eligible-window scan. All 31 source captures remain unchanged.
 
 Strategic closure and promotion gates: [14-capability dossier](internal/MARKET_PIT_FEASIBILITY_DOSSIER_20261002.md).
+
+## October 3 prospective completeness successor
+
+[Capture completeness V1](prospective_pit_capture_completeness_contract.md) starts a
+new clock only with the first successful complete future Daily capture. Time alone
+does not make any of the old incomplete receipts eligible. Additive companions,
+same-session positive listing and source-native invariant component requirements
+remain separate from effective ACTIVE membership and the standing VNM SMA50
+RAW/volume/CA signal contract. Old cohort outputs and exclusions remain exact;
+future cohorts use the shared contiguous governed capture chain. No signal
+evaluation or RAW/backtest/execution promotion follows from readiness.

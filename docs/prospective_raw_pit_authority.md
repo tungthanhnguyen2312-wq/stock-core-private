@@ -115,7 +115,7 @@ the contract supports, so `ACTIVE_UNIVERSE` stays UNKNOWN.
 
 * **Engineering can create:** ratio/cash terms per event (official announcement documents), HOSE event calendar, execution
   participation policy.
-* **Only future calendar time can create:** announcement publication time per event, history depth for backtests.
+* **Future observed evidence required:** actual announcement publication/observation time and complete comparable capture depth. Elapsed time cannot repair missing evidence in an old receipt.
 * **External source or permission:** HNX/UPCoM official series, a documented HOSE basis statement, official listing-status
   route for ACTIVE_UNIVERSE, complete historical trade ticks.
 
@@ -124,3 +124,12 @@ the contract supports, so `ACTIVE_UNIVERSE` stays UNKNOWN.
 HOSE `tradingresult`, 14 requests planned, 14 made, 14 OK, 0 retries, budget 20, spacing 1.5 s, one foreground run.
 Plan `19930c2eaf07a1f8ee1ffe68d792f9de355269dabaa132dbfad3d43c3ec93ac2`, ledger
 `0a592f86c7fcca1a0af479faf16849268a777da1753303ccc13106e83b7ad555`. No DNSE, Vnstock, KBS, VCI or FHSC call.
+
+## October 3 capture completeness successor
+
+[Capture completeness V1](prospective_pit_capture_completeness_contract.md) preserves
+the original scoped empirical RAW findings. Prospective observation fitness,
+economic/native representation, later official match and CA comparability remain
+independent dimensions. Later verification cannot rewrite T0; source-native scale
+consistency cannot promote global RAW or backtest authority. New prospective depth
+starts with a write-once first successful complete Daily marker, currently absent.

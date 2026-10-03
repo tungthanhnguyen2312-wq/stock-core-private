@@ -1,0 +1,255 @@
+{
+  "additional_daily_provider_requests": 0,
+  "all_assertions_passed": true,
+  "artifact_identity": "prospective_pit_capture_offline_acceptance:7ff40062b18a5b180bb693c903e9bf085c522cc22d41dc173783720c5f4da16a",
+  "artifact_sha256": "7ff40062b18a5b180bb693c903e9bf085c522cc22d41dc173783720c5f4da16a",
+  "authority_effect": "NONE / CAPTURE_COMPLETENESS_ONLY",
+  "canonical_publication_writes": 0,
+  "contract_version": "prospective_pit_capture_offline_acceptance/v1",
+  "disposition": "PROSPECTIVE_PIT_CAPTURE_COMPLETENESS_COMPLETE",
+  "first_real_acceptance": {
+    "gate": "FIRST_REAL_POST_RELEASE_CAPTURE_ACCEPTANCE",
+    "release_waits_for_future_session": false,
+    "status": "PENDING"
+  },
+  "future_ca_seam": {
+    "blocker": "STABLE_EVENT_ID_AND_LINKED_TERMS_LIFECYCLE_KNOWLEDGE_REQUIRED",
+    "historical_backfill": false,
+    "retained_contract": "prospective_market_evidence_retention/v1",
+    "status": "INTEGRATION_SEAM_ONLY"
+  },
+  "hermetic_acceptance": {
+    "errors": 0,
+    "failures": 0,
+    "passed": 55,
+    "skips": 0,
+    "status": "PASS"
+  },
+  "historical_t0": {
+    "bytes_unchanged": true,
+    "exact_retained_files": 19,
+    "october_2": "UNAVAILABLE_NO_RETROSPECTIVE_SEAL",
+    "source_hashes": {
+      "operations-review/prospective-decision-retention-v1/2026-09-09/29933b20fff98d5de98e1b3770c34e0896a5bf87fbc4d937c6fe8e996b058a63/prospective_decision_snapshot.json": "fa53edea215a73dc7dc44caf139dbf05894c4fd27d1ec286d2167cc92206675d",
+      "operations-review/prospective-decision-retention-v1/2026-09-10/5cf80549f4b71dcbf2c408040da2ba579b9563177825e26cda80f2004ff7c2f4/prospective_decision_snapshot.json": "a3809c43d7ef4990266d31bc7cce51e30986dad60f707f3e58f26376dca5493b",
+      "operations-review/prospective-decision-retention-v1/2026-09-11/1e2e10581a828c305c5df8a7d4c7720e54f984548122ad4fbf2873374a8b27a0/prospective_decision_snapshot.json": "ca5c6da10e7aa77cd7c4447774c29f765e15c94d8d240af1dd50a8339d0439a4",
+      "operations-review/prospective-decision-retention-v1/2026-09-11/70d8cae93a0d3a23b9a9a4c3c7a8f76e7a2baa77e2775ad420b2765975fc9b94/prospective_decision_snapshot.json": "2d90129ab008666146d51b96eb361d79089e4269f14a2c7c5a1653b9afb6676e",
+      "operations-review/prospective-decision-retention-v1/2026-09-11/c11780cd798d0a27f6bf6ec7374fc1664549960ec56a2bd75c03602a19d924ee/prospective_decision_snapshot.json": "2c8ca6e53c3ef7c1ff9b5c3c80af777a3efa800724e33f465e7a5fc0b3deedec",
+      "operations-review/prospective-decision-retention-v1/2026-09-14/18f72bc8d073d55dbee82d92723f271cbda0c2aa578a345329a08f111c2942ae/prospective_decision_snapshot.json": "d3a2d81b22468c62af4cf48df857095099b308ee17b848c325efd1590e4f5144",
+      "operations-review/prospective-decision-retention-v1/2026-09-15/cb716b767aa238f6be936d67db992c418f33b95336d36227efbfd91137cbcbf1/prospective_decision_snapshot.json": "c82dd9e229dade9dfd12977b065dccdadb05fb8db4aa3714708a7549ba4cf6e3",
+      "operations-review/prospective-decision-retention-v1/2026-09-16/b761b2c5fffd86202d3d99a952a7251736984e3cbe28d1584278f2f0e8812713/prospective_decision_snapshot.json": "dea900aa6bcb3ad2050988b4a580eca6859c28bc5defb04210f75b461211f41c",
+      "operations-review/prospective-decision-retention-v1/2026-09-17/a049a34d9b9d2100ba992acf6aaf97ce4ba1a248c4a630a1c5428879f6d55a47/prospective_decision_snapshot.json": "3dca880deaf6238f935f483c755d7464f8721b2f52b5d7f23097734318dcc872",
+      "operations-review/prospective-decision-retention-v1/2026-09-18/7cc74c68b25f1072a9816f2d97073345f1a27be66907daea9ab7c444157c35af/prospective_decision_snapshot.json": "db0be4fb36218bf7c46f0d05a7fc6cf0c5f808acc7ac9a265098e11a059bbb17",
+      "operations-review/prospective-decision-retention-v1/2026-09-21/54bb3729e544ecd00272032ac3a7a753054a941cba50bba17e53477beb512984/prospective_decision_snapshot.json": "f145642fe7ed18cf5e0fe83fd8fa5cf6dfeb3a78e1e7f1fe2cb951a832942f68",
+      "operations-review/prospective-decision-retention-v1/2026-09-22/5e89d11705ce341e838a2a36e22f4d8b83e37aaf3b9a94b4487956115a9397af/prospective_decision_snapshot.json": "b0fdf68fd3cb38b6d936441acc5c0f73db6ce1bab907eb3f321ef2e93831b4fb",
+      "operations-review/prospective-decision-retention-v1/2026-09-23/4cfc63881a492e74c55ee794b68347e74ae87cddd178283b67968b4f6c6e3f60/prospective_decision_snapshot.json": "d0840875b2cc7965721d27b0ac2e3ab3956553517a9ed284395f2d44a9b8adda",
+      "operations-review/prospective-decision-retention-v1/2026-09-24/00753d16daeb1acb42f139485647454ea271ac0c9057fce906d2acf55d68348a/prospective_decision_snapshot.json": "d01216dd042c75333574e15c68d50385ec1e4ba3822d3467f2290d2fcf75bfa2",
+      "operations-review/prospective-decision-retention-v1/2026-09-28/d30d69ad686e1943e42bc831f7f8fbbdd6f25eab69affc937a3b11d583d65896/prospective_decision_snapshot.json": "b55ff6e49611f8bc63be0332b505af025f6bb40ad662b78703459f5197273e03",
+      "operations-review/prospective-decision-retention-v1/2026-09-29/910e0d36ae0f625f681e122603d39dd9d7d7a78646c80e0c16576bf692fe44a0/prospective_decision_snapshot.json": "f9a53e59120987474a8fe7a9e09f5f7cc1243765dfa07dbf144935d2af5ef2fa",
+      "operations-review/prospective-decision-retention-v1/2026-09-30/cb678f46551102bb406f17c0013740654216a616f4cbb8f970612741f37ea574/prospective_decision_snapshot.json": "8c33b28596b31ed30aff390eeba45da366b52c807e2802093a34bf60ab1cdd3e",
+      "operations-review/prospective-decision-retention-v1/2026-10-01/8be63debc2d88f2333c2d0583c940626943588e09ecabe0fe47de1685cae3c33/prospective_decision_snapshot.json": "3474aef6ca93c4ebf228bc3b24fb67195fc6391992a8286e3ed2bb1f7d9838de",
+      "operations-review/prospective-decision-retention-v1/2026-10-02/2a4594cad0e282cdcb83c61dc6f72d8d24bf2b874a86fec6158ad73364c91c91/prospective_decision_snapshot.json": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "writes": 0
+  },
+  "input_sha256": {
+    "primary:operations-review/current-official-market-universe-refresh-v1-20260913/current_official_market_universe_artifact.json": "a3274336caa2c6c6f9f7819dd790367a5cef43f4b679da51fc98f289a13de88f",
+    "primary:operations-review/historical-raw-pit-real-factor-chain-qualification-v1-20260930/historical_raw_pit_real_factor_chain_qualification_20260930.json": "8cafb72d57b4b99d1817383b88de9e4a0ff3c086ea401c83f0eb05d829542441",
+    "primary:operations-review/prospective-market-snapshot-v1-20260929/prospective_market_snapshot_manifest.json": "09e6d33a829b860ba2cc90010d96e4ebf07ff12a7b482f4cae4488d84b591663",
+    "primary:operations-review/prospective-market-snapshot-v1-20260930/prospective_market_snapshot_manifest.json": "cd3f00e0e226159db3688610be21f5aa090dcdffe1e28f4f8ecbd3fa412b8c85",
+    "primary:operations-review/prospective-market-snapshot-v1-20261001/prospective_market_snapshot_manifest.json": "9e8ef7768ce41857ea2bcf8b35c1647af7cbbe2200e6d7ff7278d31de89be869",
+    "raw_pit:operations-review/prospective-raw-pit-authority-v1-20260929/dnse_prospective_snapshots.jsonl": "3497db3dc7c003d5cec683c834775459b79c80fbdbfc23c6579fc20349fba968",
+    "raw_pit:operations-review/prospective-raw-pit-authority-v1-20260929/hose_official_snapshots.jsonl": "935a55429b10ee4d617315b20049082b1e402230e7f138b96bae5b8e0cc6a5d9",
+    "raw_pit:operations-review/prospective-raw-pit-authority-v1-20260929/prospective_raw_pit_authority_artifact.json": "03bdb288b81ffc2baf8417bf0452662499858ac188fa7aef4fee98e36950bac0"
+  },
+  "legacy_gross_coverage": {
+    "VNM_PIT_AVAILABILITY_TECHNICAL_CONFIRMATION_V1": {
+      "by_exchange": {},
+      "contiguous_regions": [],
+      "earliest": null,
+      "eligible_sessions": 0,
+      "eligible_ticker_sessions": 0,
+      "eligible_tickers": 0,
+      "exclusion_reason_counts": {
+        "ACTIVE_UNIVERSE_UNKNOWN": 20149,
+        "CA_FACTOR_REQUIRED_UNAVAILABLE": 20149,
+        "KNOWLEDGE_CUTOFF_VIOLATION": 8945,
+        "LOOKBACK_WINDOW_INSUFFICIENT": 20149,
+        "PRICE_NOT_PIT_ELIGIBLE": 20149,
+        "SESSION_NOT_IN_GOVERNED_CALENDAR": 15568,
+        "SIGNAL_TICKER_SCOPE_NOT_SUPPORTED": 20126,
+        "VOLUME_NOT_PIT_ELIGIBLE": 20149
+      },
+      "first_contiguous_region": null,
+      "latest": null,
+      "observed_ticker_sessions": 20149
+    }
+  },
+  "legacy_market_eligibility_exactly_unchanged": true,
+  "legacy_signal_coverage": {
+    "VNM_PIT_AVAILABILITY_TECHNICAL_CONFIRMATION_V1": {
+      "by_exchange": {},
+      "contiguous_regions": [],
+      "earliest": null,
+      "eligible_sessions": 0,
+      "eligible_ticker_sessions": 0,
+      "eligible_tickers": 0,
+      "exclusion_reason_counts": {
+        "ACTIVE_UNIVERSE_UNKNOWN": 20149,
+        "CA_FACTOR_REQUIRED_UNAVAILABLE": 20149,
+        "KNOWLEDGE_CUTOFF_VIOLATION": 8945,
+        "LOOKBACK_WINDOW_INSUFFICIENT": 20149,
+        "PRICE_NOT_PIT_ELIGIBLE": 20149,
+        "SESSION_NOT_IN_GOVERNED_CALENDAR": 15568,
+        "SIGNAL_TICKER_SCOPE_NOT_SUPPORTED": 20126
+      },
+      "first_contiguous_region": null,
+      "latest": null,
+      "observed_ticker_sessions": 20149
+    }
+  },
+  "network_provider_calls": {
+    "network": 0,
+    "provider": 0,
+    "vnstock_import": 0
+  },
+  "new_evaluation_signals": 0,
+  "next_gate": "CONTEXTUAL_TECHNICAL_SEMANTIC_HARDENING_V2",
+  "next_gate_started": false,
+  "old_immutable_receipts": {
+    "before_after_digest": "c4a84337f59996c2db4165b64232845aed1f7aade504ccfbe3e642817764aed5",
+    "bytes_unchanged": true,
+    "classification_counts": {
+      "LEGACY_CAPTURE_INCOMPLETE": 908
+    },
+    "versions": 908
+  },
+  "performance": {
+    "normal_readiness": {
+      "retained_depth_per_ticker_bound": 250,
+      "run_scoped_index": true,
+      "scans": {}
+    },
+    "one_index_per_run": true,
+    "process_peak_rss_bytes": 459943936,
+    "synthetic_load": {
+      "all_assertions_passed": true,
+      "authority_effect": "NONE",
+      "counts_at_depth": {
+        "120": 256,
+        "20": 256,
+        "21": 256,
+        "250": 256,
+        "50": 256,
+        "60": 256
+      },
+      "index_pairs": 64000,
+      "index_seconds": 19.134382,
+      "indexed_sessions_per_ticker": 250,
+      "offline_guard_counters": {
+        "network": 0,
+        "provider": 0,
+        "vnstock_import": 0
+      },
+      "process_peak_rss_bytes": 194519040,
+      "readiness_seconds": 4.451573,
+      "scan_counts": {
+        "capture_batches": 250,
+        "latest_receipts": 256
+      },
+      "scope": "SYNTHETIC_LOAD_ONLY_NOT_REAL_MARKET_EVIDENCE",
+      "sessions": 260,
+      "tickers": 256,
+      "timing_context": "Concurrent with local Producer hermetic selection; not live Daily/full financial-product timing"
+    },
+    "whole_acceptance_seconds": 28.927429
+  },
+  "protected_product_bytes": {
+    "CurrentResearch": {
+      "bytes": 34873052,
+      "sha256": "ec6ce4216cc9cef50a4471fed90426edfb8ba6034bdd2c2a1b9682065fa510ac"
+    },
+    "IntegratedDecision": {
+      "bytes": 1333531241,
+      "sha256": "c569b80f752dfda9a8a63ae682d1596d716de56ff319964e21140f6cce53ea74"
+    },
+    "TechnicalContext": {
+      "bytes": 94853495,
+      "sha256": "f97f9df47a1ddd22eedb3ec29639965c3f442958de07175ea867fb78b5589f86"
+    },
+    "VolumeFlowContext": {
+      "bytes": 70975510,
+      "sha256": "39b4ef851b1e22e3ec468db837f84ea34cd085a76cb32d6a7e433fc39399ec26"
+    }
+  },
+  "protected_product_bytes_unchanged": true,
+  "release_readiness": {
+    "complete_session_count": 0,
+    "counts_at_depth": {
+      "120": 0,
+      "20": 0,
+      "21": 0,
+      "250": 0,
+      "50": 0,
+      "60": 0
+    },
+    "evaluation_authorized": false,
+    "first_complete_capture_session": null,
+    "legacy_incomplete_receipt_versions": 908,
+    "new_signals_declared": 0,
+    "session_chain_gaps": [],
+    "status": "NOT_CAPTURED"
+  },
+  "retained_calendar": {
+    "receipts": 1,
+    "source_identities": [
+      "dnse_working_dates_calendar_receipt:c324eb2a9825b965db63eabf5dd4fd213290351fb9f7b91442cf56ab10143ca3"
+    ],
+    "window_end": "2027-10-01",
+    "window_start": "2026-10-02"
+  },
+  "retained_legacy_market_inventory": {
+    "by_exchange": {
+      "UNKNOWN": 21092
+    },
+    "later_daily_receipts": 2578,
+    "legacy_raw_instrument_fields": {
+      "UNKNOWN_LEGACY_INSTRUMENT_FIELD": 6026
+    },
+    "legacy_scoped_raw_receipts": 6026,
+    "observed_earliest": "2026-08-24",
+    "observed_latest": "2026-10-01",
+    "observed_sessions": 24,
+    "official_hose_receipts": 8740,
+    "prospective_dnse_receipts": 18514,
+    "qualified_as_known_price_receipts": 21092,
+    "qualified_volume_receipts": 0,
+    "tickers": 1334,
+    "unique_market_receipt_versions": 21092,
+    "volume_values_retained": 21092
+  },
+  "starting_main": "799f727d1d783cedcf5327ab8ff9a86478aa9096",
+  "validation": {
+    "diff_check": "PASS",
+    "final_affected": {
+      "deselected": 2,
+      "passed": 306,
+      "seconds": 50.96
+    },
+    "full_local_producer": {
+      "deselected": 14,
+      "passed": 2219,
+      "scope": "Full implementation before final two resolver boundary guards; exact final candidate requires full Producer CI",
+      "seconds": 561.81,
+      "skipped": 16,
+      "subtests_passed": 37
+    },
+    "py_compile": "PASS",
+    "release_requirement": "All four exact-candidate and merge-main Producer CI jobs",
+    "retained_legacy_learning": {
+      "passed": 2,
+      "scope": "Original exact August corpus read-only; no writes",
+      "seconds": 1.15
+    }
+  }
+}

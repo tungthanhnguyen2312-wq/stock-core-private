@@ -599,6 +599,9 @@ def _feedback_record(*, artifact: Mapping[str, Any], source_path: str, temporal:
     outcome = forward_bridge.evaluate_decision_forward_outcome(
         decision_record=record, p3f9b_snapshot=None, governed_chain=chain, retained_session_snapshots=snapshots,
     )
+    if hasattr(chain, "realized_prefix_after"):
+        start = record.get("as_of_session")
+        chain = [start] + chain.realized_prefix_after(start, max(forward_bridge.FORWARD_HORIZONS.values())) if start in chain else []
     if record.get("as_of_session") in chain:
         later_sessions = len(chain) - chain.index(record["as_of_session"]) - 1
     else:
@@ -679,8 +682,10 @@ class SettledFeedbackCache:
     conditions never settle. Missing future prices alone do not settle a condition.
     """
     def __init__(self, root, chain, snapshots, *, enabled=True, metrics=None):
-        self.root, self.chain, self.snapshots = Path(root), list(chain), snapshots
-        self.enabled, self.metrics = enabled, metrics
+        self.root, self.chain, self.snapshots = Path(root), chain if hasattr(chain, "next_n_sessions") else list(chain), snapshots
+        # Legacy cache proofs encode sparse session lists. Future-chain outcomes
+        # use the strict contract directly until an equivalent cache is qualified.
+        self.enabled, self.metrics = enabled and not hasattr(chain, "next_n_sessions"), metrics
         self.entries, self.retained, self.session_proofs = {}, {}, {}
         if enabled:
             try:
@@ -896,6 +901,10 @@ def build_feedback_artifact(root: str | Path, *, resolved_context: dict | None =
     if resolved_context is not None:
         resolved_context.update(chain=chain, snapshots=snapshots)
     settled = SettledFeedbackCache(root, chain, snapshots, enabled=use_settled_cache, metrics=cache_metrics)
+    from prospective_pit_capture_retention import load_marker, load_chain, io_known_at
+    marker = load_marker(root)
+    future_chain = load_chain(root, as_of=io_known_at()) if marker else None
+    future_settled = SettledFeedbackCache(root, future_chain, snapshots, enabled=False, metrics=cache_metrics) if marker else None
     records: list[dict[str, Any]] = []
     # Modern snapshots are the sole T0 source for future runs.  Their full
     # decision content, condition serialization and T0 close facts were sealed
@@ -924,7 +933,8 @@ def build_feedback_artifact(root: str | Path, *, resolved_context: dict | None =
             decision = retained.get("integrated_decision_at_t0")
             if not isinstance(decision, Mapping) or decision.get("ticker") != ticker:
                 continue
-            records.append(settled.evaluate(
+            evaluator = future_settled if marker and artifact["session"] >= marker["session"] else settled
+            records.append(evaluator.evaluate(
                 artifact=artifact, source_path=inventory["snapshot_path"], temporal=temporal,
                 record=decision,
                 t0_snapshot=snapshot, t0_snapshot_record=retained,
@@ -936,7 +946,8 @@ def build_feedback_artifact(root: str | Path, *, resolved_context: dict | None =
         for ticker, decision in sorted((artifact.get("records") or {}).items()):
             if not isinstance(decision, Mapping) or decision.get("ticker") != ticker:
                 continue
-            records.append(settled.evaluate(artifact=artifact, source_path=candidate["artifact_path"], temporal=candidate["temporal"], record=decision))
+            evaluator = future_settled if marker and artifact["session"] >= marker["session"] else settled
+            records.append(evaluator.evaluate(artifact=artifact, source_path=candidate["artifact_path"], temporal=candidate["temporal"], record=decision))
     settled.finish()
     records.sort(key=lambda row: (str(row["decision_session"]), str(row["ticker"]), str(row["decision_identity"])))
     by_posture: dict[str, list[dict[str, Any]]] = defaultdict(list)
