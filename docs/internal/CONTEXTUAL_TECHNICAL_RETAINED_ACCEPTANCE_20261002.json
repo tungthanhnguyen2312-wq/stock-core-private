@@ -655,9 +655,8 @@
       }
     }
   },
-  "coverage_summary_provenance": "Final summary derived from SHA256-verified original feature batch; no analytical values, identities or measured timings changed.",
   "current_research_scope": 1503,
-  "feature_batch_sha256": "bc5f4abd301eed654956368886e65d8d9b4f05a9931738437cee9dc51c68f530",
+  "feature_batch_sha256": "f97f9df47a1ddd22eedb3ec29639965c3f442958de07175ea867fb78b5589f86",
   "feature_contract": "contextual_technical_feature_set/v1",
   "input_hashes_unchanged": true,
   "knowledge_cutoff": "2026-10-02T15:42:58.929255+07:00",
@@ -668,11 +667,11 @@
   },
   "performance": {
     "decision_corpora_parsed": 1,
-    "feature_build_seconds": 263.848897,
+    "feature_build_seconds": 191.558417,
     "json_member_buffer_limit_bytes": 16777216,
     "price_corpora_parsed": 1,
-    "process_lifetime_peak_rss_bytes": 485609472,
-    "whole_acceptance_seconds": 489.829623
+    "process_lifetime_peak_rss_bytes": 487280640,
+    "whole_acceptance_seconds": 413.334195
   },
   "representative_cases": {
     "D_W_M_disagreement": {
@@ -684,8 +683,8 @@
     },
     "ca_blocker": {
       "context": {
-        "artifact_identity": "contextual_technical_feature_set/v1:a645927552fbe9f7a60cb97201ee4a223fc3669477dc3610961e2e791504a344",
-        "artifact_sha256": "a645927552fbe9f7a60cb97201ee4a223fc3669477dc3610961e2e791504a344",
+        "artifact_identity": "contextual_technical_feature_set/v1:1a2893bbdff8a57270ebe75cbfc2d5aa465dce68d27d4b177f30710abc813253",
+        "artifact_sha256": "1a2893bbdff8a57270ebe75cbfc2d5aa465dce68d27d4b177f30710abc813253",
         "as_of_session": "2026-10-02",
         "authority_effect": "NONE / DETERMINISTIC_DESCRIPTIVE_TECHNICAL_CONTEXT_ONLY",
         "contract_version": "contextual_technical_feature_set/v1",
@@ -1485,8 +1484,8 @@
             "status": "UNAVAILABLE"
           },
           "1W": {
-            "artifact_identity": "contextual_technical_feature_set/v1:31705b70d73f3d775bf04c32ce7f8ee45ce531a90e117181bd4bd9707274fe24",
-            "artifact_sha256": "31705b70d73f3d775bf04c32ce7f8ee45ce531a90e117181bd4bd9707274fe24",
+            "artifact_identity": "contextual_technical_feature_set/v1:6af3a6e5fbc8c9f453c1db713cec1b26b6c958cee5942ea6d2147c425a91f4f7",
+            "artifact_sha256": "6af3a6e5fbc8c9f453c1db713cec1b26b6c958cee5942ea6d2147c425a91f4f7",
             "authority_effect": "NONE / DETERMINISTIC_DESCRIPTIVE_TECHNICAL_CONTEXT_ONLY",
             "context": {
               "artifact_identity": "contextual_technical_inputs/v1:81536686db1c846a7403dea6ec034ba3bb5b4f6762baca67f24e7467a54127cc",
@@ -1770,23 +1769,7 @@
                 "required_lookback": 1,
                 "status": "DESCRIPTIVE_ONLY",
                 "values": {
-                  "labels": [
-                    {
-                      "action_authority": "NONE",
-                      "contextual_evidence_states": [],
-                      "feature_fitness": "DESCRIPTIVE_ONLY",
-                      "interpretation": "DOES_NOT_ESTABLISH_ACTION_OR_PREDICTION",
-                      "label": "GAP_DOWN_MORPHOLOGY",
-                      "primitive_conditions": {
-                        "observed_open_minus_prior_close": -2.599999999999998
-                      },
-                      "source_bar_identities": [
-                        "canonical_market_bar:ae8e4fb821979f1a7e746541260e32d8fad0dc9be1d8109c1c59fb2129790384",
-                        "canonical_market_bar:b57b218a8ca2b8e4971f213ed5f93e494bc9da79ce8d20ad7d8ffb77556a5877"
-                      ],
-                      "timeframe": "1W"
-                    }
-                  ]
+                  "labels": []
                 }
               },
               "structure": {
@@ -5332,8 +5315,8 @@
     },
     "insufficient_history": {
       "context": {
-        "artifact_identity": "contextual_technical_feature_set/v1:38e82a7188f05ca0222d8b9cc4e4e628728f20e701fa93a216565eb0c32f6354",
-        "artifact_sha256": "38e82a7188f05ca0222d8b9cc4e4e628728f20e701fa93a216565eb0c32f6354",
+        "artifact_identity": "contextual_technical_feature_set/v1:9c68ce9055d04969853baf08f9c6b8188b46657fb61a35acda5e6ab2204084f5",
+        "artifact_sha256": "9c68ce9055d04969853baf08f9c6b8188b46657fb61a35acda5e6ab2204084f5",
         "as_of_session": "2026-10-02",
         "authority_effect": "NONE / DETERMINISTIC_DESCRIPTIVE_TECHNICAL_CONTEXT_ONLY",
         "contract_version": "contextual_technical_feature_set/v1",
@@ -6003,8 +5986,8 @@
             "status": "UNAVAILABLE"
           },
           "1W": {
-            "artifact_identity": "contextual_technical_feature_set/v1:805c872561a6d2ddcd14dbeb36478902c9f9696b432dd8448a79396c2ca7ed34",
-            "artifact_sha256": "805c872561a6d2ddcd14dbeb36478902c9f9696b432dd8448a79396c2ca7ed34",
+            "artifact_identity": "contextual_technical_feature_set/v1:b0524baa7fb876260795fe154c99860b8b32ea32a00afe35fee505bbcd9d2fe6",
+            "artifact_sha256": "b0524baa7fb876260795fe154c99860b8b32ea32a00afe35fee505bbcd9d2fe6",
             "authority_effect": "NONE / DETERMINISTIC_DESCRIPTIVE_TECHNICAL_CONTEXT_ONLY",
             "context": {
               "artifact_identity": "contextual_technical_inputs/v1:752ec8006bfb4437fcabbbdcad67ded15a986252a45494eedb5997404cc898fd",
@@ -6268,21 +6251,6 @@
                       },
                       "source_bar_identities": [
                         "canonical_market_bar:8f5e78eccb0b19301083a2f6daa392a744ecbc580add59b9c214041f60b268a0"
-                      ],
-                      "timeframe": "1W"
-                    },
-                    {
-                      "action_authority": "NONE",
-                      "contextual_evidence_states": [],
-                      "feature_fitness": "DESCRIPTIVE_ONLY",
-                      "interpretation": "DOES_NOT_ESTABLISH_ACTION_OR_PREDICTION",
-                      "label": "GAP_UP_MORPHOLOGY",
-                      "primitive_conditions": {
-                        "observed_open_minus_prior_close": 1.1000000000000014
-                      },
-                      "source_bar_identities": [
-                        "canonical_market_bar:8f5e78eccb0b19301083a2f6daa392a744ecbc580add59b9c214041f60b268a0",
-                        "canonical_market_bar:07ad11c2eb7960a74aa6538a5709e23509aaffe56d8eed091f1883f4769ee8b0"
                       ],
                       "timeframe": "1W"
                     }
@@ -8406,8 +8374,8 @@
     },
     "strong_trend": {
       "context": {
-        "artifact_identity": "contextual_technical_feature_set/v1:bdd582aa794d9f614f0b48225d356be81c0a20316943df0d8cfce1c72b9a69b5",
-        "artifact_sha256": "bdd582aa794d9f614f0b48225d356be81c0a20316943df0d8cfce1c72b9a69b5",
+        "artifact_identity": "contextual_technical_feature_set/v1:2310cbd82f0ac97d1e4e6630bb98066fcb7a27229c80b6b301f60f3c5790c9e3",
+        "artifact_sha256": "2310cbd82f0ac97d1e4e6630bb98066fcb7a27229c80b6b301f60f3c5790c9e3",
         "as_of_session": "2026-10-02",
         "authority_effect": "NONE / DETERMINISTIC_DESCRIPTIVE_TECHNICAL_CONTEXT_ONLY",
         "contract_version": "contextual_technical_feature_set/v1",
@@ -9906,8 +9874,8 @@
             "status": "UNAVAILABLE"
           },
           "1W": {
-            "artifact_identity": "contextual_technical_feature_set/v1:de40c22971a527ff0140fb149cd56b1652f090e2fe75c14856bea5bf0a83a307",
-            "artifact_sha256": "de40c22971a527ff0140fb149cd56b1652f090e2fe75c14856bea5bf0a83a307",
+            "artifact_identity": "contextual_technical_feature_set/v1:04e336d0bad10fc18949849d96cae59ed805a11cade4640610c60ed7ad33cc3d",
+            "artifact_sha256": "04e336d0bad10fc18949849d96cae59ed805a11cade4640610c60ed7ad33cc3d",
             "authority_effect": "NONE / DETERMINISTIC_DESCRIPTIVE_TECHNICAL_CONTEXT_ONLY",
             "context": {
               "artifact_identity": "contextual_technical_inputs/v1:b077219ac3f826bca6fa804d8961f3f62fd8c2ba7b7d508919c1a30e6aa48e00",
@@ -10215,21 +10183,6 @@
                       },
                       "source_bar_identities": [
                         "canonical_market_bar:450296ed1a5e14c195f64401222bf6228fde4852040b0d26f834cd1e31ced297"
-                      ],
-                      "timeframe": "1W"
-                    },
-                    {
-                      "action_authority": "NONE",
-                      "contextual_evidence_states": [],
-                      "feature_fitness": "DESCRIPTIVE_ONLY",
-                      "interpretation": "DOES_NOT_ESTABLISH_ACTION_OR_PREDICTION",
-                      "label": "GAP_DOWN_MORPHOLOGY",
-                      "primitive_conditions": {
-                        "observed_open_minus_prior_close": -0.04999999999999982
-                      },
-                      "source_bar_identities": [
-                        "canonical_market_bar:450296ed1a5e14c195f64401222bf6228fde4852040b0d26f834cd1e31ced297",
-                        "canonical_market_bar:6dcb60ec316b3884cac28023dbf713b682631bc4ec840476c0768c7ad941c507"
                       ],
                       "timeframe": "1W"
                     }
