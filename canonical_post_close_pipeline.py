@@ -1648,15 +1648,45 @@ def run_post_handoff_observers(
     )
     flow_price_divergence = run_flow_price_divergence_shadow(root, runtime_root, session, signal_velocity)
     tier1 = tiers["session_handoff_bundle"]
+    volume_flow_context = run_volume_and_flow_context(root, runtime_root, session, signal_velocity,
+        tier1.get("prospective_decision_snapshot"))
     tier1["multi_session_signal_velocity"] = signal_velocity
     tier1["current_foreign_flow_enrichment"] = current_foreign_flow_enrichment
     tier1["flow_price_divergence_shadow"] = flow_price_divergence
+    tier1["volume_and_flow_context"] = volume_flow_context
     _write_json(tiers["bundle_dir"] / "session_handoff_bundle.json", tier1)
     return {
         "multi_session_signal_velocity": signal_velocity,
         "current_foreign_flow_enrichment": current_foreign_flow_enrichment,
         "flow_price_divergence_shadow": flow_price_divergence,
+        "volume_and_flow_context": volume_flow_context,
     }
+
+
+def run_volume_and_flow_context(root: Path, runtime_root: Path, session: str,
+                                signal_velocity: Mapping[str, Any],
+                                snapshot_binding: Mapping[str, Any] | None = None) -> dict[str, Any]:
+    """Separate retained-only observer; no sealed decision or policy mutation."""
+    from volume_and_flow_retained import collect
+    from flow_price_divergence_shadow import write_immutable
+    output = root / "operations-review" / "volume-and-flow-context-v1" / session / "volume_and_flow_context.json"
+    try:
+        velocity = _load(root / signal_velocity["path"]) if signal_velocity.get("status") == "COLLECTED" else None
+        sealed = None
+        if snapshot_binding and snapshot_binding.get("status") == "RETAINED":
+            sealed = _load(root / snapshot_binding["path"])
+            if not sealed or sealed.get("snapshot_identity") != snapshot_binding.get("identity"):
+                raise ValueError("VOLUME_FLOW_T0_HANDOFF_BINDING_INVALID")
+        artifact, _ = collect(source_root=root,runtime_root=runtime_root,session=session,
+                              velocity_artifact=velocity,sealed_snapshot=sealed)
+        write_immutable(output,artifact)
+        return {"status": "COLLECTED", "session": session, "path": _rel(root,output),
+                "contract_version": artifact["contract_version"], "artifact_identity": artifact["artifact_identity"],
+                "universe_denominator": artifact["universe_denominator"], "build_stage": "POST_T0_ENRICHED",
+                "non_voting": True, "authority_effect": artifact["authority_effect"]}
+    except Exception as exc:
+        return {"status": "UNAVAILABLE", "session": session,
+                "reason": f"RETAINED_VOLUME_FLOW_CONTEXT_FAILED:{type(exc).__name__}:{exc}", "non_voting": True}
 
 
 def run_post_handoff_prospective_outcome_feedback(
@@ -2261,6 +2291,7 @@ def run_canonical_post_close(
         "multi_session_signal_velocity": post_handoff["multi_session_signal_velocity"],
         "current_foreign_flow_enrichment": post_handoff["current_foreign_flow_enrichment"],
         "flow_price_divergence_shadow": post_handoff["flow_price_divergence_shadow"],
+        "volume_and_flow_context": post_handoff["volume_and_flow_context"],
         "post_handoff_prospective_decision_feedback": post_handoff_feedback,
         "post_handoff_presentation_projection": post_handoff_presentation_projection,
         "producer_head": producer_head, "consumer_head": consumer_head,
