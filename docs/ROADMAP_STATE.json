@@ -1,7 +1,7 @@
 {
   "schema_version": "stocklookup_roadmap_execution_state/1.0.0",
   "roadmap_id": "stock-core-private",
-  "roadmap_version": "2026.10.03.1",
+  "roadmap_version": "2026.10.03.2",
   "narrative_authority": {
     "strategic_roadmap": "docs/ROADMAP.md",
     "operational_narrative": "docs/STATE.md",
@@ -9,17 +9,36 @@
     "ai_rules": "docs/AI_RULES.md",
     "note": "This file is the machine-readable EXECUTION-STATE authority: which milestone is current/active/next/blocked, what checkpoint proves each completed milestone, and whether recorded state contradicts Git/worktree reality. It does not restate or supersede the narrative docs' technical content and is not a substitute for reading them. Where this file and a narrative doc appear to disagree, that is a conflict to surface to the owner (AGENTS.md 'Default lightweight bootstrap' rule), never an automatic override in either direction."
   },
-  "implementation_lineage_head": "8a7e8bc1ee7883ed5cbeb3db7514b8cd45617fc1",
-  "last_updated_checkpoint": "8a7e8bc1ee7883ed5cbeb3db7514b8cd45617fc1",
+  "implementation_lineage_head": "e5e25abb6efd63fb0fee706512d6197d6747d343",
+  "last_updated_checkpoint": "e5e25abb6efd63fb0fee706512d6197d6747d343",
   "known_operational_diff_allowlist": [
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "CONTEXTUAL_CANDLE_AND_TECHNICAL_FEATURES_V1",
+    "milestone": "VOLUME_AND_INSTITUTIONAL_FLOW_CONTEXT_V1",
     "state": "COMPLETE"
   },
   "queued_next": [],
   "milestones": [
+    {
+      "milestone_id": "VOLUME_AND_INSTITUTIONAL_FLOW_CONTEXT_V1",
+      "state": "COMPLETE",
+      "starting_checkpoint": "20b168fe518ee58044010af0e812976ae5ea3ab9",
+      "checkpoint": "e5e25abb6efd63fb0fee706512d6197d6747d343",
+      "candidate_branch": "feature/volume-and-flow-context-v1",
+      "dependencies": [],
+      "unlocks": [],
+      "authority_effect": "NONE / DESCRIPTIVE_VOLUME_AND_PARTICIPANT_VALUE_CONTEXT_ONLY",
+      "owner_authorized": true,
+      "owner_override": "OWNER_DIRECTIVE_2026_10_03_VOLUME_FLOW_FULL_TECHNICAL_RELEASE_AUTONOMY",
+      "source_doc": "docs/volume_and_flow_context_contract.md",
+      "state_history": [
+        "ACTIVE",
+        "COMPLETE"
+      ],
+      "notes": "Separate post-handoff artifact; exact technical native-volume reuse, bounded persistence, qualified foreign VALUE cohort, explicit unqualified participants and denominators. October 2 1683/1503, native1252, short12/medium2 all stale, W/M0, foreign11 current and five-session mature / ten-twenty zero. Real T0 absent, all actual items post-T0; source/decision/technical identity parity. Contract and portable acceptance record actual limits; release requires final exact-head and merge-main four-job CI. Next Thesis Matrix Stage 1 not started; queued_next empty.",
+      "terminal_disposition": "VOLUME_AND_INSTITUTIONAL_FLOW_CONTEXT_COMPLETE"
+    },
     {
       "milestone_id": "CONTEXTUAL_CANDLE_AND_TECHNICAL_FEATURES_V1",
       "state": "COMPLETE",
@@ -2950,5 +2969,5 @@
       "reference_checkpoint": "9575cb04c899696a02b22ba9dfcfed9a4961cf2d"
     }
   ],
-  "successor_disposition": "WAITING_OWNER_AUTHORIZATION_FOR_LATER_ANALYTICAL_PROPOSAL"
+  "successor_disposition": "THESIS_EVIDENCE_MATRIX_AND_CONFLICT_ENGINE_V1_STAGE_1_REQUIRES_SEPARATE_OWNER_AUTHORIZATION_NOT_STARTED"
 }

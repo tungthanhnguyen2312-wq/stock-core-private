@@ -43,3 +43,12 @@ def test_bearish_confirmation_remains_its_source_observation():
     product.evaluate_evidence_axis_coherence(axes)
     assert axes['PARTICIPATION_CONFIRMATION']['state'] == 'CONFIRMED'
     assert axes['PARTICIPATION_CONFIRMATION']['supporting_reason_codes'] == ['MOMENTUM_DIRECTION_ALIGNED']
+
+
+@pytest.mark.parametrize('sector,expected', [('LEADING','ALIGNED'),('MIXED','ALIGNED'),('WEAKENING','MIXED'),('DATA_LIMITED','PARTIALLY_ALIGNED'),('future_new_state','PARTIALLY_ALIGNED')])
+def test_producer_sector_vocabulary_is_handled_explicitly(sector,expected):
+    axes={'FUNDAMENTAL':{'state':product.FUNDAMENTAL_STABLE}, 'TACTICAL_STRUCTURE':{'fitness':'AVAILABLE','state':product.TACTICAL_BREAKOUT_CONFIRMED}, 'PARTICIPATION_CONFIRMATION':{'state':'CONFIRMED'}, 'MARKET_SECTOR':{'context':{'sector_leadership':sector}}}
+    result=product.evaluate_evidence_axis_coherence(axes)
+    assert result['state'] == expected
+    if sector in ('DATA_LIMITED','future_new_state'):
+        assert result['reason_codes'] == ['SECTOR_LEADERSHIP_UNKNOWN_OR_DATA_LIMITED']

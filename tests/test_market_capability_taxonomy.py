@@ -73,7 +73,7 @@ class MissingDimensionIsolationTests(unittest.TestCase):
     def test_unresolved_room_fields_do_not_affect_flow_fields(self):
         room = taxonomy.capability("FOREIGN_ROOM_AVAILABLE", "DNSE")
         self.assertEqual(taxonomy.SEMANTIC_UNRESOLVED, room["usability_state"])
-        flow = taxonomy.capability("FOREIGN_NET_VOLUME", "DNSE")
+        flow = taxonomy.capability("FOREIGN_NET_VALUE", "DNSE")
         self.assertEqual(taxonomy.RESEARCH_USABLE, flow["usability_state"])
 
     def test_traded_value_missing_does_not_affect_volume(self):
@@ -142,3 +142,12 @@ class SnapshotTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+def test_dnse_foreign_volume_taxonomy_cannot_promote_semantic_contract():
+    for field in ('BUY','SELL','NET'):
+        rec=taxonomy.capability('FOREIGN_'+field+'_VOLUME','DNSE')
+        assert rec['usability_state'] == taxonomy.SEMANTIC_UNRESOLVED
+        assert rec['canonical_representation'] is None
+        assert rec['permitted_use_cases'] == ('DESCRIPTIVE_DISPLAY',)
+        assert rec['authority_effect'] == 'NONE'
