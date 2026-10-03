@@ -6,7 +6,7 @@ import subprocess
 import sys
 import tempfile
 
-AUTOMATIC_HOOK_ENABLED=False  # Enabled only after measured offline rehearsal and CI gates.
+AUTOMATIC_HOOK_ENABLED=True  # Measured retained rehearsal: 74.1 MB child peak, 0.22 MB parent growth; component-local failures.
 
 
 def _identity(value,*,kind):
