@@ -818,7 +818,9 @@ class TestEvidenceAxisCoherence:
     def test_aligned_case_is_qualitative_not_a_score(self) -> None:
         dec = self._decision()
         coherence = dec["evidence_axis_coherence"]
-        assert coherence["state"] == iidp.EVIDENCE_AXIS_COHERENCE_ALIGNED
+        # This legacy fixture has no exact-session sector binding; unknown
+        # producer vocabulary cannot silently establish full alignment.
+        assert coherence["state"] == iidp.EVIDENCE_AXIS_COHERENCE_PARTIALLY_ALIGNED
         assert "score" not in coherence and "probability" not in coherence and "vote" not in coherence
 
     def test_mixed_case_preserves_expensive_valuation_against_constructive_structure(self) -> None:

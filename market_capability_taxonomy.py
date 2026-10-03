@@ -470,21 +470,22 @@ _FOREIGN_FLOW_RECORDS: tuple[dict[str, Any], ...] = tuple(
         semantic_identity=identity, source=SOURCE_DNSE,
         source_capability_id="dnse:/price/{symbol}/foreign-trading",
         provider_native_representation={
-            "unit": "shares" if identity.endswith("VOLUME") else "vnd_raw_not_thousands",
+            "unit": "reported_shares_unqualified" if identity.endswith("VOLUME") else "vnd_raw_not_thousands",
         },
-        canonical_representation={
+        canonical_representation=None if identity.endswith("VOLUME") else {
             "unit": "shares" if identity.endswith("VOLUME") else "vnd_raw_not_thousands",
             "note": "already canonical VND; NOT passed through the K-VND->VND representation "
                     "contract, which does not apply to this capability",
         },
-        usability_state=RESEARCH_USABLE,
+        usability_state=SEMANTIC_UNRESOLVED if identity.endswith("VOLUME") else RESEARCH_USABLE,
         known_semantic_gaps=(
             "trade_type_composition_matched_vs_negotiated_undocumented",
             "point_in_time_qualified_but_provider_scoped_only",
-        ),
-        authority_requirements=(), permitted_use_cases=("EOD_FLOW", "INTRADAY_CUMULATIVE_FLOW"),
-        prohibited_use_cases=("LIQUIDITY_AUTHORITY", "POSITION_SIZING"),
-        evidence=_FOREIGN_FLOW_EVIDENCE,
+        ) + (("shares_magnitude_not_independently_qualified",) if identity.endswith("VOLUME") else ()),
+        authority_requirements=("qualified_volume_semantics",) if identity.endswith("VOLUME") else (),
+        permitted_use_cases=("DESCRIPTIVE_DISPLAY",) if identity.endswith("VOLUME") else ("EOD_FLOW", "INTRADAY_CUMULATIVE_FLOW"),
+        prohibited_use_cases=("LIQUIDITY_AUTHORITY", "POSITION_SIZING") + (("FOREIGN_FLOW_ANALYTICS",) if identity.endswith("VOLUME") else ()),
+        evidence=_FOREIGN_FLOW_EVIDENCE + ("market_volume_value_semantic_contract.py: DNSE foreign volume UNQUALIFIED; VALUE only analytics",),
     )
     for identity in ("FOREIGN_BUY_VOLUME", "FOREIGN_SELL_VOLUME", "FOREIGN_NET_VOLUME",
                       "FOREIGN_BUY_VALUE", "FOREIGN_SELL_VALUE", "FOREIGN_NET_VALUE")

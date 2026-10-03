@@ -172,7 +172,8 @@ _CONSTRUCTIVE_TACTICAL_PHASES = frozenset({
     TACTICAL_EXTENDED,
 })
 _ADVERSE_MARKET_REGIMES = frozenset({"WEAK_BREADTH", "DETERIORATING_BREADTH", "RISK_OFF"})
-_WEAK_SECTOR_STATES = frozenset({"LAGGING", "WEAK", "DETERIORATING"})
+_WEAK_SECTOR_STATES = frozenset({"WEAKENING", "LAGGING", "WEAK", "DETERIORATING"})
+_KNOWN_SECTOR_STATES = _WEAK_SECTOR_STATES | frozenset({"LEADING", "MIXED", "IMPROVING"})
 _AXIS_UNAVAILABLE_FITNESS = frozenset({
     None, "UNAVAILABLE", "INSUFFICIENT_EVIDENCE", "NOT_PROVIDED", "ABSENT", "NOT_ELIGIBLE", "NOT_AVAILABLE", "INPUT_BLOCKED",
 })
@@ -829,6 +830,9 @@ def evaluate_evidence_axis_coherence(evidence_axes: Mapping[str, Mapping[str, An
     elif technical_phase in _CONSTRUCTIVE_TACTICAL_PHASES and valuation_context.get("peer_relative_state") == "EXPENSIVE_VS_PEERS":
         state = EVIDENCE_AXIS_COHERENCE_MIXED
         reasons.append("CONSTRUCTIVE_TECHNICAL_STRUCTURE_WITH_EXPENSIVE_PEER_RELATIVE_VALUATION")
+    elif sector_state not in _KNOWN_SECTOR_STATES:
+        state = EVIDENCE_AXIS_COHERENCE_PARTIALLY_ALIGNED
+        reasons.append("SECTOR_LEADERSHIP_UNKNOWN_OR_DATA_LIMITED")
     elif (
         confirmation_state == "CONFIRMED"
         and fundamental.get("state") in (FUNDAMENTAL_IMPROVING, FUNDAMENTAL_STABLE, FUNDAMENTAL_TURNAROUND)
