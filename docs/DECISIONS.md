@@ -12,6 +12,17 @@ The owner authorizes Technical V2 and Volume & Flow V2 as one migration from mai
 
 # Decisions & Architectural Decision Records
 
+## 2026-10-03 — compact non-voting Thesis production sidecars
+
+The owner authorizes Stage 2 production integration and release from `d610db6` while
+freezing Stage-1 semantics. Build T0 only after the marker boundary and current after
+VolumeFlow in a retained-only child. Exact compact seal-index bindings prove identity;
+adapter basis and direction eligibility remain independent. Use immutable compact
+NDJSON/card products, COMPLETE-last publication and process-released writer locks;
+source artifacts retain evidence authority. Presentation copies bounded deterministic
+references without another posture. Real calendar registration remains owner-gated;
+the next gate is actual first-real capture acceptance. [Contract](thesis_evidence_stage_2_production_contract.md).
+
 ## 2026-10-02 — governed current corporate currency continuation
 
 Owner explicitly resumes the sequential program and authorizes bounded admitted-source acquisition and normal releases. Use one shared synchronous HNX/HOSE budget, preserving complete accepted bytes, failure receipts, successful-session immutability and caller-controlled retries. No new crawler/provider. The full UPCoM rights index requires 327 pages; retained two-request evidence supports explicit ex-date filtering, so the current window is named and every page/row reconciled instead of truncating or raising ceilings. HNX disclosures remain disabled. Current calendar evidence is ANNOUNCED, never inferred EXECUTED/APPROVED; explicit source lifecycles remain separately supported. All materialization stays scratch-local with actual known time. See [validation](internal/CURRENT_CORPORATE_CURRENCY_VALIDATION_20261002.md).

@@ -471,6 +471,7 @@ def _build_manifest(
             "prohibited_claims": list(PROHIBITED_CLAIMS),
         },
         "warnings": list(handoff.get("warnings") or run_manifest.get("warnings") or []),
+        **({"thesis_evidence":handoff["thesis_evidence"]} if "thesis_evidence" in handoff else {}),
     }
 
 
@@ -525,6 +526,13 @@ def _build_report_html(manifest: Mapping[str, Any], *, build_id: str) -> str:
         "<tr><td colspan=\"4\">No exact-session source identities retained.</td></tr>"
     )
     vol = market.get("median_20d_cross_sectional_volatility")
+    thesis=manifest.get("thesis_evidence") or {}
+    thesis_rows=[]
+    for card in thesis.get("focus_cards",[]):
+        lenses=card.get("lenses") or {}
+        states=" · ".join(_esc(name)+": "+_esc(p.get("state"))+" ("+_esc((p.get("lens_cap") or {}).get("reason_class"))+ ") · conflicts: "+_esc(", ".join(p.get("conflict_kinds",[]))) for name,p in lenses.items())
+        thesis_rows.append("<li>"+_esc(card.get("ticker"))+" · "+_esc(card.get("matrix_status"))+" · "+states+" · "+_esc(card.get("reason_class"))+" · blockers: "+_esc(", ".join(card.get("blocker_families",[])))+"<br><code>"+_esc(card.get("card_identity"))+"</code><br><code>"+_esc(card.get("matrix_identity"))+"</code></li>")
+    thesis_html=("<section><h2>Thesis evidence</h2><p>"+_esc((thesis.get("t0") or {}).get("status"))+" T0 · "+_esc((thesis.get("current") or {}).get("status"))+" Current</p><p>LONG / SHORT độc lập. Evidence states; non-voting. Posture hiện hữu giữ nguyên.</p><ul>"+"".join(thesis_rows)+"</ul></section>") if thesis else ""
     vol_note = ""
     if isinstance(vol, Mapping) and "value" in vol:
         vol_note = (
@@ -542,6 +550,7 @@ def _build_report_html(manifest: Mapping[str, Any], *, build_id: str) -> str:
 </head>
 <body class="bg-bg text-white font-sans" data-page="archive" data-session="{_esc(session)}">
   <main class="vs-content" style="max-width: 1100px; margin: 1.5rem auto; padding: 0 1rem;">
+    {thesis_html}
     <p class="section-eyebrow">Báo cáo phiên thị trường</p>
     <h1>Phiên giao dịch {display}</h1>
     <p>

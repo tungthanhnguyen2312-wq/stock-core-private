@@ -62,6 +62,7 @@ from canonical_post_close_pipeline import (
     evaluate_dashboard_runtime_readiness,
     register_session_inputs,
     retain_prospective_decision_snapshot,
+    run_thesis_t0_sidecar,
     run_post_handoff_observers,
     run_post_handoff_presentation_projection,
     run_post_handoff_prospective_outcome_feedback,
@@ -1022,6 +1023,7 @@ def run_canonical_daily_operation(
         capture_retention.daily_boundary, operation_output_root, session=resolved_session,
         gate=phase_b, evidence=prospective_evidence, known_at=capture_retention.io_known_at(),
         t0_snapshot_identity=((prospective_decision_snapshot or {}).get("artifact") or {}).get("snapshot_identity"))
+    thesis_t0 = run_thesis_t0_sidecar(root,resolved_session,prospective_decision_snapshot,enrichment,output_root=operation_output_root)
     decision_packet = build_decision_packet(
         root, resolved_session, opportunity=operation.get("opportunity"), enrichment=enrichment,
         artifact_root=artifact_root,
@@ -1049,6 +1051,7 @@ def run_canonical_daily_operation(
         artifact_root=artifact_root,
         runtime_release=runtime_release,
         **tier_kwargs,
+        **({"thesis_t0":thesis_t0} if thesis_t0.get("status")!="NOT_APPLICABLE" else {}),
     )
 
     # CANONICAL_DAILY_POST_HANDOFF_AND_OWNER_WORKFLOW_RECONCILIATION_V1: run every
@@ -1166,6 +1169,7 @@ def run_canonical_daily_operation(
             runtime_restage=post_handoff_runtime_restage,
             daily_producer_run_identity=producer_result.get("run_identity"),
             canonical_daily_operation_identity=operation_identity,
+            **({"thesis_evidence":post_handoff_observers["thesis_evidence"]} if "thesis_evidence" in post_handoff_observers else {}),
         )
     except Exception:
         pass

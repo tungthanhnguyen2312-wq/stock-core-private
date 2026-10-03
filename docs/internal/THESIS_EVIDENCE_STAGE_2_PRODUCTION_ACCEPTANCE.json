@@ -1,0 +1,451 @@
+{
+  "action_policy_delta": 0,
+  "all_assertions_passed": true,
+  "artifact_identity": "thesis_stage_2_production_acceptance/v1:71d4fc4841756b9de55412a79deb1a9eadfedd9648dfee902d1a5cc7768e21e5",
+  "artifact_sha256": "71d4fc4841756b9de55412a79deb1a9eadfedd9648dfee902d1a5cc7768e21e5",
+  "authority_effect": "NONE / NON_VOTING_THESIS_PRODUCTION_PROJECTION_ONLY",
+  "automatic_hook_basis": "Independently reproduced by the Claude Code takeover: 1683/1683 Stage-1 matrix+lens parity, child peak ~73 MB, parent growth <0.5 MB, immutable retry/one-ticker verifier, zero source/capture/action delta, component-local failure tests (child non-zero exit, MemoryError, component-wide, partial/stale tmp, immutable conflict, concurrent writer). Known cost: ~400-490 s wall per stage (child-only; Thesis runs after the capture marker and fails soft, 1800 s child timeout). Release gated by candidate/main CI.",
+  "automatic_hook_disposition": "ENABLED",
+  "capture_marker_writes": 0,
+  "contract_version": "thesis_stage_2_production_acceptance/v1",
+  "current": {
+    "descriptive_warnings": [
+      {
+        "count": 609,
+        "denominator": 1683,
+        "kind": "CONTESTED_CONCENTRATION",
+        "lens": "LONG_TERM_INVESTOR"
+      },
+      {
+        "count": 58,
+        "denominator": 1683,
+        "kind": "CONTESTED_CONCENTRATION",
+        "lens": "SHORT_TERM_INVESTOR"
+      },
+      {
+        "kind": "LENS_DISTRIBUTIONS_IDENTICAL",
+        "observed": false
+      },
+      {
+        "comparison": "NOT_EVALUABLE_WITHOUT_EXPLICIT_PRIOR_PRODUCT",
+        "denominator": 1683,
+        "kind": "SHORT_SUPPORTIVE_COLLAPSE",
+        "supportive_count": 92
+      },
+      {
+        "count": 592,
+        "denominator": 1683,
+        "kind": "LENS_STATES_IDENTICAL"
+      },
+      {
+        "comparison": "NOT_EVALUABLE_WITHOUT_EXPLICIT_PRIOR_PRODUCT",
+        "kind": "CONFLICT_EXPLOSION",
+        "kinds": {
+          "FUNDAMENTAL_VALUATION_DIVERGENCE": 53,
+          "MACRO_SECTOR_DIVERGENCE": 8,
+          "TECHNICAL_INTRA_TIMEFRAME_CONFLICT": 50
+        },
+        "total": 111
+      },
+      {
+        "kind": "STATE_CHURN_ACROSS_SESSIONS",
+        "status": "NOT_EVALUABLE_WITHOUT_EXPLICIT_PRIOR_PRODUCT"
+      },
+      {
+        "comparison": "NOT_EVALUABLE_WITHOUT_EXPLICIT_PRIOR_PRODUCT",
+        "current": {
+          "flow": true,
+          "t0": false
+        },
+        "kind": "AVAILABILITY_EPOCH_TRANSITIONS"
+      }
+    ],
+    "distributions": {
+      "LONG_TERM_INVESTOR": {
+        "ADVERSE": 145,
+        "CONTESTED": 609,
+        "INSUFFICIENT_EVIDENCE": 538,
+        "NOT_CONFIRMED": 391
+      },
+      "SHORT_TERM_INVESTOR": {
+        "ADVERSE": 416,
+        "CONTESTED": 58,
+        "INSUFFICIENT_EVIDENCE": 1044,
+        "NOT_CONFIRMED": 73,
+        "SUPPORTIVE": 92
+      }
+    },
+    "identity": "thesis_product_manifest/v1:5c23154a264941437a4c5eefb2f8faf3f03c32fbe064e55fe1bb33d73ae64e6a",
+    "pathology_fail_conditions": {
+      "action_posture_delta": 0,
+      "duplicate_vote": 0,
+      "flow_directional_vote": 0,
+      "forbidden_judgment_field": 0,
+      "foreign_breadth_overclaim": 0,
+      "missing_unavailable_reason": 0,
+      "post_in_t0": 0,
+      "retrospective_item_in_t0": 0,
+      "state_card_mismatch": 0
+    },
+    "records": 1683,
+    "source_parse_passes": {
+      "decision": 1,
+      "flow": 1,
+      "technical": 1
+    },
+    "stage_1_exact_matrix_and_lens_parity": 1683,
+    "status": "COLLECTED"
+  },
+  "evaluation_scope": "REPLAY_DIAGNOSTIC / NON_AUTHORITATIVE",
+  "failure_and_presentation_tests": {
+    "names": [
+      "test_generalized_binding_exact_and_no_snapshot_parse",
+      "test_exact_seal_does_not_override_stage_one_basis_policy[RETROSPECTIVE_ADJUSTED-False]",
+      "test_exact_seal_does_not_override_stage_one_basis_policy[PIT_CA_ADJUSTED-True]",
+      "test_t0_compact_product_contains_no_post_and_retry_is_immutable",
+      "test_late_rebuild_streams_original_and_is_excluded_from_learning",
+      "test_t0_unavailable_is_component_state_not_invented_lenses",
+      "test_current_new_post_inputs_get_new_digest_and_t0_bytes_unchanged",
+      "test_per_ticker_failure_isolated_and_no_fabricated_lens[ValueError]",
+      "test_per_ticker_failure_isolated_and_no_fabricated_lens[MemoryError]",
+      "test_partial_publication_rebuild_and_complete_conflict",
+      "test_child_failure_does_not_change_capture_marker_or_t0[OSError]",
+      "test_child_failure_does_not_change_capture_marker_or_t0[MemoryError]",
+      "test_actual_child_is_offline_and_bounded_result",
+      "test_separate_output_root_keeps_source_relative_handoff_reference",
+      "test_unknown_never_action_and_independent_lenses",
+      "test_compact_handoff_dashboard_ai_share_exact_cards",
+      "test_monday_thesis_rows_are_independent_of_capture_success",
+      "test_later_integrated_source_uses_original_exact_t0_basis",
+      "test_snapshot_index_mismatch_and_tamper_fail_closed",
+      "test_concurrent_retry_cannot_replace_incomplete_writer",
+      "test_production_sequence_places_thesis_after_marker_and_flow_before_feedback",
+      "test_real_child_nonzero_exit_is_bounded_unavailable_and_never_insufficient",
+      "test_component_wide_exception_in_both_hooks_is_component_local",
+      "test_hook_disabled_disposition_is_explicit_unavailable_not_computed",
+      "test_missing_seal_index_never_upgrades_current_evidence_and_flow_absence_is_partial",
+      "test_stale_pending_files_from_killed_writer_do_not_block_or_leak_into_product",
+      "test_child_retry_reports_already_retained_without_losing_collected_state"
+    ],
+    "passed": 27
+  },
+  "foreign_sources": {
+    "bytes_unchanged": true,
+    "files": 11
+  },
+  "frozen_stage_1_and_v2_sources_unchanged": true,
+  "historical_t0": {
+    "bytes_unchanged": true,
+    "files": 19,
+    "writes": 0
+  },
+  "live_daily_runs": 0,
+  "network_provider_calls": {
+    "network": 0,
+    "provider": 0,
+    "vnstock_import": 0
+  },
+  "next_gate": "FIRST_REAL_POST_RELEASE_CAPTURE_ACCEPTANCE",
+  "next_gate_started": false,
+  "old_receipts": {
+    "bytes_unchanged": true,
+    "versions": 908
+  },
+  "one_ticker_verifier": {
+    "performance": {
+      "child_peak_rss_bytes": 72675328,
+      "parent_baseline_rss_bytes": 145600512,
+      "parent_peak_rss_bytes": 145666048,
+      "parent_rss_growth_bytes": 65536,
+      "sample_interval_seconds": 0.02,
+      "wall_seconds": 219.18522539999685
+    },
+    "result": {
+      "matrix_identity": "thesis_evidence_matrix/v1:26d0703526061cd0e8ecf8865915de00cf330fb7edeab753a69c2a17d6d2ad83",
+      "network_provider_calls": {
+        "network": 0,
+        "provider": 0,
+        "vnstock_import": 0
+      },
+      "status": "PASS",
+      "ticker": "FPT",
+      "view_identity": "thesis_current_view/v1:38b40bb7a4a6eba56242d3a636eba01c2543639702f650f1f55a28b41face5a3"
+    }
+  },
+  "performance": {
+    "artifact_bytes": {
+      "COMPLETE.json": 385,
+      "cards.ndjson": 28864986,
+      "compact_total": 73489019,
+      "manifest.json": 5584,
+      "stage_1_full": 243984127,
+      "views.ndjson": 44618064
+    },
+    "current": {
+      "child_peak_rss_bytes": 72982528,
+      "parent_baseline_rss_bytes": 136544256,
+      "parent_peak_rss_bytes": 136978432,
+      "parent_rss_growth_bytes": 434176,
+      "sample_interval_seconds": 0.02,
+      "wall_seconds": 490.7850733000014
+    },
+    "engine": {
+      "peak_rss_bytes": 74203136,
+      "rss_bytes": 65458176,
+      "source_member_limit_bytes": 16777216,
+      "source_parse_passes": {
+        "decision": 1,
+        "flow": 1,
+        "technical": 1
+      },
+      "wall_seconds": 489.1135979000028
+    },
+    "reduction_fraction": 0.6987959015874832
+  },
+  "real_calendar_registration": {
+    "disposition": "CALENDAR_REGISTRATION_READY_FOR_OWNER_APPROVAL",
+    "documentation_known_at": "2026-10-02T03:40:02.445723+00:00",
+    "documentation_sha256": "7ffc05d537f8f6bc982dbf8108960e6c6eb5337482710b4309d189919fb40858",
+    "historical_extension": false,
+    "local_command_prepared": true,
+    "network_requests": 0,
+    "original_retrieved_at": "2026-10-02T03:36:48.399047+00:00",
+    "original_source_sha256": "fce46fe3c9003d094ff22910d122622566d33d39076437c06a459f2511c33d6d",
+    "registration_executed": false,
+    "registration_tool_sha256": "5514465b4462d0423fc74bbf656e9f35b99c922303477473701438a1a54ed129"
+  },
+  "real_release_readiness": {
+    "complete_session_count": 0,
+    "counts_at_depth": {
+      "120": 0,
+      "20": 0,
+      "21": 0,
+      "250": 0,
+      "50": 0,
+      "60": 0
+    },
+    "evaluation_authorized": false,
+    "first_complete_capture_session": null,
+    "new_signals_declared": 0,
+    "status": "NOT_CAPTURED"
+  },
+  "retry": {
+    "complete_bytes_unchanged": true,
+    "identity_unchanged": true,
+    "performance": {
+      "child_peak_rss_bytes": 73551872,
+      "parent_baseline_rss_bytes": 145575936,
+      "parent_peak_rss_bytes": 145678336,
+      "parent_rss_growth_bytes": 102400,
+      "sample_interval_seconds": 0.02,
+      "wall_seconds": 271.80092900000454
+    }
+  },
+  "source_hashes": {
+    "decision": "c569b80f752dfda9a8a63ae682d1596d716de56ff319964e21140f6cce53ea74",
+    "flow": "d9376670c380d45e1c9f17531b22a2cb99af5060f8c7ee25de6830dc270c9c02",
+    "stage_1_matrix": "1dc0608e64610e1e5689892002ec3b07fce97845835bf0fbde1c5a87fa3ccf94",
+    "technical": "e3b337591eb3ee57f5a4aef7c5298213bc5ad73b81d2ca1b4fc201a24371b228"
+  },
+  "source_mutation": 0,
+  "starting_main": "d610db689c1f512b3363e86cdf005c248343f422",
+  "synthetic_exact_t0": {
+    "PIT_CA_ADJUSTED": {
+      "current_status": "BUILT",
+      "index_lookup_snapshot_payload_parses": 0,
+      "only_seal_time_learning_eligible": true,
+      "origin": "SEAL_TIME",
+      "t0_performance": {
+        "child_peak_rss_bytes": 0,
+        "parent_baseline_rss_bytes": 143261696,
+        "parent_peak_rss_bytes": 143282176,
+        "parent_rss_growth_bytes": 20480,
+        "sample_interval_seconds": 0.02,
+        "wall_seconds": 0.26439140000002226
+      },
+      "t0_report": {
+        "action_policy_delta": 0,
+        "counts": {
+          "built_count": 2,
+          "partial_count": 0,
+          "unavailable_count": 0
+        },
+        "created_at": "2026-10-03T13:20:00.515050+00:00",
+        "distributions": {
+          "LONG_TERM_INVESTOR": {
+            "NOT_CONFIRMED": 2
+          },
+          "SHORT_TERM_INVESTOR": {
+            "INSUFFICIENT_EVIDENCE": 1,
+            "SUPPORTIVE": 1
+          }
+        },
+        "flow_directional_violation": 0,
+        "guards": {
+          "action_posture_delta": 0,
+          "duplicate_vote": 0,
+          "flow_directional_vote": 0,
+          "forbidden_judgment_field": 0,
+          "foreign_breadth_overclaim": 0,
+          "missing_unavailable_reason": 0,
+          "post_in_t0": 0,
+          "retrospective_item_in_t0": 0,
+          "state_card_mismatch": 0
+        },
+        "identity": "thesis_product_manifest/v1:170ca01b19b121508fba628ada983084c41d97903a7ed5b3e785f46a18f670ee",
+        "index_identity": "prospective_t0_seal_index:0e49f70881bf7b393d6314daab0c6b9a3dbf6d8977f8e42350c5355d0aef83e2",
+        "missing_unavailable_reason": 0,
+        "post_in_t0": 0,
+        "records": 2,
+        "retrospective_exclusion_count": 0,
+        "second_posture": 0,
+        "separate_basis_count": 0,
+        "session": "2026-10-05",
+        "snapshot_identity": "prospective_decision_snapshot:af7311fa44e992e2455d1b8b826f2cd07f4bbe9e554120fe9a48d6e12012ed75",
+        "stage": "t0",
+        "status": "BUILT",
+        "t0_coverage_by_axis": {
+          "CORPORATE_FORWARD": 2,
+          "EVIDENCE_QUALITY": 2,
+          "FUNDAMENTAL": 2,
+          "LIQUIDITY_PORTFOLIO": 4,
+          "MACRO_SECTOR": 4,
+          "TECHNICAL": 15,
+          "VALUATION": 2,
+          "VOLUME": 5
+        },
+        "t0_direction_coverage_by_axis": {
+          "CORPORATE_FORWARD": 0,
+          "EVIDENCE_QUALITY": 0,
+          "FUNDAMENTAL": 2,
+          "LIQUIDITY_PORTFOLIO": 0,
+          "MACRO_SECTOR": 4,
+          "TECHNICAL": 1,
+          "VALUATION": 2,
+          "VOLUME": 0
+        }
+      },
+      "t0_status": "BUILT"
+    },
+    "RETROSPECTIVE_ADJUSTED": {
+      "current_status": "BUILT",
+      "index_lookup_snapshot_payload_parses": 0,
+      "only_seal_time_learning_eligible": true,
+      "origin": "SEAL_TIME",
+      "t0_performance": {
+        "child_peak_rss_bytes": 0,
+        "parent_baseline_rss_bytes": 141381632,
+        "parent_peak_rss_bytes": 142745600,
+        "parent_rss_growth_bytes": 1363968,
+        "sample_interval_seconds": 0.02,
+        "wall_seconds": 0.2729763999959687
+      },
+      "t0_report": {
+        "action_policy_delta": 0,
+        "counts": {
+          "built_count": 2,
+          "partial_count": 0,
+          "unavailable_count": 0
+        },
+        "created_at": "2026-10-03T13:19:59.714012+00:00",
+        "distributions": {
+          "LONG_TERM_INVESTOR": {
+            "NOT_CONFIRMED": 2
+          },
+          "SHORT_TERM_INVESTOR": {
+            "INSUFFICIENT_EVIDENCE": 2
+          }
+        },
+        "flow_directional_violation": 0,
+        "guards": {
+          "action_posture_delta": 0,
+          "duplicate_vote": 0,
+          "flow_directional_vote": 0,
+          "forbidden_judgment_field": 0,
+          "foreign_breadth_overclaim": 0,
+          "missing_unavailable_reason": 0,
+          "post_in_t0": 0,
+          "retrospective_item_in_t0": 0,
+          "state_card_mismatch": 0
+        },
+        "identity": "thesis_product_manifest/v1:459476cbf696a0edb1fcd240ba112444ab23979a72d25edb28f47a9bc860a033",
+        "index_identity": "prospective_t0_seal_index:29fd939521e53a2d4f97c33272f3d8adf5f77803400821e3f41ef78b3e5b93a8",
+        "missing_unavailable_reason": 0,
+        "post_in_t0": 0,
+        "records": 2,
+        "retrospective_exclusion_count": 1,
+        "second_posture": 0,
+        "separate_basis_count": 0,
+        "session": "2026-10-05",
+        "snapshot_identity": "prospective_decision_snapshot:c89b93d51978be003cc4169948ea2525127bc55c1085229fd7128647ece468e1",
+        "stage": "t0",
+        "status": "BUILT",
+        "t0_coverage_by_axis": {
+          "CORPORATE_FORWARD": 2,
+          "EVIDENCE_QUALITY": 2,
+          "FUNDAMENTAL": 2,
+          "LIQUIDITY_PORTFOLIO": 4,
+          "MACRO_SECTOR": 4,
+          "TECHNICAL": 10,
+          "VALUATION": 2,
+          "VOLUME": 4
+        },
+        "t0_direction_coverage_by_axis": {
+          "CORPORATE_FORWARD": 0,
+          "EVIDENCE_QUALITY": 0,
+          "FUNDAMENTAL": 2,
+          "LIQUIDITY_PORTFOLIO": 0,
+          "MACRO_SECTOR": 4,
+          "TECHNICAL": 0,
+          "VALUATION": 2,
+          "VOLUME": 0
+        }
+      },
+      "t0_status": "BUILT"
+    }
+  },
+  "t0": {
+    "disposition": {
+      "reason": "VERIFIED_T0_SEAL_INDEX_UNAVAILABLE",
+      "session": "2026-10-02",
+      "status": "UNAVAILABLE"
+    },
+    "performance": {
+      "child_peak_rss_bytes": 0,
+      "parent_baseline_rss_bytes": 145575936,
+      "parent_peak_rss_bytes": 145575936,
+      "parent_rss_growth_bytes": 0,
+      "sample_interval_seconds": 0.02,
+      "wall_seconds": 0.0002826999989338219
+    }
+  },
+  "validation": {
+    "candidate_and_main_ci": "REQUIRED_BEFORE_RELEASE",
+    "ci_focused_hermetic_selection_local": {
+      "deselected": 15,
+      "passed": 2522,
+      "skipped": 16,
+      "subtests_passed": 37
+    },
+    "legacy_failures_on_candidate_and_starting_main": {
+      "failed": 34,
+      "identical_sets": true,
+      "passed": 38,
+      "stage2_regression": 0,
+      "stage_2_synthetic_dashboard_ai_identity_parity": "PASS",
+      "test_dashboard_session_companions": {
+        "cause": "retained 2026-08-26 evidence absent in worktree; not in CI",
+        "classification": "FIXTURE_UNAVAILABLE",
+        "count": 7
+      },
+      "test_release_orchestrator": {
+        "cause": "publisher authority guard refuses any checkout except the primary path; not in CI",
+        "classification": "BASELINE_ENVIRONMENT_FAILURE",
+        "count": 27
+      }
+    },
+    "stage2_tests": {
+      "passed": 27
+    }
+  }
+}
