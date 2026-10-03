@@ -1,5 +1,7 @@
 ## 2026-10-03 — owner-authorized paired semantic version migration
 
+**2026-10-03 owner-authorized Thesis Evidence Matrix Stage 1.** Build one offline non-voting organizer through `evidence_item/v1`, a closed versioned adapter registry, semantic correlation groups, independent LONG/SHORT lenses and deterministic conflicts. Reuse current source semantics; foreign VALUE is FACTS_ONLY and V2 volume owns participation. Preserve all producers, posture policy, historical T0 and authority. No Daily/Dashboard/handoff/T0-writer import. One retained acceptance and one release PR; Stage 2 production integration requires a new owner directive. [Contract](thesis_evidence_matrix_stage_1_contract.md).
+
 The owner authorizes Technical V2 and Volume & Flow V2 as one migration from main `bb3dea293ce9c7f757d3bd9e6f1f9fb22af82517`, through one PR and candidate/main CI. V1 artifacts and producers remain frozen. The compact version-neutral relationship view owns descriptive joins; Technical owns local primitives and Volume & Flow owns participation research. Strict tactical swing comparisons, action policy and authority remain unchanged. New production sessions select V2 from October 3; October 2 V2 acceptance is a non-authoritative replay without T0 registration. The first real post-release capture acceptance remains pending and additionally must prove exact V2 T0 sealing and V2 paired routing. Thesis Matrix Stage 1 stays unstarted.
 
 # Decisions & Architectural Decision Records
