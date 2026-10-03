@@ -539,3 +539,26 @@ def test_not_captured_readiness_has_no_fabricated_marker(tmp_path):
     result = store.CaptureIndex(tmp_path, cutoff=TIME).readiness(session=DAY)
     assert result["status"] == "NOT_CAPTURED" and result["first_complete_capture_session"] is None
     assert result["per_ticker"] == {} and result["complete_session_count"] == 0
+
+
+def test_first_complete_in_window_binding_after_incomplete_attempt_keeps_actual_knowledge():
+    receipt = receipt_for(snapshot())
+    early = binding(listed=presence(known="2026-10-02T02:00:00Z"))
+    complete = binding(created_at=DAY + "T12:30:00Z")
+    assert capture.effective_receipt(receipt, [early, complete], TIME)["capture_state"] == "INCOMPLETE_CAPTURE"
+    after = capture.effective_receipt(receipt, [complete, early], DAY + "T13:00:00Z")
+    assert after["capture_state"] == "T0_CAPTURE_COMPLETE" and after["effective_known_at"] == DAY + "T12:30:00Z"
+
+
+def test_official_literal_unit_label_needs_its_own_scoped_documentation():
+    documentation = {"status": "QUALIFIED", "source_identity": "doc:provider-unit", "provider": "DNSE",
+                     "route": "/price/ohlc", "fields": list(capture.OHLC), "unit": "VND", "known_at": DAY + "T02:00:00Z"}
+    value = snapshot(price_unit="VND", price_unit_documentation=documentation)
+    row = binding(value)
+    original = receipt_for(value)["observation"]
+    source = official(price_unit="VND")
+    verified = capture.official_verification(row, original, source, verification_known_at="2026-10-06T11:00:00Z")
+    assert verified["unit_semantics"]["economic_unit_qualified"] is False
+    source["price_unit_documentation"] = {**documentation, "provider": "HOSE", "source_id": source["source_id"]}
+    verified = capture.official_verification(row, original, source, verification_known_at="2026-10-06T11:00:00Z")
+    assert verified["unit_semantics"]["economic_unit_qualified"] is True

@@ -97,9 +97,10 @@ Ledger and body hashes, official native row, original capture identities and act
 later verification time remain visible. Official seconds-based report dates and
 native values are preserved without a `/1000` price guess.
 
-States are `VERIFIED_MATCH`, `VERIFIED_MISMATCH`, `PENDING_OFFICIAL_EVIDENCE`,
-`OFFICIAL_EVIDENCE_UNAVAILABLE`, or `NOT_VERIFIABLE_AT_THIS_SCALE`. Numeric ratios
-are diagnostic unless both sides independently document comparable units.
+States are `VERIFIED_MATCH`, `VERIFIED_MISMATCH`, `PENDING_VERIFICATION`,
+`OFFICIAL_SOURCE_UNAVAILABLE`, or `NOT_VERIFIABLE`. Numeric ratios
+are diagnostic unless both sides independently document comparable units. Literal
+unit labels alone cannot qualify the official side of an economic-unit comparison.
 Mismatch rows remain retained and counted, including older sessions and names
 without complete captures. Later evidence never changes original T0 knowledge.
 

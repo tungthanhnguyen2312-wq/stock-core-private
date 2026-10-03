@@ -256,19 +256,24 @@ def effective_receipt(receipt, companions, cutoff, *, first_complete_capture_ses
         conservative_close = market._utc(capture_window(session)[1], "conservative_close")
         if earliest_close <= receipt_known <= created < close <= conservative_close and observation["acquisition"]["capture_timing"] == market.PROSPECTIVE_SAME_SESSION_CAPTURE:
             qualified.append(row)
-    candidates = qualified or eligible
+    def missing_components(row):
+        missing = []
+        if not row.get("actual_provider_route") or not row.get("request_shape") or not row.get("provider_payload_identity") or not row.get("source_instrument_identity"):
+            missing.append("PROVIDER_PROVENANCE")
+        if row.get("exchange") == "UNKNOWN" or row.get("listing_binding_class") != "SAME_SESSION_POSITIVE" or not row.get("listing_observation_identity"):
+            missing.append("SAME_SESSION_LISTING_AND_EXCHANGE")
+        if row.get("representation_tier") == UNKNOWN:
+            missing.append("PRICE_REPRESENTATION")
+        return missing
+    # An earlier incomplete attempt does not suppress the first actual complete
+    # in-window binding. Its own earlier-cutoff result remains incomplete.
+    candidates = [r for r in qualified if not missing_components(r)] or qualified or eligible
     earliest = min(market._utc(r["created_at"], "created_at") for r in candidates)
     candidates = [r for r in candidates if market._utc(r["created_at"], "created_at") == earliest]
     if len({r["artifact_identity"] for r in candidates}) != 1:
         return {**base, "missing_components": ["CONFLICTING_CAPTURE_COMPANIONS"]}
     row = candidates[0]
-    missing = []
-    if not row.get("actual_provider_route") or not row.get("request_shape") or not row.get("provider_payload_identity") or not row.get("source_instrument_identity"):
-        missing.append("PROVIDER_PROVENANCE")
-    if row.get("exchange") == "UNKNOWN" or row.get("listing_binding_class") != "SAME_SESSION_POSITIVE" or not row.get("listing_observation_identity"):
-        missing.append("SAME_SESSION_LISTING_AND_EXCHANGE")
-    if row.get("representation_tier") == UNKNOWN:
-        missing.append("PRICE_REPRESENTATION")
+    missing = missing_components(row)
     return {**base, "companion": row, "effective_known_at": row["created_at"], "capture_state": "LATE_NOT_T0_QUALIFIED" if not qualified else
             "INCOMPLETE_CAPTURE" if missing else "T0_CAPTURE_COMPLETE", "missing_components": missing}
 
@@ -326,6 +331,14 @@ def official_verification(binding, observation, official=None, *, verification_k
                     state, reason = "VERIFIED_MISMATCH", "OHLC_RECONCILIATION_MISMATCH"
                 else:
                     state, reason = "NOT_VERIFIABLE", "UNIFORM_RATIO_WITHOUT_QUALIFIED_TRANSFORMATION"
+    official_unit_documentation = (official or {}).get("price_unit_documentation") or {}
+    official_unit_qualified = bool(official_unit_documentation.get("status") == "QUALIFIED" and
+        official_unit_documentation.get("source_identity") and official_unit_documentation.get("provider") == "HOSE" and
+        official_unit_documentation.get("source_id") == (official or {}).get("source_id") and
+        official_unit_documentation.get("fields") == list(OHLC) and official_unit_documentation.get("known_at") and
+        market._utc(official_unit_documentation["known_at"], "official_unit_known_at") <= when and
+        official_unit_documentation.get("unit") == (official or {}).get("price_unit") and
+        official_unit_documentation.get("unit") not in {None, "UNKNOWN", "SOURCE_PRICE_UNIT_UNDOCUMENTED"})
     body = {"contract_version": VERIFICATION_CONTRACT, "receipt_id": binding["receipt_id"],
             "t0_receipt_identity": binding["receipt_artifact_identity"], "capture_binding_identity": binding["artifact_identity"],
             "ticker": binding["ticker"], "session": binding["session"], "state": state,
@@ -336,8 +349,9 @@ def official_verification(binding, observation, official=None, *, verification_k
             "official_known_at": (official or {}).get("official_known_at"), "verification_known_at": verification_known_at,
             "ohlc_reconciliation": reconciliation, "ratio_transformation_relation": relation, "mismatch_reason": reason,
             "unit_semantics": {"provider_literal_claim": binding["literal_unit_claim"], "official_literal_claim": (official or {}).get("price_unit", "UNKNOWN"),
-                               "economic_unit_qualified": binding["representation_tier"] == ECONOMIC and
-                               binding["literal_unit_claim"] == (official or {}).get("price_unit")},
+                               "economic_unit_qualified": binding["representation_tier"] == ECONOMIC and official_unit_qualified and
+                               binding["literal_unit_claim"] == (official or {}).get("price_unit"),
+                               "official_unit_evidence": official_unit_documentation if official_unit_qualified else None},
             "basis_semantics": {"source_basis_claim": binding["source_basis_claim"],
                                 "official_basis_claim": (official or {}).get("source_basis_claim", market.SOURCE_BASIS_UNDOCUMENTED),
                                 "empirical_basis_evidence": (official or {}).get("empirical_basis_evidence", "NOT_TESTED")},

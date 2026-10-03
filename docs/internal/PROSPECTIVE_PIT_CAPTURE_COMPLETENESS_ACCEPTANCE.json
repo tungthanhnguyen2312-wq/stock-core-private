@@ -1,8 +1,8 @@
 {
   "additional_daily_provider_requests": 0,
   "all_assertions_passed": true,
-  "artifact_identity": "prospective_pit_capture_offline_acceptance:b71b3741a59fe8884facfc3b3632621bcf00bce1a128fe39067b4a31619548ec",
-  "artifact_sha256": "b71b3741a59fe8884facfc3b3632621bcf00bce1a128fe39067b4a31619548ec",
+  "artifact_identity": "prospective_pit_capture_offline_acceptance:7ff40062b18a5b180bb693c903e9bf085c522cc22d41dc173783720c5f4da16a",
+  "artifact_sha256": "7ff40062b18a5b180bb693c903e9bf085c522cc22d41dc173783720c5f4da16a",
   "authority_effect": "NONE / CAPTURE_COMPLETENESS_ONLY",
   "canonical_publication_writes": 0,
   "contract_version": "prospective_pit_capture_offline_acceptance/v1",
@@ -21,7 +21,7 @@
   "hermetic_acceptance": {
     "errors": 0,
     "failures": 0,
-    "passed": 53,
+    "passed": 55,
     "skips": 0,
     "status": "PASS"
   },
@@ -131,7 +131,7 @@
       "scans": {}
     },
     "one_index_per_run": true,
-    "process_peak_rss_bytes": 460447744,
+    "process_peak_rss_bytes": 459943936,
     "synthetic_load": {
       "all_assertions_passed": true,
       "authority_effect": "NONE",
@@ -162,7 +162,7 @@
       "tickers": 256,
       "timing_context": "Concurrent with local Producer hermetic selection; not live Daily/full financial-product timing"
     },
-    "whole_acceptance_seconds": 38.469367
+    "whole_acceptance_seconds": 28.927429
   },
   "protected_product_bytes": {
     "CurrentResearch": {
@@ -233,12 +233,13 @@
     "diff_check": "PASS",
     "final_affected": {
       "deselected": 2,
-      "passed": 304,
-      "seconds": 49.5
+      "passed": 306,
+      "seconds": 50.96
     },
     "full_local_producer": {
       "deselected": 14,
       "passed": 2219,
+      "scope": "Full implementation before final two resolver boundary guards; exact final candidate requires full Producer CI",
       "seconds": 561.81,
       "skipped": 16,
       "subtests_passed": 37
