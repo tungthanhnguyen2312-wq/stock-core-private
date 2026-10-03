@@ -47,6 +47,7 @@ def run_component(root,session,*,stage,snapshot_binding=None,output_root=None,de
             result=json.loads(result_path.read_bytes())
             if result.get("path"):
                 result["path"]=os.path.relpath(output_root/result["path"],root).replace("\\","/")
+            if result.get("status")=="ALREADY_RETAINED":result["retention"]="ALREADY_RETAINED"
             if result.get("component_status") in {"BUILT","PARTIAL"}:result["status"]="COLLECTED"
             return result
     except Exception as exc:
@@ -55,7 +56,7 @@ def run_component(root,session,*,stage,snapshot_binding=None,output_root=None,de
 
 def summary(block):
     """Only deterministic status/identity references; portable, no action or sorting."""
-    return {k:block.get(k) for k in ("status","component_status","artifact_identity","path","input_digest","built_count","partial_count","unavailable_count","reason") if block.get(k) is not None}
+    return {k:block.get(k) for k in ("status","component_status","artifact_identity","path","input_digest","built_count","partial_count","unavailable_count","reason","retention") if block.get(k) is not None}
 
 
 def focus_cards(root,reference,*,tickers=(),limit=12):

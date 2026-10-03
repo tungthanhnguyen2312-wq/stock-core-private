@@ -267,3 +267,56 @@ def test_production_sequence_places_thesis_after_marker_and_flow_before_feedback
     pipeline=(root/"canonical_post_close_pipeline.py").read_text(encoding="utf-8")
     portion=pipeline[pipeline.index("def run_post_handoff_observers"):pipeline.index("def run_thesis_t0_sidecar")]
     assert portion.index("volume_flow_context = run_volume_and_flow_context")<portion.index('stage="current"')
+
+
+def test_real_child_nonzero_exit_is_bounded_unavailable_and_never_insufficient(tmp_path,monkeypatch):
+    args,*_=fixture(tmp_path);monkeypatch.setattr(runtime,"AUTOMATIC_HOOK_ENABLED",True)
+    bad=tmp_path/"corrupt.json";bad.write_text("{"+"x"*200000,encoding="utf-8")
+    result=runtime.run_component(tmp_path,DAY,stage="current",decision_path=bad,snapshot_binding={
+        "identity":args["snapshot_identity"],"seal_index":{"status":"RETAINED",**args["index_ref"]}})
+    assert result["status"]=="UNAVAILABLE" and result["reason"].startswith("THESIS_CHILD_FAILED:")
+    assert len(json.dumps(result))<4096 and "INSUFFICIENT_EVIDENCE" not in json.dumps(result)
+
+
+def test_component_wide_exception_in_both_hooks_is_component_local(tmp_path,monkeypatch):
+    import canonical_post_close_pipeline as pipeline
+    monkeypatch.setattr(runtime,"AUTOMATIC_HOOK_ENABLED",True)
+    result=pipeline.run_thesis_t0_sidecar(tmp_path,DAY,object(),None)
+    assert result["status"]=="UNAVAILABLE" and result["reason"].startswith("THESIS_T0_COMPONENT_FAILED:")
+    monkeypatch.setattr(runtime,"run_component",lambda *a,**k:(_ for _ in ()).throw(MemoryError("fixture")))
+    result=pipeline.run_thesis_t0_sidecar(tmp_path,DAY,{"artifact":{}},{})
+    assert result["status"]=="UNAVAILABLE" and "MemoryError" in result["reason"]
+
+
+def test_hook_disabled_disposition_is_explicit_unavailable_not_computed(tmp_path,monkeypatch):
+    monkeypatch.setattr(runtime,"AUTOMATIC_HOOK_ENABLED",False)
+    result=runtime.run_component(tmp_path,DAY,stage="current",decision_path=tmp_path/"absent.json")
+    assert result["status"]=="UNAVAILABLE" and result["reason"]=="AUTOMATIC_THESIS_HOOK_DISABLED_FAIL_SOFT"
+
+
+def test_missing_seal_index_never_upgrades_current_evidence_and_flow_absence_is_partial(tmp_path):
+    args,*_=fixture(tmp_path)
+    no_index={k:v for k,v in args.items() if k not in {"index_ref","snapshot_identity","flow_path"}}
+    result=engine.build(**no_index,stage="current")
+    record=records(result,tmp_path)["VNM"]
+    assert record["matrix_status"]=="PARTIAL" and result["component_status"]=="PARTIAL"
+    assert record["t0_basis"]["availability"]!="AVAILABLE" and record["seal_index_identity"] is None
+    assert all(not n.endswith("/T0_SEALED") for n in record["stage_coverage_by_axis"])
+    assert not record["learning_cohort_eligible"] and record["second_posture"] is False
+
+
+def test_stale_pending_files_from_killed_writer_do_not_block_or_leak_into_product(tmp_path):
+    args,*_=fixture(tmp_path);first=engine.build(**args,stage="current")
+    folder=(tmp_path/first["path"]).parent;(folder/"COMPLETE.json").unlink()
+    (folder/".pending-stale-views").write_text("partial",encoding="utf-8")
+    repaired=engine.build(**args,stage="current")
+    assert repaired["component_status"]=="BUILT" and repaired["status"]!="ALREADY_RETAINED"
+    assert engine.verify_complete(folder)["files"].keys()=={"views.ndjson","cards.ndjson"}
+
+
+def test_child_retry_reports_already_retained_without_losing_collected_state(tmp_path,monkeypatch):
+    args,*_=fixture(tmp_path);monkeypatch.setattr(runtime,"AUTOMATIC_HOOK_ENABLED",True)
+    kwargs=dict(decision_path=args["decision_path"],snapshot_binding={"identity":args["snapshot_identity"],"seal_index":{"status":"RETAINED",**args["index_ref"]}})
+    first=runtime.run_component(tmp_path,DAY,stage="t0",**kwargs);second=runtime.run_component(tmp_path,DAY,stage="t0",**kwargs)
+    assert first["status"]==second["status"]=="COLLECTED" and second["retention"]=="ALREADY_RETAINED" and "retention" not in first
+    assert first["artifact_identity"]==second["artifact_identity"] and runtime.summary(second)["retention"]=="ALREADY_RETAINED"
