@@ -86,11 +86,13 @@ def default_feedback_policy(env: Mapping[str, str] | None = None) -> ResourcePol
         min_free_disk_bytes=int(number("MIN_FREE_DISK_BYTES", CALIBRATED_MIN_FREE_DISK_BYTES)))
 
 
-# Placeholders until the measured calibration is recorded (replaced in the calibration commit).
-CALIBRATED_DEADLINE_SECONDS = 1800.0
-CALIBRATED_MEMORY_LIMIT_BYTES = 3 * GIB
-CALIBRATED_MIN_AVAILABLE_PHYSICAL_BYTES = 1 * GIB
-CALIBRATED_MIN_AVAILABLE_COMMIT_BYTES = 2 * GIB
+# Calibrated from the real 31,977-row corpus (docs/owner_daily_feedback_resource_containment_contract.md section 5):
+# cold 340 s -> deadline 1,200 s (3.5x, still bounded); child committed peak 0.53 GiB -> ceiling 2 GiB (3.8x, grows ~5 MB/session);
+# admission floors at 1.5x the measured peak for RAM, 2x for commit, and 4 GiB of disk beyond the 2x-output spool/publish need.
+CALIBRATED_DEADLINE_SECONDS = 1200.0
+CALIBRATED_MEMORY_LIMIT_BYTES = 2 * GIB
+CALIBRATED_MIN_AVAILABLE_PHYSICAL_BYTES = 768 * 1024 * 1024
+CALIBRATED_MIN_AVAILABLE_COMMIT_BYTES = 1 * GIB
 CALIBRATED_MIN_FREE_DISK_BYTES = 4 * GIB
 
 

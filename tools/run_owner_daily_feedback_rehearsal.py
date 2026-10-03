@@ -203,6 +203,9 @@ def row_hashes(path: Path) -> dict:
             if key == "feedback_records":
                 for row in parser.elements():
                     rows[(row["decision_session"], row["ticker"], row["decision_identity"])] = hashlib.sha256(streaming._canon_bytes(row)).hexdigest()
+            elif key in streaming.ARRAY_MEMBERS:
+                for _ in parser.elements():
+                    pass
             else:
                 parser.value()
     return rows
