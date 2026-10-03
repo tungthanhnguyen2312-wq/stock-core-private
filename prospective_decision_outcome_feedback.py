@@ -752,6 +752,9 @@ class SettledFeedbackCache:
                    "feedback_contract": CONTRACT_VERSION, "forward_contract": forward_bridge.CONTRACT_VERSION,
                    "condition_contract": retention.CONDITION_CONTRACT_VERSION,
                    "outcome_contract": outcome_measurement.CONTRACT_VERSION,
+                   "outcome_method": outcome_measurement.METHOD_VERSION,
+                   "retention_contract": retention.CONTRACT_VERSION,
+                   "temporal_contract": TEMPORAL_CONTRACT_VERSION,
                    "policy": OUTCOME_POLICY_CONSTANTS, "horizons": forward_bridge.FORWARD_HORIZONS,
                    "inputs": inputs}
         key = _settled_hash(binding)

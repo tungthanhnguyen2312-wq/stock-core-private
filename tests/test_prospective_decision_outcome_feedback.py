@@ -320,7 +320,7 @@ def test_pre_post_handoff_and_later_session_preserve_earlier_temporal_truth(tmp_
     assert later == feedback.discover_prospective_corpus(root, use_summary_cache=False)
 
 
-@pytest.mark.parametrize("mutation", ["snapshot", "decision", "condition", "policy", "contract", "corrupt", "corrupt_entry", "oversize"])
+@pytest.mark.parametrize("mutation", ["snapshot", "decision", "condition", "policy", "contract", "method", "corrupt", "corrupt_entry", "oversize"])
 def test_settled_cache_invalidates_dependency_and_binding(tmp_path, monkeypatch, mutation):
     chain = [f"2026-01-{n:02d}" for n in range(1, 23)]
     snapshots = {s: _snapshot(s, 100 + i) for i, s in enumerate(chain)}
@@ -341,6 +341,8 @@ def test_settled_cache_invalidates_dependency_and_binding(tmp_path, monkeypatch,
         monkeypatch.setattr(feedback, "OUTCOME_POLICY_CONSTANTS", {**feedback.OUTCOME_POLICY_CONSTANTS, "version": "bumped"})
     elif mutation == "contract":
         monkeypatch.setattr(feedback, "CONTRACT_VERSION", "prospective_decision_outcome_feedback/test-bump")
+    elif mutation == "method":
+        monkeypatch.setattr(feedback.outcome_measurement, "METHOD_VERSION", "measurement/test-bump")
     elif mutation == "corrupt_entry":
         path = tmp_path / feedback._SETTLED_CACHE_PATH
         value = json.loads(path.read_text(encoding="utf-8"))

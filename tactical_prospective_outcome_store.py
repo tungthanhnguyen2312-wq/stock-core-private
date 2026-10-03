@@ -30,10 +30,10 @@ def _canon(value):
     return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False)
 
 
-def _digest(path):
+def _digest(path, *, block_bytes=1024 * 1024):
     digest, size = hashlib.sha256(), 0
     with path.open("rb") as source:
-        for chunk in iter(lambda: source.read(1024 * 1024), b""):
+        for chunk in iter(lambda: source.read(block_bytes), b""):
             digest.update(chunk)
             size += len(chunk)
     return digest.hexdigest(), size
@@ -162,7 +162,7 @@ def _legacy_compaction(root, metrics, legacy_root=None):
         fingerprint = hashlib.sha256()
         for path in originals:
             before = path.stat()
-            sha, size = _digest(path)
+            sha, size = _digest(path, block_bytes=min(before.st_size + 1, 64 * 1024))
             after = path.stat()
             if (before.st_size, before.st_mtime_ns) != (after.st_size, after.st_mtime_ns):
                 raise _error("LEGACY_OUTCOME_CHANGED_DURING_READ")
@@ -184,9 +184,9 @@ def _legacy_compaction(root, metrics, legacy_root=None):
                 if before.st_size > MAX_ROW_BYTES:
                     raise _error("OUTCOME_ROW_OVERSIZED")
                 with path.open("rb") as source:
-                    data = source.read(MAX_ROW_BYTES + 1)
+                    data = source.read(before.st_size + 1)
                 after = path.stat()
-                if len(data) > MAX_ROW_BYTES or (before.st_size, before.st_mtime_ns) != (after.st_size, after.st_mtime_ns):
+                if len(data) != before.st_size or (before.st_size, before.st_mtime_ns) != (after.st_size, after.st_mtime_ns):
                     raise _error("LEGACY_OUTCOME_CHANGED_DURING_READ")
                 metrics["legacy_validation_files_opened"] += 1
                 metrics["legacy_validation_bytes"] += len(data)
@@ -266,15 +266,15 @@ class OutcomeStoreIndex:
                     if isinstance(manifest, dict) and row.get("evaluation_as_of_session") != manifest["evaluation_as_of_session"]:
                         raise _error("OUTCOME_SHARD_SESSION_INVALID")
                     rows += 1
-                    count += 1
-                    if count > MAX_ROWS:
-                        raise _error("OUTCOME_STORE_INDEX_LIMIT")
                     identity = row["outcome_update_id"]
                     if identity in seen:
                         continue
+                    count += 1
+                    if count > MAX_ROWS:
+                        raise _error("OUTCOME_STORE_INDEX_LIMIT")
                     seen.add(identity)
                     observation = row["observation_id"]
-                    self.locations.setdefault(observation, []).append((path, offset, len(line)))
+                    self.locations.setdefault(observation, []).append((path, offset, len(line), identity))
                     old = self.latest.get(observation)
                     if old is None or _rank(row) >= _rank(old):
                         latest_bytes += len(line) - latest_sizes.get(observation, 0)
@@ -289,11 +289,11 @@ class OutcomeStoreIndex:
 
     def history(self, observation_id):
         rows = []
-        for path, offset, length in self.locations.get(observation_id, []):
+        for path, offset, length, identity in self.locations.get(observation_id, []):
             with path.open("rb") as source:
                 source.seek(offset)
                 row = json.loads(source.read(length))
-            if not _valid(row) or row.get("observation_id") != observation_id:
+            if not _valid(row) or row.get("observation_id") != observation_id or row.get("outcome_update_id") != identity:
                 raise _error("OUTCOME_INDEX_SOURCE_CHANGED")
             rows.append(row)
         return sorted(rows, key=_rank)
