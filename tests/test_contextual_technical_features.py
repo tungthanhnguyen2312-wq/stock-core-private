@@ -283,6 +283,22 @@ def test_real_product_adapter_is_additive_and_decision_identity_unchanged():
     assert before["artifact_identity"] != baseline["artifact_identity"]
 
 
+@pytest.mark.parametrize("fault,tf", [("permission", "1D"), ("partial", "1W")])
+def test_gap_label_does_not_borrow_unqualified_previous_bar(fault, tf):
+    rows = series(closes=[100, 110], tf=tf)
+    if fault == "permission":
+        rows[0]["fitness"]["allowed_uses"] = []
+    else:
+        rows[0]["period_completeness"] = "PARTIAL"
+    seal(rows[0])
+    frame = features.evaluate_timeframe(rows, ticker="VNM", timeframe=tf,
+        as_of_session=ASOF, knowledge_cutoff=CUTOFF)
+    assert frame["features"]["candle"]["status"] in features.USABLE
+    assert frame["features"]["gaps"]["status"] not in features.USABLE
+    assert not any(label["label"].startswith("GAP_")
+        for label in frame["features"]["patterns"]["values"]["labels"])
+
+
 @pytest.mark.parametrize("fault", ["nested_hash","source_bar","cutoff","ticker","non_voting","input_reference"])
 def test_product_rejects_incoherent_features_without_decision_change(fault):
     h=research_artifact();f=h["records"]["VNM"]["contextual_technical"]

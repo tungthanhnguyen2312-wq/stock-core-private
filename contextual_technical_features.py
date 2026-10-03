@@ -350,7 +350,8 @@ def evaluate_timeframe(series, *, ticker, timeframe, as_of_session, knowledge_cu
                          "breakout_retest_context": structural["breakout"]["breakout_state"] if structural else "UNKNOWN",
                          "participant_inference": "NONE", "economic_value_or_shares_conversion": "NONE"}
     result("volume", 20, volume_values, volume=True)
-    labels = _pattern_labels(geometry, current, comparable_previous, gaps.get("observed_open_minus_prior_close") if gaps else None) if geometry else None
+    labels = _pattern_labels(geometry, current, comparable_previous,
+        gaps.get("observed_open_minus_prior_close") if gaps and gap_result["status"] in USABLE else None) if geometry else None
     pattern = result("patterns", 1, {"labels": labels} if labels is not None else None, window_size=2)
     # A prior incompatible/unusable bar blocks only two-bar labels, never the
     # independent current candle morphology. Preserve that per-label boundary.
