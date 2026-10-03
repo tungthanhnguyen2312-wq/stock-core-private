@@ -658,6 +658,7 @@
   "current_research_scope": 1503,
   "feature_batch_sha256": "f97f9df47a1ddd22eedb3ec29639965c3f442958de07175ea867fb78b5589f86",
   "feature_contract": "contextual_technical_feature_set/v1",
+  "implementation_checkpoint": "8a7e8bc1ee7883ed5cbeb3db7514b8cd45617fc1",
   "input_hashes_unchanged": true,
   "knowledge_cutoff": "2026-10-02T15:42:58.929255+07:00",
   "network_provider_calls": {
@@ -10251,6 +10252,12 @@
       "status": "REAL_RETAINED_CASE",
       "ticker": "AAM"
     }
+  },
+  "secondary_label_input_fitness": {
+    "batch_sha256_verified": true,
+    "checked_timeframes": 4509,
+    "source_references_outside_verified_context": 0,
+    "unqualified_gap_labels": 0
   },
   "session": "2026-10-02",
   "source_hashes": {

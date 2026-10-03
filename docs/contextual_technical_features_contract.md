@@ -82,7 +82,7 @@ content identity changes additively under its standing contract. Prospective
 retention keeps the enriched evidence axis without revising old T0 snapshots.
 
 Milestone state is COMPLETE at implementation checkpoint
-`db3670d9689b27bd2430233efdbc320c03accfbd`, from main
+`8a7e8bc1ee7883ed5cbeb3db7514b8cd45617fc1`, from main
 `66735a3f5df3e028bd0a2b0d9840d9caa8a91ade`. Release is gated on all four
 Producer jobs for the final candidate and merged main; the final PR/merge identity
 is bound by Git/GitHub, avoiding a self-referential checkpoint in this document.
@@ -157,21 +157,23 @@ The full product content address changes additively; standing decision identity
 semantics remain unchanged. Every input byte hash is unchanged; provider/network
 calls, historical T0 writes and canonical publication writes are zero.
 
-Measured final replay: feature-build stage 263.848897 seconds (including source
-stream/hash/setup); whole acceptance 489.829623 seconds; process-lifetime peak RSS
-485,609,472 bytes (about 463.11 MiB). One 301,674,710-byte price corpus and one
+Measured final replay: feature-build stage 191.558417 seconds (including source
+stream/hash/setup); whole acceptance 413.334195 seconds; process-lifetime peak RSS
+487,280,640 bytes (about 464.71 MiB). One 301,674,710-byte price corpus and one
 1,333,531,241-byte decision corpus are parsed once; the member buffer cap is 16 MiB.
 These are offline acceptance measurements, not live Daily or whole-product timing.
 
-Validation: 92 new primitive/contract/integration/streaming cases; final focused
-affected selection 298 passed / three retained tests deselected. Local hermetic
+Validation: 94 new primitive/contract/integration/streaming cases; final focused
+affected selection 300 passed / three retained tests deselected. Local hermetic
 Producer selection 2,057 passed, 16 platform skips, 14 retained/provider deselections
 and 30 subtests passed (523.37 seconds). Final exact-head CI runs the two new suites
 alongside the standing Producer selection. Syntax, diff and roadmap checks are
 required before release. Deterministic reversed input, genuine canonical PIT factor
 fixtures, raw/retrospective/CA boundaries, complete/partial aggregates, nested
 identity/source tampering, normal adapter non-regression and new immutable T0
-retention are covered. No thresholds were tuned against outcomes.
+retention are covered. A final gap-label regression prevents incomplete/unqualified previous bars from
+contributing a label when the gap feature is withheld; all 4,509 retained timeframe
+contexts pass label source/fitness checks. No thresholds were tuned against outcomes.
 
 Expected next proposal is `VOLUME_AND_INSTITUTIONAL_FLOW_CONTEXT_V1`, with explicit
 owner selection/authorization required. `queued_next` remains empty and no next
