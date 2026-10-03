@@ -15,8 +15,8 @@
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": null,
-    "state": "NONE"
+    "milestone": "MONDAY_LIVE_READINESS_BLOCKER_CLOSEOUT_V1",
+    "state": "COMPLETE"
   },
   "queued_next": [],
   "milestones": [
