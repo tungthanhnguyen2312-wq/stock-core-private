@@ -58,12 +58,14 @@ def test_resource_bands(field, value, classification, reason):
 
 
 @pytest.mark.parametrize("field,green,floor", [
-    ("available_commit_bytes", 11.6, 8.1), ("available_physical_bytes", 6, 2.5), ("c_free_bytes", 25, 17)])
+    ("available_commit_bytes", 12.0, 9.2), ("available_physical_bytes", 6, 2.5), ("c_free_bytes", 25, 17)])
 def test_exact_band_boundaries(field, green, floor):
     observation = safe_observation()
-    observation[field] = int(green * GIB) + 1
+    observation[field] = int(green * GIB)
     assert preflight.evaluate(observation)["classification"] == "READY"
-    observation[field] = int(floor * GIB) + 1
+    observation[field] = int(green * GIB) - 1
+    assert preflight.evaluate(observation)["classification"] == "AMBER"
+    observation[field] = int(floor * GIB)
     assert preflight.evaluate(observation)["classification"] == "AMBER"
     observation[field] = int(floor * GIB) - 1
     assert preflight.evaluate(observation)["classification"] == "BLOCKED"
@@ -105,10 +107,23 @@ def test_larger_iid_scales_memory_bands_without_weakening_baseline():
     observation["retained"]["iid"]["file_bytes"] = 2 * GIB
     result = preflight.evaluate(observation)
     assert result["peak_model"]["modeled_peak_bytes"] == int(5.05 * 2 * GIB)
-    assert result["dimensions"]["commit"]["green_min_bytes"] > 11.6 * GIB
-    assert result["classification"] == "AMBER"
+    assert result["dimensions"]["commit"]["green_min_bytes"] > 12.0 * GIB
+    assert result["classification"] == "BLOCKED"
     observation["retained"]["iid"]["file_bytes"] = 100
-    assert preflight.evaluate(observation)["dimensions"]["commit"]["green_min_bytes"] == int(11.6 * GIB)
+    assert preflight.evaluate(observation)["dimensions"]["commit"]["green_min_bytes"] == int(12.0 * GIB)
+
+
+def test_final_benchmark_provenance_and_other_bands_unchanged():
+    result = preflight.evaluate(safe_observation())
+    assert result["dimensions"]["physical"]["green_min_bytes"] == 6 * GIB
+    assert result["dimensions"]["physical"]["blocked_below_bytes"] == int(2.5 * GIB)
+    assert result["dimensions"]["disk"]["green_min_bytes"] == 25 * GIB
+    assert result["dimensions"]["disk"]["blocked_below_bytes"] == 17 * GIB
+    model = result["peak_model"]
+    assert model["revised_daily_child_working_band_bytes"] == [int(6.5 * GIB), 8 * GIB]
+    assert model["working_band_high_end_is_floor_not_ceiling"] is True
+    assert model["provenance"] == "OWNER_FINAL_REAL_SCALE_RETAINED_BENCHMARK_2026_10_04"
+    assert model["monday_measured_peak_bytes"] is None
 
 
 def test_process_inventory_excludes_own_wrapper_and_never_prints_arguments(tmp_path):

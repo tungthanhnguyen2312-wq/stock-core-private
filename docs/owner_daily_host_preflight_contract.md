@@ -13,7 +13,7 @@ is provided. Current machine readings are observations, not durable launch permi
 
 | Dimension | READY | AMBER | BLOCKED |
 | --- | --- | --- | --- |
-| Available system commit | >=11.6 GiB | 8.1–11.6 GiB | <8.1 GiB or unknown |
+| Available system commit | >=12.0 GiB | 9.2–12.0 GiB | <9.2 GiB or unknown |
 | Available physical | >=6 GiB | 2.5–6 GiB; recommended amber band starts at 3.5 GiB | <2.5 GiB or unknown |
 | C: free | >=25 GiB | 17–25 GiB | <17 GiB or unknown |
 | Writers | None observed | — | Runtime writer, Git index lock, or unobservable writer state |
@@ -41,10 +41,18 @@ Payloads are never loaded. The latest session/largest same-session IID file is u
 conservatively. Its byte size is multiplied by **5.05**; `peak_basis` is
 `MODELED_FROM_RETAINED_CURRENT_MAIN`. Provenance is the owner's 2026-10-04 forensic
 directive on main `2c6c79224ae2a3a57b50dae7b96666bd2ec09715`. Baseline current-main
-Monday expectation is approximately **6.2–7 GiB**, not measured Monday telemetry.
+IID scaling estimate is not the Daily high end. The final real-scale retained
+benchmark on main `bf881cd4cc9453d351389de87ed2312c4a9e0150`, supplied by the owner
+on 2026-10-04, measured unchanged Producer `build_delivery` at approximately
+**+2.88 GiB transient over ~1.98 GiB resident**; streaming T0 is no longer the peak.
+It revises the Daily-child working band to **6.5–8.0 GiB**, with **8.0 GiB a floor
+for the high end, not a hard ceiling**. This is retained-benchmark provenance,
+not measured Monday telemetry. It tightens the baseline commit bands to 12.0/9.2 GiB.
 The historical **9,853,145,088-byte** pre-streaming peak is **STALE** for this model,
 retained as historical metadata, not deleted or relabeled in historical evidence.
-Above a modeled 7 GiB, memory bands scale by modeled peak /7 GiB; smaller inputs
+The existing 7 GiB scaling reference is retained conservatively, not asserted as
+an upper bound. Above an IID scaling estimate of 7 GiB, memory bands scale by
+that estimate /7 GiB; smaller inputs
 never lower the baseline bands. Disk bands stay fixed. Future code or input changes
 may require renewed model qualification; the estimate is not a memory guarantee.
 

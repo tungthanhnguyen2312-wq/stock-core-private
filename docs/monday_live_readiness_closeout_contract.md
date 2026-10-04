@@ -90,6 +90,23 @@ valid stranded publications.
 
 ## Compact T0 seal index
 
+Final first-real acceptance guardrail (2026-10-04): the independent
+`t0_snapshot_availability` row reports AVAILABLE only with a verified nonempty T0
+snapshot basis; otherwise it reports STILL_BLOCKED / UNAVAILABLE with
+`VERIFIED_T0_SNAPSHOT_UNAVAILABLE`. An unverifiable or missing seal-index basis
+cannot establish availability in this bounded observer. This row never gates
+capture or marker publication: `t0_snapshot_identity=None` remains allowed and
+the marker remains `CAPTURE_COMPLETENESS_ONLY`.
+
+`post_to_t0_leakage` is NOT_EVALUABLE with
+`T0_UNAVAILABLE_FOR_LEAKAGE_EVALUATION` when the verified snapshot or relevant T0
+items are unavailable. OPEN requires a nonempty T0 basis, an evaluation actually
+performed, and zero leaks; detected leakage is STILL_BLOCKED. Thesis T0 diagnostic
+rows likewise require an available, computed T0 basis, without changing reducers.
+A complete first capture may open capture/marker and progress depth to 1 while T0,
+seal-index/native T0, continuous PIT/RAW/CA and Thesis T0 capabilities remain
+unavailable or unopened. No false T0_READY is inferred from capture success.
+
 `prospective_t0_seal_index/v1` binds session, original snapshot identity/file hash,
 decision artifact/operation, ticker, exact technical version/context and original
 snapshot record identity. It contains pointers only. The companion

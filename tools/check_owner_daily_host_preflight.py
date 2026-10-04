@@ -201,7 +201,7 @@ def evaluate(observation: dict) -> dict:
                             "green_min_bytes": int(green), "blocked_below_bytes": int(floor), "reason": reason}
         reasons.append(reason)
 
-    dimension("commit", observation.get("available_commit_bytes"), 11.6 * GIB * factor, 8.1 * GIB * factor, "COMMIT_HEADROOM")
+    dimension("commit", observation.get("available_commit_bytes"), 12.0 * GIB * factor, 9.2 * GIB * factor, "COMMIT_HEADROOM")
     dimension("physical", observation.get("available_physical_bytes"), 6 * GIB * factor, 2.5 * GIB * factor, "PHYSICAL_HEADROOM")
     dimension("disk", observation.get("c_free_bytes"), 25 * GIB, 17 * GIB, "DISK_HEADROOM")
     dimensions["physical"]["recommended_amber_min_bytes"] = int(3.5 * GIB * factor)
@@ -231,9 +231,16 @@ def evaluate(observation: dict) -> dict:
             "authority_effect": "NONE / OWNER_DAILY_HOST_PREFLIGHT_ONLY", "dimensions": dimensions,
             "reasons": reasons, "observations": observation,
             "peak_model": {"peak_basis": "MODELED_FROM_RETAINED_CURRENT_MAIN", "modeled_peak_bytes": peak,
+                           "modeled_peak_scope": "IID_SIZE_SCALING_ESTIMATE_NOT_DAILY_HIGH_END",
                            "iid_multiplier": 5.05, "band_scale_factor": factor,
-                           "baseline_upper_expectation_bytes": 7 * GIB,
-                           "provenance": "OWNER_FORENSICS_DIRECTIVE_2026_10_04",
+                           "memory_band_scaling_reference_bytes": 7 * GIB,
+                           "revised_daily_child_working_band_bytes": [int(6.5 * GIB), 8 * GIB],
+                           "working_band_high_end_is_floor_not_ceiling": True,
+                           "benchmark_provenance": "OWNER_FINAL_REAL_SCALE_RETAINED_BENCHMARK_2026_10_04",
+                           "benchmark_main_sha": "bf881cd4cc9453d351389de87ed2312c4a9e0150",
+                           "delivery_resident_bytes_approx": int(1.98 * GIB),
+                           "delivery_transient_additional_bytes_approx": int(2.88 * GIB),
+                           "provenance": "OWNER_FINAL_REAL_SCALE_RETAINED_BENCHMARK_2026_10_04",
                            "forensics_main_sha": MODEL_MAIN, "observed_main_sha": repo.get("main_sha"),
                            "monday_measured_peak_bytes": None,
                            "historical_peak_bytes": 9853145088, "historical_peak_classification": "STALE"},

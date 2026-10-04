@@ -92,6 +92,11 @@ def evaluate(*, session, cutoff, calendar, capture_record=None, marker=None, rea
     add("calendar_continuity",{"immediate_next_governed_session":proof["state"]=="TRUE"},parts,details=proof)
     add("capture_session",{"verified_complete_session":bool(capture_record and capture_record.get("capture_complete_tickers"))},capture_record,details={"identity":(capture_record or {}).get("artifact_identity")})
     add("first_marker",{"bound_first_complete_record":bool(marker and capture_record and marker["session"]<=session)},capture_record,details={"session":(marker or {}).get("session")})
+    t0_available=bool(getattr(sealed_bindings,"snapshot_identity",None) and getattr(sealed_bindings,"records",None))
+    add("t0_snapshot_availability",{"verified_nonempty_snapshot":t0_available},True,details={
+        "availability":"AVAILABLE" if t0_available else "UNAVAILABLE",
+        "reason":None if t0_available else "VERIFIED_T0_SNAPSHOT_UNAVAILABLE",
+        "snapshot_identity":getattr(sealed_bindings,"snapshot_identity",None),"gates_capture":False})
     r=readiness or {}; tickers=list(r.get("per_ticker",{}).values())
     add("readiness_state",{"bounded_evaluation_depth":r.get("status")=="READY_FOR_BOUNDED_EVALUATION","no_chain_gap":not r.get("session_chain_gaps",[])},readiness,bool(r.get("complete_session_count")),{"status":r.get("status"),"complete_session_count":r.get("complete_session_count",0),"counts_at_depth":r.get("counts_at_depth",{})})
     add("positive_listing",{"all_current_capture_names_positive":bool(tickers) and all(t["positive_listing_depth"]>=1 and t["exchange"]!="UNKNOWN" for t in tickers)},tickers,details={"exchange_counts":r.get("exchange_binding_counts",{})})
@@ -117,7 +122,10 @@ def evaluate(*, session, cutoff, calendar, capture_record=None, marker=None, rea
         sealed_bindings.bindings.get(i["instrument"]["ticker"])!=(session,technical.V2,i["technical_context_identity"]) or
         sealed_bindings.snapshot_identity not in i["source_artifact_identities"])]
     add("t0_native_volume",{"nonempty_exact_native_seals":bool(native_t0),"no_false_seals":not leaks},records,details={"count":len(native_t0)})
-    add("post_to_t0_leakage",{"zero_leakage":not leaks},records,details={"count":len(leaks)})
+    leakage_evaluated=bool(t0_available and any(i["knowledge_stage"]==flow.T0 for i in items))
+    add("post_to_t0_leakage",{"zero_leakage":not leaks},leakage_evaluated,details={
+        "count":len(leaks),"evaluation_performed":leakage_evaluated,
+        "reason":None if leakage_evaluated else "T0_UNAVAILABLE_FOR_LEAKAGE_EVALUATION"})
     foreign=[i for i in items if i["sub_domain"]=="FOREIGN_VALUE" and i["coverage_scope"]["in_cohort"]]
     for n in (1,5,10,20):
         window=[i for i in foreign if i["required_observations"]==n]
@@ -137,15 +145,17 @@ def evaluate(*, session, cutoff, calendar, capture_record=None, marker=None, rea
         products=thesis_products or {};t0=products.get("t0") or {};current=products.get("current") or {}
         for stage,data in (("t0",t0),("current",current)):
             counts=data.get("counts",{});computed=counts.get("built_count",0)+counts.get("partial_count",0)
-            add("thesis_"+stage+"_component",{"computed_component":data.get("status")=="BUILT","no_unavailable_records":counts.get("unavailable_count",0)==0},data,bool(computed),details=data)
-            add("thesis_"+stage+"_record_coverage",{"whole_source_coverage":bool(data.get("records")) and computed==data.get("records")},data,bool(computed),details=counts)
-        add("thesis_t0_exact_snapshot_index_binding",{"verified_snapshot":bool(t0.get("snapshot_identity") and sealed_bindings and t0["snapshot_identity"]==sealed_bindings.snapshot_identity),"verified_index":bool(t0.get("index_identity") and sealed_bindings and t0["index_identity"]==sealed_bindings.index_identity)},t0)
-        add("thesis_t0_zero_post",{"no_post_in_t0":t0.get("post_in_t0")==0,"no_retrospective_item":t0.get("guards",{}).get("retrospective_item_in_t0")==0},t0)
+            present=bool(data) if stage=="current" else bool(data and t0_available and computed)
+            add("thesis_"+stage+"_component",{"computed_component":data.get("status")=="BUILT","no_unavailable_records":counts.get("unavailable_count",0)==0},present,bool(computed),details=data)
+            add("thesis_"+stage+"_record_coverage",{"whole_source_coverage":bool(data.get("records")) and computed==data.get("records")},present,bool(computed),details=counts)
+        t0_evaluable=bool(t0_available and t0 and sum(t0.get("counts",{}).get(k,0) for k in ("built_count","partial_count")))
+        add("thesis_t0_exact_snapshot_index_binding",{"verified_snapshot":bool(t0.get("snapshot_identity") and sealed_bindings and t0["snapshot_identity"]==sealed_bindings.snapshot_identity),"verified_index":bool(t0.get("index_identity") and sealed_bindings and t0["index_identity"]==sealed_bindings.index_identity)},t0_evaluable)
+        add("thesis_t0_zero_post",{"no_post_in_t0":t0.get("post_in_t0")==0,"no_retrospective_item":t0.get("guards",{}).get("retrospective_item_in_t0")==0},t0_evaluable)
         for lens,label in (("LONG_TERM_INVESTOR","long"),("SHORT_TERM_INVESTOR","short")):
             dist=t0.get("distributions",{}).get(lens,{})
-            add("thesis_t0_"+label+"_distribution",{"all_computed_lenses_accounted":bool(dist) and sum(dist.values())==sum(t0.get("counts",{}).get(k,0) for k in ("built_count","partial_count"))},t0,details={"distribution":dist})
-        add("thesis_retrospective_technical_t0_exclusion",{"excluded_retrospective_evidence":t0.get("retrospective_exclusion_count",0)>0,"zero_retrospective_t0":t0.get("guards",{}).get("retrospective_item_in_t0")==0},t0,details={"direction_coverage":t0.get("t0_direction_coverage_by_axis",{})})
-        add("thesis_t0_current_delta",{"separate_bases_for_each_computed_record":bool(current.get("records")) and current.get("separate_basis_count")==sum(current.get("counts",{}).get(k,0) for k in ("built_count","partial_count"))},current)
+            add("thesis_t0_"+label+"_distribution",{"all_computed_lenses_accounted":bool(dist) and sum(dist.values())==sum(t0.get("counts",{}).get(k,0) for k in ("built_count","partial_count"))},t0_evaluable,details={"distribution":dist})
+        add("thesis_retrospective_technical_t0_exclusion",{"excluded_retrospective_evidence":t0.get("retrospective_exclusion_count",0)>0,"zero_retrospective_t0":t0.get("guards",{}).get("retrospective_item_in_t0")==0},t0_evaluable,details={"direction_coverage":t0.get("t0_direction_coverage_by_axis",{})})
+        add("thesis_t0_current_delta",{"separate_bases_for_each_computed_record":bool(current.get("records")) and current.get("separate_basis_count")==sum(current.get("counts",{}).get(k,0) for k in ("built_count","partial_count"))},bool(current and t0_evaluable))
         for name,key in (("thesis_flow_facts_only","flow_directional_violation"),("thesis_zero_second_posture","second_posture"),("thesis_zero_action_policy_delta","action_policy_delta")):
             add(name,{"zero_violation":bool(current) and current.get(key)==0},current)
     rows.extend(feedback_rows(feedback))
