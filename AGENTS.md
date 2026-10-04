@@ -1,6 +1,55 @@
 # Repository guardrails
 
+## Reading contract — start here
+
+Normal work reads a **small active set, in this order, completely** (about 100 KB in total):
+
+1. This file (`AGENTS.md`).
+2. [`docs/ACTIVE_STATE.md`](docs/ACTIVE_STATE.md) — what is true now: gate, launch conditions, blockers, next action.
+3. [`docs/CAPABILITIES.md`](docs/CAPABILITIES.md) — every capability's status, contract, authority and blocker.
+4. [`docs/AUTHORITY.md`](docs/AUTHORITY.md) — who may speak for what, with the controlling contract.
+5. [`docs/DAILY_PIPELINE.md`](docs/DAILY_PIPELINE.md) — what runs Daily, in order.
+6. [`docs/ROADMAP_CURRENT.md`](docs/ROADMAP_CURRENT.md) — NOW / NEXT EVIDENCE GATE / AFTER / LATER.
+7. Only the specific contract, code and tests the task names (`docs/*_contract.md`, relevant modules).
+
+`docs/STATE.md` (~920 KB), `docs/DECISIONS.md` (~1 MB) and `docs/ROADMAP.md` (~300 KB) are **preserved
+history and deep-reference sources, not mandatory full reads and not the default current-state source**.
+Search them with `git grep` when a task needs the history of one thing; see
+[`docs/HISTORICAL_INDEX.md`](docs/HISTORICAL_INDEX.md). A task that changes authority, history-sensitive
+semantics or a machine-parsed file may read the relevant historical sections in full. Do not ignore them
+entirely, and never edit them without checking the consumers listed in the index.
+`docs/ROADMAP_STATE.json` (~540 KB) is machine state: query it with `python tools/stocklookup_roadmap.py`
+rather than reading it whole.
+
+**Authority by domain** (one rule, no ladder and no new authority layer; identical in `docs/ACTIVE_STATE.md`):
+- *Milestone execution state* (current / queued / blocked / startable, checkpoint verification):
+  `docs/ROADMAP_STATE.json`, queried with `python tools/stocklookup_roadmap.py` (AI_RULES rule 11).
+- *Capability semantics and authority limits*: the controlling contract (`docs/*_contract.md`, cited in
+  `AUTHORITY.md`) and the code and tests that implement it.
+- *Compact current-state docs* (`ACTIVE_STATE`, `CAPABILITIES`, `AUTHORITY`, `DAILY_PIPELINE`,
+  `ROADMAP_CURRENT`): maintained navigation views of the two items above. They add **no** authority; if one
+  disagrees with the first two, the first two govern and the view is corrected in the same change.
+- *Preserved `STATE.md` / `ROADMAP.md` / `DECISIONS.md`*: history, rationale and recorded invariants; not the
+  default current-state source. A compact view never overrides a recorded invariant: surface the conflict
+  and obtain an explicit owner decision.
+
+| Question | Read |
+|---|---|
+| What is active? | `ACTIVE_STATE.md` + `CAPABILITIES.md` |
+| What is authoritative? | `AUTHORITY.md` + the controlling contract it cites |
+| What runs Daily? | `DAILY_PIPELINE.md` |
+| What happens next? | `ROADMAP_CURRENT.md` |
+| What happened historically? | `HISTORICAL_INDEX.md` → legacy STATE / ROADMAP / DECISIONS / `docs/internal/` |
+
+Chat memory, prior conversation and an agent's own recollection are **never** project authority; if a
+prompt conflicts with the rule above or the sources it names, surface the conflict and ask for an explicit
+owner override. When you change current state, update `ACTIVE_STATE.md` (and the capability/pipeline files
+if they change) in the same change.
+
 ## Current direction
+
+*The program doctrine and milestone chain in this section are retained for context; the current
+operational state, gate and blockers are in [`docs/ACTIVE_STATE.md`](docs/ACTIVE_STATE.md).*
 
 **CURRENT DEVELOPMENT PRIORITY — CORE ANALYTICAL PRODUCT COMPLETION.** Stock Lookup
 optimizes **product-critical analytical completeness** for Current Research / Product
@@ -76,9 +125,10 @@ Stock Lookup. It defines the non-negotiable direction:
 
 `ACQUIRE BROADLY → PRESERVE RAW → EXTRACT → UNDERSTAND → CANONICALIZE → LABEL FITNESS FOR USE → DETERMINISTIC ANALYSIS → AI RESEARCH → HUMAN DECISION`.
 
-`docs/STATE.md` remains the operational cached truth; `docs/ROADMAP.md` owns sequencing;
-`docs/DECISIONS.md` records implementation decisions. None of them may silently redefine the
-doctrine. If current operational state appears to conflict with the doctrine, surface the conflict
+`docs/STATE.md`, `docs/ROADMAP.md` and `docs/DECISIONS.md` are the preserved narrative (recorded
+invariants, sequencing history and implementation rationale); current operational state is read through the
+Reading contract and its **Authority by domain** rule above. None of them, and no compact current-state doc,
+may silently redefine the doctrine. If current operational state appears to conflict with the doctrine, surface the conflict
 instead of following the most recent technical thread by inertia.
 
 The doctrine also establishes capability-first source routing: DNSE/Livespeed is the primary
@@ -91,23 +141,25 @@ source evidence—not AI-generated text—is factual authority.
 
 For a normal bounded implementation milestone:
 
-1. Read this file, [`docs/DATA_FIRST_DOCTRINE.md`](docs/DATA_FIRST_DOCTRINE.md), and
-   [`docs/STATE.md`](docs/STATE.md) in full.
-2. Read only the roadmap, decision, and rule sections explicitly referenced by `STATE.md` or
-   directly required by the named milestone.
-3. Read directly relevant code, tests, and data contracts.
-4. Do **not** scan all handoffs, all decisions, or the full roadmap by default.
+1. Read the active set from the **Reading contract** above, in order, in full
+   (`AGENTS.md` → `ACTIVE_STATE` → `CAPABILITIES` → `AUTHORITY` → `DAILY_PIPELINE` → `ROADMAP_CURRENT`),
+   plus [`docs/DATA_FIRST_DOCTRINE.md`](docs/DATA_FIRST_DOCTRINE.md) when the task touches evidence or authority.
+2. Read the specific contract(s), code and tests the milestone names. Read only the `STATE.md` /
+   `DECISIONS.md` / `ROADMAP.md` sections explicitly referenced by the active set or directly required.
+3. Do **not** read `STATE.md`, `DECISIONS.md` or `ROADMAP.md` in full, and do not scan all handoffs, all
+   decisions, or the full roadmap, by default.
 
-Perform a full authority refresh (`AGENTS.md`, `DATA_FIRST_DOCTRINE.md`, `STATE.md`, `ROADMAP.md`,
-`DECISIONS.md`, `AI_RULES.md`, and the current handoff) only when changing architecture, program
+Perform a full authority refresh (the active set **plus** the relevant historical sections of `STATE.md`,
+`ROADMAP.md`, `DECISIONS.md`, `AI_RULES.md` and the current handoff) only when changing architecture, program
 priority, governance, or authority; entering a new major program; promoting/demoting a source or
-capability; resolving a conflict with/staleness in `STATE.md`; finding contradictory repository
+capability; resolving a conflict with/staleness in the active set; finding contradictory repository
 docs; or when the owner explicitly requests a rebaseline/governance audit. A new session, a new
 agent, or a normal bounded milestone is not by itself a trigger.
 
-`docs/STATE.md` is the Producer operational entrypoint and cached current truth. Operations
-reviews, handoffs, historical roadmaps, and Consumer/Dashboard notes are evidence/reference,
-not competing current authority. If a prompt conflicts with `STATE.md`, surface the conflict and
+`docs/ACTIVE_STATE.md` is where current-state reading starts; what is authoritative is decided by
+**Authority by domain** in the Reading contract above (it is a view, not an authority layer). Operations
+reviews, handoffs, historical roadmaps, and Consumer/Dashboard notes are evidence/reference, not competing
+current authority. If a prompt conflicts with that rule or the sources it names, surface the conflict and
 request an explicit owner override; do not silently change architecture.
 
 ## AI context hygiene
@@ -139,7 +191,8 @@ the sibling surfaces checked and the specific evidence that would reopen it.
 
 Codex is the executor. Producer owns raw-source contracts, canonicalization, and artifact
 authority. For a cross-repository task, read the directly applicable sibling repository guardrail
-and the Producer `STATE.md`; do not reconstruct project truth from chat memory or old handoffs.
+and the Producer active set (`docs/ACTIVE_STATE.md` plus the contract the task names); do not reconstruct
+project truth from chat memory or old handoffs.
 
 - Work only inside this repository unless the task explicitly names another workspace location.
 - Use `STOCK_LOOKUP_RUNTIME_ROOT` for runtime data; do not infer or hard-code a runtime path.

@@ -2,14 +2,22 @@
 
 ## Bootstrap and authority
 
-1. Codex is the implementation executor. For a normal bounded milestone, read
-   [AGENTS.md](../AGENTS.md) and [STATE.md](STATE.md) in full, then only the sections/files
-   STATE names or the milestone directly needs, plus relevant code/tests/contracts.
+1. Codex is the implementation executor. For a normal bounded milestone, read the active set in
+   [AGENTS.md](../AGENTS.md) "Reading contract" in full (AGENTS, [ACTIVE_STATE.md](ACTIVE_STATE.md),
+   [CAPABILITIES.md](CAPABILITIES.md), [AUTHORITY.md](AUTHORITY.md), [DAILY_PIPELINE.md](DAILY_PIPELINE.md),
+   [ROADMAP_CURRENT.md](ROADMAP_CURRENT.md)), then only the contracts/sections/files the milestone directly
+   needs, plus relevant code/tests. `STATE.md`, `DECISIONS.md` and `ROADMAP.md` are preserved history, not
+   mandatory full reads ([HISTORICAL_INDEX.md](HISTORICAL_INDEX.md)).
 2. Do not scan all handoffs, all decisions, or the full roadmap by default. Full authority
-   refresh (AGENTS, STATE, ROADMAP, DECISIONS, AI_RULES, current handoff) is only for
-   architecture/program-priority/governance/authority changes, a new major program,
-   stale/ambiguous/conflicting state, or an owner-requested rebaseline.
-3. `STATE.md` is cached current truth. Do not reconstruct authority from chat memory. If a prompt
+   refresh (the active set plus the relevant historical sections of STATE, ROADMAP, DECISIONS, AI_RULES and
+   the current handoff) is only for architecture/program-priority/governance/authority changes, a new major
+   program, stale/ambiguous/conflicting state, or an owner-requested rebaseline.
+3. **Authority by domain** (the same rule as in [AGENTS.md](../AGENTS.md) "Reading contract" and
+   [ACTIVE_STATE.md](ACTIVE_STATE.md); no new authority layer): milestone execution state is
+   `ROADMAP_STATE.json` queried with its tool (rule 11); capability semantics are the controlling contract and
+   its code/tests; the compact current-state docs are navigation views that add no authority and yield to those
+   two; `STATE.md` / `ROADMAP.md` / `DECISIONS.md` are preserved history, rationale and recorded invariants,
+   not the default current-state source. Do not reconstruct authority from chat memory. If a prompt
    conflicts with state, identify the conflict and obtain explicit owner direction.
 4. One session is one substantial bounded milestone. `READY_FOR_NEXT_MILESTONE` does not authorize
    its execution. Commit, push, publish, deploy, or an authority promotion requires explicit
@@ -17,9 +25,10 @@
 
 4a. `docs/NORTH_STAR.md` is strategic product/program intent, not execution authority. Read it only
     for architecture, program-priority, product-roadmap, or owner rebaseline work. Do not load or
-    paste it into normal bounded milestone prompts. `STATE.md` and `ROADMAP_STATE.json` remain the
-    current execution-state authority; `NORTH_STAR.md` never overrides them, `ROADMAP.md`,
-    `DECISIONS.md` or this file. Analytical reference frameworks it names (for example CFA/CMA-style
+    paste it into normal bounded milestone prompts. Milestone execution state is governed by
+    `ROADMAP_STATE.json` and capability semantics by the controlling contracts (rule 3); `STATE.md`,
+    `ROADMAP.md` and `DECISIONS.md` remain preserved history, rationale and recorded invariants.
+    `NORTH_STAR.md` never overrides any of them or this file. Analytical reference frameworks it names (for example CFA/CMA-style
     concepts) guide method design only and are never an authority layer, engine or score.
 
 ## Market-data doctrine
@@ -82,4 +91,5 @@ status and lineage that bounds it.
     `--can-start MILESTONE_ID`). No new roadmap milestone may start unless it reports
     NEXT/ALLOWED, except an explicit, recorded owner override -- never inferred from a Git
     commit, a completed dependency alone, or an agent's own judgment that a milestone is ready.
-    It supplements `docs/ROADMAP.md`/`docs/STATE.md`/`docs/DECISIONS.md` and never overrides them.
+    It governs milestone execution state only; it does not restate or override the technical content, rationale
+    or recorded invariants of `docs/ROADMAP.md`/`docs/STATE.md`/`docs/DECISIONS.md`.
