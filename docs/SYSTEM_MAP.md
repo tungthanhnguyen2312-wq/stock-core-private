@@ -1,6 +1,7 @@
 # Stock Lookup — System Map
 
 > Navigation aid only. docs/STATE.md, docs/ROADMAP.md, docs/DECISIONS.md and docs/ROADMAP_STATE.json remain authority.
+> Start with the compact active set: [ACTIVE_STATE](ACTIVE_STATE.md), [CAPABILITIES](CAPABILITIES.md), [AUTHORITY](AUTHORITY.md), [DAILY_PIPELINE](DAILY_PIPELINE.md), [ROADMAP_CURRENT](ROADMAP_CURRENT.md); history index: [HISTORICAL_INDEX](HISTORICAL_INDEX.md).
 
 Outcome-feedback children (pre- and post-handoff) run bounded: `feedback_resource_guard.py` (admission, one total deadline, memory ceiling, reaping) around
 `prospective_feedback_streaming.py` (streamed proof and output, atomic COMPLETE publication). Content and `artifact_identity` equal the original

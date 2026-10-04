@@ -2,14 +2,18 @@
 
 ## Bootstrap and authority
 
-1. Codex is the implementation executor. For a normal bounded milestone, read
-   [AGENTS.md](../AGENTS.md) and [STATE.md](STATE.md) in full, then only the sections/files
-   STATE names or the milestone directly needs, plus relevant code/tests/contracts.
+1. Codex is the implementation executor. For a normal bounded milestone, read the active set in
+   [AGENTS.md](../AGENTS.md) "Reading contract" in full (AGENTS, [ACTIVE_STATE.md](ACTIVE_STATE.md),
+   [CAPABILITIES.md](CAPABILITIES.md), [AUTHORITY.md](AUTHORITY.md), [DAILY_PIPELINE.md](DAILY_PIPELINE.md),
+   [ROADMAP_CURRENT.md](ROADMAP_CURRENT.md)), then only the contracts/sections/files the milestone directly
+   needs, plus relevant code/tests. `STATE.md`, `DECISIONS.md` and `ROADMAP.md` are preserved history, not
+   mandatory full reads ([HISTORICAL_INDEX.md](HISTORICAL_INDEX.md)).
 2. Do not scan all handoffs, all decisions, or the full roadmap by default. Full authority
-   refresh (AGENTS, STATE, ROADMAP, DECISIONS, AI_RULES, current handoff) is only for
-   architecture/program-priority/governance/authority changes, a new major program,
-   stale/ambiguous/conflicting state, or an owner-requested rebaseline.
-3. `STATE.md` is cached current truth. Do not reconstruct authority from chat memory. If a prompt
+   refresh (the active set plus the relevant historical sections of STATE, ROADMAP, DECISIONS, AI_RULES and
+   the current handoff) is only for architecture/program-priority/governance/authority changes, a new major
+   program, stale/ambiguous/conflicting state, or an owner-requested rebaseline.
+3. `ACTIVE_STATE.md` is the compact current-state view and `ROADMAP_STATE.json` the machine milestone state;
+   `STATE.md` is the preserved narrative. Do not reconstruct authority from chat memory. If a prompt
    conflicts with state, identify the conflict and obtain explicit owner direction.
 4. One session is one substantial bounded milestone. `READY_FOR_NEXT_MILESTONE` does not authorize
    its execution. Commit, push, publish, deploy, or an authority promotion requires explicit
