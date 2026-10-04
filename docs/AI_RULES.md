@@ -25,9 +25,10 @@
 
 4a. `docs/NORTH_STAR.md` is strategic product/program intent, not execution authority. Read it only
     for architecture, program-priority, product-roadmap, or owner rebaseline work. Do not load or
-    paste it into normal bounded milestone prompts. `STATE.md` and `ROADMAP_STATE.json` remain the
-    current execution-state authority; `NORTH_STAR.md` never overrides them, `ROADMAP.md`,
-    `DECISIONS.md` or this file. Analytical reference frameworks it names (for example CFA/CMA-style
+    paste it into normal bounded milestone prompts. Milestone execution state is governed by
+    `ROADMAP_STATE.json` and capability semantics by the controlling contracts (rule 3); `STATE.md`,
+    `ROADMAP.md` and `DECISIONS.md` remain preserved history, rationale and recorded invariants.
+    `NORTH_STAR.md` never overrides any of them or this file. Analytical reference frameworks it names (for example CFA/CMA-style
     concepts) guide method design only and are never an authority layer, engine or score.
 
 ## Market-data doctrine
@@ -90,4 +91,5 @@ status and lineage that bounds it.
     `--can-start MILESTONE_ID`). No new roadmap milestone may start unless it reports
     NEXT/ALLOWED, except an explicit, recorded owner override -- never inferred from a Git
     commit, a completed dependency alone, or an agent's own judgment that a milestone is ready.
-    It supplements `docs/ROADMAP.md`/`docs/STATE.md`/`docs/DECISIONS.md` and never overrides them.
+    It governs milestone execution state only; it does not restate or override the technical content, rationale
+    or recorded invariants of `docs/ROADMAP.md`/`docs/STATE.md`/`docs/DECISIONS.md`.

@@ -125,9 +125,10 @@ Stock Lookup. It defines the non-negotiable direction:
 
 `ACQUIRE BROADLY → PRESERVE RAW → EXTRACT → UNDERSTAND → CANONICALIZE → LABEL FITNESS FOR USE → DETERMINISTIC ANALYSIS → AI RESEARCH → HUMAN DECISION`.
 
-`docs/STATE.md` remains the operational cached truth; `docs/ROADMAP.md` owns sequencing;
-`docs/DECISIONS.md` records implementation decisions. None of them may silently redefine the
-doctrine. If current operational state appears to conflict with the doctrine, surface the conflict
+`docs/STATE.md`, `docs/ROADMAP.md` and `docs/DECISIONS.md` are the preserved narrative (recorded
+invariants, sequencing history and implementation rationale); current operational state is read through the
+Reading contract and its **Authority by domain** rule above. None of them, and no compact current-state doc,
+may silently redefine the doctrine. If current operational state appears to conflict with the doctrine, surface the conflict
 instead of following the most recent technical thread by inertia.
 
 The doctrine also establishes capability-first source routing: DNSE/Livespeed is the primary
@@ -190,7 +191,8 @@ the sibling surfaces checked and the specific evidence that would reopen it.
 
 Codex is the executor. Producer owns raw-source contracts, canonicalization, and artifact
 authority. For a cross-repository task, read the directly applicable sibling repository guardrail
-and the Producer `STATE.md`; do not reconstruct project truth from chat memory or old handoffs.
+and the Producer active set (`docs/ACTIVE_STATE.md` plus the contract the task names); do not reconstruct
+project truth from chat memory or old handoffs.
 
 - Work only inside this repository unless the task explicitly names another workspace location.
 - Use `STOCK_LOOKUP_RUNTIME_ROOT` for runtime data; do not infer or hard-code a runtime path.

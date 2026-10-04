@@ -177,3 +177,28 @@ def test_review_corrections_wording_is_bounded():
     assert "per checkout" in text and "checkout_cleanliness_contract.py" in text
     assert "CONSUMER_APPROVED_UNTRACKED_PREFIXES" in text and "APPROVED_RUNTIME_EVIDENCE_PREFIXES" in text
     assert "untracked `data/` and `.worktrees/` are approved prefixes" not in text
+
+
+def test_legacy_authority_formulations_cannot_return():
+    files = ["AGENTS.md", "docs/AI_RULES.md"] + [f for f in ACTIVE_SET if f not in ("AGENTS.md",)] + ["docs/HISTORICAL_INDEX.md"]
+    forbidden = ("operational cached truth", "owns sequencing", "current execution-state authority",
+                 "cached current truth", "Producer operational entrypoint", "the Producer `STATE.md`",
+                 "never overrides them.", "STATE.md` is cached")
+    for rel in files:
+        body = " ".join(read(rel).split())
+        for phrase in forbidden:
+            assert phrase not in body, (rel, phrase)
+    rules = " ".join(read("docs/AI_RULES.md").split())
+    rule_4a = rules[rules.index("4a. `docs/NORTH_STAR.md`"):rules.index("## Market-data doctrine")]
+    assert "not execution authority" in rule_4a  # NORTH_STAR keeps its non-authoritative role
+    assert "Milestone execution state is governed by `ROADMAP_STATE.json`" in rule_4a
+    assert "preserved history, rationale and recorded invariants" in rule_4a
+    assert "never overrides any of them or this file" in rule_4a
+    rule_11 = rules[rules.index("11. `docs/ROADMAP_STATE.json`"):]
+    assert "It governs milestone execution state only" in rule_11
+    doctrine = " ".join(read("AGENTS.md").split())
+    doctrine = doctrine[doctrine.index("## Stable project doctrine"):doctrine.index("## Default lightweight bootstrap")]
+    assert "stable owner doctrine" in doctrine and "ACQUIRE BROADLY" in doctrine
+    assert "preserved narrative" in doctrine and "Authority by domain" in doctrine
+    assert "no compact current-state doc, may silently redefine the doctrine" in doctrine
+    assert "surface the conflict instead of following the most recent technical thread by inertia" in doctrine
