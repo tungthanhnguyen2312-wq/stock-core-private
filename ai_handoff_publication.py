@@ -74,7 +74,8 @@ def _presentation_observer_payload(session: str, attestation: Mapping[str, Any])
             "reason": foreign_flow.get("reason"),
         },
         "flow_price_divergence_shadow": {"status": flow_price.get("status"), "identity": flow_price.get("artifact_identity")},
-        "post_handoff_prospective_decision_feedback": {"status": feedback.get("status"), "identity": feedback.get("artifact_identity")},
+        "post_handoff_prospective_decision_feedback": {"status": feedback.get("status"), "identity": feedback.get("artifact_identity"),
+                                                     **({"reason_code": feedback["reason_code"]} if feedback.get("reason_code") else {})},
         **({"thesis_evidence":attestation["thesis_evidence"]} if "thesis_evidence" in attestation else {}),
     }
 def build_package(source: Path, session: str, previous: Path|None=None, *, producer_checkpoint: str="UNKNOWN", decision_brief: Path|None=None, daily_integrated_decision_brief: Path|None=None, post_handoff_presentation: Mapping[str, Any]|None=None) -> tuple[dict[str,Any],dict[str,Any]]:

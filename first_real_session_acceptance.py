@@ -34,9 +34,53 @@ def capability(name, predicates, *, evidence_present, progressed=False, details=
             "blockers":[k for k,v in predicates.items() if v is not True],"details":details or {}}
 
 
+FEEDBACK_REUSE_OUTCOMES = frozenset({"BUILT", "ALREADY_COMPLETE", "ALREADY_RETAINED_EQUAL_IDENTITY"})
+FEEDBACK_RELATIONS = frozenset({"IDENTICAL", "INCREMENTAL", "DISTINCT"})
+
+
+def feedback_rows(feedback):
+    """OWNER_DAILY_FEEDBACK_RESOURCE_CONTAINMENT_V1 status rows. They report optional derived work and NEVER gate capture.
+
+    ``feedback`` is ``{"pre": status|None, "post": status|None}`` where each status is the compact result of
+    ``run_bounded_prospective_feedback`` (or the child's status sidecar). A resource/defect reason is reported as such; it is
+    never evidence about a decision.
+    """
+    rows = []
+    feedback = feedback or {}
+    def add(name, predicates, present, details):
+        row = capability(name, predicates, evidence_present=bool(present), details={**details, "gates_capture": False})
+        rows.append(row)
+    for stage, label in (("pre", "pre_handoff"), ("post", "post_handoff")):
+        value = feedback.get(stage)
+        resource = (value or {}).get("resource") or {}
+        policy = (value or {}).get("policy") or {}
+        within = (resource.get("wall_seconds") is not None and policy.get("deadline_seconds") is not None
+                  and resource["wall_seconds"] <= policy["deadline_seconds"])
+        predicates = {"terminal_collected": (value or {}).get("status") == "COLLECTED",
+                      "identity_bound": bool((value or {}).get("artifact_identity")),
+                      "child_reaped_within_total_deadline": bool(resource.get("reaped")) and within}
+        if stage == "post":
+            predicates["input_relation_declared"] = (value or {}).get("relation") in FEEDBACK_RELATIONS
+        add("feedback_" + label, predicates, value, {"status": (value or {}).get("status"), "outcome": (value or {}).get("outcome"),
+            "reason_code": (value or {}).get("reason_code"), "wall_seconds": resource.get("wall_seconds"),
+            "child_peak_bytes": resource.get("child_peak_bytes"), "job_peak_bytes": resource.get("peak_process_bytes"),
+            "containment": resource.get("containment"), "relation": (value or {}).get("relation")})
+    admissions = [v.get("admission") for v in feedback.values() if isinstance(v, dict) and isinstance(v.get("admission"), dict)]
+    add("feedback_resource_admission", {"every_call_admitted_with_headroom": bool(admissions) and all(a.get("admitted") is True for a in admissions)},
+        admissions, {"calls": len(admissions), "free_disk_bytes": [a.get("free_disk_bytes") for a in admissions],
+                     "available_physical_bytes": [a.get("available_physical_bytes") for a in admissions]})
+    outcomes = [v.get("outcome") for v in feedback.values() if isinstance(v, dict) and v.get("status") == "COLLECTED"]
+    add("feedback_terminal_cache_reuse", {"exact_input_build_or_reuse": bool(outcomes) and all(o in FEEDBACK_REUSE_OUTCOMES for o in outcomes)},
+        outcomes, {"outcomes": outcomes})
+    reasons = {k: v.get("reason_code") for k, v in feedback.items() if isinstance(v, dict) and v.get("reason_code")}
+    add("feedback_resource_reason", {"no_resource_or_defect_reason": not reasons}, [v for v in feedback.values() if v],
+        {"reasons": reasons, "interpretation": "RESOURCE_OR_DEFECT_STATUS_IS_NOT_FEEDBACK_EVIDENCE" if reasons else "NONE"})
+    return rows
+
+
 def evaluate(*, session, cutoff, calendar, capture_record=None, marker=None, readiness=None,
              technical_contexts=None, sealed_bindings=None, flow_records=None, thesis_state=None,
-             valuation=None, liquidity=None, diagnostic=False,thesis_products=None):
+             valuation=None, liquidity=None, diagnostic=False,thesis_products=None,feedback=None):
     market._utc(cutoff,"cutoff")
     rows=[]
     def add(name,predicates,present,progress=False,details=None):
@@ -104,6 +148,7 @@ def evaluate(*, session, cutoff, calendar, capture_record=None, marker=None, rea
         add("thesis_t0_current_delta",{"separate_bases_for_each_computed_record":bool(current.get("records")) and current.get("separate_basis_count")==sum(current.get("counts",{}).get(k,0) for k in ("built_count","partial_count"))},current)
         for name,key in (("thesis_flow_facts_only","flow_directional_violation"),("thesis_zero_second_posture","second_posture"),("thesis_zero_action_policy_delta","action_policy_delta")):
             add(name,{"zero_violation":bool(current) and current.get(key)==0},current)
+    rows.extend(feedback_rows(feedback))
     add("pit_continuous_price",{"continuous_price_and_membership":bool(tickers) and all(t["pit_component_readiness"]["continuous_price"] and t["pit_component_readiness"]["observed_price_and_membership"] for t in tickers)},readiness,bool(tickers))
     add("raw_as_traded",{"all_names_exact_raw_authorized":bool(tickers) and all("PROSPECTIVE_RAW_AS_TRADED_PRICE" in (t.get("raw_use_state") or {}).get("allowed_uses",[]) for t in tickers)},tickers)
     add("ca",{"qualified_factor_chain_or_nonapplicability":bool(tickers) and all(t.get("ca_comparability")=="QUALIFIED_COMPARABLE" for t in tickers)},readiness,details={"blockers":r.get("ca_blockers",[])})
@@ -116,7 +161,18 @@ def evaluate(*, session, cutoff, calendar, capture_record=None, marker=None, rea
     body.update(market.content_identity(body,kind="first_real_session_acceptance")); return body
 
 
-def collect(root, *, session, cutoff, technical_path=None, flow_path=None, snapshot_binding=None, decision_path=None,thesis_t0_path=None,thesis_current_path=None,thesis_references=None):
+def _read_status(path):
+    try:
+        path = Path(path)
+        if path.stat().st_size > 256 * 1024:
+            return None
+        value = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError, UnicodeError):
+        return None
+    return value if isinstance(value, dict) else None
+
+
+def collect(root, *, session, cutoff, technical_path=None, flow_path=None, snapshot_binding=None, decision_path=None,thesis_t0_path=None,thesis_current_path=None,thesis_references=None,feedback_status_paths=None):
     """Explicit artifacts only; large corpora parsed once with bounded members."""
     from bounded_artifact_stream import stream_artifact
     from prospective_t0_seal_index import load_verified
@@ -191,5 +247,5 @@ def collect(root, *, session, cutoff, technical_path=None, flow_path=None, snaps
             if market._utc(data["created_at"],"thesis_known_at")<=market._utc(cutoff,"cutoff"):products[stage]=data
     return evaluate(session=session,cutoff=cutoff,calendar=calendar,capture_record=record,marker=marker,readiness=readiness,
         technical_contexts=contexts,sealed_bindings=bound,flow_records=records,valuation=valuation,liquidity=liquidity,
-        thesis_products=products,thesis_state={"stage_1":states.get("THESIS_EVIDENCE_MATRIX_AND_CONFLICT_ENGINE_V1_STAGE_1"),"stage_1_offline":True,
+        thesis_products=products,feedback={k:_read_status(v) for k,v in (feedback_status_paths or {}).items() if v},thesis_state={"stage_1":states.get("THESIS_EVIDENCE_MATRIX_AND_CONFLICT_ENGINE_V1_STAGE_1"),"stage_1_offline":True,
                       "stage_2":states.get("THESIS_EVIDENCE_MATRIX_AND_CONFLICT_ENGINE_V1_STAGE_2_PRODUCTION_INTEGRATION","NOT_STARTED")})

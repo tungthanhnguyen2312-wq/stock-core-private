@@ -2,6 +2,10 @@
 
 > Navigation aid only. docs/STATE.md, docs/ROADMAP.md, docs/DECISIONS.md and docs/ROADMAP_STATE.json remain authority.
 
+Outcome-feedback children (pre- and post-handoff) run bounded: `feedback_resource_guard.py` (admission, one total deadline, memory ceiling, reaping) around
+`prospective_feedback_streaming.py` (streamed proof and output, atomic COMPLETE publication). Content and `artifact_identity` equal the original
+`prospective_decision_outcome_feedback.build_feedback_artifact`; resource reasons are never feedback evidence. [Contract](owner_daily_feedback_resource_containment_contract.md).
+
 Prospective market continuity: `prospective_market_snapshot_contract.py` owns price/volume
 fitness and scoped official comparison; `prospective_market_evidence_retention.py` is its
 immutable Daily I/O boundary, using the existing universe verifier/retainer and corporate

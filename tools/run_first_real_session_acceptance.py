@@ -36,6 +36,8 @@ def main():
     parser.add_argument("--volume-flow-artifact",type=Path)
     parser.add_argument("--decision-artifact",type=Path)
     parser.add_argument("--thesis-t0",type=Path);parser.add_argument("--thesis-current",type=Path)
+    parser.add_argument("--feedback-pre",type=Path,help="status sidecar of the pre-handoff feedback child (reported, never gating)")
+    parser.add_argument("--feedback-post",type=Path,help="status sidecar of the post-handoff feedback child (reported, never gating)")
     parser.add_argument("--output",type=Path,required=True)
     parser.add_argument("--dry-run",action="store_true")
     args=parser.parse_args()
@@ -57,7 +59,8 @@ def main():
         report=acceptance.collect(args.source_root,session=args.session,cutoff=args.cutoff,
             technical_path=args.technical_artifact,flow_path=args.volume_flow_artifact,snapshot_binding=binding,decision_path=args.decision_artifact,
             thesis_t0_path=args.thesis_t0 or (args.source_root/thesis["t0"]["path"] if (thesis.get("t0") or {}).get("path") else None),
-            thesis_current_path=args.thesis_current or (args.source_root/thesis["current"]["path"] if (thesis.get("current") or {}).get("path") else None),thesis_references=thesis)
+            thesis_current_path=args.thesis_current or (args.source_root/thesis["current"]["path"] if (thesis.get("current") or {}).get("path") else None),thesis_references=thesis,
+            feedback_status_paths={"pre":args.feedback_pre,"post":args.feedback_post})
     from atomic_io import atomic_write_json
     atomic_write_json(output,report)
     print(json.dumps({row["capability"]:row["state"] for row in report["rows"]},indent=2))

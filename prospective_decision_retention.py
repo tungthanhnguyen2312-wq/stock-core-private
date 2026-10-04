@@ -425,16 +425,24 @@ def _handoff_snapshot_inventory(root: Path) -> list[dict[str, Any]]:
     return rows
 
 
-def discover_snapshots(root: str | Path, *, payload_projection: Callable[[Mapping[str, Any]], Mapping[str, Any]] | None = None) -> dict[str, Any]:
-    """Inventory immutable snapshots and admit only canonical-operation-bound ones."""
+def discover_snapshots(root: str | Path, *, payload_projection: Callable[[Mapping[str, Any]], Mapping[str, Any]] | None = None,
+                       snapshot_loader: Callable[[Path], Mapping[str, Any] | None] | None = None,
+                       snapshot_validator: Callable[[Mapping[str, Any]], bool] | None = None) -> dict[str, Any]:
+    """Inventory immutable snapshots and admit only canonical-operation-bound ones.
+
+    ``snapshot_loader``/``snapshot_validator`` are resource-containment seams (header-only handle plus a
+    streamed identity proof); the defaults keep the original full-parse behaviour.
+    """
     repository = Path(root)
+    load_snapshot = snapshot_loader or _load
+    validate = snapshot_validator or validate_snapshot
     operations = _operation_manifests(repository)
     handoffs = _handoff_by_snapshot(repository)
     base = repository / "operations-review" / "prospective-decision-retention-v1"
     inventory: list[dict[str, Any]] = []
     genuine: list[dict[str, Any]] = []
     for path in sorted(base.glob("*/*/prospective_decision_snapshot.json")) if base.is_dir() else []:
-        snapshot = _load(path)
+        snapshot = load_snapshot(path)
         if not snapshot:
             continue
         identity = snapshot.get("snapshot_identity")
@@ -443,7 +451,7 @@ def discover_snapshots(root: str | Path, *, payload_projection: Callable[[Mappin
         operation = operations.get(operation_identity) if isinstance(operation_identity, str) else None
         handoff = handoffs.get(identity) if isinstance(identity, str) else None
         reasons: list[str] = []
-        if not validate_snapshot(snapshot):
+        if not validate(snapshot):
             reasons.append("SNAPSHOT_CONTENT_IDENTITY_INVALID")
         if not isinstance(operation, Mapping):
             reasons.append("DAILY_OPERATION_MANIFEST_NOT_RETAINED")

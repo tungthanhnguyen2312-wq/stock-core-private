@@ -1356,44 +1356,123 @@ def test_run_post_handoff_observers_forwards_live_foreign_flow_flag(tmp_path, mo
     assert seen["allow_network"] is True
 
 
+def _admit_everything(monkeypatch):
+    """Resource admission is host-dependent (free RAM/disk); these tests exercise the wiring, not the host."""
+    import feedback_resource_guard as guard
+    monkeypatch.setattr(guard, "admit", lambda policy, **k: {"admitted": True, "reason_code": None, "reasons": [], "available_physical_bytes": 1,
+                                                              "available_commit_bytes": 1, "free_disk_bytes": 1})
+
+
+def _completed_bounded(identity="prospective_decision_outcome_feedback:test", **extra):
+    def fake_run_bounded(command, *, cwd, policy, result_path):
+        output_path = Path(command[command.index("--output") + 1])
+        assert Path(command[command.index("--result") + 1]) == Path(result_path)
+        assert Path(result_path) != Path(command[command.index("--status") + 1])
+        assert Path(command[command.index("--status") + 1]).name == output_path.name + ".status.json"
+        return {"outcome": "COMPLETED", "reason_code": None, "returncode": 0, "wall_seconds": 1.5, "containment": "TEST",
+                "reaped": True, "peak_process_bytes": 123, "stderr_tail": "",
+                "child_result": {"status": "COMPLETED", "artifact_identity": identity, "outcome": "BUILT", "record_count": 3,
+                                "relation": {"relation": "INCREMENTAL"}, "peak_memory_bytes": 99, **extra}}
+    return fake_run_bounded
+
+
+def test_complete_child_with_unconfirmed_reaping_is_fail_soft_unavailable(tmp_path, monkeypatch):
+    import feedback_resource_guard as guard
+    _admit_everything(monkeypatch)
+    runner = _completed_bounded()
+    def unreaped(*args, **kwargs):
+        return {**runner(*args, **kwargs), "reaped": False}
+    monkeypatch.setattr(guard, "run_bounded", unreaped)
+    result = cpc.run_bounded_prospective_feedback(tmp_path, "2026-10-05", output=tmp_path / "feedback.json", stage=cpc.FEEDBACK_STAGE_PRE_HANDOFF)
+    assert result["status"] == "UNAVAILABLE" and result["reason_code"] == guard.CHILD_REAP_UNCONFIRMED
+
+
 def test_run_post_handoff_prospective_outcome_feedback_writes_to_distinct_post_handoff_path(tmp_path, monkeypatch):
+    import feedback_resource_guard as guard
     session = "2026-08-25"
+    seen = {}
+    _admit_everything(monkeypatch)
+    runner = _completed_bounded()
 
-    class FakeCompleted:
-        returncode = 0
-        stdout = ""
-        stderr = ""
+    def recording(command, **kwargs):
+        seen["command"], seen["policy"] = command, kwargs["policy"]
+        return runner(command, **kwargs)
 
-    def fake_run(cmd, **kwargs):
-        output_path = Path(cmd[cmd.index("--output") + 1])
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-        output_path.write_text(json.dumps({"artifact_identity": "prospective_decision_outcome_feedback:test"}),
-                               encoding="utf-8")
-        return FakeCompleted()
-
-    monkeypatch.setattr(cpc.subprocess, "run", fake_run)
+    monkeypatch.setattr(guard, "run_bounded", recording)
     result = cpc.run_post_handoff_prospective_outcome_feedback(tmp_path, session, output_root=tmp_path)
 
     assert result["status"] == "COLLECTED"
     assert result["artifact_identity"] == "prospective_decision_outcome_feedback:test"
+    assert result["stage"] == "POST_HANDOFF" and result["relation"] == "INCREMENTAL"
     expected_path = ("operations-review/prospective-decision-outcome-feedback-post-handoff-v1/"
                      f"{session}/prospective_decision_feedback_artifact.json")
     assert result["path"] == expected_path
     # Distinct from run_prospective_collection's own pre-handoff immutable artifact path --
     # this must never write to (or conflict with) that historical evidence.
     assert "prospective-decision-outcome-feedback-v1" not in expected_path
+    # Bounded child contract: paths/identities only, one total deadline, no payload over IPC.
+    assert "--result" in seen["command"] and seen["policy"].deadline_seconds > 0 and seen["policy"].memory_limit_bytes
+    assert all(len(part) < 1024 for part in seen["command"])
+    assert result["resource"]["child_peak_bytes"] == 99
 
 
 def test_run_post_handoff_prospective_outcome_feedback_degrades_on_subprocess_failure(tmp_path, monkeypatch):
-    class FakeFailed:
-        returncode = 1
-        stdout = ""
-        stderr = "boom"
+    import feedback_resource_guard as guard
 
-    monkeypatch.setattr(cpc.subprocess, "run", lambda *a, **k: FakeFailed())
+    _admit_everything(monkeypatch)
+    monkeypatch.setattr(guard, "run_bounded", lambda *a, **k: {
+        "outcome": "EXIT_NONZERO", "reason_code": guard.COMPUTATION_ERROR, "returncode": 30, "wall_seconds": 1.0, "containment": "TEST",
+        "reaped": True, "peak_process_bytes": 1, "stderr_tail": "boom", "child_result": None})
     result = cpc.run_post_handoff_prospective_outcome_feedback(tmp_path, "2026-08-25")
     assert result["status"] == "UNAVAILABLE"
-    assert "boom" in result["reason"]
+    assert "boom" in result["reason"] and result["reason_code"] == guard.COMPUTATION_ERROR
+    assert result["interpretation"] == "RESOURCE_OR_DEFECT_STATUS_NOT_FEEDBACK_EVIDENCE"
+
+
+def test_feedback_timeout_and_admission_refusal_are_resource_reasons_and_launch_no_unbounded_work(tmp_path, monkeypatch):
+    import feedback_resource_guard as guard
+
+    launched = []
+    _admit_everything(monkeypatch)
+    monkeypatch.setattr(guard, "run_bounded", lambda *a, **k: launched.append(1) or {
+        "outcome": "TIMEOUT", "reason_code": guard.RESOURCE_TIMEOUT, "returncode": -1, "wall_seconds": 9.0, "containment": "TEST",
+        "reaped": True, "peak_process_bytes": 5, "stderr_tail": "", "child_result": None})
+    timed_out = cpc.run_bounded_prospective_feedback(tmp_path, "2026-10-05", output=tmp_path / "f.json", stage=cpc.FEEDBACK_STAGE_PRE_HANDOFF)
+    assert timed_out["status"] == "UNAVAILABLE" and timed_out["reason_code"] == guard.RESOURCE_TIMEOUT == "FEEDBACK_RESOURCE_TIMEOUT"
+    assert timed_out["reason_code"] in guard.RESOURCE_REASONS and "artifact_identity" not in timed_out
+
+    tight = guard.ResourcePolicy(deadline_seconds=5, memory_limit_bytes=1 << 30, min_available_physical_bytes=1 << 62,
+                                 min_available_commit_bytes=0, min_free_disk_bytes=0)
+    monkeypatch.undo()  # restore the real admission check and run_bounded for the refusal case
+    monkeypatch.setattr(guard, "run_bounded", lambda *a, **k: launched.append(1) or {})
+    launched.clear()
+    refused = cpc.run_bounded_prospective_feedback(tmp_path, "2026-10-05", output=tmp_path / "g.json", stage=cpc.FEEDBACK_STAGE_POST_HANDOFF, policy=tight)
+    assert refused["status"] == "UNAVAILABLE" and refused["reason_code"] == guard.RESOURCE_UNAVAILABLE == "FEEDBACK_RESOURCE_UNAVAILABLE"
+    assert launched == [] and refused["admission"]["admitted"] is False
+
+
+def test_pre_handoff_collection_keeps_only_a_compact_feedback_status_in_the_parent(tmp_path, monkeypatch):
+    import feedback_resource_guard as guard
+
+    session = "2026-10-05"
+
+    class Completed:
+        returncode, stdout, stderr = 0, "", ""
+
+    def fake_collection(cmd, **kwargs):
+        snapshot = Path(cmd[cmd.index("--output") + 1])
+        snapshot.parent.mkdir(parents=True, exist_ok=True)
+        snapshot.write_text(json.dumps({"snapshot_id": "cohort:1"}), encoding="utf-8")
+        return Completed()
+
+    monkeypatch.setattr(cpc, "run_observed_subprocess", lambda cmd, **kwargs: fake_collection(cmd))
+    _admit_everything(monkeypatch)
+    monkeypatch.setattr(guard, "run_bounded", _completed_bounded())
+    collected = cpc.run_prospective_collection(tmp_path, session)
+    feedback = collected["decision_feedback"]
+    assert feedback["status"] == "COLLECTED" and feedback["artifact_identity"] == "prospective_decision_outcome_feedback:test"
+    assert "artifact" not in feedback and "feedback_records" not in json.dumps(feedback)
+    assert len(json.dumps(feedback)) < 8000
 
 
 # ---- _sealed_workspace_lineage / run_post_handoff_presentation_projection

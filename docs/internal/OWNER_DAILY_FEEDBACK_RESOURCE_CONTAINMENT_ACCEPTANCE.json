@@ -1,0 +1,1410 @@
+{
+  "action_policy_delta": 0,
+  "artifact_identity": "owner_daily_feedback_resource_containment_acceptance:415f9ff6e027226da981a54bbecf6588ced0b2d20118c207200fad517ba26ef3",
+  "artifact_sha256": "415f9ff6e027226da981a54bbecf6588ced0b2d20118c207200fad517ba26ef3",
+  "authority_effect": "NONE / OWNER_DAILY_RESOURCE_CONTAINMENT_ONLY",
+  "calendar_registration_executed": false,
+  "capture_and_marker": {
+    "capture_store_entries_after": 0,
+    "capture_store_entries_before": 0,
+    "marker_present_after": false,
+    "marker_present_before": false,
+    "unchanged": true
+  },
+  "capture_marker_t0_seal_delta": 0,
+  "classification": "MONDAY_ENGINEERING_READY",
+  "contract_version": "owner_daily_feedback_resource_containment_acceptance/v1",
+  "evaluation_scope": "OFFLINE_RETAINED_EVIDENCE_READ_ONLY_REHEARSAL",
+  "failed_gates": [],
+  "failure_injection": {
+    "admission_refusal": {
+      "job_peak_bytes": null,
+      "output_published": false,
+      "reaped": null,
+      "reason_code": "FEEDBACK_RESOURCE_UNAVAILABLE",
+      "status": "UNAVAILABLE",
+      "wall_seconds": 0.01
+    },
+    "memory_ceiling": {
+      "job_peak_bytes": 100663296,
+      "output_published": false,
+      "reaped": true,
+      "reason_code": "FEEDBACK_RESOURCE_MEMORY_LIMIT",
+      "status": "UNAVAILABLE",
+      "wall_seconds": 7.03
+    },
+    "second_after_first": {
+      "job_peak_bytes": 39043072,
+      "output_published": false,
+      "reaped": true,
+      "reason_code": "FEEDBACK_RESOURCE_TIMEOUT",
+      "status": "UNAVAILABLE",
+      "wall_seconds": 1.04
+    },
+    "timeout_before_first_output": {
+      "job_peak_bytes": 28225536,
+      "output_published": false,
+      "reaped": true,
+      "reason_code": "FEEDBACK_RESOURCE_TIMEOUT",
+      "status": "UNAVAILABLE",
+      "wall_seconds": 1.06
+    }
+  },
+  "feedback_call_relation": {
+    "changed_percent": 55.1,
+    "interpretation": "every non-terminal row's maturity window moves when the chain grows by one session; post-handoff cannot reuse pre-handoff rows",
+    "post_rows": 30294,
+    "pre_rows": 28611,
+    "relation": "INCREMENTAL",
+    "rows_byte_identical": 12844,
+    "rows_changed_by_the_new_session": 15767,
+    "rows_new": 1683,
+    "shared_decisions": 28611
+  },
+  "gates": {
+    "admission_refusal_launches_nothing": true,
+    "all_children_reaped": true,
+    "capture_and_marker_unchanged": true,
+    "child_peak_below_half_the_default_ceiling": true,
+    "cold_completes_within_half_the_default_deadline": true,
+    "exact_identity_equals_original_builder_on_real_corpus": true,
+    "memory_ceiling_is_resource_reason": true,
+    "oracle_rows_identical": true,
+    "parent_growth_below_64_MiB": true,
+    "post_handoff_relation_incremental": true,
+    "prior_feedback_valid_after_failures": true,
+    "protected_evidence_unchanged": true,
+    "retry_rebuilds_identical_identity": true,
+    "terminal_reuse_writes_nothing": true,
+    "timeout_is_resource_reason_and_reaped": true
+  },
+  "historical_t0_rewritten": false,
+  "host": {
+    "disk_free_start_bytes": 29685125120,
+    "start": {
+      "available_commit_bytes": 9276891136,
+      "available_physical_bytes": 3967512576,
+      "total_physical_bytes": 16859357184
+    }
+  },
+  "implementation_checkpoint": "b7e785b20d745da247364a816f321d1e699d1e11",
+  "legacy_baseline": {
+    "legacy_builder_on_current_corpus": "MemoryError at 2.9 GiB (Job ceiling 4 GiB) while reading the 1.33 GB 2026-10-02 decision artifact, 54 s",
+    "parent_cost_of_loading_one_finished_artifact_bytes": 2264924160,
+    "parent_peak_rss_bytes": 9853145088,
+    "parent_rss_before_first_feedback_bytes": 4422004736,
+    "parent_rss_before_second_feedback_bytes": 5575786496,
+    "post_handoff_feedback_seconds": 601,
+    "pre_handoff_feedback_seconds": 696,
+    "source": "run-logs/stock_lookup_daily_20261002_154250.progress.jsonl",
+    "tactical_reversal_shadow_collection_seconds": 793,
+    "whole_daily_seconds": 4655
+  },
+  "live_daily_runs": 0,
+  "network_provider_calls": 0,
+  "parity": {
+    "exact_identity_on_real_reduced_corpus": {
+      "identical": true,
+      "legacy_identity": "prospective_decision_outcome_feedback:f854bcd2b671b8813dd9a6b5e32fe63bf5bc5929d70ef000a4b0dca8f05fb869",
+      "legacy_outcome": "COMPLETED",
+      "legacy_peak_job_bytes": 3604959232,
+      "legacy_reason": null,
+      "legacy_sampled": {
+        "child_processes_seen": 1,
+        "children_total_peak_rss_bytes": 3269443584,
+        "largest_single_child_peak_rss_bytes": 3269443584,
+        "min_host_available_bytes": 1116254208,
+        "parent_baseline_rss_bytes": 134336512,
+        "parent_peak_rss_bytes": 134369280,
+        "parent_rss_growth_bytes": 32768,
+        "sample_interval_seconds": 0.25
+      },
+      "legacy_wall_seconds": 78.868,
+      "records": 8415,
+      "streaming_child_peak_bytes": 383254528,
+      "streaming_identity": "prospective_decision_outcome_feedback:f854bcd2b671b8813dd9a6b5e32fe63bf5bc5929d70ef000a4b0dca8f05fb869",
+      "streaming_wall_seconds": 56.44,
+      "through_session": "2026-09-11"
+    },
+    "oracle": {
+      "differing_sections": [
+        "artifact_identity",
+        "prospective_corpus",
+        "temporal_qualification"
+      ],
+      "explained_differences": "only prospective_corpus/temporal_qualification inventory rows for evidence that changed after the oracle was written",
+      "feedback_records": 31977,
+      "feedback_records_identical": true,
+      "identical_sections": [
+        "authority_boundary",
+        "coherence_outcome_summary",
+        "contract_version",
+        "evidence_axis_outcome_summary",
+        "failed_setup_cases",
+        "false_negative_cases",
+        "feedback_records",
+        "forward_outcome_coverage",
+        "outcome_policy_constants",
+        "policy_diagnostic_candidates",
+        "posture_outcome_summary",
+        "prospective_corpus_health",
+        "required_ticker_cases",
+        "schema_version",
+        "trigger_invalidation_outcomes"
+      ],
+      "oracle": "operations-review/prospective-decision-outcome-feedback-post-handoff-v1/2026-10-02/prospective_decision_feedback_artifact.json",
+      "oracle_present": true,
+      "trigger_outcomes_identical": true
+    }
+  },
+  "policy": {
+    "deadline_seconds": 1200.0,
+    "memory_limit_bytes": 2147483648,
+    "min_available_commit_bytes": 1073741824,
+    "min_available_physical_bytes": 805306368,
+    "min_free_disk_bytes": 4294967296
+  },
+  "prior_feedback_valid_after_failures": true,
+  "protected_evidence": {
+    "bytes": 4951154026,
+    "capture_marker_t0_seal_posture_delta": 0,
+    "categories": [
+      "T0 snapshots",
+      "handoff bundles",
+      "operation manifests",
+      "capture store + marker",
+      "10-02 decision artifact",
+      "input registry"
+    ],
+    "files": 101,
+    "unchanged": true
+  },
+  "retry": {
+    "identity_equals_changed_input_run": true,
+    "incomplete_removed_automatically": true,
+    "recognisable_incomplete_files": [
+      ".feedback-retry.json-rows-21272.spool",
+      ".feedback-retry.json-trigger-21272.spool"
+    ]
+  },
+  "runs": {
+    "CHANGED_INPUT_INCREMENTAL_clone": {
+      "artifact_identity": "prospective_decision_outcome_feedback:542c1ac9215fadc70145d696af5564e65af76d903b326b9530ad804705db7267",
+      "child_job_peak_bytes": 524308480,
+      "child_sampled_peak_rss_bytes": 316375040,
+      "child_self_reported_peak_bytes": 524308480,
+      "containment": "WINDOWS_JOB_OBJECT_PROCESS_MEMORY",
+      "host_available_before": 4258734080,
+      "label": "CLONE_POST_HANDOFF_CHANGED_INPUT",
+      "min_host_available_bytes": 3567157248,
+      "outcome": "BUILT",
+      "output_bytes": 503645740,
+      "parent_baseline_rss_bytes": 134414336,
+      "parent_peak_rss_bytes": 134443008,
+      "parent_rss_growth_bytes": 28672,
+      "phases_seconds": {
+        "assemble_s": 34.581,
+        "discovery_s": 4.636,
+        "evaluate_s": 54.952,
+        "price_index_s": 1.115,
+        "total_s": 95.394
+      },
+      "reaped": true,
+      "reason_code": null,
+      "record_count": 30294,
+      "relation": "INCREMENTAL",
+      "status": "COLLECTED",
+      "stream_metrics": {
+        "legacy_receipt_hits": 2,
+        "output_bytes": 503645740,
+        "price_index_hits": 3,
+        "rows": 30294,
+        "spool_bytes": 501061633,
+        "stream_sha256_bytes": 3028439388,
+        "summary_hits": 0,
+        "t0_receipt_hits": 18
+      },
+      "wall_seconds": 99.73
+    },
+    "COLD_clone_pre_handoff": {
+      "artifact_identity": "prospective_decision_outcome_feedback:4f5fd7d15fa68bb515f6b2a5f190edeeaed189e201a65e686d1eb18384af0f56",
+      "child_job_peak_bytes": 525410304,
+      "child_sampled_peak_rss_bytes": 318726144,
+      "child_self_reported_peak_bytes": 525410304,
+      "containment": "WINDOWS_JOB_OBJECT_PROCESS_MEMORY",
+      "host_available_before": 4107931648,
+      "label": "CLONE_PRE_HANDOFF_COLD",
+      "min_host_available_bytes": 3600162816,
+      "outcome": "BUILT",
+      "output_bytes": 469840387,
+      "parent_baseline_rss_bytes": 134410240,
+      "parent_peak_rss_bytes": 134438912,
+      "parent_rss_growth_bytes": 28672,
+      "phases_seconds": {
+        "assemble_s": 11.373,
+        "discovery_s": 76.279,
+        "evaluate_s": 41.926,
+        "price_index_s": 9.693,
+        "total_s": 139.363
+      },
+      "reaped": true,
+      "reason_code": null,
+      "record_count": 28611,
+      "relation": "NO_PRIOR",
+      "status": "COLLECTED",
+      "stream_metrics": {
+        "output_bytes": 469840387,
+        "price_index_misses": 3,
+        "rows": 28611,
+        "spool_bytes": 467435197,
+        "stream_header_scan_bytes": 87098848,
+        "stream_parsed_bytes": 658232034,
+        "stream_sha256_bytes": 3028439388,
+        "stream_verified_bytes": 2283108506,
+        "summary_hits": 0,
+        "t0_receipt_misses": 18
+      },
+      "wall_seconds": 143.88
+    },
+    "COLD_primary_corpus": {
+      "artifact_identity": "prospective_decision_outcome_feedback:3b366ef7de470628d74eabf58ec2ad4c5fd7e447f889936b3b121eeaa72b4d27",
+      "child_job_peak_bytes": 557916160,
+      "child_sampled_peak_rss_bytes": 346009600,
+      "child_self_reported_peak_bytes": 557916160,
+      "containment": "WINDOWS_JOB_OBJECT_PROCESS_MEMORY",
+      "host_available_before": 3967422464,
+      "label": "PRIMARY_COLD",
+      "min_host_available_bytes": 3672248320,
+      "outcome": "BUILT",
+      "output_bytes": 545447942,
+      "parent_baseline_rss_bytes": 118820864,
+      "parent_peak_rss_bytes": 119005184,
+      "parent_rss_growth_bytes": 184320,
+      "phases_seconds": {
+        "assemble_s": 23.682,
+        "discovery_s": 136.34,
+        "evaluate_s": 83.998,
+        "price_index_s": 14.076,
+        "total_s": 258.221
+      },
+      "reaped": true,
+      "reason_code": null,
+      "record_count": 31977,
+      "relation": "NO_PRIOR",
+      "status": "COLLECTED",
+      "stream_metrics": {
+        "legacy_receipt_hits": 3,
+        "output_bytes": 545447942,
+        "price_index_misses": 4,
+        "rows": 31977,
+        "spool_bytes": 542643522,
+        "stream_header_scan_bytes": 3607192940,
+        "stream_parsed_bytes": 959906744,
+        "stream_sha256_bytes": 8270838279,
+        "stream_verified_bytes": 2283108506,
+        "summary_hits": 0,
+        "t0_receipt_misses": 18
+      },
+      "wall_seconds": 263.0
+    },
+    "RETRY_interrupted": {
+      "artifact_identity": null,
+      "child_job_peak_bytes": 501264384,
+      "child_sampled_peak_rss_bytes": 295452672,
+      "child_self_reported_peak_bytes": null,
+      "containment": "WINDOWS_JOB_OBJECT_PROCESS_MEMORY",
+      "host_available_before": 4084957184,
+      "label": "RETRY_INTERRUPTED",
+      "min_host_available_bytes": 3688128512,
+      "outcome": null,
+      "output_bytes": null,
+      "parent_baseline_rss_bytes": 148332544,
+      "parent_peak_rss_bytes": 148488192,
+      "parent_rss_growth_bytes": 155648,
+      "phases_seconds": null,
+      "reaped": true,
+      "reason_code": "FEEDBACK_RESOURCE_TIMEOUT",
+      "record_count": null,
+      "relation": null,
+      "status": "UNAVAILABLE",
+      "stream_metrics": {},
+      "wall_seconds": 47.45
+    },
+    "RETRY_rebuild": {
+      "artifact_identity": "prospective_decision_outcome_feedback:542c1ac9215fadc70145d696af5564e65af76d903b326b9530ad804705db7267",
+      "child_job_peak_bytes": 521396224,
+      "child_sampled_peak_rss_bytes": 312946688,
+      "child_self_reported_peak_bytes": 521396224,
+      "containment": "WINDOWS_JOB_OBJECT_PROCESS_MEMORY",
+      "host_available_before": 3949584384,
+      "label": "RETRY_REBUILD",
+      "min_host_available_bytes": 2970812416,
+      "outcome": "BUILT",
+      "output_bytes": 503645740,
+      "parent_baseline_rss_bytes": 148480000,
+      "parent_peak_rss_bytes": 148500480,
+      "parent_rss_growth_bytes": 20480,
+      "phases_seconds": {
+        "assemble_s": 15.32,
+        "discovery_s": 4.786,
+        "evaluate_s": 70.682,
+        "price_index_s": 1.121,
+        "total_s": 92.083
+      },
+      "reaped": true,
+      "reason_code": null,
+      "record_count": 30294,
+      "relation": "NO_PRIOR",
+      "status": "COLLECTED",
+      "stream_metrics": {
+        "legacy_receipt_hits": 2,
+        "output_bytes": 503645740,
+        "price_index_hits": 3,
+        "rows": 30294,
+        "spool_bytes": 501061633,
+        "stream_sha256_bytes": 3028439388,
+        "summary_hits": 0,
+        "t0_receipt_hits": 18
+      },
+      "wall_seconds": 96.42
+    },
+    "TERMINAL_REUSE_clone": {
+      "artifact_identity": "prospective_decision_outcome_feedback:542c1ac9215fadc70145d696af5564e65af76d903b326b9530ad804705db7267",
+      "child_job_peak_bytes": 380862464,
+      "child_sampled_peak_rss_bytes": 177135616,
+      "child_self_reported_peak_bytes": 380862464,
+      "containment": "WINDOWS_JOB_OBJECT_PROCESS_MEMORY",
+      "host_available_before": 4207366144,
+      "label": "CLONE_TERMINAL_REUSE",
+      "min_host_available_bytes": 3944067072,
+      "outcome": "ALREADY_COMPLETE",
+      "output_bytes": 503645740,
+      "parent_baseline_rss_bytes": 148279296,
+      "parent_peak_rss_bytes": 148357120,
+      "parent_rss_growth_bytes": 77824,
+      "phases_seconds": {
+        "discovery_s": 4.679,
+        "price_index_s": 1.468,
+        "total_s": 7.063
+      },
+      "reaped": true,
+      "reason_code": null,
+      "record_count": 30294,
+      "relation": "INCREMENTAL",
+      "status": "COLLECTED",
+      "stream_metrics": {
+        "legacy_receipt_hits": 2,
+        "price_index_hits": 3,
+        "stream_sha256_bytes": 3028439388,
+        "summary_hits": 0,
+        "t0_receipt_hits": 18
+      },
+      "wall_seconds": 10.69
+    },
+    "TERMINAL_REUSE_primary": {
+      "artifact_identity": "prospective_decision_outcome_feedback:3b366ef7de470628d74eabf58ec2ad4c5fd7e447f889936b3b121eeaa72b4d27",
+      "child_job_peak_bytes": 382820352,
+      "child_sampled_peak_rss_bytes": 177864704,
+      "child_self_reported_peak_bytes": 382820352,
+      "containment": "WINDOWS_JOB_OBJECT_PROCESS_MEMORY",
+      "host_available_before": 4364402688,
+      "label": "PRIMARY_REUSE",
+      "min_host_available_bytes": 4222414848,
+      "outcome": "ALREADY_COMPLETE",
+      "output_bytes": 545447942,
+      "parent_baseline_rss_bytes": 117997568,
+      "parent_peak_rss_bytes": 118108160,
+      "parent_rss_growth_bytes": 110592,
+      "phases_seconds": {
+        "discovery_s": 16.313,
+        "price_index_s": 1.902,
+        "total_s": 19.199
+      },
+      "reaped": true,
+      "reason_code": null,
+      "record_count": 31977,
+      "relation": "NO_PRIOR",
+      "status": "COLLECTED",
+      "stream_metrics": {
+        "legacy_receipt_hits": 4,
+        "price_index_hits": 4,
+        "stream_sha256_bytes": 4732429290,
+        "summary_hits": 22,
+        "t0_receipt_hits": 18
+      },
+      "wall_seconds": 22.72
+    },
+    "WARM_new_output_path_clone": {
+      "artifact_identity": "prospective_decision_outcome_feedback:542c1ac9215fadc70145d696af5564e65af76d903b326b9530ad804705db7267",
+      "child_job_peak_bytes": 523739136,
+      "child_sampled_peak_rss_bytes": 316592128,
+      "child_self_reported_peak_bytes": 523739136,
+      "containment": "WINDOWS_JOB_OBJECT_PROCESS_MEMORY",
+      "host_available_before": 4346839040,
+      "label": "CLONE_WARM",
+      "min_host_available_bytes": 3577712640,
+      "outcome": "BUILT",
+      "output_bytes": 503645740,
+      "parent_baseline_rss_bytes": 151764992,
+      "parent_peak_rss_bytes": 151789568,
+      "parent_rss_growth_bytes": 24576,
+      "phases_seconds": {
+        "assemble_s": 15.573,
+        "discovery_s": 4.455,
+        "evaluate_s": 53.213,
+        "price_index_s": 1.176,
+        "total_s": 74.517
+      },
+      "reaped": true,
+      "reason_code": null,
+      "record_count": 30294,
+      "relation": "IDENTICAL",
+      "status": "COLLECTED",
+      "stream_metrics": {
+        "legacy_receipt_hits": 2,
+        "output_bytes": 503645740,
+        "price_index_hits": 3,
+        "rows": 30294,
+        "spool_bytes": 501061633,
+        "stream_sha256_bytes": 3028439388,
+        "summary_hits": 0,
+        "t0_receipt_hits": 18
+      },
+      "wall_seconds": 78.93
+    },
+    "WARM_new_output_path_primary": {
+      "artifact_identity": "prospective_decision_outcome_feedback:3b366ef7de470628d74eabf58ec2ad4c5fd7e447f889936b3b121eeaa72b4d27",
+      "child_job_peak_bytes": 537833472,
+      "child_sampled_peak_rss_bytes": 327741440,
+      "child_self_reported_peak_bytes": 537833472,
+      "containment": "WINDOWS_JOB_OBJECT_PROCESS_MEMORY",
+      "host_available_before": 4350382080,
+      "label": "PRIMARY_WARM",
+      "min_host_available_bytes": 3586904064,
+      "outcome": "BUILT",
+      "output_bytes": 545447942,
+      "parent_baseline_rss_bytes": 118087680,
+      "parent_peak_rss_bytes": 118419456,
+      "parent_rss_growth_bytes": 331776,
+      "phases_seconds": {
+        "assemble_s": 22.919,
+        "discovery_s": 16.912,
+        "evaluate_s": 86.863,
+        "price_index_s": 1.811,
+        "total_s": 128.626
+      },
+      "reaped": true,
+      "reason_code": null,
+      "record_count": 31977,
+      "relation": "IDENTICAL",
+      "status": "COLLECTED",
+      "stream_metrics": {
+        "legacy_receipt_hits": 4,
+        "output_bytes": 545447942,
+        "price_index_hits": 4,
+        "rows": 31977,
+        "spool_bytes": 542643522,
+        "stream_sha256_bytes": 4732429290,
+        "summary_hits": 22,
+        "t0_receipt_hits": 18
+      },
+      "wall_seconds": 134.35
+    }
+  },
+  "starting_main": "e57276ab26651bd7c81ef875e0dbe23cffb0a421",
+  "summary": {
+    "disk_free_end": 24164421632,
+    "largest_child_peak_bytes": 557916160,
+    "max_parent_growth_bytes": 331776,
+    "rehearsal_wall_seconds": 1260.4
+  },
+  "tests": {},
+  "final_release_validation": {
+    "authority_effect": "NONE / OWNER_DAILY_RESOURCE_CONTAINMENT_ONLY",
+    "calendar_registration_executed": false,
+    "classification": "FEEDBACK_RESOURCE_CONTAINMENT_READY",
+    "cold_baseline_comparison": {
+      "fresh_within_prior_half_deadline_margin": true,
+      "prior_legacy_receipt_hits": 3,
+      "prior_wall_seconds": 263.0,
+      "qualification": "The fresh and prior cold runs do the same measured source work; receipt hits can arise within a run from duplicate source bytes. This run shares the host with hermetic regression validation. The configured total deadline remains the release gate; the prior half-deadline margin is reported explicitly, not asserted anew. Timing headroom is smaller on this host."
+    },
+    "contract_version": "owner_daily_feedback_final_release_rehearsal/v1",
+    "failed_gates": [],
+    "gates": {
+      "bounded_reaping_confirmed": true,
+      "cold_warm_retry_same_identity": true,
+      "cold_within_total_deadline": true,
+      "concurrent_reuse_single_complete": true,
+      "no_child_memory_regression": true,
+      "oracle_rows_identical": true,
+      "oracle_triggers_identical": true,
+      "parent_stays_compact": true,
+      "prior_15_gates_retained": true,
+      "protected_bytes_unchanged": true,
+      "retry_cleans_dead_writer": true,
+      "retry_resource_timeout": true
+    },
+    "live_daily_runs": 0,
+    "network_provider_calls": 0,
+    "prior_acceptance_sha256": "925adf43a582b89404fc92789d416ee61242261e696e50c0f1a64034920ebe39",
+    "protected_evidence": {
+      "bytes": 4951154026,
+      "files": 101,
+      "unchanged": true
+    },
+    "reused_evidence": {
+      "changed_input_relation": {
+        "changed_percent": 55.1,
+        "interpretation": "every non-terminal row's maturity window moves when the chain grows by one session; post-handoff cannot reuse pre-handoff rows",
+        "post_rows": 30294,
+        "pre_rows": 28611,
+        "relation": "INCREMENTAL",
+        "rows_byte_identical": 12844,
+        "rows_changed_by_the_new_session": 15767,
+        "rows_new": 1683,
+        "shared_decisions": 28611
+      },
+      "exact_legacy_identity_parity": {
+        "identical": true,
+        "legacy_identity": "prospective_decision_outcome_feedback:f854bcd2b671b8813dd9a6b5e32fe63bf5bc5929d70ef000a4b0dca8f05fb869",
+        "legacy_outcome": "COMPLETED",
+        "legacy_peak_job_bytes": 3604959232,
+        "legacy_reason": null,
+        "legacy_sampled": {
+          "child_processes_seen": 1,
+          "children_total_peak_rss_bytes": 3269443584,
+          "largest_single_child_peak_rss_bytes": 3269443584,
+          "min_host_available_bytes": 1116254208,
+          "parent_baseline_rss_bytes": 134336512,
+          "parent_peak_rss_bytes": 134369280,
+          "parent_rss_growth_bytes": 32768,
+          "sample_interval_seconds": 0.25
+        },
+        "legacy_wall_seconds": 78.868,
+        "records": 8415,
+        "streaming_child_peak_bytes": 383254528,
+        "streaming_identity": "prospective_decision_outcome_feedback:f854bcd2b671b8813dd9a6b5e32fe63bf5bc5929d70ef000a4b0dca8f05fb869",
+        "streaming_wall_seconds": 56.44,
+        "through_session": "2026-09-11"
+      }
+    },
+    "runs": {
+      "cold": {
+        "child_metrics": {
+          "avoided_iid_bytes": 0,
+          "full_iid_bytes_parsed": 0,
+          "full_iid_parses": 0,
+          "legacy_receipt_hits": 3,
+          "output_bytes": 545447942,
+          "price_index_misses": 4,
+          "rows": 31977,
+          "settled_misses": 31977,
+          "spool_bytes": 542643522,
+          "stream_header_scan_bytes": 3607192940,
+          "stream_parsed_bytes": 959906744,
+          "stream_sha256_bytes": 8270838279,
+          "stream_verified_bytes": 2283108506,
+          "summary_hits": 0,
+          "t0_receipt_misses": 18
+        },
+        "host_after": {
+          "available_commit_bytes": 8410030080,
+          "available_physical_bytes": 2498002944,
+          "total_physical_bytes": 16859357184
+        },
+        "host_before": {
+          "available_commit_bytes": 8626528256,
+          "available_physical_bytes": 2294046720,
+          "total_physical_bytes": 16859357184
+        },
+        "inputs_summary": {
+          "artifact_inventory_paths": [
+            "operations-review/canonical-post-close-v1/2026-08-25/enrichment/integrated_investment_decision_product.json",
+            "operations-review/canonical-post-close-v1/2026-09-03/enrichment/integrated_investment_decision_product.json",
+            "operations-review/canonical-post-close-v1/2026-09-03/post-close-attempt-080034/operations-review/integrated-investment-decision-product-v1-20260903/integrated_investment_decision_product_artifact.json",
+            "operations-review/canonical-post-close-v1/2026-09-04/enrichment/integrated_investment_decision_product.json",
+            "operations-review/canonical-post-close-v1/2026-09-08/enrichment/integrated_investment_decision_product.json",
+            "operations-review/canonical-post-close-v1/2026-09-09/enrichment/integrated_investment_decision_product.json",
+            "operations-review/canonical-post-close-v1/2026-09-10/enrichment/integrated_investment_decision_product.json",
+            "operations-review/canonical-post-close-v1/2026-09-11/enrichment/integrated_investment_decision_product.json",
+            "operations-review/canonical-post-close-v1/2026-09-14/enrichment/integrated_investment_decision_product.json",
+            "operations-review/canonical-post-close-v1/2026-09-15/enrichment/integrated_investment_decision_product.json",
+            "operations-review/canonical-post-close-v1/2026-09-16/enrichment/integrated_investment_decision_product.json",
+            "operations-review/canonical-post-close-v1/2026-09-17/enrichment/integrated_investment_decision_product.json",
+            "operations-review/canonical-post-close-v1/2026-09-18/enrichment/integrated_investment_decision_product.json",
+            "operations-review/canonical-post-close-v1/2026-09-21/enrichment/integrated_investment_decision_product.json",
+            "operations-review/canonical-post-close-v1/2026-09-22/enrichment/integrated_investment_decision_product.json",
+            "operations-review/canonical-post-close-v1/2026-09-23/enrichment/integrated_investment_decision_product.json",
+            "operations-review/canonical-post-close-v1/2026-09-24/enrichment/integrated_investment_decision_product.json",
+            "operations-review/canonical-post-close-v1/2026-09-28/enrichment/integrated_investment_decision_product.json",
+            "operations-review/canonical-post-close-v1/2026-09-29/enrichment/integrated_investment_decision_product.json",
+            "operations-review/canonical-post-close-v1/2026-09-30/enrichment/integrated_investment_decision_product.json",
+            "operations-review/canonical-post-close-v1/2026-10-01/enrichment/integrated_investment_decision_product.json",
+            "operations-review/canonical-post-close-v1/2026-10-02/enrichment/integrated_investment_decision_product.json",
+            "operations-review/integrated-investment-decision-product-v1-20260825/integrated_investment_decision_product_artifact.json",
+            "operations-review/integrated-investment-decision-product-v1-20260904/integrated_investment_decision_product_artifact.json",
+            "operations-review/integrated-investment-decision-product-v1-20260908/integrated_investment_decision_product_artifact.json",
+            "operations-review/integrated-investment-decision-product-v1-20261002/integrated_investment_decision_product_artifact.json"
+          ],
+          "chain_sessions": [
+            "2026-09-03",
+            "2026-09-04",
+            "2026-09-08",
+            "2026-09-09",
+            "2026-09-10",
+            "2026-09-11",
+            "2026-09-14",
+            "2026-09-15",
+            "2026-09-16",
+            "2026-09-17",
+            "2026-09-18",
+            "2026-09-21",
+            "2026-09-22",
+            "2026-09-23",
+            "2026-09-24",
+            "2026-09-28",
+            "2026-09-29",
+            "2026-09-30",
+            "2026-10-01",
+            "2026-10-02"
+          ],
+          "input_digest": "b7f75557edadff4309e46816bd2a12cdf8be757c1ad11ee963e9d0f24440a8b6",
+          "legacy_artifact_paths": [
+            "operations-review/canonical-post-close-v1/2026-09-03/post-close-attempt-080034/operations-review/integrated-investment-decision-product-v1-20260903/integrated_investment_decision_product_artifact.json",
+            "operations-review/integrated-investment-decision-product-v1-20260908/integrated_investment_decision_product_artifact.json",
+            "operations-review/integrated-investment-decision-product-v1-20261002/integrated_investment_decision_product_artifact.json"
+          ],
+          "price_source_sessions": [
+            "2026-09-03",
+            "2026-09-04",
+            "2026-09-08",
+            "2026-10-02"
+          ],
+          "t0_snapshot_identities": [
+            "prospective_decision_snapshot:00753d16daeb1acb42f139485647454ea271ac0c9057fce906d2acf55d68348a",
+            "prospective_decision_snapshot:18f72bc8d073d55dbee82d92723f271cbda0c2aa578a345329a08f111c2942ae",
+            "prospective_decision_snapshot:1e2e10581a828c305c5df8a7d4c7720e54f984548122ad4fbf2873374a8b27a0",
+            "prospective_decision_snapshot:29933b20fff98d5de98e1b3770c34e0896a5bf87fbc4d937c6fe8e996b058a63",
+            "prospective_decision_snapshot:4cfc63881a492e74c55ee794b68347e74ae87cddd178283b67968b4f6c6e3f60",
+            "prospective_decision_snapshot:54bb3729e544ecd00272032ac3a7a753054a941cba50bba17e53477beb512984",
+            "prospective_decision_snapshot:5cf80549f4b71dcbf2c408040da2ba579b9563177825e26cda80f2004ff7c2f4",
+            "prospective_decision_snapshot:5e89d11705ce341e838a2a36e22f4d8b83e37aaf3b9a94b4487956115a9397af",
+            "prospective_decision_snapshot:7cc74c68b25f1072a9816f2d97073345f1a27be66907daea9ab7c444157c35af",
+            "prospective_decision_snapshot:8be63debc2d88f2333c2d0583c940626943588e09ecabe0fe47de1685cae3c33",
+            "prospective_decision_snapshot:910e0d36ae0f625f681e122603d39dd9d7d7a78646c80e0c16576bf692fe44a0",
+            "prospective_decision_snapshot:a049a34d9b9d2100ba992acf6aaf97ce4ba1a248c4a630a1c5428879f6d55a47",
+            "prospective_decision_snapshot:b761b2c5fffd86202d3d99a952a7251736984e3cbe28d1584278f2f0e8812713",
+            "prospective_decision_snapshot:cb678f46551102bb406f17c0013740654216a616f4cbb8f970612741f37ea574",
+            "prospective_decision_snapshot:cb716b767aa238f6be936d67db992c418f33b95336d36227efbfd91137cbcbf1",
+            "prospective_decision_snapshot:d30d69ad686e1943e42bc831f7f8fbbdd6f25eab69affc937a3b11d583d65896"
+          ]
+        },
+        "label": "cold",
+        "output_bytes": 545447942,
+        "phases_seconds": {
+          "assemble_s": 13.037,
+          "discovery_s": 129.599,
+          "evaluate_s": 89.172,
+          "price_index_s": 13.351,
+          "total_s": 245.468
+        },
+        "processes": {
+          "child_processes_seen": 1,
+          "children_total_peak_rss_bytes": 353529856,
+          "largest_single_child_peak_rss_bytes": 353529856,
+          "min_host_available_bytes": 1935171584,
+          "parent_baseline_rss_bytes": 118820864,
+          "parent_peak_rss_bytes": 119136256,
+          "parent_rss_growth_bytes": 315392,
+          "sample_interval_seconds": 0.25
+        },
+        "result": {
+          "artifact_identity": "prospective_decision_outcome_feedback:3b366ef7de470628d74eabf58ec2ad4c5fd7e447f889936b3b121eeaa72b4d27",
+          "artifact_size": 545447942,
+          "input_digest": "b7f75557edadff4309e46816bd2a12cdf8be757c1ad11ee963e9d0f24440a8b6",
+          "outcome": "BUILT",
+          "path": "<scratch-root>\\out\\feedback.json",
+          "record_count": 31977,
+          "relation": "NO_PRIOR",
+          "resource": {
+            "child_peak_bytes": 560644096,
+            "containment": "WINDOWS_JOB_OBJECT_PROCESS_MEMORY",
+            "containment_degraded": false,
+            "immediate_child_reaped": true,
+            "peak_process_bytes": 560644096,
+            "reaped": true,
+            "tree_termination_confirmed": true,
+            "wall_seconds": 249.522
+          },
+          "session": "2026-10-05",
+          "stage": "PRE_HANDOFF",
+          "status": "COLLECTED",
+          "status_path": "<scratch-root>\\out\\feedback.json.status.json"
+        },
+        "wall_seconds": 249.53
+      },
+      "concurrent_reuse": [
+        {
+          "child_metrics": {
+            "avoided_iid_bytes": 3538408989,
+            "full_iid_bytes_parsed": 0,
+            "full_iid_parses": 0,
+            "legacy_receipt_hits": 4,
+            "price_index_hits": 4,
+            "stream_sha256_bytes": 4732429290,
+            "summary_hits": 22,
+            "t0_receipt_hits": 18
+          },
+          "host_after": {
+            "available_commit_bytes": 8511344640,
+            "available_physical_bytes": 3080421376,
+            "total_physical_bytes": 16859357184
+          },
+          "host_before": {
+            "available_commit_bytes": 8910045184,
+            "available_physical_bytes": 3148664832,
+            "total_physical_bytes": 16859357184
+          },
+          "inputs_summary": {
+            "artifact_inventory_paths": [
+              "operations-review/canonical-post-close-v1/2026-08-25/enrichment/integrated_investment_decision_product.json",
+              "operations-review/canonical-post-close-v1/2026-09-03/enrichment/integrated_investment_decision_product.json",
+              "operations-review/canonical-post-close-v1/2026-09-03/post-close-attempt-080034/operations-review/integrated-investment-decision-product-v1-20260903/integrated_investment_decision_product_artifact.json",
+              "operations-review/canonical-post-close-v1/2026-09-04/enrichment/integrated_investment_decision_product.json",
+              "operations-review/canonical-post-close-v1/2026-09-08/enrichment/integrated_investment_decision_product.json",
+              "operations-review/canonical-post-close-v1/2026-09-09/enrichment/integrated_investment_decision_product.json",
+              "operations-review/canonical-post-close-v1/2026-09-10/enrichment/integrated_investment_decision_product.json",
+              "operations-review/canonical-post-close-v1/2026-09-11/enrichment/integrated_investment_decision_product.json",
+              "operations-review/canonical-post-close-v1/2026-09-14/enrichment/integrated_investment_decision_product.json",
+              "operations-review/canonical-post-close-v1/2026-09-15/enrichment/integrated_investment_decision_product.json",
+              "operations-review/canonical-post-close-v1/2026-09-16/enrichment/integrated_investment_decision_product.json",
+              "operations-review/canonical-post-close-v1/2026-09-17/enrichment/integrated_investment_decision_product.json",
+              "operations-review/canonical-post-close-v1/2026-09-18/enrichment/integrated_investment_decision_product.json",
+              "operations-review/canonical-post-close-v1/2026-09-21/enrichment/integrated_investment_decision_product.json",
+              "operations-review/canonical-post-close-v1/2026-09-22/enrichment/integrated_investment_decision_product.json",
+              "operations-review/canonical-post-close-v1/2026-09-23/enrichment/integrated_investment_decision_product.json",
+              "operations-review/canonical-post-close-v1/2026-09-24/enrichment/integrated_investment_decision_product.json",
+              "operations-review/canonical-post-close-v1/2026-09-28/enrichment/integrated_investment_decision_product.json",
+              "operations-review/canonical-post-close-v1/2026-09-29/enrichment/integrated_investment_decision_product.json",
+              "operations-review/canonical-post-close-v1/2026-09-30/enrichment/integrated_investment_decision_product.json",
+              "operations-review/canonical-post-close-v1/2026-10-01/enrichment/integrated_investment_decision_product.json",
+              "operations-review/canonical-post-close-v1/2026-10-02/enrichment/integrated_investment_decision_product.json",
+              "operations-review/integrated-investment-decision-product-v1-20260825/integrated_investment_decision_product_artifact.json",
+              "operations-review/integrated-investment-decision-product-v1-20260904/integrated_investment_decision_product_artifact.json",
+              "operations-review/integrated-investment-decision-product-v1-20260908/integrated_investment_decision_product_artifact.json",
+              "operations-review/integrated-investment-decision-product-v1-20261002/integrated_investment_decision_product_artifact.json"
+            ],
+            "chain_sessions": [
+              "2026-09-03",
+              "2026-09-04",
+              "2026-09-08",
+              "2026-09-09",
+              "2026-09-10",
+              "2026-09-11",
+              "2026-09-14",
+              "2026-09-15",
+              "2026-09-16",
+              "2026-09-17",
+              "2026-09-18",
+              "2026-09-21",
+              "2026-09-22",
+              "2026-09-23",
+              "2026-09-24",
+              "2026-09-28",
+              "2026-09-29",
+              "2026-09-30",
+              "2026-10-01",
+              "2026-10-02"
+            ],
+            "input_digest": "b7f75557edadff4309e46816bd2a12cdf8be757c1ad11ee963e9d0f24440a8b6",
+            "legacy_artifact_paths": [
+              "operations-review/canonical-post-close-v1/2026-09-03/post-close-attempt-080034/operations-review/integrated-investment-decision-product-v1-20260903/integrated_investment_decision_product_artifact.json",
+              "operations-review/integrated-investment-decision-product-v1-20260908/integrated_investment_decision_product_artifact.json",
+              "operations-review/integrated-investment-decision-product-v1-20261002/integrated_investment_decision_product_artifact.json"
+            ],
+            "price_source_sessions": [
+              "2026-09-03",
+              "2026-09-04",
+              "2026-09-08",
+              "2026-10-02"
+            ],
+            "t0_snapshot_identities": [
+              "prospective_decision_snapshot:00753d16daeb1acb42f139485647454ea271ac0c9057fce906d2acf55d68348a",
+              "prospective_decision_snapshot:18f72bc8d073d55dbee82d92723f271cbda0c2aa578a345329a08f111c2942ae",
+              "prospective_decision_snapshot:1e2e10581a828c305c5df8a7d4c7720e54f984548122ad4fbf2873374a8b27a0",
+              "prospective_decision_snapshot:29933b20fff98d5de98e1b3770c34e0896a5bf87fbc4d937c6fe8e996b058a63",
+              "prospective_decision_snapshot:4cfc63881a492e74c55ee794b68347e74ae87cddd178283b67968b4f6c6e3f60",
+              "prospective_decision_snapshot:54bb3729e544ecd00272032ac3a7a753054a941cba50bba17e53477beb512984",
+              "prospective_decision_snapshot:5cf80549f4b71dcbf2c408040da2ba579b9563177825e26cda80f2004ff7c2f4",
+              "prospective_decision_snapshot:5e89d11705ce341e838a2a36e22f4d8b83e37aaf3b9a94b4487956115a9397af",
+              "prospective_decision_snapshot:7cc74c68b25f1072a9816f2d97073345f1a27be66907daea9ab7c444157c35af",
+              "prospective_decision_snapshot:8be63debc2d88f2333c2d0583c940626943588e09ecabe0fe47de1685cae3c33",
+              "prospective_decision_snapshot:910e0d36ae0f625f681e122603d39dd9d7d7a78646c80e0c16576bf692fe44a0",
+              "prospective_decision_snapshot:a049a34d9b9d2100ba992acf6aaf97ce4ba1a248c4a630a1c5428879f6d55a47",
+              "prospective_decision_snapshot:b761b2c5fffd86202d3d99a952a7251736984e3cbe28d1584278f2f0e8812713",
+              "prospective_decision_snapshot:cb678f46551102bb406f17c0013740654216a616f4cbb8f970612741f37ea574",
+              "prospective_decision_snapshot:cb716b767aa238f6be936d67db992c418f33b95336d36227efbfd91137cbcbf1",
+              "prospective_decision_snapshot:d30d69ad686e1943e42bc831f7f8fbbdd6f25eab69affc937a3b11d583d65896"
+            ]
+          },
+          "label": "reuse-0",
+          "output_bytes": 545447942,
+          "phases_seconds": {
+            "discovery_s": 15.419,
+            "price_index_s": 1.829,
+            "total_s": 18.521
+          },
+          "processes": {
+            "child_processes_seen": 2,
+            "children_total_peak_rss_bytes": 293183488,
+            "largest_single_child_peak_rss_bytes": 178589696,
+            "min_host_available_bytes": 2954547200,
+            "parent_baseline_rss_bytes": 133410816,
+            "parent_peak_rss_bytes": 133554176,
+            "parent_rss_growth_bytes": 143360,
+            "sample_interval_seconds": 0.25
+          },
+          "result": {
+            "artifact_identity": "prospective_decision_outcome_feedback:3b366ef7de470628d74eabf58ec2ad4c5fd7e447f889936b3b121eeaa72b4d27",
+            "artifact_size": 545447942,
+            "input_digest": "b7f75557edadff4309e46816bd2a12cdf8be757c1ad11ee963e9d0f24440a8b6",
+            "outcome": "ALREADY_COMPLETE",
+            "path": "<scratch-root>\\out\\feedback.json",
+            "record_count": 31977,
+            "relation": "NO_PRIOR",
+            "resource": {
+              "child_peak_bytes": 381493248,
+              "containment": "WINDOWS_JOB_OBJECT_PROCESS_MEMORY",
+              "containment_degraded": false,
+              "immediate_child_reaped": true,
+              "peak_process_bytes": 381493248,
+              "reaped": true,
+              "tree_termination_confirmed": true,
+              "wall_seconds": 21.57
+            },
+            "session": "2026-10-05",
+            "stage": "POST_HANDOFF",
+            "status": "COLLECTED",
+            "status_path": "<scratch-root>\\out\\feedback.json.status.json"
+          },
+          "wall_seconds": 21.58
+        },
+        {
+          "child_metrics": {
+            "avoided_iid_bytes": 3538408989,
+            "full_iid_bytes_parsed": 0,
+            "full_iid_parses": 0,
+            "legacy_receipt_hits": 4,
+            "price_index_hits": 4,
+            "stream_sha256_bytes": 4732429290,
+            "summary_hits": 22,
+            "t0_receipt_hits": 18
+          },
+          "host_after": {
+            "available_commit_bytes": 8525619200,
+            "available_physical_bytes": 3040759808,
+            "total_physical_bytes": 16859357184
+          },
+          "host_before": {
+            "available_commit_bytes": 8908967936,
+            "available_physical_bytes": 3148615680,
+            "total_physical_bytes": 16859357184
+          },
+          "inputs_summary": {
+            "artifact_inventory_paths": [
+              "operations-review/canonical-post-close-v1/2026-08-25/enrichment/integrated_investment_decision_product.json",
+              "operations-review/canonical-post-close-v1/2026-09-03/enrichment/integrated_investment_decision_product.json",
+              "operations-review/canonical-post-close-v1/2026-09-03/post-close-attempt-080034/operations-review/integrated-investment-decision-product-v1-20260903/integrated_investment_decision_product_artifact.json",
+              "operations-review/canonical-post-close-v1/2026-09-04/enrichment/integrated_investment_decision_product.json",
+              "operations-review/canonical-post-close-v1/2026-09-08/enrichment/integrated_investment_decision_product.json",
+              "operations-review/canonical-post-close-v1/2026-09-09/enrichment/integrated_investment_decision_product.json",
+              "operations-review/canonical-post-close-v1/2026-09-10/enrichment/integrated_investment_decision_product.json",
+              "operations-review/canonical-post-close-v1/2026-09-11/enrichment/integrated_investment_decision_product.json",
+              "operations-review/canonical-post-close-v1/2026-09-14/enrichment/integrated_investment_decision_product.json",
+              "operations-review/canonical-post-close-v1/2026-09-15/enrichment/integrated_investment_decision_product.json",
+              "operations-review/canonical-post-close-v1/2026-09-16/enrichment/integrated_investment_decision_product.json",
+              "operations-review/canonical-post-close-v1/2026-09-17/enrichment/integrated_investment_decision_product.json",
+              "operations-review/canonical-post-close-v1/2026-09-18/enrichment/integrated_investment_decision_product.json",
+              "operations-review/canonical-post-close-v1/2026-09-21/enrichment/integrated_investment_decision_product.json",
+              "operations-review/canonical-post-close-v1/2026-09-22/enrichment/integrated_investment_decision_product.json",
+              "operations-review/canonical-post-close-v1/2026-09-23/enrichment/integrated_investment_decision_product.json",
+              "operations-review/canonical-post-close-v1/2026-09-24/enrichment/integrated_investment_decision_product.json",
+              "operations-review/canonical-post-close-v1/2026-09-28/enrichment/integrated_investment_decision_product.json",
+              "operations-review/canonical-post-close-v1/2026-09-29/enrichment/integrated_investment_decision_product.json",
+              "operations-review/canonical-post-close-v1/2026-09-30/enrichment/integrated_investment_decision_product.json",
+              "operations-review/canonical-post-close-v1/2026-10-01/enrichment/integrated_investment_decision_product.json",
+              "operations-review/canonical-post-close-v1/2026-10-02/enrichment/integrated_investment_decision_product.json",
+              "operations-review/integrated-investment-decision-product-v1-20260825/integrated_investment_decision_product_artifact.json",
+              "operations-review/integrated-investment-decision-product-v1-20260904/integrated_investment_decision_product_artifact.json",
+              "operations-review/integrated-investment-decision-product-v1-20260908/integrated_investment_decision_product_artifact.json",
+              "operations-review/integrated-investment-decision-product-v1-20261002/integrated_investment_decision_product_artifact.json"
+            ],
+            "chain_sessions": [
+              "2026-09-03",
+              "2026-09-04",
+              "2026-09-08",
+              "2026-09-09",
+              "2026-09-10",
+              "2026-09-11",
+              "2026-09-14",
+              "2026-09-15",
+              "2026-09-16",
+              "2026-09-17",
+              "2026-09-18",
+              "2026-09-21",
+              "2026-09-22",
+              "2026-09-23",
+              "2026-09-24",
+              "2026-09-28",
+              "2026-09-29",
+              "2026-09-30",
+              "2026-10-01",
+              "2026-10-02"
+            ],
+            "input_digest": "b7f75557edadff4309e46816bd2a12cdf8be757c1ad11ee963e9d0f24440a8b6",
+            "legacy_artifact_paths": [
+              "operations-review/canonical-post-close-v1/2026-09-03/post-close-attempt-080034/operations-review/integrated-investment-decision-product-v1-20260903/integrated_investment_decision_product_artifact.json",
+              "operations-review/integrated-investment-decision-product-v1-20260908/integrated_investment_decision_product_artifact.json",
+              "operations-review/integrated-investment-decision-product-v1-20261002/integrated_investment_decision_product_artifact.json"
+            ],
+            "price_source_sessions": [
+              "2026-09-03",
+              "2026-09-04",
+              "2026-09-08",
+              "2026-10-02"
+            ],
+            "t0_snapshot_identities": [
+              "prospective_decision_snapshot:00753d16daeb1acb42f139485647454ea271ac0c9057fce906d2acf55d68348a",
+              "prospective_decision_snapshot:18f72bc8d073d55dbee82d92723f271cbda0c2aa578a345329a08f111c2942ae",
+              "prospective_decision_snapshot:1e2e10581a828c305c5df8a7d4c7720e54f984548122ad4fbf2873374a8b27a0",
+              "prospective_decision_snapshot:29933b20fff98d5de98e1b3770c34e0896a5bf87fbc4d937c6fe8e996b058a63",
+              "prospective_decision_snapshot:4cfc63881a492e74c55ee794b68347e74ae87cddd178283b67968b4f6c6e3f60",
+              "prospective_decision_snapshot:54bb3729e544ecd00272032ac3a7a753054a941cba50bba17e53477beb512984",
+              "prospective_decision_snapshot:5cf80549f4b71dcbf2c408040da2ba579b9563177825e26cda80f2004ff7c2f4",
+              "prospective_decision_snapshot:5e89d11705ce341e838a2a36e22f4d8b83e37aaf3b9a94b4487956115a9397af",
+              "prospective_decision_snapshot:7cc74c68b25f1072a9816f2d97073345f1a27be66907daea9ab7c444157c35af",
+              "prospective_decision_snapshot:8be63debc2d88f2333c2d0583c940626943588e09ecabe0fe47de1685cae3c33",
+              "prospective_decision_snapshot:910e0d36ae0f625f681e122603d39dd9d7d7a78646c80e0c16576bf692fe44a0",
+              "prospective_decision_snapshot:a049a34d9b9d2100ba992acf6aaf97ce4ba1a248c4a630a1c5428879f6d55a47",
+              "prospective_decision_snapshot:b761b2c5fffd86202d3d99a952a7251736984e3cbe28d1584278f2f0e8812713",
+              "prospective_decision_snapshot:cb678f46551102bb406f17c0013740654216a616f4cbb8f970612741f37ea574",
+              "prospective_decision_snapshot:cb716b767aa238f6be936d67db992c418f33b95336d36227efbfd91137cbcbf1",
+              "prospective_decision_snapshot:d30d69ad686e1943e42bc831f7f8fbbdd6f25eab69affc937a3b11d583d65896"
+            ]
+          },
+          "label": "reuse-1",
+          "output_bytes": 545447942,
+          "phases_seconds": {
+            "discovery_s": 17.369,
+            "price_index_s": 1.877,
+            "total_s": 20.326
+          },
+          "processes": {
+            "child_processes_seen": 2,
+            "children_total_peak_rss_bytes": 293699584,
+            "largest_single_child_peak_rss_bytes": 179105792,
+            "min_host_available_bytes": 2837856256,
+            "parent_baseline_rss_bytes": 133451776,
+            "parent_peak_rss_bytes": 133554176,
+            "parent_rss_growth_bytes": 102400,
+            "sample_interval_seconds": 0.25
+          },
+          "result": {
+            "artifact_identity": "prospective_decision_outcome_feedback:3b366ef7de470628d74eabf58ec2ad4c5fd7e447f889936b3b121eeaa72b4d27",
+            "artifact_size": 545447942,
+            "input_digest": "b7f75557edadff4309e46816bd2a12cdf8be757c1ad11ee963e9d0f24440a8b6",
+            "outcome": "ALREADY_COMPLETE",
+            "path": "<scratch-root>\\out\\feedback.json",
+            "record_count": 31977,
+            "relation": "NO_PRIOR",
+            "resource": {
+              "child_peak_bytes": 381231104,
+              "containment": "WINDOWS_JOB_OBJECT_PROCESS_MEMORY",
+              "containment_degraded": false,
+              "immediate_child_reaped": true,
+              "peak_process_bytes": 381231104,
+              "reaped": true,
+              "tree_termination_confirmed": true,
+              "wall_seconds": 41.89
+            },
+            "session": "2026-10-05",
+            "stage": "POST_HANDOFF",
+            "status": "COLLECTED",
+            "status_path": "<scratch-root>\\out\\feedback.json.status.json"
+          },
+          "wall_seconds": 41.9
+        }
+      ],
+      "interrupted": {
+        "injection_reached": true,
+        "label": "controlled-mid-stream-timeout",
+        "processes": {
+          "child_processes_seen": 1,
+          "children_total_peak_rss_bytes": 177266688,
+          "largest_single_child_peak_rss_bytes": 177266688,
+          "min_host_available_bytes": 2163556352,
+          "parent_baseline_rss_bytes": 133476352,
+          "parent_peak_rss_bytes": 133525504,
+          "parent_rss_growth_bytes": 49152,
+          "sample_interval_seconds": 0.25
+        },
+        "result": {
+          "reason_code": "FEEDBACK_RESOURCE_TIMEOUT",
+          "resource": {
+            "containment": "WINDOWS_JOB_OBJECT_PROCESS_MEMORY",
+            "peak_process_bytes": 381689856,
+            "reaped": true,
+            "tree_termination_confirmed": true
+          },
+          "status": "UNAVAILABLE"
+        },
+        "wall_seconds": 120.02
+      },
+      "retry": {
+        "child_metrics": {
+          "avoided_iid_bytes": 3538408989,
+          "full_iid_bytes_parsed": 0,
+          "full_iid_parses": 0,
+          "legacy_receipt_hits": 4,
+          "output_bytes": 545447942,
+          "price_index_hits": 4,
+          "rows": 31977,
+          "settled_misses": 31977,
+          "spool_bytes": 542643522,
+          "stream_sha256_bytes": 4732429290,
+          "summary_hits": 22,
+          "t0_receipt_hits": 18
+        },
+        "host_after": {
+          "available_commit_bytes": 9005993984,
+          "available_physical_bytes": 3122380800,
+          "total_physical_bytes": 16859357184
+        },
+        "host_before": {
+          "available_commit_bytes": 8963850240,
+          "available_physical_bytes": 3087974400,
+          "total_physical_bytes": 16859357184
+        },
+        "inputs_summary": {
+          "artifact_inventory_paths": [
+            "operations-review/canonical-post-close-v1/2026-08-25/enrichment/integrated_investment_decision_product.json",
+            "operations-review/canonical-post-close-v1/2026-09-03/enrichment/integrated_investment_decision_product.json",
+            "operations-review/canonical-post-close-v1/2026-09-03/post-close-attempt-080034/operations-review/integrated-investment-decision-product-v1-20260903/integrated_investment_decision_product_artifact.json",
+            "operations-review/canonical-post-close-v1/2026-09-04/enrichment/integrated_investment_decision_product.json",
+            "operations-review/canonical-post-close-v1/2026-09-08/enrichment/integrated_investment_decision_product.json",
+            "operations-review/canonical-post-close-v1/2026-09-09/enrichment/integrated_investment_decision_product.json",
+            "operations-review/canonical-post-close-v1/2026-09-10/enrichment/integrated_investment_decision_product.json",
+            "operations-review/canonical-post-close-v1/2026-09-11/enrichment/integrated_investment_decision_product.json",
+            "operations-review/canonical-post-close-v1/2026-09-14/enrichment/integrated_investment_decision_product.json",
+            "operations-review/canonical-post-close-v1/2026-09-15/enrichment/integrated_investment_decision_product.json",
+            "operations-review/canonical-post-close-v1/2026-09-16/enrichment/integrated_investment_decision_product.json",
+            "operations-review/canonical-post-close-v1/2026-09-17/enrichment/integrated_investment_decision_product.json",
+            "operations-review/canonical-post-close-v1/2026-09-18/enrichment/integrated_investment_decision_product.json",
+            "operations-review/canonical-post-close-v1/2026-09-21/enrichment/integrated_investment_decision_product.json",
+            "operations-review/canonical-post-close-v1/2026-09-22/enrichment/integrated_investment_decision_product.json",
+            "operations-review/canonical-post-close-v1/2026-09-23/enrichment/integrated_investment_decision_product.json",
+            "operations-review/canonical-post-close-v1/2026-09-24/enrichment/integrated_investment_decision_product.json",
+            "operations-review/canonical-post-close-v1/2026-09-28/enrichment/integrated_investment_decision_product.json",
+            "operations-review/canonical-post-close-v1/2026-09-29/enrichment/integrated_investment_decision_product.json",
+            "operations-review/canonical-post-close-v1/2026-09-30/enrichment/integrated_investment_decision_product.json",
+            "operations-review/canonical-post-close-v1/2026-10-01/enrichment/integrated_investment_decision_product.json",
+            "operations-review/canonical-post-close-v1/2026-10-02/enrichment/integrated_investment_decision_product.json",
+            "operations-review/integrated-investment-decision-product-v1-20260825/integrated_investment_decision_product_artifact.json",
+            "operations-review/integrated-investment-decision-product-v1-20260904/integrated_investment_decision_product_artifact.json",
+            "operations-review/integrated-investment-decision-product-v1-20260908/integrated_investment_decision_product_artifact.json",
+            "operations-review/integrated-investment-decision-product-v1-20261002/integrated_investment_decision_product_artifact.json"
+          ],
+          "chain_sessions": [
+            "2026-09-03",
+            "2026-09-04",
+            "2026-09-08",
+            "2026-09-09",
+            "2026-09-10",
+            "2026-09-11",
+            "2026-09-14",
+            "2026-09-15",
+            "2026-09-16",
+            "2026-09-17",
+            "2026-09-18",
+            "2026-09-21",
+            "2026-09-22",
+            "2026-09-23",
+            "2026-09-24",
+            "2026-09-28",
+            "2026-09-29",
+            "2026-09-30",
+            "2026-10-01",
+            "2026-10-02"
+          ],
+          "input_digest": "b7f75557edadff4309e46816bd2a12cdf8be757c1ad11ee963e9d0f24440a8b6",
+          "legacy_artifact_paths": [
+            "operations-review/canonical-post-close-v1/2026-09-03/post-close-attempt-080034/operations-review/integrated-investment-decision-product-v1-20260903/integrated_investment_decision_product_artifact.json",
+            "operations-review/integrated-investment-decision-product-v1-20260908/integrated_investment_decision_product_artifact.json",
+            "operations-review/integrated-investment-decision-product-v1-20261002/integrated_investment_decision_product_artifact.json"
+          ],
+          "price_source_sessions": [
+            "2026-09-03",
+            "2026-09-04",
+            "2026-09-08",
+            "2026-10-02"
+          ],
+          "t0_snapshot_identities": [
+            "prospective_decision_snapshot:00753d16daeb1acb42f139485647454ea271ac0c9057fce906d2acf55d68348a",
+            "prospective_decision_snapshot:18f72bc8d073d55dbee82d92723f271cbda0c2aa578a345329a08f111c2942ae",
+            "prospective_decision_snapshot:1e2e10581a828c305c5df8a7d4c7720e54f984548122ad4fbf2873374a8b27a0",
+            "prospective_decision_snapshot:29933b20fff98d5de98e1b3770c34e0896a5bf87fbc4d937c6fe8e996b058a63",
+            "prospective_decision_snapshot:4cfc63881a492e74c55ee794b68347e74ae87cddd178283b67968b4f6c6e3f60",
+            "prospective_decision_snapshot:54bb3729e544ecd00272032ac3a7a753054a941cba50bba17e53477beb512984",
+            "prospective_decision_snapshot:5cf80549f4b71dcbf2c408040da2ba579b9563177825e26cda80f2004ff7c2f4",
+            "prospective_decision_snapshot:5e89d11705ce341e838a2a36e22f4d8b83e37aaf3b9a94b4487956115a9397af",
+            "prospective_decision_snapshot:7cc74c68b25f1072a9816f2d97073345f1a27be66907daea9ab7c444157c35af",
+            "prospective_decision_snapshot:8be63debc2d88f2333c2d0583c940626943588e09ecabe0fe47de1685cae3c33",
+            "prospective_decision_snapshot:910e0d36ae0f625f681e122603d39dd9d7d7a78646c80e0c16576bf692fe44a0",
+            "prospective_decision_snapshot:a049a34d9b9d2100ba992acf6aaf97ce4ba1a248c4a630a1c5428879f6d55a47",
+            "prospective_decision_snapshot:b761b2c5fffd86202d3d99a952a7251736984e3cbe28d1584278f2f0e8812713",
+            "prospective_decision_snapshot:cb678f46551102bb406f17c0013740654216a616f4cbb8f970612741f37ea574",
+            "prospective_decision_snapshot:cb716b767aa238f6be936d67db992c418f33b95336d36227efbfd91137cbcbf1",
+            "prospective_decision_snapshot:d30d69ad686e1943e42bc831f7f8fbbdd6f25eab69affc937a3b11d583d65896"
+          ]
+        },
+        "label": "retry",
+        "output_bytes": 545447942,
+        "phases_seconds": {
+          "assemble_s": 10.019,
+          "discovery_s": 14.971,
+          "evaluate_s": 77.309,
+          "price_index_s": 1.674,
+          "total_s": 104.075
+        },
+        "processes": {
+          "child_processes_seen": 1,
+          "children_total_peak_rss_bytes": 329928704,
+          "largest_single_child_peak_rss_bytes": 329928704,
+          "min_host_available_bytes": 2580885504,
+          "parent_baseline_rss_bytes": 133505024,
+          "parent_peak_rss_bytes": 133595136,
+          "parent_rss_growth_bytes": 90112,
+          "sample_interval_seconds": 0.25
+        },
+        "result": {
+          "artifact_identity": "prospective_decision_outcome_feedback:3b366ef7de470628d74eabf58ec2ad4c5fd7e447f889936b3b121eeaa72b4d27",
+          "artifact_size": 545447942,
+          "input_digest": "b7f75557edadff4309e46816bd2a12cdf8be757c1ad11ee963e9d0f24440a8b6",
+          "outcome": "BUILT",
+          "path": "<scratch-root>\\retry\\feedback.json",
+          "record_count": 31977,
+          "relation": "NO_PRIOR",
+          "resource": {
+            "child_peak_bytes": 539930624,
+            "containment": "WINDOWS_JOB_OBJECT_PROCESS_MEMORY",
+            "containment_degraded": false,
+            "immediate_child_reaped": true,
+            "peak_process_bytes": 539930624,
+            "reaped": true,
+            "tree_termination_confirmed": true,
+            "wall_seconds": 107.296
+          },
+          "session": "2026-10-05",
+          "stage": "POST_HANDOFF",
+          "status": "COLLECTED",
+          "status_path": "<scratch-root>\\retry\\feedback.json.status.json"
+        },
+        "wall_seconds": 107.3
+      },
+      "warm": {
+        "child_metrics": {
+          "avoided_iid_bytes": 3538408989,
+          "full_iid_bytes_parsed": 0,
+          "full_iid_parses": 0,
+          "legacy_receipt_hits": 4,
+          "output_bytes": 545447942,
+          "price_index_hits": 4,
+          "rows": 31977,
+          "settled_misses": 31977,
+          "spool_bytes": 542643522,
+          "stream_sha256_bytes": 4732429290,
+          "summary_hits": 22,
+          "t0_receipt_hits": 18
+        },
+        "host_after": {
+          "available_commit_bytes": 8979374080,
+          "available_physical_bytes": 3193163776,
+          "total_physical_bytes": 16859357184
+        },
+        "host_before": {
+          "available_commit_bytes": 8410030080,
+          "available_physical_bytes": 2498002944,
+          "total_physical_bytes": 16859357184
+        },
+        "inputs_summary": {
+          "artifact_inventory_paths": [
+            "operations-review/canonical-post-close-v1/2026-08-25/enrichment/integrated_investment_decision_product.json",
+            "operations-review/canonical-post-close-v1/2026-09-03/enrichment/integrated_investment_decision_product.json",
+            "operations-review/canonical-post-close-v1/2026-09-03/post-close-attempt-080034/operations-review/integrated-investment-decision-product-v1-20260903/integrated_investment_decision_product_artifact.json",
+            "operations-review/canonical-post-close-v1/2026-09-04/enrichment/integrated_investment_decision_product.json",
+            "operations-review/canonical-post-close-v1/2026-09-08/enrichment/integrated_investment_decision_product.json",
+            "operations-review/canonical-post-close-v1/2026-09-09/enrichment/integrated_investment_decision_product.json",
+            "operations-review/canonical-post-close-v1/2026-09-10/enrichment/integrated_investment_decision_product.json",
+            "operations-review/canonical-post-close-v1/2026-09-11/enrichment/integrated_investment_decision_product.json",
+            "operations-review/canonical-post-close-v1/2026-09-14/enrichment/integrated_investment_decision_product.json",
+            "operations-review/canonical-post-close-v1/2026-09-15/enrichment/integrated_investment_decision_product.json",
+            "operations-review/canonical-post-close-v1/2026-09-16/enrichment/integrated_investment_decision_product.json",
+            "operations-review/canonical-post-close-v1/2026-09-17/enrichment/integrated_investment_decision_product.json",
+            "operations-review/canonical-post-close-v1/2026-09-18/enrichment/integrated_investment_decision_product.json",
+            "operations-review/canonical-post-close-v1/2026-09-21/enrichment/integrated_investment_decision_product.json",
+            "operations-review/canonical-post-close-v1/2026-09-22/enrichment/integrated_investment_decision_product.json",
+            "operations-review/canonical-post-close-v1/2026-09-23/enrichment/integrated_investment_decision_product.json",
+            "operations-review/canonical-post-close-v1/2026-09-24/enrichment/integrated_investment_decision_product.json",
+            "operations-review/canonical-post-close-v1/2026-09-28/enrichment/integrated_investment_decision_product.json",
+            "operations-review/canonical-post-close-v1/2026-09-29/enrichment/integrated_investment_decision_product.json",
+            "operations-review/canonical-post-close-v1/2026-09-30/enrichment/integrated_investment_decision_product.json",
+            "operations-review/canonical-post-close-v1/2026-10-01/enrichment/integrated_investment_decision_product.json",
+            "operations-review/canonical-post-close-v1/2026-10-02/enrichment/integrated_investment_decision_product.json",
+            "operations-review/integrated-investment-decision-product-v1-20260825/integrated_investment_decision_product_artifact.json",
+            "operations-review/integrated-investment-decision-product-v1-20260904/integrated_investment_decision_product_artifact.json",
+            "operations-review/integrated-investment-decision-product-v1-20260908/integrated_investment_decision_product_artifact.json",
+            "operations-review/integrated-investment-decision-product-v1-20261002/integrated_investment_decision_product_artifact.json"
+          ],
+          "chain_sessions": [
+            "2026-09-03",
+            "2026-09-04",
+            "2026-09-08",
+            "2026-09-09",
+            "2026-09-10",
+            "2026-09-11",
+            "2026-09-14",
+            "2026-09-15",
+            "2026-09-16",
+            "2026-09-17",
+            "2026-09-18",
+            "2026-09-21",
+            "2026-09-22",
+            "2026-09-23",
+            "2026-09-24",
+            "2026-09-28",
+            "2026-09-29",
+            "2026-09-30",
+            "2026-10-01",
+            "2026-10-02"
+          ],
+          "input_digest": "b7f75557edadff4309e46816bd2a12cdf8be757c1ad11ee963e9d0f24440a8b6",
+          "legacy_artifact_paths": [
+            "operations-review/canonical-post-close-v1/2026-09-03/post-close-attempt-080034/operations-review/integrated-investment-decision-product-v1-20260903/integrated_investment_decision_product_artifact.json",
+            "operations-review/integrated-investment-decision-product-v1-20260908/integrated_investment_decision_product_artifact.json",
+            "operations-review/integrated-investment-decision-product-v1-20261002/integrated_investment_decision_product_artifact.json"
+          ],
+          "price_source_sessions": [
+            "2026-09-03",
+            "2026-09-04",
+            "2026-09-08",
+            "2026-10-02"
+          ],
+          "t0_snapshot_identities": [
+            "prospective_decision_snapshot:00753d16daeb1acb42f139485647454ea271ac0c9057fce906d2acf55d68348a",
+            "prospective_decision_snapshot:18f72bc8d073d55dbee82d92723f271cbda0c2aa578a345329a08f111c2942ae",
+            "prospective_decision_snapshot:1e2e10581a828c305c5df8a7d4c7720e54f984548122ad4fbf2873374a8b27a0",
+            "prospective_decision_snapshot:29933b20fff98d5de98e1b3770c34e0896a5bf87fbc4d937c6fe8e996b058a63",
+            "prospective_decision_snapshot:4cfc63881a492e74c55ee794b68347e74ae87cddd178283b67968b4f6c6e3f60",
+            "prospective_decision_snapshot:54bb3729e544ecd00272032ac3a7a753054a941cba50bba17e53477beb512984",
+            "prospective_decision_snapshot:5cf80549f4b71dcbf2c408040da2ba579b9563177825e26cda80f2004ff7c2f4",
+            "prospective_decision_snapshot:5e89d11705ce341e838a2a36e22f4d8b83e37aaf3b9a94b4487956115a9397af",
+            "prospective_decision_snapshot:7cc74c68b25f1072a9816f2d97073345f1a27be66907daea9ab7c444157c35af",
+            "prospective_decision_snapshot:8be63debc2d88f2333c2d0583c940626943588e09ecabe0fe47de1685cae3c33",
+            "prospective_decision_snapshot:910e0d36ae0f625f681e122603d39dd9d7d7a78646c80e0c16576bf692fe44a0",
+            "prospective_decision_snapshot:a049a34d9b9d2100ba992acf6aaf97ce4ba1a248c4a630a1c5428879f6d55a47",
+            "prospective_decision_snapshot:b761b2c5fffd86202d3d99a952a7251736984e3cbe28d1584278f2f0e8812713",
+            "prospective_decision_snapshot:cb678f46551102bb406f17c0013740654216a616f4cbb8f970612741f37ea574",
+            "prospective_decision_snapshot:cb716b767aa238f6be936d67db992c418f33b95336d36227efbfd91137cbcbf1",
+            "prospective_decision_snapshot:d30d69ad686e1943e42bc831f7f8fbbdd6f25eab69affc937a3b11d583d65896"
+          ]
+        },
+        "label": "warm",
+        "output_bytes": 545447942,
+        "phases_seconds": {
+          "assemble_s": 12.123,
+          "discovery_s": 15.437,
+          "evaluate_s": 78.961,
+          "price_index_s": 1.874,
+          "total_s": 108.485
+        },
+        "processes": {
+          "child_processes_seen": 1,
+          "children_total_peak_rss_bytes": 329867264,
+          "largest_single_child_peak_rss_bytes": 329867264,
+          "min_host_available_bytes": 2368565248,
+          "parent_baseline_rss_bytes": 119058432,
+          "parent_peak_rss_bytes": 119296000,
+          "parent_rss_growth_bytes": 237568,
+          "sample_interval_seconds": 0.25
+        },
+        "result": {
+          "artifact_identity": "prospective_decision_outcome_feedback:3b366ef7de470628d74eabf58ec2ad4c5fd7e447f889936b3b121eeaa72b4d27",
+          "artifact_size": 545447942,
+          "input_digest": "b7f75557edadff4309e46816bd2a12cdf8be757c1ad11ee963e9d0f24440a8b6",
+          "outcome": "BUILT",
+          "path": "<scratch-root>\\warm\\feedback.json",
+          "record_count": 31977,
+          "relation": "NO_PRIOR",
+          "resource": {
+            "child_peak_bytes": 541249536,
+            "containment": "WINDOWS_JOB_OBJECT_PROCESS_MEMORY",
+            "containment_degraded": false,
+            "immediate_child_reaped": true,
+            "peak_process_bytes": 541249536,
+            "reaped": true,
+            "tree_termination_confirmed": true,
+            "wall_seconds": 112.162
+          },
+          "session": "2026-10-05",
+          "stage": "PRE_HANDOFF",
+          "status": "COLLECTED",
+          "status_path": "<scratch-root>\\warm\\feedback.json.status.json"
+        },
+        "wall_seconds": 112.16
+      }
+    },
+    "summary": {
+      "largest_child_peak_bytes": 560644096,
+      "max_parent_growth_bytes": 315392,
+      "rehearsal_wall_seconds": 660.8
+    },
+    "whole_host_status": "MONDAY_HOST_PREFLIGHT_PENDING",
+    "implementation_checkpoint": "4927158662b02177cc960ce491d8f5c2c1976532",
+    "takeover_checkpoint": "ff6e3d01a898fadaba59d1b5ae8389bc0506bee8",
+    "tests": {
+      "affected": {
+        "passed": 279,
+        "deselected": 9
+      },
+      "hermetic_ci_selection": {
+        "passed": 2603,
+        "skipped": 16,
+        "deselected": 15,
+        "subtests_passed": 37
+      },
+      "final_concurrency_reap": {
+        "passed": 26,
+        "includes_different_temp_environment": true
+      },
+      "py_compile": "PASS",
+      "roadmap_drift": "PASS",
+      "release_orchestrator": "NO_NEW_MONDAY_CRITICAL_EXPOSURE"
+    },
+    "rehearsal_repair": {
+      "initial_timing_derived_injection": "child completed before cutoff; no engine failure",
+      "corrected_injection": "wait after 256 spooled rows, then 120-second bounded timeout; exact retry",
+      "under_concurrent_validation_timing": {
+        "cold_child_build_seconds": 793.88,
+        "warm_child_build_seconds": 383.064,
+        "child_peak_self_reported_bytes": 558792704
+      },
+      "final_isolated_rehearsal": "all gates pass; fresh half-deadline comparison also passes"
+    },
+    "protected_data": {
+      "files": 508,
+      "bytes": 8281565,
+      "sha256_and_metadata_unchanged": true
+    }
+  }
+}

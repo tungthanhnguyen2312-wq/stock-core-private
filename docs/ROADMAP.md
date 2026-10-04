@@ -1,5 +1,9 @@
 # Stock Lookup — Architecture & Roadmap
 
+## 2026-10-03 Owner Daily feedback resource containment
+
+`OWNER_DAILY_FEEDBACK_RESOURCE_CONTAINMENT_V1` is COMPLETE at `4927158662b02177cc960ce491d8f5c2c1976532`: both outcome-feedback children are bounded (admission, total deadline, memory ceiling, reaping), stream their sources and publish atomically with unchanged content and identity. The final corrective uses crash-released kernel leases for single-winner immutable publication and coordinated shared status, with explicit bounded reap accounting. `FEEDBACK_RESOURCE_CONTAINMENT_READY` is separate from `MONDAY_HOST_PREFLIGHT_PENDING`: the historical 9.18 GiB enrichment/T0 peak remains untouched and live host headroom preflight is required before launch. No analytical program was started; the sole next operational gate is `FIRST_REAL_POST_RELEASE_CAPTURE_ACCEPTANCE` on Monday 2026-10-05. Calendar registration stays owner-gated. [Contract](owner_daily_feedback_resource_containment_contract.md).
+
 ## 2026-10-02 market PIT foundation closeout
 
 Release A is released through PR #38; Release B through PR #39 with candidate/main CI verified. Release C capability and retained/strategic closure are complete in this snapshot. Ordinary Daily accumulates immutable market, selected listing and corporate observations; exact signal gates reuse the existing VNM replay primitives. The actual first eligible region is empty; evidence/time/rights gates remain. Strategy: PROSPECTIVE_PIT_PRIMARY / FULL_HISTORICAL_INTEGRATED_PIT_DEFERRED. The comprehensive North Star remains unchanged. [Dossier](internal/MARKET_PIT_FEASIBILITY_DOSSIER_20261002.md) and [six document-only proposals](internal/MARKET_MULTI_TIMEFRAME_TECHNICAL_FLOW_THESIS_PROPOSALS.md); no automatic NEXT. Older sequencing below is historical unless it agrees with ROADMAP_STATE.
