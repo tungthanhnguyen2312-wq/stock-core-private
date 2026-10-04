@@ -391,6 +391,8 @@ def test_unsafe_progress_path_is_disabled_without_failing_owner_result(tmp_path,
 
 
 def test_run_daily_passes_shared_child_environment_and_writes_before_popen(tmp_path, monkeypatch):
+    from tools import check_owner_daily_host_preflight as host_preflight
+    monkeypatch.setattr(host_preflight, "check", lambda *a: {"classification": "READY"})
     events: list[str] = []
     captured = {}
 

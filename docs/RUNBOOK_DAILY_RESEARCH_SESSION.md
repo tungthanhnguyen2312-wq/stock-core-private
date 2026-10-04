@@ -9,6 +9,17 @@ from the wall clock, or promotes a source authority.
 
 ## After market close: one normal command
 
+For an actual Owner Daily acquisition (`stocklookup.ps1 daily`), run only after
+`OWNER_DAILY_HOST_PREFLIGHT_V1 = READY` and existing evidence/runtime gates pass.
+Run `python -B tools/check_owner_daily_host_preflight.py` immediately beforehand;
+the Owner launcher repeats this read-only check before spawning Daily. AMBER
+requires operator action: close ordinary browsers/IDEs/unrelated Python workloads,
+rerun preflight and launch Daily alone when READY. BLOCKED prevents acquisition.
+Neither state triggers process termination or disk cleanup. Calendar registration
+remains owner-gated. First capture marker is `CAPTURE_COMPLETENESS_ONLY`; T0
+availability remains independently evaluated. See the
+[host preflight contract](owner_daily_host_preflight_contract.md).
+
 1. Confirm that upstream approved acquisition/materialization has retained the
    completed session and that its exact artifacts have been entered in
    `config/daily_research_session_input_registry.json`. The `completed_sessions`

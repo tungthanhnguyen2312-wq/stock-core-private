@@ -443,6 +443,13 @@ def _bind_written_publication_attestation(
 
 def _run_daily(root: Path, runtime_root: Path, *, telemetry: OwnerDailyProgress | None = None) -> None:
     """Run the canonical child with explicit sequential sidecar-writer ownership."""
+    from tools.check_owner_daily_host_preflight import check
+    retained = os.environ.get("STOCK_LOOKUP_RETAINED_EVIDENCE_ROOT")
+    host = check(root, Path(retained) if retained else None)
+    print("OWNER_DAILY_HOST_PREFLIGHT=" + json.dumps(host, sort_keys=True))
+    if host["classification"] != "READY":
+        raise OwnerDailyError("Host preflight", "OWNER_DAILY_HOST_PREFLIGHT_" + host["classification"],
+                              " ".join(host["operator_guidance"]))
     env = os.environ.copy()
     if telemetry is not None and telemetry.progress_path is not None:
         env[PROGRESS_PATH_ENV] = str(telemetry.progress_path)
