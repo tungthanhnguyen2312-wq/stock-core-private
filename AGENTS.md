@@ -12,13 +12,26 @@ Normal work reads a **small active set, in this order, completely** (about 100 K
 6. [`docs/ROADMAP_CURRENT.md`](docs/ROADMAP_CURRENT.md) — NOW / NEXT EVIDENCE GATE / AFTER / LATER.
 7. Only the specific contract, code and tests the task names (`docs/*_contract.md`, relevant modules).
 
-`docs/STATE.md` (~920 KB), `docs/DECISIONS.md` (~1 MB), `docs/ROADMAP.md` (~300 KB) and
-`docs/ROADMAP_STATE.json` (~540 KB) are **preserved history and deep-reference sources, not mandatory full
-reads and not default active-state authority**. Search them with `git grep` when a task needs the history
-of one thing; see [`docs/HISTORICAL_INDEX.md`](docs/HISTORICAL_INDEX.md). A task that changes authority,
-history-sensitive semantics or a machine-parsed file may read the relevant historical sections in full.
-Do not ignore the legacy files entirely: query `ROADMAP_STATE.json` through `python tools/stocklookup_roadmap.py`
-(machine milestone authority), and never edit the legacy files without checking the consumers listed in the index.
+`docs/STATE.md` (~920 KB), `docs/DECISIONS.md` (~1 MB) and `docs/ROADMAP.md` (~300 KB) are **preserved
+history and deep-reference sources, not mandatory full reads and not the default current-state source**.
+Search them with `git grep` when a task needs the history of one thing; see
+[`docs/HISTORICAL_INDEX.md`](docs/HISTORICAL_INDEX.md). A task that changes authority, history-sensitive
+semantics or a machine-parsed file may read the relevant historical sections in full. Do not ignore them
+entirely, and never edit them without checking the consumers listed in the index.
+`docs/ROADMAP_STATE.json` (~540 KB) is machine state: query it with `python tools/stocklookup_roadmap.py`
+rather than reading it whole.
+
+**Authority by domain** (one rule, no ladder and no new authority layer; identical in `docs/ACTIVE_STATE.md`):
+- *Milestone execution state* (current / queued / blocked / startable, checkpoint verification):
+  `docs/ROADMAP_STATE.json`, queried with `python tools/stocklookup_roadmap.py` (AI_RULES rule 11).
+- *Capability semantics and authority limits*: the controlling contract (`docs/*_contract.md`, cited in
+  `AUTHORITY.md`) and the code and tests that implement it.
+- *Compact current-state docs* (`ACTIVE_STATE`, `CAPABILITIES`, `AUTHORITY`, `DAILY_PIPELINE`,
+  `ROADMAP_CURRENT`): maintained navigation views of the two items above. They add **no** authority; if one
+  disagrees with the first two, the first two govern and the view is corrected in the same change.
+- *Preserved `STATE.md` / `ROADMAP.md` / `DECISIONS.md`*: history, rationale and recorded invariants; not the
+  default current-state source. A compact view never overrides a recorded invariant: surface the conflict
+  and obtain an explicit owner decision.
 
 | Question | Read |
 |---|---|
@@ -29,7 +42,7 @@ Do not ignore the legacy files entirely: query `ROADMAP_STATE.json` through `pyt
 | What happened historically? | `HISTORICAL_INDEX.md` → legacy STATE / ROADMAP / DECISIONS / `docs/internal/` |
 
 Chat memory, prior conversation and an agent's own recollection are **never** project authority; if a
-prompt conflicts with the active set or `ROADMAP_STATE.json`, surface the conflict and ask for an explicit
+prompt conflicts with the rule above or the sources it names, surface the conflict and ask for an explicit
 owner override. When you change current state, update `ACTIVE_STATE.md` (and the capability/pipeline files
 if they change) in the same change.
 
@@ -142,12 +155,11 @@ capability; resolving a conflict with/staleness in the active set; finding contr
 docs; or when the owner explicitly requests a rebaseline/governance audit. A new session, a new
 agent, or a normal bounded milestone is not by itself a trigger.
 
-`docs/ACTIVE_STATE.md` is the Producer operational entrypoint for current state; `docs/ROADMAP_STATE.json`
-(queried with `python tools/stocklookup_roadmap.py`) is the machine milestone authority. `docs/STATE.md` is
-the preserved operational narrative (history and invariants). Operations reviews, handoffs, historical
-roadmaps, and Consumer/Dashboard notes are evidence/reference, not competing current authority. If a prompt
-conflicts with the active set, surface the conflict and request an explicit owner override; do not silently
-change architecture.
+`docs/ACTIVE_STATE.md` is where current-state reading starts; what is authoritative is decided by
+**Authority by domain** in the Reading contract above (it is a view, not an authority layer). Operations
+reviews, handoffs, historical roadmaps, and Consumer/Dashboard notes are evidence/reference, not competing
+current authority. If a prompt conflicts with that rule or the sources it names, surface the conflict and
+request an explicit owner override; do not silently change architecture.
 
 ## AI context hygiene
 

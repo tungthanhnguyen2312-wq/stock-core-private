@@ -28,9 +28,10 @@ Asia/Ho_Chi_Minh, under the unchanged Phase-A eligibility gate.
   A T0-less complete session is a legal outcome; it opens capture and marker rows only.
 
 Run the read-only harness afterwards: `python tools/run_first_real_session_acceptance.py --session 2026-10-05 --cutoff <actual> …`
-(write the report under `operations-review/first-real-session-acceptance-v1/<session>/`). Capability rows
-that must stay blocked or unknown regardless: `pit_continuous_price`, `raw_as_traded`, `ca`,
-`official_verification`; first capture alone cannot open broad PIT or RAW. Also record, from the telemetry,
+(write the report under `operations-review/first-real-session-acceptance-v1/<session>/`). First capture
+alone cannot open `pit_continuous_price`, `raw_as_traded` or `ca` (evidence-blocked today, so broad PIT/RAW
+stay closed); `official_verification` is conditional and use-dependent (it needs later, separately verified
+official ledgers) and is not expected from this run. Also record, from the telemetry,
 the measured `peak_rss_bytes` of the Daily child: it is the first real measurement against the 6.5–8.0 GiB band.
 
 ## NEXT EVIDENCE GATE — time-driven, not milestones

@@ -1,9 +1,12 @@
 # Stock Lookup — Historical Index
 
-Pointer only. The files below hold the **history** of Stock Lookup. They are preserved byte-for-byte
-(Phase A of the control-plane simplification did not move, truncate or rewrite any of them) and they
-are **deep-reference sources, not default active-state authority**. Do not copy their contents into
-prompts or into the active files; search them when a task needs the history of one thing.
+Pointer only. The narrative files below (`STATE.md`, `DECISIONS.md`, `ROADMAP.md`, `internal/`, `archive/`)
+hold the **history** of Stock Lookup. They are preserved byte-for-byte (Phase A of the control-plane
+simplification did not move, truncate or rewrite any of them) and are **deep-reference sources, not the default
+current-state source**; they remain the record of the rationale and invariants they contain. `ROADMAP_STATE.json`
+is listed because it is large, but it is live machine state for milestones. Which source governs which
+question is the **Authority by domain** rule in [AGENTS.md](../AGENTS.md) "Reading contract". Do not copy
+their contents into prompts or into the active files; search them when a task needs the history of one thing.
 
 Active reading set (read these instead): [AGENTS.md](../AGENTS.md) → [ACTIVE_STATE.md](ACTIVE_STATE.md) →
 [CAPABILITIES.md](CAPABILITIES.md) → [AUTHORITY.md](AUTHORITY.md) → [DAILY_PIPELINE.md](DAILY_PIPELINE.md) →
@@ -13,7 +16,7 @@ Active reading set (read these instead): [AGENTS.md](../AGENTS.md) → [ACTIVE_S
 
 | Source | Holds | Size at Phase A | Treat as |
 |---|---|---|---|
-| [STATE.md](STATE.md) | Operational narrative, newest section first: dated milestone sections, invariants, runbook fragments, superseded pointers | ~920 KB / ~6,000 lines | history + invariants; **not** current-state authority (its banners can pre-date current facts — see ACTIVE_STATE §6) |
+| [STATE.md](STATE.md) | Operational narrative, newest section first: dated milestone sections, invariants, runbook fragments, superseded pointers | ~920 KB / ~6,000 lines | history + recorded invariants; **not the default current-state source** (its banners can pre-date current facts — see ACTIVE_STATE §6) |
 | [DECISIONS.md](DECISIONS.md) | Decision record: rationale, measured evidence and trade-offs per milestone | ~1.0 MB / ~8,700 lines | rationale lookup |
 | [ROADMAP.md](ROADMAP.md) | Strategic roadmap and numbered milestone history | ~300 KB / ~1,600 lines | history; use ROADMAP_CURRENT for what is next |
 | [ROADMAP_STATE.json](ROADMAP_STATE.json) | **Machine** execution state: current/queued/blocked milestones and git-verified checkpoints (`python tools/stocklookup_roadmap.py`, `--check`, `--can-start ID`) | ~540 KB | **live machine authority for milestone state** — query it with the tool, do not read it whole |

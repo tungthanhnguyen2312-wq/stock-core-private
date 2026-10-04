@@ -143,3 +143,37 @@ def test_legacy_narrative_files_remain_and_are_indexed_not_copied():
     for legacy in ("STATE.md", "DECISIONS.md", "ROADMAP.md", "ROADMAP_STATE.json"):
         assert (DOCS / legacy).is_file() and legacy in index
     assert "git grep" in index and "preserved byte-for-byte" in index
+
+
+def test_one_non_contradictory_authority_rule_across_agents_active_state_and_ai_rules():
+    agents, active, rules = (" ".join(read(f).split()) for f in ("AGENTS.md", "docs/ACTIVE_STATE.md", "docs/AI_RULES.md"))
+    for text in (agents, active, rules):
+        assert "Authority by domain" in text
+    # AGENTS.md and ACTIVE_STATE.md carry the identical four-domain rule text.
+    def bullets(text):
+        start = text.index("Authority by domain")
+        return text[text.index("- *Milestone execution state*", start):text.index("surface the conflict and obtain an explicit owner decision.", start)]
+    assert bullets(agents) == bullets(active)
+    for domain in ("*Milestone execution state*", "*Capability semantics and authority limits*",
+                   "*Compact current-state docs*", "*Preserved `STATE.md` / `ROADMAP.md` / `DECISIONS.md`*"):
+        assert domain in bullets(agents)
+    assert "no ladder" in active and "no new authority layer" in active and "add **no** authority" in active
+    assert "Precedence on conflict" not in active  # the earlier ladder is gone
+    assert "operational entrypoint for current state" not in agents
+
+
+def test_review_corrections_wording_is_bounded():
+    text = " ".join(read("docs/ACTIVE_STATE.md").split())
+    # live-remote verification needs a fetch / ls-remote, not the local tracking ref alone
+    assert "git fetch origin main" in text and "git ls-remote origin refs/heads/main" in text
+    assert "local** remote-tracking ref" in text
+    assert "Nothing else in repository authority blocks" not in text
+    assert "No additional documented blocker is currently known" in text and "must still pass at launch" in text
+    for doc in ("docs/ACTIVE_STATE.md", "docs/ROADMAP_CURRENT.md"):
+        body = " ".join(read(doc).split())
+        assert "always-blocked" not in body and "stay blocked or unknown regardless" not in body
+        assert "official_verification" in body and "conditional" in body
+    # untracked-path allowances are scoped to the contract that defines them, per checkout
+    assert "per checkout" in text and "checkout_cleanliness_contract.py" in text
+    assert "CONSUMER_APPROVED_UNTRACKED_PREFIXES" in text and "APPROVED_RUNTIME_EVIDENCE_PREFIXES" in text
+    assert "untracked `data/` and `.worktrees/` are approved prefixes" not in text

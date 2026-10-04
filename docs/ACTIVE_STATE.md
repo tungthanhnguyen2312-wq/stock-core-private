@@ -2,8 +2,10 @@
 
 Compact, authoritative view of what is true **now**. Read this first; it is small on purpose.
 Written 2026-10-04 (Sunday) against Producer `main` `920d57917581a476e3ab6a9cf40d9ca53643ecb2`
-(PR #60 merged). Verify the live head with `git rev-parse origin/main`; the only change after the
-SHA above is the docs-only control-plane PR that introduced this file.
+(PR #60 merged). `git rev-parse origin/main` reads only the **local** remote-tracking ref and can be stale.
+To verify the live remote head run `git fetch origin main` and then compare `git rev-parse origin/main`
+(or ask the remote directly with `git ls-remote origin refs/heads/main`). The only change intended after
+the SHA above is the docs-only control-plane PR that introduced this file.
 
 ## 0. How this file relates to the others
 
@@ -15,10 +17,20 @@ SHA above is the docs-only control-plane PR that introduced this file.
 | What happens next? | [ROADMAP_CURRENT.md](ROADMAP_CURRENT.md) |
 | What happened historically? | [HISTORICAL_INDEX.md](HISTORICAL_INDEX.md) → legacy STATE / ROADMAP / DECISIONS / `internal/` |
 
-Precedence on conflict: `docs/ROADMAP_STATE.json` (machine milestone state, git-verified) >
-the controlling contract named in AUTHORITY.md > this file > legacy narrative (`STATE.md`,
-`ROADMAP.md`, `DECISIONS.md`). Chat memory is never authority. Legacy `STATE.md` banners
-pre-date some facts below (see §6); this file wins for *current* state, never for history.
+**Authority by domain** (one rule, no ladder and no new authority layer; identical in `AGENTS.md`):
+- *Milestone execution state* (current / queued / blocked / startable, checkpoint verification):
+  `docs/ROADMAP_STATE.json`, queried with `python tools/stocklookup_roadmap.py` (AI_RULES rule 11).
+- *Capability semantics and authority limits*: the controlling contract (`docs/*_contract.md`, cited in
+  `AUTHORITY.md`) and the code and tests that implement it.
+- *Compact current-state docs* (`ACTIVE_STATE`, `CAPABILITIES`, `AUTHORITY`, `DAILY_PIPELINE`,
+  `ROADMAP_CURRENT`): maintained navigation views of the two items above. They add **no** authority; if one
+  disagrees with the first two, the first two govern and the view is corrected in the same change.
+- *Preserved `STATE.md` / `ROADMAP.md` / `DECISIONS.md`*: history, rationale and recorded invariants; not the
+  default current-state source. A compact view never overrides a recorded invariant: surface the conflict
+  and obtain an explicit owner decision.
+Chat memory is never authority. Legacy `STATE.md` banners pre-date some facts below (see §6): for a
+current fact, verify against the sources above (or the re-verify command given with the fact), then correct
+this view; never resolve a disagreement by which prose is newer.
 
 Fact kinds used below: **CURRENT FACT** (verified in repo or by a stated read-only check),
 **HOST-LOCAL** (true on the owner's Windows host, not tracked by git — re-verify before use),
@@ -45,9 +57,13 @@ Fact kinds used below: **CURRENT FACT** (verified in repo or by a stated read-on
    not launch.** There is no override flag; the Owner launcher re-runs it before spawning the
    canonical child. Run `python -B tools/check_owner_daily_host_preflight.py` in the canonical main
    checkout. Bands: [owner_daily_host_preflight_contract.md](owner_daily_host_preflight_contract.md).
-2. Producer, Consumer (`ai-core-private`) and Dashboard (`market-dashboard`) checkouts are clean, on
-   `main`, fast-forwardable (existing Owner repository preflight; untracked `data/` and `.worktrees/`
-   are approved prefixes).
+2. Producer, Consumer (`ai-core-private`) and Dashboard (`market-dashboard`) checkouts pass the Owner
+   repository preflight (`tools/run_owner_daily.py`): right repo/origin, on `main`, clean, fast-forwardable.
+   Untracked-path allowances are **per checkout** and defined by `checkout_cleanliness_contract.py` as applied
+   there: the Consumer allows only `.worktrees/` (`CONSUMER_APPROVED_UNTRACKED_PREFIXES`); Producer and
+   Dashboard checks use the default `APPROVED_RUNTIME_EVIDENCE_PREFIXES` (specific `data/<store>/` evidence
+   subdirectories, not all of `data/`). Any tracked change or other untracked file blocks. Do not assume an
+   untracked path is approved; run the preflight and read its verdict.
 3. No other Daily/Producer writer is running; launch the Daily alone, with ordinary browsers/IDEs/
    unrelated Python workloads closed.
 4. Existing evidence/runtime/session/window gates pass (they are not bypassed by a READY host).
@@ -83,8 +99,12 @@ Fact kinds used below: **CURRENT FACT** (verified in repo or by a stated read-on
 - **Reporting rule for Monday:** report capture, marker and T0 as three separate lines. "Capture yes,
   marker yes, T0 unavailable" is a legal outcome; it must never be labelled T0/PIT-ready. Rows that
   stay blocked/unknown without T0: `t0_snapshot_availability`, `exact_t0_v2_seal_index`,
-  `t0_native_volume`, `post_to_t0_leakage` (NOT_EVALUABLE), all `thesis_t0_*` rows, plus the
-  always-blocked `pit_continuous_price`, `raw_as_traded`, `ca`, `official_verification`. The terminal
+  `t0_native_volume`, `post_to_t0_leakage` (NOT_EVALUABLE), all `thesis_t0_*` rows. Separately, first capture
+  alone does not open `pit_continuous_price`, `raw_as_traded` or `ca` (evidence-blocked today; their opening
+  predicates are conjunctions over qualified evidence). `official_verification` is conditional and
+  use-dependent: it opens only when exact retained official ledgers/bodies have been verified later and every
+  current name is `VERIFIED_MATCH`; the contract keeps that verification a separate later step, so it is not
+  expected from the first-real run. The terminal
   owner screen does **not** print T0 status; read the acceptance report and the journal `t0_snapshot`
   attestation.
 - **Streaming T0 write at real scale** (scratch benchmark, `PERFORMANCE_ONLY_NON_AUTHORITATIVE`,
@@ -120,7 +140,8 @@ Fact kinds used below: **CURRENT FACT** (verified in repo or by a stated read-on
 - `ACTIVE_UNIVERSE` authority: `UNKNOWN` for all instruments (no official listing-status proof from DNSE).
 - Reverse / intrinsic valuation outputs: no governed intrinsic evaluator output or FCFF inputs.
 - Execution-grade liquidity, canonical participation/horizon policy, position sizing authority.
-- Official verification of prospective RAW; continuous-price and standing-signal PIT readiness.
+- Continuous-price and standing-signal PIT readiness. Official verification of prospective RAW is conditional
+  on later exact retained official ledgers (a separate step), not blocked by design.
 - Foreign-flow 10/20-session maturity and Friday-governed continuity beyond the registered receipt.
 
 ## 6. HISTORICAL — do not treat as current
@@ -146,7 +167,9 @@ Fact kinds used below: **CURRENT FACT** (verified in repo or by a stated read-on
 ## 8. Actual blockers right now
 
 1. A READY host preflight is not yet observed (last observation BLOCKED on commit headroom).
-2. Nothing else in repository authority blocks the Monday launch.
+2. No additional documented blocker is currently known. That is not a launch permit: every runtime, evidence,
+   session and window gate (Phase A/B, calendar, credentials, repository preflight, runtime/trusted release)
+   must still pass at launch.
 
 ## 9. Next action
 

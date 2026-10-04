@@ -12,8 +12,12 @@
    refresh (the active set plus the relevant historical sections of STATE, ROADMAP, DECISIONS, AI_RULES and
    the current handoff) is only for architecture/program-priority/governance/authority changes, a new major
    program, stale/ambiguous/conflicting state, or an owner-requested rebaseline.
-3. `ACTIVE_STATE.md` is the compact current-state view and `ROADMAP_STATE.json` the machine milestone state;
-   `STATE.md` is the preserved narrative. Do not reconstruct authority from chat memory. If a prompt
+3. **Authority by domain** (the same rule as in [AGENTS.md](../AGENTS.md) "Reading contract" and
+   [ACTIVE_STATE.md](ACTIVE_STATE.md); no new authority layer): milestone execution state is
+   `ROADMAP_STATE.json` queried with its tool (rule 11); capability semantics are the controlling contract and
+   its code/tests; the compact current-state docs are navigation views that add no authority and yield to those
+   two; `STATE.md` / `ROADMAP.md` / `DECISIONS.md` are preserved history, rationale and recorded invariants,
+   not the default current-state source. Do not reconstruct authority from chat memory. If a prompt
    conflicts with state, identify the conflict and obtain explicit owner direction.
 4. One session is one substantial bounded milestone. `READY_FOR_NEXT_MILESTONE` does not authorize
    its execution. Commit, push, publish, deploy, or an authority promotion requires explicit
