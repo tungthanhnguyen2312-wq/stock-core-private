@@ -84,7 +84,8 @@ def chain(days, realized=None, *, as_of="2026-12-31T12:00:00Z", receipts=None):
         first_complete_capture_session=days[0])
 
 
-def capture_session(root, day=DAY, *, calendar_days=None, scale=1., include_listing=True, completion_state="READY"):
+def capture_session(root, day=DAY, *, calendar_days=None, scale=1., include_listing=True, completion_state="READY",
+                    t0_snapshot_identity="sealed:actual-fixture"):
     value = snapshot(day, scale=scale)
     known = day + "T12:00:00Z"
     days = calendar_days or [day]
@@ -106,7 +107,7 @@ def capture_session(root, day=DAY, *, calendar_days=None, scale=1., include_list
     if completion_state != "READY":
         g["completion_gate_status"] = completion_state
     result = store.daily_boundary(root, session=day, gate=g, evidence=evidence, known_at=day + "T12:05:00Z",
-                                 t0_snapshot_identity="sealed:actual-fixture")
+                                 t0_snapshot_identity=t0_snapshot_identity)
     return value, evidence, g, result
 
 

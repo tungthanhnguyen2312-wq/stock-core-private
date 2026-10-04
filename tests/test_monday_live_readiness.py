@@ -338,7 +338,7 @@ def test_harness_streams_verified_artifacts_and_reports_missing_index(tmp_path,m
     states={r["capability"]:r["state"] for r in result["rows"]}
     assert states["technical_v2_production_routing"]==states["volume_flow_v2_production_routing"]=="OPEN"
     assert states["exact_t0_v2_seal_index"]==("STILL_BLOCKED" if missing_index else "OPEN")
-    assert states["post_to_t0_leakage"]==("STILL_BLOCKED" if missing_index else "OPEN")
+    assert states["post_to_t0_leakage"]==("NOT_EVALUABLE" if missing_index else "OPEN")
 
 
 def test_harness_and_index_do_not_import_thesis_stage_one():
@@ -348,3 +348,59 @@ def test_harness_and_index_do_not_import_thesis_stage_one():
         modules=[n.module for n in ast.walk(tree) if isinstance(n,ast.ImportFrom)]
         modules += [alias.name for n in ast.walk(tree) if isinstance(n,ast.Import) for alias in n.names]
         assert not any(name and name.startswith("thesis_evidence") for name in modules)
+
+
+def test_t0less_first_session_preserves_capture_marker_and_depth(tmp_path,monkeypatch):
+    capture_session(tmp_path,calendar_days=[DAY,"2026-10-06"],t0_snapshot_identity=None)
+    assert json.loads((tmp_path/store.STORE/"sessions"/(DAY+".json")).read_bytes())["t0_decision_snapshot_identity"] is None
+    assert store.load_marker(tmp_path)["session"]==DAY
+    import socket
+    monkeypatch.setattr(socket,"socket",lambda *a,**k:pytest.fail("NETWORK_FORBIDDEN"))
+    monkeypatch.setattr(Path,"write_bytes",lambda *a,**k:pytest.fail("EVIDENCE_WRITE_FORBIDDEN"))
+    monkeypatch.setattr(Path,"write_text",lambda *a,**k:pytest.fail("EVIDENCE_WRITE_FORBIDDEN"))
+    report=harness.collect(tmp_path,session=DAY,cutoff=DAY+"T12:10:00Z")
+    rows={r["capability"]:r for r in report["rows"]}
+    assert rows["capture_session"]["state"]==rows["first_marker"]["state"]=="OPEN"
+    assert rows["readiness_state"]["details"]["complete_session_count"]==1
+    assert rows["t0_snapshot_availability"]["state"]=="STILL_BLOCKED"
+    assert rows["t0_snapshot_availability"]["details"]["availability"]=="UNAVAILABLE"
+    assert rows["t0_snapshot_availability"]["details"]["gates_capture"] is False
+    assert rows["post_to_t0_leakage"]["state"]=="NOT_EVALUABLE"
+    assert rows["post_to_t0_leakage"]["details"]["reason"]=="T0_UNAVAILABLE_FOR_LEAKAGE_EVALUATION"
+    assert all(rows[n]["state"]!="OPEN" for n in ("exact_t0_v2_seal_index","t0_native_volume","pit_continuous_price","raw_as_traded","ca"))
+    assert all(row["state"]=="NOT_EVALUABLE" for name,row in rows.items() if name.startswith("thesis_t0_"))
+
+
+@pytest.mark.parametrize("t0_present,has_content,leak,expected",[
+    (True,True,False,"OPEN"),(False,True,False,"NOT_EVALUABLE"),
+    (True,False,False,"NOT_EVALUABLE"),(True,True,True,"STILL_BLOCKED"),
+])
+def test_leakage_requires_verified_t0_and_nonempty_evaluation(tmp_path,t0_present,has_content,leak,expected):
+    c,snapshot,path,ref=sealed_fixture(tmp_path)
+    bound=index.load_verified(ref,expected_snapshot_identity=snapshot["snapshot_identity"],session=DAY)
+    artifact=flow.build_artifact(session=DAY,tickers=["VNM"],relationship_views={"VNM":bridge.build_views(c)},flow_series={},sealed_snapshot=bound)
+    records=harness.VerifiedFlowSummary(copy.deepcopy(artifact["records"]))
+    t0_items=[i for row in records.values() for i in row["items"] if i["knowledge_stage"]==flow.T0]
+    assert t0_items
+    if not has_content:
+        for item in t0_items:item["knowledge_stage"]=flow.POST
+    if leak:t0_items[0]["source_artifact_identities"]=[]
+    report=harness.evaluate(session=DAY,cutoff=TIME,calendar=governed(cutoff=TIME),
+        sealed_bindings=bound if t0_present else None,flow_records=records)
+    rows={r["capability"]:r for r in report["rows"]}
+    assert rows["post_to_t0_leakage"]["state"]==expected
+    assert rows["post_to_t0_leakage"]["details"]["evaluation_performed"]==(t0_present and has_content)
+    assert rows["t0_snapshot_availability"]["details"]["availability"]==("AVAILABLE" if t0_present else "UNAVAILABLE")
+    if leak:assert rows["post_to_t0_leakage"]["details"]["count"]>0
+
+
+def test_unavailable_thesis_report_cannot_open_t0_zero_guards():
+    report=harness.evaluate(session=DAY,cutoff=TIME,calendar=governed(cutoff=TIME),
+        capture_record={"capture_complete_tickers":["VNM"]},marker={"session":DAY},
+        thesis_state={"stage_2":"COMPLETE"},thesis_products={"t0":{
+            "status":"UNAVAILABLE","reason":"VERIFIED_T0_SEAL_INDEX_UNAVAILABLE","records":0,
+            "counts":{"built_count":0,"partial_count":0,"unavailable_count":1},
+            "post_in_t0":0,"guards":{"retrospective_item_in_t0":0}}})
+    rows={r["capability"]:r for r in report["rows"]}
+    assert rows["capture_session"]["state"]==rows["first_marker"]["state"]=="OPEN"
+    assert all(row["state"]=="NOT_EVALUABLE" for name,row in rows.items() if name.startswith("thesis_t0_"))
