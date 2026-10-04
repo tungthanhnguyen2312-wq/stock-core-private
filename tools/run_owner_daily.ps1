@@ -138,6 +138,9 @@ if ($summary -and $summary.status -eq 'PASS' -and $exitCode -eq 0) {
         elseif ($summary) { 'OWNER_DAILY_' + $summary.status }
         else { 'NO_RESULT_FILE_WRITTEN' }
     Write-Owner (' Mã lỗi: ' + $reason)
+    if ($summary.failed_step -eq 'Host preflight' -and $summary.hint) {
+        Write-Owner (' Host preflight: ' + $summary.hint)
+    }
     $resume = if ($summary.resume_completed_session) { 'CÓ' } else { 'KHÔNG' }
     Write-Owner (' Có thể tiếp tục từ phiên đã hoàn tất: ' + $resume)
     Write-Owner (' Log chi tiết: ' + $log)

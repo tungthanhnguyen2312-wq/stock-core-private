@@ -26,6 +26,12 @@ import json, sys, time
 args = sys.argv[1:]
 result_path = args[args.index("--result-path") + 1]
 mode = MODE
+if mode.startswith("host_"):
+    with open(result_path, "w", encoding="utf-8") as fh:
+        json.dump({"status": "FAILED", "failed_step": "Host preflight",
+                   "reason": "OWNER_DAILY_HOST_PREFLIGHT_" + mode[5:].upper(),
+                   "hint": "Close browsers / IDEs / unrelated Python workloads. Re-run host preflight; launch Daily alone only when READY."}, fh)
+    sys.exit(1)
 if mode == "presentation":
     print("RAW_HELPER_COMMAND --artifact-hash hidden", flush=True)
     print("OWNER_DAILY_PRESENTATION=" + json.dumps({"session": "2026-10-02", "phase_estimates": {"2": 600}}), flush=True)
@@ -74,7 +80,7 @@ def _run_launcher(tmp_path: Path, mode: str) -> tuple[subprocess.CompletedProces
     completed = subprocess.run(
         [POWERSHELL, "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-File", str(LAUNCHER),
          "-EntryScript", str(entry), "-LogDirectory", str(logs), "-NoPause",
-         *([] if mode == "presentation" else ["-Diagnostic"])],
+         *([] if mode == "presentation" or mode.startswith("host_") else ["-Diagnostic"])],
         capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=180,
     )
     return completed, logs
@@ -152,6 +158,16 @@ def test_partial_completion_reports_component_reason_and_completed_session_resum
     assert "DAILY CHƯA HOÀN TẤT" in completed.stdout
     assert "Mã lỗi: OWNER_PROFILE_UNAVAILABLE" in completed.stdout
     assert "phiên đã hoàn tất: CÓ" in completed.stdout
+
+
+@windows_powershell
+@pytest.mark.parametrize("classification", ["amber", "blocked"])
+def test_host_refusal_shows_operator_action_in_normal_owner_window(tmp_path, classification):
+    completed, _ = _run_launcher(tmp_path, "host_" + classification)
+    assert completed.returncode == 1
+    assert "OWNER_DAILY_HOST_PREFLIGHT_" + classification.upper() in completed.stdout
+    assert "Close browsers / IDEs / unrelated Python workloads." in completed.stdout
+    assert "launch Daily alone only when READY" in completed.stdout
 
 
 def test_launcher_scopes_continue_to_the_native_call_and_keeps_the_canonical_route():
