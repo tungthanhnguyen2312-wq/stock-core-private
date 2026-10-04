@@ -66,9 +66,9 @@ def command(world, name, mode='normal', *, root=None, output=None, status=None):
             str(status or base / 'shared.status.json'), mode]
 
 
-def start(world, name, mode='normal', **kwargs):
+def start(world, name, mode='normal', *, env=None, **kwargs):
     return subprocess.Popen(command(world, name, mode, **kwargs), stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                            stderr=subprocess.PIPE, text=True)
+                            stderr=subprocess.PIPE, text=True, env=env)
 
 
 def finish(process, *, send=None, code=0):
@@ -97,6 +97,20 @@ def test_winner_completes_before_loser_and_existing_complete_retry(world):
         result = finish(start(world, name))['payload']
         assert result['outcome'] == 'ALREADY_COMPLETE' and result['artifact_identity'] == first['artifact_identity']
     assert (output.read_bytes(), output.stat().st_mtime_ns) == before
+
+
+def test_lease_identity_survives_different_contender_temp_environments(world):
+    a, b = [], []
+    for name, bucket in (('a', a), ('b', b)):
+        directory = world[1] / ('temp-' + name)
+        directory.mkdir()
+        env = {**os.environ, 'TEMP': str(directory), 'TMP': str(directory), 'TMPDIR': str(directory)}
+        bucket.append(start(world, name, 'start', env=env))
+    processes = a + b
+    assert all(p.stdout.readline().strip() == 'READY' for p in processes)
+    for p in processes: p.stdin.write('\n'); p.stdin.flush()
+    outcomes = [finish(p)['payload']['outcome'] for p in processes]
+    assert sorted(outcomes) == ['ALREADY_COMPLETE', 'BUILT']
 
 
 @pytest.mark.parametrize('mode,signal,exit_code', [('claim', 'CLAIM', 91), ('temp', 'TEMP', 92), ('artifact', 'ARTIFACT', 92)])

@@ -1,14 +1,14 @@
-"""Feedback-only kernel file leases. No polling; process death releases ownership.
+"""Feedback-only kernel leases. No polling; process death releases ownership.
 
-Stable lock files live outside evidence and are never unlinked (unlinking a POSIX
-lock would let another writer lock a different inode). Windows LockFileEx and
-POSIX flock wait in the kernel; the feedback parent's total deadline bounds waits.
+Windows uses a target-named global mutex, including abandoned-owner recovery.
+POSIX uses stable /tmp lock files that are never unlinked. Lease identity does
+not depend on either contender's TEMP/TMPDIR. Kernel waits are bounded by the
+feedback parent's total deadline.
 """
 from contextlib import contextmanager, ExitStack
 import hashlib
 import os
 from pathlib import Path
-import tempfile
 import threading
 
 _held = threading.local()
@@ -23,33 +23,42 @@ def publication_lock(target, *, blocking=True):
     if key in held:
         yield
         return
-    directory = Path(tempfile.gettempdir()) / "stocklookup-feedback-locks"
+    if os.name == "nt":
+        import ctypes
+        from ctypes import wintypes
+        kernel = ctypes.WinDLL("kernel32", use_last_error=True)
+        kernel.CreateMutexW.argtypes = [ctypes.c_void_p, wintypes.BOOL, wintypes.LPCWSTR]
+        kernel.CreateMutexW.restype = wintypes.HANDLE
+        kernel.WaitForSingleObject.argtypes = [wintypes.HANDLE, wintypes.DWORD]
+        kernel.WaitForSingleObject.restype = wintypes.DWORD
+        kernel.ReleaseMutex.argtypes = [wintypes.HANDLE]
+        kernel.CloseHandle.argtypes = [wintypes.HANDLE]
+        name = "Global\\StockLookupFeedback_" + hashlib.sha256(key.encode()).hexdigest()
+        mutex = kernel.CreateMutexW(None, False, name)
+        if not mutex:
+            raise OSError(ctypes.get_last_error(), "FEEDBACK_PUBLICATION_MUTEX_FAILED")
+        try:
+            wait = kernel.WaitForSingleObject(mutex, 0xFFFFFFFF if blocking else 0)
+            if wait not in (0, 0x80):  # acquired / abandoned owner (death releases claim)
+                if wait == 258:
+                    raise BlockingIOError("FEEDBACK_PUBLICATION_BUSY")
+                raise OSError(ctypes.get_last_error(), "FEEDBACK_PUBLICATION_WAIT_FAILED")
+            held.add(key)
+            try:
+                yield
+            finally:
+                held.remove(key)
+                kernel.ReleaseMutex(mutex)
+        finally:
+            kernel.CloseHandle(mutex)
+        return
+    directory = Path("/tmp") / "stocklookup-feedback-locks"
     directory.mkdir(exist_ok=True)
     path = directory / (hashlib.sha256(key.encode()).hexdigest() + ".lock")
     with open(path, "a+b") as handle:
-        if os.name == "nt":
-            import ctypes
-            import msvcrt
-            from ctypes import wintypes
-
-            class OVERLAPPED(ctypes.Structure):
-                _fields_ = [("Internal", ctypes.c_size_t), ("InternalHigh", ctypes.c_size_t),
-                            ("Offset", wintypes.DWORD), ("OffsetHigh", wintypes.DWORD), ("hEvent", wintypes.HANDLE)]
-
-            kernel = ctypes.WinDLL("kernel32", use_last_error=True)
-            signature = [wintypes.HANDLE, wintypes.DWORD, wintypes.DWORD, wintypes.DWORD,
-                         wintypes.DWORD, ctypes.POINTER(OVERLAPPED)]
-            kernel.LockFileEx.argtypes = signature
-            kernel.UnlockFileEx.argtypes = [signature[0], signature[1], signature[3], signature[4], signature[5]]
-            overlap = OVERLAPPED()
-            native = wintypes.HANDLE(msvcrt.get_osfhandle(handle.fileno()))
-            if not kernel.LockFileEx(native, 2 | (0 if blocking else 1), 0, 1, 0, ctypes.byref(overlap)):
-                raise BlockingIOError(ctypes.get_last_error(), "FEEDBACK_PUBLICATION_BUSY")
-            release = lambda: kernel.UnlockFileEx(native, 0, 1, 0, ctypes.byref(overlap))
-        else:
-            import fcntl
-            fcntl.flock(handle.fileno(), fcntl.LOCK_EX | (0 if blocking else fcntl.LOCK_NB))
-            release = lambda: fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+        import fcntl
+        fcntl.flock(handle.fileno(), fcntl.LOCK_EX | (0 if blocking else fcntl.LOCK_NB))
+        release = lambda: fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
         held.add(key)
         try:
             yield
