@@ -1,7 +1,7 @@
 {
   "schema_version": "stocklookup_roadmap_execution_state/1.0.0",
   "roadmap_id": "stock-core-private",
-  "roadmap_version": "2026.10.03.9",
+  "roadmap_version": "2026.10.04.1",
   "narrative_authority": {
     "strategic_roadmap": "docs/ROADMAP.md",
     "operational_narrative": "docs/STATE.md",
@@ -9,8 +9,8 @@
     "ai_rules": "docs/AI_RULES.md",
     "note": "This file is the machine-readable EXECUTION-STATE authority: which milestone is current/active/next/blocked, what checkpoint proves each completed milestone, and whether recorded state contradicts Git/worktree reality. It does not restate or supersede the narrative docs' technical content and is not a substitute for reading them. Where this file and a narrative doc appear to disagree, that is a conflict to surface to the owner (AGENTS.md 'Default lightweight bootstrap' rule), never an automatic override in either direction."
   },
-  "implementation_lineage_head": "b7e785b20d745da247364a816f321d1e699d1e11",
-  "last_updated_checkpoint": "b7e785b20d745da247364a816f321d1e699d1e11",
+  "implementation_lineage_head": "4927158662b02177cc960ce491d8f5c2c1976532",
+  "last_updated_checkpoint": "4927158662b02177cc960ce491d8f5c2c1976532",
   "known_operational_diff_allowlist": [
     "config/daily_research_session_input_registry.json"
   ],
@@ -615,7 +615,7 @@
         "PARTIAL"
       ],
       "owner_override": "OWNER_DIRECTIVE_2026_09_29_FINANCIAL_EVIDENCE_COHORT1_TRIGGERED_OCR_V1",
-      "notes": "PARTIAL 2026-09-29. Retained-only H1 image OCR for HPG/PNJ/PVD/VRE; 11 completed page reads, no new CORE fact. Generic balance-sheet heading recognition accepts B\u00c3\u0192\u00c6\u2019\u00c3\u2020\u00e2\u20ac\u2122\u00c3\u0192\u00e2\u20ac\u00a0\u00c3\u00a2\u00e2\u201a\u00ac\u00e2\u201e\u00a2\u00c3\u0192\u00c6\u2019\u00c3\u00a2\u00e2\u201a\u00ac\u00c2\u00a0\u00c3\u0192\u00c2\u00a2\u00c3\u00a2\u00e2\u20ac\u0161\u00c2\u00ac\u00c3\u00a2\u00e2\u20ac\u017e\u00c2\u00a2\u00c3\u0192\u00c6\u2019\u00c3\u2020\u00e2\u20ac\u2122\u00c3\u0192\u00c2\u00a2\u00c3\u00a2\u00e2\u20ac\u0161\u00c2\u00ac\u00c3\u2026\u00c2\u00a1\u00c3\u0192\u00c6\u2019\u00c3\u00a2\u00e2\u201a\u00ac\u00c5\u00a1\u00c3\u0192\u00e2\u20ac\u0161\u00c3\u201a\u00c2\u00a1o c\u00c3\u0192\u00c6\u2019\u00c3\u2020\u00e2\u20ac\u2122\u00c3\u0192\u00e2\u20ac\u00a0\u00c3\u00a2\u00e2\u201a\u00ac\u00e2\u201e\u00a2\u00c3\u0192\u00c6\u2019\u00c3\u00a2\u00e2\u201a\u00ac\u00c2\u00a0\u00c3\u0192\u00c2\u00a2\u00c3\u00a2\u00e2\u20ac\u0161\u00c2\u00ac\u00c3\u00a2\u00e2\u20ac\u017e\u00c2\u00a2\u00c3\u0192\u00c6\u2019\u00c3\u2020\u00e2\u20ac\u2122\u00c3\u0192\u00c2\u00a2\u00c3\u00a2\u00e2\u20ac\u0161\u00c2\u00ac\u00c3\u2026\u00c2\u00a1\u00c3\u0192\u00c6\u2019\u00c3\u00a2\u00e2\u201a\u00ac\u00c5\u00a1\u00c3\u0192\u00e2\u20ac\u0161\u00c3\u201a\u00c2\u00a1o t\u00c3\u0192\u00c6\u2019\u00c3\u2020\u00e2\u20ac\u2122\u00c3\u0192\u00e2\u20ac\u00a0\u00c3\u00a2\u00e2\u201a\u00ac\u00e2\u201e\u00a2\u00c3\u0192\u00c6\u2019\u00c3\u00a2\u00e2\u201a\u00ac\u00c2\u00a0\u00c3\u0192\u00c2\u00a2\u00c3\u00a2\u00e2\u20ac\u0161\u00c2\u00ac\u00c3\u00a2\u00e2\u20ac\u017e\u00c2\u00a2\u00c3\u0192\u00c6\u2019\u00c3\u2020\u00e2\u20ac\u2122\u00c3\u0192\u00c2\u00a2\u00c3\u00a2\u00e2\u20ac\u0161\u00c2\u00ac\u00c3\u2026\u00c2\u00a1\u00c3\u0192\u00c6\u2019\u00c3\u00a2\u00e2\u201a\u00ac\u00c5\u00a1\u00c3\u0192\u00e2\u20ac\u0161\u00c3\u201a\u00c2\u00acnh h\u00c3\u0192\u00c6\u2019\u00c3\u2020\u00e2\u20ac\u2122\u00c3\u0192\u00e2\u20ac\u00a0\u00c3\u00a2\u00e2\u201a\u00ac\u00e2\u201e\u00a2\u00c3\u0192\u00c6\u2019\u00c3\u00a2\u00e2\u201a\u00ac\u00c2\u00a0\u00c3\u0192\u00c2\u00a2\u00c3\u00a2\u00e2\u20ac\u0161\u00c2\u00ac\u00c3\u00a2\u00e2\u20ac\u017e\u00c2\u00a2\u00c3\u0192\u00c6\u2019\u00c3\u2020\u00e2\u20ac\u2122\u00c3\u0192\u00c2\u00a2\u00c3\u00a2\u00e2\u20ac\u0161\u00c2\u00ac\u00c3\u2026\u00c2\u00a1\u00c3\u0192\u00c6\u2019\u00c3\u00a2\u00e2\u201a\u00ac\u00c5\u00a1\u00c3\u0192\u00e2\u20ac\u0161\u00c3\u201a\u00c2\u00acnh t\u00c3\u0192\u00c6\u2019\u00c3\u2020\u00e2\u20ac\u2122\u00c3\u0192\u00e2\u20ac\u00a0\u00c3\u00a2\u00e2\u201a\u00ac\u00e2\u201e\u00a2\u00c3\u0192\u00c6\u2019\u00c3\u00a2\u00e2\u201a\u00ac\u00c2\u00a0\u00c3\u0192\u00c2\u00a2\u00c3\u00a2\u00e2\u20ac\u0161\u00c2\u00ac\u00c3\u00a2\u00e2\u20ac\u017e\u00c2\u00a2\u00c3\u0192\u00c6\u2019\u00c3\u2020\u00e2\u20ac\u2122\u00c3\u0192\u00c2\u00a2\u00c3\u00a2\u00e2\u20ac\u0161\u00c2\u00ac\u00c3\u2026\u00c2\u00a1\u00c3\u0192\u00c6\u2019\u00c3\u00a2\u00e2\u201a\u00ac\u00c5\u00a1\u00c3\u0192\u00e2\u20ac\u0161\u00c3\u201a\u00c2\u00a0i ch\u00c3\u0192\u00c6\u2019\u00c3\u2020\u00e2\u20ac\u2122\u00c3\u0192\u00e2\u20ac\u00a0\u00c3\u00a2\u00e2\u201a\u00ac\u00e2\u201e\u00a2\u00c3\u0192\u00c6\u2019\u00c3\u00a2\u00e2\u201a\u00ac\u00c2\u00a0\u00c3\u0192\u00c2\u00a2\u00c3\u00a2\u00e2\u20ac\u0161\u00c2\u00ac\u00c3\u00a2\u00e2\u20ac\u017e\u00c2\u00a2\u00c3\u0192\u00c6\u2019\u00c3\u2020\u00e2\u20ac\u2122\u00c3\u0192\u00c2\u00a2\u00c3\u00a2\u00e2\u20ac\u0161\u00c2\u00ac\u00c3\u2026\u00c2\u00a1\u00c3\u0192\u00c6\u2019\u00c3\u00a2\u00e2\u201a\u00ac\u00c5\u00a1\u00c3\u0192\u00e2\u20ac\u0161\u00c3\u201a\u00c2\u00adnh. Qualification blocked on OCR unit ambiguity/conflict or non-unique geometry. No network, Vnstock, Daily, Financial V2 pin or successor."
+      "notes": "PARTIAL 2026-09-29. Retained-only H1 image OCR for HPG/PNJ/PVD/VRE; 11 completed page reads, no new CORE fact. Generic balance-sheet heading recognition accepts BÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡o cÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡o tÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬nh hÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬nh tÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â i chÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â­nh. Qualification blocked on OCR unit ambiguity/conflict or non-unique geometry. No network, Vnstock, Daily, Financial V2 pin or successor."
     },
     {
       "milestone_id": "FLOW_PRICE_CANONICAL_SOURCE_BACKFILL_AND_PRESENTATION_CORRECTIVE_V1",
@@ -3016,20 +3016,20 @@
       "milestone_id": "OWNER_DAILY_FEEDBACK_RESOURCE_CONTAINMENT_V1",
       "state": "COMPLETE",
       "starting_checkpoint": "e57276ab26651bd7c81ef875e0dbe23cffb0a421",
-      "checkpoint": "b7e785b20d745da247364a816f321d1e699d1e11",
+      "checkpoint": "4927158662b02177cc960ce491d8f5c2c1976532",
       "candidate_branch": "fix/owner-daily-feedback-resource-containment-20261003",
       "dependencies": [],
       "unlocks": [],
       "owner_authorized": true,
-      "owner_override": "OWNER_DIRECTIVE_2026_10_03_OWNER_DAILY_FEEDBACK_RESOURCE_CONTAINMENT_FULL_TECHNICAL_RELEASE_AUTONOMY",
+      "owner_override": "OWNER_DIRECTIVE_2026_10_04_SOLE_WRITER_FINAL_RELEASE_TAKEOVER",
       "authority_effect": "NONE / OWNER_DAILY_RESOURCE_CONTAINMENT_ONLY",
       "state_history": [
         "ACTIVE",
         "COMPLETE"
       ],
       "source_doc": "docs/owner_daily_feedback_resource_containment_contract.md",
-      "notes": "Bounded outcome-feedback children (admission, one total deadline, Job Object ceiling, reap), streaming proof/projection, atomic publication, identical content and artifact_identity. Real 31,977-row corpus: cold 263 s, changed-input 100 s, warm 134 s, terminal reuse 23 s; child peak 532 MiB (legacy builder MemoryError at 2.9 GiB); parent growth under 1 MiB; output 26.6 percent smaller. Oracle: all rows/summaries equal the production 2026-10-02 artifact; exact identity equal to the original builder on a reduced real corpus. FEEDBACK_CALL_RELATION INCREMENTAL (55.1 percent of shared rows change). Capture/marker/T0/seal/posture bytes unchanged. Classification MONDAY_ENGINEERING_READY. Calendar registration not executed. Next gate FIRST_REAL_POST_RELEASE_CAPTURE_ACCEPTANCE.",
-      "terminal_disposition": "OWNER_DAILY_FEEDBACK_RESOURCE_CONTAINMENT_V1_COMPLETE"
+      "notes": "Bounded outcome-feedback children (admission, one total deadline, Job Object ceiling, reap), streaming proof/projection, atomic publication, identical content and artifact_identity. Real 31,977-row corpus: cold 263 s, changed-input 100 s, warm 134 s, terminal reuse 23 s; child peak 532 MiB (legacy builder MemoryError at 2.9 GiB); parent growth under 1 MiB; output 26.6 percent smaller. Oracle: all rows/summaries equal the production 2026-10-02 artifact; exact identity equal to the original builder on a reduced real corpus. FEEDBACK_CALL_RELATION INCREMENTAL (55.1 percent of shared rows change). Capture/marker/T0/seal/posture bytes unchanged. Classification MONDAY_ENGINEERING_READY. Calendar registration not executed. Next gate FIRST_REAL_POST_RELEASE_CAPTURE_ACCEPTANCE. Codex repaired the ff6e3d0 publication race with target-named global Windows mutex / stable POSIX flock leases covering artifact/manifest/shared status independent of TEMP/TMPDIR. No-clobber artifact creation and unique parent IPC; same-input contenders reuse COMPLETE and changed input conflicts. Five-second cleanup grace with explicit tree accounting; uncertain reap is operational CHILD_REAP_UNCONFIRMED. Dedicated real-process concurrency and degraded-Windows tests pass. FEEDBACK_RESOURCE_CONTAINMENT_READY is separate from MONDAY_HOST_PREFLIGHT_PENDING: the historical 9,853,145,088-byte core enrichment/T0 peak remains untouched. Calendar registration unexecuted; live headroom preflight required before launch. NO_NEW_MONDAY_CRITICAL_EXPOSURE for release_orchestrator.",
+      "terminal_disposition": "OWNER_DAILY_FEEDBACK_RESOURCE_CONTAINMENT_COMPLETE"
     }
   ],
   "blocked_capabilities": [

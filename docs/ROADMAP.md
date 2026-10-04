@@ -2,7 +2,7 @@
 
 ## 2026-10-03 Owner Daily feedback resource containment
 
-`OWNER_DAILY_FEEDBACK_RESOURCE_CONTAINMENT_V1` is COMPLETE at `b7e785b20d745da247364a816f321d1e699d1e11`: both outcome-feedback children are bounded (admission, total deadline, memory ceiling, reaping), stream their sources and publish atomically with unchanged content and identity. Rehearsal classification MONDAY_ENGINEERING_READY. No analytical program was started; the sole next operational gate is `FIRST_REAL_POST_RELEASE_CAPTURE_ACCEPTANCE` on Monday 2026-10-05. Calendar registration stays owner-gated. [Contract](owner_daily_feedback_resource_containment_contract.md).
+`OWNER_DAILY_FEEDBACK_RESOURCE_CONTAINMENT_V1` is COMPLETE at `4927158662b02177cc960ce491d8f5c2c1976532`: both outcome-feedback children are bounded (admission, total deadline, memory ceiling, reaping), stream their sources and publish atomically with unchanged content and identity. The final corrective uses crash-released kernel leases for single-winner immutable publication and coordinated shared status, with explicit bounded reap accounting. `FEEDBACK_RESOURCE_CONTAINMENT_READY` is separate from `MONDAY_HOST_PREFLIGHT_PENDING`: the historical 9.18 GiB enrichment/T0 peak remains untouched and live host headroom preflight is required before launch. No analytical program was started; the sole next operational gate is `FIRST_REAL_POST_RELEASE_CAPTURE_ACCEPTANCE` on Monday 2026-10-05. Calendar registration stays owner-gated. [Contract](owner_daily_feedback_resource_containment_contract.md).
 
 ## 2026-10-02 market PIT foundation closeout
 

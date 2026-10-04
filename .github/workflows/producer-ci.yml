@@ -81,6 +81,7 @@ env:
     tests/test_canonical_post_close_pipeline.py::test_run_post_handoff_prospective_outcome_feedback_degrades_on_subprocess_failure
     tests/test_canonical_post_close_pipeline.py::test_feedback_timeout_and_admission_refusal_are_resource_reasons_and_launch_no_unbounded_work
     tests/test_canonical_post_close_pipeline.py::test_pre_handoff_collection_keeps_only_a_compact_feedback_status_in_the_parent
+    tests/test_canonical_post_close_pipeline.py::test_complete_child_with_unconfirmed_reaping_is_fail_soft_unavailable
     tests/test_integrated_decision_prospective_feedback.py
     tests/test_intrinsic_scenario_valuation.py
     tests/test_forward_driver_context.py
