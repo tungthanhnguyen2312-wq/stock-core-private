@@ -6,6 +6,8 @@ Written 2026-10-04 (Sunday) against Producer `main` `920d57917581a476e3ab6a9cf40
 To verify the live remote head run `git fetch origin main` and then compare `git rev-parse origin/main`
 (or ask the remote directly with `git ls-remote origin refs/heads/main`). The only change intended after
 the SHA above is the docs-only control-plane PR that introduced this file.
+The 2026-10-05 first-real closeout in this file was recorded after Producer `317118c788bdd46bd6de55dbff3888b92de1172d`
+(PR #66). That sentence is not a live-head proof: fetch before trusting it.
 
 ## 0. How this file relates to the others
 
@@ -38,16 +40,24 @@ Fact kinds used below: **CURRENT FACT** (verified in repo or by a stated read-on
 
 ## 1. The operational gate
 
-- **CURRENT FACT — active operational gate:** `FIRST_REAL_POST_RELEASE_CAPTURE_ACCEPTANCE` = **PENDING**.
-  It is the first ordinary successful post-release Daily on the actual session **2026-10-05
-  (Monday)**, launched around **16:00 Asia/Ho_Chi_Minh** under the unchanged Phase-A eligibility
-  gate (the 15:30 attempt floor is not lowered). Capture window: 15:00 on the session to 09:00 next
-  civil day. Contract: [monday_live_readiness_closeout_contract.md](monday_live_readiness_closeout_contract.md),
+- **CURRENT FACT — active operational gate:** `FIRST_REAL_POST_RELEASE_CAPTURE_ACCEPTANCE` = **RECORDED**
+  for session **2026-10-05**. The read-only harness (cutoff `2026-10-05T16:00:00Z`, report under
+  `operations-review/first-real-session-acceptance-v1/2026-10-05/`, not in git) returned
+  `capture_session` OPEN (`prospective_capture_complete_session:661a12b7fd0bbbde2a747e660b88f7b1eb33b57ad6d96fc3db4ddef844327d5d`,
+  658 capture-complete tickers), `first_marker` OPEN, and `t0_snapshot_availability` OPEN
+  (`prospective_decision_snapshot:1c496e3f7a2df9770e269ef20821805ef0cb8c76d34ebb2869d72fbb61e319f9`).
+  Readiness `complete_session_count` advanced 0 → 1 and stays `DEPTH_PENDING`. `representation_tier`
+  is OPEN (853 `SOURCE_NATIVE_SCALE_CONSISTENT`). `positive_listing` stays `STILL_BLOCKED`
+  (HOSE 364, UPCOM 294, UNKNOWN 195). `official_verification`, `raw_as_traded`, and `ca` stay
+  `STILL_BLOCKED`, which this gate does not treat as failure. Contract:
+  [monday_live_readiness_closeout_contract.md](monday_live_readiness_closeout_contract.md),
   [prospective_pit_capture_completeness_contract.md](prospective_pit_capture_completeness_contract.md).
-- **CURRENT FACT — no live Daily has run since 2026-10-02.** That run completed `READY` but its T0
-  failed with `MemoryError` and stays permanently `UNAVAILABLE` (a 0-byte file is retained; never
-  rebuilt). `ROADMAP_STATE.json`: `current = OWNER_DAILY_FEEDBACK_RESOURCE_CONTAINMENT_V1 / COMPLETE`,
-  `queued_next = []`, `successor_disposition = FIRST_REAL_POST_RELEASE_CAPTURE_ACCEPTANCE_PENDING_NO_AUTOMATIC_SUCCESSOR`.
+- **CURRENT FACT — Owner Daily 2026-10-05 is complete.** Journal stage `COMPLETE`, run
+  `e244385f2a7441d697679d08826c88f9`, failure null, Producer `317118c788bdd46bd6de55dbff3888b92de1172d`.
+  The 2026-10-02 Daily remains a prior session whose T0 failed with `MemoryError` and stays
+  permanently `UNAVAILABLE` (a 0-byte file is retained; never rebuilt). `ROADMAP_STATE.json`:
+  `current = OWNER_DAILY_FEEDBACK_RESOURCE_CONTAINMENT_V1 / COMPLETE`, `queued_next = []`,
+  `successor_disposition = FIRST_REAL_POST_RELEASE_CAPTURE_ACCEPTANCE_RECORDED_2026_10_05_NO_AUTOMATIC_SUCCESSOR`.
 - **CURRENT FACT — no automatic successor.** Nothing starts because something else finished;
   every new milestone needs explicit owner authorization (AI_RULES rules 4, 11).
 
@@ -84,9 +94,12 @@ Fact kinds used below: **CURRENT FACT** (verified in repo or by a stated read-on
 
 ## 3. Capture, marker and T0 on the first real session
 
-- **CURRENT FACT — first marker is null and complete-capture count is 0.** `operations-review/prospective-pit-capture-v1`
-  does not exist in the production root (checked 2026-10-04). Nothing creates a marker except a
-  genuine Phase-B-READY Daily with capture-complete tickers.
+- **CURRENT FACT — the write-once first marker is published for 2026-10-05.** Identity
+  `first_complete_capture_session:48a52e9458f361aa50bbaf5297ab98d5ccb9d5d6f76a1522cb8290bc7c7028c3`,
+  bound capture `prospective_capture_complete_session:661a12b7fd0bbbde2a747e660b88f7b1eb33b57ad6d96fc3db4ddef844327d5d`,
+  `written_at` `2026-10-05T11:31:02.861384+00:00`. Exactly one original T0 directory:
+  `operations-review/prospective-decision-retention-v1/2026-10-05/1c496e3f7a2df9770e269ef20821805ef0cb8c76d34ebb2869d72fbb61e319f9/`.
+  Do not replace the marker, the capture record, the seal index, the write receipt, or that T0.
 - **CURRENT FACT — marker semantics are `CAPTURE_COMPLETENESS_ONLY`.** `first_complete_capture_session`
   is write-once and does **not** require T0: the contract lists its preconditions (Phase-B `READY`,
   supported calendar, exact market/listing/binding batches, ≥1 capture-complete ticker) and binds
@@ -160,6 +173,21 @@ Fact kinds used below: **CURRENT FACT** (verified in repo or by a stated read-on
   context is the newest candidate known by the unchanged 15:00 cutoff; the handoff requires the queue
   exactly when the sealed operation declares it (identity-checked) and otherwise publishes an
   explicit `NOT_DECLARED_BY_SEALED_OPERATION`. The completed 2026-10-05 lock is kept as recorded.
+- **2026-10-05 Owner Daily completion (resume on `317118c`): PASS.** Canonical Daily was not rerun.
+  Dashboard `origin/main` `5a050b46b2092e2d5bac2c0af216624447800c83`, `market_session` 2026-10-05,
+  attestation `governed_publication_attestation:6daf0b708354b0384286a5c331c1765011602e446ffcd1ecd2322b3570955808`,
+  Dashboard CI `37335772813` and Deploy Pages `37335959559` both success, public-byte identity PASS.
+  AI handoff `origin/main` `9f379cc2b6f1655806ed42d63161c17479e79951`, `READY_FOR_AI`, queue
+  `NOT_DECLARED_BY_SEALED_OPERATION`. Action Center
+  `personal_investment_decision_action_center/v1:37ec23f5d430ce11b89520f171d8c4d8d0011c26b2b0feb59752e0efa435514a`.
+  First real Canonical-child `peak_rss_bytes` = `10985897984` (~10.23 GiB), above the 6.5–8.0 GiB
+  band. Later publication-only resumes peaked at `6840815616` and `2057273344` because they skipped
+  Canonical Daily. Merged before that PASS: PR #64 `c316458` (companion run binding), PR #65
+  `cc8f548` (hermetic host fixture; dashboard failure reason kept), PR #66 `317118c` (`gh run watch`
+  conclusion). Producer CI `37335518993` on `317118c` succeeded. Volume-and-flow context and the
+  Thesis T0 sidecar for this session stayed `UNAVAILABLE` (no `event_context` on the frozen lock;
+  reused T0 source IID differs from the later IID). Both are fail-soft. The lock and the T0 were
+  not rewritten.
 
 ## 5. BLOCKED (evidence-blocked; do not work around)
 
@@ -178,8 +206,11 @@ Fact kinds used below: **CURRENT FACT** (verified in repo or by a stated read-on
 - Legacy `STATE.md` banners say "calendar registration remains unexecuted / owner-gated": true when
   written; **superseded** by §4 (host-local, 2026-10-04).
 - The 9,853,145,088-byte (~9.18 GiB) core peak is **STALE** (removed whole-string T0 write). The
-  current-main Daily-child working band is **6.5–8.0 GiB, 8.0 a floor not a ceiling**; Monday is
-  unmeasured. See the host-preflight contract.
+  planning band remains **6.5–8.0 GiB, 8.0 a floor not a ceiling**. The first real Canonical-child
+  measurement is `10985897984` bytes (§4). Do not lower host thresholds to fit it.
+- **HISTORICAL — as checked 2026-10-04, first marker is null and complete-capture count is 0.**
+  Superseded by §3 on 2026-10-05. The 2026-10-02 T0 remains `UNAVAILABLE`.
+- **HISTORICAL — no live Daily had run since 2026-10-02** was true on 2026-10-04. Superseded by §1.
 - `OWNER_DAILY_ONE_CLICK.md` says "at or after about 16:30"; the Monday contract targets ~16:00 under the
   15:30 attempt floor. Use the Monday contract for 2026-10-05.
 - M1 live acceptance (2026-09-28, `DNSE_PRIMARY_UNCORROBORATED`), Thesis Stage 1 (offline, frozen),
@@ -195,17 +226,23 @@ Fact kinds used below: **CURRENT FACT** (verified in repo or by a stated read-on
 
 ## 8. Actual blockers right now
 
-1. A READY host preflight is not yet observed (last observation BLOCKED on commit headroom).
-2. No additional documented blocker is currently known. That is not a launch permit: every runtime, evidence,
+1. The 2026-10-05 Owner Daily is complete. No additional documented blocker is currently known
+   for that session. A later ordinary Daily must still pass at launch: every runtime, evidence,
    session and window gate (Phase A/B, calendar, credentials, repository preflight, runtime/trusted release)
-   must still pass at launch.
+   still applies.
+2. A later ordinary Daily still needs a fresh `OWNER_DAILY_HOST_PREFLIGHT_V1` = **READY**. The
+   post-closeout observation was **BLOCKED**: writers `WRITER_STATE_UNKNOWN` (one encoded PowerShell
+   child of the IDE; `active_writers` empty) and physical memory **AMBER** (~6.0 GiB available against
+   the 6 GiB green band). Commit and disk were READY. Thresholds are unchanged. Close IDEs and other
+   heavy processes, then re-run the preflight. **AMBER or BLOCKED must not launch.**
 
 ## 9. Next action
 
-On 2026-10-05, around 16:00 Vietnam time: close ordinary background workloads → run host preflight →
-launch only on READY → `stocklookup.ps1 daily` (or the Desktop one-click) alone → read the Vietnamese
-final screen **and** the first-real acceptance report. If anything is red, send the displayed failure
-summary and log path; never run two writers; never manually push generated files while it runs.
+Do not launch the next session early. Before 15:00 Asia/Ho_Chi_Minh on the next civil day, the
+calendar anchor is still 2026-10-05, so an ordinary launch idempotently replays that completed
+publication. At or after 16:00 on the next trading day: close ordinary background workloads → run
+host preflight → launch only on READY → `stocklookup.ps1 daily` (or the Desktop one-click) alone.
+That launch resolves 2026-10-06 and does not replay 2026-10-05. Do not start Phase B/C.
 
 ## 10. Owner approvals that remain open
 

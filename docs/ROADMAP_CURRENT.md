@@ -5,34 +5,24 @@ the machine state `ROADMAP_STATE.json`). Written 2026-10-04 on main `920d579`. *
 auto-starts.** A milestone starts only when `python tools/stocklookup_roadmap.py --can-start <ID>` allows
 it or the owner records an explicit override (AI_RULES rule 11). Facts: [ACTIVE_STATE.md](ACTIVE_STATE.md).
 
-## NOW — `FIRST_REAL_POST_RELEASE_CAPTURE_ACCEPTANCE` (PENDING)
+## NOW — `FIRST_REAL_POST_RELEASE_CAPTURE_ACCEPTANCE` (RECORDED 2026-10-05)
 
-The first ordinary successful post-release Daily on the actual session **2026-10-05**, around 16:00
-Asia/Ho_Chi_Minh, under the unchanged Phase-A eligibility gate.
+Recorded. No successor milestone is active, and nothing here starts one.
 
-**Prerequisite:** a fresh `OWNER_DAILY_HOST_PREFLIGHT_V1 = READY` immediately before launch
-(AMBER/BLOCKED do not launch; no override). Plus the other launch conditions in ACTIVE_STATE §1.
+**Result** (read-only harness, cutoff `2026-10-05T16:00:00Z`):
+- *Capture:* complete. `prospective_capture_complete_session:661a12b7fd0bbbde2a747e660b88f7b1eb33b57ad6d96fc3db4ddef844327d5d` (658 capture-complete tickers; 853 exact-session observed).
+- *Marker:* published. `first_complete_capture_session:48a52e9458f361aa50bbaf5297ab98d5ccb9d5d6f76a1522cb8290bc7c7028c3`, session 2026-10-05, `written_at` `2026-10-05T11:31:02.861384+00:00`.
+- *T0:* available. `prospective_decision_snapshot:1c496e3f7a2df9770e269ef20821805ef0cb8c76d34ebb2869d72fbb61e319f9`; seal index `prospective_t0_seal_index:afe7fe3b1cda2e2d7f8e10f7d61e8a77932ea9939eff13ede4de2327ba6e6fb6`.
 
-**What the run must demonstrate** (contract: [prospective_pit_capture_completeness_contract.md](prospective_pit_capture_completeness_contract.md),
-[monday_live_readiness_closeout_contract.md](monday_live_readiness_closeout_contract.md)):
-1. Exact bars, same-session listings and representation tier bound to the session.
-2. The Daily's own `working_dates` probe retained as a calendar receipt.
-3. One complete session record and the write-once first marker published; readiness advances exactly one
-   session (complete count 0 → 1; marker was null).
-4. Later official verification stays separate (not part of this acceptance).
+Readiness count is 1 and `DEPTH_PENDING`. Representation tier is OPEN. `positive_listing` stays
+`STILL_BLOCKED` (195 UNKNOWN exchange). `official_verification` stays conditional and closed;
+`raw_as_traded` and `ca` stay closed. Calendar receipt is OPEN. Owner Daily journal is `COMPLETE`.
 
-**How to read the result** — report three independent lines, never a single "ready":
-- *Capture:* complete / incomplete / late, with the record identity.
-- *Marker:* published / already present / not published.
-- *T0:* available (snapshot + seal index identities) / `UNAVAILABLE` with reason.
-  A T0-less complete session is a legal outcome; it opens capture and marker rows only.
+**Measured Canonical-child peak:** `peak_rss_bytes` `10985897984` (~10.23 GiB), above the 6.5–8.0 GiB
+band. That band is unchanged. Publication-only resumes are not this measurement.
 
-Run the read-only harness afterwards: `python tools/run_first_real_session_acceptance.py --session 2026-10-05 --cutoff <actual> …`
-(write the report under `operations-review/first-real-session-acceptance-v1/<session>/`). First capture
-alone cannot open `pit_continuous_price`, `raw_as_traded` or `ca` (evidence-blocked today, so broad PIT/RAW
-stay closed); `official_verification` is conditional and use-dependent (it needs later, separately verified
-official ledgers) and is not expected from this run. Also record, from the telemetry,
-the measured `peak_rss_bytes` of the Daily child: it is the first real measurement against the 6.5–8.0 GiB band.
+The next ordinary Daily is the next completed market session after a fresh READY host preflight.
+It is not a new milestone. `queued_next` stays empty.
 
 ## NEXT EVIDENCE GATE — time-driven, not milestones
 
@@ -46,7 +36,7 @@ These advance by accumulating real sessions, not by implementation:
 
 ## AFTER FIRST-REAL ACCEPTANCE — candidates, owner authorization required
 
-1. **Record the first-real result** in this control plane (a small docs update; no runtime change).
+1. **Record the first-real result** — done in this control plane (docs only; no runtime change). Phase B/C below are not started.
 2. **Control-plane simplification Phase B** (not started): move or archive historical narrative out of the default
    path (`STATE.md` / `DECISIONS.md` / `ROADMAP.md` dated sections), keep every machine marker, parser and
    `ROADMAP_STATE.json` contract working, update the drift/governance tests in the same change. Preserve history.
