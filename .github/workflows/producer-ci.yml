@@ -27,6 +27,7 @@ env:
     tests/test_owner_daily_workflow.py
     tests/test_owner_daily_final_recovery_20261005.py
     tests/test_owner_daily_20261005_recovery.py
+    tests/test_dashboard_companion_declared_producer_run.py
     tests/test_owner_daily_host_preflight.py
     tests/test_active_control_plane.py
     tests/test_owner_daily_progress.py

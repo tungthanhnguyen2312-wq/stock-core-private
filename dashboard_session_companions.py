@@ -118,7 +118,9 @@ def compute_session_companions(
     resolved = (handoff.get("market_session_proof") or {}).get("resolved_completed_session")
     if resolved != session:
         raise DashboardSessionCompanionError("HANDOFF_RESOLVED_SESSION_MISMATCH")
-    run_path, run_manifest = _unique_producer_run(root, session, run_identity=producer_run_identity)
+    run_path, run_manifest = _unique_producer_run(
+        root, session, run_identity=_bound_producer_run_identity(handoff, producer_run_identity),
+    )
     handoff_sources = handoff.get("upstream_evidence_identities") or {}
     run_sources = run_manifest.get("upstream_artifact_identities") or {}
     for name in ("descriptive", "screening", "tactical", "triage"):
@@ -255,6 +257,29 @@ def _load_object(path: Path) -> dict[str, Any]:
 
 def _dump_json(payload: Mapping[str, Any]) -> str:
     return json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True, allow_nan=False) + "\n"
+
+
+def _bound_producer_run_identity(handoff: Mapping[str, Any], explicit: str | None) -> str | None:
+    """The producer run this session's retained handoff already names.
+
+    A later crash or rerun can leave a second ``run_manifest.json`` beside the run the
+    completed handoff is bound to. Directory count is not authority. The handoff's own
+    ``daily_producer_run_identity`` and ``daily_producer.run_identity`` are. They must
+    agree when both are present. An explicit caller identity must be that same run.
+    Older handoffs that declare neither keep the single-directory rule.
+    """
+    top = handoff.get("daily_producer_run_identity")
+    producer = handoff.get("daily_producer")
+    nested = producer.get("run_identity") if isinstance(producer, Mapping) else None
+    declared = [value for value in (top, nested) if isinstance(value, str) and value]
+    if len(set(declared)) > 1:
+        raise DashboardSessionCompanionError("HANDOFF_PRODUCER_RUN_IDENTITY_CONFLICT")
+    bound = declared[0] if declared else None
+    if explicit is not None:
+        if bound is not None and explicit != bound:
+            raise DashboardSessionCompanionError("HANDOFF_PRODUCER_RUN_IDENTITY_MISMATCH:" + explicit)
+        return explicit
+    return bound
 
 
 def _unique_producer_run(
