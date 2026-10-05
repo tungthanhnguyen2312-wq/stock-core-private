@@ -22,6 +22,7 @@ import uuid
 
 CONTRACT_VERSION = "owner_daily_progress/v1"
 AUTHORITY_EFFECT = "NONE_OPERATIONAL_OBSERVABILITY_ONLY"
+STATUS_SCOPE = "TELEMETRY_SIDECAR_HEALTH_ONLY_NOT_RUN_OUTCOME"
 PROGRESS_PATH_ENV = "STOCK_LOOKUP_OWNER_DAILY_PROGRESS_PATH"
 RUN_ID_ENV = "STOCK_LOOKUP_OWNER_DAILY_RUN_ID"
 RUN_STARTED_AT_ENV = "STOCK_LOOKUP_OWNER_DAILY_RUN_STARTED_AT"
@@ -645,8 +646,13 @@ class OwnerDailyProgress:
         except Exception as exc:
             self._degrade("FINAL_RESOURCE_SAMPLE_FAILED:" + type(exc).__name__)
         elapsed = max(0.0, now - self.run_started_monotonic)
+        health = "DEGRADED" if self.degraded_reasons else "READY"
         return {
-            "status": "DEGRADED" if self.degraded_reasons else "READY",
+            # ``status`` is kept for v1 compatibility; it is sidecar health, never the run outcome
+            # (the owner result's top-level ``status`` is the outcome).
+            "status": health,
+            "telemetry_health": health,
+            "status_scope": STATUS_SCOPE,
             "contract_version": CONTRACT_VERSION,
             "authority_effect": AUTHORITY_EFFECT,
             "run_id": self.run_id,

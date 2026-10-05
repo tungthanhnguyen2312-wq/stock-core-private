@@ -595,3 +595,80 @@ def test_request_completion_resource_refresh_is_not_tree_size_boundary(tmp_path,
     emitter.emit(phase_index=2, status="BEGIN")
     emitter.emit(phase_index=2, status="END")
     assert len(calls) == 2
+
+
+# OWNER_DAILY_HOST_CAPACITY_AND_PREFLIGHT_CORRECTIVE_20261005 -- the 2026-10-05 run showed
+# "[2/9] Chạy Daily chuẩn | ĐANG CHẠY" before the mandatory host gate reported BLOCKED.
+def _fresh_workflow_fixture(tmp_path, monkeypatch, classification):
+    from functools import partial
+    from tools import check_owner_daily_host_preflight as host_preflight
+
+    monkeypatch.setattr(owner_daily, "_resolve_intended_session", lambda: "2026-10-05")
+    monkeypatch.setattr(owner_daily, "_auto_resumable_session", lambda *a, **k: None)
+    monkeypatch.setattr(owner_daily, "preflight_repository", lambda *a, **k: {"head": "producer", "status": "UP_TO_DATE"})
+    monkeypatch.setattr(owner_daily, "preflight_consumer_repository", lambda *a, **k: {"head": "consumer", "status": "UP_TO_DATE"})
+    monkeypatch.setattr(owner_daily, "preflight_dashboard_repository", lambda *a, **k: {"head": "dashboard", "status": "UP_TO_DATE"})
+    calls: list[str] = []
+
+    def check(*_args):
+        calls.append("host_preflight")
+        return {"classification": classification, "operator_guidance": host_preflight.GUIDANCE}
+
+    monkeypatch.setattr(host_preflight, "check", check)
+    monkeypatch.setattr(owner_daily, "run_workflow", partial(owner_daily.run_workflow, root=tmp_path))
+    return calls
+
+
+@pytest.mark.parametrize("classification", ["BLOCKED", "AMBER"])
+def test_canonical_daily_never_begins_before_host_preflight_accepts(tmp_path, monkeypatch, classification):
+    calls = _fresh_workflow_fixture(tmp_path, monkeypatch, classification)
+    monkeypatch.setattr(owner_daily.subprocess, "Popen", lambda *a, **k: pytest.fail("must not launch"))
+    result_path, sidecar = tmp_path / "logs" / "owner.result.json", tmp_path / "logs" / "owner.progress.jsonl"
+
+    assert owner_daily.main(["--result-path", str(result_path), "--progress-path", str(sidecar),
+                             "--runtime-root", str(tmp_path / "runtime")]) == 1
+
+    assert calls == ["host_preflight"]
+    events = [(e["phase_index"], e["status"]) for e in map(json.loads, sidecar.read_text(encoding="utf-8").splitlines())]
+    assert events == [(1, "BEGIN"), (1, "FAILED")]
+    written = json.loads(result_path.read_text(encoding="utf-8"))
+    assert written["status"] == "FAILED" and written["failed_step"] == "Host preflight"
+    assert written["reason"] == "OWNER_DAILY_HOST_PREFLIGHT_" + classification
+    # Nested telemetry health is explicit and can never be read as the run outcome.
+    assert written["telemetry"]["telemetry_health"] == written["telemetry"]["status"] == "READY"
+    assert written["telemetry"]["status_scope"] == progress.STATUS_SCOPE == "TELEMETRY_SIDECAR_HEALTH_ONLY_NOT_RUN_OUTCOME"
+
+
+def test_ready_host_gate_closes_phase_one_before_canonical_daily_begins_and_is_not_rerun(tmp_path, monkeypatch):
+    calls = _fresh_workflow_fixture(tmp_path, monkeypatch, "READY")
+
+    class Process:
+        pid = 4242
+
+        def wait(self):
+            return 7  # The existing canonical child gate still refuses; nothing downstream runs.
+
+    def launch(*_a, **_k):
+        calls.append("popen")
+        return Process()
+
+    monkeypatch.setattr(owner_daily.subprocess, "Popen", launch)
+    result_path, sidecar = tmp_path / "logs" / "owner.result.json", tmp_path / "logs" / "owner.progress.jsonl"
+
+    assert owner_daily.main(["--result-path", str(result_path), "--progress-path", str(sidecar),
+                             "--runtime-root", str(tmp_path / "runtime")]) == 1
+
+    assert calls == ["host_preflight", "popen"]
+    events = [(e["phase_index"], e["status"]) for e in map(json.loads, sidecar.read_text(encoding="utf-8").splitlines())]
+    assert events[:3] == [(1, "BEGIN"), (1, "END"), (2, "BEGIN")]
+    assert (2, "FAILED") in events
+    written = json.loads(result_path.read_text(encoding="utf-8"))
+    assert written["status"] == "FAILED" and written["reason"] == "CANONICAL_DAILY_EXIT_7"
+
+
+def test_telemetry_summary_health_fields_are_consistent_when_degraded(tmp_path):
+    emitter, _sidecar, _lines = _emitter(tmp_path, FakeClock())
+    emitter.report_degraded("UNSAFE_PROGRESS_PATH")
+    summary = emitter.summary()
+    assert summary["status"] == summary["telemetry_health"] == "DEGRADED"
+    assert summary["status_scope"] == progress.STATUS_SCOPE

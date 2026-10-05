@@ -54,8 +54,8 @@ Fact kinds used below: **CURRENT FACT** (verified in repo or by a stated read-on
 ### Launch conditions (all must hold immediately before the live Daily)
 
 1. **Fresh `OWNER_DAILY_HOST_PREFLIGHT_V1` = READY** (exit code 0). **AMBER (2) or BLOCKED (3) must
-   not launch.** There is no override flag; the Owner launcher re-runs it before spawning the
-   canonical child. Run `python -B tools/check_owner_daily_host_preflight.py` in the canonical main
+   not launch.** There is no override flag; the Owner launcher re-runs it in phase 1, before
+   Canonical Daily is shown as started. Run `python -B tools/check_owner_daily_host_preflight.py` in the canonical main
    checkout. Bands: [owner_daily_host_preflight_contract.md](owner_daily_host_preflight_contract.md).
 2. Producer, Consumer (`ai-core-private`) and Dashboard (`market-dashboard`) checkouts pass the Owner
    repository preflight (`tools/run_owner_daily.py`): right repo/origin, on `main`, clean, fast-forwardable.
@@ -131,6 +131,25 @@ Fact kinds used below: **CURRENT FACT** (verified in repo or by a stated read-on
   (<9.2), physical 3.22 GiB (AMBER), C: free 35.61 GiB (READY), writers none. An observation, not a
   permit: re-run immediately before launch. Close browsers/IDEs until READY; do not alter thresholds
   or kill processes from the tool.
+- **2026-10-05 Owner Daily attempts (16:08, 16:35): refused by host preflight `BLOCKED`** (commit
+  1.74 GiB, physical 1.02 GiB, C: 17.29 GiB). Cause: an orphaned Git-Bash `find / -name …` left by an
+  agent session (started 05:46) held ~12.6M handles → ~8 GB kernel paged pool, and kept deleted files
+  delete-pending. After it was stopped: commit 6.51 GiB (BLOCKED), physical 2.27 GiB (BLOCKED), C:
+  27.1 GiB (READY). Remaining load is ordinary owner apps; the gate and thresholds are unchanged.
+  Agents must never run root-wide `find /` (or other unbounded scans) on this host.
+- **2026-10-05 Owner Daily 18:00 (run `ad670e74…`, main `f2721f4`): host READY, Canonical Daily exit 1**
+  in `build_tiered_bundle` (`AttributeError: 'str' object has no attribute 'resolve'`). First
+  trading session at/after `PRODUCTION_V2_START_SESSION`, so the first production RETAINED T0 seal
+  index, whose serialized `{"path": str}` reached `_rel` (which assumed `Path`). Already sealed before
+  the crash and verified read-only: T0 `prospective_decision_snapshot:1c496e3f…` (seal index,
+  write receipt, file hash), capture session, first-complete-capture marker (2026-10-05), Thesis T0.
+  No tier bundle, operation record, journal completion, state commit or publication; local
+  `dashboard-runtime` was promoted at 18:26. Corrective (branch
+  `fix/owner-daily-20261005-recovery-v1`): `_rel` accepts `Path | str`; a V2 session reuses its
+  verified original sealed T0 instead of re-minting one (the operation identity embeds producer HEAD,
+  so any rerun after a merge would otherwise seal a conflicting second T0). Child peak ~10 GB was
+  reached in the telemetry-silent enrichment→Producer→T0 window; attribution is a separate resource
+  milestone.
 
 ## 5. BLOCKED (evidence-blocked; do not work around)
 
