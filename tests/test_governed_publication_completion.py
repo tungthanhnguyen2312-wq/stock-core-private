@@ -130,6 +130,15 @@ class FakeGh:
         if args[:2] == ["run", "view"] and "--log" in args:
             run_id = int(args[2])
             return _cp(0, self.logs.get(run_id, ""))
+        if args[:2] == ["run", "view"] and "--json" in args:
+            run_id = int(args[2])
+            match = next(
+                (row for row in [*self.ci_runs, *self.pages_runs] if int(row["databaseId"]) == run_id),
+                None,
+            )
+            if match is None:
+                return _cp(1, stderr="run not found")
+            return _cp(0, json.dumps({"status": match.get("status"), "conclusion": match.get("conclusion")}))
         if args[:2] == ["run", "watch"]:
             run_id = int(args[2])
             if run_id in self.timeout_runs:
@@ -249,6 +258,25 @@ def test_ci_dispatch_must_resolve_back_to_exact_release_sha(web_dir, tmp_path):
     git = FakeGit()
     with pytest.raises(gpc.PublicationCompletionError, match="BLOCKED_CI_DISPATCH"):
         _complete(web_dir, gh, git, tmp_path)
+    assert gh.pages_dispatch_count == 0
+
+
+def test_early_watch_exit_is_not_failure_when_the_run_then_succeeds(web_dir, tmp_path):
+    """2026-10-05: gh run watch returned non-zero while Dashboard CI was still queued.
+
+    The run then completed success and Deploy Pages printed PUBLIC_BYTE_IDENTITY_PASS.
+    A watch exit is not the run's conclusion.
+    """
+    gh = FakeGh()
+    gh.ci_runs = [_ci_row(status="in_progress", conclusion="")]
+    gh.watch_exit[CI_ID] = 1
+    gh.complete_after_watch[CI_ID] = _ci_row()
+    gh.pages_runs = [_pages_row()]
+    gh.logs[PAGES_ID] = PUBLIC_LINE
+    git = FakeGit()
+    record = _complete(web_dir, gh, git, tmp_path)
+    assert record["publication_state"] == PUBLISHED
+    assert record["public_byte_identity"] == "PASS"
     assert gh.pages_dispatch_count == 0
 
 
