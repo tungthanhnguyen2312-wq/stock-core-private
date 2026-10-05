@@ -1216,6 +1216,7 @@ def run_workflow(*, root: Path = ROOT, runtime_root: Path = DEFAULT_RUNTIME,
             print(f"NEW_INTENDED_SESSION: {intended_session}")
 
     run_id = _journal_start(root, intended_session=intended_session)
+    dashboard: dict[str, Any] | None = None
     try:
         # SESSION_RESOLVED must be durable BEFORE any material work begins (repository preflight,
         # acquisition, ...) -- see section 2. When the exact session is already definitively known
@@ -1344,8 +1345,13 @@ def run_workflow(*, root: Path = ROOT, runtime_root: Path = DEFAULT_RUNTIME,
                 complete_publication=dashboard_complete_publication,
             )
         if telemetry is not None:
-            telemetry.emit(phase_index=5, progress_kind="PUBLICATION", status="END",
-                           reason="DASHBOARD_PUBLICATION_DISABLED" if not publish_dashboard else None)
+            if not publish_dashboard:
+                dashboard_end_reason = "DASHBOARD_PUBLICATION_DISABLED"
+            elif dashboard.get("status") in {"READY", "SKIPPED"}:
+                dashboard_end_reason = None
+            else:
+                dashboard_end_reason = str(dashboard.get("reason") or dashboard.get("status") or "DASHBOARD_NOT_READY")
+            telemetry.emit(phase_index=5, progress_kind="PUBLICATION", status="END", reason=dashboard_end_reason)
         if dashboard["status"] in {"READY", "SKIPPED"}:
             _journal_advance_strict(root, run_id, journal.DASHBOARD_PUBLISHED, detail={"status": dashboard["status"]})
 
@@ -1440,8 +1446,15 @@ def run_workflow(*, root: Path = ROOT, runtime_root: Path = DEFAULT_RUNTIME,
                 "dashboard": dashboard, "ai_handoff": handoff, "action_center": action_center,
                 "journal_run_id": run_id}
     except BaseException as exc:
+        # A later phase that raises used to discard a Dashboard result that had already
+        # failed closed. The journal keeps that reason beside the exception.
+        detail: dict[str, Any] = {"reason": f"{type(exc).__name__}:{exc}"}
+        if isinstance(dashboard, Mapping) and dashboard.get("status") not in (None, "READY", "SKIPPED"):
+            detail["dashboard_status"] = dashboard.get("status")
+            if dashboard.get("reason"):
+                detail["dashboard_reason"] = dashboard.get("reason")
         _journal_advance(root, run_id, journal.INTERRUPTED if isinstance(exc, KeyboardInterrupt) else journal.FAILED,
-                         detail={"reason": f"{type(exc).__name__}:{exc}"})
+                         detail=detail)
         raise
 
 

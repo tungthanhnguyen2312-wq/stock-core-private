@@ -177,8 +177,22 @@ def _workflow_stubs(monkeypatch, order: list[str], seen_heads: list[str]) -> Non
     monkeypatch.setattr(workflow, "_resolve_intended_session", lambda: SESSION)
     monkeypatch.setattr(workflow, "_auto_resumable_session", lambda *a, **k: None)
 
-    def run_daily(root, _runtime_root):
+    def host_ready(_root):
+        # The real gate measures this machine. A hermetic ordering fixture must not fail
+        # OWNER_DAILY_HOST_PREFLIGHT_BLOCKED just because the CI runner is small.
+        # tests/test_owner_daily_host_preflight.py owns the real threshold contract.
+        order.append("host_preflight")
+        return {"classification": "READY", "source": "HERMETIC_FIXTURE"}
+
+    monkeypatch.setattr(workflow, "_require_host_ready", host_ready)
+
+    def run_daily(root, _runtime_root, **kwargs):
         order.append("daily")
+        accepted = kwargs.get("host_ready") or {}
+        if accepted.get("classification") != "READY" or accepted.get("source") != "HERMETIC_FIXTURE":
+            raise AssertionError("phase 1 must pass its accepted host result into Canonical Daily")
+        if order.count("host_preflight") != 1:
+            raise AssertionError("the host gate runs once in phase 1, not again inside Canonical Daily")
         # Exactly what canonical_daily_operation records as consumer_head.
         seen_heads.append(canonical_daily_operation._git_head(Path(root).parent / "ai-core-private"))
         raise RuntimeError("STOP_AFTER_DAILY_START")
@@ -195,7 +209,7 @@ def test_consumer_preflight_runs_before_daily_and_daily_records_the_preflighted_
     with pytest.raises(RuntimeError, match="STOP_AFTER_DAILY_START"):
         workflow.run_workflow(root=producer, runtime_root=tmp_path / "runtime", handoff_repo=tmp_path / "h",
                               publish_dashboard=False)
-    assert order == ["stock-core-private_preflight", "consumer_preflight", "daily"]
+    assert order == ["stock-core-private_preflight", "consumer_preflight", "host_preflight", "daily"]
     assert seen == [remote], "Daily must record the HEAD the preflight fast-forwarded to"
 
 

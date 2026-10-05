@@ -911,6 +911,32 @@ def test_run_workflow_marks_journal_failed_on_exception_and_next_run_resumes_wit
     assert journal.read_journal(tmp_path)["stage"] == journal.COMPLETE
 
 
+def test_later_phase_exception_retains_the_dashboard_failure_reason(monkeypatch, tmp_path):
+    """2026-10-05 phase 5 failed closed and phase 6 then raised. The result kept only the raise."""
+    _write_completion(tmp_path)
+    _write_presentation_attestation(tmp_path)
+    runtime = tmp_path / "runtime"; runtime.mkdir(); (runtime / "bundle_manifest.json").write_text("{}")
+    monkeypatch.setattr(workflow, "preflight_repository", lambda *a, **k: {"head": "producer", "status": "UP_TO_DATE"})
+    monkeypatch.setattr(workflow, "commit_daily_state", lambda *a, **k: {"sha": "producer", "status": "NO_CHANGE"})
+    monkeypatch.setattr(workflow, "publish_dashboard_release", lambda *a, **k: {
+        "status": "FAILED", "expected_session": SESSION, "observed_session": None,
+        "reason": "DAILY_PRODUCER_RUN_AMBIGUOUS_OR_MISSING:count=2",
+    })
+
+    def handoff_raises(*_a, **_k):
+        raise workflow.OwnerDailyError("AI handoff build", "AI_HANDOFF_REQUIRED_FILE_MISSING")
+
+    monkeypatch.setattr(workflow, "publish_ai_handoff", handoff_raises)
+    with pytest.raises(workflow.OwnerDailyError, match="AI_HANDOFF_REQUIRED_FILE_MISSING"):
+        workflow.run_workflow(root=tmp_path, runtime_root=runtime, handoff_repo=tmp_path / "handoff",
+                              replay_completed_session=SESSION)
+    failed = journal.read_journal(tmp_path)
+    assert failed["failure"]["stage"] == journal.FAILED
+    assert "AI_HANDOFF_REQUIRED_FILE_MISSING" in failed["failure"]["detail"]["reason"]
+    assert failed["failure"]["detail"]["dashboard_status"] == "FAILED"
+    assert failed["failure"]["detail"]["dashboard_reason"] == "DAILY_PRODUCER_RUN_AMBIGUOUS_OR_MISSING:count=2"
+
+
 def test_run_workflow_marks_journal_interrupted_on_keyboard_interrupt(monkeypatch, tmp_path):
     _write_completion(tmp_path)
     runtime = tmp_path / "runtime"; runtime.mkdir(); (runtime / "bundle_manifest.json").write_text("{}")
