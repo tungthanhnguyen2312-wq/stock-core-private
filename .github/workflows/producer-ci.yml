@@ -25,6 +25,8 @@ env:
   FOCUSED_SELECTION: >-
     tests/test_pre_daily_consumer_and_m1_brief_guards.py
     tests/test_owner_daily_workflow.py
+    tests/test_owner_daily_final_recovery_20261005.py
+    tests/test_owner_daily_20261005_recovery.py
     tests/test_owner_daily_host_preflight.py
     tests/test_active_control_plane.py
     tests/test_owner_daily_progress.py
