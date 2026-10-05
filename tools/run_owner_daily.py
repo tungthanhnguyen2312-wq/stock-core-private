@@ -441,8 +441,8 @@ def _bind_written_publication_attestation(
     return bound
 
 
-def _run_daily(root: Path, runtime_root: Path, *, telemetry: OwnerDailyProgress | None = None) -> None:
-    """Run the canonical child with explicit sequential sidecar-writer ownership."""
+def _require_host_ready(root: Path) -> dict[str, Any]:
+    """Mandatory host-capacity gate for a fresh acquisition; raises unless READY (no override)."""
     from tools.check_owner_daily_host_preflight import check
     retained = os.environ.get("STOCK_LOOKUP_RETAINED_EVIDENCE_ROOT")
     host = check(root, Path(retained) if retained else None)
@@ -450,6 +450,18 @@ def _run_daily(root: Path, runtime_root: Path, *, telemetry: OwnerDailyProgress 
     if host["classification"] != "READY":
         raise OwnerDailyError("Host preflight", "OWNER_DAILY_HOST_PREFLIGHT_" + host["classification"],
                               " ".join(host["operator_guidance"]))
+    return host
+
+
+def _run_daily(root: Path, runtime_root: Path, *, telemetry: OwnerDailyProgress | None = None,
+               host_ready: dict[str, Any] | None = None) -> None:
+    """Run the canonical child with explicit sequential sidecar-writer ownership.
+
+    ``run_workflow`` evaluates the host gate inside phase 1, before Canonical Daily BEGIN, and
+    passes the accepted READY result here. A direct caller without one is still gated.
+    """
+    if host_ready is None or host_ready.get("classification") != "READY":
+        _require_host_ready(root)
     env = os.environ.copy()
     if telemetry is not None and telemetry.progress_path is not None:
         env[PROGRESS_PATH_ENV] = str(telemetry.progress_path)
@@ -1233,6 +1245,9 @@ def run_workflow(*, root: Path = ROOT, runtime_root: Path = DEFAULT_RUNTIME,
         # Daily now instead of failing Dashboard publication after the whole Daily.
         dashboard_preflight = (preflight_dashboard_repository(dashboard_web_dir) if publish_dashboard
                                else {"status": "SKIPPED", "reason": "DASHBOARD_PUBLICATION_DISABLED"})
+        # The mandatory host gate belongs to phase 1: Canonical Daily is never shown as started
+        # until a fresh acquisition's host preflight has returned READY. Replay acquires nothing.
+        host_ready = None if replay_completed_session else _require_host_ready(root)
         if telemetry is not None:
             telemetry.emit(phase_index=1, progress_kind="PIPELINE", status="END")
 
@@ -1241,7 +1256,7 @@ def run_workflow(*, root: Path = ROOT, runtime_root: Path = DEFAULT_RUNTIME,
         if replay_completed_session:
             daily_status = "ALREADY_COMPLETED / RESUMED" if auto_resumed else "ALREADY_COMPLETED / REUSED"
         else:
-            _run_daily(root, runtime_root, telemetry=telemetry) if telemetry is not None else _run_daily(root, runtime_root)
+            _run_daily(root, runtime_root, telemetry=telemetry, host_ready=host_ready)
             daily_status = "COMPLETED"
         if telemetry is not None:
             telemetry.emit(phase_index=2, progress_kind="PIPELINE", status="END")

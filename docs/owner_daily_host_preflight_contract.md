@@ -56,7 +56,13 @@ that estimate /7 GiB; smaller inputs
 never lower the baseline bands. Disk bands stay fixed. Future code or input changes
 may require renewed model qualification; the estimate is not a memory guarantee.
 
-The normal Owner launcher rechecks immediately before spawning its canonical child.
+The normal Owner launcher evaluates it inside phase 1 (Repository preflight), after the
+repository preflights and before Canonical Daily is shown as started; a non-READY result is
+phase 1 FAILED with step `Host preflight`, and the child is spawned right after phase 2 BEGIN.
+In the owner result, nested `telemetry.status` is progress-sidecar health only (also exposed as
+`telemetry_health` with `status_scope = TELEMETRY_SIDECAR_HEALTH_ONLY_NOT_RUN_OUTCOME`); the
+top-level `status` is the run outcome. Results written before 2026-10-05 lack the two explicit
+fields and are not reinterpreted.
 BLOCKED refuses acquisition; AMBER refuses automatic launch and requires the
 operator to close ordinary background browsers/IDEs/unrelated Python workloads,
 rerun preflight and launch alone only when READY. There is no override flag. READY

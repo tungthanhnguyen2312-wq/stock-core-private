@@ -46,6 +46,9 @@ def _no_resume_verification_by_default(monkeypatch):
     monkeypatch.setattr(workflow, "_verify_dashboard_published", lambda *a, **k: None)
     monkeypatch.setattr(workflow, "_verify_ai_handoff_published", lambda *a, **k: None)
     monkeypatch.setattr(workflow, "_verify_action_center_ready", lambda *a, **k: None)
+    # The mandatory host-capacity gate (phase 1, before Canonical Daily) observes the REAL machine;
+    # its own semantics are covered by test_owner_daily_host_preflight / test_owner_daily_progress.
+    monkeypatch.setattr(workflow, "_require_host_ready", lambda *a, **k: {"classification": "READY"})
     # Section 1: presentation UNKNOWN now blocks publication before it starts. Most tests in this
     # module are not exercising presentation semantics at all and must keep reaching PASS/PARTIAL
     # exactly as before -- default the gate to a legitimate non-UNKNOWN outcome here, and let the
@@ -296,7 +299,7 @@ def test_normal_daily_uses_the_same_dashboard_publication_boundary(monkeypatch, 
     runtime = tmp_path / "runtime"; runtime.mkdir(); (runtime / "bundle_manifest.json").write_text("{}")
     seen: list[str] = []
     monkeypatch.setattr(workflow, "preflight_repository", lambda *a, **k: {"head": "producer", "status": "UP_TO_DATE"})
-    monkeypatch.setattr(workflow, "_run_daily", lambda *a: seen.append("daily"))
+    monkeypatch.setattr(workflow, "_run_daily", lambda *a, **k: seen.append("daily"))
     monkeypatch.setattr(workflow, "commit_daily_state", lambda *a, **k: {"sha": "producer", "status": "NO_CHANGE"})
     monkeypatch.setattr(workflow, "publish_dashboard_release", lambda *a, **k: seen.append("dashboard") or _ready_dashboard(*a, **k))
     monkeypatch.setattr(workflow, "publish_ai_handoff", lambda *a, **k: {"remote": {"remote_sha": "ai"}})
@@ -502,7 +505,7 @@ def test_verify_dashboard_session_fails_closed_when_build_info_missing(tmp_path)
 
 def test_failed_daily_prevents_publication(monkeypatch, tmp_path):
     monkeypatch.setattr(workflow, "preflight_repository", lambda *a, **k: {"head": "producer", "status": "UP_TO_DATE"})
-    monkeypatch.setattr(workflow, "_run_daily", lambda *a: (_ for _ in ()).throw(workflow.OwnerDailyError("Canonical Daily", "FAILED")))
+    monkeypatch.setattr(workflow, "_run_daily", lambda *a, **k: (_ for _ in ()).throw(workflow.OwnerDailyError("Canonical Daily", "FAILED")))
     monkeypatch.setattr(workflow, "publish_ai_handoff", lambda *a, **k: pytest.fail("publication must not run"))
     with pytest.raises(workflow.OwnerDailyError, match="FAILED"):
         workflow.run_workflow(root=tmp_path, runtime_root=tmp_path, handoff_repo=tmp_path / "handoff")
@@ -741,7 +744,7 @@ def test_run_workflow_auto_resumes_without_explicit_replay_flag(monkeypatch, tmp
     journal.advance(tmp_path, entry["run_id"], journal.LOCAL_COMPLETE, resolved_session=SESSION)
     monkeypatch.setattr(workflow, "_resolve_intended_session", lambda: SESSION)
     monkeypatch.setattr(workflow, "preflight_repository", lambda *a, **k: {"head": "producer", "status": "UP_TO_DATE"})
-    monkeypatch.setattr(workflow, "_run_daily", lambda *a: pytest.fail("must not reacquire an already-completed session"))
+    monkeypatch.setattr(workflow, "_run_daily", lambda *a, **k: pytest.fail("must not reacquire an already-completed session"))
     monkeypatch.setattr(workflow, "commit_daily_state", lambda *a, **k: {"sha": "producer", "status": "NO_CHANGE"})
     monkeypatch.setattr(workflow, "publish_dashboard_release", _ready_dashboard)
     monkeypatch.setattr(workflow, "publish_ai_handoff", lambda *a, **k: {"remote": {"remote_sha": "ai"}})
@@ -768,7 +771,7 @@ def test_run_workflow_never_auto_resumes_an_older_session_when_a_newer_one_is_in
     monkeypatch.setattr(workflow, "_resolve_intended_session", lambda: "2026-09-23")
     monkeypatch.setattr(workflow, "preflight_repository", lambda *a, **k: {"head": "producer", "status": "UP_TO_DATE"})
     daily_calls: list[str] = []
-    monkeypatch.setattr(workflow, "_run_daily", lambda *a: daily_calls.append("acquired"))
+    monkeypatch.setattr(workflow, "_run_daily", lambda *a, **k: daily_calls.append("acquired"))
 
     def _latest_completion(_root, _runtime, session=None):
         return {"session": "2026-09-23", "record": {"daily_producer_run_identity": "run:new",
@@ -900,7 +903,7 @@ def test_run_workflow_marks_journal_failed_on_exception_and_next_run_resumes_wit
     monkeypatch.setattr(workflow, "publish_ai_handoff", lambda *a, **k: {"remote": {"remote_sha": "ai"}})
     monkeypatch.setattr(workflow, "materialize_action_center", lambda *_a: {"status": "READY", "session": SESSION, "json_path": "p.json", "view_path": "p.md"})
     monkeypatch.setattr(workflow, "open_action_center_view", lambda _p: {"status": "READY"})
-    monkeypatch.setattr(workflow, "_run_daily", lambda *a: pytest.fail("must not reacquire on resume"))
+    monkeypatch.setattr(workflow, "_run_daily", lambda *a, **k: pytest.fail("must not reacquire on resume"))
 
     result = workflow.run_workflow(root=tmp_path, runtime_root=runtime, handoff_repo=tmp_path / "handoff")
     assert result["status"] == "PASS"
@@ -968,7 +971,7 @@ def test_session_resolved_is_durable_before_run_daily_for_a_fresh_acquisition(mo
     monkeypatch.setattr(workflow, "preflight_repository", lambda *a, **k: {"head": "producer", "status": "UP_TO_DATE"})
     seen = {}
 
-    def _run_daily_capture(root, _runtime_root):
+    def _run_daily_capture(root, _runtime_root, **_k):
         on_disk = journal.read_journal(root)
         seen["stage"] = on_disk["stage"]
         seen["intended_session"] = on_disk["intended_session"]
@@ -999,7 +1002,7 @@ def test_hard_interruption_after_session_resolved_leaves_a_truthful_journal(monk
     monkeypatch.setattr(workflow, "_resolve_intended_session", lambda: SESSION)
     monkeypatch.setattr(workflow, "preflight_repository", lambda *a, **k: {"head": "producer", "status": "UP_TO_DATE"})
 
-    def _boom(*_a):
+    def _boom(*_a, **_k):
         raise RuntimeError("hard interruption mid-acquisition")
 
     monkeypatch.setattr(workflow, "_run_daily", _boom)
@@ -1030,7 +1033,7 @@ def test_session_resolved_only_journal_still_reacquires_on_next_invocation(monke
     monkeypatch.setattr(workflow, "preflight_repository", lambda *a, **k: {"head": "producer", "status": "UP_TO_DATE"})
     daily_calls: list[str] = []
 
-    def _run_daily_now(root, _runtime_root):
+    def _run_daily_now(root, _runtime_root, **_k):
         daily_calls.append("acquired")
         _write_completion(root)
 
@@ -1056,7 +1059,7 @@ def test_different_intended_session_never_reuses_the_prior_journal(monkeypatch, 
     journal.advance(tmp_path, entry["run_id"], journal.SESSION_RESOLVED, resolved_session="2026-09-10")
     monkeypatch.setattr(workflow, "_resolve_intended_session", lambda: SESSION)
     monkeypatch.setattr(workflow, "preflight_repository", lambda *a, **k: {"head": "producer", "status": "UP_TO_DATE"})
-    monkeypatch.setattr(workflow, "_run_daily", lambda *a: None)
+    monkeypatch.setattr(workflow, "_run_daily", lambda *a, **k: None)
     monkeypatch.setattr(workflow, "verify_daily_completion", lambda *_a, **_k: (_ for _ in ()).throw(workflow.OwnerDailyError("Daily completion verification", "SIMULATED_STOP_HERE")))
 
     with pytest.raises(workflow.OwnerDailyError, match="SIMULATED_STOP_HERE"):
@@ -1083,7 +1086,7 @@ def test_resume_after_producer_state_retained_reverifies_without_a_new_commit(mo
     journal.advance(tmp_path, entry["run_id"], journal.PRODUCER_STATE_RETAINED, resolved_session=SESSION)
     monkeypatch.setattr(workflow, "_resolve_intended_session", lambda: SESSION)
     monkeypatch.setattr(workflow, "preflight_repository", lambda *a, **k: {"head": "producer", "status": "UP_TO_DATE"})
-    monkeypatch.setattr(workflow, "_run_daily", lambda *a: pytest.fail("must not reacquire"))
+    monkeypatch.setattr(workflow, "_run_daily", lambda *a, **k: pytest.fail("must not reacquire"))
     commit_calls: list[str] = []
     monkeypatch.setattr(workflow, "commit_daily_state", lambda root, session: commit_calls.append(session) or {"sha": "producer", "status": "NO_CHANGE"})
     monkeypatch.setattr(workflow, "publish_dashboard_release", _ready_dashboard)
@@ -1302,7 +1305,7 @@ def test_resume_local_session_without_governed_proof_calls_publisher(monkeypatch
     _use_real_dashboard_verifier(monkeypatch)
     _pin_dashboard_sha(monkeypatch)
     monkeypatch.setattr(workflow, "_resolve_intended_session", lambda: SESSION)
-    monkeypatch.setattr(workflow, "_run_daily", lambda *a: pytest.fail("must not reacquire"))
+    monkeypatch.setattr(workflow, "_run_daily", lambda *a, **k: pytest.fail("must not reacquire"))
     calls = _pass_publication_mocks(monkeypatch)
 
     result = workflow.run_workflow(
@@ -1607,7 +1610,7 @@ def test_fresh_daily_preflight_with_dirty_registry_stays_blocked(tmp_path):
 def test_fresh_run_workflow_with_dirty_registry_never_reaches_daily(monkeypatch, tmp_path):
     root, _origin, runtime = _clone_with_pending_registry(tmp_path)
     monkeypatch.setattr(workflow, "_resolve_intended_session", lambda: "2026-09-17")
-    monkeypatch.setattr(workflow, "_run_daily", lambda *a: pytest.fail("fresh Daily must not start on a dirty checkout"))
+    monkeypatch.setattr(workflow, "_run_daily", lambda *a, **k: pytest.fail("fresh Daily must not start on a dirty checkout"))
     with pytest.raises(workflow.OwnerDailyError, match="UNEXPECTED_TRACKED_CHANGES"):
         workflow.run_workflow(root=root, runtime_root=runtime, handoff_repo=tmp_path / "handoff", publish_dashboard=False)
     assert workflow._tracked_changes(root) == [" M " + REGISTRY_PATH]
@@ -1633,7 +1636,7 @@ def test_replay_preflight_requires_exact_session_completion_before_tolerating_re
 def test_explicit_replay_commits_pending_registry_then_replays_idempotently(monkeypatch, tmp_path):
     root, origin, runtime = _clone_with_pending_registry(tmp_path)
     _stub_downstream_publication(monkeypatch)
-    monkeypatch.setattr(workflow, "_run_daily", lambda *a: pytest.fail("replay must never reacquire"))
+    monkeypatch.setattr(workflow, "_run_daily", lambda *a, **k: pytest.fail("replay must never reacquire"))
     base = _git_out(origin, "rev-parse", "main")
 
     first = workflow.run_workflow(root=root, runtime_root=runtime, handoff_repo=tmp_path / "handoff",
@@ -1665,7 +1668,7 @@ def test_verified_auto_resume_commits_pending_registry_after_post_kernel_crash(m
     journal.advance(root, entry["run_id"], journal.SESSION_RESOLVED, resolved_session=SESSION)
     assert journal.resumable_state(root, intended_session=SESSION)["action"] == "RESUME"
     monkeypatch.setattr(workflow, "_resolve_intended_session", lambda: SESSION)
-    monkeypatch.setattr(workflow, "_run_daily", lambda *a: pytest.fail("must not reacquire an already-completed session"))
+    monkeypatch.setattr(workflow, "_run_daily", lambda *a, **k: pytest.fail("must not reacquire an already-completed session"))
     _stub_downstream_publication(monkeypatch)
     base = _git_out(origin, "rev-parse", "main")
 
