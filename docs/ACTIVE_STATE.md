@@ -150,6 +150,16 @@ Fact kinds used below: **CURRENT FACT** (verified in repo or by a stated read-on
   so any rerun after a merge would otherwise seal a conflicting second T0). Child peak ~10 GB was
   reached in the telemetry-silent enrichment→Producer→T0 window; attribution is a separate resource
   milestone.
+- **2026-10-05 Owner Daily rerun 19:56 (main `c7362dd`): Canonical Daily `LOCAL_COMPLETE`**
+  (operation `daily_research_session_operation:140adc8a…`, original T0 reused), Producer state and
+  Dashboard published, then AI handoff `AI_HANDOFF_REQUIRED_FILE_MISSING`. The first attempt's own
+  after-close rollforward had retained a post-cutoff event context (`…-20261005`), which hid the
+  eligible `29f3a1bc…` (`…-20261002`) from the rerun; the completed lock therefore has no
+  `event_context`, so the operation built no opportunity decision queue — while the handoff required
+  it unconditionally. Corrective (branch `fix/owner-daily-final-recovery-20261005`): the event
+  context is the newest candidate known by the unchanged 15:00 cutoff; the handoff requires the queue
+  exactly when the sealed operation declares it (identity-checked) and otherwise publishes an
+  explicit `NOT_DECLARED_BY_SEALED_OPERATION`. The completed 2026-10-05 lock is kept as recorded.
 
 ## 5. BLOCKED (evidence-blocked; do not work around)
 

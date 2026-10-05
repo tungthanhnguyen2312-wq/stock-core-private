@@ -6,6 +6,10 @@ from typing import Any, Mapping
 
 CONTRACT_VERSION = "stocklookup_ai_handoff_publication/v2"
 REQUIRED = ("ai_research_session_bundle.json", "daily_opportunity_decision_queue_artifact.json", "ai_research_bundle_manifest.json")
+OPPORTUNITY_QUEUE = "daily_opportunity_decision_queue_artifact.json"
+CORE_REQUIRED = tuple(name for name in REQUIRED if name != OPPORTUNITY_QUEUE)
+OPERATION_MANIFEST = "run_manifest.json"
+QUEUE_NOT_DECLARED = "NOT_DECLARED_BY_SEALED_OPERATION"
 _ABSOLUTE_PATH = re.compile(r"^(?:[A-Za-z]:[\\/]|[\\/]{2}|/)")
 
 class HandoffPublicationError(ValueError): pass
@@ -44,6 +48,33 @@ def _financial_lineage(parsed: Mapping[str, Any]) -> str | None:
             or manifest.get("financial_analysis_source_context_identity") != source_identity):
         raise HandoffPublicationError("HANDOFF_FINANCIAL_ANALYSIS_IDENTITY_CHAIN_INVALID")
     return str(source_identity)
+def opportunity_queue_requirement(source: Path) -> dict[str, Any]:
+    """Whether this operation's handoff must carry the opportunity decision queue.
+
+    ``daily_research_session_operations.build_operation`` attaches the queue only when the
+    session's governed registry selects both optional current inputs (official universe and
+    event context); a completed session keeps its actual lock, including absent optionals. The
+    sealed operation manifest (``run_manifest.json``) therefore decides: a declared queue is
+    REQUIRED and must be that exact artifact; an undeclared queue must be absent (never borrowed
+    from another operation) and is published as an explicit status. A source without a sealed
+    manifest keeps the legacy contract: the queue file is required.
+    """
+    path = Path(source) / OPERATION_MANIFEST
+    if not path.is_file():
+        return {"status": "LEGACY_REQUIRED", "required": True, "identity": None}
+    try:
+        manifest = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        raise HandoffPublicationError("HANDOFF_OPERATION_MANIFEST_UNREADABLE") from None
+    outputs = manifest.get("outputs") if isinstance(manifest, Mapping) else None
+    if not isinstance(outputs, Mapping):
+        raise HandoffPublicationError("HANDOFF_OPERATION_MANIFEST_OUTPUTS_MISSING")
+    declared = outputs.get("daily_opportunity_decision_queue")
+    if declared:
+        return {"status": "DECLARED", "required": True, "identity": str(declared)}
+    return {"status": QUEUE_NOT_DECLARED, "required": False, "identity": None}
+def required_files(source: Path) -> tuple[str, ...]:
+    return REQUIRED if opportunity_queue_requirement(source)["required"] else CORE_REQUIRED
 def _identity(payload: Mapping[str, Any]) -> str:
     return hashlib.sha256(json.dumps(payload,sort_keys=True,separators=(",", ":")).encode("utf-8")).hexdigest()
 def _presentation_observer_payload(session: str, attestation: Mapping[str, Any]) -> dict[str, Any]:
@@ -79,7 +110,10 @@ def _presentation_observer_payload(session: str, attestation: Mapping[str, Any])
         **({"thesis_evidence":attestation["thesis_evidence"]} if "thesis_evidence" in attestation else {}),
     }
 def build_package(source: Path, session: str, previous: Path|None=None, *, producer_checkpoint: str="UNKNOWN", decision_brief: Path|None=None, daily_integrated_decision_brief: Path|None=None, post_handoff_presentation: Mapping[str, Any]|None=None) -> tuple[dict[str,Any],dict[str,Any]]:
-    files: dict[str, Any] = {name: source / name for name in REQUIRED}
+    queue = opportunity_queue_requirement(source)
+    if not queue["required"] and (source / OPPORTUNITY_QUEUE).exists():
+        raise HandoffPublicationError("HANDOFF_OPPORTUNITY_QUEUE_PRESENT_BUT_UNDECLARED")
+    files: dict[str, Any] = {name: source / name for name in (REQUIRED if queue["required"] else CORE_REQUIRED)}
     if previous: files[f"previous_session_bundle_{previous.parent.parent.name}.json"]=previous
     # next_session_decision_brief.json is a pure package-local derived projection (see
     # next_session_decision_brief.py) -- optional and additive, exactly like `previous`, so a
@@ -105,11 +139,15 @@ def build_package(source: Path, session: str, previous: Path|None=None, *, produ
             if not entry.is_file(): raise HandoffPublicationError("HANDOFF_SOURCE_MISSING:"+name)
             parsed[name]=json.loads(entry.read_text(encoding="utf-8"))
         if _unsafe(parsed[name]): raise HandoffPublicationError("HANDOFF_ABSOLUTE_PATH_FORBIDDEN:"+name)
+    if queue["identity"] is not None and (parsed.get(OPPORTUNITY_QUEUE) or {}).get("artifact_identity") != queue["identity"]:
+        raise HandoffPublicationError("HANDOFF_OPPORTUNITY_QUEUE_IDENTITY_MISMATCH")
     hashes={name:(hashlib.sha256(entry).hexdigest() if isinstance(entry, (bytes, bytearray)) else sha(entry)) for name,entry in files.items()}
     package_identity=_identity({"session":session,"files":hashes})
     lineage=_manifest_lineage(source,producer_checkpoint)
     financial_source_identity = _financial_lineage(parsed)
     if financial_source_identity is not None: lineage["financial_analysis_source_context_identity"] = financial_source_identity
+    # Additive and only when absent, so queue-bearing builds keep their existing identity.
+    if not queue["required"]: lineage["opportunity_decision_queue"] = {"status": QUEUE_NOT_DECLARED}
     if decision_brief:
         lineage["next_session_decision_brief_identity"]=parsed["next_session_decision_brief.json"].get("artifact_identity")
         lineage["comparison_metadata"]=parsed["next_session_decision_brief.json"].get("comparison_metadata")
@@ -132,7 +170,8 @@ def build_package(source: Path, session: str, previous: Path|None=None, *, produ
     payload={"schema_version":CONTRACT_VERSION,"session":session,"status":"READY_FOR_AI","files":hashes,"package_sha256":package_identity,"lineage":lineage,"handoff_build_id":handoff_build_id}
     return files,payload
 def _latest_payload(session: str, payload: Mapping[str, Any], *, immutable_session_path: str, handoff_commit: str, previous: Path|None) -> dict[str, Any]:
-    latest={"schema_version":"stocklookup_ai_handoff_latest/v2","latest_session":session,"status":"READY_FOR_AI","handoff_build_id":payload["handoff_build_id"],"immutable_session_path":immutable_session_path,"handoff_commit":handoff_commit,"producer_checkpoint":payload["lineage"]["producer_checkpoint"],"producer_lineage":payload["lineage"],"session_bundle_sha256":payload["files"]["ai_research_session_bundle.json"],"opportunity_artifact_sha256":payload["files"]["daily_opportunity_decision_queue_artifact.json"],"manifest_sha256":payload["files"]["ai_research_bundle_manifest.json"],"previous_session":previous.parent.parent.name if previous else None}
+    latest={"schema_version":"stocklookup_ai_handoff_latest/v2","latest_session":session,"status":"READY_FOR_AI","handoff_build_id":payload["handoff_build_id"],"immutable_session_path":immutable_session_path,"handoff_commit":handoff_commit,"producer_checkpoint":payload["lineage"]["producer_checkpoint"],"producer_lineage":payload["lineage"],"session_bundle_sha256":payload["files"]["ai_research_session_bundle.json"],"opportunity_artifact_sha256":payload["files"].get(OPPORTUNITY_QUEUE),"manifest_sha256":payload["files"]["ai_research_bundle_manifest.json"],"previous_session":previous.parent.parent.name if previous else None}
+    if OPPORTUNITY_QUEUE not in payload["files"]: latest["opportunity_decision_queue_status"]=QUEUE_NOT_DECLARED
     if "next_session_decision_brief.json" in payload["files"]:
         latest["decision_brief_sha256"]=payload["files"]["next_session_decision_brief.json"]
         latest["comparison_metadata"]=payload["lineage"].get("comparison_metadata")

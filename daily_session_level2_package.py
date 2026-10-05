@@ -261,6 +261,25 @@ def _latest_official_event_context_dir(ops: Path, *, as_of_session: str | None =
     return candidates[-1] if candidates else f"{prefix}UNAVAILABLE"
 
 
+def official_event_context_candidates(root: Path, session: str) -> list[Path]:
+    """Every retained official event context bounded by market date, newest first.
+
+    Same discovery bound as ``_latest_official_event_context_dir``; a caller applying a
+    knowledge cutoff walks this list so a later, post-cutoff context (for example one an
+    earlier attempt of the same session acquired after the close) can never hide the newest
+    context that was already known by the cutoff.
+    """
+    prefix = "current-official-event-context-integration-v1-"
+    ops = Path(root) / "operations-review"
+    names = sorted(
+        (candidate.name for candidate in ops.glob(f"{prefix}*")
+         if candidate.is_dir() and (candidate / "current_official_event_context_artifact.json").exists()
+         and candidate.name.removeprefix(prefix) <= session.replace("-", "")),
+        reverse=True,
+    )
+    return [ops / name / "current_official_event_context_artifact.json" for name in names]
+
+
 def session_artifact_paths(root: Path, session: str) -> dict[str, Path]:
     ops = root / "operations-review"
     nodash = session.replace("-", "")

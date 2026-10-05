@@ -115,7 +115,8 @@ def test_real_retained_seal_index_reference_serializes_root_relative_in_tiered_b
     lambda root: root / "operations-review" / "x" / "a.json",
     lambda root: str(root / "operations-review" / "x" / "a.json"),
     lambda root: "operations-review/x/a.json",
-    lambda root: "operations-review\\x\\a.json",
+    pytest.param(lambda root: "operations-review\\x\\a.json",
+                 marks=pytest.mark.skipif(os.name != "nt", reason="backslash is a path separator only on Windows")),
     lambda root: Path("operations-review/x/a.json"),
 ], ids=["abs-Path", "abs-str", "rel-str", "rel-str-backslash", "rel-Path"])
 def test_rel_normalizes_path_and_serialized_string_to_root_relative(tmp_path, monkeypatch, make):

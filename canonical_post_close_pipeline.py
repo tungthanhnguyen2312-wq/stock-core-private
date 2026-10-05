@@ -1912,19 +1912,29 @@ def capture_corporate_session_inputs(root: Path, retained_root: Path, session: s
     paths = level2.session_artifact_paths(retained_root, session)
     selected = {}
     for key in OPTIONAL_REGISTRY_KEYS:
-        try:
-            artifact = _load(paths[REGISTRY_KEY_TO_LEVEL2_KEY[key]])
-            if not artifact:
+        # The event context is the newest retained context already known by the cutoff, not
+        # merely the newest directory: an earlier attempt of this same session may have acquired
+        # a post-cutoff context after the close, which must not silently drop the eligible one
+        # on a rerun (2026-10-05). The cutoff itself is unchanged.
+        candidates = [paths[REGISTRY_KEY_TO_LEVEL2_KEY[key]]]
+        if key == "event_context":
+            candidates += [path for path in level2.official_event_context_candidates(retained_root, session)
+                           if path != candidates[0]]
+        for candidate in candidates:
+            try:
+                artifact = _load(candidate)
+                if not artifact:
+                    continue
+                _verify(artifact, "CAPTURED_OPTIONAL_INPUT")
+                if key == "event_context" and not context_known_by(artifact, cutoff):
+                    continue
+                out = root / "operations-review" / "corporate-daily-frozen-inputs-v1" / session / (artifact["artifact_sha256"] + ".json")
+                _retain_context(out, artifact)
+            except (ValueError, KeyError, OSError):
+                # Optional source outage/integrity failure does not stop other lanes.
                 continue
-            _verify(artifact, "CAPTURED_OPTIONAL_INPUT")
-            if key == "event_context" and not context_known_by(artifact, cutoff):
-                continue
-            out = root / "operations-review" / "corporate-daily-frozen-inputs-v1" / session / (artifact["artifact_sha256"] + ".json")
-            _retain_context(out, artifact)
-        except (ValueError, KeyError, OSError):
-            # Optional source outage/integrity failure does not stop other lanes.
-            continue
-        selected[key] = {"path": _rel(root, out), "artifact_identity": artifact["artifact_identity"]}
+            selected[key] = {"path": _rel(root, out), "artifact_identity": artifact["artifact_identity"]}
+            break
     return selected
 
 

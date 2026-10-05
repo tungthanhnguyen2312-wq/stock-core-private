@@ -849,13 +849,20 @@ def verify_retained_daily_brief_for_handoff(source: Path, session: str, *, root:
 
 
 def publish_ai_handoff(root: Path, handoff_repo: Path, completion: Mapping[str, Any]) -> dict[str, Any]:
-    from ai_handoff_publication import publish, verify_remote_publication
+    from ai_handoff_publication import HandoffPublicationError, publish, required_files, verify_remote_publication
     from post_handoff_presentation_attestation import read_attestation
     preflight_repository(handoff_repo, expected_name="stocklookup-ai-handoffs", expected_remote_fragment="stocklookup-ai-handoffs")
     source = Path(completion["source"])
-    needed = ("ai_research_session_bundle.json", "daily_opportunity_decision_queue_artifact.json", "ai_research_bundle_manifest.json")
-    if any(not (source / name).is_file() for name in needed):
-        raise OwnerDailyError("AI handoff build", "AI_HANDOFF_REQUIRED_FILE_MISSING")
+    # The sealed operation manifest decides whether the conditional opportunity queue is part of
+    # this handoff (see ai_handoff_publication.opportunity_queue_requirement); the core files
+    # are always required. The missing file is named so the next failure is never opaque.
+    try:
+        needed = required_files(source)
+    except HandoffPublicationError as exc:
+        raise OwnerDailyError("AI handoff build", f"AI_HANDOFF_OPERATION_MANIFEST_INVALID:{exc}") from None
+    missing = [name for name in needed if not (source / name).is_file()]
+    if missing:
+        raise OwnerDailyError("AI handoff build", "AI_HANDOFF_REQUIRED_FILE_MISSING:" + ",".join(missing))
     previous = None
     session = str(completion["session"])
     # A declared (and, for M1, index-bearing) Brief is required and verified before publication;
