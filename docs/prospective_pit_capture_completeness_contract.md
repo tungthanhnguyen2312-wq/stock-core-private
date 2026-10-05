@@ -142,6 +142,18 @@ proofs that permit sparse maturation.
 
 ## Normal Daily boundary and readiness
 
+**One original T0 per session (V2 seal-index sessions).** For a session at/after
+`PRODUCTION_V2_START_SESSION`, `retain_prospective_decision_snapshot` first looks up an already
+sealed T0 for the session: the capture-session record's `t0_decision_snapshot_identity` when bound,
+otherwise the session's sealed (write-receipt) snapshot directory. A verified original (seal index +
+write receipt + snapshot fingerprint, never a re-read of the snapshot) is reused as
+`retention = ORIGINAL_SESSION_T0_REUSED`; an ambiguous or unverifiable one is UNAVAILABLE and is never
+replaced. Only when no sealing ever began is a T0 built. The snapshot identity embeds the Daily
+operation identity (and so producer HEAD), so without this a rerun after any code change would seal a
+second, later-knowledge T0 that the immutable capture record refuses (`RECOVERY_T0_BINDING_MISMATCH`).
+Seal-index references stay serialized strings; the handoff writer normalizes them to root-relative
+POSIX paths (`_rel` accepts `Path | str`, relative input is root-relative, out-of-root stays absolute).
+
 The [Monday readiness corrective](monday_live_readiness_closeout_contract.md) adds
 original-evidence verification and missing-first-marker recovery at this same
 completion boundary. Session records stay immutable; later knowledge cannot repair

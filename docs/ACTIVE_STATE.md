@@ -137,6 +137,19 @@ Fact kinds used below: **CURRENT FACT** (verified in repo or by a stated read-on
   delete-pending. After it was stopped: commit 6.51 GiB (BLOCKED), physical 2.27 GiB (BLOCKED), C:
   27.1 GiB (READY). Remaining load is ordinary owner apps; the gate and thresholds are unchanged.
   Agents must never run root-wide `find /` (or other unbounded scans) on this host.
+- **2026-10-05 Owner Daily 18:00 (run `ad670e74…`, main `f2721f4`): host READY, Canonical Daily exit 1**
+  in `build_tiered_bundle` (`AttributeError: 'str' object has no attribute 'resolve'`). First
+  trading session at/after `PRODUCTION_V2_START_SESSION`, so the first production RETAINED T0 seal
+  index, whose serialized `{"path": str}` reached `_rel` (which assumed `Path`). Already sealed before
+  the crash and verified read-only: T0 `prospective_decision_snapshot:1c496e3f…` (seal index,
+  write receipt, file hash), capture session, first-complete-capture marker (2026-10-05), Thesis T0.
+  No tier bundle, operation record, journal completion, state commit or publication; local
+  `dashboard-runtime` was promoted at 18:26. Corrective (branch
+  `fix/owner-daily-20261005-recovery-v1`): `_rel` accepts `Path | str`; a V2 session reuses its
+  verified original sealed T0 instead of re-minting one (the operation identity embeds producer HEAD,
+  so any rerun after a merge would otherwise seal a conflicting second T0). Child peak ~10 GB was
+  reached in the telemetry-silent enrichment→Producer→T0 window; attribution is a separate resource
+  milestone.
 
 ## 5. BLOCKED (evidence-blocked; do not work around)
 

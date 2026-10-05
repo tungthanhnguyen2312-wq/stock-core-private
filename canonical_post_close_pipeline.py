@@ -1374,7 +1374,12 @@ def retain_prospective_decision_snapshot(
     artifact can silently rewrite the original T0 decision.
     """
     from prospective_decision_retention import build_snapshot, write_immutable_snapshot
+    from contextual_technical_dispatch import PRODUCTION_V2_START_SESSION
 
+    if session >= PRODUCTION_V2_START_SESSION:
+        original = _original_session_t0(output_root or root, session)
+        if original is not None:
+            return original
     integrated = (enrichment.get("integrated_investment_decision_product") or {}).get("artifact")
     operation = producer_result.get("operation") or {}
     operation_identity = (operation.get("manifest") or {}).get("operation_identity")
@@ -1390,7 +1395,6 @@ def retain_prospective_decision_snapshot(
             exact_session_snapshot=exact_session_snapshot,
         )
         seal_index = None
-        from contextual_technical_dispatch import PRODUCTION_V2_START_SESSION
         def index_written(path, file_sha256):
             nonlocal seal_index
             from prospective_t0_seal_index import from_snapshot
@@ -1405,6 +1409,53 @@ def retain_prospective_decision_snapshot(
     except Exception as exc:
         return {"status": "UNAVAILABLE", "reason": f"PROSPECTIVE_SNAPSHOT_RETENTION_FAILED:{type(exc).__name__}:{exc}"}
     return {"status": "RETAINED", "artifact": snapshot, "path": path, "seal_index": seal_index}
+
+
+def _original_session_t0(base: Path, session: str) -> dict[str, Any] | None:
+    """The session's already-sealed original T0, verified; never a second, later-knowledge T0.
+
+    The snapshot identity embeds the Daily operation identity (which embeds producer HEAD), so a
+    rerun of the same session after any code change -- or a recovery after a late failure --
+    would otherwise seal a competing T0 that conflicts with the immutable capture-session binding
+    ("later evidence never changes original T0 knowledge"). Lookup is exact: the capture-session
+    record's ``t0_decision_snapshot_identity`` when bound, else the session directory's sealed
+    (write-receipt) entries. Returns None only when no T0 sealing ever began for the session.
+    Ambiguous or unverifiable retained T0 fails soft as UNAVAILABLE; it is never replaced.
+    """
+    import prospective_t0_seal_index as seals
+    from prospective_decision_retention import SNAPSHOT_PREFIX
+
+    session_dir = Path(base) / "operations-review" / "prospective-decision-retention-v1" / session
+    capture_path = Path(base) / "operations-review" / "prospective-pit-capture-v1" / "sessions" / f"{session}.json"
+    try:
+        bound = json.loads(capture_path.read_bytes()).get("t0_decision_snapshot_identity") if capture_path.is_file() else None
+    except (OSError, ValueError, AttributeError) as exc:
+        return {"status": "UNAVAILABLE", "reason": f"ORIGINAL_SESSION_T0_CAPTURE_BINDING_UNREADABLE:{type(exc).__name__}"}
+    sealed = sorted(p.parent for p in session_dir.glob("*/prospective_t0_snapshot_write_receipt.json"))
+    if isinstance(bound, str) and bound.startswith(SNAPSHOT_PREFIX):
+        directory = session_dir / bound.removeprefix(SNAPSHOT_PREFIX)
+    elif len(sealed) == 1:
+        directory = sealed[0]
+    elif sealed:
+        return {"status": "UNAVAILABLE", "reason": f"ORIGINAL_SESSION_T0_AMBIGUOUS:{len(sealed)}"}
+    else:
+        return None
+    identity = SNAPSHOT_PREFIX + directory.name
+    try:
+        index_path = directory / "prospective_t0_seal_index.json"
+        index = json.loads(index_path.read_bytes())
+        receipt = json.loads((directory / "prospective_t0_snapshot_write_receipt.json").read_bytes())
+        ref = {"path": str(index_path), "artifact_identity": index["artifact_identity"],
+               "write_receipt_identity": receipt["artifact_identity"]}
+        seals.load_verified(ref, expected_snapshot_identity=identity, session=session)
+    except Exception as exc:
+        return {"status": "UNAVAILABLE", "reason": f"ORIGINAL_SESSION_T0_UNVERIFIED:{type(exc).__name__}:{exc}"}
+    # Compact, index-derived binding: the immutable snapshot file is stat-verified, never re-read.
+    artifact = {"snapshot_identity": identity, "session": session,
+                "source_integrated_decision_artifact": index["source_integrated_decision_artifact"],
+                "daily_session_operation_identity": index["operation_identity"]}
+    return {"status": "RETAINED", "retention": "ORIGINAL_SESSION_T0_REUSED", "artifact": artifact,
+            "path": directory / index["snapshot_file"], "seal_index": {"status": "RETAINED", **ref}}
 
 
 def run_multi_session_signal_velocity_shadow(root: Path, session: str) -> dict[str, Any]:
@@ -1943,11 +1994,23 @@ def register_session_inputs(
     return {"status": "REGISTERED", "session": session, "selection": selection}
 
 
-def _rel(root: Path, path: Path) -> str:
+def _rel(root: Path, path: str | os.PathLike[str]) -> str:
+    """Root-relative POSIX form of an in-memory ``Path`` or a serialized path string.
+
+    Serialized references (e.g. ``prospective_t0_seal_index.publish``'s ``{"path": str}``) stay
+    strings; they are normalized here, at the consumer boundary. A relative input is relative to
+    ``root`` (never to the process CWD). A path outside ``root`` keeps the existing policy: its
+    absolute POSIX form is returned unchanged rather than relativized.
+    """
+    if not isinstance(path, (str, os.PathLike)):
+        raise TypeError(f"PATH_LIKE_REQUIRED:{type(path).__name__}")
+    candidate = Path(path)
+    if not candidate.is_absolute():
+        candidate = Path(root) / candidate
     try:
-        return path.resolve().relative_to(root.resolve()).as_posix()
+        return candidate.resolve().relative_to(Path(root).resolve()).as_posix()
     except ValueError:
-        return path.as_posix()
+        return candidate.as_posix()
 
 
 def validate_and_freeze_completed_session(
@@ -2304,6 +2367,7 @@ def build_tiered_bundle(
                 if ((prospective_snapshot or {}).get("seal_index") or {}).get("status") == "RETAINED"
                 else (prospective_snapshot or {}).get("seal_index")),
             "source_integrated_decision_artifact_identity": (((prospective_snapshot or {}).get("artifact") or {}).get("source_integrated_decision_artifact") or {}).get("artifact_identity"),
+            **({"retention": prospective_snapshot["retention"]} if (prospective_snapshot or {}).get("retention") else {}),
             "authority_boundary": "IMMUTABLE_T0_SNAPSHOT_NOT_A_CURRENT_DECISION_INPUT",
         },
         "prospective_cohort_snapshot_identity": ((prospective or {}).get("snapshot") or {}).get("snapshot_id"),
