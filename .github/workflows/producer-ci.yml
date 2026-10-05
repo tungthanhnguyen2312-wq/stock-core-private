@@ -113,6 +113,7 @@ env:
     tests/test_screener_master_projection.py
     tests/test_current_valuation_opportunity_integration.py
     tests/test_dashboard_release_publisher.py
+    tests/test_governed_publication_completion.py
     tests/test_producer_sync_timestamp_contract.py::MetadataUpdatedTests
     tests/test_producer_sync_timestamp_contract.py::FreshnessGateCompatibilityTests
     tests/test_producer_sync_timestamp_contract.py::UntouchedDataAsOfIsWallClockIndependentTests

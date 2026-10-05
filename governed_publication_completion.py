@@ -320,6 +320,22 @@ def run_logs(run_id: int | str, *, cwd: Path, runner: GhRunner | None = None) ->
     return result.stdout or ""
 
 
+def _view_run_state(
+    run_id: int | str, *, cwd: Path, runner: GhRunner | None = None,
+) -> tuple[str, str]:
+    """The run's own status and conclusion. Empty when ``gh`` cannot answer."""
+    result = run_gh(
+        ["run", "view", str(run_id), "--json", "status,conclusion"],
+        cwd=cwd, runner=runner,
+    )
+    if result.returncode != 0:
+        return "", ""
+    payload = _decode_json(result.stdout or "", "BLOCKED_GH_UNAVAILABLE")
+    if not isinstance(payload, dict):
+        return "", ""
+    return str(payload.get("status") or ""), str(payload.get("conclusion") or "")
+
+
 def watch_run(
     run_id: int | str,
     *,
@@ -328,30 +344,58 @@ def watch_run(
     timeout: float | None = None,
     stage: str,
 ) -> None:
-    try:
-        result = run_gh(
+    """Wait until ``run_id`` succeeds.
+
+    ``gh run watch --exit-status`` can return non-zero while a run is still queued
+    (2026-10-05 Dashboard CI 37334565714 was reported failed, then completed
+    success and Deploy Pages proved the public bytes). A non-zero watch is a
+    failure only when the run's own conclusion is not success. One follow-up
+    watch covers the early exit; it does not poll on a timer.
+    """
+    budget = _watch_timeout() if timeout is None else timeout
+
+    def _once() -> subprocess.CompletedProcess:
+        return run_gh(
             ["run", "watch", str(run_id), "--exit-status"],
-            cwd=cwd,
-            runner=runner,
-            timeout=_watch_timeout() if timeout is None else timeout,
+            cwd=cwd, runner=runner, timeout=budget,
         )
-    except subprocess.TimeoutExpired as exc:
+
+    def _timeout(exc: subprocess.TimeoutExpired) -> PublicationCompletionError:
         code = "BLOCKED_CI_TIMEOUT" if stage == "ci" else "BLOCKED_PAGES_TIMEOUT" if stage == "pages" else "BLOCKED_REMOTE_TIMEOUT"
-        raise PublicationCompletionError(
+        return PublicationCompletionError(
             code,
             f"{code}: gh run watch timed out for {stage} run {run_id}",
             run_id=str(run_id),
             stage=stage,
-        ) from exc
-    if result.returncode != 0:
-        code = "BLOCKED_CI_FAILED" if stage == "ci" else "BLOCKED_PAGES_FAILED"
-        raise PublicationCompletionError(
-            code,
-            f"{code}: {stage} run {run_id} did not succeed",
-            run_id=str(run_id),
-            stage=stage,
-            stderr=(result.stderr or "")[:500],
         )
+
+    try:
+        result = _once()
+    except subprocess.TimeoutExpired as exc:
+        raise _timeout(exc) from exc
+    if result.returncode == 0:
+        return
+    status, conclusion = _view_run_state(run_id, cwd=cwd, runner=runner)
+    if status == "completed" and conclusion == "success":
+        return
+    if not (status == "completed" and conclusion not in ("", "success")):
+        try:
+            result = _once()
+        except subprocess.TimeoutExpired as exc:
+            raise _timeout(exc) from exc
+        if result.returncode == 0:
+            return
+        status, conclusion = _view_run_state(run_id, cwd=cwd, runner=runner)
+        if status == "completed" and conclusion == "success":
+            return
+    code = "BLOCKED_CI_FAILED" if stage == "ci" else "BLOCKED_PAGES_FAILED"
+    detail = (result.stderr or result.stdout or "").strip()
+    message = f"{code}: {stage} run {run_id} did not succeed"
+    if detail:
+        message = f"{message}: {detail[:300]}"
+    raise PublicationCompletionError(
+        code, message, run_id=str(run_id), stage=stage, stderr=detail[:500],
+    )
 
 
 def _successful_ci(rows: Sequence[Mapping[str, Any]], source_sha: str) -> dict[str, Any] | None:
