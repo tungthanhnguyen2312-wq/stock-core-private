@@ -8,8 +8,15 @@ it or the owner records an explicit override (AI_RULES rule 11). Facts: [ACTIVE_
 ## NOW — `FIRST_REAL_POST_RELEASE_CAPTURE_ACCEPTANCE` (RECORDED 2026-10-05)
 
 Recorded. Owner-authorized Phase C is released. The later owner-authorized freshness
-contract is complete. The current completed milestone is the historical temporal
-research panel. No successor is active, and nothing here starts one.
+contract is complete. The historical research panel is complete. The current
+completed milestone is the outcome calibration review. No successor is active,
+and nothing here starts one.
+
+**Outcome review:** `DECISION_OUTCOME_CALIBRATION_AND_FALSE_NEGATIVE_REVIEW_V1` is a
+descriptive review of retained horizons 1, 3, 5, 10 and 20. It does not emit probabilities
+or change production thresholds. The streamed 2026-10-06 recount is T5 9,590, T10 5,823,
+T20 16. Details:
+[outcome review](internal/DECISION_OUTCOME_CALIBRATION_AND_FALSE_NEGATIVE_REVIEW_20261006.md).
 
 **Historical research panel:** `HISTORICAL_TEMPORAL_RESEARCH_PANEL_FOUNDATION_V1`
 is research memory only. It is not PIT backtest authority. The retained small-file
