@@ -40,6 +40,11 @@ Fact kinds used below: **CURRENT FACT** (verified in repo or by a stated read-on
 
 ## 1. The operational gate
 
+- **CURRENT FACT — portfolio research workbench.** `PORTFOLIO_RESEARCH_DECISION_WORKBENCH_FOUNDATION_V1`
+  reports sector and style concentration, thesis and event overlap, and current
+  correlation only when aligned series are supplied. Ranking requires an explicit
+  objective and is not a capital allocation. No size, leverage, or order.
+  [Workbench](internal/PORTFOLIO_RESEARCH_DECISION_WORKBENCH_FOUNDATION_20261006.md).
 - **CURRENT FACT — human/AI evidence packet.** `HUMAN_AI_DECISION_EVIDENCE_PACKET_CONVERGENCE_V2`
   adds a sectioned packet that points at the existing decision-packet identity. Measurements
   stay named. There is no buy score. AI narration does not receive numerical authority, and

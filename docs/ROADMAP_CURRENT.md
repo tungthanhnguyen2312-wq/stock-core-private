@@ -9,8 +9,12 @@ it or the owner records an explicit override (AI_RULES rule 11). Facts: [ACTIVE_
 
 Recorded. Owner-authorized Phase C is released. The later owner-authorized freshness
 contract is complete. The historical research panel is complete. The current
-completed milestone is the human/AI evidence packet. The outcome review is complete.
-No successor is active, and nothing here starts one.
+completed milestone is the portfolio research workbench. The evidence packet is
+complete. No successor is active, and nothing here starts one.
+
+**Portfolio research workbench:** `PORTFOLIO_RESEARCH_DECISION_WORKBENCH_FOUNDATION_V1`
+is overlap and concentration research. It does not size or place orders. Details:
+[workbench](internal/PORTFOLIO_RESEARCH_DECISION_WORKBENCH_FOUNDATION_20261006.md).
 
 **Evidence packet:** `HUMAN_AI_DECISION_EVIDENCE_PACKET_CONVERGENCE_V2` keeps named
 measurements, requires analogue disclosure, and does not delegate the capital decision.

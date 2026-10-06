@@ -15,7 +15,7 @@
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "HUMAN_AI_DECISION_EVIDENCE_PACKET_CONVERGENCE_V2",
+    "milestone": "PORTFOLIO_RESEARCH_DECISION_WORKBENCH_FOUNDATION_V1",
     "state": "COMPLETE"
   },
   "queued_next": [],
@@ -100,8 +100,24 @@
       "state_history": ["ACTIVE", "COMPLETE"],
       "source_doc": "docs/internal/HUMAN_AI_DECISION_EVIDENCE_PACKET_CONVERGENCE_V2_20261006.md",
       "notes": "Owner overnight program authorizes this milestone with queued_next empty. Adds a sectioned evidence packet over the existing decision-packet identity. Measurements stay named. Analogues keep input order and require matching disclosure. AI narration has no numerical authority. The human capital decision is not delegated. No CLI and no successor.",
-      "checkpoint": "HEAD",
+      "checkpoint": "f3dcffe04018aabe99e94818f17e9c1461a8ee37",
       "terminal_disposition": "EVIDENCE_PACKET_READY"
+    },
+    {
+      "milestone_id": "PORTFOLIO_RESEARCH_DECISION_WORKBENCH_FOUNDATION_V1",
+      "state": "COMPLETE",
+      "starting_checkpoint": "18b28fe6d7c790d28ecabf4357553ac3b5dbf307",
+      "candidate_branch": "feature/portfolio-research-decision-workbench-20261006",
+      "dependencies": [],
+      "unlocks": [],
+      "owner_authorized": true,
+      "owner_override": "OWNER_DIRECTIVE_2026_10_06_OVERNIGHT_PROGRAM_PORTFOLIO_RESEARCH_DECISION_WORKBENCH_FOUNDATION_V1",
+      "authority_effect": "NONE / RESEARCH_OVERLAP_ONLY_NO_SIZING_OR_EXECUTION",
+      "state_history": ["ACTIVE", "COMPLETE"],
+      "source_doc": "docs/internal/PORTFOLIO_RESEARCH_DECISION_WORKBENCH_FOUNDATION_20261006.md",
+      "notes": "Owner overnight program authorizes this milestone before 06:30 ICT with queued_next empty. Research-only concentration, overlap, current correlation, and explicit-objective ranking. No leverage, size, order, or capital allocation. No successor.",
+      "checkpoint": "HEAD",
+      "terminal_disposition": "RESEARCH_WORKBENCH_READY"
     },
     {
       "milestone_id": "POST_FIRST_REAL_DAILY_PHASE_C_WHOLE_PIPELINE_RESOURCE_ARCHITECTURE_CLOSEOUT_V2",
