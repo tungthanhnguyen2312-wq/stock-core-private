@@ -40,6 +40,12 @@ Fact kinds used below: **CURRENT FACT** (verified in repo or by a stated read-on
 
 ## 1. The operational gate
 
+- **CURRENT FACT — historical temporal research panel.** `HISTORICAL_TEMPORAL_RESEARCH_PANEL_FOUNDATION_V1`
+  projects retained post-close handoff and opportunity bundles into research memory.
+  A read-only host index of 28 session directories produced 2,445 reconstructed rows
+  across 26 indexed sessions. PIT rows are 0. NVL and PNJ have no retained cohort
+  evidence in that slice. The panel is not persisted and is not PIT backtest authority.
+  [Panel contract and measured slice](internal/HISTORICAL_TEMPORAL_RESEARCH_PANEL_FOUNDATION_20261006.md).
 - **CURRENT FACT — current-research freshness contract.** `CURRENT_RESEARCH_FUNDAMENTAL_CI_VALUATION_FRESHNESS_CONVERGENCE_V1`
   adds denominator-integrity diagnostics, an earnings-quality flag, and a corporate-event
   binding projection on the existing valuation and decision-packet path. Provider multiples
