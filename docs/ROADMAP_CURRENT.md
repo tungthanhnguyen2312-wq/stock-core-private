@@ -8,7 +8,14 @@ it or the owner records an explicit override (AI_RULES rule 11). Facts: [ACTIVE_
 ## NOW — `FIRST_REAL_POST_RELEASE_CAPTURE_ACCEPTANCE` (RECORDED 2026-10-05)
 
 Recorded. Owner-authorized Phase C is released. The later owner-authorized freshness
-contract is the current completed milestone. No successor is active, and nothing here starts one.
+contract is complete. The current completed milestone is the historical temporal
+research panel. No successor is active, and nothing here starts one.
+
+**Historical research panel:** `HISTORICAL_TEMPORAL_RESEARCH_PANEL_FOUNDATION_V1`
+is research memory only. It is not PIT backtest authority. The retained small-file
+slice is 2,445 reconstructed rows from 26 indexed sessions. NVL and PNJ remain
+without cohort evidence. Details:
+[panel foundation](internal/HISTORICAL_TEMPORAL_RESEARCH_PANEL_FOUNDATION_20261006.md).
 
 **Current-research freshness:** `CURRENT_RESEARCH_FUNDAMENTAL_CI_VALUATION_FRESHNESS_CONVERGENCE_V1`
 is a diagnostic contract only. It does not fill missing fundamentals. Retained 2026-10-06

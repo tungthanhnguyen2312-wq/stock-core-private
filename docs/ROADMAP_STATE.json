@@ -15,7 +15,7 @@
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "CURRENT_RESEARCH_FUNDAMENTAL_CI_VALUATION_FRESHNESS_CONVERGENCE_V1",
+    "milestone": "HISTORICAL_TEMPORAL_RESEARCH_PANEL_FOUNDATION_V1",
     "state": "COMPLETE"
   },
   "queued_next": [],
@@ -52,8 +52,24 @@
       "state_history": ["ACTIVE", "COMPLETE"],
       "source_doc": "docs/internal/CURRENT_RESEARCH_FUNDAMENTAL_CI_VALUATION_FRESHNESS_20261006.md",
       "notes": "Owner overnight program authorizes this milestone with queued_next empty. Adds denominator integrity diagnostics, earnings-quality flags, corporate-event binding projection, claim classes, and a coverage summary. Provider multiples are not replaced. No recommendation, probability, target price, RAW, or PIT promotion. The Forex idea bank is a non-authoritative design note and is not a roadmap entry.",
-      "checkpoint": "HEAD",
+      "checkpoint": "5368a9eba2df753e0038a612433160ddb76948c1",
       "terminal_disposition": "RESEARCH_CONTRACT_READY"
+    },
+    {
+      "milestone_id": "HISTORICAL_TEMPORAL_RESEARCH_PANEL_FOUNDATION_V1",
+      "state": "COMPLETE",
+      "starting_checkpoint": "0ebccd46b89f67d58b5721c14f2be6b24cee6b97",
+      "candidate_branch": "feature/historical-temporal-research-panel-foundation-20261006",
+      "dependencies": [],
+      "unlocks": [],
+      "owner_authorized": true,
+      "owner_override": "OWNER_DIRECTIVE_2026_10_06_OVERNIGHT_PROGRAM_HISTORICAL_TEMPORAL_RESEARCH_PANEL_FOUNDATION_V1",
+      "authority_effect": "NONE / RESEARCH_MEMORY_ONLY_NOT_PIT_BACKTEST_AUTHORITY",
+      "state_history": ["ACTIVE", "COMPLETE"],
+      "source_doc": "docs/internal/HISTORICAL_TEMPORAL_RESEARCH_PANEL_FOUNDATION_20261006.md",
+      "notes": "Owner overnight program authorizes this milestone with queued_next empty. Projects retained post-close handoff and opportunity bundles into a rebuildable research panel. Rows from that source are RECONSTRUCTED_RESEARCH. PIT requires an explicit qualification and stays separate from RAW_AS_TRADED. Missing cohort evidence stays explicit. No source mutation, no persisted duplicate, no DuckDB or Parquet migration, and no successor.",
+      "checkpoint": "HEAD",
+      "terminal_disposition": "RESEARCH_PANEL_READY"
     },
     {
       "milestone_id": "POST_FIRST_REAL_DAILY_PHASE_C_WHOLE_PIPELINE_RESOURCE_ARCHITECTURE_CLOSEOUT_V2",
