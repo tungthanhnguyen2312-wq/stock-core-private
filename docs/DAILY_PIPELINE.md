@@ -5,6 +5,13 @@ from `tools/run_owner_daily.py`, `owner_daily_progress.py`, `canonical_daily_ope
 `canonical_post_close_pipeline.py`. If this file and the code disagree, the code wins — fix this file.
 Current-state facts: [ACTIVE_STATE.md](ACTIVE_STATE.md). Authority per output: [AUTHORITY.md](AUTHORITY.md).
 
+Candidate-local Phase C (2026-10-06) preserves this run order and all output identities.
+IID artifact identity encodes one record at a time; Brief binding copies only the writable
+operation spine; delivery buffers UTF-8 rows and builds cockpit metadata without projecting
+the whole universe again. No production Daily was run. Existing host admission/feedback
+containment thresholds remain unchanged; observer whole-T0 loads remain a residual pressure
+source. [Measurements and ownership map](internal/POST_FIRST_REAL_DAILY_PHASE_C_RESOURCE_SIMPLIFICATION_20261006.md).
+
 **One production workflow, two front doors:** `stocklookup.ps1 daily` and the Desktop one-click both call
 `tools.run_owner_daily.run_workflow`. Never run two writers at once. Runbook:
 [OWNER_DAILY_ONE_CLICK.md](OWNER_DAILY_ONE_CLICK.md). Evening target for the first real session: ~16:00

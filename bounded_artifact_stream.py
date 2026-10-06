@@ -96,6 +96,36 @@ def canonical_bytes(value):
     return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False).encode("utf-8")
 
 
+def record_mapping_digest(value):
+    """Hash a string-keyed artifact exactly, encoding one records member at a time.
+
+    Equivalent to sha256(canonical_bytes(value)); avoids the whole canonical
+    Unicode string and UTF-8 bytes coexisting with the resident object graph.
+    Non-record metadata retains the same strict stdlib JSON semantics.
+    """
+    digest = hashlib.sha256()
+    digest.update(b"{")
+    for index, key in enumerate(sorted(value)):
+        if index:
+            digest.update(b",")
+        digest.update(canonical_bytes(key))
+        digest.update(b":")
+        member = value[key]
+        if key == "records" and isinstance(member, dict):
+            digest.update(b"{")
+            for record_index, ticker in enumerate(sorted(member)):
+                if record_index:
+                    digest.update(b",")
+                digest.update(canonical_bytes(ticker))
+                digest.update(b":")
+                digest.update(canonical_bytes(member[ticker]))
+            digest.update(b"}")
+        else:
+            digest.update(canonical_bytes(member))
+    digest.update(b"}")
+    return digest.hexdigest()
+
+
 def source_hash(path):
     digest = hashlib.sha256()
     with path.open("rb") as source:

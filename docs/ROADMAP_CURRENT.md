@@ -7,7 +7,19 @@ it or the owner records an explicit override (AI_RULES rule 11). Facts: [ACTIVE_
 
 ## NOW — `FIRST_REAL_POST_RELEASE_CAPTURE_ACCEPTANCE` (RECORDED 2026-10-05)
 
-Recorded. No successor milestone is active, and nothing here starts one.
+Recorded. The explicitly owner-authorized candidate-local Phase C below is complete and
+awaits review. No successor milestone is active, and nothing here starts one.
+
+**2026-10-06 candidate-local checkpoint:**
+`POST_FIRST_REAL_DAILY_PHASE_C_RESOURCE_AND_ARTIFACT_SIMPLIFICATION_V1` is COMPLETE /
+`PHASE_C_RESOURCE_SIMPLIFICATION_READY_FOR_REVIEW`. Branch `perf/post-first-real-daily-phase-c-resource-simplification-20261006`
+starts from exact `802b11e00a2bb38db7f57644dca9f3ba463e1522`; canonical main is unchanged.
+Bounded real-scale Producer private peak 4.15 GiB, five outputs byte-identical. Historical
+Oct 6 child RSS peak is 9.93 GiB; the 10.23-GiB figure below is Oct 5 rerun. Whole-Daily
+capacity is not requalified. [Resource map, parity, gates and review boundary](internal/POST_FIRST_REAL_DAILY_PHASE_C_RESOURCE_SIMPLIFICATION_20261006.md).
+Next recommendation only: merge this Phase C candidate after review. No push/merge is
+authorized here and `queued_next` stays empty. Read-only Oct 6 capture chain has depth 2,
+`DEPTH_PENDING`; first-real evidence below remains historical and unchanged.
 
 **Result** (read-only harness, cutoff `2026-10-05T16:00:00Z`):
 - *Capture:* complete. `prospective_capture_complete_session:661a12b7fd0bbbde2a747e660b88f7b1eb33b57ad6d96fc3db4ddef844327d5d` (658 capture-complete tickers; 853 exact-session observed).
@@ -36,15 +48,16 @@ These advance by accumulating real sessions, not by implementation:
 
 ## AFTER FIRST-REAL ACCEPTANCE — candidates, owner authorization required
 
-1. **Record the first-real result** — done in this control plane (docs only; no runtime change). Phase B/C below are not started.
+1. **Record the first-real result** — done in this control plane (docs only; no runtime change). Phase B is not started; candidate-local Phase C is complete above.
 2. **Control-plane simplification Phase B** (not started): move or archive historical narrative out of the default
    path (`STATE.md` / `DECISIONS.md` / `ROADMAP.md` dated sections), keep every machine marker, parser and
    `ROADMAP_STATE.json` contract working, update the drift/governance tests in the same change. Preserve history.
-3. **Simplification Phase C** (not started): runtime/architecture simplification only where post-Monday
+3. **Simplification Phase C** (candidate-local complete, awaiting review): runtime/architecture simplification only where post-Monday
    measurements justify it. Inputs are the measured figures in [owner_daily_host_preflight_contract.md](owner_daily_host_preflight_contract.md)
    and [owner_daily_feedback_resource_containment_contract.md](owner_daily_feedback_resource_containment_contract.md)
    (per-session artifacts are large: Integrated Decision ≈1.3 GB, T0 ≈1.4 GB, feedback ≈0.5 GB; the Daily-child
-   peak sits in the Producer delivery stage). Scope is decided after Monday, not before.
+   peak includes silent Producer/observer intervals). The local scope and measured allocation
+   causes are recorded in the linked report; exact historical instruction attribution is unavailable.
 
 ## LATER — blocked on evidence or an owner decision
 

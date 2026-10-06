@@ -40,6 +40,14 @@ Fact kinds used below: **CURRENT FACT** (verified in repo or by a stated read-on
 
 ## 1. The operational gate
 
+- **CANDIDATE-LOCAL — 2026-10-06 Phase C complete, ready for review.** Explicit owner
+  override authorized `POST_FIRST_REAL_DAILY_PHASE_C_RESOURCE_AND_ARTIFACT_SIMPLIFICATION_V1`
+  on an isolated branch from `802b11e00a2bb38db7f57644dca9f3ba463e1522`. Canonical main
+  remains there; no push/merge/deploy/publication or production write. Real-scale retained-only
+  Producer rehearsal peaks at 4.15 GiB private commit with exact five-output byte parity;
+  this is not a whole-Daily capacity requalification. Oct 6 capture depth is 2, still
+  `DEPTH_PENDING`; original marker/T0/seals unchanged. Local roadmap current is this completed
+  candidate, `queued_next = []`. [Evidence and gate accounting](internal/POST_FIRST_REAL_DAILY_PHASE_C_RESOURCE_SIMPLIFICATION_20261006.md).
 - **CURRENT FACT — active operational gate:** `FIRST_REAL_POST_RELEASE_CAPTURE_ACCEPTANCE` = **RECORDED**
   for session **2026-10-05**. The read-only harness (cutoff `2026-10-05T16:00:00Z`, report under
   `operations-review/first-real-session-acceptance-v1/2026-10-05/`, not in git) returned
@@ -56,7 +64,7 @@ Fact kinds used below: **CURRENT FACT** (verified in repo or by a stated read-on
   `e244385f2a7441d697679d08826c88f9`, failure null, Producer `317118c788bdd46bd6de55dbff3888b92de1172d`.
   The 2026-10-02 Daily remains a prior session whose T0 failed with `MemoryError` and stays
   permanently `UNAVAILABLE` (a 0-byte file is retained; never rebuilt). `ROADMAP_STATE.json`:
-  `current = OWNER_DAILY_FEEDBACK_RESOURCE_CONTAINMENT_V1 / COMPLETE`, `queued_next = []`,
+  historical `current = OWNER_DAILY_FEEDBACK_RESOURCE_CONTAINMENT_V1 / COMPLETE`, `queued_next = []`,
   `successor_disposition = FIRST_REAL_POST_RELEASE_CAPTURE_ACCEPTANCE_RECORDED_2026_10_05_NO_AUTOMATIC_SUCCESSOR`.
 - **CURRENT FACT — no automatic successor.** Nothing starts because something else finished;
   every new milestone needs explicit owner authorization (AI_RULES rules 4, 11).

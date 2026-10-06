@@ -300,7 +300,11 @@ def bind_integrated_decision_brief_before_sealing(
     This prevents a post-seal file discovery or a mutation of an already-retained
     operation while preserving standalone/no-Brief operation semantics.
     """
-    prepared = copy.deepcopy(dict(operation))
+    # The sealed analytical payloads are borrowed read-only, just as they are
+    # in build_operation/_integrated_delivery_binding. Only the binding and
+    # manifest/outputs below are replaced. Deep-copying the entire operation
+    # duplicated the full-universe Integrated Decision until Daily returned.
+    prepared = dict(operation)
     manifest = prepared.get("manifest")
     binding = prepared.get("integrated_delivery")
     if not isinstance(manifest, Mapping) or not isinstance(binding, Mapping):
