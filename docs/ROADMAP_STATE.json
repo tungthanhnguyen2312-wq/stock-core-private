@@ -15,7 +15,7 @@
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "HISTORICAL_TEMPORAL_RESEARCH_PANEL_FOUNDATION_V1",
+    "milestone": "DECISION_OUTCOME_CALIBRATION_AND_FALSE_NEGATIVE_REVIEW_V1",
     "state": "COMPLETE"
   },
   "queued_next": [],
@@ -68,8 +68,24 @@
       "state_history": ["ACTIVE", "COMPLETE"],
       "source_doc": "docs/internal/HISTORICAL_TEMPORAL_RESEARCH_PANEL_FOUNDATION_20261006.md",
       "notes": "Owner overnight program authorizes this milestone with queued_next empty. Projects retained post-close handoff and opportunity bundles into a rebuildable research panel. Rows from that source are RECONSTRUCTED_RESEARCH. PIT requires an explicit qualification and stays separate from RAW_AS_TRADED. Missing cohort evidence stays explicit. No source mutation, no persisted duplicate, no DuckDB or Parquet migration, and no successor.",
-      "checkpoint": "HEAD",
+      "checkpoint": "c8d1a245ec67949c6f9f7d774209e936a4033d35",
       "terminal_disposition": "RESEARCH_PANEL_READY"
+    },
+    {
+      "milestone_id": "DECISION_OUTCOME_CALIBRATION_AND_FALSE_NEGATIVE_REVIEW_V1",
+      "state": "COMPLETE",
+      "starting_checkpoint": "0b124d8193630269b6c1e125e04c5640b76938a7",
+      "candidate_branch": "feature/decision-outcome-calibration-false-negative-20261006",
+      "dependencies": [],
+      "unlocks": [],
+      "owner_authorized": true,
+      "owner_override": "OWNER_DIRECTIVE_2026_10_06_OVERNIGHT_PROGRAM_DECISION_OUTCOME_CALIBRATION_AND_FALSE_NEGATIVE_REVIEW_V1",
+      "authority_effect": "NONE / DESCRIPTIVE_REVIEW_ONLY_NO_THRESHOLD_OR_PROBABILITY_AUTHORITY",
+      "state_history": ["ACTIVE", "COMPLETE"],
+      "source_doc": "docs/internal/DECISION_OUTCOME_CALIBRATION_AND_FALSE_NEGATIVE_REVIEW_20261006.md",
+      "notes": "Owner overnight program authorizes this milestone with queued_next empty. Reviews retained forward-feedback horizons 1, 3, 5, 10 and 20 without mixing evidence populations. Horizon 60 is not an engine output. Matched-control edge stays unqualified unless sample and regime gates pass. No production threshold rewrite, no probability, and no successor.",
+      "checkpoint": "HEAD",
+      "terminal_disposition": "DESCRIPTIVE_REVIEW_READY"
     },
     {
       "milestone_id": "POST_FIRST_REAL_DAILY_PHASE_C_WHOLE_PIPELINE_RESOURCE_ARCHITECTURE_CLOSEOUT_V2",

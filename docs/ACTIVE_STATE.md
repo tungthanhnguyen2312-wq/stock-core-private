@@ -40,6 +40,13 @@ Fact kinds used below: **CURRENT FACT** (verified in repo or by a stated read-on
 
 ## 1. The operational gate
 
+- **CURRENT FACT — outcome calibration review.** `DECISION_OUTCOME_CALIBRATION_AND_FALSE_NEGATIVE_REVIEW_V1`
+  reads retained forward feedback without mixing populations and without rewriting thresholds.
+  A streamed recount of the 2026-10-06 feedback artifact found T5 9,590 mature rows,
+  T10 5,823, and T20 16. Those figures differ from the earlier 10,338 / 6,544 / 16 reference
+  where the status filter and session membership differ. October 5 and October 6 are not
+  decision sessions in that artifact. Authority effect none.
+  [Review and recount](internal/DECISION_OUTCOME_CALIBRATION_AND_FALSE_NEGATIVE_REVIEW_20261006.md).
 - **CURRENT FACT — historical temporal research panel.** `HISTORICAL_TEMPORAL_RESEARCH_PANEL_FOUNDATION_V1`
   projects retained post-close handoff and opportunity bundles into research memory.
   A read-only host index of 28 session directories produced 2,445 reconstructed rows
