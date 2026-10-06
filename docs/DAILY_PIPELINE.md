@@ -5,13 +5,13 @@ from `tools/run_owner_daily.py`, `owner_daily_progress.py`, `canonical_daily_ope
 `canonical_post_close_pipeline.py`. If this file and the code disagree, the code wins — fix this file.
 Current-state facts: [ACTIVE_STATE.md](ACTIVE_STATE.md). Authority per output: [AUTHORITY.md](AUTHORITY.md).
 
-Candidate-local Phase C V2 (2026-10-06) preserves this run order and all output identities.
-V1 streams IID identity, copies the writable binding spine and buffers delivery UTF-8 rows.
-V2 verifies T0 root/record hashes while projecting only velocity axes; hashing/pretty writing
+Phase C resource architecture (released 2026-10-06) preserves this run order and all output identities.
+IID identity is streamed, the writable binding spine is copied, and delivery UTF-8 rows are buffered.
+T0 root/record hashes are verified while projecting only velocity axes; hashing and pretty writing
 are record-bounded and immutable writers retain exact native bytes. Held-live Canonical heavy
-path completes at 4.03 GiB private; actual Owner completion/handoff at 5.51 GiB in its separate
-lifetime after Canonical exit. No new child boundary or production GC is needed by measured
-release behavior. No production Daily was run and no host/feedback threshold changed.
+path completed at 4.03 GiB private; actual Owner completion/handoff at 5.51 GiB in its separate
+lifetime after Canonical exit. No new child boundary or production GC is required by measured
+release behavior. No production Daily was run for this release and no host/feedback threshold changed.
 [Whole measurements, ownership map and limits](internal/PHASE_C_WHOLE_PIPELINE_RESOURCE_CLOSEOUT_20261006.md).
 
 **One production workflow, two front doors:** `stocklookup.ps1 daily` and the Desktop one-click both call

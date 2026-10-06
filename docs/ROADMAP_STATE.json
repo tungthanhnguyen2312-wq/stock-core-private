@@ -15,11 +15,30 @@
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "POST_FIRST_REAL_DAILY_PHASE_C_WHOLE_PIPELINE_RESOURCE_ARCHITECTURE_CLOSEOUT_V2",
+    "milestone": "POST_FIRST_REAL_DAILY_PHASE_C_RESOURCE_ARCHITECTURE_RELEASE_V1",
     "state": "COMPLETE"
   },
   "queued_next": [],
   "milestones": [
+    {
+      "milestone_id": "POST_FIRST_REAL_DAILY_PHASE_C_RESOURCE_ARCHITECTURE_RELEASE_V1",
+      "state": "COMPLETE",
+      "starting_checkpoint": "3231616022213aac7f8c75e164c1f403566ee12c",
+      "candidate_branch": "perf/post-first-real-daily-phase-c-resource-simplification-20261006",
+      "dependencies": [],
+      "unlocks": [],
+      "owner_authorized": true,
+      "owner_override": "OWNER_DIRECTIVE_2026_10_06_OVERNIGHT_PROGRAM_PHASE_C_RELEASE_CHATGPT_APPROVED",
+      "authority_effect": "NONE / RESOURCE_AND_RUNTIME_SIMPLIFICATION_ONLY",
+      "state_history": [
+        "ACTIVE",
+        "COMPLETE"
+      ],
+      "source_doc": "docs/internal/PHASE_C_WHOLE_PIPELINE_RESOURCE_CLOSEOUT_20261006.md",
+      "notes": "Owner overnight program STOCK_LOOKUP_OVERNIGHT_ENGINEERING_CLOSEOUT_20261006 authorizes release of reviewed candidate 3231616022213aac7f8c75e164c1f403566ee12c. ChatGPT approved Phase C for release. Independent review confirmed incremental hashing, pretty streaming, binding-spine copy, T0 axis projection, warm reuse, velocity publication and downstream digest validation, numeric-key fallback, and fail-closed malformed/duplicate/unsorted handling. Historical production peak about 10.23 GiB; retained qualification Canonical heavy path about 4.03 GiB private; Owner consumer peak about 5.51 GiB private. Exact semantic parity. No authority effect. queued_next stays empty. This commit is the release head.",
+      "checkpoint": "HEAD",
+      "terminal_disposition": "RELEASED_RESIDUAL_PEAK_CORRECTIVE_READY"
+    },
     {
       "milestone_id": "POST_FIRST_REAL_DAILY_PHASE_C_WHOLE_PIPELINE_RESOURCE_ARCHITECTURE_CLOSEOUT_V2",
       "state": "COMPLETE",
@@ -35,8 +54,8 @@
         "COMPLETE"
       ],
       "source_doc": "docs/internal/PHASE_C_WHOLE_PIPELINE_RESOURCE_CLOSEOUT_20261006.md",
-      "notes": "Same owner-authorized candidate continued from 8ca12295. Verified record-streamed T0 axes remove bounded observer MemoryError; actual IID/delivery/T0/index/velocity/downstream retained heavy path 4.03 GiB private, separate actual Owner completion/handoff 5.51 GiB under unchanged 7 GiB Job guard. Exact bytes/identities preserved, 141 original protected files unchanged. Retained-only qualification excludes fresh providers/production writes; final host disk AMBER remains an independent launch blocker. Final broad 442 pass with same 18 missing-fixture failures/errors as exact baseline; candidate-only regressions zero, final control checks 61 pass. Local review checkpoint only. No authority effect, successor, push or merge.",
-      "checkpoint": "HEAD",
+      "notes": "Same owner-authorized candidate continued from 8ca12295. Verified record-streamed T0 axes remove bounded observer MemoryError; actual IID/delivery/T0/index/velocity/downstream retained heavy path 4.03 GiB private, separate actual Owner completion/handoff 5.51 GiB under unchanged 7 GiB Job guard. Exact bytes/identities preserved, 141 original protected files unchanged. Retained-only qualification excludes fresh providers/production writes; final host disk AMBER remains an independent launch blocker. Final broad 442 pass with same 18 missing-fixture failures/errors as exact baseline; candidate-only regressions zero, final control checks 61 pass. Local review checkpoint only. No authority effect and no successor. Released by the later POST_FIRST_REAL_DAILY_PHASE_C_RESOURCE_ARCHITECTURE_RELEASE_V1 commit.",
+      "checkpoint": "3231616022213aac7f8c75e164c1f403566ee12c",
       "terminal_disposition": "RESIDUAL_PEAK_CORRECTIVE_READY"
     },
     {
@@ -3121,5 +3140,5 @@
       "reference_checkpoint": "9575cb04c899696a02b22ba9dfcfed9a4961cf2d"
     }
   ],
-  "successor_disposition": "PHASE_C_V2_CORRECTIVE_READY_FOR_REVIEW_NO_AUTOMATIC_SUCCESSOR"
+  "successor_disposition": "PHASE_C_RELEASED_NO_AUTOMATIC_SUCCESSOR"
 }

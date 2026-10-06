@@ -7,22 +7,25 @@ it or the owner records an explicit override (AI_RULES rule 11). Facts: [ACTIVE_
 
 ## NOW — `FIRST_REAL_POST_RELEASE_CAPTURE_ACCEPTANCE` (RECORDED 2026-10-05)
 
-Recorded. The explicitly owner-authorized candidate-local Phase C below is complete and
-awaits review. No successor milestone is active, and nothing here starts one.
+Recorded. Owner-authorized Phase C is released on this commit. No successor milestone is
+active, and nothing here starts one.
 
-**2026-10-06 candidate-local checkpoint:**
-`POST_FIRST_REAL_DAILY_PHASE_C_WHOLE_PIPELINE_RESOURCE_ARCHITECTURE_CLOSEOUT_V2` is COMPLETE /
-`RESIDUAL_PEAK_CORRECTIVE_READY`, continuing the V1 `8ca12295` checkpoint on
-`perf/post-first-real-daily-phase-c-resource-simplification-20261006`. Main remains exact
-`802b11e00a2bb38db7f57644dca9f3ba463e1522`. Whole retained heavy path completes at 4.03 GiB
-private; separate actual Owner completion/handoff completes at 5.51 GiB, both under the
-unchanged 7-GiB guard. Streaming all verified T0 records into seven-axis velocity context
-removes the measured residual failure. Fresh provider acquisition/production orchestration
-are outside this read-only qualification; disk admission is currently AMBER after retained
-scratch evidence. [Whole model, benchmark scope, parity, maturity and review boundary](internal/PHASE_C_WHOLE_PIPELINE_RESOURCE_CLOSEOUT_20261006.md).
-Recommendation: `MERGE_CANDIDATE_AFTER_REVIEW`. No push/merge/production launch is authorized;
-no new milestone starts. Capture depth2 stays `DEPTH_PENDING`; retained first-real evidence
-below is historical and unchanged. V1's [intermediate proof](internal/POST_FIRST_REAL_DAILY_PHASE_C_RESOURCE_SIMPLIFICATION_20261006.md)
+**2026-10-06 release:**
+`POST_FIRST_REAL_DAILY_PHASE_C_RESOURCE_ARCHITECTURE_RELEASE_V1` releases reviewed candidate
+`3231616022213aac7f8c75e164c1f403566ee12c`
+(`POST_FIRST_REAL_DAILY_PHASE_C_WHOLE_PIPELINE_RESOURCE_ARCHITECTURE_CLOSEOUT_V2` /
+`RESIDUAL_PEAK_CORRECTIVE_READY`), continuing V1 `8ca12295` on
+`perf/post-first-real-daily-phase-c-resource-simplification-20261006`. Whole retained heavy
+path completed at 4.03 GiB private; separate actual Owner completion/handoff completed at
+5.51 GiB, both under the unchanged 7-GiB guard. Historical production peak was about
+10.23 GiB. Streaming all verified T0 records into seven-axis velocity context removes the
+measured residual failure. Exact semantic parity. Authority effect none. Fresh provider
+acquisition and production Daily orchestration stay outside this release. Host disk admission
+was AMBER after retained scratch and must be READY before the next Daily.
+[Whole model, benchmark scope, parity, maturity and review boundary](internal/PHASE_C_WHOLE_PIPELINE_RESOURCE_CLOSEOUT_20261006.md).
+This commit is the release head. No new milestone starts. Capture depth2 stays
+`DEPTH_PENDING`; retained first-real evidence below is historical and unchanged. V1's
+[intermediate proof](internal/POST_FIRST_REAL_DAILY_PHASE_C_RESOURCE_SIMPLIFICATION_20261006.md)
 remains preserved.
 
 **Result** (read-only harness, cutoff `2026-10-05T16:00:00Z`):
@@ -52,11 +55,11 @@ These advance by accumulating real sessions, not by implementation:
 
 ## AFTER FIRST-REAL ACCEPTANCE — candidates, owner authorization required
 
-1. **Record the first-real result** — done in this control plane (docs only; no runtime change). Phase B is not started; candidate-local Phase C is complete above.
+1. **Record the first-real result** — done in this control plane (docs only; no runtime change). Phase B is not started. Phase C resource architecture is released above.
 2. **Control-plane simplification Phase B** (not started): move or archive historical narrative out of the default
    path (`STATE.md` / `DECISIONS.md` / `ROADMAP.md` dated sections), keep every machine marker, parser and
    `ROADMAP_STATE.json` contract working, update the drift/governance tests in the same change. Preserve history.
-3. **Simplification Phase C** (candidate-local complete, awaiting review): runtime/architecture simplification only where post-Monday
+3. **Simplification Phase C** (released): runtime/architecture simplification only where post-Monday
    measurements justify it. Inputs are the measured figures in [owner_daily_host_preflight_contract.md](owner_daily_host_preflight_contract.md)
    and [owner_daily_feedback_resource_containment_contract.md](owner_daily_feedback_resource_containment_contract.md)
    (per-session artifacts are large: Integrated Decision ≈1.3 GB, T0 ≈1.4 GB, feedback ≈0.5 GB; the Daily-child
