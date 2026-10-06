@@ -80,6 +80,32 @@ def _section(spec: Mapping[str, Any] | None) -> dict[str, Any]:
     return {"status": "PRESENT", "fields": fields}
 
 
+def _spine_view(spine: Mapping[str, Any] | None) -> dict[str, Any] | None:
+    if not isinstance(spine, Mapping) or not spine:
+        return None
+    _reject_forbidden(spine, where="SPINE")
+    limitation = spine.get("retention_limitation")
+    return {
+        "coverage_state": spine.get("coverage_state"),
+        "denominator_integrity": spine.get("denominator_integrity"),
+        "ci_freshness": spine.get("ci_freshness"),
+        "corporate_action_state": spine.get("corporate_action_state"),
+        "analogue_evidence_tier": spine.get("analogue_evidence_tier"),
+        "analogue_regime_similarity": spine.get("analogue_regime_similarity"),
+        "analogue_outcomes": spine.get("analogue_outcomes"),
+        "mfe": spine.get("mfe"),
+        "mae": spine.get("mae"),
+        "failure_rate": spine.get("failure_rate"),
+        "sample_quality": spine.get("sample_quality"),
+        "matched_control_readiness": spine.get("matched_control_readiness"),
+        "matched_control_edge": spine.get("matched_control_edge"),
+        "retention_limitation": limitation if isinstance(limitation, str) and limitation.strip() else None,
+        "buy_score": None,
+        "probability": None,
+        "target_price": None,
+    }
+
+
 def build_packet(
     *,
     ticker: str,
@@ -89,6 +115,7 @@ def build_packet(
     canonical_packet_identity: str | None = None,
     ai_narration: str | None = None,
     capital_decision: Any = None,
+    spine: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build one ticker packet. Input analogue order is preserved."""
     del capital_decision  # retained so a caller cannot sneak a delegated decision through
@@ -102,6 +129,17 @@ def build_packet(
     history["cherry_pick"] = False
     if qualified and history["status"] == "MISSING":
         history["status"] = "PRESENT"
+    spine_view = _spine_view(spine)
+    if spine_view is not None:
+        history["spine"] = spine_view
+        if history["status"] == "MISSING":
+            history["status"] = "PRESENT"
+        if spine_view.get("retention_limitation"):
+            history["fields"]["retention_limitation"] = {"claim": "FACT", "value": spine_view["retention_limitation"]}
+            uncertainty = projected_sections["uncertainty"]
+            uncertainty["fields"]["retention_limitation"] = {"claim": "FACT", "value": spine_view["retention_limitation"]}
+            if uncertainty["status"] == "MISSING":
+                uncertainty["status"] = "PRESENT"
     packet = {
         "contract_version": CONTRACT_VERSION,
         "ticker": ticker,

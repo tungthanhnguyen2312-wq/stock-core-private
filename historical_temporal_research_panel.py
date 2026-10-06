@@ -428,3 +428,83 @@ def index_retained_root(root: Path, *, focus_tickers: tuple[str, ...] = ()) -> d
     panel["source_root_name"] = root.name
     panel["sessions_opened"] = len(projections)
     return panel
+
+
+def _copy_field(field: Mapping[str, Any] | None) -> dict[str, Any]:
+    return dict(field) if isinstance(field, Mapping) else _missing()
+
+
+def enrich_row(row: Mapping[str, Any], overlay: Mapping[str, Any] | None) -> dict[str, Any]:
+    """Attach bounded overlays without changing the row identity.
+
+    Outcomes stay in ``outcome_namespace``. They are not written back into
+    the decision-time ``fields["outcome"]`` value. A parent row tier is not
+    upgraded because a child field carries a stronger tier.
+    """
+    enriched = dict(row)
+    fields = {name: _copy_field(value) if isinstance(value, Mapping) else value for name, value in (row.get("fields") or {}).items()}
+    original_outcome = _copy_field(fields.get("outcome"))
+    decision = overlay.get("decision") if isinstance(overlay, Mapping) else None
+    if isinstance(decision, Mapping):
+        for name, supplied in decision.items():
+            if not isinstance(supplied, Mapping):
+                continue
+            current = _copy_field(fields.get(name))
+            current["value"] = supplied.get("value")
+            current["tier"] = supplied.get("tier") or current.get("tier") or UNKNOWN
+            current["status"] = supplied.get("status") or "PRESENT"
+            if supplied.get("reason"):
+                current["reason"] = supplied.get("reason")
+            fields[name] = current
+    fields["outcome"] = original_outcome
+    enriched["fields"] = fields
+    enriched["semantic_tier"] = row.get("semantic_tier")
+    enriched["row_identity"] = row.get("row_identity")
+    outcomes = []
+    if isinstance(overlay, Mapping):
+        for item in overlay.get("outcomes") or []:
+            if isinstance(item, Mapping):
+                outcomes.append(dict(item))
+    enriched["outcome_namespace"] = {
+        "separated_from_decision": True,
+        "outcomes": outcomes,
+    }
+    return enriched
+
+
+def enrich_panel(panel: Mapping[str, Any], overlays: Mapping[tuple[str, str], Mapping[str, Any]] | None = None) -> dict[str, Any]:
+    """Return a new panel. Source rows and their identities stay in place."""
+    overlays = overlays or {}
+    rows = []
+    populated = 0
+    missing = 0
+    tier_counts: dict[str, int] = {}
+    for row in panel.get("rows") or []:
+        key = (str(row.get("session")), str(row.get("ticker")))
+        overlay = overlays.get(key)
+        enriched = enrich_row(row, overlay if isinstance(overlay, Mapping) else None)
+        if overlay:
+            populated += 1
+        else:
+            missing += 1
+        for field in enriched["fields"].values():
+            if isinstance(field, Mapping):
+                tier = str(field.get("tier") or UNKNOWN)
+                tier_counts[tier] = tier_counts.get(tier, 0) + 1
+        for outcome in enriched["outcome_namespace"]["outcomes"]:
+            tier = str(outcome.get("tier") or UNKNOWN)
+            tier_counts[tier] = tier_counts.get(tier, 0) + 1
+        rows.append(enriched)
+    body = dict(panel)
+    body["rows"] = rows
+    body["row_identities"] = [row.get("row_identity") for row in rows]
+    body["enrichment"] = {
+        "contract_version": "historical_temporal_research_panel_enrichment/v1",
+        "rows_with_overlay": populated,
+        "rows_without_overlay": missing,
+        "field_tier_counts": dict(sorted(tier_counts.items())),
+        "parent_tier_upgraded": False,
+        "outcome_namespace_separated": True,
+        "persisted": False,
+    }
+    return body

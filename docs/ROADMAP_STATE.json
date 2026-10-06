@@ -9,13 +9,13 @@
     "ai_rules": "docs/AI_RULES.md",
     "note": "This file is the machine-readable EXECUTION-STATE authority: which milestone is current/active/next/blocked, what checkpoint proves each completed milestone, and whether recorded state contradicts Git/worktree reality. It does not restate or supersede the narrative docs' technical content and is not a substitute for reading them. Where this file and a narrative doc appear to disagree, that is a conflict to surface to the owner (AGENTS.md 'Default lightweight bootstrap' rule), never an automatic override in either direction."
   },
-  "implementation_lineage_head": "90c8e98809896c6822dc6551ec57c4b24b8e7444",
-  "last_updated_checkpoint": "90c8e98809896c6822dc6551ec57c4b24b8e7444",
+  "implementation_lineage_head": "22d2de0a261ab410bd6c35ae0ab86f2758076cbd",
+  "last_updated_checkpoint": "22d2de0a261ab410bd6c35ae0ab86f2758076cbd",
   "known_operational_diff_allowlist": [
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "PORTFOLIO_RESEARCH_DECISION_WORKBENCH_FOUNDATION_V1",
+    "milestone": "DECISION_INTELLIGENCE_COVERAGE_AND_CALIBRATION_CLOSURE_V1",
     "state": "COMPLETE"
   },
   "queued_next": [],
@@ -118,6 +118,22 @@
       "notes": "Owner overnight program authorizes this milestone before 06:30 ICT with queued_next empty. Research-only concentration, overlap, current correlation, and explicit-objective ranking. No leverage, size, order, or capital allocation. No successor.",
       "checkpoint": "90c8e98809896c6822dc6551ec57c4b24b8e7444",
       "terminal_disposition": "RESEARCH_WORKBENCH_READY"
+    },
+    {
+      "milestone_id": "DECISION_INTELLIGENCE_COVERAGE_AND_CALIBRATION_CLOSURE_V1",
+      "state": "COMPLETE",
+      "starting_checkpoint": "c45938f59a1389e8f03c7f32f74c7962d933799e",
+      "candidate_branch": "feature/decision-intelligence-coverage-calibration-20261007",
+      "dependencies": [],
+      "unlocks": [],
+      "owner_authorized": true,
+      "owner_override": "OWNER_DIRECTIVE_2026_10_07_DECISION_INTELLIGENCE_COVERAGE_AND_CALIBRATION_CLOSURE_V1",
+      "authority_effect": "NONE / DECISION_INTELLIGENCE_RESEARCH_COVERAGE_AND_CALIBRATION_ONLY",
+      "state_history": ["ACTIVE", "COMPLETE"],
+      "source_doc": "docs/internal/DECISION_INTELLIGENCE_COVERAGE_AND_CALIBRATION_CLOSURE_20261007.md",
+      "notes": "Owner authorized this milestone on 2026-10-07 with queued_next empty. Joins the 1683-name coverage index to the existing historical panel, calibration review, evidence packet v2, and portfolio workbench. Retained feedback axes are projected without rewriting old T0. Matched-control edges stay unpublished unless every readiness gate passes. No RAW, PIT, probability, sizing, or recommendation authority. Optional CLI deferred. No successor.",
+      "checkpoint": "22d2de0a261ab410bd6c35ae0ab86f2758076cbd",
+      "terminal_disposition": "RESEARCH_COVERAGE_AND_CALIBRATION_READY"
     },
     {
       "milestone_id": "POST_FIRST_REAL_DAILY_PHASE_C_WHOLE_PIPELINE_RESOURCE_ARCHITECTURE_CLOSEOUT_V2",

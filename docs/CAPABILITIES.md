@@ -13,6 +13,11 @@ results) · `FROZEN_HISTORICAL` (code/artifacts preserved, not the production pa
 Each block: **Contract** · **Runtime** · **Authority** · **Production** · **Input** · **Predecessor**
 (frozen) · **Blocker** · **Next trigger** (the evidence that would change the status).
 
+Decision-intelligence closure (2026-10-07) is research coverage and calibration context
+only. Contract `decision_intelligence_coverage_calibration/v1`. It does not vote, size,
+or recommend. The optional read-only CLI is deferred.
+[Closure evidence](internal/DECISION_INTELLIGENCE_COVERAGE_AND_CALIBRATION_CLOSURE_20261007.md).
+
 ## A. Market evidence and calendar
 
 Phase C resource architecture (released 2026-10-06) retains record-wise IID hashing, borrowed
