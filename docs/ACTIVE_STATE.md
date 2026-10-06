@@ -40,6 +40,11 @@ Fact kinds used below: **CURRENT FACT** (verified in repo or by a stated read-on
 
 ## 1. The operational gate
 
+- **CURRENT FACT — human/AI evidence packet.** `HUMAN_AI_DECISION_EVIDENCE_PACKET_CONVERGENCE_V2`
+  adds a sectioned packet that points at the existing decision-packet identity. Measurements
+  stay named. There is no buy score. AI narration does not receive numerical authority, and
+  the capital decision stays human. No CLI was added.
+  [Packet contract](internal/HUMAN_AI_DECISION_EVIDENCE_PACKET_CONVERGENCE_V2_20261006.md).
 - **CURRENT FACT — outcome calibration review.** `DECISION_OUTCOME_CALIBRATION_AND_FALSE_NEGATIVE_REVIEW_V1`
   reads retained forward feedback without mixing populations and without rewriting thresholds.
   A streamed recount of the 2026-10-06 feedback artifact found T5 9,590 mature rows,
