@@ -40,6 +40,18 @@ Fact kinds used below: **CURRENT FACT** (verified in repo or by a stated read-on
 
 ## 1. The operational gate
 
+- **CURRENT FACT — 2026-10-06 Phase C resource architecture released.** Owner-authorized
+  `POST_FIRST_REAL_DAILY_PHASE_C_RESOURCE_ARCHITECTURE_RELEASE_V1` releases reviewed candidate
+  `3231616022213aac7f8c75e164c1f403566ee12c`
+  (`POST_FIRST_REAL_DAILY_PHASE_C_WHOLE_PIPELINE_RESOURCE_ARCHITECTURE_CLOSEOUT_V2`,
+  disposition `RESIDUAL_PEAK_CORRECTIVE_READY`). The record-streamed T0 observer replaces the
+  residual overread. Held-live Canonical heavy-path rehearsal peaked at 4.03 GiB private;
+  separate Owner completion/handoff peaked at 5.51 GiB; both completed below the unchanged
+  7-GiB Job ceiling. This is retained-only qualification, not a production Daily and not
+  authorization to launch the next Daily. Host-local disk was AMBER after diagnostic scratch;
+  fresh READY preflight remains mandatory before any Daily. Original marker/T0/seals/captures
+  unchanged, depth2 `DEPTH_PENDING`. Authority effect none. `queued_next = []`.
+  [Whole-pipeline model, exact parity and limits](internal/PHASE_C_WHOLE_PIPELINE_RESOURCE_CLOSEOUT_20261006.md).
 - **CURRENT FACT — active operational gate:** `FIRST_REAL_POST_RELEASE_CAPTURE_ACCEPTANCE` = **RECORDED**
   for session **2026-10-05**. The read-only harness (cutoff `2026-10-05T16:00:00Z`, report under
   `operations-review/first-real-session-acceptance-v1/2026-10-05/`, not in git) returned
@@ -56,8 +68,9 @@ Fact kinds used below: **CURRENT FACT** (verified in repo or by a stated read-on
   `e244385f2a7441d697679d08826c88f9`, failure null, Producer `317118c788bdd46bd6de55dbff3888b92de1172d`.
   The 2026-10-02 Daily remains a prior session whose T0 failed with `MemoryError` and stays
   permanently `UNAVAILABLE` (a 0-byte file is retained; never rebuilt). `ROADMAP_STATE.json`:
-  `current = OWNER_DAILY_FEEDBACK_RESOURCE_CONTAINMENT_V1 / COMPLETE`, `queued_next = []`,
-  `successor_disposition = FIRST_REAL_POST_RELEASE_CAPTURE_ACCEPTANCE_RECORDED_2026_10_05_NO_AUTOMATIC_SUCCESSOR`.
+  `current = POST_FIRST_REAL_DAILY_PHASE_C_RESOURCE_ARCHITECTURE_RELEASE_V1 / COMPLETE`,
+  `queued_next = []`,
+  `successor_disposition = PHASE_C_RELEASED_NO_AUTOMATIC_SUCCESSOR`.
 - **CURRENT FACT — no automatic successor.** Nothing starts because something else finished;
   every new milestone needs explicit owner authorization (AI_RULES rules 4, 11).
 

@@ -9,17 +9,74 @@
     "ai_rules": "docs/AI_RULES.md",
     "note": "This file is the machine-readable EXECUTION-STATE authority: which milestone is current/active/next/blocked, what checkpoint proves each completed milestone, and whether recorded state contradicts Git/worktree reality. It does not restate or supersede the narrative docs' technical content and is not a substitute for reading them. Where this file and a narrative doc appear to disagree, that is a conflict to surface to the owner (AGENTS.md 'Default lightweight bootstrap' rule), never an automatic override in either direction."
   },
-  "implementation_lineage_head": "4927158662b02177cc960ce491d8f5c2c1976532",
-  "last_updated_checkpoint": "4927158662b02177cc960ce491d8f5c2c1976532",
+  "implementation_lineage_head": "HEAD",
+  "last_updated_checkpoint": "HEAD",
   "known_operational_diff_allowlist": [
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "OWNER_DAILY_FEEDBACK_RESOURCE_CONTAINMENT_V1",
+    "milestone": "POST_FIRST_REAL_DAILY_PHASE_C_RESOURCE_ARCHITECTURE_RELEASE_V1",
     "state": "COMPLETE"
   },
   "queued_next": [],
   "milestones": [
+    {
+      "milestone_id": "POST_FIRST_REAL_DAILY_PHASE_C_RESOURCE_ARCHITECTURE_RELEASE_V1",
+      "state": "COMPLETE",
+      "starting_checkpoint": "3231616022213aac7f8c75e164c1f403566ee12c",
+      "candidate_branch": "perf/post-first-real-daily-phase-c-resource-simplification-20261006",
+      "dependencies": [],
+      "unlocks": [],
+      "owner_authorized": true,
+      "owner_override": "OWNER_DIRECTIVE_2026_10_06_OVERNIGHT_PROGRAM_PHASE_C_RELEASE_CHATGPT_APPROVED",
+      "authority_effect": "NONE / RESOURCE_AND_RUNTIME_SIMPLIFICATION_ONLY",
+      "state_history": [
+        "ACTIVE",
+        "COMPLETE"
+      ],
+      "source_doc": "docs/internal/PHASE_C_WHOLE_PIPELINE_RESOURCE_CLOSEOUT_20261006.md",
+      "notes": "Owner overnight program STOCK_LOOKUP_OVERNIGHT_ENGINEERING_CLOSEOUT_20261006 authorizes release of reviewed candidate 3231616022213aac7f8c75e164c1f403566ee12c. ChatGPT approved Phase C for release. Independent review confirmed incremental hashing, pretty streaming, binding-spine copy, T0 axis projection, warm reuse, velocity publication and downstream digest validation, numeric-key fallback, and fail-closed malformed/duplicate/unsorted handling. Historical production peak about 10.23 GiB; retained qualification Canonical heavy path about 4.03 GiB private; Owner consumer peak about 5.51 GiB private. Exact semantic parity. No authority effect. queued_next stays empty. This commit is the release head.",
+      "checkpoint": "HEAD",
+      "terminal_disposition": "RELEASED_RESIDUAL_PEAK_CORRECTIVE_READY"
+    },
+    {
+      "milestone_id": "POST_FIRST_REAL_DAILY_PHASE_C_WHOLE_PIPELINE_RESOURCE_ARCHITECTURE_CLOSEOUT_V2",
+      "state": "COMPLETE",
+      "starting_checkpoint": "8ca12295a47a09a8fafb8055312a9a9f06cbff2e",
+      "candidate_branch": "perf/post-first-real-daily-phase-c-resource-simplification-20261006",
+      "dependencies": [],
+      "unlocks": [],
+      "owner_authorized": true,
+      "owner_override": "OWNER_DIRECTIVE_2026_10_06_PHASE_C_WHOLE_PIPELINE_CLOSEOUT_V2_LOCAL_ONLY",
+      "authority_effect": "NONE / RESOURCE_AND_RUNTIME_SIMPLIFICATION_ONLY",
+      "state_history": [
+        "ACTIVE",
+        "COMPLETE"
+      ],
+      "source_doc": "docs/internal/PHASE_C_WHOLE_PIPELINE_RESOURCE_CLOSEOUT_20261006.md",
+      "notes": "Same owner-authorized candidate continued from 8ca12295. Verified record-streamed T0 axes remove bounded observer MemoryError; actual IID/delivery/T0/index/velocity/downstream retained heavy path 4.03 GiB private, separate actual Owner completion/handoff 5.51 GiB under unchanged 7 GiB Job guard. Exact bytes/identities preserved, 141 original protected files unchanged. Retained-only qualification excludes fresh providers/production writes; final host disk AMBER remains an independent launch blocker. Final broad 442 pass with same 18 missing-fixture failures/errors as exact baseline; candidate-only regressions zero, final control checks 61 pass. Local review checkpoint only. No authority effect and no successor. Released by the later POST_FIRST_REAL_DAILY_PHASE_C_RESOURCE_ARCHITECTURE_RELEASE_V1 commit.",
+      "checkpoint": "3231616022213aac7f8c75e164c1f403566ee12c",
+      "terminal_disposition": "RESIDUAL_PEAK_CORRECTIVE_READY"
+    },
+    {
+      "milestone_id": "POST_FIRST_REAL_DAILY_PHASE_C_RESOURCE_AND_ARTIFACT_SIMPLIFICATION_V1",
+      "state": "COMPLETE",
+      "starting_checkpoint": "802b11e00a2bb38db7f57644dca9f3ba463e1522",
+      "candidate_branch": "perf/post-first-real-daily-phase-c-resource-simplification-20261006",
+      "dependencies": [],
+      "unlocks": [],
+      "owner_authorized": true,
+      "owner_override": "OWNER_DIRECTIVE_2026_10_06_POST_FIRST_REAL_DAILY_PHASE_C_RESOURCE_AND_ARTIFACT_SIMPLIFICATION_V1_LOCAL_ONLY",
+      "authority_effect": "NONE / RESOURCE_AND_RUNTIME_SIMPLIFICATION_ONLY",
+      "state_history": [
+        "ACTIVE",
+        "COMPLETE"
+      ],
+      "source_doc": "docs/ROADMAP_CURRENT.md",
+      "notes": "Explicit pasted owner authorization on 2026-10-06: read-only retained evidence, isolated implementation, offline bounded benchmark and one validated local checkpoint. No push/merge/deploy/publication/runtime writes/authority promotion or next milestone.",
+      "checkpoint": "8ca12295a47a09a8fafb8055312a9a9f06cbff2e",
+      "terminal_disposition": "PHASE_C_RESOURCE_SIMPLIFICATION_READY_FOR_REVIEW"
+    },
     {
       "milestone_id": "THESIS_EVIDENCE_MATRIX_AND_CONFLICT_ENGINE_V1_STAGE_2_PRODUCTION_INTEGRATION",
       "state": "COMPLETE",
@@ -3083,5 +3140,5 @@
       "reference_checkpoint": "9575cb04c899696a02b22ba9dfcfed9a4961cf2d"
     }
   ],
-  "successor_disposition": "FIRST_REAL_POST_RELEASE_CAPTURE_ACCEPTANCE_RECORDED_2026_10_05_NO_AUTOMATIC_SUCCESSOR"
+  "successor_disposition": "PHASE_C_RELEASED_NO_AUTOMATIC_SUCCESSOR"
 }

@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import copy
 import hashlib
+import io
 import json
 from typing import Any, Mapping
 
@@ -169,13 +170,8 @@ def project_integrated_decision_for_ai_delivery(record: Any, *, integrated_ident
     }
 
 
-def project_integrated_decision_delivery_overlay(session: str, integrated: Mapping[str, Any], daily_brief: Mapping[str, Any] | None) -> dict[str, Any]:
-    """The Integrated Decision overlay (header plus per-ticker projections) the AI delivery carries.
-
-    The single definition: Owner Daily's M1 handoff verifier rebuilds it from the canonical
-    Integrated Decision and Brief and requires the delivered bytes to equal it exactly.
-    """
-    records = integrated.get("records") or {}
+def _integrated_overlay_header(session: str, integrated: Mapping[str, Any], daily_brief: Mapping[str, Any] | None) -> dict[str, Any]:
+    """Shared overlay metadata, independent of the per-ticker projection."""
     return {
         "contract_version": INTEGRATED_DELIVERY_CONTRACT,
         "session": session,
@@ -191,6 +187,18 @@ def project_integrated_decision_delivery_overlay(session: str, integrated: Mappi
             "no_position_size": True,
             "no_numeric_risk_reward": True,
         },
+    }
+
+
+def project_integrated_decision_delivery_overlay(session: str, integrated: Mapping[str, Any], daily_brief: Mapping[str, Any] | None) -> dict[str, Any]:
+    """The Integrated Decision overlay (header plus per-ticker projections) the AI delivery carries.
+
+    The single definition: Owner Daily's M1 handoff verifier rebuilds it from the canonical
+    Integrated Decision and Brief and requires the delivered bytes to equal it exactly.
+    """
+    records = integrated.get("records") or {}
+    return {
+        **_integrated_overlay_header(session, integrated, daily_brief),
         "records": {
             ticker: project_integrated_decision_for_ai_delivery(record, integrated_identity=integrated["artifact_identity"])
             for ticker, record in sorted(records.items())
@@ -558,7 +566,7 @@ def build_dashboard_projection(
         "what_to_verify_next": copy.deepcopy(product["what_to_verify_next"]),
     }
     if integrated_decision is not None:
-        overlay = project_integrated_decision_delivery_overlay(manifest["market_session"], integrated_decision, daily_integrated_brief)
+        overlay = _integrated_overlay_header(manifest["market_session"], integrated_decision, daily_integrated_brief)
         projection["source"]["integrated_investment_decision_product_identity"] = integrated_decision["artifact_identity"]
         projection["source"]["daily_integrated_decision_brief_identity"] = (
             daily_integrated_brief.get("artifact_identity") if daily_integrated_brief else None
@@ -641,11 +649,16 @@ def build_delivery(operation: Mapping[str, Any], inputs: Mapping[str, Any]) -> d
         for ticker, context in primary["ticker_research_contexts"].items():
             context["integrated_decision_v1"] = copy.deepcopy((integrated_overlay["records"] or {}).get(ticker))
     primary_bytes = (_canon(primary) + "\n").encode("utf-8")
-    rows = [
-        _canon(_compact_context(ticker, operation, inputs, financial_context, integrated_overlay))
-        for ticker in universe
-    ]
-    full_bytes = (("\n".join(rows) + "\n") if rows else "").encode("utf-8")
+    # Keep the bytes-returning contract, without a universe-sized Unicode row
+    # list, joined string, newline copy and UTF-8 copy alive at the same time.
+    with io.BytesIO() as companion:
+        for ticker in universe:
+            companion.write(_canon(_compact_context(ticker, operation, inputs, financial_context, integrated_overlay)).encode("utf-8"))
+            companion.write(b"\n")
+        full_bytes = companion.getvalue()
+    # Their last consumer is the companion; the cockpit needs only the overlay
+    # header and its existing watchlist cards, not another full-universe graph.
+    del integrated_overlay, primary
     projection = build_dashboard_projection(
         operation,
         integrated_decision=integrated_decision,

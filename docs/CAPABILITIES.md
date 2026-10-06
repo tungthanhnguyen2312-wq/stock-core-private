@@ -15,6 +15,15 @@ Each block: **Contract** · **Runtime** · **Authority** · **Production** · **
 
 ## A. Market evidence and calendar
 
+Phase C resource architecture (released 2026-10-06) retains record-wise IID hashing, borrowed
+analytical binding leaves and bounded delivery encoding. Production signal velocity verifies
+full T0/root/per-record hashes while retaining only seven axes; T0 and observer hashing/emission
+are record-bounded, with exact immutable publication/reuse. Held-live heavy-path private
+peak 4.03 GiB; separate actual Owner completion/handoff 5.51 GiB, under unchanged 7-GiB
+containment. Disposition `RESIDUAL_PEAK_CORRECTIVE_READY`; no capability or authority promotion
+and no production Daily launch. Disk admission remains independently mandatory.
+[Whole-pipeline review evidence](internal/PHASE_C_WHOLE_PIPELINE_RESOURCE_CLOSEOUT_20261006.md).
+
 ### 1. Market acquisition (DNSE exact-session)
 - Contract: [exact_session_bundle_contract.md](exact_session_bundle_contract.md); Phase A/B gates in `completed_market_session_gate.py`
 - Runtime: `ACTIVE` · Authority: `SCOPED` (current-session exact evidence; no RAW/PIT claim) · Production: `IN_DAILY_BLOCKING`
