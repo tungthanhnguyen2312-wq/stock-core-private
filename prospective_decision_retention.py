@@ -57,6 +57,12 @@ def _json_bytes(value: Any, *, pretty: bool = False):
     Pretty output preserves the old text writer's native newline translation.
     Canonical identity bytes always use the original compact UTF-8 representation.
     """
+    records = value.get('records') if isinstance(value,dict) else None
+    if (pretty and isinstance(records,(dict,list)) and all(isinstance(k,str) for k in value)
+            and (not isinstance(records,dict) or all(isinstance(k,str) for k in records))):
+        from bounded_artifact_stream import pretty_record_chunks
+        yield from pretty_record_chunks(value)
+        return
     encoder = (json.JSONEncoder(ensure_ascii=False, sort_keys=True, indent=2) if pretty else
                json.JSONEncoder(ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False))
     buffer = bytearray()
@@ -77,6 +83,9 @@ def _json_bytes(value: Any, *, pretty: bool = False):
 
 
 def _hash(value: Any) -> str:
+    if isinstance(value, dict):
+        from bounded_artifact_stream import record_mapping_digest
+        return record_mapping_digest(value)
     digest = hashlib.sha256()
     for block in _json_bytes(value):
         digest.update(block)
@@ -338,6 +347,21 @@ def snapshot_path(root: str | Path, snapshot: Mapping[str, Any]) -> Path:
 def write_immutable_snapshot(root: str | Path, snapshot: Mapping[str, Any], *, on_written=None) -> Path:
     path = snapshot_path(root, snapshot)
     path.parent.mkdir(parents=True, exist_ok=True)
+    if path.exists():
+        before = path.stat()
+        existing, existing_size = hashlib.sha256(), 0
+        with path.open('rb') as source:
+            for block in iter(lambda: source.read(1024*1024), b''):
+                existing.update(block); existing_size += len(block)
+        expected, size = hashlib.sha256(), 0
+        for block in _json_bytes(snapshot, pretty=True):
+            expected.update(block); size += len(block)
+        after = path.stat()
+        if ((before.st_size,before.st_mtime_ns) != (after.st_size,after.st_mtime_ns)
+                or existing_size != size or existing.digest() != expected.digest()):
+            raise ProspectiveDecisionRetentionError('IMMUTABLE_PROSPECTIVE_SNAPSHOT_CONFLICT:'+str(path))
+        if on_written: on_written(path, existing.hexdigest())
+        return path
     temporary = None
     try:
         digest, size = hashlib.sha256(), 0

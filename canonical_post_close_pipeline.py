@@ -1509,10 +1509,8 @@ def run_flow_price_divergence_shadow(root: Path, runtime_root: Path, session: st
                 "reason": "SIGNAL_VELOCITY_IDENTITY_MISMATCH"}
     velocity_body = {key: value for key, value in velocity.items()
                      if key not in {"artifact_identity", "artifact_sha256"}}
-    velocity_digest = hashlib.sha256(
-        json.dumps(velocity_body, ensure_ascii=False, sort_keys=True,
-                   separators=(",", ":"), allow_nan=False).encode("utf-8")
-    ).hexdigest()
+    from bounded_artifact_stream import record_mapping_digest
+    velocity_digest = record_mapping_digest(velocity_body)
     if (velocity.get("artifact_sha256") != velocity_digest or
             velocity.get("artifact_identity") != "multi_session_signal_velocity:" + velocity_digest):
         return {"status": "UNAVAILABLE", "session": session,

@@ -330,6 +330,9 @@ def test_failed_stream_write_leaves_destination_and_cleans_temp(tmp_path, monkey
         monkeypatch.setattr(retention, "_json_bytes", broken)
         expected = MemoryError
     elif failure == "fsync":
+        # Warm verification performs no write/fsync. Exercise a fresh target's
+        # fsync failure while the previously retained original stays protected.
+        snapshot = _snapshot("2026-01-02", 100)
         def fail(*args):
             raise OSError("fsync failed")
         monkeypatch.setattr(retention.os, "fsync", fail)
@@ -343,7 +346,21 @@ def test_failed_stream_write_leaves_destination_and_cleans_temp(tmp_path, monkey
     with pytest.raises(expected):
         retention.write_immutable_snapshot(tmp_path, snapshot)
     assert path.read_bytes() == original
+    if failure in {"fsync","replace"}:
+        assert not retention.snapshot_path(tmp_path,snapshot).exists()
     assert not list((tmp_path / "operations-review" / "prospective-decision-retention-v1").glob("*/*/*.tmp"))
+
+
+def test_warm_snapshot_verification_has_no_temporary_write_or_fsync(tmp_path,monkeypatch):
+    snapshot=_snapshot('2026-01-01',100)
+    path=retention.write_immutable_snapshot(tmp_path,snapshot)
+    before=path.stat().st_mtime_ns
+    monkeypatch.setattr(retention.tempfile,'NamedTemporaryFile',lambda *a,**k:pytest.fail('warm temporary write'))
+    monkeypatch.setattr(retention.os,'fsync',lambda *a,**k:pytest.fail('warm fsync'))
+    callbacks=[]
+    assert retention.write_immutable_snapshot(tmp_path,snapshot,on_written=lambda p,h:callbacks.append((p,h))) == path
+    assert len(callbacks) == 1 and callbacks[0][0] == path
+    assert path.stat().st_mtime_ns == before
 
 
 def test_large_synthetic_snapshot_uses_bounded_batches_and_no_registration(tmp_path):

@@ -2,6 +2,8 @@
 from __future__ import annotations
 from collections import Counter
 import hashlib, json
+import os
+import tempfile
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 import fundamental_signal_consumption_contract as fundamental_signals
@@ -16,7 +18,8 @@ AXES=("price_momentum","structural_repair","participation_confirmation","setup_m
 
 def _canon(value: Any)->str: return json.dumps(value,ensure_ascii=False,sort_keys=True,separators=(",",":"),allow_nan=False)
 def _identity(payload:dict[str,Any])->dict[str,Any]:
-    body={k:v for k,v in payload.items() if k not in {"artifact_identity","artifact_sha256"}}; digest=hashlib.sha256(_canon(body).encode()).hexdigest()
+    from bounded_artifact_stream import record_mapping_digest
+    body={k:v for k,v in payload.items() if k not in {"artifact_identity","artifact_sha256"}}; digest=record_mapping_digest(body)
     payload.update(artifact_sha256=digest,artifact_identity="multi_session_signal_velocity:"+digest); return payload
 def _load(path:Path)->dict[str,Any]|None:
     try: value=json.loads(path.read_text(encoding="utf-8"))
@@ -34,17 +37,50 @@ def _operation(root:Path,session:str,identity:str)->dict[str,Any]|None:
     path,manifest=rows[0]
     return {"path":_rel(root,path)} if manifest.get("market_session")==session and manifest.get("generation_context")=="DAILY_PRODUCER_RETAINED_COMPLETED_SESSION" else None
 
-def discover_retained_snapshots(root:str|Path)->dict[str,Any]:
+def _project_snapshot(path: Path) -> tuple[dict[str, Any] | None, bool]:
+    """Verify the entire immutable source, retaining only the seven consumed axes.
+
+    A projection is private to the observer, never a replacement T0. Full public
+    discovery remains available for callers explicitly requiring the snapshot.
+    """
+    from bounded_artifact_stream import canonical_bytes, stream_artifact
+    records = {}
+    valid = True
+    def consume(ticker, row):
+        nonlocal valid
+        if not isinstance(row, Mapping) or row.get("ticker") != ticker:
+            valid = False
+            return
+        body = dict(row)
+        identity = body.pop("prospective_snapshot_record_identity", None)
+        if identity != retention.RECORD_PREFIX + hashlib.sha256(canonical_bytes(body)).hexdigest():
+            valid = False
+        decision = row.get("integrated_decision_at_t0")
+        if isinstance(decision, Mapping) and decision.get("ticker") == ticker:
+            records[ticker] = {"integrated_decision_identity": row.get("integrated_decision_identity"),
+                              "velocity_axes": {name: _axis(decision, name) for name in AXES}}
+    try:
+        metadata, digest, _ = stream_artifact(path, excluded={"snapshot_identity"}, on_record=consume)
+    except (OSError, ValueError):
+        return None, False
+    valid = valid and metadata.get("contract_version") == retention.CONTRACT_VERSION
+    valid = valid and metadata.get("snapshot_identity") == retention.SNAPSHOT_PREFIX + digest
+    return dict(metadata, records=records), valid
+
+
+def discover_retained_snapshots(root:str|Path, *, project_axes: bool = False)->dict[str,Any]:
     """Completed-session ledger -> exact handoff -> exact immutable snapshot only."""
     repo=Path(root); registry=_load(repo/"config"/"daily_research_session_input_registry.json") or {}; completed=registry.get("completed_sessions") or {}
     inventory=[]; qualified=[]
     for session in sorted(str(s) for s,e in completed.items() if isinstance(s,str) and isinstance(e,Mapping) and e.get("status")=="COMPLETED_RETAINED_EVIDENCE"):
         handoff_path=repo/"operations-review"/"canonical-post-close-v1"/session/"session_handoff_bundle.json"; handoff=_load(handoff_path); declared=(handoff or {}).get("prospective_decision_snapshot") or {}; ident=declared.get("identity") if isinstance(declared,Mapping) else None
-        digest=ident.removeprefix(retention.SNAPSHOT_PREFIX) if isinstance(ident,str) else ""; path=repo/"operations-review"/"prospective-decision-retention-v1"/session/digest/"prospective_decision_snapshot.json"; snap=_load(path); reasons=[]; operation=None
+        digest=ident.removeprefix(retention.SNAPSHOT_PREFIX) if isinstance(ident,str) else ""; path=repo/"operations-review"/"prospective-decision-retention-v1"/session/digest/"prospective_decision_snapshot.json"
+        snap, valid = _project_snapshot(path) if project_axes else (_load(path), None)
+        reasons=[]; operation=None
         if not snap: reasons.append("EXACT_HANDOFF_SNAPSHOT_NOT_RETAINED_OR_UNREADABLE")
         else:
             source=snap.get("source_integrated_decision_artifact") or {}; operation=_operation(repo,session,str(snap.get("daily_session_operation_identity") or ""))
-            if not retention.validate_snapshot(snap):reasons.append("SNAPSHOT_CONTENT_IDENTITY_INVALID")
+            if not (valid if project_axes else retention.validate_snapshot(snap)):reasons.append("SNAPSHOT_CONTENT_IDENTITY_INVALID")
             if snap.get("session")!=session:reasons.append("HANDOFF_SESSION_MISMATCH")
             if not handoff:reasons.append("CANONICAL_HANDOFF_NOT_RETAINED")
             else:
@@ -54,7 +90,8 @@ def discover_retained_snapshots(root:str|Path)->dict[str,Any]:
             if operation is None:reasons.append("COMPLETED_DAILY_OPERATION_NOT_RETAINED")
         row={"session":session,"snapshot_path":_rel(repo,path),"snapshot_identity":(snap or {}).get("snapshot_identity") or ident,"classification":"QUALIFIED" if not reasons else "EXCLUDED","reason_codes":reasons or ["EXACT_T0_SNAPSHOT_AND_HANDOFF_BOUND"],"canonical_handoff_path":_rel(repo,handoff_path) if handoff else None,"operation_manifest_path":operation.get("path") if operation else None}
         inventory.append(row)
-        if snap and not reasons:qualified.append({"snapshot":snap,"inventory":row})
+        if snap and not reasons:qualified.append({"snapshot":snap,"inventory":row,
+                                                 **({"axis_projection":True} if project_axes else {})})
     return {"contract_version":CONTRACT_VERSION,"inventory":inventory,"qualified_snapshots":qualified,"qualified_session_chain":[x["snapshot"]["session"] for x in qualified],"classification_counts":dict(sorted(Counter(x["classification"] for x in inventory).items()))}
 
 def _state(value:Any,table:Mapping[str,str])->str:
@@ -122,8 +159,9 @@ def build_artifact(*,qualified_snapshots:Sequence[Mapping[str,Any]],source_inven
         snapshot=item["snapshot"]; inv=item["inventory"]; session=snapshot["session"]
         for ticker,sealed in sorted((snapshot.get("records") or {}).items()):
             decision=(sealed or {}).get("integrated_decision_at_t0") if isinstance(sealed,Mapping) else None
-            if not isinstance(decision,Mapping) or decision.get("ticker")!=ticker:continue
-            prior=histories.setdefault(ticker,{n:[] for n in AXES}); axes={n:_axis(decision,n) for n in AXES}
+            projected = sealed.get("velocity_axes") if item.get("axis_projection") is True and isinstance(sealed, Mapping) else None
+            if projected is None and (not isinstance(decision,Mapping) or decision.get("ticker")!=ticker):continue
+            prior=histories.setdefault(ticker,{n:[] for n in AXES}); axes={n:dict(projected[n]) if projected is not None else _axis(decision,n) for n in AXES}
             for n in AXES:
                 axes[n]["session"]=session
                 axes[n]["trajectory"]=_trajectory(n,prior[n]+[axes[n]])
@@ -134,8 +172,21 @@ def build_artifact(*,qualified_snapshots:Sequence[Mapping[str,Any]],source_inven
     artifact={"schema_version":"1.2.0","contract_version":CONTRACT_VERSION,"supersedes":{"contract_version":"multi_session_signal_velocity/v1.1","status":"SUPERSEDED_FOR_CATEGORICAL_ACCELERATION_TERMINOLOGY","old_artifacts_immutable":True},"research_tier":RESEARCH_TIER,"source_inventory":list(source_inventory or []),"records":records,"validation":{"retained_session_count":len(qualified_snapshots),"retained_sessions":[x["snapshot"]["session"] for x in qualified_snapshots],"record_count":len(records),"latest_session":latest,"latest_session_cohort_counts":dict(sorted(Counter(r["overall_transition_state"] for r in cohort).items())),"lead_time_diagnostic":{"status":"NOT_EVALUABLE_NO_FORWARD_OUTCOME_CONTRACT"},"false_transition_diagnostic":{"status":"NOT_EVALUABLE_NO_FORWARD_OUTCOME_CONTRACT"},"limits":["NO_FUTURE_PRICE_OR_OUTCOME_DATA","NO_SCORE_OR_PROBABILITY","MISSING_OBSERVATIONS_NOT_INTERPOLATED","CATEGORICAL_ORDINAL_RANKS_NOT_CARDINAL_ACCELERATION"]},"authority_boundary":{"retained_t0_only":True,"no_provider_or_network":True,"no_historical_reconstruction":True,"no_score_probability_or_recommendation":True,"no_execution_or_sizing":True,"is_actionable":False}}
     return _identity(artifact)
 def build_from_retained_root(root:str|Path)->dict[str,Any]:
-    discovery=discover_retained_snapshots(root);return build_artifact(qualified_snapshots=discovery["qualified_snapshots"],source_inventory=discovery["inventory"])
+    discovery=discover_retained_snapshots(root, project_axes=True);return build_artifact(qualified_snapshots=discovery["qualified_snapshots"],source_inventory=discovery["inventory"])
 def write_immutable(path:str|Path,artifact:Mapping[str,Any])->Path:
-    destination=Path(path); text=json.dumps(artifact,ensure_ascii=False,sort_keys=True,indent=2)+"\n"
-    if destination.exists() and destination.read_text(encoding="utf-8")!=text:raise ValueError("IMMUTABLE_ARTIFACT_CONFLICT:"+str(destination))
-    destination.parent.mkdir(parents=True,exist_ok=True);destination.write_text(text,encoding="utf-8");return destination
+    from atomic_io import retain_immutable_file, AtomicWriteError
+    destination = Path(path)
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    temporary = None
+    try:
+        with tempfile.NamedTemporaryFile(dir=destination.parent, prefix='.velocity-', suffix='.tmp', delete=False) as out:
+            temporary = Path(out.name)
+            for block in retention._json_bytes(artifact, pretty=True): out.write(block)
+            out.flush(); os.fsync(out.fileno())
+        try:
+            retain_immutable_file(destination, temporary)
+        except AtomicWriteError as exc:
+            raise ValueError("IMMUTABLE_ARTIFACT_CONFLICT:"+str(destination)) from exc
+        return destination
+    finally:
+        if temporary is not None: temporary.unlink(missing_ok=True)

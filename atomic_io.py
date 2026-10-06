@@ -83,6 +83,27 @@ def retain_immutable_bytes(target_path: Path | str, content: bytes) -> bool:
         Path(temporary).unlink(missing_ok=True)
 
 
+def retain_immutable_file(target_path: Path | str, prepared_path: Path | str) -> bool:
+    """Publish a closed, fsynced sibling file without clobber; compare in bounded blocks.
+
+    The caller owns and cleans the prepared file. Hard-link publication exposes
+    only completed bytes and arbitrates simultaneous writers atomically.
+    """
+    target, prepared = Path(target_path), Path(prepared_path)
+    def equal():
+        with target.open('rb') as existing, prepared.open('rb') as candidate:
+            while True:
+                left, right = existing.read(1024*1024), candidate.read(1024*1024)
+                if left != right: return False
+                if not left: return True
+    try:
+        os.link(prepared, target)
+        return False
+    except FileExistsError:
+        if not equal(): raise AtomicWriteError(f"IMMUTABLE_BYTES_CONFLICT:{target}")
+        return True
+
+
 def validate_json_file(path: Path) -> None:
     """Validator: ensure file exists and parses as valid JSON."""
     try:

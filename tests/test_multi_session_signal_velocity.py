@@ -1,12 +1,96 @@
 from __future__ import annotations
 
 import json
+import pytest
 from pathlib import Path
 
 import multi_session_signal_velocity as velocity
 import prospective_decision_retention as retention
 from canonical_post_close_pipeline import run_multi_session_signal_velocity_shadow
 from tools.run_multi_session_signal_velocity import run
+
+
+def test_streamed_axes_equal_full_t0_consumer_and_release_unused_fields(tmp_path, monkeypatch):
+    _fixture(tmp_path, [("2026-01-02", _decision("2026-01-02")),
+                        ("2026-01-03", _decision("2026-01-03", price="UPTREND"))])
+    full = velocity.discover_retained_snapshots(tmp_path)
+    oracle = velocity.build_artifact(qualified_snapshots=full['qualified_snapshots'],source_inventory=full['inventory'])
+    original = velocity._load
+    def reject_whole_t0(path):
+        if path.name == 'prospective_decision_snapshot.json':
+            pytest.fail('whole T0 loader called')
+        return original(path)
+    monkeypatch.setattr(velocity, '_load', reject_whole_t0)
+    compact = velocity.discover_retained_snapshots(tmp_path, project_axes=True)
+    assert compact['inventory'] == full['inventory']
+    assert 'integrated_decision_at_t0' not in compact['qualified_snapshots'][0]['snapshot']['records']['FPT']
+    assert velocity.build_from_retained_root(tmp_path) == oracle
+
+
+@pytest.mark.parametrize('defect', ['record_identity','ticker','snapshot_identity','contract'])
+def test_projected_reader_rejects_invalid_immutable_content(tmp_path, defect):
+    snapshot = _snapshot('2026-01-02', _decision('2026-01-02'))
+    if defect == 'record_identity': snapshot['records']['FPT']['prospective_snapshot_record_identity'] = 'wrong'
+    if defect == 'ticker': snapshot['records']['FPT']['ticker'] = 'OTHER'
+    if defect == 'contract': snapshot['contract_version'] = 'wrong'
+    if defect != 'snapshot_identity':
+        snapshot.pop('snapshot_identity')
+        retention._identity(snapshot, retention.SNAPSHOT_PREFIX, 'snapshot_identity')
+    else: snapshot['snapshot_identity'] = 'wrong'
+    path = tmp_path/'snapshot.json'; _write(path,snapshot)
+    _, valid = velocity._project_snapshot(path)
+    assert not valid
+
+
+@pytest.mark.parametrize('content', ['{"records":{"B":{},"A":{}}}',
+                                    '{"records":{"A":{},"A":{}}}',
+                                    '{"records":{}} trailing', '{"records":'])
+def test_projected_reader_fails_closed_on_unordered_duplicate_or_broken_json(tmp_path, content):
+    path = tmp_path/'snapshot.json'; path.write_text(content,encoding='utf-8')
+    assert velocity._project_snapshot(path) == (None, False)
+
+
+def test_velocity_identity_does_not_canonicalize_whole_record_list(monkeypatch):
+    monkeypatch.setattr(velocity, '_canon', lambda value: pytest.fail('whole artifact canonicalization'))
+    artifact = {'records':[{'ticker':'ĐỒNG','state':-0.0}, {'ticker':'😀','x':1e-30}], 'z':None}
+    import hashlib
+    expected = hashlib.sha256(json.dumps(artifact,ensure_ascii=False,sort_keys=True,separators=(',',':'),allow_nan=False).encode()).hexdigest()
+    assert velocity._identity(artifact)['artifact_sha256'] == expected
+
+
+def test_streamed_writer_has_exact_native_bytes_and_immutable_concurrent_reuse(tmp_path):
+    from concurrent.futures import ThreadPoolExecutor
+    artifact = {'records':[{'ticker':'ĐỒNG 😀','nested':{'n':-0.0}}], 'z':True}
+    oracle = tmp_path/'oracle.json'
+    oracle.write_text(json.dumps(artifact,ensure_ascii=False,sort_keys=True,indent=2)+'\n',encoding='utf-8')
+    path = tmp_path/'result.json'
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        assert all(p == path for p in pool.map(lambda _:velocity.write_immutable(path,artifact),range(2)))
+    assert path.read_bytes() == oracle.read_bytes()
+    modified = {**artifact,'z':False}
+    with pytest.raises(ValueError,match='IMMUTABLE_ARTIFACT_CONFLICT'):
+        velocity.write_immutable(path,modified)
+    assert path.read_bytes() == oracle.read_bytes()
+    assert not list(tmp_path.glob('.velocity-*'))
+
+
+def test_streamed_writer_cleans_partial_file_without_publishing(tmp_path, monkeypatch):
+    def broken(*args, **kwargs):
+        yield b'partial'
+        raise RuntimeError('diagnostic interruption')
+    monkeypatch.setattr(retention,'_json_bytes',broken)
+    with pytest.raises(RuntimeError,match='interruption'):
+        velocity.write_immutable(tmp_path/'result.json',{'records':[]})
+    assert not (tmp_path/'result.json').exists()
+    assert not list(tmp_path.glob('.velocity-*'))
+
+
+def test_immutable_row_cannot_spoof_private_axis_projection():
+    snapshot = _snapshot('2026-01-02',_decision('2026-01-02'))
+    row = snapshot['records']['FPT']
+    normal = velocity.build_artifact(qualified_snapshots=[{'snapshot':snapshot,'inventory':{}}])
+    row['velocity_axes'] = {'malicious':'must not be consumed'}
+    assert velocity.build_artifact(qualified_snapshots=[{'snapshot':snapshot,'inventory':{}}]) == normal
 
 
 def _write(path: Path, value: object) -> None:

@@ -1,8 +1,9 @@
-"""Offline retained-only qualification; no Daily, acquisition, T0 or publication.
+"""Offline retained-only qualification; no production Daily/acquisition/publication.
 
 Rehydrates the already-built Producer operation, then executes the actual IID
 identity / pre-seal Brief binding / build_delivery functions under a Job ceiling
-and total deadline. Analytical builders are deliberately not rerun.
+and total deadline. Whole mode rebuilds IID from frozen products and exercises T0
+and observers under scratch only; it never replaces historical production evidence.
 """
 from __future__ import annotations
 
@@ -23,6 +24,12 @@ def child(args):
     import integrated_investment_decision_product as iid
     from ai_research_session_delivery import build_delivery
     from feedback_resource_guard import memory_status
+    code_paths = [Path(module.__file__) for module in (operations,iid)]
+    code_paths += [args.code_root/name for name in ('bounded_artifact_stream.py',
+        'ai_research_session_delivery.py','prospective_decision_retention.py','multi_session_signal_velocity.py',
+        'canonical_post_close_pipeline.py','atomic_io.py')]
+    code_paths += [Path(__file__).resolve(),Path(__file__).with_name('run_phase_c_whole_pipeline_rehearsal.py')]
+    code_sha256 = {str(path):source_hash(path) for path in code_paths}
 
     process = psutil.Process()
     observations = []
@@ -47,14 +54,34 @@ def child(args):
         return json.loads(path.read_text(encoding="utf-8"))
     source = args.source_root
     session = args.session
+    if args.stage in {'observer', 'consumers'}:
+        from run_phase_c_whole_pipeline_rehearsal import observer, consumers
+        observe('before_observer')
+        proof = (observer(source, args.output, touched, observe) if args.stage == 'observer'
+                 else consumers(source, args.output, touched, observe))
+        unchanged = all(source_hash(Path(p)) == sha for p,sha in touched.items())
+        assert unchanged
+        args.result.write_text(json.dumps(dict(status='COMPLETED', elapsed=time.perf_counter()-started,
+            observations=observations, proof=proof, protected_sources=touched,
+            protected_sources_unchanged=unchanged), indent=2)+'\n',encoding='utf-8')
+        return
     decision_path = source / 'operations-review/canonical-post-close-v1' / session / 'enrichment/integrated_investment_decision_product.json'
     records = {}
     touched[str(decision_path)] = source_hash(decision_path)
     metadata, digest, count = stream_artifact(decision_path,
         excluded={'artifact_identity', 'artifact_sha256', 'requested_at'},
-        on_record=lambda t,r: records.update({t:r}))
+        on_record=lambda t,r: records.update({t:r}) if args.stage not in {'whole','downstream'} else None)
     assert digest == metadata['artifact_sha256']
-    decision = dict(metadata, records=records)
+    construction_elapsed = None
+    if args.stage in {'whole','downstream'}:
+        from run_phase_c_whole_pipeline_rehearsal import rebuild_iid, load_daily_live_sources
+        observe('before_iid_construction')
+        live_sources = load_daily_live_sources(source,session,touched)
+        observe('acquisition_and_enrichment_owners_live')
+        decision, construction_elapsed = rebuild_iid(source, session, metadata, touched, observe,live_sources)
+        records = decision['records']
+    else:
+        decision = dict(metadata, records=records)
     observe('resident_iid')
     t = time.perf_counter()
     identity = iid.content_identity(decision)
@@ -96,10 +123,14 @@ def child(args):
         observe('after_binding')
         assert bound['manifest']['operation_identity'] == op_identity
         assert operation['integrated_delivery']['daily_integrated_decision_brief'] is None
-        if args.stage == 'binding':
+        if args.stage in {'binding','downstream'}:
             result = dict(identity=identity,record_count=count,identity_elapsed=identity_elapsed,
                 operation_identity=bound['manifest']['operation_identity'],binding_elapsed=binding_elapsed,
                 borrowed_iid_records=bound['integrated_delivery']['integrated_investment_decision_product']['records'] is records)
+            if args.stage == 'downstream':
+                from run_phase_c_whole_pipeline_rehearsal import whole_tail
+                result['downstream'] = whole_tail(source,args.output,session,decision,bound,handoff,touched,observe,
+                                                live_sources,downstream_only=True)
         else:
             delivery_inputs = dict(bound['inputs'],integrated_investment_decision_product=
                 bound['integrated_delivery']['integrated_investment_decision_product'],daily_integrated_decision_brief=brief)
@@ -124,10 +155,25 @@ def child(args):
                 operation_identity=bound['manifest']['operation_identity'],binding_elapsed=binding_elapsed,
                 delivery_elapsed=delivery_elapsed,output_parity=parity,bytes_written=written,
                 borrowed_iid_records=bound['integrated_delivery']['integrated_investment_decision_product']['records'] is records)
+            if args.stage == 'whole':
+                del raw, delivery
+                observe('delivery_last_reference_deleted')
+                from run_phase_c_whole_pipeline_rehearsal import whole_tail
+                result['whole'] = whole_tail(source, args.output, session, decision, bound, handoff,
+                                             touched, observe,live_sources)
+                del delivery_inputs, bound, operation, inputs, primary, decision, records,live_sources
+                observe('analytical_references_deleted')
+                import gc
+                result['gc_collected'] = gc.collect()
+                observe('after_gc')
+                time.sleep(1)
+                observe('idle_boundary')
     unchanged = all(source_hash(Path(p)) == sha for p,sha in touched.items())
     assert unchanged, 'PROTECTED_SOURCE_CHANGED'
+    assert all(source_hash(Path(p)) == sha for p,sha in code_sha256.items()), 'REHEARSAL_CODE_CHANGED'
     result.update(status='COMPLETED',stage=args.stage,elapsed=time.perf_counter()-started,
-        observations=observations,serialization_sizes=serialization_sizes,process_io_before=io_before,process_io_after=process.io_counters()._asdict(),protected_sources=touched,protected_sources_unchanged=unchanged,
+        code_sha256=code_sha256,python=sys.version,
+        observations=observations,construction_elapsed=construction_elapsed,serialization_sizes=serialization_sizes,process_io_before=io_before,process_io_after=process.io_counters()._asdict(),protected_sources=touched,protected_sources_unchanged=unchanged,
         input_unique_bytes=sum(Path(p).stat().st_size for p in touched),
         byte_accounting='Unique source sizes; hashing/proof rereads additional bytes. OS cache/physical IO unmeasured.',
         authority_effect='NONE / RESOURCE_AND_RUNTIME_SIMPLIFICATION_ONLY')
@@ -139,7 +185,7 @@ def main():
     for name in ('source-root','code-root','output','result'):
         parser.add_argument('--'+name,type=Path,required=True)
     parser.add_argument('--session',default='2026-10-06')
-    parser.add_argument('--stage',choices=('identity','binding','producer'),default='producer')
+    parser.add_argument('--stage',choices=('identity','binding','producer','whole','observer','consumers','downstream'),default='producer')
     parser.add_argument('--deadline',type=float,default=1200)
     parser.add_argument('--memory-gib',type=float,default=7)
     parser.add_argument('--child',action='store_true')

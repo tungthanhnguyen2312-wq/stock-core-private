@@ -15,12 +15,14 @@ Each block: **Contract** · **Runtime** · **Authority** · **Production** · **
 
 ## A. Market evidence and calendar
 
-Candidate-local Phase C (2026-10-06): deterministic IID artifact hashing streams records;
-pre-seal Brief binding borrows read-only analytical graphs; delivery avoids aggregate Unicode
-buffers and unnecessary cockpit universe projection. Existing capability/authority states
-remain unchanged. Real-scale five-output byte parity and bounded 4.15-GiB private peak prove
-the corrected Producer stage, not whole-Daily capacity. Production main remains `802b11e`.
-[Review evidence](internal/POST_FIRST_REAL_DAILY_PHASE_C_RESOURCE_SIMPLIFICATION_20261006.md).
+Candidate-local Phase C V2 (2026-10-06) retains V1 record-wise IID hashing, borrowed analytical
+binding leaves and bounded delivery encoding. Production signal velocity now verifies full
+T0/root/per-record hashes while retaining only seven axes; T0 and observer hashing/emission
+are record-bounded, with exact immutable publication/reuse. Held-live heavy-path private
+peak 4.03 GiB; separate actual Owner completion/handoff 5.51 GiB, under unchanged 7-GiB
+containment. Disposition `RESIDUAL_PEAK_CORRECTIVE_READY`; no capability/authority promotion
+or production launch. Main remains `802b11e`; disk admission remains independently mandatory.
+[Whole-pipeline review evidence](internal/PHASE_C_WHOLE_PIPELINE_RESOURCE_CLOSEOUT_20261006.md).
 
 ### 1. Market acquisition (DNSE exact-session)
 - Contract: [exact_session_bundle_contract.md](exact_session_bundle_contract.md); Phase A/B gates in `completed_market_session_gate.py`

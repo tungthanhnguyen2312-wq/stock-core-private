@@ -40,14 +40,17 @@ Fact kinds used below: **CURRENT FACT** (verified in repo or by a stated read-on
 
 ## 1. The operational gate
 
-- **CANDIDATE-LOCAL — 2026-10-06 Phase C complete, ready for review.** Explicit owner
-  override authorized `POST_FIRST_REAL_DAILY_PHASE_C_RESOURCE_AND_ARTIFACT_SIMPLIFICATION_V1`
-  on an isolated branch from `802b11e00a2bb38db7f57644dca9f3ba463e1522`. Canonical main
-  remains there; no push/merge/deploy/publication or production write. Real-scale retained-only
-  Producer rehearsal peaks at 4.15 GiB private commit with exact five-output byte parity;
-  this is not a whole-Daily capacity requalification. Oct 6 capture depth is 2, still
-  `DEPTH_PENDING`; original marker/T0/seals unchanged. Local roadmap current is this completed
-  candidate, `queued_next = []`. [Evidence and gate accounting](internal/POST_FIRST_REAL_DAILY_PHASE_C_RESOURCE_SIMPLIFICATION_20261006.md).
+- **CANDIDATE-LOCAL — 2026-10-06 Phase C V2 complete, ready for review.** Owner-authorized
+  `POST_FIRST_REAL_DAILY_PHASE_C_WHOLE_PIPELINE_RESOURCE_ARCHITECTURE_CLOSEOUT_V2` continues
+  `8ca12295` on the same candidate branch. Disposition `RESIDUAL_PEAK_CORRECTIVE_READY`:
+  record-streamed T0 observer replaces the proven residual overread. Held-live Canonical
+  heavy-path rehearsal peaks at 4.03 GiB private; actual separate Owner completion/handoff
+  peaks at 5.51 GiB; both complete below the unchanged 7-GiB Job ceiling. This is retained-only
+  qualification, not a production Daily or authorization to launch. Host-local disk is AMBER
+  after retained diagnostic outputs; fresh READY preflight remains mandatory. Canonical main
+  stays `802b11e`; original marker/T0/seals/captures unchanged, depth2 `DEPTH_PENDING`.
+  No push/merge/deploy/publication/authority promotion; `queued_next = []`.
+  [Whole-pipeline model, exact parity and limits](internal/PHASE_C_WHOLE_PIPELINE_RESOURCE_CLOSEOUT_20261006.md).
 - **CURRENT FACT — active operational gate:** `FIRST_REAL_POST_RELEASE_CAPTURE_ACCEPTANCE` = **RECORDED**
   for session **2026-10-05**. The read-only harness (cutoff `2026-10-05T16:00:00Z`, report under
   `operations-review/first-real-session-acceptance-v1/2026-10-05/`, not in git) returned
