@@ -689,6 +689,28 @@ def _book_value_method(
                                              "warnings": warning, "limitations": limitations})
 
 
+def _denominator_integrity_observations(methods: Mapping[str, Mapping[str, Any]], *, entity: str,
+                                       earnings_quality: Mapping[str, Any] | None,
+                                       corporate_action_lifecycle: str | None,
+                                       supplied: Sequence[Mapping[str, Any]] | None) -> list[dict[str, Any]]:
+    """Provider multiples stay intact. Supplied rows may add a real arithmetic check."""
+    if supplied is not None:
+        return [dict(item) for item in supplied]
+    rows = []
+    for method_id, method in methods.items():
+        if method_id == MARKET_CAP:
+            continue
+        rows.append({
+            "method_id": method_id,
+            "provider_multiple": method.get("value"),
+            "entity_class": entity,
+            "method_applicable": method.get("applicability") == APPLICABLE,
+            "corporate_action_lifecycle": corporate_action_lifecycle,
+            "earnings_quality": earnings_quality if method_id in {PE_TTM, PE_EXISTING} else None,
+        })
+    return rows
+
+
 def evaluate_ticker_valuation(*, ticker: str, feature_record: Mapping[str, Any] | None,
                               valuation_record: Mapping[str, Any] | None,
                               financial_analysis_record: Mapping[str, Any] | None = None,
@@ -698,7 +720,10 @@ def evaluate_ticker_valuation(*, ticker: str, feature_record: Mapping[str, Any] 
                               decision_session: str | None = None,
                               book_equity_rows: Sequence[Mapping[str, Any]] | None = None,
                               monetary_basis_verdict: Mapping[str, Any] | None = None,
-                              official_equity_facts: Sequence[Mapping[str, Any]] | None = None) -> dict[str, Any]:
+                              official_equity_facts: Sequence[Mapping[str, Any]] | None = None,
+                              earnings_quality: Mapping[str, Any] | None = None,
+                              corporate_action_lifecycle: str | None = None,
+                              denominator_observations: Sequence[Mapping[str, Any]] | None = None) -> dict[str, Any]:
     entity, entity_detail = _entity(feature_record, valuation_record, entity_applicability)
     share = (valuation_record or {}).get("share_basis_input") or {}
     share_class = share_basis_class(share)
@@ -736,6 +761,11 @@ def evaluate_ticker_valuation(*, ticker: str, feature_record: Mapping[str, Any] 
         MARKET_CAP: _existing_method(MARKET_CAP, market_cap, entity=entity, share_class=share_class),
     }
     readiness_reconciliation = _calculation_readiness_reconciliation(methods, calculation_readiness_record)
+    from current_valuation_denominator_integrity import diagnose_methods
+    denominator_integrity = diagnose_methods(_denominator_integrity_observations(
+        methods, entity=entity, earnings_quality=earnings_quality,
+        corporate_action_lifecycle=corporate_action_lifecycle, supplied=denominator_observations,
+    ))
     usable = [item for item in methods.values() if item["status"] in {"RESEARCH_USABLE", "READY"}]
     not_meaningful = [item for item in methods.values() if item["status"] == PE_NOT_MEANINGFUL]
     # Earnings yield (section 11): the reciprocal of a usable P/E_TTM. A pure derived
@@ -765,6 +795,11 @@ def evaluate_ticker_valuation(*, ticker: str, feature_record: Mapping[str, Any] 
         "share_concept": share.get("share_concept"),
         "authoritative_current_market_cap_eligible": bool(share.get("authoritative_current_market_cap_eligible")),
         "earnings_state": earnings_state,
+        "denominator_integrity": denominator_integrity,
+        "earnings_quality": denominator_integrity["multiples"] and next(
+            (item["earnings_quality"] for item in denominator_integrity["multiples"] if item["method_id"] in {PE_TTM, PE_EXISTING}),
+            None,
+        ),
         "pbt_ttm_context": _qualified_ttm("profit_before_tax_ttm", financial_analysis_record, financial_analysis_context_identity),
         "methods": methods,
         "calculation_readiness_context": dict(calculation_readiness_record or {}),

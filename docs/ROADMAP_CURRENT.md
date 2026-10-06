@@ -7,8 +7,15 @@ it or the owner records an explicit override (AI_RULES rule 11). Facts: [ACTIVE_
 
 ## NOW — `FIRST_REAL_POST_RELEASE_CAPTURE_ACCEPTANCE` (RECORDED 2026-10-05)
 
-Recorded. Owner-authorized Phase C is released on this commit. No successor milestone is
-active, and nothing here starts one.
+Recorded. Owner-authorized Phase C is released. The later owner-authorized freshness
+contract is the current completed milestone. No successor is active, and nothing here starts one.
+
+**Current-research freshness:** `CURRENT_RESEARCH_FUNDAMENTAL_CI_VALUATION_FRESHNESS_CONVERGENCE_V1`
+is a diagnostic contract only. It does not fill missing fundamentals. Retained 2026-10-06
+valuation coverage stays sparse (13 official-qualified financial inputs, 5 research-usable P/E
+rows, 0 price-and-qualified-share rows). Details:
+[freshness contract](internal/CURRENT_RESEARCH_FUNDAMENTAL_CI_VALUATION_FRESHNESS_20261006.md).
+The Forex idea bank is not a roadmap entry.
 
 **2026-10-06 release:**
 `POST_FIRST_REAL_DAILY_PHASE_C_RESOURCE_ARCHITECTURE_RELEASE_V1` releases reviewed candidate

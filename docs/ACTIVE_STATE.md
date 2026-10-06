@@ -40,6 +40,13 @@ Fact kinds used below: **CURRENT FACT** (verified in repo or by a stated read-on
 
 ## 1. The operational gate
 
+- **CURRENT FACT — current-research freshness contract.** `CURRENT_RESEARCH_FUNDAMENTAL_CI_VALUATION_FRESHNESS_CONVERGENCE_V1`
+  adds denominator-integrity diagnostics, an earnings-quality flag, and a corporate-event
+  binding projection on the existing valuation and decision-packet path. Provider multiples
+  are not replaced. Authority effect none. The 2026-10-06 retained valuation artifact still
+  shows 13 official-qualified financial inputs, 5 research-usable P/E rows, and 0 records
+  with both price and qualified shares ready, on its own 1,507-record denominator.
+  [Contract and retained counts](internal/CURRENT_RESEARCH_FUNDAMENTAL_CI_VALUATION_FRESHNESS_20261006.md).
 - **CURRENT FACT — 2026-10-06 Phase C resource architecture released.** Owner-authorized
   `POST_FIRST_REAL_DAILY_PHASE_C_RESOURCE_ARCHITECTURE_RELEASE_V1` releases reviewed candidate
   `3231616022213aac7f8c75e164c1f403566ee12c`
