@@ -15,7 +15,7 @@
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "DECISION_OUTCOME_CALIBRATION_AND_FALSE_NEGATIVE_REVIEW_V1",
+    "milestone": "HUMAN_AI_DECISION_EVIDENCE_PACKET_CONVERGENCE_V2",
     "state": "COMPLETE"
   },
   "queued_next": [],
@@ -84,8 +84,24 @@
       "state_history": ["ACTIVE", "COMPLETE"],
       "source_doc": "docs/internal/DECISION_OUTCOME_CALIBRATION_AND_FALSE_NEGATIVE_REVIEW_20261006.md",
       "notes": "Owner overnight program authorizes this milestone with queued_next empty. Reviews retained forward-feedback horizons 1, 3, 5, 10 and 20 without mixing evidence populations. Horizon 60 is not an engine output. Matched-control edge stays unqualified unless sample and regime gates pass. No production threshold rewrite, no probability, and no successor.",
-      "checkpoint": "HEAD",
+      "checkpoint": "865ac017dcebdeb061943fb54cf066437a2bca4d",
       "terminal_disposition": "DESCRIPTIVE_REVIEW_READY"
+    },
+    {
+      "milestone_id": "HUMAN_AI_DECISION_EVIDENCE_PACKET_CONVERGENCE_V2",
+      "state": "COMPLETE",
+      "starting_checkpoint": "b75721a8f35346b972371577dc5223a69e70f629",
+      "candidate_branch": "feature/human-ai-decision-evidence-packet-v2-20261006",
+      "dependencies": [],
+      "unlocks": [],
+      "owner_authorized": true,
+      "owner_override": "OWNER_DIRECTIVE_2026_10_06_OVERNIGHT_PROGRAM_HUMAN_AI_DECISION_EVIDENCE_PACKET_CONVERGENCE_V2",
+      "authority_effect": "NONE / EVIDENCE_PACKET_ONLY_NO_BUY_SCORE_OR_CAPITAL_DELEGATION",
+      "state_history": ["ACTIVE", "COMPLETE"],
+      "source_doc": "docs/internal/HUMAN_AI_DECISION_EVIDENCE_PACKET_CONVERGENCE_V2_20261006.md",
+      "notes": "Owner overnight program authorizes this milestone with queued_next empty. Adds a sectioned evidence packet over the existing decision-packet identity. Measurements stay named. Analogues keep input order and require matching disclosure. AI narration has no numerical authority. The human capital decision is not delegated. No CLI and no successor.",
+      "checkpoint": "HEAD",
+      "terminal_disposition": "EVIDENCE_PACKET_READY"
     },
     {
       "milestone_id": "POST_FIRST_REAL_DAILY_PHASE_C_WHOLE_PIPELINE_RESOURCE_ARCHITECTURE_CLOSEOUT_V2",

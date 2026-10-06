@@ -9,8 +9,13 @@ it or the owner records an explicit override (AI_RULES rule 11). Facts: [ACTIVE_
 
 Recorded. Owner-authorized Phase C is released. The later owner-authorized freshness
 contract is complete. The historical research panel is complete. The current
-completed milestone is the outcome calibration review. No successor is active,
-and nothing here starts one.
+completed milestone is the human/AI evidence packet. The outcome review is complete.
+No successor is active, and nothing here starts one.
+
+**Evidence packet:** `HUMAN_AI_DECISION_EVIDENCE_PACKET_CONVERGENCE_V2` keeps named
+measurements, requires analogue disclosure, and does not delegate the capital decision.
+No buy score and no CLI. Details:
+[evidence packet](internal/HUMAN_AI_DECISION_EVIDENCE_PACKET_CONVERGENCE_V2_20261006.md).
 
 **Outcome review:** `DECISION_OUTCOME_CALIBRATION_AND_FALSE_NEGATIVE_REVIEW_V1` is a
 descriptive review of retained horizons 1, 3, 5, 10 and 20. It does not emit probabilities
