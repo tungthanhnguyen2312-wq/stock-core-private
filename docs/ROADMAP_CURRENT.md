@@ -8,9 +8,14 @@ it or the owner records an explicit override (AI_RULES rule 11). Facts: [ACTIVE_
 ## NOW — `FIRST_REAL_POST_RELEASE_CAPTURE_ACCEPTANCE` (RECORDED 2026-10-05)
 
 Recorded. Owner-authorized Phase C is released. The later owner-authorized freshness
-contract is complete. The historical research panel is complete. The current
-completed milestone is the portfolio research workbench. The evidence packet is
-complete. No successor is active, and nothing here starts one.
+contract is complete. The historical research panel is complete. The evidence packet
+is complete. The portfolio research workbench is complete. The current completed
+milestone is `DECISION_INTELLIGENCE_COVERAGE_AND_CALIBRATION_CLOSURE_V1`. No successor
+is active, and nothing here starts one.
+
+**Decision-intelligence closure:** coverage, historical context, calibration, the
+evidence packet, and the workbench now share one research spine. Counts and limits:
+[closure](internal/DECISION_INTELLIGENCE_COVERAGE_AND_CALIBRATION_CLOSURE_20261007.md).
 
 **Portfolio research workbench:** `PORTFOLIO_RESEARCH_DECISION_WORKBENCH_FOUNDATION_V1`
 is overlap and concentration research. It does not size or place orders. Details:

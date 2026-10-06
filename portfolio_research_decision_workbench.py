@@ -146,6 +146,16 @@ def build_workbench(opportunities: Sequence[Mapping[str, Any]], *, objective: st
         "overlaps": _overlaps(rows),
         "current_correlation": _correlation(rows),
         "ranking": _rank(rows, objective),
+        "evidence_comparison": {
+            "evidence_quality": _counts(rows, "evidence_quality"),
+            "setup_maturity": _counts(rows, "setup_maturity"),
+            "event_risk": _counts(rows, "event_risk"),
+            "analogue_quality": _counts(rows, "analogue_quality"),
+            "outcome_evidence_quality": _counts(rows, "outcome_evidence_quality"),
+            "weights": None,
+            "leverage": None,
+            "is_optimizer": False,
+        },
     }
     body["workbench_identity"] = "portfolio_research_decision_workbench:" + _sha(body)
     return body

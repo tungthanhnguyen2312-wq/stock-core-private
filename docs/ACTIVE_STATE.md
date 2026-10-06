@@ -40,6 +40,12 @@ Fact kinds used below: **CURRENT FACT** (verified in repo or by a stated read-on
 
 ## 1. The operational gate
 
+- **CURRENT FACT — decision-intelligence closure.** `DECISION_INTELLIGENCE_COVERAGE_AND_CALIBRATION_CLOSURE_V1`
+  joins the 1,683-name coverage index, the existing historical panel, the outcome
+  review, the v2 evidence packet, and the portfolio workbench. Authority effect
+  `NONE / DECISION_INTELLIGENCE_RESEARCH_COVERAGE_AND_CALIBRATION_ONLY`. The optional
+  CLI is deferred. No 2026-10-07 Daily and no new T0.
+  [Closure](internal/DECISION_INTELLIGENCE_COVERAGE_AND_CALIBRATION_CLOSURE_20261007.md).
 - **CURRENT FACT — portfolio research workbench.** `PORTFOLIO_RESEARCH_DECISION_WORKBENCH_FOUNDATION_V1`
   reports sector and style concentration, thesis and event overlap, and current
   correlation only when aligned series are supplied. Ranking requires an explicit
