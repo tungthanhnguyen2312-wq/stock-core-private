@@ -456,9 +456,10 @@ def test_no_vnstock_vnai_in_refresh_modules():
         assert "import vnai" not in source
 
 
-def test_roadmap_current_milestone_is_the_authorized_ocr_continuation():
+def test_authorized_ocr_continuation_remains_in_roadmap_history():
     state = json.loads((ROOT / "docs" / "ROADMAP_STATE.json").read_text(encoding="utf-8"))
-    assert state["current"]["milestone"] == "HISTORICAL_NET_INCOME_SEMANTIC_CORRECTION_OVERLAY_V1"
+    completed = next(row for row in state["milestones"] if row["milestone_id"] == "HISTORICAL_NET_INCOME_SEMANTIC_CORRECTION_OVERLAY_V1")
+    assert completed["state"] == "COMPLETE"
     assert state["queued_next"] == []
     ids = [row["milestone_id"] for row in state["milestones"]]
     assert "HISTORICAL_NET_INCOME_SEMANTIC_CORRECTION_OVERLAY_V1" in ids

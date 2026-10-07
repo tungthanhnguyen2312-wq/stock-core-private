@@ -791,6 +791,8 @@ def acquire_and_materialize(
         materialize_kwargs["progress_callback"] = progress_callback
     if explicit_retained_evidence_root:
         materialize_kwargs["retained_evidence_root"] = retained_evidence_root
+    if corporate_frozen_inputs is not None:
+        materialize_kwargs["corporate_inputs"] = corporate_frozen_inputs
     level2.materialize_independent_components(
         artifact_root,
         session,
@@ -800,6 +802,8 @@ def acquire_and_materialize(
     triage_kwargs: dict[str, Any] = {"execution_root": root}
     if explicit_retained_evidence_root:
         triage_kwargs["retained_evidence_root"] = retained_evidence_root
+    if corporate_frozen_inputs is not None:
+        triage_kwargs["corporate_inputs"] = corporate_frozen_inputs
     triage_build_result = level2.maybe_build_triage_dependent(
         artifact_root,
         session,
@@ -938,6 +942,9 @@ def build_enrichment_components(
     output_root = output_root or root
     paths = level2.session_artifact_paths(artifact_root, session)
     retained_paths = level2.session_artifact_paths(retained_evidence_root, session)
+    projected_fundamental = level2.validated_session_fundamental_path(artifact_root, root, session)
+    if projected_fundamental:
+        retained_paths["fundamental"] = projected_fundamental
     registry_file = root / "config" / "daily_research_session_input_registry.json"
     registry = json.loads(registry_file.read_text(encoding="utf-8")) if registry_file.is_file() else {}
     completed = (registry.get("completed_sessions") or {}).get(session) or {}
@@ -1015,16 +1022,9 @@ def build_enrichment_components(
         official_event_context = _load(retained_paths["official_event_context"])
         if not official_universe or not official_event_context:
             raise CanonicalPostCloseError("REQUIRED_INPUT_MISSING")
-        # official_event_context has been frozen at research_session=2026-08-21 since before
-        # CORPORATE_INTELLIGENCE_CATALYST_EVENT_RISK_DECISION_INTEGRATION_V1 (no fresher retained
-        # official ex-date evidence exists yet). Bind to that evidence's own session -- never
-        # today's `session` -- exactly like current_corporate_intelligence_axis's build below, so
-        # this component actually builds instead of always failing closed on
-        # EVENT_CONTEXT_SESSION_MISMATCH and silently degrading to a frozen PRIOR_AS_OF copy every
-        # day. Also activate supplemental_events (the HPG/VNM/VCB retained issuer/VSDC chains),
-        # closing the gap the prior milestone explicitly left open for this shared component so
-        # current_research_risk_register.py/current_research_decision_packet.py see the same
-        # evidence current_corporate_intelligence_axis.py already does.
+        # Future construction supplies the selected session projection. Completed
+        # legacy locks retain their source session; the packet localizes any mismatch
+        # with opportunity. Supplemental issuer/VSDC chains keep their own dates.
         evidence_session = official_event_context.get("research_session")
         supplemental = (load_supplemental_retained_events(retained_evidence_root, evidence_session)
                         if evidence_session and corporate_currency_rollforward is None else None)
@@ -1951,6 +1951,9 @@ def capture_corporate_session_inputs(root: Path, retained_root: Path, session: s
                 _verify(artifact, "CAPTURED_OPTIONAL_INPUT")
                 if key == "event_context" and not context_known_by(artifact, cutoff):
                     continue
+                if key == "event_context":
+                    from current_official_event_context import project_session_context
+                    artifact = project_session_context(artifact, session=session, cutoff=cutoff.isoformat())
                 out = root / "operations-review" / "corporate-daily-frozen-inputs-v1" / session / (artifact["artifact_sha256"] + ".json")
                 _retain_context(out, artifact)
             except (ValueError, KeyError, OSError):
@@ -1985,6 +1988,9 @@ def register_session_inputs(
     registry = json.loads(path.read_text(encoding="utf-8"))
     paths = level2.session_artifact_paths(artifact_root, session)
     retained_paths = level2.session_artifact_paths(retained_evidence_root or root, session)
+    projected_fundamental = level2.validated_session_fundamental_path(artifact_root, root, session)
+    if projected_fundamental:
+        retained_paths["fundamental"] = projected_fundamental
     selection: dict[str, dict[str, str]] = {}
     for registry_key, level2_key in REGISTRY_KEY_TO_LEVEL2_KEY.items():
         if corporate_frozen_inputs is not None and registry_key in OPTIONAL_REGISTRY_KEYS:

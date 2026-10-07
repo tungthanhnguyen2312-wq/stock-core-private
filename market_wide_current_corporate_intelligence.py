@@ -83,6 +83,8 @@ def _official_event_context_events(event_context: Mapping[str, Any] | None, sess
         return []
     if event_context.get("contract_version") != "current_official_event_context/v1" or event_context.get("research_session") != session:
         raise ValueError("OFFICIAL_EVENT_CONTEXT_SESSION_OR_CONTRACT_INVALID")
+    from current_official_event_context import _verify
+    _verify(event_context, "CURRENT_OFFICIAL_EVENT_CONTEXT")
     output = []
     for source in event_context.get("corporate_intelligence_adapter", {}).get("events", []):
         event = _event(
@@ -92,7 +94,7 @@ def _official_event_context_events(event_context: Mapping[str, Any] | None, sess
             status_basis=f"deterministic event_state={source['event_state']} from explicit ex_date only",
             source_authority=source["source"], authority_tier="OFFICIAL_QUALIFIED",
             retrieved_at=source.get("official_observed_at") or "UNKNOWN", source_urls=[source.get("source_url")] if source.get("source_url") else [],
-            evidence_identity=source["source_identity"], material_evidence=[source["qualification"]], session=session,
+            evidence_identity=source.get("source_record_identity") or source["source_identity"], material_evidence=[source["qualification"]], session=session,
             limitations=list(source.get("warnings") or []) + ["Publication date/time is unavailable; this context is not suitable for historical known-at replay."],
         )
         event.update({"event_state": source["event_state"], "materiality_status": source["materiality_status"],
@@ -140,13 +142,17 @@ def load_retained_events(root: Path, session: str, official_event_context: Mappi
         material_evidence=[vcb_source["document"]["citation"]], session=session,
         limitations=["Approved/planned issuance is not executed issuance.", "Completion, amendment, and supersession evidence is missing.", "Record date is not an ex-date."],
     )
-    return sorted((hpg, vcb, vnm, *_official_event_context_events(official_event_context, session)), key=lambda item: (item["ticker"], item["event_id"]))
+    events = (hpg, vcb, vnm, *_official_event_context_events(official_event_context, session))
+    # Repeated adapters for the same retained evidence are not additional observations.
+    unique = {(e["ticker"], e["event_type"], e["evidence_identity"], e.get("record_date"), e.get("ex_date"), e.get("payment_date")): e
+              for e in sorted(events, key=lambda item: item["event_id"], reverse=True)}
+    return sorted(unique.values(), key=lambda item: (item["ticker"], item["event_id"]))
 
 
 def _catalyst_surface(events: list[Mapping[str, Any]]) -> dict[str, list[dict[str, Any]]]:
     current = [event for event in events if event["freshness"] == "CURRENT_90_DAYS" or event.get("event_state") in {"UPCOMING", "EX_DATE_TODAY", "RECENT"}]
     pending = [event for event in events if event["status"] in {"PLANNED", "PROPOSED", "APPROVED", "ANNOUNCED"}]
-    historical = [event for event in events if event["freshness"] != "CURRENT_90_DAYS"]
+    historical = [event for event in events if event not in current]
     def descriptor(event: Mapping[str, Any], descriptor_type: str, direction: str, note: str) -> dict[str, Any]:
         return {"event_id": event["event_id"], "descriptor": descriptor_type, "direction": direction, "status": event["status"], "note": note, "evidence_identity": event["evidence_identity"]}
     return {

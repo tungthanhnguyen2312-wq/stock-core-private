@@ -744,13 +744,13 @@ def test_new_corporate_selection_is_captured_before_latest_changes(tmp_path, mon
     registry_path = tmp_path / "config" / "daily_research_session_input_registry.json"
     registry_path.parent.mkdir()
     registry_path.write_text('{"sessions":{},"completed_sessions":{}}', encoding="utf-8")
-    artifact = incremental._self_verified({"all_current_universe_event_records": [
+    artifact = incremental._self_verified({"contract_version": "current_official_event_context/v1", "research_session": session, "all_current_universe_event_records": [
         {"official_observed_at": "2026-10-01T14:59:59+07:00"}]}, "current_official_event_context")
     latest = paths["official_event_context"]
     latest.write_text(json.dumps(artifact), encoding="utf-8")
     selection = cpc.capture_corporate_session_inputs(tmp_path, tmp_path, session)
     captured = (tmp_path / selection["event_context"]["path"]).read_bytes()
-    later = incremental._self_verified({"all_current_universe_event_records": [
+    later = incremental._self_verified({"contract_version": "current_official_event_context/v1", "research_session": session, "all_current_universe_event_records": [
         {"official_observed_at": "2026-10-01T15:00:01+07:00"}]}, "current_official_event_context")
     latest.write_text(json.dumps(later), encoding="utf-8")
     registered = cpc.register_session_inputs(tmp_path, session, corporate_frozen_inputs=selection)

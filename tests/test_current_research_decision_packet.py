@@ -123,10 +123,10 @@ def _optional_artifacts() -> dict:
             }},
         }, financial_identity),
         "corporate_event": _sign({
-            "contract_version": "current_corporate_event_context/v1", "research_session": "2023-01-01",
+            "contract_version": "current_corporate_event_context/v1", "research_session": "2026-08-21",
             "records": {ticker: {
                 "qualified_event_count": 2, "planned_unresolved_count": 1, "temporal_incomplete_count": 0,
-                "data_limited_count": 0, "conflicting_count": 0, "research_session": "2023-01-01",
+                "data_limited_count": 0, "conflicting_count": 0, "research_session": "2026-08-21",
                 "events": [
                     {"event_id": "e1", "event_status": "PLANNED_NOT_EXECUTED", "event_type": "BONUS_OR_STOCK_DIVIDEND",
                      "known_at": "2023-02-01", "published_at": "2023-02-02", "record_date": "2023-06-01",
@@ -242,7 +242,7 @@ class ComponentAuthorityTests(unittest.TestCase):
         self.assertEqual(manifest["scenario"]["source_as_of"], "2025-01-01")
         self.assertEqual(manifest["market_sector"]["source_as_of"], "2024-01-01")
         self.assertEqual(manifest["financial_momentum"]["source_as_of"], "2020-01-01")
-        self.assertEqual(manifest["corporate_event"]["source_as_of"], "2023-01-01")
+        self.assertEqual(manifest["corporate_event"]["source_as_of"], "2026-08-21")
         self.assertEqual(manifest["valuation"]["source_as_of"], "2021-01-01")
         self.assertEqual(manifest["historical"]["source_as_of"], "2022-01-01")
         self.assertIsNone(manifest["risk_register"]["source_as_of"])

@@ -390,6 +390,30 @@ def _compact_context(ticker: str, operation: Mapping[str, Any], inputs: Mapping[
         "corporate_intelligence_context": _slim(_records(inputs.get("corporate_intelligence")).get(ticker)),
         "authority_boundary": boundary,
     }
+    fundamental = _records(inputs.get("fundamental")).get(ticker) or {}
+    if "official_field_context" in fundamental:
+        # These bounded canonical facts must survive the generic nested-context
+        # compactor, including their exact period/use limits and citation identity.
+        result["fundamental_context"].update({key: copy.deepcopy(fundamental.get(key)) for key in
+            ("official_field_context", "baseline_metric_temporal_context", "earnings_quality_context")})
+        result["fundamental_context"]["source_artifact_identity"] = inputs["fundamental"].get("artifact_identity")
+        result["fundamental_context"]["research_session"] = inputs["fundamental"].get("research_session")
+    intelligence = inputs.get("corporate_intelligence") or {}
+    identities = intelligence.get("source_artifact_identities") or {}
+    if "official_event_context" in identities:
+        identity = identities["official_event_context"]
+        manifest = operation.get("manifest") or {}
+        expected_session = manifest.get("market_session")
+        selected = (inputs.get("event_context") or {}).get("artifact_identity") or (
+            (manifest.get("input_artifacts") or {}).get("event_context") or {}).get("artifact_identity")
+        mismatch = bool((expected_session and intelligence.get("session") != expected_session)
+                        or (selected and identity != selected))
+        result["official_event_context_binding"] = {
+            "status": "AVAILABLE" if identity and not mismatch else "UNAVAILABLE",
+            "artifact_identity": identity, "session": intelligence.get("session"),
+            "reason": "EXACT_SESSION_EVENT_BINDING_MISMATCH" if mismatch else
+                None if identity else "EXACT_SESSION_OFFICIAL_EVENT_CONTEXT_NOT_SUPPLIED",
+        }
     # This happens after _slim by construction, so the versioned compact
     # contract cannot collapse to an empty nested map.
     financial = _delivery_financial_context(financial_analysis_product_context, ticker)

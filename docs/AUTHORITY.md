@@ -36,6 +36,12 @@ ticker verdict ([AI_RULES.md](AI_RULES.md) rules 5–10, [DATA_FIRST_DOCTRINE.md
 
 ## 3. Analytical context
 
+The local October-7 projection checkpoint distinguishes current official exact-field facts
+from annual research admissibility. Reviewed H1 revenue retains `RESEARCH_PERIOD_NOT_ANNUAL`;
+it cannot replace annual inputs, create TTM or upgrade other fields. Session event projection
+preserves source qualification, explicit dates and knowledge time; it grants no factor,
+governance, ownership, share, PIT or execution authority.
+
 | Area | Status | Meaning | Controlling source |
 |---|---|---|---|
 | Technical (contextual V1/V2) | `NON_VOTING` | Deterministic descriptive context; tactical owner (BOS/CHoCH, pivots, breakouts, posture, triggers, invalidations) unchanged. V1 frozen; V2 production from 2026-10-03; Oct-2 V2 is replay-diagnostic. Retrospective-adjusted evidence stays POST. | [contextual_technical_features_v2_contract.md](contextual_technical_features_v2_contract.md) |

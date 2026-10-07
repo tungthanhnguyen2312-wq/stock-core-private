@@ -280,6 +280,68 @@ def official_event_context_candidates(root: Path, session: str) -> list[Path]:
     return [ops / name / "current_official_event_context_artifact.json" for name in names]
 
 
+def registered_official_event_context(root: Path, session: str) -> dict[str, Any] | None:
+    """Read the exact completed lock, never a latest-file candidate."""
+    from canonical_post_close_pipeline import frozen_optional_session_inputs
+    selected = frozen_optional_session_inputs(root, session).get("event_context")
+    if not selected:
+        return None
+    artifact = _load(root / selected["path"])
+    if not artifact or artifact.get("artifact_identity") != selected["artifact_identity"]:
+        raise ValueError("OFFICIAL_EVENT_SELECTION_IDENTITY_MISMATCH")
+    from current_official_event_context import project_session_context
+    return project_session_context(artifact, session=session, cutoff=f"{session}T15:00:00+07:00")
+
+
+def session_fundamental_path(root: Path, session: str) -> Path:
+    return root / "operations-review" / f"market-wide-current-fundamental-research-v1-{session.replace('-', '')}" / "market_wide_current_fundamental_research_artifact.json"
+
+
+def validated_session_fundamental_path(artifact_root: Path, authority_root: Path, session: str) -> Path | None:
+    path = session_fundamental_path(artifact_root, session)
+    if not path.is_file():
+        return None
+    from market_wide_current_fundamental_research import content_identity, CONTRACT_VERSION
+    value = _load(path)
+    if (not value or value.get("contract_version") != CONTRACT_VERSION or value.get("research_session") != session
+            or {k: value.get(k) for k in ("artifact_sha256", "artifact_identity")} != content_identity(value)):
+        raise ValueError("SESSION_FUNDAMENTAL_PROJECTION_INVALID")
+    registry = _load(authority_root / "config/daily_research_session_input_registry.json") or {}
+    completed = (registry.get("completed_sessions") or {}).get(session) or {}
+    if completed.get("status") == "COMPLETED_RETAINED_EVIDENCE":
+        expected = (completed.get("frozen_input_identities") or {}).get("fundamental")
+        if value["artifact_identity"] != expected:
+            raise ValueError("COMPLETED_SESSION_FUNDAMENTAL_MUTATION_REJECTED")
+    return path
+
+
+def bind_session_retained_paths(paths: dict[str, Path], *, artifact_root: Path,
+                                authority_root: Path, session: str,
+                                corporate_inputs: Mapping[str, Any] | None = None) -> None:
+    """Bind explicit attempt/registered identities; static prior paths remain historical only."""
+    fundamental = validated_session_fundamental_path(artifact_root, authority_root, session)
+    if fundamental:
+        paths["fundamental"] = fundamental
+    if corporate_inputs is None:
+        from canonical_post_close_pipeline import frozen_optional_session_inputs
+        registry_path = authority_root / "config/daily_research_session_input_registry.json"
+        if registry_path.exists():
+            corporate_inputs = frozen_optional_session_inputs(authority_root, session)
+    if corporate_inputs is not None:
+        from current_official_event_context import _verify
+        for key, target in (("official_universe", "official_universe"), ("event_context", "official_event_context")):
+            entry = corporate_inputs.get(key)
+            if entry:
+                path = authority_root / entry["path"]
+                value = _load(path)
+                if not value or value.get("artifact_identity") != entry["artifact_identity"]:
+                    raise ValueError("SELECTED_CORPORATE_INPUT_IDENTITY_MISMATCH:" + key)
+                _verify(value, "SELECTED_CORPORATE_INPUT")
+                paths[target] = path
+            elif key == "event_context":
+                paths[target] = artifact_root / "operations-review" / "unavailable-exact-session-event" / session
+
+
 def session_artifact_paths(root: Path, session: str) -> dict[str, Path]:
     ops = root / "operations-review"
     nodash = session.replace("-", "")
@@ -1741,6 +1803,7 @@ def materialize_independent_components(
     execution_root: Path | None = None,
     retained_evidence_root: Path | None = None,
     progress_callback: Callable[[Mapping[str, Any]], None] | None = None,
+    corporate_inputs: Mapping[str, Any] | None = None,
 ) -> None:
     """Materialize a session into ``artifact_root`` using ``execution_root`` tools.
 
@@ -1752,6 +1815,8 @@ def materialize_independent_components(
     retained_evidence_root = retained_evidence_root or execution_root
     paths = session_artifact_paths(artifact_root, session)
     retained_paths = session_artifact_paths(retained_evidence_root, session)
+    bind_session_retained_paths(retained_paths, artifact_root=artifact_root,
+                               authority_root=execution_root, session=session, corporate_inputs=corporate_inputs)
     p3f9b_snapshot = ensure_exact_session_snapshot(
         artifact_root, session, runtime_root, workers, now, execution_root=execution_root,
         **({"progress_callback": progress_callback} if progress_callback is not None else {}),
@@ -1834,6 +1899,24 @@ def materialize_independent_components(
         run_cmd(execution_root, ["tools/run_current_market_screening_opportunity_comparison_foundation.py", "--source", str(desc_out), "--out", str(screen_out)])
     tactical_out = paths["tactical_classifier"]
     tactical_dir = tactical_out.parent
+    # Completed session locks are immutable. Only a future, uncompleted construction
+    # can mint a new fundamental projection from the qualified retained overlay.
+    registry = _load(execution_root / "config/daily_research_session_input_registry.json") or {}
+    completed = (registry.get("completed_sessions") or {}).get(session) or {}
+    projected_path = session_fundamental_path(artifact_root, session)
+    if completed.get("status") != "COMPLETED_RETAINED_EVIDENCE" and not projected_path.exists() and retained_paths["fundamental"].exists():
+        from financial_evidence_currency_refresh import load_public_official_fact_rows
+        from market_wide_current_fundamental_research import project_session
+        from financial_evidence_currency_contract import PUBLIC_ARTIFACT_DIR
+        baseline = _load(retained_paths["fundamental"])
+        report_path = execution_root / PUBLIC_ARTIFACT_DIR / "cohort_report.json"
+        projection = project_session(baseline=baseline,
+            official_rows=load_public_official_fact_rows(execution_root), session=session,
+            cutoff=f"{session}T15:00:00+07:00", cohort_report=_load(report_path))
+        projected_path.parent.mkdir(parents=True, exist_ok=True)
+        projected_path.write_text(json.dumps(projection, ensure_ascii=False, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+    if projected_path.exists() and completed.get("status") != "COMPLETED_RETAINED_EVIDENCE":
+        retained_paths["fundamental"] = projected_path
     fundamental_retained = retained_paths["fundamental"]
     if not tactical_out.exists():
         run_cmd(execution_root, [
@@ -1843,10 +1926,15 @@ def materialize_independent_components(
         ])
     ci_out = paths["corporate_intelligence"]
     if not ci_out.exists():
+        event_path = retained_paths["official_event_context"]
+        event = _load(event_path)
+        event_args = (["--official-event-context", str(event_path), "--expected-event-identity", event["artifact_identity"]]
+                      if event and event.get("research_session") == session else [])
         run_cmd(execution_root, [
             "tools/run_market_wide_current_corporate_intelligence.py",
             "--session", session, "--descriptive", str(desc_out),
             "--fundamental", str(fundamental_retained), "--output", str(ci_out),
+            "--evidence-root", str(retained_evidence_root), *event_args,
         ])
     val_out = paths["valuation"]
     val_dir = val_out.parent
@@ -1855,6 +1943,7 @@ def materialize_independent_components(
             "tools/derive_market_wide_current_valuation_input_scaleout.py",
             "--runtime-root", str(runtime_root), "--price", str(p3f9b_snapshot),
             "--expected-session", session,
+            "--fundamental", str(fundamental_retained),
             "--output", str(val_out), "--report", str(val_dir / "market_wide_current_valuation_research_scaleout_report.json"),
         ])
     leadership_out = paths["sector_leadership"]
@@ -1905,6 +1994,7 @@ def maybe_build_triage_dependent(
     *,
     execution_root: Path | None = None,
     retained_evidence_root: Path | None = None,
+    corporate_inputs: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build attempt outputs from selected artifacts and retained Producer inputs.
 
@@ -1916,6 +2006,8 @@ def maybe_build_triage_dependent(
     retained_evidence_root = retained_evidence_root or execution_root
     paths = session_artifact_paths(artifact_root, session)
     retained_paths = session_artifact_paths(retained_evidence_root, session)
+    bind_session_retained_paths(retained_paths, artifact_root=artifact_root,
+                               authority_root=execution_root, session=session, corporate_inputs=corporate_inputs)
     if (
         not paths["session_triage"].exists()
         and paths["descriptive_research"].exists()
@@ -1983,6 +2075,9 @@ def maybe_build_triage_dependent(
     )
     paths["strategy"].parent.mkdir(parents=True, exist_ok=True)
     paths["strategy"].write_text(json.dumps(strategy_art, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    selected_event = _load(retained_paths["official_event_context"])
+    if not selected_event or selected_event.get("research_session") != session:
+        return {"built": False, "reason": {"status": "UNAVAILABLE_REQUIRED_INPUT", "reason_code": "EXACT_SESSION_EVENT_CONTEXT_UNAVAILABLE"}}
     opp_art = build_opp(
         official_universe=json.loads(retained_paths["official_universe"].read_text("utf-8")),
         screening=json.loads(paths["screening_foundation"].read_text("utf-8")),
@@ -1991,7 +2086,7 @@ def maybe_build_triage_dependent(
         scenario=json.loads(paths["scenario"].read_text("utf-8")),
         fundamental=json.loads(retained_paths["fundamental"].read_text("utf-8")),
         peer=json.loads(paths["peer_relative"].read_text("utf-8")),
-        event_context=json.loads(retained_paths["official_event_context"].read_text("utf-8")),
+        event_context=selected_event,
         descriptive=json.loads(paths["descriptive_research"].read_text("utf-8")),
     )
     opp_art.update(opp_id(opp_art))
