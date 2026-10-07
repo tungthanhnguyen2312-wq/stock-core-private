@@ -41,7 +41,11 @@ def _event(row):
  return {k:row.get(k) for k in ("qualified_event_count","planned_unresolved_count","temporal_incomplete_count","data_limited_count","conflicting_count","research_session")} | {"events":[{k:e.get(k) for k in ("event_id","event_status","event_type","known_at","published_at","ex_date","effective_date","execution_date","temporal_completeness","evidence_tier")} for e in row.get("events",[])]}
 def _valuation(row):
  keys=("status","blocked_reasons","price_session","authority_tier","labels","first_blocker")
- return {"valuation_session":(row.get("price_input") or {}).get("session"),"share_basis_status":(row.get("share_basis_input") or {}).get("status"),"financial_authority":(row.get("financial_input") or {}).get("authority"),"metrics":{k:{x:v.get(x) for x in keys if x in v} for k,v in sorted((row.get("metrics") or {}).items())},"value_strategy":copy.deepcopy(row.get("value_strategy")),"research_usable_is_not_authoritative":True}
+ result={"valuation_session":(row.get("price_input") or {}).get("session"),"share_basis_status":(row.get("share_basis_input") or {}).get("status"),"financial_authority":(row.get("financial_input") or {}).get("authority"),"metrics":{k:{x:v.get(x) for x in keys if x in v} for k,v in sorted((row.get("metrics") or {}).items())},"value_strategy":copy.deepcopy(row.get("value_strategy")),"research_usable_is_not_authoritative":True}
+ financial=row.get("financial_input") or {}
+ if "official_field_context" in financial:
+  result.update({k:copy.deepcopy(financial.get(k)) for k in ("official_field_context","baseline_metric_temporal_context","earnings_quality_context","interim_context_does_not_supply_annual_valuation_inputs")})
+ return result
 def _historical(row, artifact):
  return {"as_of_session":row.get("as_of_session"),"context_status":row.get("context_status"),"structural_state":copy.deepcopy(row.get("structural_state")),"volatility_regime":copy.deepcopy(row.get("volatility_regime")),"momentum":copy.deepcopy(row.get("momentum")),"drawdown":copy.deepcopy(row.get("drawdown")),"authority_boundary":copy.deepcopy(artifact.get("authority_boundary"))}
 def _financial(row):
@@ -53,6 +57,15 @@ def build_artifact(*, opportunity: Mapping[str,Any], scenario: Mapping[str,Any]|
  if opportunity.get("contract_version")!="current_opportunity_prioritization/v1" or opportunity.get("artifact_sha256")!=opportunity_identity(opportunity).get("artifact_sha256") or not isinstance(opportunity.get("records"),Mapping):raise CurrentResearchDecisionPacketError("CURRENT_DECISION_CONTEXT_INVALID")
  supplied={"scenario":scenario,"risk_register":risk_register,"market_sector":market_sector,"financial_momentum":financial_momentum,"corporate_event":corporate_event,"valuation":valuation,"historical":historical}
  manifest={name:_manifest(name,a) for name,a in supplied.items()}
+ # Current event context must agree with both the decision session and the
+ # exact official event identity consumed by opportunity comparison.
+ if manifest["corporate_event"]["status"]=="PRESENT":
+  expected=(opportunity.get("source_artifact_identities") or {}).get("event_context")
+  selected=(corporate_event.get("source_artifact_identities") or {}).get("current_official_event_context")
+  manifest["corporate_event"]["official_event_context_identity"]=selected
+  if corporate_event.get("research_session")!=opportunity.get("research_session") or (expected and selected!=expected):
+   manifest["corporate_event"]["status"]="MALFORMED"
+   manifest["corporate_event"]["authority_use_status"]="EXACT_SESSION_EVENT_BINDING_MISMATCH"
  valid={name:a for name,a in supplied.items() if manifest[name]["status"]=="PRESENT"}
  records={}
  for ticker, decision in sorted(opportunity["records"].items()):

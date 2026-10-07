@@ -1,13 +1,8 @@
 # Stock Lookup — Active State
 
-Compact, authoritative view of what is true **now**. Read this first; it is small on purpose.
-Written 2026-10-04 (Sunday) against Producer `main` `920d57917581a476e3ab6a9cf40d9ca53643ecb2`
-(PR #60 merged). `git rev-parse origin/main` reads only the **local** remote-tracking ref and can be stale.
-To verify the live remote head run `git fetch origin main` and then compare `git rev-parse origin/main`
-(or ask the remote directly with `git ls-remote origin refs/heads/main`). The only change intended after
-the SHA above is the docs-only control-plane PR that introduced this file.
-The 2026-10-05 first-real closeout in this file was recorded after Producer `317118c788bdd46bd6de55dbff3888b92de1172d`
-(PR #66). That sentence is not a live-head proof: fetch before trusting it.
+Compact navigation view of what is true **now**. Updated 2026-10-07 from locally verified
+Producer main `c2c7c52337e923ae9163934601e2686f668c2dcc` (PR #75 corrective).
+The new projection checkpoint is local and awaits owner review; this is not a remote-head claim.
 
 ## 0. How this file relates to the others
 
@@ -40,6 +35,18 @@ Fact kinds used below: **CURRENT FACT** (verified in repo or by a stated read-on
 
 ## 1. The operational gate
 
+- **CURRENT FACT — retained-evidence projection integration.** Owner-selected
+  `CURRENT_OFFICIAL_EVIDENCE_PROJECTION_INTEGRATION_V1` is complete at a local checkpoint,
+  with partial retained-evidence coverage. PNJ/VRE reviewed H1 revenue enters exact-field
+  context; annual baseline and valuation eligibility stay unchanged. Future construction
+  binds one session event identity across CI, opportunity and the evidence packet.
+  `queued_next=[]`; next gate is owner review of this checkpoint, with no automatic successor.
+  [Evidence, offline comparison and limits](internal/CURRENT_OFFICIAL_EVIDENCE_PROJECTION_INTEGRATION_20261007.md).
+- **HOST-LOCAL — October 7 Daily completed.** Read-only owner journal verification records
+  session `2026-10-07`, run `30e060d6e0f74ccb826e6f4bf5adba1e`, stage `COMPLETE`, no failure.
+  This predates the later Phase-2 corrective below. This projection milestone ran no Daily,
+  accessed no T0 body and changed no genuine session/seal or Dashboard output.
+
 - **CURRENT FACT — Owner Daily Phase 2 observability corrective (2026-10-07).** The owner explicitly
   authorizes `OWNER_DAILY_PHASE2_TRUTHFUL_PROGRESS_AND_TERMINAL_CLEANUP_V2` as a bounded operational
   override (the roadmap tool does not register that ID). Fixed 13 logical checkpoints, separate
@@ -52,7 +59,8 @@ Fact kinds used below: **CURRENT FACT** (verified in repo or by a stated read-on
   joins the 1,683-name coverage index, the existing historical panel, the outcome
   review, the v2 evidence packet, and the portfolio workbench. Authority effect
   `NONE / DECISION_INTELLIGENCE_RESEARCH_COVERAGE_AND_CALIBRATION_ONLY`. The optional
-  CLI is deferred. No 2026-10-07 Daily and no new T0.
+  CLI is deferred. That closure job ran no 2026-10-07 Daily and created no new T0;
+  the actual subsequent Daily completion is recorded above.
   [Closure](internal/DECISION_INTELLIGENCE_COVERAGE_AND_CALIBRATION_CLOSURE_20261007.md).
 - **CURRENT FACT — portfolio research workbench.** `PORTFOLIO_RESEARCH_DECISION_WORKBENCH_FOUNDATION_V1`
   reports sector and style concentration, thesis and event overlap, and current

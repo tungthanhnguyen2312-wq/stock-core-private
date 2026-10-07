@@ -1,17 +1,21 @@
 # Stock Lookup — Current Roadmap
 
 What happens next, and nothing else. No historical milestones (those live in [ROADMAP.md](ROADMAP.md) and
-the machine state `ROADMAP_STATE.json`). Written 2026-10-04 on main `920d579`. **Nothing below
+the machine state `ROADMAP_STATE.json`). Updated 2026-10-07 from main `c2c7c523`. **Nothing below
 auto-starts.** A milestone starts only when `python tools/stocklookup_roadmap.py --can-start <ID>` allows
 it or the owner records an explicit override (AI_RULES rule 11). Facts: [ACTIVE_STATE.md](ACTIVE_STATE.md).
 
-## NOW — `FIRST_REAL_POST_RELEASE_CAPTURE_ACCEPTANCE` (RECORDED 2026-10-05)
+## NOW — `CURRENT_OFFICIAL_EVIDENCE_PROJECTION_INTEGRATION_V1` (LOCAL CHECKPOINT)
 
 Recorded. Owner-authorized Phase C is released. The later owner-authorized freshness
 contract is complete. The historical research panel is complete. The evidence packet
 is complete. The portfolio research workbench is complete. The current completed
-milestone is `DECISION_INTELLIGENCE_COVERAGE_AND_CALIBRATION_CLOSURE_V1`. No successor
-is active, and nothing here starts one.
+milestone is `CURRENT_OFFICIAL_EVIDENCE_PROJECTION_INTEGRATION_V1`, explicitly owner-selected
+after the decision-intelligence closure. Its local checkpoint projects retained official
+facts and coherently binds session events; coverage remains partial by retained evidence.
+The October 7 Daily subsequently completed before PR #75's Phase-2 corrective.
+Next gate: owner review of the local checkpoint. `queued_next=[]`; no successor is authorized.
+[Scope, counts and blockers](internal/CURRENT_OFFICIAL_EVIDENCE_PROJECTION_INTEGRATION_20261007.md).
 
 **Decision-intelligence closure:** coverage, historical context, calibration, the
 evidence packet, and the workbench now share one research spine. Counts and limits:

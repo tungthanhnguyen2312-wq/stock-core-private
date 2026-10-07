@@ -115,3 +115,52 @@ def replay(artifact: Mapping[str, Any]) -> None:
     events = artifact.get("all_current_universe_event_records", [])
     if len({item["event_id"] for item in events}) != len(events): raise ValueError("EVENT_ID_DUPLICATE")
     if any(item["ex_date"] is None and item["event_state"] not in {"DATE_INCOMPLETE", "UNKNOWN"} for item in events): raise ValueError("MISSING_EX_DATE_INFERRED")
+
+
+def project_session_context(artifact: Mapping[str, Any], *, session: str, cutoff: str) -> dict[str, Any]:
+    """Reclassify retained qualified dates for one session, preserving source evidence.
+
+    The parent remains immutable. No acquisition, publication-time inference, new
+    universe membership, lifecycle qualification or ex-date inference occurs here.
+    """
+    from corporate_currency_rollforward import context_known_by
+    _verify(artifact, "RETAINED_OFFICIAL_EVENT_CONTEXT")
+    if artifact.get("contract_version") != CONTRACT_VERSION:
+        raise ValueError("OFFICIAL_EVENT_CONTEXT_CONTRACT_INVALID")
+    boundary = datetime.fromisoformat(cutoff.replace("Z", "+00:00"))
+    if boundary.tzinfo is None or boundary.date().isoformat() != session:
+        raise ValueError("EVENT_SESSION_CUTOFF_INVALID")
+    if not context_known_by(dict(artifact), boundary):
+        raise ValueError("EVENT_CONTEXT_NOT_KNOWN_BY_SESSION_CUTOFF")
+    if artifact.get("research_session") == session:
+        return dict(artifact)
+    if str(artifact.get("research_session") or "") > session:
+        raise ValueError("EVENT_CONTEXT_SOURCE_SESSION_AFTER_TARGET")
+    value = copy.deepcopy(dict(artifact))
+    value["research_session"] = session
+    value["projection_source_artifact_identity"] = artifact["artifact_identity"]
+    value["session_cutoff"] = cutoff
+    as_of = date.fromisoformat(session)
+    for group in ("all_current_universe_event_records", "excluded_noncurrent_or_official_only_event_records"):
+        for item in value.get(group, []):
+            state, delta = _state(item.get("ex_date"), as_of)
+            item.update(event_state=state, days_to_ex_date=delta if delta is not None and delta >= 0 else None,
+                        days_since_ex_date=-delta if delta is not None and delta < 0 else None)
+            item["source_event_id"] = item["event_id"]
+            seed = {k: v for k, v in item.items() if k != "event_id"}
+            item["event_id"] = "current_official_event:" + hashlib.sha256(_canonical(seed)).hexdigest()
+    by_ticker = defaultdict(list)
+    for item in value["all_current_universe_event_records"]:
+        by_ticker[item["ticker"]].append(item)
+    value["records"] = {ticker: {"ticker": ticker, "qualified_official_events_available": bool(events), "events": events,
+        "event_types": sorted({e["event_type"] for e in events}), "current_or_recent_event_count": sum(e["event_state"] in CURRENT_STATES for e in events),
+        "data_gaps": []} for ticker, events in sorted(by_ticker.items())}
+    value["corporate_intelligence_adapter"]["events"] = [e for events in by_ticker.values() for e in events
+        if e["event_state"] in CURRENT_STATES and e["qualification"] == "EX_DATE_OFFICIAL_QUALIFIED"]
+    counts = Counter(e["event_state"] for events in by_ticker.values() for e in events)
+    for key, state in (("upcoming_events", "UPCOMING"), ("ex_date_today_events", "EX_DATE_TODAY"), ("recent_events", "RECENT"),
+                       ("past_events", "PAST"), ("date_incomplete_events", "DATE_INCOMPLETE"), ("unknown_events", "UNKNOWN")):
+        value["coverage"][key] = counts[state]
+    value.update(_identity(value))
+    replay(value)
+    return value

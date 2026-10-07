@@ -30,6 +30,10 @@ def _tier(lanes: Mapping[str,str], tactical: Mapping[str,Any], scenario: str) ->
     return "MONITOR",reasons,["NO_EXISTING_STRATEGY_ELIGIBILITY"]
 
 def build(*, official_universe: Mapping[str,Any], screening: Mapping[str,Any], tactical: Mapping[str,Any], strategy: Mapping[str,Any], scenario: Mapping[str,Any], fundamental: Mapping[str,Any], peer: Mapping[str,Any], event_context: Mapping[str,Any], descriptive: Mapping[str,Any]) -> dict[str,Any]:
+    from current_official_event_context import _verify
+    _verify(event_context, "CURRENT_OFFICIAL_EVENT_CONTEXT")
+    if event_context.get("research_session") != descriptive.get("session"):
+        raise ValueError("OPPORTUNITY_EXACT_SESSION_EVENT_BINDING_MISMATCH")
     official={t:r for t,r in official_universe["records"].items() if r.get("stocklookup_candidate") and r.get("current_universe_status") in {"OFFICIAL_CURRENT_EXCHANGE_SECURITY","OFFICIAL_CURRENT_STOCK_LIST_CANDIDATE"}}
     if len(official)!=1507: raise ValueError("CURRENT_OFFICIAL_UNIVERSE_1507_REQUIRED")
     inputs={"official_universe":official_universe["artifact_identity"],"screening":screening["artifact_identity"],"tactical":tactical["artifact_identity"],"strategy":strategy["artifact_identity"],"scenario":scenario["artifact_identity"],"fundamental":fundamental["artifact_identity"],"peer":peer["artifact_identity"],"event_context":event_context["artifact_identity"],"descriptive":descriptive["artifact_identity"]}

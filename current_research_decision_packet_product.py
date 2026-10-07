@@ -108,6 +108,7 @@ def _component_status(record: Mapping[str, Any], manifest: Mapping[str, Any]) ->
             "source_artifact_identity": row.get("source_artifact_identity"),
             "source_as_of": row.get("source_as_of"),
             "authority_use_status": row.get("authority_use_status"),
+            "official_event_context_identity": row.get("official_event_context_identity"),
             "unresolved_on_ticker": name in unresolved,
         }
     return rows

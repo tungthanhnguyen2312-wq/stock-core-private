@@ -395,17 +395,22 @@ def _financial_input(fundamental: Mapping[str, Any] | None, artifact: Mapping[st
     if fundamental is None:
         return {"authority": "UNAVAILABLE", "calculation_grade": False, "blocked_reasons": ["NO_RETAINED_FINANCIAL_RECORD"]}
     tier = fundamental.get("authority_tier")
+    context = {"official_field_context": fundamental.get("official_field_context", []),
+               "baseline_metric_temporal_context": fundamental.get("baseline_metric_temporal_context", {}),
+               "earnings_quality_context": fundamental.get("earnings_quality_context", {"status": "UNKNOWN"}),
+               "interim_context_does_not_supply_annual_valuation_inputs": True} if "official_projection" in artifact else {}
     if tier != "OFFICIAL_QUALIFIED":
         return {
             "authority": tier, "calculation_grade": False,
             "blocked_reasons": ["PROVIDER_RESEARCH_NOT_AUTHORIZED_FOR_ABSOLUTE_VALUATION_INPUTS"],
-            "source_artifact_identity": artifact.get("artifact_identity"),
+            "source_artifact_identity": artifact.get("artifact_identity"), **context,
         }
     return {
         "authority": "OFFICIAL_QUALIFIED", "calculation_grade": True,
         "source_artifact_identity": artifact.get("artifact_identity"),
         "metric_count": len(fundamental.get("metrics") or []),
         "period_context": fundamental.get("official_metric_context"),
+        **context,
     }
 
 

@@ -1294,3 +1294,120 @@ def execute(*, p3f10_frozen_path: Path = DEFAULT_P3F10_FROZEN, requested_at: str
         requested_at=requested_at or datetime.now(timezone.utc).isoformat(),
         provider_series_by_ticker=load_retained_provider_series(DEFAULT_CANONICAL_FACTS_ROOT),
     )
+
+
+def project_session(*, baseline: Mapping[str, Any], official_rows: list[Mapping[str, Any]],
+                    session: str, cutoff: str, cohort_report: Mapping[str, Any] | None = None) -> dict[str, Any]:
+    """Add exact-field official context without replacing the frozen annual research layer.
+
+    Qualification and annual research permission remain separate. This projection never
+    supplies interim amounts to a ratio engine or upgrades the record's authority tier.
+    """
+    import copy
+    from financial_evidence_currency_contract import COHORT, TARGET_INTERIM_PERIODS
+    from reviewed_interim_canonical_ingress import authority_projection
+    from official_financial_assurance_evidence import assurance_status_is_qualified
+
+    if baseline.get("contract_version") != CONTRACT_VERSION or content_identity(baseline) != {
+        k: baseline.get(k) for k in ("artifact_sha256", "artifact_identity")
+    }:
+        raise ValueError("FUNDAMENTAL_BASELINE_IDENTITY_INVALID")
+    boundary = datetime.fromisoformat(cutoff.replace("Z", "+00:00"))
+    if boundary.tzinfo is None or boundary.date().isoformat() != session:
+        raise ValueError("FUNDAMENTAL_SESSION_CUTOFF_INVALID")
+    artifact = copy.deepcopy(dict(baseline))
+    for key in ("artifact_sha256", "artifact_identity"):
+        artifact.pop(key, None)
+    artifact["research_session"] = session
+    artifact["session_cutoff"] = cutoff
+    artifact["source_artifacts"] = dict(artifact.get("source_artifacts") or {}) | {
+        "frozen_annual_baseline": baseline["artifact_identity"],
+        "official_overlay_rows": "official_overlay_rows:" + _hash(official_rows),
+    }
+    rejected, by_ticker = [], defaultdict(list)
+    seen = set()
+    values_by_key = defaultdict(set)
+    for row in official_rows:
+        key = (row.get("ticker"), row.get("canonical_metric"), row.get("reporting_period"), row.get("statement_scope"))
+        values_by_key[key].add(_hash({k: row.get(k) for k in ("normalized_value", "currency", "unit_scale")}))
+    for source in sorted(official_rows, key=lambda row: _hash(row)):
+        row = copy.deepcopy(dict(source))
+        reasons = list(row.get("blockers") or [])
+        required = ("ticker", "canonical_metric", "reporting_period", "period_type", "period_start",
+                    "period_end", "statement_scope", "currency", "unit_scale", "audit_or_review_status",
+                    "document_sha256", "citation_id", "knowledge_available_at")
+        if any(row.get(key) is None for key in required):
+            reasons.append("OFFICIAL_FIELD_SEMANTICS_INCOMPLETE")
+        if row.get("ticker") not in COHORT or row.get("qualification_state") != "QUALIFIED":
+            reasons.append("VALUE_NOT_QUALIFIED_OR_OUTSIDE_FROZEN_COHORT")
+        if not assurance_status_is_qualified(row.get("audit_or_review_status")):
+            reasons.append("ASSURANCE_STATUS_NOT_ALLOWED")
+        if row.get("audit_or_review_status") == "reviewed" and not (row.get("assurance_evidence") or {}).get("evidence_id"):
+            reasons.append("REVIEWED_STATUS_WITHOUT_EVIDENCE")
+        if row.get("normalized_value") is None or row.get("currency") != "VND" or row.get("unit_scale") != 1 or not row.get("already_normalized"):
+            reasons.append("OFFICIAL_VALUE_UNIT_NOT_QUALIFIED")
+        exact_key = (row.get("ticker"), row.get("canonical_metric"), row.get("reporting_period"), row.get("statement_scope"))
+        if len(values_by_key[exact_key]) > 1:
+            reasons.append("TRUE_CONFLICT")
+        try:
+            known = datetime.fromisoformat(str(row.get("knowledge_available_at")).replace("Z", "+00:00"))
+            if known.tzinfo is None or known > boundary:
+                reasons.append("OFFICIAL_FACT_NOT_KNOWN_BY_SESSION_CUTOFF")
+            from datetime import date
+            if date.fromisoformat(str(row.get("period_end"))) > date.fromisoformat(session):
+                reasons.append("FINANCIAL_PERIOD_END_AFTER_SESSION")
+        except ValueError:
+            reasons.append("OFFICIAL_KNOWLEDGE_TIME_INVALID")
+        if reasons:
+            rejected.append({"ticker": row.get("ticker"), "citation_id": row.get("citation_id"),
+                             "state": "BLOCKED", "reasons": sorted(set(reasons))})
+            continue
+        authority = authority_projection(row)
+        if authority["factual_status"] != "qualified":
+            rejected.append({"ticker": row["ticker"], "citation_id": row["citation_id"],
+                             "state": "BLOCKED", "reasons": authority["factual_reason_codes"]})
+            continue
+        period = row["reporting_period"]
+        current = period in TARGET_INTERIM_PERIODS and period.startswith(session[:4])
+        field = row | authority | {
+            "temporal_status": "CURRENT_OFFICIAL_FACT" if current else "HISTORICAL_OFFICIAL_FACT",
+            "source_identity": row.get("source_locator") or "official-document:" + row["document_sha256"],
+            "allowed_projection_use": "EXACT_FIELD_CURRENT_RESEARCH_CONTEXT",
+            "valuation_use": "EXISTING_METRIC_PERIOD_CONTRACT_ONLY",
+            "annualization": "NOT_PERMITTED", "ttm_derivation": "NOT_PERMITTED",
+        }
+        key = (row["ticker"], row["canonical_metric"], period, row["statement_scope"], row["citation_id"])
+        if key not in seen:
+            seen.add(key)
+            by_ticker[row["ticker"]].append(field)
+    for ticker, record in artifact["records"].items():
+        record["official_field_context"] = by_ticker.get(ticker, [])
+        record["baseline_metric_temporal_context"] = {
+            metric["metric_id"]: {
+                "temporal_status": (
+                    "UNKNOWN" if metric.get("status") in {"MISSING", "BLOCKED", "NOT_APPLICABLE", "UNAVAILABLE"}
+                    else "HISTORICAL_OFFICIAL_FACT" if record.get("authority_tier") == OFFICIAL_TIER
+                    else "PROVIDER_RESEARCH" if record.get("authority_tier") == PROVIDER_TIER else "UNKNOWN"),
+                "periods_used": list(metric.get("periods_used") or []),
+                "status": metric.get("status"), "baseline_artifact_identity": baseline["artifact_identity"],
+            } for metric in record.get("metrics") or []
+        }
+        record["earnings_quality_context"] = {"status": "UNKNOWN", "reason": "NO_QUALIFIED_NON_RECURRING_LINE_EVIDENCE"}
+    cohort = {}
+    for ticker in COHORT:
+        fields = by_ticker.get(ticker, [])
+        prior = (artifact["records"].get(ticker) or {}).get("authority_tier") == OFFICIAL_TIER
+        periods = ((cohort_report or {}).get("issuers", {}).get(ticker) or {}).get("periods") or {}
+        blockers = sorted({row["blocker"] for row in periods.values() if row.get("blocker")})
+        state = "CURRENT_OFFICIAL_FACT" if any(f["temporal_status"] == "CURRENT_OFFICIAL_FACT" for f in fields) else (
+            "NO_ADMITTED_ISSUER_IR_HOST" if "NO_ADMITTED_ISSUER_IR_HOST" in blockers else
+            "EXTRACTION_PENDING" if any(row.get("immutable_raw_retained") for row in periods.values()) else
+            "HISTORICAL_OFFICIAL_FACT" if prior else "TARGET_PERIOD_NOT_FOUND")
+        cohort[ticker] = {"state": state, "projected_field_count": len(fields), "retained_blockers": blockers,
+                          "historical_baseline_available": prior}
+    artifact["official_projection"] = {"cohort": cohort, "rejected_fields": rejected,
+        "current_official_field_count": sum(f["temporal_status"] == "CURRENT_OFFICIAL_FACT" for fs in by_ticker.values() for f in fs),
+        "historical_official_overlay_field_count": sum(f["temporal_status"] == "HISTORICAL_OFFICIAL_FACT" for fs in by_ticker.values() for f in fs),
+        "annual_baseline_unchanged": True, "authority_effect": "NONE"}
+    artifact.update(content_identity(artifact))
+    return artifact

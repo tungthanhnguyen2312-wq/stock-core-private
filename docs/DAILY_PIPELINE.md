@@ -5,6 +5,14 @@ from `tools/run_owner_daily.py`, `owner_daily_progress.py`, `canonical_daily_ope
 `canonical_post_close_pipeline.py`. If this file and the code disagree, the code wins — fix this file.
 Current-state facts: [ACTIVE_STATE.md](ACTIVE_STATE.md). Authority per output: [AUTHORITY.md](AUTHORITY.md).
 
+Local October-7 integration checkpoint extends K2's existing fundamental builder with a
+new session projection of the immutable annual baseline and qualified retained overlay.
+CI, valuation and downstream research receive that projection; corporate selection is
+carried from the same frozen/attempt input binding into opportunity and K6 event context.
+Completed locks cannot be replaced. AI context preserves exact-field citations and event
+identity; Dashboard input manifests carry the bindings. No production Daily or publication
+was performed for this checkpoint. [Offline proof](internal/CURRENT_OFFICIAL_EVIDENCE_PROJECTION_INTEGRATION_20261007.md).
+
 Phase C resource architecture (released 2026-10-06) preserves this run order and all output identities.
 IID identity is streamed, the writable binding spine is copied, and delivery UTF-8 rows are buffered.
 T0 root/record hashes are verified while projecting only velocity axes; hashing and pretty writing

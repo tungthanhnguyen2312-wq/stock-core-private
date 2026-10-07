@@ -119,6 +119,10 @@ and no production Daily launch. Disk admission remains independently mandatory.
 ## C. Fundamental, valuation, decision
 
 ### 11. Corporate Intelligence
+- Local projection checkpoint: exact selected session event context joins the three retained
+  historical chains. Prior contexts require deterministic session projection with immutable
+  parent identity; missing selection is explicit UNAVAILABLE. Governance/ownership remain
+  unavailable without their own evidence. [Measured integration](internal/CURRENT_OFFICIAL_EVIDENCE_PROJECTION_INTEGRATION_20261007.md).
 - Contract: [corporate_currency_daily_rollforward_contract.md](corporate_currency_daily_rollforward_contract.md); `current_corporate_intelligence_axis.py`
 - Runtime: `ACTIVE_FAILSOFT` (bounded HNX/HOSE rollforward; failure leaves the axis `NOT_PROVIDED`) · Authority: `SCOPED` (additive IID axis; official events only) · Production: `IN_DAILY_FAILSOFT`
 - Input: official HNX/HOSE corporate events within one shared budget · Predecessor: frozen 2026-08-21 event context
@@ -126,6 +130,10 @@ and no production Daily launch. Disk admission remains independently mandatory.
 - Next trigger: qualified executed official factor with explicit ex-date and knowledge time
 
 ### 12. Current financial evidence
+- Local projection checkpoint: the frozen August-23 baseline remains immutable. Session
+  projections add qualified PNJ/VRE 2026-H1 revenue as exact-field official facts; nonannual
+  research-use restrictions remain. Annual metrics, share authority and earnings quality
+  are unchanged. Remaining cohort issuers retain explicit extraction/route blockers.
 - Contract: [financial_statement_canonical_contract.md](financial_statement_canonical_contract.md); `financial_analysis_engine_v2.py`
 - Runtime: `ACTIVE` · Authority: `SCOPED` (provider-reported research evidence with explicit method/provenance; no official promotion) · Production: `IN_DAILY_BLOCKING` (inside enrichment; absent inputs yield explicit ABSENT records)
 - Input: pinned Financial V2 current-input authority chain · Predecessor: legacy 523-record fundamental shape (frozen)

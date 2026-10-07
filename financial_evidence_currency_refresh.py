@@ -881,7 +881,8 @@ def load_public_official_citations(root: Path | str) -> dict[tuple[str, str, str
         citations[(ticker, metric, period)] = {
             "citation_id": record.get("citation_id") or record.get("table_id") or _hash(record),
             "evidence_id": record.get("document_sha256"),
-            "value": record.get("normalized_value") or record.get("parsed_numeric_value") or record.get("value"),
+            "value": next((record[key] for key in ("normalized_value", "parsed_numeric_value", "value")
+                           if record.get(key) is not None), None),
             "currency": record.get("currency") or "VND",
             "scale": record.get("unit_scale") or 1,
             "statement_scope": record.get("statement_scope"),
