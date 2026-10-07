@@ -875,6 +875,10 @@ def load_public_official_citations(root: Path | str) -> dict[tuple[str, str, str
     for record in load_public_official_fact_rows(root):
         if record.get("qualification_state") != "QUALIFIED":
             continue
+        # This legacy citation lane corroborates VND canonical/provider facts.
+        # Foreign-currency context must never establish their unit from numeric agreement.
+        if record.get("currency") != "VND":
+            continue
         ticker = str(record.get("ticker") or "").upper()
         metric = str(record.get("canonical_metric") or "")
         period = str(record.get("reporting_period") or "")

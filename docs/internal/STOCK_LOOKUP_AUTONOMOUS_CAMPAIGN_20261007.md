@@ -29,8 +29,39 @@ One writer; official exact-field evidence only; immutable completed sessions pre
   (74 before the final numeric corruption test); bounded 32-page reviewed replay;
   scratch full consumer join with exact identity binding and unchanged analytical gates.
 - Implementation checkpoint: `8ba240b`; optional renderer import CI repair: `6e76e88`.
-- PR: [77](https://github.com/tungthanhnguyen2312-wq/stock-core-private/pull/77); merge pending clean CI.
+- Terminal candidate: `28361b7`; PR [77](https://github.com/tungthanhnguyen2312-wq/stock-core-private/pull/77).
+- Merge/main: `05bc504d1cac8002e859a7745c42efba870faae8`; all four CI jobs passed.
 - CI classification: candidate-only optional renderer import failure. Token qualification now
   imports PDF/Pillow dependencies only when rendering/cropping is invoked; core dependencies unchanged.
 - Next reason: after this coherent extraction→qualification→existing projection chain releases,
   evaluate HPG unit evidence, NVL native text and PVD currency-preserving context.
+
+## Currency-preserving interim income context
+
+- ID: `CURRENCY_PRESERVING_INTERIM_RESEARCH_CONTEXT_V1`.
+- Starting main: `05bc504d1cac8002e859a7745c42efba870faae8`.
+- Branch: `feature/currency-preserving-interim-20261007`.
+- Selection: PVD has reviewed consolidated H1 USD revenue and two distinct profit fields
+  already extracted. Currency-preserving research context improves business understanding
+  without an invented conversion. The generic currency boundary protects all consumers.
+- Allowed authority: exact USD income fields, context only; the existing VND citation
+  loader excludes them. Annual/valuation/share gates and immutable sessions stay unchanged.
+- Retained blockers inspected: HPG page 12 unit OCR is literally `Don vj: VND`, which
+  fails the explicit declaration parser; no letter repair. NVL first 12 pages show
+  management-prepared Q2 statements, damaged native text and no qualified assurance.
+- Evidence gained: current fields 4→7, issuers 2→3. PVD H1 revenue USD 245,730,824;
+  consolidated profit USD 18,272,708; parent-attributable profit USD 17,920,760.
+  Retained reviewed page 8, codes 10/60/61, base USD, consolidated, original Sept-29
+  knowledge timestamp; publication remains null. VND citations remain four, with no PVD entry.
+- Capability: USD and explicit no-conversion/no-VND-valuation restrictions reach the existing
+  fundamental→valuation context→packet→AI path. 94 annual metrics, 507 provider/984 missing
+  records, 1,505 research shares and zero strict shares/valuation remain unchanged.
+- Validation: 32-page deterministic replay and source image inspection; 107 data/consumer
+  tests passed before a two-line active-doc budget failure, repaired in the 70-test focused
+  rerun. Final 65 affected tests pass after currency precedence clarification. Scratch consumer
+  replay verifies all 15 genuine input hashes unchanged; projected fundamental grows 13,044 bytes.
+- Blockers: USD remains nonannual; no FX, TTM or valuation conversion. HPG/NVL/PNJ/VRE
+  unresolved extraction/assurance blockers above remain. Earnings quality stays UNKNOWN.
+- Terminal checkpoint / PR / merge: pending.
+- Next reason: after this releases, evaluate explicit non-recurring evidence already
+  printed in retained VRE statements before spending requests on new filings.

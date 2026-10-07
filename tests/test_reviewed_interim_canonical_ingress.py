@@ -158,9 +158,28 @@ def test_reviewed_h1_fact_remains_research_partial_not_annual():
     assert projection["factual_reason_codes"] == []
 
 
-def test_non_vnd_fact_is_not_emitted_to_the_vnd_overlay():
+def test_usd_is_context_only_and_excluded_from_vnd_citations(tmp_path):
     rows, blocked = overlay_rows_from_panel_facts(_facts(evidence=_reviewed_evidence(), currency="USD"))
-    assert rows == [] and blocked[0]["reasons"] == ["CURRENCY_NOT_VND_OVERLAY_UNSUPPORTED"]
+    assert not blocked and rows[0]['currency'] == 'USD'
+    assert rows[0]['projection_currency_policy'] == 'SOURCE_CURRENCY_CONTEXT_ONLY'
+    assert authority_projection(rows[0])['factual_status'] == 'qualified'
+    precedence = precedence_row(rows[0],{'currency':'VND','normalized_value':rows[0]['normalized_value']})
+    assert precedence['status']=='NOT_COMPARABLE' and precedence['official_factual_status']=='qualified'
+    assert precedence['legacy_modified'] is False
+    assert precedence['allowed_uses']==['EXACT_FIELD_CURRENT_RESEARCH_CONTEXT']
+    directory = tmp_path / PUBLIC_ARTIFACT_DIR
+    directory.mkdir(parents=True)
+    (directory / PUBLIC_FACTS).write_text(json.dumps(rows[0])+'\n',encoding='utf-8')
+    assert load_public_official_fact_rows(tmp_path) == rows
+    assert load_public_official_citations(tmp_path) == {}
+    assert load_official_citations(tmp_path) == {}
+
+
+def test_unknown_currency_and_foreign_stock_metrics_stay_blocked():
+    rows, blocked = overlay_rows_from_panel_facts(_facts(evidence=_reviewed_evidence(), currency="EUR"))
+    assert not rows and 'CURRENCY_NOT_ADMITTED_FOR_CONTEXT' in blocked[0]['reasons']
+    rows, blocked = overlay_rows_from_panel_facts(_facts(evidence=_reviewed_evidence(), currency="USD",metric='total_assets'))
+    assert not rows and 'FOREIGN_CURRENCY_METRIC_NOT_ADMITTED' in blocked[0]['reasons']
 
 
 def test_financial_v2_pin_is_not_bumped_by_three_or_four_tickers():
