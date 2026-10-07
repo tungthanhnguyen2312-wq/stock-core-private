@@ -1,0 +1,412 @@
+{
+  "after_close_identities": {
+    "CI": "market_wide_current_corporate_intelligence:2c4b0699653c31cac2224675dbc856ccce973585c3551d2b2770157b9f1742cd",
+    "corporate_event": "current_corporate_event_context:22a888d5c8ad9846298870519af2b30f95b33b39847d74f97933f95e0e4a9f2c",
+    "fundamental": "market_wide_current_fundamental_research:91c800ad715b4968b96c7412ec3f2cdc686bf8b2b0a1e59fbee0202101e276f1",
+    "opportunity": "current_opportunity_prioritization:6bb99073b855f6f0a757667cfe79f7d15feaec97623d4a49e1b4f9cfaa9a8911",
+    "packet": "current_research_decision_packet:150f3c8104a46cbc774c6f2ab95907768e61d9237bc158ddf6fcf85a98cee258"
+  },
+  "after_close_input_sha256_unchanged": {
+    "config\\daily_research_session_input_registry.json": "fd9c79db4c070ca185d4ae93c254e84ce226e14d227cddca24aeeb4a8775a1f8",
+    "operations-review\\catalyst-event-research-context-v1-20260820\\catalyst_event_research_context_artifact.json": "4b1b7d0cadb21209040aab6747b7903acbfaf91bae649e77fa7b3ade2ea6b715",
+    "operations-review\\corporate-daily-frozen-inputs-v1\\2026-10-07\\8caab5f7a0d13d3c6e1a0c7dcd60e47f46db7d8644b686353da780d15cccff23.json": "217bfd445d84f3a2c09e8b8f9e18c4ff058cc3a9592171c16b256b0d5928af7d",
+    "operations-review\\corporate-daily-frozen-inputs-v1\\2026-10-07\\d77e16f82893df419689b24356d066d6a6431bd3c27e09190e3c319e004abb55.json": "1552ebb30c77e4c25ba91f9e2e7cf14e806f1e825dd93733d7794707857f8585",
+    "operations-review\\current-evidence-bound-scenario-v1-20261007\\current_evidence_bound_scenario_artifact.json": "85466844767358bb1b6a0cd9baa3355e8e8924519fb8a5d457013ba3da31f021",
+    "operations-review\\current-market-screening-opportunity-comparison-foundation-v1-20261007\\current_market_screening_opportunity_comparison_foundation_artifact.json": "5c0a4ee17a052f09b1e624a60fdac72e62f4d08b85b4a62ad5dcea3cf8871859",
+    "operations-review\\current-opportunity-prioritization-v1-20261007\\current_opportunity_prioritization_artifact.json": "95ef4806b379ae0437f97d27ad2a53e415b2ba257968575e40c4c76ad556b365",
+    "operations-review\\current-research-decision-packet-v1-20261007\\current_research_decision_packet_artifact.json": "f75e35578d4ae7f5543a912b15f4b7862ae3d2905edbf6393fe157a9bbaee581",
+    "operations-review\\full-universe-entry-candidate-triage-v1-20261007\\full_universe_entry_candidate_triage_20261007.json": "37a188e471fddc7c79e33ea109e01edc59cd5077e2bf400242cea27294397ed5",
+    "operations-review\\market-wide-current-corporate-intelligence-v1-20261007\\market_wide_current_corporate_intelligence_artifact.json": "4005d5ea7ea999598f9fae264580ca0e68fb187f57906fb33119ce42f0fdc813",
+    "operations-review\\market-wide-current-descriptive-research-v1-20261007\\market_wide_current_descriptive_research_artifact.json": "fe9be0730272540a68c6990bb0a7143ce38dd9cb7529e29beeae10dda9680975",
+    "operations-review\\market-wide-current-fundamental-research-v1-20260823\\market_wide_current_fundamental_research_artifact.json": "9b701438cef931c129479b5dd4d59f03371e0de2956fff36e07160ca52e86f05",
+    "operations-review\\market-wide-current-valuation-v1-20261007-session20261007\\market_wide_current_valuation_artifact.json": "896e7fbb9914dac9bb11acd4a3a6836be6ff424856aca1986ec101ff1a4ea9e7",
+    "operations-review\\polymorphic-current-strategy-classification-v1-20261007\\polymorphic_current_strategy_classification_artifact.json": "93e98a3dd19d682b64fc9d32ca0c1399d008b51db5c0ed04a8339c5a7a110e39",
+    "operations-review\\watchlist-tactical-entry-decision-v1-20261007\\watchlist_tactical_entry_classifier_artifact.json": "4b0872f1b7200e84256c0df2c0e2e022309d9048b98bccfe30cb1365fdc82aec"
+  },
+  "annual_known_at": "2026-10-07T15:33:12Z",
+  "annual_qualification_report": "audited_annual_context_report.json",
+  "artifact_sha256": "a56b242dfc8855610f04542a571fdd9a18fb57f8df10e063e44d7b6fd52daadd",
+  "completed_cutoff_input_sha256_unchanged": {
+    "config\\daily_research_session_input_registry.json": "fd9c79db4c070ca185d4ae93c254e84ce226e14d227cddca24aeeb4a8775a1f8",
+    "operations-review\\catalyst-event-research-context-v1-20260820\\catalyst_event_research_context_artifact.json": "4b1b7d0cadb21209040aab6747b7903acbfaf91bae649e77fa7b3ade2ea6b715",
+    "operations-review\\corporate-daily-frozen-inputs-v1\\2026-10-07\\8caab5f7a0d13d3c6e1a0c7dcd60e47f46db7d8644b686353da780d15cccff23.json": "217bfd445d84f3a2c09e8b8f9e18c4ff058cc3a9592171c16b256b0d5928af7d",
+    "operations-review\\corporate-daily-frozen-inputs-v1\\2026-10-07\\d77e16f82893df419689b24356d066d6a6431bd3c27e09190e3c319e004abb55.json": "1552ebb30c77e4c25ba91f9e2e7cf14e806f1e825dd93733d7794707857f8585",
+    "operations-review\\current-evidence-bound-scenario-v1-20261007\\current_evidence_bound_scenario_artifact.json": "85466844767358bb1b6a0cd9baa3355e8e8924519fb8a5d457013ba3da31f021",
+    "operations-review\\current-market-screening-opportunity-comparison-foundation-v1-20261007\\current_market_screening_opportunity_comparison_foundation_artifact.json": "5c0a4ee17a052f09b1e624a60fdac72e62f4d08b85b4a62ad5dcea3cf8871859",
+    "operations-review\\current-opportunity-prioritization-v1-20261007\\current_opportunity_prioritization_artifact.json": "95ef4806b379ae0437f97d27ad2a53e415b2ba257968575e40c4c76ad556b365",
+    "operations-review\\current-research-decision-packet-v1-20261007\\current_research_decision_packet_artifact.json": "f75e35578d4ae7f5543a912b15f4b7862ae3d2905edbf6393fe157a9bbaee581",
+    "operations-review\\full-universe-entry-candidate-triage-v1-20261007\\full_universe_entry_candidate_triage_20261007.json": "37a188e471fddc7c79e33ea109e01edc59cd5077e2bf400242cea27294397ed5",
+    "operations-review\\market-wide-current-corporate-intelligence-v1-20261007\\market_wide_current_corporate_intelligence_artifact.json": "4005d5ea7ea999598f9fae264580ca0e68fb187f57906fb33119ce42f0fdc813",
+    "operations-review\\market-wide-current-descriptive-research-v1-20261007\\market_wide_current_descriptive_research_artifact.json": "fe9be0730272540a68c6990bb0a7143ce38dd9cb7529e29beeae10dda9680975",
+    "operations-review\\market-wide-current-fundamental-research-v1-20260823\\market_wide_current_fundamental_research_artifact.json": "9b701438cef931c129479b5dd4d59f03371e0de2956fff36e07160ca52e86f05",
+    "operations-review\\market-wide-current-valuation-v1-20261007-session20261007\\market_wide_current_valuation_artifact.json": "896e7fbb9914dac9bb11acd4a3a6836be6ff424856aca1986ec101ff1a4ea9e7",
+    "operations-review\\polymorphic-current-strategy-classification-v1-20261007\\polymorphic_current_strategy_classification_artifact.json": "93e98a3dd19d682b64fc9d32ca0c1399d008b51db5c0ed04a8339c5a7a110e39",
+    "operations-review\\watchlist-tactical-entry-decision-v1-20261007\\watchlist_tactical_entry_classifier_artifact.json": "4b0872f1b7200e84256c0df2c0e2e022309d9048b98bccfe30cb1365fdc82aec"
+  },
+  "contract_version": "bounded_current_filing_acquisition_acceptance/v1",
+  "counts_after_close": {
+    "CI_any_intelligence_tickers_D_universe": [
+      3,
+      171
+    ],
+    "CI_current_event_tickers_D_universe": [
+      0,
+      168
+    ],
+    "earnings_quality_explicit_unknown_D_retained_financial": [
+      523,
+      522
+    ],
+    "earnings_quality_known_D_valuation": [
+      0,
+      1
+    ],
+    "earnings_quality_unavailable_D_valuation": [
+      984,
+      984
+    ],
+    "historical_official_qualified_metric_fields": [
+      94,
+      94
+    ],
+    "missing_fundamental_records_D_valuation": [
+      984,
+      984
+    ],
+    "official_current_fact_fields": [
+      9,
+      9
+    ],
+    "opportunity_any_event_tickers": [
+      173,
+      169
+    ],
+    "opportunity_exact_frozen_event_identity_tickers_with_events": [
+      0,
+      169
+    ],
+    "packet_exact_frozen_event_identity_tickers_with_events": [
+      0,
+      171
+    ],
+    "provider_research_records_D_valuation": [
+      507,
+      507
+    ],
+    "research_share_eligible": [
+      1505,
+      1505
+    ],
+    "strict_share_ready": [
+      0,
+      0
+    ],
+    "valuation_research_usable_metrics": [
+      {
+        "EV/EBITDA": 0,
+        "EV/Sales": 6,
+        "P/B": 6,
+        "P/E": 5,
+        "P/S": 6,
+        "enterprise_value": 6,
+        "market_cap": 855
+      },
+      {
+        "EV/EBITDA": 0,
+        "EV/Sales": 6,
+        "P/B": 6,
+        "P/E": 5,
+        "P/S": 6,
+        "enterprise_value": 6,
+        "market_cap": 855
+      }
+    ],
+    "valuation_strict_ready_metrics": [
+      {
+        "EV/EBITDA": 0,
+        "EV/Sales": 0,
+        "P/B": 0,
+        "P/E": 0,
+        "P/S": 0,
+        "enterprise_value": 0,
+        "market_cap": 0
+      },
+      {
+        "EV/EBITDA": 0,
+        "EV/Sales": 0,
+        "P/B": 0,
+        "P/E": 0,
+        "P/S": 0,
+        "enterprise_value": 0,
+        "market_cap": 0
+      }
+    ]
+  },
+  "counts_completed_cutoff": {
+    "CI_any_intelligence_tickers_D_universe": [
+      3,
+      171
+    ],
+    "CI_current_event_tickers_D_universe": [
+      0,
+      168
+    ],
+    "earnings_quality_explicit_unknown_D_retained_financial": [
+      523,
+      522
+    ],
+    "earnings_quality_known_D_valuation": [
+      0,
+      1
+    ],
+    "earnings_quality_unavailable_D_valuation": [
+      984,
+      984
+    ],
+    "historical_official_qualified_metric_fields": [
+      94,
+      94
+    ],
+    "missing_fundamental_records_D_valuation": [
+      984,
+      984
+    ],
+    "official_current_fact_fields": [
+      9,
+      9
+    ],
+    "opportunity_any_event_tickers": [
+      173,
+      169
+    ],
+    "opportunity_exact_frozen_event_identity_tickers_with_events": [
+      0,
+      169
+    ],
+    "packet_exact_frozen_event_identity_tickers_with_events": [
+      0,
+      171
+    ],
+    "provider_research_records_D_valuation": [
+      507,
+      507
+    ],
+    "research_share_eligible": [
+      1505,
+      1505
+    ],
+    "strict_share_ready": [
+      0,
+      0
+    ],
+    "valuation_research_usable_metrics": [
+      {
+        "EV/EBITDA": 0,
+        "EV/Sales": 6,
+        "P/B": 6,
+        "P/E": 5,
+        "P/S": 6,
+        "enterprise_value": 6,
+        "market_cap": 855
+      },
+      {
+        "EV/EBITDA": 0,
+        "EV/Sales": 6,
+        "P/B": 6,
+        "P/E": 5,
+        "P/S": 6,
+        "enterprise_value": 6,
+        "market_cap": 855
+      }
+    ],
+    "valuation_strict_ready_metrics": [
+      {
+        "EV/EBITDA": 0,
+        "EV/Sales": 0,
+        "P/B": 0,
+        "P/E": 0,
+        "P/S": 0,
+        "enterprise_value": 0,
+        "market_cap": 0
+      },
+      {
+        "EV/EBITDA": 0,
+        "EV/Sales": 0,
+        "P/B": 0,
+        "P/E": 0,
+        "P/S": 0,
+        "enterprise_value": 0,
+        "market_cap": 0
+      }
+    ]
+  },
+  "current_field_counts": [
+    9,
+    9
+  ],
+  "disposition": "PARTIAL_EXACT_ANNUAL_CONTEXT_READY",
+  "financial_v2_pin_changed": false,
+  "http_request_cap": 40,
+  "http_requests": 19,
+  "immutable_session_mutation": false,
+  "issuer_period_blockers": {
+    "EVF": {
+      "2025": "NO_ADMITTED_ISSUER_IR_HOST",
+      "2026-H1": "NO_ADMITTED_ISSUER_IR_HOST",
+      "2026-Q2": "NO_ADMITTED_ISSUER_IR_HOST"
+    },
+    "FPT": {
+      "2025": "INDEX_OR_ROUTE_NO_TARGET_PERIOD_DOCUMENT",
+      "2026-H1": null,
+      "2026-Q2": null
+    },
+    "GAS": {
+      "2025": "access_denied",
+      "2026-H1": null,
+      "2026-Q2": null
+    },
+    "HPG": {
+      "2025": "IMAGE_ONLY_OCR_NOT_TRIGGERED",
+      "2026-H1": "IMAGE_ONLY_OCR_NOT_TRIGGERED",
+      "2026-Q2": null
+    },
+    "NVL": {
+      "2025": "INDEX_OR_ROUTE_NO_TARGET_PERIOD_DOCUMENT",
+      "2026-H1": null,
+      "2026-Q2": null
+    },
+    "PAN": {
+      "2025": null,
+      "2026-H1": null,
+      "2026-Q2": null
+    },
+    "PNJ": {
+      "2025": "IMAGE_ONLY_OCR_NOT_TRIGGERED",
+      "2026-H1": "IMAGE_ONLY_OCR_NOT_TRIGGERED",
+      "2026-Q2": null
+    },
+    "POW": {
+      "2025": "access_denied",
+      "2026-H1": null,
+      "2026-Q2": null
+    },
+    "PVD": {
+      "2025": "IMAGE_ONLY_OCR_NOT_TRIGGERED",
+      "2026-H1": "IMAGE_ONLY_OCR_NOT_TRIGGERED",
+      "2026-Q2": null
+    },
+    "QNS": {
+      "2025": "INDEX_OR_ROUTE_NO_TARGET_PERIOD_DOCUMENT",
+      "2026-H1": null,
+      "2026-Q2": null
+    },
+    "SSI": {
+      "2025": "access_denied",
+      "2026-H1": null,
+      "2026-Q2": null
+    },
+    "VCB": {
+      "2025": "INDEX_OR_ROUTE_NO_TARGET_PERIOD_DOCUMENT",
+      "2026-H1": null,
+      "2026-Q2": null
+    },
+    "VNM": {
+      "2025": "INDEX_OR_ROUTE_NO_TARGET_PERIOD_DOCUMENT",
+      "2026-H1": null,
+      "2026-Q2": null
+    },
+    "VRE": {
+      "2025": "IMAGE_ONLY_OCR_NOT_TRIGGERED",
+      "2026-H1": "IMAGE_ONLY_OCR_NOT_TRIGGERED",
+      "2026-Q2": null
+    }
+  },
+  "milestone_id": "BOUNDED_CURRENT_OFFICIAL_FILINGS_ACQUISITION_AND_RECONCILIATION_V1",
+  "new_documents": [
+    {
+      "discovery_provenance": {
+        "index_checked_at": "2026-10-07T15:02:46.809385Z",
+        "index_document_id": "93423bacc0c19a03e7833f08b0806e51c5f668c983250e3c290e8457253ec0d2",
+        "index_sha256": "34585d73df77bd2e917b4dc6f714bd55af7b7c563b7937b82777a27e72c6be37",
+        "index_url": "https://www.hoaphat.com.vn/quan-he-co-dong/bao-cao-tai-chinh",
+        "literal_href_resolved": "https://file.hoaphat.com.vn/hoaphat-com-vn/2026/03/20260327-hpg-bctc-hop-nhat-nam-2025-sau-kiem-toan.pdf"
+      },
+      "document_class": "audited_annual_financial_statements",
+      "document_id": "61bd40a3b6dc8322c2c017594babcb1b113c3d5e80429ea2e7edca204ed60e92",
+      "document_sha256": "f38c5f75becf7d3f145d27183eec81f119fd4f75e378b983a2763ddc3f7e0c07",
+      "observed_at": "2026-10-07T15:02:46.809385Z",
+      "published_at": null,
+      "reporting_period": "2025",
+      "source_locator": "https://file.hoaphat.com.vn/hoaphat-com-vn/2026/03/20260327-hpg-bctc-hop-nhat-nam-2025-sau-kiem-toan.pdf",
+      "ticker": "HPG"
+    },
+    {
+      "discovery_provenance": {
+        "index_checked_at": "2026-10-07T15:02:46.809385Z",
+        "index_document_id": "0a0e246b57075cb8b9c0facdc865dbfbaf71891cec66471ed2ead73d8bb51980",
+        "index_sha256": "d3ec5cd3413ecf9ccb396f191c1b79a4657c4e688fcdff8a79dc5e74f603e345",
+        "index_url": "https://www.pnj.com.vn/quan-he-co-dong/bao-cao-tai-chinh/",
+        "literal_href_resolved": "https://cdn.pnj.io/images/quan-he-co-dong/2025/21b-20260319-PNJ-BCTC-kiem-toan-nam-2025-Hop-nhat-VN-EN.pdf"
+      },
+      "document_class": "audited_annual_financial_statements",
+      "document_id": "964efd1c800de93d643eebc42476aaf7eadb465a256f1a48f04be2e25e3ad888",
+      "document_sha256": "309f86836d9f00b37e3cccb25da9e7ffd0dab6c531be995618542004acccdf1d",
+      "observed_at": "2026-10-07T15:02:46.809385Z",
+      "published_at": null,
+      "reporting_period": "2025",
+      "source_locator": "https://cdn.pnj.io/images/quan-he-co-dong/2025/21b-20260319-PNJ-BCTC-kiem-toan-nam-2025-Hop-nhat-VN-EN.pdf",
+      "ticker": "PNJ"
+    },
+    {
+      "discovery_provenance": {
+        "index_checked_at": "2026-10-07T15:02:46.809385Z",
+        "index_document_id": "5edb4427a76930bdf665d496f8dcb3fe9615a9e1f38e5ef6f8df5d3817fd7156",
+        "index_sha256": "90e261172521222db208619459561efac4e9b3b56ca6b8c1124e86df0c657bcb",
+        "index_url": "https://www.pvdrilling.com.vn/quan-he-co-dong/bao-cao-tai-chinh",
+        "literal_href_resolved": "https://www.pvdrilling.com.vn/Data/Sites/1/media/qhcd/bao-cao-tai-chinh/2025/20260330 - PVD - BCTC kiem toan - Hop nhat 2025_Signed.pdf"
+      },
+      "document_class": "audited_annual_financial_statements",
+      "document_id": "3a4991917203855ca2db18b6e193ef560cf55913692fc24fed978689eef8831f",
+      "document_sha256": "6ee20a554891c449a8ee72fffe6358bc9b32145d066a7e52d8492d88f305139c",
+      "observed_at": "2026-10-07T15:02:46.809385Z",
+      "published_at": null,
+      "reporting_period": "2025",
+      "source_locator": "https://www.pvdrilling.com.vn/Data/Sites/1/media/qhcd/bao-cao-tai-chinh/2025/20260330 - PVD - BCTC kiem toan - Hop nhat 2025_Signed.pdf",
+      "ticker": "PVD"
+    }
+  ],
+  "new_historical_fields_at_2300": 2,
+  "new_landing_bytes": 28533192,
+  "original_manifest_records_unchanged": true,
+  "original_raw_sha256_unchanged": {
+    "documents/FPT/2025/issuer_ir_index_page/49863f6b6ec46b174f61b90de2bac5260217b864fcbc96b58e64b695e5069422.html": "49863f6b6ec46b174f61b90de2bac5260217b864fcbc96b58e64b695e5069422",
+    "documents/HPG/2025/issuer_ir_index_page/bf0e837bc002924f86569fc28bd3be9ea4d33bf8775033c4846dc225390b1a79.html": "bf0e837bc002924f86569fc28bd3be9ea4d33bf8775033c4846dc225390b1a79",
+    "documents/HPG/2026-H1/reviewed_interim_financial_statements/9a2881a88ac8ca4cc5cd948b0fafa031ff30fd0332a372f362477a8a6b0c9968.pdf": "9a2881a88ac8ca4cc5cd948b0fafa031ff30fd0332a372f362477a8a6b0c9968",
+    "documents/HPG/2026-Q2/reviewed_interim_financial_statements/1f5c4b14f867d2683fd3a84fe0f31fed6fc9920fdcd768c0eaaa1a6e9d19ea71.pdf": "1f5c4b14f867d2683fd3a84fe0f31fed6fc9920fdcd768c0eaaa1a6e9d19ea71",
+    "documents/NVL/2025/issuer_ir_index_page/7b2170168deece4210bdc74bd52f225027be931b05863cf3384be231900eed0c.html": "7b2170168deece4210bdc74bd52f225027be931b05863cf3384be231900eed0c",
+    "documents/NVL/2026-Q2/reviewed_interim_financial_statements/52d827fa2a5f8d07e07a08a6b57251d172d06aa4d4c7cd80127df2079e12d182.pdf": "52d827fa2a5f8d07e07a08a6b57251d172d06aa4d4c7cd80127df2079e12d182",
+    "documents/PNJ/2025/issuer_ir_index_page/0edd431439a3f6042501548938c27d116940881aa71cf23626c3df1972feca7d.html": "0edd431439a3f6042501548938c27d116940881aa71cf23626c3df1972feca7d",
+    "documents/PNJ/2026-H1/reviewed_interim_financial_statements/db877169e7c19b4b81d60b37d5aab8f9938129a66b582c2229ffffebdca2a43d.pdf": "db877169e7c19b4b81d60b37d5aab8f9938129a66b582c2229ffffebdca2a43d",
+    "documents/PNJ/2026-Q2/reviewed_interim_financial_statements/a5d860ad579820f9532d037d476ce0d09ce8a078572159a6dfebac0c7b32cbf3.pdf": "a5d860ad579820f9532d037d476ce0d09ce8a078572159a6dfebac0c7b32cbf3",
+    "documents/PVD/2025/issuer_ir_index_page/981fd0b5c5f1f60044d96b8a59944a0458b1fc8bef3f5193794fc44a6d3c3498.html": "981fd0b5c5f1f60044d96b8a59944a0458b1fc8bef3f5193794fc44a6d3c3498",
+    "documents/PVD/2026-H1/reviewed_interim_financial_statements/a7360d2fc9a8a67a1535820813cda2bb8ef288466cd36c949e050c2f2a1b290a.pdf": "a7360d2fc9a8a67a1535820813cda2bb8ef288466cd36c949e050c2f2a1b290a",
+    "documents/PVD/2026-Q2/reviewed_interim_financial_statements/535967018d6704bca01f0bc19ddce55a6d5b72c091a1bcdcd9129e29274c5c98.pdf": "535967018d6704bca01f0bc19ddce55a6d5b72c091a1bcdcd9129e29274c5c98",
+    "documents/QNS/2025/issuer_ir_index_page/4c7951d8183e16bb4702b8696978c89998e8df19e3d35a5176d1fd58b8f8e7df.html": "4c7951d8183e16bb4702b8696978c89998e8df19e3d35a5176d1fd58b8f8e7df",
+    "documents/VCB/2025/issuer_ir_index_page/0ae350bb20d08d0509f9dd3c04ff84b139c182fcec9ba3f5e7730dc397ff4271.html": "0ae350bb20d08d0509f9dd3c04ff84b139c182fcec9ba3f5e7730dc397ff4271",
+    "documents/VNM/2025/issuer_ir_index_page/ce94e5e2462483d548aea430b5d97cc689c5e3bd8d458702a3cd996ef997e261.html": "ce94e5e2462483d548aea430b5d97cc689c5e3bd8d458702a3cd996ef997e261",
+    "documents/VRE/2025/audited_annual_financial_statements/85b250e9bd3b87aac9a1f650363f7063b2a830f6f4f1dda07eb6eecd09063a3e.pdf": "85b250e9bd3b87aac9a1f650363f7063b2a830f6f4f1dda07eb6eecd09063a3e",
+    "documents/VRE/2025/issuer_ir_index_page/ba3376113a4d2d1abbe351096d05b5a52bac23a4661857afb4b3b7446a5c763c.html": "ba3376113a4d2d1abbe351096d05b5a52bac23a4661857afb4b3b7446a5c763c",
+    "documents/VRE/2026-H1/reviewed_interim_financial_statements/7e9b9e39901a028972fff80bc1a4f9f5cab4c1526ce4029f9b853ccff6aeaac0.pdf": "7e9b9e39901a028972fff80bc1a4f9f5cab4c1526ce4029f9b853ccff6aeaac0"
+  },
+  "overlay_field_counts": [
+    9,
+    11
+  ],
+  "qualification_note": "Batch observation predates individual response completion; annual knowledge bound uses later qualification observation. Publication remains null. Native acquisition now stamps each retained response.",
+  "retained_record_counts": [
+    18,
+    29
+  ],
+  "starting_main": "f5d92c1c57326040e2d75988c37c982268aedb68",
+  "valuation_authority_changed": false
+}

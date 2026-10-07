@@ -21,6 +21,32 @@ FIXTURE_REGISTRY={"schema_version":"1.0.0","approval_state":{"state":"APPROVED",
    "min_request_interval_seconds":0,"parser_version":"1.0.0"}]}
 
 class AcquisitionTests(unittest.TestCase):
+ def test_index_refresh_versions_changed_bytes_and_same_bytes_are_a_noop(self):
+  import copy
+  registry=copy.deepcopy(FIXTURE_REGISTRY)
+  registry['sources'][0]['index_document_types']=['issuer_ir_index_page']
+  spec=self.spec(document_class='issuer_ir_index_page')
+  fetch=lambda *_a,**_k:(200,{'Content-Type':'text/html'},HTML)
+  acquire([spec],self.root,fetcher=fetch,registry=registry)
+  first=(self.root/MANIFEST).read_bytes()
+  same=acquire([spec|{'observed_at':'2026-10-07T00:00:00Z'}],self.root,fetcher=fetch,registry=registry,refresh_index_pages=True)
+  self.assertTrue(same['outcomes'][0]['refreshed_same_bytes'])
+  self.assertEqual((self.root/MANIFEST).read_bytes(),first)
+  newer=HTML+b'changed index'
+  acquire([spec|{'observed_at':'2026-10-07T00:00:00Z'}],self.root,
+          fetcher=lambda *_a,**_k:(200,{'Content-Type':'text/html'},newer),registry=registry,refresh_index_pages=True)
+  records=json.loads((self.root/MANIFEST).read_text())['records']
+  self.assertEqual(len(records),2)
+  self.assertEqual(records[0],json.loads(first)['records'][0])
+  self.assertEqual((self.root/records[0]['relative_path']).read_bytes(),HTML)
+  self.assertEqual((self.root/records[1]['relative_path']).read_bytes(),newer)
+
+ def test_index_refresh_flag_never_refetches_a_cached_pdf(self):
+  acquire([self.spec()],self.root,fetcher=self.fetch)
+  before=(self.root/MANIFEST).read_bytes()
+  result=acquire([self.spec()],self.root,fetcher=lambda *_a,**_k:self.fail('cached PDF fetched'),refresh_index_pages=True)
+  self.assertEqual(result['outcomes'][0]['state'],'cached_valid')
+  self.assertEqual((self.root/MANIFEST).read_bytes(),before)
  def setUp(self):
   self.tmp=tempfile.TemporaryDirectory(); self.root=Path(self.tmp.name)
   patcher=patch("official_document_acquisition.load_registry",return_value=FIXTURE_REGISTRY)

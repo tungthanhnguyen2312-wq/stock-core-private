@@ -6,7 +6,6 @@ import json
 from pathlib import Path
 
 import pytest
-from pypdf import PdfWriter
 
 from financial_evidence_currency_contract import (
     COHORT,
@@ -151,6 +150,7 @@ def test_h1_and_q2_period_identity_and_q3_out_of_scope():
 
 
 def test_image_only_fail_closed_without_ocr(tmp_path: Path):
+    PdfWriter = pytest.importorskip("pypdf", reason="Optional native PDF fixture writer").PdfWriter
     writer = PdfWriter()
     writer.add_blank_page(width=72, height=72)
     path = tmp_path / "blank.pdf"
@@ -337,6 +337,65 @@ def test_http_budget_stops_at_cap():
     assert budget.can_request() is False
     assert budget.stopped_reason == "HTTP_REQUEST_CAP_REACHED"
     assert HTTP_REQUEST_CAP == 40
+
+
+def test_cached_document_retains_original_observation_time(tmp_path):
+    from financial_evidence_currency_refresh import _acquire_one
+    spec={'ticker':'HPG','source_id':'issuer_ir','document_class':INDEX_DOCUMENT_TYPE,
+          'reporting_period':'2025','canonical_url':'https://www.hoaphat.com.vn/index'}
+    calls=[]
+    def fetch(*args,**kwargs):
+        calls.append(1)
+        return 200,{'Content-Type':'text/html'},b'<html>index</html>'
+    budget=BoundedHttpBudget()
+    old=_acquire_one(spec,tmp_path,budget,fetcher=fetch,observed_at='2026-09-29T00:00:00Z')
+    before=(tmp_path/acquirer.MANIFEST).read_bytes()
+    new=_acquire_one(spec,tmp_path,budget,fetcher=fetch,observed_at='2026-10-07T00:00:00Z')
+    assert old['sha256']==new['sha256'] and new['observed_at']=='2026-09-29T00:00:00Z'
+    assert new['state']=='cached_valid' and len(calls)==1 and budget.requests==1
+    assert (tmp_path/acquirer.MANIFEST).read_bytes()==before
+
+
+@pytest.mark.parametrize('cap,expected_requests,expected_state',[(1,1,'HTTP_REQUEST_CAP_REACHED'),(2,2,'retained')])
+def test_native_redirects_consume_actual_http_budget(tmp_path,monkeypatch,cap,expected_requests,expected_state):
+    from financial_evidence_currency_refresh import _acquire_one
+    class Response:
+        status_code=200;headers={'Content-Type':'text/html'}
+        is_redirect=False;is_permanent_redirect=False
+        def iter_content(self,chunk_size): yield b'<html>official index</html>'
+        def close(self): pass
+    class Redirect(Response):
+        status_code=302;headers={'Location':'https://www.hoaphat.com.vn/next'};is_redirect=True
+    calls=[]
+    def get(*args,**kwargs):
+        calls.append(args[0])
+        return Redirect() if len(calls)==1 else Response()
+    monkeypatch.setattr(acquirer.requests,'get',get)
+    monkeypatch.setattr(acquirer.time,'sleep',lambda _:None)
+    budget=BoundedHttpBudget(cap=cap)
+    result=_acquire_one({'ticker':'HPG','source_id':'issuer_ir','document_class':INDEX_DOCUMENT_TYPE,
+        'reporting_period':'2025','canonical_url':'https://www.hoaphat.com.vn/index'},
+        tmp_path,budget,fetcher=None,observed_at='2026-10-07T00:00:00Z')
+    assert len(calls)==budget.requests==expected_requests
+    assert result['state']==expected_state
+
+
+def test_direct_annual_and_index_selection_share_two_document_limit(tmp_path,monkeypatch):
+    import financial_evidence_currency_refresh as module
+    monkeypatch.setattr(module,'extract_from_retained_pdf',lambda *a,**k:{'facts':[],'metadata':{}})
+    seen=[]
+    def fetch(url,**kwargs):
+        seen.append(url)
+        if url.endswith('.pdf'):
+            return 200,{'Content-Type':'application/pdf'},b'%PDF-1.4\nfixture\n'
+        if url=='https://ir.vincom.com.vn/':
+            return 200,{'Content-Type':'text/html'},b'<html><a href="/BCTC-2026Q2.pdf">Q2</a><a href="/BCTC-2026H1.pdf">H1</a><a href="/BCTC-2025.pdf">Annual</a></html>'
+        return 404,{'Content-Type':'text/html'},b'not found'
+    report=run_refresh(landing_root=tmp_path/'landing',public_root=tmp_path/'public',allow_network=True,fetcher=fetch)
+    assert report['issuers']['VRE']['documents_retained']==2
+    assert 'https://ir.vincom.com.vn/BCTC-2026H1.pdf' in seen
+    assert 'https://ir.vincom.com.vn/BCTC-2026Q2.pdf' not in seen
+    assert 'https://ir.vincom.com.vn/BCTC-2025.pdf' not in seen
 
 
 def test_index_parser_keeps_target_periods_and_drops_q3():

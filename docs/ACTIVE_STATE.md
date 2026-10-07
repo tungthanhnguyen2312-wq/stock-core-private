@@ -43,8 +43,8 @@ Fact kinds used below: **CURRENT FACT** (verified in repo or by a stated read-on
   reported disposal component. PVD's three USD fields remain source-currency context only,
   excluded from VND canonical citations and valuation inputs. PNJ parent profit is now
   source-qualified. VRE's component flags possible non-recurring earnings; recurrence stays
-  UNKNOWN and normalized EPS is absent. Annual metrics and valuation eligibility stay fixed.
-  [Earnings contract](reported_earnings_component_context_contract.md). CI, opportunity and packet bind one event identity.
+  UNKNOWN and normalized EPS is absent. Two HPG FY2025 fields add after-close historical
+  context only; completed cutoff, annual metrics, shares and valuation eligibility stay fixed.
   Owner campaign delegation authorizes continued bounded evidence milestones; `queued_next=[]`.
   [Campaign results and remaining blockers](internal/STOCK_LOOKUP_AUTONOMOUS_CAMPAIGN_20261007.md).
 - **HOST-LOCAL — October 7 Daily completed.** Read-only owner journal verification records

@@ -94,6 +94,64 @@ One writer; official exact-field evidence only; immutable completed sessions pre
   binding is a label-only fallback for incomplete identity. No source letters/digits repaired.
 - Blockers: VRE damaged parent label, HPG explicit unit OCR, NVL unreviewed Q2 assurance,
   balance/cash-flow extraction and current-share proof remain. Disposal recurrence is unknown.
-- Terminal candidate / PR / merge: pending.
+- Terminal candidate: `5464799d5930b342c65168095c9d3eea76678e00`; PR [79](https://github.com/tungthanhnguyen2312-wq/stock-core-private/pull/79).
+- Merge/main: `f5d92c1c57326040e2d75988c37c982268aedb68`; all four CI jobs passed.
 - Next reason: bounded approved-route FY2025/reviewed-H1 acquisition now has higher value
   than further speculative repair of unreadable retained labels or repeated architecture work.
+
+## Bounded current official filing acquisition
+
+- ID: `BOUNDED_CURRENT_OFFICIAL_FILINGS_ACQUISITION_AND_RECONCILIATION_V1` (COMPLETE; release pending).
+- Starting main: `f5d92c1c57326040e2d75988c37c982268aedb68`.
+- Branch: `feature/current-filing-acquisition-20261007`.
+- Selection: retained ambiguous labels and NVL unreviewed Q2 cannot safely support more facts.
+  Refresh approved first-party indices for FY2025 and reviewed H1 (Q2 entity alternative).
+- Boundaries: 40 actual HTTP requests, one index per issuer, two target documents per issuer,
+  one concurrent request and 5-GiB storage cap; no duplicate-byte retention or knowledge-time rewrite.
+- Evidence gained: 19 actual HTTP requests; three new FY2025 PDFs (HPG/PNJ/PVD),
+  eight changed index versions. Manifest 18→29; all original records/raw hashes unchanged.
+  Duplicate PDF bytes no-op. Native source knows each future response at retention time.
+- Exact gain: HPG audited consolidated FY2025 revenue VND 156,116,094,618,482 and
+  total profit after tax VND 15,514,931,571,606 (page 10, codes 10/60, base VND).
+  Audit assurance is independently qualified on page 5. Literal header recovery groups
+  only the same OCR source line within bounded physical header geometry; no text repair.
+- Temporal boundary: raw batch receipt is 15:02:46 UTC. Conservative annual knowledge
+  bound is later qualification observation 15:33:12 UTC (22:33:12 local); publication null.
+  Overlay 9→11; current fields remain nine. Completed Oct-7 15:00 view rejects both;
+  23:00 scratch view includes both as historical research context, no valuation promotion.
+- Consumer proof: both joins preserve 15 protected inputs; annual metrics 94, research
+  shares 1,505, strict shares/valuation zero and all original valuation metrics unchanged.
+  Annual fields survive packet/AI. Legacy VND citation lane excludes annual context.
+- Bounded diagnosis: two fixed 33-page reads; alternate English read adds no assured facts
+  and is not operationalized. Saved default source tokens reused for header qualification.
+  PNJ/PVD assurance remains unresolved; HPG parent value includes ambiguous superscripts.
+  PVD's source-published FY2025 converted-VND statement is distinct from H1 native USD.
+- Native acquisition fixes: refresh only indices; unchanged bytes preserve manifest;
+  redirects/retries count against actual request cap; source interval holds across calls;
+  direct annual and index documents share issuer cap. Literal discovery href/hash retained.
+- Blockers: current HPG units, NVL unreviewed Q2/no alternate approved seed document,
+  PNJ/PVD annual assurance, annual balance/cash/debt, exact current shares remain blocked.
+- Validation: 163 focused tests pass (2 retained clean-clone skips, 5 subtests);
+  47 retained/extraction pass (8 skips), 30 read-only retained consumer tests pass.
+  Both full scratch consumer joins pass. Final 124 affected tests pass after fail-closed
+  marker stripping and exact retained-period binding guards. Implementation `7c718cc`;
+  hardening `e16f1a1539c74b9162df1665a54835b80461ef8a`; PR [80](https://github.com/tungthanhnguyen2312-wq/stock-core-private/pull/80), release pending.
+- Next reason: stop further OCR escalation; examine retained official share-basis proof
+  or corporate-event evidence where it can improve evidence without inventing valuation inputs.
+
+## Campaign quota checkpoint
+
+- Observed quota: primary window 85% used /15% remaining, weekly 36% used /64% remaining;
+  ordinary usage still allowed. No reset credit used. This is a safety floor for starting
+  another evidence milestone with unknown acquisition/qualification and CI repair cost.
+- Finish the existing candidate release and handoff; start no further substantive milestone.
+- Source-route audit for resume: the legacy `run_authoritative_current_common_shares.py`
+  calls retired KBS; do not run it. Retained HPG executed listing change (8,442,964,520
+  listed shares, July 2) does not establish common outstanding shares or October continuity.
+- Exact next task: scope a bounded HPG official common-share observation and executed-action
+  continuity qualification through the next completed session, using retained first-party
+  notices and approved routes. Record the native milestone before any acquisition.
+- Candidate worktree: `C:/Projects/StockLookup/current-filing-acquisition-v1`, branch
+  `feature/current-filing-acquisition-20261007`, upstream same origin branch, clean after push.
+- Canonical: main remains `f5d92c1c57326040e2d75988c37c982268aedb68` pending PR80;
+  preserved untracked `data/` only. No Daily writer or T0 activity introduced.

@@ -1308,6 +1308,7 @@ def project_session(*, baseline: Mapping[str, Any], official_rows: list[Mapping[
     from reviewed_interim_canonical_ingress import (
         authority_projection, FOREIGN_CONTEXT_METRICS, CONTRACT_VERSION as INTERIM_INGRESS,
         EARNINGS_COMPONENT_METRIC, earnings_component_is_admitted,
+        ANNUAL_CONTEXT_CONTRACT,
     )
     from official_financial_assurance_evidence import assurance_status_is_qualified
 
@@ -1357,6 +1358,19 @@ def project_session(*, baseline: Mapping[str, Any], official_rows: list[Mapping[
                      or row.get("context_kind") == "EARNINGS_QUALITY_COMPONENT")
         if component and not earnings_component_is_admitted(row):
             reasons.append("EARNINGS_COMPONENT_IDENTITY_NOT_QUALIFIED")
+        annual_context = (row.get("context_kind") == "AUDITED_ANNUAL_FIELD"
+                          or row.get("projection_period_policy") == "AUDITED_ANNUAL_CONTEXT_ONLY"
+                          or (row.get("period_type") == "annual" and row.get("ingress_contract") == INTERIM_INGRESS))
+        if annual_context and not (
+                row.get("context_kind") == "AUDITED_ANNUAL_FIELD"
+                and row.get("projection_period_policy") == "AUDITED_ANNUAL_CONTEXT_ONLY"
+                and row.get("annual_context_contract") == ANNUAL_CONTEXT_CONTRACT
+                and row.get("ingress_contract") == INTERIM_INGRESS
+                and row.get("audit_or_review_status") == "audited"
+                and (row.get("assurance_evidence") or {}).get("evidence_id")
+                and row.get("period_type") == "annual" and row.get("reporting_period") == "2025"
+                and row.get("currency") == "VND"):
+            reasons.append("AUDITED_ANNUAL_CONTEXT_IDENTITY_NOT_QUALIFIED")
         if row.get("normalized_value") is None or (row.get("currency") != "VND" and not native_usd_context) or row.get("unit_scale") != 1 or not row.get("already_normalized"):
             reasons.append("OFFICIAL_VALUE_UNIT_NOT_QUALIFIED")
         exact_key = (row.get("ticker"), row.get("canonical_metric"), row.get("reporting_period"), row.get("statement_scope"))
@@ -1386,8 +1400,9 @@ def project_session(*, baseline: Mapping[str, Any], official_rows: list[Mapping[
             "temporal_status": "CURRENT_OFFICIAL_FACT" if current else "HISTORICAL_OFFICIAL_FACT",
             "source_identity": row.get("source_locator") or "official-document:" + row["document_sha256"],
             "allowed_projection_use": "EXACT_FIELD_CURRENT_RESEARCH_CONTEXT",
-            "valuation_use": "NOT_PERMITTED_EARNINGS_COMPONENT_CONTEXT" if component else (
-                "NOT_PERMITTED_FOREIGN_CURRENCY_CONTEXT" if native_usd_context else "EXISTING_METRIC_PERIOD_CONTRACT_ONLY"),
+            "valuation_use": "NOT_PERMITTED_AUDITED_ANNUAL_CONTEXT" if annual_context else (
+                "NOT_PERMITTED_EARNINGS_COMPONENT_CONTEXT" if component else (
+                "NOT_PERMITTED_FOREIGN_CURRENCY_CONTEXT" if native_usd_context else "EXISTING_METRIC_PERIOD_CONTRACT_ONLY")),
             "foreign_currency_conversion": "NOT_PERMITTED",
             "annualization": "NOT_PERMITTED", "ttm_derivation": "NOT_PERMITTED",
         }

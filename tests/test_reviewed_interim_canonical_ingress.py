@@ -93,6 +93,70 @@ def test_audited_annual_still_accepted():
     assert (facts[0]["period_start"], facts[0]["period_end"]) == ("2025-01-01", "2025-12-31")
 
 
+def annual_context_row():
+    evidence=resolve_document_assurance_evidence(_materialization(AUDIT_PAGE))
+    facts=_facts('2025','audited',evidence=evidence,knowledge='2026-10-07T15:02:46Z')
+    rows,blocked=overlay_rows_from_panel_facts(facts,allow_audited_annual_context=True)
+    assert not blocked and len(rows)==1
+    return rows[0]
+
+
+def test_audited_annual_scope_is_explicit_and_does_not_change_existing_interim_default():
+    evidence=resolve_document_assurance_evidence(_materialization(AUDIT_PAGE))
+    facts=_facts('2025','audited',evidence=evidence,knowledge='2026-10-07T15:02:46Z')
+    rows,blocked=overlay_rows_from_panel_facts(facts)
+    assert not rows and 'PERIOD_NOT_INTERIM' in blocked[0]['reasons']
+    row=annual_context_row()
+    assert row['projection_period_policy']=='AUDITED_ANNUAL_CONTEXT_ONLY'
+    assert authority_projection(row)['factual_status']=='qualified'
+    assert precedence_row(row,None)['status']=='NOT_COMPARABLE'
+
+
+@pytest.mark.parametrize('change',[{'currency':'USD'},{'reporting_period':'2024'},
+    {'audit_or_review_status':'reviewed'},{'source_lineage':{'document_sha256':SHA,'citation_id':'c'}}])
+def test_annual_scope_requires_audited_vnd_2025_document_evidence(change):
+    evidence=resolve_document_assurance_evidence(_materialization(AUDIT_PAGE))
+    fact=_facts('2025','audited',evidence=evidence,knowledge='2026-10-07T15:02:46Z')[0]
+    fact.update(change)
+    rows,blocked=overlay_rows_from_panel_facts([fact],allow_audited_annual_context=True)
+    assert not rows and blocked
+
+
+def annual_projection(rows,cutoff='2026-10-07T23:00:00+07:00'):
+    import market_wide_current_fundamental_research as f
+    base={'contract_version':f.CONTRACT_VERSION,'records':{'PNJ':{'authority_tier':'PROVIDER_RESEARCH','metrics':[]}}}
+    base.update(f.content_identity(base))
+    value=f.project_session(baseline=base,official_rows=rows,session='2026-10-07',cutoff=cutoff)
+    assert value['records']['PNJ']['metrics']==[] and value['records']['PNJ']['authority_tier']=='PROVIDER_RESEARCH'
+    return value
+
+
+def test_new_annual_evidence_is_post_cutoff_history_with_context_only_valuation_use(tmp_path):
+    row=annual_context_row()
+    early=annual_projection([row],'2026-10-07T15:00:00+07:00')
+    assert not early['records']['PNJ']['official_field_context']
+    assert 'OFFICIAL_FACT_NOT_KNOWN_BY_SESSION_CUTOFF' in early['official_projection']['rejected_fields'][0]['reasons']
+    value=annual_projection([row])
+    field=value['records']['PNJ']['official_field_context'][0]
+    assert field['temporal_status']=='HISTORICAL_OFFICIAL_FACT'
+    assert field['valuation_use']=='NOT_PERMITTED_AUDITED_ANNUAL_CONTEXT'
+    assert value['official_projection']['current_official_field_count']==0
+    path=tmp_path/PUBLIC_ARTIFACT_DIR;path.mkdir(parents=True)
+    (path/PUBLIC_FACTS).write_text(json.dumps(row)+'\n',encoding='utf8')
+    assert load_public_official_fact_rows(tmp_path)==[row]
+    assert not load_public_official_citations(tmp_path)
+
+
+@pytest.mark.parametrize('change',[{'annual_context_contract':None},{'ingress_contract':None},
+    {'audit_or_review_status':'reviewed'},{'currency':'USD'},{'period_type':'interim'},
+    {'context_kind':None}])
+def test_annual_context_projection_cannot_widen_missing_or_invalid_contract(change):
+    row=annual_context_row();row.update(change)
+    value=annual_projection([row])
+    assert not value['records']['PNJ']['official_field_context']
+    assert 'AUDITED_ANNUAL_CONTEXT_IDENTITY_NOT_QUALIFIED' in value['official_projection']['rejected_fields'][0]['reasons']
+
+
 def test_reviewed_interim_accepted_when_explicitly_evidenced():
     evidence = _reviewed_evidence()
     assert evidence["state"] == "QUALIFIED" and evidence["audit_or_review_status"] == "reviewed"
@@ -315,7 +379,11 @@ def test_current_overlay_has_no_net_income_sourced_from_line_61():
     path = ROOT / PUBLIC_ARTIFACT_DIR / PUBLIC_FACTS
     rows = [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
     assert all((row["canonical_metric"], str(row.get("line_code"))) not in ingress_module.LINE_CODE_IDENTITY_CONFLICTS for row in rows)
-    assert all(row["period_type"] == "interim" and row["audit_or_review_status"] == "reviewed" for row in rows)
+    assert all((row["period_type"], row["audit_or_review_status"]) in {("interim", "reviewed"), ("annual", "audited")} for row in rows)
+    annual = [row for row in rows if row["period_type"] == "annual"]
+    assert {row["canonical_metric"]: row["normalized_value"] for row in annual} == {
+        "revenue": 156116094618482, "net_income": 15514931571606}
+    assert all(row["context_kind"] == "AUDITED_ANNUAL_FIELD" for row in annual)
 
 
 def test_core_metric_vocabulary_has_no_orphans():
@@ -325,3 +393,24 @@ def test_core_metric_vocabulary_has_no_orphans():
                   "brokerage_revenue", "total_operating_revenue"}
     orphans = (set(currency_contract.BANK_CORE_METRICS) | set(currency_contract.SECURITIES_CORE_METRICS)) - set(METRIC_REGISTRY)
     assert orphans == specialist
+
+
+def test_retained_batch_scope_rejects_annual_without_opt_in_and_page_expansion(tmp_path):
+    from tools.run_reviewed_interim_canonical_ingress import run
+    with pytest.raises(ValueError, match='REQUIRES_EXPLICIT_SCOPE'):
+        run(landing_root=tmp_path, reporting_period='2025')
+    with pytest.raises(ValueError, match='OUTSIDE_BOUNDED_CONTRACT'):
+        run(landing_root=tmp_path, document_specs=({'ticker':'HPG','pages':tuple(range(1,41))},))
+
+
+def test_overlay_refresh_preserves_other_periods_and_separate_report(tmp_path):
+    from tools.run_reviewed_interim_canonical_ingress import write_outputs
+    existing = load_public_official_fact_rows(ROOT)
+    (tmp_path / PUBLIC_FACTS).write_text(''.join(json.dumps(r)+'\n' for r in existing), encoding='utf8')
+    annual = [r for r in existing if r['period_type']=='annual']
+    result = {'report':{'documents':[{'reporting_period':'2025'}]},
+              'overlay_rows':annual, 'precedence_rows':[]}
+    write_outputs(result,tmp_path,preserve_other_periods=True,report_name='annual_report.json')
+    after = [json.loads(line) for line in (tmp_path/PUBLIC_FACTS).read_text(encoding='utf8').splitlines()]
+    assert sorted(after,key=lambda r:r['citation_id']) == sorted(existing,key=lambda r:r['citation_id'])
+    assert (tmp_path/'annual_report.json').is_file()

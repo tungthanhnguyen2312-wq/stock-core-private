@@ -31,11 +31,25 @@ def rows(currency='VND'):
     # These original VND boundary regressions deliberately use one fixed currency lane.
     return [r for line in (ROOT / "derived/financial-evidence-currency-refresh-v1/qualified_official_facts.jsonl").read_text(encoding="utf-8").splitlines()
             if (r := json.loads(line))['currency'] == currency
+            and r['period_type'] == 'interim'
             and (currency != 'VND' or r['canonical_metric'] in {'revenue','net_income'})]
 
 
 def all_rows():
     return [json.loads(line) for line in (ROOT / 'derived/financial-evidence-currency-refresh-v1/qualified_official_facts.jsonl').read_text(encoding='utf8').splitlines()]
+
+
+def test_annual_ingress_cannot_strip_all_context_markers_to_escape_restriction():
+    annual = [r for r in all_rows() if r['period_type']=='annual']
+    assert len(annual)==2
+    for row in annual:
+        for key in ('context_kind','projection_period_policy','annual_context_contract'):
+            row.pop(key)
+    value = fundamental.project_session(baseline=baseline(),official_rows=annual,
+        session=SESSION,cutoff=SESSION+'T23:00:00+07:00')
+    assert not value['records']['HPG']['official_field_context']
+    assert all('AUDITED_ANNUAL_CONTEXT_IDENTITY_NOT_QUALIFIED' in r['reasons']
+               for r in value['official_projection']['rejected_fields'])
 
 
 def test_reported_component_survives_consumers_with_unknown_recurrence_and_no_normalization():
