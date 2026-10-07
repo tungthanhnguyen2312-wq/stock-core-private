@@ -1,8 +1,8 @@
 # Stock Lookup — Active State
 
 Compact navigation view of what is true **now**. Updated 2026-10-07 from locally verified
-Producer main `c2c7c52337e923ae9163934601e2686f668c2dcc` (PR #75 corrective).
-The new projection checkpoint is local and awaits owner review; this is not a remote-head claim.
+Producer main `05bc504d1cac8002e859a7745c42efba870faae8` (PR #77 retained recovery).
+The owner-authorized campaign continues through bounded evidence milestones.
 Verify live remote main with `git fetch origin main` or
 `git ls-remote origin refs/heads/main`; a **local** remote-tracking ref alone can be stale.
 
@@ -39,18 +39,18 @@ Fact kinds used below: **CURRENT FACT** (verified in repo or by a stated read-on
 
 - **CURRENT FACT — retained-evidence projection integration.** Owner-selected
   `CURRENT_OFFICIAL_EVIDENCE_PROJECTION_INTEGRATION_V1` was released in PR #76.
-  Retained geometry recovery raises PNJ/VRE reviewed H1 exact fields from two to four:
-  revenue and consolidated net income for each. These enter exact-field
-  context; annual baseline and valuation eligibility stay unchanged. Future construction
-  binds one session event identity across CI, opportunity and the evidence packet.
+  Retained recovery and source-currency context raise reviewed H1 exact fields from two
+  to seven: PNJ/VRE revenue and consolidated net income, plus PVD USD revenue, consolidated
+  and parent-attributable profit. USD facts remain source-currency context only and are
+  excluded from VND canonical citations and valuation inputs. These enter exact-field
+  context; annual baseline and valuation eligibility stay unchanged. CI, opportunity and
+  the evidence packet bind one session event identity.
   Owner campaign delegation authorizes continued bounded evidence milestones; `queued_next=[]`.
   [Campaign results and remaining blockers](internal/STOCK_LOOKUP_AUTONOMOUS_CAMPAIGN_20261007.md).
-  [Evidence, offline comparison and limits](internal/CURRENT_OFFICIAL_EVIDENCE_PROJECTION_INTEGRATION_20261007.md).
 - **HOST-LOCAL — October 7 Daily completed.** Read-only owner journal verification records
   session `2026-10-07`, run `30e060d6e0f74ccb826e6f4bf5adba1e`, stage `COMPLETE`, no failure.
-  This predates the later Phase-2 corrective below. This projection milestone ran no Daily,
-  accessed no T0 body and changed no genuine session/seal or Dashboard output.
-
+  This predates the later Phase-2 corrective. Campaign work ran no Daily, accessed no T0
+  body and changed no genuine session/seal or Dashboard output.
 - **CURRENT FACT — Owner Daily Phase 2 observability corrective (2026-10-07).** The owner explicitly
   authorizes `OWNER_DAILY_PHASE2_TRUTHFUL_PROGRESS_AND_TERMINAL_CLEANUP_V2` as a bounded operational
   override (the roadmap tool does not register that ID). Fixed 13 logical checkpoints, separate

@@ -15,15 +15,33 @@
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "RETAINED_INTERIM_STATEMENT_GEOMETRY_RECOVERY_V1",
+    "milestone": "CURRENCY_PRESERVING_INTERIM_RESEARCH_CONTEXT_V1",
     "state": "COMPLETE"
   },
   "queued_next": [],
   "milestones": [
     {
-      "milestone_id": "RETAINED_INTERIM_STATEMENT_GEOMETRY_RECOVERY_V1",
+      "milestone_id": "CURRENCY_PRESERVING_INTERIM_RESEARCH_CONTEXT_V1",
       "state": "COMPLETE",
       "checkpoint": "HEAD",
+      "terminal_disposition": "PARTIAL_SOURCE_CURRENCY_CONTEXT_READY",
+      "starting_checkpoint": "05bc504d1cac8002e859a7745c42efba870faae8",
+      "candidate_branch": "feature/currency-preserving-interim-20261007",
+      "dependencies": [
+        "RETAINED_INTERIM_STATEMENT_GEOMETRY_RECOVERY_V1"
+      ],
+      "unlocks": [],
+      "owner_authorized": true,
+      "owner_override": "STOCK_LOOKUP_AUTONOMOUS_EVIDENCE_AND_DECISION_QUALITY_CAMPAIGN_V1",
+      "authority_effect": "SCOPED / SOURCE_CURRENCY_INCOME_CONTEXT_ONLY",
+      "state_history": ["ACTIVE", "COMPLETE"],
+      "source_doc": "docs/internal/STOCK_LOOKUP_AUTONOMOUS_CAMPAIGN_20261007.md",
+      "notes": "Qualified USD income context excluded from VND citations/valuation; no FX conversion or authority widening."
+    },
+    {
+      "milestone_id": "RETAINED_INTERIM_STATEMENT_GEOMETRY_RECOVERY_V1",
+      "state": "COMPLETE",
+      "checkpoint": "8ba240bcd95c6b69646f350aa5f4b15132755c6a",
       "terminal_disposition": "PARTIAL_EXACT_INTERIM_FIELDS_READY",
       "starting_checkpoint": "df5510c8a610735e98596df14994e1be45da14e3",
       "candidate_branch": "feature/retained-statement-recovery-20261007",

@@ -37,10 +37,13 @@ ticker verdict ([AI_RULES.md](AI_RULES.md) rules 5–10, [DATA_FIRST_DOCTRINE.md
 ## 3. Analytical context
 
 The local October-7 projection checkpoint distinguishes current official exact-field facts
-from annual research admissibility. Reviewed H1 revenue retains `RESEARCH_PERIOD_NOT_ANNUAL`;
+from annual research admissibility. Reviewed H1 income retains `RESEARCH_PERIOD_NOT_ANNUAL`;
 it cannot replace annual inputs, create TTM or upgrade other fields. Session event projection
 preserves source qualification, explicit dates and knowledge time; it grants no factor,
 governance, ownership, share, PIT or execution authority.
+The [currency context contract](currency_preserving_interim_context_contract.md) admits
+source-qualified USD income fields for context only. No FX conversion or VND valuation
+input/citation use follows.
 
 | Area | Status | Meaning | Controlling source |
 |---|---|---|---|

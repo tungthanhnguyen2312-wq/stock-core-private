@@ -1,8 +1,8 @@
 {
-  "artifact_sha256": "269ccc77b9d0bc662431f5b49f14bf272545e276f691391b1f147ce9f5af10b5",
+  "artifact_sha256": "92c8d4e10b56fc903b864970717c02b8f13e6822178c68861f77abc86b4c02c5",
   "candidate_fact_count": 7,
-  "canonical_fact_count": 4,
-  "contract_version": "reviewed_interim_canonical_ingress/v1",
+  "canonical_fact_count": 7,
+  "contract_version": "reviewed_interim_canonical_ingress/v2",
   "documents": [
     {
       "assurance": {
@@ -256,49 +256,73 @@
           "value": 17920760
         }
       ],
-      "canonical_facts": [],
-      "document_sha256": "a7360d2fc9a8a67a1535820813cda2bb8ef288466cd36c949e050c2f2a1b290a",
-      "ingress_blocked": [
+      "canonical_facts": [
         {
-          "key": {
-            "currency": "USD",
-            "metric": "attributable_net_income",
-            "period": "2026-H1",
-            "ticker": "PVD",
-            "value": 17920760
-          },
-          "reasons": [
-            "CURRENCY_NOT_VND_OVERLAY_UNSUPPORTED"
+          "audit_or_review_status": "reviewed",
+          "citation_id": "402c21fe90c3b0823bb439743fe2c703ae0da8d701db9c7b76a75a112be3df4c",
+          "currency": "USD",
+          "factual_reason_codes": [],
+          "factual_status": "qualified",
+          "line_code": "61",
+          "metric": "attributable_net_income",
+          "period": "2026-H1",
+          "period_end": "2026-06-30",
+          "period_start": "2026-01-01",
+          "period_type": "interim",
+          "research_reason_codes": [
+            "RESEARCH_PERIOD_NOT_ANNUAL"
           ],
-          "state": "BLOCKED"
+          "research_status": "partial",
+          "scope": "consolidated",
+          "source_page": 8,
+          "source_unit_scale": 1,
+          "value": 17920760
         },
         {
-          "key": {
-            "currency": "USD",
-            "metric": "net_income",
-            "period": "2026-H1",
-            "ticker": "PVD",
-            "value": 18272708
-          },
-          "reasons": [
-            "CURRENCY_NOT_VND_OVERLAY_UNSUPPORTED"
+          "audit_or_review_status": "reviewed",
+          "citation_id": "e30e02d315ff9bb45536613459d84dcb8154351668c9a781ca4cda9de0ccbba4",
+          "currency": "USD",
+          "factual_reason_codes": [],
+          "factual_status": "qualified",
+          "line_code": "60",
+          "metric": "net_income",
+          "period": "2026-H1",
+          "period_end": "2026-06-30",
+          "period_start": "2026-01-01",
+          "period_type": "interim",
+          "research_reason_codes": [
+            "RESEARCH_PERIOD_NOT_ANNUAL"
           ],
-          "state": "BLOCKED"
+          "research_status": "partial",
+          "scope": "consolidated",
+          "source_page": 8,
+          "source_unit_scale": 1,
+          "value": 18272708
         },
         {
-          "key": {
-            "currency": "USD",
-            "metric": "revenue",
-            "period": "2026-H1",
-            "ticker": "PVD",
-            "value": 245730824
-          },
-          "reasons": [
-            "CURRENCY_NOT_VND_OVERLAY_UNSUPPORTED"
+          "audit_or_review_status": "reviewed",
+          "citation_id": "eeac0f173b78da85a8027f3bb6edf015619584f080d028822bd57bc9805c07da",
+          "currency": "USD",
+          "factual_reason_codes": [],
+          "factual_status": "qualified",
+          "line_code": "10",
+          "metric": "revenue",
+          "period": "2026-H1",
+          "period_end": "2026-06-30",
+          "period_start": "2026-01-01",
+          "period_type": "interim",
+          "research_reason_codes": [
+            "RESEARCH_PERIOD_NOT_ANNUAL"
           ],
-          "state": "BLOCKED"
+          "research_status": "partial",
+          "scope": "consolidated",
+          "source_page": 8,
+          "source_unit_scale": 1,
+          "value": 245730824
         }
       ],
+      "document_sha256": "a7360d2fc9a8a67a1535820813cda2bb8ef288466cd36c949e050c2f2a1b290a",
+      "ingress_blocked": [],
       "knowledge_available_at": "2026-09-29T11:31:14.408633Z",
       "observed_at": "2026-09-29T11:31:14.408633Z",
       "reporting_period": "2026-H1",
@@ -465,6 +489,7 @@
     "front_matter_and_statement_pages": 32
   },
   "precedence_statuses": [
+    "NOT_COMPARABLE",
     "OFFICIAL_ONLY"
   ],
   "raw_pdf_or_image_bytes_committed": false,

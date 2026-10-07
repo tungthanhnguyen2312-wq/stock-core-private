@@ -5,8 +5,10 @@ from `tools/run_owner_daily.py`, `owner_daily_progress.py`, `canonical_daily_ope
 `canonical_post_close_pipeline.py`. If this file and the code disagree, the code wins — fix this file.
 Current-state facts: [ACTIVE_STATE.md](ACTIVE_STATE.md). Authority per output: [AUTHORITY.md](AUTHORITY.md).
 
-Local October-7 integration checkpoint extends K2's existing fundamental builder with a
+Released October-7 integration extends K2's existing fundamental builder with a
 new session projection of the immutable annual baseline and qualified retained overlay.
+Reviewed USD income fields remain currency-preserving context and are excluded from VND
+canonical citations/valuation inputs. This changes future construction only.
 CI, valuation and downstream research receive that projection; corporate selection is
 carried from the same frozen/attempt input binding into opportunity and K6 event context.
 Completed locks cannot be replaced. AI context preserves exact-field citations and event

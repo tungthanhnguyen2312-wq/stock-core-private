@@ -1305,7 +1305,9 @@ def project_session(*, baseline: Mapping[str, Any], official_rows: list[Mapping[
     """
     import copy
     from financial_evidence_currency_contract import COHORT, TARGET_INTERIM_PERIODS
-    from reviewed_interim_canonical_ingress import authority_projection
+    from reviewed_interim_canonical_ingress import (
+        authority_projection, FOREIGN_CONTEXT_METRICS, CONTRACT_VERSION as INTERIM_INGRESS,
+    )
     from official_financial_assurance_evidence import assurance_status_is_qualified
 
     if baseline.get("contract_version") != CONTRACT_VERSION or content_identity(baseline) != {
@@ -1344,7 +1346,13 @@ def project_session(*, baseline: Mapping[str, Any], official_rows: list[Mapping[
             reasons.append("ASSURANCE_STATUS_NOT_ALLOWED")
         if row.get("audit_or_review_status") == "reviewed" and not (row.get("assurance_evidence") or {}).get("evidence_id"):
             reasons.append("REVIEWED_STATUS_WITHOUT_EVIDENCE")
-        if row.get("normalized_value") is None or row.get("currency") != "VND" or row.get("unit_scale") != 1 or not row.get("already_normalized"):
+        native_usd_context = (row.get("currency") == "USD"
+                              and row.get("ingress_contract") == INTERIM_INGRESS
+                              and row.get("projection_currency_policy") == "SOURCE_CURRENCY_CONTEXT_ONLY"
+                              and row.get("canonical_metric") in FOREIGN_CONTEXT_METRICS
+                              and row.get("statement_family") == "income_statement"
+                              and row.get("period_type") == "interim")
+        if row.get("normalized_value") is None or (row.get("currency") != "VND" and not native_usd_context) or row.get("unit_scale") != 1 or not row.get("already_normalized"):
             reasons.append("OFFICIAL_VALUE_UNIT_NOT_QUALIFIED")
         exact_key = (row.get("ticker"), row.get("canonical_metric"), row.get("reporting_period"), row.get("statement_scope"))
         if len(values_by_key[exact_key]) > 1:
@@ -1373,7 +1381,8 @@ def project_session(*, baseline: Mapping[str, Any], official_rows: list[Mapping[
             "temporal_status": "CURRENT_OFFICIAL_FACT" if current else "HISTORICAL_OFFICIAL_FACT",
             "source_identity": row.get("source_locator") or "official-document:" + row["document_sha256"],
             "allowed_projection_use": "EXACT_FIELD_CURRENT_RESEARCH_CONTEXT",
-            "valuation_use": "EXISTING_METRIC_PERIOD_CONTRACT_ONLY",
+            "valuation_use": "NOT_PERMITTED_FOREIGN_CURRENCY_CONTEXT" if native_usd_context else "EXISTING_METRIC_PERIOD_CONTRACT_ONLY",
+            "foreign_currency_conversion": "NOT_PERMITTED",
             "annualization": "NOT_PERMITTED", "ttm_derivation": "NOT_PERMITTED",
         }
         key = (row["ticker"], row["canonical_metric"], period, row["statement_scope"], row["citation_id"])

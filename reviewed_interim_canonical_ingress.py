@@ -22,8 +22,10 @@ from official_financial_assurance_evidence import REVIEWED, assurance_status_is_
 from official_legacy_precedence import compare_official_and_legacy
 
 MILESTONE_ID = "FINANCIAL_EVIDENCE_REVIEWED_INTERIM_CANONICAL_INGRESS_V1"
-CONTRACT_VERSION = "reviewed_interim_canonical_ingress/v1"
+CONTRACT_VERSION = "reviewed_interim_canonical_ingress/v2"
 OVERLAY_CURRENCY = "VND"
+CONTEXT_CURRENCIES = frozenset({"VND", "USD"})
+FOREIGN_CONTEXT_METRICS = frozenset({"revenue", "net_income", "attributable_net_income"})
 PROVIDER_LABEL = "official_issuer_ir"
 # Circular-200 income statement: line 60 total profit after tax (net_income); line 61 profit
 # attributable to the parent (attributable_net_income).  Crossed pairs are never emitted.
@@ -37,8 +39,8 @@ def _hash(value: Any) -> str:
 def overlay_rows_from_panel_facts(panel_facts: Sequence[Mapping[str, Any]]) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     """Adapt already-qualified panel facts to overlay rows; refuse anything the overlay cannot carry.
 
-    The overlay is VND-denominated (its existing extraction contract blocks any other
-    currency), so a non-VND fact stays a candidate: no FX conversion is invented here.
+    USD income fields retain their native currency as context only. The legacy
+    VND citation lane excludes them; no FX conversion is invented here.
     """
     rows: list[dict[str, Any]] = []
     blocked: list[dict[str, Any]] = []
@@ -56,8 +58,12 @@ def overlay_rows_from_panel_facts(panel_facts: Sequence[Mapping[str, Any]]) -> t
             reasons.append("PERIOD_NOT_INTERIM")
         if fact.get("statement_scope") != "consolidated":
             reasons.append("SCOPE_NOT_CONSOLIDATED")
-        if fact.get("currency") != OVERLAY_CURRENCY:
-            reasons.append("CURRENCY_NOT_VND_OVERLAY_UNSUPPORTED")
+        if fact.get("currency") not in CONTEXT_CURRENCIES:
+            reasons.append("CURRENCY_NOT_ADMITTED_FOR_CONTEXT")
+        elif fact.get("currency") != OVERLAY_CURRENCY and (
+                fact.get("canonical_metric") not in FOREIGN_CONTEXT_METRICS
+                or fact.get("statement_family") != "income_statement"):
+            reasons.append("FOREIGN_CURRENCY_METRIC_NOT_ADMITTED")
         if not (lineage.get("document_sha256") and lineage.get("citation_id")):
             reasons.append("CITATION_MISSING")
         if (fact.get("canonical_metric"), str(lineage.get("line_code"))) in LINE_CODE_IDENTITY_CONFLICTS:
@@ -74,9 +80,10 @@ def overlay_rows_from_panel_facts(panel_facts: Sequence[Mapping[str, Any]]) -> t
             "period_start": fact["period_start"], "period_end": fact["period_end"],
             "statement_scope": fact["statement_scope"], "statement_family": fact["statement_family"],
             "temporal_nature": fact["temporal_nature"],
-            # ``value`` is the absolute VND amount; the source-declared scale is kept apart so the
+            # ``value`` is the absolute source-currency amount; declared scale is kept apart so the
             # existing citation loader (scale "units") cannot rescale it a second time.
             "currency": fact["currency"], "normalized_value": fact["value"], "value": fact["value"],
+            "projection_currency_policy": "VND_EXISTING_CONTRACT" if fact["currency"] == "VND" else "SOURCE_CURRENCY_CONTEXT_ONLY",
             "already_normalized": True, "unit_scale": 1,
             "source_unit_scale": (lineage.get("unit_evidence") or {}).get("unit_scale"),
             "qualification_state": "QUALIFIED", "blockers": [],
@@ -123,4 +130,10 @@ def precedence_row(row: Mapping[str, Any], legacy: Mapping[str, Any] | None) -> 
     """Official-vs-legacy comparison for one exact ticker/metric/period/scope key only."""
     key = {"ticker": row["ticker"], "metric": row["canonical_metric"],
            "period": row["reporting_period"], "scope": row["statement_scope"]}
+    if row.get("projection_currency_policy") == "SOURCE_CURRENCY_CONTEXT_ONLY":
+        return {"key": key, "status": "NOT_COMPARABLE",
+                "reason": "SOURCE_CURRENCY_CONTEXT_ONLY_VND_COMPARISON_NOT_ADMITTED",
+                "official_factual_status": authority_projection(row)["factual_status"],
+                "currency": row["currency"], "allowed_uses": ["EXACT_FIELD_CURRENT_RESEARCH_CONTEXT"],
+                "legacy_modified": False}
     return {"key": key, **compare_official_and_legacy(row, legacy)}

@@ -131,7 +131,9 @@ and no production Daily launch. Disk admission remains independently mandatory.
 
 ### 12. Current financial evidence
 - Local projection checkpoint: the frozen August-23 baseline remains immutable. Session
-  projections add qualified PNJ/VRE 2026-H1 revenue as exact-field official facts; nonannual
+  projections add qualified PNJ/VRE 2026-H1 revenue/profit and three PVD USD income fields
+  as exact-field official facts. USD remains context only, excluded from the VND citation
+  lane under [currency context contract](currency_preserving_interim_context_contract.md); nonannual
   research-use restrictions remain. Annual metrics, share authority and earnings quality
   are unchanged. Remaining cohort issuers retain explicit extraction/route blockers.
 - Contract: [financial_statement_canonical_contract.md](financial_statement_canonical_contract.md); `financial_analysis_engine_v2.py`

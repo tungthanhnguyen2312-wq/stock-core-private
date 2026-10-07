@@ -22,13 +22,54 @@ def baseline():
     value = {"contract_version": fundamental.CONTRACT_VERSION, "records": {
         ticker: {"authority_tier": "OFFICIAL_QUALIFIED", "authoritative_periods_available": [period],
                  "metrics": [{"metric_id": "net_margin", "status": "EXACT_QUALIFIED", "periods_used": [period], "value": 0.1}]}
-        for ticker, period in (("PNJ", "2024"), ("VRE", "2025"), ("HPG", "2024"))}}
+        for ticker, period in (("PNJ", "2024"), ("VRE", "2025"), ("HPG", "2024"), ("PVD", "2024"))}}
     value.update(fundamental.content_identity(value))
     return value
 
 
-def rows():
-    return [json.loads(line) for line in (ROOT / "derived/financial-evidence-currency-refresh-v1/qualified_official_facts.jsonl").read_text(encoding="utf-8").splitlines()]
+def rows(currency='VND'):
+    # These original VND boundary regressions deliberately use one fixed currency lane.
+    return [r for line in (ROOT / "derived/financial-evidence-currency-refresh-v1/qualified_official_facts.jsonl").read_text(encoding="utf-8").splitlines()
+            if (r := json.loads(line))['currency'] == currency]
+
+
+def test_usd_income_survives_consumers_without_fx_or_annual_input_promotion():
+    old = baseline()
+    old['records']['PVD'] = {'authority_tier': 'PROVIDER_RESEARCH', 'metrics': []}
+    old.update(fundamental.content_identity(old))
+    before = deepcopy(old)
+    usd = rows('USD')
+    assert {r['canonical_metric']: r['normalized_value'] for r in usd} == {
+        'revenue':245730824, 'net_income':18272708, 'attributable_net_income':17920760}
+    value = fundamental.project_session(baseline=old,official_rows=rows()+usd,session=SESSION,cutoff=CUTOFF)
+    assert old == before and value['official_projection']['current_official_field_count'] == 7
+    fields = value['records']['PVD']['official_field_context']
+    assert len(fields) == 3
+    assert all(f['currency']=='USD' and f['foreign_currency_conversion']=='NOT_PERMITTED'
+               and f['valuation_use']=='NOT_PERMITTED_FOREIGN_CURRENCY_CONTEXT'
+               and f['research_reason_codes']==['RESEARCH_PERIOD_NOT_ANNUAL'] for f in fields)
+    assert _financial_input(value['records']['PVD'],value)['official_field_context'] == fields
+    assert value['records']['PVD']['authority_tier'] == before['records']['PVD']['authority_tier']
+    from financial_evidence_currency_refresh import load_public_official_citations
+    assert not any(key[0]=='PVD' for key in load_public_official_citations(ROOT))
+    from ai_research_session_delivery import _compact_context
+    compact = _compact_context('PVD',{'product':{}},{'fundamental':value})
+    assert compact['fundamental_context']['official_field_context'] == fields
+
+
+@pytest.mark.parametrize('change,reason', [
+    ({'projection_currency_policy':None},'OFFICIAL_VALUE_UNIT_NOT_QUALIFIED'),
+    ({'unit_scale':1000},'OFFICIAL_VALUE_UNIT_NOT_QUALIFIED'),
+    ({'knowledge_available_at':'2026-10-07T15:01:00+07:00'},'OFFICIAL_FACT_NOT_KNOWN_BY_SESSION_CUTOFF'),
+    ({'currency':'EUR'},'OFFICIAL_VALUE_UNIT_NOT_QUALIFIED'),
+])
+def test_usd_context_is_bounded_and_invalid_row_does_not_widen_vnd_lane(change,reason):
+    usd = rows('USD')
+    assert len(usd)==3
+    usd[0].update(change)
+    value = project(rows()+usd)
+    assert value['official_projection']['current_official_field_count']==6
+    assert reason in value['official_projection']['rejected_fields'][0]['reasons']
 
 
 def project(source=None):
