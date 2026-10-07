@@ -6,7 +6,6 @@ import json
 from pathlib import Path
 
 import pytest
-from pypdf import PdfWriter
 
 from financial_evidence_currency_contract import (
     COHORT,
@@ -151,6 +150,7 @@ def test_h1_and_q2_period_identity_and_q3_out_of_scope():
 
 
 def test_image_only_fail_closed_without_ocr(tmp_path: Path):
+    PdfWriter = pytest.importorskip("pypdf", reason="Optional native PDF fixture writer").PdfWriter
     writer = PdfWriter()
     writer.add_blank_page(width=72, height=72)
     path = tmp_path / "blank.pdf"
