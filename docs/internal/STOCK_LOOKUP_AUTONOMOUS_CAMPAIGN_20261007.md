@@ -101,7 +101,7 @@ One writer; official exact-field evidence only; immutable completed sessions pre
 
 ## Bounded current official filing acquisition
 
-- ID: `BOUNDED_CURRENT_OFFICIAL_FILINGS_ACQUISITION_AND_RECONCILIATION_V1` (COMPLETE; release pending).
+- ID: `BOUNDED_CURRENT_OFFICIAL_FILINGS_ACQUISITION_AND_RECONCILIATION_V1` (COMPLETE).
 - Starting main: `f5d92c1c57326040e2d75988c37c982268aedb68`.
 - Branch: `feature/current-filing-acquisition-20261007`.
 - Selection: retained ambiguous labels and NVL unreviewed Q2 cannot safely support more facts.
@@ -135,16 +135,22 @@ One writer; official exact-field evidence only; immutable completed sessions pre
   47 retained/extraction pass (8 skips), 30 read-only retained consumer tests pass.
   Both full scratch consumer joins pass. Final 124 affected tests pass after fail-closed
   marker stripping and exact retained-period binding guards. Implementation `7c718cc`;
-  hardening `e16f1a1539c74b9162df1665a54835b80461ef8a`; PR [80](https://github.com/tungthanhnguyen2312-wq/stock-core-private/pull/80), release pending.
+  hardening `e16f1a1539c74b9162df1665a54835b80461ef8a`; final candidate
+  `4ece8a1412bb3598a4647f379bc9b92811bea44e`. PR [80](https://github.com/tungthanhnguyen2312-wq/stock-core-private/pull/80) merged at
+  `a7e0a7ea22c982651ee05860408b2d01cead9004`; all four candidate checks passed,
+  CI run `37647425497`. Expanded CI exposed an optional pypdf import during collection;
+  that single fixture now skips without pypdf. Final 78 affected local tests pass.
 - Next reason: stop further OCR escalation; examine retained official share-basis proof
   or corporate-event evidence where it can improve evidence without inventing valuation inputs.
 
 ## Campaign quota checkpoint
 
-- Observed quota: primary window 85% used /15% remaining, weekly 36% used /64% remaining;
+- Quota at checkpoint start: primary 85% used /15% remaining. Latest after CI repair:
+  primary 91% used /9% remaining, weekly 37% used /63% remaining;
   ordinary usage still allowed. No reset credit used. This is a safety floor for starting
   another evidence milestone with unknown acquisition/qualification and CI repair cost.
-- Finish the existing candidate release and handoff; start no further substantive milestone.
+- Evidence release finished; this documentation closes the same campaign. No further
+  substantive milestone starts. Resume with refreshed quota and repository bootstrap.
 - Source-route audit for resume: the legacy `run_authoritative_current_common_shares.py`
   calls retired KBS; do not run it. Retained HPG executed listing change (8,442,964,520
   listed shares, July 2) does not establish common outstanding shares or October continuity.
@@ -153,5 +159,12 @@ One writer; official exact-field evidence only; immutable completed sessions pre
   notices and approved routes. Record the native milestone before any acquisition.
 - Candidate worktree: `C:/Projects/StockLookup/current-filing-acquisition-v1`, branch
   `feature/current-filing-acquisition-20261007`, upstream same origin branch, clean after push.
-- Canonical: main remains `f5d92c1c57326040e2d75988c37c982268aedb68` pending PR80;
-  preserved untracked `data/` only. No Daily writer or T0 activity introduced.
+- Canonical main at evidence release: `a7e0a7ea22c982651ee05860408b2d01cead9004`,
+  equals origin/main after fast-forward; preserved untracked `data/` only. No Daily writer
+  or T0 activity introduced. Final handoff publication is a documentation-only follow-up.
+- Handoff worktree: `C:/Projects/StockLookup/campaign-quota-checkpoint-v1`, branch
+  `docs/autonomous-campaign-checkpoint-20261007`; its HEAD is the documentation checkpoint.
+  Each candidate is committed and pushed. No implementation work remains in progress.
+- Campaign gains: current fields 2→9, current issuers 2→3, historical context fields +2;
+  one sourced earnings-quality component, three additional annual PDFs. Original 94 annual
+  metrics, 1,505 research shares, zero strict shares/valuation and genuine input bytes preserved.
