@@ -1065,9 +1065,25 @@ def match_geometry_table_row(
     # is therefore the bounded space between the code and note/value bands, not
     # a stream-order or fixed-side assumption.
     label_right = float((bands["note_reference"] or bands["current_period_value"])["x0"])
-    label_band = {"x0": float(bands["line_code"]["x1"]), "x1": label_right}
-    label_tokens = [token for token in row_tokens if label_band["x0"] < float(token["x0"]) < label_band["x1"]]
-    label_tokens.sort(key=lambda token: (float(token["top"]), float(token["x0"]), int(token.get("raw_token_order", 0))))
+    candidate_label_bands = (
+        {"x0": 0.0, "x1": float(bands["line_code"]["x0"])},
+        {"x0": float(bands["line_code"]["x1"]), "x1": label_right},
+    )
+    candidates = []
+    for candidate_band in candidate_label_bands:
+        candidate_tokens = [token for token in row_tokens
+                            if candidate_band["x0"] < float(token["x0"])
+                            and float(token["x1"]) < candidate_band["x1"]]
+        if any(any(ch.isalpha() for ch in str(token["text"])) for token in candidate_tokens):
+            candidates.append((candidate_band, candidate_tokens))
+    # Explicit alphabetic labels on both sides are ambiguous. Never select one by
+    # its financial meaning or manufacture a label from a neighbouring row.
+    if len(candidates) > 1:
+        return None
+    label_band, label_tokens = candidates[0] if candidates else (candidate_label_bands[1], [])
+    # TSV word order preserves wrapped lines and words on a shared OCR line.
+    # Glyph tops vary with accents; sorting individual tops scrambles that text.
+    label_tokens.sort(key=lambda token: int(token["raw_token_order"]))
     raw_fragments = [str(token["text"]) for token in label_tokens]
     reconstructed_label = " ".join(raw_fragments)
     normalized_label = _normalize_text(reconstructed_label)

@@ -41,9 +41,10 @@ def test_reviewed_fact_is_current_without_annual_research_or_valuation_upgrade()
     before = deepcopy(old)
     value = fundamental.project_session(baseline=old, official_rows=rows(), session=SESSION, cutoff=CUTOFF)
     assert old == before
-    assert value["official_projection"]["current_official_field_count"] == 2
+    assert value["official_projection"]["current_official_field_count"] == 4
     for ticker in ("PNJ", "VRE"):
         row = value["records"][ticker]
+        assert {f['canonical_metric'] for f in row['official_field_context']} == {'revenue', 'net_income'}
         field = row["official_field_context"][0]
         assert field["temporal_status"] == "CURRENT_OFFICIAL_FACT"
         assert field["factual_status"] == "qualified"
@@ -72,16 +73,16 @@ def test_invalid_fields_remain_local(change, reason):
     source = rows()
     source[0].update(change)
     value = project(source)
-    assert value["official_projection"]["current_official_field_count"] == 1
+    assert value["official_projection"]["current_official_field_count"] == 3
     assert reason in value["official_projection"]["rejected_fields"][0]["reasons"]
 
 
 def test_conflicts_block_every_candidate_and_duplicate_evidence_does_not_add_coverage():
     source = rows()
-    assert project(source + deepcopy(source))["official_projection"]["current_official_field_count"] == 2
+    assert project(source + deepcopy(source))["official_projection"]["current_official_field_count"] == 4
     conflict = deepcopy(source[0]); conflict["normalized_value"] += 1
     value = project(source + [conflict])
-    assert value["official_projection"]["current_official_field_count"] == 1
+    assert value["official_projection"]["current_official_field_count"] == 3
     assert all("TRUE_CONFLICT" in r["reasons"] for r in value["official_projection"]["rejected_fields"])
 
 
@@ -91,7 +92,7 @@ def test_old_interim_is_historical_and_never_current():
         row.update(reporting_period="2024-H1", period_start="2024-01-01", period_end="2024-06-30")
     value = project(source)
     assert value["official_projection"]["current_official_field_count"] == 0
-    assert value["official_projection"]["historical_official_overlay_field_count"] == 2
+    assert value["official_projection"]["historical_official_overlay_field_count"] == 4
 
 
 def test_missing_metric_carries_no_official_or_provider_fact_claim():

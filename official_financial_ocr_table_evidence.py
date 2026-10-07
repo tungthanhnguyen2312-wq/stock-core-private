@@ -15,9 +15,6 @@ import re
 import subprocess
 from typing import Any, Mapping, Sequence
 
-import fitz
-from PIL import Image
-
 from annual_financial_ocr_materialization import DEFAULT_ENGINE, parse_accounting_integer, sha256_file
 from official_financial_assurance_evidence import REVIEWED, validate_assurance_claim
 from official_financial_period_identity import period_bounds
@@ -63,7 +60,11 @@ def row_label_supports_metric(metric: str, label: str) -> bool:
     if contract is None:
         return True
     normalized = _normalize(label)
-    return any(term in normalized for term in contract["any_of"]) and not any(term in normalized for term in contract["forbidden"])
+    # OCR may join adjacent words (``Loinhuan``). Ignore word spacing only;
+    # never repair letters, digits or replace a missing identity-bearing word.
+    compact = normalized.replace(" ", "")
+    return any(term.replace(" ", "") in compact for term in contract["any_of"]) and not any(
+        term.replace(" ", "") in compact for term in contract["forbidden"])
 
 
 DEBT_COMPONENT_RULES = (
@@ -130,6 +131,7 @@ def _parse_tsv(raw: bytes, *, page_number: int, image_sha256: str) -> list[dict[
 
 def _render_image_bytes(source: Path, page_number: int) -> tuple[bytes, dict[str, Any]]:
     """Re-render the immutable source page under the primary render contract."""
+    import fitz
     document = fitz.open(source)
     try:
         if page_number < 1 or page_number > document.page_count:
@@ -145,6 +147,7 @@ def _render_image_bytes(source: Path, page_number: int) -> tuple[bytes, dict[str
 
 def materialize_tsv_pages(record: Mapping[str, Any], *, evidence_root: Path, pages: Sequence[int], engine: Path = DEFAULT_ENGINE) -> dict[str, Any]:
     """Render fixed image-only pages once and preserve raw positioned TSV tokens."""
+    import fitz
     root = Path(evidence_root)
     source = (root / str(record["relative_path"])).resolve()
     if not source.is_file() or sha256_file(source) != str(record["sha256"]):
@@ -337,6 +340,7 @@ def _run_secondary_line_code_read(
     source_image: Mapping[str, Any], primary_ocr_evidence: Mapping[str, Any], materialization_id: str, engine: Path,
 ) -> dict[str, Any]:
     """Run the one fixed, field-scoped secondary OCR read for one malformed cell."""
+    from PIL import Image
     image_bytes, render = _render_image_bytes(source, int(locator["page"]))
     if render["rendered_image_sha256"] != source_image.get("rendered_image_sha256"):
         raise ValueError("PRIMARY_RENDER_IDENTITY_MISMATCH")

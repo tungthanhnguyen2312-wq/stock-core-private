@@ -63,6 +63,7 @@ env:
     tests/test_current_corporate_event_context.py
     tests/test_current_corporate_intelligence_axis.py
     tests/test_current_official_evidence_projection.py
+    tests/test_retained_interim_geometry_recovery.py
     tests/test_official_acquisition_budget.py
     tests/test_official_corporate_event_incremental_acquisition.py
     tests/test_hose_public_xhr_and_periodic_series_recon.py
