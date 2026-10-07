@@ -63,6 +63,9 @@ env:
     tests/test_current_corporate_event_context.py
     tests/test_current_corporate_intelligence_axis.py
     tests/test_current_official_evidence_projection.py
+    tests/test_hpg_common_share_semantics.py
+    tests/test_b1_share_basis_event_promotion.py
+    tests/test_current_common_shares_authority.py
     tests/test_retained_interim_geometry_recovery.py
     tests/test_column_major_financial_geometry.py
     tests/test_reviewed_interim_canonical_ingress.py

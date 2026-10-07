@@ -325,6 +325,7 @@ def _valuation_handoff(row: Any) -> dict[str, Any]:
         "valuation_session": price.get("session"),
         "price_status": price.get("status"),
         "share_basis_status": share.get("status"),
+        "official_share_observation": share.get("official_share_observation"),
         "financial_authority": financial.get("authority"),
         "metrics": metrics,
         "shadow_proxy": {

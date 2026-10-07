@@ -143,6 +143,11 @@ def _share_from_authority_record(record: Mapping[str, Any]) -> dict[str, Any]:
         and record.get("value") is not None
         and authority not in STALE_FAIL_CLOSED_AUTHORITIES
     )
+    observation = (record.get('lineage') or {}).get('official_common') or {}
+    if observation.get('contract_version') == 'retained_common_share_note/v1' and not authoritative_ready:
+        # Newly qualified point observations are context, never a silent
+        # historical-denominator proxy for a current-session price.
+        research_eligible = False
     blockers = list(record.get("blockers") or [])
     if not authoritative_ready:
         blockers.append("CURRENT_COMMON_OUTSTANDING_COVERAGE_NOT_PROVEN_THROUGH_PRICE_SESSION")
@@ -161,6 +166,22 @@ def _share_from_authority_record(record: Mapping[str, Any]) -> dict[str, Any]:
         "research_proxy_eligible": research_eligible,
         "blocked_reasons": sorted(set(blockers)),
         "retained_evidence": dict(record),
+        "official_share_observation": compact_official_share_observation(record),
+    }
+
+
+def compact_official_share_observation(record: Mapping[str, Any]) -> dict[str, Any] | None:
+    """Dated evidence context remains separate from the valuation denominator."""
+    observation = (record.get('lineage') or {}).get('official_common') or {}
+    if observation.get('contract_version') != 'retained_common_share_note/v1':
+        return None
+    keys = ('ticker', 'identity', 'share_class', 'value', 'unit', 'effective_date', 'coverage_through',
+            'observed_at', 'knowledge_available_at', 'published_at', 'source_url', 'document_sha256',
+            'evidence_id', 'citation_id', 'qualification_state', 'lifecycle_state', 'limitations')
+    return {k: observation.get(k) for k in keys} | {
+        'pdf_page': (observation.get('citation') or {}).get('pdf_page'),
+        'current_basis_eligible': record.get('coverage_through_session') is True,
+        'blockers': list(record.get('blockers') or []),
     }
 
 

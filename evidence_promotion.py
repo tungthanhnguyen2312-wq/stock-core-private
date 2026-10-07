@@ -151,7 +151,8 @@ def build_share_basis_event_citation(*, ticker: str, shares_after: int, effectiv
                                       corroborated_value: int | None = None,
                                       corroborated_source: str | None = None,
                                       corroborated_on: str | None = None,
-                                      share_class: str = "common_outstanding",
+                                      share_class: str | None = None,
+                                      share_count_identity: str | None = None,
                                       citation: str | None = None,
                                       verified_at: str | None = None) -> dict[str, Any]:
     """Pure. A share count an official executed event states outright, at a stated date.
@@ -174,6 +175,7 @@ def build_share_basis_event_citation(*, ticker: str, shares_after: int, effectiv
         "citation_id": citation_id, "ticker": ticker,
         "identity_type": _SHARE_EVENT_IDENTITY, "value": int(shares_after),
         "share_class": share_class, "unit": "shares",
+        "share_count_identity": share_count_identity,
         "effective_date": effective_date, "event_id": event_id, "event_type": event_type,
         "evidence_id": evidence_id, "source_content_hashes": sorted(source_content_hashes),
         "corroborated_value": corroborated_value, "corroborated_source": corroborated_source,

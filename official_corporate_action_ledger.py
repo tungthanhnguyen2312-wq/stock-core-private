@@ -251,6 +251,8 @@ def _reconcile(key: tuple[str, str, str],
         "shares_before": merged.get("shares_before"),
         "shares_issued": merged.get("shares_issued"),
         "shares_after": merged.get("shares_after"),
+        "share_count_identity": _count_identity(ordered, 'share_count_identity') or 'unknown',
+        "share_class": _count_identity(ordered, 'share_class'),
         "cash_amount_per_share": merged.get("cash_amount_per_share"),
         "stock_ratio": merged.get("stock_ratio"),
         "ratio_basis": merged.get("ratio_basis"),
@@ -268,6 +270,8 @@ def _reconcile(key: tuple[str, str, str],
              "source_authority": observation.get("source_authority"),
              "source_url": observation.get("source_url"),
              "content_sha256": observation.get("content_sha256"),
+             "share_count_identity": observation.get('share_count_identity'),
+             "share_class": observation.get('share_class'),
              "citations": observation.get("citations") or []}
             for observation in ordered
         ],
@@ -286,6 +290,13 @@ def _reconcile(key: tuple[str, str, str],
 
 def _comparable(value: Any) -> Any:
     return round(float(value), 6) if isinstance(value, (int, float)) else str(value)
+
+
+def _count_identity(observations: Sequence[Mapping[str, Any]], field: str) -> str | None:
+    """Preserve only unanimous explicit semantics of documents stating shares_after."""
+    values = {str(o[field]) for o in observations if o.get('shares_after') is not None
+              and o.get(field) not in (None, '', 'unknown')}
+    return next(iter(values)) if len(values) == 1 else None
 
 
 def _corroborate(merged: Mapping[str, Any],

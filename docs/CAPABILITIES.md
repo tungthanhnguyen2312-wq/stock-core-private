@@ -143,6 +143,11 @@ and no production Daily launch. Disk admission remains independently mandatory.
 - Blocker: official statement refresh and OCR cohorts `PARTIAL`
 - Next trigger: official statement currency refresh
 
+HPG's audited capital note now supplies one dated common-outstanding observation,
+context only until complete continuity qualifies. Listed quantities and provider
+agreement cannot establish common semantics or continuity. Completed sessions remain
+immutable. [Share contract](hpg_common_share_evidence_contract.md).
+
 ### 13a. Relative valuation (current state)
 - Contract: [current_state_relative_valuation_contract.md](current_state_relative_valuation_contract.md)
 - Runtime: `ACTIVE` · Authority: `SCOPED` (research context; no target price/probability) · Production: `IN_DAILY_BLOCKING` (inside enrichment)

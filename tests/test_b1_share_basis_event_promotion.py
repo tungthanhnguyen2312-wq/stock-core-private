@@ -1,11 +1,4 @@
-"""B1.1 — an official executed event establishes a current share basis.
-
-The ledger had stated HPG's share count outright since 2026-08-02 and nothing read it: the
-resolver looked for official anchors in `share_basis_citations.jsonl`, which held only FY2024
-period-end figures, so a published count sat one directory away while HPG resolved as
-`provider_reported_lagged`. These tests cover the reader that closes that gap and the
-promotion gate that decides whether an anchor is a *current* count.
-"""
+"""Executed event and exact common-share semantics; listing quantity cannot qualify."""
 
 from __future__ import annotations
 
@@ -32,6 +25,7 @@ def ledger_entry(**overrides) -> dict:
         "event_id": "evt1", "ticker": "AAA", "event_type": "stock_dividend",
         "lifecycle_state": "executed", "execution_status": "executed",
         "qualification_state": "qualified", "shares_after": 2000,
+        "share_count_identity": "common_shares_outstanding", "share_class": "common_outstanding",
         "payment_or_execution_date": "2026-07-02", "trading_date": "2026-07-15",
         "ex_date": None, "record_date": None,
         "source_document_ids": ["doc1"], "source_content_hashes": ["hash1"],
@@ -76,6 +70,7 @@ def event_anchor(**overrides) -> dict:
         "citation_id": "cite1", "ticker": "AAA",
         "identity_type": "current_shares_outstanding_after_event",
         "value": 2000, "share_class": "common_outstanding", "unit": "shares",
+        "share_count_identity": "common_shares_outstanding", "coverage_through": "2026-08-03",
         "effective_date": "2026-07-02", "event_id": "evt1", "event_type": "stock_dividend",
         "corroborated_value": 2000, "corroborated_source": "provider",
         "corroborated_on": "2026-07-30",
@@ -216,12 +211,13 @@ class PromotionGateTests(unittest.TestCase):
 class LiveRuntimeTests(unittest.TestCase):
     """What the retained evidence actually supports today."""
 
-    def test_hpg_qualifies_from_its_own_notice(self) -> None:
+    @unittest.skipUnless((RUNTIME / 'vn_stock.db').is_file(), 'retained runtime unavailable')
+    def test_hpg_listing_notice_does_not_qualify_common_shares(self) -> None:
         result = shares.resolve_effective_shares("HPG", RUNTIME, SESSION)
-        self.assertEqual(result["authority"], "qualified_official")
-        self.assertEqual(result["value"], HPG_SHARES)
-        self.assertEqual(result["official_anchor_effective_date"], "2026-07-02")
+        self.assertNotEqual(result["authority"], "qualified_official")
+        self.assertEqual(result["official_anchor_not_promoted_because"], "common_outstanding_share_semantics_not_proven")
 
+    @unittest.skipUnless((RUNTIME / 'vn_stock.db').is_file(), 'retained runtime unavailable')
     def test_vnm_and_vcb_stay_refused_for_a_named_reason(self) -> None:
         for ticker in ("VNM", "VCB"):
             result = shares.resolve_effective_shares(ticker, RUNTIME, SESSION)
@@ -229,9 +225,10 @@ class LiveRuntimeTests(unittest.TestCase):
             self.assertEqual(result["official_anchor_not_promoted_because"],
                              "anchor_is_a_period_end_figure_not_a_dated_current_count")
 
-    def test_exactly_one_ticker_is_qualified_market_wide(self) -> None:
+    @unittest.skipUnless((RUNTIME / 'vn_stock.db').is_file(), 'retained runtime unavailable')
+    def test_no_legacy_anchor_is_qualified_market_wide(self) -> None:
         summary = shares.resolve_market_wide_shares(RUNTIME, SESSION)
-        self.assertEqual(summary["counts"].get("qualified_official"), 1)
+        self.assertEqual(summary["counts"].get("qualified_official", 0), 0)
         self.assertTrue(summary["counts_reconcile"])
 
 

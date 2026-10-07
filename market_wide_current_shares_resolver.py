@@ -166,6 +166,8 @@ def load_official_anchors(runtime_root: Path | str) -> dict[str, dict[str, Any]]
             "event_id": record.get("event_id"),
             "event_type": record.get("event_type"),
             "share_class": record.get("share_class"),
+            "share_count_identity": record.get("share_count_identity"),
+            "coverage_through": record.get("coverage_through"),
             "unit": record.get("unit"),
             "citation_id": record.get("citation_id"),
             "evidence_id": record.get("evidence_id"),
@@ -213,6 +215,8 @@ def _promotion_refusal(anchor: Mapping[str, Any], boundary: date | None,
     """
     if anchor.get("identity_type") != _EVENT_IDENTITY:
         return "anchor_is_a_period_end_figure_not_a_dated_current_count"
+    if anchor.get("share_count_identity") != "common_shares_outstanding" or anchor.get("share_class") != "common_outstanding":
+        return "common_outstanding_share_semantics_not_proven"
     if boundary is None:
         return "official_anchor_carries_no_resolvable_effective_date"
     if session_on is None or boundary > session_on:
@@ -238,6 +242,11 @@ def _promotion_refusal(anchor: Mapping[str, Any], boundary: date | None,
         exright = event["exright_date"]
         if exright is not None and exright > boundary:
             return "a_later_share_changing_event_is_recorded_after_the_anchor"
+    # Matching provider snapshots and absence of discovered events do not prove
+    # the intervening outstanding-share chain. Explicit coverage is mandatory.
+    through = _as_date(anchor.get("coverage_through"))
+    if through is None or session_on > through:
+        return "explicit_common_share_continuity_does_not_cover_session"
     return None
 
 

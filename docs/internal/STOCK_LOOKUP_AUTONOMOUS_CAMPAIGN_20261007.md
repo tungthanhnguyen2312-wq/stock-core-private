@@ -168,3 +168,5 @@ One writer; official exact-field evidence only; immutable completed sessions pre
 - Campaign gains: current fields 2→9, current issuers 2→3, historical context fields +2;
   one sourced earnings-quality component, three additional annual PDFs. Original 94 annual
   metrics, 1,505 research shares, zero strict shares/valuation and genuine input bytes preserved.
+
+Campaign resumed under refreshed owner authority: [October-8 share and official evidence campaign](STOCK_LOOKUP_AUTONOMOUS_CAMPAIGN_20261008.md).

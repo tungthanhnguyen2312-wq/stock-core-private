@@ -120,10 +120,10 @@ SOURCE_AND_SEMANTIC_QUALIFICATION = {
     "official_executed_current_common_after_event": {
         "native_field": "current_shares_outstanding_after_event",
         "canonical_identity": COMMON_OUTSTANDING,
-        "proven": True,
+        "proven": False,
         "promotable_to_current_common_shares": True,
-        "authority": "APPROVED_EXISTING_WHEN_COVERAGE_INCLUDES_SESSION",
-        "evidence": "HPG 8,442,964,520 effective 2026-07-02; coverage_through 2026-07-30 only",
+        "authority": "REQUIRES_EXPLICIT_COMMON_CLASS_AND_SESSION_CONTINUITY",
+        "evidence": "HPG retained July-2 8,442,964,520 observation is listed quantity; legacy common label is not semantic proof",
     },
     "official_period_end_shares": {
         "native_field": "period_end_shares_outstanding",
@@ -209,7 +209,7 @@ def classify_event_share_effect(event: Mapping[str, Any]) -> str:
 
 
 def _event_execution_date(event: Mapping[str, Any]) -> str | None:
-    return _date(event.get("execution_date") or event.get("effective_date") or event.get("exright_date"))
+    return _date(event.get("execution_date") or event.get("effective_date"))
 
 
 def _event_known_on(event: Mapping[str, Any]) -> str | None:
@@ -275,6 +275,10 @@ def reconcile_subsequent_events(
         elif not resulting_valid:
             blockers.append("CORPORATE_ACTION_INVALIDATES_CURRENT_SHARE_COVERAGE")
             row["disposition"] = "EXECUTED_WITHOUT_RESULTING_SHARES"
+        elif (str(event.get('lifecycle') or '').lower() not in {'executed', 'completed', 'issuance_result'}
+                or event.get('share_count_identity') != COMMON_OUTSTANDING):
+            blockers.append('CORPORATE_ACTION_COMMON_SHARE_EXECUTION_NOT_PROVEN')
+            row['disposition'] = 'COMMON_SHARE_EXECUTION_UNRESOLVED'
         else:
             row["disposition"] = "EXECUTED_WITH_RESULTING_SHARES"
             blockers.append("CORPORATE_ACTION_REQUIRES_CHAIN_RECONCILIATION")
@@ -359,6 +363,7 @@ def resolve_ticker_share_authority(
     official_period_end: Mapping[str, Any] | None = None,
     official_events: Sequence[Mapping[str, Any]] = (),
     weighted_average: Mapping[str, Any] | None = None,
+    knowledge_cutoff: str | None = None,
 ) -> dict[str, Any]:
     """Emit exactly one terminal disposition for one ticker."""
     t = str(ticker).strip().upper()
@@ -368,7 +373,7 @@ def resolve_ticker_share_authority(
     identities: list[str] = []
     warnings: list[str] = []
     if official_common:
-        identities.append(str(official_common.get("identity") or COMMON_OUTSTANDING))
+        identities.append(str(official_common.get("identity") or "unknown"))
     if official_period_end:
         identities.append(str(official_period_end.get("identity") or "period_end_shares"))
     if weighted_average:
@@ -383,6 +388,37 @@ def resolve_ticker_share_authority(
     common_value = _positive_int((official_common or {}).get("value"))
     common_from = _date((official_common or {}).get("effective_date") or (official_common or {}).get("effective_on"))
     common_through = _date((official_common or {}).get("coverage_through"))
+    knowledge = (official_common or {}).get('knowledge_available_at')
+    if knowledge:
+        known = datetime.fromisoformat(str(knowledge).replace('Z', '+00:00'))
+        cutoff = datetime.fromisoformat((knowledge_cutoff or target + 'T15:00:00+07:00').replace('Z', '+00:00'))
+        if known.tzinfo is None or cutoff.tzinfo is None:
+            raise ValueError('SHARE_KNOWLEDGE_TIME_REQUIRES_TIMEZONE')
+        if known > cutoff:
+            return _terminal(
+                ticker=t, session=target, authority_tier=UNAVAILABLE, native_identity=None,
+                canonical_identity=None, value=None, source_evidence_identity=None,
+                observed_at=None, published_at=None, effective_at=None, anchor_date=None,
+                coverage_through=None, coverage_through_session=False, subsequent=[],
+                blockers=['SHARE_OBSERVATION_NOT_KNOWN_AT_CUTOFF'], warnings=sorted(set(warnings)),
+                lineage={'excluded_citation_id': official_common.get('citation_id'), 'knowledge_cutoff': cutoff.isoformat()},
+                observed_identities=[],
+            )
+    if official_common and (official_common.get("identity") != COMMON_OUTSTANDING
+            or official_common.get("share_count_identity") != COMMON_OUTSTANDING
+            or official_common.get("share_class") != "common_outstanding"
+            or official_common.get("qualification_state") != "QUALIFIED"):
+        return _terminal(
+            ticker=t, session=target, authority_tier=SEMANTIC_IDENTITY_UNRESOLVED,
+            native_identity=official_common.get("share_count_identity") or official_common.get("identity"),
+            canonical_identity=None, value=None,
+            source_evidence_identity=official_common.get("citation_id"),
+            observed_at=official_common.get("observed_at"), published_at=official_common.get("published_at"),
+            effective_at=common_from, anchor_date=common_from, coverage_through=None,
+            coverage_through_session=False, subsequent=[],
+            blockers=["COMMON_OUTSTANDING_SHARE_SEMANTICS_NOT_PROVEN"], warnings=sorted(set(warnings)),
+            lineage={"official_common": dict(official_common)}, observed_identities=sorted(set(identities)),
+        )
     if official_common and common_value and common_from:
         candidates = [{
             "canonical_ticker": t,
@@ -573,6 +609,7 @@ def build_current_common_shares_authority(
     official_period_end_anchors: Mapping[str, Mapping[str, Any]] | None = None,
     official_events_by_ticker: Mapping[str, Sequence[Mapping[str, Any]]] | None = None,
     source_identities: Mapping[str, Any] | None = None,
+    knowledge_cutoff: str | None = None,
 ) -> dict[str, Any]:
     """Scale the temporal share contract across the official research universe."""
     tickers = official_research_universe_tickers(official_universe)
@@ -588,6 +625,7 @@ def build_current_common_shares_authority(
             ticker, session=session, resolver_row=resolved.get(ticker),
             official_common=common_anchors.get(ticker), official_period_end=period_end.get(ticker),
             official_events=list(events.get(ticker) or []),
+            knowledge_cutoff=knowledge_cutoff,
         )
     tiers = Counter(row["authority_tier"] for row in records.values())
     blockers = Counter(reason for row in records.values() for reason in row["blockers"])

@@ -36,6 +36,11 @@ ticker verdict ([AI_RULES.md](AI_RULES.md) rules 5–10, [DATA_FIRST_DOCTRINE.md
 
 ## 3. Analytical context
 
+The [HPG share contract](hpg_common_share_evidence_contract.md) qualifies one audited
+historical common-outstanding observation. Listed quantity is separate. Complete
+subsequent continuity and knowledge eligibility remain mandatory for current valuation.
+
+
 The local October-7 projection checkpoint distinguishes current official exact-field facts
 from annual research admissibility. Reviewed H1 income retains `RESEARCH_PERIOD_NOT_ANNUAL`;
 it cannot replace annual inputs, create TTM or upgrade other fields. Session event projection
