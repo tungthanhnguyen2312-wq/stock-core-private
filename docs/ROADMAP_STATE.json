@@ -15,11 +15,29 @@
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "CURRENT_OFFICIAL_EVIDENCE_PROJECTION_INTEGRATION_V1",
+    "milestone": "RETAINED_INTERIM_STATEMENT_GEOMETRY_RECOVERY_V1",
     "state": "COMPLETE"
   },
   "queued_next": [],
   "milestones": [
+    {
+      "milestone_id": "RETAINED_INTERIM_STATEMENT_GEOMETRY_RECOVERY_V1",
+      "state": "COMPLETE",
+      "checkpoint": "HEAD",
+      "terminal_disposition": "PARTIAL_EXACT_INTERIM_FIELDS_READY",
+      "starting_checkpoint": "df5510c8a610735e98596df14994e1be45da14e3",
+      "candidate_branch": "feature/retained-statement-recovery-20261007",
+      "dependencies": [
+        "CURRENT_OFFICIAL_EVIDENCE_PROJECTION_INTEGRATION_V1"
+      ],
+      "unlocks": [],
+      "owner_authorized": true,
+      "owner_override": "STOCK_LOOKUP_AUTONOMOUS_EVIDENCE_AND_DECISION_QUALITY_CAMPAIGN_V1",
+      "authority_effect": "SCOPED / EXACT_INTERIM_FIELDS_ONLY",
+      "state_history": ["ACTIVE", "COMPLETE"],
+      "source_doc": "docs/internal/STOCK_LOOKUP_AUTONOMOUS_CAMPAIGN_20261007.md",
+      "notes": "Retained official statement geometry recovery; no annualization or share promotion."
+    },
     {
       "milestone_id": "POST_FIRST_REAL_DAILY_PHASE_C_RESOURCE_ARCHITECTURE_RELEASE_V1",
       "state": "COMPLETE",
@@ -3188,7 +3206,7 @@
       "milestone_id": "CURRENT_OFFICIAL_EVIDENCE_PROJECTION_INTEGRATION_V1",
       "state": "COMPLETE",
       "starting_checkpoint": "c2c7c52337e923ae9163934601e2686f668c2dcc",
-      "checkpoint": "HEAD",
+      "checkpoint": "d05daa75e22f2d860f86cdbdb8ae87dd2c0813c7",
       "candidate_branch": "feature/current-official-evidence-projection-20261007",
       "dependencies": [
         "DECISION_INTELLIGENCE_COVERAGE_AND_CALIBRATION_CLOSURE_V1"

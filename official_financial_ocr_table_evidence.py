@@ -63,7 +63,11 @@ def row_label_supports_metric(metric: str, label: str) -> bool:
     if contract is None:
         return True
     normalized = _normalize(label)
-    return any(term in normalized for term in contract["any_of"]) and not any(term in normalized for term in contract["forbidden"])
+    # OCR may join adjacent words (``Loinhuan``). Ignore word spacing only;
+    # never repair letters, digits or replace a missing identity-bearing word.
+    compact = normalized.replace(" ", "")
+    return any(term.replace(" ", "") in compact for term in contract["any_of"]) and not any(
+        term.replace(" ", "") in compact for term in contract["forbidden"])
 
 
 DEBT_COMPONENT_RULES = (

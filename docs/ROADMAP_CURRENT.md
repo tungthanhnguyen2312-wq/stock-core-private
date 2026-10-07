@@ -5,16 +5,18 @@ the machine state `ROADMAP_STATE.json`). Updated 2026-10-07 from main `c2c7c523`
 auto-starts.** A milestone starts only when `python tools/stocklookup_roadmap.py --can-start <ID>` allows
 it or the owner records an explicit override (AI_RULES rule 11). Facts: [ACTIVE_STATE.md](ACTIVE_STATE.md).
 
-## NOW — `CURRENT_OFFICIAL_EVIDENCE_PROJECTION_INTEGRATION_V1` (LOCAL CHECKPOINT)
+## NOW — `RETAINED_INTERIM_STATEMENT_GEOMETRY_RECOVERY_V1` (COMPLETE)
 
 Recorded. Owner-authorized Phase C is released. The later owner-authorized freshness
 contract is complete. The historical research panel is complete. The evidence packet
 is complete. The portfolio research workbench is complete. The current completed
-milestone is `CURRENT_OFFICIAL_EVIDENCE_PROJECTION_INTEGRATION_V1`, explicitly owner-selected
-after the decision-intelligence closure. Its local checkpoint projects retained official
-facts and coherently binds session events; coverage remains partial by retained evidence.
+milestone is `RETAINED_INTERIM_STATEMENT_GEOMETRY_RECOVERY_V1`, selected under the owner's
+autonomous evidence campaign. PR #76 released the preceding session projection.
+Retained geometry now qualifies four PNJ/VRE H1 fields; coverage remains partial by evidence.
 The October 7 Daily subsequently completed before PR #75's Phase-2 corrective.
-Next gate: owner review of the local checkpoint. `queued_next=[]`; no successor is authorized.
+Next gate: clean CI/release, then evidence-driven milestone selection under campaign delegation.
+`queued_next=[]`; native owner override records each selected milestone.
+[Campaign](internal/STOCK_LOOKUP_AUTONOMOUS_CAMPAIGN_20261007.md).
 [Scope, counts and blockers](internal/CURRENT_OFFICIAL_EVIDENCE_PROJECTION_INTEGRATION_20261007.md).
 
 The prior operational gate `FIRST_REAL_POST_RELEASE_CAPTURE_ACCEPTANCE` remains RECORDED

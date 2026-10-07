@@ -38,11 +38,13 @@ Fact kinds used below: **CURRENT FACT** (verified in repo or by a stated read-on
 ## 1. The operational gate
 
 - **CURRENT FACT — retained-evidence projection integration.** Owner-selected
-  `CURRENT_OFFICIAL_EVIDENCE_PROJECTION_INTEGRATION_V1` is complete at a local checkpoint,
-  with partial retained-evidence coverage. PNJ/VRE reviewed H1 revenue enters exact-field
+  `CURRENT_OFFICIAL_EVIDENCE_PROJECTION_INTEGRATION_V1` was released in PR #76.
+  Retained geometry recovery raises PNJ/VRE reviewed H1 exact fields from two to four:
+  revenue and consolidated net income for each. These enter exact-field
   context; annual baseline and valuation eligibility stay unchanged. Future construction
   binds one session event identity across CI, opportunity and the evidence packet.
-  `queued_next=[]`; next gate is owner review of this checkpoint, with no automatic successor.
+  Owner campaign delegation authorizes continued bounded evidence milestones; `queued_next=[]`.
+  [Campaign results and remaining blockers](internal/STOCK_LOOKUP_AUTONOMOUS_CAMPAIGN_20261007.md).
   [Evidence, offline comparison and limits](internal/CURRENT_OFFICIAL_EVIDENCE_PROJECTION_INTEGRATION_20261007.md).
 - **HOST-LOCAL — October 7 Daily completed.** Read-only owner journal verification records
   session `2026-10-07`, run `30e060d6e0f74ccb826e6f4bf5adba1e`, stage `COMPLETE`, no failure.
