@@ -25,12 +25,17 @@ def main() -> int:
     parser.add_argument("--landing-root", type=Path, default=Path(DEFAULT_LANDING_ROOT))
     parser.add_argument("--public-root", type=Path, default=ROOT / PUBLIC_ARTIFACT_DIR)
     parser.add_argument("--write", action="store_true")
+    parser.add_argument("--tickers", nargs="+", choices=[doc["ticker"] for doc in DOCUMENTS])
+    parser.add_argument("--report-name", default="audited_annual_context_report.json")
     args = parser.parse_args()
-    result = run(landing_root=args.landing_root, document_specs=DOCUMENTS,
+    selected = tuple(doc for doc in DOCUMENTS if not args.tickers or doc["ticker"] in args.tickers)
+    if Path(args.report_name).name != args.report_name:
+        raise ValueError("REPORT_NAME_MUST_BE_BASENAME")
+    result = run(landing_root=args.landing_root, document_specs=selected,
                  reporting_period="2025", allow_audited_annual_context=True)
     if args.write:
-        write_outputs(result, args.public_root, preserve_other_periods=True,
-                      report_name="audited_annual_context_report.json")
+        write_outputs(result, args.public_root, preserve_other_documents=True,
+                      report_name=args.report_name)
     print(json.dumps(result["report"], ensure_ascii=False, sort_keys=True, indent=2))
     return 0
 

@@ -381,8 +381,10 @@ def test_current_overlay_has_no_net_income_sourced_from_line_61():
     assert all((row["canonical_metric"], str(row.get("line_code"))) not in ingress_module.LINE_CODE_IDENTITY_CONFLICTS for row in rows)
     assert all((row["period_type"], row["audit_or_review_status"]) in {("interim", "reviewed"), ("annual", "audited")} for row in rows)
     annual = [row for row in rows if row["period_type"] == "annual"]
-    assert {row["canonical_metric"]: row["normalized_value"] for row in annual} == {
-        "revenue": 156116094618482, "net_income": 15514931571606}
+    assert {(row["ticker"], row["canonical_metric"]): row["normalized_value"] for row in annual} == {
+        ("HPG", "revenue"): 156116094618482, ("HPG", "net_income"): 15514931571606,
+        ("PNJ", "cash_and_equivalents"): 522025257031,
+        ("PVD", "revenue"): 10896989276040, ("PVD", "net_income"): 1051572991932}
     assert all(row["context_kind"] == "AUDITED_ANNUAL_FIELD" for row in annual)
 
 

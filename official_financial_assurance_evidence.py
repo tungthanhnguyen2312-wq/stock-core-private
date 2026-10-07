@@ -22,6 +22,17 @@ _AUDIT_TITLE = ("bao", "cao", "kiem", "toan", "doc", "lap")
 _REVIEW_ENGAGEMENT = ("hop dong dich vu soat xet", "soat xet so 2410")
 _REVIEW_DISCLAIMER = "khong dua ra y kien kiem toan"
 _AUDIT_OPINION = ("chung toi da kiem toan", "y kien kiem toan cua chung toi")
+_AUDITOR_OPINION_TITLE = ("y", "kien", "cua", "kiem", "toan", "vien")
+
+
+def _explicit_consolidated_opinion(tokens):
+    """Literal opinion heading and scope/fair-presentation wording; no OCR repair."""
+    text = _page_text(tokens)
+    heading = _title_span(tokens, _AUDITOR_OPINION_TITLE)
+    anchors = ("hop nhat", "da phan anh", "khia canh trong yeu", "chuan muc")
+    if heading and all(anchor in text for anchor in anchors) and _REVIEW_DISCLAIMER not in text:
+        return heading, list(anchors)
+    return None
 
 
 def _hash(value: Any) -> str:
@@ -68,6 +79,7 @@ def resolve_document_assurance_evidence(materialization: Mapping[str, Any]) -> d
     document_sha = str(materialization.get("document_sha256") or "")
     reviewed: list[dict[str, Any]] = []
     audited: list[dict[str, Any]] = []
+    pages = {int(page.get("page_number", 0)): page for page in materialization.get("pages") or []}
     for page in materialization.get("pages") or []:
         tokens = (page.get("ocr_derived_text_evidence") or {}).get("tokens") or []
         if not tokens:
@@ -83,8 +95,31 @@ def resolve_document_assurance_evidence(materialization: Mapping[str, Any]) -> d
                 if _REVIEW_DISCLAIMER in text:
                     anchors.append(_REVIEW_DISCLAIMER)
                 reviewed.append({"page_number": number, "title_tokens": review_title, "anchors": anchors, "text": text, "page": page})
-        elif audit_title and not review_title and any(phrase in text for phrase in _AUDIT_OPINION) and _REVIEW_DISCLAIMER not in text:
-            audited.append({"page_number": number, "title_tokens": audit_title, "anchors": ["bao cao kiem toan doc lap"], "text": text, "page": page})
+        elif audit_title and not review_title and _REVIEW_DISCLAIMER not in text:
+            if any(phrase in text for phrase in _AUDIT_OPINION) and "hop nhat" in text:
+                audited.append({"page_number": number, "title_tokens": audit_title, "anchors": ["bao cao kiem toan doc lap", "hop nhat"], "text": text, "page": page})
+                continue
+            # The auditor opinion may continue on the immediately next page of
+            # this same document. Never bridge a missing page or another report.
+            if "hop nhat" not in text:
+                continue
+            for opinion_number in (number, number + 1):
+                opinion_page = pages.get(opinion_number) or {}
+                opinion_tokens = (opinion_page.get("ocr_derived_text_evidence") or {}).get("tokens") or []
+                opinion_text = _page_text(opinion_tokens)
+                proof = _explicit_consolidated_opinion(opinion_tokens)
+                if (not proof or _title_span(opinion_tokens, _REVIEW_TITLE)
+                        or (opinion_number != number and _title_span(opinion_tokens, _AUDIT_TITLE))):
+                    continue
+                heading, anchors = proof
+                audited.append({"page_number": number, "title_tokens": audit_title,
+                    "anchors": ["bao cao kiem toan doc lap", "y kien cua kiem toan vien", *anchors],
+                    "text": text + " " + opinion_text, "page": page,
+                    "opinion_evidence": {"page_number": opinion_number,
+                        "token_ids": [str(t.get("token_id", "")) for t in heading],
+                        "rendered_image_sha256": (opinion_page.get("source_image_evidence") or {}).get("rendered_image_sha256"),
+                        "page_text_sha256": _hash(opinion_text)}})
+                break
     base = {"contract_version": CONTRACT_VERSION, "document_sha256": document_sha}
     if reviewed and audited:
         return {**base, "state": "BLOCKED", "reason": "ASSURANCE_STATUS_AMBIGUOUS", "audit_or_review_status": None}
@@ -99,9 +134,12 @@ def resolve_document_assurance_evidence(materialization: Mapping[str, Any]) -> d
                          "status": status, "anchors": hit["anchors"], "title_span": span,
                          "rendered_image_sha256": image.get("rendered_image_sha256"),
                          "materialization_id": materialization.get("materialization_id")})
+    if hit.get("opinion_evidence"):
+        evidence_id = _hash({"base_evidence_id": evidence_id, "opinion_evidence": hit["opinion_evidence"]})
     return {**base, "state": "QUALIFIED", "audit_or_review_status": status, "page_number": hit["page_number"],
             "scope_of_assurance": "consolidated_interim_statements" if status == REVIEWED else "consolidated_statements",
             "matched_anchors": hit["anchors"], "title_span": span,
+            "opinion_evidence": hit.get("opinion_evidence"),
             "page_text_sha256": _hash(hit["text"]), "rendered_image_sha256": image.get("rendered_image_sha256"),
             "materialization_id": materialization.get("materialization_id"),
             "evidence_id": evidence_id, "citation_id": evidence_id,

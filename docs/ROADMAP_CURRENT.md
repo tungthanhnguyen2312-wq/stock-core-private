@@ -5,7 +5,7 @@ the machine state `ROADMAP_STATE.json`). Updated 2026-10-08 from starting main `
 auto-starts.** A milestone starts only when `python tools/stocklookup_roadmap.py --can-start <ID>` allows
 it or the owner records an explicit override (AI_RULES rule 11). Facts: [ACTIVE_STATE.md](ACTIVE_STATE.md).
 
-## NOW — `HPG_CURRENT_COMMON_SHARE_AND_EXECUTED_ACTION_CONTINUITY_QUALIFICATION_V1` (COMPLETE)
+## NOW — `RETAINED_FY2025_AUDIT_ASSURANCE_AND_FINANCIAL_CONTEXT_RECOVERY_V1` (COMPLETE)
 
 The October-8 owner campaign delegates repeated bounded implementation and release.
 HPG FY2025 audited capital note qualifies 7,675,465,855 ordinary outstanding shares
@@ -14,8 +14,9 @@ July 2's 8,442,964,520 is **listed** quantity; future promotion rejects the lega
 common label. Continuity from January 1 through October 7 remains unproven.
 Strict shares/valuation stay zero; completed sessions and T0 remain immutable.
 The previous bounded filing-acquisition milestone completed in PR #80; PR #81
-closed its handoff. This view now agrees with machine state at the terminal gate.
-`queued_next=[]`; select the next retained financial-evidence lane under recorded
+closed its handoff. PNJ/PVD assurance now qualifies three historical fields. Annual overlay2→5;
+current fields9, annual exact metrics94 and strict valuation0 are unchanged.
+`queued_next=[]`; select the next remaining financial geometry/earnings-evidence lane under recorded
 owner delegation. No October-8 production Daily is authorized by engineering work.
 [Campaign and exact blockers](internal/STOCK_LOOKUP_AUTONOMOUS_CAMPAIGN_20261008.md).
 

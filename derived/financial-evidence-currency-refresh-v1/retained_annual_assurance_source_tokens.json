@@ -1,0 +1,1517 @@
+[
+  {
+    "ticker": "PNJ",
+    "document_sha256": "309f86836d9f00b37e3cccb25da9e7ffd0dab6c531be995618542004acccdf1d",
+    "materialization_id": "55fe363ce400300c4544b2d444db67cd0fcfcc87af9d7161f107fc4e56e3d898",
+    "ocr_config": {
+      "dpi": 240,
+      "colorspace": "gray",
+      "language": "vie+eng",
+      "psm": 6,
+      "format": "tsv"
+    },
+    "assurance": {
+      "contract_version": "official_financial_assurance_evidence/v1",
+      "document_sha256": "309f86836d9f00b37e3cccb25da9e7ffd0dab6c531be995618542004acccdf1d",
+      "state": "QUALIFIED",
+      "audit_or_review_status": "audited",
+      "page_number": 5,
+      "scope_of_assurance": "consolidated_statements",
+      "matched_anchors": [
+        "bao cao kiem toan doc lap",
+        "y kien cua kiem toan vien",
+        "hop nhat",
+        "da phan anh",
+        "khia canh trong yeu",
+        "chuan muc"
+      ],
+      "title_span": {
+        "token_ids": [
+          "18ae86a72147682facda777f1e4fa0104500df51879538baa0f9e01cada4f98d",
+          "4e3e2be156ee75f97721e587a0bdda69b21280f1d7b2911506bb9b0b70e6d2a3",
+          "eb34c6dabe64f215a3c020cb2d059791dee55ad938031b2c678494d336ca7af9",
+          "77ee94ac125084015144a9af31e58ead4ce66b3b4134da4765c00037232fd01e",
+          "f0de6803e091ab586a8ec0dd9241735bea26a2d89464847a7d828d6d41958012",
+          "02cb1bcd3e1760038f9b046276a3e2881081f7bb0b61ab3d25dc2ae5eeda7ccf"
+        ],
+        "raw_token_order": [
+          7,
+          8,
+          9,
+          10,
+          11,
+          12
+        ]
+      },
+      "opinion_evidence": {
+        "page_number": 6,
+        "token_ids": [
+          "335aa2141a826d655f50984bd5035e70ff18d86db9d4a5f3c8ba8fd9188650c5",
+          "4dcfc3e8d3051ae2b26bff025d93f8d84e39610da143fc37d190a8c4a63f7175",
+          "51de47c9036ae12a2c54347929a90679174816ac69ca7e1d6903e4d4e9250cf9",
+          "08f1f44196cf36e58ce7912d48f5fdcf56ef48ebf5e967b36309d4b6673c6bd8",
+          "a7a047e057d4ff17d774044508877a647413a8054cd6e08ce69f106e87c58022",
+          "a461463cf7bf45cb6b67bd022a6394c8dacaec36a98c7bf71df0f33efa502ad8"
+        ],
+        "rendered_image_sha256": "07611ea92344c6f6ab8b98748feb03b84554ad8f0e60544bb9ae6814116e1d73",
+        "page_text_sha256": "e7714fe3c2fdffeadb32d90e3e56aabfcc08a62b401a4f9fcb60f0396793ac68"
+      },
+      "page_text_sha256": "a55f12086d9b155c410d809bb6a57d3558c1ab3a87e551e2d5ccdd7c9f7ac249",
+      "rendered_image_sha256": "5b21ac95d14e467a1b4c2ab53806103f1571323f9563c80c76712441a28245d3",
+      "materialization_id": "55fe363ce400300c4544b2d444db67cd0fcfcc87af9d7161f107fc4e56e3d898",
+      "evidence_id": "3c0c311a9353bf9e6df2652b508c4da4a921b1bf5f1a396f3ec1dd9d8bcb336b",
+      "citation_id": "3c0c311a9353bf9e6df2652b508c4da4a921b1bf5f1a396f3ec1dd9d8bcb336b",
+      "inheritance": "document_level_report_applies_to_all_statements_in_document"
+    },
+    "selected_pages": [
+      {
+        "page_number": 5,
+        "route": "IMAGE_ONLY_TSV_OCR",
+        "positioned_token_provenance": "OCR_TSV_POSITIONED_TOKEN",
+        "source_image_evidence": {
+          "document_sha256": "309f86836d9f00b37e3cccb25da9e7ffd0dab6c531be995618542004acccdf1d",
+          "source_page": 5,
+          "rendered_image_sha256": "5b21ac95d14e467a1b4c2ab53806103f1571323f9563c80c76712441a28245d3",
+          "rendered_width": 1984,
+          "rendered_height": 2807,
+          "source_page_rotation": 0
+        },
+        "ocr_derived_text_evidence": {
+          "engine_version": "tesseract v5.5.0.20241111",
+          "config": {
+            "dpi": 240,
+            "colorspace": "gray",
+            "language": "vie+eng",
+            "psm": 6,
+            "format": "tsv"
+          },
+          "tokens": [
+            {
+              "text": "BAO",
+              "x0": 286.0,
+              "x1": 363.0,
+              "top": 475.0,
+              "bottom": 522.0,
+              "bbox": {
+                "left": 286.0,
+                "top": 475.0,
+                "width": 77.0,
+                "height": 47.0,
+                "coordinate_system": "rendered_image_pixels_top_left"
+              },
+              "confidence": 96.815224,
+              "raw_token_order": 7,
+              "tsv_hierarchy": {
+                "level": 5,
+                "page_num": 1,
+                "block_num": 1,
+                "par_num": 1,
+                "line_num": 2,
+                "word_num": 2
+              },
+              "provenance": "OCR_TSV_POSITIONED_TOKEN",
+              "token_id": "18ae86a72147682facda777f1e4fa0104500df51879538baa0f9e01cada4f98d"
+            },
+            {
+              "text": "CAO",
+              "x0": 376.0,
+              "x1": 455.0,
+              "top": 475.0,
+              "bottom": 522.0,
+              "bbox": {
+                "left": 376.0,
+                "top": 475.0,
+                "width": 79.0,
+                "height": 47.0,
+                "coordinate_system": "rendered_image_pixels_top_left"
+              },
+              "confidence": 90.293091,
+              "raw_token_order": 8,
+              "tsv_hierarchy": {
+                "level": 5,
+                "page_num": 1,
+                "block_num": 1,
+                "par_num": 1,
+                "line_num": 2,
+                "word_num": 3
+              },
+              "provenance": "OCR_TSV_POSITIONED_TOKEN",
+              "token_id": "4e3e2be156ee75f97721e587a0bdda69b21280f1d7b2911506bb9b0b70e6d2a3"
+            },
+            {
+              "text": "KIEM",
+              "x0": 469.0,
+              "x1": 552.0,
+              "top": 476.0,
+              "bottom": 509.0,
+              "bbox": {
+                "left": 469.0,
+                "top": 476.0,
+                "width": 83.0,
+                "height": 33.0,
+                "coordinate_system": "rendered_image_pixels_top_left"
+              },
+              "confidence": 91.506737,
+              "raw_token_order": 9,
+              "tsv_hierarchy": {
+                "level": 5,
+                "page_num": 1,
+                "block_num": 1,
+                "par_num": 1,
+                "line_num": 2,
+                "word_num": 4
+              },
+              "provenance": "OCR_TSV_POSITIONED_TOKEN",
+              "token_id": "eb34c6dabe64f215a3c020cb2d059791dee55ad938031b2c678494d336ca7af9"
+            },
+            {
+              "text": "TOAN",
+              "x0": 571.0,
+              "x1": 664.0,
+              "top": 474.0,
+              "bottom": 522.0,
+              "bbox": {
+                "left": 571.0,
+                "top": 474.0,
+                "width": 93.0,
+                "height": 48.0,
+                "coordinate_system": "rendered_image_pixels_top_left"
+              },
+              "confidence": 91.975494,
+              "raw_token_order": 10,
+              "tsv_hierarchy": {
+                "level": 5,
+                "page_num": 1,
+                "block_num": 1,
+                "par_num": 1,
+                "line_num": 2,
+                "word_num": 5
+              },
+              "provenance": "OCR_TSV_POSITIONED_TOKEN",
+              "token_id": "77ee94ac125084015144a9af31e58ead4ce66b3b4134da4765c00037232fd01e"
+            },
+            {
+              "text": "DOC",
+              "x0": 683.0,
+              "x1": 750.0,
+              "top": 465.0,
+              "bottom": 526.0,
+              "bbox": {
+                "left": 683.0,
+                "top": 465.0,
+                "width": 67.0,
+                "height": 61.0,
+                "coordinate_system": "rendered_image_pixels_top_left"
+              },
+              "confidence": 83.48616,
+              "raw_token_order": 11,
+              "tsv_hierarchy": {
+                "level": 5,
+                "page_num": 1,
+                "block_num": 1,
+                "par_num": 1,
+                "line_num": 2,
+                "word_num": 6
+              },
+              "provenance": "OCR_TSV_POSITIONED_TOKEN",
+              "token_id": "f0de6803e091ab586a8ec0dd9241735bea26a2d89464847a7d828d6d41958012"
+            },
+            {
+              "text": "LAP",
+              "x0": 769.0,
+              "x1": 845.0,
+              "top": 478.0,
+              "bottom": 522.0,
+              "bbox": {
+                "left": 769.0,
+                "top": 478.0,
+                "width": 76.0,
+                "height": 44.0,
+                "coordinate_system": "rendered_image_pixels_top_left"
+              },
+              "confidence": 96.144226,
+              "raw_token_order": 12,
+              "tsv_hierarchy": {
+                "level": 5,
+                "page_num": 1,
+                "block_num": 1,
+                "par_num": 1,
+                "line_num": 2,
+                "word_num": 7
+              },
+              "provenance": "OCR_TSV_POSITIONED_TOKEN",
+              "token_id": "02cb1bcd3e1760038f9b046276a3e2881081f7bb0b61ab3d25dc2ae5eeda7ccf"
+            },
+            {
+              "text": "hop",
+              "x0": 984.0,
+              "x1": 1045.0,
+              "top": 653.0,
+              "bottom": 685.0,
+              "bbox": {
+                "left": 984.0,
+                "top": 653.0,
+                "width": 61.0,
+                "height": 32.0,
+                "coordinate_system": "rendered_image_pixels_top_left"
+              },
+              "confidence": 92.811386,
+              "raw_token_order": 45,
+              "tsv_hierarchy": {
+                "level": 5,
+                "page_num": 1,
+                "block_num": 1,
+                "par_num": 1,
+                "line_num": 4,
+                "word_num": 11
+              },
+              "provenance": "OCR_TSV_POSITIONED_TOKEN",
+              "token_id": "4103b493583dd99525be1295db30122f0c58e4227dc80076c33e0d443fa9d58e"
+            },
+            {
+              "text": "nhat",
+              "x0": 1061.0,
+              "x1": 1130.0,
+              "top": 645.0,
+              "bottom": 680.0,
+              "bbox": {
+                "left": 1061.0,
+                "top": 645.0,
+                "width": 69.0,
+                "height": 35.0,
+                "coordinate_system": "rendered_image_pixels_top_left"
+              },
+              "confidence": 90.914696,
+              "raw_token_order": 46,
+              "tsv_hierarchy": {
+                "level": 5,
+                "page_num": 1,
+                "block_num": 1,
+                "par_num": 1,
+                "line_num": 4,
+                "word_num": 12
+              },
+              "provenance": "OCR_TSV_POSITIONED_TOKEN",
+              "token_id": "f6a5a06c84569befa40dd0b30eec8e6f8a192a80146c182c4f7707e58bfd75a3"
+            },
+            {
+              "text": "Chuan",
+              "x0": 1059.0,
+              "x1": 1164.0,
+              "top": 1112.0,
+              "bottom": 1141.0,
+              "bbox": {
+                "left": 1059.0,
+                "top": 1112.0,
+                "width": 105.0,
+                "height": 29.0,
+                "coordinate_system": "rendered_image_pixels_top_left"
+              },
+              "confidence": 93.219101,
+              "raw_token_order": 220,
+              "tsv_hierarchy": {
+                "level": 5,
+                "page_num": 1,
+                "block_num": 1,
+                "par_num": 1,
+                "line_num": 13,
+                "word_num": 11
+              },
+              "provenance": "OCR_TSV_POSITIONED_TOKEN",
+              "token_id": "8a1976ca643d575df9346d4fe48cf818392d24f449ce9deaf80a3b94225e24f6"
+            },
+            {
+              "text": "muc",
+              "x0": 1178.0,
+              "x1": 1248.0,
+              "top": 1119.0,
+              "bottom": 1146.0,
+              "bbox": {
+                "left": 1178.0,
+                "top": 1119.0,
+                "width": 70.0,
+                "height": 27.0,
+                "coordinate_system": "rendered_image_pixels_top_left"
+              },
+              "confidence": 91.809113,
+              "raw_token_order": 221,
+              "tsv_hierarchy": {
+                "level": 5,
+                "page_num": 1,
+                "block_num": 1,
+                "par_num": 1,
+                "line_num": 13,
+                "word_num": 12
+              },
+              "provenance": "OCR_TSV_POSITIONED_TOKEN",
+              "token_id": "76ebb9ea3f01d9ae44c76eb4dae45196647640056815e5bff809d25acecc7b64"
+            }
+          ],
+          "token_count": 10
+        },
+        "evidence_selection": "LITERAL_ASSURANCE_ANCHOR_SPANS_ONLY_FULL_PAGE_TEXT_HASH_IN_ASSURANCE"
+      },
+      {
+        "page_number": 6,
+        "route": "IMAGE_ONLY_TSV_OCR",
+        "positioned_token_provenance": "OCR_TSV_POSITIONED_TOKEN",
+        "source_image_evidence": {
+          "document_sha256": "309f86836d9f00b37e3cccb25da9e7ffd0dab6c531be995618542004acccdf1d",
+          "source_page": 6,
+          "rendered_image_sha256": "07611ea92344c6f6ab8b98748feb03b84554ad8f0e60544bb9ae6814116e1d73",
+          "rendered_width": 1984,
+          "rendered_height": 2804,
+          "source_page_rotation": 0
+        },
+        "ocr_derived_text_evidence": {
+          "engine_version": "tesseract v5.5.0.20241111",
+          "config": {
+            "dpi": 240,
+            "colorspace": "gray",
+            "language": "vie+eng",
+            "psm": 6,
+            "format": "tsv"
+          },
+          "tokens": [
+            {
+              "text": "Ý",
+              "x0": 286.0,
+              "x1": 309.0,
+              "top": 473.0,
+              "bottom": 509.0,
+              "bbox": {
+                "left": 286.0,
+                "top": 473.0,
+                "width": 23.0,
+                "height": 36.0,
+                "coordinate_system": "rendered_image_pixels_top_left"
+              },
+              "confidence": 93.281258,
+              "raw_token_order": 7,
+              "tsv_hierarchy": {
+                "level": 5,
+                "page_num": 1,
+                "block_num": 1,
+                "par_num": 1,
+                "line_num": 2,
+                "word_num": 2
+              },
+              "provenance": "OCR_TSV_POSITIONED_TOKEN",
+              "token_id": "335aa2141a826d655f50984bd5035e70ff18d86db9d4a5f3c8ba8fd9188650c5"
+            },
+            {
+              "text": "kiến",
+              "x0": 323.0,
+              "x1": 392.0,
+              "top": 472.0,
+              "bottom": 509.0,
+              "bbox": {
+                "left": 323.0,
+                "top": 472.0,
+                "width": 69.0,
+                "height": 37.0,
+                "coordinate_system": "rendered_image_pixels_top_left"
+              },
+              "confidence": 91.47081,
+              "raw_token_order": 8,
+              "tsv_hierarchy": {
+                "level": 5,
+                "page_num": 1,
+                "block_num": 1,
+                "par_num": 1,
+                "line_num": 2,
+                "word_num": 3
+              },
+              "provenance": "OCR_TSV_POSITIONED_TOKEN",
+              "token_id": "4dcfc3e8d3051ae2b26bff025d93f8d84e39610da143fc37d190a8c4a63f7175"
+            },
+            {
+              "text": "của",
+              "x0": 406.0,
+              "x1": 466.0,
+              "top": 481.0,
+              "bottom": 508.0,
+              "bbox": {
+                "left": 406.0,
+                "top": 481.0,
+                "width": 60.0,
+                "height": 27.0,
+                "coordinate_system": "rendered_image_pixels_top_left"
+              },
+              "confidence": 92.451561,
+              "raw_token_order": 9,
+              "tsv_hierarchy": {
+                "level": 5,
+                "page_num": 1,
+                "block_num": 1,
+                "par_num": 1,
+                "line_num": 2,
+                "word_num": 4
+              },
+              "provenance": "OCR_TSV_POSITIONED_TOKEN",
+              "token_id": "51de47c9036ae12a2c54347929a90679174816ac69ca7e1d6903e4d4e9250cf9"
+            },
+            {
+              "text": "Kiểm",
+              "x0": 480.0,
+              "x1": 564.0,
+              "top": 473.0,
+              "bottom": 509.0,
+              "bbox": {
+                "left": 480.0,
+                "top": 473.0,
+                "width": 84.0,
+                "height": 36.0,
+                "coordinate_system": "rendered_image_pixels_top_left"
+              },
+              "confidence": 92.099457,
+              "raw_token_order": 10,
+              "tsv_hierarchy": {
+                "level": 5,
+                "page_num": 1,
+                "block_num": 1,
+                "par_num": 1,
+                "line_num": 2,
+                "word_num": 5
+              },
+              "provenance": "OCR_TSV_POSITIONED_TOKEN",
+              "token_id": "08f1f44196cf36e58ce7912d48f5fdcf56ef48ebf5e967b36309d4b6673c6bd8"
+            },
+            {
+              "text": "tºán",
+              "x0": 578.0,
+              "x1": 652.0,
+              "top": 480.0,
+              "bottom": 508.0,
+              "bbox": {
+                "left": 578.0,
+                "top": 480.0,
+                "width": 74.0,
+                "height": 28.0,
+                "coordinate_system": "rendered_image_pixels_top_left"
+              },
+              "confidence": 92.688858,
+              "raw_token_order": 11,
+              "tsv_hierarchy": {
+                "level": 5,
+                "page_num": 1,
+                "block_num": 1,
+                "par_num": 1,
+                "line_num": 2,
+                "word_num": 6
+              },
+              "provenance": "OCR_TSV_POSITIONED_TOKEN",
+              "token_id": "a7a047e057d4ff17d774044508877a647413a8054cd6e08ce69f106e87c58022"
+            },
+            {
+              "text": "viên",
+              "x0": 666.0,
+              "x1": 735.0,
+              "top": 481.0,
+              "bottom": 508.0,
+              "bbox": {
+                "left": 666.0,
+                "top": 481.0,
+                "width": 69.0,
+                "height": 27.0,
+                "coordinate_system": "rendered_image_pixels_top_left"
+              },
+              "confidence": 93.014557,
+              "raw_token_order": 12,
+              "tsv_hierarchy": {
+                "level": 5,
+                "page_num": 1,
+                "block_num": 1,
+                "par_num": 1,
+                "line_num": 2,
+                "word_num": 7
+              },
+              "provenance": "OCR_TSV_POSITIONED_TOKEN",
+              "token_id": "a461463cf7bf45cb6b67bd022a6394c8dacaec36a98c7bf71df0f33efa502ad8"
+            },
+            {
+              "text": "hợp",
+              "x0": 1032.0,
+              "x1": 1093.0,
+              "top": 563.0,
+              "bottom": 599.0,
+              "bbox": {
+                "left": 1032.0,
+                "top": 563.0,
+                "width": 61.0,
+                "height": 36.0,
+                "coordinate_system": "rendered_image_pixels_top_left"
+              },
+              "confidence": 91.283508,
+              "raw_token_order": 24,
+              "tsv_hierarchy": {
+                "level": 5,
+                "page_num": 1,
+                "block_num": 1,
+                "par_num": 1,
+                "line_num": 3,
+                "word_num": 11
+              },
+              "provenance": "OCR_TSV_POSITIONED_TOKEN",
+              "token_id": "1f867cd9e627cd5303a39dad3a7abfc1011aac5886778fd3dcbc13a05f2cdd95"
+            },
+            {
+              "text": "nhat",
+              "x0": 1107.0,
+              "x1": 1177.0,
+              "top": 557.0,
+              "bottom": 605.0,
+              "bbox": {
+                "left": 1107.0,
+                "top": 557.0,
+                "width": 70.0,
+                "height": 48.0,
+                "coordinate_system": "rendered_image_pixels_top_left"
+              },
+              "confidence": 86.67308,
+              "raw_token_order": 25,
+              "tsv_hierarchy": {
+                "level": 5,
+                "page_num": 1,
+                "block_num": 1,
+                "par_num": 1,
+                "line_num": 3,
+                "word_num": 12
+              },
+              "provenance": "OCR_TSV_POSITIONED_TOKEN",
+              "token_id": "a9f6f3a77968fc530f2b5bd063c0ce299203943e76b5b4841f14852d79d5d47c"
+            },
+            {
+              "text": "da",
+              "x0": 1191.0,
+              "x1": 1229.0,
+              "top": 563.0,
+              "bottom": 591.0,
+              "bbox": {
+                "left": 1191.0,
+                "top": 563.0,
+                "width": 38.0,
+                "height": 28.0,
+                "coordinate_system": "rendered_image_pixels_top_left"
+              },
+              "confidence": 75.664543,
+              "raw_token_order": 26,
+              "tsv_hierarchy": {
+                "level": 5,
+                "page_num": 1,
+                "block_num": 1,
+                "par_num": 1,
+                "line_num": 3,
+                "word_num": 13
+              },
+              "provenance": "OCR_TSV_POSITIONED_TOKEN",
+              "token_id": "d92cbc1f9769094a9e5c2968876a927ba923ec23ed43ad0b316d015f2edde460"
+            },
+            {
+              "text": "phan",
+              "x0": 1243.0,
+              "x1": 1322.0,
+              "top": 562.0,
+              "bottom": 599.0,
+              "bbox": {
+                "left": 1243.0,
+                "top": 562.0,
+                "width": 79.0,
+                "height": 37.0,
+                "coordinate_system": "rendered_image_pixels_top_left"
+              },
+              "confidence": 96.02504,
+              "raw_token_order": 27,
+              "tsv_hierarchy": {
+                "level": 5,
+                "page_num": 1,
+                "block_num": 1,
+                "par_num": 1,
+                "line_num": 3,
+                "word_num": 14
+              },
+              "provenance": "OCR_TSV_POSITIONED_TOKEN",
+              "token_id": "6bd1f8fd3f46b6c6851c79f8479d247353df00d701c2e05109cef8652363c4fe"
+            },
+            {
+              "text": "anh",
+              "x0": 1336.0,
+              "x1": 1394.0,
+              "top": 563.0,
+              "bottom": 591.0,
+              "bbox": {
+                "left": 1336.0,
+                "top": 563.0,
+                "width": 58.0,
+                "height": 28.0,
+                "coordinate_system": "rendered_image_pixels_top_left"
+              },
+              "confidence": 93.060783,
+              "raw_token_order": 28,
+              "tsv_hierarchy": {
+                "level": 5,
+                "page_num": 1,
+                "block_num": 1,
+                "par_num": 1,
+                "line_num": 3,
+                "word_num": 15
+              },
+              "provenance": "OCR_TSV_POSITIONED_TOKEN",
+              "token_id": "21c0cf31d174276fd20c6d78f831576ab1ef5ad77caa361c19f51b4f9d3cda9f"
+            },
+            {
+              "text": "khia",
+              "x0": 358.0,
+              "x1": 424.0,
+              "top": 606.0,
+              "bottom": 634.0,
+              "bbox": {
+                "left": 358.0,
+                "top": 606.0,
+                "width": 66.0,
+                "height": 28.0,
+                "coordinate_system": "rendered_image_pixels_top_left"
+              },
+              "confidence": 92.019119,
+              "raw_token_order": 38,
+              "tsv_hierarchy": {
+                "level": 5,
+                "page_num": 1,
+                "block_num": 1,
+                "par_num": 1,
+                "line_num": 4,
+                "word_num": 3
+              },
+              "provenance": "OCR_TSV_POSITIONED_TOKEN",
+              "token_id": "de1976d63c0bf86ad6f09af728e524284c325f43cc6cdd6428aecec1c351c1b7"
+            },
+            {
+              "text": "canh",
+              "x0": 438.0,
+              "x1": 514.0,
+              "top": 606.0,
+              "bottom": 640.0,
+              "bbox": {
+                "left": 438.0,
+                "top": 606.0,
+                "width": 76.0,
+                "height": 34.0,
+                "coordinate_system": "rendered_image_pixels_top_left"
+              },
+              "confidence": 92.874283,
+              "raw_token_order": 39,
+              "tsv_hierarchy": {
+                "level": 5,
+                "page_num": 1,
+                "block_num": 1,
+                "par_num": 1,
+                "line_num": 4,
+                "word_num": 4
+              },
+              "provenance": "OCR_TSV_POSITIONED_TOKEN",
+              "token_id": "bea2dddeea849176f80c34bfbe8c9b497f814c35f361cc6c0ce92be447dd255a"
+            },
+            {
+              "text": "trong",
+              "x0": 528.0,
+              "x1": 609.0,
+              "top": 608.0,
+              "bottom": 640.0,
+              "bbox": {
+                "left": 528.0,
+                "top": 608.0,
+                "width": 81.0,
+                "height": 32.0,
+                "coordinate_system": "rendered_image_pixels_top_left"
+              },
+              "confidence": 93.117172,
+              "raw_token_order": 40,
+              "tsv_hierarchy": {
+                "level": 5,
+                "page_num": 1,
+                "block_num": 1,
+                "par_num": 1,
+                "line_num": 4,
+                "word_num": 5
+              },
+              "provenance": "OCR_TSV_POSITIONED_TOKEN",
+              "token_id": "49ca0b0736cd121c2ae6f82387dd39aaab722117317f98e80c4db23313fe4a4b"
+            },
+            {
+              "text": "yéu,",
+              "x0": 624.0,
+              "x1": 689.0,
+              "top": 606.0,
+              "bottom": 640.0,
+              "bbox": {
+                "left": 624.0,
+                "top": 606.0,
+                "width": 65.0,
+                "height": 34.0,
+                "coordinate_system": "rendered_image_pixels_top_left"
+              },
+              "confidence": 93.084526,
+              "raw_token_order": 41,
+              "tsv_hierarchy": {
+                "level": 5,
+                "page_num": 1,
+                "block_num": 1,
+                "par_num": 1,
+                "line_num": 4,
+                "word_num": 6
+              },
+              "provenance": "OCR_TSV_POSITIONED_TOKEN",
+              "token_id": "db7354fcd656e7fab3eb306a51848d5fe635eae95ec994b6c29339622cecd3a2"
+            },
+            {
+              "text": "Chuan",
+              "x0": 1722.0,
+              "x1": 1827.0,
+              "top": 688.0,
+              "bottom": 717.0,
+              "bbox": {
+                "left": 1722.0,
+                "top": 688.0,
+                "width": 105.0,
+                "height": 29.0,
+                "coordinate_system": "rendered_image_pixels_top_left"
+              },
+              "confidence": 96.536858,
+              "raw_token_order": 96,
+              "tsv_hierarchy": {
+                "level": 5,
+                "page_num": 1,
+                "block_num": 1,
+                "par_num": 1,
+                "line_num": 6,
+                "word_num": 19
+              },
+              "provenance": "OCR_TSV_POSITIONED_TOKEN",
+              "token_id": "545c6fd5746ae4adcc93dd42e4bc08ad7b1d62238a0dfb5bba9905ab3c8b8696"
+            },
+            {
+              "text": "muc",
+              "x0": 289.0,
+              "x1": 360.0,
+              "top": 739.0,
+              "bottom": 765.0,
+              "bbox": {
+                "left": 289.0,
+                "top": 739.0,
+                "width": 71.0,
+                "height": 26.0,
+                "coordinate_system": "rendered_image_pixels_top_left"
+              },
+              "confidence": 81.169006,
+              "raw_token_order": 98,
+              "tsv_hierarchy": {
+                "level": 5,
+                "page_num": 1,
+                "block_num": 1,
+                "par_num": 1,
+                "line_num": 7,
+                "word_num": 1
+              },
+              "provenance": "OCR_TSV_POSITIONED_TOKEN",
+              "token_id": "b46ed7703b77df9fff0a6a90afb5ede48158fb471b025ea7c0175408963db3b4"
+            }
+          ],
+          "token_count": 17
+        },
+        "evidence_selection": "LITERAL_ASSURANCE_ANCHOR_SPANS_ONLY_FULL_PAGE_TEXT_HASH_IN_ASSURANCE"
+      }
+    ]
+  },
+  {
+    "ticker": "PVD",
+    "document_sha256": "6ee20a554891c449a8ee72fffe6358bc9b32145d066a7e52d8492d88f305139c",
+    "materialization_id": "a7c1494917077053cd9bdaa9e4c1f03b52c1724e4396f31443bd208af89a6bae",
+    "ocr_config": {
+      "dpi": 240,
+      "colorspace": "gray",
+      "language": "vie+eng",
+      "psm": 6,
+      "format": "tsv"
+    },
+    "assurance": {
+      "contract_version": "official_financial_assurance_evidence/v1",
+      "document_sha256": "6ee20a554891c449a8ee72fffe6358bc9b32145d066a7e52d8492d88f305139c",
+      "state": "QUALIFIED",
+      "audit_or_review_status": "audited",
+      "page_number": 5,
+      "scope_of_assurance": "consolidated_statements",
+      "matched_anchors": [
+        "bao cao kiem toan doc lap",
+        "y kien cua kiem toan vien",
+        "hop nhat",
+        "da phan anh",
+        "khia canh trong yeu",
+        "chuan muc"
+      ],
+      "title_span": {
+        "token_ids": [
+          "b9ad84fb3194d90c44f431111b95d0554dd28880f286c92f3a82c0aa7207302f",
+          "dc13334ac96832f77794974d899d5118cc11c6ecf66947a5afebb777fd97cc32",
+          "9735bf9c7e44d163eb888fbb214c625e08a6094c8f7ba03f61aa73d21ba7831d",
+          "484976ee3f14f468b350a317e2d1ac7e1bc8902361a9dbc70e9c9017f97d4c2d",
+          "596b39a699fb3cf3c06ec04ff89c672670fd8a14601445f9824363c2c35713e0",
+          "6a01f1e56aa6e7ccdd5a1b53fb6cf6943557fb958f3a4aa32677baa7724e33ee"
+        ],
+        "raw_token_order": [
+          57,
+          58,
+          59,
+          60,
+          61,
+          62
+        ]
+      },
+      "opinion_evidence": {
+        "page_number": 5,
+        "token_ids": [
+          "0205baf0e31ff4ae3956cd3b3fb6fd0e0a132c3ef3da16282ad2a9f2d5538412",
+          "ff4c5c5aece0eefaada80020bc532a38cf9d7ec48c005a29224e11cfe3c426a0",
+          "6662cff39969d025b4e49f0cb94aadab7777dc22ccf602ae4c78504fb2c6466e",
+          "14347ffb8a60150cb62d43f87edf2db5d906814c6ef74f2e3aef66eb13c511dd",
+          "29105a036ae8c0b2211ed22e3f83bbed12693b57425876454a931067cb2a983f",
+          "c7b74a032608c7634fcb5d22182c80dd2a829b6154cfb42adec840bbb0542972"
+        ],
+        "rendered_image_sha256": "3cad00a33188ed797798c58da4f3e6f7f5aa069bf1ac52e0ded21b13eeee6a5f",
+        "page_text_sha256": "6159923f5f481fd0fa1c5a5a80ef15cac2adbce8ed36d7ec360cc4313931fc0c"
+      },
+      "page_text_sha256": "bb29f1a611dcc39239525c2bb0c0f464225e97f8296138933161f70c533ae10f",
+      "rendered_image_sha256": "3cad00a33188ed797798c58da4f3e6f7f5aa069bf1ac52e0ded21b13eeee6a5f",
+      "materialization_id": "a7c1494917077053cd9bdaa9e4c1f03b52c1724e4396f31443bd208af89a6bae",
+      "evidence_id": "52a6ad51aa3eb61be4477234551a9067541bf31c0e0306895909d810da0eb5de",
+      "citation_id": "52a6ad51aa3eb61be4477234551a9067541bf31c0e0306895909d810da0eb5de",
+      "inheritance": "document_level_report_applies_to_all_statements_in_document"
+    },
+    "selected_pages": [
+      {
+        "page_number": 5,
+        "route": "IMAGE_ONLY_TSV_OCR",
+        "positioned_token_provenance": "OCR_TSV_POSITIONED_TOKEN",
+        "source_image_evidence": {
+          "document_sha256": "6ee20a554891c449a8ee72fffe6358bc9b32145d066a7e52d8492d88f305139c",
+          "source_page": 5,
+          "rendered_image_sha256": "3cad00a33188ed797798c58da4f3e6f7f5aa069bf1ac52e0ded21b13eeee6a5f",
+          "rendered_width": 1985,
+          "rendered_height": 2808,
+          "source_page_rotation": 0
+        },
+        "ocr_derived_text_evidence": {
+          "engine_version": "tesseract v5.5.0.20241111",
+          "config": {
+            "dpi": 240,
+            "colorspace": "gray",
+            "language": "vie+eng",
+            "psm": 6,
+            "format": "tsv"
+          },
+          "tokens": [
+            {
+              "text": "BÁO",
+              "x0": 832.0,
+              "x1": 894.0,
+              "top": 334.0,
+              "bottom": 364.0,
+              "bbox": {
+                "left": 832.0,
+                "top": 334.0,
+                "width": 62.0,
+                "height": 30.0,
+                "coordinate_system": "rendered_image_pixels_top_left"
+              },
+              "confidence": 92.361336,
+              "raw_token_order": 57,
+              "tsv_hierarchy": {
+                "level": 5,
+                "page_num": 1,
+                "block_num": 1,
+                "par_num": 1,
+                "line_num": 8,
+                "word_num": 2
+              },
+              "provenance": "OCR_TSV_POSITIONED_TOKEN",
+              "token_id": "b9ad84fb3194d90c44f431111b95d0554dd28880f286c92f3a82c0aa7207302f"
+            },
+            {
+              "text": "CÁO",
+              "x0": 903.0,
+              "x1": 970.0,
+              "top": 334.0,
+              "bottom": 365.0,
+              "bbox": {
+                "left": 903.0,
+                "top": 334.0,
+                "width": 67.0,
+                "height": 31.0,
+                "coordinate_system": "rendered_image_pixels_top_left"
+              },
+              "confidence": 92.172356,
+              "raw_token_order": 58,
+              "tsv_hierarchy": {
+                "level": 5,
+                "page_num": 1,
+                "block_num": 1,
+                "par_num": 1,
+                "line_num": 8,
+                "word_num": 3
+              },
+              "provenance": "OCR_TSV_POSITIONED_TOKEN",
+              "token_id": "dc13334ac96832f77794974d899d5118cc11c6ecf66947a5afebb777fd97cc32"
+            },
+            {
+              "text": "KIỂM",
+              "x0": 980.0,
+              "x1": 1052.0,
+              "top": 332.0,
+              "bottom": 365.0,
+              "bbox": {
+                "left": 980.0,
+                "top": 332.0,
+                "width": 72.0,
+                "height": 33.0,
+                "coordinate_system": "rendered_image_pixels_top_left"
+              },
+              "confidence": 91.024132,
+              "raw_token_order": 59,
+              "tsv_hierarchy": {
+                "level": 5,
+                "page_num": 1,
+                "block_num": 1,
+                "par_num": 1,
+                "line_num": 8,
+                "word_num": 4
+              },
+              "provenance": "OCR_TSV_POSITIONED_TOKEN",
+              "token_id": "9735bf9c7e44d163eb888fbb214c625e08a6094c8f7ba03f61aa73d21ba7831d"
+            },
+            {
+              "text": "TOÁN",
+              "x0": 1061.0,
+              "x1": 1145.0,
+              "top": 336.0,
+              "bottom": 366.0,
+              "bbox": {
+                "left": 1061.0,
+                "top": 336.0,
+                "width": 84.0,
+                "height": 30.0,
+                "coordinate_system": "rendered_image_pixels_top_left"
+              },
+              "confidence": 92.974747,
+              "raw_token_order": 60,
+              "tsv_hierarchy": {
+                "level": 5,
+                "page_num": 1,
+                "block_num": 1,
+                "par_num": 1,
+                "line_num": 8,
+                "word_num": 5
+              },
+              "provenance": "OCR_TSV_POSITIONED_TOKEN",
+              "token_id": "484976ee3f14f468b350a317e2d1ac7e1bc8902361a9dbc70e9c9017f97d4c2d"
+            },
+            {
+              "text": "ĐỘC",
+              "x0": 1153.0,
+              "x1": 1224.0,
+              "top": 338.0,
+              "bottom": 372.0,
+              "bbox": {
+                "left": 1153.0,
+                "top": 338.0,
+                "width": 71.0,
+                "height": 34.0,
+                "coordinate_system": "rendered_image_pixels_top_left"
+              },
+              "confidence": 91.816849,
+              "raw_token_order": 61,
+              "tsv_hierarchy": {
+                "level": 5,
+                "page_num": 1,
+                "block_num": 1,
+                "par_num": 1,
+                "line_num": 8,
+                "word_num": 6
+              },
+              "provenance": "OCR_TSV_POSITIONED_TOKEN",
+              "token_id": "596b39a699fb3cf3c06ec04ff89c672670fd8a14601445f9824363c2c35713e0"
+            },
+            {
+              "text": "LẬP",
+              "x0": 1235.0,
+              "x1": 1291.0,
+              "top": 338.0,
+              "bottom": 373.0,
+              "bbox": {
+                "left": 1235.0,
+                "top": 338.0,
+                "width": 56.0,
+                "height": 35.0,
+                "coordinate_system": "rendered_image_pixels_top_left"
+              },
+              "confidence": 93.071312,
+              "raw_token_order": 62,
+              "tsv_hierarchy": {
+                "level": 5,
+                "page_num": 1,
+                "block_num": 1,
+                "par_num": 1,
+                "line_num": 8,
+                "word_num": 7
+              },
+              "provenance": "OCR_TSV_POSITIONED_TOKEN",
+              "token_id": "6a01f1e56aa6e7ccdd5a1b53fb6cf6943557fb958f3a4aa32677baa7724e33ee"
+            },
+            {
+              "text": "hợp",
+              "x0": 1389.0,
+              "x1": 1442.0,
+              "top": 670.0,
+              "bottom": 699.0,
+              "bbox": {
+                "left": 1389.0,
+                "top": 670.0,
+                "width": 53.0,
+                "height": 29.0,
+                "coordinate_system": "rendered_image_pixels_top_left"
+              },
+              "confidence": 92.514946,
+              "raw_token_order": 189,
+              "tsv_hierarchy": {
+                "level": 5,
+                "page_num": 1,
+                "block_num": 1,
+                "par_num": 1,
+                "line_num": 14,
+                "word_num": 18
+              },
+              "provenance": "OCR_TSV_POSITIONED_TOKEN",
+              "token_id": "0eb3ed90891e1456d0ef9908db2fa3c8c45a6ce73af5d7f20aa872af3c29d34c"
+            },
+            {
+              "text": "nhất,",
+              "x0": 1453.0,
+              "x1": 1524.0,
+              "top": 666.0,
+              "bottom": 699.0,
+              "bbox": {
+                "left": 1453.0,
+                "top": 666.0,
+                "width": 71.0,
+                "height": 33.0,
+                "coordinate_system": "rendered_image_pixels_top_left"
+              },
+              "confidence": 90.10331,
+              "raw_token_order": 190,
+              "tsv_hierarchy": {
+                "level": 5,
+                "page_num": 1,
+                "block_num": 1,
+                "par_num": 1,
+                "line_num": 14,
+                "word_num": 19
+              },
+              "provenance": "OCR_TSV_POSITIONED_TOKEN",
+              "token_id": "65e7634f23c3e7cf23d5ff646328882bea289053b40fe49ed5be69816c7be3ba"
+            },
+            {
+              "text": "chuẩn",
+              "x0": 1377.0,
+              "x1": 1465.0,
+              "top": 950.0,
+              "bottom": 978.0,
+              "bbox": {
+                "left": 1377.0,
+                "top": 950.0,
+                "width": 88.0,
+                "height": 28.0,
+                "coordinate_system": "rendered_image_pixels_top_left"
+              },
+              "confidence": 88.460739,
+              "raw_token_order": 278,
+              "tsv_hierarchy": {
+                "level": 5,
+                "page_num": 1,
+                "block_num": 1,
+                "par_num": 1,
+                "line_num": 19,
+                "word_num": 16
+              },
+              "provenance": "OCR_TSV_POSITIONED_TOKEN",
+              "token_id": "c0c53dec59abb65d19ea6f1d15ad89bbce71029fe6fbd7ce691fe150bb4ccf66"
+            },
+            {
+              "text": "mực",
+              "x0": 1477.0,
+              "x1": 1540.0,
+              "top": 958.0,
+              "bottom": 983.0,
+              "bbox": {
+                "left": 1477.0,
+                "top": 958.0,
+                "width": 63.0,
+                "height": 25.0,
+                "coordinate_system": "rendered_image_pixels_top_left"
+              },
+              "confidence": 92.440491,
+              "raw_token_order": 279,
+              "tsv_hierarchy": {
+                "level": 5,
+                "page_num": 1,
+                "block_num": 1,
+                "par_num": 1,
+                "line_num": 19,
+                "word_num": 17
+              },
+              "provenance": "OCR_TSV_POSITIONED_TOKEN",
+              "token_id": "7a236b72adc5a39b3c284d1a84a1417bd7aa1ba69ab8cb386e66dd28eeb625ca"
+            },
+            {
+              "text": "Ý",
+              "x0": 281.0,
+              "x1": 295.0,
+              "top": 2066.0,
+              "bottom": 2096.0,
+              "bbox": {
+                "left": 281.0,
+                "top": 2066.0,
+                "width": 14.0,
+                "height": 30.0,
+                "coordinate_system": "rendered_image_pixels_top_left"
+              },
+              "confidence": 93.269096,
+              "raw_token_order": 792,
+              "tsv_hierarchy": {
+                "level": 5,
+                "page_num": 1,
+                "block_num": 1,
+                "par_num": 1,
+                "line_num": 45,
+                "word_num": 1
+              },
+              "provenance": "OCR_TSV_POSITIONED_TOKEN",
+              "token_id": "0205baf0e31ff4ae3956cd3b3fb6fd0e0a132c3ef3da16282ad2a9f2d5538412"
+            },
+            {
+              "text": "kién",
+              "x0": 305.0,
+              "x1": 367.0,
+              "top": 2069.0,
+              "bottom": 2097.0,
+              "bbox": {
+                "left": 305.0,
+                "top": 2069.0,
+                "width": 62.0,
+                "height": 28.0,
+                "coordinate_system": "rendered_image_pixels_top_left"
+              },
+              "confidence": 91.447906,
+              "raw_token_order": 793,
+              "tsv_hierarchy": {
+                "level": 5,
+                "page_num": 1,
+                "block_num": 1,
+                "par_num": 1,
+                "line_num": 45,
+                "word_num": 2
+              },
+              "provenance": "OCR_TSV_POSITIONED_TOKEN",
+              "token_id": "ff4c5c5aece0eefaada80020bc532a38cf9d7ec48c005a29224e11cfe3c426a0"
+            },
+            {
+              "text": "cua",
+              "x0": 376.0,
+              "x1": 431.0,
+              "top": 2072.0,
+              "bottom": 2098.0,
+              "bbox": {
+                "left": 376.0,
+                "top": 2072.0,
+                "width": 55.0,
+                "height": 26.0,
+                "coordinate_system": "rendered_image_pixels_top_left"
+              },
+              "confidence": 64.401505,
+              "raw_token_order": 794,
+              "tsv_hierarchy": {
+                "level": 5,
+                "page_num": 1,
+                "block_num": 1,
+                "par_num": 1,
+                "line_num": 45,
+                "word_num": 3
+              },
+              "provenance": "OCR_TSV_POSITIONED_TOKEN",
+              "token_id": "6662cff39969d025b4e49f0cb94aadab7777dc22ccf602ae4c78504fb2c6466e"
+            },
+            {
+              "text": "Kiém",
+              "x0": 439.0,
+              "x1": 516.0,
+              "top": 2070.0,
+              "bottom": 2099.0,
+              "bbox": {
+                "left": 439.0,
+                "top": 2070.0,
+                "width": 77.0,
+                "height": 29.0,
+                "coordinate_system": "rendered_image_pixels_top_left"
+              },
+              "confidence": 92.965652,
+              "raw_token_order": 795,
+              "tsv_hierarchy": {
+                "level": 5,
+                "page_num": 1,
+                "block_num": 1,
+                "par_num": 1,
+                "line_num": 45,
+                "word_num": 4
+              },
+              "provenance": "OCR_TSV_POSITIONED_TOKEN",
+              "token_id": "14347ffb8a60150cb62d43f87edf2db5d906814c6ef74f2e3aef66eb13c511dd"
+            },
+            {
+              "text": "tºán",
+              "x0": 525.0,
+              "x1": 592.0,
+              "top": 2075.0,
+              "bottom": 2100.0,
+              "bbox": {
+                "left": 525.0,
+                "top": 2075.0,
+                "width": 67.0,
+                "height": 25.0,
+                "coordinate_system": "rendered_image_pixels_top_left"
+              },
+              "confidence": 90.928169,
+              "raw_token_order": 796,
+              "tsv_hierarchy": {
+                "level": 5,
+                "page_num": 1,
+                "block_num": 1,
+                "par_num": 1,
+                "line_num": 45,
+                "word_num": 5
+              },
+              "provenance": "OCR_TSV_POSITIONED_TOKEN",
+              "token_id": "29105a036ae8c0b2211ed22e3f83bbed12693b57425876454a931067cb2a983f"
+            },
+            {
+              "text": "vién",
+              "x0": 601.0,
+              "x1": 662.0,
+              "top": 2076.0,
+              "bottom": 2101.0,
+              "bbox": {
+                "left": 601.0,
+                "top": 2076.0,
+                "width": 61.0,
+                "height": 25.0,
+                "coordinate_system": "rendered_image_pixels_top_left"
+              },
+              "confidence": 90.819992,
+              "raw_token_order": 797,
+              "tsv_hierarchy": {
+                "level": 5,
+                "page_num": 1,
+                "block_num": 1,
+                "par_num": 1,
+                "line_num": 45,
+                "word_num": 6
+              },
+              "provenance": "OCR_TSV_POSITIONED_TOKEN",
+              "token_id": "c7b74a032608c7634fcb5d22182c80dd2a829b6154cfb42adec840bbb0542972"
+            },
+            {
+              "text": "da",
+              "x0": 1478.0,
+              "x1": 1511.0,
+              "top": 2170.0,
+              "bottom": 2194.0,
+              "bbox": {
+                "left": 1478.0,
+                "top": 2170.0,
+                "width": 33.0,
+                "height": 24.0,
+                "coordinate_system": "rendered_image_pixels_top_left"
+              },
+              "confidence": 89.16803,
+              "raw_token_order": 820,
+              "tsv_hierarchy": {
+                "level": 5,
+                "page_num": 1,
+                "block_num": 1,
+                "par_num": 1,
+                "line_num": 47,
+                "word_num": 19
+              },
+              "provenance": "OCR_TSV_POSITIONED_TOKEN",
+              "token_id": "0f0bc78c38613b5f0dd5dad886df715eafda88283c7d497116b94cade8fd190d"
+            },
+            {
+              "text": "phan",
+              "x0": 1521.0,
+              "x1": 1589.0,
+              "top": 2168.0,
+              "bottom": 2200.0,
+              "bbox": {
+                "left": 1521.0,
+                "top": 2168.0,
+                "width": 68.0,
+                "height": 32.0,
+                "coordinate_system": "rendered_image_pixels_top_left"
+              },
+              "confidence": 95.986359,
+              "raw_token_order": 821,
+              "tsv_hierarchy": {
+                "level": 5,
+                "page_num": 1,
+                "block_num": 1,
+                "par_num": 1,
+                "line_num": 47,
+                "word_num": 20
+              },
+              "provenance": "OCR_TSV_POSITIONED_TOKEN",
+              "token_id": "e1d8d36a461d0b730cb3eab028b25116ecf6811b94b9d4aa8291ce9459ff0d78"
+            },
+            {
+              "text": "ánh",
+              "x0": 1598.0,
+              "x1": 1648.0,
+              "top": 2170.0,
+              "bottom": 2196.0,
+              "bbox": {
+                "left": 1598.0,
+                "top": 2170.0,
+                "width": 50.0,
+                "height": 26.0,
+                "coordinate_system": "rendered_image_pixels_top_left"
+              },
+              "confidence": 92.899734,
+              "raw_token_order": 822,
+              "tsv_hierarchy": {
+                "level": 5,
+                "page_num": 1,
+                "block_num": 1,
+                "par_num": 1,
+                "line_num": 47,
+                "word_num": 21
+              },
+              "provenance": "OCR_TSV_POSITIONED_TOKEN",
+              "token_id": "5a32b6a16a575b25655f3e7b9e7a9ceb2180027fb99dc25ab7e2c3bf06814399"
+            },
+            {
+              "text": "khia",
+              "x0": 532.0,
+              "x1": 588.0,
+              "top": 2197.0,
+              "bottom": 2223.0,
+              "bbox": {
+                "left": 532.0,
+                "top": 2197.0,
+                "width": 56.0,
+                "height": 26.0,
+                "coordinate_system": "rendered_image_pixels_top_left"
+              },
+              "confidence": 89.904228,
+              "raw_token_order": 832,
+              "tsv_hierarchy": {
+                "level": 5,
+                "page_num": 1,
+                "block_num": 1,
+                "par_num": 1,
+                "line_num": 48,
+                "word_num": 6
+              },
+              "provenance": "OCR_TSV_POSITIONED_TOKEN",
+              "token_id": "04402f69d0343bc071dbd6e4b4e843c3e0c2a2a51aeb2e069930ee73572d6c16"
+            },
+            {
+              "text": "canh",
+              "x0": 597.0,
+              "x1": 665.0,
+              "top": 2199.0,
+              "bottom": 2228.0,
+              "bbox": {
+                "left": 597.0,
+                "top": 2199.0,
+                "width": 68.0,
+                "height": 29.0,
+                "coordinate_system": "rendered_image_pixels_top_left"
+              },
+              "confidence": 93.011734,
+              "raw_token_order": 833,
+              "tsv_hierarchy": {
+                "level": 5,
+                "page_num": 1,
+                "block_num": 1,
+                "par_num": 1,
+                "line_num": 48,
+                "word_num": 7
+              },
+              "provenance": "OCR_TSV_POSITIONED_TOKEN",
+              "token_id": "a0014ecef46d8e50e11fffc7760ccebe9a9b69fe0e05b92cda87de056921b18d"
+            },
+            {
+              "text": "trong",
+              "x0": 672.0,
+              "x1": 746.0,
+              "top": 2202.0,
+              "bottom": 2231.0,
+              "bbox": {
+                "left": 672.0,
+                "top": 2202.0,
+                "width": 74.0,
+                "height": 29.0,
+                "coordinate_system": "rendered_image_pixels_top_left"
+              },
+              "confidence": 93.306175,
+              "raw_token_order": 834,
+              "tsv_hierarchy": {
+                "level": 5,
+                "page_num": 1,
+                "block_num": 1,
+                "par_num": 1,
+                "line_num": 48,
+                "word_num": 8
+              },
+              "provenance": "OCR_TSV_POSITIONED_TOKEN",
+              "token_id": "f98945911145ea5cc08f11da81cd5149b82a06e4084e7a2fe1d6d4150b60b697"
+            },
+            {
+              "text": "yéu,",
+              "x0": 752.0,
+              "x1": 811.0,
+              "top": 2198.0,
+              "bottom": 2231.0,
+              "bbox": {
+                "left": 752.0,
+                "top": 2198.0,
+                "width": 59.0,
+                "height": 33.0,
+                "coordinate_system": "rendered_image_pixels_top_left"
+              },
+              "confidence": 91.19989,
+              "raw_token_order": 835,
+              "tsv_hierarchy": {
+                "level": 5,
+                "page_num": 1,
+                "block_num": 1,
+                "par_num": 1,
+                "line_num": 48,
+                "word_num": 9
+              },
+              "provenance": "OCR_TSV_POSITIONED_TOKEN",
+              "token_id": "50ada3f89323760f0bf22456cf7ee74d6bc0d061a7379b7af0d29de290242043"
+            }
+          ],
+          "token_count": 23
+        },
+        "evidence_selection": "LITERAL_ASSURANCE_ANCHOR_SPANS_ONLY_FULL_PAGE_TEXT_HASH_IN_ASSURANCE"
+      }
+    ]
+  }
+]

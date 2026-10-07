@@ -15,7 +15,7 @@
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "HPG_CURRENT_COMMON_SHARE_AND_EXECUTED_ACTION_CONTINUITY_QUALIFICATION_V1",
+    "milestone": "RETAINED_FY2025_AUDIT_ASSURANCE_AND_FINANCIAL_CONTEXT_RECOVERY_V1",
     "state": "COMPLETE"
   },
   "queued_next": [],
@@ -3283,7 +3283,7 @@
       "milestone_id": "HPG_CURRENT_COMMON_SHARE_AND_EXECUTED_ACTION_CONTINUITY_QUALIFICATION_V1",
       "state": "COMPLETE",
       "starting_checkpoint": "755caab570a505554ffbea07c18ac97b773683d9",
-      "checkpoint": "HEAD",
+      "checkpoint": "d57f3147d86969c515c6cd9f6d0b7868ed338fdc",
       "candidate_branch": "feature/hpg-share-basis-20261008",
       "dependencies": [
         "BOUNDED_CURRENT_OFFICIAL_FILINGS_ACQUISITION_AND_RECONCILIATION_V1"
@@ -3299,6 +3299,27 @@
       "source_doc": "docs/internal/STOCK_LOOKUP_AUTONOMOUS_CAMPAIGN_20261008.md",
       "notes": "Retained HPG audited FY2025 page41: 7,675,465,855 ordinary outstanding at 2025-12-31. New knowledge October8; no completed-session backfill. July2 listed quantity cannot qualify common shares. Legacy aliases rejected prospectively; provider agreement is not continuity. January1–October7 complete executed common-share chain absent. Strict share/valuation counts zero. Owner campaign authorizes next bounded retained financial lane.",
       "terminal_disposition": "QUALIFIED_SHARE_OBSERVATION_CONTINUITY_BLOCKED"
+    },
+    {
+      "milestone_id": "RETAINED_FY2025_AUDIT_ASSURANCE_AND_FINANCIAL_CONTEXT_RECOVERY_V1",
+      "state": "COMPLETE",
+      "starting_checkpoint": "5f3623da3e3c40dc03583c730a3d1b8c9cef7026",
+      "checkpoint": "HEAD",
+      "candidate_branch": "feature/annual-assurance-20261008",
+      "dependencies": [
+        "HPG_CURRENT_COMMON_SHARE_AND_EXECUTED_ACTION_CONTINUITY_QUALIFICATION_V1"
+      ],
+      "unlocks": [],
+      "owner_authorized": true,
+      "owner_override": "OWNER_DIRECTIVE_2026_10_08_AUTONOMOUS_SHARE_BASIS_AND_OFFICIAL_EVIDENCE_CAMPAIGN_V1",
+      "authority_effect": "SOURCE_BOUND_ASSURANCE_AND_HISTORICAL_FINANCIAL_CONTEXT_ONLY",
+      "state_history": [
+        "ACTIVE",
+        "COMPLETE"
+      ],
+      "source_doc": "docs/internal/STOCK_LOOKUP_AUTONOMOUS_CAMPAIGN_20261008.md",
+      "notes": "PNJ/PVD FY2025 audited assurance qualified from literal report/opinion source spans. PNJ cash + PVD revenue/total profit admitted as later-known historical context. Annual overlay2->5; current official fields9 unchanged at Oct7 cutoff; annual exact metrics94, strict shares/valuation0 unchanged. Other geometry/debt components remain blocked. No new documents, FX conversion, completed-session or T0 writes.",
+      "terminal_disposition": "THREE_NEW_LATER_KNOWN_ANNUAL_CONTEXT_FIELDS_NO_CURRENT_VALUATION_GAIN"
     }
   ],
   "blocked_capabilities": [
