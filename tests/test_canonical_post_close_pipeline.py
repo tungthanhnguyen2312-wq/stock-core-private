@@ -1803,3 +1803,16 @@ def test_knowledge_overlay_has_separate_namespace_and_preserves_market_packet(tm
     assert overlay["artifact"]["historical_use_allowed"] is False
     assert overlay["artifact"]["official_event_context"]["artifact_identity"] == "selected"
     assert packet.read_bytes() == before
+
+
+
+def test_enrichment_task_callbacks_do_not_promote_missing_components(tmp_path):
+    import canonical_post_close_pipeline as pipeline
+    baseline = pipeline.build_enrichment_components(tmp_path, "2026-01-02")
+    events = []
+    observed = pipeline.build_enrichment_components(tmp_path, "2026-01-02", progress_callback=events.append)
+    assert observed == baseline
+    assert [e["status"] for e in events] == ["BEGIN", "END"] * 4
+    assert all("task_label" in e and "component_outcome" in e for e in events)
+    def broken(_): raise ValueError("telemetry")
+    assert pipeline.build_enrichment_components(tmp_path, "2026-01-02", progress_callback=broken) == baseline

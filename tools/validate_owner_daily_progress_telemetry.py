@@ -2,6 +2,9 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+import argparse
+import hashlib
+import time
 import json
 from pathlib import Path
 import sys
@@ -11,7 +14,7 @@ ROOT = Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from owner_daily_progress import AUTHORITY_EFFECT, CONTRACT_VERSION, OwnerDailyProgress  # noqa: E402
+from owner_daily_progress import AUTHORITY_EFFECT, CONTRACT_VERSION, OwnerDailyProgress, CanonicalCheckpointProgress, CANONICAL_CHECKPOINTS  # noqa: E402
 
 
 class _Clock:
@@ -103,11 +106,80 @@ def build_report() -> dict:
         }
 
 
+def phase2_simulation() -> dict:
+    """Synthetic timing, not a reconstruction of unobserved October 7 boundaries."""
+    clock = _Clock()
+    lines = []
+    events = []
+    emitter = OwnerDailyProgress(None, session="2026-10-07", sampler=_Sampler(), clock=clock,
+                                human_sink=lines.append, writer_role="DAILY_CHILD")
+    callback = emitter.callback()
+    def observe(payload):
+        callback(payload)
+        events.append(payload)
+    checkpoints = CanonicalCheckpointProgress(observe, clock=clock)
+    checkpoints.begin()
+    durations = (5, 822, 8, 300, 180, 60, 300, 113, 540, 10, 528, 147, 53)
+    for index, seconds in enumerate(durations):
+        clock.value += seconds
+        if index == 1:
+            emitter.emit(phase_index=2, component="DNSE", progress_kind="REQUESTS", status="REUSED")
+        checkpoints.finish()
+    return {"scope": "SYNTHETIC_PRESENTATION_ONLY_NO_DAILY_NO_PROVIDER_NO_RETENTION",
+            "timing_is_simulated": True, "checkpoints": [x[0] for x in CANONICAL_CHECKPOINTS],
+            "events": events, "console": lines, "elapsed_seconds": clock.value}
+
+
+def forensic_sidecar(path: Path) -> dict:
+    """Read one explicitly supplied sidecar; no discovery or production writes."""
+    raw = path.read_bytes()
+    events = [json.loads(line) for line in raw.decode("utf-8").splitlines()]
+    phase = [e for e in events if e.get("phase_index") == 2]
+    timeline = []
+    previous = None
+    for e in phase:
+        row = {key: e.get(key) for key in (
+            "timestamp", "writer_role", "component", "subtask", "progress_kind", "completed", "total",
+            "status", "work_elapsed_seconds", "elapsed_seconds")}
+        row["gap_seconds"] = None if previous is None else round(e["elapsed_seconds"] - previous, 3)
+        previous = e["elapsed_seconds"]
+        timeline.append(row)
+    gaps = [{"seconds": round(b["elapsed_seconds"] - a["elapsed_seconds"], 3),
+             "from": {k: a[k] for k in ("component", "subtask", "status", "elapsed_seconds")},
+             "to": {k: b[k] for k in ("component", "subtask", "status", "elapsed_seconds")}}
+            for a, b in zip(phase, phase[1:])]
+    parent = [e for e in phase if e.get("writer_role") == "OWNER_PARENT" and e.get("subtask") is None]
+    return {"input_name": path.name, "input_sha256": hashlib.sha256(raw).hexdigest(),
+            "phase2_elapsed_seconds": next(e["work_elapsed_seconds"] for e in parent if e["status"] == "END"),
+            "phase2_start": parent[0]["timestamp"], "phase2_end": parent[-1]["timestamp"],
+            "event_count": len(phase), "timeline": timeline,
+            "largest_gaps": sorted(gaps, key=lambda x: -x["seconds"])[:10],
+            "foreground_running_events": [e for e in timeline if e["status"] == "RUNNING"],
+            "observed_internal_spans": [e for e in timeline if e["status"] == "END" and e["subtask"] in {"child subprocess", "bounded child subprocess"}],
+            "reused": [e for e in timeline if e["status"] == "REUSED"]}
+
+
 def main() -> int:
-    report_path = ROOT / "derived" / "owner-daily-progress-telemetry-v1" / "validation_report.json"
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--phase2", action="store_true")
+    parser.add_argument("--sidecar", type=Path)
+    parser.add_argument("--output", type=Path)
+    args = parser.parse_args()
+    if args.phase2:
+        start = time.perf_counter()
+        report = phase2_simulation()
+        report["fixture_wall_seconds"] = round(time.perf_counter() - start, 6)
+        if args.sidecar:
+            report["forensic"] = forensic_sidecar(args.sidecar)
+    else:
+        report = build_report()
+    report_path = args.output or ROOT / "derived" / "owner-daily-progress-telemetry-v1" / "validation_report.json"
     report_path.parent.mkdir(parents=True, exist_ok=True)
-    report_path.write_text(json.dumps(build_report(), ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    print(report_path.relative_to(ROOT).as_posix())
+    report_path.write_text(json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    print(report_path)
+    if args.phase2:
+        for line in report["console"]:
+            print(line)
     return 0
 
 

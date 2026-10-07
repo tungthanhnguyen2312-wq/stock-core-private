@@ -8,6 +8,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime, timezone
 import ctypes
+import functools
 import json
 import math
 import os
@@ -46,6 +47,100 @@ PHASES_VI = dict(enumerate((
     "Xác minh từ xa", "Trung tâm Hành động Cá nhân", "Mở màn hình dành cho chủ sở hữu",
 ), 1))
 STRUCTURED_CONSOLE_ENV = "STOCK_LOOKUP_OWNER_STRUCTURED_CONSOLE"
+
+# Execution-order transitions in run_canonical_daily_operation. A handled soft
+# component counts as finished work, never as analytical availability or success.
+PIPELINE_CHECKPOINT_PROGRESS = "PIPELINE_CHECKPOINT_PROGRESS"
+CANONICAL_CHECKPOINTS = (
+    ("SESSION_RESOLVED", "Xác định phiên & kiểm tra điều kiện"),
+    ("MARKET_EVIDENCE_READY", "Chuẩn bị dữ liệu thị trường đúng phiên"),
+    ("INPUTS_FROZEN", "Đăng ký & khóa đầu vào"),
+    ("DECISION_SURFACE_READY", "Làm giàu nghiên cứu & tạo quyết định"),
+    ("PRODUCER_SEALED", "Tạo & niêm phong gói Producer"),
+    ("RUNTIME_TRUSTED_READY", "Chuẩn bị dữ liệu phục vụ & tập tin cậy"),
+    ("T0_CAPTURE_HANDLED", "Lưu T0 & ghi nhận bằng chứng phiên"),
+    ("DECISION_PACKET_READY", "Tạo gói quyết định & luận điểm T0"),
+    ("PROSPECTIVE_COLLECTION_HANDLED", "Thu thập theo dõi & phản hồi ban đầu"),
+    ("HANDOFF_READY", "Tạo gói bàn giao phiên"),
+    ("OBSERVERS_HANDLED", "Cập nhật quan sát sau bàn giao"),
+    ("FEEDBACK_HANDLED", "Cập nhật phản hồi sau bàn giao"),
+    ("CANONICAL_RECORD_VERIFIED", "Hoàn tất trình bày & xác minh bản ghi Daily"),
+)
+
+
+def safe_callback(callback, payload) -> None:
+    """Telemetry may neither revise results nor turn a soft component into failure."""
+    if callback is not None:
+        try:
+            callback(payload)
+        except Exception:
+            pass
+
+
+def observe_canonical_failure(function):
+    @functools.wraps(function)
+    def observed(*args, **kwargs):
+        callback = kwargs.get("progress_callback")
+        if callback is None:
+            return function(*args, **kwargs)
+        last = {}
+        observed_started = time.monotonic()
+        def sink(payload):
+            if isinstance(payload, Mapping) and payload.get("progress_kind") == PIPELINE_CHECKPOINT_PROGRESS:
+                last.update(payload)
+            safe_callback(callback, payload)
+        kwargs["progress_callback"] = sink
+        try:
+            return function(*args, **kwargs)
+        except Exception:
+            if last:
+                safe_callback(callback, dict(last, status="FAILED",
+                    phase_elapsed_seconds=round(max(0, time.monotonic() - observed_started), 3)))
+            raise
+    return observed
+
+
+class CanonicalCheckpointProgress:
+    """Fixed denominator, completion only at the real successful return boundary."""
+
+    def __init__(self, callback, *, clock=time.monotonic):
+        self.callback = callback
+        self.clock = clock
+        self.started = clock()
+        self.completed = 0
+
+    def emit(self, status: str) -> None:
+        index = min(self.completed, len(CANONICAL_CHECKPOINTS) - 1)
+        checkpoint_id, label = CANONICAL_CHECKPOINTS[index]
+        safe_callback(self.callback, {
+            "component": "Canonical Daily", "subtask": "canonical_checkpoints",
+            "progress_kind": PIPELINE_CHECKPOINT_PROGRESS, "status": status,
+            "checkpoint_id": checkpoint_id, "checkpoint_index": index + 1,
+            "checkpoint_completed": self.completed,
+            "checkpoint_total": len(CANONICAL_CHECKPOINTS),
+            "checkpoint_percent": percent(self.completed, len(CANONICAL_CHECKPOINTS)),
+            "current_checkpoint": checkpoint_id, "checkpoint_label": label,
+            "phase_elapsed_seconds": round(max(0, self.clock() - self.started), 3),
+        })
+
+    def begin(self) -> None:
+        self.emit("BEGIN")
+
+    def finish(self) -> None:
+        self.completed += 1
+        # END identifies the checkpoint just completed; BEGIN identifies the next.
+        checkpoint_id, label = CANONICAL_CHECKPOINTS[self.completed - 1]
+        safe_callback(self.callback, {
+            "component": "Canonical Daily", "subtask": "canonical_checkpoints",
+            "progress_kind": PIPELINE_CHECKPOINT_PROGRESS, "status": "END",
+            "checkpoint_id": checkpoint_id, "checkpoint_index": self.completed,
+            "checkpoint_completed": self.completed, "checkpoint_total": len(CANONICAL_CHECKPOINTS),
+            "checkpoint_percent": percent(self.completed, len(CANONICAL_CHECKPOINTS)),
+            "current_checkpoint": checkpoint_id, "checkpoint_label": label,
+            "phase_elapsed_seconds": round(max(0, self.clock() - self.started), 3),
+        })
+        if self.completed < len(CANONICAL_CHECKPOINTS):
+            self.begin()
 
 
 def recent_phase_estimates(log_root: Path, *, limit: int = 30, minimum_samples: int = 3) -> dict[int, float]:
@@ -320,6 +415,9 @@ class OwnerDailyProgress:
         self._human_counter_history: dict[tuple[int, str, str, str], tuple[Any, Any]] = {}
         self._disk_warning = False
         self.active_phase = 1
+        self._checkpoint = {}
+        self._phase2_started = None
+        self._request_detail = None
 
     def start_view(self, estimates: Mapping[int, float]) -> None:
         self.phase_estimates = dict(estimates)
@@ -334,7 +432,7 @@ class OwnerDailyProgress:
             for phase, label in PHASES_VI.items():
                 estimate = self.phase_estimates.get(phase)
                 self.human_sink(f"[{phase}/9] {label} | CHỜ | ETA: " +
-                                ("~" + _format_duration(estimate) if estimate is not None else "đang ước tính"))
+                                ("~" + _format_duration(estimate) if estimate is not None else "chưa đủ dữ liệu"))
 
     def set_session(self, session: str | None) -> None:
         if session:
@@ -435,38 +533,108 @@ class OwnerDailyProgress:
                 and "DNSE" in str(event.get("component", "")).upper()
                 and isinstance(event.get("total"), int) and event["total"] > 0)
 
-    def _human_line(self, event: Mapping[str, Any]) -> str:
-        phase = event["phase_index"]
-        status = event.get("status")
-        done = status == "END" and self._owner_phase(event)
-        state = "XONG" if done else ("LỖI" if status in {"FAILED", "FAIL"} else
-                ("CẢNH BÁO" if status == "WARN" else "ĐANG CHẠY"))
-        parts = [f"[{phase}/9] {PHASES_VI.get(phase, 'Daily')}", state]
-        if done:
-            parts.append("Thời gian: " + _format_duration(event.get("work_elapsed_seconds")))
-        else:
-            measured = event.get("eta_seconds") if self._acquisition(event) and event.get("eta_state") == "KNOWN" else None
-            reference = self.phase_estimates.get(phase) if self._owner_phase(event) else None
-            remaining = max(reference - (event.get("work_elapsed_seconds") or 0), 0) if reference is not None else None
-            estimate = measured if measured is not None else (remaining if remaining else None)
-            parts.append("ETA: " + ("~" + _format_duration(estimate) if estimate is not None else "đang ước tính"))
-        if self._acquisition(event):
-            if status == "REUSED":
-                parts.append("DNSE: dùng lại dữ liệu phiên đã hoàn tất")
+    def _presentation_fields(self, event):
+        extra = event.get("extra") or {}
+        if event.get("progress_kind") == PIPELINE_CHECKPOINT_PROGRESS:
+            count = extra.get("checkpoint_completed")
+            index = extra.get("checkpoint_index")
+            total = extra.get("checkpoint_total")
+            if (type(count) is not int or type(index) is not int or total != len(CANONICAL_CHECKPOINTS)
+                    or not 0 <= count <= total or not 1 <= index <= total
+                    or extra.get("checkpoint_id") != CANONICAL_CHECKPOINTS[index - 1][0]
+                    or count < self._checkpoint.get("checkpoint_completed", 0)
+                    or count > self._checkpoint.get("checkpoint_completed", 0) + 1
+                    or (event.get("status") == "END" and count != index)
+                    or (event.get("status") in {"BEGIN", "RUNNING", "FAILED"} and count != index - 1)
+                    or (event.get("status") == "FAILED" and count == total)):
+                self._degrade("INVALID_CHECKPOINT_TELEMETRY")
             else:
-                parts.append("DNSE exact-session")
-                if event.get("completed") is not None:
-                    parts.append(f"Yêu cầu: {event['completed']}/{event['total']} ({event.get('percent') or 0:.1f}%)")
+                self._checkpoint = {key: extra.get(key) for key in (
+                    "checkpoint_id", "checkpoint_index", "checkpoint_completed", "checkpoint_total",
+                    "current_checkpoint", "checkpoint_label")}
+                self._checkpoint["checkpoint_percent"] = percent(count, total)
+                self._checkpoint["checkpoint_label"] = CANONICAL_CHECKPOINTS[index - 1][1]
+                phase_elapsed = extra.get("phase_elapsed_seconds")
+                if self._phase2_started is None and isinstance(phase_elapsed, (int, float)) and math.isfinite(phase_elapsed):
+                    self._phase2_started = self.clock() - max(0, phase_elapsed)
+        owner = self._owner_phase(event)
+        status = event.get("status")
+        done = owner and status == "END"
+        failed = status in {"FAIL", "FAILED"} and (owner or event.get("progress_kind") == PIPELINE_CHECKPOINT_PROGRESS or self._acquisition(event))
+        state = "XONG" if done else "LỖI" if failed else "CẢNH BÁO" if status == "WARN" else "ĐANG CHẠY"
+        label = extra.get("task_label")
+        if not isinstance(label, str):
+            label = self._checkpoint.get("checkpoint_label") if event["phase_index"] == 2 else None
+        # Machine-facing component/subtask names never serve as owner labels.
+        known_tasks = {
+            "Prospective decision feedback": "Cập nhật phản hồi ban đầu",
+            "Prospective decision feedback (post-handoff)": "Cập nhật phản hồi sau bàn giao",
+            "Tactical reversal prospective shadow collection": "Thu thập theo dõi chiến thuật",
+            "Prospective research cohort collection": "Thu thập theo dõi nghiên cứu",
+            "Build current market universe breadth foundation": "Chuẩn bị toàn thị trường",
+            "Current universe status and session coverage resolution": "Kiểm tra phạm vi dữ liệu phiên",
+            "Market wide current liquidity research": "Đối chiếu thanh khoản thị trường",
+            "Market wide current technical coverage scaleout": "Chuẩn bị bối cảnh kỹ thuật",
+            "Market wide current descriptive research": "Tổng hợp mô tả thị trường",
+            "Current market screening opportunity comparison foundation": "So sánh cơ hội nghiên cứu",
+            "Watchlist tactical entry classifier": "Phân loại điều kiện chiến thuật",
+            "Market wide current corporate intelligence": "Tổng hợp sự kiện doanh nghiệp",
+            "Derive market wide current valuation input scaleout": "Chuẩn bị đầu vào định giá",
+            "Current market sector leadership context": "Chuẩn bị bối cảnh ngành",
+            "Sector aware relative research": "So sánh nghiên cứu trong ngành",
+            "Current research risk register": "Tổng hợp rủi ro nghiên cứu",
+        }
+        label = extra.get("task_label") or known_tasks.get(event.get("component")) or label
+        if not label and event.get("subtask") in {"child subprocess", "bounded child subprocess"}:
+            label = "Xử lý dữ liệu phiên"
+        request_detail = None
+        if event["phase_index"] == 2 and "DNSE" in str(event.get("component", "")).upper():
+            if status == "REUSED":
+                request_detail = "DNSE: dùng lại dữ liệu phiên đã hoàn tất"
+            elif event.get("progress_kind") == "REQUESTS" and event.get("completed") is not None:
+                request_detail = (f"DNSE: Yêu cầu: {event['completed']}/{event['total']} ({event['percent']:.1f}%)"
+                                  if event.get("percent") is not None else f"DNSE: Yêu cầu: {event['completed']}/? (chưa rõ tổng)")
                 if event.get("qualified_count") is not None and event.get("coverage_denominator"):
-                    parts.append(f"Nến đúng phiên: {event['qualified_count']}/{event['coverage_denominator']} ({event.get('coverage_percent') or 0:.1f}%)")
-                counters = []
-                for key, label in (("success_count", "Thành công"), ("retry_count", "Retry"), ("failure_count", "Lỗi")):
-                    if event.get(key) is not None:
-                        counters.append(f"{label}: {event[key]}")
+                    request_detail += f"; Nến đúng phiên: {event['qualified_count']}/{event['coverage_denominator']} ({event.get('coverage_percent') or 0:.1f}%)"
+                counters = [f"{name}: {event[key]}" for key, name in (
+                    ("success_count", "Thành công"), ("retry_count", "Retry"), ("failure_count", "Lỗi")) if event.get(key) is not None]
                 if counters:
-                    parts.append("; ".join(counters))
-        disk = event.get("disk_free_bytes")
-        if isinstance(disk, int) and disk < 10 * 1024**3:
+                    request_detail += "; " + "; ".join(counters)
+        if request_detail:
+            self._request_detail = request_detail
+        if event["phase_index"] == 2:
+            request_detail = self._request_detail
+        work_detail = None
+        if event.get("progress_kind") in {"RECORDS", "SESSIONS"}:
+            unit = "Bản ghi" if event["progress_kind"] == "RECORDS" else "Phiên T0"
+            work_detail = f"{unit}: {event.get('completed')}/{event.get('total') if event.get('total') is not None else '?'}"
+            if event.get("percent") is not None:
+                work_detail += f" ({event['percent']:.1f}%)"
+        duration = event.get("work_elapsed_seconds") if owner else None
+        if event["phase_index"] == 2 and self._phase2_started is not None:
+            duration = max(0, self.clock() - self._phase2_started)
+        reference = self.phase_estimates.get(event["phase_index"]) if owner else None
+        remaining = max(reference - (event.get("work_elapsed_seconds") or 0), 0) if reference is not None else None
+        return dict(self._checkpoint if event["phase_index"] == 2 else {},
+                    phase_state=state, phase_label=PHASES_VI.get(event["phase_index"], "Daily"),
+                    task_label=label, phase_elapsed_seconds=duration,
+                    owner_eta_seconds=remaining if remaining else None,
+                    request_detail=request_detail, work_detail=work_detail,
+                    disk_warning=isinstance(event.get("disk_free_bytes"), int) and event["disk_free_bytes"] < 10 * 1024**3)
+
+    def _human_line(self, event: Mapping[str, Any]) -> str:
+        parts = [f"[{event['phase_index']}/9] {event['phase_label']}", event["phase_state"]]
+        if event.get("checkpoint_total"):
+            parts.append(f"Tiến độ {event['checkpoint_completed']}/{event['checkpoint_total']} ({event['checkpoint_percent']:.0f}%)")
+        if event.get("task_label"):
+            parts.append("Đang làm: " + event["task_label"])
+        if event.get("phase_elapsed_seconds") is not None:
+            parts.append(("Thời gian: " if event["phase_state"] == "XONG" else "Đã chạy: ") + _format_duration(event["phase_elapsed_seconds"]))
+        parts.append("ETA: " + ("~" + _format_duration(event["owner_eta_seconds"]) if event.get("owner_eta_seconds") is not None else "chưa đủ dữ liệu"))
+        for field in ("request_detail", "work_detail"):
+            if event.get(field):
+                parts.append(event[field])
+        if event.get("disk_warning"):
             parts.append("CẢNH BÁO: dung lượng đĩa thấp")
         return " | ".join(parts)
 
@@ -479,6 +647,16 @@ class OwnerDailyProgress:
             return True
         if self._owner_phase(event):
             return event.get("status") in {"BEGIN", "END", "FAILED", "WARN", "FAIL"}
+        if event.get("progress_kind") == PIPELINE_CHECKPOINT_PROGRESS:
+            return True
+        if event.get("phase_index") == 2 and event.get("subtask") in {"child subprocess", "bounded child subprocess"}:
+            return True
+        if self._checkpoint and event.get("progress_kind") != "REQUESTS" and (event.get("status") in {"BEGIN", "END", "RUNNING", "FAILED"}
+                                 or event.get("progress_kind") in {"RECORDS", "SESSIONS"}):
+            return True
+        if (event.get("phase_index") == 2 and event.get("status") in {"REUSED", "BEGIN", "FAILED"}
+                and "DNSE" in str(event.get("component", "")).upper()):
+            return True
         if not self._acquisition(event):
             return False
         key = self._task_key(event["phase_index"], event["component"], event.get("subtask"), event["progress_kind"])
@@ -520,7 +698,8 @@ class OwnerDailyProgress:
             resources = self._resources(now, force=self._forces_resource_refresh(status, completed, total),
                                         size_outputs=owner_boundary)
             elapsed = max(0.0, now - self.run_started_monotonic)
-            eta_seconds, eta_state, rate = eta(completed=completed, total=total, elapsed_seconds=work_elapsed)
+            eta_seconds, eta_state, rate = (eta(completed=completed, total=total, elapsed_seconds=work_elapsed)
+                if progress_kind != PIPELINE_CHECKPOINT_PROGRESS else (None, "UNKNOWN", None))
             event: dict[str, Any] = {
                 "contract_version": CONTRACT_VERSION,
                 "authority_effect": AUTHORITY_EFFECT,
@@ -566,6 +745,7 @@ class OwnerDailyProgress:
             }
             if extra:
                 event["extra"] = dict(extra)
+            event.update(self._presentation_fields(event))
             if self._owner_phase(event) and status == "BEGIN":
                 self.active_phase = phase_index
             self.event_count += 1
@@ -588,24 +768,27 @@ class OwnerDailyProgress:
 
     def callback(self, *, phase_index: int = 2, phase_name: str | None = None) -> Callable[[Mapping[str, Any]], None]:
         def sink(payload: Mapping[str, Any]) -> None:
-            data = dict(payload)
-            self.emit(
-                phase_index=phase_index,
-                phase_name=phase_name,
-                component=str(data.pop("component", "Canonical Daily")),
-                subtask=data.pop("subtask", None),
-                progress_kind=str(data.pop("progress_kind", "OTHER")),
-                completed=data.pop("completed", None), total=data.pop("total", None),
-                current_item=data.pop("current_item", None), success_count=data.pop("success_count", None),
-                retry_count=data.pop("retry_count", None), failure_count=data.pop("failure_count", None),
-                qualified_count=data.pop("qualified_count", None),
-                coverage_denominator=data.pop("coverage_denominator", None),
-                status=data.pop("status", None), reason=data.pop("reason", None),
-                downloaded_bytes=data.pop("downloaded_bytes", None),
-                downloaded_bytes_reason=data.pop("downloaded_bytes_reason", None),
-                written_bytes=data.pop("written_bytes", None), run_output_paths=data.pop("run_output_paths", None),
-                extra=data or None,
-            )
+            try:
+                data = dict(payload)
+                self.emit(
+                    phase_index=phase_index,
+                    phase_name=phase_name,
+                    component=str(data.pop("component", "Canonical Daily")),
+                    subtask=data.pop("subtask", None),
+                    progress_kind=str(data.pop("progress_kind", "OTHER")),
+                    completed=data.pop("completed", None), total=data.pop("total", None),
+                    current_item=data.pop("current_item", None), success_count=data.pop("success_count", None),
+                    retry_count=data.pop("retry_count", None), failure_count=data.pop("failure_count", None),
+                    qualified_count=data.pop("qualified_count", None),
+                    coverage_denominator=data.pop("coverage_denominator", None),
+                    status=data.pop("status", None), reason=data.pop("reason", None),
+                    downloaded_bytes=data.pop("downloaded_bytes", None),
+                    downloaded_bytes_reason=data.pop("downloaded_bytes_reason", None),
+                    written_bytes=data.pop("written_bytes", None), run_output_paths=data.pop("run_output_paths", None),
+                    extra=data or None,
+                )
+            except Exception as exc:
+                self._degrade("CALLBACK_FAILED:" + type(exc).__name__)
         return sink
 
     def _ingest_event_summary(self, event: Mapping[str, Any]) -> None:

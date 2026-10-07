@@ -920,6 +920,7 @@ def build_enrichment_components(
     priority_queue_artifact: Mapping[str, Any] | None = None,
     retained_evidence_root: Path | None = None, output_root: Path | None = None,
     corporate_currency_rollforward=None,
+    progress_callback=None,
 ) -> dict[str, Any]:
     """Best-effort materialize the three current-research components no orchestrator wires today
     (historical context, financial momentum, corporate event context). Each is fully independent;
@@ -1355,17 +1356,30 @@ def build_enrichment_components(
         retain_iid_classification_summary(output_root, paths["integrated_investment_decision_product"], res)
         return res
 
+    from owner_daily_progress import safe_callback
+    def report_enrichment(name, label, status):
+        safe_callback(progress_callback, {"component": "Canonical Daily", "subtask": "enrichment:" + name,
+            "task_label": label, "progress_kind": "PIPELINE", "status": status,
+            "component_outcome": results.get(name, {}).get("status")})
+    report_enrichment("financial_momentum", "Làm giàu động lực tài chính", "BEGIN")
     _attempt("financial_momentum", "financial_momentum", _financial_momentum)
+    report_enrichment("financial_momentum", "Làm giàu động lực tài chính", "END")
+    report_enrichment("corporate_event_context", "Làm giàu sự kiện doanh nghiệp", "BEGIN")
     _attempt("corporate_event_context", "corporate_event_context", _corporate_event_context)
+    report_enrichment("corporate_event_context", "Làm giàu sự kiện doanh nghiệp", "END")
+    report_enrichment("historical_context", "Làm giàu lịch sử & kỹ thuật", "BEGIN")
     _attempt("historical_context", "historical_context", _historical_context)
+    report_enrichment("historical_context", "Làm giàu lịch sử & kỹ thuật", "END")
+    report_enrichment("integrated_investment_decision_product", "Tạo & lưu quyết định tổng hợp", "BEGIN")
     _attempt("integrated_investment_decision_product", "integrated_investment_decision_product", _integrated_investment_decision_product)
+    report_enrichment("integrated_investment_decision_product", "Tạo & lưu quyết định tổng hợp", "END")
     return results
 
 
 def retain_prospective_decision_snapshot(
     root: Path, session: str, *, producer_result: Mapping[str, Any],
     enrichment: Mapping[str, Any], exact_session_snapshot: Mapping[str, Any] | None = None,
-    output_root: Path | None = None,
+    output_root: Path | None = None, progress_callback=None,
 ) -> dict[str, Any]:
     """Seal the current Integrated Decision at T0 before its handoff is written.
 
@@ -1393,6 +1407,7 @@ def retain_prospective_decision_snapshot(
             session=session, operation_identity=operation_identity,
             producer_run_identity=producer_result.get("run_identity"), integrated_artifact=integrated,
             exact_session_snapshot=exact_session_snapshot,
+            **({"progress_callback": progress_callback} if progress_callback is not None else {}),
         )
         seal_index = None
         def index_written(path, file_sha256):
@@ -1458,7 +1473,7 @@ def _original_session_t0(base: Path, session: str) -> dict[str, Any] | None:
             "path": directory / index["snapshot_file"], "seal_index": {"status": "RETAINED", **ref}}
 
 
-def run_multi_session_signal_velocity_shadow(root: Path, session: str) -> dict[str, Any]:
+def run_multi_session_signal_velocity_shadow(root: Path, session: str, *, progress_callback=None) -> dict[str, Any]:
     """Optional retained-only transition projection after the canonical handoff exists.
 
     The current immutable snapshot is intentionally not admitted until
@@ -1470,7 +1485,7 @@ def run_multi_session_signal_velocity_shadow(root: Path, session: str) -> dict[s
 
     output = root / "operations-review" / "multi-session-signal-velocity-v1.2" / session / "multi_session_signal_velocity_artifact.json"
     try:
-        artifact = build_from_retained_root(root)
+        artifact = build_from_retained_root(root, **({"progress_callback": progress_callback} if progress_callback is not None else {}))
         if session not in artifact["validation"]["retained_sessions"]:
             return {"status": "UNAVAILABLE", "session": session, "reason": "CURRENT_SESSION_SNAPSHOT_NOT_QUALIFIED_AFTER_HANDOFF"}
         write_immutable(output, artifact)
@@ -1709,7 +1724,7 @@ def run_post_handoff_presentation_projection(
 
 def run_post_handoff_observers(
     root: Path, runtime_root: Path, session: str, tiers: Mapping[str, Any], *,
-    enable_current_foreign_flow_live: bool = False,
+    enable_current_foreign_flow_live: bool = False, progress_callback=None,
 ) -> dict[str, Any]:
     """Retained-only observers admitted only after ``build_tiered_bundle`` has written the
     same-session canonical handoff binding (``session_handoff_bundle.json``).
@@ -1723,18 +1738,28 @@ def run_post_handoff_observers(
     (CURRENT_FOREIGN_FLOW_DAILY_ACTIVATION_V1). This helper still defaults False so a
     diagnostic caller that omits the flag cannot silently reach DNSE.
     """
-    signal_velocity = run_multi_session_signal_velocity_shadow(root, session)
+    from owner_daily_progress import safe_callback
+    def task(label):
+        safe_callback(progress_callback, {"component": "Canonical Daily", "subtask": "post_handoff_observer",
+                                         "progress_kind": "PIPELINE", "task_label": label, "status": "BEGIN"})
+    task("Đọc & xác minh các T0 đã lưu")
+    signal_velocity = run_multi_session_signal_velocity_shadow(root, session,
+        **({"progress_callback": progress_callback} if progress_callback is not None else {}))
+    task("Cập nhật dòng vốn nước ngoài")
     current_foreign_flow_enrichment = run_current_foreign_flow_enrichment(
         root, runtime_root, session, allow_network=enable_current_foreign_flow_live,
     )
+    task("Đối chiếu dòng vốn & giá")
     flow_price_divergence = run_flow_price_divergence_shadow(root, runtime_root, session, signal_velocity)
     tier1 = tiers["session_handoff_bundle"]
+    task("Cập nhật bối cảnh khối lượng & dòng vốn")
     volume_flow_context = run_volume_and_flow_context(root, runtime_root, session, signal_velocity,
         tier1.get("prospective_decision_snapshot"))
     tier1["multi_session_signal_velocity"] = signal_velocity
     tier1["current_foreign_flow_enrichment"] = current_foreign_flow_enrichment
     tier1["flow_price_divergence_shadow"] = flow_price_divergence
     tier1["volume_and_flow_context"] = volume_flow_context
+    task("Cập nhật luận điểm hiện tại")
     thesis_current = None
     from contextual_technical_dispatch import PRODUCTION_V2_START_SESSION
     if session >= PRODUCTION_V2_START_SESSION:

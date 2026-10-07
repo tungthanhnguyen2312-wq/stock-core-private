@@ -144,7 +144,7 @@ def test_nine_vietnamese_rows_and_sparse_phase_output_without_fake_heartbeat_eta
     rows = [line for line in lines if line.startswith("[")]
     assert [line.split("]")[0] for line in rows] == [f"[{i}/9" for i in range(1, 10)]
     assert "ETA: ~00:01:40" in rows[1]
-    assert "đang ước tính" in rows[0]
+    assert "chưa đủ dữ liệu" in rows[0]
     emitter.emit(phase_index=2, status="BEGIN")
     count = len(lines)
     for tick in (30, 60, 90):
@@ -477,7 +477,7 @@ def test_compact_heartbeat_retains_resource_sidecar_and_surfaces_threshold(tmp_p
     clock.value = 30
     event = emitter.emit(phase_index=2, component="Prospective decision feedback", status="RUNNING")
     assert lines == []
-    assert json.loads(sidecar.read_text().splitlines()[-1])["rss_bytes"] == event["rss_bytes"] == 20
+    assert json.loads(sidecar.read_text(encoding="utf-8").splitlines()[-1])["rss_bytes"] == event["rss_bytes"] == 20
     sampler.disk = 9 * 1024**3; clock.value = 60
     emitter.emit(phase_index=2, component="Prospective decision feedback", status="RUNNING")
     assert "CẢNH BÁO: dung lượng đĩa thấp" in lines[-1]
@@ -519,7 +519,8 @@ def test_named_foreground_subprocess_heartbeat_preserves_captured_result(tmp_pat
     result = progress.run_observed_subprocess(["python", "fixture.py"], component="Prospective decision feedback",
                                              capture_output=True, text=True)
     assert result.stdout == "retained stdout" and result.stderr == "retained stderr" and result.returncode == 0
-    assert lines == []
+    assert len(lines) == 3
+    assert all("Cập nhật phản hồi ban đầu" in line and "ETA: chưa đủ dữ liệu" in line for line in lines)
 
 
 def test_local_complete_checkpoint_is_distinct_from_owner_terminal(capsys):
@@ -672,3 +673,73 @@ def test_telemetry_summary_health_fields_are_consistent_when_degraded(tmp_path):
     summary = emitter.summary()
     assert summary["status"] == summary["telemetry_health"] == "DEGRADED"
     assert summary["status_scope"] == progress.STATUS_SCOPE
+
+
+
+def test_checkpoint_fields_and_request_measurements_are_distinct(tmp_path):
+    clock = FakeClock()
+    emitter, sidecar, lines = _emitter(tmp_path, clock)
+    checkpoints = progress.CanonicalCheckpointProgress(emitter.callback(), clock=clock)
+    checkpoints.begin()
+    checkpoints.finish()
+    clock.value = 10
+    request = emitter.emit(phase_index=2, component="DNSE", progress_kind="REQUESTS", completed=7, total=10, status="RUNNING")
+    assert request["percent"] == 70 and request["checkpoint_percent"] == 7.69
+    assert request["checkpoint_completed"] == 1 and request["checkpoint_total"] == 13
+    assert "Tiến độ 1/13 (8%)" in lines[-1] and "7/10 (70.0%)" in lines[-1]
+    emitter.emit(phase_index=2, component="DNSE", progress_kind="REQUESTS", total=None, status="REUSED")
+    assert "dùng lại dữ liệu phiên đã hoàn tất" in lines[-1]
+    assert "Yêu cầu:" not in lines[-1]
+    for _ in range(12):
+        checkpoints.finish()
+    events = [json.loads(x) for x in sidecar.read_text(encoding="utf-8").splitlines()]
+    assert events[-1]["checkpoint_percent"] == 100
+    assert events[-1]["eta_seconds"] is None and events[-1]["rate_per_second"] is None
+    assert "ETA: chưa đủ dữ liệu" in lines[-1]
+
+
+def test_unknown_request_denominator_and_elapsed_not_fake_progress(tmp_path):
+    clock = FakeClock()
+    emitter, _, lines = _emitter(tmp_path, clock)
+    checkpoints = progress.CanonicalCheckpointProgress(emitter.callback(), clock=clock)
+    checkpoints.begin()
+    clock.value = 1800
+    event = emitter.emit(phase_index=2, component="DNSE", progress_kind="REQUESTS", completed=3, total=None)
+    assert event["percent"] is None and event["checkpoint_percent"] == 0
+    assert "3/?" in emitter._human_line(event)
+    checkpoints.emit("RUNNING")
+    assert "Tiến độ 0/13 (0%)" in lines[-1] and "00:30:00" in lines[-1]
+
+
+@pytest.mark.parametrize("payload", [None, 2, [], {"progress_kind": "PIPELINE_CHECKPOINT_PROGRESS", "checkpoint_total": "bad"}])
+def test_malformed_callback_is_operational_only(tmp_path, payload):
+    emitter, _, _ = _emitter(tmp_path, FakeClock())
+    emitter.callback()(payload)
+    assert emitter.summary()["status"] in {"READY", "DEGRADED"}
+
+
+def test_checkpoint_denominator_and_monotonicity_validation(tmp_path):
+    emitter, _, _ = _emitter(tmp_path, FakeClock())
+    checkpoints = progress.CanonicalCheckpointProgress(emitter.callback())
+    checkpoints.begin(); checkpoints.finish()
+    for bad in (dict(checkpoint_total=14), dict(checkpoint_completed=0), dict(checkpoint_id="internal_function")):
+        payloads = []
+        current = progress.CanonicalCheckpointProgress(payloads.append)
+        current.begin()
+        emitter.callback()(dict(payloads[0], **bad))
+    assert emitter._checkpoint["checkpoint_total"] == 13
+    assert emitter._checkpoint["checkpoint_completed"] == 1
+    assert "INVALID_CHECKPOINT_TELEMETRY" in emitter.summary()["warnings"]
+
+
+
+def test_checkpoint_context_does_not_make_every_dnse_request_a_console_row(tmp_path):
+    clock = FakeClock()
+    emitter, _, lines = _emitter(tmp_path, clock)
+    checkpoints = progress.CanonicalCheckpointProgress(emitter.callback(), clock=clock)
+    checkpoints.begin(); checkpoints.finish()
+    start = len(lines)
+    for completed in range(1001):
+        emitter.emit(phase_index=2, component="DNSE", progress_kind="REQUESTS", subtask="requests",
+                     completed=completed, total=1000, status="RUNNING")
+    assert len(lines) - start <= 21  # real 5% request buckets, separate from 13 checkpoints

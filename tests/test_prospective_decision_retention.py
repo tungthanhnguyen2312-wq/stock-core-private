@@ -377,3 +377,22 @@ def test_large_synthetic_snapshot_uses_bounded_batches_and_no_registration(tmp_p
     retention.write_immutable_snapshot(tmp_path, snapshot)
     assert not (tmp_path / "operations-review" / "canonical-post-close-v1").exists()
     assert not (tmp_path / "operations-review" / "daily-research-session-operations-v1").exists()
+
+
+
+def test_natural_t0_counter_reuses_records_and_preserves_all_bytes():
+    import copy
+    events = []
+    integrated = _integrated("2026-01-02")
+    for i in range(130):
+        ticker = f"X{i:03}"
+        integrated["records"][ticker] = dict(copy.deepcopy(integrated["records"]["FPT"]), ticker=ticker)
+    options = dict(session="2026-01-02", operation_identity="op:test", producer_run_identity="run:test", integrated_artifact=integrated)
+    baseline = retention.build_snapshot(**options)
+    observed = retention.build_snapshot(**options, progress_callback=events.append)
+    assert retention._canon(observed) == retention._canon(baseline)
+    assert [e["completed"] for e in events] == [0, 64, 128, 131, 131]
+    assert {e["total"] for e in events} == {131}
+    def broken(_):
+        raise ValueError("telemetry")
+    assert retention.build_snapshot(**options, progress_callback=broken) == baseline

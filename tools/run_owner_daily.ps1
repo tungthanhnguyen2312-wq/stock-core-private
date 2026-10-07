@@ -33,6 +33,10 @@ $viewReady = $false
 $rowTop = 0
 $currentPhase = 1
 $rows = @()
+$checkpointState = @{}
+$phaseStarts = @{}
+$requestState = @{}
+. (Join-Path $PSScriptRoot 'owner_daily_presentation.ps1')
 $logWriter = [System.IO.StreamWriter]::new($log, $false, $utf8)
 $logWriter.AutoFlush = $true
 function Write-Owner([string]$Text) {
@@ -40,7 +44,7 @@ function Write-Owner([string]$Text) {
     $logWriter.WriteLine($Text)
 }
 function Format-Duration($Seconds) {
-    if ($null -eq $Seconds) { return 'đang ước tính' }
+    if ($null -eq $Seconds) { return 'chưa đủ dữ liệu' }
     $n = [Math]::Max(0, [Math]::Round([double]$Seconds))
     return '{0:00}:{1:00}:{2:00}' -f [Math]::Floor($n / 3600), [Math]::Floor(($n % 3600) / 60), ($n % 60)
 }
@@ -80,26 +84,34 @@ try {
             }
             foreach ($phase in 1..9) {
                 $estimate = $presentation.phase_estimates.([string]$phase)
-                $etaText = if ($null -eq $estimate) { 'đang ước tính' } else { '~' + (Format-Duration $estimate) }
+                $etaText = if ($null -eq $estimate) { 'chưa đủ dữ liệu' } else { '~' + (Format-Duration $estimate) }
                 $rows += ('[{0}/9] {1} | CHỜ | ETA: {2}' -f $phase, $labels[$phase - 1], $etaText)
                 [Console]::WriteLine($rows[-1])
             }
             if ($interactive) { foreach ($unused in 1..5) { [Console]::WriteLine('') } }
             $viewReady = $true
         } elseif ($text.StartsWith('OWNER_DAILY_PROGRESS=')) {
-            $event = $text.Substring('OWNER_DAILY_PROGRESS='.Length) | ConvertFrom-Json
-            $currentPhase = [int]$event.phase_index
+            try { $event = $text.Substring('OWNER_DAILY_PROGRESS='.Length) | ConvertFrom-Json -ErrorAction Stop } catch { return }
+            $parsedPhase = 0
+            if ($null -eq $event -or -not [int]::TryParse([string]$event.phase_index, [ref]$parsedPhase) -or $parsedPhase -lt 1 -or $parsedPhase -gt 9) { return }
+            $currentPhase = $parsedPhase
+            if ($event.owner_phase -and $event.status -eq 'BEGIN') { $phaseStarts[$currentPhase] = $event.elapsed_seconds }
+            if ($event.checkpoint_total) { $checkpointState[$currentPhase] = $event }
+            if (-not $event.phase_label) { $event | Add-Member -NotePropertyName phase_label -NotePropertyValue $labels[$currentPhase - 1] }
+            if ($event.request_detail) { $requestState[$currentPhase] = $event.request_detail }
+            elseif ($requestState[$currentPhase]) {
+                $event | Add-Member -NotePropertyName request_detail -NotePropertyValue $requestState[$currentPhase] -Force
+            }
+            $width = 0
+            if ($interactive) { try { $width = [Math]::Max(20, [Console]::WindowWidth - 1) } catch {} }
+            $rendered = Format-OwnerPresentation $event $checkpointState[$currentPhase] $phaseStarts[$currentPhase] $width
             if ($interactive -and $viewReady) {
-                $parts = $event.owner_line -split ' \| '
-                Set-OwnerRow ($currentPhase - 1) (($parts | Select-Object -First 3) -join ' | ')
-                if (-not $event.owner_phase) {
-                    $details = @($parts | Select-Object -Skip 3)
-                    foreach ($index in 0..4) {
-                        $detail = if ($index -lt $details.Count) { '      ' + $details[$index] } else { '' }
-                        Set-OwnerRow (9 + $index) $detail
-                    }
+                Set-OwnerRow ($currentPhase - 1) $rendered.Row
+                foreach ($index in 0..4) {
+                    $detail = if ($index -lt $rendered.Details.Count) { '      ' + $rendered.Details[$index] } else { '' }
+                    Set-OwnerRow (9 + $index) $detail
                 }
-            } else { [Console]::WriteLine($event.owner_line) }
+            } else { [Console]::WriteLine((@($rendered.Row) + $rendered.Details) -join ' | ') }
         } elseif ($Diagnostic) { [Console]::WriteLine($text) }
     }
     $exitCode = $LASTEXITCODE
