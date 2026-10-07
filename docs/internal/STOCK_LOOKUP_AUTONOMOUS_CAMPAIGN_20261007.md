@@ -133,6 +133,25 @@ One writer; official exact-field evidence only; immutable completed sessions pre
   PNJ/PVD annual assurance, annual balance/cash/debt, exact current shares remain blocked.
 - Validation: 163 focused tests pass (2 retained clean-clone skips, 5 subtests);
   47 retained/extraction pass (8 skips), 30 read-only retained consumer tests pass.
-  Both full scratch consumer joins pass. Terminal candidate and CI release pending.
+  Both full scratch consumer joins pass. Final 124 affected tests pass after fail-closed
+  marker stripping and exact retained-period binding guards. Implementation `7c718cc`;
+  hardening `e16f1a1539c74b9162df1665a54835b80461ef8a`; PR [80](https://github.com/tungthanhnguyen2312-wq/stock-core-private/pull/80), release pending.
 - Next reason: stop further OCR escalation; examine retained official share-basis proof
   or corporate-event evidence where it can improve evidence without inventing valuation inputs.
+
+## Campaign quota checkpoint
+
+- Observed quota: primary window 85% used /15% remaining, weekly 36% used /64% remaining;
+  ordinary usage still allowed. No reset credit used. This is a safety floor for starting
+  another evidence milestone with unknown acquisition/qualification and CI repair cost.
+- Finish the existing candidate release and handoff; start no further substantive milestone.
+- Source-route audit for resume: the legacy `run_authoritative_current_common_shares.py`
+  calls retired KBS; do not run it. Retained HPG executed listing change (8,442,964,520
+  listed shares, July 2) does not establish common outstanding shares or October continuity.
+- Exact next task: scope a bounded HPG official common-share observation and executed-action
+  continuity qualification through the next completed session, using retained first-party
+  notices and approved routes. Record the native milestone before any acquisition.
+- Candidate worktree: `C:/Projects/StockLookup/current-filing-acquisition-v1`, branch
+  `feature/current-filing-acquisition-20261007`, upstream same origin branch, clean after push.
+- Canonical: main remains `f5d92c1c57326040e2d75988c37c982268aedb68` pending PR80;
+  preserved untracked `data/` only. No Daily writer or T0 activity introduced.
