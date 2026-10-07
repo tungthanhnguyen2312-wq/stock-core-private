@@ -179,7 +179,8 @@ def _bounded_additional_ticker_scope(tickers: Iterable[str] | None) -> frozenset
 
 def fetch_http(url: str, *, temporary_path: Path, timeout_seconds: int = READ_TIMEOUT_SECONDS,
                connect_timeout_seconds: int = CONNECT_TIMEOUT_SECONDS, max_response_bytes: int = MAX_RESPONSE_BYTES,
-               admit_hop: Callable[[str], bool] | None = None, max_redirects: int = MAX_REDIRECTS) -> tuple[int, Mapping[str, str], bytes, str]:
+               admit_hop: Callable[[str], bool] | None = None, max_redirects: int = MAX_REDIRECTS,
+               before_request: Callable[[], None] | None = None) -> tuple[int, Mapping[str, str], bytes, str]:
     """Stream one response to caller-owned temporary storage; never promote it.
 
     Redirects are followed one hop at a time, and `admit_hop` decides each hop *before* the
@@ -190,6 +191,8 @@ def fetch_http(url: str, *, temporary_path: Path, timeout_seconds: int = READ_TI
     """
     current, seen = url, set()
     for _ in range(max_redirects + 1):
+        if before_request is not None:
+            before_request()
         response = requests.get(current, headers=REQUEST_HEADERS, timeout=(connect_timeout_seconds, timeout_seconds), allow_redirects=False, stream=True)
         if response.is_redirect or response.is_permanent_redirect:
             location = response.headers.get("Location") or response.headers.get("location")
@@ -228,9 +231,11 @@ def fetch_http(url: str, *, temporary_path: Path, timeout_seconds: int = READ_TI
 
 
 def _failure(exc: Exception) -> str:
+    if str(exc) in {"HTTP_REQUEST_CAP_REACHED", "STORAGE_BUDGET_REACHED"}:
+        return str(exc)
     if isinstance(exc, (TimeoutError, requests.Timeout)): return "timeout"
     if isinstance(exc, ValueError) and str(exc) in {"unstable_redirect", "response_size_limit", "redirect_refused_by_source_registry"}: return str(exc)
-    if isinstance(exc, requests.SSLError): return "tls_network_error"
+    if isinstance(exc, requests.exceptions.SSLError): return "tls_network_error"
     if isinstance(exc, (OSError, requests.RequestException)): return "tls_network_error"
     return "network_error"
 
@@ -266,7 +271,8 @@ def acquire(requests_: Iterable[Mapping[str, Any]], destination: Path, *, fetche
             sleep: Callable[[float], None] = time.sleep, connect_timeout_seconds: int = CONNECT_TIMEOUT_SECONDS,
             max_response_bytes: int = MAX_RESPONSE_BYTES, registry: Mapping[str, Any] | None = None,
             clock: Callable[[], float] = time.monotonic,
-            additional_allowed_tickers: Iterable[str] | None = None) -> dict[str, Any]:
+            additional_allowed_tickers: Iterable[str] | None = None,
+            refresh_index_pages: bool = False) -> dict[str, Any]:
     """Retain official documents, one request at a time, each admitted by the source registry.
 
     Nothing here reaches the network until `official_source_registry.admit()` has approved that
@@ -281,6 +287,7 @@ def acquire(requests_: Iterable[Mapping[str, Any]], destination: Path, *, fetche
     allowed_tickers = frozenset({*TICKERS, *additional_scope})
     last_request_at: dict[str, float] = {}
     root = Path(destination); root.mkdir(parents=True, exist_ok=True); manifest_path = root / MANIFEST; records = _load(manifest_path)["records"]; outcomes = []
+    initial_record_count = len(records)
     for spec in requests_:
         requested_ticker = str(spec.get("ticker", "")).upper()
         if (additional_allowed_tickers is not None and requested_ticker not in TICKERS
@@ -290,7 +297,8 @@ def acquire(requests_: Iterable[Mapping[str, Any]], destination: Path, *, fetche
         try: ticker, document_class, period, url, source_id = _validate_spec(spec, allowed_types, allowed_tickers=allowed_tickers)
         except ValueError as exc: outcomes.append({"state": str(exc), "ticker": str(spec.get("ticker", "")).upper()}); continue
         cached = _cached(root, records, ticker, url)
-        if cached: outcomes.append({"ticker": ticker, "document_id": cached["document_id"], "state": "cached_valid"}); continue
+        if cached and not (refresh_index_pages and document_class == "issuer_ir_index_page"):
+            outcomes.append({"ticker": ticker, "document_id": cached["document_id"], "state": "cached_valid"}); continue
         # Honour the source's declared minimum interval before asking, so the rate rule shapes
         # the request rather than merely reporting on one already made.
         previous = last_request_at.get(source_id)
@@ -318,6 +326,8 @@ def acquire(requests_: Iterable[Mapping[str, Any]], destination: Path, *, fetche
                 failure = None; break
             except Exception as exc:
                 temporary.unlink(missing_ok=True); failure = _failure(exc)
+                if failure in {"HTTP_REQUEST_CAP_REACHED", "STORAGE_BUDGET_REACHED"}:
+                    break
                 if attempt + 1 >= max_attempts: break
                 # A retry is another request to the same host, so it waits out that source's
                 # declared interval. Backing off 0.25s against a declared 10s minimum made the
@@ -353,6 +363,10 @@ def acquire(requests_: Iterable[Mapping[str, Any]], destination: Path, *, fetche
         if not path.exists(): os.replace(temporary, path)
         else: temporary.unlink(missing_ok=True)
         document_id, prior = _document_id(ticker, url, sha256), [r for r in records if r.get("ticker") == ticker and r.get("canonical_url") == url]
+        if any(r.get("document_id") == document_id for r in records):
+            outcomes.append({"ticker": ticker, "document_id": document_id, "state": "cached_valid",
+                             "refreshed_same_bytes": True})
+            continue
         received_at = spec.get("observed_at") or observed_at or _now()
         qualified_official = (str(spec.get("qualification_state") or "").upper() == "QUALIFIED"
                               and str(spec.get("source_authority") or "").lower() in {"issuer_ir", "exchange"})
@@ -381,7 +395,8 @@ def acquire(requests_: Iterable[Mapping[str, Any]], destination: Path, *, fetche
                   "temporal_retention": temporal_retention,
                   "a1_temporal_projection": project_retention_to_a1(temporal_retention)}
         records.append(record); outcomes.append({"ticker": ticker, "document_id": document_id, "state": "retained", "extraction_status": record["extraction_status"]})
-    _write_manifest(manifest_path, records)
+    if len(records) != initial_record_count or not manifest_path.exists():
+        _write_manifest(manifest_path, records)
     return {"schema_version": VERSION, "manifest": str(manifest_path), "outcomes": outcomes}
 
 

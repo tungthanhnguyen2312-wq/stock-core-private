@@ -10,6 +10,7 @@ import argparse
 import hashlib
 import json
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -53,24 +54,39 @@ def _record(evidence_root: Path, sha256: str) -> dict[str, Any]:
     return matches[0]
 
 
-def run(*, landing_root: Path) -> dict[str, Any]:
+def run(*, landing_root: Path, document_specs=DOCUMENTS, reporting_period: str = PERIOD,
+        allow_audited_annual_context: bool = False, annual_context_known_at: str | None = None) -> dict[str, Any]:
+    from financial_evidence_currency_contract import COHORT, TARGET_PERIODS
+    if (reporting_period not in TARGET_PERIODS or len(document_specs) > 3
+            or any(s["ticker"] not in COHORT for s in document_specs)
+            or sum(len(FRONT_MATTER_PAGES)+len(s["pages"]) for s in document_specs) > 40):
+        raise ValueError("RETAINED_OCR_BATCH_OUTSIDE_BOUNDED_CONTRACT")
+    if reporting_period == "2025" and not allow_audited_annual_context:
+        raise ValueError("AUDITED_ANNUAL_CONTEXT_REQUIRES_EXPLICIT_SCOPE")
     evidence_root = landing_root / EVIDENCE_SUBDIR
-    documents, overlay_rows, precedence, ocr_reads = [], [], [], 0
-    for spec in DOCUMENTS:
+    annual_known = annual_context_known_at or datetime.now(timezone.utc).isoformat()
+    documents, overlay_rows, precedence, ocr_reads, materializations = [], [], [], 0, []
+    for spec in document_specs:
         record = _record(evidence_root, spec["sha256"])
+        known_at = record["observed_at"]
+        if reporting_period == "2025":
+            # Qualification is a conservative later bound when the retained batch
+            # observation predates individual response completion. Never backdate it.
+            known_at = max((known_at, annual_known), key=lambda value: datetime.fromisoformat(value.replace("Z", "+00:00")))
         front = materialize_tsv_pages(record, evidence_root=evidence_root, pages=FRONT_MATTER_PAGES)
         statements = materialize_tsv_pages(record, evidence_root=evidence_root, pages=spec["pages"])
+        materializations.append({"ticker": spec["ticker"], "front": front, "statements": statements})
         ocr_reads += len(FRONT_MATTER_PAGES) + len(spec["pages"])
         assurance = resolve_document_assurance_evidence(front)
         qualification = qualify_table_facts(
-            statements, ticker=spec["ticker"], reporting_period=PERIOD,
-            include_earnings_quality_components=True,
+            statements, ticker=spec["ticker"], reporting_period=reporting_period,
+            include_earnings_quality_components=reporting_period != "2025",
             scoped_unit_evidence=resolve_scoped_unit_evidence(statements),
             scoped_statement_scope_evidence=resolve_scoped_statement_scope_evidence(statements),
         )
         entry: dict[str, Any] = {
-            "ticker": spec["ticker"], "document_sha256": spec["sha256"], "reporting_period": PERIOD,
-            "observed_at": record["observed_at"], "knowledge_available_at": record["observed_at"],
+            "ticker": spec["ticker"], "document_sha256": spec["sha256"], "reporting_period": reporting_period,
+            "observed_at": record["observed_at"], "knowledge_available_at": known_at,
             "assurance": {key: assurance.get(key) for key in (
                 "state", "reason", "audit_or_review_status", "page_number", "scope_of_assurance", "matched_anchors",
                 "evidence_id", "citation_id", "inheritance", "rendered_image_sha256")},
@@ -84,9 +100,10 @@ def run(*, landing_root: Path) -> dict[str, Any]:
             panel_facts = panel_facts_from_qualified_ocr(
                 qualification, entity_type="corporate", statement_scope="consolidated",
                 audit_or_review_status=assurance["audit_or_review_status"], assurance_evidence=assurance,
-                knowledge_available_at=record["observed_at"], observed_at=record["observed_at"],
+                knowledge_available_at=known_at, observed_at=record["observed_at"],
             )
-            rows, blocked = overlay_rows_from_panel_facts(panel_facts)
+            rows, blocked = overlay_rows_from_panel_facts(panel_facts,
+                allow_audited_annual_context=allow_audited_annual_context)
             entry["ingress_blocked"] = blocked
             for row in rows:
                 # No exact-key legacy fact exists for an H1 flow (provider rows are quarterly); a
@@ -124,15 +141,27 @@ def run(*, landing_root: Path) -> dict[str, Any]:
         "valuation": {"pe_ttm_from_h1": False, "ps_ttm_from_h1": False, "pb_effect": "NONE"},
     }
     report["artifact_sha256"] = _hash(report)
-    return {"report": report, "overlay_rows": overlay_rows, "precedence_rows": precedence}
+    return {"report": report, "overlay_rows": overlay_rows, "precedence_rows": precedence,
+            "materializations": materializations}
 
 
-def write_outputs(result: dict[str, Any], public_root: Path) -> None:
+def write_outputs(result: dict[str, Any], public_root: Path, *, preserve_other_periods: bool = False,
+                  report_name: str = REPORT_NAME) -> None:
     public_root.mkdir(parents=True, exist_ok=True)
     render = lambda rows: "".join(json.dumps(row, ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\n" for row in rows)  # noqa: E731
-    (public_root / PUBLIC_FACTS).write_text(render(result["overlay_rows"]), encoding="utf-8", newline="\n")
-    (public_root / PUBLIC_PRECEDENCE).write_text(render(result["precedence_rows"]), encoding="utf-8", newline="\n")
-    (public_root / REPORT_NAME).write_text(json.dumps(result["report"], ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+    facts, precedence = list(result["overlay_rows"]), list(result["precedence_rows"])
+    if preserve_other_periods:
+        periods = {d["reporting_period"] for d in result["report"]["documents"]}
+        for filename, rows, period in ((PUBLIC_FACTS, facts, lambda r: r["reporting_period"]),
+                                      (PUBLIC_PRECEDENCE, precedence, lambda r: r["key"]["period"])):
+            path = public_root / filename
+            if path.exists():
+                rows.extend(r for r in (json.loads(line) for line in path.read_text(encoding="utf-8").splitlines())
+                            if period(r) not in periods)
+    facts.sort(key=lambda row: (row["ticker"], row["reporting_period"], row["canonical_metric"]))
+    (public_root / PUBLIC_FACTS).write_text(render(facts), encoding="utf-8", newline="\n")
+    (public_root / PUBLIC_PRECEDENCE).write_text(render(precedence), encoding="utf-8", newline="\n")
+    (public_root / report_name).write_text(json.dumps(result["report"], ensure_ascii=False, indent=2, sort_keys=True) + "\n",
                                            encoding="utf-8", newline="\n")
 
 
@@ -144,7 +173,7 @@ def main() -> int:
     args = parser.parse_args()
     result = run(landing_root=args.landing_root)
     if args.write:
-        write_outputs(result, args.public_root)
+        write_outputs(result, args.public_root, preserve_other_periods=True)
     print(json.dumps(result["report"], ensure_ascii=False, indent=2, sort_keys=True))
     return 0
 

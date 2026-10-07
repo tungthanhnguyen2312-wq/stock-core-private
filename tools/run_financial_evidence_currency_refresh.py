@@ -22,12 +22,15 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--allow-network", action="store_true")
     parser.add_argument("--allow-ocr", action="store_true")
+    parser.add_argument("--refresh-indexes", action="store_true",
+                        help="Recheck approved index pages; preserve cached PDF bytes and original observation times")
     parser.add_argument("--landing-root", type=Path, default=Path(DEFAULT_LANDING_ROOT))
     parser.add_argument("--public-root", type=Path, default=ROOT / PUBLIC_ARTIFACT_DIR)
     args = parser.parse_args(argv)
     report = run_refresh(
         landing_root=args.landing_root, public_root=args.public_root,
         allow_network=args.allow_network, allow_ocr=args.allow_ocr,
+        refresh_indexes=args.refresh_indexes,
     )
     print(json.dumps({
         "http_requests": report["http_requests"],

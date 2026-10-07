@@ -28,6 +28,7 @@ CONTEXT_CURRENCIES = frozenset({"VND", "USD"})
 FOREIGN_CONTEXT_METRICS = frozenset({"revenue", "net_income", "attributable_net_income"})
 EARNINGS_COMPONENT_METRIC = "investment_property_disposal_result"
 EARNINGS_COMPONENT_CONTRACT = "reported_earnings_component_context/v1"
+ANNUAL_CONTEXT_CONTRACT = "audited_annual_exact_field_context/v1"
 
 
 def earnings_component_is_admitted(row: Mapping[str, Any]) -> bool:
@@ -53,7 +54,8 @@ def _hash(value: Any) -> str:
     return hashlib.sha256(json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()
 
 
-def overlay_rows_from_panel_facts(panel_facts: Sequence[Mapping[str, Any]]) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+def overlay_rows_from_panel_facts(panel_facts: Sequence[Mapping[str, Any]], *,
+        allow_audited_annual_context: bool = False) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     """Adapt already-qualified panel facts to overlay rows; refuse anything the overlay cannot carry.
 
     USD income fields retain their native currency as context only. The legacy
@@ -71,7 +73,12 @@ def overlay_rows_from_panel_facts(panel_facts: Sequence[Mapping[str, Any]]) -> t
             reasons.append("ASSURANCE_STATUS_NOT_ALLOWED")
         if fact.get("audit_or_review_status") == REVIEWED and not (assurance or {}).get("evidence_id"):
             reasons.append("REVIEWED_STATUS_WITHOUT_EVIDENCE")
-        if fact.get("period_type") != "interim":
+        annual_context = (allow_audited_annual_context and fact.get("period_type") == "annual"
+                          and fact.get("reporting_period") == "2025"
+                          and fact.get("audit_or_review_status") == "audited"
+                          and fact.get("currency") == "VND"
+                          and bool((assurance or {}).get("evidence_id")))
+        if fact.get("period_type") != "interim" and not annual_context:
             reasons.append("PERIOD_NOT_INTERIM")
         if fact.get("statement_scope") != "consolidated":
             reasons.append("SCOPE_NOT_CONSOLIDATED")
@@ -119,6 +126,8 @@ def overlay_rows_from_panel_facts(panel_facts: Sequence[Mapping[str, Any]]) -> t
             "publication_date": None, "source_family": "issuer_ir", "restatement": None,
             "extraction_method": lineage.get("extraction_method"), "reason_codes": list(fact.get("reason_codes") or []),
             "ingress_contract": CONTRACT_VERSION, "overlay_contract": OVERLAY_CONTRACT,
+            **({"context_kind": "AUDITED_ANNUAL_FIELD", "annual_context_contract": ANNUAL_CONTEXT_CONTRACT,
+                "projection_period_policy": "AUDITED_ANNUAL_CONTEXT_ONLY"} if annual_context else {}),
             **({"context_kind": "EARNINGS_QUALITY_COMPONENT", "component_contract": EARNINGS_COMPONENT_CONTRACT,
                 "reported_component_evidence": {"literal_label": lineage["row_object"]["reconstructed_label"],
                     "citation_id": lineage["citation_id"]}} if component else {}),
@@ -158,6 +167,10 @@ def precedence_row(row: Mapping[str, Any], legacy: Mapping[str, Any] | None) -> 
     """Official-vs-legacy comparison for one exact ticker/metric/period/scope key only."""
     key = {"ticker": row["ticker"], "metric": row["canonical_metric"],
            "period": row["reporting_period"], "scope": row["statement_scope"]}
+    if row.get("context_kind") == "AUDITED_ANNUAL_FIELD":
+        return {"key": key, "status": "NOT_COMPARABLE", "reason": "AUDITED_ANNUAL_CONTEXT_ONLY",
+                "official_factual_status": authority_projection(row)["factual_status"],
+                "allowed_uses": ["EXACT_FIELD_CURRENT_RESEARCH_CONTEXT"], "legacy_modified": False}
     if row.get("context_kind") == "EARNINGS_QUALITY_COMPONENT":
         return {"key": key, "status": "NOT_COMPARABLE", "reason": "EARNINGS_COMPONENT_CONTEXT_ONLY",
                 "official_factual_status": authority_projection(row)["factual_status"],

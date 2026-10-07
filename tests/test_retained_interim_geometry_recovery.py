@@ -14,6 +14,27 @@ from official_financial_structural_table import match_geometry_table_row
 FIXTURES = Path(__file__).parent / 'fixtures' / 'retained_interim_geometry'
 
 
+def test_audited_annual_split_baseline_header_requires_literal_source_line():
+    from official_financial_assurance_evidence import resolve_document_assurance_evidence
+    mat = materialization('HPG_FY25')
+    assert resolve_document_assurance_evidence(mat['front'])['state'] == 'QUALIFIED'
+    result = qualify_table_facts(mat['statements'], ticker='HPG', reporting_period='2025')
+    assert {f['canonical_metric']: f['value'] for f in result['qualified_facts']} == {
+        'revenue': 156116094618482, 'net_income': 15514931571606}
+    # Superscript characters in parent profit remain unreadable, not repaired.
+    assert any(b['canonical_metric'] == 'attributable_net_income' for b in result['blocked_candidates'])
+    broken = copy.deepcopy(mat['statements'])
+    for token in broken['pages'][0]['ocr_derived_text_evidence']['tokens']:
+        if token['text'] == 'nay':
+            token['tsv_hierarchy']['line_num'] += 1000
+    assert not qualify_table_facts(broken, ticker='HPG', reporting_period='2025')['qualified_facts']
+    damaged = copy.deepcopy(mat['statements'])
+    for token in damaged['pages'][0]['ocr_derived_text_evidence']['tokens']:
+        if token['text'] == 'nay':
+            token['text'] = 'naY0'
+    assert not qualify_table_facts(damaged, ticker='HPG', reporting_period='2025')['qualified_facts']
+
+
 def materialization(ticker):
     return json.loads((FIXTURES / (ticker + '.json')).read_text(encoding='utf-8'))
 

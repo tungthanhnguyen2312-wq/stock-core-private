@@ -36,6 +36,7 @@ from financial_evidence_currency_contract import (
     STORAGE_BUDGET_BYTES,
     TARGET_ANNUAL_PERIOD,
     TARGET_INTERIM_PERIODS,
+    TARGET_PERIODS,
     core_metrics_for,
     corporate_debt_ebitda_applicable,
     entity_family,
@@ -61,6 +62,7 @@ from official_legacy_precedence import (
     compare_official_and_legacy,
 )
 import official_document_acquisition as acquirer
+import time
 import official_source_registry as registry_module
 
 VERSION = "1.0.0"
@@ -170,6 +172,7 @@ class BoundedHttpBudget:
         self.requests = 0
         self.new_bytes = 0
         self.stopped_reason: str | None = None
+        self.last_http_request_at: float | None = None
 
     def can_request(self) -> bool:
         if self.stopped_reason:
@@ -434,6 +437,7 @@ def _acquire_one(
     *,
     fetcher: Callable[..., tuple[Any, ...]] | None,
     observed_at: str,
+    refresh_indexes: bool = False,
 ) -> dict[str, Any]:
     if not budget.can_request():
         return {"state": budget.stopped_reason, "ticker": spec.get("ticker"), "requested": False}
@@ -443,15 +447,24 @@ def _acquire_one(
         original = acquirer.fetch_http
 
         def wrapped(url: str, **kwargs: Any) -> tuple[Any, ...]:
-            if not budget.can_request():
-                raise RuntimeError(budget.stopped_reason)
-            budget.record_request()
+            def before_request() -> None:
+                if not budget.can_request():
+                    raise RuntimeError(budget.stopped_reason)
+                interval = acquirer._declared_interval(registry_module.load_registry(), SOURCE_ID)
+                if not 0 <= interval <= 30:
+                    raise ValueError("SOURCE_INTERVAL_OUTSIDE_BOUNDED_REFRESH")
+                if budget.last_http_request_at is not None:
+                    time.sleep(max(0, interval - (time.monotonic() - budget.last_http_request_at)))
+                budget.record_request()
+                budget.last_http_request_at = time.monotonic()
+            kwargs["before_request"] = before_request
             return original(url, **kwargs)
 
         acquirer.fetch_http = wrapped  # type: ignore[method-assign]
         try:
             result = acquirer.acquire(
-                [spec], destination, fetcher=acquirer.fetch_http, observed_at=observed_at, max_attempts=2,
+                [spec], destination, fetcher=acquirer.fetch_http, max_attempts=2,
+                refresh_index_pages=refresh_indexes,
             )
         finally:
             acquirer.fetch_http = original  # type: ignore[method-assign]
@@ -464,6 +477,7 @@ def _acquire_one(
 
         result = acquirer.acquire(
             [spec], destination, fetcher=counting, observed_at=observed_at, max_attempts=2,
+            refresh_index_pages=refresh_indexes,
         )
     after = {path: path.stat().st_size for path in destination.rglob("*") if path.is_file()}
     added = sum(size - before.get(path, 0) for path, size in after.items())
@@ -485,6 +499,7 @@ def _acquire_one(
                 outcome.setdefault("relative_path", record.get("relative_path"))
                 outcome.setdefault("http_status", record.get("http_status"))
                 outcome.setdefault("document_id", record.get("document_id"))
+                outcome.setdefault("observed_at", record.get("observed_at"))
                 break
     outcome["http_requests_so_far"] = budget.requests
     outcome["new_landing_bytes_so_far"] = budget.new_bytes
@@ -497,6 +512,7 @@ def run_refresh(
     public_root: Path | str | None = None,
     allow_network: bool = False,
     allow_ocr: bool = False,
+    refresh_indexes: bool = False,
     fetcher: Callable[..., tuple[Any, ...]] | None = None,
     observed_at: str | None = None,
     legacy_facts: Mapping[tuple[str, str, str, str], Mapping[str, Any]] | None = None,
@@ -590,8 +606,8 @@ def run_refresh(
                         {
                             "document_id": outcome.get("document_id"),
                             "ticker": ticker, "sha256": outcome.get("sha256"),
-                            "official_url": locator["url"], "retrieved_at": observed,
-                            "observed_at": observed, "immutable_bytes_verified": True,
+                            "official_url": locator["url"], "retrieved_at": outcome.get("observed_at") or observed,
+                            "observed_at": outcome.get("observed_at") or observed, "immutable_bytes_verified": True,
                         },
                         pdf_path, allow_ocr=allow_ocr,
                     )
@@ -623,7 +639,8 @@ def run_refresh(
             }
             route["requested"] = True
             per_issuer[ticker]["periods"][TARGET_ANNUAL_PERIOD]["route"] = seed
-            outcome = _acquire_one(spec, landing, budget, fetcher=fetcher, observed_at=observed)
+            outcome = _acquire_one(spec, landing, budget, fetcher=fetcher, observed_at=observed,
+                                   refresh_indexes=refresh_indexes)
             per_issuer[ticker]["periods"][TARGET_ANNUAL_PERIOD]["http_status"] = outcome.get("http_status") or outcome.get("state")
             per_issuer[ticker]["periods"][TARGET_ANNUAL_PERIOD]["requested"] = True
             if outcome.get("state") not in {"retained", "cached_valid"}:
@@ -635,9 +652,10 @@ def run_refresh(
             if html_path and html_path.is_file():
                 links = parse_index_document_links(html_path.read_text(encoding="utf-8", errors="replace"), seed)
             kept: list[dict[str, str]] = []
-            seen_periods: set[str] = set()
-            for link in links:
-                if len(kept) >= MAX_DOCUMENTS_PER_ISSUER:
+            seen_periods = {p for p,r in per_issuer[ticker]["periods"].items() if r["immutable_raw_retained"]}
+            for link in sorted(links,key=lambda item: (TARGET_PERIODS.index(item["period"]),
+                    not bool(re.search(r"hop[-_]?nhat|consolidated",item["url"],re.IGNORECASE)))):
+                if len(kept) >= MAX_DOCUMENTS_PER_ISSUER - per_issuer[ticker]["documents_retained"]:
                     break
                 if link["period"] in seen_periods:
                     continue
@@ -653,6 +671,9 @@ def run_refresh(
                         TARGET_ANNUAL_PERIOD if link["period"] == TARGET_ANNUAL_PERIOD else link["period"]
                     ),
                     "canonical_url": link["url"],
+                    "discovery_provenance": {"index_url": seed, "index_document_id": outcome.get("document_id"),
+                        "index_sha256": outcome.get("sha256"), "literal_href_resolved": link["url"],
+                        "index_checked_at": observed},
                 }
                 doc_outcome = _acquire_one(doc_spec, landing, budget, fetcher=fetcher, observed_at=observed)
                 period_key = link["period"]
@@ -672,8 +693,8 @@ def run_refresh(
                             {
                                 "document_id": doc_outcome.get("document_id"),
                                 "ticker": ticker, "sha256": doc_outcome.get("sha256"),
-                                "official_url": link["url"], "retrieved_at": observed,
-                                "observed_at": observed, "immutable_bytes_verified": True,
+                                "official_url": link["url"], "retrieved_at": doc_outcome.get("observed_at") or observed,
+                                "observed_at": doc_outcome.get("observed_at") or observed, "immutable_bytes_verified": True,
                             },
                             pdf_path, allow_ocr=allow_ocr,
                         )
@@ -878,6 +899,8 @@ def load_public_official_citations(root: Path | str) -> dict[tuple[str, str, str
         # This legacy citation lane corroborates VND canonical/provider facts.
         # Foreign-currency context must never establish their unit from numeric agreement.
         if (record.get("currency") != "VND" or record.get("context_kind") == "EARNINGS_QUALITY_COMPONENT"
+                or record.get("context_kind") == "AUDITED_ANNUAL_FIELD"
+                or record.get("projection_period_policy") == "AUDITED_ANNUAL_CONTEXT_ONLY"
                 or record.get("canonical_metric") == "investment_property_disposal_result"):
             continue
         ticker = str(record.get("ticker") or "").upper()

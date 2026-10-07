@@ -15,15 +15,35 @@
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "RETAINED_EARNINGS_COMPONENT_AND_WRAPPED_LABEL_RECOVERY_V1",
+    "milestone": "BOUNDED_CURRENT_OFFICIAL_FILINGS_ACQUISITION_AND_RECONCILIATION_V1",
     "state": "COMPLETE"
   },
   "queued_next": [],
   "milestones": [
     {
-      "milestone_id": "RETAINED_EARNINGS_COMPONENT_AND_WRAPPED_LABEL_RECOVERY_V1",
+      "milestone_id": "BOUNDED_CURRENT_OFFICIAL_FILINGS_ACQUISITION_AND_RECONCILIATION_V1",
       "state": "COMPLETE",
       "checkpoint": "HEAD",
+      "terminal_disposition": "PARTIAL_EXACT_ANNUAL_CONTEXT_READY",
+      "starting_checkpoint": "f5d92c1c57326040e2d75988c37c982268aedb68",
+      "candidate_branch": "feature/current-filing-acquisition-20261007",
+      "dependencies": [
+        "RETAINED_EARNINGS_COMPONENT_AND_WRAPPED_LABEL_RECOVERY_V1"
+      ],
+      "unlocks": [],
+      "owner_authorized": true,
+      "owner_override": "STOCK_LOOKUP_AUTONOMOUS_EVIDENCE_AND_DECISION_QUALITY_CAMPAIGN_V1",
+      "authority_effect": "SCOPED / RETAINED_FIRST_PARTY_FINANCIAL_EVIDENCE_AND_EXACT_CONTEXT_ONLY",
+      "state_history": [
+        "ACTIVE", "COMPLETE"
+      ],
+      "source_doc": "docs/internal/STOCK_LOOKUP_AUTONOMOUS_CAMPAIGN_20261007.md",
+      "notes": "19 actual HTTP requests; three new FY2025 PDFs; two audited HPG fields as historical context after qualification cutoff. Old 18 records/raw hashes and 15 genuine session inputs unchanged; annual metrics/shares/valuation unchanged. PNJ/PVD assurance and other field extraction remain blocked."
+    },
+    {
+      "milestone_id": "RETAINED_EARNINGS_COMPONENT_AND_WRAPPED_LABEL_RECOVERY_V1",
+      "state": "COMPLETE",
+      "checkpoint": "5464799d5930b342c65168095c9d3eea76678e00",
       "terminal_disposition": "PARTIAL_EXACT_FIELDS_AND_REPORTED_COMPONENT_CONTEXT_READY",
       "starting_checkpoint": "5e1e1776c72dd9ad102231b5ea7eeab2ca0d4f28",
       "candidate_branch": "feature/earnings-component-recovery-20261007",

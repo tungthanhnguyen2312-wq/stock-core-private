@@ -830,17 +830,35 @@ def _semantic_header_spans(header_lines: Sequence[Mapping[str, Any]], *, phrases
     """Match exact normalized header-token sequences, never page-wide prose."""
     phrase_tokens = sorted((tuple(_normalize_text(item).split()) for item in phrases), key=lambda item: (-len(item), item))
     matches: list[dict[str, Any]] = []
+    source_lines: dict[tuple[int, ...], list[Mapping[str, Any]]] = {}
+    token_lines = {}
     for line in header_lines:
+        for token in line["tokens"]:
+            hierarchy = token.get("tsv_hierarchy") or {}
+            key = tuple(hierarchy.get(k) for k in ("page_num", "block_num", "par_num", "line_num"))
+            if all(isinstance(value, int) and value > 0 for value in key):
+                source_lines.setdefault(key, []).append(token)
+                token_lines[int(token["raw_token_order"])] = int(line["line_id"])
+    # A word's glyph baseline can split an otherwise literal OCR header phrase.
+    # Reconstruct only source lines inside this already bounded header group.
+    # Native PDF tokens retain their physical-line path; no text is repaired.
+    logical_lines = []
+    for tokens in source_lines.values():
+        tokens = sorted(tokens, key=lambda token: int(token["raw_token_order"]))
+        if len({int(token["raw_token_order"]) for token in tokens}) != len(tokens):
+            continue
+        logical_lines.append({"tokens": tokens, "line_id": token_lines[int(tokens[0]["raw_token_order"])]})
+    for line in [*header_lines, *logical_lines]:
         tokens = list(line["tokens"])
         words = [_normalize_text(str(token["text"])) for token in tokens]
         for token, word in zip(tokens, words):
             if any(len(phrase) > 1 and word == " ".join(phrase) for phrase in phrase_tokens):
-                matches.append(_period_header_span([token], header_line_id=int(line["line_id"]), header_class=header_class))
+                matches.append(_period_header_span([token], header_line_id=token_lines.get(int(token.get("raw_token_order", 0)), int(line["line_id"])), header_class=header_class))
         for start in range(len(tokens)):
             for phrase in phrase_tokens:
                 end = start + len(phrase)
                 if tuple(words[start:end]) == phrase:
-                    matches.append(_period_header_span(tokens[start:end], header_line_id=int(line["line_id"]), header_class=header_class))
+                    matches.append(_period_header_span(tokens[start:end], header_line_id=token_lines.get(int(tokens[start].get("raw_token_order", 0)), int(line["line_id"])), header_class=header_class))
                     break
     unique = {(item["header_line_id"], item["x0"], item["x1"], item["raw_text"]): item for item in matches}
     return [unique[key] for key in sorted(unique)]

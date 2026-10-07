@@ -31,6 +31,7 @@ def rows(currency='VND'):
     # These original VND boundary regressions deliberately use one fixed currency lane.
     return [r for line in (ROOT / "derived/financial-evidence-currency-refresh-v1/qualified_official_facts.jsonl").read_text(encoding="utf-8").splitlines()
             if (r := json.loads(line))['currency'] == currency
+            and r['period_type'] == 'interim'
             and (currency != 'VND' or r['canonical_metric'] in {'revenue','net_income'})]
 
 
