@@ -40,6 +40,14 @@ Fact kinds used below: **CURRENT FACT** (verified in repo or by a stated read-on
 
 ## 1. The operational gate
 
+- **CURRENT FACT — Owner Daily Phase 2 observability corrective (2026-10-07).** The owner explicitly
+  authorizes `OWNER_DAILY_PHASE2_TRUTHFUL_PROGRESS_AND_TERMINAL_CLEANUP_V2` as a bounded operational
+  override (the roadmap tool does not register that ID). Fixed 13 logical checkpoints, separate
+  DNSE requests, natural T0/session counters, structured Vietnamese presentation and detached
+  default-handler opening have no analytical authority. No production Daily or retained evidence
+  rebuild is part of this corrective. Analytical roadmap/successor state is unchanged.
+  [Contract, real-run forensic, fixture acceptance and visibility limits](internal/owner_daily_progress_post_merge_acceptance.md#phase-2-v2-corrective--2026-10-07).
+
 - **CURRENT FACT — decision-intelligence closure.** `DECISION_INTELLIGENCE_COVERAGE_AND_CALIBRATION_CLOSURE_V1`
   joins the 1,683-name coverage index, the existing historical panel, the outcome
   review, the v2 evidence packet, and the portfolio workbench. Authority effect

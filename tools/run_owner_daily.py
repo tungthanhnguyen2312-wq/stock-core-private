@@ -907,10 +907,20 @@ def materialize_action_center(root: Path, session: str) -> dict[str, Any]:
     }
 
 
+# ShellExecute runs from a helper with no console and no inherited launcher pipes.
+# Keep the user's default file association; no editor executable is selected here.
+OWNER_VIEW_HELPER = "import os,sys; os.startfile(sys.argv[1])"
+
+
 def open_action_center_view(path: str) -> dict[str, str]:
     """Opening the local Markdown is convenience only, never a Daily data gate."""
     try:
-        os.startfile(path)  # type: ignore[attr-defined]  # Windows owner launcher contract.
+        subprocess.run(
+            [sys.executable, "-c", OWNER_VIEW_HELPER, path],
+            stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+            creationflags=subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP,
+            close_fds=True, check=True, timeout=15,
+        )
     except Exception as exc:
         return {"status": "READY_VIEW_OPEN_FAILED", "reason": f"VIEW_OPEN_FAILED:{type(exc).__name__}:{exc}"}
     return {"status": "READY"}

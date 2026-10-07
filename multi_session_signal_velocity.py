@@ -68,11 +68,18 @@ def _project_snapshot(path: Path) -> tuple[dict[str, Any] | None, bool]:
     return dict(metadata, records=records), valid
 
 
-def discover_retained_snapshots(root:str|Path, *, project_axes: bool = False)->dict[str,Any]:
+def discover_retained_snapshots(root:str|Path, *, project_axes: bool = False, progress_callback=None)->dict[str,Any]:
     """Completed-session ledger -> exact handoff -> exact immutable snapshot only."""
     repo=Path(root); registry=_load(repo/"config"/"daily_research_session_input_registry.json") or {}; completed=registry.get("completed_sessions") or {}
     inventory=[]; qualified=[]
-    for session in sorted(str(s) for s,e in completed.items() if isinstance(s,str) and isinstance(e,Mapping) and e.get("status")=="COMPLETED_RETAINED_EVIDENCE"):
+    from owner_daily_progress import safe_callback
+    sessions = sorted(str(s) for s,e in completed.items() if isinstance(s,str) and isinstance(e,Mapping) and e.get("status")=="COMPLETED_RETAINED_EVIDENCE")
+    def report(status):
+        safe_callback(progress_callback, {"component": "Canonical Daily", "subtask": "retained_t0_sessions",
+            "task_label": "Xác minh các phiên T0 đã lưu", "progress_kind": "SESSIONS",
+            "completed": len(inventory), "total": len(sessions), "status": status})
+    report("BEGIN")
+    for session in sessions:
         handoff_path=repo/"operations-review"/"canonical-post-close-v1"/session/"session_handoff_bundle.json"; handoff=_load(handoff_path); declared=(handoff or {}).get("prospective_decision_snapshot") or {}; ident=declared.get("identity") if isinstance(declared,Mapping) else None
         digest=ident.removeprefix(retention.SNAPSHOT_PREFIX) if isinstance(ident,str) else ""; path=repo/"operations-review"/"prospective-decision-retention-v1"/session/digest/"prospective_decision_snapshot.json"
         snap, valid = _project_snapshot(path) if project_axes else (_load(path), None)
@@ -90,8 +97,10 @@ def discover_retained_snapshots(root:str|Path, *, project_axes: bool = False)->d
             if operation is None:reasons.append("COMPLETED_DAILY_OPERATION_NOT_RETAINED")
         row={"session":session,"snapshot_path":_rel(repo,path),"snapshot_identity":(snap or {}).get("snapshot_identity") or ident,"classification":"QUALIFIED" if not reasons else "EXCLUDED","reason_codes":reasons or ["EXACT_T0_SNAPSHOT_AND_HANDOFF_BOUND"],"canonical_handoff_path":_rel(repo,handoff_path) if handoff else None,"operation_manifest_path":operation.get("path") if operation else None}
         inventory.append(row)
+        report("RUNNING")
         if snap and not reasons:qualified.append({"snapshot":snap,"inventory":row,
                                                  **({"axis_projection":True} if project_axes else {})})
+    report("END")
     return {"contract_version":CONTRACT_VERSION,"inventory":inventory,"qualified_snapshots":qualified,"qualified_session_chain":[x["snapshot"]["session"] for x in qualified],"classification_counts":dict(sorted(Counter(x["classification"] for x in inventory).items()))}
 
 def _state(value:Any,table:Mapping[str,str])->str:
@@ -171,8 +180,8 @@ def build_artifact(*,qualified_snapshots:Sequence[Mapping[str,Any]],source_inven
     latest=records[-1]["session"] if records else None; cohort=[r for r in records if r["session"]==latest]
     artifact={"schema_version":"1.2.0","contract_version":CONTRACT_VERSION,"supersedes":{"contract_version":"multi_session_signal_velocity/v1.1","status":"SUPERSEDED_FOR_CATEGORICAL_ACCELERATION_TERMINOLOGY","old_artifacts_immutable":True},"research_tier":RESEARCH_TIER,"source_inventory":list(source_inventory or []),"records":records,"validation":{"retained_session_count":len(qualified_snapshots),"retained_sessions":[x["snapshot"]["session"] for x in qualified_snapshots],"record_count":len(records),"latest_session":latest,"latest_session_cohort_counts":dict(sorted(Counter(r["overall_transition_state"] for r in cohort).items())),"lead_time_diagnostic":{"status":"NOT_EVALUABLE_NO_FORWARD_OUTCOME_CONTRACT"},"false_transition_diagnostic":{"status":"NOT_EVALUABLE_NO_FORWARD_OUTCOME_CONTRACT"},"limits":["NO_FUTURE_PRICE_OR_OUTCOME_DATA","NO_SCORE_OR_PROBABILITY","MISSING_OBSERVATIONS_NOT_INTERPOLATED","CATEGORICAL_ORDINAL_RANKS_NOT_CARDINAL_ACCELERATION"]},"authority_boundary":{"retained_t0_only":True,"no_provider_or_network":True,"no_historical_reconstruction":True,"no_score_probability_or_recommendation":True,"no_execution_or_sizing":True,"is_actionable":False}}
     return _identity(artifact)
-def build_from_retained_root(root:str|Path)->dict[str,Any]:
-    discovery=discover_retained_snapshots(root, project_axes=True);return build_artifact(qualified_snapshots=discovery["qualified_snapshots"],source_inventory=discovery["inventory"])
+def build_from_retained_root(root:str|Path, *, progress_callback=None)->dict[str,Any]:
+    discovery=discover_retained_snapshots(root, project_axes=True, **({"progress_callback": progress_callback} if progress_callback is not None else {}));return build_artifact(qualified_snapshots=discovery["qualified_snapshots"],source_inventory=discovery["inventory"])
 def write_immutable(path:str|Path,artifact:Mapping[str,Any])->Path:
     from atomic_io import retain_immutable_file, AtomicWriteError
     destination = Path(path)

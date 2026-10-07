@@ -257,6 +257,7 @@ def _axis_completeness(record: Mapping[str, Any]) -> dict[str, Any]:
 def build_snapshot(
     *, session: str, operation_identity: str, producer_run_identity: str | None,
     integrated_artifact: Mapping[str, Any], exact_session_snapshot: Mapping[str, Any] | None = None,
+    progress_callback=None,
 ) -> dict[str, Any]:
     """Create the immutable T0 payload from the current canonical decision artifact."""
     if integrated_artifact.get("contract_version") != "integrated_investment_decision_product/v1":
@@ -271,7 +272,13 @@ def build_snapshot(
     records = integrated_artifact.get("records")
     if not isinstance(records, Mapping) or not records:
         raise ProspectiveDecisionRetentionError("INTEGRATED_DECISION_RECORDS_MISSING")
+    from owner_daily_progress import safe_callback
+    def report(status):
+        safe_callback(progress_callback, {"component": "Canonical Daily", "subtask": "t0_records",
+            "task_label": "Tạo bản ghi T0", "progress_kind": "RECORDS",
+            "completed": len(retained), "total": len(records), "status": status})
     retained: dict[str, Any] = {}
+    report("BEGIN")
     price_records = (exact_session_snapshot or {}).get("records") or {}
     for ticker, decision in sorted(records.items()):
         if not isinstance(decision, Mapping) or decision.get("ticker") != ticker or decision.get("as_of_session") != session:
@@ -307,6 +314,8 @@ def build_snapshot(
             "integrated_decision_at_t0": dict(decision),
         }
         retained[ticker] = _identity(record, RECORD_PREFIX, "prospective_snapshot_record_identity")
+        if len(retained) % 64 == 0 or len(retained) == len(records):
+            report("RUNNING")
     payload: dict[str, Any] = {
         "schema_version": "1.0.0",
         "contract_version": CONTRACT_VERSION,
@@ -333,7 +342,9 @@ def build_snapshot(
             "no_execution_or_stop_loss": True,
         },
     }
-    return _identity(payload, SNAPSHOT_PREFIX, "snapshot_identity")
+    result = _identity(payload, SNAPSHOT_PREFIX, "snapshot_identity")
+    report("END")
+    return result
 
 
 def snapshot_path(root: str | Path, snapshot: Mapping[str, Any]) -> Path:

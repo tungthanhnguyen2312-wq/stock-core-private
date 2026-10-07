@@ -57,3 +57,30 @@ Daily workflow; the two launchers are different front doors onto the same code.
   separately from a checkout problem -- see the failure code's own prefix
   (`FAILED_PREFLIGHT_RETAINED_EVIDENCE`, `FAILED_PREFLIGHT_RUNTIME`, etc.) rather than
   `FAILED_PREFLIGHT_PRODUCER`.
+
+
+## Phase 2 progress and clean owner view (2026-10-07)
+
+Canonical Daily reports `PIPELINE_CHECKPOINT_PROGRESS`: completed logical transitions / 13.
+This percentage is **work checkpoints, not elapsed-time completion or a probability**. The
+fixed execution-order IDs and measured October 7 gaps are in the existing
+[telemetry acceptance handoff](internal/owner_daily_progress_post_merge_acceptance.md#phase-2-v2-corrective--2026-10-07).
+An acquisition reused from retained exact-session evidence completes its checkpoint after
+Phase B passes. It displays `DNSE: dùng lại dữ liệu phiên đã hoàn tất`; request work is not
+invented. DNSE request and observed-coverage percentages have their own denominators.
+T0 record construction and retained-session verification also show their own natural counts.
+
+The nine-row console reads structured state, checkpoint counts, current Vietnamese task,
+and observed elapsed time. At narrow widths the count precedes the task. Unknown ETA is
+`ETA: chưa đủ dữ liệu`; a historical phase estimate, when available, is independent of the
+checkpoint count. There is no checkpoint-derived ETA, background heartbeat, or elapsed-time
+percentage. Foreground subprocess observations and natural callbacks show new activity;
+long indivisible in-process work can leave the last observed elapsed/task unchanged.
+
+Opening the local Markdown view is convenience-only. A detached Windows helper uses the
+owner's current default file association with all three standard streams sent to DEVNULL,
+closed inherited handles and no Daily console. A launch failure is a warning; it cannot
+change Daily PASS. The launcher still reaches `Nhấn Enter để đóng`.
+
+Telemetry has no analytical authority and enters no analytical, T0, capture, Producer,
+operation, Dashboard, AI handoff, or Action Center content identity.

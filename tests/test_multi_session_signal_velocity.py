@@ -296,3 +296,16 @@ def test_public_overall_vocabulary_has_no_accelerating_state():
     axes = {name: {"state": "CONSTRUCTIVE", "source_identity": name, "trajectory": {"persistence": "IMPROVEMENT_PERSISTENT", "acceleration_state": "NOT_EVALUABLE_CATEGORICAL_ONLY", "latest_transition": "IMPROVING"}} for name in velocity.AXES}
     result, _, _ = velocity._overall(axes, "COMPLETE_RETAINED_EVIDENCE")
     assert result == "PERSISTENT_IMPROVEMENT"
+
+
+
+def test_retained_session_counter_preserves_streaming_identity(tmp_path):
+    _fixture(tmp_path, [("2026-01-02", _decision("2026-01-02")), ("2026-01-03", _decision("2026-01-03"))])
+    baseline = velocity.build_from_retained_root(tmp_path)
+    events = []
+    assert velocity.build_from_retained_root(tmp_path, progress_callback=events.append) == baseline
+    assert [e["completed"] for e in events] == [0, 1, 2, 2]
+    assert {e["total"] for e in events} == {2}
+    def broken(_):
+        raise ValueError("telemetry")
+    assert velocity.build_from_retained_root(tmp_path, progress_callback=broken) == baseline

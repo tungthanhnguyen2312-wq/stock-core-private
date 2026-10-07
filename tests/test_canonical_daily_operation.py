@@ -1433,3 +1433,56 @@ def test_synthetic_retained_mva_snapshot_skips_working_dates_probe(tmp_path: Pat
         now=datetime(2026, 9, 21, 19, 0, tzinfo=VN_TZ),
         evidence_dir=evidence_dir,
     )
+
+
+@pytest.mark.parametrize("reused,soft_unavailable", [(False, False), (True, False), (True, True)])
+def test_phase2_checkpoints_follow_real_graph_with_identity_and_call_parity(tmp_path, monkeypatch, reused, soft_unavailable):
+    from owner_daily_progress import CANONICAL_CHECKPOINTS, PIPELINE_CHECKPOINT_PROGRESS
+    acquired = _acquired(tmp_path, reused=reused)
+    events = []
+    options = dict(acquire_fn=lambda *a, **k: acquired)
+    if soft_unavailable:
+        options.update(post_handoff_observers_fn=lambda *a, **k: {"multi_session_signal_velocity": {"status": "UNAVAILABLE"}},
+                       post_handoff_feedback_fn=lambda *a, **k: {"status": "NOT_APPLICABLE"})
+    baseline = _run(tmp_path, monkeypatch, **options)
+    operation_path = Path(baseline["operation_directory"]) / "daily_operation_record.json"
+    before = operation_path.read_bytes()
+    observed = _run(tmp_path, monkeypatch, progress_callback=events.append, **options)
+    assert observed["operation_identity"] == baseline["operation_identity"]
+    assert observed["_calls"] == baseline["_calls"]
+    assert operation_path.read_bytes() == before
+    checkpoints = [e for e in events if e["progress_kind"] == PIPELINE_CHECKPOINT_PROGRESS]
+    ends = [e for e in checkpoints if e["status"] == "END"]
+    assert [e["checkpoint_id"] for e in ends] == [x[0] for x in CANONICAL_CHECKPOINTS]
+    assert {e["checkpoint_total"] for e in checkpoints} == {13}
+    counts = [e["checkpoint_completed"] for e in checkpoints]
+    assert counts == sorted(counts) and counts[0] == 0 and counts[-1] == 13
+    assert ends[-1]["checkpoint_percent"] == 100
+    assert '"checkpoint_' not in before.decode("utf-8")
+    assert ends[1]["checkpoint_id"] == "MARKET_EVIDENCE_READY"  # includes reused acquisition
+
+
+@pytest.mark.parametrize("failure", ["acquire", "producer", "runtime", "record"])
+def test_failed_real_boundary_never_claims_phase2_complete(tmp_path, monkeypatch, failure):
+    events = []
+    def fail(*a, **k):
+        raise RuntimeError("FIXTURE_BOUNDARY_FAILURE")
+    options = {}
+    if failure == "record":
+        monkeypatch.setattr(cdo, "_write_json", fail)
+    else:
+        options[failure + "_fn"] = fail
+    with pytest.raises((RuntimeError, cdo.CanonicalDailyOperationError)):
+        _run(tmp_path, monkeypatch, progress_callback=events.append, **options)
+    assert events[-1]["status"] == "FAILED"
+    assert events[-1]["checkpoint_percent"] < 100
+    assert all(e.get("checkpoint_percent", 0) < 100 for e in events)
+
+
+def test_broken_progress_callback_does_not_change_canonical_record(tmp_path, monkeypatch):
+    baseline = _run(tmp_path, monkeypatch)
+    def broken(_):
+        raise RuntimeError("TELEMETRY_ONLY")
+    observed = _run(tmp_path, monkeypatch, progress_callback=broken)
+    assert observed["operation_identity"] == baseline["operation_identity"]
+    assert observed["_calls"] == baseline["_calls"]

@@ -33,6 +33,8 @@ Authority effect remains NONE. No OS scheduler, poll, sleep, or background loop.
 """
 from __future__ import annotations
 
+from owner_daily_progress import CanonicalCheckpointProgress, observe_canonical_failure
+
 import argparse
 import hashlib
 import json
@@ -624,6 +626,7 @@ def _build_preseal_daily_integrated_brief(
     return brief
 
 
+@observe_canonical_failure
 def run_canonical_daily_operation(
     root: Path,
     runtime_root: Path,
@@ -663,6 +666,8 @@ def run_canonical_daily_operation(
             STAGE_BLOCKED_PRE_ACQUISITION,
             f"OPERATING_MODE_NOT_PERMITTED_FOR_CANONICAL_DAILY:{operating_mode}",
         )
+    checkpoints = CanonicalCheckpointProgress(progress_callback)
+    checkpoints.begin()
     # Legacy companion-less snapshot reuse is scoped by operating mode, never by trusting absence:
     # only an explicit DIAGNOSTIC_OVERRIDE historical replay that forbids new provider acquisition
     # may use it. ORDINARY_DAILY never can.
@@ -760,6 +765,7 @@ def run_canonical_daily_operation(
     if not resolved_session:
         raise CanonicalDailyOperationError(STAGE_BLOCKED_PRE_ACQUISITION, "INTENDED_SESSION_UNRESOLVED")
 
+    checkpoints.finish()  # SESSION_RESOLVED
     acquisition_calls = 0
 
     def _acquire() -> Mapping[str, Any]:
@@ -878,6 +884,7 @@ def run_canonical_daily_operation(
             local_state={"phase_a": phase_a, "phase_b": phase_b, "acquisition": acquisition},
         )
 
+    checkpoints.finish()  # MARKET_EVIDENCE_READY (including Phase B)
     artifact_root = Path(acquisition.get("artifact_root") or root)
     try:
         registration = register_session_inputs(
@@ -890,6 +897,7 @@ def run_canonical_daily_operation(
     except CanonicalPostCloseError as exc:
         raise CanonicalDailyOperationError(STAGE_BLOCKED_INPUT_REGISTRATION, str(exc)) from exc
 
+    checkpoints.finish()  # INPUTS_FROZEN
     # The immutable Daily operation owns the AI handoff and cockpit projection.
     # Build and validate its exact-session Integrated Decision after the input
     # ledger is frozen, then pass that object explicitly into the producer.
@@ -900,9 +908,11 @@ def run_canonical_daily_operation(
         **({"corporate_currency_rollforward": acquisition["corporate_currency_rollforward"]} if acquisition.get("corporate_currency_rollforward") is not None else {}), artifact_root=artifact_root, runtime_root=runtime_root,
         retained_evidence_root=retained_evidence_root,
         output_root=operation_output_root,
+        **({"progress_callback": progress_callback} if progress_callback is not None else {}),
     )
     integrated_delivery = _integrated_delivery_for_session(enrichment, resolved_session)
 
+    checkpoints.finish()  # DECISION_SURFACE_READY, after required delivery verification
     # Single-refresh invariant: the macro synchronizer runs at most once per operation, and
     # runs here -- before the Daily Producer -- so the AI handoff can carry the exact same
     # retained snapshot the Dashboard later reuses from disk. A refresh failure never blocks
@@ -972,6 +982,7 @@ def run_canonical_daily_operation(
             "DAILY_SHADOW_AUTOSOURCE_LINEAGE_MISSING_OR_SESSION_MISMATCH",
         )
 
+    checkpoints.finish()  # PRODUCER_SEALED, after session/lineage checks
     try:
         runtime_materialized = runtime_materialize(
             root, runtime_root, resolved_session, producer_run_identity=producer_result.get("run_identity"),
@@ -1012,6 +1023,7 @@ def run_canonical_daily_operation(
             ),
         )
 
+    checkpoints.finish()  # RUNTIME_TRUSTED_READY
     operation = producer_result.get("operation") if isinstance(producer_result.get("operation"), Mapping) else {}
     prospective_snapshot_kwargs: dict[str, Any] = {}
     if operation_output_root != root:
@@ -1019,6 +1031,7 @@ def run_canonical_daily_operation(
     prospective_decision_snapshot = retain_prospective_decision_snapshot(
         root, resolved_session, producer_result=producer_result, enrichment=enrichment,
         exact_session_snapshot=snapshot, **prospective_snapshot_kwargs,
+        **({"progress_callback": progress_callback} if progress_callback is not None else {}),
     )
     prospective_evidence = dict(acquisition.get("prospective_market_evidence") or {})
     prospective_evidence["calendar"] = retained_calendar
@@ -1026,11 +1039,13 @@ def run_canonical_daily_operation(
         capture_retention.daily_boundary, operation_output_root, session=resolved_session,
         gate=phase_b, evidence=prospective_evidence, known_at=capture_retention.io_known_at(),
         t0_snapshot_identity=((prospective_decision_snapshot or {}).get("artifact") or {}).get("snapshot_identity"))
+    checkpoints.finish()  # T0_CAPTURE_HANDLED (soft outcomes preserved)
     thesis_t0 = run_thesis_t0_sidecar(root,resolved_session,prospective_decision_snapshot,enrichment,output_root=operation_output_root)
     decision_packet = build_decision_packet(
         root, resolved_session, opportunity=operation.get("opportunity"), enrichment=enrichment,
         artifact_root=artifact_root,
     )
+    checkpoints.finish()  # DECISION_PACKET_READY
     prospective_kwargs: dict[str, Any] = {}
     tier_kwargs: dict[str, Any] = {}
     if operation_output_root != root:
@@ -1047,6 +1062,7 @@ def run_canonical_daily_operation(
         root, resolved_session, artifact_root=artifact_root,
         **({"output_root": operation_output_root} if operation_output_root != root else {}),
     )
+    checkpoints.finish()  # PROSPECTIVE_COLLECTION_HANDLED
     tiers = build_tiered_bundle(
         root, resolved_session, acquisition=acquisition, producer_result=producer_result,
         decision_packet=decision_packet, prospective=prospective, enrichment=enrichment,
@@ -1057,6 +1073,7 @@ def run_canonical_daily_operation(
         **({"thesis_t0":thesis_t0} if thesis_t0.get("status")!="NOT_APPLICABLE" else {}),
     )
 
+    checkpoints.finish()  # HANDOFF_READY
     # CANONICAL_DAILY_POST_HANDOFF_AND_OWNER_WORKFLOW_RECONCILIATION_V1: run every
     # already-approved post-handoff observer now that build_tiered_bundle has written
     # today's canonical handoff binding. Same shared helper the diagnostic
@@ -1068,10 +1085,13 @@ def run_canonical_daily_operation(
     post_handoff_observers = run_post_handoff_observers(
         root, runtime_root, resolved_session, tiers,
         enable_current_foreign_flow_live=NORMAL_DAILY_ENABLE_CURRENT_FOREIGN_FLOW_LIVE,
+        **({"progress_callback": progress_callback} if progress_callback is not None else {}),
     )
+    checkpoints.finish()  # OBSERVERS_HANDLED
     post_handoff_prospective_decision_feedback = run_post_handoff_prospective_outcome_feedback(
         root, resolved_session, output_root=operation_output_root,
     )
+    checkpoints.finish()  # FEEDBACK_HANDLED
     # CANONICAL_DAILY_OWNER_PUBLICATION_RESUME_AND_PRESENTATION_JOIN_V1: now that Signal
     # Velocity / Flow-Price exist for this exact session, additively re-join the current-product
     # projections (Workspace/Screener) with those now-available axes into a NEW artifact set --
@@ -1307,12 +1327,14 @@ def run_canonical_daily_operation(
             merged = dict(record)
             merged.update(prior)
             merged["is_idempotent_replay"] = True
+            checkpoints.finish()  # verified idempotent canonical record
             return merged
         raise CanonicalDailyOperationError("IMMUTABLE_OPERATION_RECORD_CONFLICT")
     run_dir.mkdir(parents=True, exist_ok=True)
     _write_json(run_dir / "phase_a_gate.json", phase_a)
     _write_json(run_dir / "phase_b_gate.json", phase_b)
     _write_json(existing, persistable)
+    checkpoints.finish()  # CANONICAL_RECORD_VERIFIED; publication (if requested) finished
     return record
 
 
