@@ -5,15 +5,15 @@ the machine state `ROADMAP_STATE.json`). Updated 2026-10-07 from main `c2c7c523`
 auto-starts.** A milestone starts only when `python tools/stocklookup_roadmap.py --can-start <ID>` allows
 it or the owner records an explicit override (AI_RULES rule 11). Facts: [ACTIVE_STATE.md](ACTIVE_STATE.md).
 
-## NOW — `CURRENCY_PRESERVING_INTERIM_RESEARCH_CONTEXT_V1` (COMPLETE)
+## NOW — `RETAINED_EARNINGS_COMPONENT_AND_WRAPPED_LABEL_RECOVERY_V1` (COMPLETE)
 
 Recorded. Owner-authorized Phase C is released. The later owner-authorized freshness
 contract is complete. The historical research panel is complete. The evidence packet
 is complete. The portfolio research workbench is complete. The current completed
-milestone is `CURRENCY_PRESERVING_INTERIM_RESEARCH_CONTEXT_V1`, selected under the owner's
+milestone is `RETAINED_EARNINGS_COMPONENT_AND_WRAPPED_LABEL_RECOVERY_V1`, selected under the owner's
 autonomous evidence campaign. PR #76 released the preceding session projection.
-PR #77 released retained geometry recovery. Seven H1 fields across PNJ/VRE/PVD now
-qualify as exact-field context; PVD's three retain USD and cannot enter VND valuation.
+PR #77 released retained geometry recovery. Wrapped labels qualify PNJ parent profit and VRE reported disposal context;
+recurrence stays UNKNOWN and no normalized EPS is calculated. PVD retains USD.
 The October 7 Daily subsequently completed before PR #75's Phase-2 corrective.
 Next gate: clean CI/release, then evidence-driven milestone selection under campaign delegation.
 `queued_next=[]`; native owner override records each selected milestone.

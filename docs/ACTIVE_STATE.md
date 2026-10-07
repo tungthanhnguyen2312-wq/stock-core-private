@@ -1,7 +1,7 @@
 # Stock Lookup — Active State
 
 Compact navigation view of what is true **now**. Updated 2026-10-07 from locally verified
-Producer main `05bc504d1cac8002e859a7745c42efba870faae8` (PR #77 retained recovery).
+Producer main `5e1e1776c72dd9ad102231b5ea7eeab2ca0d4f28` (PR #78 currency context).
 The owner-authorized campaign continues through bounded evidence milestones.
 Verify live remote main with `git fetch origin main` or
 `git ls-remote origin refs/heads/main`; a **local** remote-tracking ref alone can be stale.
@@ -39,12 +39,12 @@ Fact kinds used below: **CURRENT FACT** (verified in repo or by a stated read-on
 
 - **CURRENT FACT — retained-evidence projection integration.** Owner-selected
   `CURRENT_OFFICIAL_EVIDENCE_PROJECTION_INTEGRATION_V1` was released in PR #76.
-  Retained recovery and source-currency context raise reviewed H1 exact fields from two
-  to seven: PNJ/VRE revenue and consolidated net income, plus PVD USD revenue, consolidated
-  and parent-attributable profit. USD facts remain source-currency context only and are
-  excluded from VND canonical citations and valuation inputs. These enter exact-field
-  context; annual baseline and valuation eligibility stay unchanged. CI, opportunity and
-  the evidence packet bind one session event identity.
+  Reviewed H1 context includes eight income fields across PNJ/VRE/PVD and one VRE
+  reported disposal component. PVD's three USD fields remain source-currency context only,
+  excluded from VND canonical citations and valuation inputs. PNJ parent profit is now
+  source-qualified. VRE's component flags possible non-recurring earnings; recurrence stays
+  UNKNOWN and normalized EPS is absent. Annual metrics and valuation eligibility stay fixed.
+  [Earnings contract](reported_earnings_component_context_contract.md). CI, opportunity and packet bind one event identity.
   Owner campaign delegation authorizes continued bounded evidence milestones; `queued_next=[]`.
   [Campaign results and remaining blockers](internal/STOCK_LOOKUP_AUTONOMOUS_CAMPAIGN_20261007.md).
 - **HOST-LOCAL — October 7 Daily completed.** Read-only owner journal verification records

@@ -1,7 +1,7 @@
 {
-  "artifact_sha256": "92c8d4e10b56fc903b864970717c02b8f13e6822178c68861f77abc86b4c02c5",
-  "candidate_fact_count": 7,
-  "canonical_fact_count": 7,
+  "artifact_sha256": "a38bf732a8d51616f4f0835611816cc0c534702134be432639f4a08e1a4b9f16",
+  "candidate_fact_count": 9,
+  "canonical_fact_count": 9,
   "contract_version": "reviewed_interim_canonical_ingress/v2",
   "documents": [
     {
@@ -50,19 +50,20 @@
           "statement_family": "balance_sheet"
         },
         {
-          "canonical_metric": "attributable_net_income",
-          "line_code": "61",
-          "reason": "ROW_LABEL_DOES_NOT_SUPPORT_METRIC",
-          "state": "BLOCKED",
-          "statement_family": "income_statement"
-        },
-        {
           "canonical_metric": "operating_cash_flow",
           "line_code": "20",
           "raw_value": "1.991.053.934.²37",
           "reason": "OCR_NUMERIC_AMBIGUITY",
           "state": "BLOCKED",
           "statement_family": "cash_flow"
+        },
+        {
+          "canonical_metric": "investment_property_disposal_result",
+          "line_code": "21",
+          "match_count": 0,
+          "reason": "ROW_NOT_UNIQUE_OR_NOT_GEOMETRICALLY_RESOLVED",
+          "state": "BLOCKED",
+          "statement_family": "income_statement"
         },
         {
           "canonical_metric": "short_term_borrowings",
@@ -102,12 +103,41 @@
           "source_page": 10,
           "source_unit_scale": 1,
           "value": 728386009054
+        },
+        {
+          "currency": "VND",
+          "line_code": "61",
+          "metric": "attributable_net_income",
+          "source_page": 10,
+          "source_unit_scale": 1,
+          "value": 728529788872
         }
       ],
       "canonical_facts": [
         {
           "audit_or_review_status": "reviewed",
-          "citation_id": "b9cbadfbb732be02035ae5b3a88dd2695da89b70a09b98d5f9bec22296a6ad98",
+          "citation_id": "e6e869cee1c314cf68ded5dfebaad8f53eedcd647ac64a3d432119268c89d663",
+          "currency": "VND",
+          "factual_reason_codes": [],
+          "factual_status": "qualified",
+          "line_code": "61",
+          "metric": "attributable_net_income",
+          "period": "2026-H1",
+          "period_end": "2026-06-30",
+          "period_start": "2026-01-01",
+          "period_type": "interim",
+          "research_reason_codes": [
+            "RESEARCH_PERIOD_NOT_ANNUAL"
+          ],
+          "research_status": "partial",
+          "scope": "consolidated",
+          "source_page": 10,
+          "source_unit_scale": 1,
+          "value": 728529788872
+        },
+        {
+          "audit_or_review_status": "reviewed",
+          "citation_id": "4c33e154f0442df62e420ca335f5b9acbde2299148b029fc887c14afcc95f72d",
           "currency": "VND",
           "factual_reason_codes": [],
           "factual_status": "qualified",
@@ -128,7 +158,7 @@
         },
         {
           "audit_or_review_status": "reviewed",
-          "citation_id": "4f71aaa3a905781d92793733214ddfa76c0af131d177b4883df5f199b4c175cb",
+          "citation_id": "d619f485f6ca80b689910400c62263669f1d9a71bc1c8e3c81a653ec35386db1",
           "currency": "VND",
           "factual_reason_codes": [],
           "factual_status": "qualified",
@@ -209,6 +239,14 @@
           "statement_family": "cash_flow"
         },
         {
+          "canonical_metric": "investment_property_disposal_result",
+          "line_code": "21",
+          "match_count": 0,
+          "reason": "ROW_NOT_UNIQUE_OR_NOT_GEOMETRICALLY_RESOLVED",
+          "state": "BLOCKED",
+          "statement_family": "income_statement"
+        },
+        {
           "canonical_metric": "short_term_borrowings",
           "line_code": "320",
           "match_count": 0,
@@ -259,7 +297,7 @@
       "canonical_facts": [
         {
           "audit_or_review_status": "reviewed",
-          "citation_id": "402c21fe90c3b0823bb439743fe2c703ae0da8d701db9c7b76a75a112be3df4c",
+          "citation_id": "09055eeae69f562bd778906c75095d2892b5e754f44a6db797d98d4a2a66ce1d",
           "currency": "USD",
           "factual_reason_codes": [],
           "factual_status": "qualified",
@@ -280,7 +318,7 @@
         },
         {
           "audit_or_review_status": "reviewed",
-          "citation_id": "e30e02d315ff9bb45536613459d84dcb8154351668c9a781ca4cda9de0ccbba4",
+          "citation_id": "6e92fa09ee83ca4e2d2f74ffa788887080b719749035bd2b8f1c12bb2f46cc10",
           "currency": "USD",
           "factual_reason_codes": [],
           "factual_status": "qualified",
@@ -301,7 +339,7 @@
         },
         {
           "audit_or_review_status": "reviewed",
-          "citation_id": "eeac0f173b78da85a8027f3bb6edf015619584f080d028822bd57bc9805c07da",
+          "citation_id": "b3ede3e3db59872fee8c04c58ed23c0f9f8a0b48ad6acce7af4a22bc410d5b6a",
           "currency": "USD",
           "factual_reason_codes": [],
           "factual_status": "qualified",
@@ -425,12 +463,41 @@
           "source_page": 11,
           "source_unit_scale": 1000000,
           "value": 3214788000000
+        },
+        {
+          "currency": "VND",
+          "line_code": "21",
+          "metric": "investment_property_disposal_result",
+          "source_page": 11,
+          "source_unit_scale": 1000000,
+          "value": 184751000000
         }
       ],
       "canonical_facts": [
         {
           "audit_or_review_status": "reviewed",
-          "citation_id": "509643ecaea3bf77df0badbd118c7197a50f0f37d50effafb6a57b2c571f8a10",
+          "citation_id": "b273abcc297780a8fd03ad6108fa0a3b345dcc68c41ef83d4259be383979e852",
+          "currency": "VND",
+          "factual_reason_codes": [],
+          "factual_status": "qualified",
+          "line_code": "21",
+          "metric": "investment_property_disposal_result",
+          "period": "2026-H1",
+          "period_end": "2026-06-30",
+          "period_start": "2026-01-01",
+          "period_type": "interim",
+          "research_reason_codes": [
+            "RESEARCH_PERIOD_NOT_ANNUAL"
+          ],
+          "research_status": "partial",
+          "scope": "consolidated",
+          "source_page": 11,
+          "source_unit_scale": 1000000,
+          "value": 184751000000
+        },
+        {
+          "audit_or_review_status": "reviewed",
+          "citation_id": "5a8385dcaedbaadcfada52a60422a99e2993494ed7c835b6e9d60762fa1c7735",
           "currency": "VND",
           "factual_reason_codes": [],
           "factual_status": "qualified",
@@ -451,7 +518,7 @@
         },
         {
           "audit_or_review_status": "reviewed",
-          "citation_id": "ce12ef33fbeb23da23d6da49ddd7f765aa0a09a752ad81b980a9fc2feed2cdb2",
+          "citation_id": "66af631b69c42bb4f793fac694cc09461c7323941d9005c5e7ff62cacc342e2d",
           "currency": "VND",
           "factual_reason_codes": [],
           "factual_status": "qualified",

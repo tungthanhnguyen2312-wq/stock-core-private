@@ -73,6 +73,20 @@ def _rows() -> list[dict]:
     return rows
 
 
+@pytest.mark.parametrize('change', [{}, {'currency':'USD'}, {'source_lineage':{'line_code':'31'}}])
+def test_disposal_component_ingress_requires_exact_identity(change):
+    fact = _facts(metric='investment_property_disposal_result',evidence=_reviewed_evidence())[0]
+    fact['source_lineage']['line_code']='21'
+    fact['source_lineage']['row_object']['reconstructed_label']='thanh ly bat dong san dau tu'
+    fact.update(change)
+    rows,blocked = overlay_rows_from_panel_facts([fact])
+    if change:
+        assert not rows and 'EARNINGS_COMPONENT_IDENTITY_NOT_QUALIFIED' in blocked[0]['reasons']
+    else:
+        assert ingress_module.earnings_component_is_admitted(rows[0])
+        assert precedence_row(rows[0],None)['status']=='NOT_COMPARABLE'
+
+
 def test_audited_annual_still_accepted():
     facts = _facts("2025", "audited", knowledge="2026-08-09T00:00:00Z")
     assert facts[0]["period_type"] == "annual" and facts[0]["audit_or_review_status"] == "audited"

@@ -48,6 +48,8 @@ STANDARD_FACT_RULES = (
 # Line code alone is not identity: the matched row's own label must support the concept.
 # ``any_of`` phrases are normalized (accent-free) label substrings; ``forbidden`` phrases block.
 ROW_LABEL_CONTRACT = {
+    "investment_property_disposal_result": {"any_of": ("thanh ly",),
+        "all_of": ("bat dong san dau tu",), "forbidden": ()},
     "net_income": {"any_of": ("loi nhuan sau thue", "profit after tax"),
                    "forbidden": ("cong ty me", "chu so huu", "co dong", "parent", "khong kiem soat")},
     "attributable_net_income": {"any_of": ("cong ty me", "of the parent", "parent company"),
@@ -63,7 +65,8 @@ def row_label_supports_metric(metric: str, label: str) -> bool:
     # OCR may join adjacent words (``Loinhuan``). Ignore word spacing only;
     # never repair letters, digits or replace a missing identity-bearing word.
     compact = normalized.replace(" ", "")
-    return any(term.replace(" ", "") in compact for term in contract["any_of"]) and not any(
+    return any(term.replace(" ", "") in compact for term in contract["any_of"]) and all(
+        term.replace(" ", "") in compact for term in contract.get("all_of", ())) and not any(
         term.replace(" ", "") in compact for term in contract["forbidden"])
 
 
@@ -422,6 +425,7 @@ def resolve_ambiguous_debt_line_code_cells(
 
 
 def qualify_table_facts(materialization: Mapping[str, Any], *, ticker: str, reporting_period: str, currency: str = "VND", unit_scale: int = 1,
+                        include_earnings_quality_components: bool = False,
                         line_code_cell_resolution: Mapping[str, Any] | None = None,
                         scoped_unit_evidence: Mapping[str, Any] | None = None,
                         scoped_statement_scope_evidence: Mapping[str, Any] | None = None) -> dict[str, Any]:
@@ -431,7 +435,18 @@ def qualify_table_facts(materialization: Mapping[str, Any], *, ticker: str, repo
     pages_by_family = _pages_by_statement_family(materialization)
     resolved_cells = {str(item.get("canonical_metric")): item for item in (line_code_cell_resolution or {}).get("cells", [])}
     def attempt(metric: str, family: str, code: str) -> dict[str, Any] | None:
-        matches = [match_geometry_table_row(page, line_code=code, target_period=reporting_period) for page in pages_by_family.get(family, [])]
+        matches = []
+        for page in pages_by_family.get(family, []):
+            match = match_geometry_table_row(page, line_code=code, target_period=reporting_period)
+            # Preserve an already literal, qualified physical label. TSV hierarchy
+            # is a label-only fallback for an incomplete identity, never a new
+            # amount/period candidate or a repair of OCR letters.
+            if match and not row_label_supports_metric(metric, str(match.get("line_text") or "")):
+                wrapped = match_geometry_table_row(page, line_code=code, target_period=reporting_period,
+                                                   bind_wrapped_label=True)
+                if wrapped and row_label_supports_metric(metric, str(wrapped.get("line_text") or "")):
+                    match = wrapped
+            matches.append(match)
         matches = [match for match in matches if match is not None]
         cell_resolution = resolved_cells.get(metric)
         cell_evidence = None
@@ -484,6 +499,10 @@ def qualify_table_facts(materialization: Mapping[str, Any], *, ticker: str, repo
         fact = attempt(*rule)
         if fact:
             qualified.append(fact)
+    if include_earnings_quality_components:
+        component = attempt("investment_property_disposal_result", "income_statement", "21")
+        if component:
+            qualified.append(component)
     components = [attempt(name, family, code) for name, family, code in DEBT_COMPONENT_RULES]
     if all(components) and len({(item["currency"], item["unit_scale"]) for item in components}) == 1:
         short, long = components

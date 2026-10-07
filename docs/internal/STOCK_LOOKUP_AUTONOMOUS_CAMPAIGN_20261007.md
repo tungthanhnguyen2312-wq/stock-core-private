@@ -62,6 +62,38 @@ One writer; official exact-field evidence only; immutable completed sessions pre
   replay verifies all 15 genuine input hashes unchanged; projected fundamental grows 13,044 bytes.
 - Blockers: USD remains nonannual; no FX, TTM or valuation conversion. HPG/NVL/PNJ/VRE
   unresolved extraction/assurance blockers above remain. Earnings quality stays UNKNOWN.
-- Terminal checkpoint / PR / merge: pending.
+- Terminal candidate: `8440a5de2adef94a92708db6036c2d7c318600ea`; PR [78](https://github.com/tungthanhnguyen2312-wq/stock-core-private/pull/78).
+- Merge/main: `5e1e1776c72dd9ad102231b5ea7eeab2ca0d4f28`; all four CI jobs passed.
 - Next reason: after this releases, evaluate explicit non-recurring evidence already
   printed in retained VRE statements before spending requests on new filings.
+
+## Wrapped labels and reported earnings component
+
+- ID: `RETAINED_EARNINGS_COMPONENT_AND_WRAPPED_LABEL_RECOVERY_V1` (COMPLETE).
+- Starting main: `5e1e1776c72dd9ad102231b5ea7eeab2ca0d4f28`.
+- Branch: `feature/earnings-component-recovery-20261007`.
+- Selection: PNJ parent label and VRE explicit disposal result wrap across OCR lines.
+  Recover literal label ownership before additional acquisition; values remain geometrically bounded.
+- Scope: exact interim context and sourced earnings flag, recurrence UNKNOWN; no normalization.
+- Evidence gained: PNJ reviewed H1 parent-attributable profit VND 728,529,788,872
+  (page 10, line 61); VRE reported investment-property disposal result VND 184,751,000,000
+  (page 11, line 21, printed 184,751 million VND). Original Sept-29 knowledge time,
+  consolidated scope, reviewed assurance and exact citations preserved. Current context 7→9:
+  eight income fields plus one descriptive component; not nine annual valuation inputs.
+- Capability: VRE quality becomes NON_RECURRING_COMPONENT_PRESENT_OR_POSSIBLE, recurrence
+  UNKNOWN and normalized EPS absent. Other 522 retained financial records stay explicitly
+  UNKNOWN; 984 valuation records have no retained financial input. These populations remain distinct.
+- Consumer proof: exact Oct-7 scratch join carries fields and quality through valuation,
+  packet and AI; 15 genuine input hashes unchanged. Annual metrics 94, provider/missing
+  records 507/984, research shares 1,505 and strict shares/valuation zero remain unchanged.
+- Validation: corrected 32-page replay; 135 focused tests pass (3 clean-clone skips);
+  46 retained/extraction tests pass (8 skips). Additional 59 affected tests pass after
+  defensive legacy-citation exclusion. PVD token fixture guards all three USD fields.
+- Corrective found by parity: PVD code on the second label line lost its first line under
+  unconditional TSV binding. Already-qualified physical labels are now preserved; hierarchy
+  binding is a label-only fallback for incomplete identity. No source letters/digits repaired.
+- Blockers: VRE damaged parent label, HPG explicit unit OCR, NVL unreviewed Q2 assurance,
+  balance/cash-flow extraction and current-share proof remain. Disposal recurrence is unknown.
+- Terminal candidate / PR / merge: pending.
+- Next reason: bounded approved-route FY2025/reviewed-H1 acquisition now has higher value
+  than further speculative repair of unreadable retained labels or repeated architecture work.

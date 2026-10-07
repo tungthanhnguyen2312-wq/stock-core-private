@@ -1307,6 +1307,7 @@ def project_session(*, baseline: Mapping[str, Any], official_rows: list[Mapping[
     from financial_evidence_currency_contract import COHORT, TARGET_INTERIM_PERIODS
     from reviewed_interim_canonical_ingress import (
         authority_projection, FOREIGN_CONTEXT_METRICS, CONTRACT_VERSION as INTERIM_INGRESS,
+        EARNINGS_COMPONENT_METRIC, earnings_component_is_admitted,
     )
     from official_financial_assurance_evidence import assurance_status_is_qualified
 
@@ -1352,6 +1353,10 @@ def project_session(*, baseline: Mapping[str, Any], official_rows: list[Mapping[
                               and row.get("canonical_metric") in FOREIGN_CONTEXT_METRICS
                               and row.get("statement_family") == "income_statement"
                               and row.get("period_type") == "interim")
+        component = (row.get("canonical_metric") == EARNINGS_COMPONENT_METRIC
+                     or row.get("context_kind") == "EARNINGS_QUALITY_COMPONENT")
+        if component and not earnings_component_is_admitted(row):
+            reasons.append("EARNINGS_COMPONENT_IDENTITY_NOT_QUALIFIED")
         if row.get("normalized_value") is None or (row.get("currency") != "VND" and not native_usd_context) or row.get("unit_scale") != 1 or not row.get("already_normalized"):
             reasons.append("OFFICIAL_VALUE_UNIT_NOT_QUALIFIED")
         exact_key = (row.get("ticker"), row.get("canonical_metric"), row.get("reporting_period"), row.get("statement_scope"))
@@ -1381,7 +1386,8 @@ def project_session(*, baseline: Mapping[str, Any], official_rows: list[Mapping[
             "temporal_status": "CURRENT_OFFICIAL_FACT" if current else "HISTORICAL_OFFICIAL_FACT",
             "source_identity": row.get("source_locator") or "official-document:" + row["document_sha256"],
             "allowed_projection_use": "EXACT_FIELD_CURRENT_RESEARCH_CONTEXT",
-            "valuation_use": "NOT_PERMITTED_FOREIGN_CURRENCY_CONTEXT" if native_usd_context else "EXISTING_METRIC_PERIOD_CONTRACT_ONLY",
+            "valuation_use": "NOT_PERMITTED_EARNINGS_COMPONENT_CONTEXT" if component else (
+                "NOT_PERMITTED_FOREIGN_CURRENCY_CONTEXT" if native_usd_context else "EXISTING_METRIC_PERIOD_CONTRACT_ONLY"),
             "foreign_currency_conversion": "NOT_PERMITTED",
             "annualization": "NOT_PERMITTED", "ttm_derivation": "NOT_PERMITTED",
         }
@@ -1402,6 +1408,16 @@ def project_session(*, baseline: Mapping[str, Any], official_rows: list[Mapping[
             } for metric in record.get("metrics") or []
         }
         record["earnings_quality_context"] = {"status": "UNKNOWN", "reason": "NO_QUALIFIED_NON_RECURRING_LINE_EVIDENCE"}
+        components = [f for f in record["official_field_context"]
+                      if f.get("context_kind") == "EARNINGS_QUALITY_COMPONENT"
+                      and f["temporal_status"] == "CURRENT_OFFICIAL_FACT" and f["normalized_value"] != 0]
+        if components:
+            record["earnings_quality_context"] = {
+                "status": "NON_RECURRING_COMPONENT_PRESENT_OR_POSSIBLE",
+                "reason": "EXPLICIT_REPORTED_INVESTMENT_PROPERTY_DISPOSAL_RESULT",
+                "recurrence_assessment": "UNKNOWN", "normalization_status": "NOT_CALCULATED",
+                "normalized_eps": None, "component_evidence": components,
+            }
     cohort = {}
     for ticker in COHORT:
         fields = by_ticker.get(ticker, [])

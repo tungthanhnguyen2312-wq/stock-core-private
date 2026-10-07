@@ -15,15 +15,33 @@
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "CURRENCY_PRESERVING_INTERIM_RESEARCH_CONTEXT_V1",
+    "milestone": "RETAINED_EARNINGS_COMPONENT_AND_WRAPPED_LABEL_RECOVERY_V1",
     "state": "COMPLETE"
   },
   "queued_next": [],
   "milestones": [
     {
-      "milestone_id": "CURRENCY_PRESERVING_INTERIM_RESEARCH_CONTEXT_V1",
+      "milestone_id": "RETAINED_EARNINGS_COMPONENT_AND_WRAPPED_LABEL_RECOVERY_V1",
       "state": "COMPLETE",
       "checkpoint": "HEAD",
+      "terminal_disposition": "PARTIAL_EXACT_FIELDS_AND_REPORTED_COMPONENT_CONTEXT_READY",
+      "starting_checkpoint": "5e1e1776c72dd9ad102231b5ea7eeab2ca0d4f28",
+      "candidate_branch": "feature/earnings-component-recovery-20261007",
+      "dependencies": [
+        "CURRENCY_PRESERVING_INTERIM_RESEARCH_CONTEXT_V1"
+      ],
+      "unlocks": [],
+      "owner_authorized": true,
+      "owner_override": "STOCK_LOOKUP_AUTONOMOUS_EVIDENCE_AND_DECISION_QUALITY_CAMPAIGN_V1",
+      "authority_effect": "SCOPED / EXACT_INTERIM_FIELDS_AND_DESCRIPTIVE_EARNINGS_CONTEXT_ONLY",
+      "state_history": ["ACTIVE", "COMPLETE"],
+      "source_doc": "docs/internal/STOCK_LOOKUP_AUTONOMOUS_CAMPAIGN_20261007.md",
+      "notes": "Bind literal wrapped labels; exact disposal result context; recurrence unknown and no normalized earnings."
+    },
+    {
+      "milestone_id": "CURRENCY_PRESERVING_INTERIM_RESEARCH_CONTEXT_V1",
+      "state": "COMPLETE",
+      "checkpoint": "8440a5de2adef94a92708db6036c2d7c318600ea",
       "terminal_disposition": "PARTIAL_SOURCE_CURRENCY_CONTEXT_READY",
       "starting_checkpoint": "05bc504d1cac8002e859a7745c42efba870faae8",
       "candidate_branch": "feature/currency-preserving-interim-20261007",

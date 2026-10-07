@@ -8,7 +8,9 @@ Current-state facts: [ACTIVE_STATE.md](ACTIVE_STATE.md). Authority per output: [
 Released October-7 integration extends K2's existing fundamental builder with a
 new session projection of the immutable annual baseline and qualified retained overlay.
 Reviewed USD income fields remain currency-preserving context and are excluded from VND
-canonical citations/valuation inputs. This changes future construction only.
+canonical citations/valuation inputs. Reported disposal components follow the
+[earnings contract](reported_earnings_component_context_contract.md): descriptive flags,
+recurrence UNKNOWN, no normalized EPS. This changes future construction only.
 CI, valuation and downstream research receive that projection; corporate selection is
 carried from the same frozen/attempt input binding into opportunity and K6 event context.
 Completed locks cannot be replaced. AI context preserves exact-field citations and event

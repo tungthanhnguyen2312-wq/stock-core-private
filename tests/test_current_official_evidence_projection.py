@@ -30,7 +30,50 @@ def baseline():
 def rows(currency='VND'):
     # These original VND boundary regressions deliberately use one fixed currency lane.
     return [r for line in (ROOT / "derived/financial-evidence-currency-refresh-v1/qualified_official_facts.jsonl").read_text(encoding="utf-8").splitlines()
-            if (r := json.loads(line))['currency'] == currency]
+            if (r := json.loads(line))['currency'] == currency
+            and (currency != 'VND' or r['canonical_metric'] in {'revenue','net_income'})]
+
+
+def all_rows():
+    return [json.loads(line) for line in (ROOT / 'derived/financial-evidence-currency-refresh-v1/qualified_official_facts.jsonl').read_text(encoding='utf8').splitlines()]
+
+
+def test_reported_component_survives_consumers_with_unknown_recurrence_and_no_normalization():
+    value = project(all_rows())
+    assert value['official_projection']['current_official_field_count']==9
+    quality = value['records']['VRE']['earnings_quality_context']
+    assert quality['status']=='NON_RECURRING_COMPONENT_PRESENT_OR_POSSIBLE'
+    assert quality['recurrence_assessment']=='UNKNOWN' and quality['normalized_eps'] is None
+    evidence = quality['component_evidence'][0]
+    assert evidence['normalized_value']==184751000000
+    assert evidence['valuation_use']=='NOT_PERMITTED_EARNINGS_COMPONENT_CONTEXT'
+    assert _financial_input(value['records']['VRE'],value)['earnings_quality_context']==quality
+    from ai_research_session_delivery import _compact_context
+    assert _compact_context('VRE',{'product':{}},{'fundamental':value})['fundamental_context']['earnings_quality_context']==quality
+    assert value['records']['PNJ']['earnings_quality_context']['status']=='UNKNOWN'
+    from financial_evidence_currency_refresh import load_public_official_citations
+    assert not any(k[1]=='investment_property_disposal_result' for k in load_public_official_citations(ROOT))
+
+
+@pytest.mark.parametrize('change',[
+    {'normalized_value':0}, {'knowledge_available_at':'2026-10-07T15:01:00+07:00'},
+    {'reporting_period':'2025-H1'}, {'component_contract':None},
+    {'ingress_contract':None}, {'period_type':'annual'}, {'currency':'USD'}, {'line_code':'31'},
+    {'reported_component_evidence':{'literal_label':'other income'}},
+])
+def test_absent_stale_zero_or_unqualified_component_stays_unknown(change):
+    source = all_rows()
+    row = next(r for r in source if r.get('context_kind')=='EARNINGS_QUALITY_COMPONENT')
+    row.update(change)
+    assert project(source)['records']['VRE']['earnings_quality_context']['status']=='UNKNOWN'
+
+
+def test_conflicting_component_cannot_become_known_quality():
+    source = all_rows()
+    other = deepcopy(next(r for r in source if r.get('context_kind')=='EARNINGS_QUALITY_COMPONENT'))
+    other['normalized_value']+=1
+    source.append(other)
+    assert project(source)['records']['VRE']['earnings_quality_context']['status']=='UNKNOWN'
 
 
 def test_usd_income_survives_consumers_without_fx_or_annual_input_promotion():
