@@ -41,6 +41,7 @@ def _official_universe(*tickers: str) -> dict:
 def _hpg_common(**overrides) -> dict:
     row = {
         "identity": COMMON_OUTSTANDING,
+        "share_count_identity": COMMON_OUTSTANDING, "share_class": "common_outstanding",
         "value": 8_442_964_520,
         "effective_date": "2026-07-02",
         "coverage_through": "2026-07-30",

@@ -43,6 +43,9 @@ def _valuation(row):
  keys=("status","blocked_reasons","price_session","authority_tier","labels","first_blocker")
  result={"valuation_session":(row.get("price_input") or {}).get("session"),"share_basis_status":(row.get("share_basis_input") or {}).get("status"),"financial_authority":(row.get("financial_input") or {}).get("authority"),"metrics":{k:{x:v.get(x) for x in keys if x in v} for k,v in sorted((row.get("metrics") or {}).items())},"value_strategy":copy.deepcopy(row.get("value_strategy")),"research_usable_is_not_authoritative":True}
  financial=row.get("financial_input") or {}
+ share=row.get("share_basis_input") or {}
+ if share.get('official_share_observation'):
+  result['official_share_observation']=copy.deepcopy(share['official_share_observation'])
  if "official_field_context" in financial:
   result.update({k:copy.deepcopy(financial.get(k)) for k in ("official_field_context","baseline_metric_temporal_context","earnings_quality_context","interim_context_does_not_supply_annual_valuation_inputs")})
  return result

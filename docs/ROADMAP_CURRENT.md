@@ -1,24 +1,23 @@
 # Stock Lookup — Current Roadmap
 
 What happens next, and nothing else. No historical milestones (those live in [ROADMAP.md](ROADMAP.md) and
-the machine state `ROADMAP_STATE.json`). Updated 2026-10-07 from main `c2c7c523`. **Nothing below
+the machine state `ROADMAP_STATE.json`). Updated 2026-10-08 from starting main `755caab570a505554ffbea07c18ac97b773683d9`. **Nothing below
 auto-starts.** A milestone starts only when `python tools/stocklookup_roadmap.py --can-start <ID>` allows
 it or the owner records an explicit override (AI_RULES rule 11). Facts: [ACTIVE_STATE.md](ACTIVE_STATE.md).
 
-## NOW — `RETAINED_EARNINGS_COMPONENT_AND_WRAPPED_LABEL_RECOVERY_V1` (COMPLETE)
+## NOW — `HPG_CURRENT_COMMON_SHARE_AND_EXECUTED_ACTION_CONTINUITY_QUALIFICATION_V1` (COMPLETE)
 
-Recorded. Owner-authorized Phase C is released. The later owner-authorized freshness
-contract is complete. The historical research panel is complete. The evidence packet
-is complete. The portfolio research workbench is complete. The current completed
-milestone is `RETAINED_EARNINGS_COMPONENT_AND_WRAPPED_LABEL_RECOVERY_V1`, selected under the owner's
-autonomous evidence campaign. PR #76 released the preceding session projection.
-PR #77 released retained geometry recovery. Wrapped labels qualify PNJ parent profit and VRE reported disposal context;
-recurrence stays UNKNOWN and no normalized EPS is calculated. PVD retains USD.
-The October 7 Daily subsequently completed before PR #75's Phase-2 corrective.
-Next gate: clean CI/release, then evidence-driven milestone selection under campaign delegation.
-`queued_next=[]`; native owner override records each selected milestone.
-[Campaign](internal/STOCK_LOOKUP_AUTONOMOUS_CAMPAIGN_20261007.md).
-[Scope, counts and blockers](internal/CURRENT_OFFICIAL_EVIDENCE_PROJECTION_INTEGRATION_20261007.md).
+The October-8 owner campaign delegates repeated bounded implementation and release.
+HPG FY2025 audited capital note qualifies 7,675,465,855 ordinary outstanding shares
+at December 31, 2025. It is later-known historical context, not a current denominator.
+July 2's 8,442,964,520 is **listed** quantity; future promotion rejects the legacy
+common label. Continuity from January 1 through October 7 remains unproven.
+Strict shares/valuation stay zero; completed sessions and T0 remain immutable.
+The previous bounded filing-acquisition milestone completed in PR #80; PR #81
+closed its handoff. This view now agrees with machine state at the terminal gate.
+`queued_next=[]`; select the next retained financial-evidence lane under recorded
+owner delegation. No October-8 production Daily is authorized by engineering work.
+[Campaign and exact blockers](internal/STOCK_LOOKUP_AUTONOMOUS_CAMPAIGN_20261008.md).
 
 The prior operational gate `FIRST_REAL_POST_RELEASE_CAPTURE_ACCEPTANCE` remains RECORDED
 for October 5; the new analytical checkpoint does not reopen that gate.

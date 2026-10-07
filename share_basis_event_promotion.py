@@ -1,16 +1,9 @@
 """Derive promotable share-basis citations from the official corporate-action ledger (B1.1).
 
 WHAT THIS IS FOR
-    The ledger already produces qualified, hash-bound, executed events. One of them states
-    HPG's share count outright: `shares_after = 8,442,964,520` as of 2026-07-02. Nothing read
-    it. `market_wide_current_shares_resolver` looked for official anchors in
-    `share_basis_citations.jsonl`, which held only FY2024 period-end figures, so the count the
-    issuer had already published sat one directory away while the resolver reported HPG as
-    `provider_reported_lagged`.
-
-    This module is the reader that closes that gap. It selects the ledger entries that may
-    become evidence and hands them to `evidence_promotion.promote()`, which remains the sole
-    writer. Nothing here writes anything.
+    Select only explicit common-outstanding counts from retained executed events.
+    The historical HPG listing notice states listed shares; its untyped
+    shares_after cannot establish an accounting common-outstanding denominator.
 
 WHAT QUALIFIES, AND WHAT DOES NOT
     An entry is promotable only when all of these hold:
@@ -19,8 +12,9 @@ WHAT QUALIFIES, AND WHAT DOES NOT
       * `lifecycle_state == "executed"` — a proposed or approved event has not happened;
       * `shares_after` is a positive integer the document states outright, not a difference
         this module computes;
-      * an execution date exists (`payment_or_execution_date`, else `trading_date`);
+      * an execution date exists (`payment_or_execution_date`);
       * the entry is neither superseded nor cancelled nor amended away;
+      * explicit common-outstanding count identity and common share class;
       * at least one source content hash, so the value is traceable to retained bytes.
 
     An **ex-right date is not required**, and that is deliberate. An ex-date places an action
@@ -40,7 +34,7 @@ import json
 from pathlib import Path
 from typing import Any, Iterable, Mapping
 
-VERSION = "1.0.0"
+VERSION = "1.1.0"
 
 LEDGER_RELATIVE = Path("data") / "official-corporate-actions" / "event_ledger.json"
 
@@ -72,7 +66,7 @@ def load_ledger(runtime_root: Path | str) -> dict[str, Any]:
 
 
 def _execution_date(entry: Mapping[str, Any]) -> str | None:
-    for field in ("payment_or_execution_date", "trading_date"):
+    for field in ("payment_or_execution_date",):
         value = entry.get(field)
         if isinstance(value, str) and value.strip():
             return value.strip()[:10]
@@ -99,8 +93,14 @@ def entry_verdict(entry: Mapping[str, Any], superseded_ids: Iterable[str] = ()) 
         return {**base, "promotable": False, "reason": "event_type_does_not_change_share_count"}
 
     shares_after = entry.get("shares_after")
-    if not isinstance(shares_after, (int, float)) or isinstance(shares_after, bool) or shares_after <= 0:
+    if not isinstance(shares_after, int) or isinstance(shares_after, bool) or shares_after <= 0:
         return {**base, "promotable": False, "reason": "no_stated_shares_after"}
+
+    # Execution of a listing change establishes listed quantity, not the
+    # accounting common-outstanding denominator. Untyped legacy entries fail closed.
+    if entry.get("share_count_identity") != "common_shares_outstanding" or entry.get("share_class") != "common_outstanding":
+        return {**base, "promotable": False, "reason": "common_outstanding_share_semantics_not_proven",
+                "native_share_identity": entry.get("share_count_identity") or "unknown"}
 
     effective_date = _execution_date(entry)
     if effective_date is None:
@@ -157,6 +157,7 @@ def promotable_citations(runtime_root: Path | str, *, tickers: Iterable[str] | N
             effective_date=verdict["effective_date"], event_id=verdict["event_id"],
             event_type=verdict["event_type"], evidence_id=str(verdict["evidence_id"] or ""),
             source_content_hashes=verdict["source_content_hashes"],
+            share_count_identity=entry["share_count_identity"], share_class=entry["share_class"],
             corroborated_value=(int(witness_value) if witness_value is not None else None),
             corroborated_source=witness.get("source"),
             corroborated_on=witness.get("observed_on"),

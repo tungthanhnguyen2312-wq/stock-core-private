@@ -111,12 +111,11 @@ class OfficialAnchorTests(unittest.TestCase):
                          "anchor_is_a_period_end_figure_not_a_dated_current_count")
         self.assertEqual(result["value"], 2000)
 
-    def test_only_one_ticker_is_qualified_official_against_the_live_runtime(self) -> None:
-        """HPG, from its own executed-event notice (B1.1). The other 1,682 have no such
-        document, and a period-end citation is not one."""
+    @unittest.skipUnless((RUNTIME / 'vn_stock.db').is_file(), 'retained runtime unavailable')
+    def test_listing_notice_is_not_an_outstanding_common_denominator(self) -> None:
         summary = shares.resolve_market_wide_shares(RUNTIME, "2026-08-03")
-        self.assertEqual(summary["counts"].get("qualified_official", 0), 1)
-        self.assertEqual(shares.resolve_effective_shares("HPG", RUNTIME, "2026-08-03")["authority"],
+        self.assertEqual(summary["counts"].get("qualified_official", 0), 0)
+        self.assertNotEqual(shares.resolve_effective_shares("HPG", RUNTIME, "2026-08-03")["authority"],
                          "qualified_official")
 
 

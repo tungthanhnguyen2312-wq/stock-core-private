@@ -1,11 +1,10 @@
 # Stock Lookup — Active State
 
-Compact navigation view of what is true **now**. Updated 2026-10-07 from locally verified
-Producer main `5e1e1776c72dd9ad102231b5ea7eeab2ca0d4f28` (PR #78 currency context).
+Compact navigation view of what is true **now**. Updated 2026-10-08 from verified
+starting main `755caab570a505554ffbea07c18ac97b773683d9` (PR #81 campaign checkpoint).
 The owner-authorized campaign continues through bounded evidence milestones.
 Verify live remote main with `git fetch origin main` or
 `git ls-remote origin refs/heads/main`; a **local** remote-tracking ref alone can be stale.
-
 ## 0. How this file relates to the others
 
 | Question | Answer lives in |
@@ -37,6 +36,7 @@ Fact kinds used below: **CURRENT FACT** (verified in repo or by a stated read-on
 
 ## 1. The operational gate
 
+- **CURRENT FACT — HPG common-share observation:** audited FY2025 page 41 states 7,675,465,855 at December 31, 2025; later-known historical context only. July-2 quantity is listed shares. January 1–October 7 common-share continuity remains unproven; strict shares/valuation stay zero. [Campaign](internal/STOCK_LOOKUP_AUTONOMOUS_CAMPAIGN_20261008.md).
 - **CURRENT FACT — retained-evidence projection integration.** Owner-selected
   `CURRENT_OFFICIAL_EVIDENCE_PROJECTION_INTEGRATION_V1` was released in PR #76.
   Reviewed H1 context includes eight income fields across PNJ/VRE/PVD and one VRE

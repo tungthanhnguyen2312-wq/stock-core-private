@@ -15,7 +15,7 @@
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "BOUNDED_CURRENT_OFFICIAL_FILINGS_ACQUISITION_AND_RECONCILIATION_V1",
+    "milestone": "HPG_CURRENT_COMMON_SHARE_AND_EXECUTED_ACTION_CONTINUITY_QUALIFICATION_V1",
     "state": "COMPLETE"
   },
   "queued_next": [],
@@ -3278,6 +3278,27 @@
       ],
       "notes": "Owner-selected retained-only integration complete at one LOCAL checkpoint. PNJ/VRE exact H1 revenue context; annual metrics/share authority unchanged. Offline October-7 CI 3 to 171, current event tickers 0 to 168; all consumers bind one session projection of the exact frozen parent. Remaining issuer evidence stays blocked. Next gate owner checkpoint review; no push, PR, merge, deploy, network, Daily, T0 rewrite or successor.",
       "terminal_disposition": "PARTIAL_RETAINED_EVIDENCE_PROJECTION_READY"
+    },
+    {
+      "milestone_id": "HPG_CURRENT_COMMON_SHARE_AND_EXECUTED_ACTION_CONTINUITY_QUALIFICATION_V1",
+      "state": "COMPLETE",
+      "starting_checkpoint": "755caab570a505554ffbea07c18ac97b773683d9",
+      "checkpoint": "HEAD",
+      "candidate_branch": "feature/hpg-share-basis-20261008",
+      "dependencies": [
+        "BOUNDED_CURRENT_OFFICIAL_FILINGS_ACQUISITION_AND_RECONCILIATION_V1"
+      ],
+      "unlocks": [],
+      "owner_authorized": true,
+      "owner_override": "OWNER_DIRECTIVE_2026_10_08_AUTONOMOUS_SHARE_BASIS_AND_OFFICIAL_EVIDENCE_CAMPAIGN_V1",
+      "authority_effect": "EXACT_SOURCE_QUALIFICATION_ONLY_NO_IMPLIED_LISTED_TO_OUTSTANDING",
+      "state_history": [
+        "ACTIVE",
+        "COMPLETE"
+      ],
+      "source_doc": "docs/internal/STOCK_LOOKUP_AUTONOMOUS_CAMPAIGN_20261008.md",
+      "notes": "Retained HPG audited FY2025 page41: 7,675,465,855 ordinary outstanding at 2025-12-31. New knowledge October8; no completed-session backfill. July2 listed quantity cannot qualify common shares. Legacy aliases rejected prospectively; provider agreement is not continuity. January1–October7 complete executed common-share chain absent. Strict share/valuation counts zero. Owner campaign authorizes next bounded retained financial lane.",
+      "terminal_disposition": "QUALIFIED_SHARE_OBSERVATION_CONTINUITY_BLOCKED"
     }
   ],
   "blocked_capabilities": [
