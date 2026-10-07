@@ -901,6 +901,7 @@ def load_public_official_citations(root: Path | str) -> dict[tuple[str, str, str
         if (record.get("currency") != "VND" or record.get("context_kind") == "EARNINGS_QUALITY_COMPONENT"
                 or record.get("context_kind") == "AUDITED_ANNUAL_FIELD"
                 or record.get("projection_period_policy") == "AUDITED_ANNUAL_CONTEXT_ONLY"
+                or (record.get("period_type") == "annual" and record.get("ingress_contract") == "reviewed_interim_canonical_ingress/v2")
                 or record.get("canonical_metric") == "investment_property_disposal_result"):
             continue
         ticker = str(record.get("ticker") or "").upper()

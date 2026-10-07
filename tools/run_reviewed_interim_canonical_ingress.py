@@ -68,6 +68,8 @@ def run(*, landing_root: Path, document_specs=DOCUMENTS, reporting_period: str =
     documents, overlay_rows, precedence, ocr_reads, materializations = [], [], [], 0, []
     for spec in document_specs:
         record = _record(evidence_root, spec["sha256"])
+        if record.get("reporting_period") != reporting_period:
+            raise ValueError("RETAINED_DOCUMENT_PERIOD_BINDING_MISMATCH")
         known_at = record["observed_at"]
         if reporting_period == "2025":
             # Qualification is a conservative later bound when the retained batch

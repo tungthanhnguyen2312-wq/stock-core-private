@@ -1359,7 +1359,8 @@ def project_session(*, baseline: Mapping[str, Any], official_rows: list[Mapping[
         if component and not earnings_component_is_admitted(row):
             reasons.append("EARNINGS_COMPONENT_IDENTITY_NOT_QUALIFIED")
         annual_context = (row.get("context_kind") == "AUDITED_ANNUAL_FIELD"
-                          or row.get("projection_period_policy") == "AUDITED_ANNUAL_CONTEXT_ONLY")
+                          or row.get("projection_period_policy") == "AUDITED_ANNUAL_CONTEXT_ONLY"
+                          or (row.get("period_type") == "annual" and row.get("ingress_contract") == INTERIM_INGRESS))
         if annual_context and not (
                 row.get("context_kind") == "AUDITED_ANNUAL_FIELD"
                 and row.get("projection_period_policy") == "AUDITED_ANNUAL_CONTEXT_ONLY"
