@@ -24,6 +24,7 @@ from official_financial_assurance_evidence import resolve_document_assurance_evi
 from official_financial_ocr_table_evidence import (  # noqa: E402
     materialize_tsv_pages, panel_facts_from_qualified_ocr, qualify_table_facts,
     resolve_scoped_statement_scope_evidence, resolve_scoped_unit_evidence,
+    resolve_ambiguous_debt_line_code_cells,
 )
 from reviewed_interim_canonical_ingress import (  # noqa: E402
     CONTRACT_VERSION, MILESTONE_ID, authority_projection, overlay_rows_from_panel_facts, precedence_row,
@@ -55,7 +56,8 @@ def _record(evidence_root: Path, sha256: str) -> dict[str, Any]:
 
 
 def run(*, landing_root: Path, document_specs=DOCUMENTS, reporting_period: str = PERIOD,
-        allow_audited_annual_context: bool = False, annual_context_known_at: str | None = None) -> dict[str, Any]:
+        allow_audited_annual_context: bool = False, annual_context_known_at: str | None = None,
+        resolve_cash_flow_code_cells: bool = False) -> dict[str, Any]:
     from financial_evidence_currency_contract import COHORT, TARGET_PERIODS
     if (reporting_period not in TARGET_PERIODS or len(document_specs) > 3
             or any(s["ticker"] not in COHORT for s in document_specs)
@@ -80,11 +82,15 @@ def run(*, landing_root: Path, document_specs=DOCUMENTS, reporting_period: str =
         materializations.append({"ticker": spec["ticker"], "front": front, "statements": statements})
         ocr_reads += len(FRONT_MATTER_PAGES) + len(spec["pages"])
         assurance = resolve_document_assurance_evidence(front)
+        cells = (resolve_ambiguous_debt_line_code_cells(statements, record=record,
+                    evidence_root=evidence_root, reporting_period=reporting_period,
+                    include_operating_cash_flow=True) if resolve_cash_flow_code_cells else None)
         qualification = qualify_table_facts(
             statements, ticker=spec["ticker"], reporting_period=reporting_period,
             include_earnings_quality_components=reporting_period != "2025",
             scoped_unit_evidence=resolve_scoped_unit_evidence(statements),
             scoped_statement_scope_evidence=resolve_scoped_statement_scope_evidence(statements),
+            line_code_cell_resolution=cells,
         )
         entry: dict[str, Any] = {
             "ticker": spec["ticker"], "document_sha256": spec["sha256"], "reporting_period": reporting_period,
@@ -99,6 +105,8 @@ def run(*, landing_root: Path, document_specs=DOCUMENTS, reporting_period: str =
             "blocked_candidates": qualification["blocked_candidates"],
             "canonical_facts": [], "ingress_blocked": [],
         }
+        if cells:
+            entry["line_code_cell_resolution"] = cells
         if assurance["state"] == "QUALIFIED":
             panel_facts = panel_facts_from_qualified_ocr(
                 qualification, entity_type="corporate", statement_scope="consolidated",
@@ -149,11 +157,37 @@ def run(*, landing_root: Path, document_specs=DOCUMENTS, reporting_period: str =
 
 
 def write_outputs(result: dict[str, Any], public_root: Path, *, preserve_other_periods: bool = False,
-                  report_name: str = REPORT_NAME, preserve_other_documents: bool = False) -> None:
+                  report_name: str = REPORT_NAME, preserve_other_documents: bool = False,
+                  append_new_facts_only: bool = False) -> None:
     public_root.mkdir(parents=True, exist_ok=True)
     render = lambda rows: "".join(json.dumps(row, ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\n" for row in rows)  # noqa: E731
     facts, precedence = list(result["overlay_rows"]), list(result["precedence_rows"])
-    if preserve_other_periods or preserve_other_documents:
+    report = dict(result["report"])
+    if append_new_facts_only:
+        def fact_key(row):
+            return tuple(row.get(k) for k in ("ticker", "canonical_metric", "reporting_period", "statement_scope"))
+        old_facts_path, old_precedence_path = public_root / PUBLIC_FACTS, public_root / PUBLIC_PRECEDENCE
+        old_facts = [json.loads(line) for line in old_facts_path.read_text(encoding="utf-8").splitlines()] if old_facts_path.exists() else []
+        old_precedence = [json.loads(line) for line in old_precedence_path.read_text(encoding="utf-8").splitlines()] if old_precedence_path.exists() else []
+        retained = {fact_key(row): row for row in old_facts}
+        added = []
+        for row in facts:
+            prior = retained.get(fact_key(row))
+            if prior is not None:
+                if any(prior.get(k) != row.get(k) for k in ("normalized_value", "currency", "unit_scale")):
+                    raise ValueError("APPEND_ONLY_OFFICIAL_FACT_CONFLICT")
+            else:
+                added.append(row)
+                retained[fact_key(row)] = row
+        new_keys = {fact_key(row) for row in added}
+        precedence = old_precedence + [row for row in precedence if tuple((row.get("key") or {}).get(k)
+            for k in ("ticker", "metric", "period", "scope")) in new_keys]
+        facts = old_facts + added
+        report["overlay_write"] = {"policy": "APPEND_ONLY_NEW_EXACT_KEYS", "appended_fact_count": len(added),
+                                   "prior_fact_count": len(old_facts), "prior_facts_preserved": True}
+        report.pop("artifact_sha256", None)
+        report["artifact_sha256"] = _hash(report)
+    elif preserve_other_periods or preserve_other_documents:
         periods = {d["reporting_period"] for d in result["report"]["documents"]}
         selected = ({(d["ticker"], d["reporting_period"]) for d in result["report"]["documents"]}
                     if preserve_other_documents else set())
@@ -167,7 +201,7 @@ def write_outputs(result: dict[str, Any], public_root: Path, *, preserve_other_p
     facts.sort(key=lambda row: (row["ticker"], row["reporting_period"], row["canonical_metric"]))
     (public_root / PUBLIC_FACTS).write_text(render(facts), encoding="utf-8", newline="\n")
     (public_root / PUBLIC_PRECEDENCE).write_text(render(precedence), encoding="utf-8", newline="\n")
-    (public_root / report_name).write_text(json.dumps(result["report"], ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+    (public_root / report_name).write_text(json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
                                            encoding="utf-8", newline="\n")
 
 

@@ -379,9 +379,9 @@ def _run_secondary_line_code_read(
 
 def resolve_ambiguous_debt_line_code_cells(
     materialization: Mapping[str, Any], *, record: Mapping[str, Any], evidence_root: Path,
-    reporting_period: str, engine: Path = DEFAULT_ENGINE,
+    reporting_period: str, engine: Path = DEFAULT_ENGINE, include_operating_cash_flow: bool = False,
 ) -> dict[str, Any]:
-    """Resolve at most one malformed line-code cell per declared debt component.
+    """Resolve one malformed code cell per debt component and optional operating flow.
 
     Exact primary codes stay authoritative.  For a malformed code, all candidate
     rows are located before one fixed crop read is permitted; no output can be used
@@ -393,13 +393,18 @@ def resolve_ambiguous_debt_line_code_cells(
         raise ValueError("RETAINED_SOURCE_HASH_MISMATCH")
     pages_by_family = _pages_by_statement_family(materialization)
     cells = []
-    for metric, family, code in DEBT_COMPONENT_RULES:
+    rules = DEBT_COMPONENT_RULES
+    label_terms = dict(DEBT_COMPONENT_LABEL_TERMS)
+    if include_operating_cash_flow:
+        rules += (("operating_cash_flow", "cash_flow", "20"),)
+        label_terms["operating_cash_flow"] = ("thuan", "hoat", "dong", "kinh", "doanh")
+    for metric, family, code in rules:
         primary_matches = [match_geometry_table_row(page, line_code=code, target_period=reporting_period) for page in pages_by_family.get(family, [])]
         primary_matches = [match for match in primary_matches if match is not None]
         if len(primary_matches) == 1:
             cells.append({"canonical_metric": metric, "expected_line_code": code, "state": "PRIMARY_EXACT", "match": primary_matches[0], "secondary_run_count": 0})
             continue
-        locators = [match_geometry_ambiguous_line_code_cell(page, target_period=reporting_period, required_label_terms=DEBT_COMPONENT_LABEL_TERMS[metric]) for page in pages_by_family.get(family, [])]
+        locators = [match_geometry_ambiguous_line_code_cell(page, target_period=reporting_period, required_label_terms=label_terms[metric]) for page in pages_by_family.get(family, [])]
         locators = [item for item in locators if item is not None]
         if len(locators) != 1:
             cells.append({"canonical_metric": metric, "expected_line_code": code, "state": "BLOCKED", "reason": "AMBIGUOUS_CODE_CELL_ROW_NOT_UNIQUE", "primary_match_count": len(primary_matches), "secondary_run_count": 0})

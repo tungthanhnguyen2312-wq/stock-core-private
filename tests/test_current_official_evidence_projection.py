@@ -41,7 +41,7 @@ def all_rows():
 
 def test_annual_ingress_cannot_strip_all_context_markers_to_escape_restriction():
     annual = [r for r in all_rows() if r['period_type']=='annual']
-    assert len(annual)==5
+    assert len(annual)==8
     for row in annual:
         for key in ('context_kind','projection_period_policy','annual_context_contract'):
             row.pop(key)

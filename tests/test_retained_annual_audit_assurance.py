@@ -86,14 +86,14 @@ def test_retained_source_anchor_spans_and_new_facts_stay_historical_context():
         assert result["opinion_evidence"]["page_number"] == source["assurance"]["opinion_evidence"]["page_number"]
     rows = [json.loads(line) for line in (root / PUBLIC_FACTS).read_text(encoding="utf8").splitlines()]
     new = [r for r in rows if r["period_type"] == "annual" and r["ticker"] in {"PNJ", "PVD"}]
-    assert len(new) == 3
+    assert len(new) == 6
     original = baseline()
     early = fundamental.project_session(baseline=original, official_rows=new,
         session="2026-10-07", cutoff="2026-10-07T15:00:00+07:00")
     assert all(not r["official_field_context"] for r in early["records"].values())
     later = fundamental.project_session(baseline=original, official_rows=new,
         session="2026-10-08", cutoff="2026-10-08T15:00:00+07:00")
-    assert sum(len(r["official_field_context"]) for r in later["records"].values()) == 3
+    assert sum(len(r["official_field_context"]) for r in later["records"].values()) == 6
     for ticker, record in later["records"].items():
         assert record["metrics"] == original["records"][ticker]["metrics"]
         for field in record["official_field_context"]:

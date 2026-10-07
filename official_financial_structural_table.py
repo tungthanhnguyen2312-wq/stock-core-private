@@ -626,7 +626,7 @@ def _discover_column_bands_with_year(lines: Sequence[Mapping[str, Any]], target_
         # table header explicitly.  This is a header vocabulary extension, not an
         # issuer/page exception; two independently visible year labels remain
         # mandatory below.
-        has_code_header = "code" in normalized or ("ma" in normalized and "thuyet" in normalized)
+        has_code_header = _has_explicit_code_header(group)
         # A scanned Vietnamese prescribed form can retain the exact visible form
         # identifier while OCR damages the non-authoritative header word "Code".
         # Form B01/B02/B03 plus two spatially positioned years is independent
@@ -861,7 +861,24 @@ def _semantic_header_spans(header_lines: Sequence[Mapping[str, Any]], *, phrases
                     matches.append(_period_header_span(tokens[start:end], header_line_id=token_lines.get(int(tokens[start].get("raw_token_order", 0)), int(line["line_id"])), header_class=header_class))
                     break
     unique = {(item["header_line_id"], item["x0"], item["x1"], item["raw_text"]): item for item in matches}
-    return [unique[key] for key in sorted(unique)]
+    spans = [unique[key] for key in sorted(unique)]
+    # "Số cuối năm" and its "cuối năm" alias refer to the same positioned
+    # source phrase. Preserve the longest literal span, while distinct phrases
+    # remain competing evidence. Never merge neighbouring or repeated headings.
+    return [span for span in spans if not any(
+        span["header_class"] == other["header_class"]
+        and set(span["source_token_orders"]) < set(other["source_token_orders"])
+        for other in spans)]
+
+
+
+def _has_explicit_code_header(lines: Sequence[Mapping[str, Any]]) -> bool:
+    text = _normalize_text(" ".join(str(line["text"]) for line in lines))
+    if "code" in text or ("ma" in text and "thuyet" in text):
+        return True
+    # Prescribed cash-flow forms may omit a note column. The literal positioned
+    # code label is sufficient; bare "Mã" in page prose is not.
+    return len(_semantic_header_spans(lines, phrases=("ma so",), header_class="LINE_CODE")) == 1
 
 
 def _semantic_period_header_candidates(lines: Sequence[Mapping[str, Any]], *, target_period: str,
@@ -888,7 +905,7 @@ def _semantic_period_header_candidates(lines: Sequence[Mapping[str, Any]], *, ta
                 break
         text = " ".join(str(line["text"]) for line in group)
         normalized = _normalize_text(text)
-        has_code_header = "code" in normalized or ("ma" in normalized and "thuyet" in normalized)
+        has_code_header = _has_explicit_code_header(group)
         form_code_header = page_form_code_header or bool(re.search(r"form\s*b\s*0[1-3]", normalized))
         if not (has_code_header or form_code_header):
             continue
@@ -938,7 +955,7 @@ def _contains_nonyear_period_header_evidence(lines: Sequence[Mapping[str, Any]])
             else:
                 break
         text = _normalize_text(" ".join(str(line["text"]) for line in group))
-        has_code_header = "code" in text or ("ma" in text and "thuyet" in text)
+        has_code_header = _has_explicit_code_header(group)
         if not has_code_header:
             continue
         if re.search(r"\b\d{1,2}[/-]\d{1,2}[/-]20[0-3]\d\b", text) or re.search(

@@ -27,16 +27,21 @@ def main() -> int:
     parser.add_argument("--write", action="store_true")
     parser.add_argument("--tickers", nargs="+", choices=[doc["ticker"] for doc in DOCUMENTS])
     parser.add_argument("--report-name", default="audited_annual_context_report.json")
+    parser.add_argument("--resolve-cash-flow-code-cells", action="store_true")
+    parser.add_argument("--append-new-facts-only", action="store_true")
     args = parser.parse_args()
     selected = tuple(doc for doc in DOCUMENTS if not args.tickers or doc["ticker"] in args.tickers)
     if Path(args.report_name).name != args.report_name:
         raise ValueError("REPORT_NAME_MUST_BE_BASENAME")
     result = run(landing_root=args.landing_root, document_specs=selected,
-                 reporting_period="2025", allow_audited_annual_context=True)
+                 reporting_period="2025", allow_audited_annual_context=True,
+                 resolve_cash_flow_code_cells=args.resolve_cash_flow_code_cells)
     if args.write:
         write_outputs(result, args.public_root, preserve_other_documents=True,
-                      report_name=args.report_name)
-    print(json.dumps(result["report"], ensure_ascii=False, sort_keys=True, indent=2))
+                      report_name=args.report_name, append_new_facts_only=args.append_new_facts_only)
+    # Source-token text can contain Vietnamese glyphs; escaped JSON also works
+    # under the Windows console's legacy encoding without losing those tokens.
+    print(json.dumps(result["report"], ensure_ascii=True, sort_keys=True, indent=2))
     return 0
 
 

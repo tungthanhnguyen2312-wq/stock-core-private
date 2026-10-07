@@ -384,7 +384,9 @@ def test_current_overlay_has_no_net_income_sourced_from_line_61():
     assert {(row["ticker"], row["canonical_metric"]): row["normalized_value"] for row in annual} == {
         ("HPG", "revenue"): 156116094618482, ("HPG", "net_income"): 15514931571606,
         ("PNJ", "cash_and_equivalents"): 522025257031,
-        ("PVD", "revenue"): 10896989276040, ("PVD", "net_income"): 1051572991932}
+        ("PNJ", "operating_cash_flow"): 18890403841,
+        ("PVD", "revenue"): 10896989276040, ("PVD", "net_income"): 1051572991932,
+        ("PVD", "total_assets"): 28309862682750, ("PVD", "shareholders_equity"): 17098286949122}
     assert all(row["context_kind"] == "AUDITED_ANNUAL_FIELD" for row in annual)
 
 
