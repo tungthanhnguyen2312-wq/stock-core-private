@@ -91,7 +91,8 @@ def run(*, landing_root: Path, document_specs=DOCUMENTS, reporting_period: str =
             "observed_at": record["observed_at"], "knowledge_available_at": known_at,
             "assurance": {key: assurance.get(key) for key in (
                 "state", "reason", "audit_or_review_status", "page_number", "scope_of_assurance", "matched_anchors",
-                "evidence_id", "citation_id", "inheritance", "rendered_image_sha256")},
+                "evidence_id", "citation_id", "inheritance", "rendered_image_sha256",
+                "title_span", "opinion_evidence", "materialization_id", "page_text_sha256")},
             "candidate_facts": [{"metric": fact["canonical_metric"], "value": fact["value"], "currency": fact["currency"],
                                  "source_unit_scale": fact["unit_scale"], "source_page": fact["source_lineage"]["source_page"],
                                  "line_code": fact["source_lineage"]["line_code"]} for fact in qualification["qualified_facts"]],
@@ -148,18 +149,21 @@ def run(*, landing_root: Path, document_specs=DOCUMENTS, reporting_period: str =
 
 
 def write_outputs(result: dict[str, Any], public_root: Path, *, preserve_other_periods: bool = False,
-                  report_name: str = REPORT_NAME) -> None:
+                  report_name: str = REPORT_NAME, preserve_other_documents: bool = False) -> None:
     public_root.mkdir(parents=True, exist_ok=True)
     render = lambda rows: "".join(json.dumps(row, ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\n" for row in rows)  # noqa: E731
     facts, precedence = list(result["overlay_rows"]), list(result["precedence_rows"])
-    if preserve_other_periods:
+    if preserve_other_periods or preserve_other_documents:
         periods = {d["reporting_period"] for d in result["report"]["documents"]}
+        selected = ({(d["ticker"], d["reporting_period"]) for d in result["report"]["documents"]}
+                    if preserve_other_documents else set())
         for filename, rows, period in ((PUBLIC_FACTS, facts, lambda r: r["reporting_period"]),
                                       (PUBLIC_PRECEDENCE, precedence, lambda r: r["key"]["period"])):
             path = public_root / filename
             if path.exists():
                 rows.extend(r for r in (json.loads(line) for line in path.read_text(encoding="utf-8").splitlines())
-                            if period(r) not in periods)
+                            if ((r.get("ticker", (r.get("key") or {}).get("ticker")), period(r)) not in selected
+                                if preserve_other_documents else period(r) not in periods))
     facts.sort(key=lambda row: (row["ticker"], row["reporting_period"], row["canonical_metric"]))
     (public_root / PUBLIC_FACTS).write_text(render(facts), encoding="utf-8", newline="\n")
     (public_root / PUBLIC_PRECEDENCE).write_text(render(precedence), encoding="utf-8", newline="\n")

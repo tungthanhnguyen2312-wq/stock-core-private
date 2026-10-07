@@ -15,8 +15,8 @@ consumers preserve `NOT_PERMITTED_AUDITED_ANNUAL_CONTEXT` through their existing
 The October 7 campaign retained three additional annual PDFs through approved issuer
 indices. HPG page 5 supplies audited assurance; page 10 supplies revenue
 156,116,094,618,482 VND and total consolidated profit 15,514,931,571,606 VND. Parent
-profit remains blocked. PNJ/PVD annual assurance remains unresolved, so readable
-candidate values are not admitted. A source-published PVD converted-VND annual report
+profit remains blocked. PNJ/PVD annual assurance was unresolved at that checkpoint,
+so their candidate values were not admitted then. A source-published PVD converted-VND annual report
 does not change the currency of its USD interim report.
 
 Literal semantic headers may use the same TSV source line within the already bounded
@@ -44,3 +44,25 @@ likewise preserves other periods. Run to a scratch `--public-root` for review.
 
 Evidence: `derived/financial-evidence-currency-refresh-v1/audited_annual_context_report.json`
 and `current_acquisition_acceptance.json`. Raw PDF/image bytes stay outside Git.
+
+October 8 recovery admits literal auditor opinion headings (`Ý kiến của Kiểm toán viên`)
+with explicit consolidated scope, fair-presentation and standards wording on the report
+page or its immediately next page. The next page must not begin another audit/review
+report. Missing page, standalone scope, management opinion, damaged heading or review
+disclaimer stays blocked. No OCR glyph repair is permitted. Title and opinion page,
+positioned token IDs, full-page text hashes, rendered-image hashes and source SHA bind
+the assurance evidence. Audited status does not assert a clean/unmodified opinion.
+
+PNJ pages 5–6 now prove auditor assurance, and page 7 qualifies cash 522,025,257,031 VND.
+PVD page 5 proves auditor assurance, and page 9 qualifies net revenue 10,896,989,276,040
+VND and total profit 1,051,572,991,932 VND. Parent profit remains blocked. PVD's source
+itself publishes converted VND; no system FX conversion is performed and USD H1 remains
+separate. New knowledge is October 8 local; publication remains unproven. The current
+annual baseline, exact-session valuation and completed October 7 inputs stay unchanged.
+
+`--tickers PNJ PVD --report-name retained_annual_assurance_recovery_report.json` replays
+21 fixed pages under default OCR. Subset writes preserve every other issuer/period in
+the existing overlay and precedence rows. Use a scratch public root for inspection.
+New proof artifacts are `retained_annual_assurance_recovery_report.json`,
+`retained_annual_assurance_source_tokens.json` (only literal anchor spans), and
+`retained_annual_assurance_consumer_proof.json` in the same existing derived directory.
