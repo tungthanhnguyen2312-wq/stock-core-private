@@ -1,0 +1,37 @@
+{
+  "protected_input_hashes": {
+    "price": "7bd244a3e35b8beb5e33afb6837bbb5dfdeeb2ecf02f2db7f28f891b35b582f4",
+    "fundamental": "9b701438cef931c129479b5dd4d59f03371e0de2956fff36e07160ca52e86f05",
+    "share_promotion": "441dc605943c9e11e983818e3f3a47038acfeb8370a7c53d8fbe850ee06f0ad8",
+    "p3e": "351a471622d80802d8187434a3be7f7e79998ef5fbe9384ffa1e5fbb35811f58",
+    "official": "a3274336caa2c6c6f9f7819dd790367a5cef43f4b679da51fc98f289a13de88f",
+    "completed_valuation": "896e7fbb9914dac9bb11acd4a3a6836be6ff424856aca1986ec101ff1a4ea9e7",
+    "legacy_share_citations": "9153d5326a2aaff31bf6995a9e1c964758f4ebf10e6dfbe105d9898c993d067f"
+  },
+  "completed_session_rewrites": 0,
+  "historical_t0_mutations": 0,
+  "false_promotions": 0,
+  "completed_cutoff_fundamental_records_equal": true,
+  "completed_cutoff_current_official_fields_before": 9,
+  "completed_cutoff_current_official_fields_after": 9,
+  "valuation_metrics_equal": true,
+  "strict_share_ready_before": 0,
+  "strict_share_ready_after": 0,
+  "strict_metric_ready_counts": {
+    "market_cap": 0,
+    "P/E": 0,
+    "P/B": 0,
+    "P/S": 0,
+    "enterprise_value": 0,
+    "EV/Sales": 0,
+    "EV/EBITDA": 0
+  },
+  "annual_baseline_exact_qualified_metrics_before": 94,
+  "annual_baseline_exact_qualified_metrics_after": 94,
+  "annual_baseline_metric_count": 174,
+  "later_known_annual_fields_before": 5,
+  "later_known_annual_fields_after": 8,
+  "later_projection_current_annual_metrics_equal": true,
+  "research_session_for_new_context": "2026-10-08",
+  "source_currency_policy": "PVD official source converted-to-VND statements; no system FX conversion"
+}

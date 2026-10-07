@@ -70,6 +70,7 @@ env:
     tests/test_column_major_financial_geometry.py
     tests/test_reviewed_interim_canonical_ingress.py
     tests/test_retained_annual_audit_assurance.py
+    tests/test_retained_cash_flow_balance.py
     tests/test_financial_evidence_currency_refresh.py
     tests/test_official_document_acquisition.py
     tests/test_official_acquisition_budget.py

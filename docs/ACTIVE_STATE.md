@@ -34,7 +34,7 @@ Fact kinds used below: **CURRENT FACT** (verified in repo or by a stated read-on
 **BLOCKED**, **DEFERRED**, **HISTORICAL**.
 
 ## 1. The operational gate
-- **CURRENT FACT — retained FY2025 assurance recovery:** PNJ cash plus PVD revenue/profit added as three later-known historical fields. Annual baseline94, current official fields9 and strict share/valuation0 unchanged. [Campaign](internal/STOCK_LOOKUP_AUTONOMOUS_CAMPAIGN_20261008.md).
+- **CURRENT FACT — cash-flow/balance qualification:** PNJ FY2025 operating flow plus PVD assets/equity added; annual overlay8 fields. PNJ H1 and PVD cash-flow numeric ambiguity remain blocked. Annual baseline94, current official fields9 and strict share/valuation0 unchanged. [Campaign](internal/STOCK_LOOKUP_AUTONOMOUS_CAMPAIGN_20261008.md).
 
 - **CURRENT FACT — HPG common-share observation:** audited FY2025 page 41 states 7,675,465,855 at December 31, 2025; later-known historical context only. July-2 quantity is listed shares. January 1–October 7 common-share continuity remains unproven; strict shares/valuation stay zero. [Campaign](internal/STOCK_LOOKUP_AUTONOMOUS_CAMPAIGN_20261008.md).
 - **CURRENT FACT — retained-evidence projection integration.** Owner-selected

@@ -66,3 +66,22 @@ the existing overlay and precedence rows. Use a scratch public root for inspecti
 New proof artifacts are `retained_annual_assurance_recovery_report.json`,
 `retained_annual_assurance_source_tokens.json` (only literal anchor spans), and
 `retained_annual_assurance_consumer_proof.json` in the same existing derived directory.
+
+Cash-flow/balance recovery keeps literal nested aliases (`Số cuối năm`/`cuối năm`)
+as one source phrase only when their token-order sets strictly contain one another.
+Repeated phrases with distinct tokens remain competing; damaged text stays blocked.
+An exact positioned `Mã số` header admits prescribed no-note-column layouts, with the
+existing two-period and numeric/code clustering gates intact. Page prose is insufficient.
+
+The fixed secondary line-code read may explicitly include operating-flow code20 in
+addition to the two declared debt components. Exactly one label-bound malformed code
+cell is allowed, requiring net operating-flow terms. One unchanged crop/config is read;
+raw output must be literal20. Amount cells are never re-read or repaired. Primary/crop
+image hashes, raw code outputs and field bounds remain in lineage. No retry search.
+
+Append-only recovery writes retain every earlier exact-key fact and its first knowledge
+and citation. Equal requalification never replaces it; different value/currency/unit
+fails the entire write. New exact keys and matching precedence rows alone are appended.
+Use `--append-new-facts-only --resolve-cash-flow-code-cells` for this bounded recovery.
+The admitted fields remain historical context, with no source FX conversion or ratio
+promotion; damaged H1 PNJ/PVD cash-flow amounts and incomplete debt remain blocked.

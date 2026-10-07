@@ -62,3 +62,37 @@ One writer; no production Daily, completed-session rewrite or T0 mutation.
 - Remaining: PNJ/PVD balance equity/assets/debt/OCF and parent profit geometry; HPG source
   ambiguity; executed common-share continuity. Next bounded choice prioritizes useful cash,
   debt and operating-cash-flow facts over repeating assurance or promoting current ratios.
+
+- Released FY2025 assurance candidate `1ca68c1202860d18319612cc941f38002aeffab1`,
+  PR #83, merge `59d41ac0d336ae0f299732b06445b583fab4b587`; four CI jobs passed.
+
+## Retained cash-flow and balance header qualification
+
+- ID: `RETAINED_CASH_FLOW_AND_BALANCE_HEADER_QUALIFICATION_V1` (COMPLETE).
+- Starting main: `59d41ac0d336ae0f299732b06445b583fab4b587`.
+- Owner delegation selects bounded cash/debt/operating-flow evidence. PNJ H1 primary
+  OCF has numeric ambiguity; one144dpi RGB probe did not qualify, so no further retries.
+  PVD retained primary pages reveal nested literal header aliases and explicit no-note
+  `Mã số` schema. PNJ FY2025 has an ambiguous code cell with literal value cells;
+  only the existing fixed secondary code read may resolve it. No numeric repair.
+
+- Result: PNJ annual OCF18,890,403,841 VND; PVD assets28,309,862,682,750 VND and
+  equity17,098,286,949,122 VND. Exact values visually verified against retained source.
+- Header aliases collapse only strict source-token containment; distinct/competing or
+  damaged headers fail. Explicit no-note Mã số requires positioned literal evidence.
+  PNJ²0 primary code remains recorded; one fixed cropped code read gives literal20.
+  Neither crop includes amount cells. Default OCR amounts remain unchanged.
+- Final21-page replay plus one code cell; independent code probe agrees. New source
+  fixtures are positioned tokens only. Annual context5→8; all14 prior fact lines and
+  matching precedence rows retain their original bytes/knowledge/citations. Conflict
+  fails append-only writing; repeated requalification adds no duplicates.
+- Windows CLI escaped JSON output fixed after a console-encoding failure following
+  successful artifact writes; legacy-console regression confirms lossless JSON output.
+- Full-universe scratch: Oct7 fundamental records/valuation metrics equal; current
+  official fields9→9, annual exact metrics94→94 and all7 strict valuation/share counts
+  0→0. Seven protected hashes unchanged. Historical restrictions survive packet/AI.
+- Focused219 passed /5 retained skips (218 before final console regression).
+  False promotions, completed-session rewrites and historical T0 mutations: zero.
+- Remaining: damaged amount cells, debt component completeness, current common-share
+  continuity. Next selection returns to retained HPG H1 capital-note evidence for a
+  later common-outstanding point; balance geometry does not establish a denominator.
