@@ -189,7 +189,9 @@ Markdown association; no VS Code path is embedded. Exception/timeout is READY_VI
 and remains an Owner warning. Real Windows fixture tests launch the same detached path with
 node-compile-cache/DEP0169/AgentHost-shaped noise from the helper and a nested process: none enters
 the launcher stdout, stderr or log. No real GUI is opened by that fixture. Successful default-handler
-forwarding is tested separately; a live owner GUI run awaits the next separately authorized Daily.
+forwarding is tested separately. An additional synthetic Markdown file was opened through the actual
+Windows default association: READY, exit 0, exactly the JSON result on stdout, empty stderr
+(`actual-owner-view-launch.json` in the external acceptance directory). This did not run Daily.
 
 Fixture parity verifies exact canonical operation bytes/identity/call counts with callback on/off
 and failing callbacks, ordinary/reused paths and soft unavailable/skipped branches. T0 and streamed
@@ -208,3 +210,10 @@ default-association forwarding and fail-soft launch errors. Python compilation a
 --check` passed. Roadmap `--check`: ON_TRACK / DRIFT PASS, unchanged completed analytical
 milestone and no successor; candidate tracked edits produced expected pre-checkpoint warnings.
 CI additionally includes the signal-velocity tests so the new natural counter's parity is checked.
+
+
+Candidate CI initially caught one new-fixture static-contract failure: three enrichment calls
+used a temporary root implicitly, but the retained-evidence guard requires explicit scratch
+`artifact_root` and `output_root`. Those arguments are now explicit; production code is unchanged.
+The first CI run otherwise had 2,741 hermetic tests and 37 subtests pass, 62 platform skips and
+15 deselections. The corrected candidate is subjected to a fresh full PR CI run before merge.
