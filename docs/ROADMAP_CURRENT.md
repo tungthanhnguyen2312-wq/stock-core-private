@@ -17,6 +17,9 @@ The October 7 Daily subsequently completed before PR #75's Phase-2 corrective.
 Next gate: owner review of the local checkpoint. `queued_next=[]`; no successor is authorized.
 [Scope, counts and blockers](internal/CURRENT_OFFICIAL_EVIDENCE_PROJECTION_INTEGRATION_20261007.md).
 
+The prior operational gate `FIRST_REAL_POST_RELEASE_CAPTURE_ACCEPTANCE` remains RECORDED
+for October 5; the new analytical checkpoint does not reopen that gate.
+
 **Decision-intelligence closure:** coverage, historical context, calibration, the
 evidence packet, and the workbench now share one research spine. Counts and limits:
 [closure](internal/DECISION_INTELLIGENCE_COVERAGE_AND_CALIBRATION_CLOSURE_20261007.md).

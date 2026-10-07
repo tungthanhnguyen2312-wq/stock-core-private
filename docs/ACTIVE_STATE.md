@@ -3,6 +3,8 @@
 Compact navigation view of what is true **now**. Updated 2026-10-07 from locally verified
 Producer main `c2c7c52337e923ae9163934601e2686f668c2dcc` (PR #75 corrective).
 The new projection checkpoint is local and awaits owner review; this is not a remote-head claim.
+Verify live remote main with `git fetch origin main` or
+`git ls-remote origin refs/heads/main`; a **local** remote-tracking ref alone can be stale.
 
 ## 0. How this file relates to the others
 

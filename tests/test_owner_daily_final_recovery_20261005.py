@@ -243,6 +243,7 @@ def test_source_without_sealed_manifest_keeps_legacy_required_queue(tmp_path):
 
 def _event_context(path: Path, observed_at: str) -> str:
     artifact = {"contract_version": "current_official_event_context/v1",
+                "research_session": SESSION,
                 "all_current_universe_event_records": [{"ticker": "AAA", "official_observed_at": observed_at}],
                 "excluded_noncurrent_or_official_only_event_records": []}
     artifact.update(event_context._identity(artifact))
