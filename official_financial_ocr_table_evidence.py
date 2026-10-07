@@ -339,8 +339,8 @@ def _run_secondary_line_code_read(
     locator: Mapping[str, Any], *, expected_line_code: str, source: Path,
     source_image: Mapping[str, Any], primary_ocr_evidence: Mapping[str, Any], materialization_id: str, engine: Path,
 ) -> dict[str, Any]:
-    from PIL import Image
     """Run the one fixed, field-scoped secondary OCR read for one malformed cell."""
+    from PIL import Image
     image_bytes, render = _render_image_bytes(source, int(locator["page"]))
     if render["rendered_image_sha256"] != source_image.get("rendered_image_sha256"):
         raise ValueError("PRIMARY_RENDER_IDENTITY_MISMATCH")

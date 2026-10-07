@@ -25,8 +25,12 @@ One writer; official exact-field evidence only; immutable completed sessions pre
 - Blockers: PNJ parent label extends beyond its bounded row; VRE parent label contains an
   unqualified OCR letter. Neither is repaired. Balance-sheet/cash-flow geometry still blocked.
   PVD revenue/total/parent profit are extracted in USD but remain outside the VND overlay.
-- Validation: four new hermetic positioned-token tests; bounded 32-page reviewed replay;
+- Validation: five new hermetic positioned-token tests; 75 focused/retained tests pass
+  (74 before the final numeric corruption test); bounded 32-page reviewed replay;
   scratch full consumer join with exact identity binding and unchanged analytical gates.
-- Terminal checkpoint / PR / merge: pending.
+- Implementation checkpoint: `8ba240b`; optional renderer import CI repair: `6e76e88`.
+- PR: [77](https://github.com/tungthanhnguyen2312-wq/stock-core-private/pull/77); merge pending clean CI.
+- CI classification: candidate-only optional renderer import failure. Token qualification now
+  imports PDF/Pillow dependencies only when rendering/cropping is invoked; core dependencies unchanged.
 - Next reason: after this coherent extraction→qualification→existing projection chain releases,
   evaluate HPG unit evidence, NVL native text and PVD currency-preserving context.
