@@ -1007,6 +1007,7 @@ def match_geometry_table_row(
     target_period: str,
     label_anchors: Sequence[str] = (),
     require_label_anchor: bool = False,
+    bind_wrapped_label: bool = False,
 ) -> dict[str, Any] | None:
     """Return one exact code-addressed OCR/native table row from positioned tokens.
 
@@ -1081,6 +1082,38 @@ def match_geometry_table_row(
     if len(candidates) > 1:
         return None
     label_band, label_tokens = candidates[0] if candidates else (candidate_label_bands[1], [])
+    label_binding = {"contract": "physical_midpoint_label/v1"}
+    # TSV hierarchy binds a wrapped label to its own code line through the next
+    # visible code-column line. Only labels use this window; amount cells retain
+    # the independent physical midpoint bounds above, including damaged codes.
+    target_codes = [t for t in line["tokens"] if _in_band(t, bands["line_code"])
+                    and str(t["text"]).strip() == str(line_code)]
+    if bind_wrapped_label and len(target_codes) == 1:
+        hierarchy = target_codes[0].get("tsv_hierarchy") or {}
+        prefix = tuple(hierarchy.get(k) for k in ("page_num", "block_num", "par_num"))
+        start_line = hierarchy.get("line_num")
+        if all(v is not None for v in prefix) and isinstance(start_line, int):
+            same_block = [t for t in tokens if tuple((t.get("tsv_hierarchy") or {}).get(k)
+                          for k in ("page_num", "block_num", "par_num")) == prefix]
+            ends = [(t.get("tsv_hierarchy") or {}).get("line_num") for t in same_block
+                    if _in_band(t, bands["line_code"])
+                    and isinstance((t.get("tsv_hierarchy") or {}).get("line_num"), int)
+                    and t["tsv_hierarchy"]["line_num"] > start_line]
+            if ends:
+                end_line = min(ends)
+                window = [t for t in same_block if isinstance(t["tsv_hierarchy"].get("line_num"), int)
+                          and start_line <= t["tsv_hierarchy"]["line_num"] < end_line]
+                wrapped_candidates = []
+                for band in candidate_label_bands:
+                    selected = [t for t in window if band["x0"] < float(t["x0"])
+                                and float(t["x1"]) < band["x1"]]
+                    if any(any(c.isalpha() for c in str(t["text"])) for t in selected):
+                        wrapped_candidates.append((band, selected))
+                if len(wrapped_candidates) != 1:
+                    return None
+                label_band, label_tokens = wrapped_candidates[0]
+                label_binding = {"contract": "tsv_code_line_label/v1", "hierarchy_prefix": list(prefix),
+                                 "start_line_inclusive": start_line, "end_line_exclusive": end_line}
     # TSV word order preserves wrapped lines and words on a shared OCR line.
     # Glyph tops vary with accents; sorting individual tops scrambles that text.
     label_tokens.sort(key=lambda token: int(token["raw_token_order"]))
@@ -1106,6 +1139,7 @@ def match_geometry_table_row(
         "row_object": {"document_sha": page.get("document_sha256"), "page": int(page["page_number"]), "table_id": None,
             "statement_family": page.get("statement_family"), "row_bbox": row_bbox, "raw_label_fragments": raw_fragments,
             "reconstructed_label": reconstructed_label, "line_code": str(line_code), "note_reference": note,
+            "label_binding": label_binding, "label_source_token_orders": [int(t["raw_token_order"]) for t in label_tokens],
             "current_period_label": discovered["current_period_label"], "current_raw_value": str(current[0]["text"]),
             "current_value_bbox": {k: current[0][k] for k in ("x0", "x1", "top", "bottom")},
             "comparative_period_label": discovered["comparative_period_label"], "comparative_raw_value": str(comparative[0]["text"]),

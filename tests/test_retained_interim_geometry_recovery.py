@@ -28,9 +28,54 @@ def test_total_profit_requires_label_and_preserves_exact_scale(ticker, value):
     assert facts['net_income']['value'] == value
     assert facts['net_income']['source_lineage']['line_code'] == '60'
     assert facts['net_income']['currency'] == 'VND'
-    # Neither a damaged letter nor missing wrapped parent text can be guessed.
-    assert 'attributable_net_income' not in facts
-    assert any(b['canonical_metric']=='attributable_net_income' for b in result['blocked_candidates'])
+    if ticker == 'PNJ':
+        assert facts['attributable_net_income']['value'] == 728529788872
+        row = facts['attributable_net_income']['source_lineage']['row_object']
+        assert row['label_binding']['contract'] == 'tsv_code_line_label/v1'
+        assert 'khongkiemsoat' not in row['reconstructed_label'].replace(' ', '').lower()
+    else:
+        # A damaged identity-bearing letter is never repaired.
+        assert 'attributable_net_income' not in facts
+        assert any(b['canonical_metric']=='attributable_net_income' for b in result['blocked_candidates'])
+
+
+def test_disposal_component_requires_full_literal_label_and_preserves_scale():
+    mat = materialization('VRE')
+    result = qualify_table_facts(mat,ticker='VRE',reporting_period='2026-H1',
+        include_earnings_quality_components=True,scoped_unit_evidence=resolve_scoped_unit_evidence(mat),
+        scoped_statement_scope_evidence=resolve_scoped_statement_scope_evidence(mat))
+    component = next(f for f in result['qualified_facts'] if f['canonical_metric']=='investment_property_disposal_result')
+    assert component['value']==184751000000 and component['unit_scale']==1000000
+    row = component['source_lineage']['row_object']
+    assert row['current_raw_value']=='184.751' and row['comparative_raw_value']=='143'
+    assert row_label_supports_metric(component['canonical_metric'],row['reconstructed_label'])
+    assert not row_label_supports_metric(component['canonical_metric'],'thanh ly bat dau')
+    assert not row_label_supports_metric(component['canonical_metric'],'thanh ly bat dong san dAu tO')
+    assert 'cấp dich vu' not in row['reconstructed_label']
+
+
+def test_code_on_second_label_line_preserves_all_literal_usd_income_fields():
+    mat = materialization('PVD')
+    result = qualify_table_facts(mat,ticker='PVD',reporting_period='2026-H1',
+        include_earnings_quality_components=True,scoped_unit_evidence=resolve_scoped_unit_evidence(mat),
+        scoped_statement_scope_evidence=resolve_scoped_statement_scope_evidence(mat))
+    assert {f['canonical_metric']:(f['value'],f['currency']) for f in result['qualified_facts']} == {
+        'revenue':(245730824,'USD'), 'net_income':(18272708,'USD'),
+        'attributable_net_income':(17920760,'USD')}
+    profit = next(f for f in result['qualified_facts'] if f['canonical_metric']=='net_income')
+    assert profit['source_lineage']['row_object']['label_binding']['contract']=='physical_midpoint_label/v1'
+
+
+def test_missing_parent_wrap_and_damaged_next_code_cannot_cross_map_label():
+    mat = materialization('PNJ')
+    for page in mat['pages']:
+        tokens = page['ocr_derived_text_evidence']['tokens']
+        page['ocr_derived_text_evidence']['tokens'] = [t for t in tokens if t['tsv_hierarchy']['line_num'] != 33]
+        for t in page['ocr_derived_text_evidence']['tokens']:
+            if t['text']=='62':
+                t['text']='6Z'
+    result = qualify_table_facts(mat,ticker='PNJ',reporting_period='2026-H1')
+    assert not any(f['canonical_metric']=='attributable_net_income' for f in result['qualified_facts'])
 
 
 def test_two_sided_labels_fail_closed():

@@ -64,6 +64,7 @@ def run(*, landing_root: Path) -> dict[str, Any]:
         assurance = resolve_document_assurance_evidence(front)
         qualification = qualify_table_facts(
             statements, ticker=spec["ticker"], reporting_period=PERIOD,
+            include_earnings_quality_components=True,
             scoped_unit_evidence=resolve_scoped_unit_evidence(statements),
             scoped_statement_scope_evidence=resolve_scoped_statement_scope_evidence(statements),
         )

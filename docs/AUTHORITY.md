@@ -44,6 +44,9 @@ governance, ownership, share, PIT or execution authority.
 The [currency context contract](currency_preserving_interim_context_contract.md) admits
 source-qualified USD income fields for context only. No FX conversion or VND valuation
 input/citation use follows.
+The [earnings component contract](reported_earnings_component_context_contract.md) admits
+explicit reported disposal results as descriptive context. Recurrence stays UNKNOWN; no
+normalized EPS, annual valuation input, action or score change follows.
 
 | Area | Status | Meaning | Controlling source |
 |---|---|---|---|

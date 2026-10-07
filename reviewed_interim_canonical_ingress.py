@@ -26,6 +26,23 @@ CONTRACT_VERSION = "reviewed_interim_canonical_ingress/v2"
 OVERLAY_CURRENCY = "VND"
 CONTEXT_CURRENCIES = frozenset({"VND", "USD"})
 FOREIGN_CONTEXT_METRICS = frozenset({"revenue", "net_income", "attributable_net_income"})
+EARNINGS_COMPONENT_METRIC = "investment_property_disposal_result"
+EARNINGS_COMPONENT_CONTRACT = "reported_earnings_component_context/v1"
+
+
+def earnings_component_is_admitted(row: Mapping[str, Any]) -> bool:
+    from official_financial_ocr_table_evidence import row_label_supports_metric
+    evidence = row.get("reported_component_evidence") or {}
+    return (row.get("canonical_metric") == EARNINGS_COMPONENT_METRIC
+            and row.get("context_kind") == "EARNINGS_QUALITY_COMPONENT"
+            and row.get("component_contract") == EARNINGS_COMPONENT_CONTRACT
+            and row.get("ingress_contract") == CONTRACT_VERSION
+            and row.get("projection_currency_policy") == "VND_EXISTING_CONTRACT"
+            and row.get("currency") == "VND" and row.get("period_type") == "interim"
+            and row.get("statement_family") == "income_statement"
+            and str(row.get("line_code")) == "21"
+            and evidence.get("citation_id") == row.get("citation_id")
+            and row_label_supports_metric(EARNINGS_COMPONENT_METRIC, str(evidence.get("literal_label") or "")))
 PROVIDER_LABEL = "official_issuer_ir"
 # Circular-200 income statement: line 60 total profit after tax (net_income); line 61 profit
 # attributable to the parent (attributable_net_income).  Crossed pairs are never emitted.
@@ -68,6 +85,14 @@ def overlay_rows_from_panel_facts(panel_facts: Sequence[Mapping[str, Any]]) -> t
             reasons.append("CITATION_MISSING")
         if (fact.get("canonical_metric"), str(lineage.get("line_code"))) in LINE_CODE_IDENTITY_CONFLICTS:
             reasons.append("METRIC_LINE_CODE_IDENTITY_CONFLICT")
+        component = fact.get("canonical_metric") == EARNINGS_COMPONENT_METRIC
+        if component:
+            from official_financial_ocr_table_evidence import row_label_supports_metric
+            if (fact.get("currency") != "VND" or fact.get("statement_family") != "income_statement"
+                    or str(lineage.get("line_code")) != "21"
+                    or not row_label_supports_metric(EARNINGS_COMPONENT_METRIC,
+                        str((lineage.get("row_object") or {}).get("reconstructed_label") or ""))):
+                reasons.append("EARNINGS_COMPONENT_IDENTITY_NOT_QUALIFIED")
         identity = {"ticker": fact.get("issuer_identity"), "metric": fact.get("canonical_metric"),
                     "period": fact.get("reporting_period"), "currency": fact.get("currency"),
                     "value": fact.get("value")}
@@ -94,6 +119,9 @@ def overlay_rows_from_panel_facts(panel_facts: Sequence[Mapping[str, Any]]) -> t
             "publication_date": None, "source_family": "issuer_ir", "restatement": None,
             "extraction_method": lineage.get("extraction_method"), "reason_codes": list(fact.get("reason_codes") or []),
             "ingress_contract": CONTRACT_VERSION, "overlay_contract": OVERLAY_CONTRACT,
+            **({"context_kind": "EARNINGS_QUALITY_COMPONENT", "component_contract": EARNINGS_COMPONENT_CONTRACT,
+                "reported_component_evidence": {"literal_label": lineage["row_object"]["reconstructed_label"],
+                    "citation_id": lineage["citation_id"]}} if component else {}),
         })
     rows.sort(key=lambda row: (row["ticker"], row["reporting_period"], row["canonical_metric"]))
     blocked.sort(key=lambda item: json.dumps(item["key"], sort_keys=True))
@@ -130,6 +158,10 @@ def precedence_row(row: Mapping[str, Any], legacy: Mapping[str, Any] | None) -> 
     """Official-vs-legacy comparison for one exact ticker/metric/period/scope key only."""
     key = {"ticker": row["ticker"], "metric": row["canonical_metric"],
            "period": row["reporting_period"], "scope": row["statement_scope"]}
+    if row.get("context_kind") == "EARNINGS_QUALITY_COMPONENT":
+        return {"key": key, "status": "NOT_COMPARABLE", "reason": "EARNINGS_COMPONENT_CONTEXT_ONLY",
+                "official_factual_status": authority_projection(row)["factual_status"],
+                "allowed_uses": ["DESCRIPTIVE_EARNINGS_QUALITY_CONTEXT"], "legacy_modified": False}
     if row.get("projection_currency_policy") == "SOURCE_CURRENCY_CONTEXT_ONLY":
         return {"key": key, "status": "NOT_COMPARABLE",
                 "reason": "SOURCE_CURRENCY_CONTEXT_ONLY_VND_COMPARISON_NOT_ADMITTED",

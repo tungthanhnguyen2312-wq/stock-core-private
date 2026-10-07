@@ -877,7 +877,8 @@ def load_public_official_citations(root: Path | str) -> dict[tuple[str, str, str
             continue
         # This legacy citation lane corroborates VND canonical/provider facts.
         # Foreign-currency context must never establish their unit from numeric agreement.
-        if record.get("currency") != "VND":
+        if (record.get("currency") != "VND" or record.get("context_kind") == "EARNINGS_QUALITY_COMPONENT"
+                or record.get("canonical_metric") == "investment_property_disposal_result"):
             continue
         ticker = str(record.get("ticker") or "").upper()
         metric = str(record.get("canonical_metric") or "")
