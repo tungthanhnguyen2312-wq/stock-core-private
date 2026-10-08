@@ -11,6 +11,8 @@ import portfolio_research_decision_workbench as workbench
 
 SESSION = "2026-10-08"
 DATES = ["2026-10-01", "2026-10-02", "2026-10-05", "2026-10-06", "2026-10-07"]
+# Percentile consistent with each upstream label (current_research_valuation_context direction rule).
+LABEL_PERCENTILE = {"ATTRACTIVE_RELATIVE_RESEARCH": 0.1, "EXPENSIVE_RELATIVE_RESEARCH": 0.9, "IN_LINE_RELATIVE_RESEARCH": 0.5}
 
 
 def _lens(**fields):
@@ -20,14 +22,16 @@ def _lens(**fields):
 
 def _candidate(ticker, *, role="CORE", horizon="STRUCTURAL", sector="materials", fundamental="STABLE",
                thesis="INTACT", valuation="IN_LINE_RELATIVE_RESEARCH", methods=("P/B",), phase="TREND_CONTINUATION",
-               thesis_ids=(), event_ids=(), **extra):
+               thesis_ids=(), event_ids=(), method_status="READY_RESEARCH_ONLY", **extra):
+    percentile = LABEL_PERCENTILE.get(valuation, 0.5)
     row = {
         "ticker": ticker, "session": SESSION, "thesis_id": f"thesis-{ticker.lower()}", "horizon": horizon,
         "portfolio_role": role, "sector": sector, "thesis_ids": list(thesis_ids), "event_ids": list(event_ids),
         "source_artifact_identities": {"integrated_investment_decision_product": "integrated_investment_decision_product/v1:abc"},
-        "structural": _lens(fundamental_state=fundamental, thesis_status=thesis) if fundamental else None,
-        "valuation": _lens(relative_research_state=valuation,
-                           supporting_methods=[{"method": m, "basis": "CURRENT_RESEARCH"} for m in methods]) if valuation else None,
+        "structural": _lens(fundamental_state=fundamental, thesis_status=thesis, thesis_source="owner-thesis-note:synthetic") if fundamental else None,
+        "valuation": _lens(relative_research_state=valuation, peer_methods={
+            m: {"status": method_status, "percentile": percentile, "peer_count": 12, "basis": {"method_id": m}} for m in methods
+        }) if valuation else None,
         "tactical": _lens(tactical_phase=phase) if phase else None,
         "invalidation": [f"{ticker}_SOURCE_INVALIDATION_LEVEL_BREACHED"],
     }
@@ -80,7 +84,7 @@ def test_scenario1_strong_core_thesis_weak_tactical_structure_keeps_lenses_indep
         owner_portfolio_state=_state({"AAA": "materials"}, sector_weights={"materials": 0.2}, policy={"max_sector_weight": 0.4}),
     )
     hold = _cases(built, research.HOLD_CORE_REVIEW, "AAA")[0]
-    assert hold["structural_case_status"] == "THESIS_INTACT_EVIDENCE"
+    assert hold["structural_case_status"] == "REPORTED_THESIS_INTACT_FUNDAMENTAL_STATE_CONSISTENT"
     assert "FUNDAMENTAL_IMPROVING" in hold["supporting_evidence"]
     assert "TACTICAL_BREAKDOWN_ADVERSE" in hold["counter_evidence"]
     assert hold["tactical_lens_is_independent"] is True
@@ -127,7 +131,7 @@ def test_scenario3_sound_core_with_qualified_expensive_valuation_is_trim_review_
     assert trim["fundamental_thesis_break"] is False
     assert trim["trim_basis"] == "VALUATION_ONLY"
     assert trim["supporting_evidence"] == ["QUALIFIED_EXPENSIVE_RELATIVE_VALUATION:P/B,P/E_TTM"]
-    assert "THESIS_INTACT" in trim["counter_evidence"]
+    assert "REPORTED_THESIS_INTACT" in trim["counter_evidence"]
     assert _cases(built, research.HOLD_CORE_REVIEW, "AAA")
     assert not _cases(built, research.ADD_CORE_REVIEW, "AAA")
     _no_capital_decision(built)
@@ -237,8 +241,9 @@ def test_missing_or_unqualified_valuation_never_becomes_attractive_value():
         assert "QUALIFIED_ATTRACTIVE_RELATIVE_VALUATION" not in case["supporting_evidence"]
     lens = built["comparison_units"][1]["lenses"]["strategic"]
     assert lens["relative_research_state"] == "UNQUALIFIED_ATTRACTIVE_RELATIVE_RESEARCH"
+    assert lens["reported_relative_label"] == "ATTRACTIVE_RELATIVE_RESEARCH"
     assert lens["valuation_qualified"] is False
-    assert "RELATIVE_LABEL_WITHOUT_SUPPORTING_METHOD" in lens["gaps"]
+    assert "RELATIVE_LABEL_NOT_SUPPORTED_BY_QUALIFIED_METHOD" in lens["gaps"]
 
 
 def test_unqualified_expensive_label_does_not_open_trim_review():
@@ -248,7 +253,7 @@ def test_unqualified_expensive_label_does_not_open_trim_review():
     )
     assert not _cases(built, research.VALUATION_TRIM_REVIEW)
     assert {"ticker": "AAA", "case": research.VALUATION_TRIM_REVIEW,
-            "reason": "EXPENSIVE_LABEL_WITHOUT_SUPPORTING_RELATIVE_METHOD"} in built["narrowed_by_owner_constraints_or_evidence"]
+            "reason": "EXPENSIVE_LABEL_NOT_SUPPORTED_BY_QUALIFIED_METHOD"} in built["narrowed_by_owner_constraints_or_evidence"]
 
 
 def test_thesis_break_is_not_relabelled_as_valuation_trim():
@@ -258,7 +263,7 @@ def test_thesis_break_is_not_relabelled_as_valuation_trim():
         owner_portfolio_state=_state({"AAA": "consumer"}, sector_weights={"consumer": 0.2}),
     )
     assert not _cases(built, research.VALUATION_TRIM_REVIEW)
-    assert _cases(built, research.HOLD_CORE_REVIEW)[0]["structural_case_status"] == "THESIS_BREAK_REPORTED"
+    assert _cases(built, research.HOLD_CORE_REVIEW)[0]["structural_case_status"] == "REPORTED_THESIS_BREAK"
 
 
 def test_core_lens_is_independent_of_tactical_inputs():
@@ -329,7 +334,8 @@ def test_concentration_uncertainty_is_explicit():
 def test_unresolved_position_never_gets_a_holding_or_alternative_case():
     built = research.build_comparison(session=SESSION, candidates=[_candidate("AAA")],
                                       owner_portfolio_state=_state({}, sector_weights={}, unresolved=("AAA",)))
-    assert built["holding_fact_unresolved_or_excluded"] == [{"ticker": "AAA", "holding_fact": research.POSITION_UNRESOLVED}]
+    assert built["holding_fact_unresolved_or_excluded"] == [
+        {"ticker": "AAA", "holding_fact": research.POSITION_UNRESOLVED, "basis": "OWNER_LEDGER_POSITION_UNRESOLVED"}]
     assert [c["case"] for c in built["research_cases"]] == [research.CASH_OPTIONALITY_REVIEW]
 
 
@@ -350,3 +356,96 @@ def test_module_has_no_daily_or_filesystem_writer():
     source = open(research.__file__, encoding="utf-8").read()
     for token in ("open(", "write_text", "mkdir", "daily_pipeline", "owner_daily", "dashboard"):
         assert token not in source.lower()
+
+
+# ── Release gates: valuation fitness, holding coverage, thesis provenance ───────
+
+@pytest.mark.parametrize("label", ["EXPENSIVE_RELATIVE_RESEARCH", "ATTRACTIVE_RELATIVE_RESEARCH"])
+@pytest.mark.parametrize("peer_methods", [
+    {"P/E_TTM": {"percentile": 0.9}},                                            # fitness missing
+    {"P/E_TTM": {"status": "BLOCKED", "percentile": 0.9}},                       # fitness blocked
+    {"P/E_TTM": {"status": "INSUFFICIENT_PEER_COUNT", "percentile": 0.9}},       # incompatible fitness
+    {"P/E_TTM": {"status": "NOT_COMPARABLE", "percentile": 0.1}},                # incompatible fitness
+    {"P/E_TTM": {"status": "READY", "percentile": 0.1}},                         # strict-style status is not this contract
+    {"P/E_TTM": "READY_RESEARCH_ONLY"},                                          # malformed detail
+    {"market_cap": {"status": "READY_RESEARCH_ONLY", "percentile": 0.1}},        # size context, not relative value
+])
+def test_method_name_or_label_without_qualified_fitness_is_never_a_qualified_valuation_claim(label, peer_methods):
+    candidate = _candidate("AAA", valuation=label)
+    candidate["valuation"]["peer_methods"] = peer_methods
+    built = research.build_comparison(
+        session=SESSION, candidates=[candidate, _candidate("BBB", role="STRATEGIC", horizon="STRATEGIC", valuation=None)],
+        owner_portfolio_state=_state({"AAA": "materials"}, sector_weights={"materials": 0.2}),
+    )
+    lens = built["comparison_units"][0]["lenses"]["strategic"]
+    assert lens["valuation_qualified"] is False
+    assert lens["qualified_methods"] == []
+    assert lens["relative_research_state"] == "UNQUALIFIED_" + label
+    assert lens["valuation_authority"] == research.SCOPED_VALUATION_AUTHORITY
+    text = json.dumps(built["research_cases"])
+    assert "QUALIFIED_EXPENSIVE_RELATIVE_VALUATION" not in text
+    assert "QUALIFIED_ATTRACTIVE_RELATIVE_VALUATION" not in text
+    assert not _cases(built, research.VALUATION_TRIM_REVIEW)
+
+
+def test_label_contradicted_by_qualified_method_percentile_stays_unqualified():
+    candidate = _candidate("AAA", valuation="EXPENSIVE_RELATIVE_RESEARCH")
+    candidate["valuation"]["peer_methods"] = {"P/B": {"status": "READY_RESEARCH_ONLY", "percentile": 0.1}}
+    built = research.build_comparison(session=SESSION, candidates=[candidate],
+                                      owner_portfolio_state=_state({"AAA": "materials"}, sector_weights={"materials": 0.2}))
+    assert built["comparison_units"][0]["lenses"]["strategic"]["valuation_qualified"] is False
+    assert not _cases(built, research.VALUATION_TRIM_REVIEW)
+
+
+def test_caller_supporting_method_list_is_not_accepted_as_fitness():
+    candidate = _candidate("AAA", valuation="EXPENSIVE_RELATIVE_RESEARCH")
+    candidate["valuation"].pop("peer_methods")
+    candidate["valuation"]["supporting_methods"] = [{"method": "P/E_TTM", "percentile": 0.9}]
+    built = research.build_comparison(session=SESSION, candidates=[candidate],
+                                      owner_portfolio_state=_state({"AAA": "materials"}, sector_weights={"materials": 0.2}))
+    lens = built["comparison_units"][0]["lenses"]["strategic"]
+    assert lens["valuation_qualified"] is False
+    assert "SUPPORTING_METHODS_WITHOUT_UPSTREAM_STATUS_IGNORED" in lens["gaps"]
+    assert "PEER_METHOD_FITNESS_NOT_SUPPLIED" in lens["gaps"]
+
+
+def test_qualified_methods_reuse_the_workspace_predicate():
+    import investment_decision_workspace_projection as workspace
+    methods = {"P/B": {"status": "READY_RESEARCH_ONLY", "percentile": 0.9}, "P/E_TTM": {"status": "BLOCKED"},
+               "market_cap": {"status": "READY_RESEARCH_ONLY"}}
+    assert [m["method"] for m in workspace.qualified_relative_methods(methods)] == ["P/B"]
+
+
+def test_ticker_absent_from_owner_state_is_unresolved_not_confirmed_not_held():
+    built = research.build_comparison(
+        session=SESSION, candidates=[_candidate("AAA"), _candidate("BBB", role="STRATEGIC", horizon="STRATEGIC")],
+        owner_portfolio_state=_state({"AAA": "materials"}, sector_weights={"materials": 0.2}),
+    )
+    unit = {u["comparison_unit"]["ticker"]: u for u in built["comparison_units"]}["BBB"]
+    assert unit["holding_fact"] == research.POSITION_UNRESOLVED
+    assert unit["holding_fact_basis"] == research.BASIS_NOT_LISTED
+    case = _cases(built, research.ALTERNATIVE_INVESTMENT_REVIEW, "BBB")[0]
+    assert case["holding_fact"] != research.NOT_HELD_CONFIRMED
+    assert "HOLDING_FACT_UNRESOLVED_" + research.BASIS_NOT_LISTED in case["evidence_gaps"]
+    assert {"ticker": "BBB", "holding_fact": research.POSITION_UNRESOLVED, "basis": research.BASIS_NOT_LISTED} in built["holding_fact_unresolved_or_excluded"]
+    # An explicit zero-quantity confirmed row is the only way to be confirmed not held.
+    state = _state({"AAA": "materials"}, sector_weights={"materials": 0.2})
+    state["positions"]["BBB"] = {"ticker": "BBB", "is_active": True, "current_quantity": 0.0,
+                                 "current_position_status": "CURRENT_CONFIRMED", "current_weight": 0.0, "sector": "materials"}
+    built = research.build_comparison(session=SESSION, candidates=[_candidate("AAA"), _candidate("BBB")], owner_portfolio_state=state)
+    assert _cases(built, research.ALTERNATIVE_INVESTMENT_REVIEW, "BBB")[0]["holding_fact"] == research.NOT_HELD_CONFIRMED
+
+
+def test_reported_thesis_is_a_research_assertion_not_structural_proof():
+    built = research.build_comparison(session=SESSION, candidates=[_candidate("AAA", fundamental="IMPROVING")],
+                                      owner_portfolio_state=_state({"AAA": "materials"}, sector_weights={"materials": 0.2}))
+    lens = built["comparison_units"][0]["lenses"]["core_structural"]
+    assert lens["thesis_provenance"] == {"basis": "CALLER_REPORTED_RESEARCH_ASSERTION", "thesis_source": "owner-thesis-note:synthetic"}
+    assert lens["structural_thesis_authority"] == "REPORTED_RESEARCH_CONTEXT_NOT_QUALIFIED_MULTI_YEAR_THESIS"
+    hold = _cases(built, research.HOLD_CORE_REVIEW)[0]
+    assert "THESIS_INTACT_EVIDENCE" not in json.dumps(built)
+    assert "REPORTED_THESIS_INTACT" in hold["supporting_evidence"]
+    unsourced = _candidate("AAA")
+    unsourced["structural"].pop("thesis_source")
+    built = research.build_comparison(session=SESSION, candidates=[unsourced])
+    assert "THESIS_ASSERTION_SOURCE_NOT_STATED" in built["comparison_units"][0]["lenses"]["core_structural"]["gaps"]

@@ -25,7 +25,7 @@ shortlist and decision packet are unchanged.
 
 ## Six synthetic scenarios
 
-1. Strong Core, tactical `BREAKDOWN` → hold review keeps `THESIS_INTACT_EVIDENCE`; tactical is counter-evidence only.
+1. Strong Core, tactical `BREAKDOWN` → hold review keeps `REPORTED_THESIS_INTACT_FUNDAMENTAL_STATE_CONSISTENT`; tactical is counter-evidence only.
 2. Attractive candidate, owner sector 45% vs 40% limit, shared thesis → alternative review with limit and redundancy counter-evidence; held add review narrowed.
 3. Sound Core, qualified expensive (P/E TTM, P/B) → valuation trim review, `fundamental_thesis_break: false`; no add review.
 4. A→B with no common valuation method → `PARTIALLY_COMPARABLE`; with candidate fundamentals insufficient and no valuation → `INSUFFICIENT_COMPARABLE_EVIDENCE`.
@@ -33,3 +33,17 @@ shortlist and decision packet are unchanged.
 6. Cash with incomplete alternatives → cash review citing them, cash-to-NAV fact, no return.
 
 No Daily, T0, October 7 record, owner holding or Dashboard output was touched.
+
+## Release corrective (PR #94)
+
+- Valuation fitness: the consumer accepted a method by name. It now reads upstream peer methods
+  through the workspace predicate `qualified_relative_methods` (status `READY_RESEARCH_ONLY`), and
+  the label must agree with the percentiles. Missing, blocked, incompatible or strict-style status,
+  caller lists and market cap stay `UNQUALIFIED_*`.
+- Holding coverage: `portfolio_state/v1` has no coverage guarantee, so a ticker missing from it is
+  `CURRENT_POSITION_UNRESOLVED`, not confirmed not-held.
+- Thesis: `thesis_status` is a caller-reported assertion with `thesis_source`, not a qualified
+  multi-year structural thesis.
+- CI: `test_timeout_before_first_output_publishes_nothing_and_changes_no_evidence` failed identically
+  on clean main (runs 37729085586, 37733426993). It is a pre-existing timing-sensitive test that
+  imports nothing changed here, so feedback-resource code was left as it is.

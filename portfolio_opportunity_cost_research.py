@@ -29,6 +29,7 @@ import hashlib
 import json
 from typing import Any, Mapping, Sequence
 
+import investment_decision_workspace_projection as workspace_projection
 import portfolio_research_decision_workbench as workbench
 from current_research_valuation_context import RELATIVE_METHODS
 from integrated_investment_decision_product import FUNDAMENTAL_STATES, TACTICAL_PHASES
@@ -61,11 +62,15 @@ NOT_HELD_CONFIRMED = "NOT_HELD_CONFIRMED"
 POSITION_UNRESOLVED = "CURRENT_POSITION_UNRESOLVED"
 EXCLUDED_INACTIVE = "EXCLUDED_INACTIVE"
 OWNER_STATE_NOT_SUPPLIED = "OWNER_STATE_NOT_SUPPLIED"
+BASIS_NOT_LISTED = "TICKER_NOT_LISTED_IN_OWNER_PORTFOLIO_STATE"
 
 _SUPPORTIVE_FUNDAMENTAL = frozenset({"IMPROVING", "STABLE"})
 _CONFIRMED_TACTICAL = frozenset({"BREAKOUT_CONFIRMED", "RETEST_AFTER_BREAKOUT", "TREND_CONTINUATION"})
 _UNCONFIRMED_TACTICAL = frozenset({"BASE_BUILDING", "EARLY_REVERSAL", "BREAKOUT_SETUP"})
 _ADVERSE_TACTICAL = frozenset({"DISTRIBUTION_RISK", "BREAKDOWN"})
+THESIS_PROVENANCE = "CALLER_REPORTED_RESEARCH_ASSERTION"
+STRUCTURAL_THESIS_AUTHORITY = "REPORTED_RESEARCH_CONTEXT_NOT_QUALIFIED_MULTI_YEAR_THESIS"
+SCOPED_VALUATION_AUTHORITY = "SCOPED_RELATIVE_RESEARCH_NOT_STRICT_VALUATION"
 _RELATIVE_LABELS = frozenset({"ATTRACTIVE_RELATIVE_RESEARCH", "EXPENSIVE_RELATIVE_RESEARCH", "IN_LINE_RELATIVE_RESEARCH"})
 FORBIDDEN = workbench.FORBIDDEN + (
     "expected_return", "universal_score", "composite_score", "score", "recommendation",
@@ -108,7 +113,8 @@ def _source(lens: Mapping[str, Any], *, session: str, where: str) -> dict[str, A
 
 def _core_structural(raw: Mapping[str, Any] | None, *, session: str, ticker: str) -> dict[str, Any]:
     if not isinstance(raw, Mapping) or not raw:
-        return {"status": "MISSING", "fundamental_state": None, "thesis_status": "UNKNOWN", "source": None,
+        return {"status": "MISSING", "fundamental_state": None, "thesis_status": "UNKNOWN",
+                "thesis_provenance": None, "structural_thesis_authority": STRUCTURAL_THESIS_AUTHORITY, "source": None,
                 "comparable": False, "gaps": ["STRUCTURAL_EVIDENCE_NOT_SUPPLIED"]}
     _reject(raw, "STRUCTURAL")
     source = _source(raw, session=session, where=f"STRUCTURAL:{ticker}")
@@ -121,38 +127,74 @@ def _core_structural(raw: Mapping[str, Any] | None, *, session: str, ticker: str
         gaps.append("FUNDAMENTAL_STATE_INSUFFICIENT")
     if thesis == "UNKNOWN":
         gaps.append("THESIS_STATUS_UNKNOWN")
-    return {"status": "PRESENT", "fundamental_state": state, "thesis_status": thesis, "source": source,
+    # The thesis status is a caller/owner research assertion, kept with its provenance. Neither it
+    # nor a current fundamental state proves a qualified multi-year structural company thesis.
+    provenance = {"basis": THESIS_PROVENANCE, "thesis_source": raw.get("thesis_source")}
+    if thesis != "UNKNOWN" and not raw.get("thesis_source"):
+        gaps.append("THESIS_ASSERTION_SOURCE_NOT_STATED")
+    return {"status": "PRESENT", "fundamental_state": state, "thesis_status": thesis, "thesis_provenance": provenance,
+            "structural_thesis_authority": STRUCTURAL_THESIS_AUTHORITY, "source": source,
             "comparable": state != "INSUFFICIENT", "gaps": gaps}
 
 
+def _label_supported(label: str, methods: Sequence[Mapping[str, Any]]) -> bool:
+    """Same direction rule that produced the upstream label: attractive at or below the 25th peer
+    percentile, expensive at or above the 75th with no attractive method, in-line otherwise."""
+    percentiles = [m["percentile"] for m in methods if isinstance(m.get("percentile"), (int, float)) and not isinstance(m.get("percentile"), bool)]
+    attractive = any(value <= 0.25 for value in percentiles)
+    expensive = any(value >= 0.75 for value in percentiles)
+    if label == "ATTRACTIVE_RELATIVE_RESEARCH":
+        return attractive
+    if label == "EXPENSIVE_RELATIVE_RESEARCH":
+        return expensive and not attractive
+    return bool(methods) and not attractive and not expensive
+
+
 def _strategic(raw: Mapping[str, Any] | None, *, session: str, ticker: str, event_ids: Sequence[str]) -> dict[str, Any]:
-    """Qualified relative valuation only; a label without a supporting relative method is not evidence."""
-    base = {"event_ids": sorted(event_ids), "catalyst_context": "EVENT_IDS_ONLY_NO_IMPACT_CLAIM"}
+    """Scoped relative research valuation, qualified only through the workspace method predicate.
+
+    ``peer_methods`` is the upstream ``peer_relative_context.methods`` mapping. A method counts only
+    when it is a true relative method with upstream status READY_RESEARCH_ONLY; a method name or a
+    relative label alone is never qualification. This is research-scoped relative fitness, not
+    strict valuation authority.
+    """
+    base = {"event_ids": sorted(event_ids), "catalyst_context": "EVENT_IDS_ONLY_NO_IMPACT_CLAIM",
+            "valuation_authority": SCOPED_VALUATION_AUTHORITY}
     if not isinstance(raw, Mapping) or not raw:
-        return {**base, "status": "MISSING", "relative_research_state": "UNAVAILABLE", "qualified_methods": [],
-                "valuation_qualified": False, "source": None, "comparable": False,
+        return {**base, "status": "MISSING", "relative_research_state": "UNAVAILABLE", "reported_relative_label": None,
+                "qualified_methods": [], "valuation_qualified": False, "source": None, "comparable": False,
                 "gaps": ["VALUATION_EVIDENCE_NOT_SUPPLIED"]}
     _reject(raw, "VALUATION")
     source = _source(raw, session=session, where=f"VALUATION:{ticker}")
     label = raw.get("relative_research_state") or "UNAVAILABLE"
-    methods = [
-        {"method": item.get("method"), "basis": item.get("basis"), "percentile": item.get("percentile"),
-         "peer_count": item.get("peer_count")}
-        for item in raw.get("supporting_methods") or []
-        if isinstance(item, Mapping) and item.get("method") in RELATIVE_METHODS
-    ]
-    methods.sort(key=lambda item: str(item["method"]))
+    peer_methods = raw.get("peer_methods")
     gaps = []
-    # Same guard as the workspace projection: a relative label needs a true relative method.
-    qualified = label in _RELATIVE_LABELS and bool(methods)
-    if label in _RELATIVE_LABELS and not methods:
-        gaps.append("RELATIVE_LABEL_WITHOUT_SUPPORTING_METHOD")
-        label = "UNQUALIFIED_" + label
+    if "supporting_methods" in raw:
+        gaps.append("SUPPORTING_METHODS_WITHOUT_UPSTREAM_STATUS_IGNORED")
+    if not isinstance(peer_methods, Mapping):
+        peer_methods = {}
+        gaps.append("PEER_METHOD_FITNESS_NOT_SUPPLIED")
+    unqualified = sorted(
+        str(method_id) for method_id, detail in peer_methods.items()
+        if method_id in RELATIVE_METHODS and not (isinstance(detail, Mapping) and detail.get("status") == "READY_RESEARCH_ONLY")
+    )
+    if unqualified:
+        gaps.append("RELATIVE_METHOD_FITNESS_NOT_READY_RESEARCH_ONLY:" + ",".join(unqualified))
+    methods = sorted(
+        ({"method": m["method"], "basis": m["basis"], "percentile": m["percentile"], "peer_count": m["peer_count"]}
+         for m in workspace_projection.qualified_relative_methods(peer_methods)),
+        key=lambda item: str(item["method"]),
+    )
+    qualified = label in _RELATIVE_LABELS and _label_supported(label, methods)
+    state = label
+    if label in _RELATIVE_LABELS and not qualified:
+        gaps.append("RELATIVE_LABEL_NOT_SUPPORTED_BY_QUALIFIED_METHOD")
+        state = "UNQUALIFIED_" + label
     elif label not in _RELATIVE_LABELS:
         gaps.append("RELATIVE_VALUATION_" + str(label))
-    return {**base, "status": "PRESENT", "relative_research_state": label, "qualified_methods": methods,
-            "valuation_qualified": qualified, "earnings_state": raw.get("earnings_state"), "source": source,
-            "comparable": qualified, "gaps": gaps}
+    return {**base, "status": "PRESENT", "relative_research_state": state, "reported_relative_label": label,
+            "qualified_methods": methods if qualified else [], "valuation_qualified": qualified,
+            "earnings_state": raw.get("earnings_state"), "source": source, "comparable": qualified, "gaps": gaps}
 
 
 def _tactical(raw: Mapping[str, Any] | None, *, session: str, ticker: str) -> dict[str, Any]:
@@ -211,17 +253,25 @@ def _owner_exposure(state: Mapping[str, Any] | None) -> dict[str, Any]:
     }
 
 
-def _holding_fact(ticker: str, state: Mapping[str, Any] | None) -> str:
+def _holding_fact(ticker: str, state: Mapping[str, Any] | None) -> tuple[str, str]:
+    """(holding fact, basis). ``portfolio_state/v1`` carries no position-coverage guarantee: its
+    ``positions`` are only the snapshot's rows. A ticker absent from them is therefore unresolved,
+    never confirmed not-held."""
     if state is None or state.get("status") != "AVAILABLE":
-        return OWNER_STATE_NOT_SUPPLIED
+        return OWNER_STATE_NOT_SUPPLIED, "NO_OWNER_PORTFOLIO_STATE"
     position = (state.get("positions") or {}).get(ticker)
     if not isinstance(position, Mapping):
-        return NOT_HELD_CONFIRMED
+        return POSITION_UNRESOLVED, BASIS_NOT_LISTED
     if not position.get("is_active"):
-        return EXCLUDED_INACTIVE
-    if position.get("current_position_status", "CURRENT_CONFIRMED") != "CURRENT_CONFIRMED":
-        return POSITION_UNRESOLVED
-    return HELD_CONFIRMED if (position.get("current_quantity") or 0) > 0 else NOT_HELD_CONFIRMED
+        return EXCLUDED_INACTIVE, "OWNER_RESEARCH_EXCLUSION"
+    status = position.get("current_position_status", "CURRENT_CONFIRMED")
+    if status == "CLOSED":
+        return NOT_HELD_CONFIRMED, "OWNER_LEDGER_POSITION_CLOSED"
+    if status != "CURRENT_CONFIRMED":
+        return POSITION_UNRESOLVED, "OWNER_LEDGER_POSITION_UNRESOLVED"
+    if (position.get("current_quantity") or 0) > 0:
+        return HELD_CONFIRMED, "OWNER_LEDGER_CURRENT_CONFIRMED"
+    return NOT_HELD_CONFIRMED, "OWNER_LEDGER_CURRENT_CONFIRMED_ZERO_QUANTITY"
 
 
 def _concentration(sector: str | None, exposure: Mapping[str, Any], policy: Mapping[str, Any]) -> dict[str, Any]:
@@ -328,6 +378,7 @@ def _case(kind: str, unit: Mapping[str, Any], *, support: list[str], counter: li
         "ticker": unit["ticker"],
         "comparison_unit": unit["comparison_unit"],
         "holding_fact": unit["holding_fact"],
+        "holding_fact_basis": unit["holding_fact_basis"],
         "supporting_evidence": support,
         "counter_evidence": counter,
         "evidence_gaps": sorted(set(gaps)),
@@ -352,9 +403,9 @@ def _structural_evidence(unit: Mapping[str, Any]) -> tuple[list[str], list[str]]
     elif lens["fundamental_state"] in ("DETERIORATING", "MIXED"):
         counter.append("FUNDAMENTAL_" + lens["fundamental_state"])
     if lens["thesis_status"] == "INTACT":
-        support.append("THESIS_INTACT")
+        support.append("REPORTED_THESIS_INTACT")
     elif lens["thesis_status"] in ("UNDER_REVIEW", "BROKEN"):
-        counter.append("THESIS_" + lens["thesis_status"])
+        counter.append("REPORTED_THESIS_" + lens["thesis_status"])
     return support, counter
 
 
@@ -393,13 +444,13 @@ def _held_cases(unit: Mapping[str, Any], concentration: Mapping[str, Any], polic
             support=["QUALIFIED_EXPENSIVE_RELATIVE_VALUATION:" + ",".join(m["method"] for m in strategic["qualified_methods"])],
             counter=s_support + t_support, gaps=gaps,
             changers=["RELATIVE_VALUATION_RETURNS_TO_IN_LINE_OR_ATTRACTIVE",
-                      "THESIS_BREAK_REPORTED_MOVES_THIS_TO_THESIS_REVIEW_NOT_VALUATION_TRIM"],
+                      "REPORTED_THESIS_BREAK_MOVES_THIS_TO_THESIS_REVIEW_NOT_VALUATION_TRIM"],
             concentration=concentration,
             extra={"fundamental_thesis_break": False, "trim_basis": "VALUATION_ONLY"},
         ))
     elif strategic["relative_research_state"] == "UNQUALIFIED_EXPENSIVE_RELATIVE_RESEARCH":
         narrowed.append({"ticker": unit["ticker"], "case": VALUATION_TRIM_REVIEW,
-                         "reason": "EXPENSIVE_LABEL_WITHOUT_SUPPORTING_RELATIVE_METHOD"})
+                         "reason": "EXPENSIVE_LABEL_NOT_SUPPORTED_BY_QUALIFIED_METHOD"})
     if s_support and not s_counter and not expensive and not thesis_break:
         reasons = _owner_limit_reasons(unit, concentration, policy)
         if reasons:
@@ -408,7 +459,7 @@ def _held_cases(unit: Mapping[str, Any], concentration: Mapping[str, Any], polic
             add_gaps = gaps + ([] if strategic["valuation_qualified"] else ["VALUATION_NOT_QUALIFIED_NO_VALUE_CLAIM"])
             cases.append(_case(
                 ADD_CORE_REVIEW, unit, support=s_support + t_support, counter=t_counter, gaps=add_gaps,
-                changers=["SECTOR_WEIGHT_REACHES_OWNER_LIMIT", "QUALIFIED_EXPENSIVE_RELATIVE_VALUATION",
+                changers=["SECTOR_WEIGHT_REACHES_OWNER_LIMIT", "VALUATION_BECOMES_QUALIFIED_EXPENSIVE",
                           "TACTICAL_PHASE_BECOMES_BREAKDOWN"],
                 concentration=concentration,
             ))
@@ -419,12 +470,14 @@ def _structural_case_status(lens: Mapping[str, Any]) -> str:
     if lens["status"] == "MISSING" or lens["fundamental_state"] == "INSUFFICIENT":
         return "STRUCTURAL_EVIDENCE_INSUFFICIENT"
     if lens["thesis_status"] == "BROKEN":
-        return "THESIS_BREAK_REPORTED"
-    if lens["thesis_status"] == "UNDER_REVIEW" or lens["fundamental_state"] in ("DETERIORATING", "MIXED"):
-        return "THESIS_UNDER_REVIEW"
+        return "REPORTED_THESIS_BREAK"
+    if lens["thesis_status"] == "UNDER_REVIEW":
+        return "REPORTED_THESIS_UNDER_REVIEW"
+    if lens["fundamental_state"] in ("DETERIORATING", "MIXED"):
+        return "FUNDAMENTAL_STATE_CONTESTS_REPORTED_THESIS"
     if lens["thesis_status"] == "UNKNOWN":
         return "THESIS_STATUS_UNKNOWN"
-    return "THESIS_INTACT_EVIDENCE"
+    return "REPORTED_THESIS_INTACT_FUNDAMENTAL_STATE_CONSISTENT"
 
 
 def _owner_limit_reasons(unit: Mapping[str, Any], concentration: Mapping[str, Any], policy: Mapping[str, Any]) -> list[str]:
@@ -466,6 +519,8 @@ def _alternative_case(unit: Mapping[str, Any], held: Sequence[Mapping[str, Any]]
             counter.append("LIKELY_REDUNDANT_WITH_HELD:" + comparison["held_ticker"])
     if not held:
         gaps.append("NO_CONFIRMED_HOLDING_TO_COMPARE_AGAINST")
+    if unit["holding_fact_basis"] == BASIS_NOT_LISTED:
+        gaps.append("HOLDING_FACT_UNRESOLVED_" + BASIS_NOT_LISTED)
     return _case(
         ALTERNATIVE_INVESTMENT_REVIEW, unit, support=support, counter=counter, gaps=gaps,
         changers=["NOT_COMPARABLE_AXES_BECOME_COMPARABLE", "OWNER_SECTOR_WEIGHT_CHANGES",
@@ -542,7 +597,7 @@ def _unit(raw: Mapping[str, Any], *, session: str, market: Mapping[str, Any] | N
     _require(role in PORTFOLIO_ROLES, f"PORTFOLIO_ROLE_REQUIRED:{ticker}")
     thesis_ids = sorted({t for t in raw.get("thesis_ids") or [] if isinstance(t, str) and t.strip()})
     event_ids = sorted({e for e in raw.get("event_ids") or [] if isinstance(e, str) and e.strip()})
-    holding = _holding_fact(ticker, state)
+    holding, holding_basis = _holding_fact(ticker, state)
     position = ((state or {}).get("positions") or {}).get(ticker) or {}
     return {
         "ticker": ticker,
@@ -551,6 +606,7 @@ def _unit(raw: Mapping[str, Any], *, session: str, market: Mapping[str, Any] | N
             "market_state": (market or {}).get("market_state"),
         },
         "holding_fact": holding,
+        "holding_fact_basis": holding_basis,
         "owner_position_weight": position.get("current_weight") if holding == HELD_CONFIRMED else None,
         "sector": raw.get("sector") if isinstance(raw.get("sector"), str) and raw.get("sector").strip() else None,
         "style": raw.get("style") if isinstance(raw.get("style"), str) and raw.get("style").strip() else None,
@@ -619,12 +675,16 @@ def build_comparison(
             held_cases, held_narrowed = _held_cases(unit, concentration, policy)
             cases.extend(held_cases)
             narrowed.extend(held_narrowed)
-        elif unit["holding_fact"] in (NOT_HELD_CONFIRMED, OWNER_STATE_NOT_SUPPLIED):
+        elif unit["holding_fact"] in (NOT_HELD_CONFIRMED, OWNER_STATE_NOT_SUPPLIED) or unit["holding_fact_basis"] == BASIS_NOT_LISTED:
+            # A ticker merely absent from the snapshot may be reviewed as an alternative, but its
+            # holding fact stays unresolved and is listed as a gap, never as confirmed not-held.
+            if unit["holding_fact_basis"] == BASIS_NOT_LISTED:
+                unresolved.append({"ticker": unit["ticker"], "holding_fact": unit["holding_fact"], "basis": BASIS_NOT_LISTED})
             cases.append(_alternative_case(unit, held, pairs, concentration))
         else:
             # Excluded or unresolved: the holding fact is unknown or owner-excluded, so no
             # hold/add/trim case may assert it and no alternative case may imply it is free.
-            unresolved.append({"ticker": unit["ticker"], "holding_fact": unit["holding_fact"]})
+            unresolved.append({"ticker": unit["ticker"], "holding_fact": unit["holding_fact"], "basis": unit["holding_fact_basis"]})
     alternatives = [case for case in cases if case["case"] in (ALTERNATIVE_INVESTMENT_REVIEW, INSUFFICIENT_COMPARABLE_EVIDENCE)]
     cases.append(_cash_case(available_state, alternatives, policy))
 
@@ -638,7 +698,8 @@ def build_comparison(
         "mode": "OFFLINE_OPT_IN",
         "lenses": list(LENSES),
         "comparison_units": [
-            {"comparison_unit": unit["comparison_unit"], "holding_fact": unit["holding_fact"], "lenses": unit["lenses"]}
+            {"comparison_unit": unit["comparison_unit"], "holding_fact": unit["holding_fact"],
+             "holding_fact_basis": unit["holding_fact_basis"], "lenses": unit["lenses"]}
             for unit in units
         ],
         "owner_exposure": exposure,
