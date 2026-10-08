@@ -5,7 +5,7 @@ the machine state `ROADMAP_STATE.json`). Updated 2026-10-08 from starting main `
 auto-starts.** A milestone starts only when `python tools/stocklookup_roadmap.py --can-start <ID>` allows
 it or the owner records an explicit override (AI_RULES rule 11). Facts: [ACTIVE_STATE.md](ACTIVE_STATE.md).
 
-## NOW — `FPT_OFFICIAL_FINANCIAL_FILINGS_AND_CORE_EVIDENCE_V1` (COMPLETE)
+## NOW — `NVL_REVIEWED_H1_SOURCE_ACQUISITION_AND_QUALIFICATION_V1` (COMPLETE)
 
 The October-8 owner campaign delegates repeated bounded implementation and release.
 HPG FY2025 audited capital note qualifies 7,675,465,855 ordinary outstanding shares
@@ -19,7 +19,7 @@ current fields9, annual exact metrics94 and strict valuation0 are unchanged.
 PVD assets/equity and PNJ annual operating-flow code proof are complete; ambiguous
 PNJ H1/PVD cash-flow values and debt remain blocked.
 `queued_next=[]`; select the next remaining financial geometry/earnings-evidence lane under recorded
-owner delegation. FPT annual revenue/equity qualification is complete; no October-8 production Daily is authorized.
+owner delegation. FPT annual revenue/equity qualification is complete; NVL reviewed H1 source assurance is qualified; exact fields remain blocked; no October-8 production Daily is authorized.
 [Campaign and exact blockers](internal/STOCK_LOOKUP_AUTONOMOUS_CAMPAIGN_20261008.md).
 
 The prior operational gate `FIRST_REAL_POST_RELEASE_CAPTURE_ACCEPTANCE` remains RECORDED

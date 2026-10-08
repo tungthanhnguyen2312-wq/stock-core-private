@@ -102,7 +102,7 @@ One writer; no production Daily, completed-session rewrite or T0 mutation.
 
 ## HPG retained H1 common-share observation
 
-- ID: `HPG_RETAINED_H1_COMMON_SHARE_OBSERVATION_AND_CONTINUITY_V1` (ACTIVE).
+- ID: `HPG_RETAINED_H1_COMMON_SHARE_OBSERVATION_AND_CONTINUITY_V1` (source assessment blocked; superseded by FPT before implementation).
 - Starting main: `34cb41b33cf59ac4a23078d3c2451dfb05187444`.
 - Owner delegation returns to common-share priority. Retained H1 source page52 explicitly
   distinguishes issued and ordinary outstanding quantity; page7 is a reviewed report.
@@ -144,3 +144,62 @@ No new share/financial promotion. The tentative HPG selection pivots before impl
   metrics0 unchanged. Seven immutable inputs equal. False promotions/completed rewrites/T0=0.
 - Next selection: useful current financial/cash-flow evidence from another bounded
   issuer source; no continued HPG glyph forcing and no share scale-out without continuity.
+
+- Released FPT candidate40dde8e793ef3b4d92d719994b34724b6dc9679f,
+  PR85 mergef817461711e4e56f81adc4bdceca7bb42e1750e6; four CI jobs passed.
+
+## NVL reviewed H1 financial core evidence
+
+- NVL_REVIEWED_H1_SOURCE_ACQUISITION_AND_QUALIFICATION_V1 (COMPLETE).
+- Startf817461711e4e56f81adc4bdceca7bb42e1750e6; sole writer isolated NVL branch.
+- Before HTTP: four actual requests including redirect/retry, no index refresh,
+  one H1 PDF, concurrency1,50MiB new storage in separate landing.
+- Retained official indexSHAb8593013f1d6dd2d639236d2b28407db3bb4b99cc45c704712b837d2a2d8e864
+  explicitly labels consolidated reviewed H1 financial statements; literal issuer URL.
+  Existing retained NVL PDF is Q2 only and does not supply reviewed assurance.
+  Candidate filename/index is discovery only; exact body gates facts. No Q3 or Daily.
+
+- Retained sourceSHA20aa7254735542d470f12ada8d02786dfa5e673035274e42d3404352e266a007,
+  one request, no redirects/retries;4,774,822 new landing bytes including manifest.
+  Old landing manifestSHA97189741aaa759bdd2cbc20bcf7b7076f265aca2db91ab36d88db0c621e9009b unchanged.
+  Duplicate source replay has no network and byte-identical new manifest.
+- Native text-layer labels are corrupted; existing native extractor yields zero
+  candidates. Explicit opt-in permits a separate fixed TSV OCR after source-native
+  requalification verifies zero candidates/panel facts. Any native candidate refuses
+  fallback; no native/OCR token or value mixing. Default native routing unchanged.
+  Receipt carries native artifact identity/page-text hashes and source-image/TSV hashes.
+- Reviewed consolidated H1 report page6 is visually verified: review2410, no audit
+  opinion. Page7 reviewer also emphasises going-concern uncertainty; source is not
+  a clean-earnings assertion. No numeric quality flag, normalization or score inferred.
+- Fixed9-page final replay. Damaged period/code/unit/numeric cells keep every core
+  financial value blocked. Financial fields19/annual10/current9 remain unchanged;
+  strict shares/all7 valuation0 and annual exact94 unchanged. Seven protected hashes agree.
+-236 focused tests passed /2 retained skips /5 subtests. Retained fixture tests prove
+  review assurance and zero financial promotion. No Daily, completed rewrites or T0 changes.
+- Reopen NVL exact fields only with literal undamaged independent headers/rows/units
+  under the same source contract; do not keep probing glyph profiles or repair amounts.
+  Next campaign selection moves to another useful issuer/source or execution-completion
+  evidence, subject to actual quota. No share scale-out without completed continuity.
+
+
+### Recoverable campaign boundary after NVL source qualification
+
+Canonical starting head for this release: f817461711e4e56f81adc4bdceca7bb42e1750e6.
+Working tree: C:/Projects/StockLookup/nvl-interim-evidence-v1;
+branch feature/nvl-reviewed-interim-20261008, upstream will be its origin branch
+when pushed. Candidate checkpoint is this commit (HEAD sentinel); resolve to actual
+candidate SHA during the next substantive milestone. Canonical main preserves existing
+untracked data/; other campaign trees are clean released branches and are not pruned.
+The release changes only tracked source/docs/tests and existing derived evidence artifacts;
+source PDFs and scratch stay in their existing isolated host-local landing/worktree paths.
+
+Latest quota observation at this boundary: primary85% used /15% remaining;
+weekly51% used /49% remaining, ordinary usage allowed. Finish validation/CI/merge and
+recheck actual quota before deciding whether another uncertain milestone is safe.
+No new source or milestone is pre-authorized by this note beyond the owner's campaign.
+Exact resume: fetch/verify remote main, read active docs and roadmap check; use one
+writer/isolated clean tree; keep October7 completed artifacts unchanged. Select another
+issuer's literal official H1 cash/earnings source or a genuine executed common-share
+completion document, declare request/document/storage limits before HTTP, and acquire
+through the existing governed operator. Do not force HPG/NVL OCR glyph profiles, infer
+common shares from listed quantity, or scale share acquisition without continuity.

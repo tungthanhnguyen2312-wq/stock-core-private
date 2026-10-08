@@ -148,8 +148,9 @@ def _render_image_bytes(source: Path, page_number: int) -> tuple[bytes, dict[str
         document.close()
 
 
-def materialize_tsv_pages(record: Mapping[str, Any], *, evidence_root: Path, pages: Sequence[int], engine: Path = DEFAULT_ENGINE) -> dict[str, Any]:
-    """Render fixed image-only pages once and preserve raw positioned TSV tokens."""
+def materialize_tsv_pages(record: Mapping[str, Any], *, evidence_root: Path, pages: Sequence[int], engine: Path = DEFAULT_ENGINE,
+                          allow_unqualified_native_fallback: bool = False) -> dict[str, Any]:
+    """Render fixed pages after native routing and preserve raw positioned TSV tokens."""
     import fitz
     root = Path(evidence_root)
     source = (root / str(record["relative_path"])).resolve()
@@ -163,10 +164,26 @@ def materialize_tsv_pages(record: Mapping[str, Any], *, evidence_root: Path, pag
         native_text_pages = {number: bool(document[number - 1].get_text("text").strip()) for number in pages if 1 <= number <= document.page_count}
     finally:
         document.close()
+    if any(number not in native_text_pages for number in pages):
+        raise ValueError("PAGE_OUT_OF_RANGE")
+    native_failure = None
+    if allow_unqualified_native_fallback and any(native_text_pages.values()):
+        # A text layer can be present but unusable (broken embedded font maps).
+        # Re-run the existing native extractor against these immutable bytes;
+        # OCR never supplements or replaces any native candidate.
+        from official_financial_pdf_page_evidence import build_artifact
+        native = build_artifact(document={**dict(record), "entity_type": "corporate",
+            "official_url": record["canonical_url"], "retrieved_at": record["observed_at"]}, path=source)
+        if native.get("fact_candidates") or native.get("p3f13_panel_facts"):
+            raise ValueError("NATIVE_FINANCIAL_CANDIDATES_PRESENT_OCR_FALLBACK_REFUSED")
+        native_failure = {"document_sha256": record["sha256"], "native_artifact_identity": native["artifact_identity"],
+            "candidate_count": 0, "trigger": "EXPLICIT_OPT_IN_AFTER_NATIVE_ZERO_CANDIDATES",
+            "native_page_text_sha256": {str(number): _hash(next(p["page_text"] for p in native["page_evidence"]
+                if p["page_number"] == number)) for number in pages}}
     for number in pages:
         if number not in native_text_pages:
             raise ValueError("PAGE_OUT_OF_RANGE")
-        if native_text_pages[number]:
+        if native_text_pages[number] and native_failure is None:
             materialized_pages.append({"page_number": number, "route": "NATIVE_TEXT_AVAILABLE_USE_NATIVE_PATH"})
             continue
         image_bytes, render = _render_image_bytes(source, number)
@@ -174,7 +191,9 @@ def materialize_tsv_pages(record: Mapping[str, Any], *, evidence_root: Path, pag
         result = subprocess.run([str(engine), "stdin", "stdout", "-l", OCR_CONFIG["language"], "--psm", str(OCR_CONFIG["psm"]), "tsv"], input=image_bytes, capture_output=True, check=True)
         tokens = _parse_tsv(result.stdout, page_number=number, image_sha256=image_sha256)
         materialized_pages.append({
-            "page_number": number, "route": "IMAGE_ONLY_TSV_OCR", "positioned_token_provenance": "OCR_TSV_POSITIONED_TOKEN", "source_image_evidence": {"document_sha256": record["sha256"], "source_page": number, **render},
+            "page_number": number, "route": "UNQUALIFIED_NATIVE_TSV_OCR" if native_text_pages[number] else "IMAGE_ONLY_TSV_OCR",
+            **({"native_failure_evidence": native_failure} if native_text_pages[number] else {}),
+            "positioned_token_provenance": "OCR_TSV_POSITIONED_TOKEN", "source_image_evidence": {"document_sha256": record["sha256"], "source_page": number, **render},
             "ocr_derived_text_evidence": {"engine_version": version, "config": OCR_CONFIG, "tokens": tokens, "token_count": len(tokens)},
         })
     return {"contract_version": CONTRACT_VERSION, "document_id": record["document_id"], "document_sha256": record["sha256"], "ocr_config": OCR_CONFIG, "pages": materialized_pages, "materialization_id": _hash({"document_sha256": record["sha256"], "pages": materialized_pages})}
@@ -217,6 +236,7 @@ def _pages_by_statement_family(materialization: Mapping[str, Any]) -> dict[str, 
                 "statement_family": family, "positioned_token_provenance": raw_page.get("positioned_token_provenance"),
                 "positioned_tokens": tokens, "source_image_evidence": raw_page.get("source_image_evidence"),
                 "primary_ocr_evidence": {"engine_version": payload.get("engine_version"), "config": payload.get("config")},
+                **({"native_failure_evidence": raw_page["native_failure_evidence"]} if raw_page.get("native_failure_evidence") else {}),
                 "continued_from_page": continued_from_page})
     return pages
 
@@ -491,12 +511,17 @@ def qualify_table_facts(materialization: Mapping[str, Any], *, ticker: str, repo
             blocked.append({"canonical_metric": metric, "line_code": code, "statement_family": family, "state": "BLOCKED", "reason": "OCR_NUMERIC_AMBIGUITY", "raw_value": match["current_raw"]})
             return None
         reason_codes = ["OFFICIAL_EVIDENCE_QUALIFIED", "IMAGE_ONLY_TSV_OCR_GEOMETRY", "EXACT_LINE_CODE"]
+        source_page = next(page for page in pages_by_family[family] if page["page_number"] == match["page"])
+        if source_page.get("native_failure_evidence"):
+            reason_codes[1] = "UNQUALIFIED_NATIVE_TSV_OCR_GEOMETRY"
         if cell_evidence:
             reason_codes[-1] = "CELL_LEVEL_EXACT_LINE_CODE"
         lineage = {"document_sha256": materialization["document_sha256"], "source_page": match["page"], "line_code": code,
                    "row_object": match["row_object"], "source_image_evidence": next(page["source_image_evidence"] for page in pages_by_family[family] if page["page_number"] == match["page"]),
                    "ocr_derived_text_evidence": {"materialization_id": materialization["materialization_id"], "current_raw": match["current_raw"], "comparative_raw": match["comparative_raw"]},
                    "table_id": table_id, "unit_evidence": unit, "statement_scope_evidence": scope}
+        if source_page.get("native_failure_evidence"):
+            lineage["native_failure_evidence"] = source_page["native_failure_evidence"]
         if cell_evidence:
             lineage["line_code_cell_evidence"] = cell_evidence
         return {"canonical_metric": metric, "value": value, "currency": unit["currency"], "unit_scale": unit["unit_scale"], "reporting_period": reporting_period, "statement_family": family, "qualification_state": "QUALIFIED", "reason_codes": reason_codes, "source_lineage": lineage}
@@ -600,6 +625,7 @@ def panel_facts_from_qualified_ocr(
                 "row_object": row, "source_image_evidence": source_image,
                 "ocr_derived_text_evidence": ocr, "unit_evidence": lineage.get("unit_evidence"),
                 "assurance_evidence": assurance,
-                "extraction_method": "image_only_tsv_ocr_geometry"},
+                **({"native_failure_evidence": lineage["native_failure_evidence"]} if lineage.get("native_failure_evidence") else {}),
+                "extraction_method": "unqualified_native_tsv_ocr_geometry" if lineage.get("native_failure_evidence") else "image_only_tsv_ocr_geometry"},
         })
     return output
