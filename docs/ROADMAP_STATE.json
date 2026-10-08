@@ -3388,7 +3388,7 @@
       "milestone_id": "PNJ_VRE_REVIEWED_H1_PROVISION_COMPONENT_AND_TOTAL_ASSET_IDENTITY_V1",
       "state": "COMPLETE",
       "starting_checkpoint": "5bf15809c88aa08a3333426e19515dc8fc228e03",
-      "checkpoint": "HEAD",
+      "checkpoint": "7b7b3b92f20b6f1d3363377d1015219b5293821c",
       "candidate_branch": "feature/pnj-provision-component-20261008",
       "dependencies": [
         "NVL_REVIEWED_H1_SOURCE_ACQUISITION_AND_QUALIFICATION_V1"
