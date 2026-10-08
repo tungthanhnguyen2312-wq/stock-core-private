@@ -16,6 +16,9 @@ from official_financial_ocr_table_evidence import (
 ROOT = Path(__file__).resolve().parents[1]
 PUBLIC = ROOT / "derived/financial-evidence-currency-refresh-v1"
 FIXTURE = Path(__file__).parent / "fixtures/triad_current_h1/vnm_h1_positioned_tokens.json"
+QNS_FIXTURE = Path(__file__).parent / "fixtures/triad_current_h1/qns_h1_positioned_tokens.json"
+QNS_SHA = "5a06a40f34a6d9b30233926f9c9d909d684744de2bf2ad0956edd367d5f7b068"
+QNS_EQUITY = 10647823148609
 VNM_SHA = "a6155aa757b320b893a78093b0454473f4a581aead225af4eb4ef1fbd6628561"
 VNM_URL = "https://d8um25gjecm9v.cloudfront.net/cms/20260730_VNM_BCTC_da_soat_xet_Q2_2026_Hop_nhat_76ef2e29c1.pdf"
 VNM_CASH = 4535672366831
@@ -25,8 +28,8 @@ def tokens():
     return json.loads(FIXTURE.read_text(encoding="utf8"))
 
 
-def qualify(m, period="2026-H1"):
-    return qualify_table_facts(m, ticker="VNM", reporting_period=period, include_earnings_quality_components=True,
+def qualify(m, period="2026-H1", ticker="VNM"):
+    return qualify_table_facts(m, ticker=ticker, reporting_period=period, include_earnings_quality_components=True,
                                scoped_unit_evidence=resolve_scoped_unit_evidence(m),
                                scoped_statement_scope_evidence=resolve_scoped_statement_scope_evidence(m))
 
@@ -68,20 +71,28 @@ def test_each_issuer_reaches_exactly_one_terminal_state():
     assert set(states) == {"VNM", "QNS", "POW"}
     assert states["VNM"]["state"] == "CURRENT_OFFICIAL_FACTS_QUALIFIED"
     assert states["VNM"]["document_sha256"] == VNM_SHA and states["VNM"]["network_requests"] == 0
-    assert states["QNS"]["state"] == "ROUTE_DECISION_REQUIRED"
-    assert states["QNS"]["reason"] == "INDEX_EXPOSES_DETAIL_PAGE_NOT_DOCUMENT_LOCATOR"
+    assert states["QNS"]["state"] == "CURRENT_OFFICIAL_FACTS_QUALIFIED"
+    assert states["QNS"]["document_sha256"] == QNS_SHA and states["QNS"]["qualified_metrics"] == ["shareholders_equity"]
     assert states["POW"] == {**states["POW"], "state": "APPROVED_ROUTE_BLOCKED", "reason": "access_denied"}
 
 
 def test_acquisition_stayed_inside_declared_budget():
     p = proof()
-    assert p["actual_requests"] == 3 <= p["budget"]["actual_http_cap"] == 12
-    assert p["pdf_requests"] == 0
+    assert p["actual_requests"] == 5 <= p["budget"]["actual_http_cap"] == 12
+    assert p["pdf_requests"] == 1
     assert p["new_landing_bytes_total"] <= p["budget"]["storage_cap_bytes"] == 100 * 1024 * 1024
     kinds = [(s["ticker"], s["kind"]) for s in p["trace"]]
-    assert sorted(kinds) == [("POW", "index"), ("QNS", "index")]
+    assert sorted(kinds) == [("POW", "index"), ("QNS", "detail_page_resolver"), ("QNS", "index"), ("QNS", "pdf")]
     assert sum(s["requests_counted_incl_redirects_retries"] for s in p["trace"]) == p["actual_requests"]
     assert {s["url"].split("/")[2] for s in p["trace"]} <= {"www.qns.com.vn", "www.pvpower.vn"}
+    detail = p["qns_detail_page_resolver"]
+    assert detail["classification"] == "ISSUER_IR_DETAIL_PAGE_RESOLVER"
+    assert detail["authority_effect"] == "DISCOVERY_ONLY_NOT_FINANCIAL_EVIDENCE"
+    assert detail["parent_index"]["sha256"] == next(s["sha256"] for s in p["trace"] if s["kind"] == "index" and s["ticker"] == "QNS")
+    [selected] = [a for a in detail["pdf_anchors"] if a["url"] == detail["selected_locator"]]
+    assert selected["literal_anchor_text"] == "Báo cáo tài chính hợp nhất bán niên năm 2026"
+    assert p["qns_pdf"]["sha256"] == QNS_SHA and p["qns_pdf"]["canonical_url"] == detail["selected_locator"]
+    assert p["qns_pdf"]["final_url"] == p["qns_pdf"]["canonical_url"]
     copy_ = p["vnm_retained_copy"]
     assert copy_["network_requests"] == 0 and copy_["record"]["sha256"] == VNM_SHA
     assert copy_["record"]["canonical_url"] == VNM_URL and copy_["record"]["observed_at"] == "2026-08-02T08:25:00Z"
@@ -242,3 +253,48 @@ def test_packet_and_ai_receive_the_field_without_valuation_authority():
     assert _compact_context("VNM", {"product": {}}, {"fundamental": value})["fundamental_context"]["official_field_context"] == fields
     assert report()["valuation"] == {"pe_ttm_from_h1": False, "ps_ttm_from_h1": False, "pb_effect": "NONE"}
     assert value["records"]["VNM"]["earnings_quality_context"]["status"] == "UNKNOWN"
+
+
+# --- QNS reviewed H1 continuation ---------------------------------------------------------------
+
+def qns_tokens():
+    return json.loads(QNS_FIXTURE.read_text(encoding="utf8"))
+
+
+def test_qns_assurance_and_unusable_text_layer_fallback_are_recorded():
+    qns = next(d for d in report()["documents"] if d["ticker"] == "QNS")
+    a = qns["assurance"]
+    assert (a["state"], a["audit_or_review_status"], a["scope_of_assurance"], a["page_number"]) == (
+        "QUALIFIED", "reviewed", "consolidated_interim_statements", 5)
+    assert "khong dua ra y kien kiem toan" in a["matched_anchors"]
+    receipts = [p["native_failure_evidence"] for p in qns["native_fallback_pages"]]
+    assert receipts and all(r["candidate_count"] == 0 and r["trigger"] == "EXPLICIT_OPT_IN_AFTER_NATIVE_ZERO_CANDIDATES" for r in receipts)
+
+
+def test_qns_equity_qualifies_and_damaged_headers_stay_blocked():
+    q = qualify(qns_tokens(), ticker="QNS")
+    assert set(by_metric(q)) == {"shareholders_equity"}
+    equity = by_metric(q)["shareholders_equity"]
+    row = equity["source_lineage"]["row_object"]
+    assert (equity["value"], equity["currency"], equity["unit_scale"]) == (QNS_EQUITY, "VND", 1)
+    assert (equity["source_lineage"]["source_page"], row["line_code"]) == (7, "400")
+    assert (row["current_period_label"], row["comparative_period_label"]) == ("30/06/2026", "01/01/2026")
+    # Page 6 header reads 30/06/²0²6: never normalized, so cash and total assets stay unread.
+    for metric in ("cash_and_equivalents", "total_assets", "revenue", "net_income", "attributable_net_income"):
+        assert blocked(q, metric)["reason"] == "ROW_NOT_UNIQUE_OR_NOT_GEOMETRICALLY_RESOLVED"
+    # 338 is ``Phải trả dài hạn khác`` under the 2026 template.
+    assert blocked(q, "long_term_borrowings_or_finance_leases")["reason"] == "ROW_LABEL_DOES_NOT_SUPPORT_METRIC"
+    assert blocked(q, "total_interest_bearing_debt")["reason"] == "DEBT_COMPONENT_INCOMPLETE"
+
+
+def test_qns_overlay_row_identity_and_cutoffs():
+    [row] = [r for r in overlay() if r["ticker"] == "QNS" and r["reporting_period"] == "2026-H1"]
+    assert (row["canonical_metric"], row["normalized_value"], row["statement_scope"], row["period_type"]) == (
+        "shareholders_equity", QNS_EQUITY, "consolidated", "interim")
+    assert (row["document_sha256"], row["source_page"], row["line_code"], row["audit_or_review_status"]) == (
+        QNS_SHA, 7, "400", "reviewed")
+    assert row["knowledge_available_at"] > next(r for r in overlay() if r["ticker"] == "VNM")["knowledge_available_at"]
+    assert row["knowledge_available_at"].startswith("2026-10-08T")
+    completed = fundamental.project_session(baseline=_baseline(), official_rows=[row], session="2026-10-07",
+                                            cutoff="2026-10-07T15:00:00+07:00")
+    assert "QNS" not in completed["records"] or not completed["records"]["QNS"].get("official_field_context")

@@ -13,10 +13,12 @@
     "storage_cap_bytes": 104857600,
     "pagination": false,
     "archive_crawl": false,
-    "web_search": false
+    "web_search": false,
+    "qns_detail_page_resolver_cap": 1,
+    "owner_authorization": "ONE QNS ISSUER_IR_DETAIL_PAGE_RESOLVER request plus at most one exact PDF; not a second index refresh; global 12-request ceiling unchanged"
   },
-  "actual_requests": 3,
-  "network_bytes_retained": 59666,
+  "actual_requests": 5,
+  "network_bytes_retained": 12095502,
   "trace": [
     {
       "ticker": "QNS",
@@ -39,9 +41,31 @@
       "http_status": 404,
       "sha256": null,
       "observed_at": null
+    },
+    {
+      "ticker": "QNS",
+      "kind": "detail_page_resolver",
+      "url": "https://www.qns.com.vn/qns-cong-bo-bao-cao-tai-chinh-ban-nien-nam-2026",
+      "started_at": "2026-10-08T04:06:11.774174Z",
+      "requests_counted_incl_redirects_retries": 1,
+      "state": "retained",
+      "http_status": 200,
+      "sha256": "a3da3950a165a49ad2ef1b86113f91b1ebed2673cdd9b5a23b875f0631de6499",
+      "observed_at": "2026-10-08T04:06:12.893394Z"
+    },
+    {
+      "ticker": "QNS",
+      "kind": "pdf",
+      "url": "https://www.qns.com.vn/upload/product/2026q2-bctc-hop-nhat-sau-kt-1786788334.pdf",
+      "started_at": "2026-10-08T04:06:34.343021Z",
+      "requests_counted_incl_redirects_retries": 1,
+      "state": "retained",
+      "http_status": 200,
+      "sha256": "5a06a40f34a6d9b30233926f9c9d909d684744de2bf2ad0956edd367d5f7b068",
+      "observed_at": "2026-10-08T04:06:35.272649Z"
     }
   ],
-  "pdf_requests": 0,
+  "pdf_requests": 1,
   "vnm_retained_copy": {
     "network_requests": 0,
     "source_manifest_sha256": "83c731024d94d471c0455415306d7591ade2403420f67a0046e6e0297deda522",
@@ -68,11 +92,60 @@
     "duplicate_replay_state": "cached_valid",
     "duplicate_replay_manifest_bytes_equal": true
   },
-  "landing_manifest_sha256": "436798f4bfd4c83e9bd22dc76397d2a9173dfe1853c09862b2ebb933fba52cfb",
-  "new_landing_bytes_total": 4413972,
+  "landing_manifest_sha256": "d846be8618f5b80be8c8cc22fe8bc81360beab355acbfac0a9f2936cece206ba",
+  "new_landing_bytes_total": 16451582,
   "untouched_manifests": {
     "currency_refresh_20260929": "97189741aaa759bdd2cbc20bcf7b7076f265aca2db91ab36d88db0c621e9009b",
     "hpg_vnm_current_share_bridge_20260802": "83c731024d94d471c0455415306d7591ade2403420f67a0046e6e0297deda522"
   },
-  "authority_effect": "RAW_RETAINED_DISCOVERY_AND_EXISTING_BYTES_ONLY_NO_VALUES"
+  "authority_effect": "RAW_RETAINED_DISCOVERY_AND_EXISTING_BYTES_ONLY_NO_VALUES",
+  "qns_detail_page_resolver": {
+    "classification": "ISSUER_IR_DETAIL_PAGE_RESOLVER",
+    "authority_effect": "DISCOVERY_ONLY_NOT_FINANCIAL_EVIDENCE",
+    "source_url": "https://www.qns.com.vn/qns-cong-bo-bao-cao-tai-chinh-ban-nien-nam-2026",
+    "final_url": "https://www.qns.com.vn/qns-cong-bo-bao-cao-tai-chinh-ban-nien-nam-2026",
+    "retrieved_at": "2026-10-08T04:06:12.893394Z",
+    "sha256": "a3da3950a165a49ad2ef1b86113f91b1ebed2673cdd9b5a23b875f0631de6499",
+    "issuer": "QNS",
+    "parent_index": {
+      "sha256": "8921d8e7148425222e8b953941f51783fe8595731e537556dbb49c84fa067d0a",
+      "literal_href": "/qns-cong-bo-bao-cao-tai-chinh-ban-nien-nam-2026",
+      "literal_title": "QNS công bố báo cáo tài chính bán niên năm 2026"
+    },
+    "pdf_anchors": [
+      {
+        "url": "https://www.qns.com.vn/upload/product/vie-cbtt-1786788333.pdf",
+        "literal_anchor_text": "Công văn Công bố thông tin"
+      },
+      {
+        "url": "https://www.qns.com.vn/upload/product/2026q2-bctc-hop-nhat-sau-kt-1786788334.pdf",
+        "literal_anchor_text": "Báo cáo tài chính hợp nhất bán niên năm 2026"
+      },
+      {
+        "url": "https://www.qns.com.vn/upload/product/2026q2-bctc-tong-hop-sau-kt-1786788334.pdf",
+        "literal_anchor_text": "Báo cáo tài chính tổng hợp bán niên năm 2026"
+      }
+    ],
+    "selected_locator": "https://www.qns.com.vn/upload/product/2026q2-bctc-hop-nhat-sau-kt-1786788334.pdf",
+    "selection_rule": "the single anchor literally titled 'Báo cáo tài chính hợp nhất bán niên năm 2026'; separate and disclosure-letter PDFs not fetched; no further discovery layer"
+  },
+  "qns_pdf": {
+    "document_id": "33288eafb6849f897be25cbba474d86ab09788ec0dd835b92f9830ff2db1900d",
+    "canonical_url": "https://www.qns.com.vn/upload/product/2026q2-bctc-hop-nhat-sau-kt-1786788334.pdf",
+    "final_url": "https://www.qns.com.vn/upload/product/2026q2-bctc-hop-nhat-sau-kt-1786788334.pdf",
+    "sha256": "5a06a40f34a6d9b30233926f9c9d909d684744de2bf2ad0956edd367d5f7b068",
+    "content_length": 11975796,
+    "observed_at": "2026-10-08T04:06:35.272649Z",
+    "relative_path": "documents/QNS/2026-H1/reviewed_interim_financial_statements/5a06a40f34a6d9b30233926f9c9d909d684744de2bf2ad0956edd367d5f7b068.pdf",
+    "http_status": 200,
+    "body_proof": {
+      "issuer": "page 2/6 header CÔNG TY CỔ PHẦN ĐƯỜNG QUẢNG NGÃI",
+      "period": "Cho kỳ kế toán 6 tháng đầu năm 2026; balance sheet Ngày 30 tháng 06 năm 2026",
+      "scope": "BÁO CÁO TÀI CHÍNH HỢP NHẤT GIỮA NIÊN ĐỘ",
+      "assurance": "page 5 AAC review report, VSRE 2410, no audit opinion expressed",
+      "currency_unit": "VND, unit scale 1",
+      "text_layer": "EMBEDDED_TEXT_UNUSABLE_NATIVE_ZERO_CANDIDATES_OCR_FALLBACK"
+    }
+  },
+  "redirects_or_retries": 1
 }

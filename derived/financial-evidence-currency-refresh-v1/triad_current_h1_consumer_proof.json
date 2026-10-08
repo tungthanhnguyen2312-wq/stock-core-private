@@ -15,26 +15,42 @@
   "completed_cutoff_current_official_fields_before": 9,
   "completed_cutoff_current_official_fields_after": 9,
   "scratch_20261008_current_official_fields_before": 14,
-  "scratch_20261008_current_official_fields_after": 15,
+  "scratch_20261008_current_official_fields_after": 16,
   "scratch_20261008_current_official_issuers_before": 5,
-  "scratch_20261008_current_official_issuers_after": 6,
+  "scratch_20261008_current_official_issuers_after": 7,
   "scratch_20261008_changed_records": [
+    "QNS",
     "VNM"
   ],
   "scratch_20261008_current_earnings_component_issuers_before": 2,
   "scratch_20261008_current_earnings_component_issuers_after": 2,
-  "vnm_scratch_20261008_official_field_context": [
-    {
-      "canonical_metric": "cash_and_equivalents",
-      "normalized_value": 4535672366831,
-      "currency": "VND",
-      "reporting_period": "2026-H1",
-      "period_type": "interim",
-      "knowledge_available_at": "2026-10-08T03:11:09.934237+00:00",
-      "audit_or_review_status": "reviewed",
-      "statement_scope": "consolidated"
-    }
-  ],
+  "scratch_20261008_new_official_field_context": {
+    "VNM": [
+      {
+        "canonical_metric": "cash_and_equivalents",
+        "normalized_value": 4535672366831,
+        "currency": "VND",
+        "reporting_period": "2026-H1",
+        "period_type": "interim",
+        "knowledge_available_at": "2026-10-08T03:11:09.934237+00:00",
+        "audit_or_review_status": "reviewed",
+        "statement_scope": "consolidated"
+      }
+    ],
+    "QNS": [
+      {
+        "canonical_metric": "shareholders_equity",
+        "normalized_value": 10647823148609,
+        "currency": "VND",
+        "reporting_period": "2026-H1",
+        "period_type": "interim",
+        "knowledge_available_at": "2026-10-08T04:09:10.280605+00:00",
+        "audit_or_review_status": "reviewed",
+        "statement_scope": "consolidated"
+      }
+    ]
+  },
+  "baseline_main": "795b729dbb35845511857e79d75ddc0f7f80f462",
   "valuation_metrics_equal_completed_and_scratch": true,
   "strict_share_ready_before": 0,
   "strict_share_ready_after": 0,

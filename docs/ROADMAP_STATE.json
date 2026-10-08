@@ -3444,7 +3444,7 @@
         "COMPLETE"
       ],
       "source_doc": "docs/internal/STOCK_LOOKUP_AUTONOMOUS_CAMPAIGN_20261008.md",
-      "notes": "Fixed three-issuer probe (VNM, QNS, POW) for 2026-H1 / Q2-2026 official statements; 3 actual HTTP requests of 12, 0 PDFs. VNM retained reviewed consolidated statement (zero network) qualifies cash and cash equivalents 4,535,672,366,831 VND at 2026-06-30, known 2026-10-08; other VNM fields blocked without repair. QNS ROUTE_DECISION_REQUIRED (semi-annual PDF locator behind a detail page). POW APPROVED_ROUTE_BLOCKED (seeded index 404). Debt components require a literal loan label. Strict share/valuation 0 unchanged.",
+      "notes": "Fixed three-issuer probe (VNM, QNS, POW) for 2026-H1 official statements; 5 actual HTTP requests of 12 (QNS index, owner-authorized QNS detail-page resolver and one PDF; POW index 2). Reviewed consolidated H1, fixed OCR profile, known 2026-10-08: VNM cash 4,535,672,366,831 VND (retained source, zero network); QNS equity 10,647,823,148,609 VND. Other fields blocked without repair (damaged headers, superscript years, 2026 template rows). POW APPROVED_ROUTE_BLOCKED (seeded index 404). Debt components require a literal loan label. Strict share/valuation 0 unchanged.",
       "terminal_disposition": "PARTIAL_CURRENT_OFFICIAL_H1_TRIAD_EVIDENCE_READY"
     }
   ],
