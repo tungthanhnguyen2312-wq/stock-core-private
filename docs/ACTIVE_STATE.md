@@ -1,7 +1,7 @@
 # Stock Lookup — Active State
 
 Compact navigation view of what is true **now**. Updated 2026-10-08 from verified
-starting main `59eb5a0d4f2ffa4a364d04d6dc98c3882e1561f2` (PR #92 regime context).
+starting main `da5206716ade44a4b896de48ca5c66c330191991` (PR #93 regime context).
 The owner-authorized campaign continues through bounded evidence milestones.
 Verify live remote main with `git fetch origin main` or
 `git ls-remote origin refs/heads/main`; a **local** remote-tracking ref alone can be stale.
@@ -34,7 +34,7 @@ Fact kinds used below: **CURRENT FACT** (verified in repo or by a stated read-on
 **BLOCKED**, **DEFERRED**, **HISTORICAL**.
 
 ## 1. The operational gate
-- **COMPLETE — regime context (`MACRO_MARKET_REGIME_DECISION_CONTEXT_CONVERGENCE_V1`): packet binds named axes; SBV rates, FX, and credit stay UNKNOWN; no score. Disposition `PARTIAL_MACRO_MARKET_REGIME_DECISION_CONTEXT_READY`. No successor.** QNS detail resolver (`QNS_2026_H1_OFFICIAL_DETAIL_RESOLVER_AND_FINANCIAL_EVIDENCE_V1`): one detail-page request rebound the same `www.qns.com.vn` consolidated PDF (SHA `5a06a40f…`, no second download, no new OCR). Equity 10,647,823,148,609 VND remains the only qualified H1 fact; other priority fields stay blocked on damaged headers. No earnings component. Strict share/valuation 0. The closed triad (`VNM_QNS_POW_CURRENT_OFFICIAL_FINANCIAL_EVIDENCE_ACQUISITION_V1`) still stands:** Reviewed consolidated 2026-H1 statements, fixed OCR profile, known 2026-10-08 (excluded from completed October 7): VNM cash 4,535,672,366,831 VND (retained source, zero network, page 7 line 110); QNS equity 10,647,823,148,609 VND (owner-authorized index→detail page→one PDF, page 7 line 400). Other VNM/QNS fields stay blocked (damaged headers incl. `²0²6`, dash artefact, 2026 template rows). POW `APPROVED_ROUTE_BLOCKED` (seeded index 404). 5 HTTP requests of 12. Debt components require a literal loan label. Strict share/valuation 0. [Campaign](internal/STOCK_LOOKUP_AUTONOMOUS_CAMPAIGN_20261008.md).
+- **COMPLETE — opportunity cost (`PORTFOLIO_OPPORTUNITY_COST_COMPARATIVE_RESEARCH_V1`): offline opt-in hold/add/trim/alternative/cash research cases; no winner, score, size or return. No successor.** Regime context (`MACRO_MARKET_REGIME_DECISION_CONTEXT_CONVERGENCE_V1`): SBV rates, FX, credit UNKNOWN. QNS detail resolver (`QNS_2026_H1_OFFICIAL_DETAIL_RESOLVER_AND_FINANCIAL_EVIDENCE_V1`): one detail-page request rebound the same `www.qns.com.vn` consolidated PDF (SHA `5a06a40f…`, no second download, no new OCR). Equity 10,647,823,148,609 VND remains the only qualified H1 fact; other priority fields stay blocked on damaged headers. No earnings component. Strict share/valuation 0. The closed triad (`VNM_QNS_POW_CURRENT_OFFICIAL_FINANCIAL_EVIDENCE_ACQUISITION_V1`) still stands:** Reviewed consolidated 2026-H1 statements, fixed OCR profile, known 2026-10-08 (excluded from completed October 7): VNM cash 4,535,672,366,831 VND (retained source, zero network, page 7 line 110); QNS equity 10,647,823,148,609 VND (owner-authorized index→detail page→one PDF, page 7 line 400). Other VNM/QNS fields stay blocked (damaged headers incl. `²0²6`, dash artefact, 2026 template rows). POW `APPROVED_ROUTE_BLOCKED` (seeded index 404). 5 HTTP requests of 12. Debt components require a literal loan label. Strict share/valuation 0. [Campaign](internal/STOCK_LOOKUP_AUTONOMOUS_CAMPAIGN_20261008.md).
 - **COMPLETE — FPT FY2025 audited cash-flow line 03 Provisions 651,406,282,654 VND is historical earnings-quality context (`FY2025`), known 2026-10-08. It is not current H1 evidence, normalized EPS, or a valuation input. Superscript normalization is `SOURCE_FAITHFUL_NORMALIZATION_NOT_YET_PROVABLE`.** Prior retained H1 provision components (PNJ 2,667,248,523,366 VND; VRE −7,066 million VND) and VRE cash/equity/OCF stay qualified; total-asset rows require a literal total label. Released PR87 (merge 2b6208a) and PR88 (merge 559ff7a); NVL assurance released in PR86. Prior cash-flow/balance qualification: PNJ FY2025 operating flow plus PVD assets/equity added; annual overlay10 fields. FPT annual revenue/equity added from auditor-backed English source; Q2 assurance remains absent. PNJ H1 and PVD cash-flow numeric ambiguity remain blocked. Annual baseline94, current official fields9 and strict share/valuation0 unchanged. [Campaign](internal/STOCK_LOOKUP_AUTONOMOUS_CAMPAIGN_20261008.md).
 
 - **CURRENT FACT — HPG common-share observation:** audited FY2025 page 41 states 7,675,465,855 at December 31, 2025; later-known historical context only. July-2 quantity is listed shares. January 1–October 7 common-share continuity remains unproven; strict shares/valuation stay zero. [Campaign](internal/STOCK_LOOKUP_AUTONOMOUS_CAMPAIGN_20261008.md).
@@ -67,9 +67,9 @@ Fact kinds used below: **CURRENT FACT** (verified in repo or by a stated read-on
   the actual subsequent Daily completion is recorded above.
   [Closure](internal/DECISION_INTELLIGENCE_COVERAGE_AND_CALIBRATION_CLOSURE_20261007.md).
 - **CURRENT FACT — portfolio research workbench.** `PORTFOLIO_RESEARCH_DECISION_WORKBENCH_FOUNDATION_V1`
-  reports sector and style concentration, thesis and event overlap, and current
-  correlation only when aligned series are supplied. Ranking requires an explicit
-  objective and is not a capital allocation. No size, leverage, or order.
+  counts opportunities (not owner exposure), overlap, and correlation comparable only on
+  shared dates. [Opportunity-cost cases](portfolio_opportunity_cost_research_contract.md)
+  add four independent lenses; no allocation, size, leverage, or order.
   [Workbench](internal/PORTFOLIO_RESEARCH_DECISION_WORKBENCH_FOUNDATION_20261006.md).
 - **CURRENT FACT — human/AI evidence packet.** `HUMAN_AI_DECISION_EVIDENCE_PACKET_CONVERGENCE_V2`
   adds a sectioned packet that points at the existing decision-packet identity. Measurements

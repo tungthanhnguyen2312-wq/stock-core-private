@@ -1,15 +1,18 @@
 # Stock Lookup — Current Roadmap
 
 What happens next, and nothing else. No historical milestones (those live in [ROADMAP.md](ROADMAP.md) and
-the machine state `ROADMAP_STATE.json`). Updated 2026-10-08 from starting main `59eb5a0d4f2ffa4a364d04d6dc98c3882e1561f2`. **Nothing below
+the machine state `ROADMAP_STATE.json`). Updated 2026-10-08 from starting main `da5206716ade44a4b896de48ca5c66c330191991`. **Nothing below
 auto-starts.** A milestone starts only when `python tools/stocklookup_roadmap.py --can-start <ID>` allows
 it or the owner records an explicit override (AI_RULES rule 11). Facts: [ACTIVE_STATE.md](ACTIVE_STATE.md).
 
-## NOW — `MACRO_MARKET_REGIME_DECISION_CONTEXT_CONVERGENCE_V1` (COMPLETE)
+## NOW — `PORTFOLIO_OPPORTUNITY_COST_COMPARATIVE_RESEARCH_V1` (COMPLETE)
 
-Named axes bind into the packet.
-SBV rates, FX, and credit stay UNKNOWN. No score. No successor.
-Disposition `PARTIAL_MACRO_MARKET_REGIME_DECISION_CONTEXT_READY`.
+Offline, opt-in research cases over the workbench. No winner, score, size or return.
+Disposition `PORTFOLIO_OPPORTUNITY_COST_RESEARCH_READY_OFFLINE`. No successor.
+
+## PRIOR — `MACRO_MARKET_REGIME_DECISION_CONTEXT_CONVERGENCE_V1` (COMPLETE)
+
+SBV rates, FX, and credit stay UNKNOWN. No score.
 
 ## PRIOR — `OFFICIAL_FINANCIAL_DOCUMENT_REPRESENTATION_RECOVERY_V1` (COMPLETE)
 
@@ -18,17 +21,13 @@ Disposition `OFFICIAL_REPRESENTATION_BOTTLENECK_CONFIRMED`.
 
 ## PRIOR — `QNS_2026_H1_OFFICIAL_DETAIL_RESOLVER_AND_FINANCIAL_EVIDENCE_V1` (COMPLETE)
 
-One QNS detail-page request rebound `Báo cáo tài chính hợp nhất bán niên năm 2026` on
-`www.qns.com.vn`. The retained PDF SHA `5a06a40f…` matched, so no PDF was downloaded
-and the fixed OCR profile was not rerun. Equity 10,647,823,148,609 VND remains the
-only qualified 2026-H1 fact. Revenue, profit, cash, assets, operating cash flow and
-debt stay blocked on damaged headers. No earnings component and no superscript
-repair. Strict shares and valuation stay zero. POW stays route-blocked.
+One detail-page request rebound the retained QNS PDF (SHA `5a06a40f…`); no download, no new
+OCR. Equity remains the only qualified 2026-H1 fact; other fields stay blocked on damaged headers.
 
 ## PRIOR — `VNM_QNS_POW_CURRENT_OFFICIAL_FINANCIAL_EVIDENCE_ACQUISITION_V1` (COMPLETE)
 
-Fixed three-issuer probe for 2026-H1/Q2 official statements; no cohort expansion and no
-successor. Reviewed consolidated H1 statements under the fixed OCR profile, known October 8:
+Fixed three-issuer 2026-H1/Q2 probe; no cohort expansion.
+Reviewed consolidated H1 statements under the fixed OCR profile, known October 8:
 VNM cash 4,535,672,366,831 VND (retained source) and QNS equity 10,647,823,148,609 VND
 (owner-authorized detail page and one PDF). POW's seeded index answers 404. Strict shares
 and valuation stay zero. Exact next gate: a POW first-party financial-statement index

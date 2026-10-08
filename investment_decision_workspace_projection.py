@@ -64,15 +64,10 @@ def content_identity(value: Mapping[str, Any]) -> dict[str, str]:
     return {"artifact_sha256": digest, "artifact_identity": f"{CONTRACT_VERSION}:{digest}"}
 
 
-def _valuation_view(opportunity_record: Mapping[str, Any]) -> dict[str, Any]:
-    """Method/basis-qualified valuation view with the market-cap-is-not-cheapness guard applied."""
-    valuation = opportunity_record.get("valuation") or {}
-    absolute = valuation.get("absolute_research_context") or {}
-    peer = valuation.get("peer_relative_context") or {}
-    methods = peer.get("methods") or {}
-    usable_count = absolute.get("usable_relative_method_count") or 0
-    raw_state = peer.get("relative_research_state")
-    supporting = [
+def qualified_relative_methods(methods: Mapping[str, Any]) -> list[dict[str, Any]]:
+    """Peer-relative methods that may support a relative label: a true relative method whose
+    upstream peer status is READY_RESEARCH_ONLY. A method name alone never qualifies."""
+    return [
         {
             "method": method_id,
             "percentile": detail.get("percentile"),
@@ -85,6 +80,17 @@ def _valuation_view(opportunity_record: Mapping[str, Any]) -> dict[str, Any]:
         for method_id, detail in methods.items()
         if method_id in RELATIVE_METHODS and isinstance(detail, Mapping) and detail.get("status") == "READY_RESEARCH_ONLY"
     ]
+
+
+def _valuation_view(opportunity_record: Mapping[str, Any]) -> dict[str, Any]:
+    """Method/basis-qualified valuation view with the market-cap-is-not-cheapness guard applied."""
+    valuation = opportunity_record.get("valuation") or {}
+    absolute = valuation.get("absolute_research_context") or {}
+    peer = valuation.get("peer_relative_context") or {}
+    methods = peer.get("methods") or {}
+    usable_count = absolute.get("usable_relative_method_count") or 0
+    raw_state = peer.get("relative_research_state")
+    supporting = qualified_relative_methods(methods)
     guard_applied = raw_state in RELATIVE_VALUATION_LABELS and not supporting
     display_state = raw_state
     if guard_applied:
