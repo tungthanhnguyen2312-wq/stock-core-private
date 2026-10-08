@@ -410,3 +410,26 @@ Owner program `STOCK_LOOKUP_AUTONOMOUS_OFFICIAL_EVIDENCE_CONTINUATION_20261008`;
   fitness gain. Discovery code was not widened.
 - Disposition `OFFICIAL_REPRESENTATION_BOTTLENECK_CONFIRMED`. Strict shares
   and strict valuation stay 0. October 7 records are unchanged. No successor.
+
+## Macro, market, and sector decision context
+
+- ID `MACRO_MARKET_REGIME_DECISION_CONTEXT_CONVERGENCE_V1`. Owner override
+  `OWNER_DIRECTIVE_2026_10_08_MACRO_MARKET_REGIME_DECISION_CONTEXT_CONVERGENCE_V1`.
+  Start `59eb5a0d4f2ffa4a364d04d6dc98c3882e1561f2`.
+- Reused `current_macro_regime/v1`, `vietnam_official_macro_evidence/v1`,
+  `macro_presentation_context/v1`, `market_regime_breadth_context/v1`, and
+  `current_market_sector_leadership_context/v1`. No parallel macro engine.
+- Scratch context, not an October 8 session artifact: macro backdrop `MIXED`.
+  Qualified axes are domestic inflation `STABLE`, global rates `EASING`, USD
+  pressure `EASING`, and commodity pressure `PRESSURE`. Domestic rates, FX,
+  credit, and liquidity stay `UNKNOWN`. Breadth is broad on the supplied
+  session. Leadership persistence versus a prior session is not emitted.
+  Banks lead in the scratch sector artifact. Commodity pressure conflicts with
+  broad participation and has no winner.
+- Selected domestic attempts: SBV USD/VND, SBV policy rate, SBV credit growth.
+  No retained first-party metric and no governed machine-readable locator.
+  HTTP requests 0. VCB, SJC, Yahoo, and World Bank series were not promoted.
+- Packet market, uncertainty, and counter-thesis fields carry the context.
+  Stock economics and tactical posture stay independent. No score, forecast,
+  or size. October 7 is not rewritten. Dashboard `Vĩ mô` was not redesigned.
+- Disposition `PARTIAL_MACRO_MARKET_REGIME_DECISION_CONTEXT_READY`. No successor.
