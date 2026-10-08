@@ -57,6 +57,7 @@ context. Period stays explicit. Recurrence stays UNKNOWN; no normalized EPS, ann
 valuation input, action or score change follows. Superscript normalization is not authorized.
 Interim balance-sheet columns bind only by the literal period-end date; debt components need
 a literal loan label ([canonical contract](financial_statement_canonical_contract.md)).
+A QNS semi-annual detail page is a discovery resolver, not a financial fact.
 
 | Area | Status | Meaning | Controlling source |
 |---|---|---|---|

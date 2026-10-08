@@ -360,3 +360,20 @@ Owner program `STOCK_LOOKUP_AUTONOMOUS_OFFICIAL_EVIDENCE_CONTINUATION_20261008`;
 - Downstream vs base main: overlay 25→27; October 7 fields 9→9; scratch October 8 fields
   14→16, issuers 5→7, changed records QNS and VNM only; valuation equal; strict 0.
 - Exact next gate: POW needs a first-party financial-statement index locator.
+
+## QNS 2026-H1 detail resolver
+
+- ID `QNS_2026_H1_OFFICIAL_DETAIL_RESOLVER_AND_FINANCIAL_EVIDENCE_V1` (COMPLETE). Owner
+  override. Start `7959b4d59e813c5d5ce31953d03a9f1cb94f27cc`. QNS only; the triad stays closed.
+- Budget declared before HTTP: 1 detail page, at most 1 PDF, 5 requests including
+  redirects, concurrency 1, 50 MiB, no index refresh, pagination, or search.
+- Actual: 1 request, final URL unchanged, content type `text/html`, retrieved
+  `2026-10-08T04:52:25.618175+00:00`, SHA `69a93d77422975a6afc87ae5a721e654bb87ca4b5c6d881b6b8bb4cd2e17c8bc`.
+  Parent index SHA `8921d8e7…` was cited and not refetched. The literal consolidated
+  anchor selected the retained PDF SHA `5a06a40f…` (11,975,796 bytes). No PDF request.
+- Representation `OCR_REQUIRED` from the existing native-zero receipt. No OCR rerun.
+  Equity remains qualified. Revenue, profit, cash, assets, operating cash flow and both
+  debt lines stay blocked. No earnings component. Normalization remains
+  `SOURCE_FAITHFUL_NORMALIZATION_NOT_YET_PROVABLE`.
+- Disposition `QNS_2026_H1_CURRENT_OFFICIAL_EVIDENCE_READY`. Strict share/valuation 0.
+  October 7 still excludes the equity row. No successor started.
