@@ -1,7 +1,7 @@
 # Stock Lookup — Active State
 
 Compact navigation view of what is true **now**. Updated 2026-10-08 from verified
-starting main `da5206716ade44a4b896de48ca5c66c330191991` (PR #93 regime context).
+starting main `1e1f208d15ea63ec37b99e36540019cfc6100cf8`.
 The owner-authorized campaign continues through bounded evidence milestones.
 Verify live remote main with `git fetch origin main` or
 `git ls-remote origin refs/heads/main`; a **local** remote-tracking ref alone can be stale.
@@ -34,6 +34,22 @@ Fact kinds used below: **CURRENT FACT** (verified in repo or by a stated read-on
 **BLOCKED**, **DEFERRED**, **HISTORICAL**.
 
 ## 1. The operational gate
+- **COMPLETE — long-term company economics evidence:** owner-selected
+  `LONG_TERM_COMPANY_ECONOMICS_EVIDENCE_MATRIX_V1` is a bounded offline, opt-in,
+  non-voting matrix, registered through the native roadmap. Observed exact facts
+  are separate from structural interpretation, relative valuation, tactical context
+  and capital allocation. PNJ/PVD/FPT use retained source/knowledge identities;
+  current gaps remain UNKNOWN, no normalized economics or strict valuation promotion.
+  [Contract and acceptance](long_term_company_economics_evidence_contract.md).
+  Local checkpoint only; push/PR/merge/deployment require separate approval. No successor.
+- **HOST-LOCAL — October 8 Owner Daily completed; Macro live acceptance independently verified:**
+  `MACRO_REGIME_20261008_LIVE_ACCEPTED`. Operation
+  `daily_research_session_operation:537cda6b2e7085d1461d925c7f342cf5e870feca41abb6d5ecaccd71f7262a98`,
+  Macro `current_macro_regime:e2a1a64e1a41dd50b5aa66016fa72bfff9fd7da049528d77003cba117447b541`,
+  context `macro_market_regime_decision_context:f02a0ee3f7fbcfcf79c7119a9d151437cb7302c84f4a4c4a95fc0e1d4d4b70b0`,
+  packet `current_research_decision_packet:c4fc0700eddfa04d281722ddb15ba0e6f10a8e15b0eaf460a48c9be1952908f0`.
+  This supersedes the pending-acceptance wording below. No further Macro corrective;
+  Macro authority and immutable completed records are unchanged. This milestone runs no Daily.
 - **COMPLETE — opportunity cost (`PORTFOLIO_OPPORTUNITY_COST_COMPARATIVE_RESEARCH_V1`): offline opt-in hold/add/trim/alternative/cash research cases; no winner, score, size or return. No successor.** Macro corrective: Daily/canonical packet/AI/cockpit wired; actual cutoff/freshness checked; live acceptance pending. SBV UNKNOWN. [Contract](macro_market_regime_decision_context_contract.md). QNS detail resolver (`QNS_2026_H1_OFFICIAL_DETAIL_RESOLVER_AND_FINANCIAL_EVIDENCE_V1`): one detail-page request rebound the same `www.qns.com.vn` consolidated PDF (SHA `5a06a40f…`, no second download, no new OCR). Equity 10,647,823,148,609 VND remains the only qualified H1 fact; other priority fields stay blocked on damaged headers. No earnings component. Strict share/valuation 0. The closed triad (`VNM_QNS_POW_CURRENT_OFFICIAL_FINANCIAL_EVIDENCE_ACQUISITION_V1`) still stands:** Reviewed consolidated 2026-H1 statements, fixed OCR profile, known 2026-10-08 (excluded from completed October 7): VNM cash 4,535,672,366,831 VND (retained source, zero network, page 7 line 110); QNS equity 10,647,823,148,609 VND (owner-authorized index→detail page→one PDF, page 7 line 400). Other VNM/QNS fields stay blocked (damaged headers incl. `²0²6`, dash artefact, 2026 template rows). POW `APPROVED_ROUTE_BLOCKED` (seeded index 404). 5 HTTP requests of 12. Debt components require a literal loan label. Strict share/valuation 0. [Campaign](internal/STOCK_LOOKUP_AUTONOMOUS_CAMPAIGN_20261008.md).
 - **COMPLETE — FPT FY2025 audited cash-flow line 03 Provisions 651,406,282,654 VND is historical earnings-quality context (`FY2025`), known 2026-10-08. It is not current H1 evidence, normalized EPS, or a valuation input. Superscript normalization is `SOURCE_FAITHFUL_NORMALIZATION_NOT_YET_PROVABLE`.** Prior retained H1 provision components (PNJ 2,667,248,523,366 VND; VRE −7,066 million VND) and VRE cash/equity/OCF stay qualified; total-asset rows require a literal total label. Released PR87 (merge 2b6208a) and PR88 (merge 559ff7a); NVL assurance released in PR86. Prior cash-flow/balance qualification: PNJ FY2025 operating flow plus PVD assets/equity added; annual overlay10 fields. FPT annual revenue/equity added from auditor-backed English source; Q2 assurance remains absent. PNJ H1 and PVD cash-flow numeric ambiguity remain blocked. Annual baseline94, current official fields9 and strict share/valuation0 unchanged. [Campaign](internal/STOCK_LOOKUP_AUTONOMOUS_CAMPAIGN_20261008.md).
 
@@ -195,68 +211,51 @@ Fact kinds used below: **CURRENT FACT** (verified in repo or by a stated read-on
 
 ## 4. HOST-LOCAL facts (verified 2026-10-04; not tracked by git)
 
-- **Calendar registration: COMPLETE (local).** The original October-2 DNSE `working_dates` response
-  (257 forward dates, 2026-10-02 … 2027-10-01, raw SHA-256 `fce46fe3…33d6d`) was registered once via
-  `tools/register_working_dates_receipt.py`, offline, `network_requests = 0`, `historical_extension = false`,
-  `authority_effect = NONE`. Registration `governed_calendar_registration:5cceff48f1f72934b856cc2cede8f959a276ce9f39f431057f0d27a2baf54941`,
-  receipt `dnse_working_dates_calendar_receipt:c324eb2a9825b965db63eabf5dd4fd213290351fb9f7b91442cf56ab10143ca3`,
-  stored under git-ignored `operations-review/prospective-calendar-evidence-v1/`. The resolver returns
-  `2026-10-02 → 2026-10-05` governed continuity = `TRUE` solely because of that receipt, and `UNKNOWN`
-  for cutoffs before its documentation knowledge time (2026-10-02T03:40:02Z). The September 5 – October 1
-  gap stays `UNSUPPORTED_CALENDAR_GAP`. It did not create capture, T0, foreign maturity or backfill.
-  Re-verify (run from the production checkout root, read-only): `python -c "import prospective_pit_capture_retention as s,governed_session_chain as g;from pathlib import Path;c=s.calendar_evidence_at_cutoff(Path('.'),cutoff='2026-10-05T12:10:00Z');print(g.are_consecutive_governed_sessions('2026-10-02','2026-10-05','2026-10-05T12:10:00Z',c)['state'])"`.
-  Monday's own Daily also retains its own `working_dates` probe; registration is **not** required for
-  first capture or marker, it affects continuity rows only.
-- **Rehearsal scratch (15.24 GiB) deleted**; C: free was 35.61 GiB afterwards. Other `Temp\claude\*`
-  and `Temp\codex-*` directories were classified UNCERTAIN and left alone.
-- **Last observed host preflight (2026-10-04, after the above): `BLOCKED`** — available commit 9.11 GiB
-  (<9.2), physical 3.22 GiB (AMBER), C: free 35.61 GiB (READY), writers none. An observation, not a
-  permit: re-run immediately before launch. Close browsers/IDEs until READY; do not alter thresholds
-  or kill processes from the tool.
-- **2026-10-05 Owner Daily attempts (16:08, 16:35): refused by host preflight `BLOCKED`** (commit
-  1.74 GiB, physical 1.02 GiB, C: 17.29 GiB). Cause: an orphaned Git-Bash `find / -name …` left by an
-  agent session (started 05:46) held ~12.6M handles → ~8 GB kernel paged pool, and kept deleted files
-  delete-pending. After it was stopped: commit 6.51 GiB (BLOCKED), physical 2.27 GiB (BLOCKED), C:
-  27.1 GiB (READY). Remaining load is ordinary owner apps; the gate and thresholds are unchanged.
-  Agents must never run root-wide `find /` (or other unbounded scans) on this host.
-- **2026-10-05 Owner Daily 18:00 (run `ad670e74…`, main `f2721f4`): host READY, Canonical Daily exit 1**
-  in `build_tiered_bundle` (`AttributeError: 'str' object has no attribute 'resolve'`). First
-  trading session at/after `PRODUCTION_V2_START_SESSION`, so the first production RETAINED T0 seal
-  index, whose serialized `{"path": str}` reached `_rel` (which assumed `Path`). Already sealed before
-  the crash and verified read-only: T0 `prospective_decision_snapshot:1c496e3f…` (seal index,
-  write receipt, file hash), capture session, first-complete-capture marker (2026-10-05), Thesis T0.
-  No tier bundle, operation record, journal completion, state commit or publication; local
-  `dashboard-runtime` was promoted at 18:26. Corrective (branch
-  `fix/owner-daily-20261005-recovery-v1`): `_rel` accepts `Path | str`; a V2 session reuses its
-  verified original sealed T0 instead of re-minting one (the operation identity embeds producer HEAD,
-  so any rerun after a merge would otherwise seal a conflicting second T0). Child peak ~10 GB was
-  reached in the telemetry-silent enrichment→Producer→T0 window; attribution is a separate resource
-  milestone.
-- **2026-10-05 Owner Daily rerun 19:56 (main `c7362dd`): Canonical Daily `LOCAL_COMPLETE`**
-  (operation `daily_research_session_operation:140adc8a…`, original T0 reused), Producer state and
-  Dashboard published, then AI handoff `AI_HANDOFF_REQUIRED_FILE_MISSING`. The first attempt's own
-  after-close rollforward had retained a post-cutoff event context (`…-20261005`), which hid the
-  eligible `29f3a1bc…` (`…-20261002`) from the rerun; the completed lock therefore has no
-  `event_context`, so the operation built no opportunity decision queue — while the handoff required
-  it unconditionally. Corrective (branch `fix/owner-daily-final-recovery-20261005`): the event
-  context is the newest candidate known by the unchanged 15:00 cutoff; the handoff requires the queue
-  exactly when the sealed operation declares it (identity-checked) and otherwise publishes an
-  explicit `NOT_DECLARED_BY_SEALED_OPERATION`. The completed 2026-10-05 lock is kept as recorded.
-- **2026-10-05 Owner Daily completion (resume on `317118c`): PASS.** Canonical Daily was not rerun.
-  Dashboard `origin/main` `5a050b46b2092e2d5bac2c0af216624447800c83`, `market_session` 2026-10-05,
-  attestation `governed_publication_attestation:6daf0b708354b0384286a5c331c1765011602e446ffcd1ecd2322b3570955808`,
-  Dashboard CI `37335772813` and Deploy Pages `37335959559` both success, public-byte identity PASS.
-  AI handoff `origin/main` `9f379cc2b6f1655806ed42d63161c17479e79951`, `READY_FOR_AI`, queue
+- **Calendar registration: COMPLETE (local).** The original October-2 DNSE `working_dates` response (257 forward dates, 2026-10-02 … 2027-10-01, raw SHA-256
+  `fce46fe3…33d6d`) was registered once via `tools/register_working_dates_receipt.py`, offline, `network_requests = 0`, `historical_extension = false`,
+  `authority_effect = NONE`. Registration `governed_calendar_registration:5cceff48f1f72934b856cc2cede8f959a276ce9f39f431057f0d27a2baf54941`, receipt
+  `dnse_working_dates_calendar_receipt:c324eb2a9825b965db63eabf5dd4fd213290351fb9f7b91442cf56ab10143ca3`, stored under git-ignored
+  `operations-review/prospective-calendar-evidence-v1/`. The resolver returns `2026-10-02 → 2026-10-05` governed continuity = `TRUE` solely because of that
+  receipt, and `UNKNOWN` for cutoffs before its documentation knowledge time (2026-10-02T03:40:02Z). The September 5 – October 1 gap stays
+  `UNSUPPORTED_CALENDAR_GAP`. It did not create capture, T0, foreign maturity or backfill. Re-verify (run from the production checkout root, read-only): `python
+  -c "import prospective_pit_capture_retention as s,governed_session_chain as g;from pathlib import
+  Path;c=s.calendar_evidence_at_cutoff(Path('.'),cutoff='2026-10-05T12:10:00Z');print(g.are_consecutive_governed_sessions('2026-10-02','2026-10-05','2026-10-05T12:10:00Z',c)['state'])"`.
+  Monday's own Daily also retains its own `working_dates` probe; registration is **not** required for first capture or marker, it affects continuity rows only.
+- **Rehearsal scratch (15.24 GiB) deleted**; C: free was 35.61 GiB afterwards. Other `Temp\claude\*` and `Temp\codex-*` directories were classified UNCERTAIN
+  and left alone.
+- **Last observed host preflight (2026-10-04, after the above): `BLOCKED`** — available commit 9.11 GiB (<9.2), physical 3.22 GiB (AMBER), C: free 35.61 GiB
+  (READY), writers none. An observation, not a permit: re-run immediately before launch. Close browsers/IDEs until READY; do not alter thresholds or kill
+  processes from the tool.
+- **2026-10-05 Owner Daily attempts (16:08, 16:35): refused by host preflight `BLOCKED`** (commit 1.74 GiB, physical 1.02 GiB, C: 17.29 GiB). Cause: an orphaned
+  Git-Bash `find / -name …` left by an agent session (started 05:46) held ~12.6M handles → ~8 GB kernel paged pool, and kept deleted files delete-pending. After
+  it was stopped: commit 6.51 GiB (BLOCKED), physical 2.27 GiB (BLOCKED), C: 27.1 GiB (READY). Remaining load is ordinary owner apps; the gate and thresholds
+  are unchanged. Agents must never run root-wide `find /` (or other unbounded scans) on this host.
+- **2026-10-05 Owner Daily 18:00 (run `ad670e74…`, main `f2721f4`): host READY, Canonical Daily exit 1** in `build_tiered_bundle` (`AttributeError: 'str' object
+  has no attribute 'resolve'`). First trading session at/after `PRODUCTION_V2_START_SESSION`, so the first production RETAINED T0 seal index, whose serialized
+  `{"path": str}` reached `_rel` (which assumed `Path`). Already sealed before the crash and verified read-only: T0 `prospective_decision_snapshot:1c496e3f…`
+  (seal index, write receipt, file hash), capture session, first-complete-capture marker (2026-10-05), Thesis T0. No tier bundle, operation record, journal
+  completion, state commit or publication; local `dashboard-runtime` was promoted at 18:26. Corrective (branch `fix/owner-daily-20261005-recovery-v1`): `_rel`
+  accepts `Path | str`; a V2 session reuses its verified original sealed T0 instead of re-minting one (the operation identity embeds producer HEAD, so any rerun
+  after a merge would otherwise seal a conflicting second T0). Child peak ~10 GB was reached in the telemetry-silent enrichment→Producer→T0 window; attribution
+  is a separate resource milestone.
+- **2026-10-05 Owner Daily rerun 19:56 (main `c7362dd`): Canonical Daily `LOCAL_COMPLETE`** (operation `daily_research_session_operation:140adc8a…`, original T0
+  reused), Producer state and Dashboard published, then AI handoff `AI_HANDOFF_REQUIRED_FILE_MISSING`. The first attempt's own after-close rollforward had
+  retained a post-cutoff event context (`…-20261005`), which hid the eligible `29f3a1bc…` (`…-20261002`) from the rerun; the completed lock therefore has no
+  `event_context`, so the operation built no opportunity decision queue — while the handoff required it unconditionally. Corrective (branch
+  `fix/owner-daily-final-recovery-20261005`): the event context is the newest candidate known by the unchanged 15:00 cutoff; the handoff requires the queue
+  exactly when the sealed operation declares it (identity-checked) and otherwise publishes an explicit `NOT_DECLARED_BY_SEALED_OPERATION`. The completed
+  2026-10-05 lock is kept as recorded.
+- **2026-10-05 Owner Daily completion (resume on `317118c`): PASS.** Canonical Daily was not rerun. Dashboard `origin/main`
+  `5a050b46b2092e2d5bac2c0af216624447800c83`, `market_session` 2026-10-05, attestation
+  `governed_publication_attestation:6daf0b708354b0384286a5c331c1765011602e446ffcd1ecd2322b3570955808`, Dashboard CI `37335772813` and Deploy Pages `37335959559`
+  both success, public-byte identity PASS. AI handoff `origin/main` `9f379cc2b6f1655806ed42d63161c17479e79951`, `READY_FOR_AI`, queue
   `NOT_DECLARED_BY_SEALED_OPERATION`. Action Center
-  `personal_investment_decision_action_center/v1:37ec23f5d430ce11b89520f171d8c4d8d0011c26b2b0feb59752e0efa435514a`.
-  First real Canonical-child `peak_rss_bytes` = `10985897984` (~10.23 GiB), above the 6.5–8.0 GiB
-  band. Later publication-only resumes peaked at `6840815616` and `2057273344` because they skipped
-  Canonical Daily. Merged before that PASS: PR #64 `c316458` (companion run binding), PR #65
-  `cc8f548` (hermetic host fixture; dashboard failure reason kept), PR #66 `317118c` (`gh run watch`
-  conclusion). Producer CI `37335518993` on `317118c` succeeded. Volume-and-flow context and the
-  Thesis T0 sidecar for this session stayed `UNAVAILABLE` (no `event_context` on the frozen lock;
-  reused T0 source IID differs from the later IID). Both are fail-soft. The lock and the T0 were
-  not rewritten.
+  `personal_investment_decision_action_center/v1:37ec23f5d430ce11b89520f171d8c4d8d0011c26b2b0feb59752e0efa435514a`. First real Canonical-child `peak_rss_bytes`
+  = `10985897984` (~10.23 GiB), above the 6.5–8.0 GiB band. Later publication-only resumes peaked at `6840815616` and `2057273344` because they skipped
+  Canonical Daily. Merged before that PASS: PR #64 `c316458` (companion run binding), PR #65 `cc8f548` (hermetic host fixture; dashboard failure reason kept),
+  PR #66 `317118c` (`gh run watch` conclusion). Producer CI `37335518993` on `317118c` succeeded. Volume-and-flow context and the Thesis T0 sidecar for this
+  session stayed `UNAVAILABLE` (no `event_context` on the frozen lock; reused T0 source IID differs from the later IID). Both are fail-soft. The lock and the T0
+  were not rewritten.
 
 ## 5. BLOCKED (evidence-blocked; do not work around)
 

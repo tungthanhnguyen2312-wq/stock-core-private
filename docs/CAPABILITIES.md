@@ -18,7 +18,16 @@ only. Contract `decision_intelligence_coverage_calibration/v1`. It does not vote
 or recommend. The optional read-only CLI is deferred.
 [Closure evidence](internal/DECISION_INTELLIGENCE_COVERAGE_AND_CALIBRATION_CLOSURE_20261007.md).
 
-Macro V1: Daily/AI/cockpit wired; live acceptance pending.
+Macro V1: Daily/AI/cockpit wired; October 8 live acceptance verified (`MACRO_REGIME_20261008_LIVE_ACCEPTED`;
+exact retained identities in ACTIVE_STATE). Source authority unchanged.
+
+### Long-term company economics evidence
+- Contract: [long_term_company_economics_evidence_contract.md](long_term_company_economics_evidence_contract.md)
+- Runtime: `EXPERIMENTAL` (opt-in library) · Authority: `NON_VOTING` · Production: `OFFLINE_ONLY`
+- Input: existing qualified official overlay with explicit cutoff; optional verified, timed thesis research references and method-qualified relative context
+- Predecessor: existing financial qualification, earnings-component and thesis contracts (unchanged)
+- Blocker: no qualified multi-year structural/cycle proof, recurrence/accounting normalization bridge or strict share continuity
+- Next trigger: separately authorized candidate release; no automatic Daily consumer, action or successor
 
 ## A. Market evidence and calendar
 
