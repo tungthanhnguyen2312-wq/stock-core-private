@@ -52,8 +52,9 @@ The [currency context contract](currency_preserving_interim_context_contract.md)
 source-qualified USD income fields for context only. No FX conversion or VND valuation
 input/citation use follows.
 The [earnings component contract](reported_earnings_component_context_contract.md) admits
-explicit reported disposal results as descriptive context. Recurrence stays UNKNOWN; no
-normalized EPS, annual valuation input, action or score change follows.
+explicit reported disposal results and audited annual provision components as descriptive
+context. Period stays explicit. Recurrence stays UNKNOWN; no normalized EPS, annual
+valuation input, action or score change follows. Superscript normalization is not authorized.
 
 | Area | Status | Meaning | Controlling source |
 |---|---|---|---|

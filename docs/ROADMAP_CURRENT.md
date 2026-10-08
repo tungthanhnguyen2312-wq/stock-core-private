@@ -5,7 +5,17 @@ the machine state `ROADMAP_STATE.json`). Updated 2026-10-08 from starting main `
 auto-starts.** A milestone starts only when `python tools/stocklookup_roadmap.py --can-start <ID>` allows
 it or the owner records an explicit override (AI_RULES rule 11). Facts: [ACTIVE_STATE.md](ACTIVE_STATE.md).
 
-## NOW — `PNJ_VRE_REVIEWED_H1_PROVISION_COMPONENT_AND_TOTAL_ASSET_IDENTITY_V1` (COMPLETE)
+## NOW — `ANNUAL_EARNINGS_COMPONENT_AND_SOURCE_FAITHFUL_OCR_NORMALIZATION_V1` (COMPLETE)
+
+Audited FY2025 components may enter historical earnings-quality context when the row,
+column, amount, unit, scope, assurance and citation are literal. FPT line 03
+`Provisions` 651,406,282,654 VND is that component. It stays `FY2025 / AUDITED`,
+recurrence UNKNOWN, and does not change current fields, P/E inputs, normalized EPS,
+or completed October 7 records. Source-faithful superscript normalization is not
+provable on the five retained cells and is not applied. `Số cudi ky` and `²0²5`
+remain unqualified headers.
+
+## PRIOR — `PNJ_VRE_REVIEWED_H1_PROVISION_COMPONENT_AND_TOTAL_ASSET_IDENTITY_V1` (COMPLETE)
 
 The October-8 owner campaign delegates repeated bounded implementation and release.
 HPG FY2025 audited capital note qualifies 7,675,465,855 ordinary outstanding shares

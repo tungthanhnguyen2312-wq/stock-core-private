@@ -1,0 +1,70 @@
+[
+  {
+    "issuer": "FPT",
+    "statement_family": "income_statement",
+    "line_code": "61",
+    "canonical_metric": "attributable_net_income",
+    "raw_token": "9,376,1²7,6²9,501",
+    "token_class": "NUMERIC_AMOUNT",
+    "row_identity_qualified": true,
+    "column_identity_qualified": true,
+    "competing_numeric_token": false,
+    "footnote_ambiguity": false,
+    "independent_confirmation": null,
+    "native_text_characters_on_statement_pages": 0
+  },
+  {
+    "issuer": "PNJ",
+    "statement_family": "cash_flow",
+    "line_code": "20",
+    "canonical_metric": "operating_cash_flow",
+    "reporting_period": "2026-H1",
+    "raw_token": "1.991.053.934.²37",
+    "token_class": "NUMERIC_AMOUNT",
+    "row_identity_qualified": true,
+    "column_identity_qualified": true,
+    "competing_numeric_token": false,
+    "footnote_ambiguity": false,
+    "independent_confirmation": null
+  },
+  {
+    "issuer": "PNJ",
+    "statement_family": "cash_flow",
+    "line_code": "03",
+    "canonical_metric": "provision_charge_or_reversal_adjustment",
+    "reporting_period": "2025",
+    "raw_token": "(7.695.²40.894)",
+    "token_class": "NUMERIC_AMOUNT",
+    "row_identity_qualified": true,
+    "column_identity_qualified": true,
+    "competing_numeric_token": false,
+    "footnote_ambiguity": false,
+    "independent_confirmation": null
+  },
+  {
+    "issuer": "PVD",
+    "statement_family": "balance_sheet",
+    "line_code": "110",
+    "canonical_metric": "cash_and_equivalents",
+    "raw_token": "1.8²1.²73.980.²43",
+    "token_class": "NUMERIC_AMOUNT",
+    "row_identity_qualified": true,
+    "column_identity_qualified": true,
+    "competing_numeric_token": false,
+    "footnote_ambiguity": false,
+    "independent_confirmation": null
+  },
+  {
+    "issuer": "HPG",
+    "statement_family": "income_statement",
+    "line_code": "61",
+    "canonical_metric": "attributable_net_income",
+    "raw_token": "15.453.174.006.²²3",
+    "token_class": "NUMERIC_AMOUNT",
+    "row_identity_qualified": true,
+    "column_identity_qualified": true,
+    "competing_numeric_token": false,
+    "footnote_ambiguity": true,
+    "independent_confirmation": null
+  }
+]

@@ -1354,13 +1354,18 @@ def project_session(*, baseline: Mapping[str, Any], official_rows: list[Mapping[
                               and row.get("canonical_metric") in FOREIGN_CONTEXT_METRICS
                               and row.get("statement_family") == "income_statement"
                               and row.get("period_type") == "interim")
-        component = (row.get("canonical_metric") in EARNINGS_COMPONENT_SPECS
-                     or row.get("context_kind") == "EARNINGS_QUALITY_COMPONENT")
-        if component and not earnings_component_is_admitted(row):
+        component_row = (row.get("canonical_metric") in EARNINGS_COMPONENT_SPECS
+                         or row.get("context_kind") == "EARNINGS_QUALITY_COMPONENT")
+        component_admitted = bool(component_row and earnings_component_is_admitted(row))
+        if component_row and not component_admitted:
             reasons.append("EARNINGS_COMPONENT_IDENTITY_NOT_QUALIFIED")
+        # An admitted annual component keeps its own period policy.  It must not
+        # be forced through the exact-field annual identity, and a failed
+        # component must not escape that identity by dropping its markers.
         annual_context = (row.get("context_kind") == "AUDITED_ANNUAL_FIELD"
                           or row.get("projection_period_policy") == "AUDITED_ANNUAL_CONTEXT_ONLY"
-                          or (row.get("period_type") == "annual" and row.get("ingress_contract") == INTERIM_INGRESS))
+                          or (row.get("period_type") == "annual" and row.get("ingress_contract") == INTERIM_INGRESS
+                              and not component_admitted))
         if annual_context and not (
                 row.get("context_kind") == "AUDITED_ANNUAL_FIELD"
                 and row.get("projection_period_policy") == "AUDITED_ANNUAL_CONTEXT_ONLY"
@@ -1399,9 +1404,11 @@ def project_session(*, baseline: Mapping[str, Any], official_rows: list[Mapping[
         field = row | authority | {
             "temporal_status": "CURRENT_OFFICIAL_FACT" if current else "HISTORICAL_OFFICIAL_FACT",
             "source_identity": row.get("source_locator") or "official-document:" + row["document_sha256"],
-            "allowed_projection_use": "EXACT_FIELD_CURRENT_RESEARCH_CONTEXT",
-            "valuation_use": "NOT_PERMITTED_AUDITED_ANNUAL_CONTEXT" if annual_context else (
-                "NOT_PERMITTED_EARNINGS_COMPONENT_CONTEXT" if component else (
+            "allowed_projection_use": (
+                "HISTORICAL_EARNINGS_QUALITY_CONTEXT" if component_admitted and row.get("period_type") == "annual"
+                else "EXACT_FIELD_CURRENT_RESEARCH_CONTEXT"),
+            "valuation_use": "NOT_PERMITTED_EARNINGS_COMPONENT_CONTEXT" if component_admitted else (
+                "NOT_PERMITTED_AUDITED_ANNUAL_CONTEXT" if annual_context else (
                 "NOT_PERMITTED_FOREIGN_CURRENCY_CONTEXT" if native_usd_context else "EXISTING_METRIC_PERIOD_CONTRACT_ONLY")),
             "foreign_currency_conversion": "NOT_PERMITTED",
             "annualization": "NOT_PERMITTED", "ttm_derivation": "NOT_PERMITTED",
@@ -1432,6 +1439,25 @@ def project_session(*, baseline: Mapping[str, Any], official_rows: list[Mapping[
                 "reason": "+".join(sorted({EARNINGS_COMPONENT_REASONS[f["canonical_metric"]] for f in components})),
                 "recurrence_assessment": "UNKNOWN", "normalization_status": "NOT_CALCULATED",
                 "normalized_eps": None, "component_evidence": components,
+            }
+        historical_components = [f for f in record["official_field_context"]
+                                 if f.get("context_kind") == "EARNINGS_QUALITY_COMPONENT"
+                                 and f.get("period_type") == "annual"
+                                 and f["temporal_status"] == "HISTORICAL_OFFICIAL_FACT"
+                                 and f["normalized_value"] != 0]
+        if historical_components:
+            periods = sorted({(f["reporting_period"], f["period_type"]) for f in historical_components})
+            record["historical_earnings_quality_context"] = {
+                "status": "NON_RECURRING_COMPONENT_PRESENT_OR_POSSIBLE",
+                "reason": "+".join(sorted({EARNINGS_COMPONENT_REASONS[f["canonical_metric"]] for f in historical_components})),
+                "component_semantic_types": sorted({f.get("component_semantic_type") for f in historical_components}),
+                "recurrence_assessment": "UNKNOWN", "normalization_status": "NOT_CALCULATED",
+                "normalized_eps": None,
+                "periods": [{"reporting_period": period, "period_type": period_type,
+                             "period_label": f"FY{period}" if period_type == "annual" else period}
+                            for period, period_type in periods],
+                "current_interim_evidence": False, "valuation_effect": "NONE",
+                "component_evidence": historical_components,
             }
     cohort = {}
     for ticker in COHORT:

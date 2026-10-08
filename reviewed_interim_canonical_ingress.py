@@ -35,6 +35,25 @@ EARNINGS_COMPONENT_REASONS = {
     "provision_charge_or_reversal_adjustment": "EXPLICIT_REPORTED_PROVISION_CHARGE_OR_REVERSAL_ADJUSTMENT"}
 EARNINGS_COMPONENT_CONTRACT = "reported_earnings_component_context/v1"
 ANNUAL_CONTEXT_CONTRACT = "audited_annual_exact_field_context/v1"
+ANNUAL_COMPONENT_PERIOD_POLICY = "AUDITED_ANNUAL_COMPONENT_CONTEXT_ONLY"
+PROVISION_COMPONENT_REPORTED = "PROVISION_COMPONENT_REPORTED"
+REPORTED_EARNINGS_COMPONENT = "REPORTED_EARNINGS_COMPONENT"
+
+
+def _audited_annual_component_period(row: Mapping[str, Any], metric: str) -> bool:
+    """Exact FY identity.  An annual component is never an interim fact."""
+    semantic = (PROVISION_COMPONENT_REPORTED if metric == "provision_charge_or_reversal_adjustment"
+                else REPORTED_EARNINGS_COMPONENT)
+    return (row.get("period_type") == "annual"
+            and row.get("reporting_period") == "2025"
+            and row.get("audit_or_review_status") == "audited"
+            and bool((row.get("assurance_evidence") or {}).get("evidence_id"))
+            and row.get("projection_period_policy") == ANNUAL_COMPONENT_PERIOD_POLICY
+            and row.get("component_period_class") == "AUDITED_ANNUAL"
+            and row.get("component_semantic_type") == semantic
+            and row.get("recurrence_assessment") == "UNKNOWN"
+            and row.get("normalization_status") == "NOT_CALCULATED"
+            and row.get("normalized_eps") is None)
 
 
 def earnings_component_is_admitted(row: Mapping[str, Any]) -> bool:
@@ -42,12 +61,13 @@ def earnings_component_is_admitted(row: Mapping[str, Any]) -> bool:
     evidence = row.get("reported_component_evidence") or {}
     metric = str(row.get("canonical_metric") or "")
     family, code = EARNINGS_COMPONENT_SPECS.get(metric, (None, None))
+    period_ok = row.get("period_type") == "interim" or _audited_annual_component_period(row, metric)
     return (family is not None
             and row.get("context_kind") == "EARNINGS_QUALITY_COMPONENT"
             and row.get("component_contract") == EARNINGS_COMPONENT_CONTRACT
             and row.get("ingress_contract") == CONTRACT_VERSION
             and row.get("projection_currency_policy") == "VND_EXISTING_CONTRACT"
-            and row.get("currency") == "VND" and row.get("period_type") == "interim"
+            and row.get("currency") == "VND" and period_ok
             and row.get("statement_family") == family
             and str(row.get("line_code")) == code
             and evidence.get("citation_id") == row.get("citation_id")
@@ -115,6 +135,44 @@ def overlay_rows_from_panel_facts(panel_facts: Sequence[Mapping[str, Any]], *,
         if reasons:
             blocked.append({"key": identity, "state": "BLOCKED", "reasons": sorted(set(reasons))})
             continue
+        value = fact["value"]
+        if component and annual_context:
+            semantic = (PROVISION_COMPONENT_REPORTED
+                        if fact["canonical_metric"] == "provision_charge_or_reversal_adjustment"
+                        else REPORTED_EARNINGS_COMPONENT)
+            context_markers = {
+                "context_kind": "EARNINGS_QUALITY_COMPONENT",
+                "component_contract": EARNINGS_COMPONENT_CONTRACT,
+                "projection_period_policy": ANNUAL_COMPONENT_PERIOD_POLICY,
+                "component_period_class": "AUDITED_ANNUAL",
+                "component_semantic_type": semantic,
+                "recurrence_assessment": "UNKNOWN",
+                "normalization_status": "NOT_CALCULATED",
+                "normalized_eps": None,
+                "component_direction": ("REPORTED_POSITIVE" if value > 0 else
+                                        "REPORTED_NEGATIVE" if value < 0 else "REPORTED_ZERO"),
+                "research_use_restrictions": [
+                    "NOT_CURRENT_INTERIM_EVIDENCE", "DOES_NOT_NORMALIZE_EARNINGS",
+                    "DOES_NOT_CREATE_NORMALIZED_EPS", "DOES_NOT_CHANGE_VALUATION_AUTHORITY",
+                    "DOES_NOT_CHANGE_ANNUAL_FINANCIAL_FACT_AUTHORITY", "RECURRENCE_NOT_IMPLIED",
+                ],
+                "reported_component_evidence": {
+                    "literal_label": lineage["row_object"]["reconstructed_label"],
+                    "citation_id": lineage["citation_id"],
+                },
+            }
+        elif annual_context:
+            context_markers = {"context_kind": "AUDITED_ANNUAL_FIELD",
+                               "annual_context_contract": ANNUAL_CONTEXT_CONTRACT,
+                               "projection_period_policy": "AUDITED_ANNUAL_CONTEXT_ONLY"}
+        elif component:
+            context_markers = {"context_kind": "EARNINGS_QUALITY_COMPONENT",
+                               "component_contract": EARNINGS_COMPONENT_CONTRACT,
+                               "reported_component_evidence": {
+                                   "literal_label": lineage["row_object"]["reconstructed_label"],
+                                   "citation_id": lineage["citation_id"]}}
+        else:
+            context_markers = {}
         rows.append({
             "ticker": fact["issuer_identity"], "canonical_metric": fact["canonical_metric"],
             "reporting_period": fact["reporting_period"], "period_type": fact["period_type"],
@@ -123,7 +181,7 @@ def overlay_rows_from_panel_facts(panel_facts: Sequence[Mapping[str, Any]], *,
             "temporal_nature": fact["temporal_nature"],
             # ``value`` is the absolute source-currency amount; declared scale is kept apart so the
             # existing citation loader (scale "units") cannot rescale it a second time.
-            "currency": fact["currency"], "normalized_value": fact["value"], "value": fact["value"],
+            "currency": fact["currency"], "normalized_value": value, "value": value,
             "projection_currency_policy": "VND_EXISTING_CONTRACT" if fact["currency"] == "VND" else "SOURCE_CURRENCY_CONTEXT_ONLY",
             "already_normalized": True, "unit_scale": 1,
             "source_unit_scale": (lineage.get("unit_evidence") or {}).get("unit_scale"),
@@ -135,11 +193,7 @@ def overlay_rows_from_panel_facts(panel_facts: Sequence[Mapping[str, Any]], *,
             "publication_date": None, "source_family": "issuer_ir", "restatement": None,
             "extraction_method": lineage.get("extraction_method"), "reason_codes": list(fact.get("reason_codes") or []),
             "ingress_contract": CONTRACT_VERSION, "overlay_contract": OVERLAY_CONTRACT,
-            **({"context_kind": "AUDITED_ANNUAL_FIELD", "annual_context_contract": ANNUAL_CONTEXT_CONTRACT,
-                "projection_period_policy": "AUDITED_ANNUAL_CONTEXT_ONLY"} if annual_context else {}),
-            **({"context_kind": "EARNINGS_QUALITY_COMPONENT", "component_contract": EARNINGS_COMPONENT_CONTRACT,
-                "reported_component_evidence": {"literal_label": lineage["row_object"]["reconstructed_label"],
-                    "citation_id": lineage["citation_id"]}} if component else {}),
+            **context_markers,
         })
     rows.sort(key=lambda row: (row["ticker"], row["reporting_period"], row["canonical_metric"]))
     blocked.sort(key=lambda item: json.dumps(item["key"], sort_keys=True))
@@ -165,11 +219,20 @@ def policy_fact(row: Mapping[str, Any]) -> dict[str, Any]:
 
 
 def authority_projection(row: Mapping[str, Any]) -> dict[str, Any]:
-    """Fact qualification and research admissibility, kept separate by the existing policy."""
+    """Fact qualification and research admissibility, kept separate by the existing policy.
+
+    A reported component can be a qualified fact for its exact period and still
+    must not become normalized earnings or a research-admissible earnings input.
+    """
     result = evaluate_fact(policy_fact(row))
+    research_reasons = list(result["research_reason_codes"])
+    research_status = result["research_status"]
+    if row.get("context_kind") == "EARNINGS_QUALITY_COMPONENT":
+        research_reasons.append("EARNINGS_COMPONENT_DOES_NOT_NORMALIZE_EARNINGS")
+        research_status = "partial"
     return {"factual_status": result["status"], "factual_reason_codes": result["reason_codes"],
-            "research_status": result["research_status"],
-            "research_reason_codes": result["research_reason_codes"]}
+            "research_status": research_status,
+            "research_reason_codes": sorted(set(research_reasons))}
 
 
 def precedence_row(row: Mapping[str, Any], legacy: Mapping[str, Any] | None) -> dict[str, Any]:

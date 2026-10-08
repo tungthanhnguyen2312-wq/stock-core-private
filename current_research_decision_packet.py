@@ -47,7 +47,10 @@ def _valuation(row):
  if share.get('official_share_observation'):
   result['official_share_observation']=copy.deepcopy(share['official_share_observation'])
  if "official_field_context" in financial:
-  result.update({k:copy.deepcopy(financial.get(k)) for k in ("official_field_context","baseline_metric_temporal_context","earnings_quality_context","interim_context_does_not_supply_annual_valuation_inputs")})
+  copied = ["official_field_context","baseline_metric_temporal_context","earnings_quality_context","interim_context_does_not_supply_annual_valuation_inputs"]
+  if "historical_earnings_quality_context" in financial:
+   copied.append("historical_earnings_quality_context")
+  result.update({k:copy.deepcopy(financial.get(k)) for k in copied})
  return result
 def _historical(row, artifact):
  return {"as_of_session":row.get("as_of_session"),"context_status":row.get("context_status"),"structural_state":copy.deepcopy(row.get("structural_state")),"volatility_regime":copy.deepcopy(row.get("volatility_regime")),"momentum":copy.deepcopy(row.get("momentum")),"drawdown":copy.deepcopy(row.get("drawdown")),"authority_boundary":copy.deepcopy(artifact.get("authority_boundary"))}

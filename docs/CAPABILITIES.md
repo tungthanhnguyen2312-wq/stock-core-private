@@ -136,6 +136,7 @@ and no production Daily launch. Disk admission remains independently mandatory.
   lane under [currency context contract](currency_preserving_interim_context_contract.md); nonannual
   research-use restrictions remain. PNJ parent profit and VRE reported disposal context
   follow the [earnings contract](reported_earnings_component_context_contract.md); recurrence UNKNOWN.
+  FPT FY2025 line 03 Provisions is an audited annual component in historical context only.
   FY2025 historical context now has ten fields: HPG revenue/profit, PNJ cash/operating flow, PVD revenue/profit/assets/equity and FPT revenue/equity. [Annual contract](audited_annual_exact_field_context_contract.md). Annual metrics/share gates unchanged; other fields retain geometry blockers.
 - Contract: [financial_statement_canonical_contract.md](financial_statement_canonical_contract.md); `financial_analysis_engine_v2.py`
 - Runtime: `ACTIVE` · Authority: `SCOPED` (provider-reported research evidence with explicit method/provenance; no official promotion) · Production: `IN_DAILY_BLOCKING` (inside enrichment; absent inputs yield explicit ABSENT records)

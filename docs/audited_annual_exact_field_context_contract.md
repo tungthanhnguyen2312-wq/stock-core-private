@@ -111,3 +111,9 @@ and up to eight unique front pages1–8, with total40-page batch cap. Append-onl
 preserve all17 earlier facts and their knowledge/citations. Annual context8→10;
 completed October7/current official9/annual exact94/shares and strict valuation0 unchanged.
 Other annual geometry/numeric blockers and Q2 absent assurance remain explicit.
+
+FPT FY2025 cash-flow line 03 Provisions, 651,406,282,654 VND, is an audited annual
+earnings-quality component. It is not an eleventh exact annual field. The ten-field
+annual context, current official count, annual exact baseline, and strict valuation
+counts above stay unchanged. The component carries period FY2025 and does not become
+current interim evidence or normalized EPS.

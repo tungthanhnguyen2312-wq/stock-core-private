@@ -15,7 +15,7 @@
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "PNJ_VRE_REVIEWED_H1_PROVISION_COMPONENT_AND_TOTAL_ASSET_IDENTITY_V1",
+    "milestone": "ANNUAL_EARNINGS_COMPONENT_AND_SOURCE_FAITHFUL_OCR_NORMALIZATION_V1",
     "state": "COMPLETE"
   },
   "queued_next": [],
@@ -3404,6 +3404,27 @@
       "source_doc": "docs/internal/STOCK_LOOKUP_AUTONOMOUS_CAMPAIGN_20261008.md",
       "notes": "Bounded share assessment (VNM/FPT/PNJ/QNS/PVD/POW/SSI/VCB): zero retained executed-event/continuity evidence; NO_BOUNDED_SHARE_CHAIN_CURRENTLY_QUALIFIABLE. Retained reviewed H1 requalification, no network: PNJ cash-flow line03 provisions 2,667,248,523,366 VND and VRE (7,066)m VND components; VRE cash 5,707,705m, equity 49,310,673m, OCF 1,555,752m. Values visually verified; knowledge 2026-10-08, excluded from completed October7. Row-270 renumbered other-long-term-assets false total-asset path closed by literal label contract. PNJ reviewer emphasis (note39) retained literally. Append-only overlay 19->24; strict share/valuation0 unchanged.",
       "terminal_disposition": "FIVE_LATER_KNOWN_INTERIM_FIELDS_AND_COMPONENTS_TOTAL_ASSET_IDENTITY_HARDENED"
+    },
+    {
+      "milestone_id": "ANNUAL_EARNINGS_COMPONENT_AND_SOURCE_FAITHFUL_OCR_NORMALIZATION_V1",
+      "state": "COMPLETE",
+      "starting_checkpoint": "559ff7a8453631053b2b5ff935c912e0f3568266",
+      "checkpoint": "HEAD",
+      "candidate_branch": "feature/annual-earnings-component-ocr-20261008",
+      "dependencies": [
+        "PNJ_VRE_REVIEWED_H1_PROVISION_COMPONENT_AND_TOTAL_ASSET_IDENTITY_V1"
+      ],
+      "unlocks": [],
+      "owner_authorized": true,
+      "owner_override": "OWNER_DIRECTIVE_2026_10_08_ANNUAL_EARNINGS_COMPONENT_AND_SOURCE_FAITHFUL_OCR_NORMALIZATION_V1",
+      "authority_effect": "FIELD_SCOPED_HISTORICAL_EARNINGS_COMPONENT_CONTEXT_ONLY",
+      "state_history": [
+        "ACTIVE",
+        "COMPLETE"
+      ],
+      "source_doc": "docs/internal/STOCK_LOOKUP_AUTONOMOUS_CAMPAIGN_20261008.md",
+      "notes": "FPT FY2025 cash-flow line 03 Provisions 651,406,282,654 VND admitted as an audited annual component. Period stays FY2025. Recurrence UNKNOWN. No normalized EPS, current-field change, or valuation-input change. Five superscript amount cells remain STILL_BLOCKED. Disposition ANNUAL_COMPONENT_READY_NORMALIZATION_BLOCKED.",
+      "terminal_disposition": "ANNUAL_COMPONENT_READY_NORMALIZATION_BLOCKED"
     }
   ],
   "blocked_capabilities": [

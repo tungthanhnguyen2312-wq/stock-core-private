@@ -31,6 +31,7 @@ def test_total_assets_requires_literal_total_label(label, ok):
 
 
 @pytest.mark.parametrize("label,ok", [("Cac khoan dy phòng/(hºàn nhap dy phòng)", True), ("Các khoản dự phòng", True),
+    ("Provisions", True), ("Provisi²ns", False), ("Provisions for investments", False),
     ("Khấu hao tài sản cố định", False), ("Lãi, lỗ chênh lệch tỷ giá hối đoái", False),
     ("Lãi từ hoạt động đầu tư", False), ("Dự phòng", False)])
 def test_provision_component_label_contract(label, ok):
@@ -99,7 +100,9 @@ def test_later_known_components_respect_completed_session_cutoff():
     rows = [json.loads(line) for line in (ROOT / "derived/financial-evidence-currency-refresh-v1/qualified_official_facts.jsonl")
             .read_text(encoding="utf8").splitlines()]
     new = [r for r in rows if r["canonical_metric"] == "provision_charge_or_reversal_adjustment"]
-    assert {(r["ticker"], r["normalized_value"]) for r in new} == {("PNJ", 2667248523366), ("VRE", -7066000000)}
+    assert {(r["ticker"], r["normalized_value"], r["period_type"]) for r in new} == {
+        ("PNJ", 2667248523366, "interim"), ("VRE", -7066000000, "interim"),
+        ("FPT", 651406282654, "annual")}
     assert all(r["knowledge_available_at"] >= "2026-10-08" for r in new)
     completed = fundamental.project_session(baseline=baseline(), official_rows=rows, session="2026-10-07",
                                             cutoff="2026-10-07T15:00:00+07:00")
