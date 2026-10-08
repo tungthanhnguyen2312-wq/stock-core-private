@@ -263,3 +263,14 @@ Owner program `STOCK_LOOKUP_AUTONOMOUS_OFFICIAL_EVIDENCE_CONTINUATION_20261008`;
 - Remaining: PNJ H1 equity/assets/cash/OCF/debt (header discovery, band, `²` damage);
   share continuity; FPT/HPG/NVL blockers unchanged.
 
+- Released candidate `7b7b3b92f20b6f1d3363377d1015219b5293821c`, PR #87, merge
+  `2b6208aad0e3e59298b88bead2ba408e521d664a`; four CI jobs passed. Post-merge scratch
+  acceptance: October 7 records equal (current fields 9); five rows known October 8 only;
+  PNJ/VRE components recurrence UNKNOWN, no normalized EPS; PVD USD excluded; row 270
+  label-blocked; strict shares/valuation 0; baseline hash unchanged.
+- Bounded follow-up (no new milestone): PNJ H1 pages 7/9 period header reads literal
+  `Số cudi ky`, so cash/equity have no column bands (letter repair refused); extraction
+  stopped. FPT FY2025: year header `²0²5 ²0²4` (page 8), split year lines (pages 10/14),
+  parent profit `²` damage. FPT annual line-03 `Provisions` 651,406,282,654 VND is literal
+  but annual components are not admitted by the interim component contract. No acquisition:
+  approved-route sources are scans with the same glyph failure; weekly quota 76% used.
