@@ -206,3 +206,26 @@ common shares from listed quantity, or scale share acquisition without continuit
 
 - Final entity guard refuses specialist/unknown issuers before corporate native fallback;
   no bank/securities layout is forced through the corporate reader. Four adverse cases pass.
+
+
+### Terminal quota checkpoint
+
+Fresh quota: primary90% used /10% remaining; weekly52% used /48% remaining,
+ordinary usage allowed. Another uncertain source milestone is not safe within this
+remaining primary budget. Finish PR86 release boundary and stop; no successor starts.
+NVL implementation checkpoint2a845387b5fac897bf1599a38a391f17a6ddf713,
+PR86 on feature/nvl-reviewed-interim-20261008; candidate and prior four campaign
+branches are clean, pushed, and preserved. Exact final PR head/merge/main/CI/quota
+are recorded after release in .stocklookup/scratch/nvl/campaign_checkpoint.json
+in the NVL worktree (ignored host-local handoff; no raw PDF/image bytes in Git).
+Canonical before PR86: f817461711e4e56f81adc4bdceca7bb42e1750e6; final main is the
+verified PR86 merge, obtained from remote and fast-forwarded without touching data/.
+Current evidence fields9→9, FY2025 historical context2→10, source common points0→1,
+strict shares/all7 valuation readiness0→0; baseline annual exact94 unchanged.
+New PDFs3 (FPT FY2025, FPT Q2, NVL H1); actual HTTP requests3, no redirects/retries.
+Qualified earnings-component count1→1; no normalized EPS or clean-earnings inference.
+Protected input hashes/completed-session records equal; false promotions, completed
+rewrites and T0 mutations remain zero. Final focused240 passed /2 retained skips.
+Resume exactly through the prior one-writer/bootstrap/source-budget procedure after
+quota replenishes; choose another literal official source, preserve blocked HPG/NVL
+proofs, and require complete executed common-share continuity before denominator use.

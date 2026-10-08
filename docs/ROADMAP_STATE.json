@@ -3367,7 +3367,7 @@
       "milestone_id": "NVL_REVIEWED_H1_SOURCE_ACQUISITION_AND_QUALIFICATION_V1",
       "state": "COMPLETE",
       "starting_checkpoint": "f817461711e4e56f81adc4bdceca7bb42e1750e6",
-      "checkpoint": "HEAD",
+      "checkpoint": "2a845387b5fac897bf1599a38a391f17a6ddf713",
       "candidate_branch": "feature/nvl-reviewed-interim-20261008",
       "dependencies": [
         "FPT_OFFICIAL_FINANCIAL_FILINGS_AND_CORE_EVIDENCE_V1"
