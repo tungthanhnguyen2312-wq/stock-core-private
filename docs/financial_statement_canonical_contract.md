@@ -23,3 +23,21 @@ The fixed NVL H1 replay uses report6–7 and statements8–14. It qualifies revi
 consolidated assurance only; all exact values remain blocked. Retention/assurance does
 not create a financial field, earnings-quality score, current denominator or valuation.
 The existing ingress report records native-fallback receipts; no parallel evidence store.
+
+### Interim opening-date columns, VAS note cells and loan labels (2026 templates)
+
+An interim balance sheet may compare its period end with the opening date of the same
+year (`30/6/2026` and `1/1/2026`). The year cannot choose the current column there; only
+the literal full date equal to the interim period end may, and the other literal date
+must be strictly earlier. Annual targets and other statements never use this rule.
+VAS note cells print `V.1` or `V.19(a)`. When no integer note band exists, only those
+exact literal tokens between the code and value columns are a note cell; any other or
+damaged text there still competes with the label and fails closed. Under the 2026
+template (Circular 43/2026) borrowings move to 323/339 while 320/338 become other
+payables, so a debt component needs a literal loan label (`vay` plus `ngắn/dài hạn`,
+never `phải trả`), as total assets need a literal total label. English debt labels are
+not yet admitted by this rule and fail closed.
+
+A retained official copy may be bound to its body-proven period in a separate landing
+without network. Its document identity and original observation time are preserved; a
+repeat binding is a manifest-byte no-op and a different period binding fails.

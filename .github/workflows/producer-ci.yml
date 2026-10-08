@@ -76,6 +76,7 @@ env:
     tests/test_source_faithful_numeric_normalization.py
     tests/test_nvl_reviewed_h1_native_fallback.py
     tests/test_retained_h1_provision_component.py
+    tests/test_triad_current_h1_evidence.py
     tests/test_financial_evidence_currency_refresh.py
     tests/test_official_document_acquisition.py
     tests/test_official_acquisition_budget.py

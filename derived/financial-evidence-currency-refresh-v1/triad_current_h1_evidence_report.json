@@ -1,0 +1,492 @@
+{
+  "artifact_sha256": "ac47bf73625c2616acac6ea9cde0965917dc462de4706267520bf19986fc11b8",
+  "candidate_fact_count": 2,
+  "canonical_fact_count": 2,
+  "contract_version": "reviewed_interim_canonical_ingress/v2",
+  "documents": [
+    {
+      "assurance": {
+        "audit_or_review_status": "reviewed",
+        "citation_id": "77a7d189223f087dd5f3757a7137b5ded695d72dfc6093495f4502258a20f1d4",
+        "evidence_id": "77a7d189223f087dd5f3757a7137b5ded695d72dfc6093495f4502258a20f1d4",
+        "inheritance": "document_level_report_applies_to_all_statements_in_document",
+        "matched_anchors": [
+          "bao cao soat xet",
+          "soat xet so 2410",
+          "hop nhat",
+          "giua nien do"
+        ],
+        "materialization_id": "a18c38dde0d421d445cf6d72cf5bea11bfcd9995a46cfe99e37a32f6b4678262",
+        "opinion_evidence": null,
+        "page_number": 5,
+        "page_text_sha256": "0e79f5258fe90d1c14b1be3a1a65dfd5cee66e96c1a71919bb152d135c47f7ab",
+        "reason": null,
+        "rendered_image_sha256": "b376a499dcb65541f49a1c8692195e1c45fd55191bbc4cedbd5c04c90f8f6c73",
+        "scope_of_assurance": "consolidated_interim_statements",
+        "state": "QUALIFIED",
+        "title_span": {
+          "raw_token_order": [
+            38,
+            39,
+            40,
+            41
+          ],
+          "token_ids": [
+            "a93b2cd132b49198f6a798b7a4d1602c83af69963197390c11f7074a2b2ec54d",
+            "3e9008f2015dc11b958fdfe737d0e889087c1a9c66e2b200af0b7f11c1e7905d",
+            "030cdb4736cd14abb11e129fac05dcc12c614f444bc3341288a4aeaccb1fc48e",
+            "1dabfc828f8b091c3e630d2dcb5f297c723c5d5c577b5ab434ad2bef583eb7db"
+          ]
+        }
+      },
+      "blocked_candidates": [
+        {
+          "canonical_metric": "total_assets",
+          "line_code": "270",
+          "reason": "ROW_LABEL_DOES_NOT_SUPPORT_METRIC",
+          "state": "BLOCKED",
+          "statement_family": "balance_sheet"
+        },
+        {
+          "canonical_metric": "shareholders_equity",
+          "line_code": "400",
+          "raw_value": "—-35.666.334.973.929",
+          "reason": "OCR_NUMERIC_AMBIGUITY",
+          "state": "BLOCKED",
+          "statement_family": "balance_sheet"
+        },
+        {
+          "canonical_metric": "revenue",
+          "line_code": "10",
+          "match_count": 0,
+          "reason": "ROW_NOT_UNIQUE_OR_NOT_GEOMETRICALLY_RESOLVED",
+          "state": "BLOCKED",
+          "statement_family": "income_statement"
+        },
+        {
+          "canonical_metric": "net_income",
+          "line_code": "60",
+          "match_count": 0,
+          "reason": "ROW_NOT_UNIQUE_OR_NOT_GEOMETRICALLY_RESOLVED",
+          "state": "BLOCKED",
+          "statement_family": "income_statement"
+        },
+        {
+          "canonical_metric": "attributable_net_income",
+          "line_code": "61",
+          "match_count": 0,
+          "reason": "ROW_NOT_UNIQUE_OR_NOT_GEOMETRICALLY_RESOLVED",
+          "state": "BLOCKED",
+          "statement_family": "income_statement"
+        },
+        {
+          "canonical_metric": "operating_cash_flow",
+          "line_code": "20",
+          "match_count": 0,
+          "reason": "ROW_NOT_UNIQUE_OR_NOT_GEOMETRICALLY_RESOLVED",
+          "state": "BLOCKED",
+          "statement_family": "cash_flow"
+        },
+        {
+          "canonical_metric": "investment_property_disposal_result",
+          "line_code": "21",
+          "match_count": 0,
+          "reason": "ROW_NOT_UNIQUE_OR_NOT_GEOMETRICALLY_RESOLVED",
+          "state": "BLOCKED",
+          "statement_family": "income_statement"
+        },
+        {
+          "canonical_metric": "provision_charge_or_reversal_adjustment",
+          "line_code": "03",
+          "match_count": 0,
+          "reason": "ROW_NOT_UNIQUE_OR_NOT_GEOMETRICALLY_RESOLVED",
+          "state": "BLOCKED",
+          "statement_family": "cash_flow"
+        },
+        {
+          "canonical_metric": "short_term_borrowings",
+          "line_code": "320",
+          "match_count": 0,
+          "reason": "ROW_NOT_UNIQUE_OR_NOT_GEOMETRICALLY_RESOLVED",
+          "state": "BLOCKED",
+          "statement_family": "balance_sheet"
+        },
+        {
+          "canonical_metric": "long_term_borrowings_or_finance_leases",
+          "line_code": "338",
+          "reason": "ROW_LABEL_DOES_NOT_SUPPORT_METRIC",
+          "state": "BLOCKED",
+          "statement_family": "balance_sheet"
+        },
+        {
+          "canonical_metric": "total_interest_bearing_debt",
+          "reason": "DEBT_COMPONENT_INCOMPLETE",
+          "state": "BLOCKED"
+        }
+      ],
+      "candidate_facts": [
+        {
+          "currency": "VND",
+          "line_code": "110",
+          "metric": "cash_and_equivalents",
+          "source_page": 7,
+          "source_unit_scale": 1,
+          "value": 4535672366831
+        }
+      ],
+      "canonical_facts": [
+        {
+          "audit_or_review_status": "reviewed",
+          "citation_id": "4d77c2760ed2fe36878e946eecd11c0ecfc6b8b59def91a4c04078d3b1ad45f7",
+          "currency": "VND",
+          "factual_reason_codes": [],
+          "factual_status": "qualified",
+          "line_code": "110",
+          "metric": "cash_and_equivalents",
+          "period": "2026-H1",
+          "period_end": "2026-06-30",
+          "period_start": "2026-01-01",
+          "period_type": "interim",
+          "research_reason_codes": [
+            "RESEARCH_PERIOD_NOT_ANNUAL"
+          ],
+          "research_status": "partial",
+          "scope": "consolidated",
+          "source_page": 7,
+          "source_unit_scale": 1,
+          "value": 4535672366831
+        }
+      ],
+      "document_sha256": "a6155aa757b320b893a78093b0454473f4a581aead225af4eb4ef1fbd6628561",
+      "ingress_blocked": [],
+      "knowledge_available_at": "2026-10-08T03:11:09.934237+00:00",
+      "observed_at": "2026-08-02T08:25:00Z",
+      "reporting_period": "2026-H1",
+      "ticker": "VNM"
+    },
+    {
+      "assurance": {
+        "audit_or_review_status": "reviewed",
+        "citation_id": "4b8ef55f3ec7d4af24e603be4963dae504ada194b3e45c539439904a1a4d787e",
+        "evidence_id": "4b8ef55f3ec7d4af24e603be4963dae504ada194b3e45c539439904a1a4d787e",
+        "inheritance": "document_level_report_applies_to_all_statements_in_document",
+        "matched_anchors": [
+          "bao cao soat xet",
+          "soat xet so 2410",
+          "hop nhat",
+          "giua nien do",
+          "khong dua ra y kien kiem toan"
+        ],
+        "materialization_id": "67bb80f6d52808e1bebccb81823dac186134e6ad5da1e8bf07568f31a39070af",
+        "opinion_evidence": null,
+        "page_number": 5,
+        "page_text_sha256": "35171963bef743b9a220b13869331cf6c6de0a0739eb15ca851bae23efbea43c",
+        "reason": null,
+        "rendered_image_sha256": "46b698f603212847ec4cc45b424dbef93861a8981f6736c16d945bf0545c9c90",
+        "scope_of_assurance": "consolidated_interim_statements",
+        "state": "QUALIFIED",
+        "title_span": {
+          "raw_token_order": [
+            75,
+            76,
+            77,
+            78
+          ],
+          "token_ids": [
+            "896c6ed656bdfbb5911ae84e486ec85428a70ee8115f81e56005d7dd913386a9",
+            "bb1b5cf25fc8e0ad6732983edec1f4bc9643394316569592f29cbb093d1a8495",
+            "489e4ea4492c11375712d92c5057d7ee9571bbe76c4f0b617f71fa8dc771cc9f",
+            "af30bc9fe787af3454de4fd1b9e6c0e427bf75421ad7803f0df3f43d46a91231"
+          ]
+        }
+      },
+      "blocked_candidates": [
+        {
+          "canonical_metric": "cash_and_equivalents",
+          "line_code": "110",
+          "match_count": 0,
+          "reason": "ROW_NOT_UNIQUE_OR_NOT_GEOMETRICALLY_RESOLVED",
+          "state": "BLOCKED",
+          "statement_family": "balance_sheet"
+        },
+        {
+          "canonical_metric": "total_assets",
+          "line_code": "270",
+          "match_count": 0,
+          "reason": "ROW_NOT_UNIQUE_OR_NOT_GEOMETRICALLY_RESOLVED",
+          "state": "BLOCKED",
+          "statement_family": "balance_sheet"
+        },
+        {
+          "canonical_metric": "revenue",
+          "line_code": "10",
+          "match_count": 0,
+          "reason": "ROW_NOT_UNIQUE_OR_NOT_GEOMETRICALLY_RESOLVED",
+          "state": "BLOCKED",
+          "statement_family": "income_statement"
+        },
+        {
+          "canonical_metric": "net_income",
+          "line_code": "60",
+          "match_count": 0,
+          "reason": "ROW_NOT_UNIQUE_OR_NOT_GEOMETRICALLY_RESOLVED",
+          "state": "BLOCKED",
+          "statement_family": "income_statement"
+        },
+        {
+          "canonical_metric": "attributable_net_income",
+          "line_code": "61",
+          "match_count": 0,
+          "reason": "ROW_NOT_UNIQUE_OR_NOT_GEOMETRICALLY_RESOLVED",
+          "state": "BLOCKED",
+          "statement_family": "income_statement"
+        },
+        {
+          "canonical_metric": "operating_cash_flow",
+          "line_code": "20",
+          "match_count": 0,
+          "reason": "ROW_NOT_UNIQUE_OR_NOT_GEOMETRICALLY_RESOLVED",
+          "state": "BLOCKED",
+          "statement_family": "cash_flow"
+        },
+        {
+          "canonical_metric": "investment_property_disposal_result",
+          "line_code": "21",
+          "match_count": 0,
+          "reason": "ROW_NOT_UNIQUE_OR_NOT_GEOMETRICALLY_RESOLVED",
+          "state": "BLOCKED",
+          "statement_family": "income_statement"
+        },
+        {
+          "canonical_metric": "provision_charge_or_reversal_adjustment",
+          "line_code": "03",
+          "match_count": 0,
+          "reason": "ROW_NOT_UNIQUE_OR_NOT_GEOMETRICALLY_RESOLVED",
+          "state": "BLOCKED",
+          "statement_family": "cash_flow"
+        },
+        {
+          "canonical_metric": "short_term_borrowings",
+          "line_code": "320",
+          "reason": "ROW_LABEL_DOES_NOT_SUPPORT_METRIC",
+          "state": "BLOCKED",
+          "statement_family": "balance_sheet"
+        },
+        {
+          "canonical_metric": "long_term_borrowings_or_finance_leases",
+          "line_code": "338",
+          "reason": "ROW_LABEL_DOES_NOT_SUPPORT_METRIC",
+          "state": "BLOCKED",
+          "statement_family": "balance_sheet"
+        },
+        {
+          "canonical_metric": "total_interest_bearing_debt",
+          "reason": "DEBT_COMPONENT_INCOMPLETE",
+          "state": "BLOCKED"
+        }
+      ],
+      "candidate_facts": [
+        {
+          "currency": "VND",
+          "line_code": "400",
+          "metric": "shareholders_equity",
+          "source_page": 7,
+          "source_unit_scale": 1,
+          "value": 10647823148609
+        }
+      ],
+      "canonical_facts": [
+        {
+          "audit_or_review_status": "reviewed",
+          "citation_id": "142b13f60fd17957ee8bdf82117d46dee712640196ba5732cd935daca6115ec7",
+          "currency": "VND",
+          "factual_reason_codes": [],
+          "factual_status": "qualified",
+          "line_code": "400",
+          "metric": "shareholders_equity",
+          "period": "2026-H1",
+          "period_end": "2026-06-30",
+          "period_start": "2026-01-01",
+          "period_type": "interim",
+          "research_reason_codes": [
+            "RESEARCH_PERIOD_NOT_ANNUAL"
+          ],
+          "research_status": "partial",
+          "scope": "consolidated",
+          "source_page": 7,
+          "source_unit_scale": 1,
+          "value": 10647823148609
+        }
+      ],
+      "document_sha256": "5a06a40f34a6d9b30233926f9c9d909d684744de2bf2ad0956edd367d5f7b068",
+      "ingress_blocked": [],
+      "knowledge_available_at": "2026-10-08T04:09:10.280605+00:00",
+      "native_fallback_pages": [
+        {
+          "native_failure_evidence": {
+            "candidate_count": 0,
+            "document_sha256": "5a06a40f34a6d9b30233926f9c9d909d684744de2bf2ad0956edd367d5f7b068",
+            "native_artifact_identity": "official_financial_pdf_page_evidence:a22f439c6c0eeda6a302da03fa190f4294f11ed4d1e712b0e542062bfd498783",
+            "native_page_text_sha256": {
+              "5": "09b0cbc756e59d4c9b0a5d1af87e935acb997a260da97902c6356d7693ba0821"
+            },
+            "trigger": "EXPLICIT_OPT_IN_AFTER_NATIVE_ZERO_CANDIDATES"
+          },
+          "page_number": 5,
+          "route": "UNQUALIFIED_NATIVE_TSV_OCR"
+        },
+        {
+          "native_failure_evidence": {
+            "candidate_count": 0,
+            "document_sha256": "5a06a40f34a6d9b30233926f9c9d909d684744de2bf2ad0956edd367d5f7b068",
+            "native_artifact_identity": "official_financial_pdf_page_evidence:a22f439c6c0eeda6a302da03fa190f4294f11ed4d1e712b0e542062bfd498783",
+            "native_page_text_sha256": {
+              "6": "be98f95326514c79bcd19c58b58a4b9204638aac8b5c99bbea9cbc8d91a6dcd8",
+              "7": "ed68f972afcbac502a5b9cbe47b65f81af28e34c8c5b02cbdb072471c78403cc",
+              "8": "2cb42db736a7ea2ae9cb3e8b10f67baaa2135d1ae523bea337cf455b3c4450ec",
+              "9": "54c3b4586c6c326837347a55b17511f911dbba858e8cb09a803ea729feae955a"
+            },
+            "trigger": "EXPLICIT_OPT_IN_AFTER_NATIVE_ZERO_CANDIDATES"
+          },
+          "page_number": 6,
+          "route": "UNQUALIFIED_NATIVE_TSV_OCR"
+        },
+        {
+          "native_failure_evidence": {
+            "candidate_count": 0,
+            "document_sha256": "5a06a40f34a6d9b30233926f9c9d909d684744de2bf2ad0956edd367d5f7b068",
+            "native_artifact_identity": "official_financial_pdf_page_evidence:a22f439c6c0eeda6a302da03fa190f4294f11ed4d1e712b0e542062bfd498783",
+            "native_page_text_sha256": {
+              "6": "be98f95326514c79bcd19c58b58a4b9204638aac8b5c99bbea9cbc8d91a6dcd8",
+              "7": "ed68f972afcbac502a5b9cbe47b65f81af28e34c8c5b02cbdb072471c78403cc",
+              "8": "2cb42db736a7ea2ae9cb3e8b10f67baaa2135d1ae523bea337cf455b3c4450ec",
+              "9": "54c3b4586c6c326837347a55b17511f911dbba858e8cb09a803ea729feae955a"
+            },
+            "trigger": "EXPLICIT_OPT_IN_AFTER_NATIVE_ZERO_CANDIDATES"
+          },
+          "page_number": 7,
+          "route": "UNQUALIFIED_NATIVE_TSV_OCR"
+        },
+        {
+          "native_failure_evidence": {
+            "candidate_count": 0,
+            "document_sha256": "5a06a40f34a6d9b30233926f9c9d909d684744de2bf2ad0956edd367d5f7b068",
+            "native_artifact_identity": "official_financial_pdf_page_evidence:a22f439c6c0eeda6a302da03fa190f4294f11ed4d1e712b0e542062bfd498783",
+            "native_page_text_sha256": {
+              "6": "be98f95326514c79bcd19c58b58a4b9204638aac8b5c99bbea9cbc8d91a6dcd8",
+              "7": "ed68f972afcbac502a5b9cbe47b65f81af28e34c8c5b02cbdb072471c78403cc",
+              "8": "2cb42db736a7ea2ae9cb3e8b10f67baaa2135d1ae523bea337cf455b3c4450ec",
+              "9": "54c3b4586c6c326837347a55b17511f911dbba858e8cb09a803ea729feae955a"
+            },
+            "trigger": "EXPLICIT_OPT_IN_AFTER_NATIVE_ZERO_CANDIDATES"
+          },
+          "page_number": 8,
+          "route": "UNQUALIFIED_NATIVE_TSV_OCR"
+        },
+        {
+          "native_failure_evidence": {
+            "candidate_count": 0,
+            "document_sha256": "5a06a40f34a6d9b30233926f9c9d909d684744de2bf2ad0956edd367d5f7b068",
+            "native_artifact_identity": "official_financial_pdf_page_evidence:a22f439c6c0eeda6a302da03fa190f4294f11ed4d1e712b0e542062bfd498783",
+            "native_page_text_sha256": {
+              "6": "be98f95326514c79bcd19c58b58a4b9204638aac8b5c99bbea9cbc8d91a6dcd8",
+              "7": "ed68f972afcbac502a5b9cbe47b65f81af28e34c8c5b02cbdb072471c78403cc",
+              "8": "2cb42db736a7ea2ae9cb3e8b10f67baaa2135d1ae523bea337cf455b3c4450ec",
+              "9": "54c3b4586c6c326837347a55b17511f911dbba858e8cb09a803ea729feae955a"
+            },
+            "trigger": "EXPLICIT_OPT_IN_AFTER_NATIVE_ZERO_CANDIDATES"
+          },
+          "page_number": 9,
+          "route": "UNQUALIFIED_NATIVE_TSV_OCR"
+        }
+      ],
+      "observed_at": "2026-10-08T04:06:35.272649Z",
+      "reporting_period": "2026-H1",
+      "ticker": "QNS"
+    }
+  ],
+  "financial_v2_pin": {
+    "authority_version": "2026-09-05.1",
+    "changed": false
+  },
+  "issuer_terminal_states": {
+    "POW": {
+      "detail": "Registry-seeded index https://www.pvpower.vn/quan-he-co-dong/bao-cao-tai-chinh answered 404 (as on 2026-09-29); no retained exact 2026 locator; no other route guessed.",
+      "reason": "access_denied",
+      "state": "APPROVED_ROUTE_BLOCKED"
+    },
+    "QNS": {
+      "document_sha256": "5a06a40f34a6d9b30233926f9c9d909d684744de2bf2ad0956edd367d5f7b068",
+      "knowledge_available_at": "2026-10-08T04:09:10.280605+00:00",
+      "network_requests": 3,
+      "qualified_metrics": [
+        "shareholders_equity"
+      ],
+      "state": "CURRENT_OFFICIAL_FACTS_QUALIFIED"
+    },
+    "VNM": {
+      "document_sha256": "a6155aa757b320b893a78093b0454473f4a581aead225af4eb4ef1fbd6628561",
+      "knowledge_available_at": "2026-10-08T03:11:09.934237+00:00",
+      "network_requests": 0,
+      "qualified_metrics": [
+        "cash_and_equivalents"
+      ],
+      "state": "CURRENT_OFFICIAL_FACTS_QUALIFIED"
+    }
+  },
+  "milestone_id": "VNM_QNS_POW_CURRENT_OFFICIAL_FINANCIAL_EVIDENCE_ACQUISITION_V1",
+  "network_used": false,
+  "ocr_reads": {
+    "front_matter_and_statement_pages": 16
+  },
+  "overlay_write": {
+    "appended_fact_count": 1,
+    "policy": "APPEND_ONLY_NEW_EXACT_KEYS",
+    "prior_fact_count": 26,
+    "prior_facts_preserved": true
+  },
+  "precedence_statuses": [
+    "OFFICIAL_ONLY"
+  ],
+  "qualified_at": {
+    "QNS": "2026-10-08T04:09:10.280605+00:00",
+    "VNM": "2026-10-08T03:11:09.934237+00:00"
+  },
+  "raw_pdf_or_image_bytes_committed": false,
+  "semantic_identity": {
+    "historical_affected_known": [
+      "HPG 2022 net_income=line61 (p3f13 semantic correction)",
+      "HPG 2023 net_income=line61 (p3f13 semantic correction)",
+      "annual OCR-path facts emitted by the pre-corrective STANDARD_FACT_RULES (line 61 as net_income); exhaustive count not audited"
+    ],
+    "historical_authority": "HISTORICAL_NET_INCOME_SEMANTIC_RECONCILIATION_REQUIRED",
+    "historical_rows_rewritten": false,
+    "line_60": "net_income (total profit after tax); requires explicit row label",
+    "line_61": "attributable_net_income (parent-attributable); requires explicit row label",
+    "line_61_as_net_income": "FORBIDDEN"
+  },
+  "source_notes": {
+    "QNS": {
+      "balance_sheet_page_6": "header OCR '30/06/²0²6 01/01/²0²6'; cash and total assets not read",
+      "cash_flow_page_9": "header years OCR '²0²6 ²0²5'; OCF and line 03 not read",
+      "debt": "rows 320/338 are other payables under the 2026 template and are refused; borrowings not read",
+      "income_statement_page_8": "years literal but code header OCR-damaged; revenue and profit lines not read",
+      "route": "index 8921d8e7... -> owner-authorized ISSUER_IR_DETAIL_PAGE_RESOLVER a3da3950... -> anchor 'Bao cao tai chinh hop nhat ban nien nam 2026' -> one PDF; separate (tong hop) PDF not fetched",
+      "text_layer": "embedded text layer with corrupted labels; native extractor 0 candidates; explicit fallback"
+    },
+    "VNM": {
+      "cash_flow_page_13": "statement title OCR-damaged; page not admitted as cash flow; OCF and line 03 not read",
+      "comparative_column": "1/1/2026 VND (Da phan loai lai) - comparative literally reclassified; current column unaffected",
+      "debt": "borrowings are rows 323/339 under the 2026 template; rows 320/338 are other payables and are refused",
+      "income_statement": "four date columns (Quy II and giai doan sau thang); six-month heading OCR-damaged, column not bound",
+      "shareholders_equity": "row 400 current cell OCR '—-35.666.334.973.929'; leading dash artefact not repaired",
+      "template": "Mau B 01a - DN/HN, Thong tu so 43/2026/TT-BTC (PDF page 7 header)",
+      "total_assets": "total is row 280 under the 2026 template; fixed rule reads row 270 (Tai san dai han khac) and refuses it"
+    }
+  },
+  "valuation": {
+    "pb_effect": "NONE",
+    "pe_ttm_from_h1": false,
+    "ps_ttm_from_h1": false
+  }
+}

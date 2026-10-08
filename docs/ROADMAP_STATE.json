@@ -15,7 +15,7 @@
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "ANNUAL_EARNINGS_COMPONENT_AND_SOURCE_FAITHFUL_OCR_NORMALIZATION_V1",
+    "milestone": "VNM_QNS_POW_CURRENT_OFFICIAL_FINANCIAL_EVIDENCE_ACQUISITION_V1",
     "state": "COMPLETE"
   },
   "queued_next": [],
@@ -3425,6 +3425,27 @@
       "source_doc": "docs/internal/STOCK_LOOKUP_AUTONOMOUS_CAMPAIGN_20261008.md",
       "notes": "FPT FY2025 cash-flow line 03 Provisions 651,406,282,654 VND admitted as an audited annual component. Period stays FY2025. Recurrence UNKNOWN. No normalized EPS, current-field change, or valuation-input change. Five superscript amount cells remain STILL_BLOCKED. Disposition ANNUAL_COMPONENT_READY_NORMALIZATION_BLOCKED.",
       "terminal_disposition": "ANNUAL_COMPONENT_READY_NORMALIZATION_BLOCKED"
+    },
+    {
+      "milestone_id": "VNM_QNS_POW_CURRENT_OFFICIAL_FINANCIAL_EVIDENCE_ACQUISITION_V1",
+      "state": "COMPLETE",
+      "starting_checkpoint": "795b729dbb35845511857e79d75ddc0f7f80f462",
+      "checkpoint": "HEAD",
+      "candidate_branch": "feature/triad-h1-official-evidence-20261008",
+      "dependencies": [
+        "ANNUAL_EARNINGS_COMPONENT_AND_SOURCE_FAITHFUL_OCR_NORMALIZATION_V1"
+      ],
+      "unlocks": [],
+      "owner_authorized": true,
+      "owner_override": "OWNER_DIRECTIVE_2026_10_08_VNM_QNS_POW_CURRENT_OFFICIAL_FINANCIAL_EVIDENCE_ACQUISITION_V1",
+      "authority_effect": "FIELD_SCOPED_CURRENT_INTERIM_OFFICIAL_FINANCIAL_CONTEXT_ONLY",
+      "state_history": [
+        "ACTIVE",
+        "COMPLETE"
+      ],
+      "source_doc": "docs/internal/STOCK_LOOKUP_AUTONOMOUS_CAMPAIGN_20261008.md",
+      "notes": "Fixed three-issuer probe (VNM, QNS, POW) for 2026-H1 official statements; 5 actual HTTP requests of 12 (QNS index, owner-authorized QNS detail-page resolver and one PDF; POW index 2). Reviewed consolidated H1, fixed OCR profile, known 2026-10-08: VNM cash 4,535,672,366,831 VND (retained source, zero network); QNS equity 10,647,823,148,609 VND. Other fields blocked without repair (damaged headers, superscript years, 2026 template rows). POW APPROVED_ROUTE_BLOCKED (seeded index 404). Debt components require a literal loan label. Strict share/valuation 0 unchanged.",
+      "terminal_disposition": "PARTIAL_CURRENT_OFFICIAL_H1_TRIAD_EVIDENCE_READY"
     }
   ],
   "blocked_capabilities": [

@@ -55,6 +55,8 @@ The [earnings component contract](reported_earnings_component_context_contract.m
 explicit reported disposal results and audited annual provision components as descriptive
 context. Period stays explicit. Recurrence stays UNKNOWN; no normalized EPS, annual
 valuation input, action or score change follows. Superscript normalization is not authorized.
+Interim balance-sheet columns bind only by the literal period-end date; debt components need
+a literal loan label ([canonical contract](financial_statement_canonical_contract.md)).
 
 | Area | Status | Meaning | Controlling source |
 |---|---|---|---|

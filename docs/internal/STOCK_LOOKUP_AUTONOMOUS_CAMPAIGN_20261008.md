@@ -302,3 +302,61 @@ Owner program `STOCK_LOOKUP_AUTONOMOUS_OFFICIAL_EVIDENCE_CONTINUATION_20261008`;
   Packet and AI delivery copy the historical context with the period visible.
 - Knowledge is the October 8 qualification time. October 7 projection excludes the row.
   No T0, seal, handoff, Dashboard or completed-session rewrite.
+
+## VNM/QNS/POW current official H1 evidence
+
+- ID `VNM_QNS_POW_CURRENT_OFFICIAL_FINANCIAL_EVIDENCE_ACQUISITION_V1` (COMPLETE); owner
+  override; start `795b729dbb35845511857e79d75ddc0f7f80f462`; fixed three-issuer probe.
+- Declared before HTTP: 1 index refresh and 1 PDF per issuer, 12 actual requests,
+  concurrency 1, 100 MiB, no pagination/crawl/search. Actual: 3 requests (QNS index 1;
+  POW index 2 incl. redirect/retry), 0 PDFs, 59,666 network bytes, 4,413,972 landing bytes.
+- Retained preflight: VNM reviewed consolidated "Q2 and six months ended 30 June 2026"
+  statement already retained 2026-08-02 on the admitted CloudFront host (SHA
+  `a6155aa757b320b893a78093b0454473f4a581aead225af4eb4ef1fbd6628561`, image-only, 72 pages).
+  Bound to 2026-H1 in landing `triad-h1-evidence-20261008` without network; identity and
+  original observation preserved; repeat binding is a byte-identical no-op. QNS/POW had
+  only homepage/no indices and FY2024 statements.
+- VNM: KPMG review report page 5 (VSRE 2410) proves reviewed consolidated interim
+  assurance. Fixed 240 dpi gray `vie+eng` PSM 6 profile; no other profile. Qualified:
+  cash and cash equivalents 4,535,672,366,831 VND, page 7 line 110 note V.1, 30/6/2026;
+  visually verified, lines 111+112 reconcile. Knowledge `2026-10-08T03:11:09Z`.
+  Blocked without repair: income statement (Q2 and six-month columns; six-month heading
+  OCR-damaged), cash-flow page 13 title OCR-damaged (OCF, line 03), equity leading dash
+  artefact, total assets (row 280 under Circular 43/2026; fixed row 270 refused by the
+  PR #87 label rule), debt (borrowings at 323/339). Comparative column literally
+  `(Đã phân loại lại)`; context only. No earnings component qualified.
+- Safety: 2026 template numbers 320/338 as other payables; the code-only debt path would
+  have bound them as borrowings. Debt components now need a literal loan label. No
+  existing overlay row depended on code-only debt binding.
+- QNS `ROUTE_DECISION_REQUIRED`: refreshed index (SHA `8921d8e7…`) lists the semi-annual
+  2026 report (15-08-2026) only as a first-party detail page; its PDF locator needs a
+  second discovery request beyond the cap. POW `APPROVED_ROUTE_BLOCKED`: seeded index 404.
+- Downstream: overlay 25→26 append-only. Completed October 7 records equal (current
+  fields 9→9). Scratch October 8: current fields 14→15, issuers 5→6, only VNM changed;
+  valuation metrics equal; strict share/all seven metrics 0. Packet and AI copy the field.
+  Seven protected input hashes unchanged. No Daily, T0, Dashboard or completed rewrite.
+- Superseded for QNS by the corrective below; POW gate unchanged.
+
+### Same-milestone corrective and owner-authorized QNS completion
+
+- PR #90 CI: `ACTIVE_STATE.md` was 321 lines (budget 320, candidate-owned). Two wrapped
+  lines of one existing bullet merged; no fact removed; guard unchanged.
+- Owner authorized one QNS `ISSUER_IR_DETAIL_PAGE_RESOLVER` request (not a second index
+  refresh) and at most one exact PDF inside the same 12-request ceiling.
+- Detail page (SHA `a3da3950…`, discovery only) lists three first-party PDFs; only the
+  anchor `Báo cáo tài chính hợp nhất bán niên năm 2026` was fetched (SHA
+  `5a06a40f34a6d9b30233926f9c9d909d684744de2bf2ad0956edd367d5f7b068`, 46 pages, same host,
+  no redirect). Separate statements and the disclosure letter were not fetched.
+- Body proof: issuer CTCP Đường Quảng Ngãi; six months to 30/06/2026; consolidated interim;
+  AAC review report page 5 (VSRE 2410, no audit opinion); VND. Embedded text layer has
+  corrupted labels; native extractor 0 candidates; explicit fallback under the fixed
+  profile (NVL precedent). Qualified: equity 10,647,823,148,609 VND, page 7 line 400,
+  visually verified; knowledge `2026-10-08T04:09:10Z`.
+- Blocked without repair: page 6 header `30/06/²0²6 01/01/²0²6` (cash, total assets);
+  income statement code header OCR-damaged; cash-flow years `²0²6 ²0²5` (OCF, line 03);
+  338 is `Phải trả dài hạn khác` and is refused by the loan-label rule. No component.
+- Network: 3 existing + 1 detail + 1 PDF = 5 requests, 0 redirects/retries beyond the
+  earlier POW one; 12,095,502 network bytes; landing 16,451,582 bytes.
+- Downstream vs base main: overlay 25→27; October 7 fields 9→9; scratch October 8 fields
+  14→16, issuers 5→7, changed records QNS and VNM only; valuation equal; strict 0.
+- Exact next gate: POW needs a first-party financial-statement index locator.

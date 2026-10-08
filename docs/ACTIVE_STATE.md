@@ -34,6 +34,7 @@ Fact kinds used below: **CURRENT FACT** (verified in repo or by a stated read-on
 **BLOCKED**, **DEFERRED**, **HISTORICAL**.
 
 ## 1. The operational gate
+- **COMPLETE — fixed VNM/QNS/POW current-interim probe (`VNM_QNS_POW_CURRENT_OFFICIAL_FINANCIAL_EVIDENCE_ACQUISITION_V1`).** Reviewed consolidated 2026-H1 statements, fixed OCR profile, known 2026-10-08 (excluded from completed October 7): VNM cash 4,535,672,366,831 VND (retained source, zero network, page 7 line 110); QNS equity 10,647,823,148,609 VND (owner-authorized index→detail page→one PDF, page 7 line 400). Other VNM/QNS fields stay blocked (damaged headers incl. `²0²6`, dash artefact, 2026 template rows). POW `APPROVED_ROUTE_BLOCKED` (seeded index 404). 5 HTTP requests of 12. Debt components require a literal loan label. Strict share/valuation 0. [Campaign](internal/STOCK_LOOKUP_AUTONOMOUS_CAMPAIGN_20261008.md).
 - **COMPLETE — FPT FY2025 audited cash-flow line 03 Provisions 651,406,282,654 VND is historical earnings-quality context (`FY2025`), known 2026-10-08. It is not current H1 evidence, normalized EPS, or a valuation input. Superscript normalization is `SOURCE_FAITHFUL_NORMALIZATION_NOT_YET_PROVABLE`.** Prior retained H1 provision components (PNJ 2,667,248,523,366 VND; VRE −7,066 million VND) and VRE cash/equity/OCF stay qualified; total-asset rows require a literal total label. Released PR87 (merge 2b6208a) and PR88 (merge 559ff7a); NVL assurance released in PR86. Prior cash-flow/balance qualification: PNJ FY2025 operating flow plus PVD assets/equity added; annual overlay10 fields. FPT annual revenue/equity added from auditor-backed English source; Q2 assurance remains absent. PNJ H1 and PVD cash-flow numeric ambiguity remain blocked. Annual baseline94, current official fields9 and strict share/valuation0 unchanged. [Campaign](internal/STOCK_LOOKUP_AUTONOMOUS_CAMPAIGN_20261008.md).
 
 - **CURRENT FACT — HPG common-share observation:** audited FY2025 page 41 states 7,675,465,855 at December 31, 2025; later-known historical context only. July-2 quantity is listed shares. January 1–October 7 common-share continuity remains unproven; strict shares/valuation stay zero. [Campaign](internal/STOCK_LOOKUP_AUTONOMOUS_CAMPAIGN_20261008.md).
@@ -60,8 +61,7 @@ Fact kinds used below: **CURRENT FACT** (verified in repo or by a stated read-on
   [Contract, real-run forensic, fixture acceptance and visibility limits](internal/owner_daily_progress_post_merge_acceptance.md#phase-2-v2-corrective--2026-10-07).
 
 - **CURRENT FACT — decision-intelligence closure.** `DECISION_INTELLIGENCE_COVERAGE_AND_CALIBRATION_CLOSURE_V1`
-  joins the 1,683-name coverage index, the existing historical panel, the outcome
-  review, the v2 evidence packet, and the portfolio workbench. Authority effect
+  joins the 1,683-name coverage index, historical panel, outcome review, v2 evidence packet and portfolio workbench. Authority effect
   `NONE / DECISION_INTELLIGENCE_RESEARCH_COVERAGE_AND_CALIBRATION_ONLY`. The optional
   CLI is deferred. That closure job ran no 2026-10-07 Daily and created no new T0;
   the actual subsequent Daily completion is recorded above.

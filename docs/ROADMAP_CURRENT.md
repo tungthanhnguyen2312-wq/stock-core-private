@@ -5,7 +5,16 @@ the machine state `ROADMAP_STATE.json`). Updated 2026-10-08 from starting main `
 auto-starts.** A milestone starts only when `python tools/stocklookup_roadmap.py --can-start <ID>` allows
 it or the owner records an explicit override (AI_RULES rule 11). Facts: [ACTIVE_STATE.md](ACTIVE_STATE.md).
 
-## NOW — `ANNUAL_EARNINGS_COMPONENT_AND_SOURCE_FAITHFUL_OCR_NORMALIZATION_V1` (COMPLETE)
+## NOW — `VNM_QNS_POW_CURRENT_OFFICIAL_FINANCIAL_EVIDENCE_ACQUISITION_V1` (COMPLETE)
+
+Fixed three-issuer probe for 2026-H1/Q2 official statements; no cohort expansion and no
+successor. Reviewed consolidated H1 statements under the fixed OCR profile, known October 8:
+VNM cash 4,535,672,366,831 VND (retained source) and QNS equity 10,647,823,148,609 VND
+(owner-authorized detail page and one PDF). POW's seeded index answers 404. Strict shares
+and valuation stay zero. Exact next gate: a POW first-party financial-statement index
+locator; remaining VNM/QNS fields need undamaged headers, not repair.
+
+## PRIOR — `ANNUAL_EARNINGS_COMPONENT_AND_SOURCE_FAITHFUL_OCR_NORMALIZATION_V1` (COMPLETE)
 
 Audited FY2025 components may enter historical earnings-quality context when the row,
 column, amount, unit, scope, assurance and citation are literal. FPT line 03
