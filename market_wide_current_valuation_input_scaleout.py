@@ -419,7 +419,9 @@ def _financial_input(fundamental: Mapping[str, Any] | None, artifact: Mapping[st
     context = {"official_field_context": fundamental.get("official_field_context", []),
                "baseline_metric_temporal_context": fundamental.get("baseline_metric_temporal_context", {}),
                "earnings_quality_context": fundamental.get("earnings_quality_context", {"status": "UNKNOWN"}),
-               "interim_context_does_not_supply_annual_valuation_inputs": True} if "official_projection" in artifact else {}
+               "interim_context_does_not_supply_annual_valuation_inputs": True,
+               **({"historical_earnings_quality_context": fundamental["historical_earnings_quality_context"]}
+                  if "historical_earnings_quality_context" in fundamental else {})} if "official_projection" in artifact else {}
     if tier != "OFFICIAL_QUALIFIED":
         return {
             "authority": tier, "calculation_grade": False,

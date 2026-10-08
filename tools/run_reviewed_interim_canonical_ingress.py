@@ -98,7 +98,7 @@ def run(*, landing_root: Path, document_specs=DOCUMENTS, reporting_period: str =
                     include_operating_cash_flow=True) if resolve_cash_flow_code_cells else None)
         qualification = qualify_table_facts(
             statements, ticker=spec["ticker"], reporting_period=reporting_period,
-            include_earnings_quality_components=reporting_period != "2025",
+            include_earnings_quality_components=reporting_period != "2025" or allow_audited_annual_context,
             scoped_unit_evidence=resolve_scoped_unit_evidence(statements),
             scoped_statement_scope_evidence=resolve_scoped_statement_scope_evidence(statements),
             line_code_cell_resolution=cells,

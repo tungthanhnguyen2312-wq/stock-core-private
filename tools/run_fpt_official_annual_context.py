@@ -22,7 +22,7 @@ def main():
                  evidence_subdir="fpt-evidence-20261008", front_matter_pages=(6, 7))
     if args.write:
         write_outputs(result, args.public_root, preserve_other_documents=True,
-                      append_new_facts_only=True, report_name="fpt_official_annual_context_report.json")
+                      append_new_facts_only=True, report_name="fpt_annual_provision_component_report.json")
     print(json.dumps(result["report"], ensure_ascii=True, indent=2))
     return 0
 

@@ -387,8 +387,13 @@ def test_current_overlay_has_no_net_income_sourced_from_line_61():
         ("PNJ", "operating_cash_flow"): 18890403841,
         ("PVD", "revenue"): 10896989276040, ("PVD", "net_income"): 1051572991932,
         ("PVD", "total_assets"): 28309862682750, ("PVD", "shareholders_equity"): 17098286949122,
-        ("FPT", "revenue"): 70112825100710, ("FPT", "shareholders_equity"): 43748040747539}
-    assert all(row["context_kind"] == "AUDITED_ANNUAL_FIELD" for row in annual)
+        ("FPT", "revenue"): 70112825100710, ("FPT", "shareholders_equity"): 43748040747539,
+        ("FPT", "provision_charge_or_reversal_adjustment"): 651406282654}
+    exact = [row for row in annual if row["canonical_metric"] != "provision_charge_or_reversal_adjustment"]
+    assert all(row["context_kind"] == "AUDITED_ANNUAL_FIELD" for row in exact)
+    component = next(row for row in annual if row["canonical_metric"] == "provision_charge_or_reversal_adjustment")
+    assert component["context_kind"] == "EARNINGS_QUALITY_COMPONENT"
+    assert component["reporting_period"] == "2025" and component["line_code"] == "03"
 
 
 def test_core_metric_vocabulary_has_no_orphans():

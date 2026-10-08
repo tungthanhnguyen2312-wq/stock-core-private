@@ -395,8 +395,10 @@ def _compact_context(ticker: str, operation: Mapping[str, Any], inputs: Mapping[
     if "official_field_context" in fundamental:
         # These bounded canonical facts must survive the generic nested-context
         # compactor, including their exact period/use limits and citation identity.
-        result["fundamental_context"].update({key: copy.deepcopy(fundamental.get(key)) for key in
-            ("official_field_context", "baseline_metric_temporal_context", "earnings_quality_context")})
+        preserved = ["official_field_context", "baseline_metric_temporal_context", "earnings_quality_context"]
+        if "historical_earnings_quality_context" in fundamental:
+            preserved.append("historical_earnings_quality_context")
+        result["fundamental_context"].update({key: copy.deepcopy(fundamental.get(key)) for key in preserved})
         result["fundamental_context"]["source_artifact_identity"] = inputs["fundamental"].get("artifact_identity")
         result["fundamental_context"]["research_session"] = inputs["fundamental"].get("research_session")
     intelligence = inputs.get("corporate_intelligence") or {}

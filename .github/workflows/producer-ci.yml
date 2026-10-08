@@ -72,6 +72,8 @@ env:
     tests/test_retained_annual_audit_assurance.py
     tests/test_retained_cash_flow_balance.py
     tests/test_fpt_official_financial_evidence.py
+    tests/test_fpt_annual_earnings_component.py
+    tests/test_source_faithful_numeric_normalization.py
     tests/test_nvl_reviewed_h1_native_fallback.py
     tests/test_retained_h1_provision_component.py
     tests/test_financial_evidence_currency_refresh.py

@@ -40,7 +40,7 @@ def all_rows():
 
 
 def test_annual_ingress_cannot_strip_all_context_markers_to_escape_restriction():
-    annual = [r for r in all_rows() if r['period_type']=='annual']
+    annual = [r for r in all_rows() if r['period_type']=='annual' and r.get('context_kind')!='EARNINGS_QUALITY_COMPONENT']
     assert len(annual)==10
     for row in annual:
         for key in ('context_kind','projection_period_policy','annual_context_contract'):

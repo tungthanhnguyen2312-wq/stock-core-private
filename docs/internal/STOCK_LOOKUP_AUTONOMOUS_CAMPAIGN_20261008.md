@@ -274,3 +274,31 @@ Owner program `STOCK_LOOKUP_AUTONOMOUS_OFFICIAL_EVIDENCE_CONTINUATION_20261008`;
   parent profit `²` damage. FPT annual line-03 `Provisions` 651,406,282,654 VND is literal
   but annual components are not admitted by the interim component contract. No acquisition:
   approved-route sources are scans with the same glyph failure; weekly quota 76% used.
+
+## Annual component and source-faithful normalization
+
+- ID `ANNUAL_EARNINGS_COMPONENT_AND_SOURCE_FAITHFUL_OCR_NORMALIZATION_V1`.
+- Starting main after PR #88: `559ff7a8453631053b2b5ff935c912e0f3568266`.
+- Owner override admits an audited annual component when the same component contract
+  keeps issuer, metric, amount, currency, scale, scope, period, period type, assurance,
+  citation, knowledge time, sign, recurrence and research-use restrictions explicit.
+- Requalified from retained FPT PDF `bb14bafff1a7849217f34cf4b50e0e3d69d91968f217a66d7c68f07d4c1af284`,
+  image-only page 13. Auditor pages 6–7 remain the audited consolidated assurance.
+  Literal label `Provisions`, line code 03, current amount `651,406,282,654` VND,
+  unit scale 1, consolidated cash-flow, column years literal `2025` and `2024`.
+  Semantic type `PROVISION_COMPONENT_REPORTED`. Status
+  `NON_RECURRING_COMPONENT_PRESENT_OR_POSSIBLE` with recurrence `UNKNOWN`.
+  This is not a statement that the provision is one-time, and it creates no normalized EPS.
+- OCR root cause: Tesseract 5.5.0.20241111, `vie+eng`, PSM 6, 240 dpi gray, emits
+  Unicode superscript digits for many ordinary `2` glyphs. Statement pages have no
+  native text layer (page 1 is only the digital signature). NFKC maps `²` to `2`,
+  including labels, codes, units and year headers such as `²0²5`. Those uses are not
+  normalized. `Số cudi ky` stays blocked. Five identity-qualified amount cells
+  (FPT line 61, PNJ H1 line 20, PNJ FY line 03, PVD line 110, HPG line 61) stay
+  `STILL_BLOCKED` because no independent confirmation exists.
+  Disposition `SOURCE_FAITHFUL_NORMALIZATION_NOT_YET_PROVABLE`.
+- Downstream: historical earnings-quality context carries `FY2025`. Current interim
+  quality, current field count, valuation metrics and P/E inputs do not take the component.
+  Packet and AI delivery copy the historical context with the period visible.
+- Knowledge is the October 8 qualification time. October 7 projection excludes the row.
+  No T0, seal, handoff, Dashboard or completed-session rewrite.

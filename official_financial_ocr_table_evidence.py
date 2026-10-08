@@ -66,7 +66,23 @@ ROW_LABEL_CONTRACT = {
 }
 
 
+def _identity_fold(value: str) -> str:
+    """Fold case and diacritics without compatibility decomposition.
+
+    NFKC/NFKD map superscript digits onto base digits.  Label identity must not
+    use that mapping: ``Provisi²ns`` is not the literal word Provisions.
+    """
+    import unicodedata
+    folded = unicodedata.normalize("NFD", str(value).casefold())
+    folded = "".join(ch for ch in folded if unicodedata.category(ch) != "Mn")
+    return " ".join(folded.replace("đ", "d").replace("’", "'").split())
+
+
 def row_label_supports_metric(metric: str, label: str) -> bool:
+    # English indirect cash-flow line 03 is the single literal word.  A longer
+    # phrase, or any superscript inside the word, stays unqualified.
+    if metric == "provision_charge_or_reversal_adjustment" and _identity_fold(label) == "provisions":
+        return True
     contract = ROW_LABEL_CONTRACT.get(metric)
     if contract is None:
         return True
