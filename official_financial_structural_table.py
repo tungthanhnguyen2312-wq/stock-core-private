@@ -163,6 +163,7 @@ _DASH_TOKENS = {"-", "–", "—"}
 _NUM_TOKEN_RE = re.compile(r"\(?[0-9]{1,3}(?:\s?[.,][0-9]{3})+\)?")
 _CODE_LINE_RE = re.compile(r"^\(?[0-9]{1,3}\)?$")
 _NOTE_TOKEN_RE = re.compile(r"^[0-9]{1,2}(?:\.[0-9]{1,2})?$")
+_VAS_NOTE_REFERENCE_RE = re.compile(r"^V\.[0-9]{1,2}(?:\([a-z]\))?$")
 
 
 def _hash(value: Any) -> str:
@@ -881,6 +882,14 @@ def _has_explicit_code_header(lines: Sequence[Mapping[str, Any]]) -> bool:
     return len(_semantic_header_spans(lines, phrases=("ma so",), header_class="LINE_CODE")) == 1
 
 
+def _interim_period_end(target_period: str) -> date | None:
+    match = re.fullmatch(r"(20[0-3][0-9])-(H1|Q[1-4])", target_period)
+    if match is None:
+        return None
+    month = {"H1": 6, "Q1": 3, "Q2": 6, "Q3": 9, "Q4": 12}[match.group(2)]
+    return date(int(match.group(1)), month, 31 if month in {3, 12} else 30)
+
+
 def _semantic_period_header_candidates(lines: Sequence[Mapping[str, Any]], *, target_period: str,
                                        statement_family: str | None) -> list[dict[str, Any]]:
     """Find one table-local non-year period pair before feeding the existing band engine."""
@@ -917,6 +926,17 @@ def _semantic_period_header_candidates(lines: Sequence[Mapping[str, Any]], *, ta
             if family == "balance_sheet" or comparative_year < target_year:
                 candidates.append({"header_class": "EXPLICIT_FULL_DATE", "header_lines": group,
                                    "current": current_dates[0], "comparative": comparative_dates[0]})
+        # An interim balance sheet may compare against the opening date of the same
+        # year (``30/6/2026`` and ``1/1/2026``).  The year alone cannot pick the
+        # current column there, so only the literal date equal to the interim
+        # period end may; the other literal date must be strictly earlier.
+        interim_end = _interim_period_end(str(target_period))
+        if family == "balance_sheet" and interim_end is not None and len(dates) == 2 and len(current_dates) == 2:
+            exact = [item for item in dates if item["parsed_date"] == interim_end.isoformat()]
+            earlier = [item for item in dates if item["parsed_date"] < interim_end.isoformat()]
+            if len(exact) == 1 and len(earlier) == 1:
+                candidates.append({"header_class": "EXPLICIT_FULL_DATE", "header_lines": group,
+                                   "current": exact[0], "comparative": earlier[0]})
         if family == "balance_sheet":
             closing = _semantic_header_spans(group, phrases=("closing balance", "so cuoi nam", "cuoi nam", "so cuoi ky", "cuoi ky"), header_class="CLOSING_BALANCE")
             opening = _semantic_header_spans(group, phrases=("opening balance", "so dau nam", "dau nam", "so dau ky", "dau ky"), header_class="OPENING_BALANCE")
@@ -1106,10 +1126,19 @@ def match_geometry_table_row(
         {"x0": float(bands["line_code"]["x1"]), "x1": label_right},
     )
     candidates = []
+    # VAS notes are printed ``V.1`` / ``V.19(a)``, which the integer note-band
+    # detector cannot cluster.  Without a note band, only such exact literal
+    # tokens between the code and value columns are a note cell, not a label;
+    # any other or damaged text there stays a competing label (fail closed).
+    vas_notes = [] if bands["note_reference"] is not None else [
+        token for token in row_tokens
+        if candidate_label_bands[1]["x0"] < float(token["x0"]) and float(token["x1"]) < candidate_label_bands[1]["x1"]
+        and _VAS_NOTE_REFERENCE_RE.fullmatch(str(token["text"]).strip())]
     for candidate_band in candidate_label_bands:
         candidate_tokens = [token for token in row_tokens
                             if candidate_band["x0"] < float(token["x0"])
-                            and float(token["x1"]) < candidate_band["x1"]]
+                            and float(token["x1"]) < candidate_band["x1"]
+                            and token not in vas_notes]
         if any(any(ch.isalpha() for ch in str(token["text"])) for token in candidate_tokens):
             candidates.append((candidate_band, candidate_tokens))
     # Explicit alphabetic labels on both sides are ambiguous. Never select one by
@@ -1163,6 +1192,8 @@ def match_geometry_table_row(
     if any(token in comparative for token in current) or len(current) != 1 or len(comparative) != 1:
         return None
     note = next((str(token["text"]).strip() for token in row_tokens if _in_band(token, bands["note_reference"]) and _NOTE_TOKEN_RE.fullmatch(str(token["text"]).strip())), None)
+    if note is None and len(vas_notes) == 1:
+        note = str(vas_notes[0]["text"]).strip()
     row_bbox = {
         "x0": min(float(token["x0"]) for token in row_tokens), "x1": max(float(token["x1"]) for token in row_tokens),
         "top": min(float(token["top"]) for token in row_tokens), "bottom": max(float(token["bottom"]) for token in row_tokens),

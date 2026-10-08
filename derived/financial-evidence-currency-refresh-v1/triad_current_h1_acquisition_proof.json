@@ -1,0 +1,78 @@
+{
+  "milestone_id": "VNM_QNS_POW_CURRENT_OFFICIAL_FINANCIAL_EVIDENCE_ACQUISITION_V1",
+  "budget": {
+    "issuers": [
+      "VNM",
+      "QNS",
+      "POW"
+    ],
+    "index_refresh_cap_per_issuer": 1,
+    "pdf_cap_per_issuer": 1,
+    "actual_http_cap": 12,
+    "concurrency": 1,
+    "storage_cap_bytes": 104857600,
+    "pagination": false,
+    "archive_crawl": false,
+    "web_search": false
+  },
+  "actual_requests": 3,
+  "network_bytes_retained": 59666,
+  "trace": [
+    {
+      "ticker": "QNS",
+      "kind": "index",
+      "url": "https://www.qns.com.vn/bao-cao-tai-chinh",
+      "started_at": "2026-10-08T03:03:03.452429Z",
+      "requests_counted_incl_redirects_retries": 1,
+      "state": "retained",
+      "http_status": 200,
+      "sha256": "8921d8e7148425222e8b953941f51783fe8595731e537556dbb49c84fa067d0a",
+      "observed_at": "2026-10-08T03:03:04.979377Z"
+    },
+    {
+      "ticker": "POW",
+      "kind": "index",
+      "url": "https://www.pvpower.vn/quan-he-co-dong/bao-cao-tai-chinh",
+      "started_at": "2026-10-08T03:03:04.993260Z",
+      "requests_counted_incl_redirects_retries": 2,
+      "state": "access_denied",
+      "http_status": 404,
+      "sha256": null,
+      "observed_at": null
+    }
+  ],
+  "pdf_requests": 0,
+  "vnm_retained_copy": {
+    "network_requests": 0,
+    "source_manifest_sha256": "83c731024d94d471c0455415306d7591ade2403420f67a0046e6e0297deda522",
+    "source_reporting_period": "2026",
+    "bound_reporting_period": "2026-H1",
+    "period_proof": "PDF page 1 title and page 5 review report: consolidated interim statements for Quy II and the six months ended 30 June 2026",
+    "record": {
+      "document_id": "0eda6dc732f3663d6d587292d1cd121571a780b9fabc8726b15f1385fa984996",
+      "canonical_url": "https://d8um25gjecm9v.cloudfront.net/cms/20260730_VNM_BCTC_da_soat_xet_Q2_2026_Hop_nhat_76ef2e29c1.pdf",
+      "sha256": "a6155aa757b320b893a78093b0454473f4a581aead225af4eb4ef1fbd6628561",
+      "content_length": 4351080,
+      "observed_at": "2026-08-02T08:25:00Z",
+      "published_at": "2026-07-30",
+      "relative_path": "documents/VNM/2026-H1/reviewed_interim_financial_statements/a6155aa757b320b893a78093b0454473f4a581aead225af4eb4ef1fbd6628561.pdf",
+      "retained_copy_provenance": {
+        "adopted_at": "2026-10-08T03:04:57.274647Z",
+        "adopted_at_source": "retained copy file write time (corrects an earlier operator placeholder)",
+        "method": "RETAINED_LOCAL_COPY_NO_NETWORK",
+        "network_requests": 0,
+        "source_manifest_reporting_period": "2026",
+        "source_relative_path": "documents/VNM/2026/reviewed_interim_financial_statements/a6155aa757b320b893a78093b0454473f4a581aead225af4eb4ef1fbd6628561.pdf"
+      }
+    },
+    "duplicate_replay_state": "cached_valid",
+    "duplicate_replay_manifest_bytes_equal": true
+  },
+  "landing_manifest_sha256": "436798f4bfd4c83e9bd22dc76397d2a9173dfe1853c09862b2ebb933fba52cfb",
+  "new_landing_bytes_total": 4413972,
+  "untouched_manifests": {
+    "currency_refresh_20260929": "97189741aaa759bdd2cbc20bcf7b7076f265aca2db91ab36d88db0c621e9009b",
+    "hpg_vnm_current_share_bridge_20260802": "83c731024d94d471c0455415306d7591ade2403420f67a0046e6e0297deda522"
+  },
+  "authority_effect": "RAW_RETAINED_DISCOVERY_AND_EXISTING_BYTES_ONLY_NO_VALUES"
+}

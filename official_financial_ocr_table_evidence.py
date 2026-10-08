@@ -59,6 +59,10 @@ ROW_LABEL_CONTRACT = {
     # required (OCR may read ``dự`` as ``dy``); letters are never repaired.
     "provision_charge_or_reversal_adjustment": {"any_of": ("phong",), "all_of": ("khoan",),
         "forbidden": ("khau hao", "ty gia", "lai vay", "dau tu")},
+    # The same 2026 renumbering moves borrowings to 323/339; 320 and 338 become
+    # ``Phải trả ngắn/dài hạn khác``.  A debt component must literally be a loan.
+    "short_term_borrowings": {"any_of": ("vay",), "all_of": ("ngan", "han"), "forbidden": ("phai tra",)},
+    "long_term_borrowings_or_finance_leases": {"any_of": ("vay",), "all_of": ("dai", "han"), "forbidden": ("phai tra",)},
     "net_income": {"any_of": ("loi nhuan sau thue", "profit after tax"),
                    "forbidden": ("cong ty me", "chu so huu", "co dong", "parent", "khong kiem soat")},
     "attributable_net_income": {"any_of": ("cong ty me", "of the parent", "parent company"),

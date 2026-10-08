@@ -302,3 +302,38 @@ Owner program `STOCK_LOOKUP_AUTONOMOUS_OFFICIAL_EVIDENCE_CONTINUATION_20261008`;
   Packet and AI delivery copy the historical context with the period visible.
 - Knowledge is the October 8 qualification time. October 7 projection excludes the row.
   No T0, seal, handoff, Dashboard or completed-session rewrite.
+
+## VNM/QNS/POW current official H1 evidence
+
+- ID `VNM_QNS_POW_CURRENT_OFFICIAL_FINANCIAL_EVIDENCE_ACQUISITION_V1` (COMPLETE); owner
+  override; start `795b729dbb35845511857e79d75ddc0f7f80f462`; fixed three-issuer probe.
+- Declared before HTTP: 1 index refresh and 1 PDF per issuer, 12 actual requests,
+  concurrency 1, 100 MiB, no pagination/crawl/search. Actual: 3 requests (QNS index 1;
+  POW index 2 incl. redirect/retry), 0 PDFs, 59,666 network bytes, 4,413,972 landing bytes.
+- Retained preflight: VNM reviewed consolidated "Q2 and six months ended 30 June 2026"
+  statement already retained 2026-08-02 on the admitted CloudFront host (SHA
+  `a6155aa757b320b893a78093b0454473f4a581aead225af4eb4ef1fbd6628561`, image-only, 72 pages).
+  Bound to 2026-H1 in landing `triad-h1-evidence-20261008` without network; identity and
+  original observation preserved; repeat binding is a byte-identical no-op. QNS/POW had
+  only homepage/no indices and FY2024 statements.
+- VNM: KPMG review report page 5 (VSRE 2410) proves reviewed consolidated interim
+  assurance. Fixed 240 dpi gray `vie+eng` PSM 6 profile; no other profile. Qualified:
+  cash and cash equivalents 4,535,672,366,831 VND, page 7 line 110 note V.1, 30/6/2026;
+  visually verified, lines 111+112 reconcile. Knowledge `2026-10-08T03:11:09Z`.
+  Blocked without repair: income statement (Q2 and six-month columns; six-month heading
+  OCR-damaged), cash-flow page 13 title OCR-damaged (OCF, line 03), equity leading dash
+  artefact, total assets (row 280 under Circular 43/2026; fixed row 270 refused by the
+  PR #87 label rule), debt (borrowings at 323/339). Comparative column literally
+  `(Đã phân loại lại)`; context only. No earnings component qualified.
+- Safety: 2026 template numbers 320/338 as other payables; the code-only debt path would
+  have bound them as borrowings. Debt components now need a literal loan label. No
+  existing overlay row depended on code-only debt binding.
+- QNS `ROUTE_DECISION_REQUIRED`: refreshed index (SHA `8921d8e7…`) lists the semi-annual
+  2026 report (15-08-2026) only as a first-party detail page; its PDF locator needs a
+  second discovery request beyond the cap. POW `APPROVED_ROUTE_BLOCKED`: seeded index 404.
+- Downstream: overlay 25→26 append-only. Completed October 7 records equal (current
+  fields 9→9). Scratch October 8: current fields 14→15, issuers 5→6, only VNM changed;
+  valuation metrics equal; strict share/all seven metrics 0. Packet and AI copy the field.
+  Seven protected input hashes unchanged. No Daily, T0, Dashboard or completed rewrite.
+- Exact next gate: owner decision whether one QNS detail-page discovery request is part of
+  the index allowance; POW needs a first-party financial-statement index locator.

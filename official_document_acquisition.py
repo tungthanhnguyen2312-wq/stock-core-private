@@ -400,6 +400,68 @@ def acquire(requests_: Iterable[Mapping[str, Any]], destination: Path, *, fetche
     return {"schema_version": VERSION, "manifest": str(manifest_path), "outcomes": outcomes}
 
 
+RETAINED_COPY_METHOD = "RETAINED_LOCAL_COPY_NO_NETWORK"
+
+
+def adopt_retained_document_copy(source_root: Path, sha256: str, destination: Path, *, reporting_period: str,
+                                 adopted_at: str, source_id: str = "issuer_ir",
+                                 registry: Mapping[str, Any] | None = None) -> dict[str, Any]:
+    """Bind already retained official bytes to a body-proven period in another landing; no network.
+
+    The document identity (ticker, canonical URL, SHA-256) and the original observation time
+    are preserved, so the copy never claims a newer acquisition. Only the reporting-period
+    binding, which the caller must have proven from the document body, is new. Calling it
+    again for the same document is a manifest-byte no-op.
+    """
+    source_root, root = Path(source_root), Path(destination)
+    # The source manifest is only read; an older schema stays as written.
+    try: source_records = json.loads((source_root / MANIFEST).read_text(encoding="utf-8"))["records"]
+    except (OSError, KeyError, TypeError, json.JSONDecodeError) as exc: raise ValueError("manifest_malformed") from exc
+    matches = [r for r in source_records if isinstance(r, dict) and r.get("sha256") == sha256]
+    if len(matches) != 1 or matches[0].get("acquisition_status") != "retained":
+        raise ValueError("RETAINED_DOCUMENT_NOT_UNIQUE")
+    original = matches[0]
+    source = source_root / str(original["relative_path"])
+    if not source.is_file() or _sha_file(source) != sha256:
+        raise ValueError("RETAINED_SOURCE_HASH_MISMATCH")
+    registry = registry if registry is not None else load_registry()
+    ticker, document_class, url = str(original.get("ticker") or "").upper(), str(original.get("document_class") or ""), canonical_url(str(original["canonical_url"]))
+    if ticker not in TICKERS or reporting_period not in PERIODS or document_class not in declared_document_types(registry):
+        raise ValueError("unsupported_request")
+    for target in {url, canonical_url(str(original.get("final_url") or url))}:
+        decision = admit(source_id, target, document_class, registry=registry)
+        if decision["decision"] != ADMITTED:
+            raise ValueError(f"refused_by_source_registry:{decision['reason']}")
+    document_id = _document_id(ticker, url, sha256)
+    if original.get("document_id") not in (None, document_id):
+        raise ValueError("RETAINED_DOCUMENT_IDENTITY_MISMATCH")
+    root.mkdir(parents=True, exist_ok=True)
+    records = _load(root / MANIFEST)["records"]
+    existing = next((r for r in records if r.get("document_id") == document_id), None)
+    if existing is not None:
+        if existing.get("reporting_period") != reporting_period or existing.get("sha256") != sha256:
+            raise ValueError("RETAINED_COPY_BINDING_CONFLICT")
+        return {"ticker": ticker, "document_id": document_id, "state": "cached_valid", "network_requests": 0}
+    relative = Path("documents") / ticker / reporting_period / _safe(document_class) / f"{sha256}{source.suffix.lower()}"
+    path = root / relative
+    if path.exists() and _sha_file(path) != sha256:
+        raise ValueError("hash_conflict")
+    if not path.exists():
+        path.parent.mkdir(parents=True, exist_ok=True)
+        _atomic_write(path, source.read_bytes())
+    record = {key: original.get(key) for key in (
+        "canonical_url", "final_url", "document_class", "published_at", "observed_at", "source_authority",
+        "http_status", "content_type", "content_length", "sha256", "extraction_status")}
+    record.update({"document_id": document_id, "ticker": ticker, "source_id": source_id, "reporting_period": reporting_period,
+                   "acquisition_status": "retained", "relative_path": relative.as_posix(), "supersedes_document_id": None,
+                   "retained_copy_provenance": {"method": RETAINED_COPY_METHOD, "network_requests": 0, "adopted_at": adopted_at,
+                       "source_manifest_reporting_period": original.get("reporting_period"),
+                       "source_relative_path": original.get("relative_path")}})
+    records.append(record)
+    _write_manifest(root / MANIFEST, records)
+    return {"ticker": ticker, "document_id": document_id, "state": "retained", "network_requests": 0}
+
+
 def _offline_content_type(path: Path, prefix: bytes) -> str:
     if path.suffix.lower() == ".pdf" and prefix.startswith(b"%PDF"): return "application/pdf"
     if path.suffix.lower() in {".html", ".htm"} and b"<html" in prefix.lower(): return "text/html"
