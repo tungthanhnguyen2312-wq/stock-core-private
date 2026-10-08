@@ -27,6 +27,12 @@ OVERLAY_CURRENCY = "VND"
 CONTEXT_CURRENCIES = frozenset({"VND", "USD"})
 FOREIGN_CONTEXT_METRICS = frozenset({"revenue", "net_income", "attributable_net_income"})
 EARNINGS_COMPONENT_METRIC = "investment_property_disposal_result"
+# metric -> (statement family, exact line code); mirrors the OCR component rules.
+EARNINGS_COMPONENT_SPECS = {"investment_property_disposal_result": ("income_statement", "21"),
+                            "provision_charge_or_reversal_adjustment": ("cash_flow", "03")}
+EARNINGS_COMPONENT_REASONS = {
+    "investment_property_disposal_result": "EXPLICIT_REPORTED_INVESTMENT_PROPERTY_DISPOSAL_RESULT",
+    "provision_charge_or_reversal_adjustment": "EXPLICIT_REPORTED_PROVISION_CHARGE_OR_REVERSAL_ADJUSTMENT"}
 EARNINGS_COMPONENT_CONTRACT = "reported_earnings_component_context/v1"
 ANNUAL_CONTEXT_CONTRACT = "audited_annual_exact_field_context/v1"
 
@@ -34,16 +40,18 @@ ANNUAL_CONTEXT_CONTRACT = "audited_annual_exact_field_context/v1"
 def earnings_component_is_admitted(row: Mapping[str, Any]) -> bool:
     from official_financial_ocr_table_evidence import row_label_supports_metric
     evidence = row.get("reported_component_evidence") or {}
-    return (row.get("canonical_metric") == EARNINGS_COMPONENT_METRIC
+    metric = str(row.get("canonical_metric") or "")
+    family, code = EARNINGS_COMPONENT_SPECS.get(metric, (None, None))
+    return (family is not None
             and row.get("context_kind") == "EARNINGS_QUALITY_COMPONENT"
             and row.get("component_contract") == EARNINGS_COMPONENT_CONTRACT
             and row.get("ingress_contract") == CONTRACT_VERSION
             and row.get("projection_currency_policy") == "VND_EXISTING_CONTRACT"
             and row.get("currency") == "VND" and row.get("period_type") == "interim"
-            and row.get("statement_family") == "income_statement"
-            and str(row.get("line_code")) == "21"
+            and row.get("statement_family") == family
+            and str(row.get("line_code")) == code
             and evidence.get("citation_id") == row.get("citation_id")
-            and row_label_supports_metric(EARNINGS_COMPONENT_METRIC, str(evidence.get("literal_label") or "")))
+            and row_label_supports_metric(metric, str(evidence.get("literal_label") or "")))
 PROVIDER_LABEL = "official_issuer_ir"
 # Circular-200 income statement: line 60 total profit after tax (net_income); line 61 profit
 # attributable to the parent (attributable_net_income).  Crossed pairs are never emitted.
@@ -92,12 +100,13 @@ def overlay_rows_from_panel_facts(panel_facts: Sequence[Mapping[str, Any]], *,
             reasons.append("CITATION_MISSING")
         if (fact.get("canonical_metric"), str(lineage.get("line_code"))) in LINE_CODE_IDENTITY_CONFLICTS:
             reasons.append("METRIC_LINE_CODE_IDENTITY_CONFLICT")
-        component = fact.get("canonical_metric") == EARNINGS_COMPONENT_METRIC
+        component = fact.get("canonical_metric") in EARNINGS_COMPONENT_SPECS
         if component:
             from official_financial_ocr_table_evidence import row_label_supports_metric
-            if (fact.get("currency") != "VND" or fact.get("statement_family") != "income_statement"
-                    or str(lineage.get("line_code")) != "21"
-                    or not row_label_supports_metric(EARNINGS_COMPONENT_METRIC,
+            family, code = EARNINGS_COMPONENT_SPECS[fact["canonical_metric"]]
+            if (fact.get("currency") != "VND" or fact.get("statement_family") != family
+                    or str(lineage.get("line_code")) != code
+                    or not row_label_supports_metric(fact["canonical_metric"],
                         str((lineage.get("row_object") or {}).get("reconstructed_label") or ""))):
                 reasons.append("EARNINGS_COMPONENT_IDENTITY_NOT_QUALIFIED")
         identity = {"ticker": fact.get("issuer_identity"), "metric": fact.get("canonical_metric"),

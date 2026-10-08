@@ -75,6 +75,11 @@ normalized EPS, annual valuation input, action or score change follows.
 | Operator host gate | `SCOPED` | `NONE / OWNER_DAILY_HOST_PREFLIGHT_ONLY`: a point-in-time observation that gates launch; no analytical authority. | [owner_daily_host_preflight_contract.md](owner_daily_host_preflight_contract.md) |
 
 
+Retained reviewed H1 requalification (`PNJ_VRE_REVIEWED_H1_PROVISION_COMPONENT_AND_TOTAL_ASSET_IDENTITY_V1`): indirect cash-flow line 03
+is an earnings-quality component only (`NON_RECURRING_COMPONENT_PRESENT_OR_POSSIBLE`,
+recurrence UNKNOWN, no normalization). Total assets require a literal total label; 2026
+templates number `Tài sản dài hạn khác` 270. Facts first qualified now are known now.
+
 NVL's newly retained H1 filing proves reviewed consolidated assurance after explicit
 zero-candidate native fallback. Every exact financial value remains blocked; no current
 field, valuation input or quality score is added. Source receipt and exact blockers:

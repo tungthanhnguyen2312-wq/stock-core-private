@@ -15,7 +15,7 @@
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "NVL_REVIEWED_H1_SOURCE_ACQUISITION_AND_QUALIFICATION_V1",
+    "milestone": "PNJ_VRE_REVIEWED_H1_PROVISION_COMPONENT_AND_TOTAL_ASSET_IDENTITY_V1",
     "state": "COMPLETE"
   },
   "queued_next": [],
@@ -3383,6 +3383,27 @@
       "source_doc": "docs/internal/STOCK_LOOKUP_AUTONOMOUS_CAMPAIGN_20261008.md",
       "notes": "One exact issuer PDF retained in one actual request, zero redirects/retries. Native text exists but yields zero candidates; explicit opt-in nine-page fixed OCR qualifies consolidated reviewed assurance page6. All numeric/geometry financial values remain blocked; no source mixing/repair. Same old19 financial fact lines and completed protected inputs unchanged. Source retained for later targeted literal evidence, not current share/valuation authority.",
       "terminal_disposition": "REVIEWED_SOURCE_ASSURANCE_QUALIFIED_EXACT_VALUES_BLOCKED"
+    },
+    {
+      "milestone_id": "PNJ_VRE_REVIEWED_H1_PROVISION_COMPONENT_AND_TOTAL_ASSET_IDENTITY_V1",
+      "state": "COMPLETE",
+      "starting_checkpoint": "5bf15809c88aa08a3333426e19515dc8fc228e03",
+      "checkpoint": "HEAD",
+      "candidate_branch": "feature/pnj-provision-component-20261008",
+      "dependencies": [
+        "NVL_REVIEWED_H1_SOURCE_ACQUISITION_AND_QUALIFICATION_V1"
+      ],
+      "unlocks": [],
+      "owner_authorized": true,
+      "owner_override": "OWNER_DIRECTIVE_2026_10_08_AUTONOMOUS_OFFICIAL_EVIDENCE_CONTINUATION",
+      "authority_effect": "FIELD_SCOPED_OFFICIAL_INTERIM_CONTEXT_AND_EARNINGS_COMPONENT_ONLY",
+      "state_history": [
+        "ACTIVE",
+        "COMPLETE"
+      ],
+      "source_doc": "docs/internal/STOCK_LOOKUP_AUTONOMOUS_CAMPAIGN_20261008.md",
+      "notes": "Bounded share assessment (VNM/FPT/PNJ/QNS/PVD/POW/SSI/VCB): zero retained executed-event/continuity evidence; NO_BOUNDED_SHARE_CHAIN_CURRENTLY_QUALIFIABLE. Retained reviewed H1 requalification, no network: PNJ cash-flow line03 provisions 2,667,248,523,366 VND and VRE (7,066)m VND components; VRE cash 5,707,705m, equity 49,310,673m, OCF 1,555,752m. Values visually verified; knowledge 2026-10-08, excluded from completed October7. Row-270 renumbered other-long-term-assets false total-asset path closed by literal label contract. PNJ reviewer emphasis (note39) retained literally. Append-only overlay 19->24; strict share/valuation0 unchanged.",
+      "terminal_disposition": "FIVE_LATER_KNOWN_INTERIM_FIELDS_AND_COMPONENTS_TOTAL_ASSET_IDENTITY_HARDENED"
     }
   ],
   "blocked_capabilities": [

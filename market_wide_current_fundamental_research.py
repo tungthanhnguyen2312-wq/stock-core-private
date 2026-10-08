@@ -1307,7 +1307,7 @@ def project_session(*, baseline: Mapping[str, Any], official_rows: list[Mapping[
     from financial_evidence_currency_contract import COHORT, TARGET_INTERIM_PERIODS
     from reviewed_interim_canonical_ingress import (
         authority_projection, FOREIGN_CONTEXT_METRICS, CONTRACT_VERSION as INTERIM_INGRESS,
-        EARNINGS_COMPONENT_METRIC, earnings_component_is_admitted,
+        EARNINGS_COMPONENT_SPECS, EARNINGS_COMPONENT_REASONS, earnings_component_is_admitted,
         ANNUAL_CONTEXT_CONTRACT,
     )
     from official_financial_assurance_evidence import assurance_status_is_qualified
@@ -1354,7 +1354,7 @@ def project_session(*, baseline: Mapping[str, Any], official_rows: list[Mapping[
                               and row.get("canonical_metric") in FOREIGN_CONTEXT_METRICS
                               and row.get("statement_family") == "income_statement"
                               and row.get("period_type") == "interim")
-        component = (row.get("canonical_metric") == EARNINGS_COMPONENT_METRIC
+        component = (row.get("canonical_metric") in EARNINGS_COMPONENT_SPECS
                      or row.get("context_kind") == "EARNINGS_QUALITY_COMPONENT")
         if component and not earnings_component_is_admitted(row):
             reasons.append("EARNINGS_COMPONENT_IDENTITY_NOT_QUALIFIED")
@@ -1429,7 +1429,7 @@ def project_session(*, baseline: Mapping[str, Any], official_rows: list[Mapping[
         if components:
             record["earnings_quality_context"] = {
                 "status": "NON_RECURRING_COMPONENT_PRESENT_OR_POSSIBLE",
-                "reason": "EXPLICIT_REPORTED_INVESTMENT_PROPERTY_DISPOSAL_RESULT",
+                "reason": "+".join(sorted({EARNINGS_COMPONENT_REASONS[f["canonical_metric"]] for f in components})),
                 "recurrence_assessment": "UNKNOWN", "normalization_status": "NOT_CALCULATED",
                 "normalized_eps": None, "component_evidence": components,
             }

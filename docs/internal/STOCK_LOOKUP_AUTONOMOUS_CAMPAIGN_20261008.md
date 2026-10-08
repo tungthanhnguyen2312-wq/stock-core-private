@@ -229,3 +229,37 @@ rewrites and T0 mutations remain zero. Final focused240 passed /2 retained skips
 Resume exactly through the prior one-writer/bootstrap/source-budget procedure after
 quota replenishes; choose another literal official source, preserve blocked HPG/NVL
 proofs, and require complete executed common-share continuity before denominator use.
+
+
+## Continuation: bounded share assessment and retained H1 provision components
+
+Owner program `STOCK_LOOKUP_AUTONOMOUS_OFFICIAL_EVIDENCE_CONTINUATION_20261008`; start
+`5bf15809c88aa08a3333426e19515dc8fc228e03`; one writer; no Daily, network or new document.
+
+- Share assessment (VNM, FPT, PNJ, QNS, PVD, POW, SSI, VCB): retained common-outstanding
+  points are FY2024 VNM/VCB citations only; retained event ledger has zero observations for
+  all eight; HOSE outstanding volume is governed as non-accounting. No executed-event chain
+  reaches October 7: `NO_BOUNDED_SHARE_CHAIN_CURRENTLY_QUALIFIABLE`. Pivot to financial depth.
+- Retained FY2025 PNJ/PVD/FPT/HPG statements are image-only; remaining fields fail on
+  damaged digit glyphs (`²`) or row geometry. No repair; natural blocker.
+- ID `PNJ_VRE_REVIEWED_H1_PROVISION_COMPONENT_AND_TOTAL_ASSET_IDENTITY_V1` (COMPLETE).
+  Selection: canonical-profile replay of retained PNJ H1 showed a 2.67 trillion VND
+  provision adjustment plus a reviewer emphasis (note 39, diamond-related incident).
+- Safety defect: 2026 statement templates number `Tài sản dài hạn khác` 270 and total
+  assets 280. Unchanged main, replaying PNJ H1, qualifies `total_assets=1,036,364,443,459`
+  from row 270 (true total 21,595,833,814,316). Never written; total assets now require a
+  literal total label. Row 280 stays blocked (comparative cell outside band; no loosening).
+- Qualified, visually verified, knowledge 2026-10-08T01:02Z (excluded from October 7):
+  PNJ cash-flow line 03 provisions 2,667,248,523,366 VND; VRE line 03 (7,066) million VND;
+  VRE cash 5,707,705m, equity 49,310,673m, OCF 1,555,752m VND. Components carry
+  `NON_RECURRING_COMPONENT_PRESENT_OR_POSSIBLE`, recurrence UNKNOWN, no normalized EPS.
+  PVD USD component refused (no FX). PNJ emphasis retained as literal tokens only.
+- Interim runner gains an explicit qualification-time floor; append-only overlay 19→24,
+  all prior lines byte-identical. Oct-7 projection records equal; scratch Oct-8: current
+  official fields 8→11, current components 1→3. Valuation/packet/AI pass context through;
+  strict shares/all valuation READY 0, annual exact 94 unchanged.
+- Tests: 25 new + repaired component-target selection in projection tests; focused 1,330
+  passed with zero candidate-only failures versus main; CI list 3,084 passed.
+- Remaining: PNJ H1 equity/assets/cash/OCF/debt (header discovery, band, `²` damage);
+  share continuity; FPT/HPG/NVL blockers unchanged.
+

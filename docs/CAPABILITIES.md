@@ -234,6 +234,11 @@ immutable. [Share contract](hpg_common_share_evidence_contract.md).
 - Input/Predecessor/Blocker/Next trigger: new owner decision required to revive anything
 
 
+Retained reviewed H1 requalification (`PNJ_VRE_REVIEWED_H1_PROVISION_COMPONENT_AND_TOTAL_ASSET_IDENTITY_V1`): indirect cash-flow line 03
+is an earnings-quality component only (`NON_RECURRING_COMPONENT_PRESENT_OR_POSSIBLE`,
+recurrence UNKNOWN, no normalization). Total assets require a literal total label; 2026
+templates number `Tài sản dài hạn khác` 270. Facts first qualified now are known now.
+
 NVL's newly retained H1 filing proves reviewed consolidated assurance after explicit
 zero-candidate native fallback. Every exact financial value remains blocked; no current
 field, valuation input or quality score is added. Source receipt and exact blockers:
