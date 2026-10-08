@@ -9,8 +9,8 @@
     "ai_rules": "docs/AI_RULES.md",
     "note": "This file is the machine-readable EXECUTION-STATE authority: which milestone is current/active/next/blocked, what checkpoint proves each completed milestone, and whether recorded state contradicts Git/worktree reality. It does not restate or supersede the narrative docs' technical content and is not a substitute for reading them. Where this file and a narrative doc appear to disagree, that is a conflict to surface to the owner (AGENTS.md 'Default lightweight bootstrap' rule), never an automatic override in either direction."
   },
-  "implementation_lineage_head": "05b3badb7b223c247e5c8ab8dc152167b76d9151",
-  "last_updated_checkpoint": "05b3badb7b223c247e5c8ab8dc152167b76d9151",
+  "implementation_lineage_head": "a89f521ace1683dc7aa79542abbfd86f19f56c13",
+  "last_updated_checkpoint": "a89f521ace1683dc7aa79542abbfd86f19f56c13",
   "known_operational_diff_allowlist": [
     "config/daily_research_session_input_registry.json"
   ],
@@ -3493,7 +3493,7 @@
       "milestone_id": "MACRO_MARKET_REGIME_DECISION_CONTEXT_CONVERGENCE_V1",
       "state": "COMPLETE",
       "starting_checkpoint": "59eb5a0d4f2ffa4a364d04d6dc98c3882e1561f2",
-      "checkpoint": "59eb5a0d4f2ffa4a364d04d6dc98c3882e1561f2",
+      "checkpoint": "a89f521ace1683dc7aa79542abbfd86f19f56c13",
       "candidate_branch": "feature/macro-market-regime-context-20261008",
       "dependencies": [
         "OFFICIAL_FINANCIAL_DOCUMENT_REPRESENTATION_RECOVERY_V1"
