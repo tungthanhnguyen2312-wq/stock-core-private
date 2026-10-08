@@ -1,0 +1,118 @@
+{
+  "milestone_id": "QNS_2026_H1_OFFICIAL_DETAIL_RESOLVER_AND_FINANCIAL_EVIDENCE_V1",
+  "budget": {
+    "issuer": "QNS",
+    "detail_page_requests_max": 1,
+    "pdf_requests_max": 1,
+    "total_requests_including_redirects_retries_max": 5,
+    "concurrency": 1,
+    "retained_storage_ceiling_bytes": 52428800,
+    "pagination": false,
+    "generic_search": false,
+    "index_refresh": false,
+    "further_discovery_layers": false
+  },
+  "budget_declared_before_http": true,
+  "detail_page": {
+    "classification": "DETAIL_PAGE_RESOLVER",
+    "authority_effect": "DISCOVERY_ONLY_NOT_FINANCIAL_EVIDENCE",
+    "original_url": "https://www.qns.com.vn/qns-cong-bo-bao-cao-tai-chinh-ban-nien-nam-2026",
+    "final_url": "https://www.qns.com.vn/qns-cong-bo-bao-cao-tai-chinh-ban-nien-nam-2026",
+    "retrieved_at": "2026-10-08T04:52:25.618175+00:00",
+    "sha256": "69a93d77422975a6afc87ae5a721e654bb87ca4b5c6d881b6b8bb4cd2e17c8bc",
+    "content_type": "text/html",
+    "parent_index": {
+      "url": "https://www.qns.com.vn/bao-cao-tai-chinh",
+      "sha256": "8921d8e7148425222e8b953941f51783fe8595731e537556dbb49c84fa067d0a",
+      "literal_href": "/qns-cong-bo-bao-cao-tai-chinh-ban-nien-nam-2026",
+      "literal_title": "QNS công bố báo cáo tài chính bán niên năm 2026",
+      "refreshed_by_this_milestone": false
+    }
+  },
+  "selection": {
+    "state": "PDF_LOCATOR_ON_ADMITTED_QNS_HOST",
+    "selected_locator": "https://www.qns.com.vn/upload/product/2026q2-bctc-hop-nhat-sau-kt-1786788334.pdf",
+    "pdf_anchors": [
+      {
+        "url": "https://www.qns.com.vn/upload/product/vie-cbtt-1786788333.pdf",
+        "literal_anchor_text": "Công văn Công bố thông tin"
+      },
+      {
+        "url": "https://www.qns.com.vn/upload/product/2026q2-bctc-hop-nhat-sau-kt-1786788334.pdf",
+        "literal_anchor_text": "Báo cáo tài chính hợp nhất bán niên năm 2026"
+      },
+      {
+        "url": "https://www.qns.com.vn/upload/product/2026q2-bctc-tong-hop-sau-kt-1786788334.pdf",
+        "literal_anchor_text": "Báo cáo tài chính tổng hợp bán niên năm 2026"
+      }
+    ]
+  },
+  "pdf_binding": {
+    "state": "CACHED_VALID_NO_PDF_REQUEST",
+    "sha256": "5a06a40f34a6d9b30233926f9c9d909d684744de2bf2ad0956edd367d5f7b068",
+    "request_required": false,
+    "bytes": 11975796
+  },
+  "representation": "OCR_REQUIRED",
+  "ocr_rerun": false,
+  "normalization": "SOURCE_FAITHFUL_NORMALIZATION_NOT_YET_PROVABLE",
+  "facts": [
+    {
+      "canonical_metric": "revenue",
+      "state": "BLOCKED",
+      "reason": "ROW_NOT_UNIQUE_OR_NOT_GEOMETRICALLY_RESOLVED"
+    },
+    {
+      "canonical_metric": "net_income",
+      "state": "BLOCKED",
+      "reason": "ROW_NOT_UNIQUE_OR_NOT_GEOMETRICALLY_RESOLVED"
+    },
+    {
+      "canonical_metric": "attributable_net_income",
+      "state": "BLOCKED",
+      "reason": "ROW_NOT_UNIQUE_OR_NOT_GEOMETRICALLY_RESOLVED"
+    },
+    {
+      "canonical_metric": "cash_and_equivalents",
+      "state": "BLOCKED",
+      "reason": "ROW_NOT_UNIQUE_OR_NOT_GEOMETRICALLY_RESOLVED"
+    },
+    {
+      "canonical_metric": "total_assets",
+      "state": "BLOCKED",
+      "reason": "ROW_NOT_UNIQUE_OR_NOT_GEOMETRICALLY_RESOLVED"
+    },
+    {
+      "canonical_metric": "shareholders_equity",
+      "state": "QUALIFIED",
+      "value": 10647823148609,
+      "currency": "VND",
+      "unit_scale": 1,
+      "source_page": 7,
+      "line_code": "400"
+    },
+    {
+      "canonical_metric": "operating_cash_flow",
+      "state": "BLOCKED",
+      "reason": "ROW_NOT_UNIQUE_OR_NOT_GEOMETRICALLY_RESOLVED"
+    },
+    {
+      "canonical_metric": "short_term_borrowings",
+      "state": "BLOCKED",
+      "reason": "ROW_LABEL_DOES_NOT_SUPPORT_METRIC"
+    },
+    {
+      "canonical_metric": "long_term_borrowings_or_finance_leases",
+      "state": "BLOCKED",
+      "reason": "ROW_LABEL_DOES_NOT_SUPPORT_METRIC"
+    },
+    {
+      "canonical_metric": "total_interest_bearing_debt",
+      "state": "BLOCKED",
+      "reason": "DEBT_COMPONENT_INCOMPLETE"
+    }
+  ],
+  "earnings_components": [],
+  "requests_used": 1,
+  "terminal_disposition": "QNS_2026_H1_CURRENT_OFFICIAL_EVIDENCE_READY"
+}

@@ -5,7 +5,16 @@ the machine state `ROADMAP_STATE.json`). Updated 2026-10-08 from starting main `
 auto-starts.** A milestone starts only when `python tools/stocklookup_roadmap.py --can-start <ID>` allows
 it or the owner records an explicit override (AI_RULES rule 11). Facts: [ACTIVE_STATE.md](ACTIVE_STATE.md).
 
-## NOW — `VNM_QNS_POW_CURRENT_OFFICIAL_FINANCIAL_EVIDENCE_ACQUISITION_V1` (COMPLETE)
+## NOW — `QNS_2026_H1_OFFICIAL_DETAIL_RESOLVER_AND_FINANCIAL_EVIDENCE_V1` (COMPLETE)
+
+One QNS detail-page request rebound `Báo cáo tài chính hợp nhất bán niên năm 2026` on
+`www.qns.com.vn`. The retained PDF SHA `5a06a40f…` matched, so no PDF was downloaded
+and the fixed OCR profile was not rerun. Equity 10,647,823,148,609 VND remains the
+only qualified 2026-H1 fact. Revenue, profit, cash, assets, operating cash flow and
+debt stay blocked on damaged headers. No earnings component and no superscript
+repair. Strict shares and valuation stay zero. POW stays route-blocked.
+
+## PRIOR — `VNM_QNS_POW_CURRENT_OFFICIAL_FINANCIAL_EVIDENCE_ACQUISITION_V1` (COMPLETE)
 
 Fixed three-issuer probe for 2026-H1/Q2 official statements; no cohort expansion and no
 successor. Reviewed consolidated H1 statements under the fixed OCR profile, known October 8:
