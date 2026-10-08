@@ -1,0 +1,191 @@
+{
+  "milestone_id": "OFFICIAL_FINANCIAL_DOCUMENT_REPRESENTATION_RECOVERY_V1",
+  "contract": "official_financial_representation/v1",
+  "disposition": "OFFICIAL_REPRESENTATION_BOTTLENECK_CONFIRMED",
+  "normalization": "SOURCE_FAITHFUL_NORMALIZATION_NOT_YET_PROVABLE",
+  "knowledge_available_at": "2026-10-08T05:25:33.387067Z",
+  "cohort_size": 5,
+  "alternate_official_representations_found": 3,
+  "facts_recovered": 0,
+  "root_bottleneck": "REPRESENTATION",
+  "future_acquisition_rule": "PREFER_PARSEABLE_COPY_ONLY_WHEN_THE_SAME_FILING_EXPLICITLY_LISTS_ONE",
+  "discovery_path_changed": false,
+  "issuer_by_issuer_scan_extraction_continues": false,
+  "strict_shares": 0,
+  "strict_valuation": 0,
+  "october_7_records_changed": false,
+  "network": {
+    "targets": 5,
+    "discovery_requests_per_target_max": 2,
+    "alternate_document_fetches_per_target_max": 1,
+    "concurrency": 1,
+    "new_retained_bytes": 27855577,
+    "storage_ceiling_bytes": 157286400,
+    "counted_completed_gets": 5,
+    "qns_language_switch": "unstable_redirect_hops_not_logged_at_most_6",
+    "total_http_upper_bound": 11,
+    "http_ceiling": 15
+  },
+  "assessments": [
+    {
+      "issuer": "FPT",
+      "fact": "attributable_net_income",
+      "reporting_period": "2025",
+      "original_representation": "PRIMARY_OFFICIAL_PDF_SCAN",
+      "original_sha256": "bb14bafff1a7849217f34cf4b50e0e3d69d91968f217a66d7c68f07d4c1af284",
+      "raw_token_preserved": "9,376,1²7,6²9,501",
+      "normalization": "SOURCE_FAITHFUL_NORMALIZATION_NOT_YET_PROVABLE",
+      "superscript_repair_applied": false,
+      "knowledge_available_at": "2026-10-08T05:25:33.387067Z",
+      "excluded_from_completed_october_7": true,
+      "valuation_effect": "NONE",
+      "share_continuity_inferred": false,
+      "alternate_representation": "OFFICIAL_PARALLEL_LANGUAGE_PDF",
+      "alternate_sha256": "630f61f6ef9f07d5c593c3bf8f65bad1d56ecbb091921296ed5c4e830ea070a4",
+      "identity": {
+        "same_filing": true,
+        "source_document_identity": {
+          "issuer": "FPT",
+          "reporting_period": "2025",
+          "scope": "consolidated",
+          "assurance": "audited",
+          "statement_family": "income_statement"
+        },
+        "representation_identities_distinct": true,
+        "identity_proof": "OFFICIAL_LANGUAGE_COUNTERPART",
+        "reasons": []
+      },
+      "independence": {
+        "independent": false,
+        "reason": "IMAGE_ONLY_NO_NATIVE_TEXT"
+      },
+      "value_comparison": {
+        "classification": "NOT_COMPARABLE",
+        "reason": "VALUE_NOT_EXPOSED"
+      },
+      "recovered_fact": null,
+      "outcome": "ALTERNATE_OFFICIAL_REPRESENTATION_IMAGE_ONLY"
+    },
+    {
+      "issuer": "PNJ",
+      "fact": "operating_cash_flow",
+      "reporting_period": "2026-H1",
+      "original_representation": "PRIMARY_OFFICIAL_PDF_SCAN",
+      "original_sha256": "db877169e7c19b4b81d60b37d5aab8f9938129a66b582c2229ffffebdca2a43d",
+      "raw_token_preserved": "1.991.053.934.²37",
+      "normalization": "SOURCE_FAITHFUL_NORMALIZATION_NOT_YET_PROVABLE",
+      "superscript_repair_applied": false,
+      "knowledge_available_at": "2026-10-08T05:25:33.387067Z",
+      "excluded_from_completed_october_7": true,
+      "valuation_effect": "NONE",
+      "share_continuity_inferred": false,
+      "alternate_representation": "OFFICIAL_PARALLEL_LANGUAGE_PDF",
+      "alternate_sha256": "cc0baaf7bfb938a898e9f23f1509bae0b8b25c7a045973ffc2086eb88d5db39c",
+      "identity": {
+        "same_filing": true,
+        "source_document_identity": {
+          "issuer": "PNJ",
+          "reporting_period": "2026-H1",
+          "scope": "consolidated",
+          "assurance": "reviewed",
+          "statement_family": "cash_flow"
+        },
+        "representation_identities_distinct": true,
+        "identity_proof": "EXPLICIT_OFFICIAL_CROSS_LINK",
+        "reasons": []
+      },
+      "independence": {
+        "independent": false,
+        "reason": "IMAGE_ONLY_NO_NATIVE_TEXT"
+      },
+      "value_comparison": {
+        "classification": "NOT_COMPARABLE",
+        "reason": "VALUE_NOT_EXPOSED"
+      },
+      "recovered_fact": null,
+      "outcome": "ALTERNATE_OFFICIAL_REPRESENTATION_IMAGE_ONLY"
+    },
+    {
+      "issuer": "PVD",
+      "fact": "cash_and_equivalents",
+      "reporting_period": "2025",
+      "original_representation": "PRIMARY_OFFICIAL_PDF_SCAN",
+      "original_sha256": "6ee20a554891c449a8ee72fffe6358bc9b32145d066a7e52d8492d88f305139c",
+      "raw_token_preserved": "1.8²1.²73.980.²43",
+      "normalization": "SOURCE_FAITHFUL_NORMALIZATION_NOT_YET_PROVABLE",
+      "superscript_repair_applied": false,
+      "knowledge_available_at": "2026-10-08T05:25:33.387067Z",
+      "excluded_from_completed_october_7": true,
+      "valuation_effect": "NONE",
+      "share_continuity_inferred": false,
+      "alternate_representation": "OFFICIAL_PARALLEL_LANGUAGE_PDF",
+      "alternate_sha256": "67c030b9af3341b83551e8b3ed1c46696dfa823a5c49653a3a9316800d2cf2b2",
+      "identity": {
+        "same_filing": true,
+        "source_document_identity": {
+          "issuer": "PVD",
+          "reporting_period": "2025",
+          "scope": "consolidated",
+          "assurance": "audited",
+          "statement_family": "balance_sheet"
+        },
+        "representation_identities_distinct": true,
+        "identity_proof": "OFFICIAL_LANGUAGE_COUNTERPART",
+        "reasons": []
+      },
+      "independence": {
+        "independent": false,
+        "reason": "IMAGE_ONLY_NO_NATIVE_TEXT"
+      },
+      "value_comparison": {
+        "classification": "NOT_COMPARABLE",
+        "reason": "VALUE_NOT_EXPOSED"
+      },
+      "recovered_fact": null,
+      "outcome": "ALTERNATE_OFFICIAL_REPRESENTATION_IMAGE_ONLY"
+    },
+    {
+      "issuer": "HPG",
+      "fact": "attributable_net_income",
+      "reporting_period": "2025",
+      "original_representation": "PRIMARY_OFFICIAL_PDF_SCAN",
+      "original_sha256": "f38c5f75becf7d3f145d27183eec81f119fd4f75e378b983a2763ddc3f7e0c07",
+      "raw_token_preserved": "15.453.174.006.²²3",
+      "normalization": "SOURCE_FAITHFUL_NORMALIZATION_NOT_YET_PROVABLE",
+      "superscript_repair_applied": false,
+      "knowledge_available_at": "2026-10-08T05:25:33.387067Z",
+      "excluded_from_completed_october_7": true,
+      "valuation_effect": "NONE",
+      "share_continuity_inferred": false,
+      "outcome": "NO_ALTERNATE_REPRESENTATION_FOUND",
+      "alternate_representation": null,
+      "value_comparison": {
+        "classification": "NOT_COMPARABLE",
+        "reason": "VALUE_NOT_EXPOSED"
+      },
+      "recovered_fact": null
+    },
+    {
+      "issuer": "QNS",
+      "fact": "cash_and_equivalents",
+      "reporting_period": "2026-H1",
+      "original_representation": "PRIMARY_OFFICIAL_PDF_SCAN",
+      "original_sha256": "5a06a40f34a6d9b30233926f9c9d909d684744de2bf2ad0956edd367d5f7b068",
+      "raw_token_preserved": null,
+      "normalization": "SOURCE_FAITHFUL_NORMALIZATION_NOT_YET_PROVABLE",
+      "superscript_repair_applied": false,
+      "knowledge_available_at": "2026-10-08T05:25:33.387067Z",
+      "excluded_from_completed_october_7": true,
+      "valuation_effect": "NONE",
+      "share_continuity_inferred": false,
+      "outcome": "NO_ALTERNATE_REPRESENTATION_FOUND",
+      "alternate_representation": null,
+      "value_comparison": {
+        "classification": "NOT_COMPARABLE",
+        "reason": "VALUE_NOT_EXPOSED"
+      },
+      "recovered_fact": null
+    }
+  ],
+  "packet_rows": []
+}

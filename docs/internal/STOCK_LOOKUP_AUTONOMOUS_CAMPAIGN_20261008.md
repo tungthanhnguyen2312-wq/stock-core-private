@@ -377,3 +377,36 @@ Owner program `STOCK_LOOKUP_AUTONOMOUS_OFFICIAL_EVIDENCE_CONTINUATION_20261008`;
   `SOURCE_FAITHFUL_NORMALIZATION_NOT_YET_PROVABLE`.
 - Disposition `QNS_2026_H1_CURRENT_OFFICIAL_EVIDENCE_READY`. Strict share/valuation 0.
   October 7 still excludes the equity row. No successor started.
+
+## Official alternate-representation proof
+
+- ID `OFFICIAL_FINANCIAL_DOCUMENT_REPRESENTATION_RECOVERY_V1` (COMPLETE). Owner
+  override. Start `d0d5cd489d8310efc4e494cf5250c3a4ef005ebf`. Five blocked facts.
+  No OCR, no superscript repair, no new provider.
+- Fixed cohort: FPT FY2025 attributable net income; PNJ H1 2026 operating cash
+  flow; PVD FY2025 cash; HPG FY2025 attributable net income; QNS H1 2026 cash.
+- Retained pages already named three same-scope language counterparts. Those
+  PDFs were fetched. Native text characters are 0 on every counterpart.
+  FPT Vietnamese audited consolidated SHA `630f61f6…`, 73 pages, 8,039,102
+  bytes. PNJ English reviewed consolidated SHA `cc0baaf7…`, 54 pages,
+  5,010,252 bytes. PVD English audited consolidated SHA `67c030b9…`, 115 pages,
+  14,627,697 bytes. Listing identity:
+  FPT "Báo cáo tài chính hợp nhất năm 2025 đã kiểm toán"; PNJ code 79c on the
+  same official index; PVD anchor "Audited Consolidated Financial Statements 2025".
+- HPG's retained index lists only the consolidated scan plus a parent-company
+  statement. The parent statement is a different scope and was not fetched.
+  The English link is the homepage, not a filing index.
+- QNS's detail page lists the retained consolidated PDF, a combined statement
+  (different scope, not fetched), and a disclosure letter. `change-lang/en`
+  ended `unstable_redirect` with no retained body.
+- Outcome per target: FPT, PNJ and PVD
+  `ALTERNATE_OFFICIAL_REPRESENTATION_IMAGE_ONLY`. HPG and QNS
+  `NO_ALTERNATE_REPRESENTATION_FOUND`. Facts recovered: 0. The corrupted scan
+  tokens stay raw. `SOURCE_FAITHFUL_NORMALIZATION_NOT_YET_PROVABLE` is unchanged.
+- Network: 5 completed GETs with final URL equal to the requested URL, plus
+  the QNS redirect chain (hops not logged, at most 6). Upper bound 11 of 15.
+  Concurrency 1. New retained bytes 27,855,577. No search engine. No second
+  image-only copy is preferred for extraction, because this cohort showed no
+  fitness gain. Discovery code was not widened.
+- Disposition `OFFICIAL_REPRESENTATION_BOTTLENECK_CONFIRMED`. Strict shares
+  and strict valuation stay 0. October 7 records are unchanged. No successor.
