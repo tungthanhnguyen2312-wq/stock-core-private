@@ -39,7 +39,7 @@
         "COMPLETE"
       ],
       "source_doc": "docs/long_term_company_economics_evidence_contract.md",
-      "notes": "Offline opt-in source-bound evidence matrix; retained PNJ/PVD/FPT acceptance, observation versus interpretation, exact cutoff/fitness, unknown recurrence and normalization blockers. Focused tests passed. Local checkpoint only; explicit owner approval required for push/PR, then separate merge/deployment gates. No Daily, production writes, publication or successor.",
+      "notes": "Offline opt-in source-bound evidence matrix; retained PNJ/PVD/FPT acceptance, observation versus interpretation, exact cutoff/fitness, unknown recurrence and normalization blockers. Focused tests passed. PR96 corrective keeps the active reading budget and offline Stage 1 isolation guards unchanged; independent consumer validation preserves approved valid-output identities. Corrective checkpoint is local only; explicit owner approval required to push its exact SHA to existing PR96, then separate merge/deployment gates. No Daily, production writes, publication or successor.",
       "terminal_disposition": "LONG_TERM_COMPANY_ECONOMICS_EVIDENCE_MATRIX_IMPLEMENTATION_COMPLETE"
     },
     {

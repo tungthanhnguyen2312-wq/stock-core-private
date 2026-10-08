@@ -247,3 +247,72 @@ def test_human_view_has_exact_source_references_and_no_new_action_or_engine(reta
             for child in value:
                 check(child)
     check(result)
+
+
+# Canonical full-output hashes captured from approved candidate 99b2c9a before
+# removing its Stage 1 dependency. Equality includes every fact, restriction,
+# source reference, unknown state and identity; it is not just value parity.
+@pytest.mark.parametrize("ticker,cutoff,expected", [
+    ("PNJ", BEFORE, "ea079afd26e147f2374eabb96e8d516944c5d0b3d781e90f4213aa3c5e5b1faa"),
+    ("PNJ", CUTOFF, "4cba4ac02b36d3a0fad56105e32f7f7148e7ebf83f0e444481ed9746a19ba22f"),
+    ("PVD", BEFORE, "fbd5f42b1beb537094e236f91e986b129e682988c6a7a9b365ea98ee28cb28fd"),
+    ("PVD", CUTOFF, "e1bcd0f7644beca7380f4c553809f8c29ce24a703d7a16a3637105760d691e4e"),
+    ("FPT", BEFORE, "f950238e7885bb97a6dbf1d69f2d652676b1b440edbc9f237a6b9fa233a4f41f"),
+    ("FPT", CUTOFF, "c345b485582620a20b73161d1e86796000b34b4fd922a9c00e535249de00dff3"),
+])
+def test_corrective_preserves_exact_approved_issuer_output(retained, ticker, cutoff, expected):
+    result = build(retained, ticker, knowledge_cutoff=cutoff)
+    assert result["artifact_sha256"] == expected
+    assert result == build(list(reversed(retained)) + deepcopy(retained), ticker, knowledge_cutoff=cutoff)
+
+
+@pytest.mark.parametrize("kind,expected", [
+    ("context", "ed47fb21e3add7307d69a818fac50854c6233ab3a694fe4c89087fb642a8954c"),
+    ("valuation", "f9942cf38e250b726ad0db0b5cda466487f62fee2e885c798b81456b6114affe"),
+])
+def test_corrective_preserves_exact_valid_reference_output(retained, kind, expected):
+    kwargs = {"context_items": [context("FUNDAMENTAL", "SUPPORTS")]} if kind == "context" else {"valuation_context": valuation()}
+    result = build(retained, **kwargs)
+    assert result["artifact_sha256"] == expected
+    assert result == build(list(reversed(retained)), **kwargs)
+
+
+@pytest.mark.parametrize("key", ["overallScore", "probability", "forecast-return", "confidence", "weighted", "rating"])
+def test_independent_consumer_preserves_nested_forbidden_key_semantics(retained, key):
+    from thesis_evidence_contract import seal
+    envelope = context("FUNDAMENTAL")
+    envelope["item"]["coverage"] = {"nested": [{key: 1}]}
+    envelope["item"] = seal(envelope["item"], "evidence_item/v1")
+    with pytest.raises(ValueError, match="FORBIDDEN_JUDGMENT_FIELD"):
+        build(retained, context_items=[envelope])
+
+
+@pytest.mark.parametrize("change", [
+    {"source": {"identity": "", "contract_version": "financial_analysis_context/v2", "pointer": "/records/PNJ"}},
+    {"fitness": {"fact_eligible": 1, "direction_eligible": False}},
+    {"state": "UNMAPPED"}, {"non_voting": False}, {"is_actionable": True},
+    {"lens_binding": {"LONG_TERM_INVESTOR": "CONTEXT"}},
+    {"factual_values": [{"name": "profit", "value": 1}]},
+    {"knowledge_stage": "T0_SEALED", "seal_reference": None},
+])
+def test_independent_reference_verifier_keeps_source_schema_and_authority_gates(retained, change):
+    from thesis_evidence_contract import seal, verify_item
+    envelope = context("FUNDAMENTAL")
+    envelope["item"].update(change)
+    envelope["item"] = seal(envelope["item"], "evidence_item/v1")
+    with pytest.raises(ValueError):
+        verify_item(envelope["item"])
+    with pytest.raises(ValueError):
+        build(retained, context_items=[envelope])
+
+
+def test_independent_seal_and_scanner_do_not_sanitize_nonfinite_values():
+    from thesis_evidence_contract import seal, scan_forbidden
+    for value in (float("nan"), float("inf"), float("-inf")):
+        payload = {"fact": [value]}
+        for sealer in (seal, economics._seal):
+            with pytest.raises(ValueError):
+                sealer(payload, "evidence_item/v1")
+        for scanner in (scan_forbidden, economics._scan_forbidden):
+            with pytest.raises(ValueError, match="NON_FINITE_FACT"):
+                scanner(payload)

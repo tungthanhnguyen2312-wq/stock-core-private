@@ -8,12 +8,14 @@ from __future__ import annotations
 
 from copy import deepcopy
 from datetime import datetime
+import hashlib
+import json
 import math
+import re
 from typing import Any, Mapping, Sequence
 
 import market_wide_current_fundamental_research as fundamental
 from portfolio_opportunity_cost_research import _strategic
-from thesis_evidence_contract import seal, verify_identity, verify_item, scan_forbidden
 
 CONTRACT_VERSION = "long_term_company_economics_evidence/v1"
 STATUSES = ("KNOWN", "PARTIALLY_KNOWN", "UNKNOWN", "NOT_APPLICABLE")
@@ -63,6 +65,102 @@ EVIDENCE_GAPS = {
     "valuation_fitness": ["QUALIFIED_RELATIVE_METHOD_NOT_SUPPLIED", "STRICT_SHARE_CONTINUITY_NOT_SUPPLIED"],
     "structural_thesis_invalidation": ["SOURCE_OWNED_STRUCTURAL_INVALIDATION_CONDITIONS_NOT_SUPPLIED"],
 }
+
+# Independent consumer contract for a source-bound evidence_item/v1 reference.
+# These closed schema checks do not construct items, reduce axes/lenses, verify
+# T0 snapshots, or grant any directional authority. No offline engine is imported.
+_CONTEXT_FIELDS = frozenset({
+    "contract_version", "subject", "source", "axis", "sub_axis", "role", "lens_binding",
+    "state", "unknown_class", "reason_codes", "blocker_codes", "knowledge_stage",
+    "seal_reference", "horizon", "correlation_group", "canonical_evidence_key",
+    "common_cause_key", "freshness", "basis", "authority_ceiling", "fitness", "relations",
+    "confirmation_pointers", "invalidation_pointers", "coverage", "factual_values",
+    "facts_present", "materiality", "non_voting", "is_actionable", "artifact_identity", "artifact_sha256",
+})
+_CONTEXT_ENUMS = {
+    "contract_version": {"evidence_item/v1"},
+    "state": {"SUPPORTS", "OPPOSES", "NEUTRAL", "MIXED", "UNKNOWN", "NOT_APPLICABLE"},
+    "role": {"PRIMARY", "SECONDARY", "CONTEXT"},
+    "axis": {"TECHNICAL", "VOLUME", "PARTICIPANT_FLOW", "FUNDAMENTAL", "VALUATION",
+             "CORPORATE_FORWARD", "MACRO_SECTOR", "LIQUIDITY_PORTFOLIO", "EVIDENCE_QUALITY"},
+    "knowledge_stage": {"T0_SEALED", "POST_T0_ENRICHED"},
+}
+_UNKNOWN_CLASSES = {"MISSING", "IMMATURE", "UNQUALIFIED", "STALE", "POLICY_NOT_AUTHORIZED",
+                    "PRIMARY_EVIDENCE_MISSING", "CONTEXT_ONLY", "HIGHER_TIMEFRAME_UNKNOWN",
+                    "UNRESOLVED", "AUTHORITY_LIMITED"}
+_FORBIDDEN_KEYS = {"score", "weight", "confidence", "probability", "rank", "rating", "conviction", "target",
+                   "priorityscore", "overall", "overallscore", "overallrating", "certainty", "likelihood",
+                   "recommendation", "buysell", "signalstrength", "stars", "grade", "alphaestimate", "forecastreturn"}
+_FORBIDDEN_TOKENS = {"score", "scores", "weight", "weights", "weighted", "confidence", "probability",
+                     "probabilities", "rank", "ranking", "rating", "conviction", "target", "certainty", "likelihood"}
+
+
+def _canonical(value: Any) -> str:
+    return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False)
+
+
+def _seal(value: Mapping[str, Any], kind: str) -> dict[str, Any]:
+    body = {key: item for key, item in value.items() if key not in {"artifact_identity", "artifact_sha256"}}
+    digest = hashlib.sha256(_canonical(body).encode("utf8")).hexdigest()
+    return {**body, "artifact_sha256": digest, "artifact_identity": kind + ":" + digest}
+
+
+def _verify_identity(value: Mapping[str, Any], kind: str) -> None:
+    expected = _seal(value, kind)
+    if any(value.get(key) != expected[key] for key in ("artifact_identity", "artifact_sha256")):
+        raise ValueError("ECONOMICS_CONTENT_IDENTITY_INVALID:" + kind)
+
+
+def _scan_forbidden(value: Any, path: str = "") -> None:
+    if isinstance(value, dict):
+        for key, child in value.items():
+            words = re.sub(r"([a-z])([A-Z])", r"\1_\2", str(key)).lower()
+            if ("".join(re.findall(r"[a-z]+", words)) in _FORBIDDEN_KEYS
+                    or set(re.findall(r"[a-z]+", words)) & _FORBIDDEN_TOKENS):
+                raise ValueError("ECONOMICS_FORBIDDEN_JUDGMENT_FIELD:" + path + "/" + str(key))
+            _scan_forbidden(child, path + "/" + str(key))
+    elif isinstance(value, list):
+        for index, child in enumerate(value):
+            _scan_forbidden(child, path + "/" + str(index))
+    elif isinstance(value, float) and not math.isfinite(value):
+        raise ValueError("ECONOMICS_NON_FINITE_FACT:" + path)
+
+
+def _verify_context_item(item: Mapping[str, Any]) -> None:
+    """Validate an existing serialized reference; do not evaluate its thesis."""
+    _scan_forbidden(item)
+    _verify_identity(item, "evidence_item/v1")
+    def require(condition: bool, code: str) -> None:
+        if not condition:
+            raise ValueError("ECONOMICS_CONTEXT_" + code)
+    require(set(item) == _CONTEXT_FIELDS and set(item["source"]) == {"identity", "contract_version", "pointer"}, "SCHEMA_UNSUPPORTED")
+    require(set(item["fitness"]) == {"fact_eligible", "direction_eligible"}
+            and all(type(v) is bool for v in item["fitness"].values()), "FITNESS_BOOLEAN_REQUIRED")
+    require(all(isinstance(item[key], str) and item[key] for key in (
+        "correlation_group", "canonical_evidence_key", "common_cause_key", "horizon")), "CORRELATION_BINDING_REQUIRED")
+    for key, vocabulary in _CONTEXT_ENUMS.items():
+        require(item[key] in vocabulary, "UNMAPPED_VOCABULARY:" + key)
+    require(set(item["lens_binding"]) == {"LONG_TERM_INVESTOR", "SHORT_TERM_INVESTOR"}
+            and all(role in _CONTEXT_ENUMS["role"] for role in item["lens_binding"].values()), "LENS_BINDING_INVALID")
+    require(item["unknown_class"] in _UNKNOWN_CLASSES if item["state"] == "UNKNOWN"
+            else item["unknown_class"] is None, "UNKNOWN_CLASS_INVALID")
+    require(all(item["source"].values()), "SOURCE_POINTER_REQUIRED")
+    require(item["non_voting"] is True and item["is_actionable"] is False, "ACTION_BOUNDARY")
+    if item["fitness"]["direction_eligible"]:
+        require(item["axis"] not in {"VOLUME", "PARTICIPANT_FLOW", "CORPORATE_FORWARD", "LIQUIDITY_PORTFOLIO", "EVIDENCE_QUALITY"}, "FACTS_ONLY_AXIS")
+        require(item["sub_axis"] not in {"patterns", "volatility", "morphology", "technical_native_volume_copy"}, "CONTEXT_PRIMITIVE")
+        if "RAW_AS_TRADED" in _canonical(item["basis"]):
+            require(isinstance(item["basis"], dict) and (item["basis"].get("corporate_action_comparability") or {}).get("comparability") == "PIT_NORMALIZED", "RAW_DIRECTION_AUTHORITY_INSUFFICIENT")
+        require(item["state"] in {"SUPPORTS", "OPPOSES", "NEUTRAL", "MIXED"}
+                and item["freshness"] in {"CURRENT_SESSION", "FRESH_COMPLETED_PERIOD", "CURRENT_REPORTING_PERIOD"}
+                and item["fitness"]["fact_eligible"], "DIRECTION_FITNESS_INVALID")
+        require(item["role"] != "CONTEXT" or any(role != "CONTEXT" for role in item["lens_binding"].values()), "CONTEXT_CANNOT_VOTE")
+    if item["knowledge_stage"] == "T0_SEALED":
+        require(bool(item["seal_reference"]) and "RETROSPECTIVE" not in _canonical(item["basis"]), "T0_SEAL_OR_BASIS_INVALID")
+    for fact in item["factual_values"]:
+        require(set(fact) == {"name", "value", "semantic", "unit", "fitness", "source_pointer"}, "FACT_METADATA_REQUIRED")
+        require(bool(fact["semantic"] and fact["unit"] and fact["source_pointer"]), "FACT_PROVENANCE_REQUIRED")
+        _scan_forbidden({fact["name"]: fact["value"], fact["semantic"]: None, fact["unit"]: None})
 
 
 def _time(value: Any) -> datetime:
@@ -135,7 +233,7 @@ def build(*, ticker: str, knowledge_cutoff: str,
             admitted.append(row)
     # Filter by cutoff BEFORE conflict detection: a future revision cannot poison
     # a fact known at an earlier cutoff. Reuse every standing financial gate.
-    unique = {seal(r, "row")["artifact_sha256"]: r for r in admitted}
+    unique = {_seal(r, "row")["artifact_sha256"]: r for r in admitted}
     baseline = {"contract_version": fundamental.CONTRACT_VERSION,
                 "records": {ticker: {"metrics": []}}}
     baseline.update(fundamental.content_identity(baseline))
@@ -192,7 +290,7 @@ def build(*, ticker: str, knowledge_cutoff: str,
     contexts = []
     for envelope in context_items:
         item = envelope["item"]
-        verify_item(item)
+        _verify_context_item(item)
         if item["subject"] != {"ticker": ticker, "session": session}:
             raise ValueError("RESEARCH_CONTEXT_SUBJECT_MISMATCH")
         reasons = _temporal_reasons(envelope, boundary)
@@ -229,19 +327,19 @@ def build(*, ticker: str, knowledge_cutoff: str,
         "normalization": {"status": "NORMALIZED_ECONOMICS_NOT_QUALIFIED",
                           "blockers": list(NORMALIZATION_BLOCKERS) + (["EXACT_COMPONENT_PERIOD_SCOPE_NOT_AVAILABLE"]
                             if not dimensions["earnings_quality"]["observations"] else [])},
-        "research_context": sorted({seal(r, "context")["artifact_sha256"]: r for r in contexts}.values(), key=lambda r: r["item_identity"]),
-        "excluded_evidence": sorted({seal(r, "excluded")["artifact_sha256"]: r for r in excluded}.values(), key=lambda r: seal(r, "excluded")["artifact_sha256"]),
+        "research_context": sorted({_seal(r, "context")["artifact_sha256"]: r for r in contexts}.values(), key=lambda r: r["item_identity"]),
+        "excluded_evidence": sorted({_seal(r, "excluded")["artifact_sha256"]: r for r in excluded}.values(), key=lambda r: _seal(r, "excluded")["artifact_sha256"]),
         "research_boundaries": list(BOUNDARIES), "strict_share_qualification": "NOT_PROVIDED",
         "strict_valuation_qualification": "NOT_PROVIDED", "non_voting": True,
         "is_actionable": False, "authority_effect": "NONE", "production": "OFFLINE_OPT_IN_ONLY",
     }
-    scan_forbidden(result)
-    return seal(result, CONTRACT_VERSION)
+    _scan_forbidden(result)
+    return _seal(result, CONTRACT_VERSION)
 
 
 def render_research_boundaries(evidence: Mapping[str, Any]) -> str:
     """Small human-readable view with exact retained source/knowledge references."""
-    verify_identity(evidence, CONTRACT_VERSION)
+    _verify_identity(evidence, CONTRACT_VERSION)
     lines = [f"{evidence['ticker']} company economics; knowledge cutoff {evidence['knowledge_cutoff']}"]
     for name, dimension in evidence["dimensions"].items():
         lines.append(f"{name}: observed {dimension['observation_status']}; current observed "
