@@ -27,7 +27,14 @@ exact retained identities in ACTIVE_STATE). Source authority unchanged.
 - Input: existing qualified official overlay with explicit cutoff; optional verified, timed thesis research references and method-qualified relative context
 - Predecessor: existing financial qualification, earnings-component and thesis contracts (unchanged)
 - Blocker: no qualified multi-year structural/cycle proof, recurrence/accounting normalization bridge or strict share continuity
-- Next trigger: separately authorized candidate release; no automatic Daily consumer, action or successor
+- Next trigger: separately approved qualified evidence/consumer; PR96 merged, no automatic Daily action or successor
+
+### Vault snapshot / retention
+- Contract: [vault_incremental_snapshot_contract.md](vault_incremental_snapshot_contract.md)
+- Runtime: `EXPERIMENTAL` · Authority: `NON_VOTING` · Production: `OFFLINE_ONLY`
+- Input: completed boundary, native SHA, volume proofs · Predecessor: retained vault audit
+- Blocker: runtime recovery/reference closure and source-retention approval
+- Next trigger: separate production approval; backup grants no deletion authority
 
 ## A. Market evidence and calendar
 

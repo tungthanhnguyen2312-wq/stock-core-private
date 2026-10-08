@@ -1,7 +1,7 @@
 # Stock Lookup — Active State
 
-Compact navigation view of what is true **now**. Updated 2026-10-08 from verified
-starting main `1e1f208d15ea63ec37b99e36540019cfc6100cf8`.
+Compact navigation view of what is true **now**. Updated 2026-10-09 from verified
+starting main `9db35f157af38baf3807be1a6a6827e77fd461dc`.
 The owner-authorized campaign continues through bounded evidence milestones.
 Verify live remote main with `git fetch origin main` or
 `git ls-remote origin refs/heads/main`; a **local** remote-tracking ref alone can be stale.
@@ -34,14 +34,14 @@ Fact kinds used below: **CURRENT FACT** (verified in repo or by a stated read-on
 **BLOCKED**, **DEFERRED**, **HISTORICAL**.
 
 ## 1. The operational gate
-- **COMPLETE — long-term company economics evidence:** owner-selected
-  `LONG_TERM_COMPANY_ECONOMICS_EVIDENCE_MATRIX_V1` is a bounded offline, opt-in,
-  non-voting matrix, registered through the native roadmap. Observed exact facts
-  are separate from structural interpretation, relative valuation, tactical context
-  and capital allocation. PNJ/PVD/FPT use retained source/knowledge identities;
-  current gaps remain UNKNOWN, no normalized economics or strict valuation promotion.
+- **COMPLETE — vault incremental/retention V1:** offline opt-in snapshot, SQLite backup
+  and 77-candidate preflight; no deletion authority or Daily integration. C capacity still
+  needs approved retention and runtime recovery contracts. Local checkpoint only; queue empty.
+  [Contract and acceptance](vault_incremental_snapshot_contract.md).
+- **COMPLETE — economics evidence:** PR96 merged at `9db35f157af38baf3807be1a6a6827e77fd461dc`.
+  Offline, opt-in, non-voting PNJ/PVD/FPT matrix: exact observations versus interpretation;
+  gaps UNKNOWN, no normalized economics or strict valuation promotion. No Daily/deployment.
   [Contract and acceptance](long_term_company_economics_evidence_contract.md).
-  Local checkpoint only; push/PR/merge/deployment require separate approval. No successor.
 - **HOST-LOCAL — October 8 Owner Daily completed; Macro live acceptance independently verified:**
   `MACRO_REGIME_20261008_LIVE_ACCEPTED`. Operation
   `daily_research_session_operation:537cda6b2e7085d1461d925c7f342cf5e870feca41abb6d5ecaccd71f7262a98`,

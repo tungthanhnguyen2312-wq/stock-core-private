@@ -1,19 +1,21 @@
 # Stock Lookup — Current Roadmap
 
 What happens next, and nothing else. No historical milestones (those live in [ROADMAP.md](ROADMAP.md) and
-the machine state `ROADMAP_STATE.json`). Updated 2026-10-08 from starting main `1e1f208d15ea63ec37b99e36540019cfc6100cf8`. **Nothing below
+the machine state `ROADMAP_STATE.json`). Updated 2026-10-09 from starting main `9db35f157af38baf3807be1a6a6827e77fd461dc`. **Nothing below
 auto-starts.** A milestone starts only when `python tools/stocklookup_roadmap.py --can-start <ID>` allows
 it or the owner records an explicit override (AI_RULES rule 11). Facts: [ACTIVE_STATE.md](ACTIVE_STATE.md).
 
-## NOW — `LONG_TERM_COMPANY_ECONOMICS_EVIDENCE_MATRIX_V1` (COMPLETE)
+## NOW — vault incremental snapshot / retention V1 (COMPLETE)
 
-Owner-selected bounded offline matrix, implemented with an explicit owner override.
-Native roadmap checkpoint is the local HEAD; no queued successor.
-Retained PNJ/PVD/FPT facts, separate observation/interpretation statuses, independent
-flags and normalization blockers. No Daily, capital action or successor.
-[Contract and acceptance](long_term_company_economics_evidence_contract.md).
-Next release gate: explicit owner approval to push the exact local checkpoint and open
-a PR; merge/deployment remain separate approval classes.
+Owner override registers `STOCKLOOKUP_VAULT_INCREMENTAL_SNAPSHOT_CONTRACT_AND_OFFLINE_ACCEPTANCE_V1`.
+Offline snapshot/SQLite tools and retention preflight; local HEAD checkpoint, no queued successor.
+Backup alone does not solve C capacity. Production activation and exact source retention need
+separate approval and complete recovery/reference proofs. No Daily, push, deletion or deployment.
+[Contract and acceptance](vault_incremental_snapshot_contract.md).
+
+Economics V1 is COMPLETE: PR96 merged at starting main above. PNJ/PVD/FPT observations,
+interpretation and normalization blockers remain offline/non-voting.
+[Contract](long_term_company_economics_evidence_contract.md).
 
 ## PRIOR — `MACRO_REGIME_CANONICAL_DAILY_CONSUMER_AND_TEMPORAL_CORRECTIVE_V1` (COMPLETE)
 
