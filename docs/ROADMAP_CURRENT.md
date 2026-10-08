@@ -1,11 +1,18 @@
 # Stock Lookup — Current Roadmap
 
 What happens next, and nothing else. No historical milestones (those live in [ROADMAP.md](ROADMAP.md) and
-the machine state `ROADMAP_STATE.json`). Updated 2026-10-08 from starting main `755caab570a505554ffbea07c18ac97b773683d9`. **Nothing below
+the machine state `ROADMAP_STATE.json`). Updated 2026-10-08 from starting main `d0d5cd489d8310efc4e494cf5250c3a4ef005ebf`. **Nothing below
 auto-starts.** A milestone starts only when `python tools/stocklookup_roadmap.py --can-start <ID>` allows
 it or the owner records an explicit override (AI_RULES rule 11). Facts: [ACTIVE_STATE.md](ACTIVE_STATE.md).
 
-## NOW — `QNS_2026_H1_OFFICIAL_DETAIL_RESOLVER_AND_FINANCIAL_EVIDENCE_V1` (COMPLETE)
+## NOW — `OFFICIAL_FINANCIAL_DOCUMENT_REPRESENTATION_RECOVERY_V1` (COMPLETE)
+
+Three language-counterpart PDFs are image-only. Zero facts recovered.
+HPG and QNS have no same-scope alternate. No superscript repair. Strict shares
+and valuation stay zero. Disposition `OFFICIAL_REPRESENTATION_BOTTLENECK_CONFIRMED`.
+Do not start a successor.
+
+## PRIOR — `QNS_2026_H1_OFFICIAL_DETAIL_RESOLVER_AND_FINANCIAL_EVIDENCE_V1` (COMPLETE)
 
 One QNS detail-page request rebound `Báo cáo tài chính hợp nhất bán niên năm 2026` on
 `www.qns.com.vn`. The retained PDF SHA `5a06a40f…` matched, so no PDF was downloaded
