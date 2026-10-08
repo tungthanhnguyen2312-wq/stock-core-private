@@ -18,6 +18,8 @@ only. Contract `decision_intelligence_coverage_calibration/v1`. It does not vote
 or recommend. The optional read-only CLI is deferred.
 [Closure evidence](internal/DECISION_INTELLIGENCE_COVERAGE_AND_CALIBRATION_CLOSURE_20261007.md).
 
+Macro V1: Daily/AI/cockpit wired; live acceptance pending.
+
 ## A. Market evidence and calendar
 
 Phase C resource architecture (released 2026-10-06) retains record-wise IID hashing, borrowed
