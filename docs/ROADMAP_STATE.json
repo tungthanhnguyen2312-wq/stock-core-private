@@ -15,7 +15,7 @@
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "MACRO_MARKET_REGIME_DECISION_CONTEXT_CONVERGENCE_V1",
+    "milestone": "PORTFOLIO_OPPORTUNITY_COST_COMPARATIVE_RESEARCH_V1",
     "state": "COMPLETE"
   },
   "queued_next": [],
@@ -3509,6 +3509,27 @@
       "source_doc": "docs/internal/STOCK_LOOKUP_AUTONOMOUS_CAMPAIGN_20261008.md",
       "notes": "Binds explicit macro, breadth, and sector identities into the decision packet. Axes stay named. Domestic SBV USD/VND, policy rate, and credit growth stay UNKNOWN with zero HTTP. No score, forecast, or sizing. October 7 is not rewritten. Disposition PARTIAL_MACRO_MARKET_REGIME_DECISION_CONTEXT_READY. No successor.",
       "terminal_disposition": "PARTIAL_MACRO_MARKET_REGIME_DECISION_CONTEXT_READY"
+    },
+    {
+      "milestone_id": "PORTFOLIO_OPPORTUNITY_COST_COMPARATIVE_RESEARCH_V1",
+      "state": "COMPLETE",
+      "starting_checkpoint": "da5206716ade44a4b896de48ca5c66c330191991",
+      "checkpoint": "da5206716ade44a4b896de48ca5c66c330191991",
+      "candidate_branch": "feature/portfolio-opportunity-cost-research-20261008",
+      "dependencies": [
+        "PORTFOLIO_RESEARCH_DECISION_WORKBENCH_FOUNDATION_V1"
+      ],
+      "unlocks": [],
+      "owner_authorized": true,
+      "owner_override": "OWNER_DIRECTIVE_2026_10_08_PORTFOLIO_OPPORTUNITY_COST_COMPARATIVE_RESEARCH_V1",
+      "authority_effect": "NONE",
+      "state_history": [
+        "ACTIVE",
+        "COMPLETE"
+      ],
+      "source_doc": "docs/internal/PORTFOLIO_OPPORTUNITY_COST_COMPARATIVE_RESEARCH_20261008.md",
+      "notes": "Offline, opt-in comparative research over the portfolio workbench: four independent lenses (core structural, strategic, tactical, cash optionality) and six research cases (hold, add, valuation trim, alternative, cash, insufficient evidence). Workbench now labels opportunity counts as not owner exposure and treats correlation as comparable only on shared dates. Session/identity mismatches fail closed. No capital decision, winner, weights, sizing, orders, expected returns or universal score. Not in Owner Daily. No successor.",
+      "terminal_disposition": "PORTFOLIO_OPPORTUNITY_COST_RESEARCH_READY_OFFLINE"
     }
   ],
   "blocked_capabilities": [

@@ -198,7 +198,7 @@ immutable. [Share contract](hpg_common_share_evidence_contract.md).
 ## E. Portfolio, execution, PIT
 
 ### 18. Portfolio / risk context
-- Contract: [portfolio_aware_decision_and_risk_contract.md](portfolio_aware_decision_and_risk_contract.md), [private_portfolio_context_contract.md](private_portfolio_context_contract.md), [portfolio_risk_liquidity_contract.md](portfolio_risk_liquidity_contract.md)
+- Contract: [portfolio_aware_decision_and_risk_contract.md](portfolio_aware_decision_and_risk_contract.md), [private_portfolio_context_contract.md](private_portfolio_context_contract.md), [portfolio_risk_liquidity_contract.md](portfolio_risk_liquidity_contract.md), [portfolio_opportunity_cost_research_contract.md](portfolio_opportunity_cost_research_contract.md) (offline)
 - Runtime: `ACTIVE_FAILSOFT` · Authority: `SCOPED` (strict research sizing/exposure; no execution) · Production: `IN_DAILY_FAILSOFT`
 - Input: explicit private portfolio context (never committed) · Predecessor: demonstration input
 - Blocker: no canonical capital/risk-budget binding; execution size/liquidity zero · Next trigger: owner-supplied bindings

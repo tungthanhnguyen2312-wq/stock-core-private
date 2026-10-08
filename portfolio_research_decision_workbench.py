@@ -2,7 +2,12 @@
 
 This is not position sizing, leverage, or an order. Current correlation is
 accepted only when the caller supplies aligned series, and it is labelled
-current research rather than historical PIT.
+current research rather than historical PIT. A correlation is comparable only
+when both series carry dates and are aligned on their shared dates; undated
+equal-length series keep their value but are marked unverified.
+
+Sector and style counts here count supplied opportunities. They are not the
+owner's exposure; owner exposure comes only from an explicit portfolio state.
 """
 from __future__ import annotations
 
@@ -40,6 +45,28 @@ def _counts(rows: Sequence[Mapping[str, Any]], field: str) -> dict[str, Any]:
     return {"counts": dict(sorted(counts.items())), "missing": missing}
 
 
+OPPORTUNITY_COUNT_BASIS = "OPPORTUNITY_COUNT_NOT_OWNER_EXPOSURE"
+ALIGNMENT_VERIFIED = "DATE_ALIGNED_ON_SHARED_DATES"
+ALIGNMENT_UNVERIFIED = "CALLER_ASSERTED_UNVERIFIED"
+
+
+def _concentration(rows: Sequence[Mapping[str, Any]], field: str) -> dict[str, Any]:
+    out = _counts(rows, field)
+    out["basis"] = OPPORTUNITY_COUNT_BASIS
+    return out
+
+
+def _dated(series: Any, dates: Any) -> dict[str, float] | str:
+    """Map date -> return, or a reason the series cannot be aligned."""
+    if not isinstance(dates, list) or len(dates) != len(series):
+        return "DATES_LENGTH_MISMATCH"
+    if not all(isinstance(item, str) and item.strip() for item in dates):
+        return "DATES_INVALID"
+    if len(set(dates)) != len(dates):
+        return "DATES_DUPLICATED"
+    return {date: float(value) for date, value in zip(dates, series)}
+
+
 def _pearson(left: Sequence[float], right: Sequence[float]) -> float | None:
     if len(left) != len(right) or len(left) < 3:
         return None
@@ -53,23 +80,45 @@ def _pearson(left: Sequence[float], right: Sequence[float]) -> float | None:
     return num / (den_left * den_right)
 
 
+def _pair_correlation(left: Mapping[str, Any], right: Mapping[str, Any]) -> tuple[str, float | None, str | None, int]:
+    series_left = left.get("current_returns")
+    series_right = right.get("current_returns")
+    if not isinstance(series_left, list) or not isinstance(series_right, list):
+        return "MISSING", None, None, 0
+    dates_left = left.get("current_return_dates")
+    dates_right = right.get("current_return_dates")
+    if dates_left is None and dates_right is None:
+        # Backward-compatible path: the caller asserts alignment. The value is kept, but it is
+        # never presented as comparable because nothing proves the points share dates.
+        value = _pearson([float(item) for item in series_left], [float(item) for item in series_right])
+        status = "CURRENT_RESEARCH_ONLY" if value is not None else "NOT_COMPARABLE"
+        return status, value, ALIGNMENT_UNVERIFIED, min(len(series_left), len(series_right))
+    if dates_left is None or dates_right is None:
+        return "NOT_COMPARABLE", None, "DATES_ONE_SIDED", 0
+    mapped_left = _dated(series_left, dates_left)
+    mapped_right = _dated(series_right, dates_right)
+    for mapped in (mapped_left, mapped_right):
+        if isinstance(mapped, str):
+            return "NOT_COMPARABLE", None, mapped, 0
+    shared = sorted(set(mapped_left) & set(mapped_right))
+    value = _pearson([mapped_left[date] for date in shared], [mapped_right[date] for date in shared])
+    status = "CURRENT_RESEARCH_ONLY" if value is not None else "NOT_COMPARABLE"
+    return status, value, ALIGNMENT_VERIFIED, len(shared)
+
+
 def _correlation(rows: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
     pairs = []
     for index, left in enumerate(rows):
         for right in rows[index + 1:]:
-            series_left = left.get("current_returns")
-            series_right = right.get("current_returns")
-            if not isinstance(series_left, list) or not isinstance(series_right, list):
-                status = "MISSING"
-                value = None
-            else:
-                value = _pearson([float(item) for item in series_left], [float(item) for item in series_right])
-                status = "CURRENT_RESEARCH_ONLY" if value is not None else "NOT_COMPARABLE"
+            status, value, alignment, points = _pair_correlation(left, right)
             pairs.append({
                 "left": left["ticker"],
                 "right": right["ticker"],
                 "status": status,
                 "value": value,
+                "date_alignment": alignment,
+                "aligned_points": points,
+                "comparable": status == "CURRENT_RESEARCH_ONLY" and alignment == ALIGNMENT_VERIFIED,
                 "authority": "CURRENT_RESEARCH_ONLY_NOT_PIT",
             })
     return {"status": "PRESENT" if pairs else "MISSING", "pairs": pairs}
@@ -139,8 +188,8 @@ def build_workbench(opportunities: Sequence[Mapping[str, Any]], *, objective: st
         "order": None,
         "member_count": len(rows),
         "duplicate_tickers_collapsed": sorted(set(duplicates)),
-        "sector_concentration": _counts(rows, "sector"),
-        "style_concentration": _counts(rows, "style"),
+        "sector_concentration": _concentration(rows, "sector"),
+        "style_concentration": _concentration(rows, "style"),
         "liquidity_context": _counts(rows, "liquidity_context"),
         "volatility_context": _counts(rows, "volatility_context"),
         "overlaps": _overlaps(rows),

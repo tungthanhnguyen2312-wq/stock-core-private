@@ -50,3 +50,28 @@ def test_duplicate_ticker_collapses_and_size_is_rejected():
 def test_identity_is_stable():
     rows = [{"ticker": "QNS", "sector": "food"}, {"ticker": "PAN", "sector": "food"}]
     assert workbench.build_workbench(rows)["workbench_identity"] == workbench.build_workbench(list(reversed(rows)))["workbench_identity"]
+
+
+def test_concentration_counts_opportunities_not_owner_exposure():
+    built = workbench.build_workbench([{"ticker": "AAA", "sector": "materials"}, {"ticker": "BBB", "sector": "materials"}])
+    assert built["sector_concentration"]["basis"] == workbench.OPPORTUNITY_COUNT_BASIS
+    assert built["style_concentration"]["basis"] == workbench.OPPORTUNITY_COUNT_BASIS
+
+
+def test_correlation_is_comparable_only_on_shared_dates():
+    dates = ["2026-10-01", "2026-10-02", "2026-10-05", "2026-10-06"]
+    built = workbench.build_workbench([
+        {"ticker": "AAA", "current_returns": [0.01, 0.02, -0.01, 0.00], "current_return_dates": dates},
+        {"ticker": "BBB", "current_returns": [0.02, -0.02, 0.01], "current_return_dates": dates[1:]},
+        {"ticker": "CCC", "current_returns": [0.01, 0.02, -0.01, 0.00]},
+        {"ticker": "DDD", "current_returns": [0.01, 0.02, 0.03], "current_return_dates": ["2026-10-01", "2026-10-01", "2026-10-02"]},
+    ])
+    by_pair = {(item["left"], item["right"]): item for item in built["current_correlation"]["pairs"]}
+    aligned = by_pair[("AAA", "BBB")]
+    assert aligned["comparable"] is True
+    assert aligned["aligned_points"] == 3
+    assert aligned["date_alignment"] == workbench.ALIGNMENT_VERIFIED
+    assert by_pair[("AAA", "CCC")]["status"] == "NOT_COMPARABLE"
+    assert by_pair[("AAA", "CCC")]["date_alignment"] == "DATES_ONE_SIDED"
+    assert by_pair[("AAA", "DDD")]["date_alignment"] == "DATES_DUPLICATED"
+    assert by_pair[("AAA", "DDD")]["comparable"] is False
