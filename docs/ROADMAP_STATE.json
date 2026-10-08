@@ -15,7 +15,7 @@
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "RETAINED_CASH_FLOW_AND_BALANCE_HEADER_QUALIFICATION_V1",
+    "milestone": "FPT_OFFICIAL_FINANCIAL_FILINGS_AND_CORE_EVIDENCE_V1",
     "state": "COMPLETE"
   },
   "queued_next": [],
@@ -3325,7 +3325,7 @@
       "milestone_id": "RETAINED_CASH_FLOW_AND_BALANCE_HEADER_QUALIFICATION_V1",
       "state": "COMPLETE",
       "starting_checkpoint": "59d41ac0d336ae0f299732b06445b583fab4b587",
-      "checkpoint": "HEAD",
+      "checkpoint": "a2d1a47dc61e424b7ee2b1a7179ffe1ce6de826f",
       "candidate_branch": "feature/pnj-cashflow-20261008",
       "dependencies": [
         "RETAINED_FY2025_AUDIT_ASSURANCE_AND_FINANCIAL_CONTEXT_RECOVERY_V1"
@@ -3341,6 +3341,27 @@
       "source_doc": "docs/internal/STOCK_LOOKUP_AUTONOMOUS_CAMPAIGN_20261008.md",
       "notes": "Nested literal aliases deduplicated only by source token containment; exact Ma so code header supports no-note forms. PNJ FY2025 OCF18,890,403,841 qualified via fixed secondary code20 read, unchanged amount; PVD assets28,309,862,682,750 and equity17,098,286,949,122 qualify. Annual context5->8; all14 prior rows/knowledge/citations unchanged. PNJ H1/PVD cash-flow and debt remain blocked. Current fields9, annual exact metrics94, strict share/valuation0 unchanged. No new acquisition, numeric repair, FX conversion, completed-session or T0 writes.",
       "terminal_disposition": "THREE_NEW_HISTORICAL_FIELDS_PRIMARY_AMBIGUITIES_REMAIN_BLOCKED"
+    },
+    {
+      "milestone_id": "FPT_OFFICIAL_FINANCIAL_FILINGS_AND_CORE_EVIDENCE_V1",
+      "state": "COMPLETE",
+      "starting_checkpoint": "34cb41b33cf59ac4a23078d3c2451dfb05187444",
+      "checkpoint": "HEAD",
+      "candidate_branch": "feature/fpt-financial-evidence-20261008",
+      "dependencies": [
+        "RETAINED_CASH_FLOW_AND_BALANCE_HEADER_QUALIFICATION_V1"
+      ],
+      "unlocks": [],
+      "owner_authorized": true,
+      "owner_override": "OWNER_DIRECTIVE_2026_10_08_AUTONOMOUS_SHARE_BASIS_AND_OFFICIAL_EVIDENCE_CAMPAIGN_V1",
+      "authority_effect": "EXACT_SOURCE_FINANCIAL_CONTEXT_ONLY_NO_HISTORICAL_BACKFILL",
+      "state_history": [
+        "ACTIVE",
+        "COMPLETE"
+      ],
+      "source_doc": "docs/internal/STOCK_LOOKUP_AUTONOMOUS_CAMPAIGN_20261008.md",
+      "notes": "Two requests, two first-party PDFs, 10,553,135 new landing bytes including manifest. Literal FPT financial-tab JSON discovery; English auditor pages6–7 prove FY2025 consolidated assurance. Equity43,748,040,747,539 and revenue70,112,825,100,710 VND add two historical fields8→10. Q2 assurance absent; other exact geometry/numeric blockers preserved. Protected completed/T0/valuation inputs unchanged.",
+      "terminal_disposition": "PARTIAL_EXACT_ANNUAL_CONTEXT_READY"
     }
   ],
   "blocked_capabilities": [

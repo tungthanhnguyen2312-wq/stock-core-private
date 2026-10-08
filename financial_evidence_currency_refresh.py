@@ -248,6 +248,56 @@ def parse_index_document_links(html: str, base_url: str) -> list[dict[str, str]]
         found.append({"url": absolute, "period": period, "document_class": period_document_class(
             TARGET_ANNUAL_PERIOD if period == TARGET_ANNUAL_PERIOD else period
         )})
+    # FPT's official report index renders the annual-report tab, while its
+    # financial tab lives in literal Next flight JSON. Decode data only; never
+    # execute scripts or search arbitrary page text for guessed download URLs.
+    if urlparse(base_url).hostname in {"fpt.com", "www.fpt.com"}:
+        for match in re.finditer(r'self\.__next_f\.push\((\[.*?\])\)</script>', html):
+            try:
+                chunk = json.loads(match.group(1))
+                text = chunk[1]
+            except (ValueError, IndexError, TypeError):
+                continue
+            if not isinstance(text, str):
+                continue
+            for line in text.splitlines():
+                try:
+                    payload = json.loads(line.split(":", 1)[1])
+                except (ValueError, IndexError):
+                    continue
+                if (not isinstance(payload, list) or len(payload) != 4
+                        or not isinstance(payload[3], dict)
+                        or payload[3].get("category") != "financial"):
+                    continue
+                for year in (payload[3].get("yearDataList") or []) if isinstance(payload[3].get("yearDataList"), list) else []:
+                    if not isinstance(year, dict):
+                        continue
+                    for period in (year.get("periods") or []) if isinstance(year.get("periods"), list) else []:
+                        if (not isinstance(period, dict) or not isinstance(year.get("year"), int)
+                                or not isinstance(period.get("period"), str)):
+                            continue
+                        selected = {(2025, "2025"): "2025", (2026, "Quarter II, 2026"): "2026-Q2"}.get(
+                            (year.get("year"), period.get("period")))
+                        if selected is None:
+                            continue
+                        for document in (period.get("documents") or []) if isinstance(period.get("documents"), list) else []:
+                            if not isinstance(document, dict):
+                                continue
+                            name, href = document.get("name"), document.get("pdfUrl")
+                            if (not isinstance(name, str) or not isinstance(href, str)
+                                    or "Consolidated Financial Statements" not in name
+                                    or "Separate" in name or not href.startswith("/api/media/")
+                                    or not urlparse(href).path.endswith(".pdf")):
+                                continue
+                            absolute = urljoin(base_url, href)
+                            if absolute in seen:
+                                continue
+                            seen.add(absolute)
+                            found.append({"url": absolute, "period": selected,
+                                "document_class": period_document_class(selected),
+                                "discovery_kind": "LITERAL_EMBEDDED_FINANCIAL_DOCUMENT",
+                                "literal_name": name, "literal_period": period["period"],
+                                "literal_pdf_url": href})
     return found
 
 

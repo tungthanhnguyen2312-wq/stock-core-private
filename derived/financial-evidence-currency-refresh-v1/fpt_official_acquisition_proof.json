@@ -1,0 +1,86 @@
+{
+  "budget": {
+    "actual_http_cap": 6,
+    "pdf_cap": 2,
+    "index_refresh_cap": 0,
+    "concurrency": 1,
+    "storage_cap_bytes": 52428800
+  },
+  "actual_requests": 2,
+  "new_bytes": 10553135,
+  "trace": [
+    {
+      "request_number": 1,
+      "initial_url": "https://fpt.com/api/media/20260319_fpt_audited_consolidated_financial_statements_for_2025_f29f536732.pdf"
+    },
+    {
+      "request_number": 2,
+      "initial_url": "https://fpt.com/api/media/20260727_FPT_Consolidated_Financial_Statements_for_Q22026_1_a1e229ff76.pdf"
+    }
+  ],
+  "outcomes": [
+    {
+      "ticker": "FPT",
+      "document_id": "1ba3bf46f212208543d0f9094dbe28915d421e6b2e522cb610225a35a6e0313b",
+      "state": "retained",
+      "extraction_status": "needs_ocr",
+      "sha256": "bb14bafff1a7849217f34cf4b50e0e3d69d91968f217a66d7c68f07d4c1af284",
+      "relative_path": "documents/FPT/2025/audited_annual_financial_statements/bb14bafff1a7849217f34cf4b50e0e3d69d91968f217a66d7c68f07d4c1af284.pdf",
+      "http_status": 200,
+      "observed_at": "2026-10-08T00:02:25.329356Z",
+      "http_requests_so_far": 1,
+      "new_landing_bytes_so_far": 7832976
+    },
+    {
+      "ticker": "FPT",
+      "document_id": "d7aa73e9cd2e826f53f04f342fffc4c75481a7c3328247e8e6df055862924fac",
+      "state": "retained",
+      "extraction_status": "needs_ocr",
+      "sha256": "024b14f8ceffa46d1df30180c8dee17c2f191a8c6dbe839aa9254afe051fdb60",
+      "relative_path": "documents/FPT/2026-Q2/reviewed_interim_financial_statements/024b14f8ceffa46d1df30180c8dee17c2f191a8c6dbe839aa9254afe051fdb60.pdf",
+      "http_status": 200,
+      "observed_at": "2026-10-08T00:02:35.077327Z",
+      "http_requests_so_far": 2,
+      "new_landing_bytes_so_far": 10553135
+    }
+  ],
+  "old_manifest_sha256_before": "97189741aaa759bdd2cbc20bcf7b7076f265aca2db91ab36d88db0c621e9009b",
+  "old_manifest_sha256_after": "97189741aaa759bdd2cbc20bcf7b7076f265aca2db91ab36d88db0c621e9009b",
+  "duplicate_sha_replay_network_requests": 0,
+  "duplicate_sha_manifest_bytes_equal": true,
+  "new_manifest_sha256": "0bc9a702ca870ae8ecd1c92542102863bd5dc3c61dc5d2b3f1ce16edd111046b",
+  "documents": [
+    {
+      "ticker": "FPT",
+      "period": "2025",
+      "canonical_url": "https://fpt.com/api/media/20260319_fpt_audited_consolidated_financial_statements_for_2025_f29f536732.pdf",
+      "final_url": "https://fpt.com/api/media/20260319_fpt_audited_consolidated_financial_statements_for_2025_f29f536732.pdf",
+      "sha256": "bb14bafff1a7849217f34cf4b50e0e3d69d91968f217a66d7c68f07d4c1af284",
+      "observed_at": "2026-10-08T00:02:25.329356Z",
+      "bytes": 7827790,
+      "discovery_provenance": {
+        "index_document_id": "c57c0300542078cf108c7c0644d1d1fa4ae8be87c492bee5be4cf370d7cd0a54",
+        "index_sha256": "49863f6b6ec46b174f61b90de2bac5260217b864fcbc96b58e64b695e5069422",
+        "index_url": "https://fpt.com/en/ir/report",
+        "literal_embedded_pdfUrl_resolved": "https://fpt.com/api/media/20260319_fpt_audited_consolidated_financial_statements_for_2025_f29f536732.pdf"
+      },
+      "assurance_from_acquisition": "NOT_INFERRED"
+    },
+    {
+      "ticker": "FPT",
+      "period": "2026-Q2",
+      "canonical_url": "https://fpt.com/api/media/20260727_FPT_Consolidated_Financial_Statements_for_Q22026_1_a1e229ff76.pdf",
+      "final_url": "https://fpt.com/api/media/20260727_FPT_Consolidated_Financial_Statements_for_Q22026_1_a1e229ff76.pdf",
+      "sha256": "024b14f8ceffa46d1df30180c8dee17c2f191a8c6dbe839aa9254afe051fdb60",
+      "observed_at": "2026-10-08T00:02:35.077327Z",
+      "bytes": 2715026,
+      "discovery_provenance": {
+        "index_document_id": "c57c0300542078cf108c7c0644d1d1fa4ae8be87c492bee5be4cf370d7cd0a54",
+        "index_sha256": "49863f6b6ec46b174f61b90de2bac5260217b864fcbc96b58e64b695e5069422",
+        "index_url": "https://fpt.com/en/ir/report",
+        "literal_embedded_pdfUrl_resolved": "https://fpt.com/api/media/20260727_FPT_Consolidated_Financial_Statements_for_Q22026_1_a1e229ff76.pdf"
+      },
+      "assurance_from_acquisition": "NOT_INFERRED"
+    }
+  ]
+}

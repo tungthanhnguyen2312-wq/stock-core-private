@@ -96,3 +96,51 @@ One writer; no production Daily, completed-session rewrite or T0 mutation.
 - Remaining: damaged amount cells, debt component completeness, current common-share
   continuity. Next selection returns to retained HPG H1 capital-note evidence for a
   later common-outstanding point; balance geometry does not establish a denominator.
+
+- Released balance/cash-flow candidate `a2d1a47dc61e424b7ee2b1a7179ffe1ce6de826f`,
+  PR #84, merge `34cb41b33cf59ac4a23078d3c2451dfb05187444`; all four CI jobs passed.
+
+## HPG retained H1 common-share observation
+
+- ID: `HPG_RETAINED_H1_COMMON_SHARE_OBSERVATION_AND_CONTINUITY_V1` (ACTIVE).
+- Starting main: `34cb41b33cf59ac4a23078d3c2451dfb05187444`.
+- Owner delegation returns to common-share priority. Retained H1 source page52 explicitly
+  distinguishes issued and ordinary outstanding quantity; page7 is a reviewed report.
+  No audited upgrade, monetary-capital division, EPS/listing inference or completed-session
+  backfill. Exact source period, class, knowledge, table and subsequent continuity must bind.
+
+### Bounded HPG source assessment and financial pivot
+
+HPG H1 page7 proves reviewed consolidated interim assurance. Page52 primary
+ordinary/outstanding counts contain superscript numeric ambiguity; a separate English
+probe damages labels/grouping. No mixed-profile assembly or numeric repair permitted.
+Page12 primary income table has damaged explicit unit label (Don vj); no unit inference.
+Last qualified common proof remains December31,2025; January1–October7 continuity gap.
+No new share/financial promotion. The tentative HPG selection pivots before implementation.
+
+## FPT official financial filings and core evidence
+
+- ID: FPT_OFFICIAL_FINANCIAL_FILINGS_AND_CORE_EVIDENCE_V1 (COMPLETE).
+- Start34cb41b33cf59ac4a23078d3c2451dfb05187444; same sole writer worktree.
+- Before HTTP: issuer FPT only; six actual requests counting redirects/retries;
+  zero index refresh; two PDF maximum (FY2025 and Q2 2026), concurrency1;
+  new storage50MiB. Separate campaign landing preserves every old manifest byte.
+- Retained indexSHA49863f6b6ec46b174f61b90de2bac5260217b864fcbc96b58e64b695e5069422
+  embeds financial-category document objects with exact pdfUrl/name/period.
+  Source filenames select candidates only; actual statements establish period/scope/assurance/unit.
+  No Q3, no guessed API routes, no production Daily or historical rewrite.
+
+- Result: two literal issuer-host PDFs acquired with two actual HTTP requests, no
+  redirects/retries;10,553,135 landing bytes including manifest. Duplicate replay
+  skips network and preserves manifest bytes. Every old landing record is untouched.
+- Annual auditor page6 plus opinion page7 proves consolidated audited assurance.
+  Page11 equity43,748,040,747,539; page12 revenue70,112,825,100,710 VND visually agree.
+  Total profit row geometry and parent numeric glyphs remain blocked. Q2 has no reviewer
+  report; acquisition class never grants assurance. No OCF/debt numeric repair.
+- Fixed nine-page final replay; source fixtures carry positioned tokens, no binary.
+  Old17 fact lines preserved; annual8→10 and total overlay17→19.
+- Focused230 passed /2 retained skips /5 subtests. Completed October7 fundamental records
+  and all valuation metrics equal; current official9, baseline exact94, strict shares/all7
+  metrics0 unchanged. Seven immutable inputs equal. False promotions/completed rewrites/T0=0.
+- Next selection: useful current financial/cash-flow evidence from another bounded
+  issuer source; no continued HPG glyph forcing and no share scale-out without continuity.

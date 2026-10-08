@@ -36,7 +36,7 @@ ticker verdict ([AI_RULES.md](AI_RULES.md) rules 5–10, [DATA_FIRST_DOCTRINE.md
 
 ## 3. Analytical context
 
-The [annual context contract](audited_annual_exact_field_context_contract.md) admits eight later-known FY2025 exact fields across HPG/PNJ/PVD. Auditor opinion continuation is source-bound; historical context does not replace annual valuation inputs or rewrite completed sessions.
+The [annual context contract](audited_annual_exact_field_context_contract.md) admits ten later-known FY2025 exact fields across HPG/PNJ/PVD/FPT. Auditor opinion continuation is source-bound; historical context does not replace annual valuation inputs or rewrite completed sessions.
 
 The [HPG share contract](hpg_common_share_evidence_contract.md) qualifies one audited
 historical common-outstanding observation. Listed quantity is separate. Complete

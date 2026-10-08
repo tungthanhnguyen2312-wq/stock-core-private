@@ -57,15 +57,20 @@ def _record(evidence_root: Path, sha256: str) -> dict[str, Any]:
 
 def run(*, landing_root: Path, document_specs=DOCUMENTS, reporting_period: str = PERIOD,
         allow_audited_annual_context: bool = False, annual_context_known_at: str | None = None,
-        resolve_cash_flow_code_cells: bool = False) -> dict[str, Any]:
+        resolve_cash_flow_code_cells: bool = False, evidence_subdir: str = EVIDENCE_SUBDIR,
+        front_matter_pages=FRONT_MATTER_PAGES) -> dict[str, Any]:
     from financial_evidence_currency_contract import COHORT, TARGET_PERIODS
     if (reporting_period not in TARGET_PERIODS or len(document_specs) > 3
             or any(s["ticker"] not in COHORT for s in document_specs)
-            or sum(len(FRONT_MATTER_PAGES)+len(s["pages"]) for s in document_specs) > 40):
+            or not 1 <= len(front_matter_pages) <= 8
+            or len(set(front_matter_pages)) != len(front_matter_pages)
+            or any(not isinstance(p, int) or not 1 <= p <= 8 for p in front_matter_pages)
+            or Path(evidence_subdir).name != evidence_subdir or evidence_subdir in {".", ".."}
+            or sum(len(front_matter_pages)+len(s["pages"]) for s in document_specs) > 40):
         raise ValueError("RETAINED_OCR_BATCH_OUTSIDE_BOUNDED_CONTRACT")
     if reporting_period == "2025" and not allow_audited_annual_context:
         raise ValueError("AUDITED_ANNUAL_CONTEXT_REQUIRES_EXPLICIT_SCOPE")
-    evidence_root = landing_root / EVIDENCE_SUBDIR
+    evidence_root = landing_root / evidence_subdir
     annual_known = annual_context_known_at or datetime.now(timezone.utc).isoformat()
     documents, overlay_rows, precedence, ocr_reads, materializations = [], [], [], 0, []
     for spec in document_specs:
@@ -77,10 +82,10 @@ def run(*, landing_root: Path, document_specs=DOCUMENTS, reporting_period: str =
             # Qualification is a conservative later bound when the retained batch
             # observation predates individual response completion. Never backdate it.
             known_at = max((known_at, annual_known), key=lambda value: datetime.fromisoformat(value.replace("Z", "+00:00")))
-        front = materialize_tsv_pages(record, evidence_root=evidence_root, pages=FRONT_MATTER_PAGES)
+        front = materialize_tsv_pages(record, evidence_root=evidence_root, pages=front_matter_pages)
         statements = materialize_tsv_pages(record, evidence_root=evidence_root, pages=spec["pages"])
         materializations.append({"ticker": spec["ticker"], "front": front, "statements": statements})
-        ocr_reads += len(FRONT_MATTER_PAGES) + len(spec["pages"])
+        ocr_reads += len(front_matter_pages) + len(spec["pages"])
         assurance = resolve_document_assurance_evidence(front)
         cells = (resolve_ambiguous_debt_line_code_cells(statements, record=record,
                     evidence_root=evidence_root, reporting_period=reporting_period,
