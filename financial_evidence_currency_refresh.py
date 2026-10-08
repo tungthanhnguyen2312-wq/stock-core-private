@@ -952,7 +952,8 @@ def load_public_official_citations(root: Path | str) -> dict[tuple[str, str, str
                 or record.get("context_kind") == "AUDITED_ANNUAL_FIELD"
                 or record.get("projection_period_policy") == "AUDITED_ANNUAL_CONTEXT_ONLY"
                 or (record.get("period_type") == "annual" and record.get("ingress_contract") == "reviewed_interim_canonical_ingress/v2")
-                or record.get("canonical_metric") == "investment_property_disposal_result"):
+                or record.get("canonical_metric") in ("investment_property_disposal_result",
+                                                       "provision_charge_or_reversal_adjustment")):
             continue
         ticker = str(record.get("ticker") or "").upper()
         metric = str(record.get("canonical_metric") or "")

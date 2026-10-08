@@ -58,7 +58,8 @@ def _record(evidence_root: Path, sha256: str) -> dict[str, Any]:
 def run(*, landing_root: Path, document_specs=DOCUMENTS, reporting_period: str = PERIOD,
         allow_audited_annual_context: bool = False, annual_context_known_at: str | None = None,
         resolve_cash_flow_code_cells: bool = False, evidence_subdir: str = EVIDENCE_SUBDIR,
-        front_matter_pages=FRONT_MATTER_PAGES, allow_unqualified_native_fallback: bool = False) -> dict[str, Any]:
+        front_matter_pages=FRONT_MATTER_PAGES, allow_unqualified_native_fallback: bool = False,
+        interim_qualified_at: str | None = None) -> dict[str, Any]:
     from financial_evidence_currency_contract import COHORT, TARGET_PERIODS
     if (reporting_period not in TARGET_PERIODS or len(document_specs) > 3
             or any(s["ticker"] not in COHORT for s in document_specs)
@@ -78,6 +79,10 @@ def run(*, landing_root: Path, document_specs=DOCUMENTS, reporting_period: str =
         if record.get("reporting_period") != reporting_period:
             raise ValueError("RETAINED_DOCUMENT_PERIOD_BINDING_MISMATCH")
         known_at = record["observed_at"]
+        if interim_qualified_at is not None:
+            # A rule admitted after the document was first observed makes its facts
+            # later-known: qualification time is the floor, never the retained date.
+            known_at = max((known_at, interim_qualified_at), key=lambda value: datetime.fromisoformat(value.replace("Z", "+00:00")))
         if reporting_period == "2025":
             # Qualification is a conservative later bound when the retained batch
             # observation predates individual response completion. Never backdate it.

@@ -1,0 +1,666 @@
+{
+  "artifact_sha256": "1db5c594b033c243213ded167b3fc7e5a2c23b857f18963b78f8ee75f30853c8",
+  "assurance_emphasis_evidence": {
+    "PNJ": [
+      {
+        "body_text_sha256": "54f6e786f9bb36f575609a208c2781b067b52df4550810b8e0a9ea1bd47284b0",
+        "body_token_ids": [
+          "8ce9b338f2a751f2ecff51f93a03e8a46890a3566cb36ccb0d4d6ee03e8fa9bb",
+          "95ae74ff6cd76d1965f6e0995fe31c9c10af5dbd0911a00432bcfa2c63de63cc",
+          "209c6423cfd06bb4f7f309e68a08d1b5e2094a5f3f216cca960282f8e303da17",
+          "d64754f23cb52520bbdd84e21779d38d47b96b865898c2c48797e901ea07e821",
+          "7926de56dc21f4a920b7738228077d9b7205e6209742e7455cfb74d5e2ac177a",
+          "2daab0482e1c243f954367939effc0b07dde1eff7ab57f028b0a0b0c60223fe3",
+          "fbbf132d2b798a46bb2a80740bdb043cc012ed67c6c0ebcc697e7d7550ff5207",
+          "c5a692ef181638cde7b8523a3b4d4e6e4753dd4519b515bf8f36615198f18718",
+          "e69da439f1eb67c1b302fe2a46d7d31a612867e88292e691dfe0e8503bcd2936",
+          "8da8e5cfe85d2dad3dfd6538c892b33c7f5eb37848c11890d00570c4576dd284",
+          "9b294f225744ae6b4ddb4856d902f2d038e0130958eb5e6b8b89ff399a9b7ff8",
+          "7095bf3f560a85c1abd36c671067a88164c38558aee74bdccf546cdad39afd19",
+          "0ee39a5cceed1f03cdd24f4a0cc97455d27d6ac7c859db92e935ca9d4539cb66",
+          "4eb0f137ed9d28a185b2bebcf2ca63793157afc8164857b2a00eca6e00aeb4ad",
+          "d435cc441db54502b6edc570c30b7bf0c3bfcdcf3afc525a30acd85a73449102",
+          "11781b972302f3366b3203e14697df4a2e9a5e079529cf7f7ad9cc30d1ab82b4",
+          "be9dd97cf2d6d02fbb2ccba11d5d30b9a9ba9ed1a5899e39afa73a81207f28a7",
+          "558319e12046a2bac58d6faf8883aa070401aeed10ba2fb4d1ba56b9ebfd5d82",
+          "ee67a4e1aa7a5b2a4a6158eb741edd33451b13cee4b2f550952fe04c321a5653",
+          "12c39e8bc5c6b5d3c3145e607b944e5f85811a14de06078278ad984440d282c8",
+          "093a95b22339967731c3a8de5878bb528bac11c08edb1016c6c9cf98b5e7c689",
+          "a605b3c83324dc76aa8937b3011b51618ec03ac1d60815494a5e226b0e4d9e7f",
+          "2d625f97f0075213b867f557851d9923527b8375f8c976af05a904184d7c550b",
+          "4e153c913ca474b97f7c5bf494b8f19496942fd6a19766a75e1353bf83227efd",
+          "ebaf0a4197e7f9a7aa3e8a7cb958d642b77c8db6381df4947952510c8c702738",
+          "50e11bfb1c8891d313e4857fd8e8e98cb6e9c8298153c2964a467866eca06b00",
+          "bf9d9dd31775a212a6238eb45dc238b94e9078c4b9a19eb92b6e584f6cd150bc",
+          "a33d1d71d79697990acab2923f9e7fdb0bc455a95e0adf722d153116aa4a5471",
+          "626c06e56999d4c448ffaebc70fce85f32b5d60ab839c84377e07faf1a5dfae5",
+          "4d1b6c7bbefeaad2e7087591d26533fdcf172e29a161c16fb95f6dfd9d8da3a5",
+          "22ee8e11135e458cc05af327aac89afec7ec7a33873f8333c6cda5c824abe989",
+          "1f2fb866ec848ad53d3f3ce747773ca2515472dfa2615e111b0c7cf2f6950ce5",
+          "c58ab599df43661dbc163215f427cb5ba86d26f12f4fd0f7e39d1cd4698ee409",
+          "c42022426ead1914219abcbebe0c659fead67cbd593bca23e8d027cafd7997a6",
+          "82b0461b14ee2893c99d425ac460d8b4a34674cbdc7880216b86bf9077f11628",
+          "9d12d58fd350d54da801dd239a17689615e0cec60e10d60d30aa0d138d20c8f5",
+          "683a774260955cb4d3da4b902434a47d78ef611dd126daf15efc16f9a3e99b49",
+          "59a3698e5d6cb7add05f9b85fdb2220c84c9e3ab8802f0561f569ff1db752481",
+          "711f91d9337db7bc7cca3b4a0ccd8712195c255e954265cc8e846158f7a2d784",
+          "4b0270e7ca36db6e60a8409f80502dd75d43cd43a57d3f0f64ff2f9aa78db030",
+          "d580f0df9db08c8cfe5cdb5580886bf8b2b4df0955a406c14cde12b8772e0fb0",
+          "dff55c1c037388a2f87c6db34aba48bbd66b3721d0226f9de1542884d7ea3d38",
+          "c4ea7b99bf90f6462dbb992f3dcc64430a61a7586a040612ca92eccc544b9c9b",
+          "d62065ac9b48f340d5b9eae19a91bb428f59c4653af00fba32eda85123f52dc7",
+          "169abdfcd0deb8969976a8362bccb3dde54c3769e2c2b38b86f7fad99769d47e",
+          "9c9fb4d8e1252a9e83e70becb0a76437415c1652107668e034a5f4665310b470",
+          "c0f58c2c9dd8168378cc4cd156240f17fce581e2fd455d7264d2a66bdd78214c",
+          "74c0a06d7c154ca475f7b24be3d6ff782cf91df3964d684adcff76b6b1960db6",
+          "f16488df4fe8eeeb4dec0e0d8c7799451a5bc2f6b1bbe445f19c64abed579176",
+          "508bccf4aa37858aeee780ce5f1585ca0708d0447ed37df229b7a000a567607f",
+          "a68764c753699f20c74f3ca528a6d960ae13014d4880d6abca90b79cc24cb4ab",
+          "8a0918e27425ebdca3be36c8fecd2b887247816cea4d6e1dc31f3e633af2d7df",
+          "fef2a4b481a696f178ef9a1d3c15506ae821208f3ab1d5c66f8084defb33a85f",
+          "a3518bba9948205fba062992b343d0a871d23c31d5f94ba7658d76615d6b8be7",
+          "23d6e2eba0193b83478f8733ce77e83a50f29ad091c8062f02d60276fcf11535",
+          "1d7377949aa9b85a6da9d0c3b3f5baad4140e2289e4eb9a81ca9d554bad6b18f",
+          "2ce6292e114abd6ea707c8181f8854235b9f6345cb47caf9a48efcd315122c41",
+          "2d9830a2471d79367fc3f29c8dc0b896b8d6074886c6dbeae15f47e0e5a27386",
+          "be2198585fdc6046115de18a4f7caa510e1984f50d668edadda92f79061149ba",
+          "990531ca28a8e17be8503224dddb13af838ec34b8603678e0b905feea8455d59",
+          "76fc0c41916c190f5695077672a1af9274e8852f4a4ac1c22174d855a6123717",
+          "0e00ed0a4bcc6f80f85e25f47614e26fc345c93661094bab31fece26e3aac00f",
+          "b1782b97d8a2e876cf2ceb71e50f4a765e4242db8b09af9809ce557e960bc5e6",
+          "39bdf5d6307d7409851ddea36fdcd0dc3976f276f9d646a9c57ef764c8c48f19",
+          "ea2c901e7325f1500630792ffa845c4eb097d14e1ad84ec0a5de5ddbccd6212a",
+          "87714c5c7ea1e113d2059d6508edb2e131aec525b4498d2bb1cbe4dac843e640",
+          "ba1127fa5ee0ce844fffbd8d03a3973fe102c83cf611c30b0fb071b1b158ed7a",
+          "9320a7a97c18383d1b7a08a96bac05b517637295914fd3ade8caf6d67e03ddb0",
+          "7bf08ff8be359c4445c5e45b639f8866a97a40fca6ac381a267d57d5a27cb5b1",
+          "bb495bc82270d79a33bf416d5ca3b745409f61acb3181bad4a6421081b1b0537",
+          "fe0f4501a02267cb3b8e292ddce5a9d8c9c8965b312d1bb87c5eafb45a197f88",
+          "6f800ee3209b97613ac9515f834d08f6a3bf2a9af3556662198576ae44d7ea9c",
+          "a9fcab303347780ba9c9d2edc431de654753671f144c556bfa3d2920de580b3f",
+          "cbcda1d2f327031d7454a14d30e1753c616bfdbceb1228d0345e4f55bfceabad",
+          "8fab79312b2e2ea86c3a26ae4cc9d09defe3eaaf3d1db9f0afc28182cdebfaa6",
+          "6753ee2f530f68c20a3b68962059edad00ced31c93e03fc96e3196779787eb4b",
+          "11be35c5072b0ab9ff402473f4bd3de0947151dfcf7501faa6a4d93e75292fab",
+          "5b011b331b2b6230ef566411c6eb19470874da94539d681c2a17cc0e911b6fc8",
+          "d533a834013dbcd5273d8f81efe0339b87d6892cd9946221f644be4078921fb8",
+          "365c39d0c33708e7f2512aed6b05755b4f2673d41ab362b0fed4eacfcf7fe38f",
+          "8c2d204ea7227b08212fc8262562fe2306ee691cfe29ca9acbd6c8314991c9c1",
+          "1a34d89f514a381fb1324b76d68316d48e0ca12d4d0d5737f309d6fbb0e9f700",
+          "ad81946558c39783e0a3bc62cc68106e9152f817b700b0114a424fc2ff57c8ae",
+          "6eabb58cf01186a5a1a9e6be74dbbd35cbab0e9d3a7ed3a4f88310d53fe76cea"
+        ],
+        "heading_token_ids": [
+          "6bbabe3fa6691c28d29f77319f0b8c4b4993bfd9a6ed2ab9fea747cb912776a6",
+          "b95165f8d5eefb95063e7988a5cf43b121adcdb9f5ed212a99e4cd1659014499",
+          "91704f48f5f35c636ad7ff83799752d717743e9c5e6f876eaff7fe071df5f973",
+          "75857fc5511649696158adf6c43f812433e5c28290b833f0855a497cafd6afe3",
+          "ba74853ca9ad6936ceddff99ba624d0e433285c933f419a2dd3a6f4a6d574e03"
+        ],
+        "interpretation": "NONE_RECURRENCE_AND_FINANCIAL_EFFECT_NOT_INFERRED",
+        "literal_ocr_text": "Mac du khéng dua ra két luan ngoai trừ, chúng tôi lưu ý người doc dén Thuyét minh số 39 ctia bao cáº tai chinh hợp nhat giữa nién dé, trong đó mô ta sw cé lién quan dén kim cwong, cac danh gia cia lãnh dao Céng ty va cac anh hưởng tai chinh có lién quan. Két luan cua chung tôi không lién quan dén van dé nay. Thay mat va dai dién cho Céng ty TNHH PwC (Viét Nam) 90187406. ¶",
+        "page_number": 6,
+        "rendered_image_sha256": "f5725bc17549f29dd440f4805085875371758613fdc5fed5532288b6e8611729",
+        "state": "EMPHASIS_OF_MATTER_PRESENT_REVIEW_CONCLUSION_NOT_MODIFIED_PER_SOURCE"
+      }
+    ],
+    "VRE": []
+  },
+  "candidate_fact_count": 11,
+  "canonical_fact_count": 11,
+  "contract_version": "reviewed_interim_canonical_ingress/v2",
+  "documents": [
+    {
+      "assurance": {
+        "audit_or_review_status": "reviewed",
+        "citation_id": "4c1d456f8341eafa35b02e4b5881dcac25865d94c9514b89c037c5590d584041",
+        "evidence_id": "4c1d456f8341eafa35b02e4b5881dcac25865d94c9514b89c037c5590d584041",
+        "inheritance": "document_level_report_applies_to_all_statements_in_document",
+        "matched_anchors": [
+          "bao cao soat xet",
+          "hop dong dich vu soat xet",
+          "soat xet so 2410",
+          "hop nhat",
+          "giua nien do",
+          "khong dua ra y kien kiem toan"
+        ],
+        "materialization_id": "25f0035b369c06e6464602a54bd85f897e6970cb629398b839aa49441d8e0b84",
+        "opinion_evidence": null,
+        "page_number": 5,
+        "page_text_sha256": "433994afbd5c682dc874992ba5171bdc01db33c19f8af59d256060a9bbcc009c",
+        "reason": null,
+        "rendered_image_sha256": "bedf2775acf502cbe3eacacd84c83eece126751607c3175f87714d9cfb88ed0b",
+        "scope_of_assurance": "consolidated_interim_statements",
+        "state": "QUALIFIED",
+        "title_span": {
+          "raw_token_order": [
+            10,
+            11,
+            12,
+            13
+          ],
+          "token_ids": [
+            "5f7745b1f2a7b83be6ac2f9209f11658055fe3c537add49c9ce01e367b675def",
+            "e5d30c28097ea7dfc520ac8d4126c1333b0305c34fa28d2e50894a78888bf2f7",
+            "261e985a6e818739ba9dab81e0088253da83663b8b5e42c6e6cfe1f4b3c443df",
+            "37f923f3ab56e550d18d709778519294b82170a93e460684324f85827196610b"
+          ]
+        }
+      },
+      "blocked_candidates": [
+        {
+          "canonical_metric": "cash_and_equivalents",
+          "line_code": "110",
+          "match_count": 0,
+          "reason": "ROW_NOT_UNIQUE_OR_NOT_GEOMETRICALLY_RESOLVED",
+          "state": "BLOCKED",
+          "statement_family": "balance_sheet"
+        },
+        {
+          "canonical_metric": "total_assets",
+          "line_code": "270",
+          "reason": "ROW_LABEL_DOES_NOT_SUPPORT_METRIC",
+          "state": "BLOCKED",
+          "statement_family": "balance_sheet"
+        },
+        {
+          "canonical_metric": "shareholders_equity",
+          "line_code": "400",
+          "match_count": 0,
+          "reason": "ROW_NOT_UNIQUE_OR_NOT_GEOMETRICALLY_RESOLVED",
+          "state": "BLOCKED",
+          "statement_family": "balance_sheet"
+        },
+        {
+          "canonical_metric": "operating_cash_flow",
+          "line_code": "20",
+          "raw_value": "1.991.053.934.²37",
+          "reason": "OCR_NUMERIC_AMBIGUITY",
+          "state": "BLOCKED",
+          "statement_family": "cash_flow"
+        },
+        {
+          "canonical_metric": "investment_property_disposal_result",
+          "line_code": "21",
+          "match_count": 0,
+          "reason": "ROW_NOT_UNIQUE_OR_NOT_GEOMETRICALLY_RESOLVED",
+          "state": "BLOCKED",
+          "statement_family": "income_statement"
+        },
+        {
+          "canonical_metric": "short_term_borrowings",
+          "line_code": "320",
+          "match_count": 0,
+          "reason": "ROW_NOT_UNIQUE_OR_NOT_GEOMETRICALLY_RESOLVED",
+          "state": "BLOCKED",
+          "statement_family": "balance_sheet"
+        },
+        {
+          "canonical_metric": "long_term_borrowings_or_finance_leases",
+          "line_code": "338",
+          "match_count": 0,
+          "reason": "ROW_NOT_UNIQUE_OR_NOT_GEOMETRICALLY_RESOLVED",
+          "state": "BLOCKED",
+          "statement_family": "balance_sheet"
+        },
+        {
+          "canonical_metric": "total_interest_bearing_debt",
+          "reason": "DEBT_COMPONENT_INCOMPLETE",
+          "state": "BLOCKED"
+        }
+      ],
+      "candidate_facts": [
+        {
+          "currency": "VND",
+          "line_code": "10",
+          "metric": "revenue",
+          "source_page": 10,
+          "source_unit_scale": 1,
+          "value": 25709196846401
+        },
+        {
+          "currency": "VND",
+          "line_code": "60",
+          "metric": "net_income",
+          "source_page": 10,
+          "source_unit_scale": 1,
+          "value": 728386009054
+        },
+        {
+          "currency": "VND",
+          "line_code": "61",
+          "metric": "attributable_net_income",
+          "source_page": 10,
+          "source_unit_scale": 1,
+          "value": 728529788872
+        },
+        {
+          "currency": "VND",
+          "line_code": "03",
+          "metric": "provision_charge_or_reversal_adjustment",
+          "source_page": 11,
+          "source_unit_scale": 1,
+          "value": 2667248523366
+        }
+      ],
+      "canonical_facts": [
+        {
+          "audit_or_review_status": "reviewed",
+          "citation_id": "e6e869cee1c314cf68ded5dfebaad8f53eedcd647ac64a3d432119268c89d663",
+          "currency": "VND",
+          "factual_reason_codes": [],
+          "factual_status": "qualified",
+          "line_code": "61",
+          "metric": "attributable_net_income",
+          "period": "2026-H1",
+          "period_end": "2026-06-30",
+          "period_start": "2026-01-01",
+          "period_type": "interim",
+          "research_reason_codes": [
+            "RESEARCH_PERIOD_NOT_ANNUAL"
+          ],
+          "research_status": "partial",
+          "scope": "consolidated",
+          "source_page": 10,
+          "source_unit_scale": 1,
+          "value": 728529788872
+        },
+        {
+          "audit_or_review_status": "reviewed",
+          "citation_id": "4c33e154f0442df62e420ca335f5b9acbde2299148b029fc887c14afcc95f72d",
+          "currency": "VND",
+          "factual_reason_codes": [],
+          "factual_status": "qualified",
+          "line_code": "60",
+          "metric": "net_income",
+          "period": "2026-H1",
+          "period_end": "2026-06-30",
+          "period_start": "2026-01-01",
+          "period_type": "interim",
+          "research_reason_codes": [
+            "RESEARCH_PERIOD_NOT_ANNUAL"
+          ],
+          "research_status": "partial",
+          "scope": "consolidated",
+          "source_page": 10,
+          "source_unit_scale": 1,
+          "value": 728386009054
+        },
+        {
+          "audit_or_review_status": "reviewed",
+          "citation_id": "9fd0d0170b7771ddc171879264e1af66863b803b0e60215755f0b2e2e70954d6",
+          "currency": "VND",
+          "factual_reason_codes": [],
+          "factual_status": "qualified",
+          "line_code": "03",
+          "metric": "provision_charge_or_reversal_adjustment",
+          "period": "2026-H1",
+          "period_end": "2026-06-30",
+          "period_start": "2026-01-01",
+          "period_type": "interim",
+          "research_reason_codes": [
+            "RESEARCH_PERIOD_NOT_ANNUAL"
+          ],
+          "research_status": "partial",
+          "scope": "consolidated",
+          "source_page": 11,
+          "source_unit_scale": 1,
+          "value": 2667248523366
+        },
+        {
+          "audit_or_review_status": "reviewed",
+          "citation_id": "d619f485f6ca80b689910400c62263669f1d9a71bc1c8e3c81a653ec35386db1",
+          "currency": "VND",
+          "factual_reason_codes": [],
+          "factual_status": "qualified",
+          "line_code": "10",
+          "metric": "revenue",
+          "period": "2026-H1",
+          "period_end": "2026-06-30",
+          "period_start": "2026-01-01",
+          "period_type": "interim",
+          "research_reason_codes": [
+            "RESEARCH_PERIOD_NOT_ANNUAL"
+          ],
+          "research_status": "partial",
+          "scope": "consolidated",
+          "source_page": 10,
+          "source_unit_scale": 1,
+          "value": 25709196846401
+        }
+      ],
+      "document_sha256": "db877169e7c19b4b81d60b37d5aab8f9938129a66b582c2229ffffebdca2a43d",
+      "ingress_blocked": [],
+      "knowledge_available_at": "2026-10-08T01:03:28.804230+00:00",
+      "observed_at": "2026-09-29T11:31:14.408633Z",
+      "reporting_period": "2026-H1",
+      "ticker": "PNJ"
+    },
+    {
+      "assurance": {
+        "audit_or_review_status": "reviewed",
+        "citation_id": "176caa3c02d4d7611e1af3e6cb1b09714ca81a349bfe3438c0803e4f0b1a2708",
+        "evidence_id": "176caa3c02d4d7611e1af3e6cb1b09714ca81a349bfe3438c0803e4f0b1a2708",
+        "inheritance": "document_level_report_applies_to_all_statements_in_document",
+        "matched_anchors": [
+          "bao cao soat xet",
+          "hop dong dich vu soat xet",
+          "soat xet so 2410",
+          "hop nhat",
+          "giua nien do"
+        ],
+        "materialization_id": "97fa6314afc4165173ba325124934bb6c5c23b392d5c272a3e2b372395f84f17",
+        "opinion_evidence": null,
+        "page_number": 5,
+        "page_text_sha256": "89f6ff96d68f040e210ded9eac15967af75949404d00cade992029c87658d67d",
+        "reason": null,
+        "rendered_image_sha256": "cf37569bb637091239f5050cb95b90072ad5e022db6e87cdde1fc419087bd5db",
+        "scope_of_assurance": "consolidated_interim_statements",
+        "state": "QUALIFIED",
+        "title_span": {
+          "raw_token_order": [
+            49,
+            50,
+            51,
+            52
+          ],
+          "token_ids": [
+            "cb63b1d886614cf66a74699cd3f0dc18edd31a034e73faf05e88a22439183155",
+            "65eff911f8fc4f34aea27f4e07f030c564e58e8cec982e8ebe5a9a97189f2108",
+            "f7047e1c9d5c4c9a3bc3548a14a68e31a8dbd22d1aabf0afdaaeee31d01d9979",
+            "89a5c2ae3f21f3397a879eec0cd4c75eebad6ec0f88cba79e3fc00fcd2abf808"
+          ]
+        }
+      },
+      "blocked_candidates": [
+        {
+          "canonical_metric": "total_assets",
+          "line_code": "270",
+          "match_count": 0,
+          "reason": "ROW_NOT_UNIQUE_OR_NOT_GEOMETRICALLY_RESOLVED",
+          "state": "BLOCKED",
+          "statement_family": "balance_sheet"
+        },
+        {
+          "canonical_metric": "attributable_net_income",
+          "line_code": "61",
+          "reason": "ROW_LABEL_DOES_NOT_SUPPORT_METRIC",
+          "state": "BLOCKED",
+          "statement_family": "income_statement"
+        },
+        {
+          "canonical_metric": "short_term_borrowings",
+          "line_code": "320",
+          "match_count": 0,
+          "reason": "ROW_NOT_UNIQUE_OR_NOT_GEOMETRICALLY_RESOLVED",
+          "state": "BLOCKED",
+          "statement_family": "balance_sheet"
+        },
+        {
+          "canonical_metric": "long_term_borrowings_or_finance_leases",
+          "line_code": "338",
+          "match_count": 0,
+          "reason": "ROW_NOT_UNIQUE_OR_NOT_GEOMETRICALLY_RESOLVED",
+          "state": "BLOCKED",
+          "statement_family": "balance_sheet"
+        },
+        {
+          "canonical_metric": "total_interest_bearing_debt",
+          "reason": "DEBT_COMPONENT_INCOMPLETE",
+          "state": "BLOCKED"
+        }
+      ],
+      "candidate_facts": [
+        {
+          "currency": "VND",
+          "line_code": "110",
+          "metric": "cash_and_equivalents",
+          "source_page": 7,
+          "source_unit_scale": 1000000,
+          "value": 5707705000000
+        },
+        {
+          "currency": "VND",
+          "line_code": "400",
+          "metric": "shareholders_equity",
+          "source_page": 10,
+          "source_unit_scale": 1000000,
+          "value": 49310673000000
+        },
+        {
+          "currency": "VND",
+          "line_code": "10",
+          "metric": "revenue",
+          "source_page": 11,
+          "source_unit_scale": 1000000,
+          "value": 4667489000000
+        },
+        {
+          "currency": "VND",
+          "line_code": "60",
+          "metric": "net_income",
+          "source_page": 11,
+          "source_unit_scale": 1000000,
+          "value": 3214788000000
+        },
+        {
+          "currency": "VND",
+          "line_code": "20",
+          "metric": "operating_cash_flow",
+          "source_page": 12,
+          "source_unit_scale": 1000000,
+          "value": 1555752000000
+        },
+        {
+          "currency": "VND",
+          "line_code": "21",
+          "metric": "investment_property_disposal_result",
+          "source_page": 11,
+          "source_unit_scale": 1000000,
+          "value": 184751000000
+        },
+        {
+          "currency": "VND",
+          "line_code": "03",
+          "metric": "provision_charge_or_reversal_adjustment",
+          "source_page": 12,
+          "source_unit_scale": 1000000,
+          "value": -7066000000
+        }
+      ],
+      "canonical_facts": [
+        {
+          "audit_or_review_status": "reviewed",
+          "citation_id": "754689c18134620a1799a208317076ad6a68b03d23c262cedf9b147361e8cc8a",
+          "currency": "VND",
+          "factual_reason_codes": [],
+          "factual_status": "qualified",
+          "line_code": "110",
+          "metric": "cash_and_equivalents",
+          "period": "2026-H1",
+          "period_end": "2026-06-30",
+          "period_start": "2026-01-01",
+          "period_type": "interim",
+          "research_reason_codes": [
+            "RESEARCH_PERIOD_NOT_ANNUAL"
+          ],
+          "research_status": "partial",
+          "scope": "consolidated",
+          "source_page": 7,
+          "source_unit_scale": 1000000,
+          "value": 5707705000000
+        },
+        {
+          "audit_or_review_status": "reviewed",
+          "citation_id": "b273abcc297780a8fd03ad6108fa0a3b345dcc68c41ef83d4259be383979e852",
+          "currency": "VND",
+          "factual_reason_codes": [],
+          "factual_status": "qualified",
+          "line_code": "21",
+          "metric": "investment_property_disposal_result",
+          "period": "2026-H1",
+          "period_end": "2026-06-30",
+          "period_start": "2026-01-01",
+          "period_type": "interim",
+          "research_reason_codes": [
+            "RESEARCH_PERIOD_NOT_ANNUAL"
+          ],
+          "research_status": "partial",
+          "scope": "consolidated",
+          "source_page": 11,
+          "source_unit_scale": 1000000,
+          "value": 184751000000
+        },
+        {
+          "audit_or_review_status": "reviewed",
+          "citation_id": "5a8385dcaedbaadcfada52a60422a99e2993494ed7c835b6e9d60762fa1c7735",
+          "currency": "VND",
+          "factual_reason_codes": [],
+          "factual_status": "qualified",
+          "line_code": "60",
+          "metric": "net_income",
+          "period": "2026-H1",
+          "period_end": "2026-06-30",
+          "period_start": "2026-01-01",
+          "period_type": "interim",
+          "research_reason_codes": [
+            "RESEARCH_PERIOD_NOT_ANNUAL"
+          ],
+          "research_status": "partial",
+          "scope": "consolidated",
+          "source_page": 11,
+          "source_unit_scale": 1000000,
+          "value": 3214788000000
+        },
+        {
+          "audit_or_review_status": "reviewed",
+          "citation_id": "9fa35a26ab243340281e0e3953c40be55034009a57eb1ffc8e29206d31815458",
+          "currency": "VND",
+          "factual_reason_codes": [],
+          "factual_status": "qualified",
+          "line_code": "20",
+          "metric": "operating_cash_flow",
+          "period": "2026-H1",
+          "period_end": "2026-06-30",
+          "period_start": "2026-01-01",
+          "period_type": "interim",
+          "research_reason_codes": [
+            "RESEARCH_PERIOD_NOT_ANNUAL"
+          ],
+          "research_status": "partial",
+          "scope": "consolidated",
+          "source_page": 12,
+          "source_unit_scale": 1000000,
+          "value": 1555752000000
+        },
+        {
+          "audit_or_review_status": "reviewed",
+          "citation_id": "30dedc8744974b7e5137a4445038944d58c0afdf0d30d6874381235b652e5b85",
+          "currency": "VND",
+          "factual_reason_codes": [],
+          "factual_status": "qualified",
+          "line_code": "03",
+          "metric": "provision_charge_or_reversal_adjustment",
+          "period": "2026-H1",
+          "period_end": "2026-06-30",
+          "period_start": "2026-01-01",
+          "period_type": "interim",
+          "research_reason_codes": [
+            "RESEARCH_PERIOD_NOT_ANNUAL"
+          ],
+          "research_status": "partial",
+          "scope": "consolidated",
+          "source_page": 12,
+          "source_unit_scale": 1000000,
+          "value": -7066000000
+        },
+        {
+          "audit_or_review_status": "reviewed",
+          "citation_id": "66af631b69c42bb4f793fac694cc09461c7323941d9005c5e7ff62cacc342e2d",
+          "currency": "VND",
+          "factual_reason_codes": [],
+          "factual_status": "qualified",
+          "line_code": "10",
+          "metric": "revenue",
+          "period": "2026-H1",
+          "period_end": "2026-06-30",
+          "period_start": "2026-01-01",
+          "period_type": "interim",
+          "research_reason_codes": [
+            "RESEARCH_PERIOD_NOT_ANNUAL"
+          ],
+          "research_status": "partial",
+          "scope": "consolidated",
+          "source_page": 11,
+          "source_unit_scale": 1000000,
+          "value": 4667489000000
+        },
+        {
+          "audit_or_review_status": "reviewed",
+          "citation_id": "26ab57b0f74cbd5547b9869c48ef67601baac707b6bebd17a96c980a4c132610",
+          "currency": "VND",
+          "factual_reason_codes": [],
+          "factual_status": "qualified",
+          "line_code": "400",
+          "metric": "shareholders_equity",
+          "period": "2026-H1",
+          "period_end": "2026-06-30",
+          "period_start": "2026-01-01",
+          "period_type": "interim",
+          "research_reason_codes": [
+            "RESEARCH_PERIOD_NOT_ANNUAL"
+          ],
+          "research_status": "partial",
+          "scope": "consolidated",
+          "source_page": 10,
+          "source_unit_scale": 1000000,
+          "value": 49310673000000
+        }
+      ],
+      "document_sha256": "7e9b9e39901a028972fff80bc1a4f9f5cab4c1526ce4029f9b853ccff6aeaac0",
+      "ingress_blocked": [],
+      "knowledge_available_at": "2026-10-08T01:03:28.804230+00:00",
+      "observed_at": "2026-09-29T11:31:14.408633Z",
+      "reporting_period": "2026-H1",
+      "ticker": "VRE"
+    }
+  ],
+  "financial_v2_pin": {
+    "authority_version": "2026-09-05.1",
+    "changed": false
+  },
+  "milestone_id": "PNJ_VRE_REVIEWED_H1_PROVISION_COMPONENT_AND_TOTAL_ASSET_IDENTITY_V1",
+  "network_used": false,
+  "ocr_reads": {
+    "front_matter_and_statement_pages": 22
+  },
+  "overlay_write": {
+    "appended_fact_count": 5,
+    "policy": "APPEND_ONLY_NEW_EXACT_KEYS",
+    "prior_fact_count": 19,
+    "prior_facts_preserved": true
+  },
+  "precedence_statuses": [
+    "NOT_COMPARABLE",
+    "OFFICIAL_ONLY"
+  ],
+  "qualified_at": "2026-10-08T01:03:28.804230+00:00",
+  "raw_pdf_or_image_bytes_committed": false,
+  "semantic_identity": {
+    "historical_affected_known": [
+      "HPG 2022 net_income=line61 (p3f13 semantic correction)",
+      "HPG 2023 net_income=line61 (p3f13 semantic correction)",
+      "annual OCR-path facts emitted by the pre-corrective STANDARD_FACT_RULES (line 61 as net_income); exhaustive count not audited"
+    ],
+    "historical_authority": "HISTORICAL_NET_INCOME_SEMANTIC_RECONCILIATION_REQUIRED",
+    "historical_rows_rewritten": false,
+    "line_60": "net_income (total profit after tax); requires explicit row label",
+    "line_61": "attributable_net_income (parent-attributable); requires explicit row label",
+    "line_61_as_net_income": "FORBIDDEN"
+  },
+  "valuation": {
+    "pb_effect": "NONE",
+    "pe_ttm_from_h1": false,
+    "ps_ttm_from_h1": false
+  }
+}

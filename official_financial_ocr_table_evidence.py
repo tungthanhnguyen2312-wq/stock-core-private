@@ -48,8 +48,17 @@ STANDARD_FACT_RULES = (
 # Line code alone is not identity: the matched row's own label must support the concept.
 # ``any_of`` phrases are normalized (accent-free) label substrings; ``forbidden`` phrases block.
 ROW_LABEL_CONTRACT = {
+    # Templates effective 2026 renumber the long-term asset block: code 270 is
+    # ``Tài sản dài hạn khác`` and the total moves to 280.  A code-only bind would
+    # promote a sub-total as total assets, so the row must literally say total.
+    "total_assets": {"any_of": ("tong cong tai san", "tong tai san", "total assets"),
+                     "forbidden": ("ngan han", "dai han", "khac", "non current", "current assets")},
     "investment_property_disposal_result": {"any_of": ("thanh ly",),
         "all_of": ("bat dong san dau tu",), "forbidden": ()},
+    # Indirect cash-flow adjustment line 03.  Only surviving literal words are
+    # required (OCR may read ``dự`` as ``dy``); letters are never repaired.
+    "provision_charge_or_reversal_adjustment": {"any_of": ("phong",), "all_of": ("khoan",),
+        "forbidden": ("khau hao", "ty gia", "lai vay", "dau tu")},
     "net_income": {"any_of": ("loi nhuan sau thue", "profit after tax"),
                    "forbidden": ("cong ty me", "chu so huu", "co dong", "parent", "khong kiem soat")},
     "attributable_net_income": {"any_of": ("cong ty me", "of the parent", "parent company"),
@@ -68,6 +77,12 @@ def row_label_supports_metric(metric: str, label: str) -> bool:
     return any(term.replace(" ", "") in compact for term in contract["any_of"]) and all(
         term.replace(" ", "") in compact for term in contract.get("all_of", ())) and not any(
         term.replace(" ", "") in compact for term in contract["forbidden"])
+
+
+EARNINGS_COMPONENT_RULES = (
+    ("investment_property_disposal_result", "income_statement", "21"),
+    ("provision_charge_or_reversal_adjustment", "cash_flow", "03"),
+)
 
 
 DEBT_COMPONENT_RULES = (
@@ -533,9 +548,10 @@ def qualify_table_facts(materialization: Mapping[str, Any], *, ticker: str, repo
         if fact:
             qualified.append(fact)
     if include_earnings_quality_components:
-        component = attempt("investment_property_disposal_result", "income_statement", "21")
-        if component:
-            qualified.append(component)
+        for name, family, code in EARNINGS_COMPONENT_RULES:
+            component = attempt(name, family, code)
+            if component:
+                qualified.append(component)
     components = [attempt(name, family, code) for name, family, code in DEBT_COMPONENT_RULES]
     if all(components) and len({(item["currency"], item["unit_scale"]) for item in components}) == 1:
         short, long = components

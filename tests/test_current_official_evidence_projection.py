@@ -77,14 +77,14 @@ def test_reported_component_survives_consumers_with_unknown_recurrence_and_no_no
 ])
 def test_absent_stale_zero_or_unqualified_component_stays_unknown(change):
     source = all_rows()
-    row = next(r for r in source if r.get('context_kind')=='EARNINGS_QUALITY_COMPONENT')
+    row = next(r for r in source if r.get('context_kind')=='EARNINGS_QUALITY_COMPONENT' and r['ticker']=='VRE')
     row.update(change)
     assert project(source)['records']['VRE']['earnings_quality_context']['status']=='UNKNOWN'
 
 
 def test_conflicting_component_cannot_become_known_quality():
     source = all_rows()
-    other = deepcopy(next(r for r in source if r.get('context_kind')=='EARNINGS_QUALITY_COMPONENT'))
+    other = deepcopy(next(r for r in source if r.get('context_kind')=='EARNINGS_QUALITY_COMPONENT' and r['ticker']=='VRE'))
     other['normalized_value']+=1
     source.append(other)
     assert project(source)['records']['VRE']['earnings_quality_context']['status']=='UNKNOWN'
