@@ -3409,7 +3409,7 @@
       "milestone_id": "ANNUAL_EARNINGS_COMPONENT_AND_SOURCE_FAITHFUL_OCR_NORMALIZATION_V1",
       "state": "COMPLETE",
       "starting_checkpoint": "559ff7a8453631053b2b5ff935c912e0f3568266",
-      "checkpoint": "HEAD",
+      "checkpoint": "95dbc36fa50840843630a608454f9d907fd46539",
       "candidate_branch": "feature/annual-earnings-component-ocr-20261008",
       "dependencies": [
         "PNJ_VRE_REVIEWED_H1_PROVISION_COMPONENT_AND_TOTAL_ASSET_IDENTITY_V1"
