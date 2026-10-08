@@ -3451,7 +3451,7 @@
       "milestone_id": "QNS_2026_H1_OFFICIAL_DETAIL_RESOLVER_AND_FINANCIAL_EVIDENCE_V1",
       "state": "COMPLETE",
       "starting_checkpoint": "7959b4d59e813c5d5ce31953d03a9f1cb94f27cc",
-      "checkpoint": "HEAD",
+      "checkpoint": "5cf17a6891d51d21a0bac17608e127e41c9f2c21",
       "candidate_branch": "feature/qns-h1-detail-resolver-20261008",
       "dependencies": [
         "VNM_QNS_POW_CURRENT_OFFICIAL_FINANCIAL_EVIDENCE_ACQUISITION_V1"
