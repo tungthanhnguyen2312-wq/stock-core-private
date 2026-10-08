@@ -2092,6 +2092,7 @@ def build_decision_packet(
     root: Path, session: str, *,
     opportunity: Mapping[str, Any] | None = None, enrichment: Mapping[str, Any] | None = None,
     artifact_root: Path | None = None,
+    packet: Mapping[str, Any] | None = None,
 ) -> dict[str, Any] | None:
     """Build current_research_decision_packet/v1 for this session, degrading gracefully.
 
@@ -2110,6 +2111,12 @@ def build_decision_packet(
 
     artifact_root = artifact_root or root
     paths = level2.session_artifact_paths(artifact_root, session)
+    if packet is not None:
+        from current_research_decision_packet_product import verified_packet
+        if packet.get("research_session") != session or verified_packet(packet) is None:
+            raise CanonicalPostCloseError("CANONICAL_DECISION_PACKET_IDENTITY_OR_SESSION_INVALID")
+        _write_json(paths["decision_packet"], packet)
+        return dict(packet)
     opportunity = opportunity if opportunity is not None else _load(paths["opportunity_prioritization"])
     if not opportunity:
         return None
@@ -2523,12 +2530,15 @@ def run_canonical_post_close(
     if not isinstance(integrated_delivery, Mapping) or integrated_delivery.get("session") != session:
         raise CanonicalPostCloseError("REFUSE_CANONICAL_POST_CLOSE:INTEGRATED_DECISION_DELIVERY_INPUT_UNAVAILABLE")
     producer_head, consumer_head = _git_head(root), _git_head(root.parent / "ai-core-private")
+    from canonical_daily_operation import prepare_macro_delivery
+    macro_delivery = prepare_macro_delivery(root, session, artifact_root=artifact_root, enrichment=enrichment)
     try:
         producer_result = run_daily_producer(
             root, session=session, latest_completed_session=False,
             producer_head=producer_head or "UNKNOWN", consumer_head=consumer_head or "UNKNOWN",
             integrated_investment_decision_product=integrated_delivery,
             now=now,
+            **macro_delivery,
         )
     except DailyProducerError as exc:
         raise CanonicalPostCloseError("REFUSE_CANONICAL_POST_CLOSE:DAILY_PRODUCER_INTEGRITY_FAILURE:" + str(exc)) from exc
@@ -2555,6 +2565,7 @@ def run_canonical_post_close(
     decision_packet = build_decision_packet(
         root, session, opportunity=producer_result["operation"].get("opportunity"), enrichment=enrichment,
         artifact_root=artifact_root,
+        packet=producer_result["operation"].get("canonical_decision_packet"),
     )
     prospective = run_prospective_collection(root, session, artifact_root=artifact_root)
     runtime_release = evaluate_dashboard_runtime_readiness(runtime_root, session)

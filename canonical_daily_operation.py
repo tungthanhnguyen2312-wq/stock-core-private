@@ -279,6 +279,43 @@ def refresh_macro_snapshot(root: Path, runtime_root: Path) -> dict[str, Any]:
     return {"status": "REFRESHED", "reason_code": None}
 
 
+def prepare_macro_delivery(root: Path, session: str, *, artifact_root: Path, enrichment: Mapping[str, Any], acquire_fn=None, cutoff_fn=None) -> dict[str, Any]:
+    """Acquire once for a new session; bind exact selected market inputs, never latest files.
+
+    This cutoff describes current research delivery after acquisition, not the
+    immutable market/financial session lock or historical PIT knowledge.
+    """
+    if session <= "2026-10-07":
+        return {}
+    if cutoff_fn is None and datetime.now(VN_TZ).date().isoformat() != session:
+        return {}  # Retained historical replay performs no fresh macro I/O.
+    from current_macro_regime import acquire
+    import daily_session_level2_package as level2
+    from canonical_post_close_pipeline import _load
+    from prospective_pit_capture_retention import io_known_at
+    try:
+        macro = (acquire_fn or acquire)()
+    except Exception:
+        macro = None  # Optional acquisition failure never revises security decisions.
+    if not isinstance(macro, Mapping):
+        macro = None
+    cutoff = (cutoff_fn or io_known_at)()
+    from freshness_history import parse_timestamp
+    reference = parse_timestamp(cutoff)
+    if reference is None or reference.astimezone(VN_TZ).date().isoformat() != session:
+        return {}  # A later replay cannot attach newly acquired evidence to a past session.
+    paths = level2.session_artifact_paths(artifact_root, session)
+    packet_inputs = {key: _load(paths[path_key]) for key, path_key in (("market_sector", "sector_leadership"), ("risk_register", "risk_register"))}
+    sector = packet_inputs["market_sector"]
+    if sector is not None:
+        from current_market_sector_leadership_context import content_identity
+        if sector.get("session") != session or any(sector.get(k) != v for k, v in content_identity(sector).items()):
+            packet_inputs["market_sector"] = None  # Local optional input rejection, not a core Daily failure.
+    for key, component in (("financial_momentum", "financial_momentum"), ("corporate_event", "corporate_event_context"), ("historical", "historical_context")):
+        packet_inputs[key] = (enrichment.get(component) or {}).get("artifact")
+    return {"macro": macro, "macro_cutoff": cutoff, "decision_packet_inputs": packet_inputs}
+
+
 def build_macro_presentation_context(
     root: Path, runtime_root: Path, *, macro_refresh: Mapping[str, Any], generated_at: datetime,
 ) -> dict[str, Any]:
@@ -646,6 +683,8 @@ def run_canonical_daily_operation(
     publication_runner: Callable[[list[str]], Any] | None = None,
     macro_refresh_fn: Callable[[Path, Path], Mapping[str, Any]] | None = None,
     macro_presentation_context_fn: Callable[..., Mapping[str, Any]] | None = None,
+    macro_regime_acquirer: Callable[[], Mapping[str, Any]] | None = None,
+    macro_cutoff_fn: Callable[[], str] | None = None,
     daily_integrated_decision_brief_builder: Callable[[Mapping[str, Any]], Mapping[str, Any]] | None = None,
     web_dir: Path | None = None,
     out_dir: Path | str | None = None,
@@ -924,6 +963,7 @@ def run_canonical_daily_operation(
             root, runtime_root, macro_refresh=macro_refresh, generated_at=instant,
         )
     )
+    macro_delivery = prepare_macro_delivery(root, resolved_session, artifact_root=artifact_root, enrichment=enrichment, acquire_fn=macro_regime_acquirer, cutoff_fn=macro_cutoff_fn)
 
     producer_head, consumer_head = _git_head(root), _git_head(root.parent / "ai-core-private")
     preseal_brief_builder = daily_integrated_decision_brief_builder
@@ -941,6 +981,7 @@ def run_canonical_daily_operation(
             producer_head=producer_head or "UNKNOWN", consumer_head=consumer_head or "UNKNOWN",
             integrated_investment_decision_product=integrated_delivery, now=instant,
             macro_presentation_context=macro_presentation_context,
+            **macro_delivery,
             **({"daily_integrated_decision_brief_builder": preseal_brief_builder} if preseal_brief_builder is not None else {}),
         )
         if producer_fn is None:
@@ -1044,6 +1085,7 @@ def run_canonical_daily_operation(
     decision_packet = build_decision_packet(
         root, resolved_session, opportunity=operation.get("opportunity"), enrichment=enrichment,
         artifact_root=artifact_root,
+        packet=operation.get("canonical_decision_packet"),
     )
     checkpoints.finish()  # DECISION_PACKET_READY
     prospective_kwargs: dict[str, Any] = {}

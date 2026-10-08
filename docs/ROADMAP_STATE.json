@@ -15,11 +15,31 @@
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "PORTFOLIO_OPPORTUNITY_COST_COMPARATIVE_RESEARCH_V1",
+    "milestone": "MACRO_REGIME_CANONICAL_DAILY_CONSUMER_AND_TEMPORAL_CORRECTIVE_V1",
     "state": "COMPLETE"
   },
   "queued_next": [],
   "milestones": [
+    {
+      "milestone_id": "MACRO_REGIME_CANONICAL_DAILY_CONSUMER_AND_TEMPORAL_CORRECTIVE_V1",
+      "state": "COMPLETE",
+      "checkpoint": "HEAD",
+      "terminal_disposition": "MACRO_CANONICAL_CONSUMER_OFFLINE_ACCEPTED_OWNER_DAILY_PENDING",
+      "starting_checkpoint": "e472a3dbaa2af5bc914e9f5a2f0acbec24acc77d",
+      "candidate_branch": "fix/macro-regime-canonical-daily-consumer-temporal-v1",
+      "dependencies": [
+        "MACRO_MARKET_REGIME_DECISION_CONTEXT_CONVERGENCE_V1"
+      ],
+      "unlocks": [],
+      "owner_authorized": true,
+      "owner_override": "OWNER_DIRECTIVE_2026_10_08_MACRO_CANONICAL_DAILY_CORRECTIVE",
+      "authority_effect": "NONE / CURRENT_RESEARCH_DELIVERY_AND_TEMPORAL_NARROWING_ONLY",
+      "state_history": [
+        "ACTIVE", "COMPLETE"
+      ],
+      "source_doc": "docs/macro_market_regime_decision_context_contract.md",
+      "notes": "Explicit owner handoff: PR94 merged; Claude released Producer writer. No Daily, T0, Dashboard publication or successor."
+    },
     {
       "milestone_id": "BOUNDED_CURRENT_OFFICIAL_FILINGS_ACQUISITION_AND_RECONCILIATION_V1",
       "state": "COMPLETE",

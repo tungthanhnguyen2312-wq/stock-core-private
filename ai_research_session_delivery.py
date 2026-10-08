@@ -589,6 +589,7 @@ def build_dashboard_projection(
         "ticker_cards": copy.deepcopy(product["detailed_research_cards"]),
         "risk_data_gaps": copy.deepcopy(product["risk_data_gap_panel"]),
         "macro_context": copy.deepcopy(product["macro_context"]),
+        **({"macro_market_regime_context": copy.deepcopy(product["macro_market_regime_context"]), "canonical_decision_packet_identity": product.get("canonical_decision_packet_identity")} if product.get("macro_market_regime_context") is not None else {}),
         "portfolio_risk": copy.deepcopy(operation.get("portfolio_risk") or {"status": "NO_EXPLICIT_PORTFOLIO_SUPPLIED", "is_actionable": False, "message": "No explicit portfolio-risk envelope was supplied for this operation."}),
         "what_to_verify_next": copy.deepcopy(product["what_to_verify_next"]),
     }
@@ -653,6 +654,7 @@ def build_delivery(operation: Mapping[str, Any], inputs: Mapping[str, Any]) -> d
         "no_alphabetical_sampling": True,
         "market": {"summary": copy.deepcopy(product["market_brief"]), "macro": copy.deepcopy(product.get("macro_context")), "macro_presentation_context": copy.deepcopy(operation.get("macro_presentation_context")), "flow_coverage": copy.deepcopy((manifest.get("coverage_summary") or {}).get("market_flow_positioning")), "limitations": copy.deepcopy(manifest["warnings"])},
         "source_freshness_matrix": copy.deepcopy(operation.get("source_freshness_matrix")),
+        **({"macro_market_regime_context": copy.deepcopy(product["macro_market_regime_context"]), "canonical_decision_packet_identity": product.get("canonical_decision_packet_identity")} if product.get("macro_market_regime_context") is not None else {}),
         "financial_analysis": {"market_summary": financial_summary, "ticker_index": financial_index,
                                "source_context_identity": (financial_context or {}).get("source_context_identity")},
         "owner_focus_research_contexts": _owner_focus_contexts(product, integrated_overlay),

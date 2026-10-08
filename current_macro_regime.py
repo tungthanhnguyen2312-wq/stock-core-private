@@ -7,11 +7,12 @@ import csv
 import hashlib
 import io
 import json
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta, timezone
 from typing import Any, Mapping
 from urllib.request import Request, urlopen
 
 from field_temporal_contract import stable_id
+from freshness_history import freshness_envelope, parse_timestamp
 
 CONTRACT_VERSION = "current_macro_regime/v1"
 RULE_VERSION = "macro_axes_rules/v1"
@@ -45,6 +46,7 @@ def _fetch(url: str) -> tuple[bytes, str]:
 def _fred_observation(indicator_id: str, code: str, region: str, category: str, unit: str, retrieved_at: str) -> tuple[dict[str, Any], dict[str, Any]]:
     url = "https://fred.stlouisfed.org/graph/fredgraph.csv?id=" + code
     raw, payload_hash = _fetch(url)
+    retrieved_at = _now()
     rows = list(csv.DictReader(io.StringIO(raw.decode("utf-8-sig"))))
     usable = [(row.get("observation_date"), row.get(code)) for row in rows if row.get("observation_date") and row.get(code) not in (None, ".", "")]
     if not usable: raise ValueError("FRED_NO_USABLE_OBSERVATION:" + code)
@@ -67,17 +69,19 @@ def acquire() -> dict[str, Any]:
     try:
         from vietnam_official_macro_evidence import acquire as acquire_vietnam, current_macro_observations
         vietnam = acquire_vietnam(retrieved_at=retrieved_at)
-        observations.extend(current_macro_observations(vietnam))
-        raw_sources.append({"source_identity": "vietnam_official_macro_evidence", "artifact_identity": vietnam["artifact_identity"], "sha256": vietnam["artifact_sha256"], "status": "RETAINED_EVIDENCE_ARTIFACT"})
+        vietnam_known_at = _now()
+        observations.extend({**row, "known_at": vietnam_known_at} for row in current_macro_observations(vietnam))
+        raw_sources.append({"source_identity": "vietnam_official_macro_evidence", "artifact_identity": vietnam["artifact_identity"], "sha256": vietnam["artifact_sha256"], "status": "RETAINED_EVIDENCE_ARTIFACT", "evidence_artifact": vietnam})
     except Exception as exc:
         observations += [_unavailable("vn_cpi_yoy", "inflation", "VIETNAM_OFFICIAL_MACRO_ACQUISITION_FAILED:" + type(exc).__name__, retrieved_at), _unavailable("vn_policy_rate", "domestic_rates", "NO_MACHINE_READABLE_CURRENT_OFFICIAL_POLICY_RATE_OBSERVATION_RETAINED", retrieved_at), _unavailable("vn_usd_vnd", "fx", "NO_MACHINE_READABLE_CURRENT_OFFICIAL_SBV_FX_OBSERVATION_RETAINED", retrieved_at), _unavailable("vn_credit_growth", "credit", "NO_CURRENT_OFFICIAL_CREDIT_RELEASE_RETAINED", retrieved_at), _unavailable("vn_system_liquidity", "liquidity", "NO_QUALIFIED_OFFICIAL_SYSTEM_LIQUIDITY_PROXY_RETAINED", retrieved_at), _unavailable("vn_government_bond_yield", "government_bonds", "NO_CURRENT_MACHINE_READABLE_OFFICIAL_BOND_YIELD_RETAINED", retrieved_at)]
-    return build(observations=observations, raw_sources=raw_sources, retrieved_at=retrieved_at)
+    return build(observations=observations, raw_sources=raw_sources, retrieved_at=_now())
 
 
 def _axis(observations: Mapping[str, Mapping[str, Any]], axis: str) -> dict[str, Any]:
     def item(key: str) -> Mapping[str, Any]: return observations.get(key) or {}
     def movement(key: str, threshold: float = 0.01) -> str:
         row = item(key); value, previous = row.get("value"), row.get("previous_value")
+        if row.get("status") != "AVAILABLE": return "UNKNOWN"
         if not isinstance(value, (int, float)) or not isinstance(previous, (int, float)): return "UNKNOWN"
         return "UP" if value - previous > threshold else "DOWN" if previous - value > threshold else "FLAT"
     rules = {
@@ -102,9 +106,62 @@ def build(*, observations: list[Mapping[str, Any]], raw_sources: list[Mapping[st
     artifact.update(content_identity(artifact)); return artifact
 
 
-def session_context(macro: Mapping[str, Any] | None, session: str) -> dict[str, Any]:
+def _knowledge_timestamp(value: Any) -> datetime | None:
+    """An intraday knowledge claim requires an explicit timezone, never an assumed UTC."""
+    try:
+        parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+        return parsed if parsed.tzinfo is not None else None
+    except ValueError:
+        return None
+
+
+def session_context(macro: Mapping[str, Any] | None, session: str, *, cutoff: str | None = None) -> dict[str, Any]:
     if not macro: return {"status": "UNAVAILABLE", "reason": "NO_EXPLICIT_MACRO_ARTIFACT_BOUND", "is_actionable": False}
-    late = [row["indicator_id"] for row in (macro.get("observations") or {}).values() if row.get("released_at") and str(row["released_at"]) > session]
-    if str(macro.get("current_research_as_of", "9999")) > session or late:
-        return {"status": "UNAVAILABLE", "reason": "MACRO_EVIDENCE_NOT_KNOWN_BY_RETAINED_EQUITY_SESSION", "macro_artifact_identity": macro.get("artifact_identity"), "late_observation_ids": late, "is_actionable": False}
-    return {"status": "AVAILABLE", "macro_artifact_identity": macro.get("artifact_identity"), "macro_regime": macro.get("macro_regime"), "state_axes": macro.get("state_axes"), "is_actionable": False}
+    reference = _knowledge_timestamp(cutoff)
+    if reference is None:
+        return {"status": "UNAVAILABLE", "reason": "EXPLICIT_MACRO_CUTOFF_REQUIRED", "is_actionable": False}
+    if reference.astimezone(timezone(timedelta(hours=7))).date().isoformat() != session:
+        return {"status": "UNAVAILABLE", "reason": "MACRO_CUTOFF_SESSION_MISMATCH", "is_actionable": False}
+    if macro.get("contract_version") != CONTRACT_VERSION or any(macro.get(key) != value for key, value in content_identity(macro).items()):
+        return {"status": "UNAVAILABLE", "reason": "MACRO_ARTIFACT_IDENTITY_INVALID", "is_actionable": False}
+    known = _knowledge_timestamp(macro.get("retrieved_at"))
+    if known is None or known > reference:
+        return {"status": "UNAVAILABLE", "reason": "MACRO_EVIDENCE_NOT_KNOWN_BY_RETAINED_EQUITY_SESSION", "macro_artifact_identity": macro.get("artifact_identity"), "is_actionable": False}
+    rows = []
+    excluded = {}
+    for identifier, source in (macro.get("observations") or {}).items():
+        row = copy.deepcopy(source)
+        reasons = []
+        retrieved = _knowledge_timestamp(row.get("retrieved_at"))
+        knowledge = _knowledge_timestamp(row.get("known_at") or row.get("retrieved_at"))
+        if retrieved is None or knowledge is None or max(retrieved, knowledge) > reference:
+            reasons.append("OBSERVATION_NOT_KNOWN_AT_CUTOFF")
+        release = row.get("released_at")
+        if release:
+            published = parse_timestamp(release) if len(str(release)) == 10 else _knowledge_timestamp(release)
+            if published is None or (len(str(release)) > 10 and published > reference) or (len(str(release)) == 10 and str(release) > session):
+                reasons.append("RELEASE_AFTER_CUTOFF_OR_INVALID")
+        freshness = dict(row.get("freshness") or {})
+        freshness["historical_pit"] = "NOT_PROMOTED"
+        next_release = freshness.get("next_expected_official_release")
+        # NSO has its own retained release-calendar rule; never replace it with a day threshold.
+        if next_release:
+            if session >= str(next_release)[:10]: reasons.append("NEXT_OFFICIAL_RELEASE_DUE")
+        elif identifier in FRED:
+            domain = "macro_monthly" if identifier == "us_cpi" else "macro_daily"
+            envelope = freshness_envelope(domain=domain, as_of_date=row.get("observation_date"), generated_at=row.get("retrieved_at"), source=row.get("source"), reference_at=reference)
+            envelope["is_actionable"] = False
+            freshness["cadence_assessment"] = envelope
+            if envelope["freshness_status"] not in {"current", "expiring"}: reasons.append("FRED_OBSERVATION_STALE_OR_UNKNOWN")
+        if str(freshness.get("status", "UNKNOWN")).upper() in {"STALE", "STALE_OR_UNAVAILABLE", "UNKNOWN", "UNAVAILABLE"}:
+            reasons.append("OBSERVATION_FRESHNESS_NOT_CURRENT")
+        if row.get("authority") != "OFFICIAL_PUBLIC_SOURCE": reasons.append("OBSERVATION_AUTHORITY_NOT_QUALIFIED")
+        row["freshness"] = freshness
+        row["temporal"] = {"cutoff": cutoff, "knowledge_time": row.get("known_at") or row.get("retrieved_at"), "release_precision": "DATE_ONLY" if release and len(str(release)) == 10 else "TIMESTAMP" if release else "UNKNOWN", "historical_pit": "NOT_PROMOTED", "excluded_reasons": reasons}
+        if reasons:
+            excluded[identifier] = reasons
+            row["status"] = "UNAVAILABLE"
+            row["limitations"] = list(row.get("limitations") or []) + reasons
+        rows.append(row)
+    narrowed = build(observations=rows, raw_sources=[], retrieved_at=macro["retrieved_at"])
+    return {"status": "AVAILABLE", "macro_artifact_identity": macro.get("artifact_identity"), "cutoff": cutoff, "macro_regime": narrowed["macro_regime"], "state_axes": narrowed["state_axes"], "observations": narrowed["observations"], "excluded_observations": excluded, "is_actionable": False}

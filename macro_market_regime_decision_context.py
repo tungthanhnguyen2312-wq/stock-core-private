@@ -6,6 +6,7 @@ Axis states are read from the supplying artifact. A missing input stays UNKNOWN.
 from __future__ import annotations
 
 import copy
+from datetime import UTC, datetime, timedelta, timezone
 from typing import Any, Mapping
 
 from current_macro_regime import session_context
@@ -149,17 +150,17 @@ def _closed_session(session: str | None) -> bool:
     return session == OCTOBER_7_LAST_SESSION
 
 
-def _macro_dimensions(macro: Mapping[str, Any] | None, session: str | None) -> dict[str, dict[str, Any]]:
+def _macro_dimensions(macro: Mapping[str, Any] | None, session: str | None, cutoff: str | None = None) -> dict[str, dict[str, Any]]:
     if not _identity_ok(macro, MACRO_CONTRACT):
         return {axis: _unknown(axis, "NO_EXPLICIT_MACRO_ARTIFACT_IDENTITY") for axis in MACRO_AXES}
     if _closed_session(session):
         return {axis: _unknown(axis, "COMPLETED_OCTOBER_7_SESSION_NOT_REWRITTEN") for axis in MACRO_AXES}
-    bound = session_context(macro, session) if session else {"status": "AVAILABLE", "state_axes": macro.get("state_axes")}
+    bound = session_context(macro, session, cutoff=cutoff) if session and session != "SCRATCH_CURRENT" else {"status": "AVAILABLE", "state_axes": macro.get("state_axes"), "observations": macro.get("observations")}
     if bound.get("status") != "AVAILABLE":
         reason = str(bound.get("reason") or "MACRO_NOT_KNOWN_FOR_SESSION")
         return {axis: _unknown(axis, reason) for axis in MACRO_AXES}
-    axes = macro.get("state_axes") or {}
-    observations = macro.get("observations") or {}
+    axes = bound.get("state_axes") or {}
+    observations = bound.get("observations") or {}
     rows: dict[str, dict[str, Any]] = {}
     for axis in MACRO_AXES:
         source = axes.get(axis) if isinstance(axes, Mapping) else None
@@ -184,6 +185,13 @@ def _macro_dimensions(macro: Mapping[str, Any] | None, session: str | None) -> d
                 "observation_date": observation.get("observation_date"),
                 "released_at": observation.get("released_at"),
                 "retrieved_at": observation.get("retrieved_at"),
+                "knowledge_time": observation.get("known_at") or observation.get("retrieved_at"),
+                "value": observation.get("value"),
+                "unit": observation.get("unit"),
+                "raw_payload_sha256": observation.get("raw_payload_sha256"),
+                "freshness": copy.deepcopy(observation.get("freshness")),
+                "authority": observation.get("authority"),
+                "temporal": copy.deepcopy(observation.get("temporal")),
                 "value_present": observation.get("value") is not None,
             })
             freshness = dict(observation.get("freshness") or freshness)
@@ -423,16 +431,27 @@ def build_context(
     sector_leadership: Mapping[str, Any] | None = None,
     presentation: Mapping[str, Any] | None = None,
     session: str | None = None,
-    knowledge_available_at: str = KNOWLEDGE_AVAILABLE_AT,
+    knowledge_available_at: str | None = None,
+    cutoff: str | None = None,
 ) -> dict[str, Any]:
     """Bind explicit upstream identities. There is no latest-file lookup."""
     _reject_forbidden({"macro": macro, "breadth": breadth, "sector_leadership": sector_leadership, "presentation": presentation}, where="INPUT")
+    knowledge_available_at = knowledge_available_at or cutoff or (macro or {}).get("retrieved_at") or datetime.now(UTC).isoformat()
+    if session and session != "SCRATCH_CURRENT" and not _closed_session(session):
+        # Explicit market artifacts must be from the receiving session and content verified.
+        for name, supplied, field in (("breadth", breadth, "research_session"), ("sector", sector_leadership, "session")):
+            if supplied is not None:
+                if supplied.get(field) != session:
+                    raise ValueError("REGIME_CONTEXT_SESSION_MISMATCH:" + name)
+                payload = {k: v for k, v in supplied.items() if k not in {"artifact_sha256", "artifact_identity"}}
+                if supplied.get("artifact_sha256") != stable_id(payload):
+                    raise ValueError("REGIME_UPSTREAM_IDENTITY_INVALID:" + name)
     if _closed_session(session):
         macro_rows = _macro_dimensions(None, session)
         for row in macro_rows.values():
             row["limitations"] = ["COMPLETED_OCTOBER_7_SESSION_NOT_REWRITTEN"]
     else:
-        macro_rows = _macro_dimensions(macro, session)
+        macro_rows = _macro_dimensions(macro, session, cutoff)
     market_rows = {} if _closed_session(session) else _market_dimensions(breadth, sector_leadership, presentation)
     if _closed_session(session):
         market_rows = {axis: _unknown(axis, "COMPLETED_OCTOBER_7_SESSION_NOT_REWRITTEN") for axis in (*MARKET_AXES, "EXACT_SESSION_BREADTH")}
@@ -441,10 +460,12 @@ def build_context(
         sector_rows = _sector_dimensions(sector_leadership)
     dimensions = {**macro_rows, **market_rows, **sector_rows}
     regime = (macro or {}).get("macro_regime") if _identity_ok(macro, MACRO_CONTRACT) and not _closed_session(session) else None
-    if session and _identity_ok(macro, MACRO_CONTRACT) and not _closed_session(session):
-        bound = session_context(macro, session)
+    if session and session != "SCRATCH_CURRENT" and _identity_ok(macro, MACRO_CONTRACT) and not _closed_session(session):
+        bound = session_context(macro, session, cutoff=cutoff)
         if bound.get("status") != "AVAILABLE":
             regime = None
+        else:
+            regime = bound.get("macro_regime")
     conflicts = [] if _closed_session(session) else _conflicts(macro_rows, market_rows)
     artifact = {
         "schema_version": "1.0.0",
@@ -453,6 +474,7 @@ def build_context(
         "disposition": DISPOSITION,
         "knowledge_available_at": knowledge_available_at,
         "session": session,
+        "cutoff": cutoff,
         "temporal": {
             "knowledge_available_at": knowledge_available_at,
             "october_7_records_changed": False,
@@ -504,6 +526,24 @@ def build_context(
     return artifact
 
 
+def validate_context(context: Mapping[str, Any], session: str | None) -> None:
+    """Validate the receiving session and immutable content before delivery."""
+    from current_macro_regime import _knowledge_timestamp
+    if context.get("contract_version") != CONTRACT_VERSION or context.get("session") != session:
+        raise ValueError("REGIME_CONTEXT_SESSION_MISMATCH")
+    payload = {k: v for k, v in context.items() if k not in {"artifact_sha256", "artifact_identity"}}
+    digest = stable_id(payload)
+    if context.get("artifact_sha256") != digest or context.get("artifact_identity") != "macro_market_regime_decision_context:" + digest:
+        raise ValueError("REGIME_CONTEXT_IDENTITY_INVALID")
+    if session != "SCRATCH_CURRENT":
+        cutoff = _knowledge_timestamp(context.get("cutoff"))
+        known = _knowledge_timestamp(context.get("knowledge_available_at"))
+        if cutoff is None or known is None or known > cutoff:
+            raise ValueError("REGIME_CONTEXT_KNOWLEDGE_AFTER_CUTOFF_OR_MISSING")
+        if cutoff.astimezone(timezone(timedelta(hours=7))).date().isoformat() != session:
+            raise ValueError("REGIME_CONTEXT_CUTOFF_SESSION_MISMATCH")
+
+
 def stock_relationship(context: Mapping[str, Any], ticker: str, ticker_row: Mapping[str, Any] | None = None) -> dict[str, Any]:
     """Expose sector and macro context beside company economics. Do not merge them."""
     leadership = None
@@ -530,6 +570,7 @@ def packet_section_overlay(context: Mapping[str, Any], *, decision_session: str 
     """Fields for the existing market, uncertainty, and counter-thesis sections."""
     if _closed_session(decision_session) or context.get("temporal", {}).get("session_bind") == "EXCLUDED_COMPLETED_OCTOBER_7":
         return {"bind_status": "EXCLUDED_COMPLETED_OCTOBER_7", "market": {}, "uncertainty": {}, "counter_thesis": {}}
+    validate_context(context, decision_session)
     dimensions = context.get("dimensions") or {}
     missing = [axis for axis, row in dimensions.items() if isinstance(row, Mapping) and row.get("state") == "UNKNOWN"]
     leading = [
@@ -549,6 +590,9 @@ def packet_section_overlay(context: Mapping[str, Any], *, decision_session: str 
             "sector_leadership": [item.get("group_identity") for item in leading],
             "macro_sector_relationship": context.get("macro_sector_relationship"),
             "upstream_identities": copy.deepcopy(context.get("upstream_identities")),
+            "regime_evidence": copy.deepcopy(context.get("dimensions")),
+            "knowledge_available_at": context.get("knowledge_available_at"),
+            "cutoff": context.get("cutoff"),
         },
         "uncertainty": {
             "missing_dimensions": {"claim": {"present": True, "warning": True}, "value": missing},
@@ -680,7 +724,7 @@ def scratch_acceptance() -> dict[str, Any]:
         },
         "foreign_flow": {"status": "unavailable", "reason": "not_in_snapshot", "source": "macro_sync_runtime_snapshot"},
     }
-    context = build_context(macro=macro, breadth=breadth, sector_leadership=sector, presentation=presentation, session="SCRATCH_CURRENT")
+    context = build_context(macro=macro, breadth=breadth, sector_leadership=sector, presentation=presentation, session="SCRATCH_CURRENT", knowledge_available_at=KNOWLEDGE_AVAILABLE_AT)
     return {
         "context": context,
         "answers": decision_answers(context),

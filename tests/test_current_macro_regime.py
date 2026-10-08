@@ -9,6 +9,9 @@ def artifact():
 def test_deterministic_axes_and_identity():
  a=artifact(); assert content_identity(a)['artifact_sha256']==a['artifact_sha256']; assert a['state_axes']['GLOBAL_RATES']['state']=='EASING'; assert a['state_axes']['USD_PRESSURE']['state']=='EASING'
 def test_release_semantics_fail_closed_for_earlier_equity_session():
- a=artifact(); assert session_context(a,'2026-08-21')['status']=='UNAVAILABLE'; a['current_research_as_of']='2026-08-20'; assert session_context(a,'2026-08-21')['status']=='AVAILABLE'
+ a=artifact(); assert session_context(a,'2026-08-21',cutoff='2026-08-21T10:00:00Z')['status']=='UNAVAILABLE'
+ assert session_context(a,'2026-08-24',cutoff='2026-08-24T10:00:00Z')['status']=='AVAILABLE'
+ a['current_research_as_of']='2026-08-20'
+ assert session_context(a,'2026-08-21',cutoff='2026-08-21T10:00:00Z')['status']=='UNAVAILABLE'
 def test_missing_is_never_zero():
  a=artifact(); assert a['observations']['vn_policy_rate']['value'] is None; assert a['state_axes']['DOMESTIC_RATES']['state']=='UNKNOWN'
