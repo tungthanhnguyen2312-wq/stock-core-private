@@ -168,6 +168,9 @@ def materialize_tsv_pages(record: Mapping[str, Any], *, evidence_root: Path, pag
         raise ValueError("PAGE_OUT_OF_RANGE")
     native_failure = None
     if allow_unqualified_native_fallback and any(native_text_pages.values()):
+        from financial_evidence_currency_contract import ENTITY_FAMILY
+        if ENTITY_FAMILY.get(str(record.get("ticker") or "").upper()) != "corporate":
+            raise ValueError("NATIVE_OCR_FALLBACK_REQUIRES_DECLARED_CORPORATE_ISSUER")
         # A text layer can be present but unusable (broken embedded font maps).
         # Re-run the existing native extractor against these immutable bytes;
         # OCR never supplements or replaces any native candidate.

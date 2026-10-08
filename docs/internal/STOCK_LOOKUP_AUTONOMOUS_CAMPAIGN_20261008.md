@@ -174,7 +174,7 @@ No new share/financial promotion. The tentative HPG selection pivots before impl
 - Fixed9-page final replay. Damaged period/code/unit/numeric cells keep every core
   financial value blocked. Financial fields19/annual10/current9 remain unchanged;
   strict shares/all7 valuation0 and annual exact94 unchanged. Seven protected hashes agree.
--236 focused tests passed /2 retained skips /5 subtests. Retained fixture tests prove
+-240 focused tests passed /2 retained skips /5 subtests. Retained fixture tests prove
   review assurance and zero financial promotion. No Daily, completed rewrites or T0 changes.
 - Reopen NVL exact fields only with literal undamaged independent headers/rows/units
   under the same source contract; do not keep probing glyph profiles or repair amounts.
@@ -203,3 +203,6 @@ issuer's literal official H1 cash/earnings source or a genuine executed common-s
 completion document, declare request/document/storage limits before HTTP, and acquire
 through the existing governed operator. Do not force HPG/NVL OCR glyph profiles, infer
 common shares from listed quantity, or scale share acquisition without continuity.
+
+- Final entity guard refuses specialist/unknown issuers before corporate native fallback;
+  no bank/securities layout is forced through the corporate reader. Four adverse cases pass.

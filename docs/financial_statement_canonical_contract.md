@@ -9,7 +9,9 @@ Reported values remain reported. A TTM value is derived only from four consecuti
 
 A retained PDF can expose native text while its font maps corrupt identity labels.
 Default TSV materialization still routes any native text to the native extractor.
-An explicit bounded operator opt-in may re-run the existing native extractor against
+Only a declared corporate issuer in the existing cohort may use this fallback; bank,
+securities, finance-company and unknown identities refuse it. An explicit bounded
+operator opt-in may re-run the existing native extractor against
 verified immutable source bytes. Any native fact candidate or panel fact refuses OCR
 fallback. Zero candidates permits a separate unchanged default rendered TSV pass;
 no native/OCR tokens, labels or values are assembled together. Receipts preserve the

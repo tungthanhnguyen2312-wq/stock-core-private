@@ -69,3 +69,10 @@ def test_hash_and_page_guards_precede_native_fallback(setup_native):
         ocr.materialize_tsv_pages({**record,'sha256':'0'*64},evidence_root=root,pages=(1,),allow_unqualified_native_fallback=True)
     with pytest.raises(ValueError,match='PAGE_OUT_OF_RANGE'):
         ocr.materialize_tsv_pages(record,evidence_root=root,pages=(2,),allow_unqualified_native_fallback=True)
+
+@pytest.mark.parametrize('ticker',['VCB','SSI','EVF','UNKNOWN'])
+def test_specialist_or_unknown_entity_cannot_enter_corporate_fallback(setup_native,monkeypatch,ticker):
+    root,record=setup_native
+    monkeypatch.setattr(native,'build_artifact',lambda **kwargs:pytest.fail('specialist forced through corporate extractor'))
+    with pytest.raises(ValueError,match='REQUIRES_DECLARED_CORPORATE_ISSUER'):
+        ocr.materialize_tsv_pages({**record,'ticker':ticker},evidence_root=root,pages=(1,),allow_unqualified_native_fallback=True)
