@@ -36,6 +36,12 @@ ticker verdict ([AI_RULES.md](AI_RULES.md) rules 5–10, [DATA_FIRST_DOCTRINE.md
 
 ## 3. Analytical context
 
+[Long-term company economics evidence](long_term_company_economics_evidence_contract.md)
+is an offline, opt-in `NON_VOTING` source-bound matrix. Exact observations are separate
+from structural interpretation. Provider Financial V2, tactical/sector and existing
+thesis items remain research references. No new lens reducer, posture, normalized
+economics, strict valuation/share authority or Portfolio capital allocation follows.
+
 The [annual context contract](audited_annual_exact_field_context_contract.md) admits ten later-known FY2025 exact fields across HPG/PNJ/PVD/FPT. Auditor opinion continuation is source-bound; historical context does not replace annual valuation inputs or rewrite completed sessions.
 
 The [HPG share contract](hpg_common_share_evidence_contract.md) qualifies one audited

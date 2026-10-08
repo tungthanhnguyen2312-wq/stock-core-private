@@ -9,17 +9,39 @@
     "ai_rules": "docs/AI_RULES.md",
     "note": "This file is the machine-readable EXECUTION-STATE authority: which milestone is current/active/next/blocked, what checkpoint proves each completed milestone, and whether recorded state contradicts Git/worktree reality. It does not restate or supersede the narrative docs' technical content and is not a substitute for reading them. Where this file and a narrative doc appear to disagree, that is a conflict to surface to the owner (AGENTS.md 'Default lightweight bootstrap' rule), never an automatic override in either direction."
   },
-  "implementation_lineage_head": "b1c086c3be3d75bf17ea4100105877076474d0b9",
-  "last_updated_checkpoint": "b1c086c3be3d75bf17ea4100105877076474d0b9",
+  "implementation_lineage_head": "HEAD",
+  "last_updated_checkpoint": "HEAD",
   "known_operational_diff_allowlist": [
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "MACRO_REGIME_CANONICAL_DAILY_CONSUMER_AND_TEMPORAL_CORRECTIVE_V1",
+    "milestone": "LONG_TERM_COMPANY_ECONOMICS_EVIDENCE_MATRIX_V1",
     "state": "COMPLETE"
   },
   "queued_next": [],
   "milestones": [
+    {
+      "milestone_id": "LONG_TERM_COMPANY_ECONOMICS_EVIDENCE_MATRIX_V1",
+      "state": "COMPLETE",
+      "starting_checkpoint": "1e1f208d15ea63ec37b99e36540019cfc6100cf8",
+      "checkpoint": "HEAD",
+      "candidate_branch": "feature/long-term-company-economics-evidence-20261008",
+      "dependencies": [
+        "CURRENT_OFFICIAL_EVIDENCE_PROJECTION_INTEGRATION_V1",
+        "PORTFOLIO_OPPORTUNITY_COST_COMPARATIVE_RESEARCH_V1"
+      ],
+      "unlocks": [],
+      "owner_authorized": true,
+      "owner_override": "OWNER_DIRECTIVE_2026_10_08_LONG_TERM_COMPANY_ECONOMICS_EVIDENCE_MATRIX_V1_OFFLINE_LOCAL_CHECKPOINT_ONLY",
+      "authority_effect": "NONE",
+      "state_history": [
+        "ACTIVE",
+        "COMPLETE"
+      ],
+      "source_doc": "docs/long_term_company_economics_evidence_contract.md",
+      "notes": "Offline opt-in source-bound evidence matrix; retained PNJ/PVD/FPT acceptance, observation versus interpretation, exact cutoff/fitness, unknown recurrence and normalization blockers. Focused tests passed. Local checkpoint only; explicit owner approval required for push/PR, then separate merge/deployment gates. No Daily, production writes, publication or successor.",
+      "terminal_disposition": "LONG_TERM_COMPANY_ECONOMICS_EVIDENCE_MATRIX_IMPLEMENTATION_COMPLETE"
+    },
     {
       "milestone_id": "MACRO_REGIME_CANONICAL_DAILY_CONSUMER_AND_TEMPORAL_CORRECTIVE_V1",
       "state": "COMPLETE",
@@ -3603,5 +3625,5 @@
       "reference_checkpoint": "9575cb04c899696a02b22ba9dfcfed9a4961cf2d"
     }
   ],
-  "successor_disposition": "OWNER_SELECTED_RETAINED_EVIDENCE_PROJECTION_NO_AUTOMATIC_SUCCESSOR"
+  "successor_disposition": "OWNER_SELECTED_OFFLINE_EVIDENCE_NO_AUTOMATIC_SUCCESSOR"
 }

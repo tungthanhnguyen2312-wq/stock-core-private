@@ -3,6 +3,10 @@
 Canonical Daily order, including the Macro V1 corrective. Code governs this view.
 Current-state facts: [ACTIVE_STATE.md](ACTIVE_STATE.md). Authority per output: [AUTHORITY.md](AUTHORITY.md).
 
+[Long-term company economics evidence](long_term_company_economics_evidence_contract.md)
+is offline opt-in only; it adds no Daily stage or consumer. October 8 Macro live
+acceptance is independently verified; exact identities are in ACTIVE_STATE.
+
 Released October-7 integration extends K2's existing fundamental builder with a
 new session projection of the immutable annual baseline and qualified retained overlay.
 Reviewed USD income fields remain currency-preserving context and are excluded from VND

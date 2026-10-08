@@ -1,14 +1,25 @@
 # Stock Lookup — Current Roadmap
 
 What happens next, and nothing else. No historical milestones (those live in [ROADMAP.md](ROADMAP.md) and
-the machine state `ROADMAP_STATE.json`). Updated 2026-10-08 from starting main `da5206716ade44a4b896de48ca5c66c330191991`. **Nothing below
+the machine state `ROADMAP_STATE.json`). Updated 2026-10-08 from starting main `1e1f208d15ea63ec37b99e36540019cfc6100cf8`. **Nothing below
 auto-starts.** A milestone starts only when `python tools/stocklookup_roadmap.py --can-start <ID>` allows
 it or the owner records an explicit override (AI_RULES rule 11). Facts: [ACTIVE_STATE.md](ACTIVE_STATE.md).
 
-## NOW — `MACRO_REGIME_CANONICAL_DAILY_CONSUMER_AND_TEMPORAL_CORRECTIVE_V1` (COMPLETE)
+## NOW — `LONG_TERM_COMPANY_ECONOMICS_EVIDENCE_MATRIX_V1` (COMPLETE)
+
+Owner-selected bounded offline matrix, implemented with an explicit owner override.
+Native roadmap checkpoint is the local HEAD; no queued successor.
+Retained PNJ/PVD/FPT facts, separate observation/interpretation statuses, independent
+flags and normalization blockers. No Daily, capital action or successor.
+[Contract and acceptance](long_term_company_economics_evidence_contract.md).
+Next release gate: explicit owner approval to push the exact local checkpoint and open
+a PR; merge/deployment remain separate approval classes.
+
+## PRIOR — `MACRO_REGIME_CANONICAL_DAILY_CONSUMER_AND_TEMPORAL_CORRECTIVE_V1` (COMPLETE)
 
 Owner-authorized corrective: canonical packet/AI/cockpit wiring and cutoff/freshness
-checks passed offline acceptance. No Daily/T0/publication; live Owner acceptance pending.
+checks passed offline acceptance. October 8 Owner live acceptance is independently
+verified (`MACRO_REGIME_20261008_LIVE_ACCEPTED`); exact identities in ACTIVE_STATE.
 No successor. [Contract](macro_market_regime_decision_context_contract.md).
 
 PR #94 Portfolio release and Macro V1 context are complete; SBV axes stay UNKNOWN.
