@@ -58,7 +58,7 @@ def _record(evidence_root: Path, sha256: str) -> dict[str, Any]:
 def run(*, landing_root: Path, document_specs=DOCUMENTS, reporting_period: str = PERIOD,
         allow_audited_annual_context: bool = False, annual_context_known_at: str | None = None,
         resolve_cash_flow_code_cells: bool = False, evidence_subdir: str = EVIDENCE_SUBDIR,
-        front_matter_pages=FRONT_MATTER_PAGES) -> dict[str, Any]:
+        front_matter_pages=FRONT_MATTER_PAGES, allow_unqualified_native_fallback: bool = False) -> dict[str, Any]:
     from financial_evidence_currency_contract import COHORT, TARGET_PERIODS
     if (reporting_period not in TARGET_PERIODS or len(document_specs) > 3
             or any(s["ticker"] not in COHORT for s in document_specs)
@@ -82,8 +82,9 @@ def run(*, landing_root: Path, document_specs=DOCUMENTS, reporting_period: str =
             # Qualification is a conservative later bound when the retained batch
             # observation predates individual response completion. Never backdate it.
             known_at = max((known_at, annual_known), key=lambda value: datetime.fromisoformat(value.replace("Z", "+00:00")))
-        front = materialize_tsv_pages(record, evidence_root=evidence_root, pages=front_matter_pages)
-        statements = materialize_tsv_pages(record, evidence_root=evidence_root, pages=spec["pages"])
+        fallback = {"allow_unqualified_native_fallback": True} if allow_unqualified_native_fallback else {}
+        front = materialize_tsv_pages(record, evidence_root=evidence_root, pages=front_matter_pages, **fallback)
+        statements = materialize_tsv_pages(record, evidence_root=evidence_root, pages=spec["pages"], **fallback)
         materializations.append({"ticker": spec["ticker"], "front": front, "statements": statements})
         ocr_reads += len(front_matter_pages) + len(spec["pages"])
         assurance = resolve_document_assurance_evidence(front)
@@ -112,6 +113,10 @@ def run(*, landing_root: Path, document_specs=DOCUMENTS, reporting_period: str =
         }
         if cells:
             entry["line_code_cell_resolution"] = cells
+        if allow_unqualified_native_fallback:
+            entry["native_fallback_pages"] = [{"page_number": page["page_number"],
+                "route": page["route"], "native_failure_evidence": page.get("native_failure_evidence")}
+                for materialization in (front, statements) for page in materialization["pages"]]
         if assurance["state"] == "QUALIFIED":
             panel_facts = panel_facts_from_qualified_ocr(
                 qualification, entity_type="corporate", statement_scope="consolidated",

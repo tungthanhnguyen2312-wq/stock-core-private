@@ -1,0 +1,53 @@
+{
+  "budget": {
+    "actual_http_cap": 4,
+    "pdf_cap": 1,
+    "index_refresh_cap": 0,
+    "concurrency": 1,
+    "storage_cap_bytes": 52428800
+  },
+  "actual_requests": 1,
+  "new_bytes": 4774822,
+  "trace": [
+    {
+      "request_number": 1,
+      "initial_url": "https://www.novaland.com.vn/Data/Sites/1/media/quan-h%E1%BB%87-%C4%91%E1%BA%A7u-t%C6%B0/2026/20260828/20260828_NVLG_BCTC_HN_6T2026_SX.pdf"
+    }
+  ],
+  "outcomes": [
+    {
+      "ticker": "NVL",
+      "document_id": "c7c7ca6cb25567d7a1307e15987cf0eeba7f44b7b11d682ce738a0d978606abd",
+      "state": "retained",
+      "extraction_status": "ready_for_direct_citations",
+      "sha256": "20aa7254735542d470f12ada8d02786dfa5e673035274e42d3404352e266a007",
+      "relative_path": "documents/NVL/2026-H1/reviewed_interim_financial_statements/20aa7254735542d470f12ada8d02786dfa5e673035274e42d3404352e266a007.pdf",
+      "http_status": 200,
+      "observed_at": "2026-10-08T00:17:56.905338Z",
+      "http_requests_so_far": 1,
+      "new_landing_bytes_so_far": 4774822
+    }
+  ],
+  "old_manifest_sha256_before": "97189741aaa759bdd2cbc20bcf7b7076f265aca2db91ab36d88db0c621e9009b",
+  "old_manifest_sha256_after": "97189741aaa759bdd2cbc20bcf7b7076f265aca2db91ab36d88db0c621e9009b",
+  "duplicate_sha_replay_network_requests": 0,
+  "duplicate_sha_manifest_bytes_equal": true,
+  "new_manifest_sha256": "984b2dafa8740e2264e8b02dc9ce08836ef30c8ea947f195afa66e51bfd74234",
+  "native_extraction_candidate_count": 0,
+  "document": {
+    "ticker": "NVL",
+    "reporting_period": "2026-H1",
+    "canonical_url": "https://www.novaland.com.vn/Data/Sites/1/media/quan-h%E1%BB%87-%C4%91%E1%BA%A7u-t%C6%B0/2026/20260828/20260828_NVLG_BCTC_HN_6T2026_SX.pdf",
+    "final_url": "https://www.novaland.com.vn/Data/Sites/1/media/quan-h%E1%BB%87-%C4%91%E1%BA%A7u-t%C6%B0/2026/20260828/20260828_NVLG_BCTC_HN_6T2026_SX.pdf",
+    "sha256": "20aa7254735542d470f12ada8d02786dfa5e673035274e42d3404352e266a007",
+    "content_length": 4769459,
+    "observed_at": "2026-10-08T00:17:56.905338Z",
+    "discovery_provenance": {
+      "index_document_id": "2ad83279f08eb030d30928407a761b3944c3bd8b5b871d0d748acb68496e0abe",
+      "index_sha256": "b8593013f1d6dd2d639236d2b28407db3bb4b99cc45c704712b837d2a2d8e864",
+      "index_url": "https://www.novaland.com.vn/quan-he-dau-tu/bao-cao-tai-chinh",
+      "literal_embedded_pdfUrl_resolved": "https://www.novaland.com.vn/Data/Sites/1/media/quan-h%E1%BB%87-%C4%91%E1%BA%A7u-t%C6%B0/2026/20260828/20260828_NVLG_BCTC_HN_6T2026_SX.pdf"
+    }
+  },
+  "authority_effect": "RAW_RETAINED_REVIEWED_ASSURANCE_ONLY_NO_QUALIFIED_FINANCIAL_VALUES"
+}

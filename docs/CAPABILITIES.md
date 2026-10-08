@@ -232,3 +232,9 @@ immutable. [Share contract](hpg_common_share_evidence_contract.md).
 - Contract: `ROADMAP_STATE.json` blocked_capabilities `SUPPLEMENTAL_PROVIDER_RUNTIME_OPERATION`
 - Runtime: `FROZEN_HISTORICAL` (retired 2026-09-29; worker removed; retained research evidence preserved, never officially promoted) · Authority: `BLOCKED` · Production: `NOT_RUN`
 - Input/Predecessor/Blocker/Next trigger: new owner decision required to revive anything
+
+
+NVL's newly retained H1 filing proves reviewed consolidated assurance after explicit
+zero-candidate native fallback. Every exact financial value remains blocked; no current
+field, valuation input or quality score is added. Source receipt and exact blockers:
+[October8 campaign](internal/STOCK_LOOKUP_AUTONOMOUS_CAMPAIGN_20261008.md).

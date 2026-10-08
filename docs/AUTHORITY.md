@@ -73,3 +73,9 @@ normalized EPS, annual valuation input, action or score change follows.
 | PIT backtest / replay / live eligibility | `BLOCKED` | Needs qualified CA chain, volume documentation and effective-time membership, or an explicit recorded owner approval. | same, [market_only_pit_eligibility_contract.md](market_only_pit_eligibility_contract.md) |
 | Authority promotion (any) | `DEFERRED` | Never by side effect: not by registry presence, canonical representation, software release, marker publication, a READY host, or a completed milestone. Requires exact evidence per contract or explicit owner decision. | [AI_RULES.md](AI_RULES.md) rules 4, 10, 11; STATE Invariant 6 |
 | Operator host gate | `SCOPED` | `NONE / OWNER_DAILY_HOST_PREFLIGHT_ONLY`: a point-in-time observation that gates launch; no analytical authority. | [owner_daily_host_preflight_contract.md](owner_daily_host_preflight_contract.md) |
+
+
+NVL's newly retained H1 filing proves reviewed consolidated assurance after explicit
+zero-candidate native fallback. Every exact financial value remains blocked; no current
+field, valuation input or quality score is added. Source receipt and exact blockers:
+[October8 campaign](internal/STOCK_LOOKUP_AUTONOMOUS_CAMPAIGN_20261008.md).

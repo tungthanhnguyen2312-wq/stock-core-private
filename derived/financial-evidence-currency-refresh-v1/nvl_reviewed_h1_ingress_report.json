@@ -1,0 +1,337 @@
+{
+  "artifact_sha256": "c36f753adef49095f392e5c45e41881cf5b57f81e5f9347cd7f54fa6b5b87da5",
+  "candidate_fact_count": 0,
+  "canonical_fact_count": 0,
+  "contract_version": "reviewed_interim_canonical_ingress/v2",
+  "documents": [
+    {
+      "assurance": {
+        "audit_or_review_status": "reviewed",
+        "citation_id": "574f909752daf58214166c20e4e7badfb527477674461f95358ec3751d0f2bd3",
+        "evidence_id": "574f909752daf58214166c20e4e7badfb527477674461f95358ec3751d0f2bd3",
+        "inheritance": "document_level_report_applies_to_all_statements_in_document",
+        "matched_anchors": [
+          "bao cao soat xet",
+          "hop dong dich vu soat xet",
+          "soat xet so 2410",
+          "hop nhat",
+          "giua nien do"
+        ],
+        "materialization_id": "cfe5659d00c00afcaf5af177a9a79559e9e34ea31070a67a7cb1cee809118b7e",
+        "opinion_evidence": null,
+        "page_number": 6,
+        "page_text_sha256": "b241d8f9d6c991a0bca9bb5f18578fac21293fcb31a2db96c5c88ca2abd299d8",
+        "reason": null,
+        "rendered_image_sha256": "eb5b5fe45abbc670bfc1e250c2a1e00f5c07ec8c369ac77dacc8b23ddf1ecfe6",
+        "scope_of_assurance": "consolidated_interim_statements",
+        "state": "QUALIFIED",
+        "title_span": {
+          "raw_token_order": [
+            57,
+            58,
+            59,
+            60
+          ],
+          "token_ids": [
+            "4f80b47219838880abd9695af36649645a8b9862bc9e43ac2084aed6b691c2dd",
+            "0604da5fbbf9309b27f5507aebeba6cb589f71d8688979849b77fc0a560e8fdb",
+            "8c52501aebbf0170ba815e3e212792ff564febed3717efb843320d918c4155a8",
+            "4e076c75c6337239d162b6ae40f605b4aacf232fb704ad6f98e7cc9bbcb130f8"
+          ]
+        }
+      },
+      "blocked_candidates": [
+        {
+          "canonical_metric": "cash_and_equivalents",
+          "line_code": "110",
+          "match_count": 0,
+          "reason": "ROW_NOT_UNIQUE_OR_NOT_GEOMETRICALLY_RESOLVED",
+          "state": "BLOCKED",
+          "statement_family": "balance_sheet"
+        },
+        {
+          "canonical_metric": "total_assets",
+          "line_code": "270",
+          "match_count": 0,
+          "reason": "ROW_NOT_UNIQUE_OR_NOT_GEOMETRICALLY_RESOLVED",
+          "state": "BLOCKED",
+          "statement_family": "balance_sheet"
+        },
+        {
+          "canonical_metric": "shareholders_equity",
+          "line_code": "400",
+          "match_count": 0,
+          "reason": "ROW_NOT_UNIQUE_OR_NOT_GEOMETRICALLY_RESOLVED",
+          "state": "BLOCKED",
+          "statement_family": "balance_sheet"
+        },
+        {
+          "canonical_metric": "revenue",
+          "line_code": "10",
+          "match_count": 0,
+          "reason": "ROW_NOT_UNIQUE_OR_NOT_GEOMETRICALLY_RESOLVED",
+          "state": "BLOCKED",
+          "statement_family": "income_statement"
+        },
+        {
+          "canonical_metric": "net_income",
+          "line_code": "60",
+          "match_count": 0,
+          "reason": "ROW_NOT_UNIQUE_OR_NOT_GEOMETRICALLY_RESOLVED",
+          "state": "BLOCKED",
+          "statement_family": "income_statement"
+        },
+        {
+          "canonical_metric": "attributable_net_income",
+          "line_code": "61",
+          "match_count": 0,
+          "reason": "ROW_NOT_UNIQUE_OR_NOT_GEOMETRICALLY_RESOLVED",
+          "state": "BLOCKED",
+          "statement_family": "income_statement"
+        },
+        {
+          "canonical_metric": "operating_cash_flow",
+          "line_code": "20",
+          "match_count": 0,
+          "reason": "ROW_NOT_UNIQUE_OR_NOT_GEOMETRICALLY_RESOLVED",
+          "state": "BLOCKED",
+          "statement_family": "cash_flow"
+        },
+        {
+          "canonical_metric": "investment_property_disposal_result",
+          "line_code": "21",
+          "match_count": 0,
+          "reason": "ROW_NOT_UNIQUE_OR_NOT_GEOMETRICALLY_RESOLVED",
+          "state": "BLOCKED",
+          "statement_family": "income_statement"
+        },
+        {
+          "canonical_metric": "short_term_borrowings",
+          "line_code": "320",
+          "match_count": 0,
+          "reason": "ROW_NOT_UNIQUE_OR_NOT_GEOMETRICALLY_RESOLVED",
+          "state": "BLOCKED",
+          "statement_family": "balance_sheet"
+        },
+        {
+          "canonical_metric": "long_term_borrowings_or_finance_leases",
+          "line_code": "338",
+          "match_count": 0,
+          "reason": "ROW_NOT_UNIQUE_OR_NOT_GEOMETRICALLY_RESOLVED",
+          "state": "BLOCKED",
+          "statement_family": "balance_sheet"
+        },
+        {
+          "canonical_metric": "total_interest_bearing_debt",
+          "reason": "DEBT_COMPONENT_INCOMPLETE",
+          "state": "BLOCKED"
+        }
+      ],
+      "candidate_facts": [],
+      "canonical_facts": [],
+      "document_sha256": "20aa7254735542d470f12ada8d02786dfa5e673035274e42d3404352e266a007",
+      "ingress_blocked": [],
+      "knowledge_available_at": "2026-10-08T00:17:56.905338Z",
+      "native_fallback_pages": [
+        {
+          "native_failure_evidence": {
+            "candidate_count": 0,
+            "document_sha256": "20aa7254735542d470f12ada8d02786dfa5e673035274e42d3404352e266a007",
+            "native_artifact_identity": "official_financial_pdf_page_evidence:528bc051bc4cc1dd8be56745637f540be3195048c4377f46d4f511008a514883",
+            "native_page_text_sha256": {
+              "6": "b5be4f52d830bf6efde4ef78b300d2681a5acccf3a39ec76b6c065a7c710a72b",
+              "7": "cdf2df1ee9756c1265229e617d0232519e455927a9cf4b94018d9922d43eaf9d"
+            },
+            "trigger": "EXPLICIT_OPT_IN_AFTER_NATIVE_ZERO_CANDIDATES"
+          },
+          "page_number": 6,
+          "route": "UNQUALIFIED_NATIVE_TSV_OCR"
+        },
+        {
+          "native_failure_evidence": {
+            "candidate_count": 0,
+            "document_sha256": "20aa7254735542d470f12ada8d02786dfa5e673035274e42d3404352e266a007",
+            "native_artifact_identity": "official_financial_pdf_page_evidence:528bc051bc4cc1dd8be56745637f540be3195048c4377f46d4f511008a514883",
+            "native_page_text_sha256": {
+              "6": "b5be4f52d830bf6efde4ef78b300d2681a5acccf3a39ec76b6c065a7c710a72b",
+              "7": "cdf2df1ee9756c1265229e617d0232519e455927a9cf4b94018d9922d43eaf9d"
+            },
+            "trigger": "EXPLICIT_OPT_IN_AFTER_NATIVE_ZERO_CANDIDATES"
+          },
+          "page_number": 7,
+          "route": "UNQUALIFIED_NATIVE_TSV_OCR"
+        },
+        {
+          "native_failure_evidence": {
+            "candidate_count": 0,
+            "document_sha256": "20aa7254735542d470f12ada8d02786dfa5e673035274e42d3404352e266a007",
+            "native_artifact_identity": "official_financial_pdf_page_evidence:528bc051bc4cc1dd8be56745637f540be3195048c4377f46d4f511008a514883",
+            "native_page_text_sha256": {
+              "10": "a13dc0e599ad9293311aefefaeddcc28741a59e6e6f7a3b60621be3c09911e7a",
+              "11": "5af0900b5d58fdd6ce2e5b2f06ff1222219d37de6e30e0a79ae074fd902533ff",
+              "12": "d3e9c91a4a342744b8b32394087ae1fd0d347aa50a78fcff5bcaaf9443890fb5",
+              "13": "402f6e3319ea50019cf5f544f26152d31cee94e913b3d79b23b7465e1f94514f",
+              "14": "57dd1e449436512e67cd5d957d70767ca7cccbaf62a55c1d4b7ba43949d7a7a2",
+              "8": "73c02f4791991dc557534d4e6d675c3a0d25ce323de1c9a6b7bb082c51df6238",
+              "9": "c5dd06f1b6e349ed9eebff8b38081952b7255c274154c9cf96de938ced11202b"
+            },
+            "trigger": "EXPLICIT_OPT_IN_AFTER_NATIVE_ZERO_CANDIDATES"
+          },
+          "page_number": 8,
+          "route": "UNQUALIFIED_NATIVE_TSV_OCR"
+        },
+        {
+          "native_failure_evidence": {
+            "candidate_count": 0,
+            "document_sha256": "20aa7254735542d470f12ada8d02786dfa5e673035274e42d3404352e266a007",
+            "native_artifact_identity": "official_financial_pdf_page_evidence:528bc051bc4cc1dd8be56745637f540be3195048c4377f46d4f511008a514883",
+            "native_page_text_sha256": {
+              "10": "a13dc0e599ad9293311aefefaeddcc28741a59e6e6f7a3b60621be3c09911e7a",
+              "11": "5af0900b5d58fdd6ce2e5b2f06ff1222219d37de6e30e0a79ae074fd902533ff",
+              "12": "d3e9c91a4a342744b8b32394087ae1fd0d347aa50a78fcff5bcaaf9443890fb5",
+              "13": "402f6e3319ea50019cf5f544f26152d31cee94e913b3d79b23b7465e1f94514f",
+              "14": "57dd1e449436512e67cd5d957d70767ca7cccbaf62a55c1d4b7ba43949d7a7a2",
+              "8": "73c02f4791991dc557534d4e6d675c3a0d25ce323de1c9a6b7bb082c51df6238",
+              "9": "c5dd06f1b6e349ed9eebff8b38081952b7255c274154c9cf96de938ced11202b"
+            },
+            "trigger": "EXPLICIT_OPT_IN_AFTER_NATIVE_ZERO_CANDIDATES"
+          },
+          "page_number": 9,
+          "route": "UNQUALIFIED_NATIVE_TSV_OCR"
+        },
+        {
+          "native_failure_evidence": {
+            "candidate_count": 0,
+            "document_sha256": "20aa7254735542d470f12ada8d02786dfa5e673035274e42d3404352e266a007",
+            "native_artifact_identity": "official_financial_pdf_page_evidence:528bc051bc4cc1dd8be56745637f540be3195048c4377f46d4f511008a514883",
+            "native_page_text_sha256": {
+              "10": "a13dc0e599ad9293311aefefaeddcc28741a59e6e6f7a3b60621be3c09911e7a",
+              "11": "5af0900b5d58fdd6ce2e5b2f06ff1222219d37de6e30e0a79ae074fd902533ff",
+              "12": "d3e9c91a4a342744b8b32394087ae1fd0d347aa50a78fcff5bcaaf9443890fb5",
+              "13": "402f6e3319ea50019cf5f544f26152d31cee94e913b3d79b23b7465e1f94514f",
+              "14": "57dd1e449436512e67cd5d957d70767ca7cccbaf62a55c1d4b7ba43949d7a7a2",
+              "8": "73c02f4791991dc557534d4e6d675c3a0d25ce323de1c9a6b7bb082c51df6238",
+              "9": "c5dd06f1b6e349ed9eebff8b38081952b7255c274154c9cf96de938ced11202b"
+            },
+            "trigger": "EXPLICIT_OPT_IN_AFTER_NATIVE_ZERO_CANDIDATES"
+          },
+          "page_number": 10,
+          "route": "UNQUALIFIED_NATIVE_TSV_OCR"
+        },
+        {
+          "native_failure_evidence": {
+            "candidate_count": 0,
+            "document_sha256": "20aa7254735542d470f12ada8d02786dfa5e673035274e42d3404352e266a007",
+            "native_artifact_identity": "official_financial_pdf_page_evidence:528bc051bc4cc1dd8be56745637f540be3195048c4377f46d4f511008a514883",
+            "native_page_text_sha256": {
+              "10": "a13dc0e599ad9293311aefefaeddcc28741a59e6e6f7a3b60621be3c09911e7a",
+              "11": "5af0900b5d58fdd6ce2e5b2f06ff1222219d37de6e30e0a79ae074fd902533ff",
+              "12": "d3e9c91a4a342744b8b32394087ae1fd0d347aa50a78fcff5bcaaf9443890fb5",
+              "13": "402f6e3319ea50019cf5f544f26152d31cee94e913b3d79b23b7465e1f94514f",
+              "14": "57dd1e449436512e67cd5d957d70767ca7cccbaf62a55c1d4b7ba43949d7a7a2",
+              "8": "73c02f4791991dc557534d4e6d675c3a0d25ce323de1c9a6b7bb082c51df6238",
+              "9": "c5dd06f1b6e349ed9eebff8b38081952b7255c274154c9cf96de938ced11202b"
+            },
+            "trigger": "EXPLICIT_OPT_IN_AFTER_NATIVE_ZERO_CANDIDATES"
+          },
+          "page_number": 11,
+          "route": "UNQUALIFIED_NATIVE_TSV_OCR"
+        },
+        {
+          "native_failure_evidence": {
+            "candidate_count": 0,
+            "document_sha256": "20aa7254735542d470f12ada8d02786dfa5e673035274e42d3404352e266a007",
+            "native_artifact_identity": "official_financial_pdf_page_evidence:528bc051bc4cc1dd8be56745637f540be3195048c4377f46d4f511008a514883",
+            "native_page_text_sha256": {
+              "10": "a13dc0e599ad9293311aefefaeddcc28741a59e6e6f7a3b60621be3c09911e7a",
+              "11": "5af0900b5d58fdd6ce2e5b2f06ff1222219d37de6e30e0a79ae074fd902533ff",
+              "12": "d3e9c91a4a342744b8b32394087ae1fd0d347aa50a78fcff5bcaaf9443890fb5",
+              "13": "402f6e3319ea50019cf5f544f26152d31cee94e913b3d79b23b7465e1f94514f",
+              "14": "57dd1e449436512e67cd5d957d70767ca7cccbaf62a55c1d4b7ba43949d7a7a2",
+              "8": "73c02f4791991dc557534d4e6d675c3a0d25ce323de1c9a6b7bb082c51df6238",
+              "9": "c5dd06f1b6e349ed9eebff8b38081952b7255c274154c9cf96de938ced11202b"
+            },
+            "trigger": "EXPLICIT_OPT_IN_AFTER_NATIVE_ZERO_CANDIDATES"
+          },
+          "page_number": 12,
+          "route": "UNQUALIFIED_NATIVE_TSV_OCR"
+        },
+        {
+          "native_failure_evidence": {
+            "candidate_count": 0,
+            "document_sha256": "20aa7254735542d470f12ada8d02786dfa5e673035274e42d3404352e266a007",
+            "native_artifact_identity": "official_financial_pdf_page_evidence:528bc051bc4cc1dd8be56745637f540be3195048c4377f46d4f511008a514883",
+            "native_page_text_sha256": {
+              "10": "a13dc0e599ad9293311aefefaeddcc28741a59e6e6f7a3b60621be3c09911e7a",
+              "11": "5af0900b5d58fdd6ce2e5b2f06ff1222219d37de6e30e0a79ae074fd902533ff",
+              "12": "d3e9c91a4a342744b8b32394087ae1fd0d347aa50a78fcff5bcaaf9443890fb5",
+              "13": "402f6e3319ea50019cf5f544f26152d31cee94e913b3d79b23b7465e1f94514f",
+              "14": "57dd1e449436512e67cd5d957d70767ca7cccbaf62a55c1d4b7ba43949d7a7a2",
+              "8": "73c02f4791991dc557534d4e6d675c3a0d25ce323de1c9a6b7bb082c51df6238",
+              "9": "c5dd06f1b6e349ed9eebff8b38081952b7255c274154c9cf96de938ced11202b"
+            },
+            "trigger": "EXPLICIT_OPT_IN_AFTER_NATIVE_ZERO_CANDIDATES"
+          },
+          "page_number": 13,
+          "route": "UNQUALIFIED_NATIVE_TSV_OCR"
+        },
+        {
+          "native_failure_evidence": {
+            "candidate_count": 0,
+            "document_sha256": "20aa7254735542d470f12ada8d02786dfa5e673035274e42d3404352e266a007",
+            "native_artifact_identity": "official_financial_pdf_page_evidence:528bc051bc4cc1dd8be56745637f540be3195048c4377f46d4f511008a514883",
+            "native_page_text_sha256": {
+              "10": "a13dc0e599ad9293311aefefaeddcc28741a59e6e6f7a3b60621be3c09911e7a",
+              "11": "5af0900b5d58fdd6ce2e5b2f06ff1222219d37de6e30e0a79ae074fd902533ff",
+              "12": "d3e9c91a4a342744b8b32394087ae1fd0d347aa50a78fcff5bcaaf9443890fb5",
+              "13": "402f6e3319ea50019cf5f544f26152d31cee94e913b3d79b23b7465e1f94514f",
+              "14": "57dd1e449436512e67cd5d957d70767ca7cccbaf62a55c1d4b7ba43949d7a7a2",
+              "8": "73c02f4791991dc557534d4e6d675c3a0d25ce323de1c9a6b7bb082c51df6238",
+              "9": "c5dd06f1b6e349ed9eebff8b38081952b7255c274154c9cf96de938ced11202b"
+            },
+            "trigger": "EXPLICIT_OPT_IN_AFTER_NATIVE_ZERO_CANDIDATES"
+          },
+          "page_number": 14,
+          "route": "UNQUALIFIED_NATIVE_TSV_OCR"
+        }
+      ],
+      "observed_at": "2026-10-08T00:17:56.905338Z",
+      "reporting_period": "2026-H1",
+      "ticker": "NVL"
+    }
+  ],
+  "financial_v2_pin": {
+    "authority_version": "2026-09-05.1",
+    "changed": false
+  },
+  "milestone_id": "FINANCIAL_EVIDENCE_REVIEWED_INTERIM_CANONICAL_INGRESS_V1",
+  "network_used": false,
+  "ocr_reads": {
+    "front_matter_and_statement_pages": 9
+  },
+  "overlay_write": {
+    "appended_fact_count": 0,
+    "policy": "APPEND_ONLY_NEW_EXACT_KEYS",
+    "prior_fact_count": 19,
+    "prior_facts_preserved": true
+  },
+  "precedence_statuses": [],
+  "raw_pdf_or_image_bytes_committed": false,
+  "semantic_identity": {
+    "historical_affected_known": [
+      "HPG 2022 net_income=line61 (p3f13 semantic correction)",
+      "HPG 2023 net_income=line61 (p3f13 semantic correction)",
+      "annual OCR-path facts emitted by the pre-corrective STANDARD_FACT_RULES (line 61 as net_income); exhaustive count not audited"
+    ],
+    "historical_authority": "HISTORICAL_NET_INCOME_SEMANTIC_RECONCILIATION_REQUIRED",
+    "historical_rows_rewritten": false,
+    "line_60": "net_income (total profit after tax); requires explicit row label",
+    "line_61": "attributable_net_income (parent-attributable); requires explicit row label",
+    "line_61_as_net_income": "FORBIDDEN"
+  },
+  "valuation": {
+    "pb_effect": "NONE",
+    "pe_ttm_from_h1": false,
+    "ps_ttm_from_h1": false
+  }
+}
