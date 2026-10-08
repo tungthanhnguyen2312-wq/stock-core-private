@@ -23,6 +23,12 @@ _REVIEW_ENGAGEMENT = ("hop dong dich vu soat xet", "soat xet so 2410")
 _REVIEW_DISCLAIMER = "khong dua ra y kien kiem toan"
 _AUDIT_OPINION = ("chung toi da kiem toan", "y kien kiem toan cua chung toi")
 _AUDITOR_OPINION_TITLE = ("y", "kien", "cua", "kiem", "toan", "vien")
+_EN_AUDIT_TITLE = ("independent", "auditors", "report")
+_EN_OPINION_TITLE = ("auditors", "opinion")
+_EN_OPINION_ANCHORS = ("in our opinion", "consolidated financial statements",
+                       "consolidated financial statements present fairly",
+                       "in all material respects", "accounting standards")
+_EN_REVIEW_DISCLAIMER = "do not express an audit opinion"
 
 
 def _explicit_consolidated_opinion(tokens):
@@ -88,6 +94,32 @@ def resolve_document_assurance_evidence(materialization: Mapping[str, Any]) -> d
         number = int(page.get("page_number", 0))
         review_title = _title_span(tokens, _REVIEW_TITLE)
         audit_title = _title_span(tokens, _AUDIT_TITLE)
+        english_title = _title_span(tokens, _EN_AUDIT_TITLE)
+        if (english_title and not review_title and "we have audited" in text
+                and "consolidated financial statements" in text
+                and _EN_REVIEW_DISCLAIMER not in text):
+            for opinion_number in (number, number + 1):
+                opinion_page = pages.get(opinion_number) or {}
+                opinion_tokens = (opinion_page.get("ocr_derived_text_evidence") or {}).get("tokens") or []
+                opinion_text = _page_text(opinion_tokens)
+                heading = _title_span(opinion_tokens, _EN_OPINION_TITLE)
+                if (not heading or not all(anchor in opinion_text for anchor in _EN_OPINION_ANCHORS)
+                        or _EN_REVIEW_DISCLAIMER in opinion_text
+                        or _REVIEW_DISCLAIMER in opinion_text
+                        or _title_span(opinion_tokens, _REVIEW_TITLE)
+                        or (opinion_number != number and (
+                            (bool(other_title := _title_span(opinion_tokens, _EN_AUDIT_TITLE))
+                             and int(other_title[0].get("raw_token_order", 0)) < int(heading[0].get("raw_token_order", 0)))
+                            or _title_span(opinion_tokens, _AUDIT_TITLE)))):
+                    continue
+                audited.append({"page_number": number, "title_tokens": english_title,
+                    "anchors": ["independent auditors report", "we have audited", *_EN_OPINION_ANCHORS],
+                    "text": text + " " + opinion_text, "page": page,
+                    "opinion_evidence": {"page_number": opinion_number,
+                        "token_ids": [str(t.get("token_id", "")) for t in heading],
+                        "rendered_image_sha256": (opinion_page.get("source_image_evidence") or {}).get("rendered_image_sha256"),
+                        "page_text_sha256": _hash(opinion_text)}})
+                break
         if review_title and not audit_title:
             engagement = [phrase for phrase in _REVIEW_ENGAGEMENT if phrase in text]
             if engagement and "hop nhat" in text and "giua nien do" in text:

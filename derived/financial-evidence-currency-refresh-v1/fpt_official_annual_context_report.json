@@ -1,0 +1,216 @@
+{
+  "artifact_sha256": "8d72302d2231989fb2fede4d0b4ff5973a785b03745b611f08676491bc4930a7",
+  "candidate_fact_count": 2,
+  "canonical_fact_count": 2,
+  "contract_version": "reviewed_interim_canonical_ingress/v2",
+  "documents": [
+    {
+      "assurance": {
+        "audit_or_review_status": "audited",
+        "citation_id": "18905380cba87b47854bbb595facd7ca7aa0c8391a74d2ff15b0b37706ac93c7",
+        "evidence_id": "18905380cba87b47854bbb595facd7ca7aa0c8391a74d2ff15b0b37706ac93c7",
+        "inheritance": "document_level_report_applies_to_all_statements_in_document",
+        "matched_anchors": [
+          "independent auditors report",
+          "we have audited",
+          "in our opinion",
+          "consolidated financial statements",
+          "consolidated financial statements present fairly",
+          "in all material respects",
+          "accounting standards"
+        ],
+        "materialization_id": "5a5daa7437dddba7e7a28a765d3b89dc405869ad1301df382f35e80e15c2cecb",
+        "opinion_evidence": {
+          "page_number": 7,
+          "page_text_sha256": "dbfeb7c82b386143380f0fad658a69ebe6e9feca82e2e73fd7fe6118711045ab",
+          "rendered_image_sha256": "5dccf87c09ef211f626c895a58ce1b885749994b162d2e2fcffc501b79429073",
+          "token_ids": [
+            "c0b37b23d7f6148469c59e1f6addf70d2de309d0ae16650089da17c8f2e0e22c",
+            "237c739d1e1ad35a7bff5a4e8baede2c6afc3973d8bdcd699a143633a8e22fa0"
+          ]
+        },
+        "page_number": 6,
+        "page_text_sha256": "545cd95643d8d2bf6b3ce0e5344207f08e55d9a39bebc051637547bd5e083b28",
+        "reason": null,
+        "rendered_image_sha256": "be11d0c10f2420ade3d37136d340c49b6842d01b88d83cacccd65bba4e8f6226",
+        "scope_of_assurance": "consolidated_statements",
+        "state": "QUALIFIED",
+        "title_span": {
+          "raw_token_order": [
+            7,
+            8,
+            9
+          ],
+          "token_ids": [
+            "e59ec396b9d84cee5d8e99cbfbcd2bd5d4667943296a209c95f036cac35b1248",
+            "36dadb702567ae1830802a9664ae7c5c7fa1a7abef1d1d41d64cfb4a3553b553",
+            "1e10e984a80afa0f58035c421c5c856b5c254760ed43a56b7869bf6b09a636a1"
+          ]
+        }
+      },
+      "blocked_candidates": [
+        {
+          "canonical_metric": "cash_and_equivalents",
+          "line_code": "110",
+          "match_count": 0,
+          "reason": "ROW_NOT_UNIQUE_OR_NOT_GEOMETRICALLY_RESOLVED",
+          "state": "BLOCKED",
+          "statement_family": "balance_sheet"
+        },
+        {
+          "canonical_metric": "total_assets",
+          "line_code": "270",
+          "match_count": 0,
+          "reason": "ROW_NOT_UNIQUE_OR_NOT_GEOMETRICALLY_RESOLVED",
+          "state": "BLOCKED",
+          "statement_family": "balance_sheet"
+        },
+        {
+          "canonical_metric": "net_income",
+          "line_code": "60",
+          "match_count": 0,
+          "reason": "ROW_NOT_UNIQUE_OR_NOT_GEOMETRICALLY_RESOLVED",
+          "state": "BLOCKED",
+          "statement_family": "income_statement"
+        },
+        {
+          "canonical_metric": "attributable_net_income",
+          "line_code": "61",
+          "raw_value": "9,376,1²7,6²9,501",
+          "reason": "OCR_NUMERIC_AMBIGUITY",
+          "state": "BLOCKED",
+          "statement_family": "income_statement"
+        },
+        {
+          "canonical_metric": "operating_cash_flow",
+          "line_code": "20",
+          "match_count": 0,
+          "reason": "ROW_NOT_UNIQUE_OR_NOT_GEOMETRICALLY_RESOLVED",
+          "state": "BLOCKED",
+          "statement_family": "cash_flow"
+        },
+        {
+          "canonical_metric": "short_term_borrowings",
+          "line_code": "320",
+          "match_count": 0,
+          "reason": "ROW_NOT_UNIQUE_OR_NOT_GEOMETRICALLY_RESOLVED",
+          "state": "BLOCKED",
+          "statement_family": "balance_sheet"
+        },
+        {
+          "canonical_metric": "long_term_borrowings_or_finance_leases",
+          "line_code": "338",
+          "match_count": 0,
+          "reason": "ROW_NOT_UNIQUE_OR_NOT_GEOMETRICALLY_RESOLVED",
+          "state": "BLOCKED",
+          "statement_family": "balance_sheet"
+        },
+        {
+          "canonical_metric": "total_interest_bearing_debt",
+          "reason": "DEBT_COMPONENT_INCOMPLETE",
+          "state": "BLOCKED"
+        }
+      ],
+      "candidate_facts": [
+        {
+          "currency": "VND",
+          "line_code": "400",
+          "metric": "shareholders_equity",
+          "source_page": 11,
+          "source_unit_scale": 1,
+          "value": 43748040747539
+        },
+        {
+          "currency": "VND",
+          "line_code": "10",
+          "metric": "revenue",
+          "source_page": 12,
+          "source_unit_scale": 1,
+          "value": 70112825100710
+        }
+      ],
+      "canonical_facts": [
+        {
+          "audit_or_review_status": "audited",
+          "citation_id": "28fcc0b64275294b31aebfdedd441b89884856f726c8c7a26b41972f14eaa9a8",
+          "currency": "VND",
+          "factual_reason_codes": [],
+          "factual_status": "qualified",
+          "line_code": "10",
+          "metric": "revenue",
+          "period": "2025",
+          "period_end": "2025-12-31",
+          "period_start": "2025-01-01",
+          "period_type": "annual",
+          "research_reason_codes": [],
+          "research_status": "qualified",
+          "scope": "consolidated",
+          "source_page": 12,
+          "source_unit_scale": 1,
+          "value": 70112825100710
+        },
+        {
+          "audit_or_review_status": "audited",
+          "citation_id": "2161763f83b79f57205ad8e9e199ab0e853470a0de45660fac5ed648882d5493",
+          "currency": "VND",
+          "factual_reason_codes": [],
+          "factual_status": "qualified",
+          "line_code": "400",
+          "metric": "shareholders_equity",
+          "period": "2025",
+          "period_end": "2025-12-31",
+          "period_start": "2025-01-01",
+          "period_type": "annual",
+          "research_reason_codes": [],
+          "research_status": "qualified",
+          "scope": "consolidated",
+          "source_page": 11,
+          "source_unit_scale": 1,
+          "value": 43748040747539
+        }
+      ],
+      "document_sha256": "bb14bafff1a7849217f34cf4b50e0e3d69d91968f217a66d7c68f07d4c1af284",
+      "ingress_blocked": [],
+      "knowledge_available_at": "2026-10-08T00:07:56.779802+00:00",
+      "observed_at": "2026-10-08T00:02:25.329356Z",
+      "reporting_period": "2025",
+      "ticker": "FPT"
+    }
+  ],
+  "financial_v2_pin": {
+    "authority_version": "2026-09-05.1",
+    "changed": false
+  },
+  "milestone_id": "FINANCIAL_EVIDENCE_REVIEWED_INTERIM_CANONICAL_INGRESS_V1",
+  "network_used": false,
+  "ocr_reads": {
+    "front_matter_and_statement_pages": 9
+  },
+  "overlay_write": {
+    "appended_fact_count": 2,
+    "policy": "APPEND_ONLY_NEW_EXACT_KEYS",
+    "prior_fact_count": 17,
+    "prior_facts_preserved": true
+  },
+  "precedence_statuses": [
+    "NOT_COMPARABLE"
+  ],
+  "raw_pdf_or_image_bytes_committed": false,
+  "semantic_identity": {
+    "historical_affected_known": [
+      "HPG 2022 net_income=line61 (p3f13 semantic correction)",
+      "HPG 2023 net_income=line61 (p3f13 semantic correction)",
+      "annual OCR-path facts emitted by the pre-corrective STANDARD_FACT_RULES (line 61 as net_income); exhaustive count not audited"
+    ],
+    "historical_authority": "HISTORICAL_NET_INCOME_SEMANTIC_RECONCILIATION_REQUIRED",
+    "historical_rows_rewritten": false,
+    "line_60": "net_income (total profit after tax); requires explicit row label",
+    "line_61": "attributable_net_income (parent-attributable); requires explicit row label",
+    "line_61_as_net_income": "FORBIDDEN"
+  },
+  "valuation": {
+    "pb_effect": "NONE",
+    "pe_ttm_from_h1": false,
+    "ps_ttm_from_h1": false
+  }
+}

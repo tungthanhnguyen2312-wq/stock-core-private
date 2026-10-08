@@ -85,3 +85,29 @@ fails the entire write. New exact keys and matching precedence rows alone are ap
 Use `--append-new-facts-only --resolve-cash-flow-code-cells` for this bounded recovery.
 The admitted fields remain historical context, with no source FX conversion or ratio
 promotion; damaged H1 PNJ/PVD cash-flow amounts and incomplete debt remain blocked.
+
+
+FPT FY2025 adds exact net revenue70,112,825,100,710 VND (page12/line10) and
+owners equity43,748,040,747,539 VND (page11/line400). The fixed English auditor
+report title plus explicit audited/consolidated wording requires a literal auditor
+opinion on the same or immediately next page: consolidated statements present fairly,
+material respects and accounting standards. A report-title reference in later opinion
+page prose does not start a new report; a preceding report title does. Missing pages,
+separate scope, review disclaimers and hypothetical presentation fail. The recognition
+proves audited assurance only, not an unmodified opinion or recurrence classification.
+
+FPT's retained official index contains literal financial-category Next flight JSON.
+Decode JSON data only; exact consolidated document objects in FY2025 or Quarter II2026
+supply same-host /api/media PDF locators. No script execution, URL construction from
+filenames, third-party host admission or Q3 discovery. Index SHA/document/name/period/URL
+bind provenance. Acquisition labels select candidates; Q2 is not reviewed without proof.
+Two requests acquired two PDFs in a separate50MiB landing with six-request cap,
+zero index refresh and concurrency1. Duplicate SHA replay performs no request and
+leaves the manifest byte-identical; old landing manifest remains unchanged.
+
+Replay: tools/run_fpt_official_annual_context.py, exact annual source SHA, front6–7
+and statement8–14, default OCR. The existing runner accepts only a landing basename
+and up to eight unique front pages1–8, with total40-page batch cap. Append-only writes
+preserve all17 earlier facts and their knowledge/citations. Annual context8→10;
+completed October7/current official9/annual exact94/shares and strict valuation0 unchanged.
+Other annual geometry/numeric blockers and Q2 absent assurance remain explicit.
