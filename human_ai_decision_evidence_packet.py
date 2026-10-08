@@ -116,10 +116,27 @@ def build_packet(
     ai_narration: str | None = None,
     capital_decision: Any = None,
     spine: Mapping[str, Any] | None = None,
+    regime_context: Mapping[str, Any] | None = None,
+    decision_session: str | None = None,
 ) -> dict[str, Any]:
-    """Build one ticker packet. Input analogue order is preserved."""
+    """Build one ticker packet. Input analogue order is preserved.
+
+    A regime context fills only empty market, uncertainty, and counter-thesis
+    fields. Stock economics and tactical posture are left as supplied.
+    """
     del capital_decision  # retained so a caller cannot sneak a delegated decision through
-    supplied = sections or {}
+    supplied = {name: dict(spec) for name, spec in (sections or {}).items() if isinstance(spec, Mapping)}
+    if regime_context is not None:
+        from macro_market_regime_decision_context import packet_section_overlay
+
+        overlay = packet_section_overlay(regime_context, decision_session=decision_session)
+        if overlay.get("bind_status") == "BOUND":
+            for name in ("market", "uncertainty", "counter_thesis"):
+                current = dict(supplied.get(name) or {})
+                for key, value in overlay[name].items():
+                    if key not in current:
+                        current[key] = value
+                supplied[name] = current
     _reject_forbidden(supplied, where="PACKET")
     projected_sections = {name: _section(supplied.get(name) if isinstance(supplied.get(name), Mapping) else None) for name in SECTIONS}
     history = projected_sections["history"]

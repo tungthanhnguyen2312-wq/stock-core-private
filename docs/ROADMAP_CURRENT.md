@@ -1,16 +1,20 @@
 # Stock Lookup — Current Roadmap
 
 What happens next, and nothing else. No historical milestones (those live in [ROADMAP.md](ROADMAP.md) and
-the machine state `ROADMAP_STATE.json`). Updated 2026-10-08 from starting main `d0d5cd489d8310efc4e494cf5250c3a4ef005ebf`. **Nothing below
+the machine state `ROADMAP_STATE.json`). Updated 2026-10-08 from starting main `59eb5a0d4f2ffa4a364d04d6dc98c3882e1561f2`. **Nothing below
 auto-starts.** A milestone starts only when `python tools/stocklookup_roadmap.py --can-start <ID>` allows
 it or the owner records an explicit override (AI_RULES rule 11). Facts: [ACTIVE_STATE.md](ACTIVE_STATE.md).
 
-## NOW — `OFFICIAL_FINANCIAL_DOCUMENT_REPRESENTATION_RECOVERY_V1` (COMPLETE)
+## NOW — `MACRO_MARKET_REGIME_DECISION_CONTEXT_CONVERGENCE_V1` (COMPLETE)
+
+Named axes bind into the packet.
+SBV rates, FX, and credit stay UNKNOWN. No score. No successor.
+Disposition `PARTIAL_MACRO_MARKET_REGIME_DECISION_CONTEXT_READY`.
+
+## PRIOR — `OFFICIAL_FINANCIAL_DOCUMENT_REPRESENTATION_RECOVERY_V1` (COMPLETE)
 
 Three language-counterpart PDFs are image-only. Zero facts recovered.
-HPG and QNS have no same-scope alternate. No superscript repair. Strict shares
-and valuation stay zero. Disposition `OFFICIAL_REPRESENTATION_BOTTLENECK_CONFIRMED`.
-Do not start a successor.
+Disposition `OFFICIAL_REPRESENTATION_BOTTLENECK_CONFIRMED`.
 
 ## PRIOR — `QNS_2026_H1_OFFICIAL_DETAIL_RESOLVER_AND_FINANCIAL_EVIDENCE_V1` (COMPLETE)
 

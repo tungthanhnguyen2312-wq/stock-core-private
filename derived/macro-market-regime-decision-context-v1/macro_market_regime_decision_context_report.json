@@ -1,0 +1,275 @@
+{
+  "milestone_id": "MACRO_MARKET_REGIME_DECISION_CONTEXT_CONVERGENCE_V1",
+  "disposition": "PARTIAL_MACRO_MARKET_REGIME_DECISION_CONTEXT_READY",
+  "knowledge_available_at": "2026-10-08T06:10:00Z",
+  "october_7_records_changed": false,
+  "october_8_session_artifact": false,
+  "network": {
+    "selected_dimensions": [
+      {
+        "metric_id": "vn_usd_vnd",
+        "axis": "FX_PRESSURE",
+        "authority": "SBV central/reference USD/VND",
+        "reason": "Highest-priority missing domestic axis. No retained first-party series and no governed machine-readable locator."
+      },
+      {
+        "metric_id": "vn_policy_rate",
+        "axis": "DOMESTIC_RATES",
+        "authority": "SBV policy or operating rate",
+        "reason": "Requires a retained SBV publication naming the rate and effective date. None is retained."
+      },
+      {
+        "metric_id": "vn_credit_growth",
+        "axis": "CREDIT_CONTEXT",
+        "authority": "SBV credit growth release",
+        "reason": "Requires a retained SBV credit release stating basis and as-of date. None is retained."
+      }
+    ],
+    "http_requests": 0,
+    "new_retained_bytes": 0,
+    "outcome": "UNKNOWN_NO_RETAINED_FIRST_PARTY_METRIC",
+    "not_promoted": [
+      "Vietcombank quote",
+      "SJC quote",
+      "Yahoo Finance",
+      "World Bank annual series"
+    ]
+  },
+  "coverage": {
+    "qualified_macro_dimensions": [
+      "INFLATION_PRESSURE",
+      "GLOBAL_RATES",
+      "USD_PRESSURE",
+      "COMMODITY_CONTEXT"
+    ],
+    "unavailable_macro_dimensions": [
+      "DOMESTIC_RATES",
+      "FX_PRESSURE",
+      "CREDIT_CONTEXT",
+      "DOMESTIC_LIQUIDITY"
+    ],
+    "official_macro_dimensions": [
+      "INFLATION_PRESSURE",
+      "GLOBAL_RATES",
+      "USD_PRESSURE",
+      "COMMODITY_CONTEXT"
+    ],
+    "nonofficial_dimensions_promoted": [],
+    "market_regime_bound": true,
+    "breadth_bound": true,
+    "sector_leadership_bound": true,
+    "tickers_with_sector_context": 2,
+    "historical_pit_macro_dimensions": [],
+    "current_research_only_macro_dimensions": [
+      "INFLATION_PRESSURE",
+      "GLOBAL_RATES",
+      "USD_PRESSURE",
+      "COMMODITY_CONTEXT"
+    ]
+  },
+  "macro_regime": {
+    "state": "MIXED",
+    "supporting_axes": [
+      "GLOBAL_RATES",
+      "USD_PRESSURE"
+    ],
+    "restrictive_axes": [
+      "COMMODITY_CONTEXT"
+    ],
+    "unavailable_axes": [
+      "DOMESTIC_RATES",
+      "FX_PRESSURE",
+      "CREDIT_CONTEXT",
+      "DOMESTIC_LIQUIDITY"
+    ],
+    "meaning": "Descriptive context. Axes stay independent. No equity forecast."
+  },
+  "answers": {
+    "macro_backdrop": "MIXED",
+    "axes_supporting_or_pressuring": {
+      "supportive_or_stable": [
+        "INFLATION_PRESSURE",
+        "GLOBAL_RATES",
+        "USD_PRESSURE"
+      ],
+      "pressure": [
+        "COMMODITY_CONTEXT"
+      ]
+    },
+    "unknown_dimensions": [
+      "DOMESTIC_RATES",
+      "FX_PRESSURE",
+      "CREDIT_CONTEXT",
+      "DOMESTIC_LIQUIDITY",
+      "LIQUIDITY_RISK_APPETITE",
+      "FOREIGN_FLOW",
+      "LEADERSHIP_PERSISTENCE"
+    ],
+    "breadth_versus_prior_session": "BROAD_ON_THIS_SESSION",
+    "leadership_breadth": "EMPIRICAL_COHORT_TREND_PARTICIPATION_BROAD",
+    "leading_sectors": [
+      "Banks"
+    ],
+    "macro_market_conflict": [
+      {
+        "kind": "MACRO_MARKET_CONFLICT",
+        "macro_axes": [
+          "COMMODITY_CONTEXT"
+        ],
+        "market_axes": [
+          "MARKET_BREADTH",
+          "PARTICIPATION",
+          "EXACT_SESSION_BREADTH"
+        ],
+        "winner": null
+      }
+    ],
+    "evidence": {
+      "DOMESTIC_RATES": [
+        {
+          "artifact_identity": "current_macro_regime:533b3db8f6dd95934f2c87c5da7d5cffe7bbe25fc7b71f1933f258e271ab7d8f",
+          "indicator_id": "vn_policy_rate",
+          "source_identity": "vn_policy_rate",
+          "observation_date": "2026-09-30",
+          "released_at": null,
+          "retrieved_at": "2026-10-08T06:10:00Z",
+          "value_present": false
+        }
+      ],
+      "INFLATION_PRESSURE": [
+        {
+          "artifact_identity": "current_macro_regime:533b3db8f6dd95934f2c87c5da7d5cffe7bbe25fc7b71f1933f258e271ab7d8f",
+          "indicator_id": "vn_cpi_yoy",
+          "source_identity": "vn_cpi_yoy",
+          "observation_date": "2026-09-30",
+          "released_at": "2026-10-06",
+          "retrieved_at": "2026-10-08T06:10:00Z",
+          "value_present": true
+        }
+      ],
+      "FX_PRESSURE": [
+        {
+          "artifact_identity": "current_macro_regime:533b3db8f6dd95934f2c87c5da7d5cffe7bbe25fc7b71f1933f258e271ab7d8f",
+          "indicator_id": "vn_usd_vnd",
+          "source_identity": "vn_usd_vnd",
+          "observation_date": "2026-09-30",
+          "released_at": null,
+          "retrieved_at": "2026-10-08T06:10:00Z",
+          "value_present": false
+        }
+      ],
+      "CREDIT_CONTEXT": [
+        {
+          "artifact_identity": "current_macro_regime:533b3db8f6dd95934f2c87c5da7d5cffe7bbe25fc7b71f1933f258e271ab7d8f",
+          "indicator_id": "vn_credit_growth",
+          "source_identity": "vn_credit_growth",
+          "observation_date": "2026-09-30",
+          "released_at": null,
+          "retrieved_at": "2026-10-08T06:10:00Z",
+          "value_present": false
+        }
+      ],
+      "DOMESTIC_LIQUIDITY": [
+        {
+          "artifact_identity": "current_macro_regime:533b3db8f6dd95934f2c87c5da7d5cffe7bbe25fc7b71f1933f258e271ab7d8f",
+          "indicator_id": "vn_system_liquidity",
+          "source_identity": "vn_system_liquidity",
+          "observation_date": "2026-09-30",
+          "released_at": null,
+          "retrieved_at": "2026-10-08T06:10:00Z",
+          "value_present": false
+        }
+      ],
+      "GLOBAL_RATES": [
+        {
+          "artifact_identity": "current_macro_regime:533b3db8f6dd95934f2c87c5da7d5cffe7bbe25fc7b71f1933f258e271ab7d8f",
+          "indicator_id": "us_fed_funds",
+          "source_identity": "us_fed_funds",
+          "observation_date": "2026-09-30",
+          "released_at": null,
+          "retrieved_at": "2026-10-08T06:10:00Z",
+          "value_present": true
+        }
+      ],
+      "USD_PRESSURE": [
+        {
+          "artifact_identity": "current_macro_regime:533b3db8f6dd95934f2c87c5da7d5cffe7bbe25fc7b71f1933f258e271ab7d8f",
+          "indicator_id": "usd_emerging_markets",
+          "source_identity": "usd_emerging_markets",
+          "observation_date": "2026-09-30",
+          "released_at": null,
+          "retrieved_at": "2026-10-08T06:10:00Z",
+          "value_present": true
+        }
+      ],
+      "COMMODITY_CONTEXT": [
+        {
+          "artifact_identity": "current_macro_regime:533b3db8f6dd95934f2c87c5da7d5cffe7bbe25fc7b71f1933f258e271ab7d8f",
+          "indicator_id": "wti_oil",
+          "source_identity": "wti_oil",
+          "observation_date": "2026-09-30",
+          "released_at": null,
+          "retrieved_at": "2026-10-08T06:10:00Z",
+          "value_present": true
+        }
+      ],
+      "MARKET_BREADTH": [
+        {
+          "artifact_identity": "market_regime_breadth_context:scratch",
+          "research_session": "SCRATCH_CURRENT"
+        }
+      ],
+      "PARTICIPATION": [
+        {
+          "artifact_identity": "market_regime_breadth_context:scratch",
+          "research_session": "SCRATCH_CURRENT"
+        }
+      ],
+      "SECTOR_RELATIVE_STRENGTH": [
+        {
+          "artifact_identity": "current_market_sector_leadership_context:scratch",
+          "session": "SCRATCH_CURRENT"
+        },
+        {
+          "group_key": "QUALIFIED|industry|Banks",
+          "group_identity": "Banks",
+          "leadership_state": "LEADING"
+        }
+      ]
+    },
+    "authority_split": {
+      "historical_pit_macro_dimensions": [],
+      "current_research_only_macro_dimensions": [
+        "INFLATION_PRESSURE",
+        "GLOBAL_RATES",
+        "USD_PRESSURE",
+        "COMMODITY_CONTEXT"
+      ],
+      "market_and_sector": "CURRENT_RESEARCH_OR_CURRENT_SESSION_DESCRIPTIVE"
+    },
+    "capital_recommendation": null
+  },
+  "conflicts": [
+    {
+      "kind": "MACRO_MARKET_CONFLICT",
+      "macro_axes": [
+        "COMMODITY_CONTEXT"
+      ],
+      "market_axes": [
+        "MARKET_BREADTH",
+        "PARTICIPATION",
+        "EXACT_SESSION_BREADTH"
+      ],
+      "winner": null
+    }
+  ],
+  "macro_sector_relationship": "RELATIONSHIP_NOT_FORMALIZED",
+  "upstream_identities": {
+    "macro": "current_macro_regime:533b3db8f6dd95934f2c87c5da7d5cffe7bbe25fc7b71f1933f258e271ab7d8f",
+    "breadth": "market_regime_breadth_context:scratch",
+    "sector_leadership": "current_market_sector_leadership_context:scratch",
+    "presentation": "macro_presentation_context:scratch"
+  },
+  "ui_effect": "NONE",
+  "successor_started": false
+}
