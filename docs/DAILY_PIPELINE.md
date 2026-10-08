@@ -1,8 +1,6 @@
 # Stock Lookup — Canonical Daily Pipeline
 
-The default answer to "what runs Daily?". Order as of main `920d579` (post PR #58/#59/#60), derived
-from `tools/run_owner_daily.py`, `owner_daily_progress.py`, `canonical_daily_operation.py` and
-`canonical_post_close_pipeline.py`. If this file and the code disagree, the code wins — fix this file.
+Canonical Daily order, including the Macro V1 corrective. Code governs this view.
 Current-state facts: [ACTIVE_STATE.md](ACTIVE_STATE.md). Authority per output: [AUTHORITY.md](AUTHORITY.md).
 
 Released October-7 integration extends K2's existing fundamental builder with a
@@ -65,14 +63,14 @@ ACTIVE_STATE §3).
 | K4 | **Phase B gate** | Exact-session completion gate must be `READY` | Block | child | gate record (identity-bound) | `SCOPED` | wait for provider publication / rerun |
 | K5 | **Register + freeze** | `register_session_inputs`, `validate_and_freeze_completed_session` | Block | child | registry entry (`COMPLETED_RETAINED_EVIDENCE`) | operational | idempotent |
 | K6 | **Technical + enrichment + Integrated Decision** (`build_enrichment_components`) | Financial momentum, corporate event context, historical context (market bars; **Technical V1 before 2026-10-03, V2 from it**), then the Integrated Decision; canonical streaming write, verified working-view copy, classification summary | Block for the Integrated Decision (components are individually soft; absent IID raises before Producer) | child (in-process) | `integrated_investment_decision_product.json` (≈1.3 GB on 2026-10-02) + working view | `SCOPED` research posture | rerun; `*.tmp` unlinked on failure |
-| K7 | Macro refresh | Single macro snapshot refresh | Soft | child | macro presentation context | `SCOPED` | degrades to unavailable/partial |
+| K7 | Macro refresh | Presentation + explicit Macro V1 acquisition; actual research cutoff | Soft | child | presentation + regime context | `SCOPED` | degrades to unavailable/partial |
 | K8 | **Daily Producer** (`run_daily_producer`, with pre-seal Daily Integrated Brief) | Seal the immutable run + operation directories and the Brief | Block (only `DailyProducerError`/`CanonicalPostCloseError` map to blocked stages; other exceptions, e.g. `MemoryError`, fail the child) | child (in-process; heaviest memory stage) | `daily-producer-runs-v1`, `daily-research-session-operations-v1`, `run_manifest.json` | `SCOPED` Producer verdicts | sealed identity-addressed; never re-sealed |
 | K9 | Runtime + trusted-subset materialization | Release runtime artifacts; verify trusted subset | Block | child | `dashboard-runtime` bundle | `SCOPED` | rerun |
 | K10 | **T0 snapshot** (`retain_prospective_decision_snapshot`) | Streamed canonical hash + pretty write of every full decision record | Soft (`UNAVAILABLE` + reason) | child | `prospective-decision-retention-v1/<session>/<digest>/` | `AUTHORITATIVE` for T0 content | **one-shot per session**; same-digest rerun idempotent, conflict fails |
 | K11 | **T0 seal index** (writer callback) | Compact verified index + write receipt | Soft | child | `prospective_t0_seal_index.json`, write receipt | `SCOPED` pointer | explicit `tools/recover_t0_seal_index.py` |
 | K12 | **Daily boundary / first marker** (`daily_boundary`) | Verify original evidence → immutable complete-session record → write-once first marker → readiness | Soft | child | `prospective-pit-capture-v1/` | `SCOPED` capture completeness | missing marker recovered from original evidence time; records immutable |
 | K13 | **Thesis T0 sidecar** | Retained-only compact T0 projection (needs a verified seal index) | Soft; `NOT_APPLICABLE` before 2026-10-03 | tool child (64 KiB result cap) | `thesis-evidence-t0-v1/<session>/<digest>/` (`COMPLETE.json` last) | `NON_VOTING` | `ALREADY_RETAINED`; incomplete dir rebuilds |
-| K14 | Decision packet | In-process packet from Producer opportunity + enrichment | Block (no local handler) | child | decision packet | `SCOPED` | rerun |
+| K14 | Decision packet | Retain verified pre-seal canonical packet (new sessions) | Block (no local handler) | child | decision packet | `SCOPED` | rerun |
 | K15 | **Pre-handoff prospective collection + feedback #1** | Cohort collection and first outcome-feedback child | Soft | tool children (admission → Job Object, 1,200 s total deadline) | `prospective-research-cohort-collection-v1`, `prospective-decision-outcome-feedback-v1` | `NON_VOTING` | `ALREADY_COMPLETE` reuse on identical inputs |
 | K16 | Tactical reversal shadow collection | A/B observation collector | Soft | tool child | tactical shadow store | `NON_VOTING` | idempotent store |
 | K17 | **Handoff bundle** (`build_tiered_bundle`) | Write `session_handoff_bundle.json` (binds T0 status/identity, feedback status) and tier bundles | Block (no local handler) | child | handoff + tier bundles | `SCOPED` | rerun |

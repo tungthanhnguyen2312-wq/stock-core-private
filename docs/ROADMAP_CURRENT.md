@@ -5,14 +5,13 @@ the machine state `ROADMAP_STATE.json`). Updated 2026-10-08 from starting main `
 auto-starts.** A milestone starts only when `python tools/stocklookup_roadmap.py --can-start <ID>` allows
 it or the owner records an explicit override (AI_RULES rule 11). Facts: [ACTIVE_STATE.md](ACTIVE_STATE.md).
 
-## NOW — `PORTFOLIO_OPPORTUNITY_COST_COMPARATIVE_RESEARCH_V1` (COMPLETE)
+## NOW — `MACRO_REGIME_CANONICAL_DAILY_CONSUMER_AND_TEMPORAL_CORRECTIVE_V1` (COMPLETE)
 
-Offline, opt-in research cases over the workbench. No winner, score, size or return.
-Disposition `PORTFOLIO_OPPORTUNITY_COST_RESEARCH_READY_OFFLINE`. No successor.
+Owner-authorized corrective: canonical packet/AI/cockpit wiring and cutoff/freshness
+checks passed offline acceptance. No Daily/T0/publication; live Owner acceptance pending.
+No successor. [Contract](macro_market_regime_decision_context_contract.md).
 
-## PRIOR — `MACRO_MARKET_REGIME_DECISION_CONTEXT_CONVERGENCE_V1` (COMPLETE)
-
-SBV rates, FX, and credit stay UNKNOWN. No score.
+PR #94 Portfolio release and Macro V1 context are complete; SBV axes stay UNKNOWN.
 
 ## PRIOR — `OFFICIAL_FINANCIAL_DOCUMENT_REPRESENTATION_RECOVERY_V1` (COMPLETE)
 

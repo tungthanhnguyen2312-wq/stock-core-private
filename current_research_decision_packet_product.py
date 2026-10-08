@@ -310,6 +310,7 @@ def _panel_from_verified(verified: Mapping[str, Any], tickers: list[str] | None 
         "source_artifact_identity": verified.get("artifact_identity"),
         "source_contract_version": verified.get("contract_version"),
         "research_session": verified.get("research_session"),
+        **({"macro_market_regime_context": copy.deepcopy(verified["macro_market_regime_context"])} if verified.get("macro_market_regime_context") is not None else {}),
         "component_manifest": copy.deepcopy(verified.get("component_manifest") or {}),
         "source_artifact_identities": copy.deepcopy(verified.get("source_artifact_identities") or {}),
         "coverage": copy.deepcopy(verified.get("coverage") or {}),

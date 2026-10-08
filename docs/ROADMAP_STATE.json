@@ -9,17 +9,37 @@
     "ai_rules": "docs/AI_RULES.md",
     "note": "This file is the machine-readable EXECUTION-STATE authority: which milestone is current/active/next/blocked, what checkpoint proves each completed milestone, and whether recorded state contradicts Git/worktree reality. It does not restate or supersede the narrative docs' technical content and is not a substitute for reading them. Where this file and a narrative doc appear to disagree, that is a conflict to surface to the owner (AGENTS.md 'Default lightweight bootstrap' rule), never an automatic override in either direction."
   },
-  "implementation_lineage_head": "9dd776f5186504fcd058a3a254c023b38efeb3a5",
-  "last_updated_checkpoint": "9dd776f5186504fcd058a3a254c023b38efeb3a5",
+  "implementation_lineage_head": "b1c086c3be3d75bf17ea4100105877076474d0b9",
+  "last_updated_checkpoint": "b1c086c3be3d75bf17ea4100105877076474d0b9",
   "known_operational_diff_allowlist": [
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "PORTFOLIO_OPPORTUNITY_COST_COMPARATIVE_RESEARCH_V1",
+    "milestone": "MACRO_REGIME_CANONICAL_DAILY_CONSUMER_AND_TEMPORAL_CORRECTIVE_V1",
     "state": "COMPLETE"
   },
   "queued_next": [],
   "milestones": [
+    {
+      "milestone_id": "MACRO_REGIME_CANONICAL_DAILY_CONSUMER_AND_TEMPORAL_CORRECTIVE_V1",
+      "state": "COMPLETE",
+      "checkpoint": "b1c086c3be3d75bf17ea4100105877076474d0b9",
+      "terminal_disposition": "MACRO_CANONICAL_CONSUMER_OFFLINE_ACCEPTED_OWNER_DAILY_PENDING",
+      "starting_checkpoint": "e472a3dbaa2af5bc914e9f5a2f0acbec24acc77d",
+      "candidate_branch": "fix/macro-regime-canonical-daily-consumer-temporal-v1",
+      "dependencies": [
+        "MACRO_MARKET_REGIME_DECISION_CONTEXT_CONVERGENCE_V1"
+      ],
+      "unlocks": [],
+      "owner_authorized": true,
+      "owner_override": "OWNER_DIRECTIVE_2026_10_08_MACRO_CANONICAL_DAILY_CORRECTIVE",
+      "authority_effect": "NONE / CURRENT_RESEARCH_DELIVERY_AND_TEMPORAL_NARROWING_ONLY",
+      "state_history": [
+        "ACTIVE", "COMPLETE"
+      ],
+      "source_doc": "docs/macro_market_regime_decision_context_contract.md",
+      "notes": "Explicit owner handoff: PR94 merged; Claude released Producer writer. No Daily, T0, Dashboard publication or successor."
+    },
     {
       "milestone_id": "BOUNDED_CURRENT_OFFICIAL_FILINGS_ACQUISITION_AND_RECONCILIATION_V1",
       "state": "COMPLETE",

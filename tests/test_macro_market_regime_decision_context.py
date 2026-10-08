@@ -112,7 +112,7 @@ def test_fred_latest_vintage_is_not_historical_pit_and_release_date_blocks_an_ea
     for name in ("vn_policy_rate", "vn_usd_vnd", "vn_credit_growth", "vn_system_liquidity", "vn_government_bond_yield"):
         rows.append({**row(name, None, None), "status": "UNAVAILABLE"})
     macro = build_macro(observations=rows, raw_sources=[], retrieved_at="2026-10-08T06:10:00Z")
-    early = regime.build_context(macro=macro, session="2026-10-05")
+    early = regime.build_context(macro=macro, session="2026-10-05", cutoff="2026-10-05T10:00:00Z")
     assert early["dimensions"]["INFLATION_PRESSURE"]["state"] == "UNKNOWN"
     assert early["dimensions"]["INFLATION_PRESSURE"]["limitations"] == ["MACRO_EVIDENCE_NOT_KNOWN_BY_RETAINED_EQUITY_SESSION"]
     assert macro_identity.startswith("current_macro_regime:")

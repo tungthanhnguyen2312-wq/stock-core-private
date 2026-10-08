@@ -330,7 +330,7 @@ def bind_integrated_decision_brief_before_sealing(
     return prepared
 
 
-def build_operation(inputs: Mapping[str, Any], session: str, *, producer_head: str, consumer_head: str, generation_context: str = "RETAINED_FIXED_TIME_REPLAY", portfolio: Mapping[str, Any] | None = None, macro: Mapping[str, Any] | None = None, macro_presentation_context: Mapping[str, Any] | None = None, registry: Mapping[str, Any] | None = None, root: Path | None = None, shadow_security_recommendation: Mapping[str, Any] | None = None, financial_analysis_product_context: Mapping[str, Any] | None = None, integrated_investment_decision_product: Mapping[str, Any] | None = None, daily_integrated_decision_brief: Mapping[str, Any] | None = None) -> dict[str, Any]:
+def build_operation(inputs: Mapping[str, Any], session: str, *, producer_head: str, consumer_head: str, generation_context: str = "RETAINED_FIXED_TIME_REPLAY", portfolio: Mapping[str, Any] | None = None, macro: Mapping[str, Any] | None = None, macro_presentation_context: Mapping[str, Any] | None = None, macro_cutoff: str | None = None, decision_packet_inputs: Mapping[str, Any] | None = None, registry: Mapping[str, Any] | None = None, root: Path | None = None, shadow_security_recommendation: Mapping[str, Any] | None = None, financial_analysis_product_context: Mapping[str, Any] | None = None, integrated_investment_decision_product: Mapping[str, Any] | None = None, daily_integrated_decision_brief: Mapping[str, Any] | None = None) -> dict[str, Any]:
     registry = registry if registry is not None else load_registry(root or MODULE_ROOT)
     assert_inputs_match_registered_session(session, inputs, registry)
     # This product-only context is intentionally an explicit caller attachment,
@@ -350,7 +350,7 @@ def build_operation(inputs: Mapping[str, Any], session: str, *, producer_head: s
     coherence = validate_coherence(inputs, session)
     peer = build_peer(descriptive=inputs["descriptive"], tactical=inputs["tactical"], fundamental=inputs["fundamental"], valuation=inputs["valuation"])
     if peer_identity(peer)["artifact_sha256"] != peer["artifact_sha256"]: raise ValueError("PEER_ARTIFACT_SELF_VERIFICATION_FAILED")
-    macro_context = macro_session_context(macro, session)
+    macro_context = macro_session_context(macro, session, cutoff=macro_cutoff)
     flow = inputs.get("market_flow_positioning")
     scenario = build_scenario(descriptive=inputs["descriptive"], tactical=inputs["tactical"], peer_relative=peer, fundamental=inputs["fundamental"], valuation=inputs["valuation"], triage=inputs["triage"], catalyst=inputs["catalyst"], screening=inputs["screening"], corporate_intelligence=inputs["corporate_intelligence"], macro_context=macro_context, market_flow_positioning=flow)
     if scenario_identity(scenario)["artifact_sha256"] != scenario["artifact_sha256"]: raise ValueError("SCENARIO_ARTIFACT_SELF_VERIFICATION_FAILED")
@@ -368,7 +368,21 @@ def build_operation(inputs: Mapping[str, Any], session: str, *, producer_head: s
         decision_queue = build_decision_queue(opportunity=opportunity, triage=inputs["triage"])
         if decision_queue_identity(decision_queue)["artifact_sha256"] != decision_queue["artifact_sha256"]: raise ValueError("DECISION_QUEUE_ARTIFACT_SELF_VERIFICATION_FAILED")
         opportunity_snapshot = decision_queue_prospective_context(opportunity, decision_queue)
+    regime_context = canonical_packet = None
+    packet_inputs = dict(decision_packet_inputs or {})
+    if macro_cutoff is not None and session > "2026-10-07":
+        from macro_market_regime_decision_context import build_context
+        regime_context = build_context(macro=macro, breadth=packet_inputs.get("breadth"), sector_leadership=packet_inputs.get("market_sector"), presentation=macro_presentation_context, session=session, cutoff=macro_cutoff, knowledge_available_at=macro_cutoff)
+        if opportunity is not None:
+            from current_research_decision_packet import build_artifact
+            canonical_packet = build_artifact(opportunity=opportunity, scenario=scenario, risk_register=packet_inputs.get("risk_register"), market_sector=packet_inputs.get("market_sector"), financial_momentum=packet_inputs.get("financial_momentum"), corporate_event=packet_inputs.get("corporate_event"), valuation=inputs["valuation"], historical=packet_inputs.get("historical"), regime_context=regime_context)
     product = build_product(descriptive=inputs["descriptive"], tactical=inputs["tactical"], peer_relative=peer, fundamental=inputs["fundamental"], valuation=inputs["valuation"], scenario=scenario, triage=inputs["triage"], corporate_intelligence=inputs["corporate_intelligence"], strategy_classification=strategy, portfolio_risk=portfolio_risk, macro_context=macro_context, market_flow_positioning=flow, opportunity_decision_queue=decision_queue, shadow_security_recommendation=shadow_security_recommendation)
+    if regime_context is not None:
+        product["macro_market_regime_context"] = regime_context
+        product["source_artifact_identities"]["macro_market_regime_context"] = regime_context["artifact_identity"]
+        if canonical_packet is not None:
+            product["canonical_decision_packet_identity"] = canonical_packet["artifact_identity"]
+        product.update(product_identity(product))
     if product_identity(product)["artifact_sha256"] != product["artifact_sha256"]: raise ValueError("PRODUCT_ARTIFACT_SELF_VERIFICATION_FAILED")
     snapshot = freeze_current_decision_surface(inputs["tactical"], inputs["triage"], inputs["fundamental"], inputs["valuation"])
     corporate_snapshot = prospective_context(inputs["corporate_intelligence"])
@@ -418,7 +432,13 @@ def build_operation(inputs: Mapping[str, Any], session: str, *, producer_head: s
         macro_presentation_context=macro_presentation_context, flow=flow,
         integrated_delivery=integrated_delivery,
     )
-    return {"inputs": dict(inputs), "peer": peer, "scenario": scenario, "strategy": strategy, "portfolio_risk": portfolio_risk, "macro_context": macro_context, "macro_presentation_context": macro_presentation_context, "source_freshness_matrix": source_freshness_matrix, "flow_snapshot": flow_snapshot, "opportunity": opportunity, "decision_queue": decision_queue, "opportunity_snapshot": opportunity_snapshot, "product": product, "snapshot": snapshot, "corporate_snapshot": corporate_snapshot, "strategy_snapshot": strategy_snapshot, "integrated_delivery": integrated_delivery, "manifest": manifest}
+    if regime_context is not None:
+        manifest["outputs"]["macro_market_regime_context"] = regime_context["artifact_identity"]
+        manifest["macro_research_cutoff"] = macro_cutoff
+        if canonical_packet is not None:
+            manifest["outputs"]["canonical_decision_packet"] = canonical_packet["artifact_identity"]
+        manifest["operation_identity"] = _identity(manifest)
+    return {"inputs": dict(inputs), "peer": peer, "scenario": scenario, "strategy": strategy, "portfolio_risk": portfolio_risk, "macro_context": macro_context, "macro_presentation_context": macro_presentation_context, "source_freshness_matrix": source_freshness_matrix, "flow_snapshot": flow_snapshot, "opportunity": opportunity, "decision_queue": decision_queue, "opportunity_snapshot": opportunity_snapshot, "product": product, "snapshot": snapshot, "corporate_snapshot": corporate_snapshot, "strategy_snapshot": strategy_snapshot, "integrated_delivery": integrated_delivery, "manifest": manifest, **({"macro_market_regime_context": regime_context, "canonical_decision_packet": canonical_packet, "macro_artifact": macro} if regime_context is not None else {})}
 
 
 def write_immutable(path: Path, value: Mapping[str, Any]) -> None:
@@ -429,6 +449,8 @@ def write_immutable(path: Path, value: Mapping[str, Any]) -> None:
 
 
 def materialize(output_dir: Path, operation: Mapping[str, Any]) -> None:
+    for key, filename in (("macro_artifact", "current_macro_regime_artifact.json"), ("macro_market_regime_context", "macro_market_regime_context.json"), ("canonical_decision_packet", "current_research_decision_packet_artifact.json")):
+        if operation.get(key) is not None: write_immutable(output_dir / filename, operation[key])
     write_immutable(output_dir / "peer_relative_research_artifact.json", operation["peer"])
     write_immutable(output_dir / "scenario_artifact.json", operation["scenario"])
     write_immutable(output_dir / "strategy_classification_artifact.json", operation["strategy"])
@@ -475,6 +497,8 @@ def run_session_operation(
     portfolio: Mapping[str, Any] | None = None,
     macro: Mapping[str, Any] | None = None,
     macro_presentation_context: Mapping[str, Any] | None = None,
+    macro_cutoff: str | None = None,
+    decision_packet_inputs: Mapping[str, Any] | None = None,
     shadow_security_recommendation: Mapping[str, Any] | None = None,
     financial_analysis_product_context: Mapping[str, Any] | None = None,
     integrated_investment_decision_product: Mapping[str, Any] | None = None,
@@ -504,6 +528,7 @@ def run_session_operation(
         portfolio=portfolio,
         macro=macro,
         macro_presentation_context=macro_presentation_context,
+        macro_cutoff=macro_cutoff, decision_packet_inputs=decision_packet_inputs,
         registry=registry,
         root=root,
         shadow_security_recommendation=shadow_security_recommendation,

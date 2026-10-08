@@ -249,6 +249,8 @@ def run_daily_producer(
     portfolio: Mapping[str, Any] | None = None,
     macro: Mapping[str, Any] | None = None,
     macro_presentation_context: Mapping[str, Any] | None = None,
+    macro_cutoff: str | None = None,
+    decision_packet_inputs: Mapping[str, Any] | None = None,
     shadow_security_recommendation: Mapping[str, Any] | None = None,
     fundamental_cohort_selector: str | None = None,
     integrated_investment_decision_product: Mapping[str, Any] | None = None,
@@ -296,6 +298,7 @@ def run_daily_producer(
         portfolio=portfolio,
         macro=macro,
         macro_presentation_context=macro_presentation_context,
+        macro_cutoff=macro_cutoff, decision_packet_inputs=decision_packet_inputs,
         shadow_security_recommendation=resolved_shadow_security_recommendation,
         integrated_investment_decision_product=integrated_investment_decision_product,
         daily_integrated_decision_brief=daily_integrated_decision_brief,
@@ -323,6 +326,11 @@ def run_daily_producer(
         data = (operation_dir / filename).read_bytes()
         _write_immutable(run_dir / filename, data)
         copied[filename] = {"sha256": _sha(data), "bytes": len(data)}
+    for key, filename in (("macro_artifact", "current_macro_regime_artifact.json"), ("macro_market_regime_context", "macro_market_regime_context.json"), ("canonical_decision_packet", "current_research_decision_packet_artifact.json")):
+        if operation.get(key) is not None:
+            data = (operation_dir / filename).read_bytes()
+            _write_immutable(run_dir / filename, data)
+            copied[filename] = {"sha256": _sha(data), "bytes": len(data)}
     projection = (operation_dir / "current_decision_cockpit_projection.json").read_bytes()
     _write_immutable(run_dir / "dashboard" / "current_decision_cockpit_projection.json", projection)
     copied["dashboard/current_decision_cockpit_projection.json"] = {"sha256": _sha(projection), "bytes": len(projection)}
