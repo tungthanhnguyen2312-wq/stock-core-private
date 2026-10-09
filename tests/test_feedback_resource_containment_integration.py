@@ -69,10 +69,19 @@ def test_success_is_compact_and_the_parent_never_receives_the_artifact(world):
     assert again["relation"] == "NO_PRIOR"  # no earlier status was supplied, so no relation is claimed
 
 
-def test_timeout_before_first_output_publishes_nothing_and_changes_no_evidence(world):
+def test_timeout_before_first_output_publishes_nothing_and_changes_no_evidence(world, tmp_path, monkeypatch):
     root, state, out = world
     before = _fingerprint(root)
-    result = _run(root, state, out, policy=guard.ResourcePolicy(**{**FAST.as_dict(), "deadline_seconds": 0.4}))
+    # Stop the real child before it can enter the publisher, regardless of CPU
+    # speed. Keep the real guard deadline/termination/reaping and parent status.
+    blocked = tmp_path / "blocked_before_first_output.py"
+    blocked.write_text("import threading\nthreading.Event().wait()\n", encoding="utf-8")
+    real_guard = guard.run_bounded
+    def injected(command, **kwargs):
+        return real_guard([sys.executable, str(blocked)], **kwargs)
+    with monkeypatch.context() as patch:
+        patch.setattr(guard, "run_bounded", injected)
+        result = _run(root, state, out, policy=guard.ResourcePolicy(**{**FAST.as_dict(), "deadline_seconds": 0.4}))
     assert result["status"] == "UNAVAILABLE" and result["reason_code"] == guard.RESOURCE_TIMEOUT and result["resource"]["reaped"] is True
     assert not (out / "feedback.json").exists() and _fingerprint(root) == before
     status = json.loads((out / "feedback.json.status.json").read_text(encoding="utf-8"))

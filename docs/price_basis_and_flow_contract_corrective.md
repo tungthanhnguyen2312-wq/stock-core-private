@@ -85,3 +85,52 @@ pipeline, native velocity, V1 retained flow/context, basis fitness and active do
 Compilation: 14 changed/new Python modules PASS. Active docs: 102,054 / 102,400
 bytes, 320 lines. Diff check PASS. Native roadmap ON_TRACK; owner admission ALLOWED,
 no queued successor. No retained or production artifacts were restored or written.
+
+## PR98 CI compatibility corrective (2026-10-09)
+
+Owner authorizes one coherent corrective commit and normal fast-forward push to PR98,
+with one CI inspection after push. Starting head: 0dab862a62a975b03d951847279e402780dd645f;
+parent/main 3f3d4fe38abbb3a11c5914e0337efdc0badf445e remains unchanged.
+
+The five deterministic failures reproduced locally; the timeout passed locally but
+failed on the fast Linux CI runner. Classification: five LEGACY_FIXTURE_INCOMPATIBILITY
+(PIT plus four presentation tests), one NONDETERMINISTIC_TEST (timeout), with runtime
+speed/OS an ENVIRONMENT_DIFFERENCE. The expanded v1.3 proof also found a REAL_REGRESSION: current presentation retained an additional v1.2-only flow adapter gate.
+
+Presentation fixtures formerly lacked schema, snapshot binding, consumed axis states
+and a real digest. They now retain their MIXED_TRANSITION behavioral intention with
+explicit synthetic source binding and genuine producer _identity construction. Both
+valid v1.2 and v1.3 presentation paths are exercised; corrupt identity, unknown schema,
+unbound snapshot, unknown vocabulary and incompatible policy epoch remain fail closed.
+Restaging changes neither research_action_posture nor evidence_currency.
+
+The old PIT fixture only self-asserted QUALIFIED/EXECUTED/EXPLICIT_OFFICIAL statuses.
+The existing flag-based gate is not independently authenticated source/event provenance;
+there is still no available qualified factor-chain interface. Its contextual ATR test
+now requires BLOCKED_BASIS, unchanged OHLC and historical PIT false, consistent with
+the canonical-bar anti-spoof proof. Existing scoped RAW and retrospective research tests
+remain; no production basis gate is relaxed or changed in this corrective.
+
+The timeout test injects a real child that waits before any publisher entry. The real
+0.4-second guard deadline, process termination/reaping and parent resource status remain.
+It asserts no publication/evidence mutation and a normal retry without cleanup. CPU
+speed cannot allow this injected child to publish; no production timeout is increased.
+
+The current flow presentation adapter now invokes the same guarded acceptance predicate
+instead of a v1.2-only comparison. The expanded valid v1.3 and corrupt-input proofs
+exercise this path end-to-end. No retained artifact, price calculation, flow policy or
+PAN code changes; initial numerical/operator/golden proofs remain applicable.
+Active docs are untouched: 102,054 / 102,400 bytes. No other worktree, OCR WIP, Vault,
+runtime, untracked data or authority is modified; no next milestone.
+
+Local gates: original six failing nodes 6 passed; expanded affected suites 219 passed,
+2 retained-tier deselections. Exact workflow FOCUSED_SELECTION (133 entries), provider
+import blockade and not-retained/not-provider-runtime markers: 3,146 passed, 22 skipped,
+15 deselected, 42 subtests passed on Windows/Python 3.13 (761.23 seconds). Platform and
+absent retained-evidence skips differ from Ubuntu CI; no fixtures were restored.
+All 18 Python modules changed across the PR compile; whitespace check and unchanged
+active reading budget pass. Native roadmap remains ON_TRACK; tracked dirty-worktree
+warnings before checkpoint are expected and must clear after the commit.
+
+Offline production call-shape smoke: 7 passed. Only synthetic offline test entrypoints
+were exercised; no production Daily or market acquisition was run.

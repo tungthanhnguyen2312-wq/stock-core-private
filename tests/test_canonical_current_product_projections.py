@@ -313,16 +313,7 @@ def test_flow_price_prefers_operation_linked_current_evidence_over_a_stale_stati
     """
     monkeypatch.setenv("STOCK_LOOKUP_RUNTIME_ROOT", str(tmp_path))
     session = SESSION
-    velocity_artifact = {
-        "contract_version": "multi_session_signal_velocity/v1.2",
-        "artifact_identity": "multi_session_signal_velocity:test",
-        "records": [{
-            "ticker": "HPG", "session": session, "overall_transition_state": "MIXED_TRANSITION",
-            "evidence_quality": {"state": "COMPLETE_RETAINED_EVIDENCE"},
-            "axes": {"structural_repair": {"trajectory": {}}},
-            "independent_supporting_axes": [], "contradicting_axes": [],
-        }],
-    }
+    velocity_artifact = _velocity(session)
     # Real current-session VALUE evidence, independently verifiable via
     # current_foreign_flow_enrichment_operation.verify_ticker_current.
     _write_value_observation(tmp_path, "HPG", session, buy=520_495_564_350, sell=269_865_036_850)
@@ -417,15 +408,22 @@ def test_flow_price_degrades_gracefully_when_no_root_supplied():
 # session's conftest normally exports the variable, which is how this escaped; these tests remove it.
 # ---------------------------------------------------------------------------
 
-def _velocity(session, ticker="HPG"):
-    return {
-        "contract_version": "multi_session_signal_velocity/v1.2",
-        "artifact_identity": "multi_session_signal_velocity:test",
+def _velocity(session, ticker="HPG", *, version="v1.2"):
+    # Explicit synthetic source binding, sealed with the genuine producer digest.
+    from multi_session_signal_velocity import _identity
+    return _identity({
+        "schema_version": "1.2.0", "contract_version": "multi_session_signal_velocity/" + version,
+        "source_inventory": [{"session": session, "snapshot_identity": "synthetic:presentation:t0", "classification": "QUALIFIED"}],
         "records": [{"ticker": ticker, "session": session, "overall_transition_state": "MIXED_TRANSITION",
+                     "source_snapshot_identity": "synthetic:presentation:t0",
                      "evidence_quality": {"state": "COMPLETE_RETAINED_EVIDENCE"},
-                     "axes": {"structural_repair": {"trajectory": {}}},
-                     "independent_supporting_axes": [], "contradicting_axes": []}],
-    }
+                     "axes": {"structural_repair": {"state": "REPAIRING", "source_identity": "synthetic:technical"},
+                              "setup_maturation": {"state": "EARLY"},
+                              "participation_confirmation": {"state": "NEUTRAL"},
+                              "market_support": {"state": "MIXED"}, "sector_support": {"state": "MIXED"},
+                              "fundamental_trajectory": {"trajectory": {"latest_transition": "UNCHANGED", "recent_direction": "UNCHANGED", "policy_epoch_excluded_observation_count": 0}}},
+                     "independent_supporting_axes": [], "contradicting_axes": [], "is_actionable": False}],
+    })
 
 
 def _split_roots(tmp_path, monkeypatch):
@@ -437,10 +435,11 @@ def _split_roots(tmp_path, monkeypatch):
     return producer, runtime
 
 
-def test_flow_price_reads_the_selected_release_runtime_not_the_producer_local_store(tmp_path, monkeypatch):
+@pytest.mark.parametrize("version", ["v1.2", "v1.3"])
+def test_flow_price_reads_the_selected_release_runtime_not_the_producer_local_store(tmp_path, monkeypatch, version):
     producer, runtime = _split_roots(tmp_path, monkeypatch)
     kwargs = dict(session=SESSION, registry_inputs=_registry_inputs(tickers=("HPG", "BBB")),
-                  supplementary={"signal_velocity": _velocity(SESSION)},
+                  supplementary={"signal_velocity": _velocity(SESSION, version=version)},
                   requested_at=f"{SESSION}T18:00:00+07:00", root=producer)
 
     selected = _materialize_workspace(runtime_root_override=runtime, **kwargs)["workspace"]["cards"]["HPG"]["flow_price"]
@@ -484,6 +483,31 @@ def test_flow_observer_restaging_never_moves_posture_or_evidence_currency(tmp_pa
     for ticker in sealed:
         for field in ("research_action_posture", "evidence_currency"):
             assert observed[ticker][field] == sealed[ticker][field] == integrated["records"][ticker][field]
+
+
+@pytest.mark.parametrize("defect", ["digest", "schema", "binding", "vocabulary", "policy_epoch"])
+def test_invalid_velocity_cannot_create_a_presentation_relationship_or_move_policy(tmp_path, monkeypatch, defect):
+    from multi_session_signal_velocity import _identity
+    producer, runtime = _split_roots(tmp_path, monkeypatch)
+    inputs = _registry_inputs(tickers=("HPG", "BBB"))
+    integrated = _integrated_for(SESSION, inputs)
+    common = dict(session=SESSION, registry_inputs=inputs, requested_at=f"{SESSION}T18:00:00+07:00",
+                  root=producer, integrated_investment_decision_product=integrated,
+                  runtime_root_override=runtime)
+    baseline = _materialize_workspace(supplementary={}, **common)["workspace"]["cards"]
+    velocity = _velocity(SESSION, version="v1.3")
+    record = velocity["records"][0]
+    if defect == "digest": velocity["artifact_sha256"] = "corrupt"
+    elif defect == "schema": velocity["schema_version"] = "9.0.0"
+    elif defect == "binding": record["source_snapshot_identity"] = "synthetic:unbound"
+    elif defect == "vocabulary": record["axes"]["structural_repair"]["state"] = "NEW_UNKNOWN_STATE"
+    else: record["axes"]["fundamental_trajectory"]["trajectory"]["policy_epoch_excluded_observation_count"] = 1
+    if defect != "digest": _identity(velocity)
+    observed = _materialize_workspace(supplementary={"signal_velocity": velocity}, **common)["workspace"]["cards"]
+    assert observed["HPG"]["flow_price"]["relationship"] in {"FLOW_UNAVAILABLE", "PRICE_EVIDENCE_INSUFFICIENT"}
+    for ticker in baseline:
+        for field in ("research_action_posture", "evidence_currency"):
+            assert observed[ticker][field] == baseline[ticker][field] == integrated["records"][ticker][field]
 
 
 def test_unavailable_recurring_axes_are_explicit_and_do_not_synthesize_a_contract():

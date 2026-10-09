@@ -36,7 +36,7 @@
       "owner_override": "OWNER_DIRECTIVE_2026_10_09_PRICE_BASIS_FLOW_LOCAL_CHECKPOINT_ONLY",
       "authority_effect": "NONE",
       "source_doc": "docs/price_basis_and_flow_contract_corrective.md",
-      "notes": "Owner-admitted bounded qualification, velocity read compatibility and PAN horizon presentation. No Daily, production write, push, merge, retained rebuild or successor."
+      "notes": "Owner-admitted bounded qualification, velocity read compatibility and PAN horizon presentation. PR98 CI compatibility corrective authorized 2026-10-09: legacy synthetic fixtures and deterministic timeout injection; normal pushes to the same PR only. No Daily, production write, merge, retained rebuild or successor."
     },
     {
       "milestone_id": "STOCKLOOKUP_VAULT_INCREMENTAL_SNAPSHOT_CONTRACT_AND_OFFLINE_ACCEPTANCE_V1",
