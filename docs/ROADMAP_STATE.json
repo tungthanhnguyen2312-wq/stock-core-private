@@ -9,7 +9,7 @@
     "ai_rules": "docs/AI_RULES.md",
     "note": "This file is the machine-readable EXECUTION-STATE authority: which milestone is current/active/next/blocked, what checkpoint proves each completed milestone, and whether recorded state contradicts Git/worktree reality. It does not restate or supersede the narrative docs' technical content and is not a substitute for reading them. Where this file and a narrative doc appear to disagree, that is a conflict to surface to the owner (AGENTS.md 'Default lightweight bootstrap' rule), never an automatic override in either direction."
   },
-  "implementation_lineage_head": "HEAD",
+  "implementation_lineage_head": "eed80f2fd4e0807e5721ba5474e19d21a1210220",
   "last_updated_checkpoint": "HEAD",
   "known_operational_diff_allowlist": [
     "config/daily_research_session_input_registry.json"
@@ -38,7 +38,7 @@
         "ACTIVE",
         "COMPLETE"
       ],
-      "checkpoint": "HEAD",
+      "checkpoint": "eed80f2fd4e0807e5721ba5474e19d21a1210220",
       "terminal_disposition": "PARTIAL_READ_ONLY_CAPACITY_FOUNDATION_READY",
       "notes": "Bounded safe subset: empty catalog, pre-network cold guard, read-only plan, synthetic undo/restore, qualified Vault V1 adapter. Future output links and production retention remain blocked. Zero reclaimed bytes/growth reduction; no activation or successor."
     },

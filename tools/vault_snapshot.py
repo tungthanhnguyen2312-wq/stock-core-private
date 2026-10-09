@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import argparse
-from contextlib import closing, contextmanager
+from contextlib import closing, contextmanager, ExitStack
 import ctypes
 from ctypes import wintypes
 import hashlib
@@ -10,7 +10,9 @@ import json
 import os
 from pathlib import Path, PurePosixPath
 import sqlite3
+import stat
 import subprocess
+import threading
 from typing import Callable
 
 CHUNK = 1024 * 1024
@@ -102,6 +104,81 @@ def locked_file(path: Path, *, writer=False):
             except OSError as exc:
                 raise Refused("writer exclusivity unavailable") from exc
             yield stream
+
+
+class LockedSources:
+    """Explicit, context-owned source handles; no process/global lock registry.
+
+    A nested reader borrows the original descriptor rather than acquiring flock
+    on another open file description. Windows uses the unchanged deny-write/delete
+    opener. The owner retains every handle until its context exits.
+    """
+    def __init__(self):
+        self._stack = ExitStack()
+        self._handles = {}
+        self._hashes = {}
+        self._borrowed = set()
+        self._active = False
+
+    def __enter__(self):
+        require(not self._active and not self._handles, "source lock owner already used")
+        self._active = True
+        self._execution = (os.getpid(), threading.get_ident())
+        return self
+
+    def __exit__(self, *exc):
+        self._active = False
+        self._stack.close()
+
+    def _key(self, path):
+        require(self._active and self._execution == (os.getpid(), threading.get_ident()),
+                "source lock owner inactive or foreign execution")
+        return Path(path).absolute()
+
+    def _validate(self, path, stream):
+        require(not stream.closed, "owned source handle closed")
+        try:
+            current, held = path.lstat(), os.fstat(stream.fileno())
+        except OSError as exc:
+            raise Refused("owned source pathname unavailable") from exc
+        require(stat.S_ISREG(current.st_mode) and (current.st_dev, current.st_ino) == (held.st_dev, held.st_ino),
+                "owned source pathname/inode changed")
+
+    def acquire(self, path, *, expected_sha=None):
+        path = self._key(path)
+        if path not in self._handles:
+            self._handles[path] = self._stack.enter_context(locked_file(path))
+        self._validate(path, self._handles[path])
+        if expected_sha is not None:
+            require(path not in self._hashes or self._hashes[path] == expected_sha,
+                    "conflicting owned source hash")
+            require(sha(path) == expected_sha, "completion proof tampered")
+            self._hashes[path] = expected_sha
+
+    def validate_all(self):
+        self._key(Path("."))
+        for path, stream in self._handles.items():
+            self._validate(path, stream)
+            if path in self._hashes:
+                require(sha(path) == self._hashes[path], "completion provenance changed")
+                self._validate(path, stream)
+
+    @contextmanager
+    def borrow(self, path):
+        path = self._key(path)
+        self.acquire(path)
+        require(path not in self._borrowed, "source handle already borrowed")
+        stream = self._handles[path]
+        offset = stream.tell()
+        self._borrowed.add(path)
+        try:
+            stream.seek(0)
+            yield stream
+            self._validate(path, stream)
+        finally:
+            self._borrowed.remove(path)
+            if not stream.closed:
+                stream.seek(offset)
 
 
 def fingerprint(path: Path) -> dict:
@@ -206,7 +283,11 @@ def boundary_plan(source: Path, boundary: Path, boundary_sha: str, max_bytes: in
 
 def snapshot(source: Path, vault: Path, boundary: Path, boundary_sha: str, expected: dict, *,
              previous: Path | None = None, previous_sha: str | None = None,
-             max_bytes=64 * CHUNK, observer=native_volume, on_chunk=None) -> dict:
+             max_bytes=64 * CHUNK, observer=native_volume, on_chunk=None,
+             locked_sources: LockedSources | None = None) -> dict:
+    if locked_sources is not None:
+        require(isinstance(locked_sources, LockedSources), "explicit source lock owner required")
+        locked_sources.validate_all()
     source, vault = source.absolute(), vault.absolute()
     safe_path(source, ".vault-path-check")
     safe_path(vault, ".vault-path-check")
@@ -242,6 +323,8 @@ def snapshot(source: Path, vault: Path, boundary: Path, boundary_sha: str, expec
                 require(fingerprint(safe_path(source, row["relative_path"])) == row["source_fingerprint"]
                         and fingerprint(safe_path(vault, row["vault_path"])) == row["vault_fingerprint"],
                         "repeat source/vault fingerprint changed; use explicit new version")
+            if locked_sources is not None:
+                locked_sources.validate_all()
             publish(folder / "receipt.json", canonical(receipt))
             return receipt
         folder.mkdir(parents=True, exist_ok=True)
@@ -250,7 +333,7 @@ def snapshot(source: Path, vault: Path, boundary: Path, boundary_sha: str, expec
         records, copied, reused = [], 0, 0
         for row in files:
             path = safe_path(source, row["relative_path"])
-            with locked_file(path) as stream:
+            with (locked_sources.borrow(path) if locked_sources is not None else locked_file(path)) as stream:
                 require(stream.read(16) != b"SQLite format 3\x00", "SQLite requires separate Backup API")
                 stream.seek(0)
                 before = fingerprint(path)
@@ -312,6 +395,8 @@ def snapshot(source: Path, vault: Path, boundary: Path, boundary_sha: str, expec
                  cutoff=b["cutoff"], seal_refs=b["seal_refs"], receipt_refs=b["receipt_refs"],
                  previous_sha256=previous_sha, files=records, excluded=excluded)
         raw = canonical(m)
+        if locked_sources is not None:
+            locked_sources.validate_all()
         receipt = dict(schema="vault_receipt/v1", snapshot_identity=version,
                        manifest_sha256=digest(raw), status="VERIFIED", authority_effect="NONE",
                        copied_files=copied, reused_files=reused)

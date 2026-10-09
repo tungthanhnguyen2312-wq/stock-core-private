@@ -167,3 +167,14 @@ and path approval for historical dedup; separate cold retirement approval plus v
 second copy or accepted risk; explicit restore/event qualification; adapter activation;
 scratch cleanup; and a separate Phase 2 for MVA/T0 portability. Capacity PR must not merge
 under this job. No automatic successor.
+
+PR99 lock corrective: qualification owns an explicit `LockedSources` context and
+passes it into Vault V1. Nested reads borrow the original descriptor, restore its
+cursor, and retain all source handles until qualification exits. No global lock
+registry or unlocked handoff exists. Windows retains its deny-write/delete opener;
+POSIX retains exclusive nonblocking flock. Path lstat and held-descriptor fstat
+device/inode identities are checked on borrowing and before manifest publication.
+Pinned boundary/completion hashes are also rechecked before publication, including
+registry proofs outside the payload closure. Native payload SHA/fingerprint checks,
+T0 verification, append-only receipts and the separate destination writer lock
+remain mandatory. Standalone Vault calls keep their existing locking behavior.

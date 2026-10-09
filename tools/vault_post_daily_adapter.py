@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import argparse
-from contextlib import contextmanager, ExitStack
+from contextlib import contextmanager
 import json
 from pathlib import Path
 
@@ -16,8 +16,8 @@ MUTABLE = ("/_stream/", "_artifact_summary_cache", "_settled_cache", "prospectiv
 @contextmanager
 def qualified_boundary(source: Path, boundary: Path, boundary_sha: str, *, max_bytes):
     """Use explicit native proof references, holding provenance stable throughout Vault copy."""
-    with ExitStack() as stack:
-        stack.enter_context(v.locked_file(boundary))
+    with v.LockedSources() as locks:
+        locks.acquire(boundary, expected_sha=boundary_sha)
         b, files, excluded = v.boundary_plan(source, boundary, boundary_sha, max_bytes)
         v.require(not excluded, "adapter boundary contains incomplete/mutable files")
         proof = b.get("completion_proof") or {}
@@ -26,9 +26,10 @@ def qualified_boundary(source: Path, boundary: Path, boundary_sha: str, *, max_b
         for key in ("registry", "completion_record", "handoff", "producer_manifest", "operation_manifest"):
             ref = proof.get(key) or {}
             path = v.safe_path(source, ref.get("relative_path", ""))
-            stack.enter_context(v.locked_file(path))
+            locks.acquire(path)
             v.require(path.stat().st_size <= 8*v.CHUNK, "completion proof size ceiling")
-            v.require(v.sha(path) == ref.get("sha256"), "completion proof tampered")
+            locks.acquire(path, expected_sha=ref.get("sha256"))
+            v.require(ref.get("sha256") is not None, "completion proof hash missing")
             documents[key] = json.loads(path.read_bytes())
             pinned.append((path, ref["sha256"]))
         session = b["session_identity"]
@@ -76,7 +77,7 @@ def qualified_boundary(source: Path, boundary: Path, boundary_sha: str, *, max_b
             for path in (snapshot_path, index_path, receipt_path):
                 relative = path.relative_to(source).as_posix()
                 v.require(relative in native, "original T0 proof outside closure")
-                stack.enter_context(v.locked_file(path))
+                locks.acquire(path)
             ref["path"] = str(index_path)
             v.require(load_verified(ref, expected_snapshot_identity=t0.get("identity"), session=session) is not None,
                       "original T0 binding unverified")
@@ -84,7 +85,9 @@ def qualified_boundary(source: Path, boundary: Path, boundary_sha: str, *, max_b
             v.require(snapshot_path == index_path.parent / index["snapshot_file"]
                       and native[t0["path"]]["sha256"] == index["snapshot_file_sha256"],
                       "T0 native hash/path differs from original seal")
-        yield b
+        locks.validate_all()
+        yield locks
+        locks.validate_all()
         for path, expected_sha in pinned:
             v.require(v.sha(path) == expected_sha, "completion provenance changed")
 
@@ -98,9 +101,10 @@ def snapshot_completed(source, vault, boundary, boundary_sha, expected, *, opt_i
         v.verify_volumes(source, vault, expected, observer)
     except v.Refused as exc:
         return dict(status="OPTIONAL_BACKUP_UNAVAILABLE", reason=str(exc), daily_completion_changed=False)
-    with qualified_boundary(source, boundary, boundary_sha, max_bytes=max_bytes):
+    with qualified_boundary(source, boundary, boundary_sha, max_bytes=max_bytes) as locks:
         receipt = v.snapshot(source, vault, boundary, boundary_sha, expected, observer=observer,
-                             max_bytes=max_bytes, previous=previous, previous_sha=previous_sha, on_chunk=on_chunk)
+                             max_bytes=max_bytes, previous=previous, previous_sha=previous_sha, on_chunk=on_chunk,
+                             locked_sources=locks)
     return dict(status="COMPLETE", receipt=receipt, daily_completion_changed=False)
 
 

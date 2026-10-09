@@ -4,7 +4,7 @@
   "base_sha": "1d6b8a8b9bce430a0b0f8cdd735a1cb90b8556f8",
   "branch": "feature/capacity-recovery-phase1-20261009",
   "worktree": "C:/Projects/StockLookup/capacity-recovery-phase1",
-  "checkpoint": "HEAD",
+  "checkpoint": "eed80f2fd4e0807e5721ba5474e19d21a1210220",
   "pr98_head": "62bf8386eaa153eb4674b412f566cc0540ecc025",
   "pr98_merge": "1d6b8a8b9bce430a0b0f8cdd735a1cb90b8556f8",
   "implementation_inputs": [
@@ -77,5 +77,48 @@
   "no_source_deletion": true,
   "no_production_daily": true,
   "no_provider_acquisition": true,
-  "no_authority_promotion": true
+  "no_authority_promotion": true,
+  "nested_lock_corrective": {
+    "job": "PR99_NESTED_LOCK_CORRECTIVE_AND_CI_CLOSEOUT",
+    "checkpoint": "HEAD",
+    "lock_contract": "Qualification owns source handles; nested reads borrow the same descriptor. No lock release between qualification and copying. Boundary/proof hashes and pathname-to-descriptor device/inode identity are checked before manifest publication. Destination writer lock is independent.",
+    "windows": "Unchanged deny-write/delete source opener and exclusive destination writer opener. Synthetic mutation and cross-process writer attempts refuse.",
+    "posix": "Unchanged exclusive nonblocking flock on the owned descriptor. Reuse avoids independent-descriptor self-conflict. Same-byte pathname replacement and uncooperative mutations refuse before COMPLETE publication.",
+    "validation": {
+      "original_three_tests": {
+        "passed": 3,
+        "failed": 0
+      },
+      "capacity_vault": {
+        "passed": 84,
+        "skipped": 2,
+        "failed": 0,
+        "seconds": 24.36
+      },
+      "control_plane_ci_tiers_offline_smoke": {
+        "passed": 54,
+        "failed": 0,
+        "seconds": 36.2
+      },
+      "py_compile": "PASS",
+      "diff_check": "PASS",
+      "active_doc_bytes": 102246,
+      "active_doc_budget_bytes": 102400,
+      "roadmap": "ON_TRACK",
+      "ci_selected_hermetic": {
+        "passed": 3233,
+        "skipped": 21,
+        "deselected": 15,
+        "subtests_passed": 42,
+        "failed": 0,
+        "seconds": 749.78,
+        "selection": "FOCUSED_SELECTION from producer-ci.yml; provider-import block; not retained_evidence and not provider_runtime"
+      }
+    },
+    "host_limit": "Windows Python 3.13; WSL unavailable. Two actual POSIX pathname-replacement regressions require Linux CI. Existing CI selection includes all new regressions.",
+    "historical_failures": "Prior acceptance retains eight missing August fixture failures and the known legacy handoff parser failure. Relevant implementation files are unchanged; no retained evidence reconstructed.",
+    "production_mutation": false,
+    "daily_activation": false,
+    "authority_effect": "NONE"
+  }
 }

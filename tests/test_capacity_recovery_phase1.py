@@ -1,5 +1,9 @@
 """Small isolated fixtures; never retained production data or provider acquisition."""
 import json
+import os
+import subprocess
+import sys
+from contextlib import contextmanager
 from pathlib import Path
 
 import pytest
@@ -9,6 +13,137 @@ import daily_session_level2_package as level2
 from tools import storage_capacity_plan as capacity, vault_snapshot as v, vault_post_daily_adapter as adapter
 
 SESSION = "2026-10-07"
+
+
+def assert_writer_refused(path):
+    code = """import sys
+from pathlib import Path
+from tools import vault_snapshot as v
+try:
+    with v.locked_file(Path(sys.argv[1]), writer=True):
+        pass
+except v.Refused:
+    sys.exit(0)
+sys.exit(1)
+"""
+    result = subprocess.run([sys.executable, "-c", code, str(path)],
+                            cwd=Path(__file__).resolve().parents[1], capture_output=True, text=True, timeout=15)
+    assert result.returncode == 0, result.stderr
+
+
+def test_source_owner_reuses_handle_and_retains_outer_lock(tmp_path):
+    path = tmp_path / "proof.json"
+    path.write_bytes(b"original")
+    owner = v.LockedSources()
+    with owner:
+        owner.acquire(path)
+        with owner.borrow(path) as first:
+            fd = first.fileno()
+            assert first.read() == b"original"
+            with pytest.raises(v.Refused, match="already borrowed"):
+                with owner.borrow(path):
+                    pass
+        assert_writer_refused(path)
+        with owner.borrow(path) as second:
+            assert second.fileno() == fd and second.tell() == 0
+        assert_writer_refused(path)
+    assert first.closed
+    with pytest.raises(v.Refused, match="inactive"):
+        owner.acquire(path)
+    with v.locked_file(path, writer=True):
+        pass
+
+
+def test_adapter_locks_have_no_qualification_copy_gap(vault_fixture, monkeypatch):
+    source, vault, expected, observer = vault_fixture
+    pair = boundary_fixture(vault_fixture, qualified=True)
+    original = v.locked_file
+    acquired, active = [], set()
+
+    @contextmanager
+    def tracked(path, *, writer=False):
+        with original(path, writer=writer) as stream:
+            if not writer:
+                acquired.append(path)
+                active.add(path)
+            try:
+                yield stream
+            finally:
+                active.discard(path)
+
+    monkeypatch.setattr(v, "locked_file", tracked)
+    with adapter.qualified_boundary(source, *pair, max_bytes=64 * v.CHUNK) as owner:
+        qualified = set(active)
+        assert pair[0].absolute() in qualified
+        def during_copy(path, stage):
+            assert qualified <= active
+            assert path in active
+            assert_writer_refused(path)
+        result = v.snapshot(source, vault, *pair, expected, observer=observer,
+                            locked_sources=owner, on_chunk=during_copy)
+        assert result["status"] == "VERIFIED" and qualified <= active
+        assert len(acquired) == len(set(acquired))
+        assert_writer_refused(source / "handoff.json")
+    assert not active
+
+
+def test_adapter_preserves_destination_writer_exclusivity(vault_fixture):
+    source, vault, expected, observer = vault_fixture
+    pair = boundary_fixture(vault_fixture, qualified=True)
+    lock = vault / ".writer.lock"
+    lock.touch()
+    with v.locked_file(lock, writer=True):
+        assert_writer_refused(lock)
+        with pytest.raises(v.Refused, match="exclusivity"):
+            adapter.snapshot_completed(source, vault, *pair, expected, opt_in=True, observer=observer)
+    assert not list(vault.glob("snapshots/*/manifest.json"))
+
+
+@pytest.mark.skipif(os.name == "nt", reason="POSIX permits replacement despite advisory flock")
+@pytest.mark.parametrize("target", ["boundary", "source"])
+def test_adapter_refuses_same_bytes_pathname_replacement(vault_fixture, target):
+    source, vault, expected, observer = vault_fixture
+    pair = boundary_fixture(vault_fixture, qualified=True)
+    replaced = []
+    def replace(path, stage):
+        if replaced:
+            return
+        victim = pair[0] if target == "boundary" else path
+        replacement = victim.with_name(victim.name + ".replacement")
+        replacement.write_bytes(victim.read_bytes())
+        os.replace(replacement, victim)
+        replaced.append(victim)
+    with pytest.raises(v.Refused, match="pathname/inode changed"):
+        adapter.snapshot_completed(source, vault, *pair, expected, opt_in=True,
+                                   observer=observer, on_chunk=replace)
+    assert replaced and not list(vault.glob("snapshots/*/manifest.json"))
+
+
+@pytest.mark.parametrize("target", ["payload", "registry", "boundary"])
+def test_adapter_source_mutation_during_copy(vault_fixture, target):
+    source, vault, expected, observer = vault_fixture
+    pair = boundary_fixture(vault_fixture, qualified=True)
+    attempted = []
+    def mutate(path, stage):
+        if attempted:
+            return
+        path = path if target == "payload" else source / "registry.json" if target == "registry" else pair[0]
+        attempted.append(path)
+        if os.name == "nt":
+            with pytest.raises(PermissionError):
+                path.write_bytes(b"mutation")
+        else:
+            path.write_bytes(b"mutation")
+    if os.name == "nt":
+        result = adapter.snapshot_completed(source, vault, *pair, expected, opt_in=True,
+                                            observer=observer, on_chunk=mutate)
+        assert result["status"] == "COMPLETE"
+    else:
+        with pytest.raises(v.Refused):
+            adapter.snapshot_completed(source, vault, *pair, expected, opt_in=True,
+                                       observer=observer, on_chunk=mutate)
+        assert not list(vault.glob("snapshots/*/manifest.json"))
+    assert attempted
 
 
 def write(path, value):
