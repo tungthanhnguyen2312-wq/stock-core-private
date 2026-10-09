@@ -1508,7 +1508,7 @@ def run_flow_price_divergence_shadow(root: Path, runtime_root: Path, session: st
     alter a completed Daily, decision policy, or AI handoff.
     """
     from flow_price_divergence_shadow import (
-        VELOCITY_CONTRACT_VERSION, collect_from_retained_runtime, write_immutable,
+        accept_velocity_for_flow, collect_from_retained_runtime, write_immutable,
     )
 
     if signal_velocity.get("status") != "COLLECTED":
@@ -1516,7 +1516,7 @@ def run_flow_price_divergence_shadow(root: Path, runtime_root: Path, session: st
                 "reason": "SIGNAL_VELOCITY_V1_2_NOT_COLLECTED"}
     velocity_path = root / str(signal_velocity.get("path") or "")
     velocity = _load(velocity_path)
-    if not isinstance(velocity, Mapping) or velocity.get("contract_version") != VELOCITY_CONTRACT_VERSION:
+    if not isinstance(velocity, Mapping):
         return {"status": "UNAVAILABLE", "session": session,
                 "reason": "EXACT_SIGNAL_VELOCITY_V1_2_ARTIFACT_UNAVAILABLE"}
     if velocity.get("artifact_identity") != signal_velocity.get("artifact_identity"):
@@ -1533,6 +1533,10 @@ def run_flow_price_divergence_shadow(root: Path, runtime_root: Path, session: st
     if (velocity.get("validation") or {}).get("latest_session") != session:
         return {"status": "UNAVAILABLE", "session": session,
                 "reason": "SIGNAL_VELOCITY_REFERENCE_SESSION_MISMATCH"}
+    try:
+        accept_velocity_for_flow(velocity, reference_session=session)
+    except ValueError as exc:
+        return {"status": "UNAVAILABLE", "session": session, "reason": str(exc)}
     output = root / "operations-review" / "flow-price-divergence-shadow-v1" / session / "flow_price_divergence_shadow_artifact.json"
     try:
         artifact = collect_from_retained_runtime(

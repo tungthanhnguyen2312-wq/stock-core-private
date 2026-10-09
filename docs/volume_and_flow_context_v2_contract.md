@@ -107,3 +107,9 @@ outside cohort 1,672. Each unqualified participant category has 1,683 unavailabl
 items. All 25,308 V2 items are POST. Explicit V1 bridge covers all 1,503 names and
 13,527 POST volume items without consuming repair labels. Frozen foreign primitive
 values/statuses/reasons/units/continuity and cohort membership match exactly.
+
+## 2026-10-09 bounded corrective
+
+[Qualification, velocity compatibility and horizon contract](price_basis_and_flow_contract_corrective.md).
+Native content identity and caller factor status strings alone do not authenticate
+price adjustment. The available factor-chain interface remains unqualified.

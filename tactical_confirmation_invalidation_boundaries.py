@@ -63,7 +63,13 @@ def _verify(source: Mapping[str, Any], module_name: str, label: str) -> None:
 
 
 def _context(*, tactical_record: Mapping[str, Any], descriptive_record: Mapping[str, Any], structure_record: Mapping[str, Any] | None) -> dict[str, Any]:
-    values = (descriptive_record.get("technical_features") or {}).get("values") or {}
+    technical = descriptive_record.get("technical_features") or {}
+    values = technical.get("values") or {}
+    # This consumer cannot authenticate factor chains; retained claims stay unverified.
+    from mva_daily_research_bundle import price_basis_qualification_from_window
+    qualification = {**price_basis_qualification_from_window([]), **(technical.get("price_basis_qualification") or {}),
+                     "price_basis_verified": False, "comparability": "NOT_ESTABLISHED", "historical_pit_eligible": False,
+                     "raw_as_traded_authority": "NOT_PROMOTED", "price_unit": "UNVERIFIED_RESEARCH_PRICE"}
     session = (descriptive_record.get("technical_features") or {}).get("feature_as_of_session")
     structure = (structure_record or {}).get("structure_context") or {}
     structure_available = structure.get("status") == "AVAILABLE"
@@ -74,7 +80,7 @@ def _context(*, tactical_record: Mapping[str, Any], descriptive_record: Mapping[
         "support": structure.get("support", {}).get("value") if structure_available else None,
         "structure_available": structure_available,
         "lineage": {"tactical_rule_id": tactical_record.get("rule_id"), "feature_as_of_session": session,
-                    "technical_structure_available": structure_available},
+                    "technical_structure_available": structure_available, "price_basis_qualification": qualification},
     }
 
 
@@ -83,7 +89,7 @@ def _ma_boundary(*, boundary_type: str, direction: str, operator: str, ctx: Mapp
         return _boundary(status="CONDITIONAL", boundary_type=boundary_type, direction=direction, source_rule=ctx["rule_id"],
                          source_metric="ma_20", as_of=ctx["session"], method=METHOD, lineage=ctx["lineage"],
                          warnings=["MA20_INPUT_UNAVAILABLE"], reason=reason)
-    return _boundary(status="READY", boundary_type=boundary_type, direction=direction, value=ctx["ma_20"], unit="ADJUSTED_RETROSPECTIVE_PRICE",
+    return _boundary(status="READY", boundary_type=boundary_type, direction=direction, value=ctx["ma_20"], unit="UNVERIFIED_RESEARCH_PRICE",
                      comparison_operator=operator, source_rule=ctx["rule_id"], source_metric="ma_20", baseline_value=ctx["ma_20"],
                      baseline_period_session=ctx["session"], as_of=ctx["session"], method=METHOD, lineage=ctx["lineage"], reason=reason)
 
@@ -109,7 +115,7 @@ def _level_boundary(*, boundary_type: str, direction: str, operator: str, level_
         return _ma_boundary(boundary_type=boundary_type, direction=direction,
                             operator="FUTURE_CLOSE_GT_FUTURE_MA20" if "GT" in operator else "FUTURE_CLOSE_LT_FUTURE_MA20",
                             ctx=ctx, reason=(fallback_reason or reason) + " (structural level unavailable; MA20 fallback anchor.)")
-    return _boundary(status="READY", boundary_type=boundary_type, direction=direction, value=level, unit="ADJUSTED_RETROSPECTIVE_PRICE",
+    return _boundary(status="READY", boundary_type=boundary_type, direction=direction, value=level, unit="UNVERIFIED_RESEARCH_PRICE",
                      comparison_operator=operator, source_rule=ctx["rule_id"], source_metric=level_name, baseline_value=level,
                      baseline_period_session=ctx["session"], as_of=ctx["session"], method="technical_structure_context/v1",
                      lineage=ctx["lineage"], reason=reason)

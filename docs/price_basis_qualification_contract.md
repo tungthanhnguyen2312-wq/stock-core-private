@@ -38,3 +38,9 @@ Shadow validation evaluates representative tickers under:
 - **SSI:** Financial/securities ticker with multiple historical stock dividends & rights issues.
 - **HPG:** Industrial ticker with frequent stock dividends and bonus issues.
 - **VCB:** Major commercial bank ticker with complex bonus issue history.
+
+## 2026-10-09 bounded corrective
+
+[Qualification, velocity compatibility and horizon contract](price_basis_and_flow_contract_corrective.md).
+Native content identity and caller factor status strings alone do not authenticate
+price adjustment. The available factor-chain interface remains unqualified.

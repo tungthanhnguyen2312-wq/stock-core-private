@@ -20,6 +20,79 @@ CONTRACT_VERSION = "flow_price_divergence_shadow/v1"
 VELOCITY_CONTRACT_VERSION = "multi_session_signal_velocity/v1.2"
 RESEARCH_TIER = "RETAINED_VALUE_FLOW_PRICE_RELATIONSHIP_RESEARCH_ONLY"
 
+def accept_velocity_for_flow(artifact: Mapping[str, Any], *, reference_session: str,
+                             exclusions: dict[str, str] | None = None) -> dict[str, Mapping[str, Any]]:
+    """Exact native identity plus bounded schema/record semantic compatibility.
+
+    Withhold incompatible records individually; never recompute overall state.
+    Content binding does not confer price, liquidity or decision authority.
+    """
+    from bounded_artifact_stream import record_mapping_digest
+    from multi_session_signal_velocity import RANK
+    if artifact.get("schema_version") != "1.2.0":
+        raise ValueError("VELOCITY_SCHEMA_INCOMPATIBLE")
+    version = artifact.get("contract_version")
+    if version not in {VELOCITY_CONTRACT_VERSION, "multi_session_signal_velocity/v1.3"}:
+        raise ValueError("VELOCITY_CONTRACT_INCOMPATIBLE")
+    supersedes = artifact.get("supersedes") or {}
+    if not isinstance(supersedes, Mapping) or (supersedes and
+            (supersedes.get("contract_version") not in {"multi_session_signal_velocity/v1.1"}
+             or supersedes.get("old_artifacts_immutable") is not True
+             or supersedes.get("status") != "SUPERSEDED_FOR_CATEGORICAL_ACCELERATION_TERMINOLOGY")):
+        raise ValueError("VELOCITY_CONTRACT_INCOMPATIBLE")
+    body = {k: v for k, v in artifact.items() if k not in {"artifact_identity", "artifact_sha256"}}
+    digest = record_mapping_digest(body)
+    if artifact.get("artifact_sha256") != digest or artifact.get("artifact_identity") != "multi_session_signal_velocity:" + digest:
+        raise ValueError("VOLUME_FLOW_VELOCITY_IDENTITY_INVALID")
+    records = artifact.get("records")
+    if not isinstance(records, list): raise ValueError("VELOCITY_CONSUMED_SEMANTICS_INCOMPATIBLE")
+    inventory = artifact.get("source_inventory") or []
+    if not isinstance(inventory, list): raise ValueError("VELOCITY_SESSION_SNAPSHOT_BINDING_INVALID")
+    retained_sessions = (artifact.get("validation") or {}).get("retained_sessions") or []
+    accepted, seen = {}, set()
+    refused = exclusions if exclusions is not None else {}
+    for record in records:
+        if not isinstance(record, Mapping) or not isinstance(record.get("session"), str):
+            raise ValueError("VELOCITY_SESSION_SNAPSHOT_BINDING_INVALID")
+        if record["session"] != reference_session: continue
+        ticker, snapshot = record.get("ticker"), record.get("source_snapshot_identity")
+        if not isinstance(ticker, str) or not ticker or ticker in seen:
+            raise ValueError("VELOCITY_SESSION_SNAPSHOT_BINDING_INVALID")
+        seen.add(ticker)
+        if not isinstance(snapshot, str) or not snapshot or (inventory and not any(
+                isinstance(i, Mapping) and i.get("session") == reference_session and i.get("snapshot_identity") == snapshot
+                and i.get("classification") == "QUALIFIED" for i in inventory)):
+            raise ValueError("VELOCITY_SESSION_SNAPSHOT_BINDING_INVALID")
+        if not inventory and reference_session not in retained_sessions:
+            raise ValueError("VELOCITY_SESSION_SNAPSHOT_BINDING_INVALID")
+        axes, quality = record.get("axes"), record.get("evidence_quality")
+        consumed = ("structural_repair", "setup_maturation", "participation_confirmation", "market_support", "sector_support")
+        valid = (isinstance(axes, Mapping) and isinstance(quality, Mapping)
+            and quality.get("state") in {"COMPLETE_RETAINED_EVIDENCE", "PARTIAL_RETAINED_EVIDENCE", "INSUFFICIENT_RETAINED_EVIDENCE"}
+            and record.get("overall_transition_state") in {"INSUFFICIENT_EVIDENCE", "DETERIORATING", "PERSISTENT_IMPROVEMENT", "EARLY_IMPROVEMENT", "MIXED_TRANSITION", "STABLE"}
+            and all(isinstance(axes.get(n), Mapping) and axes[n].get("state") in {*RANK[n], "UNAVAILABLE"} for n in consumed))
+        if not valid:
+            refused[ticker] = "VELOCITY_CONSUMED_SEMANTICS_INCOMPATIBLE"
+            continue
+        if version == "multi_session_signal_velocity/v1.3":
+            trajectory = (axes.get("fundamental_trajectory") or {}).get("trajectory")
+            if not isinstance(trajectory, Mapping) or any(k not in trajectory for k in
+                    ("latest_transition", "recent_direction", "policy_epoch_excluded_observation_count")):
+                refused[ticker] = "VELOCITY_CONSUMED_SEMANTICS_INCOMPATIBLE"
+                continue
+            if any(trajectory[k] not in {"IMPROVING", "DETERIORATING", "UNCHANGED", "NOT_COMPARABLE", "NOT_COMPARABLE_POLICY_CHANGE"}
+                   for k in ("latest_transition", "recent_direction")):
+                refused[ticker] = "VELOCITY_CONSUMED_SEMANTICS_INCOMPATIBLE"
+                continue
+            count = trajectory["policy_epoch_excluded_observation_count"]
+            if (not isinstance(count, int) or isinstance(count, bool) or count != 0
+                    or trajectory["latest_transition"] == "NOT_COMPARABLE_POLICY_CHANGE"
+                    or trajectory["recent_direction"] == "NOT_COMPARABLE_POLICY_CHANGE"):
+                refused[ticker] = "VELOCITY_RECORD_SEMANTICS_INCOMPATIBLE"
+                continue
+        accepted[ticker] = record
+    return accepted
+
 def _canonical(value: Any) -> str:
     return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False)
 
@@ -141,9 +214,13 @@ def _validation(records: Sequence[Mapping[str, Any]], reference_session: str) ->
 
 def build_artifact(*, reference_session: str, flow_series: Mapping[str, Mapping[str, Any]], velocity_artifact: Mapping[str, Any]) -> dict[str, Any]:
     """Build a deterministic session-bound artifact from explicit retained inputs."""
-    if velocity_artifact.get("contract_version") != VELOCITY_CONTRACT_VERSION: raise ValueError("REQUIRE_SIGNAL_VELOCITY_V1_2")
-    velocity = {str(r.get("ticker")): r for r in velocity_artifact.get("records", []) if isinstance(r, Mapping) and r.get("session") == reference_session}
-    records = [_record(ticker=ticker, reference_session=reference_session, series=flow_series.get(ticker, {}), velocity_record=velocity.get(ticker)) for ticker in sorted(set(flow_series) | set(velocity))]
+    exclusions: dict[str, str] = {}
+    velocity = accept_velocity_for_flow(velocity_artifact, reference_session=reference_session, exclusions=exclusions)
+    records = [_record(ticker=ticker, reference_session=reference_session, series=flow_series.get(ticker, {}), velocity_record=velocity.get(ticker)) for ticker in sorted(set(flow_series) | set(velocity) | set(exclusions))]
+    for record in records:
+        if record["ticker"] in exclusions:
+            record["price"]["reason_codes"] = [exclusions[record["ticker"]], "VELOCITY_RECORD_SEMANTICS_INCOMPATIBLE"]
+            _identity(record, prefix="flow_price_divergence_record:", field="record_identity")
     artifact = {"schema_version": "1.0.0", "contract_version": CONTRACT_VERSION, "research_tier": RESEARCH_TIER, "reference_session": reference_session, "source_artifact_identities": {"signal_velocity": velocity_artifact.get("artifact_identity")}, "records": records, "validation": _validation(records, reference_session), "authority_boundary": {"qualified_foreign_value_only": True, "no_volume_or_room": True, "no_normalized_flow_ratio": True, "no_causality_or_intent": True, "no_score_probability_recommendation_or_execution": True, "is_actionable": False}, "limitations": ["FLOW_STATE_IS_DESCRIPTIVE_NOT_DIRECTIONAL_AUTHORITY", "NO_HISTORICAL_PRICE_RECONSTRUCTION", "NO_FORWARD_OUTCOME_CONTRACT"]}
     return _identity(artifact, prefix="flow_price_divergence_shadow:", field="artifact_identity")
 

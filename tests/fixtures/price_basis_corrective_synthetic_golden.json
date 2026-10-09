@@ -1,0 +1,1113 @@
+{
+  "baseline": "3f3d4fe38abbb3a11c5914e0337efdc0badf445e",
+  "descriptive": {
+    "technical_features": {
+      "feature_statuses": {
+        "close": "OBSERVED",
+        "ma_20": "SHADOW_ONLY",
+        "ma_3": "SHADOW_ONLY",
+        "ma_5": "SHADOW_ONLY",
+        "momentum_20d": "SHADOW_ONLY",
+        "relative_volume_provider_scoped": "DERIVED_PROXY",
+        "return_1d": "SHADOW_ONLY",
+        "volatility_20d": "SHADOW_ONLY"
+      },
+      "historical_pit_eligible": false,
+      "is_current_session": true,
+      "method": "retained_20_completed_session_window; no_imputation",
+      "price_basis": "ADJUSTED_RETROSPECTIVE",
+      "price_basis_qualification": {
+        "comparability": "NOT_ESTABLISHED",
+        "factor_chain_status": "NOT_PROVIDED",
+        "historical_pit_eligible": false,
+        "limitations": [
+          "NO_QUALIFIED_CORPORATE_ACTION_FACTOR_CHAIN",
+          "AUTHENTICATED_FACTOR_CHAIN_INTERFACE_UNAVAILABLE",
+          "IDENTITY_TRANSFORM_IS_NOT_AN_ADJUSTMENT"
+        ],
+        "observed_price_basis": "CURRENT_DESCRIPTIVE_DNSE_REST_ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED",
+        "price_basis_verified": false,
+        "price_unit": "UNVERIFIED_RESEARCH_PRICE",
+        "raw_as_traded_authority": "NOT_PROMOTED",
+        "research_label": "ADJUSTED_RETROSPECTIVE",
+        "transformation_identity": "identity_provider_numeric_ohlc/v1",
+        "window_evidence": [
+          {
+            "observation_identity": null,
+            "price_basis": "CURRENT_DESCRIPTIVE_DNSE_REST_ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED",
+            "provider": "DNSE",
+            "session": "2026-09-19",
+            "source_identity": "synthetic:pnj",
+            "transformation_identity": "identity_provider_numeric_ohlc/v1"
+          },
+          {
+            "observation_identity": null,
+            "price_basis": "CURRENT_DESCRIPTIVE_DNSE_REST_ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED",
+            "provider": "DNSE",
+            "session": "2026-09-20",
+            "source_identity": "synthetic:pnj",
+            "transformation_identity": "identity_provider_numeric_ohlc/v1"
+          },
+          {
+            "observation_identity": null,
+            "price_basis": "CURRENT_DESCRIPTIVE_DNSE_REST_ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED",
+            "provider": "DNSE",
+            "session": "2026-09-21",
+            "source_identity": "synthetic:pnj",
+            "transformation_identity": "identity_provider_numeric_ohlc/v1"
+          },
+          {
+            "observation_identity": null,
+            "price_basis": "CURRENT_DESCRIPTIVE_DNSE_REST_ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED",
+            "provider": "DNSE",
+            "session": "2026-09-22",
+            "source_identity": "synthetic:pnj",
+            "transformation_identity": "identity_provider_numeric_ohlc/v1"
+          },
+          {
+            "observation_identity": null,
+            "price_basis": "CURRENT_DESCRIPTIVE_DNSE_REST_ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED",
+            "provider": "DNSE",
+            "session": "2026-09-23",
+            "source_identity": "synthetic:pnj",
+            "transformation_identity": "identity_provider_numeric_ohlc/v1"
+          },
+          {
+            "observation_identity": null,
+            "price_basis": "CURRENT_DESCRIPTIVE_DNSE_REST_ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED",
+            "provider": "DNSE",
+            "session": "2026-09-24",
+            "source_identity": "synthetic:pnj",
+            "transformation_identity": "identity_provider_numeric_ohlc/v1"
+          },
+          {
+            "observation_identity": null,
+            "price_basis": "CURRENT_DESCRIPTIVE_DNSE_REST_ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED",
+            "provider": "DNSE",
+            "session": "2026-09-25",
+            "source_identity": "synthetic:pnj",
+            "transformation_identity": "identity_provider_numeric_ohlc/v1"
+          },
+          {
+            "observation_identity": null,
+            "price_basis": "CURRENT_DESCRIPTIVE_DNSE_REST_ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED",
+            "provider": "DNSE",
+            "session": "2026-09-26",
+            "source_identity": "synthetic:pnj",
+            "transformation_identity": "identity_provider_numeric_ohlc/v1"
+          },
+          {
+            "observation_identity": null,
+            "price_basis": "CURRENT_DESCRIPTIVE_DNSE_REST_ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED",
+            "provider": "DNSE",
+            "session": "2026-09-27",
+            "source_identity": "synthetic:pnj",
+            "transformation_identity": "identity_provider_numeric_ohlc/v1"
+          },
+          {
+            "observation_identity": null,
+            "price_basis": "CURRENT_DESCRIPTIVE_DNSE_REST_ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED",
+            "provider": "DNSE",
+            "session": "2026-09-28",
+            "source_identity": "synthetic:pnj",
+            "transformation_identity": "identity_provider_numeric_ohlc/v1"
+          },
+          {
+            "observation_identity": null,
+            "price_basis": "CURRENT_DESCRIPTIVE_DNSE_REST_ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED",
+            "provider": "DNSE",
+            "session": "2026-09-29",
+            "source_identity": "synthetic:pnj",
+            "transformation_identity": "identity_provider_numeric_ohlc/v1"
+          },
+          {
+            "observation_identity": null,
+            "price_basis": "CURRENT_DESCRIPTIVE_DNSE_REST_ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED",
+            "provider": "DNSE",
+            "session": "2026-09-30",
+            "source_identity": "synthetic:pnj",
+            "transformation_identity": "identity_provider_numeric_ohlc/v1"
+          },
+          {
+            "observation_identity": null,
+            "price_basis": "CURRENT_DESCRIPTIVE_DNSE_REST_ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED",
+            "provider": "DNSE",
+            "session": "2026-10-01",
+            "source_identity": "synthetic:pnj",
+            "transformation_identity": "identity_provider_numeric_ohlc/v1"
+          },
+          {
+            "observation_identity": null,
+            "price_basis": "CURRENT_DESCRIPTIVE_DNSE_REST_ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED",
+            "provider": "DNSE",
+            "session": "2026-10-02",
+            "source_identity": "synthetic:pnj",
+            "transformation_identity": "identity_provider_numeric_ohlc/v1"
+          },
+          {
+            "observation_identity": null,
+            "price_basis": "CURRENT_DESCRIPTIVE_DNSE_REST_ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED",
+            "provider": "DNSE",
+            "session": "2026-10-03",
+            "source_identity": "synthetic:pnj",
+            "transformation_identity": "identity_provider_numeric_ohlc/v1"
+          },
+          {
+            "observation_identity": null,
+            "price_basis": "CURRENT_DESCRIPTIVE_DNSE_REST_ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED",
+            "provider": "DNSE",
+            "session": "2026-10-04",
+            "source_identity": "synthetic:pnj",
+            "transformation_identity": "identity_provider_numeric_ohlc/v1"
+          },
+          {
+            "observation_identity": null,
+            "price_basis": "CURRENT_DESCRIPTIVE_DNSE_REST_ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED",
+            "provider": "DNSE",
+            "session": "2026-10-05",
+            "source_identity": "synthetic:pnj",
+            "transformation_identity": "identity_provider_numeric_ohlc/v1"
+          },
+          {
+            "observation_identity": null,
+            "price_basis": "CURRENT_DESCRIPTIVE_DNSE_REST_ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED",
+            "provider": "DNSE",
+            "session": "2026-10-06",
+            "source_identity": "synthetic:pnj",
+            "transformation_identity": "identity_provider_numeric_ohlc/v1"
+          },
+          {
+            "observation_identity": null,
+            "price_basis": "CURRENT_DESCRIPTIVE_DNSE_REST_ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED",
+            "provider": "DNSE",
+            "session": "2026-10-07",
+            "source_identity": "synthetic:pnj",
+            "transformation_identity": "identity_provider_numeric_ohlc/v1"
+          },
+          {
+            "observation_identity": null,
+            "price_basis": "CURRENT_DESCRIPTIVE_DNSE_REST_ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED",
+            "provider": "DNSE",
+            "session": "2026-10-08",
+            "source_identity": "synthetic:pnj",
+            "transformation_identity": "identity_provider_numeric_ohlc/v1"
+          }
+        ]
+      },
+      "status": "SHADOW_ONLY",
+      "values": {
+        "close": 18.25,
+        "ma_20": 30.380000000000003,
+        "ma_3": 26.76228070175439,
+        "ma_5": 28.464736842105264,
+        "momentum_20d": -0.4116399423093239,
+        "relative_volume_provider_scoped": 1.0,
+        "return_1d": -0.4116399423093239,
+        "volatility_20d": 0.09191791408868277
+      },
+      "warnings": [
+        "PRICE_BASIS_UNVERIFIED_NOT_ADJUSTED_OR_RAW_AUTHORITY",
+        "RELATIVE_VOLUME_IS_PROVIDER_SCOPED_NOT_LIQUIDITY_AUTHORITY"
+      ]
+    },
+    "trend_state": "BELOW_MA20"
+  },
+  "expected_structure": {
+    "authority_boundary": {
+      "bos_choch_are_close_based_rule_inference_not_institutional_activity": true,
+      "breakout_state_v3_is_measurement_not_buy_signal": true,
+      "invalidation_level_is_not_a_stop_loss": true,
+      "trigger_context_is_not_execution_authority": true,
+      "volume_is_dimensionless_relative_not_adv": true
+    },
+    "authority_tier": "SHADOW_ONLY",
+    "base_context": {
+      "base_duration_sessions": 0,
+      "base_status": "NOT_IN_BASE",
+      "duration_cap_sessions": 60,
+      "duration_possibly_longer_than_reported": false,
+      "status": "AVAILABLE"
+    },
+    "blockers": [],
+    "bos_context": {
+      "bos_direction": null,
+      "bos_state": "NO_BOS",
+      "status": "AVAILABLE"
+    },
+    "breakout_context": {
+      "event": "BREAKDOWN_CONFIRMED",
+      "status": "AVAILABLE",
+      "today_structure_status": "BREAKDOWN_CONFIRMED_BY_RULE",
+      "yesterday_structure_status": "NEAR_RECENT_SUPPORT"
+    },
+    "breakout_state_v3": {
+      "blocked": {
+        "break_distance_atr": "NOT_AVAILABLE_HIGH_LOW_BASIS_NOT_COMPATIBLE",
+        "candle_body_fraction": "NOT_AVAILABLE_OPEN_NOT_IN_RETAINED_SERIES",
+        "close_location_value": "NOT_AVAILABLE_HIGH_LOW_BASIS_NOT_COMPATIBLE"
+      },
+      "breakout_state": "BELOW_PIVOT",
+      "distance_to_pivot_pct": -0.505420054200542,
+      "prior_close_above_pivot": false,
+      "status": "AVAILABLE",
+      "warning": "BREAKOUT_STATE_IS_MEASUREMENT_NOT_BUY_SIGNAL"
+    },
+    "choch_context": {
+      "choch_state": "NO_CHOCH",
+      "direction": null,
+      "status": "AVAILABLE"
+    },
+    "close_history_depth": 80,
+    "contraction_context": {
+      "range_state": "RANGE_EXPANSION",
+      "self_relative_volatility": {
+        "prior_realized_volatility_20d": 0.05267952836241093,
+        "prior_window_offset_sessions": 10,
+        "ratio_recent_over_prior": 1.7080676293634336,
+        "recent_realized_volatility_20d": 0.089980197125967,
+        "self_relative_volatility_state": "EXPANSION",
+        "status": "AVAILABLE"
+      },
+      "status": "AVAILABLE"
+    },
+    "eligibility": {
+      "status": "ELIGIBLE"
+    },
+    "high_low_basis": {
+      "affected_feature_classes": [
+        "true_atr",
+        "donchian_channel_breakout",
+        "wick_based_pattern_geometry"
+      ],
+      "fallback": "CLOSE_ONLY_PROXY_USED_FOR_STRUCTURE_AND_CONTRACTION",
+      "reason": "HIGH_LOW_BASIS_NOT_COMPATIBLE",
+      "status": "NOT_COMPATIBLE"
+    },
+    "invalidation_context": {
+      "distance_to_invalidation_pct": -0.505420054200542,
+      "invalidation_level": 36.9,
+      "invalidation_method": "CONFIRMED_SWING_HIGH_BY_RULE_OR_V1_RESISTANCE_FALLBACK",
+      "status": "AVAILABLE",
+      "warning": "INVALIDATION_LEVEL_IS_ANALYTICAL_CONTEXT_NOT_A_STOP_LOSS"
+    },
+    "method": {
+      "extended_threshold": 0.05,
+      "identity": "technical_structure_context/v2",
+      "max_lookback_sessions_cap": 250,
+      "min_structure_lookback_sessions": 20,
+      "near_threshold": 0.02,
+      "swing_n": 2
+    },
+    "pivot_context": {
+      "distance_to_pivot_atr": "NOT_AVAILABLE_HIGH_LOW_BASIS_NOT_COMPATIBLE",
+      "distance_to_pivot_pct": -0.505420054200542,
+      "pivot_method": "LAST_CONFIRMED_SWING_HIGH",
+      "pivot_price": 36.9,
+      "qualification": "DETERMINISTIC_CANDIDATE_NOT_PREDICTIVE",
+      "status": "AVAILABLE"
+    },
+    "relative_volume": {
+      "authority_tier": "DERIVED_PROXY",
+      "relative_volume_provider_scoped": 1.0,
+      "status": "AVAILABLE",
+      "warning": "NOT_LIQUIDITY_OR_TURNOVER; provider-scoped, own-20-session-median basis"
+    },
+    "structure_context": {
+      "range_position": null,
+      "resistance": {
+        "distance_from_close_pct": -0.4116399423093239,
+        "value": 31.01842105263158
+      },
+      "status": "AVAILABLE",
+      "structure_status": "BREAKDOWN_CONFIRMED_BY_RULE",
+      "support": {
+        "distance_from_close_pct": -0.4116399423093239,
+        "value": 31.01842105263158
+      }
+    },
+    "swing_structure": {
+      "confirmation_lag_sessions": 2,
+      "confirmed_swing_count": 11,
+      "last_confirmed_swing_high": {
+        "index": 51,
+        "kind": "HIGH",
+        "price": 36.9,
+        "session": "2026-09-10"
+      },
+      "last_confirmed_swing_low": {
+        "index": 58,
+        "kind": "LOW",
+        "price": 31.0,
+        "session": "2026-09-17"
+      },
+      "market_structure_state": "DOWNTREND",
+      "previous_confirmed_swing_high": {
+        "index": 41,
+        "kind": "HIGH",
+        "price": 36.9,
+        "session": "2026-08-31"
+      },
+      "previous_confirmed_swing_low": {
+        "index": 48,
+        "kind": "LOW",
+        "price": 31.0,
+        "session": "2026-09-07"
+      },
+      "status": "AVAILABLE",
+      "swing_high_sequence": "LH",
+      "swing_low_sequence": "LL"
+    },
+    "technical_history_lineage": {
+      "provider": null,
+      "recovery_artifact_identity": null,
+      "recovery_payload_sha256": null,
+      "source": "P3F9B_EXACT_SESSION_RECORD"
+    },
+    "ticker": "PNJ",
+    "trend_context": {
+      "close": 18.25,
+      "ma20_slope": {
+        "lookback_sessions": 5,
+        "prior_ma20": 31.51381578947369,
+        "slope_state": "FALLING",
+        "status": "AVAILABLE",
+        "today_ma20": 30.380000000000003
+      },
+      "ma_20": 30.380000000000003,
+      "momentum_20d": -0.4116399423093239,
+      "status": "AVAILABLE",
+      "trend_state": "BELOW_MA20"
+    },
+    "trigger_context": {
+      "distance_to_trigger_pct": null,
+      "status": "AVAILABLE",
+      "trigger_level": null,
+      "trigger_state": "BELOW_TRIGGER",
+      "trigger_type": "NO_TRIGGER",
+      "warning": "TRIGGER_CONTEXT_IS_NOT_EXECUTION_AUTHORITY"
+    }
+  },
+  "fixture_kind": "SYNTHETIC_NOT_RETAINED_EVIDENCE",
+  "rows": [
+    {
+      "close": 35.9,
+      "price_basis": "CURRENT_DESCRIPTIVE_DNSE_REST_ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED",
+      "provider": "DNSE",
+      "session": "2026-07-21",
+      "source_identity": "synthetic:pnj",
+      "transformation_identity": "identity_provider_numeric_ohlc/v1",
+      "volume": 1000
+    },
+    {
+      "close": 36.9,
+      "price_basis": "CURRENT_DESCRIPTIVE_DNSE_REST_ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED",
+      "provider": "DNSE",
+      "session": "2026-07-22",
+      "source_identity": "synthetic:pnj",
+      "transformation_identity": "identity_provider_numeric_ohlc/v1",
+      "volume": 1000
+    },
+    {
+      "close": 34.0,
+      "price_basis": "CURRENT_DESCRIPTIVE_DNSE_REST_ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED",
+      "provider": "DNSE",
+      "session": "2026-07-23",
+      "source_identity": "synthetic:pnj",
+      "transformation_identity": "identity_provider_numeric_ohlc/v1",
+      "volume": 1000
+    },
+    {
+      "close": 36.0,
+      "price_basis": "CURRENT_DESCRIPTIVE_DNSE_REST_ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED",
+      "provider": "DNSE",
+      "session": "2026-07-24",
+      "source_identity": "synthetic:pnj",
+      "transformation_identity": "identity_provider_numeric_ohlc/v1",
+      "volume": 1000
+    },
+    {
+      "close": 33.0,
+      "price_basis": "CURRENT_DESCRIPTIVE_DNSE_REST_ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED",
+      "provider": "DNSE",
+      "session": "2026-07-25",
+      "source_identity": "synthetic:pnj",
+      "transformation_identity": "identity_provider_numeric_ohlc/v1",
+      "volume": 1000
+    },
+    {
+      "close": 35.0,
+      "price_basis": "CURRENT_DESCRIPTIVE_DNSE_REST_ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED",
+      "provider": "DNSE",
+      "session": "2026-07-26",
+      "source_identity": "synthetic:pnj",
+      "transformation_identity": "identity_provider_numeric_ohlc/v1",
+      "volume": 1000
+    },
+    {
+      "close": 32.0,
+      "price_basis": "CURRENT_DESCRIPTIVE_DNSE_REST_ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED",
+      "provider": "DNSE",
+      "session": "2026-07-27",
+      "source_identity": "synthetic:pnj",
+      "transformation_identity": "identity_provider_numeric_ohlc/v1",
+      "volume": 1000
+    },
+    {
+      "close": 34.0,
+      "price_basis": "CURRENT_DESCRIPTIVE_DNSE_REST_ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED",
+      "provider": "DNSE",
+      "session": "2026-07-28",
+      "source_identity": "synthetic:pnj",
+      "transformation_identity": "identity_provider_numeric_ohlc/v1",
+      "volume": 1000
+    },
+    {
+      "close": 31.0,
+      "price_basis": "CURRENT_DESCRIPTIVE_DNSE_REST_ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED",
+      "provider": "DNSE",
+      "session": "2026-07-29",
+      "source_identity": "synthetic:pnj",
+      "transformation_identity": "identity_provider_numeric_ohlc/v1",
+      "volume": 1000
+    },
+    {
+      "close": 33.0,
+      "price_basis": "CURRENT_DESCRIPTIVE_DNSE_REST_ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED",
+      "provider": "DNSE",
+      "session": "2026-07-30",
+      "source_identity": "synthetic:pnj",
+      "transformation_identity": "identity_provider_numeric_ohlc/v1",
+      "volume": 1000
+    },
+    {
+      "close": 35.9,
+      "price_basis": "CURRENT_DESCRIPTIVE_DNSE_REST_ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED",
+      "provider": "DNSE",
+      "session": "2026-07-31",
+      "source_identity": "synthetic:pnj",
+      "transformation_identity": "identity_provider_numeric_ohlc/v1",
+      "volume": 1000
+    },
+    {
+      "close": 36.9,
+      "price_basis": "CURRENT_DESCRIPTIVE_DNSE_REST_ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED",
+      "provider": "DNSE",
+      "session": "2026-08-01",
+      "source_identity": "synthetic:pnj",
+      "transformation_identity": "identity_provider_numeric_ohlc/v1",
+      "volume": 1000
+    },
+    {
+      "close": 34.0,
+      "price_basis": "CURRENT_DESCRIPTIVE_DNSE_REST_ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED",
+      "provider": "DNSE",
+      "session": "2026-08-02",
+      "source_identity": "synthetic:pnj",
+      "transformation_identity": "identity_provider_numeric_ohlc/v1",
+      "volume": 1000
+    },
+    {
+      "close": 36.0,
+      "price_basis": "CURRENT_DESCRIPTIVE_DNSE_REST_ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED",
+      "provider": "DNSE",
+      "session": "2026-08-03",
+      "source_identity": "synthetic:pnj",
+      "transformation_identity": "identity_provider_numeric_ohlc/v1",
+      "volume": 1000
+    },
+    {
+      "close": 33.0,
+      "price_basis": "CURRENT_DESCRIPTIVE_DNSE_REST_ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED",
+      "provider": "DNSE",
+      "session": "2026-08-04",
+      "source_identity": "synthetic:pnj",
+      "transformation_identity": "identity_provider_numeric_ohlc/v1",
+      "volume": 1000
+    },
+    {
+      "close": 35.0,
+      "price_basis": "CURRENT_DESCRIPTIVE_DNSE_REST_ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED",
+      "provider": "DNSE",
+      "session": "2026-08-05",
+      "source_identity": "synthetic:pnj",
+      "transformation_identity": "identity_provider_numeric_ohlc/v1",
+      "volume": 1000
+    },
+    {
+      "close": 32.0,
+      "price_basis": "CURRENT_DESCRIPTIVE_DNSE_REST_ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED",
+      "provider": "DNSE",
+      "session": "2026-08-06",
+      "source_identity": "synthetic:pnj",
+      "transformation_identity": "identity_provider_numeric_ohlc/v1",
+      "volume": 1000
+    },
+    {
+      "close": 34.0,
+      "price_basis": "CURRENT_DESCRIPTIVE_DNSE_REST_ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED",
+      "provider": "DNSE",
+      "session": "2026-08-07",
+      "source_identity": "synthetic:pnj",
+      "transformation_identity": "identity_provider_numeric_ohlc/v1",
+      "volume": 1000
+    },
+    {
+      "close": 31.0,
+      "price_basis": "CURRENT_DESCRIPTIVE_DNSE_REST_ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED",
+      "provider": "DNSE",
+      "session": "2026-08-08",
+      "source_identity": "synthetic:pnj",
+      "transformation_identity": "identity_provider_numeric_ohlc/v1",
+      "volume": 1000
+    },
+    {
+      "close": 33.0,
+      "price_basis": "CURRENT_DESCRIPTIVE_DNSE_REST_ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED",
+      "provider": "DNSE",
+      "session": "2026-08-09",
+      "source_identity": "synthetic:pnj",
+      "transformation_identity": "identity_provider_numeric_ohlc/v1",
+      "volume": 1000
+    },
+    {
+      "close": 35.9,
+      "price_basis": "CURRENT_DESCRIPTIVE_DNSE_REST_ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED",
+      "provider": "DNSE",
+      "session": "2026-08-10",
+      "source_identity": "synthetic:pnj",
+      "transformation_identity": "identity_provider_numeric_ohlc/v1",
+      "volume": 1000
+    },
+    {
+      "close": 36.9,
+      "price_basis": "CURRENT_DESCRIPTIVE_DNSE_REST_ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED",
+      "provider": "DNSE",
+      "session": "2026-08-11",
+      "source_identity": "synthetic:pnj",
+      "transformation_identity": "identity_provider_numeric_ohlc/v1",
+      "volume": 1000
+    },
+    {
+      "close": 34.0,
+      "price_basis": "CURRENT_DESCRIPTIVE_DNSE_REST_ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED",
+      "provider": "DNSE",
+      "session": "2026-08-12",
+      "source_identity": "synthetic:pnj",
+      "transformation_identity": "identity_provider_numeric_ohlc/v1",
+      "volume": 1000
+    },
+    {
+      "close": 36.0,
+      "price_basis": "CURRENT_DESCRIPTIVE_DNSE_REST_ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED",
+      "provider": "DNSE",
+      "session": "2026-08-13",
+      "source_identity": "synthetic:pnj",
+      "transformation_identity": "identity_provider_numeric_ohlc/v1",
+      "volume": 1000
+    },
+    {
+      "close": 33.0,
+      "price_basis": "CURRENT_DESCRIPTIVE_DNSE_REST_ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED",
+      "provider": "DNSE",
+      "session": "2026-08-14",
+      "source_identity": "synthetic:pnj",
+      "transformation_identity": "identity_provider_numeric_ohlc/v1",
+      "volume": 1000
+    },
+    {
+      "close": 35.0,
+      "price_basis": "CURRENT_DESCRIPTIVE_DNSE_REST_ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED",
+      "provider": "DNSE",
+      "session": "2026-08-15",
+      "source_identity": "synthetic:pnj",
+      "transformation_identity": "identity_provider_numeric_ohlc/v1",
+      "volume": 1000
+    },
+    {
+      "close": 32.0,
+      "price_basis": "CURRENT_DESCRIPTIVE_DNSE_REST_ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED",
+      "provider": "DNSE",
+      "session": "2026-08-16",
+      "source_identity": "synthetic:pnj",
+      "transformation_identity": "identity_provider_numeric_ohlc/v1",
+      "volume": 1000
+    },
+    {
+      "close": 34.0,
+      "price_basis": "CURRENT_DESCRIPTIVE_DNSE_REST_ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED",
+      "provider": "DNSE",
+      "session": "2026-08-17",
+      "source_identity": "synthetic:pnj",
+      "transformation_identity": "identity_provider_numeric_ohlc/v1",
+      "volume": 1000
+    },
+    {
+      "close": 31.0,
+      "price_basis": "CURRENT_DESCRIPTIVE_DNSE_REST_ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED",
+      "provider": "DNSE",
+      "session": "2026-08-18",
+      "source_identity": "synthetic:pnj",
+      "transformation_identity": "identity_provider_numeric_ohlc/v1",
+      "volume": 1000
+    },
+    {
+      "close": 33.0,
+      "price_basis": "CURRENT_DESCRIPTIVE_DNSE_REST_ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED",
+      "provider": "DNSE",
+      "session": "2026-08-19",
+      "source_identity": "synthetic:pnj",
+      "transformation_identity": "identity_provider_numeric_ohlc/v1",
+      "volume": 1000
+    },
+    {
+      "close": 35.9,
+      "price_basis": "CURRENT_DESCRIPTIVE_DNSE_REST_ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED",
+      "provider": "DNSE",
+      "session": "2026-08-20",
+      "source_identity": "synthetic:pnj",
+      "transformation_identity": "identity_provider_numeric_ohlc/v1",
+      "volume": 1000
+    },
+    {
+      "close": 36.9,
+      "price_basis": "CURRENT_DESCRIPTIVE_DNSE_REST_ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED",
+      "provider": "DNSE",
+      "session": "2026-08-21",
+      "source_identity": "synthetic:pnj",
+      "transformation_identity": "identity_provider_numeric_ohlc/v1",
+      "volume": 1000
+    },
+    {
+      "close": 34.0,
+      "price_basis": "CURRENT_DESCRIPTIVE_DNSE_REST_ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED",
+      "provider": "DNSE",
+      "session": "2026-08-22",
+      "source_identity": "synthetic:pnj",
+      "transformation_identity": "identity_provider_numeric_ohlc/v1",
+      "volume": 1000
+    },
+    {
+      "close": 36.0,
+      "price_basis": "CURRENT_DESCRIPTIVE_DNSE_REST_ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED",
+      "provider": "DNSE",
+      "session": "2026-08-23",
+      "source_identity": "synthetic:pnj",
+      "transformation_identity": "identity_provider_numeric_ohlc/v1",
+      "volume": 1000
+    },
+    {
+      "close": 33.0,
+      "price_basis": "CURRENT_DESCRIPTIVE_DNSE_REST_ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED",
+      "provider": "DNSE",
+      "session": "2026-08-24",
+      "source_identity": "synthetic:pnj",
+      "transformation_identity": "identity_provider_numeric_ohlc/v1",
+      "volume": 1000
+    },
+    {
+      "close": 35.0,
+      "price_basis": "CURRENT_DESCRIPTIVE_DNSE_REST_ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED",
+      "provider": "DNSE",
+      "session": "2026-08-25",
+      "source_identity": "synthetic:pnj",
+      "transformation_identity": "identity_provider_numeric_ohlc/v1",
+      "volume": 1000
+    },
+    {
+      "close": 32.0,
+      "price_basis": "CURRENT_DESCRIPTIVE_DNSE_REST_ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED",
+      "provider": "DNSE",
+      "session": "2026-08-26",
+      "source_identity": "synthetic:pnj",
+      "transformation_identity": "identity_provider_numeric_ohlc/v1",
+      "volume": 1000
+    },
+    {
+      "close": 34.0,
+      "price_basis": "CURRENT_DESCRIPTIVE_DNSE_REST_ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED",
+      "provider": "DNSE",
+      "session": "2026-08-27",
+      "source_identity": "synthetic:pnj",
+      "transformation_identity": "identity_provider_numeric_ohlc/v1",
+      "volume": 1000
+    },
+    {
+      "close": 31.0,
+      "price_basis": "CURRENT_DESCRIPTIVE_DNSE_REST_ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED",
+      "provider": "DNSE",
+      "session": "2026-08-28",
+      "source_identity": "synthetic:pnj",
+      "transformation_identity": "identity_provider_numeric_ohlc/v1",
+      "volume": 1000
+    },
+    {
+      "close": 33.0,
+      "price_basis": "CURRENT_DESCRIPTIVE_DNSE_REST_ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED",
+      "provider": "DNSE",
+      "session": "2026-08-29",
+      "source_identity": "synthetic:pnj",
+      "transformation_identity": "identity_provider_numeric_ohlc/v1",
+      "volume": 1000
+    },
+    {
+      "close": 35.9,
+      "price_basis": "CURRENT_DESCRIPTIVE_DNSE_REST_ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED",
+      "provider": "DNSE",
+      "session": "2026-08-30",
+      "source_identity": "synthetic:pnj",
+      "transformation_identity": "identity_provider_numeric_ohlc/v1",
+      "volume": 1000
+    },
+    {
+      "close": 36.9,
+      "price_basis": "CURRENT_DESCRIPTIVE_DNSE_REST_ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED",
+      "provider": "DNSE",
+      "session": "2026-08-31",
+      "source_identity": "synthetic:pnj",
+      "transformation_identity": "identity_provider_numeric_ohlc/v1",
+      "volume": 1000
+    },
+    {
+      "close": 34.0,
+      "price_basis": "CURRENT_DESCRIPTIVE_DNSE_REST_ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED",
+      "provider": "DNSE",
+      "session": "2026-09-01",
+      "source_identity": "synthetic:pnj",
+      "transformation_identity": "identity_provider_numeric_ohlc/v1",
+      "volume": 1000
+    },
+    {
+      "close": 36.0,
+      "price_basis": "CURRENT_DESCRIPTIVE_DNSE_REST_ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED",
+      "provider": "DNSE",
+      "session": "2026-09-02",
+      "source_identity": "synthetic:pnj",
+      "transformation_identity": "identity_provider_numeric_ohlc/v1",
+      "volume": 1000
+    },
+    {
+      "close": 33.0,
+      "price_basis": "CURRENT_DESCRIPTIVE_DNSE_REST_ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED",
+      "provider": "DNSE",
+      "session": "2026-09-03",
+      "source_identity": "synthetic:pnj",
+      "transformation_identity": "identity_provider_numeric_ohlc/v1",
+      "volume": 1000
+    },
+    {
+      "close": 35.0,
+      "price_basis": "CURRENT_DESCRIPTIVE_DNSE_REST_ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED",
+      "provider": "DNSE",
+      "session": "2026-09-04",
+      "source_identity": "synthetic:pnj",
+      "transformation_identity": "identity_provider_numeric_ohlc/v1",
+      "volume": 1000
+    },
+    {
+      "close": 32.0,
+      "price_basis": "CURRENT_DESCRIPTIVE_DNSE_REST_ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED",
+      "provider": "DNSE",
+      "session": "2026-09-05",
+      "source_identity": "synthetic:pnj",
+      "transformation_identity": "identity_provider_numeric_ohlc/v1",
+      "volume": 1000
+    },
+    {
+      "close": 34.0,
+      "price_basis": "CURRENT_DESCRIPTIVE_DNSE_REST_ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED",
+      "provider": "DNSE",
+      "session": "2026-09-06",
+      "source_identity": "synthetic:pnj",
+      "transformation_identity": "identity_provider_numeric_ohlc/v1",
+      "volume": 1000
+    },
+    {
+      "close": 31.0,
+      "price_basis": "CURRENT_DESCRIPTIVE_DNSE_REST_ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED",
+      "provider": "DNSE",
+      "session": "2026-09-07",
+      "source_identity": "synthetic:pnj",
+      "transformation_identity": "identity_provider_numeric_ohlc/v1",
+      "volume": 1000
+    },
+    {
+      "close": 33.0,
+      "price_basis": "CURRENT_DESCRIPTIVE_DNSE_REST_ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED",
+      "provider": "DNSE",
+      "session": "2026-09-08",
+      "source_identity": "synthetic:pnj",
+      "transformation_identity": "identity_provider_numeric_ohlc/v1",
+      "volume": 1000
+    },
+    {
+      "close": 35.9,
+      "price_basis": "CURRENT_DESCRIPTIVE_DNSE_REST_ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED",
+      "provider": "DNSE",
+      "session": "2026-09-09",
+      "source_identity": "synthetic:pnj",
+      "transformation_identity": "identity_provider_numeric_ohlc/v1",
+      "volume": 1000
+    },
+    {
+      "close": 36.9,
+      "price_basis": "CURRENT_DESCRIPTIVE_DNSE_REST_ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED",
+      "provider": "DNSE",
+      "session": "2026-09-10",
+      "source_identity": "synthetic:pnj",
+      "transformation_identity": "identity_provider_numeric_ohlc/v1",
+      "volume": 1000
+    },
+    {
+      "close": 34.0,
+      "price_basis": "CURRENT_DESCRIPTIVE_DNSE_REST_ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED",
+      "provider": "DNSE",
+      "session": "2026-09-11",
+      "source_identity": "synthetic:pnj",
+      "transformation_identity": "identity_provider_numeric_ohlc/v1",
+      "volume": 1000
+    },
+    {
+      "close": 36.0,
+      "price_basis": "CURRENT_DESCRIPTIVE_DNSE_REST_ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED",
+      "provider": "DNSE",
+      "session": "2026-09-12",
+      "source_identity": "synthetic:pnj",
+      "transformation_identity": "identity_provider_numeric_ohlc/v1",
+      "volume": 1000
+    },
+    {
+      "close": 33.0,
+      "price_basis": "CURRENT_DESCRIPTIVE_DNSE_REST_ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED",
+      "provider": "DNSE",
+      "session": "2026-09-13",
+      "source_identity": "synthetic:pnj",
+      "transformation_identity": "identity_provider_numeric_ohlc/v1",
+      "volume": 1000
+    },
+    {
+      "close": 35.0,
+      "price_basis": "CURRENT_DESCRIPTIVE_DNSE_REST_ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED",
+      "provider": "DNSE",
+      "session": "2026-09-14",
+      "source_identity": "synthetic:pnj",
+      "transformation_identity": "identity_provider_numeric_ohlc/v1",
+      "volume": 1000
+    },
+    {
+      "close": 32.0,
+      "price_basis": "CURRENT_DESCRIPTIVE_DNSE_REST_ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED",
+      "provider": "DNSE",
+      "session": "2026-09-15",
+      "source_identity": "synthetic:pnj",
+      "transformation_identity": "identity_provider_numeric_ohlc/v1",
+      "volume": 1000
+    },
+    {
+      "close": 34.0,
+      "price_basis": "CURRENT_DESCRIPTIVE_DNSE_REST_ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED",
+      "provider": "DNSE",
+      "session": "2026-09-16",
+      "source_identity": "synthetic:pnj",
+      "transformation_identity": "identity_provider_numeric_ohlc/v1",
+      "volume": 1000
+    },
+    {
+      "close": 31.0,
+      "price_basis": "CURRENT_DESCRIPTIVE_DNSE_REST_ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED",
+      "provider": "DNSE",
+      "session": "2026-09-17",
+      "source_identity": "synthetic:pnj",
+      "transformation_identity": "identity_provider_numeric_ohlc/v1",
+      "volume": 1000
+    },
+    {
+      "close": 33.0,
+      "price_basis": "CURRENT_DESCRIPTIVE_DNSE_REST_ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED",
+      "provider": "DNSE",
+      "session": "2026-09-18",
+      "source_identity": "synthetic:pnj",
+      "transformation_identity": "identity_provider_numeric_ohlc/v1",
+      "volume": 1000
+    },
+    {
+      "close": 31.01842105263158,
+      "price_basis": "CURRENT_DESCRIPTIVE_DNSE_REST_ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED",
+      "provider": "DNSE",
+      "session": "2026-09-19",
+      "source_identity": "synthetic:pnj",
+      "transformation_identity": "identity_provider_numeric_ohlc/v1",
+      "volume": 1000
+    },
+    {
+      "close": 31.01842105263158,
+      "price_basis": "CURRENT_DESCRIPTIVE_DNSE_REST_ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED",
+      "provider": "DNSE",
+      "session": "2026-09-20",
+      "source_identity": "synthetic:pnj",
+      "transformation_identity": "identity_provider_numeric_ohlc/v1",
+      "volume": 1000
+    },
+    {
+      "close": 31.01842105263158,
+      "price_basis": "CURRENT_DESCRIPTIVE_DNSE_REST_ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED",
+      "provider": "DNSE",
+      "session": "2026-09-21",
+      "source_identity": "synthetic:pnj",
+      "transformation_identity": "identity_provider_numeric_ohlc/v1",
+      "volume": 1000
+    },
+    {
+      "close": 31.01842105263158,
+      "price_basis": "CURRENT_DESCRIPTIVE_DNSE_REST_ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED",
+      "provider": "DNSE",
+      "session": "2026-09-22",
+      "source_identity": "synthetic:pnj",
+      "transformation_identity": "identity_provider_numeric_ohlc/v1",
+      "volume": 1000
+    },
+    {
+      "close": 31.01842105263158,
+      "price_basis": "CURRENT_DESCRIPTIVE_DNSE_REST_ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED",
+      "provider": "DNSE",
+      "session": "2026-09-23",
+      "source_identity": "synthetic:pnj",
+      "transformation_identity": "identity_provider_numeric_ohlc/v1",
+      "volume": 1000
+    },
+    {
+      "close": 31.01842105263158,
+      "price_basis": "CURRENT_DESCRIPTIVE_DNSE_REST_ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED",
+      "provider": "DNSE",
+      "session": "2026-09-24",
+      "source_identity": "synthetic:pnj",
+      "transformation_identity": "identity_provider_numeric_ohlc/v1",
+      "volume": 1000
+    },
+    {
+      "close": 31.01842105263158,
+      "price_basis": "CURRENT_DESCRIPTIVE_DNSE_REST_ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED",
+      "provider": "DNSE",
+      "session": "2026-09-25",
+      "source_identity": "synthetic:pnj",
+      "transformation_identity": "identity_provider_numeric_ohlc/v1",
+      "volume": 1000
+    },
+    {
+      "close": 31.01842105263158,
+      "price_basis": "CURRENT_DESCRIPTIVE_DNSE_REST_ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED",
+      "provider": "DNSE",
+      "session": "2026-09-26",
+      "source_identity": "synthetic:pnj",
+      "transformation_identity": "identity_provider_numeric_ohlc/v1",
+      "volume": 1000
+    },
+    {
+      "close": 31.01842105263158,
+      "price_basis": "CURRENT_DESCRIPTIVE_DNSE_REST_ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED",
+      "provider": "DNSE",
+      "session": "2026-09-27",
+      "source_identity": "synthetic:pnj",
+      "transformation_identity": "identity_provider_numeric_ohlc/v1",
+      "volume": 1000
+    },
+    {
+      "close": 31.01842105263158,
+      "price_basis": "CURRENT_DESCRIPTIVE_DNSE_REST_ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED",
+      "provider": "DNSE",
+      "session": "2026-09-28",
+      "source_identity": "synthetic:pnj",
+      "transformation_identity": "identity_provider_numeric_ohlc/v1",
+      "volume": 1000
+    },
+    {
+      "close": 31.01842105263158,
+      "price_basis": "CURRENT_DESCRIPTIVE_DNSE_REST_ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED",
+      "provider": "DNSE",
+      "session": "2026-09-29",
+      "source_identity": "synthetic:pnj",
+      "transformation_identity": "identity_provider_numeric_ohlc/v1",
+      "volume": 1000
+    },
+    {
+      "close": 31.01842105263158,
+      "price_basis": "CURRENT_DESCRIPTIVE_DNSE_REST_ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED",
+      "provider": "DNSE",
+      "session": "2026-09-30",
+      "source_identity": "synthetic:pnj",
+      "transformation_identity": "identity_provider_numeric_ohlc/v1",
+      "volume": 1000
+    },
+    {
+      "close": 31.01842105263158,
+      "price_basis": "CURRENT_DESCRIPTIVE_DNSE_REST_ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED",
+      "provider": "DNSE",
+      "session": "2026-10-01",
+      "source_identity": "synthetic:pnj",
+      "transformation_identity": "identity_provider_numeric_ohlc/v1",
+      "volume": 1000
+    },
+    {
+      "close": 31.01842105263158,
+      "price_basis": "CURRENT_DESCRIPTIVE_DNSE_REST_ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED",
+      "provider": "DNSE",
+      "session": "2026-10-02",
+      "source_identity": "synthetic:pnj",
+      "transformation_identity": "identity_provider_numeric_ohlc/v1",
+      "volume": 1000
+    },
+    {
+      "close": 31.01842105263158,
+      "price_basis": "CURRENT_DESCRIPTIVE_DNSE_REST_ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED",
+      "provider": "DNSE",
+      "session": "2026-10-03",
+      "source_identity": "synthetic:pnj",
+      "transformation_identity": "identity_provider_numeric_ohlc/v1",
+      "volume": 1000
+    },
+    {
+      "close": 31.01842105263158,
+      "price_basis": "CURRENT_DESCRIPTIVE_DNSE_REST_ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED",
+      "provider": "DNSE",
+      "session": "2026-10-04",
+      "source_identity": "synthetic:pnj",
+      "transformation_identity": "identity_provider_numeric_ohlc/v1",
+      "volume": 1000
+    },
+    {
+      "close": 31.01842105263158,
+      "price_basis": "CURRENT_DESCRIPTIVE_DNSE_REST_ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED",
+      "provider": "DNSE",
+      "session": "2026-10-05",
+      "source_identity": "synthetic:pnj",
+      "transformation_identity": "identity_provider_numeric_ohlc/v1",
+      "volume": 1000
+    },
+    {
+      "close": 31.01842105263158,
+      "price_basis": "CURRENT_DESCRIPTIVE_DNSE_REST_ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED",
+      "provider": "DNSE",
+      "session": "2026-10-06",
+      "source_identity": "synthetic:pnj",
+      "transformation_identity": "identity_provider_numeric_ohlc/v1",
+      "volume": 1000
+    },
+    {
+      "close": 31.01842105263158,
+      "price_basis": "CURRENT_DESCRIPTIVE_DNSE_REST_ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED",
+      "provider": "DNSE",
+      "session": "2026-10-07",
+      "source_identity": "synthetic:pnj",
+      "transformation_identity": "identity_provider_numeric_ohlc/v1",
+      "volume": 1000
+    },
+    {
+      "close": 18.25,
+      "price_basis": "CURRENT_DESCRIPTIVE_DNSE_REST_ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED",
+      "provider": "DNSE",
+      "session": "2026-10-08",
+      "source_identity": "synthetic:pnj",
+      "transformation_identity": "identity_provider_numeric_ohlc/v1",
+      "volume": 1000
+    }
+  ]
+}

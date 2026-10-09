@@ -108,11 +108,12 @@ def test_raw_morphology_allowed_but_continuous_unknown_ca_blocked():
 
 def test_qualified_pit_uses_existing_factor_gate_and_allows_atr():
     s=series(15,basis="PIT_CA_ADJUSTED");r=evaluate(s)
-    assert all(b["price_basis"] == "PIT_CA_ADJUSTED" for b in s)
-    components=values(r,"continuous_indicators")
-    assert components["atr14"]["status"] == "AVAILABLE"
-    assert components["atr14"]["values"] == 4
-    assert components["sma20"]["status"] == "INSUFFICIENT_HISTORY"
+    # The fixture seals content with self-asserted factor statuses, not an
+    # independently authenticated CA producer. It cannot qualify adjusted ATR.
+    assert all(b["price_basis"] == "PIT_CA_ADJUSTED_UNQUALIFIED" and b["price_basis_verified"] is False for b in s)
+    assert all(b["high"] - b["low"] == 4 for b in s)  # no OHLC recalculation
+    assert r["features"]["continuous_indicators"]["status"] == "BLOCKED_BASIS"
+    assert values(r,"continuous_indicators") is None
     assert r["context"]["historical_pit_authority"] is False
 
 

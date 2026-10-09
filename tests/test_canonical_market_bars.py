@@ -142,7 +142,7 @@ def test_raw_and_ca_crossing_keep_values_without_factors():
     assert derive(rows,ca_events=[{**event,"event_type":"AGM"}]) == derive(rows)
 
 
-def test_future_qualified_pit_uses_same_boundary_and_keeps_factor_lineage():
+def test_self_asserted_pit_chain_is_unqualified_and_keeps_factor_lineage():
     rows=[observation("2026-07-06"),observation("2026-07-10")]
     for row in rows:
         row["price_mode"]=pit.PIT_CA_ADJUSTED
@@ -151,7 +151,7 @@ def test_future_qualified_pit_uses_same_boundary_and_keeps_factor_lineage():
             ex_date_status="EXPLICIT_OFFICIAL",ex_date="2026-07-01",knowledge_cutoff="2026-07-01T08:00:00Z",adjustment_factor=1.1)]
         rehash(row)
     b=derive(rows,requested_price_mode=pit.PIT_CA_ADJUSTED)
-    assert b["status"] == "AVAILABLE" and b["price_basis"] == pit.PIT_CA_ADJUSTED
+    assert b["status"] == "UNAVAILABLE" and b["price_basis"] == "PIT_CA_ADJUSTED_UNQUALIFIED"
     assert b["constituent_factor_chains"][0]["raw_lineage_identities"] == ["raw:original"]
     rows[0]["factor_chain"][0]["knowledge_cutoff"]="2026-08-02T08:00:00Z";rehash(rows[0])
     assert derive(rows,requested_price_mode=pit.PIT_CA_ADJUSTED)["status"] == "UNAVAILABLE"

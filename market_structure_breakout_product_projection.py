@@ -65,7 +65,20 @@ def _project_ticker(ticker: str, record: Mapping[str, Any], session: str) -> dic
             "CONFIRMED_SWING_HIGH_BY_RULE_OR_V1_RESISTANCE_FALLBACK": ">",
         }.get(invalid.get("invalidation_method"))
 
+    from mva_daily_research_bundle import price_basis_qualification_from_window
+    qualification = {**price_basis_qualification_from_window([]), **(record.get("price_basis_qualification") or {}),
+        "price_basis_verified": False, "comparability": "NOT_ESTABLISHED", "historical_pit_eligible": False,
+        "raw_as_traded_authority": "NOT_PROMOTED", "price_unit": "UNVERIFIED_RESEARCH_PRICE"}
+    trigger_horizon = "PIVOT_BREAKOUT_MEASUREMENT" if trigger.get("trigger_type") in {"PIVOT_BREAKOUT_TRIGGER", "RETEST_BROKEN_PIVOT"} else "BOS_BREAKOUT_MEASUREMENT" if trigger.get("trigger_type") == "CONFIRMED_BOS_TRIGGER" else "UNKNOWN"
+    invalidation_horizon = "SWING_STRUCTURE_ANALYTICAL_CONTEXT" if invalidation_operator else "UNKNOWN"
+    present = all(isinstance(v, (int, float)) and not isinstance(v, bool) for v in (trigger.get("trigger_level"), invalid.get("invalidation_level")))
+    shared = present and trigger["trigger_level"] == invalid["invalidation_level"]
+    distinct_horizons = trigger_horizon != "UNKNOWN" and invalidation_horizon != "UNKNOWN" and trigger_horizon != invalidation_horizon
     return {
+        "price_basis_qualification": qualification,
+        "trigger_horizon": trigger_horizon, "invalidation_horizon": invalidation_horizon,
+        "shared_level_status": "SHARED_BOUNDARY" if shared else "DISTINCT_BOUNDARIES" if present else "UNAVAILABLE_BOUNDARIES",
+        "warnings": ["SHARED_LEVEL_DISTINCT_HORIZONS"] if shared and distinct_horizons else [],
         "ticker": ticker,
         "as_of_session": session,
         "eligible": eligibility.get("status") == "ELIGIBLE",
@@ -112,6 +125,7 @@ def _project_ticker(ticker: str, record: Mapping[str, Any], session: str) -> dic
         "blockers": record.get("blockers", []),
         "fitness": "CURRENT_RESEARCH_ONLY",
         "authority": {
+            "price_basis_qualification": qualification,
             "is_actionable": False,
             "requires_human_review": True,
             "not_a_recommendation_or_execution_instruction": True,

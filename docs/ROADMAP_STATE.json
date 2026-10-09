@@ -15,16 +15,34 @@
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "STOCKLOOKUP_VAULT_INCREMENTAL_SNAPSHOT_CONTRACT_AND_OFFLINE_ACCEPTANCE_V1",
+    "milestone": "PRICE_BASIS_AND_FLOW_CONTRACT_CORRECTIVE_V1",
     "state": "COMPLETE"
   },
   "queued_next": [],
   "milestones": [
     {
+      "milestone_id": "PRICE_BASIS_AND_FLOW_CONTRACT_CORRECTIVE_V1",
+      "state": "COMPLETE",
+      "checkpoint": "HEAD",
+      "state_history": ["ACTIVE", "COMPLETE"],
+      "terminal_disposition": "PRICE_BASIS_AND_FLOW_CORRECTIVE_LOCAL_READY",
+      "starting_checkpoint": "3f3d4fe38abbb3a11c5914e0337efdc0badf445e",
+      "candidate_branch": "feature/price-basis-flow-corrective-20261009",
+      "dependencies": [
+        "STOCKLOOKUP_VAULT_INCREMENTAL_SNAPSHOT_CONTRACT_AND_OFFLINE_ACCEPTANCE_V1"
+      ],
+      "unlocks": [],
+      "owner_authorized": true,
+      "owner_override": "OWNER_DIRECTIVE_2026_10_09_PRICE_BASIS_FLOW_LOCAL_CHECKPOINT_ONLY",
+      "authority_effect": "NONE",
+      "source_doc": "docs/price_basis_and_flow_contract_corrective.md",
+      "notes": "Owner-admitted bounded qualification, velocity read compatibility and PAN horizon presentation. PR98 CI compatibility corrective authorized 2026-10-09: legacy synthetic fixtures and deterministic timeout injection; normal pushes to the same PR only. No Daily, production write, merge, retained rebuild or successor."
+    },
+    {
       "milestone_id": "STOCKLOOKUP_VAULT_INCREMENTAL_SNAPSHOT_CONTRACT_AND_OFFLINE_ACCEPTANCE_V1",
       "state": "COMPLETE",
       "starting_checkpoint": "9db35f157af38baf3807be1a6a6827e77fd461dc",
-      "checkpoint": "HEAD",
+      "checkpoint": "d7ee579ebf609afe276a27b4571b857c94f9a205",
       "candidate_branch": "feature/vault-incremental-offline-acceptance-20261009",
       "dependencies": [
         "LONG_TERM_COMPANY_ECONOMICS_EVIDENCE_MATRIX_V1"

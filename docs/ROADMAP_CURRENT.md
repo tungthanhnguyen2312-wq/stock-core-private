@@ -1,20 +1,24 @@
 # Stock Lookup — Current Roadmap
 
-What happens next, and nothing else. No historical milestones (those live in [ROADMAP.md](ROADMAP.md) and
-the machine state `ROADMAP_STATE.json`). Updated 2026-10-09 from starting main `9db35f157af38baf3807be1a6a6827e77fd461dc`. **Nothing below
-auto-starts.** A milestone starts only when `python tools/stocklookup_roadmap.py --can-start <ID>` allows
-it or the owner records an explicit override (AI_RULES rule 11). Facts: [ACTIVE_STATE.md](ACTIVE_STATE.md).
+Current navigation; history: [ROADMAP.md](ROADMAP.md), execution: ROADMAP_STATE.json.
+Updated 2026-10-09 from main `3f3d4fe38abbb3a11c5914e0337efdc0badf445e`.
+Nothing below auto-starts: native --can-start or explicit owner override admits work (AI_RULES 11).
+Facts: [ACTIVE_STATE.md](ACTIVE_STATE.md).
 
-## NOW — vault incremental snapshot / retention V1 (COMPLETE)
+## NOW — price basis/flow corrective V1 (COMPLETE)
 
-Owner override registers `STOCKLOOKUP_VAULT_INCREMENTAL_SNAPSHOT_CONTRACT_AND_OFFLINE_ACCEPTANCE_V1`.
-Offline snapshot/SQLite tools and retention preflight; local HEAD checkpoint, no queued successor.
-Backup alone does not solve C capacity. Production activation and exact source retention need
-separate approval and complete recovery/reference proofs. No Daily, push, deletion or deployment.
+Owner override admits `PRICE_BASIS_AND_FLOW_CONTRACT_CORRECTIVE_V1`: local
+implementation/tests/checkpoint only. Calculations/authority unchanged; unverified basis,
+velocity read compatibility, PAN horizons. No Daily/push/retained rebuild/successor.
+[Contract](price_basis_and_flow_contract_corrective.md).
+
+Vault V1 COMPLETE, PR97 merged at starting main: offline snapshot/SQLite tools and
+77-candidate preflight; zero deletion authority. Backup cannot solve C capacity;
+production/recovery/reference and exact retention approvals remain gated.
 [Contract and acceptance](vault_incremental_snapshot_contract.md).
 
-Economics V1 is COMPLETE: PR96 merged at starting main above. PNJ/PVD/FPT observations,
-interpretation and normalization blockers remain offline/non-voting.
+Economics V1 COMPLETE: PR96 merged `9db35f1`; PNJ/PVD/FPT observations,
+interpretation/normalization blockers stay offline/non-voting.
 [Contract](long_term_company_economics_evidence_contract.md).
 
 ## PRIOR — `MACRO_REGIME_CANONICAL_DAILY_CONSUMER_AND_TEMPORAL_CORRECTIVE_V1` (COMPLETE)

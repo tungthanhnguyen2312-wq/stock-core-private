@@ -94,6 +94,33 @@ def derive_empirical_active_cohort(rows_by_ticker: Mapping[str, Sequence[Mapping
     return contract | {"exclusions": exclusions}
 
 
+def price_basis_qualification_from_window(rows: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    """Describe retained stamps, never authenticate a caller's factor-chain claims.
+
+    No independently authenticated factor-chain producer interface exists here.
+    Identity transformation, event announcements and self-asserted status strings
+    therefore cannot establish adjusted, raw or historical PIT authority.
+    """
+    tuples = {(row.get("price_basis"), row.get("transformation_identity")) for row in rows}
+    basis, transform = next(iter(tuples)) if len(tuples) == 1 else (None, None)
+    retrospective = basis in {"ADJUSTED_RETROSPECTIVE", "RETROSPECTIVE_ADJUSTED", "CURRENT_RETROSPECTIVE_ADJUSTED",
+        "CURRENT_DESCRIPTIVE_DNSE_REST_ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED"}
+    limitations = ["NO_QUALIFIED_CORPORATE_ACTION_FACTOR_CHAIN", "AUTHENTICATED_FACTOR_CHAIN_INTERFACE_UNAVAILABLE"]
+    if transform == "identity_provider_numeric_ohlc/v1":
+        limitations.append("IDENTITY_TRANSFORM_IS_NOT_AN_ADJUSTMENT")
+    if not basis: limitations.append("PRICE_BASIS_MISSING_OR_MIXED")
+    return {"observed_price_basis": basis, "transformation_identity": transform,
+        "research_label": "ADJUSTED_RETROSPECTIVE" if retrospective else "unknown",
+        "price_basis_verified": False, "factor_chain_status": "UNAUTHENTICATED_CLAIMS" if any(row.get("factor_chain") for row in rows) else "NOT_PROVIDED",
+        "raw_as_traded_authority": "NOT_PROMOTED", "comparability": "NOT_ESTABLISHED",
+        "historical_pit_eligible": False, "price_unit": "UNVERIFIED_RESEARCH_PRICE",
+        "window_evidence": [{"session": row.get("session", row.get("date")),
+            "source_identity": row.get("source_identity"), "observation_identity": row.get("observation_identity", row.get("snapshot_identity")),
+            "provider": row.get("provider"), "price_basis": row.get("price_basis"),
+            "transformation_identity": row.get("transformation_identity")} for row in rows],
+        "limitations": limitations}
+
+
 def market_features(rows: Sequence[Mapping[str, Any]], *, as_of_session: str | None = None) -> dict[str, Any]:
     """Compute descriptive features only from the complete, chronological 20-observation window.
 
@@ -112,12 +139,13 @@ def market_features(rows: Sequence[Mapping[str, Any]], *, as_of_session: str | N
     values = {"close": closes[-1], "return_1d": returns[-1], "momentum_20d": reference_window.reference_momentum_20d(closes),
               "ma_3": statistics.mean(closes[-3:]), "ma_5": statistics.mean(closes[-5:]), "ma_20": reference_window.reference_ma20(closes),
               "volatility_20d": statistics.pstdev(returns), "relative_volume_provider_scoped": (volumes[-1] / median_volume if median_volume else None)}
-    return {"status": "SHADOW_ONLY", "price_basis": "ADJUSTED_RETROSPECTIVE", "historical_pit_eligible": False,
+    qualification = price_basis_qualification_from_window(ordered)
+    return {"status": "SHADOW_ONLY", "price_basis": qualification["research_label"], "price_basis_qualification": qualification, "historical_pit_eligible": False,
             "method": "retained_20_completed_session_window; no_imputation", "values": values,
             "feature_statuses": {"close": FeatureStatus.OBSERVED.value, "return_1d": "SHADOW_ONLY", "momentum_20d": "SHADOW_ONLY",
                                  "ma_3": "SHADOW_ONLY", "ma_5": "SHADOW_ONLY", "ma_20": "SHADOW_ONLY", "volatility_20d": "SHADOW_ONLY",
                                  "relative_volume_provider_scoped": FeatureStatus.DERIVED_PROXY.value},
-            "warnings": ["ADJUSTED_RETROSPECTIVE_NOT_RAW_AS_TRADED", "RELATIVE_VOLUME_IS_PROVIDER_SCOPED_NOT_LIQUIDITY_AUTHORITY"]}
+            "warnings": ["PRICE_BASIS_UNVERIFIED_NOT_ADJUSTED_OR_RAW_AUTHORITY", "RELATIVE_VOLUME_IS_PROVIDER_SCOPED_NOT_LIQUIDITY_AUTHORITY"]}
 
 
 def _load_runtime_market(runtime_root: Path, *, frozen_session: str) -> tuple[list[str], dict[str, list[dict[str, Any]]], list[str], dict[str, dict[str, Any]]]:

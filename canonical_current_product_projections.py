@@ -271,7 +271,11 @@ def materialize_current_flow_price_divergence_shadow(
     the release runtime already held all 11 exact-session observations, publishing 11/11
     ``FLOW_UNAVAILABLE``. ``runtime_root(root)`` remains only the no-override legacy default.
     """
-    if not isinstance(velocity_artifact, Mapping) or velocity_artifact.get("contract_version") != velocity_flow_price_presentation_projection.SIGNAL_VELOCITY_CONTRACT_VERSION:
+    if not isinstance(velocity_artifact, Mapping):
+        return None
+    try:
+        flow_price_divergence_shadow.accept_velocity_for_flow(velocity_artifact, reference_session=session)
+    except Exception:  # noqa: BLE001 - invalid evidence keeps this non-voting axis unavailable
         return None
     runtime = Path(runtime_root_override).resolve() if runtime_root_override is not None else runtime_root(root)
     series: dict[str, Any] = {}
