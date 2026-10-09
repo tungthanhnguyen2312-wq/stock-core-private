@@ -1,0 +1,1429 @@
+{
+  "schema": "vault_incremental_offline_acceptance/v1",
+  "host_local": true,
+  "base_sha": "9db35f157af38baf3807be1a6a6827e77fd461dc",
+  "branch": "feature/vault-incremental-offline-acceptance-20261009",
+  "scope": "OFFLINE_IMPLEMENTATION_AND_LOCAL_CHECKPOINT_ONLY",
+  "audit_provenance": [
+    {
+      "path": "W:\\ProjectVault\\Manifests\\storage-reconciliation-20261009\\FINAL_REPORT.md",
+      "sha256": "e34b1e0c28591dfafeafc18cd6d2eba9bceb6dfdf59f5ff60a616bd533886649"
+    },
+    {
+      "path": "W:\\ProjectVault\\Manifests\\storage-reconciliation-20261009\\PROPOSED_CLEANUP_MANIFEST.json",
+      "sha256": "fe6ecb44b341ed9141623b517e71008632dfacbbc4448b7e40be884a8733132f"
+    },
+    {
+      "path": "W:\\ProjectVault\\Manifests\\storage-reconciliation-20261009\\observed_daily_logical_growth.json",
+      "sha256": "5507fdfcc2d0cbac41a1d09bdeb8e79e1c71b960de92c56becf7aacde39b6eca"
+    },
+    {
+      "path": "W:\\ProjectVault\\Manifests\\storage-reconciliation-20261009\\duplicate_and_physical_proofs.json",
+      "sha256": "7213cdc1eaa3e6f6841e618598f04efcb7428f2d2751ea703886b84761c63112"
+    },
+    {
+      "path": "W:\\ProjectVault\\Manifests\\storage-reconciliation-20261009\\data_backup_receipt.json",
+      "sha256": "562fea0003c5f2e5ad7f309a94476942b3ff4192820af563b3bd782cafefac0b"
+    },
+    {
+      "path": "W:\\ProjectVault\\Manifests\\storage-reconciliation-20261009\\restore_drill_receipt.json",
+      "sha256": "10dcb39982b21c8853b3f9b2bfc1faa229f5a5abfc724ac4619e0534f70e4d8a"
+    }
+  ],
+  "retained_receipts": [
+    {
+      "path": "W:\\ProjectVault\\Manifests\\PHASE_A_WORKTREE_ARCHIVES_RECEIPT.json",
+      "receipt_file_sha256": "74bb6e07a0b08f346c3bd3d016b2c2072c2841c881ecf06c5a5564b9d54561fd",
+      "content": {
+        "receipt": "PROJECT_VAULT_PHASE_A_WORKTREE_ARCHIVES_V1",
+        "result": "PASS",
+        "created_at": "2026-10-08T19:46:35+0700",
+        "mode": "COPY_ONLY (robocopy /E /COPY:DAT /DCOPY:DAT /XJ /R:1 /W:1; no /MIR /PURGE /MOV)",
+        "source": {
+          "root": "T:\\StockLookup\\worktree-archives",
+          "volume_label": "uhigasi",
+          "volume_guid": "e12216ac-1354-41da-a384-305f67ae820e",
+          "device": "Lexar E6 USB"
+        },
+        "destination": {
+          "root": "W:\\ProjectVault\\StockLookup\\worktree-archives",
+          "volume_label": "WD4TB_BACKUP",
+          "volume_guid": "853437c5-ce35-43eb-ad4f-083d09e9fbe4",
+          "device": "WDC WD40EFZZ-68CPAN0 in USB enclosure"
+        },
+        "authoritative_ledger": {
+          "path": "T:\\StockLookup\\worktree-archives\\_manifest\\unique-files.jsonl",
+          "file_sha256": "64c519278f764a90fe2d78f80bc174fd92aab6729bef021bd7a9c67883c73e0b",
+          "manifest": "T:\\StockLookup\\worktree-archives\\_manifest\\worktree-archive-manifest.json",
+          "manifest_file_sha256": "f0d225882517f8dfdc74f2b7a1058ae3dfa61a99aa198cbcd1e6a05fc732b7d4",
+          "manifest_self_hash": "3b6d95519b5eb2c364f4f3ce71d781fee8544f8cca2bba2d64e0156f4b34411c",
+          "manifest_self_hash_recomputed": "MATCH (sha256 of indent-2 JSON without manifest_sha256, trailing newline)",
+          "manifest_unique_file_count": 4908,
+          "manifest_unique_bytes": 12697186152
+        },
+        "robocopy": {
+          "dirs": 882,
+          "files": 4911,
+          "bytes_copied": "11.829 GiB",
+          "failed": 0,
+          "exit_code": 1,
+          "seconds": 630,
+          "log": "W:\\ProjectVault\\Manifests\\phaseA_robocopy.log"
+        },
+        "verification": {
+          "ledger_entries": 4908,
+          "verified_ok": 4908,
+          "verified_bytes": 12697186152,
+          "failure_count": 0,
+          "source_files_scanned": 4911,
+          "destination_files_scanned": 4911,
+          "unledgered_source": [
+            [
+              "_manifest\\unique-files.jsonl",
+              4680900,
+              "MATCH"
+            ],
+            [
+              "_manifest\\worktree-archive-manifest.json",
+              76002,
+              "MATCH"
+            ],
+            [
+              "_manifest\\worktree-removal-log.jsonl",
+              62696,
+              "MATCH"
+            ]
+          ],
+          "unledgered_destination_extra": [],
+          "seconds": 479.0,
+          "verified_at": "2026-10-08T19:45:46+0700"
+        },
+        "method": "SHA-256 of every destination file vs ledger; ledger-external manifest files compared source vs destination by SHA-256",
+        "authority_effect": "NONE / SECONDARY_COPY_ONLY; T: remains source of truth"
+      }
+    },
+    {
+      "path": "W:\\ProjectVault\\Manifests\\PHASE_B_LEGALCRAWLER_COLD_RECEIPT.json",
+      "receipt_file_sha256": "4aa2a46dee96eb8e8e2ec5d0c73facc3c2e4f5d2ec02652959a47e11a937cc75",
+      "content": {
+        "receipt": "PROJECT_VAULT_PHASE_B_LEGALCRAWLER_COLD_V1",
+        "result": "PASS",
+        "created_at": "2026-10-08T20:35:39+0700",
+        "mode": "COPY_ONLY (robocopy /E /COPY:DAT /DCOPY:DAT /XJ /R:1 /W:1 in 5 foreground chunks; no /MIR /PURGE /MOV)",
+        "source": {
+          "root": "T:\\Projects\\LegalCrawler",
+          "volume_label": "uhigasi",
+          "volume_guid": "e12216ac-1354-41da-a384-305f67ae820e",
+          "device": "Lexar E6 USB"
+        },
+        "destination": {
+          "root": "W:\\ProjectVault\\LegalCrawler\\repository-cold",
+          "volume_label": "WD4TB_BACKUP",
+          "volume_guid": "853437c5-ce35-43eb-ad4f-083d09e9fbe4",
+          "device": "WDC WD40EFZZ-68CPAN0, USB SuperSpeed root port 13"
+        },
+        "migration_manifest": {
+          "identity": "LEGALCRAWLER_C_TO_T_MIGRATION_V1",
+          "version": "LEGALCRAWLER_COLD_STORAGE_MIGRATION_C_TO_T_V1",
+          "sha256": "29d3093f86176971604b907a830750bcad7507edc99a37cec6a3ff1be47f9630",
+          "matches_retained_sha256_file": true,
+          "git_head": "14e67bf7634454efd061e5b6d02a03ac4da87dd0"
+        },
+        "sha256_ledger": {
+          "sha256": "8655c19cd1b30d04ee27250036e62ed8fba1a6bbf07f96497be68463c8546b62",
+          "matches_manifest": true,
+          "entries": 19537
+        },
+        "cold_source_precheck": {
+          "ledger_size_mismatches": 0,
+          "modified_after_2026-10-07T10:30": 0,
+          "db_family_files": 146,
+          "exclusively_openable_no_other_handle": 146,
+          "wal_files_nonzero": 0,
+          "writer_processes": "none (no python/git/sqlite processes)"
+        },
+        "robocopy_files": {
+          "repository/backups": 65,
+          "repository(other)": 11549,
+          "LAW_ARCHIVE": 7910,
+          "LAW_support": 13,
+          "_migration": 16,
+          "total": 19553,
+          "failed": 0,
+          "log": "W:\\ProjectVault\\Manifests\\phaseB_robocopy.log"
+        },
+        "verification": {
+          "ledger_verified_ok": 19537,
+          "ledger_verified_bytes": 101384611686,
+          "manifest_byte_count": 101384611686,
+          "failures": 0,
+          "unledgered_source_files": [
+            [
+              "_migration\\LEGALCRAWLER_C_TO_T_MIGRATION_V1.json",
+              35782559,
+              "MATCH"
+            ],
+            [
+              "_migration\\LEGALCRAWLER_C_TO_T_MIGRATION_V1.json.sha256",
+              105,
+              "MATCH"
+            ],
+            [
+              "_migration\\LEGALCRAWLER_C_TO_T_MIGRATION_V1.md",
+              1204,
+              "MATCH"
+            ],
+            [
+              "_migration\\RESUME_LEGALCRAWLER_FROM_T.md",
+              3099,
+              "MATCH"
+            ],
+            [
+              "_migration\\VERIFY_HASHES_FROM_T.ps1",
+              1407,
+              "MATCH"
+            ],
+            [
+              "_migration\\absolute_path_audit.json",
+              6548,
+              "MATCH"
+            ],
+            [
+              "_migration\\archive_secret_structure_check.json",
+              967,
+              "MATCH"
+            ],
+            [
+              "_migration\\environment_snapshot.json",
+              8929,
+              "MATCH"
+            ],
+            [
+              "_migration\\frozen_inventory.json",
+              39393949,
+              "MATCH"
+            ],
+            [
+              "_migration\\git_secret_check.json",
+              66,
+              "MATCH"
+            ],
+            [
+              "_migration\\post_removal_verification.json",
+              18205,
+              "MATCH"
+            ],
+            [
+              "_migration\\pre_cutover_check.json",
+              220,
+              "MATCH"
+            ],
+            [
+              "_migration\\secret_candidate_review.json",
+              4263,
+              "MATCH"
+            ],
+            [
+              "_migration\\sha256_ledger.json",
+              12797762,
+              "MATCH"
+            ],
+            [
+              "_migration\\volume_before.json",
+              509,
+              "MATCH"
+            ],
+            [
+              "_migration\\volume_flush.json",
+              158,
+              "MATCH"
+            ]
+          ],
+          "unledgered_destination_extra": [],
+          "chunks": [
+            {
+              "prefix": "repository\\backups",
+              "ledger_entries": 65,
+              "verified_ok": 65,
+              "verified_bytes": 47486633325,
+              "failure_count": 0,
+              "source_files_scanned": 65,
+              "destination_files_scanned": 65,
+              "seconds": 228.3,
+              "verified_at": "2026-10-08T20:20:50+0700"
+            },
+            {
+              "prefix": "repository",
+              "ledger_entries": 11549,
+              "verified_ok": 11549,
+              "verified_bytes": 38115905117,
+              "failure_count": 0,
+              "source_files_scanned": 11549,
+              "destination_files_scanned": 11549,
+              "seconds": 552.4,
+              "verified_at": "2026-10-08T20:30:07+0700"
+            },
+            {
+              "prefix": "LAW_ARCHIVE",
+              "ledger_entries": 7910,
+              "verified_ok": 7910,
+              "verified_bytes": 14848352078,
+              "failure_count": 0,
+              "source_files_scanned": 7910,
+              "destination_files_scanned": 7910,
+              "seconds": 293.3,
+              "verified_at": "2026-10-08T20:35:08+0700"
+            },
+            {
+              "prefix": "LAW_support",
+              "ledger_entries": 13,
+              "verified_ok": 13,
+              "verified_bytes": 933721166,
+              "failure_count": 0,
+              "source_files_scanned": 13,
+              "destination_files_scanned": 13,
+              "seconds": 4.9,
+              "verified_at": "2026-10-08T20:35:14+0700"
+            },
+            {
+              "prefix": "_migration",
+              "ledger_entries": 0,
+              "verified_ok": 0,
+              "verified_bytes": 0,
+              "failure_count": 0,
+              "source_files_scanned": 16,
+              "destination_files_scanned": 16,
+              "seconds": 1.2,
+              "verified_at": "2026-10-08T20:35:15+0700"
+            }
+          ]
+        },
+        "divergence_from_original_migration": "NONE: all 19,537 ledgered files identical by SHA-256; only additional files are the 16 _migration artifacts, byte-identical to source",
+        "notes": [
+          "Absolute C:\\ paths inside configs/handoffs retained byte-exact; this copy is COLD and not runnable in place",
+          "*-shm 32 KiB / *-wal 0 B sidecars copied together with their databases"
+        ],
+        "authority_effect": "NONE / SECONDARY_COPY_ONLY; T: remains source of truth"
+      }
+    },
+    {
+      "path": "W:\\ProjectVault\\Manifests\\VAULT_STAGE3B4_OPSREV_2026-10-08-INITIAL_RECEIPT.json",
+      "receipt_file_sha256": "06f4fd2cb00589bd6c515a09f1d196281c49b481fe97dd7441a70b02a1f72ec0",
+      "content": {
+        "receipt": "VAULT_STAGE3B4_OPSREV_SNAPSHOT_2026-10-08-INITIAL",
+        "result": "VERIFIED",
+        "kind": "BYTE_EQUIVALENT_BACKUP (not a restored operational environment; NTFS hardlinks not preserved; mtimes preserved)",
+        "source": {
+          "root": "C:\\Projects\\StockLookup\\stock-core-private\\operations-review",
+          "volume": "C: OS NTFS",
+          "volume_guid": "13eb19a0-374e-48ee-bb52-04d0ebec587a",
+          "device": "Micron 2210 NVMe (internal)"
+        },
+        "destination": {
+          "root": "W:\\ProjectVault\\StockLookup\\evidence\\operations-review\\2026-10-08-initial",
+          "volume": "W: WD4TB_BACKUP NTFS",
+          "volume_guid": "853437c5-ce35-43eb-ad4f-083d09e9fbe4",
+          "device": "WDC WD40EFZZ-68CPAN0, USB SuperSpeed root port 13"
+        },
+        "repository_state": {
+          "git_head": "9db35f157af38baf3807be1a6a6827e77fd461dc",
+          "branch": "main",
+          "tracked_changes": 0
+        },
+        "inclusion_rule": "unit = whole top-level family if no file mtime >= 2026-10-08T00:00+07:00; otherwise each first-level child (or the family's root files) with no file mtime >= cutoff and session date <= 2026-10-07; temp-named files and reparse points excluded",
+        "planned_at": "2026-10-08T20:43:08+0700",
+        "completed_at": "2026-10-08T23:21:23+0700",
+        "source_files_total": 247324,
+        "source_bytes_total": 108534915505,
+        "included_units": 1207,
+        "excluded_units": 65,
+        "files": 213303,
+        "bytes": 98810923535,
+        "copy_outcomes": {
+          "COPIED": 213303
+        },
+        "verification_results": {
+          "VERIFIED": 213303
+        },
+        "verification_method": "SHA-256 computed from the exact source bytes streamed during copy; destination re-read and re-hashed; source size+mtime_ns checked at plan, before copy, after copy, at verification and in a final full metadata re-scan",
+        "source_stability": {
+          "source_files_now": 247324,
+          "new_count": 0,
+          "new_files_in_included_units_since_plan": [],
+          "changed_count": 0,
+          "planned_files_changed_since_plan": [],
+          "gone_count": 0,
+          "planned_files_gone": [],
+          "destination_files": 213303,
+          "destination_extra": [],
+          "destination_partials": []
+        },
+        "excluded": [
+          {
+            "unit": "_price_refresh_run.tmp.log",
+            "reason": "TEMP_NAME",
+            "files": 1,
+            "bytes": 105447
+          },
+          {
+            "unit": "canonical-daily-operation-v1\\2026-10-08",
+            "reason": "MODIFIED_ON_OR_AFTER_2026-10-08",
+            "files": 3,
+            "bytes": 32285
+          },
+          {
+            "unit": "canonical-post-close-v1\\2026-10-08",
+            "reason": "MODIFIED_ON_OR_AFTER_2026-10-08",
+            "files": 9,
+            "bytes": 1563410412
+          },
+          {
+            "unit": "corporate-daily-frozen-inputs-v1\\2026-10-08",
+            "reason": "MODIFIED_ON_OR_AFTER_2026-10-08",
+            "files": 2,
+            "bytes": 2306159
+          },
+          {
+            "unit": "current-corporate-knowledge-overlay-v1\\2026-10-08",
+            "reason": "MODIFIED_ON_OR_AFTER_2026-10-08",
+            "files": 1,
+            "bytes": 3754125
+          },
+          {
+            "unit": "current-corporate-product-projection-v1\\2026-10-08",
+            "reason": "MODIFIED_ON_OR_AFTER_2026-10-08",
+            "files": 10,
+            "bytes": 222077347
+          },
+          {
+            "unit": "current-evidence-bound-scenario-v1-20261008\\(root files)",
+            "reason": "MODIFIED_ON_OR_AFTER_2026-10-08",
+            "files": 1,
+            "bytes": 98848763
+          },
+          {
+            "unit": "current-foreign-flow-enrichment-v1\\2026-10-08",
+            "reason": "MODIFIED_ON_OR_AFTER_2026-10-08",
+            "files": 1,
+            "bytes": 11606
+          },
+          {
+            "unit": "current-market-screening-opportunity-comparison-foundation-v1-20261008\\(root files)",
+            "reason": "MODIFIED_ON_OR_AFTER_2026-10-08",
+            "files": 1,
+            "bytes": 11168553
+          },
+          {
+            "unit": "current-market-sector-leadership-context-v1-20261008\\(root files)",
+            "reason": "MODIFIED_ON_OR_AFTER_2026-10-08",
+            "files": 1,
+            "bytes": 1786232
+          },
+          {
+            "unit": "current-market-universe-breadth-foundation-v1-20261008\\(root files)",
+            "reason": "MODIFIED_ON_OR_AFTER_2026-10-08",
+            "files": 1,
+            "bytes": 1115220
+          },
+          {
+            "unit": "current-official-event-context-integration-v1-20261008\\(root files)",
+            "reason": "MODIFIED_ON_OR_AFTER_2026-10-08",
+            "files": 1,
+            "bytes": 872554
+          },
+          {
+            "unit": "current-opportunity-prioritization-v1-20261008\\(root files)",
+            "reason": "MODIFIED_ON_OR_AFTER_2026-10-08",
+            "files": 1,
+            "bytes": 3635616
+          },
+          {
+            "unit": "current-research-decision-packet-v1-20261008\\(root files)",
+            "reason": "MODIFIED_ON_OR_AFTER_2026-10-08",
+            "files": 1,
+            "bytes": 48062895
+          },
+          {
+            "unit": "current-research-risk-register-v1-20261008\\(root files)",
+            "reason": "MODIFIED_ON_OR_AFTER_2026-10-08",
+            "files": 1,
+            "bytes": 14379201
+          },
+          {
+            "unit": "current-universe-status-and-session-coverage-resolution-v1-20261008\\(root files)",
+            "reason": "MODIFIED_ON_OR_AFTER_2026-10-08",
+            "files": 1,
+            "bytes": 1339172
+          },
+          {
+            "unit": "daily-producer-runs-v1\\(root files)",
+            "reason": "MODIFIED_ON_OR_AFTER_2026-10-08",
+            "files": 1,
+            "bytes": 448
+          },
+          {
+            "unit": "daily-producer-runs-v1\\2026-10-08",
+            "reason": "MODIFIED_ON_OR_AFTER_2026-10-08",
+            "files": 9,
+            "bytes": 530890652
+          },
+          {
+            "unit": "daily-research-session-operations-v1\\2026-10-08",
+            "reason": "MODIFIED_ON_OR_AFTER_2026-10-08",
+            "files": 31,
+            "bytes": 888728786
+          },
+          {
+            "unit": "daily-session-shadow-recommendation-v1\\2026-10-08",
+            "reason": "MODIFIED_ON_OR_AFTER_2026-10-08",
+            "files": 1,
+            "bytes": 40654824
+          },
+          {
+            "unit": "financial-analysis-product-v2-20261008\\(root files)",
+            "reason": "MODIFIED_ON_OR_AFTER_2026-10-08",
+            "files": 2,
+            "bytes": 416578233
+          },
+          {
+            "unit": "full-universe-entry-candidate-triage-v1-20261008\\(root files)",
+            "reason": "MODIFIED_ON_OR_AFTER_2026-10-08",
+            "files": 1,
+            "bytes": 988702
+          },
+          {
+            "unit": "governed-publication-completion-v1\\2026-10-08",
+            "reason": "MODIFIED_ON_OR_AFTER_2026-10-08",
+            "files": 2,
+            "bytes": 2859
+          },
+          {
+            "unit": "integrated-investment-decision-product-v1-20261008\\(root files)",
+            "reason": "MODIFIED_ON_OR_AFTER_2026-10-08",
+            "files": 9,
+            "bytes": 1442688195
+          },
+          {
+            "unit": "market-wide-current-corporate-intelligence-v1-20261008\\(root files)",
+            "reason": "MODIFIED_ON_OR_AFTER_2026-10-08",
+            "files": 1,
+            "bytes": 4084388
+          },
+          {
+            "unit": "market-wide-current-descriptive-research-v1-20261008\\(root files)",
+            "reason": "MODIFIED_ON_OR_AFTER_2026-10-08",
+            "files": 1,
+            "bytes": 9376777
+          },
+          {
+            "unit": "market-wide-current-fundamental-research-v1-20261008\\(root files)",
+            "reason": "MODIFIED_ON_OR_AFTER_2026-10-08",
+            "files": 1,
+            "bytes": 12759108
+          },
+          {
+            "unit": "market-wide-current-liquidity-research-v1-20261008\\(root files)",
+            "reason": "MODIFIED_ON_OR_AFTER_2026-10-08",
+            "files": 1,
+            "bytes": 9777209
+          },
+          {
+            "unit": "market-wide-current-liquidity-research-v1-20261008\\batches",
+            "reason": "MODIFIED_ON_OR_AFTER_2026-10-08",
+            "files": 17,
+            "bytes": 1529213
+          },
+          {
+            "unit": "market-wide-current-technical-coverage-scaleout-v1-20261008\\(root files)",
+            "reason": "MODIFIED_ON_OR_AFTER_2026-10-08",
+            "files": 1,
+            "bytes": 17057
+          },
+          {
+            "unit": "market-wide-current-technical-coverage-scaleout-v1-20261008\\logs",
+            "reason": "MODIFIED_ON_OR_AFTER_2026-10-08",
+            "files": 1,
+            "bytes": 3936
+          },
+          {
+            "unit": "market-wide-current-valuation-v1-20261008-session20261008\\(root files)",
+            "reason": "MODIFIED_ON_OR_AFTER_2026-10-08",
+            "files": 2,
+            "bytes": 32096088
+          },
+          {
+            "unit": "multi-session-signal-velocity-v1.2\\2026-10-08",
+            "reason": "MODIFIED_ON_OR_AFTER_2026-10-08",
+            "files": 1,
+            "bytes": 321311545
+          },
+          {
+            "unit": "official-corporate-event-acquisition-sessions\\2026-10-08",
+            "reason": "MODIFIED_ON_OR_AFTER_2026-10-08",
+            "files": 4,
+            "bytes": 2963955
+          },
+          {
+            "unit": "official-corporate-event-raw-store\\raw",
+            "reason": "MODIFIED_ON_OR_AFTER_2026-10-08",
+            "files": 916,
+            "bytes": 29125418
+          },
+          {
+            "unit": "official-exchange-liquidity-research-v1-20261008\\(root files)",
+            "reason": "MODIFIED_ON_OR_AFTER_2026-10-08",
+            "files": 1,
+            "bytes": 1726
+          },
+          {
+            "unit": "official-exchange-liquidity-research-v1-20261008\\logs",
+            "reason": "MODIFIED_ON_OR_AFTER_2026-10-08",
+            "files": 1,
+            "bytes": 1222
+          },
+          {
+            "unit": "owner-daily-journal-v1\\(root files)",
+            "reason": "MODIFIED_ON_OR_AFTER_2026-10-08",
+            "files": 1,
+            "bytes": 7682
+          },
+          {
+            "unit": "p3f9b-market-wide-exact-session-scaleout-20261008\\(root files)",
+            "reason": "MODIFIED_ON_OR_AFTER_2026-10-08",
+            "files": 3,
+            "bytes": 603073085
+          },
+          {
+            "unit": "polymorphic-current-strategy-classification-v1-20261008\\(root files)",
+            "reason": "MODIFIED_ON_OR_AFTER_2026-10-08",
+            "files": 1,
+            "bytes": 37340405
+          },
+          {
+            "unit": "post-handoff-presentation-attestation-v1\\2026-10-08",
+            "reason": "MODIFIED_ON_OR_AFTER_2026-10-08",
+            "files": 1,
+            "bytes": 30134
+          },
+          {
+            "unit": "prospective-calendar-evidence-v1\\raw",
+            "reason": "MODIFIED_ON_OR_AFTER_2026-10-08",
+            "files": 5,
+            "bytes": 23332
+          },
+          {
+            "unit": "prospective-calendar-evidence-v1\\receipts",
+            "reason": "MODIFIED_ON_OR_AFTER_2026-10-08",
+            "files": 5,
+            "bytes": 22627
+          },
+          {
+            "unit": "prospective-corporate-evidence-v1\\(root files)",
+            "reason": "MODIFIED_ON_OR_AFTER_2026-10-08",
+            "files": 5,
+            "bytes": 5765086
+          },
+          {
+            "unit": "prospective-decision-outcome-feedback-post-handoff-v1\\2026-10-08",
+            "reason": "MODIFIED_ON_OR_AFTER_2026-10-08",
+            "files": 3,
+            "bytes": 657484691
+          },
+          {
+            "unit": "prospective-decision-outcome-feedback-v1\\(root files)",
+            "reason": "MODIFIED_ON_OR_AFTER_2026-10-08",
+            "files": 2,
+            "bytes": 67118767
+          },
+          {
+            "unit": "prospective-decision-outcome-feedback-v1\\2026-10-08",
+            "reason": "MODIFIED_ON_OR_AFTER_2026-10-08",
+            "files": 3,
+            "bytes": 620606192
+          },
+          {
+            "unit": "prospective-decision-outcome-feedback-v1\\_stream",
+            "reason": "MODIFIED_ON_OR_AFTER_2026-10-08",
+            "files": 50,
+            "bytes": 19450112
+          },
+          {
+            "unit": "prospective-decision-retention-v1\\2026-10-08",
+            "reason": "MODIFIED_ON_OR_AFTER_2026-10-08",
+            "files": 3,
+            "bytes": 1487139130
+          },
+          {
+            "unit": "prospective-market-evidence-v1\\2026-10-08",
+            "reason": "MODIFIED_ON_OR_AFTER_2026-10-08",
+            "files": 838,
+            "bytes": 4479942
+          },
+          {
+            "unit": "prospective-pit-capture-v1\\bindings",
+            "reason": "MODIFIED_ON_OR_AFTER_2026-10-08",
+            "files": 4,
+            "bytes": 9965474
+          },
+          {
+            "unit": "prospective-pit-capture-v1\\calendar-revisions",
+            "reason": "MODIFIED_ON_OR_AFTER_2026-10-08",
+            "files": 4,
+            "bytes": 1912
+          },
+          {
+            "unit": "prospective-pit-capture-v1\\listing",
+            "reason": "MODIFIED_ON_OR_AFTER_2026-10-08",
+            "files": 4,
+            "bytes": 5361896
+          },
+          {
+            "unit": "prospective-pit-capture-v1\\readiness",
+            "reason": "MODIFIED_ON_OR_AFTER_2026-10-08",
+            "files": 5,
+            "bytes": 3561979
+          },
+          {
+            "unit": "prospective-pit-capture-v1\\sessions",
+            "reason": "MODIFIED_ON_OR_AFTER_2026-10-08",
+            "files": 4,
+            "bytes": 28138
+          },
+          {
+            "unit": "prospective-pit-capture-v1\\verifications",
+            "reason": "MODIFIED_ON_OR_AFTER_2026-10-08",
+            "files": 4,
+            "bytes": 4590292
+          },
+          {
+            "unit": "prospective-research-cohort-collection-v1\\(root files)",
+            "reason": "MODIFIED_ON_OR_AFTER_2026-10-08",
+            "files": 29,
+            "bytes": 62228738
+          },
+          {
+            "unit": "prospective-universe-evidence-v1\\listing-sources",
+            "reason": "MODIFIED_ON_OR_AFTER_2026-10-08",
+            "files": 5,
+            "bytes": 21979062
+          },
+          {
+            "unit": "same-session-technical-coverage-recovery-v1-20261008\\(root files)",
+            "reason": "MODIFIED_ON_OR_AFTER_2026-10-08",
+            "files": 1,
+            "bytes": 1157988
+          },
+          {
+            "unit": "sector-aware-relative-research-v1-20261008\\(root files)",
+            "reason": "MODIFIED_ON_OR_AFTER_2026-10-08",
+            "files": 1,
+            "bytes": 10869801
+          },
+          {
+            "unit": "tactical-reversal-prospective-shadow-collection-v1\\observations",
+            "reason": "MODIFIED_ON_OR_AFTER_2026-10-08",
+            "files": 31977,
+            "bytes": 79837964
+          },
+          {
+            "unit": "tactical-reversal-prospective-shadow-collection-v1\\outcome_sessions",
+            "reason": "MODIFIED_ON_OR_AFTER_2026-10-08",
+            "files": 8,
+            "bytes": 195273108
+          },
+          {
+            "unit": "thesis-evidence-current-v1\\2026-10-08",
+            "reason": "MODIFIED_ON_OR_AFTER_2026-10-08",
+            "files": 8,
+            "bytes": 67548025
+          },
+          {
+            "unit": "thesis-evidence-t0-v1\\2026-10-08",
+            "reason": "MODIFIED_ON_OR_AFTER_2026-10-08",
+            "files": 6,
+            "bytes": 38678689
+          },
+          {
+            "unit": "watchlist-tactical-entry-decision-v1-20261008\\(root files)",
+            "reason": "MODIFIED_ON_OR_AFTER_2026-10-08",
+            "files": 1,
+            "bytes": 3881791
+          }
+        ],
+        "artifacts": {
+          "plan.jsonl": "6b00adfe18626175b15db094580bffb4475ae8098bcec413126ce08c95c7c708",
+          "units.json": "b0dc364bbd3d53a62f6b418e3b79bd9e6aa7bfd119fd62521d0b3b0553164c61",
+          "ledger_copy.jsonl": "bdebb474e6f28d1e71c6491c3a85a36ea3300d835ee995dd24e5467cab3ba190",
+          "ledger_verify.jsonl": "3fe99b0f863d4b8c1ad6c3ad1018b391d41bd88d84c4b9d6839674b39e487d22",
+          "post_check.json": "5472409223443b0e606aa28a9c7a6c5d8c4a37573b88bdbd03eae56a9063041e",
+          "OPSREV_2026-10-08-INITIAL_SHA256_LEDGER.jsonl": "7beaad21b381ebaa227f6c8875721da26668cd6d99b2656b4d07d125605968d9"
+        },
+        "unit_identity_files_note": "per-unit manifest/seal/receipt/index identity files listed in units.json (identity_files)",
+        "authority_effect": "NONE / SECONDARY_COPY_ONLY; C: operations-review remains source of truth"
+      }
+    },
+    {
+      "path": "W:\\ProjectVault\\Manifests\\VN_STOCK_DB_BACKUP_20261008T232153_RECEIPT.json",
+      "receipt_file_sha256": "051d26525dfa18fe54389c4696d903eb5aee7b7d75eee3d49de634e0c786f9c0",
+      "content": {
+        "receipt": "VAULT_STAGE3B4_VN_STOCK_DB_BACKUP",
+        "source": "C:\\Projects\\StockLookup\\dashboard-runtime\\vn_stock.db",
+        "destination": "W:\\ProjectVault\\Backups\\db\\stocklookup\\20261008T232153\\vn_stock.db",
+        "source_before": {
+          "size": 275177472,
+          "mtime_ns": 1791451960412002600,
+          "change_counter": 18532,
+          "write_version": 1,
+          "read_version": 1,
+          "sidecars": []
+        },
+        "source_sha256_before": "afe5c77f22d633c20df50a419b9081ecf614e54dcf012abed0f903d8bd1c2da4",
+        "exclusive_open_before": true,
+        "backup_seconds": 2.3,
+        "source_journal_mode_observed": "delete",
+        "integrity_check": [
+          "ok"
+        ],
+        "backup_page_count": 67182,
+        "backup_tables": 25,
+        "backup_journal_artifacts": [],
+        "backup_size": 275177472,
+        "backup_sha256": "8137dc9fdc038a4f1062deae790eb7f082baf1b375865381d27c54ac2b467225",
+        "source_after": {
+          "size": 275177472,
+          "mtime_ns": 1791451960412002600,
+          "change_counter": 18532,
+          "write_version": 1,
+          "read_version": 1,
+          "sidecars": []
+        },
+        "source_sha256_after": "afe5c77f22d633c20df50a419b9081ecf614e54dcf012abed0f903d8bd1c2da4",
+        "source_unchanged": true,
+        "byte_identical_to_source": false,
+        "result": "PASS",
+        "created_at": "2026-10-08T23:22:14+0700",
+        "method": "Python sqlite3 Connection.backup (SQLite Online Backup API) from URI mode=ro source; integrity_check on W: copy",
+        "authority_effect": "NONE / SECONDARY_COPY_ONLY"
+      }
+    }
+  ],
+  "current_readonly_volume_observation": [
+    {
+      "DriveLetter": "C",
+      "UniqueId": "\\\\?\\Volume{13eb19a0-374e-48ee-bb52-04d0ebec587a}\\",
+      "FileSystemLabel": "OS",
+      "SizeRemaining": 133717573632,
+      "HealthStatus": "Healthy",
+      "OperationalStatus": "OK"
+    },
+    {
+      "DriveLetter": "W",
+      "UniqueId": "\\\\?\\Volume{853437c5-ce35-43eb-ad4f-083d09e9fbe4}\\",
+      "FileSystemLabel": "WD4TB_BACKUP",
+      "SizeRemaining": 3785585373184,
+      "HealthStatus": "Healthy",
+      "OperationalStatus": "OK"
+    }
+  ],
+  "capacity": {
+    "schema": "vault_capacity_preflight/v1",
+    "free_c_bytes": 133717573632,
+    "free_w_bytes": 3785585373184,
+    "ready_guard_bytes": 26843545600,
+    "admission_guard_unchanged": true,
+    "measured_physical_growth": "UNKNOWN",
+    "measured_logical_growth": {
+      "basis": "Retained 2026-10-08 inventory; dated core output families only. Not physical change measurements; excludes independently named research fixtures and mutable root accumulators. Some sessions contain retries.",
+      "recent": {
+        "2026-10-02": {
+          "bytes": 4219903634,
+          "files": 958,
+          "families": {
+            "canonical-daily-operation-v1": 31820,
+            "canonical-post-close-v1": 1394355494,
+            "daily-producer-runs-v1": 529564939,
+            "daily-research-session-operations-v1": 862284640,
+            "prospective-decision-outcome-feedback-post-handoff-v1": 743326897,
+            "prospective-decision-outcome-feedback-v1": 685480495,
+            "prospective-decision-retention-v1": 0,
+            "prospective-market-evidence-v1": 4859349
+          }
+        },
+        "2026-10-05": {
+          "bytes": 6906112489,
+          "files": 954,
+          "families": {
+            "canonical-daily-operation-v1": 26125,
+            "canonical-post-close-v1": 1563586784,
+            "daily-producer-runs-v1": 1007161856,
+            "daily-research-session-operations-v1": 1651175663,
+            "prospective-decision-outcome-feedback-post-handoff-v1": 546794651,
+            "prospective-decision-outcome-feedback-v1": 545464572,
+            "prospective-decision-retention-v1": 1487604596,
+            "prospective-market-evidence-v1": 4565302,
+            "thesis-evidence-current-v1": 60867930,
+            "thesis-evidence-t0-v1": 38865010
+          }
+        },
+        "2026-10-06": {
+          "bytes": 5909675419,
+          "files": 928,
+          "families": {
+            "canonical-daily-operation-v1": 31995,
+            "canonical-post-close-v1": 1565090200,
+            "daily-producer-runs-v1": 501656430,
+            "daily-research-session-operations-v1": 827494050,
+            "multi-session-signal-velocity-v1.2": 285614098,
+            "prospective-decision-outcome-feedback-post-handoff-v1": 583632458,
+            "prospective-decision-outcome-feedback-v1": 546798191,
+            "prospective-decision-retention-v1": 1488200323,
+            "prospective-market-evidence-v1": 4586624,
+            "thesis-evidence-current-v1": 67723536,
+            "thesis-evidence-t0-v1": 38847514
+          }
+        },
+        "2026-10-07": {
+          "bytes": 6014595758,
+          "files": 928,
+          "families": {
+            "canonical-daily-operation-v1": 31995,
+            "canonical-post-close-v1": 1565814740,
+            "daily-producer-runs-v1": 507298559,
+            "daily-research-session-operations-v1": 833796247,
+            "multi-session-signal-velocity-v1.2": 303464544,
+            "prospective-decision-outcome-feedback-post-handoff-v1": 620752436,
+            "prospective-decision-outcome-feedback-v1": 583447099,
+            "prospective-decision-retention-v1": 1488583560,
+            "prospective-market-evidence-v1": 4586790,
+            "thesis-evidence-current-v1": 67949341,
+            "thesis-evidence-t0-v1": 38870447
+          }
+        },
+        "2026-10-08": {
+          "bytes": 6180310349,
+          "files": 914,
+          "families": {
+            "canonical-daily-operation-v1": 32285,
+            "canonical-post-close-v1": 1563410412,
+            "daily-producer-runs-v1": 530890652,
+            "daily-research-session-operations-v1": 888728786,
+            "multi-session-signal-velocity-v1.2": 321311545,
+            "prospective-decision-outcome-feedback-post-handoff-v1": 657484691,
+            "prospective-decision-outcome-feedback-v1": 620606192,
+            "prospective-decision-retention-v1": 1487139130,
+            "prospective-market-evidence-v1": 4479942,
+            "thesis-evidence-current-v1": 67548025,
+            "thesis-evidence-t0-v1": 38678689
+          }
+        }
+      }
+    },
+    "per_session_assumptions_bytes": {
+      "observed_logical_mean": 6252673503.75,
+      "planning_8_GiB": 8589934592,
+      "stressed_12_GiB": 12884901888
+    },
+    "whole_sessions_until_guard": {
+      "observed_logical_mean": 17,
+      "planning_8_GiB": 12,
+      "stressed_12_GiB": 8
+    },
+    "reclaim": {
+      "verified_reclaimable_bytes": 0,
+      "conditional_sample_allocation_bytes": 5544222720,
+      "conditional_log_waiver_bytes": 12288,
+      "conditional_referenced_allocation_bytes": 5544210432,
+      "unknown_bytes": "UNKNOWN; unmeasured dependency/allocation closure, not zero",
+      "logical_duplicates_not_reclaimable_aggregate_bytes": 17940007190,
+      "no_source_deletion_authorized": true
+    },
+    "projections": [
+      {
+        "days": 30,
+        "assumed_successful_sessions": 22,
+        "scenario": "observed_logical_mean",
+        "c_free_bytes_signed": -3841243450.5,
+        "c_guard_shortfall_bytes": 30684789050.5,
+        "w_free_bytes_signed": 3641972651717.5
+      },
+      {
+        "days": 30,
+        "assumed_successful_sessions": 22,
+        "scenario": "planning_8_GiB",
+        "c_free_bytes_signed": -55260987392,
+        "c_guard_shortfall_bytes": 82104532992,
+        "w_free_bytes_signed": 3590552907776
+      },
+      {
+        "days": 30,
+        "assumed_successful_sessions": 22,
+        "scenario": "stressed_12_GiB",
+        "c_free_bytes_signed": -149750267904,
+        "c_guard_shortfall_bytes": 176593813504,
+        "w_free_bytes_signed": 3496063627264
+      },
+      {
+        "days": 90,
+        "assumed_successful_sessions": 64,
+        "scenario": "observed_logical_mean",
+        "c_free_bytes_signed": -266453530608.0,
+        "c_guard_shortfall_bytes": 293297076208.0,
+        "w_free_bytes_signed": 3367802910736.0
+      },
+      {
+        "days": 90,
+        "assumed_successful_sessions": 64,
+        "scenario": "planning_8_GiB",
+        "c_free_bytes_signed": -416038240256,
+        "c_guard_shortfall_bytes": 442881785856,
+        "w_free_bytes_signed": 3218218201088
+      },
+      {
+        "days": 90,
+        "assumed_successful_sessions": 64,
+        "scenario": "stressed_12_GiB",
+        "c_free_bytes_signed": -690916147200,
+        "c_guard_shortfall_bytes": 717759692800,
+        "w_free_bytes_signed": 2943340294144
+      },
+      {
+        "days": 180,
+        "assumed_successful_sessions": 128,
+        "scenario": "observed_logical_mean",
+        "c_free_bytes_signed": -666624634848.0,
+        "c_guard_shortfall_bytes": 693468180448.0,
+        "w_free_bytes_signed": 2950020448288.0
+      },
+      {
+        "days": 180,
+        "assumed_successful_sessions": 128,
+        "scenario": "planning_8_GiB",
+        "c_free_bytes_signed": -965794054144,
+        "c_guard_shortfall_bytes": 992637599744,
+        "w_free_bytes_signed": 2650851028992
+      },
+      {
+        "days": 180,
+        "assumed_successful_sessions": 128,
+        "scenario": "stressed_12_GiB",
+        "c_free_bytes_signed": -1515549868032,
+        "c_guard_shortfall_bytes": 1542393413632,
+        "w_free_bytes_signed": 2101095215104
+      }
+    ],
+    "backup_alone_solves_capacity": false,
+    "assumptions": "Weekdays 22/64/128; no holidays/retries/unrelated host growth; logical growth is not physical. W receives all assumed new retained bytes plus one 275177472-byte DB backup per Daily.",
+    "remaining_gates": [
+      "approved explicit archive resolver with original identity/cutoff preservation",
+      "measured physical growth and hardlink/reference closure",
+      "owner exact-path source-retention authorization after complete recovery proof"
+    ]
+  },
+  "retention_counts": {
+    "ACTIVE_REQUIRED": 40,
+    "VERIFIED_RECOVERABLE_COLD_CANDIDATE": 0,
+    "HISTORICAL_DISTINCT": 7,
+    "EXACT_DUPLICATE_BUT_REFERENCED": 8,
+    "UNVERIFIED_OR_UNKNOWN": 22,
+    "REGENERABLE_WITH_PROOF": 0
+  },
+  "data_backup_and_restore": {
+    "data_backup": {
+      "result": "VERIFIED",
+      "source": "C:\\Projects\\StockLookup\\stock-core-private\\data",
+      "destination": "W:\\ProjectVault\\StockLookup\\raw\\data\\2026-10-09-initial",
+      "files": 508,
+      "bytes": 8281565,
+      "hash_input_bytes": 24844695,
+      "source_metadata_unchanged": true,
+      "source_post_copy_sha_match": true,
+      "permissions_changed": false,
+      "authority_effect": "NONE / SECONDARY_COPY_ONLY",
+      "created_at": "2026-10-09T05:08:31.205100+07:00"
+    },
+    "restore": {
+      "result": "VERIFIED_BOUNDED_RECOVERY",
+      "owner": "Stock Lookup owner; cleanup requires separate approval",
+      "restore_root": "W:\\ProjectVault\\RestoreTests\\stocklookup-initial",
+      "session": "2026-10-07",
+      "family": "prospective-market-evidence-v1\\2026-10-07",
+      "session_files": 858,
+      "manifest_record_count": 857,
+      "receipt_references_complete": true,
+      "predecessor_receipt_references_complete": true,
+      "source_snapshot_identity": "p3f9_exact_session_snapshot:92f79eb6a7f86d91ace74c027ebc02303d079595546bed4b697ffa81bf255202",
+      "external_full_source_snapshot": "Identity retained; large source snapshot not restored or operationally redirected",
+      "restore_data_bytes": 279764262,
+      "sqlite_integrity": [
+        "ok"
+      ],
+      "sqlite_tables": [
+        "company_profile_records",
+        "company_profile_snapshots",
+        "company_subsidiary_records",
+        "company_subsidiary_snapshots",
+        "corporate_event_ingestion_runs",
+        "corporate_event_observations",
+        "corporate_event_records",
+        "instrument_master_records",
+        "instrument_master_snapshots",
+        "macro",
+        "major_shareholder_snapshots",
+        "meta",
+        "metadata",
+        "news",
+        "ohlcv",
+        "ohlcv_lineage",
+        "ownership_structure_records",
+        "ownership_structure_snapshots",
+        "shareholder_records_v2",
+        "shareholder_source_attempts",
+        "shareholder_sync_runs",
+        "shareholders",
+        "shareholders_progress",
+        "sqlite_sequence",
+        "watchlist_history"
+      ],
+      "sqlite_schema": [
+        [
+          "company_profile_records",
+          "table"
+        ],
+        [
+          "company_profile_snapshots",
+          "table"
+        ],
+        [
+          "company_subsidiary_records",
+          "table"
+        ],
+        [
+          "company_subsidiary_snapshots",
+          "table"
+        ],
+        [
+          "corporate_event_ingestion_runs",
+          "table"
+        ],
+        [
+          "corporate_event_observations",
+          "table"
+        ],
+        [
+          "corporate_event_records",
+          "table"
+        ],
+        [
+          "idx_company_profile_records_scope_identity",
+          "index"
+        ],
+        [
+          "idx_company_profile_snapshots_scope_time",
+          "index"
+        ],
+        [
+          "idx_company_subsidiary_records_scope_identity",
+          "index"
+        ],
+        [
+          "idx_company_subsidiary_snapshots_scope_time",
+          "index"
+        ],
+        [
+          "idx_corporate_event_observations_record_time",
+          "index"
+        ],
+        [
+          "idx_date",
+          "index"
+        ],
+        [
+          "idx_instrument_master_records_scope_identity",
+          "index"
+        ],
+        [
+          "idx_instrument_master_snapshots_scope_time",
+          "index"
+        ],
+        [
+          "idx_major_shareholder_snapshots_scope_date",
+          "index"
+        ],
+        [
+          "idx_news_pub",
+          "index"
+        ],
+        [
+          "idx_ownership_structure_records_scope_identity",
+          "index"
+        ],
+        [
+          "idx_ownership_structure_snapshots_scope_time",
+          "index"
+        ],
+        [
+          "idx_shareholder_attempts_ticker_time",
+          "index"
+        ],
+        [
+          "idx_shareholder_records_v2_ticker_asof",
+          "index"
+        ],
+        [
+          "instrument_master_records",
+          "table"
+        ],
+        [
+          "instrument_master_snapshots",
+          "table"
+        ],
+        [
+          "macro",
+          "table"
+        ],
+        [
+          "major_shareholder_snapshots",
+          "table"
+        ],
+        [
+          "meta",
+          "table"
+        ],
+        [
+          "metadata",
+          "table"
+        ],
+        [
+          "news",
+          "table"
+        ],
+        [
+          "ohlcv",
+          "table"
+        ],
+        [
+          "ohlcv_lineage",
+          "table"
+        ],
+        [
+          "ownership_structure_records",
+          "table"
+        ],
+        [
+          "ownership_structure_snapshots",
+          "table"
+        ],
+        [
+          "shareholder_records_v2",
+          "table"
+        ],
+        [
+          "shareholder_source_attempts",
+          "table"
+        ],
+        [
+          "shareholder_sync_runs",
+          "table"
+        ],
+        [
+          "shareholders",
+          "table"
+        ],
+        [
+          "shareholders_progress",
+          "table"
+        ],
+        [
+          "sqlite_autoindex_company_profile_records_1",
+          "index"
+        ],
+        [
+          "sqlite_autoindex_company_profile_records_2",
+          "index"
+        ],
+        [
+          "sqlite_autoindex_company_profile_snapshots_1",
+          "index"
+        ],
+        [
+          "sqlite_autoindex_company_profile_snapshots_2",
+          "index"
+        ],
+        [
+          "sqlite_autoindex_company_subsidiary_records_1",
+          "index"
+        ],
+        [
+          "sqlite_autoindex_company_subsidiary_records_2",
+          "index"
+        ],
+        [
+          "sqlite_autoindex_company_subsidiary_snapshots_1",
+          "index"
+        ],
+        [
+          "sqlite_autoindex_company_subsidiary_snapshots_2",
+          "index"
+        ],
+        [
+          "sqlite_autoindex_corporate_event_ingestion_runs_1",
+          "index"
+        ],
+        [
+          "sqlite_autoindex_corporate_event_observations_1",
+          "index"
+        ],
+        [
+          "sqlite_autoindex_corporate_event_observations_2",
+          "index"
+        ],
+        [
+          "sqlite_autoindex_corporate_event_records_1",
+          "index"
+        ],
+        [
+          "sqlite_autoindex_corporate_event_records_2",
+          "index"
+        ],
+        [
+          "sqlite_autoindex_instrument_master_records_1",
+          "index"
+        ],
+        [
+          "sqlite_autoindex_instrument_master_records_2",
+          "index"
+        ],
+        [
+          "sqlite_autoindex_instrument_master_snapshots_1",
+          "index"
+        ],
+        [
+          "sqlite_autoindex_instrument_master_snapshots_2",
+          "index"
+        ],
+        [
+          "sqlite_autoindex_macro_1",
+          "index"
+        ],
+        [
+          "sqlite_autoindex_major_shareholder_snapshots_1",
+          "index"
+        ],
+        [
+          "sqlite_autoindex_meta_1",
+          "index"
+        ],
+        [
+          "sqlite_autoindex_metadata_1",
+          "index"
+        ],
+        [
+          "sqlite_autoindex_news_1",
+          "index"
+        ],
+        [
+          "sqlite_autoindex_ohlcv_1",
+          "index"
+        ],
+        [
+          "sqlite_autoindex_ohlcv_lineage_1",
+          "index"
+        ],
+        [
+          "sqlite_autoindex_ownership_structure_records_1",
+          "index"
+        ],
+        [
+          "sqlite_autoindex_ownership_structure_records_2",
+          "index"
+        ],
+        [
+          "sqlite_autoindex_ownership_structure_snapshots_1",
+          "index"
+        ],
+        [
+          "sqlite_autoindex_ownership_structure_snapshots_2",
+          "index"
+        ],
+        [
+          "sqlite_autoindex_shareholder_records_v2_1",
+          "index"
+        ],
+        [
+          "sqlite_autoindex_shareholder_sync_runs_1",
+          "index"
+        ],
+        [
+          "sqlite_autoindex_shareholders_1",
+          "index"
+        ],
+        [
+          "sqlite_autoindex_shareholders_progress_1",
+          "index"
+        ],
+        [
+          "sqlite_autoindex_watchlist_history_1",
+          "index"
+        ],
+        [
+          "sqlite_sequence",
+          "table"
+        ],
+        [
+          "watchlist_history",
+          "table"
+        ]
+      ],
+      "new_hash_input_bytes": 748045367,
+      "total_new_hash_input_bytes": 772890062,
+      "hash_limit": 2147483648,
+      "production_application_started": false
+    }
+  },
+  "proposed_restore_contract": "docs/vault_incremental_snapshot_contract.md#retention-preflight-and-proposed-restore-contract",
+  "acceptance_tests": "tests/test_vault_snapshot.py; focused active/roadmap/retention/host regressions recorded in checkpoint handoff",
+  "production_activation_gate": [
+    "owner approval of exact candidate release and offline invocation scope",
+    "bounded legacy-ledger/completed-boundary adapter qualification",
+    "explicit archive catalog/resolver and portable T0 storage verification before any runtime cold use",
+    "fresh matching volume/writer/host preflight"
+  ],
+  "physical_reclamation_gate": [
+    "exact paths and volume/file-ID/link closure",
+    "complete native backup + explicit restore + original receipt/seal compatibility",
+    "runtime/code/manifest and cross-session dependency closure",
+    "owner exact-path source-retention authorization"
+  ],
+  "unchanged": {
+    "source_deletions": 0,
+    "source_migrations": 0,
+    "live_data_copies": 0,
+    "daily_runs": 0,
+    "pushes": 0,
+    "merges": 0,
+    "deployments": 0,
+    "authority_effect": "NONE",
+    "existing_worktrees": 52,
+    "ocr_wip": "UNTOUCHED",
+    "untracked_data": "UNTOUCHED"
+  },
+  "validation": {
+    "focused_pytest": {
+      "passed": 196,
+      "skipped": 1,
+      "skip_reason": "POSIX unsupported-host check on Windows",
+      "deselected": 1,
+      "deselected_test": "test_windows_inventory_real_probe_is_read_only_and_usable",
+      "new_vault_tests": 42,
+      "production_writes": false
+    },
+    "py_compile": "PASS",
+    "diff_check": "PASS",
+    "roadmap_before_checkpoint": "ON_TRACK; only expected uncommitted documentation/self-HEAD warnings",
+    "roadmap_after_checkpoint_required": true,
+    "active_docs_bytes": 102065,
+    "active_docs_budget_bytes": 102400,
+    "active_state_lines": 319,
+    "full_suite_run": false
+  }
+}

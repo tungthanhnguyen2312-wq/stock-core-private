@@ -15,16 +15,37 @@
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "LONG_TERM_COMPANY_ECONOMICS_EVIDENCE_MATRIX_V1",
+    "milestone": "STOCKLOOKUP_VAULT_INCREMENTAL_SNAPSHOT_CONTRACT_AND_OFFLINE_ACCEPTANCE_V1",
     "state": "COMPLETE"
   },
   "queued_next": [],
   "milestones": [
     {
+      "milestone_id": "STOCKLOOKUP_VAULT_INCREMENTAL_SNAPSHOT_CONTRACT_AND_OFFLINE_ACCEPTANCE_V1",
+      "state": "COMPLETE",
+      "starting_checkpoint": "9db35f157af38baf3807be1a6a6827e77fd461dc",
+      "checkpoint": "HEAD",
+      "candidate_branch": "feature/vault-incremental-offline-acceptance-20261009",
+      "dependencies": [
+        "LONG_TERM_COMPANY_ECONOMICS_EVIDENCE_MATRIX_V1"
+      ],
+      "unlocks": [],
+      "owner_authorized": true,
+      "owner_override": "OWNER_DIRECTIVE_2026_10_09_VAULT_INCREMENTAL_SNAPSHOT_OFFLINE_LOCAL_CHECKPOINT_ONLY",
+      "authority_effect": "NONE",
+      "state_history": [
+        "ACTIVE",
+        "COMPLETE"
+      ],
+      "source_doc": "docs/vault_incremental_snapshot_contract.md",
+      "notes": "Bounded offline tools and synthetic snapshot/SQLite/retention acceptance; reused retained audit and receipts without inventory/large-hash/copy. 77 candidate report; zero verified cold eligibility or deletion authority. Backup alone cannot solve C capacity. No production integration, source deletion/migration, Daily, push, PR, merge, deployment, schedule or successor. Existing 52 worktrees/OCR WIP/data/runtime untouched.",
+      "terminal_disposition": "VAULT_INCREMENTAL_AND_RETENTION_OFFLINE_ACCEPTED"
+    },
+    {
       "milestone_id": "LONG_TERM_COMPANY_ECONOMICS_EVIDENCE_MATRIX_V1",
       "state": "COMPLETE",
       "starting_checkpoint": "1e1f208d15ea63ec37b99e36540019cfc6100cf8",
-      "checkpoint": "HEAD",
+      "checkpoint": "d4d9a0f969baf7ab559aa9d337aa1fd238d74635",
       "candidate_branch": "feature/long-term-company-economics-evidence-20261008",
       "dependencies": [
         "CURRENT_OFFICIAL_EVIDENCE_PROJECTION_INTEGRATION_V1",
@@ -39,7 +60,7 @@
         "COMPLETE"
       ],
       "source_doc": "docs/long_term_company_economics_evidence_contract.md",
-      "notes": "Offline opt-in source-bound evidence matrix; retained PNJ/PVD/FPT acceptance, observation versus interpretation, exact cutoff/fitness, unknown recurrence and normalization blockers. Focused tests passed. PR96 corrective keeps the active reading budget and offline Stage 1 isolation guards unchanged; independent consumer validation preserves approved valid-output identities. Corrective checkpoint is local only; explicit owner approval required to push its exact SHA to existing PR96, then separate merge/deployment gates. No Daily, production writes, publication or successor.",
+      "notes": "Offline opt-in source-bound Economics matrix; PNJ/PVD/FPT acceptance and unknown normalization/strict valuation boundaries unchanged. PR96 merged at 9db35f157af38baf3807be1a6a6827e77fd461dc. Its stale HEAD sentinel is frozen to the exact last-touch corrective checkpoint confirmed by Git ancestry and native checker. No Daily, deployment or authority promotion.",
       "terminal_disposition": "LONG_TERM_COMPANY_ECONOMICS_EVIDENCE_MATRIX_IMPLEMENTATION_COMPLETE"
     },
     {
