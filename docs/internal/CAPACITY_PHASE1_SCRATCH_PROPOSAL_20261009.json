@@ -1,0 +1,45 @@
+{
+  "schema": "capacity_scratch_disposal_proposal/v1",
+  "production_apply_implemented": false,
+  "deleted_bytes": 0,
+  "inputs": {
+    "architecture_report_sha256": "1f7667f6796bd4f84fba9dd22e2bd244fe6e5dd6708f5b1cd6f40aedc833c0d5"
+  },
+  "exact_path_candidates": [
+    {
+      "path": "C:\\Users\\tungt\\AppData\\Local\\Temp\\pytest-of-tungt\\pytest-166",
+      "kind": "OWNER_PYTEST_SCRATCH",
+      "last_write_host_observation": "2026-10-08T15:00:59+07:00",
+      "status": "OWNER_REVIEW_ONLY",
+      "active_process_reference_observed": false,
+      "physical_bytes": "NOT_MEASURED",
+      "requires": [
+        "Exact path approval",
+        "Fresh idle/ownership verification before disposal",
+        "Preserve any unknown-owner or genuine retained artifacts"
+      ]
+    }
+  ],
+  "excluded": [
+    {
+      "retained_label": "claude 6e102def/f88458d2/e088e156/967bc3ed",
+      "reason": "No matching directory at retained TEMP/claude location; no broadened scan or guessed path"
+    },
+    {
+      "retained_label": "feedback-final-release-20261004*",
+      "reason": "Exact parent/path and ownership unresolved; wildcard not a disposal proposal"
+    },
+    {
+      "retained_label": "Codex review 1.5 GiB",
+      "reason": "Exact path/active-owner closure unresolved"
+    },
+    {
+      "retained_label": "current pytest roots and running agents",
+      "reason": "ACTIVE_OR_UNKNOWN_OWNER; excluded"
+    }
+  ],
+  "historical_aggregate_scratch_estimate_GiB": 12,
+  "freshly_verified_disposable_bytes": 0,
+  "authority_effect": "NONE",
+  "deletion_authorized": false
+}

@@ -233,6 +233,9 @@ immutable. [Share contract](hpg_common_share_evidence_contract.md).
 
 ## F. Delivery and operator gates
 
+[Capacity Phase 1](capacity_recovery_phase1_contract.md): delivery reuse opt-in,
+cold guard/plan/adapter offline. Authority NONE; no production activation or reclaim.
+
 ### 20. Dashboard / AI handoff publication
 - Contract: [dashboard_release_session_contract.md](dashboard_release_session_contract.md), [release_publication_contract.md](release_publication_contract.md); `release_orchestrator.py`, `ai_handoff_publication.py`
 - Runtime: `ACTIVE` · Authority: `SCOPED` (presentation of Producer verdicts; consumers may narrow, never widen) · Production: `OWNER_LAUNCHER` (phases 3–9)

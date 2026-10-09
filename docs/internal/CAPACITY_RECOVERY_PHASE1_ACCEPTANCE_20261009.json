@@ -1,0 +1,124 @@
+{
+  "schema": "capacity_phase1_acceptance/v1",
+  "disposition": "PARTIAL_READ_ONLY_CAPACITY_FOUNDATION_READY",
+  "base_sha": "1d6b8a8b9bce430a0b0f8cdd735a1cb90b8556f8",
+  "branch": "feature/capacity-recovery-phase1-20261009",
+  "worktree": "C:/Projects/StockLookup/capacity-recovery-phase1",
+  "checkpoint": "eed80f2fd4e0807e5721ba5474e19d21a1210220",
+  "pr98_head": "62bf8386eaa153eb4674b412f566cc0540ecc025",
+  "pr98_merge": "1d6b8a8b9bce430a0b0f8cdd735a1cb90b8556f8",
+  "implementation_inputs": [
+    {
+      "path": "W:\\ProjectVault\\Manifests\\capacity-recovery-architecture-20261009\\FINAL_REPORT.md",
+      "sha256": "1f7667f6796bd4f84fba9dd22e2bd244fe6e5dd6708f5b1cd6f40aedc833c0d5"
+    },
+    {
+      "path": "W:\\ProjectVault\\Manifests\\capacity-recovery-architecture-20261009\\CODEX_IMPLEMENTATION_CONTRACT.md",
+      "sha256": "1e5014072970ed9dafd0894d3e290671440fc5a20e642e84c8a00485419c0a88"
+    },
+    {
+      "path": "W:\\ProjectVault\\Manifests\\capacity-recovery-architecture-20261009\\CANDIDATE_GROUPS.json",
+      "sha256": "cb0dd590f0d0a4f47e003f1141ea755e83ce433ef151fe8a6c987a6d4e3e6fbb"
+    },
+    {
+      "path": "W:\\ProjectVault\\Manifests\\capacity-recovery-architecture-20261009\\REPORT_RECEIPT.json",
+      "sha256": "6ad0af60d4244d56118499b07d2150f954b3dcc94995ab7e29fe8c741d4cbe97"
+    },
+    {
+      "path": "W:\\ProjectVault\\Manifests\\capacity-recovery-architecture-20261009\\physical_link_and_file_id_check.json",
+      "sha256": "de73e3c38bba192b5fae1eb19b3420eef235fcafc0fb5c5bebac030a83265461"
+    }
+  ],
+  "prior_vault_acceptance": "docs/internal/VAULT_INCREMENTAL_OFFLINE_ACCEPTANCE_20261009.json",
+  "historical_reclaimed_bytes": 0,
+  "implemented_growth_reduction_bytes_per_session": 0,
+  "conditional_historical_union_GiB": 33.4,
+  "conditional_figures_not_freshly_qualified": true,
+  "production_catalog_entries": 0,
+  "production_apply_implemented": false,
+  "daily_activation": false,
+  "authority_effect": "NONE",
+  "remaining": [
+    "Future output writer lifecycle and write protection",
+    "Legacy Vault ledger strong-fingerprint import",
+    "G2/G5 complete resolver/reference closure",
+    "Production event binding and exact original restore verification",
+    "Fresh authorized exact-path dual-hash plan",
+    "Owner approval for historical dedup/cold retirement",
+    "Second verified copy or single-copy risk acceptance",
+    "Vault adapter activation",
+    "MVA/T0 Phase 2"
+  ],
+  "pr98_post_merge_ci": {
+    "run_id": 37874297797,
+    "head_sha": "1d6b8a8b9bce430a0b0f8cdd735a1cb90b8556f8",
+    "status": "COMPLETED",
+    "conclusion": "SUCCESS"
+  },
+  "validation": {
+    "broad_affected_suite": {
+      "passed": 530,
+      "skipped": 1,
+      "deselected": 8,
+      "failed": 9,
+      "seconds": 131.74,
+      "limits": "Eight unmarked historical-fixture tests fail on absent August retained files before changed code; one known legacy handoff parser failure documented in HISTORICAL_INDEX.md. No retained data imported or recreated."
+    },
+    "py_compile": "PASS",
+    "diff_check": "PASS",
+    "focused_final": {
+      "passed": 130,
+      "failed": 0,
+      "seconds": 30.04,
+      "selection": "Capacity/Vault, active-doc budget, CI dependency tiers and all five CI-selected Producer gate tests"
+    },
+    "roadmap_before_checkpoint": "ON_TRACK"
+  },
+  "no_source_deletion": true,
+  "no_production_daily": true,
+  "no_provider_acquisition": true,
+  "no_authority_promotion": true,
+  "nested_lock_corrective": {
+    "job": "PR99_NESTED_LOCK_CORRECTIVE_AND_CI_CLOSEOUT",
+    "checkpoint": "HEAD",
+    "lock_contract": "Qualification owns source handles; nested reads borrow the same descriptor. No lock release between qualification and copying. Boundary/proof hashes and pathname-to-descriptor device/inode identity are checked before manifest publication. Destination writer lock is independent.",
+    "windows": "Unchanged deny-write/delete source opener and exclusive destination writer opener. Synthetic mutation and cross-process writer attempts refuse.",
+    "posix": "Unchanged exclusive nonblocking flock on the owned descriptor. Reuse avoids independent-descriptor self-conflict. Same-byte pathname replacement and uncooperative mutations refuse before COMPLETE publication.",
+    "validation": {
+      "original_three_tests": {
+        "passed": 3,
+        "failed": 0
+      },
+      "capacity_vault": {
+        "passed": 84,
+        "skipped": 2,
+        "failed": 0,
+        "seconds": 24.36
+      },
+      "control_plane_ci_tiers_offline_smoke": {
+        "passed": 54,
+        "failed": 0,
+        "seconds": 36.2
+      },
+      "py_compile": "PASS",
+      "diff_check": "PASS",
+      "active_doc_bytes": 102246,
+      "active_doc_budget_bytes": 102400,
+      "roadmap": "ON_TRACK",
+      "ci_selected_hermetic": {
+        "passed": 3233,
+        "skipped": 21,
+        "deselected": 15,
+        "subtests_passed": 42,
+        "failed": 0,
+        "seconds": 749.78,
+        "selection": "FOCUSED_SELECTION from producer-ci.yml; provider-import block; not retained_evidence and not provider_runtime"
+      }
+    },
+    "host_limit": "Windows Python 3.13; WSL unavailable. Two actual POSIX pathname-replacement regressions require Linux CI. Existing CI selection includes all new regressions.",
+    "historical_failures": "Prior acceptance retains eight missing August fixture failures and the known legacy handoff parser failure. Relevant implementation files are unchanged; no retained evidence reconstructed.",
+    "production_mutation": false,
+    "daily_activation": false,
+    "authority_effect": "NONE"
+  }
+}

@@ -1,0 +1,199 @@
+{
+  "schema": "capacity_phase1_end_to_end_acceptance/v1",
+  "disposition": "ENGINEERING_READY_PENDING_EXACT_HEAD_CI",
+  "owner_directive": "STOCKLOOKUP_CAPACITY_PHASE1_END_TO_END_COMPLETION",
+  "original_pr_head": "14d7f02515380ac34557e87271fa12c050959e4e",
+  "base_sha": "1d6b8a8b9bce430a0b0f8cdd735a1cb90b8556f8",
+  "checkpoint": "HEAD",
+  "branch": "feature/capacity-recovery-phase1-20261009",
+  "worktree": "C:\\Projects\\StockLookup\\capacity-recovery-phase1",
+  "inputs": {
+    "CANDIDATE_GROUPS.json": {
+      "bytes": 1004042,
+      "sha256": "cb0dd590f0d0a4f47e003f1141ea755e83ce433ef151fe8a6c987a6d4e3e6fbb"
+    },
+    "CODEX_IMPLEMENTATION_CONTRACT.md": {
+      "bytes": 13115,
+      "sha256": "1e5014072970ed9dafd0894d3e290671440fc5a20e642e84c8a00485419c0a88"
+    },
+    "FINAL_REPORT.md": {
+      "bytes": 14947,
+      "sha256": "1f7667f6796bd4f84fba9dd22e2bd244fe6e5dd6708f5b1cd6f40aedc833c0d5"
+    },
+    "exact_reference_split.json": {
+      "bytes": 160983,
+      "sha256": "8e64db0f58ce7c5350607bd93d9e814dac3f5282fd9ca5b6eacca1b97f527e50"
+    },
+    "family_session_decomposition.json": {
+      "bytes": 279139,
+      "sha256": "3762858e2274546b6659c4d1dfb5a33aef134d7292a9ada97bd1bb726c9be7a8"
+    },
+    "one_off_family_reference_classes.json": {
+      "bytes": 216429,
+      "sha256": "25b943c7e6dd087f09f4687cab3c701c470f3c49d6911bd671b19835c4411f85"
+    },
+    "physical_link_and_file_id_check.json": {
+      "bytes": 2334,
+      "sha256": "de73e3c38bba192b5fae1eb19b3420eef235fcafc0fb5c5bebac030a83265461"
+    }
+  },
+  "writer_families": {
+    "full_universe_ndjson": {
+      "status": "IMPLEMENTED_OPT_IN",
+      "producer": "ai_research_session_delivery.build_delivery -> daily_research_session_operations.materialize",
+      "publication": "daily_producer_pipeline.run_daily_producer -> _retain_owner_delivery",
+      "source": "DRO operation path",
+      "consumer": "Producer run path plus original DRO path",
+      "replay": "Identical bytes no-op, conflict explicit refusal; no in-place shared writes",
+      "protection": "New private fsynced staging protected before exclusive publication; Windows read-only rename, POSIX mode0444/link/directory fsync; NTFS GUID/device verified",
+      "historical_relink": false
+    },
+    "session_bundle": {
+      "status": "IMPLEMENTED_OPT_IN",
+      "same_lifecycle_as": "full_universe_ndjson",
+      "manifest_and_artifact_identity_parity": true
+    },
+    "canonical_iid_working_view": {
+      "status": "BLOCKED",
+      "evidence": [
+        "canonical_post_close_pipeline._write_json replaces the canonical file on rebuild",
+        "_copy_iid_working_view atomically replaces a working view and requires source stat parity",
+        "Windows replacement of a protected shared working-view target is not proven safe; clearing a shared read-only attribute would weaken the canonical source",
+        "tests/test_iid_single_serialization.py continues to prove independent working-view behavior"
+      ],
+      "implemented_savings_bytes": 0
+    }
+  },
+  "physical_allocation": {
+    "fixture": "Actual build_delivery + DRO materialize + Producer owner publication; full 1683-record denominator, no padding",
+    "before_bytes": 2236416,
+    "after_bytes": 1118208,
+    "saved_bytes": 1118208,
+    "before_distinct_file_ids": 4,
+    "after_distinct_file_ids": 2,
+    "consumer_visible_paths": 4,
+    "method": "Unique device/inode + FILE_STANDARD_INFO allocation on Windows; st_blocks*512 on POSIX. Payload allocation excludes directory/MFT overhead.",
+    "logical_bytes": {
+      "ai_research_full_universe.ndjson": 1109300,
+      "ai_research_session_bundle.json": 4890
+    },
+    "source_sha_manifest_run_identity_replay_parity": true,
+    "by_family": {
+      "ai_research_full_universe.ndjson": {
+        "before_bytes": 2220032,
+        "after_bytes": 1110016,
+        "saved_bytes": 1110016,
+        "before_file_ids": 2,
+        "after_file_ids": 1
+      },
+      "ai_research_session_bundle.json": {
+        "before_bytes": 16384,
+        "after_bytes": 8192,
+        "saved_bytes": 8192,
+        "before_file_ids": 2,
+        "after_file_ids": 1
+      }
+    }
+  },
+  "future_projection": {
+    "retained_reference_session": "2026-10-07",
+    "ndjson_reference_allocated_bytes": 474857472,
+    "bundle_reference_allocated_bytes": 30400512,
+    "conditional_avoided_bytes_per_equivalent_daily": 505257984,
+    "target_1GiB_met": false,
+    "limitations": "Projection from two exact retained candidate rows, not a Daily-sized physical acceptance run. IID is blocked. Neither deployment nor activation nor production Daily has occurred."
+  },
+  "retention": {
+    "report": "docs/internal/CAPACITY_PHASE1_RETAINED_ELIGIBILITY_20261009.json",
+    "keep_sessions": [
+      "2026-10-08",
+      "2026-10-07",
+      "2026-10-06"
+    ],
+    "conditional_union_estimate_bytes": 32066560000,
+    "verified_reclaimable_bytes": 0,
+    "actual_reclaimed_bytes": 0,
+    "all_groups": "BLOCKED until fresh integrity/dependency/owner/second-copy gates",
+    "scratch_proposal": "docs/internal/CAPACITY_PHASE1_SCRATCH_PROPOSAL_20261009.json",
+    "scratch_deleted_bytes": 0,
+    "report_sha256": "3413753c07643ca4267b292a3cd301344a0e9e196c7406fa680d3c988e47784e",
+    "scratch_proposal_sha256": "d2f336bb71fb49ede816e4dc1a58995e49991b30309d215e58dd1d7b0b1199aa"
+  },
+  "vault_restore_t0": {
+    "context_owner": "Unique locked descriptor per device/inode; path/hash validation remains per path, no global lock shortcuts",
+    "posix_substitution_refusal": "Payload native fingerprint mismatch legitimately precedes borrow-exit inode validation. Boundary substitution uses inode category. Exact categories plus no manifest/receipt and source-byte parity are asserted.",
+    "standalone_vault_compatibility": true,
+    "linked_payload_compatibility": true,
+    "original_t0_seal_identity_preserved": true,
+    "archive_resolution": "RESTORE_REQUIRED until explicit verified local event; no acquisition fallback",
+    "restore_proof": "Real isolated Vault manifest/object bytes copied to exact paths, native restore verifier and independent consumer reads; no production catalog writer"
+  },
+  "validation": {
+    "focused_writer_capacity_vault": {
+      "passed": 100,
+      "skipped": 2,
+      "failed": 0,
+      "seconds": 25.01
+    },
+    "affected_existing_integration": {
+      "passed": 173,
+      "failed": 8,
+      "deselected": 6,
+      "seconds": 17.45,
+      "classification": "All eight same documented missing August fixtures fail in resolve_inputs before changed publication code; no evidence reconstruction."
+    },
+    "host": "Windows Python 3.13; actual POSIX regressions await Linux CI",
+    "active_doc_bytes": 102227,
+    "active_doc_budget_bytes": 102400,
+    "governance_ci_tiers_offline_smoke_roadmap": {
+      "passed": 89,
+      "failed": 0,
+      "seconds": 53.16
+    },
+    "per_family_allocation_acceptance": {
+      "passed": 1,
+      "failed": 0,
+      "seconds": 2.51
+    },
+    "py_compile": "PASS",
+    "diff_integrity": "PASS",
+    "protected_production_path_diff": "PASS",
+    "historical_milestone_preservation": "PASS: raw Git baseline and unrelated milestone semantic equality",
+    "retention_deterministic_reproduction": "PASS",
+    "native_roadmap_check": "PASS, exit 0; current ACTIVE, empty successor queue",
+    "hermetic_producer_ci_selection": {
+      "passed": 3249,
+      "skipped": 21,
+      "deselected": 15,
+      "subtests_passed": 42,
+      "failed": 0,
+      "seconds": 771.63,
+      "selection": ".github/workflows/producer-ci.yml FOCUSED_SELECTION",
+      "markers": "not retained_evidence and not provider_runtime",
+      "provider_containment": "PYTHONPATH=tests/provider_import_block",
+      "log_sha256": "72d669e0e4cf6f8a2d95d937a5ce3106376dc36fe1d6f6ba9d57f51c47521882",
+      "exclusions": "Existing workflow selection unchanged except addition of all new writer lifecycle tests; retained/provider markers unchanged. Windows POSIX substitutions await Linux CI."
+    }
+  },
+  "roadmap": "ACTIVE owner-authorized continuation preserving prior partial completion; no automatic successor",
+  "production": {
+    "deleted_bytes": 0,
+    "moved_bytes": 0,
+    "relinked_paths": 0,
+    "allocation_savings_bytes": 0,
+    "daily_executions": 0,
+    "provider_acquisitions": 0,
+    "database_writes": 0,
+    "scheduled_activation": false,
+    "authority_effect": "NONE"
+  },
+  "remaining_release_gate": "Exact-head Producer CI success and required review/mergeability checks before protected normal merge",
+  "remaining_production_gates": [
+    "Separate deployment/activation gate",
+    "Authorized normal Daily allocation verification",
+    "Fresh exact-path retention qualification and approval",
+    "Second-copy/risk approval and verified catalog/restore event activation",
+    "IID working-view lifecycle proof",
+    "Phase2 MVA/T0 portability"
+  ]
+}

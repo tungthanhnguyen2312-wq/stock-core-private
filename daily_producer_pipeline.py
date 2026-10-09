@@ -164,7 +164,30 @@ def _write_immutable(path: Path, value: bytes) -> None:
     if path.exists() and path.read_bytes() != value:
         raise DailyProducerError("IMMUTABLE_DAILY_PRODUCER_CONTENT_CONFLICT:" + path.name)
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_bytes(value)
+    from immutable_delivery import publish_bytes
+    publish_bytes(path, value)
+
+
+def _retain_owner_delivery(operation_dir: Path, run_dir: Path, *, reuse_delivery: bool = False) -> dict:
+    """The real Producer owner-file publication path, with unchanged manifest records."""
+    from immutable_delivery import DELIVERIES, retain_alias
+    from atomic_io import AtomicWriteError
+    native_manifest = json.loads((operation_dir / "ai_research_bundle_manifest.json").read_bytes())
+    copied = {}
+    for filename in OWNER_FILENAMES:
+        source, target = operation_dir / filename, run_dir / filename
+        if reuse_delivery and filename in DELIVERIES:
+            proof = native_manifest["files"][filename]
+            try:
+                retain_alias(source, target, expected_sha=proof["sha256"], expected_size=proof["bytes"])
+            except AtomicWriteError as exc:
+                raise DailyProducerError(str(exc)) from exc
+            copied[filename] = {"sha256": proof["sha256"], "bytes": proof["bytes"]}
+        else:
+            data = source.read_bytes()
+            _write_immutable(target, data)
+            copied[filename] = {"sha256": _sha(data), "bytes": len(data)}
+    return copied
 
 
 def _verify_delivery(operation: Mapping[str, Any], operation_dir: Path) -> dict[str, Any]:
@@ -258,6 +281,7 @@ def run_daily_producer(
     daily_integrated_decision_brief_builder: Callable[[Mapping[str, Any]], Mapping[str, Any]] | None = None,
     runtime_root_override: Path | None = None,
     now: datetime | None = None,
+    reuse_immutable_delivery: bool = False,
 ) -> dict[str, Any]:
     """Run the one-command retained completed-session producer pipeline."""
     if bool(session) == bool(latest_completed_session):
@@ -303,6 +327,7 @@ def run_daily_producer(
         integrated_investment_decision_product=integrated_investment_decision_product,
         daily_integrated_decision_brief=daily_integrated_decision_brief,
         daily_integrated_decision_brief_builder=daily_integrated_decision_brief_builder,
+        **({"protect_delivery": True} if reuse_immutable_delivery else {}),
     )
     parity = _verify_delivery(operation, operation_dir)
     # Current-product projections (Investment Decision Workspace, Screener Master Projection):
@@ -321,11 +346,7 @@ def run_daily_producer(
     run_identity = _run_identity(selected, producer_head, consumer_head, plan, operation["manifest"]["operation_identity"])
     run_dir = output_root / selected / run_identity.split(":", 1)[1]
     existing_run = (run_dir / "run_manifest.json").exists()
-    copied: dict[str, dict[str, Any]] = {}
-    for filename in OWNER_FILENAMES:
-        data = (operation_dir / filename).read_bytes()
-        _write_immutable(run_dir / filename, data)
-        copied[filename] = {"sha256": _sha(data), "bytes": len(data)}
+    copied = _retain_owner_delivery(operation_dir, run_dir, reuse_delivery=reuse_immutable_delivery)
     for key, filename in (("macro_artifact", "current_macro_regime_artifact.json"), ("macro_market_regime_context", "macro_market_regime_context.json"), ("canonical_decision_packet", "current_research_decision_packet_artifact.json")):
         if operation.get(key) is not None:
             data = (operation_dir / filename).read_bytes()
