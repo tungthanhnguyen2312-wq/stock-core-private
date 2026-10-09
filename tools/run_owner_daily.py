@@ -39,6 +39,7 @@ from canonical_trusted_subset_release import (  # noqa: E402
 from checkout_cleanliness_contract import (  # noqa: E402
     CONSUMER_APPROVED_UNTRACKED_PREFIXES, classify_checkout_cleanliness,
 )
+from pending_session_input_freeze import classify_pending_input_freeze  # noqa: E402
 from governed_publication_completion import (  # noqa: E402
     resolve_dashboard_origin_main_sha,
     verify_existing_publication_completion,
@@ -116,8 +117,11 @@ def preflight_repository(root: Path, *, expected_name: str, expected_remote_frag
     fetched ``origin/main`` -- never a pull/fast-forward across a dirty tracked file -- and (d)
     ``verify_daily_completion`` proves ``completed_session`` already passed every canonical
     LOCAL_COMPLETE / retained-evidence gate. The registry itself is then committed and pushed by
-    the existing ``commit_daily_state``. A fresh Daily (``completed_session=None``) keeps the
-    strict clean-checkout contract unchanged.
+    the existing ``commit_daily_state``. A fresh Daily (``completed_session=None``) still refuses
+    every other tracked change. Its one exception is a sole additive pre-Producer input freeze
+    classified by ``pending_session_input_freeze``: status ``PENDING_INPUT_FREEZE_AT_ORIGIN_MAIN``.
+    That freeze is not Daily completion, is not committed here, and is refused without pulling
+    when HEAD is not already ``origin/main``.
     """
     root = root.resolve()
     if root.name != expected_name or not (root / ".git").exists():
@@ -136,7 +140,12 @@ def preflight_repository(root: Path, *, expected_name: str, expected_remote_frag
         cleanliness.tracked_dirty_paths and completed_session is not None
         and _is_sole_pending_daily_state_diff(root)
     )
-    if cleanliness.tracked_dirty_paths and not pending_daily_state:
+    pending_input_freeze = bool(
+        expected_name == "stock-core-private"
+        and cleanliness.tracked_dirty_paths and completed_session is None
+        and classify_pending_input_freeze(root).admitted
+    )
+    if cleanliness.tracked_dirty_paths and not pending_daily_state and not pending_input_freeze:
         raise OwnerDailyError("Repository preflight",
                               "UNEXPECTED_TRACKED_CHANGES:" + ";".join(cleanliness.tracked_dirty_paths),
                               "Commit, stash, or otherwise resolve the tracked work before Daily.")
@@ -146,6 +155,12 @@ def preflight_repository(root: Path, *, expected_name: str, expected_remote_frag
                               "Remove or govern the unexpected untracked file(s) before Daily; "
                               "only approved runtime/evidence paths may remain untracked.")
     head, remote_head = _git(root, "rev-parse", "HEAD"), _git(root, "rev-parse", "origin/main")
+    if pending_input_freeze:
+        if head != remote_head:
+            raise OwnerDailyError("Repository preflight", "PENDING_INPUT_FREEZE_HEAD_NOT_ORIGIN_MAIN",
+                                  "The pre-Producer input freeze can continue only on origin/main. "
+                                  "No pull, reset, or rebase was attempted.")
+        return {"head": head, "status": "PENDING_INPUT_FREEZE_AT_ORIGIN_MAIN"}
     if pending_daily_state:
         if head != remote_head:
             raise OwnerDailyError("Repository preflight", "PENDING_DAILY_STATE_HEAD_NOT_ORIGIN_MAIN",
@@ -1249,8 +1264,9 @@ def run_workflow(*, root: Path = ROOT, runtime_root: Path = DEFAULT_RUNTIME,
             _journal_advance_strict(root, run_id, journal.SESSION_RESOLVED)
 
         # A replay/verified auto-resume may carry the governed Daily registry as its sole pending
-        # diff (kernel completed, then interrupted before `commit_daily_state`); a fresh Daily
-        # passes completed_session=None and keeps the strict clean-checkout contract.
+        # diff (kernel completed, then interrupted before `commit_daily_state`). A fresh Daily
+        # passes completed_session=None. The only fresh-path registry admission is the additive
+        # pre-Producer input freeze decided inside preflight_repository; it is not completion.
         if telemetry is not None:
             telemetry.emit(phase_index=1, progress_kind="PIPELINE", status="BEGIN")
         producer = preflight_repository(root, expected_name="stock-core-private", expected_remote_fragment="stock-core-private",

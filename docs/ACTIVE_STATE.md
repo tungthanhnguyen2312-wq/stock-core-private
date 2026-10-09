@@ -159,8 +159,8 @@ Fact kinds used below: **CURRENT FACT** (verified in repo or by a stated read-on
    Untracked-path allowances are **per checkout** and defined by `checkout_cleanliness_contract.py` as applied
    there: the Consumer allows only `.worktrees/` (`CONSUMER_APPROVED_UNTRACKED_PREFIXES`); Producer and
    Dashboard checks use the default `APPROVED_RUNTIME_EVIDENCE_PREFIXES` (specific `data/<store>/` evidence
-   subdirectories, not all of `data/`). Any tracked change or other untracked file blocks. Do not assume an
-   untracked path is approved; run the preflight and read its verdict.
+   subdirectories, not all of `data/`). Tracked changes block, except one additive pre-Producer registry
+   freeze (`PENDING_INPUT_FREEZE_AT_ORIGIN_MAIN`, not completion). Any other tracked or untracked file blocks.
 3. No other Daily/Producer writer is running; launch the Daily alone, with ordinary browsers/IDEs/
    unrelated Python workloads closed.
 4. Existing evidence/runtime/session/window gates pass (they are not bypassed by a READY host).

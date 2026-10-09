@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Any, Mapping
 
 from checkout_cleanliness_contract import classify_checkout_cleanliness
+from pending_session_input_freeze import classify_pending_input_freeze
 
 
 RUNTIME_ROOT_ENV = "STOCK_LOOKUP_RUNTIME_ROOT"
@@ -86,7 +87,9 @@ def producer_release_qualification(producer_root: Path) -> dict[str, Any]:
     contract.py`` -- the same contract ``tools/run_owner_daily.py::preflight_
     repository`` uses -- so a checkout carrying only approved untracked runtime/
     evidence (e.g. ``data/dnse-foreign-flow/``) cannot pass the owner's repository
-    preflight and then fail here as ``RELEASE_CHECKOUT_DIRTY``.
+    preflight and then fail here as ``RELEASE_CHECKOUT_DIRTY``. The same shared
+    pre-Producer input-freeze classifier can qualify this checkout while the registry
+    remains the sole tracked change. That qualification does not commit the registry.
     """
     root = Path(producer_root)
     code, head = _git(root, "rev-parse", "HEAD")
@@ -109,7 +112,17 @@ def producer_release_qualification(producer_root: Path) -> dict[str, Any]:
         result["reason_code"] = "GIT_RELEASE_AUTHORITY_UNAVAILABLE"
         return result
     if not cleanliness.qualified:
-        result["reason_code"] = "RELEASE_CHECKOUT_DIRTY"
+        freeze = (classify_pending_input_freeze(root)
+                  if cleanliness.tracked_dirty_paths and not cleanliness.unsafe_untracked_paths
+                  else None)
+        if freeze is None or not freeze.admitted:
+            result["reason_code"] = "RELEASE_CHECKOUT_DIRTY"
+            return result
+        if head != origin_main:
+            result["reason_code"] = "PENDING_INPUT_FREEZE_HEAD_NOT_ORIGIN_MAIN"
+            result["session"] = freeze.session
+            return result
+        result.update(qualified=True, reason_code="PENDING_INPUT_FREEZE", session=freeze.session)
         return result
     if head != origin_main:
         result["reason_code"] = "RELEASE_CHECKOUT_NOT_AT_ORIGIN_MAIN"
