@@ -1,4 +1,4 @@
-# Capacity Recovery Phase 1 — bounded foundation
+# Capacity Recovery Phase 1 — writer completion
 
 Owner authorization: `PR98_RELEASE_AND_CAPACITY_RECOVERY_PHASE1_END_TO_END`, October 9,
 2026. PR98 merged with exact-head protection, authorized head
@@ -7,11 +7,14 @@ Owner authorization: `PR98_RELEASE_AND_CAPACITY_RECOVERY_PHASE1_END_TO_END`, Oct
 Only `STOCKLOOKUP_CAPACITY_RECOVERY_PHASE1_LINK_DEDUP_AND_COLD_CATALOG_V1` is admitted
 through native `--can-start ... --owner-override`. Queue stays empty. Authority effect NONE.
 
-This is a coherent **PARTIAL_READ_ONLY_CAPACITY_FOUNDATION_READY** subset of the
-owner-approved milestone. Catalog/resolver protection, offline exact-path qualification,
-synthetic reversible mechanics and qualified Vault V1 adapter are implemented. Future
-output linking and production retention tooling remain blocked on the dependencies below.
-No production activation, source deletion, retention apply, T0 relocation or capacity PR merge.
+The prior **PARTIAL_READ_ONLY_CAPACITY_FOUNDATION_READY** checkpoint remains recorded.
+Owner directive `STOCKLOOKUP_CAPACITY_PHASE1_END_TO_END_COMPLETION` explicitly continues
+that subset from PR99 head `14d7f02515380ac34557e87271fa12c050959e4e` without starting a
+successor. Native `--continue-scope ... --owner-override --scope-note ...` preserves the
+prior completion and records `allows_reopen=true`. Phase 1 is ACTIVE until engineering
+and exact-head CI/release gates close. Only a fully qualified exact-head normal merge is
+authorized. No production deployment/activation, source deletion, relink, retention apply,
+Daily, provider acquisition or T0 relocation is authorized.
 
 ## Catalog and acquisition boundary
 
@@ -117,10 +120,36 @@ configuration checked against native observation, never inferred from the drive 
 
 ## Writer investigation and remaining blockers
 
-`daily_research_session_operations.materialize` checks byte equality and then calls
-`path.write_bytes` for AI NDJSON/session bundle/manifest/brief on replay.
-`daily_producer_pipeline._write_immutable` likewise rewrites an equal existing file.
-Thus linking these current paths would allow in-place writes through a shared inode.
+The original DRO and Producer delivery writers rewrote equal bytes in place. They now
+publish through private staging and exclusive creation, with exact replay a no-op and
+conflicting/partial existing content an explicit refusal. Existing legacy paths are
+neither replaced, sealed nor linked by the new reuse path.
+
+`run_daily_producer(..., reuse_immutable_delivery=True)` is the opt-in integration.
+It asks DRO to protect newly published `ai_research_full_universe.ndjson` and
+`ai_research_session_bundle.json`, then uses `_retain_owner_delivery` to publish the
+Producer paths on the same verified NTFS volume (GUID) or POSIX device. Windows uses
+private fsynced staging, read-only attributes and exclusive rename; POSIX uses private
+fsynced staging, mode 0444 and exclusive hardlink publication plus directory fsync.
+No partially written file is published. Legacy/unprotected or cross-volume inputs
+retain an independent verified copy. Alias SHA/size, identity and protection are checked;
+no generic cross-run content-addressable store or historical relink exists.
+
+The switch defaults FALSE and no launcher/CLI/Daily call enables it. Deployment and
+future activation require their separate gate. Disabling reuse safely retains existing
+shared files with exact-byte no-op replay; keep the corrected immutable publishers when
+rolling back activation. Reverting to the old in-place writers is not a safe rollback.
+Completed shared paths never permit replacement through these publishers. OS protection
+is against ordinary writes, not privileged administrator removal of protection.
+
+Readers keep all original paths: AI handoff, ticker extractor, canonical runtime release,
+previous-operation/Brief resolution and tiered bundles. Manifest native SHA/size and
+artifact/run/operation identities are unchanged. Linked sources are supported by Vault's
+explicit context-local `(device,inode)` owner: one locked descriptor, separately verified
+pathnames, and no simultaneous alias borrowers. Link creation precedes snapshot sealing;
+its changed link count/ChangeTime cannot reuse an old Vault fingerprint lease silently.
+
+**IID remains BLOCKED for shared publication.**
 `canonical_post_close_pipeline._copy_iid_working_view` verifies a write receipt and
 replaces a working view; `_write_json` replaces the canonical working artifact. These
 paths are not a proven write-once shared object lifecycle. Existing tests also require
@@ -152,7 +181,14 @@ pre/post feedback; G3 dated p3f9b DNSE-only snapshots; G5 exact unreferenced one
 Their exact owner-local path manifest and hashes are recorded in the acceptance record;
 it is an implementation input, not a manifest compatible with this new production planner.
 
-**Implemented growth reduction: 0 GiB/session. Actual historical reclaim: 0 bytes.**
+**Measured isolated delivery allocation: 2,236,416 → 1,118,208 bytes (50%).**
+The genuine 1,683-row builder fixture uses no padding. Its four source/consumer paths
+retain native SHA, manifest and replay parity while physical file identities fall 4 → 2.
+Actual Producer entry-point fixtures preserve completed run identity and parity checks.
+Retained October-7 inputs project 505,257,984 bytes (~0.471 GiB) avoided per equivalent
+future session after activation, not the unimplemented 1.8-GiB all-family scenario.
+This falls below the preferred 1-GiB target; IID remains explicitly blocked.
+**Actual production growth reduction and historical reclaim: 0 bytes.**
 The architecture's 8.19 → 5.0 GiB/session scenario depends on about 1.8 GiB future link
 avoidance plus rolling historical retirement; neither is activated or claimed here.
 At the retained 125.1-GiB free-space observation and unchanged 25-GiB guard, conservative
@@ -165,8 +201,18 @@ excluding scratch, failed attempts and unrelated growth. It is not a guaranteed 
 Remaining owner gates: production read-only dual-hash plan/legacy import; exact plan SHA
 and path approval for historical dedup; separate cold retirement approval plus verified
 second copy or accepted risk; explicit restore/event qualification; adapter activation;
-scratch cleanup; and a separate Phase 2 for MVA/T0 portability. Capacity PR must not merge
-under this job. No automatic successor.
+scratch cleanup; and a separate Phase 2 for MVA/T0 portability. PR99 merge requires all
+exact-head CI/review/mergeability gates plus the measured writer integration. No successor.
+
+The deterministic `tools.capacity_retained_eligibility` report consumes only pinned small
+architecture inputs and the legacy backup receipt; it performs no production content reads
+or apply. Exact G1/G2/G3/G5 paths, native historical source/W identities, restore paths,
+physical estimates and blockers are retained in
+`internal/CAPACITY_PHASE1_RETAINED_ELIGIBILITY_20261009.json`. Keep current plus previous
+two sessions (October 8/7/6); cross-group physical IDs count once. Conditional union is
+32,066,560,000 bytes (~29.86 GiB), freshly verified reclaimable capacity remains zero.
+Fresh dual hashes/strong fingerprints, resolver/external closure, exact owner plan approval
+and second-copy/risk acceptance remain mandatory. G4/T0/MVA/accumulators stay excluded.
 
 PR99 lock corrective: qualification owns an explicit `LockedSources` context and
 passes it into Vault V1. Nested reads borrow the original descriptor, restore its

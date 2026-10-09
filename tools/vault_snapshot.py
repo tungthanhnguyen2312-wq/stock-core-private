@@ -116,6 +116,7 @@ class LockedSources:
     def __init__(self):
         self._stack = ExitStack()
         self._handles = {}
+        self._identities = {}
         self._hashes = {}
         self._borrowed = set()
         self._active = False
@@ -147,7 +148,16 @@ class LockedSources:
     def acquire(self, path, *, expected_sha=None):
         path = self._key(path)
         if path not in self._handles:
-            self._handles[path] = self._stack.enter_context(locked_file(path))
+            current = path.lstat()
+            identity = (current.st_dev, current.st_ino)
+            if identity in self._identities:
+                self._handles[path] = self._identities[identity]
+            else:
+                stream = self._stack.enter_context(locked_file(path))
+                self._validate(path, stream)
+                self._handles[path] = stream
+                held = os.fstat(stream.fileno())
+                self._identities[(held.st_dev, held.st_ino)] = stream
         self._validate(path, self._handles[path])
         if expected_sha is not None:
             require(path not in self._hashes or self._hashes[path] == expected_sha,
@@ -167,16 +177,16 @@ class LockedSources:
     def borrow(self, path):
         path = self._key(path)
         self.acquire(path)
-        require(path not in self._borrowed, "source handle already borrowed")
         stream = self._handles[path]
+        require(stream not in self._borrowed, "source handle already borrowed")
         offset = stream.tell()
-        self._borrowed.add(path)
+        self._borrowed.add(stream)
         try:
             stream.seek(0)
             yield stream
             self._validate(path, stream)
         finally:
-            self._borrowed.remove(path)
+            self._borrowed.remove(stream)
             if not stream.closed:
                 stream.seek(offset)
 

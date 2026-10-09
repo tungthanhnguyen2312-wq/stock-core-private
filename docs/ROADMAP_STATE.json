@@ -16,13 +16,13 @@
   ],
   "current": {
     "milestone": "STOCKLOOKUP_CAPACITY_RECOVERY_PHASE1_LINK_DEDUP_AND_COLD_CATALOG_V1",
-    "state": "COMPLETE"
+    "state": "ACTIVE"
   },
   "queued_next": [],
   "milestones": [
     {
       "milestone_id": "STOCKLOOKUP_CAPACITY_RECOVERY_PHASE1_LINK_DEDUP_AND_COLD_CATALOG_V1",
-      "state": "COMPLETE",
+      "state": "ACTIVE",
       "starting_checkpoint": "1d6b8a8b9bce430a0b0f8cdd735a1cb90b8556f8",
       "candidate_branch": "feature/capacity-recovery-phase1-20261009",
       "dependencies": [
@@ -30,17 +30,31 @@
       ],
       "unlocks": [],
       "owner_authorized": true,
-      "owner_override": "OWNER_DIRECTIVE_2026_10_09_PR98_RELEASE_AND_CAPACITY_RECOVERY_PHASE1_END_TO_END",
+      "owner_override": {
+        "allows_reopen": true,
+        "directive": "STOCKLOOKUP_CAPACITY_PHASE1_END_TO_END_COMPLETION: preserve the completed read-only foundation; continue actual immutable delivery writers, measured offline allocation, retention/restore readiness and exact-head PR99 CI. No production mutation or automatic successor."
+      },
       "authority_effect": "NONE",
       "source_doc": "docs/capacity_recovery_phase1_contract.md",
       "state_history": [
         "DEFERRED",
         "ACTIVE",
-        "COMPLETE"
+        "COMPLETE",
+        "ACTIVE"
       ],
-      "checkpoint": "eed80f2fd4e0807e5721ba5474e19d21a1210220",
-      "terminal_disposition": "PARTIAL_READ_ONLY_CAPACITY_FOUNDATION_READY",
-      "notes": "Bounded safe subset: empty catalog, pre-network cold guard, read-only plan, synthetic undo/restore, qualified Vault V1 adapter. Future output links and production retention remain blocked. Zero reclaimed bytes/growth reduction; no activation or successor."
+      "checkpoint": null,
+      "terminal_disposition": null,
+      "notes": "STOCKLOOKUP_CAPACITY_PHASE1_END_TO_END_COMPLETION: preserve the completed read-only foundation; continue actual immutable delivery writers, measured offline allocation, retention/restore readiness and exact-head PR99 CI. No production mutation or automatic successor.",
+      "scope_continuations": [
+        {
+          "prior_state": "COMPLETE",
+          "prior_checkpoint": "eed80f2fd4e0807e5721ba5474e19d21a1210220",
+          "prior_terminal_disposition": "PARTIAL_READ_ONLY_CAPACITY_FOUNDATION_READY",
+          "prior_notes": "Bounded safe subset: empty catalog, pre-network cold guard, read-only plan, synthetic undo/restore, qualified Vault V1 adapter. Future output links and production retention remain blocked. Zero reclaimed bytes/growth reduction; no activation or successor.",
+          "owner_scope_note": "STOCKLOOKUP_CAPACITY_PHASE1_END_TO_END_COMPLETION: preserve the completed read-only foundation; continue actual immutable delivery writers, measured offline allocation, retention/restore readiness and exact-head PR99 CI. No production mutation or automatic successor.",
+          "prior_owner_override": "OWNER_DIRECTIVE_2026_10_09_PR98_RELEASE_AND_CAPACITY_RECOVERY_PHASE1_END_TO_END"
+        }
+      ]
     },
     {
       "milestone_id": "PRICE_BASIS_AND_FLOW_CONTRACT_CORRECTIVE_V1",

@@ -99,12 +99,48 @@ def test_adapter_preserves_destination_writer_exclusivity(vault_fixture):
     assert not list(vault.glob("snapshots/*/manifest.json"))
 
 
+def test_source_owner_hardlink_aliases_share_one_descriptor(tmp_path):
+    source, alias = tmp_path / "source", tmp_path / "alias"
+    source.write_bytes(b"original")
+    os.link(source, alias)
+    with v.LockedSources() as owner:
+        owner.acquire(source)
+        owner.acquire(alias)
+        with owner.borrow(source) as first:
+            with pytest.raises(v.Refused, match="already borrowed"):
+                with owner.borrow(alias):
+                    pass
+            descriptor = first.fileno()
+        with owner.borrow(alias) as second:
+            assert second.fileno() == descriptor and second.read() == b"original"
+        owner.validate_all()
+        assert_writer_refused(alias)
+
+
+def test_adapter_linked_and_unlinked_payload_compatibility(vault_fixture):
+    source, vault, expected, observer = vault_fixture
+    path, _ = boundary_fixture(vault_fixture, qualified=True)
+    b = json.loads(path.read_bytes())
+    original = source / "historical-feedback.bin"
+    alias = source / "feedback_alias.bin"
+    os.link(original, alias)
+    b["files"].append(dict(relative_path=alias.name, size=alias.stat().st_size, sha256=v.sha(alias),
+                           family="IMMUTABLE_SESSION", state="COMPLETE", immutable=True, lock_dependent=False))
+    write(path, b)
+    before = {p: (p.read_bytes(), v.fingerprint(p)) for p in (original, alias)}
+    result = adapter.snapshot_completed(source, vault, path, v.sha(path), expected, opt_in=True, observer=observer)
+    assert result["status"] == "COMPLETE"
+    assert adapter.snapshot_completed(source, vault, path, v.sha(path), expected, opt_in=True, observer=observer) == result
+    assert {p: (p.read_bytes(), v.fingerprint(p)) for p in (original, alias)} == before
+
+
 @pytest.mark.skipif(os.name == "nt", reason="POSIX permits replacement despite advisory flock")
 @pytest.mark.parametrize("target", ["boundary", "source"])
 def test_adapter_refuses_same_bytes_pathname_replacement(vault_fixture, target):
     source, vault, expected, observer = vault_fixture
     pair = boundary_fixture(vault_fixture, qualified=True)
     replaced = []
+    before = {p: p.read_bytes() for p in [pair[0], *source.iterdir()] if p.is_file()}
     def replace(path, stage):
         if replaced:
             return
@@ -113,10 +149,13 @@ def test_adapter_refuses_same_bytes_pathname_replacement(vault_fixture, target):
         replacement.write_bytes(victim.read_bytes())
         os.replace(replacement, victim)
         replaced.append(victim)
-    with pytest.raises(v.Refused, match="pathname/inode changed"):
+    reason = "pathname/inode changed" if target == "boundary" else "source mutated or native hash mismatch"
+    with pytest.raises(v.Refused, match=reason):
         adapter.snapshot_completed(source, vault, *pair, expected, opt_in=True,
                                    observer=observer, on_chunk=replace)
     assert replaced and not list(vault.glob("snapshots/*/manifest.json"))
+    assert not list(vault.glob("snapshots/*/receipt*.json"))
+    assert {p: p.read_bytes() for p in before} == before
 
 
 @pytest.mark.parametrize("target", ["payload", "registry", "boundary"])
@@ -276,6 +315,38 @@ def test_explicit_verified_local_event_then_consumer_read(tmp_path):
     install(tmp_path, [row])  # fixture-only event; there is no production catalog writer
     assert catalog.resolve(tmp_path, row["relative_path"]) == "PRESENT_ON_C"
     assert local.read_bytes() == b"old" and v.sha(local) == row["sha256"]
+
+
+def test_real_offline_restore_keeps_archive_state_until_verified_event(vault_fixture):
+    source, vault, expected, observer = vault_fixture
+    pair = boundary_fixture(vault_fixture)
+    receipt = v.snapshot(source, vault, *pair, expected, observer=observer)
+    manifest_path = vault / "snapshots" / receipt["snapshot_identity"] / "manifest.json"
+    manifest = v.read_manifest(manifest_path, receipt["manifest_sha256"])
+    restored = source.parent / "restore-fixture"
+    for item in manifest["files"]:
+        destination = v.safe_path(restored, item["relative_path"])
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_bytes(v.safe_path(vault, item["vault_path"]).read_bytes())
+    payload = next(r for r in manifest["files"] if r["relative_path"] == "historical-feedback.bin")
+    row = dict(relative_path=payload["relative_path"], state="ARCHIVED_COLD", session_identity=SESSION,
+        artifact_identity="feedback:original", artifact_role="historical_feedback",
+        original_size=payload["size"], sha256=payload["sha256"], source_seal_provenance={"source_identity": manifest["source_identity"]},
+        vault=dict(snapshot_identity=receipt["snapshot_identity"], manifest_path=manifest_path.relative_to(vault).as_posix(),
+                   manifest_sha256=receipt["manifest_sha256"], object_path=payload["vault_path"],
+                   object_sha256=payload["sha256"], volume_id=expected["destination"]["id"]),
+        restore_procedure="Exact original path, native SHA, original consumer verification", restore_preconditions=["Verified W identity", "Explicit event"])
+    install(restored, [row])
+    with pytest.raises(catalog.ArchiveRestoreRequired, match="RESTORE_REQUIRED"):
+        catalog.resolve(restored, row["relative_path"], session_identity=SESSION)
+    verified = v.restore_verify(vault, manifest_path, receipt["manifest_sha256"], restored,
+                                expected["destination"], observer=observer)
+    assert verified["source_identity"] == manifest["source_identity"] and verified["status"] == "VERIFIED"
+    row["state"] = "PRESENT_ON_C"
+    install(restored, [row])  # explicit synthetic event, never a production catalog writer
+    assert catalog.resolve(restored, row["relative_path"], session_identity=SESSION) == "PRESENT_ON_C"
+    assert (restored / row["relative_path"]).read_bytes() == (source / row["relative_path"]).read_bytes()
+    assert (restored / row["relative_path"]).stat().st_ino != (source / row["relative_path"]).stat().st_ino
 
 
 @pytest.fixture

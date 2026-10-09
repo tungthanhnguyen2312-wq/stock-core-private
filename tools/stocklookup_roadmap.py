@@ -1,8 +1,9 @@
 """Owner-facing roadmap execution-state CLI.
 
-Read-only: reports current/next/blocked milestone state from
+Queries report current/next/blocked milestone state from
 ``docs/ROADMAP_STATE.json`` and cross-checks it against live, local Git/worktree
-state. Never mutates the roadmap file, Git, or any worktree.
+state. Queries never mutate files or Git. Explicit --continue-scope writes only
+the current owner-authorized continuation, preserving its prior completion.
 
     python tools/stocklookup_roadmap.py                    human-readable report
     python tools/stocklookup_roadmap.py --json              machine-readable report
@@ -13,6 +14,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -106,6 +108,20 @@ def _report_to_json(report: res.RoadmapReport, *, repo: Path | None) -> dict:
     }
 
 
+def continuation_text(original: str, state: dict, mid: str) -> str:
+    """Preserve the exact text of all historical milestones and other metadata."""
+    milestone = next(m for m in state["milestones"] if m["milestone_id"] == mid)
+    pattern = r'\{\s*"milestone_id":\s*' + re.escape(json.dumps(mid))
+    start = re.search(pattern, original).start()
+    _, length = json.JSONDecoder().raw_decode(original[start:])
+    body = json.dumps(milestone, ensure_ascii=False, indent=2).replace("\n", "\n    ")
+    original = original[:start] + body + original[start + length:]
+    start = re.search(r'^  "current": ', original, re.MULTILINE).end()
+    _, length = json.JSONDecoder().raw_decode(original[start:])
+    body = json.dumps(state["current"], ensure_ascii=False, indent=2).replace("\n", "\n  ")
+    return original[:start] + body + original[start + length:]
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--state-file", type=Path, default=res.DEFAULT_STATE_PATH)
@@ -114,6 +130,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--check", action="store_true", help="Preflight gate: print PASS/FAIL and exit non-zero on any FAIL-severity finding.")
     parser.add_argument("--can-start", metavar="MILESTONE_ID", help="Report whether MILESTONE_ID is allowed to start now.")
     parser.add_argument("--owner-override", action="store_true", help="With --can-start: allow starting a milestone that is not recorded NEXT (owner override). Never inferred automatically.")
+    parser.add_argument("--continue-scope", metavar="MILESTONE_ID", help="Explicitly resume the current completed subset under an owner-authorized bounded scope expansion; preserve its completion record.")
+    parser.add_argument("--scope-note", help="Exact owner directive and bounded continuation scope; required with --continue-scope.")
     args = parser.parse_args(argv)
 
     try:
@@ -123,6 +141,45 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     repo = args.repo if args.repo.is_dir() else None
+
+    if args.continue_scope:
+        mid = args.continue_scope
+        if not args.owner_override or not args.scope_note or args.can_start:
+            parser.error("--continue-scope requires --owner-override and --scope-note; cannot combine with --can-start")
+        current = state.get("current") or {}
+        milestone = next((m for m in state["milestones"] if m.get("milestone_id") == mid), None)
+        if (current.get("milestone") != mid or current.get("state") != "COMPLETE"
+                or milestone is None or milestone.get("state") != "COMPLETE"
+                or state.get("queued_next")):
+            parser.error("continuation requires the exact current COMPLETE subset and empty successor queue")
+        report = res.evaluate(state, repo=repo)
+        if report.overall != "ON_TRACK":
+            parser.error("roadmap preflight must be ON_TRACK before scope continuation")
+        checkpoint = milestone.get("checkpoint")
+        if checkpoint == "HEAD" and repo is not None:
+            ok, checkpoint = res.resolve_checkpoint(repo, checkpoint)
+            if not ok:
+                parser.error("completion checkpoint cannot be resolved")
+        milestone.setdefault("scope_continuations", []).append({
+            "prior_state": "COMPLETE", "prior_checkpoint": checkpoint,
+            "prior_terminal_disposition": milestone.get("terminal_disposition"),
+            "prior_owner_override": milestone.get("owner_override"),
+            "prior_notes": milestone.get("notes"), "owner_scope_note": args.scope_note,
+        })
+        milestone["state"] = "ACTIVE"
+        milestone["owner_override"] = {"allows_reopen": True, "directive": args.scope_note}
+        milestone["checkpoint"] = None
+        milestone["terminal_disposition"] = None
+        milestone.setdefault("state_history", []).append("ACTIVE")
+        milestone["notes"] = args.scope_note
+        state["current"]["state"] = "ACTIVE"
+        state["last_updated_checkpoint"] = "HEAD"
+        if res.evaluate(state, repo=repo).overall != "ON_TRACK":
+            parser.error("continued roadmap must remain ON_TRACK; no update written")
+        original = args.state_file.read_text(encoding="utf-8")
+        args.state_file.write_bytes(continuation_text(original, state, mid).encode("utf-8"))
+        print("OWNER_AUTHORIZED_SCOPE_CONTINUATION:" + mid)
+        return 0
 
     if args.can_start:
         allowed, reasons = res.can_start(state, args.can_start, owner_override=args.owner_override)

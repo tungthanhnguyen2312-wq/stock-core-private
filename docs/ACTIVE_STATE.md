@@ -34,8 +34,8 @@ Fact kinds used below: **CURRENT FACT** (verified in repo or by a stated read-on
 **BLOCKED**, **DEFERRED**, **HISTORICAL**.
 
 ## 1. The operational gate
-- **COMPLETE subset — capacity Phase 1:** empty catalog/guard, offline plan/adapter; zero reclaim.
-  Links blocked on write lifecycle. PR98 merged `1d6b8a8`.
+- **ACTIVE — capacity Phase 1 continuation:** measured opt-in delivery reuse;
+  release CI pending, zero production reclaim. PR98 merged `1d6b8a8`.
   [Contract](capacity_recovery_phase1_contract.md); authority NONE.
 - **COMPLETE — Vault V1:** PR97 merged `3f3d4fe`; offline/opt-in, 77 candidates,
   zero deletion authority; C retention/runtime recovery still gated. Queue empty.

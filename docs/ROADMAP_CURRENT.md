@@ -5,10 +5,10 @@ Updated 2026-10-09 from main `3f3d4fe38abbb3a11c5914e0337efdc0badf445e`.
 Nothing below auto-starts: native --can-start or explicit owner override admits work (AI_RULES 11).
 Facts: [ACTIVE_STATE.md](ACTIVE_STATE.md).
 
-## NOW — capacity Recovery Phase 1 (COMPLETE subset)
+## NOW — capacity Recovery Phase 1 (ACTIVE continuation)
 
-Owner override admits capacity Phase 1 from PR98 merge `1d6b8a8`: empty catalog/guard,
-offline plan/adapter. Links/retirement blocked; zero reclaim/growth reduction.
+Owner continuation preserves the subset from PR98 `1d6b8a8`: catalog/guard/adapter.
+Measured delivery reuse is opt-in; release CI pending, zero production reclaim.
 [Contract and gates](capacity_recovery_phase1_contract.md). No successor.
 
 Vault V1 COMPLETE, PR97 merged at starting main: offline snapshot/SQLite tools and
