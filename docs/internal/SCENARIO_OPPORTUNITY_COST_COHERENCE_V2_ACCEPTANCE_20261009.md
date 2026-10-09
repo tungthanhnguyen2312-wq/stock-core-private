@@ -133,7 +133,9 @@ probability estimate are not manufactured.
 
 ## Checkpoint and release gate
 
-Checkpoint/PR details are recorded after completed validation. This milestone remains
+Implementation checkpoint `6f3ca4641e738ac58fc7ba2ab6967714c9af75db`; the following governance checkpoint records it.
+Feature branch is pushed normally; the new PR is attached to the chat after creation.
+Exact final head and initial external CI are reported at closeout. This milestone remains
 ACTIVE for owner review/merge; the new PR is not merged. No production Daily/replay,
 deployment, publication, retained/production write, T0/history mutation, new provider,
 authority promotion, investment-policy/risk/leverage change or automatic successor.
