@@ -272,3 +272,32 @@ def test_actual_offline_packet_materialization_and_projection(tmp_path):
     broken.update(owner.content_identity(broken))
     with pytest.raises(owner.IntegratedDecisionProductError, match="INCOMPATIBLE"):
         packet.build_artifact(opportunity=source, integrated_decision=broken)
+
+
+def _opportunity(tickers):
+    import current_opportunity_prioritization as opportunity
+    source = {"contract_version": "current_opportunity_prioritization/v1", "research_session": SESSION,
+              "records": {ticker: {"priority_tier": "MONITOR"} for ticker in tickers}}
+    source.update(opportunity.content_identity(source))
+    return source
+
+
+def test_packet_keeps_official_opportunity_universe_when_integrated_decision_is_wider():
+    integrated = integrated_decision(SESSION, ["OUT", "SYN"],
+        tactical_records={"OUT": tactical(), "SYN": tactical()},
+        currency_by_ticker={"OUT": "CURRENT_SESSION", "SYN": "CURRENT_SESSION"})
+    result = packet.build_artifact(opportunity=_opportunity(["SYN"]), integrated_decision=integrated)
+    assert set(result["records"]) == {"SYN"}
+    assert "OUT" not in result["records"]
+    assert result["records"]["SYN"]["security_decision"]["decision_identity"] == integrated["records"]["SYN"]["decision_identity"]
+    packet.replay(result)
+    equal = packet.build_artifact(opportunity=_opportunity(["SYN"]), integrated_decision=integrated_decision(
+        SESSION, ["SYN"], tactical_records={"SYN": tactical()}, currency_by_ticker={"SYN": "CURRENT_SESSION"}))
+    assert set(equal["records"]) == {"SYN"}
+
+
+def test_packet_rejects_opportunity_ticker_absent_from_integrated_decision():
+    integrated = integrated_decision(SESSION, ["OUT"], tactical_records={"OUT": tactical()},
+                                    currency_by_ticker={"OUT": "CURRENT_SESSION"})
+    with pytest.raises(packet.CurrentResearchDecisionPacketError, match="INTEGRATED_DECISION_PACKET_BINDING_INVALID"):
+        packet.build_artifact(opportunity=_opportunity(["SYN"]), integrated_decision=integrated)

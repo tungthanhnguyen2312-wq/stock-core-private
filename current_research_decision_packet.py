@@ -76,10 +76,13 @@ def build_artifact(*, opportunity: Mapping[str,Any], scenario: Mapping[str,Any]|
  security_records={}
  if integrated_decision is not None:
   import integrated_investment_decision_product as owner
+  # The packet universe is the official opportunity set. Integrated Decision also
+  # retains the wider acquisition denominator. Every opportunity ticker must have
+  # an integrated record; extra integrated records are not packet rows.
   if (integrated_decision.get("session") != opportunity.get("research_session")
       or integrated_decision.get("contract_version") != owner.CONTRACT_VERSION
       or owner.content_identity(integrated_decision).get("artifact_identity") != integrated_decision.get("artifact_identity")
-      or set(integrated_decision.get("records") or {}) != set(opportunity["records"])):
+      or not set(opportunity["records"]) <= set(integrated_decision.get("records") or {})):
    raise CurrentResearchDecisionPacketError("INTEGRATED_DECISION_PACKET_BINDING_INVALID")
   security_records=integrated_decision["records"]
   for security in security_records.values():
