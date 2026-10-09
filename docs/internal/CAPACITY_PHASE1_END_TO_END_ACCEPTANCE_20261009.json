@@ -116,7 +116,7 @@
     "all_groups": "BLOCKED until fresh integrity/dependency/owner/second-copy gates",
     "scratch_proposal": "docs/internal/CAPACITY_PHASE1_SCRATCH_PROPOSAL_20261009.json",
     "scratch_deleted_bytes": 0,
-    "report_sha256": "dbd2084cfffc098c6b51cd21b44b3e3584203e4593ac33ca0ac576db2c55a624",
+    "report_sha256": "3413753c07643ca4267b292a3cd301344a0e9e196c7406fa680d3c988e47784e",
     "scratch_proposal_sha256": "d2f336bb71fb49ede816e4dc1a58995e49991b30309d215e58dd1d7b0b1199aa"
   },
   "vault_restore_t0": {
