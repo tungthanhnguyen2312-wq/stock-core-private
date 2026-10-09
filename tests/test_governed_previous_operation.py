@@ -135,6 +135,35 @@ def test_equally_lineage_qualified_operations_without_pointer_remain_ambiguous(t
     assert resolved["qualified_candidate_count"] == 2
 
 
+def test_sole_operation_with_attached_macro_matches_frozen_lineage(tmp_path):
+    registry = _registry(tmp_path)
+    chosen, identity = _operation(
+        tmp_path, "macro-attached",
+        frozen={**FROZEN, "macro": "current_macro_regime:attached"},
+    )
+    resolved = selector.resolve_governed_previous_operation(CURRENT, registry, tmp_path)
+    assert resolved["status"] == selector.AVAILABLE
+    assert resolved["operation_identity"] == identity
+    assert resolved["qualified_candidate_count"] == 1
+    assert resolved["selection_basis"] == "SOLE_FROZEN_INPUT_LINEAGE_QUALIFIED_OPERATION"
+    assert Path(resolved["operation_directory"]) == chosen
+
+
+def test_unknown_extra_input_and_frozen_value_mismatch_stay_rejected(tmp_path):
+    registry = _registry(tmp_path)
+    _operation(tmp_path, "unknown-extra", frozen={**FROZEN, "event_context": "event:other"})
+    _operation(tmp_path, "macro-but-wrong-frozen", frozen={
+        "descriptive": "descriptive:other",
+        "macro": "current_macro_regime:attached",
+    })
+    resolved = selector.resolve_governed_previous_operation(CURRENT, registry, tmp_path)
+    assert resolved["status"] == selector.GOVERNED_PREVIOUS_OPERATION_LINEAGE_MISMATCH
+    assert resolved["qualified_candidate_count"] == 0
+    assert {candidate["reason_code"] for candidate in resolved["candidates"]} == {
+        "FROZEN_INPUT_LINEAGE_MISMATCH",
+    }
+
+
 def test_pointer_must_bind_to_a_lineage_qualified_operation(tmp_path):
     registry = _registry(tmp_path)
     valid, _ = _operation(tmp_path, "valid")
