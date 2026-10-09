@@ -422,6 +422,8 @@ def retained_session_snapshots(root: str | Path, sessions: Sequence[str]) -> dic
     snapshots: dict[str, dict[str, Any]] = {}
     for session in sorted(set(sessions)):
         path = level2.session_artifact_paths(repository, session)["exact_session_snapshot"]
+        from retained_evidence_catalog import guard_path
+        guard_path(repository, path, session_identity=session)
         snapshot = _load_json(path)
         if snapshot and snapshot.get("resolved_completed_session") == session and isinstance(snapshot.get("snapshot_identity"), str):
             snapshots[session] = snapshot

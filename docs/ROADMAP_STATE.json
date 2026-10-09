@@ -15,15 +15,37 @@
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "PRICE_BASIS_AND_FLOW_CONTRACT_CORRECTIVE_V1",
+    "milestone": "STOCKLOOKUP_CAPACITY_RECOVERY_PHASE1_LINK_DEDUP_AND_COLD_CATALOG_V1",
     "state": "COMPLETE"
   },
   "queued_next": [],
   "milestones": [
     {
+      "milestone_id": "STOCKLOOKUP_CAPACITY_RECOVERY_PHASE1_LINK_DEDUP_AND_COLD_CATALOG_V1",
+      "state": "COMPLETE",
+      "starting_checkpoint": "1d6b8a8b9bce430a0b0f8cdd735a1cb90b8556f8",
+      "candidate_branch": "feature/capacity-recovery-phase1-20261009",
+      "dependencies": [
+        "PRICE_BASIS_AND_FLOW_CONTRACT_CORRECTIVE_V1"
+      ],
+      "unlocks": [],
+      "owner_authorized": true,
+      "owner_override": "OWNER_DIRECTIVE_2026_10_09_PR98_RELEASE_AND_CAPACITY_RECOVERY_PHASE1_END_TO_END",
+      "authority_effect": "NONE",
+      "source_doc": "docs/capacity_recovery_phase1_contract.md",
+      "state_history": [
+        "DEFERRED",
+        "ACTIVE",
+        "COMPLETE"
+      ],
+      "checkpoint": "HEAD",
+      "terminal_disposition": "PARTIAL_READ_ONLY_CAPACITY_FOUNDATION_READY",
+      "notes": "Bounded safe subset: empty catalog, pre-network cold guard, read-only plan, synthetic undo/restore, qualified Vault V1 adapter. Future output links and production retention remain blocked. Zero reclaimed bytes/growth reduction; no activation or successor."
+    },
+    {
       "milestone_id": "PRICE_BASIS_AND_FLOW_CONTRACT_CORRECTIVE_V1",
       "state": "COMPLETE",
-      "checkpoint": "HEAD",
+      "checkpoint": "62bf8386eaa153eb4674b412f566cc0540ecc025",
       "state_history": ["ACTIVE", "COMPLETE"],
       "terminal_disposition": "PRICE_BASIS_AND_FLOW_CORRECTIVE_LOCAL_READY",
       "starting_checkpoint": "3f3d4fe38abbb3a11c5914e0337efdc0badf445e",
@@ -932,7 +954,7 @@
       "credential_claim_correction": "DNSE credentials were not visible/configured in the execution environment used for the historical-backfill attempt.",
       "notes_credential_correction": "The prior absolute credential wording in notes is superseded by credential_claim_correction; no credential discovery was performed for this corrective.",
       "starting_checkpoint": "20e40545c4d8f1c656b070fb4e8d0d5a3385ea44",
-      "checkpoint": "HEAD",
+      "checkpoint": "62bf8386eaa153eb4674b412f566cc0540ecc025",
       "dependencies": [
         "SIGNAL_VELOCITY_AND_FLOW_PRICE_DECISION_PRESENTATION_V1"
       ],
@@ -2607,7 +2629,7 @@
       "state": "COMPLETE_LOCAL",
       "narrative_disposition": "READY_FOR_OWNER_CUTOVER_REVIEW / PRODUCTION_ACCEPTANCE_NOT_CLAIMED",
       "starting_checkpoint": "155efa6a7e39fa24c080477abcc3b3691300df12",
-      "checkpoint": "HEAD",
+      "checkpoint": "62bf8386eaa153eb4674b412f566cc0540ecc025",
       "dependencies": [],
       "unlocks": [],
       "authority_effect": "NONE / CURRENT_OFFICIAL_RESEARCH_SCOPE_PRODUCT_INTEGRATION_LOCAL_ONLY",
@@ -2622,7 +2644,7 @@
       "state": "COMPLETE_LOCAL",
       "narrative_disposition": "READY_FOR_OWNER_CUTOVER_REVIEW / PRODUCTION_ACCEPTANCE_NOT_CLAIMED",
       "starting_checkpoint": "0488ef6e357219c0e930ab5d70f4beac6a003a1f",
-      "checkpoint": "HEAD",
+      "checkpoint": "62bf8386eaa153eb4674b412f566cc0540ecc025",
       "dependencies": [
         "CURRENT_OFFICIAL_RESEARCH_UNIVERSE_PRODUCT_CUTOVER_AND_RELEASE_INTEGRATION_V1"
       ],
@@ -2639,7 +2661,7 @@
       "state": "COMPLETE_LOCAL",
       "narrative_disposition": "READY_FOR_RELEASE_AND_DASHBOARD_CUTOVER",
       "starting_checkpoint": "47a4264d7eec78e464b9a36f2395f9143e755e50",
-      "checkpoint": "HEAD",
+      "checkpoint": "62bf8386eaa153eb4674b412f566cc0540ecc025",
       "dependencies": [
         "WORKSPACE_PUBLISHER_LINEAGE_CONTRACT_RECONCILIATION_V1",
         "CURRENT_OFFICIAL_RESEARCH_UNIVERSE_PRODUCT_CUTOVER_AND_RELEASE_INTEGRATION_V1"
@@ -2657,7 +2679,7 @@
       "state": "COMPLETE_LOCAL",
       "narrative_disposition": "COMPLETE_LOCAL_AI_RESEARCH_PACKET_READY / OWNER_REVIEW_FOR_PUBLICATION",
       "starting_checkpoint": "018d8086d04a88c6051eab884c1999056f6ed11c",
-      "checkpoint": "HEAD",
+      "checkpoint": "62bf8386eaa153eb4674b412f566cc0540ecc025",
       "dependencies": [
         "OFFICIAL_SCOPE_EVIDENCE_OPERATIONALIZATION_AND_DASHBOARD_CUTOVER_READINESS_V1"
       ],

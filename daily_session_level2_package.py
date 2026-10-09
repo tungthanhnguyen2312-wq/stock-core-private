@@ -1472,6 +1472,9 @@ def ensure_exact_session_snapshot(
     """
     execution_root = execution_root or artifact_root
     paths = session_artifact_paths(artifact_root, session)
+    from retained_evidence_catalog import guard_path, guard_acquisition, guard_registered_snapshots
+    guard_registered_snapshots(execution_root, session, {"exact_session_snapshot"})
+    guard_path(artifact_root, paths["exact_session_snapshot"], session_identity=session)
     p3f9b_snapshot = paths["exact_session_snapshot"]
     evidence_path = paths["multi_source_market_evidence"]
     if p3f9b_snapshot.exists():
@@ -1505,6 +1508,8 @@ def ensure_exact_session_snapshot(
 
     instant = now or vn_now()
     dnse_only_path = paths["dnse_only_exact_session_snapshot"]
+    guard_registered_snapshots(execution_root, session, {"dnse_only_exact_session_snapshot"})
+    guard_path(artifact_root, dnse_only_path, session_identity=session)
     if dnse_only_path.exists():
         # A prior attempt already completed Pass 1 and crashed/stopped before the resolved
         # projection was written; reuse it rather than spending a second live DNSE
@@ -1521,6 +1526,9 @@ def ensure_exact_session_snapshot(
             "downloaded_bytes": None, "downloaded_bytes_reason": "PAYLOAD_BYTES_NOT_OBSERVABLE",
         })
     else:
+        guard_acquisition(execution_root, session)
+        if execution_root.absolute() != artifact_root.absolute():
+            guard_acquisition(artifact_root, session)
         candidates = snapshotter.canonical_candidates(runtime_root)
         status = ensure_credentials_loaded()
         creds = credentials_for_request()

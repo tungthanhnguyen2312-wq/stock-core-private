@@ -34,9 +34,9 @@ Fact kinds used below: **CURRENT FACT** (verified in repo or by a stated read-on
 **BLOCKED**, **DEFERRED**, **HISTORICAL**.
 
 ## 1. The operational gate
-- **COMPLETE — price basis/flow corrective V1:** local checkpoint only;
-  Numeric/operator parity; unverified basis; per-record velocity compatibility.
-  [Contract](price_basis_and_flow_contract_corrective.md); no Daily/authority promotion.
+- **COMPLETE subset — capacity Phase 1:** empty catalog/guard, offline plan/adapter; zero reclaim.
+  Links blocked on write lifecycle. PR98 merged `1d6b8a8`.
+  [Contract](capacity_recovery_phase1_contract.md); authority NONE.
 - **COMPLETE — Vault V1:** PR97 merged `3f3d4fe`; offline/opt-in, 77 candidates,
   zero deletion authority; C retention/runtime recovery still gated. Queue empty.
   [Contract and acceptance](vault_incremental_snapshot_contract.md).

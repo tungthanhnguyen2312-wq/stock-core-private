@@ -3,6 +3,8 @@
 Canonical Daily order, including the Macro V1 corrective. Code governs this view.
 Current-state facts: [ACTIVE_STATE.md](ACTIVE_STATE.md). Authority per output: [AUTHORITY.md](AUTHORITY.md).
 
+[Capacity adapter](capacity_recovery_phase1_contract.md) is offline/opt-in; no launcher hook.
+
 [Long-term company economics evidence](long_term_company_economics_evidence_contract.md)
 is offline opt-in only; it adds no Daily stage or consumer. October 8 Macro live
 acceptance is independently verified; exact identities are in ACTIVE_STATE.
