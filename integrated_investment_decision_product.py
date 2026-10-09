@@ -1707,6 +1707,8 @@ def build_ticker_integrated_decision(
     boundaries = tactical_boundaries_record or {}
     structural_identity = structural_condition_source_identity
     trigger = {
+        "horizon": tactical.get("trigger_horizon"),
+        "price_basis": copy.deepcopy(tactical.get("price_basis_qualification")),
         "trigger_type": tactical.get("trigger_type", "NO_TRIGGER"),
         "trigger_level": tactical.get("trigger_level"),
         "trigger_state": tactical.get("trigger_state", "NOT_AVAILABLE"),
@@ -1721,6 +1723,8 @@ def build_ticker_integrated_decision(
         ),
     }
     invalidation = {
+        "horizon": tactical.get("invalidation_horizon"),
+        "price_basis": copy.deepcopy(tactical.get("price_basis_qualification")),
         "invalidation_level": tactical.get("invalidation_level"),
         "invalidation_method": tactical.get("invalidation_method") or "CONFIRMED_SWING_LEVEL_OR_SUPPORT_FALLBACK",
         "distance_to_invalidation_pct": tactical.get("distance_to_invalidation_pct"),

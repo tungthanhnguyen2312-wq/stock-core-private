@@ -185,10 +185,10 @@ immutable. [Share contract](hpg_common_share_evidence_contract.md).
 
 ### 14. Integrated Decision + Daily Producer (research posture)
 - Contract: `integrated_investment_decision_product/v1` (`integrated_investment_decision_product.py`); Producer `daily_producer_pipeline.py`
-- Runtime: `ACTIVE` · Authority: `SCOPED` (research posture only; `is_actionable=false`; no target/probability/size) · Production: `IN_DAILY_BLOCKING`
-- Input: nine evidence axes, Tactical V3 structure, financial/valuation/corporate/market-sector context · Predecessor: legacy opportunity decision
-- Blocker: none for operation · Next trigger: [V2](conditional_research_posture_v2_contract.md)
-  merge/release pending; private holdings downstream only, history immutable.
+- Runtime: `ACTIVE` · Authority: `SCOPED` (research posture; no target/probability/size) · Production: `IN_DAILY_BLOCKING`
+- Input: nine axes, Tactical V3, financial/valuation/corporate/market-sector · Predecessor: legacy opportunity
+- Blocker: none · Next trigger: [coherence V2](scenario_and_opportunity_cost_decision_coherence_v2_contract.md)
+  offline PR gate; Posture V2 released PR100. Private holdings downstream; history immutable.
 
 ## D. Thesis, feedback, learning
 

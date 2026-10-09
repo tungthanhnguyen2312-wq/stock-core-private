@@ -5,6 +5,12 @@ Contract: `portfolio_opportunity_cost_research/v1` · Module: `portfolio_opportu
 Mode: **offline, opt-in**. Not called by Owner Daily, not sealed, not published to the Dashboard,
 nothing persisted.
 
+V1 remains readable and unchanged for historical callers. The distinct v2 entry
+`build_integrated_comparison` verifies complete released IID policy v2 and uses
+its class/qualified condition rather than phase-only tactical confirmation.
+See [coherence V2](scenario_and_opportunity_cost_decision_coherence_v2_contract.md)
+for admission, non-entry context, owner position and packet identity rules.
+
 ## Purpose
 
 Research for a human, never an allocation. For each supplied comparison unit it states whether a

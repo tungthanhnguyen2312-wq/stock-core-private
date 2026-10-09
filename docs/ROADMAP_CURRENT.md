@@ -1,14 +1,15 @@
 # Stock Lookup — Current Roadmap
 
 History: [ROADMAP.md](ROADMAP.md); execution: ROADMAP_STATE.json.
-Updated 2026-10-09 from main `168e0f712e3b57c6a626f0e76f36f471136f3232`.
-Nothing below auto-starts: native --can-start or owner override (AI_RULES 11).
+Updated 2026-10-09 from main `314406e59b868d2a4207fa7af7798a31ee3b6906`.
+Nothing below auto-starts; --can-start or owner override (AI_RULES 11).
 Facts: [ACTIVE_STATE.md](ACTIVE_STATE.md).
 
-## NOW — CONDITIONAL_RESEARCH_POSTURE_V2 (ACTIVE)
+## NOW — SCENARIO_AND_OPPORTUNITY_COST_DECISION_COHERENCE_V2 (ACTIVE)
 
-Owner-directed implementation, synthetic integration/CI and one PR.
-[Contract](conditional_research_posture_v2_contract.md); no merge, Daily or authority change.
+Offline implementation/CI/one PR; no Daily/deploy/authority change.
+[Contract](scenario_and_opportunity_cost_decision_coherence_v2_contract.md).
+Posture V2 COMPLETE: PR100 `314406e`, four CI jobs SUCCESS.
 Capacity Phase 1 COMPLETE: PR99 `168e0f7`, CI 37893984528 success;
 zero production reclaim/activation. [Contract](capacity_recovery_phase1_contract.md).
 

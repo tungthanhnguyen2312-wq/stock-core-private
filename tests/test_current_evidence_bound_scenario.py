@@ -1,5 +1,6 @@
 import json
 from pathlib import Path
+import pytest
 
 from current_evidence_bound_scenario import build, content_identity
 from export_ai_bundle import attach_current_evidence_bound_scenario
@@ -7,6 +8,21 @@ from export_ai_bundle import attach_current_evidence_bound_scenario
 
 ROOT = Path(__file__).resolve().parents[1]
 OPERATIONS = ROOT / "operations-review"
+
+# These original golden regressions require gitignored retained artifacts; keep
+# their assertions intact and declare the dependency using the governed tier.
+pytestmark = pytest.mark.retained_evidence(
+    "operations-review/market-wide-current-descriptive-research-v1-20260823/market_wide_current_descriptive_research_artifact.json",
+    "operations-review/watchlist-tactical-entry-decision-v1-20260823/watchlist_tactical_entry_classifier_artifact.json",
+    "operations-review/sector-aware-relative-research-v1-20260824/sector_aware_relative_research_artifact.json",
+    "operations-review/market-wide-current-fundamental-research-v1-20260823/market_wide_current_fundamental_research_artifact.json",
+    "operations-review/market-wide-current-valuation-v1-20260824/market_wide_current_valuation_artifact.json",
+    "operations-review/full-universe-entry-candidate-triage-20260824/full_universe_entry_candidate_triage_20260824.json",
+    "operations-review/catalyst-event-research-context-v1-20260820/catalyst_event_research_context_artifact.json",
+    "operations-review/market-wide-current-corporate-intelligence-v1-20260824/market_wide_current_corporate_intelligence_artifact.json",
+    "operations-review/current-market-screening-opportunity-comparison-foundation-v1-20260823/current_market_screening_opportunity_comparison_foundation_artifact.json",
+    "operations-review/current-evidence-bound-scenario-v1-20260824/current_evidence_bound_scenario_artifact.json",
+)
 
 
 def _inputs():

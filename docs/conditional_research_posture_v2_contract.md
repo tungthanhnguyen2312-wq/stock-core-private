@@ -103,4 +103,6 @@ No new score, probability, target, provider, voting flow, trade/size/PIT/RAW aut
 production write, Daily/replay, deployment, merge or automatic successor is allowed
 by this job. Capacity Phase 1 is released at the verified starting main (PR99 and
 post-merge CI success); production reclaim and delivery reuse activation remain zero.
-The posture milestone stays ACTIVE awaiting the owner's merge/release gate.
+Posture V2 is COMPLETE: owner-authorized exact-head PR100 merge released
+`314406e59b868d2a4207fa7af7798a31ee3b6906`; all four CI jobs at head `9eb5aef`
+succeeded (run 37903228274). No production Daily or deployment was performed.
