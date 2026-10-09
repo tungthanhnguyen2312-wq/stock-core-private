@@ -37,9 +37,9 @@
         "DEFERRED",
         "ACTIVE"
       ],
-      "checkpoint": null,
+      "checkpoint": "d3d02e5e58cda8013d4140d17f84a738537e4727",
       "terminal_disposition": null,
-      "notes": "RESEARCH_POSTURE_V2_FULL_IMPLEMENTATION_AND_CI: owner-directed nine-token policy V2, private holdings excluded, all named consumers, synthetic acceptance and one PR; no merge, deployment, Daily, production writes or authority promotion."
+      "notes": "RESEARCH_POSTURE_V2_FULL_IMPLEMENTATION_AND_CI: owner-directed nine-token policy V2, private holdings excluded, all named consumers, synthetic acceptance and one PR; no merge, deployment, Daily, production writes or authority promotion. Local implementation checkpoint d3d02e5e58cda8013d4140d17f84a738537e4727; full hermetic 3321 passed, 21 skipped, 15 deselected, 42 subtests passed. Owner merge/release and exact-head external CI remain pending; no production activation."
     },
     {
       "milestone_id": "STOCKLOOKUP_CAPACITY_RECOVERY_PHASE1_LINK_DEDUP_AND_COLD_CATALOG_V1",

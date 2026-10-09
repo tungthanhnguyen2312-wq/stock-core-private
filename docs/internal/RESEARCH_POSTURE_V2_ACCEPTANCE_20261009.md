@@ -116,3 +116,5 @@ Capacity Phase 1 engineering is COMPLETE at PR99/main
 `168e0f712e3b57c6a626f0e76f36f471136f3232` with post-merge CI 37893984528 success;
 zero production reclaim/activation. Posture V2 stays ACTIVE pending owner merge/release;
 there is no queued or automatic successor. One feature branch/PR is authorized.
+
+Implementation checkpoint: `d3d02e5e58cda8013d4140d17f84a738537e4727`; branch `feature/research-posture-v2-20261009`, worktree `C:/Projects/StockLookup/research-posture-v2`. External exact-head CI is checked after push/PR; local results are not external CI evidence.
