@@ -288,6 +288,8 @@ def project_ticker(record: Mapping[str, Any], packet: Mapping[str, Any], *, copy
         "allowed_uses": list(record.get("allowed_uses") or []),
         "prohibited_uses": list(record.get("prohibited_uses") or list(FORBIDDEN)),
     }
+    if "security_decision" in record:
+        view["security_decision"] = _cpy(record["security_decision"], copy_payload)
     return view
 
 

@@ -1,7 +1,7 @@
 # Stock Lookup — Active State
 
 Compact navigation view of what is true **now**. Updated 2026-10-09 from verified
-starting main `9db35f157af38baf3807be1a6a6827e77fd461dc`.
+starting main `168e0f712e3b57c6a626f0e76f36f471136f3232`.
 The owner-authorized campaign continues through bounded evidence milestones.
 Verify live remote main with `git fetch origin main` or
 `git ls-remote origin refs/heads/main`; a **local** remote-tracking ref alone can be stale.
@@ -34,13 +34,13 @@ Fact kinds used below: **CURRENT FACT** (verified in repo or by a stated read-on
 **BLOCKED**, **DEFERRED**, **HISTORICAL**.
 
 ## 1. The operational gate
-- **ACTIVE — capacity Phase 1 continuation:** measured opt-in delivery reuse;
-  release CI pending, zero production reclaim. PR98 merged `1d6b8a8`.
-  [Contract](capacity_recovery_phase1_contract.md); authority NONE.
+- **ACTIVE — [Posture V2](conditional_research_posture_v2_contract.md):** owner-directed implementation/CI/one PR; no merge, Daily, deployment or authority promotion.
+- **COMPLETE — [capacity Phase 1](capacity_recovery_phase1_contract.md):** PR99 merged
+  `168e0f7`, post-merge CI 37893984528 success; zero production reclaim/activation.
 - **COMPLETE — Vault V1:** PR97 merged `3f3d4fe`; offline/opt-in, 77 candidates,
   zero deletion authority; C retention/runtime recovery still gated. Queue empty.
   [Contract and acceptance](vault_incremental_snapshot_contract.md).
-- **COMPLETE — economics evidence:** PR96 merged at `9db35f157af38baf3807be1a6a6827e77fd461dc`.
+- **COMPLETE — economics evidence:** PR96 `9db35f1`.
   Offline, opt-in, non-voting PNJ/PVD/FPT matrix: exact observations versus interpretation;
   gaps UNKNOWN, no normalized economics or strict valuation promotion. No Daily/deployment.
   [Contract and acceptance](long_term_company_economics_evidence_contract.md).

@@ -87,6 +87,8 @@ def _thin_card(ticker: str, card: Mapping[str, Any], shard_key: str) -> dict[str
         "as_of_session": card.get("as_of_session"),
         # Primary action decision (Integrated Decision pass-through) and its evidence currency.
         "research_action_posture": card.get("research_action_posture"),
+        "posture_condition_class": card.get("posture_condition_class"),
+        "research_action_policy_version": card.get("research_action_policy_version", "v1"),
         "evidence_currency": card.get("evidence_currency"),
         "position_context": dict(card.get("position_context") or {}) or None,
         "action_presentation": dict(card.get("action_presentation") or {}) or None,

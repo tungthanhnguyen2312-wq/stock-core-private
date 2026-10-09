@@ -168,6 +168,8 @@ def _evidence_block(ticker: str, record: Mapping[str, Any], *, session: str, cov
     return {
         "why_now": record.get("why_now"),
         "research_action_posture": record.get("research_action_posture"),
+        "posture_condition_class": record.get("posture_condition_class"),
+        "research_action_policy_version": record.get("research_action_policy_version", "v1"),
         # Producer-owned evidence currency, passed through. The ``freshness`` block below stays a
         # diagnostic explanation only; it never re-derives a competing decision-currency class.
         "evidence_currency": record.get("evidence_currency"),

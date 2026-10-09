@@ -499,3 +499,46 @@ def test_no_milestone_specific_checkpoint_bypass_in_checker_source():
     assert "HNX_PERIODIC_FINANCIAL_DOCUMENT_ROUTE_ACTIVATION_AND_RAW_ACQUISITION_V1" not in source
     assert "TEXT_NATIVE_OFFICIAL_FINANCIAL_TABLE_EXTRACTION_SCALEOUT_V1" not in source
     assert "ROADMAP_CHECKPOINT_NOT_IN_GIT" in source
+
+
+def test_owner_admission_releases_only_current_and_preserves_history(git_repo, tmp_path):
+    repo, sha = git_repo
+    historical = _milestone("OLD", "COMPLETE", checkpoint=sha,
+                            notes="Immutable lịch sử", state_history=["ACTIVE", "COMPLETE"])
+    current = _milestone("CAPACITY", "ACTIVE", notes="Owner continuation", state_history=["ACTIVE"])
+    state = _state([current, historical], current={"milestone": "CAPACITY", "state": "ACTIVE"}, lineage_head=sha)
+    path = tmp_path / "roadmap.json"
+    path.write_text(json.dumps(state, ensure_ascii=False, indent=2), encoding="utf-8")
+    original = path.read_text(encoding="utf-8")
+    args = ["--state-file", str(path), "--repo", str(repo), "--admit-scope",
+            "CONDITIONAL_RESEARCH_POSTURE_V2", "--owner-override", "--release-current-at", sha,
+            "--scope-note", "Owner authorized implementation/CI/PR only"]
+    assert cli.main(args) == 0
+    updated = json.loads(path.read_text(encoding="utf-8"))
+    assert updated["current"] == {"milestone": "CONDITIONAL_RESEARCH_POSTURE_V2", "state": "ACTIVE"}
+    assert updated["milestones"][1]["checkpoint"] == sha
+    assert updated["milestones"][1]["terminal_disposition"] == "IMPLEMENTATION_RELEASED_NO_PRODUCTION_ACTIVATION"
+    assert updated["milestones"][2] == historical
+    # Unrelated raw JSON, including Unicode, is preserved exactly.
+    old_block = original[original.index('    {\n      "milestone_id": "OLD"'):]
+    assert path.read_text(encoding="utf-8").endswith(old_block)
+    stable = path.read_bytes()
+    with pytest.raises(SystemExit):
+        cli.main(args)
+    assert path.read_bytes() == stable
+
+
+def test_admission_requires_explicit_owner_and_exact_release(git_repo, tmp_path):
+    repo, sha = git_repo
+    state = _state([_milestone("CAPACITY", "ACTIVE", notes="Scope")],
+                   current={"milestone": "CAPACITY", "state": "ACTIVE"}, lineage_head=sha)
+    path = tmp_path / "roadmap.json"
+    path.write_text(json.dumps(state, indent=2), encoding="utf-8")
+    stable = path.read_bytes()
+    base = ["--state-file", str(path), "--repo", str(repo), "--admit-scope", "CONDITIONAL_RESEARCH_POSTURE_V2",
+            "--scope-note", "Owner scope", "--release-current-at", sha]
+    with pytest.raises(SystemExit):
+        cli.main(base)
+    with pytest.raises(SystemExit):
+        cli.main(base[:-1] + ["does-not-exist", "--owner-override"])
+    assert path.read_bytes() == stable

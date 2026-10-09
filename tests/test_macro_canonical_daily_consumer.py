@@ -137,6 +137,7 @@ def _install_engines(monkeypatch):
     for name in ("freeze_current_decision_surface", "prospective_context", "strategy_prospective_context", "decision_queue_prospective_context"):
         monkeypatch.setattr(operations, name, lambda *a: {"snapshot_id": "snapshot:fixture"})
     product = _scoped_operation()["product"]
+    product["watchlist"]["tickers"].append("AAA")  # exercise the real cockpit card on synthetic input
     product["market_brief"]["coverage"]["same_session_technical_feature_available_count"] = 7
     def build_product(**kwargs):
         value = copy.deepcopy(product)
@@ -158,7 +159,8 @@ def _install_engines(monkeypatch):
 @pytest.mark.parametrize("missing", [False, True])
 def test_real_daily_to_packet_handoff_and_cockpit(monkeypatch, tmp_path, missing):
     _install_engines(monkeypatch)
-    integrated = _integrated_delivery_fixture(session=SESSION)
+    from _integrated_decision_fixture import integrated_decision
+    integrated = integrated_decision(SESSION, ["AAA"], currency_by_ticker={"AAA": "CURRENT_SESSION"})
     original = copy.deepcopy(integrated)
     captured = {}
     def produce(root, **kwargs):
@@ -184,6 +186,9 @@ def test_real_daily_to_packet_handoff_and_cockpit(monkeypatch, tmp_path, missing
     operation = captured["operation"]
     packet = operation["canonical_decision_packet"]
     assert verified_packet(packet) is not None
+    security = packet["records"]["AAA"]["security_decision"]
+    assert security["posture_condition_class"] == integrated["records"]["AAA"]["posture_condition_class"]
+    assert security["research_action_policy_version"] == "v2"
     assert packet["records"]["AAA"]["current_decision_context"]["entry_action"] == "WAIT"
     context = packet["macro_market_regime_context"]
     assert context["dimensions"]["GLOBAL_RATES"]["state"] == ("UNKNOWN" if missing else "TIGHTENING")
@@ -199,6 +204,8 @@ def test_real_daily_to_packet_handoff_and_cockpit(monkeypatch, tmp_path, missing
     assert bundle["canonical_decision_packet_identity"] == cockpit["canonical_decision_packet_identity"] == packet["artifact_identity"]
     assert integrated == original
     assert bundle["ticker_research_contexts"]["AAA"]["integrated_decision_v1"]["research_action_posture"] == original["records"]["AAA"]["research_action_posture"]
+    assert bundle["ticker_research_contexts"]["AAA"]["integrated_decision_v1"]["posture_condition_class"] == security["posture_condition_class"]
+    assert cockpit["decision_card_v1"]["AAA"]["posture_condition_class"] == security["posture_condition_class"]
     files, publication = build_package(captured["operation_dir"], SESSION)
     assert publication["status"] == "READY_FOR_AI"
     assert json.loads(files["ai_research_session_bundle.json"].read_text())["macro_market_regime_context"] == context

@@ -199,7 +199,7 @@ _CURRENT_SESSION_DISPOSITION = "SAME_SESSION_TECHNICAL_COVERED"
 # A disposition that asserts the retained evidence itself is conflicted/unexplained never yields
 # a dated currency, even when a feature date happens to be present.
 _UNTRUSTED_DISPOSITIONS = frozenset({"MALFORMED_OR_CONFLICTED", "UNEXPLAINED"})
-EVIDENCE_CURRENCY_GATE_RULE = "NO_CURRENT_EVIDENCE_NEVER_WAIT_FOR_CONFIRMATION"
+EVIDENCE_CURRENCY_GATE_RULE = "NO_CURRENT_EVIDENCE_BLOCKS_ALL_CURRENT_DECISIONS_V2"
 
 # Position context. Reuses portfolio_aware_decision.POSITION_STATES; the only added value is the
 # explicit unknown used when no private portfolio was supplied -- absence is never NOT_HELD.
@@ -327,6 +327,8 @@ def decision_surface_index(artifact: Mapping[str, Any]) -> dict[str, Any]:
         rows.append({
             "ticker": ticker,
             "research_action_posture": record.get("research_action_posture"),
+            "posture_condition_class": record.get("posture_condition_class"),
+            "research_action_policy_version": research_policy_epoch(record),
             "evidence_currency": record.get("evidence_currency"),
             "opportunity_priority_tier": (record.get("opportunity_priority") or {}).get("research_priority_tier"),
         })
@@ -358,7 +360,47 @@ def content_identity(artifact: Mapping[str, Any]) -> dict[str, str]:
     return {"artifact_sha256": digest, "artifact_identity": f"{CONTRACT_VERSION}:{digest}"}
 
 
-RESEARCH_ACTION_POLICY_VERSION = "v1"  # Standing decision-identity policy; no threshold change.
+RESEARCH_ACTION_POLICY_VERSION = "v2"
+
+# One policy owner; consumers validate/pass through these exact pairs.
+POSTURE_CLASS_COMPATIBILITY = {
+    "UNQUALIFIED_TACTICAL_AND_FUNDAMENTAL": POSTURE_INSUFFICIENT,
+    "MISSING_CURRENT_EVIDENCE": POSTURE_INSUFFICIENT,
+    "BEARISH_STRUCTURE_ADVERSE": POSTURE_AVOID,
+    "DISTRIBUTION_OR_BREAKDOWN_WITH_DETERIORATION": POSTURE_AVOID,
+    "FAILED_BREAKOUT_WITH_DETERIORATION": POSTURE_REDUCE,
+    "EXTENDED_NO_CHASE": POSTURE_HOLD_DO_NOT_ADD,
+    "FRESH_ENTRY_TRIGGER": POSTURE_INITIATE_ON_BREAKOUT,
+    "CONFIRMED_RETEST_ENTRY": POSTURE_ACCUMULATE_ON_RETEST,
+    "EARLY_MONITOR_NO_TRIGGER": POSTURE_EARLY_WATCH,
+    "BASE_UNCONFIRMED": POSTURE_EARLY_WATCH,
+    **{name: POSTURE_WAIT_FOR_CONFIRMATION for name in (
+        "FAILED_BREAKOUT_REBASE_REQUIRED", "FUNDAMENTAL_DETERIORATION_VETO_NO_NEW_ENTRY",
+        "EARLY_REVERSAL_AWAITING_HIGHER_LOW", "PARTICIPATION_CONTRADICTION_NARROWS_ENTRY",
+        "BEARISH_BREADTH_NARROWS_FRESH_ENTRY", "CONSTRUCTIVE_TREND_NO_FRESH_ENTRY",
+        "UNQUALIFIED_TACTICAL_STRUCTURE", "DISTRIBUTION_RISK_NO_FRESH_ENTRY",
+        "PENDING_DEFINED_CONFIRMATION", "OBSERVATIONAL_NO_ENTRY")},
+}
+
+
+def research_policy_epoch(record: Mapping[str, Any]) -> str:
+    return record.get("research_action_policy_version") or "v1"
+
+
+def validate_posture_policy(record: Mapping[str, Any]) -> None:
+    epoch = research_policy_epoch(record)
+    if epoch not in {"v1", "v2"}:
+        raise IntegratedDecisionProductError("RESEARCH_ACTION_POLICY_UNSUPPORTED")
+    if record.get("research_action_posture") not in RESEARCH_ACTION_POSTURES:
+        raise IntegratedDecisionProductError("RESEARCH_ACTION_POSTURE_UNSUPPORTED")
+    if epoch == "v2":
+        klass = record.get("posture_condition_class")
+        if klass not in POSTURE_CLASS_COMPATIBILITY or POSTURE_CLASS_COMPATIBILITY[klass] != record.get("research_action_posture"):
+            raise IntegratedDecisionProductError("POSTURE_CONDITION_CLASS_INCOMPATIBLE")
+        if (record.get("evidence_currency") == EVIDENCE_CURRENCY_NO_CURRENT_EVIDENCE
+                and klass != "MISSING_CURRENT_EVIDENCE"):
+            raise IntegratedDecisionProductError("NO_CURRENT_EVIDENCE_POSTURE_INVALID")
+
 
 
 def decision_identity(record: Mapping[str, Any]) -> str:
@@ -375,7 +417,7 @@ def decision_identity(record: Mapping[str, Any]) -> str:
     fields = {
         "ticker": record.get("ticker"),
         "as_of_session": record.get("as_of_session"),
-        "policy_version": RESEARCH_ACTION_POLICY_VERSION,
+        "policy_version": research_policy_epoch(record),
         "research_action_posture": record.get("research_action_posture"),
         "evidence_currency": record.get("evidence_currency"),
         "fundamental_state": record.get("fundamental_state"),
@@ -388,6 +430,8 @@ def decision_identity(record: Mapping[str, Any]) -> str:
         "invalidation_condition_identity": ((record.get("invalidation") or {}).get("condition") or {}).get("condition_identity"),
         "source_identities": source_identities,
     }
+    if research_policy_epoch(record) == "v2":
+        fields["posture_condition_class"] = record.get("posture_condition_class")
     return f"decision:{record.get('ticker')}:{_sha256(fields)[:16]}"
 
 
@@ -1281,7 +1325,7 @@ def decide_research_action_posture(
     participation_summary: Mapping[str, Any] | None = None,
     market_sector_summary: Mapping[str, Any] | None = None,
     fundamental_evidence_availability: str | None = None,
-) -> tuple[str, str, str]:
+) -> tuple[str, str, str, str]:
     """Pure deterministic research policy mapping explicit evidence into research_action_posture.
 
     ``fundamental_evidence_availability`` only words the insufficient-research explanation: an
@@ -1289,7 +1333,7 @@ def decide_research_action_posture(
     never described as missing fundamental data. It never moves a posture.
 
     Returns:
-        (posture, why_now, missing_evidence_decision_effect)
+        (posture, why_now, missing_evidence_decision_effect, posture_condition_class)
     """
     eligible = tactical_rec.get("eligible") is True
     brk_v3 = tactical_rec.get("breakout_state_v3")
@@ -1336,25 +1380,36 @@ def decide_research_action_posture(
     if not eligible and fundamental_state == FUNDAMENTAL_INSUFFICIENT:
         why = f"{ticker}: " + _INSUFFICIENT_RESEARCH_REASON.get(
             fundamental_evidence_availability, _INSUFFICIENT_RESEARCH_REASON[fundamental_signals.ABSENT])
-        return POSTURE_INSUFFICIENT, why, EFFECT_BLOCKS_DECISION
+        return POSTURE_INSUFFICIENT, why, EFFECT_BLOCKS_DECISION, "UNQUALIFIED_TACTICAL_AND_FUNDAMENTAL"
+
+    # Qualification precedes every technical branch. A stale/conflicted label cannot
+    # create adverse or entry posture even when fundamental direction is available.
+    if (not eligible or tactical_phase == TACTICAL_INSUFFICIENT
+            or ms in (None, "INSUFFICIENT_HISTORY", "CONFLICTING", "CONFLICTED", "UNKNOWN")
+            or any(tactical_rec.get(key) in ("CONFLICTING", "CONFLICTED", "BLOCKED")
+                   for key in ("evidence_status", "status", "bos_state", "choch_state"))):
+        return (POSTURE_WAIT_FOR_CONFIRMATION, f"{ticker}: Tactical structure is unqualified; no entry or adverse instruction.",
+                EFFECT_BLOCKS_DECISION, "UNQUALIFIED_TACTICAL_STRUCTURE")
 
     # 2. REAL ADVERSE EVIDENCE -> REDUCE / AVOID
     # Adverse requires real negative evidence, never missing data.
     if bos == "BEARISH_BOS_DETECTED_BY_RULE" or (ms == "DOWNTREND" and not (brk_v3 == "BREAKOUT" or trig_state == "TRIGGERED")):
         why = f"{ticker}: Bearish market structure breakdown with confirmed lower lows / bearish BOS; adverse entry environment."
-        return POSTURE_AVOID, why, EFFECT_DOES_NOT_BLOCK
+        return POSTURE_AVOID, why, EFFECT_DOES_NOT_BLOCK, "BEARISH_STRUCTURE_ADVERSE"
 
-    if fundamental_state == FUNDAMENTAL_DETERIORATING and (ms in ("DOWNTREND", "EARLY_BEARISH_REVERSAL") or tactical_phase in (TACTICAL_DISTRIBUTION_RISK, TACTICAL_BREAKDOWN)):
+    # Failed breakout has its own deterioration row below; its derived
+    # DISTRIBUTION_RISK phase must not shadow that more specific condition.
+    if brk_v3 != "FAILED_BREAKOUT" and fundamental_state == FUNDAMENTAL_DETERIORATING and (ms in ("DOWNTREND", "EARLY_BEARISH_REVERSAL") or tactical_phase in (TACTICAL_DISTRIBUTION_RISK, TACTICAL_BREAKDOWN)):
         why = f"{ticker}: Deteriorating fundamentals aligned with bearish structural pressure; research posture is to avoid new exposure."
-        return POSTURE_AVOID, why, EFFECT_DOES_NOT_BLOCK
+        return POSTURE_AVOID, why, EFFECT_DOES_NOT_BLOCK, "DISTRIBUTION_OR_BREAKDOWN_WITH_DETERIORATION"
 
     if brk_v3 == "FAILED_BREAKOUT" and fundamental_state == FUNDAMENTAL_DETERIORATING:
         why = f"{ticker}: Breakout attempt failed back below pivot while fundamentals are deteriorating; high rejection risk."
-        return POSTURE_REDUCE, why, EFFECT_DOES_NOT_BLOCK
+        return POSTURE_REDUCE, why, EFFECT_DOES_NOT_BLOCK, "FAILED_BREAKOUT_WITH_DETERIORATION"
 
     if brk_v3 == "FAILED_BREAKOUT":
         why = f"{ticker}: Breakout attempt failed back below pivot resistance; wait for structural re-basing before considering re-entry."
-        return POSTURE_WAIT_FOR_CONFIRMATION, why, EFFECT_DOES_NOT_BLOCK
+        return POSTURE_WAIT_FOR_CONFIRMATION, why, EFFECT_DOES_NOT_BLOCK, "FAILED_BREAKOUT_REBASE_REQUIRED"
 
     # 3. EXTENSION RISK -> HOLD_DO_NOT_ADD / HOLD
     # Distinguish SECURITY_ATTRACTIVE from CURRENT_ENTRY_ATTRACTIVE. Never AVOID solely for extension!
@@ -1362,69 +1417,78 @@ def decide_research_action_posture(
         piv_str = f"{dist_piv*100:.1f}%" if dist_piv is not None else "extended"
         if fundamental_state != FUNDAMENTAL_DETERIORATING:
             why = f"{ticker}: Structure is strong and breakout succeeded, but price is now extended past pivot ({piv_str}); hold existing thesis but do not chase new entry."
-            return POSTURE_HOLD_DO_NOT_ADD, why, EFFECT_DOES_NOT_BLOCK
+            return POSTURE_HOLD_DO_NOT_ADD, why, EFFECT_DOES_NOT_BLOCK, "EXTENDED_NO_CHASE"
         else:
             why = f"{ticker}: Price extended into resistance with unconfirmed/mixed fundamentals; poor risk/reward asymmetry for new entry."
-            return POSTURE_HOLD_DO_NOT_ADD, why, EFFECT_DOES_NOT_BLOCK
+            return POSTURE_HOLD_DO_NOT_ADD, why, EFFECT_DOES_NOT_BLOCK, "EXTENDED_NO_CHASE"
 
     # 4. BREAKOUT TRIGGER FIRED -> INITIATE_ON_BREAKOUT (with deterministic participation/market filtering)
     if (brk_v3 == "BREAKOUT" or trig_state == "TRIGGERED") and (trig_type in ("PIVOT_BREAKOUT_TRIGGER", "CONFIRMED_BOS_TRIGGER") or tactical_phase == TACTICAL_BREAKOUT_CONFIRMED):
         if fundamental_state == FUNDAMENTAL_DETERIORATING:
             why = f"{ticker}: Technical breakout trigger fired but fundamental deterioration creates divergence; awaiting fundamental confirmation."
-            return POSTURE_WAIT_FOR_CONFIRMATION, why, EFFECT_DOES_NOT_BLOCK
+            return POSTURE_WAIT_FOR_CONFIRMATION, why, EFFECT_DOES_NOT_BLOCK, "FUNDAMENTAL_DETERIORATION_VETO_NO_NEW_ENTRY"
 
         if ms == "DOWNTREND" or tactical_phase in (TACTICAL_EARLY_REVERSAL, TACTICAL_BREAKOUT_SETUP):
             why = f"{ticker}: Breakout attempt emerging from established downtrend structure; awaiting higher-low structural confirmation."
-            return POSTURE_WAIT_FOR_CONFIRMATION, why, EFFECT_DOES_NOT_BLOCK
+            return POSTURE_WAIT_FOR_CONFIRMATION, why, EFFECT_DOES_NOT_BLOCK, "EARLY_REVERSAL_AWAITING_HIGHER_LOW"
 
         if part_contradiction:
             why = f"{ticker}: Breakout trigger fired, but participation shows volume contradiction ({part_contradiction_reason}); awaiting volume confirmation before initiating."
-            return POSTURE_WAIT_FOR_CONFIRMATION, why, EFFECT_DOES_NOT_BLOCK
+            return POSTURE_WAIT_FOR_CONFIRMATION, why, EFFECT_DOES_NOT_BLOCK, "PARTICIPATION_CONTRADICTION_NARROWS_ENTRY"
 
         if is_bearish_market:
             why = f"{ticker}: Valid structural breakout trigger fired, but defensive/weak market regime ({mkt_regime}) creates headwind; awaiting broader market confirmation."
-            return POSTURE_WAIT_FOR_CONFIRMATION, why, EFFECT_DOES_NOT_BLOCK
+            return POSTURE_WAIT_FOR_CONFIRMATION, why, EFFECT_DOES_NOT_BLOCK, "BEARISH_BREADTH_NARROWS_FRESH_ENTRY"
 
         lead_note = " with supportive sector leadership" if is_sector_leader else ""
         participation_note = ("supportive participation" if part_supports else
                               "no observed participation contradiction" if part_available else
                               "participation evidence unavailable")
         why = f"{ticker}: Valid structural breakout trigger fired at pivot level with non-conflicting fundamentals and {participation_note}{lead_note}; actionable initiation setup."
-        return POSTURE_INITIATE_ON_BREAKOUT, why, EFFECT_DOES_NOT_BLOCK
+        return POSTURE_INITIATE_ON_BREAKOUT, why, EFFECT_DOES_NOT_BLOCK, "FRESH_ENTRY_TRIGGER"
 
     # 5. RETEST OF BROKEN PIVOT -> ACCUMULATE_ON_RETEST
     if tactical_rec.get("pivot_retest_confirmed") is True and ms in ("UPTREND", "EARLY_BULLISH_REVERSAL"):
         if dist_inv is not None and dist_inv > 0 and fundamental_state != FUNDAMENTAL_DETERIORATING:
             if is_bearish_market:
                 why = f"{ticker}: Constructive retest of pivot, but defensive market regime requires confirmation."
-                return POSTURE_WAIT_FOR_CONFIRMATION, why, EFFECT_DOES_NOT_BLOCK
+                return POSTURE_WAIT_FOR_CONFIRMATION, why, EFFECT_DOES_NOT_BLOCK, "BEARISH_BREADTH_NARROWS_FRESH_ENTRY"
             why = f"{ticker}: Bullish market structure intact with price constructively testing/retesting pivot support above invalidation level; attractive accumulation location."
-            return POSTURE_ACCUMULATE_ON_RETEST, why, EFFECT_DOES_NOT_BLOCK
+            return POSTURE_ACCUMULATE_ON_RETEST, why, EFFECT_DOES_NOT_BLOCK, "CONFIRMED_RETEST_ENTRY"
+
+    # Approaching a defined trigger is an actual pending confirmation. The phase
+    # calculator calls it BREAKOUT_SETUP, so it must precede generic early watch.
+    if trig_state == "APPROACHING" and fundamental_state != FUNDAMENTAL_DETERIORATING:
+        return (POSTURE_WAIT_FOR_CONFIRMATION, f"{ticker}: Approaching the defined structural trigger; confirmation has not fired.",
+                EFFECT_DOES_NOT_BLOCK, "PENDING_DEFINED_CONFIRMATION")
 
     # 6. EARLY REVERSAL / COMPRESSION -> EARLY_WATCH
     if tactical_phase in (TACTICAL_EARLY_REVERSAL, TACTICAL_BREAKOUT_SETUP) or choch == "BULLISH_CHOCH_DETECTED_BY_RULE" or ms == "EARLY_BULLISH_REVERSAL":
         if fundamental_state != FUNDAMENTAL_DETERIORATING:
             why = f"{ticker}: Early bullish structural reversal / base compression observed, but breakout trigger has not yet fired; prioritized for early monitoring."
-            return POSTURE_EARLY_WATCH, why, EFFECT_DOES_NOT_BLOCK
+            return POSTURE_EARLY_WATCH, why, EFFECT_DOES_NOT_BLOCK, "EARLY_MONITOR_NO_TRIGGER"
 
-    # 7. TREND CONTINUATION / ESTABLISHED UPTREND -> HOLD
-    if ms == "UPTREND" and fundamental_state in (FUNDAMENTAL_IMPROVING, FUNDAMENTAL_STABLE, FUNDAMENTAL_TURNAROUND):
-        why = f"{ticker}: Established uptrend confirmed by higher swing highs/lows with supportive fundamentals; constructive holding posture."
-        return POSTURE_HOLD, why, EFFECT_DOES_NOT_BLOCK
-
-    # 8. CONSTRUCTIVE BUT AWAITING CONFIRMATION -> WAIT_FOR_CONFIRMATION
-    if ms in ("UPTREND", "EARLY_BULLISH_REVERSAL", "RANGE") or fundamental_state in (FUNDAMENTAL_IMPROVING, FUNDAMENTAL_STABLE):
-        why = f"{ticker}: Constructive background conditions present, but waiting for clear structural trigger confirmation."
-        return POSTURE_WAIT_FOR_CONFIRMATION, why, EFFECT_DOES_NOT_BLOCK
-
-    # 9. WEAK OR DOWNTREND WITHOUT EXTREME BREAKDOWN -> AVOID
+    # Remaining first-match rows: deterioration veto, base, constructive trend,
+    # distribution, defined confirmation, then observation. No holding is inferred.
+    if fundamental_state == FUNDAMENTAL_DETERIORATING:
+        return (POSTURE_WAIT_FOR_CONFIRMATION, f"{ticker}: Fundamental deterioration vetoes a new entry; research review required.",
+                EFFECT_DOES_NOT_BLOCK, "FUNDAMENTAL_DETERIORATION_VETO_NO_NEW_ENTRY")
+    if tactical_phase == TACTICAL_BASE_BUILDING and brk_v3 != "BREAKOUT" and trig_state != "TRIGGERED":
+        return (POSTURE_EARLY_WATCH, f"{ticker}: Qualified base formation under monitoring; base unconfirmed, not an entry instruction.",
+                EFFECT_DOES_NOT_BLOCK, "BASE_UNCONFIRMED")
+    if ms == "UPTREND" and tactical_phase in (TACTICAL_TREND_CONTINUATION, TACTICAL_BASE_BUILDING, TACTICAL_MIXED):
+        return (POSTURE_WAIT_FOR_CONFIRMATION,
+                f"{ticker}: Constructive established uptrend with no fresh entry trigger; not an entry instruction. "
+                f"Fundamental state {fundamental_state}; no owner position is inferred.",
+                EFFECT_DOES_NOT_BLOCK, "CONSTRUCTIVE_TREND_NO_FRESH_ENTRY")
+    if tactical_phase == TACTICAL_DISTRIBUTION_RISK:
+        return (POSTURE_WAIT_FOR_CONFIRMATION, f"{ticker}: Distribution risk observed; no fresh entry.",
+                EFFECT_DOES_NOT_BLOCK, "DISTRIBUTION_RISK_NO_FRESH_ENTRY")
     if ms == "DOWNTREND" or tactical_phase == TACTICAL_BREAKDOWN:
-        why = f"{ticker}: Established downtrend structure; avoid new capital commitments until a basing or reversal pattern forms."
-        return POSTURE_AVOID, why, EFFECT_DOES_NOT_BLOCK
-
-    # 10. Fallback
-    why = f"{ticker}: Neutral or mixed structural and fundamental signals; maintain observational watch."
-    return POSTURE_WAIT_FOR_CONFIRMATION, why, EFFECT_DOES_NOT_BLOCK
+        return (POSTURE_AVOID, f"{ticker}: Qualified bearish structure; adverse entry environment.",
+                EFFECT_DOES_NOT_BLOCK, "BEARISH_STRUCTURE_ADVERSE")
+    return (POSTURE_WAIT_FOR_CONFIRMATION, f"{ticker}: Observational research context; no fresh entry instruction.",
+            EFFECT_DOES_NOT_BLOCK, "OBSERVATIONAL_NO_ENTRY")
 
 
 def _priority_posture_reconciliation(
@@ -1580,22 +1644,10 @@ def build_ticker_integrated_decision(
         mkt_summary["sector_leadership_reason_codes"] = ["SECTOR_LEADERSHIP_" + mkt_summary["sector_leadership_status"]]
     market_context_provided = isinstance(market_sector_record, Mapping)
 
-    # 6. Portfolio Context
-    if portfolio_record is not None and isinstance(portfolio_record, Mapping) and portfolio_record.get("status") != "NOT_PROVIDED":
-        portfolio_summary = {
-            "status": "AVAILABLE",
-            "is_held": portfolio_record.get("is_held", False),
-            "concentration_flag": portfolio_record.get("concentration_flag"),
-            "sector_overlap": portfolio_record.get("sector_overlap"),
-            "policy_note": "Portfolio availability does not alter intrinsic security attractiveness.",
-        }
-    else:
-        portfolio_summary = {
-            "status": "NOT_PROVIDED",
-            # Unknown, not False: an absent private portfolio never means NOT_HELD.
-            "is_held": None,
-            "policy_note": "No explicit portfolio supplied; security attractiveness is independently evaluated.",
-        }
+    # Private holdings are accepted only for call compatibility and never consumed
+    # or serialized in a security-level V2 record (including its evidence axes).
+    portfolio_summary = {"status": "NOT_PROVIDED", "is_held": None,
+                         "policy_note": "PRIVATE_POSITION_CONTEXT_ONLY_IN_PORTFOLIO_LAYER"}
 
     # 6b. Corporate Intelligence (Section 13: additive only; computed here, but never passed
     # into decide_research_action_posture below -- no automatic posture change merely because
@@ -1612,7 +1664,7 @@ def build_ticker_integrated_decision(
             ticker=ticker, session=as_of_session)}
 
     # 7. Posture & Why Now
-    posture, why_now, missing_effect = decide_research_action_posture(
+    posture, why_now, missing_effect, posture_class = decide_research_action_posture(
         ticker=ticker,
         fundamental_state=fund_state,
         tactical_phase=tac_phase,
@@ -1629,19 +1681,19 @@ def build_ticker_integrated_decision(
         market_sector_summary=mkt_summary,
         fundamental_evidence_availability=fund_synthesis.get("fundamental_evidence_availability"),
     )
-    # 7b. Evidence-currency gate (CURRENT_DECISION_SURFACE_CONVERGENCE_V1, the only posture
-    # correction authorized there). WAIT_FOR_CONFIRMATION means evidence exists and a defined
-    # confirmation is pending; with no current evidence at all it resolves to the existing
-    # fail-closed posture. No threshold is retuned and no other policy branch is reordered.
+    # 7b. V2 currency gate applies to every table output. Dated qualified evidence
+    # remains distinct from absent evidence; trigger/invalidation facts stay intact.
     evidence_currency = resolve_evidence_currency(technical_coverage_disposition_record, decision_session=as_of_session)
     evidence_currency_gate = {"rule": EVIDENCE_CURRENCY_GATE_RULE, "applied": False}
-    if evidence_currency == EVIDENCE_CURRENCY_NO_CURRENT_EVIDENCE and posture == POSTURE_WAIT_FOR_CONFIRMATION:
-        evidence_currency_gate = {"rule": EVIDENCE_CURRENCY_GATE_RULE, "applied": True, "ungated_policy_output": posture}
+    if evidence_currency == EVIDENCE_CURRENCY_NO_CURRENT_EVIDENCE:
+        evidence_currency_gate = {"rule": EVIDENCE_CURRENCY_GATE_RULE, "applied": True, "ungated_policy_output": posture,
+                                  "ungated_posture_condition_class": posture_class}
         posture = POSTURE_INSUFFICIENT
+        posture_class = "MISSING_CURRENT_EVIDENCE"
         why_now = (
             f"{ticker}: No current price/technical evidence for this session (evidence_currency="
-            f"{EVIDENCE_CURRENCY_NO_CURRENT_EVIDENCE}); a wait-for-confirmation posture requires existing "
-            "evidence with a defined pending confirmation."
+            f"{EVIDENCE_CURRENCY_NO_CURRENT_EVIDENCE}); a current decision requires qualified "
+            "price/technical evidence; no current entry or adverse instruction is retained."
         )
         missing_effect = EFFECT_BLOCKS_DECISION
     priority_posture = _priority_posture_reconciliation(
@@ -1727,6 +1779,8 @@ def build_ticker_integrated_decision(
         "ticker": ticker,
         "as_of_session": as_of_session,
         "research_action_posture": posture,
+        "posture_condition_class": posture_class,
+        "research_action_policy_version": RESEARCH_ACTION_POLICY_VERSION,
         "evidence_currency": evidence_currency,
         "evidence_currency_lineage": {
             "method": EVIDENCE_CURRENCY_SOURCE_CONTRACT,
@@ -1806,6 +1860,7 @@ def build_ticker_integrated_decision(
     if financial_peer_context is not None:
         record["financial_peer_context"] = copy.deepcopy(dict(financial_peer_context))
         record["source_identities"]["financial_peer_materialization_identity"] = financial_peer_context.get("source_materialization_identity")
+    validate_posture_policy(record)
     record["decision_identity"] = decision_identity(record)
     if bridge_consulted:
         record["operational_fundamental_context"] = copy.deepcopy(dict(operational_fundamental_context_record))
@@ -2197,6 +2252,7 @@ def build_artifact(
         "universe_denominator": len(all_tickers),
         "integrated_context_available": len(records),
         "research_action_posture_distribution": dict(sorted(posture_counts.items())),
+        "posture_condition_class_distribution": dict(sorted(Counter(r["posture_condition_class"] for r in records.values()).items())),
         "fundamental_state_distribution": dict(sorted(fund_counts.items())),
         "tactical_phase_distribution": dict(sorted(tac_counts.items())),
         "tactical_confirmation_state_distribution": dict(sorted((k, v) for k, v in tactical_confirmation_counts.items() if k is not None)),

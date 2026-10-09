@@ -383,6 +383,8 @@ def _action_decision_view(integrated_record: Mapping[str, Any] | None, portfolio
     conditional = posture in integrated_decision_module.POSITION_CONDITIONAL_POSTURES and not held
     return {
         "research_action_posture": posture,
+        "posture_condition_class": integrated_record.get("posture_condition_class"),
+        "research_action_policy_version": integrated_decision_module.research_policy_epoch(integrated_record),
         "evidence_currency": integrated_record.get("evidence_currency"),
         "decision_identity": integrated_record.get("decision_identity"),
         "position_context": position,
@@ -421,6 +423,12 @@ def _coherent_integrated_records(
             raise InvestmentDecisionWorkspaceError(f"INTEGRATED_DECISION_POSTURE_INVALID:{ticker}")
         if not integrated_decision_module.is_valid_evidence_currency(record.get("evidence_currency")):
             raise InvestmentDecisionWorkspaceError(f"INTEGRATED_DECISION_EVIDENCE_CURRENCY_INVALID:{ticker}")
+        try:
+            integrated_decision_module.validate_posture_policy(record)
+        except integrated_decision_module.IntegratedDecisionProductError as exc:
+            raise InvestmentDecisionWorkspaceError(str(exc) + ":" + ticker) from exc
+        if integrated_decision_artifact.get("research_action_policy_version", "v1") != integrated_decision_module.research_policy_epoch(record):
+            raise InvestmentDecisionWorkspaceError("INTEGRATED_DECISION_POLICY_EPOCH_MISMATCH:" + ticker)
         if record.get("decision_identity") != integrated_decision_module.decision_identity(record):
             raise InvestmentDecisionWorkspaceError(f"INTEGRATED_DECISION_RECORD_DECISION_IDENTITY_INVALID:{ticker}")
     return records

@@ -2134,6 +2134,7 @@ def build_decision_packet(
 
     packet = build_artifact(
         opportunity=opportunity,
+        integrated_decision=_enriched("integrated_investment_decision_product", "integrated_investment_decision_product"),
         scenario=_load(paths["scenario"]),
         risk_register=_load(paths["risk_register"]),
         market_sector=_load(paths["sector_leadership"]),

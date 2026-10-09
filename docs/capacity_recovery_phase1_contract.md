@@ -11,9 +11,10 @@ The prior **PARTIAL_READ_ONLY_CAPACITY_FOUNDATION_READY** checkpoint remains rec
 Owner directive `STOCKLOOKUP_CAPACITY_PHASE1_END_TO_END_COMPLETION` explicitly continues
 that subset from PR99 head `14d7f02515380ac34557e87271fa12c050959e4e` without starting a
 successor. Native `--continue-scope ... --owner-override --scope-note ...` preserves the
-prior completion and records `allows_reopen=true`. Phase 1 is ACTIVE until engineering
-and exact-head CI/release gates close. Only a fully qualified exact-head normal merge is
-authorized. No production deployment/activation, source deletion, relink, retention apply,
+prior completion and records `allows_reopen=true`. Phase 1 engineering/release is COMPLETE:
+PR99 merged at `168e0f712e3b57c6a626f0e76f36f471136f3232`, post-merge Producer CI
+37893984528 succeeded. Production reclaim and delivery reuse activation remain zero.
+No production deployment/activation, source deletion, relink, retention apply,
 Daily, provider acquisition or T0 relocation is authorized.
 
 ## Catalog and acquisition boundary

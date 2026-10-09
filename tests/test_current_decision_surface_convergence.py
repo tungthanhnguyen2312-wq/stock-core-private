@@ -1,6 +1,6 @@
 """CURRENT_DECISION_SURFACE_CONVERGENCE_V1 -- hermetic cross-surface convergence contract.
 
-One canonical tuple ``(ticker, research_action_posture, evidence_currency)`` for every ticker of
+One canonical tuple ``(ticker, posture, currency, condition_class, policy_epoch)`` for every ticker of
 the canonical denominator, identical on every compared surface:
 
 * Producer Integrated Decision record (the authority),
@@ -40,7 +40,7 @@ SESSION = "2026-09-11"
 CUR = iidp.EVIDENCE_CURRENCY_CURRENT_SESSION
 NONE = iidp.EVIDENCE_CURRENCY_NO_CURRENT_EVIDENCE
 
-# Scenario archetypes chosen to reach every major posture branch through the unmodified policy.
+# Synthetic archetypes exercise the owner policy through its real production builder.
 _ARCHETYPES = {
     "BREAKOUT": dict(tactical=_sample_tactical_record(), financial=True),
     "DOWNTREND": dict(tactical=_sample_tactical_record(
@@ -105,7 +105,8 @@ def _priority_queue(tickers):
 
 
 def _tuple(row):
-    return (row["ticker"], row["research_action_posture"], row["evidence_currency"])
+    return (row["ticker"], row["research_action_posture"], row["evidence_currency"],
+            row["posture_condition_class"], row["research_action_policy_version"])
 
 
 # ── Evidence currency contract ─────────────────────────────────────────────────────────────────
@@ -162,24 +163,23 @@ def test_no_current_evidence_never_yields_wait_for_confirmation_across_the_unive
     assert gated, "the fixture must exercise the gate"
     for record in gated:
         assert record["research_action_posture"] == iidp.POSTURE_INSUFFICIENT
-        assert record["evidence_currency_gate"]["ungated_policy_output"] == iidp.POSTURE_WAIT_FOR_CONFIRMATION
+        assert record["evidence_currency_gate"]["ungated_policy_output"] in iidp.RESEARCH_ACTION_POSTURES
+        assert record["posture_condition_class"] == "MISSING_CURRENT_EVIDENCE"
         assert record["missing_evidence_decision_effect"] == iidp.EFFECT_BLOCKS_DECISION
     # The same policy output with established evidence keeps WAIT (only the gate changed, no policy).
     waits_with_evidence = [r for r in records.values() if r["research_action_posture"] == iidp.POSTURE_WAIT_FOR_CONFIRMATION]
     assert waits_with_evidence and all(r["evidence_currency"] != NONE for r in waits_with_evidence)
 
 
-def test_gate_changes_only_wait_and_no_other_posture():
+def test_gate_blocks_every_current_posture_without_evidence():
     tickers, tactical, financial, currency = _universe()
     none_everywhere = _integrated(tickers, tactical, financial, {t: NONE for t in tickers})
     current_everywhere = _integrated(tickers, tactical, financial, {t: CUR for t in tickers})
     for ticker in tickers:
         with_evidence = current_everywhere["records"][ticker]["research_action_posture"]
         without = none_everywhere["records"][ticker]["research_action_posture"]
-        if with_evidence == iidp.POSTURE_WAIT_FOR_CONFIRMATION:
-            assert without == iidp.POSTURE_INSUFFICIENT
-        else:
-            assert without == with_evidence
+        assert without == iidp.POSTURE_INSUFFICIENT
+        assert none_everywhere["records"][ticker]["evidence_currency_gate"]["ungated_policy_output"] == with_evidence
 
 
 def test_evidence_currency_is_part_of_decision_identity():
@@ -287,7 +287,7 @@ def test_missing_private_portfolio_is_unknown_position_never_not_held():
         assert record["position_context"] == {"status": "NOT_SUPPLIED", "position_state": iidp.POSITION_UNKNOWN_NOT_SUPPLIED}
         assert record["portfolio_context"]["is_held"] is None
     supplied = _integrated(tickers, tactical, financial, currency, portfolio_record={"status": "AVAILABLE", "is_held": True})
-    assert all(r["position_context"]["position_state"] == "HELD" for r in supplied["records"].values())
+    assert supplied == artifact
 
 
 # ── Workspace boundary ─────────────────────────────────────────────────────────────────────────
@@ -422,11 +422,12 @@ def test_public_surfaces_never_claim_not_held_and_hold_is_conditional(converged_
         conditional = card["research_action_posture"] in iidp.POSITION_CONDITIONAL_POSTURES
         assert card["action_presentation"]["position_conditional"] is conditional
         assert card["action_presentation"]["condition"] == ("IF_CURRENTLY_HELD" if conditional else None)
-    holds = [c for c in s["workspace"]["cards"].values() if c["research_action_posture"] == iidp.POSTURE_HOLD]
-    assert holds, "fixture must exercise HOLD"
+    constructive = [c for c in s["workspace"]["cards"].values() if c["posture_condition_class"] == "CONSTRUCTIVE_TREND_NO_FRESH_ENTRY"]
+    assert constructive, "fixture must exercise constructive no-entry class"
+    assert all(c["action_presentation"]["condition"] is None for c in constructive)
     for row in s["action_center"]["decision_surface_index"]["rows"]:
         assert row["position_context"] == iidp.POSITION_UNKNOWN_NOT_SUPPLIED
-        assert set(row) == {"ticker", "research_action_posture", "evidence_currency", "opportunity_priority_tier", "position_context"}
+        assert set(row) == {"ticker", "research_action_posture", "posture_condition_class", "research_action_policy_version", "evidence_currency", "opportunity_priority_tier", "position_context"}
     assert s["action_center"]["decision_surface_index"]["position_context_source"] == "NOT_SUPPLIED"
 
 
