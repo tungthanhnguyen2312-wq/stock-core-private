@@ -22,7 +22,7 @@ def test_bearish_structure_cannot_be_aligned_with_constructive_fundamentals(phas
     ('NOT_AVAILABLE', [], 'participation evidence unavailable'),
     ('AVAILABLE', ['VOLUME_ACCELERATION_HIGH_1.80X'], 'supportive participation')])
 def test_valid_breakout_retains_posture_without_inventing_participation_support(status,supports,expected):
-    posture, why, effect = product.decide_research_action_posture(ticker='HPG',
+    posture, why, effect, condition_class = product.decide_research_action_posture(ticker='HPG',
         fundamental_state=product.FUNDAMENTAL_STABLE, tactical_phase=product.TACTICAL_BREAKOUT_CONFIRMED,
         tactical_rec={'eligible': True, 'market_structure_state': 'UPTREND',
                       'breakout_state_v3': 'BREAKOUT', 'trigger_state': 'TRIGGERED',
@@ -31,6 +31,7 @@ def test_valid_breakout_retains_posture_without_inventing_participation_support(
         part_supports=supports,part_counters=[],participation_summary={'status': status},
         market_sector_summary={'market_regime':'MIXED_BREADTH','sector_leadership':'UNKNOWN'})
     assert posture == product.POSTURE_INITIATE_ON_BREAKOUT
+    assert condition_class == 'FRESH_ENTRY_TRIGGER'
     assert expected in why
     if not supports:
         assert 'supportive participation' not in why

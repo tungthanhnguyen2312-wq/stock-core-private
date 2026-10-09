@@ -136,6 +136,8 @@ def project_integrated_decision_for_ai_delivery(record: Any, *, integrated_ident
         "integrated_investment_decision_product_identity": integrated_identity,
         "as_of_session": record.get("as_of_session"),
         "research_action_posture": record.get("research_action_posture"),
+        "posture_condition_class": record.get("posture_condition_class"),
+        "research_action_policy_version": record.get("research_action_policy_version", "v1"),
         "evidence_currency": record.get("evidence_currency"),
         "evidence_currency_gate": copy.deepcopy(record.get("evidence_currency_gate")),
         "evidence_currency_lineage": copy.deepcopy(record.get("evidence_currency_lineage")),
@@ -225,6 +227,8 @@ def _decision_card(ticker: str, record: Mapping[str, Any], daily_brief: Mapping[
     return {
         "contract_version": DECISION_CARD_CONTRACT,
         "verdict": delivered.get("research_action_posture"),
+        "posture_condition_class": delivered.get("posture_condition_class"),
+        "research_action_policy_version": delivered.get("research_action_policy_version"),
         "setup": {
             "tactical_phase": delivered.get("tactical_phase"),
             "structure": copy.deepcopy((delivered.get("evidence_axes") or {}).get("TACTICAL_STRUCTURE")),

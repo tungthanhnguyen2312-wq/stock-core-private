@@ -579,6 +579,8 @@ def build_ticker_decision_input(
                                               if dimensions[name]["authority"] in (EXACT_QUALIFIED, RESEARCH_QUALIFIED)],
             "authority_distribution": dict(sorted(by_authority.items())),
             "research_action_posture": posture,
+            "posture_condition_class": record.get("posture_condition_class"),
+            "research_action_policy_version": record.get("research_action_policy_version", "v1"),
             "action_posture_gated_by_current_evidence": (
                 posture == "INSUFFICIENT_CURRENT_RESEARCH" and klass not in (CLASS_INSUFFICIENT, CLASS_OUT_OF_SCOPE)),
         },
@@ -732,6 +734,8 @@ def build_ticker_decision_fitness(item: Mapping[str, Any]) -> dict[str, Any]:
         "missing_primary_factors": missing_primary,
         "proxy_dimensions": proxy_dimensions,
         "research_action_posture": (item.get("synthesis") or {}).get("research_action_posture"),
+        "posture_condition_class": (item.get("synthesis") or {}).get("posture_condition_class"),
+        "research_action_policy_version": (item.get("synthesis") or {}).get("research_action_policy_version", "v1"),
         "action_posture_gated_by_current_evidence": (
             (item.get("synthesis") or {}).get("action_posture_gated_by_current_evidence") is True
         ),

@@ -1,20 +1,19 @@
 # Stock Lookup — Current Roadmap
 
-Current navigation; history: [ROADMAP.md](ROADMAP.md), execution: ROADMAP_STATE.json.
-Updated 2026-10-09 from main `3f3d4fe38abbb3a11c5914e0337efdc0badf445e`.
-Nothing below auto-starts: native --can-start or explicit owner override admits work (AI_RULES 11).
+History: [ROADMAP.md](ROADMAP.md); execution: ROADMAP_STATE.json.
+Updated 2026-10-09 from main `168e0f712e3b57c6a626f0e76f36f471136f3232`.
+Nothing below auto-starts: native --can-start or owner override (AI_RULES 11).
 Facts: [ACTIVE_STATE.md](ACTIVE_STATE.md).
 
-## NOW — capacity Recovery Phase 1 (ACTIVE continuation)
+## NOW — CONDITIONAL_RESEARCH_POSTURE_V2 (ACTIVE)
 
-Owner continuation preserves the subset from PR98 `1d6b8a8`: catalog/guard/adapter.
-Measured delivery reuse is opt-in; release CI pending, zero production reclaim.
-[Contract and gates](capacity_recovery_phase1_contract.md). No successor.
+Owner-directed implementation, synthetic integration/CI and one PR.
+[Contract](conditional_research_posture_v2_contract.md); no merge, Daily or authority change.
+Capacity Phase 1 COMPLETE: PR99 `168e0f7`, CI 37893984528 success;
+zero production reclaim/activation. [Contract](capacity_recovery_phase1_contract.md).
 
-Vault V1 COMPLETE, PR97 merged at starting main: offline snapshot/SQLite tools and
-77-candidate preflight; zero deletion authority. Backup cannot solve C capacity;
-production/recovery/reference and exact retention approvals remain gated.
-[Contract and acceptance](vault_incremental_snapshot_contract.md).
+Vault V1 COMPLETE (PR97): offline snapshot/SQLite, 77 candidates, zero deletion authority;
+C capacity and production/retention approvals gated. [Contract](vault_incremental_snapshot_contract.md).
 
 Economics V1 COMPLETE: PR96 merged `9db35f1`; PNJ/PVD/FPT observations,
 interpretation/normalization blockers stay offline/non-voting.

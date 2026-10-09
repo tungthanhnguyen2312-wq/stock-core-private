@@ -4,6 +4,8 @@ Queries report current/next/blocked milestone state from
 ``docs/ROADMAP_STATE.json`` and cross-checks it against live, local Git/worktree
 state. Queries never mutate files or Git. Explicit --continue-scope writes only
 the current owner-authorized continuation, preserving its prior completion.
+Explicit --admit-scope reconciles the current verified release and admits one
+owner-directed scope with an empty queue. Neither mutation starts runtime work.
 
     python tools/stocklookup_roadmap.py                    human-readable report
     python tools/stocklookup_roadmap.py --json              machine-readable report
@@ -131,7 +133,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--can-start", metavar="MILESTONE_ID", help="Report whether MILESTONE_ID is allowed to start now.")
     parser.add_argument("--owner-override", action="store_true", help="With --can-start: allow starting a milestone that is not recorded NEXT (owner override). Never inferred automatically.")
     parser.add_argument("--continue-scope", metavar="MILESTONE_ID", help="Explicitly resume the current completed subset under an owner-authorized bounded scope expansion; preserve its completion record.")
-    parser.add_argument("--scope-note", help="Exact owner directive and bounded continuation scope; required with --continue-scope.")
+    parser.add_argument("--scope-note", help="Exact owner directive and bounded scope; required for continuation or admission.")
+    parser.add_argument("--admit-scope", metavar="MILESTONE_ID", help="Register and admit an explicitly owner-directed successor after reconciling a verified release.")
+    parser.add_argument("--release-current-at", help="Exact verified release commit of the current ACTIVE milestone; required for admission.")
     args = parser.parse_args(argv)
 
     try:
@@ -141,6 +145,46 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     repo = args.repo if args.repo.is_dir() else None
+
+    if args.admit_scope:
+        if (not args.owner_override or not args.scope_note or not args.release_current_at
+                or args.continue_scope or args.can_start or repo is None):
+            parser.error("admission requires owner override, scope note, repository and exact current release checkpoint")
+        mid = args.admit_scope
+        current = state.get("current") or {}
+        prior_id = current.get("milestone")
+        prior = next((m for m in state["milestones"] if m.get("milestone_id") == prior_id), None)
+        if (prior is None or prior.get("state") != "ACTIVE" or current.get("state") != "ACTIVE"
+                or state.get("queued_next") or any(m.get("milestone_id") == mid for m in state["milestones"])):
+            parser.error("admission requires one current ACTIVE milestone, empty queue and a new exact ID")
+        ok, checkpoint = res.resolve_checkpoint(repo, args.release_current_at)
+        if not ok or checkpoint != res.git_head(repo) or res.evaluate(state, repo=repo).overall != "ON_TRACK":
+            parser.error("verified release must be exact live starting HEAD and roadmap must be ON_TRACK")
+        prior.update(state="COMPLETE", checkpoint=checkpoint,
+                     terminal_disposition="IMPLEMENTATION_RELEASED_NO_PRODUCTION_ACTIVATION")
+        prior.setdefault("state_history", []).append("COMPLETE")
+        prior["notes"] += " Verified release " + checkpoint + "; no production reclaim, activation or automatic successor."
+        new = {"milestone_id": mid, "state": "DEFERRED", "starting_checkpoint": checkpoint,
+               "candidate_branch": res.git_branch(repo), "dependencies": [prior_id], "unlocks": [],
+               "owner_authorized": True, "owner_override": args.scope_note, "authority_effect": "NONE",
+               "source_doc": "docs/" + mid.lower() + "_contract.md", "state_history": ["DEFERRED"],
+               "checkpoint": None, "terminal_disposition": None, "notes": args.scope_note}
+        state["milestones"].insert(0, new)
+        allowed, reasons = res.can_start(state, mid, owner_override=True)
+        if not allowed:
+            parser.error("admission refused: " + ",".join(reasons))
+        new["state"] = "ACTIVE"
+        new["state_history"].append("ACTIVE")
+        state["current"] = {"milestone": mid, "state": "ACTIVE"}
+        if res.evaluate(state, repo=repo).overall != "ON_TRACK":
+            parser.error("admitted state must remain ON_TRACK; no update written")
+        original = args.state_file.read_text(encoding="utf-8")
+        updated = continuation_text(original, state, prior_id)
+        body = json.dumps(new, ensure_ascii=False, indent=2).replace("\n", "\n    ")
+        updated = updated.replace('"milestones": [\n', '"milestones": [\n    ' + body + ',\n', 1)
+        args.state_file.write_bytes(updated.encode("utf-8"))
+        print("OWNER_AUTHORIZED_SCOPE_ADMISSION:" + mid)
+        return 0
 
     if args.continue_scope:
         mid = args.continue_scope

@@ -37,7 +37,7 @@ import owner_research_focus
 
 CONTRACT_VERSION = "daily_integrated_decision_brief/v1"
 SCHEMA_VERSION = "1.0.0"
-POLICY_VERSION = "v1"
+POLICY_VERSION = "v2"
 
 # ── Deterministic ordering (section 5): posture class, then governed priority tier, then trigger
 # state/distance, then participation confirmation, then a stable ticker tie-break. No hidden weight.
@@ -63,7 +63,8 @@ ORDERING_METHOD = (
 ACTIONABLE_NOW, RETEST_CANDIDATES, EARLY_SETUPS = "ACTIONABLE_NOW", "RETEST_CANDIDATES", "EARLY_SETUPS"
 EXTENDED_DO_NOT_CHASE, HOLD_MANAGE, RISK_AVOID = "EXTENDED_DO_NOT_CHASE", "HOLD_MANAGE", "RISK_AVOID"
 INSUFFICIENT_RESEARCH = "INSUFFICIENT_RESEARCH"
-OPPORTUNITY_SET_NAMES = (ACTIONABLE_NOW, EARLY_SETUPS, RETEST_CANDIDATES, EXTENDED_DO_NOT_CHASE, HOLD_MANAGE, RISK_AVOID, INSUFFICIENT_RESEARCH)
+CONSTRUCTIVE_NO_NEW_ENTRY = "CONSTRUCTIVE_NO_NEW_ENTRY"
+OPPORTUNITY_SET_NAMES = (CONSTRUCTIVE_NO_NEW_ENTRY, ACTIONABLE_NOW, EARLY_SETUPS, RETEST_CANDIDATES, EXTENDED_DO_NOT_CHASE, HOLD_MANAGE, RISK_AVOID, INSUFFICIENT_RESEARCH)
 _EARLY_SETUP_PHASES = frozenset({"EARLY_REVERSAL", "BREAKOUT_SETUP", "BASE_BUILDING", "RETEST_AFTER_BREAKOUT"})
 
 
@@ -80,6 +81,8 @@ def content_identity(artifact: Mapping[str, Any]) -> dict[str, str]:
 def classify_opportunity_set(record: Mapping[str, Any]) -> str:
     """Pure function of an integrated_investment_decision_product/v1 ticker record's own posture
     and tactical_phase -- never re-derives or overrides the posture policy itself."""
+    if record.get("posture_condition_class") == "CONSTRUCTIVE_TREND_NO_FRESH_ENTRY":
+        return CONSTRUCTIVE_NO_NEW_ENTRY
     posture = record.get("research_action_posture")
     phase = record.get("tactical_phase")
     if posture == "INITIATE_ON_BREAKOUT":
@@ -137,6 +140,8 @@ def _compact_opportunity_row(record: Mapping[str, Any], priority_tier_by_ticker:
     trigger = record.get("trigger") or {}
     return {
         "ticker": record["ticker"], "research_action_posture": record.get("research_action_posture"),
+        "posture_condition_class": record.get("posture_condition_class"),
+        "research_action_policy_version": integrated_decision_module.research_policy_epoch(record),
         "evidence_currency": record.get("evidence_currency"),
         "tactical_phase": record.get("tactical_phase"), "fundamental_state": record.get("fundamental_state"),
         "trigger_state": trigger.get("trigger_state"), "distance_to_trigger_pct": trigger.get("distance_to_trigger_pct"),
@@ -334,6 +339,8 @@ def build_watchlist_record(*, ticker: str, current: Mapping[str, Any] | None, ta
     return {
         "ticker": ticker, "status": "AVAILABLE", "sector": sector_label,
         "research_action_posture": current.get("research_action_posture"),
+        "posture_condition_class": current.get("posture_condition_class"),
+        "research_action_policy_version": integrated_decision_module.research_policy_epoch(current),
         "evidence_currency": current.get("evidence_currency"),
         "legacy_stance": legacy.get("legacy_stance"),
         "posture_transition": (posture_transition_row or {}).get("transition", "UNAVAILABLE"),
@@ -586,6 +593,14 @@ def build_artifact(
         "decision_transitions": decision_transitions, "what_changed_today": what_changed_today,
         "risk_summary": risk_summary, "financial_evidence_context": financial_evidence_context,
         "decision_surface_index": surface_index,
+        # Exact owner classes expose base/reversal/constructive/pending/failed/
+        # distribution/breakdown/missing distinctions without a new classifier.
+        "posture_condition_classes": {
+            klass: {"tickers": sorted(t for t, r in current_records.items()
+                                      if r.get("posture_condition_class") == klass)}
+            for klass in sorted({r.get("posture_condition_class") for r in current_records.values()
+                                 if r.get("posture_condition_class")})
+        },
         "feedback_status": feedback_status if feedback_status is not None else {"availability": "UNAVAILABLE", "reason_codes": ["FEEDBACK_STATUS_NOT_SUPPLIED"]},
         "coverage": {
             "universe_denominator": integrated_decision_current.get("coverage", {}).get("universe_denominator"),

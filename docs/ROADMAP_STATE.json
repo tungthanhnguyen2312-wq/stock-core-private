@@ -15,14 +15,35 @@
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "STOCKLOOKUP_CAPACITY_RECOVERY_PHASE1_LINK_DEDUP_AND_COLD_CATALOG_V1",
+    "milestone": "CONDITIONAL_RESEARCH_POSTURE_V2",
     "state": "ACTIVE"
   },
   "queued_next": [],
   "milestones": [
     {
-      "milestone_id": "STOCKLOOKUP_CAPACITY_RECOVERY_PHASE1_LINK_DEDUP_AND_COLD_CATALOG_V1",
+      "milestone_id": "CONDITIONAL_RESEARCH_POSTURE_V2",
       "state": "ACTIVE",
+      "starting_checkpoint": "168e0f712e3b57c6a626f0e76f36f471136f3232",
+      "candidate_branch": "feature/research-posture-v2-20261009",
+      "dependencies": [
+        "STOCKLOOKUP_CAPACITY_RECOVERY_PHASE1_LINK_DEDUP_AND_COLD_CATALOG_V1"
+      ],
+      "unlocks": [],
+      "owner_authorized": true,
+      "owner_override": "RESEARCH_POSTURE_V2_FULL_IMPLEMENTATION_AND_CI: owner-directed nine-token policy V2, private holdings excluded, all named consumers, synthetic acceptance and one PR; no merge, deployment, Daily, production writes or authority promotion.",
+      "authority_effect": "NONE",
+      "source_doc": "docs/conditional_research_posture_v2_contract.md",
+      "state_history": [
+        "DEFERRED",
+        "ACTIVE"
+      ],
+      "checkpoint": "d3d02e5e58cda8013d4140d17f84a738537e4727",
+      "terminal_disposition": null,
+      "notes": "RESEARCH_POSTURE_V2_FULL_IMPLEMENTATION_AND_CI: owner-directed nine-token policy V2, private holdings excluded, all named consumers, synthetic acceptance and one PR; no merge, deployment, Daily, production writes or authority promotion. Local implementation checkpoint d3d02e5e58cda8013d4140d17f84a738537e4727; full hermetic 3321 passed, 21 skipped, 15 deselected, 42 subtests passed. Owner merge/release and exact-head external CI remain pending; no production activation."
+    },
+    {
+      "milestone_id": "STOCKLOOKUP_CAPACITY_RECOVERY_PHASE1_LINK_DEDUP_AND_COLD_CATALOG_V1",
+      "state": "COMPLETE",
       "starting_checkpoint": "1d6b8a8b9bce430a0b0f8cdd735a1cb90b8556f8",
       "candidate_branch": "feature/capacity-recovery-phase1-20261009",
       "dependencies": [
@@ -40,11 +61,12 @@
         "DEFERRED",
         "ACTIVE",
         "COMPLETE",
-        "ACTIVE"
+        "ACTIVE",
+        "COMPLETE"
       ],
-      "checkpoint": null,
-      "terminal_disposition": null,
-      "notes": "STOCKLOOKUP_CAPACITY_PHASE1_END_TO_END_COMPLETION: preserve the completed read-only foundation; continue actual immutable delivery writers, measured offline allocation, retention/restore readiness and exact-head PR99 CI. No production mutation or automatic successor.",
+      "checkpoint": "168e0f712e3b57c6a626f0e76f36f471136f3232",
+      "terminal_disposition": "IMPLEMENTATION_RELEASED_NO_PRODUCTION_ACTIVATION",
+      "notes": "STOCKLOOKUP_CAPACITY_PHASE1_END_TO_END_COMPLETION: preserve the completed read-only foundation; continue actual immutable delivery writers, measured offline allocation, retention/restore readiness and exact-head PR99 CI. No production mutation or automatic successor. Verified release 168e0f712e3b57c6a626f0e76f36f471136f3232; no production reclaim, activation or automatic successor.",
       "scope_continuations": [
         {
           "prior_state": "COMPLETE",

@@ -41,6 +41,7 @@ POSTURE_TRANSITION_LABELS = frozenset({
     "NEW_BREAKOUT", "NEW_EARLY_WATCH", "NEW_RETEST_CANDIDATE", "WAIT_TO_INITIATE", "EARLY_WATCH_TO_INITIATE",
     "INITIATE_TO_HOLD", "INITIATE_TO_EXTENDED", "BREAKOUT_FAILED", "UPTREND_TO_BREAKDOWN", "AVOID_TO_RECOVERY_WATCH",
     "POSTURE_UNCHANGED", "NEWLY_AVAILABLE", "NO_LONGER_AVAILABLE", "POSTURE_CHANGED_OTHER",
+    "NOT_COMPARABLE_POLICY_CHANGE",
 })
 
 
@@ -419,6 +420,9 @@ def _classify_posture_transition(previous: Mapping[str, Any] | None, current: Ma
         return "NO_LONGER_AVAILABLE"
     if previous is None:
         return "NEWLY_AVAILABLE"
+    from integrated_investment_decision_product import research_policy_epoch
+    if research_policy_epoch(previous) != research_policy_epoch(current):
+        return "NOT_COMPARABLE_POLICY_CHANGE"
     prev_posture, curr_posture = previous.get("research_action_posture"), current.get("research_action_posture")
     prev_phase, curr_phase = previous.get("tactical_phase"), current.get("tactical_phase")
     if prev_phase in _CONSTRUCTIVE_TACTICAL_PHASES and curr_phase == "BREAKDOWN":
@@ -492,7 +496,10 @@ def _posture_transition(*, root: Path, current_session: str, previous_session: s
     counts: Counter = Counter()
     for ticker in sorted(set(current_records) | set(previous_records)):
         prev_rec, curr_rec = previous_records.get(ticker), current_records.get(ticker)
-        label = _classify_posture_transition(prev_rec, curr_rec)
+        prev_epoch = (prev_rec or {}).get("research_action_policy_version", previous_integrated.get("research_action_policy_version", "v1"))
+        curr_epoch = (curr_rec or {}).get("research_action_policy_version", current_integrated.get("research_action_policy_version", "v1"))
+        label = ("NOT_COMPARABLE_POLICY_CHANGE" if prev_epoch != curr_epoch
+                 else _classify_posture_transition(prev_rec, curr_rec))
         counts[label] += 1
         records[ticker] = {
             "transition": label,
@@ -500,6 +507,10 @@ def _posture_transition(*, root: Path, current_session: str, previous_session: s
             "current_posture": (curr_rec or {}).get("research_action_posture"),
             "previous_tactical_phase": (prev_rec or {}).get("tactical_phase"),
             "current_tactical_phase": (curr_rec or {}).get("tactical_phase"),
+            "previous_posture_condition_class": (prev_rec or {}).get("posture_condition_class"),
+            "current_posture_condition_class": (curr_rec or {}).get("posture_condition_class"),
+            "previous_research_policy_epoch": (prev_rec or {}).get("research_action_policy_version", previous_integrated.get("research_action_policy_version", "v1")),
+            "current_research_policy_epoch": (curr_rec or {}).get("research_action_policy_version", current_integrated.get("research_action_policy_version", "v1")),
             "previous_decision_identity": (prev_rec or {}).get("decision_identity"),
             "current_decision_identity": (curr_rec or {}).get("decision_identity"),
             "previous_fundamental_policy_epoch": fundamental_signals.policy_epoch(prev_rec) if prev_rec else None,

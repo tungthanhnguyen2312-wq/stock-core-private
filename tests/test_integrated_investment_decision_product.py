@@ -153,6 +153,7 @@ class TestPolicyRegressions:
             valuation_record=None,
             relative_volume_record=None,
             market_sector_record=None,
+            technical_coverage_disposition_record=_current_disposition("2026-08-28"),
         )
         assert dec["research_action_posture"] == iidp.POSTURE_INITIATE_ON_BREAKOUT
         assert "EXACT_EXECUTION_CAPACITY_BLOCKED" in dec["exact_capabilities_unavailable"]
@@ -169,6 +170,7 @@ class TestPolicyRegressions:
             valuation_record=val,
             relative_volume_record=None,
             market_sector_record=None,
+            technical_coverage_disposition_record=_current_disposition("2026-08-28"),
         )
         val_sum = dec["valuation_context_summary"]
         assert val_sum["status"] == "AVAILABLE"
@@ -188,6 +190,7 @@ class TestPolicyRegressions:
             valuation_record=val_blocked,
             relative_volume_record=None,
             market_sector_record=None,
+            technical_coverage_disposition_record=_current_disposition("2026-08-28"),
         )
         assert dec["research_action_posture"] == iidp.POSTURE_INITIATE_ON_BREAKOUT
 
@@ -202,6 +205,7 @@ class TestPolicyRegressions:
             relative_volume_record=None,
             market_sector_record=None,
             portfolio_record=None,
+            technical_coverage_disposition_record=_current_disposition("2026-08-28"),
         )
         dec_with_port = iidp.build_ticker_integrated_decision(
             ticker="VNM",
@@ -212,9 +216,11 @@ class TestPolicyRegressions:
             relative_volume_record=None,
             market_sector_record=None,
             portfolio_record={"status": "AVAILABLE", "is_held": True},
+            technical_coverage_disposition_record=_current_disposition("2026-08-28"),
         )
         assert dec_no_port["portfolio_context"]["status"] == "NOT_PROVIDED"
-        assert dec_with_port["portfolio_context"]["status"] == "AVAILABLE"
+        assert dec_with_port["portfolio_context"]["status"] == "NOT_PROVIDED"
+        assert dec_with_port == dec_no_port
         # Security research posture is identical
         assert dec_no_port["research_action_posture"] == dec_with_port["research_action_posture"] == iidp.POSTURE_INITIATE_ON_BREAKOUT
 
@@ -234,6 +240,7 @@ class TestPolicyRegressions:
             valuation_record=None,
             relative_volume_record=None,
             market_sector_record=None,
+            technical_coverage_disposition_record=_current_disposition("2026-08-28"),
         )
         assert dec["research_action_posture"] == iidp.POSTURE_HOLD_DO_NOT_ADD
         assert dec["tactical_phase"] == iidp.TACTICAL_EXTENDED
@@ -262,6 +269,7 @@ class TestPolicyRegressions:
             valuation_record=None,
             relative_volume_record=None,
             market_sector_record=None,
+            technical_coverage_disposition_record=_current_disposition("2026-08-28"),
         )
         assert dec["research_action_posture"] == iidp.POSTURE_AVOID
         assert dec["fundamental_state"] == iidp.FUNDAMENTAL_DETERIORATING
@@ -280,6 +288,7 @@ class TestPolicyRegressions:
             valuation_record=None,
             relative_volume_record=None,
             market_sector_record=None,
+            technical_coverage_disposition_record=_current_disposition("2026-08-28"),
         )
         assert dec["fundamental_state"] == iidp.FUNDAMENTAL_INSUFFICIENT
         assert dec["tactical_phase"] in iidp.TACTICAL_PHASES
@@ -304,6 +313,7 @@ class TestPolicyRegressions:
             valuation_record=None,
             relative_volume_record=None,
             market_sector_record=None,
+            technical_coverage_disposition_record=_current_disposition("2026-08-20"),
         )
         assert dec_onset["research_action_posture"] == iidp.POSTURE_INITIATE_ON_BREAKOUT
 
@@ -321,6 +331,7 @@ class TestPolicyRegressions:
             valuation_record=None,
             relative_volume_record=None,
             market_sector_record=None,
+            technical_coverage_disposition_record=_current_disposition("2026-08-21"),
         )
         assert dec_ext["research_action_posture"] == iidp.POSTURE_HOLD_DO_NOT_ADD
 
@@ -345,6 +356,7 @@ class TestGovernanceAndStructure:
             valuation_record=_sample_valuation_record(),
             relative_volume_record=None,
             market_sector_record=None,
+            technical_coverage_disposition_record=_current_disposition("2026-08-28"),
         )
         raw_json = json.dumps(dec)
         assert "score" not in dec
@@ -363,6 +375,7 @@ class TestGovernanceAndStructure:
             valuation_record=None,
             relative_volume_record=None,
             market_sector_record=None,
+            technical_coverage_disposition_record=_current_disposition("2026-08-28"),
         )
         dec2 = iidp.build_ticker_integrated_decision(
             ticker="HPG",
@@ -372,6 +385,7 @@ class TestGovernanceAndStructure:
             valuation_record=None,
             relative_volume_record=None,
             market_sector_record=None,
+            technical_coverage_disposition_record=_current_disposition("2026-08-28"),
         )
         assert dec1["decision_identity"] == dec2["decision_identity"]
         assert dec1["decision_identity"].startswith("decision:HPG:")
@@ -518,6 +532,7 @@ class TestGovernanceAndStructure:
                 "market": {"current_breadth_state": "MIXED_BREADTH"},
                 "ticker_contexts": {"PNJ": {"sector_leadership_context": {"leadership_state": "MIXED"}}},
             },
+            technical_coverage_disposition_record=_current_disposition("2026-08-20"),
         )
         assert dec["tactical_phase"] == iidp.TACTICAL_BREAKOUT_CONFIRMED
         assert dec["research_action_posture"] == iidp.POSTURE_INITIATE_ON_BREAKOUT
@@ -623,6 +638,7 @@ class TestGovernanceAndStructure:
             valuation_record=_sample_valuation_record(),
             relative_volume_record=None,
             market_sector_record=mkt,
+            technical_coverage_disposition_record=_current_disposition("2026-08-28"),
         )
         assert dec["research_action_posture"] == iidp.POSTURE_AVOID
 
@@ -703,6 +719,7 @@ class TestGovernanceAndStructure:
             valuation_record=_sample_valuation_record(),
             relative_volume_record=None,
             market_sector_record=None,
+            technical_coverage_disposition_record=_current_disposition("2026-08-28"),
         )
         assert dec["research_action_posture"] == iidp.POSTURE_INITIATE_ON_BREAKOUT
         assert dec["participation"]["status"] == "NOT_AVAILABLE"
@@ -725,6 +742,7 @@ class TestMomentumParticipationConfirmationAdditive:
             market_sector_record=None,
             momentum_record=momentum_record,
             tactical_confirmation_record=tactical_confirmation_record,
+            technical_coverage_disposition_record=_current_disposition("2026-08-28"),
         )
 
     def test_posture_identical_with_and_without_momentum_confirmation(self) -> None:
@@ -801,6 +819,7 @@ class TestEvidenceAxisCoherence:
             tactical_confirmation_record=confirmation if confirmation is not None else {
                 "tactical_confirmation_state": "CONFIRMED", "supporting_reasons": ["MOMENTUM_DIRECTION_ALIGNED"],
             },
+            technical_coverage_disposition_record=_current_disposition("2026-08-28"),
         )
 
     def test_all_supported_axes_are_exposed_with_fitness_and_lineage(self) -> None:
@@ -862,6 +881,7 @@ class TestEvidenceAxisCoherence:
             },
             momentum_record={"eligibility": {"status": "ELIGIBLE"}},
             tactical_confirmation_record={"tactical_confirmation_state": "CONFIRMED"},
+            technical_coverage_disposition_record=_current_disposition("2026-08-28"),
         )
         assert priority["evidence_axes"]["OPPORTUNITY_PRIORITY"]["state"] == "PRIORITY_NOW"
         assert priority["research_action_posture"] == base["research_action_posture"]
@@ -957,6 +977,7 @@ class TestFinancialCompositeContext:
             ticker="HPG", as_of_session="2026-08-28",
             tactical_record=_sample_tactical_record(), financial_record=_sample_financial_record(),
             valuation_record=_sample_valuation_record(), relative_volume_record=None, market_sector_record=None,
+            technical_coverage_disposition_record=_current_disposition("2026-08-28"),
         )
         assert base["financial_composite_context"]["financial_composite_state"] in iidp.FINANCIAL_COMPOSITE_STATES
         # Removing financial_composite_context's own inputs from the picture (by passing no
@@ -966,6 +987,7 @@ class TestFinancialCompositeContext:
             ticker="HPG", as_of_session="2026-08-28",
             tactical_record=_sample_tactical_record(), financial_record=None,
             valuation_record=None, relative_volume_record=None, market_sector_record=None,
+            technical_coverage_disposition_record=_current_disposition("2026-08-28"),
         )
         assert no_composite_inputs["financial_composite_context"]["financial_composite_state"] == iidp.COMPOSITE_INSUFFICIENT_EVIDENCE
         # research_action_posture is computed entirely from tactical/fundamental/valuation
@@ -1015,6 +1037,7 @@ class TestCorporateIntelligenceWiring:
             tactical_record=_sample_tactical_record(), financial_record=_sample_financial_record(),
             valuation_record=_sample_valuation_record(), relative_volume_record=None, market_sector_record=None,
             corporate_intelligence_record=corporate_intelligence_record,
+            technical_coverage_disposition_record=_current_disposition(as_of_session),
         )
 
     def test_missing_corporate_intelligence_is_feature_local_not_a_crash_or_global_block(self):

@@ -479,6 +479,8 @@ def _decision_view(workspace_card: Mapping[str, Any] | None) -> dict[str, Any]:
     position = workspace_card.get("position_context") or {}
     return {
         "research_action_posture": workspace_card.get("research_action_posture"),
+        "posture_condition_class": workspace_card.get("posture_condition_class"),
+        "research_action_policy_version": integrated_decision_module.research_policy_epoch(workspace_card),
         "evidence_currency": workspace_card.get("evidence_currency"),
         "position_context": position.get("position_state"),
         "position_conditional": (workspace_card.get("action_presentation") or {}).get("position_conditional"),
