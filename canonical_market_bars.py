@@ -56,7 +56,9 @@ def project_daily(row: Mapping, *, ticker: str, source_identity: str) -> dict:
     if "ADJUSTED_RETROSPECTIVE" in str(native_basis) or native_basis == pit.RETROSPECTIVE_ADJUSTED:
         basis = pit.RETROSPECTIVE_ADJUSTED
     elif native_basis == pit.PIT_CA_ADJUSTED:
-        basis = pit.PIT_CA_ADJUSTED if known and pit._price_ready(row,mode=pit.PIT_CA_ADJUSTED,cutoff=market._utc(known,"known")) else "PIT_CA_ADJUSTED_UNQUALIFIED"
+        # A native digest and QUALIFIED/EXECUTED strings authenticate content,
+        # not source/event provenance. No trusted factor-chain interface exists.
+        basis = "PIT_CA_ADJUSTED_UNQUALIFIED"
     elif market.USE_PROSPECTIVE_RAW_AS_TRADED_PRICE in uses:
         basis = pit.RAW_AS_TRADED
     elif native_basis == pit.RAW_AS_TRADED:
@@ -75,6 +77,7 @@ def project_daily(row: Mapping, *, ticker: str, source_identity: str) -> dict:
         "raw_lineage_identities":list(row.get("raw_lineage_identities",[])),"factor_chain":list(row.get("factor_chain",[])),
         "volume_basis":vq.get("basis",row.get("volume_basis","UNKNOWN")),"turnover":row.get("traded_value"),
         "turnover_unit":row.get("traded_value_unit"),"price_basis":basis,"source_price_basis":native_basis,
+        "price_basis_verified":False,
         "price_unit":row.get("board_basis",{}).get("unit",row.get("price_unit","UNKNOWN")),
         "source":source,"source_identities":[source_identity],"constituent_observation_identities":[observation_id],
         "constituent_sessions":[session],"constituent_count":1,"knowledge_available_at":known,

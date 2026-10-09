@@ -718,7 +718,20 @@ def _classify_ticker(
     trigger = _trigger_v3(closes, brk_v3, bos, pivot)
     invalidation = _invalidation_v3(closes, swing_ctx, v1_structure)
 
+    from mva_daily_research_bundle import price_basis_qualification_from_window
+    # Qualify the actual source window, not flags supplied on a descriptive object.
+    source_rows = history_record.get("observations") or []
+    selected_rows = sorted([r for r in source_rows if isinstance(r, Mapping)
+        and r.get("session") in sessions], key=lambda r: r["session"])
+    if len({(r.get("price_basis"), r.get("transformation_identity")) for r in selected_rows}) > 1:
+        return _insufficient_record(ticker, "REFERENCE_WINDOW_PRICE_BASIS_INCOMPATIBLE", depth)
+    qualification = price_basis_qualification_from_window(
+        selected_rows[-20:])
+    for context in (trend_context, structure_context, breakout_context, swing_ctx, bos, choch, pivot, brk_v3, trigger, invalidation):
+        context["price_basis_qualification"] = qualification
+
     return {
+        "price_basis_qualification": qualification,
         "ticker": ticker, "eligibility": {"status": "ELIGIBLE"}, "close_history_depth": depth,
         "technical_history_lineage": {
             "source": history_source, "recovery_artifact_identity": recovery_identity,
@@ -744,7 +757,7 @@ def _classify_ticker(
             "fallback": "CLOSE_ONLY_PROXY_USED_FOR_STRUCTURE_AND_CONTRACTION",
         },
         "blockers": blockers,
-        "warnings": ["ADJUSTED_RETROSPECTIVE_NOT_RAW_AS_TRADED", "CLOSE_ONLY_STRUCTURE_NOT_HIGH_LOW_GEOMETRY"],
+        "warnings": ["PRICE_BASIS_UNVERIFIED_NOT_ADJUSTED_OR_RAW_AUTHORITY", "CLOSE_ONLY_STRUCTURE_NOT_HIGH_LOW_GEOMETRY"],
         "authority_tier": "SHADOW_ONLY",
         "method": {
             "identity": CONTRACT_VERSION, "swing_n": SWING_N,

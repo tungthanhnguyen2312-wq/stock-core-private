@@ -151,24 +151,22 @@ def collect(*, source_root, runtime_root, session, feature_batch=None, feature_b
     descriptive_meta, descriptive_digest, _ = stream_artifact(paths["descriptive"], excluded={"artifact_identity","artifact_sha256"},on_record=sector_record)
     if descriptive_digest != descriptive_meta["artifact_sha256"] or descriptive_meta["artifact_identity"] != binding["descriptive"]["artifact_identity"]:
         raise ValueError("VOLUME_SECTOR_CLASSIFICATION_SOURCE_INVALID")
-    velocity = {}
-    if velocity_artifact:
-        if velocity_artifact.get("contract_version") != context.divergence.VELOCITY_CONTRACT_VERSION:
-            raise ValueError("VOLUME_FLOW_VELOCITY_CONTRACT_INVALID")
-        import hashlib
-        body = {k:v for k,v in velocity_artifact.items() if k not in {"artifact_identity","artifact_sha256"}}
-        digest = hashlib.sha256(context.divergence._canonical(body).encode()).hexdigest()
-        if velocity_artifact.get("artifact_identity") != "multi_session_signal_velocity:"+digest:
-            raise ValueError("VOLUME_FLOW_VELOCITY_IDENTITY_INVALID")
-        velocity = {r["ticker"]:r for r in velocity_artifact["records"] if r["session"] == session}
+    exclusions = {}
+    velocity = context.divergence.accept_velocity_for_flow(velocity_artifact, reference_session=session,
+        exclusions=exclusions) if velocity_artifact else {}
+
     paired_inputs = {"relationship_views": views, "allow_legacy_bridge": allow_legacy_bridge, "calendar_evidence": calendar} if v2_consumer else {"technical_contexts": technical}
     artifact = producer.build_artifact(session=session,tickers=tickers,**paired_inputs,flow_series=flow,
         exhaustive_dates=dates,registry_dates=registry_dates,sectors=sectors,velocity_records=velocity,
         source_artifact_identities=[source_header["snapshot_identity"], recovery["artifact_identity"],
             universe["artifact_identity"], events_artifact["artifact_identity"], descriptive_meta["artifact_identity"]],
         prepared_volume_items=prepared,sealed_snapshot=sealed_snapshot)
+    if velocity_artifact:
+        artifact["velocity_compatibility"] = {"source_artifact_identity": velocity_artifact.get("artifact_identity"),
+            "record_exclusions": exclusions, "non_voting": True}
+        producer.seal(artifact)
     if before != {k:source_hash(p) for k,p in paths.items()}: raise ValueError("VOLUME_RETAINED_SOURCE_BYTES_CHANGED")
-    return artifact, {"source_hashes": before, "source_bytes_unchanged": True,
+    return artifact, {"source_hashes": before, "source_bytes_unchanged": True, "velocity_record_exclusions": exclusions,
         "input_bytes_parsed": sum(p.stat().st_size for k,p in paths.items() if k != "trading_date_reference"),
         "price_corpora_parsed": 1, "technical_batches_parsed": 1,
         "foreign_sessions": {t:[o["session_date"] for o in s["observations"]] for t,s in flow.items()},

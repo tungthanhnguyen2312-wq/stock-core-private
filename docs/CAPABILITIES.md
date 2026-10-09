@@ -36,6 +36,9 @@ exact retained identities in ACTIVE_STATE). Source authority unchanged.
 - Blocker: runtime recovery/reference closure and source-retention approval
 - Next trigger: separate production approval; backup grants no deletion authority
 
+Price/flow corrective: current-research, non-voting; local checkpoint only.
+[Qualification and compatibility](price_basis_and_flow_contract_corrective.md).
+
 ## A. Market evidence and calendar
 
 Phase C resource architecture (released 2026-10-06) retains record-wise IID hashing, borrowed

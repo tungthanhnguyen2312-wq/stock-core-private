@@ -34,9 +34,11 @@ Fact kinds used below: **CURRENT FACT** (verified in repo or by a stated read-on
 **BLOCKED**, **DEFERRED**, **HISTORICAL**.
 
 ## 1. The operational gate
-- **COMPLETE — vault incremental/retention V1:** offline opt-in snapshot, SQLite backup
-  and 77-candidate preflight; no deletion authority or Daily integration. C capacity still
-  needs approved retention and runtime recovery contracts. Local checkpoint only; queue empty.
+- **COMPLETE — price basis/flow corrective V1:** local checkpoint only;
+  Numeric/operator parity; unverified basis; per-record velocity compatibility.
+  [Contract](price_basis_and_flow_contract_corrective.md); no Daily/authority promotion.
+- **COMPLETE — Vault V1:** PR97 merged `3f3d4fe`; offline/opt-in, 77 candidates,
+  zero deletion authority; C retention/runtime recovery still gated. Queue empty.
   [Contract and acceptance](vault_incremental_snapshot_contract.md).
 - **COMPLETE — economics evidence:** PR96 merged at `9db35f157af38baf3807be1a6a6827e77fd461dc`.
   Offline, opt-in, non-voting PNJ/PVD/FPT matrix: exact observations versus interpretation;
@@ -271,16 +273,15 @@ Fact kinds used below: **CURRENT FACT** (verified in repo or by a stated read-on
 
 ## 6. HISTORICAL — do not treat as current
 
-- Legacy `STATE.md` banners say "calendar registration remains unexecuted / owner-gated": true when
-  written; **superseded** by §4 (host-local, 2026-10-04).
-- The 9,853,145,088-byte (~9.18 GiB) core peak is **STALE** (removed whole-string T0 write). The
-  planning band remains **6.5–8.0 GiB, 8.0 a floor not a ceiling**. The first real Canonical-child
-  measurement is `10985897984` bytes (§4). Do not lower host thresholds to fit it.
-- **HISTORICAL — as checked 2026-10-04, first marker is null and complete-capture count is 0.**
-  Superseded by §3 on 2026-10-05. The 2026-10-02 T0 remains `UNAVAILABLE`.
-- **HISTORICAL — no live Daily had run since 2026-10-02** was true on 2026-10-04. Superseded by §1.
-- `OWNER_DAILY_ONE_CLICK.md` says "at or after about 16:30"; the Monday contract targets ~16:00 under the
-  15:30 attempt floor. Use the Monday contract for 2026-10-05.
+- Historical STATE calendar-registration gate is superseded by §4 (host-local 2026-10-04).
+- The 9,853,145,088-byte (~9.18 GiB) peak is STALE: whole-string T0 write removed.
+  Band stays **6.5–8.0 GiB; 8.0 is a floor**, first real child `10985897984` bytes (§4).
+  Do not lower host thresholds.
+- October 4's first marker is null / 0 captures were superseded October 5 (§3); October 2 T0 stays UNAVAILABLE.
+  October 4's no-live-Daily-since-October-2 statement is superseded by §1.
+- OWNER_DAILY_ONE_CLICK's ~16:30 is historical: Monday contract targets ~16:00,
+  attempt floor15:30; use that contract for October 5.
+
 - M1 live acceptance (2026-09-28, `DNSE_PRIMARY_UNCORROBORATED`), Thesis Stage 1 (offline, frozen),
   the R1–R7 program closeouts, Vnstock operation and every dated section of the giant narrative files.
 

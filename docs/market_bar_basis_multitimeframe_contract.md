@@ -104,3 +104,9 @@ includes this contract, session integrity and existing historical-context tests.
 Retained-dependent historical tests now declare exact evidence-tier dependencies;
 the omitted-session fixture explicitly removes checkout-dependent session selection.
 No later proposal is authorized by completion of this milestone.
+
+## 2026-10-09 bounded corrective
+
+[Qualification, velocity compatibility and horizon contract](price_basis_and_flow_contract_corrective.md).
+Native content identity and caller factor status strings alone do not authenticate
+price adjustment. The available factor-chain interface remains unqualified.

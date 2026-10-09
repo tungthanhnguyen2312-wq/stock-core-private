@@ -33,7 +33,8 @@ def _velocity(*, overall: str = "EARLY_IMPROVEMENT", structural: str = "REPAIRIN
               setup: str = "EARLY", participation: str = "IMPROVING", session: str = SESSION,
               quality: str = "COMPLETE_RETAINED_EVIDENCE") -> dict:
     value = {
-        "contract_version": shadow.VELOCITY_CONTRACT_VERSION,
+        "schema_version": "1.2.0", "contract_version": shadow.VELOCITY_CONTRACT_VERSION,
+        "source_inventory": [{"session": session, "snapshot_identity": "snapshot:test", "classification": "QUALIFIED"}],
         "records": [{"ticker": "AAA", "session": session, "overall_transition_state": overall,
                      "source_snapshot_identity": "snapshot:test", "evidence_quality": {"state": quality},
                      "axes": {"structural_repair": {"state": structural, "source_identity": "technical:test"},
@@ -128,7 +129,7 @@ def test_participation_is_separate_context(participation: str, expected: str):
 
 def test_old_velocity_contract_cannot_substitute_for_v12():
     velocity = _velocity(); velocity["contract_version"] = "multi_session_signal_velocity/v1.1"
-    with pytest.raises(ValueError, match="REQUIRE_SIGNAL_VELOCITY_V1_2"):
+    with pytest.raises(ValueError, match="VELOCITY_CONTRACT_INCOMPATIBLE"):
         shadow.build_artifact(reference_session=SESSION, flow_series={"AAA": _series()}, velocity_artifact=velocity)
 
 

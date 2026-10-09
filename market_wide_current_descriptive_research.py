@@ -156,10 +156,10 @@ def _feature_rows(pf_record: Mapping[str, Any]) -> list[dict[str, Any]]:
     observations = pf_record.get("observations")
     if not isinstance(observations, list):
         return []
-    # price_basis/transformation_identity ride along only so the shared reference window can
-    # refuse a window that mixes bases; they are absent (None) on recovery-series rows.
+    # Keep retained source/basis fields for qualification lineage and mixed-window refusal;
+    # recovery rows without stamps stay explicitly unverified.
     return [
-        {"date": row.get("session"), "close": row.get("close"), "volume": row.get("volume"),
+        {**row, "date": row.get("session"), "close": row.get("close"), "volume": row.get("volume"),
          "price_basis": row.get("price_basis"), "transformation_identity": row.get("transformation_identity")}
         for row in observations if isinstance(row, Mapping) and row.get("session")
     ]
