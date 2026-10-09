@@ -23,6 +23,15 @@ GOVERNED_PREVIOUS_OPERATION_LINEAGE_MISMATCH = "GOVERNED_PREVIOUS_OPERATION_LINE
 _OPERATIONS = Path("operations-review") / "daily-research-session-operations-v1"
 _PRODUCER_RUNS = Path("operations-review") / "daily-producer-runs-v1"
 
+# The completed-session registry freezes registry inputs only. The operation writer
+# additionally records macro on input_artifacts (daily_research_session_operations,
+# after the registry-backed manifest is built). Macro is not a registry freeze key.
+# Exact key equality therefore rejects the only retained operation for a session that
+# bound macro, including the completed 2026-10-08 run. Frozen identities must still
+# match exactly. Any other extra key, including a registry key such as event_context,
+# remains a lineage mismatch.
+_ATTACHED_INPUTS_OUTSIDE_SESSION_LOCK = frozenset({"macro"})
+
 
 def _read(path: Path) -> Mapping[str, Any] | None:
     try:
@@ -41,6 +50,15 @@ def _identity_map(artifacts: Any) -> dict[str, str] | None:
             return None
         identities[str(name)] = entry["artifact_identity"]
     return identities
+
+
+def _frozen_lineage_matches(manifest_identities: dict[str, str] | None, frozen: Mapping[str, str]) -> bool:
+    if manifest_identities is None or not set(frozen).issubset(manifest_identities):
+        return False
+    extra = set(manifest_identities) - set(frozen)
+    if not extra.issubset(_ATTACHED_INPUTS_OUTSIDE_SESSION_LOCK):
+        return False
+    return {key: manifest_identities[key] for key in frozen} == dict(frozen)
 
 
 def _candidate(operation_dir: Path, session: str, frozen: Mapping[str, str]) -> dict[str, Any]:
@@ -74,7 +92,7 @@ def _candidate(operation_dir: Path, session: str, frozen: Mapping[str, str]) -> 
     if not isinstance(product_identity, str) or bundle.get("product_identity") != product_identity:
         result["reason_code"] = "PRODUCT_IDENTITY_MISMATCH"
         return result
-    if _identity_map(manifest.get("input_artifacts")) != dict(frozen):
+    if not _frozen_lineage_matches(_identity_map(manifest.get("input_artifacts")), frozen):
         result["reason_code"] = "FROZEN_INPUT_LINEAGE_MISMATCH"
         return result
     result.update(
