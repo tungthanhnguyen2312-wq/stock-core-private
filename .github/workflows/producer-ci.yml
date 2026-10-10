@@ -218,9 +218,9 @@ jobs:
       - run: python -m py_compile stocklookup.py daily_analysis_pipeline.py canonical_daily_operation.py daily_producer_pipeline.py daily_research_session_operations.py
       - run: python -c "import json; json.load(open('docs/ROADMAP_STATE.json', encoding='utf-8'))"
       - run: python tools/stocklookup_roadmap.py --check
-      - run: pytest -q tests/test_repository_layout.py
       - run: >-
           pytest -q -m "${{ env.HERMETIC_MARKERS }}"
+          tests/test_repository_layout.py
           tests/test_production_call_shape_smoke.py::test_offline_guard_blocks_requests_urllib_and_vnstock_import
           tests/test_production_call_shape_smoke.py::test_owner_daily_entry_route_remains_canonical
 

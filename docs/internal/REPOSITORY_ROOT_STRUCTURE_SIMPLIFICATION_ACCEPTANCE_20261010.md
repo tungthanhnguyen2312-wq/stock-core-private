@@ -96,6 +96,15 @@ operator and listing discovery tool. No acquisition or Daily command was execute
 
 ## Remaining boundaries
 
+PR106 CI run `38022003589` passed three jobs; the hermetic job recorded
+3,754 passed, 132 skipped, 38 deselected and 49 subtests passed, with one failure:
+the existing workflow tier contract requires four pytest commands, while the new
+standalone layout guard added a fifth. The guard is now part of the existing
+structural hermetic command, preserving all assertions and four-command tiering.
+Focused dependency-tier and layout verification: **39 passed**. Replacement CI
+must pass before release; the earlier exact-HEAD approval cannot authorize this
+changed candidate.
+
 Historical prose is preserved; original module names navigate through the relocation
 map. Active navigation and the landing framework's physical-layout convention are
 updated. New root Python names are rejected in CI; compatibility exceptions require
