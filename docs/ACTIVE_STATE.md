@@ -1,8 +1,8 @@
 # Stock Lookup — Active State
 
-Updated 2026-10-10 from verified
-main `1b7c10c9a0f6037b0e289ea48ab0b56d90cc07c9`.
-Measurement integrity admitted under standing delegation.
+Updated 2026-10-11 from verified
+PR118 main `4555c867f0424aa128998ef87d32edc6aa8e834f`.
+Measurement integrity COMPLETE; four post-merge CI PASS (38095411118).
 Verify live main: `git fetch origin main` or `git ls-remote origin refs/heads/main`; a **local** remote-tracking ref can be stale.
 ## 0. How this file relates to the others
 | Question | Answer lives in |
@@ -306,8 +306,8 @@ Fact kinds used below: **CURRENT FACT** (verified in repo or by a stated read-on
 
 ## 9. Next action
 
-Finish workbench measurement integrity and its separate merge gate.
-Native admission records each standing-authorized scope. Fiscal-calendar
+PR118 COMPLETE; no queued successor. Continue only after native admission.
+Keep production Daily stable; new production-affecting merges need approval. Fiscal-calendar
 mapping needs the exact source/period/publication proof in the contract above.
 Ordinary Daily remains owner-operated after fresh READY preflight and exact session gates.
 

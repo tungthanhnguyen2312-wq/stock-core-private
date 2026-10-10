@@ -62,3 +62,14 @@ Portable scope and acceptance are here and in the native current record. Exact l
 worktree/branch/HEAD/origin-main/changed paths, test/CI state, PR gate and next command
 are retained in the existing ignored .stocklookup/scratch/ resume record in that
 checkout. No detached writer or autonomous shell polling loop is needed.
+
+## Release closeout — 2026-10-11 (Asia/Saigon)
+
+Owner-approved exact candidate 02da4ad63d04fa112b40d4eda008b3e389d2ba64
+merged as PR118 at 4555c867f0424aa128998ef87d32edc6aa8e834f. Base main
+was 1b7c10c9a0f6037b0e289ea48ab0b56d90cc07c9, candidate CLEAN/MERGEABLE
+and all four candidate jobs SUCCESS. Four post-merge jobs SUCCESS in
+run38095411118. Native current COMPLETE at actual release; queue remains empty.
+This same-release documentation closeout changes no implementation or production
+behavior, source authority, retained evidence or historical milestone objects.
+No separate bookkeeping PR or automatically admitted successor.

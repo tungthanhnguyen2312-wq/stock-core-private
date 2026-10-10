@@ -223,7 +223,7 @@ immutable. [Share contract](hpg_common_share_evidence_contract.md).
 - Contract: [portfolio_aware_decision_and_risk_contract.md](portfolio_aware_decision_and_risk_contract.md), [private_portfolio_context_contract.md](private_portfolio_context_contract.md), [portfolio_risk_liquidity_contract.md](portfolio_risk_liquidity_contract.md), [portfolio_opportunity_cost_research_contract.md](portfolio_opportunity_cost_research_contract.md) (offline)
 - Runtime: `ACTIVE_FAILSOFT` · Authority: `SCOPED` (strict research sizing/exposure; no execution) · Production: `IN_DAILY_FAILSOFT`
 - Input: explicit private portfolio context (never committed) · Predecessor: demonstration input
-- Blocker: capital/risk-budget unbound; execution zero · Next trigger: owner bindings; [measurement guards](portfolio_research_measurement_integrity_v1_contract.md) ACTIVE, merge gated
+- Blocker: capital/risk-budget unbound; execution zero · Next trigger: owner bindings; [measurement guards](portfolio_research_measurement_integrity_v1_contract.md) COMPLETE, PR118; offline only
 
 ### 19. Execution / PIT / RAW gates
 - Contract: [portfolio_pit_execution_authority_contract.md](portfolio_pit_execution_authority_contract.md), [prospective_raw_pit_authority.md](prospective_raw_pit_authority.md), [market_only_pit_eligibility_contract.md](market_only_pit_eligibility_contract.md)

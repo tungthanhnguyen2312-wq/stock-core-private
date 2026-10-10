@@ -16,13 +16,13 @@
   ],
   "current": {
     "milestone": "PORTFOLIO_RESEARCH_MEASUREMENT_INTEGRITY_V1",
-    "state": "ACTIVE"
+    "state": "COMPLETE"
   },
   "queued_next": [],
   "milestones": [
     {
       "milestone_id": "PORTFOLIO_RESEARCH_MEASUREMENT_INTEGRITY_V1",
-      "state": "ACTIVE",
+      "state": "COMPLETE",
       "starting_checkpoint": "1b7c10c9a0f6037b0e289ea48ab0b56d90cc07c9",
       "candidate_branch": "feature/portfolio-research-measurement-integrity-v1-20261010",
       "dependencies": [
@@ -35,11 +35,12 @@
       "source_doc": "docs/portfolio_research_measurement_integrity_v1_contract.md",
       "state_history": [
         "DEFERRED",
-        "ACTIVE"
+        "ACTIVE",
+        "COMPLETE"
       ],
-      "checkpoint": null,
-      "terminal_disposition": null,
-      "notes": "Owner WEEKEND_PRODUCT_VALUE_CONTINUATION and standing program delegation authorize existing workbench numeric/date/duplicate measurement integrity with Opportunity Cost integration; four released-code defects reproduced offline; single C writer, no new engine/CLI, no Daily/runtime/USB/heavy production workload/authority promotion; exact-HEAD merge separate. PR117 exact-approved release and four post-merge jobs verified."
+      "checkpoint": "4555c867f0424aa128998ef87d32edc6aa8e834f",
+      "terminal_disposition": "IMPLEMENTATION_RELEASED_NO_PRODUCTION_ACTIVATION",
+      "notes": "Owner WEEKEND_PRODUCT_VALUE_CONTINUATION and standing program delegation authorize existing workbench numeric/date/duplicate measurement integrity with Opportunity Cost integration; four released-code defects reproduced offline; single C writer, no new engine/CLI, no Daily/runtime/USB/heavy production workload/authority promotion; exact-HEAD merge separate. PR117 exact-approved release and four post-merge jobs verified. Owner-approved exact HEAD 02da4ad63d04fa112b40d4eda008b3e389d2ba64 released as PR118 at 4555c867f0424aa128998ef87d32edc6aa8e834f; four post-merge jobs SUCCESS (38095411118); no automatic successor or production activation."
     },
     {
       "milestone_id": "COMPANY_ECONOMICS_RESEARCH_PACKET_CONSUMER_V1",

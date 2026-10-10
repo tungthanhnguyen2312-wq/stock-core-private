@@ -1,13 +1,14 @@
 # Stock Lookup — Current Roadmap
 
 History: [ROADMAP.md](ROADMAP.md); execution: ROADMAP_STATE.json.
-Updated 2026-10-10 from main `1b7c10c9a0f6037b0e289ea48ab0b56d90cc07c9`.
+Updated 2026-10-11 from PR118 main `4555c867f0424aa128998ef87d32edc6aa8e834f`.
 Nothing below auto-starts; native standing admission required (AI_RULES 11).
 Facts: [ACTIVE_STATE.md](ACTIVE_STATE.md).
 
-## NOW — PORTFOLIO_RESEARCH_MEASUREMENT_INTEGRITY_V1 (ACTIVE)
+## NOW — PORTFOLIO_RESEARCH_MEASUREMENT_INTEGRITY_V1 (COMPLETE)
 
-Workbench numeric/date/duplicate guards with Opportunity Cost propagation.
+Released PR118: numeric/date/duplicate guards with Opportunity Cost propagation.
+Four post-merge CI PASS (38095411118); queue empty, no automatic successor.
 [Scope](portfolio_research_measurement_integrity_v1_contract.md).
 PR117 COMPLETE `1b7c10c`; four post-merge CI PASS (38064845939).
 Fiscal mapping lacks issuer calendar/covered-period/provider-label/publication proof;
