@@ -15,14 +15,35 @@
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "COMPANY_ECONOMICS_RESEARCH_PACKET_CONSUMER_V1",
+    "milestone": "PORTFOLIO_RESEARCH_MEASUREMENT_INTEGRITY_V1",
     "state": "ACTIVE"
   },
   "queued_next": [],
   "milestones": [
     {
-      "milestone_id": "COMPANY_ECONOMICS_RESEARCH_PACKET_CONSUMER_V1",
+      "milestone_id": "PORTFOLIO_RESEARCH_MEASUREMENT_INTEGRITY_V1",
       "state": "ACTIVE",
+      "starting_checkpoint": "1b7c10c9a0f6037b0e289ea48ab0b56d90cc07c9",
+      "candidate_branch": "feature/portfolio-research-measurement-integrity-v1-20261010",
+      "dependencies": [
+        "COMPANY_ECONOMICS_RESEARCH_PACKET_CONSUMER_V1"
+      ],
+      "unlocks": [],
+      "owner_authorized": true,
+      "owner_override": "Owner WEEKEND_PRODUCT_VALUE_CONTINUATION and standing program delegation authorize existing workbench numeric/date/duplicate measurement integrity with Opportunity Cost integration; four released-code defects reproduced offline; single C writer, no new engine/CLI, no Daily/runtime/USB/heavy production workload/authority promotion; exact-HEAD merge separate. PR117 exact-approved release and four post-merge jobs verified.",
+      "authority_effect": "NONE",
+      "source_doc": "docs/portfolio_research_measurement_integrity_v1_contract.md",
+      "state_history": [
+        "DEFERRED",
+        "ACTIVE"
+      ],
+      "checkpoint": null,
+      "terminal_disposition": null,
+      "notes": "Owner WEEKEND_PRODUCT_VALUE_CONTINUATION and standing program delegation authorize existing workbench numeric/date/duplicate measurement integrity with Opportunity Cost integration; four released-code defects reproduced offline; single C writer, no new engine/CLI, no Daily/runtime/USB/heavy production workload/authority promotion; exact-HEAD merge separate. PR117 exact-approved release and four post-merge jobs verified."
+    },
+    {
+      "milestone_id": "COMPANY_ECONOMICS_RESEARCH_PACKET_CONSUMER_V1",
+      "state": "COMPLETE",
       "starting_checkpoint": "a8a91ff6e28c9b3b0cc445eebfc15d30044009d4",
       "candidate_branch": "feature/company-economics-packet-consumer-v1-20261010",
       "dependencies": [
@@ -35,11 +56,12 @@
       "source_doc": "docs/company_economics_research_packet_consumer_v1_contract.md",
       "state_history": [
         "DEFERRED",
-        "ACTIVE"
+        "ACTIVE",
+        "COMPLETE"
       ],
-      "checkpoint": null,
-      "terminal_disposition": null,
-      "notes": "Owner weekend product-value direction and PROGRAM_LEAD_CONTINUATION_AND_STANDING_DELEGATION authorize the offline opt-in economics matrix consumer in existing Human/AI packet and descriptive selected-company comparison; preserve original economics and numerical authority, no Daily registration or runtime writes; one writer; exact-HEAD merge separate. PR116 exact approved release and four post-merge CI verified."
+      "checkpoint": "1b7c10c9a0f6037b0e289ea48ab0b56d90cc07c9",
+      "terminal_disposition": "IMPLEMENTATION_RELEASED_NO_PRODUCTION_ACTIVATION",
+      "notes": "Owner weekend product-value direction and PROGRAM_LEAD_CONTINUATION_AND_STANDING_DELEGATION authorize the offline opt-in economics matrix consumer in existing Human/AI packet and descriptive selected-company comparison; preserve original economics and numerical authority, no Daily registration or runtime writes; one writer; exact-HEAD merge separate. PR116 exact approved release and four post-merge CI verified. Verified release 1b7c10c9a0f6037b0e289ea48ab0b56d90cc07c9; no production reclaim, activation or automatic successor."
     },
     {
       "milestone_id": "RESEARCH_INSPECTION_INTEGRITY_V1",

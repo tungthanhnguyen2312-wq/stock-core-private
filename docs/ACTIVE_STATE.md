@@ -1,8 +1,8 @@
 # Stock Lookup — Active State
 
 Updated 2026-10-10 from verified
-main `9bc6360af5b678ffc15d46156bbb2bfcb8457f0c`.
-Read-only research inspection admitted under standing delegation.
+main `1b7c10c9a0f6037b0e289ea48ab0b56d90cc07c9`.
+Measurement integrity admitted under standing delegation.
 Verify live main: `git fetch origin main` or `git ls-remote origin refs/heads/main`; a **local** remote-tracking ref can be stale.
 ## 0. How this file relates to the others
 | Question | Answer lives in |
@@ -33,7 +33,7 @@ Fact kinds used below: **CURRENT FACT** (verified in repo or by a stated read-on
 **BLOCKED**, **DEFERRED**, **HISTORICAL**.
 
 ## 1. The operational gate
-- **ACTIVE — [economics packet consumer](company_economics_research_packet_consumer_v1_contract.md):** offline Human/AI view and exact-basis comparison; merge gated. PR116 COMPLETE `a8a91ff`, four post-merge CI PASS (38058615379).
+- **ACTIVE — [measurement integrity](portfolio_research_measurement_integrity_v1_contract.md):** workbench numeric/date/duplicate guards; merge gated. PR117 COMPLETE `1b7c10c`, four post-merge CI PASS (38064845939).
 - **COMPLETE — [capacity Phase 1](capacity_recovery_phase1_contract.md):** PR99 merged
   `168e0f7`, post-merge CI 37893984528 success; zero production reclaim/activation.
 - **COMPLETE — Vault V1:** PR97 merged `3f3d4fe`; offline/opt-in, 77 candidates,
@@ -306,7 +306,7 @@ Fact kinds used below: **CURRENT FACT** (verified in repo or by a stated read-on
 
 ## 9. Next action
 
-Finish read-only research inspection and its separate merge gate.
+Finish workbench measurement integrity and its separate merge gate.
 Native admission records each standing-authorized scope. Fiscal-calendar
 mapping needs the exact source/period/publication proof in the contract above.
 Ordinary Daily remains owner-operated after fresh READY preflight and exact session gates.

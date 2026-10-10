@@ -13,6 +13,8 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
+from datetime import date
 from typing import Any, Mapping, Sequence
 
 CONTRACT_VERSION = "portfolio_research_decision_workbench/v1"
@@ -20,7 +22,7 @@ FORBIDDEN = ("weight", "allocation", "position_size", "sizing", "leverage", "ord
 
 
 def _canon(value: Any) -> str:
-    return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False, allow_nan=False)
 
 
 def _sha(value: Any) -> str:
@@ -56,11 +58,40 @@ def _concentration(rows: Sequence[Mapping[str, Any]], field: str) -> dict[str, A
     return out
 
 
+def _finite_number(value: Any) -> tuple[float | None, str | None]:
+    if isinstance(value, bool):
+        return None, "BOOLEAN_NOT_MEASUREMENT"
+    if not isinstance(value, (int, float)):
+        return None, "NON_NUMERIC"
+    try:
+        number = float(value)
+    except OverflowError:
+        return None, "NUMERIC_RANGE_UNAVAILABLE"
+    if not math.isfinite(number):
+        return None, "NONFINITE"
+    return number, None
+
+
+def _returns(series: list[Any]) -> list[float] | str:
+    values = []
+    for value in series:
+        number, reason = _finite_number(value)
+        if reason:
+            return "RETURN_VALUES_" + reason
+        values.append(number)
+    return values
+
+
 def _dated(series: Any, dates: Any) -> dict[str, float] | str:
     """Map date -> return, or a reason the series cannot be aligned."""
     if not isinstance(dates, list) or len(dates) != len(series):
         return "DATES_LENGTH_MISMATCH"
     if not all(isinstance(item, str) and item.strip() for item in dates):
+        return "DATES_INVALID"
+    try:
+        if any(date.fromisoformat(item).isoformat() != item for item in dates):
+            return "DATES_INVALID"
+    except ValueError:
         return "DATES_INVALID"
     if len(set(dates)) != len(dates):
         return "DATES_DUPLICATED"
@@ -70,27 +101,48 @@ def _dated(series: Any, dates: Any) -> dict[str, float] | str:
 def _pearson(left: Sequence[float], right: Sequence[float]) -> float | None:
     if len(left) != len(right) or len(left) < 3:
         return None
-    mean_left = sum(left) / len(left)
-    mean_right = sum(right) / len(right)
-    num = sum((a - mean_left) * (b - mean_right) for a, b in zip(left, right))
-    den_left = sum((a - mean_left) ** 2 for a in left) ** 0.5
-    den_right = sum((b - mean_right) ** 2 for b in right) ** 0.5
-    if den_left == 0 or den_right == 0:
-        return None
-    return num / (den_left * den_right)
+    try:
+        # Preserve the released arithmetic for ordinary valid inputs.
+        mean_left = sum(left) / len(left)
+        mean_right = sum(right) / len(right)
+        num = sum((a - mean_left) * (b - mean_right) for a, b in zip(left, right))
+        den_left = sum((a - mean_left) ** 2 for a in left) ** 0.5
+        den_right = sum((b - mean_right) ** 2 for b in right) ** 0.5
+        if not all(math.isfinite(value) for value in (mean_left, mean_right, num, den_left, den_right, den_left * den_right)):
+            raise ValueError("CORRELATION_NUMERICAL_UNAVAILABLE")
+        if den_left == 0 or den_right == 0:
+            return None
+        result = num / (den_left * den_right)
+        if not math.isfinite(result):
+            raise ValueError("CORRELATION_NUMERICAL_UNAVAILABLE")
+        return result
+    except (OverflowError, ZeroDivisionError) as exc:
+        raise ValueError("CORRELATION_NUMERICAL_UNAVAILABLE") from exc
 
 
 def _pair_correlation(left: Mapping[str, Any], right: Mapping[str, Any]) -> tuple[str, float | None, str | None, int]:
     series_left = left.get("current_returns")
     series_right = right.get("current_returns")
     if not isinstance(series_left, list) or not isinstance(series_right, list):
+        if any("current_returns" in row and row["current_returns"] is not None
+               and not isinstance(row["current_returns"], list) for row in (left, right)):
+            return "NOT_COMPARABLE", None, "RETURN_SERIES_INVALID_SHAPE", 0
+        if any("current_returns" in row and row["current_returns"] is None for row in (left, right)):
+            return "MISSING", None, "RETURN_SERIES_PRESENT_NULL", 0
         return "MISSING", None, None, 0
+    series_left, series_right = _returns(series_left), _returns(series_right)
+    for series in (series_left, series_right):
+        if isinstance(series, str):
+            return "NOT_COMPARABLE", None, series, 0
     dates_left = left.get("current_return_dates")
     dates_right = right.get("current_return_dates")
     if dates_left is None and dates_right is None:
         # Backward-compatible path: the caller asserts alignment. The value is kept, but it is
         # never presented as comparable because nothing proves the points share dates.
-        value = _pearson([float(item) for item in series_left], [float(item) for item in series_right])
+        try:
+            value = _pearson(series_left, series_right)
+        except ValueError:
+            return "NOT_COMPARABLE", None, "CORRELATION_NUMERICAL_UNAVAILABLE", min(len(series_left), len(series_right))
         status = "CURRENT_RESEARCH_ONLY" if value is not None else "NOT_COMPARABLE"
         return status, value, ALIGNMENT_UNVERIFIED, min(len(series_left), len(series_right))
     if dates_left is None or dates_right is None:
@@ -101,7 +153,10 @@ def _pair_correlation(left: Mapping[str, Any], right: Mapping[str, Any]) -> tupl
         if isinstance(mapped, str):
             return "NOT_COMPARABLE", None, mapped, 0
     shared = sorted(set(mapped_left) & set(mapped_right))
-    value = _pearson([mapped_left[date] for date in shared], [mapped_right[date] for date in shared])
+    try:
+        value = _pearson([mapped_left[date] for date in shared], [mapped_right[date] for date in shared])
+    except ValueError:
+        return "NOT_COMPARABLE", None, "CORRELATION_NUMERICAL_UNAVAILABLE", len(shared)
     status = "CURRENT_RESEARCH_ONLY" if value is not None else "NOT_COMPARABLE"
     return status, value, ALIGNMENT_VERIFIED, len(shared)
 
@@ -145,38 +200,50 @@ def _rank(rows: Sequence[Mapping[str, Any]], objective: str | None) -> dict[str,
         return {"status": "OBJECTIVE_NOT_SUPPLIED", "ordered_tickers": []}
     ranked = []
     missing = []
+    rejected = {}
     for row in rows:
         measurements = row.get("measurements") if isinstance(row.get("measurements"), Mapping) else {}
         value = measurements.get(objective)
-        if isinstance(value, (int, float)):
-            ranked.append((float(value), row["ticker"]))
+        number, reason = _finite_number(value)
+        if reason is None:
+            ranked.append((number, row["ticker"]))
         else:
             missing.append(row["ticker"])
+            if objective in measurements:
+                rejected[row["ticker"]] = "PRESENT_NULL" if value is None else reason
     ranked.sort(key=lambda item: (-item[0], item[1]))
-    return {
+    result = {
         "status": "RANKED_UNDER_EXPLICIT_OBJECTIVE",
         "objective": objective,
         "ordered_tickers": [ticker for _value, ticker in ranked],
         "measurement_missing": sorted(missing),
         "is_capital_allocation": False,
     }
+    if rejected:
+        result["measurement_rejected"] = dict(sorted(rejected.items()))
+    return result
 
 
 def build_workbench(opportunities: Sequence[Mapping[str, Any]], *, objective: str | None = None) -> dict[str, Any]:
     seen: set[str] = set()
     rows = []
     duplicates = []
+    by_ticker = {}
     for raw in opportunities:
         if not isinstance(raw, Mapping) or not isinstance(raw.get("ticker"), str) or not raw["ticker"].strip():
             raise ValueError("TICKER_REQUIRED")
         _reject(raw)
         ticker = raw["ticker"].strip().upper()
+        row = dict(raw)
+        row["ticker"] = ticker
         if ticker in seen:
+            # Exact duplicate only; input order cannot resolve conflicting evidence.
+            if row != by_ticker[ticker] or _canon(row) != _canon(by_ticker[ticker]):
+                raise ValueError("CONFLICTING_DUPLICATE_TICKER")
             duplicates.append(ticker)
             continue
         seen.add(ticker)
-        row = dict(raw)
-        row["ticker"] = ticker
+        by_ticker[ticker] = row
         rows.append(row)
     rows.sort(key=lambda row: row["ticker"])
     body = {

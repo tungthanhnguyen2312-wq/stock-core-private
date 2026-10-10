@@ -60,6 +60,32 @@ def compare(artifact, *, state=None, candidates=None, binding=None):
         candidates=candidates or [candidate()], owner_portfolio_state=state, integrated_scenario_binding=binding)
 
 
+@pytest.mark.parametrize("bad_dates", [False, True])
+def test_workbench_measurement_limits_propagate_without_changing_verified_v2_policy(bad_dates):
+    artifact = source(FIRED, tickers=("AAA", "BBB"))
+    original = copy.deepcopy(artifact)
+    dates = ["2026-08-24", "2026-08-25", "2026-08-26"]
+    candidates = [candidate("AAA", current_returns=[.01, .02, .03], current_return_dates=dates),
+                  candidate("BBB", current_returns=[.03, .01, .02], current_return_dates=dates)]
+    state = _state({"AAA": "materials"}, sector_weights={"materials": .2})
+    baseline = compare(artifact, candidates=candidates, state=state)
+    if bad_dates:
+        candidates[0]["current_return_dates"] = ["x", "y", "z"]
+        reason = "DATES_INVALID"
+    else:
+        candidates[0]["current_returns"][0] = float("nan")
+        reason = "RETURN_VALUES_NONFINITE"
+    built = compare(artifact, candidates=candidates, state=state)
+    correlation = built["pairwise"][0]["redundancy"]["current_correlation"]
+    assert correlation["value"] is None and correlation["comparable"] is False
+    assert correlation["date_alignment"] == reason
+    assert built["comparison_units"] == baseline["comparison_units"]
+    assert built["case_counts"] == baseline["case_counts"]
+    assert built["source_identities"]["integrated_scenario_binding"] == baseline["source_identities"]["integrated_scenario_binding"]
+    assert artifact == original and built["winner"] is None and not built["is_actionable"]
+    json.dumps(built, allow_nan=False)
+
+
 MATRIX = [
     ("S1", {"base_status": "IN_BASE", "ma20_slope_state": "FLAT"}, "BASE_UNCONFIRMED", "UNCONFIRMED", False),
     ("S2", REVERSAL, "EARLY_MONITOR_NO_TRIGGER", "UNCONFIRMED", False),

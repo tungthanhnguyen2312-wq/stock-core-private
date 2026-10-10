@@ -23,6 +23,7 @@ env:
   CORE_INSTALL: python -m pip install -r requirements.txt -r requirements-test.txt -c constraints.txt
   HERMETIC_MARKERS: not retained_evidence and not provider_runtime
   FOCUSED_SELECTION: >-
+    tests/test_portfolio_research_measurement_integrity.py
     tests/test_company_economics_packet_consumer.py
     tests/test_research_inspection_integrity.py
     tests/test_correlation_concentration_guard.py
