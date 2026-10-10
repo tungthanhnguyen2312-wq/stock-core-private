@@ -150,4 +150,3 @@ def fixture_update_kwargs(case):
             "relationships":[{"original_claim_id":case["original_claims"][0]["claim_id"],
                               "relationship":"DOES_NOT_ADDRESS","claim_outcome":"UNRESOLVED"}],
             "lifecycle_state":"ACTIVE","fixture":True}
-

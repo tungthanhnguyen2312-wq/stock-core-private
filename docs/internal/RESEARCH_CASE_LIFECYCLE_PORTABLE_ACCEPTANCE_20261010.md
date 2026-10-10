@@ -51,7 +51,7 @@ That exact node reproduces on the unchanged prior release checkout: kernel-limit
 is classified FEEDBACK_COMPUTATION_ERROR rather than FEEDBACK_RESOURCE_MEMORY_LIMIT.
 The guard and its tests are unchanged; no skip or assertion is added to hide it. Its repair
 needs a bounded Windows Job Object exit/status diagnostic; it is not research-case acceptance.
-After the final readiness correction: 119 PASS (57 portable cases plus existing native roadmap, layout, active-control and offline-provider tests). Installed core dependency tiers PASS with zero violations. Clean-commit native checkpoint is checked before push. Hosted four-job CI remains a separate release gate.
+After the final readiness correction: 119 PASS (57 portable cases plus existing native roadmap, layout, active-control and offline-provider tests). Installed core dependency tiers PASS with zero violations. Clean-commit native check at 67a82d5 reports ON_TRACK, one ACTIVE scope and empty queue; final commit is checked again before push. Hosted four-job CI remains a separate release gate.
 
 The 61 historical-input failures recorded in PR112 are not rerun, weakened or relabeled here.
 Reopen only with the exact pinned 2026-08-20 product/AI/dossier/task/review/setup/decision
