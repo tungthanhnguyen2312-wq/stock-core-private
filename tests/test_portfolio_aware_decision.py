@@ -5,7 +5,7 @@ policy figure below is fabricated for test purposes only.
 """
 from __future__ import annotations
 
-import portfolio_aware_decision as pad
+import stocklookup_core.portfolio.portfolio_aware_decision as pad
 
 
 DEFAULT_POLICY = {

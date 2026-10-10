@@ -5,7 +5,7 @@ import json
 import unittest
 from pathlib import Path
 
-from correlation_concentration_guard import (
+from stocklookup_core.portfolio.correlation_concentration_guard import (
     MATERIAL_CORRELATION_THRESHOLD,
     CorrelationConcentrationGuardError,
     build_artifact,

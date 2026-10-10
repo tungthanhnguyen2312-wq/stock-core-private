@@ -30,7 +30,7 @@ from pathlib import Path
 from typing import Any, Mapping
 
 import owner_research_exclusions as _exclusions
-import private_portfolio_context as _portfolio_context
+import stocklookup_core.portfolio.private_portfolio_context as _portfolio_context
 
 CONTRACT_VERSION = "private_portfolio_research_handoff/v1"
 

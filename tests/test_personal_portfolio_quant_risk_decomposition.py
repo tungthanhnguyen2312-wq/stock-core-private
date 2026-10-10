@@ -10,7 +10,7 @@ import math
 import numpy as np
 import pytest
 
-import personal_portfolio_quant_risk_decomposition as q
+import stocklookup_core.portfolio.personal_portfolio_quant_risk_decomposition as q
 
 
 # ── Tier 1: hand-verified pure math (no price-history plumbing) ────────────────────────────────

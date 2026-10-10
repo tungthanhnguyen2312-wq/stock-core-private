@@ -93,7 +93,9 @@ def test_packaged_defaults_still_use_checkout_root_after_cwd_change(tmp_path, mo
     from stocklookup_core.financial import fundamental_market_opportunity_ranking, fundamental_research_cohort_scaleout
     from stocklookup_core.financial import multi_period_financial_panel as panel
     from stocklookup_core.valuation import current_valuation_research_proxy
+    from stocklookup_core.portfolio import private_portfolio_context
     monkeypatch.chdir(tmp_path)
+    assert private_portfolio_context.REPOSITORY_ROOT == ROOT
     for module in (financial_operational_proxy, fundamental_cross_sectional_scoring,
                    fundamental_market_opportunity_ranking, fundamental_research_cohort_scaleout, current_valuation_research_proxy):
         assert module.ROOT == ROOT

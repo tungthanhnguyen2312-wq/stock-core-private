@@ -6,6 +6,7 @@ packages, no retained evidence.
 """
 from __future__ import annotations
 
+import ast
 import os
 import subprocess
 import sys
@@ -392,7 +393,41 @@ def test_every_focused_selection_entry_exists():
     entries = [line.strip() for line in block.splitlines() if line.strip()]
     assert entries and all(entry.startswith("tests/") for entry in entries)
     for entry in entries:
-        path, _, node = entry.partition("::")
-        assert (ROOT / path).is_file(), entry
-        if node:
-            assert f"def {node}(" in (ROOT / path).read_text(encoding="utf-8") or f"class {node}(" in (ROOT / path).read_text(encoding="utf-8"), entry
+        assert _focused_selector_exists(ROOT, entry), entry
+
+
+def _focused_selector_exists(root: Path, entry: str) -> bool:
+    path, *names = entry.split("::")
+    source = root / path
+    if not source.is_file():
+        return False
+    body = ast.parse(source.read_text(encoding="utf-8")).body
+    for index, name in enumerate(names):
+        selected = next((node for node in body
+                         if isinstance(node, (ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef))
+                         and node.name == name), None)
+        if selected is None or (index < len(names) - 1 and not isinstance(selected, ast.ClassDef)):
+            return False
+        body = selected.body
+    return True
+
+
+@pytest.mark.parametrize(("selector", "expected"), [
+    ("fixture.py", True),
+    ("fixture.py::standalone", True),
+    ("fixture.py::Good", True),
+    ("fixture.py::Good::available", True),
+    ("fixture.py::Wrong::available", False),
+    ("fixture.py::Good::missing", False),
+    ("fixture.py::Missing", False),
+    ("fixture.py::standalone::available", False),
+    ("absent.py::Good::available", False),
+])
+def test_focused_selection_resolves_methods_in_the_selected_class(tmp_path, selector, expected):
+    (tmp_path / "fixture.py").write_text(
+        "def standalone(): pass\n"
+        "class Good:\n    def available(self): pass\n"
+        "class Wrong:\n    def other(self): pass\n",
+        encoding="utf-8",
+    )
+    assert _focused_selector_exists(tmp_path, selector) is expected

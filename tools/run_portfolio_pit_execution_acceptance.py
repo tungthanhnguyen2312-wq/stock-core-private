@@ -19,11 +19,11 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 import raw_pit_authority_matrix as authority
 import stocklookup_core.decision.integrated_investment_decision_product as integrated
-import execution_capacity_research as capacity
+import stocklookup_core.portfolio.execution_capacity_research as capacity
 from field_temporal_contract import stable_id
-from portfolio_aware_decision import governed_research_sizing
-from current_portfolio_risk_envelope import governed_portfolio_research
-from current_portfolio_risk_research import qualified_window_readiness
+from stocklookup_core.portfolio.portfolio_aware_decision import governed_research_sizing
+from stocklookup_core.portfolio.current_portfolio_risk_envelope import governed_portfolio_research
+from stocklookup_core.portfolio.current_portfolio_risk_research import qualified_window_readiness
 
 
 def file_hash(path):

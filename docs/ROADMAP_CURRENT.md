@@ -1,15 +1,15 @@
 # Stock Lookup — Current Roadmap
 
 History: [ROADMAP.md](ROADMAP.md); execution: ROADMAP_STATE.json.
-Updated 2026-10-10 from main `701d432cd6736dc93f005ab56321189ba031c137`.
+Updated 2026-10-10 from main `04211888251473f7872af88e959cf49ca9089dd5`.
 Nothing below auto-starts; native standing admission required (AI_RULES 11).
 Facts: [ACTIVE_STATE.md](ACTIVE_STATE.md).
 
-## NOW — FEEDBACK_WINDOWS_MEMORY_REASON_CORRECTIVE_V1 (ACTIVE)
+## NOW — PORTFOLIO_RESEARCH_PACKAGE_V1 (ACTIVE)
 
-Windows memory resource/defect reasons; fixed policy, merge gated.
-[Scope and evidence limits](feedback_windows_memory_reason_corrective_v1_contract.md).
-Case COMPLETE: PR113 `701d432`, four post-merge CI PASS (38050775088); root Python 501.
+Portfolio source layout, privacy/constraints fixed; merge gated.
+[Scope and evidence limits](portfolio_research_package_v1_contract.md).
+Memory COMPLETE: PR114 `0421188`, four post-merge CI PASS (38053161990).
 Fiscal mapping lacks issuer calendar/covered-period/provider-label/publication proof;
 existing semantics knowledge time is insufficient. No automatic conversion/promotion.
 Financial package COMPLETE: PR108 `0afad0f`, four post-merge CI PASS; root 572 / Python 554.

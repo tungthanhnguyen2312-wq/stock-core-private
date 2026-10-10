@@ -13,7 +13,7 @@ if str(ROOT) not in sys.path:
 
 import stocklookup_core.decision.current_research_decision_input as decision_input  # noqa: E402
 import daily_official_liquidity_rollforward as rollforward  # noqa: E402
-import execution_capacity_research as capacity  # noqa: E402
+import stocklookup_core.portfolio.execution_capacity_research as capacity  # noqa: E402
 import official_liquidity_market_wide as wide  # noqa: E402
 
 PRIMARY_OPS = Path(r"C:\Projects\StockLookup\stock-core-private\operations-review")

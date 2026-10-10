@@ -5,8 +5,8 @@ from pathlib import Path
 from openpyxl import Workbook
 
 import owner_research_exclusions as ore
-import private_portfolio_research_handoff as handoff
-from private_portfolio_context import import_workbook
+import stocklookup_core.portfolio.private_portfolio_research_handoff as handoff
+from stocklookup_core.portfolio.private_portfolio_context import import_workbook
 
 
 def _workbook(path: Path) -> Path:

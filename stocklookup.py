@@ -301,7 +301,7 @@ def main(argv=None) -> int:
         return subprocess.run([sys.executable, str(ROOT / "tools/stocklookup_roadmap.py")]).returncode
 
     if a.command == "portfolio":
-        from private_portfolio_context import (
+        from stocklookup_core.portfolio.private_portfolio_context import (
             PortfolioImportError,
             import_workbook,
             portfolio_status as load_portfolio_status,
@@ -318,10 +318,10 @@ def main(argv=None) -> int:
                 print(json.dumps(public_status_summary(result), ensure_ascii=False, sort_keys=True))
                 return 0
             if a.portfolio_action == "shortlist":
-                import portfolio_aware_opportunity_shortlist as pas
-                import portfolio_aware_decision as pad
+                import stocklookup_core.portfolio.portfolio_aware_opportunity_shortlist as pas
+                import stocklookup_core.portfolio.portfolio_aware_decision as pad
                 try:
-                    root = (a.portfolio_root or __import__("private_portfolio_context").default_portfolio_root()).expanduser()
+                    root = (a.portfolio_root or __import__('stocklookup_core.portfolio.private_portfolio_context', fromlist=['*']).default_portfolio_root()).expanduser()
                     portfolio_path = root / "portfolio_aware_decisions" / a.session / "portfolio_aware_decision_v1.json"
                     integrated = pad.load_integrated_decision_artifact(ROOT, a.session)
                     import asymmetric_dislocation_research as adr
@@ -336,11 +336,11 @@ def main(argv=None) -> int:
                 print(json.dumps(pas.public_console_summary(artifact), ensure_ascii=False, sort_keys=True))
                 return 0
             if a.portfolio_action == "review":
-                import private_portfolio_decision_packet as packet
-                root = (a.portfolio_root or __import__("private_portfolio_context").default_portfolio_root()).expanduser()
+                import stocklookup_core.portfolio.private_portfolio_decision_packet as packet
+                root = (a.portfolio_root or __import__('stocklookup_core.portfolio.private_portfolio_context', fromlist=['*']).default_portfolio_root()).expanduser()
                 path = root / "portfolio_aware_opportunity_shortlists" / a.session / "portfolio_aware_opportunity_shortlist_v1.json"
                 try:
-                    import portfolio_aware_decision as pad
+                    import stocklookup_core.portfolio.portfolio_aware_decision as pad
                     import asymmetric_dislocation_research as adr
                     shortlist = json.loads(path.read_text(encoding="utf-8"))
                     integrated = pad.load_integrated_decision_artifact(ROOT, a.session)
@@ -370,7 +370,7 @@ def main(argv=None) -> int:
                 }, ensure_ascii=False, sort_keys=True))
                 return 0
             if a.portfolio_action == "handoff":
-                import private_portfolio_research_handoff as handoff
+                import stocklookup_core.portfolio.private_portfolio_research_handoff as handoff
                 artifact = handoff.build_artifact(portfolio_root=a.portfolio_root)
                 destination = handoff.write_private_artifact(artifact, portfolio_root=a.portfolio_root)
                 print(json.dumps(handoff.public_console_summary(artifact, destination=destination), ensure_ascii=False, sort_keys=True))
@@ -378,7 +378,7 @@ def main(argv=None) -> int:
             # a.portfolio_action == "evaluate"
             import datetime as _dt
 
-            import portfolio_aware_decision as pad
+            import stocklookup_core.portfolio.portfolio_aware_decision as pad
             try:
                 artifact = pad.evaluate_from_retained_artifacts(
                     repo_root=ROOT, session=a.session, portfolio_root=a.portfolio_root,

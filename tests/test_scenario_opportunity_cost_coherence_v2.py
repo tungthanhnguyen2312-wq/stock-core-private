@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 import current_evidence_bound_scenario as scenario
-import portfolio_opportunity_cost_research as opportunity
+import stocklookup_core.portfolio.portfolio_opportunity_cost_research as opportunity
 import stocklookup_core.decision.integrated_investment_decision_product as owner
 import stocklookup_core.tactical.market_structure_breakout_product_projection as structural
 import stocklookup_core.decision.current_research_decision_packet as packet

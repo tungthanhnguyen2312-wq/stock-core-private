@@ -17,7 +17,7 @@ import re
 from pathlib import Path
 from typing import Any, Mapping
 
-from private_portfolio_context import default_portfolio_root
+from stocklookup_core.portfolio.private_portfolio_context import default_portfolio_root
 
 CONTRACT_VERSION = "owner_research_exclusion/v1"
 

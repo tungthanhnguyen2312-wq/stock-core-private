@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-import execution_capacity_research as capacity
+import stocklookup_core.portfolio.execution_capacity_research as capacity
 import stocklookup_core.decision.current_research_decision_input as decision_input
 
 

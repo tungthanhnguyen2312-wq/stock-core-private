@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from correlation_concentration_guard import build_artifact
+from stocklookup_core.portfolio.correlation_concentration_guard import build_artifact
 
 
 DEFAULT_RISK = ROOT / "operations-review/current-portfolio-risk-research-v1-20260829/artifact.json"

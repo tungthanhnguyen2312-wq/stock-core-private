@@ -6,8 +6,8 @@ import json
 
 import pytest
 
-import portfolio_opportunity_cost_research as research
-import portfolio_research_decision_workbench as workbench
+import stocklookup_core.portfolio.portfolio_opportunity_cost_research as research
+import stocklookup_core.portfolio.portfolio_research_decision_workbench as workbench
 
 SESSION = "2026-10-08"
 DATES = ["2026-10-01", "2026-10-02", "2026-10-05", "2026-10-06", "2026-10-07"]

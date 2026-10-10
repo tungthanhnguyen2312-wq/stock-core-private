@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from current_portfolio_risk_research import build_artifact
+from stocklookup_core.portfolio.current_portfolio_risk_research import build_artifact
 
 DEFAULT_SHADOW = ROOT / "operations-review/shadow-action-readiness-v1-20260828/artifact.json"
 DEFAULT_CASES = ROOT / "operations-review/thesis-catalyst-downside-and-dual-invalidation-v1-20260828/artifact.json"
