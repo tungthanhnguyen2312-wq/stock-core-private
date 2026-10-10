@@ -38,6 +38,9 @@ retain root paths; frozen V2 moves without changing bytes.
 Thesis adapters, matrix, sidecars and runtime are in `stocklookup_core/research/`,
 joined by the existing analyst/dossier/question/review/workbench and prospective case/
 learning chain. [Workflow scope and evidence limits](research_workflow_package_v1_contract.md).
+[Portable lifecycle and case provenance correction](research_case_lifecycle_portable_acceptance_v1_contract.md)
+binds creation to the exact validated draft/recorded review and detaches frozen T0 from caller objects;
+fixtures exercise this chain without retained default loaders or production learning.
 Their existing child tools retain paths and resolve the repository source root.
 The existing offline `official_document_acquisition.py` CLI is a small compatibility launcher.
 All library consumers import the packages; historical module names resolve through

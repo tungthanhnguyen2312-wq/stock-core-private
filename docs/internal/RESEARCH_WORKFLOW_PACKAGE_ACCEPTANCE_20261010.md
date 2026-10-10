@@ -4,6 +4,14 @@
 Branch refactor/research-workflow-package-v1-20261010; one writer, dedicated checkout.
 Starting verified main 401c75f9fd866ab3b06043fe25ff7f2b57066211.
 
+## Released workflow checkpoint
+
+PR112 merged exact owner-approved HEAD `1d0f3237d7777372a36d12235347f3f985ff2bad`
+at `6fcddb95d1cca3819c6bb67429cfe84d1ba0a3a0`. All four PR CI jobs (38044523585) and four
+post-merge jobs (38047543681) passed; focused PR regression: 4,746 pass, 147 skip,
+49 deselected, 103 subtests pass. Native successor admission records this workflow
+COMPLETE at that release. No production activation or authority promotion occurred.
+
 ## Released predecessor and native admission
 
 PR111 merged exact separately approved updated HEAD 8110bd379cba9e1f4830ddbc23ab3ac30e4d077b;

@@ -15,14 +15,35 @@
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "RESEARCH_WORKFLOW_PACKAGE_V1",
+    "milestone": "RESEARCH_CASE_LIFECYCLE_PORTABLE_ACCEPTANCE_V1",
     "state": "ACTIVE"
   },
   "queued_next": [],
   "milestones": [
     {
-      "milestone_id": "RESEARCH_WORKFLOW_PACKAGE_V1",
+      "milestone_id": "RESEARCH_CASE_LIFECYCLE_PORTABLE_ACCEPTANCE_V1",
       "state": "ACTIVE",
+      "starting_checkpoint": "6fcddb95d1cca3819c6bb67429cfe84d1ba0a3a0",
+      "candidate_branch": "test/research-case-lifecycle-portable-v1-20261010",
+      "dependencies": [
+        "RESEARCH_WORKFLOW_PACKAGE_V1"
+      ],
+      "unlocks": [],
+      "owner_authorized": true,
+      "owner_override": "Owner PROGRAM_LEAD_CONTINUATION_AND_STANDING_DELEGATION (2026-10-10) authorizes bounded selection/admission/implementation and safe feature PR continuation. PR112 exact approved HEAD 1d0f3237d7777372a36d12235347f3f985ff2bad released at live main 6fcddb95d1cca3819c6bb67429cfe84d1ba0a3a0; all four PR CI 38044523585 and post-merge CI 38047543681 succeeded. Admit substantial portable integration acceptance for decision workflow to evidence-bound AI draft, recorded human review, workbench, immutable durable case/update replay and descriptive learning exclusion. The actual PR112 baseline exposed 61 historical-input dependent tests with no portable full-lifecycle route. Use explicit fictitious TEST_FIXTURE sources/drafts and fixture-only temporary stores, original thirteen-member financial panel invariant unchanged, with full happy-path plus adversarial identity/cohort/session/AI authority/human review/time/tamper/restart/learning matrix. Never call retained default loaders, read runtime/canonical evidence or reclassify old tests; missing historical evidence retains exact reopening gate. No production-code/source-policy/schema changes, root migration, engine, provider, Daily/deploy/runtime writes, real AI/human draft or trust promotion. Exact-HEAD merge remains separately gated; dedicated worktree, sole writer, empty queue.",
+      "authority_effect": "NONE",
+      "source_doc": "docs/research_case_lifecycle_portable_acceptance_v1_contract.md",
+      "state_history": [
+        "DEFERRED",
+        "ACTIVE"
+      ],
+      "checkpoint": null,
+      "terminal_disposition": null,
+      "notes": "Owner PROGRAM_LEAD_CONTINUATION_AND_STANDING_DELEGATION (2026-10-10) authorizes bounded selection/admission/implementation and safe feature PR continuation. PR112 exact approved HEAD 1d0f3237d7777372a36d12235347f3f985ff2bad released at live main 6fcddb95d1cca3819c6bb67429cfe84d1ba0a3a0; all four PR CI 38044523585 and post-merge CI 38047543681 succeeded. Admit substantial portable integration acceptance for decision workflow to evidence-bound AI draft, recorded human review, workbench, immutable durable case/update replay and descriptive learning exclusion. The actual PR112 baseline exposed 61 historical-input dependent tests with no portable full-lifecycle route. Use explicit fictitious TEST_FIXTURE sources/drafts and fixture-only temporary stores, original thirteen-member financial panel invariant unchanged, with full happy-path plus adversarial identity/cohort/session/AI authority/human review/time/tamper/restart/learning matrix. Never call retained default loaders, read runtime/canonical evidence or reclassify old tests; missing historical evidence retains exact reopening gate. No production-code/source-policy/schema changes, root migration, engine, provider, Daily/deploy/runtime writes, real AI/human draft or trust promotion. Exact-HEAD merge remains separately gated; dedicated worktree, sole writer, empty queue. Bounded corrective discovered by portable acceptance: four new regressions fail on released main. Same-identity draft/reviewer payload mutation bypasses the recorded human-review gate; frozen T0 aliases caller-owned draft/universe objects. Standing authorization to fix recoverable issues within the same job applies. The earlier planned no-production-code limit is narrowed only for exact stored draft/review equality at workbench case creation and a detached deep snapshot at the existing case-freeze boundary. Preserve all valid serialized case identities, schemas, validator policies and data-source trust limits; no authority promotion, new engine or retrospective evidence change. Record red-before/green-after proof and all historical evidence limits under this same ACTIVE scope. Readiness projection closure: a fifth regression proves that revalidating a changed draft under the same identity leaves old-review readiness falsely ready. Match the recorded review draft to the current validated body in the existing operation gate; require fresh review before both discovery readiness and case creation. Same two source files and existing policy/states/reasons; no authority promotion."
+    },
+    {
+      "milestone_id": "RESEARCH_WORKFLOW_PACKAGE_V1",
+      "state": "COMPLETE",
       "starting_checkpoint": "401c75f9fd866ab3b06043fe25ff7f2b57066211",
       "candidate_branch": "refactor/research-workflow-package-v1-20261010",
       "dependencies": [
@@ -35,11 +56,12 @@
       "source_doc": "docs/research_workflow_package_v1_contract.md",
       "state_history": [
         "DEFERRED",
-        "ACTIVE"
+        "ACTIVE",
+        "COMPLETE"
       ],
-      "checkpoint": null,
-      "terminal_disposition": null,
-      "notes": "Owner PROGRAM_LEAD_CONTINUATION_AND_STANDING_DELEGATION (2026-10-10) explicitly authorizes bounded selection, native admission and safe implementation/PR continuation. Verified PR111 exact approved HEAD 8110bd379cba9e1f4830ddbc23ab3ac30e4d077b released at main 401c75f9fd866ab3b06043fe25ff7f2b57066211; four PR CI 38040178650 and four post-merge CI 38043709070 succeeded. Admit RESEARCH_WORKFLOW_PACKAGE_V1: fifteen existing evidence-bound analyst/dossier/question/review/workbench/prospective-case/learning implementations into existing stocklookup_core/research, 75 static imports across 57 consumers, coherent research-lifecycle boundary rather than root quota. Preserve calculations, schemas, identities, source/temporal/human-review authority and root entrypoints; strengthen existing placement guard for literal import tuples after actual IID fixture defect. Offline AST/import/CLI/synthetic regression acceptance only; baseline 61 historical-evidence dependent failures remain unclaimed, exact pinned inputs reopen replay. No runtime retention/feedback relocation, Daily/deployment/runtime writes, trust promotion, framework or alias. Separate exact-HEAD merge approval remains required; one writer and empty queue."
+      "checkpoint": "6fcddb95d1cca3819c6bb67429cfe84d1ba0a3a0",
+      "terminal_disposition": "IMPLEMENTATION_RELEASED_NO_PRODUCTION_ACTIVATION",
+      "notes": "Owner PROGRAM_LEAD_CONTINUATION_AND_STANDING_DELEGATION (2026-10-10) explicitly authorizes bounded selection, native admission and safe implementation/PR continuation. Verified PR111 exact approved HEAD 8110bd379cba9e1f4830ddbc23ab3ac30e4d077b released at main 401c75f9fd866ab3b06043fe25ff7f2b57066211; four PR CI 38040178650 and four post-merge CI 38043709070 succeeded. Admit RESEARCH_WORKFLOW_PACKAGE_V1: fifteen existing evidence-bound analyst/dossier/question/review/workbench/prospective-case/learning implementations into existing stocklookup_core/research, 75 static imports across 57 consumers, coherent research-lifecycle boundary rather than root quota. Preserve calculations, schemas, identities, source/temporal/human-review authority and root entrypoints; strengthen existing placement guard for literal import tuples after actual IID fixture defect. Offline AST/import/CLI/synthetic regression acceptance only; baseline 61 historical-evidence dependent failures remain unclaimed, exact pinned inputs reopen replay. No runtime retention/feedback relocation, Daily/deployment/runtime writes, trust promotion, framework or alias. Separate exact-HEAD merge approval remains required; one writer and empty queue. Verified release 6fcddb95d1cca3819c6bb67429cfe84d1ba0a3a0; no production reclaim, activation or automatic successor."
     },
     {
       "milestone_id": "TACTICAL_RESEARCH_PACKAGE_V1",
