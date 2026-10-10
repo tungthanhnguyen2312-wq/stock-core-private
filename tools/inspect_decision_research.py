@@ -151,14 +151,15 @@ def inspect(args):
 def run(args):
     try:
         result = inspect(args)
-    except (OSError, ValueError, TypeError, KeyError, AttributeError) as exc:
+        payload = json.dumps(result, ensure_ascii=False, sort_keys=True, allow_nan=False)
+    except (OSError, ValueError, TypeError, KeyError, AttributeError, RecursionError) as exc:
         # Do not expose host paths or source bodies in an error report.
         reason = str(exc).split(":", 1)[0] if isinstance(exc, ValueError) and not isinstance(exc, json.JSONDecodeError) else type(exc).__name__
         if not re.fullmatch(r"[A-Z][A-Z0-9_]+", reason):
             reason = type(exc).__name__
         print(json.dumps({"status": "UNAVAILABLE", "reason": reason, "persisted": False, "authority_effect": "NONE"}))
         return 2
-    print(json.dumps(result, ensure_ascii=False, sort_keys=True, allow_nan=False))
+    print(payload)
     return 0
 
 

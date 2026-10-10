@@ -173,3 +173,9 @@ def test_missing_file_does_not_leak_host_path(tmp_path, capsys):
     assert cli.run(argparse.Namespace(research_action="calibration", feedback=secret)) == 2
     output = capsys.readouterr().out
     assert "private-owner-name" not in output and str(tmp_path) not in output
+
+
+def test_nonserializable_result_never_emits_partial_success(monkeypatch, capsys):
+    monkeypatch.setattr(cli, "inspect", lambda args: {"status": "AVAILABLE", "metric": float("inf")})
+    assert cli.run(None) == 2
+    assert json.loads(capsys.readouterr().out)["status"] == "UNAVAILABLE"

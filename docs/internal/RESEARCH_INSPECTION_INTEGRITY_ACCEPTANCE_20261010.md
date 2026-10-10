@@ -84,7 +84,8 @@ them or the completed October9 Daily. Root count is not an acceptance criterion.
 
 170 projection/intake/native/layout/CI-selection/active/production-call-shape checks
 PASS (91.64 s); 12 packet/workbench checks PASS. After the final reporting distinction,
-74 intake/coverage/calibration/panel/packet/workbench tests PASS (3.80 s).
+75 intake/coverage/calibration/panel/packet/workbench tests PASS (3.54 s),
+including refusal of a nonserializable result before emitting any success.
 Native check ON_TRACK, all five categories PASS, sole ACTIVE inspection, empty queue.
 Active reading set 102,020 bytes, below unchanged 102,400-byte budget.
 
