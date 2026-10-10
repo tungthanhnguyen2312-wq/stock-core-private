@@ -17,7 +17,7 @@ from pathlib import Path
 from typing import Any, Mapping, Sequence
 
 from entity_classification_contract import load_layered_entity_profiles
-from fundamental_research_readiness import build_fundamental_research_artifact
+from stocklookup_core.financial.fundamental_research_readiness import build_fundamental_research_artifact
 from official_financial_filing_evidence import qualify_document_metadata
 from official_financial_source_discovery import discover_routes
 from official_financial_value_evidence import qualify_value_evidence

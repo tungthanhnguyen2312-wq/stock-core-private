@@ -15,7 +15,7 @@ from typing import Any, Mapping
 from field_temporal_contract import stable_id
 from current_daily_decision_research_product import ABSENT_OWNER_FOCUS_STATUS, is_present_research_card
 from owner_research_focus import load_owner_research_focus, owner_focus_tickers
-from financial_analysis_product_projection import context_for_ticker, validate_product_context
+from stocklookup_core.financial.financial_analysis_product_projection import context_for_ticker, validate_product_context
 
 
 AI_CONTRACT = "ai_research_session_bundle/v1"

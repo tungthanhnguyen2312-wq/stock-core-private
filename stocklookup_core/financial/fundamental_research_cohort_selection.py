@@ -98,7 +98,7 @@ def resolve_current_fundamental_cohort(
             if "_MISSING" not in str(exc) or cohort_relative_path or reconciliation_relative_path:
                 raise
             try:
-                from fundamental_research_cohort_scaleout import rebuild_wide_governed_cohort_from_retained_root
+                from stocklookup_core.financial.fundamental_research_cohort_scaleout import rebuild_wide_governed_cohort_from_retained_root
                 artifact, reconciliation = rebuild_wide_governed_cohort_from_retained_root(source_root)
                 _write_json(source_root / cohort_path, artifact)
                 _write_json(source_root / reconciliation_path, reconciliation)

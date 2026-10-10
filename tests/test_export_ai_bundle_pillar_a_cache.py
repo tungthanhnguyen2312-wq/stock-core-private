@@ -38,7 +38,7 @@ class PillarARequestScopedCacheTests(unittest.TestCase):
         with patch("canonical_fact_store._load_state", return_value=state), \
              patch("canonical_fact_store.read_facts", side_effect=read_facts), \
              patch("official_annual_financial_fact_projection.facts_by_ticker", return_value={}) as official_index, \
-             patch("financial_entity_applicability.load_entity_profiles", return_value={}), \
+             patch('stocklookup_core.financial.financial_entity_applicability.load_entity_profiles', return_value={}), \
              patch.object(exporter, "load_evidence_index", return_value={}), \
              patch.object(exporter, "build_research_financial_fact_projection", side_effect=projection), \
              patch.object(exporter, "research_financial_coverage_summary", side_effect=coverage_summary), \

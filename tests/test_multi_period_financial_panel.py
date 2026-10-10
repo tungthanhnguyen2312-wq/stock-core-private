@@ -6,9 +6,10 @@ import copy
 import json
 import tempfile
 import unittest
+import pytest
 from pathlib import Path
 
-from multi_period_financial_panel import (
+from stocklookup_core.financial.multi_period_financial_panel import (
     CONTRACT_VERSION,
     SCHEMA_VERSION,
     ARTIFACT_TYPE,
@@ -439,9 +440,13 @@ class TestMultiPeriodFinancialPanel(unittest.TestCase):
     # P2-CLOSEOUT: Phase 2 Integration & Invariant Tests
     # -------------------------------------------------------------------------
 
+    @pytest.mark.retained_evidence(
+        "operations-review/p2d-generic-financial-template-onboarding-20260819/p2d_generic_onboarding_report.json"
+        if (Path(__file__).resolve().parents[1] / "operations-review/p2d-generic-financial-template-onboarding-20260819/p2d_generic_onboarding_report.json").is_file()
+        else "operations-review/p2c2-governed-financial-evidence-onboarding-20260819/p2c2_governed_onboarding_report.json")
     def test_eligible_corporate_promoted_facts_enter_panel(self):
         """All eligible promoted corporate facts (GAS, VRE, HPG, etc.) enter the panel with full lineage."""
-        from multi_period_financial_panel import load_all_authoritative_citations
+        from stocklookup_core.financial.multi_period_financial_panel import load_all_authoritative_citations
         citations = load_all_authoritative_citations()
         gas_cits = [c for c in citations if c.get("ticker") == "GAS"]
         self.assertGreaterEqual(len(gas_cits), 8)
@@ -455,9 +460,10 @@ class TestMultiPeriodFinancialPanel(unittest.TestCase):
         self.assertEqual(gas_panel["issuer_identity"]["entity_type"], "corporate")
         self.assertGreaterEqual(gas_panel["qualified_facts_count"], 8)
 
+    @pytest.mark.retained_evidence("operations-review/p2f3-bounded-generic-sector-extraction-promotion-20260820/p2f3_sector_extraction_promotion_artifact.json")
     def test_vcb_promoted_bank_scope_enters_exact_boundary(self):
         """VCB bank facts enter within the authorized FY2024 consolidated proof scope (15 facts)."""
-        from multi_period_financial_panel import load_promoted_sector_citations
+        from stocklookup_core.financial.multi_period_financial_panel import load_promoted_sector_citations
         vcb_cits = [c for c in load_promoted_sector_citations() if c.get("ticker") == "VCB"]
         self.assertEqual(len(vcb_cits), 15)
 
@@ -475,9 +481,10 @@ class TestMultiPeriodFinancialPanel(unittest.TestCase):
         self.assertIn("net_interest_income", q_metrics)
         self.assertIn("net_profit_parent", q_metrics)
 
+    @pytest.mark.retained_evidence("operations-review/p2f3-bounded-generic-sector-extraction-promotion-20260820/p2f3_sector_extraction_promotion_artifact.json")
     def test_ssi_promoted_securities_scope_enters_exact_boundary(self):
         """SSI securities facts enter within the authorized FY2024 consolidated proof scope (16 facts)."""
-        from multi_period_financial_panel import load_promoted_sector_citations
+        from stocklookup_core.financial.multi_period_financial_panel import load_promoted_sector_citations
         ssi_cits = [c for c in load_promoted_sector_citations() if c.get("ticker") == "SSI"]
         self.assertEqual(len(ssi_cits), 16)
 
@@ -552,7 +559,7 @@ class TestMultiPeriodFinancialPanel(unittest.TestCase):
 
     def test_provenance_survives_panel_integration(self):
         """Source document SHA, citation ID, authority tier, and temporal envelope survive panel construction."""
-        from multi_period_financial_panel import load_all_authoritative_citations
+        from stocklookup_core.financial.multi_period_financial_panel import load_all_authoritative_citations
         citations = load_all_authoritative_citations()
         panel = build_multi_period_financial_panel(
             issuers=["VCB", "SSI", "GAS"],
@@ -569,7 +576,7 @@ class TestMultiPeriodFinancialPanel(unittest.TestCase):
 
     def test_deterministic_ordering_and_identity_stability(self):
         """Panel generation is purely deterministic with byte-stable hashes across identical inputs."""
-        from multi_period_financial_panel import load_all_authoritative_citations
+        from stocklookup_core.financial.multi_period_financial_panel import load_all_authoritative_citations
         cits = load_all_authoritative_citations()
         p1 = build_multi_period_financial_panel(
             issuers=["VCB", "HPG", "SSI"],

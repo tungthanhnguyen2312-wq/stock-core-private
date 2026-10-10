@@ -32,9 +32,9 @@ from typing import Any, Mapping, Sequence
 import current_research_valuation_context as valuation_context
 import entity_classification_contract as entity_classification
 import exchange_industry_classification as industry_classification
-import financial_analysis_product_projection as product_projection
-import financial_v2_current_input_authority as input_authority
-import market_wide_financial_analysis_v2_scaleout as scaleout
+import stocklookup_core.financial.financial_analysis_product_projection as product_projection
+import stocklookup_core.financial.financial_v2_current_input_authority as input_authority
+import stocklookup_core.financial.market_wide_financial_analysis_v2_scaleout as scaleout
 
 CONTRACT_VERSION = "canonical_daily_financial_v2_materialization/v1"
 MILESTONE = "CANONICAL_DAILY_FINANCIAL_V2_AND_CURRENT_RESEARCH_ENRICHMENT_V1"
@@ -360,7 +360,7 @@ def observed_period_label_context(engine_artifact: Mapping[str, Any], *, decisio
     This display metadata does not qualify a period or change engine feature fitness.
     Publication time and calendar resolution cannot be inferred from a largest label.
     """
-    from fundamental_signal_consumption_contract import evidence_known_at, fiscal_period_semantics
+    from stocklookup_core.financial.fundamental_signal_consumption_contract import evidence_known_at, fiscal_period_semantics
     observations = []
     for ticker, record in sorted((engine_artifact.get("records") or {}).items()):
         for name, feature in sorted((record.get("features") or {}).items()):

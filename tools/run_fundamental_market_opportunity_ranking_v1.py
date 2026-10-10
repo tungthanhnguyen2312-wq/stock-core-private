@@ -8,7 +8,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-import fundamental_market_opportunity_ranking as ranking
+import stocklookup_core.financial.fundamental_market_opportunity_ranking as ranking
 
 
 parser = argparse.ArgumentParser()

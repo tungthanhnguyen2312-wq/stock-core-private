@@ -32,7 +32,7 @@ from entity_classification_contract import (
     ClassificationStatus,
     compute_classification_evidence_id,
 )
-from financial_entity_applicability import (
+from stocklookup_core.financial.financial_entity_applicability import (
     CREDIT_INSTITUTION_INCOME_MARKERS,
     INSURANCE_INCOME_MARKERS,
     SECURITIES_INCOME_MARKERS,

@@ -23,7 +23,7 @@ from entity_classification_contract import (
     APPLICABILITY_RESOLVED, CURRENT_RESEARCH_ENTITY_APPLICABILITY_CONTRACT,
     entity_applicability_content_identity,
 )
-from financial_entity_applicability import CORPORATE_ENTITY_TYPES, FINANCIAL_ENTITY_TYPES
+from stocklookup_core.financial.financial_entity_applicability import CORPORATE_ENTITY_TYPES, FINANCIAL_ENTITY_TYPES
 import market_wide_fundamental_feature_store as feature_store_contract
 from market_wide_fundamental_feature_store import (
     COMPATIBILITY_VERSION, FEATURE_FAMILY, NATIVE, PARTIAL, PIT, PROXY, READY,

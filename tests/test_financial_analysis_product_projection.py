@@ -7,8 +7,8 @@ from __future__ import annotations
 
 import pytest
 
-import financial_analysis_engine_v2 as engine
-import financial_analysis_product_projection as projection
+import stocklookup_core.financial.financial_analysis_engine_v2 as engine
+import stocklookup_core.financial.financial_analysis_product_projection as projection
 
 REQUESTED_AT = "2026-09-02T00:00:00+07:00"
 

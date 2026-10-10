@@ -3,8 +3,8 @@ from __future__ import annotations
 import pytest
 
 import securities_financial_research_component as securities_component
-import financial_analysis_engine_v2 as engine
-import financial_analysis_product_projection as projection
+import stocklookup_core.financial.financial_analysis_engine_v2 as engine
+import stocklookup_core.financial.financial_analysis_product_projection as projection
 
 
 def component(metric_id, value, *, year=2026, quarter=1, ticker="SSI", provider="VCI",

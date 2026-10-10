@@ -24,13 +24,13 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from multi_period_financial_panel import (
+from stocklookup_core.financial.multi_period_financial_panel import (
     CONTRACT_VERSION,
     SCHEMA_VERSION,
     ARTIFACT_TYPE,
     build_multi_period_financial_panel,
 )
-from financial_entity_applicability import load_entity_profiles
+from stocklookup_core.financial.financial_entity_applicability import load_entity_profiles
 
 
 def load_retained_financial_citations(runtime_root: Path) -> list[dict[str, Any]]:

@@ -3,7 +3,7 @@ from copy import deepcopy
 
 import inspect
 
-import structured_financial_period_semantics as s
+import stocklookup_core.financial.structured_financial_period_semantics as s
 
 
 def fact(**overrides):

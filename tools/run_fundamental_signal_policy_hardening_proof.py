@@ -28,7 +28,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 import canonical_daily_financial_v2_materialization as fin_v2_material
-import fundamental_signal_consumption_contract as contract
+import stocklookup_core.financial.fundamental_signal_consumption_contract as contract
 import provider_financial_monetary_basis_verdict as verdict_pin
 from tools import current_research_capability_map as capability
 from tools import run_current_research_decision_convergence_proof as convergence

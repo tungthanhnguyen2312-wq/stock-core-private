@@ -1059,7 +1059,7 @@ def build_enrichment_components(
         import canonical_current_product_projections as product_projections
         import canonical_daily_financial_v2_materialization as fin_v2_material
         import entity_classification_contract as entity_contract
-        import financial_v2_current_input_authority as fin_v2_authority
+        import stocklookup_core.financial.financial_v2_current_input_authority as fin_v2_authority
         import integrated_investment_decision_product as integrated_contract
         import operational_fundamental_context_integration as operational_fundamental
         import market_structure_breakout_product_projection as msb_proj

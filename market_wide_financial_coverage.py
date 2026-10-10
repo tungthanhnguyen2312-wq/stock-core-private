@@ -42,7 +42,7 @@ import json
 from pathlib import Path
 from typing import Any, Iterable, Mapping
 
-from financial_entity_applicability import (
+from stocklookup_core.financial.financial_entity_applicability import (
     CORPORATE_ONLY_METRICS,
     VERSION as APPLICABILITY_VERSION,
     evaluate_ticker,

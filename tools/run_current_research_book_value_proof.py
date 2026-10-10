@@ -14,7 +14,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 import daily_session_level2_package as level2
-import financial_v2_current_input_authority as financial_authority
+import stocklookup_core.financial.financial_v2_current_input_authority as financial_authority
 import provider_financial_monetary_basis_verdict as verdict_pin
 from tools import current_research_capability_map as capability
 from tools import run_current_research_decision_convergence_proof as convergence

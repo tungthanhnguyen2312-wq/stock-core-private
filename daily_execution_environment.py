@@ -164,7 +164,7 @@ def required_retained_inputs(
     Level-2 builders and the pinned Financial V2 authority resolver.
     """
     from daily_session_level2_package import session_artifact_paths
-    import financial_v2_current_input_authority as financial_authority
+    import stocklookup_core.financial.financial_v2_current_input_authority as financial_authority
 
     root = Path(retained_root)
     registry_root = Path(producer_registry_root or root)

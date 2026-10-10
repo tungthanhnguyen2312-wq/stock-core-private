@@ -33,7 +33,7 @@ from entity_classification_contract import (
     load_seed_profiles,
     resolve_layered_entity_classification,
 )
-from financial_entity_applicability import (
+from stocklookup_core.financial.financial_entity_applicability import (
     load_entity_profiles,
     metric_applicability,
     resolve_archetype,

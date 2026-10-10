@@ -9,7 +9,7 @@ import sys
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from financial_analysis_product_projection import build_product_projection  # noqa: E402
+from stocklookup_core.financial.financial_analysis_product_projection import build_product_projection  # noqa: E402
 from screener_master_projection import (  # noqa: E402
     CONTRACT_VERSION, build_projection, js_fallback, load_screen_snapshot_rows, load_vci_industry_labels,
 )

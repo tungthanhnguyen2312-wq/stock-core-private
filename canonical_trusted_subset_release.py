@@ -38,7 +38,7 @@ from export_ai_bundle import (
     TRUSTED_SUBSET_SCHEMA_VERSION,
     build_trusted_subset_proof,
 )
-from financial_entity_applicability import load_entity_profiles
+from stocklookup_core.financial.financial_entity_applicability import load_entity_profiles
 from statement_taxonomy_sidecar import (
     SIDECAR_FILENAME,
     build_sidecar,

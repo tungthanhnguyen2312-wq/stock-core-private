@@ -58,6 +58,7 @@ The current production workflow is operated through the canonical Owner Daily pa
 | Repository layout migration | [docs/REPOSITORY_LAYOUT_MIGRATION.md](docs/REPOSITORY_LAYOUT_MIGRATION.md) |
 | Acquisition implementation | [stocklookup_core/acquisition/](stocklookup_core/acquisition/) |
 | Official document evidence | [stocklookup_core/evidence/](stocklookup_core/evidence/) |
+| Financial panels, Financial V2 and fundamental research | [stocklookup_core/financial/](stocklookup_core/financial/) |
 | Independent thesis research | [stocklookup_core/research/](stocklookup_core/research/) |
 
 ## Canonical runtime path

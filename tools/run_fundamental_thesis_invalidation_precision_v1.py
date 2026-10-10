@@ -11,7 +11,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 import action_instrumentation
-import fundamental_thesis_invalidation_precision as precision
+import stocklookup_core.financial.fundamental_thesis_invalidation_precision as precision
 import shadow_action_readiness
 
 

@@ -11,7 +11,7 @@ import sys
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
-import financial_analysis_engine_v2 as engine  # noqa: E402
+import stocklookup_core.financial.financial_analysis_engine_v2 as engine  # noqa: E402
 import tcbs_bank_capture_import as importer  # noqa: E402
 
 DEFAULT_CAPTURE = Path(r"C:\Projects\StockLookup\operations-review\tcbs-bank-public-company-capture-20260901\tcbs_bank_public_company_capture_v1.json")

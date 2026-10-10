@@ -11,7 +11,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import daily_session_level2_package as paths_module
 import integrated_investment_decision_product as product
 import market_wide_relative_volume_research as participation
-import financial_analysis_product_projection as financial_projection
+import stocklookup_core.financial.financial_analysis_product_projection as financial_projection
 import canonical_daily_financial_v2_materialization as financial_materialization
 import operational_fundamental_context_integration as operational
 from canonical_post_close_pipeline import resolve_current_session_priority_queue

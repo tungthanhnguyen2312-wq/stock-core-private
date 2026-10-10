@@ -4,8 +4,8 @@ import json
 
 import pytest
 
-import fundamental_research_cohort_selection as selection
-import fundamental_cross_sectional_scoring as scoring
+import stocklookup_core.financial.fundamental_research_cohort_selection as selection
+import stocklookup_core.financial.fundamental_cross_sectional_scoring as scoring
 
 
 def _artifact(records: dict[str, dict]) -> dict:

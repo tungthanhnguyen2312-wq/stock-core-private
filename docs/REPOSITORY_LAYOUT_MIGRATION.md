@@ -29,7 +29,8 @@ stock-core/
 ├─ stocklookup_core/
 │  ├─ acquisition/  # landing contract, isolation, checkpoint and retention
 │  ├─ evidence/     # official documents and temporal receipts
-│  └─ research/     # independent thesis research
+│  ├─ research/     # independent thesis research
+│  └─ financial/    # panels, Financial V2 and fundamental research
 ├─ tools/           # existing operator and developer launchers
 ├─ tests/
 ├─ contracts/
@@ -132,6 +133,9 @@ For every migration slice:
 - `git diff --check` passes;
 - `docs/SYSTEM_MAP.md` remains truthful.
 
-The owner explicitly made bounded root simplification the current scope on 2026-10-10.
-It changes source layout only. Analytical roadmap work is reassessed after acceptance
-and never starts automatically from this maintenance milestone.
+PR106/107 completed the first slice (595 → 574 root Python files). The owner
+standing program directive of 2026-10-10 then admitted
+[Financial research package V1](financial_research_package_v1_contract.md): 20 more
+implementations, 574 → 554 root Python files. This remains source layout only.
+Successors need explicit native scope admission under that standing authorization;
+merge, production execution and authority promotion keep their separate owner gates.

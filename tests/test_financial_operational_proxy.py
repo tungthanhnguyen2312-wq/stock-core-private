@@ -11,10 +11,10 @@ from pathlib import Path
 
 import pytest
 
-import financial_operational_proxy as fop
+import stocklookup_core.financial.financial_operational_proxy as fop
 
 ROOT = Path(__file__).resolve().parents[1]
-SOURCE = (ROOT / "financial_operational_proxy.py").read_text(encoding="utf-8")
+SOURCE = (ROOT / "stocklookup_core/financial/financial_operational_proxy.py").read_text(encoding="utf-8")
 RUNTIME_ROOT = ROOT / "operations-review" / "p1f-milestone-20260803" / "shadow-build-b"
 
 
@@ -406,6 +406,14 @@ def test_bank_ticker_on_real_retained_data_produces_zero_operational_proxy_facts
 # ---------------------------------------------------------------------------
 # 15. Real retained provider history produces research gain.
 # ---------------------------------------------------------------------------
+@pytest.mark.retained_evidence(
+    'operations-review/p3f10-generic-fundamental-evidence-scaleout-20260820/p3f10_generic_fundamental_evidence_scaleout_artifact.json',
+    'operations-review/p3e-fundamental-coverage-closeout-20260820/p3e_fundamental_coverage_closeout_artifact.json',
+    'operations-review/governed-official-evidence-v1/official_document_acquisition_manifest.json',
+    'operations-review/governed-official-evidence-v1',
+    'operations-review/p1f-milestone-20260803/shadow-build-a/data/market-wide-financials/observations',
+    'operations-review/p1f-milestone-20260803/shadow-build-b/data/market-wide-financials/observations',
+)
 def test_real_retained_hpg_data_produces_operational_proxy_and_verified_research_evidence_facts():
     store = pytest.importorskip("canonical_fact_store")
     import p3f13_official_financial_evidence_scaleout as p3f13mod
@@ -425,8 +433,11 @@ def test_real_retained_hpg_data_produces_operational_proxy_and_verified_research
 # ---------------------------------------------------------------------------
 # 16. Authoritative fact counts do not falsely increase.
 # ---------------------------------------------------------------------------
-def test_attaching_operational_proxy_never_changes_authority_tier_of_any_ticker():
+def test_attaching_operational_proxy_never_changes_authority_tier_of_any_ticker(monkeypatch):
     import market_wide_current_fundamental_research as mwcfr
+
+    # This zero-issuer fixture has no retained classification evidence.
+    monkeypatch.setattr(mwcfr, "load_entity_classification_evidence", lambda: {})
 
     p3f10_frozen = {"artifact_identity": "p3f10:x", "cohort_identity": {"total_cohort_count": 0},
                     "instrument_dispositions": []}

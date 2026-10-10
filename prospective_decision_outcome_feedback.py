@@ -19,7 +19,7 @@ from pathlib import Path
 from typing import Any, Mapping, Sequence
 
 import daily_session_level2_package as level2
-import fundamental_signal_consumption_contract as fundamental_signals
+import stocklookup_core.financial.fundamental_signal_consumption_contract as fundamental_signals
 import integrated_decision_prospective_feedback as forward_bridge
 import prospective_decision_outcome_measurement as outcome_measurement
 import prospective_decision_retention as retention

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from copy import deepcopy
 
-import financial_analysis_engine_v2 as engine
+import stocklookup_core.financial.financial_analysis_engine_v2 as engine
 import pytest
 
 

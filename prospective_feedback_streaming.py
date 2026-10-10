@@ -19,6 +19,7 @@ import errno
 import hashlib
 import heapq
 import io
+from importlib import import_module
 import json
 import os
 import tempfile
@@ -82,7 +83,9 @@ def code_digest() -> str:
              "daily_session_level2_package")
     digest = hashlib.sha256()
     for name in names:
-        module = __import__(name)
+        # Preserve historical hash labels, but resolve the relocated implementation.
+        module = import_module("stocklookup_core.financial." + name
+                               if name == "fundamental_signal_consumption_contract" else name)
         path = Path(module.__file__)
         digest.update(name.encode() + b"\0" + hashlib.sha256(path.read_bytes().replace(b"\r\n", b"\n")).digest())
     return digest.hexdigest()

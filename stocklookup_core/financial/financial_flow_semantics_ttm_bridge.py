@@ -13,7 +13,7 @@ import json
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
-from financial_analysis_engine_v2 import sign_transition
+from stocklookup_core.financial.financial_analysis_engine_v2 import sign_transition
 from market_wide_current_fundamental_research import (
     INCOME_STATEMENT_PERIOD_SEMANTICS_VERSION,
     KBS_KQKD_QUARTER_SEMANTICS,

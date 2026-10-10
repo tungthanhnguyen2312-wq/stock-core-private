@@ -23,7 +23,7 @@ from entity_classification_contract import (
     resolve_layered_entity_classification,
 )
 from field_temporal_contract import canonical_json, stable_id
-from multi_period_financial_panel import (
+from stocklookup_core.financial.multi_period_financial_panel import (
     ApplicabilityState,
     FinancialFactObservation,
     QualificationState,

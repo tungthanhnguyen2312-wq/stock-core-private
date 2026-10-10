@@ -21,9 +21,9 @@ if str(ROOT) not in sys.path:
 
 from atomic_io import atomic_write_file, atomic_write_json  # noqa: E402
 import canonical_fact_store as canonical_store  # noqa: E402
-import financial_analysis_engine_v2 as engine  # noqa: E402
+import stocklookup_core.financial.financial_analysis_engine_v2 as engine  # noqa: E402
 import raw_financial_store  # noqa: E402
-from financial_analysis_product_projection import build_product_projection  # noqa: E402
+from stocklookup_core.financial.financial_analysis_product_projection import build_product_projection  # noqa: E402
 
 
 MILESTONE = "QUALIFIED_FREE_CASH_FLOW_RESEARCH_PROXY_V1"

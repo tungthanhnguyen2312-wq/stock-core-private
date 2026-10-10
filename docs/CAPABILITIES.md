@@ -160,7 +160,7 @@ and no production Daily launch. Disk admission remains independently mandatory.
   FPT FY2025 line 03 Provisions is an audited annual component in historical context only.
   2026-H1 reviewed consolidated current fields known 2026-10-08: VNM cash 4,535,672,366,831 VND; QNS equity 10,647,823,148,609 VND. The QNS detail page is discovery only and did not add another fact.
   FY2025 historical context now has ten fields: HPG revenue/profit, PNJ cash/operating flow, PVD revenue/profit/assets/equity and FPT revenue/equity. [Annual contract](audited_annual_exact_field_context_contract.md). Annual metrics/share gates unchanged; other fields retain geometry blockers.
-- Contract: [financial_statement_canonical_contract.md](financial_statement_canonical_contract.md); `financial_analysis_engine_v2.py`
+- Contract: [financial_statement_canonical_contract.md](financial_statement_canonical_contract.md); `stocklookup_core/financial/financial_analysis_engine_v2.py`
 - Runtime: `ACTIVE` · Authority: `SCOPED` (provider-reported research evidence with explicit method/provenance; no official promotion) · Production: `IN_DAILY_BLOCKING` (inside enrichment; absent inputs yield explicit ABSENT records)
 - Input: pinned Financial V2 current-input authority chain · Predecessor: legacy 523-record fundamental shape (frozen)
 - Blocker: official statement refresh and OCR cohorts `PARTIAL`

@@ -39,6 +39,8 @@ def replay_delivery(retained: Path, output: Path, session: str):
     after = json.loads((output / "integrated_investment_decision_product_artifact.json").read_bytes())
     base_source = subprocess.check_output(["git", "show", "59580f6cda300dce8013af284d2ce11e026e3029:ai_research_session_delivery.py"], text=True, encoding="utf-8")
     namespace = {"__name__": "retained_base_delivery"}
+    # Only relocate live imports; the historical Git blob stays unchanged.
+    base_source = base_source.replace('from financial_analysis_product_projection import context_for_ticker, validate_product_context', 'from stocklookup_core.financial.financial_analysis_product_projection import context_for_ticker, validate_product_context')
     exec(compile(base_source, "retained_base_delivery", "exec"), namespace)
     base_project = namespace["project_integrated_decision_for_ai_delivery"]
     delivered = {}
@@ -132,6 +134,9 @@ def main():
     # Reproduce the old product with its own base implementation, read from Git.
     base_source = subprocess.check_output(["git", "show", "59580f6cda300dce8013af284d2ce11e026e3029:integrated_investment_decision_product.py"], text=True, encoding="utf-8")
     namespace = {"__name__": "retained_base_product"}
+    # Only relocate live imports; the historical Git blob stays unchanged.
+    base_source = base_source.replace('import financial_analysis_product_projection as fa_product_projection', 'import stocklookup_core.financial.financial_analysis_product_projection as fa_product_projection')
+    base_source = base_source.replace('import fundamental_signal_consumption_contract as fundamental_signals', 'import stocklookup_core.financial.fundamental_signal_consumption_contract as fundamental_signals')
     exec(compile(base_source, "retained_base_product", "exec"), namespace)
     started = time.perf_counter()
     reproduced = namespace["build_artifact"](**kwargs)
@@ -150,6 +155,9 @@ def main():
     kwargs["technical_structure_artifact"] = new_projection
     checkpoint_namespace = {"__name__": "previous_checkpoint_product"}
     checkpoint_source = subprocess.check_output(["git", "show", "e49c976:integrated_investment_decision_product.py"], text=True, encoding="utf-8")
+    # Only relocate live imports; the historical Git blob stays unchanged.
+    checkpoint_source = checkpoint_source.replace('import financial_analysis_product_projection as fa_product_projection', 'import stocklookup_core.financial.financial_analysis_product_projection as fa_product_projection')
+    checkpoint_source = checkpoint_source.replace('import fundamental_signal_consumption_contract as fundamental_signals', 'import stocklookup_core.financial.fundamental_signal_consumption_contract as fundamental_signals')
     exec(compile(checkpoint_source, "previous_checkpoint_product", "exec"), checkpoint_namespace)
     projection_namespace = {"__name__": "previous_checkpoint_projection"}
     projection_source = subprocess.check_output(["git", "show", "e49c976:market_structure_breakout_product_projection.py"], text=True, encoding="utf-8")

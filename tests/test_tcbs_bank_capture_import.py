@@ -5,7 +5,7 @@ import json
 
 import pytest
 
-import financial_analysis_engine_v2 as engine
+import stocklookup_core.financial.financial_analysis_engine_v2 as engine
 import tcbs_bank_capture_import as importer
 
 

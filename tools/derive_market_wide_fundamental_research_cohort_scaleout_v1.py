@@ -25,7 +25,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-import fundamental_research_cohort_scaleout as scaleout  # noqa: E402
+import stocklookup_core.financial.fundamental_research_cohort_scaleout as scaleout  # noqa: E402
 import financial_fact_coverage_recovery as ffcr  # noqa: E402
 import p3f10_fundamental_evidence_scaleout as p3f10mod  # noqa: E402
 import p3f13_official_financial_evidence_scaleout as p3f13mod  # noqa: E402

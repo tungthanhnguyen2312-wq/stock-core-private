@@ -8,8 +8,8 @@ from pathlib import Path
 from typing import Any, Mapping
 
 from field_temporal_contract import stable_id
-from fundamental_research_readiness import build_fundamental_research_artifact
-from multi_period_financial_panel import (
+from stocklookup_core.financial.fundamental_research_readiness import build_fundamental_research_artifact
+from stocklookup_core.financial.multi_period_financial_panel import (
     build_multi_period_financial_panel,
     load_all_authoritative_citations,
     load_promoted_comparative_financial_citations,

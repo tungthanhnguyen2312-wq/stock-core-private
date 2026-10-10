@@ -21,13 +21,13 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 import canonical_daily_financial_v2_materialization as mat
-import canonical_financial_analytical_panel as panel
+import stocklookup_core.financial.canonical_financial_analytical_panel as panel
 import entity_classification_contract as entity_classification
 import feature_input_fitness_contract as fitness_contract
-import financial_v2_current_input_authority as authority
-import market_wide_financial_analysis_v2_scaleout as scaleout
+import stocklookup_core.financial.financial_v2_current_input_authority as authority
+import stocklookup_core.financial.market_wide_financial_analysis_v2_scaleout as scaleout
 import owner_research_focus
-import structured_financial_period_semantics as sem
+import stocklookup_core.financial.structured_financial_period_semantics as sem
 
 MILESTONE = "FINANCIAL_TEMPORAL_SEMANTIC_NORMALIZATION_AND_ANALYTICAL_PANEL_V1"
 OWNER_OVERRIDE = "OWNER_AUTHORIZATION_2026_09_05_QUEUED_NEXT_EMPTY_FINANCIAL_TEMPORAL_SEMANTIC_NORMALIZATION_AND_ANALYTICAL_PANEL_V1"

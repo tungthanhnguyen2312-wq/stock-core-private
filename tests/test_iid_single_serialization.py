@@ -140,7 +140,7 @@ def _pipeline_fixture(tmp_path, monkeypatch, artifact):
     for name in ("build_engine_artifact", "build_evaluated_valuation_artifact"):
         monkeypatch.setattr(fin, name, lambda **k: {})
     monkeypatch.setattr(fin, "build_session_artifact", lambda **k: {"financial_analysis_product": {"records": {}}})
-    monkeypatch.setattr(importlib.import_module("financial_v2_current_input_authority"), "resolve", lambda *a: {})
+    monkeypatch.setattr(importlib.import_module('stocklookup_core.financial.financial_v2_current_input_authority'), "resolve", lambda *a: {})
     monkeypatch.setattr(importlib.import_module("entity_classification_contract"), "resolve_current_research_entity_applicability", lambda *a: {})
     monkeypatch.setattr(importlib.import_module("canonical_current_product_projections"), "materialize_current_fundamental_feature_store_context", lambda **k: {"status": "UNAVAILABLE"})
     monkeypatch.setattr(pipeline, "resolve_current_session_priority_queue", lambda *a, **k: (None, {"status": "UNAVAILABLE"}))

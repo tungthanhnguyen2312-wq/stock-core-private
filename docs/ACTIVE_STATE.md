@@ -1,8 +1,8 @@
 # Stock Lookup — Active State
 
 Updated 2026-10-10 from verified
-main `04dca9b360e064b0538a797c780895e6a4c43fc7`.
-Owner-approved source layout released; no successor admitted.
+main `288744eef54ef4b6ca8701a02e80537a406d65b6`.
+Standing program delegation; bounded financial package scope admitted.
 Verify live remote main with `git fetch origin main` or
 `git ls-remote origin refs/heads/main`; a **local** remote-tracking ref alone can be stale.
 ## 0. How this file relates to the others
@@ -34,7 +34,7 @@ Fact kinds used below: **CURRENT FACT** (verified in repo or by a stated read-on
 **BLOCKED**, **DEFERRED**, **HISTORICAL**.
 
 ## 1. The operational gate
-- **COMPLETE — [source layout](repository_root_structure_simplification_v1_contract.md):** PR106 `04dca9b`, four PR CI jobs PASS; 22 implementations packaged, root Python 595 → 574; no Daily/deploy/authority change. Semantic corrective PR105 COMPLETE.
+- **ACTIVE — [financial package](financial_research_package_v1_contract.md):** standing owner program admission; 20 source modules, offline parity/consumer acceptance; no Daily/deploy/authority change. Prior layout PR106/107 COMPLETE (root Python 595 → 574); semantic corrective PR105 COMPLETE.
 - **COMPLETE — [capacity Phase 1](capacity_recovery_phase1_contract.md):** PR99 merged
   `168e0f7`, post-merge CI 37893984528 success; zero production reclaim/activation.
 - **COMPLETE — Vault V1:** PR97 merged `3f3d4fe`; offline/opt-in, 77 candidates,
@@ -307,10 +307,10 @@ Fact kinds used below: **CURRENT FACT** (verified in repo or by a stated read-on
 
 ## 9. Next action
 
-The bounded source layout scope is released; no successor is admitted or queued.
-The next product-critical recommendation is governed issuer fiscal-calendar/publication
-mapping, with explicit source proof and knowledge time; it needs its own admission.
-Any ordinary Daily remains owner-operated after fresh READY preflight and exact session gates.
+Finish financial package acceptance and its separate merge gate. Standing delegation
+permits eligible bounded successors; native admission records each scope. Fiscal-calendar
+mapping needs the exact source/period/publication proof in the contract above.
+Ordinary Daily remains owner-operated after fresh READY preflight and exact session gates.
 
 ## 10. Owner approvals that remain open
 

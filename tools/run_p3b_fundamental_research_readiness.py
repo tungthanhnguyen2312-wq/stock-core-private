@@ -10,7 +10,7 @@ repo_root = Path(__file__).resolve().parent.parent
 if str(repo_root) not in sys.path:
     sys.path.insert(0, str(repo_root))
 
-from fundamental_research_readiness import build_fundamental_research_artifact
+from stocklookup_core.financial.fundamental_research_readiness import build_fundamental_research_artifact
 
 DEFAULT_INPUT = repo_root / "operations-review" / "p2-closeout-financial-fact-panel-20260820" / "p2_closeout_financial_panel_artifact.json"
 DEFAULT_OUTPUT = repo_root / "operations-review" / "p3b-fundamental-research-readiness-20260820" / "p3b_fundamental_research_readiness_artifact.json"

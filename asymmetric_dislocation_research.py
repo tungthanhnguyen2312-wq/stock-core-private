@@ -26,7 +26,7 @@ from collections import Counter
 from typing import Any, Mapping, Sequence
 
 from field_temporal_contract import stable_id
-import fundamental_signal_consumption_contract as fundamental_signals
+import stocklookup_core.financial.fundamental_signal_consumption_contract as fundamental_signals
 
 CONTRACT_VERSION = "asymmetric_dislocation_research/v1"
 #: CURRENT_RESEARCH_FUNDAMENTAL_PROMOTION_HARDENING_V1: survivability is read from what

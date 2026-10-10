@@ -2,7 +2,9 @@ import json
 import unittest
 from pathlib import Path
 
-from fundamental_research_readiness import (
+import pytest
+
+from stocklookup_core.financial.fundamental_research_readiness import (
     MetricStatus,
     build_fundamental_research_artifact,
     evaluate_issuer_fundamental_research,
@@ -106,6 +108,7 @@ class FundamentalResearchReadinessTests(unittest.TestCase):
         self.assertNotIn("composite_score", first["issuer_research_readiness"][0])
         self.assertTrue(first["lineage_completeness"]["positive_metrics_with_evidence_lineage"] > 0)
 
+    @pytest.mark.retained_evidence("operations-review/p2-closeout-financial-fact-panel-20260820/p2_closeout_financial_panel_artifact.json")
     def test_current_authoritative_p2_cohort_runs_without_price_or_liquidity_inputs(self):
         root = Path(__file__).resolve().parents[1]
         source = json.loads((root / "operations-review" / "p2-closeout-financial-fact-panel-20260820" / "p2_closeout_financial_panel_artifact.json").read_text(encoding="utf-8"))

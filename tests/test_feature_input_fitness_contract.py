@@ -15,7 +15,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import feature_input_fitness_contract as fitness
-import financial_entity_applicability
+import stocklookup_core.financial.financial_entity_applicability as financial_entity_applicability
 import monetary_basis_contract
 import multi_source_market_evidence_contract
 import technical_structure_context

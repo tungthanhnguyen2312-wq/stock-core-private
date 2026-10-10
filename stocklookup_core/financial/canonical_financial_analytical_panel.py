@@ -36,7 +36,7 @@ import json
 from typing import Any, Iterable, Mapping, Sequence
 
 import bitemporal_semantic_contract as bitemporal
-import structured_financial_period_semantics as period_semantics
+import stocklookup_core.financial.structured_financial_period_semantics as period_semantics
 
 SCHEMA_VERSION = "1.0.0"
 CONTRACT_VERSION = "canonical_financial_analytical_panel/v1"

@@ -20,7 +20,7 @@ import re
 from typing import Any, Iterable, Mapping
 
 import execution_capacity_research as execution_capacity
-import fundamental_signal_consumption_contract as fundamental_signals
+import stocklookup_core.financial.fundamental_signal_consumption_contract as fundamental_signals
 from operational_fundamental_context_integration import MAX_COMPLETED_QUARTER_LAG
 from opportunity_axis_freshness import STALE_BUT_RESEARCH_USABLE, classify_financial_period_freshness
 

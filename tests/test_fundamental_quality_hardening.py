@@ -16,12 +16,14 @@ import sys
 import unittest
 from pathlib import Path
 
+import pytest
+
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 import export_ai_bundle as bundle_mod  # noqa: E402
 import fundamental_quality as fq  # noqa: E402
-import fundamental_quality_evidence as fqe  # noqa: E402
+import stocklookup_core.financial.fundamental_quality_evidence as fqe  # noqa: E402
 
 _ORIGINAL_MODEL_KEYS = frozenset({
     "model_name", "model_version", "applicability_state", "result_state", "score_or_value",
@@ -67,6 +69,7 @@ def _real_bundle_entry(ticker: str) -> dict:
     return bundle["tickers"][ticker]
 
 
+@pytest.mark.retained_evidence("operations-review/phase_5d_distribution_evidence_20260801T104910Z/bundle_output/analysis_bundle.json")
 class RealDataClassificationTests(unittest.TestCase):
     """Requirement 1: HPG and VNM legacy outputs are classified correctly."""
 
@@ -226,6 +229,7 @@ class EarningsQualityConsistencyTests(unittest.TestCase):
         self.assertEqual(earnings_quality["score_or_value"], original_value)
         self.assertTrue(any("not cross-checked" in lim.lower() for lim in earnings_quality["limitations"]))
 
+    @pytest.mark.retained_evidence("operations-review/phase_5d_distribution_evidence_20260801T104910Z/bundle_output/analysis_bundle.json")
     def test_real_hpg_and_vnm_earnings_quality_matches_real_qualified_evidence(self):
         runtime_root = ROOT.parent / "dashboard-runtime"
         for ticker in ("HPG", "VNM"):

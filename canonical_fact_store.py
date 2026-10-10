@@ -60,7 +60,7 @@ from canonical_financial_facts import (
     build_facts,
 )
 from canonical_financial_resolvers import VERSION as RESOLVER_VERSION
-from financial_entity_applicability import (
+from stocklookup_core.financial.financial_entity_applicability import (
     VERSION as APPLICABILITY_VERSION,
     evaluate_ticker,
     load_entity_profiles,

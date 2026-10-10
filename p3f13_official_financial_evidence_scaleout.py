@@ -14,7 +14,7 @@ import json
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
-from fundamental_research_readiness import build_fundamental_research_artifact
+from stocklookup_core.financial.fundamental_research_readiness import build_fundamental_research_artifact
 from financial_statement_template_recognizer import normalize_monetary_display_value
 from official_financial_filing_evidence import qualify_document_metadata
 from official_financial_value_evidence import qualify_value_evidence

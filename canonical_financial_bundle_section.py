@@ -241,7 +241,7 @@ def attach(bundle_entries: Mapping[str, dict], runtime_root: Path | str,
         return bundle_entries
 
     from canonical_fact_store import _load_state, read_facts
-    from financial_entity_applicability import metric_applicability
+    from stocklookup_core.financial.financial_entity_applicability import metric_applicability
     from market_wide_calculation_readiness import evaluate_ticker
 
     state = _load_state(runtime_root)

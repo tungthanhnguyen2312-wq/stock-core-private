@@ -31,12 +31,12 @@ from pathlib import Path
 from typing import Any, Mapping
 
 import action_instrumentation
-import fundamental_market_opportunity_ranking
-import fundamental_thesis_invalidation_precision
+import stocklookup_core.financial.fundamental_market_opportunity_ranking as fundamental_market_opportunity_ranking
+import stocklookup_core.financial.fundamental_thesis_invalidation_precision as fundamental_thesis_invalidation_precision
 import shadow_action_readiness
 import shadow_security_recommendation
 import stocklookup_core.research.thesis_catalyst_downside_research_cases as thesis_catalyst_downside_research_cases
-from fundamental_research_cohort_selection import (
+from stocklookup_core.financial.fundamental_research_cohort_selection import (
     FundamentalResearchCohortSelectionError,
     resolve_current_fundamental_cohort,
 )

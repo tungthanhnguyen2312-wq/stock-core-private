@@ -30,8 +30,8 @@ if str(ROOT) not in sys.path:
 import raw_financial_store as rfs  # noqa: E402
 import raw_financial_observations as robs  # noqa: E402
 import canonical_financial_facts as facts  # noqa: E402
-import structured_financial_period_semantics as sps  # noqa: E402
-import financial_analysis_engine_v2 as engine  # noqa: E402
+import stocklookup_core.financial.structured_financial_period_semantics as sps  # noqa: E402
+import stocklookup_core.financial.financial_analysis_engine_v2 as engine  # noqa: E402
 
 USABLE_STATUSES = {facts.STATUS_QUALIFIED, facts.STATUS_PROVIDER_REPORTED, facts.STATUS_PARTIAL}
 OLD_READINESS_FEATURES = ("net_margin", "pbt_margin", "equity_to_assets", "cash_to_assets", "assets_yoy", "equity_yoy", "current_ratio")

@@ -542,3 +542,42 @@ def test_admission_requires_explicit_owner_and_exact_release(git_repo, tmp_path)
     with pytest.raises(SystemExit):
         cli.main(base[:-1] + ["does-not-exist", "--owner-override"])
     assert path.read_bytes() == stable
+
+
+def test_admission_after_complete_preserves_exact_predecessor_bytes(git_repo, tmp_path):
+    repo, prior_sha = git_repo
+    (repo / "README.md").write_text("verified release closure\n", encoding="utf-8")
+    live_sha = _commit_all(repo, "release documentation")
+    prior = _milestone("PRIOR", "COMPLETE", checkpoint=prior_sha,
+                       notes="Preserved completion — lịch sử", state_history=["ACTIVE", "COMPLETE"])
+    state = _state([prior], current={"milestone": "PRIOR", "state": "COMPLETE"}, lineage_head=prior_sha)
+    path = tmp_path / "roadmap.json"
+    path.write_text(json.dumps(state, ensure_ascii=False, indent=2), encoding="utf-8")
+    original = path.read_text(encoding="utf-8")
+    args = ["--state-file", str(path), "--repo", str(repo), "--admit-scope", "FINANCIAL_RESEARCH_PACKAGE_V1",
+            "--owner-override", "--release-current-at", live_sha, "--scope-note", "Standing owner delegation; bounded source layout"]
+    assert cli.main(args) == 0
+    updated_text = path.read_text(encoding="utf-8")
+    updated = json.loads(updated_text)
+    assert updated["milestones"][1] == prior
+    assert updated_text.endswith(original[original.index('    {\n      "milestone_id": "PRIOR"'):])
+    assert updated["current"] == {"milestone": "FINANCIAL_RESEARCH_PACKAGE_V1", "state": "ACTIVE"}
+    assert updated["queued_next"] == []
+    assert updated["milestones"][0]["starting_checkpoint"] == live_sha
+    assert updated["milestones"][0]["owner_override"] == args[-1]
+
+
+def test_admission_after_complete_refuses_unreachable_checkpoint(git_repo, tmp_path):
+    repo, root_sha = git_repo
+    _git(repo, "switch", "-c", "unmerged")
+    (repo / "README.md").write_text("unmerged\n", encoding="utf-8")
+    unmerged_sha = _commit_all(repo, "unmerged predecessor")
+    _git(repo, "switch", "--detach", root_sha)
+    prior = _milestone("PRIOR", "COMPLETE", checkpoint=unmerged_sha)
+    path = tmp_path / "roadmap.json"
+    _write_state(path, _state([prior], current={"milestone": "PRIOR", "state": "COMPLETE"}, lineage_head=root_sha))
+    original = path.read_bytes()
+    with pytest.raises(SystemExit):
+        cli.main(["--state-file", str(path), "--repo", str(repo), "--admit-scope", "NEW",
+                  "--owner-override", "--release-current-at", root_sha, "--scope-note", "Owner scope"])
+    assert path.read_bytes() == original

@@ -12,9 +12,9 @@ import pytest
 
 import current_research_decision_input as decision_input
 import current_research_valuation_context as valuation
-import financial_analysis_engine_v2 as engine
-import financial_flow_semantics_ttm_bridge as bridge
-import market_wide_financial_analysis_v2_scaleout as scaleout
+import stocklookup_core.financial.financial_analysis_engine_v2 as engine
+import stocklookup_core.financial.financial_flow_semantics_ttm_bridge as bridge
+import stocklookup_core.financial.market_wide_financial_analysis_v2_scaleout as scaleout
 from opportunity_axis_freshness import (CURRENT, STALE_BUT_RESEARCH_USABLE, UNAVAILABLE,
                                         classify_financial_period_freshness)
 import provider_financial_monetary_basis_verdict as pin
@@ -283,7 +283,7 @@ def test_stale_valid_fundamental_evidence_is_labelled_not_dropped():
 
 def test_compact_feature_fitness_names_each_computed_feature_period():
     artifact, _ = build([sem("revenue", 1000), sem("gross_profit", 300)])
-    import financial_analysis_product_projection as projection
+    import stocklookup_core.financial.financial_analysis_product_projection as projection
     compact = projection.build_product_projection(financial_context=artifact, product_tickers=["AAA"], requested_at="t")
     fitness = compact["records"]["AAA"]["feature_fitness"]
     assert fitness["gross_margin"]["as_of_period"] == "2026-Q1"

@@ -12,8 +12,8 @@ import unittest
 from pathlib import Path
 
 import financial_fact_coverage_recovery as ffcr
-import fundamental_cross_sectional_scoring as fcss
-import fundamental_research_cohort_scaleout as scaleout
+import stocklookup_core.financial.fundamental_cross_sectional_scoring as fcss
+import stocklookup_core.financial.fundamental_research_cohort_scaleout as scaleout
 import market_wide_historical_fundamentals_scaleout as mwhfs
 import p3f10_fundamental_evidence_scaleout as p3f10mod
 import p3f13_official_financial_evidence_scaleout as p3f13mod
@@ -137,7 +137,7 @@ class RealWideCohortTest(unittest.TestCase):
 
     # -- no ticker allowlist ---------------------------------------------------------------
     def test_no_ticker_allowlist_in_scaleout_module(self):
-        source = Path(ROOT / "fundamental_research_cohort_scaleout.py").read_text(encoding="utf-8")
+        source = Path(ROOT / "stocklookup_core/financial/fundamental_research_cohort_scaleout.py").read_text(encoding="utf-8")
         for pattern in ('ticker == "', "ticker == '", 'if ticker in {"', "if ticker in ('", "TICKER_ALLOWLIST"):
             self.assertNotIn(pattern, source, f"found ticker-specific branch pattern: {pattern}")
 

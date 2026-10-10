@@ -14,7 +14,7 @@ from collections import Counter, defaultdict
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
-from fundamental_research_readiness import build_fundamental_research_artifact
+from stocklookup_core.financial.fundamental_research_readiness import build_fundamental_research_artifact
 
 
 ROOT = Path(__file__).resolve().parent

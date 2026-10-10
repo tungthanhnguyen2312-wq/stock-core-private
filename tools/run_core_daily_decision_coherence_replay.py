@@ -140,7 +140,7 @@ def run(*, runtime_root: Path, output_dir: Path, session: str = PRIMARY_SESSION)
     if session != PRIMARY_SESSION:
         raise ValueError("THIS_RETAINED_REPLAY_IS_PINNED_TO_2026-09-04")
     import canonical_daily_financial_v2_materialization as financial_materialization
-    import financial_v2_current_input_authority as financial_authority
+    import stocklookup_core.financial.financial_v2_current_input_authority as financial_authority
     import integrated_investment_decision_product as integrated_product
     import market_structure_breakout_product_projection as projection
     import market_wide_relative_volume_research as relative_volume

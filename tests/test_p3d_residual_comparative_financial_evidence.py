@@ -6,7 +6,7 @@ from pathlib import Path
 import unittest
 from unittest.mock import patch
 
-from multi_period_financial_panel import (
+from stocklookup_core.financial.multi_period_financial_panel import (
     MultiPeriodPanelError,
     load_promoted_residual_comparative_financial_citations,
 )
@@ -47,7 +47,7 @@ class TestP3DResidualComparativeFinancialEvidence(unittest.TestCase):
         self.assertTrue(all(row["reconciliation_status"] == "EXACT_MATCH" for row in citations))
 
     def test_source_authority_fails_closed_and_vcb_is_recorded_not_promoted(self) -> None:
-        with patch("multi_period_financial_panel.admit", return_value={"decision": "refused"}):
+        with patch('stocklookup_core.financial.multi_period_financial_panel.admit', return_value={"decision": "refused"}):
             with self.assertRaisesRegex(MultiPeriodPanelError, "source authority is not approved"):
                 load_promoted_residual_comparative_financial_citations(self.root)
         blocked = [row for row in self.manifest["attempted_issuer_periods"] if row["ticker"] == "VCB"]

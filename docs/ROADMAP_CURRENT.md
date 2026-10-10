@@ -1,19 +1,18 @@
 # Stock Lookup — Current Roadmap
 
 History: [ROADMAP.md](ROADMAP.md); execution: ROADMAP_STATE.json.
-Updated 2026-10-10 from main `04dca9b360e064b0538a797c780895e6a4c43fc7`.
-Nothing below auto-starts; --can-start or owner override (AI_RULES 11).
+Updated 2026-10-10 from main `288744eef54ef4b6ca8701a02e80537a406d65b6`.
+Nothing below auto-starts: standing program delegation needs native scope admission (AI_RULES 11).
 Facts: [ACTIVE_STATE.md](ACTIVE_STATE.md).
 
-## NOW — REPOSITORY_ROOT_STRUCTURE_SIMPLIFICATION_V1 (COMPLETE)
+## NOW — FINANCIAL_RESEARCH_PACKAGE_V1 (ACTIVE)
 
-Released PR106 at `04dca9b`, approved HEAD `306da44`; four PR CI jobs PASS.
-22 implementations packaged; root files 613 → 592, Python 595 → 574.
-No Daily/deploy/authority change; no successor admitted, `queued_next=[]`.
-[Contract](repository_root_structure_simplification_v1_contract.md).
-Next product-critical recommendation: governed issuer fiscal-calendar/publication
-mapping evidence and exact knowledge time, subject to separate admission. It does
-not grant normalized earnings, shares, valuation authority or automatic date conversion.
+Owner standing delegation admits the bounded financial research package: 20 modules,
+original calculations/authority and Daily entrypoints preserved; merge separately gated.
+[Scope, authorization, fiscal reopening gate](financial_research_package_v1_contract.md).
+Fiscal mapping lacks issuer calendar/covered-period/provider-label/publication proof;
+existing semantics knowledge time is insufficient. No automatic conversion/promotion.
+Prior source layout COMPLETE: PR106/107, four post-merge CI PASS; root 592 / Python 574.
 Semantic corrective COMPLETE: PR105 `40c88c2`, post-merge CI 38021005739 SUCCESS.
 Coherence V2 COMPLETE: PR101 `64c8bc8`, post-merge CI 38017817078 SUCCESS.
 Posture V2 COMPLETE: PR100 `314406e`, four CI jobs SUCCESS.
@@ -80,7 +79,7 @@ These advance by accumulating real sessions, not by implementation:
   60-session maximum outcome horizon (no invented refresh schedule).
 - Later official verification of prospective RAW from exact retained ledgers.
 
-## AFTER FIRST-REAL ACCEPTANCE — candidates, owner authorization required
+## AFTER FIRST-REAL ACCEPTANCE — candidates, bounded admission required
 
 1. **Record the first-real result** — done in this control plane (docs only; no runtime change). Phase B is not started. Phase C resource architecture is released above.
 2. **Control-plane simplification Phase B** (not started): move or archive historical narrative out of the default

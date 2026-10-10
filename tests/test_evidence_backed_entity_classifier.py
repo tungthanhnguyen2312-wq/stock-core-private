@@ -35,8 +35,8 @@ from evidence_backed_entity_classifier import (
     evaluate_line_item_marker_evidence,
     evaluate_statement_form_evidence,
 )
-from financial_entity_applicability import evaluate_ticker, metric_applicability
-from multi_period_financial_panel import compute_bounded_derived_metrics, evaluate_sector_applicability
+from stocklookup_core.financial.financial_entity_applicability import evaluate_ticker, metric_applicability
+from stocklookup_core.financial.multi_period_financial_panel import compute_bounded_derived_metrics, evaluate_sector_applicability
 from tools.run_p2e_entity_classification_foundation import (
     execute_entity_classification_evaluation,
     generate_readiness_report,

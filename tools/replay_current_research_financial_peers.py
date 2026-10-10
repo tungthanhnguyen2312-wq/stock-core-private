@@ -14,7 +14,7 @@ import types
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import canonical_daily_financial_v2_materialization as financial
 import daily_session_level2_package as paths_module
-import financial_analysis_product_projection as compact
+import stocklookup_core.financial.financial_analysis_product_projection as compact
 import integrated_investment_decision_product as product
 import market_wide_relative_volume_research as participation
 from ai_research_session_delivery import project_integrated_decision_for_ai_delivery
@@ -98,6 +98,9 @@ def main():
     # module or touch disk; this temporary namespace is confined to this offline process.
     prior_dimension = types.ModuleType("accepted_peer_checkpoint_dimension")
     source = subprocess.check_output(["git", "show", "103f7ef:current_research_decision_input.py"], text=True, encoding="utf-8")
+    # Resolve the relocated live dependency without changing the historical Git blob.
+    source = source.replace("import fundamental_signal_consumption_contract as fundamental_signals",
+                            "import stocklookup_core.financial.fundamental_signal_consumption_contract as fundamental_signals")
     exec(compile(source, "accepted_peer_checkpoint_dimension", "exec"), prior_dimension.__dict__)
     live_dimension = product.decision_input
     live_fundamental = product.fundamental_signals

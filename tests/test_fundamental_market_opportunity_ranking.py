@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import inspect
 
-import fundamental_market_opportunity_ranking as ranking
+import stocklookup_core.financial.fundamental_market_opportunity_ranking as ranking
 import market_wide_current_fundamental_research as consumer
 
 

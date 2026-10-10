@@ -26,7 +26,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 import canonical_daily_financial_v2_materialization as fin_v2_material
-import fundamental_signal_consumption_contract as contract
+import stocklookup_core.financial.fundamental_signal_consumption_contract as contract
 import provider_financial_monetary_basis_verdict as verdict_pin
 from tools import current_research_capability_map as capability
 from tools import run_current_research_decision_convergence_proof as convergence
@@ -115,7 +115,11 @@ def _legacy_reader(baseline_root: Path):
     spec = importlib.util.spec_from_file_location("baseline_integrated_decision",
                                                   baseline_root / "integrated_investment_decision_product.py")
     module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
+    # Preserve the historical reader body and resolve its relocated live adapter.
+    source = Path(spec.origin).read_text(encoding="utf-8")
+    source = source.replace("import financial_analysis_product_projection as fa_product_projection",
+                            "import stocklookup_core.financial.financial_analysis_product_projection as fa_product_projection")
+    exec(compile(source, spec.origin, "exec"), module.__dict__)
     return module.evaluate_fundamental_direction
 
 
