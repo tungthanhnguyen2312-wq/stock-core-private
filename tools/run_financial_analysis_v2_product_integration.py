@@ -11,8 +11,8 @@ sys.path.insert(0, str(ROOT))
 
 from stocklookup_core.financial.financial_analysis_product_projection import build_product_projection
 from stocklookup_core.valuation.current_valuation_opportunity_integration import _decision_artifact, content_identity
-from security_decision_context import build_ticker_decision
-from investment_decision_workspace_projection import build_artifacts as build_workspace
+from stocklookup_core.decision.security_decision_context import build_ticker_decision
+from stocklookup_core.decision.investment_decision_workspace_projection import build_artifacts as build_workspace
 
 
 def load(path: Path) -> dict:

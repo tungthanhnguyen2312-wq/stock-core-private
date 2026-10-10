@@ -17,9 +17,9 @@ import daily_producer_pipeline as producer
 import daily_research_session_operations as operations
 from ai_handoff_publication import build_package
 from current_macro_regime import build as macro_build, session_context
-from current_research_decision_packet_product import verified_packet
+from stocklookup_core.decision.current_research_decision_packet_product import verified_packet
 from field_temporal_contract import stable_id
-from human_ai_decision_evidence_packet import build_packet as human_packet
+from stocklookup_core.decision.human_ai_decision_evidence_packet import build_packet as human_packet
 from macro_market_regime_decision_context import build_context, validate_context
 from vn_time import VN_TZ
 from test_ai_research_session_delivery import _scoped_operation, _scoped_inputs, _integrated_delivery_fixture, _daily_brief_fixture

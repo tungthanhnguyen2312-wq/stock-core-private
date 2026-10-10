@@ -15,9 +15,9 @@ from pathlib import Path
 import pytest
 
 import ai_research_session_delivery as delivery
-import current_research_decision_input as decision_input
+import stocklookup_core.decision.current_research_decision_input as decision_input
 import entity_classification_contract as entity_contract
-import integrated_investment_decision_product as iidp
+import stocklookup_core.decision.integrated_investment_decision_product as iidp
 import market_wide_fundamental_feature_store as feature_store
 import operational_fundamental_context_integration as bridge
 import same_session_technical_coverage_disposition as disposition_module

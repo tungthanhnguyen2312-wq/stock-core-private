@@ -15,7 +15,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import canonical_daily_financial_v2_materialization as financial
 import daily_session_level2_package as paths_module
 import stocklookup_core.financial.financial_analysis_product_projection as compact
-import integrated_investment_decision_product as product
+import stocklookup_core.decision.integrated_investment_decision_product as product
 import market_wide_relative_volume_research as participation
 from ai_research_session_delivery import project_integrated_decision_for_ai_delivery
 from canonical_post_close_pipeline import resolve_current_session_priority_queue
@@ -99,6 +99,8 @@ def main():
     prior_dimension = types.ModuleType("accepted_peer_checkpoint_dimension")
     source = subprocess.check_output(["git", "show", "103f7ef:current_research_decision_input.py"], text=True, encoding="utf-8")
     # Resolve the relocated live dependency without changing the historical Git blob.
+    source = source.replace("from opportunity_axis_freshness import",
+                            "from stocklookup_core.decision.opportunity_axis_freshness import")
     source = source.replace("import fundamental_signal_consumption_contract as fundamental_signals",
                             "import stocklookup_core.financial.fundamental_signal_consumption_contract as fundamental_signals")
     exec(compile(source, "accepted_peer_checkpoint_dimension", "exec"), prior_dimension.__dict__)

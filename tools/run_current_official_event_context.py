@@ -7,7 +7,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]; sys.path.insert(0, str(ROOT))
 from current_official_event_context import build_artifact, replay
-from current_daily_decision_research_product import build as build_product
+from stocklookup_core.decision.current_daily_decision_research_product import build as build_product
 from current_evidence_bound_scenario import build as build_scenario
 from market_wide_current_corporate_intelligence import build as build_ci, content_identity as ci_identity
 from polymorphic_current_strategy_classification import build as build_strategy

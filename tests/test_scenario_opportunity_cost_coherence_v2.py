@@ -7,11 +7,11 @@ from pathlib import Path
 import pytest
 import current_evidence_bound_scenario as scenario
 import portfolio_opportunity_cost_research as opportunity
-import integrated_investment_decision_product as owner
+import stocklookup_core.decision.integrated_investment_decision_product as owner
 import market_structure_breakout_product_projection as structural
-import current_research_decision_packet as packet
-import current_research_decision_packet_product as product
-from current_opportunity_prioritization import content_identity as opportunity_identity
+import stocklookup_core.decision.current_research_decision_packet as packet
+import stocklookup_core.decision.current_research_decision_packet_product as product
+from stocklookup_core.decision.current_opportunity_prioritization import content_identity as opportunity_identity
 from current_market_flow_positioning import content_identity as flow_identity
 from _integrated_decision_fixture import disposition_artifact, disposition_record
 from test_research_posture_v2_policy import tactical, FIRED, BEAR, FAILED, REVERSAL

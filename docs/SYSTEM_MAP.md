@@ -28,6 +28,9 @@ after semantic corrective PR105. Landing acquisition code is in `stocklookup_cor
 official document evidence and temporal receipts are in `stocklookup_core/evidence/`.
 Financial panels, Financial V2 and fundamental research are in `stocklookup_core/financial/`.
 Valuation calculations, peers and current-input scaleout are in `stocklookup_core/valuation/`.
+Decision inputs, risk/thesis/opportunity contexts, packets, integrated brief and workspace
+projection are in `stocklookup_core/decision/`; Daily orchestration/retention remain in place.
+[Decision package contract and evidence limits](decision_research_package_v1_contract.md).
 Thesis adapters, matrix, sidecars and runtime are in `stocklookup_core/research/`;
 their existing child tools retain their paths and resolve the repository source root.
 The existing offline `official_document_acquisition.py` CLI is a small compatibility launcher.
@@ -153,7 +156,7 @@ and [acceptance](internal/R6_PROSPECTIVE_LEARNING_ACCEPTANCE.json).
 
 ### 9. Investment Decision Workspace
 - **Responsibility:** Multi-axis decision convergence joining Opportunity Context, Tactical V2, Financial V2, liquidity research proxy, and research stances into unified per-ticker decision records.
-- **Primary Entry Module:** [`investment_decision_workspace_projection.py`](../investment_decision_workspace_projection.py)
+- **Primary Entry Module:** [`investment_decision_workspace_projection.py`](../stocklookup_core/decision/investment_decision_workspace_projection.py)
 - **Key Output Contract:** `investment_decision_workspace_dashboard_projection/v1` (`investment_decision_workspace_dashboard_projection_artifact.json`, `decision_workspace_cards.json`).
 - **Sealed pre-handoff, additively re-joined post-handoff:** this Workspace is materialized inside Daily Producer, before Signal Velocity/Flow-Price can exist for the same session (they are post-handoff observers -- see stage 3). `canonical_post_close_pipeline.run_post_handoff_presentation_projection()` (2026-09-22, `CANONICAL_DAILY_OWNER_PUBLICATION_RESUME_AND_PRESENTATION_JOIN_V1`) additively re-runs the identical join once those observers exist, into a new directory, then `canonical_dashboard_runtime_release.restage_runtime_with_presentation_projection()` overlays only the already-promoted runtime-served copy (never the sealed Producer operation directory) so the Dashboard actually shows same-session Velocity/Flow-Price instead of "unavailable by construction."
 - **`research_stance`/`entry_action` vs. `research_action_posture`:** this card's `research_stance`/`entry_action`/`entry_state` (from `security_decision_context.infer_research_stance`) are a distinct, tactical/research-candidate presentation layer -- a separate deterministic policy function from `integrated_investment_decision_product.decide_research_action_posture`'s `research_action_posture` (the integrated analytical decision posture surfaced in the AI handoff/Action Center). Both are legitimate, intentionally separate layers over overlapping evidence, not two competing BUY/SELL verdicts for the same question; see the card's own `authority_boundary.research_stance_is_not_execution_order`.

@@ -99,7 +99,7 @@ def test_october7_excludes_qns_equity_and_prior_facts_remain():
     assert later["records"]["QNS"]["metrics"] == base["records"]["QNS"]["metrics"]
     assert later["records"]["QNS"]["earnings_quality_context"]["status"] == "UNKNOWN"
     from ai_research_session_delivery import _compact_context
-    import current_research_decision_packet as packet
+    import stocklookup_core.decision.current_research_decision_packet as packet
     from stocklookup_core.valuation.market_wide_current_valuation_input_scaleout import _financial_input
     financial = _financial_input(later["records"]["QNS"], later)
     assert financial["official_field_context"][0]["normalized_value"] == 10647823148609

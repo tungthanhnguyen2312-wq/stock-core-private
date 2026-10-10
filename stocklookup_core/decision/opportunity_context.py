@@ -15,7 +15,7 @@ from current_event_catalyst_classification import (
     classify_events,
 )
 from stocklookup_core.valuation.current_research_valuation_context import evaluate_ticker_valuation, valuation_axis
-from opportunity_axis_freshness import STALE_BUT_RESEARCH_USABLE, axis_is_research_usable, classify_axis_freshness
+from stocklookup_core.decision.opportunity_axis_freshness import STALE_BUT_RESEARCH_USABLE, axis_is_research_usable, classify_axis_freshness
 from watchlist_tactical_entry_classifier import ENTRY_ACTION_BY_ENTRY_STATE
 
 CONTRACT_VERSION = "opportunity_context/v1"

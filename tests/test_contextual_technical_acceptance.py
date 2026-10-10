@@ -5,7 +5,7 @@ import json
 import pytest
 
 from tools.run_contextual_technical_acceptance import ObjectStream, header, stream_artifact
-import integrated_investment_decision_product as product
+import stocklookup_core.decision.integrated_investment_decision_product as product
 from field_temporal_contract import stable_id
 
 

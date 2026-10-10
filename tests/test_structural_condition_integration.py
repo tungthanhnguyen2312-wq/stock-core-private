@@ -1,6 +1,6 @@
 import pytest
 
-import integrated_investment_decision_product as product
+import stocklookup_core.decision.integrated_investment_decision_product as product
 import market_structure_breakout_product_projection as projection
 import prospective_decision_retention as retention
 import prospective_decision_outcome_feedback as feedback

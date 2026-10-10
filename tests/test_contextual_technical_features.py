@@ -7,7 +7,7 @@ import pytest
 
 import canonical_market_bars as bars
 import contextual_technical_features as features
-import integrated_investment_decision_product as product
+import stocklookup_core.decision.integrated_investment_decision_product as product
 import market_wide_historical_research_context as history
 import technical_structure_context as owned
 from test_canonical_market_bars import daily

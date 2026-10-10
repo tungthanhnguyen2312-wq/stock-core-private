@@ -173,7 +173,7 @@ def test_canonical_producer_attach_preserves_every_relative_verdict():
 
 
 def test_integrated_projection_does_not_vote_or_mutate_posture():
-    import integrated_investment_decision_product as integrated
+    import stocklookup_core.decision.integrated_investment_decision_product as integrated
     kwargs = dict(ticker="TEST", as_of_session="2026-10-01", tactical_record=None, financial_record=None,
                   relative_volume_record=None, market_sector_record=None)
     projection = model.build_current_scenario_valuation(inputs())

@@ -9,8 +9,8 @@ import unittest
 from pathlib import Path
 
 import export_ai_bundle as bundle
-from current_daily_decision_research_product import build as build_product, markdown as product_markdown
-from current_research_decision_packet_product import (
+from stocklookup_core.decision.current_daily_decision_research_product import build as build_product, markdown as product_markdown
+from stocklookup_core.decision.current_research_decision_packet_product import (
     AUTHORITY_PRESENTATION,
     CONSERVATIVE_BASE_SPECULATIVE_LENS,
     SCENARIO_LENS,
@@ -129,7 +129,7 @@ class RepresentativePacketSurfaceTests(unittest.TestCase):
         opt = _optional_artifacts()
         opt["risk_register"]["records"]["AAA"]["material_risks"] = []
         opt["risk_register"]["records"]["AAA"]["risk_register_status"] = "NO_MATERIAL_RISK_ESTABLISHED_FROM_AVAILABLE_EVIDENCE"
-        from current_research_risk_register import content_identity as risk_identity
+        from stocklookup_core.decision.current_research_risk_register import content_identity as risk_identity
         signed = copy.deepcopy(opt["risk_register"])
         signed.pop("artifact_sha256", None); signed.pop("artifact_identity", None)
         signed.update(risk_identity(signed))

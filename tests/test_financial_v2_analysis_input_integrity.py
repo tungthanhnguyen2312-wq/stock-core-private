@@ -10,12 +10,12 @@ import re
 
 import pytest
 
-import current_research_decision_input as decision_input
+import stocklookup_core.decision.current_research_decision_input as decision_input
 import stocklookup_core.valuation.current_research_valuation_context as valuation
 import stocklookup_core.financial.financial_analysis_engine_v2 as engine
 import stocklookup_core.financial.financial_flow_semantics_ttm_bridge as bridge
 import stocklookup_core.financial.market_wide_financial_analysis_v2_scaleout as scaleout
-from opportunity_axis_freshness import (CURRENT, STALE_BUT_RESEARCH_USABLE, UNAVAILABLE,
+from stocklookup_core.decision.opportunity_axis_freshness import (CURRENT, STALE_BUT_RESEARCH_USABLE, UNAVAILABLE,
                                         classify_financial_period_freshness)
 import provider_financial_monetary_basis_verdict as pin
 import monetary_basis_contract as basis

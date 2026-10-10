@@ -80,7 +80,7 @@ def _inputs_for_current_research(session: str) -> dict[str, Any]:
 
 
 def _build_integrated(session: str, inputs: Mapping[str, Any], *, attach_momentum_confirmation: bool) -> dict[str, Any]:
-    import integrated_investment_decision_product as integrated
+    import stocklookup_core.decision.integrated_investment_decision_product as integrated
 
     surfaces = inputs["surfaces"]
     return integrated.build_artifact(

@@ -10,7 +10,7 @@ from pathlib import Path
 import current_official_market_universe as official
 import current_market_sector_leadership_context as leadership
 import export_ai_bundle as bundle
-from current_market_screening_opportunity_comparison_foundation import content_identity as screening_identity
+from stocklookup_core.decision.current_market_screening_opportunity_comparison_foundation import content_identity as screening_identity
 from market_wide_current_descriptive_research import content_identity as descriptive_identity
 
 

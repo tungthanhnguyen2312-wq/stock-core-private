@@ -11,12 +11,12 @@ from stocklookup_core.valuation.current_research_valuation_context import (
     PE_NOT_MEANINGFUL, PE_TTM, PS_TTM, attach_peer_relative, evaluate_ticker_valuation, share_basis_class,
 )
 from stocklookup_core.valuation.current_valuation_opportunity_integration import build_artifacts, content_identity
-from opportunity_axis_freshness import (
+from stocklookup_core.decision.opportunity_axis_freshness import (
     CURRENT, STALE_BUT_RESEARCH_USABLE, STALE_NOT_USABLE_FOR_THIS_AXIS, UNAVAILABLE,
     FutureInformationError, classify_axis_freshness,
 )
 from sector_relative_research_context import MIN_COHORT_MEMBERS
-from security_decision_context import infer_research_stance
+from stocklookup_core.decision.security_decision_context import infer_research_stance
 
 DECISION = "2026-08-28"
 

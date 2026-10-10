@@ -10,7 +10,7 @@ import sys
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from investment_decision_workspace_projection import build_artifacts  # noqa: E402
+from stocklookup_core.decision.investment_decision_workspace_projection import build_artifacts  # noqa: E402
 
 OUT = ROOT / "operations-review" / "investment-decision-workspace-v1-20260831"
 DECISION_SESSION = "2026-08-28"

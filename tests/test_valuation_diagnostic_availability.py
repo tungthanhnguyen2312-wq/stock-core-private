@@ -1,4 +1,4 @@
-import integrated_investment_decision_product as product
+import stocklookup_core.decision.integrated_investment_decision_product as product
 import copy
 from ai_research_session_delivery import project_integrated_decision_for_ai_delivery
 

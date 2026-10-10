@@ -17,7 +17,7 @@ from pathlib import Path
 from typing import Any, Iterable, Mapping, Sequence
 
 import current_research_official_universe_scope as current_research_official_universe_scope_module
-import integrated_investment_decision_product as integrated_decision_module
+import stocklookup_core.decision.integrated_investment_decision_product as integrated_decision_module
 
 CONTRACT_VERSION = "screener_master_projection/v1"
 MILESTONE = "SCREENER_MASTER_PROJECTION_AND_DECISION_DRAWER_INTEGRATION_V1"

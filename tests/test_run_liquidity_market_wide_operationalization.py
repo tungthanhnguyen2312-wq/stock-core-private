@@ -8,8 +8,8 @@ from pathlib import Path
 
 import pytest
 
-import current_research_decision_input as decision_input
-import integrated_investment_decision_product as iidp
+import stocklookup_core.decision.current_research_decision_input as decision_input
+import stocklookup_core.decision.integrated_investment_decision_product as iidp
 import liquidity_authority_contract as contract
 import official_exchange_trading_statistics as official
 import official_liquidity_market_wide as wide

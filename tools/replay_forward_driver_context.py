@@ -15,8 +15,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import current_corporate_intelligence_axis as axis
-import current_research_decision_input as decision_input
-import integrated_investment_decision_product as product
+import stocklookup_core.decision.current_research_decision_input as decision_input
+import stocklookup_core.decision.integrated_investment_decision_product as product
 
 
 def replay(before: dict, source: dict) -> tuple[dict, dict]:

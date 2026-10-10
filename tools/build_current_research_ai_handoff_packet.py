@@ -24,7 +24,7 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 import canonical_current_product_projections as ccpp  # noqa: E402
-import current_research_ai_handoff_packet as packet_module  # noqa: E402
+import stocklookup_core.decision.current_research_ai_handoff_packet as packet_module  # noqa: E402
 import daily_research_session_operations as dso  # noqa: E402
 import daily_session_level2_package as level2  # noqa: E402
 import governed_previous_operation as gpo  # noqa: E402

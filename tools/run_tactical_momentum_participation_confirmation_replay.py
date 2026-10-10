@@ -188,7 +188,7 @@ def _regression_temporal_check() -> dict[str, Any]:
 def run(*, output_dir: Path, session: str = PRIMARY_SESSION) -> dict[str, Any]:
     if session != PRIMARY_SESSION:
         raise ValueError("THIS_RETAINED_REPLAY_IS_PINNED_TO_2026-09-04")
-    import integrated_investment_decision_product as integrated_product
+    import stocklookup_core.decision.integrated_investment_decision_product as integrated_product
 
     output_dir.mkdir(parents=True, exist_ok=True)
     token = session.replace("-", "")

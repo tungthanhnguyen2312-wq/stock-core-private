@@ -71,7 +71,7 @@ def content_identity(value: Mapping[str, Any]) -> dict[str, str]:
 
 
 def _verify(source: Mapping[str, Any], module_name: str, label: str) -> None:
-    module = __import__(module_name)
+    module = __import__(module_name, fromlist=["content_identity"])
     identity = module.content_identity(source)
     if source.get("artifact_sha256") != identity["artifact_sha256"]:
         raise TacticalSetupTagsError(f"{label}_IDENTITY_MISMATCH")
@@ -153,7 +153,7 @@ def build_artifact(*, technical_structure: Mapping[str, Any], current_descriptiv
                    tactical: Mapping[str, Any], requested_at: str) -> dict[str, Any]:
     _verify(technical_structure, "technical_structure_context", "TECHNICAL_STRUCTURE")
     _verify(current_descriptive, "market_wide_current_descriptive_research", "DESCRIPTIVE")
-    _verify(current_screening, "current_market_screening_opportunity_comparison_foundation", "SCREENING")
+    _verify(current_screening, "stocklookup_core.decision.current_market_screening_opportunity_comparison_foundation", "SCREENING")
     _verify(current_leadership, "current_market_sector_leadership_context", "LEADERSHIP")
     _verify(tactical, "watchlist_tactical_entry_classifier", "TACTICAL")
 

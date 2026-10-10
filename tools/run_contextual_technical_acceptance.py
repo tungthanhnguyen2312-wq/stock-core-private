@@ -22,7 +22,7 @@ sys.path.insert(0, str(ROOT / "tests"))
 import canonical_market_bars as bars
 import contextual_technical_features as features
 import daily_session_level2_package as level2
-import integrated_investment_decision_product as product
+import stocklookup_core.decision.integrated_investment_decision_product as product
 import market_wide_historical_research_context as history
 import prospective_decision_retention as retention
 from field_temporal_contract import _sanitize_for_json

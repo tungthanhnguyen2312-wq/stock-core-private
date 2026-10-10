@@ -18,7 +18,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 import raw_pit_authority_matrix as authority
-import integrated_investment_decision_product as integrated
+import stocklookup_core.decision.integrated_investment_decision_product as integrated
 import execution_capacity_research as capacity
 from field_temporal_contract import stable_id
 from portfolio_aware_decision import governed_research_sizing

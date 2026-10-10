@@ -1,5 +1,5 @@
 import pytest
-import integrated_investment_decision_product as product
+import stocklookup_core.decision.integrated_investment_decision_product as product
 
 
 @pytest.mark.parametrize('phase', [product.TACTICAL_BREAKDOWN, product.TACTICAL_DISTRIBUTION_RISK])

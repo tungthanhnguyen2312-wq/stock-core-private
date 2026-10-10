@@ -13,7 +13,7 @@ import technical_relationship_view as view
 import volume_and_flow_context as f1
 import volume_and_flow_context_v2 as f2
 import prospective_decision_retention as retention
-import integrated_investment_decision_product as product
+import stocklookup_core.decision.integrated_investment_decision_product as product
 import market_wide_historical_research_context as history
 from test_contextual_technical_features import series, seal, ASOF, CUTOFF
 from test_volume_and_flow_context import foreign, snapshot

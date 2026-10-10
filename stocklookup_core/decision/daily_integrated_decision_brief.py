@@ -31,7 +31,7 @@ from pathlib import Path
 from typing import Any, Mapping, Sequence
 
 import daily_session_level2_package as level2
-import integrated_investment_decision_product as integrated_decision_module
+import stocklookup_core.decision.integrated_investment_decision_product as integrated_decision_module
 import integrated_decision_prospective_feedback as feedback_bridge
 import owner_research_focus
 

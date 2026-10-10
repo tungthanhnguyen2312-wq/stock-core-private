@@ -222,7 +222,7 @@ def collect(root, *, session, cutoff, technical_path=None, flow_path=None, snaps
     contexts=VerifiedContextSummary(contexts);records=VerifiedFlowSummary(records)
     valuation=liquidity=None
     if decision_path:
-        import integrated_investment_decision_product as decisions
+        import stocklookup_core.decision.integrated_investment_decision_product as decisions
         counts=Counter()
         def inspect_decision(t,row):
             if row.get("ticker")!=t or row.get("as_of_session")!=session or decisions.decision_identity(row)!=row.get("decision_identity"):

@@ -10,7 +10,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from current_market_screening_opportunity_comparison_foundation import build_artifact
+from stocklookup_core.decision.current_market_screening_opportunity_comparison_foundation import build_artifact
 
 
 SOURCE = ROOT / "operations-review/market-wide-current-technical-coverage-scaleout-v1-20260823/market_wide_current_descriptive_research_artifact.json"

@@ -8,7 +8,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from current_daily_decision_research_product import build, content_identity, markdown
+from stocklookup_core.decision.current_daily_decision_research_product import build, content_identity, markdown
 
 OPERATIONS = ROOT / "operations-review"
 PATHS = {

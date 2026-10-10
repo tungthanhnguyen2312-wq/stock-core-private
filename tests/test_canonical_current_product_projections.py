@@ -73,7 +73,7 @@ def test_current_corporate_projection_keeps_frozen_decision_and_posture(tmp_path
     import copy
     import corporate_currency_rollforward as corporate
     import official_corporate_event_incremental_acquisition as incremental
-    import investment_decision_workspace_projection as workspace_contract
+    import stocklookup_core.decision.investment_decision_workspace_projection as workspace_contract
     bundle = _materialize_workspace(
         session=SESSION, registry_inputs=_registry_inputs(), supplementary={},
         requested_at=f"{SESSION}T18:00:00+07:00", root=tmp_path)
@@ -102,7 +102,7 @@ def test_current_corporate_projection_keeps_frozen_decision_and_posture(tmp_path
 def test_current_brief_overlay_is_a_separate_product():
     import corporate_currency_rollforward as corporate
     import official_corporate_event_incremental_acquisition as incremental
-    import daily_integrated_decision_brief as brief_contract
+    import stocklookup_core.decision.daily_integrated_decision_brief as brief_contract
     brief = {"contract_version": brief_contract.CONTRACT_VERSION, "session": SESSION,
              "research_action_posture": "WAIT", "watchlist": [{"ticker": "AAA", "posture": "WAIT"}]}
     brief.update(brief_contract.content_identity(brief))

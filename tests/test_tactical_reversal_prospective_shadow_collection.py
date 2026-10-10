@@ -328,6 +328,8 @@ class ProductionSurfaceUnchangedGuardTests(unittest.TestCase):
         "import canonical_post_close_pipeline",
         "import daily_integrated_decision_brief",
         "import integrated_investment_decision_product",
+        "import stocklookup_core.decision.daily_integrated_decision_brief",
+        "import stocklookup_core.decision.integrated_investment_decision_product",
     )
 
     def test_module_never_imports_production_classifier_or_daily_surfaces(self):

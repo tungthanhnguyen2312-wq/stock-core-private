@@ -27,7 +27,7 @@ def load_daily_live_sources(source, session, touched):
 def rebuild_iid(source, session, metadata, touched, observe, live_sources):
     """Actual IID builder over its frozen, already-materialized upstream products."""
     import daily_session_level2_package as level2
-    import integrated_investment_decision_product as iid
+    import stocklookup_core.decision.integrated_investment_decision_product as iid
     from bounded_artifact_stream import source_hash
     paths = level2.session_artifact_paths(source, session)
     def load(path):

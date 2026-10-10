@@ -4,7 +4,7 @@ from copy import deepcopy
 from pathlib import Path
 
 from ai_research_session_delivery import _compact_context
-from current_research_decision_packet import _valuation
+from stocklookup_core.decision.current_research_decision_packet import _valuation
 from stocklookup_core.valuation.market_wide_current_valuation_input_scaleout import _financial_input
 from official_financial_assurance_evidence import resolve_document_assurance_evidence
 from official_financial_ocr_table_evidence import (

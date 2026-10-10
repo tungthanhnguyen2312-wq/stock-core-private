@@ -182,7 +182,7 @@ def assemble(args: argparse.Namespace) -> None:
     import canonical_daily_financial_v2_materialization as fin_v2_material
     import canonical_post_close_pipeline as cpc
     import daily_session_level2_package as level2
-    import integrated_investment_decision_product as integrated
+    import stocklookup_core.decision.integrated_investment_decision_product as integrated
 
     artifact_root = work_root / "artifact-root"
     output_root = work_root / "output-root"

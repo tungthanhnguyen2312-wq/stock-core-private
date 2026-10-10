@@ -12,7 +12,7 @@ import json
 from collections import Counter
 from typing import Any, Mapping
 
-from current_research_decision_packet import (
+from stocklookup_core.decision.current_research_decision_packet import (
     CONTRACT_VERSION as PACKET_CONTRACT,
     content_identity as packet_content_identity,
     replay as replay_packet,

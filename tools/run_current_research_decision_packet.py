@@ -4,7 +4,7 @@ import argparse,json,sys
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:sys.path.insert(0,str(ROOT))
-from current_research_decision_packet import build_artifact,replay
+from stocklookup_core.decision.current_research_decision_packet import build_artifact,replay
 DEFAULTS={"opportunity":ROOT/"operations-review/current-opportunity-prioritization-v1-20260824/current_opportunity_prioritization_artifact.json","scenario":ROOT/"operations-review/current-evidence-bound-scenario-v1-20260824/current_evidence_bound_scenario_artifact.json","risk_register":ROOT/"operations-review/current-research-risk-register-v1/current_research_risk_register_artifact.json","market_sector":ROOT/"operations-review/current-market-sector-leadership-context-v1-20260825/current_market_sector_leadership_context_artifact.json","financial_momentum":ROOT/"operations-review/current-financial-momentum-context-v1/current_financial_momentum_context_artifact.json","corporate_event":ROOT/"operations-review/current-corporate-event-context-v1/current_corporate_event_context_artifact.json","valuation":ROOT/"operations-review/market-wide-current-valuation-research-scaleout-v1/market_wide_current_valuation_artifact.json","historical":ROOT/"operations-review/market-wide-historical-research-context-v1-20260824/market_wide_historical_research_context_artifact.json"}
 def main(argv=None):
  p=argparse.ArgumentParser(description=__doc__)

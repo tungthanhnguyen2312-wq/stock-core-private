@@ -11,7 +11,7 @@ from full_universe_entry_candidate_triage import (
     replay,
 )
 from market_wide_current_descriptive_research import content_identity as descriptive_identity
-from current_market_screening_opportunity_comparison_foundation import content_identity as screening_identity
+from stocklookup_core.decision.current_market_screening_opportunity_comparison_foundation import content_identity as screening_identity
 from watchlist_tactical_entry_classifier import content_identity as tactical_identity
 
 ROOT = Path(__file__).resolve().parents[1]

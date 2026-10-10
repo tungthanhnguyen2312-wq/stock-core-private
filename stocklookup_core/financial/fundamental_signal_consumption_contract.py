@@ -59,7 +59,7 @@ import re
 from typing import Any, Mapping, Sequence
 
 from operational_fundamental_context_integration import MAX_COMPLETED_QUARTER_LAG
-from opportunity_axis_freshness import CURRENT, STALE_BUT_RESEARCH_USABLE, classify_financial_period_freshness
+from stocklookup_core.decision.opportunity_axis_freshness import CURRENT, STALE_BUT_RESEARCH_USABLE, classify_financial_period_freshness
 
 CONTRACT_VERSION = "fundamental_signal_consumption/v1"
 #: The vote policy of this contract version (CURRENT_RESEARCH_FUNDAMENTAL_PROMOTION_HARDENING_V1).

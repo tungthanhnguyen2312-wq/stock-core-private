@@ -13,8 +13,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import daily_session_level2_package as paths_module
 import current_evidence_bound_scenario as scenario
 import polymorphic_current_strategy_classification as strategy
-import current_opportunity_prioritization as opportunity
-from current_daily_decision_research_product import _card
+import stocklookup_core.decision.current_opportunity_prioritization as opportunity
+from stocklookup_core.decision.current_daily_decision_research_product import _card
 from ai_research_session_delivery import _compact_context
 from replay_current_research_structural_conditions import changed_paths
 

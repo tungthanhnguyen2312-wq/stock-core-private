@@ -4,12 +4,12 @@ import json
 
 import pytest
 
-import integrated_investment_decision_product as owner
-import daily_integrated_decision_brief as brief
+import stocklookup_core.decision.integrated_investment_decision_product as owner
+import stocklookup_core.decision.daily_integrated_decision_brief as brief
 import next_session_decision_brief as next_brief
 import portfolio_aware_decision as portfolio
-import current_research_decision_packet as packet
-import current_research_decision_packet_product as packet_product
+import stocklookup_core.decision.current_research_decision_packet as packet
+import stocklookup_core.decision.current_research_decision_packet_product as packet_product
 from _integrated_decision_fixture import integrated_decision
 from test_integrated_investment_decision_product import _sample_tactical_record, _sample_financial_record
 from test_portfolio_aware_decision import make_snapshot, make_position
@@ -242,7 +242,7 @@ def test_actual_workspace_reads_legacy_v1_hold_without_class(tmp_path):
 
 
 def test_actual_offline_packet_materialization_and_projection(tmp_path):
-    import current_opportunity_prioritization as opportunity
+    import stocklookup_core.decision.current_opportunity_prioritization as opportunity
     integrated = integrated_decision(SESSION, ["SYN"], tactical_records={"SYN": tactical()},
                                     currency_by_ticker={"SYN": "CURRENT_SESSION"})
     source = {"contract_version": "current_opportunity_prioritization/v1", "research_session": SESSION,
@@ -275,7 +275,7 @@ def test_actual_offline_packet_materialization_and_projection(tmp_path):
 
 
 def _opportunity(tickers):
-    import current_opportunity_prioritization as opportunity
+    import stocklookup_core.decision.current_opportunity_prioritization as opportunity
     source = {"contract_version": "current_opportunity_prioritization/v1", "research_session": SESSION,
               "records": {ticker: {"priority_tier": "MONITOR"} for ticker in tickers}}
     source.update(opportunity.content_identity(source))

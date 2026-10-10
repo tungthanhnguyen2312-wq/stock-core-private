@@ -18,7 +18,7 @@ from __future__ import annotations
 import json
 import pytest
 
-import integrated_investment_decision_product as iidp
+import stocklookup_core.decision.integrated_investment_decision_product as iidp
 
 
 def test_priority_posture_reconciliation_keeps_priority_distinct_from_actionability():

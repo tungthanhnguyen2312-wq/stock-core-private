@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import inspect
 
-import current_thesis_case_context as tcc
+import stocklookup_core.decision.current_thesis_case_context as tcc
 import stocklookup_core.valuation.current_valuation_opportunity_integration as cvoi
 
 

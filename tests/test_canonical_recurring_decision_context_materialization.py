@@ -23,7 +23,7 @@ from test_tactical_behavior_context import (
     SESSION as TACTICAL_SESSION,
     _descriptive_source, _leadership_source, _p3f9b_snapshot,
 )
-import current_market_screening_opportunity_comparison_foundation as screening_module
+import stocklookup_core.decision.current_market_screening_opportunity_comparison_foundation as screening_module
 import market_wide_current_descriptive_research as descriptive_module
 import tactical_confirmation_invalidation_boundaries as boundaries_module
 import tactical_setup_tags as tags_module

@@ -18,7 +18,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT))
 sys.path.insert(0,str(ROOT/"tests"))
 
-import integrated_investment_decision_product as decision
+import stocklookup_core.decision.integrated_investment_decision_product as decision
 import volume_and_flow_context as context
 from volume_and_flow_retained import collect
 from bounded_artifact_stream import source_hash, stream_artifact

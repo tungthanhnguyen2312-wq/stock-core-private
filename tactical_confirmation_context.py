@@ -21,7 +21,7 @@ import hashlib
 import json
 from typing import Any, Mapping
 
-from integrated_investment_decision_product import evaluate_tactical_phase
+from stocklookup_core.decision.integrated_investment_decision_product import evaluate_tactical_phase
 
 CONTRACT_VERSION = "tactical_confirmation_context/v1"
 MILESTONE = "TACTICAL_MOMENTUM_PARTICIPATION_CONFIRMATION_V1"

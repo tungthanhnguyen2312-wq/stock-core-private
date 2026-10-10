@@ -8,7 +8,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
-from current_research_risk_register import build_artifact, replay
+from stocklookup_core.decision.current_research_risk_register import build_artifact, replay
 
 DEFAULTS = {
     "current_official_universe": ROOT / "operations-review/current-official-market-universe-integration-v1-20260824/current_official_market_universe_artifact.json",

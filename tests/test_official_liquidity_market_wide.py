@@ -4,7 +4,7 @@ from decimal import Decimal
 
 import pytest
 
-import current_research_decision_input as decision_input
+import stocklookup_core.decision.current_research_decision_input as decision_input
 import liquidity_authority_contract as c
 import official_exchange_trading_statistics as official
 import official_liquidity_market_wide as w

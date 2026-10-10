@@ -13,7 +13,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-import current_market_screening_opportunity_comparison_foundation as screening_module
+import stocklookup_core.decision.current_market_screening_opportunity_comparison_foundation as screening_module
 import current_market_sector_leadership_context as leadership_module
 import market_wide_current_descriptive_research as descriptive_module
 import tactical_behavior_context as compact_module

@@ -1,7 +1,7 @@
 from __future__ import annotations
 import json
 from pathlib import Path
-from current_opportunity_prioritization import replay
+from stocklookup_core.decision.current_opportunity_prioritization import replay
 
 ROOT=Path(__file__).resolve().parents[1]
 def test_materialized_priority_contract_replays_and_preserves_lane_boundaries():

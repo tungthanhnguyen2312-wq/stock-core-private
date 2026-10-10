@@ -8,7 +8,7 @@ import unittest
 from pathlib import Path
 
 import export_ai_bundle as bundle
-from current_market_screening_opportunity_comparison_foundation import content_identity
+from stocklookup_core.decision.current_market_screening_opportunity_comparison_foundation import content_identity
 
 
 ROOT = Path(__file__).resolve().parents[1]

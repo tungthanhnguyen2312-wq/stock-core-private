@@ -15,7 +15,7 @@ from pathlib import Path
 import pytest
 
 import current_research_official_universe_scope as scope_module
-from current_research_ai_handoff_packet import (
+from stocklookup_core.decision.current_research_ai_handoff_packet import (
     AI_BOUNDARY,
     CONTRACT_VERSION,
     CurrentResearchAiHandoffPacketError,
@@ -606,7 +606,7 @@ def test_momentum_context_wrong_contract_version_rejected():
 
 
 def test_technical_field_coverage_correctly_classifies_produced_vs_absent():
-    from current_research_ai_handoff_packet import TECHNICAL_FIELD_COVERAGE
+    from stocklookup_core.decision.current_research_ai_handoff_packet import TECHNICAL_FIELD_COVERAGE
     available = TECHNICAL_FIELD_COVERAGE["available_from_stocklookup"]
     absent = TECHNICAL_FIELD_COVERAGE["not_currently_produced"]
     for field in ("rsi_14", "moving_average_20_50_100_200", "macd_12_26_9", "momentum_20d", "support_resistance_levels"):
@@ -761,7 +761,7 @@ def test_no_external_provider_fallback_in_module_source():
     retained Stock Lookup evidence. (The module docstring legitimately *mentions* "Finhay" as the
     problem this milestone solves, so that word itself is not scanned -- only real fetch-call
     tokens are.)"""
-    import current_research_ai_handoff_packet as module
+    import stocklookup_core.decision.current_research_ai_handoff_packet as module
 
     source = Path(module.__file__).read_text(encoding="utf-8")
     forbidden = ["requests.", "urllib.request", "http.client", "httpx.", "aiohttp.", "socket.connect"]

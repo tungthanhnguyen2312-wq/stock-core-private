@@ -82,10 +82,10 @@ VALUATION_FIELDS = ("value", "status", "applicability", "blocker_reason_codes", 
 ENGINE_LINEAGE_FIELDS = frozenset({"ttm_source_context_identity", "source_financial_v2_identity"})
 #: Production modules this milestone changed (scanned for scratch/worktree-only path dependencies).
 CHANGED_PRODUCTION_MODULES = (
-    "stocklookup_core/financial/fundamental_signal_consumption_contract.py", "integrated_investment_decision_product.py",
-    "current_research_decision_input.py", "asymmetric_dislocation_research.py", "multi_session_signal_velocity.py",
+    "stocklookup_core/financial/fundamental_signal_consumption_contract.py", "stocklookup_core/decision/integrated_investment_decision_product.py",
+    "stocklookup_core/decision/current_research_decision_input.py", "asymmetric_dislocation_research.py", "multi_session_signal_velocity.py",
     "next_session_decision_brief.py", "prospective_decision_outcome_feedback.py",
-    "prospective_decision_outcome_measurement.py", "daily_integrated_decision_brief.py",
+    "prospective_decision_outcome_measurement.py", "stocklookup_core/decision/daily_integrated_decision_brief.py",
     "stocklookup_core/financial/market_wide_financial_analysis_v2_scaleout.py", "canonical_daily_financial_v2_materialization.py",
 )
 _FORBIDDEN_PATH_FRAGMENTS = ("tmp/", "tmp\\\\", "worktrees", ".stocklookup/scratch", "scratchpad", "AppData")

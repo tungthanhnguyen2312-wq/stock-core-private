@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-import current_research_decision_input as decision_input
+import stocklookup_core.decision.current_research_decision_input as decision_input
 import daily_official_liquidity_rollforward as rollforward
 import execution_capacity_research as capacity
 import official_exchange_trading_statistics as official

@@ -14,7 +14,7 @@ import unittest
 from datetime import date, timedelta
 from pathlib import Path
 
-import current_market_screening_opportunity_comparison_foundation as screening_module
+import stocklookup_core.decision.current_market_screening_opportunity_comparison_foundation as screening_module
 import market_structure_breakout_product_projection as projection_module
 import market_wide_current_descriptive_research as descriptive_module
 import market_wide_current_fundamental_research as fundamental_module
@@ -24,7 +24,7 @@ import tactical_reference_window as window
 import technical_structure_context as structure_module
 import watchlist_tactical_entry_classifier as classifier_module
 from field_temporal_contract import stable_id
-from integrated_investment_decision_product import decide_research_action_posture, evaluate_tactical_phase
+from stocklookup_core.decision.integrated_investment_decision_product import decide_research_action_posture, evaluate_tactical_phase
 from market_wide_current_liquidity_research import content_identity as liquidity_content_identity
 from mva_daily_research_bundle import market_features
 
@@ -323,9 +323,9 @@ class PolicyInvarianceTests(unittest.TestCase):
                              decide_research_action_posture(tactical_phase=phase_b[0], tactical_rec=other_projection[ticker], **common))
 
     def test_posture_structure_and_priority_modules_do_not_use_the_reference_window(self) -> None:
-        for name in ("integrated_investment_decision_product.py", "technical_structure_context.py",
+        for name in ("stocklookup_core/decision/integrated_investment_decision_product.py", "technical_structure_context.py",
                      "market_structure_breakout_product_projection.py", "daily_opportunity_decision_queue.py",
-                     "current_opportunity_prioritization.py"):
+                     "stocklookup_core/decision/current_opportunity_prioritization.py"):
             with self.subTest(module=name):
                 self.assertNotIn("tactical_reference_window", (REPO / name).read_text(encoding="utf-8"))
 

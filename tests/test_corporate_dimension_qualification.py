@@ -2,8 +2,8 @@ import copy
 
 import pytest
 
-import current_research_decision_input as dimension
-import integrated_investment_decision_product as product
+import stocklookup_core.decision.current_research_decision_input as dimension
+import stocklookup_core.decision.integrated_investment_decision_product as product
 from ai_research_session_delivery import project_integrated_decision_for_ai_delivery
 
 

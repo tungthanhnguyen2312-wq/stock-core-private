@@ -10,7 +10,7 @@ from pathlib import Path
 import pytest
 
 import canonical_post_close_pipeline as pipeline
-import integrated_investment_decision_product as iid
+import stocklookup_core.decision.integrated_investment_decision_product as iid
 import prospective_decision_outcome_feedback as feedback
 from _integrated_decision_fixture import integrated_decision
 

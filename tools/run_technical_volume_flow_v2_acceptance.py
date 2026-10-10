@@ -26,7 +26,7 @@ import volume_and_flow_context_v2 as flow
 import volume_and_flow_retained as retained
 import daily_session_level2_package as level2
 import market_wide_historical_research_context as history
-import integrated_investment_decision_product as decision
+import stocklookup_core.decision.integrated_investment_decision_product as decision
 import prospective_decision_retention as retention
 import prospective_pit_capture_retention as capture_store
 from bounded_artifact_stream import header, source_hash, stream_artifact

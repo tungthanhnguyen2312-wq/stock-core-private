@@ -8,7 +8,7 @@ import pytest
 import decision_intelligence_coverage_calibration as spine
 import decision_outcome_calibration_review as review
 import historical_temporal_research_panel as panel
-import human_ai_decision_evidence_packet as packet
+import stocklookup_core.decision.human_ai_decision_evidence_packet as packet
 import portfolio_research_decision_workbench as workbench
 
 

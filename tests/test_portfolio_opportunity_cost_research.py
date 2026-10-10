@@ -410,7 +410,7 @@ def test_caller_supporting_method_list_is_not_accepted_as_fitness():
 
 
 def test_qualified_methods_reuse_the_workspace_predicate():
-    import investment_decision_workspace_projection as workspace
+    import stocklookup_core.decision.investment_decision_workspace_projection as workspace
     methods = {"P/B": {"status": "READY_RESEARCH_ONLY", "percentile": 0.9}, "P/E_TTM": {"status": "BLOCKED"},
                "market_cap": {"status": "READY_RESEARCH_ONLY"}}
     assert [m["method"] for m in workspace.qualified_relative_methods(methods)] == ["P/B"]

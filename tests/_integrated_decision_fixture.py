@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import Any, Iterable, Mapping
 
-import integrated_investment_decision_product as iidp
+import stocklookup_core.decision.integrated_investment_decision_product as iidp
 import same_session_technical_coverage_disposition as disposition_module
 
 
