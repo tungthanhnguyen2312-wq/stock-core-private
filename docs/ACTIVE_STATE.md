@@ -1,8 +1,8 @@
 # Stock Lookup — Active State
 
 Updated 2026-10-10 from verified
-main `6fcddb95d1cca3819c6bb67429cfe84d1ba0a3a0`.
-Case provenance admitted under standing delegation.
+main `701d432cd6736dc93f005ab56321189ba031c137`.
+Memory reason corrective admitted under standing delegation.
 Verify live main: `git fetch origin main` or `git ls-remote origin refs/heads/main`; a **local** remote-tracking ref can be stale.
 ## 0. How this file relates to the others
 | Question | Answer lives in |
@@ -33,7 +33,7 @@ Fact kinds used below: **CURRENT FACT** (verified in repo or by a stated read-on
 **BLOCKED**, **DEFERRED**, **HISTORICAL**.
 
 ## 1. The operational gate
-- **ACTIVE — [case provenance](research_case_lifecycle_portable_acceptance_v1_contract.md):** portable lifecycle and exact review/T0 correction; merge gated. Workflow PR112 COMPLETE `6fcddb9`, four post-merge CI PASS (38047543681), root Python 501. Prior source releases COMPLETE.
+- **ACTIVE — [memory reasons](feedback_windows_memory_reason_corrective_v1_contract.md):** kernel event/defect correction; merge gated. Case PR113 COMPLETE `701d432`, four post-merge CI PASS (38050775088); root Python 501. Prior source releases COMPLETE.
 - **COMPLETE — [capacity Phase 1](capacity_recovery_phase1_contract.md):** PR99 merged
   `168e0f7`, post-merge CI 37893984528 success; zero production reclaim/activation.
 - **COMPLETE — Vault V1:** PR97 merged `3f3d4fe`; offline/opt-in, 77 candidates,
@@ -306,7 +306,7 @@ Fact kinds used below: **CURRENT FACT** (verified in repo or by a stated read-on
 
 ## 9. Next action
 
-Finish case provenance acceptance and its separate merge gate.
+Finish memory reason acceptance and its separate merge gate.
 Native admission records each standing-authorized scope. Fiscal-calendar
 mapping needs the exact source/period/publication proof in the contract above.
 Ordinary Daily remains owner-operated after fresh READY preflight and exact session gates.

@@ -90,6 +90,31 @@ def test_timeout_before_first_output_publishes_nothing_and_changes_no_evidence(w
     assert json.loads((out / "feedback.json.status.json").read_text(encoding="utf-8"))["status"] == "COMPLETED"
 
 
+@pytest.mark.skipif(os.name != "nt", reason="Windows Job Object resource/defect classification")
+@pytest.mark.parametrize("body,reason", [
+    ("bytearray(512*1024*1024)", guard.RESOURCE_MEMORY_LIMIT),
+    ("buf=bytearray(480*1024*1024)\nraise ValueError('TEST_FIXTURE ordinary defect')", guard.COMPUTATION_ERROR),
+])
+def test_kernel_memory_reason_and_ordinary_defect_remain_non_evidence_in_parent(world, tmp_path, monkeypatch, body, reason):
+    root, state, out = world
+    before = _fingerprint(root)
+    child = tmp_path / "fixture_memory_child.py"
+    child.write_text(body, encoding="utf-8")
+    real_guard = guard.run_bounded
+    def injected(command, **kwargs):
+        return real_guard([sys.executable, str(child)], **kwargs)
+    monkeypatch.setattr(guard, "run_bounded", injected)
+    policy = guard.ResourcePolicy(**{**FAST.as_dict(), "memory_limit_bytes": 512 * 1024 * 1024})
+    result = _run(root, state, out, policy=policy)
+    assert result["status"] == "UNAVAILABLE" and result["reason_code"] == reason
+    assert "artifact_identity" not in result
+    assert result["resource"]["reaped"] is True
+    assert _fingerprint(root) == before and not (out / "feedback.json").exists()
+    status = json.loads((out / "feedback.json.status.json").read_text(encoding="utf-8"))
+    assert status["reason_code"] == reason
+    assert status["interpretation"] == "RESOURCE_OR_DEFECT_STATUS_NOT_FEEDBACK_EVIDENCE"
+
+
 def test_timeout_mid_stream_leaves_only_recognisable_incomplete_data_and_a_retry_rebuilds(world, tmp_path):
     root, state, out = world
     before = _fingerprint(root)
