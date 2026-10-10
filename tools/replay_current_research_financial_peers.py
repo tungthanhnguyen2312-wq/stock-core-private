@@ -107,6 +107,9 @@ def main():
     live_adapter = product.fa_product_projection
     prior_adapter = types.ModuleType("accepted_peer_adapter")
     source = subprocess.check_output(["git", "show", "103f7ef:financial_analysis_product_projection.py"], text=True, encoding="utf-8")
+    # Resolve the historical adapter's live valuation dependency only.
+    source = source.replace("from current_research_valuation_context import ENGINE_PEER_FEATURES",
+                            "from stocklookup_core.valuation.current_research_valuation_context import ENGINE_PEER_FEATURES")
     exec(compile(source, "accepted_peer_adapter", "exec"), prior_adapter.__dict__)
     prior_fundamental = types.ModuleType("accepted_fundamental_checkpoint")
     source = subprocess.check_output(["git", "show", "6691bd2:fundamental_signal_consumption_contract.py"], text=True, encoding="utf-8")

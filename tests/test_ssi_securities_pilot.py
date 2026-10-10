@@ -1,7 +1,7 @@
 import unittest
 from ssi_securities_pilot import evaluate
-from intrinsic_valuation import evaluate_intrinsic_valuation
-from relative_valuation import evaluate_relative_valuation
+from stocklookup_core.valuation.intrinsic_valuation import evaluate_intrinsic_valuation
+from stocklookup_core.valuation.relative_valuation import evaluate_relative_valuation
 
 class SSISecuritiesPilotTests(unittest.TestCase):
     def test_missing_retained_annual_facts_fail_closed_and_deterministic(self):

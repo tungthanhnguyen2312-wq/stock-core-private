@@ -13,8 +13,8 @@ import pandas as pd
 
 import semantic_evidence_bridge as bridge
 from financial_observations import append_observations, canonical_records, observations_from_frame, read_observations, store_path
-from intrinsic_valuation import evaluate_intrinsic_valuation
-from relative_valuation import evaluate_relative_valuation
+from stocklookup_core.valuation.intrinsic_valuation import evaluate_intrinsic_valuation
+from stocklookup_core.valuation.relative_valuation import evaluate_relative_valuation
 
 
 def _hash(value):
@@ -353,7 +353,7 @@ class VcbBankingIdentityTests(unittest.TestCase):
     def test_no_ticker_specific_branch_in_touched_source(self):
         root = Path(__file__).resolve().parents[1]
         touched = ["cash_flow_debt_mapping.py", "financial_observations.py", "semantic_evidence_bridge.py",
-                   "relative_valuation.py", "intrinsic_valuation.py"]
+                   "stocklookup_core/valuation/relative_valuation.py", "stocklookup_core/valuation/intrinsic_valuation.py"]
         for filename in touched:
             text = (root / filename).read_text(encoding="utf-8")
             self.assertNotIn('"VCB"', text, f"{filename} contains a literal VCB ticker check")

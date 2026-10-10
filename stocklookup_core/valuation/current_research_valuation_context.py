@@ -14,7 +14,7 @@ from typing import Any, Mapping, Sequence
 
 from current_market_sector_leadership_context import _percentile
 import monetary_basis_contract as basis_contract
-from market_wide_current_valuation_input_scaleout import RESEARCH_SHARE_AUTHORITIES, _applicability, _market_cap_monetary_basis
+from stocklookup_core.valuation.market_wide_current_valuation_input_scaleout import RESEARCH_SHARE_AUTHORITIES, _applicability, _market_cap_monetary_basis
 from operational_fundamental_context_integration import MAX_COMPLETED_QUARTER_LAG
 from opportunity_axis_freshness import UNAVAILABLE, axis_is_research_usable, classify_axis_freshness, completed_quarter_lag
 from sector_relative_research_context import MIN_COHORT_MEMBERS
@@ -761,7 +761,7 @@ def evaluate_ticker_valuation(*, ticker: str, feature_record: Mapping[str, Any] 
         MARKET_CAP: _existing_method(MARKET_CAP, market_cap, entity=entity, share_class=share_class),
     }
     readiness_reconciliation = _calculation_readiness_reconciliation(methods, calculation_readiness_record)
-    from current_valuation_denominator_integrity import diagnose_methods
+    from stocklookup_core.valuation.current_valuation_denominator_integrity import diagnose_methods
     denominator_integrity = diagnose_methods(_denominator_integrity_observations(
         methods, entity=entity, earnings_quality=earnings_quality,
         corporate_action_lifecycle=corporate_action_lifecycle, supplied=denominator_observations,
@@ -785,7 +785,7 @@ def evaluate_ticker_valuation(*, ticker: str, feature_record: Mapping[str, Any] 
     fcf_yield_ttm = {"status": "BLOCKED", "value": None, "blocker_reason_codes": ["FCF_TTM_NOT_RETAINED_STANDALONE_QUARTER_PROXY_ONLY"]}
     intrinsic_projection = {}
     if "intrinsic_scenario_valuation" in (valuation_record or {}):
-        from intrinsic_valuation import consume_current_projection
+        from stocklookup_core.valuation.intrinsic_valuation import consume_current_projection
         intrinsic_projection["intrinsic_scenario_valuation"] = consume_current_projection(
             valuation_record["intrinsic_scenario_valuation"], ticker=ticker, session=decision_session)
     return {
@@ -1259,7 +1259,7 @@ def freshness_for_valuation(*, decision_session: str, valuation_artifact: Mappin
 def attach_intrinsic_scenario_valuation(rows, inputs, *, assumption_config_identity=None):
     """Add conditional intrinsic/reverse context; preserve every relative method and verdict."""
     import copy
-    import intrinsic_valuation as intrinsic
+    import stocklookup_core.valuation.intrinsic_valuation as intrinsic
     result = copy.deepcopy(rows)
     for ticker, row in result.items():
         invalid_config = isinstance(assumption_config_identity, str) and ":INVALID:" in assumption_config_identity

@@ -24,7 +24,7 @@ from market_wide_current_fundamental_research import (
     PROVIDER_TIER,
     content_identity as fundamental_content_identity,
 )
-from market_wide_current_valuation_input_scaleout import official_research_universe_tickers
+from stocklookup_core.valuation.market_wide_current_valuation_input_scaleout import official_research_universe_tickers
 
 
 CONTRACT_VERSION = "current_financial_momentum_context/v1"

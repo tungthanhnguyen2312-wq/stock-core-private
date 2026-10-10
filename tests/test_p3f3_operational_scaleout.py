@@ -13,7 +13,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 import current_valuation_input_authority as authority
-import p3f_current_market_valuation as p3f_val
+import stocklookup_core.valuation.p3f_current_market_valuation as p3f_val
 import tools.run_p3f3_operational_valuation_input_scaleout as scaleout
 
 COHORT_TICKERS = ["GAS", "HPG", "NVL", "PAN", "POW", "PVD", "QNS", "SSI", "VCB", "VNM", "VRE"]

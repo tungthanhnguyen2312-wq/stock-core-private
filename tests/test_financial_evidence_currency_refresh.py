@@ -47,7 +47,7 @@ import canonical_daily_financial_v2_materialization as fin_v2_material
 import canonical_fact_store as fact_store
 from official_source_registry import ADMITTED, admit, load_registry
 import stocklookup_core.evidence.official_document_acquisition as acquirer
-import current_research_valuation_context as valuation
+import stocklookup_core.valuation.current_research_valuation_context as valuation
 import stocklookup_core.financial.financial_v2_current_input_authority as fin_v2
 
 ROOT = Path(__file__).resolve().parents[1]

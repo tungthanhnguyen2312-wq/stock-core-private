@@ -26,7 +26,7 @@ from market_wide_current_shares_resolver import (
     PROVIDER_SOURCE,
     SHARE_CHANGING_EVENT_CODES,
 )
-from market_wide_current_valuation_input_scaleout import official_research_universe_tickers
+from stocklookup_core.valuation.market_wide_current_valuation_input_scaleout import official_research_universe_tickers
 
 CONTRACT_VERSION = "current_common_shares_authority/v1"
 ARTIFACT_TYPE = "CURRENT_COMMON_SHARES_AUTHORITY"

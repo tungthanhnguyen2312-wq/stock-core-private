@@ -53,7 +53,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-import current_research_valuation_context as valuation_context  # noqa: E402
+import stocklookup_core.valuation.current_research_valuation_context as valuation_context  # noqa: E402
 import entity_classification_contract as entity_classification  # noqa: E402
 import exchange_industry_classification as industry_classification  # noqa: E402
 import stocklookup_core.financial.financial_analysis_engine_v2 as engine  # noqa: E402

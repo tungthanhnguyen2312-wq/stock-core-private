@@ -11,7 +11,7 @@ import current_research_decision_packet as packet
 import current_corporate_event_context as corporate
 import current_official_event_context as official
 from current_opportunity_prioritization import content_identity as opportunity_identity
-from market_wide_current_valuation_input_scaleout import _financial_input
+from stocklookup_core.valuation.market_wide_current_valuation_input_scaleout import _financial_input
 
 ROOT = Path(__file__).resolve().parents[1]
 SESSION = "2026-10-07"

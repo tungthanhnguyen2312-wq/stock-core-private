@@ -79,7 +79,7 @@ def test_later_known_note_cannot_enter_completed_cutoff_or_historical_point_sess
 
 
 def test_historical_observation_reaches_consumers_with_exact_gap_and_no_current_valuation():
-    from market_wide_current_valuation_input_scaleout import _share_from_authority_record
+    from stocklookup_core.valuation.market_wide_current_valuation_input_scaleout import _share_from_authority_record
     from current_research_decision_packet import _valuation
     from ai_research_session_delivery import _valuation_handoff
     o = observation()

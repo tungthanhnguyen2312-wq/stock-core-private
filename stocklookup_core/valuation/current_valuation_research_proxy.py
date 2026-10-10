@@ -3,7 +3,7 @@ from __future__ import annotations
 import json,hashlib
 from pathlib import Path
 from collections import Counter
-ROOT=Path(__file__).resolve().parent
+ROOT=Path(__file__).resolve().parents[2]
 INPUT=ROOT/'operations-review/market-wide-current-valuation-research-scaleout-v1/market_wide_current_valuation_artifact.json'
 FUNDAMENTAL=ROOT/'operations-review/fundamental-cross-sectional-scoring-and-ranking-v1-20260828/artifact.json'
 SIZE_METRICS={"proxy_market_cap","proxy_EV"}

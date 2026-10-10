@@ -13,7 +13,7 @@ if str(ROOT) not in sys.path:
 
 from field_temporal_contract import stable_id  # noqa: E402
 import mva_provider_share_proxy as m  # noqa: E402
-import p3f_current_market_valuation as p3f  # noqa: E402
+import stocklookup_core.valuation.p3f_current_market_valuation as p3f  # noqa: E402
 import tools.run_p3f6_mva_provider_share_proxy as runner  # noqa: E402
 
 

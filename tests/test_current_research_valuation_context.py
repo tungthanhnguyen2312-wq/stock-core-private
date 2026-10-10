@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import pytest
 
-from current_research_valuation_context import (
+from stocklookup_core.valuation.current_research_valuation_context import (
     AVAILABLE_QUALIFIED, AVAILABLE_REFERENCE_ONLY, ENGINE_PEER_FEATURES, ENTITY_CLASS_COHORT_LEVEL,
     EV_EBITDA, EV_EBITDA_CALC_READY, INPUT_BLOCKED, NOT_AVAILABLE,
     NOT_APPLICABLE, PE_NOT_MEANINGFUL, PE_TTM, PS_TTM, RELATIVE_METHODS, SECTOR_COHORT_LEVEL,

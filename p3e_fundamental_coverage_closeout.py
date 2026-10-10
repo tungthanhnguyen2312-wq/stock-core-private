@@ -15,7 +15,7 @@ from stocklookup_core.financial.multi_period_financial_panel import (
     load_all_authoritative_citations,
     load_promoted_fundamental_coverage_closeout_citations,
 )
-from valuation_input_readiness import evaluate_valuation_input_readiness
+from stocklookup_core.valuation.valuation_input_readiness import evaluate_valuation_input_readiness
 
 SCHEMA_VERSION = "1.0.0"
 CONTRACT_VERSION = "p3e_fundamental_coverage_closeout/v1"

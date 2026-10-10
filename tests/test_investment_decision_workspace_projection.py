@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from current_valuation_opportunity_integration import build_artifacts as build_opportunity_artifacts
+from stocklookup_core.valuation.current_valuation_opportunity_integration import build_artifacts as build_opportunity_artifacts
 from investment_decision_workspace_projection import (
     InvestmentDecisionWorkspaceError, RELATIVE_VALUATION_LABELS, content_identity,
 )

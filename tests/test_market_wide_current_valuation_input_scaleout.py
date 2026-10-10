@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 
-from market_wide_current_valuation_input_scaleout import (
+from stocklookup_core.valuation.market_wide_current_valuation_input_scaleout import (
     attach_shadow_proxy_valuation,
     build_current_valuation_artifact,
     content_identity,
@@ -147,7 +147,7 @@ def test_cross_currency_financial_inputs_fail_closed_instead_of_emitting_a_multi
 
 
 def test_market_cap_monetary_basis_present_even_when_blocked():
-    from market_wide_current_valuation_input_scaleout import _market_cap_monetary_basis
+    from stocklookup_core.valuation.market_wide_current_valuation_input_scaleout import _market_cap_monetary_basis
     stale = _artifact()["records"]["STALE"]["metrics"]["market_cap"]
     assert stale["status"] == "BLOCKED"
     assert stale["monetary_basis_status"] == "UNKNOWN"
@@ -160,7 +160,7 @@ def test_market_cap_monetary_basis_present_even_when_blocked():
 
 
 def test_market_cap_monetary_basis_uses_applied_dnse_contract_and_share_count():
-    import market_wide_current_valuation_input_scaleout as scaleout
+    import stocklookup_core.valuation.market_wide_current_valuation_input_scaleout as scaleout
     proven_price = {"currency": "VND", "price_unit": "vnd_per_share",
                     "price_representation": {"contract_id": "DNSE:ohlc_1D:VN_LISTED_EQUITY:kvnd_to_vnd/v1",
                                              "canonical_unit": "vnd_per_share"}}
@@ -444,7 +444,7 @@ def test_no_network_in_valuation_session_native_path():
     root = Path(__file__).resolve().parents[1]
     banned = ("urllib", "requests", "http.client", "dnse_access", "fetch_capability_raw")
     for rel in (
-        "market_wide_current_valuation_input_scaleout.py",
+        "stocklookup_core/valuation/market_wide_current_valuation_input_scaleout.py",
         "tools/derive_market_wide_current_valuation_input_scaleout.py",
         "ai_research_session_delivery.py",
     ):

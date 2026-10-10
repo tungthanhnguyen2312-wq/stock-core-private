@@ -17,7 +17,7 @@ from current_common_shares_authority import (
 from current_official_market_universe import _identity as official_identity
 from field_temporal_contract import stable_id
 from market_wide_current_fundamental_research import content_identity as fundamental_content_identity
-from market_wide_current_valuation_input_scaleout import (
+from stocklookup_core.valuation.market_wide_current_valuation_input_scaleout import (
     build_current_valuation_artifact,
     content_identity,
     official_research_universe_tickers,

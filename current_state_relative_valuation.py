@@ -159,7 +159,7 @@ from dnse_current_state_price_analytics import (
     STATUS_QUALIFIED as DNSE_PRICE_STATUS_QUALIFIED,
     build_current_state_price_analytics_from_evidence_store,
 )
-from relative_valuation import _number as _rv_number, _qualified as _rv_qualified
+from stocklookup_core.valuation.relative_valuation import _number as _rv_number, _qualified as _rv_qualified
 from semantic_evidence_bridge import load_verified_share_basis
 from share_transition_bridge import resolve_share_transition
 

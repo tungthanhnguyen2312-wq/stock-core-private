@@ -24,7 +24,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 import canonical_daily_financial_v2_materialization as fin_v2_material
-import current_research_valuation_context as valuation_context
+import stocklookup_core.valuation.current_research_valuation_context as valuation_context
 import daily_session_level2_package as level2
 import stocklookup_core.financial.financial_v2_current_input_authority as financial_authority
 from operational_fundamental_context_integration import MAX_COMPLETED_QUARTER_LAG

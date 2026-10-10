@@ -5,7 +5,10 @@ Branch: `refactor/financial-research-package-v1-20261010`.
 Starting released main: `288744eef54ef4b6ca8701a02e80537a406d65b6`.
 One writer in the dedicated financial package checkout; the original checkout and
 its untracked data, retained evidence and production runtime are preserved.
-Native state is ACTIVE pending owner release approval, not COMPLETE.
+Released: owner approved exact HEAD `70499f8b770c5dcc68ca40d993381055f25c0d66`;
+PR108 merged at `0afad0fa8d721f8f1e44ca1ccc8a59b0a2d4eed4`. All four PR CI
+jobs (38026298202) and all four post-merge jobs (38033939795) succeeded.
+Native admission of the valuation successor reconciles this milestone COMPLETE.
 
 ## Selected work and authorization
 

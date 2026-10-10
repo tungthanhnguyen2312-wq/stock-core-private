@@ -1,5 +1,5 @@
 import unittest
-from intrinsic_valuation import evaluate_intrinsic_valuation as e
+from stocklookup_core.valuation.intrinsic_valuation import evaluate_intrinsic_valuation as e
 def r(m,v):return {"canonical_metric":m,"value":v,"quality_state":"available","statement_scope":"consolidated","period_identity":{"period":"2025","period_type":"annual"}}
 def x():
  f={m:r(m,v) for m,v in {"operating_cash_flow":100,"capital_expenditure":20,"total_debt":10,"cash_and_equivalents":5,"current_assets":100,"receivables":10,"inventory":20,"total_liabilities":50}.items()};return {"financial":f,"share_count":{"value":10,"semantics":"basic"},"current_price_actionable":True,"fcff_assumptions":{"wacc":.1,"wacc_source":"x","terminal_growth":.03,"terminal_growth_source":"x","forecast_fcff":80,"forecast_fcff_source":"x"}}

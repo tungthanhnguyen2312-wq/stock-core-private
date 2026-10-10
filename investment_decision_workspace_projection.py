@@ -22,7 +22,7 @@ import json
 from collections import Counter
 from typing import Any, Mapping
 
-from current_research_valuation_context import RELATIVE_METHODS
+from stocklookup_core.valuation.current_research_valuation_context import RELATIVE_METHODS
 import current_research_official_universe_scope as current_research_official_universe_scope_module
 import velocity_flow_price_presentation_projection as velocity_flow_price
 import integrated_investment_decision_product as integrated_decision_module

@@ -13,7 +13,7 @@ ENTRYPOINTS = (
     "stocklookup", "tools.run_owner_daily", "canonical_daily_operation",
     "canonical_post_close_pipeline", "daily_session_level2_package",
     "canonical_daily_financial_v2_materialization", "current_research_decision_input",
-    "current_research_valuation_context", "current_corporate_event_context",
+    "stocklookup_core.valuation.current_research_valuation_context", "current_corporate_event_context",
     "official_liquidity_market_wide", "prospective_pit_evidence_analysis",
     "dnse_prospective_pit_shadow", "execution_capacity_research", "portfolio_aware_decision",
     "tools.run_market_wide_current_technical_coverage_scaleout",

@@ -7,7 +7,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from market_wide_implied_growth_reverse_valuation_research import build_artifact
+from stocklookup_core.valuation.market_wide_implied_growth_reverse_valuation_research import build_artifact
 
 
 def _load(path: Path | None) -> dict:

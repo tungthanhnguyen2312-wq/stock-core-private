@@ -22,7 +22,7 @@ import market_wide_fundamental_feature_store as feature_store
 import operational_fundamental_context_integration as bridge
 import same_session_technical_coverage_disposition as disposition_module
 from _integrated_decision_fixture import disposition_artifact, disposition_record
-from current_research_valuation_context import evaluate_ticker_valuation, readiness_period_blocker
+from stocklookup_core.valuation.current_research_valuation_context import evaluate_ticker_valuation, readiness_period_blocker
 from tools import current_research_capability_map as capability
 
 SESSION = "2026-09-24"

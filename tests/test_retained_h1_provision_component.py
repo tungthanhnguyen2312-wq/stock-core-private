@@ -95,7 +95,7 @@ def test_pnj_review_emphasis_is_retained_literally_without_interpretation():
 
 def test_later_known_components_respect_completed_session_cutoff():
     import market_wide_current_fundamental_research as fundamental
-    from market_wide_current_valuation_input_scaleout import _financial_input
+    from stocklookup_core.valuation.market_wide_current_valuation_input_scaleout import _financial_input
     from tests.test_current_official_evidence_projection import ROOT, baseline
     rows = [json.loads(line) for line in (ROOT / "derived/financial-evidence-currency-refresh-v1/qualified_official_facts.jsonl")
             .read_text(encoding="utf8").splitlines()]

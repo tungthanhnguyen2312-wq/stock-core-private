@@ -35,7 +35,7 @@ from historical_matched_trading_value_authority import (
     reconcile_expected_session_grid,
     trailing_expected_sessions,
 )
-from market_wide_current_valuation_input_scaleout import official_research_universe_tickers
+from stocklookup_core.valuation.market_wide_current_valuation_input_scaleout import official_research_universe_tickers
 
 ARTIFACT_DIR = ROOT / "operations-review" / "fhsc-historical-matched-value-coverage-scaleout-v1"
 RAW_DIR = ARTIFACT_DIR / "raw"

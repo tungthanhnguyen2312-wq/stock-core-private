@@ -8,8 +8,8 @@ from unittest import mock
 
 import semantic_evidence_bridge as bridge
 from export_ai_bundle import _net_net_share_count
-from intrinsic_valuation import evaluate_intrinsic_valuation
-from relative_valuation import evaluate_relative_valuation
+from stocklookup_core.valuation.intrinsic_valuation import evaluate_intrinsic_valuation
+from stocklookup_core.valuation.relative_valuation import evaluate_relative_valuation
 
 
 def _hash(value):

@@ -10,7 +10,7 @@ import hashlib
 import json
 from typing import Any, Mapping
 
-from current_valuation_denominator_integrity import classify_claim
+from stocklookup_core.valuation.current_valuation_denominator_integrity import classify_claim
 
 CONTRACT_VERSION = "human_ai_decision_evidence_packet/v2"
 SECTIONS = ("market", "stock", "tactical", "comparison", "uncertainty", "history", "counter_thesis")

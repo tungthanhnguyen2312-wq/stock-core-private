@@ -28,7 +28,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 import current_market_sector_leadership_context as sector_context
-import current_research_valuation_context as valuation_context
+import stocklookup_core.valuation.current_research_valuation_context as valuation_context
 import entity_classification_contract as entity_classification
 import exchange_industry_classification as industry_classification
 import export_ai_bundle as eab

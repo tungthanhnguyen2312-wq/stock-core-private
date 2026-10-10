@@ -1660,7 +1660,7 @@ def build_ticker_integrated_decision(
 
     # Non-voting R5 projection. Forward events are evidence for review, never numeric forecasts.
     if "intrinsic_scenario_valuation" in valuation:
-        import intrinsic_valuation as intrinsic
+        import stocklookup_core.valuation.intrinsic_valuation as intrinsic
         valuation = {**valuation, "intrinsic_scenario_valuation": intrinsic.bind_forward_driver_explanation(
             valuation["intrinsic_scenario_valuation"], corporate_intelligence_summary.get("forward_driver_context"),
             ticker=ticker, session=as_of_session)}
@@ -2298,7 +2298,7 @@ def build_artifact(
         rec["corporate_intelligence_context"]["forward_driver_context"] for rec in records.values()
     ])
     if any("intrinsic_scenario_valuation" in rec for rec in records.values()):
-        import intrinsic_valuation as intrinsic
+        import stocklookup_core.valuation.intrinsic_valuation as intrinsic
         coverage["intrinsic_scenario_valuation"] = intrinsic.current_scenario_coverage(
             [rec["intrinsic_scenario_valuation"] for rec in records.values() if "intrinsic_scenario_valuation" in rec])
     if coverage["no_current_evidence_wait_count"]:

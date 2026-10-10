@@ -1,4 +1,4 @@
-from current_valuation_research_proxy import RELATIVE_MULTIPLES
+from stocklookup_core.valuation.current_valuation_research_proxy import RELATIVE_MULTIPLES
 
 def test_market_cap_and_ev_are_size_context_not_relative_value_multiples():
     assert "proxy_market_cap" not in RELATIVE_MULTIPLES

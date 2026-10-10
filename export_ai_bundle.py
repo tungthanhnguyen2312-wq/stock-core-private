@@ -93,8 +93,8 @@ from semantic_evidence_bridge import enrich_canonical_records, reconcile_metric_
 from altman_z_score import evaluate_altman_z_score
 from financial_mapping import get_default_registry
 from fundamental_quality import evaluate_fundamental_quality, reconcile_legacy_fundamental_quality_with_qualified_evidence
-from relative_valuation import evaluate_relative_valuation
-from intrinsic_valuation import evaluate_intrinsic_valuation
+from stocklookup_core.valuation.relative_valuation import evaluate_relative_valuation
+from stocklookup_core.valuation.intrinsic_valuation import evaluate_intrinsic_valuation
 from scenario_analysis import evaluate_scenario_analysis
 from historical_decision_analysis import evaluate_historical_decision_analysis, PILOT_TICKERS
 from qualified_historical_fundamental_analytics import build_comparative_matrix, merge_official_annual_facts
@@ -184,7 +184,7 @@ from current_market_screening_opportunity_comparison_foundation import (
 from market_wide_current_fundamental_research import (
     content_identity as market_wide_current_fundamental_research_content_identity,
 )
-from market_wide_current_valuation_input_scaleout import (
+from stocklookup_core.valuation.market_wide_current_valuation_input_scaleout import (
     content_identity as market_wide_current_valuation_content_identity,
 )
 from sector_aware_relative_research import (

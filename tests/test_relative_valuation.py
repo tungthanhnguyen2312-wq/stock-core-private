@@ -1,5 +1,5 @@
 import unittest
-from relative_valuation import evaluate_relative_valuation
+from stocklookup_core.valuation.relative_valuation import evaluate_relative_valuation
 
 def r(metric, value, period="2025", scope="consolidated", kind="annual"):
  return {"canonical_metric":metric,"value":value,"quality_state":"available","statement_scope":scope,"period_identity":{"period":period,"period_type":kind}}

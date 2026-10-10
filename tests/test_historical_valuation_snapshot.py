@@ -1,5 +1,5 @@
 import unittest
-from historical_valuation_snapshot import build_snapshot,replay
+from stocklookup_core.valuation.historical_valuation_snapshot import build_snapshot,replay
 class T(unittest.TestCase):
  def x(self,bank=False):return {"ticker":"VCB" if bank else "HPG","entity_type":"bank" if bank else "corporate","financial_period":"2024","publication_cutoff":"2025-03-01","price_date":"2025-03-02","price":10,"shares":100,"financial":{"net_income":20,"equity":50,"sales":100,"ebitda":25},"citations":["c"],"source_hashes":["h"]}
  def test_bank_gate_lineage_and_determinism(self):

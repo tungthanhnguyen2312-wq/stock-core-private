@@ -27,6 +27,7 @@ The owner admitted [root structure simplification](repository_root_structure_sim
 after semantic corrective PR105. Landing acquisition code is in `stocklookup_core/acquisition/`;
 official document evidence and temporal receipts are in `stocklookup_core/evidence/`.
 Financial panels, Financial V2 and fundamental research are in `stocklookup_core/financial/`.
+Valuation calculations, peers and current-input scaleout are in `stocklookup_core/valuation/`.
 Thesis adapters, matrix, sidecars and runtime are in `stocklookup_core/research/`;
 their existing child tools retain their paths and resolve the repository source root.
 The existing offline `official_document_acquisition.py` CLI is a small compatibility launcher.
@@ -147,7 +148,7 @@ and [acceptance](internal/R6_PROSPECTIVE_LEARNING_ACCEPTANCE.json).
 
 ### 8. Valuation / Opportunity Integration
 - **Responsibility:** Multi-method valuation metrics, peer-relative percentiles, opportunity context join, and governed research candidate stance assignment.
-- **Primary Entry Module:** [`current_valuation_opportunity_integration.py`](../current_valuation_opportunity_integration.py)
+- **Primary Entry Module:** [`current_valuation_opportunity_integration.py`](../stocklookup_core/valuation/current_valuation_opportunity_integration.py)
 - **Key Output Contract:** `opportunity_context/v1` and `security_decision_context/v1` (`current_valuation_opportunity_integration_artifact.json`).
 
 ### 9. Investment Decision Workspace

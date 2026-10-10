@@ -12,7 +12,7 @@ from __future__ import annotations
 import inspect
 
 import current_thesis_case_context as tcc
-import current_valuation_opportunity_integration as cvoi
+import stocklookup_core.valuation.current_valuation_opportunity_integration as cvoi
 
 
 SESSION = "2026-09-11"
