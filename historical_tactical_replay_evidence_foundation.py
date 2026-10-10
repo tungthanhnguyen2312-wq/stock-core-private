@@ -22,7 +22,7 @@ import market_wide_current_fundamental_research as fundamental_module
 from market_regime_breadth_context import _descriptor
 from mva_daily_research_bundle import LOOKBACK_SESSIONS, market_features
 import tactical_reversal_retrospective_validation as retained_replay
-import watchlist_tactical_entry_classifier as classifier
+import stocklookup_core.tactical.watchlist_tactical_entry_classifier as classifier
 
 
 CONTRACT_VERSION = "historical_tactical_replay_evidence_foundation/v1"

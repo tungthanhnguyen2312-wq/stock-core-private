@@ -10,7 +10,7 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import daily_session_level2_package as paths_module
 import stocklookup_core.decision.integrated_investment_decision_product as product
-import market_wide_relative_volume_research as participation
+import stocklookup_core.tactical.market_wide_relative_volume_research as participation
 import stocklookup_core.financial.financial_analysis_product_projection as financial_projection
 import canonical_daily_financial_v2_materialization as financial_materialization
 import operational_fundamental_context_integration as operational

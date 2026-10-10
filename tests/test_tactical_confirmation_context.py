@@ -12,7 +12,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-import tactical_confirmation_context as confirmation
+import stocklookup_core.tactical.tactical_confirmation_context as confirmation
 
 
 def _structure(*, eligible=True, market_structure_state=None, breakout_state_v3=None, breakout_event=None, base_status=None) -> dict:

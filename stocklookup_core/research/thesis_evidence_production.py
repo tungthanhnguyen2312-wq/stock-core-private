@@ -177,7 +177,7 @@ def build(*,root,output_root,session,stage,decision_path=None,technical_path=Non
                     for line in iter(lambda:source.readline(16*1024*1024+1),""):
                         if len(line)>16*1024*1024:raise ValueError("THESIS_SOURCE_MEMBER_LIMIT")
                         row=json.loads(line);context=row["contextual_technical"]
-                        import contextual_technical_dispatch as dispatch
+                        import stocklookup_core.tactical.contextual_technical_dispatch as dispatch
                         dispatch.verify_context(context,ticker=row["ticker"],session=session)
                         context_digest.update(c.canonical([row["ticker"],context["contract_version"],context["artifact_identity"]]).encode())
                         put(kind,row["ticker"],context)
@@ -187,7 +187,7 @@ def build(*,root,output_root,session,stage,decision_path=None,technical_path=Non
                     if kind=="technical":
                         context=row.get("contextual_technical")
                         if context:
-                            import contextual_technical_dispatch as dispatch
+                            import stocklookup_core.tactical.contextual_technical_dispatch as dispatch
                             dispatch.verify_context(context,ticker=t,session=session)
                             context_digest.update(c.canonical([t,context["contract_version"],context["artifact_identity"]]).encode());put(kind,t,context)
                     else:put(kind,t,row)

@@ -135,7 +135,7 @@ def test_context_never_direction(axis,sub):
 def test_actual_technical_v1_v2_dispatch(version):
     from test_technical_volume_flow_v2 import context
     import contextual_technical_features as v1
-    import contextual_technical_features_v2 as v2
+    import stocklookup_core.tactical.contextual_technical_features_v2 as v2
     inputs=context(v1 if version==1 else v2)
     records=a.adapt_technical(inputs)
     assert len(records)==18 and all(i["knowledge_stage"]=="POST_T0_ENRICHED" for i in records)
@@ -160,7 +160,7 @@ def test_actual_foreign_fact_only(net,state,unknown):
 
 def test_registry_matches_current_main_closed_vocabularies():
     import stocklookup_core.financial.fundamental_signal_consumption_contract as fundamental
-    import tactical_confirmation_context as confirmation
+    import stocklookup_core.tactical.tactical_confirmation_context as confirmation
     import technical_relationship_view as bridge
     assert set(a.FUNDAMENTAL)==set(product.FUNDAMENTAL_STATES)
     assert set(a.AVAILABILITY)==set(fundamental.EVIDENCE_AVAILABILITY_STATES)

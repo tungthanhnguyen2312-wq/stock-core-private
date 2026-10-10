@@ -7,8 +7,8 @@ from pathlib import Path
 import pytest
 import canonical_market_bars as bars
 import contextual_technical_features as v1
-import contextual_technical_features_v2 as v2
-import contextual_technical_dispatch as dispatch
+import stocklookup_core.tactical.contextual_technical_features_v2 as v2
+import stocklookup_core.tactical.contextual_technical_dispatch as dispatch
 import technical_relationship_view as view
 import volume_and_flow_context as f1
 import volume_and_flow_context_v2 as f2

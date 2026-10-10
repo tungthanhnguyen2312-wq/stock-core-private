@@ -22,7 +22,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 import technical_structure_context as tsc
-import market_structure_breakout_product_projection as msb_proj
+import stocklookup_core.tactical.market_structure_breakout_product_projection as msb_proj
 
 DEFAULT_DESCRIPTIVE = Path("C:/Projects/StockLookup/stock-core-private/operations-review/market-wide-current-descriptive-research-v1-20260828/market_wide_current_descriptive_research_artifact.json")
 DEFAULT_P3F9B = Path("C:/Projects/StockLookup/stock-core-private/operations-review/p3f9b-market-wide-exact-session-scaleout-20260828/p3f9b_mva_exact_session_snapshot.json")

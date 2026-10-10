@@ -9,7 +9,7 @@ import json
 from pathlib import Path
 import prospective_market_snapshot_contract as market
 import prospective_decision_retention as retention
-import contextual_technical_dispatch as dispatch
+import stocklookup_core.tactical.contextual_technical_dispatch as dispatch
 from atomic_io import retain_immutable_bytes
 
 CONTRACT_VERSION = "prospective_t0_seal_index/v1"

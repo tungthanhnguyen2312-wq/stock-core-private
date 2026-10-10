@@ -14,7 +14,7 @@ from pathlib import Path
 
 import market_wide_current_technical_coverage_scaleout as recovery_module
 import session_bar_integrity as integrity
-import tactical_reference_window as window
+import stocklookup_core.tactical.tactical_reference_window as window
 import technical_structure_context as structure_module
 from test_session_bar_integrity import PRIOR, TARGET, _pipeline, _series, _with_copy_after
 
@@ -24,12 +24,12 @@ UP = [20.0 + 0.1 * i for i in range(60)]
 
 class SingleDuplicatePolicyTests(unittest.TestCase):
     def test_the_window_keeps_no_duplicate_rule_of_its_own(self) -> None:
-        source = (REPO / "tactical_reference_window.py").read_text(encoding="utf-8")
+        source = (REPO / "stocklookup_core/tactical/tactical_reference_window.py").read_text(encoding="utf-8")
         self.assertFalse(hasattr(window, "collapse_exact_duplicate_sessions"))
         self.assertNotIn("_DUPLICATE_IDENTITY_FIELDS", source)
         self.assertIn("session_bar_integrity.resolve_session_bars", source)
         self.assertEqual(window.INTEGRITY_BLOCKERS, frozenset({integrity.REFUSAL_REASON, window.BLOCKER_MIXED_PRICE_BASIS}))
-        momentum_source = (REPO / "tactical_momentum_context.py").read_text(encoding="utf-8")
+        momentum_source = (REPO / "stocklookup_core/tactical/tactical_momentum_context.py").read_text(encoding="utf-8")
         self.assertNotIn("collapse_exact_duplicate_sessions", momentum_source)
 
     def test_window_delegation_matches_the_shared_function_row_for_row(self) -> None:

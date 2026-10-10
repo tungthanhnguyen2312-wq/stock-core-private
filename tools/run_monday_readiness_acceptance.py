@@ -39,7 +39,8 @@ def run(primary, calendar_root, *, protected, report):
         "tests/test_thesis_evidence_matrix.py","contextual_technical_features.py","contextual_technical_features_v2.py",
         "volume_and_flow_context.py","technical_structure_context.py","prospective_decision_outcome_measurement.py",
         "integrated_decision_prospective_feedback.py","prospective_daily_rollforward.py")
-    frozen_hashes={name:hashlib.sha256((ROOT/name).read_text(encoding="utf-8").encode()).hexdigest() for name in frozen}
+    relocations=json.loads((ROOT/"config/repository_layout.json").read_text(encoding="utf-8"))["relocations"]
+    frozen_hashes={name:hashlib.sha256((ROOT/relocations.get(name,name)).read_text(encoding="utf-8").encode()).hexdigest() for name in frozen}
     for name,digest in frozen_hashes.items():
         baseline=subprocess.check_output(["git","show","97a19163f66f3d3d4f412e8bedeafbb47ea4bd25:"+name],cwd=ROOT)
         if hashlib.sha256(baseline.replace(b"\r\n",b"\n")).hexdigest()!=digest:raise ValueError("FROZEN_SOURCE_CHANGED:"+name)

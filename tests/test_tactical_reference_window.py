@@ -15,14 +15,14 @@ from datetime import date, timedelta
 from pathlib import Path
 
 import stocklookup_core.decision.current_market_screening_opportunity_comparison_foundation as screening_module
-import market_structure_breakout_product_projection as projection_module
+import stocklookup_core.tactical.market_structure_breakout_product_projection as projection_module
 import market_wide_current_descriptive_research as descriptive_module
 import market_wide_current_fundamental_research as fundamental_module
 import session_bar_integrity
-import tactical_momentum_context as momentum_module
-import tactical_reference_window as window
+import stocklookup_core.tactical.tactical_momentum_context as momentum_module
+import stocklookup_core.tactical.tactical_reference_window as window
 import technical_structure_context as structure_module
-import watchlist_tactical_entry_classifier as classifier_module
+import stocklookup_core.tactical.watchlist_tactical_entry_classifier as classifier_module
 from field_temporal_contract import stable_id
 from stocklookup_core.decision.integrated_investment_decision_product import decide_research_action_posture, evaluate_tactical_phase
 from market_wide_current_liquidity_research import content_identity as liquidity_content_identity
@@ -324,7 +324,7 @@ class PolicyInvarianceTests(unittest.TestCase):
 
     def test_posture_structure_and_priority_modules_do_not_use_the_reference_window(self) -> None:
         for name in ("stocklookup_core/decision/integrated_investment_decision_product.py", "technical_structure_context.py",
-                     "market_structure_breakout_product_projection.py", "daily_opportunity_decision_queue.py",
+                     "stocklookup_core/tactical/market_structure_breakout_product_projection.py", "daily_opportunity_decision_queue.py",
                      "stocklookup_core/decision/current_opportunity_prioritization.py"):
             with self.subTest(module=name):
                 self.assertNotIn("tactical_reference_window", (REPO / name).read_text(encoding="utf-8"))

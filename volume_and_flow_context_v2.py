@@ -10,7 +10,7 @@ from datetime import date, timedelta
 import prospective_market_snapshot_contract as market
 import canonical_market_bars as bars
 import technical_relationship_view as bridge
-import contextual_technical_dispatch as dispatch
+import stocklookup_core.tactical.contextual_technical_dispatch as dispatch
 from contextual_technical_primitives import USABLE, canonical_window_fitness, finite_number
 import volume_and_flow_context as frozen
 import dnse_foreign_flow_store as flow_store

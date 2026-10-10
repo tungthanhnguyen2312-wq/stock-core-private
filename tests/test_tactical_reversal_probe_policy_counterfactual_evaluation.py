@@ -9,7 +9,7 @@ from unittest import mock
 import historical_tactical_replay_evidence_foundation as foundation
 import tactical_reversal_probe_policy_counterfactual_evaluation as probe
 import tactical_reversal_retrospective_validation as validation
-import watchlist_tactical_entry_classifier as classifier
+import stocklookup_core.tactical.watchlist_tactical_entry_classifier as classifier
 
 
 def _row(session, *, rule_id, close, momentum_bucket=None, elevated_volume=None, return_1d=None, prior_row=None, prior_row_gap=False):

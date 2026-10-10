@@ -44,7 +44,7 @@ def rebuild_iid(source, session, metadata, touched, observe, live_sources):
         entity_applicability_artifact='current_research_entity_applicability')
     kwargs = {arg:load(paths[key]) for arg,key in mapping.items()}
     # Relative volume is an on-demand context, not the descriptive liquidity artifact.
-    import market_wide_relative_volume_research as rvol
+    import stocklookup_core.tactical.market_wide_relative_volume_research as rvol
     exact = load(paths['exact_session_snapshot'])
     requested = f'{session}T15:00:00+07:00'
     kwargs['relative_volume_artifact'] = rvol.build_artifact(candidates=sorted(exact['records']),

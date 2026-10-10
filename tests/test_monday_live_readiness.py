@@ -191,7 +191,7 @@ def test_harness_unknown_representation_never_opens(tmp_path,tier):
 
 def test_prior_volume_trajectory_uses_same_governed_primitive(monkeypatch):
     from test_contextual_technical_features import series,seal
-    import contextual_technical_features_v2 as v2
+    import stocklookup_core.tactical.contextual_technical_features_v2 as v2
     rows=series(45)
     rows[-1].update(period_start=DAY,period_end=DAY,first_trading_session=DAY,last_trading_session=DAY,
         constituent_sessions=[DAY],knowledge_available_at=DAY+"T09:00:00Z")

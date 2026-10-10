@@ -18,9 +18,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import stocklookup_core.decision.current_market_screening_opportunity_comparison_foundation as screening_module
 import current_market_sector_leadership_context as leadership_module
 import market_wide_current_descriptive_research as descriptive_module
-import tactical_setup_tags as tags_module
+import stocklookup_core.tactical.tactical_setup_tags as tags_module
 import technical_structure_context as structure
-import watchlist_tactical_entry_classifier as tactical_module
+import stocklookup_core.tactical.watchlist_tactical_entry_classifier as tactical_module
 from field_temporal_contract import stable_id
 
 SESSION = "2026-08-28"

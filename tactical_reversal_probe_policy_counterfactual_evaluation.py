@@ -29,7 +29,7 @@ from typing import Any, Callable, Mapping, Sequence
 import stocklookup_core.decision.current_market_screening_opportunity_comparison_foundation as screening_module
 import historical_tactical_replay_evidence_foundation as foundation
 import tactical_reversal_retrospective_validation as validation
-import watchlist_tactical_entry_classifier as classifier
+import stocklookup_core.tactical.watchlist_tactical_entry_classifier as classifier
 
 
 CONTRACT_VERSION = "tactical_reversal_probe_policy_counterfactual_evaluation/v1"

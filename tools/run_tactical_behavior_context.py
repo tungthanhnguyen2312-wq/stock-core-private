@@ -13,7 +13,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from tactical_behavior_context import build_artifact  # noqa: E402
+from stocklookup_core.tactical.tactical_behavior_context import build_artifact  # noqa: E402
 
 
 def run(*, tactical_path: Path, technical_structure_path: Path, setup_tags_path: Path,

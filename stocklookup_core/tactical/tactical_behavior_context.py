@@ -42,7 +42,7 @@ def content_identity(value: Mapping[str, Any]) -> dict[str, str]:
 
 
 def _verify(source: Mapping[str, Any], module_name: str, label: str) -> None:
-    module = __import__(module_name)
+    module = __import__(module_name, fromlist=["content_identity"])
     identity = module.content_identity(source)
     if source.get("artifact_sha256") != identity["artifact_sha256"]:
         raise TacticalBehaviorContextError(f"{label}_IDENTITY_MISMATCH")
@@ -151,11 +151,11 @@ def _record(*, ticker: str, session: str, tactical_record: Mapping[str, Any], st
 def build_artifact(*, tactical: Mapping[str, Any], technical_structure: Mapping[str, Any], tactical_setup_tags: Mapping[str, Any],
                    confirmation_invalidation_boundaries: Mapping[str, Any] | None, current_leadership: Mapping[str, Any] | None,
                    requested_at: str) -> dict[str, Any]:
-    _verify(tactical, "watchlist_tactical_entry_classifier", "TACTICAL")
-    _verify(technical_structure, "technical_structure_context", "TECHNICAL_STRUCTURE")
-    _verify(tactical_setup_tags, "tactical_setup_tags", "SETUP_TAGS")
+    _verify(tactical, 'stocklookup_core.tactical.watchlist_tactical_entry_classifier', "TACTICAL")
+    _verify(technical_structure, 'technical_structure_context', "TECHNICAL_STRUCTURE")
+    _verify(tactical_setup_tags, 'stocklookup_core.tactical.tactical_setup_tags', "SETUP_TAGS")
     if confirmation_invalidation_boundaries is not None:
-        _verify(confirmation_invalidation_boundaries, "tactical_confirmation_invalidation_boundaries", "BOUNDARIES")
+        _verify(confirmation_invalidation_boundaries, 'stocklookup_core.tactical.tactical_confirmation_invalidation_boundaries', "BOUNDARIES")
     if current_leadership is not None:
         _verify(current_leadership, "current_market_sector_leadership_context", "LEADERSHIP")
 

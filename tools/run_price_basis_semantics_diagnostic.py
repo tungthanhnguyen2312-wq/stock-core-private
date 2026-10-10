@@ -21,7 +21,7 @@ if str(ROOT) not in sys.path:
 import daily_producer_pipeline as producer  # noqa: E402
 import daily_research_session_operations as session_operations  # noqa: E402
 import price_basis_feature_fitness as basis  # noqa: E402
-import technical_structure_context  # noqa: E402
+import technical_structure_context as technical_structure_context  # noqa: E402
 
 
 REPRESENTATIVE_TICKERS = ("SSI", "PNJ", "PAN")

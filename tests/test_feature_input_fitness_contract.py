@@ -18,7 +18,7 @@ import feature_input_fitness_contract as fitness
 import stocklookup_core.financial.financial_entity_applicability as financial_entity_applicability
 import monetary_basis_contract
 import multi_source_market_evidence_contract
-import technical_structure_context
+import technical_structure_context as technical_structure_context
 
 
 class RegistryShapeTests(unittest.TestCase):

@@ -11,7 +11,7 @@ import time
 import prospective_market_snapshot_contract as market
 import prospective_pit_capture as capture
 import prospective_pit_capture_retention as capture_store
-import contextual_technical_dispatch as technical
+import stocklookup_core.tactical.contextual_technical_dispatch as technical
 import volume_and_flow_context_v2 as flow
 from governed_session_chain import are_consecutive_governed_sessions
 

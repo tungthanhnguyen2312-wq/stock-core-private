@@ -1,8 +1,8 @@
 """Normal paired retained routing, explicit compatibility and production construction."""
 import json
 import pytest
-import contextual_technical_dispatch as dispatch
-import contextual_technical_features_v2 as technical
+import stocklookup_core.tactical.contextual_technical_dispatch as dispatch
+import stocklookup_core.tactical.contextual_technical_features_v2 as technical
 import volume_and_flow_context_v2 as flow
 import volume_and_flow_retained as old_adapter
 import volume_and_flow_retained_v2 as adapter

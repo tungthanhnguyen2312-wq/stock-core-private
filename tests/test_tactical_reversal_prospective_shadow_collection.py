@@ -323,6 +323,7 @@ class ProductionSurfaceUnchangedGuardTests(unittest.TestCase):
 
     FORBIDDEN_IMPORTS = (
         "import watchlist_tactical_entry_classifier",
+        "import stocklookup_core.tactical.watchlist_tactical_entry_classifier",
         "import canonical_daily_operation",
         "import daily_producer_pipeline",
         "import canonical_post_close_pipeline",

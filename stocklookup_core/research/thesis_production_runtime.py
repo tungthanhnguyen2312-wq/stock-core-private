@@ -19,7 +19,7 @@ def _identity(value,*,kind):
 
 def run_component(root,session,*,stage,snapshot_binding=None,output_root=None,decision_path=None,
                   technical_path=None,flow_path=None,observer_identities=None,origin="SEAL_TIME",diagnostic=False):
-    from contextual_technical_dispatch import PRODUCTION_V2_START_SESSION
+    from stocklookup_core.tactical.contextual_technical_dispatch import PRODUCTION_V2_START_SESSION
     if session<PRODUCTION_V2_START_SESSION and not diagnostic:return {"status":"NOT_APPLICABLE","reason":"PRE_STAGE_2_PRODUCTION_COHORT","session":session}
     if not AUTOMATIC_HOOK_ENABLED and not diagnostic:return {"status":"UNAVAILABLE","reason":"AUTOMATIC_THESIS_HOOK_DISABLED_FAIL_SOFT","session":session}
     root=Path(root);output_root=Path(output_root or root);binding=snapshot_binding or {}

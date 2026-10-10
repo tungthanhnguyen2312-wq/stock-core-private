@@ -524,10 +524,10 @@ def _patch_daily_enrichment(monkeypatch: pytest.MonkeyPatch, tmp_path: Path, *, 
     import canonical_post_close_pipeline as cpc
     import daily_session_level2_package as level2
     import stocklookup_core.financial.financial_v2_current_input_authority as fin_authority
-    import market_structure_breakout_product_projection as msb
-    import market_wide_relative_volume_research as rvol
-    import tactical_confirmation_context as confirmation
-    import tactical_momentum_context as momentum
+    import stocklookup_core.tactical.market_structure_breakout_product_projection as msb
+    import stocklookup_core.tactical.market_wide_relative_volume_research as rvol
+    import stocklookup_core.tactical.tactical_confirmation_context as confirmation
+    import stocklookup_core.tactical.tactical_momentum_context as momentum
     import technical_structure_context as tsc
 
     tickers = ["BNK", "COR"]

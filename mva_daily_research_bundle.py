@@ -21,7 +21,7 @@ from field_temporal_contract import stable_id
 from market_data_contracts import FeatureStatus
 import mva_provider_share_proxy as proxy
 import session_bar_integrity
-import tactical_reference_window as reference_window
+import stocklookup_core.tactical.tactical_reference_window as reference_window
 
 SCHEMA_VERSION = "1.0.0"
 CONTRACT_VERSION = "p3f7_mva_daily_research_bundle/v1"

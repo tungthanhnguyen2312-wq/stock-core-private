@@ -32,7 +32,8 @@ stock-core/
 │  ├─ research/     # independent thesis research
 │  ├─ financial/    # panels, Financial V2 and fundamental research
 │  ├─ valuation/    # calculations, peers and current-input scaleout
-│  └─ decision/     # decision inputs, contexts, packets, brief and workspace
+│  ├─ decision/     # decision inputs, contexts, packets, brief and workspace
+│  └─ tactical/     # tactical contexts and V2 dispatch; frozen foundation stays root
 ├─ tools/           # existing operator and developer launchers
 ├─ tests/
 ├─ contracts/
@@ -143,6 +144,10 @@ admits [valuation research package V1](valuation_research_package_v1_contract.md
 11 implementations, 554 → 543 root Python files (PR109 released). Standing admission
 then selects [decision research package V1](decision_research_package_v1_contract.md):
 16 implementations, 543 → 527 root Python files (69 cumulative implementations in
-packages, net 68 fewer root Python files). This remains source layout only.
+packages, net 68 fewer root Python files; PR110 released). Standing admission then
+selects [tactical research package V1](tactical_research_package_v1_contract.md):
+11 implementations, 527 → 516 root Python files (80 cumulative implementations,
+net 79 fewer root Python files). Frozen producer/dependency exclusions are explicit.
+This remains source layout only.
 Successors need explicit native scope admission under that standing authorization;
 merge, production execution and authority promotion keep their separate owner gates.
