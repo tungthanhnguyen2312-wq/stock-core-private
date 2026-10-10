@@ -7,11 +7,11 @@ import unittest
 from datetime import datetime, timezone
 from pathlib import Path
 
-from acquisition_landing_checkpoint import load_content_manifest, process_batch
-from acquisition_landing_contract import AcquisitionSpec
+from stocklookup_core.acquisition.acquisition_landing_checkpoint import load_content_manifest, process_batch
+from stocklookup_core.acquisition.acquisition_landing_contract import AcquisitionSpec
 from dnse_prospective_pit_shadow import build_observation
 from kbs_quarterly_financial_retention import metadata_rows
-from temporal_retention import (
+from stocklookup_core.evidence.temporal_retention import (
     capture_raw_receipt,
     capture_with_clock,
     merge_identical_reobservation,

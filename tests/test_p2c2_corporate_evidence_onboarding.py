@@ -6,6 +6,7 @@ import ast
 import json
 from pathlib import Path
 import unittest
+import pytest
 
 from tools.run_p2c2_corporate_evidence_onboarding import (
     ACTIVE_COHORT,
@@ -17,7 +18,7 @@ from tools.run_p2c2_corporate_evidence_onboarding import (
     generate_readiness_report,
 )
 from official_source_registry import ADMITTED, admit, load_registry
-from official_document_qualification import QUALIFICATION_SUCCESS_STATUS, qualify_retained_document
+from stocklookup_core.evidence.official_document_qualification import QUALIFICATION_SUCCESS_STATUS, qualify_retained_document
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
@@ -96,6 +97,7 @@ class TestP2C2CorporateEvidenceOnboarding(unittest.TestCase):
                 f"Prohibited financial value {lit} found hardcoded in production runner!",
             )
 
+    @pytest.mark.retained_evidence("operations-review/governed-official-evidence-v1/official_document_acquisition_manifest.json")
     def test_document_qualification_criteria(self):
         """Retained official documents meet strict audited annual consolidated criteria."""
         manifest_path = self.evidence_root / "official_document_acquisition_manifest.json"
@@ -117,6 +119,7 @@ class TestP2C2CorporateEvidenceOnboarding(unittest.TestCase):
             self.assertEqual(qual.audit_status, "audited")
             self.assertEqual(qual.periodicity, "annual")
 
+    @pytest.mark.retained_evidence("operations-review/governed-official-evidence-v1/official_document_acquisition_manifest.json", "derived/annual_financial_ocr_materialization_v1/gas-fy2025.json", "derived/annual_financial_ocr_materialization_v1/vre-fy2025.json")
     def test_end_to_end_onboarding_and_zero_ticker_materializers(self):
         """End-to-end execution onboards GAS and VRE with zero ticker-specific materializers."""
         result = execute_p2c2_onboarding(
@@ -154,6 +157,7 @@ class TestP2C2CorporateEvidenceOnboarding(unittest.TestCase):
         self.assertEqual(result["issuer_results"]["MWG"]["terminal_state"], "NOT_READY_REDIRECT_CHAIN")
         self.assertEqual(result["issuer_results"]["VIC"]["terminal_state"], "NOT_READY_REPRODUCIBILITY")
 
+    @pytest.mark.retained_evidence("operations-review/governed-official-evidence-v1/official_document_acquisition_manifest.json", "derived/annual_financial_ocr_materialization_v1/gas-fy2025.json", "derived/annual_financial_ocr_materialization_v1/vre-fy2025.json")
     def test_panel_derived_metrics_and_roe_proxy(self):
         """Multi-period panel derived ratios are properly computed with ENDING_EQUITY_ROE_PROXY semantics."""
         result = execute_p2c2_onboarding(
@@ -177,6 +181,7 @@ class TestP2C2CorporateEvidenceOnboarding(unittest.TestCase):
         self.assertAlmostEqual(vre_derived["roe_proxy"]["value"], 0.1333, places=3)
         self.assertEqual(vre_derived["net_debt"]["status"], "QUALIFIED")
 
+    @pytest.mark.retained_evidence("operations-review/governed-official-evidence-v1/official_document_acquisition_manifest.json", "derived/annual_financial_ocr_materialization_v1/gas-fy2025.json", "derived/annual_financial_ocr_materialization_v1/vre-fy2025.json")
     def test_readiness_report_generation(self):
         """Readiness report contains required tables, metrics, and invariant checks."""
         result = execute_p2c2_onboarding(

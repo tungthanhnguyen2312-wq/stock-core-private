@@ -1,8 +1,8 @@
 # Stock Lookup — Active State
 
 Updated 2026-10-10 from verified
-main `64c8bc884efd790bc05f6976bc628215a99fd58b`.
-Owner-approved corrective.
+main `40c88c2a73bcf9cb0a92c3127ca2cf4c34243386`.
+Owner-approved source layout scope.
 Verify live remote main with `git fetch origin main` or
 `git ls-remote origin refs/heads/main`; a **local** remote-tracking ref alone can be stale.
 ## 0. How this file relates to the others
@@ -34,7 +34,7 @@ Fact kinds used below: **CURRENT FACT** (verified in repo or by a stated read-on
 **BLOCKED**, **DEFERRED**, **HISTORICAL**.
 
 ## 1. The operational gate
-- **ACTIVE — [semantic corrective](daily_research_output_semantic_coherence_corrective_v1_contract.md):** offline/local commit; Coherence V2 PR101 `64c8bc8` COMPLETE, four CI jobs PASS; no Daily/deploy/authority change.
+- **ACTIVE — [source layout](repository_root_structure_simplification_v1_contract.md):** bounded package slices, offline acceptance; semantic corrective PR105 `40c88c2` COMPLETE, four post-merge CI jobs PASS; no Daily/deploy/authority change.
 - **COMPLETE — [capacity Phase 1](capacity_recovery_phase1_contract.md):** PR99 merged
   `168e0f7`, post-merge CI 37893984528 success; zero production reclaim/activation.
 - **COMPLETE — Vault V1:** PR97 merged `3f3d4fe`; offline/opt-in, 77 candidates,
@@ -307,11 +307,8 @@ Fact kinds used below: **CURRENT FACT** (verified in repo or by a stated read-on
 
 ## 9. Next action
 
-Do not launch the next session early. Before 15:00 Asia/Ho_Chi_Minh on the next civil day, the
-calendar anchor is still 2026-10-05, so an ordinary launch idempotently replays that completed
-publication. At or after 16:00 on the next trading day: close ordinary background workloads → run
-host preflight → launch only on READY → `stocklookup.ps1 daily` (or the Desktop one-click) alone.
-That launch resolves 2026-10-06 and does not replay 2026-10-05. Do not start Phase B/C.
+Continue the admitted source layout scope offline. Any ordinary Daily remains separately
+owner-operated after its fresh READY preflight and exact completed-session gates.
 
 ## 10. Owner approvals that remain open
 

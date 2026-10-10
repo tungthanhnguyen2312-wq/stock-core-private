@@ -17,8 +17,8 @@ import dataclasses
 from pathlib import Path
 from typing import Callable, Iterable
 
-from acquisition_landing_atomic_io import atomic_write_json, read_json
-from acquisition_landing_contract import (
+from stocklookup_core.acquisition.acquisition_landing_atomic_io import atomic_write_json, read_json
+from stocklookup_core.acquisition.acquisition_landing_contract import (
     MANIFEST_SCHEMA_VERSION,
     AcquisitionContractError,
     AcquisitionOutcome,
@@ -28,10 +28,10 @@ from acquisition_landing_contract import (
     RawDocumentRecord,
     SUCCESS_OUTCOMES,
 )
-from acquisition_landing_identity import content_sha256, logical_identity
-from acquisition_landing_isolation import assert_write_allowed
-from acquisition_landing_retention import retain
-from temporal_retention import merge_identical_reobservation
+from stocklookup_core.acquisition.acquisition_landing_identity import content_sha256, logical_identity
+from stocklookup_core.acquisition.acquisition_landing_isolation import assert_write_allowed
+from stocklookup_core.acquisition.acquisition_landing_retention import retain
+from stocklookup_core.evidence.temporal_retention import merge_identical_reobservation
 
 CONTENT_MANIFEST_FILENAME = "content_manifest.json"
 

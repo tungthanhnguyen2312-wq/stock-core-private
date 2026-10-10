@@ -20,10 +20,10 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-import acquisition_landing_checkpoint as checkpoint  # noqa: E402
-import acquisition_landing_isolation as isolation  # noqa: E402
+import stocklookup_core.acquisition.acquisition_landing_checkpoint as checkpoint  # noqa: E402
+import stocklookup_core.acquisition.acquisition_landing_isolation as isolation  # noqa: E402
 import financial_filings_replay_adapter as replay_adapter  # noqa: E402
-from acquisition_landing_contract import new_run_id  # noqa: E402
+from stocklookup_core.acquisition.acquisition_landing_contract import new_run_id  # noqa: E402
 
 DEFAULT_WORKSPACE_ROOT = r"C:\Projects\StockLookup"
 

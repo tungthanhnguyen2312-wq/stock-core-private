@@ -22,7 +22,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Iterable, Iterator
 
-from acquisition_landing_contract import AcquisitionSpec
+from stocklookup_core.acquisition.acquisition_landing_contract import AcquisitionSpec
 
 DOMAIN = "official-financial-filings-v1"
 GOVERNED_MANIFEST_FILENAME = "official_document_acquisition_manifest.json"

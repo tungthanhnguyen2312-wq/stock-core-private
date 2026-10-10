@@ -61,7 +61,7 @@ from official_legacy_precedence import (
     TRUE_CONFLICT,
     compare_official_and_legacy,
 )
-import official_document_acquisition as acquirer
+import stocklookup_core.evidence.official_document_acquisition as acquirer
 import time
 import official_source_registry as registry_module
 

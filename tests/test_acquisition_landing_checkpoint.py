@@ -6,10 +6,10 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from acquisition_landing_checkpoint import content_manifest_path, load_content_manifest, process_batch, run_report_path
-from acquisition_landing_contract import AcquisitionOutcome, AcquisitionSpec
-from acquisition_landing_isolation import default_protected_roots
-from acquisition_landing_retention import blob_path, blobs_dir
+from stocklookup_core.acquisition.acquisition_landing_checkpoint import content_manifest_path, load_content_manifest, process_batch, run_report_path
+from stocklookup_core.acquisition.acquisition_landing_contract import AcquisitionOutcome, AcquisitionSpec
+from stocklookup_core.acquisition.acquisition_landing_isolation import default_protected_roots
+from stocklookup_core.acquisition.acquisition_landing_retention import blob_path, blobs_dir
 
 VALID_PDF_A = b"%PDF-1.4\n%doc-a\n%%EOF"
 VALID_PDF_B = b"%PDF-1.4\n%doc-b\n%%EOF"
@@ -110,7 +110,7 @@ class InterruptionResumeTests(CheckpointTestCase):
 
 class FailureIsolationTests(CheckpointTestCase):
     def test_one_item_failure_does_not_abort_unrelated_successful_items(self):
-        from acquisition_landing_identity import content_sha256
+        from stocklookup_core.acquisition.acquisition_landing_identity import content_sha256
 
         items = make_items()
         good_1, bad, good_2 = items

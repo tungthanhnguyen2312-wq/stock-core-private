@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from temporal_retention import TEMPORAL_RETENTION_CONTRACT_VERSION
+from stocklookup_core.evidence.temporal_retention import TEMPORAL_RETENTION_CONTRACT_VERSION
 
 
 OUTPUT = ROOT / "operations-review" / "a2-provider-publication-first-seen-retention-v1-20260829" / "artifact.json"

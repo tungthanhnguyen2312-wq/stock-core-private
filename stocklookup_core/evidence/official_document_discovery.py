@@ -12,7 +12,7 @@ import json
 import urllib.parse
 from typing import Any, Iterable, Mapping
 
-from official_document_acquisition import PERIODS, TICKERS, canonical_url, declared_document_types
+from stocklookup_core.evidence.official_document_acquisition import PERIODS, TICKERS, canonical_url, declared_document_types
 from official_source_registry import all_index_document_types, load_registry
 
 VERSION = "1.0.0"
@@ -131,7 +131,7 @@ def retain(discovery: Mapping[str, Any], destination: Any, **kwargs: Any) -> dic
     Existing canonical URLs are deliberately rechecked here: acquisition compares
     bytes and records a new immutable version when an issuer changes a document.
     """
-    from official_document_acquisition import acquire
+    from stocklookup_core.evidence.official_document_acquisition import acquire
     requests = []
     for row in discovery.get("ledger", []):
         if row.get("state") not in {"new", "unchanged"} or not row.get("canonical_url") or row.get("reason") == "duplicate_canonical_url":

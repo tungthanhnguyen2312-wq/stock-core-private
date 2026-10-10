@@ -12,7 +12,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Iterable
 
-from acquisition_landing_contract import ProtectedRootWriteError
+from stocklookup_core.acquisition.acquisition_landing_contract import ProtectedRootWriteError
 
 # Sibling directories of the workspace root that this framework must never
 # write into, at minimum per the milestone's own requirement: dashboard

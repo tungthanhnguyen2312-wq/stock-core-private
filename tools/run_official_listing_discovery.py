@@ -28,10 +28,10 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from official_document_acquisition import (  # noqa: E402
+from stocklookup_core.evidence.official_document_acquisition import (  # noqa: E402
     MANIFEST, acquire, canonical_url, declared_document_types,
 )
-from official_document_discovery import discover  # noqa: E402
+from stocklookup_core.evidence.official_document_discovery import discover  # noqa: E402
 from official_listing_page_parser import (  # noqa: E402
     listing_pages, parse_index_page, parsed_summary, review_queue,
 )

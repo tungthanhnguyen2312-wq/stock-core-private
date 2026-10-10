@@ -46,7 +46,7 @@ from official_legacy_precedence import (
 import canonical_daily_financial_v2_materialization as fin_v2_material
 import canonical_fact_store as fact_store
 from official_source_registry import ADMITTED, admit, load_registry
-import official_document_acquisition as acquirer
+import stocklookup_core.evidence.official_document_acquisition as acquirer
 import current_research_valuation_context as valuation
 import financial_v2_current_input_authority as fin_v2
 

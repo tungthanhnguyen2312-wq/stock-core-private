@@ -48,7 +48,7 @@ The current production workflow is operated through the canonical Owner Daily pa
 |---|---|
 | Product direction | [docs/PRODUCT_NORTH_STAR.md](docs/PRODUCT_NORTH_STAR.md) |
 | Strategic roadmap | [docs/NORTH_STAR.md](docs/NORTH_STAR.md) |
-| Current operational state | [docs/STATE.md](docs/STATE.md) |
+| Current operational state | [docs/ACTIVE_STATE.md](docs/ACTIVE_STATE.md) |
 | Machine-readable execution state | [docs/ROADMAP_STATE.json](docs/ROADMAP_STATE.json) |
 | Roadmap history / dependencies | [docs/ROADMAP.md](docs/ROADMAP.md) |
 | Architecture decisions | [docs/DECISIONS.md](docs/DECISIONS.md) |
@@ -56,6 +56,8 @@ The current production workflow is operated through the canonical Owner Daily pa
 | Analytics & decision feature contract | [docs/ANALYTICS_AND_DECISION_FEATURE_SPEC.md](docs/ANALYTICS_AND_DECISION_FEATURE_SPEC.md) |
 | CI / dependency tiers | [docs/CI_AND_DEPENDENCY_TIERS.md](docs/CI_AND_DEPENDENCY_TIERS.md) |
 | Repository layout migration | [docs/REPOSITORY_LAYOUT_MIGRATION.md](docs/REPOSITORY_LAYOUT_MIGRATION.md) |
+| Acquisition implementation | [stocklookup_core/acquisition/](stocklookup_core/acquisition/) |
+| Official document evidence | [stocklookup_core/evidence/](stocklookup_core/evidence/) |
 
 ## Canonical runtime path
 

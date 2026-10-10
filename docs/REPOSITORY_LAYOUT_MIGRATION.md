@@ -20,39 +20,28 @@ This is real technical debt, but it is not justification for a one-shot package 
 
 ## 2. Target shape
 
-The long-term target is approximately:
+The 2026-10-10 admitted scope uses ordinary source-checkout packages. No packaging
+system or installation is added; `stocklookup.py` stays the owner CLI. The target is:
 
 ```text
 stock-core/
-├─ README.md
-├─ LICENSE
-├─ CONTRIBUTING.md
-├─ SECURITY.md
-├─ pyproject.toml
-├─ requirements*.txt
-├─ stocklookup.ps1
-├─ src/
-│  └─ stocklookup/
-│     ├─ acquisition/
-│     ├─ evidence/
-│     ├─ canonical/
-│     ├─ temporal/
-│     ├─ market/
-│     ├─ financial/
-│     ├─ valuation/
-│     ├─ tactical/
-│     ├─ decision/
-│     ├─ portfolio/
-│     ├─ daily/
-│     └─ publishing/
-├─ tools/
+├─ stocklookup.py / stocklookup.ps1
+├─ stocklookup_core/
+│  ├─ acquisition/  # landing contract, isolation, checkpoint and retention
+│  ├─ evidence/     # official documents and temporal receipts
+│  └─ research/     # independent thesis research (next tested slice)
+├─ tools/           # existing operator and developer launchers
 ├─ tests/
 ├─ contracts/
 ├─ config/
-└─ docs/
+└─ docs/            # active navigation, contracts and preserved history
 ```
 
-This is a destination, not permission to move files immediately.
+Admission and safety boundaries: [V1 contract](repository_root_structure_simplification_v1_contract.md).
+The measured starting HEAD has 613 root files, including 595 Python files, plus 8
+directories. Each slice records exact counts and validation before committing.
+`config/repository_layout.json` owns the migration map and root placement exceptions.
+CI rejects new root Python names; this is a placement rule, not a deletion quota.
 
 ## 3. Migration rules
 
@@ -143,4 +132,6 @@ For every migration slice:
 - `git diff --check` passes;
 - `docs/SYSTEM_MAP.md` remains truthful.
 
-The migration is not a roadmap priority by itself. It is a maintenance discipline attached to product-critical capability work.
+The owner explicitly made bounded root simplification the current scope on 2026-10-10.
+It changes source layout only. Analytical roadmap work is reassessed after acceptance
+and never starts automatically from this maintenance milestone.

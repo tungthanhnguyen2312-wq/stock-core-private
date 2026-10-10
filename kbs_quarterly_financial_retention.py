@@ -13,7 +13,7 @@ import re
 from typing import Any, Iterable, Mapping
 
 import provider_financial_source_metadata as source
-from temporal_retention import capture_raw_receipt, project_retention_to_a1
+from stocklookup_core.evidence.temporal_retention import capture_raw_receipt, project_retention_to_a1
 
 CONTRACT_VERSION = "kbs_quarterly_financial_retention/v1"
 KBS_QUARTERLY_INCOME_TYPE = "KQKD"

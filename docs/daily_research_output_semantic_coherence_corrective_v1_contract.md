@@ -83,6 +83,7 @@ than fabricated lineage. Historical artifacts remain unchanged.
 ## Acceptance and release
 
 [Evidence, validation and limitations](internal/DAILY_RESEARCH_SEMANTIC_COHERENCE_ACCEPTANCE_20261010.md).
-Corrective stays ACTIVE at the local checkpoint pending separate release authorization;
-queue empty. Synthetic reconstruction and read-only historical replay are offline
+Corrective implementation released in PR105 at `40c88c2` after exact-head owner approval
+and four successful PR CI jobs; four post-merge CI jobs also succeeded (38021005739).
+Native roadmap records COMPLETE. Synthetic reconstruction and read-only historical replay are offline
 validation, never a replacement Daily or a reissue of immutable October 9 outputs.

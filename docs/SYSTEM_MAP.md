@@ -21,6 +21,16 @@ exact R7 inputs offline. [Contract](market_only_pit_eligibility_contract.md).
 
 ## Repository navigation status — 2026-10-01
 
+### Source package migration — 2026-10-10
+
+The owner admitted [root structure simplification](repository_root_structure_simplification_v1_contract.md)
+after semantic corrective PR105. Landing acquisition code is in `stocklookup_core/acquisition/`;
+official document evidence and temporal receipts are in `stocklookup_core/evidence/`.
+The existing offline `official_document_acquisition.py` CLI is a small compatibility launcher.
+All library consumers import the packages; historical module names resolve through
+`config/repository_layout.json`. Owner Daily and publishing launchers retain their paths.
+Root placement is enforced by `tests/test_repository_layout.py`.
+
 The runtime topology below is authoritative as a navigation aid, but the filesystem is still historically flat. The public root currently contains hundreds of implementation modules; this is recognized layout debt, not evidence that those modules are unused.
 
 Repository cleanup follows the governed strangler plan in [REPOSITORY_LAYOUT_MIGRATION.md](REPOSITORY_LAYOUT_MIGRATION.md):

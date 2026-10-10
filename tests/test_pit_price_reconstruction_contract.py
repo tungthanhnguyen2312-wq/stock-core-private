@@ -26,7 +26,7 @@ sys.path.insert(0, str(ROOT))
 
 import corporate_action_events as events  # noqa: E402
 import official_corporate_action_ledger as ledger  # noqa: E402
-import official_document_store as document_store  # noqa: E402
+import stocklookup_core.evidence.official_document_store as document_store  # noqa: E402
 import pit_price_reconstruction_contract as contract  # noqa: E402
 
 

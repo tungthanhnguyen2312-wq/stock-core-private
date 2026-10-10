@@ -6,8 +6,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from acquisition_landing_isolation import default_protected_roots
-from acquisition_landing_quarantine import load_quarantine_manifest, quarantine_item, quarantine_root
+from stocklookup_core.acquisition.acquisition_landing_isolation import default_protected_roots
+from stocklookup_core.acquisition.acquisition_landing_quarantine import load_quarantine_manifest, quarantine_item, quarantine_root
 
 
 class QuarantineTests(unittest.TestCase):

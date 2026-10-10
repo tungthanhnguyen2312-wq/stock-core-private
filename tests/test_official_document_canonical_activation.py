@@ -1,5 +1,5 @@
-﻿import unittest
-from official_document_canonical_activation import activate, conflicts, replay, SOURCE_TYPE
+import unittest
+from stocklookup_core.evidence.official_document_canonical_activation import activate, conflicts, replay, SOURCE_TYPE
 
 class OfficialActivationTests(unittest.TestCase):
  def row(self,**more): return {'metric':'profit_after_tax_total','raw_label':'PAT','raw_value':'10','period':'FY2024','scope':'consolidated','unit':'VND','sign':'positive','page':12,'document_sha256':'h','ocr_citation_id':'c','qualification':'qualified_direct_ocr'}|more

@@ -12,7 +12,7 @@ from typing import Any, Mapping
 from urllib.request import Request, urlopen
 
 import hnx_disclosure_feed_parser as feed_parser
-import official_document_store as store
+import stocklookup_core.evidence.official_document_store as store
 from official_source_registry import ADMITTED, admit, load_registry
 
 CONTRACT_VERSION = "hnx_official_financial_filing_scaleout/v1"

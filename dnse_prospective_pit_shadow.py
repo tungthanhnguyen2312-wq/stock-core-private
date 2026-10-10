@@ -13,7 +13,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Mapping
 
-from temporal_retention import capture_raw_receipt, project_retention_to_a1
+from stocklookup_core.evidence.temporal_retention import capture_raw_receipt, project_retention_to_a1
 
 SCHEMA_ID = "dnse.prospective_pit_observation.v1"
 COLLECTOR_ID = "stocklookup.dnse_prospective_pit_shadow.v1"

@@ -23,6 +23,25 @@ env:
   CORE_INSTALL: python -m pip install -r requirements.txt -r requirements-test.txt -c constraints.txt
   HERMETIC_MARKERS: not retained_evidence and not provider_runtime
   FOCUSED_SELECTION: >-
+    tests/test_repository_layout.py
+    tests/test_acquisition_landing_contract.py
+    tests/test_acquisition_landing_checkpoint.py
+    tests/test_acquisition_landing_isolation.py
+    tests/test_acquisition_landing_quarantine.py
+    tests/test_acquisition_landing_retention.py
+    tests/test_acquisition_landing_no_network_dependency.py
+    tests/test_financial_filings_replay_adapter.py
+    tests/test_temporal_retention.py
+    tests/test_acquisition_redirect_and_rate.py
+    tests/test_acquisition_registry_gate.py
+    tests/test_official_document_canonical_activation.py
+    tests/test_official_document_discovery.py
+    tests/test_official_document_downstream_shadow.py
+    tests/test_official_document_ocr_handoff.py
+    tests/test_discovery_registry_vocabulary.py
+    tests/test_official_listing_page_discovery.py
+    tests/test_official_corporate_action_pillar.py
+    tests/test_p2c2_corporate_evidence_onboarding.py
     tests/test_scenario_opportunity_cost_coherence_v2.py
     tests/test_daily_research_semantic_coherence.py
     tests/test_daily_opportunity_decision_queue.py
@@ -196,6 +215,7 @@ jobs:
       - run: python -m py_compile stocklookup.py daily_analysis_pipeline.py canonical_daily_operation.py daily_producer_pipeline.py daily_research_session_operations.py
       - run: python -c "import json; json.load(open('docs/ROADMAP_STATE.json', encoding='utf-8'))"
       - run: python tools/stocklookup_roadmap.py --check
+      - run: pytest -q tests/test_repository_layout.py
       - run: >-
           pytest -q -m "${{ env.HERMETIC_MARKERS }}"
           tests/test_production_call_shape_smoke.py::test_offline_guard_blocks_requests_urllib_and_vnstock_import

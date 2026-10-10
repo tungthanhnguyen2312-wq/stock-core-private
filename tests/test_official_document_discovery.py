@@ -1,6 +1,6 @@
 import unittest
 
-from official_document_discovery import discover, replay
+from stocklookup_core.evidence.official_document_discovery import discover, replay
 
 
 class DiscoveryTests(unittest.TestCase):
