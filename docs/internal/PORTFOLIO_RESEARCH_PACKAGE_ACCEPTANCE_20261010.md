@@ -102,3 +102,9 @@ private default-root preservation, unchanged numerical/identity/privacy/authorit
 semantics and frozen byte equality. Distinguish portable fixture passes from the
 exact declared historical baseline. Do not infer production or execution authority
 from CI or manufacture missing evidence.
+
+## CI selection correction
+
+Initial hosted run 38055400174 at e4616e1: three jobs SUCCESS; regression had 4,945 PASS, 156 skips, 49 deselections and 103 passing subtests. Its sole failure was the old test-selection guard interpreting Class::method as one symbol. The corrected guard resolves scoped AST definitions, with nine positive/negative fixtures for exact class/method/file existence. All fifteen portfolio selectors and historical assertions remain; no runtime or analytical source changes. Final exact HEAD and four-job gate are recorded on PR115 after clean validation.
+
+Final corrected CI/dependency, layout, active and offline call-shape controls: 69 PASS (24.09 s). Correction touches only the test guard and acceptance docs; portfolio source remains the validated relocation.

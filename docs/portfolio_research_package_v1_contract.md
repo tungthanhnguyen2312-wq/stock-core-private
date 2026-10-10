@@ -87,3 +87,10 @@ Cumulative 107 packaged implementations, net 106 fewer root Python files versus
 595. Remaining root layout debt is explicit, not solved.
 
 [Acceptance and durable gate](internal/PORTFOLIO_RESEARCH_PACKAGE_ACCEPTANCE_20261010.md).
+
+CI integration correction: the existing selection guard previously treated Class::method
+as a single symbol. Resolve each node within its declared class using AST; nine
+fixture cases also reject absent/wrong-class methods and absent files. Preserve all
+six existing C1 selectors, the retained golden, four jobs, tier markers and assertions.
+First hosted run 38055400174: 4,945 pass, 156 skip, 49 deselect, 103 subtests pass;
+sole failure was that guard. No portfolio runtime/calculation failure.
