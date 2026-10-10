@@ -69,6 +69,8 @@ Financial V2 materialization, placement, native roadmap, active docs and CI-tier
 selection: **575 passed, 12 skipped, 11 deselected** (228.68 seconds).
 Offline production call-shape: **7 passed**. After historical runner repairs,
 placement/consumption/promotion selection: **57 passed**.
+Native roadmap regression runs in the structural job with full Git history;
+the other three jobs retain shallow checkout. Four tier commands remain unchanged.
 Installed pinned dependency tier audit: PASS, zero violations. All tracked Python
 sources compile; Financial V2 runner and Owner CLI help resolve offline.
 Roadmap: ON_TRACK; dirty warnings disappear once this candidate is checkpointed.
@@ -90,7 +92,11 @@ qualification. No evidence was copied, fabricated, promoted or searched recursiv
 
 ## Release and durable next action
 
-The reviewed feature PR is resolved unambiguously with:
+PR [#108](https://github.com/tungthanhnguyen2312-wq/stock-core-private/pull/108)
+contains this candidate. Implementation checkpoint: `1fd00737b60c13b45f9a9b2f82cb8472418f5703`.
+A subsequent CI wiring checkpoint moves native Git-history tests into the existing
+full-history structural job; release approval must use the final PR HEAD, never that
+pre-fix checkpoint. The reviewed feature PR is resolved unambiguously with:
 `gh pr view refactor/financial-research-package-v1-20261010 --json number,url,headRefOid,state,statusCheckRollup`.
 Its exact head and CI state govern release; the containing Git commit checkpoints
 this report. Require explicit owner approval for that exact HEAD and all four hosted
