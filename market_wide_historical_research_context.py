@@ -758,7 +758,7 @@ def build_artifact(
             "in_current_descriptive_scope": True,
             **context,
         }
-        import contextual_technical_dispatch as contextual
+        import stocklookup_core.tactical.contextual_technical_dispatch as contextual
         cutoff = p3f9b_snapshot.get("requested_at")
         if cutoff:
             try:

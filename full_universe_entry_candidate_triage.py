@@ -14,7 +14,7 @@ from typing import Any, Mapping
 from field_temporal_contract import stable_id
 from stocklookup_core.decision.current_market_screening_opportunity_comparison_foundation import content_identity as screening_identity
 from market_wide_current_descriptive_research import content_identity as descriptive_identity
-from watchlist_tactical_entry_classifier import content_identity as tactical_identity
+from stocklookup_core.tactical.watchlist_tactical_entry_classifier import content_identity as tactical_identity
 
 CONTRACT_VERSION = "full_universe_entry_candidate_triage/v1"
 ARTIFACT_TYPE = "FULL_UNIVERSE_ENTRY_CANDIDATE_TRIAGE"

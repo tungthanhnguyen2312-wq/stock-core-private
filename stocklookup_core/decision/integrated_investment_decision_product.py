@@ -1943,7 +1943,7 @@ def attach_contextual_technical(record, context):
     ``context`` must come from contextual.verified_context_records. Standing
     decision identity intentionally excludes this explanatory content.
     """
-    import contextual_technical_dispatch as contextual
+    import stocklookup_core.tactical.contextual_technical_dispatch as contextual
     record["contextual_technical_context"] = context
     record["evidence_axes"]["TACTICAL_STRUCTURE"]["contextual_feature_reference"] = {
         "status": context["status"], "non_voting": True,
@@ -1993,13 +1993,13 @@ def build_artifact(
             f"{FINANCIAL_ANALYSIS_COMPACT_CONTRACT}:got={fa_contract}"
         )
     market_bars = market_bar_context_records(historical_context_artifact, session=session, requested_at=requested_at)
-    import contextual_technical_dispatch as contextual
+    import stocklookup_core.tactical.contextual_technical_dispatch as contextual
     contextual_records = contextual.verified_context_records(historical_context_artifact, session=session,
         knowledge_cutoff=requested_at, verified_bar_contexts=market_bars)
     tac_records = technical_structure_artifact.get("records") or {}
     # A claimed identity alone does not qualify a new fixed T0 condition. Keep
     # other research axes visible while failing closed on this dependent use.
-    import market_structure_breakout_product_projection as structural_projection
+    import stocklookup_core.tactical.market_structure_breakout_product_projection as structural_projection
     structural_condition_identity = None
     if (technical_structure_artifact.get("contract_version") == structural_projection.CONTRACT_VERSION
             and technical_structure_artifact.get("session") == session):

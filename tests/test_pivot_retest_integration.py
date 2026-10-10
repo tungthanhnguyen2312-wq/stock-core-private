@@ -1,7 +1,7 @@
 import pytest
 
 import technical_structure_context as structure
-import market_structure_breakout_product_projection as projection
+import stocklookup_core.tactical.market_structure_breakout_product_projection as projection
 import stocklookup_core.decision.integrated_investment_decision_product as product
 from ai_research_session_delivery import project_integrated_decision_for_ai_delivery
 

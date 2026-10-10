@@ -13,7 +13,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from tactical_confirmation_invalidation_boundaries import build_artifact  # noqa: E402
+from stocklookup_core.tactical.tactical_confirmation_invalidation_boundaries import build_artifact  # noqa: E402
 
 
 def run(*, tactical_path: Path, descriptive_path: Path, technical_structure_path: Path | None, out_dir: Path, requested_at: str) -> Path:

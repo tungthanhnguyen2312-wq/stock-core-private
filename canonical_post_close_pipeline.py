@@ -1062,12 +1062,12 @@ def build_enrichment_components(
         import stocklookup_core.financial.financial_v2_current_input_authority as fin_v2_authority
         import stocklookup_core.decision.integrated_investment_decision_product as integrated_contract
         import operational_fundamental_context_integration as operational_fundamental
-        import market_structure_breakout_product_projection as msb_proj
-        import market_wide_relative_volume_research as rvol_research
-        import tactical_confirmation_context as confirmation_context
-        import tactical_confirmation_invalidation_boundaries as boundary_context
-        import tactical_momentum_context as momentum_context
-        import tactical_setup_tags as setup_tags_context
+        import stocklookup_core.tactical.market_structure_breakout_product_projection as msb_proj
+        import stocklookup_core.tactical.market_wide_relative_volume_research as rvol_research
+        import stocklookup_core.tactical.tactical_confirmation_context as confirmation_context
+        import stocklookup_core.tactical.tactical_confirmation_invalidation_boundaries as boundary_context
+        import stocklookup_core.tactical.tactical_momentum_context as momentum_context
+        import stocklookup_core.tactical.tactical_setup_tags as setup_tags_context
         import technical_structure_context as tsc
         # integrated_investment_decision_product.evaluate_tactical_phase/evaluate_participation read
         # a FLAT compact shape (eligible, market_structure_state, breakout_state_v3, bos_state,
@@ -1388,7 +1388,7 @@ def retain_prospective_decision_snapshot(
     artifact can silently rewrite the original T0 decision.
     """
     from prospective_decision_retention import build_snapshot, write_immutable_snapshot
-    from contextual_technical_dispatch import PRODUCTION_V2_START_SESSION
+    from stocklookup_core.tactical.contextual_technical_dispatch import PRODUCTION_V2_START_SESSION
 
     if session >= PRODUCTION_V2_START_SESSION:
         original = _original_session_t0(output_root or root, session)
@@ -1765,7 +1765,7 @@ def run_post_handoff_observers(
     tier1["volume_and_flow_context"] = volume_flow_context
     task("Cập nhật luận điểm hiện tại")
     thesis_current = None
-    from contextual_technical_dispatch import PRODUCTION_V2_START_SESSION
+    from stocklookup_core.tactical.contextual_technical_dispatch import PRODUCTION_V2_START_SESSION
     if session >= PRODUCTION_V2_START_SESSION:
         try:
             from stocklookup_core.research.thesis_production_runtime import run_component, summary, focus_cards
@@ -1813,7 +1813,7 @@ def run_volume_and_flow_context(root: Path, runtime_root: Path, session: str,
                                 signal_velocity: Mapping[str, Any],
                                 snapshot_binding: Mapping[str, Any] | None = None) -> dict[str, Any]:
     """Separate retained-only observer; no sealed decision or policy mutation."""
-    from contextual_technical_dispatch import production_version, V2
+    from stocklookup_core.tactical.contextual_technical_dispatch import production_version, V2
     if production_version(session) == V2:
         from volume_and_flow_retained_v2 import collect
     else:

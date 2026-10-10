@@ -22,7 +22,7 @@ import json
 from typing import Any, Mapping
 
 import session_bar_integrity
-import tactical_reference_window as reference_window
+import stocklookup_core.tactical.tactical_reference_window as reference_window
 from technical_structure_context import (
     MAX_LOOKBACK_SESSIONS,
     SWING_N,

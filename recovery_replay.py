@@ -1506,7 +1506,7 @@ def _parse_rows(envelope: Mapping[str, Any], body: Any, target_session: str) -> 
 
 def _ticker_descriptors(rows: list[dict[str, Any]], target: str) -> dict[str, Any]:
     import session_bar_integrity
-    import tactical_reference_window as window
+    import stocklookup_core.tactical.tactical_reference_window as window
 
     integrity = session_bar_integrity.resolve_session_bars(rows, as_of_session=target)
     if integrity["status"] == session_bar_integrity.CONFLICTING_DUPLICATE_REFUSED:

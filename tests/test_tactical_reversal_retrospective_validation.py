@@ -5,7 +5,7 @@ from unittest import mock
 
 import price_basis_feature_fitness as basis
 import tactical_reversal_retrospective_validation as validation
-import watchlist_tactical_entry_classifier as classifier
+import stocklookup_core.tactical.watchlist_tactical_entry_classifier as classifier
 
 
 SESSION = "2026-08-21"

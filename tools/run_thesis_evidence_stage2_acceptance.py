@@ -80,9 +80,10 @@ def run(args):
     frozen=("thesis_evidence_contract.py","thesis_evidence_adapters.py","thesis_evidence_matrix.py",
         "docs/thesis_evidence_matrix_stage_1_contract.md","docs/internal/THESIS_EVIDENCE_MATRIX_STAGE_1_ACCEPTANCE.json",
         "contextual_technical_features_v2.py","volume_and_flow_context_v2.py","prospective_daily_rollforward.py")
+    relocations=json.loads((ROOT/"config/repository_layout.json").read_text(encoding="utf-8"))["relocations"]
     for name in frozen:
         baseline=subprocess.check_output(["git","show",START+":"+name],cwd=ROOT).replace(b"\r\n",b"\n")
-        assert (ROOT/name).read_bytes().replace(b"\r\n",b"\n")==baseline,name
+        assert (ROOT/relocations.get(name,name)).read_bytes().replace(b"\r\n",b"\n")==baseline,name
     print("VERIFY_ORIGINAL_T0",flush=True)
     assert protected=={p:source_hash(primary/p) for p in protected}
     foreign_paths=list(observations_root(resolve_roots(primary).runtime_root).glob("*.json"))

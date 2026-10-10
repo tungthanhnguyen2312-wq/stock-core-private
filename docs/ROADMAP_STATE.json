@@ -15,14 +15,35 @@
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "DECISION_RESEARCH_PACKAGE_V1",
+    "milestone": "TACTICAL_RESEARCH_PACKAGE_V1",
     "state": "ACTIVE"
   },
   "queued_next": [],
   "milestones": [
     {
-      "milestone_id": "DECISION_RESEARCH_PACKAGE_V1",
+      "milestone_id": "TACTICAL_RESEARCH_PACKAGE_V1",
       "state": "ACTIVE",
+      "starting_checkpoint": "8142f4f872b0b079579f34cb45e782f466b4ce7c",
+      "candidate_branch": "refactor/tactical-research-package-v1-20261010",
+      "dependencies": [
+        "DECISION_RESEARCH_PACKAGE_V1"
+      ],
+      "unlocks": [],
+      "owner_authorized": true,
+      "owner_override": "Owner PROGRAM_LEAD_CONTINUATION_AND_STANDING_DELEGATION 2026-10-10 authorizes bounded program scope, native admission, implementation, validation, commits and safe feature PR. PR110 exact owner-approved HEAD cdd8a766ce9c0ad5f6d15607e9b15cf1420da07f merged at verified main 8142f4f872b0b079579f34cb45e782f466b4ce7c; all four PR CI 38037136231 and post-merge CI 38037503784 passed. Admit sole ACTIVE TACTICAL_RESEARCH_PACKAGE_V1: sixteen existing contextual technical measurement/dispatch/primitives, structure/relationship/breakout, relative-volume, tactical setup/momentum/confirmation/behavior/boundary/window and watchlist implementations under stocklookup_core/tactical; 187 static imports across 89 consumers. Expanded baseline 130 pass and 54 subtests. Preserve calculations, policy, schemas, provenance identities, source-root defaults, Owner/Daily entrypoints and canonical registry. Three frozen V1 producer bodies and bytes remain unchanged. Actual verifier imports, six module pointers, source inspection/hash readers and any historical live import must resolve the new paths while retaining old hash labels/Git blob refs and strict frozen-source guards. Explicit import-resolution normalization only for three verifier helpers; no numerical/gating AST change. Fiscal/historical evidence stays at its exact reopening gate, no fabricated substitute. SOURCE_LAYOUT_ONLY / authority effect NONE, no runtime/Daily/deploy/trust promotion/deletion/visibility action. Separate exact-HEAD merge approval remains required. Single writer dedicated worktree, empty queue, no background continuation.",
+      "authority_effect": "NONE",
+      "source_doc": "docs/tactical_research_package_v1_contract.md",
+      "state_history": [
+        "DEFERRED",
+        "ACTIVE"
+      ],
+      "checkpoint": null,
+      "terminal_disposition": null,
+      "notes": "Owner PROGRAM_LEAD_CONTINUATION_AND_STANDING_DELEGATION 2026-10-10 authorizes bounded program scope, native admission, implementation, validation, commits and safe feature PR. PR110 exact owner-approved HEAD cdd8a766ce9c0ad5f6d15607e9b15cf1420da07f merged at verified main 8142f4f872b0b079579f34cb45e782f466b4ce7c; all four PR CI 38037136231 and post-merge CI 38037503784 passed. Admit sole ACTIVE TACTICAL_RESEARCH_PACKAGE_V1: sixteen existing contextual technical measurement/dispatch/primitives, structure/relationship/breakout, relative-volume, tactical setup/momentum/confirmation/behavior/boundary/window and watchlist implementations under stocklookup_core/tactical; 187 static imports across 89 consumers. Expanded baseline 130 pass and 54 subtests. Preserve calculations, policy, schemas, provenance identities, source-root defaults, Owner/Daily entrypoints and canonical registry. Three frozen V1 producer bodies and bytes remain unchanged. Actual verifier imports, six module pointers, source inspection/hash readers and any historical live import must resolve the new paths while retaining old hash labels/Git blob refs and strict frozen-source guards. Explicit import-resolution normalization only for three verifier helpers; no numerical/gating AST change. Fiscal/historical evidence stays at its exact reopening gate, no fabricated substitute. SOURCE_LAYOUT_ONLY / authority effect NONE, no runtime/Daily/deploy/trust promotion/deletion/visibility action. Separate exact-HEAD merge approval remains required. Single writer dedicated worktree, empty queue, no background continuation.\nBounded scope correction 2026-10-10 under the same standing owner authorization: final thirteen modules, excluding contextual_technical_features, volume_and_flow_context and technical_structure_context. Their immutable frozen-byte guards and mutual root imports require exact source bytes/paths; preserve all three at root. No relaxed digest or source authority, no eligibility/state/checkpoint/history change. Remaining measurement/dispatch/primitives/relationship/breakout/relative-volume and tactical setup/momentum/confirmation/behavior/boundary/window/watchlist chain remains substantial. Root Python 527 to 514. Actual surviving consumer graph is recorded in the contract. This is a narrowed existing ACTIVE scope, not a new milestone or release.\nFinal bounded freeze closure: twelve implementations, 527 to 515 root Python. contextual_technical_primitives remains at root so the frozen V2 producer retains its original import and exact bytes while changing location only. Frozen V1 technical/flow/structure producers keep bytes and root paths; V2 keeps bytes with manifest-based current source lookup. Existing digest assertions and historical Git names remain strict, no normalization of their source hashes.\nComplete frozen dependency closure: final eleven modules, root Python 527 to 516. technical_relationship_view remains at root because the frozen V2 producer imports it lazily; its existing dispatch import alone resolves the packaged dispatcher. V2 producer moves with exact original bytes. All five root exclusions are explicit in the controlling contract; no frozen digest assertion or historical Git pointer is weakened. The earlier sixteen/thirteen/twelve candidates are superseded as implementation scope, retained here as auditable narrowing rationale. Same ACTIVE ID/authorization/checkpoint/history, no new milestone or release."
+    },
+    {
+      "milestone_id": "DECISION_RESEARCH_PACKAGE_V1",
+      "state": "COMPLETE",
       "starting_checkpoint": "703b8c79ceedefa653aa5578bb688fd50b27b203",
       "candidate_branch": "refactor/decision-research-package-v1-20261010",
       "dependencies": [
@@ -35,11 +56,12 @@
       "source_doc": "docs/decision_research_package_v1_contract.md",
       "state_history": [
         "DEFERRED",
-        "ACTIVE"
+        "ACTIVE",
+        "COMPLETE"
       ],
-      "checkpoint": null,
-      "terminal_disposition": null,
-      "notes": "Owner PROGRAM_LEAD_CONTINUATION_AND_STANDING_DELEGATION 2026-10-10 authorizes bounded program selection, native admission, implementation, validation, commits and safe feature PR. PR109 exact owner-approved HEAD 4af95d8e6665eb18457320164e6fbdd2e28399d6 merged at verified live main 703b8c79ceedefa653aa5578bb688fd50b27b203; all four PR CI 38034909212 and post-merge CI 38035299119 passed. Admit sole ACTIVE DECISION_RESEARCH_PACKAGE_V1: move sixteen existing decision input, risk/thesis/opportunity context, packet, integrated brief and workspace projection implementations into stocklookup_core/decision with complete static/dynamic/source-path/historical live-import consumer closure. 234 static imports across 172 consumers; no filename CLI or source-root defaults in moved modules. Preserve non-import AST, schemas, identity/provenance labels, policy, Daily entrypoints, canonical registry and trust boundaries. Baseline absent historical product/risk artifacts remain evidence-blocked with exact frozen session/source hash reopening gate; no substitute evidence. Financial fiscal mapping remains blocked at its exact gate. Source layout only; no runtime writes, production Daily, deployment, authority promotion or destructive/visibility action. Separate exact-HEAD owner merge approval required. One writer in dedicated worktree; empty queued_next; no background continuation."
+      "checkpoint": "8142f4f872b0b079579f34cb45e782f466b4ce7c",
+      "terminal_disposition": "IMPLEMENTATION_RELEASED_NO_PRODUCTION_ACTIVATION",
+      "notes": "Owner PROGRAM_LEAD_CONTINUATION_AND_STANDING_DELEGATION 2026-10-10 authorizes bounded program selection, native admission, implementation, validation, commits and safe feature PR. PR109 exact owner-approved HEAD 4af95d8e6665eb18457320164e6fbdd2e28399d6 merged at verified live main 703b8c79ceedefa653aa5578bb688fd50b27b203; all four PR CI 38034909212 and post-merge CI 38035299119 passed. Admit sole ACTIVE DECISION_RESEARCH_PACKAGE_V1: move sixteen existing decision input, risk/thesis/opportunity context, packet, integrated brief and workspace projection implementations into stocklookup_core/decision with complete static/dynamic/source-path/historical live-import consumer closure. 234 static imports across 172 consumers; no filename CLI or source-root defaults in moved modules. Preserve non-import AST, schemas, identity/provenance labels, policy, Daily entrypoints, canonical registry and trust boundaries. Baseline absent historical product/risk artifacts remain evidence-blocked with exact frozen session/source hash reopening gate; no substitute evidence. Financial fiscal mapping remains blocked at its exact gate. Source layout only; no runtime writes, production Daily, deployment, authority promotion or destructive/visibility action. Separate exact-HEAD owner merge approval required. One writer in dedicated worktree; empty queued_next; no background continuation. Verified release 8142f4f872b0b079579f34cb45e782f466b4ce7c; no production reclaim, activation or automatic successor."
     },
     {
       "milestone_id": "VALUATION_RESEARCH_PACKAGE_V1",

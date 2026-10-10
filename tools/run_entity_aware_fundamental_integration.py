@@ -19,7 +19,7 @@ if str(ROOT) not in sys.path:
 from canonical_post_close_pipeline import resolve_current_session_priority_queue
 from daily_session_level2_package import session_artifact_paths
 import stocklookup_core.decision.integrated_investment_decision_product as integrated
-import market_wide_relative_volume_research as relative_volume
+import stocklookup_core.tactical.market_wide_relative_volume_research as relative_volume
 import operational_fundamental_context_integration as bridge
 from tools import current_research_capability_map as capability
 

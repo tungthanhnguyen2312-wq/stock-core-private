@@ -18,8 +18,8 @@ sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "tests"))
 import canonical_market_bars as bars
 import contextual_technical_features as old_technical
-import contextual_technical_features_v2 as technical
-import contextual_technical_dispatch as dispatch
+import stocklookup_core.tactical.contextual_technical_features_v2 as technical
+import stocklookup_core.tactical.contextual_technical_dispatch as dispatch
 import technical_relationship_view as bridge
 import volume_and_flow_context as old_flow
 import volume_and_flow_context_v2 as flow

@@ -14,7 +14,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import market_wide_current_descriptive_research as descriptive_module
 import market_wide_current_technical_coverage_scaleout as recovery_module
-import tactical_momentum_context as momentum
+import stocklookup_core.tactical.tactical_momentum_context as momentum
 from field_temporal_contract import stable_id
 
 SESSION = "2026-08-28"

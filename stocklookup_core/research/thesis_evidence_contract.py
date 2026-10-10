@@ -156,7 +156,7 @@ class SealedEvidenceBindings:
                 self.sources.add((ticker, session, product["decision_identity"]))
             context = (product.get("contextual_technical_context") or {}).get("projection")
             if context:
-                import contextual_technical_dispatch as dispatch
+                import stocklookup_core.tactical.contextual_technical_dispatch as dispatch
                 dispatch.verify_context(context, ticker=ticker, session=session)
                 self.sources.add((ticker, session, context["artifact_identity"]))
 

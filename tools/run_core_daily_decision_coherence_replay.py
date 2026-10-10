@@ -87,7 +87,7 @@ def _watchlist_view(integrated: Mapping[str, Any], raw_valuation: Mapping[str, A
 
 def _regression_projection_check() -> dict[str, Any]:
     """Assert the recovered-history consumer produces the already-retained 2026-08-25 projection."""
-    import market_structure_breakout_product_projection as projection
+    import stocklookup_core.tactical.market_structure_breakout_product_projection as projection
     import retained_evidence_quarantine as quarantine
     import technical_structure_context as structure
 
@@ -142,8 +142,8 @@ def run(*, runtime_root: Path, output_dir: Path, session: str = PRIMARY_SESSION)
     import canonical_daily_financial_v2_materialization as financial_materialization
     import stocklookup_core.financial.financial_v2_current_input_authority as financial_authority
     import stocklookup_core.decision.integrated_investment_decision_product as integrated_product
-    import market_structure_breakout_product_projection as projection
-    import market_wide_relative_volume_research as relative_volume
+    import stocklookup_core.tactical.market_structure_breakout_product_projection as projection
+    import stocklookup_core.tactical.market_wide_relative_volume_research as relative_volume
     import technical_structure_context as structure
     from tools.derive_market_wide_current_valuation_input_scaleout import materialize
 

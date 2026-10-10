@@ -110,8 +110,8 @@ def _feature_counts(records: Mapping[str, Mapping[str, Any]], *, feature: str) -
 
 def _retained_replay(*, root: Path, session: str) -> tuple[dict[str, Any], dict[str, Any]]:
     """Replay structure/momentum against retained source artifacts without new network access."""
-    import tactical_momentum_context
-    import technical_structure_context
+    import stocklookup_core.tactical.tactical_momentum_context as tactical_momentum_context
+    import technical_structure_context as technical_structure_context
 
     snapshot = _session_snapshot(root, session)
     descriptive = _load(root / f"operations-review/market-wide-current-descriptive-research-v1-{session.replace('-', '')}/market_wide_current_descriptive_research_artifact.json")

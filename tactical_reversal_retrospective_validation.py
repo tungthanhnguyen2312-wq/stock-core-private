@@ -19,8 +19,8 @@ from typing import Any, Mapping, Sequence
 
 import feature_input_fitness_contract as fitness_contract
 import price_basis_feature_fitness as basis
-import technical_structure_context
-import watchlist_tactical_entry_classifier as classifier
+import technical_structure_context as technical_structure_context
+import stocklookup_core.tactical.watchlist_tactical_entry_classifier as classifier
 
 
 CONTRACT_VERSION = "tactical_reversal_retrospective_validation/v1"

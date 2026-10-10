@@ -30,8 +30,8 @@ import canonical_daily_financial_v2_materialization as fin_v2_material  # noqa: 
 import entity_classification_contract as entity_classification  # noqa: E402
 import stocklookup_core.financial.financial_v2_current_input_authority as fin_v2_authority  # noqa: E402
 import stocklookup_core.decision.integrated_investment_decision_product as iidp  # noqa: E402
-import market_structure_breakout_product_projection as msb_proj  # noqa: E402
-import market_wide_relative_volume_research as rvol_research  # noqa: E402
+import stocklookup_core.tactical.market_structure_breakout_product_projection as msb_proj  # noqa: E402
+import stocklookup_core.tactical.market_wide_relative_volume_research as rvol_research  # noqa: E402
 import owner_research_focus  # noqa: E402
 import technical_structure_context as tsc  # noqa: E402
 

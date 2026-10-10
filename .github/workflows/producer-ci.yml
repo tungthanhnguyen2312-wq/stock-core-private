@@ -23,6 +23,13 @@ env:
   CORE_INSTALL: python -m pip install -r requirements.txt -r requirements-test.txt -c constraints.txt
   HERMETIC_MARKERS: not retained_evidence and not provider_runtime
   FOCUSED_SELECTION: >-
+    tests/test_market_wide_relative_volume_research.py
+    tests/test_tactical_confirmation_context.py
+    tests/test_tactical_behavior_context.py
+    tests/test_tactical_momentum_context.py
+    tests/test_tactical_confirmation_invalidation_boundaries.py
+    tests/test_watchlist_tactical_entry_classifier.py
+    tests/test_technical_structure_context.py
     tests/test_feature_input_fitness_contract.py
     tests/test_current_research_ai_handoff_packet.py
     tests/test_current_opportunity_prioritization.py

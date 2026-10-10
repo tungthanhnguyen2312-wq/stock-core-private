@@ -19,7 +19,7 @@ import daily_session_level2_package as level2
 import stocklookup_core.decision.integrated_investment_decision_product as product
 import prospective_decision_retention as retention
 import prospective_t0_seal_index as seals
-from contextual_technical_dispatch import PRODUCTION_V2_START_SESSION
+from stocklookup_core.tactical.contextual_technical_dispatch import PRODUCTION_V2_START_SESSION
 from test_thesis_evidence_matrix import integrated_row
 
 SESSION = "2026-10-05"

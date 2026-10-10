@@ -197,7 +197,7 @@ def _seal(view):
 
 
 def build_views(context):
-    from contextual_technical_dispatch import verify_context, V1
+    from stocklookup_core.tactical.contextual_technical_dispatch import verify_context, V1
     version = verify_context(context)
     result = {}
     for tf, frame in context["timeframes"].items():
@@ -262,7 +262,7 @@ def verify_view(view):
     if (view.get("contract_version") != CONTRACT_VERSION or view.get("view_identity") != view.get("artifact_identity") or
         any(view.get(k) != v for k, v in _identity(view).items()) or view.get("non_voting") is not True or view.get("is_actionable") is not False):
         raise ValueError("RELATIONSHIP_VIEW_IDENTITY_INVALID")
-    from contextual_technical_dispatch import SUPPORTED_VERSIONS
+    from stocklookup_core.tactical.contextual_technical_dispatch import SUPPORTED_VERSIONS
     if view["source"]["technical_contract_version"] not in SUPPORTED_VERSIONS:
         raise ValueError("TECHNICAL_VERSION_UNKNOWN")
     version = view["source"]["technical_contract_version"]

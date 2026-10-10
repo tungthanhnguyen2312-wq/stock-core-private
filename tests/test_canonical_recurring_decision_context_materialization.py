@@ -18,17 +18,17 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import canonical_current_product_projections as ccpp
 import market_wide_fundamental_feature_store as feature_store_module
-import tactical_behavior_context as compact_module
+import stocklookup_core.tactical.tactical_behavior_context as compact_module
 from test_tactical_behavior_context import (
     SESSION as TACTICAL_SESSION,
     _descriptive_source, _leadership_source, _p3f9b_snapshot,
 )
 import stocklookup_core.decision.current_market_screening_opportunity_comparison_foundation as screening_module
 import market_wide_current_descriptive_research as descriptive_module
-import tactical_confirmation_invalidation_boundaries as boundaries_module
-import tactical_setup_tags as tags_module
+import stocklookup_core.tactical.tactical_confirmation_invalidation_boundaries as boundaries_module
+import stocklookup_core.tactical.tactical_setup_tags as tags_module
 import technical_structure_context as structure_module
-import watchlist_tactical_entry_classifier as tactical_module
+import stocklookup_core.tactical.watchlist_tactical_entry_classifier as tactical_module
 
 ROOT = Path(__file__).resolve().parents[1]
 

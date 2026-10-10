@@ -31,6 +31,10 @@ Valuation calculations, peers and current-input scaleout are in `stocklookup_cor
 Decision inputs, risk/thesis/opportunity contexts, packets, integrated brief and workspace
 projection are in `stocklookup_core/decision/`; Daily orchestration/retention remain in place.
 [Decision package contract and evidence limits](decision_research_package_v1_contract.md).
+Tactical contexts, breakout/relative-volume projection and V2 dispatch are in
+`stocklookup_core/tactical/`. Frozen V1 producers, primitive and relationship bridge
+retain root paths; frozen V2 moves without changing bytes.
+[Tactical package contract and frozen-source limits](tactical_research_package_v1_contract.md).
 Thesis adapters, matrix, sidecars and runtime are in `stocklookup_core/research/`;
 their existing child tools retain their paths and resolve the repository source root.
 The existing offline `official_document_acquisition.py` CLI is a small compatibility launcher.
@@ -141,7 +145,7 @@ and [acceptance](internal/R6_PROSPECTIVE_LEARNING_ACCEPTANCE.json).
 
 ### 6. Tactical (Tactical and Behavioral Engine V2)
 - **Responsibility:** Evaluates nine-state entry classification, close-only technical structure, multi-label setup tags, and confirmation/invalidation price boundaries.
-- **Primary Entry Module:** [`tactical_behavior_context.py`](../tactical_behavior_context.py) (with [`watchlist_tactical_entry_classifier.py`](../watchlist_tactical_entry_classifier.py))
+- **Primary Entry Module:** [`tactical_behavior_context.py`](../stocklookup_core/tactical/tactical_behavior_context.py) (with [`watchlist_tactical_entry_classifier.py`](../stocklookup_core/tactical/watchlist_tactical_entry_classifier.py))
 - **Key Output Contract:** `tactical_behavior_context/v1` (`tactical_behavior_context_artifact.json`).
 
 ### 7. Financial V2

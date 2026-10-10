@@ -12,7 +12,7 @@ def module_for_version(version):
     if version == V1:
         import contextual_technical_features as producer
     elif version == V2:
-        import contextual_technical_features_v2 as producer
+        import stocklookup_core.tactical.contextual_technical_features_v2 as producer
     else:
         raise ValueError("TECHNICAL_VERSION_UNKNOWN:" + str(version))
     return producer
@@ -45,7 +45,7 @@ def verify_context(context, *, ticker=None, session=None):
         from volume_and_flow_context import verify_technical
         verify_technical(context, ticker, session)
     else:
-        from contextual_technical_features_v2 import verify_context as verify
+        from stocklookup_core.tactical.contextual_technical_features_v2 import verify_context as verify
         verify(context, ticker=ticker, session=session)
     return version
 

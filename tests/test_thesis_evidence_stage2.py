@@ -10,7 +10,7 @@ import stocklookup_core.research.thesis_evidence_matrix as matrix
 import prospective_t0_seal_index as seals
 import prospective_decision_retention as retention
 import stocklookup_core.decision.integrated_investment_decision_product as product
-import contextual_technical_features_v2 as technical
+import stocklookup_core.tactical.contextual_technical_features_v2 as technical
 import technical_relationship_view as bridge
 import volume_and_flow_context_v2 as flow
 import stocklookup_core.research.thesis_production_runtime as runtime

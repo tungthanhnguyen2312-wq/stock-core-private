@@ -151,11 +151,11 @@ def _evaluate_all(facts: Mapping[str, Any], market_breadth_state: str | None) ->
 def build_artifact(*, technical_structure: Mapping[str, Any], current_descriptive: Mapping[str, Any],
                    current_screening: Mapping[str, Any], current_leadership: Mapping[str, Any],
                    tactical: Mapping[str, Any], requested_at: str) -> dict[str, Any]:
-    _verify(technical_structure, "technical_structure_context", "TECHNICAL_STRUCTURE")
+    _verify(technical_structure, 'technical_structure_context', "TECHNICAL_STRUCTURE")
     _verify(current_descriptive, "market_wide_current_descriptive_research", "DESCRIPTIVE")
     _verify(current_screening, "stocklookup_core.decision.current_market_screening_opportunity_comparison_foundation", "SCREENING")
     _verify(current_leadership, "current_market_sector_leadership_context", "LEADERSHIP")
-    _verify(tactical, "watchlist_tactical_entry_classifier", "TACTICAL")
+    _verify(tactical, 'stocklookup_core.tactical.watchlist_tactical_entry_classifier', "TACTICAL")
 
     session = current_descriptive.get("session")
     if technical_structure.get("session") != session or current_screening.get("session") != session or current_leadership.get("session") != session or tactical.get("session") != session:

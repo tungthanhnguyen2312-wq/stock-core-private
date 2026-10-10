@@ -9,7 +9,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from market_wide_relative_volume_research import build_artifact, content_identity
+from stocklookup_core.tactical.market_wide_relative_volume_research import build_artifact, content_identity
 
 
 def replay(snapshot_path: Path, output_dir: Path) -> Path:

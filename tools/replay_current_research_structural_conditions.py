@@ -13,8 +13,8 @@ import time
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import daily_session_level2_package as paths_module
 import stocklookup_core.decision.integrated_investment_decision_product as product
-import market_structure_breakout_product_projection as projection
-import market_wide_relative_volume_research as participation
+import stocklookup_core.tactical.market_structure_breakout_product_projection as projection
+import stocklookup_core.tactical.market_wide_relative_volume_research as participation
 import technical_structure_context as structure_module
 from canonical_post_close_pipeline import resolve_current_session_priority_queue
 

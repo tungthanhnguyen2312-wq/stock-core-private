@@ -13,9 +13,9 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import market_wide_current_descriptive_research as descriptive_module
-import tactical_confirmation_invalidation_boundaries as boundaries_module
+import stocklookup_core.tactical.tactical_confirmation_invalidation_boundaries as boundaries_module
 import technical_structure_context as structure
-import watchlist_tactical_entry_classifier as tactical_module
+import stocklookup_core.tactical.watchlist_tactical_entry_classifier as tactical_module
 from field_temporal_contract import stable_id
 
 SESSION = "2026-08-28"

@@ -54,10 +54,10 @@ def _priority_queue(session: str) -> dict[str, Any]:
 
 def _build_current_research_surfaces(session: str) -> dict[str, Any]:
     """Build structure/momentum/participation/confirmation from retained inputs for one session."""
-    import market_structure_breakout_product_projection as projection
-    import market_wide_relative_volume_research as relative_volume
-    import tactical_confirmation_context as confirmation
-    import tactical_momentum_context as momentum
+    import stocklookup_core.tactical.market_structure_breakout_product_projection as projection
+    import stocklookup_core.tactical.market_wide_relative_volume_research as relative_volume
+    import stocklookup_core.tactical.tactical_confirmation_context as confirmation
+    import stocklookup_core.tactical.tactical_momentum_context as momentum
     import technical_structure_context as structure
 
     token = session.replace("-", "")

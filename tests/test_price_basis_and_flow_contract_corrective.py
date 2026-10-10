@@ -9,11 +9,11 @@ import pytest
 
 import canonical_market_bars as bars
 import flow_price_divergence_shadow as flow
-import market_structure_breakout_product_projection as projection
+import stocklookup_core.tactical.market_structure_breakout_product_projection as projection
 import market_wide_current_descriptive_research as descriptive
 import multi_session_signal_velocity as velocity
 import mva_daily_research_bundle as features
-import tactical_confirmation_invalidation_boundaries as boundaries
+import stocklookup_core.tactical.tactical_confirmation_invalidation_boundaries as boundaries
 import technical_structure_context as structure
 
 SESSION = "2026-10-08"

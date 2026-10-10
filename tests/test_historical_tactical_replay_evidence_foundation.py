@@ -7,7 +7,7 @@ from unittest import mock
 
 import historical_tactical_replay_evidence_foundation as foundation
 import market_wide_current_descriptive_research as descriptive_module
-import watchlist_tactical_entry_classifier as classifier
+import stocklookup_core.tactical.watchlist_tactical_entry_classifier as classifier
 
 
 DATES = tuple(f"2026-06-{day:02d}" for day in range(1, 20)) + ("2026-07-20",)

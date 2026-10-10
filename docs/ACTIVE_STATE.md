@@ -1,8 +1,8 @@
 # Stock Lookup — Active State
 
 Updated 2026-10-10 from verified
-main `703b8c79ceedefa653aa5578bb688fd50b27b203`.
-Decision package admitted under standing delegation.
+main `8142f4f872b0b079579f34cb45e782f466b4ce7c`.
+Tactical package admitted under standing delegation.
 Verify live main: `git fetch origin main` or `git ls-remote origin refs/heads/main`; a **local** remote-tracking ref can be stale.
 ## 0. How this file relates to the others
 | Question | Answer lives in |
@@ -33,7 +33,7 @@ Fact kinds used below: **CURRENT FACT** (verified in repo or by a stated read-on
 **BLOCKED**, **DEFERRED**, **HISTORICAL**.
 
 ## 1. The operational gate
-- **ACTIVE — [decision package](decision_research_package_v1_contract.md):** 16 modules; parity/consumer acceptance, merge gated. Valuation PR109 COMPLETE `703b8c7`, four post-merge CI PASS (38035299119), root Python 543. Prior financial/layout/corrective releases COMPLETE.
+- **ACTIVE — [tactical package](tactical_research_package_v1_contract.md):** 11 modules; parity/frozen-byte acceptance, merge gated. Decision PR110 COMPLETE `8142f4f`, four post-merge CI PASS (38037503784), root Python 527. Prior financial/valuation/layout releases COMPLETE.
 - **COMPLETE — [capacity Phase 1](capacity_recovery_phase1_contract.md):** PR99 merged
   `168e0f7`, post-merge CI 37893984528 success; zero production reclaim/activation.
 - **COMPLETE — Vault V1:** PR97 merged `3f3d4fe`; offline/opt-in, 77 candidates,
@@ -306,7 +306,7 @@ Fact kinds used below: **CURRENT FACT** (verified in repo or by a stated read-on
 
 ## 9. Next action
 
-Finish decision research package acceptance and its separate merge gate. Standing delegation
+Finish tactical research package acceptance and its separate merge gate. Standing delegation
 permits eligible bounded successors; native admission records each scope. Fiscal-calendar
 mapping needs the exact source/period/publication proof in the contract above.
 Ordinary Daily remains owner-operated after fresh READY preflight and exact session gates.

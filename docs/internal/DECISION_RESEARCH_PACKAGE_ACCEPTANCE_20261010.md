@@ -4,6 +4,15 @@
 Branch `refactor/decision-research-package-v1-20261010`; dedicated checkout, sole
 writer. Starting verified main `703b8c79ceedefa653aa5578bb688fd50b27b203`.
 
+## Released decision checkpoint
+
+PR110 merged exact owner-approved HEAD `cdd8a766ce9c0ad5f6d15607e9b15cf1420da07f`
+at `8142f4f872b0b079579f34cb45e782f466b4ce7c`; all four PR CI jobs
+(38037136231) and post-merge jobs (38037503784) passed. Focused PR regression:
+4,589 pass, 146 skip, 49 deselected, 49 subtests pass. Native successor admission
+records DECISION_RESEARCH_PACKAGE_V1 COMPLETE at that verified release.
+No production activation or authority promotion occurred.
+
 ## Released predecessor and admission
 
 PR109 merged exact owner-approved HEAD `4af95d8e6665eb18457320164e6fbdd2e28399d6`

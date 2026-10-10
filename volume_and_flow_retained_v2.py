@@ -15,7 +15,7 @@ import daily_session_level2_package as level2
 import dnse_foreign_flow_store as store
 import market_wide_historical_research_context as history
 import volume_and_flow_context_v2 as context
-import contextual_technical_dispatch as dispatch
+import stocklookup_core.tactical.contextual_technical_dispatch as dispatch
 import technical_relationship_view as bridge
 from bounded_artifact_stream import header, source_hash, stream_artifact
 from daily_session_completion_reference import load_qualified_completed_sessions

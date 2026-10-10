@@ -9,7 +9,7 @@ from pathlib import Path
 import export_ai_bundle as bundle
 import market_wide_current_technical_coverage_scaleout as recovery_module
 from field_temporal_contract import stable_id
-from market_wide_relative_volume_research import build_artifact, content_identity, resolve_records_with_recovery
+from stocklookup_core.tactical.market_wide_relative_volume_research import build_artifact, content_identity, resolve_records_with_recovery
 from tools.run_market_wide_relative_volume_research import replay
 
 

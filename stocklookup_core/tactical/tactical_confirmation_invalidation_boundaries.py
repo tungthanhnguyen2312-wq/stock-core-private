@@ -56,7 +56,7 @@ def content_identity(value: Mapping[str, Any]) -> dict[str, str]:
 
 
 def _verify(source: Mapping[str, Any], module_name: str, label: str) -> None:
-    module = __import__(module_name)
+    module = __import__(module_name, fromlist=["content_identity"])
     identity = module.content_identity(source)
     if source.get("artifact_sha256") != identity["artifact_sha256"]:
         raise TacticalBoundariesError(f"{label}_IDENTITY_MISMATCH")
@@ -213,10 +213,10 @@ def build_artifact(*, tactical: Mapping[str, Any], current_descriptive: Mapping[
     given ticker's own structure record is unavailable, boundaries fall back to the MA20/momentum-only
     anchors -- exactly action_instrumentation.py's original technical_risk_boundary anchors -- rather
     than being blocked."""
-    _verify(tactical, "watchlist_tactical_entry_classifier", "TACTICAL")
+    _verify(tactical, 'stocklookup_core.tactical.watchlist_tactical_entry_classifier', "TACTICAL")
     _verify(current_descriptive, "market_wide_current_descriptive_research", "DESCRIPTIVE")
     if technical_structure is not None:
-        _verify(technical_structure, "technical_structure_context", "TECHNICAL_STRUCTURE")
+        _verify(technical_structure, 'technical_structure_context', "TECHNICAL_STRUCTURE")
         if technical_structure.get("session") != current_descriptive.get("session"):
             raise TacticalBoundariesError("TECHNICAL_STRUCTURE_SESSION_MISMATCH")
 

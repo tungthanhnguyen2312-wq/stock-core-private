@@ -136,7 +136,7 @@ def adapt_integrated(row, *, bindings=None):
 
 
 def adapt_technical(context, *, bindings=None):
-    import contextual_technical_dispatch as dispatch
+    import stocklookup_core.tactical.contextual_technical_dispatch as dispatch
     import technical_relationship_view as bridge
     from contextual_technical_primitives import USABLE
     version=dispatch.verify_context(context)

@@ -48,7 +48,7 @@ import stocklookup_core.financial.financial_entity_applicability as financial_en
 import monetary_basis_contract
 import multi_source_market_evidence_contract
 import price_basis_feature_fitness
-import technical_structure_context
+import technical_structure_context as technical_structure_context
 
 CONTRACT_VERSION = "feature_input_fitness_contract/v1"
 
@@ -182,7 +182,7 @@ FAMILY_REGISTRY: dict[str, dict[str, Any]] = {
         description="Whether a ticker's target-session volume observation is a genuine, correctly-attributed provider-native value.",
         required_dimensions=("provider", "field_identity", "field_representation", "session"),
         fitness_tiers=("READY", "UNAVAILABLE", "PARTIAL", "BLOCKED"),
-        authoritative_module="market_wide_relative_volume_research",
+        authoritative_module='stocklookup_core.tactical.market_wide_relative_volume_research',
         authoritative_functions=("resolve_records_with_recovery", "build_artifact"),
         notes="Every row (current AND historical) is independently re-verified provider=='DNSE' before being trusted -- a defense-in-depth check, not just a caller contract.",
     ),
@@ -190,7 +190,7 @@ FAMILY_REGISTRY: dict[str, dict[str, Any]] = {
         description="Whether a ticker has both a usable current-session volume AND a compatible 20-session same-provider baseline for a dimensionless acceleration/percentile comparison.",
         required_dimensions=("provider", "field_identity", "field_representation", "session", "historical_series_identity", "target_close_compatibility"),
         fitness_tiers=("READY", "PARTIAL", "UNAVAILABLE", "BLOCKED"),
-        authoritative_module="market_wide_relative_volume_research",
+        authoritative_module='stocklookup_core.tactical.market_wide_relative_volume_research',
         authoritative_functions=("resolve_records_with_recovery", "build_artifact"),
         known_blockers=("UNAVAILABLE_INSUFFICIENT_HISTORY", "UNAVAILABLE_ZERO_BASELINE", "CURRENT_VOLUME_UNAVAILABLE", "PROVIDER_MISMATCH", "REPRESENTATION_MISMATCH"),
         notes=(
@@ -220,7 +220,7 @@ FAMILY_REGISTRY: dict[str, dict[str, Any]] = {
         description="Whether high/low/open are usable for wick-based, true-range, or gap-geometry features.",
         required_dimensions=("price_basis", "provider", "historical_series_identity"),
         fitness_tiers=("BLOCKED",),
-        authoritative_module="technical_structure_context",
+        authoritative_module='technical_structure_context',
         authoritative_functions=("HIGH_LOW_BLOCKED_FEATURES",),
         known_blockers=("HIGH_LOW_BASIS_NOT_COMPATIBLE",),
         notes="Standing BLOCKED: the retained high/low basis is ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED with no wick-geometry compatibility proof (TACTICAL_MARKET_STRUCTURE_AND_BREAKOUT_V3, unchanged since). FVG/Order Block/liquidity-sweep remain DEFERRED_INPUT_BASIS_NOT_QUALIFIED for this reason.",
@@ -386,21 +386,21 @@ FAMILY_REGISTRY: dict[str, dict[str, Any]] = {
         description="Swing/BOS/CHoCH/breakout structure fitness -- close-only, requires the same target-session-close-compatible history as TECHNICAL_CLOSE_HISTORY.",
         required_dimensions=("historical_series_identity", "target_close_compatibility", "session"),
         fitness_tiers=("STRUCTURE_READY", "INSUFFICIENT_HISTORY"),
-        authoritative_module="technical_structure_context",
+        authoritative_module='technical_structure_context',
         authoritative_functions=("resolve_target_session_observations", "build_artifact"),
     ),
     MOMENTUM: _entry(
         description="RSI/MA/MACD/divergence fitness -- close-only, requires the identical history authority as TACTICAL_STRUCTURE (shared function, not a diverging copy).",
         required_dimensions=("historical_series_identity", "target_close_compatibility", "session"),
         fitness_tiers=("ELIGIBLE", "NOT_ELIGIBLE"),
-        authoritative_module="tactical_momentum_context",
+        authoritative_module='stocklookup_core.tactical.tactical_momentum_context',
         authoritative_functions=("build_artifact",),
     ),
     PARTICIPATION: _entry(
         description="Volume-based confirmation input for tactical_confirmation_context -- same authority and guard as RELATIVE_VOLUME.",
         required_dimensions=("provider", "field_identity", "session", "historical_series_identity", "target_close_compatibility"),
         fitness_tiers=("READY", "INSUFFICIENT_EVIDENCE"),
-        authoritative_module="market_wide_relative_volume_research",
+        authoritative_module='stocklookup_core.tactical.market_wide_relative_volume_research',
         authoritative_functions=("resolve_records_with_recovery", "build_artifact"),
         notes="tactical_confirmation_context.participation_state() only ever reads acceleration_status=='READY'; every other RELATIVE_VOLUME status becomes INSUFFICIENT_EVIDENCE for this family, never a fabricated neutral reading.",
     ),

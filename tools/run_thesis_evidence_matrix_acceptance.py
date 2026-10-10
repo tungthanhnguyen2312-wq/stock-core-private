@@ -12,7 +12,7 @@ from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT));sys.path.insert(0,str(ROOT/"tests"))
 import stocklookup_core.decision.integrated_investment_decision_product as product
-import contextual_technical_dispatch as dispatch
+import stocklookup_core.tactical.contextual_technical_dispatch as dispatch
 import technical_relationship_view as bridge
 import volume_and_flow_context_v2 as flow
 import prospective_pit_capture_retention as capture

@@ -129,7 +129,7 @@ from market_wide_current_liquidity_research import (
 from market_wide_historical_matched_liquidity import (
     content_identity as market_wide_historical_matched_liquidity_content_identity,
 )
-from market_wide_relative_volume_research import (
+from stocklookup_core.tactical.market_wide_relative_volume_research import (
     content_identity as market_wide_relative_volume_content_identity,
 )
 from stocklookup_core.financial.financial_analysis_product_projection import (
@@ -206,7 +206,7 @@ from daily_research_session_operations import (
 from current_market_flow_positioning import (
     content_identity as current_market_flow_positioning_content_identity,
 )
-from watchlist_tactical_entry_classifier import (
+from stocklookup_core.tactical.watchlist_tactical_entry_classifier import (
     content_identity as watchlist_tactical_entry_classifier_content_identity,
 )
 from current_state_relative_valuation import (
