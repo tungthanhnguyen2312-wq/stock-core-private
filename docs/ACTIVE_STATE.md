@@ -1,8 +1,8 @@
 # Stock Lookup — Active State
 
 Updated 2026-10-10 from verified
-main `04211888251473f7872af88e959cf49ca9089dd5`.
-Portfolio package admitted under standing delegation.
+main `9bc6360af5b678ffc15d46156bbb2bfcb8457f0c`.
+Read-only research inspection admitted under standing delegation.
 Verify live main: `git fetch origin main` or `git ls-remote origin refs/heads/main`; a **local** remote-tracking ref can be stale.
 ## 0. How this file relates to the others
 | Question | Answer lives in |
@@ -33,7 +33,7 @@ Fact kinds used below: **CURRENT FACT** (verified in repo or by a stated read-on
 **BLOCKED**, **DEFERRED**, **HISTORICAL**.
 
 ## 1. The operational gate
-- **ACTIVE — [portfolio package](portfolio_research_package_v1_contract.md):** source layout; merge gated. Memory PR114 COMPLETE `0421188`, four post-merge CI PASS (38053161990). Prior releases COMPLETE.
+- **ACTIVE — [research inspection](research_inspection_integrity_v1_contract.md):** explicit-source coverage/calibration CLI and strict feedback parsing; merge gated. PR115 COMPLETE `9bc6360`, four post-merge CI PASS (38056595405).
 - **COMPLETE — [capacity Phase 1](capacity_recovery_phase1_contract.md):** PR99 merged
   `168e0f7`, post-merge CI 37893984528 success; zero production reclaim/activation.
 - **COMPLETE — Vault V1:** PR97 merged `3f3d4fe`; offline/opt-in, 77 candidates,
@@ -80,7 +80,7 @@ Fact kinds used below: **CURRENT FACT** (verified in repo or by a stated read-on
 - **CURRENT FACT — decision-intelligence closure.** `DECISION_INTELLIGENCE_COVERAGE_AND_CALIBRATION_CLOSURE_V1`
   joins the 1,683-name coverage index, historical panel, outcome review, v2 evidence packet and portfolio workbench. Authority effect
   `NONE / DECISION_INTELLIGENCE_RESEARCH_COVERAGE_AND_CALIBRATION_ONLY`. The optional
-  CLI is deferred. That closure job ran no 2026-10-07 Daily and created no new T0;
+  CLI was deferred in that closure; the admitted inspection extends it offline. That closure job ran no 2026-10-07 Daily and created no new T0;
   the actual subsequent Daily completion is recorded above.
   [Closure](internal/DECISION_INTELLIGENCE_COVERAGE_AND_CALIBRATION_CLOSURE_20261007.md).
 - **CURRENT FACT — portfolio research workbench.** `PORTFOLIO_RESEARCH_DECISION_WORKBENCH_FOUNDATION_V1`
@@ -306,7 +306,7 @@ Fact kinds used below: **CURRENT FACT** (verified in repo or by a stated read-on
 
 ## 9. Next action
 
-Finish portfolio package acceptance and its separate merge gate.
+Finish read-only research inspection and its separate merge gate.
 Native admission records each standing-authorized scope. Fiscal-calendar
 mapping needs the exact source/period/publication proof in the contract above.
 Ordinary Daily remains owner-operated after fresh READY preflight and exact session gates.

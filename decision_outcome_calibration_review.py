@@ -570,49 +570,79 @@ def review_observations(rows: Iterable[Mapping[str, Any]], *, live_sessions: tup
     return body
 
 
-def iter_feedback_records(path: Path):
-    """Yield feedback records one at a time. The caller must not retain them."""
-    key = b'"feedback_records":'
-    decoder = json.JSONDecoder()
-    with Path(path).open("rb") as handle:
-        prefix = handle.read(400_000)
-        index = prefix.find(key)
-        if index < 0:
-            raise ValueError("FEEDBACK_RECORDS_ABSENT")
-        handle.seek(index + len(key))
-        buffer = ""
-        started = False
-        while True:
-            chunk = handle.read(1_000_000)
-            if chunk:
-                buffer += chunk.decode("utf-8")
-            if not started:
-                buffer = buffer.lstrip()
-                if not buffer and chunk:
-                    continue
-                if not buffer.startswith("["):
-                    raise ValueError("FEEDBACK_RECORDS_NOT_AN_ARRAY")
-                buffer = buffer[1:]
-                started = True
-            while True:
-                buffer = buffer.lstrip()
-                if buffer.startswith(","):
-                    buffer = buffer[1:]
-                    continue
-                if buffer.startswith("]"):
-                    return
-                if not buffer:
-                    break
-                try:
-                    record, end = decoder.raw_decode(buffer)
-                except json.JSONDecodeError:
-                    if not chunk:
-                        raise
-                    break
-                yield record
-                buffer = buffer[end:]
-            if not chunk:
-                return
+def iter_feedback_records(path: Path, *, on_metadata=None):
+    """Validate the complete object while yielding one bounded feedback row.
+
+    Exhaust the iterator before publishing a review: later syntax errors invalidate
+    earlier rows. Text IO preserves UTF8 characters across refill boundaries.
+    """
+    from bounded_artifact_stream import ObjectStream
+    import math
+
+    def unique_object(pairs):
+        result = {}
+        for key, value in pairs:
+            if key in result:
+                raise ValueError("FEEDBACK_DUPLICATE_KEY")
+            result[key] = value
+        return result
+
+    def nonfinite(value):
+        raise ValueError("FEEDBACK_NONFINITE_NUMBER")
+
+    def finite_float(value):
+        number = float(value)
+        if not math.isfinite(number):
+            raise ValueError("FEEDBACK_NONFINITE_NUMBER")
+        return number
+
+    def discard(stream, depth=0):
+        # Metadata can contain a large inventory. Validate it structurally without
+        # ever loading that container; the existing bound applies to each token.
+        if depth > 128:
+            raise ValueError("FEEDBACK_METADATA_DEPTH_LIMIT")
+        if stream.peek() == "{":
+            for _key in stream.members():
+                discard(stream, depth + 1)
+        elif stream.peek() == "[":
+            stream.take("[")
+            if stream.peek() != "]":
+                while True:
+                    discard(stream, depth + 1)
+                    if stream.peek() == "]":
+                        break
+                    stream.take(",")
+            stream.take("]")
+        else:
+            return stream.value()
+        return None
+
+    found = False
+    with Path(path).open("r", encoding="utf-8") as handle:
+        stream = ObjectStream(handle, sorted_required=False)
+        stream.decoder = json.JSONDecoder(object_pairs_hook=unique_object, parse_constant=nonfinite, parse_float=finite_float)
+        for key in stream.members():
+            if key != "feedback_records":
+                value = discard(stream)
+                if on_metadata is not None:
+                    on_metadata(key, value)
+                continue
+            found = True
+            stream.take("[")
+            if stream.peek() != "]":
+                while True:
+                    record = stream.value()
+                    if not isinstance(record, Mapping):
+                        raise ValueError("FEEDBACK_RECORD_NOT_AN_OBJECT")
+                    yield record
+                    if stream.peek() == "]":
+                        break
+                    stream.take(",")
+            stream.take("]")
+        if stream.peek():
+            raise ValueError("FEEDBACK_TRAILING_CONTENT")
+    if not found:
+        raise ValueError("FEEDBACK_RECORDS_ABSENT")
 
 
 def review_feedback_artifact(path: Path, *, live_sessions: tuple[str, ...] = LIVE_DECISION_SESSIONS) -> dict[str, Any]:

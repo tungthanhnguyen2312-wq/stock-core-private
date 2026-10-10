@@ -15,14 +15,35 @@
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "PORTFOLIO_RESEARCH_PACKAGE_V1",
+    "milestone": "RESEARCH_INSPECTION_INTEGRITY_V1",
     "state": "ACTIVE"
   },
   "queued_next": [],
   "milestones": [
     {
-      "milestone_id": "PORTFOLIO_RESEARCH_PACKAGE_V1",
+      "milestone_id": "RESEARCH_INSPECTION_INTEGRITY_V1",
       "state": "ACTIVE",
+      "starting_checkpoint": "9bc6360af5b678ffc15d46156bbb2bfcb8457f0c",
+      "candidate_branch": "feature/research-inspection-integrity-v1-20261010",
+      "dependencies": [
+        "PORTFOLIO_RESEARCH_PACKAGE_V1"
+      ],
+      "unlocks": [],
+      "owner_authorized": true,
+      "owner_override": "Owner weekend product-value direction and PROGRAM_LEAD_CONTINUATION_AND_STANDING_DELEGATION authorize extending existing coverage/calibration with read-only explicit-source CLI and strict feedback intake; one writer; no Daily/runtime/authority promotion; exact-HEAD merge separate. PR115 release and four post-merge CI jobs verified.",
+      "authority_effect": "NONE",
+      "source_doc": "docs/research_inspection_integrity_v1_contract.md",
+      "state_history": [
+        "DEFERRED",
+        "ACTIVE"
+      ],
+      "checkpoint": null,
+      "terminal_disposition": null,
+      "notes": "Owner weekend product-value direction and PROGRAM_LEAD_CONTINUATION_AND_STANDING_DELEGATION authorize extending existing coverage/calibration with read-only explicit-source CLI and strict feedback intake; one writer; no Daily/runtime/authority promotion; exact-HEAD merge separate. PR115 release and four post-merge CI jobs verified."
+    },
+    {
+      "milestone_id": "PORTFOLIO_RESEARCH_PACKAGE_V1",
+      "state": "COMPLETE",
       "starting_checkpoint": "04211888251473f7872af88e959cf49ca9089dd5",
       "candidate_branch": "refactor/portfolio-research-package-v1-20261010",
       "dependencies": [
@@ -35,11 +56,12 @@
       "source_doc": "docs/portfolio_research_package_v1_contract.md",
       "state_history": [
         "DEFERRED",
-        "ACTIVE"
+        "ACTIVE",
+        "COMPLETE"
       ],
-      "checkpoint": null,
-      "terminal_disposition": null,
-      "notes": "Owner PROGRAM_LEAD_CONTINUATION_AND_STANDING_DELEGATION (2026-10-10) explicitly authorizes substantial coherent scope selection, native admission/override, implementation, offline validation, commits and safe feature PRs, and continuation after release with empty queue. This overrides older one-milestone-per-session/start-only-on-new-prompt restrictions for bounded program development; separate exact-HEAD merge and production/authority gates remain. Verified live main 04211888251473f7872af88e959cf49ca9089dd5 releases PR114 approved HEAD 5a7c22b13a6c46972eceec02ff1633e3456bf75d; all four PR jobs (38052737565) and all four post-merge jobs (38053161990) SUCCESS. Admit PORTFOLIO_RESEARCH_PACKAGE_V1: move twelve sole implementations in the demonstrated private portfolio/context/decision, quantitative/concentration/capacity research and workbench/opportunity-comparison boundary into stocklookup_core/portfolio; update 34 direct consumers, real reflection and fitness pointers, preserve checkout/private roots, Daily and portfolio CLI paths, all calculations/schemas/identity labels/privacy/non-execution authority. Only synthetic temporary fixtures; retain three missing-evidence baseline outcomes and frozen source bytes. Prospective capture/feedback relocation deferred because actual frozen producers import the candidate modules; reopening requires an explicit compatibility design preserving strict source hashes. Fiscal/publication correctness remains evidence-blocked at existing exact source gate. Authority effect NONE/SOURCE_LAYOUT_ONLY, one writer, dedicated checkout, no production/private runtime writes, provider activation, trust promotion, deletion, deploy or visibility changes; no background continuation after session."
+      "checkpoint": "9bc6360af5b678ffc15d46156bbb2bfcb8457f0c",
+      "terminal_disposition": "IMPLEMENTATION_RELEASED_NO_PRODUCTION_ACTIVATION",
+      "notes": "Owner PROGRAM_LEAD_CONTINUATION_AND_STANDING_DELEGATION (2026-10-10) explicitly authorizes substantial coherent scope selection, native admission/override, implementation, offline validation, commits and safe feature PRs, and continuation after release with empty queue. This overrides older one-milestone-per-session/start-only-on-new-prompt restrictions for bounded program development; separate exact-HEAD merge and production/authority gates remain. Verified live main 04211888251473f7872af88e959cf49ca9089dd5 releases PR114 approved HEAD 5a7c22b13a6c46972eceec02ff1633e3456bf75d; all four PR jobs (38052737565) and all four post-merge jobs (38053161990) SUCCESS. Admit PORTFOLIO_RESEARCH_PACKAGE_V1: move twelve sole implementations in the demonstrated private portfolio/context/decision, quantitative/concentration/capacity research and workbench/opportunity-comparison boundary into stocklookup_core/portfolio; update 34 direct consumers, real reflection and fitness pointers, preserve checkout/private roots, Daily and portfolio CLI paths, all calculations/schemas/identity labels/privacy/non-execution authority. Only synthetic temporary fixtures; retain three missing-evidence baseline outcomes and frozen source bytes. Prospective capture/feedback relocation deferred because actual frozen producers import the candidate modules; reopening requires an explicit compatibility design preserving strict source hashes. Fiscal/publication correctness remains evidence-blocked at existing exact source gate. Authority effect NONE/SOURCE_LAYOUT_ONLY, one writer, dedicated checkout, no production/private runtime writes, provider activation, trust promotion, deletion, deploy or visibility changes; no background continuation after session. Verified release 9bc6360af5b678ffc15d46156bbb2bfcb8457f0c; no production reclaim, activation or automatic successor."
     },
     {
       "milestone_id": "FEEDBACK_WINDOWS_MEMORY_REASON_CORRECTIVE_V1",

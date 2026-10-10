@@ -505,13 +505,13 @@ def research_distinction(row: Mapping[str, Any]) -> list[str]:
     return notes
 
 
-def focus_reports(index: Mapping[str, Any], enriched_panel: Mapping[str, Any] | None = None) -> dict[str, Any]:
+def focus_reports(index: Mapping[str, Any], enriched_panel: Mapping[str, Any] | None = None, *, tickers: tuple[str, ...] = FOCUS_TICKERS) -> dict[str, Any]:
     by_ticker = {row["ticker"]: row for row in index.get("rows") or []}
     panel_rows = {}
     for row in (enriched_panel or {}).get("rows") or []:
         panel_rows.setdefault(row.get("ticker"), []).append(row)
     reports = {}
-    for ticker in FOCUS_TICKERS:
+    for ticker in tickers:
         coverage = by_ticker.get(ticker)
         history = panel_rows.get(ticker) or []
         trigger_missing = False
@@ -580,6 +580,14 @@ def load_retained_coverage(evidence_root: Path, *, session: str = "2026-10-06") 
     valuation = _load_json(valuation_path)
     intelligence = _load_json(intelligence_path)
     events = _load_json(event_path)
+    return join_coverage_artifacts(session=session, universe=universe, technical=technical,
+                                   valuation=valuation, intelligence=intelligence, events=events)
+
+
+def join_coverage_artifacts(*, session: str, universe: Mapping[str, Any], technical: Mapping[str, Any],
+                            valuation: Mapping[str, Any], intelligence: Mapping[str, Any],
+                            events: Mapping[str, Any]) -> dict[str, Any]:
+    """Existing coverage projection shared by dated closure and explicit-source inspection."""
     universe_records = universe.get("records") if isinstance(universe.get("records"), Mapping) else {}
     technical_records = technical.get("records") if isinstance(technical.get("records"), Mapping) else {}
     valuation_records = valuation.get("records") if isinstance(valuation.get("records"), Mapping) else {}
@@ -681,6 +689,6 @@ def retained_closure(evidence_root: Path, *, session: str = "2026-10-06") -> dic
         "focus_packet_identities": {ticker: packet["packet_identity"] for ticker, packet in packets.items()},
         "focus_limitations": {ticker: packet["sections"]["history"]["spine"]["retention_limitation"] for ticker, packet in packets.items()},
         "peak_traced_bytes": peak,
-        "cli": "DEFERRED",
+        "cli": "AVAILABLE_READ_ONLY_EXPLICIT_SOURCES",
         "persisted": False,
     }

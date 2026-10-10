@@ -221,6 +221,8 @@ def _run_owner_daily_workflow() -> int:
 def main(argv=None) -> int:
     p = argparse.ArgumentParser()
     sub = p.add_subparsers(dest="command", required=True)
+    from tools.inspect_decision_research import configure_parser
+    configure_parser(sub)
     d = sub.add_parser("daily")
     d.add_argument("--session")
     d.add_argument("--runtime-root", type=Path, default=None, help="Authoritative runtime root for canonical Daily.")
@@ -296,6 +298,10 @@ def main(argv=None) -> int:
     action_center.add_argument("--portfolio-root", type=Path, default=None, help="Private local artifact root (default: %%USERPROFILE%%\\.stocklookup\\portfolio).")
     action_center.add_argument("--action-center-root", type=Path, default=None, help="Local output root (default: %%USERPROFILE%%\\.stocklookup\\action_center).")
     a = p.parse_args(argv)
+
+    if a.command == "research":
+        from tools.inspect_decision_research import run
+        return run(a)
 
     if a.command == "roadmap":
         return subprocess.run([sys.executable, str(ROOT / "tools/stocklookup_roadmap.py")]).returncode
