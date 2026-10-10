@@ -149,3 +149,15 @@ Claude Code implemented the streaming/resource corrective. Codex independently f
 The final retained rehearsal records fresh timing separately from the earlier calibration. Its required timing gate is completion within the configured 1,200-second total budget; the historical half-budget margin is reported as a comparison, not asserted afresh. The same source byte counts and row identity were reproduced. A slower fully measured cold run is a timing-headroom caveat and does not justify resetting the deadline or claiming whole-host Monday readiness.
 
 Final isolated revalidation: cold 249.53 s; warm 112.16 s; serialized concurrent reuse 21.58/41.90 s; controlled 256-row timeout 120.02 s and exact retry 107.30 s. Maximum Job commit 560,644,096 bytes, parent growth 315,392 bytes; all 101 protected files (4,951,154,026 bytes) unchanged. The first timing-derived injection completed early and was replaced by a controlled mid-stream wait. Its cold build under concurrent hermetic validation was 793.88 s; the final isolated run reproduces the prior half-deadline margin. No deadline reset or threshold increase was made. Final real-process concurrency/reap qualification: 26 pass; hermetic CI-selected regression: 2,603 pass/16 platform skip/37 subtests. The existing acceptance artifact retains its original 15 gates and seals the supplemental final release validation.
+
+## Windows reason correction (2026-10-10)
+
+A denied large allocation can leave peak commit well below the ceiling, while an ordinary
+exception can occur after successful high-peak allocation. Peak proximity is not causal proof.
+The [bounded corrective](feedback_windows_memory_reason_corrective_v1_contract.md) retains
+queued kernel memory-limit notifications before Job/port close, including already-empty trees.
+Unknown nonzero failure classification uses positive kernel notification or the existing NT
+memory statuses; explicit sidecar/exit reasons and timeout precedence remain. Missing event
+is inconclusive, so an otherwise unknown failure keeps the generic defect fallback. Tree
+accounting and the existing shared cleanup deadline still govern safe reaping. No schema,
+reason vocabulary, resource threshold, analytical evidence or production-stage change.

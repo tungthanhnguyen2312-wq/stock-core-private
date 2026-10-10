@@ -244,6 +244,7 @@ class _Job:
         kernel.GetQueuedCompletionStatus.argtypes = [wintypes.HANDLE, ctypes.POINTER(wintypes.DWORD),
                                                      ctypes.POINTER(ctypes.c_size_t), ctypes.POINTER(ctypes.c_void_p), wintypes.DWORD]
         self.port = None
+        self.memory_limit_exceeded = False
         self.handle = kernel.CreateJobObjectW(None, None)
         if not self.handle:
             raise OSError(ctypes.get_last_error(), "CreateJobObjectW failed")
@@ -295,23 +296,36 @@ class _Job:
             self.kernel.CloseHandle(self.port)
             self.port = None
 
+    def _completion_message(self, timeout_ms: int) -> int | None:
+        message = self.wintypes.DWORD()
+        key = self.ctypes.c_size_t()
+        overlap = self.ctypes.c_void_p()
+        if not self.kernel.GetQueuedCompletionStatus(self.port, self.ctypes.byref(message), self.ctypes.byref(key),
+                                                      self.ctypes.byref(overlap), timeout_ms):
+            return None
+        if key.value == 1 and message.value in {9, 10}:  # PROCESS_MEMORY_LIMIT / JOB_MEMORY_LIMIT
+            self.memory_limit_exceeded = True
+        return message.value
+
     def wait_empty(self, timeout: float) -> bool:
-        """Wait on Job events, not a sampling/polling loop; death accounting is explicit."""
-        if self.active_processes() == 0:
-            return True
-        end = time.perf_counter() + timeout
-        while True:
+        """Confirm an empty tree and retain queued limit notifications within the cleanup budget."""
+        end = time.perf_counter() + max(0, timeout)
+        while self.active_processes() != 0:
             remaining = end - time.perf_counter()
             if remaining <= 0:
                 return False
-            message = self.wintypes.DWORD()
-            key = self.ctypes.c_size_t()
-            overlap = self.ctypes.c_void_p()
-            if not self.kernel.GetQueuedCompletionStatus(self.port, self.ctypes.byref(message), self.ctypes.byref(key),
-                                                          self.ctypes.byref(overlap), max(1, int(remaining * 1000))):
+            message = self._completion_message(max(1, int(remaining * 1000)))
+            if message is None:
                 return False
-            if message.value == 4:  # JOB_OBJECT_MSG_ACTIVE_PROCESS_ZERO
-                return self.active_processes() == 0
+            if message == 4:  # JOB_OBJECT_MSG_ACTIVE_PROCESS_ZERO
+                break
+        empty = self.active_processes() == 0
+        if empty:
+            # Even a child that has already exited may have queued a denied-allocation notification.
+            # Nonblocking dequeue only; absence of a notification is not proof that no limit was hit.
+            while time.perf_counter() < end and self._completion_message(0) is not None:
+                pass
+        return empty
 
 
 def _resume_suspended(process: subprocess.Popen) -> None:
@@ -466,11 +480,13 @@ def run_bounded(command: Sequence[str], *, cwd: str | Path, policy: ResourcePoli
         _terminate(process, job, timeout=max(0, cleanup_deadline - time.perf_counter()))
         reaped = process.poll() is not None
     peak = job.peak_process_bytes() if job is not None else None
+    memory_limit_exceeded = False
     tree_confirmed = None
     if job is not None:
         if job.active_processes() != 0:
             job.terminate()  # successful parent exit must not leave heavy descendants
         tree_confirmed = job.wait_empty(max(0, cleanup_deadline - time.perf_counter()))
+        memory_limit_exceeded = job.memory_limit_exceeded
         job.close()
     elif os.name != "nt":
         tree_confirmed = _posix_tree_stopped(process.pid) if process is not None else True
@@ -489,10 +505,10 @@ def run_bounded(command: Sequence[str], *, cwd: str | Path, policy: ResourcePoli
     elif outcome == "EXIT_NONZERO":
         reason = (child_result or {}).get("reason_code") or EXIT_REASON.get(process.returncode)
         if reason is None:
-            # A hard allocation failure inside the contained child shows as a non-zero exit near the ceiling, or as an
-            # NT "no memory"/"initialisation failed" status when the ceiling is below the interpreter's own start-up commit.
+            # A denied allocation may leave peak commit far below the ceiling; high peak alone can also precede
+            # an unrelated defect. Use positive kernel notification or the existing NT startup-failure statuses.
             returncode = (process.returncode or 0) & 0xFFFFFFFF
-            if policy.memory_limit_bytes and ((peak and peak >= 0.92 * policy.memory_limit_bytes) or returncode in NT_MEMORY_STATUSES):
+            if policy.memory_limit_bytes and (memory_limit_exceeded or returncode in NT_MEMORY_STATUSES):
                 reason = RESOURCE_MEMORY_LIMIT
             else:
                 reason = COMPUTATION_ERROR

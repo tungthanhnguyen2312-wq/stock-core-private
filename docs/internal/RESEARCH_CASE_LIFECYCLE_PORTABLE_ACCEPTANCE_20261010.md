@@ -80,3 +80,11 @@ restart and fixture learning exclusion. Identify authority/schema/history change
 historical evidence substitution. Account separately for the reproduced Windows memory-guard
 baseline failure. Return reproducible blockers with file/line evidence and explicit unverified
 limits. No writes, runtime launches, merge, deploy or trust promotion.
+
+## Released checkpoint (2026-10-10)
+
+Owner approved exact HEAD c2ddc709f5c113193b5fae8c704ceeda7fc5e9f6 when four checks are green.
+PR113 merged at live main 701d432cd6736dc93f005ab56321189ba031c137. Four PR jobs 38049457444
+and four post-merge jobs 38050775088 SUCCESS. Native successor admission records this scope
+COMPLETE at that checkpoint, without production activation. The reproduced Windows guard
+classification defect supplies the next bounded corrective; historical replay gates remain.

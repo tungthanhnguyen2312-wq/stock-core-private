@@ -10,7 +10,10 @@ import os
 import subprocess
 import sys
 import time
+import ctypes
+from collections import deque
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -77,11 +80,47 @@ def test_nonzero_exit_maps_to_a_distinct_defect_reason_not_a_resource_or_evidenc
 
 @pytest.mark.skipif(os.name != "nt", reason="Windows Job Object ceiling")
 def test_memory_ceiling_is_enforced_by_the_kernel_and_reported_as_a_memory_resource_reason(tmp_path):
-    body = "buf=[]\nwhile True:\n    buf.append(bytearray(64*1024*1024))\n"
+    body = "buf=[]\nwhile True:\n    buf.append(bytearray(8*1024*1024))\n"
     outcome = guard.run_bounded(_script(tmp_path, body), cwd=tmp_path, policy=_policy(memory_limit_bytes=512 * 1024 * 1024, deadline_seconds=60),
                                 result_path=tmp_path / "s.json")
     assert outcome["outcome"] == "EXIT_NONZERO" and outcome["reason_code"] == guard.RESOURCE_MEMORY_LIMIT
     assert outcome["peak_process_bytes"] >= 0.92 * 512 * 1024 * 1024 and outcome["peak_process_bytes"] <= 600 * 1024 * 1024
+
+
+@pytest.mark.skipif(os.name != "nt", reason="Windows Job Object allocation notifications")
+@pytest.mark.parametrize("chunk_mib", [128, 256, 512])
+def test_large_denied_allocation_is_a_resource_failure_even_with_low_peak(tmp_path, chunk_mib):
+    body = f"buf=[]\nwhile True:\n    buf.append(bytearray({chunk_mib}*1024*1024))\n"
+    outcome = guard.run_bounded(_script(tmp_path, body), cwd=tmp_path,
+                                policy=_policy(memory_limit_bytes=512 * 1024 * 1024), result_path=tmp_path / "s.json")
+    assert outcome["reason_code"] == guard.RESOURCE_MEMORY_LIMIT
+    assert 0 < outcome["peak_process_bytes"] < 0.92 * 512 * 1024 * 1024
+    assert outcome["reaped"] and outcome["tree_termination_confirmed"]
+
+
+@pytest.mark.skipif(os.name != "nt", reason="Windows Job Object memory accounting")
+def test_high_peak_is_not_proof_of_a_memory_failure(tmp_path):
+    body = "buf=bytearray(480*1024*1024)\nraise ValueError('TEST_FIXTURE ordinary defect')\n"
+    outcome = guard.run_bounded(_script(tmp_path, body), cwd=tmp_path,
+                                policy=_policy(memory_limit_bytes=512 * 1024 * 1024), result_path=tmp_path / "s.json")
+    assert outcome["reason_code"] == guard.COMPUTATION_ERROR
+    assert 0.92 * 512 * 1024 * 1024 <= outcome["peak_process_bytes"] <= 512 * 1024 * 1024
+    assert outcome["reaped"] and outcome["tree_termination_confirmed"]
+
+
+@pytest.mark.skipif(os.name != "nt", reason="Windows Job Object allocation notifications")
+@pytest.mark.parametrize("finish,reason", [
+    ("pass", None),
+    ("sys.exit(30)", guard.COMPUTATION_ERROR),
+    ("import threading;threading.Event().wait(300)", guard.RESOURCE_TIMEOUT),
+])
+def test_caught_limit_event_does_not_override_success_explicit_defect_or_timeout(tmp_path, finish, reason):
+    body = "import sys\ntry:\n    bytearray(512*1024*1024)\nexcept MemoryError:\n    " + finish + "\n"
+    outcome = guard.run_bounded(_script(tmp_path, body), cwd=tmp_path,
+                                policy=_policy(memory_limit_bytes=512 * 1024 * 1024, deadline_seconds=1),
+                                result_path=tmp_path / "s.json")
+    assert outcome["reason_code"] == reason
+    assert outcome["reaped"] and outcome["tree_termination_confirmed"]
 
 
 def test_child_memory_error_is_reported_through_the_status_sidecar(tmp_path):
@@ -93,6 +132,65 @@ def test_child_memory_error_is_reported_through_the_status_sidecar(tmp_path):
     )
     outcome = guard.run_bounded(_script(tmp_path, body), cwd=tmp_path, policy=SMALL, result_path=result_path)
     assert outcome["reason_code"] == guard.RESOURCE_MEMORY_LIMIT and outcome["child_result"]["status"] == "RESOURCE_UNAVAILABLE"
+
+
+def _queued_job(events, *, active=0, clear_on_zero=True):
+    """Inject only OS event delivery/accounting; exercise the real event consumer on every platform."""
+    queue = deque(events)
+    state = [active]
+    waits = []
+    def receive(port, message, key, overlap, timeout):
+        waits.append(timeout)
+        if not queue:
+            return False
+        value, completion_key = queue.popleft()
+        message._obj.value = value
+        key._obj.value = completion_key
+        if value == 4 and clear_on_zero:
+            state[0] = 0
+        return True
+    job = object.__new__(guard._Job)
+    job.ctypes = ctypes
+    job.wintypes = SimpleNamespace(DWORD=ctypes.c_uint32)
+    job.port = 1
+    job.kernel = SimpleNamespace(GetQueuedCompletionStatus=receive)
+    job.memory_limit_exceeded = False
+    job.active_processes = lambda: state[0]
+    return job, queue, waits
+
+
+@pytest.mark.parametrize("events,expected", [
+    ([(6, 1), (9, 1), (7, 1), (4, 1)], True),
+    ([(4, 1), (10, 1)], True),
+    ([(9, 99), (7, 1), (4, 1)], False),
+    ([], False),
+])
+def test_already_empty_job_keeps_positive_limit_events_without_waiting(events, expected):
+    job, queue, waits = _queued_job(events)
+    assert job.wait_empty(1) is True
+    assert job.memory_limit_exceeded is expected and not queue
+    assert waits and all(wait == 0 for wait in waits)
+
+
+def test_waiting_job_keeps_limit_events_before_and_after_tree_zero():
+    job, queue, waits = _queued_job([(9, 1), (4, 1), (10, 1)], active=1)
+    assert job.wait_empty(1) is True
+    assert job.memory_limit_exceeded and not queue
+    assert waits[0] > 0 and waits[-1] == 0
+
+
+def test_limit_event_never_substitutes_for_confirmed_empty_tree():
+    job, _, _ = _queued_job([(9, 1), (4, 1)], active=None, clear_on_zero=False)
+    assert job.wait_empty(1) is False
+    assert job.memory_limit_exceeded
+
+
+def test_event_drain_uses_the_existing_shared_cleanup_budget(monkeypatch):
+    job, queue, waits = _queued_job([(7, 1)] * 100)
+    ticks = iter([0, 0.1, 0.2, 0.3, 1.1])
+    monkeypatch.setattr(guard.time, "perf_counter", lambda: next(ticks))
+    assert job.wait_empty(1) is True
+    assert queue and len(waits) == 3 and waits == [0, 0, 0]
 
 
 def test_oversize_child_status_is_never_ingested(tmp_path):
