@@ -552,12 +552,6 @@
     "technical_structure_context.py",
     "temporal_evidence_operational_pilot.py",
     "temporal_evidence_registry.py",
-    "thesis_catalyst_downside_research_cases.py",
-    "thesis_evidence_adapters.py",
-    "thesis_evidence_contract.py",
-    "thesis_evidence_matrix.py",
-    "thesis_evidence_production.py",
-    "thesis_production_runtime.py",
     "ticker_capability.py",
     "trusted_subset_contract.py",
     "two_tier_fundamental_research.py",
@@ -601,7 +595,13 @@
     "official_document_qualification.py": "stocklookup_core/evidence/official_document_qualification.py",
     "official_document_retrieval.py": "stocklookup_core/evidence/official_document_retrieval.py",
     "official_document_store.py": "stocklookup_core/evidence/official_document_store.py",
-    "temporal_retention.py": "stocklookup_core/evidence/temporal_retention.py"
+    "temporal_retention.py": "stocklookup_core/evidence/temporal_retention.py",
+    "thesis_catalyst_downside_research_cases.py": "stocklookup_core/research/thesis_catalyst_downside_research_cases.py",
+    "thesis_evidence_adapters.py": "stocklookup_core/research/thesis_evidence_adapters.py",
+    "thesis_evidence_contract.py": "stocklookup_core/research/thesis_evidence_contract.py",
+    "thesis_evidence_matrix.py": "stocklookup_core/research/thesis_evidence_matrix.py",
+    "thesis_evidence_production.py": "stocklookup_core/research/thesis_evidence_production.py",
+    "thesis_production_runtime.py": "stocklookup_core/research/thesis_production_runtime.py"
   },
   "compatibility_entrypoints": {
     "official_document_acquisition.py": "Existing offline import CLI; delegates to the evidence package main()."

@@ -35,7 +35,7 @@ import fundamental_market_opportunity_ranking
 import fundamental_thesis_invalidation_precision
 import shadow_action_readiness
 import shadow_security_recommendation
-import thesis_catalyst_downside_research_cases
+import stocklookup_core.research.thesis_catalyst_downside_research_cases as thesis_catalyst_downside_research_cases
 from fundamental_research_cohort_selection import (
     FundamentalResearchCohortSelectionError,
     resolve_current_fundamental_cohort,

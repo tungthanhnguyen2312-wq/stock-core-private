@@ -16,9 +16,9 @@ import contextual_technical_dispatch as dispatch
 import technical_relationship_view as bridge
 import volume_and_flow_context_v2 as flow
 import prospective_pit_capture_retention as capture
-import thesis_evidence_contract as c
-import thesis_evidence_adapters as adapters
-import thesis_evidence_matrix as matrix
+import stocklookup_core.research.thesis_evidence_contract as c
+import stocklookup_core.research.thesis_evidence_adapters as adapters
+import stocklookup_core.research.thesis_evidence_matrix as matrix
 from bounded_artifact_stream import source_hash,stream_artifact
 from test_production_call_shape_smoke import _offline_smoke_guard
 

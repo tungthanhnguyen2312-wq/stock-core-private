@@ -29,7 +29,7 @@ stock-core/
 ├─ stocklookup_core/
 │  ├─ acquisition/  # landing contract, isolation, checkpoint and retention
 │  ├─ evidence/     # official documents and temporal receipts
-│  └─ research/     # independent thesis research (next tested slice)
+│  └─ research/     # independent thesis research
 ├─ tools/           # existing operator and developer launchers
 ├─ tests/
 ├─ contracts/

@@ -5,6 +5,10 @@ Starting main: `d610db689c1f512b3363e86cdf005c248343f422`.
 Authority: `NONE / NON_VOTING_THESIS_PRODUCTION_PROJECTION_ONLY`.
 Projection binding version: `thesis_production_projection/v1`.
 
+Thesis source lives in `stocklookup_core/research/`. Existing `tools/` child and
+acceptance launch paths are unchanged; source-root resolution uses the repository
+ancestor. Explicit runtime/output roots and retained evidence paths are unchanged.
+
 Stage 1 adapters, registry, reducers, conflict policies and retained acceptance are frozen.
 The production child calls those exact adapters and reducers for one ticker at a time;
 their internal offline/diagnostic scope remains intact. The outer production projection

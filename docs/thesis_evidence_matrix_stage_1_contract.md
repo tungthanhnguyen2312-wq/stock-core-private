@@ -14,6 +14,8 @@ Stage 2 production integration requires its own owner authorization.
 
 ## Contracts and provenance
 
+Implementation paths below are now under `stocklookup_core/research/`; the relocation
+map preserves historical names. Stage-1 semantics remain frozen.
 `thesis_evidence_contract.py` owns `evidence_item/v1`, closed states, identity,
 schema, typed facts, forbidden-field checks and verified snapshot bindings.
 `thesis_evidence_adapters.py` owns `thesis_adapter_registry/v1` and source adapters.

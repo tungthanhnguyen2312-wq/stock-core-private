@@ -1768,7 +1768,7 @@ def run_post_handoff_observers(
     from contextual_technical_dispatch import PRODUCTION_V2_START_SESSION
     if session >= PRODUCTION_V2_START_SESSION:
         try:
-            from thesis_production_runtime import run_component, summary, focus_cards
+            from stocklookup_core.research.thesis_production_runtime import run_component, summary, focus_cards
             decision_path=root/tier1["deeper_bundles"]["integrated_investment_decision_product"] if (tier1.get("deeper_bundles") or {}).get("integrated_investment_decision_product") else enrichment_output_path(root,session,"integrated_investment_decision_product")
             technical_path = decision_path.parent/"historical_context.json"
             thesis_current=run_component(root,session,stage="current",snapshot_binding=tier1.get("prospective_decision_snapshot"),
@@ -1799,7 +1799,7 @@ def run_post_handoff_observers(
 def run_thesis_t0_sidecar(root,session,prospective_snapshot,enrichment,*,output_root=None):
     """After capture/marker boundary; every Thesis failure remains component-local."""
     try:
-        from thesis_production_runtime import run_component
+        from stocklookup_core.research.thesis_production_runtime import run_component
         snapshot=prospective_snapshot or {}
         binding={"identity":(snapshot.get("artifact") or {}).get("snapshot_identity"),"seal_index":snapshot.get("seal_index")}
         delivery=enrichment.get("integrated_investment_decision_product") or {}
@@ -2441,7 +2441,7 @@ def build_tiered_bundle(
     }
 
     if thesis_t0 is not None and thesis_t0.get("status") != "NOT_APPLICABLE":
-        from thesis_production_runtime import summary
+        from stocklookup_core.research.thesis_production_runtime import summary
         tier1["thesis_evidence"]={"t0":summary(thesis_t0)}
     decision_queue = _load(level2_paths["opportunity_prioritization"])
     tier2 = {

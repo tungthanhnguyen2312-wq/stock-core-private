@@ -1,6 +1,6 @@
 # Stock Lookup — System Map
 
-> Navigation aid only. docs/STATE.md, docs/ROADMAP.md, docs/DECISIONS.md and docs/ROADMAP_STATE.json remain authority.
+> Navigation aid only. Milestone state is in ROADMAP_STATE.json; contracts/code govern semantics; STATE/ROADMAP/DECISIONS preserve history. Follow AGENTS.md's Authority by domain rule.
 > Start with the compact active set: [ACTIVE_STATE](ACTIVE_STATE.md), [CAPABILITIES](CAPABILITIES.md), [AUTHORITY](AUTHORITY.md), [DAILY_PIPELINE](DAILY_PIPELINE.md), [ROADMAP_CURRENT](ROADMAP_CURRENT.md); history index: [HISTORICAL_INDEX](HISTORICAL_INDEX.md).
 
 Outcome-feedback children (pre- and post-handoff) run bounded: `feedback_resource_guard.py` (admission, one total deadline, memory ceiling, reaping) around
@@ -26,6 +26,8 @@ exact R7 inputs offline. [Contract](market_only_pit_eligibility_contract.md).
 The owner admitted [root structure simplification](repository_root_structure_simplification_v1_contract.md)
 after semantic corrective PR105. Landing acquisition code is in `stocklookup_core/acquisition/`;
 official document evidence and temporal receipts are in `stocklookup_core/evidence/`.
+Thesis adapters, matrix, sidecars and runtime are in `stocklookup_core/research/`;
+their existing child tools retain their paths and resolve the repository source root.
 The existing offline `official_document_acquisition.py` CLI is a small compatibility launcher.
 All library consumers import the packages; historical module names resolve through
 `config/repository_layout.json`. Owner Daily and publishing launchers retain their paths.

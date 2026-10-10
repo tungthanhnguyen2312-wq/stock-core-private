@@ -134,7 +134,7 @@ def consumers(source, output, touched, observe):
     """Actual read-only Owner handoff/completion and Thesis reporting consumers."""
     from bounded_artifact_stream import source_hash
     from tools.run_owner_daily import verify_daily_completion, verify_retained_daily_brief_for_handoff
-    from thesis_production_runtime import read_product_report
+    from stocklookup_core.research.thesis_production_runtime import read_product_report
     # Use the canonical Owner's configured default; override honors the runtime env.
     import os
     runtime = Path(os.environ.get('STOCK_LOOKUP_RUNTIME_ROOT',source.parent/'dashboard-runtime'))

@@ -55,6 +55,45 @@ deselects these tests, while retained accounting must name their missing inputs.
 Other 31 historical skips retain their existing reasons. These are not full retained
 acceptance or production qualification.
 
+## Slice 2 — independent thesis research
+
+The evidence slice is checkpointed at `cc81a74`. Six thesis implementations move
+to `stocklookup_core/research/`; 19 source/test/tool consumers use package imports.
+No additional root wrapper is needed. All 22 moved modules have baseline-equal
+non-import AST after normalizing only three reviewed path expressions: the
+catalyst module's source root, the child tool path, and the child's working directory.
+The repository ancestor replaces the old file parent; runtime/output roots are not
+inferred or changed. The original Owner Python/PowerShell launchers are byte-identical.
+
+| Source root | Baseline | Final candidate |
+|---|---:|---:|
+| Tracked root files | 613 | 592 |
+| Root Python files | 595 | 574 |
+| Tracked root directories | 8 | 9 |
+
+The broader integration selection initially passed 372 cases with one deselected
+and 13 setup errors from an old shadow-recommendation class whose August inputs
+are absent in the clean worktree. Its exact eleven retained inputs are now declared
+with the existing tier contract; assertion bodies and historical expectations remain
+unchanged. The Monday source-inspection invariant now checks the final module name
+inside package imports, preserving its ban on Stage-1 imports in the acceptance harness.
+
+Final broader integration run: **372 passed, 14 deselected** in 131.85 seconds.
+This includes actual fixture-only Thesis child execution, separate output roots,
+source identity/seal contracts, offline Owner call shape and workflow regression.
+The newly added legacy-runner source-root/explicit-output fixture test additionally
+passed; package placement/resolution guards passed all four cases.
+Shadow retained accounting: **13 skipped**, every exact missing input named.
+The legacy catalyst runner has no argument parser: an attempted `--help` call
+stopped at its absent event input, before any output directory or write. Its
+fixture-only runner test now verifies source defaults and explicit temporary output.
+
+Governance/active-document tests: **49 passed**; latest active-view budget/link check:
+**12 passed**. Evidence-tier accounting for the six previously undeclared inputs:
+**6 skipped, 31 deselected**, exact missing manifest/provenance paths reported.
+CLI help resolves for the owner CLI, acquisition compatibility launcher, landing
+operator and listing discovery tool. No acquisition or Daily command was executed.
+
 ## Remaining boundaries
 
 Historical prose is preserved; original module names navigate through the relocation
@@ -70,3 +109,48 @@ remains unresolved. No analytical successor is started by this maintenance work.
 
 No production Daily, deployment, evidence deletion, database/runtime/portfolio write,
 source authority promotion or immutable-session modification was performed.
+
+## Next product priority, after source release
+
+Semantic corrective PR105 is released; this layout candidate is pending review,
+not deployed. Existing integrated product milestones remain complete. The known
+fiscal-calendar/publication mapping gap is now explicit rather than disguised by
+the lexical feature-label maximum. Recommend a separately bounded evidence gate
+for issuer fiscal-calendar and publication metadata, using existing admitted source
+routes and exact knowledge times. No dates, fiscal conversion, shares, normalized
+earnings or valuation authority should be inferred to make that gate pass.
+Broader root layout remains debt; high-fanout Daily/publishing/financial families
+should move only after their own dependency closure and parity acceptance.
+Neither recommendation starts a new analytical program or promotes authority.
+
+## Optional independent Grok review prompt
+
+You are an independent, read-only architecture reviewer for the PUBLIC GitHub
+repository `tungthanhnguyen2312-wq/stock-core-private`. Review the branch
+`refactor/repository-root-simplification-v1-20261010` against released main
+`40c88c2a73bcf9cb0a92c3127ca2cf4c34243386`. Do not write to the repository,
+merge, deploy, run production Daily, inspect private runtime/portfolio contents,
+request credentials, or scan operations-review artifacts. Claude Code is unrelated.
+
+The owner requested physical root simplification while preserving operational and
+analytical contracts. The candidate relocates seven acquisition landing modules,
+eight official document modules, one temporal receipt module, and six thesis modules
+into ordinary `stocklookup_core/acquisition`, `evidence`, and `research` packages.
+Root Python counts fall from 595 to 574, root files from 613 to 592. One existing
+`official_document_acquisition.py` CLI wrapper remains; all library callers use package
+imports. No packaging framework, installers, services or new production entrypoint.
+Owner CLI/PowerShell/tool paths, schema identities, numerical policy and evidence
+paths remain unchanged. Three source-root expressions are adjusted for package depth.
+
+Challenge import/reflection/subprocess resolution, historical-name navigation,
+API compatibility assumptions, preservation of deterministic identities, retained
+test-tier declarations, package placement enforcement and residual layout debt.
+Inspect `config/repository_layout.json`, `tests/test_repository_layout.py`, the
+controlling contract and this acceptance report, plus only directly relevant source.
+Distinguish a concrete regression from a hypothetical external consumer: cite exact
+file/line and reproduction for findings. In particular check fixture-only real Thesis
+child execution, separate output roots, the offline Owner production call shape and
+the updated package-aware Stage-1 import prohibition. The PDF retrieval module requires
+existing optional pypdf and is validated separately from pinned core CI. Missing retained
+evidence is declared, never fabricated or used to weaken assertions. Return a concise
+English verdict, blocking findings, non-blocking debt and any genuinely unverified assumption.

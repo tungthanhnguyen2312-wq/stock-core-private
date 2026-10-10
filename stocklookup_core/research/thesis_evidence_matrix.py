@@ -2,8 +2,8 @@
 from __future__ import annotations
 from collections import defaultdict
 import copy
-import thesis_evidence_contract as c
-import thesis_evidence_adapters as adapters
+import stocklookup_core.research.thesis_evidence_contract as c
+import stocklookup_core.research.thesis_evidence_adapters as adapters
 
 CONTRACT_VERSION="thesis_evidence_matrix/v1"
 CARD_VERSION="offline_thesis_decision_card/v1"

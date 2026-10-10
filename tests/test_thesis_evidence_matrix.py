@@ -3,9 +3,9 @@ import ast
 import copy
 from pathlib import Path
 import pytest
-import thesis_evidence_contract as c
-import thesis_evidence_adapters as a
-import thesis_evidence_matrix as m
+import stocklookup_core.research.thesis_evidence_contract as c
+import stocklookup_core.research.thesis_evidence_adapters as a
+import stocklookup_core.research.thesis_evidence_matrix as m
 import integrated_investment_decision_product as product
 
 LONG,SHORT=c.LENSES
