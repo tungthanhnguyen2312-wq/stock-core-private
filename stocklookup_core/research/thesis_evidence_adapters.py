@@ -1,7 +1,7 @@
 """Versioned offline adapters. Read producer semantics; never recreate relations."""
 from __future__ import annotations
 import copy
-import thesis_evidence_contract as c
+import stocklookup_core.research.thesis_evidence_contract as c
 
 FUNDAMENTAL = {"IMPROVING": "SUPPORTS", "STABLE": "NEUTRAL", "MIXED": "MIXED",
     "DETERIORATING": "OPPOSES", "TURNAROUND": "SUPPORTS", "INSUFFICIENT": "UNKNOWN"}

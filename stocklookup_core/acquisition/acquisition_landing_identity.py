@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import hashlib
 
-from acquisition_landing_contract import AcquisitionSpec
+from stocklookup_core.acquisition.acquisition_landing_contract import AcquisitionSpec
 
 
 def content_sha256(data: bytes) -> str:

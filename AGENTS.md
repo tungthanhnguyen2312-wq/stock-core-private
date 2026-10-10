@@ -168,7 +168,7 @@ To minimize AI context waste and maintain repository cleanliness:
 
 - **No recursive `operations-review/` scan:** Do not recursively scan `operations-review/` by default.
 - **Exact evidence paths only:** Read exact evidence paths only when the task requires them.
-- **No root helpers:** Never create one-off helper scripts in the repository root.
+- **Source placement:** New implementation belongs in `stocklookup_core/`, reusable tools in `tools/`; no root helpers. CI enforces `config/repository_layout.json`; root exceptions need a reviewed compatibility reason.
 - **Temporary helpers:** Place temporary helpers outside the repository or in `.stocklookup/scratch/`.
 - **Reusable tools:** Reusable runners and developer tools belong in `tools/`.
 - **Single production entrypoint:** Do not create a new production entrypoint; `stocklookup.ps1 daily` remains the owner entrypoint.

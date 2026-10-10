@@ -12,8 +12,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Callable, Iterable, Mapping
 
-from acquisition_landing_atomic_io import atomic_write_bytes
-from acquisition_landing_contract import (
+from stocklookup_core.acquisition.acquisition_landing_atomic_io import atomic_write_bytes
+from stocklookup_core.acquisition.acquisition_landing_contract import (
     AcquisitionOutcome,
     AcquisitionSpec,
     FetchError,
@@ -21,10 +21,10 @@ from acquisition_landing_contract import (
     RawDocumentRecord,
     build_record,
 )
-from acquisition_landing_identity import content_sha256
-from acquisition_landing_isolation import assert_write_allowed
-from acquisition_landing_quarantine import quarantine_item
-from temporal_retention import capture_raw_receipt
+from stocklookup_core.acquisition.acquisition_landing_identity import content_sha256
+from stocklookup_core.acquisition.acquisition_landing_isolation import assert_write_allowed
+from stocklookup_core.acquisition.acquisition_landing_quarantine import quarantine_item
+from stocklookup_core.evidence.temporal_retention import capture_raw_receipt
 
 BLOBS_SUBDIR = ("raw", "blobs")
 

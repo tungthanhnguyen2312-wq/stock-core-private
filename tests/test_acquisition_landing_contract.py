@@ -3,7 +3,7 @@ the "never build a silently-empty record" guarantee."""
 
 import unittest
 
-from acquisition_landing_contract import (
+from stocklookup_core.acquisition.acquisition_landing_contract import (
     QUALIFICATION_STATE_UNKNOWN,
     AcquisitionOutcome,
     AcquisitionSpec,

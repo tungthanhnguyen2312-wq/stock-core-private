@@ -11,13 +11,13 @@ from pathlib import Path
 MODULE_ROOT = Path(__file__).resolve().parent.parent
 
 DETERMINISTIC_CORE_MODULES = (
-    "acquisition_landing_contract.py",
-    "acquisition_landing_atomic_io.py",
-    "acquisition_landing_identity.py",
-    "acquisition_landing_isolation.py",
-    "acquisition_landing_quarantine.py",
-    "acquisition_landing_retention.py",
-    "acquisition_landing_checkpoint.py",
+    "stocklookup_core/acquisition/acquisition_landing_contract.py",
+    "stocklookup_core/acquisition/acquisition_landing_atomic_io.py",
+    "stocklookup_core/acquisition/acquisition_landing_identity.py",
+    "stocklookup_core/acquisition/acquisition_landing_isolation.py",
+    "stocklookup_core/acquisition/acquisition_landing_quarantine.py",
+    "stocklookup_core/acquisition/acquisition_landing_retention.py",
+    "stocklookup_core/acquisition/acquisition_landing_checkpoint.py",
 )
 
 FORBIDDEN_TOP_LEVEL_MODULES = {

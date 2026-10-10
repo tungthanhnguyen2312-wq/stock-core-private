@@ -18,7 +18,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from financial_evidence_currency_contract import DEFAULT_LANDING_ROOT
-from official_document_acquisition import fetch_http
+from stocklookup_core.evidence.official_document_acquisition import fetch_http
 import qns_h1_official_detail_resolver as resolver
 
 FIXTURE = ROOT / "tests/fixtures/triad_current_h1/qns_h1_positioned_tokens.json"

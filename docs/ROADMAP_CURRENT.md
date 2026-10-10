@@ -1,14 +1,15 @@
 # Stock Lookup — Current Roadmap
 
 History: [ROADMAP.md](ROADMAP.md); execution: ROADMAP_STATE.json.
-Updated 2026-10-10 from main `64c8bc884efd790bc05f6976bc628215a99fd58b`.
+Updated 2026-10-10 from main `40c88c2a73bcf9cb0a92c3127ca2cf4c34243386`.
 Nothing below auto-starts; --can-start or owner override (AI_RULES 11).
 Facts: [ACTIVE_STATE.md](ACTIVE_STATE.md).
 
-## NOW — DAILY_RESEARCH_OUTPUT_SEMANTIC_COHERENCE_CORRECTIVE_V1 (ACTIVE)
+## NOW — REPOSITORY_ROOT_STRUCTURE_SIMPLIFICATION_V1 (ACTIVE)
 
-Local checkpoint; no Daily/deploy/authority change.
-[Contract](daily_research_output_semantic_coherence_corrective_v1_contract.md).
+Owner-admitted package slices; no Daily/deploy/authority change.
+[Contract](repository_root_structure_simplification_v1_contract.md).
+Semantic corrective COMPLETE: PR105 `40c88c2`, post-merge CI 38021005739 SUCCESS.
 Coherence V2 COMPLETE: PR101 `64c8bc8`, post-merge CI 38017817078 SUCCESS.
 Posture V2 COMPLETE: PR100 `314406e`, four CI jobs SUCCESS.
 Capacity Phase 1 COMPLETE: PR99 `168e0f7`, CI 37893984528 success;

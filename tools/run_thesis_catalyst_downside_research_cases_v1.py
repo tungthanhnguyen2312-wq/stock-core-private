@@ -8,7 +8,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
-from thesis_catalyst_downside_research_cases import ROOT, execute
+from stocklookup_core.research.thesis_catalyst_downside_research_cases import ROOT, execute
 
 
 OUTPUT = ROOT / "operations-review" / "thesis-catalyst-downside-and-dual-invalidation-v1-20260828" / "artifact.json"

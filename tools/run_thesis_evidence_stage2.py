@@ -42,7 +42,7 @@ def main():
     # Explicit test/offline acquisition guard is also installed in normal child:
     # source processing is never permitted to reach provider/network surfaces.
     with retained_only_guard() as calls:
-        from thesis_evidence_production import build,verify_ticker
+        from stocklookup_core.research.thesis_evidence_production import build,verify_ticker
         if args.verify_ticker:
             if not args.manifest:raise ValueError("EXPLICIT_MANIFEST_REQUIRED")
             result=verify_ticker(args.manifest,root=args.source_root,ticker=args.verify_ticker)

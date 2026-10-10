@@ -21,7 +21,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-import official_document_acquisition as acquisition  # noqa: E402
+import stocklookup_core.evidence.official_document_acquisition as acquisition  # noqa: E402
 import official_source_registry as registry  # noqa: E402
 
 HTML = b"<html><body>notice</body></html>"

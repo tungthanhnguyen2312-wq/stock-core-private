@@ -1,6 +1,6 @@
 import hashlib,io,json,tempfile,unittest
 from pathlib import Path
-from official_document_ocr_handoff import *
+from stocklookup_core.evidence.official_document_ocr_handoff import *
 class T(unittest.TestCase):
  def test_console_is_utf8_safe(self):
   raw=io.BytesIO();stream=io.TextIOWrapper(raw,encoding='cp1252');text='T\u00ednh c\u1ee5c b\u1ed9';configure_utf8_console(stream,object());stream.write(text);stream.flush();self.assertEqual(raw.getvalue(),text.encode('utf-8'))

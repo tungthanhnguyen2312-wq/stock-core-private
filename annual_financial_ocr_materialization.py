@@ -15,7 +15,7 @@ import unicodedata
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
-from official_document_ocr_handoff import add_batch, citation_id, sha256_file
+from stocklookup_core.evidence.official_document_ocr_handoff import add_batch, citation_id, sha256_file
 
 
 VERSION = "1.0.0"

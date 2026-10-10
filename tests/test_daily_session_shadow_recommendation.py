@@ -4,6 +4,7 @@ import copy
 import inspect
 import json
 import unittest
+import pytest
 from pathlib import Path
 
 import action_instrumentation
@@ -11,7 +12,7 @@ import daily_session_shadow_recommendation
 import fundamental_thesis_invalidation_precision
 import shadow_action_readiness
 import shadow_security_recommendation
-import thesis_catalyst_downside_research_cases
+import stocklookup_core.research.thesis_catalyst_downside_research_cases as thesis_catalyst_downside_research_cases
 from daily_session_shadow_recommendation import DailySessionShadowRecommendationError, build
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -51,6 +52,7 @@ def session_inputs(session_paths: dict[str, str]) -> dict:
     return inputs
 
 
+@pytest.mark.retained_evidence(*PATHS_27.values(), *PATHS_28.values(), *SHARED_PATHS.values())
 class DailySessionShadowRecommendationTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):

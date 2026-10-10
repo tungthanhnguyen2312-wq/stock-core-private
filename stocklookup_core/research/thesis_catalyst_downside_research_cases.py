@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Any, Mapping
 
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parents[2]
 CONTRACT_VERSION = "thesis_catalyst_downside_and_dual_invalidation/v1"
 OPPORTUNITY_INPUT = ROOT / "operations-review" / "fundamental-plus-market-opportunity-ranking-v1-20260828" / "artifact.json"
 EVENT_INPUT = ROOT / "operations-review" / "current-corporate-event-context-v1" / "current_corporate_event_context_artifact.json"

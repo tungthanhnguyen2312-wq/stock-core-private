@@ -1,7 +1,7 @@
 import json, tempfile, unittest
 from pathlib import Path
 from unittest.mock import patch
-from official_document_acquisition import BOUNDED_ADDITIONAL_TICKER_SCOPE_EXCEEDED, EVENTS, MANIFEST, TICKERS, _response_failure, acquire, canonical_url, import_offline_event
+from stocklookup_core.evidence.official_document_acquisition import BOUNDED_ADDITIONAL_TICKER_SCOPE_EXCEEDED, EVENTS, MANIFEST, TICKERS, _response_failure, acquire, canonical_url, import_offline_event
 
 PDF=b"%PDF-1.4\nfixture\n"
 HTML=b"<html><body>official notice</body></html>"
@@ -49,14 +49,14 @@ class AcquisitionTests(unittest.TestCase):
   self.assertEqual((self.root/MANIFEST).read_bytes(),before)
  def setUp(self):
   self.tmp=tempfile.TemporaryDirectory(); self.root=Path(self.tmp.name)
-  patcher=patch("official_document_acquisition.load_registry",return_value=FIXTURE_REGISTRY)
+  patcher=patch('stocklookup_core.evidence.official_document_acquisition.load_registry',return_value=FIXTURE_REGISTRY)
   patcher.start(); self.addCleanup(patcher.stop)
  def tearDown(self): self.tmp.cleanup()
  def spec(self, **more): return {"ticker":"HPG","source_id":"issuer_ir","canonical_url":"https://issuer.example/f.pdf","document_class":"corporate_action_notice","reporting_period":"2024","source_authority":"issuer_ir","observed_at":"2026-08-02T00:00:00Z"}|more
  def fetch(self, *_args, **_kwargs): return 200,{"Content-Type":"application/pdf"},PDF,"https://cdn.example/f.pdf"
  def metadata(self, **more): return {"ticker":"HPG","exchange":"HOSE","action_type":"bonus_share","ex_date":"2024-01-04","ratio":.2,"ratio_basis":"new_shares_per_existing_share","source_authority":"issuer_ir","source_url":"https://issuer.example/f.pdf","document_identity":"fixture-notice-1","retrieved_at":"2026-08-02T00:00:00Z","reporting_period":"2024"}|more
  def test_success_redirect_and_cache(self):
-  with patch("official_document_acquisition._extraction_state",return_value="needs_ocr"):
+  with patch('stocklookup_core.evidence.official_document_acquisition._extraction_state',return_value="needs_ocr"):
    first=acquire([self.spec()],self.root,fetcher=self.fetch); second=acquire([self.spec()],self.root,fetcher=lambda *_a,**_k:self.fail("network"))
   self.assertEqual(first["outcomes"][0]["state"],"retained"); self.assertEqual(second["outcomes"][0]["state"],"cached_valid")
  def test_explicitly_qualified_issuer_publication_projects_to_a1(self):
@@ -88,7 +88,7 @@ class AcquisitionTests(unittest.TestCase):
   self.assertEqual(_response_failure(200,{"Content-Type":"application/pdf"},b"%PDF",0),"empty_or_truncated_document")
   self.assertFalse(list(self.root.rglob("*.part")))
  def test_hash_conflict(self):
-  with patch("official_document_acquisition._extraction_state",return_value="needs_ocr"): acquire([self.spec()],self.root,fetcher=self.fetch)
+  with patch('stocklookup_core.evidence.official_document_acquisition._extraction_state',return_value="needs_ocr"): acquire([self.spec()],self.root,fetcher=self.fetch)
   record=json.loads((self.root/MANIFEST).read_text())["records"][0]; (self.root/record["relative_path"]).write_bytes(PDF+b"bad")
   self.assertEqual(acquire([self.spec()],self.root,fetcher=self.fetch)["outcomes"][0]["state"],"hash_conflict")
  def test_offline_pdf_html_dry_run_and_idempotence(self):
@@ -151,7 +151,7 @@ class AcquisitionTests(unittest.TestCase):
   result=acquire([self.spec(reporting_period="2026",document_class="corporate_governance_report")],self.root,fetcher=self.fetch)
   self.assertEqual(result["outcomes"][0]["state"],"retained")
  def test_http_fetch_stream_retains_every_chunk_after_type_sniff(self):
-  import official_document_acquisition as module
+  import stocklookup_core.evidence.official_document_acquisition as module
   class Response:
    status_code=200; headers={"Content-Type":"text/html"}
    is_redirect=False; is_permanent_redirect=False

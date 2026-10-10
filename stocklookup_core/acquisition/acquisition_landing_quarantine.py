@@ -13,8 +13,8 @@ import hashlib
 from pathlib import Path
 from typing import Iterable
 
-from acquisition_landing_atomic_io import atomic_write_bytes, atomic_write_json, read_json
-from acquisition_landing_isolation import assert_write_allowed
+from stocklookup_core.acquisition.acquisition_landing_atomic_io import atomic_write_bytes, atomic_write_json, read_json
+from stocklookup_core.acquisition.acquisition_landing_isolation import assert_write_allowed
 
 QUARANTINE_MANIFEST_FILENAME = "quarantine_manifest.json"
 

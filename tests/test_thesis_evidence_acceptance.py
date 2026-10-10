@@ -2,8 +2,8 @@
 import json
 from pathlib import Path
 import pytest
-import thesis_evidence_contract as c
-import thesis_evidence_matrix as m
+import stocklookup_core.research.thesis_evidence_contract as c
+import stocklookup_core.research.thesis_evidence_matrix as m
 
 ROOT=Path(__file__).resolve().parents[1]
 REPORT=ROOT/"docs/internal/THESIS_EVIDENCE_MATRIX_STAGE_1_ACCEPTANCE.json"
@@ -11,7 +11,7 @@ REPORT=ROOT/"docs/internal/THESIS_EVIDENCE_MATRIX_STAGE_1_ACCEPTANCE.json"
 
 def test_portable_october_2_acceptance_identity_and_accounting():
     from tools.run_thesis_evidence_matrix_acceptance import ACCEPTANCE,NEXT
-    import thesis_evidence_adapters as adapters
+    import stocklookup_core.research.thesis_evidence_adapters as adapters
     report=json.loads(REPORT.read_text(encoding="utf-8"))
     c.verify_identity(report,ACCEPTANCE)
     assert report["all_assertions_passed"]

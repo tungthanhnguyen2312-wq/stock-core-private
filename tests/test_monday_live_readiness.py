@@ -347,7 +347,7 @@ def test_harness_and_index_do_not_import_thesis_stage_one():
         tree=ast.parse(Path(module.__file__).read_text(encoding="utf-8"))
         modules=[n.module for n in ast.walk(tree) if isinstance(n,ast.ImportFrom)]
         modules += [alias.name for n in ast.walk(tree) if isinstance(n,ast.Import) for alias in n.names]
-        assert not any(name and name.startswith("thesis_evidence") for name in modules)
+        assert not any(name and name.rsplit(".", 1)[-1].startswith("thesis_evidence") for name in modules)
 
 
 def test_t0less_first_session_preserves_capture_marker_and_depth(tmp_path,monkeypatch):

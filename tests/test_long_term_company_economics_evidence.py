@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 
 import long_term_company_economics_evidence as economics
-from thesis_evidence_contract import make_item, verify_identity
+from stocklookup_core.research.thesis_evidence_contract import make_item, verify_identity
 
 ROOT = Path(__file__).resolve().parents[1]
 OVERLAY = ROOT / "derived/financial-evidence-currency-refresh-v1/qualified_official_facts.jsonl"
@@ -279,7 +279,7 @@ def test_corrective_preserves_exact_valid_reference_output(retained, kind, expec
 
 @pytest.mark.parametrize("key", ["overallScore", "probability", "forecast-return", "confidence", "weighted", "rating"])
 def test_independent_consumer_preserves_nested_forbidden_key_semantics(retained, key):
-    from thesis_evidence_contract import seal
+    from stocklookup_core.research.thesis_evidence_contract import seal
     envelope = context("FUNDAMENTAL")
     envelope["item"]["coverage"] = {"nested": [{key: 1}]}
     envelope["item"] = seal(envelope["item"], "evidence_item/v1")
@@ -296,7 +296,7 @@ def test_independent_consumer_preserves_nested_forbidden_key_semantics(retained,
     {"knowledge_stage": "T0_SEALED", "seal_reference": None},
 ])
 def test_independent_reference_verifier_keeps_source_schema_and_authority_gates(retained, change):
-    from thesis_evidence_contract import seal, verify_item
+    from stocklookup_core.research.thesis_evidence_contract import seal, verify_item
     envelope = context("FUNDAMENTAL")
     envelope["item"].update(change)
     envelope["item"] = seal(envelope["item"], "evidence_item/v1")
@@ -307,7 +307,7 @@ def test_independent_reference_verifier_keeps_source_schema_and_authority_gates(
 
 
 def test_independent_seal_and_scanner_do_not_sanitize_nonfinite_values():
-    from thesis_evidence_contract import seal, scan_forbidden
+    from stocklookup_core.research.thesis_evidence_contract import seal, scan_forbidden
     for value in (float("nan"), float("inf"), float("-inf")):
         payload = {"fact": [value]}
         for sealer in (seal, economics._seal):

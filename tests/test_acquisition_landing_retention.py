@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from acquisition_landing_contract import (
+from stocklookup_core.acquisition.acquisition_landing_contract import (
     QUALIFICATION_STATE_UNKNOWN,
     AcquisitionOutcome,
     AcquisitionSpec,
@@ -13,8 +13,8 @@ from acquisition_landing_contract import (
     HashConflictError,
     ProtectedRootWriteError,
 )
-from acquisition_landing_isolation import default_protected_roots
-from acquisition_landing_retention import blob_path, blobs_dir, retain
+from stocklookup_core.acquisition.acquisition_landing_isolation import default_protected_roots
+from stocklookup_core.acquisition.acquisition_landing_retention import blob_path, blobs_dir, retain
 
 VALID_PDF = b"%PDF-1.4\n%fake-fixture-pdf-body\n%%EOF"
 

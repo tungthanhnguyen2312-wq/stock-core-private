@@ -14,14 +14,15 @@ import json
 import sys
 import tempfile
 import unittest
+import pytest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-import official_document_acquisition as acquisition  # noqa: E402
-import official_document_discovery as discovery  # noqa: E402
-import official_document_store as store  # noqa: E402
+import stocklookup_core.evidence.official_document_acquisition as acquisition  # noqa: E402
+import stocklookup_core.evidence.official_document_discovery as discovery  # noqa: E402
+import stocklookup_core.evidence.official_document_store as store  # noqa: E402
 import official_listing_page_parser as parser  # noqa: E402
 import official_source_registry as registry  # noqa: E402
 
@@ -375,6 +376,10 @@ class GovernedTransportTests(unittest.TestCase):
         self.assertEqual(result["outcomes"][0]["reason"], registry.REASON_APPROVAL_TIMESTAMP)
 
 
+@pytest.mark.retained_evidence(
+    "operations-review/vnm-2024-cash-dividend-official-evidence/vsdc-record-date-notice.html",
+    "operations-review/vnm-2024-cash-dividend-official-evidence/source-manifest.json",
+)
 class EntryUrlProvenanceTests(unittest.TestCase):
     """The entry URL is observed in a retained artifact, not assumed from a pattern."""
 

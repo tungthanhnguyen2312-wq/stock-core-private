@@ -249,7 +249,7 @@ def collect(root, *, session, cutoff, technical_path=None, flow_path=None, snaps
     roadmap=json.loads((Path(__file__).parent/"docs/ROADMAP_STATE.json").read_text(encoding="utf-8"))
     states={m["milestone_id"]:m["state"] for m in roadmap["milestones"]}
     products={}
-    from thesis_production_runtime import read_product_report
+    from stocklookup_core.research.thesis_production_runtime import read_product_report
     for stage,path in (("t0",thesis_t0_path),("current",thesis_current_path)):
         if path:
             data=read_product_report(path,expected_identity=((thesis_references or {}).get(stage) or {}).get("artifact_identity"))

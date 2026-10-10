@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 
 import market_wide_current_fundamental_research as fundamental
-import official_document_acquisition as acquisition
+import stocklookup_core.evidence.official_document_acquisition as acquisition
 from official_financial_ocr_table_evidence import (
     qualify_table_facts, resolve_scoped_statement_scope_evidence, resolve_scoped_unit_evidence,
     row_label_supports_metric,

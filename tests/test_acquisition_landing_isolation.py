@@ -6,8 +6,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from acquisition_landing_contract import ProtectedRootWriteError
-from acquisition_landing_isolation import assert_write_allowed, default_protected_roots
+from stocklookup_core.acquisition.acquisition_landing_contract import ProtectedRootWriteError
+from stocklookup_core.acquisition.acquisition_landing_isolation import assert_write_allowed, default_protected_roots
 
 class RealProtectedRootsAreRejectedTests(unittest.TestCase):
     def setUp(self):

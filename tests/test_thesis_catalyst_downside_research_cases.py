@@ -2,7 +2,24 @@ from __future__ import annotations
 
 import unittest
 
-from thesis_catalyst_downside_research_cases import _terminal_set_proof, build_artifact
+from stocklookup_core.research.thesis_catalyst_downside_research_cases import _terminal_set_proof, build_artifact
+
+
+def test_legacy_runner_preserves_source_root_and_explicit_output(tmp_path, monkeypatch):
+    import json
+    from pathlib import Path
+    from tools import run_thesis_catalyst_downside_research_cases_v1 as runner
+    from stocklookup_core.research import thesis_catalyst_downside_research_cases as cases
+
+    root = Path(__file__).resolve().parents[1]
+    assert runner.ROOT == cases.ROOT == root
+    assert runner.OUTPUT == root / "operations-review/thesis-catalyst-downside-and-dual-invalidation-v1-20260828/artifact.json"
+    artifact = {"contract_version": cases.CONTRACT_VERSION, "fixture": True}
+    monkeypatch.setattr(runner, "execute", lambda: artifact)
+    monkeypatch.chdir(tmp_path)
+    output = tmp_path / "fixture-output/artifact.json"
+    assert runner.run(output) == artifact
+    assert json.loads(output.read_text(encoding="utf-8")) == artifact
 
 
 def _record(*, state="BREAKOUT_READY", quality_band="HIGH_QUALITY", percentile=.9, valuation=True):

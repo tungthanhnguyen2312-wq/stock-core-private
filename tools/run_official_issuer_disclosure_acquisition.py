@@ -43,11 +43,11 @@ import requests  # noqa: E402
 import audit_opinion_evidence as audit_opinion  # noqa: E402
 import hnx_disclosure_feed_parser as feed_parser  # noqa: E402
 import insider_and_major_holder_events as events  # noqa: E402
-import official_document_store as store  # noqa: E402
+import stocklookup_core.evidence.official_document_store as store  # noqa: E402
 import official_issuer_disclosure_registry as disclosure_registry  # noqa: E402
 import official_source_registry as registry_module  # noqa: E402
 from atomic_io import atomic_write_file, atomic_write_json  # noqa: E402
-from official_document_acquisition import fetch_http  # noqa: E402
+from stocklookup_core.evidence.official_document_acquisition import fetch_http  # noqa: E402
 from official_source_registry import ADMITTED, admit  # noqa: E402
 
 SOURCE_ID = "hnx"

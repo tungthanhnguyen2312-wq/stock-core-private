@@ -34,13 +34,13 @@ def run_component(root,session,*,stage,snapshot_binding=None,output_root=None,de
         with tempfile.TemporaryDirectory(prefix="stocklookup-thesis-runtime-") as temporary:
             request=Path(temporary)/"request.json";result_path=Path(temporary)/"result.json"
             request.write_text(json.dumps({"index_ref":ref,"snapshot_identity":binding.get("identity"),"observer_identities":observer_identities or {}}),encoding="utf-8")
-            command=[sys.executable,str(Path(__file__).parent/"tools/run_thesis_evidence_stage2.py"),"--session",session,"--stage",stage,
+            command=[sys.executable,str(Path(__file__).resolve().parents[2]/"tools/run_thesis_evidence_stage2.py"),"--session",session,"--stage",stage,
                 "--source-root",str(root),"--output-root",str(output_root),"--decision",str(decision_path),"--origin",origin,
                 "--request",str(request),"--result",str(result_path)]
             if diagnostic:command.append("--diagnostic")
             for name,path in (("technical",technical_path),("flow",flow_path)):
                 if path:command.extend(["--"+name,str(path)])
-            child=subprocess.run(command,cwd=Path(__file__).parent,capture_output=True,text=True,timeout=1800)
+            child=subprocess.run(command,cwd=Path(__file__).resolve().parents[2],capture_output=True,text=True,timeout=1800)
             if child.returncode or not result_path.exists():
                 return {"status":"UNAVAILABLE","session":session,"reason":"THESIS_CHILD_FAILED:"+str(child.returncode)+":"+child.stderr[-1500:],"non_voting":True}
             if result_path.stat().st_size>64*1024:raise ValueError("THESIS_CHILD_RESULT_SIZE_LIMIT")

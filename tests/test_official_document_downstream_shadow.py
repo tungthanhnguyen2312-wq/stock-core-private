@@ -1,6 +1,6 @@
-﻿import unittest
-from official_document_canonical_activation import activate
-from official_document_downstream_shadow import build,replay
+import unittest
+from stocklookup_core.evidence.official_document_canonical_activation import activate
+from stocklookup_core.evidence.official_document_downstream_shadow import build,replay
 class ShadowTests(unittest.TestCase):
  def row(self,m):return {'metric':m,'raw_label':m,'raw_value':'10','period':'FY2024','scope':'consolidated','unit':'number_of_shares' if 'shares' in m else 'VND','sign':'positive','page':1,'document_sha256':'h','ocr_citation_id':'c','qualification':'qualified_direct_ocr'}
  def artifact(self):return {'activations':{'PAN':activate('PAN',[self.row('period_end_shares_outstanding')]),'SSI':activate('SSI',[self.row('brokerage_revenue'),self.row('financial_assets_fvtpl')])}}

@@ -27,7 +27,7 @@ sys.path.insert(0, str(ROOT / "tests"))
 import corporate_action_events as events  # noqa: E402
 import missing_payload_reconciliation as reconciliation  # noqa: E402
 import official_corporate_action_ledger as ledger  # noqa: E402
-import official_document_store as document_store  # noqa: E402
+import stocklookup_core.evidence.official_document_store as document_store  # noqa: E402
 import official_source_registry as registry  # noqa: E402
 
 _HTML = (b"<html><body><p>Thong bao</p></body></html>")

@@ -4,7 +4,7 @@ import hashlib,json,shutil
 from datetime import datetime,timezone
 from pathlib import Path
 from typing import Any
-from official_document_retrieval import SELECTED,build_index,search
+from stocklookup_core.evidence.official_document_retrieval import SELECTED,build_index,search
 VERSION="1.0.0"
 def _hash(path:Path)->str:
  h=hashlib.sha256()

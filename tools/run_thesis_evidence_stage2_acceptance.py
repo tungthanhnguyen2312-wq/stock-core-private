@@ -14,9 +14,9 @@ import psutil
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT));sys.path.insert(0,str(ROOT/"tests"))
 from bounded_artifact_stream import source_hash
-import thesis_evidence_contract as c
-import thesis_evidence_production as engine
-import thesis_production_runtime as runtime
+import stocklookup_core.research.thesis_evidence_contract as c
+import stocklookup_core.research.thesis_evidence_production as engine
+import stocklookup_core.research.thesis_production_runtime as runtime
 from tools.run_thesis_evidence_stage2 import retained_only_guard
 from tools.run_prospective_pit_capture_acceptance import _receipt_inventory
 import prospective_pit_capture_retention as captures

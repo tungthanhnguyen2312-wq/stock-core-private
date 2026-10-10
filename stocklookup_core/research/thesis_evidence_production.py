@@ -14,9 +14,9 @@ import sqlite3
 import tempfile
 import time
 
-import thesis_evidence_contract as c
-import thesis_evidence_adapters as adapters
-import thesis_evidence_matrix as matrix
+import stocklookup_core.research.thesis_evidence_contract as c
+import stocklookup_core.research.thesis_evidence_adapters as adapters
+import stocklookup_core.research.thesis_evidence_matrix as matrix
 import prospective_t0_seal_index as seals
 import prospective_decision_retention as retention
 from bounded_artifact_stream import stream_artifact, source_hash

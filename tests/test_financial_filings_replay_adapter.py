@@ -7,9 +7,9 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from acquisition_landing_checkpoint import process_batch
-from acquisition_landing_contract import AcquisitionOutcome
-from acquisition_landing_isolation import default_protected_roots
+from stocklookup_core.acquisition.acquisition_landing_checkpoint import process_batch
+from stocklookup_core.acquisition.acquisition_landing_contract import AcquisitionOutcome
+from stocklookup_core.acquisition.acquisition_landing_isolation import default_protected_roots
 from financial_filings_replay_adapter import (
     DEFAULT_TICKERS,
     default_governed_evidence_root,

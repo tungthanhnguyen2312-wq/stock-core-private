@@ -51,10 +51,10 @@ plausibility.
 
 ## Architecture
 
-Seven separated concerns, each owned by one small module (repository
-convention here is small, single-purpose modules at the repo root, not a
-package directory - this follows the same shape as the existing
-`official_document_*.py` family):
+Seven separated concerns, each owned by one small module in
+`stocklookup_core/acquisition/`. The official document family now lives in
+`stocklookup_core/evidence/`; historical names below map through
+`config/repository_layout.json`. Responsibility and acquisition authority are unchanged.
 
 | # | Concern | Module |
 |---|---|---|

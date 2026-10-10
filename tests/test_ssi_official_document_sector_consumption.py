@@ -1,6 +1,6 @@
-﻿import unittest
+import unittest
 from ssi_securities_pilot import evaluate
-from official_document_canonical_activation import activate
+from stocklookup_core.evidence.official_document_canonical_activation import activate
 class SSIOfficialSourceTests(unittest.TestCase):
  def official(self,metric='brokerage_revenue',unit='VND'):
   row={'metric':metric,'raw_label':'x','raw_value':'10','period':'FY2024','scope':'consolidated','unit':unit,'sign':'positive','page':1,'document_sha256':'h','ocr_citation_id':'c','qualification':'qualified_direct_ocr'}

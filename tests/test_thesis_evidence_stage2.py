@@ -3,17 +3,17 @@ import copy
 import json
 from pathlib import Path
 import pytest
-import thesis_evidence_production as engine
-import thesis_evidence_contract as c
-import thesis_evidence_adapters as adapters
-import thesis_evidence_matrix as matrix
+import stocklookup_core.research.thesis_evidence_production as engine
+import stocklookup_core.research.thesis_evidence_contract as c
+import stocklookup_core.research.thesis_evidence_adapters as adapters
+import stocklookup_core.research.thesis_evidence_matrix as matrix
 import prospective_t0_seal_index as seals
 import prospective_decision_retention as retention
 import integrated_investment_decision_product as product
 import contextual_technical_features_v2 as technical
 import technical_relationship_view as bridge
 import volume_and_flow_context_v2 as flow
-import thesis_production_runtime as runtime
+import stocklookup_core.research.thesis_production_runtime as runtime
 from test_thesis_evidence_matrix import integrated_row
 from test_contextual_technical_features import series,seal
 from test_prospective_pit_capture import capture_session,DAY,TIME

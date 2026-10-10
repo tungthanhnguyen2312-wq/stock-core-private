@@ -15,14 +15,35 @@
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "DAILY_RESEARCH_OUTPUT_SEMANTIC_COHERENCE_CORRECTIVE_V1",
+    "milestone": "REPOSITORY_ROOT_STRUCTURE_SIMPLIFICATION_V1",
     "state": "ACTIVE"
   },
   "queued_next": [],
   "milestones": [
     {
-      "milestone_id": "DAILY_RESEARCH_OUTPUT_SEMANTIC_COHERENCE_CORRECTIVE_V1",
+      "milestone_id": "REPOSITORY_ROOT_STRUCTURE_SIMPLIFICATION_V1",
       "state": "ACTIVE",
+      "starting_checkpoint": "40c88c2a73bcf9cb0a92c3127ca2cf4c34243386",
+      "candidate_branch": "refactor/repository-root-simplification-v1-20261010",
+      "dependencies": [
+        "DAILY_RESEARCH_OUTPUT_SEMANTIC_COHERENCE_CORRECTIVE_V1"
+      ],
+      "unlocks": [],
+      "owner_authorized": true,
+      "owner_override": "Owner directive STOCK_LOOKUP_CONTINUATION_AND_REPOSITORY_STRUCTURE_SIMPLIFICATION explicitly authorizes bounded package relocation, dependency mapping, offline parity and call-shape validation, structural clutter prevention, dedicated worktrees, local commits and public-safe feature PRs. Start after semantic corrective PR105 merged exact approved head 01b372ea9ad89383f2349d9aba4a6fe5a65aa331 with four PR CI jobs SUCCESS at main 40c88c2a73bcf9cb0a92c3127ca2cf4c34243386. Scope: acquisition landing, official document evidence and thesis research package slices; existing CLI and governed publication interfaces remain. No production Daily, deployment, runtime writes, authority promotion, evidence deletion or unrelated analytical work. Merge of the structure PR requires separate owner approval; no automatic analytical successor.",
+      "authority_effect": "NONE",
+      "source_doc": "docs/repository_root_structure_simplification_v1_contract.md",
+      "state_history": [
+        "DEFERRED",
+        "ACTIVE"
+      ],
+      "checkpoint": null,
+      "terminal_disposition": null,
+      "notes": "Owner directive STOCK_LOOKUP_CONTINUATION_AND_REPOSITORY_STRUCTURE_SIMPLIFICATION explicitly authorizes bounded package relocation, dependency mapping, offline parity and call-shape validation, structural clutter prevention, dedicated worktrees, local commits and public-safe feature PRs. Start after semantic corrective PR105 merged exact approved head 01b372ea9ad89383f2349d9aba4a6fe5a65aa331 with four PR CI jobs SUCCESS at main 40c88c2a73bcf9cb0a92c3127ca2cf4c34243386. Scope: acquisition landing, official document evidence and thesis research package slices; existing CLI and governed publication interfaces remain. No production Daily, deployment, runtime writes, authority promotion, evidence deletion or unrelated analytical work. Merge of the structure PR requires separate owner approval; no automatic analytical successor."
+    },
+    {
+      "milestone_id": "DAILY_RESEARCH_OUTPUT_SEMANTIC_COHERENCE_CORRECTIVE_V1",
+      "state": "COMPLETE",
       "starting_checkpoint": "64c8bc884efd790bc05f6976bc628215a99fd58b",
       "candidate_branch": "fix/daily-research-semantic-coherence-v1-20261010",
       "dependencies": [
@@ -35,11 +56,12 @@
       "source_doc": "docs/daily_research_output_semantic_coherence_corrective_v1_contract.md",
       "state_history": [
         "DEFERRED",
-        "ACTIVE"
+        "ACTIVE",
+        "COMPLETE"
       ],
-      "checkpoint": null,
-      "terminal_disposition": null,
-      "notes": "Owner separately approved: Approve the bounded corrective. Exact scope: DAILY_RESEARCH_OUTPUT_SEMANTIC_COHERENCE_CORRECTIVE_V1 items 1-10; semantic explanation and proven consumer mapping only, immutable October 9 artifacts read-only, unchanged IID Posture V2 and numerical authority, one dedicated worktree and repository writer, one validated local checkpoint; no push/merge/deploy/Daily/runtime write/authority promotion/automatic successor. PR101 merged exact head 424b5efcd3a7a2a030d95cd474db5c7dc2c49bed at verified main 64c8bc884efd790bc05f6976bc628215a99fd58b; post-merge CI 38017817078 four jobs SUCCESS; prior offline acceptance and compatibility gates passed."
+      "checkpoint": "40c88c2a73bcf9cb0a92c3127ca2cf4c34243386",
+      "terminal_disposition": "IMPLEMENTATION_RELEASED_NO_PRODUCTION_ACTIVATION",
+      "notes": "Owner separately approved: Approve the bounded corrective. Exact scope: DAILY_RESEARCH_OUTPUT_SEMANTIC_COHERENCE_CORRECTIVE_V1 items 1-10; semantic explanation and proven consumer mapping only, immutable October 9 artifacts read-only, unchanged IID Posture V2 and numerical authority, one dedicated worktree and repository writer, one validated local checkpoint; no push/merge/deploy/Daily/runtime write/authority promotion/automatic successor. PR101 merged exact head 424b5efcd3a7a2a030d95cd474db5c7dc2c49bed at verified main 64c8bc884efd790bc05f6976bc628215a99fd58b; post-merge CI 38017817078 four jobs SUCCESS; prior offline acceptance and compatibility gates passed. Verified release 40c88c2a73bcf9cb0a92c3127ca2cf4c34243386; no production reclaim, activation or automatic successor."
     },
     {
       "milestone_id": "SCENARIO_AND_OPPORTUNITY_COST_DECISION_COHERENCE_V2",
