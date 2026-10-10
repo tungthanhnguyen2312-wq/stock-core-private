@@ -4,6 +4,15 @@ Milestone: `REPOSITORY_ROOT_STRUCTURE_SIMPLIFICATION_V1`.
 Starting release: semantic corrective PR105, merge `40c88c2a73bcf9cb0a92c3127ca2cf4c34243386`.
 Authority effect: `NONE / SOURCE_LAYOUT_ONLY`.
 
+## Released checkpoint
+
+COMPLETE: owner-approved PR106 HEAD `306da44f92b4e974addddbaaef98114095d9509b`
+merged at `04dca9b360e064b0538a797c780895e6a4c43fc7` on 2026-10-10.
+All four PR CI jobs succeeded (run `38022405076`). Root files 613 → 592,
+root Python 595 → 574; 22 implementations moved, one required CLI launcher retained.
+No production activation or analytical successor. Exact validation and residual
+boundaries: [acceptance](internal/REPOSITORY_ROOT_STRUCTURE_SIMPLIFICATION_ACCEPTANCE_20261010.md).
+
 ## Owner admission and boundaries
 
 The owner's explicit `STOCK_LOOKUP_CONTINUATION_AND_REPOSITORY_STRUCTURE_SIMPLIFICATION`

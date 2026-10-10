@@ -102,8 +102,10 @@ the existing workflow tier contract requires four pytest commands, while the new
 standalone layout guard added a fifth. The guard is now part of the existing
 structural hermetic command, preserving all assertions and four-command tiering.
 Focused dependency-tier and layout verification: **39 passed**. Replacement CI
-must pass before release; the earlier exact-HEAD approval cannot authorize this
-changed candidate.
+passed in run `38022405076`, all four jobs successful. The owner separately approved
+HEAD `306da44f92b4e974addddbaaef98114095d9509b`, merged in PR106 at
+`04dca9b360e064b0538a797c780895e6a4c43fc7`. The earlier exact-HEAD approval was
+not reused for the changed candidate.
 
 Historical prose is preserved; original module names navigate through the relocation
 map. Active navigation and the landing framework's physical-layout convention are
@@ -121,8 +123,8 @@ source authority promotion or immutable-session modification was performed.
 
 ## Next product priority, after source release
 
-Semantic corrective PR105 is released; this layout candidate is pending review,
-not deployed. Existing integrated product milestones remain complete. The known
+Semantic corrective PR105 and layout PR106 are released; no deployment occurred.
+Existing integrated product milestones remain complete. The known
 fiscal-calendar/publication mapping gap is now explicit rather than disguised by
 the lexical feature-label maximum. Recommend a separately bounded evidence gate
 for issuer fiscal-calendar and publication metadata, using existing admitted source

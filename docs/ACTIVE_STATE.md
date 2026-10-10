@@ -1,8 +1,8 @@
 # Stock Lookup — Active State
 
 Updated 2026-10-10 from verified
-main `40c88c2a73bcf9cb0a92c3127ca2cf4c34243386`.
-Owner-approved source layout scope.
+main `04dca9b360e064b0538a797c780895e6a4c43fc7`.
+Owner-approved source layout released; no successor admitted.
 Verify live remote main with `git fetch origin main` or
 `git ls-remote origin refs/heads/main`; a **local** remote-tracking ref alone can be stale.
 ## 0. How this file relates to the others
@@ -34,7 +34,7 @@ Fact kinds used below: **CURRENT FACT** (verified in repo or by a stated read-on
 **BLOCKED**, **DEFERRED**, **HISTORICAL**.
 
 ## 1. The operational gate
-- **ACTIVE — [source layout](repository_root_structure_simplification_v1_contract.md):** bounded package slices, offline acceptance; semantic corrective PR105 `40c88c2` COMPLETE, four post-merge CI jobs PASS; no Daily/deploy/authority change.
+- **COMPLETE — [source layout](repository_root_structure_simplification_v1_contract.md):** PR106 `04dca9b`, four PR CI jobs PASS; 22 implementations packaged, root Python 595 → 574; no Daily/deploy/authority change. Semantic corrective PR105 COMPLETE.
 - **COMPLETE — [capacity Phase 1](capacity_recovery_phase1_contract.md):** PR99 merged
   `168e0f7`, post-merge CI 37893984528 success; zero production reclaim/activation.
 - **COMPLETE — Vault V1:** PR97 merged `3f3d4fe`; offline/opt-in, 77 candidates,
@@ -307,8 +307,10 @@ Fact kinds used below: **CURRENT FACT** (verified in repo or by a stated read-on
 
 ## 9. Next action
 
-Continue the admitted source layout scope offline. Any ordinary Daily remains separately
-owner-operated after its fresh READY preflight and exact completed-session gates.
+The bounded source layout scope is released; no successor is admitted or queued.
+The next product-critical recommendation is governed issuer fiscal-calendar/publication
+mapping, with explicit source proof and knowledge time; it needs its own admission.
+Any ordinary Daily remains owner-operated after fresh READY preflight and exact session gates.
 
 ## 10. Owner approvals that remain open
 
