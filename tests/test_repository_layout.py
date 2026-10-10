@@ -4,6 +4,8 @@ import importlib.util
 import json
 from pathlib import Path
 
+import pytest
+
 ROOT = Path(__file__).resolve().parents[1]
 LAYOUT = json.loads((ROOT / "config/repository_layout.json").read_text(encoding="utf-8"))
 
@@ -41,6 +43,19 @@ def test_relocated_imports_and_reflection_targets_are_not_stale():
                 names = [a.name for a in node.names]
             elif isinstance(node, ast.ImportFrom) and not node.level:
                 names = [node.module]
+            elif (isinstance(node, ast.For) and isinstance(node.target, ast.Name)
+                  and isinstance(node.iter, (ast.Tuple, ast.List))):
+                imports_loop_target = any(
+                    isinstance(call, ast.Call)
+                    and isinstance(call.func, (ast.Name, ast.Attribute))
+                    and ast.unparse(call.func).endswith(("import_module", "__import__"))
+                    and call.args and isinstance(call.args[0], ast.Name)
+                    and call.args[0].id == node.target.id
+                    for statement in node.body for call in ast.walk(statement)
+                )
+                if imports_loop_target:
+                    names = [value.value.split(".")[0] for value in node.iter.elts
+                             if isinstance(value, ast.Constant) and isinstance(value.value, str)]
             elif isinstance(node, ast.Call) and isinstance(node.func, (ast.Name, ast.Attribute)):
                 call = ast.unparse(node.func)
                 if call.endswith(("import_module", "__import__", "patch")) and node.args:
@@ -50,6 +65,20 @@ def test_relocated_imports_and_reflection_targets_are_not_stale():
             if old_modules.intersection(names):
                 stale.append(f"{path.relative_to(ROOT)}:{node.lineno}")
     assert not stale, stale
+
+
+def test_import_loop_guard_detects_the_iid_fixture_regression(tmp_path, monkeypatch):
+    source = (ROOT / "tests/test_iid_single_serialization.py").read_text(encoding="utf-8")
+    fixture = tmp_path / "iid_fixture.py"
+    fixture.write_text(source, encoding="utf-8")
+    monkeypatch.setitem(globals(), "ROOT", tmp_path)
+    test_relocated_imports_and_reflection_targets_are_not_stale()
+    stale = source.replace("stocklookup_core.tactical.market_structure_breakout_product_projection",
+                           "market_structure_breakout_product_projection", 1)
+    assert stale != source
+    fixture.write_text(stale, encoding="utf-8")
+    with pytest.raises(AssertionError, match="iid_fixture.py"):
+        test_relocated_imports_and_reflection_targets_are_not_stale()
 
 
 def test_package_initializers_do_not_activate_runtime_work():

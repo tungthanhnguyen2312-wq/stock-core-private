@@ -1,6 +1,6 @@
 from pathlib import Path
 import json
-from prospective_research_context_extension import build_successor, write_immutable
+from stocklookup_core.research.prospective_research_context_extension import build_successor, write_immutable
 from run_prospective_research_context_extension import ROOT, SNAPSHOT
 
 OUT = ROOT / 'operations-review/prospective-research-context-extension-v1-successor-20260820'

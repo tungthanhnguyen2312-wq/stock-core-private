@@ -4,8 +4,8 @@ from pathlib import Path
 
 import pytest
 
-from analyst_research_workbench import build_current_workbench
-from durable_prospective_research_case_store import DurableCaseStoreError, DurableProspectiveResearchCaseStore
+from stocklookup_core.research.analyst_research_workbench import build_current_workbench
+from stocklookup_core.research.durable_prospective_research_case_store import DurableCaseStoreError, DurableProspectiveResearchCaseStore
 
 
 SECTIONS = (

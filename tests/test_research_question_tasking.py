@@ -3,8 +3,8 @@ import copy
 
 import pytest
 
-from persistent_research_dossier import load_latest_versions
-from research_question_tasking import build, write_immutable
+from stocklookup_core.research.persistent_research_dossier import load_latest_versions
+from stocklookup_core.research.research_question_tasking import build, write_immutable
 from run_research_question_tasking import DOSSIER_ROOT
 
 

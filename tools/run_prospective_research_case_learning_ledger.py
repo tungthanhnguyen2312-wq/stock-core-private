@@ -7,7 +7,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from prospective_research_case_learning_ledger import case_readiness
+from stocklookup_core.research.prospective_research_case_learning_ledger import case_readiness
 from tools.run_evidence_bound_ai_research_human_review import run as ai_run
 from tools.run_evidence_gated_research_decision_workflow import run as decision_run
 

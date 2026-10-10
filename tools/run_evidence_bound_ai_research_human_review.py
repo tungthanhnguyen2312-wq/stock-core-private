@@ -7,7 +7,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from evidence_bound_ai_research_human_review import build_ai_input_collection
+from stocklookup_core.research.evidence_bound_ai_research_human_review import build_ai_input_collection
 from tools.run_evidence_gated_research_decision_workflow import run as decision_run
 
 

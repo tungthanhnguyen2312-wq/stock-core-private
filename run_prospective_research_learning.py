@@ -1,6 +1,6 @@
 from pathlib import Path
 import json
-from prospective_research_learning import freeze,write_immutable,attribute
+from stocklookup_core.research.prospective_research_learning import freeze,write_immutable,attribute
 ROOT=Path(__file__).resolve().parent
 def run():
  p=json.loads((ROOT/'operations-review/mva-daily-investment-research-20260820/mva_daily_investment_research_artifact.json').read_text(encoding='utf-8'));a=json.loads((ROOT/'operations-review/ai-research-analyst-v1-20260820/ai_research_analyst_artifact.json').read_text(encoding='utf-8'));s=freeze(p,a);return s,attribute(s)

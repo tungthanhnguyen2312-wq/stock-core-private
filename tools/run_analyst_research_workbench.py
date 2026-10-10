@@ -8,7 +8,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from analyst_research_workbench import CURRENT_RETAINED_SNAPSHOT, build_current_workbench
+from stocklookup_core.research.analyst_research_workbench import CURRENT_RETAINED_SNAPSHOT, build_current_workbench
 
 
 def run(ticker: str | None = None, *, as_of: str | None = CURRENT_RETAINED_SNAPSHOT, operation: str = "GET_COHORT_RESOLUTION") -> dict:

@@ -4,11 +4,11 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from prospective_research_cohort_diagnostics import (
+from stocklookup_core.research.prospective_research_cohort_diagnostics import (
     build_cohort_diagnostics,
     render_cohort_diagnostics_summary,
 )
-from prospective_research_learning import write_immutable
+from stocklookup_core.research.prospective_research_learning import write_immutable
 
 ROOT = Path(__file__).resolve().parent
 OUT_DIR = ROOT / 'operations-review/prospective-research-cohort-diagnostics-v1-20260821'

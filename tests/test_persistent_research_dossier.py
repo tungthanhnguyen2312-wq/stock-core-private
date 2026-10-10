@@ -3,7 +3,7 @@ import copy
 
 import pytest
 
-from persistent_research_dossier import build, write_immutable
+from stocklookup_core.research.persistent_research_dossier import build, write_immutable
 from run_persistent_research_dossier import inputs
 
 

@@ -5,7 +5,7 @@ import hashlib
 import json
 from typing import Any, Mapping
 
-from persistent_research_dossier import _change_set
+from stocklookup_core.research.persistent_research_dossier import _change_set
 
 FORBIDDEN = ("BUY", "SELL", "HOLD", "target price", "probability")
 

@@ -1,6 +1,6 @@
 from pathlib import Path
 import json
-from ai_research_analyst import build,markdown
+from stocklookup_core.research.ai_research_analyst import build,markdown
 ROOT=Path(__file__).resolve().parent
 def run():return build(json.loads((ROOT/'operations-review/mva-daily-investment-research-20260820/mva_daily_investment_research_artifact.json').read_text(encoding='utf-8')))
 if __name__=='__main__':

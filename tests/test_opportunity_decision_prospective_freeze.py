@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from prospective_research_learning import freeze_opportunity_decision_context, replay_opportunity_decision_context, write_immutable
+from stocklookup_core.research.prospective_research_learning import freeze_opportunity_decision_context, replay_opportunity_decision_context, write_immutable
 from tools.run_opportunity_decision_prospective_freeze import output_path, resolve
 
 

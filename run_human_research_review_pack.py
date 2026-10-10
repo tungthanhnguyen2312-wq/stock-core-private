@@ -4,10 +4,10 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from human_research_review_pack import build, markdown
-from persistent_research_dossier import load_latest_versions
-from prospective_research_learning import attribute, freeze
-from research_question_tasking import load_latest_tasks
+from stocklookup_core.research.human_research_review_pack import build, markdown
+from stocklookup_core.research.persistent_research_dossier import load_latest_versions
+from stocklookup_core.research.prospective_research_learning import attribute, freeze
+from stocklookup_core.research.research_question_tasking import load_latest_tasks
 from run_prospective_research_learning import ROOT as REPO_ROOT
 
 ROOT = REPO_ROOT

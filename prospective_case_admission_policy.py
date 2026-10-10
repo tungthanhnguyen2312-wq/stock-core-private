@@ -6,7 +6,7 @@ import json
 from collections import Counter
 from typing import Any, Mapping, Sequence
 
-from durable_prospective_research_case_store import DurableProspectiveResearchCaseStore
+from stocklookup_core.research.durable_prospective_research_case_store import DurableProspectiveResearchCaseStore
 
 
 CONTRACT_VERSION = "prospective_case_admission_policy/v1"

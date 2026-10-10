@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from durable_prospective_research_case_store import DurableProspectiveResearchCaseStore
+from stocklookup_core.research.durable_prospective_research_case_store import DurableProspectiveResearchCaseStore
 from prospective_case_admission_policy import AdmissionPolicyError, apply_admission_policy, material_decision_state_signature, retain_admitted_cases
 from prospective_decision_outcome_measurement import build_outcome_artifact, load_genuine_case_envelopes
 

@@ -1,8 +1,8 @@
 from pathlib import Path
 import json
 from evidence_aware_candidate_comparison import build
-from persistent_research_dossier import load_latest_versions
-from research_question_tasking import load_latest_tasks
+from stocklookup_core.research.persistent_research_dossier import load_latest_versions
+from stocklookup_core.research.research_question_tasking import load_latest_tasks
 ROOT=Path(__file__).resolve().parent; OUT=ROOT/'operations-review/evidence-aware-candidate-comparison-v1-20260820'
 def inputs():
  def load(path): return json.loads((ROOT/path).read_text(encoding='utf8'))

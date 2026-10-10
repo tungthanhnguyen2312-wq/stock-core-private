@@ -4,7 +4,7 @@ from __future__ import annotations
 import copy
 import pytest
 
-from prospective_research_cohort_diagnostics import (
+from stocklookup_core.research.prospective_research_cohort_diagnostics import (
     HORIZONS,
     MATURITY_NO_OBSERVATIONS,
     MATURITY_OBSERVED_IMMATURE_SAMPLE,

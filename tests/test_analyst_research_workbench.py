@@ -2,8 +2,8 @@ import copy
 
 import pytest
 
-from analyst_research_workbench import CURRENT_RETAINED_SNAPSHOT, build_current_workbench
-from evidence_bound_ai_research_human_review import apply_human_review, build_human_review_packet
+from stocklookup_core.research.analyst_research_workbench import CURRENT_RETAINED_SNAPSHOT, build_current_workbench
+from stocklookup_core.research.evidence_bound_ai_research_human_review import apply_human_review, build_human_review_packet
 
 
 SECTIONS = (
