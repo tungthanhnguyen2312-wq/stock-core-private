@@ -16,13 +16,13 @@
   ],
   "current": {
     "milestone": "REPOSITORY_ROOT_STRUCTURE_SIMPLIFICATION_V1",
-    "state": "ACTIVE"
+    "state": "COMPLETE"
   },
   "queued_next": [],
   "milestones": [
     {
       "milestone_id": "REPOSITORY_ROOT_STRUCTURE_SIMPLIFICATION_V1",
-      "state": "ACTIVE",
+      "state": "COMPLETE",
       "starting_checkpoint": "40c88c2a73bcf9cb0a92c3127ca2cf4c34243386",
       "candidate_branch": "refactor/repository-root-simplification-v1-20261010",
       "dependencies": [
@@ -35,11 +35,12 @@
       "source_doc": "docs/repository_root_structure_simplification_v1_contract.md",
       "state_history": [
         "DEFERRED",
-        "ACTIVE"
+        "ACTIVE",
+        "COMPLETE"
       ],
-      "checkpoint": null,
-      "terminal_disposition": null,
-      "notes": "Owner directive STOCK_LOOKUP_CONTINUATION_AND_REPOSITORY_STRUCTURE_SIMPLIFICATION explicitly authorizes bounded package relocation, dependency mapping, offline parity and call-shape validation, structural clutter prevention, dedicated worktrees, local commits and public-safe feature PRs. Start after semantic corrective PR105 merged exact approved head 01b372ea9ad89383f2349d9aba4a6fe5a65aa331 with four PR CI jobs SUCCESS at main 40c88c2a73bcf9cb0a92c3127ca2cf4c34243386. Scope: acquisition landing, official document evidence and thesis research package slices; existing CLI and governed publication interfaces remain. No production Daily, deployment, runtime writes, authority promotion, evidence deletion or unrelated analytical work. Merge of the structure PR requires separate owner approval; no automatic analytical successor."
+      "checkpoint": "04dca9b360e064b0538a797c780895e6a4c43fc7",
+      "terminal_disposition": "IMPLEMENTATION_RELEASED_NO_PRODUCTION_ACTIVATION",
+      "notes": "Owner directive STOCK_LOOKUP_CONTINUATION_AND_REPOSITORY_STRUCTURE_SIMPLIFICATION explicitly authorizes bounded package relocation, dependency mapping, offline parity and call-shape validation, structural clutter prevention, dedicated worktrees, local commits and public-safe feature PRs. Start after semantic corrective PR105 merged exact approved head 01b372ea9ad89383f2349d9aba4a6fe5a65aa331 with four PR CI jobs SUCCESS at main 40c88c2a73bcf9cb0a92c3127ca2cf4c34243386. Scope: acquisition landing, official document evidence and thesis research package slices; existing CLI and governed publication interfaces remain. No production Daily, deployment, runtime writes, authority promotion, evidence deletion or unrelated analytical work. Merge of the structure PR requires separate owner approval; no automatic analytical successor. Owner separately approved exact PR106 HEAD 306da44f92b4e974addddbaaef98114095d9509b after all four PR CI jobs succeeded in run 38022405076; merged at 04dca9b360e064b0538a797c780895e6a4c43fc7. Root files 613 to 592, root Python 595 to 574, 22 implementations packaged. No Daily, deployment, runtime writes, authority promotion or automatic successor."
     },
     {
       "milestone_id": "DAILY_RESEARCH_OUTPUT_SEMANTIC_COHERENCE_CORRECTIVE_V1",

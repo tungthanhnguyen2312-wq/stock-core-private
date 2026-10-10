@@ -1,14 +1,19 @@
 # Stock Lookup — Current Roadmap
 
 History: [ROADMAP.md](ROADMAP.md); execution: ROADMAP_STATE.json.
-Updated 2026-10-10 from main `40c88c2a73bcf9cb0a92c3127ca2cf4c34243386`.
+Updated 2026-10-10 from main `04dca9b360e064b0538a797c780895e6a4c43fc7`.
 Nothing below auto-starts; --can-start or owner override (AI_RULES 11).
 Facts: [ACTIVE_STATE.md](ACTIVE_STATE.md).
 
-## NOW — REPOSITORY_ROOT_STRUCTURE_SIMPLIFICATION_V1 (ACTIVE)
+## NOW — REPOSITORY_ROOT_STRUCTURE_SIMPLIFICATION_V1 (COMPLETE)
 
-Owner-admitted package slices; no Daily/deploy/authority change.
+Released PR106 at `04dca9b`, approved HEAD `306da44`; four PR CI jobs PASS.
+22 implementations packaged; root files 613 → 592, Python 595 → 574.
+No Daily/deploy/authority change; no successor admitted, `queued_next=[]`.
 [Contract](repository_root_structure_simplification_v1_contract.md).
+Next product-critical recommendation: governed issuer fiscal-calendar/publication
+mapping evidence and exact knowledge time, subject to separate admission. It does
+not grant normalized earnings, shares, valuation authority or automatic date conversion.
 Semantic corrective COMPLETE: PR105 `40c88c2`, post-merge CI 38021005739 SUCCESS.
 Coherence V2 COMPLETE: PR101 `64c8bc8`, post-merge CI 38017817078 SUCCESS.
 Posture V2 COMPLETE: PR100 `314406e`, four CI jobs SUCCESS.
@@ -24,23 +29,14 @@ interpretation/normalization blockers stay offline/non-voting.
 
 ## PRIOR — `MACRO_REGIME_CANONICAL_DAILY_CONSUMER_AND_TEMPORAL_CORRECTIVE_V1` (COMPLETE)
 
-Owner-authorized corrective: canonical packet/AI/cockpit wiring and cutoff/freshness
-checks passed offline acceptance. October 8 Owner live acceptance is independently
-verified (`MACRO_REGIME_20261008_LIVE_ACCEPTED`); exact identities in ACTIVE_STATE.
-No successor. [Contract](macro_market_regime_decision_context_contract.md).
-
-PR #94 Portfolio release and Macro V1 context are complete; SBV axes stay UNKNOWN.
+Macro Daily/AI/cockpit and October 8 live acceptance are recorded in ACTIVE_STATE.
+No successor; SBV UNKNOWN. [Contract](macro_market_regime_decision_context_contract.md).
 
 ## PRIOR — retained financial evidence checkpoints (COMPLETE)
 
-Representation recovery confirmed three image-only language counterparts with zero facts.
-QNS detail resolution rebound the same PDF without download/OCR; equity alone qualifies.
-The VNM/QNS/POW H1 probe retains VNM cash and QNS equity; POW route remains blocked.
-Annual/reviewed provisions remain descriptive with recurrence UNKNOWN and no normalization.
-HPG has one historical common-share observation; listed quantities do not prove continuity.
-Strict shares/valuation remain zero, completed sessions immutable, and `queued_next=[]`.
-The campaign's bounded financial work authorizes no Daily; October 8 Owner completion
-and Macro acceptance are recorded separately in ACTIVE_STATE.
+Retained financial qualification and blockers remain in ACTIVE_STATE and the linked
+checkpoint record. Strict shares/valuation remain zero; completed sessions immutable.
+The campaign authorizes no Daily; October 8 Owner completion is recorded separately.
 [Campaign and exact blockers](internal/STOCK_LOOKUP_AUTONOMOUS_CAMPAIGN_20261008.md).
 [Exact prior checkpoint facts](long_term_company_economics_evidence_contract.md#retained-prior-checkpoint-detail).
 
