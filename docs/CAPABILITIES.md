@@ -15,7 +15,7 @@ Each block: **Contract** · **Runtime** · **Authority** · **Production** · **
 
 Decision-intelligence closure (2026-10-07) is research coverage and calibration context
 only. Contract `decision_intelligence_coverage_calibration/v1`. It does not vote, size,
-or recommend. Read-only inspection is ACTIVE, merge gated; [scope](research_inspection_integrity_v1_contract.md).
+or recommend. Read-only inspection released PR116; [scope](research_inspection_integrity_v1_contract.md).
 [Closure evidence](internal/DECISION_INTELLIGENCE_COVERAGE_AND_CALIBRATION_CLOSURE_20261007.md).
 
 Macro V1: Daily/AI/cockpit wired; October 8 live acceptance verified (`MACRO_REGIME_20261008_LIVE_ACCEPTED`;
@@ -27,7 +27,7 @@ exact retained identities in ACTIVE_STATE). Source authority unchanged.
 - Input: existing qualified official overlay with explicit cutoff; optional verified, timed thesis research references and method-qualified relative context
 - Predecessor: existing financial qualification, earnings-component and thesis contracts (unchanged)
 - Blocker: no qualified multi-year structural/cycle proof, recurrence/accounting normalization bridge or strict share continuity
-- Next trigger: separately approved qualified evidence/consumer; PR96 merged, no automatic Daily action or successor
+- Next trigger: merge ACTIVE [packet consumer](company_economics_research_packet_consumer_v1_contract.md); no Daily or authority change
 
 ### Vault snapshot / retention
 - Contract: [vault_incremental_snapshot_contract.md](vault_incremental_snapshot_contract.md)

@@ -1,15 +1,15 @@
 # Stock Lookup — Current Roadmap
 
 History: [ROADMAP.md](ROADMAP.md); execution: ROADMAP_STATE.json.
-Updated 2026-10-10 from main `9bc6360af5b678ffc15d46156bbb2bfcb8457f0c`.
+Updated 2026-10-10 from main `a8a91ff6e28c9b3b0cc445eebfc15d30044009d4`.
 Nothing below auto-starts; native standing admission required (AI_RULES 11).
 Facts: [ACTIVE_STATE.md](ACTIVE_STATE.md).
 
-## NOW — RESEARCH_INSPECTION_INTEGRITY_V1 (ACTIVE)
+## NOW — COMPANY_ECONOMICS_RESEARCH_PACKET_CONSUMER_V1 (ACTIVE)
 
-Explicit-source coverage/calibration inspection and strict feedback intake.
-[Product-value choice and limits](research_inspection_integrity_v1_contract.md).
-Portfolio COMPLETE: PR115 `9bc6360`, four post-merge CI PASS (38056595405).
+Offline Human/AI economics view and exact-basis comparison.
+[Scope and limits](company_economics_research_packet_consumer_v1_contract.md).
+PR116 COMPLETE `a8a91ff`; four post-merge CI PASS (38058615379).
 Fiscal mapping lacks issuer calendar/covered-period/provider-label/publication proof;
 existing semantics knowledge time is insufficient. No automatic conversion/promotion.
 Capacity Phase 1 COMPLETE: PR99 `168e0f7`, CI 37893984528 success;

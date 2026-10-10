@@ -96,3 +96,11 @@ event-current35, event-historical137, missing741, price-current857, technical-st
 share-blocked1,507 and denominator-conflict2. Five source hashes retained in the
 local diagnostic result; no source written. History correctly says
 HISTORICAL_PANEL_NOT_SUPPLIED. No October9 incident reopened.
+
+## Released
+
+Owner approved exact candidate 7bdb0f95c4bb76add196d58396f00e19306588b6.
+PR116 merged main a8a91ff6e28c9b3b0cc445eebfc15d30044009d4; post-merge
+run 38058615379 and all four jobs SUCCESS. Native state records COMPLETE
+at that released commit through the standing authorized next-scope admission.
+No production activation or authority change.

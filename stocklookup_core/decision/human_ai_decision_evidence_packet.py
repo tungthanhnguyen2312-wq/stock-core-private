@@ -118,6 +118,7 @@ def build_packet(
     spine: Mapping[str, Any] | None = None,
     regime_context: Mapping[str, Any] | None = None,
     decision_session: str | None = None,
+    company_economics: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build one ticker packet. Input analogue order is preserved.
 
@@ -126,6 +127,24 @@ def build_packet(
     """
     del capital_decision  # retained so a caller cannot sneak a delegated decision through
     supplied = {name: dict(spec) for name, spec in (sections or {}).items() if isinstance(spec, Mapping)}
+    if company_economics is not None:
+        from long_term_company_economics_evidence import packet_context
+
+        view = packet_context(company_economics, ticker=ticker)
+        matrix = view["matrix"]
+        overlays = {
+            "stock": ("company_economics_evidence", view),
+            "uncertainty": ("company_economics_limits", {"flags": matrix["flags"], "normalization": matrix["normalization"],
+                            "research_boundaries": matrix["research_boundaries"], "temporal_use": view["temporal_use"]}),
+            "counter_thesis": ("company_economics_unknowns", {name: {"interpretation_status": d["interpretation_status"],
+                               "interpretation_blockers": d["interpretation_blockers"]} for name, d in matrix["dimensions"].items()}),
+        }
+        for section, (field, value) in overlays.items():
+            current = supplied.setdefault(section, {})
+            if field in current:
+                raise ValueError("ECONOMICS_PACKET_RESERVED_FIELD_COLLISION")
+            # Mixed observations/unknown interpretations are a bounded research view.
+            current[field] = {"claim": {"warning": True}, "value": value}
     if regime_context is not None:
         from macro_market_regime_decision_context import packet_section_overlay
 
