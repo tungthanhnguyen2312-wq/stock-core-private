@@ -336,7 +336,7 @@ def build_operation(inputs: Mapping[str, Any], session: str, *, producer_head: s
     # This product-only context is intentionally an explicit caller attachment,
     # not a session registry input or a replacement for any authoritative axis.
     if financial_analysis_product_context is not None:
-        from financial_analysis_product_projection import validate_product_context
+        from stocklookup_core.financial.financial_analysis_product_projection import validate_product_context
         validate_product_context(financial_analysis_product_context)
         inputs = {**dict(inputs), "financial_analysis_product_context": financial_analysis_product_context}
     integrated_decision, integrated_brief = _integrated_delivery_inputs(session, {

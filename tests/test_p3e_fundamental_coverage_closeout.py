@@ -6,7 +6,7 @@ from pathlib import Path
 import unittest
 from unittest.mock import patch
 
-from multi_period_financial_panel import MultiPeriodPanelError, load_promoted_fundamental_coverage_closeout_citations
+from stocklookup_core.financial.multi_period_financial_panel import MultiPeriodPanelError, load_promoted_fundamental_coverage_closeout_citations
 from p3e_fundamental_coverage_closeout import (
     build_p3e_closeout,
     classify_p3d_residual_gaps,
@@ -39,7 +39,7 @@ class TestP3EFundamentalCoverageCloseout(unittest.TestCase):
         values = {(row["ticker"], row["metric"]): row["value"] for row in citations}
         self.assertEqual(values[("HPG", "revenue")], 138_855_112_131_387)
         self.assertEqual(values[("VNM", "total_assets")], 56_993_245)
-        with patch("multi_period_financial_panel.admit", return_value={"decision": "refused"}):
+        with patch('stocklookup_core.financial.multi_period_financial_panel.admit', return_value={"decision": "refused"}):
             with self.assertRaisesRegex(MultiPeriodPanelError, "source authority"):
                 load_promoted_fundamental_coverage_closeout_citations(self.root)
 

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import kbs_quarterly_financial_retention as kbs
-import financial_flow_semantics_ttm_bridge as bridge
+import stocklookup_core.financial.financial_flow_semantics_ttm_bridge as bridge
 
 
 def _request(page: int = 1) -> dict:

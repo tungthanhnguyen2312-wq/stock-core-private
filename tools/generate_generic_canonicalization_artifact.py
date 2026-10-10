@@ -28,7 +28,7 @@ from generic_financial_canonicalizer import (
     ARTIFACT_TYPE,
     execute_generic_canonicalization,
 )
-from financial_entity_applicability import load_entity_profiles
+from stocklookup_core.financial.financial_entity_applicability import load_entity_profiles
 
 
 def load_manifest_records(evidence_roots: list[Path]) -> list[dict[str, Any]]:

@@ -5,9 +5,9 @@ import hashlib,json,statistics
 from pathlib import Path
 from typing import Any,Mapping
 import market_wide_historical_fundamentals_scaleout as source
-from fundamental_research_cohort_selection import resolve_current_fundamental_cohort
+from stocklookup_core.financial.fundamental_research_cohort_selection import resolve_current_fundamental_cohort
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parents[2]
 
 AXES={"PROFITABILITY_QUALITY":("net_margin_period","roa_eop_proxy","roe_eop_proxy"),"CAPITAL_EFFICIENCY":("asset_turnover_eop_proxy",),"BALANCE_SHEET_TRAJECTORY":("total_assets_same_period_yoy","shareholders_equity_same_period_yoy"),"GROWTH_MOMENTUM":("revenue_same_period_yoy","net_income_same_period_yoy")}
 def _pct(values,value):

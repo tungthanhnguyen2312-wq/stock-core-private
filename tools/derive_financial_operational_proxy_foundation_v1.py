@@ -40,7 +40,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 import canonical_fact_store as store  # noqa: E402
-import financial_operational_proxy as fop  # noqa: E402
+import stocklookup_core.financial.financial_operational_proxy as fop  # noqa: E402
 import market_wide_current_fundamental_research as mwcfr  # noqa: E402
 import p3f13_official_financial_evidence_scaleout as p3f13mod  # noqa: E402
 

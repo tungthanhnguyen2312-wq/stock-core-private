@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from copy import deepcopy
 
-import financial_analysis_engine_v2 as engine
-import structured_financial_depth_recovery as recovery
+import stocklookup_core.financial.financial_analysis_engine_v2 as engine
+import stocklookup_core.financial.structured_financial_depth_recovery as recovery
 
 
 def _row(metric: str, value: float, *, ticker: str = "AAA", period: str = "2026-Q2",

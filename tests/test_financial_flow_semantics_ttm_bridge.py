@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import financial_flow_semantics_ttm_bridge as bridge
+import stocklookup_core.financial.financial_flow_semantics_ttm_bridge as bridge
 
 
 def _fact(period: str, value: float, *, provider: str = "KBS", metric: str = "revenue",

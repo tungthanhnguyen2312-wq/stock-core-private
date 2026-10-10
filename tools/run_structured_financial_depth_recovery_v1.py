@@ -4,7 +4,7 @@ import argparse, gzip, hashlib, json, sys
 from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-import structured_financial_depth_recovery as recovery  # noqa: E402
+import stocklookup_core.financial.structured_financial_depth_recovery as recovery  # noqa: E402
 
 
 def _write_rows(path: Path, rows: list[dict]) -> str:

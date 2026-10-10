@@ -159,7 +159,7 @@ def test_actual_foreign_fact_only(net,state,unknown):
 
 
 def test_registry_matches_current_main_closed_vocabularies():
-    import fundamental_signal_consumption_contract as fundamental
+    import stocklookup_core.financial.fundamental_signal_consumption_contract as fundamental
     import tactical_confirmation_context as confirmation
     import technical_relationship_view as bridge
     assert set(a.FUNDAMENTAL)==set(product.FUNDAMENTAL_STATES)

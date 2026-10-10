@@ -23,6 +23,33 @@ env:
   CORE_INSTALL: python -m pip install -r requirements.txt -r requirements-test.txt -c constraints.txt
   HERMETIC_MARKERS: not retained_evidence and not provider_runtime
   FOCUSED_SELECTION: >-
+    tests/test_financial_operational_proxy.py
+    tests/test_financial_v2_current_input_authority.py
+    tests/test_financial_analysis_engine_v2.py
+    tests/test_financial_analysis_product_projection.py
+    tests/test_market_wide_financial_analysis_v2_scaleout.py
+    tests/test_financial_v2_analysis_input_integrity.py
+    tests/test_financial_flow_semantics_ttm_bridge.py
+    tests/test_structured_financial_period_semantics.py
+    tests/test_canonical_financial_analytical_panel.py
+    tests/test_multi_period_financial_panel.py
+    tests/test_structured_financial_depth_recovery.py
+    tests/test_fundamental_quality_evidence.py
+    tests/test_fundamental_quality_hardening.py
+    tests/test_fundamental_research_readiness.py
+    tests/test_fundamental_thesis_invalidation_precision.py
+    tests/test_fundamental_signal_policy_hardening.py
+    tests/test_integrated_fundamental_state_consumption.py
+    tests/test_fundamental_promotion_hardening.py
+    tests/test_fundamental_context_only_provenance.py
+    tests/test_fundamental_research_cohort_selection.py
+    tests/test_fundamental_research_cohort_scaleout.py
+    tests/test_fundamental_market_opportunity_ranking.py
+    tests/test_two_tier_fundamental_research.py
+    tests/test_legacy_qualified_cohort_recovery.py
+    tests/test_current_financial_momentum_context.py
+    tests/test_export_ai_bundle_pillar_a_cache.py
+    tests/test_roadmap_execution_state.py
     tests/test_thesis_catalyst_downside_research_cases.py
     tests/test_daily_session_shadow_recommendation.py
     tests/test_long_term_company_economics_evidence.py

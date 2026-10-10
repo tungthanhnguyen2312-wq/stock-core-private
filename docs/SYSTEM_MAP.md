@@ -26,6 +26,7 @@ exact R7 inputs offline. [Contract](market_only_pit_eligibility_contract.md).
 The owner admitted [root structure simplification](repository_root_structure_simplification_v1_contract.md)
 after semantic corrective PR105. Landing acquisition code is in `stocklookup_core/acquisition/`;
 official document evidence and temporal receipts are in `stocklookup_core/evidence/`.
+Financial panels, Financial V2 and fundamental research are in `stocklookup_core/financial/`.
 Thesis adapters, matrix, sidecars and runtime are in `stocklookup_core/research/`;
 their existing child tools retain their paths and resolve the repository source root.
 The existing offline `official_document_acquisition.py` CLI is a small compatibility launcher.
@@ -141,7 +142,7 @@ and [acceptance](internal/R6_PROSPECTIVE_LEARNING_ACCEPTANCE.json).
 
 ### 7. Financial V2
 - **Responsibility:** Structured financial fact extraction, period semantics resolution, layered issuer applicability classification, and working capital/liquidity ratios.
-- **Primary Entry Module:** [`financial_analysis_engine_v2.py`](../financial_analysis_engine_v2.py) / [`financial_analysis_product_projection.py`](../financial_analysis_product_projection.py)
+- **Primary Entry Module:** [`financial_analysis_engine_v2.py`](../stocklookup_core/financial/financial_analysis_engine_v2.py) / [`financial_analysis_product_projection.py`](../stocklookup_core/financial/financial_analysis_product_projection.py)
 - **Key Output Contract:** `financial_analysis_product_projection/v1` (`financial_analysis_product_projection_artifact.json`).
 
 ### 8. Valuation / Opportunity Integration

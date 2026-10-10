@@ -11,10 +11,10 @@ from __future__ import annotations
 import sys
 
 import current_research_decision_input as decision_input
-import financial_analysis_engine_v2 as engine
-import financial_flow_semantics_ttm_bridge as bridge
-import financial_analysis_product_projection as projection
-import fundamental_signal_consumption_contract as contract
+import stocklookup_core.financial.financial_analysis_engine_v2 as engine
+import stocklookup_core.financial.financial_flow_semantics_ttm_bridge as bridge
+import stocklookup_core.financial.financial_analysis_product_projection as projection
+import stocklookup_core.financial.fundamental_signal_consumption_contract as contract
 import integrated_investment_decision_product as iidp
 from tools import current_research_capability_map as capability_map
 

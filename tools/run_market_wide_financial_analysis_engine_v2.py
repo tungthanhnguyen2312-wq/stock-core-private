@@ -16,7 +16,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-import financial_analysis_engine_v2 as engine  # noqa: E402
+import stocklookup_core.financial.financial_analysis_engine_v2 as engine  # noqa: E402
 
 DEFAULT_ROWS = ROOT / "operations-review" / "market-wide-structured-financial-period-semantics-v1-20260831" / "structured_financial_period_semantics_facts.jsonl.gz"
 

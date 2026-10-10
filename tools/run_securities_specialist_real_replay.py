@@ -27,7 +27,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 import entity_classification_contract as ecc  # noqa: E402
-import financial_analysis_engine_v2 as engine  # noqa: E402
+import stocklookup_core.financial.financial_analysis_engine_v2 as engine  # noqa: E402
 import raw_financial_observations as rfo  # noqa: E402
 import securities_statement_capture_import as importer  # noqa: E402
 

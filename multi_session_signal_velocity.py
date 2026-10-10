@@ -6,7 +6,7 @@ import os
 import tempfile
 from pathlib import Path
 from typing import Any, Mapping, Sequence
-import fundamental_signal_consumption_contract as fundamental_signals
+import stocklookup_core.financial.fundamental_signal_consumption_contract as fundamental_signals
 import prospective_decision_retention as retention
 
 # v1.3 (CURRENT_RESEARCH_FUNDAMENTAL_PROMOTION_HARDENING_V1): a fundamental_trajectory change

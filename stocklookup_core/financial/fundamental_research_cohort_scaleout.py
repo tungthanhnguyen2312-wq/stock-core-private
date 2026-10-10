@@ -46,7 +46,7 @@ from pathlib import Path
 from typing import Any, Mapping, Sequence
 
 import financial_fact_coverage_recovery as ffcr
-import fundamental_cross_sectional_scoring as fcss
+import stocklookup_core.financial.fundamental_cross_sectional_scoring as fcss
 import market_wide_historical_fundamentals_scaleout as mwhfs
 import p3f10_fundamental_evidence_scaleout as p3f10mod
 import p3f13_official_financial_evidence_scaleout as p3f13mod
@@ -60,7 +60,7 @@ NARROW_COHORT_NAME = "2026-08-20 EMPIRICAL_ACTIVE_SHADOW_ONLY (frozen, 523-membe
 #: The four axes fundamental_cross_sectional_scoring.py defines. Reused verbatim -- this
 #: module never adds, removes, or reweights an axis.
 AXES = tuple(fcss.AXES)
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parents[2]
 
 
 def rebuild_wide_governed_cohort_from_retained_root(root: Path) -> tuple[dict[str, Any], dict[str, Any]]:

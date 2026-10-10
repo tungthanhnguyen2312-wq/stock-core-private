@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Any, Mapping
 
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parents[2]
 CONTRACT_VERSION = "fundamental_plus_market_opportunity_ranking/v1"
 FUNDAMENTAL_INPUT = ROOT / "operations-review" / "fundamental-cross-sectional-scoring-and-ranking-v1-20260828" / "artifact.json"
 MARKET_INPUT = ROOT / "operations-review" / "market-wide-current-descriptive-research-v1-20260825" / "market_wide_current_descriptive_research_artifact.json"

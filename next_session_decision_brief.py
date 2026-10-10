@@ -25,7 +25,7 @@ from pathlib import Path
 from typing import Any, Mapping
 
 import daily_session_level2_package
-import fundamental_signal_consumption_contract as fundamental_signals
+import stocklookup_core.financial.fundamental_signal_consumption_contract as fundamental_signals
 from correlation_concentration_guard import CONTRACT_VERSION as CORRELATION_CONCENTRATION_GUARD_CONTRACT_VERSION
 from daily_research_session_operations import frozen_input_identities, load_registry, registered_session_selection
 from field_temporal_contract import stable_id

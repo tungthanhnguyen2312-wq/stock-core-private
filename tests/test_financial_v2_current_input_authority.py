@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-import financial_v2_current_input_authority as auth
+import stocklookup_core.financial.financial_v2_current_input_authority as auth
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -25,7 +25,7 @@ def test_resolve_against_real_repository_root_succeeds():
 def test_resolver_never_scans_filesystem_for_newest_folder():
     """Source-pattern guard: this module must remain a pinned, versioned pointer, never a
     glob/mtime-based 'pick the latest directory' resolver."""
-    source = (ROOT / "financial_v2_current_input_authority.py").read_text(encoding="utf-8")
+    source = (ROOT / "stocklookup_core/financial/financial_v2_current_input_authority.py").read_text(encoding="utf-8")
     assert ".glob(" not in source
     assert "iterdir(" not in source
     assert "st_mtime" not in source

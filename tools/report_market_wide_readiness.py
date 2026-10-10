@@ -48,7 +48,7 @@ from canonical_fact_store import (  # noqa: E402
     read_facts,
     store_root,
 )
-from financial_entity_applicability import (  # noqa: E402
+from stocklookup_core.financial.financial_entity_applicability import (  # noqa: E402
     load_entity_profiles,
 )
 from market_wide_calculation_readiness import (  # noqa: E402
@@ -66,7 +66,7 @@ def _applicability_from_state(record: dict) -> dict:
     The store persists the resolved archetype, so the readiness pass does not re-read the raw
     observation shards to recover it.
     """
-    from financial_entity_applicability import metric_applicability
+    from stocklookup_core.financial.financial_entity_applicability import metric_applicability
 
     archetype = {
         "ticker": record["ticker"],

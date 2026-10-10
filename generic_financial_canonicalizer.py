@@ -40,7 +40,7 @@ from field_temporal_contract import (
     canonical_json,
     stable_id,
 )
-from financial_entity_applicability import (
+from stocklookup_core.financial.financial_entity_applicability import (
     CORPORATE_ENTITY_TYPES,
     FINANCIAL_ENTITY_TYPES,
     load_entity_profiles,

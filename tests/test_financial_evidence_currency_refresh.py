@@ -48,7 +48,7 @@ import canonical_fact_store as fact_store
 from official_source_registry import ADMITTED, admit, load_registry
 import stocklookup_core.evidence.official_document_acquisition as acquirer
 import current_research_valuation_context as valuation
-import financial_v2_current_input_authority as fin_v2
+import stocklookup_core.financial.financial_v2_current_input_authority as fin_v2
 
 ROOT = Path(__file__).resolve().parents[1]
 SHA = "c" * 64

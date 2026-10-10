@@ -57,3 +57,18 @@ def test_package_initializers_do_not_activate_runtime_work():
         nodes = ast.parse(path.read_text(encoding="utf-8")).body
         assert all(isinstance(n, ast.Expr) and isinstance(n.value, ast.Constant)
                    and isinstance(n.value.value, str) for n in nodes), path
+
+
+def test_financial_defaults_still_use_checkout_root_after_cwd_change(tmp_path, monkeypatch):
+    from stocklookup_core.financial import financial_operational_proxy, fundamental_cross_sectional_scoring
+    from stocklookup_core.financial import fundamental_market_opportunity_ranking, fundamental_research_cohort_scaleout
+    from stocklookup_core.financial import multi_period_financial_panel as panel
+    monkeypatch.chdir(tmp_path)
+    for module in (financial_operational_proxy, fundamental_cross_sectional_scoring,
+                   fundamental_market_opportunity_ranking, fundamental_research_cohort_scaleout):
+        assert module.ROOT == ROOT
+    seen = []
+    monkeypatch.setattr(panel, "load_promoted_sector_extractions",
+                        lambda path: seen.append(path) or {"promoted_sectors": {}})
+    panel.load_promoted_sector_citations()
+    assert seen == [ROOT / "config/promoted_sector_extractions.json"]

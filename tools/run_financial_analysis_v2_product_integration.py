@@ -9,7 +9,7 @@ import sys
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from financial_analysis_product_projection import build_product_projection
+from stocklookup_core.financial.financial_analysis_product_projection import build_product_projection
 from current_valuation_opportunity_integration import _decision_artifact, content_identity
 from security_decision_context import build_ticker_decision
 from investment_decision_workspace_projection import build_artifacts as build_workspace

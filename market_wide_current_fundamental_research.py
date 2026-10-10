@@ -44,7 +44,7 @@ from sector_financial_taxonomy import evaluate_metric_sector_applicability
 from sector_relative_research_context import load_qualified_entity_classes
 from two_tier_fundamental_research import ALLOWED as PROVIDER_ALLOWED_USES
 from two_tier_fundamental_research import FORBIDDEN as PROVIDER_FORBIDDEN_USES
-from fundamental_research_readiness import NON_AUTHORIZED_DOWNSTREAM_USES
+from stocklookup_core.financial.fundamental_research_readiness import NON_AUTHORIZED_DOWNSTREAM_USES
 
 
 ROOT = Path(__file__).resolve().parent

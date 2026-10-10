@@ -15,11 +15,13 @@ import tempfile
 import unittest
 from pathlib import Path
 
+import pytest
+
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 import export_ai_bundle as bundle_mod  # noqa: E402
-import fundamental_quality_evidence as fqe  # noqa: E402
+import stocklookup_core.financial.fundamental_quality_evidence as fqe  # noqa: E402
 
 
 def _record(metric, value, period="2024", scope="consolidated", currency="VND", scale=1,
@@ -230,6 +232,7 @@ class HistoricalFundamentalBriefTests(unittest.TestCase):
             self.assertNotIn(f'"{forbidden}', serialized)
 
 
+@pytest.mark.retained_evidence("operations-review/phase_5d_distribution_evidence_20260801T104910Z/bundle_output/analysis_bundle.json")
 class RealRetainedEvidenceTests(unittest.TestCase):
     """Requirement 6: HPG and VNM results must follow their real retained evidence."""
 

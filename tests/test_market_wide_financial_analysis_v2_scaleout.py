@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-import financial_analysis_engine_v2 as engine
-import financial_flow_semantics_ttm_bridge as bridge
-import market_wide_financial_analysis_v2_scaleout as scaleout
-import structured_financial_period_semantics as sem_semantics
-from market_wide_financial_analysis_v2_scaleout import GENERIC, build_qualified_flow_artifact, build_scaleout
+import stocklookup_core.financial.financial_analysis_engine_v2 as engine
+import stocklookup_core.financial.financial_flow_semantics_ttm_bridge as bridge
+import stocklookup_core.financial.market_wide_financial_analysis_v2_scaleout as scaleout
+import stocklookup_core.financial.structured_financial_period_semantics as sem_semantics
+from stocklookup_core.financial.market_wide_financial_analysis_v2_scaleout import GENERIC, build_qualified_flow_artifact, build_scaleout
 
 
 def _row(metric, value, period="2026-Q2", *, ticker="AAA", semantic="STANDALONE_QUARTER"):

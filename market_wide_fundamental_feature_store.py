@@ -8,7 +8,7 @@ from pathlib import Path
 import re
 from typing import Any, Mapping, Sequence
 
-from financial_entity_applicability import FINANCIAL_ENTITY_TYPES, load_entity_profiles
+from stocklookup_core.financial.financial_entity_applicability import FINANCIAL_ENTITY_TYPES, load_entity_profiles
 
 SCHEMA_VERSION = "1.0.0"
 CONTRACT_VERSION = "market_wide_fundamental_feature_store/v1"

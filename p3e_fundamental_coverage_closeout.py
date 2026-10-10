@@ -9,8 +9,8 @@ from typing import Any, Mapping
 
 from field_temporal_contract import stable_id
 from financial_statement_template_recognizer import _normalize_text
-from fundamental_research_readiness import build_fundamental_research_artifact
-from multi_period_financial_panel import (
+from stocklookup_core.financial.fundamental_research_readiness import build_fundamental_research_artifact
+from stocklookup_core.financial.multi_period_financial_panel import (
     build_multi_period_financial_panel,
     load_all_authoritative_citations,
     load_promoted_fundamental_coverage_closeout_citations,

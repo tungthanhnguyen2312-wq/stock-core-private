@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import unittest
 
-from fundamental_thesis_invalidation_precision import QUALITY_COHORT, build_artifact
+from stocklookup_core.financial.fundamental_thesis_invalidation_precision import QUALITY_COHORT, build_artifact
 
 
 def _source(*, posture="INITIATE_CANDIDATE", archetype="QUALITY_BREAKOUT_THESIS", percentile=.9,

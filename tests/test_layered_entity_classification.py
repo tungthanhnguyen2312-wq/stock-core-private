@@ -30,7 +30,7 @@ from entity_classification_contract import (
     load_seed_profiles,
     resolve_layered_entity_classification,
 )
-from financial_entity_applicability import (
+from stocklookup_core.financial.financial_entity_applicability import (
     load_entity_profiles,
     metric_applicability,
     resolve_archetype,
@@ -378,7 +378,7 @@ def test_p2e3_promotion_artifact_integrity():
 
 def test_multi_period_financial_panel_layered_integration():
     """Verify multi_period_financial_panel respects layered authority profiles."""
-    from multi_period_financial_panel import evaluate_sector_applicability, ApplicabilityState
+    from stocklookup_core.financial.multi_period_financial_panel import evaluate_sector_applicability, ApplicabilityState
 
     profiles = load_entity_profiles()
 

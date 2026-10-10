@@ -16,7 +16,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 import asymmetric_dislocation_research as adr
-import fundamental_signal_consumption_contract as contract
+import stocklookup_core.financial.fundamental_signal_consumption_contract as contract
 
 # Qualified LEVEL evidence (CURRENT_RESEARCH_FUNDAMENTAL_PROMOTION_HARDENING_V1): viable economics
 # must be evidenced by a level, never inferred from the direction.

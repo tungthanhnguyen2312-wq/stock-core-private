@@ -13,7 +13,7 @@ if str(ROOT) not in sys.path:
 
 from atomic_io import atomic_write_json
 from canonical_financial_facts import build_facts
-import financial_flow_semantics_ttm_bridge as bridge
+import stocklookup_core.financial.financial_flow_semantics_ttm_bridge as bridge
 import kbs_quarterly_financial_retention as kbs
 import provider_financial_source_metadata as source
 from raw_financial_observations import extract_payload, sha256_file

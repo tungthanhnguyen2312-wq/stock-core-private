@@ -44,7 +44,7 @@ from __future__ import annotations
 
 from typing import Any, Mapping, Sequence
 
-import financial_entity_applicability
+import stocklookup_core.financial.financial_entity_applicability as financial_entity_applicability
 import monetary_basis_contract
 import multi_source_market_evidence_contract
 import price_basis_feature_fitness

@@ -12,7 +12,7 @@ from pathlib import Path
 import pytest
 
 import canonical_daily_financial_v2_materialization as materialization
-import financial_v2_current_input_authority as auth
+import stocklookup_core.financial.financial_v2_current_input_authority as auth
 
 ROOT = Path(__file__).resolve().parents[1]
 REQUESTED_AT = "2026-09-02T15:00:00+07:00"

@@ -3,8 +3,8 @@ from __future__ import annotations
 import pytest
 
 import bank_financial_research_component as bank_component
-import financial_analysis_engine_v2 as engine
-import financial_analysis_product_projection as projection
+import stocklookup_core.financial.financial_analysis_engine_v2 as engine
+import stocklookup_core.financial.financial_analysis_product_projection as projection
 
 
 def component(metric_id, value, *, year=2026, quarter=2, ticker="MBB", provider="TCBS",

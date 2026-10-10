@@ -31,8 +31,8 @@ from collections import Counter
 from typing import Any, Mapping, Sequence
 
 import current_research_decision_input as decision_input
-import financial_analysis_product_projection as fa_product_projection
-import fundamental_signal_consumption_contract as fundamental_signals
+import stocklookup_core.financial.financial_analysis_product_projection as fa_product_projection
+import stocklookup_core.financial.fundamental_signal_consumption_contract as fundamental_signals
 import operational_fundamental_context_integration as operational_fundamental
 
 CONTRACT_VERSION = "integrated_investment_decision_product/v1"

@@ -19,7 +19,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from field_temporal_contract import stable_id  # noqa: E402
-from fundamental_research_cohort_selection import (  # noqa: E402
+from stocklookup_core.financial.fundamental_research_cohort_selection import (  # noqa: E402
     CURRENT_WIDE_GOVERNED_V1,
     LEGACY_HISTORICAL_FROZEN_523_V1,
     resolve_current_fundamental_cohort,

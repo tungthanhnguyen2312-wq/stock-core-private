@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Any, Mapping
 
 import canonical_fact_store as store
-import financial_operational_proxy as proxy
+import stocklookup_core.financial.financial_operational_proxy as proxy
 import market_wide_fundamental_features as features
 import market_wide_current_fundamental_research as research
 import p3f13_official_financial_evidence_scaleout as p3f13

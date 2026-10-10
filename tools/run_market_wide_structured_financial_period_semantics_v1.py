@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-import structured_financial_period_semantics as semantics  # noqa: E402
+import stocklookup_core.financial.structured_financial_period_semantics as semantics  # noqa: E402
 
 OUTPUT_DIR = ROOT / "operations-review" / "market-wide-structured-financial-period-semantics-v1-20260831"
 

@@ -82,11 +82,11 @@ VALUATION_FIELDS = ("value", "status", "applicability", "blocker_reason_codes", 
 ENGINE_LINEAGE_FIELDS = frozenset({"ttm_source_context_identity", "source_financial_v2_identity"})
 #: Production modules this milestone changed (scanned for scratch/worktree-only path dependencies).
 CHANGED_PRODUCTION_MODULES = (
-    "fundamental_signal_consumption_contract.py", "integrated_investment_decision_product.py",
+    "stocklookup_core/financial/fundamental_signal_consumption_contract.py", "integrated_investment_decision_product.py",
     "current_research_decision_input.py", "asymmetric_dislocation_research.py", "multi_session_signal_velocity.py",
     "next_session_decision_brief.py", "prospective_decision_outcome_feedback.py",
     "prospective_decision_outcome_measurement.py", "daily_integrated_decision_brief.py",
-    "market_wide_financial_analysis_v2_scaleout.py", "canonical_daily_financial_v2_materialization.py",
+    "stocklookup_core/financial/market_wide_financial_analysis_v2_scaleout.py", "canonical_daily_financial_v2_materialization.py",
 )
 _FORBIDDEN_PATH_FRAGMENTS = ("tmp/", "tmp\\\\", "worktrees", ".stocklookup/scratch", "scratchpad", "AppData")
 
@@ -144,7 +144,7 @@ def assemble(args: argparse.Namespace) -> None:
         if not active <= set(CORRECTIONS):
             raise SystemExit(f"UNKNOWN_CORRECTION:{sorted(active - set(CORRECTIONS))}")
         sys.path.insert(0, str(code_root))
-        import fundamental_signal_consumption_contract as contract
+        import stocklookup_core.financial.fundamental_signal_consumption_contract as contract
         _apply_corrections(contract, active)
     convergence.assemble(argparse.Namespace(code_root=str(code_root), producer_root=args.producer_root,
                                             work_root=args.work_root, session=args.session))
@@ -277,7 +277,7 @@ def _module(path: Path, name: str):
 
 def summarize(args: argparse.Namespace) -> dict:
     roots = _roots(args)
-    import fundamental_signal_consumption_contract as contract
+    import stocklookup_core.financial.fundamental_signal_consumption_contract as contract
     import asymmetric_dislocation_research as adr
     import multi_session_signal_velocity as velocity
     import next_session_decision_brief as next_brief
@@ -765,7 +765,7 @@ def _entity_family(contract: Any, head: Mapping[str, Any], final: Mapping[str, A
 
 def _fiscal_audit(contract: Any, roots: Mapping[str, Path], head: Mapping[str, Any], final: Mapping[str, Any],
                   official: set[str]) -> dict[str, Any]:
-    import financial_v2_current_input_authority as input_authority
+    import stocklookup_core.financial.financial_v2_current_input_authority as input_authority
     authority = input_authority.resolve(ROOT)
     semantics = json.loads(authority.semantics_artifact_path.read_text(encoding="utf-8"))
     known_at = semantics.get("requested_at")
@@ -974,7 +974,7 @@ def _valuation_diff(runs: Mapping[str, Any], official: set[str], verdict: Mappin
 
 def _authority(contract: Any, roots: Mapping[str, Path], head: Mapping[str, Any], final: Mapping[str, Any],
                attempted: set[str]) -> dict[str, Any]:
-    import financial_v2_current_input_authority as input_authority
+    import stocklookup_core.financial.financial_v2_current_input_authority as input_authority
     authority = input_authority.resolve(ROOT)
     pinned = [authority.semantics_artifact_path, authority.semantics_facts_path, authority.feature_store_artifact_path,
               authority.feature_store_records_path, authority.classification_diagnostics_path, authority.industry_snapshot_path]

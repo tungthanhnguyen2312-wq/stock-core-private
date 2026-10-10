@@ -7,7 +7,7 @@ import pytest
 
 import daily_producer_pipeline as producer
 import daily_session_shadow_recommendation as daily_shadow
-import fundamental_research_cohort_selection as cohort_selection
+import stocklookup_core.financial.fundamental_research_cohort_selection as cohort_selection
 
 
 SESSION = "2026-08-28"

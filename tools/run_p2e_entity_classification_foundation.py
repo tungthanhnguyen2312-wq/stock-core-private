@@ -43,8 +43,8 @@ from evidence_backed_entity_classifier import (
     classify_entity,
 )
 from field_temporal_contract import stable_id
-from financial_entity_applicability import evaluate_ticker, metric_applicability
-from multi_period_financial_panel import compute_bounded_derived_metrics
+from stocklookup_core.financial.financial_entity_applicability import evaluate_ticker, metric_applicability
+from stocklookup_core.financial.multi_period_financial_panel import compute_bounded_derived_metrics
 
 ARTIFACT_TYPE = "EVIDENCE_BACKED_ENTITY_CLASSIFICATION_REPORT"
 AUTHORITY_STATUS = "PROMOTION_REVIEW_READY"

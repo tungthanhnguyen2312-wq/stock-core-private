@@ -78,7 +78,7 @@ import json
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
-from financial_entity_applicability import (
+from stocklookup_core.financial.financial_entity_applicability import (
     CORPORATE_ENTITY_TYPES,
     CORPORATE_ONLY_METRICS,
     FINANCIAL_ENTITY_TYPES,
@@ -91,7 +91,7 @@ from semantic_evidence_bridge import financial_identity_is_stock_metric
 
 SCHEMA_VERSION = "1.0.0"
 CONTRACT_VERSION = "financial_operational_proxy/v1"
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parents[2]
 
 # ---------------------------------------------------------------------------
 # Evidence tiers. New names -- checked against every existing tier vocabulary in this

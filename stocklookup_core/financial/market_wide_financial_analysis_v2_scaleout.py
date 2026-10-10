@@ -16,8 +16,8 @@ from pathlib import Path
 from typing import Any, Mapping, Sequence
 
 import canonical_financial_facts as canonical_facts
-import financial_analysis_engine_v2 as engine
-import financial_flow_semantics_ttm_bridge as qualified_flow
+import stocklookup_core.financial.financial_analysis_engine_v2 as engine
+import stocklookup_core.financial.financial_flow_semantics_ttm_bridge as qualified_flow
 
 FEATURE_STORE_CONTRACT = "market_wide_fundamental_feature_store/v1"
 GENERIC = "UNCLASSIFIED_GENERIC_FINANCIAL_ANALYSIS"

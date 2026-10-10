@@ -4,8 +4,8 @@ Queries report current/next/blocked milestone state from
 ``docs/ROADMAP_STATE.json`` and cross-checks it against live, local Git/worktree
 state. Queries never mutate files or Git. Explicit --continue-scope writes only
 the current owner-authorized continuation, preserving its prior completion.
-Explicit --admit-scope reconciles the current verified release and admits one
-owner-directed scope with an empty queue. Neither mutation starts runtime work.
+Explicit --admit-scope reconciles a current ACTIVE release or preserves a COMPLETE
+predecessor, then admits one owner-directed scope with an empty queue. Neither starts runtime work.
 
     python tools/stocklookup_roadmap.py                    human-readable report
     python tools/stocklookup_roadmap.py --json              machine-readable report
@@ -135,7 +135,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--continue-scope", metavar="MILESTONE_ID", help="Explicitly resume the current completed subset under an owner-authorized bounded scope expansion; preserve its completion record.")
     parser.add_argument("--scope-note", help="Exact owner directive and bounded scope; required for continuation or admission.")
     parser.add_argument("--admit-scope", metavar="MILESTONE_ID", help="Register and admit an explicitly owner-directed successor after reconciling a verified release.")
-    parser.add_argument("--release-current-at", help="Exact verified release commit of the current ACTIVE milestone; required for admission.")
+    parser.add_argument("--release-current-at", help="Exact verified live starting HEAD; release an ACTIVE current milestone or preserve an already COMPLETE predecessor.")
     args = parser.parse_args(argv)
 
     try:
@@ -154,16 +154,23 @@ def main(argv: list[str] | None = None) -> int:
         current = state.get("current") or {}
         prior_id = current.get("milestone")
         prior = next((m for m in state["milestones"] if m.get("milestone_id") == prior_id), None)
-        if (prior is None or prior.get("state") != "ACTIVE" or current.get("state") != "ACTIVE"
+        if (prior is None or prior.get("state") not in {"ACTIVE", "COMPLETE"}
+                or current.get("state") != prior.get("state")
                 or state.get("queued_next") or any(m.get("milestone_id") == mid for m in state["milestones"])):
-            parser.error("admission requires one current ACTIVE milestone, empty queue and a new exact ID")
+            parser.error("admission requires a current ACTIVE or COMPLETE milestone, empty queue and a new exact ID")
         ok, checkpoint = res.resolve_checkpoint(repo, args.release_current_at)
         if not ok or checkpoint != res.git_head(repo) or res.evaluate(state, repo=repo).overall != "ON_TRACK":
             parser.error("verified release must be exact live starting HEAD and roadmap must be ON_TRACK")
-        prior.update(state="COMPLETE", checkpoint=checkpoint,
-                     terminal_disposition="IMPLEMENTATION_RELEASED_NO_PRODUCTION_ACTIVATION")
-        prior.setdefault("state_history", []).append("COMPLETE")
-        prior["notes"] += " Verified release " + checkpoint + "; no production reclaim, activation or automatic successor."
+        release_active = prior["state"] == "ACTIVE"
+        if release_active:
+            prior.update(state="COMPLETE", checkpoint=checkpoint,
+                         terminal_disposition="IMPLEMENTATION_RELEASED_NO_PRODUCTION_ACTIVATION")
+            prior.setdefault("state_history", []).append("COMPLETE")
+            prior["notes"] += " Verified release " + checkpoint + "; no production reclaim, activation or automatic successor."
+        else:
+            valid, prior_checkpoint = res.resolve_checkpoint(repo, prior.get("checkpoint"))
+            if not valid or not res.git_is_ancestor(repo, prior_checkpoint, checkpoint):
+                parser.error("completed predecessor checkpoint must be reachable from verified live HEAD")
         new = {"milestone_id": mid, "state": "DEFERRED", "starting_checkpoint": checkpoint,
                "candidate_branch": res.git_branch(repo), "dependencies": [prior_id], "unlocks": [],
                "owner_authorized": True, "owner_override": args.scope_note, "authority_effect": "NONE",
@@ -179,7 +186,14 @@ def main(argv: list[str] | None = None) -> int:
         if res.evaluate(state, repo=repo).overall != "ON_TRACK":
             parser.error("admitted state must remain ON_TRACK; no update written")
         original = args.state_file.read_text(encoding="utf-8")
-        updated = continuation_text(original, state, prior_id)
+        # Only the current pointer changes when the predecessor was already complete;
+        # its original JSON bytes and completion checkpoint remain historical evidence.
+        updated = continuation_text(original, state, prior_id) if release_active else original
+        if not release_active:
+            start = re.search(r'^  "current": ', updated, re.MULTILINE).end()
+            _, length = json.JSONDecoder().raw_decode(updated[start:])
+            body = json.dumps(state["current"], ensure_ascii=False, indent=2).replace("\n", "\n  ")
+            updated = updated[:start] + body + updated[start + length:]
         body = json.dumps(new, ensure_ascii=False, indent=2).replace("\n", "\n    ")
         updated = updated.replace('"milestones": [\n', '"milestones": [\n    ' + body + ',\n', 1)
         args.state_file.write_bytes(updated.encode("utf-8"))

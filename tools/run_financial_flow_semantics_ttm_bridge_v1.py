@@ -11,8 +11,8 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-import financial_flow_semantics_ttm_bridge as bridge
-import market_wide_financial_analysis_v2_scaleout as scaleout
+import stocklookup_core.financial.financial_flow_semantics_ttm_bridge as bridge
+import stocklookup_core.financial.market_wide_financial_analysis_v2_scaleout as scaleout
 
 DEFAULT_HISTORICAL_SCALEOUT = ROOT / (
     "operations-review/market-wide-historical-fundamentals-scaleout-v1-20260828/artifact.json"

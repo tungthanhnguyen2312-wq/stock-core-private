@@ -46,7 +46,7 @@ from field_temporal_contract import (
     stable_id,
     wrap_temporal_fields,
 )
-from financial_entity_applicability import (
+from stocklookup_core.financial.financial_entity_applicability import (
     CORPORATE_ENTITY_TYPES,
     FINANCIAL_ENTITY_TYPES,
     load_entity_profiles,
@@ -1072,7 +1072,7 @@ def build_multi_period_financial_panel(
 def load_promoted_sector_citations(config_path: Path | None = None) -> list[dict[str, Any]]:
     """Load promoted sector extractions (VCB Bank, SSI Securities) as citation dictionaries."""
     if config_path is None:
-        config_path = Path(__file__).resolve().parent / "config" / "promoted_sector_extractions.json"
+        config_path = Path(__file__).resolve().parents[2] / "config" / "promoted_sector_extractions.json"
 
     registry = load_promoted_sector_extractions(config_path)
     promoted_sectors = registry.get("promoted_sectors", {})
@@ -1080,7 +1080,7 @@ def load_promoted_sector_citations(config_path: Path | None = None) -> list[dict
 
     # Look for artifact file first if present
     artifact_file = (
-        Path(__file__).resolve().parent
+        Path(__file__).resolve().parents[2]
         / "operations-review"
         / "p2f3-bounded-generic-sector-extraction-promotion-20260820"
         / "p2f3_sector_extraction_promotion_artifact.json"
@@ -1119,7 +1119,7 @@ def load_promoted_sector_citations(config_path: Path | None = None) -> list[dict
 def load_governed_corporate_citations(repo_root: Path | None = None) -> list[dict[str, Any]]:
     """Load governed P2-D / P2-C2C corporate facts (GAS & VRE)."""
     if repo_root is None:
-        repo_root = Path(__file__).resolve().parent
+        repo_root = Path(__file__).resolve().parents[2]
 
     report_path = (
         repo_root
@@ -1172,7 +1172,7 @@ def load_governed_corporate_citations(repo_root: Path | None = None) -> list[dic
 def load_retained_baseline_citations(repo_root: Path | None = None) -> list[dict[str, Any]]:
     """Load baseline financial identity citations (HPG, VNM, PAN, PVD, NVL, POW, QNS)."""
     if repo_root is None:
-        repo_root = Path(__file__).resolve().parent
+        repo_root = Path(__file__).resolve().parents[2]
 
     cit_path = (
         repo_root
@@ -1206,7 +1206,7 @@ def load_promoted_comparative_financial_citations(repo_root: Path | None = None)
     explicit document/metric scopes declared by the P3-C promotion manifest.
     """
     if repo_root is None:
-        repo_root = Path(__file__).resolve().parent
+        repo_root = Path(__file__).resolve().parents[2]
     manifest_path = repo_root / "config" / "promoted_comparative_financial_evidence.json"
     if not manifest_path.is_file():
         return []
@@ -1273,7 +1273,7 @@ def load_promoted_comparative_financial_citations(repo_root: Path | None = None)
 def load_promoted_residual_comparative_financial_citations(repo_root: Path | None = None) -> list[dict[str, Any]]:
     """Load P3-D's audited corporate statement facts through the generic template recognizer."""
     if repo_root is None:
-        repo_root = Path(__file__).resolve().parent
+        repo_root = Path(__file__).resolve().parents[2]
     manifest_path = repo_root / "config" / "promoted_residual_comparative_financial_evidence.json"
     if not manifest_path.is_file():
         return []
@@ -1351,7 +1351,7 @@ def load_promoted_residual_comparative_financial_citations(repo_root: Path | Non
 def load_promoted_fundamental_coverage_closeout_citations(repo_root: Path | None = None) -> list[dict[str, Any]]:
     """Load P3-E's final retained annual revenue/assets evidence through generic recognition."""
     if repo_root is None:
-        repo_root = Path(__file__).resolve().parent
+        repo_root = Path(__file__).resolve().parents[2]
     manifest_path = repo_root / "config" / "promoted_fundamental_coverage_closeout_evidence.json"
     if not manifest_path.is_file():
         return []
@@ -1426,7 +1426,7 @@ def load_all_authoritative_citations(
     whose immutable 102-fact artifact is the P3-C before-state.
     """
     if repo_root is None:
-        repo_root = Path(__file__).resolve().parent
+        repo_root = Path(__file__).resolve().parents[2]
 
     all_cits: list[dict[str, Any]] = []
     seen: set[tuple[str, str, str, str]] = set()

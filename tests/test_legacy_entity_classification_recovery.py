@@ -223,7 +223,7 @@ def test_current_replay_reproduces_entity_distribution_without_legacy_records():
     """The point of this milestone: market_wide_financial_analysis_v2_scaleout.build_scaleout()
     reproduces the (evidence-supported) entity-family split from tracked repository inputs
     alone -- no legacy_records argument, no sibling-worktree artifact required."""
-    import market_wide_financial_analysis_v2_scaleout as scaleout
+    import stocklookup_core.financial.market_wide_financial_analysis_v2_scaleout as scaleout
     import market_wide_fundamental_feature_store as store
 
     semantics_summary = json.loads(

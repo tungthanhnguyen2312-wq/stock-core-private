@@ -26,7 +26,7 @@ if str(ROOT) not in sys.path:
 import canonical_daily_financial_v2_materialization as fin_v2_material
 import current_research_valuation_context as valuation_context
 import daily_session_level2_package as level2
-import financial_v2_current_input_authority as financial_authority
+import stocklookup_core.financial.financial_v2_current_input_authority as financial_authority
 from operational_fundamental_context_integration import MAX_COMPLETED_QUARTER_LAG
 from opportunity_axis_freshness import classify_financial_period_freshness
 import provider_financial_monetary_basis_verdict as verdict_pin

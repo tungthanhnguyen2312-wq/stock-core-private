@@ -56,9 +56,9 @@ if str(ROOT) not in sys.path:
 import current_research_valuation_context as valuation_context  # noqa: E402
 import entity_classification_contract as entity_classification  # noqa: E402
 import exchange_industry_classification as industry_classification  # noqa: E402
-import financial_analysis_engine_v2 as engine  # noqa: E402
-import financial_analysis_product_projection as product_projection  # noqa: E402
-import market_wide_financial_analysis_v2_scaleout as scaleout  # noqa: E402
+import stocklookup_core.financial.financial_analysis_engine_v2 as engine  # noqa: E402
+import stocklookup_core.financial.financial_analysis_product_projection as product_projection  # noqa: E402
+import stocklookup_core.financial.market_wide_financial_analysis_v2_scaleout as scaleout  # noqa: E402
 
 SEMANTICS_DIR = ROOT / "operations-review" / "market-wide-structured-financial-period-semantics-v1-20260831"
 FEATURE_STORE_DIR = ROOT / "operations-review" / "market-wide-fundamental-feature-store-v1-20260831"

@@ -523,7 +523,7 @@ def _patch_daily_enrichment(monkeypatch: pytest.MonkeyPatch, tmp_path: Path, *, 
     import canonical_daily_financial_v2_materialization as fin_material
     import canonical_post_close_pipeline as cpc
     import daily_session_level2_package as level2
-    import financial_v2_current_input_authority as fin_authority
+    import stocklookup_core.financial.financial_v2_current_input_authority as fin_authority
     import market_structure_breakout_product_projection as msb
     import market_wide_relative_volume_research as rvol
     import tactical_confirmation_context as confirmation
@@ -546,7 +546,7 @@ def _patch_daily_enrichment(monkeypatch: pytest.MonkeyPatch, tmp_path: Path, *, 
             "artifact_identity": "liquidity:fixture",
             "records": {"COR": {"disposition": "CURRENT_SESSION_DESCRIPTIVE_ELIGIBLE", "liquidity_research_contract": {}}}},
     }
-    import financial_analysis_product_projection as fa_projection
+    import stocklookup_core.financial.financial_analysis_product_projection as fa_projection
     fa_product = {"contract_version": fa_projection.INTEGRATION_CONTRACT, "source_context_identity": "engine:fixture",
                   "records": {"BNK": {"status": "ABSENT"}, "COR": _financial()}}
     fa_product.update(fa_projection._identity(fa_product))

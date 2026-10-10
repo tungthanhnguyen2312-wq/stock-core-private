@@ -9,8 +9,8 @@ module's output shape breaks this test suite instead of silently going unnoticed
 """
 from __future__ import annotations
 
-import structured_financial_period_semantics as sem
-import canonical_financial_analytical_panel as panel
+import stocklookup_core.financial.structured_financial_period_semantics as sem
+import stocklookup_core.financial.canonical_financial_analytical_panel as panel
 
 
 def _fact(**overrides):

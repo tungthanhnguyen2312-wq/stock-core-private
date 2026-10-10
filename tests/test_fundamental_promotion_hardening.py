@@ -12,11 +12,11 @@ import sys
 
 import asymmetric_dislocation_research as adr
 import current_research_decision_input as decision_input
-import financial_analysis_engine_v2 as engine
-import financial_analysis_product_projection as projection
-import fundamental_signal_consumption_contract as contract
+import stocklookup_core.financial.financial_analysis_engine_v2 as engine
+import stocklookup_core.financial.financial_analysis_product_projection as projection
+import stocklookup_core.financial.fundamental_signal_consumption_contract as contract
 import integrated_investment_decision_product as iidp
-import market_wide_financial_analysis_v2_scaleout as scaleout
+import stocklookup_core.financial.market_wide_financial_analysis_v2_scaleout as scaleout
 import multi_session_signal_velocity as velocity
 import next_session_decision_brief as next_brief
 import prospective_decision_outcome_feedback as feedback
@@ -71,7 +71,10 @@ def _signal(synthesis: dict, signal_id: str) -> dict:
 def _decision(record: dict, tactical: dict | None = None) -> dict:
     return iidp.build_ticker_integrated_decision(
         ticker="AAA", as_of_session=SESSION, tactical_record=tactical, financial_record=record,
-        valuation_record=None, relative_volume_record=None, market_sector_record=None)
+        valuation_record=None, relative_volume_record=None, market_sector_record=None,
+        technical_coverage_disposition_record={"ticker": "AAA", "disposition": "SAME_SESSION_TECHNICAL_COVERED",
+                                               "has_exact_session_bar": True, "is_current_session": True,
+                                               "feature_as_of_session": SESSION})
 
 
 # ── Risk level versus direction ──────────────────────────────────────────────────────────────
@@ -408,7 +411,7 @@ def test_changed_decision_modules_never_import_a_provider() -> None:
     from pathlib import Path
 
     root = Path(__file__).resolve().parents[1]
-    probe = ("import sys; import fundamental_signal_consumption_contract, integrated_investment_decision_product, "
+    probe = ("import sys; import stocklookup_core.financial.fundamental_signal_consumption_contract, integrated_investment_decision_product, "
              "asymmetric_dislocation_research, multi_session_signal_velocity, next_session_decision_brief, "
              "prospective_decision_outcome_feedback, prospective_decision_outcome_measurement, current_research_decision_input; "
              "print(sorted(m for m in sys.modules if m.split('.')[0] in ('vnstock', 'vnai', 'vnstock_data')))")

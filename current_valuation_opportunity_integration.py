@@ -17,7 +17,7 @@ from opportunity_context import (
 from security_decision_context import (
     CONTRACT_VERSION as DECISION_CONTRACT, LABELS, build_ticker_decision, compact_decision,
 )
-from financial_analysis_product_projection import context_for_ticker, validate_product_context
+from stocklookup_core.financial.financial_analysis_product_projection import context_for_ticker, validate_product_context
 
 SCHEMA_VERSION = "1.0.0"
 MILESTONE = "CURRENT_VALUATION_AND_OPPORTUNITY_INTEGRATION_V1"

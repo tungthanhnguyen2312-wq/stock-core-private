@@ -132,7 +132,7 @@ from market_wide_historical_matched_liquidity import (
 from market_wide_relative_volume_research import (
     content_identity as market_wide_relative_volume_content_identity,
 )
-from financial_analysis_product_projection import (
+from stocklookup_core.financial.financial_analysis_product_projection import (
     context_for_ticker as financial_analysis_context_for_ticker,
     validate_product_context as validate_financial_analysis_product_context,
 )
@@ -213,7 +213,7 @@ from current_state_relative_valuation import (
     STATUS_QUALIFIED as CURRENT_STATE_RELATIVE_VALUATION_STATUS_QUALIFIED,
     evaluate_current_state_relative_valuation,
 )
-from fundamental_quality_evidence import (
+from stocklookup_core.financial.fundamental_quality_evidence import (
     build_fundamental_quality_evidence_for_ticker,
     build_historical_fundamental_brief,
     build_historical_capital_structure_analysis,
@@ -4646,7 +4646,7 @@ def attach_pillar_a_research_projection(bundle_entries: dict[str, dict], root: P
         return None
     from canonical_fact_store import _load_state, read_facts
     from official_annual_financial_fact_projection import facts_by_ticker
-    from financial_entity_applicability import load_entity_profiles
+    from stocklookup_core.financial.financial_entity_applicability import load_entity_profiles
 
     state = _load_state(root)
     records = {str(record.get("ticker")): record for record in state.get("tickers") or []}

@@ -35,7 +35,7 @@ from generic_financial_canonicalizer import (
     CanonicalFinancialFact,
     canonicalize_citation,
 )
-import multi_period_financial_panel as panel_module
+import stocklookup_core.financial.multi_period_financial_panel as panel_module
 from official_source_registry import ADMITTED, admit, load_registry
 from stocklookup_core.evidence.official_document_qualification import (
     QUALIFICATION_SUCCESS_STATUS,

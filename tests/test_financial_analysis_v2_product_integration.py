@@ -5,8 +5,8 @@ import json
 
 import pytest
 
-import financial_analysis_engine_v2 as engine
-from financial_analysis_product_projection import (
+import stocklookup_core.financial.financial_analysis_engine_v2 as engine
+from stocklookup_core.financial.financial_analysis_product_projection import (
     FinancialAnalysisProductProjectionError, build_product_projection, context_for_ticker,
 )
 from security_decision_context import _financial_analysis_annotation
