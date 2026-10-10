@@ -4,7 +4,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from persistent_research_dossier import build, load_latest_versions, markdown, write_new_versions
+from stocklookup_core.research.persistent_research_dossier import build, load_latest_versions, markdown, write_new_versions
 
 ROOT = Path(__file__).resolve().parent
 OUTPUT = ROOT / "operations-review" / "persistent-research-dossier-v1-20260820"

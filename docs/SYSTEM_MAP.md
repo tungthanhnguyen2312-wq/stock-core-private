@@ -35,8 +35,10 @@ Tactical contexts, breakout/relative-volume projection and V2 dispatch are in
 `stocklookup_core/tactical/`. Frozen V1 producers, primitive and relationship bridge
 retain root paths; frozen V2 moves without changing bytes.
 [Tactical package contract and frozen-source limits](tactical_research_package_v1_contract.md).
-Thesis adapters, matrix, sidecars and runtime are in `stocklookup_core/research/`;
-their existing child tools retain their paths and resolve the repository source root.
+Thesis adapters, matrix, sidecars and runtime are in `stocklookup_core/research/`,
+joined by the existing analyst/dossier/question/review/workbench and prospective case/
+learning chain. [Workflow scope and evidence limits](research_workflow_package_v1_contract.md).
+Their existing child tools retain paths and resolve the repository source root.
 The existing offline `official_document_acquisition.py` CLI is a small compatibility launcher.
 All library consumers import the packages; historical module names resolve through
 `config/repository_layout.json`. Owner Daily and publishing launchers retain their paths.

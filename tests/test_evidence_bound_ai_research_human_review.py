@@ -2,7 +2,7 @@ import copy
 
 import pytest
 
-from evidence_bound_ai_research_human_review import (
+from stocklookup_core.research.evidence_bound_ai_research_human_review import (
     apply_human_review, build_ai_input_packet, build_human_review_packet, validate_ai_draft,
 )
 from tools.run_evidence_gated_research_decision_workflow import run as decision_run

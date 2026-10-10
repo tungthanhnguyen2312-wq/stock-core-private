@@ -2,8 +2,8 @@ import copy
 
 import pytest
 
-from evidence_bound_ai_research_human_review import apply_human_review, build_human_review_packet, validate_ai_draft
-from prospective_research_case_learning_ledger import (
+from stocklookup_core.research.evidence_bound_ai_research_human_review import apply_human_review, build_human_review_packet, validate_ai_draft
+from stocklookup_core.research.prospective_research_case_learning_ledger import (
     append_case_update, build_case_update, build_learning_ledger, case_readiness, create_research_case,
 )
 from tools.run_evidence_bound_ai_research_human_review import run as ai_run

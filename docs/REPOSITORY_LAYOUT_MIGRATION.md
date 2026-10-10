@@ -29,7 +29,7 @@ stock-core/
 ├─ stocklookup_core/
 │  ├─ acquisition/  # landing contract, isolation, checkpoint and retention
 │  ├─ evidence/     # official documents and temporal receipts
-│  ├─ research/     # independent thesis research
+│  ├─ research/     # thesis and analyst/dossier/review/case/learning workflow
 │  ├─ financial/    # panels, Financial V2 and fundamental research
 │  ├─ valuation/    # calculations, peers and current-input scaleout
 │  ├─ decision/     # decision inputs, contexts, packets, brief and workspace
@@ -147,7 +147,11 @@ then selects [decision research package V1](decision_research_package_v1_contrac
 packages, net 68 fewer root Python files; PR110 released). Standing admission then
 selects [tactical research package V1](tactical_research_package_v1_contract.md):
 11 implementations, 527 → 516 root Python files (80 cumulative implementations,
-net 79 fewer root Python files). Frozen producer/dependency exclusions are explicit.
+net 79 fewer root Python files; PR111 released). Frozen exclusions are explicit.
+Standing admission selects [research workflow V1](research_workflow_package_v1_contract.md):
+15 analyst/dossier/question/review/workbench/case/learning implementations, 516 → 501
+root Python files (95 cumulative implementations, net 94 fewer root Python files).
+An actual IID fixture failure also warrants literal import-loop closure in the existing guard.
 This remains source layout only.
 Successors need explicit native scope admission under that standing authorization;
 merge, production execution and authority promotion keep their separate owner gates.

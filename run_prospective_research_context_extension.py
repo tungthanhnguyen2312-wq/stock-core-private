@@ -1,6 +1,6 @@
 from pathlib import Path
 import json
-from prospective_research_context_extension import write_immutable
+from stocklookup_core.research.prospective_research_context_extension import write_immutable
 
 ROOT = Path(__file__).resolve().parent
 OUT = ROOT / 'operations-review/prospective-research-context-extension-v1-20260820'

@@ -62,7 +62,7 @@ The current production workflow is operated through the canonical Owner Daily pa
 | Valuation calculations, peers and current-input scaleout | [stocklookup_core/valuation/](stocklookup_core/valuation/) |
 | Decision inputs, contexts, packets, briefs and workspace projection | [stocklookup_core/decision/](stocklookup_core/decision/) |
 | Tactical contexts and V2 dispatch (frozen foundations retain root paths) | [stocklookup_core/tactical/](stocklookup_core/tactical/) |
-| Independent thesis research | [stocklookup_core/research/](stocklookup_core/research/) |
+| Thesis research and analyst/dossier/review/case/learning workflow | [stocklookup_core/research/](stocklookup_core/research/) |
 
 ## Canonical runtime path
 

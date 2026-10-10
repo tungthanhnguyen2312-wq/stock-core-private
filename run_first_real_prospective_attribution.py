@@ -2,7 +2,7 @@
 from __future__ import annotations
 import json
 from pathlib import Path
-from prospective_research_learning import first_real_observation, write_immutable
+from stocklookup_core.research.prospective_research_learning import first_real_observation, write_immutable
 
 ROOT = Path(__file__).resolve().parent
 

@@ -1,6 +1,6 @@
 import copy
 from run_first_real_prospective_attribution import run
-from prospective_research_learning import first_real_observation
+from stocklookup_core.research.prospective_research_learning import first_real_observation
 
 def test_first_real_observation_is_strict_and_replayable():
     first = run(); second = run()

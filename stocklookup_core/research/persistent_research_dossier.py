@@ -10,7 +10,7 @@ import json
 from pathlib import Path
 from typing import Any, Mapping
 
-from ai_research_analyst import stock_brief
+from stocklookup_core.research.ai_research_analyst import stock_brief
 
 
 def _canon(value: Any) -> str:

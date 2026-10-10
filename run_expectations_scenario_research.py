@@ -5,8 +5,8 @@ import json
 from pathlib import Path
 
 from expectations_scenario_research import build, load_latest, markdown, review_pack_overlay, write_versions
-from persistent_research_dossier import load_latest_versions
-from research_question_tasking import load_latest_tasks
+from stocklookup_core.research.persistent_research_dossier import load_latest_versions
+from stocklookup_core.research.research_question_tasking import load_latest_tasks
 
 ROOT = Path(__file__).resolve().parent
 OUTPUT = ROOT / "operations-review" / "expectations-scenario-research-v1-20260820"

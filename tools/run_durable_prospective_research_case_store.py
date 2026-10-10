@@ -8,7 +8,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from durable_prospective_research_case_store import DurableProspectiveResearchCaseStore
+from stocklookup_core.research.durable_prospective_research_case_store import DurableProspectiveResearchCaseStore
 
 
 def run(store_root: str | Path) -> dict:

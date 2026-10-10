@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from prospective_research_learning import (
+from stocklookup_core.research.prospective_research_learning import (
     ENTRY_RELEVANT_COHORT_STATES,
     freeze_prospective_research_cohort,
     replay_prospective_research_cohort_snapshot,

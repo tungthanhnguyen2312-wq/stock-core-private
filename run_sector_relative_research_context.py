@@ -4,7 +4,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from persistent_research_dossier import load_latest_versions
+from stocklookup_core.research.persistent_research_dossier import load_latest_versions
 from sector_relative_research_context import (build, load_provider_descriptive_industry_classes,
                                               load_qualified_entity_classes, markdown_overlay, review_pack_overlay)
 

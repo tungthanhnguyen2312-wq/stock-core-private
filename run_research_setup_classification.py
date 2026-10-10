@@ -1,6 +1,6 @@
 from pathlib import Path
 import json
-from research_setup_classification import build, consumer_overlays, daily_overlay
+from stocklookup_core.research.research_setup_classification import build, consumer_overlays, daily_overlay
 from run_price_structure_breakout_context import run as price_run
 from run_sector_relative_research_context import run as relative_run
 

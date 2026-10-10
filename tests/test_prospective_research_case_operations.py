@@ -1,7 +1,7 @@
 import pytest
 
-from analyst_research_workbench import build_current_workbench
-from prospective_research_case_operations import COHORT, build_operating_manifest
+from stocklookup_core.research.analyst_research_workbench import build_current_workbench
+from stocklookup_core.research.prospective_research_case_operations import COHORT, build_operating_manifest
 from tools.run_prospective_research_case_operations import run
 
 

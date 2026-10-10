@@ -14,7 +14,7 @@ from collections import Counter, defaultdict
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
-from durable_prospective_research_case_store import DurableProspectiveResearchCaseStore
+from stocklookup_core.research.durable_prospective_research_case_store import DurableProspectiveResearchCaseStore
 
 
 CONTRACT_VERSION = "prospective_decision_outcome/v3"

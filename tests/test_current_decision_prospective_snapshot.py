@@ -1,4 +1,4 @@
-from prospective_research_learning import freeze_current_decision_surface
+from stocklookup_core.research.prospective_research_learning import freeze_current_decision_surface
 
 def test_additive_current_decision_snapshot_is_deterministic_and_labels_shadow():
  tactical={'session':'2026-08-21','artifact_identity':'t','records':{'AAA':{'ticker':'AAA','entry_state':'BASE_BUILDING','entry_action':'ACCUMULATE_IN_BASE','ticker_structure_state':'NEUTRAL','confirmation_trigger':'c','invalidation':'i','data_quality':'OK'}}}

@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 
 from field_temporal_contract import stable_id
-from prospective_research_learning import (
+from stocklookup_core.research.prospective_research_learning import (
     ENTRY_RELEVANT_COHORT_STATES,
     OBSERVED_CHANGE_SEMANTICS,
     attribute_prospective_research_cohort_first_future,
@@ -378,7 +378,7 @@ def test_identical_replay_is_idempotent(tmp_path):
 
 def test_no_network_in_attribution_or_runner_source():
     sources = [
-        ROOT / 'prospective_research_learning.py',
+        ROOT / 'stocklookup_core' / 'research' / 'prospective_research_learning.py',
         ROOT / 'tools' / 'run_prospective_research_cohort_attribution.py',
     ]
     banned = ('urllib', 'requests', 'http.client', 'dnse_access', 'fetch_capability_raw', 'socket')
@@ -423,7 +423,7 @@ def test_ambiguous_exact_session_copies_fail_closed(tmp_path):
 
 def test_historical_first_real_observation_is_untouched_sibling():
     assert first_real_observation.__doc__ is not None
-    source = (ROOT / 'prospective_research_learning.py').read_text(encoding='utf-8')
+    source = (ROOT / 'stocklookup_core' / 'research' / 'prospective_research_learning.py').read_text(encoding='utf-8')
     assert "required_future = {" in source
     assert 'len(frozen) != 523' in source
     assert 'prospective_research_learning/cohort_future_attribution/v1' in source

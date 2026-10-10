@@ -4,8 +4,8 @@ from pathlib import Path
 
 import pytest
 
-from prospective_research_context_extension import build, write_immutable
-from prospective_research_learning import context_extension_dimensions
+from stocklookup_core.research.prospective_research_context_extension import build, write_immutable
+from stocklookup_core.research.prospective_research_learning import context_extension_dimensions
 from run_prospective_research_context_extension_successor import run as run_successor
 from run_prospective_research_context_extension import ROOT, SNAPSHOT, run
 

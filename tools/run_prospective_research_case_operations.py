@@ -7,8 +7,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from analyst_research_workbench import build_current_workbench
-from prospective_research_case_operations import build_operating_manifest
+from stocklookup_core.research.analyst_research_workbench import build_current_workbench
+from stocklookup_core.research.prospective_research_case_operations import build_operating_manifest
 
 
 def run() -> dict:

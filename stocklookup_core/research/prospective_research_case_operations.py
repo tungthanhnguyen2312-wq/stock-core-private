@@ -11,7 +11,7 @@ import hashlib
 import json
 from typing import Any, Mapping
 
-from analyst_research_workbench import CURRENT_RETAINED_SNAPSHOT, AnalystResearchWorkbench
+from stocklookup_core.research.analyst_research_workbench import CURRENT_RETAINED_SNAPSHOT, AnalystResearchWorkbench
 
 
 METHOD = "prospective_research_case_operations/v1"

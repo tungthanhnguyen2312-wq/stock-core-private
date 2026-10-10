@@ -3,7 +3,7 @@ import copy
 import pytest
 
 from tools.run_evidence_gated_research_decision_workflow import inputs, run
-from evidence_gated_research_decision_workflow import build
+from stocklookup_core.research.evidence_gated_research_decision_workflow import build
 
 
 def _record(artifact, ticker):

@@ -4,6 +4,15 @@
 Branch `refactor/tactical-research-package-v1-20261010`; dedicated checkout, sole
 writer. Starting verified main `8142f4f872b0b079579f34cb45e782f466b4ce7c`.
 
+## Released tactical checkpoint
+
+PR111 merged owner-approved updated HEAD `8110bd379cba9e1f4830ddbc23ab3ac30e4d077b`
+at `401c75f9fd866ab3b06043fe25ff7f2b57066211`. All four PR CI jobs (38040178650) and four
+post-merge jobs (38043709070) passed; focused PR regression: 4,719 pass, 146 skip,
+49 deselected, 103 subtests pass. The first failed HEAD was not merged. Native
+successor admission records TACTICAL_RESEARCH_PACKAGE_V1 COMPLETE at that release.
+No production activation or authority promotion occurred.
+
 ## Released predecessor and explicit bounded scope
 
 PR110 merged exact owner-approved HEAD `cdd8a766ce9c0ad5f6d15607e9b15cf1420da07f`.

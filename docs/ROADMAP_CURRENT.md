@@ -1,16 +1,16 @@
 # Stock Lookup — Current Roadmap
 
 History: [ROADMAP.md](ROADMAP.md); execution: ROADMAP_STATE.json.
-Updated 2026-10-10 from main `8142f4f872b0b079579f34cb45e782f466b4ce7c`.
+Updated 2026-10-10 from main `401c75f9fd866ab3b06043fe25ff7f2b57066211`.
 Nothing below auto-starts; native standing admission required (AI_RULES 11).
 Facts: [ACTIVE_STATE.md](ACTIVE_STATE.md).
 
-## NOW — TACTICAL_RESEARCH_PACKAGE_V1 (ACTIVE)
+## NOW — RESEARCH_WORKFLOW_PACKAGE_V1 (ACTIVE)
 
-Standing admission: 11 tactical/V2 dispatch and research context implementations.
-Policies, frozen producers and Daily preserved; merge gated.
-[Scope and reopening gates](tactical_research_package_v1_contract.md).
-Decision package COMPLETE: PR110 `8142f4f`, four post-merge CI PASS (38037503784); root Python 527.
+Standing admission: 15 analyst/dossier/review/case/learning implementations.
+Policies, identities and Daily preserved; merge gated.
+[Scope and reopening gates](research_workflow_package_v1_contract.md).
+Tactical package COMPLETE: PR111 `401c75f`, four post-merge CI PASS (38043709070); root Python 516.
 Fiscal mapping lacks issuer calendar/covered-period/provider-label/publication proof;
 existing semantics knowledge time is insufficient. No automatic conversion/promotion.
 Financial package COMPLETE: PR108 `0afad0f`, four post-merge CI PASS; root 572 / Python 554.

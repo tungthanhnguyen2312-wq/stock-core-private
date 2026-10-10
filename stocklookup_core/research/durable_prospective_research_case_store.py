@@ -16,7 +16,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Iterator, Mapping, Sequence
 
-from prospective_research_case_learning_ledger import append_case_update, build_learning_ledger
+from stocklookup_core.research.prospective_research_case_learning_ledger import append_case_update, build_learning_ledger
 
 
 METHOD = "durable_prospective_research_case_store/v1"

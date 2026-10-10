@@ -1,4 +1,4 @@
-from human_research_review_pack import FORBIDDEN, markdown
+from stocklookup_core.research.human_research_review_pack import FORBIDDEN, markdown
 from run_human_research_review_pack import run
 
 

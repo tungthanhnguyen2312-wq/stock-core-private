@@ -1,8 +1,8 @@
 from pathlib import Path
 import json
 from downside_uncertainty_research_context import build_v1,build_v2,review_overlay
-from persistent_research_dossier import load_latest_versions
-from research_question_tasking import load_latest_tasks
+from stocklookup_core.research.persistent_research_dossier import load_latest_versions
+from stocklookup_core.research.research_question_tasking import load_latest_tasks
 from run_market_regime_breadth_context import run as market_run
 from run_sector_relative_research_context import run as relative_run
 from run_strategy_research_eligibility import run as eligibility_run

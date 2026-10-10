@@ -1,7 +1,7 @@
 from pathlib import Path
 import json
-from evidence_aware_research_screener import build,review_overlay,query
-from persistent_research_dossier import load_latest_versions
+from stocklookup_core.research.evidence_aware_research_screener import build,review_overlay,query
+from stocklookup_core.research.persistent_research_dossier import load_latest_versions
 from run_sector_relative_research_context import run as run_relative_context
 from run_strategy_research_eligibility import run as run_eligibility
 from run_catalyst_event_research_context import run as run_event_context

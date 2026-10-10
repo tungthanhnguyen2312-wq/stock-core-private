@@ -13,14 +13,14 @@ from collections import Counter
 from dataclasses import dataclass, field
 from typing import Any, Mapping, Sequence
 
-from evidence_bound_ai_research_human_review import (
+from stocklookup_core.research.evidence_bound_ai_research_human_review import (
     REVIEW_STATES,
     apply_human_review,
     build_human_review_packet,
     prompt_contract,
     validate_ai_draft as validate_external_ai_draft,
 )
-from prospective_research_case_learning_ledger import (
+from stocklookup_core.research.prospective_research_case_learning_ledger import (
     append_case_update as append_immutable_case_update,
     build_case_update,
     build_learning_ledger,
