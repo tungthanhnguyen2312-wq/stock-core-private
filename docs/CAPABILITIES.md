@@ -187,8 +187,8 @@ immutable. [Share contract](hpg_common_share_evidence_contract.md).
 - Contract: `integrated_investment_decision_product/v1` (`integrated_investment_decision_product.py`); Producer `daily_producer_pipeline.py`
 - Runtime: `ACTIVE` · Authority: `SCOPED` (research posture; no target/probability/size) · Production: `IN_DAILY_BLOCKING`
 - Input: nine axes, Tactical V3, financial/valuation/corporate/market-sector · Predecessor: legacy opportunity
-- Blocker: none · Next trigger: [coherence V2](scenario_and_opportunity_cost_decision_coherence_v2_contract.md)
-  offline PR gate; Posture V2 released PR100. Private holdings downstream; history immutable.
+- Blocker: none · Next trigger: bounded semantic corrective (ROADMAP_CURRENT).
+  Coherence V2 released PR101; Posture V2 PR100. Private holdings downstream; history immutable.
 
 ## D. Thesis, feedback, learning
 

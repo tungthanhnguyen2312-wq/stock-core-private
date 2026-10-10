@@ -166,6 +166,10 @@ def test_all_seven_lanes_present_even_when_empty():
         assert queue["lane_queues"][lane]["count"] == 0
 
 
+@pytest.mark.retained_evidence(
+    "operations-review/current-opportunity-prioritization-v1-20260824/current_opportunity_prioritization_artifact.json",
+    "operations-review/full-universe-entry-candidate-triage-20260824/full_universe_entry_candidate_triage_20260824.json",
+)
 def test_real_retained_universe_matches_milestone_ground_truth():
     """Integration proof against the actual retained 1,507-record artifact (not a fixture)."""
     opportunity = json.loads((OPERATIONS / "current-opportunity-prioritization-v1-20260824/current_opportunity_prioritization_artifact.json").read_text(encoding="utf-8"))

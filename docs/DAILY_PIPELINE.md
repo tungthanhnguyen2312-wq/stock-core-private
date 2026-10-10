@@ -5,7 +5,7 @@ Current-state facts: [ACTIVE_STATE.md](ACTIVE_STATE.md). Authority per output: [
 
 [Capacity](capacity_recovery_phase1_contract.md): adapter offline; delivery reuse disabled.
 [Coherence V2](scenario_and_opportunity_cost_decision_coherence_v2_contract.md): offline
-opt-in; original scenario build/stage order. Posture V2 released PR100; no Daily/deploy.
+opt-in, released PR101; original scenario build/stage order. No Daily/deploy.
 
 [Long-term company economics evidence](long_term_company_economics_evidence_contract.md)
 is offline opt-in only; it adds no Daily stage or consumer. October 8 Macro live

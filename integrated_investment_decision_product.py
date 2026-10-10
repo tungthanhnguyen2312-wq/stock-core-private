@@ -1394,7 +1394,9 @@ def decide_research_action_posture(
     # 2. REAL ADVERSE EVIDENCE -> REDUCE / AVOID
     # Adverse requires real negative evidence, never missing data.
     if bos == "BEARISH_BOS_DETECTED_BY_RULE" or (ms == "DOWNTREND" and not (brk_v3 == "BREAKOUT" or trig_state == "TRIGGERED")):
-        why = f"{ticker}: Bearish market structure breakdown with confirmed lower lows / bearish BOS; adverse entry environment."
+        observed = ("Bearish BOS detected by the structural rule" if bos == "BEARISH_BOS_DETECTED_BY_RULE"
+                    else "Qualified downtrend without a breakout or fired trigger")
+        why = f"{ticker}: {observed}; adverse entry environment."
         return POSTURE_AVOID, why, EFFECT_DOES_NOT_BLOCK, "BEARISH_STRUCTURE_ADVERSE"
 
     # Failed breakout has its own deterioration row below; its derived

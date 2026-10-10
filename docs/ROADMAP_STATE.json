@@ -15,14 +15,35 @@
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "SCENARIO_AND_OPPORTUNITY_COST_DECISION_COHERENCE_V2",
+    "milestone": "DAILY_RESEARCH_OUTPUT_SEMANTIC_COHERENCE_CORRECTIVE_V1",
     "state": "ACTIVE"
   },
   "queued_next": [],
   "milestones": [
     {
-      "milestone_id": "SCENARIO_AND_OPPORTUNITY_COST_DECISION_COHERENCE_V2",
+      "milestone_id": "DAILY_RESEARCH_OUTPUT_SEMANTIC_COHERENCE_CORRECTIVE_V1",
       "state": "ACTIVE",
+      "starting_checkpoint": "64c8bc884efd790bc05f6976bc628215a99fd58b",
+      "candidate_branch": "fix/daily-research-semantic-coherence-v1-20261010",
+      "dependencies": [
+        "SCENARIO_AND_OPPORTUNITY_COST_DECISION_COHERENCE_V2"
+      ],
+      "unlocks": [],
+      "owner_authorized": true,
+      "owner_override": "Owner separately approved: Approve the bounded corrective. Exact scope: DAILY_RESEARCH_OUTPUT_SEMANTIC_COHERENCE_CORRECTIVE_V1 items 1-10; semantic explanation and proven consumer mapping only, immutable October 9 artifacts read-only, unchanged IID Posture V2 and numerical authority, one dedicated worktree and repository writer, one validated local checkpoint; no push/merge/deploy/Daily/runtime write/authority promotion/automatic successor. PR101 merged exact head 424b5efcd3a7a2a030d95cd474db5c7dc2c49bed at verified main 64c8bc884efd790bc05f6976bc628215a99fd58b; post-merge CI 38017817078 four jobs SUCCESS; prior offline acceptance and compatibility gates passed.",
+      "authority_effect": "NONE",
+      "source_doc": "docs/daily_research_output_semantic_coherence_corrective_v1_contract.md",
+      "state_history": [
+        "DEFERRED",
+        "ACTIVE"
+      ],
+      "checkpoint": null,
+      "terminal_disposition": null,
+      "notes": "Owner separately approved: Approve the bounded corrective. Exact scope: DAILY_RESEARCH_OUTPUT_SEMANTIC_COHERENCE_CORRECTIVE_V1 items 1-10; semantic explanation and proven consumer mapping only, immutable October 9 artifacts read-only, unchanged IID Posture V2 and numerical authority, one dedicated worktree and repository writer, one validated local checkpoint; no push/merge/deploy/Daily/runtime write/authority promotion/automatic successor. PR101 merged exact head 424b5efcd3a7a2a030d95cd474db5c7dc2c49bed at verified main 64c8bc884efd790bc05f6976bc628215a99fd58b; post-merge CI 38017817078 four jobs SUCCESS; prior offline acceptance and compatibility gates passed."
+    },
+    {
+      "milestone_id": "SCENARIO_AND_OPPORTUNITY_COST_DECISION_COHERENCE_V2",
+      "state": "COMPLETE",
       "starting_checkpoint": "314406e59b868d2a4207fa7af7798a31ee3b6906",
       "candidate_branch": "feature/scenario-opportunity-coherence-v2-20261009",
       "dependencies": [
@@ -35,11 +56,12 @@
       "source_doc": "docs/scenario_and_opportunity_cost_decision_coherence_v2_contract.md",
       "state_history": [
         "DEFERRED",
-        "ACTIVE"
+        "ACTIVE",
+        "COMPLETE"
       ],
-      "checkpoint": "6f3ca4641e738ac58fc7ba2ab6967714c9af75db",
-      "terminal_disposition": null,
-      "notes": "Owner authorizes offline scenario and opportunity-cost coherence implementation, integration regression, checkpoints, normal push and one PR; no Daily, production writes, authority change or successor PR merge. Implementation checkpoint 6f3ca4641e738ac58fc7ba2ab6967714c9af75db; synthetic S1-S20 and complete affected regression passed. Offline opt-in binder/comparison/packet only; original Daily/v1 path preserved. Owner merge/release and exact-head external CI remain gates; no production activation or successor."
+      "checkpoint": "64c8bc884efd790bc05f6976bc628215a99fd58b",
+      "terminal_disposition": "IMPLEMENTATION_RELEASED_NO_PRODUCTION_ACTIVATION",
+      "notes": "Owner authorizes offline scenario and opportunity-cost coherence implementation, integration regression, checkpoints, normal push and one PR; no Daily, production writes, authority change or successor PR merge. Implementation checkpoint 6f3ca4641e738ac58fc7ba2ab6967714c9af75db; synthetic S1-S20 and complete affected regression passed. Offline opt-in binder/comparison/packet only; original Daily/v1 path preserved. Owner merge/release and exact-head external CI remain gates; no production activation or successor. Verified release 64c8bc884efd790bc05f6976bc628215a99fd58b; no production reclaim, activation or automatic successor."
     },
     {
       "milestone_id": "CONDITIONAL_RESEARCH_POSTURE_V2",

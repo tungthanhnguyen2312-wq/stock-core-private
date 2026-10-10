@@ -523,14 +523,24 @@ def build_financial_evidence_context(financial_analysis_product_current: Mapping
         "financial_analysis_product_identity": compact.get("artifact_identity"),
         "financial_v2_engine_identity": financial_analysis_product_current.get("financial_v2_engine_identity"),
         "financial_evidence_as_of_period": financial_analysis_product_current.get("financial_evidence_as_of_period"),
+        "latest_observed_financial_period_label": financial_analysis_product_current.get(
+            "latest_observed_financial_period_label", financial_analysis_product_current.get("financial_evidence_as_of_period")),
+        "financial_evidence_period_label_context": financial_analysis_product_current.get(
+            "financial_evidence_period_label_context") or {
+                "semantics": "LATEST_LEXICOGRAPHIC_RETAINED_FEATURE_PERIOD_LABEL",
+                "is_publication_cutoff": False, "is_reporting_calendar_context": False,
+                "published_calendar_evidence_as_of_period": None, "observations": [],
+            },
         "financial_evidence_period_range": financial_analysis_product_current.get("financial_evidence_period_range"),
         "decision_session": financial_analysis_product_current.get("decision_session"),
         "coverage": financial_analysis_product_current.get("coverage"),
         "note": "Financial evidence is periodic: an identical financial_v2_engine_identity across "
                 "several consecutive decision sessions is normal and expected between real "
-                "financial reports. Fundamental evidence is dated by financial_evidence_as_of_"
-                "period; market/technical evidence is dated by session -- the two are not the "
-                "same clock.",
+                "financial reports. financial_evidence_as_of_period is a legacy alias for "
+                "latest_observed_financial_period_label, the lexical maximum retained feature "
+                "label, not a publication cutoff or reporting calendar context. Financial "
+                "period/calendar resolution and knowledge time are per record; market/technical "
+                "evidence is dated by session.",
     }
 
 

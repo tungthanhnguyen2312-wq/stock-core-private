@@ -124,8 +124,14 @@ def test_compact_projection_exposes_working_capital_states_not_raw_amounts():
     compact = product["records"]["AAA"]
     assert compact["working_capital_state"] == "POSITIVE_NET_WORKING_CAPITAL"
     assert compact["feature_fitness"]["current_ratio"]["fitness"] == "READY"
-    # The compact contract exposes qualitative state/fitness only, never the raw statement figures.
-    assert "700" not in json.dumps(compact) and "350" not in json.dumps(compact)
+    # Flat display fields stay qualitative. Released feature evidence retains the
+    # derived value and source facts explicitly, without exposing raw statement rows.
+    assert 'current_assets' not in compact and 'current_liabilities' not in compact
+    evidence = compact['feature_fitness']['net_working_capital']['source_feature_context']
+    assert evidence['value'] == context['records']['AAA']['features']['net_working_capital']['value'] == 350
+    assert evidence['source_context_identity'] == context['artifact_identity']
+    assert {r['fact_id'] for r in evidence['source_fact_refs']} == {'current_assets', 'current_liabilities'}
+    assert 'features' not in compact and 'reported_value' not in json.dumps(compact)
 
 
 def test_compact_projection_exposes_gross_margin_trajectory_state_not_raw_amounts():
@@ -158,7 +164,12 @@ def test_compact_projection_exposes_fcf_proxy_status_method_and_direction_not_va
     assert proxy["fitness"] == "READY"
     assert proxy["method"] == "same_provider_same_period_operating_cash_flow_plus_signed_capex/v1"
     assert compact["free_cash_flow_proxy_direction_state"] == "UNAVAILABLE"
-    assert "value" not in proxy and '"value": 63' not in json.dumps(compact)
+    assert "value" not in proxy
+    evidence = compact['feature_fitness']['free_cash_flow_proxy']['source_feature_context']
+    assert evidence['value'] == context['records']['AAA']['features']['free_cash_flow_proxy']['value'] == 63
+    assert evidence['source_context_identity'] == context['artifact_identity']
+    assert {r['fact_id'] for r in evidence['source_fact_refs']} == {'operating_cash_flow', 'capital_expenditure'}
+    assert 'features' not in compact and 'reported_value' not in json.dumps(compact)
 
 
 def test_delivery_attaches_compact_after_slim_and_retains_absent_ndjson_context():
