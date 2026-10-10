@@ -75,6 +75,23 @@ def _no_capital_decision(built):
         assert word not in text
 
 
+@pytest.mark.parametrize("invalid,reason", [(float("nan"), "RETURN_VALUES_NONFINITE"),
+    (True, "RETURN_VALUES_BOOLEAN_NOT_MEASUREMENT"), (None, "RETURN_VALUES_NON_NUMERIC"),
+    (1e308, "CORRELATION_NUMERICAL_UNAVAILABLE")])
+def test_invalid_return_measurement_remains_unusable_in_opportunity_cost(invalid, reason):
+    left = _candidate("AAA", current_returns=[.01, .02, .03, .04, .05], current_return_dates=DATES)
+    right = _candidate("BBB", current_returns=[.02, .01, .04, .03, .06], current_return_dates=DATES)
+    left["current_returns"][0] = invalid
+    built = research.build_comparison(session=SESSION, candidates=[left, right],
+        owner_portfolio_state=_state({"AAA": "materials"}, sector_weights={"materials": .2}))
+    correlation = built["pairwise"][0]["redundancy"]["current_correlation"]
+    assert correlation["value"] is None and correlation["comparable"] is False
+    assert correlation["date_alignment"] == reason
+    assert correlation["authority"] == "CURRENT_RESEARCH_ONLY_NOT_PIT"
+    json.dumps(built, allow_nan=False)
+    _no_capital_decision(built)
+
+
 # ── Six required scenarios ──────────────────────────────────────────────────────
 
 def test_scenario1_strong_core_thesis_weak_tactical_structure_keeps_lenses_independent():

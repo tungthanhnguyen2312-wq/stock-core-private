@@ -22,3 +22,14 @@ that member from the rank and lists it. The rank is not a capital allocation.
 
 Weights, allocations, position size, leverage, orders, buy scores, target
 prices, and probabilities are rejected. Nothing is persisted.
+
+Measurement integrity corrective: [contract](../portfolio_research_measurement_integrity_v1_contract.md).
+Returns must be finite nonboolean numbers; malformed points are not dropped to improve
+alignment. Verified dates are unique canonical real ISO dates. Arithmetic overflow or
+nonfinite intermediate Pearson results remain NOT_COMPARABLE, never a zero association.
+Date alignment attests only shared dates, not source/method/price-basis compatibility,
+causality, a completed session or PIT authority. Valid undated legacy values remain
+caller-asserted/unverified. Conflicting duplicate tickers fail; exact duplicates collapse.
+Explicit objectives preserve zero/negative measurements and reject boolean/nonfinite/
+malformed values with measurement_rejected reasons; omitted values stay in
+measurement_missing and present-null is additionally labelled PRESENT_NULL.

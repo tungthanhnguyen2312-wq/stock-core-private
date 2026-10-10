@@ -59,3 +59,11 @@ production Daily, deploy, runtime/private-store write, deletion or authority pro
 October9 incident stays closed. Fiscal calendar, multi-year structural interpretation,
 recurrence/accounting normalization, strict shares/valuation and future outcome maturity
 retain their existing evidence gates; no future live acceptance is claimed.
+
+## Released
+
+Owner WEEKEND_PRODUCT_VALUE_CONTINUATION approved exact candidate
+1a0330d8b217a7e8e17a96328bcaedbdbbe40fba. PR117 merged main
+1b7c10c9a0f6037b0e289ea48ab0b56d90cc07c9; all four post-merge jobs and
+run38064845939 SUCCESS. Native admission of the next bounded scope records
+this milestone COMPLETE at that actual release. No production activation.
