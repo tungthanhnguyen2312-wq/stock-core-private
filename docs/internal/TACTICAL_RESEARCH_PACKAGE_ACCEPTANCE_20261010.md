@@ -69,6 +69,17 @@ selection. Four jobs and existing commands remain; ancestry tests keep full Git
 history. No new retained marker, replacement evidence or weakened assertion.
 Hosted PR and post-merge CI remain exact release gates, not local-result claims.
 
+PR111 initial hosted run 38039194379 exposed six failures in the IID pipeline
+serialization fixture (4,713 pass, 146 skip, 49 deselected, 103 subtests pass);
+the other three jobs passed. Its variable import-name tuple was outside the
+static-import consumer selection. Update the four relocated fixture targets to
+their tactical package paths, retaining the frozen technical_structure_context
+root target and every serialization assertion. Production code is unchanged by
+this correction. The full failing suite plus layout/native/offline controls now
+pass: 76 tests. Source parity, five protected byte comparisons and both historical
+namespace loads pass again. A new exact HEAD requires fresh hosted CI and owner
+approval; the failed initial HEAD is not eligible for merge.
+
 Full historical frozen acceptance still requires the exact source checkout and its
 frozen session artifacts/source/coverage hashes. The strict historical source guards
 can reject source imports already changed by earlier package releases; source path

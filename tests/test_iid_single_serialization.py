@@ -134,7 +134,13 @@ def _pipeline_fixture(tmp_path, monkeypatch, artifact):
                 paths["technical_recovery"]: {"artifact_identity": "technical:test"}}
     monkeypatch.setattr(pipeline, "_load", lambda path: retained.get(path) or original_load(path))
     monkeypatch.setattr(pipeline.level2, "resolve_technical_recovery_artifact", lambda *a, **k: {"selected_path": paths["technical_recovery"]})
-    for name in ("technical_structure_context", "market_structure_breakout_product_projection", "market_wide_relative_volume_research", "tactical_momentum_context", "tactical_confirmation_context"):
+    for name in (
+        "technical_structure_context",
+        "stocklookup_core.tactical.market_structure_breakout_product_projection",
+        "stocklookup_core.tactical.market_wide_relative_volume_research",
+        "stocklookup_core.tactical.tactical_momentum_context",
+        "stocklookup_core.tactical.tactical_confirmation_context",
+    ):
         monkeypatch.setattr(importlib.import_module(name), "build_artifact", lambda **k: {"records": {"FPT": {}}})
     fin = importlib.import_module("canonical_daily_financial_v2_materialization")
     for name in ("build_engine_artifact", "build_evaluated_valuation_artifact"):
