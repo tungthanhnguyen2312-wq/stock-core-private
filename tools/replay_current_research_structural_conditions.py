@@ -12,7 +12,7 @@ import time
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import daily_session_level2_package as paths_module
-import integrated_investment_decision_product as product
+import stocklookup_core.decision.integrated_investment_decision_product as product
 import market_structure_breakout_product_projection as projection
 import market_wide_relative_volume_research as participation
 import technical_structure_context as structure_module
@@ -40,6 +40,7 @@ def replay_delivery(retained: Path, output: Path, session: str):
     base_source = subprocess.check_output(["git", "show", "59580f6cda300dce8013af284d2ce11e026e3029:ai_research_session_delivery.py"], text=True, encoding="utf-8")
     namespace = {"__name__": "retained_base_delivery"}
     # Only relocate live imports; the historical Git blob stays unchanged.
+    base_source = base_source.replace('from current_daily_decision_research_product import', 'from stocklookup_core.decision.current_daily_decision_research_product import')
     base_source = base_source.replace('from financial_analysis_product_projection import context_for_ticker, validate_product_context', 'from stocklookup_core.financial.financial_analysis_product_projection import context_for_ticker, validate_product_context')
     exec(compile(base_source, "retained_base_delivery", "exec"), namespace)
     base_project = namespace["project_integrated_decision_for_ai_delivery"]

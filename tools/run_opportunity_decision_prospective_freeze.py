@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
  sys.path.insert(0, str(ROOT))
 
-from current_opportunity_prioritization import replay as replay_opportunity
+from stocklookup_core.decision.current_opportunity_prioritization import replay as replay_opportunity
 from daily_opportunity_decision_queue import replay as replay_queue
 from daily_research_session_operations import _identity, assert_manifest_and_queue_match_registered_session, load_registry
 from polymorphic_current_strategy_classification import content_identity as strategy_identity

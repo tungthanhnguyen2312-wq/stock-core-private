@@ -2053,7 +2053,7 @@ def maybe_build_triage_dependent(
         return {"built": False, "reason": {"status": "ALREADY_PRESENT_EXACT_SESSION_TRIAGE"}}
     from current_evidence_bound_scenario import build as build_scenario
     from polymorphic_current_strategy_classification import build as build_strategy
-    from current_opportunity_prioritization import build as build_opp, content_identity as opp_id
+    from stocklookup_core.decision.current_opportunity_prioritization import build as build_opp, content_identity as opp_id
     triage_path = paths["session_triage"] if generated_triage else (
         execution_root / triage["path"] if triage.get("path") else paths["session_triage"]
     )

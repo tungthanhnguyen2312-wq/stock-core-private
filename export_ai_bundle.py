@@ -142,10 +142,10 @@ from market_wide_current_descriptive_research import (
 from current_market_sector_leadership_context import (
     content_identity as current_market_sector_leadership_context_content_identity,
 )
-from current_research_risk_register import (
+from stocklookup_core.decision.current_research_risk_register import (
     content_identity as current_research_risk_register_content_identity,
 )
-from current_research_decision_packet_product import (
+from stocklookup_core.decision.current_research_decision_packet_product import (
     load_verified_packet as load_current_research_decision_packet_artifact,
     project_ticker as project_current_research_decision_packet_ticker,
 )
@@ -169,7 +169,7 @@ from current_corporate_event_context import (
 from current_corporate_intelligence_axis import (
     content_identity as current_corporate_intelligence_axis_content_identity,
 )
-from integrated_investment_decision_product import (
+from stocklookup_core.decision.integrated_investment_decision_product import (
     content_identity as integrated_investment_decision_product_content_identity,
 )
 from market_wide_historical_research_context import (
@@ -178,7 +178,7 @@ from market_wide_historical_research_context import (
 from historical_matched_trading_value_authority import (
     content_identity as historical_matched_trading_value_content_identity,
 )
-from current_market_screening_opportunity_comparison_foundation import (
+from stocklookup_core.decision.current_market_screening_opportunity_comparison_foundation import (
     content_identity as current_market_screening_comparison_content_identity,
 )
 from market_wide_current_fundamental_research import (
@@ -193,7 +193,7 @@ from sector_aware_relative_research import (
 from current_evidence_bound_scenario import (
     content_identity as current_evidence_bound_scenario_content_identity,
 )
-from current_daily_decision_research_product import (
+from stocklookup_core.decision.current_daily_decision_research_product import (
     content_identity as current_daily_decision_research_product_content_identity,
 )
 from daily_opportunity_decision_queue import (

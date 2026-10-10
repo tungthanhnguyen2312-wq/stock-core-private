@@ -1,7 +1,7 @@
 import copy
 import pytest
 import stocklookup_core.financial.fundamental_signal_consumption_contract as contract
-import integrated_investment_decision_product as product
+import stocklookup_core.decision.integrated_investment_decision_product as product
 import stocklookup_core.financial.financial_analysis_product_projection as projection
 from ai_research_session_delivery import project_integrated_decision_for_ai_delivery
 from test_integrated_fundamental_state_consumption import _compact

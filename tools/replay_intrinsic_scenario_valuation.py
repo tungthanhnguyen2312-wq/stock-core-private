@@ -11,11 +11,11 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import canonical_daily_financial_v2_materialization as material
 import current_corporate_intelligence_axis as corporate
-import current_research_decision_input as decision_input
+import stocklookup_core.decision.current_research_decision_input as decision_input
 import stocklookup_core.valuation.current_research_valuation_context as valuation
 import entity_classification_contract as entity
 import stocklookup_core.financial.financial_v2_current_input_authority as authority
-import integrated_investment_decision_product as integrated
+import stocklookup_core.decision.integrated_investment_decision_product as integrated
 import stocklookup_core.valuation.intrinsic_valuation as intrinsic
 from tools.replay_forward_driver_context import replay as replay_existing_driver_join
 

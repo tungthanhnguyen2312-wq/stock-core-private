@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import pytest
 
-import human_ai_decision_evidence_packet as packet
+import stocklookup_core.decision.human_ai_decision_evidence_packet as packet
 
 
 SITUATIONS = {

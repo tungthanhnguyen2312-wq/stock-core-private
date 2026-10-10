@@ -193,7 +193,7 @@ def build(*,root,output_root,session,stage,decision_path=None,technical_path=Non
                     else:put(kind,t,row)
                 excluded={"artifact_identity","artifact_sha256"}
                 if kind in {"decision","sealed_decision"}:
-                    import integrated_investment_decision_product as product
+                    import stocklookup_core.decision.integrated_investment_decision_product as product
                     excluded=product._IDENTITY_EXCLUDED
                 metadata,digest,_=stream_artifact(path,excluded=excluded,on_record=retain)
                 if metadata.get("artifact_sha256")!=digest or metadata.get("session")!=session:raise ValueError("THESIS_SOURCE_HASH_OR_SESSION_INVALID:"+kind)

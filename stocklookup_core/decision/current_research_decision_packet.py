@@ -4,9 +4,9 @@ import copy, hashlib, json
 from collections import Counter
 from typing import Any, Mapping
 
-from current_opportunity_prioritization import content_identity as opportunity_identity
+from stocklookup_core.decision.current_opportunity_prioritization import content_identity as opportunity_identity
 from current_evidence_bound_scenario import content_identity as scenario_identity
-from current_research_risk_register import content_identity as risk_identity
+from stocklookup_core.decision.current_research_risk_register import content_identity as risk_identity
 from current_market_sector_leadership_context import content_identity as leadership_identity
 from current_financial_momentum_context import content_identity as financial_identity
 from current_corporate_event_context import content_identity as event_identity
@@ -75,7 +75,7 @@ def build_artifact(*, opportunity: Mapping[str,Any], scenario: Mapping[str,Any]|
  valid={name:a for name,a in supplied.items() if manifest[name]["status"]=="PRESENT"}
  security_records={}
  if integrated_decision is not None:
-  import integrated_investment_decision_product as owner
+  import stocklookup_core.decision.integrated_investment_decision_product as owner
   # The packet universe is the official opportunity set. Integrated Decision also
   # retains the wider acquisition denominator. Every opportunity ticker must have
   # an integrated record; extra integrated records are not packet rows.
@@ -169,7 +169,7 @@ def replay(a:Mapping[str,Any])->None:
  for ticker,row in records.items():
   if row.get("ticker")!=ticker:raise CurrentResearchDecisionPacketError("PACKET_TICKER_MISMATCH")
   if row.get("security_decision") is not None:
-   import integrated_investment_decision_product as owner
+   import stocklookup_core.decision.integrated_investment_decision_product as owner
    owner.validate_posture_policy(row["security_decision"])
    if not (a.get("source_artifact_identities") or {}).get("integrated_decision"):
     raise CurrentResearchDecisionPacketError("PACKET_SECURITY_DECISION_SOURCE_MISSING")

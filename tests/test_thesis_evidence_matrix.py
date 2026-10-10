@@ -6,7 +6,7 @@ import pytest
 import stocklookup_core.research.thesis_evidence_contract as c
 import stocklookup_core.research.thesis_evidence_adapters as a
 import stocklookup_core.research.thesis_evidence_matrix as m
-import integrated_investment_decision_product as product
+import stocklookup_core.decision.integrated_investment_decision_product as product
 
 LONG,SHORT=c.LENSES
 REF={"decision_identity":"decision:FPT:one","research_action_posture":"WAIT_FOR_CONFIRMATION"}

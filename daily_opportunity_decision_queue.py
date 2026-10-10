@@ -11,7 +11,7 @@ import copy
 from collections import Counter
 from typing import Any, Mapping
 
-from current_opportunity_prioritization import TIERS
+from stocklookup_core.decision.current_opportunity_prioritization import TIERS
 from field_temporal_contract import stable_id
 
 CONTRACT_VERSION = "daily_opportunity_decision_queue/v1"

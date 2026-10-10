@@ -12,7 +12,7 @@ CANONICAL_BASE_SHA = "3137441656019e4b7974978f034915d361b5c307"
 ENTRYPOINTS = (
     "stocklookup", "tools.run_owner_daily", "canonical_daily_operation",
     "canonical_post_close_pipeline", "daily_session_level2_package",
-    "canonical_daily_financial_v2_materialization", "current_research_decision_input",
+    "canonical_daily_financial_v2_materialization", "stocklookup_core.decision.current_research_decision_input",
     "stocklookup_core.valuation.current_research_valuation_context", "current_corporate_event_context",
     "official_liquidity_market_wide", "prospective_pit_evidence_analysis",
     "dnse_prospective_pit_shadow", "execution_capacity_research", "portfolio_aware_decision",

@@ -1742,7 +1742,7 @@ def test_new_daily_binds_exact_current_context_only_before_decision_cutoff(tmp_p
 def test_current_post_handoff_brief_consumes_overlay_without_rewriting_frozen_brief(tmp_path, monkeypatch):
     import canonical_current_product_projections as ccpp
     import daily_research_session_operations as operations
-    import daily_integrated_decision_brief as brief_module
+    import stocklookup_core.decision.daily_integrated_decision_brief as brief_module
     import official_corporate_event_incremental_acquisition as incremental
     import corporate_currency_rollforward as corporate
     session = "2026-10-01"

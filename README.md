@@ -60,6 +60,7 @@ The current production workflow is operated through the canonical Owner Daily pa
 | Official document evidence | [stocklookup_core/evidence/](stocklookup_core/evidence/) |
 | Financial panels, Financial V2 and fundamental research | [stocklookup_core/financial/](stocklookup_core/financial/) |
 | Valuation calculations, peers and current-input scaleout | [stocklookup_core/valuation/](stocklookup_core/valuation/) |
+| Decision inputs, contexts, packets, briefs and workspace projection | [stocklookup_core/decision/](stocklookup_core/decision/) |
 | Independent thesis research | [stocklookup_core/research/](stocklookup_core/research/) |
 
 ## Canonical runtime path

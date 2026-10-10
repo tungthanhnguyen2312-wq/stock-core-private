@@ -385,7 +385,7 @@ def freeze_prospective_research_cohort(*, session: str, triage: Mapping[str, Any
     packet_records: Mapping[str, Any] = {}
     packet_identity = None
     if decision_packet is not None:
-        from current_research_decision_packet import replay as _replay_packet
+        from stocklookup_core.decision.current_research_decision_packet import replay as _replay_packet
         if decision_packet.get('research_session') != session:
             raise ValueError('PROSPECTIVE_COHORT_SNAPSHOT_DECISION_PACKET_INVALID_OR_SESSION_MISMATCH')
         _replay_packet(decision_packet)  # reuses the packet's own identity/coverage/forbidden-field gate

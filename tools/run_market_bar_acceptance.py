@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "tests"))
 import canonical_market_bars as bars
-import integrated_investment_decision_product as product
+import stocklookup_core.decision.integrated_investment_decision_product as product
 import market_wide_historical_research_context as history
 from test_production_call_shape_smoke import _offline_smoke_guard
 

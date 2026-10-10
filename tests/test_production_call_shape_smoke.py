@@ -170,7 +170,7 @@ def _run_offline_production_shape(
         trace["events"] = events = []
         delivery = importlib.import_module("ai_research_session_delivery")
         next_brief = importlib.import_module("next_session_decision_brief")
-        daily_brief = importlib.import_module("daily_integrated_decision_brief")
+        daily_brief = importlib.import_module('stocklookup_core.decision.daily_integrated_decision_brief')
         comparison = importlib.import_module("session_comparison_semantics")
 
         def blocked_provider_boundary(*_args: Any, **_kwargs: Any) -> None:
@@ -330,7 +330,7 @@ def _run_offline_production_shape(
             if corporate_rollforward_fn is None:
                 return {"status": "UNAVAILABLE"}
             from corporate_currency_rollforward import current_product_projection
-            import investment_decision_workspace_projection as workspace
+            import stocklookup_core.decision.investment_decision_workspace_projection as workspace
             overlay = kwargs["current_corporate_knowledge_overlay"]
             frozen = {"contract_version": workspace.CONTRACT_VERSION, "as_of_session": SESSION,
                       "source_artifacts": {"integrated_investment_decision_product": kwargs["integrated_investment_decision_product"]["artifact_identity"]},

@@ -13,7 +13,7 @@ from ai_research_ticker_extractor import (
     resolve_daily_producer_run,
     write_packet,
 )
-from current_daily_decision_research_product import OWNER_FOCUS_TICKERS, WATCHLIST
+from stocklookup_core.decision.current_daily_decision_research_product import OWNER_FOCUS_TICKERS, WATCHLIST
 from owner_research_focus import owner_focus_tickers
 
 

@@ -26,7 +26,7 @@ from pathlib import Path
 from statistics import mean, median
 from typing import Any, Callable, Mapping, Sequence
 
-import current_market_screening_opportunity_comparison_foundation as screening_module
+import stocklookup_core.decision.current_market_screening_opportunity_comparison_foundation as screening_module
 import historical_tactical_replay_evidence_foundation as foundation
 import tactical_reversal_retrospective_validation as validation
 import watchlist_tactical_entry_classifier as classifier

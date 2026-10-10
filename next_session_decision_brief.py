@@ -420,7 +420,7 @@ def _classify_posture_transition(previous: Mapping[str, Any] | None, current: Ma
         return "NO_LONGER_AVAILABLE"
     if previous is None:
         return "NEWLY_AVAILABLE"
-    from integrated_investment_decision_product import research_policy_epoch
+    from stocklookup_core.decision.integrated_investment_decision_product import research_policy_epoch
     if research_policy_epoch(previous) != research_policy_epoch(current):
         return "NOT_COMPARABLE_POLICY_CHANGE"
     prev_posture, curr_posture = previous.get("research_action_posture"), current.get("research_action_posture")

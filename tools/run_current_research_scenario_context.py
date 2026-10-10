@@ -8,7 +8,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
-from current_research_risk_register import build_artifact as build_risk_register
+from stocklookup_core.decision.current_research_risk_register import build_artifact as build_risk_register
 from current_research_scenario_context import build_artifact, replay
 
 DEFAULTS = {

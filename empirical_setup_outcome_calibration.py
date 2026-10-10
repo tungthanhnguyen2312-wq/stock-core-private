@@ -34,7 +34,7 @@ from collections import Counter, defaultdict
 from typing import Any, Mapping, Sequence
 
 import integrated_decision_prospective_feedback as feedback_bridge
-import integrated_investment_decision_product as decision_product
+import stocklookup_core.decision.integrated_investment_decision_product as decision_product
 import prospective_decision_outcome_feedback as outcome_feedback
 import prospective_decision_retention as retention
 

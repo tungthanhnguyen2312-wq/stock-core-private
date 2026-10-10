@@ -62,7 +62,7 @@ def _stage(ticker, session, identity, basis, bindings, diagnostic=False):
 
 
 def adapt_integrated(row, *, bindings=None):
-    import integrated_investment_decision_product as product
+    import stocklookup_core.decision.integrated_investment_decision_product as product
     if row.get("decision_identity") != product.decision_identity(row): raise ValueError("THESIS_DECISION_IDENTITY_INVALID")
     if not product.is_valid_evidence_currency(row.get("evidence_currency")): raise ValueError("THESIS_EVIDENCE_CURRENCY_INVALID")
     ticker, session, identity = row["ticker"], row["as_of_session"], row["decision_identity"]

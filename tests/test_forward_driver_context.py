@@ -4,7 +4,7 @@ import copy
 import pytest
 
 import current_corporate_intelligence_axis as axis
-import integrated_investment_decision_product as product
+import stocklookup_core.decision.integrated_investment_decision_product as product
 
 
 def event(**changes):

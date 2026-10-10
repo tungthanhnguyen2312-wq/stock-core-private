@@ -18,7 +18,7 @@ from current_research_official_universe_scope import (
     CurrentResearchOfficialUniverseScopeError, eligible_ticker_set, resolve_scope,
 )
 from screener_master_projection import build_projection
-import investment_decision_workspace_projection as _workspace_module
+import stocklookup_core.decision.investment_decision_workspace_projection as _workspace_module
 from _integrated_decision_fixture import integrated_decision as _integrated_decision
 
 
@@ -365,7 +365,7 @@ def test_21b_canonical_resolver_reads_pinned_real_evidence():
 def test_22_integration_is_explicit_opt_in():
     import inspect
     from screener_master_projection import build_projection as _bp
-    from investment_decision_workspace_projection import build_artifacts as _ba
+    from stocklookup_core.decision.investment_decision_workspace_projection import build_artifacts as _ba
     assert inspect.signature(_bp).parameters["current_research_scope"].default is None
     assert inspect.signature(_ba).parameters["current_research_scope"].default is None
 

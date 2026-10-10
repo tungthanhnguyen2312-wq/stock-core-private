@@ -12,7 +12,7 @@ import sys
 import stocklookup_core.financial.financial_analysis_engine_v2 as engine
 import stocklookup_core.financial.financial_analysis_product_projection as projection
 import stocklookup_core.financial.fundamental_signal_consumption_contract as contract
-import integrated_investment_decision_product as iidp
+import stocklookup_core.decision.integrated_investment_decision_product as iidp
 
 SESSION = "2026-09-24"  # last completed quarter 2026-Q2
 CURRENT_PERIOD = "2026-Q2"

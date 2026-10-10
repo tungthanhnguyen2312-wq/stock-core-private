@@ -260,7 +260,7 @@ def _rows(n: int) -> list[dict]:
 
 def _canonical_iid(rows: list[dict], *, m1: bool) -> dict:
     """A canonical Integrated Decision artifact whose identity recomputes (the index is its read model)."""
-    import integrated_investment_decision_product as integrated_contract
+    import stocklookup_core.decision.integrated_investment_decision_product as integrated_contract
     coverage = {"universe_denominator": len(rows)}
     if m1:
         coverage["evidence_currency_distribution"] = {"CURRENT_SESSION": 4}
@@ -304,8 +304,8 @@ def _operation(tmp_path: Path, *, m1: bool = True, declare: bool = True, write_b
     operation manifest declaring the Integrated Decision (retained under the fixture root), the
     Brief (retained with its binding wrapper) and the Daily product (3 scoped cards, 2 owner-focus
     tickers); and an AI delivery projected by the serializer's own overlay function."""
-    import current_daily_decision_research_product as daily_product_contract
-    import daily_integrated_decision_brief as brief_contract
+    import stocklookup_core.decision.current_daily_decision_research_product as daily_product_contract
+    import stocklookup_core.decision.daily_integrated_decision_brief as brief_contract
     from ai_research_session_delivery import project_integrated_decision_delivery_overlay
     from daily_research_session_operations import _identity as operation_identity_of
     from daily_research_session_operations import brief_retention_identity
@@ -797,7 +797,7 @@ def test_the_sealed_manifest_cannot_be_downgraded(monkeypatch, tmp_path):
 
 def _forge_product(source: Path, mutate) -> None:
     """Codex bypass: replace the Daily product, recompute its identity, rebind the bundle to it."""
-    import current_daily_decision_research_product as daily_product_contract
+    import stocklookup_core.decision.current_daily_decision_research_product as daily_product_contract
     path = source / "current_daily_decision_research_product_artifact.json"
     product = json.loads(path.read_text())
     mutate(product)

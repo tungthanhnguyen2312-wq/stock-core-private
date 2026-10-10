@@ -6,7 +6,7 @@ and technical-invalidation semantic labeling for adverse (no-thesis) stances.
 """
 from __future__ import annotations
 
-from security_decision_context import build_ticker_decision, infer_research_stance
+from stocklookup_core.decision.security_decision_context import build_ticker_decision, infer_research_stance
 
 DECISION = "2026-08-28"
 

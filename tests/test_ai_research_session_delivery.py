@@ -4,7 +4,7 @@ import json
 import pytest
 
 from ai_research_session_delivery import AI_CONTRACT, FULL_UNIVERSE_COMPANION_ROLE, PRIMARY_HUMAN_REVIEW_FILENAME, build_delivery
-from current_daily_decision_research_product import OWNER_FOCUS_TICKERS, WATCHLIST, ABSENT_OWNER_FOCUS_STATUS
+from stocklookup_core.decision.current_daily_decision_research_product import OWNER_FOCUS_TICKERS, WATCHLIST, ABSENT_OWNER_FOCUS_STATUS
 from owner_research_focus import broader_watchlist, owner_focus_tickers
 
 

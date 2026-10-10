@@ -20,7 +20,7 @@ from daily_research_session_operations import load_registry
 from field_temporal_contract import stable_id
 import release_session_contract
 import dashboard_home_summary
-import investment_decision_workspace_projection as workspace_contract
+import stocklookup_core.decision.investment_decision_workspace_projection as workspace_contract
 import screener_master_projection as screener_contract
 
 CONTRACT_VERSION = "canonical_dashboard_runtime_release/v1"

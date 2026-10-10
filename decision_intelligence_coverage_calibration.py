@@ -12,7 +12,7 @@ from typing import Any, Iterable, Mapping
 
 import decision_outcome_calibration_review as calibration
 import historical_temporal_research_panel as panel
-import human_ai_decision_evidence_packet as evidence_packet
+import stocklookup_core.decision.human_ai_decision_evidence_packet as evidence_packet
 
 CONTRACT_VERSION = "decision_intelligence_coverage_calibration/v1"
 CANONICAL_DENOMINATOR = 1683

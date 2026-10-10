@@ -73,7 +73,7 @@ def test_retained_source_anchor_spans_and_new_facts_stay_historical_context():
     from tests.test_current_official_evidence_projection import baseline
     import market_wide_current_fundamental_research as fundamental
     from stocklookup_core.valuation.market_wide_current_valuation_input_scaleout import _financial_input
-    from current_research_decision_packet import _valuation
+    from stocklookup_core.decision.current_research_decision_packet import _valuation
     from ai_research_session_delivery import _compact_context
     root = Path(__file__).resolve().parents[1] / "derived/financial-evidence-currency-refresh-v1"
     sources = json.loads((root / "retained_annual_assurance_source_tokens.json").read_text(encoding="utf8"))

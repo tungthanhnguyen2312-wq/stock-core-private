@@ -89,9 +89,9 @@ def current_product_projection(frozen_product: dict, overlay: dict) -> dict:
     product.pop("artifact_identity", None)
     product.pop("artifact_sha256", None)
     if product.get("contract_version") == "investment_decision_workspace_projection/v1":
-        from investment_decision_workspace_projection import content_identity
+        from stocklookup_core.decision.investment_decision_workspace_projection import content_identity
     elif product.get("contract_version") == "daily_integrated_decision_brief/v1":
-        from daily_integrated_decision_brief import content_identity
+        from stocklookup_core.decision.daily_integrated_decision_brief import content_identity
     else:
         raise ValueError("CURRENT_OVERLAY_PRODUCT_CONTRACT_UNSUPPORTED")
     product.update(content_identity(product))

@@ -7,10 +7,10 @@ from pathlib import Path
 import pytest
 
 from stocklookup_core.valuation.current_valuation_opportunity_integration import build_artifacts as build_opportunity_artifacts
-from investment_decision_workspace_projection import (
+from stocklookup_core.decision.investment_decision_workspace_projection import (
     InvestmentDecisionWorkspaceError, RELATIVE_VALUATION_LABELS, content_identity,
 )
-import investment_decision_workspace_projection as _workspace_module
+import stocklookup_core.decision.investment_decision_workspace_projection as _workspace_module
 from _integrated_decision_fixture import integrated_decision as _integrated_decision, minimal_integrated_record
 
 DECISION = "2026-08-28"
@@ -350,7 +350,7 @@ def test_existing_research_stance_byte_identical_with_diagnostic_passthrough():
 
 import same_session_technical_coverage_disposition as _disposition_module
 import market_wide_current_technical_coverage_scaleout as _scaleout_module
-from investment_decision_workspace_projection import _coherent_technical_evidence
+from stocklookup_core.decision.investment_decision_workspace_projection import _coherent_technical_evidence
 
 
 def _disposition_artifact(records: dict, *, session: str = DECISION) -> dict:

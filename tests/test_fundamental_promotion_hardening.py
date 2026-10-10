@@ -11,11 +11,11 @@ from __future__ import annotations
 import sys
 
 import asymmetric_dislocation_research as adr
-import current_research_decision_input as decision_input
+import stocklookup_core.decision.current_research_decision_input as decision_input
 import stocklookup_core.financial.financial_analysis_engine_v2 as engine
 import stocklookup_core.financial.financial_analysis_product_projection as projection
 import stocklookup_core.financial.fundamental_signal_consumption_contract as contract
-import integrated_investment_decision_product as iidp
+import stocklookup_core.decision.integrated_investment_decision_product as iidp
 import stocklookup_core.financial.market_wide_financial_analysis_v2_scaleout as scaleout
 import multi_session_signal_velocity as velocity
 import next_session_decision_brief as next_brief
@@ -411,9 +411,9 @@ def test_changed_decision_modules_never_import_a_provider() -> None:
     from pathlib import Path
 
     root = Path(__file__).resolve().parents[1]
-    probe = ("import sys; import stocklookup_core.financial.fundamental_signal_consumption_contract, integrated_investment_decision_product, "
+    probe = ("import sys; import stocklookup_core.financial.fundamental_signal_consumption_contract, stocklookup_core.decision.integrated_investment_decision_product, "
              "asymmetric_dislocation_research, multi_session_signal_velocity, next_session_decision_brief, "
-             "prospective_decision_outcome_feedback, prospective_decision_outcome_measurement, current_research_decision_input; "
+             "prospective_decision_outcome_feedback, prospective_decision_outcome_measurement, stocklookup_core.decision.current_research_decision_input; "
              "print(sorted(m for m in sys.modules if m.split('.')[0] in ('vnstock', 'vnai', 'vnstock_data')))")
     completed = subprocess.run([sys.executable, "-c", probe], cwd=root, capture_output=True, text=True, check=True)
     assert completed.stdout.strip() == "[]"

@@ -4,7 +4,7 @@ import pytest
 
 import stocklookup_core.financial.financial_analysis_product_projection as projection
 import stocklookup_core.valuation.current_research_valuation_context as peers
-import integrated_investment_decision_product as decision
+import stocklookup_core.decision.integrated_investment_decision_product as decision
 from ai_research_session_delivery import project_integrated_decision_for_ai_delivery
 
 

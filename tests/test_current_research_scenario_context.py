@@ -8,7 +8,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-import current_research_risk_register as register
+import stocklookup_core.decision.current_research_risk_register as register
 import current_research_scenario_context as scenario
 import export_ai_bundle as bundle
 

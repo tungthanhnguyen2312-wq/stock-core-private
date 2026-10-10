@@ -583,9 +583,9 @@ def resolve_m1_handoff_authority(source: Path, session: str, *, root: Path | Non
     """
     if not _sealed_m1_applicable(manifest):
         return None
-    import current_daily_decision_research_product as daily_product_contract
-    import daily_integrated_decision_brief as brief_contract
-    import integrated_investment_decision_product as integrated_contract
+    import stocklookup_core.decision.current_daily_decision_research_product as daily_product_contract
+    import stocklookup_core.decision.daily_integrated_decision_brief as brief_contract
+    import stocklookup_core.decision.integrated_investment_decision_product as integrated_contract
     from ai_research_session_delivery import project_integrated_decision_delivery_overlay
     from daily_research_session_operations import BRIEF_RETENTION_CONTRACT, brief_retention_identity
     from portfolio_aware_decision import IntegratedDecisionResolutionError, resolve_operation_bound_integrated_decision

@@ -6,7 +6,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-import current_research_risk_register as register
+import stocklookup_core.decision.current_research_risk_register as register
 import export_ai_bundle as bundle
 
 ROOT = Path(__file__).resolve().parents[1]

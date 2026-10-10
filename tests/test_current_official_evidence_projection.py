@@ -7,10 +7,10 @@ import pytest
 
 import market_wide_current_fundamental_research as fundamental
 import market_wide_current_corporate_intelligence as ci
-import current_research_decision_packet as packet
+import stocklookup_core.decision.current_research_decision_packet as packet
 import current_corporate_event_context as corporate
 import current_official_event_context as official
-from current_opportunity_prioritization import content_identity as opportunity_identity
+from stocklookup_core.decision.current_opportunity_prioritization import content_identity as opportunity_identity
 from stocklookup_core.valuation.market_wide_current_valuation_input_scaleout import _financial_input
 
 ROOT = Path(__file__).resolve().parents[1]

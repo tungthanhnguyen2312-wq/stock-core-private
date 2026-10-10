@@ -7,7 +7,7 @@ import pytest
 from bounded_artifact_stream import canonical_bytes, record_mapping_digest
 from bounded_artifact_stream import pretty_record_chunks
 import daily_research_session_operations as operations
-import integrated_investment_decision_product as iid
+import stocklookup_core.decision.integrated_investment_decision_product as iid
 
 
 @pytest.mark.parametrize('value', [

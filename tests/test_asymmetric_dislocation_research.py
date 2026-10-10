@@ -316,7 +316,7 @@ def test_unknown_survivability_only_when_no_level_can_be_established():
 
 
 def test_survivability_reads_the_level_from_a_retained_synthesis_never_the_direction():
-    import integrated_investment_decision_product as iidp
+    import stocklookup_core.decision.integrated_investment_decision_product as iidp
     compact = {"contract_version": "financial_analysis_compact/v1", "status": "AVAILABLE",
                "analysis_family": "INDUSTRIAL_FINANCIAL_ANALYSIS", "issuer_type": "corporate",
                "profitability_state": "LOSS_MAKING", "balance_sheet_state": "STRENGTHENING", "leverage_state": "IMPROVING",

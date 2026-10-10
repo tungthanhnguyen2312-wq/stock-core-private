@@ -9,7 +9,7 @@ import stocklookup_core.financial.financial_analysis_engine_v2 as engine
 from stocklookup_core.financial.financial_analysis_product_projection import (
     FinancialAnalysisProductProjectionError, build_product_projection, context_for_ticker,
 )
-from security_decision_context import _financial_analysis_annotation
+from stocklookup_core.decision.security_decision_context import _financial_analysis_annotation
 from ai_research_session_delivery import build_delivery
 from export_ai_bundle import attach_financial_analysis_v2_product_context
 

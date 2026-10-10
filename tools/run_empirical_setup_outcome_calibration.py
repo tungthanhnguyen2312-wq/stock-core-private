@@ -132,7 +132,7 @@ def retained_acceptance(root, *, baseline_inventory=None, baseline_feedback=None
         "human_review_candidate_count": artifact["policy_calibration_candidates"]["human_review_candidate_count"],
         "accumulation_gate": "NEW_IMMUTABLE_T0_WITH_KNOWN_POLICY_AND_FEATURE_VERSIONS; 50_MATURE_OBSERVATIONS_FROM_10_DISTINCT_T0_SESSIONS_PER_COMPARABLE_HORIZON; QUALIFIED_PRICE_BASIS; PREDECLARED_GOVERNED_REVIEW_RULE",
         "source_hashes": dict(sorted(source_hashes.items())), "source_file_count": len(source_hashes),
-        "implementation_source_sha256": {name: _source_digest(ROOT / name) for name in ("empirical_setup_outcome_calibration.py", "prospective_decision_outcome_feedback.py", "prospective_decision_outcome_measurement.py", "prospective_decision_retention.py", "integrated_decision_prospective_feedback.py", "integrated_investment_decision_product.py", "tools/run_empirical_setup_outcome_calibration.py")},
+        "implementation_source_sha256": {name: _source_digest(ROOT / ("stocklookup_core/decision/" + name if name == "integrated_investment_decision_product.py" else name)) for name in ("empirical_setup_outcome_calibration.py", "prospective_decision_outcome_feedback.py", "prospective_decision_outcome_measurement.py", "prospective_decision_retention.py", "integrated_decision_prospective_feedback.py", "integrated_investment_decision_product.py", "tools/run_empirical_setup_outcome_calibration.py")},
         "mutation_check": {"changed_source_files": [], "unchanged": True, "baseline_hashes_unchanged": True},
         "deterministic_replay": {"reversed_input_order_identity_equal": True, "artifact_identity": artifact["artifact_identity"]},
         "before_after": comparison, "authority_effect": "NONE", "automatic_policy_change": False}

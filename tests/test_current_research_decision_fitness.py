@@ -8,7 +8,7 @@ import sys
 
 import pytest
 
-import current_research_decision_input as m
+import stocklookup_core.decision.current_research_decision_input as m
 
 
 def _item(ticker: str, evidence_class: str, *, states=None, authorities=None,

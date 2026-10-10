@@ -104,7 +104,7 @@ def _daily_integrated_decision_brief(
         print("STATUS: DAILY_INTEGRATED_DECISION_BRIEF_SKIPPED\nREASON: NEXT_SESSION_DECISION_BRIEF_NOT_AVAILABLE")
         return None
     try:
-        from daily_integrated_decision_brief import build_from_session
+        from stocklookup_core.decision.daily_integrated_decision_brief import build_from_session
         next_session_brief = json.loads(decision_brief_path.read_text(encoding="utf-8"))
         brief = build_from_session(root=root, session=session, next_session_brief=next_session_brief)
         if brief is None:

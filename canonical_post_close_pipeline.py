@@ -884,7 +884,7 @@ def resolve_current_session_priority_queue(
     stale, or self-inconsistent input leaves priority explicitly unavailable -- never a stale
     queue resurrected to make coverage nonzero.
     """
-    import current_opportunity_prioritization as opportunity_module
+    import stocklookup_core.decision.current_opportunity_prioritization as opportunity_module
     import daily_opportunity_decision_queue as queue_module
     import full_universe_entry_candidate_triage as triage_module
 
@@ -1055,12 +1055,12 @@ def build_enrichment_components(
 
     def _integrated_investment_decision_product():
         nonlocal iid_write_receipt
-        from integrated_investment_decision_product import build_artifact as build
+        from stocklookup_core.decision.integrated_investment_decision_product import build_artifact as build
         import canonical_current_product_projections as product_projections
         import canonical_daily_financial_v2_materialization as fin_v2_material
         import entity_classification_contract as entity_contract
         import stocklookup_core.financial.financial_v2_current_input_authority as fin_v2_authority
-        import integrated_investment_decision_product as integrated_contract
+        import stocklookup_core.decision.integrated_investment_decision_product as integrated_contract
         import operational_fundamental_context_integration as operational_fundamental
         import market_structure_breakout_product_projection as msb_proj
         import market_wide_relative_volume_research as rvol_research
@@ -2111,12 +2111,12 @@ def build_decision_packet(
     and where the packet itself is written, so a fresh-attempt run never writes its packet over
     Level-2's shared static per-session decision-packet path if a different attempt already has.
     """
-    from current_research_decision_packet import build_artifact
+    from stocklookup_core.decision.current_research_decision_packet import build_artifact
 
     artifact_root = artifact_root or root
     paths = level2.session_artifact_paths(artifact_root, session)
     if packet is not None:
-        from current_research_decision_packet_product import verified_packet
+        from stocklookup_core.decision.current_research_decision_packet_product import verified_packet
         if packet.get("research_session") != session or verified_packet(packet) is None:
             raise CanonicalPostCloseError("CANONICAL_DECISION_PACKET_IDENTITY_OR_SESSION_INVALID")
         _write_json(paths["decision_packet"], packet)

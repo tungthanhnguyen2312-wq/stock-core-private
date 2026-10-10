@@ -21,7 +21,7 @@ def child(args):
     import psutil
     from bounded_artifact_stream import stream_artifact, source_hash
     import daily_research_session_operations as operations
-    import integrated_investment_decision_product as iid
+    import stocklookup_core.decision.integrated_investment_decision_product as iid
     from ai_research_session_delivery import build_delivery
     from feedback_resource_guard import memory_status
     code_paths = [Path(module.__file__) for module in (operations,iid)]

@@ -6,7 +6,7 @@ from collections import Counter
 from typing import Any, Mapping
 
 from field_temporal_contract import stable_id
-from current_research_decision_packet_product import attach_shadow_to_daily_product, markdown as packet_shadow_markdown
+from stocklookup_core.decision.current_research_decision_packet_product import attach_shadow_to_daily_product, markdown as packet_shadow_markdown
 from owner_research_focus import broader_watchlist, owner_focus_tickers
 from shadow_security_recommendation import content_identity as shadow_security_recommendation_content_identity
 

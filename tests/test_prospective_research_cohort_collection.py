@@ -78,7 +78,7 @@ def test_malformed_single_record_isolated_when_packet_hash_is_recomputed():
     # Simulate "one malformed ticker" without re-triggering the whole-packet hash guard: rebuild
     # the packet's own identity over the corrupted payload, so only structural-shape validation
     # inside freeze_prospective_research_cohort is exercised (not the packet's own tamper gate).
-    from current_research_decision_packet import content_identity
+    from stocklookup_core.decision.current_research_decision_packet import content_identity
     triage, packet = _triage(), copy.deepcopy(_packet())
     any_ticker = next(iter(resolve_entry_relevant_cohort(triage)))
     packet['records'][any_ticker]['components'] = 'MALFORMED'

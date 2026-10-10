@@ -9,9 +9,9 @@ from pathlib import Path
 import pytest
 
 import canonical_daily_financial_v2_materialization as financial
-import daily_integrated_decision_brief as brief
+import stocklookup_core.decision.daily_integrated_decision_brief as brief
 import daily_opportunity_decision_queue as queue
-import integrated_investment_decision_product as iid
+import stocklookup_core.decision.integrated_investment_decision_product as iid
 from _integrated_decision_fixture import integrated_decision
 from test_daily_opportunity_decision_queue import _opportunity, _triage
 from test_research_posture_v2_policy import BEAR, FIRED, policy_case

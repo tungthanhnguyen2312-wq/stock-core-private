@@ -15,8 +15,8 @@ from collections import Counter
 from typing import Any, Mapping
 
 import current_official_market_universe as official_universe_module
-import current_opportunity_prioritization as opportunity_module
-import current_research_risk_register as risk_register_module
+import stocklookup_core.decision.current_opportunity_prioritization as opportunity_module
+import stocklookup_core.decision.current_research_risk_register as risk_register_module
 import watchlist_tactical_entry_classifier as tactical_module
 from current_corporate_event_context import content_identity as event_content_identity
 from current_financial_momentum_context import content_identity as financial_content_identity

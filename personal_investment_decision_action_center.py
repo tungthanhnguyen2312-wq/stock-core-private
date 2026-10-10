@@ -45,7 +45,7 @@ from pathlib import Path
 from typing import Any, Mapping, Sequence
 
 import asymmetric_dislocation_research as _asymmetric
-import integrated_investment_decision_product as _integrated
+import stocklookup_core.decision.integrated_investment_decision_product as _integrated
 import owner_research_exclusions as _owner_research_exclusions
 import owner_research_focus as _owner_focus
 import personal_portfolio_quant_risk_decomposition as _quant

@@ -149,7 +149,7 @@ def binding_content_identity(artifact: Mapping[str, Any]) -> dict[str, str]:
 
 def validate_integrated_source(*, session: str, integrated_decision: Mapping[str, Any], tickers) -> dict[str, Any]:
     """Verify the whole streamed IID root and every record, not caller lens assertions."""
-    import integrated_investment_decision_product as owner
+    import stocklookup_core.decision.integrated_investment_decision_product as owner
     _require_binding(isinstance(session, str) and bool(session), "SESSION_REQUIRED")
     _require_binding(isinstance(integrated_decision, Mapping), "INTEGRATED_ARTIFACT_MISSING")
     _require_binding(integrated_decision.get("contract_version") == owner.CONTRACT_VERSION, "INTEGRATED_CONTRACT_MISMATCH")

@@ -12,7 +12,7 @@ import sys
 from pathlib import Path
 from typing import Any, Callable, Mapping
 
-from current_daily_decision_research_product import build as build_product, content_identity as product_identity, markdown
+from stocklookup_core.decision.current_daily_decision_research_product import build as build_product, content_identity as product_identity, markdown
 from current_evidence_bound_scenario import build as build_scenario, content_identity as scenario_identity
 from field_temporal_contract import stable_id
 from market_wide_current_corporate_intelligence import prospective_context
@@ -20,7 +20,7 @@ from polymorphic_current_strategy_classification import build as build_strategy,
 from current_portfolio_risk_envelope import build as build_portfolio_risk
 from current_market_flow_positioning import prospective_context as flow_prospective_context
 from current_macro_regime import session_context as macro_session_context
-from current_opportunity_prioritization import build as build_opportunity, content_identity as opportunity_identity
+from stocklookup_core.decision.current_opportunity_prioritization import build as build_opportunity, content_identity as opportunity_identity
 from daily_opportunity_decision_queue import build as build_decision_queue, content_identity as decision_queue_identity, prospective_context as decision_queue_prospective_context
 from prospective_research_learning import freeze_current_decision_surface
 from sector_aware_relative_research import build as build_peer, content_identity as peer_identity
@@ -374,7 +374,7 @@ def build_operation(inputs: Mapping[str, Any], session: str, *, producer_head: s
         from macro_market_regime_decision_context import build_context
         regime_context = build_context(macro=macro, breadth=packet_inputs.get("breadth"), sector_leadership=packet_inputs.get("market_sector"), presentation=macro_presentation_context, session=session, cutoff=macro_cutoff, knowledge_available_at=macro_cutoff)
         if opportunity is not None:
-            from current_research_decision_packet import build_artifact
+            from stocklookup_core.decision.current_research_decision_packet import build_artifact
             canonical_packet = build_artifact(opportunity=opportunity, scenario=scenario, risk_register=packet_inputs.get("risk_register"), market_sector=packet_inputs.get("market_sector"), financial_momentum=packet_inputs.get("financial_momentum"), corporate_event=packet_inputs.get("corporate_event"), valuation=inputs["valuation"], historical=packet_inputs.get("historical"), regime_context=regime_context, integrated_decision=integrated_decision)
     product = build_product(descriptive=inputs["descriptive"], tactical=inputs["tactical"], peer_relative=peer, fundamental=inputs["fundamental"], valuation=inputs["valuation"], scenario=scenario, triage=inputs["triage"], corporate_intelligence=inputs["corporate_intelligence"], strategy_classification=strategy, portfolio_risk=portfolio_risk, macro_context=macro_context, market_flow_positioning=flow, opportunity_decision_queue=decision_queue, shadow_security_recommendation=shadow_security_recommendation)
     if regime_context is not None:

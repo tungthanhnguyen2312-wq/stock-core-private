@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from copy import deepcopy
 
-import integrated_investment_decision_product as integrated
+import stocklookup_core.decision.integrated_investment_decision_product as integrated
 import operational_fundamental_context_integration as bridge
 
 

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-import daily_integrated_decision_brief as brief
+import stocklookup_core.decision.daily_integrated_decision_brief as brief
 
 
 def _record(ticker: str, *, posture: str, phase: str = "TREND_CONTINUATION", trigger_state: str = "NOT_AVAILABLE",

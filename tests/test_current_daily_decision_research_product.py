@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 
-from current_daily_decision_research_product import (
+from stocklookup_core.decision.current_daily_decision_research_product import (
     ABSENT_OWNER_FOCUS_STATUS,
     OWNER_FOCUS_TICKERS,
     WATCHLIST,

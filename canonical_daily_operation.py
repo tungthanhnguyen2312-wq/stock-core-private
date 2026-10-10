@@ -631,7 +631,7 @@ def _build_preseal_daily_integrated_brief(
     is materialized.  All Analytical inputs are caller-owned/session-addressed.
     """
     from ai_research_session_delivery import build_delivery
-    from daily_integrated_decision_brief import build_from_session
+    from stocklookup_core.decision.daily_integrated_decision_brief import build_from_session
     from next_session_decision_brief import build_from_current_delivery_payload
 
     binding = operation.get("integrated_delivery")

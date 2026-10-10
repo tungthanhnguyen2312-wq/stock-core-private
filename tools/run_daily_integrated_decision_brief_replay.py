@@ -41,12 +41,12 @@ if str(ROOT) not in sys.path:
 
 import current_market_sector_leadership_context as sector_context
 import stocklookup_core.valuation.current_research_valuation_context as valuation_context
-import daily_integrated_decision_brief as brief_module
+import stocklookup_core.decision.daily_integrated_decision_brief as brief_module
 import daily_session_level2_package as level2
 import entity_classification_contract as entity_classification
 import stocklookup_core.financial.financial_analysis_product_projection as fa_projection
 import integrated_decision_prospective_feedback as feedback_bridge
-import integrated_investment_decision_product as iidp
+import stocklookup_core.decision.integrated_investment_decision_product as iidp
 import market_structure_breakout_product_projection as msb_proj
 import stocklookup_core.financial.market_wide_financial_analysis_v2_scaleout as fa_scaleout
 import market_wide_relative_volume_research as rvol_research

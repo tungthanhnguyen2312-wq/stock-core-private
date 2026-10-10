@@ -16,7 +16,7 @@ import sqlite3
 from statistics import median
 from typing import Any, Iterable, Mapping, Sequence
 
-import current_market_screening_opportunity_comparison_foundation as screening_module
+import stocklookup_core.decision.current_market_screening_opportunity_comparison_foundation as screening_module
 import market_wide_current_descriptive_research as descriptive_module
 import market_wide_current_fundamental_research as fundamental_module
 from market_regime_breadth_context import _descriptor

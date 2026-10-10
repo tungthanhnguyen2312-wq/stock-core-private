@@ -426,7 +426,7 @@ def test_supplemental_runtime_launchable_is_false_under_the_tracked_blocked_poli
 def test_research_action_posture_policy_body_is_untouched_by_this_corrective():
     """The corrective changes evidence availability/operating eligibility only; NO_CURRENT_EVIDENCE /
     unavailable axes absorb missing data."""
-    import integrated_investment_decision_product as iid
+    import stocklookup_core.decision.integrated_investment_decision_product as iid
 
     assert iid.EVIDENCE_CURRENCY_CURRENT_SESSION == "CURRENT_SESSION"
     assert hasattr(iid, "decide_research_action_posture")

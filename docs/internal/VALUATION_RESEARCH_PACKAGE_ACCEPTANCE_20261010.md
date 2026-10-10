@@ -5,6 +5,14 @@ Branch `refactor/valuation-research-package-v1-20261010`, dedicated checkout,
 one writer. Starting released main `0afad0fa8d721f8f1e44ca1ccc8a59b0a2d4eed4`.
 The original checkout, untracked data and production runtime remain untouched.
 
+## Released valuation checkpoint
+
+PR109 merged exact owner-approved HEAD `4af95d8e6665eb18457320164e6fbdd2e28399d6`
+at `703b8c79ceedefa653aa5578bb688fd50b27b203` after all four PR CI jobs
+(38034909212) passed; all four post-merge jobs (38035299119) passed. Native successor
+admission records VALUATION_RESEARCH_PACKAGE_V1 COMPLETE at that verified release.
+No production activation or authority promotion occurred.
+
 ## Prior release and native admission
 
 PR108 merged exactly owner-approved HEAD `70499f8b770c5dcc68ca40d993381055f25c0d66`

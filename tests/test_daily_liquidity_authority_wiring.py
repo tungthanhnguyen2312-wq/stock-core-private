@@ -1,7 +1,7 @@
 """DAILY_LIQUIDITY_AUTHORITY_WIRING_RECONCILIATION_V1: scoped summary vs per-record fitness."""
 from __future__ import annotations
 
-import current_research_decision_input as decision_input
+import stocklookup_core.decision.current_research_decision_input as decision_input
 import execution_capacity_research as capacity
 import market_wide_current_liquidity_research as descriptive
 import official_liquidity_market_wide as wide

@@ -16,7 +16,7 @@ import pytest
 
 import canonical_post_close_pipeline as cpc
 import daily_session_level2_package as level2
-import integrated_investment_decision_product as product
+import stocklookup_core.decision.integrated_investment_decision_product as product
 import prospective_decision_retention as retention
 import prospective_t0_seal_index as seals
 from contextual_technical_dispatch import PRODUCTION_V2_START_SESSION

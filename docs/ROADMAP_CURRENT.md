@@ -1,15 +1,16 @@
 # Stock Lookup — Current Roadmap
 
 History: [ROADMAP.md](ROADMAP.md); execution: ROADMAP_STATE.json.
-Updated 2026-10-10 from main `0afad0fa8d721f8f1e44ca1ccc8a59b0a2d4eed4`.
-Nothing below auto-starts: standing program delegation needs native scope admission (AI_RULES 11).
+Updated 2026-10-10 from main `703b8c79ceedefa653aa5578bb688fd50b27b203`.
+Nothing below auto-starts; native standing admission required (AI_RULES 11).
 Facts: [ACTIVE_STATE.md](ACTIVE_STATE.md).
 
-## NOW — VALUATION_RESEARCH_PACKAGE_V1 (ACTIVE)
+## NOW — DECISION_RESEARCH_PACKAGE_V1 (ACTIVE)
 
-Owner standing delegation admits the valuation calculation/peer package: 11 modules,
-original calculations/authority and Daily entrypoints preserved; merge separately gated.
-[Scope, authorization, fiscal reopening gate](valuation_research_package_v1_contract.md).
+Standing admission: 16 decision input/context/packet/brief/workspace implementations.
+Policies, authority and Daily preserved; merge gated.
+[Scope and reopening gates](decision_research_package_v1_contract.md).
+Valuation package COMPLETE: PR109 `703b8c7`, four post-merge CI PASS (38035299119); root Python 543.
 Fiscal mapping lacks issuer calendar/covered-period/provider-label/publication proof;
 existing semantics knowledge time is insufficient. No automatic conversion/promotion.
 Financial package COMPLETE: PR108 `0afad0f`, four post-merge CI PASS; root 572 / Python 554.
