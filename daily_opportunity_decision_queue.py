@@ -53,7 +53,7 @@ def _queue_record(ticker: str, row: Mapping[str, Any]) -> dict[str, Any]:
         "invalidation_or_context_warnings": list(row["invalidation_or_context_warnings"]),
         "opportunity_record_content_identity": row["content_identity"],
         "source_input_identities": dict(row["source_input_identities"]),
-        "authority_note": "research_priority_tier is a research-lane priority signal; it is not entry timing (see entry_action/entry_relevant), not is_full_position_ready, and not position_sizing_status.",
+        "authority_note": "research_priority_tier is a research-lane priority signal; it is not entry timing (see entry_action/entry_relevant), not is_full_position_ready, and not position_sizing_status. tactical_state, entry_action and entry_relevant describe the independent watchlist_tactical_entry_classifier lens identified by source_input_identities.tactical; they are not the Integrated Decision research_action_posture or entry permission. Integrated Decision remains the sole posture authority; disagreement between these research lenses is preserved.",
         "is_actionable": False,
     }
     record["content_identity"] = "daily_opportunity_decision_record:" + stable_id(record)

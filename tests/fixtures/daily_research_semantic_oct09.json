@@ -1,0 +1,825 @@
+{
+  "session": "2026-10-09",
+  "purpose": "Representative public research inputs extracted read-only; reconstructed test artifacts are synthetic, not historical reissues.",
+  "source_identities": {
+    "iid": "integrated_investment_decision_product/v1:9d50e885a04dc165a68c62890a12fc68871d06604f1a2e3580d58de1dfb0d0c8",
+    "tactical": "market_structure_breakout_product_projection/v1:646e447d6b6696ec324e4c9e273c3464d4635c1028ab4d3df6a88a3c06c637cb",
+    "queue": "daily_opportunity_decision_queue:2bf5d852101b62d04e4bd66f7928c07bcefa909e4e79f2bb2de53e02af07ebcf",
+    "brief": "daily_integrated_decision_brief/v1:d347140b811c8c9359dedd3d0f53d4cd63631d3118bd9c04273e35b493032117"
+  },
+  "records": {
+    "EVF": {
+      "tactical": {
+        "ticker": "EVF",
+        "eligible": true,
+        "market_structure_state": "DOWNTREND",
+        "breakout_state_v3": "BELOW_PIVOT",
+        "bos_state": "NO_BOS",
+        "choch_state": "NO_CHOCH",
+        "trigger_state": "BELOW_TRIGGER",
+        "trigger_type": "NO_TRIGGER",
+        "trigger_level": null,
+        "invalidation_level": 11.6,
+        "invalidation_method": "CONFIRMED_SWING_HIGH_BY_RULE_OR_V1_RESISTANCE_FALLBACK",
+        "distance_to_pivot_pct": -0.025862068965517127,
+        "distance_to_invalidation_pct": -0.025862068965517127,
+        "distance_to_trigger_pct": null,
+        "pivot_retest_confirmed": false,
+        "swing_high_sequence": "LH",
+        "swing_low_sequence": "LL",
+        "base_status": "NOT_IN_BASE",
+        "range_state": "RANGE_STABLE",
+        "ma20_slope_state": "FALLING",
+        "high_low_basis": "NOT_COMPATIBLE",
+        "relative_volume_provider_scoped": 1.4473786575614815,
+        "blockers": []
+      },
+      "iid": {
+        "research_action_posture": "AVOID",
+        "posture_condition_class": "BEARISH_STRUCTURE_ADVERSE",
+        "research_action_policy_version": "v2",
+        "evidence_currency": "CURRENT_SESSION",
+        "tactical_phase": "BREAKDOWN",
+        "decision_identity": "decision:EVF:45c717aa5408d250"
+      },
+      "surface": {
+        "evidence_currency": "CURRENT_SESSION",
+        "opportunity_priority_tier": "MONITOR",
+        "posture_condition_class": "BEARISH_STRUCTURE_ADVERSE",
+        "research_action_policy_version": "v2",
+        "research_action_posture": "AVOID",
+        "ticker": "EVF"
+      },
+      "queue": {
+        "research_priority_tier": "MONITOR",
+        "eligible_strategies": [],
+        "lane_specific_priority": {},
+        "tactical_state": "SIDEWAYS_NEUTRAL",
+        "entry_action": "WAIT",
+        "entry_relevant": false,
+        "scenario_status": "SCENARIO_PARTIAL",
+        "event_context_status": "UNAVAILABLE",
+        "fundamental_context_status": "PROVIDER_RESEARCH",
+        "data_quality_status": "MEDIUM",
+        "priority_reasons": [],
+        "blocking_reasons": [
+          "NO_EXISTING_STRATEGY_ELIGIBILITY"
+        ],
+        "invalidation_or_context_warnings": [
+          "Sector-relative comparison is UNAVAILABLE.",
+          "Fundamental evidence is provider-research tier only (descriptive, non-calculation-grade)."
+        ],
+        "opportunity_record_content_identity": "current_opportunity_record:927b8e57c266eabc6fa4859616f2c3c1b425e31182c57214b7c088e9f6bc4aa1",
+        "source_input_identities": {
+          "descriptive": "market_wide_current_descriptive_research:f7dd637012e352921a92da6768829f645ff005fadca5290cb9e6a52b7dab9c71",
+          "event_context": "current_official_event_context:a248a4a3885980409c6161f3d63e8d9188b321fdf0517c3b1fd12a0560525397",
+          "fundamental": "market_wide_current_fundamental_research:47132fc4703e7e6d55d36e9ac93cd6b11f3767d5ae075110ab293beb5d7e7210",
+          "official_universe": "current_official_market_universe:d77e16f82893df419689b24356d066d6a6431bd3c27e09190e3c319e004abb55",
+          "peer": "sector_aware_relative_research:b92ba3fb919d2f801e9e829fb1bbb70a62ee0ed24bb1bd0ec8e8a4d468361431",
+          "scenario": "current_evidence_bound_scenario:a694a18ff0f792b0f2175ea470800a52f3a696bbe8bac7d91d29673b6f90bf29",
+          "screening": "current_market_screening_opportunity_comparison_foundation:140356e9237f60e1e5bfc7698aa4e9e17b65eb5c83577775abc91a37bd6e9369",
+          "strategy": "polymorphic_current_strategy_classification:cd1c007b030875da6c591194024ed01d1e236d7966c93e0e9f87a2e3416ba288",
+          "tactical": "watchlist_tactical_entry_classifier:a5d63cad571380cf4f267c8cfca2add876ba8940ddebb9f2509b7fefa64bed82"
+        }
+      }
+    },
+    "FPT": {
+      "tactical": {
+        "ticker": "FPT",
+        "eligible": true,
+        "market_structure_state": "DOWNTREND",
+        "breakout_state_v3": "BELOW_PIVOT",
+        "bos_state": "NO_BOS",
+        "choch_state": "NO_CHOCH",
+        "trigger_state": "BELOW_TRIGGER",
+        "trigger_type": "NO_TRIGGER",
+        "trigger_level": null,
+        "invalidation_level": 66.6,
+        "invalidation_method": "CONFIRMED_SWING_HIGH_BY_RULE_OR_V1_RESISTANCE_FALLBACK",
+        "distance_to_pivot_pct": -0.13063063063063063,
+        "distance_to_invalidation_pct": -0.13063063063063063,
+        "distance_to_trigger_pct": null,
+        "pivot_retest_confirmed": false,
+        "swing_high_sequence": "LH",
+        "swing_low_sequence": "LL",
+        "base_status": "NOT_IN_BASE",
+        "range_state": "RANGE_EXPANSION",
+        "ma20_slope_state": "FALLING",
+        "high_low_basis": "NOT_COMPATIBLE",
+        "relative_volume_provider_scoped": 2.2225021248707155,
+        "blockers": []
+      },
+      "iid": {
+        "research_action_posture": "AVOID",
+        "posture_condition_class": "BEARISH_STRUCTURE_ADVERSE",
+        "research_action_policy_version": "v2",
+        "evidence_currency": "CURRENT_SESSION",
+        "tactical_phase": "BREAKDOWN",
+        "decision_identity": "decision:FPT:6f093aa50f4e0544"
+      },
+      "surface": {
+        "evidence_currency": "CURRENT_SESSION",
+        "opportunity_priority_tier": "MONITOR",
+        "posture_condition_class": "BEARISH_STRUCTURE_ADVERSE",
+        "research_action_policy_version": "v2",
+        "research_action_posture": "AVOID",
+        "ticker": "FPT"
+      },
+      "queue": {
+        "research_priority_tier": "MONITOR",
+        "eligible_strategies": [],
+        "lane_specific_priority": {},
+        "tactical_state": "BREAKDOWN_RISK",
+        "entry_action": "AVOID",
+        "entry_relevant": false,
+        "scenario_status": "SCENARIO_READY",
+        "event_context_status": "UNAVAILABLE",
+        "fundamental_context_status": "OFFICIAL_QUALIFIED",
+        "data_quality_status": "HIGH",
+        "priority_reasons": [],
+        "blocking_reasons": [
+          "NO_EXISTING_STRATEGY_ELIGIBILITY"
+        ],
+        "invalidation_or_context_warnings": [],
+        "opportunity_record_content_identity": "current_opportunity_record:264d5c91a4ad14128d768df8bfc125d75f5d2a68fc4838f6a9e18a75845c7e9d",
+        "source_input_identities": {
+          "descriptive": "market_wide_current_descriptive_research:f7dd637012e352921a92da6768829f645ff005fadca5290cb9e6a52b7dab9c71",
+          "event_context": "current_official_event_context:a248a4a3885980409c6161f3d63e8d9188b321fdf0517c3b1fd12a0560525397",
+          "fundamental": "market_wide_current_fundamental_research:47132fc4703e7e6d55d36e9ac93cd6b11f3767d5ae075110ab293beb5d7e7210",
+          "official_universe": "current_official_market_universe:d77e16f82893df419689b24356d066d6a6431bd3c27e09190e3c319e004abb55",
+          "peer": "sector_aware_relative_research:b92ba3fb919d2f801e9e829fb1bbb70a62ee0ed24bb1bd0ec8e8a4d468361431",
+          "scenario": "current_evidence_bound_scenario:a694a18ff0f792b0f2175ea470800a52f3a696bbe8bac7d91d29673b6f90bf29",
+          "screening": "current_market_screening_opportunity_comparison_foundation:140356e9237f60e1e5bfc7698aa4e9e17b65eb5c83577775abc91a37bd6e9369",
+          "strategy": "polymorphic_current_strategy_classification:cd1c007b030875da6c591194024ed01d1e236d7966c93e0e9f87a2e3416ba288",
+          "tactical": "watchlist_tactical_entry_classifier:a5d63cad571380cf4f267c8cfca2add876ba8940ddebb9f2509b7fefa64bed82"
+        }
+      }
+    },
+    "HPG": {
+      "tactical": {
+        "ticker": "HPG",
+        "eligible": true,
+        "market_structure_state": "DOWNTREND",
+        "breakout_state_v3": "BELOW_PIVOT",
+        "bos_state": "NO_BOS",
+        "choch_state": "NO_CHOCH",
+        "trigger_state": "BELOW_TRIGGER",
+        "trigger_type": "NO_TRIGGER",
+        "trigger_level": null,
+        "invalidation_level": 21.55,
+        "invalidation_method": "CONFIRMED_SWING_HIGH_BY_RULE_OR_V1_RESISTANCE_FALLBACK",
+        "distance_to_pivot_pct": -0.06728538283062646,
+        "distance_to_invalidation_pct": -0.06728538283062646,
+        "distance_to_trigger_pct": null,
+        "pivot_retest_confirmed": false,
+        "swing_high_sequence": "LH",
+        "swing_low_sequence": "LL",
+        "base_status": "IN_BASE",
+        "range_state": "RANGE_COMPRESSION",
+        "ma20_slope_state": "FALLING",
+        "high_low_basis": "NOT_COMPATIBLE",
+        "relative_volume_provider_scoped": 1.008026625527416,
+        "blockers": []
+      },
+      "iid": {
+        "research_action_posture": "AVOID",
+        "posture_condition_class": "BEARISH_STRUCTURE_ADVERSE",
+        "research_action_policy_version": "v2",
+        "evidence_currency": "CURRENT_SESSION",
+        "tactical_phase": "BREAKOUT_SETUP",
+        "decision_identity": "decision:HPG:2afa6d8e46a13c4e"
+      },
+      "surface": {
+        "evidence_currency": "CURRENT_SESSION",
+        "opportunity_priority_tier": "MONITOR",
+        "posture_condition_class": "BEARISH_STRUCTURE_ADVERSE",
+        "research_action_policy_version": "v2",
+        "research_action_posture": "AVOID",
+        "ticker": "HPG"
+      },
+      "queue": {
+        "research_priority_tier": "MONITOR",
+        "eligible_strategies": [],
+        "lane_specific_priority": {},
+        "tactical_state": "DOWNTREND",
+        "entry_action": "AVOID",
+        "entry_relevant": false,
+        "scenario_status": "SCENARIO_READY",
+        "event_context_status": "AVAILABLE",
+        "fundamental_context_status": "OFFICIAL_QUALIFIED",
+        "data_quality_status": "HIGH",
+        "priority_reasons": [],
+        "blocking_reasons": [
+          "NO_EXISTING_STRATEGY_ELIGIBILITY"
+        ],
+        "invalidation_or_context_warnings": [],
+        "opportunity_record_content_identity": "current_opportunity_record:c4fbb3e5e9937e4fa83d6997119ab4c4a7c5ed434dbc57691dc46b3e70c30708",
+        "source_input_identities": {
+          "descriptive": "market_wide_current_descriptive_research:f7dd637012e352921a92da6768829f645ff005fadca5290cb9e6a52b7dab9c71",
+          "event_context": "current_official_event_context:a248a4a3885980409c6161f3d63e8d9188b321fdf0517c3b1fd12a0560525397",
+          "fundamental": "market_wide_current_fundamental_research:47132fc4703e7e6d55d36e9ac93cd6b11f3767d5ae075110ab293beb5d7e7210",
+          "official_universe": "current_official_market_universe:d77e16f82893df419689b24356d066d6a6431bd3c27e09190e3c319e004abb55",
+          "peer": "sector_aware_relative_research:b92ba3fb919d2f801e9e829fb1bbb70a62ee0ed24bb1bd0ec8e8a4d468361431",
+          "scenario": "current_evidence_bound_scenario:a694a18ff0f792b0f2175ea470800a52f3a696bbe8bac7d91d29673b6f90bf29",
+          "screening": "current_market_screening_opportunity_comparison_foundation:140356e9237f60e1e5bfc7698aa4e9e17b65eb5c83577775abc91a37bd6e9369",
+          "strategy": "polymorphic_current_strategy_classification:cd1c007b030875da6c591194024ed01d1e236d7966c93e0e9f87a2e3416ba288",
+          "tactical": "watchlist_tactical_entry_classifier:a5d63cad571380cf4f267c8cfca2add876ba8940ddebb9f2509b7fefa64bed82"
+        }
+      }
+    },
+    "PAN": {
+      "tactical": {
+        "ticker": "PAN",
+        "eligible": true,
+        "market_structure_state": "EARLY_BEARISH_REVERSAL",
+        "breakout_state_v3": "BREAKOUT",
+        "bos_state": "NO_BOS",
+        "choch_state": "NO_CHOCH",
+        "trigger_state": "TRIGGERED",
+        "trigger_type": "PIVOT_BREAKOUT_TRIGGER",
+        "trigger_level": 18.75,
+        "invalidation_level": 18.75,
+        "invalidation_method": "CONFIRMED_SWING_HIGH_BY_RULE_OR_V1_RESISTANCE_FALLBACK",
+        "distance_to_pivot_pct": 0.002666666666666595,
+        "distance_to_invalidation_pct": 0.002666666666666595,
+        "distance_to_trigger_pct": 0.002666666666666595,
+        "pivot_retest_confirmed": false,
+        "swing_high_sequence": "LH",
+        "swing_low_sequence": "HL",
+        "base_status": "IN_BASE",
+        "range_state": "RANGE_EXPANSION",
+        "ma20_slope_state": "RISING",
+        "high_low_basis": "NOT_COMPATIBLE",
+        "relative_volume_provider_scoped": 1.767032967032967,
+        "blockers": []
+      },
+      "iid": {
+        "research_action_posture": "INITIATE_ON_BREAKOUT",
+        "posture_condition_class": "FRESH_ENTRY_TRIGGER",
+        "research_action_policy_version": "v2",
+        "evidence_currency": "CURRENT_SESSION",
+        "tactical_phase": "BREAKOUT_CONFIRMED",
+        "decision_identity": "decision:PAN:1d78706a37ea58ee"
+      },
+      "surface": {
+        "evidence_currency": "CURRENT_SESSION",
+        "opportunity_priority_tier": "MONITOR",
+        "posture_condition_class": "FRESH_ENTRY_TRIGGER",
+        "research_action_policy_version": "v2",
+        "research_action_posture": "INITIATE_ON_BREAKOUT",
+        "ticker": "PAN"
+      },
+      "queue": {
+        "research_priority_tier": "MONITOR",
+        "eligible_strategies": [],
+        "lane_specific_priority": {},
+        "tactical_state": "SIDEWAYS_NEUTRAL",
+        "entry_action": "WAIT",
+        "entry_relevant": false,
+        "scenario_status": "SCENARIO_READY",
+        "event_context_status": "UNAVAILABLE",
+        "fundamental_context_status": "OFFICIAL_QUALIFIED",
+        "data_quality_status": "HIGH",
+        "priority_reasons": [],
+        "blocking_reasons": [
+          "NO_EXISTING_STRATEGY_ELIGIBILITY"
+        ],
+        "invalidation_or_context_warnings": [],
+        "opportunity_record_content_identity": "current_opportunity_record:65205c9ce8f18c88445af3e2730112ec27b720985c0a30b18f854ef1ed978284",
+        "source_input_identities": {
+          "descriptive": "market_wide_current_descriptive_research:f7dd637012e352921a92da6768829f645ff005fadca5290cb9e6a52b7dab9c71",
+          "event_context": "current_official_event_context:a248a4a3885980409c6161f3d63e8d9188b321fdf0517c3b1fd12a0560525397",
+          "fundamental": "market_wide_current_fundamental_research:47132fc4703e7e6d55d36e9ac93cd6b11f3767d5ae075110ab293beb5d7e7210",
+          "official_universe": "current_official_market_universe:d77e16f82893df419689b24356d066d6a6431bd3c27e09190e3c319e004abb55",
+          "peer": "sector_aware_relative_research:b92ba3fb919d2f801e9e829fb1bbb70a62ee0ed24bb1bd0ec8e8a4d468361431",
+          "scenario": "current_evidence_bound_scenario:a694a18ff0f792b0f2175ea470800a52f3a696bbe8bac7d91d29673b6f90bf29",
+          "screening": "current_market_screening_opportunity_comparison_foundation:140356e9237f60e1e5bfc7698aa4e9e17b65eb5c83577775abc91a37bd6e9369",
+          "strategy": "polymorphic_current_strategy_classification:cd1c007b030875da6c591194024ed01d1e236d7966c93e0e9f87a2e3416ba288",
+          "tactical": "watchlist_tactical_entry_classifier:a5d63cad571380cf4f267c8cfca2add876ba8940ddebb9f2509b7fefa64bed82"
+        }
+      }
+    },
+    "PNJ": {
+      "tactical": {
+        "ticker": "PNJ",
+        "eligible": true,
+        "market_structure_state": "EARLY_BEARISH_REVERSAL",
+        "breakout_state_v3": "BELOW_PIVOT",
+        "bos_state": "BEARISH_BOS_DETECTED_BY_RULE",
+        "choch_state": "NO_CHOCH",
+        "trigger_state": "TRIGGERED",
+        "trigger_type": "CONFIRMED_BOS_TRIGGER",
+        "trigger_level": 35.9,
+        "invalidation_level": 36.9,
+        "invalidation_method": "CONFIRMED_SWING_HIGH_BY_RULE_OR_V1_RESISTANCE_FALLBACK",
+        "distance_to_pivot_pct": -0.4715447154471545,
+        "distance_to_invalidation_pct": -0.4715447154471545,
+        "distance_to_trigger_pct": -0.4568245125348189,
+        "pivot_retest_confirmed": false,
+        "swing_high_sequence": "LH",
+        "swing_low_sequence": "HL",
+        "base_status": "IN_BASE",
+        "range_state": "RANGE_EXPANSION",
+        "ma20_slope_state": "FALLING",
+        "high_low_basis": "NOT_COMPATIBLE",
+        "relative_volume_provider_scoped": 1.3370375567092279,
+        "blockers": []
+      },
+      "iid": {
+        "research_action_posture": "AVOID",
+        "posture_condition_class": "BEARISH_STRUCTURE_ADVERSE",
+        "research_action_policy_version": "v2",
+        "evidence_currency": "CURRENT_SESSION",
+        "tactical_phase": "BREAKDOWN",
+        "decision_identity": "decision:PNJ:88dd7d2de1a17b4e"
+      },
+      "surface": {
+        "evidence_currency": "CURRENT_SESSION",
+        "opportunity_priority_tier": "MONITOR",
+        "posture_condition_class": "BEARISH_STRUCTURE_ADVERSE",
+        "research_action_policy_version": "v2",
+        "research_action_posture": "AVOID",
+        "ticker": "PNJ"
+      },
+      "queue": {
+        "research_priority_tier": "MONITOR",
+        "eligible_strategies": [],
+        "lane_specific_priority": {},
+        "tactical_state": "SELLING_PRESSURE_EASING",
+        "entry_action": "WAIT",
+        "entry_relevant": false,
+        "scenario_status": "SCENARIO_READY",
+        "event_context_status": "UNAVAILABLE",
+        "fundamental_context_status": "OFFICIAL_QUALIFIED",
+        "data_quality_status": "HIGH",
+        "priority_reasons": [],
+        "blocking_reasons": [
+          "NO_EXISTING_STRATEGY_ELIGIBILITY"
+        ],
+        "invalidation_or_context_warnings": [],
+        "opportunity_record_content_identity": "current_opportunity_record:049a9113dfdc028e1afb17b6eff1b1fef24ea5380b19387a8b72c6d38d17c91a",
+        "source_input_identities": {
+          "descriptive": "market_wide_current_descriptive_research:f7dd637012e352921a92da6768829f645ff005fadca5290cb9e6a52b7dab9c71",
+          "event_context": "current_official_event_context:a248a4a3885980409c6161f3d63e8d9188b321fdf0517c3b1fd12a0560525397",
+          "fundamental": "market_wide_current_fundamental_research:47132fc4703e7e6d55d36e9ac93cd6b11f3767d5ae075110ab293beb5d7e7210",
+          "official_universe": "current_official_market_universe:d77e16f82893df419689b24356d066d6a6431bd3c27e09190e3c319e004abb55",
+          "peer": "sector_aware_relative_research:b92ba3fb919d2f801e9e829fb1bbb70a62ee0ed24bb1bd0ec8e8a4d468361431",
+          "scenario": "current_evidence_bound_scenario:a694a18ff0f792b0f2175ea470800a52f3a696bbe8bac7d91d29673b6f90bf29",
+          "screening": "current_market_screening_opportunity_comparison_foundation:140356e9237f60e1e5bfc7698aa4e9e17b65eb5c83577775abc91a37bd6e9369",
+          "strategy": "polymorphic_current_strategy_classification:cd1c007b030875da6c591194024ed01d1e236d7966c93e0e9f87a2e3416ba288",
+          "tactical": "watchlist_tactical_entry_classifier:a5d63cad571380cf4f267c8cfca2add876ba8940ddebb9f2509b7fefa64bed82"
+        }
+      }
+    },
+    "PVD": {
+      "tactical": {
+        "ticker": "PVD",
+        "eligible": true,
+        "market_structure_state": "DOWNTREND",
+        "breakout_state_v3": "BELOW_PIVOT",
+        "bos_state": "NO_BOS",
+        "choch_state": "NO_CHOCH",
+        "trigger_state": "BELOW_TRIGGER",
+        "trigger_type": "NO_TRIGGER",
+        "trigger_level": null,
+        "invalidation_level": 18.6,
+        "invalidation_method": "CONFIRMED_SWING_HIGH_BY_RULE_OR_V1_RESISTANCE_FALLBACK",
+        "distance_to_pivot_pct": -0.021505376344086113,
+        "distance_to_invalidation_pct": -0.021505376344086113,
+        "distance_to_trigger_pct": null,
+        "pivot_retest_confirmed": false,
+        "swing_high_sequence": "LH",
+        "swing_low_sequence": "LL",
+        "base_status": "IN_BASE",
+        "range_state": "RANGE_COMPRESSION",
+        "ma20_slope_state": "FALLING",
+        "high_low_basis": "NOT_COMPATIBLE",
+        "relative_volume_provider_scoped": 1.1451788450361917,
+        "blockers": []
+      },
+      "iid": {
+        "research_action_posture": "AVOID",
+        "posture_condition_class": "BEARISH_STRUCTURE_ADVERSE",
+        "research_action_policy_version": "v2",
+        "evidence_currency": "CURRENT_SESSION",
+        "tactical_phase": "BREAKOUT_SETUP",
+        "decision_identity": "decision:PVD:e2b8eb0a07462dfc"
+      },
+      "surface": {
+        "evidence_currency": "CURRENT_SESSION",
+        "opportunity_priority_tier": "MONITOR",
+        "posture_condition_class": "BEARISH_STRUCTURE_ADVERSE",
+        "research_action_policy_version": "v2",
+        "research_action_posture": "AVOID",
+        "ticker": "PVD"
+      },
+      "queue": {
+        "research_priority_tier": "MONITOR",
+        "eligible_strategies": [],
+        "lane_specific_priority": {},
+        "tactical_state": "DOWNTREND",
+        "entry_action": "AVOID",
+        "entry_relevant": false,
+        "scenario_status": "SCENARIO_READY",
+        "event_context_status": "UNAVAILABLE",
+        "fundamental_context_status": "OFFICIAL_QUALIFIED",
+        "data_quality_status": "HIGH",
+        "priority_reasons": [],
+        "blocking_reasons": [
+          "NO_EXISTING_STRATEGY_ELIGIBILITY"
+        ],
+        "invalidation_or_context_warnings": [],
+        "opportunity_record_content_identity": "current_opportunity_record:c90473629f3e92bd8f2757caa7496c3758dd26e16d0451740e5a6f85425a327b",
+        "source_input_identities": {
+          "descriptive": "market_wide_current_descriptive_research:f7dd637012e352921a92da6768829f645ff005fadca5290cb9e6a52b7dab9c71",
+          "event_context": "current_official_event_context:a248a4a3885980409c6161f3d63e8d9188b321fdf0517c3b1fd12a0560525397",
+          "fundamental": "market_wide_current_fundamental_research:47132fc4703e7e6d55d36e9ac93cd6b11f3767d5ae075110ab293beb5d7e7210",
+          "official_universe": "current_official_market_universe:d77e16f82893df419689b24356d066d6a6431bd3c27e09190e3c319e004abb55",
+          "peer": "sector_aware_relative_research:b92ba3fb919d2f801e9e829fb1bbb70a62ee0ed24bb1bd0ec8e8a4d468361431",
+          "scenario": "current_evidence_bound_scenario:a694a18ff0f792b0f2175ea470800a52f3a696bbe8bac7d91d29673b6f90bf29",
+          "screening": "current_market_screening_opportunity_comparison_foundation:140356e9237f60e1e5bfc7698aa4e9e17b65eb5c83577775abc91a37bd6e9369",
+          "strategy": "polymorphic_current_strategy_classification:cd1c007b030875da6c591194024ed01d1e236d7966c93e0e9f87a2e3416ba288",
+          "tactical": "watchlist_tactical_entry_classifier:a5d63cad571380cf4f267c8cfca2add876ba8940ddebb9f2509b7fefa64bed82"
+        }
+      }
+    },
+    "PVT": {
+      "tactical": {
+        "ticker": "PVT",
+        "eligible": true,
+        "market_structure_state": "UPTREND",
+        "breakout_state_v3": "BREAKOUT",
+        "bos_state": "NO_BOS",
+        "choch_state": "NO_CHOCH",
+        "trigger_state": "TRIGGERED",
+        "trigger_type": "PIVOT_BREAKOUT_TRIGGER",
+        "trigger_level": 24.95,
+        "invalidation_level": 23.5,
+        "invalidation_method": "CONFIRMED_SWING_LOW_BY_RULE_OR_V1_SUPPORT_FALLBACK",
+        "distance_to_pivot_pct": 0.01002004008016022,
+        "distance_to_invalidation_pct": 0.07234042553191489,
+        "distance_to_trigger_pct": 0.01002004008016022,
+        "pivot_retest_confirmed": false,
+        "swing_high_sequence": "HH",
+        "swing_low_sequence": "HL",
+        "base_status": "IN_BASE",
+        "range_state": "RANGE_STABLE",
+        "ma20_slope_state": "RISING",
+        "high_low_basis": "NOT_COMPATIBLE",
+        "relative_volume_provider_scoped": 0.8774014827822882,
+        "blockers": []
+      },
+      "iid": {
+        "research_action_posture": "INITIATE_ON_BREAKOUT",
+        "posture_condition_class": "FRESH_ENTRY_TRIGGER",
+        "research_action_policy_version": "v2",
+        "evidence_currency": "CURRENT_SESSION",
+        "tactical_phase": "BREAKOUT_CONFIRMED",
+        "decision_identity": "decision:PVT:26e56c5b151f8136"
+      },
+      "surface": {
+        "evidence_currency": "CURRENT_SESSION",
+        "opportunity_priority_tier": "PRIORITY_NOW",
+        "posture_condition_class": "FRESH_ENTRY_TRIGGER",
+        "research_action_policy_version": "v2",
+        "research_action_posture": "INITIATE_ON_BREAKOUT",
+        "ticker": "PVT"
+      },
+      "queue": {
+        "research_priority_tier": "PRIORITY_NOW",
+        "eligible_strategies": [
+          "TREND_MOMENTUM"
+        ],
+        "lane_specific_priority": {
+          "TREND_MOMENTUM": "PRIORITY_NOW"
+        },
+        "tactical_state": "UPTREND_CONFIRMED",
+        "entry_action": "WAIT",
+        "entry_relevant": false,
+        "scenario_status": "SCENARIO_READY",
+        "event_context_status": "UNAVAILABLE",
+        "fundamental_context_status": "PROVIDER_RESEARCH",
+        "data_quality_status": "MEDIUM",
+        "priority_reasons": [
+          "TREND_MOMENTUM=PRIORITY_NOW"
+        ],
+        "blocking_reasons": [],
+        "invalidation_or_context_warnings": [
+          "Fundamental evidence is provider-research tier only (descriptive, non-calculation-grade)."
+        ],
+        "opportunity_record_content_identity": "current_opportunity_record:403ed586f9ed5c221d10adfd5ad2b237c77d26659daa7735cbf99a337a4405cc",
+        "source_input_identities": {
+          "descriptive": "market_wide_current_descriptive_research:f7dd637012e352921a92da6768829f645ff005fadca5290cb9e6a52b7dab9c71",
+          "event_context": "current_official_event_context:a248a4a3885980409c6161f3d63e8d9188b321fdf0517c3b1fd12a0560525397",
+          "fundamental": "market_wide_current_fundamental_research:47132fc4703e7e6d55d36e9ac93cd6b11f3767d5ae075110ab293beb5d7e7210",
+          "official_universe": "current_official_market_universe:d77e16f82893df419689b24356d066d6a6431bd3c27e09190e3c319e004abb55",
+          "peer": "sector_aware_relative_research:b92ba3fb919d2f801e9e829fb1bbb70a62ee0ed24bb1bd0ec8e8a4d468361431",
+          "scenario": "current_evidence_bound_scenario:a694a18ff0f792b0f2175ea470800a52f3a696bbe8bac7d91d29673b6f90bf29",
+          "screening": "current_market_screening_opportunity_comparison_foundation:140356e9237f60e1e5bfc7698aa4e9e17b65eb5c83577775abc91a37bd6e9369",
+          "strategy": "polymorphic_current_strategy_classification:cd1c007b030875da6c591194024ed01d1e236d7966c93e0e9f87a2e3416ba288",
+          "tactical": "watchlist_tactical_entry_classifier:a5d63cad571380cf4f267c8cfca2add876ba8940ddebb9f2509b7fefa64bed82"
+        }
+      }
+    },
+    "SSI": {
+      "tactical": {
+        "ticker": "SSI",
+        "eligible": true,
+        "market_structure_state": "EARLY_BEARISH_REVERSAL",
+        "breakout_state_v3": "BELOW_PIVOT",
+        "bos_state": "BEARISH_BOS_DETECTED_BY_RULE",
+        "choch_state": "NO_CHOCH",
+        "trigger_state": "TRIGGERED",
+        "trigger_type": "CONFIRMED_BOS_TRIGGER",
+        "trigger_level": 20.85,
+        "invalidation_level": 19.75,
+        "invalidation_method": "CONFIRMED_SWING_HIGH_BY_RULE_OR_V1_RESISTANCE_FALLBACK",
+        "distance_to_pivot_pct": -0.03797468354430378,
+        "distance_to_invalidation_pct": -0.03797468354430378,
+        "distance_to_trigger_pct": -0.08872901678657086,
+        "pivot_retest_confirmed": false,
+        "swing_high_sequence": "LH",
+        "swing_low_sequence": "HL",
+        "base_status": "NOT_IN_BASE",
+        "range_state": "RANGE_STABLE",
+        "ma20_slope_state": "FALLING",
+        "high_low_basis": "NOT_COMPATIBLE",
+        "relative_volume_provider_scoped": 1.3093145914108457,
+        "blockers": []
+      },
+      "iid": {
+        "research_action_posture": "AVOID",
+        "posture_condition_class": "BEARISH_STRUCTURE_ADVERSE",
+        "research_action_policy_version": "v2",
+        "evidence_currency": "CURRENT_SESSION",
+        "tactical_phase": "BREAKDOWN",
+        "decision_identity": "decision:SSI:0b0eaa5c0f47cfa3"
+      },
+      "surface": {
+        "evidence_currency": "CURRENT_SESSION",
+        "opportunity_priority_tier": "MONITOR",
+        "posture_condition_class": "BEARISH_STRUCTURE_ADVERSE",
+        "research_action_policy_version": "v2",
+        "research_action_posture": "AVOID",
+        "ticker": "SSI"
+      },
+      "queue": {
+        "research_priority_tier": "MONITOR",
+        "eligible_strategies": [],
+        "lane_specific_priority": {},
+        "tactical_state": "DOWNTREND",
+        "entry_action": "AVOID",
+        "entry_relevant": false,
+        "scenario_status": "SCENARIO_READY",
+        "event_context_status": "UNAVAILABLE",
+        "fundamental_context_status": "OFFICIAL_QUALIFIED",
+        "data_quality_status": "MEDIUM",
+        "priority_reasons": [],
+        "blocking_reasons": [
+          "NO_EXISTING_STRATEGY_ELIGIBILITY"
+        ],
+        "invalidation_or_context_warnings": [
+          "Sector-relative comparison is UNAVAILABLE."
+        ],
+        "opportunity_record_content_identity": "current_opportunity_record:d2458fabaf658a732999d0e47673a18be969b2fd6d7c31b381497554add5f238",
+        "source_input_identities": {
+          "descriptive": "market_wide_current_descriptive_research:f7dd637012e352921a92da6768829f645ff005fadca5290cb9e6a52b7dab9c71",
+          "event_context": "current_official_event_context:a248a4a3885980409c6161f3d63e8d9188b321fdf0517c3b1fd12a0560525397",
+          "fundamental": "market_wide_current_fundamental_research:47132fc4703e7e6d55d36e9ac93cd6b11f3767d5ae075110ab293beb5d7e7210",
+          "official_universe": "current_official_market_universe:d77e16f82893df419689b24356d066d6a6431bd3c27e09190e3c319e004abb55",
+          "peer": "sector_aware_relative_research:b92ba3fb919d2f801e9e829fb1bbb70a62ee0ed24bb1bd0ec8e8a4d468361431",
+          "scenario": "current_evidence_bound_scenario:a694a18ff0f792b0f2175ea470800a52f3a696bbe8bac7d91d29673b6f90bf29",
+          "screening": "current_market_screening_opportunity_comparison_foundation:140356e9237f60e1e5bfc7698aa4e9e17b65eb5c83577775abc91a37bd6e9369",
+          "strategy": "polymorphic_current_strategy_classification:cd1c007b030875da6c591194024ed01d1e236d7966c93e0e9f87a2e3416ba288",
+          "tactical": "watchlist_tactical_entry_classifier:a5d63cad571380cf4f267c8cfca2add876ba8940ddebb9f2509b7fefa64bed82"
+        }
+      }
+    },
+    "VCB": {
+      "tactical": {
+        "ticker": "VCB",
+        "eligible": true,
+        "market_structure_state": "DOWNTREND",
+        "breakout_state_v3": "TESTING_PIVOT",
+        "bos_state": "NO_BOS",
+        "choch_state": "NO_CHOCH",
+        "trigger_state": "APPROACHING",
+        "trigger_type": "PIVOT_BREAKOUT_TRIGGER",
+        "trigger_level": 57.3,
+        "invalidation_level": 57.3,
+        "invalidation_method": "CONFIRMED_SWING_HIGH_BY_RULE_OR_V1_RESISTANCE_FALLBACK",
+        "distance_to_pivot_pct": -0.010471204188481575,
+        "distance_to_invalidation_pct": -0.010471204188481575,
+        "distance_to_trigger_pct": -0.010471204188481575,
+        "pivot_retest_confirmed": false,
+        "swing_high_sequence": "LH",
+        "swing_low_sequence": "LL",
+        "base_status": "IN_BASE",
+        "range_state": "RANGE_STABLE",
+        "ma20_slope_state": "FALLING",
+        "high_low_basis": "NOT_COMPATIBLE",
+        "relative_volume_provider_scoped": 0.8313341693473638,
+        "blockers": []
+      },
+      "iid": {
+        "research_action_posture": "AVOID",
+        "posture_condition_class": "BEARISH_STRUCTURE_ADVERSE",
+        "research_action_policy_version": "v2",
+        "evidence_currency": "CURRENT_SESSION",
+        "tactical_phase": "BREAKOUT_SETUP",
+        "decision_identity": "decision:VCB:528528b3fc3bbe7a"
+      },
+      "surface": {
+        "evidence_currency": "CURRENT_SESSION",
+        "opportunity_priority_tier": "PRIORITY_NOW",
+        "posture_condition_class": "BEARISH_STRUCTURE_ADVERSE",
+        "research_action_policy_version": "v2",
+        "research_action_posture": "AVOID",
+        "ticker": "VCB"
+      },
+      "queue": {
+        "research_priority_tier": "PRIORITY_NOW",
+        "eligible_strategies": [
+          "BASE_ACCUMULATION"
+        ],
+        "lane_specific_priority": {
+          "BASE_ACCUMULATION": "PRIORITY_NOW"
+        },
+        "tactical_state": "BASE_BUILDING",
+        "entry_action": "ACCUMULATE_IN_BASE",
+        "entry_relevant": true,
+        "scenario_status": "SCENARIO_READY",
+        "event_context_status": "UNAVAILABLE",
+        "fundamental_context_status": "OFFICIAL_QUALIFIED",
+        "data_quality_status": "HIGH",
+        "priority_reasons": [
+          "BASE_ACCUMULATION=PRIORITY_NOW"
+        ],
+        "blocking_reasons": [],
+        "invalidation_or_context_warnings": [],
+        "opportunity_record_content_identity": "current_opportunity_record:14d36ac539df974a4a4ec52b39ddaa5272df85987ffa37eb5fdc5ef9d689cf27",
+        "source_input_identities": {
+          "descriptive": "market_wide_current_descriptive_research:f7dd637012e352921a92da6768829f645ff005fadca5290cb9e6a52b7dab9c71",
+          "event_context": "current_official_event_context:a248a4a3885980409c6161f3d63e8d9188b321fdf0517c3b1fd12a0560525397",
+          "fundamental": "market_wide_current_fundamental_research:47132fc4703e7e6d55d36e9ac93cd6b11f3767d5ae075110ab293beb5d7e7210",
+          "official_universe": "current_official_market_universe:d77e16f82893df419689b24356d066d6a6431bd3c27e09190e3c319e004abb55",
+          "peer": "sector_aware_relative_research:b92ba3fb919d2f801e9e829fb1bbb70a62ee0ed24bb1bd0ec8e8a4d468361431",
+          "scenario": "current_evidence_bound_scenario:a694a18ff0f792b0f2175ea470800a52f3a696bbe8bac7d91d29673b6f90bf29",
+          "screening": "current_market_screening_opportunity_comparison_foundation:140356e9237f60e1e5bfc7698aa4e9e17b65eb5c83577775abc91a37bd6e9369",
+          "strategy": "polymorphic_current_strategy_classification:cd1c007b030875da6c591194024ed01d1e236d7966c93e0e9f87a2e3416ba288",
+          "tactical": "watchlist_tactical_entry_classifier:a5d63cad571380cf4f267c8cfca2add876ba8940ddebb9f2509b7fefa64bed82"
+        }
+      }
+    },
+    "VNM": {
+      "tactical": {
+        "ticker": "VNM",
+        "eligible": true,
+        "market_structure_state": "DOWNTREND",
+        "breakout_state_v3": "TESTING_PIVOT",
+        "bos_state": "NO_BOS",
+        "choch_state": "NO_CHOCH",
+        "trigger_state": "APPROACHING",
+        "trigger_type": "PIVOT_BREAKOUT_TRIGGER",
+        "trigger_level": 58.4,
+        "invalidation_level": 58.4,
+        "invalidation_method": "CONFIRMED_SWING_HIGH_BY_RULE_OR_V1_RESISTANCE_FALLBACK",
+        "distance_to_pivot_pct": -0.011986301369862895,
+        "distance_to_invalidation_pct": -0.011986301369862895,
+        "distance_to_trigger_pct": -0.011986301369862895,
+        "pivot_retest_confirmed": false,
+        "swing_high_sequence": "LH",
+        "swing_low_sequence": "LL",
+        "base_status": "IN_BASE",
+        "range_state": "RANGE_EXPANSION",
+        "ma20_slope_state": "FALLING",
+        "high_low_basis": "NOT_COMPATIBLE",
+        "relative_volume_provider_scoped": 0.7333657903278157,
+        "blockers": []
+      },
+      "iid": {
+        "research_action_posture": "AVOID",
+        "posture_condition_class": "BEARISH_STRUCTURE_ADVERSE",
+        "research_action_policy_version": "v2",
+        "evidence_currency": "CURRENT_SESSION",
+        "tactical_phase": "BREAKOUT_SETUP",
+        "decision_identity": "decision:VNM:a6073c988e4391e2"
+      },
+      "surface": {
+        "evidence_currency": "CURRENT_SESSION",
+        "opportunity_priority_tier": "MONITOR",
+        "posture_condition_class": "BEARISH_STRUCTURE_ADVERSE",
+        "research_action_policy_version": "v2",
+        "research_action_posture": "AVOID",
+        "ticker": "VNM"
+      },
+      "queue": {
+        "research_priority_tier": "MONITOR",
+        "eligible_strategies": [],
+        "lane_specific_priority": {},
+        "tactical_state": "DOWNTREND",
+        "entry_action": "AVOID",
+        "entry_relevant": false,
+        "scenario_status": "SCENARIO_READY",
+        "event_context_status": "UNAVAILABLE",
+        "fundamental_context_status": "OFFICIAL_QUALIFIED",
+        "data_quality_status": "HIGH",
+        "priority_reasons": [],
+        "blocking_reasons": [
+          "NO_EXISTING_STRATEGY_ELIGIBILITY"
+        ],
+        "invalidation_or_context_warnings": [],
+        "opportunity_record_content_identity": "current_opportunity_record:0a1984a08009bbdf6d20605e47eb22c3bf3fe383593d6bb0f70952227ea103e7",
+        "source_input_identities": {
+          "descriptive": "market_wide_current_descriptive_research:f7dd637012e352921a92da6768829f645ff005fadca5290cb9e6a52b7dab9c71",
+          "event_context": "current_official_event_context:a248a4a3885980409c6161f3d63e8d9188b321fdf0517c3b1fd12a0560525397",
+          "fundamental": "market_wide_current_fundamental_research:47132fc4703e7e6d55d36e9ac93cd6b11f3767d5ae075110ab293beb5d7e7210",
+          "official_universe": "current_official_market_universe:d77e16f82893df419689b24356d066d6a6431bd3c27e09190e3c319e004abb55",
+          "peer": "sector_aware_relative_research:b92ba3fb919d2f801e9e829fb1bbb70a62ee0ed24bb1bd0ec8e8a4d468361431",
+          "scenario": "current_evidence_bound_scenario:a694a18ff0f792b0f2175ea470800a52f3a696bbe8bac7d91d29673b6f90bf29",
+          "screening": "current_market_screening_opportunity_comparison_foundation:140356e9237f60e1e5bfc7698aa4e9e17b65eb5c83577775abc91a37bd6e9369",
+          "strategy": "polymorphic_current_strategy_classification:cd1c007b030875da6c591194024ed01d1e236d7966c93e0e9f87a2e3416ba288",
+          "tactical": "watchlist_tactical_entry_classifier:a5d63cad571380cf4f267c8cfca2add876ba8940ddebb9f2509b7fefa64bed82"
+        }
+      }
+    },
+    "VPB": {
+      "tactical": {
+        "ticker": "VPB",
+        "eligible": true,
+        "market_structure_state": "UPTREND",
+        "breakout_state_v3": "BREAKOUT",
+        "bos_state": "NO_BOS",
+        "choch_state": "NO_CHOCH",
+        "trigger_state": "TRIGGERED",
+        "trigger_type": "PIVOT_BREAKOUT_TRIGGER",
+        "trigger_level": 23.4,
+        "invalidation_level": 22.9,
+        "invalidation_method": "CONFIRMED_SWING_LOW_BY_RULE_OR_V1_SUPPORT_FALLBACK",
+        "distance_to_pivot_pct": 0.017094017094017255,
+        "distance_to_invalidation_pct": 0.039301310043668325,
+        "distance_to_trigger_pct": 0.017094017094017255,
+        "pivot_retest_confirmed": false,
+        "swing_high_sequence": "HH",
+        "swing_low_sequence": "HL",
+        "base_status": "NOT_IN_BASE",
+        "range_state": "RANGE_COMPRESSION",
+        "ma20_slope_state": "RISING",
+        "high_low_basis": "NOT_COMPATIBLE",
+        "relative_volume_provider_scoped": 1.0688787482665634,
+        "blockers": []
+      },
+      "iid": {
+        "research_action_posture": "INITIATE_ON_BREAKOUT",
+        "posture_condition_class": "FRESH_ENTRY_TRIGGER",
+        "research_action_policy_version": "v2",
+        "evidence_currency": "CURRENT_SESSION",
+        "tactical_phase": "BREAKOUT_CONFIRMED",
+        "decision_identity": "decision:VPB:c16d1905f9b1f5de"
+      },
+      "surface": {
+        "evidence_currency": "CURRENT_SESSION",
+        "opportunity_priority_tier": "PRIORITY_NOW",
+        "posture_condition_class": "FRESH_ENTRY_TRIGGER",
+        "research_action_policy_version": "v2",
+        "research_action_posture": "INITIATE_ON_BREAKOUT",
+        "ticker": "VPB"
+      },
+      "queue": {
+        "research_priority_tier": "PRIORITY_NOW",
+        "eligible_strategies": [
+          "TREND_MOMENTUM"
+        ],
+        "lane_specific_priority": {
+          "TREND_MOMENTUM": "PRIORITY_NOW"
+        },
+        "tactical_state": "UPTREND_CONFIRMED",
+        "entry_action": "WAIT",
+        "entry_relevant": false,
+        "scenario_status": "SCENARIO_READY",
+        "event_context_status": "UNAVAILABLE",
+        "fundamental_context_status": "PROVIDER_RESEARCH",
+        "data_quality_status": "MEDIUM",
+        "priority_reasons": [
+          "TREND_MOMENTUM=PRIORITY_NOW"
+        ],
+        "blocking_reasons": [],
+        "invalidation_or_context_warnings": [
+          "Fundamental evidence is provider-research tier only (descriptive, non-calculation-grade)."
+        ],
+        "opportunity_record_content_identity": "current_opportunity_record:482fbd4766920945e2653f24c66fca814916eed06349218c0bf83cef67e02318",
+        "source_input_identities": {
+          "descriptive": "market_wide_current_descriptive_research:f7dd637012e352921a92da6768829f645ff005fadca5290cb9e6a52b7dab9c71",
+          "event_context": "current_official_event_context:a248a4a3885980409c6161f3d63e8d9188b321fdf0517c3b1fd12a0560525397",
+          "fundamental": "market_wide_current_fundamental_research:47132fc4703e7e6d55d36e9ac93cd6b11f3767d5ae075110ab293beb5d7e7210",
+          "official_universe": "current_official_market_universe:d77e16f82893df419689b24356d066d6a6431bd3c27e09190e3c319e004abb55",
+          "peer": "sector_aware_relative_research:b92ba3fb919d2f801e9e829fb1bbb70a62ee0ed24bb1bd0ec8e8a4d468361431",
+          "scenario": "current_evidence_bound_scenario:a694a18ff0f792b0f2175ea470800a52f3a696bbe8bac7d91d29673b6f90bf29",
+          "screening": "current_market_screening_opportunity_comparison_foundation:140356e9237f60e1e5bfc7698aa4e9e17b65eb5c83577775abc91a37bd6e9369",
+          "strategy": "polymorphic_current_strategy_classification:cd1c007b030875da6c591194024ed01d1e236d7966c93e0e9f87a2e3416ba288",
+          "tactical": "watchlist_tactical_entry_classifier:a5d63cad571380cf4f267c8cfca2add876ba8940ddebb9f2509b7fefa64bed82"
+        }
+      }
+    }
+  }
+}

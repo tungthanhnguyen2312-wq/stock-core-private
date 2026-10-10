@@ -1,8 +1,8 @@
 # Stock Lookup — Active State
 
-Compact navigation view of what is true **now**. Updated 2026-10-09 from verified
-starting main `314406e59b868d2a4207fa7af7798a31ee3b6906`.
-Owner-authorized bounded evidence campaign.
+Updated 2026-10-10 from verified
+main `64c8bc884efd790bc05f6976bc628215a99fd58b`.
+Owner-approved corrective.
 Verify live remote main with `git fetch origin main` or
 `git ls-remote origin refs/heads/main`; a **local** remote-tracking ref alone can be stale.
 ## 0. How this file relates to the others
@@ -34,7 +34,7 @@ Fact kinds used below: **CURRENT FACT** (verified in repo or by a stated read-on
 **BLOCKED**, **DEFERRED**, **HISTORICAL**.
 
 ## 1. The operational gate
-- **ACTIVE — [Coherence V2](scenario_and_opportunity_cost_decision_coherence_v2_contract.md):** offline/CI/one PR; Posture V2 PR100 `314406e`; no Daily/deploy/authority change.
+- **ACTIVE — [semantic corrective](daily_research_output_semantic_coherence_corrective_v1_contract.md):** offline/local commit; Coherence V2 PR101 `64c8bc8` COMPLETE, four CI jobs PASS; no Daily/deploy/authority change.
 - **COMPLETE — [capacity Phase 1](capacity_recovery_phase1_contract.md):** PR99 merged
   `168e0f7`, post-merge CI 37893984528 success; zero production reclaim/activation.
 - **COMPLETE — Vault V1:** PR97 merged `3f3d4fe`; offline/opt-in, 77 candidates,

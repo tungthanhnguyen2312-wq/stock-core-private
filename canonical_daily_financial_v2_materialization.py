@@ -341,6 +341,7 @@ def build_evaluated_valuation_artifact(
 
 
 def _observed_period_range(engine_artifact: Mapping[str, Any]) -> tuple[str | None, str | None]:
+    """Lexical range of retained source labels, never a publication/calendar cutoff."""
     periods: set[str] = set()
     for record in (engine_artifact.get("records") or {}).values():
         for feature in (record.get("features") or {}).values():
@@ -350,6 +351,26 @@ def _observed_period_range(engine_artifact: Mapping[str, Any]) -> tuple[str | No
         return None, None
     ordered = sorted(periods)
     return ordered[0], ordered[-1]
+
+
+def observed_period_label_context(engine_artifact: Mapping[str, Any], *, decision_session: str,
+                                  latest_period: str | None) -> dict[str, Any]:
+    """Explain the wrapper label using the existing per-record fiscal semantics rule.
+
+    This display metadata does not qualify a period or change engine feature fitness.
+    Publication time and calendar resolution cannot be inferred from a largest label.
+    """
+    from fundamental_signal_consumption_contract import evidence_known_at, fiscal_period_semantics
+    observations = []
+    for ticker, record in sorted((engine_artifact.get("records") or {}).items()):
+        for name, feature in sorted((record.get("features") or {}).items()):
+            if isinstance(feature, Mapping) and latest_period and latest_period in (feature.get("period_identity") or []):
+                observations.append({"ticker": ticker, "feature": name,
+                                     **fiscal_period_semantics(latest_period, decision_session, evidence_known_at(record))})
+    return {"semantics": "LATEST_LEXICOGRAPHIC_RETAINED_FEATURE_PERIOD_LABEL",
+            "is_publication_cutoff": False, "is_reporting_calendar_context": False,
+            "published_calendar_evidence_as_of_period": None,
+            "observations": observations}
 
 
 def build_session_artifact(
@@ -390,6 +411,10 @@ def build_session_artifact(
         "requested_at": requested_at,
         "decision_session": decision_session,
         "financial_evidence_as_of_period": latest_period,
+        # Legacy alias retained for readers; explicit label/context removes its ambiguous as-of claim.
+        "latest_observed_financial_period_label": latest_period,
+        "financial_evidence_period_label_context": observed_period_label_context(
+            engine_artifact, decision_session=decision_session, latest_period=latest_period),
         "financial_evidence_period_range": {
             "earliest_observed_period_identity": earliest_period,
             "latest_observed_period_identity": latest_period,
@@ -413,7 +438,10 @@ def build_session_artifact(
                 "Financial evidence identity is expected to repeat identically across many "
                 "consecutive decision sessions between real financial reports; only "
                 "decision_session changes daily by construction. This artifact never "
-                "manufactures a same-session financial update."
+                "manufactures a same-session financial update. financial_evidence_as_of_period "
+                "is a legacy alias for latest_observed_financial_period_label, the lexical maximum "
+                "retained feature label, not a published financial evidence cutoff or reporting "
+                "calendar context. Fiscal/calendar resolution and knowledge time are per record."
             ),
         },
         "authority_boundary": {

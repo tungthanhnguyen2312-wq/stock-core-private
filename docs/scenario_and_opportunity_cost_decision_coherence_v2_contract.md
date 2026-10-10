@@ -114,6 +114,9 @@ scenario/packet reads and old decision identities remain valid. Historical T0 is
 Offline synthetic S1-S20 plus adversarial corruption and cross-source tests cover the
 actual IID → binding → opportunity comparison → packet/product/replay chain.
 [Acceptance and exact validation](internal/SCENARIO_OPPORTUNITY_COST_COHERENCE_V2_ACCEPTANCE_20261009.md).
-One new feature PR is authorized. Milestone stays ACTIVE pending owner merge/release;
-queue empty. No Daily/replay, provider request, deployment, retained/production write,
+Milestone COMPLETE: PR101 merged exact head `424b5efcd3a7a2a030d95cd474db5c7dc2c49bed`
+at `64c8bc884efd790bc05f6976bc628215a99fd58b`; post-merge CI 38017817078
+four jobs SUCCESS. Native admission reconciled release on 2026-10-10 after the
+separately approved semantic corrective. Queue empty. No Daily/replay, provider request,
+deployment, retained/production write,
 authority promotion, policy/risk/leverage change, force push or automatic successor.
