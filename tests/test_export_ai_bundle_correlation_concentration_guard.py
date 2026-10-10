@@ -8,7 +8,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from correlation_concentration_guard import content_identity
+from stocklookup_core.portfolio.correlation_concentration_guard import content_identity
 from export_ai_bundle import (
     attach_correlation_concentration_guard,
     load_correlation_concentration_guard_artifact,

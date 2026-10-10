@@ -23,6 +23,21 @@ env:
   CORE_INSTALL: python -m pip install -r requirements.txt -r requirements-test.txt -c constraints.txt
   HERMETIC_MARKERS: not retained_evidence and not provider_runtime
   FOCUSED_SELECTION: >-
+    tests/test_correlation_concentration_guard.py
+    tests/test_execution_capacity_research.py
+    tests/test_personal_portfolio_quant_risk_decomposition.py
+    tests/test_portfolio_aware_decision.py
+    tests/test_portfolio_aware_opportunity_shortlist.py
+    tests/test_portfolio_research_decision_workbench.py
+    tests/test_private_portfolio_context.py
+    tests/test_private_portfolio_decision_packet.py
+    tests/test_private_portfolio_research_handoff.py
+    tests/test_current_portfolio_risk_research.py::CurrentPortfolioRiskResearchTest::test_frozen_lookback_and_return_contract
+    tests/test_current_portfolio_risk_research.py::CurrentPortfolioRiskResearchTest::test_exact_window_rejects_one_missing_close
+    tests/test_current_portfolio_risk_research.py::CurrentPortfolioRiskResearchTest::test_pairwise_is_unordered_and_joint_guard_is_independent
+    tests/test_current_portfolio_risk_research.py::CurrentPortfolioRiskResearchTest::test_partial_pair_and_basis_conflict_fail_closed
+    tests/test_current_portfolio_risk_research.py::CurrentPortfolioRiskResearchTest::test_joint_guard_blocks_when_dimension_exceeds_observations
+    tests/test_current_portfolio_risk_research.py::CurrentPortfolioRiskResearchTest::test_deterministic_identity_and_non_portfolio_boundaries
     tests/test_research_case_lifecycle_portable.py
     tests/test_current_decision_prospective_snapshot.py
     tests/test_prospective_case_admission_policy.py

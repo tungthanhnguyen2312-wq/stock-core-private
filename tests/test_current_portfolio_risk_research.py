@@ -5,7 +5,7 @@ import json
 import unittest
 from pathlib import Path
 
-from current_portfolio_risk_research import (
+from stocklookup_core.portfolio.current_portfolio_risk_research import (
     ANNUALIZATION_SESSIONS,
     STANDARD_RISK_LOOKBACKS,
     _window_for,

@@ -4,8 +4,8 @@ from copy import deepcopy
 
 import pytest
 
-import execution_capacity_research as capacity
-import portfolio_aware_decision as portfolio
+import stocklookup_core.portfolio.execution_capacity_research as capacity
+import stocklookup_core.portfolio.portfolio_aware_decision as portfolio
 
 
 SESSION = "2026-09-28"

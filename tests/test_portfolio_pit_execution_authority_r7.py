@@ -4,11 +4,11 @@ import socket
 
 import pytest
 import raw_pit_authority_matrix as a
-import portfolio_aware_decision as p
-import current_portfolio_risk_envelope as portfolio
+import stocklookup_core.portfolio.portfolio_aware_decision as p
+import stocklookup_core.portfolio.current_portfolio_risk_envelope as portfolio
 import stocklookup_core.decision.integrated_investment_decision_product as integrated
 import vnm_shadow_backtest as replay
-from current_portfolio_risk_research import qualified_window_readiness
+from stocklookup_core.portfolio.current_portfolio_risk_research import qualified_window_readiness
 from tools.run_portfolio_pit_execution_acceptance import Inputs
 
 T0 = '2026-06-30'

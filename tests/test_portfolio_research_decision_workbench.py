@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import pytest
 
-import portfolio_research_decision_workbench as workbench
+import stocklookup_core.portfolio.portfolio_research_decision_workbench as workbench
 
 
 def test_concentration_overlap_and_explicit_rank_are_not_allocation():

@@ -48,9 +48,9 @@ import asymmetric_dislocation_research as _asymmetric
 import stocklookup_core.decision.integrated_investment_decision_product as _integrated
 import owner_research_exclusions as _owner_research_exclusions
 import owner_research_focus as _owner_focus
-import personal_portfolio_quant_risk_decomposition as _quant
-import portfolio_aware_decision as _pad
-import private_portfolio_context as _private_portfolio_context
+import stocklookup_core.portfolio.personal_portfolio_quant_risk_decomposition as _quant
+import stocklookup_core.portfolio.portfolio_aware_decision as _pad
+import stocklookup_core.portfolio.private_portfolio_context as _private_portfolio_context
 
 CONTRACT_VERSION = "personal_investment_decision_action_center/v1"
 MILESTONE = "PERSONAL_INVESTMENT_DECISION_ACTION_CENTER_V1"

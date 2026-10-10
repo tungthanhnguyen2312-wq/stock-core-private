@@ -67,8 +67,8 @@ R5–R7 merged in PR #35. The [post-release system review](internal/POST_R1_R7_S
 
 See [contract](portfolio_pit_execution_authority_contract.md) and [acceptance](internal/R7_PORTFOLIO_PIT_EXECUTION_ACCEPTANCE.json).
 `raw_pit_authority_matrix` owns the consumer matrix/dossier and final non-voting PORTFOLIO_FIT adapter.
-`portfolio_aware_decision`, `current_portfolio_risk_envelope` and `current_portfolio_risk_research`
-reuse the existing governed risk/minimum-cap, exposure and window engines. `vnm_shadow_backtest`
+The implementations in `stocklookup_core/portfolio/` (`portfolio_aware_decision`,
+`current_portfolio_risk_envelope` and `current_portfolio_risk_research`) reuse the existing governed risk/minimum-cap, exposure and window engines. `vnm_shadow_backtest`
 reuses the isolated VNM replay engine through explicit authority gates; no generic or live order path
 is added. `tools/run_portfolio_pit_execution_acceptance.py` is an offline exact-manifest review tool,
 not another production entrypoint. Source registries and promoted authority are unchanged.

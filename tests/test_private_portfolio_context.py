@@ -6,8 +6,8 @@ from pathlib import Path
 import pytest
 from openpyxl import Workbook
 
-import private_portfolio_context as portfolio_context
-from private_portfolio_context import (
+import stocklookup_core.portfolio.private_portfolio_context as portfolio_context
+from stocklookup_core.portfolio.private_portfolio_context import (
     CURRENT_COST_BASIS_METHOD,
     CURRENT_POSITION_STATUS_CLOSED,
     CURRENT_POSITION_STATUS_CONFIRMED,

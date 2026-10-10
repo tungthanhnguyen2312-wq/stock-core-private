@@ -1,6 +1,6 @@
 import json
 from pathlib import Path
-from current_portfolio_risk_envelope import build,identity,portfolio_fit
+from stocklookup_core.portfolio.current_portfolio_risk_envelope import build, identity, portfolio_fit
 ROOT=Path(__file__).resolve().parents[1];O=ROOT/'operations-review';P={'descriptive':'market-wide-current-technical-coverage-scaleout-v1-20260823/market_wide_current_descriptive_research_artifact.json','tactical':'watchlist-tactical-entry-decision-v1-20260823/watchlist_tactical_entry_classifier_artifact.json','peer_relative':'sector-aware-relative-research-v1-20260824/sector_aware_relative_research_artifact.json','fundamental':'market-wide-current-fundamental-research-v1-20260823/market_wide_current_fundamental_research_artifact.json','valuation':'market-wide-current-valuation-v1-20260824/market_wide_current_valuation_artifact.json','scenario':'current-evidence-bound-scenario-v1-20260824/current_evidence_bound_scenario_artifact.json','strategy':'polymorphic-current-strategy-classification-v1-20260824/polymorphic_current_strategy_classification_artifact.json','corporate_intelligence':'market-wide-current-corporate-intelligence-v1-20260824/market_wide_current_corporate_intelligence_artifact.json'}
 def a(): return build(portfolio=json.loads((ROOT/'config/demonstration_portfolio_risk_input.json').read_text(encoding='utf-8')),**{k:json.loads((O/v).read_text(encoding='utf-8')) for k,v in P.items()})
 def test_explicit_portfolio_concentration_limits_and_blocks():

@@ -1,6 +1,6 @@
 from __future__ import annotations
 import pytest
-import portfolio_aware_opportunity_shortlist as shortlist
+import stocklookup_core.portfolio.portfolio_aware_opportunity_shortlist as shortlist
 
 def _inputs(session="2026-09-09"):
     decisions = {"AAA": {"decision_identity": "d:AAA", "research_action_posture": "INITIATE_ON_BREAKOUT"}, "BBB": {"decision_identity": "d:BBB", "research_action_posture": "EARLY_WATCH"}, "CCC": {"decision_identity": "d:CCC", "research_action_posture": "ACCUMULATE_ON_RETEST"}}

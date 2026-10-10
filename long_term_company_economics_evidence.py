@@ -15,7 +15,7 @@ import re
 from typing import Any, Mapping, Sequence
 
 import market_wide_current_fundamental_research as fundamental
-from portfolio_opportunity_cost_research import _strategic
+from stocklookup_core.portfolio.portfolio_opportunity_cost_research import _strategic
 
 CONTRACT_VERSION = "long_term_company_economics_evidence/v1"
 STATUSES = ("KNOWN", "PARTIALLY_KNOWN", "UNKNOWN", "NOT_APPLICABLE")

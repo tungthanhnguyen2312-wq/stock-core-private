@@ -7,7 +7,7 @@ import pytest
 import stocklookup_core.decision.integrated_investment_decision_product as owner
 import stocklookup_core.decision.daily_integrated_decision_brief as brief
 import next_session_decision_brief as next_brief
-import portfolio_aware_decision as portfolio
+import stocklookup_core.portfolio.portfolio_aware_decision as portfolio
 import stocklookup_core.decision.current_research_decision_packet as packet
 import stocklookup_core.decision.current_research_decision_packet_product as packet_product
 from _integrated_decision_fixture import integrated_decision

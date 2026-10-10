@@ -155,7 +155,7 @@ from current_research_scenario_context import (
 from shadow_security_recommendation import (
     content_identity as shadow_security_recommendation_content_identity,
 )
-from correlation_concentration_guard import (
+from stocklookup_core.portfolio.correlation_concentration_guard import (
     CONTRACT_VERSION as CORRELATION_CONCENTRATION_GUARD_CONTRACT_VERSION,
     SUPPORTED_LOOKBACKS as CORRELATION_CONCENTRATION_GUARD_SUPPORTED_LOOKBACKS,
     content_identity as correlation_concentration_guard_content_identity,

@@ -40,9 +40,9 @@ from typing import Any, Mapping, Sequence
 
 import numpy as np
 
-import correlation_concentration_guard as _guard
-import current_portfolio_risk_research as _cprr
-import portfolio_aware_decision as _pad
+import stocklookup_core.portfolio.correlation_concentration_guard as _guard
+import stocklookup_core.portfolio.current_portfolio_risk_research as _cprr
+import stocklookup_core.portfolio.portfolio_aware_decision as _pad
 
 CONTRACT_VERSION = "personal_portfolio_quant_risk_decomposition/v1"
 MILESTONE = "PERSONAL_PORTFOLIO_QUANT_RISK_DECOMPOSITION_V1"
@@ -657,7 +657,7 @@ def evaluate_from_retained_artifacts(*, repo_root, portfolio_root=None, session:
     """
     from pathlib import Path
     import owner_research_exclusions as _exclusions
-    import private_portfolio_context as _ppc
+    import stocklookup_core.portfolio.private_portfolio_context as _ppc
 
     repo_root = Path(repo_root)
     status = _ppc.portfolio_status(portfolio_root=portfolio_root)
@@ -691,7 +691,7 @@ def evaluate_from_retained_artifacts(*, repo_root, portfolio_root=None, session:
 
 
 def default_private_output_root():
-    import private_portfolio_context as _ppc
+    import stocklookup_core.portfolio.private_portfolio_context as _ppc
     return _ppc.default_portfolio_root() / "personal_portfolio_quant_risk_decomposition"
 
 

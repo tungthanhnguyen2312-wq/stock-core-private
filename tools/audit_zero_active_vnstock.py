@@ -15,7 +15,7 @@ ENTRYPOINTS = (
     "canonical_daily_financial_v2_materialization", "stocklookup_core.decision.current_research_decision_input",
     "stocklookup_core.valuation.current_research_valuation_context", "current_corporate_event_context",
     "official_liquidity_market_wide", "prospective_pit_evidence_analysis",
-    "dnse_prospective_pit_shadow", "execution_capacity_research", "portfolio_aware_decision",
+    "dnse_prospective_pit_shadow", 'stocklookup_core.portfolio.execution_capacity_research', 'stocklookup_core.portfolio.portfolio_aware_decision',
     "tools.run_market_wide_current_technical_coverage_scaleout",
     "tools.run_market_data_historical_series_failover",
     "tools.run_multi_source_exact_session_resolver",

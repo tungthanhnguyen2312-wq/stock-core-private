@@ -601,7 +601,19 @@
     "prospective_research_case_operations.py": "stocklookup_core/research/prospective_research_case_operations.py",
     "prospective_research_case_learning_ledger.py": "stocklookup_core/research/prospective_research_case_learning_ledger.py",
     "durable_prospective_research_case_store.py": "stocklookup_core/research/durable_prospective_research_case_store.py",
-    "ai_research_analyst.py": "stocklookup_core/research/ai_research_analyst.py"
+    "ai_research_analyst.py": "stocklookup_core/research/ai_research_analyst.py",
+    "correlation_concentration_guard.py": "stocklookup_core/portfolio/correlation_concentration_guard.py",
+    "current_portfolio_risk_envelope.py": "stocklookup_core/portfolio/current_portfolio_risk_envelope.py",
+    "current_portfolio_risk_research.py": "stocklookup_core/portfolio/current_portfolio_risk_research.py",
+    "execution_capacity_research.py": "stocklookup_core/portfolio/execution_capacity_research.py",
+    "personal_portfolio_quant_risk_decomposition.py": "stocklookup_core/portfolio/personal_portfolio_quant_risk_decomposition.py",
+    "portfolio_aware_decision.py": "stocklookup_core/portfolio/portfolio_aware_decision.py",
+    "portfolio_aware_opportunity_shortlist.py": "stocklookup_core/portfolio/portfolio_aware_opportunity_shortlist.py",
+    "portfolio_opportunity_cost_research.py": "stocklookup_core/portfolio/portfolio_opportunity_cost_research.py",
+    "portfolio_research_decision_workbench.py": "stocklookup_core/portfolio/portfolio_research_decision_workbench.py",
+    "private_portfolio_context.py": "stocklookup_core/portfolio/private_portfolio_context.py",
+    "private_portfolio_decision_packet.py": "stocklookup_core/portfolio/private_portfolio_decision_packet.py",
+    "private_portfolio_research_handoff.py": "stocklookup_core/portfolio/private_portfolio_research_handoff.py"
   },
   "compatibility_entrypoints": {
     "official_document_acquisition.py": "Existing offline import CLI; delegates to the evidence package main()."

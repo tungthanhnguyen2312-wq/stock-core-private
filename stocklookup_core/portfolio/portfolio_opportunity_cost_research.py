@@ -30,7 +30,7 @@ import json
 from typing import Any, Mapping, Sequence
 
 import stocklookup_core.decision.investment_decision_workspace_projection as workspace_projection
-import portfolio_research_decision_workbench as workbench
+import stocklookup_core.portfolio.portfolio_research_decision_workbench as workbench
 from stocklookup_core.valuation.current_research_valuation_context import RELATIVE_METHODS
 from stocklookup_core.decision.integrated_investment_decision_product import FUNDAMENTAL_STATES, TACTICAL_PHASES
 

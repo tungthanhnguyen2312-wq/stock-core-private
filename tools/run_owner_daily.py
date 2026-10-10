@@ -588,7 +588,7 @@ def resolve_m1_handoff_authority(source: Path, session: str, *, root: Path | Non
     import stocklookup_core.decision.integrated_investment_decision_product as integrated_contract
     from ai_research_session_delivery import project_integrated_decision_delivery_overlay
     from daily_research_session_operations import BRIEF_RETENTION_CONTRACT, brief_retention_identity
-    from portfolio_aware_decision import IntegratedDecisionResolutionError, resolve_operation_bound_integrated_decision
+    from stocklookup_core.portfolio.portfolio_aware_decision import IntegratedDecisionResolutionError, resolve_operation_bound_integrated_decision
 
     outputs = manifest.get("outputs") if isinstance(manifest.get("outputs"), Mapping) else {}
     integrated_identity = outputs.get("integrated_investment_decision_product")

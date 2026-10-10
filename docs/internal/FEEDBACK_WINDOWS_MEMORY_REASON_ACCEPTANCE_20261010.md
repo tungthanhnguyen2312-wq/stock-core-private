@@ -98,3 +98,7 @@ of production writes or hidden evidence substitution. Account separately for Win
 kernel tests and Linux event-seam tests, including nondelivery limitations. Return concise
 English blockers with reproducible file/line evidence. No writes, runtime launch, merge,
 deploy, threshold changes or authority promotion.
+
+## Verified release
+
+Owner approved exact HEAD 5a7c22b13a6c46972eceec02ff1633e3456bf75d when four PR CI jobs succeeded. PR114 merged at 04211888251473f7872af88e959cf49ca9089dd5; all four PR jobs (38052737565) and all four post-merge jobs (38053161990) SUCCESS, independently verified. No Daily/deploy/runtime or authority activation. Next standing-authorized native admission: PORTFOLIO_RESEARCH_PACKAGE_V1.
