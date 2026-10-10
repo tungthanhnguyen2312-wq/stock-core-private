@@ -364,3 +364,174 @@ def render_research_boundaries(evidence: Mapping[str, Any]) -> str:
                      f"{context['valuation_authority']}")
     lines.extend(evidence["research_boundaries"])
     return "\n".join(lines)
+
+
+def packet_context(evidence: Mapping[str, Any], *, ticker: str) -> dict[str, Any]:
+    """Verify the serialized v1 boundary, then retain its complete research view.
+
+    A digest checks content integrity, not source authenticity or PIT eligibility.
+    The caller must supply the existing qualified producer's object. This consumer
+    neither qualifies raw facts nor evaluates structural economics.
+    """
+    def require(condition: bool, code: str) -> None:
+        if not condition:
+            raise ValueError("ECONOMICS_PACKET_" + code)
+
+    require(isinstance(evidence, Mapping), "OBJECT_REQUIRED")
+    _verify_identity(evidence, CONTRACT_VERSION)
+    _scan_forbidden(dict(evidence))
+    require(set(evidence) == {
+        "contract_version", "ticker", "knowledge_cutoff", "dimensions", "flags",
+        "normalization", "research_context", "excluded_evidence", "research_boundaries",
+        "strict_share_qualification", "strict_valuation_qualification", "non_voting",
+        "is_actionable", "authority_effect", "production", "artifact_identity", "artifact_sha256",
+    }, "SCHEMA_UNSUPPORTED")
+    require(evidence["contract_version"] == CONTRACT_VERSION and evidence["ticker"] == ticker, "SUBJECT_OR_CONTRACT_MISMATCH")
+    require(isinstance(ticker, str) and bool(ticker) and ticker == ticker.strip().upper(), "EXACT_SUBJECT_REQUIRED")
+    boundary = _time(evidence["knowledge_cutoff"])
+    require(evidence["non_voting"] is True and evidence["is_actionable"] is False
+            and evidence["authority_effect"] == "NONE" and evidence["production"] == "OFFLINE_OPT_IN_ONLY"
+            and evidence["strict_share_qualification"] == evidence["strict_valuation_qualification"] == "NOT_PROVIDED", "AUTHORITY_BOUNDARY")
+    require(evidence["research_boundaries"] == list(BOUNDARIES), "RESEARCH_BOUNDARY")
+    dimensions = evidence["dimensions"]
+    require(isinstance(dimensions, dict) and set(dimensions) == set(DIMENSIONS), "DIMENSIONS_INVALID")
+    for name, dimension in dimensions.items():
+        require(isinstance(dimension, dict) and set(dimension) == {
+            "observation_status", "current_observation_status", "interpretation_status",
+            "observations", "research_context", "interpretation_blockers"}, "DIMENSION_SCHEMA")
+        require(all(isinstance(dimension[k], list) for k in ("observations", "research_context", "interpretation_blockers")), "DIMENSION_ARRAYS")
+        observations = dimension["observations"]
+        require(all(isinstance(o, dict) for o in observations), "OBSERVATION_OBJECT_REQUIRED")
+        current = [o for o in observations if o.get("temporal_status") == "CURRENT_OFFICIAL_FACT"]
+        expected = "PARTIALLY_KNOWN" if observations else "UNKNOWN"
+        expected_current = "PARTIALLY_KNOWN" if current else "UNKNOWN"
+        if name == "revenue_profit_economics":
+            groups = {}
+            for observation in current:
+                key = tuple(observation.get(k) for k in ("reporting_period", "statement_scope", "currency"))
+                groups.setdefault(key, set()).add(observation.get("canonical_metric"))
+            if any({"revenue", "net_income"} <= metrics for metrics in groups.values()):
+                expected = expected_current = "KNOWN"
+        interpretation, blockers = "UNKNOWN", list(EVIDENCE_GAPS[name])
+        require(not dimension["research_context"] or name == "valuation_fitness", "UNSUPPORTED_DIMENSION_CONTEXT")
+        if dimension["research_context"]:
+            require(len(dimension["research_context"]) == 1, "VALUATION_CONTEXT_COUNT")
+            context = dimension["research_context"][0]
+            require(isinstance(context, dict) and set(context) == {
+                "event_ids", "catalyst_context", "valuation_authority", "status", "relative_research_state",
+                "reported_relative_label", "qualified_methods", "valuation_qualified", "earnings_state",
+                "source", "comparable", "gaps", "knowledge_available_at", "observed_at"}, "VALUATION_CONTEXT_SCHEMA")
+            require(not _temporal_reasons(context, boundary), "CONTEXT_AFTER_CUTOFF")
+            # Preserve the existing producer's scoped method result, never strict qualification.
+            require(isinstance(context, dict) and context.get("valuation_authority") == "SCOPED_RELATIVE_RESEARCH_NOT_STRICT_VALUATION"
+                    and isinstance(context.get("valuation_qualified"), bool), "VALUATION_BOUNDARY")
+            require((context.get("source") or {}).get("session") == boundary.date().isoformat(), "VALUATION_SESSION")
+            if context["valuation_qualified"]:
+                require(bool(context.get("qualified_methods")) and context.get("comparable") is True, "VALUATION_METHODS")
+                methods = context["qualified_methods"]
+                require(all(isinstance(m, dict) and set(m) == {"method", "basis", "percentile", "peer_count"} for m in methods), "VALUATION_METHOD_SCHEMA")
+                raw = {**context["source"], "relative_research_state": context["reported_relative_label"],
+                       "peer_methods": {m["method"]: {**m, "status": "READY_RESEARCH_ONLY"} for m in methods}}
+                checked = _strategic(raw, session=boundary.date().isoformat(), ticker=ticker, event_ids=[])
+                require(checked["valuation_qualified"] and checked["qualified_methods"] == methods
+                        and checked["relative_research_state"] == context["relative_research_state"], "VALUATION_METHOD_FITNESS")
+                expected = expected_current = "KNOWN"
+                interpretation, blockers = "PARTIALLY_KNOWN", ["SCOPED_RELATIVE_RESEARCH_NOT_STRICT_VALUATION"]
+        require(dimension["observation_status"] == expected and dimension["current_observation_status"] == expected_current
+                and dimension["interpretation_status"] == interpretation and dimension["interpretation_blockers"] == blockers, "STATUS_OR_INTERPRETATION_BOUNDARY")
+        for observation in observations:
+            fields = {"canonical_metric", "normalized_value", "currency", "reporting_period", "period_type",
+                      "period_start", "period_end", "statement_scope", "statement_family", "temporal_nature",
+                      "audit_or_review_status", "factual_status", "research_status", "research_reason_codes",
+                      "temporal_status", "valuation_use", "annualization", "ttm_derivation",
+                      "foreign_currency_conversion", "context_kind", "component_semantic_type", "component_direction",
+                      "source", "assurance_reference", "observation_status"}
+            if name == "earnings_quality":
+                fields.update({"recurrence_assessment", "normalization_status"})
+            require(set(observation) == fields, "OBSERVATION_SCHEMA")
+            require(METRIC_DIMENSIONS.get(observation.get("canonical_metric")) == name, "METRIC_DIMENSION")
+            amount = observation.get("normalized_value")
+            require(type(amount) in (int, float) and math.isfinite(amount), "FINITE_OBSERVATION_REQUIRED")
+            require(observation.get("observation_status") == "KNOWN" and observation.get("factual_status") == "qualified", "OBSERVATION_FITNESS")
+            require(observation.get("annualization") == observation.get("ttm_derivation") == "NOT_PERMITTED"
+                    and observation.get("foreign_currency_conversion") == "NOT_PERMITTED", "TRANSFORMATION_BOUNDARY")
+            require(observation.get("temporal_status") in {"CURRENT_OFFICIAL_FACT", "HISTORICAL_OFFICIAL_FACT"}, "TEMPORAL_STATUS")
+            source = observation.get("source")
+            require(isinstance(source, dict) and not _temporal_reasons(source, boundary), "SOURCE_TIME_INVALID")
+            require(set(source) == {"source_identity", "document_sha256", "citation_id", "source_page", "line_code",
+                                   "observed_at", "knowledge_available_at", "publication_date", "ingress_contract"}, "SOURCE_SCHEMA")
+            require(all(source.get(k) not in (None, "") for k in ("source_identity", "document_sha256", "citation_id", "source_page", "line_code")), "SOURCE_REFERENCE_REQUIRED")
+            require(isinstance(observation.get("assurance_reference"), dict)
+                    and set(observation["assurance_reference"]) == {"evidence_id", "document_sha256", "contract_version", "page_number"}
+                    and observation["assurance_reference"].get("evidence_id")
+                    and observation["assurance_reference"]["document_sha256"] == source["document_sha256"], "ASSURANCE_REFERENCE_REQUIRED")
+            require(all(observation.get(k) for k in ("currency", "reporting_period", "period_type", "statement_scope", "statement_family")), "OBSERVATION_BASIS_REQUIRED")
+            if name == "earnings_quality":
+                require(observation.get("recurrence_assessment") == "UNKNOWN"
+                        and observation.get("normalization_status") == "NOT_CALCULATED", "COMPONENT_INTERPRETATION_BOUNDARY")
+    expected_flags = {name: {"status": "UNKNOWN", "reason": "QUALIFIED_MULTI_YEAR_STRUCTURAL_SOURCE_NOT_AVAILABLE"} for name in FLAGS}
+    expected_flags.update(
+        INSUFFICIENT_STRUCTURAL_EVIDENCE={"status": "KNOWN", "reason": "PARTIAL_FACTS_DO_NOT_ESTABLISH_STRUCTURAL_THESIS"},
+        EARNINGS_QUALITY_UNCERTAIN={"status": "KNOWN", "reason": "RECURRENCE_AND_RECONCILED_PRESENTATION_UNPROVEN"},
+        VALUATION_UNQUALIFIED={"status": "KNOWN", "reason": "STRICT_SHARES_AND_VALUATION_NOT_QUALIFIED_BY_THIS_OBJECT"})
+    require(evidence["flags"] == expected_flags, "STRUCTURAL_FLAGS")
+    normalization_blockers = list(NORMALIZATION_BLOCKERS)
+    if not dimensions["earnings_quality"]["observations"]:
+        normalization_blockers.append("EXACT_COMPONENT_PERIOD_SCOPE_NOT_AVAILABLE")
+    require(evidence["normalization"] == {"status": "NORMALIZED_ECONOMICS_NOT_QUALIFIED", "blockers": normalization_blockers}, "NORMALIZATION_BOUNDARY")
+    require(isinstance(evidence["research_context"], list) and isinstance(evidence["excluded_evidence"], list), "CONTEXT_ARRAYS")
+    for context in evidence["research_context"]:
+        require(isinstance(context, dict) and set(context) == {
+            "item_identity", "source", "axis", "state", "fitness", "source_owned_facts",
+            "knowledge_available_at", "observed_at", "authority"}, "CONTEXT_SCHEMA")
+        require(not _temporal_reasons(context, boundary)
+                and context.get("authority") == "RESEARCH_CONTEXT_ONLY_NOT_QUALIFIED_COMPANY_ECONOMICS", "CONTEXT_BOUNDARY")
+    return {"matrix": deepcopy(dict(evidence)), "source_matrix_identity": evidence["artifact_identity"],
+            "temporal_use": "CONSULTATION_KNOWLEDGE_CUTOFF_NOT_SEALED_DECISION_TIME",
+            "identity_use": "CONTENT_INTEGRITY_NOT_SOURCE_AUTHENTICATION_OR_PIT"}
+
+
+def compare_selected(matrices: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    """Display exact reported bases side by side, without arithmetic or judgment."""
+    if not matrices:
+        raise ValueError("ECONOMICS_COMPARISON_SELECTION_REQUIRED")
+    views = sorted([packet_context(matrix, ticker=matrix["ticker"])["matrix"] for matrix in matrices], key=lambda v: v["ticker"])
+    tickers = [v["ticker"] for v in views]
+    if len(set(tickers)) != len(tickers):
+        raise ValueError("ECONOMICS_COMPARISON_DUPLICATE_TICKER")
+    if len({_time(v["knowledge_cutoff"]) for v in views}) != 1:
+        raise ValueError("ECONOMICS_COMPARISON_CUTOFF_MISMATCH")
+    basis_keys = ("canonical_metric", "period_start", "period_end", "period_type", "statement_scope",
+                  "currency", "statement_family", "temporal_nature", "context_kind",
+                  "component_semantic_type", "component_direction")
+    groups, unpaired = {}, []
+    from datetime import date
+    for view in sorted(views, key=lambda v: v["ticker"]):
+        for name, dimension in view["dimensions"].items():
+            for observation in dimension["observations"]:
+                row = {"ticker": view["ticker"], "dimension": name, "observation": deepcopy(observation)}
+                start, end = observation.get("period_start"), observation.get("period_end")
+                try:
+                    # Stock observations also need explicit coverage; labels never supply dates.
+                    dates_valid = bool(start and end and date.fromisoformat(start) <= date.fromisoformat(end))
+                except (ValueError, TypeError):
+                    dates_valid = False
+                if not dates_valid:
+                    unpaired.append({**row, "basis_status": "EXPLICIT_COVERED_DATES_NOT_AVAILABLE"})
+                    continue
+                basis = {k: observation.get(k) for k in basis_keys}
+                groups.setdefault(_canonical(basis), {"basis": basis, "observations": []})["observations"].append(row)
+    grouped = []
+    for key in sorted(groups):
+        group = groups[key]
+        group["basis_status"] = ("EXACT_REPORTED_BASIS_MATCH_NOT_ECONOMIC_EQUIVALENCE"
+                                 if len({r["ticker"] for r in group["observations"]}) > 1 else "SINGLE_SELECTED_ISSUER_ONLY")
+        grouped.append(group)
+    return {"selection_basis": "EXPLICIT_STUDY_GROUP_NOT_UNIVERSE_OR_PEER_COHORT",
+            "tickers": sorted(tickers), "knowledge_cutoff": views[0]["knowledge_cutoff"],
+            "groups": grouped, "unpaired_observations": unpaired,
+            "issuer_states": {v["ticker"]: {"source_matrix_identity": v["artifact_identity"],
+                "dimensions": {n: {k: deepcopy(d[k]) for k in ("observation_status", "current_observation_status", "interpretation_status", "interpretation_blockers")} for n, d in v["dimensions"].items()},
+                "flags": v["flags"], "normalization": v["normalization"]} for v in sorted(views, key=lambda v: v["ticker"])},
+            "research_boundaries": list(BOUNDARIES), "non_voting": True, "is_actionable": False,
+            "authority_effect": "NONE", "production": "OFFLINE_OPT_IN_ONLY"}

@@ -19,7 +19,7 @@ SOURCES = {
 
 
 def configure_parser(sub):
-    parser = sub.add_parser("research", help="Inspect explicit retained coverage/calibration; read-only, offline.")
+    parser = sub.add_parser("research", help="Inspect explicit retained research; read-only, offline.")
     actions = parser.add_subparsers(dest="research_action", required=True)
     coverage = actions.add_parser("coverage", help="Full-universe coverage with optional ticker and retained panel context.")
     coverage.add_argument("--session", required=True)
@@ -29,6 +29,11 @@ def configure_parser(sub):
     coverage.add_argument("--panel", type=Path, help="Optional existing historical_temporal_research_panel/v1 JSON projection.")
     calibration = actions.add_parser("calibration", help="Descriptive outcome review; genuine maturity and population limits preserved.")
     calibration.add_argument("--feedback", type=Path, required=True)
+    economics = actions.add_parser("economics", help="Selected company economics evidence packets; no structural or capital judgment.")
+    economics.add_argument("--facts", type=Path, required=True, help="Exact already-qualified official JSONL overlay.")
+    economics.add_argument("--cutoff", required=True, help="Explicit timezone-bearing consultation knowledge cutoff.")
+    economics.add_argument("--ticker", action="append", required=True, help="Selected study ticker (repeatable); not a universe/peer cohort.")
+    economics.add_argument("--canonical-packet", type=Path, help="Optional existing sealed decision packet reference; never enriched in place.")
 
 
 def _session(value):
@@ -42,7 +47,7 @@ def _digest(path):
         return hashlib.file_digest(handle, "sha256").hexdigest()
 
 
-def _json(path):
+def _decode(text):
     def unique(pairs):
         result = {}
         for key, value in pairs:
@@ -60,18 +65,66 @@ def _json(path):
             raise ValueError("NONFINITE_SOURCE_NUMBER")
         return number
 
-    with path.open(encoding="utf-8") as handle:
-        body = json.load(handle, object_pairs_hook=unique, parse_constant=nonfinite, parse_float=finite_float)
+    body = json.loads(text, object_pairs_hook=unique, parse_constant=nonfinite, parse_float=finite_float)
     if not isinstance(body, dict):
         raise ValueError("SOURCE_NOT_AN_OBJECT")
     return body
 
 
+def _json(path):
+    return _decode(path.read_text(encoding="utf-8"))
+
+
+def _economics(args, paths):
+    import long_term_company_economics_evidence as economics
+    from stocklookup_core.decision.human_ai_decision_evidence_packet import build_packet
+
+    cutoff = economics._time(args.cutoff)
+    tickers = [t.strip().upper() for t in args.ticker]
+    if not tickers or len(tickers) > 32 or len(set(tickers)) != len(tickers):
+        raise ValueError("ECONOMICS_INVALID_SELECTION")
+    if any(not t or not t.isascii() or not t.isalnum() for t in tickers):
+        raise ValueError("INVALID_TICKER")
+    rows = []
+    with paths["facts"].open(encoding="utf-8") as handle:
+        for line in handle:
+            if line.strip():
+                row = _decode(line)
+                if not isinstance(row.get("ticker"), str) or not row["ticker"]:
+                    raise ValueError("ECONOMICS_FACT_SUBJECT_REQUIRED")
+                rows.append(row)
+    canonical = None
+    if "canonical_packet" in paths:
+        from stocklookup_core.decision import current_research_decision_packet as owner
+
+        artifact = _json(paths["canonical_packet"])
+        owner.replay(artifact)
+        if any(artifact.get(k) != v for k, v in owner.content_identity(artifact).items()):
+            raise ValueError("CANONICAL_PACKET_IDENTITY_MISMATCH")
+        if date.fromisoformat(_session(artifact.get("research_session"))) > cutoff.date():
+            raise ValueError("CANONICAL_PACKET_SESSION_AFTER_CONSULTATION")
+        if not set(tickers) <= set(artifact["records"]):
+            raise ValueError("CANONICAL_PACKET_SELECTED_SUBJECT_MISMATCH")
+        canonical = {"artifact_identity": artifact["artifact_identity"], "research_session": artifact["research_session"],
+                     "use": "REFERENCE_ONLY_NOT_PROOF_ECONOMICS_KNOWN_AT_DECISION_TIME"}
+    matrices = [economics.build(ticker=t, knowledge_cutoff=args.cutoff, official_rows=rows) for t in sorted(tickers)]
+    comparison = economics.compare_selected(matrices)
+    packets = {m["ticker"]: build_packet(ticker=m["ticker"], company_economics=m,
+                canonical_packet_identity=canonical["artifact_identity"] if canonical else None,
+                sections={"comparison": {"company_economics_selected_comparison": {"claim": {"warning": True}, "value": comparison}}}) for m in matrices}
+    return {"contract_version": economics.CONTRACT_VERSION, "knowledge_cutoff": args.cutoff,
+            "temporal_use": "CONSULTATION_KNOWLEDGE_CUTOFF_NOT_SEALED_DECISION_TIME",
+            "selection_basis": comparison["selection_basis"], "canonical_reference": canonical,
+            "packets": packets, "comparison": comparison, "production": "OFFLINE_OPT_IN_ONLY"}
+
+
 def inspect(args):
     # Hash before and after projection: a changing file never produces a success.
-    names = list(SOURCES) if args.research_action == "coverage" else ["feedback"]
+    names = {"coverage": list(SOURCES), "calibration": ["feedback"], "economics": ["facts"]}[args.research_action]
     if args.research_action == "coverage" and args.panel:
         names.append("panel")
+    if args.research_action == "economics" and args.canonical_packet:
+        names.append("canonical_packet")
     paths = {name: getattr(args, name).resolve(strict=True) for name in names}
     before = {name: _digest(path) for name, path in paths.items()}
     if args.research_action == "coverage":
@@ -124,6 +177,8 @@ def inspect(args):
             "historical_context_supplied": historical is not None,
             "temporal_use": "CURRENT_RESEARCH_INSPECTION_NOT_PIT",
         }
+    elif args.research_action == "economics":
+        result = _economics(args, paths)
     else:
         import decision_outcome_calibration_review as calibration
         import prospective_decision_outcome_feedback as feedback
@@ -152,7 +207,7 @@ def run(args):
     try:
         result = inspect(args)
         payload = json.dumps(result, ensure_ascii=False, sort_keys=True, allow_nan=False)
-    except (OSError, ValueError, TypeError, KeyError, AttributeError, RecursionError) as exc:
+    except (OSError, ValueError, TypeError, KeyError, AttributeError, RecursionError, OverflowError) as exc:
         # Do not expose host paths or source bodies in an error report.
         reason = str(exc).split(":", 1)[0] if isinstance(exc, ValueError) and not isinstance(exc, json.JSONDecodeError) else type(exc).__name__
         if not re.fullmatch(r"[A-Z][A-Z0-9_]+", reason):

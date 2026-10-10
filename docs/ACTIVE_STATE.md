@@ -33,7 +33,7 @@ Fact kinds used below: **CURRENT FACT** (verified in repo or by a stated read-on
 **BLOCKED**, **DEFERRED**, **HISTORICAL**.
 
 ## 1. The operational gate
-- **ACTIVE — [research inspection](research_inspection_integrity_v1_contract.md):** explicit-source coverage/calibration CLI and strict feedback parsing; merge gated. PR115 COMPLETE `9bc6360`, four post-merge CI PASS (38056595405).
+- **ACTIVE — [economics packet consumer](company_economics_research_packet_consumer_v1_contract.md):** offline Human/AI view and exact-basis comparison; merge gated. PR116 COMPLETE `a8a91ff`, four post-merge CI PASS (38058615379).
 - **COMPLETE — [capacity Phase 1](capacity_recovery_phase1_contract.md):** PR99 merged
   `168e0f7`, post-merge CI 37893984528 success; zero production reclaim/activation.
 - **COMPLETE — Vault V1:** PR97 merged `3f3d4fe`; offline/opt-in, 77 candidates,
