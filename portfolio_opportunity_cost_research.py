@@ -253,7 +253,7 @@ def _owner_exposure(state: Mapping[str, Any] | None) -> dict[str, Any]:
     }
 
 
-def _holding_fact(ticker: str, state: Mapping[str, Any] | None) -> tuple[str, str]:
+def _holding_fact(ticker: str, state: Mapping[str, Any] | None, *, require_explicit_quantity: bool = False) -> tuple[str, str]:
     """(holding fact, basis). ``portfolio_state/v1`` carries no position-coverage guarantee: its
     ``positions`` are only the snapshot's rows. A ticker absent from them is therefore unresolved,
     never confirmed not-held."""
@@ -264,11 +264,17 @@ def _holding_fact(ticker: str, state: Mapping[str, Any] | None) -> tuple[str, st
         return POSITION_UNRESOLVED, BASIS_NOT_LISTED
     if not position.get("is_active"):
         return EXCLUDED_INACTIVE, "OWNER_RESEARCH_EXCLUSION"
-    status = position.get("current_position_status", "CURRENT_CONFIRMED")
+    status = position.get("current_position_status", "UNRESOLVED" if require_explicit_quantity else "CURRENT_CONFIRMED")
     if status == "CLOSED":
         return NOT_HELD_CONFIRMED, "OWNER_LEDGER_POSITION_CLOSED"
     if status != "CURRENT_CONFIRMED":
         return POSITION_UNRESOLVED, "OWNER_LEDGER_POSITION_UNRESOLVED"
+    if require_explicit_quantity:
+        import math
+        quantity = position.get("current_quantity")
+        if (not isinstance(quantity, (int, float)) or isinstance(quantity, bool)
+                or not math.isfinite(quantity) or quantity < 0):
+            return POSITION_UNRESOLVED, "OWNER_CURRENT_QUANTITY_UNRESOLVED"
     if (position.get("current_quantity") or 0) > 0:
         return HELD_CONFIRMED, "OWNER_LEDGER_CURRENT_CONFIRMED"
     return NOT_HELD_CONFIRMED, "OWNER_LEDGER_CURRENT_CONFIRMED_ZERO_QUANTITY"
@@ -411,6 +417,14 @@ def _structural_evidence(unit: Mapping[str, Any]) -> tuple[list[str], list[str]]
 
 def _tactical_evidence(unit: Mapping[str, Any]) -> tuple[list[str], list[str]]:
     lens = unit["lenses"]["tactical"]
+    if lens.get("research_action_policy_version") == "v2":
+        status = lens["confirmation"]
+        reason = "TACTICAL_" + lens["posture_condition_class"] + "_" + status
+        if status == "ENTRY_ADMITTED":
+            return [reason], []
+        if status in {"EXTENDED", "REBASE_REQUIRED", "ADVERSE", "DISTRIBUTION_UNCONFIRMED", "VETOED", "NARROWED"}:
+            return [], [reason]
+        return [], []
     if lens["confirmation"] == "CONFIRMED":
         return ["TACTICAL_" + lens["tactical_phase"] + "_CONFIRMED"], []
     if lens["confirmation"] in ("UNCONFIRMED", "ADVERSE", "EXTENDED"):
@@ -451,7 +465,10 @@ def _held_cases(unit: Mapping[str, Any], concentration: Mapping[str, Any], polic
     elif strategic["relative_research_state"] == "UNQUALIFIED_EXPENSIVE_RELATIVE_RESEARCH":
         narrowed.append({"ticker": unit["ticker"], "case": VALUATION_TRIM_REVIEW,
                          "reason": "EXPENSIVE_LABEL_NOT_SUPPORTED_BY_QUALIFIED_METHOD"})
-    if s_support and not s_counter and not expensive and not thesis_break:
+    entry_allowed = tactical.get("research_action_policy_version") != "v2" or tactical["confirmation"] == "ENTRY_ADMITTED"
+    if not entry_allowed:
+        narrowed.append({"ticker": unit["ticker"], "case": ADD_CORE_REVIEW, "reason": "NO_QUALIFIED_INTEGRATED_ENTRY_TRIGGER"})
+    if s_support and not s_counter and not expensive and not thesis_break and entry_allowed:
         reasons = _owner_limit_reasons(unit, concentration, policy)
         if reasons:
             narrowed.extend({"ticker": unit["ticker"], "case": ADD_CORE_REVIEW, "reason": reason} for reason in reasons)
@@ -584,7 +601,7 @@ def _cash_case(state: Mapping[str, Any] | None, alternatives: Sequence[Mapping[s
 # ── Entry point ─────────────────────────────────────────────────────────────────
 
 def _unit(raw: Mapping[str, Any], *, session: str, market: Mapping[str, Any] | None,
-          state: Mapping[str, Any] | None) -> dict[str, Any]:
+          state: Mapping[str, Any] | None, integrated_lens: Mapping[str, Any] | None = None) -> dict[str, Any]:
     _require(isinstance(raw, Mapping), "CANDIDATE_INVALID")
     _reject(raw, "CANDIDATE")
     ticker = raw.get("ticker")
@@ -597,7 +614,7 @@ def _unit(raw: Mapping[str, Any], *, session: str, market: Mapping[str, Any] | N
     _require(role in PORTFOLIO_ROLES, f"PORTFOLIO_ROLE_REQUIRED:{ticker}")
     thesis_ids = sorted({t for t in raw.get("thesis_ids") or [] if isinstance(t, str) and t.strip()})
     event_ids = sorted({e for e in raw.get("event_ids") or [] if isinstance(e, str) and e.strip()})
-    holding, holding_basis = _holding_fact(ticker, state)
+    holding, holding_basis = _holding_fact(ticker, state, require_explicit_quantity=integrated_lens is not None)
     position = ((state or {}).get("positions") or {}).get(ticker) or {}
     return {
         "ticker": ticker,
@@ -617,7 +634,7 @@ def _unit(raw: Mapping[str, Any], *, session: str, market: Mapping[str, Any] | N
         "lenses": {
             "core_structural": _core_structural(raw.get("structural"), session=session, ticker=ticker),
             "strategic": _strategic(raw.get("valuation"), session=session, ticker=ticker, event_ids=event_ids),
-            "tactical": _tactical(raw.get("tactical"), session=session, ticker=ticker),
+            "tactical": dict(integrated_lens) if integrated_lens is not None else _tactical(raw.get("tactical"), session=session, ticker=ticker),
         },
         "_workbench_row": {
             key: raw[key] for key in ("sector", "style", "current_returns", "current_return_dates") if key in raw
@@ -631,6 +648,7 @@ def build_comparison(
     candidates: Sequence[Mapping[str, Any]],
     owner_portfolio_state: Mapping[str, Any] | None = None,
     market_context: Mapping[str, Any] | None = None,
+    _integrated_lenses: Mapping[str, Mapping[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Build the opt-in comparative research view. Raises on any session or identity mismatch."""
     _require(isinstance(session, str) and session.strip(), "SESSION_REQUIRED")
@@ -641,7 +659,8 @@ def build_comparison(
     available_state = owner_portfolio_state if exposure["status"] not in (OWNER_STATE_NOT_SUPPLIED, "OWNER_STATE_NOT_AVAILABLE") else None
     policy = dict((available_state or {}).get("effective_policy") or {})
 
-    units = [_unit(raw, session=session, market=market_context, state=available_state) for raw in candidates]
+    units = [_unit(raw, session=session, market=market_context, state=available_state,
+                   integrated_lens=(_integrated_lenses or {}).get(raw.get("ticker"))) for raw in candidates]
     tickers = [unit["ticker"] for unit in units]
     _require(len(tickers) == len(set(tickers)), "DUPLICATE_COMPARISON_UNIT_TICKER")
     integrated = {unit["source_artifact_identities"].get("integrated_investment_decision_product") for unit in units} - {None}
@@ -732,4 +751,75 @@ def build_comparison(
         "persisted": False,
     }
     body["comparison_identity"] = CONTRACT_VERSION + ":" + _sha(body)
+    return body
+
+
+V2_CONTRACT_VERSION = "portfolio_opportunity_cost_research/v2"
+V2_CLASSIFICATION = {
+    "FRESH_ENTRY_TRIGGER": "ENTRY_ADMITTED", "CONFIRMED_RETEST_ENTRY": "ENTRY_ADMITTED",
+    "BASE_UNCONFIRMED": "UNCONFIRMED", "EARLY_MONITOR_NO_TRIGGER": "UNCONFIRMED",
+    "CONSTRUCTIVE_TREND_NO_FRESH_ENTRY": "NON_ENTRY", "EXTENDED_NO_CHASE": "EXTENDED",
+    "FAILED_BREAKOUT_REBASE_REQUIRED": "REBASE_REQUIRED", "FAILED_BREAKOUT_WITH_DETERIORATION": "ADVERSE",
+    "BEARISH_STRUCTURE_ADVERSE": "ADVERSE", "DISTRIBUTION_OR_BREAKDOWN_WITH_DETERIORATION": "ADVERSE",
+    "DISTRIBUTION_RISK_NO_FRESH_ENTRY": "DISTRIBUTION_UNCONFIRMED",
+    "MISSING_CURRENT_EVIDENCE": "NOT_USABLE", "UNQUALIFIED_TACTICAL_STRUCTURE": "NOT_USABLE",
+    "UNQUALIFIED_TACTICAL_AND_FUNDAMENTAL": "NOT_USABLE",
+    "FUNDAMENTAL_DETERIORATION_VETO_NO_NEW_ENTRY": "VETOED",
+    "EARLY_REVERSAL_AWAITING_HIGHER_LOW": "UNCONFIRMED",
+    "PARTICIPATION_CONTRADICTION_NARROWS_ENTRY": "NARROWED",
+    "BEARISH_BREADTH_NARROWS_FRESH_ENTRY": "NARROWED",
+    "PENDING_DEFINED_CONFIRMATION": "UNCONFIRMED", "OBSERVATIONAL_NO_ENTRY": "NON_ENTRY",
+}
+
+
+def build_integrated_comparison(*, session: str, integrated_decision: Mapping[str, Any], candidates: Sequence[Mapping[str, Any]],
+                                integrated_scenario_binding: Mapping[str, Any] | None = None,
+                                owner_portfolio_state: Mapping[str, Any] | None = None,
+                                market_context: Mapping[str, Any] | None = None) -> dict[str, Any]:
+    """Distinct v2 path; legacy callers and historical phase-only research stay v1."""
+    import copy
+    from current_evidence_bound_scenario import bind_integrated_scenarios, validate_integrated_binding
+    tickers = [row.get("ticker") for row in candidates]
+    binding = integrated_scenario_binding if integrated_scenario_binding is not None else bind_integrated_scenarios(
+        session=session, integrated_decision=integrated_decision, tickers=tickers)
+    validate_integrated_binding(binding, session=session, integrated_decision=integrated_decision, tickers=tickers)
+    source = integrated_decision["artifact_identity"]
+    lenses, prepared = {}, []
+    for candidate in candidates:
+        ticker = candidate["ticker"]
+        record = binding["records"][ticker]
+        raw = copy.deepcopy(dict(candidate))
+        asserted = (raw.get("source_artifact_identities") or {}).get("integrated_investment_decision_product")
+        _require(asserted in (None, source), "CROSS_SOURCE_INTEGRATED_IDENTITY_MISMATCH")
+        for name in ("tactical", "structural"):
+            if raw.get(name):
+                _require(raw[name].get("source_identity") == source, "INTEGRATED_LENS_IDENTITY_MISMATCH")
+                _require(raw[name].get("session") == session, "INTEGRATED_LENS_SESSION_MISMATCH")
+        if raw.get("tactical"):
+            for key in ("research_action_posture", "posture_condition_class", "research_action_policy_version", "decision_identity", "tactical_phase", "evidence_currency"):
+                _require(key not in raw["tactical"] or raw["tactical"][key] == record[key], "INTEGRATED_TACTICAL_CONFLICT")
+        structural = raw.get("structural") or {}
+        _require("fundamental_state" not in structural or structural["fundamental_state"] == record["fundamental_state"], "INTEGRATED_FUNDAMENTAL_CONFLICT")
+        raw["structural"] = {**structural, "source_identity": source, "session": session,
+                             "fundamental_state": record["fundamental_state"]}
+        raw["source_artifact_identities"] = {**(raw.get("source_artifact_identities") or {}), "integrated_investment_decision_product": source}
+        status = V2_CLASSIFICATION[record["posture_condition_class"]]
+        if status == "ENTRY_ADMITTED" and record["bull_case"]["case_status"] != "CONDITIONAL":
+            status = "NOT_USABLE"
+        if status == "ADVERSE" and not record["bear_case"]["observed_adverse"]:
+            status = "NOT_USABLE"
+        lens = {k: copy.deepcopy(record[k]) for k in ("research_action_posture", "posture_condition_class", "research_action_policy_version",
+                "decision_identity", "tactical_phase", "evidence_currency", "trigger", "invalidation", "trigger_qualified", "invalidation_qualified")}
+        lens.update(status="PRESENT", confirmation=status, source={"source_identity": source, "session": session, "fitness": "VERIFIED_INTEGRATED_V2"},
+                    comparable=status != "NOT_USABLE", gaps=["TACTICAL_NOT_USABLE"] if status == "NOT_USABLE" else [],
+                    non_entry_context=[record["posture_condition_class"]] if status in {"NON_ENTRY", "UNCONFIRMED"} else [])
+        lenses[ticker] = lens
+        prepared.append(raw)
+    body = build_comparison(session=session, candidates=prepared, owner_portfolio_state=owner_portfolio_state,
+                            market_context=market_context, _integrated_lenses=lenses)
+    body["contract_version"] = V2_CONTRACT_VERSION
+    body["research_action_policy_version"] = "v2"
+    body["source_identities"]["integrated_scenario_binding"] = binding["artifact_identity"]
+    body.pop("comparison_identity")
+    body["comparison_identity"] = V2_CONTRACT_VERSION + ":" + _sha(body)
     return body

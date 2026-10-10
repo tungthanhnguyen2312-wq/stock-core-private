@@ -59,7 +59,7 @@ def _financial(row):
 def _scenario(row):
  return {k:copy.deepcopy(row.get(k)) for k in ("scenario_disposition","current_state","bear_case","base_case","bull_case","authority_limitations")}
 
-def build_artifact(*, opportunity: Mapping[str,Any], scenario: Mapping[str,Any]|None=None, risk_register: Mapping[str,Any]|None=None, market_sector: Mapping[str,Any]|None=None, financial_momentum: Mapping[str,Any]|None=None, corporate_event: Mapping[str,Any]|None=None, valuation: Mapping[str,Any]|None=None, historical: Mapping[str,Any]|None=None, field_claims: Mapping[str, Mapping[str, Any]]|None=None, regime_context: Mapping[str,Any]|None=None, integrated_decision: Mapping[str,Any]|None=None)->dict[str,Any]:
+def build_artifact(*, opportunity: Mapping[str,Any], scenario: Mapping[str,Any]|None=None, risk_register: Mapping[str,Any]|None=None, market_sector: Mapping[str,Any]|None=None, financial_momentum: Mapping[str,Any]|None=None, corporate_event: Mapping[str,Any]|None=None, valuation: Mapping[str,Any]|None=None, historical: Mapping[str,Any]|None=None, field_claims: Mapping[str, Mapping[str, Any]]|None=None, regime_context: Mapping[str,Any]|None=None, integrated_decision: Mapping[str,Any]|None=None, integrated_scenario_binding: Mapping[str,Any]|None=None)->dict[str,Any]:
  if opportunity.get("contract_version")!="current_opportunity_prioritization/v1" or opportunity.get("artifact_sha256")!=opportunity_identity(opportunity).get("artifact_sha256") or not isinstance(opportunity.get("records"),Mapping):raise CurrentResearchDecisionPacketError("CURRENT_DECISION_CONTEXT_INVALID")
  supplied={"scenario":scenario,"risk_register":risk_register,"market_sector":market_sector,"financial_momentum":financial_momentum,"corporate_event":corporate_event,"valuation":valuation,"historical":historical}
  manifest={name:_manifest(name,a) for name,a in supplied.items()}
@@ -91,6 +91,10 @@ def build_artifact(*, opportunity: Mapping[str,Any], scenario: Mapping[str,Any]|
     raise CurrentResearchDecisionPacketError("INTEGRATED_DECISION_POLICY_EPOCH_MISMATCH")
    if security.get("decision_identity") != owner.decision_identity(security):
     raise CurrentResearchDecisionPacketError("INTEGRATED_DECISION_RECORD_IDENTITY_INVALID")
+ if integrated_scenario_binding is not None:
+  from current_evidence_bound_scenario import validate_integrated_binding
+  validate_integrated_binding(integrated_scenario_binding, session=opportunity.get("research_session"),
+                              integrated_decision=integrated_decision, tickers=opportunity["records"])
  records={}
  for ticker, decision in sorted(opportunity["records"].items()):
   unresolved=[name for name,m in manifest.items() if m["status"]!="PRESENT" or ticker not in valid.get(name,{}).get(SPECS[name][2],{})]
@@ -115,11 +119,16 @@ def build_artifact(*, opportunity: Mapping[str,Any], scenario: Mapping[str,Any]|
     "research_action_posture", "posture_condition_class", "research_action_policy_version",
     "evidence_currency", "decision_identity", "why_now", "trigger", "invalidation")}
    row["security_decision"]["research_action_policy_version"]=owner.research_policy_epoch(security)
+  if integrated_scenario_binding is not None:
+   row["integrated_scenario_binding"]=copy.deepcopy(integrated_scenario_binding["records"][ticker])
   records[ticker]=row
  coverage={"universe_denominator":len(records),"valid_packet_count":sum(not r["unresolved_components"] for r in records.values()),"partial_count":sum(r["packet_status"]=="PARTIAL" for r in records.values()),"malformed_component_count":sum(m["status"]=="MALFORMED" for m in manifest.values()),"component_availability_counts":dict(Counter(m["status"] for m in manifest.values())),"most_common_unresolved_components":dict(Counter(x for r in records.values() for x in r["unresolved_components"])),"packets_with_entry_action_and_partial_context":sum(r["packet_status"]=="PARTIAL" and r["current_decision_context"].get("entry_action") is not None for r in records.values()),"packets_with_scenario_risk_and_blocked_valuation":sum("scenario_context" in r["components"] and "risk_register" in r["components"] and any(x.get("status")=="BLOCKED" for x in r["components"].get("valuation_context",{}).get("metrics",{}).values()) for r in records.values()),"packets_with_no_current_technical_coverage":sum("EXACT_SESSION_TECHNICAL_CONTEXT_UNAVAILABLE" in {x.get("risk_type") for x in r["components"].get("risk_register",{}).get("data_authority_limitations",[])} for r in records.values())}
  artifact={"schema_version":"1.0.0","contract_version":CONTRACT_VERSION,"research_session":opportunity.get("research_session"),"component_manifest":manifest,"source_artifact_identities":{"current_decision_context":opportunity.get("artifact_identity")}|{n:m.get("source_artifact_identity") for n,m in manifest.items()},"records":records,"coverage":coverage,"authority_boundary":{"is_actionable":False,"no_global_authority_score":True,"upstream_decisions_passthrough_only":True,"source_sessions_preserved_independently":True,"no_recommendation_probability_expected_return_target_or_sizing":True,"raw_as_traded":"NOT_PROMOTED","pit":"BLOCKED"},"blocked_outputs":{x:"NOT_EMITTED" for x in FORBIDDEN}}
  if integrated_decision is not None:
   artifact["source_artifact_identities"]["integrated_decision"]=integrated_decision["artifact_identity"]
+ if integrated_scenario_binding is not None:
+  artifact["source_artifact_identities"]["integrated_scenario_binding"]=integrated_scenario_binding["artifact_identity"]
+  artifact["integrated_scenario_binding_header"]={k:copy.deepcopy(v) for k,v in integrated_scenario_binding.items() if k!="records"}
  if regime_context is not None:
   from macro_market_regime_decision_context import validate_context
   validate_context(regime_context, opportunity.get("research_session"))
@@ -132,6 +141,26 @@ def replay(a:Mapping[str,Any])->None:
   validate_context(a["macro_market_regime_context"], a.get("research_session"))
  if a.get("contract_version")!=CONTRACT_VERSION or a.get("artifact_sha256")!=content_identity(a).get("artifact_sha256"):raise CurrentResearchDecisionPacketError("PACKET_IDENTITY_MISMATCH")
  records=a.get("records") or {}
+ if a.get("integrated_scenario_binding_header") is not None:
+  from current_evidence_bound_scenario import binding_content_identity, INTEGRATED_BINDING_CONTRACT, validate_binding_context
+  binding=dict(a["integrated_scenario_binding_header"])
+  binding["records"]={t:r.get("integrated_scenario_binding") for t,r in records.items()}
+  sources=a.get("source_artifact_identities") or {}
+  if (binding.get("contract_version")!=INTEGRATED_BINDING_CONTRACT or binding.get("session")!=a.get("research_session")
+      or binding.get("research_action_policy_version")!="v2" or binding.get("integrated_artifact_identity")!=sources.get("integrated_decision")
+      or binding.get("artifact_identity")!=sources.get("integrated_scenario_binding")
+      or any(binding.get(k)!=v for k,v in binding_content_identity(binding).items())):
+   raise CurrentResearchDecisionPacketError("PACKET_SCENARIO_BINDING_INVALID")
+  validate_binding_context(binding, session=a.get("research_session"))
+  for ticker,row in records.items():
+   bound=row.get("integrated_scenario_binding") or {}
+   security=row.get("security_decision") or {}
+   if (bound.get("ticker")!=ticker or bound.get("session")!=a.get("research_session")
+       or bound.get("integrated_artifact_identity")!=sources.get("integrated_decision")
+       or any(bound.get(k)!=security.get(k) for k in ("decision_identity","research_action_posture","posture_condition_class","research_action_policy_version","evidence_currency","trigger","invalidation"))):
+    raise CurrentResearchDecisionPacketError("PACKET_SCENARIO_SECURITY_CONFLICT")
+ elif any("integrated_scenario_binding" in r for r in records.values()):
+  raise CurrentResearchDecisionPacketError("PACKET_SCENARIO_BINDING_HEADER_MISSING")
  cov=a.get("coverage") or {}
  if cov.get("universe_denominator")!=len(records):raise CurrentResearchDecisionPacketError("PACKET_DENOMINATOR_MISMATCH")
  manifest=a.get("component_manifest") or {}

@@ -121,3 +121,246 @@ def build(*, descriptive: Mapping[str, Any], tactical: Mapping[str, Any], peer_r
         if record["key_driver_conflicts"]: patterns["CONFLICTED_SCENARIO_EVIDENCE"] += 1
     artifact = {"schema_version": "1.0.0", "contract_version": CONTRACT_VERSION, "session": descriptive["session"], "source_artifact_identities": source_ids, "records": records, "case_definitions": {"BEAR": "Conditional deterioration/invalidation case.", "BASE": "Current-continuation reference; not most probable.", "BULL": "Conditional confirmation case."}, "coverage": {"universe_count": len(records), "scenario_disposition_counts": dict(sorted(counts.items())), "driver_coverage": {name: sum(record["scenario_drivers"][name]["status"] != "UNAVAILABLE" for record in records.values()) for name in DRIVER_TYPES}, "scenario_pattern_counts": dict(sorted(patterns.items()))}, "validation": {"watchlist": [_detail(records[x]) for x in WATCHLIST if x in records], "preopen_47": [_detail(records[x]) for x in PREOPEN_47 if x in records], "entry_relevant_90": [_detail(records[x]) for x in entry_90 if x in records], "representative_scenarios": representative}, "authority_boundary": {"research_only": True, "probabilities": "UNKNOWN_UNCALIBRATED", "targets_expected_returns_recommendations_rankings_sizing": "NOT_EMITTED", "valuation_case_discrimination": "NOT_EMITTED", "outcomes_or_calibration": "NOT_EMITTED"}, "data_limitations": ["Missing inputs narrow dependent cases only.", "Catalyst artifact is retained earlier-session evidence where present.", "Valuation peer context is unavailable under current authority constraints."], "is_actionable": False}
     artifact.update(content_identity(artifact)); return artifact
+
+
+# Offline opt-in only. The Daily build above retains its original contract.
+INTEGRATED_BINDING_CONTRACT = "current_evidence_bound_scenario_integrated_binding/v1"
+ENTRY_CLASSES = frozenset({"FRESH_ENTRY_TRIGGER", "CONFIRMED_RETEST_ENTRY"})
+UNUSABLE_CLASSES = frozenset({"MISSING_CURRENT_EVIDENCE", "UNQUALIFIED_TACTICAL_STRUCTURE",
+                             "UNQUALIFIED_TACTICAL_AND_FUNDAMENTAL"})
+ADVERSE_CLASSES = frozenset({"BEARISH_STRUCTURE_ADVERSE", "DISTRIBUTION_OR_BREAKDOWN_WITH_DETERIORATION",
+                            "FAILED_BREAKOUT_WITH_DETERIORATION"})
+
+
+class IntegratedScenarioBindingError(ValueError):
+    """A source, policy or binding invariant failed before interpretation."""
+
+
+def _require_binding(condition: bool, reason: str) -> None:
+    if not condition:
+        raise IntegratedScenarioBindingError(reason)
+
+
+def binding_content_identity(artifact: Mapping[str, Any]) -> dict[str, str]:
+    payload = {k: v for k, v in artifact.items() if k not in {"artifact_identity", "artifact_sha256"}}
+    digest = stable_id(payload)
+    return {"artifact_sha256": digest, "artifact_identity": INTEGRATED_BINDING_CONTRACT + ":" + digest}
+
+
+def validate_integrated_source(*, session: str, integrated_decision: Mapping[str, Any], tickers) -> dict[str, Any]:
+    """Verify the whole streamed IID root and every record, not caller lens assertions."""
+    import integrated_investment_decision_product as owner
+    _require_binding(isinstance(session, str) and bool(session), "SESSION_REQUIRED")
+    _require_binding(isinstance(integrated_decision, Mapping), "INTEGRATED_ARTIFACT_MISSING")
+    _require_binding(integrated_decision.get("contract_version") == owner.CONTRACT_VERSION, "INTEGRATED_CONTRACT_MISMATCH")
+    _require_binding(integrated_decision.get("research_action_policy_version") == "v2", "INTEGRATED_POLICY_EPOCH_MISMATCH")
+    _require_binding(integrated_decision.get("session") == session, "INTEGRATED_SESSION_MISMATCH")
+    _require_binding(not isinstance(tickers, (str, bytes)), "REQUESTED_TICKERS_INVALID")
+    try:
+        requested = list(tickers)
+    except TypeError as exc:
+        raise IntegratedScenarioBindingError("REQUESTED_TICKERS_INVALID") from exc
+    _require_binding(bool(requested) and all(isinstance(t, str) and t and t == t.strip().upper() for t in requested), "REQUESTED_TICKERS_INVALID")
+    _require_binding(len(requested) == len(set(requested)), "DUPLICATE_TICKER")
+    records = integrated_decision.get("records")
+    _require_binding(isinstance(records, Mapping) and bool(records), "INTEGRATED_RECORDS_MISSING")
+    try:
+        identity = owner.content_identity(integrated_decision)
+    except (TypeError, ValueError, KeyError) as exc:
+        raise IntegratedScenarioBindingError("INTEGRATED_CONTENT_INVALID") from exc
+    _require_binding(all(integrated_decision.get(k) == v for k, v in identity.items()), "INTEGRATED_CONTENT_IDENTITY_MISMATCH")
+    for ticker, record in records.items():
+        _require_binding(isinstance(record, Mapping) and record.get("ticker") == ticker, "INTEGRATED_TICKER_MISMATCH")
+        _require_binding(record.get("as_of_session") == session, "INTEGRATED_RECORD_SESSION_MISMATCH")
+        _require_binding(record.get("research_action_policy_version") == "v2", "INTEGRATED_RECORD_POLICY_EPOCH_MISMATCH")
+        try:
+            owner.validate_posture_policy(record)
+        except ValueError as exc:
+            raise IntegratedScenarioBindingError("INTEGRATED_CLASS_POSTURE_CONFLICT") from exc
+        _require_binding(record.get("decision_identity") == owner.decision_identity(record), "INTEGRATED_DECISION_IDENTITY_MISMATCH")
+        currency = record.get("evidence_currency")
+        _require_binding(owner.is_valid_evidence_currency(currency), "INTEGRATED_EVIDENCE_CURRENCY_INVALID")
+        if currency == "NO_CURRENT_EVIDENCE":
+            _require_binding(record.get("posture_condition_class") == "MISSING_CURRENT_EVIDENCE", "INTEGRATED_CURRENCY_CLASS_CONFLICT")
+        else:
+            _require_binding(record.get("posture_condition_class") != "MISSING_CURRENT_EVIDENCE", "INTEGRATED_CURRENCY_CLASS_CONFLICT")
+        if currency.startswith("LAST_TRADE_AS_OF:"):
+            _require_binding(currency.split(":", 1)[1] < session, "INTEGRATED_DATED_CURRENCY_INVALID")
+        if record.get("posture_condition_class") not in UNUSABLE_CLASSES:
+            fitness = ((record.get("evidence_axes") or {}).get("TACTICAL_STRUCTURE") or {}).get("fitness")
+            _require_binding(fitness == "AVAILABLE", "INTEGRATED_TACTICAL_ELIGIBILITY_CONFLICT")
+    _require_binding(set(requested) <= set(records), "REQUESTED_TICKER_MISSING")
+    return {t: records[t] for t in sorted(requested)}
+
+
+def _qualified_condition(record: Mapping[str, Any], role: str, session: str) -> bool:
+    import math
+    from bounded_artifact_stream import record_mapping_digest
+    raw = record.get(role) or {}
+    condition = raw.get("condition") or {}
+    level = raw.get(role + "_level")
+    body = {k: v for k, v in condition.items() if k != "condition_identity"}
+    tactical_axis = (record.get("evidence_axes") or {}).get("TACTICAL_STRUCTURE") or {}
+    source_identity = (tactical_axis.get("lineage") or {}).get("source_artifact_identity")
+    return (condition.get("status") == "MACHINE_EVALUABLE"
+            and condition.get("condition_version") == "retained_strategy_boundary_condition/v1"
+            and condition.get("role") == role and condition.get("operator") in {"<", ">"}
+            and condition.get("source_metric") == role + "_level"
+            and condition.get("required_state") == raw.get("trigger_type" if role == "trigger" else "invalidation_method")
+            and condition.get("condition_identity") == "retained_strategy_boundary_condition:" + record_mapping_digest(body)
+            and condition.get("source_method") == "market_structure_breakout_product_projection/v1"
+            and bool(condition.get("source_strategy_identity"))
+            and condition.get("source_strategy_identity") == source_identity
+            and (condition.get("source_lineage") or {}).get("as_of_session") == session
+            and (condition.get("source_lineage") or {}).get("source_artifact_identity") == condition.get("source_strategy_identity")
+            and isinstance(level, (int, float)) and not isinstance(level, bool)
+            and math.isfinite(level) and level > 0 and condition.get("reference_level") == level)
+
+
+def _context_specs():
+    from current_market_flow_positioning import content_identity as flow_identity
+    from current_market_sector_leadership_context import content_identity as sector_identity
+    from current_financial_momentum_context import content_identity as financial_identity
+    return {"flow": ("current_market_flow_positioning/v1", flow_identity, "records"),
+             "market_sector": ("current_market_sector_leadership_context/v1", sector_identity, "ticker_contexts"),
+             "financial": ("current_financial_momentum_context/v1", financial_identity, "records")}
+
+
+def _context_sources(context, session: str) -> dict[str, Any]:
+    """Verify roots once, retain admitted artifacts once for consumer replay.
+
+    Unavailable sources retain only session diagnostics, never unqualified facts.
+    """
+    specs = _context_specs()
+    sources = {}
+    for name, artifact in (context or {}).items():
+        if name not in specs or not isinstance(artifact, Mapping):
+            sources[name] = None
+            continue
+        contract, identity, field = specs[name]
+        qualified = False
+        try:
+            qualified = (artifact.get("session") == session and artifact.get("contract_version") == contract
+                         and isinstance(artifact.get(field), Mapping)
+                         and all(artifact.get(k) == v for k, v in identity(artifact).items()))
+        except (TypeError, ValueError, KeyError, AttributeError):
+            pass
+        sources[name] = copy.deepcopy(dict(artifact)) if qualified else {"session": artifact.get("session") if isinstance(artifact.get("session"), str) else None}
+    return sources
+
+
+def _optional_context(context, session: str, ticker: str) -> dict[str, Any]:
+    """Read only normalized, root-verified sources. No flow direction classifier."""
+    result = {}
+    specs = _context_specs()
+    for name, (contract, identity, field) in specs.items():
+        artifact = (context or {}).get(name)
+        reason = "CONTEXT_UNQUALIFIED" if name in (context or {}) else "CONTEXT_NOT_SUPPLIED"
+        row = None
+        if isinstance(artifact, Mapping):
+            reason = "CONTEXT_SESSION_MISMATCH" if artifact.get("session") != session else "CONTEXT_UNQUALIFIED"
+            try:
+                if artifact.get("session") == session and artifact.get("contract_version") == contract:
+                    row = (artifact.get(field) or {}).get(ticker)
+                    if not isinstance(row, Mapping):
+                        row = None
+                    if name == "market_sector" and (row or {}).get("status") not in {"AVAILABLE", "PARTIAL"}:
+                        row = None
+                    if name == "flow":
+                        dimensions = (row or {}).get("coverage", {}).get("available_dimensions", 0)
+                        sections = ("traded_value", "foreign_flow", "foreign_room", "proprietary_flow", "active_order_context")
+                        qualified_count = sum((row or {}).get(k, {}).get("status") == "AVAILABLE" for k in sections)
+                        if ((row or {}).get("session") != session or not isinstance(dimensions, int)
+                                or isinstance(dimensions, bool) or dimensions <= 0 or qualified_count != dimensions):
+                            row = None
+            except (TypeError, ValueError, KeyError, AttributeError):
+                row = None
+        result[name] = {"status": "AVAILABLE_DESCRIPTIVE" if row else "UNAVAILABLE", "reason_code": "QUALIFIED_SAME_SESSION_CONTEXT" if row else reason,
+                        "source_identity": artifact.get("artifact_identity") if row else None,
+                        "use": "NON_VOTING_CONTEXT_ONLY", "payload": copy.deepcopy(row) if row else None}
+    for name in sorted(set(context or {}) - set(specs)):
+        result[name] = {"status": "UNAVAILABLE", "reason_code": "UNSUPPORTED_CONTEXT_CONTRACT",
+                        "source_identity": None, "use": "NON_VOTING_CONTEXT_ONLY", "payload": None}
+    return result
+
+
+def _bound_record(record: Mapping[str, Any], source: str, session: str, context) -> dict[str, Any]:
+    klass = record["posture_condition_class"]
+    usable = klass not in UNUSABLE_CLASSES and record["evidence_currency"] != "NO_CURRENT_EVIDENCE"
+    trigger_qualified = usable and _qualified_condition(record, "trigger", session)
+    invalidation_qualified = usable and _qualified_condition(record, "invalidation", session)
+    # Retest is admitted by the released class; the corresponding fixed structural
+    # condition must still qualify. Watchlist prose never substitutes for it.
+    entry = (klass in ENTRY_CLASSES and trigger_qualified
+             and (record["trigger"].get("condition") or {}).get("operator") == ">")
+    if klass == "FRESH_ENTRY_TRIGGER":
+        entry = entry and record["trigger"].get("trigger_state") == "TRIGGERED" and record["trigger"].get("trigger_type") in {"PIVOT_BREAKOUT_TRIGGER", "CONFIRMED_BOS_TRIGGER"}
+    elif klass == "CONFIRMED_RETEST_ENTRY":
+        entry = (entry and record["trigger"].get("trigger_type") == "RETEST_BROKEN_PIVOT"
+                 and (((record.get("evidence_axes") or {}).get("TACTICAL_STRUCTURE") or {}).get("context") or {}).get("pivot_retest_confirmed") is True)
+    adverse = usable and klass in ADVERSE_CLASSES
+    common = {"probability_status": "UNKNOWN_UNCALIBRATED", "is_actionable": False}
+    copied = {k: copy.deepcopy(record.get(k)) for k in ("research_action_posture", "posture_condition_class", "research_action_policy_version",
+              "decision_identity", "tactical_phase", "fundamental_state", "evidence_currency", "trigger", "invalidation")}
+    axes = record.get("evidence_axes") or {}
+    price_basis = {role: copy.deepcopy((record.get(role) or {}).get("price_basis") or ((record.get(role) or {}).get("condition") or {}).get("price_basis")) for role in ("trigger", "invalidation")}
+    limitations = ["REFERENCE_CASE_NOT_MOST_PROBABLE", "RESEARCH_ONLY_NOT_EXECUTION"]
+    if (not all(isinstance(v, Mapping) and v.get("price_basis_verified") is True for v in price_basis.values())
+            or price_basis["trigger"] != price_basis["invalidation"]):
+        limitations.append("PRICE_BASIS_UNVERIFIED_OR_MIXED")
+    if not all((record.get(role) or {}).get("horizon") for role in ("trigger", "invalidation")):
+        limitations.append("SOURCE_HORIZON_NOT_SUPPLIED")
+    gaps = copy.deepcopy(record.get("material_uncertainties") or [])
+    if record.get("fundamental_state") == "INSUFFICIENT":
+        gaps.append("FUNDAMENTAL_STATE_INSUFFICIENT")
+    return {"ticker": record["ticker"], "session": session, "integrated_artifact_identity": source, **copied, **common,
+            "trigger_qualified": trigger_qualified, "invalidation_qualified": invalidation_qualified,
+            "time_horizon": {role: (record.get(role) or {}).get("horizon") for role in ("trigger", "invalidation")}, "price_basis": price_basis, "limitations": limitations,
+            "evidence_axis_coherence": copy.deepcopy(record.get("evidence_axis_coherence")),
+            "integrated_context": {k: copy.deepcopy(v) for k, v in axes.items() if k != "PORTFOLIO_FIT"},
+            "optional_context": _optional_context(context, session, record["ticker"]),
+            "base_case": {**common, "case_status": "OBSERVED_REFERENCE", "reason_code": klass, "fundamental_gaps": gaps,
+                          "current_state": {k: copied[k] for k in ("tactical_phase", "research_action_posture", "posture_condition_class", "fundamental_state", "evidence_currency")}},
+            "bull_case": {**common, "case_status": "CONDITIONAL" if entry else "NOT_ADMITTED", "reason_code": "QUALIFIED_INTEGRATED_ENTRY_TRIGGER" if entry else "NO_QUALIFIED_ENTRY_TRIGGER",
+                          "trigger": copy.deepcopy(record["trigger"]) if entry else None},
+            "bear_case": {**common, "case_status": "CONDITIONAL" if invalidation_qualified or adverse else "INSUFFICIENT_EVIDENCE",
+                          "reason_code": klass if adverse else "QUALIFIED_INTEGRATED_INVALIDATION" if invalidation_qualified else "NO_QUALIFIED_INVALIDATION_OR_ADVERSE_EVIDENCE",
+                          "source_condition_class": klass,
+                          "observed_adverse": adverse, "invalidation": copy.deepcopy(record["invalidation"]) if invalidation_qualified else None}}
+
+
+def bind_integrated_scenarios(*, session: str, integrated_decision: Mapping[str, Any], tickers, optional_context: Mapping[str, Any] | None = None) -> dict[str, Any]:
+    _require_binding(optional_context is None or isinstance(optional_context, Mapping), "OPTIONAL_CONTEXT_INVALID")
+    _require_binding(all(isinstance(name, str) for name in (optional_context or {})), "OPTIONAL_CONTEXT_INVALID")
+    records = validate_integrated_source(session=session, integrated_decision=integrated_decision, tickers=tickers)
+    context_sources = _context_sources(optional_context, session)
+    artifact = {"contract_version": INTEGRATED_BINDING_CONTRACT, "session": session, "research_action_policy_version": "v2",
+                "integrated_artifact_identity": integrated_decision["artifact_identity"],
+                "source_context_artifacts": context_sources,
+                "records": {t: _bound_record(r, integrated_decision["artifact_identity"], session, context_sources) for t, r in records.items()},
+                "probability_status": "UNKNOWN_UNCALIBRATED", "is_actionable": False}
+    artifact.update(binding_content_identity(artifact))
+    return artifact
+
+
+def validate_binding_context(binding: Mapping[str, Any], *, session: str) -> dict[str, Any]:
+    _require_binding(isinstance(binding.get("source_context_artifacts"), Mapping), "SCENARIO_CONTEXT_SOURCES_MISSING")
+    sources = _context_sources(binding["source_context_artifacts"], session)
+    _require_binding(sources == binding["source_context_artifacts"], "SCENARIO_CONTEXT_SOURCE_CONFLICT")
+    for ticker, bound in (binding.get("records") or {}).items():
+        _require_binding(bound.get("optional_context") == _optional_context(sources, session, ticker), "SCENARIO_CONTEXT_RECORD_CONFLICT")
+    return sources
+
+
+def validate_integrated_binding(binding: Mapping[str, Any], *, session: str, integrated_decision: Mapping[str, Any], tickers) -> None:
+    records = validate_integrated_source(session=session, integrated_decision=integrated_decision, tickers=tickers)
+    _require_binding(isinstance(binding, Mapping) and binding.get("contract_version") == INTEGRATED_BINDING_CONTRACT, "SCENARIO_BINDING_CONTRACT_MISMATCH")
+    _require_binding(binding.get("session") == session and binding.get("research_action_policy_version") == "v2", "SCENARIO_BINDING_SESSION_OR_POLICY_MISMATCH")
+    _require_binding(binding.get("integrated_artifact_identity") == integrated_decision["artifact_identity"], "SCENARIO_INTEGRATED_IDENTITY_MISMATCH")
+    _require_binding(all(binding.get(k) == v for k, v in binding_content_identity(binding).items()), "SCENARIO_BINDING_IDENTITY_MISMATCH")
+    _require_binding(set(binding.get("records") or {}) == set(records), "SCENARIO_BINDING_TICKER_SET_MISMATCH")
+    context_sources = validate_binding_context(binding, session=session)
+    for ticker, source_record in records.items():
+        bound = binding["records"][ticker]
+        expected = _bound_record(source_record, integrated_decision["artifact_identity"], session, context_sources)
+        _require_binding(bound == expected, "SCENARIO_BINDING_RECORD_CONFLICT")

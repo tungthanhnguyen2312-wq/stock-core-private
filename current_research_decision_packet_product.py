@@ -290,6 +290,8 @@ def project_ticker(record: Mapping[str, Any], packet: Mapping[str, Any], *, copy
     }
     if "security_decision" in record:
         view["security_decision"] = _cpy(record["security_decision"], copy_payload)
+    if "integrated_scenario_binding" in record:
+        view["integrated_scenario_binding"] = _cpy(record["integrated_scenario_binding"], copy_payload)
     return view
 
 

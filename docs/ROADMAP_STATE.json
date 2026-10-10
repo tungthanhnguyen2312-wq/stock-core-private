@@ -15,14 +15,35 @@
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "CONDITIONAL_RESEARCH_POSTURE_V2",
+    "milestone": "SCENARIO_AND_OPPORTUNITY_COST_DECISION_COHERENCE_V2",
     "state": "ACTIVE"
   },
   "queued_next": [],
   "milestones": [
     {
-      "milestone_id": "CONDITIONAL_RESEARCH_POSTURE_V2",
+      "milestone_id": "SCENARIO_AND_OPPORTUNITY_COST_DECISION_COHERENCE_V2",
       "state": "ACTIVE",
+      "starting_checkpoint": "314406e59b868d2a4207fa7af7798a31ee3b6906",
+      "candidate_branch": "feature/scenario-opportunity-coherence-v2-20261009",
+      "dependencies": [
+        "CONDITIONAL_RESEARCH_POSTURE_V2"
+      ],
+      "unlocks": [],
+      "owner_authorized": true,
+      "owner_override": "Owner authorizes offline scenario and opportunity-cost coherence implementation, integration regression, checkpoints, normal push and one PR; no Daily, production writes, authority change or successor PR merge.",
+      "authority_effect": "NONE",
+      "source_doc": "docs/scenario_and_opportunity_cost_decision_coherence_v2_contract.md",
+      "state_history": [
+        "DEFERRED",
+        "ACTIVE"
+      ],
+      "checkpoint": "6f3ca4641e738ac58fc7ba2ab6967714c9af75db",
+      "terminal_disposition": null,
+      "notes": "Owner authorizes offline scenario and opportunity-cost coherence implementation, integration regression, checkpoints, normal push and one PR; no Daily, production writes, authority change or successor PR merge. Implementation checkpoint 6f3ca4641e738ac58fc7ba2ab6967714c9af75db; synthetic S1-S20 and complete affected regression passed. Offline opt-in binder/comparison/packet only; original Daily/v1 path preserved. Owner merge/release and exact-head external CI remain gates; no production activation or successor."
+    },
+    {
+      "milestone_id": "CONDITIONAL_RESEARCH_POSTURE_V2",
+      "state": "COMPLETE",
       "starting_checkpoint": "168e0f712e3b57c6a626f0e76f36f471136f3232",
       "candidate_branch": "feature/research-posture-v2-20261009",
       "dependencies": [
@@ -35,11 +56,12 @@
       "source_doc": "docs/conditional_research_posture_v2_contract.md",
       "state_history": [
         "DEFERRED",
-        "ACTIVE"
+        "ACTIVE",
+        "COMPLETE"
       ],
-      "checkpoint": "d3d02e5e58cda8013d4140d17f84a738537e4727",
-      "terminal_disposition": null,
-      "notes": "RESEARCH_POSTURE_V2_FULL_IMPLEMENTATION_AND_CI: owner-directed nine-token policy V2, private holdings excluded, all named consumers, synthetic acceptance and one PR; no merge, deployment, Daily, production writes or authority promotion. Local implementation checkpoint d3d02e5e58cda8013d4140d17f84a738537e4727; full hermetic 3321 passed, 21 skipped, 15 deselected, 42 subtests passed. Owner merge/release and exact-head external CI remain pending; no production activation."
+      "checkpoint": "314406e59b868d2a4207fa7af7798a31ee3b6906",
+      "terminal_disposition": "IMPLEMENTATION_RELEASED_NO_PRODUCTION_ACTIVATION",
+      "notes": "RESEARCH_POSTURE_V2_FULL_IMPLEMENTATION_AND_CI: owner-directed nine-token policy V2, private holdings excluded, all named consumers, synthetic acceptance and one PR; no merge, deployment, Daily, production writes or authority promotion. Local implementation checkpoint d3d02e5e58cda8013d4140d17f84a738537e4727; full hermetic 3321 passed, 21 skipped, 15 deselected, 42 subtests passed. At that local checkpoint, owner merge/release and external CI were pending; no production activation. Verified release 314406e59b868d2a4207fa7af7798a31ee3b6906; no production reclaim, activation or automatic successor."
     },
     {
       "milestone_id": "STOCKLOOKUP_CAPACITY_RECOVERY_PHASE1_LINK_DEDUP_AND_COLD_CATALOG_V1",
