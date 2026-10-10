@@ -1,21 +1,17 @@
 # Stock Lookup — Current Roadmap
 
 History: [ROADMAP.md](ROADMAP.md); execution: ROADMAP_STATE.json.
-Updated 2026-10-10 from main `04211888251473f7872af88e959cf49ca9089dd5`.
+Updated 2026-10-10 from main `9bc6360af5b678ffc15d46156bbb2bfcb8457f0c`.
 Nothing below auto-starts; native standing admission required (AI_RULES 11).
 Facts: [ACTIVE_STATE.md](ACTIVE_STATE.md).
 
-## NOW — PORTFOLIO_RESEARCH_PACKAGE_V1 (ACTIVE)
+## NOW — RESEARCH_INSPECTION_INTEGRITY_V1 (ACTIVE)
 
-Portfolio source layout, privacy/constraints fixed; merge gated.
-[Scope and evidence limits](portfolio_research_package_v1_contract.md).
-Memory COMPLETE: PR114 `0421188`, four post-merge CI PASS (38053161990).
+Explicit-source coverage/calibration inspection and strict feedback intake.
+[Product-value choice and limits](research_inspection_integrity_v1_contract.md).
+Portfolio COMPLETE: PR115 `9bc6360`, four post-merge CI PASS (38056595405).
 Fiscal mapping lacks issuer calendar/covered-period/provider-label/publication proof;
 existing semantics knowledge time is insufficient. No automatic conversion/promotion.
-Financial package COMPLETE: PR108 `0afad0f`, four post-merge CI PASS; root 572 / Python 554.
-Semantic corrective COMPLETE: PR105 `40c88c2`, post-merge CI 38021005739 SUCCESS.
-Coherence V2 COMPLETE: PR101 `64c8bc8`, post-merge CI 38017817078 SUCCESS.
-Posture V2 COMPLETE: PR100 `314406e`, four CI jobs SUCCESS.
 Capacity Phase 1 COMPLETE: PR99 `168e0f7`, CI 37893984528 success;
 zero production reclaim/activation. [Contract](capacity_recovery_phase1_contract.md).
 

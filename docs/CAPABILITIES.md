@@ -15,7 +15,7 @@ Each block: **Contract** · **Runtime** · **Authority** · **Production** · **
 
 Decision-intelligence closure (2026-10-07) is research coverage and calibration context
 only. Contract `decision_intelligence_coverage_calibration/v1`. It does not vote, size,
-or recommend. The optional read-only CLI is deferred.
+or recommend. Read-only inspection is ACTIVE, merge gated; [scope](research_inspection_integrity_v1_contract.md).
 [Closure evidence](internal/DECISION_INTELLIGENCE_COVERAGE_AND_CALIBRATION_CLOSURE_20261007.md).
 
 Macro V1: Daily/AI/cockpit wired; October 8 live acceptance verified (`MACRO_REGIME_20261008_LIVE_ACCEPTED`;
