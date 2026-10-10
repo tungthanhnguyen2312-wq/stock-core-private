@@ -1,8 +1,8 @@
 # Stock Lookup — Active State
 
 Updated 2026-10-10 from verified
-main `401c75f9fd866ab3b06043fe25ff7f2b57066211`.
-Research workflow admitted under standing delegation.
+main `6fcddb95d1cca3819c6bb67429cfe84d1ba0a3a0`.
+Case provenance admitted under standing delegation.
 Verify live main: `git fetch origin main` or `git ls-remote origin refs/heads/main`; a **local** remote-tracking ref can be stale.
 ## 0. How this file relates to the others
 | Question | Answer lives in |
@@ -33,7 +33,7 @@ Fact kinds used below: **CURRENT FACT** (verified in repo or by a stated read-on
 **BLOCKED**, **DEFERRED**, **HISTORICAL**.
 
 ## 1. The operational gate
-- **ACTIVE — [research workflow](research_workflow_package_v1_contract.md):** 15 modules; parity/import acceptance, merge gated. Tactical PR111 COMPLETE `401c75f`, four post-merge CI PASS (38043709070), root Python 516. Prior decision/financial/valuation/layout releases COMPLETE.
+- **ACTIVE — [case provenance](research_case_lifecycle_portable_acceptance_v1_contract.md):** portable lifecycle and exact review/T0 correction; merge gated. Workflow PR112 COMPLETE `6fcddb9`, four post-merge CI PASS (38047543681), root Python 501. Prior source releases COMPLETE.
 - **COMPLETE — [capacity Phase 1](capacity_recovery_phase1_contract.md):** PR99 merged
   `168e0f7`, post-merge CI 37893984528 success; zero production reclaim/activation.
 - **COMPLETE — Vault V1:** PR97 merged `3f3d4fe`; offline/opt-in, 77 candidates,
@@ -306,7 +306,7 @@ Fact kinds used below: **CURRENT FACT** (verified in repo or by a stated read-on
 
 ## 9. Next action
 
-Finish research workflow acceptance and its separate merge gate.
+Finish case provenance acceptance and its separate merge gate.
 Native admission records each standing-authorized scope. Fiscal-calendar
 mapping needs the exact source/period/publication proof in the contract above.
 Ordinary Daily remains owner-operated after fresh READY preflight and exact session gates.

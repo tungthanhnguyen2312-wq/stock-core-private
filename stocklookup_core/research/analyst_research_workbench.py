@@ -124,6 +124,7 @@ class AnalystResearchWorkbench:
         qualifying_reviews = {
             identity: review for identity, review in reviews.items()
             if review["review_state"] in CASE_REVIEW_STATES and review["validation_identity"] in validations
+            and review["ai_research_draft"] == validations[review["validation_identity"]]["draft"]
         }
         case_ids = self._case_ids_for_ticker(ticker)
         create_reasons = []
@@ -238,14 +239,18 @@ class AnalystResearchWorkbench:
         expected_validation = validate_external_ai_draft(packet, draft)
         local_validation = self._validated_drafts.get(ticker, {}).get(expected_validation["validation_identity"])
         if (validation_result.get("validation_identity") != expected_validation["validation_identity"]
-                or expected_validation["validation_status"] != "VALID" or local_validation is None):
+                or expected_validation["validation_status"] != "VALID" or local_validation is None
+                or local_validation["draft"] != dict(draft)):
             raise ValueError("CASE_REQUIRES_CURRENT_VALIDATED_AI_DRAFT")
         if human_review.get("source_ai_input_identity") != packet["ai_input_identity"] or human_review.get("validation_identity") != expected_validation["validation_identity"]:
             raise ValueError("CASE_HUMAN_REVIEW_LINEAGE_MISMATCH")
         if human_review.get("review_state") not in CASE_REVIEW_STATES:
             raise ValueError("CASE_REQUIRES_RECORDED_HUMAN_REVIEW_STATE")
-        if human_review.get("review_packet_identity") not in self._human_reviews.get(ticker, {}):
+        recorded_review = self._human_reviews.get(ticker, {}).get(human_review.get("review_packet_identity"))
+        if recorded_review is None or recorded_review != dict(human_review):
             raise ValueError("CASE_REQUIRES_RECORDED_HUMAN_REVIEW_STATE")
+        if recorded_review["ai_research_draft"] != dict(draft):
+            raise ValueError("CASE_HUMAN_REVIEW_LINEAGE_MISMATCH")
         case = create_research_case(self.decision_artifact, packet, created_at=created_at, known_at=known_at,
                                     validated_draft=draft, validation=expected_validation, human_review=human_review,
                                     outcome_measurement_t0=outcome_measurement_t0)

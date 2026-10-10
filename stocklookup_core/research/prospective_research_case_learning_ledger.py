@@ -6,6 +6,7 @@ liquidity, valuation, sizing, portfolio, or execution authority.
 """
 from __future__ import annotations
 
+import copy
 import hashlib
 import json
 from collections import Counter
@@ -142,6 +143,7 @@ def create_research_case(decision_artifact: Mapping[str, Any], ai_input: Mapping
             "outcome_measurement_t0": dict(outcome_measurement_t0) if outcome_measurement_t0 is not None else None,
             "authority_boundary": {"research_snapshot_not_recommendation": True, "no_historical_pit_backfill": True,
                                    "price_movement_is_not_thesis_proof": True, "portfolio_sizing_execution": "NOT_EMITTED"}}
+    case = copy.deepcopy(case)
     case["case_id"] = "prospective_research_case:" + _hash(case)
     case["case_content_identity"] = case["case_id"]
     return case

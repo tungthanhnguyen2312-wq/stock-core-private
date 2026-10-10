@@ -23,6 +23,7 @@ env:
   CORE_INSTALL: python -m pip install -r requirements.txt -r requirements-test.txt -c constraints.txt
   HERMETIC_MARKERS: not retained_evidence and not provider_runtime
   FOCUSED_SELECTION: >-
+    tests/test_research_case_lifecycle_portable.py
     tests/test_current_decision_prospective_snapshot.py
     tests/test_prospective_case_admission_policy.py
     tests/test_prospective_research_cohort_collection.py::test_cli_resolve_rejects_unregistered_or_ungoverned_session
