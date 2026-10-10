@@ -23,6 +23,28 @@ env:
   CORE_INSTALL: python -m pip install -r requirements.txt -r requirements-test.txt -c constraints.txt
   HERMETIC_MARKERS: not retained_evidence and not provider_runtime
   FOCUSED_SELECTION: >-
+    tests/test_current_research_valuation_context.py
+    tests/test_current_valuation_denominator_integrity.py
+    tests/test_current_valuation_research_proxy.py
+    tests/test_p3f_current_market_valuation.py
+    tests/test_market_wide_current_valuation_input_scaleout.py
+    tests/test_intrinsic_valuation.py
+    tests/test_relative_valuation.py
+    tests/test_historical_valuation_snapshot.py
+    tests/test_market_wide_implied_growth_reverse_valuation_research.py
+    tests/test_financial_peer_decision_integration.py
+    tests/test_historical_relative_valuation_snapshot.py
+    tests/test_current_valuation_input_authority.py
+    tests/test_current_thesis_case_context.py
+    tests/test_vcb_banking_identity_qualification.py
+    tests/test_current_research_scenario_context.py::ScenarioRuleTests
+    tests/test_current_state_relative_valuation.py::EventRowMappingTests
+    tests/test_current_state_relative_valuation.py::CoverageThroughTests
+    tests/test_current_state_relative_valuation.py::LoadShareBasisEventRowsTests
+    tests/test_current_state_relative_valuation.py::EvaluateFormulaTests
+    tests/test_current_state_relative_valuation.py::HistoricalComparabilityTests
+    tests/test_export_ai_bundle_current_state_relative_valuation.py::DisabledByDefaultTests
+    tests/test_export_ai_bundle_current_state_relative_valuation.py::MockedAttachLayerTests
     tests/test_financial_operational_proxy.py
     tests/test_financial_v2_current_input_authority.py
     tests/test_financial_analysis_engine_v2.py

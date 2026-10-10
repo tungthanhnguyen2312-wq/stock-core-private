@@ -6,7 +6,7 @@ import unittest
 from pathlib import Path
 
 import semantic_evidence_bridge as bridge
-from relative_valuation import evaluate_relative_valuation
+from stocklookup_core.valuation.relative_valuation import evaluate_relative_valuation
 
 
 def _hash(value):

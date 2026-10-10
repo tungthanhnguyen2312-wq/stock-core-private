@@ -243,7 +243,7 @@ def test_completed_session_excludes_and_october8_scratch_includes_vnm():
 def test_packet_and_ai_receive_the_field_without_valuation_authority():
     import current_research_decision_packet as packet
     from ai_research_session_delivery import _compact_context
-    from market_wide_current_valuation_input_scaleout import _financial_input
+    from stocklookup_core.valuation.market_wide_current_valuation_input_scaleout import _financial_input
     value = _project([r for r in overlay() if r["ticker"] == "VNM"], "2026-10-08")
     fields = value["records"]["VNM"]["official_field_context"]
     financial = _financial_input(value["records"]["VNM"], value)

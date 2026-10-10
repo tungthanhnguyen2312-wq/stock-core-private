@@ -52,7 +52,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 import canonical_post_close_pipeline as pipeline
-import current_research_valuation_context as valuation_context
+import stocklookup_core.valuation.current_research_valuation_context as valuation_context
 import daily_session_level2_package as level2
 import feature_input_fitness_contract as fitness_contract
 import owner_research_focus

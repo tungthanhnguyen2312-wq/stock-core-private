@@ -16,7 +16,7 @@ if str(ROOT) not in sys.path:
 
 from field_temporal_contract import stable_id
 from market_wide_current_fundamental_research import content_identity as fundamental_content_identity
-from market_wide_current_valuation_input_scaleout import (
+from stocklookup_core.valuation.market_wide_current_valuation_input_scaleout import (
     attach_shadow_proxy_valuation,
     build_current_valuation_artifact,
     content_identity,

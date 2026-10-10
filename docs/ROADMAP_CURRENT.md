@@ -1,18 +1,18 @@
 # Stock Lookup — Current Roadmap
 
 History: [ROADMAP.md](ROADMAP.md); execution: ROADMAP_STATE.json.
-Updated 2026-10-10 from main `288744eef54ef4b6ca8701a02e80537a406d65b6`.
+Updated 2026-10-10 from main `0afad0fa8d721f8f1e44ca1ccc8a59b0a2d4eed4`.
 Nothing below auto-starts: standing program delegation needs native scope admission (AI_RULES 11).
 Facts: [ACTIVE_STATE.md](ACTIVE_STATE.md).
 
-## NOW — FINANCIAL_RESEARCH_PACKAGE_V1 (ACTIVE)
+## NOW — VALUATION_RESEARCH_PACKAGE_V1 (ACTIVE)
 
-Owner standing delegation admits the bounded financial research package: 20 modules,
+Owner standing delegation admits the valuation calculation/peer package: 11 modules,
 original calculations/authority and Daily entrypoints preserved; merge separately gated.
-[Scope, authorization, fiscal reopening gate](financial_research_package_v1_contract.md).
+[Scope, authorization, fiscal reopening gate](valuation_research_package_v1_contract.md).
 Fiscal mapping lacks issuer calendar/covered-period/provider-label/publication proof;
 existing semantics knowledge time is insufficient. No automatic conversion/promotion.
-Prior source layout COMPLETE: PR106/107, four post-merge CI PASS; root 592 / Python 574.
+Financial package COMPLETE: PR108 `0afad0f`, four post-merge CI PASS; root 572 / Python 554.
 Semantic corrective COMPLETE: PR105 `40c88c2`, post-merge CI 38021005739 SUCCESS.
 Coherence V2 COMPLETE: PR101 `64c8bc8`, post-merge CI 38017817078 SUCCESS.
 Posture V2 COMPLETE: PR100 `314406e`, four CI jobs SUCCESS.

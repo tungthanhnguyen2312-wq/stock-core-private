@@ -3,7 +3,7 @@ import copy
 import json
 
 import pytest
-import intrinsic_valuation as model
+import stocklookup_core.valuation.intrinsic_valuation as model
 
 PERIOD = {"period": "2025", "period_type": "annual", "period_end": "2025-12-31"}
 UNIT = {"currency": "VND", "scale": 1}
@@ -215,7 +215,7 @@ def test_identity_derivation_reuses_only_an_explicit_qualified_value_with_matchi
 
 
 def test_re_evaluated_valuation_consumer_preserves_verified_projection_locally():
-    import current_research_valuation_context as valuation
+    import stocklookup_core.valuation.current_research_valuation_context as valuation
     projection = model.build_current_scenario_valuation(inputs())
     kwargs = dict(ticker="TEST", feature_record=None, decision_session="2026-10-01")
     before = valuation.evaluate_ticker_valuation(**kwargs, valuation_record=None)
@@ -289,7 +289,7 @@ def test_tampered_projection_with_malformed_family_fails_locally():
 
 
 def test_invalid_config_identity_cannot_preserve_numeric_assumptions():
-    import current_research_valuation_context as valuation
+    import stocklookup_core.valuation.current_research_valuation_context as valuation
     result = valuation.attach_intrinsic_scenario_valuation({"TEST":{}}, {"TEST":inputs()},
         assumption_config_identity=model.ASSUMPTION_CONTRACT + ":INVALID:proof")
     projection = result["TEST"]["intrinsic_scenario_valuation"]

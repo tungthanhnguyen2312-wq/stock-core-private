@@ -4,7 +4,7 @@ from copy import deepcopy
 from pathlib import Path
 
 import current_research_decision_input as decision_input
-import current_research_valuation_context as valuation
+import stocklookup_core.valuation.current_research_valuation_context as valuation
 import monetary_basis_contract as basis
 import provider_financial_monetary_basis_verdict as pin
 import provider_financial_semantic_basis as semantic

@@ -10,7 +10,7 @@ from current_research_risk_register import content_identity as risk_identity
 from current_market_sector_leadership_context import content_identity as leadership_identity
 from current_financial_momentum_context import content_identity as financial_identity
 from current_corporate_event_context import content_identity as event_identity
-from market_wide_current_valuation_input_scaleout import content_identity as valuation_identity
+from stocklookup_core.valuation.market_wide_current_valuation_input_scaleout import content_identity as valuation_identity
 from market_wide_historical_research_context import content_identity as historical_identity
 
 CONTRACT_VERSION = "current_research_decision_packet/v1"
@@ -109,7 +109,7 @@ def build_artifact(*, opportunity: Mapping[str,Any], scenario: Mapping[str,Any]|
   current={k:copy.deepcopy(decision.get(k)) for k in ("priority_tier","entry_action","eligible_strategies","lane_priority","tactical_state","scenario_status","blocking_reasons","invalidation_or_context_warnings","source_input_identities")}
   row={"ticker":ticker,"packet_status":"COMPLETE_FOR_AVAILABLE_COMPONENTS" if not unresolved else "PARTIAL","current_decision_context":current,"components":components,"unresolved_components":sorted(unresolved),"authority_limitations":[name+"_UNAVAILABLE_OR_MALFORMED" for name in sorted(unresolved)],"warnings":["Component absence does not revise upstream decision state."],"allowed_uses":["AI_RESEARCH_NARRATIVE","HUMAN_REVIEW","AUDIT_REPLAY"],"prohibited_uses":list(FORBIDDEN),"is_actionable":False}
   if field_claims is not None:
-   from current_valuation_denominator_integrity import classify_claim, dependent_use_blocked
+   from stocklookup_core.valuation.current_valuation_denominator_integrity import classify_claim, dependent_use_blocked
    claims={name: classify_claim(spec) for name, spec in sorted((field_claims.get(ticker) or {}).items())}
    row["claim_classes"]=claims
    row["dependent_use_blocks"]={name: dependent_use_blocked(claim, use_requires_field=True) for name, claim in claims.items()}

@@ -4,7 +4,7 @@ The cases describe situations. They do not special-case issuer symbols.
 """
 from __future__ import annotations
 
-import current_valuation_denominator_integrity as integrity
+import stocklookup_core.valuation.current_valuation_denominator_integrity as integrity
 
 
 def test_consistent_multiple_keeps_the_provider_value():

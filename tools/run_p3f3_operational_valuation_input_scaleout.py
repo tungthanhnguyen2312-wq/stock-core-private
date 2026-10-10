@@ -26,7 +26,7 @@ import dnse_market_risk_evidence_store as evidence_store
 from dnse_secrets_env import ensure_credentials_loaded
 from field_temporal_contract import stable_id
 from freshness_history import latest_completed_market_day
-import p3f_current_market_valuation as p3f_val
+import stocklookup_core.valuation.p3f_current_market_valuation as p3f_val
 from runtime_paths import runtime_root as resolve_runtime_root
 
 VERSION = "1.0.0"

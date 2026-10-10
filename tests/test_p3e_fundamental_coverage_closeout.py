@@ -12,7 +12,7 @@ from p3e_fundamental_coverage_closeout import (
     classify_p3d_residual_gaps,
     verify_retained_document_bytes,
 )
-from valuation_input_readiness import evaluate_valuation_input_readiness
+from stocklookup_core.valuation.valuation_input_readiness import evaluate_valuation_input_readiness
 
 
 class TestP3EFundamentalCoverageCloseout(unittest.TestCase):

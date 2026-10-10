@@ -31,7 +31,7 @@ from typing import Any, Mapping, Sequence
 
 import investment_decision_workspace_projection as workspace_projection
 import portfolio_research_decision_workbench as workbench
-from current_research_valuation_context import RELATIVE_METHODS
+from stocklookup_core.valuation.current_research_valuation_context import RELATIVE_METHODS
 from integrated_investment_decision_product import FUNDAMENTAL_STATES, TACTICAL_PHASES
 
 CONTRACT_VERSION = "portfolio_opportunity_cost_research/v1"

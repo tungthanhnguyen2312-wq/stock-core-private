@@ -18,7 +18,7 @@ from typing import Any, Mapping, Sequence
 import current_official_event_context as official_event_module
 import current_official_market_universe as official_universe_module
 from market_wide_current_corporate_intelligence import load_retained_events
-from market_wide_current_valuation_input_scaleout import official_research_universe_tickers
+from stocklookup_core.valuation.market_wide_current_valuation_input_scaleout import official_research_universe_tickers
 
 
 CONTRACT_VERSION = "current_corporate_event_context/v1"

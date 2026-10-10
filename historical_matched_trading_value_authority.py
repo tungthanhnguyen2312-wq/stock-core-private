@@ -27,7 +27,7 @@ from historical_matched_traded_value_authority import (
     MATCHED_VALUE_FORMULA,
     QUALIFIED_BOARD,
 )
-from market_wide_current_valuation_input_scaleout import official_research_universe_tickers
+from stocklookup_core.valuation.market_wide_current_valuation_input_scaleout import official_research_universe_tickers
 
 CONTRACT_VERSION = "historical_matched_trading_value_authority/v1"
 ARTIFACT_TYPE = "HISTORICAL_MATCHED_TRADING_VALUE_AUTHORITY"

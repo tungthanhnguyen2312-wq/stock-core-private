@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from market_wide_implied_growth_reverse_valuation_research import build_artifact, solve_fcff_terminal_growth
+from stocklookup_core.valuation.market_wide_implied_growth_reverse_valuation_research import build_artifact, solve_fcff_terminal_growth
 
 
 def _current(*, price=100.0, status="PRICE_READY"):

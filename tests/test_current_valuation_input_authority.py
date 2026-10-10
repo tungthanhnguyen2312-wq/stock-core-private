@@ -13,7 +13,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 import current_valuation_input_authority as m  # noqa: E402
-from p3f_current_market_valuation import market_cap_from_authority_resolver  # noqa: E402
+from stocklookup_core.valuation.p3f_current_market_valuation import market_cap_from_authority_resolver  # noqa: E402
 
 
 def _instrument(ticker="ABC", symbol=None):

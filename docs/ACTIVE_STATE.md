@@ -1,8 +1,8 @@
 # Stock Lookup — Active State
 
 Updated 2026-10-10 from verified
-main `288744eef54ef4b6ca8701a02e80537a406d65b6`.
-Standing program delegation; bounded financial package scope admitted.
+main `0afad0fa8d721f8f1e44ca1ccc8a59b0a2d4eed4`.
+Standing program delegation; bounded valuation package scope admitted.
 Verify live remote main with `git fetch origin main` or
 `git ls-remote origin refs/heads/main`; a **local** remote-tracking ref alone can be stale.
 ## 0. How this file relates to the others
@@ -34,7 +34,7 @@ Fact kinds used below: **CURRENT FACT** (verified in repo or by a stated read-on
 **BLOCKED**, **DEFERRED**, **HISTORICAL**.
 
 ## 1. The operational gate
-- **ACTIVE — [financial package](financial_research_package_v1_contract.md):** standing owner program admission; 20 source modules, offline parity/consumer acceptance; no Daily/deploy/authority change. Prior layout PR106/107 COMPLETE (root Python 595 → 574); semantic corrective PR105 COMPLETE.
+- **ACTIVE — [valuation package](valuation_research_package_v1_contract.md):** 11 modules under standing admission; parity/consumer acceptance, merge gated. Financial PR108 COMPLETE `0afad0f`, four post-merge CI PASS (38033939795); root Python 554. Layout PR106/107 and corrective PR105 COMPLETE.
 - **COMPLETE — [capacity Phase 1](capacity_recovery_phase1_contract.md):** PR99 merged
   `168e0f7`, post-merge CI 37893984528 success; zero production reclaim/activation.
 - **COMPLETE — Vault V1:** PR97 merged `3f3d4fe`; offline/opt-in, 77 candidates,
@@ -307,13 +307,13 @@ Fact kinds used below: **CURRENT FACT** (verified in repo or by a stated read-on
 
 ## 9. Next action
 
-Finish financial package acceptance and its separate merge gate. Standing delegation
+Finish valuation package acceptance and its separate merge gate. Standing delegation
 permits eligible bounded successors; native admission records each scope. Fiscal-calendar
 mapping needs the exact source/period/publication proof in the contract above.
 Ordinary Daily remains owner-operated after fresh READY preflight and exact session gates.
 
 ## 10. Owner approvals that remain open
 
-- Explicit start of any post-Monday milestone (including simplification Phase B/C).
+- PR merge or work outside standing program scope; bounded development needs native admission.
 - Any further cleanup of host scratch / `Temp\*` / worktrees (only the five rehearsal directories were approved).
 - R7 / RAW / PIT / execution authority promotion; any new provider; any threshold change to the host preflight.

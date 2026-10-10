@@ -59,13 +59,14 @@ def test_package_initializers_do_not_activate_runtime_work():
                    and isinstance(n.value.value, str) for n in nodes), path
 
 
-def test_financial_defaults_still_use_checkout_root_after_cwd_change(tmp_path, monkeypatch):
+def test_packaged_defaults_still_use_checkout_root_after_cwd_change(tmp_path, monkeypatch):
     from stocklookup_core.financial import financial_operational_proxy, fundamental_cross_sectional_scoring
     from stocklookup_core.financial import fundamental_market_opportunity_ranking, fundamental_research_cohort_scaleout
     from stocklookup_core.financial import multi_period_financial_panel as panel
+    from stocklookup_core.valuation import current_valuation_research_proxy
     monkeypatch.chdir(tmp_path)
     for module in (financial_operational_proxy, fundamental_cross_sectional_scoring,
-                   fundamental_market_opportunity_ranking, fundamental_research_cohort_scaleout):
+                   fundamental_market_opportunity_ranking, fundamental_research_cohort_scaleout, current_valuation_research_proxy):
         assert module.ROOT == ROOT
     seen = []
     monkeypatch.setattr(panel, "load_promoted_sector_extractions",

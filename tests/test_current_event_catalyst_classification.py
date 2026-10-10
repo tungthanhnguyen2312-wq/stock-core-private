@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import current_event_catalyst_classification as cec
 import current_thesis_case_context as thesis
-import current_valuation_opportunity_integration as integration
+import stocklookup_core.valuation.current_valuation_opportunity_integration as integration
 
 
 SESSION = "2026-09-11"

@@ -11,7 +11,7 @@ import re
 import pytest
 
 import current_research_decision_input as decision_input
-import current_research_valuation_context as valuation
+import stocklookup_core.valuation.current_research_valuation_context as valuation
 import stocklookup_core.financial.financial_analysis_engine_v2 as engine
 import stocklookup_core.financial.financial_flow_semantics_ttm_bridge as bridge
 import stocklookup_core.financial.market_wide_financial_analysis_v2_scaleout as scaleout

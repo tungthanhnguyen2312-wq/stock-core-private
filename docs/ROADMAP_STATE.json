@@ -15,14 +15,35 @@
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "FINANCIAL_RESEARCH_PACKAGE_V1",
+    "milestone": "VALUATION_RESEARCH_PACKAGE_V1",
     "state": "ACTIVE"
   },
   "queued_next": [],
   "milestones": [
     {
-      "milestone_id": "FINANCIAL_RESEARCH_PACKAGE_V1",
+      "milestone_id": "VALUATION_RESEARCH_PACKAGE_V1",
       "state": "ACTIVE",
+      "starting_checkpoint": "0afad0fa8d721f8f1e44ca1ccc8a59b0a2d4eed4",
+      "candidate_branch": "refactor/valuation-research-package-v1-20261010",
+      "dependencies": [
+        "FINANCIAL_RESEARCH_PACKAGE_V1"
+      ],
+      "unlocks": [],
+      "owner_authorized": true,
+      "owner_override": "Standing owner authorization PROGRAM_LEAD_CONTINUATION_AND_STANDING_DELEGATION (2026-10-10) permits sequential bounded Stock Lookup implementation, validation, commits and safe feature PRs. PR108 owner-approved exact HEAD 70499f8b770c5dcc68ca40d993381055f25c0d66 merged at 0afad0fa8d721f8f1e44ca1ccc8a59b0a2d4eed4; four post-merge CI jobs succeeded in run 38033939795. Admit VALUATION_RESEARCH_PACKAGE_V1: relocate eleven existing valuation/peer calculation, denominator integrity, readiness, current-input scaleout and projection modules to stocklookup_core/valuation; update 82 verified static consumers, actual mock/dynamic/file targets and historical replay import; preserve all non-import calculations, schemas, identities, source-root defaults, Daily entrypoints and trust boundaries. No price/share bridge or scenario orchestration migration; exact historical runtime fixtures are not reproduced. Fiscal mapping remains evidence-blocked under the existing source-proof gate. One writer dedicated worktree; no production Daily/deploy/runtime writes, authority promotion, destructive action, visibility change or unrelated work. Each PR merge remains separately owner-gated.",
+      "authority_effect": "NONE",
+      "source_doc": "docs/valuation_research_package_v1_contract.md",
+      "state_history": [
+        "DEFERRED",
+        "ACTIVE"
+      ],
+      "checkpoint": null,
+      "terminal_disposition": null,
+      "notes": "Standing owner authorization PROGRAM_LEAD_CONTINUATION_AND_STANDING_DELEGATION (2026-10-10) permits sequential bounded Stock Lookup implementation, validation, commits and safe feature PRs. PR108 owner-approved exact HEAD 70499f8b770c5dcc68ca40d993381055f25c0d66 merged at 0afad0fa8d721f8f1e44ca1ccc8a59b0a2d4eed4; four post-merge CI jobs succeeded in run 38033939795. Admit VALUATION_RESEARCH_PACKAGE_V1: relocate eleven existing valuation/peer calculation, denominator integrity, readiness, current-input scaleout and projection modules to stocklookup_core/valuation; update 82 verified static consumers, actual mock/dynamic/file targets and historical replay import; preserve all non-import calculations, schemas, identities, source-root defaults, Daily entrypoints and trust boundaries. No price/share bridge or scenario orchestration migration; exact historical runtime fixtures are not reproduced. Fiscal mapping remains evidence-blocked under the existing source-proof gate. One writer dedicated worktree; no production Daily/deploy/runtime writes, authority promotion, destructive action, visibility change or unrelated work. Each PR merge remains separately owner-gated."
+    },
+    {
+      "milestone_id": "FINANCIAL_RESEARCH_PACKAGE_V1",
+      "state": "COMPLETE",
       "starting_checkpoint": "288744eef54ef4b6ca8701a02e80537a406d65b6",
       "candidate_branch": "refactor/financial-research-package-v1-20261010",
       "dependencies": [
@@ -35,11 +56,12 @@
       "source_doc": "docs/financial_research_package_v1_contract.md",
       "state_history": [
         "DEFERRED",
-        "ACTIVE"
+        "ACTIVE",
+        "COMPLETE"
       ],
-      "checkpoint": null,
-      "terminal_disposition": null,
-      "notes": "Standing owner authorization PROGRAM_LEAD_CONTINUATION_AND_STANDING_DELEGATION (2026-10-10) permits the lead to select/admit/implement sequential bounded Stock Lookup milestones, preserve provenance and Daily contracts, validate, commit and push safe feature PRs without another prompt. Explicit scope selected: FINANCIAL_RESEARCH_PACKAGE_V1, relocate the existing financial panel, Financial V2 engine/current-input authority and fundamental research consumption/cohort modules into stocklookup_core/financial, update all verified consumers and source-root defaults, enforce root layout guard, preserve non-import behavior and deterministic schemas/identities offline. Fiscal calendar/publication mapping is evidence-blocked: reopen only with source-bound issuer fiscal-year convention, provider-label linkage, actual covered period and distinct publication/retention knowledge times; no conversion or authority inference. Existing completed milestones/checkpoints remain immutable. One writer/dedicated worktree. No production Daily/deploy/runtime writes, authority promotion, destructive actions or unrelated programs. Each PR merge remains separately owner-gated."
+      "checkpoint": "0afad0fa8d721f8f1e44ca1ccc8a59b0a2d4eed4",
+      "terminal_disposition": "IMPLEMENTATION_RELEASED_NO_PRODUCTION_ACTIVATION",
+      "notes": "Standing owner authorization PROGRAM_LEAD_CONTINUATION_AND_STANDING_DELEGATION (2026-10-10) permits the lead to select/admit/implement sequential bounded Stock Lookup milestones, preserve provenance and Daily contracts, validate, commit and push safe feature PRs without another prompt. Explicit scope selected: FINANCIAL_RESEARCH_PACKAGE_V1, relocate the existing financial panel, Financial V2 engine/current-input authority and fundamental research consumption/cohort modules into stocklookup_core/financial, update all verified consumers and source-root defaults, enforce root layout guard, preserve non-import behavior and deterministic schemas/identities offline. Fiscal calendar/publication mapping is evidence-blocked: reopen only with source-bound issuer fiscal-year convention, provider-label linkage, actual covered period and distinct publication/retention knowledge times; no conversion or authority inference. Existing completed milestones/checkpoints remain immutable. One writer/dedicated worktree. No production Daily/deploy/runtime writes, authority promotion, destructive actions or unrelated programs. Each PR merge remains separately owner-gated. Verified release 0afad0fa8d721f8f1e44ca1ccc8a59b0a2d4eed4; no production reclaim, activation or automatic successor."
     },
     {
       "milestone_id": "REPOSITORY_ROOT_STRUCTURE_SIMPLIFICATION_V1",

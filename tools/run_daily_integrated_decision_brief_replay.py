@@ -40,7 +40,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 import current_market_sector_leadership_context as sector_context
-import current_research_valuation_context as valuation_context
+import stocklookup_core.valuation.current_research_valuation_context as valuation_context
 import daily_integrated_decision_brief as brief_module
 import daily_session_level2_package as level2
 import entity_classification_contract as entity_classification

@@ -6,7 +6,7 @@ import hashlib
 import json
 from typing import Any, Mapping
 
-from current_research_valuation_context import (
+from stocklookup_core.valuation.current_research_valuation_context import (
     attach_fundamental_peers, attach_peer_relative, evaluate_ticker_valuation, freshness_for_valuation,
     source_session_for_valuation,
 )

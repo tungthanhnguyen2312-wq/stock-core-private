@@ -16,7 +16,7 @@ from current_financial_momentum_context import content_identity as financial_ide
 from current_market_sector_leadership_context import content_identity as leadership_identity
 from current_opportunity_prioritization import content_identity as opportunity_identity
 from current_research_risk_register import content_identity as risk_identity
-from market_wide_current_valuation_input_scaleout import content_identity as valuation_identity
+from stocklookup_core.valuation.market_wide_current_valuation_input_scaleout import content_identity as valuation_identity
 from market_wide_historical_research_context import content_identity as historical_identity
 
 ROOT = Path(__file__).resolve().parents[1]

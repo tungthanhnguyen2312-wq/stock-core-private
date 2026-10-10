@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-import p3f_current_market_valuation as m  # noqa: E402
+import stocklookup_core.valuation.p3f_current_market_valuation as m  # noqa: E402
 
 
 def _fact(name: str, value: int, period: str = "2024") -> dict:

@@ -511,7 +511,7 @@ def build_data_limitations(research_intelligence_digest: Mapping[str, Any]) -> d
 
 def build_current_valuation_research_section(current_valuation_artifact: Mapping[str, Any]) -> dict[str, Any]:
     """Opt-in coverage pass-through. Does not affect attention-case selection or VALUE eligibility."""
-    from market_wide_current_valuation_input_scaleout import content_identity as valuation_identity
+    from stocklookup_core.valuation.market_wide_current_valuation_input_scaleout import content_identity as valuation_identity
 
     if valuation_identity(current_valuation_artifact)["artifact_sha256"] != current_valuation_artifact.get("artifact_sha256"):
         raise InputDigestIdentityError("current valuation artifact failed content-identity verification")

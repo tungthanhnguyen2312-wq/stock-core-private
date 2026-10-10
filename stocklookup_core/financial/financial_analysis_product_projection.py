@@ -289,7 +289,7 @@ def financial_peer_contexts(*, materialization: Mapping[str, Any] | None,
     from opportunity_axis_freshness import classify_financial_period_freshness
     from operational_fundamental_context_integration import MAX_COMPLETED_QUARTER_LAG
     from sector_relative_research_context import MIN_COHORT_MEMBERS
-    from current_research_valuation_context import ENGINE_PEER_FEATURES
+    from stocklookup_core.valuation.current_research_valuation_context import ENGINE_PEER_FEATURES
     contract = "canonical_daily_financial_v2_materialization/v1"
     expected = _identity(materialization, contract)
     nested = materialization.get("financial_analysis_product")

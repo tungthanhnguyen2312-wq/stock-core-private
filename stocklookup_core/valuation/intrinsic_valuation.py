@@ -461,7 +461,7 @@ def _calculate_current_case(data, method, case, readiness):
             evaluated = evaluate_intrinsic_valuation(legacy, data["valuation_session"])["methods"]["net_net"]
             case_record.update(equity_value=evaluated["equity_value"], per_share_model_value=evaluated["per_share_value"])
         else:
-            from market_wide_implied_growth_reverse_valuation_research import solve_fcff_terminal_growth
+            from stocklookup_core.valuation.market_wide_implied_growth_reverse_valuation_research import solve_fcff_terminal_growth
             price, blocked = _comparison_price(data, method)
             if price is None:
                 case_record.update(readiness="BLOCKED", reason_codes=blocked)

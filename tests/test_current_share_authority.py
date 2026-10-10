@@ -12,7 +12,7 @@ if str(ROOT) not in sys.path:
 
 import current_share_authority as shares  # noqa: E402
 import current_valuation_input_authority as valuation_inputs  # noqa: E402
-from p3f_current_market_valuation import market_cap_from_authority_resolver  # noqa: E402
+from stocklookup_core.valuation.p3f_current_market_valuation import market_cap_from_authority_resolver  # noqa: E402
 
 
 def _instrument() -> dict:

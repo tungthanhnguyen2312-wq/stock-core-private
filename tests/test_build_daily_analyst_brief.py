@@ -30,7 +30,7 @@ from tools.build_daily_analyst_brief import (
     generate_daily_analyst_brief_markdown,
     validate_input_digest,
 )
-from market_wide_current_valuation_input_scaleout import build_current_valuation_artifact
+from stocklookup_core.valuation.market_wide_current_valuation_input_scaleout import build_current_valuation_artifact
 
 CAP_DIGEST_IDENTITY = "research_intelligence_digest_v1:mock_sha_v1"
 

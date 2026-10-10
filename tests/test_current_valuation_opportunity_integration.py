@@ -6,11 +6,11 @@ import copy
 import pytest
 
 from current_market_sector_leadership_context import _percentile
-from current_research_valuation_context import (
+from stocklookup_core.valuation.current_research_valuation_context import (
     CURRENT_SHARE_RESEARCH_PROXY, EXACT_OR_QUALIFIED, INPUT_BLOCKED, NOT_APPLICABLE,
     PE_NOT_MEANINGFUL, PE_TTM, PS_TTM, attach_peer_relative, evaluate_ticker_valuation, share_basis_class,
 )
-from current_valuation_opportunity_integration import build_artifacts, content_identity
+from stocklookup_core.valuation.current_valuation_opportunity_integration import build_artifacts, content_identity
 from opportunity_axis_freshness import (
     CURRENT, STALE_BUT_RESEARCH_USABLE, STALE_NOT_USABLE_FOR_THIS_AXIS, UNAVAILABLE,
     FutureInformationError, classify_axis_freshness,
@@ -325,7 +325,7 @@ def test_incompatible_valuation_basis_excluded_from_peers():
 
 def test_fundamental_peer_method_compatibility_excludes_blocked_roe_proxy():
     features = {f"T{i}": feature_record(f"T{i}", margin=0.1 + i * 0.01) for i in range(6)}
-    from current_research_valuation_context import attach_fundamental_peers
+    from stocklookup_core.valuation.current_research_valuation_context import attach_fundamental_peers
     peers = attach_fundamental_peers(features, {})
     assert peers["T0"]["net_margin"]["status"] == "READY_RESEARCH_ONLY"
     assert peers["T0"]["net_margin"]["percentile_formula"] == "(below + 0.5 * equal) / n"

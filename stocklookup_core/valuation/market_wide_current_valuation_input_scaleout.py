@@ -20,7 +20,7 @@ from typing import Any, Mapping
 from field_temporal_contract import stable_id
 import monetary_basis_contract as basis_contract
 import mva_provider_share_proxy as issued_share_proxy
-import p3f_current_market_valuation as p3f
+import stocklookup_core.valuation.p3f_current_market_valuation as p3f
 from polymorphic_current_strategy_classification import _valuation_requirement
 from price_representation_contract import RepresentationContractError, to_canonical
 

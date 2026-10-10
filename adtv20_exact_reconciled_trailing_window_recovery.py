@@ -42,7 +42,7 @@ from historical_matched_trading_value_authority import (
     session_value_reconciliation,
     trailing_expected_sessions,
 )
-from market_wide_current_valuation_input_scaleout import official_research_universe_tickers
+from stocklookup_core.valuation.market_wide_current_valuation_input_scaleout import official_research_universe_tickers
 
 CONTRACT_VERSION = "adtv20_exact_reconciled_trailing_window_recovery/v1"
 ARTIFACT_TYPE = "ADTV20_EXACT_RECONCILED_TRAILING_WINDOW_RECOVERY"

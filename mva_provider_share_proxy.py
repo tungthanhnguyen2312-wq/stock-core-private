@@ -9,7 +9,7 @@ from __future__ import annotations
 from datetime import date
 from typing import Any, Mapping
 
-import p3f_current_market_valuation as p3f
+import stocklookup_core.valuation.p3f_current_market_valuation as p3f
 
 POLICY_VERSION = "p3f6_mva_provider_issued_share_proxy/v1"
 PROXY_NAMESPACE = "PROVIDER_REPORTED_ISSUED_SHARES_PROXY"

@@ -29,7 +29,7 @@ import json
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
-import current_research_valuation_context as valuation_context
+import stocklookup_core.valuation.current_research_valuation_context as valuation_context
 import entity_classification_contract as entity_classification
 import exchange_industry_classification as industry_classification
 import stocklookup_core.financial.financial_analysis_product_projection as product_projection
@@ -308,7 +308,7 @@ def build_evaluated_valuation_artifact(
     rows = valuation_context.attach_peer_relative(rows)
     # R5 reuses the canonical semantic input chain and the governed entity resolution.
     # Missing assumptions remain component-local; no relative verdict or policy is replaced.
-    import intrinsic_valuation as intrinsic
+    import stocklookup_core.valuation.intrinsic_valuation as intrinsic
     model_session = decision_session or (calculation_readiness_context or {}).get("decision_session")
     if model_session is not None:
         assumptions, config_identity = intrinsic.load_governed_assumption_config(

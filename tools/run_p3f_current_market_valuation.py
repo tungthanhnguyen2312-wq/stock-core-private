@@ -10,7 +10,7 @@ repo_root = Path(__file__).resolve().parent.parent
 if str(repo_root) not in sys.path:
     sys.path.insert(0, str(repo_root))
 
-from p3f_current_market_valuation import build_p3f_valuation_artifact
+from stocklookup_core.valuation.p3f_current_market_valuation import build_p3f_valuation_artifact
 
 P3E = repo_root / "operations-review/p3e-fundamental-coverage-closeout-20260820/p3e_fundamental_coverage_closeout_artifact.json"
 OUTPUT = repo_root / "operations-review/p3f-current-market-valuation-20260820"

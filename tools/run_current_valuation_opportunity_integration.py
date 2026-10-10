@@ -11,7 +11,7 @@ import sys
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from current_valuation_opportunity_integration import build_artifacts  # noqa: E402
+from stocklookup_core.valuation.current_valuation_opportunity_integration import build_artifacts  # noqa: E402
 
 OUT = ROOT / "operations-review" / "current-valuation-and-opportunity-integration-v1-20260831"
 DECISION_SESSION = "2026-08-28"

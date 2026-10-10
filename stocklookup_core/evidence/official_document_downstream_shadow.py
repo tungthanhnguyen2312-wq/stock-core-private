@@ -3,8 +3,8 @@ from __future__ import annotations
 import hashlib,json
 from typing import Any,Mapping
 from fundamental_quality import evaluate_fundamental_quality
-from intrinsic_valuation import evaluate_intrinsic_valuation
-from relative_valuation import evaluate_relative_valuation
+from stocklookup_core.valuation.intrinsic_valuation import evaluate_intrinsic_valuation
+from stocklookup_core.valuation.relative_valuation import evaluate_relative_valuation
 from ssi_securities_pilot import evaluate as evaluate_ssi
 
 VERSION="1.0.0"
