@@ -1,9 +1,8 @@
 # Stock Lookup — Active State
 
-Updated 2026-10-11 from verified
-main `498b02dd8471078a9cd627eb75241a4ed2da0de5`.
-PR120 COMPLETE; four post-merge jobs PASS (38111216670), offline only.
-Verify live main: `git fetch origin main` or `git ls-remote origin refs/heads/main`; a **local** remote-tracking ref can be stale.
+Verified main, 2026-10-11: `498b02dd8471078a9cd627eb75241a4ed2da0de5`.
+PR120 COMPLETE; 4 post-merge CI PASS (38111216670), offline only.
+Verify live main: `git fetch origin main` or `git ls-remote origin refs/heads/main`; **local** remote-tracking refs may be stale.
 ## 0. How this file relates to the others
 | Question | Answer lives in |
 |---|---|
@@ -24,9 +23,8 @@ Verify live main: `git fetch origin main` or `git ls-remote origin refs/heads/ma
 - *Preserved `STATE.md` / `ROADMAP.md` / `DECISIONS.md`*: history, rationale and recorded invariants; not the
   default current-state source. A compact view never overrides a recorded invariant: surface the conflict
   and obtain an explicit owner decision.
-Chat memory is never authority. Legacy `STATE.md` banners pre-date some facts below (see §6): for a
-current fact, verify against the sources above (or the re-verify command given with the fact), then correct
-this view; never resolve a disagreement by which prose is newer.
+Chat memory is not authority. Verify facts against governing sources, then correct this view;
+legacy prose recency does not resolve conflicts (§6).
 
 Kinds: **CURRENT FACT** (verified), **HOST-LOCAL** (untracked; re-verify),
 **BLOCKED**, **DEFERRED**, **HISTORICAL**.

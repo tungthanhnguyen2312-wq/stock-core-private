@@ -1,8 +1,8 @@
 # Stock Lookup — Capability Registry
 
-Current capability state, one block per capability. No scores. Written 2026-10-04 on main `920d579`;
-[ACTIVE_STATE.md](ACTIVE_STATE.md) holds the date-sensitive facts, [AUTHORITY.md](AUTHORITY.md) the
-authority rules, [DAILY_PIPELINE.md](DAILY_PIPELINE.md) the run order.
+Capability state (2026-10-04, main `920d579`); no scores.
+See [ACTIVE_STATE.md](ACTIVE_STATE.md) for current facts, [AUTHORITY.md](AUTHORITY.md) for authority,
+[DAILY_PIPELINE.md](DAILY_PIPELINE.md) for run order.
 
 **Runtime status vocabulary:** `ACTIVE` (runs in production, failure blocks that stage) ·
 `ACTIVE_FAILSOFT` (runs in production, failure is component-local `UNAVAILABLE`, never revises sealed
