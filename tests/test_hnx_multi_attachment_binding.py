@@ -1,6 +1,6 @@
 from __future__ import annotations
 import hashlib
-from hnx_multi_attachment_binding import parse_parent_attachments, _attachment_type
+from stocklookup_core.evidence.hnx_multi_attachment_binding import parse_parent_attachments, _attachment_type
 
 def parent(detail:bytes)->dict:
  return {'detail_sha256':hashlib.sha256(detail).hexdigest(),'detail_url':'https://www.hnx.vn/p.html','published_at':'2026-08-24'}

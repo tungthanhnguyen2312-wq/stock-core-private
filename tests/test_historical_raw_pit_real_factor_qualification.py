@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from corporate_action_events import classify_retained_document, extract_event_observation, extract_text
+from stocklookup_core.evidence.corporate_action_events import classify_retained_document, extract_event_observation, extract_text
 from tools.run_historical_raw_pit_real_factor_qualification import _document_summary, build_artifact
 
 

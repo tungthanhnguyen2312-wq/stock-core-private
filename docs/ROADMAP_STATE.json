@@ -15,11 +15,32 @@
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "STOCKLOOKUP_ARCHITECTURE_DEPENDENCY_RATCHET_AND_DAILY_LAUNCH_GUARD_V1",
-    "state": "COMPLETE"
+    "milestone": "E1_OFFICIAL_EXCHANGE_EVIDENCE_PACKAGE_MIGRATION",
+    "state": "ACTIVE"
   },
   "queued_next": [],
   "milestones": [
+    {
+      "milestone_id": "E1_OFFICIAL_EXCHANGE_EVIDENCE_PACKAGE_MIGRATION",
+      "state": "ACTIVE",
+      "starting_checkpoint": "56cdc36f860532678ae2c8c26eddea2730988ef8",
+      "candidate_branch": "refactor/e1-official-exchange-evidence-migration-20261011",
+      "dependencies": [
+        "STOCKLOOKUP_ARCHITECTURE_DEPENDENCY_RATCHET_AND_DAILY_LAUNCH_GUARD_V1"
+      ],
+      "unlocks": [],
+      "owner_authorized": true,
+      "owner_override": "Owner 2026-10-11 E1 directive after verified PR123 E0 release at 56cdc36f860532678ae2c8c26eddea2730988ef8 (post-merge Producer CI run 38139163689: four jobs success): structural-only relocation of the frozen 13-module official exchange disclosure/event-evidence cohort into stocklookup_core/evidence/ through config/repository_layout.json and the E0 dependency ratchet; update importers, tests and documentation; local implementation and closeout commits only. No evidence, identity, PIT, authority, Daily or launcher change; no push, PR, merge, deploy, production write, worktree retirement or E2.",
+      "authority_effect": "NONE",
+      "source_doc": "docs/e1_official_exchange_evidence_package_migration_contract.md",
+      "state_history": [
+        "DEFERRED",
+        "ACTIVE"
+      ],
+      "checkpoint": null,
+      "terminal_disposition": null,
+      "notes": "Owner 2026-10-11 E1 directive after verified PR123 E0 release at 56cdc36f860532678ae2c8c26eddea2730988ef8 (post-merge Producer CI run 38139163689: four jobs success): structural-only relocation of the frozen 13-module official exchange disclosure/event-evidence cohort into stocklookup_core/evidence/ through config/repository_layout.json and the E0 dependency ratchet; update importers, tests and documentation; local implementation and closeout commits only. No evidence, identity, PIT, authority, Daily or launcher change; no push, PR, merge, deploy, production write, worktree retirement or E2."
+    },
     {
       "milestone_id": "STOCKLOOKUP_ARCHITECTURE_DEPENDENCY_RATCHET_AND_DAILY_LAUNCH_GUARD_V1",
       "state": "COMPLETE",

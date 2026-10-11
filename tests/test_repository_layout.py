@@ -20,7 +20,7 @@ def test_dependency_direction_and_cycle_ratchet():
     from tools import check_architecture as guard
     policy = json.loads((ROOT / guard.POLICY).read_text(encoding="utf-8"))
     baseline = json.loads((ROOT / guard.BASELINE).read_text(encoding="utf-8"))
-    assert not guard.regressions(guard.snapshot(ROOT, policy), baseline, policy)
+    assert not guard.regressions(guard.snapshot(ROOT, policy), baseline, policy, LAYOUT["relocations"])
 
 
 def test_reviewed_path_launchers_survive_layout_changes():
@@ -38,6 +38,34 @@ def test_relocated_modules_have_one_implementation_and_resolve():
         assert spec is not None and Path(spec.origin).resolve() == path.resolve(), new
         if old not in LAYOUT["compatibility_entrypoints"]:
             assert not (ROOT / old).exists(), old
+
+
+E1_OFFICIAL_EXCHANGE_EVIDENCE = (
+    "corporate_action_events", "corporate_action_evidence_registry", "hnx_disclosure_feed_parser",
+    "hnx_filing_evidence_binding", "hnx_financial_filing_scaleout", "hnx_multi_attachment_binding",
+    "hnx_official_issuer_profile_multi_gate", "hose_source_surface_authority_qualification",
+    "insider_and_major_holder_events", "official_authority_candidates", "official_issuer_disclosure_registry",
+    "official_listing_page_parser", "real_official_corporate_action_factor_evidence",
+)
+
+
+def test_e1_official_exchange_evidence_has_no_root_path_or_shim():
+    from tools import check_architecture as guard
+    policy = json.loads((ROOT / guard.POLICY).read_text(encoding="utf-8"))
+    for name in E1_OFFICIAL_EXCHANGE_EVIDENCE:
+        assert LAYOUT["relocations"][name + ".py"] == f"stocklookup_core/evidence/{name}.py"
+        assert name + ".py" not in LAYOUT["grandfathered_root_python"]
+        assert name + ".py" not in LAYOUT["compatibility_entrypoints"]
+        assert importlib.util.find_spec(name) is None, name
+    carried = {row[0].rsplit(".", 1)[1] for row in policy["relocated_debt_edges"]}
+    assert carried <= set(E1_OFFICIAL_EXCHANGE_EVIDENCE)
+
+
+def test_recreated_root_copy_of_relocated_evidence_fails_placement(tmp_path, monkeypatch):
+    (tmp_path / "corporate_action_events.py").write_text("", encoding="utf-8")
+    monkeypatch.setitem(globals(), "ROOT", tmp_path)
+    with pytest.raises(AssertionError, match="corporate_action_events.py"):
+        test_root_python_additions_require_a_reviewed_placement_exception()
 
 
 def test_relocated_imports_and_reflection_targets_are_not_stale():

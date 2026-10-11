@@ -20,7 +20,7 @@ from pathlib import Path
 
 import analysis_lane_eligibility as lanes
 import market_volume_capability_matrix as capability
-import official_authority_candidates as candidates
+import stocklookup_core.evidence.official_authority_candidates as candidates
 import risk_liquidity
 import vci_volume_basis
 import vci_volume_composition as composition

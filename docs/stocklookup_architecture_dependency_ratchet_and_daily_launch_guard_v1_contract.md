@@ -93,4 +93,6 @@ It neither releases main nor admits a successor. Acceptance commands, counts,
 environment, exact tested HEAD and JUnit digests are retained with the final report.
 No push, PR, merge, Daily, module relocation, evidence rewrite or automatic E1.
 
-Local implementation is COMPLETE, not promoted. [Retained acceptance](internal/E0_LOCAL_ACCEPTANCE_20261011.md).
+Local implementation completed at `82a1bf3`; released by PR123 merge `56cdc36` (post-merge run
+`38139163689`, four jobs success). E1 later added reviewed relocated-debt rows; the sealed baseline is unchanged.
+[Retained acceptance](internal/E0_LOCAL_ACCEPTANCE_20261011.md).

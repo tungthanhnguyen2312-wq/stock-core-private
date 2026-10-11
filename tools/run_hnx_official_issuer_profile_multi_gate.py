@@ -2,7 +2,7 @@ from __future__ import annotations
 import json,sys
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1];sys.path.insert(0,str(ROOT))
-from hnx_official_issuer_profile_multi_gate import build,replay
+from stocklookup_core.evidence.hnx_official_issuer_profile_multi_gate import build,replay
 OUT=ROOT/'operations-review'/'hnx-official-issuer-profile-multi-gate-data-unlock-v1-20260824-r3'/'hnx_official_issuer_profile_multi_gate_artifact.json'
 def main()->None:
  if '--replay' in sys.argv:

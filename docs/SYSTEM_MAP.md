@@ -25,7 +25,7 @@ exact R7 inputs offline. [Contract](market_only_pit_eligibility_contract.md).
 
 The owner admitted [root structure simplification](repository_root_structure_simplification_v1_contract.md)
 after semantic corrective PR105. Landing acquisition code is in `stocklookup_core/acquisition/`;
-official document evidence and temporal receipts are in `stocklookup_core/evidence/`.
+official document evidence, temporal receipts and (E1) the offline HNX/HOSE disclosure, issuer-profile, listing-page and corporate-action evidence parsers are in `stocklookup_core/evidence/`.
 Financial panels, Financial V2 and fundamental research are in `stocklookup_core/financial/`.
 Valuation calculations, peers and current-input scaleout are in `stocklookup_core/valuation/`.
 Decision inputs, risk/thesis/opportunity contexts, packets, integrated brief and workspace

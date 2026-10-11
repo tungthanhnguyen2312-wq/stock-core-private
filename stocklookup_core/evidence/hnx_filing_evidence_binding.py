@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 from typing import Any, Mapping
 
-from hnx_disclosure_feed_parser import parse_disclosure_detail
+from stocklookup_core.evidence.hnx_disclosure_feed_parser import parse_disclosure_detail
 
 
 CONTRACT_VERSION = "hnx_official_filing_evidence_binding_and_extraction/v1"

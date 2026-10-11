@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import hashlib
 
-from hnx_filing_evidence_binding import parent_binding
+from stocklookup_core.evidence.hnx_filing_evidence_binding import parent_binding
 
 
 def _document(detail: bytes, *, filing_url: str = "https://owa.hnx.vn/a.pdf") -> dict:

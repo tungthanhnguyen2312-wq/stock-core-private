@@ -2,7 +2,7 @@ import json
 import unittest
 from pathlib import Path
 
-from real_official_corporate_action_factor_evidence import UNSUPPORTED_EVENT_TYPE_REASON, index_gap_classification, select_candidates
+from stocklookup_core.evidence.real_official_corporate_action_factor_evidence import UNSUPPORTED_EVENT_TYPE_REASON, index_gap_classification, select_candidates
 
 
 def _event(ticker, event_type, ex_date, **more):

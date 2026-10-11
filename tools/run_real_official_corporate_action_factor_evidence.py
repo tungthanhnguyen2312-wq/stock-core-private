@@ -13,9 +13,9 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT))
 
-from hnx_disclosure_feed_parser import parse_disclosure_rss  # noqa: E402
+from stocklookup_core.evidence.hnx_disclosure_feed_parser import parse_disclosure_rss  # noqa: E402
 from official_source_registry import load_registry  # noqa: E402
-from real_official_corporate_action_factor_evidence import select_candidates  # noqa: E402
+from stocklookup_core.evidence.real_official_corporate_action_factor_evidence import select_candidates  # noqa: E402
 
 EVENTS = REPO_ROOT / "operations-review/current-official-event-context-integration-v1-20260824/current_official_event_context_artifact.json"
 UNIVERSE = REPO_ROOT / "operations-review/current-official-market-universe-refresh-v1-20260913/current_official_market_universe_artifact.json"

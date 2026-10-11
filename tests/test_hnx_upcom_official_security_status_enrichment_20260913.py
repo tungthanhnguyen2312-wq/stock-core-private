@@ -14,7 +14,7 @@ from pathlib import Path
 
 import pytest
 
-from hnx_official_issuer_profile_multi_gate import (
+from stocklookup_core.evidence.hnx_official_issuer_profile_multi_gate import (
     CONTROL_CONTROL, CONTROL_MULTIPLE, CONTROL_NORMAL, CONTROL_RESTRICTED, CONTROL_SUSPENSION_RELATED,
     CONTROL_UNKNOWN, CONTROL_WARNING, TRADING_ACTIVE, TRADING_CANCELLED, TRADING_RESTRICTED,
     TRADING_SUSPENDED, TRADING_TEMP_STOPPED, TRADING_UNKNOWN, normalize_control_status, normalize_trading_status,

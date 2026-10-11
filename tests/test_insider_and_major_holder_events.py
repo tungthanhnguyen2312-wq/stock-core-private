@@ -8,7 +8,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-import insider_and_major_holder_events as events  # noqa: E402
+import stocklookup_core.evidence.insider_and_major_holder_events as events  # noqa: E402
 
 
 def _shares(value: float) -> dict:

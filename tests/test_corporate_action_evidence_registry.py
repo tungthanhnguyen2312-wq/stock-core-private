@@ -1,6 +1,6 @@
 import tempfile,unittest
 from pathlib import Path
-from corporate_action_evidence_registry import *
+from stocklookup_core.evidence.corporate_action_evidence_registry import *
 def rec(**x):
  r={"schema_version":"1","ticker":"VNM","provider":"VCI","provider_event_id":"e","action_type":"cash_dividend","event_code":"DIV","cash_amount":1,"share_ratio":None,"temporal":dict.fromkeys(FIELDS),"source_hash":"h","citation_id":None,"citation_reason":"partial","qualification":"partial","coverage_limitation":"partial","supersedes":[],"adjustment_provenance":"not_generated"};r.update(x);r["record_id"]=identity(r);return r
 class Tests(unittest.TestCase):

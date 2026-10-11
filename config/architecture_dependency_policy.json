@@ -13,5 +13,13 @@
     "research": ["package", "acquisition", "evidence", "financial", "valuation", "tactical"],
     "portfolio": ["package", "acquisition", "evidence", "financial", "valuation", "tactical", "research"],
     "decision": ["package", "acquisition", "evidence", "financial", "valuation", "tactical", "research", "portfolio"]
-  }
+  },
+  "relocated_debt_disposition": "E1 layout relocations only: each row is a sealed-baseline root edge renamed by config/repository_layout.json; debt carried, not approved; listing cannot create a dependency",
+  "relocated_debt_edges": [
+    ["stocklookup_core.evidence.hnx_disclosure_feed_parser", "official_source_registry", "module_load", "static", "from"],
+    ["stocklookup_core.evidence.hnx_financial_filing_scaleout", "official_financial_period_identity", "lazy", "static", "from"],
+    ["stocklookup_core.evidence.hnx_financial_filing_scaleout", "official_source_registry", "module_load", "static", "from"],
+    ["stocklookup_core.evidence.official_authority_candidates", "official_source_registry", "lazy", "static", "import"],
+    ["stocklookup_core.evidence.official_listing_page_parser", "official_source_registry", "module_load", "static", "from"]
+  ]
 }
