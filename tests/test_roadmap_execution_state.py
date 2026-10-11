@@ -589,7 +589,7 @@ def test_no_milestone_specific_checkpoint_bypass_in_checker_source():
 def test_owner_admission_releases_only_current_and_preserves_history(git_repo, tmp_path):
     repo, sha = git_repo
     historical = _milestone("OLD", "COMPLETE", checkpoint=sha,
-                            notes="Immutable lịch sử", state_history=["ACTIVE", "COMPLETE"])
+                            notes="Immutable lá»‹ch sá»­", state_history=["ACTIVE", "COMPLETE"])
     current = _milestone("CAPACITY", "ACTIVE", notes="Owner continuation", state_history=["ACTIVE"])
     state = _state([current, historical], current={"milestone": "CAPACITY", "state": "ACTIVE"}, lineage_head=sha)
     path = tmp_path / "roadmap.json"
@@ -634,7 +634,7 @@ def test_admission_after_complete_preserves_exact_predecessor_bytes(git_repo, tm
     (repo / "README.md").write_text("verified release closure\n", encoding="utf-8")
     live_sha = _commit_all(repo, "release documentation")
     prior = _milestone("PRIOR", "COMPLETE", checkpoint=prior_sha,
-                       notes="Preserved completion — lịch sử", state_history=["ACTIVE", "COMPLETE"])
+                       notes="Preserved completion â€” lá»‹ch sá»­", state_history=["ACTIVE", "COMPLETE"])
     state = _state([prior], current={"milestone": "PRIOR", "state": "COMPLETE"}, lineage_head=prior_sha)
     path = tmp_path / "roadmap.json"
     path.write_text(json.dumps(state, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -666,3 +666,46 @@ def test_admission_after_complete_refuses_unreachable_checkpoint(git_repo, tmp_p
         cli.main(["--state-file", str(path), "--repo", str(repo), "--admit-scope", "NEW",
                   "--owner-override", "--release-current-at", root_sha, "--scope-note", "Owner scope"])
     assert path.read_bytes() == original
+
+
+
+def test_owner_local_closeout_preserves_history_and_does_not_admit_successor(git_repo, tmp_path):
+    repo, sha = git_repo
+    historical = _milestone('OLD', 'COMPLETE', checkpoint=sha, notes='Immutable lịch sử')
+    state = _state([_milestone('E0', 'ACTIVE', notes='Bounded scope'), historical],
+                   current={'milestone':'E0','state':'ACTIVE'}, lineage_head=sha)
+    path = tmp_path / 'local-closeout.json'
+    path.write_text(json.dumps(state,ensure_ascii=False,indent=2),encoding='utf-8')
+    old = path.read_text(encoding='utf-8')
+    args = ['--state-file',str(path),'--repo',str(repo),'--complete-local-scope','E0',
+            '--owner-override','--checkpoint-at',sha,'--scope-note','Owner local release only']
+    assert cli.main(args) == 0
+    changed = res.load_state(path)
+    assert changed['current'] == {'milestone':'E0','state':'COMPLETE'}
+    assert changed['queued_next'] == []
+    assert changed['milestones'][0]['checkpoint'] == sha
+    assert changed['milestones'][0]['terminal_disposition'] == 'LOCAL_IMPLEMENTATION_COMPLETE_NOT_PROMOTED'
+    assert path.read_text(encoding='utf-8').endswith(old[old.index('    {\n      "milestone_id": "OLD"'):])
+    assert res.evaluate(changed,repo=repo).overall == 'ON_TRACK'
+    stable = path.read_bytes()
+    with pytest.raises(SystemExit): cli.main(args)
+    assert path.read_bytes() == stable
+
+
+@pytest.mark.parametrize('failure',['owner','head','dirty','queue','wrong-current','offline'])
+def test_local_closeout_refuses_invalid_gate_without_writing(git_repo,tmp_path,failure):
+    repo, sha = git_repo
+    state = _state([_milestone('E0','ACTIVE',notes='Bounded scope')],
+                   current={'milestone':'E0','state':'ACTIVE'},lineage_head=sha)
+    if failure == 'queue': state['queued_next'] = ['NEXT']
+    path = tmp_path/'local-closeout.json'
+    path.write_text(json.dumps(state,indent=2),encoding='utf-8')
+    stable = path.read_bytes()
+    args = ['--state-file',str(path),'--repo',str(repo),'--complete-local-scope',
+            'OTHER' if failure == 'wrong-current' else 'E0', '--checkpoint-at',
+            'HEAD' if failure == 'head' else sha, '--scope-note','Owner scope']
+    if failure != 'owner': args.append('--owner-override')
+    if failure == 'dirty': (repo/'README.md').write_text('uncommitted')
+    if failure == 'offline': args[3] = str(tmp_path/'missing')
+    with pytest.raises(SystemExit): cli.main(args)
+    assert path.read_bytes() == stable

@@ -1,0 +1,433 @@
+{
+  "basis": "Reviewed 2026-10-11 research invocation inventory at cdef38e8, verified against E0 base 6f0c483. Includes ordinary Daily, legacy CLI, offline/provider qualification and CI compile targets; not 31 ordinary Daily stages. External sibling targets excluded.",
+  "bounded_callers": {
+    "bounded_orchestration_pilot.py": {
+      "ast_sha256": "f27d3de55674888ca5d0b563a68359d3e0920a44f57866e02b7b7c1f9e05514e",
+      "reason": "Resolved dispatch plus exact caller AST; injected/unknown paths are not claimed as runtime proof.",
+      "targets": [
+        "export_ai_bundle.py",
+        "metadata_registry_export.py"
+      ]
+    },
+    "canonical_daily_operation.py": {
+      "ast_sha256": "8b34591e3ab193ea6cfb6006493559505c7b16d8df03bbde8ef6accfe8f637ed",
+      "reason": "Macro argv resolved; release_orchestrator called in-process via import/parse_args, injected runner is bounded.",
+      "targets": [
+        "macro_sync.py",
+        "tools/release_orchestrator.py"
+      ]
+    },
+    "canonical_post_close_pipeline.py": {
+      "ast_sha256": "244f417e7280848e566437daf10e12433d20a8d37f2aa9465d9b34ef568aab1f",
+      "reason": "Child argv passed to imported run_observed_subprocess and progress wrapper; exact source contract covers delegation.",
+      "targets": [
+        "tools/run_prospective_decision_outcome_feedback.py",
+        "tools/run_prospective_research_cohort_collection.py",
+        "tools/run_tactical_reversal_prospective_shadow_collection.py"
+      ]
+    },
+    "daily_analysis_pipeline.py": {
+      "ast_sha256": "6dba1f1db8063498603f98c142b164185d178c68048f010f3898f53f4304a5aa",
+      "reason": "Producer step matrix and injected runner; loops and producer_script helper are bounded by reviewed caller AST.",
+      "targets": [
+        "candle_scan.py",
+        "export_ai_bundle.py",
+        "macro_sync.py",
+        "news_sync.py",
+        "publish_dashboard.py",
+        "stock_analyzer.py",
+        "vn_indicators.py"
+      ]
+    },
+    "run.py": {
+      "ast_sha256": "db75e14b452cda079855263aaf00b4f49c3a449c1eb9af3aceb3e389b97703b7",
+      "reason": "TASKS dictionary selection to subprocess.run; exact source covers selected script and argv.",
+      "targets": [
+        "ai_analyzer.py",
+        "bctc_processor.py",
+        "candle_scan.py",
+        "macro_sync.py",
+        "news_sync.py",
+        "publish_dashboard.py",
+        "stock_analyzer.py",
+        "vn_indicators.py"
+      ]
+    },
+    "stocklookup.py": {
+      "ast_sha256": "e49991c2197840c19706682e90f65178346811783713da94002b15e95e2fb363",
+      "reason": "Resolved dispatch plus exact caller AST; injected/unknown paths are not claimed as runtime proof.",
+      "targets": [
+        "daily_analysis_pipeline.py",
+        "tools/stocklookup_roadmap.py"
+      ]
+    },
+    "stocklookup_core/research/thesis_production_runtime.py": {
+      "ast_sha256": "e38b984bf932cd2c3b6b1b9505ef8dbca6c9079490db2f0cd6f465eb36cd9548",
+      "reason": "Mutated stage2 argv to subprocess.run; exact source covers construction.",
+      "targets": [
+        "tools/run_thesis_evidence_stage2.py"
+      ]
+    },
+    "tools/operate_stocklookup.py": {
+      "ast_sha256": "4f7f8fe242ae170f8edc347f82ced5ef6a5c5c7a9f066d49e891429e6e97c35d",
+      "reason": "Resolved dispatch plus exact caller AST; injected/unknown paths are not claimed as runtime proof.",
+      "targets": [
+        "candle_scan.py",
+        "export_ai_bundle.py",
+        "meta_sync.py",
+        "stock_analyzer.py",
+        "tools/build_statement_taxonomy_sidecar.py",
+        "tools/ingest_canonical_financial_facts.py",
+        "tools/publish_release.py"
+      ]
+    },
+    "tools/release_orchestrator.py": {
+      "ast_sha256": "e5054bdf8ebf1971016f950eaef04fb6ea6a92d5c2dcdd484f1280bbd32a616f",
+      "reason": "Command plans to subprocess.run with cwd; loop dataflow is bounded.",
+      "targets": [
+        "publish_dashboard.py",
+        "tools/build_frontend.py",
+        "tools/operate_stocklookup.py",
+        "tools/publish_release.py"
+      ]
+    },
+    "tools/run_owner_daily.py": {
+      "ast_sha256": "8294af69783bbcd58baba6f740faa1442f5ac7c741159b2c13d978d5d508424a",
+      "reason": "Resolved dispatch plus exact caller AST; injected/unknown paths are not claimed as runtime proof.",
+      "targets": [
+        "daily_analysis_pipeline.py",
+        "tools/release_orchestrator.py"
+      ]
+    },
+    "tools/run_provider_os_containment_qualification.py": {
+      "ast_sha256": "fcff8685b8619c667f85ca8ed0bb80438401e39bd1b8c81868fabee074b1b2d3",
+      "reason": "Reviewed flat provider bundle copy then backend.spawn_suspended_in_job(argv=...); bundle path is not repository-relative at runtime.",
+      "targets": [
+        "tools/provider_containment_probe.py"
+      ]
+    },
+    "tools/run_thesis_evidence_stage2_acceptance.py": {
+      "ast_sha256": "ce314a965f13604faaec0136b16b87a35487d081476427e383ecb6afa6a39200",
+      "reason": "Resolved dispatch plus exact caller AST; injected/unknown paths are not claimed as runtime proof.",
+      "targets": [
+        "tools/run_thesis_evidence_stage2.py"
+      ]
+    }
+  },
+  "non_python_callers": {
+    ".github/workflows/producer-ci.yml": {
+      "kind": "compile_and_cli",
+      "reason": "Exact reviewed shell/CI command contract, normalized line endings.",
+      "sha256": "e7a1f006c705d90064e2de1bf549a43347ed62174a0d0c1f10cd7ae190f26091",
+      "targets": [
+        "canonical_daily_operation.py",
+        "daily_analysis_pipeline.py",
+        "daily_producer_pipeline.py",
+        "daily_research_session_operations.py",
+        "roadmap_execution_state.py",
+        "stocklookup.py",
+        "tools/stocklookup_roadmap.py",
+        "tools/verify_dependency_tiers.py"
+      ]
+    },
+    "stocklookup.ps1": {
+      "kind": "shell_dispatch",
+      "reason": "Exact reviewed shell/CI command contract, normalized line endings.",
+      "sha256": "6765ce13f73000eacdf8a938d64efe1bd854d766bbe274a37d978e1153c5379c",
+      "targets": [
+        "stocklookup.py"
+      ]
+    },
+    "sync_and_publish.bat": {
+      "kind": "shell_dispatch",
+      "reason": "Exact reviewed shell/CI command contract, normalized line endings.",
+      "sha256": "9c7e87d97a76a6b548c4cb750a576a6752e48980381ed16f1cf20cd579597efc",
+      "targets": [
+        "tools/release_orchestrator.py"
+      ]
+    },
+    "tools/provision_provider_os_containment.ps1": {
+      "kind": "operator_instruction",
+      "reason": "Pinned owner next-step instruction, not an executed subprocess in this script.",
+      "sha256": "50a6f2ce0a1d254073085672681bd447f1df1e3042dd3d6535bac0dcba62dab9",
+      "targets": [
+        "tools/run_provider_os_containment_qualification.py"
+      ]
+    }
+  },
+  "python_callers": {
+    "bounded_orchestration_pilot.py": [
+      "export_ai_bundle.py",
+      "metadata_registry_export.py"
+    ],
+    "canonical_daily_operation.py": [
+      "macro_sync.py",
+      "tools/release_orchestrator.py"
+    ],
+    "canonical_post_close_pipeline.py": [
+      "tools/run_prospective_decision_outcome_feedback.py",
+      "tools/run_prospective_research_cohort_collection.py",
+      "tools/run_tactical_reversal_prospective_shadow_collection.py"
+    ],
+    "daily_analysis_pipeline.py": [
+      "candle_scan.py",
+      "export_ai_bundle.py",
+      "macro_sync.py",
+      "news_sync.py",
+      "publish_dashboard.py",
+      "stock_analyzer.py",
+      "vn_indicators.py"
+    ],
+    "run.py": [
+      "ai_analyzer.py",
+      "bctc_processor.py",
+      "candle_scan.py",
+      "macro_sync.py",
+      "news_sync.py",
+      "publish_dashboard.py",
+      "stock_analyzer.py",
+      "vn_indicators.py"
+    ],
+    "stocklookup.py": [
+      "daily_analysis_pipeline.py",
+      "tools/stocklookup_roadmap.py"
+    ],
+    "stocklookup_core/research/thesis_production_runtime.py": [
+      "tools/run_thesis_evidence_stage2.py"
+    ],
+    "tools/operate_stocklookup.py": [
+      "candle_scan.py",
+      "export_ai_bundle.py",
+      "meta_sync.py",
+      "stock_analyzer.py",
+      "tools/build_statement_taxonomy_sidecar.py",
+      "tools/ingest_canonical_financial_facts.py",
+      "tools/publish_release.py"
+    ],
+    "tools/release_orchestrator.py": [
+      "publish_dashboard.py",
+      "tools/build_frontend.py",
+      "tools/operate_stocklookup.py",
+      "tools/publish_release.py"
+    ],
+    "tools/run_owner_daily.py": [
+      "daily_analysis_pipeline.py",
+      "tools/release_orchestrator.py"
+    ],
+    "tools/run_provider_os_containment_qualification.py": [
+      "tools/provider_containment_probe.py"
+    ],
+    "tools/run_thesis_evidence_stage2_acceptance.py": [
+      "tools/run_thesis_evidence_stage2.py"
+    ]
+  },
+  "schema": 2,
+  "targets": [
+    {
+      "callers": [
+        "run.py"
+      ],
+      "path": "ai_analyzer.py"
+    },
+    {
+      "callers": [
+        "run.py"
+      ],
+      "path": "bctc_processor.py"
+    },
+    {
+      "callers": [
+        "daily_analysis_pipeline.py",
+        "run.py",
+        "tools/operate_stocklookup.py"
+      ],
+      "path": "candle_scan.py"
+    },
+    {
+      "callers": [
+        ".github/workflows/producer-ci.yml"
+      ],
+      "path": "canonical_daily_operation.py"
+    },
+    {
+      "callers": [
+        ".github/workflows/producer-ci.yml",
+        "stocklookup.py",
+        "tools/run_owner_daily.py"
+      ],
+      "path": "daily_analysis_pipeline.py"
+    },
+    {
+      "callers": [
+        ".github/workflows/producer-ci.yml"
+      ],
+      "path": "daily_producer_pipeline.py"
+    },
+    {
+      "callers": [
+        ".github/workflows/producer-ci.yml"
+      ],
+      "path": "daily_research_session_operations.py"
+    },
+    {
+      "callers": [
+        "bounded_orchestration_pilot.py",
+        "daily_analysis_pipeline.py",
+        "tools/operate_stocklookup.py"
+      ],
+      "path": "export_ai_bundle.py"
+    },
+    {
+      "callers": [
+        "canonical_daily_operation.py",
+        "daily_analysis_pipeline.py",
+        "run.py"
+      ],
+      "path": "macro_sync.py"
+    },
+    {
+      "callers": [
+        "tools/operate_stocklookup.py"
+      ],
+      "path": "meta_sync.py"
+    },
+    {
+      "callers": [
+        "bounded_orchestration_pilot.py"
+      ],
+      "path": "metadata_registry_export.py"
+    },
+    {
+      "callers": [
+        "daily_analysis_pipeline.py",
+        "run.py"
+      ],
+      "path": "news_sync.py"
+    },
+    {
+      "callers": [
+        "daily_analysis_pipeline.py",
+        "run.py",
+        "tools/release_orchestrator.py"
+      ],
+      "path": "publish_dashboard.py"
+    },
+    {
+      "callers": [
+        ".github/workflows/producer-ci.yml"
+      ],
+      "path": "roadmap_execution_state.py"
+    },
+    {
+      "callers": [
+        "daily_analysis_pipeline.py",
+        "run.py",
+        "tools/operate_stocklookup.py"
+      ],
+      "path": "stock_analyzer.py"
+    },
+    {
+      "callers": [
+        ".github/workflows/producer-ci.yml",
+        "stocklookup.ps1"
+      ],
+      "path": "stocklookup.py"
+    },
+    {
+      "callers": [
+        "tools/release_orchestrator.py"
+      ],
+      "path": "tools/build_frontend.py"
+    },
+    {
+      "callers": [
+        "tools/operate_stocklookup.py"
+      ],
+      "path": "tools/build_statement_taxonomy_sidecar.py"
+    },
+    {
+      "callers": [
+        "tools/operate_stocklookup.py"
+      ],
+      "path": "tools/ingest_canonical_financial_facts.py"
+    },
+    {
+      "callers": [
+        "tools/release_orchestrator.py"
+      ],
+      "path": "tools/operate_stocklookup.py"
+    },
+    {
+      "callers": [
+        "tools/run_provider_os_containment_qualification.py"
+      ],
+      "path": "tools/provider_containment_probe.py"
+    },
+    {
+      "callers": [
+        "tools/operate_stocklookup.py",
+        "tools/release_orchestrator.py"
+      ],
+      "path": "tools/publish_release.py"
+    },
+    {
+      "callers": [
+        "canonical_daily_operation.py",
+        "sync_and_publish.bat",
+        "tools/run_owner_daily.py"
+      ],
+      "path": "tools/release_orchestrator.py"
+    },
+    {
+      "callers": [
+        "canonical_post_close_pipeline.py"
+      ],
+      "path": "tools/run_prospective_decision_outcome_feedback.py"
+    },
+    {
+      "callers": [
+        "canonical_post_close_pipeline.py"
+      ],
+      "path": "tools/run_prospective_research_cohort_collection.py"
+    },
+    {
+      "callers": [
+        "tools/provision_provider_os_containment.ps1"
+      ],
+      "path": "tools/run_provider_os_containment_qualification.py"
+    },
+    {
+      "callers": [
+        "canonical_post_close_pipeline.py"
+      ],
+      "path": "tools/run_tactical_reversal_prospective_shadow_collection.py"
+    },
+    {
+      "callers": [
+        "stocklookup_core/research/thesis_production_runtime.py",
+        "tools/run_thesis_evidence_stage2_acceptance.py"
+      ],
+      "path": "tools/run_thesis_evidence_stage2.py"
+    },
+    {
+      "callers": [
+        ".github/workflows/producer-ci.yml",
+        "stocklookup.py"
+      ],
+      "path": "tools/stocklookup_roadmap.py"
+    },
+    {
+      "callers": [
+        ".github/workflows/producer-ci.yml"
+      ],
+      "path": "tools/verify_dependency_tiers.py"
+    },
+    {
+      "callers": [
+        "daily_analysis_pipeline.py",
+        "run.py"
+      ],
+      "path": "vn_indicators.py"
+    }
+  ]
+}

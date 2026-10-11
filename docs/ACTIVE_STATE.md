@@ -1,7 +1,7 @@
 # Stock Lookup — Active State
 
-Verified main, 2026-10-11: `498b02dd8471078a9cd627eb75241a4ed2da0de5`.
-PR120 COMPLETE; 4 post-merge CI PASS (38111216670), offline only.
+E0 base/main at admission, 2026-10-11: `6f0c483eed41ca9b3ffdcd2f918ab21138b50124`.
+PR122 released; four jobs PASS (38126328546). E0 local only.
 Verify live main: `git fetch origin main` or `git ls-remote origin refs/heads/main`; **local** remote-tracking refs may be stale.
 ## 0. How this file relates to the others
 | Question | Answer lives in |
@@ -30,7 +30,7 @@ Kinds: **CURRENT FACT** (verified), **HOST-LOCAL** (untracked; re-verify),
 **BLOCKED**, **DEFERRED**, **HISTORICAL**.
 
 ## 1. The operational gate
-- **ACTIVE — [bootstrap footgun removal](agent_bootstrap_footgun_removal_v1_contract.md):** query and handoff only. Exact-HEAD merge gate.
+- **COMPLETE LOCAL — [architecture E0](stocklookup_architecture_dependency_ratchet_and_daily_launch_guard_v1_contract.md):** guards validated; owner push/PR gate; no E1. Bootstrap PR122 released.
 - **COMPLETE — [Action Center cases](action_center_opportunity_cost_cases_consumer_v1_contract.md):** PR119, four post-merge jobs PASS (38105025004); offline/non-voting.
 - **COMPLETE — [capacity Phase 1](capacity_recovery_phase1_contract.md):** PR99 merged
   `168e0f7`, post-merge CI 37893984528 success; zero production reclaim/activation.
@@ -301,8 +301,8 @@ Kinds: **CURRENT FACT** (verified), **HOST-LOCAL** (untracked; re-verify),
 
 ## 9. Next action
 
-Financial transparency COMPLETE at PR120 release; queue empty.
-Source-qualification integrity is the owner-selected next corrective, requiring native admission. No Daily activation.
+PR120/121/122 merged; architecture E0 natively admitted here. Queue empty; no automatic E1.
+No Daily activation, source moves, production writes, push or PR.
 Daily stays owner-operated after fresh READY/session gates; production merges need approval.
 Fiscal mapping needs exact source/period/publication proof under its existing contract.
 

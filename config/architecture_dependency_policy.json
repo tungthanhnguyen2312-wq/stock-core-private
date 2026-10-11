@@ -1,0 +1,17 @@
+{
+  "schema": 1,
+  "disposition": "E0 regression guard only; grandfathered edges are debt, not approval",
+  "allowed_dependencies": {
+    "root": ["package", "acquisition", "evidence", "financial", "valuation", "tactical", "research", "decision", "portfolio"],
+    "tools": ["root", "package", "acquisition", "evidence", "financial", "valuation", "tactical", "research", "decision", "portfolio"],
+    "package": [],
+    "acquisition": ["package"],
+    "evidence": ["package", "acquisition"],
+    "financial": ["package", "acquisition", "evidence"],
+    "valuation": ["package", "acquisition", "evidence", "financial"],
+    "tactical": ["package", "acquisition", "evidence"],
+    "research": ["package", "acquisition", "evidence", "financial", "valuation", "tactical"],
+    "portfolio": ["package", "acquisition", "evidence", "financial", "valuation", "tactical", "research"],
+    "decision": ["package", "acquisition", "evidence", "financial", "valuation", "tactical", "research", "portfolio"]
+  }
+}

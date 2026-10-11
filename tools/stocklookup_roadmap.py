@@ -169,6 +169,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--scope-note", help="Exact owner directive and bounded scope; required for continuation or admission.")
     parser.add_argument("--admit-scope", metavar="MILESTONE_ID", help="Register and admit an explicitly owner-directed successor after reconciling a verified release.")
     parser.add_argument("--release-current-at", help="Exact verified live starting HEAD; release an ACTIVE current milestone or preserve an already COMPLETE predecessor.")
+    parser.add_argument("--complete-local-scope", metavar="MILESTONE_ID", help="Owner-authorized local implementation closeout only; no main release or successor.")
+    parser.add_argument("--checkpoint-at", help="Exact full live implementation HEAD for local closeout.")
     parser.add_argument("--worktrees", action="store_true", help="Print worktree class, HEAD, branch and tracked-dirty count. Does not remove worktrees.")
     args = parser.parse_args(argv)
 
@@ -179,6 +181,34 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     repo = args.repo if args.repo.is_dir() else None
+
+    if args.complete_local_scope:
+        if (not args.owner_override or not args.scope_note or not args.checkpoint_at
+                or args.admit_scope or args.continue_scope or args.can_start or repo is None):
+            parser.error("local closeout requires explicit owner directive, exact checkpoint and live repository only")
+        mid = args.complete_local_scope
+        current = state.get("current") or {}
+        milestone = next((m for m in state["milestones"] if m.get("milestone_id") == mid), None)
+        if (milestone is None or current != {"milestone": mid, "state": "ACTIVE"}
+                or milestone.get("state") != "ACTIVE" or state.get("queued_next")):
+            parser.error("local closeout requires exact current ACTIVE milestone and empty queue")
+        ok, checkpoint = res.resolve_checkpoint(repo, args.checkpoint_at)
+        status_code, status, _ = res.git_run(repo, "status", "--porcelain")
+        if (not ok or checkpoint != args.checkpoint_at or checkpoint != res.git_head(repo)
+                or status_code != 0 or any(line and not line.startswith("??") for line in status.splitlines())
+                or res.evaluate(state, repo=repo).overall != "ON_TRACK"):
+            parser.error("local closeout requires exact live HEAD, tracked-clean repository and ON_TRACK roadmap")
+        milestone.update(state="COMPLETE", checkpoint=checkpoint,
+                         terminal_disposition="LOCAL_IMPLEMENTATION_COMPLETE_NOT_PROMOTED")
+        milestone.setdefault("state_history", []).append("COMPLETE")
+        milestone["notes"] += " Local closeout: " + args.scope_note + "; no main release, authority promotion or successor."
+        state["current"]["state"] = "COMPLETE"
+        if res.evaluate(state, repo=repo).overall != "ON_TRACK":
+            parser.error("local completion must remain ON_TRACK; no state written")
+        original = args.state_file.read_text(encoding="utf-8")
+        args.state_file.write_bytes(continuation_text(original, state, mid).encode("utf-8"))
+        print("OWNER_AUTHORIZED_LOCAL_CLOSEOUT:" + mid + ":" + checkpoint)
+        return 0
 
     if args.admit_scope:
         if (not args.owner_override or not args.scope_note or not args.release_current_at

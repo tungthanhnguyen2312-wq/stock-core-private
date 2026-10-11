@@ -15,14 +15,36 @@
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "AGENT_BOOTSTRAP_FOOTGUN_REMOVAL_V1",
-    "state": "ACTIVE"
+    "milestone": "STOCKLOOKUP_ARCHITECTURE_DEPENDENCY_RATCHET_AND_DAILY_LAUNCH_GUARD_V1",
+    "state": "COMPLETE"
   },
   "queued_next": [],
   "milestones": [
     {
+      "milestone_id": "STOCKLOOKUP_ARCHITECTURE_DEPENDENCY_RATCHET_AND_DAILY_LAUNCH_GUARD_V1",
+      "state": "COMPLETE",
+      "starting_checkpoint": "6f0c483eed41ca9b3ffdcd2f918ab21138b50124",
+      "candidate_branch": "feature/architecture-dependency-ratchet-daily-launch-guard-v1-20261011",
+      "dependencies": [
+        "AGENT_BOOTSTRAP_FOOTGUN_REMOVAL_V1"
+      ],
+      "unlocks": [],
+      "owner_authorized": true,
+      "owner_override": "Owner-selected bounded structural simplification E0: AST dependency baseline and ratchet plus canonical path-launched Daily script guards, reusing existing 107-relocation layout contract; release bootstrap PR122 only after verified merged exact main and four green post-merge jobs in run 38126328546. One local validated checkpoint only; no production changes, module moves, financial authority, Daily, push, PR, merge, or E1.",
+      "authority_effect": "NONE",
+      "source_doc": "docs/stocklookup_architecture_dependency_ratchet_and_daily_launch_guard_v1_contract.md",
+      "state_history": [
+        "DEFERRED",
+        "ACTIVE",
+        "COMPLETE"
+      ],
+      "checkpoint": "1f9ee05ba057a73178b17dc8d60ca2c9a827163a",
+      "terminal_disposition": "LOCAL_IMPLEMENTATION_COMPLETE_NOT_PROMOTED",
+      "notes": "Owner-selected bounded structural simplification E0: AST dependency baseline and ratchet plus canonical path-launched Daily script guards, reusing existing 107-relocation layout contract; release bootstrap PR122 only after verified merged exact main and four green post-merge jobs in run 38126328546. One local validated checkpoint only; no production changes, module moves, financial authority, Daily, push, PR, merge, or E1. Local closeout: Owner 2026-10-11 end-to-end E0 mandate; validated local implementation and reproducible offline acceptance; push/PR/merge remain unauthorized, no E1; no main release, authority promotion or successor."
+    },
+    {
       "milestone_id": "AGENT_BOOTSTRAP_FOOTGUN_REMOVAL_V1",
-      "state": "ACTIVE",
+      "state": "COMPLETE",
       "starting_checkpoint": "cdef38e8b8401c2161997885ab92cd7e3852ec78",
       "candidate_branch": "feature/agent-bootstrap-footgun-removal-v1-20261011",
       "dependencies": [
@@ -35,11 +57,12 @@
       "source_doc": "docs/agent_bootstrap_footgun_removal_v1_contract.md",
       "state_history": [
         "DEFERRED",
-        "ACTIVE"
+        "ACTIVE",
+        "COMPLETE"
       ],
-      "checkpoint": null,
-      "terminal_disposition": null,
-      "notes": "Owner approved PR 121 release at cdef38e8b8401c2161997885ab92cd7e3852ec78 and directed AGENT_BOOTSTRAP_FOOTGUN_REMOVAL_V1: ordinary handoff must not read historical STATE.md or ROADMAP.md; skipped Git verification must not report ON_TRACK; resume fields come from the native roadmap query. No Daily, production write, worktree deletion, or source-authority change."
+      "checkpoint": "6f0c483eed41ca9b3ffdcd2f918ab21138b50124",
+      "terminal_disposition": "IMPLEMENTATION_RELEASED_NO_PRODUCTION_ACTIVATION",
+      "notes": "Owner approved PR 121 release at cdef38e8b8401c2161997885ab92cd7e3852ec78 and directed AGENT_BOOTSTRAP_FOOTGUN_REMOVAL_V1: ordinary handoff must not read historical STATE.md or ROADMAP.md; skipped Git verification must not report ON_TRACK; resume fields come from the native roadmap query. No Daily, production write, worktree deletion, or source-authority change. Verified release 6f0c483eed41ca9b3ffdcd2f918ab21138b50124; no production reclaim, activation or automatic successor."
     },
     {
       "milestone_id": "OFFICIAL_FINANCIAL_SOURCE_QUALIFICATION_INTEGRITY_CORRECTIVE_V1",
