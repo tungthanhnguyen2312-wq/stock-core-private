@@ -1,0 +1,278 @@
+{
+  "basis": "Reviewed 2026-10-11 research invocation inventory at cdef38e8, verified against E0 base 6f0c483. Includes ordinary Daily, legacy CLI, offline/provider qualification and CI compile targets; not 31 ordinary Daily stages. External sibling targets excluded.",
+  "python_callers": {
+    "bounded_orchestration_pilot.py": [
+      "export_ai_bundle.py",
+      "metadata_registry_export.py"
+    ],
+    "canonical_daily_operation.py": [
+      "macro_sync.py",
+      "tools/release_orchestrator.py"
+    ],
+    "canonical_post_close_pipeline.py": [
+      "tools/run_prospective_decision_outcome_feedback.py",
+      "tools/run_prospective_research_cohort_collection.py",
+      "tools/run_tactical_reversal_prospective_shadow_collection.py"
+    ],
+    "daily_analysis_pipeline.py": [
+      "candle_scan.py",
+      "export_ai_bundle.py",
+      "macro_sync.py",
+      "news_sync.py",
+      "publish_dashboard.py",
+      "stock_analyzer.py",
+      "vn_indicators.py"
+    ],
+    "run.py": [
+      "ai_analyzer.py",
+      "bctc_processor.py",
+      "candle_scan.py",
+      "macro_sync.py",
+      "news_sync.py",
+      "publish_dashboard.py",
+      "stock_analyzer.py",
+      "vn_indicators.py"
+    ],
+    "stocklookup.py": [
+      "daily_analysis_pipeline.py",
+      "tools/stocklookup_roadmap.py"
+    ],
+    "stocklookup_core/research/thesis_production_runtime.py": [
+      "tools/run_thesis_evidence_stage2.py"
+    ],
+    "tools/operate_stocklookup.py": [
+      "candle_scan.py",
+      "export_ai_bundle.py",
+      "meta_sync.py",
+      "stock_analyzer.py",
+      "tools/build_statement_taxonomy_sidecar.py",
+      "tools/ingest_canonical_financial_facts.py",
+      "tools/publish_release.py"
+    ],
+    "tools/release_orchestrator.py": [
+      "publish_dashboard.py",
+      "tools/build_frontend.py",
+      "tools/operate_stocklookup.py",
+      "tools/publish_release.py"
+    ],
+    "tools/run_owner_daily.py": [
+      "daily_analysis_pipeline.py",
+      "tools/release_orchestrator.py"
+    ],
+    "tools/run_provider_os_containment_qualification.py": [
+      "tools/provider_containment_probe.py"
+    ],
+    "tools/run_thesis_evidence_stage2_acceptance.py": [
+      "tools/run_thesis_evidence_stage2.py"
+    ]
+  },
+  "schema": 1,
+  "targets": [
+    {
+      "callers": [
+        "run.py"
+      ],
+      "path": "ai_analyzer.py"
+    },
+    {
+      "callers": [
+        "run.py"
+      ],
+      "path": "bctc_processor.py"
+    },
+    {
+      "callers": [
+        "daily_analysis_pipeline.py",
+        "run.py",
+        "tools/operate_stocklookup.py"
+      ],
+      "path": "candle_scan.py"
+    },
+    {
+      "callers": [
+        ".github/workflows/producer-ci.yml"
+      ],
+      "path": "canonical_daily_operation.py"
+    },
+    {
+      "callers": [
+        ".github/workflows/producer-ci.yml",
+        "stocklookup.py",
+        "tools/run_owner_daily.py"
+      ],
+      "path": "daily_analysis_pipeline.py"
+    },
+    {
+      "callers": [
+        ".github/workflows/producer-ci.yml"
+      ],
+      "path": "daily_producer_pipeline.py"
+    },
+    {
+      "callers": [
+        ".github/workflows/producer-ci.yml"
+      ],
+      "path": "daily_research_session_operations.py"
+    },
+    {
+      "callers": [
+        "bounded_orchestration_pilot.py",
+        "daily_analysis_pipeline.py",
+        "tools/operate_stocklookup.py"
+      ],
+      "path": "export_ai_bundle.py"
+    },
+    {
+      "callers": [
+        "canonical_daily_operation.py",
+        "daily_analysis_pipeline.py",
+        "run.py"
+      ],
+      "path": "macro_sync.py"
+    },
+    {
+      "callers": [
+        "tools/operate_stocklookup.py"
+      ],
+      "path": "meta_sync.py"
+    },
+    {
+      "callers": [
+        "bounded_orchestration_pilot.py"
+      ],
+      "path": "metadata_registry_export.py"
+    },
+    {
+      "callers": [
+        "daily_analysis_pipeline.py",
+        "run.py"
+      ],
+      "path": "news_sync.py"
+    },
+    {
+      "callers": [
+        "daily_analysis_pipeline.py",
+        "run.py",
+        "tools/release_orchestrator.py"
+      ],
+      "path": "publish_dashboard.py"
+    },
+    {
+      "callers": [
+        ".github/workflows/producer-ci.yml"
+      ],
+      "path": "roadmap_execution_state.py"
+    },
+    {
+      "callers": [
+        "daily_analysis_pipeline.py",
+        "run.py",
+        "tools/operate_stocklookup.py"
+      ],
+      "path": "stock_analyzer.py"
+    },
+    {
+      "callers": [
+        ".github/workflows/producer-ci.yml",
+        "stocklookup.ps1"
+      ],
+      "path": "stocklookup.py"
+    },
+    {
+      "callers": [
+        "tools/release_orchestrator.py"
+      ],
+      "path": "tools/build_frontend.py"
+    },
+    {
+      "callers": [
+        "tools/operate_stocklookup.py"
+      ],
+      "path": "tools/build_statement_taxonomy_sidecar.py"
+    },
+    {
+      "callers": [
+        "tools/operate_stocklookup.py"
+      ],
+      "path": "tools/ingest_canonical_financial_facts.py"
+    },
+    {
+      "callers": [
+        "tools/release_orchestrator.py"
+      ],
+      "path": "tools/operate_stocklookup.py"
+    },
+    {
+      "callers": [
+        "tools/run_provider_os_containment_qualification.py"
+      ],
+      "path": "tools/provider_containment_probe.py"
+    },
+    {
+      "callers": [
+        "tools/operate_stocklookup.py",
+        "tools/release_orchestrator.py"
+      ],
+      "path": "tools/publish_release.py"
+    },
+    {
+      "callers": [
+        "canonical_daily_operation.py",
+        "sync_and_publish.bat",
+        "tools/run_owner_daily.py"
+      ],
+      "path": "tools/release_orchestrator.py"
+    },
+    {
+      "callers": [
+        "canonical_post_close_pipeline.py"
+      ],
+      "path": "tools/run_prospective_decision_outcome_feedback.py"
+    },
+    {
+      "callers": [
+        "canonical_post_close_pipeline.py"
+      ],
+      "path": "tools/run_prospective_research_cohort_collection.py"
+    },
+    {
+      "callers": [
+        "tools/provision_provider_os_containment.ps1"
+      ],
+      "path": "tools/run_provider_os_containment_qualification.py"
+    },
+    {
+      "callers": [
+        "canonical_post_close_pipeline.py"
+      ],
+      "path": "tools/run_tactical_reversal_prospective_shadow_collection.py"
+    },
+    {
+      "callers": [
+        "stocklookup_core/research/thesis_production_runtime.py",
+        "tools/run_thesis_evidence_stage2_acceptance.py"
+      ],
+      "path": "tools/run_thesis_evidence_stage2.py"
+    },
+    {
+      "callers": [
+        ".github/workflows/producer-ci.yml",
+        "stocklookup.py"
+      ],
+      "path": "tools/stocklookup_roadmap.py"
+    },
+    {
+      "callers": [
+        ".github/workflows/producer-ci.yml"
+      ],
+      "path": "tools/verify_dependency_tiers.py"
+    },
+    {
+      "callers": [
+        "daily_analysis_pipeline.py",
+        "run.py"
+      ],
+      "path": "vn_indicators.py"
+    }
+  ]
+}

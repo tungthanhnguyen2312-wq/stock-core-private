@@ -23,6 +23,7 @@ env:
   CORE_INSTALL: python -m pip install -r requirements.txt -r requirements-test.txt -c constraints.txt
   HERMETIC_MARKERS: not retained_evidence and not provider_runtime
   FOCUSED_SELECTION: >-
+    tests/test_architecture_ratchet.py
     tests/test_official_financial_source_integrity.py
     tests/test_financial_reporting_currency.py
     tests/test_action_center_opportunity_cost_consumer.py
@@ -313,6 +314,7 @@ jobs:
       - run: >-
           pytest -q -m "${{ env.HERMETIC_MARKERS }}"
           tests/test_repository_layout.py
+          tests/test_architecture_ratchet.py
           tests/test_roadmap_execution_state.py
           tests/test_production_call_shape_smoke.py::test_offline_guard_blocks_requests_urllib_and_vnstock_import
           tests/test_production_call_shape_smoke.py::test_owner_daily_entry_route_remains_canonical

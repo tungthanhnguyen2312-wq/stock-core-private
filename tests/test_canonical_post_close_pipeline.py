@@ -1,3 +1,4 @@
+import ast
 import copy
 import json
 import re
@@ -482,8 +483,17 @@ def test_canonical_integrated_decision_materializes_existing_momentum_and_confir
     start = source.index("def _integrated_investment_decision_product")
     end = source.index("\n    _attempt(", start)
     body = source[start:end]
-    assert "import tactical_momentum_context as momentum_context" in body
-    assert "import tactical_confirmation_context as confirmation_context" in body
+    function = next(node for node in ast.walk(ast.parse(source))
+                    if isinstance(node, ast.FunctionDef)
+                    and node.name == "_integrated_investment_decision_product")
+    imports = {(alias.name, alias.asname) for node in ast.walk(function)
+               if isinstance(node, ast.Import) for alias in node.names}
+    imports.update((node.module + "." + alias.name, alias.asname)
+                   for node in ast.walk(function)
+                   if isinstance(node, ast.ImportFrom) and node.module
+                   for alias in node.names)
+    assert ("stocklookup_core.tactical.tactical_momentum_context", "momentum_context") in imports
+    assert ("stocklookup_core.tactical.tactical_confirmation_context", "confirmation_context") in imports
     assert "momentum_context.build_artifact(" in body
     assert "technical_history_recovery_artifact=technical_recovery" in body
     assert "confirmation_context.build_artifact(" in body

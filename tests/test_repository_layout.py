@@ -16,6 +16,19 @@ def test_root_python_additions_require_a_reviewed_placement_exception():
     assert actual <= allowed, f"Place implementation in stocklookup_core/ or reusable tools in tools/: {actual - allowed}"
 
 
+def test_dependency_direction_and_cycle_ratchet():
+    from tools import check_architecture as guard
+    policy = json.loads((ROOT / guard.POLICY).read_text(encoding="utf-8"))
+    baseline = json.loads((ROOT / guard.BASELINE).read_text(encoding="utf-8"))
+    assert not guard.regressions(guard.snapshot(ROOT, policy), baseline, policy)
+
+
+def test_reviewed_path_launchers_survive_layout_changes():
+    from tools.check_daily_launchers import check
+    manifest = json.loads((ROOT / "config/daily_path_launchers.json").read_text(encoding="utf-8"))
+    assert not check(ROOT, manifest)
+
+
 def test_relocated_modules_have_one_implementation_and_resolve():
     for old, new in LAYOUT["relocations"].items():
         path = ROOT / new
