@@ -185,3 +185,11 @@ adversarial cases and final repository-layout checks pass (**104 PASS**, includi
 all 98 reporting-currency tests). Original default identity/numerical goldens still
 pass. Bounded measurement preserves 27 admitted facts, the source-report identity
 warning and every input hash. Hosted CI must be checked again at the amended HEAD.
+
+## Owner-approved release closeout
+
+PR120 approved at exact HEAD `dddadbf40853a8655f5ac0fa72ae44aaa82f4316`;
+Head Lead merged at `498b02dd8471078a9cd627eb75241a4ed2da0de5`. All four post-merge
+jobs PASS in run 38111216670. Native current state COMPLETE, queue empty.
+No repeat merge, production activation, source refresh or historical evidence write.
+The source-integrity corrective remains separately admitted and separately merge-gated.

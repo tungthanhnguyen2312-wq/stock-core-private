@@ -16,13 +16,13 @@
   ],
   "current": {
     "milestone": "FINANCIAL_REPORTING_CURRENCY_TRANSPARENCY_V1",
-    "state": "ACTIVE"
+    "state": "COMPLETE"
   },
   "queued_next": [],
   "milestones": [
     {
       "milestone_id": "FINANCIAL_REPORTING_CURRENCY_TRANSPARENCY_V1",
-      "state": "ACTIVE",
+      "state": "COMPLETE",
       "starting_checkpoint": "3d9abf8fdcd4f8f4a13276ae55d26da8bf2a66b2",
       "candidate_branch": "feature/financial-reporting-currency-transparency-v1-20261011",
       "dependencies": [
@@ -35,11 +35,12 @@
       "source_doc": "docs/financial_reporting_currency_transparency_v1_contract.md",
       "state_history": [
         "DEFERRED",
-        "ACTIVE"
+        "ACTIVE",
+        "COMPLETE"
       ],
-      "checkpoint": null,
-      "terminal_disposition": null,
-      "notes": "Owner FINANCIAL_RESEARCH_COMPLETENESS_WEEKEND_20261011 directive and standing development delegation authorize one substantial financial_reporting_currency/v1 descriptive projection, frozen Financial V2/qualified official reconciliation, opt-in offline selected investor research and Human/AI consumer, adversarial and default numerical/identity parity tests and one feature PR. Sole C writer; no source activation, authority or vote policy promotion, default Daily/Dashboard/AI change, private/runtime/T0 mutation, unscheduled Daily, deployment, other drives, cleanup or background jobs. PR119 exact approved HEAD released at d1c9c805e69a558153c65fef973c129a235efb68 with four post-merge jobs SUCCESS (38105025004), native closeout on live main 3d9abf8fdcd4f8f4a13276ae55d26da8bf2a66b2. Future exact-HEAD merge requires owner review."
+      "checkpoint": "498b02dd8471078a9cd627eb75241a4ed2da0de5",
+      "terminal_disposition": "IMPLEMENTATION_RELEASED_NO_PRODUCTION_ACTIVATION",
+      "notes": "Owner FINANCIAL_RESEARCH_COMPLETENESS_WEEKEND_20261011 directive and standing development delegation authorize one substantial financial_reporting_currency/v1 descriptive projection, frozen Financial V2/qualified official reconciliation, opt-in offline selected investor research and Human/AI consumer, adversarial and default numerical/identity parity tests and one feature PR. Sole C writer; no source activation, authority or vote policy promotion, default Daily/Dashboard/AI change, private/runtime/T0 mutation, unscheduled Daily, deployment, other drives, cleanup or background jobs. PR119 exact approved HEAD released at d1c9c805e69a558153c65fef973c129a235efb68 with four post-merge jobs SUCCESS (38105025004), native closeout on live main 3d9abf8fdcd4f8f4a13276ae55d26da8bf2a66b2. Future exact-HEAD merge requires owner review. Owner approved PR120 exact HEAD dddadbf40853a8655f5ac0fa72ae44aaa82f4316; Head Lead merged at 498b02dd8471078a9cd627eb75241a4ed2da0de5; four exact post-merge jobs SUCCESS (38111216670). Offline opt-in only; no authority promotion or production activation."
     },
     {
       "milestone_id": "ACTION_CENTER_OPPORTUNITY_COST_CASES_CONSUMER_V1",

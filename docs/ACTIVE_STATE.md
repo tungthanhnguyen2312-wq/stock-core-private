@@ -1,8 +1,8 @@
 # Stock Lookup — Active State
 
 Updated 2026-10-11 from verified
-main `3d9abf8fdcd4f8f4a13276ae55d26da8bf2a66b2`.
-PR119 COMPLETE; financial transparency natively admitted, offline only.
+main `498b02dd8471078a9cd627eb75241a4ed2da0de5`.
+PR120 COMPLETE; four post-merge jobs PASS (38111216670), offline only.
 Verify live main: `git fetch origin main` or `git ls-remote origin refs/heads/main`; a **local** remote-tracking ref can be stale.
 ## 0. How this file relates to the others
 | Question | Answer lives in |
@@ -32,7 +32,7 @@ Kinds: **CURRENT FACT** (verified), **HOST-LOCAL** (untracked; re-verify),
 **BLOCKED**, **DEFERRED**, **HISTORICAL**.
 
 ## 1. The operational gate
-- **ACTIVE — [financial reporting currency](financial_reporting_currency_transparency_v1_contract.md):** descriptive opt-in basis/source/cutoff view; no vote/authority/production change. One PR, exact-HEAD merge gated.
+- **COMPLETE — [financial reporting currency](financial_reporting_currency_transparency_v1_contract.md):** PR120 owner-approved release; four post-merge jobs PASS. Descriptive opt-in basis/source/cutoff view; no vote/authority/production change.
 - **COMPLETE — [Action Center cases](action_center_opportunity_cost_cases_consumer_v1_contract.md):** PR119, four post-merge jobs PASS (38105025004); offline/non-voting.
 - **COMPLETE — [capacity Phase 1](capacity_recovery_phase1_contract.md):** PR99 merged
   `168e0f7`, post-merge CI 37893984528 success; zero production reclaim/activation.
@@ -303,8 +303,8 @@ Kinds: **CURRENT FACT** (verified), **HOST-LOCAL** (untracked; re-verify),
 
 ## 9. Next action
 
-Financial transparency ACTIVE under owner directive/delegation; queue empty.
-One feature PR requires four CI gates and exact-HEAD owner review; no Daily activation.
+Financial transparency COMPLETE at PR120 release; queue empty.
+Source-qualification integrity is the owner-selected next corrective, requiring native admission. No Daily activation.
 Daily stays owner-operated after fresh READY/session gates; production merges need approval.
 Fiscal mapping needs exact source/period/publication proof under its existing contract.
 

@@ -230,7 +230,7 @@ are released in PR119 / NON_VOTING / OFFLINE_ONLY; explicit private state and II
 valuation, no ordinary Daily consumer. Production activation needs separate review.
 
 [Financial reporting currency](financial_reporting_currency_transparency_v1_contract.md):
-ACTIVE development / NON_VOTING / OFFLINE_OPT_IN_ONLY. Frozen provider, official
+RELEASED PR120 / NON_VOTING / OFFLINE_OPT_IN_ONLY. Frozen provider, official
 periods, retained receipts, unknown publication and cutoff limits; no valuation/vote change.
 
 ### 19. Execution / PIT / RAW gates

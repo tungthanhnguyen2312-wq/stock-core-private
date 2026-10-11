@@ -1,15 +1,16 @@
 # Stock Lookup — Current Roadmap
 
 History: [ROADMAP.md](ROADMAP.md); execution: ROADMAP_STATE.json.
-Updated 2026-10-11 from main `3d9abf8fdcd4f8f4a13276ae55d26da8bf2a66b2`.
+Updated 2026-10-11 from main `498b02dd8471078a9cd627eb75241a4ed2da0de5`.
 Nothing below auto-starts; native standing admission required (AI_RULES 11).
 Facts: [ACTIVE_STATE.md](ACTIVE_STATE.md).
 
-## NOW — FINANCIAL_REPORTING_CURRENCY_TRANSPARENCY_V1 (ACTIVE)
+## NOW — FINANCIAL_REPORTING_CURRENCY_TRANSPARENCY_V1 (COMPLETE)
 
 Owner-admitted descriptive financial basis/source/cutoff reconciliation and opt-in
 investor/packet consumer. [Scope](financial_reporting_currency_transparency_v1_contract.md).
-One feature PR; future exact-HEAD merge gated. No Daily/authority change. Queue empty.
+PR120 owner-approved release; four post-merge jobs PASS (38111216670). No Daily/authority change. Queue empty.
+Next owner-selected scope is source-qualification integrity; native admission required.
 PR119 COMPLETE at `d1c9c805`; four post-merge jobs PASS (38105025004).
 Fiscal mapping lacks issuer calendar/covered-period/provider-label/publication proof;
 existing semantics knowledge time is insufficient. No automatic conversion/promotion.
