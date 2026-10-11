@@ -92,3 +92,5 @@ queue; it preserves historical JSON and records LOCAL_IMPLEMENTATION_COMPLETE_NO
 It neither releases main nor admits a successor. Acceptance commands, counts,
 environment, exact tested HEAD and JUnit digests are retained with the final report.
 No push, PR, merge, Daily, module relocation, evidence rewrite or automatic E1.
+
+Local implementation is COMPLETE, not promoted. [Retained acceptance](internal/E0_LOCAL_ACCEPTANCE_20261011.md).
