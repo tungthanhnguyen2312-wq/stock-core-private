@@ -16,6 +16,7 @@ ROOT = Path(__file__).resolve().parents[1]
 BASELINE = "config/architecture_dependency_baseline.json"
 POLICY = "config/architecture_dependency_policy.json"
 MIGRATION_CHECKPOINT = "d2ba70324a5d458091ac54549466a9bec57d6434"
+MIGRATED_BASELINE_SHA256 = '6b3eed9a1236481cf02fec38bd76553ea7ba56d4bd86918d4c37c1695aa19dbf'
 PRIOR_BASELINE_SHA256 = "749a59996a4d245ea3056289c5d59f443bf2ca60f7b61fe8dc4217f951772b26"
 
 
@@ -85,7 +86,7 @@ class ImportVisitor(ast.NodeVisitor):
 
     def bind_symbol(self, name, origin):
         old = self.symbols.get(name)
-        if old and old.startswith(('importlib', 'runpy', 'builtins.__import__')) and old != origin:
+        if old and old.startswith(('importlib', 'runpy', 'builtins.__import__', 'builtins.exec', 'builtins.eval')) and old != origin:
             self.symbols[name] = old if '.<computed>' in old else old + '.<computed>'
         else:
             self.symbols[name] = origin
@@ -115,9 +116,14 @@ class ImportVisitor(ast.NodeVisitor):
                 symbol = self.symbol(node.value)
                 if symbol:
                     self.bind_symbol(target.id, symbol)
-                elif target.id in self.symbols and self.symbols[target.id].startswith(('importlib', 'runpy', 'builtins.__import__')):
+                elif target.id in self.symbols and self.symbols[target.id].startswith(('importlib', 'runpy', 'builtins.__import__', 'builtins.exec', 'builtins.eval')):
                     if '.<computed>' not in self.symbols[target.id]:
                         self.symbols[target.id] += '.<computed>'
+
+    def visit_AnnAssign(self, node):
+        self.visit(node.annotation)
+        if node.value is not None:
+            self.visit_Assign(ast.Assign(targets=[node.target], value=node.value))
 
     def symbol(self, node):
         if isinstance(node, ast.Name):
@@ -125,6 +131,9 @@ class ImportVisitor(ast.NodeVisitor):
         if isinstance(node, ast.Attribute):
             base = self.symbol(node.value)
             return base + '.' + node.attr if base else None
+        if isinstance(node, ast.Subscript):
+            base = self.symbol(node.value)
+            return base + '.<computed>' if base and base.startswith(('importlib', 'runpy', 'builtins')) else None
         if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == 'getattr' and len(node.args) >= 2:
             base = self.symbol(node.args[0])
             member = self.literal(node.args[1])
@@ -151,11 +160,17 @@ class ImportVisitor(ast.NodeVisitor):
     def dynamic_call(self, node, function):
         loaders = {'importlib.import_module': ('module', 0, 'name'), 'builtins.__import__': ('module', 0, 'name'),
                    'importlib.util.spec_from_file_location': ('file', 1, 'location'),
-                   'importlib.machinery.SourceFileLoader': ('file', 1, 'path'), 'runpy.run_path': ('file', 0, 'path_name')}
+                   'importlib.machinery.SourceFileLoader': ('file', 1, 'path'), 'runpy.run_path': ('file', 0, 'path_name'),
+                   'runpy.run_module': ('module', 0, 'mod_name')}
         if function not in loaders:
-            if function and (function.startswith(('importlib.', 'runpy.')) and
-                             (function.endswith(('.load_module', '.exec_module')) or '.<computed>' in function)) or function in {'builtins.exec', 'builtins.eval'}:
-                self.dynamic_sites.add((self.source, self.context, function, 'unsupported', ast.dump(ast.Call(func=ast.Name(id=function), args=node.args, keywords=node.keywords), include_attributes=False)))
+            unsupported = function in {'builtins.exec', 'builtins.eval'}
+            if function:
+                unsupported |= (function.startswith(('importlib.', 'runpy.')) and
+                                function.endswith(('.load_module', '.exec_module', '.SourcelessFileLoader', '.ExtensionFileLoader', '._run_module_as_main')))
+                unsupported |= function.startswith(('importlib.', 'runpy.', 'builtins.')) and '.<computed>' in function
+            if unsupported:
+                identity = ast.dump(ast.Call(func=ast.Name(id=function), args=node.args, keywords=node.keywords), include_attributes=False)
+                self.dynamic_sites.add((self.source, self.context, function, 'unsupported', identity))
             return
         kind, position, keyword = loaders[function]
         argument = node.args[position] if len(node.args) > position else next((k.value for k in node.keywords if k.arg == keyword), None)
@@ -286,11 +301,11 @@ class ImportVisitor(ast.NodeVisitor):
 
     def visit_Call(self, node):
         symbol = self.symbol(node.func)
-        if not symbol and isinstance(node.func, ast.Attribute) and node.func.attr in {'spec_from_file_location', 'SourceFileLoader', 'run_path', 'import_module'}:
+        if not symbol and isinstance(node.func, ast.Attribute) and node.func.attr in {'spec_from_file_location', 'SourceFileLoader', 'run_path', 'run_module', 'import_module'}:
             # A recognizable loader API through an opaque receiver is internal-capable.
             symbol = {'spec_from_file_location':'importlib.util.spec_from_file_location',
                       'SourceFileLoader':'importlib.machinery.SourceFileLoader', 'run_path':'runpy.run_path',
-                      'import_module':'importlib.import_module'}[node.func.attr]
+                      'run_module':'runpy.run_module', 'import_module':'importlib.import_module'}[node.func.attr]
         if not symbol and isinstance(node.func, ast.Attribute) and node.func.attr in {'load_module', 'exec_module'}:
             symbol = 'importlib.<computed>.' + node.func.attr
         self.dynamic_call(node, symbol)
@@ -424,6 +439,11 @@ def encode(data: dict) -> str:
     return json.dumps(data, indent=2, sort_keys=True, ensure_ascii=False) + "\n"
 
 
+def baseline_identity_valid(baseline):
+    # Normal CI can be a shallow checkout: no historical Git object is required.
+    return hashlib.sha256(encode(baseline).encode('utf-8')).hexdigest() == MIGRATED_BASELINE_SHA256
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, default=ROOT)
@@ -440,8 +460,7 @@ def main(argv=None):
         args.write_candidate.write_text(encode(data), encoding="utf-8", newline="\n")
         return 0
     baseline = json.loads((args.root / BASELINE).read_text(encoding="utf-8"))
-    expected = baseline_from_checkpoint(args.root, MIGRATION_CHECKPOINT, policy)
-    if encode(baseline) != encode(expected):
+    if not baseline_identity_valid(baseline):
         print("BASELINE_IDENTITY_CHANGED:reviewed checkpoint migration differs")
         return 1
     errors = regressions(data, baseline, policy)

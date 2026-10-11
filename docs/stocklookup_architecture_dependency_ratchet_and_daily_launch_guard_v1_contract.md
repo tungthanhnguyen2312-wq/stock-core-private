@@ -13,8 +13,8 @@ The existing `config/repository_layout.json` remains the relocation authority;
 its 107 entries and compatibility launchers are unchanged.
 
 `config/architecture_dependency_policy.json` defines the initial conservative
-development dependency direction: acquisition â†’ evidence â†’ financial â†’ valuation,
-evidence â†’ tactical, those analytical layers â†’ research â†’ portfolio â†’ decision.
+development dependency direction: acquisition Ã¢â€ â€™ evidence Ã¢â€ â€™ financial Ã¢â€ â€™ valuation,
+evidence Ã¢â€ â€™ tactical, those analytical layers Ã¢â€ â€™ research Ã¢â€ â€™ portfolio Ã¢â€ â€™ decision.
 Arrows mean upstream input may be consumed by the downstream layer. Root legacy
 orchestration and tools may consume domain packages; domain packages may not add
 root/tool dependencies. This is an E0 source regression policy, not evidence,
@@ -32,8 +32,8 @@ Grandfathering is regression tolerance, never architectural approval.
 
 This is static coverage, not complete runtime reachability. Literal imports,
 relative imports, importlib aliases and literal import-name tuples are resolved.
-Module aliases, from-import aliases, callable assignments, constant getattr,
-import_module, __import__, spec_from_file_location, SourceFileLoader and run_path
+Module aliases, from-import aliases, plain/annotated callable assignments, constant getattr,
+import_module, __import__, spec_from_file_location, SourceFileLoader, run_path and run_module
 are classified as internal, external, unresolved or unsupported. Computed targets
 fail closed against exact site identities; exec/eval, loader execution and computed
 loader attributes are unsupported and require exact grandfathering. Non-loader
@@ -47,7 +47,8 @@ Schema 2 is a one-time measurement migration from accepted checkpoint
 `749a59996a4d245ea3056289c5d59f443bf2ca60f7b61fe8dc4217f951772b26`.
 `--migrate-baseline-from <that-checkpoint> --write-candidate <scratch-path>` reads
 immutable Git blobs only. It retains old exact debt plus newly exposed historical
-sites. Ordinary checking recomputes that migration and rejects baseline changes;
+sites. Ordinary checking verifies its sealed canonical-JSON digest (including in shallow CI)
+and rejects baseline changes;
 current-source candidate generation cannot silently authorize new debt. The
 candidate cannot overwrite the enforced baseline. Any later debt-policy migration
 requires explicit review of the anchor, prior digest, analyzer and source diff.
@@ -67,7 +68,7 @@ carry exact AST digests: a changed root, dispatcher, executable or dead branch
 cannot reuse a reviewed contract. Complex loops, injected runners, inline imports,
 bundle copying and delegated command plans remain explicit bounded contracts,
 not claims of resolved runtime reachability. Four shell/CI callers have normalized
-source digests. Updating a digest requires reviewing actual dispatch, target map
+source digests (one is an owner instruction, not executable dispatch). Updating a digest requires reviewing actual dispatch, target map
 and regression tests; matching a filename alone never authorizes an update.
 The check is bounded static protection, not a claim that every branch is active.
 

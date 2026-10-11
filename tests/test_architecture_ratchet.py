@@ -175,6 +175,8 @@ def test_launcher_parsing_handles_both_path_separators_and_ignores_prose():
     "import importlib.machinery as m; m.SourceFileLoader('b','tools/b.py')",
     "from importlib.machinery import SourceFileLoader as L; L('b','tools/b.py')",
     "import runpy as r; r.run_path('tools/b.py')",
+    "import runpy as r; r.run_module('tools.b')",
+    "import importlib.util as u\nload: object = u.spec_from_file_location\nload('b','tools/b.py')",
     "from runpy import run_path as r; r(path_name='tools/b.py')",
     "from importlib import util as u; load=u.spec_from_file_location; load('b','tools/'+'b.py')",
     "import importlib.util as u; getattr(u,'spec_from_file_location')('b','tools/b.py')",
@@ -196,6 +198,10 @@ def test_equivalent_loaders_cannot_add_backward_dependency(tmp_path, source):
     "__import__('tools',fromlist=unknown)",
     "import importlib.util as u; getattr(u,unknown)('b')",
     "exec(source)", "eval(source)",
+    "__import__=unknown; __import__(name)",
+    "import builtins as b; b.__dict__[unknown](name)",
+    "import importlib.util as u; u.__dict__['spec_from_file_location']('b',path)",
+    "import importlib.machinery as m; m.SourcelessFileLoader('b',path)",
     "if flag:\n from importlib.util import spec_from_file_location as load\nelse:\n from os import path as load\nload('b',path)",
     "import importlib.util as u; load=u.spec_from_file_location; load=unknown; load('b',path)",
 ])
@@ -222,15 +228,36 @@ def test_alias_and_formatting_do_not_change_review_identity(tmp_path):
     assert not guard.regressions(guard.snapshot(tmp_path, POLICY), before, POLICY)
 
 
-def test_migration_uses_old_sources_and_rejects_different_anchor():
-    migrated = guard.baseline_from_checkpoint(ROOT, guard.MIGRATION_CHECKPOINT, POLICY)
-    assert guard.encode(json.loads((ROOT / guard.BASELINE).read_text())) == guard.encode(migrated)
-    assert migrated['migration']['prior_baseline_sha256'] == guard.PRIOR_BASELINE_SHA256
-    assert guard.encode(migrated) == guard.encode(guard.baseline_from_checkpoint(ROOT, guard.MIGRATION_CHECKPOINT, POLICY))
-    candidate = guard.snapshot(ROOT, POLICY)
-    candidate['edges'].append(['stocklookup_core.evidence.NEW', 'tools.NEW', 'module_load', 'dynamic', 'file_load'])
-    assert guard.regressions(candidate, migrated, POLICY)
-    with pytest.raises(ValueError): guard.baseline_from_checkpoint(ROOT, '6f0c483eed41ca9b3ffdcd2f918ab21138b50124', POLICY)
+def test_migration_uses_old_sources_and_rejects_different_anchor(tmp_path,monkeypatch):
+    import subprocess,hashlib
+    def git(*args):
+        return subprocess.check_output(['git','-C',str(tmp_path),*args],text=True).strip()
+    git('init')
+    write(tmp_path,'stocklookup_core/evidence/a.py','')
+    write(tmp_path,'tools/b.py','')
+    prior = guard.encode(guard.snapshot(tmp_path,POLICY))
+    write(tmp_path,guard.BASELINE,prior)
+    git('add','.')
+    git('-c','user.name=Fixture','-c','user.email=fixture@example.test','commit','-m','accepted fixture')
+    accepted = git('rev-parse','HEAD')
+    monkeypatch.setattr(guard,'MIGRATION_CHECKPOINT',accepted)
+    monkeypatch.setattr(guard,'PRIOR_BASELINE_SHA256',hashlib.sha256(prior.encode()).hexdigest())
+    migrated = guard.baseline_from_checkpoint(tmp_path,accepted,POLICY)
+    write(tmp_path,'stocklookup_core/evidence/a.py','import tools.b')
+    assert guard.encode(migrated) == guard.encode(guard.baseline_from_checkpoint(tmp_path,accepted,POLICY))
+    assert guard.regressions(guard.snapshot(tmp_path,POLICY),migrated,POLICY)
+    git('add','.')
+    git('-c','user.name=Fixture','-c','user.email=fixture@example.test','commit','-m','unaccepted candidate')
+    with pytest.raises(ValueError): guard.baseline_from_checkpoint(tmp_path,git('rev-parse','HEAD'),POLICY)
+
+
+def test_baseline_identity_rejects_new_permissions_without_historical_git(monkeypatch):
+    data = json.loads((ROOT/guard.BASELINE).read_text())
+    def forbidden_git(*args,**kwargs): raise AssertionError('ordinary identity check must not need old Git objects')
+    monkeypatch.setattr(guard.subprocess,'check_output',forbidden_git)
+    assert guard.baseline_identity_valid(data)
+    data['grandfathered_violations'].append(['stocklookup_core.evidence.NEW','tools.NEW','module_load','dynamic','file_load'])
+    assert not guard.baseline_identity_valid(data)
 
 
 @pytest.mark.parametrize('command', [
