@@ -13,8 +13,8 @@ The existing `config/repository_layout.json` remains the relocation authority;
 its 107 entries and compatibility launchers are unchanged.
 
 `config/architecture_dependency_policy.json` defines the initial conservative
-development dependency direction: acquisition Ã¢â€ â€™ evidence Ã¢â€ â€™ financial Ã¢â€ â€™ valuation,
-evidence Ã¢â€ â€™ tactical, those analytical layers Ã¢â€ â€™ research Ã¢â€ â€™ portfolio Ã¢â€ â€™ decision.
+development dependency direction: acquisition ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ evidence ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ financial ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ valuation,
+evidence ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ tactical, those analytical layers ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ research ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ portfolio ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ decision.
 Arrows mean upstream input may be consumed by the downstream layer. Root legacy
 orchestration and tools may consume domain packages; domain packages may not add
 root/tool dependencies. This is an E0 source regression policy, not evidence,
@@ -36,7 +36,8 @@ Module aliases, from-import aliases, plain/annotated callable assignments, const
 import_module, __import__, spec_from_file_location, SourceFileLoader, run_path and run_module
 are classified as internal, external, unresolved or unsupported. Computed targets
 fail closed against exact site identities; exec/eval, loader execution and computed
-loader attributes are unsupported and require exact grandfathering. Non-loader
+loader attributes, builtin dictionary calls and loader-library wildcard imports
+are unsupported and require exact grandfathering. Non-loader
 importlib use is not a dependency. Custom wrappers, reflective rebinding and
 interprocedural assembly are not proven; E0 is not a Python interpreter. No production import or invocation is attempted to fill that gap.
 

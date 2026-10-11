@@ -48,7 +48,7 @@ class ImportVisitor(ast.NodeVisitor):
         self.edges: set[tuple[str, ...]] = set()
         self.unresolved: set[tuple[str, ...]] = set()
         self.bindings: dict[str, object] = {}
-        self.symbols = {"__import__": "builtins.__import__", "exec": "builtins.exec", "eval": "builtins.eval"}
+        self.symbols = {"__builtins__": "builtins", "__import__": "builtins.__import__", "exec": "builtins.exec", "eval": "builtins.eval"}
         self.dynamic_sites: set[tuple[str, ...]] = set()
         self.typing_names = {"TYPE_CHECKING", "typing.TYPE_CHECKING"}
 
@@ -102,6 +102,8 @@ class ImportVisitor(ast.NodeVisitor):
         base = self.resolve("." * node.level + (node.module or ""))
         self.edge(base, "static", "from")
         for alias in node.names:
+            if alias.name == '*' and base in {'importlib', 'importlib.util', 'importlib.machinery', 'runpy', 'builtins'}:
+                self.dynamic_sites.add((self.source, self.context, base + '.*', 'unsupported', ast.dump(node, include_attributes=False)))
             self.edge(base + "." + alias.name, "static", "from")
             self.bind_symbol(alias.asname or alias.name, base + "." + alias.name)
             if base == "typing" and alias.name == "TYPE_CHECKING":
