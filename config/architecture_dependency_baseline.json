@@ -1,4 +1,272 @@
 {
+  "dynamic_sites": [
+    [
+      "bitemporal_semantic_contract",
+      "lazy",
+      "builtins.__import__",
+      "external",
+      "Call(func=Name(id='builtins.__import__', ctx=Load()), args=[Constant(value='zoneinfo')])"
+    ],
+    [
+      "canonical_daily_operation",
+      "lazy",
+      "builtins.__import__",
+      "external",
+      "Call(func=Name(id='builtins.__import__', ctx=Load()), args=[Constant(value='os')])"
+    ],
+    [
+      "canonical_post_close_pipeline",
+      "lazy",
+      "builtins.__import__",
+      "internal",
+      "Call(func=Name(id='builtins.__import__', ctx=Load()), args=[Constant(value='official_corporate_event_incremental_acquisition')])"
+    ],
+    [
+      "canonical_trusted_subset_release",
+      "lazy",
+      "builtins.__import__",
+      "external",
+      "Call(func=Name(id='builtins.__import__', ctx=Load()), args=[Constant(value='sys')])"
+    ],
+    [
+      "dnse_foreign_flow_store",
+      "lazy",
+      "builtins.__import__",
+      "internal",
+      "Call(func=Name(id='builtins.__import__', ctx=Load()), args=[Constant(value='prospective_market_snapshot_contract')])"
+    ],
+    [
+      "news_ticker_mapping",
+      "module_load",
+      "importlib.<computed>.exec_module",
+      "unsupported",
+      "Call(func=Name(id='importlib.<computed>.exec_module', ctx=Load()), args=[Name(id='_guard_module', ctx=Load())])"
+    ],
+    [
+      "news_ticker_mapping",
+      "module_load",
+      "importlib.util.spec_from_file_location",
+      "internal",
+      "Call(func=Name(id='importlib.util.spec_from_file_location', ctx=Load()), args=[Constant(value='vnstock_source_schema_guards'), Call(func=Attribute(value=Call(func=Name(id='Path', ctx=Load()), args=[Name(id='__file__', ctx=Load())]), attr='with_name', ctx=Load()), args=[Constant(value='source_schema_guards.py')])])"
+    ],
+    [
+      "prospective_feedback_streaming",
+      "lazy",
+      "builtins.__import__",
+      "internal",
+      "Call(func=Name(id='builtins.__import__', ctx=Load()), args=[Name(id='name', ctx=Load())])"
+    ],
+    [
+      "prospective_feedback_streaming",
+      "lazy",
+      "importlib.import_module",
+      "unresolved",
+      "Call(func=Name(id='importlib.import_module', ctx=Load()), args=[IfExp(test=Compare(left=Name(id='name', ctx=Load()), ops=[Eq()], comparators=[Constant(value='fundamental_signal_consumption_contract')]), body=BinOp(left=Constant(value='stocklookup_core.financial.'), op=Add(), right=Name(id='name', ctx=Load())), orelse=Name(id='name', ctx=Load()))])"
+    ],
+    [
+      "stocklookup",
+      "lazy",
+      "builtins.__import__",
+      "internal",
+      "Call(func=Name(id='builtins.__import__', ctx=Load()), args=[Constant(value='stocklookup_core.portfolio.private_portfolio_context')], keywords=[keyword(arg='fromlist', value=List(elts=[Constant(value='*')], ctx=Load()))])"
+    ],
+    [
+      "stocklookup_core.tactical.tactical_behavior_context",
+      "lazy",
+      "builtins.__import__",
+      "unresolved",
+      "Call(func=Name(id='builtins.__import__', ctx=Load()), args=[Name(id='module_name', ctx=Load())], keywords=[keyword(arg='fromlist', value=List(elts=[Constant(value='content_identity')], ctx=Load()))])"
+    ],
+    [
+      "stocklookup_core.tactical.tactical_confirmation_invalidation_boundaries",
+      "lazy",
+      "builtins.__import__",
+      "unresolved",
+      "Call(func=Name(id='builtins.__import__', ctx=Load()), args=[Name(id='module_name', ctx=Load())], keywords=[keyword(arg='fromlist', value=List(elts=[Constant(value='content_identity')], ctx=Load()))])"
+    ],
+    [
+      "stocklookup_core.tactical.tactical_setup_tags",
+      "lazy",
+      "builtins.__import__",
+      "unresolved",
+      "Call(func=Name(id='builtins.__import__', ctx=Load()), args=[Name(id='module_name', ctx=Load())], keywords=[keyword(arg='fromlist', value=List(elts=[Constant(value='content_identity')], ctx=Load()))])"
+    ],
+    [
+      "tools.bulk_ingest_dnse_foreign_trading_raw",
+      "lazy",
+      "builtins.__import__",
+      "external",
+      "Call(func=Name(id='builtins.__import__', ctx=Load()), args=[Constant(value='hashlib')])"
+    ],
+    [
+      "tools.derive_annual_provider_financial_recovery_v1",
+      "lazy",
+      "builtins.__import__",
+      "external",
+      "Call(func=Name(id='builtins.__import__', ctx=Load()), args=[Constant(value='pandas')])"
+    ],
+    [
+      "tools.replay_current_research_financial_peers",
+      "lazy",
+      "builtins.exec",
+      "unsupported",
+      "Call(func=Name(id='builtins.exec', ctx=Load()), args=[Call(func=Name(id='compile', ctx=Load()), args=[Name(id='source', ctx=Load()), Constant(value='accepted_fundamental_checkpoint'), Constant(value='exec')]), Attribute(value=Name(id='prior_fundamental', ctx=Load()), attr='__dict__', ctx=Load())])"
+    ],
+    [
+      "tools.replay_current_research_financial_peers",
+      "lazy",
+      "builtins.exec",
+      "unsupported",
+      "Call(func=Name(id='builtins.exec', ctx=Load()), args=[Call(func=Name(id='compile', ctx=Load()), args=[Name(id='source', ctx=Load()), Constant(value='accepted_peer_adapter'), Constant(value='exec')]), Attribute(value=Name(id='prior_adapter', ctx=Load()), attr='__dict__', ctx=Load())])"
+    ],
+    [
+      "tools.replay_current_research_financial_peers",
+      "lazy",
+      "builtins.exec",
+      "unsupported",
+      "Call(func=Name(id='builtins.exec', ctx=Load()), args=[Call(func=Name(id='compile', ctx=Load()), args=[Name(id='source', ctx=Load()), Constant(value='accepted_peer_checkpoint_dimension'), Constant(value='exec')]), Attribute(value=Name(id='prior_dimension', ctx=Load()), attr='__dict__', ctx=Load())])"
+    ],
+    [
+      "tools.replay_current_research_scenario_roles",
+      "lazy",
+      "builtins.exec",
+      "unsupported",
+      "Call(func=Name(id='builtins.exec', ctx=Load()), args=[Call(func=Name(id='compile', ctx=Load()), args=[Name(id='source', ctx=Load()), Constant(value='<pinned scenario baseline>'), Constant(value='exec')]), Attribute(value=Name(id='baseline', ctx=Load()), attr='__dict__', ctx=Load())])"
+    ],
+    [
+      "tools.replay_current_research_structural_conditions",
+      "lazy",
+      "builtins.exec",
+      "unsupported",
+      "Call(func=Name(id='builtins.exec', ctx=Load()), args=[Call(func=Name(id='compile', ctx=Load()), args=[Name(id='base_source', ctx=Load()), Constant(value='retained_base_delivery'), Constant(value='exec')]), Name(id='namespace', ctx=Load())])"
+    ],
+    [
+      "tools.replay_current_research_structural_conditions",
+      "lazy",
+      "builtins.exec",
+      "unsupported",
+      "Call(func=Name(id='builtins.exec', ctx=Load()), args=[Call(func=Name(id='compile', ctx=Load()), args=[Name(id='base_source', ctx=Load()), Constant(value='retained_base_product'), Constant(value='exec')]), Name(id='namespace', ctx=Load())])"
+    ],
+    [
+      "tools.replay_current_research_structural_conditions",
+      "lazy",
+      "builtins.exec",
+      "unsupported",
+      "Call(func=Name(id='builtins.exec', ctx=Load()), args=[Call(func=Name(id='compile', ctx=Load()), args=[Name(id='baseline_structure_source', ctx=Load()), Constant(value='retained_base_structure'), Constant(value='exec')]), Name(id='baseline_structure_namespace', ctx=Load())])"
+    ],
+    [
+      "tools.replay_current_research_structural_conditions",
+      "lazy",
+      "builtins.exec",
+      "unsupported",
+      "Call(func=Name(id='builtins.exec', ctx=Load()), args=[Call(func=Name(id='compile', ctx=Load()), args=[Name(id='checkpoint_source', ctx=Load()), Constant(value='previous_checkpoint_product'), Constant(value='exec')]), Name(id='checkpoint_namespace', ctx=Load())])"
+    ],
+    [
+      "tools.replay_current_research_structural_conditions",
+      "lazy",
+      "builtins.exec",
+      "unsupported",
+      "Call(func=Name(id='builtins.exec', ctx=Load()), args=[Call(func=Name(id='compile', ctx=Load()), args=[Name(id='projection_source', ctx=Load()), Constant(value='previous_checkpoint_projection'), Constant(value='exec')]), Name(id='projection_namespace', ctx=Load())])"
+    ],
+    [
+      "tools.run_current_research_decision_convergence_proof",
+      "lazy",
+      "importlib.<computed>.exec_module",
+      "unsupported",
+      "Call(func=Name(id='importlib.<computed>.exec_module', ctx=Load()), args=[Name(id='module', ctx=Load())])"
+    ],
+    [
+      "tools.run_current_research_decision_convergence_proof",
+      "lazy",
+      "importlib.util.spec_from_file_location",
+      "unresolved",
+      "Call(func=Name(id='importlib.util.spec_from_file_location', ctx=Load()), args=[Constant(value='canonical_evidence_write_guard'), BinOp(left=BinOp(left=Name(id='TOOL_ROOT', ctx=Load()), op=Div(), right=Constant(value='tests')), op=Div(), right=Constant(value='_canonical_evidence_write_guard.py'))])"
+    ],
+    [
+      "tools.run_financial_v2_analysis_input_integrity_proof",
+      "lazy",
+      "importlib.<computed>.exec_module",
+      "unsupported",
+      "Call(func=Name(id='importlib.<computed>.exec_module', ctx=Load()), args=[Name(id='module', ctx=Load())])"
+    ],
+    [
+      "tools.run_financial_v2_analysis_input_integrity_proof",
+      "lazy",
+      "importlib.util.spec_from_file_location",
+      "unresolved",
+      "Call(func=Name(id='importlib.util.spec_from_file_location', ctx=Load()), args=[Constant(value='baseline_capability_map'), BinOp(left=BinOp(left=Name(id='baseline_root', ctx=Load()), op=Div(), right=Constant(value='tools')), op=Div(), right=Constant(value='current_research_capability_map.py'))])"
+    ],
+    [
+      "tools.run_fundamental_promotion_hardening_proof",
+      "lazy",
+      "importlib.<computed>.exec_module",
+      "unsupported",
+      "Call(func=Name(id='importlib.<computed>.exec_module', ctx=Load()), args=[Name(id='module', ctx=Load())])"
+    ],
+    [
+      "tools.run_fundamental_promotion_hardening_proof",
+      "lazy",
+      "importlib.util.spec_from_file_location",
+      "unresolved",
+      "Call(func=Name(id='importlib.util.spec_from_file_location', ctx=Load()), args=[Name(id='name', ctx=Load()), Name(id='path', ctx=Load())])"
+    ],
+    [
+      "tools.run_fundamental_signal_policy_hardening_proof",
+      "lazy",
+      "importlib.<computed>.exec_module",
+      "unsupported",
+      "Call(func=Name(id='importlib.<computed>.exec_module', ctx=Load()), args=[Name(id='module', ctx=Load())])"
+    ],
+    [
+      "tools.run_fundamental_signal_policy_hardening_proof",
+      "lazy",
+      "importlib.util.spec_from_file_location",
+      "unresolved",
+      "Call(func=Name(id='importlib.util.spec_from_file_location', ctx=Load()), args=[Name(id='name', ctx=Load()), Name(id='path', ctx=Load())])"
+    ],
+    [
+      "tools.run_hnx_enumerable_universe_kllh_event_disclosure_scaleout",
+      "module_load",
+      "runpy.run_path",
+      "internal",
+      "Call(func=Name(id='runpy.run_path', ctx=Load()), args=[Call(func=Name(id='str', ctx=Load()), args=[Call(func=Attribute(value=Call(func=Name(id='Path', ctx=Load()), args=[Name(id='__file__', ctx=Load())]), attr='with_name', ctx=Load()), args=[Constant(value='materialize_hnx_enumerable_universe_artifact.py')])])], keywords=[keyword(arg='run_name', value=Constant(value='__main__'))])"
+    ],
+    [
+      "tools.run_integrated_fundamental_state_consumption_proof",
+      "lazy",
+      "builtins.exec",
+      "unsupported",
+      "Call(func=Name(id='builtins.exec', ctx=Load()), args=[Call(func=Name(id='compile', ctx=Load()), args=[Name(id='source', ctx=Load()), Attribute(value=Name(id='spec', ctx=Load()), attr='origin', ctx=Load()), Constant(value='exec')]), Attribute(value=Name(id='module', ctx=Load()), attr='__dict__', ctx=Load())])"
+    ],
+    [
+      "tools.run_integrated_fundamental_state_consumption_proof",
+      "lazy",
+      "importlib.util.spec_from_file_location",
+      "unresolved",
+      "Call(func=Name(id='importlib.util.spec_from_file_location', ctx=Load()), args=[Constant(value='baseline_integrated_decision'), BinOp(left=Name(id='baseline_root', ctx=Load()), op=Div(), right=Constant(value='integrated_investment_decision_product.py'))])"
+    ],
+    [
+      "tools.run_market_wide_financial_analysis_engine_v2",
+      "lazy",
+      "builtins.__import__",
+      "external",
+      "Call(func=Name(id='builtins.__import__', ctx=Load()), args=[Constant(value='hashlib')])"
+    ],
+    [
+      "tools.run_portfolio_pit_execution_acceptance",
+      "lazy",
+      "builtins.__import__",
+      "external",
+      "Call(func=Name(id='builtins.__import__', ctx=Load()), args=[Constant(value='contextlib')])"
+    ],
+    [
+      "tools.run_volume_and_flow_context",
+      "lazy",
+      "builtins.exec",
+      "unsupported",
+      "Call(func=Name(id='builtins.exec', ctx=Load()), args=[Call(func=Name(id='compile', ctx=Load()), args=[Name(id='source', ctx=Load()), Constant(value='starting_descriptive_coherence'), Constant(value='exec')]), Name(id='namespace', ctx=Load())])"
+    ]
+  ],
   "eager_cycle_edges": [
     [
       "canonical_current_product_projections",
@@ -6593,6 +6861,13 @@
       "module_load",
       "static",
       "from"
+    ],
+    [
+      "news_ticker_mapping",
+      "source_schema_guards",
+      "module_load",
+      "dynamic",
+      "file_load"
     ],
     [
       "news_ticker_mapping",
@@ -18110,6 +18385,13 @@
       "import"
     ],
     [
+      "tools.run_hnx_enumerable_universe_kllh_event_disclosure_scaleout",
+      "tools.materialize_hnx_enumerable_universe_artifact",
+      "module_load",
+      "dynamic",
+      "file_load"
+    ],
+    [
       "tools.run_hnx_filing_evidence_binding",
       "hnx_filing_evidence_binding",
       "module_load",
@@ -24118,6 +24400,11 @@
       "from"
     ]
   ],
+  "migration": {
+    "checkpoint": "d2ba70324a5d458091ac54549466a9bec57d6434",
+    "prior_baseline_sha256": "749a59996a4d245ea3056289c5d59f443bf2ca60f7b61fe8dc4217f951772b26",
+    "reason": "Expanded loader classification of immutable accepted sources only"
+  },
   "modules": [
     "action_instrumentation",
     "adtv20_exact_reconciled_trailing_window_recovery",
@@ -26245,57 +26532,52 @@
       "tactical_reversal_prospective_shadow_collection"
     ]
   ],
-  "schema": 1,
+  "schema": 2,
   "unresolved_dynamic": [
-    [
-      "news_ticker_mapping",
-      "module_load",
-      "importlib.util.spec_from_file_location('vnstock_source_schema_guards', Path(__file__).with_name('source_schema_guards.py'))"
-    ],
     [
       "prospective_feedback_streaming",
       "lazy",
-      "import_module('stocklookup_core.financial.' + name if name == 'fundamental_signal_consumption_contract' else name)"
+      "Call(func=Name(id='importlib.import_module', ctx=Load()), args=[IfExp(test=Compare(left=Name(id='name', ctx=Load()), ops=[Eq()], comparators=[Constant(value='fundamental_signal_consumption_contract')]), body=BinOp(left=Constant(value='stocklookup_core.financial.'), op=Add(), right=Name(id='name', ctx=Load())), orelse=Name(id='name', ctx=Load()))])"
     ],
     [
       "stocklookup_core.tactical.tactical_behavior_context",
       "lazy",
-      "__import__(module_name, fromlist=['content_identity'])"
+      "Call(func=Name(id='builtins.__import__', ctx=Load()), args=[Name(id='module_name', ctx=Load())], keywords=[keyword(arg='fromlist', value=List(elts=[Constant(value='content_identity')], ctx=Load()))])"
     ],
     [
       "stocklookup_core.tactical.tactical_confirmation_invalidation_boundaries",
       "lazy",
-      "__import__(module_name, fromlist=['content_identity'])"
+      "Call(func=Name(id='builtins.__import__', ctx=Load()), args=[Name(id='module_name', ctx=Load())], keywords=[keyword(arg='fromlist', value=List(elts=[Constant(value='content_identity')], ctx=Load()))])"
     ],
     [
       "stocklookup_core.tactical.tactical_setup_tags",
       "lazy",
-      "__import__(module_name, fromlist=['content_identity'])"
+      "Call(func=Name(id='builtins.__import__', ctx=Load()), args=[Name(id='module_name', ctx=Load())], keywords=[keyword(arg='fromlist', value=List(elts=[Constant(value='content_identity')], ctx=Load()))])"
     ],
     [
       "tools.run_current_research_decision_convergence_proof",
       "lazy",
-      "importlib.util.spec_from_file_location('canonical_evidence_write_guard', TOOL_ROOT / 'tests' / '_canonical_evidence_write_guard.py')"
+      "Call(func=Name(id='importlib.util.spec_from_file_location', ctx=Load()), args=[Constant(value='canonical_evidence_write_guard'), BinOp(left=BinOp(left=Name(id='TOOL_ROOT', ctx=Load()), op=Div(), right=Constant(value='tests')), op=Div(), right=Constant(value='_canonical_evidence_write_guard.py'))])"
     ],
     [
       "tools.run_financial_v2_analysis_input_integrity_proof",
       "lazy",
-      "importlib.util.spec_from_file_location('baseline_capability_map', baseline_root / 'tools' / 'current_research_capability_map.py')"
+      "Call(func=Name(id='importlib.util.spec_from_file_location', ctx=Load()), args=[Constant(value='baseline_capability_map'), BinOp(left=BinOp(left=Name(id='baseline_root', ctx=Load()), op=Div(), right=Constant(value='tools')), op=Div(), right=Constant(value='current_research_capability_map.py'))])"
     ],
     [
       "tools.run_fundamental_promotion_hardening_proof",
       "lazy",
-      "importlib.util.spec_from_file_location(name, path)"
+      "Call(func=Name(id='importlib.util.spec_from_file_location', ctx=Load()), args=[Name(id='name', ctx=Load()), Name(id='path', ctx=Load())])"
     ],
     [
       "tools.run_fundamental_signal_policy_hardening_proof",
       "lazy",
-      "importlib.util.spec_from_file_location(name, path)"
+      "Call(func=Name(id='importlib.util.spec_from_file_location', ctx=Load()), args=[Name(id='name', ctx=Load()), Name(id='path', ctx=Load())])"
     ],
     [
       "tools.run_integrated_fundamental_state_consumption_proof",
       "lazy",
-      "importlib.util.spec_from_file_location('baseline_integrated_decision', baseline_root / 'integrated_investment_decision_product.py')"
+      "Call(func=Name(id='importlib.util.spec_from_file_location', ctx=Load()), args=[Constant(value='baseline_integrated_decision'), BinOp(left=Name(id='baseline_root', ctx=Load()), op=Div(), right=Constant(value='integrated_investment_decision_product.py'))])"
     ]
   ]
 }

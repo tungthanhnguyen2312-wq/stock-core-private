@@ -134,7 +134,7 @@ def test_reviewed_daily_path_set_exists_and_compiles():
 
 @pytest.mark.parametrize("displacement", ["deleted", "stocklookup_core/macro/macro_sync.py"])
 def test_missing_or_mislocated_macro_launcher_fails(tmp_path, displacement):
-    write(tmp_path, "canonical_daily_operation.py", "argv=[py, str(root / 'macro_sync.py')]")
+    write(tmp_path, "canonical_daily_operation.py", "import subprocess\nargv=[py, str(root / 'macro_sync.py')]\nsubprocess.run(argv)")
     manifest = {"targets": [{"path": "macro_sync.py"}], "python_callers": {"canonical_daily_operation.py": ["macro_sync.py"]}}
     write(tmp_path, "macro_sync.py", "print('fixture')")
     assert not launchers.check(tmp_path, manifest)
@@ -155,7 +155,124 @@ def test_launcher_path_change_is_detected_even_if_old_file_survives(tmp_path):
 
 
 def test_launcher_parsing_handles_both_path_separators_and_ignores_prose():
-    assert launchers.argv_references('argv=[py, "tools\\\\child.py"]') == {"tools/child.py"}
+    assert launchers.argv_references('import subprocess\nsubprocess.run([py, "tools\\\\child.py"])') == {"tools/child.py"}
     assert launchers.argv_references('"""macro_sync.py"""\n# macro_sync.py') == set()
     with pytest.raises(ValueError):
         launchers.portable_path("../macro_sync.py")
+
+
+@pytest.mark.parametrize('source', [
+    "import importlib.util as u; u.spec_from_file_location('m','tools/b.py')",
+    "import importlib.util; importlib.util.spec_from_file_location('m','tools/b.py')",
+    "from importlib import util; util.spec_from_file_location('m','tools/b.py')",
+    "from importlib.util import spec_from_file_location; spec_from_file_location('m','tools/b.py')",
+    "from importlib.util import spec_from_file_location as load; load('m','tools/b.py')",
+    "import importlib as il; il.import_module('tools.b')",
+    "from importlib import import_module as load; load(name='tools.b')",
+    "__import__('tools.b')",
+    "__import__('tools',fromlist=['b'])",
+    "from builtins import __import__ as load; load('tools.b')",
+    "import importlib.machinery as m; m.SourceFileLoader('b','tools/b.py')",
+    "from importlib.machinery import SourceFileLoader as L; L('b','tools/b.py')",
+    "import runpy as r; r.run_path('tools/b.py')",
+    "from runpy import run_path as r; r(path_name='tools/b.py')",
+    "from importlib import util as u; load=u.spec_from_file_location; load('b','tools/'+'b.py')",
+    "import importlib.util as u; getattr(u,'spec_from_file_location')('b','tools/b.py')",
+])
+def test_equivalent_loaders_cannot_add_backward_dependency(tmp_path, source):
+    write(tmp_path, 'stocklookup_core/evidence/a.py', '')
+    write(tmp_path, 'tools/b.py', '')
+    before = guard.snapshot(tmp_path, POLICY)
+    write(tmp_path, 'stocklookup_core/evidence/a.py', source)
+    errors = guard.regressions(guard.snapshot(tmp_path, POLICY), before, POLICY)
+    assert any('NEW_BACKWARD_DEPENDENCY' in error for error in errors)
+
+
+@pytest.mark.parametrize('source', [
+    "import importlib.util as u; u.spec_from_file_location('b',root/name)",
+    "from runpy import run_path as r; r(path)",
+    "import importlib; importlib.import_module(name=unknown)",
+    "__import__('b', level=1)",
+    "__import__('tools',fromlist=unknown)",
+    "import importlib.util as u; getattr(u,unknown)('b')",
+    "exec(source)", "eval(source)",
+    "if flag:\n from importlib.util import spec_from_file_location as load\nelse:\n from os import path as load\nload('b',path)",
+    "import importlib.util as u; load=u.spec_from_file_location; load=unknown; load('b',path)",
+])
+def test_unknown_or_unsupported_dynamic_site_requires_exact_review(tmp_path, source):
+    write(tmp_path, 'a.py', '')
+    before = guard.snapshot(tmp_path, POLICY)
+    write(tmp_path, 'a.py', source)
+    after = guard.snapshot(tmp_path, POLICY)
+    assert guard.regressions(after, before, POLICY)
+    assert not guard.regressions(after, after, POLICY)
+
+
+def test_external_import_and_non_loader_importlib_use_are_not_dependencies(tmp_path):
+    write(tmp_path, 'a.py', "import importlib.util as u\nu.find_spec('requests')\n__import__('json')")
+    after = guard.scan(tmp_path)
+    assert not after['edges'] and not after['unresolved_dynamic']
+    assert {row[3] for row in after['dynamic_sites']} == {'external'}
+
+
+def test_alias_and_formatting_do_not_change_review_identity(tmp_path):
+    write(tmp_path, 'a.py', "import importlib.util as u\nu.spec_from_file_location('b', unknown)")
+    before = guard.snapshot(tmp_path, POLICY)
+    write(tmp_path, 'a.py', "# formatting\nfrom importlib.util import spec_from_file_location as load\nload( 'b',unknown )")
+    assert not guard.regressions(guard.snapshot(tmp_path, POLICY), before, POLICY)
+
+
+def test_migration_uses_old_sources_and_rejects_different_anchor():
+    migrated = guard.baseline_from_checkpoint(ROOT, guard.MIGRATION_CHECKPOINT, POLICY)
+    assert guard.encode(json.loads((ROOT / guard.BASELINE).read_text())) == guard.encode(migrated)
+    assert migrated['migration']['prior_baseline_sha256'] == guard.PRIOR_BASELINE_SHA256
+    assert guard.encode(migrated) == guard.encode(guard.baseline_from_checkpoint(ROOT, guard.MIGRATION_CHECKPOINT, POLICY))
+    candidate = guard.snapshot(ROOT, POLICY)
+    candidate['edges'].append(['stocklookup_core.evidence.NEW', 'tools.NEW', 'module_load', 'dynamic', 'file_load'])
+    assert guard.regressions(candidate, migrated, POLICY)
+    with pytest.raises(ValueError): guard.baseline_from_checkpoint(ROOT, '6f0c483eed41ca9b3ffdcd2f918ab21138b50124', POLICY)
+
+
+@pytest.mark.parametrize('command', [
+    "KEEP=('macro_sync.py',)\nargv=[py,str(root/'other.py')]\nsubprocess.run(argv)",
+    "argv=[py,'macro_sync.py']",  # never dispatched
+    "KEEP=['macro_sync.py']\nsubprocess.run([py,'other.py'])",
+    "subprocess.run([py,'-m','macro_sync.py'])",
+    "subprocess.run([py,'-c','print(1)','macro_sync.py'])",
+    "argv=[py,'macro_sync.py']\nargv[1]='other.py'\nsubprocess.run(argv)",
+    "subprocess.run([py,*unknown,'macro_sync.py'])",
+])
+def test_stale_literals_cannot_establish_invocation(tmp_path, command):
+    write(tmp_path, 'macro_sync.py', '')
+    write(tmp_path, 'caller.py', 'import subprocess\n' + command)
+    manifest = {'targets': [{'path':'macro_sync.py'}], 'python_callers': {'caller.py':['macro_sync.py']}}
+    assert launchers.check(tmp_path, manifest)
+
+
+def test_valid_delegated_dispatch_and_python_flags(tmp_path):
+    write(tmp_path, 'macro_sync.py', '')
+    write(tmp_path, 'caller.py', "import subprocess\ndef dispatch(argv):\n return subprocess.run(argv)\nargv=[py,'-I','-X','utf8',str(root/'macro_sync.py')]\ndispatch(argv)")
+    manifest = {'targets': [{'path':'macro_sync.py'}], 'python_callers': {'caller.py':['macro_sync.py']}}
+    assert not launchers.check(tmp_path, manifest)
+
+
+def test_bounded_dynamic_caller_requires_exact_reviewed_source(tmp_path):
+    source = "import subprocess\nTASKS={'a':'macro_sync.py'}\nsubprocess.run(make_command(TASKS))"
+    write(tmp_path, 'macro_sync.py', '')
+    path = write(tmp_path, 'caller.py', source)
+    manifest = {'targets':[{'path':'macro_sync.py'}], 'python_callers':{'caller.py':['macro_sync.py']}}
+    assert launchers.check(tmp_path, manifest)
+    manifest['bounded_callers'] = {'caller.py':{'ast_sha256':launchers.ast_digest(source),'targets':['macro_sync.py']}}
+    assert not launchers.check(tmp_path, manifest)
+    path.write_text(source.replace('make_command(TASKS)', "[py,'other.py']"))
+    assert 'BOUNDED_LAUNCH_CONTRACT_CHANGED:caller.py' in launchers.check(tmp_path, manifest)
+
+
+def test_non_python_command_changes_cannot_keep_stale_literal(tmp_path):
+    import hashlib
+    source = b'REM macro_sync.py\npython macro_sync.py\n'
+    path = write(tmp_path, 'launch.bat', source.decode())
+    manifest = {'targets':[], 'python_callers':{}, 'non_python_callers': {'launch.bat':{'sha256':hashlib.sha256(source).hexdigest()}}}
+    assert not launchers.check(tmp_path, manifest)
+    path.write_text('REM macro_sync.py\npython other.py\n')
+    assert launchers.check(tmp_path, manifest)

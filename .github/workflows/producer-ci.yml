@@ -188,6 +188,7 @@ env:
     tests/test_corporate_currency_rollforward.py
     tests/test_canonical_post_close_pipeline.py::test_new_daily_binds_exact_current_context_only_before_decision_cutoff
     tests/test_canonical_post_close_pipeline.py::test_current_post_handoff_brief_consumes_overlay_without_rewriting_frozen_brief
+    tests/test_canonical_post_close_pipeline.py::test_canonical_integrated_decision_materializes_existing_momentum_and_confirmation_contexts
     tests/test_canonical_post_close_pipeline.py::test_post_close_propagates_single_corporate_selection
     tests/test_canonical_post_close_pipeline.py::test_new_corporate_selection_is_captured_before_latest_changes
     tests/test_canonical_post_close_pipeline.py::test_completed_optional_selection_cannot_advance_or_ignore_corrupt_lock

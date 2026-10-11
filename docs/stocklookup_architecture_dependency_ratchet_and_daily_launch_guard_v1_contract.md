@@ -13,8 +13,8 @@ The existing `config/repository_layout.json` remains the relocation authority;
 its 107 entries and compatibility launchers are unchanged.
 
 `config/architecture_dependency_policy.json` defines the initial conservative
-development dependency direction: acquisition → evidence → financial → valuation,
-evidence → tactical, those analytical layers → research → portfolio → decision.
+development dependency direction: acquisition â†’ evidence â†’ financial â†’ valuation,
+evidence â†’ tactical, those analytical layers â†’ research â†’ portfolio â†’ decision.
 Arrows mean upstream input may be consumed by the downstream layer. Root legacy
 orchestration and tools may consume domain packages; domain packages may not add
 root/tool dependencies. This is an E0 source regression policy, not evidence,
@@ -32,18 +32,26 @@ Grandfathering is regression tolerance, never architectural approval.
 
 This is static coverage, not complete runtime reachability. Literal imports,
 relative imports, importlib aliases and literal import-name tuples are resolved.
-Unknown computed names and file loaders are reported for review; arbitrary
-exec/eval, custom import wrappers and interprocedural string assembly are not
-proven. No production import or invocation is attempted to fill that gap.
+Module aliases, from-import aliases, callable assignments, constant getattr,
+import_module, __import__, spec_from_file_location, SourceFileLoader and run_path
+are classified as internal, external, unresolved or unsupported. Computed targets
+fail closed against exact site identities; exec/eval, loader execution and computed
+loader attributes are unsupported and require exact grandfathering. Non-loader
+importlib use is not a dependency. Custom wrappers, reflective rebinding and
+interprocedural assembly are not proven; E0 is not a Python interpreter. No production import or invocation is attempted to fill that gap.
 
 ## Reviewed updates
 
-Run `python tools/check_architecture.py --write-candidate <scratch-path>` twice
-and compare bytes. The tool refuses to overwrite the enforced baseline. Review
-the candidate diff with the existing relocation manifest, importer edits, cycle
-impact and this policy. Only a deliberate reviewed source change may replace
-`config/architecture_dependency_baseline.json`; ordinary CI only checks it.
-Baseline updates do not authorize a module move or a successor milestone.
+Schema 2 is a one-time measurement migration from accepted checkpoint
+`d2ba70324a5d458091ac54549466a9bec57d6434`, whose prior baseline SHA256 is
+`749a59996a4d245ea3056289c5d59f443bf2ca60f7b61fe8dc4217f951772b26`.
+`--migrate-baseline-from <that-checkpoint> --write-candidate <scratch-path>` reads
+immutable Git blobs only. It retains old exact debt plus newly exposed historical
+sites. Ordinary checking recomputes that migration and rejects baseline changes;
+current-source candidate generation cannot silently authorize new debt. The
+candidate cannot overwrite the enforced baseline. Any later debt-policy migration
+requires explicit review of the anchor, prior digest, analyzer and source diff.
+No wildcard site exemption or automatic baseline refresh is permitted.
 
 ## Path-launch contract
 
@@ -52,8 +60,15 @@ Producer targets, verified against this base: ordinary Daily, legacy CLI,
 offline/provider qualification and CI compile paths. These are not 31 ordinary
 Daily stages. Unresolved external sibling targets are outside this repository.
 `tools/check_daily_launchers.py` checks exact relative file presence, Python
-compilation, and path-valued AST references in the 12 reviewed Python callers.
-Comments and narrative string mentions do not establish a launch contract.
+compilation, and backward slices of argv at subprocess dispatch or recognized
+local wrappers. Python flags and script position are distinguished; stale lists,
+prose and undispatched argv are not proof. All 12 reviewed Python callers also
+carry exact AST digests: a changed root, dispatcher, executable or dead branch
+cannot reuse a reviewed contract. Complex loops, injected runners, inline imports,
+bundle copying and delegated command plans remain explicit bounded contracts,
+not claims of resolved runtime reachability. Four shell/CI callers have normalized
+source digests. Updating a digest requires reviewing actual dispatch, target map
+and regression tests; matching a filename alone never authorizes an update.
 The check is bounded static protection, not a claim that every branch is active.
 
 Deleting or moving `macro_sync.py` without its canonical root launcher fails
@@ -67,5 +82,11 @@ Existing layout tests integrate both guards; structural CI also runs adversarial
 tests for backward dependencies, eager/lazy cycle promotion, old SCCs, dynamics,
 portable parsing and missing/mislocated launchers. Governance and offline Daily
 call-shape tests remain required. Report baseline failures separately from E0.
-Only one validated local checkpoint commit is authorized. No push, PR, merge,
-Daily, module relocation, evidence rewrite or automatic E1.
+The 2026-10-11 end-to-end owner directive supersedes the earlier one-commit limit:
+validated implementation and local closeout commits are authorized. Native
+`--complete-local-scope <current-id> --owner-override --checkpoint-at <full-live-HEAD>
+--scope-note <owner-directive>` requires ON_TRACK, tracked-clean Git and an empty
+queue; it preserves historical JSON and records LOCAL_IMPLEMENTATION_COMPLETE_NOT_PROMOTED.
+It neither releases main nor admits a successor. Acceptance commands, counts,
+environment, exact tested HEAD and JUnit digests are retained with the final report.
+No push, PR, merge, Daily, module relocation, evidence rewrite or automatic E1.
