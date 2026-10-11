@@ -138,6 +138,11 @@ def _report_to_json(report: res.RoadmapReport, *, repo: Path | None) -> dict:
     }
 
 
+def _offline_mutation_allowed(report: res.RoadmapReport) -> bool:
+    """Scope continuation may run without live Git. ``--check`` still rejects that case."""
+    return not report.has_fail() and report.overall in {"ON_TRACK", res.OVERALL_GIT_NOT_CHECKED}
+
+
 def continuation_text(original: str, state: dict, mid: str) -> str:
     """Preserve the exact text of all historical milestones and other metadata."""
     milestone = next(m for m in state["milestones"] if m["milestone_id"] == mid)
@@ -240,7 +245,7 @@ def main(argv: list[str] | None = None) -> int:
                 or state.get("queued_next")):
             parser.error("continuation requires the exact current COMPLETE subset and empty successor queue")
         report = res.evaluate(state, repo=repo)
-        if report.overall != "ON_TRACK":
+        if not _offline_mutation_allowed(report):
             parser.error("roadmap preflight must be ON_TRACK before scope continuation")
         checkpoint = milestone.get("checkpoint")
         if checkpoint == "HEAD" and repo is not None:
@@ -261,7 +266,7 @@ def main(argv: list[str] | None = None) -> int:
         milestone["notes"] = args.scope_note
         state["current"]["state"] = "ACTIVE"
         state["last_updated_checkpoint"] = "HEAD"
-        if res.evaluate(state, repo=repo).overall != "ON_TRACK":
+        if not _offline_mutation_allowed(res.evaluate(state, repo=repo)):
             parser.error("continued roadmap must remain ON_TRACK; no update written")
         original = args.state_file.read_text(encoding="utf-8")
         args.state_file.write_bytes(continuation_text(original, state, mid).encode("utf-8"))
