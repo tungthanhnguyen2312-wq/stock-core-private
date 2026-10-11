@@ -8,6 +8,7 @@ import subprocess
 import sys
 
 import pytest
+from tests.financial_source_fixture import bind_fixture_source, synthetic_retained_source_io
 
 import long_term_company_economics_evidence as economics
 from stocklookup_core.decision.human_ai_decision_evidence_packet import build_packet
@@ -21,7 +22,7 @@ BEFORE = "2026-10-07T15:00:00+07:00"
 
 @pytest.fixture
 def matrices():
-    rows = [json.loads(line) for line in FACTS.read_text(encoding="utf8").splitlines()]
+    rows = [bind_fixture_source(json.loads(line))[0] for line in FACTS.read_text(encoding="utf8").splitlines()]
     return {t: economics.build(ticker=t, knowledge_cutoff=CUTOFF, official_rows=rows) for t in ("PNJ", "PVD", "FPT")}
 
 

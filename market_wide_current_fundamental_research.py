@@ -1337,6 +1337,10 @@ def project_session(*, baseline: Mapping[str, Any], official_rows: list[Mapping[
     for source in sorted(official_rows, key=lambda row: _hash(row)):
         row = copy.deepcopy(dict(source))
         reasons = list(row.get("blockers") or [])
+        from stocklookup_core.evidence.official_document_qualification import admit_retained_financial_fact
+        admission = admit_retained_financial_fact(row, cutoff=cutoff)
+        if admission["state"] != "ADMITTED":
+            reasons.extend(admission["reason_codes"])
         required = ("ticker", "canonical_metric", "reporting_period", "period_type", "period_start",
                     "period_end", "statement_scope", "currency", "unit_scale", "audit_or_review_status",
                     "document_sha256", "citation_id", "knowledge_available_at")

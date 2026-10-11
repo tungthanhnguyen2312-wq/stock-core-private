@@ -267,6 +267,38 @@ def build_artifact(*, document: Mapping[str, Any], path: Path) -> dict[str, Any]
         except ValueError:
             period_start, period_end, period_type = None, None, "annual" if re.fullmatch(r"20\d{2}", str(period)) else "interim"
         panel_facts.append({"issuer_identity": candidate["ticker"], "entity_type": "corporate", "applicability_state": "APPLICABLE", "authority_tier": "promoted_corporate_evidence", "canonical_metric": candidate["canonical_metric"], "value": candidate["normalized_value"], "currency": candidate["currency"], "unit_scale": candidate["unit_scale"], "reporting_period": period, "period_type": period_type, "period_start": period_start, "period_end": period_end, "statement_scope": candidate["statement_scope"], "statement_family": candidate["statement_family"], "temporal_nature": "instant" if instant else "duration", "qualification_state": "QUALIFIED", "is_positive_authority": True, "knowledge_available_at": knowledge_available_at, "observed_at": knowledge_available_at, "reason_codes": ["OFFICIAL_DOCUMENT_PAGE_TABLE_CITED"], "reconciliation_status": "NOT_COMPARED_TO_PROVIDER", "temporal_envelope": {"as_of": period, "domain": "financial_statement", "field_id": f"pdf-page:{candidate['document_sha256']}:{candidate['canonical_metric']}:{period}", "field_name": candidate["canonical_metric"], "freshness_status": "historical", "knowledge_available_at": knowledge_available_at, "observed_at": knowledge_available_at, "pit_eligible": True, "pit_status": "QUALIFIED", "quality_status": "qualified", "value": candidate["normalized_value"]}, "source_lineage": {"provider": "official_issuer_ir", "authority_tier": "promoted_corporate_evidence", "document_sha256": candidate["document_sha256"], "citation_id": candidate["table_id"], "evidence_id": candidate["table_id"], "source_page": candidate["page_number"], "source_span": candidate["source_span"], "table_heading": candidate["table_heading"], "period_column_label": candidate["period_column_label"], "extraction_method": candidate["extraction_method"], "reconciliation_status": "NOT_COMPARED_TO_PROVIDER"}})
+    # The current source path cannot escape admission through the older panel adapter.
+    # Preserved older historical artifact contracts are not reinterpreted here.
+    from financial_evidence_currency_contract import TARGET_PERIODS
+    current = {(candidate['table_id'],candidate['canonical_metric']):candidate for candidate in candidates if candidate.get('fiscal_period') in TARGET_PERIODS}
+    if current:
+        from financial_evidence_currency_refresh import _metadata_from_pages, _qualify_extracted_fact
+        from official_financial_assurance_evidence import resolve_native_document_assurance
+        from official_source_registry import load_registry
+        records = []
+        for folder in (path.parent,path.parent.parent):
+            manifest = folder/'official_document_acquisition_manifest.json'
+            if manifest.is_file():
+                records.extend(record for record in json.loads(manifest.read_text(encoding='utf8')).get('records',[])
+                    if record.get('sha256')==document['sha256'])
+        source = records[0] if len(records)==1 else None
+        texts = {page['page_number']:page['page_text'] for page in pages}
+        payload = path.read_bytes()
+        proof = resolve_native_document_assurance(document['sha256'],{n:t for n,t in texts.items() if n<=8})
+        bound_document = {**document,**(source or {}),'document_metadata':_metadata_from_pages(texts,
+            {**document,**(source or {}),'immutable_bytes_verified':hashlib.sha256(payload).hexdigest()==document['sha256']}),
+            'assurance_evidence':proof,'audit_or_review_status':proof.get('audit_or_review_status'),
+            '_source_record':source,'_retained_bytes':payload,'_source_registry':load_registry(),'_document_pages':texts}
+        for fact in panel_facts:
+            candidate = current.get((fact['source_lineage']['citation_id'],fact['canonical_metric']))
+            if candidate is None:
+                continue
+            admitted = _qualify_extracted_fact({**candidate,'reporting_period':candidate['fiscal_period']},bound_document)
+            fact['source_lineage']['source_fact'] = admitted
+            if admitted['qualification_state'] != 'QUALIFIED':
+                fact.update(qualification_state='UNQUALIFIED',is_positive_authority=False,authority_tier='unqualified_source_evidence',
+                    reason_codes=admitted['blockers'])
+                fact['temporal_envelope'].update(pit_eligible=False,pit_status='UNKNOWN',quality_status='unqualified')
     output = {"schema_version": VERSION, "document": {k: document[k] for k in ("document_id", "ticker", "sha256", "official_url", "retrieved_at")}, "page_count": len(pages), "text_layer_status": "USABLE_NATIVE_TEXT" if any(p["status"] == "TEXT_AVAILABLE" for p in pages) else "IMAGE_ONLY_OR_SCANNED", "page_evidence": pages, "document_metadata": metadata, "tables": tables, "fact_candidates": candidates, "p3f13_panel_facts": panel_facts, "blocked_candidates": rejected, "authority": {"network_used": False, "provider_used": False, "production_db_mutated": False, "value_or_recommendation_activated": False}}
     if not tables and str(document.get("entity_type", "corporate")) == "corporate":
         # Additive only: the exact-form document_metadata claims above stay exactly what

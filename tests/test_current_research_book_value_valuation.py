@@ -124,27 +124,35 @@ def test_pb_fail_closed_on_negative_stale_conflict_entity_and_basis() -> None:
     assert _pb(cap=incompatible)["status"] == "INPUT_BLOCKED"
 
 
-def test_pb_does_not_replace_legacy_on_scope_period_or_missing_scope() -> None:
+def test_pb_does_not_replace_legacy_on_scope_period_or_missing_scope(monkeypatch) -> None:
     from official_legacy_precedence import NOT_COMPARABLE
     from tests.test_financial_evidence_currency_refresh import _fact, _pb_official
+    from tests.financial_source_fixture import install_synthetic_admission
+    # Synthetic official proof needs a registered issuer domain; the shared helper values HPG.
+    install_synthetic_admission(monkeypatch)
 
     baseline = _pb(rows=[_equity(period="2025-Q4")])
     same_period_scope = _pb_official([
-        _fact("AAA", "shareholders_equity", "2025", 9_000_000, statement_scope="standalone"),
+        _fact("HPG", "shareholders_equity", "2025", 9_000_000, statement_scope="standalone"),
     ])
     assert same_period_scope["formula"] == "research_usable_market_cap / VCI_total_owners_equity"
     assert abs(same_period_scope["value"] - baseline["value"]) < 1e-12
-    same_period_metric = _pb_official([_fact("AAA", "total_equity", "2025", 9_000_000)])
-    assert same_period_metric["official_legacy_precedence"] == NOT_COMPARABLE
+    same_period_metric = _pb_official([_fact("HPG", "total_equity", "2025", 9_000_000)])
+    # total_equity has no source-template proof under the common admission, so it is never an
+    # official input at all; it can neither replace nor be compared against the VCI basis.
+    assert same_period_metric.get("official_legacy_precedence", NOT_COMPARABLE) == NOT_COMPARABLE
+    assert same_period_metric.get("official_becomes_factual_authority", False) is False
     assert same_period_metric["formula"] == "research_usable_market_cap / VCI_total_owners_equity"
-    different_period = _pb_official([_fact("AAA", "shareholders_equity", "2024", 9_000_000)])
-    assert different_period["official_legacy_precedence"] == NOT_COMPARABLE
-    missing_scope = _pb_official([_fact("AAA", "shareholders_equity", "2025", 9_000_000, statement_scope=None)])
+    different_period = _pb_official([_fact("HPG", "shareholders_equity", "2024", 9_000_000)])
+    # FY2024 is outside the registered source periods: unadmitted, so never compared or used.
+    assert different_period.get("official_legacy_precedence", NOT_COMPARABLE) == NOT_COMPARABLE
+    assert different_period["formula"] == "research_usable_market_cap / VCI_total_owners_equity"
+    missing_scope = _pb_official([_fact("HPG", "shareholders_equity", "2025", 9_000_000, statement_scope=None)])
     assert valuation._official_equity_row(
-        [_fact("AAA", "shareholders_equity", "2025", 9_000_000, statement_scope=None)], "AAA",
+        [_fact("HPG", "shareholders_equity", "2025", 9_000_000, statement_scope=None)], "HPG",
     ) is None
     assert missing_scope["formula"] == "research_usable_market_cap / VCI_total_owners_equity"
-    exact = _pb_official([_fact("AAA", "shareholders_equity", "2025", 1_000_000)])
+    exact = _pb_official([_fact("HPG", "shareholders_equity", "2025", 1_000_000)])
     assert exact["formula"] == "research_usable_market_cap / official_total_owners_equity"
-    conflicted = _pb_official([_fact("AAA", "shareholders_equity", "2025", 2_000_000)])
+    conflicted = _pb_official([_fact("HPG", "shareholders_equity", "2025", 2_000_000)])
     assert conflicted["status"] == "INPUT_BLOCKED"

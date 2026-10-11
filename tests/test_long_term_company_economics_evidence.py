@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 
 import pytest
+from tests.financial_source_fixture import bind_fixture_source, synthetic_retained_source_io
 
 import long_term_company_economics_evidence as economics
 from stocklookup_core.research.thesis_evidence_contract import make_item, verify_identity
@@ -17,7 +18,8 @@ BEFORE = "2026-10-07T15:00:00+07:00"
 @pytest.fixture
 def retained():
     # Read just the existing compact tracked overlay; no PDF/OCR, lake or T0 scan.
-    return [json.loads(line) for line in OVERLAY.read_text(encoding="utf8").splitlines()
+    # Positive consumer controls bind owned synthetic bytes; original retained claims stay UNKNOWN.
+    return [bind_fixture_source(json.loads(line))[0] for line in OVERLAY.read_text(encoding="utf8").splitlines()
             if json.loads(line)["ticker"] in {"PNJ", "PVD", "FPT"}]
 
 
@@ -66,7 +68,7 @@ def test_pnj_reviewed_income_and_provision_do_not_fill_missing_current_economics
     provision = observations(result, "earnings_quality")[0]
     assert provision["normalized_value"] == 2667248523366
     assert provision["recurrence_assessment"] == "UNKNOWN"
-    assert provision["source"]["document_sha256"] == "db877169e7c19b4b81d60b37d5aab8f9938129a66b582c2229ffffebdca2a43d"
+    assert provision["source"]["document_sha256"] == next(r["document_sha256"] for r in retained if r["ticker"]=="PNJ" and r["canonical_metric"]=="provision_charge_or_reversal_adjustment")
     for dimension in ("balance_sheet_resilience", "cash_generation_reinvestment"):
         assert result["dimensions"][dimension]["current_observation_status"] == "UNKNOWN"
         assert {o["reporting_period"] for o in observations(result, dimension)} == {"2025"}
@@ -80,8 +82,8 @@ def test_pvd_usd_interim_and_vnd_annual_are_separate_source_facts(retained):
     assert {o["reporting_period"] for o in usd} == {"2026-H1"}
     assert {o["reporting_period"] for o in vnd} == {"2025"}
     assert {o["normalized_value"] for o in usd} == {245730824, 18272708, 17920760}
-    assert {o["source"]["document_sha256"] for o in usd} == {"a7360d2fc9a8a67a1535820813cda2bb8ef288466cd36c949e050c2f2a1b290a"}
-    assert {o["source"]["document_sha256"] for o in vnd} == {"6ee20a554891c449a8ee72fffe6358bc9b32145d066a7e52d8492d88f305139c"}
+    assert {o["source"]["document_sha256"] for o in usd} == {r["document_sha256"] for r in retained if r["ticker"]=="PVD" and r["currency"]=="USD"}
+    assert {o["source"]["document_sha256"] for o in vnd} == {r["document_sha256"] for r in retained if r["ticker"]=="PVD" and r["currency"]=="VND" and r['canonical_metric'] in {'revenue','net_income'}}
     assert all(o["valuation_use"] == "NOT_PERMITTED_FOREIGN_CURRENCY_CONTEXT" for o in usd)
     assert all(o["valuation_use"] == "NOT_PERMITTED_AUDITED_ANNUAL_CONTEXT" for o in vnd)
     assert result["dimensions"]["cyclicality"]["observation_status"] == "UNKNOWN"
@@ -93,7 +95,7 @@ def test_fpt_annual_observations_leave_current_parent_earnings_and_shares_unknow
     actual = [o for d in result["dimensions"].values() for o in d["observations"]]
     assert {o["normalized_value"] for o in actual} == {70112825100710, 43748040747539, 651406282654}
     assert {o["reporting_period"] for o in actual} == {"2025"}
-    assert {o["source"]["document_sha256"] for o in actual} == {"bb14bafff1a7849217f34cf4b50e0e3d69d91968f217a66d7c68f07d4c1af284"}
+    assert {o["source"]["document_sha256"] for o in actual} == {r["document_sha256"] for r in retained if r["ticker"]=="FPT"}
     assert all(o["temporal_status"] == "HISTORICAL_OFFICIAL_FACT" for o in actual)
     assert all(d["current_observation_status"] == "UNKNOWN" for d in result["dimensions"].values())
     assert "attributable_net_income" not in {o["canonical_metric"] for o in actual}
@@ -249,28 +251,28 @@ def test_human_view_has_exact_source_references_and_no_new_action_or_engine(reta
     check(result)
 
 
-# Canonical full-output hashes captured from approved candidate 99b2c9a before
-# removing its Stage 1 dependency. Equality includes every fact, restriction,
-# source reference, unknown state and identity; it is not just value parity.
+# Full-output goldens for independently bound synthetic source fixtures.
+# The former retained-claim goldens remain in Git history; they are not proof
+# under the source-integrity contract. All values, restrictions and references are checked.
 @pytest.mark.parametrize("ticker,cutoff,expected", [
-    ("PNJ", BEFORE, "ea079afd26e147f2374eabb96e8d516944c5d0b3d781e90f4213aa3c5e5b1faa"),
-    ("PNJ", CUTOFF, "4cba4ac02b36d3a0fad56105e32f7f7148e7ebf83f0e444481ed9746a19ba22f"),
-    ("PVD", BEFORE, "fbd5f42b1beb537094e236f91e986b129e682988c6a7a9b365ea98ee28cb28fd"),
-    ("PVD", CUTOFF, "e1bcd0f7644beca7380f4c553809f8c29ce24a703d7a16a3637105760d691e4e"),
-    ("FPT", BEFORE, "f950238e7885bb97a6dbf1d69f2d652676b1b440edbc9f237a6b9fa233a4f41f"),
-    ("FPT", CUTOFF, "c345b485582620a20b73161d1e86796000b34b4fd922a9c00e535249de00dff3"),
+    ("PNJ", BEFORE, "af0cff9dc98dc5f0273e39ea593686baeac5e3daa23240e0bd4acac2583f9023"),
+    ("PNJ", CUTOFF, "68061e5d893f4c616fa02da40460840eeee3207387f441a49f4d9b425a0c390c"),
+    ("PVD", BEFORE, "8e19cca42b270dc4bbb73fc154d4b83a4e1884b92cf1865d4c3f99f4e294cb85"),
+    ("PVD", CUTOFF, "83d4e3947203bbf39a789af706730a447b7d618d86cc6dc5e0a85b235c57db37"),
+    ("FPT", BEFORE, "dab05c46f05701ccc845fef76ca1234576d0c13ab12bb47788212d016e692a44"),
+    ("FPT", CUTOFF, "be7a4ca2803396b6a3aa55b5f0347d85d991b9208fe15b5aca1a6d664626b1d0"),
 ])
-def test_corrective_preserves_exact_approved_issuer_output(retained, ticker, cutoff, expected):
+def test_bound_synthetic_issuer_output_matches_full_golden(retained, ticker, cutoff, expected):
     result = build(retained, ticker, knowledge_cutoff=cutoff)
     assert result["artifact_sha256"] == expected
     assert result == build(list(reversed(retained)) + deepcopy(retained), ticker, knowledge_cutoff=cutoff)
 
 
 @pytest.mark.parametrize("kind,expected", [
-    ("context", "ed47fb21e3add7307d69a818fac50854c6233ab3a694fe4c89087fb642a8954c"),
-    ("valuation", "f9942cf38e250b726ad0db0b5cda466487f62fee2e885c798b81456b6114affe"),
+    ("context", "0f0de2beb7af49efee5a5e768ce88ffaa4c98d755951cc2a490c2a63d40f32cf"),
+    ("valuation", "b1d4552f864961e8649babb48736dc3b0daf0271238adeb33128979db62464ac"),
 ])
-def test_corrective_preserves_exact_valid_reference_output(retained, kind, expected):
+def test_bound_synthetic_reference_output_matches_full_golden(retained, kind, expected):
     kwargs = {"context_items": [context("FUNDAMENTAL", "SUPPORTS")]} if kind == "context" else {"valuation_context": valuation()}
     result = build(retained, **kwargs)
     assert result["artifact_sha256"] == expected

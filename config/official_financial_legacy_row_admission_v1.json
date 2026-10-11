@@ -1,0 +1,212 @@
+{
+ "contract_version": "official_financial_legacy_row_admission/v1",
+ "milestone": "OFFICIAL_FINANCIAL_SOURCE_QUALIFICATION_INTEGRITY_CORRECTIVE_V1",
+ "admission_basis": "PINNED_LEGACY_GOVERNED_INGRESS_V2",
+ "governing_contracts": {
+  "ingress_contract": "reviewed_interim_canonical_ingress/v2",
+  "overlay_contract": "financial_evidence_currency_refresh/v1"
+ },
+ "authorization": "Rows published by owner-merged PRs #78-#90 (last overlay change 94cf855, merged 7959b4d); preserved byte-identical by this corrective.",
+ "overlay_path": "derived/financial-evidence-currency-refresh-v1/qualified_official_facts.jsonl",
+ "overlay_sha256_lf": "bd83de2ddb80a56e8a1fdfccb131418c55979a0799836da36538496a7283d653",
+ "overlay_sha256_windows_crlf_checkout": "a1f057017a9309f5c5a2a1a9ec53c3746500f9355bf45642e039ebf2608e33ff",
+ "evidence_classification": {
+  "shape_valid": true,
+  "retained_assurance_proof_bound": true,
+  "original_document_bytes_sha_verified": "9/9 offline 2026-10-11 (read-only)",
+  "original_document_semantics_independently_verified": false,
+  "historical_contamination": "UNKNOWN"
+ },
+ "closed_set": true,
+ "rows": [
+  {
+   "row_sha256": "9dc48dbd9571bee02daf4bbf913c1e45ec3ebbfe784c51d5a73a72e3c8a08299",
+   "ticker": "FPT",
+   "canonical_metric": "provision_charge_or_reversal_adjustment",
+   "reporting_period": "2025",
+   "document_sha256": "bb14bafff1a7849217f34cf4b50e0e3d69d91968f217a66d7c68f07d4c1af284"
+  },
+  {
+   "row_sha256": "6e114102abb7fab87786d95feaf5de52b03f6903c4b8210cc8f0ef0a622631cb",
+   "ticker": "FPT",
+   "canonical_metric": "revenue",
+   "reporting_period": "2025",
+   "document_sha256": "bb14bafff1a7849217f34cf4b50e0e3d69d91968f217a66d7c68f07d4c1af284"
+  },
+  {
+   "row_sha256": "2ab003d5d44ce6fa43fcd38557bcc86d2c7c2caa8ab2a4eb84cc8ed52d14c565",
+   "ticker": "FPT",
+   "canonical_metric": "shareholders_equity",
+   "reporting_period": "2025",
+   "document_sha256": "bb14bafff1a7849217f34cf4b50e0e3d69d91968f217a66d7c68f07d4c1af284"
+  },
+  {
+   "row_sha256": "f743220635e556daa65b4d1a1dbc3ad524a24d76e748f99786c3666b2797fe5b",
+   "ticker": "HPG",
+   "canonical_metric": "net_income",
+   "reporting_period": "2025",
+   "document_sha256": "f38c5f75becf7d3f145d27183eec81f119fd4f75e378b983a2763ddc3f7e0c07"
+  },
+  {
+   "row_sha256": "8a710ab8bdd90355189de48390c25d09799fe6e171a0f1d258ee9b58f9c3983e",
+   "ticker": "HPG",
+   "canonical_metric": "revenue",
+   "reporting_period": "2025",
+   "document_sha256": "f38c5f75becf7d3f145d27183eec81f119fd4f75e378b983a2763ddc3f7e0c07"
+  },
+  {
+   "row_sha256": "1ae77a2f3282f6db91c4df2c9600abbcb7f0d8432ee6039413336b33d5b975ed",
+   "ticker": "PNJ",
+   "canonical_metric": "cash_and_equivalents",
+   "reporting_period": "2025",
+   "document_sha256": "309f86836d9f00b37e3cccb25da9e7ffd0dab6c531be995618542004acccdf1d"
+  },
+  {
+   "row_sha256": "afd5bd330a74a3c1fd5cbc2b4d5bbfe98d433c47fd5232de2c467223bcd731b4",
+   "ticker": "PNJ",
+   "canonical_metric": "operating_cash_flow",
+   "reporting_period": "2025",
+   "document_sha256": "309f86836d9f00b37e3cccb25da9e7ffd0dab6c531be995618542004acccdf1d"
+  },
+  {
+   "row_sha256": "d285f001e12f2062d4df6d2a03dfcac9b52c2f257bd165e3dca5205265e39615",
+   "ticker": "PNJ",
+   "canonical_metric": "attributable_net_income",
+   "reporting_period": "2026-H1",
+   "document_sha256": "db877169e7c19b4b81d60b37d5aab8f9938129a66b582c2229ffffebdca2a43d"
+  },
+  {
+   "row_sha256": "5d9198196af093f92dad179e08b3e63939ff31c542fc1bc5d920b2d327848bc6",
+   "ticker": "PNJ",
+   "canonical_metric": "net_income",
+   "reporting_period": "2026-H1",
+   "document_sha256": "db877169e7c19b4b81d60b37d5aab8f9938129a66b582c2229ffffebdca2a43d"
+  },
+  {
+   "row_sha256": "8712d4f67995b1afab9de399209cb109dd12884cf790bc2e629569defa8d280b",
+   "ticker": "PNJ",
+   "canonical_metric": "provision_charge_or_reversal_adjustment",
+   "reporting_period": "2026-H1",
+   "document_sha256": "db877169e7c19b4b81d60b37d5aab8f9938129a66b582c2229ffffebdca2a43d"
+  },
+  {
+   "row_sha256": "af71760ba1bbc5d79c18bcede9f86f4aa0a80b56a8d139e055802b979600bd72",
+   "ticker": "PNJ",
+   "canonical_metric": "revenue",
+   "reporting_period": "2026-H1",
+   "document_sha256": "db877169e7c19b4b81d60b37d5aab8f9938129a66b582c2229ffffebdca2a43d"
+  },
+  {
+   "row_sha256": "304bebce02cd64e70d58b0a343defe689a078a0e2baef459307b98aa093db864",
+   "ticker": "PVD",
+   "canonical_metric": "net_income",
+   "reporting_period": "2025",
+   "document_sha256": "6ee20a554891c449a8ee72fffe6358bc9b32145d066a7e52d8492d88f305139c"
+  },
+  {
+   "row_sha256": "9203e78a05446d1883018782c178b87d9d5fd1276ba64c35fe098e189a6d7312",
+   "ticker": "PVD",
+   "canonical_metric": "revenue",
+   "reporting_period": "2025",
+   "document_sha256": "6ee20a554891c449a8ee72fffe6358bc9b32145d066a7e52d8492d88f305139c"
+  },
+  {
+   "row_sha256": "4528f6165da909dd75c4b133d4665ca8ead10efe5be8041813bbfbab99313897",
+   "ticker": "PVD",
+   "canonical_metric": "shareholders_equity",
+   "reporting_period": "2025",
+   "document_sha256": "6ee20a554891c449a8ee72fffe6358bc9b32145d066a7e52d8492d88f305139c"
+  },
+  {
+   "row_sha256": "d63075997cc6dd98e4a12a20505d339c564a78d56fc0737ed80df0f31db4b094",
+   "ticker": "PVD",
+   "canonical_metric": "total_assets",
+   "reporting_period": "2025",
+   "document_sha256": "6ee20a554891c449a8ee72fffe6358bc9b32145d066a7e52d8492d88f305139c"
+  },
+  {
+   "row_sha256": "bb1bbc9ffb38e424444cf2b939270fa1b8dc2eff09ecaa99ec0ca320e398bd67",
+   "ticker": "PVD",
+   "canonical_metric": "attributable_net_income",
+   "reporting_period": "2026-H1",
+   "document_sha256": "a7360d2fc9a8a67a1535820813cda2bb8ef288466cd36c949e050c2f2a1b290a"
+  },
+  {
+   "row_sha256": "290485bf292786d41d0f8835d3df57035271acf3ab6c4e5cf20cd1f6575d5570",
+   "ticker": "PVD",
+   "canonical_metric": "net_income",
+   "reporting_period": "2026-H1",
+   "document_sha256": "a7360d2fc9a8a67a1535820813cda2bb8ef288466cd36c949e050c2f2a1b290a"
+  },
+  {
+   "row_sha256": "b78589db665faafcecf853eb16c707205dfc9a6a4e051e7872eda46d3d53e795",
+   "ticker": "PVD",
+   "canonical_metric": "revenue",
+   "reporting_period": "2026-H1",
+   "document_sha256": "a7360d2fc9a8a67a1535820813cda2bb8ef288466cd36c949e050c2f2a1b290a"
+  },
+  {
+   "row_sha256": "a163d4cede5c46d1b7628fe6a9804cdf0634b0578ca56b2e223b1a7dd094acfa",
+   "ticker": "QNS",
+   "canonical_metric": "shareholders_equity",
+   "reporting_period": "2026-H1",
+   "document_sha256": "5a06a40f34a6d9b30233926f9c9d909d684744de2bf2ad0956edd367d5f7b068"
+  },
+  {
+   "row_sha256": "ea9ae3cd529842a2ed67269d3432b0d94d144c572c02aeeea01249bf2bfeaac2",
+   "ticker": "VNM",
+   "canonical_metric": "cash_and_equivalents",
+   "reporting_period": "2026-H1",
+   "document_sha256": "a6155aa757b320b893a78093b0454473f4a581aead225af4eb4ef1fbd6628561"
+  },
+  {
+   "row_sha256": "b58845d020f2b93c92064b344682cb0b81b7d081ab9c14da417d89e6090b7ecb",
+   "ticker": "VRE",
+   "canonical_metric": "cash_and_equivalents",
+   "reporting_period": "2026-H1",
+   "document_sha256": "7e9b9e39901a028972fff80bc1a4f9f5cab4c1526ce4029f9b853ccff6aeaac0"
+  },
+  {
+   "row_sha256": "16d2b492df5099e7dea071f5722115188de1055ee95fbfd23a955a5ede2a0643",
+   "ticker": "VRE",
+   "canonical_metric": "investment_property_disposal_result",
+   "reporting_period": "2026-H1",
+   "document_sha256": "7e9b9e39901a028972fff80bc1a4f9f5cab4c1526ce4029f9b853ccff6aeaac0"
+  },
+  {
+   "row_sha256": "c6173c71c810ba496a5c27bd9bfcf3abe9497ec0228a2cff1de31ce91542a3a9",
+   "ticker": "VRE",
+   "canonical_metric": "net_income",
+   "reporting_period": "2026-H1",
+   "document_sha256": "7e9b9e39901a028972fff80bc1a4f9f5cab4c1526ce4029f9b853ccff6aeaac0"
+  },
+  {
+   "row_sha256": "d1d6aabc703122046cfad6cfbb3a038b4e40e7de07bd817ce97dc9a631a5a513",
+   "ticker": "VRE",
+   "canonical_metric": "operating_cash_flow",
+   "reporting_period": "2026-H1",
+   "document_sha256": "7e9b9e39901a028972fff80bc1a4f9f5cab4c1526ce4029f9b853ccff6aeaac0"
+  },
+  {
+   "row_sha256": "53d7dbabcddebe0d7ec078172c521189ce8d6df00a344ad93739bb4e01abcf28",
+   "ticker": "VRE",
+   "canonical_metric": "provision_charge_or_reversal_adjustment",
+   "reporting_period": "2026-H1",
+   "document_sha256": "7e9b9e39901a028972fff80bc1a4f9f5cab4c1526ce4029f9b853ccff6aeaac0"
+  },
+  {
+   "row_sha256": "792e2969697685633bc60c77e3c82d9ebc1057a917709a192230d3908630721c",
+   "ticker": "VRE",
+   "canonical_metric": "revenue",
+   "reporting_period": "2026-H1",
+   "document_sha256": "7e9b9e39901a028972fff80bc1a4f9f5cab4c1526ce4029f9b853ccff6aeaac0"
+  },
+  {
+   "row_sha256": "a21ede7a8b20caa3a1a84c4a26698d567bfb60c479124c08ca507b3cc00b86fb",
+   "ticker": "VRE",
+   "canonical_metric": "shareholders_equity",
+   "reporting_period": "2026-H1",
+   "document_sha256": "7e9b9e39901a028972fff80bc1a4f9f5cab4c1526ce4029f9b853ccff6aeaac0"
+  }
+ ]
+}

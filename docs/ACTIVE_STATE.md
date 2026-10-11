@@ -30,7 +30,7 @@ Kinds: **CURRENT FACT** (verified), **HOST-LOCAL** (untracked; re-verify),
 **BLOCKED**, **DEFERRED**, **HISTORICAL**.
 
 ## 1. The operational gate
-- **COMPLETE — [financial reporting currency](financial_reporting_currency_transparency_v1_contract.md):** PR120 owner-approved release; four post-merge jobs PASS. Descriptive opt-in basis/source/cutoff view; no vote/authority/production change.
+- **ACTIVE — [source integrity](official_financial_source_qualification_integrity_corrective_v1_contract.md):** offline corrective; PR120 COMPLETE. No refresh/Daily/Q3 authority; exact-HEAD merge gate.
 - **COMPLETE — [Action Center cases](action_center_opportunity_cost_cases_consumer_v1_contract.md):** PR119, four post-merge jobs PASS (38105025004); offline/non-voting.
 - **COMPLETE — [capacity Phase 1](capacity_recovery_phase1_contract.md):** PR99 merged
   `168e0f7`, post-merge CI 37893984528 success; zero production reclaim/activation.

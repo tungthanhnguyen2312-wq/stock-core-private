@@ -89,14 +89,26 @@ def test_secondary_code_must_be_raw_exact_without_character_repair(raw):
     assert ocr.assess_secondary_line_code_raw("20", raw)[1] != "QUALIFIED_BY_SECONDARY_RAW_CODE"
 
 
-def test_append_only_refresh_preserves_first_qualification_and_precedence(tmp_path):
+def _bound_candidate(template):
+    """Owned synthetic source proof; the retained historical row itself is never requalified."""
+    from official_financial_period_identity import period_bounds
+    from tests.financial_source_fixture import bind_fixture_source
+    start, end = period_bounds(template["reporting_period"])
+    return bind_fixture_source({"qualification_state": "QUALIFIED", "period_type": "annual",
+        "period_start": start, "period_end": end, "observed_at": "2026-10-07T00:00:00Z", **template})[0]
+
+
+def test_append_only_refresh_preserves_first_qualification_and_precedence(tmp_path, monkeypatch):
     from tools.run_reviewed_interim_canonical_ingress import write_outputs
     from financial_evidence_currency_refresh import PUBLIC_FACTS, PUBLIC_PRECEDENCE
+    from tests.financial_source_fixture import install_synthetic_admission
+    install_synthetic_admission(monkeypatch)
     old = {"ticker": "PNJ", "canonical_metric": "cash_and_equivalents", "reporting_period": "2025",
         "statement_scope": "consolidated", "normalized_value": 522025257031, "currency": "VND",
         "unit_scale": 1, "citation_id": "first-citation", "knowledge_available_at": "2026-10-08T06:18:00+07:00"}
-    new = {**old, "canonical_metric": "operating_cash_flow", "normalized_value": 18890403841, "citation_id": "new-flow"}
-    newer = {**old, "citation_id": "replay-citation", "knowledge_available_at": "2026-10-08T08:00:00+07:00"}
+    new = _bound_candidate({**old, "canonical_metric": "operating_cash_flow", "normalized_value": 18890403841})
+    newer = _bound_candidate({**old, "knowledge_available_at": "2026-10-08T08:00:00+07:00"})
+    assert newer["citation_id"] != old["citation_id"]
     def precedence(row):
         return {"key": {"ticker": row["ticker"], "metric": row["canonical_metric"],
             "period": row["reporting_period"], "scope": row["statement_scope"]}, "legacy_modified": False}
@@ -106,17 +118,31 @@ def test_append_only_refresh_preserves_first_qualification_and_precedence(tmp_pa
         "overlay_rows": [newer, new], "precedence_rows": [precedence(newer),precedence(new)]}
     copy_before = copy.deepcopy(result)
     write_outputs(result,tmp_path,append_new_facts_only=True)
-    rows = [json.loads(line) for line in (tmp_path/PUBLIC_FACTS).read_text().splitlines()]
+    rows = [json.loads(line) for line in (tmp_path/PUBLIC_FACTS).read_text(encoding="utf8").splitlines()]
     assert rows == [old,new]
-    assert len((tmp_path/PUBLIC_PRECEDENCE).read_text().splitlines())==2
+    assert len((tmp_path/PUBLIC_PRECEDENCE).read_text(encoding="utf8").splitlines())==2
     assert result == copy_before
     write_outputs(result,tmp_path,append_new_facts_only=True)
-    assert [json.loads(line) for line in (tmp_path/PUBLIC_FACTS).read_text().splitlines()] == rows
+    assert [json.loads(line) for line in (tmp_path/PUBLIC_FACTS).read_text(encoding="utf8").splitlines()] == rows
     before = (tmp_path/PUBLIC_FACTS).read_bytes()
+    # A caller-edited value no longer matches its literal citation and is refused at admission.
     result["overlay_rows"][0]["normalized_value"] += 1
+    with pytest.raises(ValueError,match="OFFICIAL_PUBLICATION_CANDIDATE_NOT_ADMITTED"):
+        write_outputs(result,tmp_path,append_new_facts_only=True)
+    assert (tmp_path/PUBLIC_FACTS).read_bytes() == before
+    # A genuinely source-bound but different value for a retained key is a conflict, never a replacement.
+    result["overlay_rows"][0] = _bound_candidate({**old, "normalized_value": old["normalized_value"] + 1})
     with pytest.raises(ValueError,match="APPEND_ONLY_OFFICIAL_FACT_CONFLICT"):
         write_outputs(result,tmp_path,append_new_facts_only=True)
     assert (tmp_path/PUBLIC_FACTS).read_bytes() == before
+    # Input order never changes the published bytes.
+    reversed_root = tmp_path / "reversed"
+    reversed_root.mkdir()
+    (reversed_root/PUBLIC_FACTS).write_text(json.dumps(old)+"\n",encoding="utf8")
+    (reversed_root/PUBLIC_PRECEDENCE).write_text(json.dumps(precedence(old))+"\n",encoding="utf8")
+    write_outputs({**copy_before, "overlay_rows": list(reversed(copy_before["overlay_rows"])),
+        "precedence_rows": list(reversed(copy_before["precedence_rows"]))}, reversed_root)
+    assert (reversed_root/PUBLIC_FACTS).read_bytes() == before
 
 
 def test_retained_secondary_code_evidence_never_includes_value_cells():

@@ -70,7 +70,14 @@ _REVIEWED = re.compile(r"(?:so[áa]t\s+x[ée]t|reviewed)", re.IGNORECASE)
 
 
 def recognize_statement_period(text: str) -> dict[str, Any]:
-    blob = str(text or "")
+    # Comparative notes describe other periods; they cannot identify this filing.
+    blob = re.split(r"\b(?:notes?\s*:|comparative|thuyết minh|thuyet minh)\b",
+                    str(text or ""), maxsplit=1, flags=re.IGNORECASE)[0]
+    if _Q3_VI.search(blob) or _Q3_EN.search(blob) or re.search(
+            r"\b(?:nine[- ]months?|9\s+th[áa]ng)\b", blob, re.IGNORECASE):
+        return {"period": None, "periodicity": None, "status": "OUT_OF_SCOPE_Q3_2026",
+                "evidence": "Quarter-three/nine-month statement is not admitted"}
+    hits = []
     for pattern, period_fn, periodicity in (
         (_ANNUAL_VI, lambda m: m.group(1), ANNUAL),
         (_ANNUAL_EN, lambda m: m.group(1), ANNUAL),
@@ -83,20 +90,26 @@ def recognize_statement_period(text: str) -> dict[str, Any]:
     ):
         found = pattern.search(blob)
         if found:
-            return {
+            hits.append({
                 "period": period_fn(found), "periodicity": periodicity,
                 "status": "EXPLICIT", "evidence": found.group(0)[:240],
-            }
-    if _Q3_VI.search(blob) or _Q3_EN.search(blob):
-        return {
-            "period": None, "periodicity": None, "status": "OUT_OF_SCOPE_Q3_2026",
-            "evidence": "Q3 2026 is out of scope for this milestone",
-        }
+            })
+    if len({hit["period"] for hit in hits}) > 1:
+        return {"period": None, "periodicity": None, "status": "CONFLICT", "evidence": None}
+    if hits:
+        return hits[0]
     return {"period": None, "periodicity": None, "status": "UNKNOWN", "evidence": None}
 
 
 def recognize_unit_scale(text: str) -> dict[str, Any]:
     blob = str(text or "")
+    from financial_statement_unit_resolution import parse_explicit_unit_declaration
+    labelled = [line for line in blob.splitlines() if re.search(r"(?:[đd][ơo]n\s*v[ịi]|\bunit\b|\bcurrency\b)", line, re.IGNORECASE)]
+    if labelled:
+        declarations = [parse_explicit_unit_declaration(line) for line in labelled]
+        if any(item is None for item in declarations) or len({(item["currency"], item["unit_scale"]) for item in declarations}) != 1:
+            return {"unit_scale": None, "status": "CONFLICT", "evidence": None}
+        return {"unit_scale": declarations[0]["unit_scale"], "status": "EXPLICIT", "evidence": labelled[0]}
     million = _SCALE_MILLION.search(blob)
     if million:
         return {"unit_scale": 1_000_000, "status": "EXPLICIT", "evidence": million.group(0)[:180]}
@@ -112,7 +125,12 @@ def recognize_unit_scale(text: str) -> dict[str, Any]:
 
 
 def recognize_currency(text: str) -> dict[str, Any]:
+    usd = re.search(r"(?:\bUSD\b|US dollars?)", str(text or ""), re.IGNORECASE)
     found = _CURRENCY_VND.search(str(text or ""))
+    if usd and found:
+        return {"currency": None, "status": "CONFLICT", "evidence": None}
+    if usd:
+        return {"currency": "USD", "status": "EXPLICIT", "evidence": usd.group(0)}
     if found:
         return {"currency": "VND", "status": "EXPLICIT", "evidence": found.group(0)}
     return {"currency": None, "status": "UNKNOWN", "evidence": None}
@@ -127,11 +145,31 @@ def recognize_scope(text: str) -> dict[str, Any]:
     return {"statement_scope": None, "status": "UNKNOWN"}
 
 
+def assurance_language_is_negative(text: str) -> bool:
+    from official_financial_ocr_table_evidence import _normalize
+    blob = _normalize(str(text or ""))
+    return bool(re.search(r"\b(?:unaudited|unreviewed|not\s+(?:(?:been|yet|independently)\s+)*(?:audited|reviewed)|"
+        r"(?:chua|khong)\s+(?:duoc\s+)?(?:soat\s+xet|kiem\s+toan)|"
+        r"do not express (?:a |an )?review (?:opinion|conclusion)|"
+        r"audit engagement notice|lua chon don vi kiem toan)\b",blob))
+
+
 def recognize_audit_or_review(text: str) -> dict[str, Any]:
     blob = str(text or "")
-    if _AUDITED.search(blob):
+    if assurance_language_is_negative(blob):
+        return {"audit_or_review_status": None, "status": "UNKNOWN"}
+    audit_title = re.search(r"(?:báo cáo kiểm toán độc lập|bao cao kiem toan doc lap|"
+                            r"independent auditors.? report)", blob, re.IGNORECASE)
+    audit_opinion = re.search(r"(?:chúng tôi đã kiểm toán|chung toi da kiem toan|"
+                              r"we have audited|in our opinion)", blob, re.IGNORECASE)
+    review_title = re.search(r"(?:báo cáo soát xét|bao cao soat xet|independent review report)",
+                            blob, re.IGNORECASE)
+    review_engagement = re.search(r"(?:2410|hợp đồng dịch vụ soát xét|hop dong dich vu soat xet)",
+                                 blob, re.IGNORECASE)
+    scope = recognize_scope(blob)["statement_scope"] == "consolidated"
+    if audit_title and audit_opinion and scope and not review_title:
         return {"audit_or_review_status": "audited", "status": "EXPLICIT"}
-    if _REVIEWED.search(blob):
+    if review_title and review_engagement and scope and not audit_title:
         return {"audit_or_review_status": "reviewed", "status": "EXPLICIT"}
     return {"audit_or_review_status": None, "status": "UNKNOWN"}
 

@@ -231,7 +231,8 @@ def parse_index_document_links(html: str, base_url: str) -> list[dict[str, str]]
         path = urlparse(absolute).path.lower()
         if not path.endswith((".pdf", ".xlsx", ".xls")):
             continue
-        if _Q3_HREF.search(absolute) and not _PERIOD_HREF[1][1].search(absolute):
+        if (_Q3_HREF.search(absolute) or re.search(r"(?:9[-_ ]?thang|nine[-_ ]?months?|9m|engagement|appointment|"
+                r"lua[-_ ]?chon|hop[-_ ]?dong[-_ ]?kiem[-_ ]?toan)", absolute, re.IGNORECASE)):
             continue
         period = None
         for name, pattern in _PERIOD_HREF:
@@ -332,6 +333,13 @@ def _qualify_extracted_fact(fact: Mapping[str, Any], document: Mapping[str, Any]
     citation = fact.get("source_span") or fact.get("citation")
     raw = fact.get("raw_value_text") or fact.get("raw_numeric_text")
     blockers: list[str] = []
+    if fact.get("qualification_status") != "OFFICIAL_FACT_QUALIFIED":
+        blockers.append("EXTRACTED_FACT_NOT_QUALIFIED")
+    if (document.get("document_metadata") or {}).get("qualification_status") != "DOCUMENT_METADATA_QUALIFIED":
+        blockers.append("DOCUMENT_METADATA_NOT_QUALIFIED")
+    from official_financial_assurance_evidence import assurance_proof_is_bound
+    if not assurance_proof_is_bound(document.get("audit_or_review_status"), document.get("assurance_evidence"), document_sha256=sha):
+        blockers.append("DOCUMENT_ASSURANCE_PROOF_NOT_BOUND")
     if not sha or len(sha) != 64:
         blockers.append("DOCUMENT_HASH_MISSING")
     if not period:
@@ -359,68 +367,77 @@ def _qualify_extracted_fact(fact: Mapping[str, Any], document: Mapping[str, Any]
         except ValueError:
             blockers.append("PERIOD_BOUNDS_UNSUPPORTED")
             qualified = False
-    return {
+    row = {
         **dict(fact),
         "ticker": document.get("ticker"),
         "document_sha256": sha,
-        "source_locator": document.get("official_url") or document.get("source_locator"),
+        "source_locator": document.get("canonical_url") or document.get("official_url") or document.get("source_locator"),
         "qualification_state": "QUALIFIED" if qualified else "BLOCKED",
         "blockers": blockers,
         "parsed_numeric_value": parsed,
+        "normalized_value": parsed * scale if parsed is not None and isinstance(scale, int) else None,
+        "source_unit_scale": scale, "unit_scale": 1, "already_normalized": True,
+        "citation_id": fact.get("citation_id") or fact.get("table_id"),
+        "source_span": {**(dict(citation) if isinstance(citation, Mapping) else {}), "document_sha256": sha,
+            "source_page": fact.get("page_number"), "citation_id": fact.get("citation_id") or fact.get("table_id")},
         "period_start": start,
         "period_end": end,
+        "period_type": "annual" if period.isdigit() else "interim",
         "observed_at": document.get("observed_at") or document.get("retrieved_at"),
         "knowledge_available_at": document.get("observed_at") or document.get("retrieved_at"),
         "publication_date": document.get("published_at"),
         "source_family": SOURCE_ID,
         "restatement": None,
+        "document_metadata": document.get("document_metadata"),
+        "assurance_evidence": document.get("assurance_evidence"),
+        "audit_or_review_status": document.get("audit_or_review_status"),
     }
+    from official_financial_filing_evidence import admit_official_financial_fact
+    admission = admit_official_financial_fact(row, source_record=document.get("_source_record"),
+        retained_bytes=document.get("_retained_bytes"), registry=document.get("_source_registry"),
+        document_pages=document.get("_document_pages"))
+    row["admission"] = admission
+    if admission["state"] != "ADMITTED":
+        row["qualification_state"] = "BLOCKED"
+        row["blockers"] = sorted(set(blockers + admission["reason_codes"]))
+    return row
 
 
-def _metadata_from_pages(pages_text: str, document: Mapping[str, Any]) -> dict[str, Any]:
-    period = recognize_statement_period(pages_text)
-    scale = recognize_unit_scale(pages_text)
-    currency = recognize_currency(pages_text)
-    scope = recognize_scope(pages_text)
-    audit = recognize_audit_or_review(pages_text)
+def _metadata_from_pages(pages_text: str | Mapping[int, str], document: Mapping[str, Any]) -> dict[str, Any]:
+    """Literal page-bound metadata; front-matter conflicts never select an annual winner."""
+    pages = dict(pages_text) if isinstance(pages_text, Mapping) else {1: pages_text}
+    front = {number: text for number, text in pages.items() if 1 <= number <= 8}
     sha = str(document.get("sha256") or "")
-
-    def span(text: str | None) -> dict[str, Any]:
-        return {
-            "citation_id": _hash({"doc": sha, "text": text or ""}),
-            "document_sha256": sha, "source_page": 1,
-            "text": text or "explicit", "citation_kind": "source_span",
-        }
-
+    recognized = [(number, recognize_statement_period(text)) for number,text in sorted(front.items())]
+    periods = {claim["period"] for _,claim in recognized if claim.get("period")}
+    period_blocked = len(periods) != 1 or any(claim["status"] in {"CONFLICT", "OUT_OF_SCOPE_Q3_2026"} for _,claim in recognized)
     metadata = {}
-    if period.get("period"):
-        metadata["reporting_period"] = {"value": period["period"], "evidence_span": span(period.get("evidence"))}
-        metadata["periodicity"] = {
-            "value": "annual" if period["periodicity"] == "annual" else "interim",
-            "evidence_span": span(period.get("evidence")),
-        }
-    if scope.get("statement_scope"):
-        metadata["statement_scope"] = {"value": scope["statement_scope"], "evidence_span": span(pages_text[:180])}
-    if currency.get("currency"):
-        metadata["currency"] = {"value": currency["currency"], "evidence_span": span(currency.get("evidence"))}
-    if scale.get("unit_scale"):
-        metadata["unit_scale"] = {"value": scale["unit_scale"], "evidence_span": span(scale.get("evidence"))}
-    if audit.get("audit_or_review_status"):
-        metadata["audit_or_review_status"] = {
-            "value": audit["audit_or_review_status"], "evidence_span": span(pages_text[:180]),
-        }
-    return qualify_document_metadata({
-        "issuer_identity": document.get("ticker"),
-        "entity_type": entity_family(str(document.get("ticker") or "")),
-        "document": {
-            "document_id": document.get("document_id"), "sha256": sha,
-            "source_locator": document.get("official_url") or document.get("source_locator"),
-            "source_id": SOURCE_ID, "observed_at": document.get("observed_at") or document.get("retrieved_at"),
-            "published_at": document.get("published_at"),
-            "immutable_bytes_verified": document.get("immutable_bytes_verified", True),
-        },
-        "metadata": metadata,
-    })
+    def add(name, value, number, text):
+        metadata[name] = {"value": value, "evidence_span": {
+            "citation_id": _hash({"doc":sha,"page":number,"text":text}),
+            "document_sha256":sha,"source_page":number,"text":text,"citation_kind":"source_span"}}
+    if not period_blocked:
+        number,period = next((number,claim) for number,claim in recognized if claim.get("period"))
+        add("reporting_period",period["period"],number,period["evidence"])
+        add("periodicity","annual" if period["periodicity"]=="annual" else "interim",number,period["evidence"])
+    for name,recognizer in (("statement_scope",recognize_scope),("currency",recognize_currency),("unit_scale",recognize_unit_scale)):
+        hits = [(number,recognizer(text),text) for number,text in sorted(front.items())]
+        values = {claim.get(name) for _,claim,_ in hits if claim.get(name) is not None}
+        if len(values)==1 and not any(claim.get("status")=="CONFLICT" for _,claim,_ in hits):
+            number,claim,text = next(hit for hit in hits if hit[1].get(name) is not None)
+            literal = claim.get("evidence")
+            if name == "statement_scope":
+                found = re.search(r"consolidated|h[ợo]p\s+nh[ấa]t|dn/hn", text, re.IGNORECASE)
+                literal = found.group(0) if found else None
+            if literal:
+                add(name,claim[name],number,literal)
+    return qualify_document_metadata({"issuer_identity":document.get("ticker"),
+        "entity_type":entity_family(str(document.get("ticker") or "")),
+        "document":{"document_id":document.get("document_id"),"sha256":sha,
+            "source_locator":document.get("canonical_url") or document.get("official_url") or document.get("source_locator"),
+            "source_id":document.get("source_id"),"observed_at":document.get("observed_at") or document.get("retrieved_at"),
+            "published_at":document.get("published_at"),"immutable_bytes_verified":document.get("immutable_bytes_verified") is True},
+        "metadata":metadata})
 
 
 def extract_from_retained_pdf(document: Mapping[str, Any], path: Path, *, allow_ocr: bool = False) -> dict[str, Any]:
@@ -434,8 +451,12 @@ def extract_from_retained_pdf(document: Mapping[str, Any], path: Path, *, allow_
         text_layer_status=text_status, ocr_authorized=allow_ocr,
         needed_for_core=True,
     )
-    pages_text = "\n".join(str(page.get("page_text") or "") for page in artifact.get("page_evidence") or [])
-    metadata = _metadata_from_pages(pages_text, {**payload, "sha256": document["sha256"]})
+    pages_text = {page["page_number"]: str(page.get("page_text") or "") for page in artifact.get("page_evidence") or []}
+    retained_bytes = path.read_bytes()
+    verified = hashlib.sha256(retained_bytes).hexdigest() == document["sha256"]
+    metadata = _metadata_from_pages(pages_text, {**payload, "sha256": document["sha256"], "immutable_bytes_verified": verified})
+    from official_financial_assurance_evidence import resolve_native_document_assurance
+    assurance = resolve_native_document_assurance(document["sha256"], {n:t for n,t in pages_text.items() if n <= 8})
     facts = []
     if ocr["status"] == "IMAGE_ONLY_FAIL_CLOSED":
         return {
@@ -449,9 +470,11 @@ def extract_from_retained_pdf(document: Mapping[str, Any], path: Path, *, allow_
         mapped["reporting_period"] = mapped.get("fiscal_period") or (metadata.get("metadata_claims") or {}).get(
             "reporting_period", {},
         ).get("value")
-        mapped["statement_scope"] = mapped.get("statement_scope") or "consolidated"
-        mapped["currency"] = mapped.get("currency") or "VND"
-        facts.append(_qualify_extracted_fact(mapped, document))
+        from official_source_registry import load_registry
+        facts.append(_qualify_extracted_fact(mapped, {**document, "document_metadata": metadata,
+            "assurance_evidence": assurance, "audit_or_review_status": assurance.get("audit_or_review_status"),
+            "_retained_bytes": retained_bytes, "_source_record": document, "_source_registry": load_registry(),
+            "_document_pages": {page["page_number"]: page["page_text"] for page in artifact.get("page_evidence") or []}}))
     if entity in {"bank", "securities"}:
         # Specialist layouts are not forced through the corporate Circular-200 template.
         if not facts:
@@ -888,14 +911,40 @@ def run_refresh(
             else "B_PARTIAL_EXTERNAL_BLOCKERS"
         ),
     }
-    public.mkdir(parents=True, exist_ok=True)
     facts_path = public / PUBLIC_FACTS
-    _atomic_write(facts_path, "".join(_json(fact) + "\n" for fact in qualified_facts))
-    _atomic_write(public / PUBLIC_PRECEDENCE, "".join(_json(row) + "\n" for row in precedence_rows))
-    report["public_facts_path"] = str(facts_path)
-    report["artifact_sha256"] = _hash(report)
-    report["artifact_identity"] = f"financial_evidence_currency_refresh:{report['artifact_sha256']}"
-    _atomic_write(public / PUBLIC_REPORT, json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True) + "\n")
+    from official_financial_filing_evidence import append_precedence_for_keys, official_fact_key
+    from official_financial_filing_evidence import plan_official_overlay_publication
+    from stocklookup_core.evidence.official_document_qualification import admit_retained_financial_fact
+    retained = facts_path.read_bytes().decode("utf8") if facts_path.exists() else ""
+    # Artifact split: only producer-QUALIFIED rows are overlay candidates, and every one must
+    # pass common admission or nothing is published. Blocked extractions stay diagnostic in
+    # the refresh report and never enter the qualified overlay.
+    candidates = [fact for fact in qualified_facts if fact.get("qualification_state") == "QUALIFIED"]
+    report["blocked_fact_diagnostics"] = sorted((
+        {"ticker": fact.get("ticker"), "canonical_metric": fact.get("canonical_metric"),
+         "reporting_period": fact.get("reporting_period"), "document_sha256": fact.get("document_sha256"),
+         "citation_id": fact.get("citation_id"), "qualification_state": fact.get("qualification_state"),
+         "blockers": sorted(str(item) for item in fact.get("blockers") or [])}
+        for fact in qualified_facts if fact.get("qualification_state") != "QUALIFIED"), key=_json)
+    plan = plan_official_overlay_publication(candidates, retained_text=retained,
+        admission=lambda row: admit_retained_financial_fact(row, evidence_root=landing))
+    if plan["text"] is None:
+        report["overlay_publication"] = "NO_NEW_ADMITTED_FACTS_RETAINED_HISTORY_UNCHANGED"
+    else:
+        report["overlay_publication"] = "APPEND_ONLY_NEW_EXACT_KEYS"
+        report["appended_fact_count"] = len(plan["appended"])
+        report["public_facts_path"] = str(facts_path)
+        report["artifact_sha256"] = _hash(report)
+        report["artifact_identity"] = f"financial_evidence_currency_refresh:{report['artifact_sha256']}"
+        from stocklookup_core.evidence.official_document_qualification import _publish_official_artifacts
+        prior_precedence = public / PUBLIC_PRECEDENCE
+        old_precedence = prior_precedence.read_bytes().decode("utf8") if prior_precedence.exists() else ""
+        precedence_text = append_precedence_for_keys(old_precedence, precedence_rows,
+                                                     [official_fact_key(row) for row in plan["appended"]])
+        report_text = json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True, allow_nan=False) + "\n"
+        public.mkdir(parents=True, exist_ok=True)
+        _publish_official_artifacts({facts_path: plan["text"], prior_precedence: precedence_text,
+                                    public / PUBLIC_REPORT: report_text}, commit_path=facts_path)
     landing.mkdir(parents=True, exist_ok=True)
     _atomic_write(landing / LANDING_RUN_MANIFEST, json.dumps({
         "http_requests": budget.requests, "new_bytes": budget.new_bytes,
@@ -943,7 +992,16 @@ def load_public_official_citations(root: Path | str) -> dict[tuple[str, str, str
     Missing overlay is empty. A present malformed overlay raises OfficialOverlayArtifactError.
     """
     citations: dict[tuple[str, str, str], dict[str, Any]] = {}
-    for record in load_public_official_fact_rows(root):
+    from stocklookup_core.evidence.official_document_qualification import admit_retained_financial_fact
+    records = load_public_official_fact_rows(root)
+    groups = {}
+    for record in records:
+        key = tuple(record.get(k) for k in ("ticker", "canonical_metric", "reporting_period"))
+        groups.setdefault(key, set()).add(_json(record))
+    for record in records:
+        key = tuple(record.get(k) for k in ("ticker", "canonical_metric", "reporting_period"))
+        if len(groups[key]) != 1 or admit_retained_financial_fact(record, intended_use="CANONICAL_CITATION")["state"] != "ADMITTED":
+            continue
         if record.get("qualification_state") != "QUALIFIED":
             continue
         # This legacy citation lane corroborates VND canonical/provider facts.

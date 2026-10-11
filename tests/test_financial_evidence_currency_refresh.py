@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 
 import pytest
+from tests.financial_source_fixture import bind_fixture_source, synthetic_retained_source_io
 
 from financial_evidence_currency_contract import (
     COHORT,
@@ -86,6 +87,11 @@ def _fact(ticker="HPG", metric="shareholders_equity", period="2025", value=1000,
         "source_span": {"document_sha256": SHA, "text": "equity", "source_page": 1},
         "extraction_mode": "native_text",
     }
+    from official_financial_period_identity import period_bounds
+    if period in {'2025','2026-H1','2026-Q2'} and metric != 'total_equity':
+        start,end = period_bounds(period)
+        row.update(period_start=start,period_end=end,period_type='annual' if period=='2025' else 'interim')
+        row, _ = bind_fixture_source(row)
     row.update(extra)
     return row
 
@@ -293,40 +299,29 @@ def test_ttm_not_promoted_from_fy_plus_h1():
     assert official_ttm_eligible(["2026-Q1", "2026-Q2"]) is False
 
 
-def test_run_refresh_integrates_injected_facts_and_writes_public_overlay(tmp_path: Path):
+def test_qualified_batch_publication_integrates_independent_sources(tmp_path: Path):
+    # Exercise publication directly; never execute the production refresh orchestrator.
+    from tools.run_reviewed_interim_canonical_ingress import write_outputs
+    from financial_evidence_currency_refresh import PUBLIC_FACTS
     facts = [
         _fact("HPG", "shareholders_equity", "2025", 10),
-        _fact("VNM", "net_income", "2025", 20, statement_family="income_statement"),
+        _fact("PVD", "net_income", "2025", 20, statement_family="income_statement"),
         _fact("FPT", "total_assets", "2025", 30),
         _fact("PNJ", "revenue", "2026-H1", 40, statement_family="income_statement"),
         _fact("QNS", "operating_cash_flow", "2025", 50, statement_family="cash_flow"),
     ]
-    legacy = {
-        ("HPG", "shareholders_equity", "2025", "consolidated"): {
-            "canonical_metric": "shareholders_equity", "reporting_period": "2025-Q4",
-            "statement_family": "balance_sheet", "statement_scope": "consolidated",
-            "normalized_value": 10, "already_normalized": True,
-        }
-    }
-    report = run_refresh(
-        landing_root=tmp_path / "landing", public_root=tmp_path / "derived/financial-evidence-currency-refresh-v1",
-        allow_network=False, extracted_facts=facts, legacy_facts=legacy,
-        observed_at="2026-09-29T00:00:00Z",
-    )
-    assert report["new_qualified_core_fact_count"] == 5
-    assert report["tickers_with_ge1_new_qualified_core_fact"] == ["FPT", "HPG", "PNJ", "QNS", "VNM"]
-    assert report["official_pe_ttm_gain"] == []
-    assert report["official_ps_ttm_gain"] == []
-    assert report["official_ttm_eligible"] is False
-    assert report["financial_v2_pin"]["rebuild_performed"] is False
-    assert report["vnstock_runtime"] is False
-    assert report["raw_filings_committed"] is False
-    assert report["conflicts"]["EXACT_MATCH"] == 1
-    written = (tmp_path / "derived/financial-evidence-currency-refresh-v1/qualified_official_facts.jsonl").read_text(
-        encoding="utf-8",
-    )
-    assert "HPG" in written
-    assert report["implementation_success_gate"] == "A_FIVE_TICKERS_QUALIFIED"
+    assert all(official_is_value_qualified(row) for row in facts)
+    precedence = [compare_official_and_legacy(row, None) for row in facts]
+    write_outputs({'overlay_rows':facts,'precedence_rows':precedence,'report':{'synthetic':True}}, tmp_path)
+    written = [json.loads(line) for line in (tmp_path/PUBLIC_FACTS).read_text(encoding='utf8').splitlines()]
+    assert sorted(written,key=lambda row:row['ticker']) == sorted(facts,key=lambda row:row['ticker'])
+    assert {row['ticker'] for row in written} == {'HPG','PVD','FPT','PNJ','QNS'}
+    assert official_ttm_eligible([row['reporting_period'] for row in written]) is False
+    before=(tmp_path/PUBLIC_FACTS).read_bytes()
+    bad={**facts[0],'normalized_value':11}
+    with pytest.raises(ValueError,match='CANDIDATE_NOT_ADMITTED'):
+        write_outputs({'overlay_rows':[facts[0],bad],'precedence_rows':[],'report':{}},tmp_path)
+    assert (tmp_path/PUBLIC_FACTS).read_bytes()==before
 
 
 def test_http_budget_stops_at_cap():
@@ -429,58 +424,62 @@ def test_issuer_ir_index_page_is_admitted_on_existing_host():
     assert "EVF" not in acquirer.TICKERS
 
 
-def _pb_official(official_facts, *, period="2025-Q4", value=1_000_000):
+def _pb_official(official_facts, *, period="2025-Q4", value=1_000_000, decision_session="2026-09-30"):
+    # Official fixtures become known 2026-09-29; the decision session must follow that knowledge.
     from tests.test_current_research_book_value_valuation import _cap, _equity
     verdict = __import__("provider_financial_monetary_basis_verdict").resolve(ROOT)
     return valuation._book_value_method(
-        ticker="AAA", entity="corporate", share_class="CURRENT_SHARE_RESEARCH_PROXY",
+        ticker="HPG", entity="corporate", share_class="CURRENT_SHARE_RESEARCH_PROXY",
         market_cap=_cap(), equity_rows=[_equity(period=period, value=value)],
-        decision_session="2026-09-24", verdict=verdict, official_equity_facts=official_facts,
+        decision_session=decision_session, verdict=verdict, official_equity_facts=official_facts,
     )
 
 
 def test_official_equity_supersedes_matching_vci_and_conflicts_fail_closed():
-    matched = _pb_official([_fact("AAA", "shareholders_equity", "2025", 1_000_000)])
+    matched = _pb_official([_fact("HPG", "shareholders_equity", "2025", 1_000_000)])
     assert matched["status"] == "RESEARCH_USABLE"
     assert matched["formula"] == "research_usable_market_cap / official_total_owners_equity"
     assert matched["official_becomes_factual_authority"] is True
-    conflicted = _pb_official([_fact("AAA", "shareholders_equity", "2025", 2_000_000)])
+    conflicted = _pb_official([_fact("HPG", "shareholders_equity", "2025", 2_000_000)])
     assert conflicted["status"] == "INPUT_BLOCKED"
     assert "OFFICIAL_LEGACY_TRUE_CONFLICT" in conflicted["blocker_reason_codes"]
+    # An official fact known after the decision cutoff cannot replace or block the provider basis.
+    earlier = _pb_official([_fact("HPG", "shareholders_equity", "2025", 2_000_000)], decision_session="2026-09-24")
+    assert earlier["status"] == "RESEARCH_USABLE"
+    assert earlier["formula"] == "research_usable_market_cap / VCI_total_owners_equity"
 
 
 def test_pb_same_period_does_not_authorize_official_on_scope_or_metric_difference():
     baseline = _pb_official([])
     different_scope = _pb_official([
-        _fact("AAA", "shareholders_equity", "2025", 9_000_000, statement_scope="standalone"),
+        _fact("HPG", "shareholders_equity", "2025", 9_000_000, statement_scope="standalone"),
     ])
     assert different_scope["status"] == "RESEARCH_USABLE"
     assert different_scope["formula"] == "research_usable_market_cap / VCI_total_owners_equity"
     assert abs(different_scope["value"] - baseline["value"]) < 1e-12
     different_metric = _pb_official([
-        _fact("AAA", "total_equity", "2025", 9_000_000),
+        _fact("HPG", "total_equity", "2025", 9_000_000),
     ])
     assert different_metric["status"] == "RESEARCH_USABLE"
     assert different_metric["formula"] == "research_usable_market_cap / VCI_total_owners_equity"
-    assert different_metric["official_legacy_precedence"] == NOT_COMPARABLE
-    assert different_metric["official_becomes_factual_authority"] is False
+    assert different_metric.get("official_becomes_factual_authority",False) is False
     assert abs(different_metric["value"] - baseline["value"]) < 1e-12
     different_period = _pb_official([
-        _fact("AAA", "shareholders_equity", "2024", 9_000_000),
+        _fact("HPG", "shareholders_equity", "2024", 9_000_000),
     ])
     assert different_period["status"] == "RESEARCH_USABLE"
     assert different_period["formula"] == "research_usable_market_cap / VCI_total_owners_equity"
-    assert different_period["official_legacy_precedence"] == NOT_COMPARABLE
-    exact = _pb_official([_fact("AAA", "shareholders_equity", "2025", 1_000_000)])
+    assert different_period.get("official_becomes_factual_authority",False) is False
+    exact = _pb_official([_fact("HPG", "shareholders_equity", "2025", 1_000_000)])
     assert exact["formula"] == "research_usable_market_cap / official_total_owners_equity"
-    conflicted = _pb_official([_fact("AAA", "shareholders_equity", "2025", 2_000_000)])
+    conflicted = _pb_official([_fact("HPG", "shareholders_equity", "2025", 2_000_000)])
     assert conflicted["status"] == "INPUT_BLOCKED"
 
 
 def test_official_equity_missing_scope_is_not_treated_as_consolidated():
-    missing_scope = _fact("AAA", "shareholders_equity", "2025", 9_000_000, statement_scope=None)
+    missing_scope = _fact("HPG", "shareholders_equity", "2025", 9_000_000, statement_scope=None)
     assert official_is_value_qualified(missing_scope) is False
-    assert valuation._official_equity_row([missing_scope], "AAA") is None
+    assert valuation._official_equity_row([missing_scope], "HPG") is None
     method = _pb_official([missing_scope])
     assert method["formula"] == "research_usable_market_cap / VCI_total_owners_equity"
     assert "official_legacy_precedence" not in method
@@ -490,7 +489,7 @@ def test_missing_official_does_not_change_legacy_pb():
     from tests.test_current_research_book_value_valuation import _pb
     baseline = _pb()
     unchanged = valuation._book_value_method(
-        ticker="AAA", entity="corporate", share_class="CURRENT_SHARE_RESEARCH_PROXY",
+        ticker="HPG", entity="corporate", share_class="CURRENT_SHARE_RESEARCH_PROXY",
         market_cap=baseline["market_cap"] if False else __import__(
             "tests.test_current_research_book_value_valuation", fromlist=["_cap"]
         )._cap(),

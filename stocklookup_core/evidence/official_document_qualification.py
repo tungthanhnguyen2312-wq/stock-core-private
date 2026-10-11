@@ -173,16 +173,38 @@ def qualify_retained_document(
     is_annual = (doc_class == "audited_annual_financial_statements" or doc_class == "annual_report")
     periodicity = "annual" if is_annual else "interim"
 
-    # 4. Scope & Audit Status
-    # By contract, audited_annual_financial_statements are audited and consolidated
-    is_audited = (doc_class == "audited_annual_financial_statements")
-    audit_status = "audited" if is_audited else "unaudited"
-    scope = "consolidated"
+    # 4. A discovered class is a hint, never proof of assurance or scope.
+    audit_status, scope = "unknown", "unknown"
+    try:
+        import io
+        from pypdf import PdfReader
+        from financial_evidence_currency_refresh import _metadata_from_pages
+        from official_financial_assurance_evidence import resolve_native_document_assurance, assurance_proof_is_bound
+        from official_financial_filing_evidence import METADATA_QUALIFIED
+        reader = PdfReader(io.BytesIO(doc_path.read_bytes())) if doc_path is not None else None
+        pages = {index+1:reader.pages[index].extract_text() or "" for index in range(min(8,len(reader.pages)))} if reader else {}
+        metadata = _metadata_from_pages(pages,{**record,"immutable_bytes_verified":is_qualified})
+        claims = metadata.get("metadata_claims") or {}
+        assurance = resolve_native_document_assurance(doc_sha,pages)
+        actual_scope = (claims.get("statement_scope") or {}).get("value")
+        actual_period = (claims.get("reporting_period") or {}).get("value")
+        actual_status = assurance.get("audit_or_review_status")
+        expected_status = "audited" if doc_class=="audited_annual_financial_statements" else "reviewed"
+        import re
+        if (metadata.get("qualification_status") != METADATA_QUALIFIED or actual_period != period
+                or actual_scope != "consolidated" or actual_status != expected_status
+                or not assurance_proof_is_bound(actual_status,assurance,document_sha256=doc_sha)
+                or not re.search(r"\b"+re.escape(ticker)+r"\b","\n".join(pages.values()),re.IGNORECASE)):
+            raise ValueError("DOCUMENT_LITERAL_QUALIFICATION_NOT_BOUND")
+        audit_status,scope = actual_status,actual_scope
+    except Exception:
+        is_qualified = False
+        reasons.append("DOCUMENT_METADATA_OR_ASSURANCE_PROOF_UNAVAILABLE")
 
     if is_qualified:
         reasons.append("OFFICIAL_HOST_ADMITTED")
         reasons.append("DOCUMENT_INTEGRITY_VERIFIED")
-        reasons.append("AUDITED_ANNUAL_CONSOLIDATED_SCOPE_VERIFIED")
+        reasons.append("LITERAL_DOCUMENT_PERIOD_SCOPE_ASSURANCE_VERIFIED")
         status = QUALIFICATION_SUCCESS_STATUS
     else:
         status = QUALIFICATION_FAILURE_STATUS
@@ -252,3 +274,90 @@ def load_document_qualification(path: Path) -> dict[str, Any]:
         raise FileNotFoundError(f"Qualification file not found: {p}")
     data = json.loads(p.read_text(encoding="utf-8"))
     return data.get("record", data)
+
+
+def admit_retained_financial_fact(row: Mapping[str, Any], *, evidence_root: Path | None = None,
+        registry: Mapping[str, Any] | None = None, cutoff: str | None = None,
+        intended_use: str = "CURRENT_RESEARCH_FACTUAL_AUTHORITY") -> dict[str, Any]:
+    """Read-only source replay around the pure filing admission rule.
+
+    The source record comes from the retained manifest, never from an overlay's
+    caller-selected source flags. Historical rows without metadata remain unproved.
+    """
+    from official_financial_filing_evidence import admit_official_financial_fact
+    from financial_evidence_currency_contract import DEFAULT_LANDING_ROOT
+    from runtime_paths import runtime_root
+    kwargs = {"cutoff": cutoff, "intended_use": intended_use}
+    if not isinstance(row.get("document_metadata"), Mapping):
+        return admit_official_financial_fact(row, **kwargs)
+    base = (Path(evidence_root) if evidence_root is not None else runtime_root(DEFAULT_LANDING_ROOT)).resolve()
+    subdir = Path(str(row.get("evidence_subdir") or "."))
+    landing = (base / subdir).resolve()
+    if not landing.is_relative_to(base):
+        return admit_official_financial_fact(row, **kwargs)
+    try:
+        manifest = json.loads((landing / "official_document_acquisition_manifest.json").read_text(encoding="utf8"))
+        matches = [record for record in manifest.get("records", []) if record.get("sha256") == row.get("document_sha256")]
+        if len(matches) != 1:
+            return admit_official_financial_fact(row, **kwargs)
+        record = matches[0]
+        path = (landing / str(record.get("relative_path") or "")).resolve()
+        if not path.is_relative_to(landing) or not path.is_file():
+            return admit_official_financial_fact(row, **kwargs)
+        payload = path.read_bytes()
+        source_registry = registry if registry is not None else load_registry()
+    except (OSError, ValueError, TypeError, AttributeError):
+        return admit_official_financial_fact(row, **kwargs)
+    pages = None
+    if payload.startswith(b"%PDF"):
+        try:
+            from pypdf import PdfReader
+            import io
+            reader = PdfReader(io.BytesIO(payload))
+            metadata = row["document_metadata"]
+            required = {((claim or {}).get("evidence_span") or {}).get("source_page")
+                        for claim in (metadata.get("metadata_claims") or {}).values()}
+            proof = row.get("assurance_evidence") or {}
+            required.update((proof.get("native_text_evidence") or {}).get("page_numbers") or [])
+            required.update((proof.get("page_number"), (proof.get("opinion_evidence") or {}).get("page_number"),
+                             (row.get("source_span") or {}).get("source_page")))
+            required.discard(None)
+            if len(required) <= 8 and all(isinstance(number, int) and 1 <= number <= len(reader.pages) for number in required):
+                pages = {number: reader.pages[number-1].extract_text() or "" for number in sorted(required)}
+        except Exception:  # An unavailable/malformed retained parser leaves proof UNKNOWN.
+            pass
+    return admit_official_financial_fact(row, source_record=record, retained_bytes=payload,
+                                       registry=source_registry, document_pages=pages, **kwargs)
+
+
+def _publish_official_artifacts(payloads: Mapping[Path, str], *, commit_path: Path, writer=None) -> None:
+    """Facts are the final commit point; restore companions on a promotion failure.
+
+    Callers must complete common admission and serialization first. This helper
+    cannot authorize publication. It preserves existing bytes on a failed batch.
+    """
+    from atomic_io import atomic_write_file
+    commit = Path(commit_path).resolve()
+    prepared = {Path(path).resolve(): text.encode("utf8") for path, text in payloads.items()}
+    if commit not in prepared or any(path.parent != commit.parent for path in prepared):
+        raise ValueError("OFFICIAL_PUBLICATION_PATH_OUTSIDE_ARTIFACT_ROOT")
+    originals = {path: path.read_bytes() if path.exists() else None for path in prepared}
+    promote = writer or atomic_write_file
+    order = sorted((path for path in prepared if path != commit), key=str) + [commit]
+    try:
+        for path in order:
+            promote(path, prepared[path])
+    except Exception as error:
+        failed = []
+        for path, content in originals.items():
+            try:
+                if content is not None:
+                    if not path.exists() or path.read_bytes() != content:
+                        atomic_write_file(path, content)
+                elif path.exists():
+                    path.unlink()
+            except OSError:
+                failed.append(str(path))
+        if failed:
+            raise RuntimeError("OFFICIAL_ARTIFACT_ROLLBACK_INCOMPLETE:" + ",".join(failed)) from error
+        raise

@@ -202,7 +202,7 @@ def load_official_citations(runtime_root: Path | str) -> dict[tuple, dict[str, A
         "cash_and_equivalents": "cash_and_cash_equivalents",
         "total_interest_bearing_debt": "total_interest_bearing_debt",
     }
-    citations: dict[tuple, dict[str, Any]] = {}
+    candidates: dict[tuple, dict[str, dict[str, Any]]] = {}
     for name in ("ebitda_component_citations.jsonl", "financial_identity_citations.jsonl"):
         path = root / name
         if not path.is_file():
@@ -214,7 +214,17 @@ def load_official_citations(runtime_root: Path | str) -> dict[tuple, dict[str, A
                 record = json.loads(line)
             except ValueError:
                 continue
+            modern = any(field in record for field in ("canonical_metric", "ingress_contract", "document_metadata"))
+            if modern:
+                # Refresh-shaped rows cannot bypass common admission through a legacy citation filename.
+                from stocklookup_core.evidence.official_document_qualification import admit_retained_financial_fact
+                if admit_retained_financial_fact(record, intended_use="CANONICAL_CITATION")["state"] != "ADMITTED":
+                    continue
             metric = mapping.get(str(record.get("metric") or record.get("identity_type") or ""))
+            if modern:
+                metric = mapping.get(str(record.get("canonical_metric")), record.get("canonical_metric"))
+                if metric not in METRIC_REGISTRY:
+                    continue
             ticker = str(record.get("ticker") or "").upper()
             period = str(record.get("reporting_period") or "")
             value = record.get("value")
@@ -227,18 +237,29 @@ def load_official_citations(runtime_root: Path | str) -> dict[tuple, dict[str, A
                 "currency": record.get("currency") or "VND",
                 "scale": record.get("scale") or "units",
             }
-            citations[(ticker, metric, period)] = entry
-            if (metric in stock_metrics or financial_identity_is_stock_metric(metric)) and period.isdigit():
-                citations.setdefault((ticker, metric, f"{period}-Q4"),
-                                     {**entry, "period_alias": "annual_year_end_is_q4_end"})
+            candidates.setdefault((ticker, metric, period), {})[
+                json.dumps(entry, sort_keys=True, ensure_ascii=False, default=str)] = entry
+    # Order-independent: distinct values for one key fail closed; equal values keep the
+    # lexicographically first citation identity, never the last line read.
+    citations: dict[tuple, dict[str, Any]] = {}
+    for key in sorted(candidates):
+        variants = candidates[key]
+        values = {json.dumps([entry["value"], entry["currency"], entry["scale"]], sort_keys=True, default=str)
+                  for entry in variants.values()}
+        if len(values) != 1:
+            continue
+        citations[key] = dict(variants[min(variants)])
+    for (ticker, metric, period), entry in list(citations.items()):
+        if (metric in stock_metrics or financial_identity_is_stock_metric(metric)) and period.isdigit():
+            citations.setdefault((ticker, metric, f"{period}-Q4"),
+                                 {**entry, "period_alias": "annual_year_end_is_q4_end"})
     from financial_evidence_currency_refresh import load_public_official_citations
     overlay = load_public_official_citations(runtime_root)
     for (ticker, metric, period), entry in overlay.items():
         citations[(ticker, metric, period)] = dict(entry)
         if (metric in stock_metrics or financial_identity_is_stock_metric(metric)) and period.isdigit():
             citations[(ticker, metric, f"{period}-Q4")] = dict(entry)
-        if metric in stock_metrics and period == "2026-H1":
-            citations[(ticker, metric, "2026-Q2")] = dict(entry)
+        # A retained H1 statement does not prove a Q2 filing identity.
     from historical_net_income_semantic_correction import (
         apply_to_citation_mapping,
         load_semantic_correction_artifacts,

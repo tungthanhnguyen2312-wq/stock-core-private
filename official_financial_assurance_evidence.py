@@ -34,6 +34,9 @@ _EN_REVIEW_DISCLAIMER = "do not express an audit opinion"
 def _explicit_consolidated_opinion(tokens):
     """Literal opinion heading and scope/fair-presentation wording; no OCR repair."""
     text = _page_text(tokens)
+    from official_financial_period_identity import assurance_language_is_negative
+    if assurance_language_is_negative(text):
+        return None
     heading = _title_span(tokens, _AUDITOR_OPINION_TITLE)
     anchors = ("hop nhat", "da phan anh", "khia canh trong yeu", "chuan muc")
     if heading and all(anchor in text for anchor in anchors) and _REVIEW_DISCLAIMER not in text:
@@ -91,6 +94,9 @@ def resolve_document_assurance_evidence(materialization: Mapping[str, Any]) -> d
         if not tokens:
             continue
         text = _page_text(tokens)
+        from official_financial_period_identity import assurance_language_is_negative
+        if assurance_language_is_negative(text):
+            continue
         number = int(page.get("page_number", 0))
         review_title = _title_span(tokens, _REVIEW_TITLE)
         audit_title = _title_span(tokens, _AUDIT_TITLE)
@@ -104,6 +110,7 @@ def resolve_document_assurance_evidence(materialization: Mapping[str, Any]) -> d
                 opinion_text = _page_text(opinion_tokens)
                 heading = _title_span(opinion_tokens, _EN_OPINION_TITLE)
                 if (not heading or not all(anchor in opinion_text for anchor in _EN_OPINION_ANCHORS)
+                        or assurance_language_is_negative(opinion_text)
                         or _EN_REVIEW_DISCLAIMER in opinion_text
                         or _REVIEW_DISCLAIMER in opinion_text
                         or _title_span(opinion_tokens, _REVIEW_TITLE)
@@ -168,12 +175,16 @@ def resolve_document_assurance_evidence(materialization: Mapping[str, Any]) -> d
                          "materialization_id": materialization.get("materialization_id")})
     if hit.get("opinion_evidence"):
         evidence_id = _hash({"base_evidence_id": evidence_id, "opinion_evidence": hit["opinion_evidence"]})
+    native = materialization.get("native_text_evidence")
+    if native:
+        evidence_id = _hash({"base_evidence_id": evidence_id, "native_text_evidence": native})
     return {**base, "state": "QUALIFIED", "audit_or_review_status": status, "page_number": hit["page_number"],
             "scope_of_assurance": "consolidated_interim_statements" if status == REVIEWED else "consolidated_statements",
             "matched_anchors": hit["anchors"], "title_span": span,
             "opinion_evidence": hit.get("opinion_evidence"),
             "page_text_sha256": _hash(hit["text"]), "rendered_image_sha256": image.get("rendered_image_sha256"),
             "materialization_id": materialization.get("materialization_id"),
+            **({"native_text_evidence": native} if native else {}),
             "evidence_id": evidence_id, "citation_id": evidence_id,
             "inheritance": "document_level_report_applies_to_all_statements_in_document"}
 
@@ -181,16 +192,60 @@ def resolve_document_assurance_evidence(materialization: Mapping[str, Any]) -> d
 def validate_assurance_claim(status: Any, evidence: Mapping[str, Any] | None, *, document_sha256: str) -> dict[str, Any] | None:
     """Fail closed unless the claim is an allowed status backed by matching evidence.
 
-    ``audited`` keeps its pre-existing caller contract (evidence optional, but if given it
-    must agree).  ``reviewed`` is never accepted on the caller's word.
+    Neither allowed status can be established by a caller's word.
     """
     if not assurance_status_is_qualified(status):
         raise ValueError("OCR_DOCUMENT_METADATA_NOT_QUALIFIED")
     if evidence is None:
-        if status == REVIEWED:
-            raise ValueError("REVIEWED_STATUS_REQUIRES_RETAINED_DOCUMENT_EVIDENCE")
-        return None
+        raise ValueError(f"{str(status).upper()}_STATUS_REQUIRES_RETAINED_DOCUMENT_EVIDENCE")
+    if not isinstance(evidence, Mapping):
+        raise ValueError("ASSURANCE_EVIDENCE_DOES_NOT_SUPPORT_STATUS")
     if (evidence.get("state") != "QUALIFIED" or evidence.get("audit_or_review_status") != status
             or evidence.get("document_sha256") != document_sha256 or not evidence.get("evidence_id")):
         raise ValueError("ASSURANCE_EVIDENCE_DOES_NOT_SUPPORT_STATUS")
     return dict(evidence)
+
+
+def assurance_proof_is_bound(status: Any, evidence: Mapping[str, Any] | None, *, document_sha256: str) -> bool:
+    """Replay the existing resolver identity; a seal is binding, not source authentication."""
+    import re
+    try:
+        proof = validate_assurance_claim(status, evidence, document_sha256=document_sha256)
+    except ValueError:
+        return False
+    if not proof or proof.get("contract_version") != CONTRACT_VERSION:
+        return False
+    span = proof.get("title_span")
+    if not isinstance(span, Mapping) or not span.get("token_ids"):
+        return False
+    expected = _hash({"contract": CONTRACT_VERSION, "document_sha256": document_sha256,
+        "page_number": proof.get("page_number"), "status": status,
+        "anchors": proof.get("matched_anchors"), "title_span": span,
+        "rendered_image_sha256": proof.get("rendered_image_sha256"),
+        "materialization_id": proof.get("materialization_id")})
+    if proof.get("opinion_evidence"):
+        expected = _hash({"base_evidence_id": expected, "opinion_evidence": proof["opinion_evidence"]})
+    native = proof.get("native_text_evidence")
+    if native:
+        expected = _hash({"base_evidence_id": expected, "native_text_evidence": native})
+    source_bound = (isinstance(native, Mapping) and native.get("document_sha256") == document_sha256
+        and native.get("method") == "retained_pdf_native_text"
+        and bool(re.fullmatch(r"[0-9a-f]{64}", str(native.get("pages_sha256") or "")))) if native else bool(
+            re.fullmatch(r"[0-9a-f]{64}", str(proof.get("rendered_image_sha256") or "")))
+    scope = "consolidated_interim_statements" if status == REVIEWED else "consolidated_statements"
+    return bool(proof.get("evidence_id") == expected and proof.get("citation_id") == expected
+        and proof.get("scope_of_assurance") == scope and proof.get("matched_anchors")
+        and source_bound and all(re.fullmatch(r"[0-9a-f]{64}", str(proof.get(key) or "")) for key in
+                ("materialization_id", "page_text_sha256")))
+
+
+def resolve_native_document_assurance(document_sha256: str, pages: Mapping[int, str]) -> dict[str, Any]:
+    """Reuse report recognition on actual native PDF text, without claiming an image exists."""
+    page_rows = [{"page_number": number, "ocr_derived_text_evidence": {"tokens": [
+        {"text": word, "token_id": f"native:{number}:{index}", "raw_token_order": index}
+        for index, word in enumerate(text.split())]}} for number, text in sorted(pages.items())]
+    identity = _hash(page_rows)
+    return resolve_document_assurance_evidence({"document_sha256": document_sha256,
+        "materialization_id": identity, "pages": page_rows,
+        "native_text_evidence": {"method": "retained_pdf_native_text", "document_sha256": document_sha256,
+            "pages_sha256": identity, "page_numbers": sorted(pages)}})

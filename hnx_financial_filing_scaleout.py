@@ -67,10 +67,14 @@ def discover(feed_payload: bytes, registry: Mapping[str, Any]) -> list[dict[str,
     for item in parsed["items"]:
         title=str(item.get("title") or ""); lowered=title.lower()
         if "báo cáo tài chính" not in lowered or not item.get("canonical_url"): continue
+        if re.search(r"(?:lựa chọn|bổ nhiệm|ký hợp đồng|hợp đồng kiểm toán|đơn vị kiểm toán|engagement|appointment)", lowered):
+            continue
         year=re.search(r"năm\s*(20\d{2})", lowered)
         if not year: continue
         interim="bán niên" in lowered or "quý" in lowered
-        rows.append({"title": title, "detail_url": item["canonical_url"], "published_at": _publication(item.get("pub_date_raw")), "reporting_period": f"{year.group(1)}-H1" if "bán niên" in lowered else year.group(1), "document_type": "reviewed_interim_financial_statements" if interim else "audited_annual_financial_statements", "title_scope": "separate" if "công ty mẹ" in lowered else "UNKNOWN"})
+        if "quý" in lowered and not re.search(r"quý\s*(?:2|ii)(?!i)\b", lowered):
+            continue
+        rows.append({"title": title, "detail_url": item["canonical_url"], "published_at": _publication(item.get("pub_date_raw")), "reporting_period": f"{year.group(1)}-H1" if "bán niên" in lowered else (f"{year.group(1)}-Q2" if "quý" in lowered else year.group(1)), "document_type": "reviewed_interim_financial_statements" if interim else "audited_annual_financial_statements", "title_scope": "separate" if "công ty mẹ" in lowered else "UNKNOWN"})
     return rows[:MAX_FILINGS]
 
 
@@ -94,8 +98,10 @@ def _pdf_metadata(data: bytes, reporting_period: str, title_scope: str) -> tuple
         pages=[page.extract_text() or "" for page in PdfReader(io.BytesIO(data)).pages]
     except Exception: return ({"scope":"UNKNOWN", "audit_review_status":"UNKNOWN", "currency":"UNKNOWN", "unit_scale":None, "parser_status":"NEEDS_OCR"}, [])
     text="\n".join(pages).lower()
-    scope="consolidated" if "hợp nhất" in text or "consolidated" in text else title_scope
-    audit="REVIEWED" if "soát xét" in text or "reviewed" in text else ("AUDITED" if "kiểm toán" in text or "audited" in text else "UNKNOWN")
+    from official_financial_period_identity import recognize_scope, recognize_audit_or_review, recognize_statement_period
+    scope=recognize_scope(text)["statement_scope"] or "UNKNOWN"
+    audit=(recognize_audit_or_review(text)["audit_or_review_status"] or "UNKNOWN").upper()
+    actual_period=recognize_statement_period(text)["period"]
     unit_match=re.search(r"(?:đơn vị tính|unit)\s*[:\-]?\s*([^\n]{1,80})", text)
     unit_text=unit_match.group(1).strip() if unit_match else ""
     scale=1 if re.search(r"\b(vnd|đồng)\b", unit_text) and "nghìn" not in unit_text and "triệu" not in unit_text else (1000 if "nghìn" in unit_text else (1000000 if "triệu" in unit_text else None))
@@ -107,8 +113,8 @@ def _pdf_metadata(data: bytes, reporting_period: str, title_scope: str) -> tuple
                 if any(re.search(label, line, re.I) for label in labels):
                     values=re.findall(_NUMBER, line)
                     if len(values)==1: matches.append((page_no,line,values[0]))
-        if len(matches)==1 and scale is not None and scope in {"consolidated","separate"}:
-            page,line,value=matches[0]; facts.append({"canonical_metric":metric,"raw_value_text":value,"value":int(value.replace(",","").replace(".","").replace("(","-").replace(")",""))*scale,"source_page":page,"citation_text":line,"reporting_period":reporting_period,"statement_scope":scope,"currency":"VND","unit_scale":scale,"qualification_state":"QUALIFIED_OFFICIAL_EXACT_SINGLE_VALUE_LINE"})
+        if len(matches)==1 and scale is not None and scope in {"consolidated","separate"} and actual_period==reporting_period:
+            page,line,value=matches[0]; facts.append({"canonical_metric":metric,"raw_value_text":value,"value":int(value.replace(",","").replace(".","").replace("(","-").replace(")",""))*scale,"source_page":page,"citation_text":line,"reporting_period":actual_period,"statement_scope":scope,"currency":"VND","unit_scale":scale,"qualification_state":"UNQUALIFIED_SOURCE_CANDIDATE"})
     return ({"scope":scope,"audit_review_status":audit,"currency":"VND" if scale else "UNKNOWN","unit_scale":scale,"parser_status":"DIRECT_TEXT"}, facts)
 
 def _attachment_token(url: str) -> str | None:

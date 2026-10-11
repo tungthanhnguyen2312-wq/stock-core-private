@@ -6,6 +6,7 @@ semantics. It does not invent DCF, fair-value, consensus, target prices, or prob
 from __future__ import annotations
 
 import calendar
+import json
 from collections import defaultdict
 from datetime import date
 import re
@@ -522,21 +523,24 @@ def _calculation_readiness_reconciliation(
     return out
 
 
-def _official_equity_row(official_equity_facts: Sequence[Mapping[str, Any]] | None, ticker: str) -> Mapping[str, Any] | None:
+def _official_equity_row(official_equity_facts: Sequence[Mapping[str, Any]] | None, ticker: str,
+                         *, cutoff: str | None = None) -> Mapping[str, Any] | None:
     """Newest value-qualified official equity with explicit consolidated scope.
 
     Missing statement_scope is not treated as consolidated. Currency, scale, period,
     and citation must already be established by the value-level official contract.
+    Facts known after the decision cutoff are excluded, and distinct values sharing the
+    newest knowledge time and period fail closed instead of following input order.
     """
     from official_legacy_precedence import official_is_value_qualified
 
-    best = None
+    eligible = []
     for fact in official_equity_facts or ():
         if str(fact.get("ticker") or "").upper() != ticker:
             continue
         if fact.get("canonical_metric") not in {"shareholders_equity", "total_equity"}:
             continue
-        if not official_is_value_qualified(fact):
+        if not official_is_value_qualified(fact, cutoff=cutoff):
             continue
         if fact.get("statement_scope") != "consolidated":
             continue
@@ -546,9 +550,15 @@ def _official_equity_row(official_equity_facts: Sequence[Mapping[str, Any]] | No
             continue
         if not fact.get("reporting_period"):
             continue
-        if best is None or str(fact.get("knowledge_available_at") or "") > str(best.get("knowledge_available_at") or ""):
-            best = fact
-    return best
+        eligible.append(fact)
+    if not eligible:
+        return None
+    rank = lambda fact: (str(fact.get("knowledge_available_at") or ""), str(fact.get("period_end") or ""))  # noqa: E731
+    newest = max(rank(fact) for fact in eligible)
+    tied = [fact for fact in eligible if rank(fact) == newest]
+    if len({(fact.get("normalized_value", fact.get("value")), fact.get("reporting_period")) for fact in tied}) != 1:
+        return None
+    return min(tied, key=lambda fact: json.dumps(fact, sort_keys=True, ensure_ascii=False, default=str))
 
 
 def _book_value_method(
@@ -636,7 +646,8 @@ def _book_value_method(
     if chosen["reported_value"] <= 0:
         return _method_shell(PB_CURRENT_RESEARCH, applicability=applicability, status="PB_NOT_MEANINGFUL",
                              blockers=["NON_POSITIVE_BOOK_EQUITY"], extra={**extra, "warnings": warning})
-    official = _official_equity_row(official_equity_facts, ticker)
+    official = _official_equity_row(official_equity_facts, ticker,
+                                    cutoff=f"{decision_session[:10]}T15:00:00+07:00" if decision_session else None)
     equity_value = chosen["reported_value"]
     formula = "research_usable_market_cap / VCI_total_owners_equity"
     if official is not None:

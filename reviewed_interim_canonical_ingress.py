@@ -189,6 +189,9 @@ def overlay_rows_from_panel_facts(panel_facts: Sequence[Mapping[str, Any]], *,
             "document_sha256": lineage["document_sha256"], "citation_id": lineage["citation_id"],
             "source_page": lineage.get("source_page"), "line_code": lineage.get("line_code"),
             "audit_or_review_status": fact["audit_or_review_status"], "assurance_evidence": assurance,
+            "document_metadata": lineage.get("document_metadata"), "raw_value_text": lineage.get("raw_value_text"),
+            "raw_row_label": lineage.get("raw_row_label"), "source_span": lineage.get("source_span"),
+            "evidence_subdir": lineage.get("evidence_subdir"),
             "observed_at": fact["observed_at"], "knowledge_available_at": fact["knowledge_available_at"],
             "publication_date": None, "source_family": "issuer_ir", "restatement": None,
             "extraction_method": lineage.get("extraction_method"), "reason_codes": list(fact.get("reason_codes") or []),
@@ -224,7 +227,19 @@ def authority_projection(row: Mapping[str, Any]) -> dict[str, Any]:
     A reported component can be a qualified fact for its exact period and still
     must not become normalized earnings or a research-admissible earnings input.
     """
-    result = evaluate_fact(policy_fact(row))
+    from stocklookup_core.evidence.official_document_qualification import admit_retained_financial_fact
+    admission = admit_retained_financial_fact(row)
+    index = None
+    if admission["state"] == "ADMITTED":
+        index = {(row["ticker"], row["canonical_metric"], row["reporting_period"]): {
+            "value": row["normalized_value"], "statement_scope": row["statement_scope"],
+            "currency": row["currency"], "unit_scale": row["unit_scale"], "verified": True,
+            "citation_id": row["citation_id"], "evidence_id": row["document_sha256"],
+            "document_sha256": row["document_sha256"]}}
+    result = evaluate_fact(policy_fact(row), evidence_index=index)
+    if admission["state"] != "ADMITTED":
+        result["reason_codes"] = sorted(set(result["reason_codes"] + admission["reason_codes"]))
+        result["research_reason_codes"] = sorted(set(result["research_reason_codes"] + admission["reason_codes"]))
     research_reasons = list(result["research_reason_codes"])
     research_status = result["research_status"]
     if row.get("context_kind") == "EARNINGS_QUALITY_COMPONENT":

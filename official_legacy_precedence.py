@@ -63,13 +63,18 @@ def _int(value: Any) -> int | None:
         return int(number)
 
 
-def official_is_value_qualified(record: Mapping[str, Any] | None) -> bool:
+def official_is_value_qualified(record: Mapping[str, Any] | None, *, cutoff: str | None = None) -> bool:
     """True only after value-level official qualification.
 
     DOCUMENT_METADATA_QUALIFIED is document-level and is never sufficient.
     Numeric agreement with a legacy row does not establish this state.
+    A knowledge cutoff, when supplied, is enforced by the common admission.
     """
     if not isinstance(record, Mapping):
+        return False
+    from stocklookup_core.evidence.official_document_qualification import admit_retained_financial_fact
+    if admit_retained_financial_fact(record, cutoff=cutoff,
+                                     intended_use="VALUATION_INPUT_WHERE_METRIC_PERMITS")["state"] != "ADMITTED":
         return False
     states = {
         str(record.get("qualification_state") or ""),
@@ -163,6 +168,8 @@ def compare_official_and_legacy(
     legacy_period = str(legacy.get("reporting_period") or "")
     family = str(official.get("statement_family") or legacy.get("statement_family") or "")
     aliases = set(canonical_stock_period_alias(official_period, family))
+    if official_period.endswith("-H1") and official_period != legacy_period:
+        value_qualified = False
     if legacy_period not in aliases and official_period != legacy_period:
         return {
             "contract_version": CONTRACT_VERSION,

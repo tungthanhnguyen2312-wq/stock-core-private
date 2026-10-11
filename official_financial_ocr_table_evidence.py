@@ -595,6 +595,10 @@ def panel_facts_from_qualified_ocr(
     qualification: Mapping[str, Any], *, entity_type: str, statement_scope: str,
     audit_or_review_status: str, knowledge_available_at: str, observed_at: str,
     assurance_evidence: Mapping[str, Any] | None = None,
+    document_metadata: Mapping[str, Any] | None = None,
+    source_record: Mapping[str, Any] | None = None, retained_bytes: bytes | None = None,
+    source_registry: Mapping[str, Any] | None = None, document_pages: Mapping[int, str] | None = None,
+    evidence_subdir: str | None = None,
 ) -> list[dict[str, Any]]:
     """Adapt already-qualified OCR geometry facts to the existing P3-F13 ingress shape.
 
@@ -664,7 +668,30 @@ def panel_facts_from_qualified_ocr(
                 "row_object": row, "source_image_evidence": source_image,
                 "ocr_derived_text_evidence": ocr, "unit_evidence": lineage.get("unit_evidence"),
                 "assurance_evidence": assurance,
+                "document_metadata": document_metadata,
+                "raw_value_text": ocr.get("current_raw"),
+                "raw_row_label": row.get("reconstructed_label"),
+                "source_span": {"text": str(row.get("reconstructed_label") or "") + " " + str(ocr.get("current_raw") or ""),
+                    "document_sha256": document_sha, "source_page": lineage.get("source_page"), "citation_id": citation_id},
+                "evidence_subdir": evidence_subdir,
                 **({"native_failure_evidence": lineage["native_failure_evidence"]} if lineage.get("native_failure_evidence") else {}),
                 "extraction_method": "unqualified_native_tsv_ocr_geometry" if lineage.get("native_failure_evidence") else "image_only_tsv_ocr_geometry"},
         })
+        from official_financial_filing_evidence import admit_official_financial_fact
+        projected = output[-1]
+        admission_row = {**projected, "ticker": ticker, "document_sha256": document_sha,
+            "citation_id": citation_id, "normalized_value": fact["value"], "unit_scale": 1,
+            "source_unit_scale": fact["unit_scale"], "document_metadata": document_metadata,
+            "assurance_evidence": assurance, "raw_value_text": ocr.get("current_raw"),
+            "raw_row_label": projected["source_lineage"]["raw_row_label"],
+            "source_span": projected["source_lineage"]["source_span"]}
+        admission = admit_official_financial_fact(admission_row, source_record=source_record,
+            retained_bytes=retained_bytes, registry=source_registry, document_pages=document_pages)
+        projected["admission"] = admission
+        if admission["state"] != "ADMITTED":
+            projected.update(qualification_state="UNQUALIFIED", is_positive_authority=False,
+                             authority_tier="unqualified_official_candidate")
+            projected["reason_codes"] = sorted(set(projected["reason_codes"] + admission["reason_codes"]))
+            projected["temporal_envelope"].update(pit_eligible=False, pit_status="UNKNOWN", quality_status="unqualified")
+            projected["source_lineage"]["authority_tier"] = "unqualified_official_candidate"
     return output

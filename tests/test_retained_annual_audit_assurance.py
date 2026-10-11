@@ -1,5 +1,6 @@
 """Auditor-page continuation and subset refresh preserve authority boundaries."""
 import copy
+import hashlib
 import json
 from pathlib import Path
 import pytest
@@ -17,7 +18,7 @@ def test_literal_opinion_same_or_immediately_next_page(texts, opinion_page):
     assert result["state"] == "QUALIFIED"
     assert result["audit_or_review_status"] == "audited"
     assert result["opinion_evidence"]["page_number"] == opinion_page
-    assert result["opinion_evidence"]["rendered_image_sha256"] == f"img{opinion_page}"
+    assert result["opinion_evidence"]["rendered_image_sha256"] == hashlib.sha256(texts[opinion_page-1].encode()).hexdigest()
     assert result["opinion_evidence"]["token_ids"]
 
 @pytest.mark.parametrize("texts", [
@@ -60,11 +61,13 @@ def test_subset_refresh_preserves_other_issuers_same_year_and_all_other_periods(
     result = {"report": {"documents": [{"ticker": "PNJ", "reporting_period": "2025"}]},
               "overlay_rows": [refreshed], "precedence_rows": [prior[1]]}
     untouched = copy.deepcopy(result)
-    write_outputs(result, tmp_path, preserve_other_documents=True)
+    originals = {name:(tmp_path/name).read_bytes() for name in (PUBLIC_FACTS,PUBLIC_PRECEDENCE)}
+    with pytest.raises(ValueError, match="CANDIDATE_NOT_ADMITTED"):
+        write_outputs(result, tmp_path, preserve_other_documents=True)
     rows = [json.loads(line) for line in (tmp_path / PUBLIC_FACTS).read_text().splitlines()]
     assert len(rows) == 4
-    assert refreshed in rows
-    assert all(r in rows for i, r in enumerate(old) if i != 1)
+    assert rows == old
+    assert all((tmp_path/name).read_bytes()==content for name,content in originals.items())
     assert len((tmp_path / PUBLIC_PRECEDENCE).read_text().splitlines()) == 4
     assert result == untouched
 
@@ -93,6 +96,7 @@ def test_retained_source_anchor_spans_and_new_facts_stay_historical_context():
     assert all(not r["official_field_context"] for r in early["records"].values())
     later = fundamental.project_session(baseline=original, official_rows=new,
         session="2026-10-08", cutoff="2026-10-08T15:00:00+07:00")
+    # Exact pinned v2 retained rows remain historical context; edited copies would not.
     assert sum(len(r["official_field_context"]) for r in later["records"].values()) == 6
     for ticker, record in later["records"].items():
         assert record["metrics"] == original["records"][ticker]["metrics"]
