@@ -169,10 +169,18 @@ def _official(tickers: Sequence[str], rows: Sequence[Mapping[str, Any]], session
     baseline.update(owner.content_identity(baseline))
     projected = owner.project_session(baseline=baseline, official_rows=[inputs[k] for k in sorted(inputs)], session=session, cutoff=cutoff)
     qualified = {t: [] for t in tickers}
+    identity = lambda row: tuple(row.get(k) for k in ("ticker", "canonical_metric", "reporting_period",  # noqa: E731
+                                                     "citation_id", "document_sha256"))
+    originals: dict[tuple, list[dict[str, Any]]] = {}
+    for row in inputs.values():
+        originals.setdefault(identity(row), []).append(row)
     for t in tickers:
         for row in projected["records"][t].get("official_field_context", []):
+            # The packet re-admits the exact input fact, never the consumer's projected copy.
+            matches = originals.get(identity(row), [])
+            source_fact = deepcopy(matches[0]) if len(matches) == 1 else None
             qualified[t].append({"basis": _basis(row), "normalized_value": row["normalized_value"],
-                                 "source_fact": deepcopy(row),
+                                 "source_fact": source_fact,
                                  "assurance_evidence": deepcopy(row["assurance_evidence"]),
                                  "audit_or_review_status": row["audit_or_review_status"],
                                  "source": _reference(row), "qualification": {k: row[k] for k in ("factual_status", "factual_reason_codes", "research_status", "research_reason_codes")},

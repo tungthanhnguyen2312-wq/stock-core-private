@@ -424,13 +424,14 @@ def test_issuer_ir_index_page_is_admitted_on_existing_host():
     assert "EVF" not in acquirer.TICKERS
 
 
-def _pb_official(official_facts, *, period="2025-Q4", value=1_000_000):
+def _pb_official(official_facts, *, period="2025-Q4", value=1_000_000, decision_session="2026-09-30"):
+    # Official fixtures become known 2026-09-29; the decision session must follow that knowledge.
     from tests.test_current_research_book_value_valuation import _cap, _equity
     verdict = __import__("provider_financial_monetary_basis_verdict").resolve(ROOT)
     return valuation._book_value_method(
         ticker="HPG", entity="corporate", share_class="CURRENT_SHARE_RESEARCH_PROXY",
         market_cap=_cap(), equity_rows=[_equity(period=period, value=value)],
-        decision_session="2026-09-24", verdict=verdict, official_equity_facts=official_facts,
+        decision_session=decision_session, verdict=verdict, official_equity_facts=official_facts,
     )
 
 
@@ -442,6 +443,10 @@ def test_official_equity_supersedes_matching_vci_and_conflicts_fail_closed():
     conflicted = _pb_official([_fact("HPG", "shareholders_equity", "2025", 2_000_000)])
     assert conflicted["status"] == "INPUT_BLOCKED"
     assert "OFFICIAL_LEGACY_TRUE_CONFLICT" in conflicted["blocker_reason_codes"]
+    # An official fact known after the decision cutoff cannot replace or block the provider basis.
+    earlier = _pb_official([_fact("HPG", "shareholders_equity", "2025", 2_000_000)], decision_session="2026-09-24")
+    assert earlier["status"] == "RESEARCH_USABLE"
+    assert earlier["formula"] == "research_usable_market_cap / VCI_total_owners_equity"
 
 
 def test_pb_same_period_does_not_authorize_official_on_scope_or_metric_difference():

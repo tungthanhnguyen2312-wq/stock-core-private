@@ -10,6 +10,8 @@ from __future__ import annotations
 import hashlib
 import json
 from dataclasses import dataclass
+from functools import lru_cache
+from pathlib import Path
 from typing import Any, Mapping
 
 
@@ -127,6 +129,37 @@ def qualify_document_metadata(candidate: Mapping[str, Any]) -> dict[str, Any]:
     }
     envelope["evidence_envelope_id"] = stable_id(identity)
     return envelope
+
+
+LEGACY_ROW_ADMISSION_PATH = "config/official_financial_legacy_row_admission_v1.json"
+LEGACY_ROW_PROOF_SUBSTITUTED = frozenset({"DOCUMENT_METADATA_PROOF_MISSING", "RETAINED_SOURCE_PROOF_UNAVAILABLE",
+    "LITERAL_METRIC_ROW_PROOF_MISSING", "LITERAL_VALUE_PROOF_MISSING"})
+
+
+@lru_cache(maxsize=1)
+def _legacy_row_admission() -> Mapping[str, Any]:
+    pin = json.loads((Path(__file__).resolve().parent / LEGACY_ROW_ADMISSION_PATH).read_text(encoding="utf-8"))
+    return {"pin": pin, "rows": {entry["row_sha256"]: entry for entry in pin["rows"]}}
+
+
+def legacy_row_admission_entry(row: Mapping[str, Any]) -> Mapping[str, Any] | None:
+    """Exact-row membership in the closed, hash-sealed v2 legacy set; never a shape test.
+
+    Only rows that predate the document-metadata schema and are byte-for-byte the rows
+    published under the governed ingress v2 contract qualify. Any edited, re-derived or
+    new row has a different hash and must carry modern retained-source proof instead.
+    """
+    if isinstance(row.get("document_metadata"), Mapping):
+        return None
+    loaded = _legacy_row_admission()
+    contracts = loaded["pin"]["governing_contracts"]
+    if any(row.get(name) != value for name, value in contracts.items()):
+        return None
+    digest = hashlib.sha256(canonical_json({k: v for k, v in row.items() if k != "admission"}).encode("utf-8")).hexdigest()
+    entry = loaded["rows"].get(digest)
+    if entry is None or entry["document_sha256"] != row.get("document_sha256") or entry["ticker"] != row.get("ticker"):
+        return None
+    return entry
 
 
 def admit_official_financial_fact(row: Mapping[str, Any], **context) -> dict[str, Any]:
@@ -360,39 +393,101 @@ def _admit_official_financial_fact(row: Mapping[str, Any], *, source_record: Map
         reasons.append("INTENDED_USE_NOT_ADMITTED")
     if intended_use not in {"CURRENT_RESEARCH_FACTUAL_AUTHORITY", "CANONICAL_CITATION", "VALUATION_INPUT_WHERE_METRIC_PERMITS"}:
         reasons.append("INTENDED_USE_OUTSIDE_CONTRACT")
+    legacy = legacy_row_admission_entry(row)
+    if legacy is not None:
+        # Version-specific: the pinned v2 row substitutes only for the newer document-metadata
+        # and literal-span schema. Assurance binding, period, scope, units, time and use still apply.
+        missing = [reason for reason in missing if reason not in LEGACY_ROW_PROOF_SUBSTITUTED]
     reasons = sorted(set(reasons + missing))
     state = "BLOCKED" if reasons and any(reason not in missing for reason in reasons) else "UNKNOWN" if missing else "ADMITTED"
     if reasons == ["INTENDED_USE_OUTSIDE_CONTRACT"]:
         state = "INAPPLICABLE"
     result = {"state": state, "reason_codes": reasons, "intended_use": intended_use,
         "document_sha256": sha, "metadata_evidence_id": metadata.get("evidence_envelope_id") if isinstance(metadata, Mapping) else None}
+    if legacy is not None:
+        pin = _legacy_row_admission()["pin"]
+        result.update(admission_basis=pin["admission_basis"], legacy_row_sha256=legacy["row_sha256"],
+                      evidence_classification=dict(pin["evidence_classification"]))
+    elif state == "ADMITTED":
+        result["admission_basis"] = "RETAINED_SOURCE_REPLAY"
     result["admission_id"] = stable_id({**result, "row": {k: v for k, v in row.items() if k != "admission"}, "cutoff": cutoff})
     return result
 
 
-def prepare_official_overlay_publication(rows, *, retained_text: str, admission) -> str | None:
-    """Validate the entire ingress before returning append-only publication bytes.
+OFFICIAL_FACT_KEY_FIELDS = ("ticker", "canonical_metric", "reporting_period", "statement_scope")
+OFFICIAL_FACT_VALUE_FIELDS = ("normalized_value", "currency", "unit_scale")
 
-    None means no replacement. Historical claims are preserved, never requalified.
-    Supersession needs an explicit future owner; this function cannot select a winner.
+
+def official_fact_key(row: Mapping[str, Any]) -> tuple:
+    return tuple(row.get(name) for name in OFFICIAL_FACT_KEY_FIELDS)
+
+
+def plan_official_overlay_publication(rows, *, retained_text: str, admission) -> dict[str, Any]:
+    """Validate the entire ingress and plan an append-only, order-independent publication.
+
+    Every candidate, including an exact replay of a retained key, must pass the common
+    admission. A retained key with the same value identity keeps its first qualification;
+    a different value is a conflict. Distinct candidates for one new key are refused rather
+    than resolved by input order. Historical claims are preserved, never requalified.
     """
     candidates = list(rows)
-    if not candidates:
-        return None
-    for row in candidates:
-        if admission(row)["state"] != "ADMITTED":
-            raise ValueError("OFFICIAL_PUBLICATION_CANDIDATE_NOT_ADMITTED")
-    def key(row):
-        return tuple(row.get(name) for name in ("ticker", "canonical_metric", "reporting_period", "statement_scope"))
+    plan = {"text": None, "appended": [], "replayed_keys": [], "prior_count": 0}
     prior = [json.loads(line) for line in retained_text.splitlines() if line.strip()]
-    groups = {}
-    for row in prior + candidates:
-        groups.setdefault(key(row), set()).add(canonical_json(row))
+    plan["prior_count"] = len(prior)
+    if not candidates:
+        return plan
+    blocked = []
     for row in candidates:
-        if len(groups[key(row)]) != 1:
+        decision = admission(row)
+        if decision["state"] != "ADMITTED":
+            blocked.append({"key": [str(part) for part in official_fact_key(row)], "state": decision["state"],
+                "reason_codes": list(decision.get("reason_codes") or [])})
+    if blocked:
+        blocked.sort(key=canonical_json)
+        raise ValueError("OFFICIAL_PUBLICATION_CANDIDATE_NOT_ADMITTED:" + canonical_json(blocked))
+    retained = {}
+    for row in prior:
+        retained.setdefault(official_fact_key(row), row)
+    proposed: dict[tuple, dict[str, str]] = {}
+    for row in candidates:
+        proposed.setdefault(official_fact_key(row), {})[canonical_json(row)] = row
+    appended, replayed = [], []
+    for key in sorted(proposed, key=lambda item: canonical_json(list(item))):
+        variants = proposed[key]
+        values = {canonical_json([row.get(name) for name in OFFICIAL_FACT_VALUE_FIELDS]) for row in variants.values()}
+        if key in retained:
+            first = canonical_json([retained[key].get(name) for name in OFFICIAL_FACT_VALUE_FIELDS])
+            if values != {first}:
+                raise ValueError("APPEND_ONLY_OFFICIAL_FACT_CONFLICT")
+            replayed.append(list(key))
+            continue
+        if len(values) != 1:
             raise ValueError("OFFICIAL_PUBLICATION_EXACT_KEY_CONFLICT")
-    existing = {canonical_json(row) for row in prior}
-    added = sorted({canonical_json(row) for row in candidates} - existing)
-    if not added:
-        return None
-    return retained_text + ("\n" if retained_text and not retained_text.endswith("\n") else "") + "".join(line + "\n" for line in added)
+        if len(variants) != 1:
+            raise ValueError("OFFICIAL_PUBLICATION_DUPLICATE_KEY_AMBIGUOUS_CITATION")
+        appended.append(next(iter(variants.values())))
+    plan["appended"], plan["replayed_keys"] = appended, replayed
+    if appended:
+        plan["text"] = retained_text + ("\n" if retained_text and not retained_text.endswith("\n") else "") + "".join(
+            canonical_json(row) + "\n" for row in appended)
+    return plan
+
+
+def prepare_official_overlay_publication(rows, *, retained_text: str, admission) -> str | None:
+    """Append-only publication bytes, or None when no new admitted key exists."""
+    return plan_official_overlay_publication(rows, retained_text=retained_text, admission=admission)["text"]
+
+
+def append_precedence_for_keys(retained_text: str, precedence_rows, keys) -> str:
+    """Append companion precedence rows only for newly published fact keys, once each."""
+    wanted = {tuple(key) for key in keys}
+    existing = {line.strip() for line in retained_text.splitlines() if line.strip()}
+    lines = []
+    for row in precedence_rows:
+        key = row.get("key") or {}
+        identity = (key.get("ticker"), key.get("metric"), key.get("period"), key.get("scope"))
+        line = json.dumps(row, ensure_ascii=False, sort_keys=True, allow_nan=False)
+        if identity in wanted and line not in existing and line not in lines:
+            lines.append(line)
+    return retained_text + ("\n" if retained_text and lines and not retained_text.endswith("\n") else "") + "".join(
+        line + "\n" for line in sorted(lines))

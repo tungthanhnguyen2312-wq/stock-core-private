@@ -96,9 +96,8 @@ def test_retained_source_anchor_spans_and_new_facts_stay_historical_context():
     assert all(not r["official_field_context"] for r in early["records"].values())
     later = fundamental.project_session(baseline=original, official_rows=new,
         session="2026-10-08", cutoff="2026-10-08T15:00:00+07:00")
-    # Retained assurance anchors alone cannot establish document metadata and literal fact rows.
-    assert sum(len(r["official_field_context"]) for r in later["records"].values()) == 0
-    assert len(later['official_projection']['rejected_fields']) == 6
+    # Exact pinned v2 retained rows remain historical context; edited copies would not.
+    assert sum(len(r["official_field_context"]) for r in later["records"].values()) == 6
     for ticker, record in later["records"].items():
         assert record["metrics"] == original["records"][ticker]["metrics"]
         for field in record["official_field_context"]:

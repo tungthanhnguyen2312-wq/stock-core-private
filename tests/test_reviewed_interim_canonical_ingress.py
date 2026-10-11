@@ -445,8 +445,14 @@ def test_overlay_refresh_preserves_other_periods_and_separate_report(tmp_path):
     result = {'report':{'documents':[{'reporting_period':'2025'}]},
               'overlay_rows':annual, 'precedence_rows':[]}
     before = (tmp_path/PUBLIC_FACTS).read_bytes()
+    # Replaying the exact pinned retained rows is a no-op: first qualification is preserved.
+    write_outputs(result,tmp_path,preserve_other_periods=True,report_name='annual_report.json')
+    assert (tmp_path/PUBLIC_FACTS).read_bytes()==before
+    assert not (tmp_path/'annual_report.json').exists()
+    # An edited retained row loses its pinned identity and is refused before any write.
+    edited = [dict(annual[0], citation_id='re-derived-citation')]
     with pytest.raises(ValueError, match='CANDIDATE_NOT_ADMITTED'):
-        write_outputs(result,tmp_path,preserve_other_periods=True,report_name='annual_report.json')
+        write_outputs({**result,'overlay_rows':edited},tmp_path,preserve_other_periods=True,report_name='annual_report.json')
     assert (tmp_path/PUBLIC_FACTS).read_bytes()==before
     assert not (tmp_path/'annual_report.json').exists()
     source, _ = bind_fixture_source({'ticker':'PNJ','canonical_metric':'revenue','normalized_value':123,

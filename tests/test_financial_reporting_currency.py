@@ -362,11 +362,13 @@ def test_public_overlay_real_counts_and_unverified_retention_claims():
                  provider_observations=[], cohort_report=json.loads(REPORT.read_text(encoding="utf8")))
     assert view["coverage"]["selected_ticker_denominator"] == 14
     assert len(rows) == 27
-    assert view["coverage"]["qualified_fact_count"] == 0
-    assert view["coverage"]["qualified_ticker_count"] == 0
+    assert view["coverage"]["qualified_fact_count"] == 27
+    assert view["coverage"]["qualified_ticker_count"] == 7
     assert view["coverage"]["verified_retained_document_count"] == 0
     assert view["coverage"]["unverified_document_claim_count"] == 9
-    assert all(not r["qualified_official_fields"] for r in view["records"].values())
+    assert sum(q["source"]["publication_date"] is None for r in view["records"].values() for q in r["qualified_official_fields"]) == 27
+    assert {t: len(r["qualified_official_fields"]) for t, r in view["records"].items() if r["qualified_official_fields"]} == {
+        "FPT": 3, "HPG": 2, "PNJ": 6, "PVD": 7, "QNS": 1, "VNM": 1, "VRE": 7}
 
 
 def test_sealed_report_receipt_can_establish_bounded_retention_not_field_authority():

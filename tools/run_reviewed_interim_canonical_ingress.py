@@ -188,25 +188,32 @@ def run(*, landing_root: Path, document_specs=DOCUMENTS, reporting_period: str =
 def write_outputs(result: dict[str, Any], public_root: Path, *, preserve_other_periods: bool = False,
                   report_name: str = REPORT_NAME, preserve_other_documents: bool = False,
                   append_new_facts_only: bool = False) -> None:
-    from official_financial_filing_evidence import prepare_official_overlay_publication
+    from official_financial_filing_evidence import append_precedence_for_keys, official_fact_key
+    from official_financial_filing_evidence import plan_official_overlay_publication
     from stocklookup_core.evidence.official_document_qualification import admit_retained_financial_fact
     from stocklookup_core.evidence.official_document_qualification import _publish_official_artifacts
+    # Publication is append-only for every mode: legacy preservation flags no longer
+    # authorize removing or replacing any retained evidence row.
     path = public_root / PUBLIC_FACTS
     retained = path.read_bytes().decode("utf8") if path.exists() else ""
-    prepared = prepare_official_overlay_publication(result["overlay_rows"], retained_text=retained,
-                                                   admission=admit_retained_financial_fact)
-    if prepared is None:
+    plan = plan_official_overlay_publication(result["overlay_rows"], retained_text=retained,
+                                             admission=admit_retained_financial_fact)
+    if plan["text"] is None:
         return
-    # Serialize all companion outputs before the facts commit point. Legacy preservation
-    # flags no longer authorize removing/replacing any retained evidence row.
+    appended_keys = [official_fact_key(row) for row in plan["appended"]]
     prior_precedence = public_root / PUBLIC_PRECEDENCE
     old_precedence = prior_precedence.read_bytes().decode("utf8") if prior_precedence.exists() else ""
-    rendered_precedence = old_precedence + ("\n" if old_precedence and not old_precedence.endswith("\n") else "") + "".join(json.dumps(row, ensure_ascii=False, sort_keys=True, allow_nan=False) + "\n"
-                                                   for row in result["precedence_rows"])
-    rendered_report = json.dumps(result["report"], ensure_ascii=False, indent=2, sort_keys=True, allow_nan=False) + "\n"
-    _publish_official_artifacts({path: prepared, prior_precedence: rendered_precedence,
-                                public_root / report_name: rendered_report}, commit_path=path)
-    return
+    report = dict(result["report"])
+    report["overlay_write"] = {"policy": "APPEND_ONLY_NEW_EXACT_KEYS", "appended_fact_count": len(plan["appended"]),
+                               "prior_fact_count": plan["prior_count"], "prior_facts_preserved": True}
+    report.pop("artifact_sha256", None)
+    report["artifact_sha256"] = _hash(report)
+    rendered_report = json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True, allow_nan=False) + "\n"
+    # Serialize every companion before the facts commit point.
+    public_root.mkdir(parents=True, exist_ok=True)
+    _publish_official_artifacts({path: plan["text"],
+                                 prior_precedence: append_precedence_for_keys(old_precedence, result["precedence_rows"], appended_keys),
+                                 public_root / report_name: rendered_report}, commit_path=path)
 
 
 def main() -> int:

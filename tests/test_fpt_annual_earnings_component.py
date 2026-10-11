@@ -13,6 +13,7 @@ from official_financial_ocr_table_evidence import (
 from official_financial_ocr_table_evidence import panel_facts_from_qualified_ocr
 from reviewed_interim_canonical_ingress import earnings_component_is_admitted, overlay_rows_from_panel_facts
 from tests.test_current_official_evidence_projection import baseline
+from tests.financial_source_fixture import bind_fixture_source, synthetic_retained_source_io
 import market_wide_current_fundamental_research as fundamental
 
 FIXTURE = Path(__file__).parent / "fixtures/fpt_official_evidence"
@@ -45,9 +46,32 @@ def test_retained_fpt_page_qualifies_only_the_literal_provision_amount():
     assert fact["source_lineage"]["row_object"]["reconstructed_label"] == "Provisions"
     assert fact["source_lineage"]["ocr_derived_text_evidence"]["current_raw"] == "651,406,282,654"
     assert fact["statement_family"] == "cash_flow"
+    # Retained page assurance alone, without retained source/metadata proof, cannot publish the row.
+    unbound = panel_facts_from_qualified_ocr(
+        deepcopy(qualified), entity_type="corporate", statement_scope="consolidated",
+        audit_or_review_status="audited", assurance_evidence=_assurance(),
+        knowledge_available_at="2026-10-08T06:00:00+00:00", observed_at="2026-10-08T02:00:00+00:00",
+    )
+    assert unbound[0]["qualification_state"] == "UNQUALIFIED" and unbound[0]["admission"]["state"] == "UNKNOWN"
+    assert {"DOCUMENT_METADATA_PROOF_MISSING", "RETAINED_SOURCE_PROOF_UNAVAILABLE"} <= set(unbound[0]["reason_codes"])
+    rows, _ = overlay_rows_from_panel_facts(unbound, allow_audited_annual_context=True)
+    assert not any(item["canonical_metric"] == "provision_charge_or_reversal_adjustment" for item in rows)
+    # Positive control: the same adapter with owned synthetic source-bound proof for this literal.
+    source, context = bind_fixture_source({"ticker": "FPT", "canonical_metric": fact["canonical_metric"],
+        "normalized_value": fact["value"], "currency": "VND", "unit_scale": 1, "source_unit_scale": 1,
+        "reporting_period": "2025", "period_start": "2025-01-01", "period_end": "2025-12-31", "period_type": "annual",
+        "observed_at": "2026-10-08T02:00:00+00:00", "knowledge_available_at": "2026-10-08T06:00:00+00:00", "source_page": 13})
+    qualified["document_sha256"] = source["document_sha256"]
+    lineage = fact["source_lineage"]
+    lineage["source_image_evidence"]["document_sha256"] = source["document_sha256"]
+    lineage["ocr_derived_text_evidence"]["current_raw"] = source["raw_value_text"]
+    assert lineage["row_object"]["reconstructed_label"] == source["raw_row_label"] == "Provisions"
     panel = panel_facts_from_qualified_ocr(
         qualified, entity_type="corporate", statement_scope="consolidated",
-        audit_or_review_status="audited", assurance_evidence=_assurance(),
+        audit_or_review_status="audited", assurance_evidence=source["assurance_evidence"],
+        document_metadata=source["document_metadata"], source_record=context["source_record"],
+        retained_bytes=context["retained_bytes"], source_registry=context["registry"],
+        document_pages=context["document_pages"],
         knowledge_available_at="2026-10-08T06:00:00+00:00", observed_at="2026-10-08T02:00:00+00:00",
     )
     rows, blocked = overlay_rows_from_panel_facts(panel, allow_audited_annual_context=True)

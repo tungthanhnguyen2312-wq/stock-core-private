@@ -21,6 +21,29 @@ an audited/reviewed statement. Q3/9M numeric authority and period bounds stay cl
 Publication must validate the complete candidate set before replacement, refuse conflicts,
 preserve retained history and refuse empty destructive replacement.
 
+## Publication, citation and consumer semantics
+
+Overlay publication is append-only and order-independent. Only producer-QUALIFIED rows are
+candidates; every candidate must be admitted or nothing is written. A replayed retained key with
+the same value/currency/unit keeps its first qualification; a different value is
+`APPEND_ONLY_OFFICIAL_FACT_CONFLICT`; distinct candidates for one new key are refused.
+Blocked extractions are diagnostics in the refresh report, never qualified-overlay rows.
+Precedence rows are appended only for newly published keys. Canonical citation files and the
+overlay resolve duplicates without line order: conflicting values drop the key; equal values
+keep the lexicographically first citation. Financial V2 official equity applies the decision
+session's knowledge cutoff and fails closed on equal-time conflicting values.
+
+## Version-specific legacy rows
+
+`config/official_financial_legacy_row_admission_v1.json` is a closed, hash-sealed list of the 27
+rows published under `reviewed_interim_canonical_ingress/v2` by owner-merged PRs #78-#90 (overlay
+SHA `a1f05701...`). Only an exact pinned row (canonical-JSON SHA-256, governing contract fields,
+document SHA and issuer) may substitute for the newer document-metadata and literal-span schema.
+Assurance binding, period, scope, unit, knowledge time, cutoff and intended use still apply.
+Any edited, re-derived or new row must carry modern retained-source proof. Classification is
+shape-valid, assurance-proof-bound, original bytes SHA-verified offline; original document
+semantics are not independently re-verified and historical contamination stays UNKNOWN.
+
 ## Validation and preservation
 
 Synthetic adversarial regressions execute the actual owners before and after fixes;

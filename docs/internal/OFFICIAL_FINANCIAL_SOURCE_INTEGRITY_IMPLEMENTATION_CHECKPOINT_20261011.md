@@ -60,3 +60,6 @@ policy; an arbitrary direct citation remains insufficient. Legacy cohort recover
 Positive company-economics goldens now pin owned synthetic source identities; former retained-
 claim goldens remain in Git history. Original evidence bytes were not changed.
 Quota checkpoint requested by the owner: 79% of the five-hour window used before final handoff.
+
+Superseded by the resumed-writer acceptance record:
+[OFFICIAL_FINANCIAL_SOURCE_INTEGRITY_ACCEPTANCE_20261011.md](OFFICIAL_FINANCIAL_SOURCE_INTEGRITY_ACCEPTANCE_20261011.md).

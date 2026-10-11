@@ -912,24 +912,39 @@ def run_refresh(
         ),
     }
     facts_path = public / PUBLIC_FACTS
-    from official_financial_filing_evidence import prepare_official_overlay_publication
+    from official_financial_filing_evidence import append_precedence_for_keys, official_fact_key
+    from official_financial_filing_evidence import plan_official_overlay_publication
     from stocklookup_core.evidence.official_document_qualification import admit_retained_financial_fact
     retained = facts_path.read_bytes().decode("utf8") if facts_path.exists() else ""
-    prepared = prepare_official_overlay_publication(qualified_facts, retained_text=retained,
+    # Artifact split: only producer-QUALIFIED rows are overlay candidates, and every one must
+    # pass common admission or nothing is published. Blocked extractions stay diagnostic in
+    # the refresh report and never enter the qualified overlay.
+    candidates = [fact for fact in qualified_facts if fact.get("qualification_state") == "QUALIFIED"]
+    report["blocked_fact_diagnostics"] = sorted((
+        {"ticker": fact.get("ticker"), "canonical_metric": fact.get("canonical_metric"),
+         "reporting_period": fact.get("reporting_period"), "document_sha256": fact.get("document_sha256"),
+         "citation_id": fact.get("citation_id"), "qualification_state": fact.get("qualification_state"),
+         "blockers": sorted(str(item) for item in fact.get("blockers") or [])}
+        for fact in qualified_facts if fact.get("qualification_state") != "QUALIFIED"), key=_json)
+    plan = plan_official_overlay_publication(candidates, retained_text=retained,
         admission=lambda row: admit_retained_financial_fact(row, evidence_root=landing))
-    if prepared is None:
+    if plan["text"] is None:
         report["overlay_publication"] = "NO_NEW_ADMITTED_FACTS_RETAINED_HISTORY_UNCHANGED"
-        return report
-    report["public_facts_path"] = str(facts_path)
-    report["artifact_sha256"] = _hash(report)
-    report["artifact_identity"] = f"financial_evidence_currency_refresh:{report['artifact_sha256']}"
-    from stocklookup_core.evidence.official_document_qualification import _publish_official_artifacts
-    prior_precedence = public / PUBLIC_PRECEDENCE
-    old_precedence = prior_precedence.read_bytes().decode("utf8") if prior_precedence.exists() else ""
-    precedence_text = old_precedence + ("\n" if old_precedence and not old_precedence.endswith("\n") else "") + "".join(_json(row) + "\n" for row in precedence_rows)
-    report_text = json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True, allow_nan=False) + "\n"
-    _publish_official_artifacts({facts_path: prepared, prior_precedence: precedence_text,
-                                public / PUBLIC_REPORT: report_text}, commit_path=facts_path)
+    else:
+        report["overlay_publication"] = "APPEND_ONLY_NEW_EXACT_KEYS"
+        report["appended_fact_count"] = len(plan["appended"])
+        report["public_facts_path"] = str(facts_path)
+        report["artifact_sha256"] = _hash(report)
+        report["artifact_identity"] = f"financial_evidence_currency_refresh:{report['artifact_sha256']}"
+        from stocklookup_core.evidence.official_document_qualification import _publish_official_artifacts
+        prior_precedence = public / PUBLIC_PRECEDENCE
+        old_precedence = prior_precedence.read_bytes().decode("utf8") if prior_precedence.exists() else ""
+        precedence_text = append_precedence_for_keys(old_precedence, precedence_rows,
+                                                     [official_fact_key(row) for row in plan["appended"]])
+        report_text = json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True, allow_nan=False) + "\n"
+        public.mkdir(parents=True, exist_ok=True)
+        _publish_official_artifacts({facts_path: plan["text"], prior_precedence: precedence_text,
+                                    public / PUBLIC_REPORT: report_text}, commit_path=facts_path)
     landing.mkdir(parents=True, exist_ok=True)
     _atomic_write(landing / LANDING_RUN_MANIFEST, json.dumps({
         "http_requests": budget.requests, "new_bytes": budget.new_bytes,

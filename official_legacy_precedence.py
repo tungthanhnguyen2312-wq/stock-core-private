@@ -63,16 +63,18 @@ def _int(value: Any) -> int | None:
         return int(number)
 
 
-def official_is_value_qualified(record: Mapping[str, Any] | None) -> bool:
+def official_is_value_qualified(record: Mapping[str, Any] | None, *, cutoff: str | None = None) -> bool:
     """True only after value-level official qualification.
 
     DOCUMENT_METADATA_QUALIFIED is document-level and is never sufficient.
     Numeric agreement with a legacy row does not establish this state.
+    A knowledge cutoff, when supplied, is enforced by the common admission.
     """
     if not isinstance(record, Mapping):
         return False
     from stocklookup_core.evidence.official_document_qualification import admit_retained_financial_fact
-    if admit_retained_financial_fact(record, intended_use="VALUATION_INPUT_WHERE_METRIC_PERMITS")["state"] != "ADMITTED":
+    if admit_retained_financial_fact(record, cutoff=cutoff,
+                                     intended_use="VALUATION_INPUT_WHERE_METRIC_PERMITS")["state"] != "ADMITTED":
         return False
     states = {
         str(record.get("qualification_state") or ""),

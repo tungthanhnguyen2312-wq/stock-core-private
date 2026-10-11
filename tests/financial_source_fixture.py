@@ -46,13 +46,18 @@ def bind_fixture_source(template):
     return row, deepcopy(context)
 
 
-@pytest.fixture(autouse=True)
-def synthetic_retained_source_io(monkeypatch):
+def install_synthetic_admission(monkeypatch):
+    """Route retained-source IO to the registered synthetic contexts; admission itself is unchanged."""
     from official_financial_filing_evidence import admit_official_financial_fact
     from stocklookup_core.evidence import official_document_qualification as owner
     def replay(row, *, cutoff=None, intended_use="CURRENT_RESEARCH_FACTUAL_AUTHORITY", **_):
         context = deepcopy(_CONTEXTS.get(row.get("document_sha256"), {}))
         return admit_official_financial_fact(row, **context, cutoff=cutoff, intended_use=intended_use)
     monkeypatch.setattr(owner, "admit_retained_financial_fact", replay)
+
+
+@pytest.fixture(autouse=True)
+def synthetic_retained_source_io(monkeypatch):
+    install_synthetic_admission(monkeypatch)
     yield
     _CONTEXTS.clear()

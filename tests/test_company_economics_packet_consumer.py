@@ -163,7 +163,7 @@ def test_cli_real_overlay_read_only_and_earlier_cutoff():
     args.cutoff = BEFORE
     early = cli.inspect(args)
     counts = {t: len(observations(p["sections"]["stock"]["fields"]["company_economics_evidence"]["value"]["matrix"])) for t, p in early["packets"].items()}
-    assert counts == {"FPT": 0, "PNJ": 0, "PVD": 0}
+    assert counts == {"FPT": 0, "PNJ": 3, "PVD": 3}
     assert hashlib.sha256(FACTS.read_bytes()).hexdigest() == before
 
 
@@ -246,4 +246,4 @@ def test_production_entrypoint_routes_only_explicit_offline_research():
     assert process.returncode == 0, process.stderr
     output = json.loads(process.stdout)
     assert output["status"] == "AVAILABLE" and output["persisted"] is False
-    assert len(observations(output["packets"]["PNJ"]["sections"]["stock"]["fields"]["company_economics_evidence"]["value"]["matrix"])) == 0
+    assert len(observations(output["packets"]["PNJ"]["sections"]["stock"]["fields"]["company_economics_evidence"]["value"]["matrix"])) == 6

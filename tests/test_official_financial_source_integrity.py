@@ -114,9 +114,44 @@ def test_retained_overlay_inventory_is_read_only():
     assert len(rows)==27 and len({r['document_sha256'] for r in rows})==9
     assert all(r['assurance_evidence']['document_sha256']==r['document_sha256'] for r in rows)
     from official_financial_filing_evidence import admit_official_financial_fact
-    assert all(admit_official_financial_fact(row)["state"]=="UNKNOWN" for row in rows)
+    results=[admit_official_financial_fact(row) for row in rows]
+    # Exact pinned v2 rows: proof-bound and byte-verified offline, original semantics NOT re-verified.
+    assert all(r["state"]=="ADMITTED" and r["admission_basis"]=="PINNED_LEGACY_GOVERNED_INGRESS_V2" for r in results)
+    assert all(r["evidence_classification"]["original_document_semantics_independently_verified"] is False for r in results)
     assert hashlib.sha256(before).hexdigest()=="a1f057017a9309f5c5a2a1a9ec53c3746500f9355bf45642e039ebf2608e33ff"
+    pin=json.loads((Path(__file__).resolve().parents[1]/"config/official_financial_legacy_row_admission_v1.json").read_text(encoding="utf8"))
+    assert pin["overlay_sha256"]==hashlib.sha256(before).hexdigest() and len(pin["rows"])==27
     assert path.read_bytes()==before
+
+
+def _retained_rows():
+    path=Path(__file__).resolve().parents[1]/refresh.PUBLIC_ARTIFACT_DIR/refresh.PUBLIC_FACTS
+    return [json.loads(line) for line in path.read_bytes().splitlines()]
+
+
+@pytest.mark.parametrize("mutation",["value","status","assurance","citation","contract","metadata","period","new_row"])
+def test_pinned_legacy_rows_cannot_be_reused_or_edited(mutation):
+    from official_financial_filing_evidence import admit_official_financial_fact
+    row=deepcopy(next(r for r in _retained_rows() if r["ticker"]=="VNM"))
+    if mutation=="value": row["normalized_value"]+=1; row["value"]=row["normalized_value"]
+    if mutation=="status": row["audit_or_review_status"]="audited"
+    if mutation=="assurance": row["assurance_evidence"]["document_sha256"]="f"*64
+    if mutation=="citation": row["citation_id"]="cross-document-reuse"
+    if mutation=="contract": row["ingress_contract"]="reviewed_interim_canonical_ingress/v3"
+    if mutation=="metadata": row["document_metadata"]={"qualification_status":"DOCUMENT_METADATA_QUALIFIED"}
+    if mutation=="period": row["reporting_period"]="2026-Q3"
+    if mutation=="new_row": row["ticker"]="PNJ"
+    result=admit_official_financial_fact(row)
+    assert result["state"]!="ADMITTED" and "admission_basis" not in result
+
+
+def test_pinned_legacy_rows_still_respect_cutoff_and_intended_use():
+    from official_financial_filing_evidence import admit_official_financial_fact
+    rows=_retained_rows()
+    early=[admit_official_financial_fact(r,cutoff="2026-09-01T00:00:00+07:00") for r in rows]
+    assert all(r["state"]=="BLOCKED" and "AFTER_KNOWLEDGE_CUTOFF" in r["reason_codes"] for r in early)
+    annual=[r for r in rows if r.get("context_kind") in {"AUDITED_ANNUAL_FIELD","EARNINGS_QUALITY_COMPONENT"}]
+    assert annual and all(admit_official_financial_fact(r,intended_use="VALUATION_INPUT_WHERE_METRIC_PERMITS")["state"]=="BLOCKED" for r in annual)
 
 
 def proved_fixture(period="2026-H1", *, ticker="PNJ", metric="revenue", value=123,
@@ -278,6 +313,24 @@ def test_refresh_shaped_row_cannot_bypass_through_legacy_citation_filename(tmp_p
     assert ('PNJ','revenue','2026-H1') not in load_official_citations(tmp_path)
 
 
+def test_legacy_citation_files_never_resolve_conflicts_by_line_order(tmp_path):
+    from canonical_fact_store import load_official_citations
+    folder=tmp_path/'data/official-evidence';folder.mkdir(parents=True)
+    path=folder/'financial_identity_citations.jsonl'
+    base={'ticker':'AAA','metric':'revenue','reporting_period':'2024','currency':'VND','scale':'units'}
+    rows=[{**base,'value':10,'citation_id':'c-1','evidence_id':'e-1'},
+          {**base,'value':11,'citation_id':'c-2','evidence_id':'e-2'},
+          {**base,'metric':'net_income','value':5,'citation_id':'n-2','evidence_id':'e-n2'},
+          {**base,'metric':'net_income','value':5,'citation_id':'n-1','evidence_id':'e-n1'}]
+    answers=[]
+    for ordered in (rows,list(reversed(rows))):
+        path.write_text(''.join(json.dumps(row)+'\n' for row in ordered),encoding='utf8')
+        answers.append(load_official_citations(tmp_path))
+    assert answers[0]==answers[1]
+    assert ('AAA','revenue','2024') not in answers[0]
+    assert answers[0][('AAA','net_income','2024')]['citation_id']=='n-1'
+
+
 @pytest.mark.parametrize('change',[
     {'document_metadata':{'document':'bad'}},{'assurance_evidence':'bad'},
     {'value':999},{'source_locator':'https://unrelated.invalid/fixture.pdf'}])
@@ -426,3 +479,42 @@ def test_publication_promotion_failure_restores_all_original_artifacts(tmp_path,
         _publish_official_artifacts({facts:prepared,paths[1]:'{"new":true}\n',paths[2]:'{"new":true}\n'},commit_path=facts,writer=writer)
     assert all(path.read_bytes()==content for path,content in originals.items())
     if fail_at==3: assert calls[-1]==facts
+
+
+def test_financial_v2_official_equity_respects_cutoff_and_never_follows_input_order():
+    from stocklookup_core.valuation.current_research_valuation_context import _official_equity_row
+    rows=_retained_rows()
+    qns=next(r for r in rows if r["ticker"]=="QNS")
+    assert _official_equity_row(rows,"QNS")==qns
+    assert _official_equity_row(rows,"QNS",cutoff="2026-10-07T15:00:00+07:00") is None
+    assert _official_equity_row(rows,"QNS",cutoff="2026-10-08T15:00:00+07:00")==qns
+    # Annual audited context rows are research context only; V2 valuation cannot widen that verdict.
+    assert _official_equity_row(rows,"PVD") is None and _official_equity_row(rows,"FPT") is None
+    assert _official_equity_row(list(reversed(rows)),"QNS")==_official_equity_row(rows,"QNS")
+
+
+def test_financial_v2_equal_time_conflicting_official_equity_fails_closed(monkeypatch):
+    from tests.financial_source_fixture import bind_fixture_source, install_synthetic_admission
+    from stocklookup_core.valuation.current_research_valuation_context import _official_equity_row
+    install_synthetic_admission(monkeypatch)
+    template={"ticker":"PNJ","canonical_metric":"shareholders_equity","reporting_period":"2026-H1",
+        "period_start":"2026-01-01","period_end":"2026-06-30","period_type":"interim","statement_scope":"consolidated",
+        "currency":"VND","qualification_state":"QUALIFIED","observed_at":"2026-10-07T00:00:00Z",
+        "knowledge_available_at":"2026-10-07T00:00:00Z"}
+    first=bind_fixture_source({**template,"normalized_value":100})[0]
+    second=bind_fixture_source({**template,"normalized_value":101})[0]
+    assert _official_equity_row([first],"PNJ")==first
+    assert _official_equity_row([first,second],"PNJ") is None
+    assert _official_equity_row([second,first],"PNJ") is None
+
+
+def test_stale_projected_copy_of_a_qualified_row_cannot_requalify():
+    from tests.test_current_official_evidence_projection import baseline
+    from market_wide_current_fundamental_research import project_session
+    rows=_retained_rows()
+    session=dict(session="2026-10-08",cutoff="2026-10-08T15:00:00+07:00")
+    first=project_session(baseline=baseline(),official_rows=rows,**session)
+    cached=[deepcopy(f) for r in first["records"].values() for f in r["official_field_context"]]
+    assert cached and all(f.get("factual_status") for f in cached)
+    replay=project_session(baseline=baseline(),official_rows=cached,**session)
+    assert not any(r["official_field_context"] for r in replay["records"].values())
