@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 
 import pytest
+from tests.financial_source_fixture import bind_fixture_source, synthetic_retained_source_io
 
 import market_wide_current_fundamental_research as fundamental
 import market_wide_current_corporate_intelligence as ci
@@ -29,14 +30,16 @@ def baseline():
 
 def rows(currency='VND'):
     # These original VND boundary regressions deliberately use one fixed currency lane.
-    return [r for line in (ROOT / "derived/financial-evidence-currency-refresh-v1/qualified_official_facts.jsonl").read_text(encoding="utf-8").splitlines()
+    return [bind_fixture_source(r)[0] for line in (ROOT / "derived/financial-evidence-currency-refresh-v1/qualified_official_facts.jsonl").read_text(encoding="utf-8").splitlines()
             if (r := json.loads(line))['currency'] == currency
             and r['period_type'] == 'interim'
             and (currency != 'VND' or r['canonical_metric'] in {'revenue','net_income'})]
 
 
 def all_rows():
-    return [json.loads(line) for line in (ROOT / 'derived/financial-evidence-currency-refresh-v1/qualified_official_facts.jsonl').read_text(encoding='utf8').splitlines()]
+    # Consumer controls use independently bound synthetic sources with the same values.
+    # Original retained rows remain unverified and are covered by the read-only integrity test.
+    return [bind_fixture_source(json.loads(line))[0] for line in (ROOT / 'derived/financial-evidence-currency-refresh-v1/qualified_official_facts.jsonl').read_text(encoding='utf8').splitlines()]
 
 
 def test_annual_ingress_cannot_strip_all_context_markers_to_escape_restriction():
@@ -190,7 +193,9 @@ def test_old_interim_is_historical_and_never_current():
         row.update(reporting_period="2024-H1", period_start="2024-01-01", period_end="2024-06-30")
     value = project(source)
     assert value["official_projection"]["current_official_field_count"] == 0
-    assert value["official_projection"]["historical_official_overlay_field_count"] == 4
+    assert value["official_projection"]["historical_official_overlay_field_count"] == 0
+    assert len(value["official_projection"]["rejected_fields"]) == 4
+    assert all('SOURCE_PERIOD_NOT_ADMITTED' in r['reasons'] for r in value['official_projection']['rejected_fields'])
 
 
 def test_missing_metric_carries_no_official_or_provider_fact_claim():

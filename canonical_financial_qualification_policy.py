@@ -61,6 +61,8 @@ def build_evidence_index(verified_entries: Mapping[tuple, Mapping[str, Any]] | N
     for key, entry in sorted((verified_entries or {}).items(), key=lambda item: tuple(map(str, item[0]))):
         if not isinstance(entry, Mapping) or not isinstance(key, tuple) or len(key) != 3:
             continue
+        if entry.get("verified") is not True:
+            continue
         normalized = dict(entry)
         normalized["verified"] = True
         result[_key(*key)] = normalized
@@ -81,21 +83,21 @@ def _matching_evidence(fact: Mapping[str, Any], evidence_index: Mapping[tuple, M
         if not isinstance(entry, Mapping):
             continue
         try:
-            if float(entry.get("value")) != float(fact.get("value")):
+            from decimal import Decimal, InvalidOperation
+            if Decimal(str(entry.get("value"))) != Decimal(str(fact.get("value"))):
                 continue
-        except (TypeError, ValueError):
+        except (TypeError, ValueError, InvalidOperation):
             continue
-        if entry.get("statement_scope") not in (None, fact.get("statement_scope")):
+        if entry.get("verified") is not True or entry.get("statement_scope") != fact.get("statement_scope"):
+            continue
+        if entry.get("currency") is not None and fact.get("currency") is not None and entry["currency"] != fact["currency"]:
+            continue
+        evidence_scale = entry.get("unit_scale", entry.get("scale"))
+        fact_scale = 1 if fact.get("scale") == "units" else fact.get("scale")
+        if evidence_scale is not None and fact_scale is not None and evidence_scale != fact_scale:
             continue
         return dict(entry)
-    # Direct citation/evidence fields are an already-established upstream contract.  They are
-    # accepted for pure callers/tests, but are never manufactured from a provider fact here.
-    if fact.get("citation_id") and fact.get("evidence_id"):
-        return {
-            "citation_id": fact.get("citation_id"), "evidence_id": fact.get("evidence_id"),
-            "document_sha256": fact.get("document_sha256"), "citation": fact.get("citation"),
-            "verified": True,
-        }
+    # Direct caller citation labels do not constitute hash-verified retained evidence.
     return None
 
 

@@ -6,6 +6,7 @@ evidence that a production record was contaminated.
 """
 from copy import deepcopy
 import json
+import hashlib
 from pathlib import Path
 
 import pytest
@@ -112,4 +113,300 @@ def test_retained_overlay_inventory_is_read_only():
     rows=[json.loads(line) for line in before.splitlines()]
     assert len(rows)==27 and len({r['document_sha256'] for r in rows})==9
     assert all(r['assurance_evidence']['document_sha256']==r['document_sha256'] for r in rows)
+    from official_financial_filing_evidence import admit_official_financial_fact
+    assert all(admit_official_financial_fact(row)["state"]=="UNKNOWN" for row in rows)
+    assert hashlib.sha256(before).hexdigest()=="a1f057017a9309f5c5a2a1a9ec53c3746500f9355bf45642e039ebf2608e33ff"
     assert path.read_bytes()==before
+
+
+def proved_fixture(period="2026-H1", *, ticker="PNJ", metric="revenue", value=123,
+                   currency="VND", scale=1, observed="2026-10-07T00:00:00Z", native_pdf=False):
+    """Entirely synthetic document/source; no real issuer disclosure is fabricated."""
+    from official_source_registry import load_registry
+    from official_financial_filing_evidence import qualify_document_metadata
+    from official_financial_period_identity import period_bounds
+    from financial_statement_template_recognizer import GENERIC_METRIC_RULES
+    from financial_evidence_currency_contract import ISSUER_IR_INDEX_SEEDS
+    annual=period=="2025"
+    status="audited" if annual else "reviewed"
+    title=("BAO CAO KIEM TOAN DOC LAP chung toi da kiem toan hop nhat" if annual else
+           "BAO CAO SOAT XET hop dong dich vu soat xet so 2410 hop nhat giua nien do")
+    period_text={"2025":"financial year ended 31 December 2025",
+          "2026-H1":"six months ended 30 June 2026","2026-Q2":"second quarter 2026"}[period]
+    spec=GENERIC_METRIC_RULES.get(metric)
+    label=spec["source_label"] if spec else {"provision_charge_or_reversal_adjustment":"Provisions",
+        "investment_property_disposal_result":"thanh ly bat dong san dau tu"}.get(metric,"synthetic unknown metric")
+    raw=str(value//scale) if value>=0 else '('+str(abs(value)//scale)+')'
+    unit="Unit: "+({1:"",1000:"thousand ",1_000_000:"million "}[scale])+currency
+    if native_pdf:
+        import unicodedata
+        label=''.join(c for c in unicodedata.normalize('NFD',label.replace('đ','d').replace('Đ','D')) if not unicodedata.combining(c))
+    text_payload=(ticker+" synthetic fixture\n"+period_text+"\n"+title+"\nconsolidated\n"+unit+"\n"+label+" "+raw)
+    payload=text_payload.encode("utf8")
+    if native_pdf:
+        payload=_synthetic_pdf(text_payload)
+    sha=hashlib.sha256(payload).hexdigest()
+    materialization={"document_sha256":sha,"materialization_id":"b"*64,"pages":[{
+        "page_number":1,"source_image_evidence":{"rendered_image_sha256":"c"*64},
+        "ocr_derived_text_evidence":{"tokens":[{"text":word,"token_id":str(i),"raw_token_order":i}
+                                               for i,word in enumerate(title.split())]}}]}
+    proof=assurance.resolve_document_assurance_evidence(materialization)
+    if native_pdf:
+        proof=assurance.resolve_native_document_assurance(sha,{1:text_payload})
+    text={"2025":"financial year ended 31 December 2025",
+          "2026-H1":"six months ended 30 June 2026","2026-Q2":"second quarter 2026"}[period]
+    seed=ISSUER_IR_INDEX_SEEDS[ticker]
+    from urllib.parse import urlsplit
+    url="https://"+str(urlsplit(seed).hostname)+"/test-only-synthetic-fixture.pdf"
+    source={"ticker":ticker,"document_id":"synthetic-doc","sha256":sha,"source_id":"issuer_ir",
+        "canonical_url":url,"final_url":url,
+        "document_class":"audited_annual_financial_statements" if annual else "reviewed_interim_financial_statements",
+        "acquisition_status":"retained","observed_at":observed,"reporting_period":period,
+        "relative_path":"fixture.pdf"}
+    document={"document_id":source["document_id"],"sha256":sha,"source_locator":source["canonical_url"],
+        "source_id":"issuer_ir","observed_at":source["observed_at"],"immutable_bytes_verified":True}
+    claims={k:{"value":v,"evidence_span":{"citation_id":"synthetic-metadata","document_sha256":sha,
+        "source_page":1,"text":text if k in {"reporting_period","periodicity"} else unit if k=="unit_scale" else str(v)}}
+        for k,v in {"reporting_period":period,"periodicity":"annual" if annual else "interim",
+            "statement_scope":"consolidated","currency":currency,"unit_scale":scale}.items()}
+    metadata=qualify_document_metadata({"issuer_identity":ticker,"entity_type":"corporate","document":document,"metadata":claims})
+    start,end=period_bounds(period)
+    row={"ticker":ticker,"canonical_metric":metric,"reporting_period":period,"period_start":start,"period_end":end,
+        "period_type":"annual" if annual else "interim","statement_family":str(spec["statement_type"]) if spec else "income_statement" if metric=="investment_property_disposal_result" else "cash_flow","statement_scope":"consolidated",
+        "currency":currency,"unit_scale":1,"source_unit_scale":scale,"raw_value_text":raw,"normalized_value":value,
+        "raw_row_label":label, "source_span":{"text":label+" "+raw,
+            "document_sha256":sha,"citation_id":"synthetic-value","source_page":1},
+        "document_sha256":sha,"citation_id":"synthetic-value","document_metadata":metadata,
+        "qualification_state":"QUALIFIED","audit_or_review_status":status,"assurance_evidence":proof,
+        "observed_at":source["observed_at"],"knowledge_available_at":source["observed_at"]}
+    registry=load_registry()
+    synthetic_source=next(s for s in registry["sources"] if s["source_id"]=="issuer_ir")
+    synthetic_source["allowed_hosts"].append("synthetic.invalid")
+    synthetic_source.get("host_document_types",{}).pop("synthetic.invalid",None)
+    return row,{"source_record":source,"retained_bytes":payload,"registry":registry,"document_pages":{1:text_payload}}
+
+
+def _synthetic_pdf(text):
+    """Minimal owned ASCII PDF fixture; no external document or PDF generator dependency."""
+    lines=[line.replace('\\','\\\\').replace('(','\\(').replace(')','\\)') for line in text.splitlines()]
+    stream=('BT /F1 10 Tf 40 760 Td '+ ' 0 -14 Td '.join('('+line+') Tj' for line in lines)+' ET').encode('ascii')
+    objects=[b'<< /Type /Catalog /Pages 2 0 R >>',b'<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
+        b'<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>',
+        b'<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>',
+        b'<< /Length '+str(len(stream)).encode()+b' >>\nstream\n'+stream+b'\nendstream']
+    output=b'%PDF-1.4\n'; offsets=[0]
+    for number,obj in enumerate(objects,1):
+        offsets.append(len(output));output+=str(number).encode()+b' 0 obj\n'+obj+b'\nendobj\n'
+    xref=len(output)
+    output+=b'xref\n0 6\n0000000000 65535 f \n'+b''.join(f'{offset:010d} 00000 n \n'.encode() for offset in offsets[1:])
+    return output+b'trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n'+str(xref).encode()+b'\n%%EOF\n'
+
+
+@pytest.mark.parametrize('period',['2025','2026-H1','2026-Q2'])
+def test_native_retained_pdf_reader_replays_owned_source_and_fails_closed_without_parser(tmp_path,period):
+    from stocklookup_core.evidence.official_document_qualification import admit_retained_financial_fact
+    row,context=proved_fixture(period,native_pdf=True)
+    (tmp_path/'fixture.pdf').write_bytes(context['retained_bytes'])
+    (tmp_path/'official_document_acquisition_manifest.json').write_text(json.dumps({'records':[context['source_record']]}),encoding='utf8')
+    result=admit_retained_financial_fact(row,evidence_root=tmp_path,registry=context['registry'])
+    try:
+        import pypdf
+    except ImportError:
+        assert result['state']=='UNKNOWN' and 'RETAINED_DOCUMENT_TEXT_PROOF_UNAVAILABLE' in result['reason_codes']
+    else:
+        assert result['state']=='ADMITTED',result
+        from stocklookup_core.evidence.official_document_qualification import qualify_retained_document, QUALIFICATION_SUCCESS_STATUS
+        qualification=qualify_retained_document(context['source_record'],evidence_root=tmp_path,registry=context['registry'])
+        assert qualification.qualification_status==QUALIFICATION_SUCCESS_STATUS
+        bad=deepcopy(row);bad['normalized_value']+=1
+        assert admit_retained_financial_fact(bad,evidence_root=tmp_path,registry=context['registry'])['state']=='BLOCKED'
+    (tmp_path/'fixture.pdf').write_bytes(context['retained_bytes']+b'changed')
+    assert admit_retained_financial_fact(row,evidence_root=tmp_path,registry=context['registry'])['state']=='BLOCKED'
+
+
+@pytest.mark.parametrize("period",["2025","2026-H1","2026-Q2"])
+def test_shared_admission_positive_controls(period):
+    from official_financial_filing_evidence import admit_official_financial_fact
+    row,context=proved_fixture(period)
+    result=admit_official_financial_fact(row,**context)
+    assert result["state"]=="ADMITTED",result
+    assert result==admit_official_financial_fact(deepcopy(row),**context)
+
+
+@pytest.mark.parametrize('body',[
+    'PNJ\nQ3 2026 financial statements\nnotes: financial year ended 31 December 2025\nUnit: VND\nconsolidated\nBAO CAO KIEM TOAN DOC LAP chung toi da kiem toan hop nhat',
+    'PNJ\nfinancial year ended 31 December 2025\nUnit: VND\nconsolidated\naudit engagement notice BAO CAO KIEM TOAN DOC LAP',
+    'PNJ\nfinancial year ended 31 December 2025\nUnit: VND\nconsolidated\nnot audited BAO CAO KIEM TOAN DOC LAP chung toi da kiem toan hop nhat'])
+def test_document_class_hint_cannot_qualify_actual_retained_document(tmp_path,body):
+    from stocklookup_core.evidence.official_document_qualification import qualify_retained_document
+    _,context=proved_fixture('2025',native_pdf=True)
+    payload=_synthetic_pdf(body)
+    record={**context['source_record'],'sha256':hashlib.sha256(payload).hexdigest()}
+    (tmp_path/'fixture.pdf').write_bytes(payload)
+    result=qualify_retained_document(record,evidence_root=tmp_path,registry=context['registry'])
+    assert result.qualification_status=='DISQUALIFIED_RETAINED_DOCUMENT'
+    assert result.audit_status=='unknown' and result.statement_scope=='unknown'
+
+
+def test_actual_extracted_fact_owner_requires_whole_bound_source():
+    row,context=proved_fixture()
+    candidate={**row,'qualification_status':'OFFICIAL_FACT_QUALIFIED',
+        'page_number':1,'unit_scale':row['source_unit_scale']}
+    document={**context['source_record'],'document_metadata':row['document_metadata'],
+        'assurance_evidence':row['assurance_evidence'],'audit_or_review_status':row['audit_or_review_status'],
+        '_source_record':context['source_record'],'_retained_bytes':context['retained_bytes'],
+        '_source_registry':context['registry'],'_document_pages':context['document_pages']}
+    assert refresh._qualify_extracted_fact(candidate,document)['qualification_state']=='QUALIFIED'
+    bad=deepcopy(document);bad['_retained_bytes']+=b'changed'
+    assert refresh._qualify_extracted_fact(candidate,bad)['qualification_state']=='BLOCKED'
+
+
+def test_unregistered_intended_use_has_no_authority():
+    from official_financial_filing_evidence import admit_official_financial_fact
+    row,context=proved_fixture()
+    result=admit_official_financial_fact(row,**context,intended_use='Q3_VALUE_AUTHORITY')
+    assert result['state']=='INAPPLICABLE' and result['reason_codes']==['INTENDED_USE_OUTSIDE_CONTRACT']
+
+
+def test_refresh_shaped_row_cannot_bypass_through_legacy_citation_filename(tmp_path):
+    from canonical_fact_store import load_official_citations
+    row,_=proved_fixture()
+    row.pop('document_metadata')
+    row.update(metric='revenue',value=row['normalized_value'])
+    folder=tmp_path/'data/official-evidence';folder.mkdir(parents=True)
+    (folder/'financial_identity_citations.jsonl').write_text(json.dumps(row)+'\n',encoding='utf8')
+    assert ('PNJ','revenue','2026-H1') not in load_official_citations(tmp_path)
+
+
+@pytest.mark.parametrize('change',[
+    {'document_metadata':{'document':'bad'}},{'assurance_evidence':'bad'},
+    {'value':999},{'source_locator':'https://unrelated.invalid/fixture.pdf'}])
+def test_malformed_or_contradictory_proof_cannot_promote(change):
+    from official_financial_filing_evidence import admit_official_financial_fact
+    row,context=proved_fixture()
+    row.update(change)
+    assert admit_official_financial_fact(row,**context)['state']=='BLOCKED'
+
+
+@pytest.mark.parametrize('manifest_present',[True,False])
+def test_native_panel_adapter_cannot_promote_unadmitted_current_source(tmp_path,monkeypatch,manifest_present):
+    import official_financial_pdf_page_evidence as pdf
+    row,context=proved_fixture('2025',native_pdf=True)
+    path=tmp_path/'fixture.pdf';path.write_bytes(context['retained_bytes'])
+    source=context['source_record']
+    if manifest_present:
+        (tmp_path/'official_document_acquisition_manifest.json').write_text(json.dumps({'records':[source]}),encoding='utf8')
+    # Isolate table extraction; exercise the actual current-panel admission against the owned bytes/pages.
+    pages=[{'page_number':1,'page_text':context['document_pages'][1],'status':'TEXT_AVAILABLE','positioned_tokens':[]}]
+    monkeypatch.setattr(pdf,'page_evidence',lambda **_:pages)
+    candidate={**row,'fiscal_period':'2025','qualification_status':'OFFICIAL_FACT_QUALIFIED',
+        'table_id':row['citation_id'],'page_number':1,'table_heading':'synthetic table',
+        'period_column_label':'2025','extraction_method':'synthetic fixture','unit_scale':1,
+        'source_span':row['source_span']}
+    monkeypatch.setattr(pdf,'extract_candidates',lambda **_:([candidate],[]))
+    artifact=pdf.build_artifact(document={**source,'official_url':source['canonical_url'],'retrieved_at':source['observed_at']},path=path)
+    fact=artifact['p3f13_panel_facts'][0]
+    assert fact['is_positive_authority'] is manifest_present
+    assert fact['qualification_state']==('QUALIFIED' if manifest_present else 'UNQUALIFIED')
+
+
+@pytest.mark.parametrize('negative',['not been reviewed','not yet independently reviewed','chua duoc soat xet'])
+def test_expanded_negation_blocks_both_actual_recognizers(negative):
+    text='BAO CAO SOAT XET hop nhat giua nien do hop dong dich vu soat xet so 2410 '+negative
+    assert recognize_audit_or_review(text)['audit_or_review_status'] is None
+    from tests.test_reviewed_interim_canonical_ingress import _materialization
+    assert assurance.resolve_document_assurance_evidence(_materialization(text))['state']=='BLOCKED'
+
+
+@pytest.mark.parametrize("mutation",["bytes","source","ticker","assurance","metadata","period","units","cutoff"])
+def test_shared_admission_refuses_broken_bindings(mutation):
+    from official_financial_filing_evidence import admit_official_financial_fact
+    row,context=proved_fixture()
+    if mutation=="bytes": context["retained_bytes"]=b"wrong original bytes"
+    if mutation=="source": context["source_record"]["final_url"]="https://unregistered.invalid/wrong.pdf"
+    if mutation=="ticker": row["ticker"]="FAKE"
+    if mutation=="assurance": row["assurance_evidence"]["document_sha256"]="f"*64
+    if mutation=="metadata": row["document_metadata"]["qualification_status"]="DOCUMENT_METADATA_BLOCKED"
+    if mutation=="period": row["reporting_period"]="2026-Q3"
+    if mutation=="units": row["unit_scale"]=1_000_000
+    if mutation=="cutoff": context["cutoff"]="2026-10-06T00:00:00Z"
+    assert admit_official_financial_fact(row,**context)["state"]=="BLOCKED"
+
+
+def test_publication_validates_whole_batch_and_retains_history():
+    from official_financial_filing_evidence import admit_official_financial_fact, prepare_official_overlay_publication
+    row,context=proved_fixture()
+    admission=lambda r:admit_official_financial_fact(r,**context)
+    history='{"historical_marker":true}\n'
+    result=prepare_official_overlay_publication([row],retained_text=history,admission=admission)
+    assert result.startswith(history)
+    bad=deepcopy(row);bad["normalized_value"]=124
+    with pytest.raises(ValueError):
+        prepare_official_overlay_publication([row,bad],retained_text=history,admission=admission)
+    with pytest.raises(ValueError,match="CONFLICT"):
+        prepare_official_overlay_publication([row],retained_text=json.dumps(bad)+"\n",admission=admission)
+
+
+@pytest.mark.parametrize("href",["2026-q3-interim-audited-2025.pdf","2025-audit-engagement.pdf"])
+def test_ir_discovery_does_not_reclassify_excluded_documents(href):
+    assert refresh.parse_index_document_links('<a href="'+href+'">financial statement</a>',"https://synthetic.invalid/")==[]
+
+
+@pytest.mark.parametrize("title",["Thông báo ký hợp đồng kiểm toán báo cáo tài chính năm 2026",
+    "Báo cáo tài chính quý III năm 2026"])
+def test_hnx_discovery_does_not_call_engagement_or_q3_an_annual_statement(title):
+    from hnx_financial_filing_scaleout import discover
+    feed=('<rss><channel><item><title>'+title+'</title><link>https://www.hnx.vn/fixture.html</link></item></channel></rss>').encode("utf8")
+    registry={"sources":[{"source_id":"hnx","authority":"HNX","allowed_hosts":["www.hnx.vn"],
+        "document_types":["audited_annual_financial_statements","reviewed_interim_financial_statements"]}]}
+    assert discover(feed,registry)==[]
+
+
+def test_negated_retained_assurance_cannot_qualify_at_resolver():
+    row,_=proved_fixture()
+    text="BAO CAO SOAT XET hop nhat giua nien do hop dong dich vu soat xet so 2410 khong duoc soat xet"
+    page={"page_number":1,"ocr_derived_text_evidence":{"tokens":[{"text":word,"token_id":str(i),"raw_token_order":i}
+          for i,word in enumerate(text.split())]}}
+    result=assurance.resolve_document_assurance_evidence({"document_sha256":row["document_sha256"],"pages":[page]})
+    assert result["state"]=="BLOCKED"
+
+
+def test_canonical_policy_does_not_admit_direct_citation_labels():
+    from canonical_financial_qualification_policy import evaluate_fact
+    from tests.test_canonical_financial_qualification_policy import _fact
+    fact=_fact(status="qualified");fact.update(citation_id="fake-citation",evidence_id="fake-evidence")
+    assert evaluate_fact(fact)["status"]!="qualified"
+
+
+def test_metadata_blocked_row_cannot_reach_fundamental_or_valuation():
+    from tests.test_current_official_evidence_projection import baseline
+    from market_wide_current_fundamental_research import project_session
+    from official_legacy_precedence import official_is_value_qualified
+    row,_=proved_fixture()
+    row["document_metadata"]["qualification_status"]="DOCUMENT_METADATA_BLOCKED"
+    result=project_session(baseline=baseline(),official_rows=[row],session="2026-10-08",cutoff="2026-10-08T15:00:00+07:00")
+    assert not any(r["official_field_context"] for r in result["records"].values())
+    assert not official_is_value_qualified(row)
+
+
+@pytest.mark.parametrize("fail_at",[2,3])
+def test_publication_promotion_failure_restores_all_original_artifacts(tmp_path,fail_at):
+    from atomic_io import atomic_write_file
+    from official_financial_filing_evidence import admit_official_financial_fact, prepare_official_overlay_publication
+    from stocklookup_core.evidence.official_document_qualification import _publish_official_artifacts
+    row,context=proved_fixture()
+    facts=tmp_path/refresh.PUBLIC_FACTS
+    paths=[facts,tmp_path/"precedence.jsonl",tmp_path/"report.json"]
+    originals={path:b'{"original":true}\n' for path in paths}
+    for path,content in originals.items(): path.write_bytes(content)
+    prepared=prepare_official_overlay_publication([row],retained_text=facts.read_text(),
+        admission=lambda r:admit_official_financial_fact(r,**context))
+    calls=[]
+    def writer(path,content):
+        calls.append(path)
+        atomic_write_file(path,content)
+        if len(calls)==fail_at: raise OSError("synthetic promotion failure")
+    with pytest.raises(OSError,match="synthetic"):
+        _publish_official_artifacts({facts:prepared,paths[1]:'{"new":true}\n',paths[2]:'{"new":true}\n'},commit_path=facts,writer=writer)
+    assert all(path.read_bytes()==content for path,content in originals.items())
+    if fail_at==3: assert calls[-1]==facts

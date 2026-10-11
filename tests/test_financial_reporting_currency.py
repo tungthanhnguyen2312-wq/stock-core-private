@@ -8,6 +8,7 @@ import subprocess
 import sys
 
 import pytest
+from tests.financial_source_fixture import bind_fixture_source, synthetic_retained_source_io
 
 from stocklookup_core.decision.opportunity_axis_freshness import reporting_period_basis as basis
 from stocklookup_core.decision.opportunity_axis_freshness import reporting_period_relation as relation
@@ -28,6 +29,9 @@ BEFORE = "2026-09-05T00:00:00Z"
 def official(**updates):
     rows = [json.loads(line) for line in FACTS.read_text(encoding="utf8").splitlines()]
     row = next(r for r in rows if r["ticker"] == "PNJ" and r["canonical_metric"] == "revenue")
+    if isinstance(updates.get("normalized_value"), int) and not isinstance(updates.get("normalized_value"), bool):
+        row["normalized_value"] = updates["normalized_value"]
+    row, _ = bind_fixture_source(row)
     row.update(updates)
     return row
 
@@ -180,7 +184,7 @@ def test_projection_preserves_measurements_provenance_and_separate_five_dimensio
 def test_historical_annual_remains_useful_and_year_transition_changes_only_legacy_label():
     annual = official(reporting_period="2025", period_type="annual", period_start="2025-01-01", period_end="2025-12-31", assurance="audited")
     # Use an actual admitted annual field rather than manufacturing a new annual ingress.
-    annual = next(json.loads(x) for x in FACTS.read_text(encoding="utf8").splitlines() if json.loads(x)["ticker"] == "HPG" and json.loads(x)["canonical_metric"] == "revenue")
+    annual, _ = bind_fixture_source(next(json.loads(x) for x in FACTS.read_text(encoding="utf8").splitlines() if json.loads(x)["ticker"] == "HPG" and json.loads(x)["canonical_metric"] == "revenue"))
     view = build([annual], financial_product=financial(names=("HPG",)), tickers=["HPG"], provider_observations=[])
     assert view["records"]["HPG"]["qualified_official_fields"][0]["formal_temporal_status"] == "HISTORICAL_OFFICIAL_FACT"
     now, later = build(), build(decision_session="2027-01-05", knowledge_cutoff="2027-01-05T15:00:00+07:00")
@@ -357,13 +361,12 @@ def test_public_overlay_real_counts_and_unverified_retention_claims():
     view = build(rows, financial_product=financial(names=COHORT), tickers=COHORT,
                  provider_observations=[], cohort_report=json.loads(REPORT.read_text(encoding="utf8")))
     assert view["coverage"]["selected_ticker_denominator"] == 14
-    assert view["coverage"]["qualified_fact_count"] == 27
-    assert view["coverage"]["qualified_ticker_count"] == 7
+    assert len(rows) == 27
+    assert view["coverage"]["qualified_fact_count"] == 0
+    assert view["coverage"]["qualified_ticker_count"] == 0
     assert view["coverage"]["verified_retained_document_count"] == 0
     assert view["coverage"]["unverified_document_claim_count"] == 9
-    assert sum(q["source"]["publication_date"] is None for r in view["records"].values() for q in r["qualified_official_fields"]) == 27
-    assert {t: len(r["qualified_official_fields"]) for t, r in view["records"].items() if r["qualified_official_fields"]} == {
-        "FPT": 3, "HPG": 2, "PNJ": 6, "PVD": 7, "QNS": 1, "VNM": 1, "VRE": 7}
+    assert all(not r["qualified_official_fields"] for r in view["records"].values())
 
 
 def test_sealed_report_receipt_can_establish_bounded_retention_not_field_authority():

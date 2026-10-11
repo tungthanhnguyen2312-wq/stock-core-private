@@ -2,11 +2,13 @@
 from __future__ import annotations
 
 import inspect
+import hashlib
 import json
 import subprocess
 from pathlib import Path
 
 import pytest
+from tests.financial_source_fixture import bind_fixture_source, synthetic_retained_source_io
 
 import official_financial_assurance_evidence as assurance_module
 import reviewed_interim_canonical_ingress as ingress_module
@@ -40,9 +42,9 @@ def _materialization(*page_texts: str, sha: str = SHA) -> dict:
     for number, text in enumerate(page_texts, start=1):
         tokens = [{"text": word, "token_id": f"t{number}-{index}", "raw_token_order": index, "top": 1.0, "bottom": 2.0}
                   for index, word in enumerate(text.split())]
-        pages.append({"page_number": number, "source_image_evidence": {"rendered_image_sha256": f"img{number}"},
+        pages.append({"page_number": number, "source_image_evidence": {"rendered_image_sha256": hashlib.sha256(text.encode()).hexdigest()},
                       "ocr_derived_text_evidence": {"tokens": tokens}})
-    return {"document_sha256": sha, "materialization_id": "m1", "pages": pages}
+    return {"document_sha256": sha, "materialization_id": hashlib.sha256("|".join(page_texts).encode()).hexdigest(), "pages": pages}
 
 
 def _qualification(period: str = "2026-H1", *, currency: str = "VND", metric: str = "revenue", value: int = 1_000_000_000) -> dict:
@@ -60,11 +62,33 @@ def _reviewed_evidence() -> dict:
 
 
 def _facts(period: str = "2026-H1", status: str = "reviewed", evidence=None, **kwargs) -> list[dict]:
-    return panel_facts_from_qualified_ocr(
-        _qualification(period, **{k: v for k, v in kwargs.items() if k in {"currency", "metric", "value"}}),
-        entity_type="corporate", statement_scope=kwargs.get("scope", "consolidated"),
-        audit_or_review_status=status, assurance_evidence=evidence,
-        knowledge_available_at=kwargs.get("knowledge", OBSERVED), observed_at=OBSERVED)
+    qualification=_qualification(period, **{k: v for k, v in kwargs.items() if k in {"currency", "metric", "value"}})
+    scope=kwargs.get("scope","consolidated")
+    knowledge=kwargs.get("knowledge",OBSERVED)
+    validate_assurance_claim(status,evidence,document_sha256=SHA)
+    if not assurance_module.assurance_proof_is_bound(status,evidence,document_sha256=SHA):
+        raise ValueError("ASSURANCE_EVIDENCE_DOES_NOT_SUPPORT_STATUS")
+    if scope!='consolidated' or (status=='reviewed' and period.isdigit()) or str(knowledge)[:10]<=('2025-12-31' if period=='2025' else '2026-06-30'):
+        return panel_facts_from_qualified_ocr(qualification,entity_type='corporate',statement_scope=scope,
+            audit_or_review_status=status,assurance_evidence=evidence,knowledge_available_at=knowledge,observed_at=OBSERVED)
+    from official_financial_period_identity import period_bounds
+    start,end=period_bounds(period)
+    value=qualification['qualified_facts'][0]
+    source,context=bind_fixture_source({'ticker':'PNJ','canonical_metric':value['canonical_metric'],
+        'normalized_value':value['value'],'currency':value['currency'],'unit_scale':1,'source_unit_scale':value['unit_scale'],
+        'reporting_period':period,'period_start':start,'period_end':end,'period_type':'annual' if period.isdigit() else 'interim',
+        'observed_at':OBSERVED,'knowledge_available_at':knowledge,'source_page':8})
+    qualification['document_sha256']=source['document_sha256']
+    lineage=value['source_lineage']
+    lineage['source_image_evidence']['document_sha256']=source['document_sha256']
+    lineage['row_object']['reconstructed_label']=source['raw_row_label']
+    lineage['ocr_derived_text_evidence']['current_raw']=source['raw_value_text']
+    value['statement_family']=source['statement_family']
+    return panel_facts_from_qualified_ocr(qualification,entity_type='corporate',statement_scope=scope,
+        audit_or_review_status=status,assurance_evidence=source['assurance_evidence'],
+        document_metadata=source['document_metadata'],source_record=context['source_record'],retained_bytes=context['retained_bytes'],
+        source_registry=context['registry'],document_pages=context['document_pages'],
+        knowledge_available_at=knowledge,observed_at=OBSERVED)
 
 
 def _rows() -> list[dict]:
@@ -88,7 +112,8 @@ def test_disposal_component_ingress_requires_exact_identity(change):
 
 
 def test_audited_annual_still_accepted():
-    facts = _facts("2025", "audited", knowledge="2026-08-09T00:00:00Z")
+    evidence = resolve_document_assurance_evidence(_materialization(AUDIT_PAGE))
+    facts = _facts("2025", "audited", evidence=evidence, knowledge="2026-10-07T00:00:00Z")
     assert facts[0]["period_type"] == "annual" and facts[0]["audit_or_review_status"] == "audited"
     assert (facts[0]["period_start"], facts[0]["period_end"]) == ("2025-01-01", "2025-12-31")
 
@@ -162,7 +187,8 @@ def test_reviewed_interim_accepted_when_explicitly_evidenced():
     assert evidence["state"] == "QUALIFIED" and evidence["audit_or_review_status"] == "reviewed"
     fact = _facts(evidence=evidence)[0]
     assert fact["audit_or_review_status"] == "reviewed"
-    assert fact["source_lineage"]["assurance_evidence"]["evidence_id"] == evidence["evidence_id"]
+    proof=fact["source_lineage"]["assurance_evidence"]
+    assert assurance_module.assurance_proof_is_bound("reviewed",proof,document_sha256=fact["source_lineage"]["document_sha256"])
 
 
 @pytest.mark.parametrize("status", ["unknown", "unaudited", "management-prepared", "", None, "Reviewed"])
@@ -348,11 +374,9 @@ def test_explicit_row_label_is_required_for_each_identity():
 
 
 def _line_fact(metric: str, code: str) -> list[dict]:
-    qualification = _qualification(metric=metric)
-    qualification["qualified_facts"][0]["source_lineage"]["line_code"] = code
-    return panel_facts_from_qualified_ocr(
-        qualification, entity_type="corporate", statement_scope="consolidated", audit_or_review_status="reviewed",
-        assurance_evidence=_reviewed_evidence(), knowledge_available_at=OBSERVED, observed_at=OBSERVED)
+    facts = _facts(metric=metric, evidence=_reviewed_evidence())
+    facts[0]["source_lineage"]["line_code"] = code
+    return facts
 
 
 def test_line_61_can_never_emit_net_income_into_the_overlay():
@@ -420,7 +444,19 @@ def test_overlay_refresh_preserves_other_periods_and_separate_report(tmp_path):
     annual = [r for r in existing if r['period_type']=='annual']
     result = {'report':{'documents':[{'reporting_period':'2025'}]},
               'overlay_rows':annual, 'precedence_rows':[]}
+    before = (tmp_path/PUBLIC_FACTS).read_bytes()
+    with pytest.raises(ValueError, match='CANDIDATE_NOT_ADMITTED'):
+        write_outputs(result,tmp_path,preserve_other_periods=True,report_name='annual_report.json')
+    assert (tmp_path/PUBLIC_FACTS).read_bytes()==before
+    assert not (tmp_path/'annual_report.json').exists()
+    source, _ = bind_fixture_source({'ticker':'PNJ','canonical_metric':'revenue','normalized_value':123,
+        'reporting_period':'2026-Q2','period_start':'2026-04-01','period_end':'2026-06-30',
+        'period_type':'interim','statement_scope':'consolidated','currency':'VND',
+        'qualification_state':'QUALIFIED','observed_at':'2026-10-07T00:00:00Z',
+        'knowledge_available_at':'2026-10-07T00:00:00Z'})
+    result['overlay_rows']=[source]
     write_outputs(result,tmp_path,preserve_other_periods=True,report_name='annual_report.json')
     after = [json.loads(line) for line in (tmp_path/PUBLIC_FACTS).read_text(encoding='utf8').splitlines()]
-    assert sorted(after,key=lambda r:r['citation_id']) == sorted(existing,key=lambda r:r['citation_id'])
+    assert after[:-1] == existing and after[-1]==source
+    assert (tmp_path/PUBLIC_FACTS).read_bytes().startswith(before)
     assert (tmp_path/'annual_report.json').is_file()

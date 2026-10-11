@@ -8,6 +8,7 @@ import subprocess
 import sys
 
 import pytest
+from tests.financial_source_fixture import bind_fixture_source, synthetic_retained_source_io
 
 import long_term_company_economics_evidence as economics
 from stocklookup_core.decision.human_ai_decision_evidence_packet import build_packet
@@ -21,7 +22,7 @@ BEFORE = "2026-10-07T15:00:00+07:00"
 
 @pytest.fixture
 def matrices():
-    rows = [json.loads(line) for line in FACTS.read_text(encoding="utf8").splitlines()]
+    rows = [bind_fixture_source(json.loads(line))[0] for line in FACTS.read_text(encoding="utf8").splitlines()]
     return {t: economics.build(ticker=t, knowledge_cutoff=CUTOFF, official_rows=rows) for t in ("PNJ", "PVD", "FPT")}
 
 
@@ -162,7 +163,7 @@ def test_cli_real_overlay_read_only_and_earlier_cutoff():
     args.cutoff = BEFORE
     early = cli.inspect(args)
     counts = {t: len(observations(p["sections"]["stock"]["fields"]["company_economics_evidence"]["value"]["matrix"])) for t, p in early["packets"].items()}
-    assert counts == {"FPT": 0, "PNJ": 3, "PVD": 3}
+    assert counts == {"FPT": 0, "PNJ": 0, "PVD": 0}
     assert hashlib.sha256(FACTS.read_bytes()).hexdigest() == before
 
 
@@ -245,4 +246,4 @@ def test_production_entrypoint_routes_only_explicit_offline_research():
     assert process.returncode == 0, process.stderr
     output = json.loads(process.stdout)
     assert output["status"] == "AVAILABLE" and output["persisted"] is False
-    assert len(observations(output["packets"]["PNJ"]["sections"]["stock"]["fields"]["company_economics_evidence"]["value"]["matrix"])) == 6
+    assert len(observations(output["packets"]["PNJ"]["sections"]["stock"]["fields"]["company_economics_evidence"]["value"]["matrix"])) == 0

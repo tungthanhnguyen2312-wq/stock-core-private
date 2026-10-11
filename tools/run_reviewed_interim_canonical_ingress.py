@@ -123,9 +123,23 @@ def run(*, landing_root: Path, document_specs=DOCUMENTS, reporting_period: str =
                 "route": page["route"], "native_failure_evidence": page.get("native_failure_evidence")}
                 for materialization in (front, statements) for page in materialization["pages"]]
         if assurance["state"] == "QUALIFIED":
+            from financial_evidence_currency_refresh import _metadata_from_pages
+            from official_source_registry import load_registry
+            pages = {page['page_number']: ' '.join(str(token.get('text') or '') for token in sorted(
+                (page.get('ocr_derived_text_evidence') or {}).get('tokens') or [],
+                key=lambda token:int(token.get('raw_token_order',0))))
+                for materialization in (front, statements) for page in materialization['pages']}
+            retained_path = (evidence_root / record['relative_path']).resolve()
+            if not retained_path.is_relative_to(evidence_root.resolve()):
+                raise ValueError('RETAINED_DOCUMENT_PATH_OUTSIDE_EVIDENCE_ROOT')
+            retained_bytes = retained_path.read_bytes()
+            metadata = _metadata_from_pages(pages, {**record,
+                'immutable_bytes_verified':hashlib.sha256(retained_bytes).hexdigest()==record['sha256']})
             panel_facts = panel_facts_from_qualified_ocr(
                 qualification, entity_type="corporate", statement_scope="consolidated",
                 audit_or_review_status=assurance["audit_or_review_status"], assurance_evidence=assurance,
+                document_metadata=metadata, source_record=record, retained_bytes=retained_bytes,
+                source_registry=load_registry(), document_pages=pages, evidence_subdir=evidence_subdir,
                 knowledge_available_at=known_at, observed_at=record["observed_at"],
             )
             rows, blocked = overlay_rows_from_panel_facts(panel_facts,
@@ -174,50 +188,25 @@ def run(*, landing_root: Path, document_specs=DOCUMENTS, reporting_period: str =
 def write_outputs(result: dict[str, Any], public_root: Path, *, preserve_other_periods: bool = False,
                   report_name: str = REPORT_NAME, preserve_other_documents: bool = False,
                   append_new_facts_only: bool = False) -> None:
-    public_root.mkdir(parents=True, exist_ok=True)
-    render = lambda rows: "".join(json.dumps(row, ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\n" for row in rows)  # noqa: E731
-    facts, precedence = list(result["overlay_rows"]), list(result["precedence_rows"])
-    report = dict(result["report"])
-    if append_new_facts_only:
-        def fact_key(row):
-            return tuple(row.get(k) for k in ("ticker", "canonical_metric", "reporting_period", "statement_scope"))
-        old_facts_path, old_precedence_path = public_root / PUBLIC_FACTS, public_root / PUBLIC_PRECEDENCE
-        old_facts = [json.loads(line) for line in old_facts_path.read_text(encoding="utf-8").splitlines()] if old_facts_path.exists() else []
-        old_precedence = [json.loads(line) for line in old_precedence_path.read_text(encoding="utf-8").splitlines()] if old_precedence_path.exists() else []
-        retained = {fact_key(row): row for row in old_facts}
-        added = []
-        for row in facts:
-            prior = retained.get(fact_key(row))
-            if prior is not None:
-                if any(prior.get(k) != row.get(k) for k in ("normalized_value", "currency", "unit_scale")):
-                    raise ValueError("APPEND_ONLY_OFFICIAL_FACT_CONFLICT")
-            else:
-                added.append(row)
-                retained[fact_key(row)] = row
-        new_keys = {fact_key(row) for row in added}
-        precedence = old_precedence + [row for row in precedence if tuple((row.get("key") or {}).get(k)
-            for k in ("ticker", "metric", "period", "scope")) in new_keys]
-        facts = old_facts + added
-        report["overlay_write"] = {"policy": "APPEND_ONLY_NEW_EXACT_KEYS", "appended_fact_count": len(added),
-                                   "prior_fact_count": len(old_facts), "prior_facts_preserved": True}
-        report.pop("artifact_sha256", None)
-        report["artifact_sha256"] = _hash(report)
-    elif preserve_other_periods or preserve_other_documents:
-        periods = {d["reporting_period"] for d in result["report"]["documents"]}
-        selected = ({(d["ticker"], d["reporting_period"]) for d in result["report"]["documents"]}
-                    if preserve_other_documents else set())
-        for filename, rows, period in ((PUBLIC_FACTS, facts, lambda r: r["reporting_period"]),
-                                      (PUBLIC_PRECEDENCE, precedence, lambda r: r["key"]["period"])):
-            path = public_root / filename
-            if path.exists():
-                rows.extend(r for r in (json.loads(line) for line in path.read_text(encoding="utf-8").splitlines())
-                            if ((r.get("ticker", (r.get("key") or {}).get("ticker")), period(r)) not in selected
-                                if preserve_other_documents else period(r) not in periods))
-    facts.sort(key=lambda row: (row["ticker"], row["reporting_period"], row["canonical_metric"]))
-    (public_root / PUBLIC_FACTS).write_text(render(facts), encoding="utf-8", newline="\n")
-    (public_root / PUBLIC_PRECEDENCE).write_text(render(precedence), encoding="utf-8", newline="\n")
-    (public_root / report_name).write_text(json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
-                                           encoding="utf-8", newline="\n")
+    from official_financial_filing_evidence import prepare_official_overlay_publication
+    from stocklookup_core.evidence.official_document_qualification import admit_retained_financial_fact
+    from stocklookup_core.evidence.official_document_qualification import _publish_official_artifacts
+    path = public_root / PUBLIC_FACTS
+    retained = path.read_bytes().decode("utf8") if path.exists() else ""
+    prepared = prepare_official_overlay_publication(result["overlay_rows"], retained_text=retained,
+                                                   admission=admit_retained_financial_fact)
+    if prepared is None:
+        return
+    # Serialize all companion outputs before the facts commit point. Legacy preservation
+    # flags no longer authorize removing/replacing any retained evidence row.
+    prior_precedence = public_root / PUBLIC_PRECEDENCE
+    old_precedence = prior_precedence.read_bytes().decode("utf8") if prior_precedence.exists() else ""
+    rendered_precedence = old_precedence + ("\n" if old_precedence and not old_precedence.endswith("\n") else "") + "".join(json.dumps(row, ensure_ascii=False, sort_keys=True, allow_nan=False) + "\n"
+                                                   for row in result["precedence_rows"])
+    rendered_report = json.dumps(result["report"], ensure_ascii=False, indent=2, sort_keys=True, allow_nan=False) + "\n"
+    _publish_official_artifacts({path: prepared, prior_precedence: rendered_precedence,
+                                public_root / report_name: rendered_report}, commit_path=path)
+    return
 
 
 def main() -> int:

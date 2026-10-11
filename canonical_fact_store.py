@@ -214,7 +214,17 @@ def load_official_citations(runtime_root: Path | str) -> dict[tuple, dict[str, A
                 record = json.loads(line)
             except ValueError:
                 continue
+            modern = any(field in record for field in ("canonical_metric", "ingress_contract", "document_metadata"))
+            if modern:
+                # Refresh-shaped rows cannot bypass common admission through a legacy citation filename.
+                from stocklookup_core.evidence.official_document_qualification import admit_retained_financial_fact
+                if admit_retained_financial_fact(record, intended_use="CANONICAL_CITATION")["state"] != "ADMITTED":
+                    continue
             metric = mapping.get(str(record.get("metric") or record.get("identity_type") or ""))
+            if modern:
+                metric = mapping.get(str(record.get("canonical_metric")), record.get("canonical_metric"))
+                if metric not in METRIC_REGISTRY:
+                    continue
             ticker = str(record.get("ticker") or "").upper()
             period = str(record.get("reporting_period") or "")
             value = record.get("value")
@@ -237,8 +247,7 @@ def load_official_citations(runtime_root: Path | str) -> dict[tuple, dict[str, A
         citations[(ticker, metric, period)] = dict(entry)
         if (metric in stock_metrics or financial_identity_is_stock_metric(metric)) and period.isdigit():
             citations[(ticker, metric, f"{period}-Q4")] = dict(entry)
-        if metric in stock_metrics and period == "2026-H1":
-            citations[(ticker, metric, "2026-Q2")] = dict(entry)
+        # A retained H1 statement does not prove a Q2 filing identity.
     from historical_net_income_semantic_correction import (
         apply_to_citation_mapping,
         load_semantic_correction_artifacts,
