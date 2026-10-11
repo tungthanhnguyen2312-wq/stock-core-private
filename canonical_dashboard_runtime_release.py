@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import Any, Mapping
 
 from atomic_io import atomic_copy_file, atomic_write_file, atomic_write_json, validate_csv_file
-from daily_research_session_operations import load_registry
+from stocklookup_core.evidence.session_registry import load_registry
 from field_temporal_contract import stable_id
 import release_session_contract
 import dashboard_home_summary

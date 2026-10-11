@@ -1,14 +1,15 @@
 # Stock Lookup — Current Roadmap
 
 History: [ROADMAP.md](ROADMAP.md); execution: ROADMAP_STATE.json.
-E1 base/main at admission `56cdc36f860532678ae2c8c26eddea2730988ef8`.
+E2/E3 base/main `e99000494ab52374c01383f4c57891165b58768f`.
 Nothing below auto-starts; native standing admission required (AI_RULES 11).
 Facts: [ACTIVE_STATE.md](ACTIVE_STATE.md).
 
-## NOW — E1_OFFICIAL_EXCHANGE_EVIDENCE_PACKAGE_MIGRATION (COMPLETE LOCAL)
+## NOW — E2_E3_FOUNDATION_SEAMS_AND_DEPENDENCY_UNTANGLING (COMPLETE LOCAL)
 
-[Scope](e1_official_exchange_evidence_package_migration_contract.md): 13 offline modules to
-`stocklookup_core/evidence/`; no shim. Owner push/PR gate; no E2.
+[Scope](e2_e3_foundation_seams_and_dependency_untangling_contract.md): read-only registry and temporal seams, with financial/valuation/decision policy ownership. Local checkpoint `9bd9395`; feature PR authorized; hosted CI and separate merge review pending.
+E1 PR124 released `e990004`; four post-merge jobs PASS (38148897543).
+Hash-bound session paths/serialization need a separate E4 acceptance scope; E4 is not admitted.
 E0 COMPLETE at PR123 `56cdc36`; four post-merge jobs PASS (38139163689).
 Queue empty. Existing evidence and authority remain unchanged.
 PR119 COMPLETE at `d1c9c805`; four post-merge jobs PASS (38105025004).
@@ -38,17 +39,10 @@ The campaign authorizes no Daily; October 8 Owner completion is recorded separat
 The prior operational gate `FIRST_REAL_POST_RELEASE_CAPTURE_ACCEPTANCE` remains RECORDED
 for October 5; the new analytical checkpoint does not reopen that gate.
 
-Research foundations below are complete and remain non-voting; authority and current
-measurements are in ACTIVE_STATE. None starts a successor or supplies capital decisions.
-
-| Foundation | Boundary and retained detail |
-|---|---|
-| Decision-intelligence closure | Coverage, history, calibration, packet and workbench share one research spine. [Closure](internal/DECISION_INTELLIGENCE_COVERAGE_AND_CALIBRATION_CLOSURE_20261007.md). |
-| Portfolio workbench | Opportunity overlap/concentration, no sizing or orders. [Workbench](internal/PORTFOLIO_RESEARCH_DECISION_WORKBENCH_FOUNDATION_20261006.md). |
-| Evidence packet V2 | Named measurements and analogue disclosure; capital decision stays human. [Packet](internal/HUMAN_AI_DECISION_EVIDENCE_PACKET_CONVERGENCE_V2_20261006.md). |
-| Outcome review | Descriptive T1/3/5/10/20; T5 9,590, T10 5,823, T20 16; no probability or threshold changes. [Review](internal/DECISION_OUTCOME_CALIBRATION_AND_FALSE_NEGATIVE_REVIEW_20261006.md). |
-| Historical panel | 2,445 rows/26 indexed sessions; research memory, no PIT; NVL/PNJ cohort absent. [Panel](internal/HISTORICAL_TEMPORAL_RESEARCH_PANEL_FOUNDATION_20261006.md). |
-| Freshness contract | Diagnostic only: retained denominator1,507, official inputs13, research P/E5, qualified price/share0; no missing fact fill. [Freshness](internal/CURRENT_RESEARCH_FUNDAMENTAL_CI_VALUATION_FRESHNESS_20261006.md). |
+Completed research foundations remain non-voting; authority, measurements and their retained
+contracts are indexed in ACTIVE_STATE: decision-intelligence closure, portfolio workbench,
+evidence packet V2, outcome review, historical panel and freshness contract.
+None starts a successor or supplies capital decisions.
 
 The Forex idea bank is not a roadmap entry.
 

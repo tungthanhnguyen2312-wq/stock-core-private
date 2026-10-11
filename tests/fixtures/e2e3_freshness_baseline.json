@@ -1,0 +1,2817 @@
+[
+  {
+    "name": "classify_axis_freshness",
+    "kwargs": {
+      "axis": "fundamental",
+      "decision_session": "2026-10-11",
+      "source_session": null,
+      "source_period": "2026-H1"
+    },
+    "result": {
+      "value": {
+        "axis": "fundamental",
+        "decision_session": "2026-10-11",
+        "source_session": null,
+        "source_period": "2026-H1",
+        "known_at": null,
+        "source_artifact_identity": null,
+        "freshness_status": "STALE_BUT_RESEARCH_USABLE",
+        "compatibility_status": "TEMPORALLY_COMPATIBLE",
+        "older_evidence_usable": true,
+        "rewritten_as_current": false,
+        "contract_version": "opportunity_axis_freshness/v1"
+      }
+    }
+  },
+  {
+    "name": "classify_axis_freshness",
+    "kwargs": {
+      "axis": "fundamental",
+      "decision_session": "2026-10-11",
+      "source_session": "",
+      "source_period": "2026-H1"
+    },
+    "result": {
+      "value": {
+        "axis": "fundamental",
+        "decision_session": "2026-10-11",
+        "source_session": null,
+        "source_period": "2026-H1",
+        "known_at": null,
+        "source_artifact_identity": null,
+        "freshness_status": "STALE_BUT_RESEARCH_USABLE",
+        "compatibility_status": "TEMPORALLY_COMPATIBLE",
+        "older_evidence_usable": true,
+        "rewritten_as_current": false,
+        "contract_version": "opportunity_axis_freshness/v1"
+      }
+    }
+  },
+  {
+    "name": "classify_axis_freshness",
+    "kwargs": {
+      "axis": "fundamental",
+      "decision_session": "2026-10-11",
+      "source_session": "2026-10-10",
+      "source_period": "2026-H1"
+    },
+    "result": {
+      "value": {
+        "axis": "fundamental",
+        "decision_session": "2026-10-11",
+        "source_session": "2026-10-10",
+        "source_period": "2026-H1",
+        "known_at": null,
+        "source_artifact_identity": null,
+        "freshness_status": "STALE_BUT_RESEARCH_USABLE",
+        "compatibility_status": "TEMPORALLY_COMPATIBLE",
+        "older_evidence_usable": true,
+        "rewritten_as_current": false,
+        "contract_version": "opportunity_axis_freshness/v1"
+      }
+    }
+  },
+  {
+    "name": "classify_axis_freshness",
+    "kwargs": {
+      "axis": "fundamental",
+      "decision_session": "2026-10-11",
+      "source_session": "2026-10-11",
+      "source_period": "2026-H1"
+    },
+    "result": {
+      "value": {
+        "axis": "fundamental",
+        "decision_session": "2026-10-11",
+        "source_session": "2026-10-11",
+        "source_period": "2026-H1",
+        "known_at": null,
+        "source_artifact_identity": null,
+        "freshness_status": "CURRENT",
+        "compatibility_status": "TEMPORALLY_COMPATIBLE",
+        "older_evidence_usable": false,
+        "rewritten_as_current": false,
+        "contract_version": "opportunity_axis_freshness/v1"
+      }
+    }
+  },
+  {
+    "name": "classify_axis_freshness",
+    "kwargs": {
+      "axis": "fundamental",
+      "decision_session": "2026-10-11",
+      "source_session": "2026-10-12",
+      "source_period": "2026-H1"
+    },
+    "result": {
+      "error_type": "FutureInformationError",
+      "error": "FUTURE_INFORMATION_PROHIBITED:fundamental:2026-10-12>2026-10-11"
+    }
+  },
+  {
+    "name": "classify_axis_freshness",
+    "kwargs": {
+      "axis": "valuation",
+      "decision_session": "2026-10-11",
+      "source_session": null,
+      "source_period": "2026-H1"
+    },
+    "result": {
+      "value": {
+        "axis": "valuation",
+        "decision_session": "2026-10-11",
+        "source_session": null,
+        "source_period": "2026-H1",
+        "known_at": null,
+        "source_artifact_identity": null,
+        "freshness_status": "UNAVAILABLE",
+        "compatibility_status": "SOURCE_SESSION_ABSENT",
+        "older_evidence_usable": false,
+        "rewritten_as_current": false,
+        "contract_version": "opportunity_axis_freshness/v1"
+      }
+    }
+  },
+  {
+    "name": "classify_axis_freshness",
+    "kwargs": {
+      "axis": "valuation",
+      "decision_session": "2026-10-11",
+      "source_session": "",
+      "source_period": "2026-H1"
+    },
+    "result": {
+      "value": {
+        "axis": "valuation",
+        "decision_session": "2026-10-11",
+        "source_session": null,
+        "source_period": "2026-H1",
+        "known_at": null,
+        "source_artifact_identity": null,
+        "freshness_status": "UNAVAILABLE",
+        "compatibility_status": "SOURCE_SESSION_ABSENT",
+        "older_evidence_usable": false,
+        "rewritten_as_current": false,
+        "contract_version": "opportunity_axis_freshness/v1"
+      }
+    }
+  },
+  {
+    "name": "classify_axis_freshness",
+    "kwargs": {
+      "axis": "valuation",
+      "decision_session": "2026-10-11",
+      "source_session": "2026-10-10",
+      "source_period": "2026-H1"
+    },
+    "result": {
+      "value": {
+        "axis": "valuation",
+        "decision_session": "2026-10-11",
+        "source_session": "2026-10-10",
+        "source_period": "2026-H1",
+        "known_at": null,
+        "source_artifact_identity": null,
+        "freshness_status": "STALE_BUT_RESEARCH_USABLE",
+        "compatibility_status": "TEMPORALLY_COMPATIBLE",
+        "older_evidence_usable": true,
+        "rewritten_as_current": false,
+        "contract_version": "opportunity_axis_freshness/v1"
+      }
+    }
+  },
+  {
+    "name": "classify_axis_freshness",
+    "kwargs": {
+      "axis": "valuation",
+      "decision_session": "2026-10-11",
+      "source_session": "2026-10-11",
+      "source_period": "2026-H1"
+    },
+    "result": {
+      "value": {
+        "axis": "valuation",
+        "decision_session": "2026-10-11",
+        "source_session": "2026-10-11",
+        "source_period": "2026-H1",
+        "known_at": null,
+        "source_artifact_identity": null,
+        "freshness_status": "CURRENT",
+        "compatibility_status": "TEMPORALLY_COMPATIBLE",
+        "older_evidence_usable": false,
+        "rewritten_as_current": false,
+        "contract_version": "opportunity_axis_freshness/v1"
+      }
+    }
+  },
+  {
+    "name": "classify_axis_freshness",
+    "kwargs": {
+      "axis": "valuation",
+      "decision_session": "2026-10-11",
+      "source_session": "2026-10-12",
+      "source_period": "2026-H1"
+    },
+    "result": {
+      "error_type": "FutureInformationError",
+      "error": "FUTURE_INFORMATION_PROHIBITED:valuation:2026-10-12>2026-10-11"
+    }
+  },
+  {
+    "name": "classify_axis_freshness",
+    "kwargs": {
+      "axis": "tactical",
+      "decision_session": "2026-10-11",
+      "source_session": null,
+      "source_period": "2026-H1"
+    },
+    "result": {
+      "value": {
+        "axis": "tactical",
+        "decision_session": "2026-10-11",
+        "source_session": null,
+        "source_period": "2026-H1",
+        "known_at": null,
+        "source_artifact_identity": null,
+        "freshness_status": "UNAVAILABLE",
+        "compatibility_status": "SOURCE_SESSION_ABSENT",
+        "older_evidence_usable": false,
+        "rewritten_as_current": false,
+        "contract_version": "opportunity_axis_freshness/v1"
+      }
+    }
+  },
+  {
+    "name": "classify_axis_freshness",
+    "kwargs": {
+      "axis": "tactical",
+      "decision_session": "2026-10-11",
+      "source_session": "",
+      "source_period": "2026-H1"
+    },
+    "result": {
+      "value": {
+        "axis": "tactical",
+        "decision_session": "2026-10-11",
+        "source_session": null,
+        "source_period": "2026-H1",
+        "known_at": null,
+        "source_artifact_identity": null,
+        "freshness_status": "UNAVAILABLE",
+        "compatibility_status": "SOURCE_SESSION_ABSENT",
+        "older_evidence_usable": false,
+        "rewritten_as_current": false,
+        "contract_version": "opportunity_axis_freshness/v1"
+      }
+    }
+  },
+  {
+    "name": "classify_axis_freshness",
+    "kwargs": {
+      "axis": "tactical",
+      "decision_session": "2026-10-11",
+      "source_session": "2026-10-10",
+      "source_period": "2026-H1"
+    },
+    "result": {
+      "value": {
+        "axis": "tactical",
+        "decision_session": "2026-10-11",
+        "source_session": "2026-10-10",
+        "source_period": "2026-H1",
+        "known_at": null,
+        "source_artifact_identity": null,
+        "freshness_status": "STALE_NOT_USABLE_FOR_THIS_AXIS",
+        "compatibility_status": "STALE_AXIS_LOCALIZED",
+        "older_evidence_usable": false,
+        "rewritten_as_current": false,
+        "contract_version": "opportunity_axis_freshness/v1"
+      }
+    }
+  },
+  {
+    "name": "classify_axis_freshness",
+    "kwargs": {
+      "axis": "tactical",
+      "decision_session": "2026-10-11",
+      "source_session": "2026-10-11",
+      "source_period": "2026-H1"
+    },
+    "result": {
+      "value": {
+        "axis": "tactical",
+        "decision_session": "2026-10-11",
+        "source_session": "2026-10-11",
+        "source_period": "2026-H1",
+        "known_at": null,
+        "source_artifact_identity": null,
+        "freshness_status": "CURRENT",
+        "compatibility_status": "TEMPORALLY_COMPATIBLE",
+        "older_evidence_usable": false,
+        "rewritten_as_current": false,
+        "contract_version": "opportunity_axis_freshness/v1"
+      }
+    }
+  },
+  {
+    "name": "classify_axis_freshness",
+    "kwargs": {
+      "axis": "tactical",
+      "decision_session": "2026-10-11",
+      "source_session": "2026-10-12",
+      "source_period": "2026-H1"
+    },
+    "result": {
+      "error_type": "FutureInformationError",
+      "error": "FUTURE_INFORMATION_PROHIBITED:tactical:2026-10-12>2026-10-11"
+    }
+  },
+  {
+    "name": "classify_axis_freshness",
+    "kwargs": {
+      "axis": "market_sector",
+      "decision_session": "2026-10-11",
+      "source_session": null,
+      "source_period": "2026-H1"
+    },
+    "result": {
+      "value": {
+        "axis": "market_sector",
+        "decision_session": "2026-10-11",
+        "source_session": null,
+        "source_period": "2026-H1",
+        "known_at": null,
+        "source_artifact_identity": null,
+        "freshness_status": "UNAVAILABLE",
+        "compatibility_status": "SOURCE_SESSION_ABSENT",
+        "older_evidence_usable": false,
+        "rewritten_as_current": false,
+        "contract_version": "opportunity_axis_freshness/v1"
+      }
+    }
+  },
+  {
+    "name": "classify_axis_freshness",
+    "kwargs": {
+      "axis": "market_sector",
+      "decision_session": "2026-10-11",
+      "source_session": "",
+      "source_period": "2026-H1"
+    },
+    "result": {
+      "value": {
+        "axis": "market_sector",
+        "decision_session": "2026-10-11",
+        "source_session": null,
+        "source_period": "2026-H1",
+        "known_at": null,
+        "source_artifact_identity": null,
+        "freshness_status": "UNAVAILABLE",
+        "compatibility_status": "SOURCE_SESSION_ABSENT",
+        "older_evidence_usable": false,
+        "rewritten_as_current": false,
+        "contract_version": "opportunity_axis_freshness/v1"
+      }
+    }
+  },
+  {
+    "name": "classify_axis_freshness",
+    "kwargs": {
+      "axis": "market_sector",
+      "decision_session": "2026-10-11",
+      "source_session": "2026-10-10",
+      "source_period": "2026-H1"
+    },
+    "result": {
+      "value": {
+        "axis": "market_sector",
+        "decision_session": "2026-10-11",
+        "source_session": "2026-10-10",
+        "source_period": "2026-H1",
+        "known_at": null,
+        "source_artifact_identity": null,
+        "freshness_status": "STALE_NOT_USABLE_FOR_THIS_AXIS",
+        "compatibility_status": "STALE_AXIS_LOCALIZED",
+        "older_evidence_usable": false,
+        "rewritten_as_current": false,
+        "contract_version": "opportunity_axis_freshness/v1"
+      }
+    }
+  },
+  {
+    "name": "classify_axis_freshness",
+    "kwargs": {
+      "axis": "market_sector",
+      "decision_session": "2026-10-11",
+      "source_session": "2026-10-11",
+      "source_period": "2026-H1"
+    },
+    "result": {
+      "value": {
+        "axis": "market_sector",
+        "decision_session": "2026-10-11",
+        "source_session": "2026-10-11",
+        "source_period": "2026-H1",
+        "known_at": null,
+        "source_artifact_identity": null,
+        "freshness_status": "CURRENT",
+        "compatibility_status": "TEMPORALLY_COMPATIBLE",
+        "older_evidence_usable": false,
+        "rewritten_as_current": false,
+        "contract_version": "opportunity_axis_freshness/v1"
+      }
+    }
+  },
+  {
+    "name": "classify_axis_freshness",
+    "kwargs": {
+      "axis": "market_sector",
+      "decision_session": "2026-10-11",
+      "source_session": "2026-10-12",
+      "source_period": "2026-H1"
+    },
+    "result": {
+      "error_type": "FutureInformationError",
+      "error": "FUTURE_INFORMATION_PROHIBITED:market_sector:2026-10-12>2026-10-11"
+    }
+  },
+  {
+    "name": "classify_axis_freshness",
+    "kwargs": {
+      "axis": "catalyst",
+      "decision_session": "2026-10-11",
+      "source_session": null,
+      "source_period": "2026-H1"
+    },
+    "result": {
+      "value": {
+        "axis": "catalyst",
+        "decision_session": "2026-10-11",
+        "source_session": null,
+        "source_period": "2026-H1",
+        "known_at": null,
+        "source_artifact_identity": null,
+        "freshness_status": "UNAVAILABLE",
+        "compatibility_status": "SOURCE_SESSION_ABSENT",
+        "older_evidence_usable": false,
+        "rewritten_as_current": false,
+        "contract_version": "opportunity_axis_freshness/v1"
+      }
+    }
+  },
+  {
+    "name": "classify_axis_freshness",
+    "kwargs": {
+      "axis": "catalyst",
+      "decision_session": "2026-10-11",
+      "source_session": "",
+      "source_period": "2026-H1"
+    },
+    "result": {
+      "value": {
+        "axis": "catalyst",
+        "decision_session": "2026-10-11",
+        "source_session": null,
+        "source_period": "2026-H1",
+        "known_at": null,
+        "source_artifact_identity": null,
+        "freshness_status": "UNAVAILABLE",
+        "compatibility_status": "SOURCE_SESSION_ABSENT",
+        "older_evidence_usable": false,
+        "rewritten_as_current": false,
+        "contract_version": "opportunity_axis_freshness/v1"
+      }
+    }
+  },
+  {
+    "name": "classify_axis_freshness",
+    "kwargs": {
+      "axis": "catalyst",
+      "decision_session": "2026-10-11",
+      "source_session": "2026-10-10",
+      "source_period": "2026-H1"
+    },
+    "result": {
+      "value": {
+        "axis": "catalyst",
+        "decision_session": "2026-10-11",
+        "source_session": "2026-10-10",
+        "source_period": "2026-H1",
+        "known_at": null,
+        "source_artifact_identity": null,
+        "freshness_status": "STALE_BUT_RESEARCH_USABLE",
+        "compatibility_status": "TEMPORALLY_COMPATIBLE",
+        "older_evidence_usable": true,
+        "rewritten_as_current": false,
+        "contract_version": "opportunity_axis_freshness/v1"
+      }
+    }
+  },
+  {
+    "name": "classify_axis_freshness",
+    "kwargs": {
+      "axis": "catalyst",
+      "decision_session": "2026-10-11",
+      "source_session": "2026-10-11",
+      "source_period": "2026-H1"
+    },
+    "result": {
+      "value": {
+        "axis": "catalyst",
+        "decision_session": "2026-10-11",
+        "source_session": "2026-10-11",
+        "source_period": "2026-H1",
+        "known_at": null,
+        "source_artifact_identity": null,
+        "freshness_status": "CURRENT",
+        "compatibility_status": "TEMPORALLY_COMPATIBLE",
+        "older_evidence_usable": false,
+        "rewritten_as_current": false,
+        "contract_version": "opportunity_axis_freshness/v1"
+      }
+    }
+  },
+  {
+    "name": "classify_axis_freshness",
+    "kwargs": {
+      "axis": "catalyst",
+      "decision_session": "2026-10-11",
+      "source_session": "2026-10-12",
+      "source_period": "2026-H1"
+    },
+    "result": {
+      "error_type": "FutureInformationError",
+      "error": "FUTURE_INFORMATION_PROHIBITED:catalyst:2026-10-12>2026-10-11"
+    }
+  },
+  {
+    "name": "classify_axis_freshness",
+    "kwargs": {
+      "axis": "downside_invalidation",
+      "decision_session": "2026-10-11",
+      "source_session": null,
+      "source_period": "2026-H1"
+    },
+    "result": {
+      "value": {
+        "axis": "downside_invalidation",
+        "decision_session": "2026-10-11",
+        "source_session": null,
+        "source_period": "2026-H1",
+        "known_at": null,
+        "source_artifact_identity": null,
+        "freshness_status": "UNAVAILABLE",
+        "compatibility_status": "SOURCE_SESSION_ABSENT",
+        "older_evidence_usable": false,
+        "rewritten_as_current": false,
+        "contract_version": "opportunity_axis_freshness/v1"
+      }
+    }
+  },
+  {
+    "name": "classify_axis_freshness",
+    "kwargs": {
+      "axis": "downside_invalidation",
+      "decision_session": "2026-10-11",
+      "source_session": "",
+      "source_period": "2026-H1"
+    },
+    "result": {
+      "value": {
+        "axis": "downside_invalidation",
+        "decision_session": "2026-10-11",
+        "source_session": null,
+        "source_period": "2026-H1",
+        "known_at": null,
+        "source_artifact_identity": null,
+        "freshness_status": "UNAVAILABLE",
+        "compatibility_status": "SOURCE_SESSION_ABSENT",
+        "older_evidence_usable": false,
+        "rewritten_as_current": false,
+        "contract_version": "opportunity_axis_freshness/v1"
+      }
+    }
+  },
+  {
+    "name": "classify_axis_freshness",
+    "kwargs": {
+      "axis": "downside_invalidation",
+      "decision_session": "2026-10-11",
+      "source_session": "2026-10-10",
+      "source_period": "2026-H1"
+    },
+    "result": {
+      "value": {
+        "axis": "downside_invalidation",
+        "decision_session": "2026-10-11",
+        "source_session": "2026-10-10",
+        "source_period": "2026-H1",
+        "known_at": null,
+        "source_artifact_identity": null,
+        "freshness_status": "STALE_BUT_RESEARCH_USABLE",
+        "compatibility_status": "TEMPORALLY_COMPATIBLE",
+        "older_evidence_usable": true,
+        "rewritten_as_current": false,
+        "contract_version": "opportunity_axis_freshness/v1"
+      }
+    }
+  },
+  {
+    "name": "classify_axis_freshness",
+    "kwargs": {
+      "axis": "downside_invalidation",
+      "decision_session": "2026-10-11",
+      "source_session": "2026-10-11",
+      "source_period": "2026-H1"
+    },
+    "result": {
+      "value": {
+        "axis": "downside_invalidation",
+        "decision_session": "2026-10-11",
+        "source_session": "2026-10-11",
+        "source_period": "2026-H1",
+        "known_at": null,
+        "source_artifact_identity": null,
+        "freshness_status": "CURRENT",
+        "compatibility_status": "TEMPORALLY_COMPATIBLE",
+        "older_evidence_usable": false,
+        "rewritten_as_current": false,
+        "contract_version": "opportunity_axis_freshness/v1"
+      }
+    }
+  },
+  {
+    "name": "classify_axis_freshness",
+    "kwargs": {
+      "axis": "downside_invalidation",
+      "decision_session": "2026-10-11",
+      "source_session": "2026-10-12",
+      "source_period": "2026-H1"
+    },
+    "result": {
+      "error_type": "FutureInformationError",
+      "error": "FUTURE_INFORMATION_PROHIBITED:downside_invalidation:2026-10-12>2026-10-11"
+    }
+  },
+  {
+    "name": "classify_axis_freshness",
+    "kwargs": {
+      "axis": "liquidity",
+      "decision_session": "2026-10-11",
+      "source_session": null,
+      "source_period": "2026-H1"
+    },
+    "result": {
+      "value": {
+        "axis": "liquidity",
+        "decision_session": "2026-10-11",
+        "source_session": null,
+        "source_period": "2026-H1",
+        "known_at": null,
+        "source_artifact_identity": null,
+        "freshness_status": "UNAVAILABLE",
+        "compatibility_status": "SOURCE_SESSION_ABSENT",
+        "older_evidence_usable": false,
+        "rewritten_as_current": false,
+        "contract_version": "opportunity_axis_freshness/v1"
+      }
+    }
+  },
+  {
+    "name": "classify_axis_freshness",
+    "kwargs": {
+      "axis": "liquidity",
+      "decision_session": "2026-10-11",
+      "source_session": "",
+      "source_period": "2026-H1"
+    },
+    "result": {
+      "value": {
+        "axis": "liquidity",
+        "decision_session": "2026-10-11",
+        "source_session": null,
+        "source_period": "2026-H1",
+        "known_at": null,
+        "source_artifact_identity": null,
+        "freshness_status": "UNAVAILABLE",
+        "compatibility_status": "SOURCE_SESSION_ABSENT",
+        "older_evidence_usable": false,
+        "rewritten_as_current": false,
+        "contract_version": "opportunity_axis_freshness/v1"
+      }
+    }
+  },
+  {
+    "name": "classify_axis_freshness",
+    "kwargs": {
+      "axis": "liquidity",
+      "decision_session": "2026-10-11",
+      "source_session": "2026-10-10",
+      "source_period": "2026-H1"
+    },
+    "result": {
+      "value": {
+        "axis": "liquidity",
+        "decision_session": "2026-10-11",
+        "source_session": "2026-10-10",
+        "source_period": "2026-H1",
+        "known_at": null,
+        "source_artifact_identity": null,
+        "freshness_status": "STALE_BUT_RESEARCH_USABLE",
+        "compatibility_status": "TEMPORALLY_COMPATIBLE",
+        "older_evidence_usable": true,
+        "rewritten_as_current": false,
+        "contract_version": "opportunity_axis_freshness/v1"
+      }
+    }
+  },
+  {
+    "name": "classify_axis_freshness",
+    "kwargs": {
+      "axis": "liquidity",
+      "decision_session": "2026-10-11",
+      "source_session": "2026-10-11",
+      "source_period": "2026-H1"
+    },
+    "result": {
+      "value": {
+        "axis": "liquidity",
+        "decision_session": "2026-10-11",
+        "source_session": "2026-10-11",
+        "source_period": "2026-H1",
+        "known_at": null,
+        "source_artifact_identity": null,
+        "freshness_status": "CURRENT",
+        "compatibility_status": "TEMPORALLY_COMPATIBLE",
+        "older_evidence_usable": false,
+        "rewritten_as_current": false,
+        "contract_version": "opportunity_axis_freshness/v1"
+      }
+    }
+  },
+  {
+    "name": "classify_axis_freshness",
+    "kwargs": {
+      "axis": "liquidity",
+      "decision_session": "2026-10-11",
+      "source_session": "2026-10-12",
+      "source_period": "2026-H1"
+    },
+    "result": {
+      "error_type": "FutureInformationError",
+      "error": "FUTURE_INFORMATION_PROHIBITED:liquidity:2026-10-12>2026-10-11"
+    }
+  },
+  {
+    "name": "classify_axis_freshness",
+    "kwargs": {
+      "axis": "portfolio",
+      "decision_session": "2026-10-11",
+      "source_session": null,
+      "source_period": "2026-H1"
+    },
+    "result": {
+      "value": {
+        "axis": "portfolio",
+        "decision_session": "2026-10-11",
+        "source_session": null,
+        "source_period": "2026-H1",
+        "known_at": null,
+        "source_artifact_identity": null,
+        "freshness_status": "UNAVAILABLE",
+        "compatibility_status": "SOURCE_SESSION_ABSENT",
+        "older_evidence_usable": false,
+        "rewritten_as_current": false,
+        "contract_version": "opportunity_axis_freshness/v1"
+      }
+    }
+  },
+  {
+    "name": "classify_axis_freshness",
+    "kwargs": {
+      "axis": "portfolio",
+      "decision_session": "2026-10-11",
+      "source_session": "",
+      "source_period": "2026-H1"
+    },
+    "result": {
+      "value": {
+        "axis": "portfolio",
+        "decision_session": "2026-10-11",
+        "source_session": null,
+        "source_period": "2026-H1",
+        "known_at": null,
+        "source_artifact_identity": null,
+        "freshness_status": "UNAVAILABLE",
+        "compatibility_status": "SOURCE_SESSION_ABSENT",
+        "older_evidence_usable": false,
+        "rewritten_as_current": false,
+        "contract_version": "opportunity_axis_freshness/v1"
+      }
+    }
+  },
+  {
+    "name": "classify_axis_freshness",
+    "kwargs": {
+      "axis": "portfolio",
+      "decision_session": "2026-10-11",
+      "source_session": "2026-10-10",
+      "source_period": "2026-H1"
+    },
+    "result": {
+      "value": {
+        "axis": "portfolio",
+        "decision_session": "2026-10-11",
+        "source_session": "2026-10-10",
+        "source_period": "2026-H1",
+        "known_at": null,
+        "source_artifact_identity": null,
+        "freshness_status": "STALE_BUT_RESEARCH_USABLE",
+        "compatibility_status": "TEMPORALLY_COMPATIBLE",
+        "older_evidence_usable": true,
+        "rewritten_as_current": false,
+        "contract_version": "opportunity_axis_freshness/v1"
+      }
+    }
+  },
+  {
+    "name": "classify_axis_freshness",
+    "kwargs": {
+      "axis": "portfolio",
+      "decision_session": "2026-10-11",
+      "source_session": "2026-10-11",
+      "source_period": "2026-H1"
+    },
+    "result": {
+      "value": {
+        "axis": "portfolio",
+        "decision_session": "2026-10-11",
+        "source_session": "2026-10-11",
+        "source_period": "2026-H1",
+        "known_at": null,
+        "source_artifact_identity": null,
+        "freshness_status": "CURRENT",
+        "compatibility_status": "TEMPORALLY_COMPATIBLE",
+        "older_evidence_usable": false,
+        "rewritten_as_current": false,
+        "contract_version": "opportunity_axis_freshness/v1"
+      }
+    }
+  },
+  {
+    "name": "classify_axis_freshness",
+    "kwargs": {
+      "axis": "portfolio",
+      "decision_session": "2026-10-11",
+      "source_session": "2026-10-12",
+      "source_period": "2026-H1"
+    },
+    "result": {
+      "error_type": "FutureInformationError",
+      "error": "FUTURE_INFORMATION_PROHIBITED:portfolio:2026-10-12>2026-10-11"
+    }
+  },
+  {
+    "name": "classify_axis_freshness",
+    "kwargs": {
+      "axis": "data_authority",
+      "decision_session": "2026-10-11",
+      "source_session": null,
+      "source_period": "2026-H1"
+    },
+    "result": {
+      "value": {
+        "axis": "data_authority",
+        "decision_session": "2026-10-11",
+        "source_session": null,
+        "source_period": "2026-H1",
+        "known_at": null,
+        "source_artifact_identity": null,
+        "freshness_status": "UNAVAILABLE",
+        "compatibility_status": "SOURCE_SESSION_ABSENT",
+        "older_evidence_usable": false,
+        "rewritten_as_current": false,
+        "contract_version": "opportunity_axis_freshness/v1"
+      }
+    }
+  },
+  {
+    "name": "classify_axis_freshness",
+    "kwargs": {
+      "axis": "data_authority",
+      "decision_session": "2026-10-11",
+      "source_session": "",
+      "source_period": "2026-H1"
+    },
+    "result": {
+      "value": {
+        "axis": "data_authority",
+        "decision_session": "2026-10-11",
+        "source_session": null,
+        "source_period": "2026-H1",
+        "known_at": null,
+        "source_artifact_identity": null,
+        "freshness_status": "UNAVAILABLE",
+        "compatibility_status": "SOURCE_SESSION_ABSENT",
+        "older_evidence_usable": false,
+        "rewritten_as_current": false,
+        "contract_version": "opportunity_axis_freshness/v1"
+      }
+    }
+  },
+  {
+    "name": "classify_axis_freshness",
+    "kwargs": {
+      "axis": "data_authority",
+      "decision_session": "2026-10-11",
+      "source_session": "2026-10-10",
+      "source_period": "2026-H1"
+    },
+    "result": {
+      "value": {
+        "axis": "data_authority",
+        "decision_session": "2026-10-11",
+        "source_session": "2026-10-10",
+        "source_period": "2026-H1",
+        "known_at": null,
+        "source_artifact_identity": null,
+        "freshness_status": "STALE_BUT_RESEARCH_USABLE",
+        "compatibility_status": "TEMPORALLY_COMPATIBLE",
+        "older_evidence_usable": true,
+        "rewritten_as_current": false,
+        "contract_version": "opportunity_axis_freshness/v1"
+      }
+    }
+  },
+  {
+    "name": "classify_axis_freshness",
+    "kwargs": {
+      "axis": "data_authority",
+      "decision_session": "2026-10-11",
+      "source_session": "2026-10-11",
+      "source_period": "2026-H1"
+    },
+    "result": {
+      "value": {
+        "axis": "data_authority",
+        "decision_session": "2026-10-11",
+        "source_session": "2026-10-11",
+        "source_period": "2026-H1",
+        "known_at": null,
+        "source_artifact_identity": null,
+        "freshness_status": "CURRENT",
+        "compatibility_status": "TEMPORALLY_COMPATIBLE",
+        "older_evidence_usable": false,
+        "rewritten_as_current": false,
+        "contract_version": "opportunity_axis_freshness/v1"
+      }
+    }
+  },
+  {
+    "name": "classify_axis_freshness",
+    "kwargs": {
+      "axis": "data_authority",
+      "decision_session": "2026-10-11",
+      "source_session": "2026-10-12",
+      "source_period": "2026-H1"
+    },
+    "result": {
+      "error_type": "FutureInformationError",
+      "error": "FUTURE_INFORMATION_PROHIBITED:data_authority:2026-10-12>2026-10-11"
+    }
+  },
+  {
+    "name": "completed_quarter_lag",
+    "kwargs": {
+      "source_period": null,
+      "decision_session": "2026-03-30"
+    },
+    "result": {
+      "value": [
+        null,
+        null,
+        "FINANCIAL_SOURCE_PERIOD_UNRESOLVED"
+      ]
+    }
+  },
+  {
+    "name": "classify_financial_period_freshness",
+    "kwargs": {
+      "source_period": null,
+      "decision_session": "2026-03-30",
+      "maximum_completed_quarter_lag": 2
+    },
+    "result": {
+      "value": {
+        "contract_version": "financial_period_freshness/v1",
+        "vocabulary": "opportunity_axis_freshness/v1",
+        "source_period": null,
+        "decision_session": "2026-03-30",
+        "completed_quarter_lag": null,
+        "quarters_behind_last_completed_quarter": null,
+        "maximum_completed_quarter_lag": 2,
+        "freshness_status": "UNAVAILABLE",
+        "reason_codes": [
+          "FINANCIAL_SOURCE_PERIOD_ABSENT"
+        ],
+        "older_evidence_usable": true,
+        "rewritten_as_current": false
+      }
+    }
+  },
+  {
+    "name": "completed_quarter_lag",
+    "kwargs": {
+      "source_period": null,
+      "decision_session": "2026-03-31"
+    },
+    "result": {
+      "value": [
+        null,
+        null,
+        "FINANCIAL_SOURCE_PERIOD_UNRESOLVED"
+      ]
+    }
+  },
+  {
+    "name": "classify_financial_period_freshness",
+    "kwargs": {
+      "source_period": null,
+      "decision_session": "2026-03-31",
+      "maximum_completed_quarter_lag": 2
+    },
+    "result": {
+      "value": {
+        "contract_version": "financial_period_freshness/v1",
+        "vocabulary": "opportunity_axis_freshness/v1",
+        "source_period": null,
+        "decision_session": "2026-03-31",
+        "completed_quarter_lag": null,
+        "quarters_behind_last_completed_quarter": null,
+        "maximum_completed_quarter_lag": 2,
+        "freshness_status": "UNAVAILABLE",
+        "reason_codes": [
+          "FINANCIAL_SOURCE_PERIOD_ABSENT"
+        ],
+        "older_evidence_usable": true,
+        "rewritten_as_current": false
+      }
+    }
+  },
+  {
+    "name": "completed_quarter_lag",
+    "kwargs": {
+      "source_period": null,
+      "decision_session": "2026-04-01"
+    },
+    "result": {
+      "value": [
+        null,
+        null,
+        "FINANCIAL_SOURCE_PERIOD_UNRESOLVED"
+      ]
+    }
+  },
+  {
+    "name": "classify_financial_period_freshness",
+    "kwargs": {
+      "source_period": null,
+      "decision_session": "2026-04-01",
+      "maximum_completed_quarter_lag": 2
+    },
+    "result": {
+      "value": {
+        "contract_version": "financial_period_freshness/v1",
+        "vocabulary": "opportunity_axis_freshness/v1",
+        "source_period": null,
+        "decision_session": "2026-04-01",
+        "completed_quarter_lag": null,
+        "quarters_behind_last_completed_quarter": null,
+        "maximum_completed_quarter_lag": 2,
+        "freshness_status": "UNAVAILABLE",
+        "reason_codes": [
+          "FINANCIAL_SOURCE_PERIOD_ABSENT"
+        ],
+        "older_evidence_usable": true,
+        "rewritten_as_current": false
+      }
+    }
+  },
+  {
+    "name": "completed_quarter_lag",
+    "kwargs": {
+      "source_period": null,
+      "decision_session": "2026-12-31"
+    },
+    "result": {
+      "value": [
+        null,
+        null,
+        "FINANCIAL_SOURCE_PERIOD_UNRESOLVED"
+      ]
+    }
+  },
+  {
+    "name": "classify_financial_period_freshness",
+    "kwargs": {
+      "source_period": null,
+      "decision_session": "2026-12-31",
+      "maximum_completed_quarter_lag": 2
+    },
+    "result": {
+      "value": {
+        "contract_version": "financial_period_freshness/v1",
+        "vocabulary": "opportunity_axis_freshness/v1",
+        "source_period": null,
+        "decision_session": "2026-12-31",
+        "completed_quarter_lag": null,
+        "quarters_behind_last_completed_quarter": null,
+        "maximum_completed_quarter_lag": 2,
+        "freshness_status": "UNAVAILABLE",
+        "reason_codes": [
+          "FINANCIAL_SOURCE_PERIOD_ABSENT"
+        ],
+        "older_evidence_usable": true,
+        "rewritten_as_current": false
+      }
+    }
+  },
+  {
+    "name": "completed_quarter_lag",
+    "kwargs": {
+      "source_period": "",
+      "decision_session": "2026-03-30"
+    },
+    "result": {
+      "value": [
+        null,
+        null,
+        "FINANCIAL_SOURCE_PERIOD_UNRESOLVED"
+      ]
+    }
+  },
+  {
+    "name": "classify_financial_period_freshness",
+    "kwargs": {
+      "source_period": "",
+      "decision_session": "2026-03-30",
+      "maximum_completed_quarter_lag": 2
+    },
+    "result": {
+      "value": {
+        "contract_version": "financial_period_freshness/v1",
+        "vocabulary": "opportunity_axis_freshness/v1",
+        "source_period": "",
+        "decision_session": "2026-03-30",
+        "completed_quarter_lag": null,
+        "quarters_behind_last_completed_quarter": null,
+        "maximum_completed_quarter_lag": 2,
+        "freshness_status": "UNAVAILABLE",
+        "reason_codes": [
+          "FINANCIAL_SOURCE_PERIOD_ABSENT"
+        ],
+        "older_evidence_usable": true,
+        "rewritten_as_current": false
+      }
+    }
+  },
+  {
+    "name": "completed_quarter_lag",
+    "kwargs": {
+      "source_period": "",
+      "decision_session": "2026-03-31"
+    },
+    "result": {
+      "value": [
+        null,
+        null,
+        "FINANCIAL_SOURCE_PERIOD_UNRESOLVED"
+      ]
+    }
+  },
+  {
+    "name": "classify_financial_period_freshness",
+    "kwargs": {
+      "source_period": "",
+      "decision_session": "2026-03-31",
+      "maximum_completed_quarter_lag": 2
+    },
+    "result": {
+      "value": {
+        "contract_version": "financial_period_freshness/v1",
+        "vocabulary": "opportunity_axis_freshness/v1",
+        "source_period": "",
+        "decision_session": "2026-03-31",
+        "completed_quarter_lag": null,
+        "quarters_behind_last_completed_quarter": null,
+        "maximum_completed_quarter_lag": 2,
+        "freshness_status": "UNAVAILABLE",
+        "reason_codes": [
+          "FINANCIAL_SOURCE_PERIOD_ABSENT"
+        ],
+        "older_evidence_usable": true,
+        "rewritten_as_current": false
+      }
+    }
+  },
+  {
+    "name": "completed_quarter_lag",
+    "kwargs": {
+      "source_period": "",
+      "decision_session": "2026-04-01"
+    },
+    "result": {
+      "value": [
+        null,
+        null,
+        "FINANCIAL_SOURCE_PERIOD_UNRESOLVED"
+      ]
+    }
+  },
+  {
+    "name": "classify_financial_period_freshness",
+    "kwargs": {
+      "source_period": "",
+      "decision_session": "2026-04-01",
+      "maximum_completed_quarter_lag": 2
+    },
+    "result": {
+      "value": {
+        "contract_version": "financial_period_freshness/v1",
+        "vocabulary": "opportunity_axis_freshness/v1",
+        "source_period": "",
+        "decision_session": "2026-04-01",
+        "completed_quarter_lag": null,
+        "quarters_behind_last_completed_quarter": null,
+        "maximum_completed_quarter_lag": 2,
+        "freshness_status": "UNAVAILABLE",
+        "reason_codes": [
+          "FINANCIAL_SOURCE_PERIOD_ABSENT"
+        ],
+        "older_evidence_usable": true,
+        "rewritten_as_current": false
+      }
+    }
+  },
+  {
+    "name": "completed_quarter_lag",
+    "kwargs": {
+      "source_period": "",
+      "decision_session": "2026-12-31"
+    },
+    "result": {
+      "value": [
+        null,
+        null,
+        "FINANCIAL_SOURCE_PERIOD_UNRESOLVED"
+      ]
+    }
+  },
+  {
+    "name": "classify_financial_period_freshness",
+    "kwargs": {
+      "source_period": "",
+      "decision_session": "2026-12-31",
+      "maximum_completed_quarter_lag": 2
+    },
+    "result": {
+      "value": {
+        "contract_version": "financial_period_freshness/v1",
+        "vocabulary": "opportunity_axis_freshness/v1",
+        "source_period": "",
+        "decision_session": "2026-12-31",
+        "completed_quarter_lag": null,
+        "quarters_behind_last_completed_quarter": null,
+        "maximum_completed_quarter_lag": 2,
+        "freshness_status": "UNAVAILABLE",
+        "reason_codes": [
+          "FINANCIAL_SOURCE_PERIOD_ABSENT"
+        ],
+        "older_evidence_usable": true,
+        "rewritten_as_current": false
+      }
+    }
+  },
+  {
+    "name": "completed_quarter_lag",
+    "kwargs": {
+      "source_period": "2026-Q1",
+      "decision_session": "2026-03-30"
+    },
+    "result": {
+      "value": [
+        null,
+        null,
+        "FINANCIAL_PERIOD_AFTER_DECISION_SESSION"
+      ]
+    }
+  },
+  {
+    "name": "classify_financial_period_freshness",
+    "kwargs": {
+      "source_period": "2026-Q1",
+      "decision_session": "2026-03-30",
+      "maximum_completed_quarter_lag": 2
+    },
+    "result": {
+      "value": {
+        "contract_version": "financial_period_freshness/v1",
+        "vocabulary": "opportunity_axis_freshness/v1",
+        "source_period": "2026-Q1",
+        "decision_session": "2026-03-30",
+        "completed_quarter_lag": null,
+        "quarters_behind_last_completed_quarter": null,
+        "maximum_completed_quarter_lag": 2,
+        "freshness_status": "UNAVAILABLE",
+        "reason_codes": [
+          "FINANCIAL_PERIOD_AFTER_DECISION_SESSION"
+        ],
+        "older_evidence_usable": true,
+        "rewritten_as_current": false
+      }
+    }
+  },
+  {
+    "name": "completed_quarter_lag",
+    "kwargs": {
+      "source_period": "2026-Q1",
+      "decision_session": "2026-03-31"
+    },
+    "result": {
+      "value": [
+        0,
+        0,
+        null
+      ]
+    }
+  },
+  {
+    "name": "classify_financial_period_freshness",
+    "kwargs": {
+      "source_period": "2026-Q1",
+      "decision_session": "2026-03-31",
+      "maximum_completed_quarter_lag": 2
+    },
+    "result": {
+      "value": {
+        "contract_version": "financial_period_freshness/v1",
+        "vocabulary": "opportunity_axis_freshness/v1",
+        "source_period": "2026-Q1",
+        "decision_session": "2026-03-31",
+        "completed_quarter_lag": 0,
+        "quarters_behind_last_completed_quarter": 0,
+        "maximum_completed_quarter_lag": 2,
+        "freshness_status": "CURRENT",
+        "reason_codes": [],
+        "older_evidence_usable": true,
+        "rewritten_as_current": false
+      }
+    }
+  },
+  {
+    "name": "completed_quarter_lag",
+    "kwargs": {
+      "source_period": "2026-Q1",
+      "decision_session": "2026-04-01"
+    },
+    "result": {
+      "value": [
+        1,
+        0,
+        null
+      ]
+    }
+  },
+  {
+    "name": "classify_financial_period_freshness",
+    "kwargs": {
+      "source_period": "2026-Q1",
+      "decision_session": "2026-04-01",
+      "maximum_completed_quarter_lag": 2
+    },
+    "result": {
+      "value": {
+        "contract_version": "financial_period_freshness/v1",
+        "vocabulary": "opportunity_axis_freshness/v1",
+        "source_period": "2026-Q1",
+        "decision_session": "2026-04-01",
+        "completed_quarter_lag": 1,
+        "quarters_behind_last_completed_quarter": 0,
+        "maximum_completed_quarter_lag": 2,
+        "freshness_status": "CURRENT",
+        "reason_codes": [],
+        "older_evidence_usable": true,
+        "rewritten_as_current": false
+      }
+    }
+  },
+  {
+    "name": "completed_quarter_lag",
+    "kwargs": {
+      "source_period": "2026-Q1",
+      "decision_session": "2026-12-31"
+    },
+    "result": {
+      "value": [
+        3,
+        3,
+        null
+      ]
+    }
+  },
+  {
+    "name": "classify_financial_period_freshness",
+    "kwargs": {
+      "source_period": "2026-Q1",
+      "decision_session": "2026-12-31",
+      "maximum_completed_quarter_lag": 2
+    },
+    "result": {
+      "value": {
+        "contract_version": "financial_period_freshness/v1",
+        "vocabulary": "opportunity_axis_freshness/v1",
+        "source_period": "2026-Q1",
+        "decision_session": "2026-12-31",
+        "completed_quarter_lag": 3,
+        "quarters_behind_last_completed_quarter": 3,
+        "maximum_completed_quarter_lag": 2,
+        "freshness_status": "STALE_BUT_RESEARCH_USABLE",
+        "reason_codes": [
+          "FINANCIAL_PERIOD_BEYOND_MAXIMUM_COMPLETED_QUARTER_LAG"
+        ],
+        "older_evidence_usable": true,
+        "rewritten_as_current": false
+      }
+    }
+  },
+  {
+    "name": "completed_quarter_lag",
+    "kwargs": {
+      "source_period": "2026-Q2",
+      "decision_session": "2026-03-30"
+    },
+    "result": {
+      "value": [
+        null,
+        null,
+        "FINANCIAL_PERIOD_AFTER_DECISION_SESSION"
+      ]
+    }
+  },
+  {
+    "name": "classify_financial_period_freshness",
+    "kwargs": {
+      "source_period": "2026-Q2",
+      "decision_session": "2026-03-30",
+      "maximum_completed_quarter_lag": 2
+    },
+    "result": {
+      "value": {
+        "contract_version": "financial_period_freshness/v1",
+        "vocabulary": "opportunity_axis_freshness/v1",
+        "source_period": "2026-Q2",
+        "decision_session": "2026-03-30",
+        "completed_quarter_lag": null,
+        "quarters_behind_last_completed_quarter": null,
+        "maximum_completed_quarter_lag": 2,
+        "freshness_status": "UNAVAILABLE",
+        "reason_codes": [
+          "FINANCIAL_PERIOD_AFTER_DECISION_SESSION"
+        ],
+        "older_evidence_usable": true,
+        "rewritten_as_current": false
+      }
+    }
+  },
+  {
+    "name": "completed_quarter_lag",
+    "kwargs": {
+      "source_period": "2026-Q2",
+      "decision_session": "2026-03-31"
+    },
+    "result": {
+      "value": [
+        null,
+        null,
+        "FINANCIAL_PERIOD_AFTER_DECISION_SESSION"
+      ]
+    }
+  },
+  {
+    "name": "classify_financial_period_freshness",
+    "kwargs": {
+      "source_period": "2026-Q2",
+      "decision_session": "2026-03-31",
+      "maximum_completed_quarter_lag": 2
+    },
+    "result": {
+      "value": {
+        "contract_version": "financial_period_freshness/v1",
+        "vocabulary": "opportunity_axis_freshness/v1",
+        "source_period": "2026-Q2",
+        "decision_session": "2026-03-31",
+        "completed_quarter_lag": null,
+        "quarters_behind_last_completed_quarter": null,
+        "maximum_completed_quarter_lag": 2,
+        "freshness_status": "UNAVAILABLE",
+        "reason_codes": [
+          "FINANCIAL_PERIOD_AFTER_DECISION_SESSION"
+        ],
+        "older_evidence_usable": true,
+        "rewritten_as_current": false
+      }
+    }
+  },
+  {
+    "name": "completed_quarter_lag",
+    "kwargs": {
+      "source_period": "2026-Q2",
+      "decision_session": "2026-04-01"
+    },
+    "result": {
+      "value": [
+        null,
+        null,
+        "FINANCIAL_PERIOD_AFTER_DECISION_SESSION"
+      ]
+    }
+  },
+  {
+    "name": "classify_financial_period_freshness",
+    "kwargs": {
+      "source_period": "2026-Q2",
+      "decision_session": "2026-04-01",
+      "maximum_completed_quarter_lag": 2
+    },
+    "result": {
+      "value": {
+        "contract_version": "financial_period_freshness/v1",
+        "vocabulary": "opportunity_axis_freshness/v1",
+        "source_period": "2026-Q2",
+        "decision_session": "2026-04-01",
+        "completed_quarter_lag": null,
+        "quarters_behind_last_completed_quarter": null,
+        "maximum_completed_quarter_lag": 2,
+        "freshness_status": "UNAVAILABLE",
+        "reason_codes": [
+          "FINANCIAL_PERIOD_AFTER_DECISION_SESSION"
+        ],
+        "older_evidence_usable": true,
+        "rewritten_as_current": false
+      }
+    }
+  },
+  {
+    "name": "completed_quarter_lag",
+    "kwargs": {
+      "source_period": "2026-Q2",
+      "decision_session": "2026-12-31"
+    },
+    "result": {
+      "value": [
+        2,
+        2,
+        null
+      ]
+    }
+  },
+  {
+    "name": "classify_financial_period_freshness",
+    "kwargs": {
+      "source_period": "2026-Q2",
+      "decision_session": "2026-12-31",
+      "maximum_completed_quarter_lag": 2
+    },
+    "result": {
+      "value": {
+        "contract_version": "financial_period_freshness/v1",
+        "vocabulary": "opportunity_axis_freshness/v1",
+        "source_period": "2026-Q2",
+        "decision_session": "2026-12-31",
+        "completed_quarter_lag": 2,
+        "quarters_behind_last_completed_quarter": 2,
+        "maximum_completed_quarter_lag": 2,
+        "freshness_status": "CURRENT",
+        "reason_codes": [],
+        "older_evidence_usable": true,
+        "rewritten_as_current": false
+      }
+    }
+  },
+  {
+    "name": "completed_quarter_lag",
+    "kwargs": {
+      "source_period": "2026-Q3",
+      "decision_session": "2026-03-30"
+    },
+    "result": {
+      "value": [
+        null,
+        null,
+        "FINANCIAL_PERIOD_AFTER_DECISION_SESSION"
+      ]
+    }
+  },
+  {
+    "name": "classify_financial_period_freshness",
+    "kwargs": {
+      "source_period": "2026-Q3",
+      "decision_session": "2026-03-30",
+      "maximum_completed_quarter_lag": 2
+    },
+    "result": {
+      "value": {
+        "contract_version": "financial_period_freshness/v1",
+        "vocabulary": "opportunity_axis_freshness/v1",
+        "source_period": "2026-Q3",
+        "decision_session": "2026-03-30",
+        "completed_quarter_lag": null,
+        "quarters_behind_last_completed_quarter": null,
+        "maximum_completed_quarter_lag": 2,
+        "freshness_status": "UNAVAILABLE",
+        "reason_codes": [
+          "FINANCIAL_PERIOD_AFTER_DECISION_SESSION"
+        ],
+        "older_evidence_usable": true,
+        "rewritten_as_current": false
+      }
+    }
+  },
+  {
+    "name": "completed_quarter_lag",
+    "kwargs": {
+      "source_period": "2026-Q3",
+      "decision_session": "2026-03-31"
+    },
+    "result": {
+      "value": [
+        null,
+        null,
+        "FINANCIAL_PERIOD_AFTER_DECISION_SESSION"
+      ]
+    }
+  },
+  {
+    "name": "classify_financial_period_freshness",
+    "kwargs": {
+      "source_period": "2026-Q3",
+      "decision_session": "2026-03-31",
+      "maximum_completed_quarter_lag": 2
+    },
+    "result": {
+      "value": {
+        "contract_version": "financial_period_freshness/v1",
+        "vocabulary": "opportunity_axis_freshness/v1",
+        "source_period": "2026-Q3",
+        "decision_session": "2026-03-31",
+        "completed_quarter_lag": null,
+        "quarters_behind_last_completed_quarter": null,
+        "maximum_completed_quarter_lag": 2,
+        "freshness_status": "UNAVAILABLE",
+        "reason_codes": [
+          "FINANCIAL_PERIOD_AFTER_DECISION_SESSION"
+        ],
+        "older_evidence_usable": true,
+        "rewritten_as_current": false
+      }
+    }
+  },
+  {
+    "name": "completed_quarter_lag",
+    "kwargs": {
+      "source_period": "2026-Q3",
+      "decision_session": "2026-04-01"
+    },
+    "result": {
+      "value": [
+        null,
+        null,
+        "FINANCIAL_PERIOD_AFTER_DECISION_SESSION"
+      ]
+    }
+  },
+  {
+    "name": "classify_financial_period_freshness",
+    "kwargs": {
+      "source_period": "2026-Q3",
+      "decision_session": "2026-04-01",
+      "maximum_completed_quarter_lag": 2
+    },
+    "result": {
+      "value": {
+        "contract_version": "financial_period_freshness/v1",
+        "vocabulary": "opportunity_axis_freshness/v1",
+        "source_period": "2026-Q3",
+        "decision_session": "2026-04-01",
+        "completed_quarter_lag": null,
+        "quarters_behind_last_completed_quarter": null,
+        "maximum_completed_quarter_lag": 2,
+        "freshness_status": "UNAVAILABLE",
+        "reason_codes": [
+          "FINANCIAL_PERIOD_AFTER_DECISION_SESSION"
+        ],
+        "older_evidence_usable": true,
+        "rewritten_as_current": false
+      }
+    }
+  },
+  {
+    "name": "completed_quarter_lag",
+    "kwargs": {
+      "source_period": "2026-Q3",
+      "decision_session": "2026-12-31"
+    },
+    "result": {
+      "value": [
+        1,
+        1,
+        null
+      ]
+    }
+  },
+  {
+    "name": "classify_financial_period_freshness",
+    "kwargs": {
+      "source_period": "2026-Q3",
+      "decision_session": "2026-12-31",
+      "maximum_completed_quarter_lag": 2
+    },
+    "result": {
+      "value": {
+        "contract_version": "financial_period_freshness/v1",
+        "vocabulary": "opportunity_axis_freshness/v1",
+        "source_period": "2026-Q3",
+        "decision_session": "2026-12-31",
+        "completed_quarter_lag": 1,
+        "quarters_behind_last_completed_quarter": 1,
+        "maximum_completed_quarter_lag": 2,
+        "freshness_status": "CURRENT",
+        "reason_codes": [],
+        "older_evidence_usable": true,
+        "rewritten_as_current": false
+      }
+    }
+  },
+  {
+    "name": "completed_quarter_lag",
+    "kwargs": {
+      "source_period": "2026-Q4",
+      "decision_session": "2026-03-30"
+    },
+    "result": {
+      "value": [
+        null,
+        null,
+        "FINANCIAL_PERIOD_AFTER_DECISION_SESSION"
+      ]
+    }
+  },
+  {
+    "name": "classify_financial_period_freshness",
+    "kwargs": {
+      "source_period": "2026-Q4",
+      "decision_session": "2026-03-30",
+      "maximum_completed_quarter_lag": 2
+    },
+    "result": {
+      "value": {
+        "contract_version": "financial_period_freshness/v1",
+        "vocabulary": "opportunity_axis_freshness/v1",
+        "source_period": "2026-Q4",
+        "decision_session": "2026-03-30",
+        "completed_quarter_lag": null,
+        "quarters_behind_last_completed_quarter": null,
+        "maximum_completed_quarter_lag": 2,
+        "freshness_status": "UNAVAILABLE",
+        "reason_codes": [
+          "FINANCIAL_PERIOD_AFTER_DECISION_SESSION"
+        ],
+        "older_evidence_usable": true,
+        "rewritten_as_current": false
+      }
+    }
+  },
+  {
+    "name": "completed_quarter_lag",
+    "kwargs": {
+      "source_period": "2026-Q4",
+      "decision_session": "2026-03-31"
+    },
+    "result": {
+      "value": [
+        null,
+        null,
+        "FINANCIAL_PERIOD_AFTER_DECISION_SESSION"
+      ]
+    }
+  },
+  {
+    "name": "classify_financial_period_freshness",
+    "kwargs": {
+      "source_period": "2026-Q4",
+      "decision_session": "2026-03-31",
+      "maximum_completed_quarter_lag": 2
+    },
+    "result": {
+      "value": {
+        "contract_version": "financial_period_freshness/v1",
+        "vocabulary": "opportunity_axis_freshness/v1",
+        "source_period": "2026-Q4",
+        "decision_session": "2026-03-31",
+        "completed_quarter_lag": null,
+        "quarters_behind_last_completed_quarter": null,
+        "maximum_completed_quarter_lag": 2,
+        "freshness_status": "UNAVAILABLE",
+        "reason_codes": [
+          "FINANCIAL_PERIOD_AFTER_DECISION_SESSION"
+        ],
+        "older_evidence_usable": true,
+        "rewritten_as_current": false
+      }
+    }
+  },
+  {
+    "name": "completed_quarter_lag",
+    "kwargs": {
+      "source_period": "2026-Q4",
+      "decision_session": "2026-04-01"
+    },
+    "result": {
+      "value": [
+        null,
+        null,
+        "FINANCIAL_PERIOD_AFTER_DECISION_SESSION"
+      ]
+    }
+  },
+  {
+    "name": "classify_financial_period_freshness",
+    "kwargs": {
+      "source_period": "2026-Q4",
+      "decision_session": "2026-04-01",
+      "maximum_completed_quarter_lag": 2
+    },
+    "result": {
+      "value": {
+        "contract_version": "financial_period_freshness/v1",
+        "vocabulary": "opportunity_axis_freshness/v1",
+        "source_period": "2026-Q4",
+        "decision_session": "2026-04-01",
+        "completed_quarter_lag": null,
+        "quarters_behind_last_completed_quarter": null,
+        "maximum_completed_quarter_lag": 2,
+        "freshness_status": "UNAVAILABLE",
+        "reason_codes": [
+          "FINANCIAL_PERIOD_AFTER_DECISION_SESSION"
+        ],
+        "older_evidence_usable": true,
+        "rewritten_as_current": false
+      }
+    }
+  },
+  {
+    "name": "completed_quarter_lag",
+    "kwargs": {
+      "source_period": "2026-Q4",
+      "decision_session": "2026-12-31"
+    },
+    "result": {
+      "value": [
+        0,
+        0,
+        null
+      ]
+    }
+  },
+  {
+    "name": "classify_financial_period_freshness",
+    "kwargs": {
+      "source_period": "2026-Q4",
+      "decision_session": "2026-12-31",
+      "maximum_completed_quarter_lag": 2
+    },
+    "result": {
+      "value": {
+        "contract_version": "financial_period_freshness/v1",
+        "vocabulary": "opportunity_axis_freshness/v1",
+        "source_period": "2026-Q4",
+        "decision_session": "2026-12-31",
+        "completed_quarter_lag": 0,
+        "quarters_behind_last_completed_quarter": 0,
+        "maximum_completed_quarter_lag": 2,
+        "freshness_status": "CURRENT",
+        "reason_codes": [],
+        "older_evidence_usable": true,
+        "rewritten_as_current": false
+      }
+    }
+  },
+  {
+    "name": "completed_quarter_lag",
+    "kwargs": {
+      "source_period": "2025-Q4",
+      "decision_session": "2026-03-30"
+    },
+    "result": {
+      "value": [
+        1,
+        0,
+        null
+      ]
+    }
+  },
+  {
+    "name": "classify_financial_period_freshness",
+    "kwargs": {
+      "source_period": "2025-Q4",
+      "decision_session": "2026-03-30",
+      "maximum_completed_quarter_lag": 2
+    },
+    "result": {
+      "value": {
+        "contract_version": "financial_period_freshness/v1",
+        "vocabulary": "opportunity_axis_freshness/v1",
+        "source_period": "2025-Q4",
+        "decision_session": "2026-03-30",
+        "completed_quarter_lag": 1,
+        "quarters_behind_last_completed_quarter": 0,
+        "maximum_completed_quarter_lag": 2,
+        "freshness_status": "CURRENT",
+        "reason_codes": [],
+        "older_evidence_usable": true,
+        "rewritten_as_current": false
+      }
+    }
+  },
+  {
+    "name": "completed_quarter_lag",
+    "kwargs": {
+      "source_period": "2025-Q4",
+      "decision_session": "2026-03-31"
+    },
+    "result": {
+      "value": [
+        1,
+        1,
+        null
+      ]
+    }
+  },
+  {
+    "name": "classify_financial_period_freshness",
+    "kwargs": {
+      "source_period": "2025-Q4",
+      "decision_session": "2026-03-31",
+      "maximum_completed_quarter_lag": 2
+    },
+    "result": {
+      "value": {
+        "contract_version": "financial_period_freshness/v1",
+        "vocabulary": "opportunity_axis_freshness/v1",
+        "source_period": "2025-Q4",
+        "decision_session": "2026-03-31",
+        "completed_quarter_lag": 1,
+        "quarters_behind_last_completed_quarter": 1,
+        "maximum_completed_quarter_lag": 2,
+        "freshness_status": "CURRENT",
+        "reason_codes": [],
+        "older_evidence_usable": true,
+        "rewritten_as_current": false
+      }
+    }
+  },
+  {
+    "name": "completed_quarter_lag",
+    "kwargs": {
+      "source_period": "2025-Q4",
+      "decision_session": "2026-04-01"
+    },
+    "result": {
+      "value": [
+        2,
+        1,
+        null
+      ]
+    }
+  },
+  {
+    "name": "classify_financial_period_freshness",
+    "kwargs": {
+      "source_period": "2025-Q4",
+      "decision_session": "2026-04-01",
+      "maximum_completed_quarter_lag": 2
+    },
+    "result": {
+      "value": {
+        "contract_version": "financial_period_freshness/v1",
+        "vocabulary": "opportunity_axis_freshness/v1",
+        "source_period": "2025-Q4",
+        "decision_session": "2026-04-01",
+        "completed_quarter_lag": 2,
+        "quarters_behind_last_completed_quarter": 1,
+        "maximum_completed_quarter_lag": 2,
+        "freshness_status": "CURRENT",
+        "reason_codes": [],
+        "older_evidence_usable": true,
+        "rewritten_as_current": false
+      }
+    }
+  },
+  {
+    "name": "completed_quarter_lag",
+    "kwargs": {
+      "source_period": "2025-Q4",
+      "decision_session": "2026-12-31"
+    },
+    "result": {
+      "value": [
+        4,
+        4,
+        null
+      ]
+    }
+  },
+  {
+    "name": "classify_financial_period_freshness",
+    "kwargs": {
+      "source_period": "2025-Q4",
+      "decision_session": "2026-12-31",
+      "maximum_completed_quarter_lag": 2
+    },
+    "result": {
+      "value": {
+        "contract_version": "financial_period_freshness/v1",
+        "vocabulary": "opportunity_axis_freshness/v1",
+        "source_period": "2025-Q4",
+        "decision_session": "2026-12-31",
+        "completed_quarter_lag": 4,
+        "quarters_behind_last_completed_quarter": 4,
+        "maximum_completed_quarter_lag": 2,
+        "freshness_status": "STALE_BUT_RESEARCH_USABLE",
+        "reason_codes": [
+          "FINANCIAL_PERIOD_BEYOND_MAXIMUM_COMPLETED_QUARTER_LAG"
+        ],
+        "older_evidence_usable": true,
+        "rewritten_as_current": false
+      }
+    }
+  },
+  {
+    "name": "completed_quarter_lag",
+    "kwargs": {
+      "source_period": "2026-H1",
+      "decision_session": "2026-03-30"
+    },
+    "result": {
+      "value": [
+        null,
+        null,
+        "FINANCIAL_SOURCE_PERIOD_UNRESOLVED"
+      ]
+    }
+  },
+  {
+    "name": "classify_financial_period_freshness",
+    "kwargs": {
+      "source_period": "2026-H1",
+      "decision_session": "2026-03-30",
+      "maximum_completed_quarter_lag": 2
+    },
+    "result": {
+      "value": {
+        "contract_version": "financial_period_freshness/v1",
+        "vocabulary": "opportunity_axis_freshness/v1",
+        "source_period": "2026-H1",
+        "decision_session": "2026-03-30",
+        "completed_quarter_lag": null,
+        "quarters_behind_last_completed_quarter": null,
+        "maximum_completed_quarter_lag": 2,
+        "freshness_status": "UNAVAILABLE",
+        "reason_codes": [
+          "FINANCIAL_SOURCE_PERIOD_UNRESOLVED"
+        ],
+        "older_evidence_usable": true,
+        "rewritten_as_current": false
+      }
+    }
+  },
+  {
+    "name": "completed_quarter_lag",
+    "kwargs": {
+      "source_period": "2026-H1",
+      "decision_session": "2026-03-31"
+    },
+    "result": {
+      "value": [
+        null,
+        null,
+        "FINANCIAL_SOURCE_PERIOD_UNRESOLVED"
+      ]
+    }
+  },
+  {
+    "name": "classify_financial_period_freshness",
+    "kwargs": {
+      "source_period": "2026-H1",
+      "decision_session": "2026-03-31",
+      "maximum_completed_quarter_lag": 2
+    },
+    "result": {
+      "value": {
+        "contract_version": "financial_period_freshness/v1",
+        "vocabulary": "opportunity_axis_freshness/v1",
+        "source_period": "2026-H1",
+        "decision_session": "2026-03-31",
+        "completed_quarter_lag": null,
+        "quarters_behind_last_completed_quarter": null,
+        "maximum_completed_quarter_lag": 2,
+        "freshness_status": "UNAVAILABLE",
+        "reason_codes": [
+          "FINANCIAL_SOURCE_PERIOD_UNRESOLVED"
+        ],
+        "older_evidence_usable": true,
+        "rewritten_as_current": false
+      }
+    }
+  },
+  {
+    "name": "completed_quarter_lag",
+    "kwargs": {
+      "source_period": "2026-H1",
+      "decision_session": "2026-04-01"
+    },
+    "result": {
+      "value": [
+        null,
+        null,
+        "FINANCIAL_SOURCE_PERIOD_UNRESOLVED"
+      ]
+    }
+  },
+  {
+    "name": "classify_financial_period_freshness",
+    "kwargs": {
+      "source_period": "2026-H1",
+      "decision_session": "2026-04-01",
+      "maximum_completed_quarter_lag": 2
+    },
+    "result": {
+      "value": {
+        "contract_version": "financial_period_freshness/v1",
+        "vocabulary": "opportunity_axis_freshness/v1",
+        "source_period": "2026-H1",
+        "decision_session": "2026-04-01",
+        "completed_quarter_lag": null,
+        "quarters_behind_last_completed_quarter": null,
+        "maximum_completed_quarter_lag": 2,
+        "freshness_status": "UNAVAILABLE",
+        "reason_codes": [
+          "FINANCIAL_SOURCE_PERIOD_UNRESOLVED"
+        ],
+        "older_evidence_usable": true,
+        "rewritten_as_current": false
+      }
+    }
+  },
+  {
+    "name": "completed_quarter_lag",
+    "kwargs": {
+      "source_period": "2026-H1",
+      "decision_session": "2026-12-31"
+    },
+    "result": {
+      "value": [
+        null,
+        null,
+        "FINANCIAL_SOURCE_PERIOD_UNRESOLVED"
+      ]
+    }
+  },
+  {
+    "name": "classify_financial_period_freshness",
+    "kwargs": {
+      "source_period": "2026-H1",
+      "decision_session": "2026-12-31",
+      "maximum_completed_quarter_lag": 2
+    },
+    "result": {
+      "value": {
+        "contract_version": "financial_period_freshness/v1",
+        "vocabulary": "opportunity_axis_freshness/v1",
+        "source_period": "2026-H1",
+        "decision_session": "2026-12-31",
+        "completed_quarter_lag": null,
+        "quarters_behind_last_completed_quarter": null,
+        "maximum_completed_quarter_lag": 2,
+        "freshness_status": "UNAVAILABLE",
+        "reason_codes": [
+          "FINANCIAL_SOURCE_PERIOD_UNRESOLVED"
+        ],
+        "older_evidence_usable": true,
+        "rewritten_as_current": false
+      }
+    }
+  },
+  {
+    "name": "completed_quarter_lag",
+    "kwargs": {
+      "source_period": "0000-Q1",
+      "decision_session": "2026-03-30"
+    },
+    "result": {
+      "value": [
+        8104,
+        8103,
+        null
+      ]
+    }
+  },
+  {
+    "name": "classify_financial_period_freshness",
+    "kwargs": {
+      "source_period": "0000-Q1",
+      "decision_session": "2026-03-30",
+      "maximum_completed_quarter_lag": 2
+    },
+    "result": {
+      "value": {
+        "contract_version": "financial_period_freshness/v1",
+        "vocabulary": "opportunity_axis_freshness/v1",
+        "source_period": "0000-Q1",
+        "decision_session": "2026-03-30",
+        "completed_quarter_lag": 8104,
+        "quarters_behind_last_completed_quarter": 8103,
+        "maximum_completed_quarter_lag": 2,
+        "freshness_status": "STALE_BUT_RESEARCH_USABLE",
+        "reason_codes": [
+          "FINANCIAL_PERIOD_BEYOND_MAXIMUM_COMPLETED_QUARTER_LAG"
+        ],
+        "older_evidence_usable": true,
+        "rewritten_as_current": false
+      }
+    }
+  },
+  {
+    "name": "completed_quarter_lag",
+    "kwargs": {
+      "source_period": "0000-Q1",
+      "decision_session": "2026-03-31"
+    },
+    "result": {
+      "value": [
+        8104,
+        8104,
+        null
+      ]
+    }
+  },
+  {
+    "name": "classify_financial_period_freshness",
+    "kwargs": {
+      "source_period": "0000-Q1",
+      "decision_session": "2026-03-31",
+      "maximum_completed_quarter_lag": 2
+    },
+    "result": {
+      "value": {
+        "contract_version": "financial_period_freshness/v1",
+        "vocabulary": "opportunity_axis_freshness/v1",
+        "source_period": "0000-Q1",
+        "decision_session": "2026-03-31",
+        "completed_quarter_lag": 8104,
+        "quarters_behind_last_completed_quarter": 8104,
+        "maximum_completed_quarter_lag": 2,
+        "freshness_status": "STALE_BUT_RESEARCH_USABLE",
+        "reason_codes": [
+          "FINANCIAL_PERIOD_BEYOND_MAXIMUM_COMPLETED_QUARTER_LAG"
+        ],
+        "older_evidence_usable": true,
+        "rewritten_as_current": false
+      }
+    }
+  },
+  {
+    "name": "completed_quarter_lag",
+    "kwargs": {
+      "source_period": "0000-Q1",
+      "decision_session": "2026-04-01"
+    },
+    "result": {
+      "value": [
+        8105,
+        8104,
+        null
+      ]
+    }
+  },
+  {
+    "name": "classify_financial_period_freshness",
+    "kwargs": {
+      "source_period": "0000-Q1",
+      "decision_session": "2026-04-01",
+      "maximum_completed_quarter_lag": 2
+    },
+    "result": {
+      "value": {
+        "contract_version": "financial_period_freshness/v1",
+        "vocabulary": "opportunity_axis_freshness/v1",
+        "source_period": "0000-Q1",
+        "decision_session": "2026-04-01",
+        "completed_quarter_lag": 8105,
+        "quarters_behind_last_completed_quarter": 8104,
+        "maximum_completed_quarter_lag": 2,
+        "freshness_status": "STALE_BUT_RESEARCH_USABLE",
+        "reason_codes": [
+          "FINANCIAL_PERIOD_BEYOND_MAXIMUM_COMPLETED_QUARTER_LAG"
+        ],
+        "older_evidence_usable": true,
+        "rewritten_as_current": false
+      }
+    }
+  },
+  {
+    "name": "completed_quarter_lag",
+    "kwargs": {
+      "source_period": "0000-Q1",
+      "decision_session": "2026-12-31"
+    },
+    "result": {
+      "value": [
+        8107,
+        8107,
+        null
+      ]
+    }
+  },
+  {
+    "name": "classify_financial_period_freshness",
+    "kwargs": {
+      "source_period": "0000-Q1",
+      "decision_session": "2026-12-31",
+      "maximum_completed_quarter_lag": 2
+    },
+    "result": {
+      "value": {
+        "contract_version": "financial_period_freshness/v1",
+        "vocabulary": "opportunity_axis_freshness/v1",
+        "source_period": "0000-Q1",
+        "decision_session": "2026-12-31",
+        "completed_quarter_lag": 8107,
+        "quarters_behind_last_completed_quarter": 8107,
+        "maximum_completed_quarter_lag": 2,
+        "freshness_status": "STALE_BUT_RESEARCH_USABLE",
+        "reason_codes": [
+          "FINANCIAL_PERIOD_BEYOND_MAXIMUM_COMPLETED_QUARTER_LAG"
+        ],
+        "older_evidence_usable": true,
+        "rewritten_as_current": false
+      }
+    }
+  },
+  {
+    "name": "completed_quarter_lag",
+    "kwargs": {
+      "source_period": "bad",
+      "decision_session": "2026-03-30"
+    },
+    "result": {
+      "value": [
+        null,
+        null,
+        "FINANCIAL_SOURCE_PERIOD_UNRESOLVED"
+      ]
+    }
+  },
+  {
+    "name": "classify_financial_period_freshness",
+    "kwargs": {
+      "source_period": "bad",
+      "decision_session": "2026-03-30",
+      "maximum_completed_quarter_lag": 2
+    },
+    "result": {
+      "value": {
+        "contract_version": "financial_period_freshness/v1",
+        "vocabulary": "opportunity_axis_freshness/v1",
+        "source_period": "bad",
+        "decision_session": "2026-03-30",
+        "completed_quarter_lag": null,
+        "quarters_behind_last_completed_quarter": null,
+        "maximum_completed_quarter_lag": 2,
+        "freshness_status": "UNAVAILABLE",
+        "reason_codes": [
+          "FINANCIAL_SOURCE_PERIOD_UNRESOLVED"
+        ],
+        "older_evidence_usable": true,
+        "rewritten_as_current": false
+      }
+    }
+  },
+  {
+    "name": "completed_quarter_lag",
+    "kwargs": {
+      "source_period": "bad",
+      "decision_session": "2026-03-31"
+    },
+    "result": {
+      "value": [
+        null,
+        null,
+        "FINANCIAL_SOURCE_PERIOD_UNRESOLVED"
+      ]
+    }
+  },
+  {
+    "name": "classify_financial_period_freshness",
+    "kwargs": {
+      "source_period": "bad",
+      "decision_session": "2026-03-31",
+      "maximum_completed_quarter_lag": 2
+    },
+    "result": {
+      "value": {
+        "contract_version": "financial_period_freshness/v1",
+        "vocabulary": "opportunity_axis_freshness/v1",
+        "source_period": "bad",
+        "decision_session": "2026-03-31",
+        "completed_quarter_lag": null,
+        "quarters_behind_last_completed_quarter": null,
+        "maximum_completed_quarter_lag": 2,
+        "freshness_status": "UNAVAILABLE",
+        "reason_codes": [
+          "FINANCIAL_SOURCE_PERIOD_UNRESOLVED"
+        ],
+        "older_evidence_usable": true,
+        "rewritten_as_current": false
+      }
+    }
+  },
+  {
+    "name": "completed_quarter_lag",
+    "kwargs": {
+      "source_period": "bad",
+      "decision_session": "2026-04-01"
+    },
+    "result": {
+      "value": [
+        null,
+        null,
+        "FINANCIAL_SOURCE_PERIOD_UNRESOLVED"
+      ]
+    }
+  },
+  {
+    "name": "classify_financial_period_freshness",
+    "kwargs": {
+      "source_period": "bad",
+      "decision_session": "2026-04-01",
+      "maximum_completed_quarter_lag": 2
+    },
+    "result": {
+      "value": {
+        "contract_version": "financial_period_freshness/v1",
+        "vocabulary": "opportunity_axis_freshness/v1",
+        "source_period": "bad",
+        "decision_session": "2026-04-01",
+        "completed_quarter_lag": null,
+        "quarters_behind_last_completed_quarter": null,
+        "maximum_completed_quarter_lag": 2,
+        "freshness_status": "UNAVAILABLE",
+        "reason_codes": [
+          "FINANCIAL_SOURCE_PERIOD_UNRESOLVED"
+        ],
+        "older_evidence_usable": true,
+        "rewritten_as_current": false
+      }
+    }
+  },
+  {
+    "name": "completed_quarter_lag",
+    "kwargs": {
+      "source_period": "bad",
+      "decision_session": "2026-12-31"
+    },
+    "result": {
+      "value": [
+        null,
+        null,
+        "FINANCIAL_SOURCE_PERIOD_UNRESOLVED"
+      ]
+    }
+  },
+  {
+    "name": "classify_financial_period_freshness",
+    "kwargs": {
+      "source_period": "bad",
+      "decision_session": "2026-12-31",
+      "maximum_completed_quarter_lag": 2
+    },
+    "result": {
+      "value": {
+        "contract_version": "financial_period_freshness/v1",
+        "vocabulary": "opportunity_axis_freshness/v1",
+        "source_period": "bad",
+        "decision_session": "2026-12-31",
+        "completed_quarter_lag": null,
+        "quarters_behind_last_completed_quarter": null,
+        "maximum_completed_quarter_lag": 2,
+        "freshness_status": "UNAVAILABLE",
+        "reason_codes": [
+          "FINANCIAL_SOURCE_PERIOD_UNRESOLVED"
+        ],
+        "older_evidence_usable": true,
+        "rewritten_as_current": false
+      }
+    }
+  },
+  {
+    "name": "reporting_period_basis",
+    "kwargs": {
+      "row": {}
+    },
+    "result": {
+      "value": {
+        "native_label": null,
+        "period_family": "UNKNOWN",
+        "fiscal_year_label": null,
+        "fiscal_calendar": "UNKNOWN",
+        "period_start": null,
+        "period_end": null,
+        "time_basis": "UNKNOWN",
+        "duration_days": null,
+        "cumulative_basis": "UNKNOWN",
+        "statement_family": null,
+        "statement_scope": null,
+        "currency": null,
+        "unit_scale": null,
+        "canonical_metric": null,
+        "reason_codes": [
+          "EXPLICIT_REPORTING_BOUNDS_UNPROVEN",
+          "FISCAL_CALENDAR_NOT_PROVEN_BY_LABEL",
+          "FLOW_DURATION_NOT_PROVEN_BY_QUARTER_LABEL",
+          "STATEMENT_TIME_BASIS_UNPROVEN",
+          "UNKNOWN_OR_MALFORMED_NATIVE_PERIOD_LABEL"
+        ]
+      }
+    }
+  },
+  {
+    "name": "reporting_period_basis",
+    "kwargs": {
+      "row": {
+        "reporting_period": "2026-H1"
+      }
+    },
+    "result": {
+      "value": {
+        "native_label": "2026-H1",
+        "period_family": "HALF_YEAR",
+        "fiscal_year_label": "2026",
+        "fiscal_calendar": "UNKNOWN",
+        "period_start": null,
+        "period_end": null,
+        "time_basis": "UNKNOWN",
+        "duration_days": null,
+        "cumulative_basis": "UNKNOWN",
+        "statement_family": null,
+        "statement_scope": null,
+        "currency": null,
+        "unit_scale": null,
+        "canonical_metric": null,
+        "reason_codes": [
+          "EXPLICIT_REPORTING_BOUNDS_UNPROVEN",
+          "FISCAL_CALENDAR_NOT_PROVEN_BY_LABEL",
+          "FLOW_DURATION_NOT_PROVEN_BY_QUARTER_LABEL",
+          "STATEMENT_TIME_BASIS_UNPROVEN"
+        ]
+      }
+    }
+  },
+  {
+    "name": "reporting_period_basis",
+    "kwargs": {
+      "row": {
+        "reporting_period": "2026-H1",
+        "period_start": "2026-01-01",
+        "period_end": "2026-06-30",
+        "statement_family": "income_statement",
+        "period_type": "half_year",
+        "fiscal_calendar": "CALENDAR_YEAR"
+      }
+    },
+    "result": {
+      "value": {
+        "native_label": "2026-H1",
+        "period_family": "HALF_YEAR",
+        "fiscal_year_label": "2026",
+        "fiscal_calendar": "CALENDAR_YEAR",
+        "period_start": "2026-01-01",
+        "period_end": "2026-06-30",
+        "time_basis": "DURATION",
+        "duration_days": 181,
+        "cumulative_basis": "CUMULATIVE",
+        "statement_family": "income_statement",
+        "statement_scope": null,
+        "currency": null,
+        "unit_scale": null,
+        "canonical_metric": null,
+        "reason_codes": []
+      }
+    }
+  },
+  {
+    "name": "reporting_period_basis",
+    "kwargs": {
+      "row": {
+        "reporting_period": "2026-Q3",
+        "period_start": "2026-09-30",
+        "period_end": "2026-01-01",
+        "metric_nature": "FLOW_DURATION"
+      }
+    },
+    "result": {
+      "value": {
+        "native_label": "2026-Q3",
+        "period_family": "QUARTER",
+        "fiscal_year_label": "2026",
+        "fiscal_calendar": "UNKNOWN",
+        "period_start": null,
+        "period_end": null,
+        "time_basis": "DURATION",
+        "duration_days": null,
+        "cumulative_basis": "UNKNOWN",
+        "statement_family": null,
+        "statement_scope": null,
+        "currency": null,
+        "unit_scale": null,
+        "canonical_metric": null,
+        "reason_codes": [
+          "EXPLICIT_REPORTING_BOUNDS_UNPROVEN",
+          "FISCAL_CALENDAR_NOT_PROVEN_BY_LABEL",
+          "FLOW_DURATION_NOT_PROVEN_BY_QUARTER_LABEL",
+          "MALFORMED_EXPLICIT_PERIOD_BOUNDS"
+        ]
+      }
+    }
+  },
+  {
+    "name": "reporting_period_basis",
+    "kwargs": {
+      "row": {
+        "reporting_period": "2026-H1",
+        "period_end": "2026-06-30",
+        "statement_family": "balance_sheet"
+      }
+    },
+    "result": {
+      "value": {
+        "native_label": "2026-H1",
+        "period_family": "HALF_YEAR",
+        "fiscal_year_label": "2026",
+        "fiscal_calendar": "UNKNOWN",
+        "period_start": null,
+        "period_end": "2026-06-30",
+        "time_basis": "INSTANT",
+        "duration_days": null,
+        "cumulative_basis": "NOT_APPLICABLE_INSTANT",
+        "statement_family": "balance_sheet",
+        "statement_scope": null,
+        "currency": null,
+        "unit_scale": null,
+        "canonical_metric": null,
+        "reason_codes": [
+          "FISCAL_CALENDAR_NOT_PROVEN_BY_LABEL"
+        ]
+      }
+    }
+  },
+  {
+    "name": "reporting_period_basis",
+    "kwargs": {
+      "row": {
+        "reporting_period": "bad",
+        "period_semantic_state": [
+          "ANNUAL",
+          "STANDALONE_QUARTER"
+        ]
+      }
+    },
+    "result": {
+      "value": {
+        "native_label": "bad",
+        "period_family": "UNKNOWN",
+        "fiscal_year_label": null,
+        "fiscal_calendar": "UNKNOWN",
+        "period_start": null,
+        "period_end": null,
+        "time_basis": "MIXED",
+        "duration_days": null,
+        "cumulative_basis": "UNKNOWN",
+        "statement_family": null,
+        "statement_scope": null,
+        "currency": null,
+        "unit_scale": null,
+        "canonical_metric": null,
+        "reason_codes": [
+          "EXPLICIT_REPORTING_BOUNDS_UNPROVEN",
+          "FISCAL_CALENDAR_NOT_PROVEN_BY_LABEL",
+          "FLOW_DURATION_NOT_PROVEN_BY_QUARTER_LABEL",
+          "MIXED_STATEMENT_TIMING_BASIS",
+          "STATEMENT_TIME_BASIS_UNPROVEN",
+          "UNKNOWN_OR_MALFORMED_NATIVE_PERIOD_LABEL"
+        ]
+      }
+    }
+  },
+  {
+    "name": "reporting_period_basis",
+    "kwargs": {
+      "row": {
+        "reporting_period": "2026-Q2",
+        "period_start": 7,
+        "period_end": "invalid"
+      }
+    },
+    "result": {
+      "value": {
+        "native_label": "2026-Q2",
+        "period_family": "QUARTER",
+        "fiscal_year_label": "2026",
+        "fiscal_calendar": "UNKNOWN",
+        "period_start": null,
+        "period_end": null,
+        "time_basis": "UNKNOWN",
+        "duration_days": null,
+        "cumulative_basis": "UNKNOWN",
+        "statement_family": null,
+        "statement_scope": null,
+        "currency": null,
+        "unit_scale": null,
+        "canonical_metric": null,
+        "reason_codes": [
+          "EXPLICIT_REPORTING_BOUNDS_UNPROVEN",
+          "FISCAL_CALENDAR_NOT_PROVEN_BY_LABEL",
+          "FLOW_DURATION_NOT_PROVEN_BY_QUARTER_LABEL",
+          "MALFORMED_EXPLICIT_PERIOD_BOUNDS",
+          "STATEMENT_TIME_BASIS_UNPROVEN"
+        ]
+      }
+    }
+  },
+  {
+    "name": "reporting_period_relation",
+    "kwargs": {
+      "baseline": {
+        "native_label": "2026-Q1"
+      },
+      "candidate": {
+        "native_label": "2026-H1"
+      }
+    },
+    "result": {
+      "value": "NATIVE_LABEL_PROGRESS_CALENDAR_UNPROVEN"
+    }
+  },
+  {
+    "name": "reporting_period_relation",
+    "kwargs": {
+      "baseline": {
+        "native_label": "2026-H1"
+      },
+      "candidate": {
+        "native_label": "2026-Q2"
+      }
+    },
+    "result": {
+      "value": "SAME_NATIVE_PERIOD_POSITION"
+    }
+  },
+  {
+    "name": "reporting_period_relation",
+    "kwargs": {
+      "baseline": {
+        "native_label": "2025-FY"
+      },
+      "candidate": {
+        "native_label": "2026-Q1"
+      }
+    },
+    "result": {
+      "value": "PERIOD_ORDER_UNRESOLVED"
+    }
+  },
+  {
+    "name": "reporting_period_relation",
+    "kwargs": {
+      "baseline": {
+        "native_label": "bad"
+      },
+      "candidate": {
+        "native_label": "2026-Q3"
+      }
+    },
+    "result": {
+      "value": "PERIOD_ORDER_UNRESOLVED"
+    }
+  }
+]

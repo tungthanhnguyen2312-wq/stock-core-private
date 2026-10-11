@@ -31,7 +31,7 @@ from canonical_post_close_pipeline import (
     register_session_inputs,
     validate_and_freeze_completed_session,
 )
-from daily_research_session_operations import load_registry
+from stocklookup_core.evidence.session_registry import load_registry
 
 CONTRACT_VERSION = "session_registry_gap_reconciliation/v1"
 
