@@ -5,12 +5,11 @@ Updated 2026-10-11 from main `498b02dd8471078a9cd627eb75241a4ed2da0de5`.
 Nothing below auto-starts; native standing admission required (AI_RULES 11).
 Facts: [ACTIVE_STATE.md](ACTIVE_STATE.md).
 
-## NOW — FINANCIAL_REPORTING_CURRENCY_TRANSPARENCY_V1 (COMPLETE)
+## NOW — OFFICIAL_FINANCIAL_SOURCE_QUALIFICATION_INTEGRITY_CORRECTIVE_V1 (ACTIVE)
 
-Owner-admitted descriptive financial basis/source/cutoff reconciliation and opt-in
-investor/packet consumer. [Scope](financial_reporting_currency_transparency_v1_contract.md).
-PR120 owner-approved release; four post-merge jobs PASS (38111216670). No Daily/authority change. Queue empty.
-Next owner-selected scope is source-qualification integrity; native admission required.
+Owner-admitted offline source-to-citation corrective. [Scope](official_financial_source_qualification_integrity_corrective_v1_contract.md).
+PR120 COMPLETE; four post-merge jobs PASS (38111216670). Queue empty.
+No refresh/Daily, Q3 authority or retained overlay rewrite. Separate exact-HEAD merge approval.
 PR119 COMPLETE at `d1c9c805`; four post-merge jobs PASS (38105025004).
 Fiscal mapping lacks issuer calendar/covered-period/provider-label/publication proof;
 existing semantics knowledge time is insufficient. No automatic conversion/promotion.

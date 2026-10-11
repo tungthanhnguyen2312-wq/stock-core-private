@@ -15,11 +15,32 @@
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "FINANCIAL_REPORTING_CURRENCY_TRANSPARENCY_V1",
-    "state": "COMPLETE"
+    "milestone": "OFFICIAL_FINANCIAL_SOURCE_QUALIFICATION_INTEGRITY_CORRECTIVE_V1",
+    "state": "ACTIVE"
   },
   "queued_next": [],
   "milestones": [
+    {
+      "milestone_id": "OFFICIAL_FINANCIAL_SOURCE_QUALIFICATION_INTEGRITY_CORRECTIVE_V1",
+      "state": "ACTIVE",
+      "starting_checkpoint": "78d3fb994b3e05310ac138b8be235cb108da2698",
+      "candidate_branch": "feature/official-financial-source-integrity-corrective-v1-20261011",
+      "dependencies": [
+        "FINANCIAL_REPORTING_CURRENCY_TRANSPARENCY_V1"
+      ],
+      "unlocks": [],
+      "owner_authorized": true,
+      "owner_override": "Owner P0 directive and standing development delegation authorize one end-to-end offline source qualification corrective after PR120 approved release and native closeout: regression-first classification, shared document/assurance/metadata/fact admission, preservation and atomic overlay validation, canonical/fundamental/valuation consumer guards, bounded read-only 27-row proof inventory, valid-source and numerical/packet parity, one feature PR with four CI gates. Sole C writer. No Q3 authority, period_bounds expansion, unreviewed facts, source activation, production refresh or Daily, retained evidence rewrites, other drives, concurrent writers or background continuation. Corrective merge requires separate exact-HEAD owner approval.",
+      "authority_effect": "NONE",
+      "source_doc": "docs/official_financial_source_qualification_integrity_corrective_v1_contract.md",
+      "state_history": [
+        "DEFERRED",
+        "ACTIVE"
+      ],
+      "checkpoint": null,
+      "terminal_disposition": null,
+      "notes": "Owner P0 directive and standing development delegation authorize one end-to-end offline source qualification corrective after PR120 approved release and native closeout: regression-first classification, shared document/assurance/metadata/fact admission, preservation and atomic overlay validation, canonical/fundamental/valuation consumer guards, bounded read-only 27-row proof inventory, valid-source and numerical/packet parity, one feature PR with four CI gates. Sole C writer. No Q3 authority, period_bounds expansion, unreviewed facts, source activation, production refresh or Daily, retained evidence rewrites, other drives, concurrent writers or background continuation. Corrective merge requires separate exact-HEAD owner approval."
+    },
     {
       "milestone_id": "FINANCIAL_REPORTING_CURRENCY_TRANSPARENCY_V1",
       "state": "COMPLETE",
