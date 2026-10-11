@@ -5,8 +5,9 @@ Updated 2026-10-11 from main `498b02dd8471078a9cd627eb75241a4ed2da0de5`.
 Nothing below auto-starts; native standing admission required (AI_RULES 11).
 Facts: [ACTIVE_STATE.md](ACTIVE_STATE.md).
 
-## NOW — OFFICIAL_FINANCIAL_SOURCE_QUALIFICATION_INTEGRITY_CORRECTIVE_V1 (ACTIVE)
+## NOW — AGENT_BOOTSTRAP_FOOTGUN_REMOVAL_V1 (ACTIVE)
 
+[Scope](agent_bootstrap_footgun_removal_v1_contract.md). Source-integrity predecessor COMPLETE at `cdef38e8` on this branch only.
 Owner-admitted offline source-to-citation corrective. [Scope](official_financial_source_qualification_integrity_corrective_v1_contract.md).
 PR120 COMPLETE; four post-merge jobs PASS (38111216670). Queue empty.
 No refresh/Daily, Q3 authority or retained overlay rewrite. Separate exact-HEAD merge approval.

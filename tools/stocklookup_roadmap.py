@@ -9,7 +9,8 @@ predecessor, then admits one owner-directed scope with an empty queue. Neither s
 
     python tools/stocklookup_roadmap.py                    human-readable report
     python tools/stocklookup_roadmap.py --json              machine-readable report
-    python tools/stocklookup_roadmap.py --check              preflight gate (exit 0 = ON_TRACK)
+    python tools/stocklookup_roadmap.py --check              preflight gate (exit 0 = ON_TRACK with live Git)
+    python tools/stocklookup_roadmap.py --worktrees          classify worktrees; removes nothing
     python tools/stocklookup_roadmap.py --can-start ID        is milestone ID allowed to start now
 """
 from __future__ import annotations
@@ -61,7 +62,14 @@ def _print_human_report(report: res.RoadmapReport, *, repo: Path | None) -> None
     print(f"  {resolved_lineage}" + (f"  (recorded: {lineage_head})" if resolved_lineage != lineage_head else ""))
     print()
     print("DRIFT CHECK:")
-    print(f"  {'PASS' if report.overall == 'ON_TRACK' else 'FAIL'}")
+    if report.overall == "ON_TRACK":
+        drift = "PASS"
+    elif report.overall == res.OVERALL_GIT_NOT_CHECKED:
+        drift = res.OVERALL_GIT_NOT_CHECKED
+    else:
+        drift = "FAIL"
+    print(f"  {drift}")
+    print(f"Git verification: {report.git_verification}")
     print()
     print("Checks:")
     for category in res.CHECK_CATEGORIES:
@@ -77,6 +85,19 @@ def _print_human_report(report: res.RoadmapReport, *, repo: Path | None) -> None
         reason = entry.get("reason")
         if reason:
             print(f"      {reason}")
+
+    if repo is not None:
+        bootstrap = res.build_bootstrap(repo)
+        counts = bootstrap["worktrees"]
+        print("Bootstrap:")
+        print(f"  focused_selection_count: {bootstrap['focused_selection_count']}")
+        print(
+            "  worktrees: "
+            + " ".join(f"{key}={counts[key]}" for key in (
+                "registered", "ancestor_of_head", "tracked_clean", "tracked_dirty", "unmerged", "status_unknown",
+            ))
+        )
+        print("  do_not_open: " + ", ".join(bootstrap["do_not_open"]))
 
     non_info = [f for f in report.findings if f.severity != res.INFO]
     if non_info:
@@ -96,7 +117,14 @@ def _report_to_json(report: res.RoadmapReport, *, repo: Path | None) -> dict:
     return {
         "schema_version": res.SCHEMA_VERSION,
         "overall": report.overall,
+        "git_verification": report.git_verification,
         "content_identity": report.content_identity,
+        "bootstrap": res.build_bootstrap(repo) if repo is not None else {
+            "do_not_open": list(res.DO_NOT_OPEN),
+            "local_fast": list(res.LOCAL_FAST),
+            "focused_selection_count": "UNKNOWN",
+            "worktrees": "UNKNOWN",
+        },
         "current": report.state.get("current"),
         "queued_next": report.state.get("queued_next"),
         "summary_counts": res.summary_counts(report.state),
@@ -136,6 +164,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--scope-note", help="Exact owner directive and bounded scope; required for continuation or admission.")
     parser.add_argument("--admit-scope", metavar="MILESTONE_ID", help="Register and admit an explicitly owner-directed successor after reconciling a verified release.")
     parser.add_argument("--release-current-at", help="Exact verified live starting HEAD; release an ACTIVE current milestone or preserve an already COMPLETE predecessor.")
+    parser.add_argument("--worktrees", action="store_true", help="Print worktree class, HEAD, branch and tracked-dirty count. Does not remove worktrees.")
     args = parser.parse_args(argv)
 
     try:
@@ -249,6 +278,17 @@ def main(argv: list[str] | None = None) -> int:
                 print(f"  - {reason}")
         return 0 if allowed else 1
 
+    if args.worktrees and not args.json:
+        if repo is None:
+            print("WORKTREES: UNKNOWN")
+        else:
+            classified = res.classify_worktrees(repo)
+            print("class\thead\tbranch\ttracked_dirty_count\tpath")
+            for row in classified["rows"]:
+                print(f"{row['class']}\t{row['head']}\t{row['branch']}\t{row['tracked_dirty_count']}\t{row['path']}")
+        if not args.check:
+            return 0
+
     report = res.evaluate(state, repo=repo)
 
     if args.json:
@@ -257,7 +297,7 @@ def main(argv: list[str] | None = None) -> int:
         _print_human_report(report, repo=repo)
 
     if args.check:
-        return 0 if report.overall == "ON_TRACK" else 1
+        return 0 if report.overall == "ON_TRACK" and report.git_verification == res.GIT_VERIFICATION_VERIFIED else 1
     return 0
 
 

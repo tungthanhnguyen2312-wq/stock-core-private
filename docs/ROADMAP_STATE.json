@@ -15,14 +15,35 @@
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "OFFICIAL_FINANCIAL_SOURCE_QUALIFICATION_INTEGRITY_CORRECTIVE_V1",
+    "milestone": "AGENT_BOOTSTRAP_FOOTGUN_REMOVAL_V1",
     "state": "ACTIVE"
   },
   "queued_next": [],
   "milestones": [
     {
-      "milestone_id": "OFFICIAL_FINANCIAL_SOURCE_QUALIFICATION_INTEGRITY_CORRECTIVE_V1",
+      "milestone_id": "AGENT_BOOTSTRAP_FOOTGUN_REMOVAL_V1",
       "state": "ACTIVE",
+      "starting_checkpoint": "cdef38e8b8401c2161997885ab92cd7e3852ec78",
+      "candidate_branch": "feature/agent-bootstrap-footgun-removal-v1-20261011",
+      "dependencies": [
+        "OFFICIAL_FINANCIAL_SOURCE_QUALIFICATION_INTEGRITY_CORRECTIVE_V1"
+      ],
+      "unlocks": [],
+      "owner_authorized": true,
+      "owner_override": "Owner approved PR 121 release at cdef38e8b8401c2161997885ab92cd7e3852ec78 and directed AGENT_BOOTSTRAP_FOOTGUN_REMOVAL_V1: ordinary handoff must not read historical STATE.md or ROADMAP.md; skipped Git verification must not report ON_TRACK; resume fields come from the native roadmap query. No Daily, production write, worktree deletion, or source-authority change.",
+      "authority_effect": "NONE",
+      "source_doc": "docs/agent_bootstrap_footgun_removal_v1_contract.md",
+      "state_history": [
+        "DEFERRED",
+        "ACTIVE"
+      ],
+      "checkpoint": null,
+      "terminal_disposition": null,
+      "notes": "Owner approved PR 121 release at cdef38e8b8401c2161997885ab92cd7e3852ec78 and directed AGENT_BOOTSTRAP_FOOTGUN_REMOVAL_V1: ordinary handoff must not read historical STATE.md or ROADMAP.md; skipped Git verification must not report ON_TRACK; resume fields come from the native roadmap query. No Daily, production write, worktree deletion, or source-authority change."
+    },
+    {
+      "milestone_id": "OFFICIAL_FINANCIAL_SOURCE_QUALIFICATION_INTEGRITY_CORRECTIVE_V1",
+      "state": "COMPLETE",
       "starting_checkpoint": "78d3fb994b3e05310ac138b8be235cb108da2698",
       "candidate_branch": "feature/official-financial-source-integrity-corrective-v1-20261011",
       "dependencies": [
@@ -35,11 +56,12 @@
       "source_doc": "docs/official_financial_source_qualification_integrity_corrective_v1_contract.md",
       "state_history": [
         "DEFERRED",
-        "ACTIVE"
+        "ACTIVE",
+        "COMPLETE"
       ],
-      "checkpoint": null,
-      "terminal_disposition": null,
-      "notes": "Owner P0 directive and standing development delegation authorize one end-to-end offline source qualification corrective after PR120 approved release and native closeout: regression-first classification, shared document/assurance/metadata/fact admission, preservation and atomic overlay validation, canonical/fundamental/valuation consumer guards, bounded read-only 27-row proof inventory, valid-source and numerical/packet parity, one feature PR with four CI gates. Sole C writer. No Q3 authority, period_bounds expansion, unreviewed facts, source activation, production refresh or Daily, retained evidence rewrites, other drives, concurrent writers or background continuation. Corrective merge requires separate exact-HEAD owner approval."
+      "checkpoint": "cdef38e8b8401c2161997885ab92cd7e3852ec78",
+      "terminal_disposition": "IMPLEMENTATION_RELEASED_NO_PRODUCTION_ACTIVATION",
+      "notes": "Owner P0 directive and standing development delegation authorize one end-to-end offline source qualification corrective after PR120 approved release and native closeout: regression-first classification, shared document/assurance/metadata/fact admission, preservation and atomic overlay validation, canonical/fundamental/valuation consumer guards, bounded read-only 27-row proof inventory, valid-source and numerical/packet parity, one feature PR with four CI gates. Sole C writer. No Q3 authority, period_bounds expansion, unreviewed facts, source activation, production refresh or Daily, retained evidence rewrites, other drives, concurrent writers or background continuation. Corrective merge requires separate exact-HEAD owner approval. Verified release cdef38e8b8401c2161997885ab92cd7e3852ec78; no production reclaim, activation or automatic successor."
     },
     {
       "milestone_id": "FINANCIAL_REPORTING_CURRENCY_TRANSPARENCY_V1",

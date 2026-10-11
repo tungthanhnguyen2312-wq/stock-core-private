@@ -2,7 +2,7 @@
 
 ## Reading contract — start here
 
-Normal work reads a **small active set, in this order, completely** (about 100 KB in total):
+Ordinary work runs `python tools/stocklookup_roadmap.py --check --json`, then opens only the compact file the task table names. The navigation set remains, in this order:
 
 1. This file (`AGENTS.md`).
 2. [`docs/ACTIVE_STATE.md`](docs/ACTIVE_STATE.md) — what is true now: gate, launch conditions, blockers, next action.
@@ -141,12 +141,12 @@ source evidence—not AI-generated text—is factual authority.
 
 For a normal bounded implementation milestone:
 
-1. Read the active set from the **Reading contract** above, in order, in full
-   (`AGENTS.md` → `ACTIVE_STATE` → `CAPABILITIES` → `AUTHORITY` → `DAILY_PIPELINE` → `ROADMAP_CURRENT`),
-   plus [`docs/DATA_FIRST_DOCTRINE.md`](docs/DATA_FIRST_DOCTRINE.md) when the task touches evidence or authority.
-2. Read the specific contract(s), code and tests the milestone names. Read only the `STATE.md` /
-   `DECISIONS.md` / `ROADMAP.md` sections explicitly referenced by the active set or directly required.
-3. Do **not** read `STATE.md`, `DECISIONS.md` or `ROADMAP.md` in full, and do not scan all handoffs, all
+1. Run `python tools/stocklookup_roadmap.py --check --json`. `GIT_NOT_CHECKED` is not a live Git pass.
+2. Read the authority section of this file. Open only the compact file the task table names.
+   Read [`docs/DATA_FIRST_DOCTRINE.md`](docs/DATA_FIRST_DOCTRINE.md) when the task touches evidence or authority.
+3. Open `STATE.md`, `DECISIONS.md`, or `ROADMAP.md` only for a heading the JSON or the task names.
+   `python tools/handoff.py` skips those files; `--historical` reads them.
+4. Do **not** read `STATE.md`, `DECISIONS.md` or `ROADMAP.md` in full, and do not scan all handoffs, all
    decisions, or the full roadmap, by default.
 
 Perform a full authority refresh (the active set **plus** the relevant historical sections of `STATE.md`,

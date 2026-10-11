@@ -86,18 +86,46 @@ class Finding:
         return _CATEGORY_BY_CODE.get(self.code, "other")
 
 
+GIT_VERIFICATION_VERIFIED = "VERIFIED"
+GIT_VERIFICATION_SKIPPED = "SKIPPED"
+GIT_VERIFICATION_UNAVAILABLE = "UNAVAILABLE"
+GIT_VERIFICATION_MISMATCH = "MISMATCH"
+OVERALL_GIT_NOT_CHECKED = "GIT_NOT_CHECKED"
+_GIT_MISMATCH_CODES = {"ROADMAP_RECORDED_HEAD_DIVERGENCE", "ROADMAP_CHECKPOINT_NOT_IN_GIT"}
+
+DO_NOT_OPEN = (
+    "docs/STATE.md",
+    "docs/DECISIONS.md",
+    "docs/ROADMAP.md",
+    "docs/ROADMAP_STATE.json",
+    "tools/handoff.py historical mode",
+)
+LOCAL_FAST = (
+    "tests/test_repository_layout.py",
+    "tests/test_roadmap_execution_state.py",
+    "tests/test_production_call_shape_smoke.py::test_offline_guard_blocks_requests_urllib_and_vnstock_import",
+    "tests/test_production_call_shape_smoke.py::test_owner_daily_entry_route_remains_canonical",
+    "python tools/stocklookup_roadmap.py --check",
+)
+
+
 @dataclass(frozen=True)
 class RoadmapReport:
     state: Mapping[str, Any]
     findings: tuple[Finding, ...]
     overall: str
     content_identity: str
+    git_verification: str = GIT_VERIFICATION_SKIPPED
 
     def findings_at_or_above(self, severity: str) -> tuple[Finding, ...]:
         rank = _SEVERITY_RANK[severity]
         return tuple(f for f in self.findings if _SEVERITY_RANK[f.severity] <= rank)
 
     def category_status(self, category: str) -> str:
+        if category == "git/worktree consistency" and self.git_verification == GIT_VERIFICATION_SKIPPED:
+            return "SKIPPED"
+        if category == "git/worktree consistency" and self.git_verification == GIT_VERIFICATION_UNAVAILABLE:
+            return "UNAVAILABLE"
         codes = [f for f in self.findings if f.category == category]
         if any(f.severity == FAIL for f in codes):
             return FAIL
@@ -344,6 +372,7 @@ def evaluate(state: Mapping[str, Any], *, repo: Path | None = None) -> RoadmapRe
             findings.append(Finding("ROADMAP_STALE_NEXT_POINTER", WARNING, f"queued_next references {mid!r} whose state is already {milestones[mid].get('state')}", mid))
 
     # -- checkpoint existence -----------------------------------------------------
+    git_live = repo is not None and git_head(repo) is not None
     for m in milestones.values():
         mid = m.get("milestone_id")
         if m.get("state") != "COMPLETE":
@@ -352,7 +381,7 @@ def evaluate(state: Mapping[str, Any], *, repo: Path | None = None) -> RoadmapRe
         if not checkpoint:
             findings.append(Finding("ROADMAP_CHECKPOINT_MISSING", FAIL, f"{mid} is COMPLETE but has no checkpoint recorded", mid))
             continue
-        if repo is None:
+        if not git_live:
             continue
         ok, resolved = resolve_checkpoint(repo, checkpoint)
         if not ok:
@@ -368,7 +397,7 @@ def evaluate(state: Mapping[str, Any], *, repo: Path | None = None) -> RoadmapRe
                 ))
 
     # -- git/worktree consistency --------------------------------------------------
-    if repo is not None:
+    if git_live:
         recorded_head = state.get("implementation_lineage_head")
         ok, resolved = resolve_checkpoint(repo, recorded_head)
         live_head = git_head(repo)
@@ -400,9 +429,136 @@ def evaluate(state: Mapping[str, Any], *, repo: Path | None = None) -> RoadmapRe
         findings.extend(writer_findings)
 
     findings.sort(key=lambda f: (_SEVERITY_RANK[f.severity], f.category, f.code, f.message))
-    overall = "DRIFT_DETECTED" if any(f.severity == FAIL for f in findings) else "ON_TRACK"
-    identity = stable_id({"state": state, "overall": overall})
-    return RoadmapReport(state=state, findings=tuple(findings), overall=overall, content_identity=identity)
+    git_verification = _git_verification(repo, findings)
+    if any(f.severity == FAIL for f in findings):
+        overall = "DRIFT_DETECTED"
+    elif git_verification in {GIT_VERIFICATION_SKIPPED, GIT_VERIFICATION_UNAVAILABLE}:
+        overall = OVERALL_GIT_NOT_CHECKED
+    else:
+        overall = "ON_TRACK"
+    identity = stable_id({"state": state, "overall": overall, "git_verification": git_verification})
+    return RoadmapReport(
+        state=state, findings=tuple(findings), overall=overall,
+        content_identity=identity, git_verification=git_verification,
+    )
+
+
+def _git_verification(repo: Path | None, findings: Sequence[Finding]) -> str:
+    """Separate native-state validation from a live Git checkpoint check."""
+    if repo is None:
+        return GIT_VERIFICATION_SKIPPED
+    if git_head(repo) is None:
+        return GIT_VERIFICATION_UNAVAILABLE
+    if any(f.code in _GIT_MISMATCH_CODES and f.severity == FAIL for f in findings):
+        return GIT_VERIFICATION_MISMATCH
+    return GIT_VERIFICATION_VERIFIED
+
+
+def focused_selection_count(repo: Path) -> int | str:
+    """Count FOCUSED_SELECTION test tokens. UNKNOWN when the workflow cannot be parsed."""
+    path = repo / ".github" / "workflows" / "producer-ci.yml"
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError:
+        return "UNKNOWN"
+    marker = "FOCUSED_SELECTION:"
+    start = text.find(marker)
+    if start < 0:
+        return "UNKNOWN"
+    tokens: list[str] = []
+    for line in text[start:].splitlines()[1:]:
+        if line and not line[0].isspace():
+            break
+        tokens.extend(line.split())
+    paths = [token for token in tokens if token.startswith("tests/") or token.endswith(".py")]
+    return len(paths) if paths else "UNKNOWN"
+
+
+def classify_worktrees(repo: Path) -> dict[str, Any]:
+    """Count worktrees. Rows are for ``--worktrees`` only and are not the default JSON payload.
+
+    Untracked inspection is limited to ``data/`` and ``operations-review/`` on ancestor
+    candidates. It does not hash file contents and does not remove anything.
+    """
+    counts = {
+        "registered": 0,
+        "ancestor_of_head": 0,
+        "tracked_clean": 0,
+        "tracked_dirty": 0,
+        "unmerged": 0,
+        "status_unknown": 0,
+    }
+    rows: list[dict[str, Any]] = []
+    head = git_head(repo)
+    entries = [wt for wt in git_worktrees(repo) if wt.get("bare") != "true" and wt.get("worktree")]
+    counts["registered"] = len(entries)
+    if head is None:
+        counts["status_unknown"] = len(entries)
+        return {"counts": counts, "rows": rows}
+    for wt in entries:
+        wt_head = wt.get("head") or ""
+        ancestor = bool(wt_head) and git_is_ancestor(repo, wt_head, head)
+        code, out, _ = git_run(Path(wt["worktree"]), "status", "--porcelain")
+        if code != 0:
+            counts["status_unknown"] += 1
+            klass = "STATUS_UNKNOWN"
+            dirty_count: int | str = "UNKNOWN"
+        else:
+            tracked = [line for line in out.splitlines() if line.strip() and not line.startswith("??")]
+            dirty_count = len(tracked)
+            if not ancestor:
+                counts["unmerged"] += 1
+                klass = "UNMERGED"
+            else:
+                counts["ancestor_of_head"] += 1
+                if tracked:
+                    counts["tracked_dirty"] += 1
+                    klass = "ANCESTOR_TRACKED_DIRTY"
+                else:
+                    counts["tracked_clean"] += 1
+                    klass = "ANCESTOR_TRACKED_CLEAN"
+                    unresolved = _ancestor_untracked_unresolved(Path(wt["worktree"]))
+                    if unresolved is None:
+                        counts["status_unknown"] += 1
+                        klass = "STATUS_UNKNOWN"
+                    elif unresolved:
+                        klass = "UNTRACKED_UNRESOLVED"
+        branch = wt.get("branch") or ("DETACHED" if wt.get("detached") == "true" else "UNKNOWN")
+        rows.append({
+            "class": klass,
+            "head": wt_head or "UNKNOWN",
+            "branch": branch,
+            "tracked_dirty_count": dirty_count,
+            "path": wt["worktree"],
+        })
+    rows.sort(key=lambda row: (row["class"], row["branch"], row["head"], row["path"]))
+    return {"counts": counts, "rows": rows}
+
+
+def _ancestor_untracked_unresolved(worktree: Path) -> bool | None:
+    code, out, _ = git_run(
+        worktree, "status", "--porcelain", "-u", "--untracked-files=normal", "--", "data", "operations-review",
+    )
+    if code != 0:
+        return None
+    for line in out.splitlines():
+        if not line.startswith("??"):
+            continue
+        path = line[3:].strip().replace("\\", "/")
+        if path == "data" or path.startswith("data/") or path == "operations-review" or path.startswith("operations-review/"):
+            return True
+    return False
+
+
+def build_bootstrap(repo: Path) -> dict[str, Any]:
+    """Navigation fields for an ordinary agent. Counts only; no worktree path list."""
+    classified = classify_worktrees(repo)
+    return {
+        "do_not_open": list(DO_NOT_OPEN),
+        "local_fast": list(LOCAL_FAST),
+        "focused_selection_count": focused_selection_count(repo),
+        "worktrees": classified["counts"],
+    }
 
 
 def _check_multiple_source_writers(
@@ -426,7 +582,11 @@ def _check_multiple_source_writers(
             ahead_worktrees.append(path)
 
     if ahead_worktrees:
-        findings.append(Finding("ROADMAP_MULTIPLE_SOURCE_WRITERS", INFO, f"{len(ahead_worktrees)} worktree(s) ahead of recorded implementation_lineage_head (normal parallel exploration): {', '.join(ahead_worktrees)}"))
+        findings.append(Finding(
+            "ROADMAP_MULTIPLE_SOURCE_WRITERS", INFO,
+            f"{len(ahead_worktrees)} worktree(s) ahead of recorded implementation_lineage_head "
+            "(normal parallel exploration). Pass --worktrees for paths.",
+        ))
 
     matches_by_milestone: dict[str, list[str]] = {}
     for wt in worktrees:
