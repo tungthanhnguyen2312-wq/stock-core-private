@@ -74,7 +74,10 @@ def load_evidence_index(runtime_root: Path | str) -> dict[tuple, dict[str, Any]]
     from semantic_evidence_bridge import load_verified_financial_identities
 
     loaded = load_verified_financial_identities(Path(runtime_root))
-    return build_evidence_index(loaded.get("by_key") if isinstance(loaded, Mapping) else None)
+    entries = loaded.get("by_key") if isinstance(loaded, Mapping) else None
+    # The hash-verified bridge already expresses by_key values in absolute currency units;
+    # its unit_scale describes the displayed source, not those normalized values.
+    return build_evidence_index({key:{**entry,"verified":True,"normalized_unit_scale":1} for key,entry in (entries or {}).items()})
 
 
 def _matching_evidence(fact: Mapping[str, Any], evidence_index: Mapping[tuple, Mapping[str, Any]] | None) -> dict[str, Any] | None:
@@ -92,7 +95,7 @@ def _matching_evidence(fact: Mapping[str, Any], evidence_index: Mapping[tuple, M
             continue
         if entry.get("currency") is not None and fact.get("currency") is not None and entry["currency"] != fact["currency"]:
             continue
-        evidence_scale = entry.get("unit_scale", entry.get("scale"))
+        evidence_scale = entry.get("normalized_unit_scale", entry.get("unit_scale", entry.get("scale")))
         fact_scale = 1 if fact.get("scale") == "units" else fact.get("scale")
         if evidence_scale is not None and fact_scale is not None and evidence_scale != fact_scale:
             continue

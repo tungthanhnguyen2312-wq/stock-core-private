@@ -19,7 +19,7 @@ Facts are the final commit point; promotion failures restore existing artifact b
 This is a rollback contract, not a filesystem-wide atomic transaction. Empty batches preserve
 history. Existing JSONL line endings and bytes remain unchanged when new rows are appended.
 
-Focused financial/source/canonical/valuation/packet consumer selection: **408 passed,
+Focused financial/source/canonical/valuation/packet consumer selection: **473 passed,
 2 deselected**. The two excluded tests invoke the refresh orchestrator; this job has not
 invoked it. Source controls include actual native PDF reader replay and current native panel
 admission, supported FY2025/H1/Q2 positives, metadata-blocked facts, notices, negation,
@@ -27,9 +27,12 @@ malformed proof, source/time/value conflicts, legacy-filename bypass and rollbac
 Synthetic source fixtures are owned test bytes, not verification of issuer records.
 Native/layout selection passed 96 tests before the last narrow source additions.
 
-Broad hosted-selection parity is still in progress and has reported failures. Some downstream
-fixtures were already corrected to use independently bound synthetic sources; others must be
-reconciled before any release-ready claim. An unrestricted all-tests run was interrupted;
+Broad hosted-selection parity completed on the earlier working implementation: 5343 passed,
+40 failed, 74 skipped, 52 deselected and 103 subtests passed. Corrected groups subsequently
+passed focused reruns. A bounded rerun confirms **six failures / 66 passed** remain in retained
+cash-flow publication, FPT annual component, H1 provision, VNM triad and QNS consumer tests.
+Reconcile genuine source-proof gaps and positive synthetic fixtures without weakening admission.
+An unrestricted all-tests run was interrupted;
 it is not a passing validation. Five optional retained PDF tests separately failed because their
 legacy local evidence file is absent in this worktree; they are outside the hosted selection.
 
@@ -50,3 +53,10 @@ reachability reconciliation before claiming the entire corrective boundary close
 Next: inspect broad failures, finish scoped consumer/cache reconciliation and positive producer
 wiring, rerun focused/broad/native checks, then create one corrective PR with four hosted jobs
 on its exact HEAD. Separate owner approval is required to merge that HEAD.
+
+The verified legacy semantic bridge still normalizes monetary values to absolute currency
+units. Its hash-verified IO owner binds that normalized basis and verification state for
+policy; an arbitrary direct citation remains insufficient. Legacy cohort recovery tests pass.
+Positive company-economics goldens now pin owned synthetic source identities; former retained-
+claim goldens remain in Git history. Original evidence bytes were not changed.
+Quota checkpoint requested by the owner: 79% of the five-hour window used before final handoff.

@@ -227,9 +227,10 @@ def _admit_official_financial_fact(row: Mapping[str, Any], *, source_record: Map
                 item["url"] for item in DIRECT_TARGET_LOCATORS if item["ticker"] == row.get("ticker")]
             hosts = {str(urlsplit(url).hostname or "").removeprefix("www.") for url in locators if url}
             actual_host = str(urlsplit(str(source.get("canonical_url") or "")).hostname or "").removeprefix("www.")
+            final_host = str(urlsplit(str(source.get("final_url") or source.get("canonical_url") or "")).hostname or "").removeprefix("www.")
             if not hosts:
                 missing.append("ISSUER_DOMAIN_BINDING_PROOF_UNAVAILABLE")
-            elif actual_host not in hosts:
+            elif actual_host not in hosts or final_host not in hosts:
                 reasons.append("ISSUER_SOURCE_DOMAIN_MISMATCH")
         else:
             missing.append("EXCHANGE_ISSUER_BINDING_PROOF_UNAVAILABLE")
@@ -286,6 +287,9 @@ def _admit_official_financial_fact(row: Mapping[str, Any], *, source_record: Map
     from financial_statement_template_recognizer import GENERIC_METRIC_RULES, _normalize_text
     from official_financial_ocr_table_evidence import row_label_supports_metric
     metric = str(row.get("canonical_metric") or "")
+    from reviewed_interim_canonical_ingress import LINE_CODE_IDENTITY_CONFLICTS
+    if (metric,str(row.get('line_code') or '')) in LINE_CODE_IDENTITY_CONFLICTS:
+        reasons.append("METRIC_LINE_CODE_IDENTITY_CONFLICT")
     label = row.get("raw_row_label")
     span = row.get("source_span")
     if not label or not isinstance(span, Mapping):

@@ -175,8 +175,8 @@ def proved_fixture(period="2026-H1", *, ticker="PNJ", metric="revenue", value=12
         "period_type":"annual" if annual else "interim","statement_family":str(spec["statement_type"]) if spec else "income_statement" if metric=="investment_property_disposal_result" else "cash_flow","statement_scope":"consolidated",
         "currency":currency,"unit_scale":1,"source_unit_scale":scale,"raw_value_text":raw,"normalized_value":value,
         "raw_row_label":label, "source_span":{"text":label+" "+raw,
-            "document_sha256":sha,"citation_id":"synthetic-value","source_page":1},
-        "document_sha256":sha,"citation_id":"synthetic-value","document_metadata":metadata,
+            "document_sha256":sha,"citation_id":"synthetic-value:"+sha,"source_page":1},
+        "document_sha256":sha,"citation_id":"synthetic-value:"+sha,"document_metadata":metadata,
         "qualification_state":"QUALIFIED","audit_or_review_status":status,"assurance_evidence":proof,
         "observed_at":source["observed_at"],"knowledge_available_at":source["observed_at"]}
     registry=load_registry()
@@ -316,6 +316,22 @@ def test_expanded_negation_blocks_both_actual_recognizers(negative):
     assert recognize_audit_or_review(text)['audit_or_review_status'] is None
     from tests.test_reviewed_interim_canonical_ingress import _materialization
     assert assurance.resolve_document_assurance_evidence(_materialization(text))['state']=='BLOCKED'
+
+
+def test_registry_admitted_cross_issuer_redirect_does_not_bind_issuer():
+    from official_financial_filing_evidence import admit_official_financial_fact
+    row,context=proved_fixture()
+    context['source_record']['final_url']='https://www.hoaphat.com.vn/test-only-synthetic-fixture.pdf'
+    result=admit_official_financial_fact(row,**context)
+    assert result['state']=='BLOCKED' and 'ISSUER_SOURCE_DOMAIN_MISMATCH' in result['reason_codes']
+
+
+def test_common_rule_rejects_crossed_line_identity_without_relying_on_adapter():
+    from official_financial_filing_evidence import admit_official_financial_fact
+    row,context=proved_fixture(metric='net_income')
+    row['line_code']='61'
+    result=admit_official_financial_fact(row,**context)
+    assert result['state']=='BLOCKED' and 'METRIC_LINE_CODE_IDENTITY_CONFLICT' in result['reason_codes']
 
 
 @pytest.mark.parametrize("mutation",["bytes","source","ticker","assurance","metadata","period","units","cutoff"])
