@@ -1,8 +1,8 @@
 # Stock Lookup — Active State
 
 Updated 2026-10-11 from verified
-main `cd486c4f2af41ac6a89dfbb5b6ad3ac3d5d99698`.
-PR118 COMPLETE; four closeout CI PASS (38095908308); consumer natively admitted.
+PR119 main `d1c9c805e69a558153c65fef973c129a235efb68`.
+Action Center consumer COMPLETE; four post-merge jobs PASS (38105025004).
 Verify live main: `git fetch origin main` or `git ls-remote origin refs/heads/main`; a **local** remote-tracking ref can be stale.
 ## 0. How this file relates to the others
 | Question | Answer lives in |
@@ -32,7 +32,7 @@ Kinds: **CURRENT FACT** (verified), **HOST-LOCAL** (untracked; re-verify),
 **BLOCKED**, **DEFERRED**, **HISTORICAL**.
 
 ## 1. The operational gate
-- **ACTIVE — [Action Center opportunity cost](action_center_opportunity_cost_cases_consumer_v1_contract.md):** optional private v2 cases; offline validation/one PR, exact-HEAD merge gated. PR118 measurement integrity COMPLETE; no Daily activation.
+- **COMPLETE — [Action Center opportunity cost](action_center_opportunity_cost_cases_consumer_v1_contract.md):** optional private v2 cases; released PR119, four post-merge jobs PASS (38105025004). PR118 COMPLETE; no Daily activation.
 - **COMPLETE — [capacity Phase 1](capacity_recovery_phase1_contract.md):** PR99 merged
   `168e0f7`, post-merge CI 37893984528 success; zero production reclaim/activation.
 - **COMPLETE — Vault V1:** PR97 merged `3f3d4fe`; offline/opt-in, 77 candidates,

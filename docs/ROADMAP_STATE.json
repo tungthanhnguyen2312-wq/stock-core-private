@@ -16,13 +16,13 @@
   ],
   "current": {
     "milestone": "ACTION_CENTER_OPPORTUNITY_COST_CASES_CONSUMER_V1",
-    "state": "ACTIVE"
+    "state": "COMPLETE"
   },
   "queued_next": [],
   "milestones": [
     {
       "milestone_id": "ACTION_CENTER_OPPORTUNITY_COST_CASES_CONSUMER_V1",
-      "state": "ACTIVE",
+      "state": "COMPLETE",
       "starting_checkpoint": "cd486c4f2af41ac6a89dfbb5b6ad3ac3d5d99698",
       "candidate_branch": "feature/action-center-opportunity-cost-cases-v1-20261011",
       "dependencies": [
@@ -35,11 +35,12 @@
       "source_doc": "docs/action_center_opportunity_cost_cases_consumer_v1_contract.md",
       "state_history": [
         "DEFERRED",
-        "ACTIVE"
+        "ACTIVE",
+        "COMPLETE"
       ],
-      "checkpoint": null,
-      "terminal_disposition": null,
-      "notes": "Owner directive ACTION_CENTER_OPPORTUNITY_COST_CASES_CONSUMER_V1 dated 2026-10-11 selects one bounded product milestone under PROGRAM_LEAD_CONTINUATION_AND_STANDING_DELEGATION (2026-10-10): verify feasibility, extend existing private Action Center with opt-in read-only opportunity-cost v2 cases using qualified session-bound sources and explicit portfolio_state/v1; implement and validate synthetic offline consumer, commit and create one safe feature PR with four hosted CI gates. Preserve upstream identities/method/basis/provenance/freshness/thesis/counter-evidence; omitted ticker unresolved, missing portfolio unavailable, limits only narrow. No winner/rank/new numerical authority/sizing/trade/forecast, no automatic Daily consumer, no production/runtime/private dataset or completed-session writes, no Dashboard/AI publication, no D/W/T/USB operations, no concurrent writers/background continuation or automatic successor. Exact-HEAD owner merge approval and separate production activation review remain required. Starting remote main verified cd486c4f2af41ac6a89dfbb5b6ad3ac3d5d99698; predecessor COMPLETE/ON_TRACK with empty queue."
+      "checkpoint": "d1c9c805e69a558153c65fef973c129a235efb68",
+      "terminal_disposition": "IMPLEMENTATION_RELEASED_NO_PRODUCTION_ACTIVATION",
+      "notes": "Owner directive ACTION_CENTER_OPPORTUNITY_COST_CASES_CONSUMER_V1 dated 2026-10-11 selects one bounded product milestone under PROGRAM_LEAD_CONTINUATION_AND_STANDING_DELEGATION (2026-10-10): verify feasibility, extend existing private Action Center with opt-in read-only opportunity-cost v2 cases using qualified session-bound sources and explicit portfolio_state/v1; implement and validate synthetic offline consumer, commit and create one safe feature PR with four hosted CI gates. Preserve upstream identities/method/basis/provenance/freshness/thesis/counter-evidence; omitted ticker unresolved, missing portfolio unavailable, limits only narrow. No winner/rank/new numerical authority/sizing/trade/forecast, no automatic Daily consumer, no production/runtime/private dataset or completed-session writes, no Dashboard/AI publication, no D/W/T/USB operations, no concurrent writers/background continuation or automatic successor. Exact-HEAD owner merge approval and separate production activation review remain required. Starting remote main verified cd486c4f2af41ac6a89dfbb5b6ad3ac3d5d99698; predecessor COMPLETE/ON_TRACK with empty queue. Owner-approved exact HEAD 6995144254fbb727674d881f01622ab6d31887e2 released as PR119 at d1c9c805e69a558153c65fef973c129a235efb68; all four post-merge jobs SUCCESS (38105025004). Opt-in/non-voting only; no production activation or automatic successor."
     },
     {
       "milestone_id": "PORTFOLIO_RESEARCH_MEASUREMENT_INTEGRITY_V1",

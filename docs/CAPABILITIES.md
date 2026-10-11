@@ -226,7 +226,7 @@ immutable. [Share contract](hpg_common_share_evidence_contract.md).
 - Blocker: capital/risk-budget unbound; execution zero · Next trigger: owner bindings; [measurement guards](portfolio_research_measurement_integrity_v1_contract.md) COMPLETE, PR118; offline only
 
 Optional [Action Center cases](action_center_opportunity_cost_cases_consumer_v1_contract.md)
-are EXPERIMENTAL / NON_VOTING / OFFLINE_ONLY; explicit private state and IID-bound
+are released in PR119 / NON_VOTING / OFFLINE_ONLY; explicit private state and IID-bound
 valuation, no ordinary Daily consumer. Production activation needs separate review.
 
 ### 19. Execution / PIT / RAW gates

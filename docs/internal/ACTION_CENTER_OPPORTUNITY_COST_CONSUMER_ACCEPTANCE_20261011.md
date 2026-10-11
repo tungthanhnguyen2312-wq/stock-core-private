@@ -49,3 +49,11 @@ feature branch HEAD and PR, verify base ancestry and a clean checkout, then
 resume the outstanding validation or exact-HEAD review. Do not repeat the audit
 or create another bookkeeping milestone. Machine-specific checkout and exact
 HEAD/changed-files/test/PR/blocker/next-action details stay in the local handoff.
+
+## Release closeout — 2026-10-11
+
+Owner explicitly approved exact HEAD `6995144254fbb727674d881f01622ab6d31887e2`.
+PR119 merged at `d1c9c805e69a558153c65fef973c129a235efb68`; all four
+post-merge Producer CI jobs succeeded (38105025004). Native state COMPLETE,
+checkpoint at the actual merge; queue empty. No Daily or production activation.
+The earlier ACTIVE/merge-gated statements describe pre-release acceptance.
