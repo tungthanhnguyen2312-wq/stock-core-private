@@ -119,6 +119,7 @@ def build_packet(
     regime_context: Mapping[str, Any] | None = None,
     decision_session: str | None = None,
     company_economics: Mapping[str, Any] | None = None,
+    financial_reporting_currency: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build one ticker packet. Input analogue order is preserved.
 
@@ -127,6 +128,22 @@ def build_packet(
     """
     del capital_decision  # retained so a caller cannot sneak a delegated decision through
     supplied = {name: dict(spec) for name, spec in (sections or {}).items() if isinstance(spec, Mapping)}
+    if financial_reporting_currency is not None:
+        from stocklookup_core.financial.financial_reporting_currency import packet_context
+
+        view = packet_context(financial_reporting_currency, ticker=ticker, decision_session=decision_session)
+        record = view["record"]
+        overlays = {
+            "stock": ("financial_reporting_currency", view),
+            "uncertainty": ("financial_reporting_limits", {"cutoff": record["knowledge_cutoff_eligibility"],
+                            "interpretation": record["investor_interpretation"], "boundaries": view["research_boundaries"]}),
+            "counter_thesis": ("financial_reporting_gaps", record["newer_period_evidence"]),
+        }
+        for section, (field, value) in overlays.items():
+            current = supplied.setdefault(section, {})
+            if field in current:
+                raise ValueError("FINANCIAL_CURRENCY_PACKET_RESERVED_FIELD_COLLISION")
+            current[field] = {"claim": {"warning": True}, "value": value}
     if company_economics is not None:
         from long_term_company_economics_evidence import packet_context
 

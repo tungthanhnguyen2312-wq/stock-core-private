@@ -229,6 +229,10 @@ Optional [Action Center cases](action_center_opportunity_cost_cases_consumer_v1_
 are released in PR119 / NON_VOTING / OFFLINE_ONLY; explicit private state and IID-bound
 valuation, no ordinary Daily consumer. Production activation needs separate review.
 
+[Financial reporting currency](financial_reporting_currency_transparency_v1_contract.md):
+ACTIVE development / NON_VOTING / OFFLINE_OPT_IN_ONLY. Frozen provider, official
+periods, retained receipts, unknown publication and cutoff limits; no valuation/vote change.
+
 ### 19. Execution / PIT / RAW gates
 - Contract: [portfolio_pit_execution_authority_contract.md](portfolio_pit_execution_authority_contract.md), [prospective_raw_pit_authority.md](prospective_raw_pit_authority.md), [market_only_pit_eligibility_contract.md](market_only_pit_eligibility_contract.md)
 - Runtime: `BLOCKED_EVIDENCE` · Authority: `BLOCKED` (RAW partially promoted, use-scoped) · Production: `OFFLINE_ONLY`

@@ -34,6 +34,17 @@ def configure_parser(sub):
     economics.add_argument("--cutoff", required=True, help="Explicit timezone-bearing consultation knowledge cutoff.")
     economics.add_argument("--ticker", action="append", required=True, help="Selected study ticker (repeatable); not a universe/peer cohort.")
     economics.add_argument("--canonical-packet", type=Path, help="Optional existing sealed decision packet reference; never enriched in place.")
+    currency = actions.add_parser("financial-currency", help="Selected financial reporting basis and source/cutoff reconciliation; offline opt-in.")
+    currency.add_argument("--financial-product", type=Path, required=True, help="Exact financial_analysis_product_integration/v1 JSON.")
+    currency.add_argument("--facts", type=Path, required=True, help="Exact existing official JSONL overlay; standing gates are rechecked.")
+    currency.add_argument("--cohort-report", type=Path, help="Exact sealed financial-evidence refresh report with retained/check receipts.")
+    currency.add_argument("--provider-observations", type=Path, help="Optional exact structured period-semantics JSONL or JSONL.gz; joins compact source refs.")
+    currency.add_argument("--source-checks", type=Path, help="Optional explicit descriptive check/notice receipt JSONL; no authority or route admission.")
+    currency.add_argument("--session", required=True)
+    currency.add_argument("--cutoff", required=True)
+    currency.add_argument("--ticker", action="append", required=True)
+    currency.add_argument("--canonical-packet", type=Path, help="Optional sealed packet reference; no in-place enrichment or backdating.")
+    currency.add_argument("--format", choices=("json", "markdown"), default="json")
 
 
 def _session(value):
@@ -118,9 +129,61 @@ def _economics(args, paths):
             "packets": packets, "comparison": comparison, "production": "OFFLINE_OPT_IN_ONLY"}
 
 
+def _financial_currency(args, paths):
+    import gzip
+    from stocklookup_core.financial import financial_reporting_currency as currency
+    from stocklookup_core.decision.human_ai_decision_evidence_packet import build_packet
+
+    tickers = [t.strip().upper() for t in args.ticker]
+    if not tickers or len(tickers) > 32 or len(set(tickers)) != len(tickers) or any(not re.fullmatch(r"[A-Z0-9]{1,16}", t) for t in tickers):
+        raise ValueError("INVALID_BOUNDED_TICKER_SELECTION")
+
+    def rows(name):
+        if name not in paths:
+            return []
+        path = paths[name]
+        opener = gzip.open if path.suffix == ".gz" else open
+        selected = []
+        with opener(path, "rt", encoding="utf-8") as handle:
+            for line in handle:
+                if line.strip():
+                    row = _decode(line)
+                    if not isinstance(row.get("ticker"), str) or not row["ticker"]:
+                        raise ValueError("FINANCIAL_SOURCE_SUBJECT_REQUIRED")
+                    if row["ticker"] in tickers:
+                        selected.append(row)
+        return selected
+
+    projection = currency.build(financial_product=_json(paths["financial_product"]), official_rows=rows("facts"),
+        tickers=tickers, decision_session=_session(args.session), knowledge_cutoff=args.cutoff,
+        cohort_report=_json(paths["cohort_report"]) if "cohort_report" in paths else None,
+        provider_observations=rows("provider_observations"), source_checks=rows("source_checks"))
+    canonical = None
+    if "canonical_packet" in paths:
+        from stocklookup_core.decision import current_research_decision_packet as owner
+
+        packet = _json(paths["canonical_packet"])
+        owner.replay(packet)
+        if any(packet.get(k) != v for k, v in owner.content_identity(packet).items()):
+            raise ValueError("CANONICAL_PACKET_IDENTITY_MISMATCH")
+        if _session(packet.get("research_session")) > args.session or not set(tickers) <= set(packet["records"]):
+            raise ValueError("CANONICAL_PACKET_SESSION_OR_SUBJECT_MISMATCH")
+        canonical = {"artifact_identity": packet["artifact_identity"], "research_session": packet["research_session"],
+                     "use": "REFERENCE_ONLY_NOT_PROOF_FINANCIAL_CONTEXT_KNOWN_AT_DECISION_TIME"}
+    packets = {t: build_packet(ticker=t, decision_session=args.session, financial_reporting_currency=projection,
+                              canonical_packet_identity=canonical["artifact_identity"] if canonical else None,
+                              sections={"comparison": {"financial_reporting_selected_comparison": {"claim": {"warning": True},
+                                        "value": projection["selected_comparison"]}}}) for t in sorted(tickers)}
+    return {"contract_version": currency.CONTRACT_VERSION, "projection": projection, "packets": packets,
+            "canonical_reference": canonical, "presentation": currency.render_markdown(projection), "production": "OFFLINE_OPT_IN_ONLY"}
+
+
 def inspect(args):
     # Hash before and after projection: a changing file never produces a success.
-    names = {"coverage": list(SOURCES), "calibration": ["feedback"], "economics": ["facts"]}[args.research_action]
+    names = {"coverage": list(SOURCES), "calibration": ["feedback"], "economics": ["facts"],
+             "financial-currency": ["financial_product", "facts"]}[args.research_action]
+    if args.research_action == "financial-currency":
+        names.extend(name for name in ("cohort_report", "provider_observations", "source_checks", "canonical_packet") if getattr(args, name, None))
     if args.research_action == "coverage" and args.panel:
         names.append("panel")
     if args.research_action == "economics" and args.canonical_packet:
@@ -179,6 +242,8 @@ def inspect(args):
         }
     elif args.research_action == "economics":
         result = _economics(args, paths)
+    elif args.research_action == "financial-currency":
+        result = _financial_currency(args, paths)
     else:
         import decision_outcome_calibration_review as calibration
         import prospective_decision_outcome_feedback as feedback
@@ -214,7 +279,7 @@ def run(args):
             reason = type(exc).__name__
         print(json.dumps({"status": "UNAVAILABLE", "reason": reason, "persisted": False, "authority_effect": "NONE"}))
         return 2
-    print(payload)
+    print(result["presentation"] if getattr(args, "format", "json") == "markdown" else payload)
     return 0
 
 
