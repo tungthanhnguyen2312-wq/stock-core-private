@@ -155,6 +155,86 @@ def axis_is_research_usable(envelope: Mapping[str, Any]) -> bool:
     return envelope.get("freshness_status") in {CURRENT, STALE_BUT_RESEARCH_USABLE}
 
 
+def reporting_period_basis(row: Mapping[str, Any]) -> dict[str, Any]:
+    """Describe explicit accounting time without changing analytical freshness policy.
+
+    Labels describe issuer-native periods. They never prove calendar dates,
+    standalone flows, publication time, or a fiscal-calendar mapping.
+    """
+    label = row.get("reporting_period", row.get("native_period_label"))
+    match = re.fullmatch(r"(\d{4})(?:-(Q[1-4]|H1|9M|FY))?", str(label or ""))
+    if match and int(match[1]) == 0:
+        match = None
+    token = match[2] if match else None
+    family = ("ANNUAL" if match and token in {None, "FY"} else
+              "HALF_YEAR" if token == "H1" else "NINE_MONTH" if token == "9M" else
+              "QUARTER" if token else "UNKNOWN")
+    semantic = row.get("period_semantic_state", row.get("period_semantics"))
+    mixed = isinstance(semantic, list) and len(set(str(s) for s in semantic)) > 1
+    if isinstance(semantic, list):
+        semantic = semantic[0] if len(semantic) == 1 else None
+    nature = row.get("metric_nature")
+    instant = semantic == "POINT_IN_TIME_BALANCE_SHEET" or nature == "STOCK_POINT_IN_TIME" or row.get("statement_family") == "balance_sheet"
+    flow = semantic in ("STANDALONE_QUARTER", "YTD_CUMULATIVE_INTERIM", "ANNUAL") or nature == "FLOW_DURATION" or row.get("statement_family") in ("income_statement", "cash_flow")
+    start, end = row.get("period_start"), row.get("period_end")
+    reasons = []
+    try:
+        end_date = date.fromisoformat(end) if end else None
+        start_date = date.fromisoformat(start) if start else None
+        if (end_date and end_date.isoformat() != end) or (start_date and start_date.isoformat() != start):
+            raise ValueError()
+        if start_date and end_date and start_date > end_date:
+            raise ValueError()
+    except (ValueError, TypeError):
+        start_date = end_date = None
+        reasons.append("MALFORMED_EXPLICIT_PERIOD_BOUNDS")
+    if not match:
+        reasons.append("UNKNOWN_OR_MALFORMED_NATIVE_PERIOD_LABEL")
+    if not end_date or (not instant and not start_date):
+        reasons.append("EXPLICIT_REPORTING_BOUNDS_UNPROVEN")
+    cumulative = ("STANDALONE" if semantic == "STANDALONE_QUARTER" or row.get("cumulative_state") == "period_only" else
+                  "CUMULATIVE" if semantic in ("YTD_CUMULATIVE_INTERIM", "ANNUAL") or row.get("cumulative_state") == "cumulative" or row.get("period_type") in ("half_year", "nine_month", "annual") else "UNKNOWN")
+    calendar_basis = row.get("fiscal_calendar") if row.get("fiscal_calendar") in ("CALENDAR_YEAR", "NON_CALENDAR_YEAR") else "UNKNOWN"
+    if calendar_basis == "UNKNOWN":
+        reasons.append("FISCAL_CALENDAR_NOT_PROVEN_BY_LABEL")
+    if not instant and cumulative == "UNKNOWN":
+        reasons.append("FLOW_DURATION_NOT_PROVEN_BY_QUARTER_LABEL")
+    if not instant and not flow:
+        reasons.append("STATEMENT_TIME_BASIS_UNPROVEN")
+    if mixed:
+        reasons.append("MIXED_STATEMENT_TIMING_BASIS")
+    duration = (end_date - start_date).days + 1 if flow and not instant and start_date and end_date else None
+    ranges = {"QUARTER": (80, 100), "HALF_YEAR": (170, 190), "NINE_MONTH": (260, 285), "ANNUAL": (350, 380)}
+    if duration is not None and family in ranges and not ranges[family][0] <= duration <= ranges[family][1]:
+        reasons.append("NATIVE_PERIOD_FAMILY_DURATION_CONFLICT")
+    return {"native_label": label, "period_family": family,
+            "fiscal_year_label": match[1] if match else None, "fiscal_calendar": calendar_basis,
+            "period_start": start_date.isoformat() if start_date else None,
+            "period_end": end_date.isoformat() if end_date else None,
+            "time_basis": "MIXED" if mixed else "INSTANT" if instant else "DURATION" if flow else "UNKNOWN",
+            "duration_days": duration,
+            "cumulative_basis": "NOT_APPLICABLE_INSTANT" if instant else cumulative,
+            "statement_family": row.get("statement_family"), "statement_scope": row.get("statement_scope", row.get("scope")),
+            "currency": row.get("currency", row.get("reported_currency")),
+            "unit_scale": row.get("unit_scale", row.get("reported_scale", row.get("scale"))),
+            "canonical_metric": row.get("canonical_metric"), "reason_codes": sorted(reasons)}
+
+
+def reporting_period_relation(baseline: Mapping[str, Any], candidate: Mapping[str, Any]) -> str:
+    """End-date ordering is distinct from duration compatibility and native label order."""
+    left, right = baseline.get("period_end"), candidate.get("period_end")
+    if left and right:
+        return "NEWER_EXPLICIT_END" if right > left else "OLDER_EXPLICIT_END" if right < left else "SAME_EXPLICIT_END"
+    # A native label progression can be shown, but is never a proved calendar comparison.
+    order = {"Q1": 1, "Q2": 2, "H1": 2, "Q3": 3, "9M": 3, "Q4": 4, "FY": 4}
+    pattern = r"(\d{4})(?:-(Q[1-4]|H1|9M|FY))?"
+    a, b = re.fullmatch(pattern, str(baseline.get("native_label") or "")), re.fullmatch(pattern, str(candidate.get("native_label") or ""))
+    if a and b and a[1] == b[1]:
+        x, y = order[a[2] or "FY"], order[b[2] or "FY"]
+        return "NATIVE_LABEL_PROGRESS_CALENDAR_UNPROVEN" if y > x else "SAME_NATIVE_PERIOD_POSITION" if y == x else "OLDER_NATIVE_PERIOD_POSITION"
+    return "PERIOD_ORDER_UNRESOLVED"
+
+
 def assert_artifact_session_not_future(session: str | None, *, decision_session: str, label: str) -> None:
     """Fail closed when a whole source artifact is later than the decision session."""
     if _session(session) and session > decision_session:

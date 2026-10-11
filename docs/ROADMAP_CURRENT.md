@@ -1,16 +1,16 @@
 # Stock Lookup — Current Roadmap
 
 History: [ROADMAP.md](ROADMAP.md); execution: ROADMAP_STATE.json.
-Updated 2026-10-11 from PR119 main `d1c9c805e69a558153c65fef973c129a235efb68`.
+Updated 2026-10-11 from main `3d9abf8fdcd4f8f4a13276ae55d26da8bf2a66b2`.
 Nothing below auto-starts; native standing admission required (AI_RULES 11).
 Facts: [ACTIVE_STATE.md](ACTIVE_STATE.md).
 
-## NOW — ACTION_CENTER_OPPORTUNITY_COST_CASES_CONSUMER_V1 (COMPLETE)
+## NOW — FINANCIAL_REPORTING_CURRENCY_TRANSPARENCY_V1 (ACTIVE)
 
-Released PR119: optional private Action Center cases over the existing v2 engine.
-Four post-merge jobs PASS (38105025004); queue empty, no automatic successor.
-[Scope](action_center_opportunity_cost_cases_consumer_v1_contract.md). No Daily activation.
-PR118 COMPLETE; four closeout CI PASS (38095908308). Queue empty.
+Owner-admitted descriptive financial basis/source/cutoff reconciliation and opt-in
+investor/packet consumer. [Scope](financial_reporting_currency_transparency_v1_contract.md).
+One feature PR; future exact-HEAD merge gated. No Daily/authority change. Queue empty.
+PR119 COMPLETE at `d1c9c805`; four post-merge jobs PASS (38105025004).
 Fiscal mapping lacks issuer calendar/covered-period/provider-label/publication proof;
 existing semantics knowledge time is insufficient. No automatic conversion/promotion.
 Capacity Phase 1 COMPLETE: PR99 `168e0f7`, CI 37893984528 success;
@@ -19,9 +19,7 @@ zero production reclaim/activation. [Contract](capacity_recovery_phase1_contract
 Vault V1 COMPLETE (PR97): offline snapshot/SQLite, 77 candidates, zero deletion authority;
 C capacity and production/retention approvals gated. [Contract](vault_incremental_snapshot_contract.md).
 
-Economics V1 COMPLETE: PR96 merged `9db35f1`; PNJ/PVD/FPT observations,
-interpretation/normalization blockers stay offline/non-voting.
-[Contract](long_term_company_economics_evidence_contract.md).
+Economics V1 COMPLETE: PR96; [offline limits](long_term_company_economics_evidence_contract.md).
 
 ## PRIOR — `MACRO_REGIME_CANONICAL_DAILY_CONSUMER_AND_TEMPORAL_CORRECTIVE_V1` (COMPLETE)
 
@@ -82,12 +80,12 @@ These advance by accumulating real sessions, not by implementation:
 2. **Control-plane simplification Phase B** (not started): move or archive historical narrative out of the default
    path (`STATE.md` / `DECISIONS.md` / `ROADMAP.md` dated sections), keep every machine marker, parser and
    `ROADMAP_STATE.json` contract working, update the drift/governance tests in the same change. Preserve history.
-3. **Simplification Phase C** (released): runtime/architecture simplification only where post-Monday
-   measurements justify it. Inputs are the measured figures in [owner_daily_host_preflight_contract.md](owner_daily_host_preflight_contract.md)
-   and [owner_daily_feedback_resource_containment_contract.md](owner_daily_feedback_resource_containment_contract.md)
-   (per-session artifacts are large: Integrated Decision ≈1.3 GB, T0 ≈1.4 GB, feedback ≈0.5 GB; the Daily-child
-   peak includes silent Producer/observer intervals). The local scope and measured allocation
-   causes are recorded in the linked report; exact historical instruction attribution is unavailable.
+3. **Simplification Phase C** (released): measured allocation causes and immutable
+   session sizes remain in the linked acceptance and
+   [host preflight](owner_daily_host_preflight_contract.md) /
+   [feedback containment](owner_daily_feedback_resource_containment_contract.md)
+   contracts. Further runtime work needs measured justification; historical
+   instruction attribution is unavailable.
 
 ## LATER — blocked on evidence or an owner decision
 
