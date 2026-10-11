@@ -15,11 +15,32 @@
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "E1_OFFICIAL_EXCHANGE_EVIDENCE_PACKAGE_MIGRATION",
-    "state": "COMPLETE"
+    "milestone": "E2_E3_FOUNDATION_SEAMS_AND_DEPENDENCY_UNTANGLING",
+    "state": "ACTIVE"
   },
   "queued_next": [],
   "milestones": [
+    {
+      "milestone_id": "E2_E3_FOUNDATION_SEAMS_AND_DEPENDENCY_UNTANGLING",
+      "state": "ACTIVE",
+      "starting_checkpoint": "e99000494ab52374c01383f4c57891165b58768f",
+      "candidate_branch": "refactor/e2e3-foundation-seams-20261012",
+      "dependencies": [
+        "E1_OFFICIAL_EXCHANGE_EVIDENCE_PACKAGE_MIGRATION"
+      ],
+      "unlocks": [],
+      "owner_authorized": true,
+      "owner_override": "Owner directive 2026-10-11 attachment 8d6cc579: implement E2/E3 registry and temporal foundation plus safe connected untangling; local validation/closeout, feature push and PR authorized; no merge, Daily, deployment, evidence writes or authority promotion. E1 PR124 merged at exact verified starting HEAD; post-merge acceptance gates publication.",
+      "authority_effect": "NONE",
+      "source_doc": "docs/e2_e3_foundation_seams_and_dependency_untangling_contract.md",
+      "state_history": [
+        "DEFERRED",
+        "ACTIVE"
+      ],
+      "checkpoint": null,
+      "terminal_disposition": null,
+      "notes": "Owner directive 2026-10-11 attachment 8d6cc579: implement E2/E3 registry and temporal foundation plus safe connected untangling; local validation/closeout, feature push and PR authorized; no merge, Daily, deployment, evidence writes or authority promotion. E1 PR124 merged at exact verified starting HEAD; post-merge acceptance gates publication."
+    },
     {
       "milestone_id": "E1_OFFICIAL_EXCHANGE_EVIDENCE_PACKAGE_MIGRATION",
       "state": "COMPLETE",

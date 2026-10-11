@@ -10,7 +10,8 @@ from stocklookup_core.valuation.current_research_valuation_context import (
     attach_fundamental_peers, attach_peer_relative, evaluate_ticker_valuation, freshness_for_valuation,
     source_session_for_valuation,
 )
-from stocklookup_core.decision.opportunity_axis_freshness import assert_artifact_session_not_future, classify_axis_freshness
+from stocklookup_core.evidence.temporal_freshness import assert_artifact_session_not_future
+from stocklookup_core.decision.opportunity_axis_freshness import classify_axis_freshness
 from stocklookup_core.decision.opportunity_context import (
     CONTRACT_VERSION as OPPORTUNITY_CONTRACT, MAJOR_AXES, build_ticker_opportunity, compact_opportunity, _records, _session,
 )

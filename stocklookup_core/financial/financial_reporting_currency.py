@@ -15,9 +15,8 @@ import math
 import re
 from typing import Any, Mapping, Sequence
 
-from stocklookup_core.decision.opportunity_axis_freshness import (
-    classify_financial_period_freshness, reporting_period_basis, reporting_period_relation,
-)
+from stocklookup_core.financial.period_freshness import classify_financial_period_freshness
+from stocklookup_core.evidence.temporal_freshness import reporting_period_basis, reporting_period_relation
 from stocklookup_core.financial import financial_analysis_product_projection as product
 from stocklookup_core.financial import financial_v2_current_input_authority as pin
 

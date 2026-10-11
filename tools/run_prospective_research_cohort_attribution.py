@@ -17,7 +17,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from daily_research_session_operations import load_registry
+from stocklookup_core.evidence.session_registry import load_registry
 from stocklookup_core.research.prospective_research_learning import (
     attribute_prospective_research_cohort_first_future,
     replay_prospective_research_cohort_future_attribution,

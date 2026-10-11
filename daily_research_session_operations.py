@@ -43,12 +43,8 @@ def _identity(value: Mapping[str, Any]) -> str:
     return "daily_research_session_operation:" + stable_id(payload)
 
 
-def load_registry(root: Path, registry_path: Path | None = None) -> Mapping[str, Any]:
-    path = registry_path or root / "config" / "daily_research_session_input_registry.json"
-    registry = json.loads(path.read_text(encoding="utf-8"))
-    if registry.get("contract_version") != "daily_research_session_input_registry/v1":
-        raise ValueError("SESSION_INPUT_REGISTRY_CONTRACT_INVALID")
-    return registry
+# Compatibility: retain one callable for existing frozen/pinned consumers.
+from stocklookup_core.evidence.session_registry import load_registry
 
 
 def selection_identities(selection: Mapping[str, Any]) -> dict[str, str]:

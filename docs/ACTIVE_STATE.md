@@ -1,7 +1,7 @@
 # Stock Lookup — Active State
 
-E1 base/main at admission, 2026-10-11: `56cdc36f860532678ae2c8c26eddea2730988ef8`.
-PR123 (E0) released; four post-merge jobs PASS (38139163689). E1 local at `fbee426`.
+E2/E3 base/main at admission: `e99000494ab52374c01383f4c57891165b58768f`.
+E1 PR124 released; four post-merge jobs PASS (38148897543). E0 PR123 released.
 Verify live main: `git fetch origin main` or `git ls-remote origin refs/heads/main`; **local** remote-tracking refs may be stale.
 ## 0. How this file relates to the others
 | Question | Answer lives in |
@@ -30,7 +30,8 @@ Kinds: **CURRENT FACT** (verified), **HOST-LOCAL** (untracked; re-verify),
 **BLOCKED**, **DEFERRED**, **HISTORICAL**.
 
 ## 1. The operational gate
-- **COMPLETE LOCAL — [E1 evidence move](e1_official_exchange_evidence_package_migration_contract.md):** 13 modules to `stocklookup_core/evidence/`; no shim, Daily or authority change.
+- **ACTIVE LOCAL — [E2/E3 seams](e2_e3_foundation_seams_and_dependency_untangling_contract.md):** explicit registry reads and temporal measurements; domain policy remains domain-owned. No Daily or authority change.
+- **COMPLETE — [E1 evidence move](e1_official_exchange_evidence_package_migration_contract.md):** 13 modules to `stocklookup_core/evidence/`; no shim, Daily or authority change.
 - **COMPLETE — [E0](stocklookup_architecture_dependency_ratchet_and_daily_launch_guard_v1_contract.md):** PR123 merged `56cdc36`.
 - **COMPLETE — [Action Center cases](action_center_opportunity_cost_cases_consumer_v1_contract.md):** PR119, four post-merge jobs PASS (38105025004); offline/non-voting.
 - **COMPLETE — [capacity Phase 1](capacity_recovery_phase1_contract.md):** PR99 merged
@@ -302,8 +303,8 @@ Kinds: **CURRENT FACT** (verified), **HOST-LOCAL** (untracked; re-verify),
 
 ## 9. Next action
 
-PR120–123 merged; E1 natively admitted here. Queue empty; no automatic E2.
-No Daily activation, production writes, push or PR.
+E1 PR124 merged; E2/E3 natively admitted under explicit Owner direction. Queue empty; no automatic E4.
+Validated feature push/PR authorized; E2/E3 merge remains Owner-gated. No Daily or production writes.
 Daily stays owner-operated after fresh READY/session gates; production merges need approval.
 Fiscal mapping needs exact source/period/publication proof under its existing contract.
 

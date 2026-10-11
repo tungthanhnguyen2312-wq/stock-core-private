@@ -17,7 +17,8 @@ from current_market_sector_leadership_context import _percentile
 import monetary_basis_contract as basis_contract
 from stocklookup_core.valuation.market_wide_current_valuation_input_scaleout import RESEARCH_SHARE_AUTHORITIES, _applicability, _market_cap_monetary_basis
 from operational_fundamental_context_integration import MAX_COMPLETED_QUARTER_LAG
-from stocklookup_core.decision.opportunity_axis_freshness import UNAVAILABLE, axis_is_research_usable, classify_axis_freshness, completed_quarter_lag
+from stocklookup_core.evidence.temporal_freshness import UNAVAILABLE, completed_quarter_lag
+from stocklookup_core.valuation.freshness import classify_valuation_freshness, axis_is_research_usable
 from sector_relative_research_context import MIN_COHORT_MEMBERS
 
 CONTRACT_VERSION = "current_research_valuation_context/v1"
@@ -1259,8 +1260,8 @@ def source_session_for_valuation(valuation_artifact: Mapping[str, Any] | None) -
 
 
 def freshness_for_valuation(*, decision_session: str, valuation_artifact: Mapping[str, Any] | None) -> dict[str, Any]:
-    return classify_axis_freshness(
-        axis="valuation", decision_session=decision_session,
+    return classify_valuation_freshness(
+        decision_session=decision_session,
         source_session=source_session_for_valuation(valuation_artifact),
         source_artifact_identity=(valuation_artifact or {}).get("artifact_identity"),
     )

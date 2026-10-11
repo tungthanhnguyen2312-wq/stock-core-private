@@ -61,3 +61,11 @@ carried. The debt is carried, not approved. No new cycle, unresolved or unsuppor
 Local implementation checkpoint `fbee4265a559255a7d91e707ccb8344928660288`; native disposition
 `LOCAL_IMPLEMENTATION_COMPLETE_NOT_PROMOTED`. Owner review/push/PR is the next gate; no E2.
 [Retained acceptance](internal/E1_LOCAL_ACCEPTANCE_20261011.md).
+
+## Verified release
+
+PR124 merged by Owner at `e99000494ab52374c01383f4c57891165b58768f`; candidate
+`8443a19132436236621e52ad85e2f1ffd407fa3b` is an ancestor. Four pre-merge jobs
+PASS (38147082549) and four post-merge jobs PASS (38148897543). The earlier
+local-only gate above records the historical checkpoint; E2/E3 has a separate
+explicit Owner admission. Evidence and production authority remain unchanged.

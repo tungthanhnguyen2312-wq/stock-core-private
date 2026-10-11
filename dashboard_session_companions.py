@@ -21,7 +21,7 @@ from pathlib import Path
 from typing import Any, Mapping
 
 from atomic_io import atomic_write_file, validate_json_file
-from daily_research_session_operations import load_registry
+from stocklookup_core.evidence.session_registry import load_registry
 
 CONTRACT_VERSION = "dashboard_session_companions/v1"
 SCHEMA_VERSION = "1.0.0"

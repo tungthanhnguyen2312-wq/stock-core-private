@@ -23,6 +23,13 @@ exact R7 inputs offline. [Contract](market_only_pit_eligibility_contract.md).
 
 ### Source package migration — 2026-10-10
 
+[E2/E3 seams](e2_e3_foundation_seams_and_dependency_untangling_contract.md):
+`evidence/session_registry` owns explicit read-only Daily registry loading;
+`evidence/temporal_freshness` owns policy-free time measurements and caller-policy envelopes.
+`financial/period_freshness` and `valuation/freshness` retain domain interpretation;
+`decision/opportunity_axis_freshness` keeps other axis policy and compatibility exports.
+
+
 The owner admitted [root structure simplification](repository_root_structure_simplification_v1_contract.md)
 after semantic corrective PR105. Landing acquisition code is in `stocklookup_core/acquisition/`;
 official document evidence, temporal receipts and (E1) the offline HNX/HOSE disclosure, issuer-profile, listing-page and corporate-action evidence parsers are in `stocklookup_core/evidence/`.

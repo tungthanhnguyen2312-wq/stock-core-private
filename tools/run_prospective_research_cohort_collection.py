@@ -20,7 +20,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from daily_producer_pipeline import resolve_latest_registered_completed_session
-from daily_research_session_operations import load_registry
+from stocklookup_core.evidence.session_registry import load_registry
 from full_universe_entry_candidate_triage import replay as replay_triage
 from stocklookup_core.research.prospective_research_learning import (
     freeze_prospective_research_cohort,
