@@ -75,6 +75,57 @@ def check(**updates):
     return row
 
 
+@pytest.mark.parametrize("mutation", [
+    "bare_audited", "bare_reviewed", "blocked_assurance", "wrong_document", "wrong_status",
+    "wrong_contract", "missing_title", "missing_image", "metadata_blocked", "q3_label",
+    "refresh_shape", "engagement_notice", "negated_review", "wrong_proof_identity", "changed_anchors",
+])
+def test_unverified_source_claim_cannot_enter_currency_qualified_lane(mutation):
+    row = official()
+    proof = row["assurance_evidence"]
+    if mutation.startswith("bare_"):
+        row.update(audit_or_review_status=mutation[5:], assurance_evidence=None)
+    elif mutation == "blocked_assurance":
+        proof["state"] = "BLOCKED"
+    elif mutation == "wrong_document":
+        proof["document_sha256"] = "0" * 64
+    elif mutation == "wrong_status":
+        proof["audit_or_review_status"] = "audited"
+    elif mutation == "wrong_contract":
+        proof["contract_version"] = "discovery_claim/v1"
+    elif mutation == "wrong_proof_identity":
+        proof["evidence_id"] = "0" * 64
+    elif mutation == "changed_anchors":
+        proof["matched_anchors"] = ["incidental review mention"]
+    elif mutation == "missing_title":
+        proof["title_span"] = {}
+    elif mutation == "missing_image":
+        proof["rendered_image_sha256"] = None
+    elif mutation == "metadata_blocked":
+        row["metadata_qualification"] = "BLOCKED"
+    elif mutation == "q3_label":
+        row["reporting_period"] = "2026-Q3"
+    elif mutation == "refresh_shape":
+        row.pop("assurance_evidence")
+        row.pop("ingress_contract")
+        row["qualification_state"] = "QUALIFIED"
+    else:
+        row.update(audit_or_review_status="audited", assurance_evidence=None)
+        row["source_title"] = "Auditor engagement notice" if mutation == "engagement_notice" else "not reviewed"
+    view = build([row])
+    record = view["records"]["PNJ"]
+    assert record["qualified_official_fields"] == []
+    assert "QUALIFIED_EXACT_FACT" not in record["newer_period_evidence"]["known_progress_kinds"]
+
+
+def test_packet_rejects_resealed_unbound_assurance():
+    view = build()
+    view["records"]["PNJ"]["qualified_official_fields"][0]["assurance_evidence"] = None
+    view.update(currency.identity(view))
+    with pytest.raises(ValueError, match="ASSURANCE_PROOF_NOT_BOUND"):
+        currency.packet_context(view, ticker="PNJ", decision_session="2026-10-08")
+
+
 @pytest.mark.parametrize("label,family", [("2026-Q1", "QUARTER"), ("2026-Q2", "QUARTER"), ("2026-Q3", "QUARTER"), ("2026-Q4", "QUARTER"), ("2026-H1", "HALF_YEAR"), ("2026-9M", "NINE_MONTH"), ("2025", "ANNUAL"), ("2025-FY", "ANNUAL"), ("2026-Q5", "UNKNOWN"), ("Q3-2026", "UNKNOWN"), (None, "UNKNOWN")])
 def test_native_period_families_never_infer_calendar_or_duration(label, family):
     value = basis({"reporting_period": label})

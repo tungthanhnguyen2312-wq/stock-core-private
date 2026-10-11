@@ -130,6 +130,42 @@ def compatible_measurement(left: Mapping[str, Any], right: Mapping[str, Any]) ->
             "replacement": "NOT_PERMITTED"}
 
 
+def _assurance_bound(row: Mapping[str, Any]) -> bool:
+    """Consumer guard against the owner's legacy bare-audited caller allowance.
+
+    This validates the existing retained proof envelope, not PDF classification.
+    It cannot certify a filing period or repair upstream evidence recognizers.
+    """
+    from official_financial_assurance_evidence import CONTRACT_VERSION, validate_assurance_claim
+
+    proof = row.get("assurance_evidence")
+    if not isinstance(proof, Mapping) or proof.get("contract_version") != CONTRACT_VERSION:
+        return False
+    try:
+        validate_assurance_claim(row.get("audit_or_review_status"), proof,
+                                 document_sha256=row.get("document_sha256"))
+    except ValueError:
+        return False
+    span = proof.get("title_span")
+    if not isinstance(span, Mapping):
+        return False
+    # Reconcile the existing resolver's content identity without reclassifying text.
+    proof_id = hashlib.sha256(canonical({"contract": CONTRACT_VERSION,
+        "document_sha256": proof.get("document_sha256"), "page_number": proof.get("page_number"),
+        "status": proof.get("audit_or_review_status"), "anchors": proof.get("matched_anchors"),
+        "title_span": span, "rendered_image_sha256": proof.get("rendered_image_sha256"),
+        "materialization_id": proof.get("materialization_id")}).encode()).hexdigest()
+    if proof.get("opinion_evidence"):
+        proof_id = hashlib.sha256(canonical({"base_evidence_id": proof_id,
+            "opinion_evidence": proof["opinion_evidence"]}).encode()).hexdigest()
+    scope = "consolidated_interim_statements" if row.get("audit_or_review_status") == "reviewed" else "consolidated_statements"
+    return bool(proof.get("evidence_id") == proof_id and proof.get("citation_id") == proof_id
+                and proof.get("scope_of_assurance") == scope
+                and proof.get("matched_anchors") and span.get("token_ids")
+                and all(re.fullmatch(r"[0-9a-f]{64}", str(proof.get(k) or ""))
+                        for k in ("evidence_id", "materialization_id", "page_text_sha256", "rendered_image_sha256")))
+
+
 def _official(tickers: Sequence[str], rows: Sequence[Mapping[str, Any]], session: str, cutoff: str):
     import market_wide_current_fundamental_research as owner
     from financial_evidence_currency_contract import TARGET_PERIODS
@@ -150,6 +186,10 @@ def _official(tickers: Sequence[str], rows: Sequence[Mapping[str, Any]], session
             reasons.append("EXACT_SOURCE_REFERENCE_REQUIRED")
         if row.get("reporting_period") not in TARGET_PERIODS:
             reasons.append("SOURCE_PERIOD_NOT_REGISTERED_BY_EXISTING_INGRESS")
+        if not _assurance_bound(row):
+            reasons.append("RETAINED_DOCUMENT_ASSURANCE_PROOF_NOT_BOUND")
+        if row.get("metadata_qualification") in ("BLOCKED", "UNQUALIFIED") or row.get("qualification_status") == "BLOCKED":
+            reasons.append("SOURCE_METADATA_EXPLICITLY_BLOCKED")
         if reasons:
             excluded[ticker].append({"source": source, "eligibility": eligibility, "reason_codes": sorted(set(reasons))})
         else:
@@ -162,6 +202,8 @@ def _official(tickers: Sequence[str], rows: Sequence[Mapping[str, Any]], session
     for t in tickers:
         for row in projected["records"][t].get("official_field_context", []):
             qualified[t].append({"basis": _basis(row), "normalized_value": row["normalized_value"],
+                                 "assurance_evidence": deepcopy(row["assurance_evidence"]),
+                                 "audit_or_review_status": row["audit_or_review_status"],
                                  "source": _reference(row), "qualification": {k: row[k] for k in ("factual_status", "factual_reason_codes", "research_status", "research_reason_codes")},
                                  "formal_temporal_status": row["temporal_status"],
                                  "valuation_use": row["valuation_use"],
@@ -481,6 +523,9 @@ def packet_context(projection: Mapping[str, Any], *, ticker: str, decision_sessi
     from financial_evidence_currency_contract import TARGET_INTERIM_PERIODS, TARGET_PERIODS
 
     for q in record["qualified_official_fields"]:
+        if not _assurance_bound({**q["source"], "assurance_evidence": q.get("assurance_evidence"),
+                                 "audit_or_review_status": q.get("audit_or_review_status")}):
+            raise ValueError("FINANCIAL_CURRENCY_ASSURANCE_PROOF_NOT_BOUND")
         eligibility = _eligibility(q["source"], boundary)
         if eligibility["reason_codes"] or q["eligibility"] != eligibility or isinstance(q["normalized_value"], bool) or not isinstance(q["normalized_value"], (int, float)) or not math.isfinite(q["normalized_value"]):
             raise ValueError("FINANCIAL_CURRENCY_FACT_CUTOFF_INVALID")

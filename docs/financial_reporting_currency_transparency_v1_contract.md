@@ -54,6 +54,16 @@ annual, component and foreign-currency gates are reused. This adapter additional
 requires the existing ingress period registry: describing Q3/9M is not registering
 them as new official financial facts. Conflicts do not elect a winner.
 
+The adapter also requires an existing `official_financial_assurance_evidence/v1`
+envelope for both audited and reviewed claims: qualified state, matching document
+and status, retained title/anchor/image references, and the resolver's matching
+content identity. The opt-in packet rechecks that envelope after artifact identity
+validation. Explicitly blocked metadata stays excluded. This closes the new
+consumer's demonstrated bare-audited bypass without changing the upstream owner.
+It verifies the retained proof contract, not original PDF classification or a
+filing header's reporting period. Those upstream integrity checks remain a
+separate corrective; no blanket source-integrity certification is implied.
+
 Comparability requires explicit metric, statement family/time basis, scope,
 currency, scale, dates, period family and cumulative basis. H1 is not standalone
 Q2; IS/CF duration and BS instant remain distinct. Newer end dates alone permit

@@ -129,3 +129,59 @@ cleanup, background polling or automatic successor occurred. PR119 checkout and
 handoff remain protected. The genuine source integrity/publication/fiscal and
 upstream qualification gaps limit interpretation; they do not block delivery of
 the descriptive opt-in capability.
+
+## Source-integrity follow-up reconciliation
+
+Read the completed host report `claude-reports/q3-official-disclosure-intake-assurance-20261011/REPORT.md`.
+The report's experimental results are distinct from production impact. Its
+quarterly schema proposal is not admitted by this milestone.
+
+- Verified `_qualify_extracted_fact` has no document-metadata/assurance dependency;
+  extraction defaults scope/currency and `run_refresh` writes the public overlay.
+  Whole-text period/assurance recognition and HNX title/attachment typing remain
+  upstream weaknesses. No refresh, network experiment or overlay write was run.
+- Verified `load_public_official_citations` accepts a QUALIFIED VND refresh-shaped
+  row without the strict fundamental semantic/assurance gates, marks its citation
+  verified, and feeds `canonical_fact_store.load_official_citations`. This is a
+  vulnerable citation consumer, not proof of affected production values.
+- Repository Python/PowerShell/batch/workflow call search found only the explicit
+  `tools/run_financial_evidence_currency_refresh.py` entry point invoking
+  `run_refresh`. Ordinary Daily code reads the existing overlay (including equity
+  and fundamental projections); no automatic Daily refresh invocation was found.
+  Dynamic external job configuration was not asserted safe by this code audit.
+- Reproduced the current adapter admitting one synthetic interim `audited` row
+  with no assurance evidence via the standing owner's legacy allowance. Added
+  a local guard for both statuses, bound proof identities and explicit blocked
+  metadata, plus packet validation. No upstream classifier or Daily code changed.
+  Sixteen new adversarial checks bring this file to **98 tests**. Bare audit/review,
+  blocked/mismatched proof, Q3, refresh-shaped, engagement and negated-review claims
+  cannot enter this consumer's qualified/newer-qualified lanes.
+- Bounded read-only overlay audit: candidate and canonical files are byte-equal
+  (SHA256 `a1f057017a9309f5c5a2a1a9ec53c3746500f9355bf45642e039ebf2608e33ff`).
+  All **27 rows / 7 issuers / 9 documents** carry matching bound assurance envelopes
+  and ingress v2; zero refresh-shaped rows or explicit blockers. Period totals
+  remain 16 H1 and 11 annual, all 27 admitted by the guarded adapter. Nine claimed
+  retained documents in the identity-failing cohort report remain unverified.
+- PNJ/PVD annual retained title/anchor spans replay the same qualified audit status,
+  scope and title references, binding six rows to their retained envelopes. These
+  deliberately selected spans omit full page text: full text hashes/proof IDs
+  cannot be independently replayed from them. No full PDF/header-period audit of
+  all nine documents occurred. No production contamination is established or
+  ruled out by this bounded audit; historical evidence is unchanged.
+
+Leading next corrective: `OFFICIAL_FINANCIAL_SOURCE_QUALIFICATION_INTEGRITY_CORRECTIVE_V1`.
+After the current exact-HEAD owner merge checkpoint, establish the adversarial
+source-to-canonical tests first, then close discovery → document classification →
+assurance evidence → metadata-bound fact qualification → immutable/public overlay
+publication → canonical citation admission. Q3 mislabelling, auditor engagement,
+insufficient assurance and metadata-blocked facts must all fail canonical QUALIFIED
+admission. Preserve historical evidence and approved ingress rows; keep quarterly
+schema/unreviewed policy separate unless necessary to close a demonstrated bypass.
+No successor writer, automatic admission or merge is started here.
+
+Follow-up validation: **443 PASS** across financial, valuation, packet, research CLI,
+assurance, ingress and native-roadmap regressions; two further proof-identity/anchor
+adversarial cases and final repository-layout checks pass (**104 PASS**, including
+all 98 reporting-currency tests). Original default identity/numerical goldens still
+pass. Bounded measurement preserves 27 admitted facts, the source-report identity
+warning and every input hash. Hosted CI must be checked again at the amended HEAD.
