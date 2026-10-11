@@ -76,6 +76,8 @@ A QNS semi-annual detail page is a discovery resolver, not a financial fact.
 
 ## 4. Execution, portfolio and promotion
 
+[Optional Action Center cases](action_center_opportunity_cost_cases_consumer_v1_contract.md): NON_VOTING, offline only.
+
 | Area | Status | Meaning | Controlling source |
 |---|---|---|---|
 | Portfolio / risk | `SCOPED` | Strict research sizing, exposure aggregation and risk-window readiness only; private portfolio inputs are explicit and never committed. | [portfolio_aware_decision_and_risk_contract.md](portfolio_aware_decision_and_risk_contract.md), [private_portfolio_context_contract.md](private_portfolio_context_contract.md) |

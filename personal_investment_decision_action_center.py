@@ -608,6 +608,7 @@ def build_artifact(
     owner_focus: Mapping[str, Any] | None = None, portfolio_aware_decision_artifact: Mapping[str, Any] | None = None,
     sector_by_ticker: Mapping[str, str] | None = None, excluded_tickers: frozenset[str] = frozenset(),
     portfolio_snapshot: Mapping[str, Any] | None = None, quant_risk_artifact: Mapping[str, Any] | None = None,
+    opportunity_cost_input: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Pure composition over already-built artifacts for one session -- no file I/O, no
     recomputation. See ``evaluate_from_retained_artifacts`` for the real-session, file-resolving
@@ -694,6 +695,21 @@ def build_artifact(
             "investment_account_values_never_alter_security_or_portfolio_action_computation": True,
         },
     }
+    if opportunity_cost_input is not None:
+        from stocklookup_core.portfolio.action_center_opportunity_cost import build_view
+        view = build_view(session=session, integrated_decision=integrated_decision_artifact, request=opportunity_cost_input)
+        state = opportunity_cost_input.get("owner_portfolio_state") or {}
+        sources = state.get("source_identities") or {}
+        snapshot_identity = sources.get("portfolio_snapshot_identity") if isinstance(sources, Mapping) else None
+        if portfolio_snapshot is not None and snapshot_identity != portfolio_snapshot.get("artifact_identity"):
+            raise ActionCenterError("OPPORTUNITY_COST_OWNER_SNAPSHOT_MISMATCH")
+        if portfolio_aware_decision_artifact is not None:
+            if portfolio_aware_decision_artifact.get("session") != session:
+                raise ActionCenterError("OPPORTUNITY_COST_PORTFOLIO_DECISION_SESSION_MISMATCH")
+            expected_snapshot = (portfolio_aware_decision_artifact.get("source_artifact_identities") or {}).get("portfolio_state_identity")
+            if not expected_snapshot or expected_snapshot != snapshot_identity:
+                raise ActionCenterError("OPPORTUNITY_COST_PORTFOLIO_DECISION_SOURCE_MISMATCH")
+        body["opportunity_cost_research"] = view
     return {**body, **_identity(body)}
 
 
@@ -801,8 +817,35 @@ def evaluate_from_retained_artifacts(
     )
 
 
+def _optional_research_private_root(artifact: Mapping[str, Any], root: Path | None) -> Path:
+    destination = root or default_action_center_root()
+    if "opportunity_cost_research" in artifact:
+        if not destination.resolve().is_relative_to(default_action_center_root().resolve()):
+            raise ActionCenterError("OPPORTUNITY_COST_OUTPUT_REQUIRES_PRIVATE_ACTION_CENTER_ROOT")
+        if str(artifact.get("session")) != _destination_session(artifact.get("session")):
+            raise ActionCenterError("OPPORTUNITY_COST_OUTPUT_SESSION_INVALID")
+        if not (destination / artifact["session"]).resolve().is_relative_to(default_action_center_root().resolve()):
+            raise ActionCenterError("OPPORTUNITY_COST_OUTPUT_REQUIRES_PRIVATE_ACTION_CENTER_ROOT")
+    return destination
+
+
+def _destination_session(session: Any) -> str | None:
+    from datetime import date
+    try:
+        return date.fromisoformat(session).isoformat()
+    except (TypeError, ValueError):
+        return None
+
+
+def _optional_research_destination(artifact: Mapping[str, Any], root: Path | None, filename: str) -> Path:
+    destination = _optional_research_private_root(artifact, root) / str(artifact["session"]) / filename
+    if "opportunity_cost_research" in artifact and not destination.resolve().is_relative_to(default_action_center_root().resolve()):
+        raise ActionCenterError("OPPORTUNITY_COST_OUTPUT_REQUIRES_PRIVATE_ACTION_CENTER_ROOT")
+    return destination
+
+
 def write_private_artifact(artifact: Mapping[str, Any], *, root: Path | None = None) -> Path:
-    destination = (root or default_action_center_root()) / str(artifact["session"]) / "personal_investment_decision_action_center_v1.json"
+    destination = _optional_research_destination(artifact, root, "personal_investment_decision_action_center_v1.json")
     destination.parent.mkdir(parents=True, exist_ok=True)
     payload = _canon(artifact) + "\n"
     temporary = destination.with_suffix(destination.suffix + ".tmp")
@@ -871,7 +914,10 @@ def markdown(artifact: Mapping[str, Any]) -> str:
     lines.append("## PORTFOLIO ACTIONS")
     portfolio = artifact.get("portfolio") or {}
     if portfolio.get("status") == "PRIVATE_PORTFOLIO_NOT_SUPPLIED":
-        lines.append("- PRIVATE_PORTFOLIO_NOT_SUPPLIED — import a workbook (`portfolio import`) to enable this section.")
+        if (artifact.get("opportunity_cost_research") or {}).get("status") == "AVAILABLE":
+            lines.append("- The existing portfolio decision artifact was not supplied; explicit owner state is shown in optional opportunity-cost research below.")
+        else:
+            lines.append("- PRIVATE_PORTFOLIO_NOT_SUPPLIED — import a workbook (`portfolio import`) to enable this section.")
     elif not portfolio.get("holdings"):
         lines.append("- No confirmed current holdings.")
     else:
@@ -972,16 +1018,23 @@ def markdown(artifact: Mapping[str, Any]) -> str:
         lines.append(f"- **{bucket}**: {', '.join(row['ticker'] for row in rows)}")
     lines.append("")
 
+    if "opportunity_cost_research" in artifact:
+        from stocklookup_core.portfolio.action_center_opportunity_cost import markdown as opportunity_markdown
+        lines.extend(opportunity_markdown(artifact["opportunity_cost_research"]))
+
     lines.append("## DATA / AUTHORITY WARNINGS")
     lines.append(f"- Security denominator: {(artifact.get('coverage') or {}).get('security_denominator')}")
-    lines.append(f"- Portfolio supplied: {(artifact.get('coverage') or {}).get('portfolio_supplied')}")
+    if "opportunity_cost_research" in artifact:
+        lines.append(f"- Existing portfolio decision artifact supplied: {(artifact.get('coverage') or {}).get('portfolio_supplied')}; optional owner state: {(artifact['opportunity_cost_research'].get('owner_state_status') or artifact['opportunity_cost_research']['status'])}.")
+    else:
+        lines.append(f"- Portfolio supplied: {(artifact.get('coverage') or {}).get('portfolio_supplied')}")
     lines.append("- No universal score, no fabricated probability/target price, no execution order anywhere in this file.")
     lines.append("")
     return "\n".join(lines)
 
 
 def write_markdown(artifact: Mapping[str, Any], *, root: Path | None = None) -> Path:
-    destination = (root or default_action_center_root()) / str(artifact["session"]) / "personal_investment_decision_action_center.md"
+    destination = _optional_research_destination(artifact, root, "personal_investment_decision_action_center.md")
     destination.parent.mkdir(parents=True, exist_ok=True)
     destination.write_text(markdown(artifact), encoding="utf-8")
     return destination
