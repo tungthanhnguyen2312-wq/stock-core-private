@@ -58,4 +58,6 @@ carried. The debt is carried, not approved. No new cycle, unresolved or unsuppor
 
 ## Acceptance
 
+Local implementation checkpoint `fbee4265a559255a7d91e707ccb8344928660288`; native disposition
+`LOCAL_IMPLEMENTATION_COMPLETE_NOT_PROMOTED`. Owner review/push/PR is the next gate; no E2.
 [Retained acceptance](internal/E1_LOCAL_ACCEPTANCE_20261011.md).

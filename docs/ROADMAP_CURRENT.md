@@ -5,7 +5,7 @@ E1 base/main at admission `56cdc36f860532678ae2c8c26eddea2730988ef8`.
 Nothing below auto-starts; native standing admission required (AI_RULES 11).
 Facts: [ACTIVE_STATE.md](ACTIVE_STATE.md).
 
-## NOW — E1_OFFICIAL_EXCHANGE_EVIDENCE_PACKAGE_MIGRATION (ACTIVE LOCAL)
+## NOW — E1_OFFICIAL_EXCHANGE_EVIDENCE_PACKAGE_MIGRATION (COMPLETE LOCAL)
 
 [Scope](e1_official_exchange_evidence_package_migration_contract.md): 13 offline modules to
 `stocklookup_core/evidence/`; no shim. Owner push/PR gate; no E2.

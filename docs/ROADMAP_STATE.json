@@ -16,13 +16,13 @@
   ],
   "current": {
     "milestone": "E1_OFFICIAL_EXCHANGE_EVIDENCE_PACKAGE_MIGRATION",
-    "state": "ACTIVE"
+    "state": "COMPLETE"
   },
   "queued_next": [],
   "milestones": [
     {
       "milestone_id": "E1_OFFICIAL_EXCHANGE_EVIDENCE_PACKAGE_MIGRATION",
-      "state": "ACTIVE",
+      "state": "COMPLETE",
       "starting_checkpoint": "56cdc36f860532678ae2c8c26eddea2730988ef8",
       "candidate_branch": "refactor/e1-official-exchange-evidence-migration-20261011",
       "dependencies": [
@@ -35,11 +35,12 @@
       "source_doc": "docs/e1_official_exchange_evidence_package_migration_contract.md",
       "state_history": [
         "DEFERRED",
-        "ACTIVE"
+        "ACTIVE",
+        "COMPLETE"
       ],
-      "checkpoint": null,
-      "terminal_disposition": null,
-      "notes": "Owner 2026-10-11 E1 directive after verified PR123 E0 release at 56cdc36f860532678ae2c8c26eddea2730988ef8 (post-merge Producer CI run 38139163689: four jobs success): structural-only relocation of the frozen 13-module official exchange disclosure/event-evidence cohort into stocklookup_core/evidence/ through config/repository_layout.json and the E0 dependency ratchet; update importers, tests and documentation; local implementation and closeout commits only. No evidence, identity, PIT, authority, Daily or launcher change; no push, PR, merge, deploy, production write, worktree retirement or E2."
+      "checkpoint": "fbee4265a559255a7d91e707ccb8344928660288",
+      "terminal_disposition": "LOCAL_IMPLEMENTATION_COMPLETE_NOT_PROMOTED",
+      "notes": "Owner 2026-10-11 E1 directive after verified PR123 E0 release at 56cdc36f860532678ae2c8c26eddea2730988ef8 (post-merge Producer CI run 38139163689: four jobs success): structural-only relocation of the frozen 13-module official exchange disclosure/event-evidence cohort into stocklookup_core/evidence/ through config/repository_layout.json and the E0 dependency ratchet; update importers, tests and documentation; local implementation and closeout commits only. No evidence, identity, PIT, authority, Daily or launcher change; no push, PR, merge, deploy, production write, worktree retirement or E2. Local closeout: Owner 2026-10-11 autonomous E1 mandate: validated 13-module official exchange evidence relocation into stocklookup_core/evidence with reproducible offline acceptance; push/PR/merge remain unauthorized, no E2; no main release, authority promotion or successor."
     },
     {
       "milestone_id": "STOCKLOOKUP_ARCHITECTURE_DEPENDENCY_RATCHET_AND_DAILY_LAUNCH_GUARD_V1",
