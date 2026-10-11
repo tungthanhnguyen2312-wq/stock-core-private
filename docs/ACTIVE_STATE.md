@@ -1,8 +1,8 @@
 # Stock Lookup — Active State
 
 Updated 2026-10-11 from verified
-PR118 main `4555c867f0424aa128998ef87d32edc6aa8e834f`.
-Measurement integrity COMPLETE; four post-merge CI PASS (38095411118).
+main `cd486c4f2af41ac6a89dfbb5b6ad3ac3d5d99698`.
+PR118 COMPLETE; four closeout CI PASS (38095908308); consumer natively admitted.
 Verify live main: `git fetch origin main` or `git ls-remote origin refs/heads/main`; a **local** remote-tracking ref can be stale.
 ## 0. How this file relates to the others
 | Question | Answer lives in |
@@ -28,12 +28,11 @@ Chat memory is never authority. Legacy `STATE.md` banners pre-date some facts be
 current fact, verify against the sources above (or the re-verify command given with the fact), then correct
 this view; never resolve a disagreement by which prose is newer.
 
-Fact kinds used below: **CURRENT FACT** (verified in repo or by a stated read-only check),
-**HOST-LOCAL** (true on the owner's Windows host, not tracked by git — re-verify before use),
+Kinds: **CURRENT FACT** (verified), **HOST-LOCAL** (untracked; re-verify),
 **BLOCKED**, **DEFERRED**, **HISTORICAL**.
 
 ## 1. The operational gate
-- **ACTIVE — [measurement integrity](portfolio_research_measurement_integrity_v1_contract.md):** workbench numeric/date/duplicate guards; merge gated. PR117 COMPLETE `1b7c10c`, four post-merge CI PASS (38064845939).
+- **ACTIVE — [Action Center opportunity cost](action_center_opportunity_cost_cases_consumer_v1_contract.md):** optional private v2 cases; offline validation/one PR, exact-HEAD merge gated. PR118 measurement integrity COMPLETE; no Daily activation.
 - **COMPLETE — [capacity Phase 1](capacity_recovery_phase1_contract.md):** PR99 merged
   `168e0f7`, post-merge CI 37893984528 success; zero production reclaim/activation.
 - **COMPLETE — Vault V1:** PR97 merged `3f3d4fe`; offline/opt-in, 77 candidates,
@@ -69,13 +68,10 @@ Fact kinds used below: **CURRENT FACT** (verified in repo or by a stated read-on
   session `2026-10-07`, run `30e060d6e0f74ccb826e6f4bf5adba1e`, stage `COMPLETE`, no failure.
   This predates the later Phase-2 corrective. Campaign work ran no Daily, accessed no T0
   body and changed no genuine session/seal or Dashboard output.
-- **CURRENT FACT — Owner Daily Phase 2 observability corrective (2026-10-07).** The owner explicitly
-  authorizes `OWNER_DAILY_PHASE2_TRUTHFUL_PROGRESS_AND_TERMINAL_CLEANUP_V2` as a bounded operational
-  override (the roadmap tool does not register that ID). Fixed 13 logical checkpoints, separate
-  DNSE requests, natural T0/session counters, structured Vietnamese presentation and detached
-  default-handler opening have no analytical authority. No production Daily or retained evidence
-  rebuild is part of this corrective. Analytical roadmap/successor state is unchanged.
-  [Contract, real-run forensic, fixture acceptance and visibility limits](internal/owner_daily_progress_post_merge_acceptance.md#phase-2-v2-corrective--2026-10-07).
+- **CURRENT FACT — Owner Daily Phase 2 (2026-10-07):** owner operational override
+  `OWNER_DAILY_PHASE2_TRUTHFUL_PROGRESS_AND_TERMINAL_CLEANUP_V2` (not a native milestone).
+  Thirteen checkpoints and Vietnamese progress have no analytical authority; no
+  Daily/rebuild/successor. [Acceptance](internal/owner_daily_progress_post_merge_acceptance.md#phase-2-v2-corrective--2026-10-07).
 
 - **CURRENT FACT — decision-intelligence closure.** `DECISION_INTELLIGENCE_COVERAGE_AND_CALIBRATION_CLOSURE_V1`
   joins the 1,683-name coverage index, historical panel, outcome review, v2 evidence packet and portfolio workbench. Authority effect
@@ -306,10 +302,10 @@ Fact kinds used below: **CURRENT FACT** (verified in repo or by a stated read-on
 
 ## 9. Next action
 
-PR118 COMPLETE; no queued successor. Continue only after native admission.
-Keep production Daily stable; new production-affecting merges need approval. Fiscal-calendar
-mapping needs the exact source/period/publication proof in the contract above.
-Ordinary Daily remains owner-operated after fresh READY preflight and exact session gates.
+Consumer ACTIVE under recorded delegation; queue empty. Exact-HEAD owner merge review
+requires offline validation, four CI gates and one PR; no Daily activation.
+Daily stays owner-operated after fresh READY/session gates; production merges need approval.
+Fiscal mapping needs exact source/period/publication proof under its existing contract.
 
 ## 10. Owner approvals that remain open
 
