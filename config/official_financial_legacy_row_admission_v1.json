@@ -8,7 +8,8 @@
  },
  "authorization": "Rows published by owner-merged PRs #78-#90 (last overlay change 94cf855, merged 7959b4d); preserved byte-identical by this corrective.",
  "overlay_path": "derived/financial-evidence-currency-refresh-v1/qualified_official_facts.jsonl",
- "overlay_sha256": "a1f057017a9309f5c5a2a1a9ec53c3746500f9355bf45642e039ebf2608e33ff",
+ "overlay_sha256_lf": "bd83de2ddb80a56e8a1fdfccb131418c55979a0799836da36538496a7283d653",
+ "overlay_sha256_windows_crlf_checkout": "a1f057017a9309f5c5a2a1a9ec53c3746500f9355bf45642e039ebf2608e33ff",
  "evidence_classification": {
   "shape_valid": true,
   "retained_assurance_proof_bound": true,

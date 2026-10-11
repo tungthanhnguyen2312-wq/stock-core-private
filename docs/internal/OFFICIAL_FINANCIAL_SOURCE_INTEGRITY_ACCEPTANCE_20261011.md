@@ -46,8 +46,8 @@ change of annual-equity valuation use would need a separate owner authority deci
 
 ## Retained evidence classification
 
-27 rows / 9 documents, overlay SHA `a1f057017a9309f5c5a2a1a9ec53c3746500f9355bf45642e039ebf2608e33ff`
-unchanged. Shape-valid: 27. Assurance proof bound: 27. Original bytes SHA-verified (offline,
+27 rows / 9 documents, overlay committed LF SHA `bd83de2ddb80a56e8a1fdfccb131418c55979a0799836da36538496a7283d653`
+(Windows CRLF checkout `a1f05701...`) unchanged. Shape-valid: 27. Assurance proof bound: 27. Original bytes SHA-verified (offline,
 read-only): 9/9 documents. Original document semantics independently verified: 0. Historical
 contamination: UNKNOWN. No evidence written, resealed or requalified.
 

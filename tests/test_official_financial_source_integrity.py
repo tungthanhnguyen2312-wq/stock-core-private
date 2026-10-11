@@ -118,9 +118,11 @@ def test_retained_overlay_inventory_is_read_only():
     # Exact pinned v2 rows: proof-bound and byte-verified offline, original semantics NOT re-verified.
     assert all(r["state"]=="ADMITTED" and r["admission_basis"]=="PINNED_LEGACY_GOVERNED_INGRESS_V2" for r in results)
     assert all(r["evidence_classification"]["original_document_semantics_independently_verified"] is False for r in results)
-    assert hashlib.sha256(before).hexdigest()=="a1f057017a9309f5c5a2a1a9ec53c3746500f9355bf45642e039ebf2608e33ff"
+    # Committed LF bytes; a Windows autocrlf checkout differs only in line endings.
+    committed=hashlib.sha256(before.replace(b"\r\n",b"\n")).hexdigest()
+    assert committed=="bd83de2ddb80a56e8a1fdfccb131418c55979a0799836da36538496a7283d653"
     pin=json.loads((Path(__file__).resolve().parents[1]/"config/official_financial_legacy_row_admission_v1.json").read_text(encoding="utf8"))
-    assert pin["overlay_sha256"]==hashlib.sha256(before).hexdigest() and len(pin["rows"])==27
+    assert pin["overlay_sha256_lf"]==committed and len(pin["rows"])==27
     assert path.read_bytes()==before
 
 

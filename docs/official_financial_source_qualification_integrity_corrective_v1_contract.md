@@ -37,7 +37,7 @@ session's knowledge cutoff and fails closed on equal-time conflicting values.
 
 `config/official_financial_legacy_row_admission_v1.json` is a closed, hash-sealed list of the 27
 rows published under `reviewed_interim_canonical_ingress/v2` by owner-merged PRs #78-#90 (overlay
-SHA `a1f05701...`). Only an exact pinned row (canonical-JSON SHA-256, governing contract fields,
+LF SHA `bd83de2d...`; Windows CRLF checkout `a1f05701...`). Only an exact pinned row (canonical-JSON SHA-256, governing contract fields,
 document SHA and issuer) may substitute for the newer document-metadata and literal-span schema.
 Assurance binding, period, scope, unit, knowledge time, cutoff and intended use still apply.
 Any edited, re-derived or new row must carry modern retained-source proof. Classification is
