@@ -109,6 +109,13 @@ def test_relocation_list_cannot_add_promote_or_launder_dependencies(tmp_path):
     assert any("RELOCATED_DEBT_NOT_IN_SEALED_BASELINE" in e for e in guard.regressions(guard.snapshot(tmp_path, laundered), baseline, laundered, relocations))
 
 
+def test_carried_relocation_edge_cannot_hide_a_new_cycle(tmp_path):
+    baseline, relocations, policy = _relocated_fixture(tmp_path)
+    write(tmp_path, "registry.py", "import stocklookup_core.evidence.parser\n")
+    errors = guard.regressions(guard.snapshot(tmp_path, policy), baseline, policy, relocations)
+    assert any("NEW_EAGER_CYCLE" in e for e in errors)
+
+
 def test_relative_type_lazy_and_dynamic_imports(tmp_path):
     write(tmp_path, "stocklookup_core/evidence/__init__.py", '"""package"""')
     write(tmp_path, "stocklookup_core/evidence/b.py", "")
