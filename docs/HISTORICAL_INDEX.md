@@ -34,9 +34,9 @@ Why Phase A left the giant files untouched. Do not reformat, reorder or delete t
   for forbidden KBS causal-overclaim phrases; any edit to those four files must keep it green.
 - `docs/STATE.md` banners are delimited by `<!-- *_CURRENT_START -->` / `<!-- *_CURRENT_END -->`; no code parser
   was found, but milestone-update workflows rely on the convention — keep it.
-- `tools/handoff.py` (legacy) expects `- Active phase` / `- Active milestone` / `- Production state` lines in
-  `STATE.md` and `- Exit gates:` lines in `ROADMAP.md`. Those lines **no longer exist**, so its test
-  (`tests/test_governance_tools.py`) already fails on main; it is not in CI. This index does not repair it.
+- `tools/handoff.py` ordinary mode reads the native roadmap query and does not open `STATE.md` or `ROADMAP.md`.
+  `--historical` is the explicit history path. It still looks for `- Active phase`, `- Active milestone`,
+  `- Production state`, and `- Exit gates:` lines, which are not the ordinary bootstrap.
 
 ## How to search history without reading it
 

@@ -88,7 +88,9 @@ def test_valid_roadmap_state_passes():
         queued_next=["B"],
     )
     report = res.evaluate(state)
-    assert report.overall == "ON_TRACK"
+    assert report.overall == res.OVERALL_GIT_NOT_CHECKED
+    assert report.git_verification == res.GIT_VERIFICATION_SKIPPED
+    assert report.category_status("git/worktree consistency") == "SKIPPED"
     assert not report.has_fail()
 
 
@@ -240,6 +242,7 @@ def test_checkpoint_not_in_git_fails(git_repo):
     report = res.evaluate(state, repo=repo)
     assert "ROADMAP_CHECKPOINT_NOT_IN_GIT" in {f.code for f in report.findings}
     assert report.overall == "DRIFT_DETECTED"
+    assert report.git_verification == res.GIT_VERIFICATION_MISMATCH
 
 
 def test_head_sentinel_resolves_live(git_repo):
@@ -258,6 +261,7 @@ def test_recorded_head_divergence_when_repo_reset_behind(git_repo):
     _git(repo, "reset", "--hard", sha)
     report = res.evaluate(state, repo=repo)
     assert "ROADMAP_RECORDED_HEAD_DIVERGENCE" in {f.code for f in report.findings if f.severity == res.FAIL}
+    assert report.git_verification == res.GIT_VERIFICATION_MISMATCH
 
 
 def test_known_operational_diff_is_info_not_fatal(git_repo):
@@ -318,7 +322,9 @@ def test_cli_json_mode_emits_parseable_report(tmp_path, capsys):
     code = cli.main(["--state-file", str(state_path), "--repo", str(tmp_path / "does-not-exist"), "--json"])
     assert code == 0
     payload = json.loads(capsys.readouterr().out)
-    assert payload["overall"] == "ON_TRACK"
+    assert payload["overall"] == res.OVERALL_GIT_NOT_CHECKED
+    assert payload["git_verification"] == res.GIT_VERIFICATION_SKIPPED
+    assert payload["checks"]["git/worktree consistency"] == "SKIPPED"
     assert payload["schema_version"] == res.SCHEMA_VERSION
 
 
@@ -330,7 +336,7 @@ def test_cli_check_exit_code_nonzero_on_drift(tmp_path, capsys):
     assert code == 1
 
 
-def test_cli_check_exit_code_zero_on_track(tmp_path, capsys):
+def test_cli_check_exit_code_nonzero_when_git_skipped(tmp_path, capsys):
     state_path = tmp_path / "roadmap_state.json"
     _write_state(
         state_path,
@@ -338,7 +344,7 @@ def test_cli_check_exit_code_zero_on_track(tmp_path, capsys):
     )
     code = cli.main(["--state-file", str(state_path), "--repo", str(tmp_path / "does-not-exist"), "--check"])
     capsys.readouterr()
-    assert code == 0
+    assert code == 1
 
 
 def test_cli_can_start_allowed(tmp_path, capsys):
@@ -365,6 +371,83 @@ def test_cli_can_start_blocked(tmp_path, capsys):
     assert out.startswith("BLOCKED")
 
 
+def test_cli_check_exit_zero_when_live_git_matches(git_repo, capsys):
+    repo, sha = git_repo
+    state_path = repo / "state.json"
+    _write_state(
+        state_path,
+        _state(
+            [_milestone("A", "COMPLETE", checkpoint=sha)],
+            current={"milestone": "A", "state": "COMPLETE"},
+            lineage_head=sha,
+        ),
+    )
+    code = cli.main(["--state-file", str(state_path), "--repo", str(repo), "--check", "--json"])
+    payload = json.loads(capsys.readouterr().out)
+    assert code == 0
+    assert payload["overall"] == "ON_TRACK"
+    assert payload["git_verification"] == res.GIT_VERIFICATION_VERIFIED
+    assert payload["checks"]["git/worktree consistency"] == "PASS"
+    assert payload["bootstrap"]["focused_selection_count"] == "UNKNOWN"
+    assert "path" not in payload["bootstrap"]["worktrees"]
+    assert len(payload["bootstrap"]["local_fast"]) == 5
+
+
+def test_cli_git_unavailable_directory_is_not_on_track(tmp_path, capsys):
+    empty = tmp_path / "empty"
+    empty.mkdir()
+    state_path = tmp_path / "roadmap_state.json"
+    _write_state(
+        state_path,
+        _state([_milestone("A", "COMPLETE", checkpoint="x")], current={"milestone": "A", "state": "COMPLETE"}),
+    )
+    code = cli.main(["--state-file", str(state_path), "--repo", str(empty), "--check", "--json"])
+    payload = json.loads(capsys.readouterr().out)
+    assert code == 1
+    assert payload["overall"] == res.OVERALL_GIT_NOT_CHECKED
+    assert payload["git_verification"] == res.GIT_VERIFICATION_UNAVAILABLE
+    assert payload["checks"]["git/worktree consistency"] == "UNAVAILABLE"
+
+
+def test_detached_matching_head_stays_verified(git_repo):
+    repo, sha = git_repo
+    _git(repo, "checkout", "--detach", sha)
+    state = _state([_milestone("A", "COMPLETE", checkpoint=sha)], lineage_head=sha)
+    first = res.evaluate(state, repo=repo)
+    second = res.evaluate(state, repo=repo)
+    assert res.git_branch(repo) in ("", None)
+    assert first.git_verification == res.GIT_VERIFICATION_VERIFIED
+    assert first.overall == "ON_TRACK"
+    assert [(f.code, f.severity, f.message) for f in first.findings] == [
+        (f.code, f.severity, f.message) for f in second.findings
+    ]
+
+
+def test_worktree_classification_keeps_unmerged_and_ancestor(git_repo):
+    repo, sha = git_repo
+    _git(repo, "branch", "feature/keep-unmerged")
+    ancestor = repo.parent / "wt-ancestor"
+    unmerged = repo.parent / "wt-unmerged"
+    _git(repo, "worktree", "add", "--detach", str(ancestor), sha)
+    _git(repo, "worktree", "add", str(unmerged), "feature/keep-unmerged")
+    (unmerged / "ahead.txt").write_text("ahead\n", encoding="utf-8")
+    _commit_all(unmerged, "unmerged work")
+    classified = res.classify_worktrees(repo)
+    counts = classified["counts"]
+    assert counts["ancestor_of_head"] >= 1
+    assert counts["tracked_clean"] >= 1
+    assert counts["unmerged"] >= 1
+    assert "path" not in json.dumps(counts)
+    classes = {row["class"] for row in classified["rows"]}
+    assert "ANCESTOR_TRACKED_CLEAN" in classes
+    assert "UNMERGED" in classes
+
+
+def test_real_workflow_focused_selection_count_is_an_integer():
+    count = res.focused_selection_count(res.REPO_ROOT)
+    assert isinstance(count, int) and count >= 1
+
+
 # ---------------------------------------------------------------------------
 # Real bootstrap file sanity (read-only against this actual worktree)
 # ---------------------------------------------------------------------------
@@ -372,6 +455,8 @@ def test_cli_can_start_blocked(tmp_path, capsys):
 def test_real_bootstrap_roadmap_state_is_on_track():
     state = res.load_state()
     report = res.evaluate(state, repo=res.REPO_ROOT)
+    assert report.git_verification == res.GIT_VERIFICATION_VERIFIED
+    assert report.overall == "ON_TRACK"
     assert not report.has_fail(), [(f.code, f.message) for f in report.findings if f.severity == res.FAIL]
 
 
