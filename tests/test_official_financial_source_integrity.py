@@ -426,7 +426,7 @@ def test_ir_discovery_does_not_reclassify_excluded_documents(href):
 @pytest.mark.parametrize("title",["Thông báo ký hợp đồng kiểm toán báo cáo tài chính năm 2026",
     "Báo cáo tài chính quý III năm 2026"])
 def test_hnx_discovery_does_not_call_engagement_or_q3_an_annual_statement(title):
-    from hnx_financial_filing_scaleout import discover
+    from stocklookup_core.evidence.hnx_financial_filing_scaleout import discover
     feed=('<rss><channel><item><title>'+title+'</title><link>https://www.hnx.vn/fixture.html</link></item></channel></rss>').encode("utf8")
     registry={"sources":[{"source_id":"hnx","authority":"HNX","allowed_hosts":["www.hnx.vn"],
         "document_types":["audited_annual_financial_statements","reviewed_interim_financial_statements"]}]}

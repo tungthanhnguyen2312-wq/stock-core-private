@@ -20,7 +20,8 @@ def write(root, relative, source):
 
 def test_repository_dependency_ratchet():
     baseline = json.loads((ROOT / guard.BASELINE).read_text(encoding="utf-8"))
-    assert not guard.regressions(guard.snapshot(ROOT, POLICY), baseline, POLICY)
+    layout = json.loads((ROOT / guard.LAYOUT).read_text(encoding="utf-8"))
+    assert not guard.regressions(guard.snapshot(ROOT, POLICY), baseline, POLICY, layout["relocations"])
 
 
 def test_baseline_is_byte_deterministic_and_portable(tmp_path, monkeypatch):
@@ -66,6 +67,53 @@ def test_lazy_to_eager_cycle_promotion_rejected(tmp_path):
     baseline = guard.snapshot(tmp_path, POLICY)
     write(tmp_path, "b.py", "import a")
     assert any("NEW_EAGER_CYCLE" in e for e in guard.regressions(guard.snapshot(tmp_path, POLICY), baseline, POLICY))
+
+
+def _relocated_fixture(tmp_path):
+    write(tmp_path, "registry.py", "")
+    write(tmp_path, "parser.py", "from registry import x\ndef f():\n    import registry\n")
+    write(tmp_path, "stocklookup_core/__init__.py", "")
+    write(tmp_path, "stocklookup_core/evidence/__init__.py", "")
+    baseline = guard.snapshot(tmp_path, POLICY)
+    (tmp_path / "parser.py").unlink()
+    write(tmp_path, "stocklookup_core/evidence/parser.py", "from registry import x\ndef f():\n    import registry\n")
+    carried = [["stocklookup_core.evidence.parser", "registry", "module_load", "static", "from"],
+               ["stocklookup_core.evidence.parser", "registry", "lazy", "static", "import"]]
+    return baseline, {"parser.py": "stocklookup_core/evidence/parser.py"}, dict(POLICY, relocated_debt_edges=carried)
+
+
+def test_reviewed_relocation_carries_only_sealed_baseline_edges(tmp_path):
+    baseline, relocations, policy = _relocated_fixture(tmp_path)
+    current = guard.snapshot(tmp_path, policy)
+    assert not guard.regressions(current, baseline, policy, relocations)
+    # Without the layout manifest, or without the reviewed list, the renamed edge is a new violation.
+    assert any("NEW_BACKWARD_DEPENDENCY" in e for e in guard.regressions(current, baseline, policy))
+    assert any("NEW_BACKWARD_DEPENDENCY" in e for e in guard.regressions(current, baseline, POLICY, relocations))
+
+
+def test_relocation_list_cannot_add_promote_or_launder_dependencies(tmp_path):
+    baseline, relocations, policy = _relocated_fixture(tmp_path)
+    write(tmp_path, "tools/t.py", "")
+    added = dict(policy, relocated_debt_edges=policy["relocated_debt_edges"]
+                 + [["stocklookup_core.evidence.parser", "tools.t", "module_load", "static", "import"]])
+    write(tmp_path, "stocklookup_core/evidence/parser.py", "from registry import x\nimport tools.t\ndef f():\n    import registry\n")
+    assert any("RELOCATED_DEBT_NOT_IN_SEALED_BASELINE" in e for e in guard.regressions(guard.snapshot(tmp_path, added), baseline, added, relocations))
+    # Promoting the lazy edge to module load is a different edge, not the carried one.
+    write(tmp_path, "stocklookup_core/evidence/parser.py", "from registry import x\nimport registry\n")
+    errors = guard.regressions(guard.snapshot(tmp_path, policy), baseline, policy, relocations)
+    assert any("NEW_BACKWARD_DEPENDENCY" in e and "'module_load', 'static', 'import'" in e for e in errors)
+    assert any("STALE_RELOCATED_DEBT" in e for e in errors)
+    # An unrelocated module cannot use the list as a grandfathering bypass.
+    write(tmp_path, "stocklookup_core/evidence/other.py", "import registry\n")
+    laundered = dict(POLICY, relocated_debt_edges=[["stocklookup_core.evidence.other", "registry", "module_load", "static", "import"]])
+    assert any("RELOCATED_DEBT_NOT_IN_SEALED_BASELINE" in e for e in guard.regressions(guard.snapshot(tmp_path, laundered), baseline, laundered, relocations))
+
+
+def test_carried_relocation_edge_cannot_hide_a_new_cycle(tmp_path):
+    baseline, relocations, policy = _relocated_fixture(tmp_path)
+    write(tmp_path, "registry.py", "import stocklookup_core.evidence.parser\n")
+    errors = guard.regressions(guard.snapshot(tmp_path, policy), baseline, policy, relocations)
+    assert any("NEW_EAGER_CYCLE" in e for e in errors)
 
 
 def test_relative_type_lazy_and_dynamic_imports(tmp_path):

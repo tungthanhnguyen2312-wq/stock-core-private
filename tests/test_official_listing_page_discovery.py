@@ -23,7 +23,7 @@ sys.path.insert(0, str(ROOT))
 import stocklookup_core.evidence.official_document_acquisition as acquisition  # noqa: E402
 import stocklookup_core.evidence.official_document_discovery as discovery  # noqa: E402
 import stocklookup_core.evidence.official_document_store as store  # noqa: E402
-import official_listing_page_parser as parser  # noqa: E402
+import stocklookup_core.evidence.official_listing_page_parser as parser  # noqa: E402
 import official_source_registry as registry  # noqa: E402
 
 INDEX_TYPE = "announcement_index_page"

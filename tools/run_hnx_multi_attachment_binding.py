@@ -2,7 +2,7 @@ from __future__ import annotations
 import json, sys
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1];sys.path.insert(0,str(ROOT))
-from hnx_multi_attachment_binding import build,replay
+from stocklookup_core.evidence.hnx_multi_attachment_binding import build,replay
 RETAINED=ROOT/'operations-review'/'official-financial-filings-and-canonical-history-scaleout-v1-20260824-r3'
 BASELINE=ROOT/'operations-review'/'p3f13-official-financial-evidence-scaleout-20260820'/'p3f13_official_financial_evidence_scaleout_artifact.json'
 OUT=ROOT/'operations-review'/'hnx-multi-attachment-binding-and-citable-extraction-v1-20260824-r3'/'hnx_multi_attachment_binding_artifact.json'

@@ -1,4 +1,4 @@
-from hnx_financial_filing_scaleout import _pdf_metadata, data_gap_matrix, discover
+from stocklookup_core.evidence.hnx_financial_filing_scaleout import _pdf_metadata, data_gap_matrix, discover
 
 def test_discovery_uses_only_financial_titles_and_preserves_separate_scope():
     feed=b'''<rss><channel><item><title>B\xc3\xa1o c\xc3\xa1o t\xc3\xa0i ch\xc3\xadnh b\xc3\xa1n ni\xc3\xaan n\xc4\x83m 2026 (c\xc3\xb4ng ty m\xe1\xba\xb9)</title><link>https://www.hnx.vn/a.html</link><pubDate>Mon, 24 Aug 2026 09:38:44 +0700</pubDate></item></channel></rss>'''

@@ -40,7 +40,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from atomic_io import atomic_write_file, atomic_write_json  # noqa: E402
-from corporate_action_events import extract_event_observation, extract_text  # noqa: E402
+from stocklookup_core.evidence.corporate_action_events import extract_event_observation, extract_text  # noqa: E402
 from official_corporate_action_ledger import build_ledger  # noqa: E402
 from stocklookup_core.evidence.official_document_store import (  # noqa: E402
     adopt_retained_document,

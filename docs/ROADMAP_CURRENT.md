@@ -1,16 +1,15 @@
 # Stock Lookup — Current Roadmap
 
 History: [ROADMAP.md](ROADMAP.md); execution: ROADMAP_STATE.json.
-E0 base/main at admission `6f0c483eed41ca9b3ffdcd2f918ab21138b50124`.
+E1 base/main at admission `56cdc36f860532678ae2c8c26eddea2730988ef8`.
 Nothing below auto-starts; native standing admission required (AI_RULES 11).
 Facts: [ACTIVE_STATE.md](ACTIVE_STATE.md).
 
-## NOW — STOCKLOOKUP_ARCHITECTURE_DEPENDENCY_RATCHET_AND_DAILY_LAUNCH_GUARD_V1 (COMPLETE LOCAL)
+## NOW — E1_OFFICIAL_EXCHANGE_EVIDENCE_PACKAGE_MIGRATION (COMPLETE LOCAL)
 
-[Scope](stocklookup_architecture_dependency_ratchet_and_daily_launch_guard_v1_contract.md).
-E0 COMPLETE locally. Owner push/PR gate pending; no E1.
-Bootstrap COMPLETE at PR122; four post-merge jobs PASS (38126328546).
-PR120/121 released; E0 has no production effect.
+[Scope](e1_official_exchange_evidence_package_migration_contract.md): 13 offline modules to
+`stocklookup_core/evidence/`; no shim. Owner push/PR gate; no E2.
+E0 COMPLETE at PR123 `56cdc36`; four post-merge jobs PASS (38139163689).
 Queue empty. Existing evidence and authority remain unchanged.
 PR119 COMPLETE at `d1c9c805`; four post-merge jobs PASS (38105025004).
 Fiscal mapping lacks issuer calendar/covered-period/provider-label/publication proof;

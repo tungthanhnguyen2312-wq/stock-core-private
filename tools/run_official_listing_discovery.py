@@ -32,7 +32,7 @@ from stocklookup_core.evidence.official_document_acquisition import (  # noqa: E
     MANIFEST, acquire, canonical_url, declared_document_types,
 )
 from stocklookup_core.evidence.official_document_discovery import discover  # noqa: E402
-from official_listing_page_parser import (  # noqa: E402
+from stocklookup_core.evidence.official_listing_page_parser import (  # noqa: E402
     listing_pages, parse_index_page, parsed_summary, review_queue,
 )
 from official_source_registry import (  # noqa: E402

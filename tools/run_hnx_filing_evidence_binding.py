@@ -7,7 +7,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from hnx_filing_evidence_binding import build, replay
+from stocklookup_core.evidence.hnx_filing_evidence_binding import build, replay
 
 
 RETAINED_ROOT = ROOT / "operations-review" / "official-financial-filings-and-canonical-history-scaleout-v1-20260824-r3"

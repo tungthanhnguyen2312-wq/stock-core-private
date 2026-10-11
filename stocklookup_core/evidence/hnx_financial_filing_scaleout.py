@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any, Mapping
 from urllib.request import Request, urlopen
 
-import hnx_disclosure_feed_parser as feed_parser
+import stocklookup_core.evidence.hnx_disclosure_feed_parser as feed_parser
 import stocklookup_core.evidence.official_document_store as store
 from official_source_registry import ADMITTED, admit, load_registry
 

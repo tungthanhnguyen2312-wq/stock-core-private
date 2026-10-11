@@ -25,7 +25,7 @@ from urllib.parse import urlencode
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from hnx_official_issuer_profile_multi_gate import SEARCH, PROFILE, fetch, retain, parse_profile, _identity
+from stocklookup_core.evidence.hnx_official_issuer_profile_multi_gate import SEARCH, PROFILE, fetch, retain, parse_profile, _identity
 
 STATUS_PATH = ROOT / "operations-review" / "current-universe-status-and-session-coverage-resolution-v1-20260911" / "current_universe_status_and_session_coverage_resolution_artifact.json"
 OUT = ROOT / "operations-review" / "hnx-upcom-official-security-status-enrichment-v1-20260913"

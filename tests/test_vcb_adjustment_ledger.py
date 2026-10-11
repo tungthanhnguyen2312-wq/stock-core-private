@@ -1,5 +1,5 @@
 import unittest
-from corporate_action_evidence_registry import promote_official_stock_dividend,shadow_share_factor
+from stocklookup_core.evidence.corporate_action_evidence_registry import promote_official_stock_dividend,shadow_share_factor
 from vcb_adjustment_ledger import build_shadow_ledger
 class Tests(unittest.TestCase):
  def test_multiplier_only_lineage_is_deterministic(self):

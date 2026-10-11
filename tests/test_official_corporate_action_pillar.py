@@ -24,7 +24,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "tests"))
 
-import corporate_action_events as events  # noqa: E402
+import stocklookup_core.evidence.corporate_action_events as events  # noqa: E402
 import missing_payload_reconciliation as reconciliation  # noqa: E402
 import official_corporate_action_ledger as ledger  # noqa: E402
 import stocklookup_core.evidence.official_document_store as document_store  # noqa: E402
@@ -498,7 +498,7 @@ class VcbListingTransferNoticeTests(unittest.TestCase):
                        if record["canonical_url"] == "https://vsd.vn/en/ad/181754"), None)
         if source is None:
             self.skipTest("retained VCB registration certificate is not present")
-        from official_listing_page_parser import parse_index_page
+        from stocklookup_core.evidence.official_listing_page_parser import parse_index_page
         from official_source_registry import load_registry
         parsed = parse_index_page(
             (self.RETAINED / source["relative_path"]).read_bytes(),

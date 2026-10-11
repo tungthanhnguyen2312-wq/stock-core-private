@@ -8,7 +8,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-import official_issuer_disclosure_registry as reg  # noqa: E402
+import stocklookup_core.evidence.official_issuer_disclosure_registry as reg  # noqa: E402
 
 
 class ProjectDisclosureRecord(unittest.TestCase):

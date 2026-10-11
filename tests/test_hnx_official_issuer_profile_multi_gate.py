@@ -1,5 +1,5 @@
 from __future__ import annotations
-from hnx_official_issuer_profile_multi_gate import _date,_number,parse_profile
+from stocklookup_core.evidence.hnx_official_issuer_profile_multi_gate import _date,_number,parse_profile
 
 def test_profile_keeps_kllh_and_klny_distinct_and_parses_explicit_ex_date():
  raw='''<div class="dktimkiem_row row_inline"><div class="dktimkiem_cell_title"><label>KLLH (Cổ phiếu)</label></div><div class="dktimkiem_cell_content">100.000</div></div><div class="dktimkiem_row row_inline"><div class="dktimkiem_cell_title"><label>KLNY (Cổ phiếu)</label></div><div class="dktimkiem_cell_content">90.000</div></div><div id="divGiaoDichGLDT"><tr><td>1</td><td>01/02/2026</td><td>02/02/2026</td><td>03/02/2026</td><td>Trả cổ tức bằng tiền</td></tr></div><div id="divBaoCaoDK">'''.encode()

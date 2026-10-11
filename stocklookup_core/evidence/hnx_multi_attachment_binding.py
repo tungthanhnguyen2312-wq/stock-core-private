@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any, Mapping
 from urllib.parse import urlparse
 
-from hnx_disclosure_feed_parser import parse_disclosure_detail
+from stocklookup_core.evidence.hnx_disclosure_feed_parser import parse_disclosure_detail
 
 
 CONTRACT_VERSION = "hnx_multi_attachment_binding_and_citable_extraction/v1"

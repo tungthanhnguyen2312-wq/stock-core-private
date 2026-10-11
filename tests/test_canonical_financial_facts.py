@@ -460,7 +460,7 @@ class MalformedInputTests(unittest.TestCase):
         self.assertIsNone(bounds["period_end"])
 
     def test_vietnamese_number_parser_rejects_damaged_grouping(self):
-        from corporate_action_events import parse_vietnamese_number
+        from stocklookup_core.evidence.corporate_action_events import parse_vietnamese_number
         self.assertEqual(parse_vietnamese_number("767.498.665"), 767498665.0)
         self.assertIsNone(parse_vietnamese_number("8.M2.964.520"))
         self.assertIsNone(parse_vietnamese_number("2.96"))

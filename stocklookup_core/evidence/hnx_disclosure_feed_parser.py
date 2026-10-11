@@ -38,7 +38,7 @@ import re
 import urllib.parse
 from typing import Any, Mapping
 
-from corporate_action_events import normalize_text, parse_vietnamese_date, parse_vietnamese_number
+from stocklookup_core.evidence.corporate_action_events import normalize_text, parse_vietnamese_date, parse_vietnamese_number
 from official_source_registry import canonical_host, evidence_document_types, source_index
 
 VERSION = "1.0.0"

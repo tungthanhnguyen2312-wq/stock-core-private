@@ -15,6 +15,7 @@ from pathlib import Path, PurePosixPath
 ROOT = Path(__file__).resolve().parents[1]
 BASELINE = "config/architecture_dependency_baseline.json"
 POLICY = "config/architecture_dependency_policy.json"
+LAYOUT = "config/repository_layout.json"
 MIGRATION_CHECKPOINT = "d2ba70324a5d458091ac54549466a9bec57d6434"
 MIGRATED_BASELINE_SHA256 = '6b3eed9a1236481cf02fec38bd76553ea7ba56d4bd86918d4c37c1695aa19dbf'
 PRIOR_BASELINE_SHA256 = "749a59996a4d245ea3056289c5d59f443bf2ca60f7b61fe8dc4217f951772b26"
@@ -392,11 +393,44 @@ def snapshot(root: Path, policy: dict) -> dict:
     return annotate(scan(root), policy)
 
 
-def regressions(current: dict, baseline: dict, policy: dict) -> list[str]:
-    errors = []
+def relocated_origins(baseline: dict, relocations: dict | None) -> dict[str, str]:
+    """New module -> sealed-baseline root module, for layout relocations made after the baseline."""
+    known = set(baseline.get("modules", []))
+    origins = {}
+    for old, new in (relocations or {}).items():
+        old_module, new_module = module_name(old), module_name(new)
+        if old_module in known and new_module not in known:
+            origins[new_module] = old_module
+    return origins
+
+
+def relocation_carried(current: dict, baseline: dict, policy: dict, relocations: dict | None) -> tuple[set, list[str]]:
+    """Reviewed relocated debt: each listed row must be a sealed-baseline edge renamed by the layout manifest.
+
+    Without a layout manifest nothing is carried, so every listed row stays an ordinary violation.
+    """
+    if relocations is None:
+        return set(), []
+    origins = relocated_origins(baseline, relocations)
+    sealed = {tuple(e) for e in baseline["edges"]}
+    present = {tuple(e) for e in current["edges"]}
+    carried, errors = set(), []
+    for row in map(tuple, policy.get("relocated_debt_edges", [])):
+        origin = (origins.get(row[0], row[0]), origins.get(row[1], row[1])) + row[2:]
+        if origin == row or origin not in sealed:
+            errors.append("RELOCATED_DEBT_NOT_IN_SEALED_BASELINE:" + repr(row))
+        elif row not in present:
+            errors.append("STALE_RELOCATED_DEBT:" + repr(row))
+        else:
+            carried.add(row)
+    return carried, errors
+
+
+def regressions(current: dict, baseline: dict, policy: dict, relocations: dict | None = None) -> list[str]:
     grandfathered = {tuple(e) for e in baseline["grandfathered_violations"]}
+    carried, errors = relocation_carried(current, baseline, policy, relocations)
     for edge in current["edges"]:
-        if forbidden(edge, policy) and tuple(edge) not in grandfathered:
+        if forbidden(edge, policy) and tuple(edge) not in grandfathered and tuple(edge) not in carried:
             errors.append("NEW_BACKWARD_DEPENDENCY:" + repr(edge))
     for key in ("eager_cycle_edges", "runtime_cycle_edges", "unresolved_dynamic"):
         old = {tuple(e) for e in baseline[key]}
@@ -465,7 +499,8 @@ def main(argv=None):
     if not baseline_identity_valid(baseline):
         print("BASELINE_IDENTITY_CHANGED:reviewed checkpoint migration differs")
         return 1
-    errors = regressions(data, baseline, policy)
+    layout = json.loads((args.root / LAYOUT).read_text(encoding="utf-8")) if (args.root / LAYOUT).is_file() else {}
+    errors = regressions(data, baseline, policy, layout.get("relocations"))
     print("\n".join(errors) if errors else "ARCHITECTURE_RATCHET:PASS")
     return int(bool(errors))
 
