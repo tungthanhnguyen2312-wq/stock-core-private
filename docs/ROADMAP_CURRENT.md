@@ -1,16 +1,16 @@
 # Stock Lookup — Current Roadmap
 
 History: [ROADMAP.md](ROADMAP.md); execution: ROADMAP_STATE.json.
-Updated 2026-10-11 from PR118 main `4555c867f0424aa128998ef87d32edc6aa8e834f`.
+Updated 2026-10-11 from main `cd486c4f2af41ac6a89dfbb5b6ad3ac3d5d99698`.
 Nothing below auto-starts; native standing admission required (AI_RULES 11).
 Facts: [ACTIVE_STATE.md](ACTIVE_STATE.md).
 
-## NOW — PORTFOLIO_RESEARCH_MEASUREMENT_INTEGRITY_V1 (COMPLETE)
+## NOW — ACTION_CENTER_OPPORTUNITY_COST_CASES_CONSUMER_V1 (ACTIVE)
 
-Released PR118: numeric/date/duplicate guards with Opportunity Cost propagation.
-Four post-merge CI PASS (38095411118); queue empty, no automatic successor.
-[Scope](portfolio_research_measurement_integrity_v1_contract.md).
-PR117 COMPLETE `1b7c10c`; four post-merge CI PASS (38064845939).
+Owner-delegated native admission: optional private Action Center cases over the
+existing v2 engine; offline validation, one PR, exact-HEAD owner merge gate.
+[Scope](action_center_opportunity_cost_cases_consumer_v1_contract.md). No Daily activation.
+PR118 COMPLETE; four closeout CI PASS (38095908308). Queue empty.
 Fiscal mapping lacks issuer calendar/covered-period/provider-label/publication proof;
 existing semantics knowledge time is insufficient. No automatic conversion/promotion.
 Capacity Phase 1 COMPLETE: PR99 `168e0f7`, CI 37893984528 success;
