@@ -67,3 +67,7 @@ No acquisition, Owner Daily, production configuration/data/database/evidence wri
 Consumer/Dashboard repository edit, deployment, authority promotion or worktree deletion.
 
 [Local acceptance and exact parity hashes](e2_e3_foundation_seams_acceptance.md).
+
+Native local closeout at `9bd93953f2ebc31a50c12ec50bd548c6b1affaf4`; COMPLETE,
+LOCAL_IMPLEMENTATION_COMPLETE_NOT_PROMOTED. Feature PR/hosted acceptance and Owner
+exact-HEAD merge review remain; no main release or successor is implied.

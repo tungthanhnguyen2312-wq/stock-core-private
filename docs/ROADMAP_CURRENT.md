@@ -5,9 +5,9 @@ E2/E3 base/main `e99000494ab52374c01383f4c57891165b58768f`.
 Nothing below auto-starts; native standing admission required (AI_RULES 11).
 Facts: [ACTIVE_STATE.md](ACTIVE_STATE.md).
 
-## NOW — E2_E3_FOUNDATION_SEAMS_AND_DEPENDENCY_UNTANGLING (ACTIVE LOCAL)
+## NOW — E2_E3_FOUNDATION_SEAMS_AND_DEPENDENCY_UNTANGLING (COMPLETE LOCAL)
 
-[Scope](e2_e3_foundation_seams_and_dependency_untangling_contract.md): read-only registry and temporal seams, with financial/valuation/decision policy ownership. Feature PR authorized; separate merge review.
+[Scope](e2_e3_foundation_seams_and_dependency_untangling_contract.md): read-only registry and temporal seams, with financial/valuation/decision policy ownership. Local checkpoint `9bd9395`; feature PR authorized; hosted CI and separate merge review pending.
 E1 PR124 released `e990004`; four post-merge jobs PASS (38148897543).
 Hash-bound session paths/serialization need a separate E4 acceptance scope; E4 is not admitted.
 E0 COMPLETE at PR123 `56cdc36`; four post-merge jobs PASS (38139163689).

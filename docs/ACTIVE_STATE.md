@@ -30,7 +30,7 @@ Kinds: **CURRENT FACT** (verified), **HOST-LOCAL** (untracked; re-verify),
 **BLOCKED**, **DEFERRED**, **HISTORICAL**.
 
 ## 1. The operational gate
-- **ACTIVE LOCAL — [E2/E3 seams](e2_e3_foundation_seams_and_dependency_untangling_contract.md):** explicit registry reads and temporal measurements; domain policy remains domain-owned. No Daily or authority change.
+- **COMPLETE LOCAL — [E2/E3 seams](e2_e3_foundation_seams_and_dependency_untangling_contract.md):** explicit registry reads and temporal measurements; domain policy remains domain-owned. No Daily or authority change.
 - **COMPLETE — [E1 evidence move](e1_official_exchange_evidence_package_migration_contract.md):** 13 modules to `stocklookup_core/evidence/`; no shim, Daily or authority change.
 - **COMPLETE — [E0](stocklookup_architecture_dependency_ratchet_and_daily_launch_guard_v1_contract.md):** PR123 merged `56cdc36`.
 - **COMPLETE — [Action Center cases](action_center_opportunity_cost_cases_consumer_v1_contract.md):** PR119, four post-merge jobs PASS (38105025004); offline/non-voting.
@@ -303,7 +303,7 @@ Kinds: **CURRENT FACT** (verified), **HOST-LOCAL** (untracked; re-verify),
 
 ## 9. Next action
 
-E1 PR124 merged; E2/E3 natively admitted under explicit Owner direction. Queue empty; no automatic E4.
+E1 PR124 merged; E2/E3 COMPLETE LOCAL at `9bd9395`, awaiting hosted CI/Owner merge review. Queue empty; no automatic E4.
 Validated feature push/PR authorized; E2/E3 merge remains Owner-gated. No Daily or production writes.
 Daily stays owner-operated after fresh READY/session gates; production merges need approval.
 Fiscal mapping needs exact source/period/publication proof under its existing contract.
