@@ -16,13 +16,13 @@
   ],
   "current": {
     "milestone": "E4_VERSIONED_IDENTITY_SAFE_INFRASTRUCTURE_EXTRACTION",
-    "state": "ACTIVE"
+    "state": "COMPLETE"
   },
   "queued_next": [],
   "milestones": [
     {
       "milestone_id": "E4_VERSIONED_IDENTITY_SAFE_INFRASTRUCTURE_EXTRACTION",
-      "state": "ACTIVE",
+      "state": "COMPLETE",
       "starting_checkpoint": "0061d5f8afe4275ef6cf1dd7ba44930f559d2278",
       "candidate_branch": "e4-versioned-identity-seams",
       "dependencies": [
@@ -35,11 +35,12 @@
       "source_doc": "docs/e4_versioned_identity_safe_infrastructure_extraction_contract.md",
       "state_history": [
         "DEFERRED",
-        "ACTIVE"
+        "ACTIVE",
+        "COMPLETE"
       ],
-      "checkpoint": null,
-      "terminal_disposition": null,
-      "notes": "Owner directive attachment 46b69cf2-8417-48dd-ae0c-839183060ef9 dated 2026-10-12: bounded E4 path and JSON foundations with explicit offline V2 candidate qualification, immutable V1 sources/evidence, local tests/checkpoint/closeout and feature PR/CI authorized; no merge, Daily, provider requests, production writes/deploy, identity activation or authority promotion."
+      "checkpoint": "ddc1880579a38eedfd17d1111a46b6064dd6ea60",
+      "terminal_disposition": "LOCAL_IMPLEMENTATION_COMPLETE_NOT_PROMOTED",
+      "notes": "Owner directive attachment 46b69cf2-8417-48dd-ae0c-839183060ef9 dated 2026-10-12: bounded E4 path and JSON foundations with explicit offline V2 candidate qualification, immutable V1 sources/evidence, local tests/checkpoint/closeout and feature PR/CI authorized; no merge, Daily, provider requests, production writes/deploy, identity activation or authority promotion. Local closeout: Owner-authorized bounded E4 side-by-side foundations and candidate qualification satisfied: 205 E4 parity tests, 233 final affected, 149 structural, 5837 qualified focused cases with 75 explicit skips; two venv-only Windows containment failures reproduced on accepted V1 and pass with real base executable and same pinned libraries. Frozen V1 sources/evidence preserved; no merge, Daily, production V2 activation or authority promotion.; no main release, authority promotion or successor."
     },
     {
       "milestone_id": "E2_E3_FOUNDATION_SEAMS_AND_DEPENDENCY_UNTANGLING",

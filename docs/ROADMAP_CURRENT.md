@@ -5,7 +5,7 @@ E4 base/main `0061d5f8afe4275ef6cf1dd7ba44930f559d2278`.
 Nothing below auto-starts; native standing admission required (AI_RULES 11).
 Facts: [ACTIVE_STATE.md](ACTIVE_STATE.md).
 
-## NOW — E4_VERSIONED_IDENTITY_SAFE_INFRASTRUCTURE_EXTRACTION (ACTIVE LOCAL)
+## NOW — E4_VERSIONED_IDENTITY_SAFE_INFRASTRUCTURE_EXTRACTION (COMPLETE LOCAL)
 
 [Scope](e4_versioned_identity_safe_infrastructure_extraction_contract.md): fixed paths,
 bounded JSON and verification, migrated consumers, offline versioned source qualification.

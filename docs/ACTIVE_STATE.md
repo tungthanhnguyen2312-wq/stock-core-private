@@ -30,7 +30,7 @@ Kinds: **CURRENT FACT** (verified), **HOST-LOCAL** (untracked; re-verify),
 **BLOCKED**, **DEFERRED**, **HISTORICAL**.
 
 ## 1. The operational gate
-- **ACTIVE LOCAL — [E4 infrastructure](e4_versioned_identity_safe_infrastructure_extraction_contract.md):** fixed paths and bounded JSON/verification owners; frozen V1 preserved, V2 qualifier offline. No V2 activation, Daily or authority change.
+- **COMPLETE LOCAL — [E4 infrastructure](e4_versioned_identity_safe_infrastructure_extraction_contract.md):** fixed paths and bounded JSON/verification owners; frozen V1 preserved, V2 qualifier offline. No V2 activation, Daily or authority change.
 - **COMPLETE — [E2/E3 seams](e2_e3_foundation_seams_and_dependency_untangling_contract.md):** explicit registry reads and temporal measurements; domain policy remains domain-owned. No Daily or authority change.
 - **COMPLETE — [E1 evidence move](e1_official_exchange_evidence_package_migration_contract.md):** 13 modules to `stocklookup_core/evidence/`; no shim, Daily or authority change.
 - **COMPLETE — [E0](stocklookup_architecture_dependency_ratchet_and_daily_launch_guard_v1_contract.md):** PR123 merged `56cdc36`.
@@ -304,7 +304,7 @@ Kinds: **CURRENT FACT** (verified), **HOST-LOCAL** (untracked; re-verify),
 
 ## 9. Next action
 
-E4 ACTIVE LOCAL; [scope](e4_versioned_identity_safe_infrastructure_extraction_contract.md).
+E4 COMPLETE LOCAL at ddc1880; [scope](e4_versioned_identity_safe_infrastructure_extraction_contract.md).
 Validated feature PR/CI repairs authorized; E4 merge and production V2 activation remain Owner-gated. Queue empty; no automatic successor.
 Daily stays owner-operated after fresh READY/session gates; production merges need approval.
 Fiscal mapping needs exact source/period/publication proof under its existing contract.

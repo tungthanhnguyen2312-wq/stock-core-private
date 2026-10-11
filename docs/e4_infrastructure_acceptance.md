@@ -86,3 +86,9 @@ architecture conditions pass. Hosted Producer CI and exact-HEAD Owner merge revi
 are separate from local acceptance. A future production V2 feedback transition must
 integrate versioned terminal manifests and verification receipts under new explicit
 owner activation authority; this PR preserves the frozen V1 runtime implementation.
+
+Native local closeout: implementation checkpoint
+ddc1880579a38eedfd17d1111a46b6064dd6ea60, COMPLETE /
+LOCAL_IMPLEMENTATION_COMPLETE_NOT_PROMOTED. No automatic successor.
+Feature PR and hosted CI remain separate release-candidate gates; E4 merge and
+production V2 feedback activation require their own owner decisions.
