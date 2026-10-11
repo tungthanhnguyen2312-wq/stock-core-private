@@ -88,15 +88,15 @@ def test_registry_default_override_errors_and_legacy_callable(tmp_path, monkeypa
     root = tmp_path / "root"
     (root / "config").mkdir(parents=True)
     path = root / "config/daily_research_session_input_registry.json"
-    payload = {"contract_version": "daily_research_session_input_registry/v1", "sessions": {"Î±": None}}
+    payload = {"contract_version": "daily_research_session_input_registry/v1", "sessions": {"α": None}}
     path.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
     foreign = tmp_path / "foreign"
     foreign.mkdir()
     monkeypatch.chdir(foreign)
     assert load_registry(root) == payload == registry.load_registry(root)
     override = tmp_path / "override.json"
-    override.write_text(json.dumps(dict(payload, sessions={"Î²": 0})), encoding="utf-8")
-    assert registry.load_registry(root, override)["sessions"] == {"Î²": 0}
+    override.write_text(json.dumps(dict(payload, sessions={"β": 0})), encoding="utf-8")
+    assert registry.load_registry(root, override)["sessions"] == {"β": 0}
     assert path.read_text(encoding="utf-8") == json.dumps(payload, ensure_ascii=False)
     for text, error, match in [("{}", ValueError, "SESSION_INPUT_REGISTRY_CONTRACT_INVALID"),
                                ("[1]", AttributeError, "get"), ("{bad", json.JSONDecodeError, None)]:
