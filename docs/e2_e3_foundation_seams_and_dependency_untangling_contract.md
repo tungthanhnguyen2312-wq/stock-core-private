@@ -65,3 +65,5 @@ canonical-JSON variants or rewrite historical artifacts. E4 does not start autom
 
 No acquisition, Owner Daily, production configuration/data/database/evidence write,
 Consumer/Dashboard repository edit, deployment, authority promotion or worktree deletion.
+
+[Local acceptance and exact parity hashes](e2_e3_foundation_seams_acceptance.md).
