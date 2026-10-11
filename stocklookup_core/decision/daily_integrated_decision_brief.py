@@ -30,7 +30,7 @@ from collections import Counter
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
-import daily_session_level2_package as level2
+from stocklookup_core.evidence.session_paths import fixed_session_artifact_paths
 import stocklookup_core.decision.integrated_investment_decision_product as integrated_decision_module
 import integrated_decision_prospective_feedback as feedback_bridge
 import owner_research_focus
@@ -651,7 +651,7 @@ def build_from_session(*, root: Path, session: str, next_session_brief: Mapping[
     a stale prior-session product per Section 15). Every other input degrades gracefully inside the
     section builders themselves.
     """
-    paths = level2.session_artifact_paths(root, session)
+    paths = fixed_session_artifact_paths(root, session)
     integrated_current = _load_json(paths["integrated_investment_decision_product"])
     if integrated_current is None:
         return None

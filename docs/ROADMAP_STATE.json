@@ -15,11 +15,32 @@
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "E2_E3_FOUNDATION_SEAMS_AND_DEPENDENCY_UNTANGLING",
-    "state": "COMPLETE"
+    "milestone": "E4_VERSIONED_IDENTITY_SAFE_INFRASTRUCTURE_EXTRACTION",
+    "state": "ACTIVE"
   },
   "queued_next": [],
   "milestones": [
+    {
+      "milestone_id": "E4_VERSIONED_IDENTITY_SAFE_INFRASTRUCTURE_EXTRACTION",
+      "state": "ACTIVE",
+      "starting_checkpoint": "0061d5f8afe4275ef6cf1dd7ba44930f559d2278",
+      "candidate_branch": "e4-versioned-identity-seams",
+      "dependencies": [
+        "E2_E3_FOUNDATION_SEAMS_AND_DEPENDENCY_UNTANGLING"
+      ],
+      "unlocks": [],
+      "owner_authorized": true,
+      "owner_override": "Owner directive attachment 46b69cf2-8417-48dd-ae0c-839183060ef9 dated 2026-10-12: bounded E4 path and JSON foundations with explicit offline V2 candidate qualification, immutable V1 sources/evidence, local tests/checkpoint/closeout and feature PR/CI authorized; no merge, Daily, provider requests, production writes/deploy, identity activation or authority promotion.",
+      "authority_effect": "NONE",
+      "source_doc": "docs/e4_versioned_identity_safe_infrastructure_extraction_contract.md",
+      "state_history": [
+        "DEFERRED",
+        "ACTIVE"
+      ],
+      "checkpoint": null,
+      "terminal_disposition": null,
+      "notes": "Owner directive attachment 46b69cf2-8417-48dd-ae0c-839183060ef9 dated 2026-10-12: bounded E4 path and JSON foundations with explicit offline V2 candidate qualification, immutable V1 sources/evidence, local tests/checkpoint/closeout and feature PR/CI authorized; no merge, Daily, provider requests, production writes/deploy, identity activation or authority promotion."
+    },
     {
       "milestone_id": "E2_E3_FOUNDATION_SEAMS_AND_DEPENDENCY_UNTANGLING",
       "state": "COMPLETE",

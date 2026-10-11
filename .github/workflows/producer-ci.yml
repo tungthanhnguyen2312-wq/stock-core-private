@@ -25,6 +25,7 @@ env:
   FOCUSED_SELECTION: >-
     tests/test_architecture_ratchet.py
     tests/test_foundation_seams.py
+    tests/test_e4_infrastructure.py
     tests/test_official_financial_source_integrity.py
     tests/test_financial_reporting_currency.py
     tests/test_action_center_opportunity_cost_consumer.py
@@ -338,6 +339,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        # E4 executes the immutable accepted-baseline library blobs beside the
+        # candidate. A depth-1 PR checkout cannot resolve that baseline commit.
+        with:
+          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: '3.13'

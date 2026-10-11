@@ -19,7 +19,7 @@ import stocklookup_core.research.thesis_evidence_adapters as adapters
 import stocklookup_core.research.thesis_evidence_matrix as matrix
 import prospective_t0_seal_index as seals
 import prospective_decision_retention as retention
-from bounded_artifact_stream import stream_artifact, source_hash
+from stocklookup_core.evidence.artifact_stream import stream_artifact, source_hash
 from atomic_io import atomic_write_json, retain_immutable_bytes
 
 CONTRACT_VERSION="thesis_production_projection/v1"

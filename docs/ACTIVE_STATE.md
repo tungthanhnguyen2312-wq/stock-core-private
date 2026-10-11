@@ -1,7 +1,7 @@
 # Stock Lookup — Active State
 
-E2/E3 base/main at admission: `e99000494ab52374c01383f4c57891165b58768f`.
-E1 PR124 released; four post-merge jobs PASS (38148897543). E0 PR123 released.
+E4 base/main: `0061d5f8afe4275ef6cf1dd7ba44930f559d2278`.
+E2/E3 PR125 released; four post-merge jobs PASS (38181224017). E1/E0 released.
 Verify live main: `git fetch origin main` or `git ls-remote origin refs/heads/main`; **local** remote-tracking refs may be stale.
 ## 0. How this file relates to the others
 | Question | Answer lives in |
@@ -30,7 +30,8 @@ Kinds: **CURRENT FACT** (verified), **HOST-LOCAL** (untracked; re-verify),
 **BLOCKED**, **DEFERRED**, **HISTORICAL**.
 
 ## 1. The operational gate
-- **COMPLETE LOCAL — [E2/E3 seams](e2_e3_foundation_seams_and_dependency_untangling_contract.md):** explicit registry reads and temporal measurements; domain policy remains domain-owned. No Daily or authority change.
+- **ACTIVE LOCAL — [E4 infrastructure](e4_versioned_identity_safe_infrastructure_extraction_contract.md):** fixed paths and bounded JSON/verification owners; frozen V1 preserved, V2 qualifier offline. No V2 activation, Daily or authority change.
+- **COMPLETE — [E2/E3 seams](e2_e3_foundation_seams_and_dependency_untangling_contract.md):** explicit registry reads and temporal measurements; domain policy remains domain-owned. No Daily or authority change.
 - **COMPLETE — [E1 evidence move](e1_official_exchange_evidence_package_migration_contract.md):** 13 modules to `stocklookup_core/evidence/`; no shim, Daily or authority change.
 - **COMPLETE — [E0](stocklookup_architecture_dependency_ratchet_and_daily_launch_guard_v1_contract.md):** PR123 merged `56cdc36`.
 - **COMPLETE — [Action Center cases](action_center_opportunity_cost_cases_consumer_v1_contract.md):** PR119, four post-merge jobs PASS (38105025004); offline/non-voting.
@@ -303,8 +304,8 @@ Kinds: **CURRENT FACT** (verified), **HOST-LOCAL** (untracked; re-verify),
 
 ## 9. Next action
 
-E1 PR124 merged; E2/E3 COMPLETE LOCAL at `9bd9395`, awaiting hosted CI/Owner merge review. Queue empty; no automatic E4.
-Validated feature push/PR authorized; E2/E3 merge remains Owner-gated. No Daily or production writes.
+E4 ACTIVE LOCAL; [scope](e4_versioned_identity_safe_infrastructure_extraction_contract.md).
+Validated feature PR/CI repairs authorized; E4 merge and production V2 activation remain Owner-gated. Queue empty; no automatic successor.
 Daily stays owner-operated after fresh READY/session gates; production merges need approval.
 Fiscal mapping needs exact source/period/publication proof under its existing contract.
 
