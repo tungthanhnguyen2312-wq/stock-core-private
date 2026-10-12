@@ -13,6 +13,9 @@ results) · `FROZEN_HISTORICAL` (code/artifacts preserved, not the production pa
 Each block: **Contract** · **Runtime** · **Authority** · **Production** · **Input** · **Predecessor**
 (frozen) · **Blocker** · **Next trigger** (the evidence that would change the status).
 
+[Development lanes](parallel_domain_development_control_plane_v1_contract.md):
+`EXPERIMENTAL` / `SCOPED` / `OFFLINE_ONLY`; Owner merge gate; no runtime authority.
+
 Decision-intelligence closure (2026-10-07) is research coverage and calibration context
 only. Contract `decision_intelligence_coverage_calibration/v1`. It does not vote, size,
 or recommend. Read-only inspection released PR116; [scope](research_inspection_integrity_v1_contract.md).

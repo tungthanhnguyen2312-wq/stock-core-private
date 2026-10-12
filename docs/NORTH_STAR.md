@@ -74,7 +74,7 @@ qualified evidence/data
 - Research proxy is never silently promoted to exact canonical fact.
 - Current-session evidence may support scoped actionable research even when historical/PIT authority remains blocked.
 - No provider/source becomes authoritative by side effect.
-- One meaningful milestone at a time; no parallel roadmap branches unless there is a real architectural dependency.
+- Governed disjoint development lanes may coexist under the Owner-approved [control-plane contract](parallel_domain_development_control_plane_v1_contract.md); integration and production writers remain exclusive.
 - Production Daily, recovery replay, and historical backfill must remain operationally distinct.
 - Policy changes must be versioned so outcome/velocity systems do not mistake code changes for issuer changes.
 - The active `vnstock`/VNAI/VCI/KBS runtime is retired; historical provider-reported evidence remains a lineage-labeled research proxy. DNSE/Livespeed remains the primary market-data direction.

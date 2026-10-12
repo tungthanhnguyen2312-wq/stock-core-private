@@ -93,3 +93,9 @@ status and lineage that bounds it.
     commit, a completed dependency alone, or an agent's own judgment that a milestone is ready.
     It governs milestone execution state only; it does not restate or override the technical content, rationale
     or recorded invariants of `docs/ROADMAP.md`/`docs/STATE.md`/`docs/DECISIONS.md`.
+
+11a. Owner-approved [development lanes](parallel_domain_development_control_plane_v1_contract.md)
+     may coexist only under native admission, disjoint file/domain ownership and one
+     integration coordinator in the same ROADMAP_STATE. Shadow/research/reviewer work
+     is not release or runtime authority. Shared files require integration ownership;
+     merge/publication and the single production writer remain separately gated.

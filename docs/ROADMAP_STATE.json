@@ -15,11 +15,32 @@
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "CURRENT_FINANCIAL_VALUATION_INPUT_UNLOCK_V1",
-    "state": "COMPLETE"
+    "milestone": "PARALLEL_DOMAIN_DEVELOPMENT_CONTROL_PLANE_V1",
+    "state": "ACTIVE"
   },
   "queued_next": [],
   "milestones": [
+    {
+      "milestone_id": "PARALLEL_DOMAIN_DEVELOPMENT_CONTROL_PLANE_V1",
+      "state": "ACTIVE",
+      "starting_checkpoint": "23da9d84da94ad91ebcd8617b3b8a453b5a6baab",
+      "candidate_branch": "feature/parallel-domain-control-plane-v1",
+      "dependencies": [
+        "CURRENT_FINANCIAL_VALUATION_INPUT_UNLOCK_V1"
+      ],
+      "unlocks": [],
+      "owner_authorized": true,
+      "owner_override": "Owner directive 2026-10-13: Codex sole control-plane implementation writer in feature/parallel-domain-control-plane-v1; backward-compatible native disjoint DEVELOPMENT lanes, ownership/dependency validation, checkpoints, integration planning and adversarial hermetic Git tests; shared files exclusive to integration owner; preserve current/history, four CI jobs, immutable October12 and one production writer. Claude architecture prototype and Grok HPG evidence remain independent experiments. One feature PR after validation; no merge, deployment, production, evidence promotion, refactor or cleanup.",
+      "authority_effect": "NONE",
+      "source_doc": "docs/parallel_domain_development_control_plane_v1_contract.md",
+      "state_history": [
+        "DEFERRED",
+        "ACTIVE"
+      ],
+      "checkpoint": null,
+      "terminal_disposition": null,
+      "notes": "Owner directive 2026-10-13: Codex sole control-plane implementation writer in feature/parallel-domain-control-plane-v1; backward-compatible native disjoint DEVELOPMENT lanes, ownership/dependency validation, checkpoints, integration planning and adversarial hermetic Git tests; shared files exclusive to integration owner; preserve current/history, four CI jobs, immutable October12 and one production writer. Claude architecture prototype and Grok HPG evidence remain independent experiments. One feature PR after validation; no merge, deployment, production, evidence promotion, refactor or cleanup."
+    },
     {
       "milestone_id": "CURRENT_FINANCIAL_VALUATION_INPUT_UNLOCK_V1",
       "state": "COMPLETE",

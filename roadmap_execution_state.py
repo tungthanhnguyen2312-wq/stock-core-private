@@ -67,6 +67,7 @@ _CATEGORY_BY_CODE = {
     "ROADMAP_RECORDED_HEAD_DIVERGENCE": "git/worktree consistency",
     "ROADMAP_DIRTY_WORKTREE": "git/worktree consistency",
     "ROADMAP_UNRESOLVED_HEAD_SENTINEL_STALE": "git/worktree consistency",
+    "ROADMAP_LANE_WORKTREE_UNAVAILABLE": "git/worktree consistency",
 }
 
 
@@ -168,7 +169,12 @@ def _milestones_by_id(state: Mapping[str, Any]) -> dict[str, Mapping[str, Any]]:
 # --------------------------------------------------------------------------
 
 def git_run(repo: Path, *args: str) -> tuple[int, str, str]:
-    return run_utf8(["git", "-C", str(repo), *args])
+    from subprocess import TimeoutExpired
+    try:
+        return run_utf8(["git", "--no-optional-locks", "-c", "maintenance.auto=false",
+                         "-c", "gc.auto=0", "-C", str(repo), *args], timeout=30)
+    except TimeoutExpired:
+        return 124, "", "GIT_QUERY_TIMEOUT"
 
 
 def git_head(repo: Path) -> str | None:
@@ -248,6 +254,10 @@ def git_worktrees(repo: Path) -> list[dict[str, str]]:
             current["bare"] = "true"
         elif line == "detached":
             current["detached"] = "true"
+        elif line.startswith("locked"):
+            current["locked"] = "true"
+        elif line.startswith("prunable"):
+            current["prunable"] = "true"
     if current:
         entries.append(current)
     return entries
@@ -296,6 +306,10 @@ def evaluate(state: Mapping[str, Any], *, repo: Path | None = None) -> RoadmapRe
     findings: list[Finding] = []
     milestones = _milestones_by_id(state)
     allowlist = set(state.get("known_operational_diff_allowlist") or [])
+    if len(milestones) != len(state.get("milestones") or []):
+        findings.append(Finding("ROADMAP_UNKNOWN_MILESTONE", FAIL, "duplicate or malformed milestone IDs"))
+    for message in validate_development_control(state):
+        findings.append(Finding("ROADMAP_LANE_INVALID", FAIL, message))
 
     # -- referential integrity -------------------------------------------------
     known_ids = set(milestones)
@@ -427,6 +441,15 @@ def evaluate(state: Mapping[str, Any], *, repo: Path | None = None) -> RoadmapRe
 
         writer_findings = _check_multiple_source_writers(state, milestones, repo)
         findings.extend(writer_findings)
+        control = state.get("development_control") if isinstance(state.get("development_control"), dict) else {}
+        if control and not coordinator_host_available(state, repo):
+            findings.append(Finding("ROADMAP_LANE_WORKTREE_UNAVAILABLE", WARNING,
+                                    "lane host observations SKIPPED_NON_COORDINATOR_CLONE; structural state only, no lane start/integration authority"))
+        elif not validate_development_control(state):
+            for lane in (state.get("development_control") or {}).get("lanes", []):
+                if lane.get("state") not in LANE_TERMINAL:
+                    for error in check_lane(state, lane["milestone_id"], repo=repo)["errors"]:
+                        findings.append(Finding("ROADMAP_LANE_INVALID", FAIL, error, lane["milestone_id"]))
 
     findings.sort(key=lambda f: (_SEVERITY_RANK[f.severity], f.category, f.code, f.message))
     git_verification = _git_verification(repo, findings)
@@ -645,3 +668,389 @@ def summary_counts(state: Mapping[str, Any]) -> dict[str, int]:
         if st in counts:
             counts[st] += 1
     return counts
+
+
+# Optional coordinated development extension. Legacy current/milestones are unchanged.
+# These records grant source-development scope only, never runtime or release authority.
+LANE_SCHEMA = "stocklookup_development_lanes/1"
+LANE_MODES = {"IMPLEMENTATION", "SHADOW", "READ_ONLY", "EXTERNAL_RESEARCH"}
+LANE_STATES = {"ADMITTED", "ACTIVE", "PAUSED", "REVIEW_READY", "COMPLETE_LOCAL", "MERGED_RELEASED", "ABANDONED"}
+LANE_TERMINAL = {"MERGED_RELEASED", "ABANDONED"}
+SHARED_PATHS = (
+    "docs/ROADMAP_STATE.json", "roadmap_execution_state.py", "tools/stocklookup_roadmap.py",
+    ".github/", "config/", "AGENTS.md", "docs/AI_RULES.md", "docs/ACTIVE_STATE.md",
+    "docs/AUTHORITY.md", "docs/ROADMAP_CURRENT.md", "docs/CAPABILITIES.md",
+    "docs/DAILY_PIPELINE.md", "docs/NORTH_STAR.md", "requirements", "constraints.txt",
+    "stocklookup.ps1", "stocklookup.py", "release_orchestrator.py",
+    "tests/fixtures/e2e3_frozen_sources.json",
+    ".gitignore", ".gitattributes", ".gitmodules", ".rgignore",
+)
+PROTECTED_PATHS = (".git/", "data/", "operations-review/", "dashboard-runtime/", "backups/", ".stocklookup/")
+
+
+def _path_key(path: str) -> str:
+    return str(Path(path).resolve()).replace("\\", "/").casefold()
+
+
+def _scope_path(path: Any) -> bool:
+    """Only exact relative paths or directory prefixes; no glob ambiguity/traversal."""
+    return (isinstance(path, str) and bool(path) and path == path.strip()
+            and not path.startswith("/") and "\\" not in path and ":" not in path
+            and not any(c in path for c in "*?[]\x00\n\r")
+            and all(p not in {"", ".", ".."} for p in path.rstrip("/").split("/")))
+
+
+def path_owned(path: str, scope: str) -> bool:
+    # Windows and case-sensitive hosts enforce the same conservative overlap contract.
+    path, scope = path.casefold(), scope.casefold()
+    return path.startswith(scope) if scope.endswith("/") else path == scope
+
+
+def scope_overlap(a: str, b: str) -> bool:
+    return path_owned(a.rstrip("/"), b) or path_owned(b.rstrip("/"), a) or a.casefold() == b.casefold()
+
+
+def shared_path(path: str) -> bool:
+    return (any(path_owned(path, p) for p in SHARED_PATHS)
+            or "registry" in Path(path).name.casefold()
+            or Path(path).name.casefold().startswith("requirements"))
+
+
+def validate_development_control(state: Mapping[str, Any]) -> list[str]:
+    control = state.get("development_control")
+    if control is None:
+        return []
+    errors: list[str] = []
+    if not isinstance(control, dict) or control.get("schema") != LANE_SCHEMA:
+        return ["LANE_SCHEMA_INVALID"]
+    if (not isinstance(control.get("revision"), int) or isinstance(control.get("revision"), bool)
+            or control["revision"] < 1 or not isinstance(control.get("history"), list)
+            or len(control["history"]) != control["revision"]
+            or not all(control.get(k) for k in ("integration_agent", "integration_branch", "integration_worktree"))):
+        return ["LANE_COORDINATOR_INVALID"]
+    lanes = control.get("lanes")
+    if not isinstance(lanes, list) or not all(isinstance(l, dict) for l in lanes):
+        return errors + ["LANE_RECORDS_INVALID"]
+    ids = [l.get("milestone_id") for l in lanes]
+    if any(not isinstance(mid, str) or not mid for mid in ids) or len(set(map(str, ids))) != len(ids):
+        return errors + ["LANE_DUPLICATE_OR_INVALID_ID"]
+    legacy_ids = set(_milestones_by_id(state))
+    for lane in lanes:
+        mid = lane["milestone_id"]
+        if mid in legacy_ids:
+            errors.append(f"LANE_DUPLICATE_LEGACY_ID:{mid}")
+        if (lane.get("mode") not in LANE_MODES or lane.get("state") not in LANE_STATES
+                or lane.get("authority_effect") != "NONE"
+                or not all(isinstance(lane.get(k), str) and lane[k].strip() for k in
+                           ("responsible_agent", "branch", "worktree", "base_sha", "domain"))
+                or not isinstance(lane.get("admission_authority"), dict)
+                or lane.get("admission_authority", {}).get("kind") != "EXPLICIT_OWNER_DIRECTIVE"
+                or not lane.get("admission_authority", {}).get("note")):
+            errors.append(f"LANE_METADATA_INVALID:{mid}")
+            continue
+        if not Path(lane["worktree"]).is_absolute():
+            errors.append(f"LANE_ABSOLUTE_WORKTREE_REQUIRED:{mid}")
+        import re
+        if not re.fullmatch(r"[0-9a-f]{40}", lane["base_sha"]):
+            errors.append(f"LANE_EXACT_BASE_SHA_REQUIRED:{mid}")
+        if lane.get("checkpoint") and (not isinstance(lane["checkpoint"], str) or not re.fullmatch(r"[0-9a-f]{40}", lane["checkpoint"])):
+            errors.append(f"LANE_EXACT_CHECKPOINT_REQUIRED:{mid}")
+        if lane.get("branch") in {"main", "master", control["integration_branch"]}:
+            errors.append(f"LANE_MAIN_OR_COORDINATOR_BRANCH:{mid}")
+        scopes = lane.get("allowed_paths")
+        if not isinstance(scopes, list) or not scopes or not all(_scope_path(p) for p in scopes):
+            errors.append(f"LANE_SCOPE_INVALID:{mid}")
+            continue
+        leases = lane.get("shared_paths")
+        if not isinstance(leases, list) or not all(_scope_path(p) and not p.endswith("/") for p in leases):
+            errors.append(f"LANE_SHARED_LEASE_INVALID:{mid}")
+            continue
+        for path in scopes:
+            if any(scope_overlap(path, p) for p in PROTECTED_PATHS):
+                errors.append(f"LANE_PROTECTED_SCOPE:{mid}:{path}")
+            if (lane["mode"] in {"IMPLEMENTATION", "SHADOW"}
+                    and (any(scope_overlap(path, p) for p in SHARED_PATHS) or shared_path(path)) and path not in leases):
+                errors.append(f"LANE_SHARED_SCOPE_REQUIRES_EXACT_LEASE:{mid}:{path}")
+        if leases and (lane.get("responsible_agent") != control["integration_agent"]
+                       or not lane.get("lease_note") or not all(p in scopes for p in leases)):
+            errors.append(f"LANE_SHARED_LEASE_NOT_INTEGRATION_OWNER:{mid}")
+        deps = lane.get("dependencies")
+        if not isinstance(deps, list) or any(d not in ids + list(legacy_ids) or d == mid for d in deps):
+            errors.append(f"LANE_DEPENDENCY_INVALID:{mid}")
+        for key in ("provides", "consumes"):
+            if not isinstance(lane.get(key), dict) or not all(isinstance(k, str) and k and isinstance(v, str) and v for k, v in lane[key].items()):
+                errors.append(f"LANE_INTERFACE_INVALID:{mid}:{key}")
+        if (not isinstance(lane.get("required_checks"), list) or not lane["required_checks"]
+                or not all(isinstance(c, str) and c.strip() for c in lane["required_checks"])
+                or len(set(lane["required_checks"])) != len(lane["required_checks"])):
+            errors.append(f"LANE_CHECKS_REQUIRED:{mid}")
+        if not isinstance(lane.get("history"), list):
+            errors.append(f"LANE_HISTORY_REQUIRED:{mid}")
+        if lane.get("mode") != "IMPLEMENTATION" and lane.get("state") in {"REVIEW_READY", "COMPLETE_LOCAL", "MERGED_RELEASED"}:
+            errors.append(f"LANE_SHADOW_PROMOTION_FORBIDDEN:{mid}")
+        if lane.get("state") in {"REVIEW_READY", "COMPLETE_LOCAL", "MERGED_RELEASED"} and not lane.get("checkpoint"):
+            errors.append(f"LANE_CHECKPOINT_REQUIRED:{mid}")
+    active = [l for l in lanes if l.get("state") not in LANE_TERMINAL]
+    if errors:
+        return sorted(set(errors))
+    for i, a in enumerate(active):
+        for b in active[i + 1:]:
+            if a.get("branch") == b.get("branch") or _path_key(a.get("worktree", ".")) == _path_key(b.get("worktree", ".")):
+                errors.append(f"LANE_WRITER_IDENTITY_OVERLAP:{a['milestone_id']}:{b['milestone_id']}")
+            writers = a.get("mode") in {"IMPLEMENTATION", "SHADOW"} and b.get("mode") in {"IMPLEMENTATION", "SHADOW"}
+            if writers and (a["domain"].casefold() == b["domain"].casefold() or any(scope_overlap(p, q) for p in a.get("allowed_paths", []) for q in b.get("allowed_paths", []))):
+                errors.append(f"LANE_OWNERSHIP_OVERLAP:{a['milestone_id']}:{b['milestone_id']}")
+    visiting, visited = set(), set()
+    by_id = {l["milestone_id"]: l for l in lanes}
+    def visit(mid: str) -> None:
+        if mid in visiting:
+            errors.append(f"LANE_DEPENDENCY_CYCLE:{mid}")
+            return
+        if mid in visited:
+            return
+        visiting.add(mid)
+        for dep in by_id[mid].get("dependencies", []):
+            if dep in by_id:
+                visit(dep)
+        visiting.remove(mid)
+        visited.add(mid)
+    for mid in by_id:
+        visit(mid)
+    return sorted(set(errors))
+
+
+def lane_by_id(state: Mapping[str, Any], mid: str) -> dict[str, Any]:
+    errors = validate_development_control(state)
+    if errors:
+        raise RoadmapStateError(";".join(errors))
+    for lane in (state.get("development_control") or {}).get("lanes", []):
+        if lane["milestone_id"] == mid:
+            return lane
+    raise RoadmapStateError(f"LANE_UNKNOWN:{mid}")
+
+
+def coordinator_host_available(state: Mapping[str, Any], repo: Path) -> bool:
+    """Clone/CI metadata validation cannot certify another host's live worktrees."""
+    control = state.get("development_control") if isinstance(state.get("development_control"), dict) else {}
+    path = control.get("integration_worktree")
+    if not isinstance(path, str) or not Path(path).is_dir():
+        return False
+    first = git_run(repo, "rev-parse", "--path-format=absolute", "--git-common-dir")
+    second = git_run(Path(path), "rev-parse", "--path-format=absolute", "--git-common-dir")
+    return first[0] == second[0] == 0 and _path_key(first[1].strip()) == _path_key(second[1].strip())
+
+
+def _full_sha(repo: Path, sha: Any) -> bool:
+    import re
+    return isinstance(sha, str) and re.fullmatch(r"[0-9a-f]{40}", sha) is not None and git_object_type(repo, sha) == "commit"
+
+
+def _changed_paths(repo: Path, base: str) -> tuple[list[str], list[str]]:
+    """Include committed, staged, unstaged, untracked and both sides of renames."""
+    errors, paths = [], set()
+    for args in (("diff", "--no-renames", "--name-only", "-z", base, "HEAD"),
+                 ("diff", "--no-renames", "--name-only", "-z", "HEAD"),
+                 ("ls-files", "--others", "--exclude-standard", "-z")):
+        code, out, _ = git_run(repo, *args)
+        if code:
+            errors.append("LANE_GIT_DIFF_UNAVAILABLE")
+        else:
+            paths.update(p for p in out.split("\x00") if p)
+    return sorted(paths), errors
+
+
+def identity_sensitive_paths(repo: Path, base: str) -> set[str]:
+    """Read only the small, existing reviewed source/launcher manifests at base.
+
+    This is a navigation guard, not an exhaustive model of dynamic code identities;
+    explicit frozen/source-contract review remains mandatory for every integration.
+    """
+    sensitive = set(SHARED_PATHS)
+    for path in ("tests/fixtures/e2e3_frozen_sources.json", "config/daily_path_launchers.json"):
+        code, out, _ = git_run(repo, "show", base + ":" + path)
+        if code:
+            continue  # Hermetic/minimal repositories may have no Producer manifests.
+        try:
+            manifest = json.loads(out)
+            sensitive.update(manifest.get("source_sha256_lf", {}))
+            sensitive.update(manifest.get("python_callers", {}))
+            sensitive.update(manifest.get("non_python_callers", {}))
+        except (ValueError, TypeError, AttributeError) as exc:
+            raise RoadmapStateError("LANE_FROZEN_MANIFEST_INVALID:" + path) from exc
+    return sensitive
+
+
+def check_lane(state: Mapping[str, Any], mid: str, *, repo: Path) -> dict[str, Any]:
+    lane = lane_by_id(state, mid)
+    errors = validate_development_control(state)
+    if errors:
+        return {"milestone_id": mid, "head": None, "paths": [], "clean": False,
+                "errors": errors, "unmet_dependencies": [], "authority_effect": "NONE", "runtime_authorized": False}
+    wt = Path(lane["worktree"])
+    registered = git_worktrees(repo)
+    match = next((w for w in registered if _path_key(w["worktree"]) == _path_key(str(wt))), None)
+    if not match or not wt.is_dir() or match.get("branch") != "refs/heads/" + lane["branch"]:
+        errors.append("LANE_WORKTREE_BRANCH_MISMATCH")
+    if match and (match.get("locked") or match.get("prunable")):
+        errors.append("LANE_WORKTREE_LOCKED_OR_MISSING")
+    # Ensure it is really this Git repository, not a replaced directory with another .git.
+    def common(root: Path) -> str:
+        code, value, _ = git_run(root, "rev-parse", "--path-format=absolute", "--git-common-dir")
+        return _path_key(value.strip()) if code == 0 else ""
+    if not common(wt) or common(wt) != common(repo):
+        errors.append("LANE_REPOSITORY_MISMATCH")
+    head = git_head(wt)
+    if git_branch(wt) != lane["branch"] or head != (match or {}).get("head"):
+        errors.append("LANE_LIVE_HEAD_MISMATCH")
+    code, branch_head, _ = git_run(repo, "rev-parse", "refs/heads/" + lane["branch"])
+    if code or branch_head.strip() != head:
+        errors.append("LANE_BRANCH_HEAD_MISMATCH")
+    if not _full_sha(repo, lane["base_sha"]) or not head or not git_is_ancestor(repo, lane["base_sha"], head):
+        errors.append("LANE_BASE_NOT_ANCESTOR")
+        return {"milestone_id": mid, "head": head, "paths": [], "clean": False,
+                "errors": sorted(set(errors)), "unmet_dependencies": [], "authority_effect": "NONE", "runtime_authorized": False}
+    checkpoint = lane.get("checkpoint")
+    if checkpoint and (not _full_sha(repo, checkpoint) or not head or not git_is_ancestor(repo, checkpoint, head)):
+        errors.append("LANE_CHECKPOINT_NOT_ANCESTOR")
+    paths, diff_errors = _changed_paths(wt, lane["base_sha"])
+    errors += diff_errors
+    sensitive = identity_sensitive_paths(repo, lane["base_sha"])
+    for path in paths:
+        if (not _scope_path(path) or any(path_owned(path, p) for p in PROTECTED_PATHS)
+                or not any(path_owned(path, p) for p in lane["allowed_paths"])
+                or (shared_path(path) or path in sensitive) and path not in lane["shared_paths"]):
+            errors.append("LANE_PROHIBITED_CHANGE:" + path)
+    if lane["mode"] in {"READ_ONLY", "EXTERNAL_RESEARCH"} and paths:
+        errors.append("LANE_READ_ONLY_CHANGE")
+    code, status, _ = git_run(wt, "status", "--porcelain", "--untracked-files=all")
+    if code:
+        errors.append("LANE_STATUS_UNAVAILABLE")
+    for scope in lane["allowed_paths"]:
+        if lane["mode"] in {"IMPLEMENTATION", "SHADOW"} and any(path_owned(path, scope) for path in sensitive) and scope not in lane["shared_paths"]:
+            errors.append("LANE_FROZEN_SCOPE_REQUIRES_EXACT_LEASE:" + scope)
+    control = state["development_control"]
+    all_deps = {m["milestone_id"]: m for m in state.get("milestones", [])}
+    all_deps.update({l["milestone_id"]: l for l in control["lanes"]})
+    unmet = [d for d in lane["dependencies"] if all_deps.get(d, {}).get("state") not in {"COMPLETE", "SUPERSEDED", "COMPLETE_LOCAL", "MERGED_RELEASED"}]
+    if lane["state"] == "ACTIVE" and unmet:
+        errors.append("LANE_DEVELOPMENT_DEPENDENCIES_UNSATISFIED:" + ",".join(unmet))
+    return {"milestone_id": mid, "head": head, "branch": lane["branch"], "worktree": str(wt),
+            "paths": paths, "clean": code == 0 and not status.strip(),
+            "state": lane["state"], "mode": lane["mode"], "unmet_dependencies": unmet,
+            "errors": sorted(set(errors)), "authority_effect": "NONE", "runtime_authorized": False}
+
+
+def integration_plan(state: Mapping[str, Any], *, repo: Path, main_sha: str,
+                     receipts: Mapping[str, Any] | None = None, candidate_id: str | None = None) -> dict[str, Any]:
+    """Bounded metadata-only plan. Never fetch, merge, rebase, run checks or promote."""
+    errors = validate_development_control(state)
+    if errors:
+        raise RoadmapStateError(";".join(errors))
+    control = state.get("development_control") or {}
+    if not control:
+        raise RoadmapStateError("LANE_COORDINATOR_NOT_INITIALIZED")
+    if not _full_sha(repo, main_sha):
+        raise RoadmapStateError("LANE_EXACT_MAIN_SHA_REQUIRED")
+    # Remote-tracking metadata alone is explicitly insufficient. No ref writes.
+    code, remote, _ = git_run(repo, "ls-remote", "origin", "refs/heads/main")
+    code2, tracking, _ = git_run(repo, "rev-parse", "refs/remotes/origin/main")
+    if code or not remote.strip() or remote.split()[0] != main_sha or code2 or tracking.strip() != main_sha:
+        errors.append("LANE_REMOTE_MAIN_STALE_OR_UNVERIFIED")
+    coordinator = Path(control["integration_worktree"])
+    coordinator_head = git_head(coordinator) if coordinator_host_available(state, repo) else None
+    coordinator_paths, coordinator_errors = _changed_paths(coordinator, coordinator_head) if coordinator_head else ([], ["LANE_COORDINATOR_HOST_UNAVAILABLE"])
+    errors += coordinator_errors
+    source_dirty = [p for p in coordinator_paths if p != "docs/ROADMAP_STATE.json"]
+    if source_dirty:
+        errors.append("LANE_COORDINATOR_SOURCE_DIRTY:" + ",".join(source_dirty))
+    lanes = [l for l in control["lanes"] if l["mode"] == "IMPLEMENTATION" and l["state"] not in LANE_TERMINAL]
+    if candidate_id:
+        lanes = [l for l in lanes if l["milestone_id"] == candidate_id]
+        if not lanes:
+            raise RoadmapStateError("LANE_INTEGRATION_CANDIDATE_UNKNOWN")
+    rows = {l["milestone_id"]: check_lane(state, l["milestone_id"], repo=repo) for l in lanes}
+    main_paths = {}
+    for lane in lanes:
+        mid, row = lane["milestone_id"], rows[lane["milestone_id"]]
+        errors += [mid + ":" + e for e in row["errors"]]
+        if not row["clean"]:
+            errors.append(f"LANE_DIRTY_CANDIDATE:{mid}")
+        if lane["state"] not in {"REVIEW_READY", "COMPLETE_LOCAL"} or lane.get("checkpoint") != row["head"]:
+            errors.append(f"LANE_NOT_EXACT_REVIEW_CANDIDATE:{mid}")
+        if not git_is_ancestor(repo, lane["base_sha"], main_sha):
+            errors.append(f"LANE_MAIN_BASE_DIVERGED:{mid}")
+        code, out, _ = git_run(repo, "diff", "--no-renames", "--name-only", "-z", lane["base_sha"], main_sha)
+        main_paths[mid] = sorted(p for p in out.split("\x00") if p) if code == 0 else []
+        if code:
+            errors.append(f"LANE_MAIN_DIFF_UNAVAILABLE:{mid}")
+        overlap = sorted(set(main_paths[mid]) & set(row["paths"]))
+        if overlap and not (git_is_ancestor(repo, main_sha, row["head"]) or git_is_ancestor(repo, row["head"], main_sha)):
+            errors.append(f"LANE_MAIN_CHANGED_FILE_OVERLAP:{mid}:" + ",".join(overlap))
+        for dep in lane["dependencies"]:
+            other = next((l for l in control["lanes"] if l["milestone_id"] == dep), None)
+            legacy = _milestones_by_id(state).get(dep)
+            if other and (other["state"] != "MERGED_RELEASED" or not other.get("release_sha") or not git_is_ancestor(repo, other["release_sha"], main_sha)):
+                errors.append(f"LANE_DEPENDENCY_NOT_RELEASED:{mid}:{dep}")
+            if legacy and (legacy.get("state") not in CLOSED_STATES or not legacy.get("checkpoint") or not git_is_ancestor(repo, legacy["checkpoint"], main_sha)):
+                errors.append(f"LANE_LEGACY_DEPENDENCY_NOT_ON_MAIN:{mid}:{dep}")
+    semantic_risks = []
+    selected = {l["milestone_id"] for l in lanes}
+    peers = [l for l in control["lanes"] if l["mode"] == "IMPLEMENTATION" and l["state"] != "ABANDONED"]
+    for i, a in enumerate(peers):
+        for b in peers[i + 1:]:
+            if not {a["milestone_id"], b["milestone_id"]} & selected:
+                continue
+            overlap = sorted(set(rows.get(a["milestone_id"], {}).get("paths", [])) & set(rows.get(b["milestone_id"], {}).get("paths", [])))
+            if overlap:
+                errors.append(f"LANE_CHANGED_FILE_OVERLAP:{a['milestone_id']}:{b['milestone_id']}:" + ",".join(overlap))
+            for producer, consumer in ((a, b), (b, a)):
+                for key, version in producer["provides"].items():
+                    if key in consumer["provides"]:
+                        errors.append(f"LANE_DUPLICATE_INTERFACE_OWNER:{key}")
+                    if key in consumer["consumes"]:
+                        semantic_risks.append({"interface": key, "producer": producer["milestone_id"], "consumer": consumer["milestone_id"]})
+                        if version != consumer["consumes"][key]:
+                            errors.append(f"LANE_INTERFACE_VERSION_CONFLICT:{key}")
+                        if consumer["milestone_id"] in selected and producer["milestone_id"] not in consumer["dependencies"]:
+                            errors.append(f"LANE_INTERFACE_DEPENDENCY_UNDECLARED:{key}")
+    order, todo = [], {l["milestone_id"]: l for l in lanes}
+    while todo:
+        ready = sorted(mid for mid, l in todo.items() if not set(l["dependencies"]) & set(todo))
+        if not ready:
+            errors.append("LANE_INTEGRATION_CYCLE")
+            break
+        for mid in ready:
+            order.append(mid)
+            del todo[mid]
+    sensitive = identity_sensitive_paths(repo, main_sha)
+    plan = {"schema": "stocklookup_integration_plan/1", "main_sha": main_sha,
+            "coordinator_head": coordinator_head, "coordinator_source_changes": source_dirty,
+            "coordinator_native_state_dirty": "docs/ROADMAP_STATE.json" in coordinator_paths,
+            "heads": {mid: rows[mid]["head"] for mid in sorted(rows)}, "order": order,
+            "changed_paths": {mid: rows[mid]["paths"] for mid in sorted(rows)},
+            "main_changes_since_base": main_paths, "semantic_dependencies": semantic_risks,
+            "declared_interfaces": {l["milestone_id"]: {k: l[k] for k in ("provides", "consumes")} for l in lanes},
+            "dependencies": {l["milestone_id"]: l["dependencies"] for l in lanes},
+            "lane_context": {l["milestone_id"]: {k: l[k] for k in
+                             ("responsible_agent", "branch", "worktree", "base_sha", "domain",
+                              "allowed_paths", "shared_paths", "admission_authority")} for l in lanes},
+            "peer_interfaces": {l["milestone_id"]: {k: l[k] for k in ("provides", "consumes", "state", "checkpoint")} for l in peers},
+            "required_checks": {l["milestone_id"]: l["required_checks"] for l in lanes},
+            "shared_and_frozen_review": sorted({p for row in rows.values() for p in row["paths"] if shared_path(p) or p in sensitive}),
+            "authority_effect": "NONE", "runtime_authorized": False, "merge_authorized": False}
+    plan["plan_identity"] = stable_id(plan)
+    # Human semantic/cross-repo/frozen review and actual test receipts are mandatory:
+    # a static disjoint-file calculation alone cannot establish integration safety.
+    receipt = receipts or {}
+    if (receipt.get("plan_identity") != plan["plan_identity"] or receipt.get("reviewed_by") != control["integration_agent"]
+            or not receipt.get("review_note") or not receipt.get("cross_repo_review")
+            or not receipt.get("frozen_identity_review")):
+        errors.append("LANE_EXACT_INTEGRATION_REVIEW_REQUIRED")
+    for mid, checks in plan["required_checks"].items():
+        for check in checks:
+            result = (receipt.get("checks") or {}).get(mid, {}).get(check, {})
+            if result.get("status") != "PASS" or not result.get("evidence"):
+                errors.append(f"LANE_INTEGRATION_CHECK_REQUIRED:{mid}:{check}")
+    plan["errors"] = sorted(set(errors))
+    plan["disposition"] = "BLOCKED" if errors else "READY_FOR_OWNER_REVIEW"
+    return plan
