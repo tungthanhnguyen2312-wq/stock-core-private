@@ -42,10 +42,24 @@
         "temporal_evidence_operational_pilot.py",
         "vnm_historical_snapshot_reconstruction.py"
       ]
+    },
+    "C": {
+      "package": "tools/replay/legacy_financial_materializers",
+      "purpose": "Self-declared legacy per-ticker financial materializers (generic_financial_canonicalizer.classify_legacy_materializers).",
+      "modules": [
+        "fpt_fy2025_official_financial_materialization.py",
+        "legacy_qualified_cohort_recovery.py",
+        "qns_pow_official_financial_materialization.py",
+        "ssi_official_financial_materialization.py",
+        "targeted_multi_period_official_financial_evidence.py"
+      ]
     }
   },
   "relocations": {
     "evidence_replay.py": "tools/replay/pilots/evidence_replay.py",
+    "fpt_fy2025_official_financial_materialization.py": "tools/replay/legacy_financial_materializers/fpt_fy2025_official_financial_materialization.py",
+    "legacy_qualified_cohort_recovery.py": "tools/replay/legacy_financial_materializers/legacy_qualified_cohort_recovery.py",
+    "qns_pow_official_financial_materialization.py": "tools/replay/legacy_financial_materializers/qns_pow_official_financial_materialization.py",
     "run_ai_research_analyst.py": "tools/replay/research_20260820/run_ai_research_analyst.py",
     "run_catalyst_event_research_context.py": "tools/replay/research_20260820/run_catalyst_event_research_context.py",
     "run_downside_uncertainty_research_context.py": "tools/replay/research_20260820/run_downside_uncertainty_research_context.py",
@@ -71,7 +85,9 @@
     "run_strategy_research_eligibility.py": "tools/replay/research_20260820/run_strategy_research_eligibility.py",
     "shadow_analytics_pilot.py": "tools/replay/pilots/shadow_analytics_pilot.py",
     "snapshot_rebuild.py": "tools/replay/pilots/snapshot_rebuild.py",
+    "ssi_official_financial_materialization.py": "tools/replay/legacy_financial_materializers/ssi_official_financial_materialization.py",
     "storage_analytics_benchmark.py": "tools/replay/pilots/storage_analytics_benchmark.py",
+    "targeted_multi_period_official_financial_evidence.py": "tools/replay/legacy_financial_materializers/targeted_multi_period_official_financial_evidence.py",
     "temporal_evidence_operational_pilot.py": "tools/replay/pilots/temporal_evidence_operational_pilot.py",
     "vnm_historical_snapshot_reconstruction.py": "tools/replay/pilots/vnm_historical_snapshot_reconstruction.py"
   }

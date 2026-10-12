@@ -21,7 +21,7 @@ from annual_financial_ocr_materialization import (
     verified_sum_extraction,
     write_materialization,
 )
-import targeted_multi_period_official_financial_evidence as multi_period
+import tools.replay.legacy_financial_materializers.targeted_multi_period_official_financial_evidence as multi_period
 
 
 DEFAULT_EVIDENCE_ROOT = Path("operations-review") / "governed-official-evidence-v1"

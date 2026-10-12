@@ -118,7 +118,6 @@
     "financial_statement_unit_resolution.py",
     "first_real_session_acceptance.py",
     "flow_price_divergence_shadow.py",
-    "fpt_fy2025_official_financial_materialization.py",
     "freshness_history.py",
     "full_universe_entry_candidate_triage.py",
     "fundamental_quality.py",
@@ -140,7 +139,6 @@
     "instrument_master_sync.py",
     "integrated_decision_prospective_feedback.py",
     "kbs_quarterly_financial_retention.py",
-    "legacy_qualified_cohort_recovery.py",
     "liquidity_authority_contract.py",
     "long_term_company_economics_evidence.py",
     "macro_market_regime_decision_context.py",
@@ -254,7 +252,6 @@
     "provider_worker_containment.py",
     "publish_dashboard.py",
     "qns_h1_official_detail_resolver.py",
-    "qns_pow_official_financial_materialization.py",
     "qualified_research_change_events.py",
     "qualified_research_snapshot.py",
     "qualified_research_snapshot_v2.py",
@@ -282,7 +279,6 @@
     "shareholders_sync.py",
     "source_faithful_numeric_glyph_normalization.py",
     "source_schema_guards.py",
-    "ssi_official_financial_materialization.py",
     "ssi_securities_pilot.py",
     "statement_taxonomy_sidecar.py",
     "stock_analyzer.py",
@@ -295,7 +291,6 @@
     "tactical_reversal_prospective_shadow_collection.py",
     "tactical_reversal_retrospective_validation.py",
     "tactical_reversal_shadow_probe_policy.py",
-    "targeted_multi_period_official_financial_evidence.py",
     "technical_relationship_view.py",
     "technical_structure_context.py",
     "temporal_evidence_registry.py",
@@ -613,7 +608,12 @@
     "shadow_analytics_pilot.py": "tools/replay/pilots/shadow_analytics_pilot.py",
     "evidence_replay.py": "tools/replay/pilots/evidence_replay.py",
     "vnm_historical_snapshot_reconstruction.py": "tools/replay/pilots/vnm_historical_snapshot_reconstruction.py",
-    "snapshot_rebuild.py": "tools/replay/pilots/snapshot_rebuild.py"
+    "snapshot_rebuild.py": "tools/replay/pilots/snapshot_rebuild.py",
+    "fpt_fy2025_official_financial_materialization.py": "tools/replay/legacy_financial_materializers/fpt_fy2025_official_financial_materialization.py",
+    "qns_pow_official_financial_materialization.py": "tools/replay/legacy_financial_materializers/qns_pow_official_financial_materialization.py",
+    "ssi_official_financial_materialization.py": "tools/replay/legacy_financial_materializers/ssi_official_financial_materialization.py",
+    "legacy_qualified_cohort_recovery.py": "tools/replay/legacy_financial_materializers/legacy_qualified_cohort_recovery.py",
+    "targeted_multi_period_official_financial_evidence.py": "tools/replay/legacy_financial_materializers/targeted_multi_period_official_financial_evidence.py"
   },
   "compatibility_entrypoints": {
     "official_document_acquisition.py": "Existing offline import CLI; delegates to the evidence package main()."

@@ -17,7 +17,7 @@ import canonical_financial_qualification_policy as policy  # noqa: E402
 import evidence_promotion as promotion  # noqa: E402
 from stocklookup_core.financial.financial_entity_applicability import load_entity_profiles, resolve_archetype  # noqa: E402
 import official_annual_financial_fact_projection as annual  # noqa: E402
-import qns_pow_official_financial_materialization as milestone  # noqa: E402
+import tools.replay.legacy_financial_materializers.qns_pow_official_financial_materialization as milestone  # noqa: E402
 import research_financial_fact_projection as research  # noqa: E402
 from stocklookup_core.financial.qualified_historical_fundamental_analytics import build as build_historical  # noqa: E402
 from stocklookup_core.research.ticker_capability import build_ticker_capability_matrix  # noqa: E402

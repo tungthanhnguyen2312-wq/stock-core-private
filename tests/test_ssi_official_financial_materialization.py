@@ -15,7 +15,7 @@ sys.path.insert(0, str(ROOT))
 
 import evidence_promotion as promotion  # noqa: E402
 import semantic_evidence_bridge as bridge  # noqa: E402
-import ssi_official_financial_materialization as milestone  # noqa: E402
+import tools.replay.legacy_financial_materializers.ssi_official_financial_materialization as milestone  # noqa: E402
 
 
 class SsiOfficialFinancialMaterializationTests(unittest.TestCase):
