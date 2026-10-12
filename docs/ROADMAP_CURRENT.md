@@ -7,7 +7,7 @@ Facts: [ACTIVE_STATE.md](ACTIVE_STATE.md).
 
 ## NOW — ACCELERATED_ROOT_PACKAGE_CONSOLIDATION_V2 (COMPLETE LOCAL)
 
-[Scope](accelerated_root_package_consolidation_v2_contract.md): 45 AMBER modules to packages;
+[Scope](accelerated_root_package_consolidation_v2_contract.md): 45 AMBER modules moved;
 no shim/pin/Daily/authority change. PR/CI repairs authorized; merge Owner-gated.
 V1 PR129 merged `9174d2b`; post-merge CI PASS (38210255068).
 E5 PR127 merged `70fbba9`; post-merge CI PASS (38190156979).
