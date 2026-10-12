@@ -94,22 +94,90 @@ def test_root_names_imported_by_executed_historical_sources_are_not_relocated():
             assert not moved.intersection(name.split(".")[0] for name in names), (ref, relative, names)
 
 
+# Exact (module -> top-level package) pairs whose import chain needs a documented optional dependency
+# outside the hermetic core install (docs/CI_AND_DEPENDENCY_TIERS.md "Undeclared optional imports").
+# cited_evidence_backup -> evidence.official_document_retrieval -> `from pypdf import PdfReader`
+# (unchanged from the E6 root module). Absence is tolerated only for that exact missing name.
+OPTIONAL_IMPORT_DEPENDENCIES = {"stocklookup_core.evidence.cited_evidence_backup": "pypdf"}
+
+_IMPORT_PROBE = r'''
+import importlib, importlib.util, json, sys, traceback
+modules, rooted, root, optional = json.loads(sys.argv[1])
+report = {"failed": {}, "optional_absent": {}, "root_mismatch": {}}
+for name in modules:  # one interpreter, the original manifest order
+    try:
+        importlib.import_module(name)
+    except ModuleNotFoundError as error:
+        missing = (error.name or "").split(".")[0]
+        if optional.get(name) == missing and importlib.util.find_spec(missing) is None:
+            report["optional_absent"][name] = missing
+        else:
+            report["failed"][name] = traceback.format_exc()
+    except BaseException:
+        report["failed"][name] = traceback.format_exc()
+for name in rooted:
+    value = getattr(sys.modules.get(name), "ROOT", None)
+    if str(value) != root:
+        report["root_mismatch"][name] = repr(value)
+report["imported"] = sorted(name for name in modules if name in sys.modules)
+report["providers"] = sorted(m for m in sys.modules if m.split(".")[0] in ("vnstock", "vnai"))
+print("IMPORT_PROBE_REPORT=" + json.dumps(report, sort_keys=True))
+'''
+
+
 def test_bulk_relocated_modules_import_cleanly_and_keep_checkout_root(tmp_path):
+    import os
     import subprocess
     import sys
     modules = [new[:-3].replace("/", ".") for new in BULK["relocations"].values()]
+    assert len(modules) == len(set(modules)) == len(BULK["relocations"])
+    assert set(OPTIONAL_IMPORT_DEPENDENCIES) <= set(modules)
     rooted = [m for m, new in zip(modules, BULK["relocations"].values())
               if "ROOT=Path(__file__).resolve().parents[2]" in (ROOT / new).read_text(encoding="utf-8").replace(" ", "")]
-    script = (
-        "import importlib, sys\n"
-        f"modules = {modules!r}\n"
-        "for name in modules: importlib.import_module(name)\n"
-        f"for name in {rooted!r}: assert str(sys.modules[name].ROOT) == {str(ROOT)!r}, name\n"
-        "assert not {'vnstock', 'vnai'} & {m.split('.')[0] for m in sys.modules}\n"
-    )
-    import os
+    assert not set(rooted) & set(OPTIONAL_IMPORT_DEPENDENCIES)
     env = {**os.environ, "PYTHONPATH": os.pathsep.join(filter(None, [str(ROOT), os.environ.get("PYTHONPATH")]))}
-    subprocess.run([sys.executable, "-c", script], cwd=tmp_path, env=env, check=True, capture_output=True)
+    payload = json.dumps([modules, rooted, str(ROOT), OPTIONAL_IMPORT_DEPENDENCIES])
+    completed = subprocess.run([sys.executable, "-c", _IMPORT_PROBE, payload], cwd=tmp_path, env=env,
+                               capture_output=True, text=True, encoding="utf-8")
+    diagnostic = f"exit={completed.returncode}\nstdout:\n{completed.stdout}\nstderr:\n{completed.stderr}"
+    assert completed.returncode == 0, diagnostic
+    lines = [line for line in completed.stdout.splitlines() if line.startswith("IMPORT_PROBE_REPORT=")]
+    assert len(lines) == 1, diagnostic
+    report = json.loads(lines[0].split("=", 1)[1])
+    assert report["failed"] == {}, "\n".join(f"{name}:\n{trace}" for name, trace in report["failed"].items())
+    assert report["root_mismatch"] == {}, report["root_mismatch"]
+    assert report["providers"] == [], report["providers"]
+    absent = set(report["optional_absent"])
+    assert report["imported"] == sorted(set(modules) - absent), set(modules) - absent - set(report["imported"])
+    for name, package in report["optional_absent"].items():
+        assert importlib.util.find_spec(package) is None, (name, package)  # never excused when installed
+
+
+def test_import_probe_fails_on_missing_required_dependency_and_wrong_root(tmp_path):
+    """Negative controls: the optional allowance is exact and the probe still detects real failures."""
+    import os
+    import subprocess
+    import sys
+    package = tmp_path / "probe_pkg"
+    package.mkdir()
+    (package / "__init__.py").write_text("", encoding="utf-8")
+    (package / "needs_required.py").write_text("import surely_absent_required_dependency\n", encoding="utf-8")
+    (package / "needs_optional.py").write_text("import surely_absent_optional_dependency\n", encoding="utf-8")
+    (package / "wrong_root.py").write_text("ROOT = 'elsewhere'\n", encoding="utf-8")
+    (package / "fine.py").write_text("ROOT = 'expected'\n", encoding="utf-8")
+    modules = ["probe_pkg.needs_required", "probe_pkg.needs_optional", "probe_pkg.wrong_root", "probe_pkg.fine"]
+    optional = {"probe_pkg.needs_optional": "surely_absent_optional_dependency",
+                "probe_pkg.needs_required": "some_other_dependency"}
+    payload = json.dumps([modules, ["probe_pkg.wrong_root", "probe_pkg.fine"], "expected", optional])
+    env = {**os.environ, "PYTHONPATH": os.pathsep.join(filter(None, [str(tmp_path), os.environ.get("PYTHONPATH")]))}
+    completed = subprocess.run([sys.executable, "-c", _IMPORT_PROBE, payload], cwd=tmp_path, env=env,
+                               capture_output=True, text=True, encoding="utf-8", check=True)
+    report = json.loads(completed.stdout.splitlines()[-1].split("=", 1)[1])
+    assert list(report["failed"]) == ["probe_pkg.needs_required"]
+    assert "surely_absent_required_dependency" in report["failed"]["probe_pkg.needs_required"]
+    assert report["optional_absent"] == {"probe_pkg.needs_optional": "surely_absent_optional_dependency"}
+    assert report["root_mismatch"] == {"probe_pkg.wrong_root": "'elsewhere'"}
+    assert report["imported"] == ["probe_pkg.fine", "probe_pkg.wrong_root"]
 
 
 def test_recreated_root_copy_of_relocated_evidence_fails_placement(tmp_path, monkeypatch):

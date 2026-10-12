@@ -63,3 +63,23 @@ Admission recorded at the exact starting HEAD `3f1be10` (first attempt refused b
 permission; rerun after Owner approval). Local closeout checkpoint
 `69160a150a882d4dd40c6ba7a147e4c7a8e43eff`: `LOCAL_IMPLEMENTATION_COMPLETE_NOT_PROMOTED`.
 Hosted CI and the Owner merge decision remain release gates; no successor is admitted.
+
+## Hosted CI corrective
+
+Hosted run `38205381308` on `959b0d2` failed Structural and Focused jobs (6076 pass, 1 fail)
+on `test_bulk_relocated_modules_import_cleanly_and_keep_checkout_root`; its subprocess
+output was captured but not shown. The local runs above used an interpreter with extra
+packages, so they did not reproduce it. In a venv built only from the CI install contract
+the old test fails identically. Root cause: `stocklookup_core.evidence.cited_evidence_backup`
+imports `official_document_retrieval`, whose line 7 `from pypdf import PdfReader` raises
+`ModuleNotFoundError: No module named 'pypdf'`. The chain is byte-identical to the E6 root
+module, and `pypdf` is a documented undeclared optional import; this is a clean-clone
+limitation the new harness exposed, not a relocation regression.
+
+Only the harness changed. It imports all 95 in the original order and reports per-module
+tracebacks, stdout/stderr, ROOT mismatches and provider modules. One exact pair
+(`cited_evidence_backup` -> `pypdf`) is excused, and only while `pypdf` is absent.
+Negative controls prove missing required dependencies and wrong roots still fail.
+CI-equivalent venv: probe 94 imported + 1 excused, 0 failures; structural selection
+136 PASS; E4/E5/E6/foundation/call-shape/fitness/price/control-plane 725 PASS, 3 skips;
+ratchet, launcher guard and roadmap check PASS. Moved code and the native checkpoint are unchanged.
