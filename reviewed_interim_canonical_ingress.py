@@ -57,7 +57,7 @@ def _audited_annual_component_period(row: Mapping[str, Any], metric: str) -> boo
 
 
 def earnings_component_is_admitted(row: Mapping[str, Any]) -> bool:
-    from official_financial_ocr_table_evidence import row_label_supports_metric
+    from stocklookup_core.evidence.financial_row_identity import row_label_supports_metric
     evidence = row.get("reported_component_evidence") or {}
     metric = str(row.get("canonical_metric") or "")
     family, code = EARNINGS_COMPONENT_SPECS.get(metric, (None, None))
@@ -75,7 +75,7 @@ def earnings_component_is_admitted(row: Mapping[str, Any]) -> bool:
 PROVIDER_LABEL = "official_issuer_ir"
 # Circular-200 income statement: line 60 total profit after tax (net_income); line 61 profit
 # attributable to the parent (attributable_net_income).  Crossed pairs are never emitted.
-LINE_CODE_IDENTITY_CONFLICTS = frozenset({("net_income", "61"), ("attributable_net_income", "60")})
+from stocklookup_core.evidence.financial_row_identity import LINE_CODE_IDENTITY_CONFLICTS
 
 
 def _hash(value: Any) -> str:
@@ -122,7 +122,7 @@ def overlay_rows_from_panel_facts(panel_facts: Sequence[Mapping[str, Any]], *,
             reasons.append("METRIC_LINE_CODE_IDENTITY_CONFLICT")
         component = fact.get("canonical_metric") in EARNINGS_COMPONENT_SPECS
         if component:
-            from official_financial_ocr_table_evidence import row_label_supports_metric
+            from stocklookup_core.evidence.financial_row_identity import row_label_supports_metric
             family, code = EARNINGS_COMPONENT_SPECS[fact["canonical_metric"]]
             if (fact.get("currency") != "VND" or fact.get("statement_family") != family
                     or str(lineage.get("line_code")) != code

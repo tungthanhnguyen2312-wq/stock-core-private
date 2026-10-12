@@ -15,11 +15,32 @@
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "E5_RUNTIME_DEPENDENCY_CYCLE_REDUCTION",
-    "state": "COMPLETE"
+    "milestone": "E6_FINANCIAL_EXTRACTION_ADMISSION_BOUNDARY",
+    "state": "ACTIVE"
   },
   "queued_next": [],
   "milestones": [
+    {
+      "milestone_id": "E6_FINANCIAL_EXTRACTION_ADMISSION_BOUNDARY",
+      "state": "ACTIVE",
+      "starting_checkpoint": "70fbba96d02369e0f02a5a15dd264bad780fe6ce",
+      "candidate_branch": "e6-financial-extraction-boundary",
+      "dependencies": [
+        "E5_RUNTIME_DEPENDENCY_CYCLE_REDUCTION"
+      ],
+      "unlocks": [],
+      "owner_authorized": true,
+      "owner_override": "Owner directive attachment 3ead8b4b-ef62-4137-add2-c6e02170d704 dated 2026-10-12: bounded financial extraction/admission cycle ownership reduction with exact financial, assurance, period, currency, scope, PIT, qualification and source identity semantics preserved. Local edits/tests/commits/native closeout and one feature PR/CI repairs authorized after E5 baseline acceptance; no merge/Daily/provider acquisition/deploy/production writes/evidence or authority promotion/V2 activation/successor. Preserve E0-E5 histories and frozen sources.",
+      "authority_effect": "NONE",
+      "source_doc": "docs/e6_financial_extraction_admission_boundary_contract.md",
+      "state_history": [
+        "DEFERRED",
+        "ACTIVE"
+      ],
+      "checkpoint": null,
+      "terminal_disposition": null,
+      "notes": "Owner directive attachment 3ead8b4b-ef62-4137-add2-c6e02170d704 dated 2026-10-12: bounded financial extraction/admission cycle ownership reduction with exact financial, assurance, period, currency, scope, PIT, qualification and source identity semantics preserved. Local edits/tests/commits/native closeout and one feature PR/CI repairs authorized after E5 baseline acceptance; no merge/Daily/provider acquisition/deploy/production writes/evidence or authority promotion/V2 activation/successor. Preserve E0-E5 histories and frozen sources."
+    },
     {
       "milestone_id": "E5_RUNTIME_DEPENDENCY_CYCLE_REDUCTION",
       "state": "COMPLETE",

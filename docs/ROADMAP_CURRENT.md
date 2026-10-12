@@ -1,16 +1,17 @@
 # Stock Lookup — Current Roadmap
 
 History: [ROADMAP.md](ROADMAP.md); execution: ROADMAP_STATE.json.
-E5 base/main `e9ee2fe135e9e529b60f11ab97f30fc6441e6e24`.
+E6 base/main `70fbba96d02369e0f02a5a15dd264bad780fe6ce`.
 Nothing below auto-starts; native standing admission required (AI_RULES 11).
 Facts: [ACTIVE_STATE.md](ACTIVE_STATE.md).
 
-## NOW — E5_RUNTIME_DEPENDENCY_CYCLE_REDUCTION (COMPLETE LOCAL)
+## NOW — E6_FINANCIAL_EXTRACTION_ADMISSION_BOUNDARY (ACTIVE LOCAL)
 
-[Scope](e5_runtime_dependency_cycle_reduction_contract.md): pure event cutoff,
-heading folding, field identity and evidence-output boundaries; lower consumers.
-Frozen V1/V2 identities and Daily behavior preserved. No V2 activation or authority change.
-Feature PR/CI repairs authorized; E5 merge requires separate Owner approval. No automatic successor.
+[Scope](e6_financial_extraction_admission_boundary_contract.md): shared row rules,
+metadata envelopes and result labels; financial semantics and frozen sources unchanged.
+No Daily or authority change.
+Feature PR/CI repairs authorized; E6 merge remains Owner-gated. No automatic successor.
+E5 PR127 merged `70fbba9`; post-merge CI PASS (38190156979).
 E4 PR126 merged `e9ee2fe`; four post-merge jobs PASS (38186488312).
 E2/E3 PR125 merged `0061d5f`; four post-merge jobs PASS (38181224017).
 E1 PR124 released `e990004`; four post-merge jobs PASS (38148897543).

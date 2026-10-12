@@ -17,7 +17,7 @@ import json
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
-from official_financial_ocr_table_evidence import row_label_supports_metric
+from stocklookup_core.evidence.financial_row_identity import row_label_supports_metric
 from official_legacy_precedence import compare_official_and_legacy
 
 

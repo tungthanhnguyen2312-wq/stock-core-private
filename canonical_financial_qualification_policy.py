@@ -13,11 +13,9 @@ from typing import Any, Iterable, Mapping, Sequence
 
 VERSION = "1.0.0"
 
-QUALIFIED = "qualified"
-PROVIDER_REPORTED = "provider_reported"
-PARTIAL = "partial"
-CONFLICTED = "conflicted"
-UNAVAILABLE = "unavailable"
+from stocklookup_core.financial.qualification_states import (
+    QUALIFIED, PROVIDER_REPORTED, PARTIAL, CONFLICTED, UNAVAILABLE,
+)
 
 RESTATEMENT_CONFLICT = "restated_period_column_disagrees"
 PERIOD_SCOPE_CONFLICTS = frozenset({"cash_flow_period_attribution_unverified"})

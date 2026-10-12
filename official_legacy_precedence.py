@@ -16,14 +16,14 @@ from __future__ import annotations
 from typing import Any, Mapping
 
 from canonical_financial_facts import STATUS_QUALIFIED
-from canonical_financial_qualification_policy import QUALIFIED as POLICY_QUALIFIED
+from stocklookup_core.financial.qualification_states import QUALIFIED as POLICY_QUALIFIED
 from financial_evidence_currency_contract import (
     CONTRACT_VERSION,
     LEGACY_PROVIDER_LABEL,
     LEGACY_SOURCE_STATUS,
     canonical_stock_period_alias,
 )
-from official_financial_filing_evidence import METADATA_QUALIFIED
+from stocklookup_core.evidence.financial_metadata_envelope import METADATA_QUALIFIED
 
 EXACT_MATCH = "EXACT_MATCH"
 TRUE_CONFLICT = "TRUE_CONFLICT"

@@ -44,7 +44,7 @@ from financial_evidence_currency_contract import (
     period_document_class,
     pin_rebuild_eligible,
 )
-from official_financial_filing_evidence import METADATA_QUALIFIED, qualify_document_metadata
+from stocklookup_core.evidence.financial_metadata_envelope import METADATA_QUALIFIED, qualify_document_metadata
 from official_financial_period_identity import (
     period_bounds,
     recognize_audit_or_review,
