@@ -73,6 +73,7 @@ env:
     tests/test_stocklookup_daily_integrated_decision_brief.py
     tests/test_tactical_setup_tags.py
     tests/test_current_research_valuation_context.py
+    tests/test_current_financial_valuation_input_unlock.py
     tests/test_current_valuation_denominator_integrity.py
     tests/test_current_valuation_research_proxy.py
     tests/test_p3f_current_market_valuation.py

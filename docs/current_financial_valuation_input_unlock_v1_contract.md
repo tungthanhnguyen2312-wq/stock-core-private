@@ -27,3 +27,27 @@ applicable four-job CI selections, native roadmap check and diff check are requi
 Heavy suites pause when host readiness is poor or an Owner operational run is active.
 Validated checkpoints may be committed; one feature push/PR is authorized only
 following successful validation. External HANDOFF.md records exact resume state.
+
+## Admitted reported-period use
+
+The existing common official-fact admission decides valuation-use eligibility.
+`already_normalized=true`, explicit VND/base-unit values, retained source hashes,
+consolidated scope, explicit reporting bounds and knowledge cutoff are mandatory.
+Historical-context-only annual fields and foreign-currency context remain excluded.
+The current share/price contract remains unchanged; issued-share inputs remain
+restricted research proxies, never official current common shares.
+
+Current Research projects these eligible fields through the existing P3-F formula
+owner as `P/E_REPORTED_PERIOD`, `P/S_REPORTED_PERIOD` and `P/B_OFFICIAL_RESEARCH`.
+Duration ratios retain their original H1 start/end and cumulative/fiscal uncertainty;
+they are neither annualized nor relabelled TTM. Book equity is an instant, not an
+income duration. Corporate total net income is not parent-attributable profit.
+No existing annual/TTM/provider method, policy threshold or posture vote is replaced.
+Distinct method IDs and exact period/scope bases separate comparison cohorts.
+
+Same-input prospective diagnostic on the verified October 12 cohort (1,683 issuers):
+two reported-period P/E, two reported-period P/S and two official-equity research P/B
+results become computable across PNJ/QNS/VRE. Six admitted denominator facts are
+reused; no new source evidence or strict-share authority is acquired. Existing
+numerical methods and Decision Fitness valuation state counts remain unchanged.
+These are implementation gains, not changes to the immutable production session.

@@ -9,8 +9,8 @@ Facts: [ACTIVE_STATE.md](ACTIVE_STATE.md).
 
 [Scope](current_financial_valuation_input_unlock_v1_contract.md): retained October 12
 baseline, evidence-proven semantic/denominator connections and existing valuation /
-Decision Fitness integration. Authority effect NONE. Host resource/writer gate holds
-implementation/heavy validation; queue empty, no production activation.
+Decision Fitness integration. Six reported-H1 research results are locally validated;
+authority effect NONE, strict shares unchanged. Queue empty, no production activation.
 
 Prior Owner Daily import recovery is COMPLETE and released in PR132 (`288208a6`).
 

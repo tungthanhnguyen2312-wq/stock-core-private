@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import calendar
 import json
+import math
 from collections import defaultdict
 from datetime import date
 import re
@@ -26,6 +27,9 @@ PE_TTM = "P/E_TTM"
 PS_TTM = "P/S_TTM"
 PB = "P/B"
 PB_CURRENT_RESEARCH = "P/B_CURRENT_RESEARCH"
+PB_OFFICIAL_RESEARCH = "P/B_OFFICIAL_RESEARCH"
+PE_REPORTED_PERIOD = "P/E_REPORTED_PERIOD"
+PS_REPORTED_PERIOD = "P/S_REPORTED_PERIOD"
 PE_EXISTING = "P/E"
 PS_EXISTING = "P/S"
 EV_EBITDA = "EV/EBITDA"
@@ -43,6 +47,7 @@ TTM_METHODS = (PE_TTM, PS_TTM)
 EXISTING_MULTIPLES = (PE_EXISTING, PS_EXISTING, PB, EV_SALES, EV_EBITDA)
 CALCULATION_READINESS_METHODS = (EV_EBITDA_CALC_READY,)
 RELATIVE_METHODS = (PE_TTM, PS_TTM, PE_EXISTING, PS_EXISTING, PB, PB_CURRENT_RESEARCH, EV_SALES, EV_EBITDA, EV_EBITDA_CALC_READY)
+REPORTED_PERIOD_METHODS = (PE_REPORTED_PERIOD, PS_REPORTED_PERIOD, PB_OFFICIAL_RESEARCH)
 APPLICABLE = "APPLICABLE"
 NOT_APPLICABLE = "NOT_APPLICABLE"
 INPUT_BLOCKED = "INPUT_BLOCKED"
@@ -211,11 +216,11 @@ def _entity(feature_record: Mapping[str, Any] | None, valuation_record: Mapping[
 def _method_applicability(entity: str, method_id: str) -> str:
     if method_id == MARKET_CAP:
         mapped = _applicability(entity, "market_cap")
-    elif method_id in {PE_TTM, PE_EXISTING}:
+    elif method_id in {PE_TTM, PE_EXISTING, PE_REPORTED_PERIOD}:
         mapped = _applicability(entity, "P/E")
-    elif method_id in {PS_TTM, PS_EXISTING}:
+    elif method_id in {PS_TTM, PS_EXISTING, PS_REPORTED_PERIOD}:
         mapped = _applicability(entity, "P/S")
-    elif method_id in {PB, PB_CURRENT_RESEARCH}:
+    elif method_id in {PB, PB_CURRENT_RESEARCH, PB_OFFICIAL_RESEARCH}:
         mapped = _applicability(entity, "P/B")
     elif method_id == EV_EBITDA:
         mapped = _applicability(entity, "EV/EBITDA")
@@ -701,6 +706,139 @@ def _book_value_method(
                                              "warnings": warning, "limitations": limitations})
 
 
+def _official_reported_period_methods(*, ticker: str, entity: str, share_class: str,
+                                     market_cap: Mapping[str, Any], decision_session: str | None,
+                                     valuation_record: Mapping[str, Any] | None,
+                                     facts: Sequence[Mapping[str, Any]] | None) -> dict[str, Any]:
+    """Project admitted normalized facts through P3-F, without annualization or substitution.
+
+    A reported-duration multiple is distinct from annual/TTM P/E or P/S. An official
+    denominator never upgrades the current issued-share numerator to exact authority.
+    Absent facts do not manufacture methods; present-but-ineligible evidence stays visible.
+    """
+    from official_legacy_precedence import official_is_value_qualified
+    from stocklookup_core.evidence.temporal_freshness import reporting_period_basis
+    from stocklookup_core.valuation import p3f_current_market_valuation as p3f
+
+    definitions = {PE_REPORTED_PERIOD: ("net_income", "P/E"),
+                   PS_REPORTED_PERIOD: ("revenue", "P/S"),
+                   PB_OFFICIAL_RESEARCH: ("shareholders_equity", "P/B")}
+    out = {}
+    for method_id, (metric, formula_method) in definitions.items():
+        matching = [r for r in facts or () if r.get("ticker") == ticker and r.get("canonical_metric") == metric]
+        if not matching:
+            continue
+        applicability = _method_applicability(entity, method_id)
+        extra = {"share_basis": share_class, "source": "RETAINED_OFFICIAL_REPORTED_PERIOD",
+                 "denominator_authority": "UNAVAILABLE", "is_actionable": False,
+                 "denominator_period_semantics": ("BALANCE_SHEET_INSTANT" if metric == "shareholders_equity"
+                                                   else "SINGLE_REPORTING_PERIOD_NOT_ANNUALIZED"),
+                 "limitations": ["CURRENT_RESEARCH_ONLY", "NOT_AUTHORITATIVE", "NOT_PIT",
+                                 "NOT_FOR_TARGET_PRICE", "NOT_FOR_SIZING", "NOT_FOR_EXECUTION",
+                                 "NO_ANNUALIZATION_OR_TTM", "SHARE_BASIS=" + share_class]}
+        # These exact canonical fields are corporate identities. Bank/securities earnings
+        # and equity need their distinct parent/total identities, never an alias here.
+        if applicability == NOT_APPLICABLE or entity != "corporate":
+            out[method_id] = _method_shell(method_id, applicability=NOT_APPLICABLE if applicability == NOT_APPLICABLE else INPUT_BLOCKED,
+                status=NOT_APPLICABLE if applicability == NOT_APPLICABLE else INPUT_BLOCKED,
+                blockers=["SECTOR_ENTITY_METHOD_NOT_SUPPORTED"], extra=extra)
+            continue
+        eligible = []
+        if decision_session:
+            cutoff = decision_session[:10] + "T15:00:00+07:00"
+            day = date.fromisoformat(decision_session[:10])
+            for row in matching:
+                if not official_is_value_qualified(row, cutoff=cutoff):
+                    continue
+                value = row.get("normalized_value")
+                if (row.get("already_normalized") is not True or row.get("unit_scale") != 1
+                        or row.get("currency") != "VND" or row.get("statement_scope") != "consolidated"
+                        or not _numeric(value) or not math.isfinite(value) or row.get("value") != value):
+                    continue
+                basis = reporting_period_basis(row)
+                if (basis["period_end"] is None or basis["time_basis"] != ("INSTANT" if metric == "shareholders_equity" else "DURATION")
+                        or (metric != "shareholders_equity" and basis["period_start"] is None)
+                        or "MALFORMED_EXPLICIT_PERIOD_BOUNDS" in basis["reason_codes"]
+                        or "NATIVE_PERIOD_FAMILY_DURATION_CONFLICT" in basis["reason_codes"]):
+                    continue
+                end = date.fromisoformat(basis["period_end"])
+                # Age the explicit end date, not an inferred issuer fiscal-calendar label.
+                lag = day.year * 4 + (day.month - 1) // 3 - (end.year * 4 + (end.month - 1) // 3)
+                if end > day or lag > MAX_COMPLETED_QUARTER_LAG:
+                    continue
+                eligible.append((row, basis))
+        if not eligible:
+            out[method_id] = _method_shell(method_id, applicability=applicability, status=INPUT_BLOCKED,
+                blockers=["OFFICIAL_REPORTED_PERIOD_INPUT_NOT_ADMITTED"], extra=extra)
+            continue
+        latest_end = max(b["period_end"] for _, b in eligible)
+        latest = [(r, b) for r, b in eligible if b["period_end"] == latest_end]
+        keys = {(r["normalized_value"], r["reporting_period"], b["period_start"], b["time_basis"]) for r, b in latest}
+        if len(keys) != 1:
+            out[method_id] = _method_shell(method_id, applicability=applicability, status=INPUT_BLOCKED,
+                blockers=["OFFICIAL_REPORTED_PERIOD_CONFLICT"], extra=extra)
+            continue
+        row, period_basis = min(latest, key=lambda pair: json.dumps(pair[0], sort_keys=True, default=str))
+        extra.update({"period_basis": row["reporting_period"], "input_periods": [row["reporting_period"]],
+                      "source": "OFFICIAL_QUALIFIED_REPORTED_PERIOD", "denominator_authority": "QUALIFIED_OFFICIAL",
+                      "statement_scope": row["statement_scope"], "reporting_basis": period_basis,
+                      "knowledge_cutoff": cutoff, "denominator_metric": metric,
+                      **({"earnings_definition": "REPORTED_TOTAL_NET_INCOME_NOT_PARENT_ATTRIBUTABLE"}
+                         if metric == "net_income" else {}),
+                      "denominator_value_vnd": row["normalized_value"],
+                      "ttm_compatibility_class": "OFFICIAL_REPORTED:" + json.dumps(
+                          [row["statement_scope"], period_basis["time_basis"], period_basis["period_start"], latest_end]),
+                      "source_fact": {k: row.get(k) for k in (
+                          "citation_id", "document_sha256", "source_page", "line_code", "observed_at",
+                          "knowledge_available_at", "publication_date", "source_unit_scale", "already_normalized",
+                          "reporting_period", "period_start", "period_end", "currency", "unit_scale", "statement_scope")}})
+        if (market_cap.get("status") not in {"RESEARCH_USABLE", "READY"} or share_class == SHARE_UNAVAILABLE
+                or not _numeric(market_cap.get("value")) or not math.isfinite(market_cap["value"])):
+            out[method_id] = _method_shell(method_id, applicability=applicability, status=INPUT_BLOCKED,
+                blockers=["MARKET_CAP_RESEARCH_INPUT_UNAVAILABLE"], extra=extra)
+            continue
+        financial_basis = basis_contract.build_basis(currency="VND", scale="units",
+            basis_status=basis_contract.RESEARCH_CONTRACT_QUALIFIED, multiplier_to_vnd=1,
+            normalized_unit="VND", basis_source=str(row.get("citation_id")))
+        compatible, blocker = basis_contract.compatible(financial_basis, _market_cap_basis_envelope(market_cap))
+        if not compatible:
+            out[method_id] = _method_shell(method_id, applicability=applicability, status=INPUT_BLOCKED,
+                blockers=[blocker or "MONETARY_BASIS_INCOMPATIBLE"], extra=extra)
+            continue
+        cap = basis_contract.normalize_value(market_cap["value"], _market_cap_basis_envelope(market_cap))
+        # Reuse the original price and share observations and the existing sole formula
+        # owner. Never synthesize a price/share pair from the market-cap number.
+        from stocklookup_core.valuation.market_wide_current_valuation_input_scaleout import _p3f_price, _p3f_shares
+        fact = {**row, "source_lineage": extra["source_fact"]}
+        price = (valuation_record or {}).get("price_input") or {}
+        share = (valuation_record or {}).get("share_basis_input") or {}
+        resolved_price = _p3f_price(price)
+        resolved_shares = _p3f_shares(share, research=True,
+            authoritative=bool(share.get("authoritative_current_market_cap_eligible")))
+        if (resolved_price["status"] != "PRICE_READY" or resolved_shares["status"] != "SHARE_BASIS_READY"
+                or not _numeric(resolved_price["value"]) or not math.isfinite(resolved_price["value"]) or resolved_price["value"] <= 0
+                or not _numeric(resolved_shares["value"]) or not math.isfinite(resolved_shares["value"]) or resolved_shares["value"] <= 0):
+            out[method_id] = _method_shell(method_id, applicability=applicability, status=INPUT_BLOCKED,
+                blockers=["MARKET_CAP_RESEARCH_INPUT_UNAVAILABLE"], extra=extra)
+            continue
+        calculated_row = p3f._evaluate_issuer(
+            {"issuer_identity": {"ticker": ticker, "entity_type": entity}, "facts": [fact]},
+            price=resolved_price, shares=resolved_shares)
+        calculated = calculated_row["methods"][formula_method]
+        extra.update({"numerator_price_input": dict(price), "numerator_share_basis_input": dict(share)})
+        if price.get("session") != decision_session[:10] or calculated_row.get("market_cap") != cap:
+            out[method_id] = _method_shell(method_id, applicability=applicability, status=INPUT_BLOCKED,
+                blockers=["OFFICIAL_REPORTED_PERIOD_NUMERATOR_IDENTITY_MISMATCH"], extra=extra)
+            continue
+        ready = calculated["status"] == "VALUATION_READY" and math.isfinite(calculated["value"])
+        out[method_id] = _method_shell(method_id, applicability=applicability,
+            status="RESEARCH_USABLE" if ready else INPUT_BLOCKED, value=calculated.get("value"),
+            blockers=calculated["blockers"], extra={**extra, "formula": calculated.get("formula"),
+                "formula_owner": p3f.CONTRACT_VERSION, "numerator_value_vnd": cap,
+                "numerator_monetary_basis": _market_cap_basis_envelope(market_cap)})
+    return out
+
+
 def _denominator_integrity_observations(methods: Mapping[str, Mapping[str, Any]], *, entity: str,
                                        earnings_quality: Mapping[str, Any] | None,
                                        corporate_action_lifecycle: str | None,
@@ -733,6 +871,7 @@ def evaluate_ticker_valuation(*, ticker: str, feature_record: Mapping[str, Any] 
                               book_equity_rows: Sequence[Mapping[str, Any]] | None = None,
                               monetary_basis_verdict: Mapping[str, Any] | None = None,
                               official_equity_facts: Sequence[Mapping[str, Any]] | None = None,
+                              official_financial_facts: Sequence[Mapping[str, Any]] | None = None,
                               earnings_quality: Mapping[str, Any] | None = None,
                               corporate_action_lifecycle: str | None = None,
                               denominator_observations: Sequence[Mapping[str, Any]] | None = None) -> dict[str, Any]:
@@ -772,6 +911,9 @@ def evaluate_ticker_valuation(*, ticker: str, feature_record: Mapping[str, Any] 
             decision_session=decision_session),
         MARKET_CAP: _existing_method(MARKET_CAP, market_cap, entity=entity, share_class=share_class),
     }
+    methods.update(_official_reported_period_methods(ticker=ticker, entity=entity, share_class=share_class,
+        market_cap=market_cap, decision_session=decision_session, valuation_record=valuation_record,
+        facts=official_financial_facts))
     readiness_reconciliation = _calculation_readiness_reconciliation(methods, calculation_readiness_record)
     from stocklookup_core.valuation.current_valuation_denominator_integrity import diagnose_methods
     denominator_integrity = diagnose_methods(_denominator_integrity_observations(
@@ -816,7 +958,7 @@ def evaluate_ticker_valuation(*, ticker: str, feature_record: Mapping[str, Any] 
         "methods": methods,
         "calculation_readiness_context": dict(calculation_readiness_record or {}),
         "valuation_method_reconciliation": readiness_reconciliation,
-        "usable_relative_method_count": sum(item["method_id"] in RELATIVE_METHODS and item["status"] in {"RESEARCH_USABLE", "READY"} for item in methods.values()),
+        "usable_relative_method_count": sum(item["method_id"] in RELATIVE_METHODS + REPORTED_PERIOD_METHODS and item["status"] in {"RESEARCH_USABLE", "READY"} for item in methods.values()),
         "pe_not_meaningful": bool(not_meaningful),
         "earnings_yield_ttm": earnings_yield_ttm,
         "fcf_yield_ttm": fcf_yield_ttm,
@@ -1163,7 +1305,7 @@ def _valuation_display_summary(methods_view: Mapping[str, Mapping[str, Any]]) ->
     cap is size context, not a valuation method, and is deliberately excluded here exactly as
     `attach_peer_relative` excludes it from ATTRACTIVE/EXPENSIVE_RELATIVE_RESEARCH labelling.
     """
-    relevant = {method_id: method for method_id, method in methods_view.items() if method_id in RELATIVE_METHODS}
+    relevant = {method_id: method for method_id, method in methods_view.items() if method_id in RELATIVE_METHODS + REPORTED_PERIOD_METHODS}
     qualified = {mid: m for mid, m in relevant.items() if m.get("availability_state") == AVAILABLE_QUALIFIED}
     reference_only = {mid: m for mid, m in relevant.items() if m.get("availability_state") == AVAILABLE_REFERENCE_ONLY}
     missing = {mid: m for mid, m in relevant.items() if m.get("availability_state") == NOT_AVAILABLE}
@@ -1226,6 +1368,12 @@ def valuation_axis(*, ticker: str, decision_session: str, valuation_artifact: Ma
             "limitations": method.get("limitations"),
             "peer_relative": (row.get("peer_relative") or {}).get(method_id),
             "availability_state": method_availability_state(method, (row.get("peer_relative") or {}).get(method_id)),
+            **({key: method[key] for key in (
+                "reporting_basis", "source_fact", "denominator_period_semantics", "denominator_authority",
+                "denominator_metric", "denominator_value_vnd", "numerator_value_vnd", "numerator_monetary_basis",
+                "numerator_price_input", "numerator_share_basis_input", "formula", "formula_owner",
+                "knowledge_cutoff", "earnings_definition") if key in method}
+               if method_id in REPORTED_PERIOD_METHODS else {}),
         }
         for method_id, method in (row.get("methods") or {}).items()
     }
