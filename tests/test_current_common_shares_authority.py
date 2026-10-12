@@ -17,7 +17,7 @@ from current_common_shares_authority import (
     reconcile_subsequent_events,
     resolve_ticker_share_authority,
 )
-from current_share_authority import SHARE_IDENTITIES
+from stocklookup_core.evidence.current_share_authority import SHARE_IDENTITIES
 from stocklookup_core.valuation.market_wide_current_valuation_input_scaleout import build_current_valuation_artifact
 from tools.derive_market_wide_current_valuation_input_scaleout import FROZEN_OUTPUTS, _refuse_frozen_output
 

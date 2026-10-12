@@ -27,7 +27,7 @@ from functools import lru_cache
 from pathlib import Path, PurePosixPath
 from typing import Any, Mapping
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parents[2]
 REGISTRY_PATH = ROOT / "config" / "retained_evidence_quarantine.json"
 CONTRACT_VERSION = "retained_evidence_quarantine/v1"
 REFUSAL_CODE = "RETAINED_EVIDENCE_QUARANTINED"

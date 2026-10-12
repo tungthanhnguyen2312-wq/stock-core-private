@@ -16,7 +16,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-import current_share_authority as share_authority
+from stocklookup_core.evidence import current_share_authority as share_authority
 import current_valuation_input_authority as inputs
 from current_state_relative_valuation import resolve_current_shares
 from field_temporal_contract import stable_id

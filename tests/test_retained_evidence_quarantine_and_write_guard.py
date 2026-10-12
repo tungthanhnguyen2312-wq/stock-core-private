@@ -19,7 +19,7 @@ from pathlib import Path
 import pytest
 
 import _canonical_evidence_write_guard as guard
-import retained_evidence_quarantine as quarantine
+from stocklookup_core.evidence import retained_evidence_quarantine as quarantine
 
 ROOT = Path(__file__).resolve().parents[1]
 TESTS_DIR = ROOT / "tests"

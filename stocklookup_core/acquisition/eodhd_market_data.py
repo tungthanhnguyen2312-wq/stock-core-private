@@ -7,7 +7,7 @@ from collections.abc import Callable, Mapping, Sequence
 from datetime import date
 from typing import Any
 
-from eodhd_access import safe_error_code
+from stocklookup_core.acquisition.eodhd_access import safe_error_code
 
 PROVIDER = "EODHD"
 PROVIDER_INTERFACE_VERSION = "eodhd_eod_http_unversioned"

@@ -17,7 +17,7 @@ from collections import Counter
 from datetime import datetime
 from typing import Any, Mapping, Sequence
 
-from current_share_authority import COMMON_OUTSTANDING, build_current_share_timeline
+from stocklookup_core.evidence.current_share_authority import COMMON_OUTSTANDING, build_current_share_timeline
 from current_share_basis_capability_reconciliation import derive_common_shares_from_components
 from field_temporal_contract import stable_id
 from market_wide_current_shares_resolver import (

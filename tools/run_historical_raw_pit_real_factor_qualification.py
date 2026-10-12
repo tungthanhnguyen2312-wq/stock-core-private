@@ -12,7 +12,7 @@ from typing import Any, Mapping
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from bitemporal_semantic_contract import project_official_evidence_temporal_metadata
+from stocklookup_core.evidence.bitemporal_semantic_contract import project_official_evidence_temporal_metadata
 from stocklookup_core.evidence.corporate_action_events import classify_retained_document, extract_event_observation, extract_text
 from stocklookup_core.evidence.official_corporate_action_ledger import build_ledger
 from stocklookup_core.evidence.real_official_corporate_action_factor_evidence import select_candidates

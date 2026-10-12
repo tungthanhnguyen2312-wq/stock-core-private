@@ -1,7 +1,7 @@
 """Representation identity stays distinct from a repaired OCR token."""
 from pathlib import Path
 
-from official_financial_representation import (
+from stocklookup_core.evidence.official_financial_representation import (
     DISPOSITION, IMAGE_ONLY, NO_ALTERNATE, NORMALIZATION, RECOVERED,
     assess_target, compare_exposed_values, empirical_assessments, extraction_preference,
     filing_identity_decision, milestone_report, packet_provenance,
@@ -88,7 +88,7 @@ def test_native_official_representation_can_supply_the_value():
 
 
 def test_corrupted_scan_token_stays_raw_and_superscript_normalization_stays_blocked():
-    source = (ROOT / "official_financial_representation.py").read_text(encoding="utf-8")
+    source = (ROOT / "stocklookup_core/evidence/official_financial_representation.py").read_text(encoding="utf-8")
     assert 'replace("²"' not in source and "NFKC" not in source
     decision = normalization_decision({
         "raw_token": "9,376,1²7,6²9,501", "token_class": "NUMERIC_AMOUNT",

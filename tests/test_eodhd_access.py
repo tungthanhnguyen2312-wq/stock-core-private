@@ -7,8 +7,8 @@ import unittest
 from contextlib import redirect_stdout
 from unittest.mock import patch
 
-from eodhd_access import credential_status, sanitize_url
-from eodhd_market_data import EodhdQualificationError, qualify_eod_sample
+from stocklookup_core.acquisition.eodhd_access import credential_status, sanitize_url
+from stocklookup_core.acquisition.eodhd_market_data import EodhdQualificationError, qualify_eod_sample
 from tools.check_eodhd_access import main
 
 
@@ -43,7 +43,7 @@ class EodhdAccessTests(unittest.TestCase):
     def test_non_live_mode_makes_no_request(self):
         output = io.StringIO()
         with patch.dict(os.environ, {}, clear=True), redirect_stdout(output), patch(
-            "eodhd_market_data._default_request_get"
+            "stocklookup_core.acquisition.eodhd_market_data._default_request_get"
         ) as request:
             self.assertEqual(0, main([]))
         request.assert_not_called()

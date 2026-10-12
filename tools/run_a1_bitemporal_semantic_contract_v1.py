@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from bitemporal_semantic_contract import (
+from stocklookup_core.evidence.bitemporal_semantic_contract import (
     CONTRACT_VERSION, PublicationAuthorityTier, PublicationTime, TemporalPrecision,
     build_temporal_envelope, content_identity, project_official_evidence_temporal_metadata,
     project_provider_temporal_metadata, propagate_derived_knowledge, validate_valid_time,

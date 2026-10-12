@@ -18,8 +18,8 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 import macro_sync as ms  # noqa: E402
-import macro_sjc_adapter
-import macro_vcb_adapter
+from stocklookup_core.acquisition import macro_sjc_adapter
+from stocklookup_core.acquisition import macro_vcb_adapter
 
 
 class FakeResponse:

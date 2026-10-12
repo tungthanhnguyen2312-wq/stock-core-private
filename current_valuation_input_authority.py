@@ -16,7 +16,7 @@ from dnse_market_risk_evidence_store import read_stock_ohlc
 from field_temporal_contract import stable_id
 from freshness_history import latest_completed_market_day
 from current_state_relative_valuation import resolve_current_shares
-from current_share_authority import build_current_share_timeline
+from stocklookup_core.evidence.current_share_authority import build_current_share_timeline
 
 VERSION = "1.0.0"
 CONTRACT_VERSION = "current_valuation_input_authority/v1"

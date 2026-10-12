@@ -45,7 +45,7 @@ from datetime import date
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
-import bitemporal_semantic_contract as bitemporal
+from stocklookup_core.evidence import bitemporal_semantic_contract as bitemporal
 import current_corporate_event_context as event_context_module
 
 CONTRACT_VERSION = "current_corporate_intelligence_axis/v1"

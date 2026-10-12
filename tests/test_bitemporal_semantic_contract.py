@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from bitemporal_semantic_contract import (
+from stocklookup_core.evidence.bitemporal_semantic_contract import (
     ClosePriceExecutionEligibility, EODResolutionRule, HistoricalReconstructionScope,
     KnowledgeTimeStatus, PublicationAuthorityTier, PublicationTime, TemporalPrecision,
     build_temporal_envelope, canonical_json, classify_observation_identity, content_identity,

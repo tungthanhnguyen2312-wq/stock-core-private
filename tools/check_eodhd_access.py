@@ -11,8 +11,8 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from eodhd_access import credential_status, token_for_request
-from eodhd_market_data import EodhdQualificationError, qualify_eod_sample
+from stocklookup_core.acquisition.eodhd_access import credential_status, token_for_request
+from stocklookup_core.acquisition.eodhd_market_data import EodhdQualificationError, qualify_eod_sample
 
 
 def main(argv: list[str] | None = None) -> int:

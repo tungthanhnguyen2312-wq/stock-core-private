@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-import current_share_authority as shares  # noqa: E402
+from stocklookup_core.evidence import current_share_authority as shares  # noqa: E402
 import current_valuation_input_authority as valuation_inputs  # noqa: E402
 from stocklookup_core.valuation.p3f_current_market_valuation import market_cap_from_authority_resolver  # noqa: E402
 

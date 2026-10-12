@@ -81,7 +81,7 @@ from pathlib import Path
 from typing import Any, Callable, Iterable, Mapping
 
 import pandas as pd
-from shareholder_pipeline import DONE, calculate_major_shareholder_delta
+from stocklookup_core.evidence.shareholder_pipeline import DONE, calculate_major_shareholder_delta
 from stocklookup_core.evidence.live_universe import summary as live_universe_summary
 from freshness_history import evaluate_analysis_readiness, freshness_envelope, parse_timestamp
 from stocklookup_core.financial.financial_canonicalization import canonicalize_financial_rows

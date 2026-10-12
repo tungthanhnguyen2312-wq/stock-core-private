@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import unittest
 
-from share_transition_bridge import resolve_share_transition
+from stocklookup_core.evidence.share_transition_bridge import resolve_share_transition
 
 
 def opening(**more):

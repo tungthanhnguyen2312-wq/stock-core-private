@@ -10,7 +10,7 @@ import hashlib
 import json
 from typing import Any, Mapping, Protocol
 
-from bitemporal_semantic_contract import (
+from stocklookup_core.evidence.bitemporal_semantic_contract import (
     PublicationAuthorityTier, PublicationTime, TemporalPrecision, infer_precision,
     project_provider_temporal_metadata, resolve_knowledge_availability,
 )

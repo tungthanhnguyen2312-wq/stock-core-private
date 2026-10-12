@@ -21,8 +21,8 @@ if str(_REPO_ROOT) not in sys.path:
 
 def main() -> int:
     import macro_sync  # noqa: F401
-    import macro_sjc_adapter
-    import macro_vcb_adapter
+    from stocklookup_core.acquisition import macro_sjc_adapter
+    from stocklookup_core.acquisition import macro_vcb_adapter
 
     # Exercise the fetchers' full round-trip (network layer mocked) so any lazy/deferred
     # import inside fetch_vcb_today()/fetch_sjc_today() actually executes in this process,

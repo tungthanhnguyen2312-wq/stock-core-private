@@ -106,7 +106,7 @@ def quarantined_evidence(relative_paths: tuple[str, ...]) -> list[str]:
     repo_root = str(Path(__file__).resolve().parents[1])
     if repo_root not in sys.path:  # this module also runs as a standalone plugin (-p _test_tiers)
         sys.path.append(repo_root)
-    import retained_evidence_quarantine as quarantine
+    from stocklookup_core.evidence import retained_evidence_quarantine as quarantine
 
     registry = quarantine.load_registry()
     return [
