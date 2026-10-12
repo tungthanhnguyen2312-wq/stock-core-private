@@ -81,7 +81,10 @@ and mandated live-remote verification wording are preserved; no test was weakene
 Retained-accounting selection: 5 PASS, 44 explicit absent-evidence skips, 6064 deselected.
 Architecture ratchet, Daily launcher guard, dependency tiers (0 violations), pinned
 package consistency, five launcher compilation checks, roadmap JSON and diff checks PASS.
-Full CI-equivalent focused hermetic selection: 6092 PASS, 75 explicit skips, zero failures/errors (1027.91s). Native closeout follows the clean implementation checkpoint.
+Full CI-equivalent focused hermetic selection: 5989 tests and 103 subtests PASS,
+75 explicit skips, 49 deselected, zero failures/errors (1027.44s pytest elapsed).
+JUnit counts subtests as separate cases (6167 total, including skips).
+Native closeout follows the clean implementation checkpoint.
 
 Pinned CI packages run with the real Windows Python executable and explicit libraries
 (`python -S` parent excludes global/user site; children inherit pinned PYTHONPATH and
