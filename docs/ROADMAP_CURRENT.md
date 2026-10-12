@@ -5,7 +5,7 @@ E6 base/main `70fbba96d02369e0f02a5a15dd264bad780fe6ce`.
 Nothing below auto-starts; native standing admission required (AI_RULES 11).
 Facts: [ACTIVE_STATE.md](ACTIVE_STATE.md).
 
-## NOW — E6_FINANCIAL_EXTRACTION_ADMISSION_BOUNDARY (ACTIVE LOCAL)
+## NOW — E6_FINANCIAL_EXTRACTION_ADMISSION_BOUNDARY (COMPLETE LOCAL)
 
 [Scope](e6_financial_extraction_admission_boundary_contract.md): shared row rules,
 metadata envelopes and result labels; financial semantics and frozen sources unchanged.

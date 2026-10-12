@@ -16,13 +16,13 @@
   ],
   "current": {
     "milestone": "E6_FINANCIAL_EXTRACTION_ADMISSION_BOUNDARY",
-    "state": "ACTIVE"
+    "state": "COMPLETE"
   },
   "queued_next": [],
   "milestones": [
     {
       "milestone_id": "E6_FINANCIAL_EXTRACTION_ADMISSION_BOUNDARY",
-      "state": "ACTIVE",
+      "state": "COMPLETE",
       "starting_checkpoint": "70fbba96d02369e0f02a5a15dd264bad780fe6ce",
       "candidate_branch": "e6-financial-extraction-boundary",
       "dependencies": [
@@ -35,11 +35,12 @@
       "source_doc": "docs/e6_financial_extraction_admission_boundary_contract.md",
       "state_history": [
         "DEFERRED",
-        "ACTIVE"
+        "ACTIVE",
+        "COMPLETE"
       ],
-      "checkpoint": null,
-      "terminal_disposition": null,
-      "notes": "Owner directive attachment 3ead8b4b-ef62-4137-add2-c6e02170d704 dated 2026-10-12: bounded financial extraction/admission cycle ownership reduction with exact financial, assurance, period, currency, scope, PIT, qualification and source identity semantics preserved. Local edits/tests/commits/native closeout and one feature PR/CI repairs authorized after E5 baseline acceptance; no merge/Daily/provider acquisition/deploy/production writes/evidence or authority promotion/V2 activation/successor. Preserve E0-E5 histories and frozen sources."
+      "checkpoint": "3d731a81cabf9537289f08138d921615b899fa34",
+      "terminal_disposition": "LOCAL_IMPLEMENTATION_COMPLETE_NOT_PROMOTED",
+      "notes": "Owner directive attachment 3ead8b4b-ef62-4137-add2-c6e02170d704 dated 2026-10-12: bounded financial extraction/admission cycle ownership reduction with exact financial, assurance, period, currency, scope, PIT, qualification and source identity semantics preserved. Local edits/tests/commits/native closeout and one feature PR/CI repairs authorized after E5 baseline acceptance; no merge/Daily/provider acquisition/deploy/production writes/evidence or authority promotion/V2 activation/successor. Preserve E0-E5 histories and frozen sources. Local closeout: Owner directive 3ead8b4b-ef62-4137-add2-c6e02170d704: locally complete E6 financial row identity, pure metadata envelopes and qualification status ownership seams. Financial SCC10->4 and cyclic participation47->41, Daily/eager components and backward176/core-to-root140 unchanged; no ratchet exceptions. Final targeted166 pass3 optional skips; pinned native169 pass; affected847 pass4 skips with5 absent-retained tests independently reproduced on unchanged E5; structural149 pass; retained5 pass44 explicit skips; full hermetic6155 tests plus103 subtests pass78 explicit skips. Independent141591/165531 byte outputs and frozen V1/E4 V2 digests identical. E5 post-merge CI38190156979 all4 success on accepted70fbba9. Clean exact implementation checkpoint; local completion only, no merge/Daily/provider/acquisition/deploy/production writes/evidence or authority promotion/V2 activation/E7.; no main release, authority promotion or successor."
     },
     {
       "milestone_id": "E5_RUNTIME_DEPENDENCY_CYCLE_REDUCTION",

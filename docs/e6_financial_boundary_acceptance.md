@@ -79,3 +79,9 @@ Final API parity includes literal-fold deferred annotations. The broad run prece
 that compatibility-only flag, filing ownership docstring and fixture-root containment
 update; final targeted/native/contained-fixture checks qualify those changes. Financial
 algorithms are unchanged; no expensive broad rerun for these bounded updates.
+
+Native local closeout: implementation checkpoint
+`3d731a81cabf9537289f08138d921615b899fa34`, COMPLETE /
+LOCAL_IMPLEMENTATION_COMPLETE_NOT_PROMOTED, ON_TRACK / VERIFIED; queue empty.
+Feature publication and hosted CI remain separate release-candidate gates. Owner
+exact-HEAD merge approval is required; no E6 merge or E7 admission is performed.
