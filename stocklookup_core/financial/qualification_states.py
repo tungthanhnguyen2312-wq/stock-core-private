@@ -1,0 +1,6 @@
+"""Existing canonical-fact qualification result labels, without policy execution."""
+QUALIFIED = "qualified"
+PROVIDER_REPORTED = "provider_reported"
+PARTIAL = "partial"
+CONFLICTED = "conflicted"
+UNAVAILABLE = "unavailable"

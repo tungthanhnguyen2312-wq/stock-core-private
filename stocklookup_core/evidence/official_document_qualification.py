@@ -180,7 +180,7 @@ def qualify_retained_document(
         from pypdf import PdfReader
         from financial_evidence_currency_refresh import _metadata_from_pages
         from official_financial_assurance_evidence import resolve_native_document_assurance, assurance_proof_is_bound
-        from official_financial_filing_evidence import METADATA_QUALIFIED
+        from stocklookup_core.evidence.financial_metadata_envelope import METADATA_QUALIFIED
         reader = PdfReader(io.BytesIO(doc_path.read_bytes())) if doc_path is not None else None
         pages = {index+1:reader.pages[index].extract_text() or "" for index in range(min(8,len(reader.pages)))} if reader else {}
         metadata = _metadata_from_pages(pages,{**record,"immutable_bytes_verified":is_qualified})

@@ -226,7 +226,16 @@ def test_cycle_cuts_remain_real_and_restoring_them_restores_coupling():
     assert not any(tuple(edge[:2]) in cuts for edge in graph['edges'])
     restored = list(graph['edges'])+[(left,right,'lazy','static','from') for left,right in cuts]
     assert max(map(len,guard.cyclic_components(restored,eager=False)[1]))==26
-    assert sum(map(len,guard.cyclic_components(restored,eager=False)[1]))==65
+    assert sum(map(len,guard.cyclic_components(restored,eager=False)[1])) > sum(map(len,groups))
+    # E6 legitimately reduces the separate financial component. Preserve the
+    # exact E5 negative control against immutable E5 source, rather than require
+    # later improvements to recreate unrelated historical financial cycles.
+    from tests.architecture_checkpoint_fixture import checkpoint_graph
+    accepted = checkpoint_graph(ROOT,'ad66c6e964845b0b972a29383ae844213107bd98',guard)
+    assert sum(map(len,guard.cyclic_components(accepted['edges'],eager=False)[1]))==47
+    historical_restored = list(accepted['edges'])+[(left,right,'lazy','static','from') for left,right in cuts]
+    assert max(map(len,guard.cyclic_components(historical_restored,eager=False)[1]))==26
+    assert sum(map(len,guard.cyclic_components(historical_restored,eager=False)[1]))==65
 
 
 def test_v1_v2_inputs_provider_bundle_and_tactical_frozen_sources_are_untouched():
