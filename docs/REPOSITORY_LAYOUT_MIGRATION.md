@@ -157,5 +157,8 @@ Later E1 moved 13 evidence modules (488 → 476 at E6). Owner-admitted
 [accelerated consolidation V1](accelerated_root_package_consolidation_v1_contract.md)
 classifies the whole root and moves 95 GREEN implementations in four cohorts,
 476 → 381 root Python files, with no shim, pin, launcher or ratchet change.
+[Consolidation V2](accelerated_root_package_consolidation_v2_contract.md) resolves AMBER
+hazards for 45 more (381 → 336); remaining root modules are bound by pins, launch
+paths, executed historical sources or closure on those hubs.
 Successors need explicit native scope admission under that standing authorization;
 merge, production execution and authority promotion keep their separate owner gates.

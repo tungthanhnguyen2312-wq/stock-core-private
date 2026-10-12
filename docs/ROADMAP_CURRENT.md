@@ -1,15 +1,15 @@
 # Stock Lookup — Current Roadmap
 
 History: [ROADMAP.md](ROADMAP.md); execution: ROADMAP_STATE.json.
-Base/main `3f1be104386a218899b7dcb4bdeaa154be17ce06`.
+Base/main `9174d2b8b8e13fa3a2a4c696b9e2fb28a39a81ea`.
 Nothing below auto-starts; native standing admission required (AI_RULES 11).
 Facts: [ACTIVE_STATE.md](ACTIVE_STATE.md).
 
-## NOW — ACCELERATED_ROOT_PACKAGE_CONSOLIDATION_V1 (COMPLETE LOCAL)
+## NOW — ACCELERATED_ROOT_PACKAGE_CONSOLIDATION_V2 (IMPLEMENTED)
 
-[Scope](accelerated_root_package_consolidation_v1_contract.md): 95 root modules to packages;
+[Scope](accelerated_root_package_consolidation_v2_contract.md): 45 AMBER modules to packages;
 no shim/pin/Daily/authority change. PR/CI repairs authorized; merge Owner-gated.
-E6 PR128 merged `3f1be10`; post-merge CI PASS (38194697661).
+V1 PR129 merged `9174d2b`; post-merge CI PASS (38210255068).
 E5 PR127 merged `70fbba9`; post-merge CI PASS (38190156979).
 E4 PR126 merged `e9ee2fe`; four post-merge jobs PASS (38186488312).
 E2/E3 PR125 merged `0061d5f`; four post-merge jobs PASS (38181224017).
