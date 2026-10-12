@@ -7,7 +7,7 @@ import json
 from pathlib import Path
 from typing import Any, Mapping
 
-from field_temporal_contract import stable_id
+from stocklookup_core.evidence.field_identity import stable_id
 from stocklookup_core.financial.fundamental_research_readiness import build_fundamental_research_artifact
 from stocklookup_core.financial.multi_period_financial_panel import (
     build_multi_period_financial_panel,

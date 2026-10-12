@@ -1,6 +1,6 @@
 import json
 from pathlib import Path
-from authoritative_current_common_shares import build_artifact, classify_observation, retain_response
+from stocklookup_core.evidence.authoritative_current_common_shares import build_artifact, classify_observation, retain_response
 
 def raw(tmp_path: Path, ticker='AAA', payload=None):
  return retain_response(ticker,status=200,body=json.dumps(payload or {'data':{'outstanding_shares':100,'as_of_date':'2026-08-20'}}).encode(),retrieved_at='2026-08-24T00:00:00Z',output_root=tmp_path)

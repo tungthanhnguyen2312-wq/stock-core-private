@@ -8,7 +8,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from sector_aware_relative_research import build, content_identity
+from stocklookup_core.research.sector_aware_relative_research import build, content_identity
 
 OPS = ROOT / "operations-review"
 DEFAULT_OUT = OPS / "sector-aware-relative-research-v1-20260824" / "sector_aware_relative_research_artifact.json"

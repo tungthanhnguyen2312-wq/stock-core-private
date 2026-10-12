@@ -32,8 +32,8 @@ import hashlib
 import json
 from typing import Any, Mapping, Sequence
 
-import canonical_market_evidence_integration as canonical
-from current_market_flow_positioning import build as build_flow_positioning
+from stocklookup_core.evidence import canonical_market_evidence_integration as canonical
+from stocklookup_core.research.current_market_flow_positioning import build as build_flow_positioning
 from dnse_foreign_flow_store import build_series
 
 BRIDGE_CONTRACT_VERSION = "current_foreign_flow_positioning_bridge/v1"

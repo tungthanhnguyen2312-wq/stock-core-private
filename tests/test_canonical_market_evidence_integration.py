@@ -23,7 +23,7 @@ import tempfile
 import unittest
 from typing import Any
 
-import canonical_market_evidence_integration as integration
+from stocklookup_core.evidence import canonical_market_evidence_integration as integration
 from tools import collect_market_evidence as collector
 from stocklookup_core.evidence import market_capability_taxonomy as taxonomy
 from stocklookup_core.evidence import price_representation_contract as price_contract

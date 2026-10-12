@@ -11,7 +11,7 @@ import unittest
 from unittest.mock import patch
 
 from atomic_io import AtomicWriteError
-import canonical_market_evidence_integration as canonical_integration_module
+from stocklookup_core.evidence import canonical_market_evidence_integration as canonical_integration_module
 import tools.materialize_daily_market_research as materializer
 from tools.materialize_daily_market_research import (
     CONTRACT_VERSION,

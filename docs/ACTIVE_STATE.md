@@ -1,7 +1,7 @@
 # Stock Lookup — Active State
 
-Base/main: `9174d2b8b8e13fa3a2a4c696b9e2fb28a39a81ea`.
-V1 PR129 released; post-merge CI PASS (38210255068). E0–E6 released.
+Base/main: `d53999ba07a080b7fae2104185c56cc9a55ce210`.
+V2 PR130 released; post-merge CI PASS (38222535046). E0–E6 released.
 Verify live main: `git fetch origin main` or `git ls-remote origin refs/heads/main`; **local** remote-tracking refs may be stale.
 ## 0. How this file relates to the others
 | Question | Answer lives in |
@@ -30,7 +30,7 @@ Kinds: **CURRENT FACT** (verified), **HOST-LOCAL** (untracked; re-verify),
 **BLOCKED**, **DEFERRED**, **HISTORICAL**.
 
 ## 1. The operational gate
-- **COMPLETE LOCAL — [root consolidation V2](accelerated_root_package_consolidation_v2_contract.md):** root 381→336; V1 released. No shim/pin/Daily/authority change.
+- **COMPLETE LOCAL — [root hub V3](root_hub_dependency_reduction_v3_contract.md):** field-identity owner seam; root 336→325; V2 released. No shim/pin/Daily/authority change.
 - **COMPLETE — [E6 financial seams](e6_financial_extraction_admission_boundary_contract.md):** row/envelope/status owners.
 - **COMPLETE — [E4 infrastructure](e4_versioned_identity_safe_infrastructure_extraction_contract.md):** fixed paths and bounded JSON/verification owners; frozen V1 preserved, V2 qualifier offline. No V2 activation, Daily or authority change.
 - **COMPLETE — [E2/E3 seams](e2_e3_foundation_seams_and_dependency_untangling_contract.md):** explicit registry reads and temporal measurements; domain policy remains domain-owned. No Daily or authority change.

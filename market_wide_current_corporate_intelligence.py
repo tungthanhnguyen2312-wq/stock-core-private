@@ -13,7 +13,7 @@ from datetime import date
 from pathlib import Path
 from typing import Any, Mapping
 
-from field_temporal_contract import stable_id
+from stocklookup_core.evidence.field_identity import stable_id
 
 CONTRACT_VERSION = "market_wide_current_corporate_intelligence/v1"
 FACT_FIELDS = ("ticker", "fact_id", "fact_type", "value", "source_type", "source_identity", "source_url", "retrieved_at", "effective_or_announced_date", "evidence_identity", "authority_tier", "freshness", "status", "limitations")

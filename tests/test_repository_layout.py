@@ -63,9 +63,10 @@ def test_e1_official_exchange_evidence_has_no_root_path_or_shim():
 
 BULK = json.loads((ROOT / "tests/fixtures/bulk_root_package_consolidation_relocations.json").read_text(encoding="utf-8"))
 BULK_V2 = json.loads((ROOT / "tests/fixtures/bulk_root_package_consolidation_v2_relocations.json").read_text(encoding="utf-8"))
-# Accepted V1 and V2 cohort maps stay separate fixtures; checks below cover their disjoint union.
-BULK_RELOCATIONS = {**BULK["relocations"], **BULK_V2["relocations"]}
-assert len(BULK_RELOCATIONS) == len(BULK["relocations"]) + len(BULK_V2["relocations"])
+HUB_V3 = json.loads((ROOT / "tests/fixtures/root_hub_dependency_reduction_v3_relocations.json").read_text(encoding="utf-8"))
+# Accepted V1, V2 and V3 cohort maps stay separate fixtures; checks below cover their disjoint union.
+BULK_RELOCATIONS = {**BULK["relocations"], **BULK_V2["relocations"], **HUB_V3["relocations"]}
+assert len(BULK_RELOCATIONS) == len(BULK["relocations"]) + len(BULK_V2["relocations"]) + len(HUB_V3["relocations"])
 
 
 def test_bulk_relocations_are_exact_without_root_path_shim_or_carried_debt():
@@ -96,6 +97,34 @@ def test_root_names_imported_by_executed_historical_sources_are_not_relocated():
             else:
                 continue
             assert not moved.intersection(name.split(".")[0] for name in names), (ref, relative, names)
+
+
+def _root_identity_only_hub_importers(seam):
+    """Root modules importing only the field-identity primitives through the temporal hub path."""
+    found = set()
+    for path in ROOT.glob("*.py"):
+        tree = ast.parse(path.read_bytes().decode("utf-8-sig"))
+        nodes = [n for n in ast.walk(tree) if isinstance(n, ast.ImportFrom) and n.module == seam["hub"] and not n.level]
+        if nodes and all({a.name for a in n.names} <= set(seam["primitives"]) for n in nodes):
+            found.add(path.name)
+    return found
+
+
+def test_field_identity_primitives_have_one_owner_and_hub_reexport_is_identical():
+    """V3: the temporal hub re-exports, never re-implements, the field-identity primitives."""
+    import importlib
+    seam = HUB_V3["identity_seam"]
+    owner = importlib.import_module(seam["owner"])
+    hub = importlib.import_module(seam["hub"])
+    for name in seam["primitives"]:
+        assert getattr(hub, name) is getattr(owner, name), name
+        assert getattr(owner, name).__module__ == seam["owner"], name
+    # Only frozen/protected sources and Daily launcher targets keep the hub path for these names.
+    assert _root_identity_only_hub_importers(seam) == set(seam["retained_hub_importers"])
+    for new in HUB_V3["relocations"].values():
+        tree = ast.parse((ROOT / new).read_bytes().decode("utf-8-sig"))
+        assert not [n for n in ast.walk(tree) if isinstance(n, (ast.Import, ast.ImportFrom))
+                    and seam["hub"] in ([a.name for a in n.names] if isinstance(n, ast.Import) else [n.module])], new
 
 
 # Exact (module -> top-level package) pairs whose import chain needs a documented optional dependency

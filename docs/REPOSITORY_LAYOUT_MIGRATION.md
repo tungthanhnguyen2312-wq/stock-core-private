@@ -160,5 +160,9 @@ classifies the whole root and moves 95 GREEN implementations in four cohorts,
 [Consolidation V2](accelerated_root_package_consolidation_v2_contract.md) resolves AMBER
 hazards for 45 more (381 → 336); remaining root modules are bound by pins, launch
 paths, executed historical sources or closure on those hubs.
+[Root hub V3](root_hub_dependency_reduction_v3_contract.md) points 43 root modules that
+used only `stable_id`/`canonical_json` at their package owner
+`stocklookup_core.evidence.field_identity` instead of `field_temporal_contract`, which
+frees 11 more (336 → 325); `atomic_io`, `vn_time` and `semantic_evidence_bridge` stay.
 Successors need explicit native scope admission under that standing authorization;
 merge, production execution and authority promotion keep their separate owner gates.

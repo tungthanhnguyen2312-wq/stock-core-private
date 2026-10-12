@@ -10,7 +10,7 @@ import json
 from pathlib import Path
 from typing import Any, Mapping
 
-from field_temporal_contract import stable_id
+from stocklookup_core.evidence.field_identity import stable_id
 from owner_research_focus import owner_focus_tickers
 
 PACKET_CONTRACT = "ai_ticker_research_packet/v1"

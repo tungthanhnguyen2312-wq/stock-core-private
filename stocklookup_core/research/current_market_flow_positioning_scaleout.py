@@ -6,9 +6,9 @@ from collections import Counter, defaultdict
 from pathlib import Path
 from typing import Any, Iterable, Mapping
 
-import canonical_market_evidence_integration as canonical
-from current_market_flow_positioning import build, content_identity
-from field_temporal_contract import stable_id
+from stocklookup_core.evidence import canonical_market_evidence_integration as canonical
+from stocklookup_core.research.current_market_flow_positioning import build, content_identity
+from stocklookup_core.evidence.field_identity import stable_id
 
 
 def _read(path: Path) -> dict[str, Any]:

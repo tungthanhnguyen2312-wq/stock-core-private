@@ -134,9 +134,10 @@ def test_frozen_source_and_relocation_contracts_remain_exact():
     # The 120 E2/E3 mappings stay exact; the only later additions are the exact reviewed bulk cohort map.
     bulk = json.loads((ROOT / "tests/fixtures/bulk_root_package_consolidation_relocations.json").read_text(encoding="utf-8"))
     bulk_v2 = json.loads((ROOT / "tests/fixtures/bulk_root_package_consolidation_v2_relocations.json").read_text(encoding="utf-8"))
-    groups = [manifest["relocations"], bulk["relocations"], bulk_v2["relocations"]]
+    hub_v3 = json.loads((ROOT / "tests/fixtures/root_hub_dependency_reduction_v3_relocations.json").read_text(encoding="utf-8"))
+    groups = [manifest["relocations"], bulk["relocations"], bulk_v2["relocations"], hub_v3["relocations"]]
     assert sum(map(len, groups)) == len(set().union(*groups))  # pairwise disjoint accepted maps
-    assert layout["relocations"] == {**groups[0], **groups[1], **groups[2]}
+    assert layout["relocations"] == {**groups[0], **groups[1], **groups[2], **groups[3]}
 
 
 @pytest.mark.parametrize("target", ["orchestrator", "stocklookup_core.decision.policy", "tools.runner"])

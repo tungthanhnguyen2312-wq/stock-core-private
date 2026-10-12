@@ -60,6 +60,12 @@ basis, temporal, official-route and share evidence to `evidence/`, EODHD and SJC
 adapters to `acquisition/`, raw/canonical financial fact layers to `financial/`, the MVA share
 proxy to `valuation/`, the temporal panel to `research/` and shadow/screener projections to
 `decision/` (`tests/fixtures/bulk_root_package_consolidation_v2_relocations.json`).
+[Root hub V3](root_hub_dependency_reduction_v3_contract.md) adds share, market-evidence,
+universe-status and macro evidence to `evidence/`, P3-C to `financial/`, the provider valuation
+proxy to `valuation/` and flow-positioning/sector-relative research to `research/`
+(`tests/fixtures/root_hub_dependency_reduction_v3_relocations.json`). Field identity
+(`stable_id`, `canonical_json`) is imported from `stocklookup_core.evidence.field_identity`;
+`field_temporal_contract` re-exports the same objects for frozen and historical callers.
 The existing offline `official_document_acquisition.py` CLI is a small compatibility launcher.
 All library consumers import the packages; historical module names resolve through
 `config/repository_layout.json`. Owner Daily and publishing launchers retain their paths.

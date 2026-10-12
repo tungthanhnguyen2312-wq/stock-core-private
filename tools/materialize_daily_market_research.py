@@ -40,7 +40,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from atomic_io import atomic_write_json, validate_json_file
-import canonical_market_evidence_integration as canonical_integration_module
+from stocklookup_core.evidence import canonical_market_evidence_integration as canonical_integration_module
 from field_temporal_contract import canonical_json, stable_id
 import market_analysis_artifact as research_consumer
 from stocklookup_core.evidence import market_capability_taxonomy as taxonomy

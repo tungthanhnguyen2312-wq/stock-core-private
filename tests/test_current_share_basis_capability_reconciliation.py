@@ -11,7 +11,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from field_temporal_contract import stable_id
-import current_share_basis_capability_reconciliation as reconciliation
+from stocklookup_core.evidence import current_share_basis_capability_reconciliation as reconciliation
 import tools.derive_current_share_basis_capability_reconciliation as runner
 
 

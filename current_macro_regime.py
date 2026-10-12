@@ -11,7 +11,7 @@ from datetime import UTC, datetime, timedelta, timezone
 from typing import Any, Mapping
 from urllib.request import Request, urlopen
 
-from field_temporal_contract import stable_id
+from stocklookup_core.evidence.field_identity import stable_id
 from freshness_history import freshness_envelope, parse_timestamp
 
 CONTRACT_VERSION = "current_macro_regime/v1"
@@ -67,7 +67,7 @@ def acquire() -> dict[str, Any]:
         except Exception as exc:
             observations.append({"indicator_id": indicator_id, "country_or_region": region, "category": category, "value": None, "unit": unit, "observation_date": None, "released_at": None, "source": "Federal Reserve Bank of St. Louis FRED", "source_identity": "FRED:" + code, "url": "https://fred.stlouisfed.org/series/" + code, "retrieved_at": retrieved_at, "freshness": {"status": "UNKNOWN"}, "revision_state": "UNKNOWN", "authority": "OFFICIAL_PUBLIC_SOURCE", "status": "UNAVAILABLE", "limitations": ["ACQUISITION_FAILED:" + type(exc).__name__], "previous_observation_date": None, "previous_value": None, "raw_payload_sha256": None})
     try:
-        from vietnam_official_macro_evidence import acquire as acquire_vietnam, current_macro_observations
+        from stocklookup_core.evidence.vietnam_official_macro_evidence import acquire as acquire_vietnam, current_macro_observations
         vietnam = acquire_vietnam(retrieved_at=retrieved_at)
         vietnam_known_at = _now()
         observations.extend({**row, "known_at": vietnam_known_at} for row in current_macro_observations(vietnam))

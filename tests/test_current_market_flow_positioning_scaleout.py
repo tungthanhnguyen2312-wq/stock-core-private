@@ -1,8 +1,8 @@
 import json
 
-import canonical_market_evidence_integration as canonical
-from current_market_flow_positioning import build
-from current_market_flow_positioning_scaleout import combine_retained_packets
+from stocklookup_core.evidence import canonical_market_evidence_integration as canonical
+from stocklookup_core.research.current_market_flow_positioning import build
+from stocklookup_core.research.current_market_flow_positioning_scaleout import combine_retained_packets
 from tools import collect_market_evidence as collector
 
 

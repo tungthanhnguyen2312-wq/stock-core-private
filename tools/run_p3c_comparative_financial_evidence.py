@@ -10,7 +10,7 @@ repo_root = Path(__file__).resolve().parent.parent
 if str(repo_root) not in sys.path:
     sys.path.insert(0, str(repo_root))
 
-from p3c_comparative_financial_evidence import build_p3c_closeout, build_starting_gap_inventory
+from stocklookup_core.financial.p3c_comparative_financial_evidence import build_p3c_closeout, build_starting_gap_inventory
 
 P2_INPUT = repo_root / "operations-review" / "p2-closeout-financial-fact-panel-20260820" / "p2_closeout_financial_panel_artifact.json"
 P3B_INPUT = repo_root / "operations-review" / "p3b-fundamental-research-readiness-20260820" / "p3b_fundamental_research_readiness_artifact.json"

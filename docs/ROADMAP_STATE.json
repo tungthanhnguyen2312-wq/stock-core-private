@@ -15,11 +15,33 @@
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "ACCELERATED_ROOT_PACKAGE_CONSOLIDATION_V2",
+    "milestone": "ROOT_HUB_DEPENDENCY_REDUCTION_V3",
     "state": "COMPLETE"
   },
   "queued_next": [],
   "milestones": [
+    {
+      "milestone_id": "ROOT_HUB_DEPENDENCY_REDUCTION_V3",
+      "state": "COMPLETE",
+      "starting_checkpoint": "d53999ba07a080b7fae2104185c56cc9a55ce210",
+      "candidate_branch": "refactor/root-hub-dependency-reduction-v3",
+      "dependencies": [
+        "ACCELERATED_ROOT_PACKAGE_CONSOLIDATION_V2"
+      ],
+      "unlocks": [],
+      "owner_authorized": true,
+      "owner_override": "Owner-directed 2026-10-12 ROOT_HUB_DEPENDENCY_REDUCTION_V3: on accepted V2 merge d53999b (post-merge CI 38222535046 success), identify and remove avoidable dependencies of root modules on blocking root hubs (field_temporal_contract, semantic_evidence_bridge, atomic_io, vn_time) by reusing governed low-level owners or extracting single-authority pure primitives without changing frozen/historical source bytes, then relocate root modules that become safely eligible into existing stocklookup_core packages with a separate exact V3 relocation fixture. Local dev/tests/checkpoint commits/feature push/one PR/CI corrections only; no merge, Owner Daily, deploy, production writes, provider calls, or evidence/authority promotion; E0 baseline, E1 allowance and V1/V2 fixtures unchanged.",
+      "authority_effect": "NONE",
+      "source_doc": "docs/root_hub_dependency_reduction_v3_contract.md",
+      "state_history": [
+        "DEFERRED",
+        "ACTIVE",
+        "COMPLETE"
+      ],
+      "checkpoint": "45af8fcb67fccf04b3f322d400afc8f2793a98bb",
+      "terminal_disposition": "LOCAL_IMPLEMENTATION_COMPLETE_NOT_PROMOTED",
+      "notes": "Owner-directed 2026-10-12 ROOT_HUB_DEPENDENCY_REDUCTION_V3: on accepted V2 merge d53999b (post-merge CI 38222535046 success), identify and remove avoidable dependencies of root modules on blocking root hubs (field_temporal_contract, semantic_evidence_bridge, atomic_io, vn_time) by reusing governed low-level owners or extracting single-authority pure primitives without changing frozen/historical source bytes, then relocate root modules that become safely eligible into existing stocklookup_core packages with a separate exact V3 relocation fixture. Local dev/tests/checkpoint commits/feature push/one PR/CI corrections only; no merge, Owner Daily, deploy, production writes, provider calls, or evidence/authority promotion; E0 baseline, E1 allowance and V1/V2 fixtures unchanged. Local closeout: Owner-directed V3 local implementation closeout: field-identity owner seam (43 root imports) and 11 relocations (336->325) at 45af8fc; hosted CI and Owner merge remain release gates; no successor.; no main release, authority promotion or successor."
+    },
     {
       "milestone_id": "ACCELERATED_ROOT_PACKAGE_CONSOLIDATION_V2",
       "state": "COMPLETE",

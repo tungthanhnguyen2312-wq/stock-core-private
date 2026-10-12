@@ -10,7 +10,7 @@ import copy
 from collections import Counter
 from typing import Any, Mapping
 
-from field_temporal_contract import stable_id
+from stocklookup_core.evidence.field_identity import stable_id
 
 CONTRACT_VERSION = "polymorphic_current_strategy_classification/v1"
 STRATEGY_REGISTRY = {

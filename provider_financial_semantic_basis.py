@@ -64,7 +64,7 @@ from pathlib import Path
 from typing import Any, Mapping, Sequence
 
 from stocklookup_core.financial.canonical_financial_facts import METRIC_REGISTRY, STATUS_PROVIDER_REPORTED, STATUS_QUALIFIED
-from field_temporal_contract import stable_id
+from stocklookup_core.evidence.field_identity import stable_id
 
 CONTRACT_VERSION = "provider_financial_semantic_basis/v1"
 SCHEMA_VERSION = "1.0.0"

@@ -21,7 +21,7 @@ from collections import Counter, defaultdict
 from decimal import Decimal, InvalidOperation
 from typing import Any, Iterable, Mapping, Sequence
 
-from field_temporal_contract import stable_id
+from stocklookup_core.evidence.field_identity import stable_id
 from stocklookup_core.evidence.historical_matched_traded_value_authority import (
     KNOWN_BOARDS,
     MATCHED_VALUE_FORMULA,

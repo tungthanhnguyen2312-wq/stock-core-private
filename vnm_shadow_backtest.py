@@ -104,7 +104,7 @@ def run_authority_gated_replay(*, snapshot: Mapping[str, Any], raw_sessions: lis
  """
  from raw_pit_authority_matrix import use_case_readiness
  from vnm_execution_contract import _row_reason, _costs
- from field_temporal_contract import stable_id
+ from stocklookup_core.evidence.field_identity import stable_id
  ticker = snapshot.get("ticker")
  cutoff = snapshot.get("knowledge_cutoff")
  session = str(cutoff or "")[:10]

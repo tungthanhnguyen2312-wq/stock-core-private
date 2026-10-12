@@ -17,7 +17,7 @@ from typing import Any, Mapping
 
 from atomic_io import atomic_copy_file, atomic_write_file, atomic_write_json, validate_csv_file
 from stocklookup_core.evidence.session_registry import load_registry
-from field_temporal_contract import stable_id
+from stocklookup_core.evidence.field_identity import stable_id
 import release_session_contract
 import dashboard_home_summary
 import stocklookup_core.decision.investment_decision_workspace_projection as workspace_contract

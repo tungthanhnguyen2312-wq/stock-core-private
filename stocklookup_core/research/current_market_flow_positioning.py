@@ -10,7 +10,7 @@ import copy
 from collections import Counter, defaultdict
 from typing import Any, Mapping
 
-from field_temporal_contract import stable_id
+from stocklookup_core.evidence.field_identity import stable_id
 
 CONTRACT_VERSION = "current_market_flow_positioning/v1"
 FLOW_USE = "flow_research"
