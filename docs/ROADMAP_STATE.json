@@ -15,11 +15,32 @@
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "ROOT_HUB_DEPENDENCY_REDUCTION_V3",
-    "state": "COMPLETE"
+    "milestone": "OWNER_DAILY_AI_HANDOFF_IMPORT_RECOVERY_20261012",
+    "state": "ACTIVE"
   },
   "queued_next": [],
   "milestones": [
+    {
+      "milestone_id": "OWNER_DAILY_AI_HANDOFF_IMPORT_RECOVERY_20261012",
+      "state": "ACTIVE",
+      "starting_checkpoint": "4755d94a977f468a4122e40fba77850281582f42",
+      "candidate_branch": "fix/owner-daily-ai-handoff-import-recovery-20261012",
+      "dependencies": [
+        "ROOT_HUB_DEPENDENCY_REDUCTION_V3"
+      ],
+      "unlocks": [],
+      "owner_authorized": true,
+      "owner_override": "Owner-directed 2026-10-12 P0 OWNER_DAILY_AI_HANDOFF_IMPORT_RECOVERY_20261012: on qualified main 4755d94 (V3 merge d11b1016 plus the retained 2026-10-12 completed session), restore completed-session publication after the 2026-10-12 Owner Daily failed at phase 6 (ModuleNotFoundError daily_integrated_decision_brief). Forensic root cause, the narrowest correct code fix in the owner workflow, regression tests in hosted Producer CI, one feature branch and one PR. No merge, Owner Daily, production replay, AI handoff or Dashboard publication, provider calls, evidence/authority promotion, or change to sealed artifacts, Daily calculations or V1/V2 code digests; the reviewed frozen-guard amendment is limited to tools/run_owner_daily.py.",
+      "authority_effect": "NONE",
+      "source_doc": "docs/owner_daily_ai_handoff_import_recovery_20261012_contract.md",
+      "state_history": [
+        "DEFERRED",
+        "ACTIVE"
+      ],
+      "checkpoint": null,
+      "terminal_disposition": null,
+      "notes": "Owner-directed 2026-10-12 P0 OWNER_DAILY_AI_HANDOFF_IMPORT_RECOVERY_20261012: on qualified main 4755d94 (V3 merge d11b1016 plus the retained 2026-10-12 completed session), restore completed-session publication after the 2026-10-12 Owner Daily failed at phase 6 (ModuleNotFoundError daily_integrated_decision_brief). Forensic root cause, the narrowest correct code fix in the owner workflow, regression tests in hosted Producer CI, one feature branch and one PR. No merge, Owner Daily, production replay, AI handoff or Dashboard publication, provider calls, evidence/authority promotion, or change to sealed artifacts, Daily calculations or V1/V2 code digests; the reviewed frozen-guard amendment is limited to tools/run_owner_daily.py."
+    },
     {
       "milestone_id": "ROOT_HUB_DEPENDENCY_REDUCTION_V3",
       "state": "COMPLETE",

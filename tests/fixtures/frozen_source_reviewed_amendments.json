@@ -1,0 +1,11 @@
+{
+  "contract": "Reviewed, owner-approved exceptions to the historical-base byte comparison of frozen sources. Each entry still pins exact bytes: the historical base must hash to base_sha256_lf and the current file to sha256_lf (equal to its tests/fixtures/e2e3_frozen_sources.json pin). No entry may be a V1/V2 code-digest input.",
+  "amendments": {
+    "tools/run_owner_daily.py": {
+      "milestone": "OWNER_DAILY_AI_HANDOFF_IMPORT_RECOVERY_20261012",
+      "reason": "A Producer fast-forward in phase 1 no longer continues on pre-pull code; the owner entrypoint relaunches once on the new HEAD (2026-10-12 phase-6 ModuleNotFoundError).",
+      "base_sha256_lf": "4a3877388c543d858820a5550632a74cbf155f70403af8cd0cdb6f58cb20db75",
+      "sha256_lf": "18848d9f82e08dee2af6fa82c01a3491d033e1efdc7d6828461e3d0452a26311"
+    }
+  }
+}

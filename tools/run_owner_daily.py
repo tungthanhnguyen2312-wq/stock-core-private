@@ -46,6 +46,7 @@ from governed_publication_completion import (  # noqa: E402
 )
 import owner_daily_journal as journal  # noqa: E402
 from owner_daily_progress import OwnerDailyProgress, PHASES, PROGRESS_PATH_ENV, safe_progress_path, recent_phase_estimates  # noqa: E402
+from owner_daily_progress import RUN_ID_ENV, RUN_STARTED_AT_ENV, RUN_STARTED_MONOTONIC_ENV  # noqa: E402
 
 DEFAULT_WEB_DIR = CANONICAL_WEB_ROOT
 
@@ -54,6 +55,26 @@ class OwnerDailyError(RuntimeError):
     def __init__(self, step: str, reason: str, hint: str = "") -> None:
         super().__init__(reason)
         self.step, self.reason, self.hint = step, reason, hint
+
+
+# OWNER_DAILY_AI_HANDOFF_IMPORT_RECOVERY_20261012: set only on the one relaunch below, to the
+# Producer HEAD the relaunched process was started on.
+CODE_HEAD_ENV = "STOCK_LOOKUP_OWNER_DAILY_CODE_HEAD"
+
+
+class ProducerCodeAdvanced(Exception):
+    """Phase 1 fast-forwarded the Producer checkout this process imported its code from.
+
+    Every module this process already imported is the pre-pull code, while every later lazy
+    import (and every Daily subprocess) reads the fast-forwarded tree: on 2026-10-12 the pre-pull
+    ``resolve_m1_handoff_authority`` executed ``import daily_integrated_decision_brief`` after the
+    pull had relocated that root module into ``stocklookup_core.decision``. No later phase may
+    run on that mixed code; ``main`` relaunches this same entrypoint once on the new HEAD.
+    """
+
+    def __init__(self, head: str) -> None:
+        super().__init__(head)
+        self.head = head
 
 
 def _git(root: Path, *args: str) -> str:
@@ -1271,6 +1292,14 @@ def run_workflow(*, root: Path = ROOT, runtime_root: Path = DEFAULT_RUNTIME,
             telemetry.emit(phase_index=1, progress_kind="PIPELINE", status="BEGIN")
         producer = preflight_repository(root, expected_name="stock-core-private", expected_remote_fragment="stock-core-private",
                                         completed_session=replay_completed_session, runtime_root=runtime_root)
+        # This process imported its code before the pull: nothing past phase 1 may run on it.
+        # A process that was itself relaunched for this reason fails closed instead of looping.
+        if producer["status"] == "FAST_FORWARDED":
+            if os.environ.get(CODE_HEAD_ENV):
+                raise OwnerDailyError("Repository preflight", "PRODUCER_CODE_ADVANCED_AFTER_RELAUNCH:" + producer["head"],
+                                      "origin/main advanced again while Daily was restarting on new code. "
+                                      "Nothing analytical ran; start Daily again.")
+            raise ProducerCodeAdvanced(producer["head"])
         # The Consumer checkout whose code Daily and the release path execute is governed before
         # any analytical work too (fresh Daily and replay/resume alike).
         consumer_preflight = preflight_consumer_repository(consumer_root_for(root), producer_root=root)
@@ -1471,6 +1500,9 @@ def run_workflow(*, root: Path = ROOT, runtime_root: Path = DEFAULT_RUNTIME,
                 "producer_preflight": producer, "dashboard_preflight": dashboard_preflight, "consumer_preflight": consumer_preflight, "producer_state": producer_state,
                 "dashboard": dashboard, "ai_handoff": handoff, "action_center": action_center,
                 "journal_run_id": run_id}
+    except ProducerCodeAdvanced:
+        # Not a failure: the relaunched process starts its own journal run, superseding this one.
+        raise
     except BaseException as exc:
         # A later phase that raises used to discard a Dashboard result that had already
         # failed closed. The journal keeps that reason beside the exception.
@@ -1516,6 +1548,21 @@ def default_result_path(*, root: Path = ROOT, log_root: Path | None = None, now:
     return validate_result_path(base / f"stock_lookup_daily_{stamp}.result.json", root=root)
 
 
+def relaunch_on_advanced_code(head: str, argv: list[str], telemetry: OwnerDailyProgress) -> int:
+    """Run this same entrypoint, with the same arguments, as a fresh interpreter on ``head``.
+
+    Its console output reaches the launcher directly and its exit code is this process's own.
+    ``CODE_HEAD_ENV`` marks the relaunch so a second fast-forward fails closed instead of looping.
+    """
+    sys.stdout.flush()
+    sys.stderr.flush()
+    environment = {**os.environ, **telemetry.child_environment(), CODE_HEAD_ENV: head}
+    print("STATUS: PRODUCER_CODE_ADVANCED_RELAUNCH")
+    print(f"PRODUCER_CODE_HEAD: {head}", flush=True)
+    return subprocess.run([sys.executable, "-u", str(ROOT / "tools" / "run_owner_daily.py"), *argv],
+                          cwd=ROOT, env=environment, check=False).returncode
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--runtime-root", type=Path, default=DEFAULT_RUNTIME)
@@ -1540,8 +1587,23 @@ def main(argv: list[str] | None = None) -> int:
         print(f"HINT: {exc.hint}", file=sys.stderr)
         return 1
     safe_sidecar = safe_progress_path(args.progress_path, root=ROOT)
-    telemetry = OwnerDailyProgress(safe_sidecar, session=args.replay_completed_session)
-    telemetry.start_view(recent_phase_estimates(args.result_path.parent))
+    relaunched = bool(os.environ.get(CODE_HEAD_ENV))
+    if relaunched:
+        # Same run as the process that relaunched this one: same run origin, and the owner view
+        # it already presented is reused rather than presented twice.
+        origin = os.environ.get(RUN_STARTED_MONOTONIC_ENV)
+        try:
+            origin_monotonic = float(origin) if origin is not None else None
+        except ValueError:
+            origin_monotonic = None
+        telemetry = OwnerDailyProgress(safe_sidecar, session=args.replay_completed_session,
+                                       run_id=os.environ.get(RUN_ID_ENV) or None,
+                                       run_started_monotonic=origin_monotonic,
+                                       run_started_at=os.environ.get(RUN_STARTED_AT_ENV) or None)
+        telemetry.phase_estimates = dict(recent_phase_estimates(args.result_path.parent))
+    else:
+        telemetry = OwnerDailyProgress(safe_sidecar, session=args.replay_completed_session)
+        telemetry.start_view(recent_phase_estimates(args.result_path.parent))
     if args.progress_path is not None and safe_sidecar is None:
         telemetry.report_degraded("UNSAFE_PROGRESS_PATH")
     result: dict[str, Any]
@@ -1558,6 +1620,18 @@ def main(argv: list[str] | None = None) -> int:
             code = 3
             result["resume_completed_session"] = bool(_auto_resumable_session(
                 ROOT, args.runtime_root, intended_session=result.get("session") or telemetry.session))
+    except ProducerCodeAdvanced as advanced:
+        # The relaunched process owns the rest of this run, including the result file.
+        try:
+            return relaunch_on_advanced_code(advanced.head, list(sys.argv[1:] if argv is None else argv), telemetry)
+        except OSError as exc:
+            code = 1
+            result = {"status": "FAILED", "failed_step": "Repository preflight",
+                      "reason": f"PRODUCER_CODE_RELAUNCH_FAILED:{type(exc).__name__}",
+                      "hint": "The Producer checkout was updated but Daily could not restart on it. "
+                              "Nothing analytical ran; start Daily again."}
+            telemetry.emit(phase_index=1, status="FAILED", reason=result["reason"])
+            result["resume_completed_session"] = bool(_auto_resumable_session(ROOT, args.runtime_root, intended_session=telemetry.session))
     except OwnerDailyError as exc:
         code = 1
         result = {"status": "FAILED", "failed_step": exc.step, "reason": exc.reason, "hint": exc.hint}

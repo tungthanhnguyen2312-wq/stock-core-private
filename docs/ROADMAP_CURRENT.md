@@ -1,15 +1,15 @@
 # Stock Lookup — Current Roadmap
 
 History: [ROADMAP.md](ROADMAP.md); execution: ROADMAP_STATE.json.
-Base/main `d53999ba07a080b7fae2104185c56cc9a55ce210`.
+Base/main `4755d94a977f468a4122e40fba77850281582f42`.
 Nothing below auto-starts; native standing admission required (AI_RULES 11).
 Facts: [ACTIVE_STATE.md](ACTIVE_STATE.md).
 
-## NOW — ROOT_HUB_DEPENDENCY_REDUCTION_V3 (COMPLETE LOCAL)
+## NOW — OWNER_DAILY_AI_HANDOFF_IMPORT_RECOVERY_20261012 (P0)
 
-[Scope](root_hub_dependency_reduction_v3_contract.md): hub seam; 11 modules moved;
-no shim/pin/Daily/authority change. PR/CI repairs authorized; merge Owner-gated.
-V2 PR130 merged `d53999b`; post-merge CI PASS (38222535046).
+[Scope](owner_daily_ai_handoff_import_recovery_20261012_contract.md): relaunch
+after pull. Replay Owner-gated.
+V3 PR131 merged `d11b101`; V2 PR130 merged `d53999b`.
 E5 PR127 merged `70fbba9`; post-merge CI PASS (38190156979).
 E4 PR126 merged `e9ee2fe`; four post-merge jobs PASS (38186488312).
 E2/E3 PR125 merged `0061d5f`; four post-merge jobs PASS (38181224017).

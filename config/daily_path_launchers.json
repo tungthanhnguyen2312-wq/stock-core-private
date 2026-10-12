@@ -92,11 +92,12 @@
       ]
     },
     "tools/run_owner_daily.py": {
-      "ast_sha256": "8294af69783bbcd58baba6f740faa1442f5ac7c741159b2c13d978d5d508424a",
+      "ast_sha256": "171c0e2d6808ab34da98ec58bef879f54d4944f64d3d0624db0c79ab9971d468",
       "reason": "Resolved dispatch plus exact caller AST; injected/unknown paths are not claimed as runtime proof.",
       "targets": [
         "daily_analysis_pipeline.py",
-        "tools/release_orchestrator.py"
+        "tools/release_orchestrator.py",
+        "tools/run_owner_daily.py"
       ]
     },
     "tools/run_provider_os_containment_qualification.py": {
@@ -118,7 +119,7 @@
     ".github/workflows/producer-ci.yml": {
       "kind": "compile_and_cli",
       "reason": "Exact reviewed shell/CI command contract, normalized line endings.",
-      "sha256": "7ae6e1fe684034340ab34ad50cf05eb67c9b5f8b4898fadc6cddd8fa11de113e",
+      "sha256": "1457e1ab7175d0dfe7940cde516b56c0810268e1af64c07f16d9cf8df5df19aa",
       "targets": [
         "canonical_daily_operation.py",
         "daily_analysis_pipeline.py",
@@ -212,7 +213,8 @@
     ],
     "tools/run_owner_daily.py": [
       "daily_analysis_pipeline.py",
-      "tools/release_orchestrator.py"
+      "tools/release_orchestrator.py",
+      "tools/run_owner_daily.py"
     ],
     "tools/run_provider_os_containment_qualification.py": [
       "tools/provider_containment_probe.py"
