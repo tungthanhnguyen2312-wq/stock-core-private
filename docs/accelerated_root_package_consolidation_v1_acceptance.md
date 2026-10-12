@@ -1,0 +1,58 @@
+# Accelerated root package consolidation V1 acceptance
+
+Baseline `3f1be104386a218899b7dcb4bdeaa154be17ce06` (E6 PR128 merge; post-merge CI
+`38194697661` four jobs SUCCESS). [Contract](accelerated_root_package_consolidation_v1_contract.md).
+Interpreter: governed system CPython 3.13, provider import block on `PYTHONPATH`.
+
+## Cohorts
+
+| Cohort | Destination | Moved | Import sites | Targeted tests (pass / new failures) |
+|---|---|---:|---:|---|
+| C1 official source and corporate-action evidence | evidence | 20 | 75 + 3 reviewed | 1913 / 0 |
+| C2 market, session and universe evidence; breadth | evidence 25, tactical 3 | 28 | 154 + 3 | 2641 / 0 |
+| C3 financial research components | financial | 19 | 87 + 2 | 1846 / 0 |
+| C4 research, portfolio and decision projections | research 20, portfolio 2, decision 6 | 28 | 93 | 1707 / 0 |
+
+Each cohort ran its affected tests on the unchanged tree and after relocation; failing IDs
+were identical (62/168/70/167), all absent retained evidence or local runtime data in this
+worktree (FileNotFound under `operations-review/`/`data/`, export-bundle runtime DB,
+`LATEST_COMPLETED_RUN.json` fixture assumptions). Nothing was regenerated or copied.
+A first C1 attempt exposed E5 parity sources importing `official_acquisition_budget` by
+name; the cohort was reset and re-applied without the three historically bound modules.
+
+## Counts and graph (identical E0 analyzer)
+
+| Measurement | E6 baseline | After |
+|---|---:|---:|
+| Root Python | 476 | 381 |
+| Packaged Python | 145 | 240 |
+| Relocations / grandfathered root names | 120 / 488 | 215 / 393 |
+| Modules | 982 | 982 |
+| Backward edge rows (pairs) | 176 (172) | 156 (152) |
+| core-to-root module pairs | 138 | 118 |
+| Eager / runtime SCCs (largest; participation) | 1 / 11 (10; 41) | identical membership |
+| Unresolved / unsupported dynamic sites | 9 / 16 | 9 / 16 |
+
+Unique edge rows rise 3374 → 3662 only through package-initializer edges recorded for
+package-form imports. Mapping relocated names back and excluding initializer edges, the
+dependency set is identical: 2567 edges before and after, none added or removed.
+Ratchet, Daily launcher guard and placement guards PASS without baseline, policy or
+grandfathering edits.
+
+## Identity and parity
+
+No E2/E3 byte pin, V1/E4 V2 source, provider bundle file, E5/E6 pinned foundation,
+AST-pinned launcher caller, workflow or dependency file changed. Of 95 moved bodies,
+76 are byte-identical and 19 differ only in import lines or the `parents[2]` root line.
+Every moved module imported at the baseline (old name) and candidate (new name) in
+separate processes yields identical public names, signatures, function-source hashes and
+constant values; the only differences are object addresses and checkout-root paths.
+Frozen V1 `fa79baad…` and E4 V2 `07c2a363…` digests are asserted by E5/E6 tests (PASS).
+
+## CI-equivalent validation
+
+Structural job selection 135 PASS; call-shape smoke 7 PASS; focused hermetic selection
+(267 entries, four local chunks) 6180 PASS, 74 skipped, 49 deselected, 112 subtests,
+zero failures; retained accounting 5 PASS, 44 explicit absent-evidence skips. Static
+dependency tiers PASS; `--installed` reports host package drift only (no file changed).
+Roadmap `--check` ON_TRACK. `git diff --check` clean.
