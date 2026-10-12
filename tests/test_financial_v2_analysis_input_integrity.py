@@ -17,8 +17,8 @@ import stocklookup_core.financial.financial_flow_semantics_ttm_bridge as bridge
 import stocklookup_core.financial.market_wide_financial_analysis_v2_scaleout as scaleout
 from stocklookup_core.decision.opportunity_axis_freshness import (CURRENT, STALE_BUT_RESEARCH_USABLE, UNAVAILABLE,
                                         classify_financial_period_freshness)
-import provider_financial_monetary_basis_verdict as pin
-import monetary_basis_contract as basis
+from stocklookup_core.financial import provider_financial_monetary_basis_verdict as pin
+from stocklookup_core.financial import monetary_basis_contract as basis
 
 ROOT = Path(__file__).resolve().parents[1]
 SESSION = "2026-09-24"

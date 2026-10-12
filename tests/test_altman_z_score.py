@@ -14,7 +14,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from altman_z_score import (  # noqa: E402
+from stocklookup_core.financial.altman_z_score import (  # noqa: E402
     DISTRESS_THRESHOLD, REQUIRED_IDENTITIES, SAFE_THRESHOLD, VARIANT,
     evaluate_altman_z_score as _raw_evaluate,
 )

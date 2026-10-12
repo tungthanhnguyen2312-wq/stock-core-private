@@ -36,7 +36,7 @@ from derive_financial_fact_coverage_recovery_v1 import (
     build_valuation,
 )
 from field_temporal_contract import stable_id
-from p3f10_fundamental_evidence_scaleout import DEFAULT_P3E
+from stocklookup_core.financial.p3f10_fundamental_evidence_scaleout import DEFAULT_P3E
 
 OPS = ROOT / "operations-review"
 PRIOR_OUTPUT_DIR = OPS / "current-financial-fact-coverage-recovery-and-scaleout-v1-20260827"

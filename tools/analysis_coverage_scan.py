@@ -105,7 +105,7 @@ def altman_applicability_census(runtime_root: Path) -> dict[str, Any]:
     generated statement-taxonomy sidecar only to withhold, and the retained industry label.
     Nothing here grants eligibility that the bundle would not also grant.
     """
-    from altman_applicability import evaluate_altman_applicability
+    from stocklookup_core.financial.altman_applicability import evaluate_altman_applicability
     from statement_taxonomy_sidecar import load_sidecar, resolve_entity_authority, taxonomy_index
 
     sidecar = load_sidecar(runtime_root)

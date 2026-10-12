@@ -29,8 +29,8 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from altman_applicability import evaluate_altman_applicability  # noqa: E402
-from statement_taxonomy_classifier import classify_statement_taxonomy  # noqa: E402
+from stocklookup_core.financial.altman_applicability import evaluate_altman_applicability  # noqa: E402
+from stocklookup_core.financial.statement_taxonomy_classifier import classify_statement_taxonomy  # noqa: E402
 
 PROFILES = ROOT / "config" / "ticker_entity_profiles.csv"
 # Only this taxonomy is even a candidate for the corporate archetype; the others are

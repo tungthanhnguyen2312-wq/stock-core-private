@@ -12,9 +12,9 @@ import json
 import re
 from typing import Any, Mapping, Sequence
 
-import monetary_basis_contract as basis_contract
-import bank_financial_research_component as bank_component
-import securities_financial_research_component as securities_component
+from stocklookup_core.financial import monetary_basis_contract as basis_contract
+from stocklookup_core.financial import bank_financial_research_component as bank_component
+from stocklookup_core.financial import securities_financial_research_component as securities_component
 
 
 CONTRACT_VERSION = "financial_analysis_context/v2"

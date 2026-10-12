@@ -14,7 +14,7 @@ import math
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
-import bank_financial_research_component as component
+from stocklookup_core.financial import bank_financial_research_component as component
 
 CONTRACT_VERSION = "tcbs_bank_research_component_bundle/v1"
 SOURCE_CAPTURE_CONTRACT = "tcbs_bank_public_company_capture/v1"

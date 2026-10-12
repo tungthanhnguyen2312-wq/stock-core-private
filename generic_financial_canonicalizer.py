@@ -45,7 +45,7 @@ from stocklookup_core.financial.financial_entity_applicability import (
     FINANCIAL_ENTITY_TYPES,
     load_entity_profiles,
 )
-from altman_applicability import evaluate_altman_applicability
+from stocklookup_core.financial.altman_applicability import evaluate_altman_applicability
 
 
 SCHEMA_VERSION = "1.0.0"

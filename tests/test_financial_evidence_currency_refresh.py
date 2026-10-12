@@ -427,7 +427,7 @@ def test_issuer_ir_index_page_is_admitted_on_existing_host():
 def _pb_official(official_facts, *, period="2025-Q4", value=1_000_000, decision_session="2026-09-30"):
     # Official fixtures become known 2026-09-29; the decision session must follow that knowledge.
     from tests.test_current_research_book_value_valuation import _cap, _equity
-    verdict = __import__("provider_financial_monetary_basis_verdict").resolve(ROOT)
+    verdict = __import__("stocklookup_core.financial.provider_financial_monetary_basis_verdict", fromlist=["resolve"]).resolve(ROOT)
     return valuation._book_value_method(
         ticker="HPG", entity="corporate", share_class="CURRENT_SHARE_RESEARCH_PROXY",
         market_cap=_cap(), equity_rows=[_equity(period=period, value=value)],
@@ -495,7 +495,7 @@ def test_missing_official_does_not_change_legacy_pb():
         )._cap(),
         equity_rows=[__import__("tests.test_current_research_book_value_valuation", fromlist=["_equity"])._equity()],
         decision_session="2026-09-24",
-        verdict=__import__("provider_financial_monetary_basis_verdict").resolve(ROOT),
+        verdict=__import__("stocklookup_core.financial.provider_financial_monetary_basis_verdict", fromlist=["resolve"]).resolve(ROOT),
         official_equity_facts=[],
     )
     assert unchanged["status"] == baseline["status"]

@@ -34,7 +34,7 @@ FEATURE_FAMILY = {
     "equity_to_assets": "LEVERAGE_SOLVENCY", "debt_to_equity": "LEVERAGE_SOLVENCY",
     "roa_eop_proxy": "CAPITAL_EFFICIENCY", "roe_eop_proxy": "CAPITAL_EFFICIENCY",
 }
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_SEMANTICS = ROOT / "operations-review" / "market-wide-structured-financial-period-semantics-v1-20260831" / "structured_financial_period_semantics_facts.jsonl.gz"
 
 

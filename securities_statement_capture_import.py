@@ -66,7 +66,7 @@ from __future__ import annotations
 import math
 from typing import Any, Mapping, Sequence
 
-import securities_financial_research_component as component
+from stocklookup_core.financial import securities_financial_research_component as component
 
 #: statement_family -> {raw_item_id: metric_id}. The single reviewable place this
 #: milestone's native-vocabulary mapping lives; see module docstring for the

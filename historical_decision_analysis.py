@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from typing import Any, Mapping
 
-from qualified_historical_fundamental_analytics import build as build_fundamental_analytics
+from stocklookup_core.financial.qualified_historical_fundamental_analytics import build as build_fundamental_analytics
 
 
 SCHEMA_VERSION = "1.1.0"

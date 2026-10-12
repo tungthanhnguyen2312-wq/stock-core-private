@@ -4,7 +4,7 @@ import argparse, gzip, hashlib, json, sys
 from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-import market_wide_fundamental_feature_store as store  # noqa: E402
+from stocklookup_core.financial import market_wide_fundamental_feature_store as store  # noqa: E402
 OUT = ROOT / "operations-review" / "market-wide-fundamental-feature-store-v1-20260831"
 def main() -> int:
  p=argparse.ArgumentParser(); p.add_argument("--semantics-path", type=Path, default=store.DEFAULT_SEMANTICS); p.add_argument("--requested-at", default="2026-08-31T00:00:00+07:00"); p.add_argument("--output-dir", type=Path, default=OUT); a=p.parse_args()

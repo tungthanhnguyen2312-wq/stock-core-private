@@ -1,7 +1,7 @@
 from copy import deepcopy
 import inspect
 
-import market_wide_fundamental_feature_store as store
+from stocklookup_core.financial import market_wide_fundamental_feature_store as store
 import pytest
 
 

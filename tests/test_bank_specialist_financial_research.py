@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-import bank_financial_research_component as bank_component
+from stocklookup_core.financial import bank_financial_research_component as bank_component
 import stocklookup_core.financial.financial_analysis_engine_v2 as engine
 import stocklookup_core.financial.financial_analysis_product_projection as projection
 

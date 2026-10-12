@@ -14,7 +14,7 @@ from stocklookup_core.valuation.current_research_valuation_context import (
     method_availability_state, valuation_axis,
 )
 from stocklookup_core.decision.opportunity_axis_freshness import CURRENT
-import monetary_basis_contract as basis_contract
+from stocklookup_core.financial import monetary_basis_contract as basis_contract
 
 BLOCKED_METHOD = {"status": "BLOCKED", "value": None, "blocked_reasons": []}
 

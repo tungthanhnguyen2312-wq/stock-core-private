@@ -59,7 +59,7 @@ from canonical_financial_facts import (
     SUPPORTED_STATUSES,
     build_facts,
 )
-from canonical_financial_resolvers import VERSION as RESOLVER_VERSION
+from stocklookup_core.financial.canonical_financial_resolvers import VERSION as RESOLVER_VERSION
 from stocklookup_core.financial.financial_entity_applicability import (
     VERSION as APPLICABILITY_VERSION,
     evaluate_ticker,
@@ -76,7 +76,7 @@ from raw_financial_store import (
     read_shard,
     state_index as raw_state_index,
 )
-from statement_taxonomy_classifier import classify_statement_taxonomy
+from stocklookup_core.financial.statement_taxonomy_classifier import classify_statement_taxonomy
 from official_annual_financial_fact_projection import facts_for_ticker as official_annual_facts
 from canonical_financial_qualification_policy import QUALIFIED as POLICY_QUALIFIED, apply_policy, load_evidence_index
 

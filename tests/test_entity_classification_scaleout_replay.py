@@ -52,7 +52,7 @@ pytestmark = pytest.mark.skipif(
 
 @pytest.fixture(scope="module")
 def before_after_artifacts(tmp_path_factory):
-    import market_wide_fundamental_feature_store as store
+    from stocklookup_core.financial import market_wide_fundamental_feature_store as store
     import stocklookup_core.financial.market_wide_financial_analysis_v2_scaleout as scaleout
     from stocklookup_core.financial.financial_analysis_product_projection import build_product_projection
     from stocklookup_core.decision.security_decision_context import build_ticker_decision

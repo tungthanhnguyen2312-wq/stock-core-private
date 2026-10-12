@@ -45,8 +45,8 @@ import os
 from pathlib import Path
 from typing import Any, Iterable, Mapping
 
-from statement_taxonomy_classifier import VERSION as CLASSIFIER_VERSION
-from statement_taxonomy_classifier import classify_statement_taxonomy
+from stocklookup_core.financial.statement_taxonomy_classifier import VERSION as CLASSIFIER_VERSION
+from stocklookup_core.financial.statement_taxonomy_classifier import classify_statement_taxonomy
 
 SIDECAR_SCHEMA_VERSION = "1.0.0"
 SIDECAR_FILENAME = "statement_taxonomy_sidecar.json"

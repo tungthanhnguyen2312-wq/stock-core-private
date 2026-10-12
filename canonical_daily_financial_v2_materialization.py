@@ -270,7 +270,7 @@ def build_evaluated_valuation_artifact(
     valuation_records = (raw_valuation_artifact or {}).get("records") or {}
     applicability_records = (entity_applicability_artifact or {}).get("records") or {}
     from collections import defaultdict
-    import provider_financial_monetary_basis_verdict as monetary_verdict
+    from stocklookup_core.financial import provider_financial_monetary_basis_verdict as monetary_verdict
     equity_by_ticker: dict[str, list[Mapping[str, Any]]] = defaultdict(list)
     for row in semantic_rows or ():
         if (row.get("canonical_metric") == "shareholders_equity"

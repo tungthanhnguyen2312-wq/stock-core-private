@@ -13,7 +13,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from altman_applicability import (  # noqa: E402
+from stocklookup_core.financial.altman_applicability import (  # noqa: E402
     evaluate_altman_applicability, is_manufacturing_industry,
 )
 

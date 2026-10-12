@@ -2,7 +2,7 @@ import copy
 import json
 import unittest
 
-from qualified_historical_fundamental_analytics import (
+from stocklookup_core.financial.qualified_historical_fundamental_analytics import (
     adapt_official_annual_facts, build, build_comparative_matrix, merge_official_annual_facts,
 )
 

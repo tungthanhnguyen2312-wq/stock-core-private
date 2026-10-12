@@ -1,7 +1,7 @@
 from __future__ import annotations
 import hashlib,json
 from pathlib import Path
-ROOT=Path(__file__).resolve().parent
+ROOT=Path(__file__).resolve().parents[2]
 def run():
  p10=json.loads((ROOT/'operations-review/p3f10-generic-fundamental-evidence-scaleout-20260820/p3f10_generic_fundamental_evidence_scaleout_artifact.json').read_text());p13=json.loads((ROOT/'operations-review/p3f13-official-financial-evidence-scaleout-20260820/p3f13_official_financial_evidence_scaleout_artifact.json').read_text())
  rows=p10['instrument_dispositions'];provider=[r for r in rows if r['raw_observation_state']=='RAW_OBSERVED'];official=[r for r in rows if r['evidence_state']=='EVIDENCE_QUALIFIED']

@@ -14,7 +14,7 @@ from statistics import median
 from typing import Any, Mapping, Sequence
 
 from current_market_sector_leadership_context import _percentile
-import monetary_basis_contract as basis_contract
+from stocklookup_core.financial import monetary_basis_contract as basis_contract
 from stocklookup_core.valuation.market_wide_current_valuation_input_scaleout import RESEARCH_SHARE_AUTHORITIES, _applicability, _market_cap_monetary_basis
 from operational_fundamental_context_integration import MAX_COMPLETED_QUARTER_LAG
 from stocklookup_core.evidence.temporal_freshness import UNAVAILABLE, completed_quarter_lag
