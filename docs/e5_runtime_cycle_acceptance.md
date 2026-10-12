@@ -97,3 +97,8 @@ closeout requires the complete admitted scope's validation and a clean implement
 checkpoint. Feature publication/hosted CI and separate Owner exact-HEAD merge approval
 are release gates. No Daily, provider request, production write, Consumer/Dashboard
 edit, evidence promotion or production V2 activation is performed.
+
+Native local closeout: implementation checkpoint
+`a0f6c423afd7edf77a77723df75c61a30c950179`, COMPLETE /
+LOCAL_IMPLEMENTATION_COMPLETE_NOT_PROMOTED. Queue empty; no successor admitted.
+Feature PR/hosted CI and separate Owner exact-HEAD merge review remain release gates.

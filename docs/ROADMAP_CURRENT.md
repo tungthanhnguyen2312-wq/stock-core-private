@@ -5,7 +5,7 @@ E5 base/main `e9ee2fe135e9e529b60f11ab97f30fc6441e6e24`.
 Nothing below auto-starts; native standing admission required (AI_RULES 11).
 Facts: [ACTIVE_STATE.md](ACTIVE_STATE.md).
 
-## NOW — E5_RUNTIME_DEPENDENCY_CYCLE_REDUCTION (ACTIVE LOCAL)
+## NOW — E5_RUNTIME_DEPENDENCY_CYCLE_REDUCTION (COMPLETE LOCAL)
 
 [Scope](e5_runtime_dependency_cycle_reduction_contract.md): pure event cutoff,
 heading folding, field identity and evidence-output boundaries; lower consumers.
