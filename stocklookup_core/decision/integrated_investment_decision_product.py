@@ -354,7 +354,7 @@ _IDENTITY_EXCLUDED = {"artifact_sha256", "artifact_identity", "requested_at"}
 
 
 def content_identity(artifact: Mapping[str, Any]) -> dict[str, str]:
-    from bounded_artifact_stream import record_mapping_digest
+    from stocklookup_core.evidence.bounded_json import record_mapping_digest
     payload = {k: v for k, v in artifact.items() if k not in _IDENTITY_EXCLUDED}
     digest = record_mapping_digest(payload)
     return {"artifact_sha256": digest, "artifact_identity": f"{CONTRACT_VERSION}:{digest}"}

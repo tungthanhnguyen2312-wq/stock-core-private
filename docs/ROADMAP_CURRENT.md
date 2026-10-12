@@ -1,15 +1,18 @@
 # Stock Lookup — Current Roadmap
 
 History: [ROADMAP.md](ROADMAP.md); execution: ROADMAP_STATE.json.
-E2/E3 base/main `e99000494ab52374c01383f4c57891165b58768f`.
+E4 base/main `0061d5f8afe4275ef6cf1dd7ba44930f559d2278`.
 Nothing below auto-starts; native standing admission required (AI_RULES 11).
 Facts: [ACTIVE_STATE.md](ACTIVE_STATE.md).
 
-## NOW — E2_E3_FOUNDATION_SEAMS_AND_DEPENDENCY_UNTANGLING (COMPLETE LOCAL)
+## NOW — E4_VERSIONED_IDENTITY_SAFE_INFRASTRUCTURE_EXTRACTION (COMPLETE LOCAL)
 
-[Scope](e2_e3_foundation_seams_and_dependency_untangling_contract.md): read-only registry and temporal seams, with financial/valuation/decision policy ownership. Local checkpoint `9bd9395`; feature PR authorized; hosted CI and separate merge review pending.
+[Scope](e4_versioned_identity_safe_infrastructure_extraction_contract.md): fixed paths,
+bounded JSON and verification, migrated consumers, offline versioned source qualification.
+V1 frozen sources and retained identities preserved. No production V2 activation or Daily.
+Feature PR/CI repairs authorized; merge requires separate Owner approval. No automatic successor.
+E2/E3 PR125 merged `0061d5f`; four post-merge jobs PASS (38181224017).
 E1 PR124 released `e990004`; four post-merge jobs PASS (38148897543).
-Hash-bound session paths/serialization need a separate E4 acceptance scope; E4 is not admitted.
 E0 COMPLETE at PR123 `56cdc36`; four post-merge jobs PASS (38139163689).
 Queue empty. Existing evidence and authority remain unchanged.
 PR119 COMPLETE at `d1c9c805`; four post-merge jobs PASS (38105025004).
