@@ -500,3 +500,11 @@ def test_declared_external_list_covers_every_requirements_entry_and_never_shadow
 
 def test_repository_has_no_missing_internal_or_undeclared_imports():
     assert guard.internal_import_errors(ROOT) == []
+
+
+def test_only_an_import_error_handler_is_a_fallback_branch_not_a_sibling_broad_handler():
+    source = ("def run():\n    try:\n        work()\n    except ValueError:\n        pass\n    except Exception:\n        pass\n"
+              "    except OSError:\n        import stocklookup_core.resume_gone\n        from stock_core_private.x import y\n")
+    rows = {(f["target"], f["verdict"], f["fallback"]) for f in _internal_findings(dict(_PACKAGE_TREE, **{"x.py": source}))}
+    assert rows == {("stocklookup_core.resume_gone", "INTERNAL_MISSING", False),
+                    ("stock_core_private.x", "UNDECLARED", False)}

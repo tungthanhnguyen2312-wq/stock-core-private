@@ -622,14 +622,18 @@ def import_references(tree: ast.Module, source: str = "import_module __import__"
                 stack.extend((s, context, guarded, fallback) for s in node.orelse)
                 continue
         elif isinstance(node, (ast.Try, ast.TryStar)):
-            caught = set()
+            names = []
             for handler in node.handlers:
                 types = handler.type.elts if isinstance(handler.type, ast.Tuple) else [handler.type] if handler.type else []
-                caught |= {ast.unparse(t).rpartition(".")[2] for t in types} if types else {"BaseException"}
-            catches = bool(caught & IMPORT_ERROR_NAMES)
+                names.append({ast.unparse(t).rpartition(".")[2] for t in types} if types else {"BaseException"})
+            catches = any(n & IMPORT_ERROR_NAMES for n in names)
             stack.extend((s, context, guarded or catches, fallback) for s in node.body)
             stack.extend((s, context, guarded, fallback) for s in [*node.orelse, *node.finalbody])
-            stack.extend((s, context, guarded, fallback or catches) for h in node.handlers for s in h.body)
+            # Only a handler that names ImportError itself is a deliberate fallback branch; an import in
+            # any other handler is an exceptional-path import and must resolve like any other.
+            for handler, caught in zip(node.handlers, names):
+                own = bool(caught & {"ImportError", "ModuleNotFoundError"})
+                stack.extend((s, context, guarded, fallback or own) for s in handler.body)
             continue
         elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda)):
             inner = context if context == "type_checking" else "lazy"
