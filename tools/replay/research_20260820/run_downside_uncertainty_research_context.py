@@ -3,12 +3,12 @@ import json
 from stocklookup_core.research.downside_uncertainty_research_context import build_v1,build_v2,review_overlay
 from stocklookup_core.research.persistent_research_dossier import load_latest_versions
 from stocklookup_core.research.research_question_tasking import load_latest_tasks
-from run_market_regime_breadth_context import run as market_run
-from run_sector_relative_research_context import run as relative_run
-from run_strategy_research_eligibility import run as eligibility_run
-from run_catalyst_event_research_context import run as event_run
-from run_price_structure_breakout_context import run as price_run
-ROOT=Path(__file__).resolve().parent;OUT_V1=ROOT/'operations-review/downside-uncertainty-research-context-v1-restored-20260820';OUT_V2=ROOT/'operations-review/downside-uncertainty-research-context-v2-20260820'
+from tools.replay.research_20260820.run_market_regime_breadth_context import run as market_run
+from tools.replay.research_20260820.run_sector_relative_research_context import run as relative_run
+from tools.replay.research_20260820.run_strategy_research_eligibility import run as eligibility_run
+from tools.replay.research_20260820.run_catalyst_event_research_context import run as event_run
+from tools.replay.research_20260820.run_price_structure_breakout_context import run as price_run
+ROOT=Path(__file__).resolve().parents[3];OUT_V1=ROOT/'operations-review/downside-uncertainty-research-context-v1-restored-20260820';OUT_V2=ROOT/'operations-review/downside-uncertainty-research-context-v2-20260820'
 def write_immutable(path, artifact):
  payload=json.dumps(artifact,ensure_ascii=False,indent=2,sort_keys=True)+'\n'
  if path.exists() and path.read_text(encoding='utf8') != payload: raise ValueError('IMMUTABLE_DOWNSIDE_CONTEXT_CONTENT_CONFLICT')

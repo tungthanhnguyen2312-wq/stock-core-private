@@ -8,7 +8,7 @@ from stocklookup_core.research.human_research_review_pack import build, markdown
 from stocklookup_core.research.persistent_research_dossier import load_latest_versions
 from stocklookup_core.research.prospective_research_learning import attribute, freeze
 from stocklookup_core.research.research_question_tasking import load_latest_tasks
-from run_prospective_research_learning import ROOT as REPO_ROOT
+from tools.replay.research_20260820.run_prospective_research_learning import ROOT as REPO_ROOT
 
 ROOT = REPO_ROOT
 DOSSIER_ROOT = ROOT / "operations-review" / "persistent-research-dossier-v1-20260820"

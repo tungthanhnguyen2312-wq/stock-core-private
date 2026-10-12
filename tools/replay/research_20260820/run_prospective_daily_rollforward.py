@@ -5,7 +5,7 @@ from pathlib import Path
 from prospective_daily_rollforward import build_learning_ledger, latest_exact_session, seal_daily_snapshot
 from stocklookup_core.research.prospective_research_learning import write_immutable
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parents[3]
 OUT = ROOT / 'operations-review/prospective-daily-rollforward-v1-20260821'
 
 def _load(relative: str) -> dict:

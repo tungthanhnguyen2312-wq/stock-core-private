@@ -1,5 +1,5 @@
 from stocklookup_core.research.human_research_review_pack import FORBIDDEN, markdown
-from run_human_research_review_pack import run
+from tools.replay.research_20260820.run_human_research_review_pack import run
 
 
 def test_review_pack_reconciles_and_preserves_structured_boundaries():

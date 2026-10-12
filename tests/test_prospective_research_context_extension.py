@@ -6,8 +6,8 @@ import pytest
 
 from stocklookup_core.research.prospective_research_context_extension import build, write_immutable
 from stocklookup_core.research.prospective_research_learning import context_extension_dimensions
-from run_prospective_research_context_extension_successor import run as run_successor
-from run_prospective_research_context_extension import ROOT, SNAPSHOT, run
+from tools.replay.research_20260820.run_prospective_research_context_extension_successor import run as run_successor
+from tools.replay.research_20260820.run_prospective_research_context_extension import ROOT, SNAPSHOT, run
 
 
 def _load(relative: str):

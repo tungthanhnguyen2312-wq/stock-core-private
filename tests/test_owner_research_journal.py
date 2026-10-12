@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 
 from stocklookup_core.research.owner_research_journal import append_event, build, create_event, write_immutable_event
-from run_human_research_review_pack import run as review_pack_run
+from tools.replay.research_20260820.run_human_research_review_pack import run as review_pack_run
 
 
 def test_baseline_is_unreviewed_and_system_state_is_unchanged():

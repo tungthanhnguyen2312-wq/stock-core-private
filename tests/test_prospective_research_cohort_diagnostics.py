@@ -11,7 +11,7 @@ from stocklookup_core.research.prospective_research_cohort_diagnostics import (
     MATURITY_PENDING_OUTCOMES,
     build_cohort_diagnostics,
 )
-from run_prospective_research_cohort_diagnostics import _load, run
+from tools.replay.research_20260820.run_prospective_research_cohort_diagnostics import _load, run
 
 
 def test_cohort_diagnostics_deterministic_and_replayable():

@@ -5,7 +5,7 @@ import pytest
 
 from stocklookup_core.research.persistent_research_dossier import load_latest_versions
 from stocklookup_core.research.research_question_tasking import build, write_immutable
-from run_research_question_tasking import DOSSIER_ROOT
+from tools.replay.research_20260820.run_research_question_tasking import DOSSIER_ROOT
 
 
 def test_baseline_tasks_are_deduplicated_deferred_and_replay_safe(tmp_path: Path):

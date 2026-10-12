@@ -1,4 +1,4 @@
-from run_research_setup_classification import run
+from tools.replay.research_20260820.run_research_setup_classification import run
 
 
 def test_setup_classification_is_deterministic_multilabel_and_authority_bound():

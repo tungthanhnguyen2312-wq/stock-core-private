@@ -1,7 +1,7 @@
 import pytest
 
 from stocklookup_core.research.evidence_aware_candidate_comparison import build, validate_request
-from run_evidence_aware_candidate_comparison import inputs, make, pilot_requests
+from tools.replay.research_20260820.run_evidence_aware_candidate_comparison import inputs, make, pilot_requests
 
 
 def test_request_rejects_unknown_session_ticker_dimension_and_invalid_size():

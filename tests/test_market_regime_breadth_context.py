@@ -1,5 +1,5 @@
-from run_market_regime_breadth_context import run
-from run_evidence_aware_research_screener import run as screener_run
+from tools.replay.research_20260820.run_market_regime_breadth_context import run
+from tools.replay.research_20260820.run_evidence_aware_research_screener import run as screener_run
 from stocklookup_core.tactical.market_regime_breadth_context import review_overlay
 
 

@@ -1,7 +1,7 @@
 from pathlib import Path
 import json
 from stocklookup_core.research.prospective_research_context_extension import build_successor, write_immutable
-from run_prospective_research_context_extension import ROOT, SNAPSHOT
+from tools.replay.research_20260820.run_prospective_research_context_extension import ROOT, SNAPSHOT
 
 OUT = ROOT / 'operations-review/prospective-research-context-extension-v1-successor-20260820'
 PREDECESSOR = ROOT / 'operations-review/prospective-research-context-extension-v1-20260820/1248d909c9ffd204d9bbcfbf3c886a4621e690c6739b5c8736fcab3bf7f58339.json'

@@ -1,7 +1,7 @@
 import copy
 import pytest
 from prospective_daily_rollforward import HORIZONS, build_learning_ledger, latest_exact_session
-from run_prospective_daily_rollforward import run
+from tools.replay.research_20260820.run_prospective_daily_rollforward import run
 
 def test_daily_rollforward_is_deterministic_and_preserves_pending_horizons():
     first_snapshot, first_ledger = run(); second_snapshot, second_ledger = run()

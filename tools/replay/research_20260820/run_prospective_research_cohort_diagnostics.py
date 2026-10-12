@@ -10,7 +10,7 @@ from stocklookup_core.research.prospective_research_cohort_diagnostics import (
 )
 from stocklookup_core.research.prospective_research_learning import write_immutable
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parents[3]
 OUT_DIR = ROOT / 'operations-review/prospective-research-cohort-diagnostics-v1-20260821'
 
 

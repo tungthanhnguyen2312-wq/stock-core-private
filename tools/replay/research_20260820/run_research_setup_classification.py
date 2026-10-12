@@ -1,10 +1,10 @@
 from pathlib import Path
 import json
 from stocklookup_core.research.research_setup_classification import build, consumer_overlays, daily_overlay
-from run_price_structure_breakout_context import run as price_run
-from run_sector_relative_research_context import run as relative_run
+from tools.replay.research_20260820.run_price_structure_breakout_context import run as price_run
+from tools.replay.research_20260820.run_sector_relative_research_context import run as relative_run
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parents[3]
 OUT = ROOT / 'operations-review/research-setup-classification-v1-20260820'
 
 def run():
