@@ -54,3 +54,9 @@ single excused optional import.
   launcher spawns the real interpreter as a child, so the job PID differs. Both pass with
   the governed system interpreter; V2 does not touch either file, and Linux CI skips them.
 - Retained accounting: 5 PASS, 44 explicit absent-evidence skips.
+
+## Native state
+
+Admitted at the exact starting HEAD `9174d2b` before any source edit. Local closeout
+checkpoint `171d14b2b7f483dbb7433cfd0cee8cc6a6d10384`: `LOCAL_IMPLEMENTATION_COMPLETE_NOT_PROMOTED`.
+Hosted Linux CI and the Owner merge decision remain release gates; no successor is admitted.

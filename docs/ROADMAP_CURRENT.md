@@ -5,7 +5,7 @@ Base/main `9174d2b8b8e13fa3a2a4c696b9e2fb28a39a81ea`.
 Nothing below auto-starts; native standing admission required (AI_RULES 11).
 Facts: [ACTIVE_STATE.md](ACTIVE_STATE.md).
 
-## NOW — ACCELERATED_ROOT_PACKAGE_CONSOLIDATION_V2 (IMPLEMENTED)
+## NOW — ACCELERATED_ROOT_PACKAGE_CONSOLIDATION_V2 (COMPLETE LOCAL)
 
 [Scope](accelerated_root_package_consolidation_v2_contract.md): 45 AMBER modules to packages;
 no shim/pin/Daily/authority change. PR/CI repairs authorized; merge Owner-gated.
