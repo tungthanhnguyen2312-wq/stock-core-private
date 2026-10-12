@@ -3,7 +3,7 @@ from __future__ import annotations
 import copy
 from collections import Counter,defaultdict
 from typing import Any,Mapping
-from field_temporal_contract import stable_id
+from stocklookup_core.evidence.field_identity import stable_id
 CONTRACT_VERSION='current_portfolio_risk_envelope/v1'
 def identity(a:Mapping[str,Any]):
  p=copy.deepcopy(dict(a));p.pop('artifact_identity',None);p.pop('artifact_sha256',None);h=stable_id(p);return {'artifact_sha256':h,'artifact_identity':'current_portfolio_risk_envelope:'+h}

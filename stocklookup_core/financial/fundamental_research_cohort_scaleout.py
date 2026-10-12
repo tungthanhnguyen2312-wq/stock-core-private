@@ -50,7 +50,7 @@ import stocklookup_core.financial.fundamental_cross_sectional_scoring as fcss
 import market_wide_historical_fundamentals_scaleout as mwhfs
 import p3f10_fundamental_evidence_scaleout as p3f10mod
 import p3f13_official_financial_evidence_scaleout as p3f13mod
-from field_temporal_contract import stable_id
+from stocklookup_core.evidence.field_identity import stable_id
 
 CONTRACT_VERSION = "fundamental_cross_sectional_scoring_and_ranking_cohort_scaleout/v1"
 ARTIFACT_TYPE = "MARKET_WIDE_FUNDAMENTAL_RESEARCH_COHORT_SCALEOUT"

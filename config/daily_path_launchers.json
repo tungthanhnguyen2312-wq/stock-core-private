@@ -118,7 +118,7 @@
     ".github/workflows/producer-ci.yml": {
       "kind": "compile_and_cli",
       "reason": "Exact reviewed shell/CI command contract, normalized line endings.",
-      "sha256": "2f55dc08ae2c2a259e70ffef30e51273dc2ef10274012bb2401879f4f9d3078c",
+      "sha256": "67d8bfe78ad5750540da6394348cf8611294f327cb3e6326991c31ac0fae8f92",
       "targets": [
         "canonical_daily_operation.py",
         "daily_analysis_pipeline.py",

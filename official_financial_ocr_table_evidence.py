@@ -130,14 +130,7 @@ def _hash(value: Any) -> str:
     return hashlib.sha256(json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()
 
 
-def _normalize(value: str) -> str:
-    import unicodedata
-    # OCR commonly inserts apostrophes inside Vietnamese words (for example
-    # ``LU'U``).  Normalize punctuation only for statement/scope headings;
-    # values and their raw OCR text never pass through this helper.
-    folded = "".join(ch for ch in unicodedata.normalize("NFKD", value.lower()) if not unicodedata.combining(ch))
-    folded = re.sub(r"(?<=[a-z0-9])['’](?=[a-z0-9])", "", folded)
-    return " ".join(re.sub(r"[^a-z0-9]+", " ", folded.replace("đ", "d")).split())
+from stocklookup_core.evidence.financial_document_text import _normalize
 
 
 def _parse_tsv(raw: bytes, *, page_number: int, image_sha256: str) -> list[dict[str, Any]]:

@@ -8,7 +8,7 @@ import statistics
 from datetime import date
 from pathlib import Path
 from typing import Any,Mapping
-from field_temporal_contract import stable_id
+from stocklookup_core.evidence.field_identity import stable_id
 from stocklookup_core.research.prospective_research_context_extension import ATTRIBUTION_SAFE_SUCCESSOR_ID,SUPERSEDED_LEGACY_EXTENSION_ID
 def _canon(x:Any):return json.dumps(x,ensure_ascii=False,sort_keys=True,separators=(',',':'))
 def _hash(x:Any):return hashlib.sha256(_canon(x).encode()).hexdigest()

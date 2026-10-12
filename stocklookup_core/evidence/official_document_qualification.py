@@ -18,7 +18,7 @@ import json
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
-from field_temporal_contract import stable_id
+from stocklookup_core.evidence.field_identity import stable_id
 from official_source_registry import ADMITTED, admit, load_registry
 
 SCHEMA_VERSION = "1.0.0"

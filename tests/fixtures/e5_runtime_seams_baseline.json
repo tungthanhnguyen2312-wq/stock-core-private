@@ -1,0 +1,478 @@
+{
+  "source_ref": "e9ee2fe135e9e529b60f11ab97f30fc6441e6e24",
+  "canonical_sha256": "be69a64373b485f9563b560af68555c4d7a10dfd8e300dbbe415bdaf6422c5cb",
+  "outputs": {
+    "assurance": {
+      "audit_or_review_status": "reviewed",
+      "citation_id": "c00709b1fdd7c958f2240bc88ddd9de46259fba572997cfe3c4c71bae938f3ab",
+      "contract_version": "official_financial_assurance_evidence/v1",
+      "document_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "evidence_id": "c00709b1fdd7c958f2240bc88ddd9de46259fba572997cfe3c4c71bae938f3ab",
+      "inheritance": "document_level_report_applies_to_all_statements_in_document",
+      "matched_anchors": [
+        "bao cao soat xet",
+        "hop dong dich vu soat xet",
+        "soat xet so 2410",
+        "hop nhat",
+        "giua nien do",
+        "khong dua ra y kien kiem toan"
+      ],
+      "materialization_id": null,
+      "opinion_evidence": null,
+      "page_number": 1,
+      "page_text_sha256": "8b5194c07c3ce134e6a60e704bf9ac7b9f7baab984f18c6bdab62412b68da5cf",
+      "rendered_image_sha256": null,
+      "scope_of_assurance": "consolidated_interim_statements",
+      "state": "QUALIFIED",
+      "title_span": {
+        "raw_token_order": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "token_ids": [
+          "",
+          "",
+          "",
+          ""
+        ]
+      }
+    },
+    "currency": {
+      "artifact_identity": "financial_reporting_currency/v1:08d65a81de8010a7fba60885c62ee14b81ebefa9b5730aeec8c86e7b665fffab",
+      "artifact_sha256": "08d65a81de8010a7fba60885c62ee14b81ebefa9b5730aeec8c86e7b665fffab",
+      "authority_effect": "NONE",
+      "contract_version": "financial_reporting_currency/v1",
+      "coverage": {
+        "checked_negative_scope_count": 0,
+        "notice_scope_count": 0,
+        "progress_kind_ticker_counts": {},
+        "provider_known_by_cutoff_count": 0,
+        "provider_present_count": 0,
+        "qualified_fact_count": 0,
+        "qualified_ticker_count": 0,
+        "selected_ticker_denominator": 1,
+        "unverified_document_claim_count": 0,
+        "verified_retained_document_count": 0,
+        "zero_silent_ticker_drops": true
+      },
+      "decision_session": "2026-10-08",
+      "is_actionable": false,
+      "knowledge_cutoff": "2026-10-08T15:00:00+07:00",
+      "non_voting": true,
+      "production": "OFFLINE_OPT_IN_ONLY",
+      "records": {
+        "FPT": {
+          "frozen_provider_baseline": {
+            "compact_context": null,
+            "excluded_measurement_references": [],
+            "last_retained_knowledge_time": null,
+            "last_source_publication": null,
+            "lineage_ref": null,
+            "matched_observations": [],
+            "measurements": [],
+            "pin_version": null,
+            "publication_state": "UNKNOWN",
+            "reason_codes": [
+              "OBSERVATION_IS_NOT_PUBLICATION",
+              "COMPACT_HEADLINE_IS_NATIVE_LABEL_NOT_CALENDAR_LATEST"
+            ],
+            "retained_knowledge_eligibility": {
+              "decision_time_eligibility": "NOT_ESTABLISHED_FOR_SEALED_DECISION_OR_PIT",
+              "publication_state": "UNKNOWN",
+              "reason_codes": [
+                "KNOWLEDGE_AVAILABLE_AT_UNKNOWN_OR_INVALID",
+                "OBSERVED_AT_UNKNOWN_OR_INVALID"
+              ],
+              "state": "EXCLUDED_OR_UNPROVEN_AT_CUTOFF"
+            },
+            "source_context_identity": "synthetic:provider",
+            "source_identities": {},
+            "source_update_state": "PROVIDER_UPDATE_STATE_UNPROVEN",
+            "status": "ABSENT"
+          },
+          "investor_interpretation": {
+            "blocked_fields": [],
+            "historical_research_usable": false,
+            "material_freshness_warning": false,
+            "reason_codes": [
+              "FORMAL_CURRENT_IS_POLICY_LABEL_NOT_LATEST_REPORT",
+              "NO_GLOBAL_LATEST_REPORT_PROOF",
+              "NO_WHOLE_TICKER_REJECTION",
+              "PUBLICATION_UNKNOWN_DOES_NOT_PROVE_PIT"
+            ],
+            "ticker_rejected": false,
+            "update_status": "LATEST_UPDATE_UNKNOWN"
+          },
+          "knowledge_cutoff_eligibility": {
+            "excluded_checks": [],
+            "excluded_facts": [],
+            "knowledge_cutoff": "2026-10-08T15:00:00+07:00",
+            "temporal_use": "CONSULTATION_KNOWLEDGE_CUTOFF_NOT_PIT_OR_SEALED_DECISION_TIME"
+          },
+          "newer_period_evidence": {
+            "conflicts": false,
+            "global_latest_status": "UNPROVEN",
+            "known_progress_kinds": [],
+            "period_evidence": [],
+            "qualification_rejections": [],
+            "unqualified_assertions": []
+          },
+          "qualified_official_fields": [],
+          "report_period_coverage": {
+            "analysis_family": null,
+            "entity_type": "UNKNOWN",
+            "method_applicability": {
+              "bank": "NOT_APPLICABLE",
+              "ordinary_corporate_debt_ebitda": "FOLLOW_EXISTING_ENTITY_METHOD_GATES",
+              "securities": "NOT_APPLICABLE"
+            },
+            "official_bases": [],
+            "provider_bases": []
+          },
+          "source_update": {
+            "checks": [],
+            "live_route_status": "NOT_CHECKED_BY_OFFLINE_CONSUMER",
+            "official_fact_qualification_times": [],
+            "official_fact_retrieval_times": [],
+            "official_publication_state": "UNKNOWN_FOR_SOME_OR_ALL_FACTS",
+            "official_publication_times": [],
+            "official_route": "BLOCKED_OR_UNCHECKED",
+            "provider": "PROVIDER_UPDATE_STATE_UNPROVEN"
+          },
+          "ticker": "FPT"
+        }
+      },
+      "research_boundaries": [
+        "NO_METRIC_REPLACEMENT",
+        "NO_ANNUALIZATION_TTM_OR_FX_CONVERSION",
+        "NO_VOTE_VALUATION_OR_AUTHORITY_CHANGE",
+        "NO_SOURCE_ACTIVATION",
+        "NO_GLOBAL_LATEST_OR_ABSENCE_CLAIM",
+        "NO_CAPITAL_VERDICT"
+      ],
+      "selected_comparison": {
+        "basis_groups": [],
+        "cross_basis_comparison": "NOT_PERMITTED",
+        "ranking": "NOT_PRODUCED"
+      },
+      "selection_basis": "EXPLICIT_SELECTED_SECURITIES_NOT_PEER_OR_UNIVERSE_COHORT",
+      "source_financial_product_identity": "financial_analysis_product_integration/v1:0a15ece7bc91718081ed5b2d078febb39d49dec4444b0480311d57bc46a54c35",
+      "temporal_use": "CONSULTATION_KNOWLEDGE_CUTOFF_NOT_PIT_OR_SEALED_DECISION_TIME"
+    },
+    "currency_packet_context": {
+      "knowledge_cutoff": "2026-10-08T15:00:00+07:00",
+      "projection_identity": "financial_reporting_currency/v1:08d65a81de8010a7fba60885c62ee14b81ebefa9b5730aeec8c86e7b665fffab",
+      "record": {
+        "frozen_provider_baseline": {
+          "compact_context": null,
+          "excluded_measurement_references": [],
+          "last_retained_knowledge_time": null,
+          "last_source_publication": null,
+          "lineage_ref": null,
+          "matched_observations": [],
+          "measurements": [],
+          "pin_version": null,
+          "publication_state": "UNKNOWN",
+          "reason_codes": [
+            "OBSERVATION_IS_NOT_PUBLICATION",
+            "COMPACT_HEADLINE_IS_NATIVE_LABEL_NOT_CALENDAR_LATEST"
+          ],
+          "retained_knowledge_eligibility": {
+            "decision_time_eligibility": "NOT_ESTABLISHED_FOR_SEALED_DECISION_OR_PIT",
+            "publication_state": "UNKNOWN",
+            "reason_codes": [
+              "KNOWLEDGE_AVAILABLE_AT_UNKNOWN_OR_INVALID",
+              "OBSERVED_AT_UNKNOWN_OR_INVALID"
+            ],
+            "state": "EXCLUDED_OR_UNPROVEN_AT_CUTOFF"
+          },
+          "source_context_identity": "synthetic:provider",
+          "source_identities": {},
+          "source_update_state": "PROVIDER_UPDATE_STATE_UNPROVEN",
+          "status": "ABSENT"
+        },
+        "investor_interpretation": {
+          "blocked_fields": [],
+          "historical_research_usable": false,
+          "material_freshness_warning": false,
+          "reason_codes": [
+            "FORMAL_CURRENT_IS_POLICY_LABEL_NOT_LATEST_REPORT",
+            "NO_GLOBAL_LATEST_REPORT_PROOF",
+            "NO_WHOLE_TICKER_REJECTION",
+            "PUBLICATION_UNKNOWN_DOES_NOT_PROVE_PIT"
+          ],
+          "ticker_rejected": false,
+          "update_status": "LATEST_UPDATE_UNKNOWN"
+        },
+        "knowledge_cutoff_eligibility": {
+          "excluded_checks": [],
+          "excluded_facts": [],
+          "knowledge_cutoff": "2026-10-08T15:00:00+07:00",
+          "temporal_use": "CONSULTATION_KNOWLEDGE_CUTOFF_NOT_PIT_OR_SEALED_DECISION_TIME"
+        },
+        "newer_period_evidence": {
+          "conflicts": false,
+          "global_latest_status": "UNPROVEN",
+          "known_progress_kinds": [],
+          "period_evidence": [],
+          "qualification_rejections": [],
+          "unqualified_assertions": []
+        },
+        "qualified_official_fields": [],
+        "report_period_coverage": {
+          "analysis_family": null,
+          "entity_type": "UNKNOWN",
+          "method_applicability": {
+            "bank": "NOT_APPLICABLE",
+            "ordinary_corporate_debt_ebitda": "FOLLOW_EXISTING_ENTITY_METHOD_GATES",
+            "securities": "NOT_APPLICABLE"
+          },
+          "official_bases": [],
+          "provider_bases": []
+        },
+        "source_update": {
+          "checks": [],
+          "live_route_status": "NOT_CHECKED_BY_OFFLINE_CONSUMER",
+          "official_fact_qualification_times": [],
+          "official_fact_retrieval_times": [],
+          "official_publication_state": "UNKNOWN_FOR_SOME_OR_ALL_FACTS",
+          "official_publication_times": [],
+          "official_route": "BLOCKED_OR_UNCHECKED",
+          "provider": "PROVIDER_UPDATE_STATE_UNPROVEN"
+        },
+        "ticker": "FPT"
+      },
+      "research_boundaries": [
+        "NO_METRIC_REPLACEMENT",
+        "NO_ANNUALIZATION_TTM_OR_FX_CONVERSION",
+        "NO_VOTE_VALUATION_OR_AUTHORITY_CHANGE",
+        "NO_SOURCE_ACTIVATION",
+        "NO_GLOBAL_LATEST_OR_ABSENCE_CLAIM",
+        "NO_CAPITAL_VERDICT"
+      ],
+      "temporal_use": "CONSULTATION_KNOWLEDGE_CUTOFF_NOT_PIT_OR_SEALED_DECISION_TIME"
+    },
+    "daily_identity": {
+      "artifact_identity": "current_daily_decision_research_product:ef56aeb5a1ac0f32f512943cb145f65f8b35e4f78a8e0fdca5632bb80cbd282b",
+      "artifact_sha256": "ef56aeb5a1ac0f32f512943cb145f65f8b35e4f78a8e0fdca5632bb80cbd282b"
+    },
+    "event_projection": {
+      "all_current_universe_event_records": [
+        {
+          "days_since_ex_date": null,
+          "days_to_ex_date": 0,
+          "event_id": "current_official_event:563fc019fd578da61be86f5b63252679c908f6e94749b7fbc1281848578fb339",
+          "event_state": "EX_DATE_TODAY",
+          "event_type": "CASH_DIVIDEND",
+          "ex_date": "2026-10-08",
+          "execution_date": null,
+          "materiality_status": "PRICE_SHARE_AFFECTING",
+          "official_observed_at": "2026-10-07T08:00:00Z",
+          "pit_suitability": "LIMITED_PUBLICATION_TIME_UNKNOWN",
+          "publication_availability": "UNKNOWN_NOT_RETAINED",
+          "published_at": null,
+          "qualification": "EX_DATE_OFFICIAL_QUALIFIED",
+          "record_date": "2026-10-09",
+          "source": "hnx_official_rights_event_index/v1",
+          "source_event_id": "current_official_event:fc3fe341162f989b40245f089b07c1c4bb0e666884da7fb94f99d616c5acd70f",
+          "source_identity": "synthetic:hnx",
+          "source_record_identity": "synthetic:hnx:FPT:CASH_DIVIDEND:2026-10-08:2026-10-09::1",
+          "source_url": null,
+          "ticker": "FPT",
+          "warnings": [
+            "Source execution/payment dates are calendar observations, not proof of executed lifecycle.",
+            "No event impact, probability, score, target, or recommendation is derived."
+          ]
+        }
+      ],
+      "artifact_identity": "current_official_event_context:4104a84b317c2ef763eea2b632e47c3294f2ca47e1395321232fc032be70ab0e",
+      "artifact_sha256": "4104a84b317c2ef763eea2b632e47c3294f2ca47e1395321232fc032be70ab0e",
+      "authority_boundary": "CURRENT_FACTUAL_EVENT_CONTEXT_ONLY; NO_EVENT_SCORE_OR_IMPACT; NO_PRICE_ADJUSTMENT_RAW_AS_TRADED_PIT_OR_BACKTEST_PROMOTION",
+      "contract_version": "current_official_event_context/v1",
+      "corporate_intelligence_adapter": {
+        "events": [
+          {
+            "days_since_ex_date": null,
+            "days_to_ex_date": 0,
+            "event_id": "current_official_event:563fc019fd578da61be86f5b63252679c908f6e94749b7fbc1281848578fb339",
+            "event_state": "EX_DATE_TODAY",
+            "event_type": "CASH_DIVIDEND",
+            "ex_date": "2026-10-08",
+            "execution_date": null,
+            "materiality_status": "PRICE_SHARE_AFFECTING",
+            "official_observed_at": "2026-10-07T08:00:00Z",
+            "pit_suitability": "LIMITED_PUBLICATION_TIME_UNKNOWN",
+            "publication_availability": "UNKNOWN_NOT_RETAINED",
+            "published_at": null,
+            "qualification": "EX_DATE_OFFICIAL_QUALIFIED",
+            "record_date": "2026-10-09",
+            "source": "hnx_official_rights_event_index/v1",
+            "source_event_id": "current_official_event:fc3fe341162f989b40245f089b07c1c4bb0e666884da7fb94f99d616c5acd70f",
+            "source_identity": "synthetic:hnx",
+            "source_record_identity": "synthetic:hnx:FPT:CASH_DIVIDEND:2026-10-08:2026-10-09::1",
+            "source_url": null,
+            "ticker": "FPT",
+            "warnings": [
+              "Source execution/payment dates are calendar observations, not proof of executed lifecycle.",
+              "No event impact, probability, score, target, or recommendation is derived."
+            ]
+          }
+        ],
+        "limitations": [
+          "Only upcoming/today/recent events with explicit qualified ex-date enter CI current-context adapter.",
+          "Publication date/time is unavailable; adapter is not suitable for historical known-at replay."
+        ],
+        "status": "READY_CURRENT_CONTEXT_PIT_LIMITED"
+      },
+      "coverage": {
+        "agm_context": 0,
+        "bonus_context": 0,
+        "cash_dividend_context": 1,
+        "date_incomplete_events": 0,
+        "event_context_records": 1,
+        "event_context_tickers": 1,
+        "ex_date_today_events": 1,
+        "other_context": 0,
+        "past_events": 0,
+        "recent_events": 0,
+        "rights_context": 0,
+        "stock_dividend_context": 0,
+        "unknown_events": 0,
+        "upcoming_events": 0
+      },
+      "current_official_universe": {
+        "count": 1,
+        "scope": "STOCKLOOKUP_CANDIDATES_WITH_RETAINED_CURRENT_OFFICIAL_EXCHANGE_PRESENCE"
+      },
+      "excluded_noncurrent_or_official_only_event_records": [],
+      "missing_is_zero": false,
+      "projection_source_artifact_identity": "current_official_event_context:fc5b87dc7aafc6bbba5417265965a9f4451448c7eed10bdaf5dc384f6a363814",
+      "records": {
+        "FPT": {
+          "current_or_recent_event_count": 1,
+          "data_gaps": [],
+          "event_types": [
+            "CASH_DIVIDEND"
+          ],
+          "events": [
+            {
+              "days_since_ex_date": null,
+              "days_to_ex_date": 0,
+              "event_id": "current_official_event:563fc019fd578da61be86f5b63252679c908f6e94749b7fbc1281848578fb339",
+              "event_state": "EX_DATE_TODAY",
+              "event_type": "CASH_DIVIDEND",
+              "ex_date": "2026-10-08",
+              "execution_date": null,
+              "materiality_status": "PRICE_SHARE_AFFECTING",
+              "official_observed_at": "2026-10-07T08:00:00Z",
+              "pit_suitability": "LIMITED_PUBLICATION_TIME_UNKNOWN",
+              "publication_availability": "UNKNOWN_NOT_RETAINED",
+              "published_at": null,
+              "qualification": "EX_DATE_OFFICIAL_QUALIFIED",
+              "record_date": "2026-10-09",
+              "source": "hnx_official_rights_event_index/v1",
+              "source_event_id": "current_official_event:fc3fe341162f989b40245f089b07c1c4bb0e666884da7fb94f99d616c5acd70f",
+              "source_identity": "synthetic:hnx",
+              "source_record_identity": "synthetic:hnx:FPT:CASH_DIVIDEND:2026-10-08:2026-10-09::1",
+              "source_url": null,
+              "ticker": "FPT",
+              "warnings": [
+                "Source execution/payment dates are calendar observations, not proof of executed lifecycle.",
+                "No event impact, probability, score, target, or recommendation is derived."
+              ]
+            }
+          ],
+          "qualified_official_events_available": true,
+          "ticker": "FPT"
+        }
+      },
+      "research_session": "2026-10-08",
+      "schema_version": "1.0.0",
+      "session_cutoff": "2026-10-08T15:00:00+07:00",
+      "source_artifact_identities": {
+        "hnx": "synthetic:33d8ebb235a894dbb2c4531c383bd0f8c2ca016ab892f1a154656572fc1877e9",
+        "hose": "synthetic:40f4340b110630e125c66c5371f9322f2e77e209e52069d034cc064de6869c21",
+        "official_universe": "synthetic:ed408a4caa0523c0069e3ba5c44e48960af21475c08482bb541596bd5120f0ec"
+      },
+      "source_coverage_scopes": {
+        "hnx_rights": {},
+        "hose_events": "HPG_PUBLIC_EVENT_INDEX_ONLY"
+      }
+    },
+    "field_id": "ef56aeb5a1ac0f32f512943cb145f65f8b35e4f78a8e0fdca5632bb80cbd282b",
+    "field_json": "{\"at\":\"2026-10-08 08:00:00+00:00\",\"records\":{\"FPT\":{\"name\":\"Tiếng Việt\",\"value\":null,\"zero\":-0.0}},\"session\":\"2026-10-08\"}",
+    "field_record_json": "{\"as_of\":\"2026-10-08\",\"contract_version\":\"1.0.0\",\"domain\":\"daily_market\",\"expected_update_frequency\":null,\"field_id\":\"f257d60ae198da3676a1bf0fcfaf709861d448ead0e8a6dd14e994509757a0f6\",\"field_name\":\"close\",\"freshness_status\":\"current\",\"is_actionable\":true,\"knowledge_cutoff\":null,\"lineage\":{\"fixture\":\"synthetic\"},\"observed_at\":\"2026-10-08T08:00:00Z\",\"pit_eligible\":false,\"pit_status\":\"UNQUALIFIED_PRICE_BASIS\",\"price_basis\":null,\"quality_status\":\"research\",\"reference_at\":null,\"source\":null,\"stale_reason\":null,\"value\":25.5}",
+    "human_packet": {
+      "ai_narration": {
+        "authority": "NARRATION_ONLY",
+        "status": "MISSING",
+        "value": null
+      },
+      "buy_score": null,
+      "canonical_packet_identity": "synthetic:packet",
+      "capital_decision": {
+        "owner": "HUMAN",
+        "status": "NOT_DELEGATED",
+        "value": null
+      },
+      "contract_version": "human_ai_decision_evidence_packet/v2",
+      "feature_vector": {
+        "collapsed_scalar": null,
+        "measurements": {
+          "context": "Tiếng Việt",
+          "rsi": 28
+        },
+        "status": "PRESENT"
+      },
+      "is_actionable": false,
+      "owners": {
+        "capital_decision": "HUMAN",
+        "measurements": "PYTHON",
+        "narration": "AI"
+      },
+      "packet_identity": "human_ai_decision_evidence_packet:d0c9239989a7241da686fc4cab593803f766b32531f0278f560665c4f03f40d4",
+      "probability": null,
+      "sections": {
+        "comparison": {
+          "fields": {},
+          "status": "MISSING"
+        },
+        "counter_thesis": {
+          "fields": {},
+          "status": "MISSING"
+        },
+        "history": {
+          "analogue_order": "INPUT_ORDER",
+          "analogues": [],
+          "cherry_pick": false,
+          "fields": {},
+          "status": "MISSING"
+        },
+        "market": {
+          "fields": {},
+          "status": "MISSING"
+        },
+        "stock": {
+          "fields": {},
+          "status": "MISSING"
+        },
+        "tactical": {
+          "fields": {},
+          "status": "MISSING"
+        },
+        "uncertainty": {
+          "fields": {},
+          "status": "MISSING"
+        }
+      },
+      "target_price": null,
+      "ticker": "FPT"
+    },
+    "risk_identity": {
+      "artifact_identity": "current_portfolio_risk_envelope:ef56aeb5a1ac0f32f512943cb145f65f8b35e4f78a8e0fdca5632bb80cbd282b",
+      "artifact_sha256": "ef56aeb5a1ac0f32f512943cb145f65f8b35e4f78a8e0fdca5632bb80cbd282b"
+    }
+  }
+}

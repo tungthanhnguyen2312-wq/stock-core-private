@@ -49,7 +49,7 @@ def _hash(value: Any) -> str:
 
 
 def _normalize(value: str) -> str:
-    from official_financial_ocr_table_evidence import _normalize as normalize
+    from stocklookup_core.evidence.financial_document_text import _normalize as normalize
     return normalize(value)
 
 

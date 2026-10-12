@@ -26,6 +26,7 @@ env:
     tests/test_architecture_ratchet.py
     tests/test_foundation_seams.py
     tests/test_e4_infrastructure.py
+    tests/test_e5_runtime_seams.py
     tests/test_official_financial_source_integrity.py
     tests/test_financial_reporting_currency.py
     tests/test_action_center_opportunity_cost_consumer.py
