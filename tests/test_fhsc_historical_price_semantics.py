@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fhsc_historical_price_semantics import FIELDS, calibration_matrix, ratio_classification
+from stocklookup_core.evidence.fhsc_historical_price_semantics import FIELDS, calibration_matrix, ratio_classification
 
 
 def _uniform_representation() -> dict[str, str]:

@@ -25,7 +25,7 @@ from __future__ import annotations
 from typing import Any, Mapping, Sequence
 
 try:
-    from vci_direct_basis_pilot import VCIPilotError, hose_tick_size
+    from stocklookup_core.evidence.vci_direct_basis_pilot import VCIPilotError, hose_tick_size
 except ImportError:  # pragma: no cover - defensive; module is always present in this repo
     class VCIPilotError(ValueError):
         pass

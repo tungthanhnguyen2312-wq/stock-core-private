@@ -376,7 +376,7 @@ class StockDataCannotEnterIndexContractTests(unittest.TestCase):
     reads the other's set."""
 
     def test_evidence_qualified_sets_are_disjoint(self):
-        import dnse_ohlc_price_basis_capability as stock_capability
+        from stocklookup_core.evidence import dnse_ohlc_price_basis_capability as stock_capability
 
         self.assertEqual(
             set(), set(m.EVIDENCE_QUALIFIED_BENCHMARKS) & set(stock_capability.EVIDENCE_QUALIFIED_TICKERS)
@@ -386,7 +386,7 @@ class StockDataCannotEnterIndexContractTests(unittest.TestCase):
         self.assertFalse(m.benchmark_current_state_eligible("HPG"))
 
     def test_vnindex_is_not_an_eligible_stock_ticker(self):
-        import dnse_ohlc_price_basis_capability as stock_capability
+        from stocklookup_core.evidence import dnse_ohlc_price_basis_capability as stock_capability
 
         self.assertFalse(stock_capability.ticker_current_state_eligible("VNINDEX"))
 

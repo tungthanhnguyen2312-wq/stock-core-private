@@ -60,7 +60,7 @@ import dnse_access as dnse_acc
 from dnse_access import BASE_URL as DNSE_BASE_URL, auth_headers, credential_status, credentials_for_request
 from dnse_market_data import resolve_endpoint
 from dnse_secrets_env import ensure_credentials_loaded
-from fhsc_retained_live_reconciliation import (
+from stocklookup_core.evidence.fhsc_retained_live_reconciliation import (
     FHSC_BASE_URL,
     PRICE_HISTORY_PATH,
     STOCK_REALTIME_PATH,
@@ -68,7 +68,7 @@ from fhsc_retained_live_reconciliation import (
     load_finhay_api_key,
 )
 from stocklookup_core.evidence import market_capability_taxonomy as taxonomy
-import price_representation_contract as price_contract
+from stocklookup_core.evidence import price_representation_contract as price_contract
 from vn_time import VN_TZ, vn_now
 
 COLLECTOR_VERSION = "1.0.0"

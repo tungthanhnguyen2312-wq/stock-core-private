@@ -22,8 +22,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-import kbs_empirical_basis as kbs  # noqa: E402
-import kbs_trading_value_coverage as coverage  # noqa: E402
+from stocklookup_core.evidence import kbs_empirical_basis as kbs  # noqa: E402
+from stocklookup_core.evidence import kbs_trading_value_coverage as coverage  # noqa: E402
 
 EVIDENCE_DIR = ROOT / "operations-review" / "kbs-empirical-basis-20260804"
 OUT_DIR = ROOT / "operations-review" / "kbs-trading-value-coverage-20260804"

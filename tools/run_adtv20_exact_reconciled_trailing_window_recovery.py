@@ -24,7 +24,7 @@ from adtv20_exact_reconciled_trailing_window_recovery import (
     reconcile_acquired_session,
     run_bounded_acquisition,
 )
-from fhsc_retained_live_reconciliation import load_finhay_api_key
+from stocklookup_core.evidence.fhsc_retained_live_reconciliation import load_finhay_api_key
 from historical_matched_trading_value_authority import EXACT_RECONCILED
 
 

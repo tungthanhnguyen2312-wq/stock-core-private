@@ -45,7 +45,7 @@ from stocklookup_core.evidence import evidence_qualification_tiers as tiers
 # rule the VCI lane used -- reused rather than restated so the two lanes cannot drift into
 # disagreeing about what the exchange permits. Importing a pure arithmetic function is not
 # a VCI probe and touches no VCI surface.
-from vci_direct_basis_pilot import hose_tick_size, on_tick_lattice  # noqa: F401
+from stocklookup_core.evidence.vci_direct_basis_pilot import hose_tick_size, on_tick_lattice  # noqa: F401
 
 VERSION = "1.0.0"
 

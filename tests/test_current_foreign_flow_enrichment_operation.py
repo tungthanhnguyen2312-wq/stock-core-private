@@ -15,7 +15,7 @@ import pytest
 import current_foreign_flow_enrichment_operation as op
 import current_foreign_flow_retention as retention
 import dnse_foreign_flow_store as store
-from dnse_foreign_flow_capability import normalize_record
+from stocklookup_core.evidence.dnse_foreign_flow_capability import normalize_record
 
 ROOT = Path(__file__).resolve().parents[1]
 SESSION = "2026-09-18"

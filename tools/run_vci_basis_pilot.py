@@ -22,7 +22,7 @@ import requests
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-import vci_direct_basis_pilot as pilot  # noqa: E402
+from stocklookup_core.evidence import vci_direct_basis_pilot as pilot  # noqa: E402
 
 EVIDENCE_DIR = ROOT / "operations-review" / "vci-direct-basis-pilot-20260804"
 

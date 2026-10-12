@@ -19,7 +19,7 @@ from stocklookup_core.evidence.dnse_closed_session_ohlc_representation import ( 
 )
 from dnse_market_data import resolve_endpoint  # noqa: E402
 from dnse_secrets_env import ensure_credentials_loaded  # noqa: E402
-from fhsc_retained_live_reconciliation import parse_retained_history  # noqa: E402
+from stocklookup_core.evidence.fhsc_retained_live_reconciliation import parse_retained_history  # noqa: E402
 from stocklookup_core.evidence.provider_reference_reconciliation import (  # noqa: E402
     BASIS_UNRESOLVED, CLOSED_SESSION_OBSERVATION, SHADOW_REFERENCE_PROVIDER,
     provider_reference_observation, reconcile_observations,

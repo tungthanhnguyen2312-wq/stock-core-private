@@ -299,7 +299,7 @@ class EvidenceIntegrity(unittest.TestCase):
         self.assertEqual(before, after)
 
     def test_secret_bearing_headers_are_rejected_from_persistence(self):
-        import vci_direct_basis_pilot as pilot
+        from stocklookup_core.evidence import vci_direct_basis_pilot as pilot
 
         redacted = pilot.redact_headers({"Cookie": "s=1", "Authorization": "Bearer x", "Accept": "application/json"})
         self.assertEqual(redacted["Cookie"], pilot.REDACTED)
@@ -326,7 +326,7 @@ class PriorVerdictsIntact(unittest.TestCase):
     """14/15. The price supersession stands and no production gate moved."""
 
     def test_price_basis_supersession_is_still_active(self):
-        import provider_price_basis_registry as registry
+        from stocklookup_core.evidence import provider_price_basis_registry as registry
 
         self.assertTrue(registry.is_superseded("phase3a_vci_price_basis"))
         self.assertEqual(registry.active_verdict("VCI")["price_basis"], "empirically_event_adjusted")

@@ -7,7 +7,7 @@ from datetime import datetime
 from pathlib import Path
 
 import dnse_current_state_price_analytics as m
-from dnse_ohlc_price_basis_capability import EVIDENCE_EVENTS, SOURCE_CONTRACT_VERSION
+from stocklookup_core.evidence.dnse_ohlc_price_basis_capability import EVIDENCE_EVENTS, SOURCE_CONTRACT_VERSION
 from vn_time import VN_TZ
 
 # Real, shape-matched HPG-like closes over 15 consecutive trading sessions (no

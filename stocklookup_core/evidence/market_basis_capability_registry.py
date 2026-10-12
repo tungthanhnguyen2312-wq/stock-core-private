@@ -37,11 +37,11 @@ from __future__ import annotations
 
 from typing import Any, Mapping, Sequence
 
-import kbs_capability_matrix as kbs
-import market_data_source_authority as source_authority
-import market_volume_capability_matrix as vci_volume
-import provider_price_basis_registry as price_registry
-import vci_direct_basis_pilot as vci_pilot
+from stocklookup_core.evidence import kbs_capability_matrix as kbs
+from stocklookup_core.evidence import market_data_source_authority as source_authority
+from stocklookup_core.evidence import market_volume_capability_matrix as vci_volume
+from stocklookup_core.evidence import provider_price_basis_registry as price_registry
+from stocklookup_core.evidence import vci_direct_basis_pilot as vci_pilot
 
 VERSION = "1.2.0"
 

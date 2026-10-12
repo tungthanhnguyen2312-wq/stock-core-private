@@ -3,7 +3,7 @@ from __future__ import annotations
 import hashlib,json,sqlite3
 from pathlib import Path
 from typing import Any,Mapping
-from provider_price_basis_registry import active_verdict,blocks_raw_as_traded,ineligibility_reason
+from stocklookup_core.evidence.provider_price_basis_registry import active_verdict,blocks_raw_as_traded,ineligibility_reason
 VERSION="1.0.0"; PROVIDERS=("VCI","KBS")
 class OHLCVBasisError(ValueError):pass
 def _hash(path:Path)->str:

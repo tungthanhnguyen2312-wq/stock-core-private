@@ -1,6 +1,6 @@
 import json,sqlite3,tempfile,unittest
 from pathlib import Path
-from ohlcv_basis_qualification import OHLCVBasisError,qualify,validate_forward
+from stocklookup_core.evidence.ohlcv_basis_qualification import OHLCVBasisError,qualify,validate_forward
 class BasisTests(unittest.TestCase):
  def fixture(self,d):
   db=Path(d)/"db.sqlite";c=sqlite3.connect(db);c.execute("create table ohlcv(ticker text,date text,close real,source text)");c.executemany("insert into ohlcv values(?,?,?,?)",[("HPG","2024-12-31",19830,"VCI"),("VCB","2024-12-31",60560,"VCI"),("AAA","2024-01-01",10,"KBS")]);c.commit();c.close();p=Path(d)/"c.jsonl";rows=[{"provider":"VCI","source_table":"ohlcv","price_field":"close","ticker":"HPG","trading_date":"2024-12-31","value":19830,"adjustment_status":"raw_as_quoted_no_adjustment_applied","citation_id":"a"},{"provider":"VCI","source_table":"ohlcv","price_field":"close","ticker":"VCB","trading_date":"2024-12-31","value":60560,"adjustment_status":"raw_as_quoted_no_adjustment_applied","citation_id":"b"}];p.write_text("\n".join(json.dumps(x) for x in rows));return db,p

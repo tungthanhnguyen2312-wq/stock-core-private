@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any, Iterable, Mapping
 from urllib.request import Request, urlopen
 
-from fhsc_retained_live_reconciliation import (
+from stocklookup_core.evidence.fhsc_retained_live_reconciliation import (
     FHSC_BASE_URL,
     PRICE_HISTORY_PATH,
     TIER1_HEADER_NAME,
@@ -18,7 +18,7 @@ from fhsc_retained_live_reconciliation import (
 )
 
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parents[2]
 VERSION = "1.0.0"
 CALIBRATION_VERSION = "fhsc_historical_price_scale_calibration/v1"
 LEGACY_CAPABILITY = "price_histories_chart_1d"

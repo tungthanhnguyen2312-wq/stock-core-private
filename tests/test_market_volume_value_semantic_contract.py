@@ -3,7 +3,7 @@ from __future__ import annotations
 import copy
 import unittest
 
-import market_volume_value_semantic_contract as contract
+from stocklookup_core.evidence import market_volume_value_semantic_contract as contract
 
 
 class VolumeValueSemanticContractTests(unittest.TestCase):

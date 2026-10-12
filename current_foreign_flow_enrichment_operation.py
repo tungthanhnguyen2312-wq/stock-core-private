@@ -49,7 +49,7 @@ import current_foreign_flow_retention as retention
 import dnse_foreign_flow_store as store
 import dnse_foreign_trading_raw as raw_contract
 import market_raw_lake as lake
-from dnse_foreign_flow_capability import DnseForeignFlowError
+from stocklookup_core.evidence.dnse_foreign_flow_capability import DnseForeignFlowError
 from vn_time import vn_now_iso
 
 import sys as _sys

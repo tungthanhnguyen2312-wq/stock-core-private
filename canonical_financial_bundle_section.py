@@ -46,7 +46,7 @@ from canonical_financial_facts import (
     STATUS_UNAVAILABLE,
 )
 from stocklookup_core.financial.canonical_financial_resolvers import VERSION as RESOLVER_VERSION
-from price_representation_contract import RepresentationContractError, to_canonical as _to_canonical_price
+from stocklookup_core.evidence.price_representation_contract import RepresentationContractError, to_canonical as _to_canonical_price
 from market_wide_calculation_readiness import (
     CAPABILITIES,
     POLICY_VERSION,

@@ -53,7 +53,7 @@ from market_feature_store import (
 )
 import canonical_market_evidence_integration as canonical_integration_module
 from stocklookup_core.evidence import market_capability_taxonomy as taxonomy
-from market_volume_value_semantic_contract import (
+from stocklookup_core.evidence.market_volume_value_semantic_contract import (
     DownstreamUse,
     FIELD_CONTRACTS,
     assert_fail_closed,

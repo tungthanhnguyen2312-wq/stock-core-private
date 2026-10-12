@@ -33,7 +33,7 @@ import json
 from typing import Any, Mapping, Sequence
 
 import price_basis_feature_fitness as fitness
-import provider_price_basis_registry as basis_registry
+from stocklookup_core.evidence import provider_price_basis_registry as basis_registry
 
 CONTRACT_VERSION = "pit_price_series_qualification/v1"
 SCHEMA_VERSION = "1.0.0"

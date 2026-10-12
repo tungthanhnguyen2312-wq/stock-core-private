@@ -12,7 +12,7 @@ from __future__ import annotations
 import unittest
 
 import market_price_volume_basis_authority as basis_authority
-import market_data_source_authority as source_authority
+from stocklookup_core.evidence import market_data_source_authority as source_authority
 
 
 class BuildMatrixShapeTests(unittest.TestCase):

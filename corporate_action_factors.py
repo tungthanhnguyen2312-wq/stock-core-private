@@ -195,7 +195,7 @@ def derive_cash_dividend_adjustment_factors(runtime_root: Path, ticker: str = "V
             "factor_counts": {"cash_dividend": N, "unavailable": M}
         }
     """
-    from provider_price_basis_registry import ineligibility_reason, raw_as_traded_eligible
+    from stocklookup_core.evidence.provider_price_basis_registry import ineligibility_reason, raw_as_traded_eligible
     from semantic_evidence_bridge import load_verified_market_price
 
     ledger_res = build_corporate_action_ledger(runtime_root, ticker=ticker)

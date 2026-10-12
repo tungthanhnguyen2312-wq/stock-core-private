@@ -15,11 +15,32 @@
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "ACCELERATED_ROOT_PACKAGE_CONSOLIDATION_V1",
-    "state": "COMPLETE"
+    "milestone": "ACCELERATED_ROOT_PACKAGE_CONSOLIDATION_V2",
+    "state": "ACTIVE"
   },
   "queued_next": [],
   "milestones": [
+    {
+      "milestone_id": "ACCELERATED_ROOT_PACKAGE_CONSOLIDATION_V2",
+      "state": "ACTIVE",
+      "starting_checkpoint": "9174d2b8b8e13fa3a2a4c696b9e2fb28a39a81ea",
+      "candidate_branch": "refactor/bulk-root-package-consolidation-v2",
+      "dependencies": [
+        "ACCELERATED_ROOT_PACKAGE_CONSOLIDATION_V1"
+      ],
+      "unlocks": [],
+      "owner_authorized": true,
+      "owner_override": "Owner directive 2026-10-12: ACCELERATED_ROOT_PACKAGE_CONSOLIDATION_V2, continuation of root-structure simplification after V1 PR129 merge 9174d2b (post-merge CI 38210255068 success). Resolve bounded AMBER compatibility hazards and relocate qualified modules into existing stocklookup_core packages in validated cohorts; E0 baseline, E1 carry, E2/E3 and V1 relocation mappings, E4 V1/V2 identities, E5/E6 parity, provider bundle, launcher paths/ASTs, historical-blob root names and analytical output preserved; separate exact V2 fixture; no broad proxies. Local edits/tests/checkpoints/native closeout, one feature push/PR and in-scope CI repairs authorized; no merge/Daily/deploy/production writes/evidence or authority promotion/successor.",
+      "authority_effect": "NONE",
+      "source_doc": "docs/accelerated_root_package_consolidation_v2_contract.md",
+      "state_history": [
+        "DEFERRED",
+        "ACTIVE"
+      ],
+      "checkpoint": null,
+      "terminal_disposition": null,
+      "notes": "Owner directive 2026-10-12: ACCELERATED_ROOT_PACKAGE_CONSOLIDATION_V2, continuation of root-structure simplification after V1 PR129 merge 9174d2b (post-merge CI 38210255068 success). Resolve bounded AMBER compatibility hazards and relocate qualified modules into existing stocklookup_core packages in validated cohorts; E0 baseline, E1 carry, E2/E3 and V1 relocation mappings, E4 V1/V2 identities, E5/E6 parity, provider bundle, launcher paths/ASTs, historical-blob root names and analytical output preserved; separate exact V2 fixture; no broad proxies. Local edits/tests/checkpoints/native closeout, one feature push/PR and in-scope CI repairs authorized; no merge/Daily/deploy/production writes/evidence or authority promotion/successor."
+    },
     {
       "milestone_id": "ACCELERATED_ROOT_PACKAGE_CONSOLIDATION_V1",
       "state": "COMPLETE",

@@ -10,10 +10,10 @@ from __future__ import annotations
 
 import unittest
 
-import kbs_capability_matrix as kbs
-import market_basis_capability_registry as registry
-import market_volume_capability_matrix as vci_volume
-import provider_price_basis_registry as price_registry
+from stocklookup_core.evidence import kbs_capability_matrix as kbs
+from stocklookup_core.evidence import market_basis_capability_registry as registry
+from stocklookup_core.evidence import market_volume_capability_matrix as vci_volume
+from stocklookup_core.evidence import provider_price_basis_registry as price_registry
 
 
 class DelegationIsPassThroughNotRederivation(unittest.TestCase):

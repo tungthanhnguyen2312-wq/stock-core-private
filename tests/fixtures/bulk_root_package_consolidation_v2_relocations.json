@@ -1,0 +1,29 @@
+{
+  "milestone": "ACCELERATED_ROOT_PACKAGE_CONSOLIDATION_V2",
+  "baseline": "9174d2b8b8e13fa3a2a4c696b9e2fb28a39a81ea",
+  "relocations": {
+    "dnse_fhsc_market_composition_scaleout.py": "stocklookup_core/evidence/dnse_fhsc_market_composition_scaleout.py",
+    "dnse_fhsc_volume_basis.py": "stocklookup_core/evidence/dnse_fhsc_volume_basis.py",
+    "dnse_foreign_flow_capability.py": "stocklookup_core/evidence/dnse_foreign_flow_capability.py",
+    "dnse_ohlc_price_basis_capability.py": "stocklookup_core/evidence/dnse_ohlc_price_basis_capability.py",
+    "dnse_provider_native_closed_ohlc.py": "stocklookup_core/evidence/dnse_provider_native_closed_ohlc.py",
+    "fhsc_historical_price_semantics.py": "stocklookup_core/evidence/fhsc_historical_price_semantics.py",
+    "fhsc_retained_live_reconciliation.py": "stocklookup_core/evidence/fhsc_retained_live_reconciliation.py",
+    "kbs_capability_matrix.py": "stocklookup_core/evidence/kbs_capability_matrix.py",
+    "kbs_empirical_basis.py": "stocklookup_core/evidence/kbs_empirical_basis.py",
+    "kbs_mutability_protocol.py": "stocklookup_core/evidence/kbs_mutability_protocol.py",
+    "kbs_trade_scope_qualification.py": "stocklookup_core/evidence/kbs_trade_scope_qualification.py",
+    "kbs_trading_value_coverage.py": "stocklookup_core/evidence/kbs_trading_value_coverage.py",
+    "kbs_trading_value_export.py": "stocklookup_core/evidence/kbs_trading_value_export.py",
+    "market_basis_capability_registry.py": "stocklookup_core/evidence/market_basis_capability_registry.py",
+    "market_data_source_authority.py": "stocklookup_core/evidence/market_data_source_authority.py",
+    "market_volume_capability_matrix.py": "stocklookup_core/evidence/market_volume_capability_matrix.py",
+    "market_volume_value_semantic_contract.py": "stocklookup_core/evidence/market_volume_value_semantic_contract.py",
+    "ohlcv_basis_qualification.py": "stocklookup_core/evidence/ohlcv_basis_qualification.py",
+    "price_representation_contract.py": "stocklookup_core/evidence/price_representation_contract.py",
+    "provider_price_basis_registry.py": "stocklookup_core/evidence/provider_price_basis_registry.py",
+    "qualified_market_observations.py": "stocklookup_core/evidence/qualified_market_observations.py",
+    "qualified_price_storage_benchmark.py": "stocklookup_core/evidence/qualified_price_storage_benchmark.py",
+    "vci_direct_basis_pilot.py": "stocklookup_core/evidence/vci_direct_basis_pilot.py"
+  }
+}

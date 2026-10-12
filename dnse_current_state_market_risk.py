@@ -67,7 +67,7 @@ from typing import Any, Mapping, Sequence
 import dnse_current_state_price_analytics as price_analytics
 import dnse_index_return_series_capability as index_capability
 import dnse_market_risk_evidence_store as evidence_store
-import dnse_ohlc_price_basis_capability as stock_price_basis
+from stocklookup_core.evidence import dnse_ohlc_price_basis_capability as stock_price_basis
 
 VERSION = "1.0.0"
 

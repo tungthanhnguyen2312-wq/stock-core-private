@@ -8,7 +8,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from fhsc_historical_price_semantics import (  # noqa: E402
+from stocklookup_core.evidence.fhsc_historical_price_semantics import (  # noqa: E402
     CALIBRATION_TICKERS, build_artifact, fetch_legacy_history_and_retain, load_finhay_api_key,
     retain_official_documents, retained_dnse_ohlc,
 )

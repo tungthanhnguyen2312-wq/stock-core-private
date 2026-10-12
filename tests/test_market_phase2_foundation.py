@@ -6,7 +6,7 @@ import pandas as pd
 from market_phase2_foundation import (DNSE_BOARD_SEMANTICS, FinancialPitFact, canonical_instrument_identity, evaluate_quality,
     expand_raw_ohlc, financial_facts_visible_as_of, phase1_provider_exceptions, price_basis_for,
     semantic_registry)
-from provider_price_basis_registry import bounded_price_basis_for
+from stocklookup_core.evidence.provider_price_basis_registry import bounded_price_basis_for
 
 
 def raw(symbol="AAA", payload=None):

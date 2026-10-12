@@ -13,10 +13,10 @@ import unittest
 from pathlib import Path
 
 from stocklookup_core.evidence import evidence_qualification_tiers as tiers
-import kbs_capability_matrix as caps
-import kbs_empirical_basis as kbs
-import kbs_mutability_protocol as protocol
-import provider_price_basis_registry as registry
+from stocklookup_core.evidence import kbs_capability_matrix as caps
+from stocklookup_core.evidence import kbs_empirical_basis as kbs
+from stocklookup_core.evidence import kbs_mutability_protocol as protocol
+from stocklookup_core.evidence import provider_price_basis_registry as registry
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
@@ -629,7 +629,7 @@ class InertnessTest(unittest.TestCase):
         ):
             self.assertNotIn(forbidden, imported, f"{forbidden} is imported by the protocol")
         self.assertEqual(imported, {"__future__", "hashlib", "json", "typing",
-                                    "stocklookup_core", "kbs_empirical_basis"})
+                                    "stocklookup_core"})
         # No writes either: the protocol describes artifacts, it does not create them.
         for forbidden in ("write_text(", "write_bytes(", "open("):
             self.assertNotIn(forbidden, source, forbidden)

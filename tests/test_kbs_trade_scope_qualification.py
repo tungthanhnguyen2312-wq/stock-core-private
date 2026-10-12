@@ -12,7 +12,7 @@ from __future__ import annotations
 import unittest
 
 from stocklookup_core.evidence import evidence_qualification_tiers as tiers
-import kbs_trade_scope_qualification as scope
+from stocklookup_core.evidence import kbs_trade_scope_qualification as scope
 
 
 def _board(ticker="HPG", tt=1_000_000, ptq=0, ptv=0, date="07/08/2026"):

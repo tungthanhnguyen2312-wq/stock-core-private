@@ -12,7 +12,7 @@ import json
 from pathlib import Path
 from typing import Any, Mapping
 
-import dnse_ohlc_price_basis_capability as price_basis
+from stocklookup_core.evidence import dnse_ohlc_price_basis_capability as price_basis
 from dnse_current_state_price_analytics import build_current_state_price_analytics_from_evidence_store
 from dnse_market_risk_evidence_store import read_stock_ohlc
 from stocklookup_core.evidence.field_identity import stable_id

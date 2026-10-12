@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from stocklookup_core.evidence.dnse_closed_session_ohlc_representation import IDENTITY_TRANSFORMATION
-from dnse_provider_native_closed_ohlc import (
+from stocklookup_core.evidence.dnse_provider_native_closed_ohlc import (
     ADJUSTMENT_BASIS, FORMAL_PRICE_UNIT, RAW_AS_TRADED, closed_historical_session_gate,
     cross_provider_native_agreement, qualify_provider_native_closed_ohlc, scale_invariant_return,
 )

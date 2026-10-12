@@ -52,7 +52,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from atomic_io import atomic_write_json
-from dnse_fhsc_market_composition_scaleout import (
+from stocklookup_core.evidence.dnse_fhsc_market_composition_scaleout import (
     DNSE_EQUALS_MATCHED,
     DNSE_EQUALS_NONE,
     DNSE_EQUALS_PUT_THROUGH,
@@ -61,9 +61,9 @@ from dnse_fhsc_market_composition_scaleout import (
     NOT_COMPARABLE as SOURCE_A_NOT_COMPARABLE,
     classify_volume as classify_volume_row,
 )
-from dnse_fhsc_market_composition_scaleout import content_identity as market_composition_content_identity
-from dnse_fhsc_volume_basis import content_identity as volume_basis_content_identity
-from dnse_fhsc_volume_basis import parse_dnse_ohlc_volume, parse_fhsc_trading_history
+from stocklookup_core.evidence.dnse_fhsc_market_composition_scaleout import content_identity as market_composition_content_identity
+from stocklookup_core.evidence.dnse_fhsc_volume_basis import content_identity as volume_basis_content_identity
+from stocklookup_core.evidence.dnse_fhsc_volume_basis import parse_dnse_ohlc_volume, parse_fhsc_trading_history
 from market_phase2_foundation import DNSE_BOARD_SEMANTICS
 
 SCHEMA_VERSION = "1.0.0"

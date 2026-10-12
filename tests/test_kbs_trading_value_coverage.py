@@ -16,10 +16,10 @@ import unittest
 from pathlib import Path
 
 from stocklookup_core.evidence import evidence_qualification_tiers as tiers
-import kbs_capability_matrix as caps
-import kbs_empirical_basis as kbs
-import kbs_trading_value_coverage as coverage
-import provider_price_basis_registry as registry
+from stocklookup_core.evidence import kbs_capability_matrix as caps
+from stocklookup_core.evidence import kbs_empirical_basis as kbs
+from stocklookup_core.evidence import kbs_trading_value_coverage as coverage
+from stocklookup_core.evidence import provider_price_basis_registry as registry
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 EVIDENCE_DIR = REPO_ROOT / "operations-review" / "kbs-empirical-basis-20260804"
@@ -341,9 +341,9 @@ class AssociationTest(unittest.TestCase):
         reasoning improves, and corrections against them are recorded separately.
         """
         targets = [REPO_ROOT / name for name in (
-            "kbs_trading_value_coverage.py", "kbs_capability_matrix.py",
-            "kbs_empirical_basis.py", "provider_price_basis_registry.py",
-            "kbs_mutability_protocol.py",
+            "stocklookup_core/evidence/kbs_trading_value_coverage.py", "stocklookup_core/evidence/kbs_capability_matrix.py",
+            "stocklookup_core/evidence/kbs_empirical_basis.py", "stocklookup_core/evidence/provider_price_basis_registry.py",
+            "stocklookup_core/evidence/kbs_mutability_protocol.py",
             "docs/kbs_empirical_basis_qualification.md", "docs/STATE.md",
             "docs/ROADMAP.md", "docs/DECISIONS.md", "docs/AI_RULES.md",
         )]
@@ -612,7 +612,7 @@ class ReplayTest(unittest.TestCase):
             self.assertNotIn(forbidden, imported, forbidden)
         self.assertEqual(
             imported,
-            {"__future__", "typing", "stocklookup_core", "kbs_empirical_basis"},
+            {"__future__", "typing", "stocklookup_core"},
         )
 
 

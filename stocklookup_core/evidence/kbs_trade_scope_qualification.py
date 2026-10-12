@@ -359,7 +359,7 @@ def assert_contract_fail_closed(contract: Mapping[str, Any]) -> Mapping[str, Any
 # are frozen here as data. The raw bytes stay retained, hashed, and re-verifiable; the
 # module just does not require them to exist to answer a query.
 
-EVIDENCE_DIR = Path(__file__).resolve().parent / "operations-review" / "kbs-trade-scope-qualification-20260809" / "raw"
+EVIDENCE_DIR = Path(__file__).resolve().parents[2] / "operations-review" / "kbs-trade-scope-qualification-20260809" / "raw"
 
 #: Retrieved and reconciled 2026-08-09, one session (2026-08-07), from the raw artifacts
 #: hashed in FROZEN_ARTIFACT_HASHES below. Reproduce with verify_against_retained_evidence().

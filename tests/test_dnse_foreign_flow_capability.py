@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import unittest
 
-from dnse_foreign_flow_capability import (
+from stocklookup_core.evidence.dnse_foreign_flow_capability import (
     PARTIALLY_QUALIFIED,
     DnseForeignFlowError,
     active_capability_contract,

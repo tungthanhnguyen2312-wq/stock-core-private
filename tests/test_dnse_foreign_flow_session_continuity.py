@@ -18,7 +18,7 @@ from pathlib import Path
 
 import dnse_foreign_flow_store as store
 from stocklookup_core.evidence.daily_session_completion_reference import registry_path
-from dnse_foreign_flow_capability import normalize_record
+from stocklookup_core.evidence.dnse_foreign_flow_capability import normalize_record
 
 
 def _raw(session_date: str, ticker: str = "HPG", buy: int = 100, sell: int = 40) -> dict:

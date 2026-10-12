@@ -16,9 +16,9 @@ import unittest
 from pathlib import Path
 
 from stocklookup_core.evidence import evidence_qualification_tiers as tiers
-import kbs_capability_matrix as caps
-import kbs_empirical_basis as kbs
-import provider_price_basis_registry as registry
+from stocklookup_core.evidence import kbs_capability_matrix as caps
+from stocklookup_core.evidence import kbs_empirical_basis as kbs
+from stocklookup_core.evidence import provider_price_basis_registry as registry
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 EVIDENCE_DIR = REPO_ROOT / "operations-review" / "kbs-empirical-basis-20260804"

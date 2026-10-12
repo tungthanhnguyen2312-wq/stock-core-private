@@ -35,9 +35,9 @@ from __future__ import annotations
 import math
 from typing import Any, Mapping, Sequence
 
-import kbs_empirical_basis as kbs_basis
-import market_basis_capability_registry as registry
-import provider_price_basis_registry as price_registry
+from stocklookup_core.evidence import kbs_empirical_basis as kbs_basis
+from stocklookup_core.evidence import market_basis_capability_registry as registry
+from stocklookup_core.evidence import provider_price_basis_registry as price_registry
 
 VERSION = "1.0.0"
 SCHEMA_VERSION = VERSION

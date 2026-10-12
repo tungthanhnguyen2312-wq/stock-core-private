@@ -14,11 +14,11 @@ import unittest
 from pathlib import Path
 
 from stocklookup_core.evidence import evidence_qualification_tiers as tiers
-import kbs_capability_matrix as caps
-import kbs_empirical_basis as kbs
-import kbs_trading_value_coverage as cov
-import kbs_trading_value_export as ex
-import provider_price_basis_registry as registry
+from stocklookup_core.evidence import kbs_capability_matrix as caps
+from stocklookup_core.evidence import kbs_empirical_basis as kbs
+from stocklookup_core.evidence import kbs_trading_value_coverage as cov
+from stocklookup_core.evidence import kbs_trading_value_export as ex
+from stocklookup_core.evidence import provider_price_basis_registry as registry
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 FIXTURE = REPO_ROOT / "tests" / "fixtures" / "kbs_trading_value_export_block.json"
@@ -341,7 +341,7 @@ class DeterminismAndAbsenceTest(unittest.TestCase):
         self.assertEqual(
             imported,
             {"__future__", "hashlib", "json", "typing",
-             "stocklookup_core", "kbs_trading_value_coverage"},
+             "stocklookup_core"},
         )
 
 

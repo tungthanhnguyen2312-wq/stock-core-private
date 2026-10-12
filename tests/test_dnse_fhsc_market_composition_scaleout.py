@@ -1,8 +1,8 @@
-from dnse_fhsc_market_composition_scaleout import (
+from stocklookup_core.evidence.dnse_fhsc_market_composition_scaleout import (
     DNSE_EQUALS_MATCHED, DNSE_EQUALS_NONE, DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE,
     NON_DISCRIMINATING_ZERO_PUT_THROUGH, classify_volume, reconcile_scaleout, value_matrix,
 )
-from dnse_fhsc_volume_basis import parse_fhsc_trading_history
+from stocklookup_core.evidence.dnse_fhsc_volume_basis import parse_fhsc_trading_history
 
 
 def _trading(matched=100, put_through=10):

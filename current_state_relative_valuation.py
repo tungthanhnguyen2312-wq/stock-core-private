@@ -154,7 +154,7 @@ import json
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
-import dnse_ohlc_price_basis_capability as price_basis_capability
+from stocklookup_core.evidence import dnse_ohlc_price_basis_capability as price_basis_capability
 from dnse_current_state_price_analytics import (
     STATUS_QUALIFIED as DNSE_PRICE_STATUS_QUALIFIED,
     build_current_state_price_analytics_from_evidence_store,

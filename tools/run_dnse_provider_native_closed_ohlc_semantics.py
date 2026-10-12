@@ -13,7 +13,7 @@ import requests
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from dnse_provider_native_closed_ohlc import (  # noqa: E402
+from stocklookup_core.evidence.dnse_provider_native_closed_ohlc import (  # noqa: E402
     CONTRACT_VERSION, cross_provider_native_agreement, qualify_provider_native_closed_ohlc,
 )
 
