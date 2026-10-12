@@ -354,3 +354,149 @@ def test_non_python_command_changes_cannot_keep_stale_literal(tmp_path):
     assert not launchers.check(tmp_path, manifest)
     path.write_text('REM macro_sync.py\npython other.py\n')
     assert launchers.check(tmp_path, manifest)
+
+
+# --- G3 missing internal import guard (closed-world; adversarial) -------------------------------
+
+def _internal_findings(files, former=None):
+    return guard.internal_import_findings(files, former or {})
+
+
+_PACKAGE_TREE = {
+    "stocklookup_core/__init__.py": "",
+    "stocklookup_core/decision/__init__.py": "from .real import exported\n",
+    "stocklookup_core/decision/real.py": "exported = 1\nif True:\n    conditional = 2\ntry:\n    guarded = 3\nexcept ImportError:\n    pass\ndef helper(): pass\n",
+    "stocklookup_core/decision/star.py": "from stocklookup_core.decision.real import *\n",
+    "stocklookup_core/decision/dyn.py": "def __getattr__(name):\n    return name\n",
+    "tools/sibling.py": "VALUE = 1\n",
+    "atomic_io.py": "def atomic_write_json(path, value): pass\n",
+}
+
+
+def _verdicts(statement, *, at="tools/run_owner_daily.py", former=None):
+    body = "def phase():\n" + "".join("    " + line + "\n" for line in statement.splitlines())
+    found = _internal_findings(dict(_PACKAGE_TREE, **{at: body}), former)
+    return [(f["verdict"], f["reason"], f["path"], f["line"], f["context"]) for f in found if f["path"] == at]
+
+
+def test_exact_2026_10_12_stale_relocated_root_import_is_caught_with_location_and_hint():
+    former = {"daily_integrated_decision_brief": "stocklookup_core.decision.daily_integrated_decision_brief"}
+    found = _internal_findings(dict(_PACKAGE_TREE, **{"tools/run_owner_daily.py":
+        "def resolve_m1_handoff_authority():\n    import daily_integrated_decision_brief as brief_contract\n"}), former)
+    assert len(found) == 1
+    row = found[0]
+    assert (row["verdict"], row["reason"], row["path"], row["line"], row["context"]) == \
+        ("INTERNAL_MISSING", "RELOCATED", "tools/run_owner_daily.py", 2, "lazy")
+    message = guard.format_finding(row)
+    assert "stocklookup_core.decision.daily_integrated_decision_brief" in message
+    assert "import daily_integrated_decision_brief as brief_contract" in message
+    # The same statement was invisible to E0: no edge, no unresolved row.
+    scanned = guard.scan_sources({"tools/run_owner_daily.py": "def f():\n    import daily_integrated_decision_brief\n"})
+    assert not scanned["edges"] and not scanned["unresolved_dynamic"]
+
+
+def test_exact_2026_10_12_statement_in_the_real_tree_is_caught_from_repository_former_names():
+    baseline = json.loads((ROOT / guard.BASELINE).read_text(encoding="utf-8"))
+    layout = json.loads((ROOT / guard.LAYOUT).read_text(encoding="utf-8"))
+    former = guard.former_internal_names(baseline, layout)
+    assert former["daily_integrated_decision_brief"] == "stocklookup_core.decision.daily_integrated_decision_brief"
+    entry = (ROOT / "tools/run_owner_daily.py").read_text(encoding="utf-8")
+    stale = entry + "\n\ndef _stale_phase_6():\n    import daily_integrated_decision_brief as brief_contract\n"
+    sources = {"tools/run_owner_daily.py": stale, "stocklookup_core/__init__.py": "",
+               "stocklookup_core/decision/__init__.py": "",
+               "stocklookup_core/decision/daily_integrated_decision_brief.py": ""}
+    rows = [f for f in guard.internal_import_findings(sources, former) if f["target"] == "daily_integrated_decision_brief"]
+    assert [(r["reason"], r["context"], r["hint"]) for r in rows] == \
+        [("RELOCATED", "lazy", "stocklookup_core.decision.daily_integrated_decision_brief")]
+
+
+@pytest.mark.parametrize("statement, expected", [
+    ("from stocklookup_core.decision.nope import x", ("INTERNAL_MISSING", "NO_SUCH_MODULE")),
+    ("import stocklookup_core.decision.nope", ("INTERNAL_MISSING", "NO_SUCH_MODULE")),
+    ("import stocklookup_core.decision.real.deeper", ("INTERNAL_MISSING", "NO_SUCH_MODULE")),
+    ("from stocklookup_core.decision.real import removed_name", ("INTERNAL_MISSING", "NO_SUCH_SYMBOL")),
+    ("from stocklookup_core.decision import removed_name", ("INTERNAL_MISSING", "NO_SUCH_SYMBOL")),
+    ("from atomic_io import atomic_write_text", ("INTERNAL_MISSING", "NO_SUCH_SYMBOL")),
+    ("import tools.missing_tool", ("INTERNAL_MISSING", "NO_SUCH_MODULE")),
+    ("import importlib\nimportlib.import_module('stocklookup_core.decision.gone')", ("INTERNAL_MISSING", "NO_SUCH_MODULE")),
+    ("try:\n    from stocklookup_core.gone import x\nexcept ImportError:\n    x = None", ("INTERNAL_MISSING", "NO_SUCH_MODULE")),
+    ("import totally_unknown_distribution", ("UNDECLARED", "UNKNOWN_TOP_LEVEL")),
+    ("from stock_core_private.atomic_io import atomic_write_json", ("UNDECLARED", "UNKNOWN_TOP_LEVEL")),
+])
+def test_missing_internal_and_undeclared_imports_are_reported(statement, expected):
+    rows = _verdicts(statement)
+    assert [r[:2] for r in rows] == [expected], rows
+
+
+@pytest.mark.parametrize("statement", [
+    "import stocklookup_core.decision.real",
+    "from stocklookup_core.decision import real",           # submodule, not a symbol
+    "from stocklookup_core import decision",                 # package
+    "from stocklookup_core.decision import exported",        # re-exported by __init__
+    "from stocklookup_core.decision.real import conditional, guarded, helper",
+    "from stocklookup_core.decision.star import anything",   # star re-export: namespace open
+    "from stocklookup_core.decision.dyn import anything",    # module __getattr__
+    "from tools import sibling",                             # tools/ is a namespace package
+    "import sibling",                                        # script directory is sys.path[0]
+    "from atomic_io import atomic_write_json",
+    "import json, os.path, importlib.util",
+    "import requests\nimport pandas as pd\nfrom numpy import nan",
+    "import importlib\nname = 'x'\nimportlib.import_module(name)",  # computed: E0 dynamic-site limitation
+    "try:\n    from atomic_io import atomic_write_json\nexcept ImportError:\n    from stock_core_private.atomic_io import atomic_write_json",
+    "from builders.build_ticker_context import verify_exact_session_bundle",  # sibling repository
+])
+def test_valid_internal_external_and_namespace_imports_pass(statement):
+    assert _verdicts(statement) == []
+
+
+def test_removed_former_root_name_is_internal_not_external():
+    rows = _verdicts("import old_removed_root", former={"old_removed_root": ""})
+    assert [r[:2] for r in rows] == [("INTERNAL_MISSING", "NO_SUCH_MODULE")]
+    assert [r[:2] for r in _verdicts("import old_removed_root")] == [("UNDECLARED", "UNKNOWN_TOP_LEVEL")]
+
+
+def test_former_tools_script_name_is_internal_for_sibling_imports():
+    rows = _verdicts("import retired_tool", former={"tools.retired_tool": ""})
+    assert [r[:2] for r in rows] == [("INTERNAL_MISSING", "NO_SUCH_MODULE")]
+
+
+def test_relative_imports_resolve_against_the_package():
+    tree = dict(_PACKAGE_TREE, **{"stocklookup_core/decision/consumer.py":
+        "from . import real\nfrom .real import exported\nfrom .gone import x\nfrom .real import missing\nfrom .. import decision\n"})
+    rows = [(f["line"], f["reason"]) for f in _internal_findings(tree) if f["path"].endswith("consumer.py")]
+    assert rows == [(3, "NO_SUCH_MODULE"), (4, "NO_SUCH_SYMBOL")]
+
+
+def test_context_and_guard_are_reported_for_type_checking_module_load_and_lazy():
+    source = ("from typing import TYPE_CHECKING\nif TYPE_CHECKING:\n    import stocklookup_core.t_gone\n"
+              "import stocklookup_core.m_gone\ndef f():\n    import stocklookup_core.l_gone\n")
+    rows = {f["target"]: f["context"] for f in _internal_findings(dict(_PACKAGE_TREE, **{"x.py": source}))}
+    assert rows == {"stocklookup_core.t_gone": "type_checking", "stocklookup_core.m_gone": "module_load",
+                    "stocklookup_core.l_gone": "lazy"}
+
+
+def test_root_file_resolves_tools_sibling_only_through_sys_path_manipulation():
+    plain = "import sibling\n"
+    manipulated = "import sys\nsys.path.insert(0, 'tools')\nimport sibling\n"
+    aliased = "import sys as _sys\n_sys.path.insert(0, 'tools')\nimport sibling\n"
+    assert [f["verdict"] for f in _internal_findings(dict(_PACKAGE_TREE, **{"root_mod.py": plain}))] == ["UNDECLARED"]
+    assert not _internal_findings(dict(_PACKAGE_TREE, **{"root_mod.py": manipulated}))
+    assert not _internal_findings(dict(_PACKAGE_TREE, **{"root_mod.py": aliased}))
+
+
+def test_declared_external_list_covers_every_requirements_entry_and_never_shadows_a_root_module():
+    import re
+    import sys
+    declared = set()
+    for name in ("requirements.txt", "requirements-test.txt", "requirements-providers.txt"):
+        for line in (ROOT / name).read_text(encoding="utf-8").splitlines():
+            match = re.match(r"\s*([A-Za-z0-9_.-]+)", line.split("#")[0])
+            if match:
+                declared.add(match.group(1).lower().replace("-", "_"))
+    assert declared <= {k.lower() for k in guard.DECLARED_EXTERNAL}
+    roots = {p.stem for p in ROOT.glob("*.py")}
+    assert not roots & (set(guard.DECLARED_EXTERNAL) | set(guard.SIBLING_REPOSITORY_PACKAGES) | set(sys.stdlib_module_names))
+
+
+def test_repository_has_no_missing_internal_or_undeclared_imports():
+    assert guard.internal_import_errors(ROOT) == []

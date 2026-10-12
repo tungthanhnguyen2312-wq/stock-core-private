@@ -9,6 +9,7 @@ import argparse
 import ast
 import json
 import hashlib
+import re
 import subprocess
 from pathlib import Path, PurePosixPath
 
@@ -471,6 +472,285 @@ def baseline_from_checkpoint(root: Path, checkpoint: str, policy: dict) -> dict:
     return data
 
 
+# --- Missing internal import guard (G3) ---------------------------------------------------------
+# E0 drops an import whose target is not a current module, so a stale `import old_root_name` or
+# `from stocklookup_core.x import removed` looked "external" and passed. This pass is closed-world:
+# every absolute import is internal, stdlib, a declared third-party distribution, a reviewed sibling
+# repository package, or a reviewed guarded legacy alias. Unknown names are reported as UNDECLARED,
+# never assumed internal. Separate pass: E0 edges and the sealed baseline identity are unchanged.
+
+# Import name -> declaring file. requirements*.txt entries must all appear here (drift-tested).
+DECLARED_EXTERNAL = {
+    "pandas": "requirements.txt", "numpy": "requirements.txt", "requests": "requirements.txt",
+    "pyarrow": "requirements.txt", "openpyxl": "requirements.txt", "pytest": "requirements-test.txt",
+    "_pytest": "requirements-test.txt", "anthropic": "requirements-providers.txt",
+    "certifi": "transitive of requests", "packaging": "transitive of pytest",
+    # Optional local-only extras, declared nowhere (docs/CI_AND_DEPENDENCY_TIERS.md); import sites
+    # must stay lazy or guarded so the hermetic tier never needs them.
+    "PIL": "optional OCR extra", "fitz": "optional PDF extra", "pypdf": "optional PDF extra",
+    "duckdb": "optional benchmark extra", "websockets": "optional DNSE stream extra",
+    "psutil": "optional resource-observer extra", "pandas_ta": "optional legacy indicator extra",
+    "vnstock": "retired provider; refused by tests/provider_import_block",
+    "vnai": "retired provider; refused by tests/provider_import_block",
+}
+# Packages that live in another repository and are put on sys.path at the call site.
+SIBLING_REPOSITORY_PACKAGES = {
+    "builders": "ai-core-private (Consumer) package, inserted from consumer_root at the call site",
+    "metadata_registry_reader": "ai-core-private builders/ module, inserted from consumer_root",
+    "metadata_registry_shadow_compare": "ai-core-private builders/ module, inserted from consumer_root",
+    "vnstock_worker_protocol": "provider worker bundle module loaded beside the fake worker fixture",
+}
+# Legacy installed-package spelling, only ever imported as the guarded fallback of a root import.
+GUARDED_LEGACY_ALIASES = {"stock_core_private": "pre-rename package alias; except ImportError fallback"}
+IMPORT_ERROR_NAMES = {"ImportError", "ModuleNotFoundError", "Exception", "BaseException"}
+
+
+def guard_source_paths(root: Path, include_tests: bool = True) -> list[Path]:
+    paths = source_paths(root)
+    if include_tests:
+        paths += sorted((root / "tests").rglob("*.py"), key=lambda p: p.relative_to(root).as_posix())
+    return paths
+
+
+def former_internal_names(baseline: dict, layout: dict) -> dict[str, str]:
+    """Module names that were repository-owned once -> where they went (or '' if removed)."""
+    moved = {module_name(old): module_name(new) for old, new in (layout.get("relocations") or {}).items()}
+    names = {m: moved.get(m, "") for m in baseline.get("modules", [])}
+    names.update({module_name(p): moved.get(module_name(p), "") for p in layout.get("grandfathered_root_python", [])})
+    names.update(moved)
+    return names
+
+
+def module_exports(tree: ast.Module, source: str = "global := globals( vars(") -> tuple[set[str], bool]:
+    """Names bound at module level; open=True when the namespace cannot be closed statically."""
+    names, open_namespace = set(), False
+    def bind(target):
+        if isinstance(target, ast.Name):
+            names.add(target.id)
+        elif isinstance(target, (ast.Tuple, ast.List)):
+            for element in target.elts:
+                bind(element)
+        elif isinstance(target, ast.Starred):
+            bind(target.value)
+    def walk(statements):
+        nonlocal open_namespace
+        for node in statements:
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                names.add(node.name)
+                open_namespace |= node.name == "__getattr__"
+            elif isinstance(node, ast.Assign):
+                for target in node.targets:
+                    bind(target)
+            elif isinstance(node, (ast.AnnAssign, ast.AugAssign)) and node.value is not None or isinstance(node, ast.AnnAssign):
+                bind(node.target)
+            elif isinstance(node, ast.Import):
+                names.update(a.asname or a.name.split(".")[0] for a in node.names)
+            elif isinstance(node, ast.ImportFrom):
+                for alias in node.names:
+                    open_namespace |= alias.name == "*"
+                    names.add(alias.asname or alias.name)
+            elif isinstance(node, (ast.For, ast.AsyncFor, ast.With, ast.AsyncWith)):
+                if hasattr(node, "target"):
+                    bind(node.target)
+                for item in getattr(node, "items", []):
+                    if item.optional_vars is not None:
+                        bind(item.optional_vars)
+            for field in ("body", "orelse", "finalbody"):
+                if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                    walk(getattr(node, field, []) or [])
+            for handler in getattr(node, "handlers", []) or []:
+                if handler.name:
+                    names.add(handler.name)
+                walk(handler.body)
+            for case in getattr(node, "cases", []) or []:
+                walk(case.body)
+    walk(tree.body)
+    if not any(token in source for token in ("global ", ":=", "globals(", "vars(")):
+        return names, open_namespace
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Global):
+            names.update(node.names)
+        elif isinstance(node, ast.NamedExpr) and isinstance(node.target, ast.Name):
+            names.add(node.target.id)
+        elif isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id in {"globals", "vars"}:
+            open_namespace = True  # globals()[name] = ... / vars().update(...)
+    return names, open_namespace
+
+
+STATEMENT_FIELDS = ("body", "orelse", "finalbody", "handlers", "cases")
+
+
+def import_references(tree: ast.Module, source: str = "import_module __import__") -> tuple[list[dict], bool]:
+    """Every import-like reference with line, execution context and guard state; plus whether the
+    file manipulates sys.path. Import statements are statements, so expressions are descended only
+    when the text can hold a dynamic loader call (this runs over every source and test file in CI)."""
+    references, sys_names, path_bases = [], {"sys"}, set()
+    uses_sys_path = False
+    full = "import_module" in source or "__import__" in source
+    aliases = set(re.findall(r"^\s*import\s+sys\s+as\s+(\w+)", source, re.M)) | {"sys"}
+    if any(re.search(r"\b" + alias + r"\.path\b", source) for alias in aliases) or \
+            re.search(r"^\s*from\s+sys\s+import\s[^\n]*\bpath\b", source, re.M):
+        uses_sys_path = True
+    stack = [(tree, "module_load", False, False)]
+    while stack:
+        node, context, guarded, fallback = stack.pop()
+        def add(kind, module, names=(), level=0):
+            references.append({"line": node.lineno, "context": context, "guarded": guarded, "fallback": fallback,
+                               "kind": kind, "module": module, "names": list(names), "level": level,
+                               "statement": ast.unparse(node).splitlines()[0][:160]})
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                add("import", alias.name)
+                if alias.name == "sys":
+                    sys_names.add(alias.asname or "sys")
+            continue
+        if isinstance(node, ast.ImportFrom):
+            add("from", node.module or "", [a.name for a in node.names], node.level)
+            uses_sys_path |= node.module == "sys" and any(a.name == "path" for a in node.names)
+            continue
+        if isinstance(node, ast.Attribute) and node.attr == "path" and isinstance(node.value, ast.Name):
+            path_bases.add(node.value.id)
+        elif isinstance(node, ast.Call):
+            func = node.func
+            name = func.id if isinstance(func, ast.Name) else func.attr if isinstance(func, ast.Attribute) else None
+            if name in {"import_module", "__import__"} and node.args and isinstance(node.args[0], ast.Constant)                     and isinstance(node.args[0].value, str) and not node.args[0].value.startswith("."):
+                add("dynamic", node.args[0].value)
+        elif isinstance(node, ast.If):
+            test = node.test
+            if isinstance(test, ast.Name) and test.id == "TYPE_CHECKING" or isinstance(test, ast.Attribute) and test.attr == "TYPE_CHECKING":
+                stack.extend((s, "type_checking", guarded, fallback) for s in node.body)
+                stack.extend((s, context, guarded, fallback) for s in node.orelse)
+                continue
+        elif isinstance(node, (ast.Try, ast.TryStar)):
+            caught = set()
+            for handler in node.handlers:
+                types = handler.type.elts if isinstance(handler.type, ast.Tuple) else [handler.type] if handler.type else []
+                caught |= {ast.unparse(t).rpartition(".")[2] for t in types} if types else {"BaseException"}
+            catches = bool(caught & IMPORT_ERROR_NAMES)
+            stack.extend((s, context, guarded or catches, fallback) for s in node.body)
+            stack.extend((s, context, guarded, fallback) for s in [*node.orelse, *node.finalbody])
+            stack.extend((s, context, guarded, fallback or catches) for h in node.handlers for s in h.body)
+            continue
+        elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda)):
+            inner = context if context == "type_checking" else "lazy"
+            heads = [*getattr(node, "decorator_list", []), *node.args.defaults, *node.args.kw_defaults]
+            stack.extend((h, context, guarded, fallback) for h in heads if h is not None)
+            body = node.body if isinstance(node.body, list) else [node.body]
+            stack.extend((s, inner, guarded, fallback) for s in body)
+            continue
+        if full:
+            stack.extend((child, context, guarded, fallback) for child in ast.iter_child_nodes(node))
+        else:
+            for field in STATEMENT_FIELDS:
+                stack.extend((child, context, guarded, fallback) for child in getattr(node, field, ()) or ())
+    return references, uses_sys_path or bool(path_bases & sys_names)
+
+
+def internal_import_findings(sources: dict[str, str], former: dict[str, str] | None = None) -> list[dict]:
+    """Classify every absolute import; return findings that are INTERNAL_MISSING or UNDECLARED.
+
+    Resolution follows CPython: repository root first; a non-package script directory (tools/,
+    tests/, root) also resolves bare sibling names, because the script's own directory is sys.path[0];
+    a file that manipulates sys.path may additionally resolve tools/ and tests/ siblings.
+    """
+    import sys as _sys
+    former = former or {}
+    # One pass per file; trees are dropped at once (retaining ~1,700 trees makes GC dominate).
+    parsed = {}
+    for path, source in sorted(sources.items()):
+        tree = ast.parse(source.lstrip("﻿"), filename=path)
+        parsed[path] = (import_references(tree, source), module_exports(tree, source))
+        del tree
+    modules = {module_name(p): p for p in sources}
+    packages = {".".join(m.split(".")[:i]) for m in modules for i in range(1, len(m.split(".")))}
+    packages |= {module_name(p) for p in sources if p.endswith("/__init__.py")}
+    script_dirs = {PurePosixPath(p).parent.as_posix() for p in sources} - {""}
+    script_dirs = {d for d in script_dirs if d + "/__init__.py" not in sources}
+    stdlib = set(_sys.stdlib_module_names) | {"__future__"}
+    # Current repository top-level names, and former bare root / tools-script names.
+    internal_tops = {m.split(".")[0] for m in modules}
+    former_tops = {m for m in former if "." not in m} | {m[6:] for m in former if m.startswith("tools.") and m.count(".") == 1}
+
+    def exists(name):
+        return name in modules or name in packages
+
+    def exports(name):
+        path = modules.get(name)
+        return parsed[path][1] if path else (set(), True)
+
+    def candidates(path, name, uses_sys_path):
+        """Absolute dotted names `name` may resolve to for this importer, in sys.path order."""
+        own = PurePosixPath(path).parent.as_posix()
+        found = [name]
+        dirs = [own] if own in script_dirs else []
+        if uses_sys_path:
+            dirs += [d for d in ("tools", "tests") if d != own]
+        found += [d.replace("/", ".") + "." + name for d in dirs if d]
+        return found
+
+    findings = []
+    for path, ((references, uses_sys_path), _exports) in parsed.items():
+        importer = module_name(path)
+        package = importer if path.endswith("/__init__.py") else importer.rpartition(".")[0]
+        for ref in sorted(references, key=lambda r: (r["line"], r["module"])):
+            module = ref["module"]
+            if ref["level"]:
+                parts = package.split(".") if package else []
+                if ref["level"] > len(parts) + (1 if path.endswith("/__init__.py") else 0):
+                    findings.append(dict(ref, path=path, verdict="INTERNAL_MISSING", reason="RELATIVE_BEYOND_TOP", target=module))
+                    continue
+                base = parts[:len(parts) - ref["level"] + 1]
+                module = ".".join(base + ([module] if module else []))
+                choices = [module]
+            else:
+                top = module.split(".")[0]
+                if top in stdlib:
+                    continue
+                choices = candidates(path, module, uses_sys_path)
+            resolved = next((c for c in choices if exists(c)), None)
+            if resolved is None:
+                if ref["level"]:
+                    findings.append(dict(ref, path=path, verdict="INTERNAL_MISSING", reason="NO_SUCH_MODULE", target=module))
+                    continue
+                top = module.split(".")[0]
+                if top in internal_tops or any(c in former or c.split(".")[0] in former_tops for c in choices):
+                    hint = next((former[c] for c in choices if former.get(c)), "")
+                    findings.append(dict(ref, path=path, verdict="INTERNAL_MISSING",
+                                         reason="RELOCATED" if hint else "NO_SUCH_MODULE", target=module, hint=hint))
+                elif top in DECLARED_EXTERNAL or top in SIBLING_REPOSITORY_PACKAGES:
+                    continue
+                elif top in GUARDED_LEGACY_ALIASES and (ref["guarded"] or ref["fallback"]):
+                    continue
+                else:
+                    findings.append(dict(ref, path=path, verdict="UNDECLARED", reason="UNKNOWN_TOP_LEVEL", target=module))
+                continue
+            if ref["kind"] != "from":
+                continue
+            for name in ref["names"]:
+                if name == "*" or exists(resolved + "." + name):
+                    continue
+                defined, open_namespace = exports(resolved)
+                if name not in defined and not open_namespace:
+                    findings.append(dict(ref, path=path, verdict="INTERNAL_MISSING", reason="NO_SUCH_SYMBOL",
+                                         target=resolved + ":" + name))
+    return findings
+
+
+def format_finding(f: dict) -> str:
+    hint = f" -> {f['hint']}" if f.get("hint") else ""
+    guard = ":guarded" if f["guarded"] else ":fallback" if f.get("fallback") else ""
+    return (f"{f['verdict']}:{f['reason']}:{f['path']}:{f['line']}:{f['context']}{guard}:"
+            f"{f['target']}{hint} | {f['statement']}")
+
+
+def internal_import_errors(root: Path, baseline: dict | None = None, layout: dict | None = None,
+                           include_tests: bool = True) -> list[str]:
+    baseline = baseline if baseline is not None else json.loads((root / BASELINE).read_text(encoding="utf-8"))
+    layout = layout if layout is not None else json.loads((root / LAYOUT).read_text(encoding="utf-8"))
+    sources = {p.relative_to(root).as_posix(): p.read_text(encoding="utf-8-sig") for p in guard_source_paths(root, include_tests)}
+    return [format_finding(f) for f in internal_import_findings(sources, former_internal_names(baseline, layout))]
+
+
 def encode(data: dict) -> str:
     return json.dumps(data, indent=2, sort_keys=True, ensure_ascii=False) + "\n"
 
@@ -501,6 +781,7 @@ def main(argv=None):
         return 1
     layout = json.loads((args.root / LAYOUT).read_text(encoding="utf-8")) if (args.root / LAYOUT).is_file() else {}
     errors = regressions(data, baseline, policy, layout.get("relocations"))
+    errors += internal_import_errors(args.root, baseline, layout)
     print("\n".join(errors) if errors else "ARCHITECTURE_RATCHET:PASS")
     return int(bool(errors))
 
