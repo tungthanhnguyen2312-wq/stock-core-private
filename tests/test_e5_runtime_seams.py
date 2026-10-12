@@ -248,8 +248,16 @@ def test_v1_v2_inputs_provider_bundle_and_tactical_frozen_sources_are_untouched(
     bundle = next(node for node in tree.body if isinstance(node,ast.Assign) and any(isinstance(t,ast.Name) and t.id=='WORKER_SOURCE_FILES' for t in node.targets))
     protected |= set(ast.literal_eval(bundle.value))
     protected |= {'contextual_technical_features.py','volume_and_flow_context.py','technical_structure_context.py'}
+    # Owner-reviewed exceptions keep an exact pin, re-anchored from the historical base bytes.
+    amended = json.loads((ROOT/'tests/fixtures/frozen_source_reviewed_amendments.json').read_text(encoding='utf-8'))['amendments']
+    assert not set(amended) & ({path for _,path in identity.V1_SOURCES}|set(identity.V2_SOURCES))
     for path in sorted(protected):
         original = subprocess.check_output(['git','show',BASE+':'+path],cwd=ROOT).replace(b'\r\n',b'\n')
-        assert (ROOT/path).read_bytes().replace(b'\r\n',b'\n')==original,path
+        current = (ROOT/path).read_bytes().replace(b'\r\n',b'\n')
+        if path in amended:
+            assert hashlib.sha256(original).hexdigest()==amended[path]['base_sha256_lf'],path
+            assert hashlib.sha256(current).hexdigest()==amended[path]['sha256_lf']==manifest['source_sha256_lf'][path],path
+            continue
+        assert current==original,path
     assert identity.source_identity(ROOT,version='v1')['code_digest']=='fa79baadcca197493b9ca70067fbd153f5e8bb7f50dfb6dbc6da53f253483d46'
     assert identity.source_identity(ROOT,version='v2')['code_digest']=='07c2a363df0e91a1dee230f0316a081249b247f7aa74bd67e04e45b1d1886567'

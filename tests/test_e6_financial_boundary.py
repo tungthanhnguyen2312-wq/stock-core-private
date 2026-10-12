@@ -211,14 +211,23 @@ def test_financial_cycle_cuts_and_restoration_are_real_daily_component_unchanged
 def test_frozen_sources_e5_foundations_and_financial_authority_pins_are_unchanged():
     from tools import qualify_e4_infrastructure as identity
     protected={path for _,path in identity.V1_SOURCES}|set(identity.V2_SOURCES)
-    protected |= set(json.loads((ROOT/'tests/fixtures/e2e3_frozen_sources.json').read_text())['source_sha256_lf'])
+    frozen=json.loads((ROOT/'tests/fixtures/e2e3_frozen_sources.json').read_text())['source_sha256_lf']
+    protected |= set(frozen)
     protected |= {'stocklookup_core/evidence/field_identity.py','stocklookup_core/evidence/financial_document_text.py',
         'stocklookup_core/evidence/corporate_event_temporality.py','stocklookup_core/evidence/research_output_fields.py',
         'config/official_financial_legacy_row_admission_v1.json','config/official_source_registry.json',
         'official_financial_period_identity.py','official_financial_assurance_evidence.py','financial_statement_unit_resolution.py',
         'financial_evidence_currency_contract.py','official_financial_pdf_page_evidence.py'}
+    # Owner-reviewed exceptions keep an exact pin, re-anchored from the historical base bytes.
+    amended=json.loads((ROOT/'tests/fixtures/frozen_source_reviewed_amendments.json').read_text(encoding='utf-8'))['amendments']
+    assert not set(amended)&({path for _,path in identity.V1_SOURCES}|set(identity.V2_SOURCES))
     for path in sorted(protected):
         original=subprocess.check_output(['git','show',BASE+':'+path],cwd=ROOT).replace(b'\r\n',b'\n')
-        assert (ROOT/path).read_bytes().replace(b'\r\n',b'\n')==original,path
+        current=(ROOT/path).read_bytes().replace(b'\r\n',b'\n')
+        if path in amended:
+            assert hashlib.sha256(original).hexdigest()==amended[path]['base_sha256_lf'],path
+            assert hashlib.sha256(current).hexdigest()==amended[path]['sha256_lf']==frozen[path],path
+            continue
+        assert current==original,path
     assert identity.source_identity(ROOT,version='v1')['code_digest']=='fa79baadcca197493b9ca70067fbd153f5e8bb7f50dfb6dbc6da53f253483d46'
     assert identity.source_identity(ROOT,version='v2')['code_digest']=='07c2a363df0e91a1dee230f0316a081249b247f7aa74bd67e04e45b1d1886567'

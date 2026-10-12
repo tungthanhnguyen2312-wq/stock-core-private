@@ -161,6 +161,7 @@ env:
     tests/test_macro_market_regime_decision_context.py
     tests/test_pre_daily_consumer_and_m1_brief_guards.py
     tests/test_owner_daily_workflow.py
+    tests/test_owner_daily_code_advance_relaunch.py
     tests/test_owner_daily_final_recovery_20261005.py
     tests/test_owner_daily_20261005_recovery.py
     tests/test_dashboard_companion_declared_producer_run.py

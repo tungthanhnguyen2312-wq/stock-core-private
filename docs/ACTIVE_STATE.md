@@ -30,7 +30,8 @@ Kinds: **CURRENT FACT** (verified), **HOST-LOCAL** (untracked; re-verify),
 **BLOCKED**, **DEFERRED**, **HISTORICAL**.
 
 ## 1. The operational gate
-- **COMPLETE LOCAL — [root hub V3](root_hub_dependency_reduction_v3_contract.md):** field-identity owner seam; root 336→325; V2 released. No shim/pin/Daily/authority change.
+- **COMPLETE LOCAL — [owner Daily relaunch](owner_daily_ai_handoff_import_recovery_20261012_contract.md):** pull relaunches on new code.
+- **COMPLETE — [root hub V3](root_hub_dependency_reduction_v3_contract.md):** PR131 merged `d11b101`.
 - **COMPLETE — [E6 financial seams](e6_financial_extraction_admission_boundary_contract.md):** row/envelope/status owners.
 - **COMPLETE — [E4 infrastructure](e4_versioned_identity_safe_infrastructure_extraction_contract.md):** fixed paths and bounded JSON/verification owners; frozen V1 preserved, V2 qualifier offline. No V2 activation, Daily or authority change.
 - **COMPLETE — [E2/E3 seams](e2_e3_foundation_seams_and_dependency_untangling_contract.md):** explicit registry reads and temporal measurements; domain policy remains domain-owned. No Daily or authority change.
