@@ -146,7 +146,7 @@ def recognize_scope(text: str) -> dict[str, Any]:
 
 
 def assurance_language_is_negative(text: str) -> bool:
-    from official_financial_ocr_table_evidence import _normalize
+    from stocklookup_core.evidence.financial_document_text import _normalize
     blob = _normalize(str(text or ""))
     return bool(re.search(r"\b(?:unaudited|unreviewed|not\s+(?:(?:been|yet|independently)\s+)*(?:audited|reviewed)|"
         r"(?:chua|khong)\s+(?:duoc\s+)?(?:soat\s+xet|kiem\s+toan)|"

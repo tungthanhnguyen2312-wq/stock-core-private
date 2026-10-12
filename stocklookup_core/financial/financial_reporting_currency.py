@@ -465,7 +465,7 @@ def packet_context(projection: Mapping[str, Any], *, ticker: str, decision_sessi
         raise ValueError("FINANCIAL_CURRENCY_DENOMINATOR_MISMATCH")
     if record["investor_interpretation"].get("ticker_rejected") is not False or record["newer_period_evidence"].get("global_latest_status") != "UNPROVEN":
         raise ValueError("FINANCIAL_CURRENCY_INTERPRETATION_PROMOTED")
-    from stocklookup_core.decision.human_ai_decision_evidence_packet import FORBIDDEN
+    from stocklookup_core.evidence.research_output_fields import FORBIDDEN
 
     def no_capital_fields(value):
         if isinstance(value, Mapping):

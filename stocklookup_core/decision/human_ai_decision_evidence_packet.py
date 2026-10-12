@@ -14,7 +14,7 @@ from stocklookup_core.valuation.current_valuation_denominator_integrity import c
 
 CONTRACT_VERSION = "human_ai_decision_evidence_packet/v2"
 SECTIONS = ("market", "stock", "tactical", "comparison", "uncertainty", "history", "counter_thesis")
-FORBIDDEN = ("buy_score", "recommendation", "probability", "expected_return", "target_price", "position_size", "sizing", "composite_score")
+from stocklookup_core.evidence.research_output_fields import FORBIDDEN
 ANALOGUE_FIELDS = ("matching_method", "evidence_tier", "sample_size", "regime_similarity", "missing_dimensions")
 EVIDENCE_TIERS = ("PIT_AUTHORITATIVE", "RECONSTRUCTED_RESEARCH", "EXPLANATORY_ONLY", "UNKNOWN")
 

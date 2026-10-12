@@ -123,7 +123,7 @@ def project_session_context(artifact: Mapping[str, Any], *, session: str, cutoff
     The parent remains immutable. No acquisition, publication-time inference, new
     universe membership, lifecycle qualification or ex-date inference occurs here.
     """
-    from corporate_currency_rollforward import context_known_by
+    from stocklookup_core.evidence.corporate_event_temporality import context_known_by
     _verify(artifact, "RETAINED_OFFICIAL_EVENT_CONTEXT")
     if artifact.get("contract_version") != CONTRACT_VERSION:
         raise ValueError("OFFICIAL_EVENT_CONTEXT_CONTRACT_INVALID")
