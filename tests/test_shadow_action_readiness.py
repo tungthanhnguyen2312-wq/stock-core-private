@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import unittest
 
-from shadow_action_readiness import build_artifact
+from stocklookup_core.research.shadow_action_readiness import build_artifact
 
 
 def _case(*, disposition="OPPORTUNITY_CASE_ELIGIBLE", state="BREAKOUT_READY", percentile=.9,

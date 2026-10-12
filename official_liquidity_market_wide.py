@@ -25,8 +25,8 @@ from typing import Any, Iterable, Mapping, Sequence
 
 import dnse_trades_liquidity_basis as dimension_basis
 import liquidity_authority_contract as contract
-import official_exchange_trading_statistics as official
-from market_wide_historical_matched_liquidity import COVERAGE_RESTRICTED_WINDOW, EXACT_WINDOW, INSUFFICIENT_WINDOW
+from stocklookup_core.evidence import official_exchange_trading_statistics as official
+from stocklookup_core.evidence.market_wide_historical_matched_liquidity import COVERAGE_RESTRICTED_WINDOW, EXACT_WINDOW, INSUFFICIENT_WINDOW
 
 CONTRACT_VERSION = "official_exchange_liquidity_research/v1"
 MILESTONE = "OFFICIAL_EXCHANGE_LIQUIDITY_MARKET_WIDE_OPERATIONALIZATION_V1"

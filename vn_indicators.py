@@ -25,8 +25,8 @@ import argparse
 import numpy as np
 import pandas as pd
 from runtime_paths import runtime_root
-from live_universe import evaluate as evaluate_live_universe
-from source_timestamp import source_timestamp
+from stocklookup_core.evidence.live_universe import evaluate as evaluate_live_universe
+from stocklookup_core.evidence.source_timestamp import source_timestamp
 
 warnings.filterwarnings("ignore")
 

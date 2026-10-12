@@ -38,7 +38,7 @@ from pathlib import Path
 from typing import Any, Mapping, Sequence
 
 import market_wide_current_fundamental_research as mwcfr
-import p3f10_fundamental_evidence_scaleout as p3f10mod
+from stocklookup_core.financial import p3f10_fundamental_evidence_scaleout as p3f10mod
 import p3f13_official_financial_evidence_scaleout as p3f13mod
 from field_temporal_contract import stable_id
 

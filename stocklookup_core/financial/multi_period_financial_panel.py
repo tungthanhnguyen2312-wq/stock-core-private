@@ -51,7 +51,7 @@ from stocklookup_core.financial.financial_entity_applicability import (
     FINANCIAL_ENTITY_TYPES,
     load_entity_profiles,
 )
-from altman_applicability import (
+from stocklookup_core.financial.altman_applicability import (
     MANUFACTURING_INDUSTRIES,
     evaluate_altman_applicability,
 )

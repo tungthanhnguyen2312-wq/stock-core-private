@@ -27,7 +27,7 @@ from __future__ import annotations
 
 from typing import Any, Mapping
 
-from altman_applicability import evaluate_altman_applicability
+from stocklookup_core.financial.altman_applicability import evaluate_altman_applicability
 
 VERSION = "1.0.0"
 VARIANT = "altman_z_prime_1983_private_firm"

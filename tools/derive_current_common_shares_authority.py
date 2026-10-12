@@ -14,7 +14,7 @@ from current_common_shares_authority import (
     COMMON_OUTSTANDING,
     build_current_common_shares_authority,
 )
-from current_official_market_universe import _identity as official_identity
+from stocklookup_core.evidence.current_official_market_universe import _identity as official_identity
 from field_temporal_contract import stable_id
 from market_wide_current_fundamental_research import content_identity as fundamental_content_identity
 from stocklookup_core.valuation.market_wide_current_valuation_input_scaleout import (

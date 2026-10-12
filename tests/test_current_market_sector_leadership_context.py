@@ -7,7 +7,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-import current_official_market_universe as official
+from stocklookup_core.evidence import current_official_market_universe as official
 import current_market_sector_leadership_context as leadership
 import export_ai_bundle as bundle
 from stocklookup_core.decision.current_market_screening_opportunity_comparison_foundation import content_identity as screening_identity

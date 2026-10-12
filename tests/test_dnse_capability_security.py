@@ -4,7 +4,7 @@ import inspect
 import json
 import unittest
 
-import dnse_bid_ask_capability as bid_ask
+from stocklookup_core.evidence import dnse_bid_ask_capability as bid_ask
 import dnse_foreign_flow_capability as foreign_flow
 
 RAW_QUOTE_WITH_ROGUE_FIELDS = {

@@ -31,7 +31,7 @@ from entity_classification_scaleout import (
     ReconciliationInput,
     reconcile_ticker,
 )
-from exchange_industry_classification import (
+from stocklookup_core.evidence.exchange_industry_classification import (
     HINT_AMBIGUOUS_FINANCIAL,
     HINT_BANK,
     HINT_CORPORATE,

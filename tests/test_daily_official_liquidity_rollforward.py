@@ -9,7 +9,7 @@ import pytest
 import stocklookup_core.decision.current_research_decision_input as decision_input
 import daily_official_liquidity_rollforward as rollforward
 import stocklookup_core.portfolio.execution_capacity_research as capacity
-import official_exchange_trading_statistics as official
+from stocklookup_core.evidence import official_exchange_trading_statistics as official
 import official_liquidity_market_wide as wide
 import owner_daily_progress as progress
 from tests.test_daily_liquidity_authority_wiring import _descriptive

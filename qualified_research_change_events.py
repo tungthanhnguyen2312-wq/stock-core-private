@@ -5,7 +5,7 @@ from hashlib import sha256
 import json
 from typing import Any, Mapping
 
-from qualified_research_delta import compare
+from stocklookup_core.research.qualified_research_delta import compare
 from qualified_research_snapshot_v2 import COMPATIBLE_SCHEMA_VERSIONS
 
 SCHEMA_VERSION = "1.0.0"

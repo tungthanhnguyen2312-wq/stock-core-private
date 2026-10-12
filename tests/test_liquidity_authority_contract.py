@@ -6,9 +6,9 @@ import pytest
 
 import dnse_trades_liquidity_basis as descriptive
 import liquidity_authority_contract as c
-import official_exchange_trading_statistics as official
-from governed_trading_session_calendar import calendar_from_sessions
-from market_wide_historical_matched_liquidity import COVERAGE_RESTRICTED_WINDOW, EXACT_WINDOW, INSUFFICIENT_WINDOW
+from stocklookup_core.evidence import official_exchange_trading_statistics as official
+from stocklookup_core.evidence.governed_trading_session_calendar import calendar_from_sessions
+from stocklookup_core.evidence.market_wide_historical_matched_liquidity import COVERAGE_RESTRICTED_WINDOW, EXACT_WINDOW, INSUFFICIENT_WINDOW
 
 S = "2026-09-28"
 D = Decimal

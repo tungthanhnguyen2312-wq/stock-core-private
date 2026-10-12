@@ -16,7 +16,7 @@ from pathlib import Path
 
 import pytest
 
-from current_official_market_universe import (
+from stocklookup_core.evidence.current_official_market_universe import (
     OFFICIAL_ONLY_NOT_IN_STOCKLOOKUP, STATUS_NORMAL, STATUS_NOT_PROVIDED, STATUS_UNKNOWN_CODE,
     _hose_official_security_status, _source_row, build_artifact, replay,
 )

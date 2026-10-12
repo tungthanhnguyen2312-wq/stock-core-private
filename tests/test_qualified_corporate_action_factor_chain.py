@@ -8,8 +8,8 @@ only the *evidence values* are synthetic, not the adapter logic under test. One 
 """
 import unittest
 
-import official_corporate_action_ledger as ledger
-import qualified_corporate_action_factor_chain as factor_chain
+from stocklookup_core.evidence import official_corporate_action_ledger as ledger
+from stocklookup_core.evidence import qualified_corporate_action_factor_chain as factor_chain
 
 
 def _observation(event_type="stock_dividend", **overrides):

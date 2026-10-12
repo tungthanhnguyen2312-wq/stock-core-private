@@ -61,7 +61,7 @@ except ImportError:
         emit_observability_event,
     )
 try:
-    from price_basis_contract import (
+    from stocklookup_core.evidence.price_basis_contract import (
         PriceBasis,
         VolumeBasis,
         qualify_price_basis,
@@ -82,35 +82,35 @@ from typing import Any, Callable, Iterable, Mapping
 
 import pandas as pd
 from shareholder_pipeline import DONE, calculate_major_shareholder_delta
-from live_universe import summary as live_universe_summary
+from stocklookup_core.evidence.live_universe import summary as live_universe_summary
 from freshness_history import evaluate_analysis_readiness, freshness_envelope, parse_timestamp
-from financial_canonicalization import canonicalize_financial_rows
+from stocklookup_core.financial.financial_canonicalization import canonicalize_financial_rows
 from official_evidence import load_cited_financial_records
-from financial_identity import empty_identity_export
-from corporate_actions_export import build_corporate_actions_section
+from stocklookup_core.evidence.financial_identity import empty_identity_export
+from stocklookup_core.evidence.corporate_actions_export import build_corporate_actions_section
 from financial_observations import canonical_records, read_observations, store_path
 from semantic_evidence_bridge import enrich_canonical_records, reconcile_metric_identities, load_verified_share_basis, latest_share_basis, load_verified_market_price, load_verified_ebitda_components, latest_ebitda_component, derive_ebitda, load_verified_citations, load_verified_financial_identities, latest_financial_identity
-from altman_z_score import evaluate_altman_z_score
+from stocklookup_core.financial.altman_z_score import evaluate_altman_z_score
 from financial_mapping import get_default_registry
 from fundamental_quality import evaluate_fundamental_quality, reconcile_legacy_fundamental_quality_with_qualified_evidence
 from stocklookup_core.valuation.relative_valuation import evaluate_relative_valuation
 from stocklookup_core.valuation.intrinsic_valuation import evaluate_intrinsic_valuation
-from scenario_analysis import evaluate_scenario_analysis
-from historical_decision_analysis import evaluate_historical_decision_analysis, PILOT_TICKERS
-from qualified_historical_fundamental_analytics import build_comparative_matrix, merge_official_annual_facts
-from qualified_cohort_comparison import build as build_qualified_cohort_comparison
-from portfolio_risk_analysis import evaluate_portfolio_risk_analysis
+from stocklookup_core.research.scenario_analysis import evaluate_scenario_analysis
+from stocklookup_core.research.historical_decision_analysis import evaluate_historical_decision_analysis, PILOT_TICKERS
+from stocklookup_core.financial.qualified_historical_fundamental_analytics import build_comparative_matrix, merge_official_annual_facts
+from stocklookup_core.research.qualified_cohort_comparison import build as build_qualified_cohort_comparison
+from stocklookup_core.portfolio.portfolio_risk_analysis import evaluate_portfolio_risk_analysis
 from historical_scaleout import attach as attach_historical_scaleout
-from qualified_research_brief import build as build_qualified_research_brief
-from qualified_research_delta import attach as attach_qualified_research_delta
+from stocklookup_core.research.qualified_research_brief import build as build_qualified_research_brief
+from stocklookup_core.research.qualified_research_delta import attach as attach_qualified_research_delta
 from qualified_research_snapshot import snapshot_as_bundle
 from qualified_research_snapshot_v2 import build as build_research_snapshot_v2
 from qualified_research_change_events import build_v2 as build_research_change_events_v2
-from opportunity_ranking import evaluate_opportunity, rank_opportunities
+from stocklookup_core.decision.opportunity_ranking import evaluate_opportunity, rank_opportunities
 from risk_liquidity import evaluate_market_risk
 from qualified_market_observations import evaluate as evaluate_qualified_market_observations
-from analysis_lane_eligibility import evaluate_ticker_lanes
-from ticker_capability import build_ticker_capability_matrix
+from stocklookup_core.research.analysis_lane_eligibility import evaluate_ticker_lanes
+from stocklookup_core.research.ticker_capability import build_ticker_capability_matrix
 from market_basis_capability_registry import MARKET_DATA_SOURCE_AUTHORITY_SELECTION
 from research_financial_fact_projection import (
     build_projection as build_research_financial_fact_projection,
@@ -126,7 +126,7 @@ from dnse_current_state_price_analytics import build_current_state_price_analyti
 from market_wide_current_liquidity_research import (
     content_identity as market_wide_current_liquidity_content_identity,
 )
-from market_wide_historical_matched_liquidity import (
+from stocklookup_core.evidence.market_wide_historical_matched_liquidity import (
     content_identity as market_wide_historical_matched_liquidity_content_identity,
 )
 from stocklookup_core.tactical.market_wide_relative_volume_research import (
@@ -152,7 +152,7 @@ from stocklookup_core.decision.current_research_decision_packet_product import (
 from current_research_scenario_context import (
     content_identity as current_research_scenario_context_content_identity,
 )
-from shadow_security_recommendation import (
+from stocklookup_core.decision.shadow_security_recommendation import (
     content_identity as shadow_security_recommendation_content_identity,
 )
 from stocklookup_core.portfolio.correlation_concentration_guard import (

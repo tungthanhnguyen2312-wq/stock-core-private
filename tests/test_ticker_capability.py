@@ -15,7 +15,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-import ticker_capability as tc  # noqa: E402
+from stocklookup_core.research import ticker_capability as tc  # noqa: E402
 
 
 def _empty_capability_inputs() -> dict:

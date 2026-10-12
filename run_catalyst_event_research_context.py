@@ -1,6 +1,6 @@
 from pathlib import Path
 import json
-from catalyst_event_research_context import build, review_overlay
+from stocklookup_core.research.catalyst_event_research_context import build, review_overlay
 from stocklookup_core.research.persistent_research_dossier import load_latest_versions
 from stocklookup_core.research.research_question_tasking import load_latest_tasks
 

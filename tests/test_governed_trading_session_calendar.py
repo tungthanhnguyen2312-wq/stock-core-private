@@ -2,12 +2,12 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from governed_trading_session_calendar import (
+from stocklookup_core.evidence.governed_trading_session_calendar import (
     TARGET_SESSION_INVALID,
     TARGET_SESSION_VALID,
     load_governed_trading_session_calendar,
 )
-from market_wide_historical_matched_liquidity import calculate_trailing_feature
+from stocklookup_core.evidence.market_wide_historical_matched_liquidity import calculate_trailing_feature
 
 
 ROOT = Path(__file__).resolve().parents[1]

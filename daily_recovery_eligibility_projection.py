@@ -48,7 +48,7 @@ import json
 from pathlib import Path
 from typing import Any, Mapping
 
-import current_market_universe_breadth_foundation as _breadth_foundation
+from stocklookup_core.tactical import current_market_universe_breadth_foundation as _breadth_foundation
 import current_universe_status_and_session_coverage_resolution as _status_resolution
 
 CONTRACT_VERSION = "daily_recovery_eligibility_projection/v1"

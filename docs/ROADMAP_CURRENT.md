@@ -1,16 +1,15 @@
 # Stock Lookup — Current Roadmap
 
 History: [ROADMAP.md](ROADMAP.md); execution: ROADMAP_STATE.json.
-E6 base/main `70fbba96d02369e0f02a5a15dd264bad780fe6ce`.
+Base/main `3f1be104386a218899b7dcb4bdeaa154be17ce06`.
 Nothing below auto-starts; native standing admission required (AI_RULES 11).
 Facts: [ACTIVE_STATE.md](ACTIVE_STATE.md).
 
-## NOW — E6_FINANCIAL_EXTRACTION_ADMISSION_BOUNDARY (COMPLETE LOCAL)
+## NOW — ACCELERATED_ROOT_PACKAGE_CONSOLIDATION_V1 (COMPLETE LOCAL)
 
-[Scope](e6_financial_extraction_admission_boundary_contract.md): shared row rules,
-metadata envelopes and result labels; financial semantics and frozen sources unchanged.
-No Daily or authority change.
-Feature PR/CI repairs authorized; E6 merge remains Owner-gated. No automatic successor.
+[Scope](accelerated_root_package_consolidation_v1_contract.md): 95 root modules to packages;
+no shim/pin/Daily/authority change. PR/CI repairs authorized; merge Owner-gated.
+E6 PR128 merged `3f1be10`; post-merge CI PASS (38194697661).
 E5 PR127 merged `70fbba9`; post-merge CI PASS (38190156979).
 E4 PR126 merged `e9ee2fe`; four post-merge jobs PASS (38186488312).
 E2/E3 PR125 merged `0061d5f`; four post-merge jobs PASS (38181224017).

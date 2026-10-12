@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-import securities_financial_research_component as securities_component
+from stocklookup_core.financial import securities_financial_research_component as securities_component
 import stocklookup_core.financial.financial_analysis_engine_v2 as engine
 import stocklookup_core.financial.financial_analysis_product_projection as projection
 
@@ -266,7 +266,7 @@ def test_denominator_preserved_and_zero_silent_drops_with_mixed_tickers():
 
 
 def test_bank_and_securities_families_coexist_independently():
-    import bank_financial_research_component as bank_component
+    from stocklookup_core.financial import bank_financial_research_component as bank_component
     bank_components = [bank_component.build_observation(
         provider="TCBS", ticker="MBB", entity_type="bank", year=2026, quarter=2,
         period_kind=bank_component.QUARTER, period_semantics_status=bank_component.EMPIRICALLY_VERIFIED_PROVIDER_PERIOD_SEMANTICS,

@@ -5,7 +5,7 @@ import hashlib
 import json
 from pathlib import Path
 
-from official_route_ownership_evidence import qualify
+from stocklookup_core.evidence.official_route_ownership_evidence import qualify
 from prospective_route_ownership_review import (
     BRANDING_ONLY,
     FULL_LEGAL_ENTITY_NAME,

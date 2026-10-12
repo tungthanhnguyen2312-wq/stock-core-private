@@ -9,7 +9,7 @@ import pandas as pd
 
 from candlestick_patterns import atomic_write_snapshot, build_snapshot
 from runtime_paths import runtime_root
-from source_timestamp import resolve_source_datetime, source_timestamp
+from stocklookup_core.evidence.source_timestamp import resolve_source_datetime, source_timestamp
 
 # Console Windows mặc định cp1252 -> vỡ khi in tiếng Việt
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")

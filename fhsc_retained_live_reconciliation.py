@@ -16,7 +16,7 @@ from urllib.error import HTTPError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
-from provider_reference_reconciliation import (
+from stocklookup_core.evidence.provider_reference_reconciliation import (
     BASIS_UNRESOLVED,
     CLOSED_SESSION_OBSERVATION,
     FINALIZATION_STATUS_UNKNOWN,

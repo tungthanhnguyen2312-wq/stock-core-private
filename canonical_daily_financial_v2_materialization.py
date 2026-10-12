@@ -31,7 +31,7 @@ from typing import Any, Mapping, Sequence
 
 import stocklookup_core.valuation.current_research_valuation_context as valuation_context
 import entity_classification_contract as entity_classification
-import exchange_industry_classification as industry_classification
+from stocklookup_core.evidence import exchange_industry_classification as industry_classification
 import stocklookup_core.financial.financial_analysis_product_projection as product_projection
 import stocklookup_core.financial.financial_v2_current_input_authority as input_authority
 import stocklookup_core.financial.market_wide_financial_analysis_v2_scaleout as scaleout
@@ -270,7 +270,7 @@ def build_evaluated_valuation_artifact(
     valuation_records = (raw_valuation_artifact or {}).get("records") or {}
     applicability_records = (entity_applicability_artifact or {}).get("records") or {}
     from collections import defaultdict
-    import provider_financial_monetary_basis_verdict as monetary_verdict
+    from stocklookup_core.financial import provider_financial_monetary_basis_verdict as monetary_verdict
     equity_by_ticker: dict[str, list[Mapping[str, Any]]] = defaultdict(list)
     for row in semantic_rows or ():
         if (row.get("canonical_metric") == "shareholders_equity"

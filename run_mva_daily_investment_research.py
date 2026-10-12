@@ -1,6 +1,6 @@
 from pathlib import Path
 import json
-from mva_daily_investment_research import build
+from stocklookup_core.research.mva_daily_investment_research import build
 ROOT=Path(__file__).resolve().parent
 def run():
  s=json.loads((ROOT/'operations-review/p3f18-mva-research-synthesis-20260820/p3f18_mva_research_synthesis_artifact.json').read_text(encoding='utf-8'));return build(s)

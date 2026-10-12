@@ -6,7 +6,7 @@ import json
 import pytest
 
 import stocklookup_core.financial.financial_analysis_engine_v2 as engine
-import tcbs_bank_capture_import as importer
+from stocklookup_core.financial import tcbs_bank_capture_import as importer
 
 
 def digest(value):

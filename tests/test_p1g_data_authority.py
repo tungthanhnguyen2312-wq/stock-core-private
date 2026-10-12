@@ -22,7 +22,7 @@ SESSION = "2026-07-30"
 import official_source_registry as registry  # noqa: E402
 import stocklookup_core.evidence.official_document_store as doc_store  # noqa: E402
 import stocklookup_core.evidence.corporate_action_events as events  # noqa: E402
-import official_corporate_action_ledger as ledger  # noqa: E402
+from stocklookup_core.evidence import official_corporate_action_ledger as ledger  # noqa: E402
 import share_transition_bridge as share_bridge  # noqa: E402
 import market_wide_calculation_readiness as readiness  # noqa: E402
 from canonical_financial_bundle_section import attach  # noqa: E402

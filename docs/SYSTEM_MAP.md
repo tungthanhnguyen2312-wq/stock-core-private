@@ -49,6 +49,12 @@ learning chain. [Workflow scope and evidence limits](research_workflow_package_v
 binds creation to the exact validated draft/recorded review and detaches frozen T0 from caller objects;
 fixtures exercise this chain without retained default loaders or production learning.
 Their existing child tools retain paths and resolve the repository source root.
+[Accelerated consolidation V1](accelerated_root_package_consolidation_v1_contract.md) adds
+official-source, corporate-action, market/session/universe and price-basis evidence to
+`evidence/`, breadth contexts to `tactical/`, Altman/bank/securities/statement and provider
+financial components to `financial/`, research briefs/scenarios/lanes to `research/`, two
+risk/liquidity projections to `portfolio/` and ranking/shadow/indicator projections to
+`decision/`; `tests/fixtures/bulk_root_package_consolidation_relocations.json` lists them.
 The existing offline `official_document_acquisition.py` CLI is a small compatibility launcher.
 All library consumers import the packages; historical module names resolve through
 `config/repository_layout.json`. Owner Daily and publishing launchers retain their paths.

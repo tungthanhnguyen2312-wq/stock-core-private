@@ -8,7 +8,7 @@ import unittest
 from pathlib import Path
 
 import current_financial_momentum_context as momentum
-import current_official_market_universe as official
+from stocklookup_core.evidence import current_official_market_universe as official
 import export_ai_bundle as bundle
 import polymorphic_current_strategy_classification as strategy
 from market_wide_current_descriptive_research import content_identity as descriptive_identity

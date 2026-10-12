@@ -156,7 +156,7 @@ from pathlib import Path
 from typing import Any, Iterable, Mapping, Sequence
 
 import market_data_contracts
-import official_corporate_action_ledger as ledger
+from stocklookup_core.evidence import official_corporate_action_ledger as ledger
 import provider_price_basis_registry as price_basis_registry
 
 VERSION = "1.0.0"

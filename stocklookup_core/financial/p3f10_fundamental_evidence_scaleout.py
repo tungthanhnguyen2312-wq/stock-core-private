@@ -17,7 +17,7 @@ from typing import Any, Mapping, Sequence
 from stocklookup_core.financial.fundamental_research_readiness import build_fundamental_research_artifact
 
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parents[2]
 VERSION = "1.0.0"
 CONTRACT_VERSION = "p3f10_generic_fundamental_evidence_scaleout/v1"
 ARTIFACT_TYPE = "P3F10_GENERIC_FUNDAMENTAL_EVIDENCE_SCALEOUT"

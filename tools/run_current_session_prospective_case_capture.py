@@ -11,7 +11,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from stocklookup_core.research.durable_prospective_research_case_store import DurableProspectiveResearchCaseStore  # noqa: E402
-from prospective_case_admission_policy import AdmissionPolicyError, apply_admission_policy, retain_admitted_cases  # noqa: E402
+from stocklookup_core.research.prospective_case_admission_policy import AdmissionPolicyError, apply_admission_policy, retain_admitted_cases  # noqa: E402
 from prospective_decision_outcome_measurement import build_outcome_artifact, load_genuine_case_envelopes  # noqa: E402
 
 

@@ -15,7 +15,7 @@ import financial_fact_coverage_recovery as ffcr
 import stocklookup_core.financial.fundamental_cross_sectional_scoring as fcss
 import stocklookup_core.financial.fundamental_research_cohort_scaleout as scaleout
 import market_wide_historical_fundamentals_scaleout as mwhfs
-import p3f10_fundamental_evidence_scaleout as p3f10mod
+from stocklookup_core.financial import p3f10_fundamental_evidence_scaleout as p3f10mod
 import p3f13_official_financial_evidence_scaleout as p3f13mod
 
 ROOT = Path(__file__).resolve().parents[1]

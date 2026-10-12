@@ -27,7 +27,7 @@ if str(ROOT) not in sys.path:
 
 import stocklookup_core.financial.fundamental_research_cohort_scaleout as scaleout  # noqa: E402
 import financial_fact_coverage_recovery as ffcr  # noqa: E402
-import p3f10_fundamental_evidence_scaleout as p3f10mod  # noqa: E402
+from stocklookup_core.financial import p3f10_fundamental_evidence_scaleout as p3f10mod  # noqa: E402
 import p3f13_official_financial_evidence_scaleout as p3f13mod  # noqa: E402
 import market_wide_historical_fundamentals_scaleout as mwhfs  # noqa: E402
 from field_temporal_contract import stable_id  # noqa: E402

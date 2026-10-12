@@ -98,7 +98,7 @@ def test_same_receipt_mutation_and_corrupt_path_fail_closed(tmp_path):
 
 
 def test_current_universe_retained_without_historical_active_membership(tmp_path):
-    import current_official_market_universe as universe
+    from stocklookup_core.evidence import current_official_market_universe as universe
     value = {"contract_version": universe.CONTRACT_VERSION, "records": {"AAA": {"exchange_or_market": "HOSE",
              "official_observed_at": SESSION+"T09:00:00Z", "current_universe_status": "OFFICIAL_CURRENT_EXCHANGE_SECURITY"}}}
     value.update(universe._identity(value))

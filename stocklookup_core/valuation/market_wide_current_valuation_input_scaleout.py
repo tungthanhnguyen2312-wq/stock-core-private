@@ -18,7 +18,7 @@ from collections import Counter, defaultdict
 from typing import Any, Mapping
 
 from stocklookup_core.evidence.field_identity import stable_id
-import monetary_basis_contract as basis_contract
+from stocklookup_core.financial import monetary_basis_contract as basis_contract
 import mva_provider_share_proxy as issued_share_proxy
 import stocklookup_core.valuation.p3f_current_market_valuation as p3f
 from polymorphic_current_strategy_classification import _valuation_requirement

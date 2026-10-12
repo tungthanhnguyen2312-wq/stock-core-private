@@ -17,7 +17,7 @@ import current_foreign_flow_retention as retention
 import dnse_foreign_flow_store as store
 import flow_price_divergence_shadow as flow_price
 from dnse_foreign_flow_capability import normalize_record
-from velocity_flow_price_presentation_projection import flow_price_view
+from stocklookup_core.decision.velocity_flow_price_presentation_projection import flow_price_view
 
 ROOT = Path(__file__).resolve().parents[1]
 SESSION = "2026-09-23"

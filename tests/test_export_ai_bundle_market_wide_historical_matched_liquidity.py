@@ -8,7 +8,7 @@ import unittest
 from pathlib import Path
 
 import export_ai_bundle as bundle
-from market_wide_historical_matched_liquidity import build_artifact, content_identity
+from stocklookup_core.evidence.market_wide_historical_matched_liquidity import build_artifact, content_identity
 
 
 def _artifact() -> dict:

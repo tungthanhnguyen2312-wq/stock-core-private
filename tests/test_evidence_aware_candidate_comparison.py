@@ -1,6 +1,6 @@
 import pytest
 
-from evidence_aware_candidate_comparison import build, validate_request
+from stocklookup_core.research.evidence_aware_candidate_comparison import build, validate_request
 from run_evidence_aware_candidate_comparison import inputs, make, pilot_requests
 
 

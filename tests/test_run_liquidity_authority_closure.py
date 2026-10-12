@@ -7,7 +7,7 @@ from datetime import date, datetime, timezone
 from pathlib import Path
 
 import liquidity_authority_contract as contract
-import official_exchange_trading_statistics as official
+from stocklookup_core.evidence import official_exchange_trading_statistics as official
 from tools import run_liquidity_authority_closure as runner
 
 SESSIONS = ["2026-08-25", "2026-08-26", "2026-08-27", "2026-08-28", "2026-09-03", "2026-09-04", "2026-09-07", "2026-09-08",

@@ -8,15 +8,19 @@ function directly, proving they delegate rather than re-derive.
 from __future__ import annotations
 
 import importlib
+import json
 import sys
 import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+# Registry module names are serialized identity text; a governed relocation resolves the original label.
+_RELOCATIONS = json.loads((Path(__file__).resolve().parents[1] / "config/repository_layout.json")
+                          .read_text(encoding="utf-8"))["relocations"]
 
 import feature_input_fitness_contract as fitness
 import stocklookup_core.financial.financial_entity_applicability as financial_entity_applicability
-import monetary_basis_contract
+from stocklookup_core.financial import monetary_basis_contract
 import multi_source_market_evidence_contract
 import technical_structure_context as technical_structure_context
 
@@ -92,8 +96,9 @@ class RegistryPointersAreRealTests(unittest.TestCase):
             module_name = entry["authoritative_module"]
             if "/" in module_name or "#" in module_name:
                 continue  # a doc/registry reference, not a Python module
+            relocated = _RELOCATIONS.get(module_name + ".py")
             try:
-                module = importlib.import_module(module_name)
+                module = importlib.import_module(relocated[:-3].replace("/", ".") if relocated else module_name)
             except ImportError as exc:
                 self.fail(f"{family}: authoritative_module {module_name!r} does not import: {exc}")
             for function_name in entry["authoritative_functions"]:

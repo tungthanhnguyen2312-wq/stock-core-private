@@ -14,7 +14,7 @@ import json
 from collections import Counter
 from typing import Any, Mapping
 
-import current_official_market_universe as official_universe_module
+from stocklookup_core.evidence import current_official_market_universe as official_universe_module
 import stocklookup_core.decision.current_opportunity_prioritization as opportunity_module
 import stocklookup_core.decision.current_research_risk_register as risk_register_module
 import stocklookup_core.tactical.watchlist_tactical_entry_classifier as tactical_module

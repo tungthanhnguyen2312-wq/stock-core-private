@@ -9,7 +9,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
-import action_instrumentation as instrumentation
+from stocklookup_core.tactical import action_instrumentation as instrumentation
 
 
 OUTPUT = ROOT / "operations-review" / "action-instrumentation-and-invalidation-precision-v1-20260828" / "artifact.json"

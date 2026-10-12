@@ -3,7 +3,7 @@ import os, tempfile, unittest
 from pathlib import Path
 from unittest import mock
 import pandas as pd
-import live_universe as universe
+from stocklookup_core.evidence import live_universe as universe
 import stock_analyzer
 import export_ai_bundle as exporter
 

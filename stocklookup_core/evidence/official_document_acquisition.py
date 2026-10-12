@@ -483,7 +483,7 @@ def import_offline_event(source_path: Path, destination: Path, metadata: Mapping
     document_id = _document_id(ticker, url, sha256)
     evidence = {"citation_id": document_id, "document_sha256": sha256, "source_url": url}
     event = {"canonical_event_id": None, "ticker": ticker, "exchange": exchange, "event_type": metadata["action_type"], "ex_date": metadata["ex_date"], "entitlement_ratio": {"ratio_float": ratio}, "ratio_basis": metadata["ratio_basis"], "official_source_id": metadata.get("official_source_id") or url, "retrieved_at": metadata["retrieved_at"], "evidence": evidence, "qualified_for_price_basis_test": True, "qualified_for_share_transition": False, "provider_event_id": metadata.get("provider_event_id")}
-    from price_basis_events import official_event_id
+    from stocklookup_core.evidence.price_basis_events import official_event_id
     event["canonical_event_id"] = official_event_id(event, ratio)
     root = Path(destination); root.mkdir(parents=True, exist_ok=True); manifest = _load(root / MANIFEST); records = manifest["records"]; existing = next((r for r in records if r.get("document_id") == document_id), None)
     event_path = root / EVENTS

@@ -16,7 +16,7 @@ import dnse_foreign_flow_store as store
 import market_wide_historical_research_context as history
 import volume_and_flow_context as context
 from bounded_artifact_stream import header, source_hash, stream_artifact
-from daily_session_completion_reference import load_qualified_completed_sessions
+from stocklookup_core.evidence.daily_session_completion_reference import load_qualified_completed_sessions
 
 
 def trading_date_index(runtime_root):

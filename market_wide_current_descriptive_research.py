@@ -39,7 +39,7 @@ from statistics import median
 from typing import Any, Mapping, Sequence
 
 from field_temporal_contract import stable_id as _p3f9b_stable_id
-from market_regime_breadth_context import _descriptor
+from stocklookup_core.tactical.market_regime_breadth_context import _descriptor
 from mva_daily_research_bundle import market_features
 import stocklookup_core.tactical.tactical_reference_window as reference_window
 import market_wide_current_liquidity_research as liquidity_module

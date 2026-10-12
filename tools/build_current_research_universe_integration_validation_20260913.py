@@ -9,7 +9,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 OUT_DIR = ROOT / "operations-review/current-research-official-universe-consumer-integration-v1-20260913"
 
-from current_research_official_universe_scope import resolve_scope
+from stocklookup_core.evidence.current_research_official_universe_scope import resolve_scope
 
 
 def main():

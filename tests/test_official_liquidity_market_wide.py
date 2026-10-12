@@ -6,10 +6,10 @@ import pytest
 
 import stocklookup_core.decision.current_research_decision_input as decision_input
 import liquidity_authority_contract as c
-import official_exchange_trading_statistics as official
+from stocklookup_core.evidence import official_exchange_trading_statistics as official
 import official_liquidity_market_wide as w
-from governed_trading_session_calendar import calendar_from_sessions
-from market_wide_historical_matched_liquidity import EXACT_WINDOW
+from stocklookup_core.evidence.governed_trading_session_calendar import calendar_from_sessions
+from stocklookup_core.evidence.market_wide_historical_matched_liquidity import EXACT_WINDOW
 
 SESSIONS = [f"2026-08-{d:02d}" for d in (24, 25, 26, 27, 28, 31)] + [f"2026-09-{d:02d}" for d in (1, 3, 4, 7, 8, 9, 10, 11, 14, 15, 16, 17, 18, 21, 22, 23, 24, 25, 28)]
 TARGET = "2026-09-28"

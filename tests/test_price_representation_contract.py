@@ -97,13 +97,16 @@ class IndependenceFromAdjustmentBasisTests(unittest.TestCase):
                 imported_names.update(alias.name for alias in node.names)
             elif isinstance(node, ast.ImportFrom) and node.module:
                 imported_names.add(node.module)
+                imported_names.update(node.module + "." + alias.name for alias in node.names)
+        # Leaf names also catch the packaged forms (stocklookup_core.evidence.price_basis_contract).
+        imported_leaves = {name.rsplit(".", 1)[-1] for name in imported_names}
         forbidden_imports = (
             "provider_price_basis_registry", "corporate_action_factors",
             "price_basis_contract", "price_basis_events",
         )
         for name in forbidden_imports:
             with self.subTest(module=name):
-                self.assertNotIn(name, imported_names)
+                self.assertNotIn(name, imported_leaves)
 
     def test_result_never_claims_raw_as_traded_or_pit_eligibility(self):
         result = contract.to_canonical(

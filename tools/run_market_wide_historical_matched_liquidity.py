@@ -22,8 +22,8 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from atomic_io import atomic_write_file, atomic_write_json
-from governed_trading_session_calendar import load_governed_trading_session_calendar
-from market_wide_historical_matched_liquidity import (
+from stocklookup_core.evidence.governed_trading_session_calendar import load_governed_trading_session_calendar
+from stocklookup_core.evidence.market_wide_historical_matched_liquidity import (
     CONTRACT_VERSION,
     EXACT_WINDOW,
     FEATURES,

@@ -12,7 +12,7 @@ from pathlib import Path
 
 import pytest
 
-from current_research_official_universe_scope import (
+from stocklookup_core.evidence.current_research_official_universe_scope import (
     DISPOSITION_ELIGIBLE, DISPOSITION_TEMPORALLY_INELIGIBLE, SCOPE_ELIGIBLE,
     SCOPE_OUTSIDE_DELISTING_CORRELATED, SCOPE_OUTSIDE_UNRESOLVED,
     CurrentResearchOfficialUniverseScopeError, eligible_ticker_set, resolve_scope,

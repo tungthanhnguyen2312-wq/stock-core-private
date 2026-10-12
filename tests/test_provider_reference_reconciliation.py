@@ -1,7 +1,7 @@
 """Focused provider-reference reconciliation regressions."""
 from __future__ import annotations
 
-from provider_reference_reconciliation import (
+from stocklookup_core.evidence.provider_reference_reconciliation import (
     BASIS_UNRESOLVED,
     CLOSED_SESSION_OBSERVATION,
     EXACT_MATCH,

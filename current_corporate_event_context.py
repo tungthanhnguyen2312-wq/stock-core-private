@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import Any, Mapping, Sequence
 
 import current_official_event_context as official_event_module
-import current_official_market_universe as official_universe_module
+from stocklookup_core.evidence import current_official_market_universe as official_universe_module
 from market_wide_current_corporate_intelligence import load_retained_events
 from stocklookup_core.valuation.market_wide_current_valuation_input_scaleout import official_research_universe_tickers
 

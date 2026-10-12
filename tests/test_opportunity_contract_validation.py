@@ -1,5 +1,5 @@
 import unittest
-from opportunity_contract_validation import find_prohibited_fields, validate_no_prohibited_capabilities
+from stocklookup_core.research.opportunity_contract_validation import find_prohibited_fields, validate_no_prohibited_capabilities
 
 
 class OpportunityContractValidationTests(unittest.TestCase):

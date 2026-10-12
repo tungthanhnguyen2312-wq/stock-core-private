@@ -19,7 +19,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from runtime_paths import runtime_root as resolve_runtime_root
-from vci_exchange_reference_snapshot import build_snapshot
+from stocklookup_core.evidence.vci_exchange_reference_snapshot import build_snapshot
 
 VN_TZ = timezone(timedelta(hours=7))
 DEFAULT_OUTPUT = ROOT / "operations-review/vci-exchange-reference-snapshot-v1-20260823/vci_exchange_reference_snapshot_artifact.json"

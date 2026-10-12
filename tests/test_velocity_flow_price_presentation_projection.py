@@ -12,7 +12,7 @@ from pathlib import Path
 
 import pytest
 
-import velocity_flow_price_presentation_projection as bridge
+from stocklookup_core.decision import velocity_flow_price_presentation_projection as bridge
 
 ROOT = Path(__file__).resolve().parents[1]
 SESSION = "2026-09-18"

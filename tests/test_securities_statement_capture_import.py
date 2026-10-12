@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import securities_financial_research_component as securities_component
+from stocklookup_core.financial import securities_financial_research_component as securities_component
 import securities_statement_capture_import as importer
 
 

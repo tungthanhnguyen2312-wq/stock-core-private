@@ -1,7 +1,7 @@
 ﻿import unittest
-from opportunity_ranking import evaluate_opportunity
-from scenario_analysis import evaluate_scenario_analysis
-from opportunity_contract_validation import find_prohibited_fields
+from stocklookup_core.decision.opportunity_ranking import evaluate_opportunity
+from stocklookup_core.research.scenario_analysis import evaluate_scenario_analysis
+from stocklookup_core.research.opportunity_contract_validation import find_prohibited_fields
 from opportunity_snapshot import build_snapshot, serialize_snapshot
 
 def entry():

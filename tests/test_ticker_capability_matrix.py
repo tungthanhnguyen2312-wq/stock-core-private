@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from export_ai_bundle import attach_ticker_capability_matrix  # noqa: E402
-from ticker_capability import build_ticker_capability_matrix  # noqa: E402
+from stocklookup_core.research.ticker_capability import build_ticker_capability_matrix  # noqa: E402
 
 
 AUTHORITY = {

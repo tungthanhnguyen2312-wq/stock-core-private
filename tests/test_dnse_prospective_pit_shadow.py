@@ -10,7 +10,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
-import dnse_prospective_pit_shadow as pit
+from stocklookup_core.evidence import dnse_prospective_pit_shadow as pit
 from tools import collect_dnse_prospective_pit_shadow as collector
 
 

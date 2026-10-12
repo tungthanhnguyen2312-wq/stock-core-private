@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import unittest
 
-from dnse_bid_ask_capability import (
+from stocklookup_core.evidence.dnse_bid_ask_capability import (
     DISPLAY_ONLY,
     LIQUIDITY_ANALYTICS,
     QUANTITY_UNIT_QUALIFIED,

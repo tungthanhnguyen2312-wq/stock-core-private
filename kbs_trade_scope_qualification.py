@@ -51,7 +51,7 @@ import json
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
-import evidence_qualification_tiers as tiers
+from stocklookup_core.evidence import evidence_qualification_tiers as tiers
 
 VERSION = "1.0.0"
 PROVIDER = "KBS"

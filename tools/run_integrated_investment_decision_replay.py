@@ -30,7 +30,7 @@ if str(ROOT) not in sys.path:
 import current_market_sector_leadership_context as sector_context
 import stocklookup_core.valuation.current_research_valuation_context as valuation_context
 import entity_classification_contract as entity_classification
-import exchange_industry_classification as industry_classification
+from stocklookup_core.evidence import exchange_industry_classification as industry_classification
 import export_ai_bundle as eab
 import stocklookup_core.financial.financial_analysis_engine_v2 as fa_engine
 import stocklookup_core.financial.financial_analysis_product_projection as fa_projection

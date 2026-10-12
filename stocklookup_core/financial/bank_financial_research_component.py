@@ -45,7 +45,7 @@ import math
 import re
 from typing import Any, Mapping, Sequence
 
-import monetary_basis_contract as basis_contract
+from stocklookup_core.financial import monetary_basis_contract as basis_contract
 
 CONTRACT_VERSION = "bank_financial_research_component/v1"
 

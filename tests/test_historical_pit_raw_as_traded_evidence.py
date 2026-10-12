@@ -1,6 +1,6 @@
 import unittest
 
-from historical_pit_raw_as_traded_evidence import (build_artifact, event_from_observation,
+from stocklookup_core.evidence.historical_pit_raw_as_traded_evidence import (build_artifact, event_from_observation,
                                                      price_source_inventory, source_document)
 
 

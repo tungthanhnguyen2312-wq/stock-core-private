@@ -47,7 +47,7 @@ from entity_classification_contract import (
     compute_classification_evidence_id,
 )
 from evidence_backed_entity_classifier import evaluate_legal_charter_evidence
-from exchange_industry_classification import (
+from stocklookup_core.evidence.exchange_industry_classification import (
     HINT_AMBIGUOUS_FINANCIAL,
     HINT_BANK,
     HINT_CORPORATE,

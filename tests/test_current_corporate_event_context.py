@@ -10,7 +10,7 @@ from pathlib import Path
 
 import current_corporate_event_context as events
 import current_official_event_context as official_events
-import current_official_market_universe as official
+from stocklookup_core.evidence import current_official_market_universe as official
 import export_ai_bundle as bundle
 import polymorphic_current_strategy_classification as strategy
 

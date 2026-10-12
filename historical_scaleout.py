@@ -7,8 +7,8 @@ market-wide selection path.
 """
 from __future__ import annotations
 from typing import Any, Mapping
-from historical_decision_analysis import PILOT_TICKERS, evaluate_historical_decision_analysis
-from portfolio_risk_analysis import evaluate_portfolio_risk_analysis
+from stocklookup_core.research.historical_decision_analysis import PILOT_TICKERS, evaluate_historical_decision_analysis
+from stocklookup_core.portfolio.portfolio_risk_analysis import evaluate_portfolio_risk_analysis
 
 def _m(v:Any)->Mapping[str,Any]: return v if isinstance(v,Mapping) else {}
 def _qualified(entry:Mapping[str,Any])->bool:

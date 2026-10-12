@@ -23,7 +23,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from stocklookup_core.decision.current_daily_decision_research_product import attach_decision_context  # noqa: E402
-from multi_session_thesis_recommendation_lifecycle import (  # noqa: E402
+from stocklookup_core.research.multi_session_thesis_recommendation_lifecycle import (  # noqa: E402
     CONTRACT_VERSION as LIFECYCLE_CONTRACT,
     build_artifact,
 )

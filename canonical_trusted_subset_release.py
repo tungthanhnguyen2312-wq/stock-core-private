@@ -25,7 +25,7 @@ from datetime import date, timedelta
 from pathlib import Path
 from typing import Any, Mapping
 
-from altman_applicability import evaluate_altman_applicability
+from stocklookup_core.financial.altman_applicability import evaluate_altman_applicability
 from atomic_io import atomic_copy_file, atomic_write_json
 from canonical_dashboard_runtime_release import (
     CanonicalRuntimeReleaseError,

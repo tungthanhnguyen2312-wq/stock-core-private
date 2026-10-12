@@ -1,5 +1,5 @@
 import unittest
-from provider_official_bridge import *
+from stocklookup_core.evidence.provider_official_bridge import *
 class BridgeTests(unittest.TestCase):
  def snapshot(self):return provider_snapshot(provider='VCI',method='income_statement',version='4.0.4',parameters={'period':'year'},retrieved_at='2026-07-30T00:00:00Z',raw_payload=[{'x':1}])
  def rows(self):

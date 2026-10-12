@@ -14,7 +14,7 @@ sys.path.insert(0, str(ROOT))
 
 from bitemporal_semantic_contract import project_official_evidence_temporal_metadata
 from stocklookup_core.evidence.corporate_action_events import classify_retained_document, extract_event_observation, extract_text
-from official_corporate_action_ledger import build_ledger
+from stocklookup_core.evidence.official_corporate_action_ledger import build_ledger
 from stocklookup_core.evidence.real_official_corporate_action_factor_evidence import select_candidates
 
 EVENTS = ROOT / "operations-review/current-official-event-context-integration-v1-20260824/current_official_event_context_artifact.json"

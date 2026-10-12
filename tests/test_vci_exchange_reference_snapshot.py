@@ -1,6 +1,6 @@
 import pytest
 
-from vci_exchange_reference_snapshot import (
+from stocklookup_core.evidence.vci_exchange_reference_snapshot import (
     VciExchangeReferenceSnapshotError,
     build_snapshot,
     verify_identity,

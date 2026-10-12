@@ -68,7 +68,7 @@ from canonical_financial_facts import (
     STATUS_QUALIFIED,
     STATUS_UNAVAILABLE,
 )
-from canonical_financial_resolvers import UNKNOWN
+from stocklookup_core.financial.canonical_financial_resolvers import UNKNOWN
 
 VERSION = "1.0.0"
 POLICY_VERSION = "market-wide-calculation-readiness/1.0.0"

@@ -3,8 +3,8 @@ from __future__ import annotations
 import argparse,json
 from pathlib import Path
 from typing import Any,Mapping
-from opportunity_ranking import evaluate_opportunity
-from scenario_analysis import evaluate_scenario_analysis
+from stocklookup_core.decision.opportunity_ranking import evaluate_opportunity
+from stocklookup_core.research.scenario_analysis import evaluate_scenario_analysis
 from opportunity_snapshot import build_snapshot
 from opportunity_snapshot_retention import RetentionError,append_snapshot,replay_vnm
 from vnm_shadow_backtest import run_shadow_backtest

@@ -4,7 +4,7 @@ import json
 
 import pytest
 
-import official_exchange_trading_statistics as official
+from stocklookup_core.evidence import official_exchange_trading_statistics as official
 
 # 2026-09-28 00:00:00 UTC; HPG figures are the retained official HOSE row for that session.
 SEPT_28 = 1790553600

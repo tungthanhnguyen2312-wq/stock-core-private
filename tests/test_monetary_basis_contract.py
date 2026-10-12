@@ -1,7 +1,7 @@
 """Focused tests for the shared monetary-basis contract."""
 from __future__ import annotations
 
-import monetary_basis_contract as basis_contract
+from stocklookup_core.financial import monetary_basis_contract as basis_contract
 import pytest
 
 

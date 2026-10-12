@@ -39,7 +39,7 @@ import re
 from datetime import datetime, timezone
 from typing import Any, Mapping, Sequence
 
-import evidence_qualification_tiers as tiers
+from stocklookup_core.evidence import evidence_qualification_tiers as tiers
 
 # The HOSE order-price step. An exchange trading rule, not a provider claim, and the same
 # rule the VCI lane used -- reused rather than restated so the two lanes cannot drift into

@@ -16,7 +16,7 @@ sys.path.insert(0, str(ROOT))
 
 from atomic_io import atomic_write_json
 from stocklookup_core.evidence.corporate_action_events import classify_retained_document, extract_event_observations, extract_text
-from historical_pit_raw_as_traded_evidence import build_artifact, event_from_observation
+from stocklookup_core.evidence.historical_pit_raw_as_traded_evidence import build_artifact, event_from_observation
 
 
 def run(raw_root: Path, output: Path) -> dict:

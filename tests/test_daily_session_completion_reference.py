@@ -11,7 +11,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from daily_session_completion_reference import load_qualified_completed_sessions, registry_path
+from stocklookup_core.evidence.daily_session_completion_reference import load_qualified_completed_sessions, registry_path
 
 
 def _write(tmp: str, payload) -> Path:

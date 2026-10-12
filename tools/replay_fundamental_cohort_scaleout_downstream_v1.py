@@ -44,7 +44,7 @@ if str(ROOT) not in sys.path:
 
 from stocklookup_core.decision.current_daily_decision_research_product import attach_decision_context  # noqa: E402
 from daily_session_shadow_recommendation import build as build_daily_session_shadow_recommendation  # noqa: E402
-from multi_session_thesis_recommendation_lifecycle import (  # noqa: E402
+from stocklookup_core.research.multi_session_thesis_recommendation_lifecycle import (  # noqa: E402
     CONTRACT_VERSION as LIFECYCLE_CONTRACT,
     build_artifact as build_lifecycle_artifact,
 )

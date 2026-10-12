@@ -5,9 +5,9 @@ import hashlib
 import json
 from datetime import datetime, timezone
 from typing import Any, Mapping
-from opportunity_contract_validation import validate_no_prohibited_capabilities
-from opportunity_ranking import DIMENSIONS, VERSION as RANKING_CONTRACT_VERSION, evaluate_opportunity
-from scenario_analysis import VERSION as SCENARIO_CONTRACT_VERSION, evaluate_scenario_analysis
+from stocklookup_core.research.opportunity_contract_validation import validate_no_prohibited_capabilities
+from stocklookup_core.decision.opportunity_ranking import DIMENSIONS, VERSION as RANKING_CONTRACT_VERSION, evaluate_opportunity
+from stocklookup_core.research.scenario_analysis import VERSION as SCENARIO_CONTRACT_VERSION, evaluate_scenario_analysis
 
 VERSION = "1.0.0"
 IDENTITY_VERSION = "1.0.0"

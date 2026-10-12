@@ -3,7 +3,7 @@ import json
 import unittest
 
 from export_ai_bundle import attach_historical_decision_analysis
-from historical_decision_analysis import evaluate_historical_decision_analysis
+from stocklookup_core.research.historical_decision_analysis import evaluate_historical_decision_analysis
 
 
 def record(metric, value, period="2024", *, state="available"):

@@ -22,7 +22,7 @@ WORKSPACE = ROOT.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from historical_matched_traded_value_authority import (  # noqa: E402
+from stocklookup_core.evidence.historical_matched_traded_value_authority import (  # noqa: E402
     CONTRACT_VERSION,
     adv20_status,
     qualify_anchor_rows,

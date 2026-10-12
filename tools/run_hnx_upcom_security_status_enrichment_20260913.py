@@ -5,7 +5,7 @@ import json, sys
 from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from current_official_market_universe import attach_hnx_upcom_security_status, build_no_bar_explanation_summary
+from stocklookup_core.evidence.current_official_market_universe import attach_hnx_upcom_security_status, build_no_bar_explanation_summary
 
 OFFICIAL = ROOT / "operations-review/current-official-market-universe-refresh-v1-20260913/current_official_market_universe_artifact.json"
 STATUS = ROOT / "operations-review/hnx-upcom-official-security-status-enrichment-v1-20260913/hnx_upcom_official_security_status_artifact.json"

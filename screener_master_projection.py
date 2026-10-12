@@ -16,7 +16,7 @@ from collections import Counter
 from pathlib import Path
 from typing import Any, Iterable, Mapping, Sequence
 
-import current_research_official_universe_scope as current_research_official_universe_scope_module
+from stocklookup_core.evidence import current_research_official_universe_scope as current_research_official_universe_scope_module
 import stocklookup_core.decision.integrated_investment_decision_product as integrated_decision_module
 
 CONTRACT_VERSION = "screener_master_projection/v1"

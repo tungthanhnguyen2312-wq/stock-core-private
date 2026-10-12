@@ -36,7 +36,7 @@ from __future__ import annotations
 
 from typing import Any, Mapping, Sequence
 
-import evidence_qualification_tiers as tiers
+from stocklookup_core.evidence import evidence_qualification_tiers as tiers
 import kbs_empirical_basis as basis
 
 VERSION = "1.0.0"

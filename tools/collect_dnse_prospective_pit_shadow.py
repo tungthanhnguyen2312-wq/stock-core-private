@@ -17,7 +17,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from dnse_access import credential_status, credentials_for_request, safe_error_code  # noqa: E402
-from dnse_prospective_pit_shadow import (  # noqa: E402
+from stocklookup_core.evidence.dnse_prospective_pit_shadow import (  # noqa: E402
     COLLECTOR_ID, OBSERVATIONS_FILENAME, ProspectivePitContractError, SCHEMA_ID, build_observation,
     canonical_json, retain_observation, sha256_json, validate_payload_correspondence,
 )

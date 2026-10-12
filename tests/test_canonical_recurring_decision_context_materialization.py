@@ -17,7 +17,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import canonical_current_product_projections as ccpp
-import market_wide_fundamental_feature_store as feature_store_module
+from stocklookup_core.financial import market_wide_fundamental_feature_store as feature_store_module
 import stocklookup_core.tactical.tactical_behavior_context as compact_module
 from test_tactical_behavior_context import (
     SESSION as TACTICAL_SESSION,

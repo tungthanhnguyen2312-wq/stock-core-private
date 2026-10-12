@@ -5,7 +5,7 @@ from datetime import datetime
 from decimal import Decimal, InvalidOperation
 from typing import Any, Mapping
 
-from dnse_closed_session_ohlc_representation import FIELDS, IDENTITY_TRANSFORMATION
+from stocklookup_core.evidence.dnse_closed_session_ohlc_representation import FIELDS, IDENTITY_TRANSFORMATION
 
 
 CONTRACT_VERSION = "dnse_provider_native_closed_ohlc_representation/v1"

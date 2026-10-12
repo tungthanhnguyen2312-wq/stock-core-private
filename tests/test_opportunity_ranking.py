@@ -1,6 +1,6 @@
 import unittest
-from opportunity_ranking import evaluate_opportunity, rank_opportunities
-from scenario_analysis import evaluate_scenario_analysis
+from stocklookup_core.decision.opportunity_ranking import evaluate_opportunity, rank_opportunities
+from stocklookup_core.research.scenario_analysis import evaluate_scenario_analysis
 
 
 def fact(metric="net_income"):

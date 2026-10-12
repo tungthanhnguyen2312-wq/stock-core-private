@@ -281,7 +281,7 @@ def summarize(args: argparse.Namespace) -> dict:
     import asymmetric_dislocation_research as adr
     import multi_session_signal_velocity as velocity
     import next_session_decision_brief as next_brief
-    import provider_financial_monetary_basis_verdict as verdict_pin
+    from stocklookup_core.financial import provider_financial_monetary_basis_verdict as verdict_pin
     from tools import current_research_capability_map as capability
     from tools import run_integrated_fundamental_state_consumption_proof as consumption
 

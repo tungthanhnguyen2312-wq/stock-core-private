@@ -21,7 +21,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
 import vci_direct_basis_pilot as pilot  # noqa: E402
-import vci_volume_composition as composition  # noqa: E402
+from stocklookup_core.evidence import vci_volume_composition as composition  # noqa: E402
 
 EVIDENCE_DIR = ROOT / "operations-review" / "vci-volume-composition-20260804"
 TICKER = "VCB"

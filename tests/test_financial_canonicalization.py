@@ -1,6 +1,6 @@
 import unittest
 import pandas as pd
-from financial_canonicalization import canonicalize_financial_rows, derive_ttm
+from stocklookup_core.financial.financial_canonicalization import canonicalize_financial_rows, derive_ttm
 class FinancialCanonicalizationTests(unittest.TestCase):
     def rows(self): return pd.DataFrame([{"ticker":"AAA","period":"2025-Q1","period_type":"quarter","period_calendar_end":"2025-03-31","revenue":1,"net_profit":-2,"cash":0,"statement_currency":"VND","statement_scale":1,"statement_scope":"consolidated"},{"ticker":"AAA","period":"2025-Q2","period_type":"quarter","period_calendar_end":"2025-06-30","revenue":2,"net_profit":None,"cash":0,"statement_currency":"VND","statement_scale":1,"statement_scope":"consolidated"},{"ticker":"AAA","period":"2025-Q3","period_type":"quarter","period_calendar_end":"2025-09-30","revenue":3,"net_profit":4,"cash":0,"statement_currency":"VND","statement_scale":1,"statement_scope":"consolidated"},{"ticker":"AAA","period":"2025-Q4","period_type":"quarter","period_calendar_end":"2025-12-31","revenue":4,"net_profit":5,"cash":0,"statement_currency":"VND","statement_scale":1,"statement_scope":"consolidated"}])
     def test_period_identity_null_zero_negative_and_determinism(self):

@@ -8,7 +8,7 @@ from __future__ import annotations
 from collections import Counter
 from typing import Any, Mapping
 
-from current_event_catalyst_classification import (
+from stocklookup_core.research.current_event_catalyst_classification import (
     NEGATIVE_CATALYST,
     POSITIVE_CATALYST,
     UNRESOLVED,

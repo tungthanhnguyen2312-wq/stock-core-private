@@ -1,5 +1,5 @@
 import unittest
-from vci_volume_basis import declaration, validate_forward
+from stocklookup_core.evidence.vci_volume_basis import declaration, validate_forward
 
 class VCIVolumeBasisTests(unittest.TestCase):
     def test_declaration_is_fail_closed(self):

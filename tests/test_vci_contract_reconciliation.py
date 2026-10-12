@@ -11,7 +11,7 @@ import unittest
 from pathlib import Path
 
 import provider_price_basis_registry as registry
-import vci_intraday_pagination as pager
+from stocklookup_core.evidence import vci_intraday_pagination as pager
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 PAGINATION_DIR = REPO_ROOT / "operations-review" / "vci-intraday-pagination-20260804"
@@ -365,8 +365,8 @@ class OfflineReplay(unittest.TestCase):
         self.assertFalse(summary["volume_contract"]["liquidity_actionable"])
 
     def test_production_and_actionability_gates_are_unchanged(self):
-        from price_basis_contract import qualify_price_basis, qualify_volume_basis
-        import vci_volume_basis
+        from stocklookup_core.evidence.price_basis_contract import qualify_price_basis, qualify_volume_basis
+        from stocklookup_core.evidence import vci_volume_basis
 
         self.assertFalse(qualify_price_basis("adjusted", verified=False)["is_actionable"])
         self.assertEqual(qualify_volume_basis("raw_shares_traded", verified=False)["volume_basis"], "unknown")

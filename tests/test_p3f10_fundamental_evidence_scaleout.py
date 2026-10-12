@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import inspect
 
-from p3f10_fundamental_evidence_scaleout import build_scaleout_artifact
+from stocklookup_core.financial.p3f10_fundamental_evidence_scaleout import build_scaleout_artifact
 
 
 def _cohort():

@@ -1,6 +1,6 @@
 from pathlib import Path
 import json
-from downside_uncertainty_research_context import build_v1,build_v2,review_overlay
+from stocklookup_core.research.downside_uncertainty_research_context import build_v1,build_v2,review_overlay
 from stocklookup_core.research.persistent_research_dossier import load_latest_versions
 from stocklookup_core.research.research_question_tasking import load_latest_tasks
 from run_market_regime_breadth_context import run as market_run

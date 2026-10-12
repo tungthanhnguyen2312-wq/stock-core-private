@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-import shadow_action_readiness as shadow
+from stocklookup_core.research import shadow_action_readiness as shadow
 
 
 OUTPUT = ROOT / "operations-review" / "shadow-action-readiness-v1-20260828" / "artifact.json"

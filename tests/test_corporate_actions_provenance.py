@@ -1,6 +1,6 @@
 import unittest
 
-from corporate_actions_export import build_corporate_actions_section
+from stocklookup_core.evidence.corporate_actions_export import build_corporate_actions_section
 
 
 class CorporateActionsProvenanceTests(unittest.TestCase):

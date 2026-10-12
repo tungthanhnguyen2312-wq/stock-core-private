@@ -6,7 +6,7 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 from dnse_fhsc_volume_basis import parse_fhsc_trading_history
-from historical_matched_traded_value_authority import (
+from stocklookup_core.evidence.historical_matched_traded_value_authority import (
     reconcile_fhsc_anchor,
     summarize_complete_trade_session,
 )

@@ -28,7 +28,7 @@ if str(ROOT) not in sys.path:
 
 import financial_fact_coverage_recovery as ffcr
 import market_wide_current_fundamental_research as mwcfr
-import p3f10_fundamental_evidence_scaleout as p3f10mod
+from stocklookup_core.financial import p3f10_fundamental_evidence_scaleout as p3f10mod
 import p3f13_official_financial_evidence_scaleout as p3f13mod
 from stocklookup_core.valuation.market_wide_current_valuation_input_scaleout import build_current_valuation_artifact, content_identity as valuation_identity
 from field_temporal_contract import stable_id

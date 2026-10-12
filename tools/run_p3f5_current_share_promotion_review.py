@@ -15,7 +15,7 @@ if str(ROOT) not in sys.path:
 
 from field_temporal_contract import stable_id
 import market_wide_current_shares_resolver as resolver
-import provider_share_promotion_review as review
+from stocklookup_core.evidence import provider_share_promotion_review as review
 from runtime_paths import runtime_root as resolve_runtime_root
 
 VERSION = "1.0.0"

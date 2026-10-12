@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from owner_research_journal import append_event, build, create_event, write_immutable_event
+from stocklookup_core.research.owner_research_journal import append_event, build, create_event, write_immutable_event
 from run_human_research_review_pack import run as review_pack_run
 
 

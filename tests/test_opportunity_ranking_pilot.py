@@ -1,5 +1,5 @@
 import unittest
-from opportunity_ranking_pilot import build_snapshot,digest,canonical_runtime_bundle
+from stocklookup_core.decision.opportunity_ranking_pilot import build_snapshot,digest,canonical_runtime_bundle
 class T(unittest.TestCase):
  def data(self):return {k:{"cutoff":"2025-03-01","axes":{a:{"state":"available"} for a in ("quality","valuation","technical","relative_strength","catalyst","downside","data_confidence")},"scenarios":{"bear":{},"base":{},"bull":{}},"invalidation":"x"} for k in ("HPG","VNM","VCB")}
  def test_sector_cutoff_determinism_and_no_recommendation(self):

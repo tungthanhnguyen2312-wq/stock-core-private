@@ -19,7 +19,7 @@ from stocklookup_core.evidence.hnx_official_issuer_profile_multi_gate import (
     CONTROL_UNKNOWN, CONTROL_WARNING, TRADING_ACTIVE, TRADING_CANCELLED, TRADING_RESTRICTED,
     TRADING_SUSPENDED, TRADING_TEMP_STOPPED, TRADING_UNKNOWN, normalize_control_status, normalize_trading_status,
 )
-from current_official_market_universe import (
+from stocklookup_core.evidence.current_official_market_universe import (
     attach_hnx_upcom_security_status, build_no_bar_explanation_summary, _explanatory_bucket,
 )
 

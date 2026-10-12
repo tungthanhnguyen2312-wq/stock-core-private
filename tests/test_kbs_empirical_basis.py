@@ -15,7 +15,7 @@ import json
 import unittest
 from pathlib import Path
 
-import evidence_qualification_tiers as tiers
+from stocklookup_core.evidence import evidence_qualification_tiers as tiers
 import kbs_capability_matrix as caps
 import kbs_empirical_basis as kbs
 import provider_price_basis_registry as registry

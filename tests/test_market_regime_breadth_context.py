@@ -1,6 +1,6 @@
 from run_market_regime_breadth_context import run
 from run_evidence_aware_research_screener import run as screener_run
-from market_regime_breadth_context import review_overlay
+from stocklookup_core.tactical.market_regime_breadth_context import review_overlay
 
 
 def test_market_context_reconciles_to_cohort_and_screener_without_changing_lenses():

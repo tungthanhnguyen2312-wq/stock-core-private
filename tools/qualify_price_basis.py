@@ -17,7 +17,7 @@ import sys
 if sys_path not in sys.path:
     sys.path.insert(0, sys_path)
 from corporate_action_ledger import build_corporate_action_ledger
-from price_basis_events import project_price_test_events
+from stocklookup_core.evidence.price_basis_events import project_price_test_events
 
 VERSION = "1.0.0"
 MIN_EVENTS = 8

@@ -1,6 +1,6 @@
 from pathlib import Path
 import json
-from market_regime_breadth_context import build, review_overlay
+from stocklookup_core.tactical.market_regime_breadth_context import build, review_overlay
 from run_evidence_aware_research_screener import run as run_screener
 ROOT=Path(__file__).resolve().parent; OUT=ROOT/'operations-review/market-regime-breadth-context-v1-20260820'
 def run():

@@ -13,7 +13,7 @@ from collections import Counter, defaultdict
 from statistics import median
 from typing import Any, Mapping
 
-import current_official_market_universe as official_universe_module
+from stocklookup_core.evidence import current_official_market_universe as official_universe_module
 from stocklookup_core.decision.current_market_screening_opportunity_comparison_foundation import content_identity as screening_content_identity
 from market_wide_current_descriptive_research import content_identity as descriptive_content_identity
 from sector_relative_research_context import MIN_COHORT_MEMBERS, _bucket

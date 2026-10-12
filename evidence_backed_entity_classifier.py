@@ -39,7 +39,7 @@ from stocklookup_core.financial.financial_entity_applicability import (
     classify_income_statement,
     load_entity_profiles,
 )
-from statement_taxonomy_classifier import (
+from stocklookup_core.financial.statement_taxonomy_classifier import (
     CORPORATE_MARKERS,
     CREDIT_INSTITUTION_EXCLUSIVE_MARKERS,
     SECURITIES_MARKERS,

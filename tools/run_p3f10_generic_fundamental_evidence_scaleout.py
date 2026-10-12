@@ -9,7 +9,7 @@ import sys
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from p3f10_fundamental_evidence_scaleout import execute
+from stocklookup_core.financial.p3f10_fundamental_evidence_scaleout import execute
 
 DEFAULT_OUTPUT = ROOT / "operations-review" / "p3f10-generic-fundamental-evidence-scaleout-20260820" / "p3f10_generic_fundamental_evidence_scaleout_artifact.json"
 

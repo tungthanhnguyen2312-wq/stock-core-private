@@ -13,7 +13,7 @@ from collections import Counter
 from typing import Any, Mapping
 
 import session_bar_integrity
-from current_official_market_universe import (
+from stocklookup_core.evidence.current_official_market_universe import (
     OFFICIAL_CURRENT_EXCHANGE_SECURITY,
     OFFICIAL_CURRENT_STOCK_LIST_CANDIDATE,
 )

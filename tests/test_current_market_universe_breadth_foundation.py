@@ -2,7 +2,7 @@ import hashlib
 
 import pytest
 
-from current_market_universe_breadth_foundation import _canonical_json, build_artifact
+from stocklookup_core.tactical.current_market_universe_breadth_foundation import _canonical_json, build_artifact
 
 
 def qualification(records):

@@ -9,7 +9,7 @@ import json
 import unittest
 from pathlib import Path
 
-import vci_volume_composition as composition
+from stocklookup_core.evidence import vci_volume_composition as composition
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 COMPOSITION_DIR = REPO_ROOT / "operations-review" / "vci-volume-composition-20260804"
@@ -340,8 +340,8 @@ class PriorVerdictsIntact(unittest.TestCase):
         self.assertIn("raw_as_traded_eligible", inspect.getsource(bridge.load_verified_market_price))
 
     def test_production_and_actionability_gates_unchanged(self):
-        from price_basis_contract import qualify_price_basis, qualify_volume_basis
-        import vci_volume_basis
+        from stocklookup_core.evidence.price_basis_contract import qualify_price_basis, qualify_volume_basis
+        from stocklookup_core.evidence import vci_volume_basis
 
         self.assertFalse(qualify_price_basis("adjusted", verified=False)["is_actionable"])
         self.assertEqual(qualify_volume_basis("raw_shares_traded", verified=False)["volume_basis"], "unknown")
@@ -349,7 +349,7 @@ class PriorVerdictsIntact(unittest.TestCase):
         self.assertFalse(vci_volume_basis.declaration()["volume_basis_verified"])
 
     def test_pagination_structural_limit_is_still_recorded(self):
-        import vci_intraday_pagination as pager
+        from stocklookup_core.evidence import vci_intraday_pagination as pager
 
         self.assertEqual(pager.OBSERVED_SERVER_ROW_CAP, 100)
         self.assertEqual(pager.CURSOR_BOUNDARY, "exclusive")

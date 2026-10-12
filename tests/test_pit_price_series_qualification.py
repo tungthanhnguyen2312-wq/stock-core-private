@@ -9,10 +9,10 @@ file can exercise QUALIFIED-series mechanics that the real retained corpus never
 """
 import unittest
 
-import official_corporate_action_ledger as ledger
+from stocklookup_core.evidence import official_corporate_action_ledger as ledger
 import pit_price_series_qualification as pit
 import price_basis_feature_fitness as fitness
-import qualified_corporate_action_factor_chain as factor_chain
+from stocklookup_core.evidence import qualified_corporate_action_factor_chain as factor_chain
 
 
 def _hpg_qualified_factor(ex_date="2026-05-26", knowledge_cutoff="2026-05-25T18:00:00+07:00"):

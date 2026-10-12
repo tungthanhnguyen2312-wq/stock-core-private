@@ -19,9 +19,9 @@ from typing import Any, Mapping, Sequence
 from entity_classification_contract import load_layered_entity_profiles
 from stocklookup_core.financial.fundamental_research_readiness import build_fundamental_research_artifact
 from official_financial_filing_evidence import qualify_document_metadata
-from official_financial_source_discovery import discover_routes
+from stocklookup_core.evidence.official_financial_source_discovery import discover_routes
 from official_financial_value_evidence import qualify_value_evidence
-from official_route_ownership_evidence import qualify as qualify_route_ownership
+from stocklookup_core.evidence.official_route_ownership_evidence import qualify as qualify_route_ownership
 
 
 ROOT = Path(__file__).resolve().parent

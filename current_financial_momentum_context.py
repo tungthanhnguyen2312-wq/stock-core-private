@@ -16,7 +16,7 @@ import json
 from collections import Counter
 from typing import Any, Mapping, Sequence
 
-import current_official_market_universe as official_universe_module
+from stocklookup_core.evidence import current_official_market_universe as official_universe_module
 from market_wide_current_descriptive_research import content_identity as descriptive_content_identity
 from market_wide_current_fundamental_research import (
     BLOCKED_TIER,

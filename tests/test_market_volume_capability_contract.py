@@ -18,12 +18,12 @@ import json
 import unittest
 from pathlib import Path
 
-import analysis_lane_eligibility as lanes
+from stocklookup_core.research import analysis_lane_eligibility as lanes
 import market_volume_capability_matrix as capability
 import stocklookup_core.evidence.official_authority_candidates as candidates
 import risk_liquidity
-import vci_volume_basis
-import vci_volume_composition as composition
+from stocklookup_core.evidence import vci_volume_basis
+from stocklookup_core.evidence import vci_volume_composition as composition
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 COMPOSITION_DIR = REPO_ROOT / "operations-review" / "vci-volume-composition-20260804"
@@ -549,7 +549,7 @@ class PriceAndProductionAreUntouched(unittest.TestCase):
         )
 
     def test_the_volume_closeout_did_not_touch_the_price_gates(self):
-        from price_basis_contract import qualify_price_basis, qualify_volume_basis
+        from stocklookup_core.evidence.price_basis_contract import qualify_price_basis, qualify_volume_basis
 
         self.assertFalse(qualify_price_basis("adjusted", verified=False)["is_actionable"])
         self.assertEqual(

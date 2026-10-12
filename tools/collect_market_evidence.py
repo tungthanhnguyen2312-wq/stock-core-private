@@ -67,7 +67,7 @@ from fhsc_retained_live_reconciliation import (
     TIER1_HEADER_NAME,
     load_finhay_api_key,
 )
-import market_capability_taxonomy as taxonomy
+from stocklookup_core.evidence import market_capability_taxonomy as taxonomy
 import price_representation_contract as price_contract
 from vn_time import VN_TZ, vn_now
 

@@ -1,7 +1,7 @@
 from __future__ import annotations
 import hashlib,json
 from pathlib import Path
-ROOT=Path(__file__).resolve().parent
+ROOT=Path(__file__).resolve().parents[2]
 def run():
  b=json.loads((ROOT/'operations-review/p3f9b-market-wide-exact-session-scaleout-20260820/p3f7_mva_daily_research_bundle_exact_session.json').read_text(encoding='utf-8'));p10=json.loads((ROOT/'operations-review/p3f10-generic-fundamental-evidence-scaleout-20260820/p3f10_generic_fundamental_evidence_scaleout_artifact.json').read_text(encoding='utf-8'));disp={x['ticker']:x for x in p10['instrument_dispositions']};records=[]
  for r in b['records']:

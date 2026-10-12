@@ -171,7 +171,7 @@ def _run_offline_production_shape(
         delivery = importlib.import_module("ai_research_session_delivery")
         next_brief = importlib.import_module("next_session_decision_brief")
         daily_brief = importlib.import_module('stocklookup_core.decision.daily_integrated_decision_brief')
-        comparison = importlib.import_module("session_comparison_semantics")
+        comparison = importlib.import_module("stocklookup_core.evidence.session_comparison_semantics")
 
         def blocked_provider_boundary(*_args: Any, **_kwargs: Any) -> None:
             counters["provider"] += 1

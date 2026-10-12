@@ -4,7 +4,7 @@ import argparse, json, sys
 from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from current_official_market_universe import build_artifact, replay
+from stocklookup_core.evidence.current_official_market_universe import build_artifact, replay
 
 DEFAULT = ROOT / "operations-review"
 PATHS = {

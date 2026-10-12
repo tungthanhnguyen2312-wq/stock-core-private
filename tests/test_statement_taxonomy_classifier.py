@@ -15,7 +15,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from statement_taxonomy_classifier import (  # noqa: E402
+from stocklookup_core.financial.statement_taxonomy_classifier import (  # noqa: E402
     TAXONOMIES, classify_statement_taxonomy as classify,
 )
 

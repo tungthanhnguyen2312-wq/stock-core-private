@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import pytest
 
-import securities_financial_research_component as securities_component
-import monetary_basis_contract as basis_contract
+from stocklookup_core.financial import securities_financial_research_component as securities_component
+from stocklookup_core.financial import monetary_basis_contract as basis_contract
 
 
 def _kwargs(**overrides):

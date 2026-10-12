@@ -13,7 +13,7 @@ import json
 import unittest
 from pathlib import Path
 
-import evidence_qualification_tiers as tiers
+from stocklookup_core.evidence import evidence_qualification_tiers as tiers
 import kbs_capability_matrix as caps
 import kbs_empirical_basis as kbs
 import kbs_trading_value_coverage as cov
@@ -341,7 +341,7 @@ class DeterminismAndAbsenceTest(unittest.TestCase):
         self.assertEqual(
             imported,
             {"__future__", "hashlib", "json", "typing",
-             "evidence_qualification_tiers", "kbs_trading_value_coverage"},
+             "stocklookup_core", "kbs_trading_value_coverage"},
         )
 
 

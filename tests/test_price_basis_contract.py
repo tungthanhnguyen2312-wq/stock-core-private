@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import unittest
 
-from price_basis_contract import (
+from stocklookup_core.evidence.price_basis_contract import (
     PriceBasis,
     PriceBasisMismatchError,
     VolumeBasis,

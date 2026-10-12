@@ -71,7 +71,7 @@ from datetime import datetime
 from typing import Any, Iterable, Mapping, Sequence
 from zoneinfo import ZoneInfo
 
-from canonical_financial_resolvers import (
+from stocklookup_core.financial.canonical_financial_resolvers import (
     UNKNOWN,
     VERSION as RESOLVER_VERSION,
     period_bounds,
