@@ -51,3 +51,8 @@ results become computable across PNJ/QNS/VRE. Six admitted denominator facts are
 reused; no new source evidence or strict-share authority is acquired. Existing
 numerical methods and Decision Fitness valuation state counts remain unchanged.
 These are implementation gains, not changes to the immutable production session.
+
+[Acceptance](internal/CURRENT_FINANCIAL_VALUATION_INPUT_UNLOCK_ACCEPTANCE.md).
+Predecessor [Owner Daily relaunch](owner_daily_ai_handoff_import_recovery_20261012_contract.md)
+is COMPLETE and released in PR132 (`288208a6`); replay remains separately Owner-gated.
+This local milestone closed at `6a35afc2`; queue empty, no activation or successor.

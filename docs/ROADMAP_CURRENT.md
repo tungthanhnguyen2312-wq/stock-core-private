@@ -5,18 +5,10 @@ Base/main `4755d94a977f468a4122e40fba77850281582f42`.
 Nothing below auto-starts; native standing admission required (AI_RULES 11).
 Facts: [ACTIVE_STATE.md](ACTIVE_STATE.md).
 
-## NOW — CURRENT_FINANCIAL_VALUATION_INPUT_UNLOCK_V1 (LOCAL)
+## NOW — CURRENT_FINANCIAL_VALUATION_INPUT_UNLOCK_V1 (COMPLETE LOCAL)
 
-[Scope](current_financial_valuation_input_unlock_v1_contract.md): retained October 12
-baseline, evidence-proven semantic/denominator connections and existing valuation /
-Decision Fitness integration. COMPLETE LOCAL at `6a35afc2`: six reported-H1 research
-results, authority effect NONE, strict shares unchanged. Owner exact-head review/merge
-is the next gate; queue empty, no production activation or automatic successor.
-
-Prior Owner Daily import recovery is COMPLETE and released in PR132 (`288208a6`).
-
-[Scope](owner_daily_ai_handoff_import_recovery_20261012_contract.md): relaunch
-after pull. Replay Owner-gated.
+[Scope](current_financial_valuation_input_unlock_v1_contract.md): six H1 results.
+Review gated; strict shares unchanged.
 V3 PR131 merged `d11b101`; V2 PR130 merged `d53999b`.
 E5 PR127 merged `70fbba9`; post-merge CI PASS (38190156979).
 E4 PR126 merged `e9ee2fe`; four post-merge jobs PASS (38186488312).
