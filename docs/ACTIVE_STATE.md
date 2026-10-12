@@ -30,7 +30,7 @@ Kinds: **CURRENT FACT** (verified), **HOST-LOCAL** (untracked; re-verify),
 **BLOCKED**, **DEFERRED**, **HISTORICAL**.
 
 ## 1. The operational gate
-- **ACTIVE — [development lanes](parallel_domain_development_control_plane_v1_contract.md):** Owner-admitted implementation; no merge/runtime authority.
+- **COMPLETE LOCAL — [development lanes](parallel_domain_development_control_plane_v1_contract.md):** review gate; no merge/runtime authority.
 - **RELEASED — [unlock](current_financial_valuation_input_unlock_v1_contract.md):** PR133; six H1 ratios; proxy shares.
 - **COMPLETE — [root hub V3](root_hub_dependency_reduction_v3_contract.md):** PR131 merged `d11b101`.
 - **COMPLETE — [E6 financial seams](e6_financial_extraction_admission_boundary_contract.md):** row/envelope/status owners.
@@ -308,7 +308,7 @@ Kinds: **CURRENT FACT** (verified), **HOST-LOCAL** (untracked; re-verify),
 
 ## 9. Next action
 
-[Development lanes](parallel_domain_development_control_plane_v1_contract.md): implement/test,
+[Development lanes](parallel_domain_development_control_plane_v1_contract.md): review PR,
 one feature PR; stop at Owner merge gate. Queue empty. Daily requires fresh READY/session
 gates. Claude/Grok prototypes are experiments, not admitted lanes. No cleanup.
 

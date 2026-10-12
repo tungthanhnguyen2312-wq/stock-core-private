@@ -5,7 +5,7 @@ Base/main `23da9d84da94ad91ebcd8617b3b8a453b5a6baab`.
 Nothing below auto-starts; native standing admission required (AI_RULES 11).
 Facts: [ACTIVE_STATE.md](ACTIVE_STATE.md).
 
-## NOW — PARALLEL_DOMAIN_DEVELOPMENT_CONTROL_PLANE_V1
+## NOW — PARALLEL_DOMAIN_DEVELOPMENT_CONTROL_PLANE_V1 (COMPLETE LOCAL)
 
 [Scope](parallel_domain_development_control_plane_v1_contract.md): disjoint native lanes;
 Owner merge gate. PR133 released; post-merge CI PASS (38318598892).
