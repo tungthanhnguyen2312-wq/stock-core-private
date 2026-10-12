@@ -15,11 +15,32 @@
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "E6_FINANCIAL_EXTRACTION_ADMISSION_BOUNDARY",
-    "state": "COMPLETE"
+    "milestone": "ACCELERATED_ROOT_PACKAGE_CONSOLIDATION_V1",
+    "state": "ACTIVE"
   },
   "queued_next": [],
   "milestones": [
+    {
+      "milestone_id": "ACCELERATED_ROOT_PACKAGE_CONSOLIDATION_V1",
+      "state": "ACTIVE",
+      "starting_checkpoint": "3f1be104386a218899b7dcb4bdeaa154be17ce06",
+      "candidate_branch": "refactor/bulk-root-package-consolidation-v1",
+      "dependencies": [
+        "E6_FINANCIAL_EXTRACTION_ADMISSION_BOUNDARY"
+      ],
+      "unlocks": [],
+      "owner_authorized": true,
+      "owner_override": "Owner directive 2026-10-12 (replaces stopped E6-gate job): bounded continuation of root-structure simplification after E6 PR128 merge 3f1be10 (post-merge CI 38194697661 success). Relocate evidence-qualified GREEN root implementations into existing stocklookup_core packages in validated cohorts; behavior, identity labels, frozen V1/E4 V2/E2-E3/provider/launcher pins, sealed E0 baseline, E1 carry scope and grandfathering preserved; no default shims. Local edits/tests/checkpoints/native closeout, one feature push/PR and in-scope CI repairs authorized; no merge/Daily/deploy/production writes/evidence rewrite/authority promotion/identity activation/sibling repos/successor.",
+      "authority_effect": "NONE",
+      "source_doc": "docs/accelerated_root_package_consolidation_v1_contract.md",
+      "state_history": [
+        "DEFERRED",
+        "ACTIVE"
+      ],
+      "checkpoint": null,
+      "terminal_disposition": null,
+      "notes": "Owner directive 2026-10-12 (replaces stopped E6-gate job): bounded continuation of root-structure simplification after E6 PR128 merge 3f1be10 (post-merge CI 38194697661 success). Relocate evidence-qualified GREEN root implementations into existing stocklookup_core packages in validated cohorts; behavior, identity labels, frozen V1/E4 V2/E2-E3/provider/launcher pins, sealed E0 baseline, E1 carry scope and grandfathering preserved; no default shims. Local edits/tests/checkpoints/native closeout, one feature push/PR and in-scope CI repairs authorized; no merge/Daily/deploy/production writes/evidence rewrite/authority promotion/identity activation/sibling repos/successor."
+    },
     {
       "milestone_id": "E6_FINANCIAL_EXTRACTION_ADMISSION_BOUNDARY",
       "state": "COMPLETE",
