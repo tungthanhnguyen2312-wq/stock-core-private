@@ -8,7 +8,7 @@ import hashlib
 import json
 from pathlib import Path
 
-import historical_temporal_research_panel as panel
+from stocklookup_core.research import historical_temporal_research_panel as panel
 
 
 def _observation(**overrides):

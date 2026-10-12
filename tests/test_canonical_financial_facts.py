@@ -23,9 +23,9 @@ sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "tests"))
 
 import canonical_fact_store as fact_store  # noqa: E402
-import canonical_financial_facts as facts  # noqa: E402
+from stocklookup_core.financial import canonical_financial_facts as facts  # noqa: E402
 from stocklookup_core.financial import canonical_financial_resolvers as resolvers  # noqa: E402
-import market_wide_calculation_readiness as readiness  # noqa: E402
+from stocklookup_core.financial import market_wide_calculation_readiness as readiness  # noqa: E402
 from _runtime_root import runtime_path  # noqa: E402
 
 
@@ -648,7 +648,7 @@ class ObservedAtNormalizationTests(unittest.TestCase):
         self.assertEqual(facts._normalize_observed_at("not-a-date"), "not-a-date")
 
     def test_normalized_value_is_strictly_timezone_aware(self):
-        import bitemporal_semantic_contract as bitemporal
+        from stocklookup_core.evidence import bitemporal_semantic_contract as bitemporal
         fixed = facts._normalize_observed_at("2026-07-21 14:35")
         self.assertIsNotNone(bitemporal._parse_aware(fixed))
         self.assertIsNone(bitemporal._parse_aware("2026-07-21 14:35"))

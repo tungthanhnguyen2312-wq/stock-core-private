@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import unittest
 
-import qualified_market_observations as qmo
+from stocklookup_core.evidence import qualified_market_observations as qmo
 
 
 def _rows(n: int, *, start: float = 50_000.0, day_offset: int = 0) -> list[dict]:
@@ -217,7 +217,7 @@ class CapabilityRegistryIntegration(unittest.TestCase):
     """Every computed field's availability is decided by the registry, not re-derived here."""
 
     def test_descriptive_price_capability_matches_registry(self):
-        import market_basis_capability_registry as registry
+        from stocklookup_core.evidence import market_basis_capability_registry as registry
         entry = _entry(_rows(60), provider="VCI")
         result = qmo.evaluate("HPG", entry)
         expected = registry.evaluate("VCI", "vci_namespaced_price_display", existing_gates_passed=True)

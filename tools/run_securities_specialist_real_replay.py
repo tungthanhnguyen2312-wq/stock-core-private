@@ -28,8 +28,8 @@ if str(ROOT) not in sys.path:
 
 import entity_classification_contract as ecc  # noqa: E402
 import stocklookup_core.financial.financial_analysis_engine_v2 as engine  # noqa: E402
-import raw_financial_observations as rfo  # noqa: E402
-import securities_statement_capture_import as importer  # noqa: E402
+from stocklookup_core.financial import raw_financial_observations as rfo  # noqa: E402
+from stocklookup_core.financial import securities_statement_capture_import as importer  # noqa: E402
 
 DEFAULT_RUNTIME_ROOT = Path(r"C:\Projects\StockLookup\dashboard-runtime")
 REQUESTED_AT = "2026-09-02T00:00:00+07:00"

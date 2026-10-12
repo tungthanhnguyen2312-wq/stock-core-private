@@ -24,7 +24,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from dnse_foreign_flow_capability import DnseForeignFlowError, normalize_record  # noqa: E402
+from stocklookup_core.evidence.dnse_foreign_flow_capability import DnseForeignFlowError, normalize_record  # noqa: E402
 from dnse_foreign_flow_store import write_observations  # noqa: E402
 from runtime_paths import runtime_root as resolve_runtime_root  # noqa: E402
 

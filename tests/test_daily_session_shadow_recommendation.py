@@ -8,12 +8,12 @@ import pytest
 from pathlib import Path
 
 from stocklookup_core.tactical import action_instrumentation
-import daily_session_shadow_recommendation
+from stocklookup_core.decision import daily_session_shadow_recommendation
 import stocklookup_core.financial.fundamental_thesis_invalidation_precision as fundamental_thesis_invalidation_precision
 from stocklookup_core.research import shadow_action_readiness
 from stocklookup_core.decision import shadow_security_recommendation
 import stocklookup_core.research.thesis_catalyst_downside_research_cases as thesis_catalyst_downside_research_cases
-from daily_session_shadow_recommendation import DailySessionShadowRecommendationError, build
+from stocklookup_core.decision.daily_session_shadow_recommendation import DailySessionShadowRecommendationError, build
 
 ROOT = Path(__file__).resolve().parents[1]
 

@@ -12,7 +12,7 @@ import json
 import unittest
 from pathlib import Path
 
-import vci_direct_basis_pilot as pilot
+from stocklookup_core.evidence import vci_direct_basis_pilot as pilot
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 EVIDENCE_DIR = REPO_ROOT / "operations-review" / "vci-direct-basis-pilot-20260804"

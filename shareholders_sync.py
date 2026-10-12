@@ -11,7 +11,7 @@ from pathlib import Path
 from vn_time import vn_now
 import pandas as pd
 
-from shareholder_pipeline import (
+from stocklookup_core.evidence.shareholder_pipeline import (
     DONE,
     MANUAL_OVERRIDE,
     NETWORK_FAILED,

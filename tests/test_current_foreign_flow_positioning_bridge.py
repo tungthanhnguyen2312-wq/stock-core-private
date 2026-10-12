@@ -4,7 +4,7 @@ from pathlib import Path
 
 import current_foreign_flow_positioning_bridge as bridge
 import current_foreign_flow_retention as retention
-from dnse_foreign_flow_capability import normalize_record
+from stocklookup_core.evidence.dnse_foreign_flow_capability import normalize_record
 
 SESSION = "2026-09-18"
 

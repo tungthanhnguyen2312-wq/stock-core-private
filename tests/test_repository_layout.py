@@ -62,13 +62,17 @@ def test_e1_official_exchange_evidence_has_no_root_path_or_shim():
 
 
 BULK = json.loads((ROOT / "tests/fixtures/bulk_root_package_consolidation_relocations.json").read_text(encoding="utf-8"))
+BULK_V2 = json.loads((ROOT / "tests/fixtures/bulk_root_package_consolidation_v2_relocations.json").read_text(encoding="utf-8"))
+# Accepted V1 and V2 cohort maps stay separate fixtures; checks below cover their disjoint union.
+BULK_RELOCATIONS = {**BULK["relocations"], **BULK_V2["relocations"]}
+assert len(BULK_RELOCATIONS) == len(BULK["relocations"]) + len(BULK_V2["relocations"])
 
 
 def test_bulk_relocations_are_exact_without_root_path_shim_or_carried_debt():
     from tools import check_architecture as guard
     policy = json.loads((ROOT / guard.POLICY).read_text(encoding="utf-8"))
     carried = {row[0] for row in policy["relocated_debt_edges"]}
-    for old, new in BULK["relocations"].items():
+    for old, new in BULK_RELOCATIONS.items():
         assert LAYOUT["relocations"][old] == new
         assert old not in LAYOUT["grandfathered_root_python"] and old not in LAYOUT["compatibility_entrypoints"]
         assert not (ROOT / old).exists() and importlib.util.find_spec(old[:-3]) is None, old
@@ -79,7 +83,7 @@ def test_bulk_relocations_are_exact_without_root_path_shim_or_carried_debt():
 def test_root_names_imported_by_executed_historical_sources_are_not_relocated():
     """Parity harnesses and replays execute immutable accepted sources by their original import names."""
     import subprocess
-    moved = {old[:-3] for old in BULK["relocations"]}
+    moved = {old[:-3] for old in BULK_RELOCATIONS}
     for name in BULK["retained_root_for_historical_execution"]:
         assert (ROOT / name).is_file() and name not in LAYOUT["relocations"], name
     for ref, relative in BULK["historically_executed_sources"]:
@@ -129,10 +133,10 @@ def test_bulk_relocated_modules_import_cleanly_and_keep_checkout_root(tmp_path):
     import os
     import subprocess
     import sys
-    modules = [new[:-3].replace("/", ".") for new in BULK["relocations"].values()]
-    assert len(modules) == len(set(modules)) == len(BULK["relocations"])
+    modules = [new[:-3].replace("/", ".") for new in BULK_RELOCATIONS.values()]
+    assert len(modules) == len(set(modules)) == len(BULK_RELOCATIONS)
     assert set(OPTIONAL_IMPORT_DEPENDENCIES) <= set(modules)
-    rooted = [m for m, new in zip(modules, BULK["relocations"].values())
+    rooted = [m for m, new in zip(modules, BULK_RELOCATIONS.values())
               if "ROOT=Path(__file__).resolve().parents[2]" in (ROOT / new).read_text(encoding="utf-8").replace(" ", "")]
     assert not set(rooted) & set(OPTIONAL_IMPORT_DEPENDENCIES)
     env = {**os.environ, "PYTHONPATH": os.pathsep.join(filter(None, [str(ROOT), os.environ.get("PYTHONPATH")]))}

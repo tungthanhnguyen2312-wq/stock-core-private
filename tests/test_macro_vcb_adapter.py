@@ -18,7 +18,7 @@ import requests
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-import macro_vcb_adapter as adapter  # noqa: E402
+from stocklookup_core.acquisition import macro_vcb_adapter as adapter  # noqa: E402
 
 
 def _make_workbook_bytes(rows):

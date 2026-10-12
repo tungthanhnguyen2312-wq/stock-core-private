@@ -10,7 +10,7 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from fhsc_historical_price_semantics import calibration_matrix, retained_dnse_ohlc  # noqa: E402
+from stocklookup_core.evidence.fhsc_historical_price_semantics import calibration_matrix, retained_dnse_ohlc  # noqa: E402
 
 
 PRIOR_OUTPUT = ROOT / "operations-review" / "fhsc-historical-price-semantics-qualification-v1-20260821"

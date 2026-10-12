@@ -15,7 +15,7 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
-from shareholder_pipeline import load_config, load_manual_overrides  # noqa: E402
+from stocklookup_core.evidence.shareholder_pipeline import load_config, load_manual_overrides  # noqa: E402
 
 
 def _tables(connection: sqlite3.Connection) -> set[str]:

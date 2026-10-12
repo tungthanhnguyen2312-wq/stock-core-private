@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any, Iterable, Mapping
 
 import decision_outcome_calibration_review as calibration
-import historical_temporal_research_panel as panel
+from stocklookup_core.research import historical_temporal_research_panel as panel
 import stocklookup_core.decision.human_ai_decision_evidence_packet as evidence_packet
 
 CONTRACT_VERSION = "decision_intelligence_coverage_calibration/v1"

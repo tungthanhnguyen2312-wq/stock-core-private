@@ -17,7 +17,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-import market_wide_calculation_readiness as readiness  # noqa: E402
+from stocklookup_core.financial import market_wide_calculation_readiness as readiness  # noqa: E402
 import market_wide_current_shares_resolver as shares  # noqa: E402
 
 RUNTIME = ROOT.parent / "dashboard-runtime"

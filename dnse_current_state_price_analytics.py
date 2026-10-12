@@ -72,7 +72,7 @@ from typing import Any, Mapping, Sequence
 
 import pandas as pd
 
-import dnse_ohlc_price_basis_capability as price_basis
+from stocklookup_core.evidence import dnse_ohlc_price_basis_capability as price_basis
 import vn_indicators
 from vn_time import VN_TZ
 

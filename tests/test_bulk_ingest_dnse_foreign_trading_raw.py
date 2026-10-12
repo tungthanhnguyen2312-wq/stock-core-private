@@ -14,7 +14,7 @@ if str(TOOLS) not in sys.path:
 
 import bulk_ingest_dnse_foreign_trading_raw as ingest  # noqa: E402
 import dnse_foreign_trading_raw as contract  # noqa: E402
-import market_data_source_authority as authority  # noqa: E402
+from stocklookup_core.evidence import market_data_source_authority as authority  # noqa: E402
 
 
 class _Response:

@@ -28,8 +28,8 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 import raw_financial_store as rfs  # noqa: E402
-import raw_financial_observations as robs  # noqa: E402
-import canonical_financial_facts as facts  # noqa: E402
+from stocklookup_core.financial import raw_financial_observations as robs  # noqa: E402
+from stocklookup_core.financial import canonical_financial_facts as facts  # noqa: E402
 import stocklookup_core.financial.structured_financial_period_semantics as sps  # noqa: E402
 import stocklookup_core.financial.financial_analysis_engine_v2 as engine  # noqa: E402
 

@@ -8,7 +8,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from fhsc_retained_live_reconciliation import (  # noqa: E402
+from stocklookup_core.evidence.fhsc_retained_live_reconciliation import (  # noqa: E402
     TICKERS, fetch_and_retain, fetch_realtime_and_retain, load_finhay_api_key, parse_retained_history,
     parse_retained_realtime, reconciliation_artifact,
 )

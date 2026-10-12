@@ -35,17 +35,17 @@ import json
 from typing import Any, Mapping, Sequence
 
 import current_valuation_input_authority as current_valuation
-import dnse_fhsc_market_composition_scaleout as fhsc_composition
-import dnse_fhsc_volume_basis as fhsc_volume_basis
-import dnse_ohlc_price_basis_capability as dnse_price_capability
-import dnse_provider_native_closed_ohlc as dnse_native_ohlc
+from stocklookup_core.evidence import dnse_fhsc_market_composition_scaleout as fhsc_composition
+from stocklookup_core.evidence import dnse_fhsc_volume_basis as fhsc_volume_basis
+from stocklookup_core.evidence import dnse_ohlc_price_basis_capability as dnse_price_capability
+from stocklookup_core.evidence import dnse_provider_native_closed_ohlc as dnse_native_ohlc
 from stocklookup_core.evidence import market_capability_taxonomy as taxonomy
-import market_data_source_authority as source_authority
-import market_volume_capability_matrix as vci_volume_capability
-import market_volume_value_semantic_contract as volume_value_contract
+from stocklookup_core.evidence import market_data_source_authority as source_authority
+from stocklookup_core.evidence import market_volume_capability_matrix as vci_volume_capability
+from stocklookup_core.evidence import market_volume_value_semantic_contract as volume_value_contract
 from stocklookup_core.evidence import official_corporate_action_ledger as corporate_action_ledger
-import price_representation_contract as representation
-import provider_price_basis_registry as price_basis_registry
+from stocklookup_core.evidence import price_representation_contract as representation
+from stocklookup_core.evidence import provider_price_basis_registry as price_basis_registry
 from dnse_volume_composition_reconciliation import (
     C5_CANDIDATE,
     CANDIDATE_DEFINITIONS,

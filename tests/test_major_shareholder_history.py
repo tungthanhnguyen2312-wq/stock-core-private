@@ -12,7 +12,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from shareholder_pipeline import (  # noqa: E402
+from stocklookup_core.evidence.shareholder_pipeline import (  # noqa: E402
     DONE,
     MAJOR_SHAREHOLDER_SNAPSHOT_SCHEMA_VERSION,
     build_major_shareholder_snapshot_manifest,

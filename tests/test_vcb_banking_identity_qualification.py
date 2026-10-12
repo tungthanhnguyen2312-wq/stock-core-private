@@ -352,7 +352,7 @@ class VcbBankingIdentityTests(unittest.TestCase):
     # 15. No ticker-specific VCB branch exists in the source this milestone touched.
     def test_no_ticker_specific_branch_in_touched_source(self):
         root = Path(__file__).resolve().parents[1]
-        touched = ["cash_flow_debt_mapping.py", "financial_observations.py", "semantic_evidence_bridge.py",
+        touched = ["stocklookup_core/financial/cash_flow_debt_mapping.py", "financial_observations.py", "semantic_evidence_bridge.py",
                    "stocklookup_core/valuation/relative_valuation.py", "stocklookup_core/valuation/intrinsic_valuation.py"]
         for filename in touched:
             text = (root / filename).read_text(encoding="utf-8")

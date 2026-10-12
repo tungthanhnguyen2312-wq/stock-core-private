@@ -15,7 +15,7 @@ import numpy as np
 import pandas as pd
 
 from market_data_contracts import ExceptionDisposition, FeatureStatus, PriceBasis, stable_id
-from provider_price_basis_registry import active_bounded_authorities, bounded_price_basis_for
+from stocklookup_core.evidence.provider_price_basis_registry import active_bounded_authorities, bounded_price_basis_for
 
 
 QUALITY_RULE_VERSION = "1.0.0"

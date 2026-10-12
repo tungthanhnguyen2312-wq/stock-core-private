@@ -15,7 +15,7 @@ import requests
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-import macro_sjc_adapter as adapter  # noqa: E402
+from stocklookup_core.acquisition import macro_sjc_adapter as adapter  # noqa: E402
 
 
 class FakeResponse:

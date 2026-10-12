@@ -14,8 +14,8 @@ from typing import Any, Iterable, Mapping
 
 import pandas as pd
 
-from canonical_financial_facts import build_facts
-from raw_financial_observations import extract_payload_file, parse_payload_name, sha256_file
+from stocklookup_core.financial.canonical_financial_facts import build_facts
+from stocklookup_core.financial.raw_financial_observations import extract_payload_file, parse_payload_name, sha256_file
 from provider_execution_guard import require_governed_provider_execution
 
 CONTRACT_VERSION = "annual_provider_financial_retention/v1"

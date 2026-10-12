@@ -60,7 +60,7 @@ from __future__ import annotations
 
 from typing import Any, Iterable, Mapping, Sequence
 
-from canonical_financial_facts import (
+from stocklookup_core.financial.canonical_financial_facts import (
     STATUS_CONFLICTED,
     STATUS_NOT_APPLICABLE,
     STATUS_PARTIAL,

@@ -3,7 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 
-from fhsc_retained_live_reconciliation import (
+from stocklookup_core.evidence.fhsc_retained_live_reconciliation import (
     HISTORICAL_SESSION,
     PRICE_HISTORY_PATH,
     STOCK_REALTIME_PATH,

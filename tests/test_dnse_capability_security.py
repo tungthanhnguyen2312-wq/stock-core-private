@@ -5,7 +5,7 @@ import json
 import unittest
 
 from stocklookup_core.evidence import dnse_bid_ask_capability as bid_ask
-import dnse_foreign_flow_capability as foreign_flow
+from stocklookup_core.evidence import dnse_foreign_flow_capability as foreign_flow
 
 RAW_QUOTE_WITH_ROGUE_FIELDS = {
     "bid": [{"price": 22.0, "quantity": 100}],

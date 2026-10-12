@@ -35,7 +35,7 @@ import hashlib
 import json
 from typing import Any, Iterable, Mapping, Sequence
 
-import bitemporal_semantic_contract as bitemporal
+from stocklookup_core.evidence import bitemporal_semantic_contract as bitemporal
 import stocklookup_core.financial.structured_financial_period_semantics as period_semantics
 
 SCHEMA_VERSION = "1.0.0"

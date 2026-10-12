@@ -5,7 +5,7 @@ import json
 
 import pytest
 
-from screener_master_projection import (
+from stocklookup_core.decision.screener_master_projection import (
     CONTRACT_VERSION,
     ENTITY_CLASS_VOCABULARY,
     EXECUTION_BLOCKED,

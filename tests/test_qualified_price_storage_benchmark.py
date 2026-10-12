@@ -1,6 +1,6 @@
 import sqlite3,tempfile,unittest
 from pathlib import Path
-from qualified_price_storage_benchmark import BASIS,export_vci_price,_equal
+from stocklookup_core.evidence.qualified_price_storage_benchmark import BASIS,export_vci_price,_equal
 class PriceBenchmarkTests(unittest.TestCase):
  def test_vci_only_export_and_determinism(self):
   with tempfile.TemporaryDirectory() as d:

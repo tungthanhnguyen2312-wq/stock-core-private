@@ -10,7 +10,7 @@ from collections import Counter
 from datetime import date, datetime, timedelta, timezone
 from typing import Any, Iterable, Mapping
 
-from dnse_ohlc_price_basis_capability import (
+from stocklookup_core.evidence.dnse_ohlc_price_basis_capability import (
     ADJUSTED_PATTERN,
     EVIDENCE_EVENTS,
     RAW_PATTERN,

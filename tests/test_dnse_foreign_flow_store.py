@@ -6,7 +6,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from dnse_foreign_flow_capability import normalize_record
+from stocklookup_core.evidence.dnse_foreign_flow_capability import normalize_record
 from dnse_foreign_flow_store import (
     STATUS_AVAILABLE,
     STATUS_MISSING,

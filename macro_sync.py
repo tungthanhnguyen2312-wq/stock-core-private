@@ -211,7 +211,7 @@ def fetch_vcb_today():
     """Tỷ giá VCB bán ra hôm nay, qua adapter first-party trực tiếp (macro_vcb_adapter.py) --
     KHÔNG qua vnstock (xem docs/DECISIONS.md
     MACRO_NETWORK_GOVERNANCE_AND_VNSTOCK_DECOUPLING_V1)."""
-    from macro_vcb_adapter import fetch_vcb_usd_sell_rate
+    from stocklookup_core.acquisition.macro_vcb_adapter import fetch_vcb_usd_sell_rate
     result = fetch_vcb_usd_sell_rate()
     time.sleep(REQUEST_DELAY)
     if result.status != "OK":
@@ -222,7 +222,7 @@ def fetch_sjc_today():
     """Giá vàng SJC bán ra (chi nhánh HCM) hôm nay, đồng/lượng -- qua adapter first-party
     trực tiếp (macro_sjc_adapter.py) -- KHÔNG qua vnstock (xem docs/DECISIONS.md
     MACRO_NETWORK_GOVERNANCE_AND_VNSTOCK_DECOUPLING_V1)."""
-    from macro_sjc_adapter import fetch_sjc_gold_sell_price
+    from stocklookup_core.acquisition.macro_sjc_adapter import fetch_sjc_gold_sell_price
     result = fetch_sjc_gold_sell_price()
     time.sleep(REQUEST_DELAY)
     if result.status != "OK":

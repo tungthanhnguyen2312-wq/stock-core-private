@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any, Mapping, Sequence
 
 from financial_observations import read_observations, store_path
-from provider_price_basis_registry import ineligibility_reason, raw_as_traded_eligible
+from stocklookup_core.evidence.provider_price_basis_registry import ineligibility_reason, raw_as_traded_eligible
 
 VERSION = "1.0.0"
 MANIFEST_RELATIVE = Path("data") / "official-evidence" / "manifest.json"

@@ -4,7 +4,7 @@ import hashlib
 
 import pytest
 
-from official_source_route_coverage import (
+from stocklookup_core.evidence.official_source_route_coverage import (
     ROUTE_CAPABILITY_CHARACTERIZED, ROUTE_DISCOVERED, ROUTE_READY_FOR_OWNER_PROMOTION,
     ROUTE_TECHNICALLY_REACHABLE, RouteCoverageError, build_artifact, inspect_seed, validate_route,
 )

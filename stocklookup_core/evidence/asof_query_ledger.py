@@ -30,7 +30,7 @@ from datetime import date
 from enum import Enum
 from typing import Any, Iterable, Mapping
 
-from bitemporal_semantic_contract import (
+from stocklookup_core.evidence.bitemporal_semantic_contract import (
     KnowledgeTimeStatus,
     HistoricalReconstructionScope,
     canonical_json,

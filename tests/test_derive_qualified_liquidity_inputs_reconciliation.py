@@ -7,8 +7,8 @@ import json
 import unittest
 from pathlib import Path
 
-from dnse_fhsc_market_composition_scaleout import content_identity as market_composition_content_identity
-from dnse_fhsc_volume_basis import content_identity as volume_basis_content_identity
+from stocklookup_core.evidence.dnse_fhsc_market_composition_scaleout import content_identity as market_composition_content_identity
+from stocklookup_core.evidence.dnse_fhsc_volume_basis import content_identity as volume_basis_content_identity
 from tools.derive_qualified_liquidity_inputs_reconciliation import (
     CONFLICTING,
     COVERAGE_RESTRICTED_RECONCILED,

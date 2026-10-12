@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from stocklookup_core.financial import securities_financial_research_component as securities_component
-import securities_statement_capture_import as importer
+from stocklookup_core.financial import securities_statement_capture_import as importer
 
 
 def _raw(*, statement_family="balance_sheet", provider="VCI", raw_item_id="financial_assets_at_fair_value_through_profit_or_loss_fvtpl",

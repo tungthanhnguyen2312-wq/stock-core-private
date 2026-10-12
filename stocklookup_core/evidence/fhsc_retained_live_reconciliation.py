@@ -26,7 +26,7 @@ from stocklookup_core.evidence.provider_reference_reconciliation import (
 )
 
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parents[2]
 FHSC_BASE_URL = "https://open-api.fhsc.com.vn"
 PRICE_HISTORY_PATH = "/market/price-histories-chart"
 STOCK_REALTIME_PATH = "/market/stock-realtime"

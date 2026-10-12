@@ -15,7 +15,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 CONSUMER_ROOT = ROOT.parent / "ai-core-private"
 
-import market_wide_calculation_readiness as readiness  # noqa: E402
+from stocklookup_core.financial import market_wide_calculation_readiness as readiness  # noqa: E402
 import market_wide_current_shares_resolver as shares_resolver  # noqa: E402
 from canonical_financial_bundle_section import attach  # noqa: E402
 from tools.operate_stocklookup import Operator  # noqa: E402

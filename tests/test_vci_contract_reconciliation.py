@@ -10,7 +10,7 @@ import json
 import unittest
 from pathlib import Path
 
-import provider_price_basis_registry as registry
+from stocklookup_core.evidence import provider_price_basis_registry as registry
 from stocklookup_core.evidence import vci_intraday_pagination as pager
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -102,7 +102,7 @@ class SupersededVerdictIsNotActive(unittest.TestCase):
         self.assertEqual(resolved["price_basis"], "empirically_event_adjusted")
 
     def test_the_benchmark_generator_no_longer_hardcodes_the_old_value(self):
-        import qualified_price_storage_benchmark as benchmark
+        from stocklookup_core.evidence import qualified_price_storage_benchmark as benchmark
 
         self.assertEqual(benchmark.BASIS, "empirically_event_adjusted")
         self.assertNotEqual(benchmark.BASIS, registry.LEGACY_NO_LOCAL_ADJUSTMENT_LABEL)

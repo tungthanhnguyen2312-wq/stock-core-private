@@ -44,7 +44,7 @@ from typing import Any, Mapping, Sequence
 
 from atomic_io import atomic_write_file, validate_json_file
 from stocklookup_core.evidence.daily_session_completion_reference import load_qualified_completed_sessions
-from dnse_foreign_flow_capability import PROVIDER, SOURCE_CONTRACT_VERSION
+from stocklookup_core.evidence.dnse_foreign_flow_capability import PROVIDER, SOURCE_CONTRACT_VERSION
 
 _GOVERNED_CALENDAR = ContextVar("foreign_flow_governed_calendar", default=None)
 

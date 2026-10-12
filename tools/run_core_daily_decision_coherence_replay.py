@@ -88,7 +88,7 @@ def _watchlist_view(integrated: Mapping[str, Any], raw_valuation: Mapping[str, A
 def _regression_projection_check() -> dict[str, Any]:
     """Assert the recovered-history consumer produces the already-retained 2026-08-25 projection."""
     import stocklookup_core.tactical.market_structure_breakout_product_projection as projection
-    import retained_evidence_quarantine as quarantine
+    from stocklookup_core.evidence import retained_evidence_quarantine as quarantine
     import technical_structure_context as structure
 
     session = "2026-08-25"

@@ -10,7 +10,7 @@ from __future__ import annotations
 from collections import Counter
 from typing import Any, Callable, Iterable, Mapping, Sequence
 
-from canonical_conflict_decomposition import decompose_facts
+from stocklookup_core.financial.canonical_conflict_decomposition import decompose_facts
 from canonical_financial_qualification_policy import (
     QUALIFIED as POLICY_QUALIFIED,
     apply_policy,

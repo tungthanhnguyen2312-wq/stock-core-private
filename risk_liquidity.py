@@ -4,7 +4,7 @@ import math
 from pathlib import Path
 from typing import Any
 
-import market_volume_capability_matrix as volume_capability
+from stocklookup_core.evidence import market_volume_capability_matrix as volume_capability
 from point_in_time_market_risk import calculate_point_in_time_beta_and_correlation
 
 VERSION = "1.0.0"

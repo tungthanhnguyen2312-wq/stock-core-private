@@ -8,7 +8,7 @@ import pytest
 
 import decision_outcome_calibration_review as review
 import decision_intelligence_coverage_calibration as spine
-import historical_temporal_research_panel as panel
+from stocklookup_core.research import historical_temporal_research_panel as panel
 import stocklookup
 from tools import inspect_decision_research as cli
 

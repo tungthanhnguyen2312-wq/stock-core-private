@@ -33,7 +33,7 @@ import json
 from typing import Any, Mapping, Sequence
 
 from stocklookup_core.evidence import evidence_qualification_tiers as tiers
-import kbs_trading_value_coverage as cov
+from stocklookup_core.evidence import kbs_trading_value_coverage as cov
 
 VERSION = "1.0.0"
 

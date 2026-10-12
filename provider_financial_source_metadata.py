@@ -16,7 +16,7 @@ from typing import Any, Iterable, Mapping
 import pandas as pd
 import requests
 
-from raw_financial_observations import extract_payload, sha256_file
+from stocklookup_core.financial.raw_financial_observations import extract_payload, sha256_file
 from provider_execution_guard import require_governed_provider_execution
 
 CONTRACT_VERSION = "provider_financial_source_metadata/v1"

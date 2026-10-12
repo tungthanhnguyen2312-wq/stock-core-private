@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import unittest
 
-from dnse_ohlc_price_basis_capability import (
+from stocklookup_core.evidence.dnse_ohlc_price_basis_capability import (
     ADJUSTED_CONFIRMED,
     ADJUSTED_PATTERN,
     CONDITIONALLY_ADJUSTED,
@@ -344,7 +344,7 @@ class CurrentStateTickerEligibilityTests(unittest.TestCase):
         self.assertFalse(ticker_current_state_eligible("VNM"))
 
     def test_eligibility_fails_closed_if_current_analysis_safety_flag_is_false(self):
-        import dnse_ohlc_price_basis_capability as module
+        from stocklookup_core.evidence import dnse_ohlc_price_basis_capability as module
 
         original = module.CURRENT_ANALYSIS_PRICE_BASIS_SAFE
         module.CURRENT_ANALYSIS_PRICE_BASIS_SAFE = False

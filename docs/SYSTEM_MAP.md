@@ -55,6 +55,11 @@ official-source, corporate-action, market/session/universe and price-basis evide
 financial components to `financial/`, research briefs/scenarios/lanes to `research/`, two
 risk/liquidity projections to `portfolio/` and ranking/shadow/indicator projections to
 `decision/`; `tests/fixtures/bulk_root_package_consolidation_relocations.json` lists them.
+[Consolidation V2](accelerated_root_package_consolidation_v2_contract.md) adds KBS/DNSE/FHSC/VCI
+basis, temporal, official-route and share evidence to `evidence/`, EODHD and SJC/VCB macro
+adapters to `acquisition/`, raw/canonical financial fact layers to `financial/`, the MVA share
+proxy to `valuation/`, the temporal panel to `research/` and shadow/screener projections to
+`decision/` (`tests/fixtures/bulk_root_package_consolidation_v2_relocations.json`).
 The existing offline `official_document_acquisition.py` CLI is a small compatibility launcher.
 All library consumers import the packages; historical module names resolve through
 `config/repository_layout.json`. Owner Daily and publishing launchers retain their paths.

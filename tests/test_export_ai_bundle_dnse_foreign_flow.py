@@ -16,7 +16,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from dnse_foreign_flow_capability import normalize_record  # noqa: E402
+from stocklookup_core.evidence.dnse_foreign_flow_capability import normalize_record  # noqa: E402
 from dnse_foreign_flow_store import observation_path, write_observations  # noqa: E402
 from export_ai_bundle import (  # noqa: E402
     attach_dnse_foreign_flow,

@@ -10,7 +10,7 @@ sys.path.insert(0, str(ROOT))
 from atomic_io import atomic_write_json
 import canonical_fact_store as store
 import provider_financial_source_metadata as metadata
-from canonical_financial_facts import build_facts
+from stocklookup_core.financial.canonical_financial_facts import build_facts
 import provider_financial_semantic_basis as pfsb
 
 OUT = ROOT / "operations-review" / "annual-provider-financial-metadata-retention-and-flow-semantic-corroboration-v1-20260827"

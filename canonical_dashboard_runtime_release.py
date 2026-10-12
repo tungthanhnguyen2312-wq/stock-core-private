@@ -21,7 +21,7 @@ from field_temporal_contract import stable_id
 import release_session_contract
 import dashboard_home_summary
 import stocklookup_core.decision.investment_decision_workspace_projection as workspace_contract
-import screener_master_projection as screener_contract
+from stocklookup_core.decision import screener_master_projection as screener_contract
 
 CONTRACT_VERSION = "canonical_dashboard_runtime_release/v1"
 REQUIRED_INPUTS = ("descriptive", "screening", "tactical", "triage", "official_universe")

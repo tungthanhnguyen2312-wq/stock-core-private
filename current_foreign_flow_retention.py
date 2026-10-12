@@ -10,7 +10,7 @@ from typing import Any, Mapping, Sequence
 import canonical_current_product_projections as projections
 from stocklookup_core.evidence import current_official_market_universe as official
 from stocklookup_core.evidence import current_research_official_universe_scope as scope
-from dnse_foreign_flow_capability import assert_point_in_time_consistency, normalize_record
+from stocklookup_core.evidence.dnse_foreign_flow_capability import assert_point_in_time_consistency, normalize_record
 from dnse_foreign_flow_store import build_series, read_observations, write_observations
 from dnse_foreign_trading_raw import canonical_json
 from owner_research_focus import load_owner_research_focus

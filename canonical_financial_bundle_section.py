@@ -36,7 +36,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Iterable, Mapping, Sequence
 
-from canonical_financial_facts import (
+from stocklookup_core.financial.canonical_financial_facts import (
     CONTRACT_VERSION,
     MAPPER_VERSION,
     STATUS_CONFLICTED,
@@ -46,8 +46,8 @@ from canonical_financial_facts import (
     STATUS_UNAVAILABLE,
 )
 from stocklookup_core.financial.canonical_financial_resolvers import VERSION as RESOLVER_VERSION
-from price_representation_contract import RepresentationContractError, to_canonical as _to_canonical_price
-from market_wide_calculation_readiness import (
+from stocklookup_core.evidence.price_representation_contract import RepresentationContractError, to_canonical as _to_canonical_price
+from stocklookup_core.financial.market_wide_calculation_readiness import (
     CAPABILITIES,
     POLICY_VERSION,
     STILL_BLOCKED_BY_PRICE_BASIS,
@@ -242,7 +242,7 @@ def attach(bundle_entries: Mapping[str, dict], runtime_root: Path | str,
 
     from canonical_fact_store import _load_state, read_facts
     from stocklookup_core.financial.financial_entity_applicability import metric_applicability
-    from market_wide_calculation_readiness import evaluate_ticker
+    from stocklookup_core.financial.market_wide_calculation_readiness import evaluate_ticker
 
     state = _load_state(runtime_root)
     if not state:

@@ -19,10 +19,10 @@ from typing import Any, Mapping
 
 from stocklookup_core.evidence.field_identity import stable_id
 from stocklookup_core.financial import monetary_basis_contract as basis_contract
-import mva_provider_share_proxy as issued_share_proxy
+from stocklookup_core.valuation import mva_provider_share_proxy as issued_share_proxy
 import stocklookup_core.valuation.p3f_current_market_valuation as p3f
 from polymorphic_current_strategy_classification import _valuation_requirement
-from price_representation_contract import RepresentationContractError, to_canonical
+from stocklookup_core.evidence.price_representation_contract import RepresentationContractError, to_canonical
 
 CONTRACT_VERSION = "market_wide_current_valuation/v1"
 ARTIFACT_TYPE = "MARKET_WIDE_CURRENT_VALUATION"

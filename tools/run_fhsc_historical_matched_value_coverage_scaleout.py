@@ -23,8 +23,8 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from stocklookup_core.evidence.current_official_market_universe import _identity as official_identity
-from dnse_fhsc_volume_basis import parse_fhsc_trading_history
-from fhsc_retained_live_reconciliation import FHSC_BASE_URL, TIER1_HEADER_NAME, load_finhay_api_key
+from stocklookup_core.evidence.dnse_fhsc_volume_basis import parse_fhsc_trading_history
+from stocklookup_core.evidence.fhsc_retained_live_reconciliation import FHSC_BASE_URL, TIER1_HEADER_NAME, load_finhay_api_key
 from stocklookup_core.evidence.historical_matched_traded_value_authority import (
     reconcile_fhsc_anchor,
     summarize_complete_trade_session,

@@ -1,4 +1,4 @@
-from dnse_fhsc_volume_basis import (
+from stocklookup_core.evidence.dnse_fhsc_volume_basis import (
     BASIS_UNRESOLVED, DNSE_EQUALS_MATCHED, DNSE_EQUALS_TOTAL,
     FHSC_HISTORY_VOLUME_MATCHED, FHSC_HISTORY_VOLUME_NON_INVARIANT,
     HISTORY_EQUALS_MATCHED, HISTORY_EQUALS_TOTAL, NOT_COMPARABLE,

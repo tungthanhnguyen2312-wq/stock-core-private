@@ -431,7 +431,7 @@ def validate_screener_master_projection(source: Path, market_session: str) -> di
 
 def copy_screener_master_projection(source: Path) -> bool:
     """Copy the Producer projection JSON and emit the identical JS fallback."""
-    from screener_master_projection import js_fallback
+    from stocklookup_core.decision.screener_master_projection import js_fallback
 
     target = WEB_ROOT / SCREENER_MASTER_ASSET
     js_target = WEB_ROOT / SCREENER_MASTER_JS_ASSET

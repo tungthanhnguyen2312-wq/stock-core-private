@@ -10,7 +10,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from official_financial_source_route_discovery import LEGAL_IDENTITY_HINTS, STATIC_ISSUER_ROUTE_HINTS
-from official_source_route_coverage import build_artifact, inspect_seed, requests_fetcher
+from stocklookup_core.evidence.official_source_route_coverage import build_artifact, inspect_seed, requests_fetcher
 
 OUTPUT = ROOT / "operations-review" / "official-source-route-evidence-coverage-scaleout-v1-20260822" / "official_source_route_coverage_artifact.json"
 # These are the seven unapproved, exact repository candidates from the prior closed-world

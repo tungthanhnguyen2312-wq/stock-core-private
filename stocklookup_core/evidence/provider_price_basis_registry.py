@@ -21,7 +21,7 @@ from __future__ import annotations
 from datetime import date
 from typing import Any, Iterable, Mapping, Sequence
 
-from dnse_ohlc_price_basis_capability import (
+from stocklookup_core.evidence.dnse_ohlc_price_basis_capability import (
     CURRENT_ANALYSIS_PRICE_BASIS_SAFE,
     EVIDENCE_EVENTS as DNSE_EVIDENCE_EVENTS,
     PROVIDER as DNSE_PROVIDER,

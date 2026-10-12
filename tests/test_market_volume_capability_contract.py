@@ -19,7 +19,7 @@ import unittest
 from pathlib import Path
 
 from stocklookup_core.research import analysis_lane_eligibility as lanes
-import market_volume_capability_matrix as capability
+from stocklookup_core.evidence import market_volume_capability_matrix as capability
 import stocklookup_core.evidence.official_authority_candidates as candidates
 import risk_liquidity
 from stocklookup_core.evidence import vci_volume_basis
@@ -531,7 +531,7 @@ class PriceAndProductionAreUntouched(unittest.TestCase):
     """16/17/18. Nothing here moved the price supersession, P2a, or actionability."""
 
     def test_the_vci_price_supersession_remains_active(self):
-        import provider_price_basis_registry as registry
+        from stocklookup_core.evidence import provider_price_basis_registry as registry
 
         self.assertTrue(registry.is_superseded("phase3a_vci_price_basis"))
         verdict = registry.active_verdict("VCI")
@@ -540,7 +540,7 @@ class PriceAndProductionAreUntouched(unittest.TestCase):
         self.assertFalse(verdict["official_exchange_price"])
 
     def test_p2a_remains_blocked(self):
-        import provider_price_basis_registry as registry
+        from stocklookup_core.evidence import provider_price_basis_registry as registry
 
         self.assertFalse(registry.raw_as_traded_eligible("VCI"))
         self.assertTrue(registry.blocks_raw_as_traded("VCI"))

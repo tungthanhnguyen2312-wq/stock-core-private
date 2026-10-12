@@ -17,7 +17,7 @@ sys.path.insert(0, str(ROOT))
 import bctc_processor as processor  # noqa: E402
 from financial_mapping import get_default_registry  # noqa: E402
 from news_ticker_mapping import Alias, TickerAliasRegistry, map_article, summarize_news  # noqa: E402
-from shareholder_pipeline import (  # noqa: E402
+from stocklookup_core.evidence.shareholder_pipeline import (  # noqa: E402
     ShareholderSourceAdapter, build_shareholder_summary, provider_parser, run_source_chain,
 )
 

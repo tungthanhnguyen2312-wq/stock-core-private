@@ -27,7 +27,7 @@ sys.path.insert(0, str(ROOT / "tests"))
 
 import stocklookup_core.financial.financial_entity_applicability as applicability  # noqa: E402
 import market_wide_financial_coverage as coverage  # noqa: E402
-import raw_financial_observations as observations  # noqa: E402
+from stocklookup_core.financial import raw_financial_observations as observations  # noqa: E402
 import raw_financial_store as store  # noqa: E402
 from _runtime_root import runtime_path  # noqa: E402
 

@@ -14,7 +14,7 @@ import json
 from pathlib import Path
 
 from daily_research_session_operations import build_operation, load_registry, resolve_inputs
-from daily_session_shadow_recommendation import build as build_daily_session_shadow_recommendation
+from stocklookup_core.decision.daily_session_shadow_recommendation import build as build_daily_session_shadow_recommendation
 
 
 ROOT = Path(__file__).resolve().parents[1]

@@ -18,7 +18,7 @@ import json
 import unittest
 from typing import Any, Mapping
 
-from asof_query_ledger import (
+from stocklookup_core.evidence.asof_query_ledger import (
     ASOF_QUERY_CONTRACT_VERSION,
     AsofResultCode,
     LedgerEntry,
@@ -28,7 +28,7 @@ from asof_query_ledger import (
     deterministic_ledger_hash,
     query_as_of,
 )
-from bitemporal_semantic_contract import (
+from stocklookup_core.evidence.bitemporal_semantic_contract import (
     KnowledgeTimeStatus,
     HistoricalReconstructionScope,
 )

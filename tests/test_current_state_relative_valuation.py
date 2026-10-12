@@ -23,7 +23,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 import current_state_relative_valuation as m  # noqa: E402
-from share_transition_bridge import resolve_share_transition  # noqa: E402
+from stocklookup_core.evidence.share_transition_bridge import resolve_share_transition  # noqa: E402
 
 RUNTIME_ROOT = ROOT.parent / "dashboard-runtime"
 REAL_SHARE_BASIS_PATH = RUNTIME_ROOT / m._SHARE_BASIS_RELATIVE

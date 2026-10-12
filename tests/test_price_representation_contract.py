@@ -5,7 +5,7 @@ import inspect
 import unittest
 from decimal import Decimal
 
-import price_representation_contract as contract
+from stocklookup_core.evidence import price_representation_contract as contract
 
 
 class ProviderNativePreservedTests(unittest.TestCase):

@@ -45,7 +45,7 @@ from pathlib import Path
 from typing import Any, Iterable, Mapping, Sequence
 
 from atomic_io import atomic_write_file, atomic_write_json
-from canonical_financial_facts import (
+from stocklookup_core.financial.canonical_financial_facts import (
     CONTRACT_VERSION,
     MAPPER_VERSION,
     METRIC_REGISTRY,

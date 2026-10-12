@@ -81,7 +81,7 @@ from pathlib import Path
 from typing import Any, Callable, Iterable, Mapping
 
 import pandas as pd
-from shareholder_pipeline import DONE, calculate_major_shareholder_delta
+from stocklookup_core.evidence.shareholder_pipeline import DONE, calculate_major_shareholder_delta
 from stocklookup_core.evidence.live_universe import summary as live_universe_summary
 from freshness_history import evaluate_analysis_readiness, freshness_envelope, parse_timestamp
 from stocklookup_core.financial.financial_canonicalization import canonicalize_financial_rows
@@ -108,17 +108,17 @@ from qualified_research_snapshot_v2 import build as build_research_snapshot_v2
 from qualified_research_change_events import build_v2 as build_research_change_events_v2
 from stocklookup_core.decision.opportunity_ranking import evaluate_opportunity, rank_opportunities
 from risk_liquidity import evaluate_market_risk
-from qualified_market_observations import evaluate as evaluate_qualified_market_observations
+from stocklookup_core.evidence.qualified_market_observations import evaluate as evaluate_qualified_market_observations
 from stocklookup_core.research.analysis_lane_eligibility import evaluate_ticker_lanes
 from stocklookup_core.research.ticker_capability import build_ticker_capability_matrix
-from market_basis_capability_registry import MARKET_DATA_SOURCE_AUTHORITY_SELECTION
+from stocklookup_core.evidence.market_basis_capability_registry import MARKET_DATA_SOURCE_AUTHORITY_SELECTION
 from research_financial_fact_projection import (
     build_projection as build_research_financial_fact_projection,
     coverage_summary as research_financial_coverage_summary,
     select_research_source,
 )
 from canonical_financial_qualification_policy import load_evidence_index
-from canonical_conflict_decomposition import coverage_summary as canonical_conflict_coverage_summary
+from stocklookup_core.financial.canonical_conflict_decomposition import coverage_summary as canonical_conflict_coverage_summary
 from distribution_evidence import build_distribution_evidence_for_ticker
 from dnse_foreign_flow_store import build_series as build_dnse_foreign_flow_series
 from dnse_current_state_market_risk import build_current_state_market_risk_from_evidence_store

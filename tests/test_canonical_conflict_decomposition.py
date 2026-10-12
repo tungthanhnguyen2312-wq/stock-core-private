@@ -9,7 +9,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from canonical_conflict_decomposition import decompose_facts, semantic_identity  # noqa: E402
+from stocklookup_core.financial.canonical_conflict_decomposition import decompose_facts, semantic_identity  # noqa: E402
 
 
 def _fact(*, kind: str, status: str = "conflicted", detail: dict | None = None) -> dict:

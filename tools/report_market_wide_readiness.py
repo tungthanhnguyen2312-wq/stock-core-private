@@ -51,7 +51,7 @@ from canonical_fact_store import (  # noqa: E402
 from stocklookup_core.financial.financial_entity_applicability import (  # noqa: E402
     load_entity_profiles,
 )
-from market_wide_calculation_readiness import (  # noqa: E402
+from stocklookup_core.financial.market_wide_calculation_readiness import (  # noqa: E402
     CAPABILITIES,
     build_readiness_report,
     evaluate_ticker,
