@@ -20,7 +20,7 @@ sys.path.insert(0, str(ROOT))
 import canonical_fact_store  # noqa: E402
 import evidence_promotion as promotion  # noqa: E402
 import semantic_evidence_bridge as bridge  # noqa: E402
-from provider_official_bridge import exact_links, provider_observation, provider_snapshot  # noqa: E402
+from stocklookup_core.evidence.provider_official_bridge import exact_links, provider_observation, provider_snapshot  # noqa: E402
 
 
 class PanFy2024FinancialIdentityQualificationTests(unittest.TestCase):

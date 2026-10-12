@@ -13,7 +13,7 @@ from typing import Any, Mapping
 
 from bounded_official_route_evidence_enrichment import execute_bounded_enrichment
 from official_financial_source_route_discovery import normalize_domain
-from official_route_ownership_evidence import qualify
+from stocklookup_core.evidence.official_route_ownership_evidence import qualify
 from prospective_route_ownership_review import OWNER_REVIEW_READY, build_prospective_owner_review_artifact
 
 

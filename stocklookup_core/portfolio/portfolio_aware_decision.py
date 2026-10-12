@@ -39,7 +39,7 @@ from typing import Any, Mapping, Sequence
 
 import empirical_setup_outcome_calibration as _empirical_calibration
 import stocklookup_core.portfolio.execution_capacity_research as _execution_capacity
-import exchange_industry_classification as _industry_classification
+from stocklookup_core.evidence import exchange_industry_classification as _industry_classification
 import owner_research_exclusions as _owner_research_exclusions
 import stocklookup_core.portfolio.private_portfolio_context as _private_portfolio_context
 

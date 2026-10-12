@@ -1,6 +1,6 @@
 import unittest
 
-from financial_identity import empty_identity_export
+from stocklookup_core.evidence.financial_identity import empty_identity_export
 
 
 class FinancialIdentityExportTests(unittest.TestCase):

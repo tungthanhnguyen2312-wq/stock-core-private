@@ -2,7 +2,7 @@ import unittest
 
 import pandas as pd
 
-from financial_identity import qualify_capital_structure_observation, qualify_statement_identity
+from stocklookup_core.evidence.financial_identity import qualify_capital_structure_observation, qualify_statement_identity
 
 
 class FinancialIdentityTests(unittest.TestCase):

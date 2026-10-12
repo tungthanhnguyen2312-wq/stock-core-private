@@ -34,7 +34,7 @@ from __future__ import annotations
 
 from typing import Any, Mapping
 
-import evidence_qualification_tiers as tiers
+from stocklookup_core.evidence import evidence_qualification_tiers as tiers
 import kbs_empirical_basis as basis
 import kbs_trade_scope_qualification as trade_scope
 

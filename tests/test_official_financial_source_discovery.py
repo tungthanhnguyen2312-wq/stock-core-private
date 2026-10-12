@@ -1,5 +1,5 @@
 import inspect
-from official_financial_source_discovery import discover_routes
+from stocklookup_core.evidence.official_financial_source_discovery import discover_routes
 REG={'sources':[{'activation':'approved','allowed_hosts':['issuer.example']}]}
 def test_discovery_is_not_approval_without_registry_host():
  r=discover_routes([{'ticker':'AAA'}],{'AAA':{'candidate_url':'https://mirror.example/x','issuer_domain_evidence':'claim'}},REG)

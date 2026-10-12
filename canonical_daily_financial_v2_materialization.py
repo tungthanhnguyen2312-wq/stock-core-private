@@ -31,7 +31,7 @@ from typing import Any, Mapping, Sequence
 
 import stocklookup_core.valuation.current_research_valuation_context as valuation_context
 import entity_classification_contract as entity_classification
-import exchange_industry_classification as industry_classification
+from stocklookup_core.evidence import exchange_industry_classification as industry_classification
 import stocklookup_core.financial.financial_analysis_product_projection as product_projection
 import stocklookup_core.financial.financial_v2_current_input_authority as input_authority
 import stocklookup_core.financial.market_wide_financial_analysis_v2_scaleout as scaleout

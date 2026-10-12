@@ -32,7 +32,7 @@ import hashlib
 import json
 from typing import Any, Mapping, Sequence
 
-import evidence_qualification_tiers as tiers
+from stocklookup_core.evidence import evidence_qualification_tiers as tiers
 import kbs_trading_value_coverage as cov
 
 VERSION = "1.0.0"

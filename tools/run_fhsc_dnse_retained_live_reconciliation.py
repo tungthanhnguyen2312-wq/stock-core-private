@@ -12,7 +12,7 @@ from fhsc_retained_live_reconciliation import (  # noqa: E402
     TICKERS, fetch_and_retain, fetch_realtime_and_retain, load_finhay_api_key, parse_retained_history,
     parse_retained_realtime, reconciliation_artifact,
 )
-from provider_reference_reconciliation import _retained_dnse_observations  # noqa: E402
+from stocklookup_core.evidence.provider_reference_reconciliation import _retained_dnse_observations  # noqa: E402
 
 
 OUTPUT = ROOT / "operations-review" / "fhsc-dnse-retained-live-reconciliation-v1-20260821"

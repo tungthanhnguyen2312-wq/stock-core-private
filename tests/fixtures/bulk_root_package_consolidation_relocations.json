@@ -1,0 +1,108 @@
+{
+  "milestone": "ACCELERATED_ROOT_PACKAGE_CONSOLIDATION_V1",
+  "baseline": "3f1be104386a218899b7dcb4bdeaa154be17ce06",
+  "relocations": {
+    "approved_issuer_ir_financial_evidence.py": "stocklookup_core/evidence/approved_issuer_ir_financial_evidence.py",
+    "audit_opinion_evidence.py": "stocklookup_core/evidence/audit_opinion_evidence.py",
+    "cited_evidence_backup.py": "stocklookup_core/evidence/cited_evidence_backup.py",
+    "corporate_actions.py": "stocklookup_core/evidence/corporate_actions.py",
+    "corporate_actions_export.py": "stocklookup_core/evidence/corporate_actions_export.py",
+    "evidence_qualification_tiers.py": "stocklookup_core/evidence/evidence_qualification_tiers.py",
+    "exchange_industry_classification.py": "stocklookup_core/evidence/exchange_industry_classification.py",
+    "financial_filings_replay_adapter.py": "stocklookup_core/evidence/financial_filings_replay_adapter.py",
+    "financial_identity.py": "stocklookup_core/evidence/financial_identity.py",
+    "ocr_sidecar_encoding.py": "stocklookup_core/evidence/ocr_sidecar_encoding.py",
+    "official_corporate_action_ledger.py": "stocklookup_core/evidence/official_corporate_action_ledger.py",
+    "official_financial_source_discovery.py": "stocklookup_core/evidence/official_financial_source_discovery.py",
+    "official_route_ownership_evidence.py": "stocklookup_core/evidence/official_route_ownership_evidence.py",
+    "p3f14_official_financial_source_discovery.py": "stocklookup_core/evidence/p3f14_official_financial_source_discovery.py",
+    "p3f14b_route_ownership_evidence.py": "stocklookup_core/evidence/p3f14b_route_ownership_evidence.py",
+    "provider_official_bridge.py": "stocklookup_core/evidence/provider_official_bridge.py",
+    "provider_reference_reconciliation.py": "stocklookup_core/evidence/provider_reference_reconciliation.py",
+    "provider_share_promotion_review.py": "stocklookup_core/evidence/provider_share_promotion_review.py",
+    "qualified_corporate_action_factor_chain.py": "stocklookup_core/evidence/qualified_corporate_action_factor_chain.py",
+    "sector_aware_downstream_facts.py": "stocklookup_core/evidence/sector_aware_downstream_facts.py"
+  },
+  "retained_root_for_historical_execution": [
+    "official_acquisition_budget.py",
+    "official_financial_value_evidence.py"
+  ],
+  "historically_executed_sources": [
+    [
+      "0061d5f8afe4275ef6cf1dd7ba44930f559d2278",
+      "stocklookup_core/decision/daily_integrated_decision_brief.py"
+    ],
+    [
+      "0061d5f8afe4275ef6cf1dd7ba44930f559d2278",
+      "stocklookup_core/research/thesis_evidence_production.py"
+    ],
+    [
+      "e9ee2fe135e9e529b60f11ab97f30fc6441e6e24",
+      "corporate_currency_rollforward.py"
+    ],
+    [
+      "e9ee2fe135e9e529b60f11ab97f30fc6441e6e24",
+      "field_temporal_contract.py"
+    ],
+    [
+      "e9ee2fe135e9e529b60f11ab97f30fc6441e6e24",
+      "official_financial_ocr_table_evidence.py"
+    ],
+    [
+      "e9ee2fe135e9e529b60f11ab97f30fc6441e6e24",
+      "official_financial_period_identity.py"
+    ],
+    [
+      "e9ee2fe135e9e529b60f11ab97f30fc6441e6e24",
+      "stocklookup_core/decision/human_ai_decision_evidence_packet.py"
+    ],
+    [
+      "70fbba96d02369e0f02a5a15dd264bad780fe6ce",
+      "official_financial_filing_evidence.py"
+    ],
+    [
+      "70fbba96d02369e0f02a5a15dd264bad780fe6ce",
+      "official_financial_ocr_table_evidence.py"
+    ],
+    [
+      "70fbba96d02369e0f02a5a15dd264bad780fe6ce",
+      "canonical_financial_qualification_policy.py"
+    ],
+    [
+      "70fbba96d02369e0f02a5a15dd264bad780fe6ce",
+      "stocklookup_core/evidence/official_document_qualification.py"
+    ],
+    [
+      "103f7ef",
+      "current_research_decision_input.py"
+    ],
+    [
+      "103f7ef",
+      "financial_analysis_product_projection.py"
+    ],
+    [
+      "6691bd2",
+      "fundamental_signal_consumption_contract.py"
+    ],
+    [
+      "59580f6cda300dce8013af284d2ce11e026e3029",
+      "ai_research_session_delivery.py"
+    ],
+    [
+      "59580f6cda300dce8013af284d2ce11e026e3029",
+      "integrated_investment_decision_product.py"
+    ],
+    [
+      "e49c976",
+      "technical_structure_context.py"
+    ],
+    [
+      "e49c976",
+      "integrated_investment_decision_product.py"
+    ],
+    [
+      "e49c976",
+      "market_structure_breakout_product_projection.py"
+    ]
+  ]
+}

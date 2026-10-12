@@ -6,7 +6,7 @@ from datetime import datetime, timezone, timedelta
 from dnse_closed_session_ohlc_representation import (
     FIELDS, IDENTITY_TRANSFORMATION, parse_raw_ohlc_bytes, uniform_anchor,
 )
-from provider_reference_reconciliation import (
+from stocklookup_core.evidence.provider_reference_reconciliation import (
     BASIS_UNRESOLVED, CLOSED_SESSION_OBSERVATION, provider_reference_observation, reconcile_observations,
 )
 

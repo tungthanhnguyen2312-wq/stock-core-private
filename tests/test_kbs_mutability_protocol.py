@@ -12,7 +12,7 @@ import ast
 import unittest
 from pathlib import Path
 
-import evidence_qualification_tiers as tiers
+from stocklookup_core.evidence import evidence_qualification_tiers as tiers
 import kbs_capability_matrix as caps
 import kbs_empirical_basis as kbs
 import kbs_mutability_protocol as protocol
@@ -629,7 +629,7 @@ class InertnessTest(unittest.TestCase):
         ):
             self.assertNotIn(forbidden, imported, f"{forbidden} is imported by the protocol")
         self.assertEqual(imported, {"__future__", "hashlib", "json", "typing",
-                                    "evidence_qualification_tiers", "kbs_empirical_basis"})
+                                    "stocklookup_core", "kbs_empirical_basis"})
         # No writes either: the protocol describes artifacts, it does not create them.
         for forbidden in ("write_text(", "write_bytes(", "open("):
             self.assertNotIn(forbidden, source, forbidden)

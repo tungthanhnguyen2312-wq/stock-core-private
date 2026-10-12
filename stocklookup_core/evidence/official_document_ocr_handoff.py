@@ -3,7 +3,7 @@ from __future__ import annotations
 import hashlib,json,os,sys,tempfile
 from pathlib import Path
 from typing import Any,Callable,Mapping
-from ocr_sidecar_encoding import decode_utf8,diagnostic,stable_json
+from stocklookup_core.evidence.ocr_sidecar_encoding import decode_utf8,diagnostic,stable_json
 STATES={'ocr_available','ocr_partial','ocr_timeout','ocr_failed','ocr_empty_page','invalid_utf8_ocr_text','source_hash_mismatch'}
 def configure_utf8_console(stdout=None,stderr=None)->None:
  """Best-effort UTF-8 console setup for Windows OCR runners and adapters."""

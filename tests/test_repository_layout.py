@@ -61,6 +61,57 @@ def test_e1_official_exchange_evidence_has_no_root_path_or_shim():
     assert carried <= set(E1_OFFICIAL_EXCHANGE_EVIDENCE)
 
 
+BULK = json.loads((ROOT / "tests/fixtures/bulk_root_package_consolidation_relocations.json").read_text(encoding="utf-8"))
+
+
+def test_bulk_relocations_are_exact_without_root_path_shim_or_carried_debt():
+    from tools import check_architecture as guard
+    policy = json.loads((ROOT / guard.POLICY).read_text(encoding="utf-8"))
+    carried = {row[0] for row in policy["relocated_debt_edges"]}
+    for old, new in BULK["relocations"].items():
+        assert LAYOUT["relocations"][old] == new
+        assert old not in LAYOUT["grandfathered_root_python"] and old not in LAYOUT["compatibility_entrypoints"]
+        assert not (ROOT / old).exists() and importlib.util.find_spec(old[:-3]) is None, old
+        assert new.count("/") == 2 and new.startswith("stocklookup_core/"), new
+        assert new[:-3].replace("/", ".") not in carried, new  # the E1 carry allowance is not extended
+
+
+def test_root_names_imported_by_executed_historical_sources_are_not_relocated():
+    """Parity harnesses and replays execute immutable accepted sources by their original import names."""
+    import subprocess
+    moved = {old[:-3] for old in BULK["relocations"]}
+    for name in BULK["retained_root_for_historical_execution"]:
+        assert (ROOT / name).is_file() and name not in LAYOUT["relocations"], name
+    for ref, relative in BULK["historically_executed_sources"]:
+        source = subprocess.check_output(["git", "show", f"{ref}:{relative}"], cwd=ROOT)
+        for node in ast.walk(ast.parse(source)):
+            if isinstance(node, ast.Import):
+                names = [alias.name for alias in node.names]
+            elif isinstance(node, ast.ImportFrom) and node.module and not node.level:
+                names = [node.module]
+            else:
+                continue
+            assert not moved.intersection(name.split(".")[0] for name in names), (ref, relative, names)
+
+
+def test_bulk_relocated_modules_import_cleanly_and_keep_checkout_root(tmp_path):
+    import subprocess
+    import sys
+    modules = [new[:-3].replace("/", ".") for new in BULK["relocations"].values()]
+    rooted = [m for m, new in zip(modules, BULK["relocations"].values())
+              if "ROOT=Path(__file__).resolve().parents[2]" in (ROOT / new).read_text(encoding="utf-8").replace(" ", "")]
+    script = (
+        "import importlib, sys\n"
+        f"modules = {modules!r}\n"
+        "for name in modules: importlib.import_module(name)\n"
+        f"for name in {rooted!r}: assert str(sys.modules[name].ROOT) == {str(ROOT)!r}, name\n"
+        "assert not {'vnstock', 'vnai'} & {m.split('.')[0] for m in sys.modules}\n"
+    )
+    import os
+    env = {**os.environ, "PYTHONPATH": os.pathsep.join(filter(None, [str(ROOT), os.environ.get("PYTHONPATH")]))}
+    subprocess.run([sys.executable, "-c", script], cwd=tmp_path, env=env, check=True, capture_output=True)
+
+
 def test_recreated_root_copy_of_relocated_evidence_fails_placement(tmp_path, monkeypatch):
     (tmp_path / "corporate_action_events.py").write_text("", encoding="utf-8")
     monkeypatch.setitem(globals(), "ROOT", tmp_path)

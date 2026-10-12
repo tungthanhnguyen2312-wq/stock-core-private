@@ -9,7 +9,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from provider_reference_reconciliation import build_offline_artifact
+from stocklookup_core.evidence.provider_reference_reconciliation import build_offline_artifact
 
 
 OUTPUT = ROOT / "operations-review" / "fhsc-reference-reconciliation-foundation-v1-20260821" / "fhsc_reference_reconciliation_artifact.json"

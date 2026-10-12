@@ -152,7 +152,7 @@ def test_existing_vnm_requirement_uses_actual_sma50_and_replay_volume_dependency
 
 @pytest.mark.parametrize("mutation", ["later_terms","later_ex_date","not_executed","missing_raw_lineage"])
 def test_pit_adjusted_requires_existing_qualified_factor_and_no_future_event(mutation):
-    from qualified_corporate_action_factor_chain import build_factor_chain_entry
+    from stocklookup_core.evidence.qualified_corporate_action_factor_chain import build_factor_chain_entry
     entry = {"event_id":"fixture:event","ticker":"VNM","event_type":"STOCK_DIVIDEND","execution_status":"executed",
              "ex_date":DAYS[0],"adjustment_factor_status":"ready","adjustment_factor":0.9,"source_content_hashes":["b"*64]}
     factor = build_factor_chain_entry(entry,knowledge_cutoff=DAYS[0]+"T08:00:00Z")

@@ -2,8 +2,8 @@ from __future__ import annotations
 import hashlib,json
 from pathlib import Path
 from typing import Any
-from official_financial_source_discovery import discover_routes
-ROOT=Path(__file__).resolve().parent
+from stocklookup_core.evidence.official_financial_source_discovery import discover_routes
+ROOT=Path(__file__).resolve().parents[2]
 def _load(p:Path)->dict[str,Any]: return json.loads(p.read_text(encoding='utf-8'))
 def _hash(x:Any)->str:return hashlib.sha256(json.dumps(x,sort_keys=True,separators=(',',':')).encode()).hexdigest()
 def execute()->dict[str,Any]:

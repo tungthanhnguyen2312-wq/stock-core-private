@@ -55,7 +55,7 @@ if str(ROOT) not in sys.path:
 
 import stocklookup_core.valuation.current_research_valuation_context as valuation_context  # noqa: E402
 import entity_classification_contract as entity_classification  # noqa: E402
-import exchange_industry_classification as industry_classification  # noqa: E402
+from stocklookup_core.evidence import exchange_industry_classification as industry_classification  # noqa: E402
 import stocklookup_core.financial.financial_analysis_engine_v2 as engine  # noqa: E402
 import stocklookup_core.financial.financial_analysis_product_projection as product_projection  # noqa: E402
 import stocklookup_core.financial.market_wide_financial_analysis_v2_scaleout as scaleout  # noqa: E402

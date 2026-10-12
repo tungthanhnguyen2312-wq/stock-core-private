@@ -151,8 +151,8 @@ def retain_selected_listing_sources(source_root: Path, *, acquisition_session: s
 def retain_corporate(context: Mapping[str, Any], *, root: Path,
                      ledger: Mapping[str, Any] | None = None) -> dict[str, Any]:
     from current_official_event_context import replay
-    from official_corporate_action_ledger import build_ledger
-    from qualified_corporate_action_factor_chain import build_factor_chain_entry
+    from stocklookup_core.evidence.official_corporate_action_ledger import build_ledger
+    from stocklookup_core.evidence.qualified_corporate_action_factor_chain import build_factor_chain_entry
     replay(context)
     # Index observations are not typed official-document terms. Never convert them into ledger terms.
     canonical_ledger = ledger if ledger is not None else build_ledger([])

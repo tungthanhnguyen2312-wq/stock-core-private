@@ -1,8 +1,8 @@
 from __future__ import annotations
 import hashlib, json
 from pathlib import Path
-from official_route_ownership_evidence import qualify
-ROOT=Path(__file__).resolve().parent
+from stocklookup_core.evidence.official_route_ownership_evidence import qualify
+ROOT=Path(__file__).resolve().parents[2]
 def run():
  p14=json.loads((ROOT/'operations-review/p3f14-official-financial-source-discovery-20260820/p3f14_official_financial_source_discovery_artifact.json').read_text()); reg=json.loads((ROOT/'config/official_source_registry.json').read_text()); manifest=json.loads((ROOT/'operations-review/governed-official-evidence-v1/official_document_acquisition_manifest.json').read_text())
  cohort=[x['canonical_instrument'] for x in p14['route_candidate_inventory']]; rows=[x for x in manifest['records'] if x.get('acquisition_status')=='retained' and x.get('source_id')=='issuer_ir']

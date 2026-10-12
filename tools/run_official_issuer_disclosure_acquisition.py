@@ -40,7 +40,7 @@ sys.path.insert(0, str(ROOT))
 
 import requests  # noqa: E402
 
-import audit_opinion_evidence as audit_opinion  # noqa: E402
+from stocklookup_core.evidence import audit_opinion_evidence as audit_opinion  # noqa: E402
 import stocklookup_core.evidence.hnx_disclosure_feed_parser as feed_parser  # noqa: E402
 import stocklookup_core.evidence.insider_and_major_holder_events as events  # noqa: E402
 import stocklookup_core.evidence.official_document_store as store  # noqa: E402

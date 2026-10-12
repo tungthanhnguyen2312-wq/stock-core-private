@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from approved_issuer_ir_financial_evidence import acquire, summarize_existing_artifact
+from stocklookup_core.evidence.approved_issuer_ir_financial_evidence import acquire, summarize_existing_artifact
 
 
 OUTPUT = ROOT / "operations-review" / "approved-issuer-ir-official-financial-evidence-cohort-v1-20260827"

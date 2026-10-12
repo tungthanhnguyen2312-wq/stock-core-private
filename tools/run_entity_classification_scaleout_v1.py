@@ -28,7 +28,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-import exchange_industry_classification as icb_mod  # noqa: E402
+from stocklookup_core.evidence import exchange_industry_classification as icb_mod  # noqa: E402
 from entity_classification_contract import (  # noqa: E402
     DEFAULT_PROMOTED_CLASSIFICATIONS_PATH,
     DEFAULT_SCALEOUT_PROMOTED_CLASSIFICATIONS_PATH,

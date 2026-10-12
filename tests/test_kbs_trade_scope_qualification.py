@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import unittest
 
-import evidence_qualification_tiers as tiers
+from stocklookup_core.evidence import evidence_qualification_tiers as tiers
 import kbs_trade_scope_qualification as scope
 
 

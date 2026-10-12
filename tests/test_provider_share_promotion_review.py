@@ -9,7 +9,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-import provider_share_promotion_review as review  # noqa: E402
+from stocklookup_core.evidence import provider_share_promotion_review as review  # noqa: E402
 
 
 class ProviderSharePromotionReviewTests(unittest.TestCase):

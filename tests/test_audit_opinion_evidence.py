@@ -8,7 +8,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-import audit_opinion_evidence as opinion  # noqa: E402
+from stocklookup_core.evidence import audit_opinion_evidence as opinion  # noqa: E402
 
 UNMODIFIED_PAGE = (
     "Independent Auditor's Report\n"

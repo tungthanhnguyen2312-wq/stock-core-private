@@ -23,7 +23,7 @@ import requests
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-import evidence_qualification_tiers as tiers  # noqa: E402
+from stocklookup_core.evidence import evidence_qualification_tiers as tiers  # noqa: E402
 import kbs_capability_matrix as caps  # noqa: E402
 import kbs_empirical_basis as kbs  # noqa: E402
 import kbs_mutability_protocol as protocol  # noqa: E402

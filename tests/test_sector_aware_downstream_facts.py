@@ -1,5 +1,5 @@
 ﻿import unittest
-from sector_aware_downstream_facts import export,replay
+from stocklookup_core.evidence.sector_aware_downstream_facts import export,replay
 class ExportTests(unittest.TestCase):
  def shadow(self):
   l={'canonical_input':'brokerage_revenue','record_id':'r','value':10,'source_type':'official_document_observation','document_sha256':'h','citation_id':'c','period':{'period':'2024'},'scope':'consolidated','unit':'VND'}

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import approved_issuer_ir_financial_evidence as subject
+from stocklookup_core.evidence import approved_issuer_ir_financial_evidence as subject
 from p3f13_official_financial_evidence_scaleout import merge_document_qualified_facts_into_panel
 
 

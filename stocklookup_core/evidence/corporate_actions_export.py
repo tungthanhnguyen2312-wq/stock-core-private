@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from typing import Any, Mapping
 
-from corporate_actions import canonicalize_corporate_actions
+from stocklookup_core.evidence.corporate_actions import canonicalize_corporate_actions
 
 
 def build_corporate_actions_section(events: Mapping[str, Any]) -> dict[str, Any]:

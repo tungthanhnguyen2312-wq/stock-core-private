@@ -1,7 +1,7 @@
 import hashlib,json,tempfile,unittest
 from pathlib import Path
 from unittest.mock import patch
-import cited_evidence_backup as b
+from stocklookup_core.evidence import cited_evidence_backup as b
 class BackupTests(unittest.TestCase):
  def fixture(self):
   temp=tempfile.TemporaryDirectory();r=Path(temp.name);(r/'x.pdf').write_bytes(b'x');h=hashlib.sha256(b'x').hexdigest();(r/'manifest.json').write_text(json.dumps({'records':[{'ticker':'HPG','reporting_period':'2024','evidence_type':'audited_consolidated_financial_statements','filename':'x.pdf','sha256':h,'evidence_id':'d'}]}));(r/'qualification_citations.jsonl').write_text(json.dumps({'evidence_id':'d','citation_id':'c'})+'\n');return temp,r

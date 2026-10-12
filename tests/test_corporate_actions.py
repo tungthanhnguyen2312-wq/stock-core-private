@@ -1,7 +1,7 @@
 import unittest
 
-from corporate_actions import canonicalize_corporate_actions
-from corporate_actions_export import build_corporate_actions_section
+from stocklookup_core.evidence.corporate_actions import canonicalize_corporate_actions
+from stocklookup_core.evidence.corporate_actions_export import build_corporate_actions_section
 
 
 P = {"provider": "VCI", "vnstock_version": "4.0.4", "method": "events", "parameters": {}, "retrieved_at": "t"}
