@@ -9,7 +9,7 @@ from __future__ import annotations
 from collections import Counter
 from typing import Any, Mapping, Sequence
 
-from field_temporal_contract import stable_id
+from stocklookup_core.evidence.field_identity import stable_id
 
 CONTRACT_VERSION = "current_share_basis_capability_reconciliation/v1"
 ARTIFACT_TYPE = "CURRENT_SHARE_BASIS_CAPABILITY_RECONCILIATION"

@@ -16,7 +16,7 @@ from typing import Any, Mapping, Sequence
 
 import requests
 
-from field_temporal_contract import stable_id
+from stocklookup_core.evidence.field_identity import stable_id
 
 CONTRACT_VERSION = "authoritative_current_common_shares_qualification/v1"
 SOURCE = "KBS_PUBLIC_COMPANY_PROFILE"

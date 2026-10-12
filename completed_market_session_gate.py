@@ -45,7 +45,7 @@ from typing import Any, Callable, Mapping, Sequence
 import json
 import hashlib
 
-from field_temporal_contract import canonical_json, stable_id
+from stocklookup_core.evidence.field_identity import canonical_json, stable_id
 from vn_time import VN_TZ, vn_now
 
 SCHEMA_VERSION = "completed_market_session_gate/v1"

@@ -7,7 +7,7 @@ from collections import Counter
 from typing import Any, Mapping, Sequence
 
 import session_bar_integrity
-from field_temporal_contract import stable_id
+from stocklookup_core.evidence.field_identity import stable_id
 from mva_daily_research_bundle import market_features
 from mva_exact_session_snapshot import _observation_rows
 

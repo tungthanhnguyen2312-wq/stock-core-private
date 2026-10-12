@@ -9,7 +9,7 @@ import copy
 from collections import Counter
 from typing import Any, Mapping
 
-from field_temporal_contract import stable_id
+from stocklookup_core.evidence.field_identity import stable_id
 
 CONTRACT_VERSION = "current_evidence_bound_scenario/v1"
 WATCHLIST = ("EVF", "FPT", "HPG", "NVL", "PAN", "PNJ", "POW", "PVD", "QNS", "SSI", "VNM")

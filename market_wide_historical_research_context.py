@@ -18,7 +18,7 @@ from collections import Counter
 from typing import Any, Mapping, Sequence
 
 import session_bar_integrity
-from field_temporal_contract import stable_id as _p3f9b_stable_id
+from stocklookup_core.evidence.field_identity import stable_id as _p3f9b_stable_id
 from market_wide_current_technical_coverage_scaleout import (
     content_identity as recovery_content_identity,
 )

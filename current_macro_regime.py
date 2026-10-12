@@ -11,7 +11,7 @@ from datetime import UTC, datetime, timedelta, timezone
 from typing import Any, Mapping
 from urllib.request import Request, urlopen
 
-from field_temporal_contract import stable_id
+from stocklookup_core.evidence.field_identity import stable_id
 from freshness_history import freshness_envelope, parse_timestamp
 
 CONTRACT_VERSION = "current_macro_regime/v1"

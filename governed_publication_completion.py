@@ -24,7 +24,7 @@ from pathlib import Path
 from typing import Any, Callable, Mapping, Sequence
 
 from atomic_io import atomic_write_json, validate_json_file
-from field_temporal_contract import stable_id
+from stocklookup_core.evidence.field_identity import stable_id
 from release_checkout_identity import (
     CANONICAL_BRANCH,
     CANONICAL_ORIGIN_REPO,

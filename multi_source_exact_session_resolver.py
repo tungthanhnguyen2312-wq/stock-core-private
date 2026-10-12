@@ -68,7 +68,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Callable, Mapping, Sequence
 
-from field_temporal_contract import stable_id
+from stocklookup_core.evidence.field_identity import stable_id
 from multi_source_market_evidence_contract import (
     DNSE_HEALTH_BROAD_STALE_OR_INCOMPLETE_EOD,
     DNSE_HEALTH_UNASSESSED_SUPPLEMENTAL_RUNTIME_UNAVAILABLE,

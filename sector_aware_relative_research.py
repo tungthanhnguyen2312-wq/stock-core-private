@@ -6,7 +6,7 @@ from collections import Counter, defaultdict
 from statistics import median
 from typing import Any, Mapping
 
-from field_temporal_contract import stable_id
+from stocklookup_core.evidence.field_identity import stable_id
 
 CONTRACT_VERSION = "sector_aware_relative_research/v1"
 MIN_COHORT = 5

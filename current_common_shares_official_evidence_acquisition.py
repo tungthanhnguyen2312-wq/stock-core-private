@@ -9,7 +9,7 @@ import unicodedata
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
-from field_temporal_contract import stable_id
+from stocklookup_core.evidence.field_identity import stable_id
 
 CONTRACT_VERSION = "current_common_shares_official_evidence_acquisition/v1"
 QUALIFIED = "CURRENT_COMMON_OUTSTANDING_QUALIFIED"

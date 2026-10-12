@@ -53,7 +53,7 @@ import json
 from collections import Counter
 from typing import Any, Mapping
 
-from field_temporal_contract import stable_id as _p3f9b_stable_id
+from stocklookup_core.evidence.field_identity import stable_id as _p3f9b_stable_id
 
 CONTRACT_VERSION = "current_universe_status_and_session_coverage_resolution/v1"
 

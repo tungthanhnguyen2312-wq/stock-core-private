@@ -10,7 +10,7 @@ from datetime import UTC, datetime, timedelta, timezone
 from typing import Any, Mapping
 
 from current_macro_regime import session_context
-from field_temporal_contract import stable_id
+from stocklookup_core.evidence.field_identity import stable_id
 
 CONTRACT_VERSION = "macro_market_regime_decision_context/v1"
 MILESTONE_ID = "MACRO_MARKET_REGIME_DECISION_CONTEXT_CONVERGENCE_V1"

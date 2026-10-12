@@ -12,7 +12,7 @@ from collections import Counter
 from typing import Any, Mapping
 
 from stocklookup_core.decision.current_opportunity_prioritization import TIERS
-from field_temporal_contract import stable_id
+from stocklookup_core.evidence.field_identity import stable_id
 
 CONTRACT_VERSION = "daily_opportunity_decision_queue/v1"
 LANES = ("TREND_MOMENTUM", "BREAKOUT", "EARLY_REVERSAL", "BASE_ACCUMULATION", "FUNDAMENTAL_IMPROVEMENT", "EVENT_DRIVEN", "VALUE")

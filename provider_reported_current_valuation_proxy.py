@@ -1,7 +1,7 @@
 """Non-authoritative adapter over retained provider-issued-share proxy valuation evidence."""
 from __future__ import annotations
 from typing import Any, Mapping
-from field_temporal_contract import stable_id
+from stocklookup_core.evidence.field_identity import stable_id
 
 CONTRACT_VERSION="provider_reported_current_valuation_proxy/v1"
 METHOD="PROVIDER_ISSUED_SHARES_PROXY"

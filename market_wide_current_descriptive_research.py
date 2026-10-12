@@ -38,7 +38,7 @@ from collections import Counter
 from statistics import median
 from typing import Any, Mapping, Sequence
 
-from field_temporal_contract import stable_id as _p3f9b_stable_id
+from stocklookup_core.evidence.field_identity import stable_id as _p3f9b_stable_id
 from stocklookup_core.tactical.market_regime_breadth_context import _descriptor
 from mva_daily_research_bundle import market_features
 import stocklookup_core.tactical.tactical_reference_window as reference_window

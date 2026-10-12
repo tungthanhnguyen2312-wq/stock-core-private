@@ -10,7 +10,7 @@ from datetime import UTC, datetime
 from typing import Any, Mapping
 from urllib.request import Request, urlopen
 
-from field_temporal_contract import stable_id
+from stocklookup_core.evidence.field_identity import stable_id
 
 CONTRACT_VERSION = "vietnam_macro_observation/v1"
 SOURCE_ID = "NSO_VIETNAM_CPI_RELEASE"

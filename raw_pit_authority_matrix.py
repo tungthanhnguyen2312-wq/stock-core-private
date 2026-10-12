@@ -11,7 +11,7 @@ from __future__ import annotations
 from typing import Any, Mapping
 from datetime import datetime
 import math
-from field_temporal_contract import stable_id
+from stocklookup_core.evidence.field_identity import stable_id
 
 CONTRACT_VERSION = "raw_pit_authority_matrix/v1"
 

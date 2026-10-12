@@ -256,7 +256,7 @@ def missing_retained_inputs(
 
 def _snapshot_plan(output_root: Path, session: str) -> list[dict[str, Any]]:
     from daily_session_level2_package import _canonical_snapshot_gate_satisfied, session_artifact_paths
-    from field_temporal_contract import stable_id
+    from stocklookup_core.evidence.field_identity import stable_id
 
     paths = session_artifact_paths(output_root, session)
     snapshot_path = paths["exact_session_snapshot"]
