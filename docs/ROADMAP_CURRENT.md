@@ -5,10 +5,9 @@ Base/main `4755d94a977f468a4122e40fba77850281582f42`.
 Nothing below auto-starts; native standing admission required (AI_RULES 11).
 Facts: [ACTIVE_STATE.md](ACTIVE_STATE.md).
 
-## NOW — CURRENT_FINANCIAL_VALUATION_INPUT_UNLOCK_V1 (COMPLETE LOCAL)
+## NOW — CURRENT_FINANCIAL_VALUATION_INPUT_UNLOCK_V1 (LOCAL)
 
-[Scope](current_financial_valuation_input_unlock_v1_contract.md): six H1 results.
-Review gated; strict shares unchanged.
+[Scope](current_financial_valuation_input_unlock_v1_contract.md): H1 ratios; review gate.
 V3 PR131 merged `d11b101`; V2 PR130 merged `d53999b`.
 E5 PR127 merged `70fbba9`; post-merge CI PASS (38190156979).
 E4 PR126 merged `e9ee2fe`; four post-merge jobs PASS (38186488312).
