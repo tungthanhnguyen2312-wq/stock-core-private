@@ -62,5 +62,6 @@ core-to-root pairs; the one partial case (`multi_period_financial_panel`) needs 
 ## Native state
 
 Admitted at the exact starting HEAD `d53999b` before any source edit (owner-approved
-`--owner-override` admission). Hosted Linux CI and the Owner merge decision remain release
+`--owner-override` admission). Local closeout checkpoint
+`45af8fcb67fccf04b3f322d400afc8f2793a98bb`: `LOCAL_IMPLEMENTATION_COMPLETE_NOT_PROMOTED`. Hosted Linux CI and the Owner merge decision remain release
 gates; no successor is admitted.

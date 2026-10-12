@@ -5,7 +5,7 @@ Base/main `d53999ba07a080b7fae2104185c56cc9a55ce210`.
 Nothing below auto-starts; native standing admission required (AI_RULES 11).
 Facts: [ACTIVE_STATE.md](ACTIVE_STATE.md).
 
-## NOW — ROOT_HUB_DEPENDENCY_REDUCTION_V3 (IMPLEMENTED)
+## NOW — ROOT_HUB_DEPENDENCY_REDUCTION_V3 (COMPLETE LOCAL)
 
 [Scope](root_hub_dependency_reduction_v3_contract.md): hub seam; 11 modules moved;
 no shim/pin/Daily/authority change. PR/CI repairs authorized; merge Owner-gated.
