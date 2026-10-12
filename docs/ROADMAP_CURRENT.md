@@ -5,7 +5,14 @@ Base/main `4755d94a977f468a4122e40fba77850281582f42`.
 Nothing below auto-starts; native standing admission required (AI_RULES 11).
 Facts: [ACTIVE_STATE.md](ACTIVE_STATE.md).
 
-## NOW — OWNER_DAILY_AI_HANDOFF_IMPORT_RECOVERY_20261012 (LOCAL)
+## NOW — CURRENT_FINANCIAL_VALUATION_INPUT_UNLOCK_V1 (LOCAL)
+
+[Scope](current_financial_valuation_input_unlock_v1_contract.md): retained October 12
+baseline, evidence-proven semantic/denominator connections and existing valuation /
+Decision Fitness integration. Authority effect NONE. Host resource/writer gate holds
+implementation/heavy validation; queue empty, no production activation.
+
+Prior Owner Daily import recovery is COMPLETE and released in PR132 (`288208a6`).
 
 [Scope](owner_daily_ai_handoff_import_recovery_20261012_contract.md): relaunch
 after pull. Replay Owner-gated.

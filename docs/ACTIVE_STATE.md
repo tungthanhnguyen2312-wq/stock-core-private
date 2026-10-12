@@ -30,6 +30,7 @@ Kinds: **CURRENT FACT** (verified), **HOST-LOCAL** (untracked; re-verify),
 **BLOCKED**, **DEFERRED**, **HISTORICAL**.
 
 ## 1. The operational gate
+- **ACTIVE LOCAL — [financial/valuation input unlock](current_financial_valuation_input_unlock_v1_contract.md):** native Owner admission from `288208a6`; authority effect NONE. Stage A metadata checkpoint only; implementation/heavy validation held by observed host resource/writer gate. No Daily or completed-session changes.
 - **COMPLETE LOCAL — [owner Daily relaunch](owner_daily_ai_handoff_import_recovery_20261012_contract.md):** pull relaunches on new code.
 - **COMPLETE — [root hub V3](root_hub_dependency_reduction_v3_contract.md):** PR131 merged `d11b101`.
 - **COMPLETE — [E6 financial seams](e6_financial_extraction_admission_boundary_contract.md):** row/envelope/status owners.

@@ -15,11 +15,32 @@
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "OWNER_DAILY_AI_HANDOFF_IMPORT_RECOVERY_20261012",
-    "state": "COMPLETE"
+    "milestone": "CURRENT_FINANCIAL_VALUATION_INPUT_UNLOCK_V1",
+    "state": "ACTIVE"
   },
   "queued_next": [],
   "milestones": [
+    {
+      "milestone_id": "CURRENT_FINANCIAL_VALUATION_INPUT_UNLOCK_V1",
+      "state": "ACTIVE",
+      "starting_checkpoint": "288208a6d94b8933bc4d1badfe1e6d27411d3a4f",
+      "candidate_branch": "feature/financial-valuation-input-unlock-v1",
+      "dependencies": [
+        "OWNER_DAILY_AI_HANDOFF_IMPORT_RECOVERY_20261012"
+      ],
+      "unlocks": [],
+      "owner_authorized": true,
+      "owner_override": "Owner-authorized CURRENT_FINANCIAL_VALUATION_INPUT_UNLOCK_V1 stages A-F: measure verified October 12 retained valuation/financial/share baseline and blockers; resolve evidence-proven period/scope/currency/scale/share semantics; integrate representative denominator-to-existing-valuation slices and generalize only compatible retained market-wide records; first-party acquisition only under existing explicit route permissions into isolated scratch; existing Decision Fitness/packet integration with same-cohort before/after coverage; focused financial/valuation/share/evidence/PIT/frozen V1-V2/E0-E6/root V1-V3/launcher/Action Center/AI/four-job CI validation, checkpoint commits and one feature-branch push/PR. Sole Producer writer in dedicated worktree. Authority effect NONE; no new engine/provider/registry, no merge, Daily/deploy/publication, source promotion, protected runtime/evidence write or October 12 session rewrite. Preserve historical HPG shares and VCB sector non-applicability. Suspend heavy work when host readiness is poor.",
+      "authority_effect": "NONE",
+      "source_doc": "docs/current_financial_valuation_input_unlock_v1_contract.md",
+      "state_history": [
+        "DEFERRED",
+        "ACTIVE"
+      ],
+      "checkpoint": null,
+      "terminal_disposition": null,
+      "notes": "Owner-authorized CURRENT_FINANCIAL_VALUATION_INPUT_UNLOCK_V1 stages A-F: measure verified October 12 retained valuation/financial/share baseline and blockers; resolve evidence-proven period/scope/currency/scale/share semantics; integrate representative denominator-to-existing-valuation slices and generalize only compatible retained market-wide records; first-party acquisition only under existing explicit route permissions into isolated scratch; existing Decision Fitness/packet integration with same-cohort before/after coverage; focused financial/valuation/share/evidence/PIT/frozen V1-V2/E0-E6/root V1-V3/launcher/Action Center/AI/four-job CI validation, checkpoint commits and one feature-branch push/PR. Sole Producer writer in dedicated worktree. Authority effect NONE; no new engine/provider/registry, no merge, Daily/deploy/publication, source promotion, protected runtime/evidence write or October 12 session rewrite. Preserve historical HPG shares and VCB sector non-applicability. Suspend heavy work when host readiness is poor."
+    },
     {
       "milestone_id": "OWNER_DAILY_AI_HANDOFF_IMPORT_RECOVERY_20261012",
       "state": "COMPLETE",
