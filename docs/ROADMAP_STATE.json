@@ -16,13 +16,13 @@
   ],
   "current": {
     "milestone": "ACCELERATED_ROOT_PACKAGE_CONSOLIDATION_V1",
-    "state": "ACTIVE"
+    "state": "COMPLETE"
   },
   "queued_next": [],
   "milestones": [
     {
       "milestone_id": "ACCELERATED_ROOT_PACKAGE_CONSOLIDATION_V1",
-      "state": "ACTIVE",
+      "state": "COMPLETE",
       "starting_checkpoint": "3f1be104386a218899b7dcb4bdeaa154be17ce06",
       "candidate_branch": "refactor/bulk-root-package-consolidation-v1",
       "dependencies": [
@@ -35,11 +35,12 @@
       "source_doc": "docs/accelerated_root_package_consolidation_v1_contract.md",
       "state_history": [
         "DEFERRED",
-        "ACTIVE"
+        "ACTIVE",
+        "COMPLETE"
       ],
-      "checkpoint": null,
-      "terminal_disposition": null,
-      "notes": "Owner directive 2026-10-12 (replaces stopped E6-gate job): bounded continuation of root-structure simplification after E6 PR128 merge 3f1be10 (post-merge CI 38194697661 success). Relocate evidence-qualified GREEN root implementations into existing stocklookup_core packages in validated cohorts; behavior, identity labels, frozen V1/E4 V2/E2-E3/provider/launcher pins, sealed E0 baseline, E1 carry scope and grandfathering preserved; no default shims. Local edits/tests/checkpoints/native closeout, one feature push/PR and in-scope CI repairs authorized; no merge/Daily/deploy/production writes/evidence rewrite/authority promotion/identity activation/sibling repos/successor."
+      "checkpoint": "69160a150a882d4dd40c6ba7a147e4c7a8e43eff",
+      "terminal_disposition": "LOCAL_IMPLEMENTATION_COMPLETE_NOT_PROMOTED",
+      "notes": "Owner directive 2026-10-12 (replaces stopped E6-gate job): bounded continuation of root-structure simplification after E6 PR128 merge 3f1be10 (post-merge CI 38194697661 success). Relocate evidence-qualified GREEN root implementations into existing stocklookup_core packages in validated cohorts; behavior, identity labels, frozen V1/E4 V2/E2-E3/provider/launcher pins, sealed E0 baseline, E1 carry scope and grandfathering preserved; no default shims. Local edits/tests/checkpoints/native closeout, one feature push/PR and in-scope CI repairs authorized; no merge/Daily/deploy/production writes/evidence rewrite/authority promotion/identity activation/sibling repos/successor. Local closeout: Owner directive 2026-10-12: locally complete accelerated root consolidation. 95 GREEN root implementations relocated in four cohorts (evidence45/tactical3/financial19/research20/portfolio2/decision6), root Python 476->381, relocations 120->215, no shim/compat entrypoint. Normalized dependency set identical (2567 edges); backward176->156, core-to-root138->118, eager/runtime SCC membership unchanged; no ratchet/baseline/grandfathering/E1 carry change. 76 moved bodies byte-identical, 19 import/root-line only; public API parity 95/95. Per-cohort targeted parity 0 new failures; structural135, call-shape7, focused hermetic6180 pass74 skip0 fail, retained5 pass44 skip. No pinned source/provider/launcher/workflow change. Three historically imported names and 24 CLIs/7 ownership deferrals stay at root. No merge/Daily/deploy/production writes/authority change/successor.; no main release, authority promotion or successor."
     },
     {
       "milestone_id": "E6_FINANCIAL_EXTRACTION_ADMISSION_BOUNDARY",

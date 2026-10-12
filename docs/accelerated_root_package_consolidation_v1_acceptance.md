@@ -56,3 +56,10 @@ Structural job selection 135 PASS; call-shape smoke 7 PASS; focused hermetic sel
 zero failures; retained accounting 5 PASS, 44 explicit absent-evidence skips. Static
 dependency tiers PASS; `--installed` reports host package drift only (no file changed).
 Roadmap `--check` ON_TRACK. `git diff --check` clean.
+
+## Native state
+
+Admission recorded at the exact starting HEAD `3f1be10` (first attempt refused by tool
+permission; rerun after Owner approval). Local closeout checkpoint
+`69160a150a882d4dd40c6ba7a147e4c7a8e43eff`: `LOCAL_IMPLEMENTATION_COMPLETE_NOT_PROMOTED`.
+Hosted CI and the Owner merge decision remain release gates; no successor is admitted.
