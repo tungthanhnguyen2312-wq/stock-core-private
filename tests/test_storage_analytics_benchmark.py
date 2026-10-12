@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-import storage_analytics_benchmark as benchmark
+import tools.replay.pilots.storage_analytics_benchmark as benchmark
 
 
 class BenchmarkContractTests(unittest.TestCase):

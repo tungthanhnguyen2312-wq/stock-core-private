@@ -18,7 +18,7 @@ import bctc_processor as processor
 from financial_mapping import get_default_registry
 
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parents[3]
 CSV_PATH = ROOT / "financial_snapshot.csv"
 PARQUET_PATH = ROOT / "financial_snapshot.parquet"
 NEXT_CSV = ROOT / "financial_snapshot.next.csv"

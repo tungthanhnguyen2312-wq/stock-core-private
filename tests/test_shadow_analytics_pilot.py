@@ -5,7 +5,7 @@ from decimal import Decimal
 import unittest
 from pathlib import Path
 
-import shadow_analytics_pilot as pilot
+import tools.replay.pilots.shadow_analytics_pilot as pilot
 
 
 class ScopeQualificationTests(unittest.TestCase):

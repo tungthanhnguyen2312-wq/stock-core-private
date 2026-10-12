@@ -23,7 +23,7 @@ from pathlib import Path
 import pandas as pd
 
 # Allow running from the worktree root without installation
-_HERE = Path(__file__).parent
+_HERE = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(_HERE))
 
 from dnse_volume_composition_reconciliation import (

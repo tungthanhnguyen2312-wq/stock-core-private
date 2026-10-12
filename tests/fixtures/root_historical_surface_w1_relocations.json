@@ -29,9 +29,23 @@
         "run_sector_relative_research_context.py",
         "run_strategy_research_eligibility.py"
       ]
+    },
+    "B": {
+      "package": "tools/replay/pilots",
+      "purpose": "Historical pilots, benchmarks and the P0-B.2B1 full-corpus reconciliation runner.",
+      "modules": [
+        "evidence_replay.py",
+        "run_full_corpus_reconciliation_p0b2b1.py",
+        "shadow_analytics_pilot.py",
+        "snapshot_rebuild.py",
+        "storage_analytics_benchmark.py",
+        "temporal_evidence_operational_pilot.py",
+        "vnm_historical_snapshot_reconstruction.py"
+      ]
     }
   },
   "relocations": {
+    "evidence_replay.py": "tools/replay/pilots/evidence_replay.py",
     "run_ai_research_analyst.py": "tools/replay/research_20260820/run_ai_research_analyst.py",
     "run_catalyst_event_research_context.py": "tools/replay/research_20260820/run_catalyst_event_research_context.py",
     "run_downside_uncertainty_research_context.py": "tools/replay/research_20260820/run_downside_uncertainty_research_context.py",
@@ -39,6 +53,7 @@
     "run_evidence_aware_research_screener.py": "tools/replay/research_20260820/run_evidence_aware_research_screener.py",
     "run_expectations_scenario_research.py": "tools/replay/research_20260820/run_expectations_scenario_research.py",
     "run_first_real_prospective_attribution.py": "tools/replay/research_20260820/run_first_real_prospective_attribution.py",
+    "run_full_corpus_reconciliation_p0b2b1.py": "tools/replay/pilots/run_full_corpus_reconciliation_p0b2b1.py",
     "run_human_research_review_pack.py": "tools/replay/research_20260820/run_human_research_review_pack.py",
     "run_market_regime_breadth_context.py": "tools/replay/research_20260820/run_market_regime_breadth_context.py",
     "run_mva_daily_investment_research.py": "tools/replay/research_20260820/run_mva_daily_investment_research.py",
@@ -53,6 +68,11 @@
     "run_research_question_tasking.py": "tools/replay/research_20260820/run_research_question_tasking.py",
     "run_research_setup_classification.py": "tools/replay/research_20260820/run_research_setup_classification.py",
     "run_sector_relative_research_context.py": "tools/replay/research_20260820/run_sector_relative_research_context.py",
-    "run_strategy_research_eligibility.py": "tools/replay/research_20260820/run_strategy_research_eligibility.py"
+    "run_strategy_research_eligibility.py": "tools/replay/research_20260820/run_strategy_research_eligibility.py",
+    "shadow_analytics_pilot.py": "tools/replay/pilots/shadow_analytics_pilot.py",
+    "snapshot_rebuild.py": "tools/replay/pilots/snapshot_rebuild.py",
+    "storage_analytics_benchmark.py": "tools/replay/pilots/storage_analytics_benchmark.py",
+    "temporal_evidence_operational_pilot.py": "tools/replay/pilots/temporal_evidence_operational_pilot.py",
+    "vnm_historical_snapshot_reconstruction.py": "tools/replay/pilots/vnm_historical_snapshot_reconstruction.py"
   }
 }

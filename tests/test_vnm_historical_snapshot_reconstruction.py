@@ -1,6 +1,6 @@
 ﻿import tempfile,unittest
 from pathlib import Path
-from vnm_historical_snapshot_reconstruction import reconstruct_and_replay
+from tools.replay.pilots.vnm_historical_snapshot_reconstruction import reconstruct_and_replay
 
 def record(cutoff="2026-06-30T00:00:00Z"):
  f={"value":1,"period_identity":{"period":"2024","period_type":"annual"},"statement_scope":"consolidated","currency":"VND","unit_scale":1,"source":"test","observation_ids":["o"],"citation_id":"c","evidence_id":"e"}
