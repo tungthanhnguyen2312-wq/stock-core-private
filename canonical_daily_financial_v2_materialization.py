@@ -249,6 +249,7 @@ def build_evaluated_valuation_artifact(
     entity_applicability_artifact: Mapping[str, Any] | None = None,
     semantic_rows: Sequence[Mapping[str, Any]] | None = None,
     decision_session: str | None = None,
+    official_financial_facts: Sequence[Mapping[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Evaluate the raw ``market_wide_current_valuation_input_scaleout`` per-ticker records
     into the ``current_research_valuation_context/v1`` shape (``methods``, ``peer_relative_
@@ -282,6 +283,13 @@ def build_evaluated_valuation_artifact(
     except monetary_verdict.MonetaryBasisVerdictUnavailable:
         verdict = None  # component-local fail-closed; the decision still builds
     official_overlay_eligibility = None
+    if official_financial_facts is None:
+        from financial_evidence_currency_refresh import load_public_official_fact_rows, OfficialOverlayArtifactError
+        try:
+            official_financial_facts = load_public_official_fact_rows(Path(__file__).resolve().parent)
+        except OfficialOverlayArtifactError:
+            official_financial_facts = []
+            official_overlay_eligibility = "OFFICIAL_OVERLAY_MALFORMED_INELIGIBLE"
     try:
         official_equity_facts = _official_equity_overlay(Path(__file__).resolve().parent)
     except CanonicalFinancialV2MaterializationError as exc:
@@ -299,9 +307,10 @@ def build_evaluated_valuation_artifact(
             entity_applicability=applicability_records.get(ticker),
             # The readiness context names its own decision session; a denominator period stale
             # against it is never a current valuation input.
-            decision_session=(calculation_readiness_context or {}).get("decision_session"),
+            decision_session=decision_session or (calculation_readiness_context or {}).get("decision_session"),
             book_equity_rows=equity_by_ticker.get(ticker), monetary_basis_verdict=verdict,
             official_equity_facts=official_equity_facts,
+            official_financial_facts=official_financial_facts,
         )
         for ticker in product_tickers
     }
