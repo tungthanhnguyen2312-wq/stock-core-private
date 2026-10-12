@@ -16,13 +16,13 @@
   ],
   "current": {
     "milestone": "OWNER_DAILY_AI_HANDOFF_IMPORT_RECOVERY_20261012",
-    "state": "ACTIVE"
+    "state": "COMPLETE"
   },
   "queued_next": [],
   "milestones": [
     {
       "milestone_id": "OWNER_DAILY_AI_HANDOFF_IMPORT_RECOVERY_20261012",
-      "state": "ACTIVE",
+      "state": "COMPLETE",
       "starting_checkpoint": "4755d94a977f468a4122e40fba77850281582f42",
       "candidate_branch": "fix/owner-daily-ai-handoff-import-recovery-20261012",
       "dependencies": [
@@ -35,11 +35,12 @@
       "source_doc": "docs/owner_daily_ai_handoff_import_recovery_20261012_contract.md",
       "state_history": [
         "DEFERRED",
-        "ACTIVE"
+        "ACTIVE",
+        "COMPLETE"
       ],
-      "checkpoint": null,
-      "terminal_disposition": null,
-      "notes": "Owner-directed 2026-10-12 P0 OWNER_DAILY_AI_HANDOFF_IMPORT_RECOVERY_20261012: on qualified main 4755d94 (V3 merge d11b1016 plus the retained 2026-10-12 completed session), restore completed-session publication after the 2026-10-12 Owner Daily failed at phase 6 (ModuleNotFoundError daily_integrated_decision_brief). Forensic root cause, the narrowest correct code fix in the owner workflow, regression tests in hosted Producer CI, one feature branch and one PR. No merge, Owner Daily, production replay, AI handoff or Dashboard publication, provider calls, evidence/authority promotion, or change to sealed artifacts, Daily calculations or V1/V2 code digests; the reviewed frozen-guard amendment is limited to tools/run_owner_daily.py."
+      "checkpoint": "450d49634b57b0de89caef7226a1751e21bf8713",
+      "terminal_disposition": "LOCAL_IMPLEMENTATION_COMPLETE_NOT_PROMOTED",
+      "notes": "Owner-directed 2026-10-12 P0 OWNER_DAILY_AI_HANDOFF_IMPORT_RECOVERY_20261012: on qualified main 4755d94 (V3 merge d11b1016 plus the retained 2026-10-12 completed session), restore completed-session publication after the 2026-10-12 Owner Daily failed at phase 6 (ModuleNotFoundError daily_integrated_decision_brief). Forensic root cause, the narrowest correct code fix in the owner workflow, regression tests in hosted Producer CI, one feature branch and one PR. No merge, Owner Daily, production replay, AI handoff or Dashboard publication, provider calls, evidence/authority promotion, or change to sealed artifacts, Daily calculations or V1/V2 code digests; the reviewed frozen-guard amendment is limited to tools/run_owner_daily.py. Local closeout: Owner-directed 2026-10-12 P0 local closeout: relaunch-on-fast-forward corrective at 450d49634b57b0de89caef7226a1751e21bf8713; regression test in the hosted focused selection; focused CI-equivalent 6174 passed. No merge, Owner Daily, replay or publication.; no main release, authority promotion or successor."
     },
     {
       "milestone_id": "ROOT_HUB_DEPENDENCY_REDUCTION_V3",

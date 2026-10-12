@@ -5,7 +5,7 @@ Base/main `4755d94a977f468a4122e40fba77850281582f42`.
 Nothing below auto-starts; native standing admission required (AI_RULES 11).
 Facts: [ACTIVE_STATE.md](ACTIVE_STATE.md).
 
-## NOW — OWNER_DAILY_AI_HANDOFF_IMPORT_RECOVERY_20261012 (P0)
+## NOW — OWNER_DAILY_AI_HANDOFF_IMPORT_RECOVERY_20261012 (LOCAL)
 
 [Scope](owner_daily_ai_handoff_import_recovery_20261012_contract.md): relaunch
 after pull. Replay Owner-gated.
