@@ -2,7 +2,7 @@ import base64
 import hashlib
 
 from current_macro_regime import build as build_macro, session_context
-from vietnam_official_macro_evidence import build, content_identity, current_macro_observations
+from stocklookup_core.evidence.vietnam_official_macro_evidence import build, content_identity, current_macro_observations
 
 
 def raw(source_id, body, locator):

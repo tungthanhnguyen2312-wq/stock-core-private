@@ -4,7 +4,7 @@ from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path: sys.path.insert(0,str(ROOT))
 from field_temporal_contract import stable_id
-import current_common_shares_official_evidence_acquisition as c
+from stocklookup_core.evidence import current_common_shares_official_evidence_acquisition as c
 import tools.derive_current_common_shares_official_evidence_acquisition as runner
 class Tests(unittest.TestCase):
  def test_exact_cohort_manifest_and_identity(self):

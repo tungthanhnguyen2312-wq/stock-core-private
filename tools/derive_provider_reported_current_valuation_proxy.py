@@ -3,7 +3,7 @@ import argparse,json,sys
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:sys.path.insert(0,str(ROOT))
-from provider_reported_current_valuation_proxy import build_proxy
+from stocklookup_core.valuation.provider_reported_current_valuation_proxy import build_proxy
 P6=ROOT/'operations-review/p3f6-mva-provider-share-proxy-20260820/p3f6_mva_provider_share_proxy_artifact.json';P3=ROOT/'operations-review/p3f3-operational-valuation-input-scaleout-20260820/p3f3_operational_valuation_input_scaleout_artifact.json'
 def build():return build_proxy(json.loads(P6.read_text(encoding='utf-8')),json.loads(P3.read_text(encoding='utf-8')))
 def main(argv=None):

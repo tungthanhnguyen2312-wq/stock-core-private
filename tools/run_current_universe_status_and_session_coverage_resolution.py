@@ -18,7 +18,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from current_universe_status_and_session_coverage_resolution import build_artifact
+from stocklookup_core.evidence.current_universe_status_and_session_coverage_resolution import build_artifact
 
 DEFAULT_BREADTH_FOUNDATION = ROOT / "operations-review/current-market-universe-breadth-foundation-v1-20260823/current_market_universe_breadth_foundation_artifact.json"
 DEFAULT_P3F9B_SNAPSHOT = ROOT / "operations-review/p3f9b-market-wide-exact-session-scaleout-20260821/p3f9b_mva_exact_session_snapshot.json"

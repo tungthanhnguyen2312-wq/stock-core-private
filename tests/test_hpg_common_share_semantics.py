@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from current_common_shares_official_evidence_acquisition import qualify_retained_common_share_note
+from stocklookup_core.evidence.current_common_shares_official_evidence_acquisition import qualify_retained_common_share_note
 from current_common_shares_authority import resolve_ticker_share_authority, reconcile_subsequent_events
 from share_basis_event_promotion import entry_verdict
 from tests.test_b1_share_basis_event_promotion import ledger_entry

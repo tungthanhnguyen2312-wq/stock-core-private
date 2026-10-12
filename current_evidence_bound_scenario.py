@@ -218,7 +218,7 @@ def _qualified_condition(record: Mapping[str, Any], role: str, session: str) -> 
 
 
 def _context_specs():
-    from current_market_flow_positioning import content_identity as flow_identity
+    from stocklookup_core.research.current_market_flow_positioning import content_identity as flow_identity
     from current_market_sector_leadership_context import content_identity as sector_identity
     from current_financial_momentum_context import content_identity as financial_identity
     return {"flow": ("current_market_flow_positioning/v1", flow_identity, "records"),

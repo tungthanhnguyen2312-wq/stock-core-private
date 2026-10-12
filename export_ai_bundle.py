@@ -187,7 +187,7 @@ from market_wide_current_fundamental_research import (
 from stocklookup_core.valuation.market_wide_current_valuation_input_scaleout import (
     content_identity as market_wide_current_valuation_content_identity,
 )
-from sector_aware_relative_research import (
+from stocklookup_core.research.sector_aware_relative_research import (
     content_identity as sector_aware_relative_research_content_identity,
 )
 from current_evidence_bound_scenario import (
@@ -203,7 +203,7 @@ from daily_research_session_operations import (
     _identity as daily_research_session_operation_identity,
     assert_manifest_and_queue_match_registered_session,
 )
-from current_market_flow_positioning import (
+from stocklookup_core.research.current_market_flow_positioning import (
     content_identity as current_market_flow_positioning_content_identity,
 )
 from stocklookup_core.tactical.watchlist_tactical_entry_classifier import (

@@ -7,7 +7,7 @@ import unittest
 
 from entity_classification_contract import EntityClass
 from stocklookup_core.financial.multi_period_financial_panel import load_promoted_comparative_financial_citations
-from p3c_comparative_financial_evidence import (
+from stocklookup_core.financial.p3c_comparative_financial_evidence import (
     build_p3c_closeout,
     build_starting_gap_inventory,
     verify_retained_document_bytes,

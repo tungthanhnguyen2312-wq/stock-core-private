@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from current_share_basis_capability_reconciliation import build_reconciliation
+from stocklookup_core.evidence.current_share_basis_capability_reconciliation import build_reconciliation
 
 P3F4 = ROOT / "operations-review" / "p3f4-generic-current-share-authority-20260820" / "p3f4_generic_current_share_authority_artifact.json"
 P3F5 = ROOT / "operations-review" / "p3f5-current-share-promotion-review-20260820" / "p3f5_current_share_promotion_review_artifact.json"

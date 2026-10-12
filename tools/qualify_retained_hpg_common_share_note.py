@@ -10,7 +10,7 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from current_common_shares_official_evidence_acquisition import qualify_retained_common_share_note
+from stocklookup_core.evidence.current_common_shares_official_evidence_acquisition import qualify_retained_common_share_note
 from financial_evidence_currency_contract import DEFAULT_LANDING_ROOT
 from official_financial_ocr_table_evidence import DEFAULT_ENGINE, OCR_CONFIG, _parse_tsv
 

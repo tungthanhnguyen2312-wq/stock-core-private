@@ -1,6 +1,6 @@
 import unittest
 
-from current_market_flow_positioning import build, content_identity, prospective_context
+from stocklookup_core.research.current_market_flow_positioning import build, content_identity, prospective_context
 
 
 def obs(semantic, value, *, source="FHSC", status="ACQUIRED", session="2026-08-21"):

@@ -1,0 +1,35 @@
+{
+  "milestone": "ROOT_HUB_DEPENDENCY_REDUCTION_V3",
+  "baseline": "d53999ba07a080b7fae2104185c56cc9a55ce210",
+  "identity_seam": {
+    "hub": "field_temporal_contract",
+    "owner": "stocklookup_core.evidence.field_identity",
+    "primitives": [
+      "_sanitize_for_json",
+      "canonical_json",
+      "stable_id"
+    ],
+    "retained_hub_importers": [
+      "bounded_artifact_stream.py",
+      "canonical_daily_operation.py",
+      "daily_producer_pipeline.py",
+      "daily_research_session_operations.py",
+      "daily_session_level2_package.py",
+      "roadmap_execution_state.py",
+      "technical_structure_context.py"
+    ]
+  },
+  "relocations": {
+    "authoritative_current_common_shares.py": "stocklookup_core/evidence/authoritative_current_common_shares.py",
+    "canonical_market_evidence_integration.py": "stocklookup_core/evidence/canonical_market_evidence_integration.py",
+    "current_common_shares_official_evidence_acquisition.py": "stocklookup_core/evidence/current_common_shares_official_evidence_acquisition.py",
+    "current_market_flow_positioning.py": "stocklookup_core/research/current_market_flow_positioning.py",
+    "current_market_flow_positioning_scaleout.py": "stocklookup_core/research/current_market_flow_positioning_scaleout.py",
+    "current_share_basis_capability_reconciliation.py": "stocklookup_core/evidence/current_share_basis_capability_reconciliation.py",
+    "current_universe_status_and_session_coverage_resolution.py": "stocklookup_core/evidence/current_universe_status_and_session_coverage_resolution.py",
+    "p3c_comparative_financial_evidence.py": "stocklookup_core/financial/p3c_comparative_financial_evidence.py",
+    "provider_reported_current_valuation_proxy.py": "stocklookup_core/valuation/provider_reported_current_valuation_proxy.py",
+    "sector_aware_relative_research.py": "stocklookup_core/research/sector_aware_relative_research.py",
+    "vietnam_official_macro_evidence.py": "stocklookup_core/evidence/vietnam_official_macro_evidence.py"
+  }
+}

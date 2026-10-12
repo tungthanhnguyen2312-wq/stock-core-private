@@ -3,7 +3,7 @@ import json
 
 import pytest
 
-from current_universe_status_and_session_coverage_resolution import (
+from stocklookup_core.evidence.current_universe_status_and_session_coverage_resolution import (
     ACTIVE_LISTED_NO_QUALIFIED_SESSION_OBSERVATION,
     ACTIVE_LISTED_OBSERVED,
     INACTIVE_OR_DELISTED,

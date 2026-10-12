@@ -2,7 +2,7 @@ from __future__ import annotations
 import argparse, json, sys
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]; sys.path.insert(0,str(ROOT))
-from authoritative_current_common_shares import build_artifact, fetch_and_retain
+from stocklookup_core.evidence.authoritative_current_common_shares import build_artifact, fetch_and_retain
 
 def main() -> None:
  p=argparse.ArgumentParser(); p.add_argument('--session',default='2026-08-21'); p.add_argument('--output-root',type=Path,default=ROOT/'operations-review'/'authoritative-current-common-shares-qualification-and-scaleout-v1-20260824'); a=p.parse_args()

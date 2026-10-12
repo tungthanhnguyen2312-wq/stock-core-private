@@ -8,8 +8,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-import canonical_market_evidence_integration as canonical
-from current_market_flow_positioning import build, content_identity
+from stocklookup_core.evidence import canonical_market_evidence_integration as canonical
+from stocklookup_core.research.current_market_flow_positioning import build, content_identity
 
 
 def main() -> int:

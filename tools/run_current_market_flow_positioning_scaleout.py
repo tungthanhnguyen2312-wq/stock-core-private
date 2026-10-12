@@ -6,8 +6,8 @@ import sys
 from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]; sys.path.insert(0, str(ROOT))
 from current_evidence_bound_scenario import PREOPEN_47, WATCHLIST
-from current_market_flow_positioning import content_identity
-from current_market_flow_positioning_scaleout import build_scaleout
+from stocklookup_core.research.current_market_flow_positioning import content_identity
+from stocklookup_core.research.current_market_flow_positioning_scaleout import build_scaleout
 
 def main() -> int:
     parser = argparse.ArgumentParser(); parser.add_argument("--packets", nargs="+", required=True, type=Path); parser.add_argument("--descriptive", required=True, type=Path); parser.add_argument("--tactical", required=True, type=Path); parser.add_argument("--triage", required=True, type=Path); parser.add_argument("--output", required=True, type=Path); parser.add_argument("--session", default="2026-08-21")

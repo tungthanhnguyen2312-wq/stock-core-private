@@ -4,7 +4,7 @@ from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:sys.path.insert(0,str(ROOT))
 from field_temporal_contract import stable_id
-import provider_reported_current_valuation_proxy as p
+from stocklookup_core.valuation import provider_reported_current_valuation_proxy as p
 import tools.derive_provider_reported_current_valuation_proxy as runner
 class Tests(unittest.TestCase):
  def test_real_retained_proxy_preserves_identity_and_counts(self):

@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 
 from export_ai_bundle import attach_sector_aware_relative_research
-from sector_aware_relative_research import build, content_identity
+from stocklookup_core.research.sector_aware_relative_research import build, content_identity
 
 
 ROOT = Path(__file__).resolve().parents[1]
