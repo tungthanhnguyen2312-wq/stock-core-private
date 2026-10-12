@@ -39,7 +39,7 @@ import dnse_fhsc_market_composition_scaleout as fhsc_composition
 import dnse_fhsc_volume_basis as fhsc_volume_basis
 import dnse_ohlc_price_basis_capability as dnse_price_capability
 import dnse_provider_native_closed_ohlc as dnse_native_ohlc
-import market_capability_taxonomy as taxonomy
+from stocklookup_core.evidence import market_capability_taxonomy as taxonomy
 import market_data_source_authority as source_authority
 import market_volume_capability_matrix as vci_volume_capability
 import market_volume_value_semantic_contract as volume_value_contract

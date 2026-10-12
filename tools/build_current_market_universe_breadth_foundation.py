@@ -10,7 +10,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from current_market_universe_breadth_foundation import build_artifact
+from stocklookup_core.tactical.current_market_universe_breadth_foundation import build_artifact
 
 
 DEFAULT_QUALIFICATION = ROOT / "operations-review/market-wide-current-research-universe-qualification-v1-20260823/market_wide_current_research_universe_artifact.json"

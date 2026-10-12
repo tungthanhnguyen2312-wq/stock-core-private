@@ -1,4 +1,4 @@
-import prospective_pit_evidence_analysis as a
+from stocklookup_core.evidence import prospective_pit_evidence_analysis as a
 
 
 def test_bar_pair_classification():

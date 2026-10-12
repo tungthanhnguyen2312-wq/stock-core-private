@@ -7,7 +7,7 @@ import market_wide_current_liquidity_research as descriptive
 import official_liquidity_market_wide as wide
 from tests.test_execution_capacity_research import SESSION, _official, _policy
 from tests.test_official_liquidity_market_wide import _frame_row, _record, _slot
-import official_exchange_trading_statistics as official
+from stocklookup_core.evidence import official_exchange_trading_statistics as official
 
 
 def _descriptive(eligible=True):

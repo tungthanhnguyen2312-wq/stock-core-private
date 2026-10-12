@@ -19,7 +19,7 @@ from typing import Any, Iterable, Mapping, Sequence
 import stocklookup_core.decision.current_market_screening_opportunity_comparison_foundation as screening_module
 import market_wide_current_descriptive_research as descriptive_module
 import market_wide_current_fundamental_research as fundamental_module
-from market_regime_breadth_context import _descriptor
+from stocklookup_core.tactical.market_regime_breadth_context import _descriptor
 from mva_daily_research_bundle import LOOKBACK_SESSIONS, market_features
 import tactical_reversal_retrospective_validation as retained_replay
 import stocklookup_core.tactical.watchlist_tactical_entry_classifier as classifier

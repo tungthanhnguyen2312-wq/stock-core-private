@@ -35,13 +35,13 @@ from decimal import Decimal
 from typing import Any, Iterable, Mapping, Sequence
 
 import dnse_trades_liquidity_basis as dimension_basis
-import official_exchange_trading_statistics as official
-from governed_trading_session_calendar import (
+from stocklookup_core.evidence import official_exchange_trading_statistics as official
+from stocklookup_core.evidence.governed_trading_session_calendar import (
     CALENDAR_SOURCE_KIND,
     CONTRACT_VERSION as CALENDAR_CONTRACT_VERSION,
     GovernedTradingSessionCalendar,
 )
-from market_wide_historical_matched_liquidity import (
+from stocklookup_core.evidence.market_wide_historical_matched_liquidity import (
     COVERAGE_RESTRICTED_WINDOW,
     EXACT_WINDOW,
     INSUFFICIENT_WINDOW,

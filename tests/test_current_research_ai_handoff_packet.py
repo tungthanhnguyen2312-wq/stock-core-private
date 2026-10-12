@@ -14,7 +14,7 @@ from pathlib import Path
 
 import pytest
 
-import current_research_official_universe_scope as scope_module
+from stocklookup_core.evidence import current_research_official_universe_scope as scope_module
 from stocklookup_core.decision.current_research_ai_handoff_packet import (
     AI_BOUNDARY,
     CONTRACT_VERSION,

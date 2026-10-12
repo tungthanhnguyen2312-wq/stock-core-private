@@ -42,7 +42,7 @@ from current_common_shares_authority import (
     CORPORATE_ACTION_RECONCILIATION_REQUIRED,
     build_current_common_shares_authority,
 )
-from current_official_market_universe import _identity as official_identity
+from stocklookup_core.evidence.current_official_market_universe import _identity as official_identity
 from field_temporal_contract import stable_id
 from market_wide_current_shares_resolver import resolve_market_wide_shares
 from stocklookup_core.valuation.market_wide_current_valuation_input_scaleout import (

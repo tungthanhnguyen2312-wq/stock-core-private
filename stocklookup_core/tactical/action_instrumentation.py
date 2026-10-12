@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Any, Mapping
 
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parents[2]
 CONTRACT_VERSION = "action_instrumentation_and_invalidation_precision/v1"
 SHADOW_INPUT = ROOT / "operations-review" / "shadow-action-readiness-v1-20260828" / "artifact.json"
 TACTICAL_INPUT = ROOT / "operations-review" / "watchlist-tactical-entry-decision-v1-20260825" / "watchlist_tactical_entry_classifier_artifact.json"

@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-import action_instrumentation
+from stocklookup_core.tactical import action_instrumentation
 import stocklookup_core.financial.fundamental_thesis_invalidation_precision as precision
 import shadow_action_readiness
 

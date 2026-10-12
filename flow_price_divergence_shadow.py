@@ -13,7 +13,7 @@ import json
 from pathlib import Path
 from typing import Any, Callable, Mapping, Sequence
 
-from daily_session_completion_reference import registry_path as _session_registry_path
+from stocklookup_core.evidence.daily_session_completion_reference import registry_path as _session_registry_path
 from dnse_foreign_flow_store import build_series, observations_root
 
 CONTRACT_VERSION = "flow_price_divergence_shadow/v1"

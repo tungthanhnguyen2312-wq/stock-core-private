@@ -21,7 +21,7 @@ from pathlib import Path
 from typing import Any
 
 from atomic_io import atomic_copy_file
-import current_official_market_universe
+from stocklookup_core.evidence import current_official_market_universe
 
 CONTRACT_VERSION = "current_official_universe_evidence_retention/v1"
 

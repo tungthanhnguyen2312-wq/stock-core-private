@@ -13,7 +13,7 @@ from pathlib import Path
 import pytest
 
 from next_session_decision_brief import NextSessionDecisionBriefError, build_artifact
-from session_comparison_semantics import FITNESS_DEGRADED, FITNESS_FRESH, FITNESS_UNAVAILABLE, ROLE_DISTANT, ROLE_IMMEDIATE, ROLE_NONE
+from stocklookup_core.evidence.session_comparison_semantics import FITNESS_DEGRADED, FITNESS_FRESH, FITNESS_UNAVAILABLE, ROLE_DISTANT, ROLE_IMMEDIATE, ROLE_NONE
 
 
 def _write_operation(directory: Path, *, session: str) -> None:

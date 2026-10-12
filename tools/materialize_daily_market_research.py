@@ -43,7 +43,7 @@ from atomic_io import atomic_write_json, validate_json_file
 import canonical_market_evidence_integration as canonical_integration_module
 from field_temporal_contract import canonical_json, stable_id
 import market_analysis_artifact as research_consumer
-import market_capability_taxonomy as taxonomy
+from stocklookup_core.evidence import market_capability_taxonomy as taxonomy
 from tools import collect_market_evidence as collector_module
 
 RUN_SCHEMA_VERSION = "1.0.0"

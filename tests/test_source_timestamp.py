@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 import unittest
 
-from source_timestamp import resolve_source_datetime, source_timestamp
+from stocklookup_core.evidence.source_timestamp import resolve_source_datetime, source_timestamp
 from candle_scan import WATCHLIST
 
 

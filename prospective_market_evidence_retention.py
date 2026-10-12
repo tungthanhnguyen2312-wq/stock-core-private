@@ -89,7 +89,7 @@ def retain_market(exact_snapshot: Mapping[str, Any], *, session: str, root: Path
 
 
 def retain_universe(source_path: Path, *, root: Path) -> dict[str, Any]:
-    from current_official_market_universe import verify_retained_artifact
+    from stocklookup_core.evidence.current_official_market_universe import verify_retained_artifact
     from current_official_universe_evidence_retention import retain_evidence
     artifact = json.loads(source_path.read_bytes())
     verify_retained_artifact(artifact, label="PROSPECTIVE_UNIVERSE")
@@ -124,7 +124,7 @@ def retain_selected_listing_sources(source_root: Path, *, acquisition_session: s
     Existing source bridge and universe row semantics own normalization.
     """
     from official_corporate_event_incremental_acquisition import verify_successful_acquisition, _hnx_bridge
-    from current_official_market_universe import _source_row, _observed_by_source
+    from stocklookup_core.evidence.current_official_market_universe import _source_row, _observed_by_source
     verified = verify_successful_acquisition(source_root, acquisition_session)
     sources = {"hnx":_hnx_bridge(verified["hnx"]),"hose":verified["hose"]}
     records = []

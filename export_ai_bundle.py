@@ -61,7 +61,7 @@ except ImportError:
         emit_observability_event,
     )
 try:
-    from price_basis_contract import (
+    from stocklookup_core.evidence.price_basis_contract import (
         PriceBasis,
         VolumeBasis,
         qualify_price_basis,
@@ -82,7 +82,7 @@ from typing import Any, Callable, Iterable, Mapping
 
 import pandas as pd
 from shareholder_pipeline import DONE, calculate_major_shareholder_delta
-from live_universe import summary as live_universe_summary
+from stocklookup_core.evidence.live_universe import summary as live_universe_summary
 from freshness_history import evaluate_analysis_readiness, freshness_envelope, parse_timestamp
 from financial_canonicalization import canonicalize_financial_rows
 from official_evidence import load_cited_financial_records
@@ -126,7 +126,7 @@ from dnse_current_state_price_analytics import build_current_state_price_analyti
 from market_wide_current_liquidity_research import (
     content_identity as market_wide_current_liquidity_content_identity,
 )
-from market_wide_historical_matched_liquidity import (
+from stocklookup_core.evidence.market_wide_historical_matched_liquidity import (
     content_identity as market_wide_historical_matched_liquidity_content_identity,
 )
 from stocklookup_core.tactical.market_wide_relative_volume_research import (

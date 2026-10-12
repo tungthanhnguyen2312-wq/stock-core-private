@@ -440,7 +440,7 @@ class ExistingContractsUnchanged(unittest.TestCase):
     """12/13. Production price and volume contracts and actionability gates are untouched."""
 
     def test_existing_price_and_volume_contracts_still_fail_closed(self):
-        from price_basis_contract import qualify_price_basis, qualify_volume_basis
+        from stocklookup_core.evidence.price_basis_contract import qualify_price_basis, qualify_volume_basis
 
         price = qualify_price_basis("adjusted", verified=False)
         self.assertEqual(price["price_basis"], "unknown")
@@ -449,7 +449,7 @@ class ExistingContractsUnchanged(unittest.TestCase):
         self.assertEqual(volume["volume_basis"], "unknown")
 
     def test_the_vci_volume_declaration_is_unchanged_and_still_unknown(self):
-        import vci_volume_basis
+        from stocklookup_core.evidence import vci_volume_basis
 
         declaration = vci_volume_basis.declaration()
         self.assertEqual(declaration["volume_basis"], "unknown")

@@ -26,7 +26,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 import prospective_market_snapshot_contract as contract  # noqa: E402
-import prospective_pit_evidence_analysis as analysis  # noqa: E402
+from stocklookup_core.evidence import prospective_pit_evidence_analysis as analysis  # noqa: E402
 import raw_pit_authority_matrix as matrix  # noqa: E402
 from atomic_io import atomic_write_file, atomic_write_json  # noqa: E402
 

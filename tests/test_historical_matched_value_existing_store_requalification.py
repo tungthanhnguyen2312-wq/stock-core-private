@@ -1,6 +1,6 @@
 import pytest
 
-from historical_matched_value_existing_store_requalification import (build_artifact, fhsc_anchor_interpretation,
+from stocklookup_core.evidence.historical_matched_value_existing_store_requalification import (build_artifact, fhsc_anchor_interpretation,
                                                                        inventory_record)
 
 

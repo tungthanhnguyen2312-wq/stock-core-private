@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import unittest
 
-from action_instrumentation import build_artifact
+from stocklookup_core.tactical.action_instrumentation import build_artifact
 
 
 def _shadow(*, posture="INITIATE_CANDIDATE", gate="CONDITIONAL_SHADOW", fundamental=None):

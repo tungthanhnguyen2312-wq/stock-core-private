@@ -24,7 +24,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
 import vci_direct_basis_pilot as pilot  # noqa: E402
-import vci_intraday_pagination as pager  # noqa: E402
+from stocklookup_core.evidence import vci_intraday_pagination as pager  # noqa: E402
 
 EVIDENCE_ROOT = ROOT / "operations-review" / "vci-intraday-pagination-20260804"
 # Run 01 used an off-by-one cursor and is retained as the evidence that established the

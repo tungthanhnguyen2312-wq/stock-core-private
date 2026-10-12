@@ -13,7 +13,7 @@ ROOT = Path(__file__).resolve().parents[1]
 WORKSPACE = ROOT.parent
 sys.path.insert(0, str(ROOT))
 
-from historical_matched_value_existing_store_requalification import build_artifact, inventory_record
+from stocklookup_core.evidence.historical_matched_value_existing_store_requalification import build_artifact, inventory_record
 
 RAW_ORIGINAL = WORKSPACE / "operations-review" / "dnse-market-wide-trades-multi-session-v1-20260812"
 RAW_REPAIR = WORKSPACE / "operations-review" / "dnse-trades-targeted-repair-live-v1-20260815"

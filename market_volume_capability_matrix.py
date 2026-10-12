@@ -33,7 +33,7 @@ from __future__ import annotations
 
 from typing import Any, Mapping
 
-import vci_volume_composition as composition
+from stocklookup_core.evidence import vci_volume_composition as composition
 
 VERSION = "1.0.0"
 

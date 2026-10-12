@@ -18,7 +18,7 @@ from typing import Any, Mapping, Sequence
 
 import daily_session_level2_package as level2
 import liquidity_authority_contract as contract
-import official_exchange_trading_statistics as official
+from stocklookup_core.evidence import official_exchange_trading_statistics as official
 import official_liquidity_market_wide as wide
 from atomic_io import atomic_write_json
 

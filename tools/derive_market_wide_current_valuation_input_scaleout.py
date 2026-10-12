@@ -53,7 +53,7 @@ def _verify_sources(price: dict, fundamental: dict, shares: dict, p3e: dict, off
     if fundamental_content_identity(fundamental)["artifact_sha256"] != fundamental.get("artifact_sha256"):
         raise ValueError("SOURCE_SELF_VERIFICATION_FAILED:fundamental")
     if official is not None:
-        from current_official_market_universe import _identity as official_identity
+        from stocklookup_core.evidence.current_official_market_universe import _identity as official_identity
         expected = official_identity(official)
         if expected["artifact_sha256"] != official.get("artifact_sha256"):
             raise ValueError("SOURCE_SELF_VERIFICATION_FAILED:official_universe")

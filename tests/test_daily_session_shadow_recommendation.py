@@ -7,7 +7,7 @@ import unittest
 import pytest
 from pathlib import Path
 
-import action_instrumentation
+from stocklookup_core.tactical import action_instrumentation
 import daily_session_shadow_recommendation
 import stocklookup_core.financial.fundamental_thesis_invalidation_precision as fundamental_thesis_invalidation_precision
 import shadow_action_readiness

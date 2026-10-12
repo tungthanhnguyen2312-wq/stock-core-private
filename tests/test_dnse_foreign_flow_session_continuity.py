@@ -17,7 +17,7 @@ import unittest
 from pathlib import Path
 
 import dnse_foreign_flow_store as store
-from daily_session_completion_reference import registry_path
+from stocklookup_core.evidence.daily_session_completion_reference import registry_path
 from dnse_foreign_flow_capability import normalize_record
 
 

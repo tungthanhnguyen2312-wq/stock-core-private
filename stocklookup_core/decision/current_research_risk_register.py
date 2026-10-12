@@ -12,7 +12,7 @@ import json
 from collections import Counter
 from typing import Any, Mapping
 
-import current_official_market_universe as official_universe_module
+from stocklookup_core.evidence import current_official_market_universe as official_universe_module
 from current_corporate_event_context import content_identity as event_content_identity
 from current_financial_momentum_context import content_identity as financial_content_identity
 from current_market_sector_leadership_context import content_identity as leadership_content_identity

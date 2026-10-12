@@ -18,7 +18,7 @@ import volume_and_flow_context_v2 as context
 import stocklookup_core.tactical.contextual_technical_dispatch as dispatch
 import technical_relationship_view as bridge
 from bounded_artifact_stream import header, source_hash, stream_artifact
-from daily_session_completion_reference import load_qualified_completed_sessions
+from stocklookup_core.evidence.daily_session_completion_reference import load_qualified_completed_sessions
 
 
 def trading_date_index(runtime_root):

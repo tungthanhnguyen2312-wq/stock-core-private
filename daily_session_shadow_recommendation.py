@@ -30,7 +30,7 @@ import json
 from pathlib import Path
 from typing import Any, Mapping
 
-import action_instrumentation
+from stocklookup_core.tactical import action_instrumentation
 import stocklookup_core.financial.fundamental_market_opportunity_ranking as fundamental_market_opportunity_ranking
 import stocklookup_core.financial.fundamental_thesis_invalidation_precision as fundamental_thesis_invalidation_precision
 import shadow_action_readiness

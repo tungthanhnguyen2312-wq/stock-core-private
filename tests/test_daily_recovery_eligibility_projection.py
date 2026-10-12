@@ -9,7 +9,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-import current_market_universe_breadth_foundation as breadth_mod
+from stocklookup_core.tactical import current_market_universe_breadth_foundation as breadth_mod
 import current_universe_status_and_session_coverage_resolution as status_mod
 import daily_recovery_eligibility_projection as project
 

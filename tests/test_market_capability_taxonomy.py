@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import unittest
 
-import market_capability_taxonomy as taxonomy
+from stocklookup_core.evidence import market_capability_taxonomy as taxonomy
 
 
 # The owner-specified field list, transcribed independently of SEMANTIC_FIELDS so this test

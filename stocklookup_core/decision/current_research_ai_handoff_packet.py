@@ -64,7 +64,7 @@ import hashlib
 import json
 from typing import Any, Mapping, Sequence
 
-import current_research_official_universe_scope as current_research_official_universe_scope_module
+from stocklookup_core.evidence import current_research_official_universe_scope as current_research_official_universe_scope_module
 import price_basis_feature_fitness
 
 CONTRACT_VERSION = "current_research_ai_handoff_packet/v1"

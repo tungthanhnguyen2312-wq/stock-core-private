@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from datetime import datetime, timezone, timedelta
 
-from dnse_closed_session_ohlc_representation import (
+from stocklookup_core.evidence.dnse_closed_session_ohlc_representation import (
     FIELDS, IDENTITY_TRANSFORMATION, parse_raw_ohlc_bytes, uniform_anchor,
 )
 from stocklookup_core.evidence.provider_reference_reconciliation import (

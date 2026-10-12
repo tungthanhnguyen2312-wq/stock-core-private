@@ -22,7 +22,7 @@ from decimal import Decimal, InvalidOperation
 from typing import Any, Iterable, Mapping, Sequence
 
 from field_temporal_contract import stable_id
-from historical_matched_traded_value_authority import (
+from stocklookup_core.evidence.historical_matched_traded_value_authority import (
     KNOWN_BOARDS,
     MATCHED_VALUE_FORMULA,
     QUALIFIED_BOARD,

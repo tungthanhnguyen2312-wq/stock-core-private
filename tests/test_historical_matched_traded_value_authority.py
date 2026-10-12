@@ -1,4 +1,4 @@
-from historical_matched_traded_value_authority import (
+from stocklookup_core.evidence.historical_matched_traded_value_authority import (
     MATCHED_VALUE_FORMULA,
     adv20_status,
     qualify_anchor_rows,

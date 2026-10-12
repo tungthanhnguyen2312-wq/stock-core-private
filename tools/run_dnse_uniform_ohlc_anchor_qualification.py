@@ -14,7 +14,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from dnse_access import BASE_URL, auth_headers, credentials_for_request
-from dnse_closed_session_ohlc_representation import (  # noqa: E402
+from stocklookup_core.evidence.dnse_closed_session_ohlc_representation import (  # noqa: E402
     CONTRACT_VERSION, FIELDS, IDENTITY_TRANSFORMATION, parse_raw_ohlc_bytes, uniform_anchor,
 )
 from dnse_market_data import resolve_endpoint  # noqa: E402

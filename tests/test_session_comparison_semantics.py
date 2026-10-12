@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from session_comparison_semantics import (
+from stocklookup_core.evidence.session_comparison_semantics import (
     FITNESS_DEGRADED,
     FITNESS_FRESH,
     FITNESS_UNAVAILABLE,

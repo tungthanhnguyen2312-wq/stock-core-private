@@ -25,7 +25,7 @@ from __future__ import annotations
 from collections import Counter
 from typing import Any, Mapping
 
-from action_instrumentation import _boundary
+from stocklookup_core.tactical.action_instrumentation import _boundary
 
 CONTRACT_VERSION = "tactical_confirmation_invalidation_boundaries/v1"
 MILESTONE = "TACTICAL_AND_BEHAVIORAL_ENGINE_V2"

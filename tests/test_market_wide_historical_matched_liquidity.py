@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from market_wide_historical_matched_liquidity import (
+from stocklookup_core.evidence.market_wide_historical_matched_liquidity import (
     COVERAGE_RESTRICTED_WINDOW,
     EXACT_WINDOW,
     INSUFFICIENT_WINDOW,

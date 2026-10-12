@@ -35,7 +35,7 @@ import hashlib
 import json
 from typing import Any, Mapping, Sequence
 
-import market_capability_taxonomy as taxonomy
+from stocklookup_core.evidence import market_capability_taxonomy as taxonomy
 import price_representation_contract as price_contract
 from field_temporal_contract import canonical_json, stable_id
 
