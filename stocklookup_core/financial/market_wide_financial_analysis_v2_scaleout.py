@@ -15,7 +15,7 @@ from collections import Counter, defaultdict
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
-import canonical_financial_facts as canonical_facts
+from stocklookup_core.financial import canonical_financial_facts as canonical_facts
 import stocklookup_core.financial.financial_analysis_engine_v2 as engine
 import stocklookup_core.financial.financial_flow_semantics_ttm_bridge as qualified_flow
 

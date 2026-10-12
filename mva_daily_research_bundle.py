@@ -19,7 +19,7 @@ from typing import Any, Mapping, Sequence
 
 from field_temporal_contract import stable_id
 from market_data_contracts import FeatureStatus
-import mva_provider_share_proxy as proxy
+from stocklookup_core.valuation import mva_provider_share_proxy as proxy
 import session_bar_integrity
 import stocklookup_core.tactical.tactical_reference_window as reference_window
 

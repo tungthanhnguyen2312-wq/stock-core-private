@@ -43,7 +43,7 @@ from pathlib import Path
 from typing import Any, Iterable, Mapping
 
 from atomic_io import atomic_write_file, atomic_write_json
-from raw_financial_observations import (
+from stocklookup_core.financial.raw_financial_observations import (
     PayloadNameError,
     SCHEMA_VERSION as OBSERVATION_SCHEMA_VERSION,
     STATEMENT_FAMILIES,

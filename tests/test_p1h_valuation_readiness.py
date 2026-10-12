@@ -20,7 +20,7 @@ SESSION = "2026-07-30"
 
 
 from stocklookup_core.evidence import share_transition_bridge as share_bridge  # noqa: E402
-import market_wide_calculation_readiness as readiness  # noqa: E402
+from stocklookup_core.financial import market_wide_calculation_readiness as readiness  # noqa: E402
 from canonical_financial_bundle_section import attach, _resolve_session_inputs  # noqa: E402
 from tools.operate_stocklookup import Operator  # noqa: E402
 

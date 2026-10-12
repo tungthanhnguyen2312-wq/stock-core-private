@@ -1,7 +1,7 @@
 import inspect
 from pathlib import Path
 
-import canonical_financial_facts as facts
+from stocklookup_core.financial import canonical_financial_facts as facts
 import financial_fact_coverage_recovery as ffcr
 import market_wide_current_fundamental_research as mwcfr
 import provider_financial_semantic_basis as pfsb

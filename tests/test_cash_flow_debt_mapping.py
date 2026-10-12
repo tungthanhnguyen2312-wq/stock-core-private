@@ -1,6 +1,6 @@
 import unittest
 
-from cash_flow_debt_mapping import canonicalize_items
+from stocklookup_core.financial.cash_flow_debt_mapping import canonicalize_items
 
 
 def item(code, value, statement="cash_flow", **extra):

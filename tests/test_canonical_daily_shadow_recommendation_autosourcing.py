@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 
 import daily_producer_pipeline as producer
-import daily_session_shadow_recommendation as daily_shadow
+from stocklookup_core.decision import daily_session_shadow_recommendation as daily_shadow
 import stocklookup_core.financial.fundamental_research_cohort_selection as cohort_selection
 
 

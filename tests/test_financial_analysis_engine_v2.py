@@ -147,7 +147,7 @@ def test_free_cash_flow_proxy_is_blocked_without_qualified_capex():
 
 
 def test_free_cash_flow_proxy_uses_only_existing_canonical_ocf_and_capex_routes():
-    import canonical_financial_facts as canonical
+    from stocklookup_core.financial import canonical_financial_facts as canonical
 
     routes = {
         metric: {candidate.raw_item_id for candidate in canonical.METRIC_REGISTRY[metric]["candidates"]}
@@ -512,7 +512,7 @@ def test_current_liabilities_is_never_substituted_for_debt():
 
 
 def test_finance_lease_metrics_are_not_folded_into_total_interest_bearing_debt():
-    import canonical_financial_facts as canonical
+    from stocklookup_core.financial import canonical_financial_facts as canonical
     definition = canonical.METRIC_REGISTRY["total_interest_bearing_debt"]
     assert set(definition["derived_from"]) == {"short_term_interest_bearing_debt", "long_term_interest_bearing_debt"}
     assert "short_term_finance_lease_liabilities" not in definition["derived_from"]

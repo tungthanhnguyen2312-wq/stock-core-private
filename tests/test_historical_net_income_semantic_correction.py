@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 
 from canonical_fact_store import load_official_citations
-from canonical_financial_facts import METRIC_REGISTRY
+from stocklookup_core.financial.canonical_financial_facts import METRIC_REGISTRY
 from financial_statement_template_recognizer import (
     CANONICAL_ATTRIBUTABLE_NET_INCOME_SEMANTIC,
     CANONICAL_NET_INCOME_SEMANTIC,

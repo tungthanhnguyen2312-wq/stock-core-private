@@ -15,7 +15,7 @@ from __future__ import annotations
 
 from typing import Any, Mapping
 
-from canonical_financial_facts import STATUS_QUALIFIED
+from stocklookup_core.financial.canonical_financial_facts import STATUS_QUALIFIED
 from stocklookup_core.financial.qualification_states import QUALIFIED as POLICY_QUALIFIED
 from financial_evidence_currency_contract import (
     CONTRACT_VERSION,

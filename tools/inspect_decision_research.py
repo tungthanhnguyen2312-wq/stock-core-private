@@ -218,7 +218,7 @@ def inspect(args):
             raise ValueError("INVALID_TICKER")
         historical = None
         if args.panel:
-            import historical_temporal_research_panel as panel
+            from stocklookup_core.research import historical_temporal_research_panel as panel
             historical = _json(paths["panel"])
             if historical.get("contract_version") != panel.CONTRACT_VERSION or not isinstance(historical.get("rows"), list):
                 raise ValueError("PANEL_CONTRACT_MISMATCH")

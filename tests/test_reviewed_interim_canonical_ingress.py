@@ -348,7 +348,7 @@ def test_overlay_loader_accepts_rows_and_keeps_missing_overlay_empty(tmp_path):
 
 
 # ---- net_income vs attributable_net_income identity corrective --------------------------------
-from canonical_financial_facts import METRIC_REGISTRY  # noqa: E402
+from stocklookup_core.financial.canonical_financial_facts import METRIC_REGISTRY  # noqa: E402
 import financial_evidence_currency_contract as currency_contract  # noqa: E402
 from official_financial_ocr_table_evidence import STANDARD_FACT_RULES, row_label_supports_metric  # noqa: E402
 

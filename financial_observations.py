@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable, Mapping
 
-from cash_flow_debt_mapping import canonicalize_items
+from stocklookup_core.financial.cash_flow_debt_mapping import canonicalize_items
 from provider_execution_guard import require_governed_provider_execution
 
 

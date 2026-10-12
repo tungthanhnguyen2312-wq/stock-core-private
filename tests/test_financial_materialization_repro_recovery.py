@@ -60,7 +60,7 @@ sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "tests"))
 
 import canonical_fact_store as fact_store  # noqa: E402
-import canonical_financial_facts as facts  # noqa: E402
+from stocklookup_core.financial import canonical_financial_facts as facts  # noqa: E402
 import raw_financial_store as raw_store  # noqa: E402
 import stocklookup_core.financial.market_wide_financial_analysis_v2_scaleout as v2_scaleout  # noqa: E402
 from entity_classification_contract import (  # noqa: E402

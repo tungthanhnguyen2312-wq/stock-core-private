@@ -48,7 +48,7 @@ from stocklookup_core.financial.financial_entity_applicability import (
     evaluate_ticker,
     load_entity_profiles,
 )
-from raw_financial_observations import STATEMENT_FAMILIES, sha256_file
+from stocklookup_core.financial.raw_financial_observations import STATEMENT_FAMILIES, sha256_file
 from raw_financial_store import load_state, read_shard, shard_path
 from statement_taxonomy_sidecar import load_sidecar, taxonomy_index
 

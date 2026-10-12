@@ -20,7 +20,7 @@ if str(ROOT) not in sys.path:
 
 from field_temporal_contract import stable_id
 import market_wide_current_shares_resolver as shares_resolver
-import mva_provider_share_proxy as proxy
+from stocklookup_core.valuation import mva_provider_share_proxy as proxy
 from runtime_paths import runtime_root as resolve_runtime_root
 
 VERSION = "1.0.0"

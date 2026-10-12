@@ -63,7 +63,7 @@ from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
-from canonical_financial_facts import METRIC_REGISTRY, STATUS_PROVIDER_REPORTED, STATUS_QUALIFIED
+from stocklookup_core.financial.canonical_financial_facts import METRIC_REGISTRY, STATUS_PROVIDER_REPORTED, STATUS_QUALIFIED
 from field_temporal_contract import stable_id
 
 CONTRACT_VERSION = "provider_financial_semantic_basis/v1"

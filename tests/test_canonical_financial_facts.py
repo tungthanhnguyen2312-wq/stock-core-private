@@ -23,9 +23,9 @@ sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "tests"))
 
 import canonical_fact_store as fact_store  # noqa: E402
-import canonical_financial_facts as facts  # noqa: E402
+from stocklookup_core.financial import canonical_financial_facts as facts  # noqa: E402
 from stocklookup_core.financial import canonical_financial_resolvers as resolvers  # noqa: E402
-import market_wide_calculation_readiness as readiness  # noqa: E402
+from stocklookup_core.financial import market_wide_calculation_readiness as readiness  # noqa: E402
 from _runtime_root import runtime_path  # noqa: E402
 
 

@@ -64,7 +64,7 @@ def test_three_evidence_tiers_are_distinct_string_values():
 
 
 def test_tier_names_do_not_collide_with_any_existing_tier_or_status_vocabulary():
-    import canonical_financial_facts as cff
+    from stocklookup_core.financial import canonical_financial_facts as cff
     import market_wide_current_fundamental_research as mwcfr
     import provider_financial_semantic_basis as pfsb
 
