@@ -24,7 +24,7 @@ ROOT = Path(__file__).resolve().parents[1]
 import sys  # noqa: E402
 sys.path.insert(0, str(ROOT))
 
-import velocity_flow_price_presentation_projection as velocity_flow_price  # noqa: E402
+from stocklookup_core.decision import velocity_flow_price_presentation_projection as velocity_flow_price  # noqa: E402
 from stocklookup_core.decision.investment_decision_workspace_projection import content_identity  # noqa: E402
 from owner_research_focus import load_owner_research_focus  # noqa: E402
 

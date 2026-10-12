@@ -15,7 +15,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-import analysis_lane_eligibility as ale  # noqa: E402
+from stocklookup_core.research import analysis_lane_eligibility as ale  # noqa: E402
 
 
 def _lane(results: list[dict], name: str) -> dict:

@@ -1,6 +1,6 @@
 from pathlib import Path
 import json
-from strategy_research_eligibility import build,review_overlay
+from stocklookup_core.research.strategy_research_eligibility import build,review_overlay
 from run_sector_relative_research_context import run as run_relative_context
 from run_catalyst_event_research_context import run as run_event_context
 from run_price_structure_breakout_context import run as run_price_structure

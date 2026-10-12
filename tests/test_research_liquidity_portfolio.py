@@ -1,5 +1,5 @@
 import pytest
-from research_liquidity_portfolio import build_liquidity_research_context, build_portfolio_research_context
+from stocklookup_core.portfolio.research_liquidity_portfolio import build_liquidity_research_context, build_portfolio_research_context
 
 def risk():
     return {"artifact_identity":"risk:x", "metadata":{"as_of_session":"2026-08-25"}, "ticker_risk_context":{"AAA":{"sector":"tech","volatility_context":{"L20":{"annualized_research_volatility":.2}}},"BBB":{"sector":"bank","volatility_context":{"L20":{"annualized_research_volatility":.3}}}}, "joint_matrix_context":{"L20":{"status":"JOINT_MATRIX_BLOCKED_T_RELATIVE_TO_N","included_tickers":["AAA","BBB"]},"L60":{"status":"JOINT_MATRIX_READY","included_tickers":["AAA","BBB"]}}}

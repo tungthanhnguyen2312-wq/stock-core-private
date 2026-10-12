@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from typing import Any, Mapping
 
-import indicator_metric_availability as availability
+from stocklookup_core.decision import indicator_metric_availability as availability
 
 CONTRACT_VERSION = "indicator_metric_display_state/v1"
 

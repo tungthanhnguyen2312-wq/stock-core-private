@@ -18,7 +18,7 @@ import json
 import unittest
 from pathlib import Path
 
-import analysis_lane_eligibility as lanes
+from stocklookup_core.research import analysis_lane_eligibility as lanes
 import market_volume_capability_matrix as capability
 import stocklookup_core.evidence.official_authority_candidates as candidates
 import risk_liquidity

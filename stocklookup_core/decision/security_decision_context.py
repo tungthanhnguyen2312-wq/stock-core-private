@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import Any, Mapping
 
-from shadow_security_recommendation import LABELS
+from stocklookup_core.decision.shadow_security_recommendation import LABELS
 from stocklookup_core.tactical.watchlist_tactical_entry_classifier import ENTRY_ACTION_BY_ENTRY_STATE
 
 CONTRACT_VERSION = "security_decision_context/v1"

@@ -12,7 +12,7 @@ if str(ROOT) not in sys.path:
 
 from stocklookup_core.tactical import action_instrumentation
 import stocklookup_core.financial.fundamental_thesis_invalidation_precision as precision
-import shadow_action_readiness
+from stocklookup_core.research import shadow_action_readiness
 
 
 CASE_INPUT = ROOT / "operations-review" / "thesis-catalyst-downside-and-dual-invalidation-v1-20260828" / "artifact.json"

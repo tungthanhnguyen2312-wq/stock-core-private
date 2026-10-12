@@ -14,7 +14,7 @@ import re
 from typing import Any, Mapping
 
 from atomic_io import atomic_write_file, validate_json_file
-from qualified_research_delta import compare
+from stocklookup_core.research.qualified_research_delta import compare
 
 
 SCHEMA_VERSION = "1.0.0"

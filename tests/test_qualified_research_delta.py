@@ -1,7 +1,7 @@
 import copy
 import unittest
 
-from qualified_research_delta import attach, compare
+from stocklookup_core.research.qualified_research_delta import attach, compare
 
 
 def brief(ticker="HPG", entity_type="corporate"):

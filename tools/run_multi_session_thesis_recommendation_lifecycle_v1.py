@@ -2,7 +2,7 @@ from __future__ import annotations
 import argparse, hashlib, json, sys
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1];sys.path.insert(0,str(ROOT))
-from multi_session_thesis_recommendation_lifecycle import build_artifact
+from stocklookup_core.research.multi_session_thesis_recommendation_lifecycle import build_artifact
 def load(path: Path | None):
     if path is None:return None
     raw=path.read_bytes(); value=json.loads(raw); value["source_artifact_sha256"]=hashlib.sha256(raw).hexdigest(); return value

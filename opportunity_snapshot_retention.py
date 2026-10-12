@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Mapping
 from opportunity_snapshot import IDENTITY_VERSION, SCENARIO_CONTRACT_VERSION, VERSION, _canonical
-from opportunity_ranking import VERSION as RANKING_VERSION
+from stocklookup_core.decision.opportunity_ranking import VERSION as RANKING_VERSION
 
 RETENTION_VERSION="1.0.0"
 class RetentionError(ValueError): pass

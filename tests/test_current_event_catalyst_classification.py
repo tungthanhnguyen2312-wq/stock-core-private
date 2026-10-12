@@ -1,7 +1,7 @@
 """Focused contract tests for current event catalyst semantics."""
 from __future__ import annotations
 
-import current_event_catalyst_classification as cec
+from stocklookup_core.research import current_event_catalyst_classification as cec
 import stocklookup_core.decision.current_thesis_case_context as thesis
 import stocklookup_core.valuation.current_valuation_opportunity_integration as integration
 

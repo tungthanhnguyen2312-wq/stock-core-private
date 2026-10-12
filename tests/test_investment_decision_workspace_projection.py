@@ -311,7 +311,7 @@ def test_display_metrics_bridge_present_and_never_omits_a_registered_slot():
     """DASHBOARD_INVESTOR_FIRST_PRESENTATION_SIMPLIFICATION_V1: every card gets an additive
     display_metrics block from indicator_metric_display_state.py, covering every investor
     -facing metric slot regardless of whether the underlying value is available."""
-    import indicator_metric_display_state as display
+    from stocklookup_core.decision import indicator_metric_display_state as display
 
     opportunity, decision = real_pair(tickers=("AAA",))
     out = build_artifacts(opportunity_artifact=opportunity, decision_artifact=decision, requested_at="t")
@@ -849,8 +849,8 @@ def test_velocity_session_mismatch_falls_back_to_insufficient_evidence():
 # primary checkout, never a freshly created isolated milestone worktree.
 # ---------------------------------------------------------------------------
 
-import indicator_metric_availability as _availability  # noqa: E402
-import indicator_metric_display_state as _display_state  # noqa: E402
+from stocklookup_core.decision import indicator_metric_availability as _availability  # noqa: E402
+from stocklookup_core.decision import indicator_metric_display_state as _display_state  # noqa: E402
 
 _OPS = Path(__file__).resolve().parents[1] / "operations-review"
 _REAL_WORKSPACE_PATH = (

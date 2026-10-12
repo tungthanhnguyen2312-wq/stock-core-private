@@ -56,7 +56,7 @@ import hashlib
 import json
 from typing import Any, Mapping
 
-from current_event_catalyst_classification import (
+from stocklookup_core.research.current_event_catalyst_classification import (
     METHOD_VERSION as CATALYST_METHOD_VERSION,
     NEGATIVE_CATALYST,
     POSITIVE_CATALYST,

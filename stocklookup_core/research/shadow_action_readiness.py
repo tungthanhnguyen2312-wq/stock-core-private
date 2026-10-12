@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Any, Mapping
 
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parents[2]
 CONTRACT_VERSION = "shadow_action_readiness/v1"
 CASE_INPUT = ROOT / "operations-review" / "thesis-catalyst-downside-and-dual-invalidation-v1-20260828" / "artifact.json"
 STRONG_INITIATE_STATES = frozenset({"BREAKOUT_READY", "EARLY_REVERSAL_CANDIDATE"})

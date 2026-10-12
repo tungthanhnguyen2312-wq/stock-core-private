@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from multi_session_thesis_recommendation_lifecycle import build_artifact
+from stocklookup_core.research.multi_session_thesis_recommendation_lifecycle import build_artifact
 
 
 def context(*, priority="MONITOR", tactical="BASE_BUILDING", recommendation=None, invalidation=None, strategy="ELIGIBLE", scenario="SCENARIO_READY"):

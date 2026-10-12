@@ -11,7 +11,7 @@ from stocklookup_core.decision.current_daily_decision_research_product import (
 )
 from export_ai_bundle import attach_current_daily_decision_research_product
 from polymorphic_current_strategy_classification import build as build_strategy
-from shadow_security_recommendation import content_identity as shadow_content_identity
+from stocklookup_core.decision.shadow_security_recommendation import content_identity as shadow_content_identity
 
 
 ROOT = Path(__file__).resolve().parents[1]

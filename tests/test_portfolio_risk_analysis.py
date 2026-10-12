@@ -1,6 +1,6 @@
 import copy, json, unittest
-from historical_decision_analysis import evaluate_historical_decision_analysis
-from portfolio_risk_analysis import evaluate_portfolio_risk_analysis
+from stocklookup_core.research.historical_decision_analysis import evaluate_historical_decision_analysis
+from stocklookup_core.portfolio.portfolio_risk_analysis import evaluate_portfolio_risk_analysis
 
 def entry(ticker="HPG",entity="corporate",capex=True):
  r=lambda metric,value:{"canonical_metric":metric,"value":value,"quality_state":"available","period_identity":{"period":"2024"},"source":"x","observation_ids":[metric],"evidence":{"evidence_id":"e","citation_id":"c"}}

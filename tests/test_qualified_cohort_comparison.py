@@ -2,7 +2,7 @@ import copy
 import json
 import unittest
 
-from qualified_cohort_comparison import QUALIFIED_COHORT, build
+from stocklookup_core.research.qualified_cohort_comparison import QUALIFIED_COHORT, build
 
 
 def metric(value=None, *, status="available", reasons=None):

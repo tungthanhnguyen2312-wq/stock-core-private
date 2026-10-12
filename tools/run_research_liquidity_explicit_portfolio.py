@@ -16,7 +16,7 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from research_liquidity_portfolio import build_liquidity_research_context, build_portfolio_research_context  # noqa: E402
+from stocklookup_core.portfolio.research_liquidity_portfolio import build_liquidity_research_context, build_portfolio_research_context  # noqa: E402
 
 DEFAULT_RISK = ROOT / "operations-review/current-portfolio-risk-research-v1-20260829/artifact.json"
 DEFAULT_DESCRIPTIVE = ROOT / "operations-review/market-wide-current-technical-coverage-scaleout-v1-20260823/market_wide_current_descriptive_research_artifact.json"

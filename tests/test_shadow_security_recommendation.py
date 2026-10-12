@@ -6,7 +6,7 @@ import unittest
 from pathlib import Path
 
 from export_ai_bundle import attach_shadow_security_recommendation, load_shadow_security_recommendation_artifact
-from shadow_security_recommendation import LABELS, build_artifact, content_identity
+from stocklookup_core.decision.shadow_security_recommendation import LABELS, build_artifact, content_identity
 
 
 ROOT = Path(__file__).resolve().parents[1]

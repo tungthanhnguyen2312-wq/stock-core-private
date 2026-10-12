@@ -8,7 +8,7 @@ from typing import Any, Mapping
 from stocklookup_core.evidence.field_identity import stable_id
 from stocklookup_core.decision.current_research_decision_packet_product import attach_shadow_to_daily_product, markdown as packet_shadow_markdown
 from owner_research_focus import broader_watchlist, owner_focus_tickers
-from shadow_security_recommendation import content_identity as shadow_security_recommendation_content_identity
+from stocklookup_core.decision.shadow_security_recommendation import content_identity as shadow_security_recommendation_content_identity
 
 CONTRACT_VERSION = "current_daily_decision_research_product/v2"
 SHADOW_SECURITY_RECOMMENDATION_CONTRACT = "shadow_security_recommendation/v1"

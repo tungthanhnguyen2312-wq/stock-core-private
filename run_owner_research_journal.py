@@ -4,7 +4,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from owner_research_journal import build, load_events, markdown
+from stocklookup_core.research.owner_research_journal import build, load_events, markdown
 
 ROOT = Path(__file__).resolve().parent
 PACK = ROOT / "operations-review/human-research-review-pack-v1-20260820/human_research_review_pack_artifact.json"

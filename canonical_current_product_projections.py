@@ -88,7 +88,7 @@ import stocklookup_core.decision.investment_decision_workspace_projection as inv
 from stocklookup_core.financial import market_wide_fundamental_feature_store
 import screener_master_projection
 import stocklookup_core.tactical.tactical_behavior_context as tactical_behavior_context
-import velocity_flow_price_presentation_projection
+from stocklookup_core.decision import velocity_flow_price_presentation_projection
 from owner_research_focus import load_owner_research_focus
 from runtime_paths import runtime_root
 

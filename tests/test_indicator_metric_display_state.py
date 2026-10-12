@@ -11,8 +11,8 @@ from pathlib import Path
 
 import pytest
 
-import indicator_metric_availability as availability
-import indicator_metric_display_state as display
+from stocklookup_core.decision import indicator_metric_availability as availability
+from stocklookup_core.decision import indicator_metric_display_state as display
 
 ROOT = Path(__file__).resolve().parents[1]
 DASHBOARD = ROOT.parent / "market-dashboard"
