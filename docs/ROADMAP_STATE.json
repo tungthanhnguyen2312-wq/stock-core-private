@@ -4383,5 +4383,270 @@
       "reference_checkpoint": "9575cb04c899696a02b22ba9dfcfed9a4961cf2d"
     }
   ],
-  "successor_disposition": "OWNER_SELECTED_OFFLINE_EVIDENCE_NO_AUTOMATIC_SUCCESSOR"
+  "successor_disposition": "OWNER_SELECTED_OFFLINE_EVIDENCE_NO_AUTOMATIC_SUCCESSOR",
+  "development_control": {
+    "schema": "stocklookup_development_lanes/1",
+    "revision": 10,
+    "history": [
+      {
+        "operation": "INIT",
+        "owner_note": "Owner authorizes OFFICIAL_BUSINESS_UPDATES_CURRENT_RESEARCH_INTEGRATION_V1 and one isolated integration coordinator with native admission; no merge, runtime writes or source-route activation.",
+        "agent": "Codex",
+        "observed_head": "b60bdd6738b1079612abd08602bc79e7e6c91a1b",
+        "revision": 1
+      },
+      {
+        "operation": "ADMIT",
+        "milestone_id": "OFFICIAL_BUSINESS_UPDATES_CURRENT_RESEARCH_INTEGRATION_V1",
+        "owner_note": "Owner authorizes this exact business-update lane; Codex is bound integration owner for the exact ACTIVE_STATE and CAPABILITIES navigation leases; no other shared, frozen or protected file writes.",
+        "agent": "Codex",
+        "observed_head": "b60bdd6738b1079612abd08602bc79e7e6c91a1b",
+        "revision": 2
+      },
+      {
+        "operation": "TRANSITION",
+        "milestone_id": "OFFICIAL_BUSINESS_UPDATES_CURRENT_RESEARCH_INTEGRATION_V1",
+        "from": "ADMITTED",
+        "to": "ACTIVE",
+        "checkpoint": null,
+        "owner_note": "Owner authorized implementation of the exact admitted research scope; runtime and merge remain prohibited.",
+        "agent": "Codex",
+        "observed_head": "b60bdd6738b1079612abd08602bc79e7e6c91a1b",
+        "revision": 3
+      },
+      {
+        "operation": "TRANSITION",
+        "milestone_id": "OFFICIAL_BUSINESS_UPDATES_CURRENT_RESEARCH_INTEGRATION_V1",
+        "from": "ACTIVE",
+        "to": "ABANDONED",
+        "checkpoint": null,
+        "owner_note": "Replace initial lane with corrected exact consumer transport scope within the same Owner business-update milestone. Source checkpoint preserved; no deletion, merge or runtime authority.",
+        "agent": "Codex",
+        "observed_head": "b60bdd6738b1079612abd08602bc79e7e6c91a1b",
+        "revision": 4
+      },
+      {
+        "operation": "ADMIT",
+        "milestone_id": "OFFICIAL_BUSINESS_UPDATES_CURRENT_RESEARCH_INTEGRATION_V1_ACCEPTANCE",
+        "owner_note": "Corrected exact disjoint consumer scope for the same Owner-authorized business-update milestone; replaces abandoned initial lane, adds canonical decision-packet transport and its tests only.",
+        "agent": "Codex",
+        "observed_head": "b60bdd6738b1079612abd08602bc79e7e6c91a1b",
+        "revision": 5
+      },
+      {
+        "operation": "TRANSITION",
+        "milestone_id": "OFFICIAL_BUSINESS_UPDATES_CURRENT_RESEARCH_INTEGRATION_V1_ACCEPTANCE",
+        "from": "ADMITTED",
+        "to": "ACTIVE",
+        "checkpoint": null,
+        "owner_note": "Activate corrected exact business-update consumer lane under existing Owner authority, replacing the abandoned scope; no other writer admission or runtime authority.",
+        "agent": "Codex",
+        "observed_head": "b60bdd6738b1079612abd08602bc79e7e6c91a1b",
+        "revision": 6
+      },
+      {
+        "operation": "TRANSITION",
+        "milestone_id": "OFFICIAL_BUSINESS_UPDATES_CURRENT_RESEARCH_INTEGRATION_V1_ACCEPTANCE",
+        "from": "ACTIVE",
+        "to": "REVIEW_READY",
+        "checkpoint": "5469b4efa7a6bbc8a66b7807d987beafb682214f",
+        "owner_note": "Exact clean business research feature checkpoint is locally validated and ready for hosted CI and review; Owner merge and all runtime/source activation remain gated.",
+        "agent": "Codex",
+        "observed_head": "b60bdd6738b1079612abd08602bc79e7e6c91a1b",
+        "revision": 7
+      },
+      {
+        "operation": "TRANSITION",
+        "milestone_id": "OFFICIAL_BUSINESS_UPDATES_CURRENT_RESEARCH_INTEGRATION_V1_ACCEPTANCE",
+        "from": "REVIEW_READY",
+        "to": "ACTIVE",
+        "checkpoint": "5469b4efa7a6bbc8a66b7807d987beafb682214f",
+        "owner_note": "In-scope pre-review repair: preserve the existing future-source session gate and clarify synthetic preliminary/guidance labels; exact-head hosted checks will be refreshed after the repair.",
+        "agent": "Codex",
+        "observed_head": "b60bdd6738b1079612abd08602bc79e7e6c91a1b",
+        "revision": 8
+      },
+      {
+        "operation": "TRANSITION",
+        "milestone_id": "OFFICIAL_BUSINESS_UPDATES_CURRENT_RESEARCH_INTEGRATION_V1_ACCEPTANCE",
+        "from": "ACTIVE",
+        "to": "REVIEW_READY",
+        "checkpoint": "42b3e483379862e2f1985f23e2bd7f76f56ef3c6",
+        "owner_note": "Repaired observed exact clean checkpoint; final focused temporal/consumer regressions passed. Native gate rejected a mistyped SHA without changing state; this uses the actual Git HEAD. Hosted CI and exact integration receipt pending; no merge or runtime authority.",
+        "agent": "Codex",
+        "observed_head": "b60bdd6738b1079612abd08602bc79e7e6c91a1b",
+        "revision": 9
+      },
+      {
+        "operation": "TRANSITION",
+        "milestone_id": "OFFICIAL_BUSINESS_UPDATES_CURRENT_RESEARCH_INTEGRATION_V1_ACCEPTANCE",
+        "from": "REVIEW_READY",
+        "to": "COMPLETE_LOCAL",
+        "checkpoint": "42b3e483379862e2f1985f23e2bd7f76f56ef3c6",
+        "owner_note": "Exact feature HEAD validated locally and four hosted Producer CI jobs SUCCESS in run 38333013078. Software locally complete; real acquisition/qualification remains blocked. Stop at Owner review/merge gate; no runtime or source activation.",
+        "agent": "Codex",
+        "observed_head": "b60bdd6738b1079612abd08602bc79e7e6c91a1b",
+        "revision": 10
+      }
+    ],
+    "lanes": [
+      {
+        "worktree": "C:\\Projects\\StockLookup\\business-update-research-v1",
+        "responsible_agent": "Codex",
+        "provides": {},
+        "lease_note": "Owner Stage 0 and Stage 7 authorize exact integration-owner leases for additive research integration and current navigation only; no frozen repin, CI, architecture policy, source registry or runtime changes.",
+        "base_sha": "b60bdd6738b1079612abd08602bc79e7e6c91a1b",
+        "shared_paths": [
+          "docs/ACTIVE_STATE.md",
+          "docs/CAPABILITIES.md"
+        ],
+        "consumes": {},
+        "required_checks": [
+          "business-unit-temporal",
+          "corporate-consumers",
+          "structural-ratchets",
+          "offline-call-shape",
+          "hosted-producer-ci"
+        ],
+        "domain": "corporate-business-update-research",
+        "mode": "IMPLEMENTATION",
+        "milestone_id": "OFFICIAL_BUSINESS_UPDATES_CURRENT_RESEARCH_INTEGRATION_V1",
+        "dependencies": [],
+        "allowed_paths": [
+          "stocklookup_core/evidence/business_update_observations.py",
+          "current_corporate_event_context.py",
+          "current_corporate_intelligence_axis.py",
+          "stocklookup_core/decision/integrated_investment_decision_product.py",
+          "stocklookup_core/decision/investment_decision_workspace_projection.py",
+          "stocklookup_core/decision/current_research_ai_handoff_packet.py",
+          "tests/test_business_update_observations.py",
+          "tests/test_current_corporate_intelligence_axis.py",
+          "tests/test_current_research_ai_handoff_packet.py",
+          "docs/official_business_update_research_contract.md",
+          "docs/ACTIVE_STATE.md",
+          "docs/CAPABILITIES.md"
+        ],
+        "branch": "feature/business-update-research-v1",
+        "state": "ABANDONED",
+        "checkpoint": null,
+        "authority_effect": "NONE",
+        "admission_authority": {
+          "kind": "EXPLICIT_OWNER_DIRECTIVE",
+          "note": "Owner authorizes this exact business-update lane; Codex is bound integration owner for the exact ACTIVE_STATE and CAPABILITIES navigation leases; no other shared, frozen or protected file writes.",
+          "integration_agent": "Codex"
+        },
+        "history": [
+          {
+            "operation": "TRANSITION",
+            "milestone_id": "OFFICIAL_BUSINESS_UPDATES_CURRENT_RESEARCH_INTEGRATION_V1",
+            "from": "ADMITTED",
+            "to": "ACTIVE",
+            "checkpoint": null,
+            "owner_note": "Owner authorized implementation of the exact admitted research scope; runtime and merge remain prohibited."
+          },
+          {
+            "operation": "TRANSITION",
+            "milestone_id": "OFFICIAL_BUSINESS_UPDATES_CURRENT_RESEARCH_INTEGRATION_V1",
+            "from": "ACTIVE",
+            "to": "ABANDONED",
+            "checkpoint": null,
+            "owner_note": "Replace initial lane with corrected exact consumer transport scope within the same Owner business-update milestone. Source checkpoint preserved; no deletion, merge or runtime authority."
+          }
+        ]
+      },
+      {
+        "worktree": "C:\\Projects\\StockLookup\\business-update-research-v1-acceptance",
+        "responsible_agent": "Codex",
+        "provides": {},
+        "lease_note": "Owner Stage 0 and Stage 7 authorize exact integration-owner leases for additive research integration and current navigation only; no frozen repin, CI, architecture policy, source registry or runtime changes.",
+        "base_sha": "b60bdd6738b1079612abd08602bc79e7e6c91a1b",
+        "shared_paths": [
+          "docs/ACTIVE_STATE.md",
+          "docs/CAPABILITIES.md"
+        ],
+        "consumes": {},
+        "required_checks": [
+          "business-unit-temporal",
+          "corporate-consumers",
+          "structural-ratchets",
+          "offline-call-shape",
+          "hosted-producer-ci"
+        ],
+        "domain": "corporate-business-update-research",
+        "mode": "IMPLEMENTATION",
+        "milestone_id": "OFFICIAL_BUSINESS_UPDATES_CURRENT_RESEARCH_INTEGRATION_V1_ACCEPTANCE",
+        "dependencies": [],
+        "allowed_paths": [
+          "stocklookup_core/evidence/business_update_observations.py",
+          "current_corporate_event_context.py",
+          "current_corporate_intelligence_axis.py",
+          "stocklookup_core/decision/integrated_investment_decision_product.py",
+          "stocklookup_core/decision/investment_decision_workspace_projection.py",
+          "stocklookup_core/decision/current_research_ai_handoff_packet.py",
+          "tests/test_business_update_observations.py",
+          "tests/test_current_corporate_intelligence_axis.py",
+          "tests/test_current_research_ai_handoff_packet.py",
+          "docs/official_business_update_research_contract.md",
+          "docs/ACTIVE_STATE.md",
+          "docs/CAPABILITIES.md",
+          "stocklookup_core/decision/current_research_decision_packet.py",
+          "tests/test_current_research_decision_packet.py"
+        ],
+        "branch": "feature/business-update-research-v1-acceptance",
+        "state": "COMPLETE_LOCAL",
+        "checkpoint": "42b3e483379862e2f1985f23e2bd7f76f56ef3c6",
+        "authority_effect": "NONE",
+        "admission_authority": {
+          "kind": "EXPLICIT_OWNER_DIRECTIVE",
+          "note": "Corrected exact disjoint consumer scope for the same Owner-authorized business-update milestone; replaces abandoned initial lane, adds canonical decision-packet transport and its tests only.",
+          "integration_agent": "Codex"
+        },
+        "history": [
+          {
+            "operation": "TRANSITION",
+            "milestone_id": "OFFICIAL_BUSINESS_UPDATES_CURRENT_RESEARCH_INTEGRATION_V1_ACCEPTANCE",
+            "from": "ADMITTED",
+            "to": "ACTIVE",
+            "checkpoint": null,
+            "owner_note": "Activate corrected exact business-update consumer lane under existing Owner authority, replacing the abandoned scope; no other writer admission or runtime authority."
+          },
+          {
+            "operation": "TRANSITION",
+            "milestone_id": "OFFICIAL_BUSINESS_UPDATES_CURRENT_RESEARCH_INTEGRATION_V1_ACCEPTANCE",
+            "from": "ACTIVE",
+            "to": "REVIEW_READY",
+            "checkpoint": "5469b4efa7a6bbc8a66b7807d987beafb682214f",
+            "owner_note": "Exact clean business research feature checkpoint is locally validated and ready for hosted CI and review; Owner merge and all runtime/source activation remain gated."
+          },
+          {
+            "operation": "TRANSITION",
+            "milestone_id": "OFFICIAL_BUSINESS_UPDATES_CURRENT_RESEARCH_INTEGRATION_V1_ACCEPTANCE",
+            "from": "REVIEW_READY",
+            "to": "ACTIVE",
+            "checkpoint": "5469b4efa7a6bbc8a66b7807d987beafb682214f",
+            "owner_note": "In-scope pre-review repair: preserve the existing future-source session gate and clarify synthetic preliminary/guidance labels; exact-head hosted checks will be refreshed after the repair."
+          },
+          {
+            "operation": "TRANSITION",
+            "milestone_id": "OFFICIAL_BUSINESS_UPDATES_CURRENT_RESEARCH_INTEGRATION_V1_ACCEPTANCE",
+            "from": "ACTIVE",
+            "to": "REVIEW_READY",
+            "checkpoint": "42b3e483379862e2f1985f23e2bd7f76f56ef3c6",
+            "owner_note": "Repaired observed exact clean checkpoint; final focused temporal/consumer regressions passed. Native gate rejected a mistyped SHA without changing state; this uses the actual Git HEAD. Hosted CI and exact integration receipt pending; no merge or runtime authority."
+          },
+          {
+            "operation": "TRANSITION",
+            "milestone_id": "OFFICIAL_BUSINESS_UPDATES_CURRENT_RESEARCH_INTEGRATION_V1_ACCEPTANCE",
+            "from": "REVIEW_READY",
+            "to": "COMPLETE_LOCAL",
+            "checkpoint": "42b3e483379862e2f1985f23e2bd7f76f56ef3c6",
+            "owner_note": "Exact feature HEAD validated locally and four hosted Producer CI jobs SUCCESS in run 38333013078. Software locally complete; real acquisition/qualification remains blocked. Stop at Owner review/merge gate; no runtime or source activation."
+          }
+        ]
+      }
+    ],
+    "integration_agent": "Codex",
+    "integration_branch": "ops/integration-coordinator-20261013",
+    "integration_worktree": "C:\\Projects\\StockLookup\\integration-coordinator-20261013"
+  }
 }
