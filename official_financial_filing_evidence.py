@@ -25,6 +25,11 @@ LEGACY_ROW_ADMISSION_PATH = "config/official_financial_legacy_row_admission_v1.j
 LEGACY_ROW_PROOF_SUBSTITUTED = frozenset({"DOCUMENT_METADATA_PROOF_MISSING", "RETAINED_SOURCE_PROOF_UNAVAILABLE",
     "LITERAL_METRIC_ROW_PROOF_MISSING", "LITERAL_VALUE_PROOF_MISSING"})
 
+# Existing issuer/attachment relationship, evidenced by HPG's retained FY2024
+# locator in config/promoted_fundamental_coverage_closeout_evidence.json. This is
+# exact issuer binding only; current registry admission still governs each URL.
+_EXISTING_ISSUER_ATTACHMENT_HOSTS = {"HPG": frozenset({"file.hoaphat.com.vn"})}
+
 
 @lru_cache(maxsize=1)
 def _legacy_row_admission() -> Mapping[str, Any]:
@@ -149,6 +154,7 @@ def _admit_official_financial_fact(row: Mapping[str, Any], *, source_record: Map
             locators = [ISSUER_IR_INDEX_SEEDS.get(str(row.get("ticker")), "")] + [
                 item["url"] for item in DIRECT_TARGET_LOCATORS if item["ticker"] == row.get("ticker")]
             hosts = {str(urlsplit(url).hostname or "").removeprefix("www.") for url in locators if url}
+            hosts.update(_EXISTING_ISSUER_ATTACHMENT_HOSTS.get(str(row.get("ticker")), ()))
             actual_host = str(urlsplit(str(source.get("canonical_url") or "")).hostname or "").removeprefix("www.")
             final_host = str(urlsplit(str(source.get("final_url") or source.get("canonical_url") or "")).hostname or "").removeprefix("www.")
             if not hosts:
@@ -176,7 +182,16 @@ def _admit_official_financial_fact(row: Mapping[str, Any], *, source_record: Map
             source_time = datetime.fromisoformat(str(source.get("observed_at")).replace("Z", "+00:00"))
             if source_time.tzinfo is None:
                 raise ValueError()
-            source_admitted = admit(str(source.get("source_id") or ""), str(url), expected_class, registry=registry, now=source_time)["decision"] == ADMITTED
+            source_urls = {str(url)}
+            if (source.get("source_id") == "issuer_ir" and any(host in
+                    _EXISTING_ISSUER_ATTACHMENT_HOSTS.get(str(row.get("ticker")), ())
+                    for host in (actual_host, final_host))):
+                # In either redirect direction, both origin and final URL must
+                # retain their own host and document-class registry admission.
+                source_urls.add(str(source.get("canonical_url") or ""))
+            source_admitted = all(admit(str(source.get("source_id") or ""), source_url,
+                expected_class, registry=registry, now=source_time)["decision"] == ADMITTED
+                for source_url in source_urls)
         except (ValueError, TypeError):
             source_admitted = False
         if not source_admitted:
