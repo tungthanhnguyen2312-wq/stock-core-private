@@ -389,17 +389,32 @@ def _remote_repo(tmp_path):
 
 
 def test_real_remote_identical_replay_reports_pointer_head_and_verifies(tmp_path):
+    import owner_daily_journal as journal
+
     s = tmp_path / "source"; source(s)
     r = _remote_repo(tmp_path)
     first = publish(r, s, "2026-10-13", producer_checkpoint="released:test")
-    assert verify_remote_publication(r, first)["remote_sha"] == first["handoff_commit"]
+    verified = verify_remote_publication(r, first)
+    assert verified["remote_sha"] == first["handoff_commit"]
+    assert verified["handoff_build_id"] == first["package"]["handoff_build_id"]
+    assert verified["handoff_build_id"]
+    owner_root = tmp_path / "owner"
+    run_id = journal.start_run(owner_root, intended_session="2026-10-13")["run_id"]
+    journal.advance(owner_root, run_id, journal.LOCAL_COMPLETE, resolved_session="2026-10-13")
+    complete = journal.advance(owner_root, run_id, journal.COMPLETE, detail={
+        "ai_handoff": {"session": "2026-10-13", "remote_sha": verified["remote_sha"],
+                       "handoff_build_id": verified.get("handoff_build_id")},
+    })
+    assert complete["attestation"]["ai_handoff"]["handoff_build_id"] == first["package"]["handoff_build_id"]
     head_before = handoff._git(r, "rev-parse", "HEAD")
     repeated = publish(r, s, "2026-10-13", producer_checkpoint="released:test")
     assert repeated["status"] == "NO_OP_ALREADY_PUBLISHED"
     assert repeated["handoff_commit"] == first["handoff_commit"] == head_before
     assert repeated["immutable_handoff_commit"] == first["immutable_handoff_commit"]
     assert repeated["immutable_handoff_commit"] != repeated["handoff_commit"]
-    assert verify_remote_publication(r, repeated)["remote_sha"] == head_before
+    repeated_verified = verify_remote_publication(r, repeated)
+    assert repeated_verified["remote_sha"] == head_before
+    assert repeated_verified == verified
     assert handoff._git(r, "rev-parse", "HEAD") == head_before
 
 

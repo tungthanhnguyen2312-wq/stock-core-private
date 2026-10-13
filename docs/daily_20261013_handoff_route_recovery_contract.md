@@ -48,6 +48,8 @@ after the immutable build commit can finish its pointer commit while preserving
 the build bytes. Uncommitted build directories and conflicting pointers fail
 closed. Independent remote verification checks pointer/session/build, remote
 blob hashes, lineage, pointer hash fields and immutable commit identity.
+The verified remote result also carries the already-validated handoff build ID,
+so the first Owner COMPLETE journal records the exact published build identity.
 The publisher's crash recovery does not bypass Owner checkout preflight: a dirty
 or local-ahead handoff checkout requires inspection and verified reconciliation
 of its exact pending commits before the official Owner replay can proceed.

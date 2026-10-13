@@ -318,4 +318,5 @@ def verify_remote_publication(repo: Path, published: Mapping[str, Any]) -> dict[
     if latest.get("handoff_commit") != published.get("immutable_handoff_commit"):
         raise HandoffPublicationError("REMOTE_IMMUTABLE_COMMIT_MISMATCH")
     return {"status": "READY_FOR_AI", "latest_session": session,
-            "latest_pointer": path, "remote_sha": remote_sha}
+            "latest_pointer": path, "remote_sha": remote_sha,
+            "handoff_build_id": latest["handoff_build_id"]}
