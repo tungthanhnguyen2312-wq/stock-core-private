@@ -4386,7 +4386,7 @@
   "successor_disposition": "OWNER_SELECTED_OFFLINE_EVIDENCE_NO_AUTOMATIC_SUCCESSOR",
   "development_control": {
     "schema": "stocklookup_development_lanes/1",
-    "revision": 11,
+    "revision": 19,
     "history": [
       {
         "operation": "INIT",
@@ -4498,6 +4498,88 @@
         "agent": "Codex",
         "observed_head": "7ca2a1c6cd263fcf97219c620dd34f2f3f93c944",
         "revision": 11
+      },
+      {
+        "operation": "ADMIT",
+        "milestone_id": "ARCHITECTURE_IMPORT_RELIABILITY_V1",
+        "owner_note": "Owner stage1 authorizes Claude PATCH-A only in the verified clean fresh-base architecture worktree: exact analyzer and two test files; no policy/CI/frozen leases, no sandbox entry or Codex implementation of the guard.",
+        "agent": "Codex",
+        "observed_head": "614d8524615b83178ba27b7eac2bd93bf74b0d5b",
+        "revision": 12
+      },
+      {
+        "operation": "ADMIT",
+        "milestone_id": "OFFICIAL_FINANCIAL_EVIDENCE_INTAKE_AND_QUARTERLY_SEMANTICS_V1",
+        "owner_note": "Owner authorizes reusable financial/evidence intake and quarterly semantics only in exact scoped clean worktree, disjoint from Claude PATCH-A. Existing approval cohort and source registry remain unchanged; two navigation files leased to bound coordinator Codex; no runtime/source activation.",
+        "agent": "Codex",
+        "observed_head": "614d8524615b83178ba27b7eac2bd93bf74b0d5b",
+        "revision": 13
+      },
+      {
+        "operation": "TRANSITION",
+        "milestone_id": "ARCHITECTURE_IMPORT_RELIABILITY_V1",
+        "from": "ADMITTED",
+        "to": "ACTIVE",
+        "checkpoint": null,
+        "owner_note": "Owner enables independent Claude PATCH-A source writing only in the admitted three-file architecture scope; Codex does not implement/apply the patch; shared CI and policy changes remain excluded.",
+        "agent": "Codex",
+        "observed_head": "614d8524615b83178ba27b7eac2bd93bf74b0d5b",
+        "revision": 14
+      },
+      {
+        "operation": "TRANSITION",
+        "milestone_id": "OFFICIAL_FINANCIAL_EVIDENCE_INTAKE_AND_QUARTERLY_SEMANTICS_V1",
+        "from": "ADMITTED",
+        "to": "ACTIVE",
+        "checkpoint": null,
+        "owner_note": "Owner financial/evidence scope admitted at verified released base; activate source implementation only, keeping all HPG/KBC route approval and production/strict valuation authority disabled.",
+        "agent": "Codex",
+        "observed_head": "614d8524615b83178ba27b7eac2bd93bf74b0d5b",
+        "revision": 15
+      },
+      {
+        "operation": "TRANSITION",
+        "milestone_id": "OFFICIAL_FINANCIAL_EVIDENCE_INTAKE_AND_QUARTERLY_SEMANTICS_V1",
+        "from": "ACTIVE",
+        "to": "REVIEW_READY",
+        "checkpoint": "2a3488686ddcc9374f148451ef887b53c388ecc5",
+        "owner_note": "Validated clean financial candidate intake checkpoint; 53 of57 real rows semantically resolved with zero source activation; local engineering/ownership gates passed, hosted exact-head CI and Owner review pending. Claude independent PATCH-A stays ACTIVE and untouched.",
+        "agent": "Codex",
+        "observed_head": "614d8524615b83178ba27b7eac2bd93bf74b0d5b",
+        "revision": 16
+      },
+      {
+        "operation": "TRANSITION",
+        "milestone_id": "OFFICIAL_FINANCIAL_EVIDENCE_INTAKE_AND_QUARTERLY_SEMANTICS_V1",
+        "from": "REVIEW_READY",
+        "to": "ACTIVE",
+        "checkpoint": "2a3488686ddcc9374f148451ef887b53c388ecc5",
+        "owner_note": "Resume Owner-authorized financial lane; repair hosted frozen identity regression by restoring the pinned module and moving additive column semantics into the admitted existing period semantics owner; no frozen amendment or route activation.",
+        "agent": "Codex",
+        "observed_head": "614d8524615b83178ba27b7eac2bd93bf74b0d5b",
+        "revision": 17
+      },
+      {
+        "operation": "TRANSITION",
+        "milestone_id": "OFFICIAL_FINANCIAL_EVIDENCE_INTAKE_AND_QUARTERLY_SEMANTICS_V1",
+        "from": "ACTIVE",
+        "to": "REVIEW_READY",
+        "checkpoint": "43e32b36aa7a317907731f8de37a529f9012b71f",
+        "owner_note": "Owner-authorized feature PR137 repaired in the same lane; exact clean checkpoint43e32b36 after399 local financial/frozen/semantic/consumer cases and independent read-only review. Hosted exact-head checks and native integration receipt required before final local completion; no source/runtime/merge authority.",
+        "agent": "Codex",
+        "observed_head": "614d8524615b83178ba27b7eac2bd93bf74b0d5b",
+        "revision": 18
+      },
+      {
+        "operation": "TRANSITION",
+        "milestone_id": "OFFICIAL_FINANCIAL_EVIDENCE_INTAKE_AND_QUARTERLY_SEMANTICS_V1",
+        "from": "REVIEW_READY",
+        "to": "COMPLETE_LOCAL",
+        "checkpoint": "43e32b36aa7a317907731f8de37a529f9012b71f",
+        "owner_note": "Record Owner-authorized software local completion at exact clean HEAD43e32b36. Hosted run38344524188 has four SUCCESS jobs including structural/native/frozen/offline checks;399 financial and228 metadata/offline local cases passed; independent six-finding review repaired. Separate Owner merge, source admission and runtime activation remain unauthorized.",
+        "agent": "Codex",
+        "observed_head": "614d8524615b83178ba27b7eac2bd93bf74b0d5b",
+        "revision": 19
       }
     ],
     "lanes": [
@@ -4663,6 +4745,152 @@
           }
         ],
         "release_sha": "2a3edff066b5ef9b9621b7e5913a8705a3a2d807"
+      },
+      {
+        "responsible_agent": "Claude",
+        "dependencies": [],
+        "milestone_id": "ARCHITECTURE_IMPORT_RELIABILITY_V1",
+        "branch": "feature/architecture-import-reliability-v1",
+        "provides": {
+          "internal_import_guard": "v1"
+        },
+        "base_sha": "2a3edff066b5ef9b9621b7e5913a8705a3a2d807",
+        "allowed_paths": [
+          "tools/check_architecture.py",
+          "tests/test_architecture_ratchet.py",
+          "tests/test_daily_lazy_import_closure.py"
+        ],
+        "required_checks": [
+          "patch-a-sensitivity",
+          "architecture-layout",
+          "cold-import-closure",
+          "offline-call-shape",
+          "hosted-producer-ci"
+        ],
+        "mode": "IMPLEMENTATION",
+        "worktree": "C:\\Projects\\StockLookup\\architecture-import-reliability-v1",
+        "consumes": {},
+        "domain": "architecture-import-reliability",
+        "shared_paths": [],
+        "state": "ACTIVE",
+        "checkpoint": null,
+        "authority_effect": "NONE",
+        "admission_authority": {
+          "kind": "EXPLICIT_OWNER_DIRECTIVE",
+          "note": "Owner stage1 authorizes Claude PATCH-A only in the verified clean fresh-base architecture worktree: exact analyzer and two test files; no policy/CI/frozen leases, no sandbox entry or Codex implementation of the guard.",
+          "integration_agent": "Codex"
+        },
+        "history": [
+          {
+            "operation": "TRANSITION",
+            "milestone_id": "ARCHITECTURE_IMPORT_RELIABILITY_V1",
+            "from": "ADMITTED",
+            "to": "ACTIVE",
+            "checkpoint": null,
+            "owner_note": "Owner enables independent Claude PATCH-A source writing only in the admitted three-file architecture scope; Codex does not implement/apply the patch; shared CI and policy changes remain excluded."
+          }
+        ]
+      },
+      {
+        "branch": "feature/official-financial-quarterly-intake-v1",
+        "required_checks": [
+          "financial-intake-semantics",
+          "source-citation-sha",
+          "reported-period-consumers",
+          "structural-frozen",
+          "offline-call-shape",
+          "hosted-producer-ci"
+        ],
+        "dependencies": [
+          "OFFICIAL_BUSINESS_UPDATES_CURRENT_RESEARCH_INTEGRATION_V1_ACCEPTANCE"
+        ],
+        "provides": {
+          "official_financial_intake": "v1"
+        },
+        "mode": "IMPLEMENTATION",
+        "allowed_paths": [
+          "stocklookup_core/evidence/approved_issuer_ir_financial_evidence.py",
+          "stocklookup_core/evidence/financial_metadata_envelope.py",
+          "stocklookup_core/evidence/financial_row_identity.py",
+          "stocklookup_core/evidence/official_document_qualification.py",
+          "official_financial_period_identity.py",
+          "official_financial_value_evidence.py",
+          "official_financial_filing_evidence.py",
+          "stocklookup_core/financial/canonical_financial_facts.py",
+          "stocklookup_core/financial/structured_financial_period_semantics.py",
+          "stocklookup_core/valuation/current_research_valuation_context.py",
+          "stocklookup_core/evidence/business_update_observations.py",
+          "tests/test_approved_issuer_ir_financial_evidence.py",
+          "tests/test_official_financial_filing_evidence.py",
+          "tests/test_official_financial_value_evidence.py",
+          "tests/test_official_financial_quarterly_intake.py",
+          "tests/test_current_financial_valuation_input_unlock.py",
+          "tests/test_current_research_ai_handoff_packet.py",
+          "docs/official_financial_quarterly_intake_contract.md",
+          "docs/ACTIVE_STATE.md",
+          "docs/CAPABILITIES.md"
+        ],
+        "worktree": "C:\\Projects\\StockLookup\\official-financial-quarterly-intake-v1",
+        "responsible_agent": "Codex",
+        "consumes": {},
+        "lease_note": "Owner financial milestone authorizes integration-owned exact navigation leases only. No approved routes, source registry, CI/pins/architecture policy or protected data changes. All activation disabled.",
+        "shared_paths": [
+          "docs/ACTIVE_STATE.md",
+          "docs/CAPABILITIES.md"
+        ],
+        "base_sha": "2a3edff066b5ef9b9621b7e5913a8705a3a2d807",
+        "domain": "official-financial-quarterly-intake",
+        "milestone_id": "OFFICIAL_FINANCIAL_EVIDENCE_INTAKE_AND_QUARTERLY_SEMANTICS_V1",
+        "state": "COMPLETE_LOCAL",
+        "checkpoint": "43e32b36aa7a317907731f8de37a529f9012b71f",
+        "authority_effect": "NONE",
+        "admission_authority": {
+          "kind": "EXPLICIT_OWNER_DIRECTIVE",
+          "note": "Owner authorizes reusable financial/evidence intake and quarterly semantics only in exact scoped clean worktree, disjoint from Claude PATCH-A. Existing approval cohort and source registry remain unchanged; two navigation files leased to bound coordinator Codex; no runtime/source activation.",
+          "integration_agent": "Codex"
+        },
+        "history": [
+          {
+            "operation": "TRANSITION",
+            "milestone_id": "OFFICIAL_FINANCIAL_EVIDENCE_INTAKE_AND_QUARTERLY_SEMANTICS_V1",
+            "from": "ADMITTED",
+            "to": "ACTIVE",
+            "checkpoint": null,
+            "owner_note": "Owner financial/evidence scope admitted at verified released base; activate source implementation only, keeping all HPG/KBC route approval and production/strict valuation authority disabled."
+          },
+          {
+            "operation": "TRANSITION",
+            "milestone_id": "OFFICIAL_FINANCIAL_EVIDENCE_INTAKE_AND_QUARTERLY_SEMANTICS_V1",
+            "from": "ACTIVE",
+            "to": "REVIEW_READY",
+            "checkpoint": "2a3488686ddcc9374f148451ef887b53c388ecc5",
+            "owner_note": "Validated clean financial candidate intake checkpoint; 53 of57 real rows semantically resolved with zero source activation; local engineering/ownership gates passed, hosted exact-head CI and Owner review pending. Claude independent PATCH-A stays ACTIVE and untouched."
+          },
+          {
+            "operation": "TRANSITION",
+            "milestone_id": "OFFICIAL_FINANCIAL_EVIDENCE_INTAKE_AND_QUARTERLY_SEMANTICS_V1",
+            "from": "REVIEW_READY",
+            "to": "ACTIVE",
+            "checkpoint": "2a3488686ddcc9374f148451ef887b53c388ecc5",
+            "owner_note": "Resume Owner-authorized financial lane; repair hosted frozen identity regression by restoring the pinned module and moving additive column semantics into the admitted existing period semantics owner; no frozen amendment or route activation."
+          },
+          {
+            "operation": "TRANSITION",
+            "milestone_id": "OFFICIAL_FINANCIAL_EVIDENCE_INTAKE_AND_QUARTERLY_SEMANTICS_V1",
+            "from": "ACTIVE",
+            "to": "REVIEW_READY",
+            "checkpoint": "43e32b36aa7a317907731f8de37a529f9012b71f",
+            "owner_note": "Owner-authorized feature PR137 repaired in the same lane; exact clean checkpoint43e32b36 after399 local financial/frozen/semantic/consumer cases and independent read-only review. Hosted exact-head checks and native integration receipt required before final local completion; no source/runtime/merge authority."
+          },
+          {
+            "operation": "TRANSITION",
+            "milestone_id": "OFFICIAL_FINANCIAL_EVIDENCE_INTAKE_AND_QUARTERLY_SEMANTICS_V1",
+            "from": "REVIEW_READY",
+            "to": "COMPLETE_LOCAL",
+            "checkpoint": "43e32b36aa7a317907731f8de37a529f9012b71f",
+            "owner_note": "Record Owner-authorized software local completion at exact clean HEAD43e32b36. Hosted run38344524188 has four SUCCESS jobs including structural/native/frozen/offline checks;399 financial and228 metadata/offline local cases passed; independent six-finding review repaired. Separate Owner merge, source admission and runtime activation remain unauthorized."
+          }
+        ]
       }
     ],
     "integration_agent": "Codex",
