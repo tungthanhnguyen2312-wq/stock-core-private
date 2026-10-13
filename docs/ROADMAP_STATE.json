@@ -4386,7 +4386,7 @@
   "successor_disposition": "OWNER_SELECTED_OFFLINE_EVIDENCE_NO_AUTOMATIC_SUCCESSOR",
   "development_control": {
     "schema": "stocklookup_development_lanes/1",
-    "revision": 42,
+    "revision": 43,
     "history": [
       {
         "operation": "INIT",
@@ -4821,6 +4821,17 @@
         "agent": "Codex",
         "observed_head": "7cec982aea5a869124b12251ee329b6f4f7e8225",
         "revision": 42
+      },
+      {
+        "operation": "TRANSITION",
+        "milestone_id": "FINANCIAL_ACCOUNTING_QUALIFIER_TRANSPORT_CORRECTIVE_V1",
+        "from": "COMPLETE_LOCAL",
+        "to": "MERGED_RELEASED",
+        "checkpoint": "aa479645b871b8663e1c5d593c870568e092d9e1",
+        "owner_note": "Owner resume directive and delegated source-only program release: PR140 merged preserving candidate aa479645, actual main includes PR139; feature and exact postmerge run38389945901 all four SUCCESS, real strictM1/session/Workspace and current-main tests PASS. No coverage/source/authority or sealed-session change.",
+        "agent": "Codex",
+        "observed_head": "7c55d75eacb6c65f3de61461865621f46bccaebb",
+        "revision": 43
       }
     ],
     "lanes": [
@@ -5490,7 +5501,7 @@
           "offline-call-shape",
           "hosted-producer-ci"
         ],
-        "state": "COMPLETE_LOCAL",
+        "state": "MERGED_RELEASED",
         "checkpoint": "aa479645b871b8663e1c5d593c870568e092d9e1",
         "authority_effect": "NONE",
         "admission_authority": {
@@ -5522,8 +5533,17 @@
             "to": "COMPLETE_LOCAL",
             "checkpoint": "aa479645b871b8663e1c5d593c870568e092d9e1",
             "owner_note": "Exactaa479645 transport locallycomplete with492selectedpasses5retainedskips1deselection and259currentPR139mainintegrationpasses. All4 hostedCI38388745129 SUCCESS; strictM1 verifier13/14/15 and immutablelegacybyte proofPASS. CurrentConsumer canonicalingestion preserves fullcard/deepcopy; no API/schema/authority/math changes. Native exactintegration receipt/authorizedmerge/postCI remain gates."
+          },
+          {
+            "operation": "TRANSITION",
+            "milestone_id": "FINANCIAL_ACCOUNTING_QUALIFIER_TRANSPORT_CORRECTIVE_V1",
+            "from": "COMPLETE_LOCAL",
+            "to": "MERGED_RELEASED",
+            "checkpoint": "aa479645b871b8663e1c5d593c870568e092d9e1",
+            "owner_note": "Owner resume directive and delegated source-only program release: PR140 merged preserving candidate aa479645, actual main includes PR139; feature and exact postmerge run38389945901 all four SUCCESS, real strictM1/session/Workspace and current-main tests PASS. No coverage/source/authority or sealed-session change."
           }
-        ]
+        ],
+        "release_sha": "714d9b25dbb6e389e29631cee9f72791122d9aed"
       },
       {
         "milestone_id": "CI_MANDATORY_IMPORT_AND_FINANCIAL_REGRESSIONS_V1",
