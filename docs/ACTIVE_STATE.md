@@ -1,6 +1,6 @@
 # Stock Lookup — Active State
 
-Base/main: `2a3edff066b5ef9b9621b7e5913a8705a3a2d807`.
+Base/main: `2ce0f0b7c8b62e7b55146f9e5bdc81e37115b110` (PR136; post-merge CI PASS).
 PR135: four post-merge CI jobs PASS.
 Verify live main: `git fetch origin main` or `git ls-remote origin refs/heads/main`; **local** remote-tracking refs may be stale.
 ## 0. How this file relates to the others
@@ -30,7 +30,8 @@ Kinds: **CURRENT FACT** (verified), **HOST-LOCAL** (untracked; re-verify),
 **BLOCKED**, **DEFERRED**, **HISTORICAL**.
 
 ## 1. The operational gate
-- **LOCAL — [financial intake](official_financial_quarterly_intake_contract.md):** candidates; routes blocked.
+- **RELEASED — [financial intake](official_financial_quarterly_intake_contract.md):** PR137; candidates; source admission gated.
+- **LOCAL — [Wave 1 replay relocation](SYSTEM_MAP.md#wave-1-historical-replay-relocation--2026-10-13):** 34 historical modules to `tools/replay/`; root Python 325 → 291. No Daily/authority change; release gates pending.
 - **RELEASED — [unlock](current_financial_valuation_input_unlock_v1_contract.md):** PR133; six H1 ratios; proxy shares.
 - **COMPLETE — [root hub V3](root_hub_dependency_reduction_v3_contract.md):** PR131 merged `d11b101`.
 - **COMPLETE — [E6 financial seams](e6_financial_extraction_admission_boundary_contract.md):** row/envelope/status owners.
@@ -56,8 +57,8 @@ Kinds: **CURRENT FACT** (verified), **HOST-LOCAL** (untracked; re-verify),
   packet `current_research_decision_packet:c4fc0700eddfa04d281722ddb15ba0e6f10a8e15b0eaf460a48c9be1952908f0`.
   This supersedes the pending-acceptance wording below. No further Macro corrective;
   Macro authority and immutable completed records are unchanged. This milestone runs no Daily.
-- **COMPLETE — opportunity cost (`PORTFOLIO_OPPORTUNITY_COST_COMPARATIVE_RESEARCH_V1`): offline opt-in hold/add/trim/alternative/cash research cases; no winner, score, size or return. No successor.** Macro corrective: Daily/canonical packet/AI/cockpit wired; actual cutoff/freshness checked; live acceptance pending. SBV UNKNOWN. [Contract](macro_market_regime_decision_context_contract.md). QNS detail resolver (`QNS_2026_H1_OFFICIAL_DETAIL_RESOLVER_AND_FINANCIAL_EVIDENCE_V1`): one detail-page request rebound the same `www.qns.com.vn` consolidated PDF (SHA `5a06a40f…`, no second download, no new OCR). Equity 10,647,823,148,609 VND remains the only qualified H1 fact; other priority fields stay blocked on damaged headers. No earnings component. Strict share/valuation 0. The closed triad (`VNM_QNS_POW_CURRENT_OFFICIAL_FINANCIAL_EVIDENCE_ACQUISITION_V1`) still stands:** Reviewed consolidated 2026-H1 statements, fixed OCR profile, known 2026-10-08 (excluded from completed October 7): VNM cash 4,535,672,366,831 VND (retained source, zero network, page 7 line 110); QNS equity 10,647,823,148,609 VND (owner-authorized index→detail page→one PDF, page 7 line 400). Other VNM/QNS fields stay blocked (damaged headers incl. `²0²6`, dash artefact, 2026 template rows). POW `APPROVED_ROUTE_BLOCKED` (seeded index 404). 5 HTTP requests of 12. Debt components require a literal loan label. Strict share/valuation 0. [Campaign](internal/STOCK_LOOKUP_AUTONOMOUS_CAMPAIGN_20261008.md).
-- **COMPLETE — FPT FY2025 audited cash-flow line 03 Provisions 651,406,282,654 VND is historical earnings-quality context (`FY2025`), known 2026-10-08. It is not current H1 evidence, normalized EPS, or a valuation input. Superscript normalization is `SOURCE_FAITHFUL_NORMALIZATION_NOT_YET_PROVABLE`.** Prior retained H1 provision components (PNJ 2,667,248,523,366 VND; VRE −7,066 million VND) and VRE cash/equity/OCF stay qualified; total-asset rows require a literal total label. Released PR87 (merge 2b6208a) and PR88 (merge 559ff7a); NVL assurance released in PR86. Prior cash-flow/balance qualification: PNJ FY2025 operating flow plus PVD assets/equity added; annual overlay10 fields. FPT annual revenue/equity added from auditor-backed English source; Q2 assurance remains absent. PNJ H1 and PVD cash-flow numeric ambiguity remain blocked. Annual baseline94, current official fields9 and strict share/valuation0 unchanged. [Campaign](internal/STOCK_LOOKUP_AUTONOMOUS_CAMPAIGN_20261008.md).
+- **COMPLETE — opportunity cost:** `PORTFOLIO_OPPORTUNITY_COST_COMPARATIVE_RESEARCH_V1`; offline hold/add/trim/alternative/cash cases; no winner, score, size, return or successor. **Closed VNM/QNS/POW triad and QNS detail resolver:** reviewed consolidated H1/2026, fixed OCR; known October 8, excluded October 7. VNM cash 4,535,672,366,831 VND (retained, zero network, page 7/110); QNS equity 10,647,823,148,609 VND (page 7/400), its only qualified H1 fact. One authorized detail request rebound the same `www.qns.com.vn` PDF (`5a06a40f…`); no download/OCR. Other fields: damaged headers (`²0²6`, dash artefact, 2026 rows); no earnings component. POW `APPROVED_ROUTE_BLOCKED` (index 404); 5/12 HTTP requests. Loans require literal labels; strict share/valuation 0. Macro acceptance is recorded above; SBV UNKNOWN. [Campaign](internal/STOCK_LOOKUP_AUTONOMOUS_CAMPAIGN_20261008.md).
+- **COMPLETE — FPT FY2025 earnings-quality context:** audited cash-flow 03 Provisions 651,406,282,654 VND, known October 8; no H1/normalized-EPS/valuation use. Superscripts: `SOURCE_FAITHFUL_NORMALIZATION_NOT_YET_PROVABLE`. Qualified H1 provisions: PNJ 2,667,248,523,366 VND; VRE −7,066 million VND; VRE cash/equity/OCF retained. Total assets need literal labels. PR87 `2b6208a`, PR88 `559ff7a`; NVL assurance PR86. PNJ FY2025 OCF, PVD assets/equity and auditor-backed English FPT revenue/equity qualified; annual overlay10. FPT Q2 assurance absent; PNJ H1/PVD cash-flow numeric ambiguity blocked. Annual baseline94, current official fields9, strict share/valuation0. [Campaign](internal/STOCK_LOOKUP_AUTONOMOUS_CAMPAIGN_20261008.md).
 
 - **CURRENT FACT — HPG common-share observation:** audited FY2025 page 41 states 7,675,465,855 at December 31, 2025; later-known historical context only. July-2 quantity is listed shares. January 1–October 7 common-share continuity remains unproven; strict shares/valuation stay zero. [Campaign](internal/STOCK_LOOKUP_AUTONOMOUS_CAMPAIGN_20261008.md).
 - **CURRENT FACT — retained-evidence projection integration.** Owner-selected
@@ -146,8 +147,8 @@ Kinds: **CURRENT FACT** (verified), **HOST-LOCAL** (untracked; re-verify),
   `current = POST_FIRST_REAL_DAILY_PHASE_C_RESOURCE_ARCHITECTURE_RELEASE_V1 / COMPLETE`,
   `queued_next = []`,
   `successor_disposition = PHASE_C_RELEASED_NO_AUTOMATIC_SUCCESSOR`.
-- **CURRENT FACT — no automatic successor.** Nothing starts because something else finished;
-  every new milestone needs explicit owner authorization (AI_RULES rules 4, 11).
+- **CURRENT FACT — Owner source-only program (2026-10-13):** admitted lanes/merges need native receipts and exact-head CI.
+  New source/runtime activation, sealed-session edits and authority promotion need specific Owner approval.
 
 ### Launch conditions (all must hold immediately before the live Daily)
 
@@ -308,11 +309,11 @@ Kinds: **CURRENT FACT** (verified), **HOST-LOCAL** (untracked; re-verify),
 
 ## 9. Next action
 
-[Financial intake](official_financial_quarterly_intake_contract.md): Owner review gate.
-Host-local lanes; Claude owns PATCH-A. Daily needs READY/session gates.
+Wave 1: targeted local checks, dependency release, exact-head CI and native integration receipt before merge.
+[Financial intake](official_financial_quarterly_intake_contract.md): source gate; Daily needs READY/session gates.
 
 ## 10. Owner approvals that remain open
 
-- PR merge or work outside standing program scope; bounded development needs native admission.
+- Work outside the source-only program; admitted in-scope merges are delegated with native receipts/exact-head CI. Source/runtime approvals stay separate.
 - Any further cleanup of host scratch / `Temp\*` / worktrees (only the five rehearsal directories were approved).
 - R7 / RAW / PIT / execution authority promotion; any new provider; any threshold change to the host preflight.

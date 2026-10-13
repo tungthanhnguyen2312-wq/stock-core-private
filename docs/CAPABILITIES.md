@@ -1,6 +1,6 @@
 # Stock Lookup — Capability Registry
 
-Capability state (2026-10-04, main `920d579`); no scores.
+Capability navigation; no scores.
 See [ACTIVE_STATE.md](ACTIVE_STATE.md) for current facts, [AUTHORITY.md](AUTHORITY.md) for authority,
 [DAILY_PIPELINE.md](DAILY_PIPELINE.md) for run order.
 
@@ -15,6 +15,8 @@ Each block: **Contract** · **Runtime** · **Authority** · **Production** · **
 
 [Development lanes](parallel_domain_development_control_plane_v1_contract.md):
 released PR134; native admission only; no runtime authority.
+
+[Wave 1 replay](SYSTEM_MAP.md#wave-1-historical-replay-relocation--2026-10-13): local, release pending; `FROZEN_HISTORICAL / NON_VOTING / OFFLINE_ONLY`; 22 runners, seven pilots, five legacy materializers in `tools/replay/`. Identity/evidence unchanged.
 
 Decision-intelligence closure (2026-10-07) is research coverage and calibration context
 only. Contract `decision_intelligence_coverage_calibration/v1`. It does not vote, size,
