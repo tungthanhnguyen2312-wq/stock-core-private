@@ -4386,7 +4386,7 @@
   "successor_disposition": "OWNER_SELECTED_OFFLINE_EVIDENCE_NO_AUTOMATIC_SUCCESSOR",
   "development_control": {
     "schema": "stocklookup_development_lanes/1",
-    "revision": 43,
+    "revision": 44,
     "history": [
       {
         "operation": "INIT",
@@ -4832,6 +4832,17 @@
         "agent": "Codex",
         "observed_head": "7c55d75eacb6c65f3de61461865621f46bccaebb",
         "revision": 43
+      },
+      {
+        "operation": "TRANSITION",
+        "milestone_id": "CI_MANDATORY_IMPORT_AND_FINANCIAL_REGRESSIONS_V1",
+        "from": "ADMITTED",
+        "to": "ACTIVE",
+        "checkpoint": null,
+        "owner_note": "Owner continuation resumes existing essential PATCH-D after transport MERGED_RELEASED43. Exact admitted seven-file CI scope and four Codex leases, reuse prior classifier/parity, mandatory G2/business/quarterly coverage and independently checked extended hosted result; no production or financial authority changes.",
+        "agent": "Codex",
+        "observed_head": "5657cb828abcda6ac6250c59310805b0467a72c7",
+        "revision": 44
       }
     ],
     "lanes": [
@@ -5589,7 +5600,7 @@
           "hosted-producer-ci",
           "extended-hermetic-actual-result"
         ],
-        "state": "ADMITTED",
+        "state": "ACTIVE",
         "checkpoint": null,
         "authority_effect": "NONE",
         "admission_authority": {
@@ -5597,7 +5608,16 @@
           "note": "Owner program 20261013 objectives B/E and continuation directive authorize exact source-only CI milestone with four Codex shared-file leases; admission only while transport postmerge CI completes, no activation or runtime authority.",
           "integration_agent": "Codex"
         },
-        "history": []
+        "history": [
+          {
+            "operation": "TRANSITION",
+            "milestone_id": "CI_MANDATORY_IMPORT_AND_FINANCIAL_REGRESSIONS_V1",
+            "from": "ADMITTED",
+            "to": "ACTIVE",
+            "checkpoint": null,
+            "owner_note": "Owner continuation resumes existing essential PATCH-D after transport MERGED_RELEASED43. Exact admitted seven-file CI scope and four Codex leases, reuse prior classifier/parity, mandatory G2/business/quarterly coverage and independently checked extended hosted result; no production or financial authority changes."
+          }
+        ]
       }
     ],
     "integration_agent": "Codex",
