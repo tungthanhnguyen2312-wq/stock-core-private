@@ -16,7 +16,7 @@ from typing import Any, Callable, Mapping
 
 
 FRAMEWORK_VERSION = "1.0.0"
-REGISTRY_PATH = Path(__file__).with_name("config") / "strategy_registry.json"
+REGISTRY_PATH = Path(__file__).resolve().parents[2] / "config" / "strategy_registry.json"
 
 
 class RegistryState(StrEnum):

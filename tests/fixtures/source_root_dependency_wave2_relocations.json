@@ -1,0 +1,23 @@
+{
+  "milestone": "STOCKLOOKUP_ARCHITECTURE_SIMPLIFICATION_AND_CORRECTNESS_CLOSEOUT_20261014",
+  "baseline": "bd71cb23013f0175cca22bad7df8632be65e8cad",
+  "relocations": {
+    "market_feature_store_v1.py": "stocklookup_core/tactical/market_feature_store_v1.py",
+    "strategy_framework.py": "stocklookup_core/tactical/strategy_framework.py",
+    "momentum_screening_v1.py": "stocklookup_core/tactical/momentum_screening_v1.py",
+    "candlestick_patterns.py": "stocklookup_core/tactical/candlestick_patterns.py",
+    "source_schema_guards.py": "stocklookup_core/evidence/source_schema_guards.py"
+  },
+  "source_sha256_lf": {
+    "market_feature_store_v1.py": "efbf2bd8631eb01e10bfbf3da6b5dfe4cd6fdfb3189549d481091674943d7b19",
+    "strategy_framework.py": "e28c9c7366e1336138e03a4c8e7047d4e462a355c52318e7bbbbe81e3dbac7b4",
+    "momentum_screening_v1.py": "526df2e17731c4302a043800d56ab51f708c0cda68c42961dd3aeb1b3d84de58",
+    "candlestick_patterns.py": "7d3639467a094c435d8a1681d7ef4adfcd7cb40acb604964b091fcade3c2984c",
+    "source_schema_guards.py": "9ec226cc7599f2c6f8784bb06c5f8dccfa1fb6fb1178931bd539057939aab1b3"
+  },
+  "preserved_registry_labels": [
+    "config/feature_dictionary.json",
+    "config/strategy_registry.json"
+  ],
+  "allowed_non_import_change": "strategy_framework REGISTRY_PATH resolves checkout root; standalone news guard loader follows exact moved file"
+}

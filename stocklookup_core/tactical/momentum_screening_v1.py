@@ -9,8 +9,8 @@ from typing import Any, Iterable, Mapping
 import numpy as np
 import pandas as pd
 
-from market_feature_store_v1 import snapshot
-from strategy_framework import RegistryState, StrategyPlugin, evaluate_eligibility, load_strategy_registry
+from stocklookup_core.tactical.market_feature_store_v1 import snapshot
+from stocklookup_core.tactical.strategy_framework import RegistryState, StrategyPlugin, evaluate_eligibility, load_strategy_registry
 
 
 MOMENTUM_ID = "MOMENTUM_V1"

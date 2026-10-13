@@ -8,7 +8,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
-from source_schema_guards import (  # noqa: E402
+from stocklookup_core.evidence.source_schema_guards import (  # noqa: E402
     SourceSchemaError, guard_alias_columns, guard_financial_statement_columns,
 )
 

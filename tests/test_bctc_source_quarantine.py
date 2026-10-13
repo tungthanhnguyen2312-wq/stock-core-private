@@ -19,7 +19,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 import bctc_processor as processor  # noqa: E402
-from source_schema_guards import SourceSchemaError  # noqa: E402
+from stocklookup_core.evidence.source_schema_guards import SourceSchemaError  # noqa: E402
 
 KNOWN_BAD_TICKER = "BIO"   # thiếu cột kỳ/giá trị ở CẢ HAI file balance_sheet — xem mục 1 báo cáo
 KNOWN_GOOD_TICKER = "HPG"

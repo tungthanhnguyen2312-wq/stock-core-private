@@ -300,6 +300,41 @@ def test_packaged_defaults_still_use_checkout_root_after_cwd_change(tmp_path, mo
 
 
 W1 = json.loads((ROOT / "tests/fixtures/root_historical_surface_w1_relocations.json").read_text(encoding="utf-8"))
+W2 = json.loads((ROOT / "tests/fixtures/source_root_dependency_wave2_relocations.json").read_text(encoding="utf-8"))
+
+
+def test_wave2_keeps_one_implementation_and_no_frozen_or_launcher_relocation():
+    import subprocess
+    launch = json.loads((ROOT / "config/daily_path_launchers.json").read_text(encoding="utf-8"))
+    forbidden = {item["path"] for item in launch["targets"]}
+    forbidden.update(launch.get("python_callers", {}))
+    forbidden.update(json.loads((ROOT / "tests/fixtures/e2e3_frozen_sources.json").read_text())
+                     .get("source_sha256_lf", {}))
+    assert len(W2["relocations"]) == 5
+    for old, new in W2["relocations"].items():
+        assert old not in forbidden
+        assert LAYOUT["relocations"][old] == new
+        assert old not in LAYOUT["grandfathered_root_python"]
+        assert old not in LAYOUT["compatibility_entrypoints"]
+        assert not (ROOT / old).exists() and importlib.util.find_spec(old[:-3]) is None
+        assert Path(importlib.util.find_spec(new[:-3].replace("/", ".")).origin) == ROOT / new
+    moved = {old[:-3] for old in W2["relocations"]}
+    for ref, relative in BULK["historically_executed_sources"]:
+        tree = ast.parse(subprocess.check_output(["git", "show", f"{ref}:{relative}"], cwd=ROOT))
+        for node in ast.walk(tree):
+            names = [a.name for a in node.names] if isinstance(node, ast.Import) else \
+                [node.module] if isinstance(node, ast.ImportFrom) and node.module and not node.level else []
+            assert not moved.intersection(n.split(".")[0] for n in names), (ref, relative, names)
+
+
+def test_wave2_registry_defaults_and_identity_labels_survive_foreign_cwd(tmp_path, monkeypatch):
+    from stocklookup_core.tactical import strategy_framework
+    monkeypatch.chdir(tmp_path)
+    assert strategy_framework.REGISTRY_PATH == ROOT / "config/strategy_registry.json"
+    plugin = strategy_framework.load_strategy_registry()["MOMENTUM_V1"]
+    # Serialized labels are historical contract identity; the layout owns source placement.
+    assert plugin.scoring_handler == "momentum_screening_v1.evaluate_momentum"
+    assert plugin.execution_enabled and len(plugin.contract_lineage_id) == 64
 
 
 def test_w1_historical_surface_is_archived_under_tools_replay_without_root_shim():
