@@ -367,7 +367,7 @@ def test_workflow_installs_only_the_constrained_core_tier():
     assert install_lines == [
         "CORE_INSTALL: python -m pip install -r requirements.txt -r requirements-test.txt -c constraints.txt",
     ]
-    assert workflow.count("run: ${{ env.CORE_INSTALL }}") == 4
+    assert workflow.count("run: ${{ env.CORE_INSTALL }}") == 5  # + extended-hermetic (non-blocking)
     assert "PYTHONPATH: ${{ github.workspace }}/tests/provider_import_block" in workflow
     assert "python tools/verify_dependency_tiers.py --installed" in workflow
     assert "secrets." not in workflow
@@ -378,10 +378,15 @@ def test_workflow_separates_hermetic_and_retained_evidence_tiers():
     assert "HERMETIC_MARKERS: not retained_evidence and not provider_runtime" in workflow
     lines = [line.strip().removeprefix("- ") for line in workflow.splitlines()]
     pytest_lines = [line for line in lines if line.startswith(("pytest ", "run: pytest "))]
-    assert len(pytest_lines) == 4
+    assert len(pytest_lines) == 5
     hermetic = [line for line in pytest_lines if '-m "${{ env.HERMETIC_MARKERS }}"' in line]
     retained = [line for line in pytest_lines if "-m retained_evidence" in line]
-    assert len(hermetic) == 3 and len(retained) == 1
+    assert len(hermetic) == 4 and len(retained) == 1
+    extended = [line for line in hermetic if "tests/extended_hermetic_selection.txt" in line]
+    assert len(extended) == 1
+    extended_job = _workflow_job_block(workflow, "extended-hermetic")
+    assert extended_job.splitlines().count("    continue-on-error: true") == 1
+    assert "          fetch-depth: 0" in extended_job  # immutable liquidity-closure checkpoint
     assert "STOCKLOOKUP_RETAINED_EVIDENCE_POLICY: skip-if-absent" in workflow
     # Tiering replaces ad-hoc deselection of evidence-dependent tests.
     assert "--deselect" not in workflow
@@ -389,8 +394,7 @@ def test_workflow_separates_hermetic_and_retained_evidence_tiers():
 
 def test_every_focused_selection_entry_exists():
     workflow = WORKFLOW.read_text(encoding="utf-8")
-    block = workflow.split("FOCUSED_SELECTION: >-", 1)[1].split("\n\njobs:", 1)[0]
-    entries = [line.strip() for line in block.splitlines() if line.strip()]
+    entries = _focused_selection_entries(workflow)
     assert entries and all(entry.startswith("tests/") for entry in entries)
     for entry in entries:
         assert _focused_selector_exists(ROOT, entry), entry
@@ -431,3 +435,60 @@ def test_focused_selection_resolves_methods_in_the_selected_class(tmp_path, sele
         encoding="utf-8",
     )
     assert _focused_selector_exists(tmp_path, selector) is expected
+
+
+def _focused_selection_entries(workflow: str) -> tuple[str, ...]:
+    block = workflow.split("FOCUSED_SELECTION: >-", 1)[1].split("\n\njobs:", 1)[0]
+    return tuple(line.strip() for line in block.splitlines() if line.strip())
+
+
+def _workflow_job_block(workflow: str, name: str) -> str:
+    # Keep the reviewed text-level workflow contract; no new YAML dependency.
+    jobs = workflow.split("\njobs:\n", 1)[1]
+    header = "  " + name + ":"
+    assert jobs.splitlines().count(header) == 1, name
+    block = jobs.split(header + "\n", 1)[1]
+    lines = []
+    for line in block.splitlines():
+        if line.startswith("  ") and not line.startswith("   "):
+            break
+        lines.append(line)
+    return "\n".join(lines)
+
+
+def test_product_critical_suites_run_in_mandatory_focused_job():
+    workflow = WORKFLOW.read_text(encoding="utf-8")
+    focused = _focused_selection_entries(workflow)
+    assert len(focused) == len(set(focused)), "duplicate focused selector"
+    assert {"tests/test_business_update_observations.py",
+            "tests/test_official_financial_quarterly_intake.py"} <= set(focused)
+    job = _workflow_job_block(workflow, "focused-regressions")
+    assert "continue-on-error:" not in job
+    assert '      - run: pytest -q -rs -m "${{ env.HERMETIC_MARKERS }}" $FOCUSED_SELECTION' in job.splitlines()
+
+
+def test_daily_import_closure_runs_in_mandatory_structural_job():
+    workflow = WORKFLOW.read_text(encoding="utf-8")
+    job = _workflow_job_block(workflow, "structural")
+    assert "continue-on-error:" not in job
+    command = job.split("      - run: >-\n", 1)[1].split("\n      - ", 1)[0]
+    assert command.split()[0] == "pytest"
+    assert '-m "${{ env.HERMETIC_MARKERS }}"' in command
+    assert command.split().count("tests/test_daily_lazy_import_closure.py") == 1
+
+
+def test_extended_selection_has_no_missing_duplicate_or_focused_files():
+    workflow = WORKFLOW.read_text(encoding="utf-8")
+    focused_files = {entry.split("::", 1)[0] for entry in _focused_selection_entries(workflow)}
+    lines = _read("tests/extended_hermetic_selection.txt").splitlines()
+    entries = [line for line in lines if line and not line.startswith("#")]
+    # These two suites import undeclared optional pypdf during clean-core collection.
+    assert not {"tests/test_cited_evidence_backup.py",
+                "tests/test_official_document_retrieval.py"}.intersection(entries)
+    assert len(entries) == 367, "reviewed extended cohort was omitted or expanded"
+    assert len(entries) == len(set(entries)), "duplicate extended file"
+    assert not focused_files.intersection(entries), "a focused file also runs in extended CI"
+    for entry in entries:
+        assert entry == entry.strip() and entry.startswith("tests/") and entry.endswith(".py"), entry
+        assert "::" not in entry and ".." not in Path(entry).parts, entry
+        assert (ROOT / entry).is_file(), entry

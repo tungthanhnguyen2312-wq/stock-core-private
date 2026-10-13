@@ -142,6 +142,10 @@ class CheckoutRefusalTests(unittest.TestCase):
         )
 
 
+@unittest.skipUnless(
+    os.name == "nt" and Path(r"C:\Projects\StockLookup\tools\workspace_status.py").is_file(),
+    "owner-local Windows workspace topology is absent from this checkout",
+)
 class WorkspaceStatusTopologyTests(unittest.TestCase):
     def test_workspace_status_lists_canonical_dashboard_not_legacy_web(self):
         status = Path(r"C:\Projects\StockLookup\tools\workspace_status.py")

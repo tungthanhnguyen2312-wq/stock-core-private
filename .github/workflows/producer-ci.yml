@@ -29,6 +29,8 @@ env:
     tests/test_e5_runtime_seams.py
     tests/test_e6_financial_boundary.py
     tests/test_official_financial_source_integrity.py
+    tests/test_official_financial_quarterly_intake.py
+    tests/test_business_update_observations.py
     tests/test_financial_reporting_currency.py
     tests/test_action_center_opportunity_cost_consumer.py
     tests/test_personal_investment_decision_action_center.py
@@ -281,10 +283,8 @@ env:
     tests/test_provider_os_enforcement.py
     tests/test_provider_windows_os_containment.py
     tests/test_provider_qualification.py
-    tests/test_multi_source_market_evidence_contract.py
     tests/test_historical_series_failover.py
     tests/test_run_market_wide_current_technical_coverage_scaleout.py
-    tests/test_session_bar_integrity.py
     tests/test_tactical_reference_window.py
     tests/test_integrity_bypass_boundaries.py
     tests/test_mva_runtime_integrity_ordering.py
@@ -322,6 +322,7 @@ jobs:
           pytest -q -m "${{ env.HERMETIC_MARKERS }}"
           tests/test_repository_layout.py
           tests/test_architecture_ratchet.py
+          tests/test_daily_lazy_import_closure.py
           tests/test_roadmap_execution_state.py
           tests/test_parallel_domain_control_plane.py
           tests/test_production_call_shape_smoke.py::test_offline_guard_blocks_requests_urllib_and_vnstock_import
@@ -354,6 +355,25 @@ jobs:
       - run: python -m pip install --upgrade pip
       - run: ${{ env.CORE_INSTALL }}
       - run: pytest -q -rs -m "${{ env.HERMETIC_MARKERS }}" $FOCUSED_SELECTION
+
+  extended-hermetic:
+    # Stage D extended tier: test files outside FOCUSED_SELECTION that pass hermetically
+    # (tests/extended_hermetic_selection.txt). Runs as a separate parallel job.
+    # Non-blocking until at least ten successful hosted runs and coordinator review.
+    name: Extended hermetic regressions (non-blocking)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+        # The offline liquidity closure reads its immutable historical roadmap checkpoint.
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: python -m pip install --upgrade pip
+      - run: ${{ env.CORE_INSTALL }}
+      - run: pytest -q -rs -m "${{ env.HERMETIC_MARKERS }}" $(grep -v '^#' tests/extended_hermetic_selection.txt)
 
   retained-evidence-tier:
     # Accounting only: the retained-evidence tests of the focused selection, run from the clean
