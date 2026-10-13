@@ -18,6 +18,7 @@ future regression) must still never display a market-cap-only mislabel.
 from __future__ import annotations
 
 import hashlib
+import copy
 import json
 from collections import Counter
 from typing import Any, Mapping
@@ -529,6 +530,7 @@ def build_ticker_card(
     portfolio_view = _portfolio_view(portfolio_research, ticker, sector)
     card: dict[str, Any] = {
         "ticker": ticker,
+        "business_update_context": copy.deepcopy((((integrated_record or {}).get("corporate_intelligence_context") or {}).get("forward_driver_context") or {}).get("business_update_context")),
         "as_of_session": as_of_session,
         "sector": sector,
         # Signal Velocity V1.2 / Flow-Price Divergence Shadow V1 -- presentation only, no new
