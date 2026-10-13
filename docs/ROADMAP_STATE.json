@@ -4386,7 +4386,7 @@
   "successor_disposition": "OWNER_SELECTED_OFFLINE_EVIDENCE_NO_AUTOMATIC_SUCCESSOR",
   "development_control": {
     "schema": "stocklookup_development_lanes/1",
-    "revision": 44,
+    "revision": 45,
     "history": [
       {
         "operation": "INIT",
@@ -4843,6 +4843,17 @@
         "agent": "Codex",
         "observed_head": "5657cb828abcda6ac6250c59310805b0467a72c7",
         "revision": 44
+      },
+      {
+        "operation": "TRANSITION",
+        "milestone_id": "CI_MANDATORY_IMPORT_AND_FINANCIAL_REGRESSIONS_V1",
+        "from": "ACTIVE",
+        "to": "REVIEW_READY",
+        "checkpoint": "f61f0a3b3ead5cae10cd3bfec4d38cecbffe469b",
+        "owner_note": "Owner source-only CI milestone exact seven-file checkpoint; mandatory G2/business/quarterly, 369-file extension, two preexisting duplicate selectors removed, reviewed normalized workflow pin77cd84e6, unchanged launcher targets. Local initial273PASS and both genuine CI/nav failures repaired with47CI and12navPASS; launcher/diffPASS. Hosted gates pending.",
+        "agent": "Codex",
+        "observed_head": "768bf740dd0ff338d92efbced49b241c82564ac4",
+        "revision": 45
       }
     ],
     "lanes": [
@@ -5600,8 +5611,8 @@
           "hosted-producer-ci",
           "extended-hermetic-actual-result"
         ],
-        "state": "ACTIVE",
-        "checkpoint": null,
+        "state": "REVIEW_READY",
+        "checkpoint": "f61f0a3b3ead5cae10cd3bfec4d38cecbffe469b",
         "authority_effect": "NONE",
         "admission_authority": {
           "kind": "EXPLICIT_OWNER_DIRECTIVE",
@@ -5616,6 +5627,14 @@
             "to": "ACTIVE",
             "checkpoint": null,
             "owner_note": "Owner continuation resumes existing essential PATCH-D after transport MERGED_RELEASED43. Exact admitted seven-file CI scope and four Codex leases, reuse prior classifier/parity, mandatory G2/business/quarterly coverage and independently checked extended hosted result; no production or financial authority changes."
+          },
+          {
+            "operation": "TRANSITION",
+            "milestone_id": "CI_MANDATORY_IMPORT_AND_FINANCIAL_REGRESSIONS_V1",
+            "from": "ACTIVE",
+            "to": "REVIEW_READY",
+            "checkpoint": "f61f0a3b3ead5cae10cd3bfec4d38cecbffe469b",
+            "owner_note": "Owner source-only CI milestone exact seven-file checkpoint; mandatory G2/business/quarterly, 369-file extension, two preexisting duplicate selectors removed, reviewed normalized workflow pin77cd84e6, unchanged launcher targets. Local initial273PASS and both genuine CI/nav failures repaired with47CI and12navPASS; launcher/diffPASS. Hosted gates pending."
           }
         ]
       }
