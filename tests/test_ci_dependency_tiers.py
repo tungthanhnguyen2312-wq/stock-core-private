@@ -384,7 +384,9 @@ def test_workflow_separates_hermetic_and_retained_evidence_tiers():
     assert len(hermetic) == 4 and len(retained) == 1
     extended = [line for line in hermetic if "tests/extended_hermetic_selection.txt" in line]
     assert len(extended) == 1
-    assert _workflow_job_block(workflow, "extended-hermetic").splitlines().count("    continue-on-error: true") == 1
+    extended_job = _workflow_job_block(workflow, "extended-hermetic")
+    assert extended_job.splitlines().count("    continue-on-error: true") == 1
+    assert "          fetch-depth: 0" in extended_job  # immutable liquidity-closure checkpoint
     assert "STOCKLOOKUP_RETAINED_EVIDENCE_POLICY: skip-if-absent" in workflow
     # Tiering replaces ad-hoc deselection of evidence-dependent tests.
     assert "--deselect" not in workflow

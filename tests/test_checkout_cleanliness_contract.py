@@ -38,9 +38,12 @@ def _repo_with_origin(tmp_path: Path) -> Path:
     _git(seed, "branch", "-M", "main")
     _git(seed, "remote", "add", "origin", str(origin))
     _git(seed, "push", "-u", "origin", "main")
+    _git(origin, "symbolic-ref", "HEAD", "refs/heads/main")
     root = tmp_path / "clone"
     subprocess.run(["git", "clone", "-q", str(origin), str(root)], check=True)
     _git(root, "checkout", "-q", "main")
+    _git(root, "config", "user.email", "test@example.com")
+    _git(root, "config", "user.name", "Test")
     return root
 
 

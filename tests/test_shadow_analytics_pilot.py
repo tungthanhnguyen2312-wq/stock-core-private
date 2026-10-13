@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import importlib.util
 import tempfile
 from decimal import Decimal
 import unittest
@@ -58,6 +59,8 @@ class ScopeQualificationTests(unittest.TestCase):
         self.assertTrue(rejected)
 
 
+    @unittest.skipUnless(importlib.util.find_spec("duckdb") is not None,
+                         "optional isolated-pilot DuckDB dependency is absent")
     def test_qualified_bridge_records_round_trip_through_explicit_schema(self):
         hpg, _ = pilot.qualify_fy2024_scoped_records([self._record(value=138855112131387)], "HPG")
         vnm, _ = pilot.qualify_fy2024_scoped_records([self._record(value=None, observation_ids=["observation-2"], evidence={"citation_id": "citation-2", "evidence_id": "evidence-2"})], "VNM")
@@ -120,6 +123,8 @@ class ShadowPilotContractTests(unittest.TestCase):
         with self.assertRaises(pilot.ShadowPilotError):
             pilot._assert_parity("synthetic", [{"ticker":"HPG", "value":None}], [], ("ticker","value"))
 
+    @unittest.skipUnless(importlib.util.find_spec("duckdb") is not None,
+                         "optional isolated-pilot DuckDB dependency is absent")
     def test_partitioning_creates_one_isolated_file_per_ticker(self):
         duckdb = pilot.require_duckdb()
         with tempfile.TemporaryDirectory() as tmp:
@@ -147,6 +152,8 @@ class NumericPrecisionContractTests(unittest.TestCase):
                 "currency": "VND", "unit_scale": 1, "source": "test", "observation_id": "obs",
                 "citation_id": "cit", "evidence_id": "ev", "provenance_json": "{}"}
 
+    @unittest.skipUnless(importlib.util.find_spec("duckdb") is not None,
+                         "optional isolated-pilot DuckDB dependency is absent")
     def test_ohlcv_double_and_bigint_round_trip_without_tolerance(self):
         duckdb = pilot.require_duckdb()
         with tempfile.TemporaryDirectory() as tmp:
@@ -162,6 +169,8 @@ class NumericPrecisionContractTests(unittest.TestCase):
         self.assertEqual(shadow[0]["high"], 8060.000000000001)
         self.assertEqual(shadow[0]["low"], -1.25)
 
+    @unittest.skipUnless(importlib.util.find_spec("duckdb") is not None,
+                         "optional isolated-pilot DuckDB dependency is absent")
     def test_large_financial_integer_round_trip_and_null_preservation(self):
         duckdb = pilot.require_duckdb()
         with tempfile.TemporaryDirectory() as tmp:

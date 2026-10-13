@@ -209,7 +209,8 @@ class CanonicalUniverseTierTests(unittest.TestCase):
             root = Path(tmp)
             written = tiers.write_artifact(root, artifact)
             self.assertTrue(Path(written["path"]).is_file())
-            self.assertIn("data\\canonical_universe_tiers\\artifacts", written["path"])
+            relative = Path(written["path"]).relative_to(root)
+            self.assertEqual(relative.parts[:3], ("data", "canonical_universe_tiers", "artifacts"))
 
     def test_prior_ledger_must_be_a_canonical_artifact(self):
         with self.assertRaisesRegex(tiers.CanonicalUniverseTierError, "prior_ledger_not_a_canonical"):

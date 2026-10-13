@@ -193,6 +193,11 @@ selection because each rebuilds a full Integrated Decision (about 2 minutes).
   `tests/test_cited_evidence_backup.py` and `tests/test_official_document_retrieval.py`
   import undeclared `pypdf`. They remain preserved outside this core cohort; admitting their
   optional dependency or refactoring that boundary needs a separate reviewed change.
+  Four DuckDB round-trip cases declare their optional isolated-pilot dependency and skip
+  explicitly when absent; pure pilot contracts still run. Three owner-local Windows
+  workspace checks require that workspace. Portable path and temporary-Git fixtures
+  validate the same contracts on Linux; the extension fetches full history for the
+  offline liquidity closure's immutable prior checkpoint.
 - `tests/test_ci_dependency_tiers.py` guards the two critical focused files and structural G2
   invocation. It also rejects duplicate, missing, expanded or omitted extended entries and
   overlap with any file in the focused selection. The extended job adds regression breadth;
