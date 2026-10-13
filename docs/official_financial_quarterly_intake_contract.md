@@ -12,7 +12,7 @@ and semantic validation are independent; HPG/KBC still fail the existing cohort.
 
 `official_financial_value_evidence.parse_accounting_integer` owns parsing through
 an explicit callback; commas/dots/parentheses retain its strict integer policy.
-`official_financial_period_identity.recognize_reported_column_period` is a separate
+`structured_financial_period_semantics.recognize_reported_column_period` is a separate
 opt-in column recognizer. The existing recognize_statement_period Q3 block and
 period_bounds/source-period admission are unchanged. No implicit fiscal calendar.
 
@@ -49,6 +49,10 @@ Original SHA is reverified; page bounds and exact citation binding fail closed.
 Raw-token versus reviewed-value disagreement blocks normalization. Booleans,
 malformed grouped numbers and unsupported scales fail; zero and negative integer
 values survive. Exact unit normalization does not create currency/FX authority.
+Review spans must bind the row's actual page; covered-date proofs require an
+in-range page and literal endpoints. Monetary document scales never multiply EPS
+or share quantities; mixed-unit documents remain explicitly unsupported pending
+an independently qualified row-unit adapter.
 
 ## Accounting and temporal distinctions
 

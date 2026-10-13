@@ -118,7 +118,7 @@ def resolve_reported_row_identity(statement_family: str, line_code: str, label: 
     if not any(term in folded for term in phrases):
         blockers.append("LITERAL_ROW_LABEL_MISMATCH")
     if (statement_family == "income_statement" and str(line_code) == "60"
-            and any(term in folded for term in ("parent", "cong ty me", "non controlling", "khong kiem soat"))):
+            and any(term in folded for term in ("parent", "cong ty me", "non-controlling", "non controlling", "khong kiem soat"))):
         blockers.append("TOTAL_PARENT_PROFIT_IDENTITY_CONFLICT")
     if statement_family == "income_statement" and str(line_code) == "61" and any(term in folded for term in ("non-controlling", "non controlling", "khong kiem soat")):
         blockers.append("PARENT_NCI_PROFIT_IDENTITY_CONFLICT")

@@ -10,6 +10,7 @@ from collections import Counter, defaultdict
 import gzip
 import hashlib
 import json
+import re
 from pathlib import Path
 from typing import Any, Iterable, Mapping, Sequence
 
@@ -61,6 +62,94 @@ STATUS_BLOCKERS = {
 FLOW_FAMILIES = frozenset({"income_statement", "cash_flow"})
 REQUIRED_LINEAGE_FIELDS = ("ticker", "canonical_metric", "provider", "statement_family",
                            "reporting_period", "source_sha256", "source_file", "fact_id")
+
+
+def recognize_reported_column_period(label: str, *, statement_family: str,
+                                     explicit_start: str | None = None,
+                                     explicit_end: str | None = None) -> dict[str, Any]:
+    """Opt-in reviewed-column intake; existing provider and source gates stay intact.
+
+    Q3 and nine-month flow columns have different identities. Covered endpoints
+    must be supplied independently; this never infers an issuer fiscal calendar.
+    Existing canonical provider projection does not call this recognizer.
+    """
+    from datetime import date
+    text = str(label or "")
+    result = dict(reporting_period=None, period_semantic_state=UNKNOWN_DURATION,
+                  period_start=explicit_start, period_end=explicit_end, native_period_label=text,
+                  reported_duration_months=None, blockers=[])
+    start = end = None
+    if explicit_start or explicit_end:
+        try:
+            start = date.fromisoformat(explicit_start) if explicit_start else None
+            end = date.fromisoformat(explicit_end) if explicit_end else None
+            if start and end and start > end:
+                raise ValueError()
+        except (TypeError, ValueError):
+            result["blockers"].append("MALFORMED_EXPLICIT_PERIOD_BOUNDS")
+    if statement_family == "balance_sheet":
+        if explicit_end:
+            result.update(reporting_period=explicit_end, period_semantic_state=POINT_IN_TIME_BALANCE_SHEET)
+            literal_dates = re.findall(r"\b20\d{2}-\d{2}-\d{2}\b", text)
+            month_names = "January February March April May June July August September October November December".split()
+            month_pattern = "|".join(month_names)
+            for day, month_name, year in re.findall(rf"\b(\d{{1,2}})\s+({month_pattern})\s+(20\d{{2}})\b", text, re.IGNORECASE):
+                month = next(i for i, name in enumerate(month_names, 1) if name.casefold() == month_name.casefold())
+                literal_dates.append(f"{year}-{month:02d}-{int(day):02d}")
+            for month_name, day, year in re.findall(rf"\b({month_pattern})\s+(\d{{1,2}}),?\s+(20\d{{2}})\b", text, re.IGNORECASE):
+                month = next(i for i, name in enumerate(month_names, 1) if name.casefold() == month_name.casefold())
+                literal_dates.append(f"{year}-{month:02d}-{int(day):02d}")
+            if any(value != explicit_end for value in literal_dates):
+                result["blockers"].append("REPORTED_BALANCE_INSTANT_CONFLICT")
+        else:
+            result["blockers"].append("BALANCE_INSTANT_NOT_PROVEN")
+        if explicit_start:
+            result["blockers"].append("BALANCE_SHEET_IS_NOT_DURATION")
+        return result
+    if statement_family not in {"income_statement", "cash_flow", "eps_note"}:
+        result["blockers"].append("STATEMENT_FAMILY_NOT_SUPPORTED")
+        return result
+    quarter_pattern = r"(?:\b(20\d{2})-Q([1-4])\b|(?:quarter\s*(III|II|IV|I|[1-4])|q([1-4])|qu[ýy]\s*([1-4]))\s*[/, -]*(20\d{2}))"
+    quarter_hits = list(re.finditer(quarter_pattern, text, re.IGNORECASE))
+    quarter = quarter_hits[0] if quarter_hits else None
+    cumulative_pattern = r"(?:\b(20\d{2})-(9M|H1)\b|(?:nine[- ]months?|9[- ]months?|9\s+th[áa]ng|six[- ]months?|6[- ]months?)\b.*?\b(20\d{2})\b)"
+    cumulative_hits = list(re.finditer(cumulative_pattern, text, re.IGNORECASE))
+    cumulative = cumulative_hits[0] if cumulative_hits else None
+    if len({hit.group(0).casefold() for hit in quarter_hits}) > 1:
+        result["blockers"].append("MULTIPLE_REPORTED_QUARTER_COLUMNS")
+        return result
+    if len({hit.group(0).casefold() for hit in cumulative_hits}) > 1:
+        result["blockers"].append("MULTIPLE_REPORTED_CUMULATIVE_COLUMNS")
+        return result
+    if quarter and cumulative:
+        result["blockers"].append("QUARTER_CUMULATIVE_COLUMN_AMBIGUOUS")
+        return result
+    if quarter:
+        groups = quarter.groups()
+        year = groups[0] or groups[5]
+        token = groups[1] or groups[2] or groups[3] or groups[4]
+        number = {"I": 1, "II": 2, "III": 3, "IV": 4}.get(token.upper()) or int(token)
+        result.update(reporting_period=f"{year}-Q{number}", period_semantic_state=STANDALONE_QUARTER, reported_duration_months=3)
+    elif cumulative:
+        year = cumulative.group(1) or cumulative.group(3)
+        months = 9 if str(cumulative.group(2)).upper() == "9M" or re.search(r"nine|9[- ]month|9\s+th", cumulative.group(0), re.IGNORECASE) else 6
+        result.update(reporting_period=f"{year}-" + ("9M" if months == 9 else "H1"),
+                      period_semantic_state=YTD_CUMULATIVE_INTERIM if months == 9 else UNKNOWN_DURATION,
+                      reported_duration_months=months)
+    else:
+        result["blockers"].append("REPORTED_FLOW_PERIOD_UNKNOWN")
+    if result["reporting_period"] and explicit_end and not result["reporting_period"].startswith(explicit_end[:4]):
+        result["blockers"].append("PERIOD_END_YEAR_CONFLICT")
+    months = result["reported_duration_months"]
+    if start and end and months:
+        month_span = (end.year - start.year) * 12 + end.month - start.month
+        if month_span > months or (month_span == months and end.day >= start.day):
+            # Reject an explicitly longer covered interval; do not invent a start
+            # or assume that fiscal Q3 begins in July.
+            result["blockers"].append("COVERED_DURATION_CONFLICTS_WITH_REPORTED_COLUMN")
+    if statement_family == "cash_flow" and result["period_semantic_state"] == STANDALONE_QUARTER:
+        result["blockers"].append("CASH_FLOW_QUARTER_DURATION_NOT_PROVEN")
+    return result
 
 
 def _canonical(value: Any) -> str:

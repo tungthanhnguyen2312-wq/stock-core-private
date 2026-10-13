@@ -4,7 +4,8 @@ import hashlib
 
 import pytest
 
-from official_financial_period_identity import recognize_reported_column_period, recognize_statement_period
+from official_financial_period_identity import recognize_statement_period
+from stocklookup_core.financial.structured_financial_period_semantics import recognize_reported_column_period
 from official_financial_value_evidence import parse_accounting_integer
 from stocklookup_core.evidence.approved_issuer_ir_financial_evidence import prepare_financial_intake_candidate, APPROVED_ROUTES
 from stocklookup_core.evidence.financial_row_identity import resolve_reported_row_identity
@@ -56,6 +57,7 @@ def test_existing_q3_source_gate_is_unchanged():
 @pytest.mark.parametrize("label,period,state", [
     ("Quarter III 2026", "2026-Q3", "STANDALONE_QUARTER"),
     ("2026-Q3", "2026-Q3", "STANDALONE_QUARTER"),
+    ("2026-9m", "2026-9M", "YTD_CUMULATIVE_INTERIM"),
     ("nine months ended September 30 2026", "2026-9M", "YTD_CUMULATIVE_INTERIM"),
     ("2026-H1", "2026-H1", "UNKNOWN_DURATION"),
     ("Six-month period ended 30 June 2026", "2026-H1", "UNKNOWN_DURATION"),
@@ -224,3 +226,75 @@ def test_composite_depreciation_and_capital_amount_do_not_become_ebitda_or_share
     assert depreciation["accounting_identity"] == "COMPOSITE_CASH_FLOW_DEPRECIATION_ADJUSTMENT"
     capital = resolve_reported_row_identity("balance_sheet", "411a", "Ordinary shares carrying voting rights")
     assert capital["canonical_metric"] is None and capital["accounting_identity"] == "ORDINARY_VOTING_SHARE_CAPITAL_AMOUNT"
+
+
+@pytest.mark.parametrize("label", ["2026-9M and 2025-9M", "2026-H1 and 2026-9M"])
+def test_multiple_cumulative_columns_cannot_select_one_period(label):
+    result = prepared(period=label)
+    assert not result["semantic_valid"]
+    assert "MULTIPLE_REPORTED_CUMULATIVE_COLUMNS" in result["semantic_blockers"]
+    assert result["candidate"]["reporting_period"] is None
+
+
+@pytest.mark.parametrize("label", ["Profit after tax of non-controlling interests", "Profit after tax of non controlling interests"])
+def test_nci_profit_cannot_masquerade_as_total_profit(label):
+    result = prepared(code="60", label=label)
+    assert not result["semantic_valid"]
+    assert "TOTAL_PARENT_PROFIT_IDENTITY_CONFLICT" in result["semantic_blockers"]
+
+
+@pytest.mark.parametrize("span_page", [None, -1, 8, 58, True])
+def test_review_span_page_must_match_original_row_page(span_page):
+    row, doc, raw = inputs()
+    row["source_span"]["source_page"] = span_page
+    result = prepared(row, doc, raw)
+    assert not result["semantic_valid"] and not result["native_numeric_literal_proven"]
+    assert "REVIEW_SPAN_PAGE_NOT_BOUND" in result["citation_blockers"]
+
+
+@pytest.mark.parametrize("proof_page,proof_text", [(-1, "2026-09-30"), (58, "2026-09-30"), (9, "unrelated note")])
+def test_covered_date_proof_must_bind_a_real_page_and_endpoint(proof_page, proof_text):
+    row, doc, raw = inputs(family="balance_sheet", code="280", label="Total assets", period="2026-09-30")
+    row.update(period_end="2026-09-30", period_bounds_evidence=dict(document_sha256=doc["sha256"], source_page=proof_page, text=proof_text))
+    result = prepared(row, doc, raw)
+    assert not result["semantic_valid"]
+    assert any(code.startswith("COVERED_DATE_ENDPOINT") for code in result["semantic_blockers"])
+
+
+@pytest.mark.parametrize("text", ["As at 30 September 2026", "September 30, 2026", "2026-09-30"])
+def test_reviewed_date_formats_preserve_proven_balance_instant(text):
+    row, doc, raw = inputs(family="balance_sheet", code="280", label="Total assets", period="2026-09-30")
+    row.update(period_end="2026-09-30", period_bounds_evidence=dict(document_sha256=doc["sha256"], source_page=9, text=text))
+    result = prepared(row, doc, raw)
+    assert result["semantic_valid"]
+    assert result["candidate"]["period_semantic_state"] == "POINT_IN_TIME_BALANCE_SHEET"
+
+
+@pytest.mark.parametrize("quantity,row_scale", [(True, 1), (True, 1000000), (False, 1), (False, 1000000)])
+def test_document_monetary_scale_never_multiplies_eps_or_share_quantities(quantity, row_scale):
+    row, doc, raw = inputs(family="eps_note" if quantity else "income_statement", code="" if quantity else "70",
+        label="Number of ordinary shares in circulation for the period" if quantity else "Basic earnings per share", value="1,000")
+    doc["unit_scale"] = 1000000
+    row["unit_scale"] = row_scale
+    if quantity:
+        row.update(currency=None, unit="shares")
+    result = prepared(row, doc, raw)
+    assert not result["semantic_valid"] and result["candidate"]["normalized_value"] is None
+    assert "EPS_OR_SHARE_MIXED_UNIT_SCALE_NOT_SUPPORTED" in result["semantic_blockers"]
+
+
+@pytest.mark.parametrize("family,label,start,end,blocker", [
+    ("income_statement", "2026-Q3", "2026-01-01", "2026-09-30", "COVERED_DURATION_CONFLICTS_WITH_REPORTED_COLUMN"),
+    ("balance_sheet", "2026-09-30", None, "2026-06-30", "REPORTED_BALANCE_INSTANT_CONFLICT"),
+    ("balance_sheet", "As at 30 September 2026", None, "2026-06-30", "REPORTED_BALANCE_INSTANT_CONFLICT"),
+])
+def test_conflicting_explicit_column_bounds_fail_closed(family, label, start, end, blocker):
+    result = recognize_reported_column_period(label, statement_family=family, explicit_start=start, explicit_end=end)
+    assert blocker in result["blockers"]
+
+
+@pytest.mark.parametrize("start,end", [("2026-06-01", "2026-08-31"), ("2026-01-31", "2026-04-30")])
+def test_proven_quarter_bounds_do_not_require_a_july_fiscal_start(start, end):
+    result = recognize_reported_column_period("2026-Q3", statement_family="income_statement", explicit_start=start, explicit_end=end)
+    assert not result["blockers"]
+    assert result["period_start"] == start and result["period_end"] == end

@@ -30,6 +30,14 @@ from tests.test_official_financial_quarterly_intake import (
     test_real_candidate_cannot_enable_existing_reported_period_ratios,
     test_document_class_cannot_make_unreviewed_rows_reviewed_or_news_financial,
     test_composite_depreciation_and_capital_amount_do_not_become_ebitda_or_shares,
+    test_multiple_cumulative_columns_cannot_select_one_period,
+    test_nci_profit_cannot_masquerade_as_total_profit,
+    test_review_span_page_must_match_original_row_page,
+    test_covered_date_proof_must_bind_a_real_page_and_endpoint,
+    test_reviewed_date_formats_preserve_proven_balance_instant,
+    test_document_monetary_scale_never_multiplies_eps_or_share_quantities,
+    test_conflicting_explicit_column_bounds_fail_closed,
+    test_proven_quarter_bounds_do_not_require_a_july_fiscal_start,
 )
 
 

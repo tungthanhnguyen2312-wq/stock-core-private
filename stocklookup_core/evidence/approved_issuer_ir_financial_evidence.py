@@ -142,13 +142,20 @@ def prepare_financial_intake_candidate(candidate: Mapping[str, Any], *, document
         if row.get(key) in (None, ""):
             schema.append(key.upper() + "_MISSING")
     page = row.get("source_page")
-    if type(page) is not int or page < 1 or doc.get("page_count") and page > doc["page_count"]:
+    page_count = doc.get("page_count")
+    def valid_page(value):
+        return type(value) is int and type(page_count) is int and 1 <= value <= page_count
+    if type(page_count) is not int or page_count < 1:
+        citation.append("SOURCE_DOCUMENT_PAGE_COUNT_REQUIRED")
+    if not valid_page(page):
         citation.append("SOURCE_PAGE_OUT_OF_RANGE_OR_MISSING")
     original_span = row.get("source_span")
     span = original_span if isinstance(original_span, Mapping) else {}
     if (not isinstance(span, Mapping) or span.get("document_sha256") != digest
             or not span.get("citation_id") or not span.get("text")):
         citation.append("EXACT_CITATION_NOT_DOCUMENT_BOUND")
+    if not valid_page(span.get("source_page")) or span.get("source_page") != page:
+        citation.append("REVIEW_SPAN_PAGE_NOT_BOUND")
     if str(row.get("raw_row_label") or "") not in str(span.get("text") or ""):
         citation.append("ROW_LABEL_NOT_IN_REVIEW_SPAN")
     identity = resolve_reported_row_identity(str(row.get("statement_family") or ""),
@@ -163,6 +170,12 @@ def prepare_financial_intake_candidate(candidate: Mapping[str, Any], *, document
     if type(scale) is not int or scale <= 0:
         semantic.append("UNIT_SCALE_NOT_EXPLICIT")
     quantity = identity["accounting_identity"] in {"EPS_DENOMINATOR_SHARES", "EPS_OPENING_SHARES", "EPS_RESTATED_DIVIDEND_IMPACT"}
+    per_share = identity["accounting_identity"] == "REPORTED_BASIC_EPS"
+    unsupported_special_scale = (quantity or per_share) and (scale != 1 or doc.get("unit_scale") != 1)
+    if unsupported_special_scale:
+        # A statement's monetary scale cannot establish shares or VND/share.
+        # Mixed-unit documents require an independently qualified row-unit adapter.
+        semantic.append("EPS_OR_SHARE_MIXED_UNIT_SCALE_NOT_SUPPORTED")
     if quantity and (row.get("unit") != "shares" or row.get("currency") is not None):
         semantic.append("EPS_SHARE_QUANTITY_UNIT_NOT_PROVEN")
     if (not quantity and row.get("currency") != doc.get("currency")) or scale != doc.get("unit_scale"):
@@ -180,7 +193,7 @@ def prepare_financial_intake_candidate(candidate: Mapping[str, Any], *, document
             value = parsed
         if type(value) is not int:
             raise ValueError("EXACT_INTEGER_REQUIRED")
-        normalized = value * scale if type(scale) is int and scale > 0 else None
+        normalized = value * scale if type(scale) is int and scale > 0 and not unsupported_special_scale else None
     except (ValueError, TypeError):
         normalized = None
         semantic.append("ACCOUNTING_INTEGER_INVALID_OR_CONFLICTING")
@@ -194,8 +207,25 @@ def prepare_financial_intake_candidate(candidate: Mapping[str, Any], *, document
         semantic.append("COVERED_DATE_ENDPOINT_PROOF_MISSING")
     bounds_proof = row.get("period_bounds_evidence")
     if bounds_proof and (not isinstance(bounds_proof, Mapping) or bounds_proof.get("document_sha256") != digest
-                         or not bounds_proof.get("source_page") or not bounds_proof.get("text")):
+                         or not valid_page(bounds_proof.get("source_page")) or not bounds_proof.get("text")):
         semantic.append("COVERED_DATE_ENDPOINT_PROOF_UNBOUND")
+    elif isinstance(bounds_proof, Mapping):
+        def endpoint_in_text(endpoint):
+            try:
+                parsed_date = datetime.fromisoformat(endpoint).date()
+            except (TypeError, ValueError):
+                return False
+            text = " ".join(str(bounds_proof.get("text") or "").casefold().split())
+            months = ("january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december")
+            day, month, year = parsed_date.day, parsed_date.month, parsed_date.year
+            month_name = months[month - 1]
+            patterns = (re.escape(endpoint), rf"0?{day}\s+{month_name}\s+{year}",
+                        rf"{month_name}\s+0?{day},?\s+{year}",
+                        rf"0?{day}[/.-]0?{month}[/.-]{year}",
+                        rf"ng[àa]y\s+0?{day}\s+th[áa]ng\s+0?{month}\s+n[ăa]m\s+{year}")
+            return any(re.search(r"(?<!\d)(?:" + pattern + r")(?!\d)", text) for pattern in patterns)
+        if any(not endpoint_in_text(row[key]) for key in ("period_start", "period_end") if row.get(key)):
+            semantic.append("COVERED_DATE_ENDPOINT_NOT_IN_PROOF_TEXT")
     if row.get("reported_column_kind") and row["reported_column_kind"] != period.get("period_semantic_state"):
         semantic.append("QUARTER_CUMULATIVE_OR_INSTANT_MISMATCH")
     assurance = doc.get("audit_or_review_status", "unknown")
