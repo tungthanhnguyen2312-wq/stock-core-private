@@ -4386,7 +4386,7 @@
   "successor_disposition": "OWNER_SELECTED_OFFLINE_EVIDENCE_NO_AUTOMATIC_SUCCESSOR",
   "development_control": {
     "schema": "stocklookup_development_lanes/1",
-    "revision": 24,
+    "revision": 26,
     "history": [
       {
         "operation": "INIT",
@@ -4632,6 +4632,28 @@
         "agent": "Codex",
         "observed_head": "4b9a6be97bddb246235ffce4e8c0aaf64818ddf4",
         "revision": 24
+      },
+      {
+        "operation": "TRANSITION",
+        "milestone_id": "ARCHITECTURE_IMPORT_RELIABILITY_V1",
+        "from": "ACTIVE",
+        "to": "REVIEW_READY",
+        "checkpoint": "c184558cdea26c487b6c11d4c48b8d6d9fc997fd",
+        "owner_note": "Bounded G2 correction complete in admitted test file:124 guard/layout/closure cases passed, audit denies before side effect and nonzero child exit fails. Exact clean c184558c pushed to PR136; hosted exact-head CI pending. Original observed-main integration234cases passed; refreshed integrated G2 required before release.",
+        "agent": "Codex",
+        "observed_head": "f0d4fd3f7bfda07af8c7c3828777adacd41967fa",
+        "revision": 25
+      },
+      {
+        "operation": "TRANSITION",
+        "milestone_id": "HPG_EXISTING_ISSUER_ATTACHMENT_BINDING_CORRECTIVE_V1",
+        "from": "ACTIVE",
+        "to": "REVIEW_READY",
+        "checkpoint": "9f12970c5e706424ee2547f3df78009c6e33de18",
+        "owner_note": "Exact admitted HPG common-owner binding repair complete at9f12970c:435 source/financial/frozen cases pass, independent root diff review and old cohort/registry/period preservation verified. Three-file clean feature pushed for hosted CI; no real fact/ratio/source/runtime activation.",
+        "agent": "Codex",
+        "observed_head": "f0d4fd3f7bfda07af8c7c3828777adacd41967fa",
+        "revision": 26
       }
     ],
     "lanes": [
@@ -4824,8 +4846,8 @@
         "consumes": {},
         "domain": "architecture-import-reliability",
         "shared_paths": [],
-        "state": "ACTIVE",
-        "checkpoint": "7c067d3407c11f1ec51a8ec8132f8d608e874e0e",
+        "state": "REVIEW_READY",
+        "checkpoint": "c184558cdea26c487b6c11d4c48b8d6d9fc997fd",
         "authority_effect": "NONE",
         "admission_authority": {
           "kind": "EXPLICIT_OWNER_DIRECTIVE",
@@ -4856,6 +4878,14 @@
             "to": "ACTIVE",
             "checkpoint": "7c067d3407c11f1ec51a8ec8132f8d608e874e0e",
             "owner_note": "Owner program delegates in-scope fixes and integration. Independent review found G2 records import-time side effects without refusing them and ignores child exit status. Reopen review candidate for bounded test-harness correction in its already admitted file; no product/source/runtime changes. Claude handoff confirms original branch idle; delegated subagent is sole writer."
+          },
+          {
+            "operation": "TRANSITION",
+            "milestone_id": "ARCHITECTURE_IMPORT_RELIABILITY_V1",
+            "from": "ACTIVE",
+            "to": "REVIEW_READY",
+            "checkpoint": "c184558cdea26c487b6c11d4c48b8d6d9fc997fd",
+            "owner_note": "Bounded G2 correction complete in admitted test file:124 guard/layout/closure cases passed, audit denies before side effect and nonzero child exit fails. Exact clean c184558c pushed to PR136; hosted exact-head CI pending. Original observed-main integration234cases passed; refreshed integrated G2 required before release."
           }
         ]
       },
@@ -4999,8 +5029,8 @@
           "offline-call-shape",
           "hosted-producer-ci"
         ],
-        "state": "ACTIVE",
-        "checkpoint": null,
+        "state": "REVIEW_READY",
+        "checkpoint": "9f12970c5e706424ee2547f3df78009c6e33de18",
         "authority_effect": "NONE",
         "admission_authority": {
           "kind": "EXPLICIT_OWNER_DIRECTIVE",
@@ -5015,6 +5045,14 @@
             "to": "ACTIVE",
             "checkpoint": null,
             "owner_note": "Activate exact admitted HPG compatibility corrective under Owner program20261013. Actual common-owner reproduction proves existing approved file host blocks solely due to exact issuer seed mismatch. Subagent sole writer of admitted source/test/contract; no authority promotion, new source activation or protected data."
+          },
+          {
+            "operation": "TRANSITION",
+            "milestone_id": "HPG_EXISTING_ISSUER_ATTACHMENT_BINDING_CORRECTIVE_V1",
+            "from": "ACTIVE",
+            "to": "REVIEW_READY",
+            "checkpoint": "9f12970c5e706424ee2547f3df78009c6e33de18",
+            "owner_note": "Exact admitted HPG common-owner binding repair complete at9f12970c:435 source/financial/frozen cases pass, independent root diff review and old cohort/registry/period preservation verified. Three-file clean feature pushed for hosted CI; no real fact/ratio/source/runtime activation."
           }
         ]
       }
