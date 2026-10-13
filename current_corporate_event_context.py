@@ -11,7 +11,7 @@ import copy
 import hashlib
 import json
 from collections import Counter, defaultdict
-from datetime import date, datetime
+from datetime import date, datetime, time, timedelta, timezone
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
@@ -101,12 +101,67 @@ def _verify_event_context(artifact: Mapping[str, Any]) -> None:
         raise CurrentCorporateEventContextError("CURRENT_OFFICIAL_EVENT_CONTRACT_UNSUPPORTED")
 
 
-def known_at_ok(*, known_at: str | None, published_at: str | None, as_of: date) -> bool:
-    """Exclude look-ahead. Missing known_at is not inferred to be as-of."""
-    boundary = _parse_date(known_at) or _parse_date(published_at)
-    if boundary is None:
-        return True
-    return boundary <= as_of
+def _knowledge_cutoff(as_of: date | datetime) -> datetime:
+    if isinstance(as_of, datetime):
+        if as_of.utcoffset() is None:
+            raise CurrentCorporateEventContextError("KNOWLEDGE_CUTOFF_TIMEZONE_REQUIRED")
+        return as_of
+    # Existing Integrated Decision evaluation time; no exchange-close inference.
+    return datetime.combine(as_of, time(15), timezone(timedelta(hours=7)))
+
+
+def _knowledge_bounds(value: Any) -> tuple[datetime | None, datetime | None, str]:
+    """Preserve a civil date's uncertainty instead of assigning midnight publication."""
+    if value is None or value == "":
+        return None, None, "MISSING"
+    if not isinstance(value, str):
+        return None, None, "MALFORMED"
+    try:
+        if len(value) == 10:
+            civil_date = date.fromisoformat(value)
+            zone = timezone(timedelta(hours=7))
+            return (datetime.combine(civil_date, time.min, zone),
+                    datetime.combine(civil_date, time.max, zone), "DATE_ONLY")
+        if len(value) < 16 or value[10] not in {"T", " "}:
+            return None, None, "MALFORMED"
+        instant = datetime.fromisoformat(value)
+        if instant.utcoffset() is None:
+            return None, None, "TIMEZONE_UNKNOWN"
+        return instant, instant, "TIMESTAMP"
+    except ValueError:
+        return None, None, "MALFORMED"
+
+
+def _known_at_qualification(*, known_at: Any, published_at: Any,
+                            as_of: date | datetime) -> str:
+    cutoff = _knowledge_cutoff(as_of)
+    bounds = [_knowledge_bounds(value) for value in (known_at, published_at)]
+    # An explicit later time cannot be hidden by an earlier fallback or bad field.
+    if any(lower is not None and lower > cutoff for lower, _, _ in bounds):
+        return "AFTER_CUTOFF"
+    declared = [item for item in bounds if item[2] != "MISSING"]
+    if not declared:
+        return "KNOWLEDGE_TIME_MISSING"
+    if any(kind in {"MALFORMED", "TIMEZONE_UNKNOWN"} for _, _, kind in declared):
+        return "KNOWLEDGE_TIME_INVALID_OR_UNZONED"
+    if any(upper > cutoff for _, upper, _ in declared):
+        return "DATE_ONLY_CUTOFF_UNPROVEN"
+    return "KNOWN_BY_CUTOFF"
+
+
+def known_at_ok(*, known_at: str | None, published_at: str | None,
+                as_of: date | datetime) -> bool:
+    """Both declared clocks must prove eligibility at the existing session cutoff."""
+    return _known_at_qualification(known_at=known_at, published_at=published_at,
+                                   as_of=as_of) == "KNOWN_BY_CUTOFF"
+
+
+def _annotate_knowledge_time(event: dict[str, Any], qualification: str) -> None:
+    event["knowledge_time_qualification"] = qualification
+    event["historical_known_at_eligible"] = qualification == "KNOWN_BY_CUTOFF"
+    if not event["historical_known_at_eligible"]:
+        event["warnings"] = list(event["warnings"]) + [qualification]
+        event["blockers"] = list(event["blockers"]) + ["HISTORICAL_KNOWN_AT_NOT_ESTABLISHED"]
 
 
 def classify_event_status(event: Mapping[str, Any], *, as_of: date) -> tuple[str, str]:
@@ -176,7 +231,12 @@ def deduplicate_events(events: Sequence[Mapping[str, Any]]) -> list[dict[str, An
         conflicts = []
         for left, right in zip(cluster, cluster[1:]):
             conflicts.extend(_date_conflict(left, right))
-        merged = dict(cluster[0])
+        # Keep qualification and temporal proof bound to the same source record.
+        primary = max(cluster, key=lambda item: (
+            item.get("evidence_tier") == "OFFICIAL_QUALIFIED",
+            item.get("historical_known_at_eligible") is True,
+        ))
+        merged = dict(primary)
         merged["source_identities"] = sorted({
             str(item.get("source_identity") or item.get("evidence_identity") or item.get("event_id"))
             for item in cluster
@@ -186,6 +246,11 @@ def deduplicate_events(events: Sequence[Mapping[str, Any]]) -> list[dict[str, An
                 "event_id": item.get("event_id"),
                 "source": item.get("source") or item.get("source_authority"),
                 "source_identity": item.get("source_identity") or item.get("evidence_identity"),
+                "evidence_tier": item.get("evidence_tier"),
+                "known_at": item.get("known_at"),
+                "published_at": item.get("published_at"),
+                "knowledge_time_qualification": item.get("knowledge_time_qualification"),
+                "historical_known_at_eligible": item.get("historical_known_at_eligible"),
             }
             for item in cluster
         ]
@@ -209,10 +274,15 @@ def deduplicate_events(events: Sequence[Mapping[str, Any]]) -> list[dict[str, An
     return output
 
 
-def _normalize_official_event(raw: Mapping[str, Any], *, as_of: date) -> dict[str, Any] | None:
+def _normalize_official_event(raw: Mapping[str, Any], *, as_of: date,
+                              knowledge_cutoff: datetime | None = None) -> dict[str, Any] | None:
     published = raw.get("published_at")
-    known = raw.get("known_at") or published
-    if not known_at_ok(known_at=known, published_at=published, as_of=as_of):
+    known = raw.get("known_at")
+    if known is None or known == "":
+        known = published
+    temporal = _known_at_qualification(known_at=raw.get("known_at"), published_at=published,
+                                       as_of=knowledge_cutoff or as_of)
+    if temporal == "AFTER_CUTOFF":
         return None
     status, reason = classify_event_status(raw, as_of=as_of)
     qualification = str(raw.get("qualification") or "")
@@ -253,15 +323,23 @@ def _normalize_official_event(raw: Mapping[str, Any], *, as_of: date) -> dict[st
         "allowed_uses": ["current_research_context"],
         "prohibited_uses": list(FORBIDDEN_USES),
     }
+    _annotate_knowledge_time(event, temporal)
     seed = {key: value for key, value in event.items() if key != "event_id"}
     event["event_id"] = "current_corporate_event:" + hashlib.sha256(_canonical(seed)).hexdigest()
     return event
 
 
-def _normalize_supplemental(raw: Mapping[str, Any], *, as_of: date) -> dict[str, Any] | None:
-    published = raw.get("announcement_date") or raw.get("published_at")
-    known = raw.get("known_at") or published
-    if not known_at_ok(known_at=known, published_at=published, as_of=as_of):
+def _normalize_supplemental(raw: Mapping[str, Any], *, as_of: date,
+                           knowledge_cutoff: datetime | None = None) -> dict[str, Any] | None:
+    published = raw.get("published_at")
+    if published is None or published == "":
+        published = raw.get("announcement_date")
+    known = raw.get("known_at")
+    if known is None or known == "":
+        known = published
+    temporal = _known_at_qualification(known_at=raw.get("known_at"), published_at=published,
+                                       as_of=knowledge_cutoff or as_of)
+    if temporal == "AFTER_CUTOFF":
         return None
     mapped = {
         "ticker": raw["ticker"],
@@ -284,7 +362,7 @@ def _normalize_supplemental(raw: Mapping[str, Any], *, as_of: date) -> dict[str,
         "event_type": raw.get("event_type"),
         "event_status": status,
         "status_reason": reason,
-        "evidence_tier": raw.get("authority_tier") or "OFFICIAL_QUALIFIED",
+        "evidence_tier": raw.get("authority_tier") or "UNKNOWN",
         "source": raw.get("source_authority"),
         "source_identities": [raw.get("evidence_identity") or raw.get("event_id")],
         "supporting_evidence": [{"event_id": raw.get("event_id"), "source": raw.get("source_authority"),
@@ -311,6 +389,9 @@ def _normalize_supplemental(raw: Mapping[str, Any], *, as_of: date) -> dict[str,
     }
     if status == EXECUTED and not event.get("execution_date"):
         event["warnings"] = event["warnings"] + ["EXECUTED_STATUS_RETAINED_WITHOUT_DATED_EXECUTION_FIELD"]
+    if not raw.get("authority_tier"):
+        event["warnings"].append("AUTHORITY_TIER_UNSPECIFIED")
+    _annotate_knowledge_time(event, temporal)
     seed = {key: value for key, value in event.items() if key != "event_id"}
     event["event_id"] = "current_corporate_event:" + hashlib.sha256(_canonical(seed)).hexdigest()
     return event
@@ -338,7 +419,9 @@ def _ticker_summary(ticker: str, session: str, events: Sequence[Mapping[str, Any
         "data_limited_count": limited,
         "temporal_incomplete_count": incomplete,
         "qualified_event_count": qualified,
-        "has_qualified_event": qualified > 0 or any(event["event_status"] not in {DATA_LIMITED} for event in events),
+        "has_qualified_event": qualified > 0,
+        "historical_known_at_eligible_event_count": sum(
+            event.get("historical_known_at_eligible") is True for event in events),
         "does_not_enable_event_driven": True,
         "allowed_uses": ["current_research_context"],
         "prohibited_uses": list(FORBIDDEN_USES),
@@ -351,6 +434,7 @@ def build_artifact(
     official_event_context: Mapping[str, Any],
     supplemental_events: Sequence[Mapping[str, Any]] | None = None,
     research_session: str | None = None,
+    knowledge_cutoff: str | None = None,
 ) -> dict[str, Any]:
     tickers = _verify_universe(official_universe)
     _verify_event_context(official_event_context)
@@ -358,19 +442,27 @@ def build_artifact(
     if not session:
         raise CurrentCorporateEventContextError("RESEARCH_SESSION_REQUIRED")
     as_of = date.fromisoformat(session)
+    cutoff = _knowledge_cutoff(as_of)
+    if knowledge_cutoff is not None:
+        lower, _, kind = _knowledge_bounds(knowledge_cutoff)
+        if kind != "TIMESTAMP" or lower.astimezone(cutoff.tzinfo).date() != as_of:
+            raise CurrentCorporateEventContextError("KNOWLEDGE_CUTOFF_INVALID_OR_SESSION_MISMATCH")
+        if lower > cutoff:
+            raise CurrentCorporateEventContextError("KNOWLEDGE_CUTOFF_AFTER_SESSION_BOUNDARY")
+        cutoff = lower
     if official_event_context.get("research_session") != session:
         raise CurrentCorporateEventContextError("EVENT_CONTEXT_SESSION_MISMATCH")
     normalized: list[dict[str, Any]] = []
     for raw in official_event_context.get("all_current_universe_event_records") or []:
         if raw.get("ticker") not in tickers:
             continue
-        item = _normalize_official_event(raw, as_of=as_of)
+        item = _normalize_official_event(raw, as_of=as_of, knowledge_cutoff=cutoff)
         if item is not None:
             normalized.append(item)
     for raw in supplemental_events or []:
         if raw.get("ticker") not in tickers:
             continue
-        item = _normalize_supplemental(raw, as_of=as_of)
+        item = _normalize_supplemental(raw, as_of=as_of, knowledge_cutoff=cutoff)
         if item is not None:
             normalized.append(item)
     normalized = deduplicate_events(normalized)
@@ -387,7 +479,7 @@ def build_artifact(
     coverage = {
         "universe_denominator": len(records),
         "tickers_with_qualified_event": sum(1 for row in records.values() if row["has_qualified_event"] and row["events"]),
-        "tickers_with_no_qualified_event": sum(1 for row in records.values() if not row["events"]),
+        "tickers_with_no_qualified_event": sum(1 for row in records.values() if not row["has_qualified_event"]),
         "deduplicated_event_count": len(events),
         "event_type_distribution": dict(sorted(Counter(event["event_type"] for event in events).items())),
         "status_distribution": dict(sorted(Counter(event["event_status"] for event in events).items())),
@@ -406,6 +498,12 @@ def build_artifact(
         "milestone": MILESTONE,
         "research_mode": "CURRENT_RESEARCH_ONLY",
         "research_session": session,
+        "knowledge_cutoff": cutoff.isoformat(),
+        "knowledge_time_policy": {
+            "missing_or_invalid_time": "CURRENT_CONTEXT_ONLY_HISTORICAL_KNOWN_AT_UNPROVEN",
+            "date_only": "VIETNAM_CIVIL_DAY_INTERVAL_NO_INFERRED_PUBLICATION_CLOCK",
+            "qualified_counts": "EXPLICIT_SOURCE_TIER_SEPARATE_FROM_KNOWN_AT_ELIGIBILITY",
+        },
         "source_artifact_identities": {
             "current_official_universe": official_universe.get("artifact_identity"),
             "current_official_event_context": official_event_context.get("artifact_identity"),
