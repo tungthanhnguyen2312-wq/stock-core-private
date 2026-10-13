@@ -4386,7 +4386,7 @@
   "successor_disposition": "OWNER_SELECTED_OFFLINE_EVIDENCE_NO_AUTOMATIC_SUCCESSOR",
   "development_control": {
     "schema": "stocklookup_development_lanes/1",
-    "revision": 30,
+    "revision": 31,
     "history": [
       {
         "operation": "INIT",
@@ -4695,6 +4695,17 @@
         "agent": "Codex",
         "observed_head": "1a532f02b5dbcdd05c6148f32dd9043189cb8854",
         "revision": 30
+      },
+      {
+        "operation": "TRANSITION",
+        "milestone_id": "HPG_EXISTING_ISSUER_ATTACHMENT_BINDING_CORRECTIVE_V1",
+        "from": "ACTIVE",
+        "to": "REVIEW_READY",
+        "checkpoint": "b81a7518e0e5878d1deaf4f6a7fb861836fb61cf",
+        "owner_note": "Reverse redirect review finding repaired: both URL permissions required in either direction. Exact b81a7518 clean and pushed;220 source/financial plus176 E6 frozen/offline cases pass on repaired HEAD. Previous435baseline cases passed; no authority/cohort/source/runtime change. Refresh hosted CI and native integration receipt before release.",
+        "agent": "Codex",
+        "observed_head": "597ab8e2984698d92275ed913d0c36ab81f200a3",
+        "revision": 31
       }
     ],
     "lanes": [
@@ -5078,8 +5089,8 @@
           "offline-call-shape",
           "hosted-producer-ci"
         ],
-        "state": "ACTIVE",
-        "checkpoint": "9f12970c5e706424ee2547f3df78009c6e33de18",
+        "state": "REVIEW_READY",
+        "checkpoint": "b81a7518e0e5878d1deaf4f6a7fb861836fb61cf",
         "authority_effect": "NONE",
         "admission_authority": {
           "kind": "EXPLICIT_OWNER_DIRECTIVE",
@@ -5110,6 +5121,14 @@
             "to": "ACTIVE",
             "checkpoint": "9f12970c5e706424ee2547f3df78009c6e33de18",
             "owner_note": "Independent review found reverse website-to-attachment redirect checks only final registry permission. Repair within same admitted source/test paths: whenever either origin or final is exact HPG attachment host, require both URL permissions and cover reverse-origin withdrawal. Existing source authority remains unchanged; refreshed exact-head CI required."
+          },
+          {
+            "operation": "TRANSITION",
+            "milestone_id": "HPG_EXISTING_ISSUER_ATTACHMENT_BINDING_CORRECTIVE_V1",
+            "from": "ACTIVE",
+            "to": "REVIEW_READY",
+            "checkpoint": "b81a7518e0e5878d1deaf4f6a7fb861836fb61cf",
+            "owner_note": "Reverse redirect review finding repaired: both URL permissions required in either direction. Exact b81a7518 clean and pushed;220 source/financial plus176 E6 frozen/offline cases pass on repaired HEAD. Previous435baseline cases passed; no authority/cohort/source/runtime change. Refresh hosted CI and native integration receipt before release."
           }
         ]
       },
