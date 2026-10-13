@@ -4,8 +4,9 @@ PR #132 executed the function-local imports of tools/run_owner_daily.py only (on
 computes every module statically reachable from the Daily entries (E0 edges, lazy included, plus the
 reviewed launcher manifest), then in ONE fresh interpreter imports each module and executes every
 import statement found inside a function body of it: the module, then each imported symbol. Nothing
-is called. Providers, optional extras, sockets and subprocesses are refused; an audit hook records any
-write or launch so import-time side effects fail loudly. No retained evidence, no credentials.
+is called. Providers, optional extras, sockets and subprocesses are refused; an audit hook records and
+refuses side effects before they occur, including attempts an importer swallows. No retained evidence,
+no credentials.
 """
 from __future__ import annotations
 
@@ -18,6 +19,8 @@ import textwrap
 from collections import defaultdict, deque
 from functools import lru_cache
 from pathlib import Path
+
+import pytest
 
 from tools import check_architecture as guard
 
@@ -93,39 +96,44 @@ CHILD = textwrap.dedent('''
                 raise ModuleNotFoundError(("PROVIDER_BLOCKED:" if top in providers else "OPTIONAL_BLOCKED:") + name, name=top)
     sys.meta_path.insert(0, Refuse())
     events = []
+    def refuse(*event):
+        events.append(list(event))
+        raise PermissionError("CLOSURE_SIDE_EFFECT_BLOCKED:" + event[0])
     def no_network(*a, **k):
         # Recorded before refusing, so an import that catches and swallows the OSError still fails.
-        events.append(["network", "connect_refused", repr(a[-1:])[:160]])
-        raise OSError("NETWORK_BLOCKED")
+        refuse("network", "connect_refused", repr(a[-1:])[:160])
     socket.socket.connect = socket.socket.connect_ex = no_network
     socket.create_connection = no_network
     # builtin open() passes a mode string; os.open() passes mode None and integer flags.
     write_flags = os.O_WRONLY | os.O_RDWR | os.O_CREAT | os.O_APPEND | os.O_TRUNC
     mutations = {"os.mkdir", "os.rename", "os.replace", "os.remove", "os.rmdir", "os.truncate", "os.link",
-                 "os.symlink", "shutil.rmtree", "shutil.copyfile", "shutil.move"}
+                 "os.symlink", "os.chmod", "os.chown", "os.utime", "os.setxattr", "os.removexattr",
+                 "shutil.rmtree", "shutil.copyfile", "shutil.move"}
     launches = {"subprocess.Popen", "os.system", "os.exec", "os.posix_spawn", "os.spawn", "os.fork", "os.startfile"}
+    normalized_root = os.path.normcase(os.path.abspath(root)).replace(os.sep, "/")
     def audit(event, args):
         if event == "open" and isinstance(args[0], (str, bytes, os.PathLike)):
-            target = os.fsdecode(args[0]).replace(os.sep, "/")
+            target = os.path.abspath(os.fsdecode(args[0])).replace(os.sep, "/")
+            normalized_target = os.path.normcase(target).replace(os.sep, "/")
             mode, flags = args[1], args[2]
             if isinstance(mode, str) and any(c in mode for c in "wax+") or isinstance(flags, int) and flags & write_flags:
-                events.append(["write", target])
-            elif "/operations-review/" in target or target.startswith(root.replace(os.sep, "/") + "/data/"):
-                events.append(["retained_read", target])
+                refuse("write", target)
+            elif "/operations-review/" in normalized_target or normalized_target.startswith(normalized_root + "/data/"):
+                refuse("retained_read", target)
         elif event in mutations:
-            events.append(["fs_mutation", event, os.fsdecode(args[0]) if isinstance(args[0], (str, bytes, os.PathLike)) else repr(args[0])])
+            refuse("fs_mutation", event, os.fsdecode(args[0]) if isinstance(args[0], (str, bytes, os.PathLike)) else repr(args[0]))
         elif event in ("socket.connect", "socket.getaddrinfo", "socket.sendto", "socket.sendmsg"):
             # Recorded even when the refused connect is caught and swallowed at import time.
-            events.append(["network", event, repr(args[1:] if event.startswith("socket.s") or event == "socket.connect" else args)[:160]])
+            refuse("network", event, repr(args[1:] if event.startswith("socket.s") or event == "socket.connect" else args)[:160])
         elif event == "socket.bind":
             address = args[1]
             # Loopback, ephemeral port: the IPv6-support probe urllib3 runs when requests is imported.
             if not (isinstance(address, tuple) and address[:2] in (("::1", 0), ("127.0.0.1", 0))):
-                events.append(["network", event, repr(address)[:160]])
+                refuse("network", event, repr(address)[:160])
         elif event == "sqlite3.connect":
-            events.append(["sqlite", repr(args[0])[:160]])
+            refuse("sqlite", repr(args[0])[:160])
         elif event in launches:
-            events.append(["launch", event])
+            refuse("launch", event)
     sys.addaudithook(audit)
     sys.path[:0] = [root, tools]
     result = {"module_errors": {}, "lazy_errors": [], "optional": [], "events": events, "modules": 0, "statements": 0}
@@ -179,6 +187,8 @@ def run_closure(root: Path, workdir: Path, modules: list[str] | None = None) -> 
          str(workdir / "modules.json"), ",".join(OPTIONAL), ",".join(PROVIDERS), ",".join(guard.SIBLING_REPOSITORY_PACKAGES)],
         cwd=workdir, env=env, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=600)
     line = next((l for l in completed.stdout.splitlines() if l.startswith("CLOSURE_RESULT=")), None)
+    assert completed.returncode == 0, ("CLOSURE_CHILD_EXIT_FAILED", completed.returncode,
+                                       completed.stderr[-4000:], completed.stdout[-4000:])
     assert line, (completed.returncode, completed.stderr[-4000:])
     result = json.loads(line.partition("=")[2])
     result["plan"], result["module_count"] = len(plan), len(modules)
@@ -229,11 +239,19 @@ SYNTHETIC = {
     "os_open_writer.py": ("import os\nos.close(os.open(os.path.join(os.environ['STOCK_LOOKUP_RUNTIME_ROOT'], 'x'),"
                           " os.O_WRONLY | os.O_CREAT))\n"),
     "text_writer.py": "import os\nopen(os.path.join(os.environ['STOCK_LOOKUP_RUNTIME_ROOT'], 'y'), 'w').close()\n",
+    "swallowed_writer.py": ("import os\ntry:\n    open(os.path.join(os.environ['STOCK_LOOKUP_RUNTIME_ROOT'], 'swallowed'), 'w').close()\n"
+                            "except OSError:\n    pass\n"),
     "mkdir_writer.py": "import os\nos.mkdir(os.path.join(os.environ['STOCK_LOOKUP_RUNTIME_ROOT'], 'd'))\n",
     "swallowed_dial.py": ("import socket\ntry:\n    socket.create_connection(('192.0.2.1', 9), timeout=0.01)\n"
                           "except OSError:\n    pass\n"),
-    "sqlite_opener.py": "import sqlite3\nsqlite3.connect(':memory:').close()\n",
-    "launcher.py": "import subprocess, sys\nsubprocess.run([sys.executable, '-c', 'pass'])\n",
+    "sqlite_opener.py": "import os, sqlite3\nsqlite3.connect(os.path.join(os.environ['STOCK_LOOKUP_RUNTIME_ROOT'], 'db')).close()\n",
+    "launcher.py": ("import os, subprocess, sys\nsubprocess.run([sys.executable, '-c',"
+                    " \"import sys; open(sys.argv[1], 'w').close()\", os.path.join(os.environ['STOCK_LOOKUP_RUNTIME_ROOT'], 'spawned')])\n"),
+    "swallowed_launcher.py": ("import os, subprocess, sys\ntry:\n    subprocess.run([sys.executable, '-c',"
+                              " \"import sys; open(sys.argv[1], 'w').close()\", os.path.join(os.environ['STOCK_LOOKUP_RUNTIME_ROOT'], 'swallowed_spawn')])\n"
+                              "except OSError:\n    pass\n"),
+    "swallowed_retained_reader.py": ("from pathlib import Path\ntry:\n    (Path(__file__).parent / 'operations-review' / 'canary.txt').read_text()\n"
+                                    "except OSError:\n    pass\n"),
     "provider_user.py": "def run():\n    import vnstock\n",
     "masked.py": "import fitz\nimport removed_root_module\n",
     "benign_tempdir.py": "import tempfile\nCACHE = tempfile.gettempdir()\n",
@@ -244,20 +262,43 @@ SYNTHETIC = {
 def test_closure_reports_every_planted_defect_and_no_benign_probe(tmp_path):
     root = tmp_path / "repo"
     root.mkdir()
+    retained = root / "operations-review"
+    retained.mkdir()
+    (retained / "canary.txt").write_text("must not be read", encoding="utf-8")
     for name, body in SYNTHETIC.items():
         (root / name).write_text(body, encoding="utf-8")
     work = tmp_path / "work"
     work.mkdir()
     result = run_closure(root, work, modules=sorted(Path(n).stem for n in SYNTHETIC))
     failures = closure_failures(result)
-    assert set(failures["module_errors"]) == {"broken_body"}
+    refused_modules = {"os_open_writer", "text_writer", "mkdir_writer", "sqlite_opener", "launcher"}
+    assert set(failures["module_errors"]) == {"broken_body"} | refused_modules
     assert "removed_root_module" in failures["module_errors"]["broken_body"]
+    assert all("CLOSURE_SIDE_EFFECT_BLOCKED:" in failures["module_errors"][name] for name in refused_modules)
     assert sorted((r[0], r[2], tuple(r[3])) for r in result["lazy_errors"]) == [
         ("stale_module", "removed_root_module", ()), ("stale_symbol", "good", ("REMOVED",))]
     # Exactly the planted side effects: nothing from benign_tempdir / benign_loopback.
-    kinds = sorted((e[0], e[1].rsplit("/", 1)[-1] if e[0] == "write" else e[1]) for e in result["events"])
-    assert kinds == [("fs_mutation", "os.mkdir"), ("launch", "subprocess.Popen"), ("network", "connect_refused"),
-                     ("sqlite", "':memory:'"), ("write", "x"), ("write", "y")], result["events"]
+    kinds = sorted((e[0], e[1].rsplit("/", 1)[-1] if e[0] in {"write", "retained_read"} else e[1]) for e in result["events"])
+    sqlite_event = next(e[1] for e in result["events"] if e[0] == "sqlite")
+    assert Path(ast.literal_eval(sqlite_event)).name == "db"
+    assert kinds == [("fs_mutation", "os.mkdir"), ("launch", "subprocess.Popen"), ("launch", "subprocess.Popen"),
+                     ("network", "connect_refused"), ("retained_read", "canary.txt"), ("sqlite", sqlite_event),
+                     ("write", "swallowed"), ("write", "x"), ("write", "y")], result["events"]
+    # The refusal happens before file creation or process launch, including swallowed attempts.
+    assert list((work / "runtime").iterdir()) == []
     assert [r[0] for r in failures["masked_modules"]] == ["masked"]
     assert [r[0] for r in result["optional"] if len(r) != 2] == ["provider_user"]
     assert "good" not in failures["module_errors"] and result["provider_modules_loaded"] == []
+
+
+def test_closure_rejects_nonzero_child_exit_after_result(tmp_path):
+    root = tmp_path / "repo"
+    root.mkdir()
+    (root / "shutdown_failure.py").write_text(
+        "import atexit, os, sys\ndef fail_at_shutdown():\n    sys.stdout.flush()\n    os._exit(23)\n"
+        "atexit.register(fail_at_shutdown)\n", encoding="utf-8")
+    work = tmp_path / "work"
+    work.mkdir()
+    with pytest.raises(AssertionError, match="CLOSURE_CHILD_EXIT_FAILED") as caught:
+        run_closure(root, work, modules=["shutdown_failure"])
+    assert "23" in str(caught.value) and "CLOSURE_RESULT=" in str(caught.value)
