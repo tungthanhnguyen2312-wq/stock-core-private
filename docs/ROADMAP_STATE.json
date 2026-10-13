@@ -4386,7 +4386,7 @@
   "successor_disposition": "OWNER_SELECTED_OFFLINE_EVIDENCE_NO_AUTOMATIC_SUCCESSOR",
   "development_control": {
     "schema": "stocklookup_development_lanes/1",
-    "revision": 10,
+    "revision": 11,
     "history": [
       {
         "operation": "INIT",
@@ -4487,6 +4487,17 @@
         "agent": "Codex",
         "observed_head": "b60bdd6738b1079612abd08602bc79e7e6c91a1b",
         "revision": 10
+      },
+      {
+        "operation": "TRANSITION",
+        "milestone_id": "OFFICIAL_BUSINESS_UPDATES_CURRENT_RESEARCH_INTEGRATION_V1_ACCEPTANCE",
+        "from": "COMPLETE_LOCAL",
+        "to": "MERGED_RELEASED",
+        "checkpoint": "42b3e483379862e2f1985f23e2bd7f76f56ef3c6",
+        "owner_note": "Owner-approved PR135 actually merged; record verified ancestry and four post-merge SUCCESS jobs. Preserve abandoned lane and all legacy state; no merge performed or runtime authority granted.",
+        "agent": "Codex",
+        "observed_head": "7ca2a1c6cd263fcf97219c620dd34f2f3f93c944",
+        "revision": 11
       }
     ],
     "lanes": [
@@ -4593,7 +4604,7 @@
           "tests/test_current_research_decision_packet.py"
         ],
         "branch": "feature/business-update-research-v1-acceptance",
-        "state": "COMPLETE_LOCAL",
+        "state": "MERGED_RELEASED",
         "checkpoint": "42b3e483379862e2f1985f23e2bd7f76f56ef3c6",
         "authority_effect": "NONE",
         "admission_authority": {
@@ -4641,8 +4652,17 @@
             "to": "COMPLETE_LOCAL",
             "checkpoint": "42b3e483379862e2f1985f23e2bd7f76f56ef3c6",
             "owner_note": "Exact feature HEAD validated locally and four hosted Producer CI jobs SUCCESS in run 38333013078. Software locally complete; real acquisition/qualification remains blocked. Stop at Owner review/merge gate; no runtime or source activation."
+          },
+          {
+            "operation": "TRANSITION",
+            "milestone_id": "OFFICIAL_BUSINESS_UPDATES_CURRENT_RESEARCH_INTEGRATION_V1_ACCEPTANCE",
+            "from": "COMPLETE_LOCAL",
+            "to": "MERGED_RELEASED",
+            "checkpoint": "42b3e483379862e2f1985f23e2bd7f76f56ef3c6",
+            "owner_note": "Owner-approved PR135 actually merged; record verified ancestry and four post-merge SUCCESS jobs. Preserve abandoned lane and all legacy state; no merge performed or runtime authority granted."
           }
-        ]
+        ],
+        "release_sha": "2a3edff066b5ef9b9621b7e5913a8705a3a2d807"
       }
     ],
     "integration_agent": "Codex",
