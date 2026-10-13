@@ -184,11 +184,15 @@ selection because each rebuilds a full Integrated Decision (about 2 minutes).
   (`-m "$HERMETIC_MARKERS"`). The focused selection is defined once, in `FOCUSED_SELECTION`.
   Business-update observations and quarterly financial intake run in this mandatory focused
   job as complete test files, alongside their source and accounting integrity regressions.
-- `extended-hermetic` runs the 369 previously validated files listed in
+- `extended-hermetic` runs the 367 core-compatible files listed in
   `tests/extended_hermetic_selection.txt` as a separate parallel hermetic job, using the same
   constrained dependencies and provider-import guard. It starts with `continue-on-error: true`;
   a later reviewed CI change may make it blocking after at least ten successful hosted runs
   and coordinator review. A green aggregate check alone is insufficient while it is non-blocking.
+  The first clean-core hosted collection exposed two misclassified optional-PDF suites:
+  `tests/test_cited_evidence_backup.py` and `tests/test_official_document_retrieval.py`
+  import undeclared `pypdf`. They remain preserved outside this core cohort; admitting their
+  optional dependency or refactoring that boundary needs a separate reviewed change.
 - `tests/test_ci_dependency_tiers.py` guards the two critical focused files and structural G2
   invocation. It also rejects duplicate, missing, expanded or omitted extended entries and
   overlap with any file in the focused selection. The extended job adds regression breadth;

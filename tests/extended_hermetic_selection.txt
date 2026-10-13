@@ -1,6 +1,7 @@
 # Extended hermetic tier (STAGE D, 2026-10-13): test files outside FOCUSED_SELECTION that pass with
 # providers, network and retained evidence refused. Preserve the reviewed classifier cohort.
 # Revision 2026-10-13: business updates and quarterly financial intake run in mandatory FOCUSED_SELECTION.
+# Clean core CI excludes test_cited_evidence_backup.py and test_official_document_retrieval.py: undeclared optional pypdf.
 tests/regression/test_mapping_registry_guards.py
 tests/regression/test_missing_data_regression.py
 tests/regression/test_mutations_and_goldens.py
@@ -43,7 +44,6 @@ tests/test_canonical_universe_tiers.py
 tests/test_cash_dividend_qualification.py
 tests/test_cash_flow_debt_mapping.py
 tests/test_checkout_cleanliness_contract.py
-tests/test_cited_evidence_backup.py
 tests/test_collect_market_evidence.py
 tests/test_company_profile_sync.py
 tests/test_company_subsidiaries_sync.py
@@ -233,7 +233,6 @@ tests/test_next_session_decision_brief_posture_transition.py
 tests/test_non_cash_event_qualification.py
 tests/test_observability_events.py
 tests/test_ocr_sidecar_encoding.py
-tests/test_official_document_retrieval.py
 tests/test_official_evidence.py
 tests/test_official_exchange_trading_statistics.py
 tests/test_official_financial_filing_evidence.py

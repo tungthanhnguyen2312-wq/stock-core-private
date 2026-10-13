@@ -156,7 +156,7 @@ and no production Daily launch. Disk admission remains independently mandatory.
 [Business updates](official_business_update_research_contract.md): PR135; news route blocked.
 [Intake](official_financial_quarterly_intake_contract.md): PR137; offline/source gate. HPG binding PR138 uses approved routes.
 [Qualifier transport](current_financial_valuation_input_unlock_v1_contract.md): PR140; present Workspace/AI labels (AI bound session ≥2026-10-14); coverage unchanged.
-[CI extension](CI_AND_DEPENDENCY_TIERS.md): G2/business/quarterly mandatory; 369 files nonblocking; release via native lanes.
+[CI extension](CI_AND_DEPENDENCY_TIERS.md): G2/business/quarterly mandatory; 367 files nonblocking; release via native lanes.
 
 ### 12. Current financial evidence
 - Local projection checkpoint: the frozen August-23 baseline remains immutable. Session

@@ -37,7 +37,7 @@ Kinds: **CURRENT FACT** (verified), **HOST-LOCAL** (untracked; re-verify),
 - **COMPLETE — [E4](e4_versioned_identity_safe_infrastructure_extraction_contract.md):** frozen V1; V2 offline.
 - **COMPLETE — [E2/E3](e2_e3_foundation_seams_and_dependency_untangling_contract.md):** registry/temporal seams.
 - **COMPLETE — [E1 evidence move](e1_official_exchange_evidence_package_migration_contract.md):** 13 modules to `stocklookup_core/evidence/`; no shim, Daily or authority change.
-- **COMPLETE — [E0](stocklookup_architecture_dependency_ratchet_and_daily_launch_guard_v1_contract.md):** PR123 `56cdc36`. [CI extension](CI_AND_DEPENDENCY_TIERS.md): G2/business/quarterly mandatory; 369 files nonblocking; release via native lanes.
+- **COMPLETE — [E0](stocklookup_architecture_dependency_ratchet_and_daily_launch_guard_v1_contract.md):** PR123 `56cdc36`. [CI extension](CI_AND_DEPENDENCY_TIERS.md): G2/business/quarterly mandatory; 367 files nonblocking; release via native lanes.
 - **COMPLETE — [Action Center cases](action_center_opportunity_cost_cases_consumer_v1_contract.md):** PR119, four post-merge jobs PASS (38105025004); offline/non-voting.
 - **COMPLETE — [capacity Phase 1](capacity_recovery_phase1_contract.md):** PR99 merged
   `168e0f7`, post-merge CI 37893984528 success; zero production reclaim/activation.

@@ -480,7 +480,10 @@ def test_extended_selection_has_no_missing_duplicate_or_focused_files():
     focused_files = {entry.split("::", 1)[0] for entry in _focused_selection_entries(workflow)}
     lines = _read("tests/extended_hermetic_selection.txt").splitlines()
     entries = [line for line in lines if line and not line.startswith("#")]
-    assert len(entries) == 369, "reviewed extended cohort was omitted or expanded"
+    # These two suites import undeclared optional pypdf during clean-core collection.
+    assert not {"tests/test_cited_evidence_backup.py",
+                "tests/test_official_document_retrieval.py"}.intersection(entries)
+    assert len(entries) == 367, "reviewed extended cohort was omitted or expanded"
     assert len(entries) == len(set(entries)), "duplicate extended file"
     assert not focused_files.intersection(entries), "a focused file also runs in extended CI"
     for entry in entries:
