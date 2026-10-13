@@ -4386,7 +4386,7 @@
   "successor_disposition": "OWNER_SELECTED_OFFLINE_EVIDENCE_NO_AUTOMATIC_SUCCESSOR",
   "development_control": {
     "schema": "stocklookup_development_lanes/1",
-    "revision": 38,
+    "revision": 39,
     "history": [
       {
         "operation": "INIT",
@@ -4780,6 +4780,17 @@
         "agent": "Codex",
         "observed_head": "f6450ee43f3163459953c082a9c318997a66053b",
         "revision": 38
+      },
+      {
+        "operation": "TRANSITION",
+        "milestone_id": "ARCHITECTURE_WAVE1_ROOT_RELOCATION_V1",
+        "from": "COMPLETE_LOCAL",
+        "to": "MERGED_RELEASED",
+        "checkpoint": "554e1dafa39f9156acde586391d12fd64b961df5",
+        "owner_note": "Resume verifies actualPR139merge preserving554e1da ancestry and four postmergeSUCCESS jobs38358219222 on exact main9c4a4ff9. Fresh nativepostmerge receipt has noerrors; recordreleased34module relocation325->291root. Sourceparity/replayproof reused; no data/runtime/source/authority change. Financialtransport remains independentlyACTIVE.",
+        "agent": "Codex",
+        "observed_head": "8473f0a7072437b98a022f176d219f16b5a43a32",
+        "revision": 39
       }
     ],
     "lanes": [
@@ -5375,7 +5386,7 @@
           "offline-call-shape",
           "hosted-producer-ci"
         ],
-        "state": "COMPLETE_LOCAL",
+        "state": "MERGED_RELEASED",
         "checkpoint": "554e1dafa39f9156acde586391d12fd64b961df5",
         "authority_effect": "NONE",
         "admission_authority": {
@@ -5407,8 +5418,17 @@
             "to": "COMPLETE_LOCAL",
             "checkpoint": "554e1dafa39f9156acde586391d12fd64b961df5",
             "owner_note": "Record C local software completion atclean554e1da:347targetedtests/guard/launcher/frozen/sourceparity/docbudgetPASS; all4exactheadhostedCI38356276776SUCCESS. Adependency released, new main9d HPGonly three disjoint sourcepaths reviewed; fresh combinedG2/E6rehearsal pending before exact integration/merge. No production/source/runtime/authority changes."
+          },
+          {
+            "operation": "TRANSITION",
+            "milestone_id": "ARCHITECTURE_WAVE1_ROOT_RELOCATION_V1",
+            "from": "COMPLETE_LOCAL",
+            "to": "MERGED_RELEASED",
+            "checkpoint": "554e1dafa39f9156acde586391d12fd64b961df5",
+            "owner_note": "Resume verifies actualPR139merge preserving554e1da ancestry and four postmergeSUCCESS jobs38358219222 on exact main9c4a4ff9. Fresh nativepostmerge receipt has noerrors; recordreleased34module relocation325->291root. Sourceparity/replayproof reused; no data/runtime/source/authority change. Financialtransport remains independentlyACTIVE."
           }
-        ]
+        ],
+        "release_sha": "9c4a4ff921b31c4a595527e7aa6731734e1093db"
       },
       {
         "milestone_id": "FINANCIAL_ACCOUNTING_QUALIFIER_TRANSPORT_CORRECTIVE_V1",
