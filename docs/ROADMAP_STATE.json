@@ -4386,7 +4386,7 @@
   "successor_disposition": "OWNER_SELECTED_OFFLINE_EVIDENCE_NO_AUTOMATIC_SUCCESSOR",
   "development_control": {
     "schema": "stocklookup_development_lanes/1",
-    "revision": 51,
+    "revision": 52,
     "history": [
       {
         "operation": "INIT",
@@ -4917,6 +4917,17 @@
         "agent": "Codex",
         "observed_head": "f528069e4f253ad46101dbeeb0d0f2452c8ceca3",
         "revision": 51
+      },
+      {
+        "operation": "TRANSITION",
+        "milestone_id": "CI_MANDATORY_IMPORT_AND_FINANCIAL_REGRESSIONS_CLEAN_CORE_V1",
+        "from": "ACTIVE",
+        "to": "REVIEW_READY",
+        "checkpoint": "230a1f9212f237355a09305953b9ce1993dadb16",
+        "owner_note": "Exact11-file clean-core continuation checkpoint230a preservesc068 ancestry.125precise fixture/CI/nav testsPASS including optional DuckDB locally;3ownerhost cases deliberately deselected, no publisher/NAS operation. New history checkout guard1PASS; final reviewed normalized pin294e7ebb independently matches unchanged launcher targets. OriginalG2/business/quarterly/architecture proofs retained; all five actual hosted jobs pending, no failed-result bypass.",
+        "agent": "Codex",
+        "observed_head": "cfe5b440f038c0dd67fe24bc5a6d262f51e92a6b",
+        "revision": 52
       }
     ],
     "lanes": [
@@ -5781,8 +5792,8 @@
           "hosted-producer-ci",
           "extended-hermetic-actual-result"
         ],
-        "state": "ACTIVE",
-        "checkpoint": null,
+        "state": "REVIEW_READY",
+        "checkpoint": "230a1f9212f237355a09305953b9ce1993dadb16",
         "authority_effect": "NONE",
         "admission_authority": {
           "kind": "EXPLICIT_OWNER_DIRECTIVE",
@@ -5797,6 +5808,14 @@
             "to": "ACTIVE",
             "checkpoint": null,
             "owner_note": "Owner program continuation same CI delivery stage, exact11-file revised admission. Preserve originalc068 ancestry by fast-forward, repair four test fixtures and history checkout; no production/dependency/source authority modifications, all actual hosted checks remain mandatory for first release."
+          },
+          {
+            "operation": "TRANSITION",
+            "milestone_id": "CI_MANDATORY_IMPORT_AND_FINANCIAL_REGRESSIONS_CLEAN_CORE_V1",
+            "from": "ACTIVE",
+            "to": "REVIEW_READY",
+            "checkpoint": "230a1f9212f237355a09305953b9ce1993dadb16",
+            "owner_note": "Exact11-file clean-core continuation checkpoint230a preservesc068 ancestry.125precise fixture/CI/nav testsPASS including optional DuckDB locally;3ownerhost cases deliberately deselected, no publisher/NAS operation. New history checkout guard1PASS; final reviewed normalized pin294e7ebb independently matches unchanged launcher targets. OriginalG2/business/quarterly/architecture proofs retained; all five actual hosted jobs pending, no failed-result bypass."
           }
         ]
       }
