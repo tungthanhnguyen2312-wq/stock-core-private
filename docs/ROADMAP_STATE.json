@@ -4386,7 +4386,7 @@
   "successor_disposition": "OWNER_SELECTED_OFFLINE_EVIDENCE_NO_AUTOMATIC_SUCCESSOR",
   "development_control": {
     "schema": "stocklookup_development_lanes/1",
-    "revision": 45,
+    "revision": 46,
     "history": [
       {
         "operation": "INIT",
@@ -4854,6 +4854,17 @@
         "agent": "Codex",
         "observed_head": "768bf740dd0ff338d92efbced49b241c82564ac4",
         "revision": 45
+      },
+      {
+        "operation": "TRANSITION",
+        "milestone_id": "CI_MANDATORY_IMPORT_AND_FINANCIAL_REGRESSIONS_V1",
+        "from": "REVIEW_READY",
+        "to": "ACTIVE",
+        "checkpoint": "f61f0a3b3ead5cae10cd3bfec4d38cecbffe469b",
+        "owner_note": "Repair actual hosted first extended collection failure in same admitted milestone: two previously classified PDF suites import undeclared optional pypdf on clean core CI. Correct exact source list to367 core-compatible files and document two deferred optional-PDF suites; retain mandatory G2/business/quarterly, all prior focused coverage, constrained core dependencies and actual extended-success release gate. No production/extraction/backup code change.",
+        "agent": "Codex",
+        "observed_head": "b33033e1e5b667d49549eff7d0719bb6a59d8fb3",
+        "revision": 46
       }
     ],
     "lanes": [
@@ -5611,7 +5622,7 @@
           "hosted-producer-ci",
           "extended-hermetic-actual-result"
         ],
-        "state": "REVIEW_READY",
+        "state": "ACTIVE",
         "checkpoint": "f61f0a3b3ead5cae10cd3bfec4d38cecbffe469b",
         "authority_effect": "NONE",
         "admission_authority": {
@@ -5635,6 +5646,14 @@
             "to": "REVIEW_READY",
             "checkpoint": "f61f0a3b3ead5cae10cd3bfec4d38cecbffe469b",
             "owner_note": "Owner source-only CI milestone exact seven-file checkpoint; mandatory G2/business/quarterly, 369-file extension, two preexisting duplicate selectors removed, reviewed normalized workflow pin77cd84e6, unchanged launcher targets. Local initial273PASS and both genuine CI/nav failures repaired with47CI and12navPASS; launcher/diffPASS. Hosted gates pending."
+          },
+          {
+            "operation": "TRANSITION",
+            "milestone_id": "CI_MANDATORY_IMPORT_AND_FINANCIAL_REGRESSIONS_V1",
+            "from": "REVIEW_READY",
+            "to": "ACTIVE",
+            "checkpoint": "f61f0a3b3ead5cae10cd3bfec4d38cecbffe469b",
+            "owner_note": "Repair actual hosted first extended collection failure in same admitted milestone: two previously classified PDF suites import undeclared optional pypdf on clean core CI. Correct exact source list to367 core-compatible files and document two deferred optional-PDF suites; retain mandatory G2/business/quarterly, all prior focused coverage, constrained core dependencies and actual extended-success release gate. No production/extraction/backup code change."
           }
         ]
       }
