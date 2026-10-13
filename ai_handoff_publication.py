@@ -24,10 +24,35 @@ def _git_bytes(repo: Path, *args: str) -> bytes:
         raise HandoffPublicationError("GIT_"+args[0].upper()+":"+result.stderr.decode("utf-8", errors="replace").strip())
     return result.stdout
 def _unsafe(value: Any) -> bool:
-    if isinstance(value,str): return bool(_ABSOLUTE_PATH.match(value))
-    if isinstance(value,dict): return any(_unsafe(v) for v in value.values())
-    if isinstance(value,list): return any(_unsafe(v) for v in value)
-    return False
+    return _unsafe_pointer(value) is not None
+def _unsafe_pointer(value: Any, pointer: str = "") -> str | None:
+    """Locate private paths without confusing the governed DNSE route with a file.
+
+    The exact snapshot source descriptor carries a root-relative HTTP endpoint. Only
+    that known provider/dataset/endpoint tuple is a route; every sibling, dictionary
+    key and nested value still passes through the filesystem-path guard. This is
+    validation only: sealed bytes and their content identities remain unchanged.
+    """
+    if isinstance(value, str):
+        return (pointer or "/") if _ABSOLUTE_PATH.match(value.strip()) else None
+    if isinstance(value, dict):
+        dnse_route = (value.get("provider") == "DNSE" and value.get("dataset") == "DNSE_OHLC_1D"
+                      and value.get("endpoint") == "/price/ohlc")
+        for key, entry in value.items():
+            if isinstance(key, str) and _ABSOLUTE_PATH.match(key.strip()):
+                return pointer + "/<unsafe-key>"
+            if key == "endpoint" and dnse_route:
+                continue
+            token = str(key).replace("~", "~0").replace("/", "~1")
+            rejected = _unsafe_pointer(entry, pointer + "/" + token)
+            if rejected is not None:
+                return rejected
+    if isinstance(value, list):
+        for index, entry in enumerate(value):
+            rejected = _unsafe_pointer(entry, pointer + "/" + str(index))
+            if rejected is not None:
+                return rejected
+    return None
 def _manifest_lineage(source: Path, producer_checkpoint: str) -> dict[str, Any]:
     manifest=json.loads((source/"ai_research_bundle_manifest.json").read_text(encoding="utf-8"))
     if not isinstance(manifest, Mapping): raise HandoffPublicationError("HANDOFF_MANIFEST_NOT_OBJECT")
@@ -138,7 +163,9 @@ def build_package(source: Path, session: str, previous: Path|None=None, *, produ
         else:
             if not entry.is_file(): raise HandoffPublicationError("HANDOFF_SOURCE_MISSING:"+name)
             parsed[name]=json.loads(entry.read_text(encoding="utf-8"))
-        if _unsafe(parsed[name]): raise HandoffPublicationError("HANDOFF_ABSOLUTE_PATH_FORBIDDEN:"+name)
+        rejected = _unsafe_pointer(parsed[name])
+        if rejected is not None:
+            raise HandoffPublicationError("HANDOFF_ABSOLUTE_PATH_FORBIDDEN:"+name+":"+rejected)
     if queue["identity"] is not None and (parsed.get(OPPORTUNITY_QUEUE) or {}).get("artifact_identity") != queue["identity"]:
         raise HandoffPublicationError("HANDOFF_OPPORTUNITY_QUEUE_IDENTITY_MISMATCH")
     hashes={name:(hashlib.sha256(entry).hexdigest() if isinstance(entry, (bytes, bytearray)) else sha(entry)) for name,entry in files.items()}
@@ -191,25 +218,50 @@ def publish(repo: Path, source: Path, session: str, *, previous: Path|None=None,
     target=repo/"sessions"/session/"builds"/payload["handoff_build_id"]
     if local_only:
         return {"status":"LOCAL_VALIDATED_NO_GIT_MUTATION","session":session,"package":payload,"immutable_session_path":target.relative_to(repo).as_posix()}
+    latest_path = repo / "LATEST.json"
+    latest = json.loads(latest_path.read_text(encoding="utf-8")) if latest_path.is_file() else {}
+    if not isinstance(latest, dict):
+        raise HandoffPublicationError("HANDOFF_LATEST_NOT_OBJECT")
+    if str(latest.get("latest_session") or "") > session:
+        raise HandoffPublicationError("HANDOFF_NEWER_LATEST_SESSION:"+str(latest["latest_session"]))
+    immutable_session_path=target.relative_to(repo).as_posix()
     if target.exists():
         current={name:sha(target/name) for name in files if (target/name).is_file()}
-        if current==payload["files"]:
-            latest_path = repo / "LATEST.json"
-            latest = json.loads(latest_path.read_text(encoding="utf-8")) if latest_path.is_file() else {}
+        if current!=payload["files"]:
+            raise HandoffPublicationError("FAIL_CLOSED_HANDOFF_BUILD_CONFLICT:"+payload["handoff_build_id"])
+        # A directory alone is not a publication receipt. Resume only committed,
+        # unchanged immutable bytes; a crash before the immutable commit fails closed.
+        if _git(repo, "status", "--porcelain", "--", immutable_session_path):
+            raise HandoffPublicationError("FAIL_CLOSED_HANDOFF_BUILD_UNCOMMITTED")
+        build_commit = _git(repo, "log", "-1", "--format=%H", "--", immutable_session_path)
+        if not build_commit:
+            raise HandoffPublicationError("FAIL_CLOSED_HANDOFF_BUILD_UNCOMMITTED")
+        expected_latest = _latest_payload(session,payload,immutable_session_path=immutable_session_path,
+                                          handoff_commit=build_commit,previous=previous)
+        if (latest == expected_latest and
+                not _git(repo, "status", "--porcelain", "--", "LATEST.json", "LATEST.md")):
+            pointer_commit = _git(repo, "rev-parse", "HEAD")
+            if push: _git(repo, "push")
             return {"status":"NO_OP_ALREADY_PUBLISHED","session":session,"package":payload,
-                    "immutable_session_path":target.relative_to(repo).as_posix(),
-                    "handoff_commit":latest.get("handoff_commit"),
-                    "immutable_handoff_commit":latest.get("handoff_commit")}
-        raise HandoffPublicationError("FAIL_CLOSED_HANDOFF_BUILD_CONFLICT:"+payload["handoff_build_id"])
-    target.mkdir(parents=True,exist_ok=False)
-    for name,entry in files.items():
-        if isinstance(entry, (bytes, bytearray)): (target/name).write_bytes(entry)
-        else: shutil.copyfile(entry,target/name)
-    (target/"HANDOFF.md").write_text(f"# Stock Lookup AI handoff\n\nSession: {session}\n\nBuild: {payload['handoff_build_id']}\n\nStatus: READY_FOR_AI\n",encoding="utf-8")
-    immutable_session_path=target.relative_to(repo).as_posix()
-    _git(repo,"add",immutable_session_path)
-    _git(repo,"commit","-m",f"handoff: {session} build {payload['handoff_build_id']}")
-    build_commit=_git(repo,"rev-parse","HEAD")
+                    "immutable_session_path":immutable_session_path,
+                    "handoff_commit":pointer_commit,"immutable_handoff_commit":build_commit}
+        # Only the just-committed build may finish an interrupted pointer update.
+        # An older build with a different authoritative pointer is never repointed.
+        if _git(repo, "rev-parse", "HEAD") != build_commit:
+            raise HandoffPublicationError("FAIL_CLOSED_HANDOFF_LATEST_POINTER_CONFLICT")
+    else:
+        target.mkdir(parents=True,exist_ok=False)
+        # Hash-bound transport bytes must survive repository/global text and clean
+        # filters. The nearest attributes apply only to this new immutable build;
+        # neither source bytes, old builds nor the operator's Git config are changed.
+        (target/".gitattributes").write_bytes(b"* -text -filter -ident\n")
+        for name,entry in files.items():
+            if isinstance(entry, (bytes, bytearray)): (target/name).write_bytes(entry)
+            else: shutil.copyfile(entry,target/name)
+        (target/"HANDOFF.md").write_text(f"# Stock Lookup AI handoff\n\nSession: {session}\n\nBuild: {payload['handoff_build_id']}\n\nStatus: READY_FOR_AI\n",encoding="utf-8")
+        _git(repo,"add",immutable_session_path)
+        _git(repo,"commit","-m",f"handoff: {session} build {payload['handoff_build_id']}")
+        build_commit=_git(repo,"rev-parse","HEAD")
     latest=_latest_payload(session,payload,immutable_session_path=immutable_session_path,handoff_commit=build_commit,previous=previous)
     (repo/"LATEST.json").write_text(json.dumps(latest,indent=2,sort_keys=True)+"\n",encoding="utf-8")
     (repo/"LATEST.md").write_text(f"# Latest Stock Lookup handoff\n\nSession: {session}\n\nBuild: {payload['handoff_build_id']}\n\nStatus: READY_FOR_AI\n",encoding="utf-8")
@@ -256,5 +308,14 @@ def verify_remote_publication(repo: Path, published: Mapping[str, Any]) -> dict[
             raise HandoffPublicationError("REMOTE_FILE_HASH_MISMATCH:" + name)
     if latest.get("producer_lineage") != package.get("lineage"):
         raise HandoffPublicationError("REMOTE_LINEAGE_MISMATCH")
+    for key, name in (("session_bundle_sha256", "ai_research_session_bundle.json"),
+                      ("opportunity_artifact_sha256", OPPORTUNITY_QUEUE),
+                      ("manifest_sha256", "ai_research_bundle_manifest.json"),
+                      ("decision_brief_sha256", "next_session_decision_brief.json"),
+                      ("daily_integrated_decision_brief_sha256", "daily_integrated_decision_brief.json")):
+        if latest.get(key) != (package.get("files") or {}).get(name):
+            raise HandoffPublicationError("REMOTE_LATEST_HASH_MISMATCH:"+name)
+    if latest.get("handoff_commit") != published.get("immutable_handoff_commit"):
+        raise HandoffPublicationError("REMOTE_IMMUTABLE_COMMIT_MISMATCH")
     return {"status": "READY_FOR_AI", "latest_session": session,
             "latest_pointer": path, "remote_sha": remote_sha}

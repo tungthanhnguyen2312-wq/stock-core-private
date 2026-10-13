@@ -1,8 +1,8 @@
 # Stock Lookup — Active State
 
-Verified base/main: `714d9b25dbb6e389e29631cee9f72791122d9aed`.
+Base/main: `714d9b25dbb6e389e29631cee9f72791122d9aed`.
 PR136–140 released; four post-merge CI jobs PASS each.
-Recheck main: `git fetch origin main` / `git ls-remote origin refs/heads/main`; **local** remote-tracking refs may be stale.
+`git fetch origin main` / `git ls-remote origin refs/heads/main`; **local** remote-tracking refs may be stale.
 ## 0. How this file relates to the others
 | Question | Answer lives in |
 |---|---|
@@ -29,6 +29,7 @@ Kinds: **CURRENT FACT** (verified), **HOST-LOCAL** (untracked; re-verify),
 **BLOCKED**, **DEFERRED**, **HISTORICAL**.
 
 ## 1. The operational gate
+- [Oct13](daily_20261013_handoff_route_recovery_contract.md).
 - **RELEASED — [financial intake](official_financial_quarterly_intake_contract.md):** PR137; candidates; source admission gated.
 - **RELEASED — [Wave 1 replay](SYSTEM_MAP.md#wave-1-historical-replay-relocation--2026-10-13):** PR139; `tools/replay/`: 34 modules; root 325 → 291; replay unchanged.
 - **RELEASED — [unlock/transport](current_financial_valuation_input_unlock_v1_contract.md):** PR133: six H1 ratios/proxy shares; PR140: present labels (bound AI session ≥2026-10-14), no new facts/ratios.
