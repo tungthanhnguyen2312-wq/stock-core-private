@@ -1,5 +1,7 @@
 from __future__ import annotations
-import json, subprocess
+import hashlib, json, subprocess
+from pathlib import Path
+import ai_handoff_publication as handoff
 import pytest
 from ai_handoff_publication import HandoffPublicationError, build_package, publish, verify_remote_publication
 
@@ -259,3 +261,319 @@ def test_publish_no_op_replay_still_matches_with_presentation_state_present(tmp_
     second = publish(r, s, "2026-08-28", producer_checkpoint="abc", push=False, post_handoff_presentation=_attestation())
     assert second["status"] == "NO_OP_ALREADY_PUBLISHED"
     assert second["package"]["handoff_build_id"] == first["package"]["handoff_build_id"]
+
+
+def _incident_brief(path):
+    """Minimal retained-wrapper reproduction of the October 13 PNJ/QNS failure.
+
+    The method identifiers, list indexes, source descriptor and wrapper structure are
+    retained from the incident. Fixture identities describe these reduced test bytes.
+    """
+    descriptor = {
+        "provider": "DNSE", "dataset": "DNSE_OHLC_1D", "endpoint": "/price/ohlc",
+        "observed_at": "2026-10-13T21:01:56.488698+07:00", "target_session": "2026-10-13",
+        "request_contract": {"from": 1760288400, "resolution": "1D", "to": 1791910799, "type": "STOCK"},
+        "no_older_session_substitution": True, "intraday_observations_used": False,
+    }
+    records = [{"valuation_methods": {}} for _ in range(11)]
+    for index, ticker, methods in (
+        (5, "PNJ", ("P/E_REPORTED_PERIOD", "P/S_REPORTED_PERIOD")),
+        (8, "QNS", ("P/B_OFFICIAL_RESEARCH",)),
+    ):
+        records[index] = {
+            "ticker": ticker,
+            "valuation_methods": {
+                method: {"status": "RESEARCH_USABLE", "numerator_price_input": {
+                    "source": json.loads(json.dumps(descriptor)), "source_snapshot_identity": "retained-snapshot:test",
+                }} for method in methods
+            },
+        }
+    payload = {
+        "schema_version": "1.0.0", "contract_version": "daily_session_integrated_decision_brief_artifact/v1",
+        "session": "2026-10-13", "daily_operation_identity": "retained-operation:test",
+        "daily_integrated_decision_brief": {"watchlist": {"records": records}},
+        "source_frozen_input_identities": {"valuation_context": "retained-valuation:test"},
+    }
+    identity = hashlib.sha256(json.dumps(payload, sort_keys=True).encode("utf-8")).hexdigest()
+    payload.update({"artifact_identity": "daily_session_integrated_decision_brief_artifact:" + identity,
+                    "artifact_sha256": identity})
+    path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+    return payload
+
+
+def test_incident_provider_routes_preserve_sealed_wrapper_and_package_identity(tmp_path, monkeypatch):
+    s, r = tmp_path / "source", tmp_path / "repo"
+    source(s); repo(r)
+    brief = s / "daily_integrated_decision_brief_artifact.json"
+    original = _incident_brief(brief)
+    source_before = {p.name: p.read_bytes() for p in s.iterdir()}
+    head_before = handoff._git(r, "rev-parse", "HEAD")
+    status_before = handoff._git(r, "status", "--porcelain")
+    direct = build_package(s, "2026-10-13", producer_checkpoint="released:test",
+                           daily_integrated_decision_brief=brief)[1]
+    # local_only must not call Git, including for path/order checks in the destination.
+    with monkeypatch.context() as bounded:
+        bounded.setattr(handoff, "_git", lambda *a, **k: pytest.fail("local_only called Git"))
+        bounded.setattr(handoff, "_git_bytes", lambda *a, **k: pytest.fail("local_only read Git"))
+        local = publish(r, s, "2026-10-13", producer_checkpoint="released:test",
+                        daily_integrated_decision_brief=brief, local_only=True)
+    repeated = build_package(s, "2026-10-13", producer_checkpoint="released:test",
+                             daily_integrated_decision_brief=brief)[1]
+    assert local["package"] == direct == repeated
+    assert direct["files"]["daily_integrated_decision_brief.json"] == hashlib.sha256(source_before[brief.name]).hexdigest()
+    assert direct["lineage"]["daily_integrated_decision_brief_identity"] == original["artifact_identity"]
+    assert {p.name: p.read_bytes() for p in s.iterdir()} == source_before
+    assert handoff._git(r, "rev-parse", "HEAD") == head_before
+    assert handoff._git(r, "status", "--porcelain") == status_before
+    assert not (r / "sessions").exists()
+    assert not (r / "LATEST.json").exists()
+    published = publish(r, s, "2026-10-13", producer_checkpoint="released:test",
+                        daily_integrated_decision_brief=brief, push=False)
+    delivered = r / published["immutable_session_path"] / "daily_integrated_decision_brief.json"
+    assert delivered.read_bytes() == source_before[brief.name]
+    assert json.loads(delivered.read_text(encoding="utf-8"))["artifact_identity"] == original["artifact_identity"]
+    assert published["package"] == direct
+    assert {p.name: p.read_bytes() for p in s.iterdir()} == source_before
+
+
+@pytest.mark.parametrize("descriptor, key", [
+    ({"provider": "FHSC", "dataset": "DNSE_OHLC_1D", "endpoint": "/price/ohlc"}, "endpoint"),
+    ({"dataset": "DNSE_OHLC_1D", "endpoint": "/price/ohlc"}, "endpoint"),
+    ({"provider": "DNSE", "dataset": "other", "endpoint": "/price/ohlc"}, "endpoint"),
+    ({"provider": "DNSE", "endpoint": "/price/ohlc"}, "endpoint"),
+    ({"provider": "DNSE", "dataset": "DNSE_OHLC_1D", "path": "/price/ohlc"}, "path"),
+    ({"provider": "DNSE", "dataset": "DNSE_OHLC_1D", "endpoint": "/price/ohlc/private"}, "endpoint"),
+    ({"provider": "DNSE", "dataset": "DNSE_OHLC_1D", "endpoint": "/price/ohlc?file=private"}, "endpoint"),
+    ({"provider": "DNSE", "dataset": "DNSE_OHLC_1D", "endpoint": "/price/ohlc/../../private"}, "endpoint"),
+    ({"provider": "DNSE", "dataset": "DNSE_OHLC_1D", "endpoint": "//price/ohlc"}, "endpoint"),
+    ({"provider": "DNSE", "dataset": "DNSE_OHLC_1D", "endpoint": "C:\\private\\secret.json"}, "endpoint"),
+    ({"provider": "DNSE", "dataset": "DNSE_OHLC_1D", "endpoint": "C:/private/secret.json"}, "endpoint"),
+    ({"provider": "DNSE", "dataset": "DNSE_OHLC_1D", "endpoint": "\\\\private-server\\share\\secret.json"}, "endpoint"),
+    ({"provider": "DNSE", "dataset": "DNSE_OHLC_1D", "endpoint": "/private/secret.json"}, "endpoint"),
+    ({"provider": "DNSE", "dataset": "DNSE_OHLC_1D", "endpoint": "/price/ohlc", "private_path": "/private/secret.json"}, "private_path"),
+])
+def test_provider_route_exception_rejects_unsafe_context_and_siblings(tmp_path, descriptor, key):
+    s = tmp_path / "source"; source(s)
+    brief = s / "daily_integrated_decision_brief_artifact.json"
+    fixture = _incident_brief(brief)
+    fixture["daily_integrated_decision_brief"]["watchlist"]["records"][5]["valuation_methods"]["P/E_REPORTED_PERIOD"]["numerator_price_input"]["source"] = descriptor
+    brief.write_text(json.dumps(fixture), encoding="utf-8")
+    before = brief.read_bytes()
+    with pytest.raises(HandoffPublicationError, match="HANDOFF_ABSOLUTE_PATH_FORBIDDEN") as raised:
+        publish(tmp_path / "untouched", s, "2026-10-13", local_only=True,
+                daily_integrated_decision_brief=brief)
+    message = str(raised.value)
+    assert "/daily_integrated_decision_brief/watchlist/records/5/valuation_methods/P~1E_REPORTED_PERIOD/numerator_price_input/source/" + key in message
+    assert descriptor[key] not in message
+    assert brief.read_bytes() == before
+    assert not (tmp_path / "untouched").exists()
+
+
+@pytest.mark.parametrize("private_key", ["C:\\private\\key", "\\\\private-server\\share\\key", "/private/key"])
+def test_absolute_dictionary_keys_are_rejected_without_disclosing_them(tmp_path, private_key):
+    s = tmp_path / "source"; source(s)
+    (s / "ai_research_session_bundle.json").write_text(json.dumps({"nested": [{private_key: "otherwise-safe"}]}), encoding="utf-8")
+    with pytest.raises(HandoffPublicationError, match="HANDOFF_ABSOLUTE_PATH_FORBIDDEN") as raised:
+        publish(tmp_path / "untouched", s, "2026-10-13", local_only=True)
+    assert "/nested/0" in str(raised.value)
+    assert private_key not in str(raised.value)
+    assert not (tmp_path / "untouched").exists()
+
+
+def _remote_repo(tmp_path):
+    r = tmp_path / "repo"; repo(r)
+    remote = tmp_path / "remote.git"
+    subprocess.run(["git", "init", "--bare", "-q", str(remote)], check=True, capture_output=True)
+    git(r, "branch", "-M", "main"); git(r, "remote", "add", "origin", str(remote)); git(r, "push", "-u", "origin", "main")
+    return r
+
+
+def test_real_remote_identical_replay_reports_pointer_head_and_verifies(tmp_path):
+    s = tmp_path / "source"; source(s)
+    r = _remote_repo(tmp_path)
+    first = publish(r, s, "2026-10-13", producer_checkpoint="released:test")
+    assert verify_remote_publication(r, first)["remote_sha"] == first["handoff_commit"]
+    head_before = handoff._git(r, "rev-parse", "HEAD")
+    repeated = publish(r, s, "2026-10-13", producer_checkpoint="released:test")
+    assert repeated["status"] == "NO_OP_ALREADY_PUBLISHED"
+    assert repeated["handoff_commit"] == first["handoff_commit"] == head_before
+    assert repeated["immutable_handoff_commit"] == first["immutable_handoff_commit"]
+    assert repeated["immutable_handoff_commit"] != repeated["handoff_commit"]
+    assert verify_remote_publication(r, repeated)["remote_sha"] == head_before
+    assert handoff._git(r, "rev-parse", "HEAD") == head_before
+
+
+@pytest.mark.parametrize("older_build_exists", [False, True])
+def test_newer_latest_blocks_older_publication_before_any_write(tmp_path, older_build_exists):
+    s, r = tmp_path / "source", tmp_path / "repo"; source(s); repo(r)
+    if older_build_exists:
+        publish(r, s, "2026-10-13", producer_checkpoint="released:test", push=False)
+    publish(r, s, "2026-10-14", producer_checkpoint="released:test", push=False)
+    before = {p.relative_to(r).as_posix(): p.read_bytes() for p in r.rglob("*") if p.is_file() and ".git" not in p.relative_to(r).parts}
+    head_before = handoff._git(r, "rev-parse", "HEAD")
+    with pytest.raises(HandoffPublicationError, match="NEWER|ORDER|REGRESSION"):
+        publish(r, s, "2026-10-13", producer_checkpoint="released:test", push=False)
+    assert handoff._git(r, "rev-parse", "HEAD") == head_before
+    assert handoff._git(r, "status", "--porcelain") == ""
+    assert {p.relative_to(r).as_posix(): p.read_bytes() for p in r.rglob("*") if p.is_file() and ".git" not in p.relative_to(r).parts} == before
+
+
+@pytest.mark.parametrize("crash_boundary", ["pointer_write", "pointer_commit"])
+def test_replay_recovers_committed_build_after_pointer_crash_without_rewriting(tmp_path, monkeypatch, crash_boundary):
+    s, r = tmp_path / "source", tmp_path / "repo"; source(s); repo(r)
+    actual_git, actual_write = handoff._git, Path.write_text
+    with monkeypatch.context() as interrupted:
+        if crash_boundary == "pointer_write":
+            def fail_pointer_write(path, *args, **kwargs):
+                if path == r / "LATEST.json":
+                    raise OSError("simulated pointer write interruption")
+                return actual_write(path, *args, **kwargs)
+            interrupted.setattr(Path, "write_text", fail_pointer_write)
+        else:
+            def fail_pointer_commit(path, *args):
+                if args[0] == "commit" and " latest " in args[-1]:
+                    raise HandoffPublicationError("simulated pointer commit interruption")
+                return actual_git(path, *args)
+            interrupted.setattr(handoff, "_git", fail_pointer_commit)
+        with pytest.raises((OSError, HandoffPublicationError), match="simulated pointer"):
+            publish(r, s, "2026-10-13", producer_checkpoint="released:test", push=False)
+    immutable_commit = actual_git(r, "rev-parse", "HEAD")
+    target = next((r / "sessions" / "2026-10-13" / "builds").iterdir())
+    before = {p.name: (p.read_bytes(), p.stat().st_mtime_ns) for p in target.iterdir()}
+    with monkeypatch.context() as resumed:
+        resumed.setattr(handoff.shutil, "copyfile", lambda *a, **k: pytest.fail("replay rewrote sealed build"))
+        result = publish(r, s, "2026-10-13", producer_checkpoint="released:test", push=False)
+    assert result["immutable_handoff_commit"] == immutable_commit
+    assert result["handoff_commit"] == actual_git(r, "rev-parse", "HEAD")
+    assert result["handoff_commit"] != immutable_commit
+    latest = json.loads((r / "LATEST.json").read_text(encoding="utf-8"))
+    assert latest["handoff_commit"] == immutable_commit
+    assert latest["immutable_session_path"] == result["immutable_session_path"]
+    assert latest["handoff_build_id"] == result["package"]["handoff_build_id"]
+    assert {p.name: (p.read_bytes(), p.stat().st_mtime_ns) for p in target.iterdir()} == before
+    assert actual_git(r, "status", "--porcelain") == ""
+
+
+def test_existing_uncommitted_build_is_not_accepted_as_published(tmp_path, monkeypatch):
+    s, r = tmp_path / "source", tmp_path / "repo"; source(s); repo(r)
+    actual_git = handoff._git
+    with monkeypatch.context() as interrupted:
+        def fail_build_commit(path, *args):
+            if args[0] == "commit" and " build " in args[-1]:
+                raise HandoffPublicationError("simulated immutable commit interruption")
+            return actual_git(path, *args)
+        interrupted.setattr(handoff, "_git", fail_build_commit)
+        with pytest.raises(HandoffPublicationError, match="simulated immutable"):
+            publish(r, s, "2026-10-13", producer_checkpoint="released:test", push=False)
+    head_before = actual_git(r, "rev-parse", "HEAD")
+    status_before = actual_git(r, "status", "--porcelain")
+    with pytest.raises(HandoffPublicationError):
+        publish(r, s, "2026-10-13", producer_checkpoint="released:test", push=False)
+    assert actual_git(r, "rev-parse", "HEAD") == head_before
+    assert actual_git(r, "status", "--porcelain") == status_before
+    assert not (r / "LATEST.json").exists()
+
+
+def test_push_interruption_retry_publishes_committed_pointer_without_extra_commits(tmp_path, monkeypatch):
+    s = tmp_path / "source"; source(s)
+    r = _remote_repo(tmp_path)
+    actual_git = handoff._git
+    with monkeypatch.context() as interrupted:
+        def fail_push(path, *args):
+            if args[0] == "push":
+                raise HandoffPublicationError("simulated remote push interruption")
+            return actual_git(path, *args)
+        interrupted.setattr(handoff, "_git", fail_push)
+        with pytest.raises(HandoffPublicationError, match="simulated remote push"):
+            publish(r, s, "2026-10-13", producer_checkpoint="released:test")
+    pointer_head = actual_git(r, "rev-parse", "HEAD")
+    assert actual_git(r, "rev-parse", "origin/main") != pointer_head
+    result = publish(r, s, "2026-10-13", producer_checkpoint="released:test")
+    assert result["handoff_commit"] == pointer_head
+    assert actual_git(r, "rev-parse", "HEAD") == pointer_head
+    assert verify_remote_publication(r, result)["remote_sha"] == pointer_head
+    assert actual_git(r, "status", "--porcelain") == ""
+
+
+@pytest.mark.parametrize("field, artifact_name", [
+    ("session_bundle_sha256", "ai_research_session_bundle.json"),
+    ("opportunity_artifact_sha256", "daily_opportunity_decision_queue_artifact.json"),
+    ("manifest_sha256", "ai_research_bundle_manifest.json"),
+    ("decision_brief_sha256", "next_session_decision_brief.json"),
+    ("daily_integrated_decision_brief_sha256", "daily_integrated_decision_brief.json"),
+])
+def test_remote_verifier_rejects_committed_latest_hash_tampering(tmp_path, field, artifact_name):
+    s = tmp_path / "source"; source(s)
+    r = _remote_repo(tmp_path)
+    decision = s / "next_session_decision_brief.json"
+    decision.write_text(json.dumps({"artifact_identity": "next_session_decision_brief:fixture"}), encoding="utf-8")
+    daily = s / "daily_integrated_decision_brief_artifact.json"; _incident_brief(daily)
+    published = publish(r, s, "2026-10-13", producer_checkpoint="released:test",
+                        decision_brief=decision, daily_integrated_decision_brief=daily)
+    verify_remote_publication(r, published)
+    latest_path = r / "LATEST.json"
+    latest = json.loads(latest_path.read_text(encoding="utf-8"))
+    assert latest[field] == published["package"]["files"][artifact_name]
+    latest[field] = "0" * 64
+    latest_path.write_text(json.dumps(latest), encoding="utf-8")
+    git(r, "add", "LATEST.json"); git(r, "commit", "-qm", "test: corrupt advertised artifact hash"); git(r, "push")
+    # Match the remote HEAD deliberately, so rejection must prove semantic integrity.
+    tampered_receipt = {**published, "handoff_commit": handoff._git(r, "rev-parse", "HEAD")}
+    with pytest.raises(HandoffPublicationError) as raised:
+        verify_remote_publication(r, tampered_receipt)
+    assert str(raised.value) == "REMOTE_LATEST_HASH_MISMATCH:" + artifact_name
+
+
+def test_remote_verifier_rejects_committed_immutable_commit_tampering(tmp_path):
+    s = tmp_path / "source"; source(s)
+    r = _remote_repo(tmp_path)
+    published = publish(r, s, "2026-10-13", producer_checkpoint="released:test")
+    verify_remote_publication(r, published)
+    latest_path = r / "LATEST.json"
+    latest = json.loads(latest_path.read_text(encoding="utf-8"))
+    assert latest["handoff_commit"] == published["immutable_handoff_commit"]
+    # A valid Git object that is the pointer commit still cannot replace the build commit.
+    latest["handoff_commit"] = published["handoff_commit"]
+    latest_path.write_text(json.dumps(latest), encoding="utf-8")
+    git(r, "add", "LATEST.json"); git(r, "commit", "-qm", "test: corrupt immutable commit reference"); git(r, "push")
+    tampered_receipt = {**published, "handoff_commit": handoff._git(r, "rev-parse", "HEAD")}
+    with pytest.raises(HandoffPublicationError) as raised:
+        verify_remote_publication(r, tampered_receipt)
+    assert str(raised.value) == "REMOTE_IMMUTABLE_COMMIT_MISMATCH"
+
+
+def test_remote_verifier_rejects_committed_immutable_artifact_tampering(tmp_path):
+    s = tmp_path / "source"; source(s)
+    r = _remote_repo(tmp_path)
+    published = publish(r, s, "2026-10-13", producer_checkpoint="released:test")
+    verify_remote_publication(r, published)
+    relative = published["immutable_session_path"] + "/ai_research_session_bundle.json"
+    (r / relative).write_text(json.dumps({"artifact_identity": "tampered-after-publication"}), encoding="utf-8")
+    git(r, "add", relative); git(r, "commit", "-qm", "test: corrupt immutable artifact bytes"); git(r, "push")
+    tampered_receipt = {**published, "handoff_commit": handoff._git(r, "rev-parse", "HEAD")}
+    with pytest.raises(HandoffPublicationError) as raised:
+        verify_remote_publication(r, tampered_receipt)
+    assert str(raised.value) == "REMOTE_FILE_HASH_MISMATCH:ai_research_session_bundle.json"
+
+
+def test_publication_preserves_crlf_sealed_bytes_under_host_and_repository_text_conversion(tmp_path):
+    s = tmp_path / "source"; source(s)
+    r = _remote_repo(tmp_path)
+    git(r, "config", "core.autocrlf", "true")
+    (r / ".gitattributes").write_bytes(b"*.json text eol=lf\n")
+    git(r, "add", ".gitattributes"); git(r, "commit", "-qm", "test: enforce repository JSON normalization"); git(r, "push")
+    brief = s / "daily_integrated_decision_brief_artifact.json"; _incident_brief(brief)
+    original = brief.read_bytes().replace(b"\r\n", b"\n").replace(b"\n", b"\r\n")
+    brief.write_bytes(original)
+    assert original.count(b"\r\n") > 1
+    source_before = {p.name: p.read_bytes() for p in s.iterdir()}
+    published = publish(r, s, "2026-10-13", producer_checkpoint="released:test",
+                        daily_integrated_decision_brief=brief)
+    copied = r / published["immutable_session_path"] / "daily_integrated_decision_brief.json"
+    assert copied.read_bytes() == original
+    assert published["package"]["files"]["daily_integrated_decision_brief.json"] == hashlib.sha256(original).hexdigest()
+    assert verify_remote_publication(r, published)["remote_sha"] == published["handoff_commit"]
+    remote_name = published["immutable_session_path"] + "/daily_integrated_decision_brief.json"
+    fields = handoff._git(r, "ls-tree", "origin/main", "--", remote_name).split("\t", 1)[0].split()
+    assert handoff._git_bytes(r, "cat-file", "blob", fields[2]) == original
+    assert {p.name: p.read_bytes() for p in s.iterdir()} == source_before

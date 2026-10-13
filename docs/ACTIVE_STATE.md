@@ -29,6 +29,12 @@ Kinds: **CURRENT FACT** (verified), **HOST-LOCAL** (untracked; re-verify),
 **BLOCKED**, **DEFERRED**, **HISTORICAL**.
 
 ## 1. The operational gate
+- **October 13 publication corrective:** the completed Daily's DNSE `/price/ohlc`
+  source route is recognized by its exact provider/dataset descriptor during AI
+  path validation. Sealed bytes and identities remain fixed; replay preserves
+  immutable builds and refuses a newer LATEST session. Production recovery is a
+  separate, explicitly authorized completed-session replay; see the
+  [incident contract](daily_20261013_handoff_route_recovery_contract.md).
 - **RELEASED — [financial intake](official_financial_quarterly_intake_contract.md):** PR137; candidates; source admission gated.
 - **RELEASED — [Wave 1 replay](SYSTEM_MAP.md#wave-1-historical-replay-relocation--2026-10-13):** PR139; `tools/replay/`: 34 modules; root 325 → 291; replay unchanged.
 - **RELEASED — [unlock/transport](current_financial_valuation_input_unlock_v1_contract.md):** PR133: six H1 ratios/proxy shares; PR140: present labels (bound AI session ≥2026-10-14), no new facts/ratios.
