@@ -117,6 +117,210 @@ def classify_conflict(existing: Mapping[str, Any], incoming: Mapping[str, Any]) 
     return "TRUE_CONFLICT"
 
 
+def prepare_financial_intake_candidate(candidate: Mapping[str, Any], *, document: Mapping[str, Any],
+        retained_bytes: bytes, value_parser: Callable[[Any], int],
+        period_resolver: Callable[..., Mapping[str, Any]],
+        route_admission: Mapping[str, Any] | None = None, cutoff: str | None = None) -> dict[str, Any]:
+    """Pure intake over previously reviewed rows, not official source activation.
+
+    Existing value and period owners are injected explicitly to preserve dependency
+    direction. The cohort gate is evaluated unchanged. A semantic candidate never
+    claims official fact admission or makes an overlay/ratio available by itself.
+    """
+    from stocklookup_core.evidence.financial_row_identity import resolve_reported_row_identity
+    row, doc = dict(candidate), dict(document)
+    schema, semantic, citation, knowledge = [], [], [], []
+    digest = sha256(retained_bytes).hexdigest()
+    if digest != doc.get("sha256") or digest != row.get("document_sha256"):
+        citation.append("ORIGINAL_DOCUMENT_HASH_MISMATCH")
+    if not doc.get("ticker") or row.get("ticker") != doc.get("ticker"):
+        schema.append("DOCUMENT_ISSUER_MISMATCH")
+    required_fields = ["statement_family", "raw_row_label", "native_period_label", "statement_scope", "unit_scale"]
+    if row.get("statement_family") != "eps_note":
+        required_fields += ["line_code", "currency"]
+    for key in required_fields:
+        if row.get(key) in (None, ""):
+            schema.append(key.upper() + "_MISSING")
+    page = row.get("source_page")
+    page_count = doc.get("page_count")
+    def valid_page(value):
+        return type(value) is int and type(page_count) is int and 1 <= value <= page_count
+    if type(page_count) is not int or page_count < 1:
+        citation.append("SOURCE_DOCUMENT_PAGE_COUNT_REQUIRED")
+    if not valid_page(page):
+        citation.append("SOURCE_PAGE_OUT_OF_RANGE_OR_MISSING")
+    original_span = row.get("source_span")
+    span = original_span if isinstance(original_span, Mapping) else {}
+    if (not isinstance(span, Mapping) or span.get("document_sha256") != digest
+            or not span.get("citation_id") or not span.get("text")):
+        citation.append("EXACT_CITATION_NOT_DOCUMENT_BOUND")
+    if not valid_page(span.get("source_page")) or span.get("source_page") != page:
+        citation.append("REVIEW_SPAN_PAGE_NOT_BOUND")
+    if str(row.get("raw_row_label") or "") not in str(span.get("text") or ""):
+        citation.append("ROW_LABEL_NOT_IN_REVIEW_SPAN")
+    identity = resolve_reported_row_identity(str(row.get("statement_family") or ""),
+        str(row.get("line_code") or ""), str(row.get("raw_row_label") or ""))
+    semantic.extend(identity["blockers"])
+    if row.get("canonical_metric") is not None and row["canonical_metric"] != identity["canonical_metric"]:
+        semantic.append("CANONICAL_METRIC_IDENTITY_CONFLICT")
+    scope = row.get("statement_scope")
+    if scope not in {"consolidated", "standalone"} or scope != doc.get("statement_scope"):
+        semantic.append("STATEMENT_SCOPE_NOT_BOUND")
+    scale = row.get("unit_scale")
+    if type(scale) is not int or scale <= 0:
+        semantic.append("UNIT_SCALE_NOT_EXPLICIT")
+    quantity = identity["accounting_identity"] in {"EPS_DENOMINATOR_SHARES", "EPS_OPENING_SHARES", "EPS_RESTATED_DIVIDEND_IMPACT"}
+    per_share = identity["accounting_identity"] == "REPORTED_BASIC_EPS"
+    unsupported_special_scale = (quantity or per_share) and (scale != 1 or doc.get("unit_scale") != 1)
+    if unsupported_special_scale:
+        # A statement's monetary scale cannot establish shares or VND/share.
+        # Mixed-unit documents require an independently qualified row-unit adapter.
+        semantic.append("EPS_OR_SHARE_MIXED_UNIT_SCALE_NOT_SUPPORTED")
+    if quantity and (row.get("unit") != "shares" or row.get("currency") is not None):
+        semantic.append("EPS_SHARE_QUANTITY_UNIT_NOT_PROVEN")
+    if (not quantity and row.get("currency") != doc.get("currency")) or scale != doc.get("unit_scale"):
+        semantic.append("DOCUMENT_CURRENCY_SCALE_MISMATCH")
+    raw = row.get("raw_value_text")
+    value = row.get("reviewed_integer_value")
+    native_literal_proven = raw is not None
+    try:
+        if raw is not None:
+            parsed = value_parser(raw)
+            if value is not None and parsed != value:
+                raise ValueError("TRANSCRIPTION_VALUE_MISMATCH")
+            if str(raw) not in str(span.get("text")):
+                citation.append("NUMERIC_LITERAL_NOT_IN_REVIEW_SPAN")
+            value = parsed
+        if type(value) is not int:
+            raise ValueError("EXACT_INTEGER_REQUIRED")
+        normalized = value * scale if type(scale) is int and scale > 0 and not unsupported_special_scale else None
+    except (ValueError, TypeError):
+        normalized = None
+        semantic.append("ACCOUNTING_INTEGER_INVALID_OR_CONFLICTING")
+    period = dict(period_resolver(str(row.get("native_period_label") or ""),
+        statement_family=str(row.get("statement_family") or ""),
+        explicit_start=row.get("period_start"), explicit_end=row.get("period_end")))
+    semantic.extend(period["blockers"])
+    if row.get("reporting_period") is not None and row["reporting_period"] != period.get("reporting_period"):
+        semantic.append("REPORTED_PERIOD_IDENTITY_CONFLICT")
+    if (row.get("period_start") or row.get("period_end")) and not row.get("period_bounds_evidence"):
+        semantic.append("COVERED_DATE_ENDPOINT_PROOF_MISSING")
+    bounds_proof = row.get("period_bounds_evidence")
+    if bounds_proof and (not isinstance(bounds_proof, Mapping) or bounds_proof.get("document_sha256") != digest
+                         or not valid_page(bounds_proof.get("source_page")) or not bounds_proof.get("text")):
+        semantic.append("COVERED_DATE_ENDPOINT_PROOF_UNBOUND")
+    elif isinstance(bounds_proof, Mapping):
+        def endpoint_in_text(endpoint):
+            try:
+                parsed_date = datetime.fromisoformat(endpoint).date()
+            except (TypeError, ValueError):
+                return False
+            text = " ".join(str(bounds_proof.get("text") or "").casefold().split())
+            months = ("january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december")
+            day, month, year = parsed_date.day, parsed_date.month, parsed_date.year
+            month_name = months[month - 1]
+            patterns = (re.escape(endpoint), rf"0?{day}\s+{month_name}\s+{year}",
+                        rf"{month_name}\s+0?{day},?\s+{year}",
+                        rf"0?{day}[/.-]0?{month}[/.-]{year}",
+                        rf"ng[àa]y\s+0?{day}\s+th[áa]ng\s+0?{month}\s+n[ăa]m\s+{year}")
+            return any(re.search(r"(?<!\d)(?:" + pattern + r")(?!\d)", text) for pattern in patterns)
+        if any(not endpoint_in_text(row[key]) for key in ("period_start", "period_end") if row.get(key)):
+            semantic.append("COVERED_DATE_ENDPOINT_NOT_IN_PROOF_TEXT")
+    if row.get("reported_column_kind") and row["reported_column_kind"] != period.get("period_semantic_state"):
+        semantic.append("QUARTER_CUMULATIVE_OR_INSTANT_MISMATCH")
+    assurance = doc.get("audit_or_review_status", "unknown")
+    doc_class = doc.get("document_class")
+    if doc_class not in {"quarterly_financial_statements", "reviewed_interim_financial_statements", "audited_annual_financial_statements", "unreviewed_financial_statements"}:
+        semantic.append("FINANCIAL_DOCUMENT_CLASS_NOT_SUPPORTED")
+    expected_assurance = {"reviewed_interim_financial_statements": "reviewed", "audited_annual_financial_statements": "audited"}.get(doc_class)
+    if expected_assurance and assurance != expected_assurance:
+        semantic.append("DECLARED_DOCUMENT_CLASS_ASSURANCE_CONFLICT")
+    if assurance not in {"audited", "reviewed", "unreviewed", "unknown"}:
+        semantic.append("ASSURANCE_IDENTITY_UNKNOWN")
+    if row.get("audit_or_review_status") not in (None, assurance):
+        semantic.append("ASSURANCE_IDENTITY_CONFLICT")
+    def instant(raw_time):
+        try:
+            result = datetime.fromisoformat(str(raw_time).replace("Z", "+00:00"))
+            return result if result.utcoffset() is not None else None
+        except (TypeError, ValueError):
+            return None
+    observed, known, published, limit = (instant(doc.get("observed_at")), instant(row.get("knowledge_available_at")),
+                                       instant(doc.get("published_at")), instant(cutoff))
+    if observed is None or known is None:
+        knowledge.append("EXACT_OBSERVATION_KNOWLEDGE_TIMESTAMP_UNKNOWN")
+    elif known < observed:
+        knowledge.append("KNOWLEDGE_PRECEDES_OBSERVATION")
+    if cutoff is not None and limit is None:
+        knowledge.append("CUTOFF_TIMESTAMP_INVALID")
+    if limit and known and known > limit:
+        knowledge.append("AFTER_KNOWLEDGE_CUTOFF")
+    if published and known and published > known:
+        knowledge.append("PUBLICATION_AFTER_KNOWLEDGE")
+    publication_blockers = [] if published else ["SOURCE_PUBLICATION_TIMESTAMP_UNKNOWN_NO_HISTORICAL_PIT"]
+    canonical = {**row, "canonical_metric": identity["canonical_metric"], "accounting_identity": identity["accounting_identity"],
+                 "reporting_period": period.get("reporting_period"), "period_semantic_state": period["period_semantic_state"],
+                 "value": normalized, "normalized_value": normalized, "source_unit_scale": scale, "unit_scale": 1,
+                 "already_normalized": normalized is not None, "audit_or_review_status": assurance,
+                 "qualification_state": "CANDIDATE_ONLY", "publication_date": doc.get("published_at")}
+    canonical["value_unit"] = "shares" if quantity else (str(row.get("currency")) + "/share" if identity["accounting_identity"] == "REPORTED_BASIC_EPS" else row.get("currency"))
+    # This preserves the existing gate, including TICKER_NOT_IN_APPROVED_COHORT.
+    legacy = validate_fact({**row, "canonical_metric": identity["canonical_metric"],
+        "issuer_identity": doc.get("issuer_identity"), "reporting_period": period.get("reporting_period"),
+        "periodicity": row.get("periodicity"), "audit_or_review_status": assurance,
+        "citation": {"page": page, "text": span.get("text") if isinstance(span, Mapping) else None}})
+    route = dict(route_admission or {})
+    route_bound = all(route.get(key) == doc.get(field) for key, field in
+        (("source_id", "source_id"), ("url", "source_url"), ("document_type", "document_class")))
+    source_blockers = list(legacy.get("blockers") or [])
+    from stocklookup_core.evidence.financial_metadata_envelope import qualify_document_metadata, METADATA_QUALIFIED
+    metadata_input = doc.get("metadata_candidate")
+    metadata = qualify_document_metadata(metadata_input) if isinstance(metadata_input, Mapping) else None
+    if metadata is None or metadata.get("qualification_status") != METADATA_QUALIFIED:
+        source_blockers.append("EXPLICIT_DOCUMENT_METADATA_NOT_QUALIFIED")
+    elif metadata["document"]["document_sha256"] != digest:
+        source_blockers.append("DOCUMENT_METADATA_HASH_MISMATCH")
+    else:
+        claims = metadata.get("metadata_claims") or {}
+        expected = {"reporting_period": period.get("reporting_period"), "statement_scope": scope,
+                    "currency": row.get("currency"), "unit_scale": scale, "periodicity": row.get("periodicity")}
+        if metadata.get("issuer_identity") != str(row.get("ticker") or "").upper():
+            source_blockers.append("DOCUMENT_METADATA_ISSUER_MISMATCH")
+        if any((claims.get(key) or {}).get("value") != value for key, value in expected.items()):
+            source_blockers.append("DOCUMENT_METADATA_DIMENSION_MISMATCH")
+    if route.get("decision") != "admitted" or not route_bound:
+        source_blockers.append("REGISTRY_SOURCE_ROUTE_NOT_ADMITTED")
+    valuation_blocks = ["OFFICIAL_FACT_ADMISSION_NOT_ESTABLISHED", "NO_ANNUALIZATION_OR_TTM", "CURRENT_SHARES_NOT_ESTABLISHED"]
+    if identity["accounting_identity"] == "TOTAL_EQUITY_INCLUDING_NCI":
+        valuation_blocks.append("TOTAL_EQUITY_IS_NOT_PARENT_BOOK_EQUITY")
+    if identity["accounting_identity"] == "PARENT_PROFIT_AFTER_TAX":
+        valuation_blocks.append("PARENT_PROFIT_IS_NOT_TOTAL_NET_INCOME")
+    if "LOANS_AND_FINANCE_LEASES" in identity["accounting_identity"]:
+        valuation_blocks.append("LEASE_INCLUSIVE_LOANS_ARE_NOT_PURE_BORROWINGS")
+    if "LEASE_CONTENT_UNKNOWN" in identity["accounting_identity"]:
+        valuation_blocks.append("LOAN_LEASE_CONTENT_UNKNOWN_NO_DEBT_TOTAL")
+    if quantity:
+        valuation_blocks.append("EPS_SHARE_BASIS_IS_NOT_CURRENT_OUTSTANDING_SHARES")
+    if identity["accounting_identity"] == "EPS_ORDINARY_SHAREHOLDER_PROFIT":
+        valuation_blocks.append("EPS_NUMERATOR_IS_NOT_PARENT_OR_TOTAL_PROFIT")
+    result = dict(contract_version="official_financial_intake_candidate/v1", candidate=canonical,
+        schema_valid=not schema, semantic_valid=not (schema + semantic + citation),
+        native_numeric_literal_proven=native_literal_proven and normalized is not None and not citation,
+        schema_blockers=sorted(set(schema)), semantic_blockers=sorted(set(semantic)),
+        citation_blockers=sorted(set(citation)), source_admission_blockers=sorted(set(source_blockers)),
+        knowledge_blockers=sorted(set(knowledge)), publication_blockers=publication_blockers,
+        source_admission_eligible=not (schema + semantic + citation + source_blockers),
+        knowledge_cutoff_eligible=not knowledge and limit is not None,
+        existing_consumer_usable=False, official_fact_admitted=False, strict_valuation_eligible=False,
+        valuation_blockers=valuation_blocks, period_identity=period,
+        assurance_scope=doc.get("assurance_scope", "UNKNOWN"),
+        document_metadata=metadata,
+        cutoff=cutoff, source_document={key: doc.get(key) for key in ("ticker", "source_id", "source_url", "document_class", "observed_at", "published_at", "audit_or_review_status")},
+        original_document_sha256=digest, authority_effect="NONE", is_actionable=False)
+    result["candidate_identity"] = sha256(canonical_json(result).encode()).hexdigest()
+    return result
+
+
 def acquire(*, output_root: Path, fetcher: Callable[[str], tuple[int, Mapping[str, str], bytes, str]] = fetch,
             now: Callable[[], str] | None = None) -> dict[str, Any]:
     """Run exactly one foreground index pass and at most two direct documents per issuer."""
