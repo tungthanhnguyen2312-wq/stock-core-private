@@ -4386,7 +4386,7 @@
   "successor_disposition": "OWNER_SELECTED_OFFLINE_EVIDENCE_NO_AUTOMATIC_SUCCESSOR",
   "development_control": {
     "schema": "stocklookup_development_lanes/1",
-    "revision": 39,
+    "revision": 40,
     "history": [
       {
         "operation": "INIT",
@@ -4791,6 +4791,17 @@
         "agent": "Codex",
         "observed_head": "8473f0a7072437b98a022f176d219f16b5a43a32",
         "revision": 39
+      },
+      {
+        "operation": "TRANSITION",
+        "milestone_id": "FINANCIAL_ACCOUNTING_QUALIFIER_TRANSPORT_CORRECTIVE_V1",
+        "from": "ACTIVE",
+        "to": "REVIEW_READY",
+        "checkpoint": "aa479645b871b8663e1c5d593c870568e092d9e1",
+        "owner_note": "Owner resume directive fulfilled local transport/verifier/epoch checks:492passes5retainedskips1deselected;79 focused transportcases includingactualofflineM1 verifier13/14/15 and frozenlegacybytes. Exactclean aa479645 pushed as sourceonlyPR140. ExistingWIP preserved;Workspace lineage/immutability tests added; portablelegacyfixture avoids shallowCIhistory dependency. Source/numerical/posture/coverage unchanged; latestmain9c integration and exacthosted gates pending.",
+        "agent": "Codex",
+        "observed_head": "ba3248775d8bd904046b5032e2fbce0fddb28461",
+        "revision": 40
       }
     ],
     "lanes": [
@@ -5460,8 +5471,8 @@
           "offline-call-shape",
           "hosted-producer-ci"
         ],
-        "state": "ACTIVE",
-        "checkpoint": null,
+        "state": "REVIEW_READY",
+        "checkpoint": "aa479645b871b8663e1c5d593c870568e092d9e1",
         "authority_effect": "NONE",
         "admission_authority": {
           "kind": "EXPLICIT_OWNER_DIRECTIVE",
@@ -5476,6 +5487,14 @@
             "to": "ACTIVE",
             "checkpoint": null,
             "owner_note": "Activate exact admitted accounting qualifier pass-through corrective under existing program consumer authority. Sole subagent writes only admitted fivefiles; actual primary AI/workspace regressions preserve source definitions, missing fields and action gates. No numerical/authority/source/runtime or financial promotion."
+          },
+          {
+            "operation": "TRANSITION",
+            "milestone_id": "FINANCIAL_ACCOUNTING_QUALIFIER_TRANSPORT_CORRECTIVE_V1",
+            "from": "ACTIVE",
+            "to": "REVIEW_READY",
+            "checkpoint": "aa479645b871b8663e1c5d593c870568e092d9e1",
+            "owner_note": "Owner resume directive fulfilled local transport/verifier/epoch checks:492passes5retainedskips1deselected;79 focused transportcases includingactualofflineM1 verifier13/14/15 and frozenlegacybytes. Exactclean aa479645 pushed as sourceonlyPR140. ExistingWIP preserved;Workspace lineage/immutability tests added; portablelegacyfixture avoids shallowCIhistory dependency. Source/numerical/posture/coverage unchanged; latestmain9c integration and exacthosted gates pending."
           }
         ]
       }
