@@ -4386,7 +4386,7 @@
   "successor_disposition": "OWNER_SELECTED_OFFLINE_EVIDENCE_NO_AUTOMATIC_SUCCESSOR",
   "development_control": {
     "schema": "stocklookup_development_lanes/1",
-    "revision": 53,
+    "revision": 54,
     "history": [
       {
         "operation": "INIT",
@@ -4939,6 +4939,17 @@
         "agent": "Codex",
         "observed_head": "0d273cbbb26811bd6e1f2a5aa2381b3ef8aa603a",
         "revision": 53
+      },
+      {
+        "operation": "TRANSITION",
+        "milestone_id": "CI_MANDATORY_IMPORT_AND_FINANCIAL_REGRESSIONS_CLEAN_CORE_V1",
+        "from": "COMPLETE_LOCAL",
+        "to": "MERGED_RELEASED",
+        "checkpoint": "230a1f9212f237355a09305953b9ce1993dadb16",
+        "owner_note": "Owner delegated source-only program release: PR142 merged preserving230a/f61/c068 ancestry; exactfeature38394103672 and exactpostmerge38394957956 all5actualjobs/extendedpytestSUCCESS,4280PASS/82explicitSKIP/129subtests each. Fresh nativepostreview20766f54 errors[], exact11file leases and dependencies satisfied. MandatoryG2/business/quarterly enforced; extensionnonblocking with2actualsuccessfulhostedruns, no10-run promotion. Accounting transport alreadyreleased43; no financial facts/ratios/authority, production or NAS changes.",
+        "agent": "Codex",
+        "observed_head": "c90d20e6d26238bfc4fbea636c99c94538dca3ce",
+        "revision": 54
       }
     ],
     "lanes": [
@@ -5803,7 +5814,7 @@
           "hosted-producer-ci",
           "extended-hermetic-actual-result"
         ],
-        "state": "COMPLETE_LOCAL",
+        "state": "MERGED_RELEASED",
         "checkpoint": "230a1f9212f237355a09305953b9ce1993dadb16",
         "authority_effect": "NONE",
         "admission_authority": {
@@ -5835,8 +5846,17 @@
             "to": "COMPLETE_LOCAL",
             "checkpoint": "230a1f9212f237355a09305953b9ce1993dadb16",
             "owner_note": "Owner delegated same CI stage local completion: exact11 files,125 precise local cases plus finalhistoryguardPASS, current-main identicaltree proof, launcher/diff/frozen/source invariantsPASS. Actual extended hosted job now4280PASS/82explicit skips/129subtests, no failures; three other hostedjobsPASS, focused still pending and remains an unwaived release gate. No numerical/dependency/source/runtime authority change; no production/NAS operations."
+          },
+          {
+            "operation": "TRANSITION",
+            "milestone_id": "CI_MANDATORY_IMPORT_AND_FINANCIAL_REGRESSIONS_CLEAN_CORE_V1",
+            "from": "COMPLETE_LOCAL",
+            "to": "MERGED_RELEASED",
+            "checkpoint": "230a1f9212f237355a09305953b9ce1993dadb16",
+            "owner_note": "Owner delegated source-only program release: PR142 merged preserving230a/f61/c068 ancestry; exactfeature38394103672 and exactpostmerge38394957956 all5actualjobs/extendedpytestSUCCESS,4280PASS/82explicitSKIP/129subtests each. Fresh nativepostreview20766f54 errors[], exact11file leases and dependencies satisfied. MandatoryG2/business/quarterly enforced; extensionnonblocking with2actualsuccessfulhostedruns, no10-run promotion. Accounting transport alreadyreleased43; no financial facts/ratios/authority, production or NAS changes."
           }
-        ]
+        ],
+        "release_sha": "90188187e2c4a954b63ca2b877e418cd7d6c5784"
       }
     ],
     "integration_agent": "Codex",
