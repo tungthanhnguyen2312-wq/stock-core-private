@@ -1,13 +1,14 @@
 # Stock Lookup — Current Roadmap
 
 History: [ROADMAP.md](ROADMAP.md); execution: ROADMAP_STATE.json.
-Base/main `4755d94a977f468a4122e40fba77850281582f42`.
+Base/main `23da9d84da94ad91ebcd8617b3b8a453b5a6baab`.
 Nothing below auto-starts; native standing admission required (AI_RULES 11).
 Facts: [ACTIVE_STATE.md](ACTIVE_STATE.md).
 
-## NOW — CURRENT_FINANCIAL_VALUATION_INPUT_UNLOCK_V1 (LOCAL)
+## NOW — PARALLEL_DOMAIN_DEVELOPMENT_CONTROL_PLANE_V1 (COMPLETE LOCAL)
 
-[Scope](current_financial_valuation_input_unlock_v1_contract.md): H1 ratios; review gate.
+[Scope](parallel_domain_development_control_plane_v1_contract.md): disjoint native lanes;
+Owner merge gate. PR133 released; post-merge CI PASS (38318598892).
 V3 PR131 merged `d11b101`; V2 PR130 merged `d53999b`.
 E5 PR127 merged `70fbba9`; post-merge CI PASS (38190156979).
 E4 PR126 merged `e9ee2fe`; four post-merge jobs PASS (38186488312).

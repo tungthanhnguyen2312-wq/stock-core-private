@@ -323,6 +323,7 @@ jobs:
           tests/test_repository_layout.py
           tests/test_architecture_ratchet.py
           tests/test_roadmap_execution_state.py
+          tests/test_parallel_domain_control_plane.py
           tests/test_production_call_shape_smoke.py::test_offline_guard_blocks_requests_urllib_and_vnstock_import
           tests/test_production_call_shape_smoke.py::test_owner_daily_entry_route_remains_canonical
 

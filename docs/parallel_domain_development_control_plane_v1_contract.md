@@ -1,0 +1,162 @@
+# Parallel domain development control plane V1
+
+Owner-approved source-development extension of the existing roadmap authority.
+`docs/ROADMAP_STATE.json` remains the only execution-state source; the existing
+`current`, milestones, queue, checkpoints and historical bytes retain their meaning.
+The optional `development_control` object uses `stocklookup_development_lanes/1`.
+Absent extension: all existing admission/continuation/closeout behavior is unchanged.
+Once initialized, unscoped legacy mutations are refused; use scoped lane operations
+while preserving the historical current pointer. Read-only legacy queries remain.
+
+## Authority and roles
+
+Development writers (Codex, Claude, Grok) own explicitly admitted domains and paths
+in separate registered branches/worktrees. Reviewers and external researchers are
+read-only. SHADOW work is source experimentation without release eligibility.
+Only the bound integration agent changes shared execution state and controls the
+integration/release process. Lane commands never merge, fetch, create worktrees,
+run tests, publish, deploy, or grant runtime/database/evidence authority.
+Owner merge approval and existing single production writer, host admission,
+session seals and evidence-use contracts remain mandatory and unchanged.
+
+Identity is an explicit local attestation, as with the existing owner override;
+the CLI does not authenticate humans or sandbox an arbitrary editor. Git/PR review
+and branch protection remain enforcement boundaries. Merely naming an agent or
+passing an override is not a human approval. Spec/receipt files are inputs and
+evidence, not competing execution-state registries.
+
+## Coordinator and admission
+
+After release, the Owner designates one integration checkout and agent. Execute
+the released CLI with `--repo <integration-checkout>` and
+`--state-file <integration-checkout>/docs/ROADMAP_STATE.json` for every mutation.
+`--init-lanes --agent Integrator --owner-override --scope-note <exact-directive>`
+binds its exact branch/path. No default migration or automatic admission occurs.
+Branches consult that same state file; editing their copied roadmap is forbidden.
+Coordinator changes must be committed/reviewed and carried forward by the integration
+owner; another checkout's copied state cannot silently become the coordinator.
+CI/foreign clones validate structural lane state and legacy Git checkpoints; live
+lane observations are explicitly SKIPPED_NON_COORDINATOR_CLONE, with a warning.
+That result grants no lane start or integration permission. On the bound host,
+native checks verify live lanes; `--check-lane` and integration operations always
+require their real registered worktrees, even when invoked from another clone.
+
+Each lane spec supplies: milestone_id, responsible_agent, branch, worktree, exact
+40-character base_sha, domain, mode, allowed_paths, shared_paths, dependencies,
+provides, consumes, required_checks; lease_note is required for any shared lease.
+No checkpoint/state/authority fields may be injected. Admission requires an exact
+new ID, registered clean worktree at base, correct repository and branch identity,
+explicit Owner scope note and disjoint domains/paths. No main/coordinator branch
+may be a development lane. No source permissions follow from an existing worktree.
+
+Paths are exact relative files or trailing-slash directory prefixes. Globs,
+traversal, absolute paths and platform-specific separators are rejected. Case-folded
+overlap detection is conservative across Windows/Linux. Shared governance, configs,
+CI, dependencies, source registries and release entrypoints require an exact-file
+lease to the integration owner, with a narrowly approved note. Directory leases
+cannot authorize shared files. Protected data/evidence/runtime/Git/scratch paths
+are never development scope. Existing frozen-source / reviewed-launcher manifest
+members require an exact integration lease; manifests are read at immutable base.
+This is bounded navigation coverage, not exhaustive dynamic identity discovery.
+Check-lane examines committed, staged, unstaged and
+untracked names, including both sides of renames; it does not read their payloads.
+Ignored runtime files are not proof of safe deletion and are outside this tool.
+
+## Lifecycle and crash recovery
+
+ADMITTED → ACTIVE → REVIEW_READY → COMPLETE_LOCAL → MERGED_RELEASED.
+ACTIVE → PAUSED → ACTIVE is the interruption path; ADMITTED/ACTIVE/PAUSED may be
+ABANDONED without deleting anything. Review-ready/local-complete may return ACTIVE
+for corrections, retaining history. Completed/released state cannot be reopened by
+inference. Nonimplementation modes cannot enter any release-candidate/completion state.
+
+`--transition-lane ID --lane-state STATE --agent Integrator --owner-override
+--scope-note <exact-directive>` records one lane, leaving all others and legacy
+milestones intact. PAUSED/REVIEW_READY/COMPLETE_LOCAL/MERGED_RELEASED require
+`--checkpoint-at <full-live-clean-HEAD>`. Commit first; never represent uncommitted
+work as a durable checkpoint. Keep external handoffs for outstanding dirty work.
+ACTIVE requires dependencies COMPLETE_LOCAL or released/legacy-complete; integration
+requires dependencies actually released and reachable from exact main. No automatic
+dependency promotion. Checkpoints must stay ancestors of the real branch HEAD.
+
+Mutations use a nonblocking, process-released OS lock, byte comparison and fsynced
+atomic replacement. Concurrent stale state fails with reload-required; no polling,
+background coordinator or persistent lock ownership. A crash preserves either old
+or new complete state, including revision/history and exact lane checkpoints.
+Legacy JSON is preserved textually; only the extension changes through lane commands.
+
+## Integration planning
+
+`--integration-plan --main-sha <observed-main> [--candidate-lane ID]` reads
+`ls-remote origin refs/heads/main` and requires the local origin/main to match.
+It does not fetch. Stale metadata, unavailable remote, dirty/unreviewed candidates,
+base/checkpoint mismatch, same-file changes, main overlap, unsatisfied release
+dependencies and declared interface-version/owner conflicts fail closed.
+Ordering is deterministic dependency order with lexical ties. A dependent successor
+does not stop planning its prerequisite via `--candidate-lane`.
+
+Interface declarations are semantic review inputs, not automatic import/schema
+compatibility proof. Include canonical and cross-repo API contracts and frozen
+identity/pin impacts in explicit provides/consumes version declarations and tests.
+Every candidate needs an exact plan receipt: plan_identity, reviewed_by (integration
+owner), review_note, cross_repo_review, frozen_identity_review, checks mapping
+lane ID → required check → status PASS + evidence locator. Recheck after main or
+candidate changes; the identity binds heads, changed files, declared interfaces,
+dependencies/order and check requirements. A receipt is an attestation to actual
+tests/review, not a substitute for running them. Unknown semantic impacts remain
+blocked until the responsible reviewer supplies that proof.
+
+For shared pins/CI changes, review actual source identity and dispatch effects;
+regenerate normalized workflow hash only after reviewing the changed workflow.
+No automatic frozen repin or architecture baseline refresh is implemented.
+No clean/green branch auto-merges. A behind but disjoint candidate can be checked
+against new main using an external temporary integration fixture and fresh exact
+receipt; the original branch need not be reset or rebased. Same-file overlap needs
+a reviewed forward merge/correction and new checks, never silent conflict resolution.
+
+MERGED_RELEASED additionally requires actual checkpoint ancestry of exact remote
+main, an exact post-merge review receipt, Owner merge directive and post-merge CI
+evidence. It records a merge already performed by an authorized integration owner;
+it does not perform one. Runtime authorization is always false in lane reports.
+Squash/rebase merges that do not preserve candidate ancestry require a separately
+reviewed future equivalence contract; this version does not guess patch equivalence.
+
+## Command example (after Owner admits each exact scope)
+
+In an isolated integration checkout, initialize once using the command above.
+Create developer worktrees separately using ordinary reviewed Git procedures.
+An example financial lane spec (absolute worktree supplied locally):
+
+```json
+{"milestone_id":"OFFICIAL_FINANCIAL_DEV","responsible_agent":"Codex",
+ "branch":"feature/official-financial-dev","worktree":"<absolute-worktree>",
+ "base_sha":"<full-main-SHA>","domain":"financial-evidence","mode":"IMPLEMENTATION",
+ "allowed_paths":["stocklookup_core/financial/","tests/test_financial_lane.py"],
+ "shared_paths":[],"dependencies":[],"provides":{},"consumes":{},
+ "required_checks":["financial-contracts","integration-offline"]}
+```
+
+Claude's separately reviewed spec may own `tools/reliability/` plus its exact tests
+with domain `architecture-reliability`; Grok's may own a disjoint acquisition
+component and tests with domain `official-acquisition`. These are examples, not
+admission of the current prototypes or HPG facts. Source registry changes go through
+the integration owner, not an adapter's directory ownership.
+
+```text
+python tools/stocklookup_roadmap.py --repo <coordinator> --state-file <native-state> --admit-lane OFFICIAL_FINANCIAL_DEV --lane-spec <financial-spec> --agent Integrator --owner-override --scope-note <Owner-directive>
+python tools/stocklookup_roadmap.py --repo <coordinator> --state-file <native-state> --transition-lane OFFICIAL_FINANCIAL_DEV --lane-state ACTIVE --agent Integrator --owner-override --scope-note <Owner-directive>
+python tools/stocklookup_roadmap.py --repo <developer> --state-file <native-state> --check-lane OFFICIAL_FINANCIAL_DEV
+# Developer checks/commits, then Integrator records REVIEW_READY with --checkpoint-at.
+python tools/stocklookup_roadmap.py --repo <coordinator> --state-file <native-state> --integration-plan --main-sha <remote-main> --candidate-lane OFFICIAL_FINANCIAL_DEV
+# Run named integration tests in an isolated fixture, review APIs/frozen identities.
+python tools/stocklookup_roadmap.py --repo <coordinator> --state-file <native-state> --integration-plan --main-sha <remote-main> --candidate-lane OFFICIAL_FINANCIAL_DEV --review-receipt <exact-receipt>
+# Stop at Owner merge approval. After separately authorized merge and green CI,
+# obtain a fresh post-merge plan/receipt and record MERGED_RELEASED with exact HEAD/main.
+```
+
+The same admission/check/checkpoint commands apply independently to Claude and Grok.
+The hermetic tests execute these actual commands with three registered temporary
+worktrees and a local bare remote, integrate A and verify unchanged B against new
+main, and assert shared/state/authority restrictions. No production Daily or secrets
+are needed. Optional GitHub merge queue/branch-protection configuration is a later
+Owner administration decision; this milestone changes neither.

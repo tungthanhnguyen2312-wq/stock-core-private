@@ -1,7 +1,7 @@
 # Stock Lookup — Active State
 
-Base/main: `d53999ba07a080b7fae2104185c56cc9a55ce210`.
-V2 PR130 released; post-merge CI PASS (38222535046). E0–E6 released.
+Base/main: `23da9d84da94ad91ebcd8617b3b8a453b5a6baab`.
+PR133 released; post-merge CI PASS (38318598892). E0–E6 released.
 Verify live main: `git fetch origin main` or `git ls-remote origin refs/heads/main`; **local** remote-tracking refs may be stale.
 ## 0. How this file relates to the others
 | Question | Answer lives in |
@@ -30,11 +30,12 @@ Kinds: **CURRENT FACT** (verified), **HOST-LOCAL** (untracked; re-verify),
 **BLOCKED**, **DEFERRED**, **HISTORICAL**.
 
 ## 1. The operational gate
-- **LOCAL COMPLETE — [unlock](current_financial_valuation_input_unlock_v1_contract.md):** six H1 ratios; proxy shares; review gate.
+- **COMPLETE LOCAL — [development lanes](parallel_domain_development_control_plane_v1_contract.md):** review gate; no merge/runtime authority.
+- **RELEASED — [unlock](current_financial_valuation_input_unlock_v1_contract.md):** PR133; six H1 ratios; proxy shares.
 - **COMPLETE — [root hub V3](root_hub_dependency_reduction_v3_contract.md):** PR131 merged `d11b101`.
 - **COMPLETE — [E6 financial seams](e6_financial_extraction_admission_boundary_contract.md):** row/envelope/status owners.
-- **COMPLETE — [E4 infrastructure](e4_versioned_identity_safe_infrastructure_extraction_contract.md):** fixed paths and bounded JSON/verification owners; frozen V1 preserved, V2 qualifier offline. No V2 activation, Daily or authority change.
-- **COMPLETE — [E2/E3 seams](e2_e3_foundation_seams_and_dependency_untangling_contract.md):** explicit registry reads and temporal measurements; domain policy remains domain-owned. No Daily or authority change.
+- **COMPLETE — [E4](e4_versioned_identity_safe_infrastructure_extraction_contract.md):** frozen V1; V2 offline.
+- **COMPLETE — [E2/E3](e2_e3_foundation_seams_and_dependency_untangling_contract.md):** registry/temporal seams.
 - **COMPLETE — [E1 evidence move](e1_official_exchange_evidence_package_migration_contract.md):** 13 modules to `stocklookup_core/evidence/`; no shim, Daily or authority change.
 - **COMPLETE — [E0](stocklookup_architecture_dependency_ratchet_and_daily_launch_guard_v1_contract.md):** PR123 merged `56cdc36`.
 - **COMPLETE — [Action Center cases](action_center_opportunity_cost_cases_consumer_v1_contract.md):** PR119, four post-merge jobs PASS (38105025004); offline/non-voting.
@@ -307,10 +308,9 @@ Kinds: **CURRENT FACT** (verified), **HOST-LOCAL** (untracked; re-verify),
 
 ## 9. Next action
 
-E6 COMPLETE LOCAL; [scope](e6_financial_extraction_admission_boundary_contract.md).
-Feature PR/CI repairs authorized; E6 merge and V2 activation remain Owner-gated. Queue empty; no automatic successor.
-Daily stays owner-operated after fresh READY/session gates; production merges need approval.
-Fiscal mapping needs exact source/period/publication proof under its existing contract.
+[Development lanes](parallel_domain_development_control_plane_v1_contract.md): review PR,
+one feature PR; stop at Owner merge gate. Queue empty. Daily requires fresh READY/session
+gates. Claude/Grok prototypes are experiments, not admitted lanes. No cleanup.
 
 ## 10. Owner approvals that remain open
 
