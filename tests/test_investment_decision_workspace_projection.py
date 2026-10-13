@@ -196,6 +196,69 @@ def test_method_level_usable_value_survives_workspace_projection():
     assert diagnostics["availability_state"] == "AVAILABLE_QUALIFIED"
 
 
+@pytest.mark.parametrize("earnings_definition", [
+    "REPORTED_TOTAL_NET_INCOME_NOT_PARENT_ATTRIBUTABLE", "PARENT_PROFIT",
+])
+def test_accounting_qualifiers_survive_actual_workspace_without_changing_authority(earnings_definition):
+    from copy import deepcopy
+
+    opportunity, decision = real_pair(tickers=("AAA",))
+    methods = opportunity["records"]["AAA"]["valuation"]["applicable_methods"]
+    methods.update({
+        "P/E_REPORTED_PERIOD": {
+            "status": "RESEARCH_USABLE", "value": 20.0,
+            "availability_state": "AVAILABLE_REFERENCE_ONLY", "period_basis": "2026-H1",
+            "blocker_reason_codes": [], "peer_relative": False,
+            "source_fact": {"evidence_id": "synthetic:reported-income", "canonical_metric": "net_income"},
+            "knowledge_cutoff": "2026-10-13T09:00:00+07:00",
+        },
+        "P/B_CURRENT_RESEARCH": {
+            "status": "RESEARCH_USABLE", "value": 2.0,
+            "availability_state": "AVAILABLE_REFERENCE_ONLY", "period_basis": "POINT_IN_TIME_BALANCE_SHEET",
+            "blocker_reason_codes": [], "peer_relative": False,
+        },
+        "P/B_OFFICIAL_RESEARCH": {
+            "status": "INPUT_BLOCKED", "value": None, "availability_state": "NOT_AVAILABLE",
+            "blocker_reason_codes": ["PARENT_EQUITY_NOT_ESTABLISHED"], "peer_relative": False,
+            "statement_scope": "consolidated",
+        },
+    })
+    before = build_artifacts(opportunity_artifact=opportunity, decision_artifact=decision, requested_at="t")
+    methods["P/E_REPORTED_PERIOD"].update(
+        earnings_definition=earnings_definition, statement_scope="consolidated",
+        limitations=["SINGLE_REPORTING_PERIOD_NOT_ANNUALIZED"],
+    )
+    methods["P/B_CURRENT_RESEARCH"].update(
+        equity_definition="TOTAL_OWNERS_EQUITY_AS_REPORTED_INCLUDES_NCI_WHERE_PRESENT",
+        statement_scope="consolidated", limitations=["CURRENT_RESEARCH_ONLY", "NCI_NOT_DEDUCTED"],
+    )
+    source = deepcopy(opportunity)
+    after = build_artifacts(opportunity_artifact=opportunity, decision_artifact=decision, requested_at="t")
+    card = after["cards"]["AAA"]
+    diagnostics = card["valuation"]["method_diagnostics"]
+    assert diagnostics["P/E_REPORTED_PERIOD"]["earnings_definition"] == earnings_definition
+    assert diagnostics["P/E_REPORTED_PERIOD"]["source_fact"] == methods["P/E_REPORTED_PERIOD"]["source_fact"]
+    assert diagnostics["P/E_REPORTED_PERIOD"]["knowledge_cutoff"] == methods["P/E_REPORTED_PERIOD"]["knowledge_cutoff"]
+    assert diagnostics["P/B_CURRENT_RESEARCH"]["equity_definition"] == methods["P/B_CURRENT_RESEARCH"]["equity_definition"]
+    assert diagnostics["P/B_CURRENT_RESEARCH"]["limitations"] == ["CURRENT_RESEARCH_ONLY", "NCI_NOT_DEDUCTED"]
+    assert diagnostics["P/B_OFFICIAL_RESEARCH"]["statement_scope"] == "consolidated"
+    assert "equity_definition" not in diagnostics["P/B_OFFICIAL_RESEARCH"]
+    assert "limitations" not in diagnostics["P/B_OFFICIAL_RESEARCH"]
+    old_card = before["cards"]["AAA"]
+    for name in ("P/E_REPORTED_PERIOD", "P/B_CURRENT_RESEARCH", "P/B_OFFICIAL_RESEARCH"):
+        for key in ("value", "status", "availability_state", "blocker_reason_codes", "peer_relative"):
+            assert diagnostics[name][key] == old_card["valuation"]["method_diagnostics"][name][key]
+    assert card["lineage"] == old_card["lineage"]
+    assert after["source_artifacts"] == before["source_artifacts"]
+    assert card["research_action_posture"] == old_card["research_action_posture"]
+    assert card["valuation"]["relative_research_state"] == old_card["valuation"]["relative_research_state"]
+    assert opportunity == source
+    # A consumer editing a diagnostic must not edit the source's retained qualifications.
+    diagnostics["P/B_CURRENT_RESEARCH"]["limitations"].append("consumer note")
+    diagnostics["P/E_REPORTED_PERIOD"]["limitations"].append("consumer note")
+    assert opportunity == source
+
+
 def test_peer_relative_blocker_does_not_erase_available_underlying_multiple():
     # Single ticker: well below MIN_COHORT_MEMBERS, so P/E has no qualified peer cohort --
     # the multiple itself must still survive as AVAILABLE_REFERENCE_ONLY, not disappear.

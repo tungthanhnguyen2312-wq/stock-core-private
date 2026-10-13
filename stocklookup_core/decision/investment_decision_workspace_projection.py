@@ -111,11 +111,15 @@ def _valuation_view(opportunity_record: Mapping[str, Any]) -> dict[str, Any]:
             "blocker_reason_codes": detail.get("blocker_reason_codes"),
             "period_basis": detail.get("period_basis"), "share_basis": detail.get("share_basis"),
             "peer_relative": detail.get("peer_relative"),
+            # Preserve the producer's equity attribution beside its displayed multiple.
+            # Older methods without these fields keep their original projection shape.
+            **{key: copy.deepcopy(detail[key]) for key in (
+                "equity_definition", "statement_scope", "limitations") if key in detail},
             **({key: detail[key] for key in (
                 "reporting_basis", "source_fact", "denominator_period_semantics", "denominator_authority",
                 "denominator_metric", "denominator_value_vnd", "numerator_value_vnd", "numerator_monetary_basis",
                 "numerator_price_input", "numerator_share_basis_input", "formula", "formula_owner",
-                "knowledge_cutoff", "earnings_definition", "limitations") if key in detail}
+                "knowledge_cutoff", "earnings_definition") if key in detail}
                if method_id in REPORTED_PERIOD_METHODS else {}),
         }
         for method_id, detail in applicable_methods.items()

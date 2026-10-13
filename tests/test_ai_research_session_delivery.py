@@ -1,5 +1,6 @@
 import hashlib
 import json
+from copy import deepcopy
 
 import pytest
 
@@ -172,6 +173,217 @@ def test_integrated_delivery_rejects_cross_session_or_mismatched_brief_identity(
     inputs["daily_integrated_decision_brief"] = brief
     with pytest.raises(ValueError, match="DAILY_INTEGRATED_BRIEF_SESSION_MISMATCH"):
         build_delivery(operation, inputs)
+
+
+# Exact shipped projection snapshot from 9d567d056e8c79494572e288e88dbf00af637ce6.
+# Embedded so clean, shallow CI needs no historical Git object.
+LEGACY_ACCOUNTING_PROJECTION_SOURCE = r'''
+def _selected_fields(value: Any, fields: tuple[str, ...]) -> dict[str, Any] | None:
+    if not isinstance(value, Mapping):
+        return None
+    return {field: copy.deepcopy(value.get(field)) for field in fields if field in value}
+
+def _valuation_methods_for_delivery(record: Mapping[str, Any]) -> dict[str, Any]:
+    """Pass through qualified valuation values and blocked states without a calculation."""
+    result: dict[str, Any] = {}
+    for name, method in sorted((record.get("valuation_methods") or {}).items()):
+        if not isinstance(method, Mapping):
+            continue
+        row = _selected_fields(method, (
+            "method_id", "status", "applicability", "blocker_reason_codes",
+            "period_basis", "value", "source_status", "p3f_method_status",
+        )) or {}
+        # Targets, fair values, and probabilities are deliberately not a delivery
+        # field, even when an upstream blocked row represents them as null.
+        result[str(name)] = row
+    return result
+
+def project_integrated_decision_for_ai_delivery(record: Any, *, integrated_identity: str | None = None) -> dict[str, Any] | None:
+    """Project one Integrated Decision record for AI delivery.
+
+    M1_LIVE_ACCEPTANCE_CORRECTIVE_V1: the decision-surface fields (ticker binding,
+    ``evidence_currency`` and its gate/lineage, ``position_context``, priority) are
+    copied verbatim from the canonical record, never recomputed here.  A field the
+    record does not carry is delivered as ``None``; it is never inferred. ``is_actionable`` and
+    the other boundary flags are fixed by this contract, not taken from the record, so the whole
+    returned object (boundary flags included) is what AI handoff verification requires exactly.
+    """
+    if not isinstance(record, Mapping):
+        return None
+    trigger = _selected_fields(record.get("trigger"), (
+        "trigger_type", "trigger_level", "trigger_state", "distance_to_trigger_pct",
+        "condition", "watchlist_condition",
+    ))
+    invalidation = _selected_fields(record.get("invalidation"), (
+        "invalidation_level", "invalidation_method", "distance_to_invalidation_pct",
+        "condition", "watchlist_condition",
+    ))
+    return {
+        "ticker": record.get("ticker"),
+        "decision_identity": record.get("decision_identity"),
+        "integrated_investment_decision_product_identity": integrated_identity,
+        "as_of_session": record.get("as_of_session"),
+        "research_action_posture": record.get("research_action_posture"),
+        "posture_condition_class": record.get("posture_condition_class"),
+        "research_action_policy_version": record.get("research_action_policy_version", "v1"),
+        "evidence_currency": record.get("evidence_currency"),
+        "evidence_currency_gate": copy.deepcopy(record.get("evidence_currency_gate")),
+        "evidence_currency_lineage": copy.deepcopy(record.get("evidence_currency_lineage")),
+        "position_context": copy.deepcopy(record.get("position_context")),
+        "opportunity_priority": copy.deepcopy(record.get("opportunity_priority")),
+        "tactical_phase": record.get("tactical_phase"),
+        "trigger": trigger,
+        "invalidation": invalidation,
+        "evidence_axis_coherence": copy.deepcopy(record.get("evidence_axis_coherence")),
+        "evidence_axes": copy.deepcopy(record.get("evidence_axes")),
+        **({"financial_peer_context": copy.deepcopy(record["financial_peer_context"])} if "financial_peer_context" in record else {}),
+        "financial_composite_context": copy.deepcopy(record.get("financial_composite_context")),
+        "corporate_intelligence_context": copy.deepcopy(record.get("corporate_intelligence_context")),
+        "material_uncertainties": copy.deepcopy(record.get("material_uncertainties")),
+        "counter_thesis": copy.deepcopy(record.get("counter_thesis")),
+        "missing_evidence_decision_effect": copy.deepcopy(record.get("missing_evidence_decision_effect")),
+        "why_now": copy.deepcopy(record.get("why_now")),
+        "participation": copy.deepcopy(record.get("participation")),
+        "valuation_context_summary": copy.deepcopy(record.get("valuation_context_summary")),
+        "valuation_methods": _valuation_methods_for_delivery(record),
+        "valuation_method_reconciliation": copy.deepcopy(record.get("valuation_method_reconciliation")),
+        "source_identities": copy.deepcopy(record.get("source_identities")),
+        # CURRENT_RESEARCH_DECISION_CONVERGENCE_V1: the Producer's per-dimension explanation of
+        # what is available, proxy, qualified, blocked or non-applicable and why -- passed
+        # through so AI never reverse-engineers a disappeared metric.
+        "current_research_decision_input": copy.deepcopy(record.get("current_research_decision_input")),
+        "is_actionable": False,
+        "research_support_not_execution_instruction": True,
+        "no_target_price": True,
+        "no_calibrated_probability": True,
+        "no_position_size": True,
+    }
+'''
+LEGACY_ACCOUNTING_PROJECTION_SHA256 = 'fb5f7fbd876a5216fd7d980a71eabe46e71ad72437400bf05a09f8438ee9b4f9'
+
+
+@pytest.fixture(scope="module")
+def legacy_accounting_delivery_projection():
+    """Execute only the three shipped projection functions, without importing historical code."""
+    import ast
+    import copy
+    from typing import Any, Mapping
+
+    source = LEGACY_ACCOUNTING_PROJECTION_SOURCE
+    assert hashlib.sha256(source.encode()).hexdigest() == LEGACY_ACCOUNTING_PROJECTION_SHA256
+    names = {"_selected_fields", "_valuation_methods_for_delivery", "project_integrated_decision_for_ai_delivery"}
+    functions = [node for node in ast.parse(source).body if isinstance(node, ast.FunctionDef) and node.name in names]
+    assert {node.name for node in functions} == names
+    namespace = {"copy": copy, "Any": Any, "Mapping": Mapping}
+    exec(compile(ast.Module(body=functions, type_ignores=[]), "<shipped-delivery-projection>", "exec"), namespace)
+    return namespace["project_integrated_decision_for_ai_delivery"]
+
+
+def _accounting_delivery_inputs(session):
+    operation = _operation()
+    operation["manifest"]["market_session"] = session
+    operation["manifest"]["session_coherence"]["session"] = session
+    integrated = _integrated_delivery_fixture(session=session)
+    record = integrated["records"]["AAA"]
+    record["valuation_methods"]["P/E_REPORTED_PERIOD"] = {
+        "method_id": "P/E_REPORTED_PERIOD", "status": "RESEARCH_USABLE", "applicability": "APPLICABLE",
+        "value": 20.0, "period_basis": "2026-H1", "blocker_reason_codes": [],
+        "earnings_definition": "REPORTED_TOTAL_NET_INCOME_NOT_PARENT_ATTRIBUTABLE",
+        "denominator_metric": "net_income", "denominator_period_semantics": "SINGLE_REPORTING_PERIOD_NOT_ANNUALIZED",
+        "statement_scope": "consolidated", "share_basis": "CURRENT_SHARE_RESEARCH_PROXY",
+        "limitations": ["CURRENT_RESEARCH_ONLY", "NOT_AUTHORITATIVE", "NO_ANNUALIZATION_OR_TTM"],
+        "target_price": 999.0, "fair_value": 998.0, "probability": 0.9,
+    }
+    record["valuation_methods"]["P/B_CURRENT_RESEARCH"] = {
+        "method_id": "P/B_CURRENT_RESEARCH", "status": "RESEARCH_USABLE", "applicability": "APPLICABLE",
+        "value": 2.0, "period_basis": "POINT_IN_TIME_BALANCE_SHEET", "blocker_reason_codes": [],
+        "equity_definition": "TOTAL_OWNERS_EQUITY_AS_REPORTED_INCLUDES_NCI_WHERE_PRESENT",
+        "statement_scope": "consolidated", "share_basis": "CURRENT_SHARE_RESEARCH_PROXY",
+        "limitations": ["CURRENT_RESEARCH_ONLY", "NCI_NOT_DEDUCTED"],
+    }
+    brief = _daily_brief_fixture(integrated, session=session)
+    return operation, integrated, brief, {
+        "descriptive": {"records": {"AAA": {}}},
+        "integrated_investment_decision_product": integrated, "daily_integrated_decision_brief": brief,
+    }
+
+
+@pytest.mark.parametrize("session", ["2026-10-12", "2026-10-13"])
+def test_possible_sealed_deliveries_keep_all_shipped_bytes(session, monkeypatch, legacy_accounting_delivery_projection):
+    import ai_research_session_delivery as delivery
+
+    monkeypatch.setattr(delivery, "owner_focus_tickers", lambda: ("AAA",))
+    operation, integrated, _brief, inputs = _accounting_delivery_inputs(session)
+    # Neither a record date nor a delivery flag can choose the new source-session epoch.
+    integrated["records"]["AAA"]["as_of_session"] = "2099-01-01"
+    operation["manifest"]["accounting_qualifiers_enabled"] = True
+    current = build_delivery(operation, inputs)
+    with monkeypatch.context() as old:
+        old.setattr(delivery, "project_integrated_decision_for_ai_delivery",
+                    lambda record, *, integrated_identity=None, source_session=None:
+                    legacy_accounting_delivery_projection(record, integrated_identity=integrated_identity))
+        shipped = build_delivery(operation, inputs)
+    assert current == shipped  # primary, full universe, cockpit, manifest and brief bytes
+
+
+@pytest.mark.parametrize("source_session", [None, "", "not-a-date", "2026-02-30", "20261014", "2026-10-14T00:00:00Z"])
+def test_absent_invalid_or_noncanonical_source_session_keeps_legacy_projection(source_session, legacy_accounting_delivery_projection):
+    from ai_research_session_delivery import project_integrated_decision_for_ai_delivery
+
+    _operation, integrated, _brief, _inputs = _accounting_delivery_inputs("2026-10-14")
+    record = integrated["records"]["AAA"]
+    expected = legacy_accounting_delivery_projection(record, integrated_identity=integrated["artifact_identity"])
+    assert project_integrated_decision_for_ai_delivery(record, integrated_identity=integrated["artifact_identity"],
+                                                      source_session=source_session) == expected
+
+
+@pytest.mark.parametrize("session", ["2026-10-13", "2026-10-14", "2026-10-15"])
+def test_actual_delivery_verifier_and_cockpit_preserve_prospective_accounting_labels(session, monkeypatch, tmp_path):
+    import ai_research_session_delivery as delivery
+    from tools import run_owner_daily as workflow
+
+    monkeypatch.setattr(delivery, "owner_focus_tickers", lambda: ("AAA",))
+    operation, integrated, brief, inputs = _accounting_delivery_inputs(session)
+    snapshot = deepcopy(inputs)
+    result = build_delivery(operation, inputs)
+    primary = json.loads(result["primary"])
+    companion = json.loads(result["full_universe"])
+    cockpit = json.loads(result["projection"])
+    contexts = [primary["ticker_research_contexts"]["AAA"]["integrated_decision_v1"],
+                primary["owner_focus_research_contexts"][0]["integrated_decision_v1"], companion["integrated_decision_v1"]]
+    method_views = [context["valuation_methods"] for context in contexts]
+    method_views.append(cockpit["decision_card_v1"]["AAA"]["valuation"]["methods"])
+    for methods in method_views:
+        pe, pb = methods["P/E_REPORTED_PERIOD"], methods["P/B_CURRENT_RESEARCH"]
+        assert (pe["value"], pe["status"], pb["value"], pb["status"]) == (20.0, "RESEARCH_USABLE", 2.0, "RESEARCH_USABLE")
+        if session >= "2026-10-14":
+            assert pe["earnings_definition"] == integrated["records"]["AAA"]["valuation_methods"]["P/E_REPORTED_PERIOD"]["earnings_definition"]
+            assert pe["denominator_metric"] == "net_income"
+            assert pe["denominator_period_semantics"] == "SINGLE_REPORTING_PERIOD_NOT_ANNUALIZED"
+            assert pb["equity_definition"] == integrated["records"]["AAA"]["valuation_methods"]["P/B_CURRENT_RESEARCH"]["equity_definition"]
+            assert "NCI_NOT_DEDUCTED" in pb["limitations"]
+        else:
+            assert "earnings_definition" not in pe and "equity_definition" not in pb
+        assert "earnings_definition" not in methods["P/E"]  # absent source labels are not inferred
+        assert not {"target_price", "fair_value", "probability"}.intersection(pe)
+    assert all(context["research_action_posture"] == "INITIATE_ON_BREAKOUT" for context in contexts)
+    assert cockpit["decision_card_v1"]["AAA"]["verdict"] == "INITIATE_ON_BREAKOUT"
+    assert inputs == snapshot
+    (tmp_path / delivery.PRIMARY_HUMAN_REVIEW_FILENAME).write_bytes(result["primary"])
+    (tmp_path / delivery.FULL_UNIVERSE_LOOKUP_FILENAME).write_bytes(result["full_universe"])
+    overlay = delivery.project_integrated_decision_delivery_overlay(session, integrated, brief)
+    projections = overlay.pop("records")
+    authority = {"operation_identity": operation["manifest"]["operation_identity"],
+                 "product_identity": operation["product"]["artifact_identity"],
+                 "overlay_header": overlay, "projections": projections,
+                 "scoped": ["AAA"], "owner_focus": ["AAA"], "full_universe": ["AAA"]}
+    assert workflow._verify_m1_ai_delivery(tmp_path, session, authority) == {
+        "ticker_research_contexts": 1, "owner_focus_research_contexts": 1, "full_universe_rows": 1}
+    if session >= "2026-10-14":
+        primary["ticker_research_contexts"]["AAA"]["integrated_decision_v1"]["valuation_methods"]["P/E_REPORTED_PERIOD"]["earnings_definition"] = "PARENT_PROFIT"
+        (tmp_path / delivery.PRIMARY_HUMAN_REVIEW_FILENAME).write_text(json.dumps(primary), encoding="utf-8")
+        with pytest.raises(workflow.OwnerDailyError, match="M1_AI_DELIVERY_PROJECTION_MISMATCH"):
+            workflow._verify_m1_ai_delivery(tmp_path, session, authority)
 
 
 def test_integrated_delivery_without_brief_preserves_standalone_semantics():

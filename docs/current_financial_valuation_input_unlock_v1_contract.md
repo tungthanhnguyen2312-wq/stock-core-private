@@ -56,3 +56,27 @@ These are implementation gains, not changes to the immutable production session.
 Predecessor [Owner Daily relaunch](owner_daily_ai_handoff_import_recovery_20261012_contract.md)
 is COMPLETE and released in PR132 (`288208a6`); replay remains separately Owner-gated.
 This local milestone closed at `6a35afc2`; queue empty, no activation or successor.
+
+## Accounting qualifier transport corrective — 2026-10-13
+
+`FINANCIAL_ACCOUNTING_QUALIFIER_TRANSPORT_CORRECTIVE_V1` is separately admitted
+under the Owner's source-only engineering program. It copies existing earnings,
+equity, scope, share-basis, denominator and limitation fields through primary AI
+delivery, and existing equity/scope/limitations through Workspace diagnostics.
+Absent producer fields remain absent; the official P/B parent-equity producer gap
+is outside this corrective. Values, eligibility, source authority and posture do
+not change, and no new fact or ratio becomes qualified.
+
+Primary AI delivery uses the bound Integrated Decision's canonical source session.
+Sessions through `2026-10-13`, and absent/invalid/noncanonical identities, keep the
+exact legacy projection. Qualifier delivery starts at `2026-10-14`, the first
+prospective date after admission, preserving any already-sealed October 13 delivery.
+This is a deterministic projection compatibility boundary, not publication/PIT
+proof or a trading-calendar inference. Wall time, record dates and delivery flags
+cannot select the new shape. The unchanged strict M1 verifier reprojects the same
+canonical source and rejects changed qualifiers. Existing sessions are never rebuilt.
+
+Workspace copies only present upstream qualifiers and keeps their lineage and
+blocked states. This improves its data contract; Dashboard renderer changes are
+not included. Release requires actual transport/verifier, legacy/future-session,
+financial/frozen/offline regressions, exact-head CI and native integration receipts.

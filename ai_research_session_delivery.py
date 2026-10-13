@@ -7,6 +7,7 @@ recommendation, target, probability, or execution instruction.
 from __future__ import annotations
 
 import copy
+from datetime import date
 import hashlib
 import io
 import json
@@ -26,6 +27,7 @@ FULL_UNIVERSE_COMPANION_ROLE = "FULL_UNIVERSE_LOOKUP_ONLY"
 PRIMARY_HUMAN_REVIEW_ROLE = "PRIMARY_NORMAL_HUMAN_REVIEW_INPUT"
 INTEGRATED_DELIVERY_CONTRACT = "integrated_decision_delivery_overlay/v1"
 DECISION_CARD_CONTRACT = "decision_card_v1"
+ACCOUNTING_QUALIFIER_FIRST_SESSION = "2026-10-14"
 
 
 def _canon(value: Any) -> str:
@@ -94,9 +96,25 @@ def _selected_fields(value: Any, fields: tuple[str, ...]) -> dict[str, Any] | No
     return {field: copy.deepcopy(value.get(field)) for field in fields if field in value}
 
 
-def _valuation_methods_for_delivery(record: Mapping[str, Any]) -> dict[str, Any]:
+def _accounting_qualifiers_enabled(source_session: Any) -> bool:
+    """Select prospectively from the bound canonical source session, never wall time.
+
+    Old sealed deliveries are verified by re-projecting their retained sources. Keep
+    their exact projection, including any session already sealed on October 13.
+    """
+    if not isinstance(source_session, str):
+        return False
+    try:
+        parsed = date.fromisoformat(source_session)
+    except ValueError:
+        return False
+    return parsed.isoformat() == source_session and source_session >= ACCOUNTING_QUALIFIER_FIRST_SESSION
+
+
+def _valuation_methods_for_delivery(record: Mapping[str, Any], *, source_session: str | None = None) -> dict[str, Any]:
     """Pass through qualified valuation values and blocked states without a calculation."""
     result: dict[str, Any] = {}
+    include_qualifiers = _accounting_qualifiers_enabled(source_session)
     for name, method in sorted((record.get("valuation_methods") or {}).items()):
         if not isinstance(method, Mapping):
             continue
@@ -104,13 +122,19 @@ def _valuation_methods_for_delivery(record: Mapping[str, Any]) -> dict[str, Any]
             "method_id", "status", "applicability", "blocker_reason_codes",
             "period_basis", "value", "source_status", "p3f_method_status",
         )) or {}
+        if include_qualifiers:
+            row.update(_selected_fields(method, (
+                "earnings_definition", "equity_definition", "statement_scope", "share_basis",
+                "denominator_metric", "denominator_period_semantics", "limitations",
+            )) or {})
         # Targets, fair values, and probabilities are deliberately not a delivery
         # field, even when an upstream blocked row represents them as null.
         result[str(name)] = row
     return result
 
 
-def project_integrated_decision_for_ai_delivery(record: Any, *, integrated_identity: str | None = None) -> dict[str, Any] | None:
+def project_integrated_decision_for_ai_delivery(record: Any, *, integrated_identity: str | None = None,
+                                              source_session: str | None = None) -> dict[str, Any] | None:
     """Project one Integrated Decision record for AI delivery.
 
     M1_LIVE_ACCEPTANCE_CORRECTIVE_V1: the decision-surface fields (ticker binding,
@@ -157,7 +181,7 @@ def project_integrated_decision_for_ai_delivery(record: Any, *, integrated_ident
         "why_now": copy.deepcopy(record.get("why_now")),
         "participation": copy.deepcopy(record.get("participation")),
         "valuation_context_summary": copy.deepcopy(record.get("valuation_context_summary")),
-        "valuation_methods": _valuation_methods_for_delivery(record),
+        "valuation_methods": _valuation_methods_for_delivery(record, source_session=source_session),
         "valuation_method_reconciliation": copy.deepcopy(record.get("valuation_method_reconciliation")),
         "source_identities": copy.deepcopy(record.get("source_identities")),
         # CURRENT_RESEARCH_DECISION_CONVERGENCE_V1: the Producer's per-dimension explanation of
@@ -202,7 +226,8 @@ def project_integrated_decision_delivery_overlay(session: str, integrated: Mappi
     return {
         **_integrated_overlay_header(session, integrated, daily_brief),
         "records": {
-            ticker: project_integrated_decision_for_ai_delivery(record, integrated_identity=integrated["artifact_identity"])
+            ticker: project_integrated_decision_for_ai_delivery(record, integrated_identity=integrated["artifact_identity"],
+                                                              source_session=integrated.get("session"))
             for ticker, record in sorted(records.items())
         },
     }
@@ -221,9 +246,10 @@ def _daily_brief_transition(daily_brief: Mapping[str, Any] | None, ticker: str) 
     return None
 
 
-def _decision_card(ticker: str, record: Mapping[str, Any], daily_brief: Mapping[str, Any] | None) -> dict[str, Any]:
+def _decision_card(ticker: str, record: Mapping[str, Any], daily_brief: Mapping[str, Any] | None,
+                   *, source_session: str | None = None) -> dict[str, Any]:
     """A compact presentation of only existing Integrated Decision/brief facts."""
-    delivered = project_integrated_decision_for_ai_delivery(record) or {}
+    delivered = project_integrated_decision_for_ai_delivery(record, source_session=source_session) or {}
     return {
         "contract_version": DECISION_CARD_CONTRACT,
         "verdict": delivered.get("research_action_posture"),
@@ -608,7 +634,8 @@ def build_dashboard_projection(
         # when supplied, the Daily Integrated Decision Brief's transition view).
         watchlist_tickers = list((product.get("watchlist") or {}).get("tickers") or [])
         projection["decision_card_v1"] = {
-            ticker: _decision_card(ticker, record, daily_integrated_brief)
+            ticker: _decision_card(ticker, record, daily_integrated_brief,
+                                  source_session=integrated_decision.get("session"))
             for ticker, record in sorted((integrated_decision.get("records") or {}).items())
             if ticker in watchlist_tickers
         }
