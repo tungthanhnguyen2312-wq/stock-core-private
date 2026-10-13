@@ -1,7 +1,7 @@
 # Stock Lookup — Current Roadmap
 
 History: [ROADMAP.md](ROADMAP.md); execution: ROADMAP_STATE.json.
-Base/main `23da9d84da94ad91ebcd8617b3b8a453b5a6baab`.
+Observed main 2026-10-14 `bd71cb23013f0175cca22bad7df8632be65e8cad`.
 Nothing below auto-starts; native standing admission required (AI_RULES 11).
 Facts: [ACTIVE_STATE.md](ACTIVE_STATE.md).
 
@@ -9,6 +9,7 @@ Facts: [ACTIVE_STATE.md](ACTIVE_STATE.md).
 
 [Scope](parallel_domain_development_control_plane_v1_contract.md): disjoint native lanes;
 Owner merge gate. PR133 released; post-merge CI PASS (38318598892).
+2026-10-14 Owner closeout: Codex sequentially preserves the CI corrective, completes bounded Wave2 and measured PhaseB, and prepares isolated integration/receipt. Exact coordinator state governs; no push, merge, deploy, Daily, production writes, authority promotion or successor is authorized.
 V3 PR131 merged `d11b101`; V2 PR130 merged `d53999b`.
 E5 PR127 merged `70fbba9`; post-merge CI PASS (38190156979).
 E4 PR126 merged `e9ee2fe`; four post-merge jobs PASS (38186488312).
@@ -75,10 +76,8 @@ These advance by accumulating real sessions, not by implementation:
 
 ## AFTER FIRST-REAL ACCEPTANCE — candidates, bounded admission required
 
-1. **Record the first-real result** — done in this control plane (docs only; no runtime change). Phase B is not started. Phase C resource architecture is released above.
-2. **Control-plane simplification Phase B** (not started): move or archive historical narrative out of the default
-   path (`STATE.md` / `DECISIONS.md` / `ROADMAP.md` dated sections), keep every machine marker, parser and
-   `ROADMAP_STATE.json` contract working, update the drift/governance tests in the same change. Preserve history.
+1. **Record the first-real result** — done in this control plane (docs only; no runtime change). Phase C resource architecture is released above.
+2. **Control-plane simplification Phase B** (admitted in the current Codex source closeout): reduce obsolete bootstrap context and duplicate live audits; use explicit coordinator/lane handoffs. Preserve historical files, markers, parser output/error shape and native roadmap contracts; measure the effective reading footprint.
 3. **Simplification Phase C** (released): measured allocation causes and immutable
    session sizes remain in the linked acceptance and
    [host preflight](owner_daily_host_preflight_contract.md) /

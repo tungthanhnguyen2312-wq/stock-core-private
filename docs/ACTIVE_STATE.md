@@ -29,6 +29,8 @@ Kinds: **CURRENT FACT** (verified), **HOST-LOCAL** (untracked; re-verify),
 **BLOCKED**, **DEFERRED**, **HISTORICAL**.
 
 ## 1. The operational gate
+- **Owner source-only closeout 2026-10-14:** `STOCKLOOKUP_ARCHITECTURE_SIMPLIFICATION_AND_CORRECTNESS_CLOSEOUT_20261014`; Codex alone, exact native coordinator scope/checks; prior Claude/Grok lanes superseded, `1659d643` preserved.
+  Wave2/PhaseB local source preparation only: no push, merge, deploy, Daily, production writes or authority promotion; PNJ/FPT unadmitted, Oct13 seals unchanged.
 - [Oct13](daily_20261013_handoff_route_recovery_contract.md).
 - **RELEASED — [financial intake](official_financial_quarterly_intake_contract.md):** PR137; candidates; source admission gated.
 - **RELEASED — [Wave 1 replay](SYSTEM_MAP.md#wave-1-historical-replay-relocation--2026-10-13):** PR139; `tools/replay/`: 34 modules; root 325 → 291; replay unchanged.
@@ -288,8 +290,8 @@ Kinds: **CURRENT FACT** (verified), **HOST-LOCAL** (untracked; re-verify),
 
 ## 7. DEFERRED
 
-- Control-plane simplification **Phase B/C** (archive/move of history, runtime simplification): defined
-  in [ROADMAP_CURRENT.md](ROADMAP_CURRENT.md), **not authorized, not started**.
+- Further control-plane/runtime work is **not authorized, not started**. Phase B's bounded source improvements
+  are admitted in the current closeout; historical files stay preserved and Phase C's release scope is unchanged.
 - R7 authority promotion (`AUTHORITY_PROMOTION_PENDING_EVIDENCE_OR_OWNER_APPROVAL`).
 - Any later analytical milestone, new provider, new authority, or calibration use of learning outputs.
 - Worktree pruning (186 worktrees listed at last count) and artifact/scratch cleanup beyond what the owner approved.
@@ -308,8 +310,8 @@ Kinds: **CURRENT FACT** (verified), **HOST-LOCAL** (untracked; re-verify),
 
 ## 9. Next action
 
-Wave 1: targeted local checks, dependency release, exact-head CI and native integration receipt before merge.
-[Financial intake](official_financial_quarterly_intake_contract.md): source gate; Daily needs READY/session gates.
+Current closeout: clean local source checkpoints, isolated integration checks and exact native review receipt;
+then stop for separate release approval. No successor. [Financial intake](official_financial_quarterly_intake_contract.md) source/Daily gates remain.
 
 ## 10. Owner approvals that remain open
 
