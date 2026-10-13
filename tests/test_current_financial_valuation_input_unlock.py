@@ -8,6 +8,30 @@ from tests.test_financial_evidence_currency_refresh import _fact
 from stocklookup_core.valuation import current_research_valuation_context as valuation
 from stocklookup_core.valuation.market_wide_current_valuation_input_scaleout import _price_input
 
+# This selected suite owns the intake-to-valuation boundary. New candidate tests
+# run in hosted focused CI without changing workflow dispatch or frozen pins.
+from tests.test_official_financial_quarterly_intake import (
+    test_quarter_and_cumulative_values_are_candidates_not_official_facts,
+    test_existing_q3_source_gate_is_unchanged,
+    test_column_period_never_invents_covered_dates,
+    test_quarter_vs_nine_months_ambiguous_header_is_not_a_column,
+    test_total_parent_and_separate_profits_never_alias,
+    test_cash_flow_negative_and_nine_months_not_q3,
+    test_equity_including_nci_and_lease_debt_stay_distinct,
+    test_semantic_adversaries,
+    test_hash_page_and_exact_citation_fail_closed,
+    test_knowledge_and_publication_are_independent,
+    test_reviewed_integer_without_original_lexeme_is_honestly_labeled,
+    test_unreviewed_never_becomes_reviewed_from_pdf_creation_metadata,
+    test_eps_shares_and_numerator_never_become_current_shares_or_parent_profit,
+    test_reclassified_comparative_state_is_preserved_not_inferred,
+    test_quarter_and_scope_conflicts_use_existing_conflict_owner,
+    test_source_candidate_is_blocked_by_existing_common_admission,
+    test_real_candidate_cannot_enable_existing_reported_period_ratios,
+    test_document_class_cannot_make_unreviewed_rows_reviewed_or_news_financial,
+    test_composite_depreciation_and_capital_amount_do_not_become_ebitda_or_shares,
+)
+
 
 def raw():
     price = _price_input({"disposition": "EXACT_SESSION_RETAINED", "observations": [

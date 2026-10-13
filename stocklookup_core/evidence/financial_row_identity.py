@@ -65,3 +65,65 @@ def row_label_supports_metric(metric: str, label: str, *, normalizer=None) -> bo
 
 # Crossed total-versus-parent income line identities are never admitted.
 LINE_CODE_IDENTITY_CONFLICTS = frozenset({("net_income", "61"), ("attributable_net_income", "60")})
+
+
+def resolve_reported_row_identity(statement_family: str, line_code: str, label: str) -> dict:
+    """Candidate-only literal row mapping; never changes standing fact admission.
+
+    Codes are scoped to the statement. Total equity and lease-inclusive debt keep
+    their distinct source concepts, even where the canonical vocabulary is narrower.
+    """
+    folded = _identity_fold(label)
+    if statement_family == "eps_note":
+        for phrase, concept in (("profit attributable to ordinary shareholders", "EPS_ORDINARY_SHAREHOLDER_PROFIT"),
+                ("shares in circulation for the period", "EPS_DENOMINATOR_SHARES"),
+                ("shares in circulation at the beginning", "EPS_OPENING_SHARES"),
+                ("impact of the stock dividend", "EPS_RESTATED_DIVIDEND_IMPACT")):
+            if phrase in folded:
+                return dict(canonical_metric=None, accounting_identity=concept, blockers=[])
+    if statement_family == "balance_sheet" and str(line_code) in {"321", "339"} and "loans" in folded and "finance lease" not in folded:
+        return dict(canonical_metric=None, accounting_identity=("SHORT_TERM" if str(line_code) == "321" else "LONG_TERM") + "_LOANS_LEASE_CONTENT_UNKNOWN", blockers=[])
+    entries = {
+        ("income_statement", "10"): ("revenue", "NET_REVENUE", ("net sales", "net revenue", "doanh thu thuan")),
+        ("income_statement", "01"): (None, "GROSS_REVENUE", ("revenue", "sales", "doanh thu")),
+        ("income_statement", "02"): (None, "REVENUE_DEDUCTIONS", ("deductions", "giam tru")),
+        ("income_statement", "24"): (None, "REPORTED_BORROWING_COSTS", ("borrowing costs", "chi phi lai vay")),
+        ("income_statement", "60"): ("net_income", "TOTAL_PROFIT_AFTER_TAX", ("profit after tax", "profit after corporate income tax", "loi nhuan sau thue")),
+        ("income_statement", "20"): ("gross_profit", "GROSS_PROFIT", ("gross profit", "loi nhuan gop")),
+        ("income_statement", "50"): (None, "PROFIT_BEFORE_TAX", ("profit before tax", "loi nhuan truoc thue")),
+        ("income_statement", "62"): (None, "NCI_PROFIT_AFTER_TAX", ("non-controlling", "non controlling", "khong kiem soat")),
+        ("income_statement", "70"): (None, "REPORTED_BASIC_EPS", ("earnings per share", "lai co ban tren co phieu")),
+        ("income_statement", "61"): ("attributable_net_income", "PARENT_PROFIT_AFTER_TAX", ("parent", "cong ty me")),
+        ("balance_sheet", "110"): ("cash_and_cash_equivalents", "CASH_AND_EQUIVALENTS", ("cash and cash equivalents", "tien va cac khoan tuong duong")),
+        ("balance_sheet", "111"): (None, "CASH_ONLY_NOT_CASH_AND_EQUIVALENTS", ("cash", "tien")),
+        ("balance_sheet", "200"): (None, "NON_CURRENT_ASSETS", ("non-current assets", "non current assets", "tai san dai han")),
+        ("balance_sheet", "100"): ("current_assets", "CURRENT_ASSETS", ("current assets", "tai san ngan han")),
+        ("balance_sheet", "280"): ("total_assets", "TOTAL_ASSETS", ("total assets", "tong cong tai san")),
+        ("balance_sheet", "400"): ("shareholders_equity", "TOTAL_EQUITY_INCLUDING_NCI", ("owners' equity", "owners equity", "d. equity", "chu so huu")),
+        ("balance_sheet", "140"): (None, "INVENTORIES", ("inventor", "hang ton kho")),
+        ("balance_sheet", "300"): ("total_liabilities", "TOTAL_LIABILITIES", ("liabilities", "no phai tra")),
+        ("balance_sheet", "411"): (None, "CONTRIBUTED_SHARE_CAPITAL", ("share capital", "contributed capital", "von gop")),
+        ("balance_sheet", "411a"): (None, "ORDINARY_VOTING_SHARE_CAPITAL_AMOUNT", ("ordinary shares carrying voting rights",)),
+        ("balance_sheet", "429"): (None, "NON_CONTROLLING_INTERESTS", ("non-controlling", "non controlling", "khong kiem soat")),
+        ("balance_sheet", "321"): (None, "SHORT_TERM_LOANS_AND_FINANCE_LEASES", ("borrowings and finance lease", "loans and finance lease", "loans and obligations under finance lease", "vay va no thue")),
+        ("balance_sheet", "339"): (None, "LONG_TERM_LOANS_AND_FINANCE_LEASES", ("borrowings and finance lease", "loans and finance lease", "loans and obligations under finance lease", "vay va no thue")),
+        ("cash_flow", "20"): ("operating_cash_flow", "OPERATING_CASH_FLOW", ("operating activities", "hoat dong kinh doanh")),
+        ("cash_flow", "02"): (None, "COMPOSITE_CASH_FLOW_DEPRECIATION_ADJUSTMENT", ("depreciation and amortisation", "khau hao")),
+    }
+    entry = entries.get((statement_family, str(line_code)))
+    blockers = []
+    if entry is None:
+        return dict(canonical_metric=None, accounting_identity="UNKNOWN", blockers=["ROW_IDENTITY_NOT_MAPPED"])
+    metric, concept, phrases = entry
+    if not any(term in folded for term in phrases):
+        blockers.append("LITERAL_ROW_LABEL_MISMATCH")
+    if (statement_family == "income_statement" and str(line_code) == "60"
+            and any(term in folded for term in ("parent", "cong ty me", "non controlling", "khong kiem soat"))):
+        blockers.append("TOTAL_PARENT_PROFIT_IDENTITY_CONFLICT")
+    if statement_family == "income_statement" and str(line_code) == "61" and any(term in folded for term in ("non-controlling", "non controlling", "khong kiem soat")):
+        blockers.append("PARENT_NCI_PROFIT_IDENTITY_CONFLICT")
+    if concept == "TOTAL_ASSETS" and any(term in folded for term in ("current assets", "non-current", "non current", "other assets")):
+        blockers.append("SUBTOTAL_IS_NOT_TOTAL_ASSETS")
+    if concept == "TOTAL_LIABILITIES" and any(term in folded for term in ("current liabilities", "non-current", "other liabilities")):
+        blockers.append("SUBTOTAL_IS_NOT_TOTAL_LIABILITIES")
+    return dict(canonical_metric=metric, accounting_identity=concept, blockers=blockers)

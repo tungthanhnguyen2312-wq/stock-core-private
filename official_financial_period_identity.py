@@ -188,3 +188,65 @@ def period_bounds(period: str) -> tuple[str, str]:
         year = period[:4]
         return f"{year}-01-01", f"{year}-03-31"
     raise ValueError(f"unsupported_period:{period}")
+
+
+def recognize_reported_column_period(label: str, *, statement_family: str,
+                                     explicit_start: str | None = None,
+                                     explicit_end: str | None = None) -> dict[str, Any]:
+    """Opt-in intake semantics; standing Q3 source admission stays unchanged.
+
+    Recognize the literal column, not the filing title. Q3 and nine-month flows
+    remain separate. Covered endpoints must be independently supplied, never
+    inferred by period_bounds or a familiar issuer calendar.
+    """
+    from datetime import date
+    text = str(label or "")
+    result = dict(reporting_period=None, period_semantic_state="UNKNOWN_DURATION",
+                  period_start=explicit_start, period_end=explicit_end, native_period_label=text,
+                  reported_duration_months=None, blockers=[])
+    if explicit_start or explicit_end:
+        try:
+            start = date.fromisoformat(explicit_start) if explicit_start else None
+            end = date.fromisoformat(explicit_end) if explicit_end else None
+            if start and end and start > end:
+                raise ValueError()
+        except (TypeError, ValueError):
+            result["blockers"].append("MALFORMED_EXPLICIT_PERIOD_BOUNDS")
+    if statement_family == "balance_sheet":
+        if explicit_end:
+            result.update(reporting_period=explicit_end, period_semantic_state="POINT_IN_TIME_BALANCE_SHEET")
+        else:
+            result["blockers"].append("BALANCE_INSTANT_NOT_PROVEN")
+        if explicit_start:
+            result["blockers"].append("BALANCE_SHEET_IS_NOT_DURATION")
+        return result
+    quarter_pattern = r"(?:\b(20\d{2})-Q([1-4])\b|(?:quarter\s*(III|II|IV|I|[1-4])|q([1-4])|qu[ýy]\s*([1-4]))\s*[/, -]*(20\d{2}))"
+    quarter_hits = list(re.finditer(quarter_pattern, text, re.IGNORECASE))
+    quarter = quarter_hits[0] if quarter_hits else None
+    cumulative = re.search(r"(?:\b(20\d{2})-(9M|H1)\b|(?:nine[- ]months?|9[- ]months?|9\s+th[áa]ng|six[- ]months?|6[- ]months?)\b.*?\b(20\d{2})\b)", text, re.IGNORECASE)
+    if len({hit.group(0).casefold() for hit in quarter_hits}) > 1:
+        result["blockers"].append("MULTIPLE_REPORTED_QUARTER_COLUMNS")
+        return result
+    if quarter and cumulative:
+        result["blockers"].append("QUARTER_CUMULATIVE_COLUMN_AMBIGUOUS")
+        return result
+    if quarter:
+        groups = quarter.groups()
+        year = groups[0] or groups[5]
+        token = groups[1] or groups[2] or groups[3] or groups[4]
+        number = {"I": 1, "II": 2, "III": 3, "IV": 4}.get(token.upper()) or int(token)
+        result.update(reporting_period=f"{year}-Q{number}", period_semantic_state="STANDALONE_QUARTER", reported_duration_months=3)
+    elif cumulative:
+        year = cumulative.group(1) or cumulative.group(3)
+        months = 9 if cumulative.group(2) == "9M" or re.search(r"nine|9[- ]month|9\s+th", text, re.IGNORECASE) else 6
+        result.update(reporting_period=f"{year}-" + ("9M" if months == 9 else "H1"),
+                      period_semantic_state="YTD_CUMULATIVE_INTERIM" if months == 9 else "UNKNOWN_DURATION",
+                      reported_duration_months=months)
+    else:
+        result["blockers"].append("REPORTED_FLOW_PERIOD_UNKNOWN")
+    if result["reporting_period"] and explicit_end and not result["reporting_period"].startswith(explicit_end[:4]):
+        result["blockers"].append("PERIOD_END_YEAR_CONFLICT")
+    if statement_family == "cash_flow" and result["period_semantic_state"] == "STANDALONE_QUARTER":
+        # A filing quarter label cannot establish a quarterly cash-flow column.
+        result["blockers"].append("CASH_FLOW_QUARTER_DURATION_NOT_PROVEN")
+    return result
