@@ -4386,7 +4386,7 @@
   "successor_disposition": "OWNER_SELECTED_OFFLINE_EVIDENCE_NO_AUTOMATIC_SUCCESSOR",
   "development_control": {
     "schema": "stocklookup_development_lanes/1",
-    "revision": 34,
+    "revision": 38,
     "history": [
       {
         "operation": "INIT",
@@ -4739,6 +4739,47 @@
         "agent": "Codex",
         "observed_head": "de7581726f757a39f00d4b273c538996b3fb0d77",
         "revision": 34
+      },
+      {
+        "operation": "TRANSITION",
+        "milestone_id": "HPG_EXISTING_ISSUER_ATTACHMENT_BINDING_CORRECTIVE_V1",
+        "from": "COMPLETE_LOCAL",
+        "to": "MERGED_RELEASED",
+        "checkpoint": "b81a7518e0e5878d1deaf4f6a7fb861836fb61cf",
+        "owner_note": "Source-only PR138 merged under explicit Ownerprogramdelegation preserving b81checkpoint; all4postmerge CI38355998409SUCCESS at9d567d05; fresh native postmerge receipt has noerrors. Exact existing HPG attachment binding repaired with origin/final permissions; no real facts/ratios/source activation/runtime/authority promotion.",
+        "agent": "Codex",
+        "observed_head": "f6450ee43f3163459953c082a9c318997a66053b",
+        "revision": 35
+      },
+      {
+        "operation": "ADMIT",
+        "milestone_id": "FINANCIAL_ACCOUNTING_QUALIFIER_TRANSPORT_CORRECTIVE_V1",
+        "owner_note": "Owner program20261013 Financial/Corporate consumer correctness authorizes smallest five-file existing-owner transport corrective. Actual primary Daily AI drops existing total-not-parent PE label; Workspace drops NCI-equity qualifier from existing researchPB. Preserve existing typed qualifier fields verbatim through actual transports; no calculation/method/status/source/authority/runtime changes and no new facts/ratios. Exactdisjointscope, no sharedfilelease.",
+        "agent": "Codex",
+        "observed_head": "f6450ee43f3163459953c082a9c318997a66053b",
+        "revision": 36
+      },
+      {
+        "operation": "TRANSITION",
+        "milestone_id": "FINANCIAL_ACCOUNTING_QUALIFIER_TRANSPORT_CORRECTIVE_V1",
+        "from": "ADMITTED",
+        "to": "ACTIVE",
+        "checkpoint": null,
+        "owner_note": "Activate exact admitted accounting qualifier pass-through corrective under existing program consumer authority. Sole subagent writes only admitted fivefiles; actual primary AI/workspace regressions preserve source definitions, missing fields and action gates. No numerical/authority/source/runtime or financial promotion.",
+        "agent": "Codex",
+        "observed_head": "f6450ee43f3163459953c082a9c318997a66053b",
+        "revision": 37
+      },
+      {
+        "operation": "TRANSITION",
+        "milestone_id": "ARCHITECTURE_WAVE1_ROOT_RELOCATION_V1",
+        "from": "REVIEW_READY",
+        "to": "COMPLETE_LOCAL",
+        "checkpoint": "554e1dafa39f9156acde586391d12fd64b961df5",
+        "owner_note": "Record C local software completion atclean554e1da:347targetedtests/guard/launcher/frozen/sourceparity/docbudgetPASS; all4exactheadhostedCI38356276776SUCCESS. Adependency released, new main9d HPGonly three disjoint sourcepaths reviewed; fresh combinedG2/E6rehearsal pending before exact integration/merge. No production/source/runtime/authority changes.",
+        "agent": "Codex",
+        "observed_head": "f6450ee43f3163459953c082a9c318997a66053b",
+        "revision": 38
       }
     ],
     "lanes": [
@@ -5131,7 +5172,7 @@
           "offline-call-shape",
           "hosted-producer-ci"
         ],
-        "state": "COMPLETE_LOCAL",
+        "state": "MERGED_RELEASED",
         "checkpoint": "b81a7518e0e5878d1deaf4f6a7fb861836fb61cf",
         "authority_effect": "NONE",
         "admission_authority": {
@@ -5179,8 +5220,17 @@
             "to": "COMPLETE_LOCAL",
             "checkpoint": "b81a7518e0e5878d1deaf4f6a7fb861836fb61cf",
             "owner_note": "Final b81a7518 source-only corrective has220 source/financial and176 frozen/offline passes plus all4 hosted CI38354942363 SUCCESS. Independent reverse-origin permission finding repaired. Common-owner shape/calculations/period/assurance/cohort unchanged; native exact integration receipt and Owner-delegated merge remain gates."
+          },
+          {
+            "operation": "TRANSITION",
+            "milestone_id": "HPG_EXISTING_ISSUER_ATTACHMENT_BINDING_CORRECTIVE_V1",
+            "from": "COMPLETE_LOCAL",
+            "to": "MERGED_RELEASED",
+            "checkpoint": "b81a7518e0e5878d1deaf4f6a7fb861836fb61cf",
+            "owner_note": "Source-only PR138 merged under explicit Ownerprogramdelegation preserving b81checkpoint; all4postmerge CI38355998409SUCCESS at9d567d05; fresh native postmerge receipt has noerrors. Exact existing HPG attachment binding repaired with origin/final permissions; no real facts/ratios/source activation/runtime/authority promotion."
           }
-        ]
+        ],
+        "release_sha": "9d567d056e8c79494572e288e88dbf00af637ce6"
       },
       {
         "milestone_id": "ARCHITECTURE_WAVE1_ROOT_RELOCATION_V1",
@@ -5325,7 +5375,7 @@
           "offline-call-shape",
           "hosted-producer-ci"
         ],
-        "state": "REVIEW_READY",
+        "state": "COMPLETE_LOCAL",
         "checkpoint": "554e1dafa39f9156acde586391d12fd64b961df5",
         "authority_effect": "NONE",
         "admission_authority": {
@@ -5349,6 +5399,63 @@
             "to": "REVIEW_READY",
             "checkpoint": "554e1dafa39f9156acde586391d12fd64b961df5",
             "owner_note": "Exact clean109-path C checkpoint554e1da pushed for hosted CI.347 targeted cases, architecture/launcher guards, native ownership, frozen/source72blob parity and doc budgetsPASS. Retained21/21 proof reused after67baseblobmatch;325->291 root Python. A dependency MERGED_RELEASED; refreshed main integration and hosted gates remain mandatory. No tools archive/policy/runtime/source promotion."
+          },
+          {
+            "operation": "TRANSITION",
+            "milestone_id": "ARCHITECTURE_WAVE1_ROOT_RELOCATION_V1",
+            "from": "REVIEW_READY",
+            "to": "COMPLETE_LOCAL",
+            "checkpoint": "554e1dafa39f9156acde586391d12fd64b961df5",
+            "owner_note": "Record C local software completion atclean554e1da:347targetedtests/guard/launcher/frozen/sourceparity/docbudgetPASS; all4exactheadhostedCI38356276776SUCCESS. Adependency released, new main9d HPGonly three disjoint sourcepaths reviewed; fresh combinedG2/E6rehearsal pending before exact integration/merge. No production/source/runtime/authority changes."
+          }
+        ]
+      },
+      {
+        "milestone_id": "FINANCIAL_ACCOUNTING_QUALIFIER_TRANSPORT_CORRECTIVE_V1",
+        "responsible_agent": "Codex",
+        "branch": "fix/financial-accounting-label-transport-20261013",
+        "worktree": "C:\\Projects\\StockLookup\\financial-accounting-label-transport-20261013",
+        "base_sha": "9d567d056e8c79494572e288e88dbf00af637ce6",
+        "domain": "financial-accounting-qualifier-consumer-transport",
+        "mode": "IMPLEMENTATION",
+        "allowed_paths": [
+          "ai_research_session_delivery.py",
+          "stocklookup_core/decision/investment_decision_workspace_projection.py",
+          "tests/test_ai_research_session_delivery.py",
+          "tests/test_investment_decision_workspace_projection.py",
+          "docs/current_financial_valuation_input_unlock_v1_contract.md"
+        ],
+        "shared_paths": [],
+        "dependencies": [
+          "OFFICIAL_FINANCIAL_EVIDENCE_INTAKE_AND_QUARTERLY_SEMANTICS_V1"
+        ],
+        "provides": {
+          "financial_accounting_qualifier_transport": "v1"
+        },
+        "consumes": {},
+        "required_checks": [
+          "actual-primary-ai-and-workspace-transport",
+          "accounting-and-numerical-preservation",
+          "structural-frozen",
+          "offline-call-shape",
+          "hosted-producer-ci"
+        ],
+        "state": "ACTIVE",
+        "checkpoint": null,
+        "authority_effect": "NONE",
+        "admission_authority": {
+          "kind": "EXPLICIT_OWNER_DIRECTIVE",
+          "note": "Owner program20261013 Financial/Corporate consumer correctness authorizes smallest five-file existing-owner transport corrective. Actual primary Daily AI drops existing total-not-parent PE label; Workspace drops NCI-equity qualifier from existing researchPB. Preserve existing typed qualifier fields verbatim through actual transports; no calculation/method/status/source/authority/runtime changes and no new facts/ratios. Exactdisjointscope, no sharedfilelease.",
+          "integration_agent": "Codex"
+        },
+        "history": [
+          {
+            "operation": "TRANSITION",
+            "milestone_id": "FINANCIAL_ACCOUNTING_QUALIFIER_TRANSPORT_CORRECTIVE_V1",
+            "from": "ADMITTED",
+            "to": "ACTIVE",
+            "checkpoint": null,
+            "owner_note": "Activate exact admitted accounting qualifier pass-through corrective under existing program consumer authority. Sole subagent writes only admitted fivefiles; actual primary AI/workspace regressions preserve source definitions, missing fields and action gates. No numerical/authority/source/runtime or financial promotion."
           }
         ]
       }
