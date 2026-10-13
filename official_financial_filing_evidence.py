@@ -183,10 +183,11 @@ def _admit_official_financial_fact(row: Mapping[str, Any], *, source_record: Map
             if source_time.tzinfo is None:
                 raise ValueError()
             source_urls = {str(url)}
-            if (source.get("source_id") == "issuer_ir" and actual_host in
-                    _EXISTING_ISSUER_ATTACHMENT_HOSTS.get(str(row.get("ticker")), ())):
-                # An attachment redirect must not bypass a withdrawn origin host
-                # or its document-class restriction through the issuer index host.
+            if (source.get("source_id") == "issuer_ir" and any(host in
+                    _EXISTING_ISSUER_ATTACHMENT_HOSTS.get(str(row.get("ticker")), ())
+                    for host in (actual_host, final_host))):
+                # In either redirect direction, both origin and final URL must
+                # retain their own host and document-class registry admission.
                 source_urls.add(str(source.get("canonical_url") or ""))
             source_admitted = all(admit(str(source.get("source_id") or ""), source_url,
                 expected_class, registry=registry, now=source_time)["decision"] == ADMITTED

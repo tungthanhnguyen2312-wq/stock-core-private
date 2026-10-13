@@ -445,16 +445,22 @@ def test_hpg_attachment_binding_rejects_cross_issuer_redirect_in_both_directions
     assert "ISSUER_SOURCE_DOMAIN_MISMATCH" in result["reason_codes"]
 
 
-@pytest.mark.parametrize("final", ["file.hoaphat.com.vn", "www.hoaphat.com.vn"])
+@pytest.mark.parametrize("origin,final", [
+    ("file.hoaphat.com.vn", "file.hoaphat.com.vn"),
+    ("file.hoaphat.com.vn", "www.hoaphat.com.vn"),
+    ("www.hoaphat.com.vn", "file.hoaphat.com.vn"),
+])
+@pytest.mark.parametrize("restricted_url", ["origin", "final"])
 @pytest.mark.parametrize("restriction", ["host_removed", "class_removed", "activation_removed"])
-def test_existing_hpg_attachment_relationship_cannot_bypass_current_registry(final, restriction):
+def test_existing_hpg_attachment_relationship_cannot_bypass_current_registry(origin, final, restricted_url, restriction):
     from official_financial_filing_evidence import admit_official_financial_fact
-    row, context = _attachment_fixture(final=final)
+    row, context = _attachment_fixture(origin=origin, final=final)
     issuer_source = next(s for s in context["registry"]["sources"] if s["source_id"] == "issuer_ir")
+    restricted_host = origin if restricted_url == "origin" else final
     if restriction == "host_removed":
-        issuer_source["allowed_hosts"].remove("file.hoaphat.com.vn")
+        issuer_source["allowed_hosts"].remove(restricted_host)
     elif restriction == "class_removed":
-        issuer_source.setdefault("host_document_types", {})["file.hoaphat.com.vn"] = ["audited_annual_financial_statements"]
+        issuer_source.setdefault("host_document_types", {})[restricted_host] = ["audited_annual_financial_statements"]
     else:
         issuer_source["activation"] = "declared"
     result = admit_official_financial_fact(row, **context)
