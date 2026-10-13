@@ -1,8 +1,6 @@
 # Stock Lookup — Capability Registry
 
-Capability navigation; no scores.
-See [ACTIVE_STATE.md](ACTIVE_STATE.md) for current facts, [AUTHORITY.md](AUTHORITY.md) for authority,
-[DAILY_PIPELINE.md](DAILY_PIPELINE.md) for run order.
+Navigation; no scores. [Facts](ACTIVE_STATE.md), [authority](AUTHORITY.md), [run order](DAILY_PIPELINE.md).
 
 **Runtime status vocabulary:** `ACTIVE` (runs in production, failure blocks that stage) ·
 `ACTIVE_FAILSOFT` (runs in production, failure is component-local `UNAVAILABLE`, never revises sealed
@@ -16,7 +14,7 @@ Each block: **Contract** · **Runtime** · **Authority** · **Production** · **
 [Development lanes](parallel_domain_development_control_plane_v1_contract.md):
 released PR134; native admission only; no runtime authority.
 
-[Wave 1 replay](SYSTEM_MAP.md#wave-1-historical-replay-relocation--2026-10-13): local, release pending; `FROZEN_HISTORICAL / NON_VOTING / OFFLINE_ONLY`; 22 runners, seven pilots, five legacy materializers in `tools/replay/`. Identity/evidence unchanged.
+[Wave 1 replay](SYSTEM_MAP.md#wave-1-historical-replay-relocation--2026-10-13): PR139 released; 34 modules in `tools/replay/`; `FROZEN_HISTORICAL / NON_VOTING / OFFLINE_ONLY`; identity/evidence unchanged.
 
 Decision-intelligence closure (2026-10-07) is research coverage and calibration context
 only. Contract `decision_intelligence_coverage_calibration/v1`. It does not vote, size,
@@ -156,7 +154,9 @@ and no production Daily launch. Disk admission remains independently mandatory.
 - Next trigger: qualified executed official factor with explicit ex-date and knowledge time
 
 [Business updates](official_business_update_research_contract.md): PR135; news route blocked.
-[Intake](official_financial_quarterly_intake_contract.md): offline; source gate.
+[Intake](official_financial_quarterly_intake_contract.md): PR137; offline/source gate. HPG binding PR138 uses approved routes.
+[Qualifier transport](current_financial_valuation_input_unlock_v1_contract.md): PR140; present Workspace/AI labels (AI bound session ≥2026-10-14); coverage unchanged.
+[CI extension](CI_AND_DEPENDENCY_TIERS.md): G2/business/quarterly mandatory; 369 files nonblocking; release via native lanes.
 
 ### 12. Current financial evidence
 - Local projection checkpoint: the frozen August-23 baseline remains immutable. Session

@@ -174,9 +174,25 @@ selection because each rebuilds a full Integrated Decision (about 2 minutes).
   every Python subprocess a test spawns. A hidden provider import therefore fails loudly, even
   on a machine where the packages are installed. To reproduce locally:
   `PYTHONPATH=tests/provider_import_block python -m pytest ...`.
-- `structural` also runs `pip check` and `tools/verify_dependency_tiers.py --installed`.
+- `structural` also runs `pip check` and `tools/verify_dependency_tiers.py --installed`. It holds
+  the import-reliability gates: the missing-internal-import guard (G3, in
+  `tests/test_architecture_ratchet.py`) and the cold Owner Daily import closure (G2,
+  `tests/test_daily_lazy_import_closure.py`). G2 refuses providers, optional extras, retained
+  reads, network, writes, filesystem mutations, sqlite opens and launches before they occur;
+  swallowed attempts and unsuccessful child exits still fail the test.
 - `production-call-shape-smoke`, `structural` and `focused-regressions` are the hermetic tier
   (`-m "$HERMETIC_MARKERS"`). The focused selection is defined once, in `FOCUSED_SELECTION`.
+  Business-update observations and quarterly financial intake run in this mandatory focused
+  job as complete test files, alongside their source and accounting integrity regressions.
+- `extended-hermetic` runs the 369 previously validated files listed in
+  `tests/extended_hermetic_selection.txt` as a separate parallel hermetic job, using the same
+  constrained dependencies and provider-import guard. It starts with `continue-on-error: true`;
+  a later reviewed CI change may make it blocking after at least ten successful hosted runs
+  and coordinator review. A green aggregate check alone is insufficient while it is non-blocking.
+- `tests/test_ci_dependency_tiers.py` guards the two critical focused files and structural G2
+  invocation. It also rejects duplicate, missing, expanded or omitted extended entries and
+  overlap with any file in the focused selection. The extended job adds regression breadth;
+  critical product regressions stay mandatory.
 - `retained-evidence-tier` runs `-m retained_evidence` over the same selection with
   `skip-if-absent`. On a clean clone every test in it skips, and `-rs` prints each explicit
   reason. The ad-hoc `--deselect` is gone.
