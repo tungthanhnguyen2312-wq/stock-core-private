@@ -1,7 +1,7 @@
 # Stock Lookup — Active State
 
-Base/main: `b60bdd6738b1079612abd08602bc79e7e6c91a1b`.
-PR134 released; four post-merge CI jobs PASS. E0–E6 released.
+Base/main: `2a3edff066b5ef9b9621b7e5913a8705a3a2d807`.
+PR135: four post-merge CI jobs PASS.
 Verify live main: `git fetch origin main` or `git ls-remote origin refs/heads/main`; **local** remote-tracking refs may be stale.
 ## 0. How this file relates to the others
 | Question | Answer lives in |
@@ -30,7 +30,7 @@ Kinds: **CURRENT FACT** (verified), **HOST-LOCAL** (untracked; re-verify),
 **BLOCKED**, **DEFERRED**, **HISTORICAL**.
 
 ## 1. The operational gate
-- **LOCAL — [business updates](official_business_update_research_contract.md):** offline; news route blocked.
+- **LOCAL — [financial intake](official_financial_quarterly_intake_contract.md):** candidates; routes blocked.
 - **RELEASED — [unlock](current_financial_valuation_input_unlock_v1_contract.md):** PR133; six H1 ratios; proxy shares.
 - **COMPLETE — [root hub V3](root_hub_dependency_reduction_v3_contract.md):** PR131 merged `d11b101`.
 - **COMPLETE — [E6 financial seams](e6_financial_extraction_admission_boundary_contract.md):** row/envelope/status owners.
@@ -308,8 +308,8 @@ Kinds: **CURRENT FACT** (verified), **HOST-LOCAL** (untracked; re-verify),
 
 ## 9. Next action
 
-[Business updates](official_business_update_research_contract.md): review feature PR; Owner merge gate.
-Native state is host-local. Daily needs fresh READY/session gates.
+[Financial intake](official_financial_quarterly_intake_contract.md): Owner review gate.
+Host-local lanes; Claude owns PATCH-A. Daily needs READY/session gates.
 
 ## 10. Owner approvals that remain open
 

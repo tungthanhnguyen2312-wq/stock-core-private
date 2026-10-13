@@ -153,8 +153,8 @@ and no production Daily launch. Disk admission remains independently mandatory.
 - Blocker: three real corporate-action factors unqualified; lifecycle/term identities incomplete
 - Next trigger: qualified executed official factor with explicit ex-date and knowledge time
 
-[Business updates](official_business_update_research_contract.md): local/offline/non-voting;
-packet/Workspace/AI fixtures. Real news route blocked.
+[Business updates](official_business_update_research_contract.md): PR135; news route blocked.
+[Intake](official_financial_quarterly_intake_contract.md): offline; source gate.
 
 ### 12. Current financial evidence
 - Local projection checkpoint: the frozen August-23 baseline remains immutable. Session
