@@ -680,7 +680,7 @@ def build_forward_driver_context(record: Mapping[str, Any] | None, *,
                    blocker_reason_codes=sorted({b for d in drivers for b in d["blocker_reason_codes"]} |
                                               ({"NO_QUALIFIED_FORWARD_DRIVER"} if not any(d["qualified"] for d in drivers) else set())),
                    authority_effect="NONE", applicability="CURRENT_RESEARCH_EXPLANATION_ONLY")
-    if source.get("business_update_context"):
+    if source.get("business_update_context") and session_usable:
         from stocklookup_core.evidence.business_update_observations import research_context, session_cutoff
         payload["business_update_context"] = research_context(
             source["business_update_context"]["documents"], ticker=source.get("ticker") or ticker,

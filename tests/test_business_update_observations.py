@@ -39,12 +39,21 @@ def envelope(ticker="HPG", kind="official_operating_update", value="3.0", **meta
         fact["metric_kind"] = "EARNINGS"
         fact["accounting_scope"] = "CONSOLIDATED_ESTIMATE"
         raw = raw.replace(b"million tonnes", b"billion VND")
+        raw = raw.replace(b"Sales", b"Revenue estimate")
+        fact["native_label"] = "Revenue estimate"
+        fact["concept"] = "revenue_estimate"
+        fact["basis"] = "PRELIMINARY_CONSOLIDATED"
         fact["span"]["text"] = raw.decode()
         fact["span"]["end"] = len(raw.decode())
         fact["unit"] = fact["native_unit"] = "billion VND"
         manifest["content_sha256"] = hashlib.sha256(raw).hexdigest()
     elif kind == "management_guidance":
         fact["metric_kind"] = "GUIDANCE"
+        raw = raw.replace(b"Sales", b"Sales target")
+        fact["native_label"] = "Sales target"
+        fact["span"]["text"] = raw.decode()
+        fact["span"]["end"] = len(raw.decode())
+        manifest["content_sha256"] = hashlib.sha256(raw).hexdigest()
     return business.observe(manifest=manifest, source_bytes=raw, observations=[fact],
                             cutoff="2026-10-13T15:00:00+07:00", research_fixture=True)
 

@@ -87,6 +87,9 @@ def test_business_updates_full_research_consumer_chain_is_non_voting(document_cl
     assert full_packet["cards"][ticker]["business_update_context"] == context
     subset = ai.build_watchlist_subset(full_packet, [ticker])
     assert subset["cards"][ticker]["business_update_context"] == context
+    future = copy.deepcopy(enriched["records"][ticker])
+    future["research_session"] = "2026-10-14"
+    assert "business_update_context" not in axis.build_forward_driver_context(future, as_of_session=session, ticker=ticker)
 
 
 def _signed_official(tickers: list[str]) -> dict:
