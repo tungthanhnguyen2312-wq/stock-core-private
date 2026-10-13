@@ -4386,7 +4386,7 @@
   "successor_disposition": "OWNER_SELECTED_OFFLINE_EVIDENCE_NO_AUTOMATIC_SUCCESSOR",
   "development_control": {
     "schema": "stocklookup_development_lanes/1",
-    "revision": 46,
+    "revision": 47,
     "history": [
       {
         "operation": "INIT",
@@ -4865,6 +4865,17 @@
         "agent": "Codex",
         "observed_head": "b33033e1e5b667d49549eff7d0719bb6a59d8fb3",
         "revision": 46
+      },
+      {
+        "operation": "TRANSITION",
+        "milestone_id": "CI_MANDATORY_IMPORT_AND_FINANCIAL_REGRESSIONS_V1",
+        "from": "ACTIVE",
+        "to": "REVIEW_READY",
+        "checkpoint": "c0680a28695a8cb108a7fbb325af21e57d2830d8",
+        "owner_note": "Exact repaired source checkpoint after clean-core PDF dependency finding:367 core-compatible extended files, both optional PDF tests preserved outside cohort,59CI/navPASS; original mandatory216cases and actual-main63rehearsalPASS reused unchanged, launcher/diffPASS. Four mandatory jobs on firstheadPASS; actual extended result failed and is not accepted. New exact hosted CI required; no numerical/authority/production change.",
+        "agent": "Codex",
+        "observed_head": "36c11a390012abca352e75a8528cc9093491949b",
+        "revision": 47
       }
     ],
     "lanes": [
@@ -5622,8 +5633,8 @@
           "hosted-producer-ci",
           "extended-hermetic-actual-result"
         ],
-        "state": "ACTIVE",
-        "checkpoint": "f61f0a3b3ead5cae10cd3bfec4d38cecbffe469b",
+        "state": "REVIEW_READY",
+        "checkpoint": "c0680a28695a8cb108a7fbb325af21e57d2830d8",
         "authority_effect": "NONE",
         "admission_authority": {
           "kind": "EXPLICIT_OWNER_DIRECTIVE",
@@ -5654,6 +5665,14 @@
             "to": "ACTIVE",
             "checkpoint": "f61f0a3b3ead5cae10cd3bfec4d38cecbffe469b",
             "owner_note": "Repair actual hosted first extended collection failure in same admitted milestone: two previously classified PDF suites import undeclared optional pypdf on clean core CI. Correct exact source list to367 core-compatible files and document two deferred optional-PDF suites; retain mandatory G2/business/quarterly, all prior focused coverage, constrained core dependencies and actual extended-success release gate. No production/extraction/backup code change."
+          },
+          {
+            "operation": "TRANSITION",
+            "milestone_id": "CI_MANDATORY_IMPORT_AND_FINANCIAL_REGRESSIONS_V1",
+            "from": "ACTIVE",
+            "to": "REVIEW_READY",
+            "checkpoint": "c0680a28695a8cb108a7fbb325af21e57d2830d8",
+            "owner_note": "Exact repaired source checkpoint after clean-core PDF dependency finding:367 core-compatible extended files, both optional PDF tests preserved outside cohort,59CI/navPASS; original mandatory216cases and actual-main63rehearsalPASS reused unchanged, launcher/diffPASS. Four mandatory jobs on firstheadPASS; actual extended result failed and is not accepted. New exact hosted CI required; no numerical/authority/production change."
           }
         ]
       }
