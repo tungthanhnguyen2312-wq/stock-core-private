@@ -4386,7 +4386,7 @@
   "successor_disposition": "OWNER_SELECTED_OFFLINE_EVIDENCE_NO_AUTOMATIC_SUCCESSOR",
   "development_control": {
     "schema": "stocklookup_development_lanes/1",
-    "revision": 26,
+    "revision": 28,
     "history": [
       {
         "operation": "INIT",
@@ -4654,6 +4654,28 @@
         "agent": "Codex",
         "observed_head": "f0d4fd3f7bfda07af8c7c3828777adacd41967fa",
         "revision": 26
+      },
+      {
+        "operation": "TRANSITION",
+        "milestone_id": "HPG_EXISTING_ISSUER_ATTACHMENT_BINDING_CORRECTIVE_V1",
+        "from": "REVIEW_READY",
+        "to": "ACTIVE",
+        "checkpoint": "9f12970c5e706424ee2547f3df78009c6e33de18",
+        "owner_note": "Independent review found reverse website-to-attachment redirect checks only final registry permission. Repair within same admitted source/test paths: whenever either origin or final is exact HPG attachment host, require both URL permissions and cover reverse-origin withdrawal. Existing source authority remains unchanged; refreshed exact-head CI required.",
+        "agent": "Codex",
+        "observed_head": "4b05c5ff26960baac14e07e00fb69016955e5eb0",
+        "revision": 27
+      },
+      {
+        "operation": "TRANSITION",
+        "milestone_id": "ARCHITECTURE_IMPORT_RELIABILITY_V1",
+        "from": "REVIEW_READY",
+        "to": "COMPLETE_LOCAL",
+        "checkpoint": "c184558cdea26c487b6c11d4c48b8d6d9fc997fd",
+        "owner_note": "Record actual local software completion:124 candidate guard/layout/closure cases,234 original main integration cases and4 corrected combined-main closure cases passed. Exact hosted CI38353942571 still pending focused job; COMPLETE_LOCAL is not release, and no merge will occur until all exact-head hosted/native checks pass. Enables isolated dependent source preparation only.",
+        "agent": "Codex",
+        "observed_head": "4b05c5ff26960baac14e07e00fb69016955e5eb0",
+        "revision": 28
       }
     ],
     "lanes": [
@@ -4846,7 +4868,7 @@
         "consumes": {},
         "domain": "architecture-import-reliability",
         "shared_paths": [],
-        "state": "REVIEW_READY",
+        "state": "COMPLETE_LOCAL",
         "checkpoint": "c184558cdea26c487b6c11d4c48b8d6d9fc997fd",
         "authority_effect": "NONE",
         "admission_authority": {
@@ -4886,6 +4908,14 @@
             "to": "REVIEW_READY",
             "checkpoint": "c184558cdea26c487b6c11d4c48b8d6d9fc997fd",
             "owner_note": "Bounded G2 correction complete in admitted test file:124 guard/layout/closure cases passed, audit denies before side effect and nonzero child exit fails. Exact clean c184558c pushed to PR136; hosted exact-head CI pending. Original observed-main integration234cases passed; refreshed integrated G2 required before release."
+          },
+          {
+            "operation": "TRANSITION",
+            "milestone_id": "ARCHITECTURE_IMPORT_RELIABILITY_V1",
+            "from": "REVIEW_READY",
+            "to": "COMPLETE_LOCAL",
+            "checkpoint": "c184558cdea26c487b6c11d4c48b8d6d9fc997fd",
+            "owner_note": "Record actual local software completion:124 candidate guard/layout/closure cases,234 original main integration cases and4 corrected combined-main closure cases passed. Exact hosted CI38353942571 still pending focused job; COMPLETE_LOCAL is not release, and no merge will occur until all exact-head hosted/native checks pass. Enables isolated dependent source preparation only."
           }
         ]
       },
@@ -5029,7 +5059,7 @@
           "offline-call-shape",
           "hosted-producer-ci"
         ],
-        "state": "REVIEW_READY",
+        "state": "ACTIVE",
         "checkpoint": "9f12970c5e706424ee2547f3df78009c6e33de18",
         "authority_effect": "NONE",
         "admission_authority": {
@@ -5053,6 +5083,14 @@
             "to": "REVIEW_READY",
             "checkpoint": "9f12970c5e706424ee2547f3df78009c6e33de18",
             "owner_note": "Exact admitted HPG common-owner binding repair complete at9f12970c:435 source/financial/frozen cases pass, independent root diff review and old cohort/registry/period preservation verified. Three-file clean feature pushed for hosted CI; no real fact/ratio/source/runtime activation."
+          },
+          {
+            "operation": "TRANSITION",
+            "milestone_id": "HPG_EXISTING_ISSUER_ATTACHMENT_BINDING_CORRECTIVE_V1",
+            "from": "REVIEW_READY",
+            "to": "ACTIVE",
+            "checkpoint": "9f12970c5e706424ee2547f3df78009c6e33de18",
+            "owner_note": "Independent review found reverse website-to-attachment redirect checks only final registry permission. Repair within same admitted source/test paths: whenever either origin or final is exact HPG attachment host, require both URL permissions and cover reverse-origin withdrawal. Existing source authority remains unchanged; refreshed exact-head CI required."
           }
         ]
       }
