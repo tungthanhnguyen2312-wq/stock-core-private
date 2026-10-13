@@ -4386,7 +4386,7 @@
   "successor_disposition": "OWNER_SELECTED_OFFLINE_EVIDENCE_NO_AUTOMATIC_SUCCESSOR",
   "development_control": {
     "schema": "stocklookup_development_lanes/1",
-    "revision": 47,
+    "revision": 51,
     "history": [
       {
         "operation": "INIT",
@@ -4876,6 +4876,47 @@
         "agent": "Codex",
         "observed_head": "36c11a390012abca352e75a8528cc9093491949b",
         "revision": 47
+      },
+      {
+        "operation": "TRANSITION",
+        "milestone_id": "CI_MANDATORY_IMPORT_AND_FINANCIAL_REGRESSIONS_V1",
+        "from": "REVIEW_READY",
+        "to": "ACTIVE",
+        "checkpoint": "c0680a28695a8cb108a7fbb325af21e57d2830d8",
+        "owner_note": "Actual clean-Linux extension exposed11 preexisting test-environment defects,4276PASS. Exact original seven-file scope cannot authorize four fixture-file repairs. Return ACTIVE solely to close old admission and record a broader source-only revision of this same CI delivery stage; preserve all existing commits/WIP, no code/runtime/authority changes or bypass of failed CI.",
+        "agent": "Codex",
+        "observed_head": "f528069e4f253ad46101dbeeb0d0f2452c8ceca3",
+        "revision": 48
+      },
+      {
+        "operation": "TRANSITION",
+        "milestone_id": "CI_MANDATORY_IMPORT_AND_FINANCIAL_REGRESSIONS_V1",
+        "from": "ACTIVE",
+        "to": "ABANDONED",
+        "checkpoint": "c0680a28695a8cb108a7fbb325af21e57d2830d8",
+        "owner_note": "Supersede immutable seven-file admission with exact11-file CLEAN_CORE revision of same CI delivery stage to repair hosted fixture defects. Originalc068 commits/worktree/PR and all failed/positive receipts retained; no destructive Git operation or failed-check bypass. Successor must rerun all five actual hosted jobs.",
+        "agent": "Codex",
+        "observed_head": "f528069e4f253ad46101dbeeb0d0f2452c8ceca3",
+        "revision": 49
+      },
+      {
+        "operation": "ADMIT",
+        "milestone_id": "CI_MANDATORY_IMPORT_AND_FINANCIAL_REGRESSIONS_CLEAN_CORE_V1",
+        "owner_note": "Owner program authorizes precise continuation of same essential CI release stage after clean-host findings; previous immutable scope abandoned without discarding source. Admit exact11files/four shared leases at714d; preserve c068 ancestry, fix four test-only fixtures, full Git history for actual closure, explicit host/optional cases. No source implementation/dependency/production/NAS changes; all five hosted jobs required.",
+        "agent": "Codex",
+        "observed_head": "f528069e4f253ad46101dbeeb0d0f2452c8ceca3",
+        "revision": 50
+      },
+      {
+        "operation": "TRANSITION",
+        "milestone_id": "CI_MANDATORY_IMPORT_AND_FINANCIAL_REGRESSIONS_CLEAN_CORE_V1",
+        "from": "ADMITTED",
+        "to": "ACTIVE",
+        "checkpoint": null,
+        "owner_note": "Owner program continuation same CI delivery stage, exact11-file revised admission. Preserve originalc068 ancestry by fast-forward, repair four test fixtures and history checkout; no production/dependency/source authority modifications, all actual hosted checks remain mandatory for first release.",
+        "agent": "Codex",
+        "observed_head": "f528069e4f253ad46101dbeeb0d0f2452c8ceca3",
+        "revision": 51
       }
     ],
     "lanes": [
@@ -5633,7 +5674,7 @@
           "hosted-producer-ci",
           "extended-hermetic-actual-result"
         ],
-        "state": "REVIEW_READY",
+        "state": "ABANDONED",
         "checkpoint": "c0680a28695a8cb108a7fbb325af21e57d2830d8",
         "authority_effect": "NONE",
         "admission_authority": {
@@ -5673,6 +5714,89 @@
             "to": "REVIEW_READY",
             "checkpoint": "c0680a28695a8cb108a7fbb325af21e57d2830d8",
             "owner_note": "Exact repaired source checkpoint after clean-core PDF dependency finding:367 core-compatible extended files, both optional PDF tests preserved outside cohort,59CI/navPASS; original mandatory216cases and actual-main63rehearsalPASS reused unchanged, launcher/diffPASS. Four mandatory jobs on firstheadPASS; actual extended result failed and is not accepted. New exact hosted CI required; no numerical/authority/production change."
+          },
+          {
+            "operation": "TRANSITION",
+            "milestone_id": "CI_MANDATORY_IMPORT_AND_FINANCIAL_REGRESSIONS_V1",
+            "from": "REVIEW_READY",
+            "to": "ACTIVE",
+            "checkpoint": "c0680a28695a8cb108a7fbb325af21e57d2830d8",
+            "owner_note": "Actual clean-Linux extension exposed11 preexisting test-environment defects,4276PASS. Exact original seven-file scope cannot authorize four fixture-file repairs. Return ACTIVE solely to close old admission and record a broader source-only revision of this same CI delivery stage; preserve all existing commits/WIP, no code/runtime/authority changes or bypass of failed CI."
+          },
+          {
+            "operation": "TRANSITION",
+            "milestone_id": "CI_MANDATORY_IMPORT_AND_FINANCIAL_REGRESSIONS_V1",
+            "from": "ACTIVE",
+            "to": "ABANDONED",
+            "checkpoint": "c0680a28695a8cb108a7fbb325af21e57d2830d8",
+            "owner_note": "Supersede immutable seven-file admission with exact11-file CLEAN_CORE revision of same CI delivery stage to repair hosted fixture defects. Originalc068 commits/worktree/PR and all failed/positive receipts retained; no destructive Git operation or failed-check bypass. Successor must rerun all five actual hosted jobs."
+          }
+        ]
+      },
+      {
+        "milestone_id": "CI_MANDATORY_IMPORT_AND_FINANCIAL_REGRESSIONS_CLEAN_CORE_V1",
+        "responsible_agent": "Codex",
+        "branch": "ci/mandatory-regressions-clean-core-20261013",
+        "worktree": "C:\\Projects\\StockLookup\\ci-mandatory-regressions-clean-core-20261013",
+        "base_sha": "714d9b25dbb6e389e29631cee9f72791122d9aed",
+        "domain": "hosted-regression-effectiveness",
+        "mode": "IMPLEMENTATION",
+        "allowed_paths": [
+          ".github/workflows/producer-ci.yml",
+          "config/daily_path_launchers.json",
+          "docs/CI_AND_DEPENDENCY_TIERS.md",
+          "tests/extended_hermetic_selection.txt",
+          "tests/test_ci_dependency_tiers.py",
+          "docs/ACTIVE_STATE.md",
+          "docs/CAPABILITIES.md",
+          "tests/test_canonical_universe_tiers.py",
+          "tests/test_checkout_cleanliness_contract.py",
+          "tests/test_release_checkout_identity.py",
+          "tests/test_shadow_analytics_pilot.py"
+        ],
+        "shared_paths": [
+          ".github/workflows/producer-ci.yml",
+          "config/daily_path_launchers.json",
+          "docs/ACTIVE_STATE.md",
+          "docs/CAPABILITIES.md"
+        ],
+        "lease_note": "Owner program 20261013 objectives B and E delegates source-only CI effectiveness. Integration owner Codex leases exactly workflow and its reviewed launcher digest for mandatory G2, mandatory business/quarterly intake tests and separate nonblocking 369-file extended tier; compact ACTIVE_STATE/CAPABILITIES navigation for actual released C/HPG/transport and CI scope. No dependency/provider/source activation, production launch, frozen repin, authority or numerical edits. Exact revised admission preserves c068 source ancestry and adds four test-only portability/optional/host fixtures following actual clean Linux failures; extended checkout fetches required Git history. Four shared leases remain narrowly bound. Previous seven-file lane superseded without deleting WIP or rewriting history.",
+        "dependencies": [
+          "ARCHITECTURE_IMPORT_RELIABILITY_V1",
+          "ARCHITECTURE_WAVE1_ROOT_RELOCATION_V1",
+          "FINANCIAL_ACCOUNTING_QUALIFIER_TRANSPORT_CORRECTIVE_V1"
+        ],
+        "provides": {
+          "routine_import_and_financial_ci": "v1"
+        },
+        "consumes": {
+          "internal_import_guard": "v1",
+          "historical_root_replay_layout": "w1",
+          "financial_accounting_qualifier_transport": "v1"
+        },
+        "required_checks": [
+          "ci-topology-and-selection",
+          "launcher-and-frozen-contracts",
+          "mandatory-local-regressions",
+          "hosted-producer-ci",
+          "extended-hermetic-actual-result"
+        ],
+        "state": "ACTIVE",
+        "checkpoint": null,
+        "authority_effect": "NONE",
+        "admission_authority": {
+          "kind": "EXPLICIT_OWNER_DIRECTIVE",
+          "note": "Owner program authorizes precise continuation of same essential CI release stage after clean-host findings; previous immutable scope abandoned without discarding source. Admit exact11files/four shared leases at714d; preserve c068 ancestry, fix four test-only fixtures, full Git history for actual closure, explicit host/optional cases. No source implementation/dependency/production/NAS changes; all five hosted jobs required.",
+          "integration_agent": "Codex"
+        },
+        "history": [
+          {
+            "operation": "TRANSITION",
+            "milestone_id": "CI_MANDATORY_IMPORT_AND_FINANCIAL_REGRESSIONS_CLEAN_CORE_V1",
+            "from": "ADMITTED",
+            "to": "ACTIVE",
+            "checkpoint": null,
+            "owner_note": "Owner program continuation same CI delivery stage, exact11-file revised admission. Preserve originalc068 ancestry by fast-forward, repair four test fixtures and history checkout; no production/dependency/source authority modifications, all actual hosted checks remain mandatory for first release."
           }
         ]
       }
