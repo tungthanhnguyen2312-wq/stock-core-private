@@ -4386,7 +4386,7 @@
   "successor_disposition": "OWNER_SELECTED_OFFLINE_EVIDENCE_NO_AUTOMATIC_SUCCESSOR",
   "development_control": {
     "schema": "stocklookup_development_lanes/1",
-    "revision": 41,
+    "revision": 42,
     "history": [
       {
         "operation": "INIT",
@@ -4813,6 +4813,14 @@
         "agent": "Codex",
         "observed_head": "b6c1cfae79edf72c035f29f5330c0bd44e3bfdb9",
         "revision": 41
+      },
+      {
+        "operation": "ADMIT",
+        "milestone_id": "CI_MANDATORY_IMPORT_AND_FINANCIAL_REGRESSIONS_V1",
+        "owner_note": "Owner program 20261013 objectives B/E and continuation directive authorize exact source-only CI milestone with four Codex shared-file leases; admission only while transport postmerge CI completes, no activation or runtime authority.",
+        "agent": "Codex",
+        "observed_head": "7cec982aea5a869124b12251ee329b6f4f7e8225",
+        "revision": 42
       }
     ],
     "lanes": [
@@ -5516,6 +5524,60 @@
             "owner_note": "Exactaa479645 transport locallycomplete with492selectedpasses5retainedskips1deselection and259currentPR139mainintegrationpasses. All4 hostedCI38388745129 SUCCESS; strictM1 verifier13/14/15 and immutablelegacybyte proofPASS. CurrentConsumer canonicalingestion preserves fullcard/deepcopy; no API/schema/authority/math changes. Native exactintegration receipt/authorizedmerge/postCI remain gates."
           }
         ]
+      },
+      {
+        "milestone_id": "CI_MANDATORY_IMPORT_AND_FINANCIAL_REGRESSIONS_V1",
+        "responsible_agent": "Codex",
+        "branch": "ci/mandatory-import-and-financial-regressions-20261013",
+        "worktree": "C:\\Projects\\StockLookup\\ci-mandatory-regressions-20261013",
+        "base_sha": "714d9b25dbb6e389e29631cee9f72791122d9aed",
+        "domain": "hosted-regression-effectiveness",
+        "mode": "IMPLEMENTATION",
+        "allowed_paths": [
+          ".github/workflows/producer-ci.yml",
+          "config/daily_path_launchers.json",
+          "docs/CI_AND_DEPENDENCY_TIERS.md",
+          "tests/extended_hermetic_selection.txt",
+          "tests/test_ci_dependency_tiers.py",
+          "docs/ACTIVE_STATE.md",
+          "docs/CAPABILITIES.md"
+        ],
+        "shared_paths": [
+          ".github/workflows/producer-ci.yml",
+          "config/daily_path_launchers.json",
+          "docs/ACTIVE_STATE.md",
+          "docs/CAPABILITIES.md"
+        ],
+        "lease_note": "Owner program 20261013 objectives B and E delegates source-only CI effectiveness. Integration owner Codex leases exactly workflow and its reviewed launcher digest for mandatory G2, mandatory business/quarterly intake tests and separate nonblocking 369-file extended tier; compact ACTIVE_STATE/CAPABILITIES navigation for actual released C/HPG/transport and CI scope. No dependency/provider/source activation, production launch, frozen repin, authority or numerical edits.",
+        "dependencies": [
+          "ARCHITECTURE_IMPORT_RELIABILITY_V1",
+          "ARCHITECTURE_WAVE1_ROOT_RELOCATION_V1",
+          "FINANCIAL_ACCOUNTING_QUALIFIER_TRANSPORT_CORRECTIVE_V1"
+        ],
+        "provides": {
+          "routine_import_and_financial_ci": "v1"
+        },
+        "consumes": {
+          "internal_import_guard": "v1",
+          "historical_root_replay_layout": "w1",
+          "financial_accounting_qualifier_transport": "v1"
+        },
+        "required_checks": [
+          "ci-topology-and-selection",
+          "launcher-and-frozen-contracts",
+          "mandatory-local-regressions",
+          "hosted-producer-ci",
+          "extended-hermetic-actual-result"
+        ],
+        "state": "ADMITTED",
+        "checkpoint": null,
+        "authority_effect": "NONE",
+        "admission_authority": {
+          "kind": "EXPLICIT_OWNER_DIRECTIVE",
+          "note": "Owner program 20261013 objectives B/E and continuation directive authorize exact source-only CI milestone with four Codex shared-file leases; admission only while transport postmerge CI completes, no activation or runtime authority.",
+          "integration_agent": "Codex"
+        },
+        "history": []
       }
     ],
     "integration_agent": "Codex",
