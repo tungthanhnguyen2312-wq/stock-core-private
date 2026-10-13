@@ -4386,7 +4386,7 @@
   "successor_disposition": "OWNER_SELECTED_OFFLINE_EVIDENCE_NO_AUTOMATIC_SUCCESSOR",
   "development_control": {
     "schema": "stocklookup_development_lanes/1",
-    "revision": 33,
+    "revision": 34,
     "history": [
       {
         "operation": "INIT",
@@ -4728,6 +4728,17 @@
         "agent": "Codex",
         "observed_head": "1278c57226e828165b133863b4f34070d3399794",
         "revision": 33
+      },
+      {
+        "operation": "TRANSITION",
+        "milestone_id": "ARCHITECTURE_WAVE1_ROOT_RELOCATION_V1",
+        "from": "ACTIVE",
+        "to": "REVIEW_READY",
+        "checkpoint": "554e1dafa39f9156acde586391d12fd64b961df5",
+        "owner_note": "Exact clean109-path C checkpoint554e1da pushed for hosted CI.347 targeted cases, architecture/launcher guards, native ownership, frozen/source72blob parity and doc budgetsPASS. Retained21/21 proof reused after67baseblobmatch;325->291 root Python. A dependency MERGED_RELEASED; refreshed main integration and hosted gates remain mandatory. No tools archive/policy/runtime/source promotion.",
+        "agent": "Codex",
+        "observed_head": "de7581726f757a39f00d4b273c538996b3fb0d77",
+        "revision": 34
       }
     ],
     "lanes": [
@@ -5314,8 +5325,8 @@
           "offline-call-shape",
           "hosted-producer-ci"
         ],
-        "state": "ACTIVE",
-        "checkpoint": null,
+        "state": "REVIEW_READY",
+        "checkpoint": "554e1dafa39f9156acde586391d12fd64b961df5",
         "authority_effect": "NONE",
         "admission_authority": {
           "kind": "EXPLICIT_OWNER_DIRECTIVE",
@@ -5330,6 +5341,14 @@
             "to": "ACTIVE",
             "checkpoint": null,
             "owner_note": "Activate exact admitted PATCH-C migration source scope with integration-owned layout/navigation leases under Owner ObjectiveB. Dependency actual code merged, native COMPLETE_LOCAL; post-merge CI/native release remain integration gates. Sole subagent writer applies four reviewed patches and bounded navigation, no retained replay/downloads or protected resources."
+          },
+          {
+            "operation": "TRANSITION",
+            "milestone_id": "ARCHITECTURE_WAVE1_ROOT_RELOCATION_V1",
+            "from": "ACTIVE",
+            "to": "REVIEW_READY",
+            "checkpoint": "554e1dafa39f9156acde586391d12fd64b961df5",
+            "owner_note": "Exact clean109-path C checkpoint554e1da pushed for hosted CI.347 targeted cases, architecture/launcher guards, native ownership, frozen/source72blob parity and doc budgetsPASS. Retained21/21 proof reused after67baseblobmatch;325->291 root Python. A dependency MERGED_RELEASED; refreshed main integration and hosted gates remain mandatory. No tools archive/policy/runtime/source promotion."
           }
         ]
       }
