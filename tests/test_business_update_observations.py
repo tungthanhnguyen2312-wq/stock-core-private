@@ -38,6 +38,11 @@ def envelope(ticker="HPG", kind="official_operating_update", value="3.0", **meta
         manifest["assurance"] = "PRELIMINARY_UNASSURED"
         fact["metric_kind"] = "EARNINGS"
         fact["accounting_scope"] = "CONSOLIDATED_ESTIMATE"
+        raw = raw.replace(b"million tonnes", b"billion VND")
+        fact["span"]["text"] = raw.decode()
+        fact["span"]["end"] = len(raw.decode())
+        fact["unit"] = fact["native_unit"] = "billion VND"
+        manifest["content_sha256"] = hashlib.sha256(raw).hexdigest()
     elif kind == "management_guidance":
         fact["metric_kind"] = "GUIDANCE"
     return business.observe(manifest=manifest, source_bytes=raw, observations=[fact],
@@ -150,7 +155,7 @@ def test_native_real_lane_denies_other_domains_and_protected_paths():
     if not coordinator.exists():
         pytest.skip("Owner-host live acceptance only; hermetic CLI cases cover clean clones")
     state = roadmap.load_state(coordinator / "docs/ROADMAP_STATE.json")
-    mid = "OFFICIAL_BUSINESS_UPDATES_CURRENT_RESEARCH_INTEGRATION_V1"
+    mid = "OFFICIAL_BUSINESS_UPDATES_CURRENT_RESEARCH_INTEGRATION_V1_ACCEPTANCE"
     if not any(l["milestone_id"] == mid for l in state.get("development_control", {}).get("lanes", [])):
         pytest.skip("Host coordinator does not contain this lane")
     with patch.object(roadmap, "_changed_paths", return_value=(["stocklookup_core/evidence/business_update_observations.py"], [])):
@@ -158,3 +163,86 @@ def test_native_real_lane_denies_other_domains_and_protected_paths():
     for path in ("tools/reliability/claude.py", "data/private.json", "config/official_source_registry.json"):
         with patch.object(roadmap, "_changed_paths", return_value=([path], [])):
             assert "LANE_PROHIBITED_CHANGE:" + path in roadmap.check_lane(state, mid, repo=coordinator)["errors"]
+
+
+def hpg_research_demo():
+    """Verified numerical observations, synthetic byte envelope; no issuer byte hash.
+
+    Official locator read October13. Quarter/cumulative labels are preserved; exact
+    covered-date endpoints are UNKNOWN. The synthetic fixture adds no PIT authority.
+    """
+    production, sales, hrc = "sản xuất", "Sản lượng bán hàng", "HRC"
+    q3, nine = "Quý 3/2026", "9 tháng năm 2026"
+    rows = [
+        (q3, production, "crude_steel", "PRODUCTION", "3,7", "EXACT", "QoQ", "3"),
+        (q3, sales, "major_steel_products", "SALES", "3,8", "EXACT", "YoY", "54"),
+        (q3, sales, "major_steel_products", "SALES", "3,8", "EXACT", "QoQ", "8"),
+        (q3, hrc, "hot_rolled_coil_sales", "SALES", "2", "GREATER_THAN", "YoY", "64"),
+        (nine, production, "crude_steel", "PRODUCTION", "10,7", "EXACT", "YoY", "35"),
+        (nine, sales, "major_steel_products", "SALES", "10,3", "EXACT", "YoY", "39"),
+        (nine, hrc, "hot_rolled_coil_sales", "SALES", "5,47", "EXACT", "UNKNOWN", "59"),
+    ]
+    # Each line is a generated observation table, NOT a quotation from issuer HTML.
+    lines = [f"{period}; {label}; {concept}; {value} triệu tấn; {relation}; {basis} {pct}%" for period, label, concept, kind, value, relation, basis, pct in rows]
+    text = "RESEARCH DEMO; NOT ORIGINAL SOURCE BYTES\n" + "\n".join(lines)
+    manifest, _, _ = fixture(document_id="HPG-research-demo")
+    manifest["issuer_name"] = "Hoa Phat Group"
+    manifest["publication_timezone_basis"] = "OWNER_LOCAL_TIME_CONTEXT; PAGE_HAS_NO_TIMEZONE_LABEL"
+    raw = text.encode()
+    manifest["content_sha256"] = hashlib.sha256(raw).hexdigest()
+    facts = []
+    for row, line in zip(rows, lines):
+        period, label, concept, kind, value, relation, basis, pct = row
+        start = text.index(line)
+        facts.append(dict(native_label=label, concept=concept, metric_kind=kind,
+                          value=value.replace(",", "."), native_value=value,
+                          native_unit="triệu tấn", unit="million tonnes", value_relation=relation,
+                          basis="CRUDE_STEEL" if kind == "PRODUCTION" else concept,
+                          sector="STEEL", sector_applicability=True, period_label=period,
+                          limitations=["RESEARCH_TRANSCRIPTION_NOT_ISSUER_BYTES", "TITLE_AND_BODY_9M_SALES_QUANTIFIER_DIFFER"] if period == nine and label == sales else ["RESEARCH_TRANSCRIPTION_NOT_ISSUER_BYTES"],
+                          period_start=None, period_end=None, period_proof=period,
+                          span=dict(start=start, end=start + len(line), text=line),
+                          comparison=dict(basis=basis, method="EXPLICIT", value=pct, native_value=pct,
+                                          unit="percent", source_span=f"{basis} {pct}%")))
+    return business.observe(manifest=manifest, source_bytes=raw, observations=facts,
+                            cutoff="2026-10-13T15:00:00+07:00", research_fixture=True)
+
+
+def test_hpg_periods_production_sales_percent_and_bounds_stay_distinct():
+    demo = hpg_research_demo()
+    assert demo["research_usable"] and len(demo["observations"]) == 7
+    facts = demo["observations"]
+    assert len({f["period_label"] for f in facts}) == 2
+    assert facts[3]["value_relation"] == "GREATER_THAN"
+    assert facts[0]["metric_kind"] != facts[1]["metric_kind"]
+    assert all(f["unit"] == "million tonnes" and f["comparison"]["unit"] == "percent" for f in facts)
+    assert all(f["period_start"] is None and "PERIOD_ENDPOINTS_UNKNOWN" in f["limitations"] for f in facts)
+    assert all(f["qualification"] == "SOURCE_BOUND_RESEARCH" for f in facts)
+    assert facts[-1]["comparison"]["qualification"] == "UNKNOWN_BASIS"
+
+
+def test_duplicate_capture_different_observation_time_does_not_double_facts():
+    a = envelope()
+    b = envelope(observed_at="2026-10-13T10:00:00+07:00", known_at="2026-10-13T10:00:00+07:00")
+    ctx = business.research_context([a, b], ticker="HPG", cutoff="2026-10-13T15:00:00+07:00")
+    assert len(ctx["FACT"]) == 1
+
+
+def test_candidate_metadata_never_invents_timezone_or_uses_pdf_moddate():
+    manifest, raw, _ = fixture()
+    candidate = dict(record_type="official_issuer_disclosure/v1-candidate", ticker="HPG",
+                     issuer_name="Synthetic", evidence_id="test", document_type="issuer_operating_update",
+                     document_url=HPG_LOCATOR, sha256=manifest["content_sha256"],
+                     observation_at="2026-10-13T08:20:56+07:00", declared_publication="2026-10-12 10:21",
+                     declared_publication_timezone="NOT_PRINTED", pdf_moddate="D:20261012025535Z")
+    mapped = business.candidate_manifest(candidate, source_id="issuer_ir")
+    assert mapped["published_at"] is None
+    observation = business.observe(manifest=mapped, source_bytes=raw, observations=[], cutoff="2026-10-13T15:00:00+07:00")
+    assert "PUBLISHED_AT_UNKNOWN" in observation["blockers"]
+    assert observation["document_class"] == "OFFICIAL_OPERATING_UPDATE"
+    assert not observation["research_usable"]
+    ctx = business.research_context([observation], ticker="HPG", cutoff="2026-10-13T15:00:00+07:00")
+    assert len(ctx["documents"]) == 1 and not ctx["FACT"]
+    assert "PUBLISHED_AT_UNKNOWN" in ctx["UNCERTAINTY"]
+    with pytest.raises(ValueError, match="SCHEMA_UNSUPPORTED"):
+        business.candidate_manifest({**candidate, "record_type": "freeform"})

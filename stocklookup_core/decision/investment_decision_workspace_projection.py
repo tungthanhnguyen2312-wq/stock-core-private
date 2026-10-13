@@ -530,7 +530,6 @@ def build_ticker_card(
     portfolio_view = _portfolio_view(portfolio_research, ticker, sector)
     card: dict[str, Any] = {
         "ticker": ticker,
-        "business_update_context": copy.deepcopy((((integrated_record or {}).get("corporate_intelligence_context") or {}).get("forward_driver_context") or {}).get("business_update_context")),
         "as_of_session": as_of_session,
         "sector": sector,
         # Signal Velocity V1.2 / Flow-Price Divergence Shadow V1 -- presentation only, no new
@@ -651,6 +650,9 @@ def build_ticker_card(
         },
     }
     # DASHBOARD_INVESTOR_FIRST_PRESENTATION_SIMPLIFICATION_V1: additive, presentation-only
+    business_context = (((integrated_record or {}).get("corporate_intelligence_context") or {}).get("forward_driver_context") or {}).get("business_update_context")
+    if business_context is not None:
+        card["business_update_context"] = copy.deepcopy(business_context)
     # bridge -- reconciles fields already on this exact card into the six-state
     # indicator_metric_display_state/v1 contract. Computes nothing new; see
     # indicator_metric_availability.py / indicator_metric_display_state.py.

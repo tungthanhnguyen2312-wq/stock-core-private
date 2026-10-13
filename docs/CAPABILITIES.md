@@ -14,7 +14,7 @@ Each block: **Contract** · **Runtime** · **Authority** · **Production** · **
 (frozen) · **Blocker** · **Next trigger** (the evidence that would change the status).
 
 [Development lanes](parallel_domain_development_control_plane_v1_contract.md):
-`EXPERIMENTAL` / `SCOPED` / `OFFLINE_ONLY`; Owner merge gate; no runtime authority.
+released PR134; native admission only; no runtime authority.
 
 Decision-intelligence closure (2026-10-07) is research coverage and calibration context
 only. Contract `decision_intelligence_coverage_calibration/v1`. It does not vote, size,
@@ -152,6 +152,9 @@ and no production Daily launch. Disk admission remains independently mandatory.
 - Input: official HNX/HOSE corporate events within one shared budget · Predecessor: frozen 2026-08-21 event context
 - Blocker: three real corporate-action factors unqualified; lifecycle/term identities incomplete
 - Next trigger: qualified executed official factor with explicit ex-date and knowledge time
+
+[Business updates](official_business_update_research_contract.md): local/offline/non-voting;
+packet/Workspace/AI fixtures. Real news route blocked.
 
 ### 12. Current financial evidence
 - Local projection checkpoint: the frozen August-23 baseline remains immutable. Session

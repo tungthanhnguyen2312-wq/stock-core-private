@@ -495,7 +495,8 @@ def build_card(
     return {
         "ticker": ticker,
         "coverage_status": "COVERED",
-        "business_update_context": copy.deepcopy(w.get("business_update_context")),
+        **({"business_update_context": copy.deepcopy(w["business_update_context"])}
+           if "business_update_context" in w else {}),
         "identity": {
             "ticker": ticker,
             "sector": sector_view.get("label"),
