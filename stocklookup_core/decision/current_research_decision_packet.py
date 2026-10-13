@@ -115,6 +115,9 @@ def build_artifact(*, opportunity: Mapping[str,Any], scenario: Mapping[str,Any]|
    row["dependent_use_blocks"]={name: dependent_use_blocked(claim, use_requires_field=True) for name, claim in claims.items()}
   if ticker in security_records:
    security=security_records[ticker]
+   business_context=((security.get("corporate_intelligence_context") or {}).get("forward_driver_context") or {}).get("business_update_context")
+   if business_context is not None:
+    row["components"]["business_update_context"]=copy.deepcopy(business_context)
    row["security_decision"]={key:copy.deepcopy(security.get(key)) for key in (
     "research_action_posture", "posture_condition_class", "research_action_policy_version",
     "evidence_currency", "decision_identity", "why_now", "trigger", "invalidation")}

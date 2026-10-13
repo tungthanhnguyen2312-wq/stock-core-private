@@ -447,6 +447,7 @@ def build_artifact(
     research_session: str | None = None,
     market_wide_current_corporate_intelligence: Mapping[str, Any] | None = None,
     include_supplemental_events: bool = True,
+    business_update_observations: Sequence[Mapping[str, Any]] = (),
 ) -> dict[str, Any]:
     """Build the market-wide Corporate Intelligence axis artifact for one Current-Research
     session. `root` is the Producer workspace root used only to read the already-retained
@@ -471,6 +472,10 @@ def build_artifact(
     for ticker, row in sorted(event_context_artifact.get("records", {}).items()):
         classified = [classify_event(event, as_of=as_of) for event in row.get("events", [])]
         records[ticker] = _ticker_axis(ticker, session, classified)
+        if business_update_observations:
+            from stocklookup_core.evidence.business_update_observations import research_context, session_cutoff
+            records[ticker]["business_update_context"] = research_context(
+                business_update_observations, ticker=ticker, cutoff=session_cutoff(session))
         all_events.extend(classified)
 
     ownership_governance_reason = "No retained market-wide current shareholder or management/board-change corpus is available."
@@ -675,6 +680,11 @@ def build_forward_driver_context(record: Mapping[str, Any] | None, *,
                    blocker_reason_codes=sorted({b for d in drivers for b in d["blocker_reason_codes"]} |
                                               ({"NO_QUALIFIED_FORWARD_DRIVER"} if not any(d["qualified"] for d in drivers) else set())),
                    authority_effect="NONE", applicability="CURRENT_RESEARCH_EXPLANATION_ONLY")
+    if source.get("business_update_context") and session_usable:
+        from stocklookup_core.evidence.business_update_observations import research_context, session_cutoff
+        payload["business_update_context"] = research_context(
+            source["business_update_context"]["documents"], ticker=source.get("ticker") or ticker,
+            cutoff=session_cutoff(as_of_session))
     payload["context_identity"] = FORWARD_DRIVER_VERSION + ":" + hashlib.sha256(
         json.dumps(payload, sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode("utf-8")).hexdigest()
     return payload

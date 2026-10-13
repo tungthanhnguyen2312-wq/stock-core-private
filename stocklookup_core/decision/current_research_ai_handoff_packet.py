@@ -59,6 +59,7 @@ only joins the same resolved result onto cards, exactly the way those two build 
 do when ``current_research_scope`` is supplied to them.
 """
 from __future__ import annotations
+import copy
 
 import hashlib
 import json
@@ -494,6 +495,8 @@ def build_card(
     return {
         "ticker": ticker,
         "coverage_status": "COVERED",
+        **({"business_update_context": copy.deepcopy(w["business_update_context"])}
+           if "business_update_context" in w else {}),
         "identity": {
             "ticker": ticker,
             "sector": sector_view.get("label"),

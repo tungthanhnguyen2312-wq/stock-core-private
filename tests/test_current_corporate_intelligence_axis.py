@@ -19,6 +19,78 @@ import export_ai_bundle as bundle
 ROOT = Path(__file__).resolve().parents[1]
 SESSION = "2026-08-21"
 
+# Hosted focused selection already owns this file. Run the bounded offline envelope
+# cases here too, without changing CI dispatch or any frozen source pins.
+from test_business_update_observations import (
+    test_fixture_is_restricted_source_bound_and_duplicate_stable,
+    test_document_temporal_and_identity_fail_closed,
+    test_numeric_period_and_unit_fail_closed,
+    test_real_unapproved_route_no_bytes_and_third_party_stay_discovery,
+    test_later_observation_cannot_repair_historical_cutoff,
+    test_revision_and_conflicts_never_choose_a_preferred_fact,
+    test_distinct_document_classes_never_become_financial_inputs,
+    test_tampered_envelope_is_rejected,
+    test_hpg_periods_production_sales_percent_and_bounds_stay_distinct,
+    test_duplicate_capture_different_observation_time_does_not_double_facts,
+    test_candidate_metadata_never_invents_timezone_or_uses_pdf_moddate,
+)
+
+
+@pytest.mark.parametrize("document_class", ["HPG", "PRELIMINARY", "GUIDANCE"])
+def test_business_updates_full_research_consumer_chain_is_non_voting(document_class):
+    from test_business_update_observations import envelope, hpg_research_demo
+    from stocklookup_core.decision import integrated_investment_decision_product as iid
+    from stocklookup_core.decision import current_research_decision_input as research
+    from stocklookup_core.decision import current_research_decision_packet as packet
+    from stocklookup_core.decision import investment_decision_workspace_projection as workspace
+    from stocklookup_core.decision import current_research_ai_handoff_packet as ai
+    from test_current_research_decision_packet import _opportunity, _decision
+    session = "2026-10-13"
+    observation = (hpg_research_demo() if document_class == "HPG" else
+                   envelope("XYZ", "preliminary_earnings_disclosure" if document_class == "PRELIMINARY" else "management_guidance"))
+    ticker = observation["ticker"]
+    inputs = dict(official_universe=_signed_official([ticker]),
+                  official_event_context=_signed_event_context([], session), root=ROOT,
+                  research_session=session, include_supplemental_events=False)
+    original = axis.build_artifact(**inputs)
+    enriched = axis.build_artifact(**inputs, business_update_observations=[observation])
+    assert original["coverage"] == enriched["coverage"]
+    assert original["records"][ticker]["state"] == enriched["records"][ticker]["state"]
+    kwargs = dict(ticker=ticker, as_of_session=session, tactical_record=None, financial_record=None,
+                  valuation_record=None, relative_volume_record=None, market_sector_record=None)
+    old = iid.build_ticker_integrated_decision(**kwargs, corporate_intelligence_record=original["records"][ticker])
+    new = iid.build_ticker_integrated_decision(**kwargs, corporate_intelligence_record=enriched["records"][ticker])
+    for key in ("research_action_posture", "evidence_currency", "decision_identity", "valuation_context_summary"):
+        assert old.get(key) == new.get(key)
+    context = new["corporate_intelligence_context"]["forward_driver_context"]["business_update_context"]
+    assert context["research_usable"] and not context["financial_fact_authority"]
+    assert research._corporate(new)["forward_driver_context"]["business_update_context"] == context
+    integrated = dict(contract_version=iid.CONTRACT_VERSION, session=session, records={ticker: new},
+                      research_action_policy_version="v2")
+    integrated.update(iid.content_identity(integrated))
+    decision_packet = packet.build_artifact(opportunity=_opportunity({ticker: _decision(ticker)}, session), integrated_decision=integrated)
+    assert decision_packet["records"][ticker]["components"]["business_update_context"] == context
+    card = workspace.build_ticker_card(ticker=ticker, opportunity_record={"as_of_session": session},
+                                      decision_record={"as_of_session": session}, sector="STEEL",
+                                      portfolio_research=None, prospective_record={}, integrated_record=new)
+    assert card["business_update_context"] == context
+    ai_card = ai.build_card(ticker=ticker, workspace_card=card, screener_card=None, session=session,
+                            current_research_scope=None, workspace_identity="demo-workspace", screener_identity=None)
+    assert ai_card["business_update_context"] == context
+    assert ai_card["business_update_context"]["DECISION_USE"] == "NON_VOTING_RESEARCH_CONTEXT_ONLY"
+    assert all(f["coverage_kind"] == "OFFLINE_FIXTURE" for f in context["FACT"])
+    from test_current_research_ai_handoff_packet import _workspace_artifact, _screener_artifact
+    full_packet = ai.build_packet(session=session, requested_at="2026-10-13T16:00:00+07:00",
+                                 producer_commit="synthetic-demo", daily_operation_identity=None,
+                                 workspace_artifact=_workspace_artifact({ticker: card}, session=session),
+                                 screener_artifact=_screener_artifact({}, session=session))
+    assert full_packet["cards"][ticker]["business_update_context"] == context
+    subset = ai.build_watchlist_subset(full_packet, [ticker])
+    assert subset["cards"][ticker]["business_update_context"] == context
+    future = copy.deepcopy(enriched["records"][ticker])
+    future["research_session"] = "2026-10-14"
+    assert "business_update_context" not in axis.build_forward_driver_context(future, as_of_session=session, ticker=ticker)
+
 
 def _signed_official(tickers: list[str]) -> dict:
     artifact = {
