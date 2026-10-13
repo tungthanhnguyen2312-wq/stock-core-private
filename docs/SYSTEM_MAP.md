@@ -71,6 +71,21 @@ All library consumers import the packages; historical module names resolve throu
 `config/repository_layout.json`. Owner Daily and publishing launchers retain their paths.
 Root placement is enforced by `tests/test_repository_layout.py`.
 
+### Wave 1 historical replay relocation — 2026-10-13
+
+Locally implemented, release gates pending: 34 reviewed historical root modules moved to
+`tools/replay/research_20260820/` (22), `tools/replay/pilots/` (seven) and
+`tools/replay/legacy_financial_materializers/` (five), reducing root Python 325 → 291.
+The exact cohort is `tests/fixtures/root_historical_surface_w1_relocations.json`;
+`config/repository_layout.json` maps each old name to its sole implementation. No root shims;
+G3 flags stale imports with relocation hints. Daily launchers, artifact producer identity text,
+retained paths and numerical/source/PIT/valuation authority remain unchanged.
+Archived module spelling: `python -m tools.replay.research_20260820.run_mva_daily_investment_research`
+from the checkout root; replay still needs its existing explicit evidence and write authority.
+The P0-B full-corpus runner retains path dispatch and explicit inputs. Existing read-only proof:
+21 runnable outputs identical, 13 identical non-run statuses; historical stored-output drift is separate.
+[Source-layout boundaries](repository_root_structure_simplification_v1_contract.md) still apply.
+
 The runtime topology below is authoritative as a navigation aid, but the filesystem is still historically flat. The public root currently contains hundreds of implementation modules; this is recognized layout debt, not evidence that those modules are unused.
 
 Repository cleanup follows the governed strangler plan in [REPOSITORY_LAYOUT_MIGRATION.md](REPOSITORY_LAYOUT_MIGRATION.md):

@@ -2,12 +2,12 @@ from pathlib import Path
 import json
 from stocklookup_core.research.evidence_aware_research_screener import build,review_overlay,query
 from stocklookup_core.research.persistent_research_dossier import load_latest_versions
-from run_sector_relative_research_context import run as run_relative_context
-from run_strategy_research_eligibility import run as run_eligibility
-from run_catalyst_event_research_context import run as run_event_context
-from run_price_structure_breakout_context import run as run_price_structure
-from run_research_setup_classification import run as run_setup_context
-ROOT=Path(__file__).resolve().parent;OUT=ROOT/'operations-review/evidence-aware-research-screener-v1-20260820'
+from tools.replay.research_20260820.run_sector_relative_research_context import run as run_relative_context
+from tools.replay.research_20260820.run_strategy_research_eligibility import run as run_eligibility
+from tools.replay.research_20260820.run_catalyst_event_research_context import run as run_event_context
+from tools.replay.research_20260820.run_price_structure_breakout_context import run as run_price_structure
+from tools.replay.research_20260820.run_research_setup_classification import run as run_setup_context
+ROOT=Path(__file__).resolve().parents[3];OUT=ROOT/'operations-review/evidence-aware-research-screener-v1-20260820'
 def run():
  p=json.loads((ROOT/'operations-review/mva-daily-investment-research-20260820/mva_daily_investment_research_artifact.json').read_text(encoding='utf-8'));e,_=run_eligibility();c,_=run_relative_context();v,_=run_event_context();pack=json.loads((ROOT/'operations-review/human-research-review-pack-v1-20260820/human_research_review_pack_artifact.json').read_text(encoding='utf-8'));a=build(p,e,c,load_latest_versions(ROOT/'operations-review/persistent-research-dossier-v1-20260820'),v,run_price_structure()[0],run_setup_context()[0]);return a,review_overlay(pack,a)
 if __name__=='__main__':

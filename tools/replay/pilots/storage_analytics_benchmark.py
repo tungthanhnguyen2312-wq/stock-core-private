@@ -13,7 +13,7 @@ from typing import Any, Callable
 
 import pandas as pd
 
-from shadow_analytics_pilot import TICKERS, _evidence_records, _financial_records, require_duckdb, semantic_fingerprint
+from tools.replay.pilots.shadow_analytics_pilot import TICKERS, _evidence_records, _financial_records, require_duckdb, semantic_fingerprint
 
 
 class BenchmarkError(RuntimeError):

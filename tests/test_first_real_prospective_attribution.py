@@ -1,5 +1,5 @@
 import copy
-from run_first_real_prospective_attribution import run
+from tools.replay.research_20260820.run_first_real_prospective_attribution import run
 from stocklookup_core.research.prospective_research_learning import first_real_observation
 
 def test_first_real_observation_is_strict_and_replayable():
@@ -16,7 +16,7 @@ def test_first_real_observation_is_strict_and_replayable():
     assert {group['group'] for group in first['queue_attribution']} == {'queue:FROZEN_25_NAME_QUEUE', 'queue:FROZEN_NON_QUEUE'}
 
 def test_future_session_and_identity_are_fail_closed(monkeypatch):
-    import run_first_real_prospective_attribution as runner
+    import tools.replay.research_20260820.run_first_real_prospective_attribution as runner
     original = runner._load
     def altered(path):
         value = original(path)

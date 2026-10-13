@@ -7,7 +7,7 @@ from pathlib import Path
 from stocklookup_core.research.persistent_research_dossier import load_latest_versions
 from stocklookup_core.research.research_question_tasking import build, load_latest_tasks, markdown, write_task_states
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parents[3]
 DOSSIER_ROOT = ROOT / "operations-review" / "persistent-research-dossier-v1-20260820"
 OUTPUT = ROOT / "operations-review" / "research-question-tasking-v1-20260820"
 

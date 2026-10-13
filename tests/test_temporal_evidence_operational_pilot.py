@@ -1,7 +1,7 @@
 import json,tempfile,unittest
 from pathlib import Path
 from unittest.mock import patch
-from temporal_evidence_operational_pilot import OperationalLockError,run_operational_pilot
+from tools.replay.pilots.temporal_evidence_operational_pilot import OperationalLockError,run_operational_pilot
 
 def base():
  return {"record_id":"r1","record_type":"qualification","ticker":"VNM","period":"2024","metric":"sales","source":"qualification","temporal":{"observed_at":None,"published_at":"2025-01-01","effective_at":None,"period_end":None,"calculated_at":"2025-01-02"}}
@@ -10,7 +10,7 @@ def parity():return {"MISSING":0,"CONFLICT":0,"UNEXPECTED_EXTRA":0,"EXACT":1,"EX
 def dual():return {"SEMANTIC_MISMATCH":0,"AUTHORITY_ONLY":0,"REGISTRY_ONLY":0,"QUERY_UNSUPPORTED":0,"FALLBACK_TO_AUTHORITY":True,"EXACT":1,"EXPECTED_ENRICHMENT":1,"REPLAY_HASH":"dual"}
 class OperationalPilotTests(unittest.TestCase):
  def _run(self,root,report,run_id="r",inject=False):
-  with patch("temporal_evidence_operational_pilot.authority_read",return_value=[base()]),patch("temporal_evidence_operational_pilot.run_promoted_vertical_slice",return_value=replay()),patch("temporal_evidence_operational_pilot.run_replay_parity",return_value=parity()),patch("temporal_evidence_operational_pilot.run_shadow_dual_read",return_value=dual()):
+  with patch("tools.replay.pilots.temporal_evidence_operational_pilot.authority_read",return_value=[base()]),patch("tools.replay.pilots.temporal_evidence_operational_pilot.run_promoted_vertical_slice",return_value=replay()),patch("tools.replay.pilots.temporal_evidence_operational_pilot.run_replay_parity",return_value=parity()),patch("tools.replay.pilots.temporal_evidence_operational_pilot.run_shadow_dual_read",return_value=dual()):
    return run_operational_pilot(root,report,run_id,inject,"2026-07-29T00:00:00+00:00")
  def test_stage_order_atomic_report_cleanup_and_authority_baseline(self):
   with tempfile.TemporaryDirectory() as d:

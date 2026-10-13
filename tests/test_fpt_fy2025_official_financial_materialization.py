@@ -8,7 +8,7 @@ from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-import fpt_fy2025_official_financial_materialization as fpt  # noqa: E402
+import tools.replay.legacy_financial_materializers.fpt_fy2025_official_financial_materialization as fpt  # noqa: E402
 import evidence_promotion as promotion  # noqa: E402
 from canonical_financial_qualification_policy import load_evidence_index  # noqa: E402
 from official_annual_financial_fact_projection import facts_for_ticker  # noqa: E402

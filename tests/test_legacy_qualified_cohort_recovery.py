@@ -14,7 +14,7 @@ sys.path.insert(0, str(ROOT))
 
 import canonical_financial_qualification_policy as policy  # noqa: E402
 import evidence_promotion as promotion  # noqa: E402
-import legacy_qualified_cohort_recovery as recovery  # noqa: E402
+import tools.replay.legacy_financial_materializers.legacy_qualified_cohort_recovery as recovery  # noqa: E402
 import official_annual_financial_fact_projection as annual  # noqa: E402
 import research_financial_fact_projection as research  # noqa: E402
 import semantic_evidence_bridge as bridge  # noqa: E402

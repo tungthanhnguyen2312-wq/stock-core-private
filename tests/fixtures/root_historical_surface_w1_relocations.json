@@ -1,0 +1,94 @@
+{
+  "milestone": "ROOT_HISTORICAL_SURFACE_RETIREMENT_W1",
+  "baseline": "cfb77628fb94da79b32c2ff16344c660a128ec0f",
+  "cohorts": {
+    "A": {
+      "package": "tools/replay/research_20260820",
+      "purpose": "Root 2026-08-20 research replay runners (retained operations-review/*-20260820).",
+      "modules": [
+        "run_ai_research_analyst.py",
+        "run_catalyst_event_research_context.py",
+        "run_downside_uncertainty_research_context.py",
+        "run_evidence_aware_candidate_comparison.py",
+        "run_evidence_aware_research_screener.py",
+        "run_expectations_scenario_research.py",
+        "run_first_real_prospective_attribution.py",
+        "run_human_research_review_pack.py",
+        "run_market_regime_breadth_context.py",
+        "run_mva_daily_investment_research.py",
+        "run_owner_research_journal.py",
+        "run_persistent_research_dossier.py",
+        "run_price_structure_breakout_context.py",
+        "run_prospective_daily_rollforward.py",
+        "run_prospective_research_cohort_diagnostics.py",
+        "run_prospective_research_context_extension.py",
+        "run_prospective_research_context_extension_successor.py",
+        "run_prospective_research_learning.py",
+        "run_research_question_tasking.py",
+        "run_research_setup_classification.py",
+        "run_sector_relative_research_context.py",
+        "run_strategy_research_eligibility.py"
+      ]
+    },
+    "B": {
+      "package": "tools/replay/pilots",
+      "purpose": "Historical pilots, benchmarks and the P0-B.2B1 full-corpus reconciliation runner.",
+      "modules": [
+        "evidence_replay.py",
+        "run_full_corpus_reconciliation_p0b2b1.py",
+        "shadow_analytics_pilot.py",
+        "snapshot_rebuild.py",
+        "storage_analytics_benchmark.py",
+        "temporal_evidence_operational_pilot.py",
+        "vnm_historical_snapshot_reconstruction.py"
+      ]
+    },
+    "C": {
+      "package": "tools/replay/legacy_financial_materializers",
+      "purpose": "Self-declared legacy per-ticker financial materializers (generic_financial_canonicalizer.classify_legacy_materializers).",
+      "modules": [
+        "fpt_fy2025_official_financial_materialization.py",
+        "legacy_qualified_cohort_recovery.py",
+        "qns_pow_official_financial_materialization.py",
+        "ssi_official_financial_materialization.py",
+        "targeted_multi_period_official_financial_evidence.py"
+      ]
+    }
+  },
+  "relocations": {
+    "evidence_replay.py": "tools/replay/pilots/evidence_replay.py",
+    "fpt_fy2025_official_financial_materialization.py": "tools/replay/legacy_financial_materializers/fpt_fy2025_official_financial_materialization.py",
+    "legacy_qualified_cohort_recovery.py": "tools/replay/legacy_financial_materializers/legacy_qualified_cohort_recovery.py",
+    "qns_pow_official_financial_materialization.py": "tools/replay/legacy_financial_materializers/qns_pow_official_financial_materialization.py",
+    "run_ai_research_analyst.py": "tools/replay/research_20260820/run_ai_research_analyst.py",
+    "run_catalyst_event_research_context.py": "tools/replay/research_20260820/run_catalyst_event_research_context.py",
+    "run_downside_uncertainty_research_context.py": "tools/replay/research_20260820/run_downside_uncertainty_research_context.py",
+    "run_evidence_aware_candidate_comparison.py": "tools/replay/research_20260820/run_evidence_aware_candidate_comparison.py",
+    "run_evidence_aware_research_screener.py": "tools/replay/research_20260820/run_evidence_aware_research_screener.py",
+    "run_expectations_scenario_research.py": "tools/replay/research_20260820/run_expectations_scenario_research.py",
+    "run_first_real_prospective_attribution.py": "tools/replay/research_20260820/run_first_real_prospective_attribution.py",
+    "run_full_corpus_reconciliation_p0b2b1.py": "tools/replay/pilots/run_full_corpus_reconciliation_p0b2b1.py",
+    "run_human_research_review_pack.py": "tools/replay/research_20260820/run_human_research_review_pack.py",
+    "run_market_regime_breadth_context.py": "tools/replay/research_20260820/run_market_regime_breadth_context.py",
+    "run_mva_daily_investment_research.py": "tools/replay/research_20260820/run_mva_daily_investment_research.py",
+    "run_owner_research_journal.py": "tools/replay/research_20260820/run_owner_research_journal.py",
+    "run_persistent_research_dossier.py": "tools/replay/research_20260820/run_persistent_research_dossier.py",
+    "run_price_structure_breakout_context.py": "tools/replay/research_20260820/run_price_structure_breakout_context.py",
+    "run_prospective_daily_rollforward.py": "tools/replay/research_20260820/run_prospective_daily_rollforward.py",
+    "run_prospective_research_cohort_diagnostics.py": "tools/replay/research_20260820/run_prospective_research_cohort_diagnostics.py",
+    "run_prospective_research_context_extension.py": "tools/replay/research_20260820/run_prospective_research_context_extension.py",
+    "run_prospective_research_context_extension_successor.py": "tools/replay/research_20260820/run_prospective_research_context_extension_successor.py",
+    "run_prospective_research_learning.py": "tools/replay/research_20260820/run_prospective_research_learning.py",
+    "run_research_question_tasking.py": "tools/replay/research_20260820/run_research_question_tasking.py",
+    "run_research_setup_classification.py": "tools/replay/research_20260820/run_research_setup_classification.py",
+    "run_sector_relative_research_context.py": "tools/replay/research_20260820/run_sector_relative_research_context.py",
+    "run_strategy_research_eligibility.py": "tools/replay/research_20260820/run_strategy_research_eligibility.py",
+    "shadow_analytics_pilot.py": "tools/replay/pilots/shadow_analytics_pilot.py",
+    "snapshot_rebuild.py": "tools/replay/pilots/snapshot_rebuild.py",
+    "ssi_official_financial_materialization.py": "tools/replay/legacy_financial_materializers/ssi_official_financial_materialization.py",
+    "storage_analytics_benchmark.py": "tools/replay/pilots/storage_analytics_benchmark.py",
+    "targeted_multi_period_official_financial_evidence.py": "tools/replay/legacy_financial_materializers/targeted_multi_period_official_financial_evidence.py",
+    "temporal_evidence_operational_pilot.py": "tools/replay/pilots/temporal_evidence_operational_pilot.py",
+    "vnm_historical_snapshot_reconstruction.py": "tools/replay/pilots/vnm_historical_snapshot_reconstruction.py"
+  }
+}

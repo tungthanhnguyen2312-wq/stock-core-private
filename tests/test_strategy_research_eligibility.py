@@ -1,4 +1,4 @@
-from run_strategy_research_eligibility import run
+from tools.replay.research_20260820.run_strategy_research_eligibility import run
 def test_eligibility_is_deterministic_and_isolates_blockers():
  a,o=run();b,_=run();assert a['artifact_identity']==b['artifact_identity'];assert len(a['records'])==523;assert len(o['entries'])==25
  for r in a['records']:

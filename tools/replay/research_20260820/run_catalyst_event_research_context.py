@@ -4,7 +4,7 @@ from stocklookup_core.research.catalyst_event_research_context import build, rev
 from stocklookup_core.research.persistent_research_dossier import load_latest_versions
 from stocklookup_core.research.research_question_tasking import load_latest_tasks
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parents[3]
 OUT = ROOT / "operations-review/catalyst-event-research-context-v1-20260820"
 
 def run():

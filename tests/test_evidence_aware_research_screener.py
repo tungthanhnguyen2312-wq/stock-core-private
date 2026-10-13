@@ -1,4 +1,4 @@
-from run_evidence_aware_research_screener import run
+from tools.replay.research_20260820.run_evidence_aware_research_screener import run
 from stocklookup_core.research.evidence_aware_research_screener import query
 def test_screener_is_deterministic_and_fails_closed():
  a,o=run();b,_=run();assert a['artifact_identity']==b['artifact_identity'];assert len(a['records'])==523;assert len(o['entries'])==25

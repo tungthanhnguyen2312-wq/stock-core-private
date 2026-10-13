@@ -297,3 +297,27 @@ def test_packaged_defaults_still_use_checkout_root_after_cwd_change(tmp_path, mo
                         lambda path: seen.append(path) or {"promoted_sectors": {}})
     panel.load_promoted_sector_citations()
     assert seen == [ROOT / "config/promoted_sector_extractions.json"]
+
+
+W1 = json.loads((ROOT / "tests/fixtures/root_historical_surface_w1_relocations.json").read_text(encoding="utf-8"))
+
+
+def test_w1_historical_surface_is_archived_under_tools_replay_without_root_shim():
+    """Wave 1: historical runners, pilots and legacy materializers leave the root; nothing runs them Daily."""
+    import subprocess
+    launch = json.loads((ROOT / "config/daily_path_launchers.json").read_text(encoding="utf-8"))
+    launched = {t["path"] for t in launch["targets"]}
+    assert sorted(W1["relocations"]) == sorted(m for c in W1["cohorts"].values() for m in c["modules"])
+    for old, new in W1["relocations"].items():
+        assert LAYOUT["relocations"][old] == new and new not in BULK_RELOCATIONS.values()
+        assert old not in LAYOUT["grandfathered_root_python"] and old not in LAYOUT["compatibility_entrypoints"]
+        assert not (ROOT / old).exists() and importlib.util.find_spec(old[:-3]) is None, old
+        assert new.startswith("tools/replay/") and new.count("/") == 3, new
+        assert old not in launched and new not in launched, old
+    moved = {old[:-3] for old in W1["relocations"]}
+    for ref, relative in BULK["historically_executed_sources"]:
+        source = subprocess.check_output(["git", "show", f"{ref}:{relative}"], cwd=ROOT)
+        for node in ast.walk(ast.parse(source)):
+            names = [a.name for a in node.names] if isinstance(node, ast.Import) else \
+                [node.module] if isinstance(node, ast.ImportFrom) and node.module and not node.level else []
+            assert not moved.intersection(n.split(".")[0] for n in names), (ref, relative, names)

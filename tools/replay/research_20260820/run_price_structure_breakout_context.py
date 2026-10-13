@@ -1,7 +1,7 @@
 from pathlib import Path
 import json
 from price_structure_breakout_context import build,daily_overlay,review_overlay,scenario_overlay
-ROOT=Path(__file__).resolve().parent;OUT=ROOT/'operations-review/price-structure-breakout-context-v1-20260820'
+ROOT=Path(__file__).resolve().parents[3];OUT=ROOT/'operations-review/price-structure-breakout-context-v1-20260820'
 def run():
  s=json.loads((ROOT/'operations-review/p3f9b-market-wide-exact-session-scaleout-20260820/p3f9b_mva_exact_session_snapshot.json').read_text(encoding='utf8'));p=json.loads((ROOT/'operations-review/mva-daily-investment-research-20260820/mva_daily_investment_research_artifact.json').read_text(encoding='utf8'));r=json.loads((ROOT/'operations-review/human-research-review-pack-v1-20260820/human_research_review_pack_artifact.json').read_text(encoding='utf8'));q=json.loads((ROOT/'operations-review/expectations-scenario-research-v1-20260820/expectations_scenario_research_artifact.json').read_text(encoding='utf8'));x=build(s,p,r);return x,daily_overlay(x),review_overlay(x,r),scenario_overlay(x,q)
 if __name__=='__main__':

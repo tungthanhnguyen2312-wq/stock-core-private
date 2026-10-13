@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 from stocklookup_core.research.prospective_research_learning import first_real_observation, write_immutable
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parents[3]
 
 def _load(relative: str) -> dict:
     return json.loads((ROOT / relative).read_text(encoding='utf-8'))

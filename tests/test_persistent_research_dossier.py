@@ -4,7 +4,7 @@ import copy
 import pytest
 
 from stocklookup_core.research.persistent_research_dossier import build, write_immutable
-from run_persistent_research_dossier import inputs
+from tools.replay.research_20260820.run_persistent_research_dossier import inputs
 
 
 def test_initialization_replay_and_authority_lineage_are_deterministic(tmp_path: Path):

@@ -1,8 +1,8 @@
 from pathlib import Path
 import json
 from stocklookup_core.tactical.market_regime_breadth_context import build, review_overlay
-from run_evidence_aware_research_screener import run as run_screener
-ROOT=Path(__file__).resolve().parent; OUT=ROOT/'operations-review/market-regime-breadth-context-v1-20260820'
+from tools.replay.research_20260820.run_evidence_aware_research_screener import run as run_screener
+ROOT=Path(__file__).resolve().parents[3]; OUT=ROOT/'operations-review/market-regime-breadth-context-v1-20260820'
 def run():
  p=json.loads((ROOT/'operations-review/mva-daily-investment-research-20260820/mva_daily_investment_research_artifact.json').read_text(encoding='utf8')); s,_=run_screener(); r=json.loads((ROOT/'operations-review/human-research-review-pack-v1-20260820/human_research_review_pack_artifact.json').read_text(encoding='utf8')); return build(p,s,r)
 if __name__=='__main__':

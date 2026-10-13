@@ -6,7 +6,7 @@ from pathlib import Path
 
 from stocklookup_core.research.persistent_research_dossier import build, load_latest_versions, markdown, write_new_versions
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parents[3]
 OUTPUT = ROOT / "operations-review" / "persistent-research-dossier-v1-20260820"
 
 

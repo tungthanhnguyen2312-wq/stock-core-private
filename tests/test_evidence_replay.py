@@ -1,6 +1,6 @@
 import json,tempfile,unittest
 from pathlib import Path
-from evidence_replay import replay
+from tools.replay.pilots.evidence_replay import replay
 
 def fixture(root):
  e=root/'data'/'official-evidence';e.mkdir(parents=True);(e/'x.pdf').write_bytes(b'x');h='2d711642b726b04401627ca9fbac32f5c8530fb1903cc4db02258717921a4881';(e/'manifest.json').write_text(json.dumps({'records':[{'evidence_id':'e','filename':'x.pdf','sha256':h,'qualification_state':'qualified'}]}));(root/'data'/'financial-observations').mkdir(parents=True);(root/'data'/'financial-observations'/'observations.jsonl').write_text('');
@@ -17,7 +17,7 @@ class T(unittest.TestCase):
 class ReplayContractRegression(unittest.TestCase):
  def test_market_price_and_statement_type_identity(self):
   import sqlite3
-  from evidence_replay import init,validate
+  from tools.replay.pilots.evidence_replay import init,validate
   with tempfile.TemporaryDirectory() as d:
    c=sqlite3.connect(Path(d)/'x.db');init(c)
    rows=[('manifest','e','{}'),('observations','a','{}'),('observations','b','{}'),('market_price','m',json.dumps({'citation_id':'m'})),('qualification','q1',json.dumps({'ticker':'HPG','reporting_period':'2024','raw_item_id':'minority_interests','raw_statement_type':'balance_sheet','citation_id':'q1','evidence_id':'e','observation_id':'a'})),('qualification','q2',json.dumps({'ticker':'HPG','reporting_period':'2024','raw_item_id':'minority_interests','raw_statement_type':'income_statement','citation_id':'q2','evidence_id':'e','observation_id':'b'}))]

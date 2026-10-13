@@ -4,7 +4,7 @@ import copy
 import pytest
 
 from stocklookup_core.research.expectations_scenario_research import build, write_immutable
-from run_expectations_scenario_research import inputs
+from tools.replay.research_20260820.run_expectations_scenario_research import inputs
 
 
 def test_scenarios_are_deterministic_evidence_bound_and_unqualified_for_probabilities(tmp_path: Path):
