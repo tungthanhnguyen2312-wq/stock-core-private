@@ -4386,7 +4386,7 @@
   "successor_disposition": "OWNER_SELECTED_OFFLINE_EVIDENCE_NO_AUTOMATIC_SUCCESSOR",
   "development_control": {
     "schema": "stocklookup_development_lanes/1",
-    "revision": 19,
+    "revision": 21,
     "history": [
       {
         "operation": "INIT",
@@ -4580,6 +4580,28 @@
         "agent": "Codex",
         "observed_head": "614d8524615b83178ba27b7eac2bd93bf74b0d5b",
         "revision": 19
+      },
+      {
+        "operation": "TRANSITION",
+        "milestone_id": "ARCHITECTURE_IMPORT_RELIABILITY_V1",
+        "from": "ACTIVE",
+        "to": "REVIEW_READY",
+        "checkpoint": "7c067d3407c11f1ec51a8ec8132f8d608e874e0e",
+        "owner_note": "Owner engineering program 20261013 explicitly delegates integration and source-only merge of PR136 under normal native and exact-head CI gates; completed Claude guard implementation at verified clean exact HEAD, integrated tests on observed main pending.",
+        "agent": "Codex",
+        "observed_head": "7637d0d3ef0905efa541eeced15b23aa600c3711",
+        "revision": 20
+      },
+      {
+        "operation": "TRANSITION",
+        "milestone_id": "OFFICIAL_FINANCIAL_EVIDENCE_INTAKE_AND_QUARTERLY_SEMANTICS_V1",
+        "from": "COMPLETE_LOCAL",
+        "to": "MERGED_RELEASED",
+        "checkpoint": "43e32b36aa7a317907731f8de37a529f9012b71f",
+        "owner_note": "Owner program 20261013 authorizes release reconciliation: PR137 merged at observed main a0f54b3, exact feature checkpoint is an ancestor, all four post-merge jobs38351945541 SUCCESS; refreshed native post-merge receipt passes. Source/cohort/runtime and sealed sessions unchanged.",
+        "agent": "Codex",
+        "observed_head": "7637d0d3ef0905efa541eeced15b23aa600c3711",
+        "revision": 21
       }
     ],
     "lanes": [
@@ -4772,8 +4794,8 @@
         "consumes": {},
         "domain": "architecture-import-reliability",
         "shared_paths": [],
-        "state": "ACTIVE",
-        "checkpoint": null,
+        "state": "REVIEW_READY",
+        "checkpoint": "7c067d3407c11f1ec51a8ec8132f8d608e874e0e",
         "authority_effect": "NONE",
         "admission_authority": {
           "kind": "EXPLICIT_OWNER_DIRECTIVE",
@@ -4788,6 +4810,14 @@
             "to": "ACTIVE",
             "checkpoint": null,
             "owner_note": "Owner enables independent Claude PATCH-A source writing only in the admitted three-file architecture scope; Codex does not implement/apply the patch; shared CI and policy changes remain excluded."
+          },
+          {
+            "operation": "TRANSITION",
+            "milestone_id": "ARCHITECTURE_IMPORT_RELIABILITY_V1",
+            "from": "ACTIVE",
+            "to": "REVIEW_READY",
+            "checkpoint": "7c067d3407c11f1ec51a8ec8132f8d608e874e0e",
+            "owner_note": "Owner engineering program 20261013 explicitly delegates integration and source-only merge of PR136 under normal native and exact-head CI gates; completed Claude guard implementation at verified clean exact HEAD, integrated tests on observed main pending."
           }
         ]
       },
@@ -4841,7 +4871,7 @@
         "base_sha": "2a3edff066b5ef9b9621b7e5913a8705a3a2d807",
         "domain": "official-financial-quarterly-intake",
         "milestone_id": "OFFICIAL_FINANCIAL_EVIDENCE_INTAKE_AND_QUARTERLY_SEMANTICS_V1",
-        "state": "COMPLETE_LOCAL",
+        "state": "MERGED_RELEASED",
         "checkpoint": "43e32b36aa7a317907731f8de37a529f9012b71f",
         "authority_effect": "NONE",
         "admission_authority": {
@@ -4889,8 +4919,17 @@
             "to": "COMPLETE_LOCAL",
             "checkpoint": "43e32b36aa7a317907731f8de37a529f9012b71f",
             "owner_note": "Record Owner-authorized software local completion at exact clean HEAD43e32b36. Hosted run38344524188 has four SUCCESS jobs including structural/native/frozen/offline checks;399 financial and228 metadata/offline local cases passed; independent six-finding review repaired. Separate Owner merge, source admission and runtime activation remain unauthorized."
+          },
+          {
+            "operation": "TRANSITION",
+            "milestone_id": "OFFICIAL_FINANCIAL_EVIDENCE_INTAKE_AND_QUARTERLY_SEMANTICS_V1",
+            "from": "COMPLETE_LOCAL",
+            "to": "MERGED_RELEASED",
+            "checkpoint": "43e32b36aa7a317907731f8de37a529f9012b71f",
+            "owner_note": "Owner program 20261013 authorizes release reconciliation: PR137 merged at observed main a0f54b3, exact feature checkpoint is an ancestor, all four post-merge jobs38351945541 SUCCESS; refreshed native post-merge receipt passes. Source/cohort/runtime and sealed sessions unchanged."
           }
-        ]
+        ],
+        "release_sha": "a0f54b391576958c7f2569b2433fd462a4e81243"
       }
     ],
     "integration_agent": "Codex",
