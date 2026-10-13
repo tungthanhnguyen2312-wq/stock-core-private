@@ -4386,7 +4386,7 @@
   "successor_disposition": "OWNER_SELECTED_OFFLINE_EVIDENCE_NO_AUTOMATIC_SUCCESSOR",
   "development_control": {
     "schema": "stocklookup_development_lanes/1",
-    "revision": 52,
+    "revision": 53,
     "history": [
       {
         "operation": "INIT",
@@ -4928,6 +4928,17 @@
         "agent": "Codex",
         "observed_head": "cfe5b440f038c0dd67fe24bc5a6d262f51e92a6b",
         "revision": 52
+      },
+      {
+        "operation": "TRANSITION",
+        "milestone_id": "CI_MANDATORY_IMPORT_AND_FINANCIAL_REGRESSIONS_CLEAN_CORE_V1",
+        "from": "REVIEW_READY",
+        "to": "COMPLETE_LOCAL",
+        "checkpoint": "230a1f9212f237355a09305953b9ce1993dadb16",
+        "owner_note": "Owner delegated same CI stage local completion: exact11 files,125 precise local cases plus finalhistoryguardPASS, current-main identicaltree proof, launcher/diff/frozen/source invariantsPASS. Actual extended hosted job now4280PASS/82explicit skips/129subtests, no failures; three other hostedjobsPASS, focused still pending and remains an unwaived release gate. No numerical/dependency/source/runtime authority change; no production/NAS operations.",
+        "agent": "Codex",
+        "observed_head": "0d273cbbb26811bd6e1f2a5aa2381b3ef8aa603a",
+        "revision": 53
       }
     ],
     "lanes": [
@@ -5792,7 +5803,7 @@
           "hosted-producer-ci",
           "extended-hermetic-actual-result"
         ],
-        "state": "REVIEW_READY",
+        "state": "COMPLETE_LOCAL",
         "checkpoint": "230a1f9212f237355a09305953b9ce1993dadb16",
         "authority_effect": "NONE",
         "admission_authority": {
@@ -5816,6 +5827,14 @@
             "to": "REVIEW_READY",
             "checkpoint": "230a1f9212f237355a09305953b9ce1993dadb16",
             "owner_note": "Exact11-file clean-core continuation checkpoint230a preservesc068 ancestry.125precise fixture/CI/nav testsPASS including optional DuckDB locally;3ownerhost cases deliberately deselected, no publisher/NAS operation. New history checkout guard1PASS; final reviewed normalized pin294e7ebb independently matches unchanged launcher targets. OriginalG2/business/quarterly/architecture proofs retained; all five actual hosted jobs pending, no failed-result bypass."
+          },
+          {
+            "operation": "TRANSITION",
+            "milestone_id": "CI_MANDATORY_IMPORT_AND_FINANCIAL_REGRESSIONS_CLEAN_CORE_V1",
+            "from": "REVIEW_READY",
+            "to": "COMPLETE_LOCAL",
+            "checkpoint": "230a1f9212f237355a09305953b9ce1993dadb16",
+            "owner_note": "Owner delegated same CI stage local completion: exact11 files,125 precise local cases plus finalhistoryguardPASS, current-main identicaltree proof, launcher/diff/frozen/source invariantsPASS. Actual extended hosted job now4280PASS/82explicit skips/129subtests, no failures; three other hostedjobsPASS, focused still pending and remains an unwaived release gate. No numerical/dependency/source/runtime authority change; no production/NAS operations."
           }
         ]
       }
