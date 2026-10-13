@@ -381,6 +381,118 @@ def test_registry_admitted_cross_issuer_redirect_does_not_bind_issuer():
     assert result['state']=='BLOCKED' and 'ISSUER_SOURCE_DOMAIN_MISMATCH' in result['reason_codes']
 
 
+def _attachment_fixture(*, ticker="HPG", period="2026-H1", origin="file.hoaphat.com.vn", final=None):
+    """Owned proof on explicit hosts; this is never a real HPG financial fact."""
+    row, context = proved_fixture(period, ticker=ticker)
+    url = "https://" + origin + "/test-only-synthetic-fixture.pdf"
+    context["source_record"].update(canonical_url=url,
+        final_url="https://" + (final or origin) + "/test-only-synthetic-fixture.pdf")
+    row["source_locator"] = url
+    row["document_metadata"]["document"]["source_locator"] = url
+    return row, context
+
+
+@pytest.mark.parametrize("period", ["2025", "2026-H1", "2026-Q2"])
+@pytest.mark.parametrize("origin,final", [
+    ("www.hoaphat.com.vn", "www.hoaphat.com.vn"),
+    ("file.hoaphat.com.vn", "file.hoaphat.com.vn"),
+    ("www.hoaphat.com.vn", "file.hoaphat.com.vn"),
+    ("file.hoaphat.com.vn", "www.hoaphat.com.vn"),
+])
+def test_existing_hpg_attachment_binding_runs_whole_common_admission(period, origin, final):
+    from official_financial_filing_evidence import admit_official_financial_fact
+    row, context = _attachment_fixture(period=period, origin=origin, final=final)
+    before = deepcopy((row, context))
+    result = admit_official_financial_fact(row, **context)
+    assert result["state"] == "ADMITTED", result
+    assert result["admission_basis"] == "RETAINED_SOURCE_REPLAY"
+    assert (row, context) == before
+    assert result == admit_official_financial_fact(deepcopy(row), **deepcopy(context))
+
+
+@pytest.mark.parametrize("ticker", ["PNJ", "FPT", "VNM"])
+def test_registered_hpg_attachment_host_cannot_bind_another_issuer(ticker):
+    from official_financial_filing_evidence import admit_official_financial_fact
+    row, context = _attachment_fixture(ticker=ticker)
+    result = admit_official_financial_fact(row, **context)
+    assert result["state"] == "BLOCKED"
+    assert "ISSUER_SOURCE_DOMAIN_MISMATCH" in result["reason_codes"]
+
+
+@pytest.mark.parametrize("host", [
+    "files.hoaphat.com.vn", "cdn.hoaphat.com.vn", "file-hoaphat.com.vn",
+    "file.hoaphat.com.vn.evil.invalid",
+])
+def test_registry_host_alone_cannot_create_an_hpg_attachment_binding(host):
+    from official_financial_filing_evidence import admit_official_financial_fact
+    row, context = _attachment_fixture(origin=host)
+    issuer_source = next(s for s in context["registry"]["sources"] if s["source_id"] == "issuer_ir")
+    issuer_source["allowed_hosts"].append(host)  # Synthetic approval cannot supply issuer linkage.
+    result = admit_official_financial_fact(row, **context)
+    assert result["state"] == "BLOCKED"
+    assert "ISSUER_SOURCE_DOMAIN_MISMATCH" in result["reason_codes"]
+
+
+@pytest.mark.parametrize("origin,final", [
+    ("file.hoaphat.com.vn", "www.pnj.com.vn"),
+    ("www.pnj.com.vn", "file.hoaphat.com.vn"),
+])
+def test_hpg_attachment_binding_rejects_cross_issuer_redirect_in_both_directions(origin, final):
+    from official_financial_filing_evidence import admit_official_financial_fact
+    row, context = _attachment_fixture(origin=origin, final=final)
+    result = admit_official_financial_fact(row, **context)
+    assert result["state"] == "BLOCKED"
+    assert "ISSUER_SOURCE_DOMAIN_MISMATCH" in result["reason_codes"]
+
+
+@pytest.mark.parametrize("final", ["file.hoaphat.com.vn", "www.hoaphat.com.vn"])
+@pytest.mark.parametrize("restriction", ["host_removed", "class_removed", "activation_removed"])
+def test_existing_hpg_attachment_relationship_cannot_bypass_current_registry(final, restriction):
+    from official_financial_filing_evidence import admit_official_financial_fact
+    row, context = _attachment_fixture(final=final)
+    issuer_source = next(s for s in context["registry"]["sources"] if s["source_id"] == "issuer_ir")
+    if restriction == "host_removed":
+        issuer_source["allowed_hosts"].remove("file.hoaphat.com.vn")
+    elif restriction == "class_removed":
+        issuer_source.setdefault("host_document_types", {})["file.hoaphat.com.vn"] = ["audited_annual_financial_statements"]
+    else:
+        issuer_source["activation"] = "declared"
+    result = admit_official_financial_fact(row, **context)
+    assert result["state"] == "BLOCKED"
+    assert "OFFICIAL_SOURCE_NOT_ADMITTED" in result["reason_codes"]
+
+
+@pytest.mark.parametrize("mutation,reason", [
+    ("source_ticker", "RETAINED_SOURCE_IDENTITY_MISMATCH"),
+    ("metadata_issuer", "DOCUMENT_ISSUER_IDENTITY_MISMATCH"),
+    ("literal_issuer", "RETAINED_ISSUER_LITERAL_PROOF_UNAVAILABLE"),
+    ("bytes", "RETAINED_DOCUMENT_HASH_MISMATCH"),
+    ("assurance", "DOCUMENT_ASSURANCE_PROOF_NOT_BOUND"),
+    ("period", "SOURCE_PERIOD_NOT_ADMITTED"),
+    ("cutoff", "AFTER_KNOWLEDGE_CUTOFF"),
+])
+def test_hpg_attachment_host_does_not_replace_independent_document_proofs(mutation, reason):
+    from official_financial_filing_evidence import admit_official_financial_fact
+    row, context = _attachment_fixture()
+    if mutation == "source_ticker":
+        context["source_record"]["ticker"] = "PNJ"
+    elif mutation == "metadata_issuer":
+        row["document_metadata"]["issuer_identity"] = "PNJ"
+    elif mutation == "literal_issuer":
+        context["document_pages"][1] = context["document_pages"][1].replace("HPG", "PNJ")
+    elif mutation == "bytes":
+        context["retained_bytes"] += b"changed"
+    elif mutation == "assurance":
+        row["assurance_evidence"]["document_sha256"] = "f" * 64
+    elif mutation == "period":
+        row["reporting_period"] = "2026-Q3"
+    else:
+        context["cutoff"] = "2026-10-06T00:00:00Z"
+    result = admit_official_financial_fact(row, **context)
+    assert result["state"] != "ADMITTED"
+    assert reason in result["reason_codes"]
+
+
 def test_common_rule_rejects_crossed_line_identity_without_relying_on_adapter():
     from official_financial_filing_evidence import admit_official_financial_fact
     row,context=proved_fixture(metric='net_income')

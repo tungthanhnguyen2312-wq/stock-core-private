@@ -57,6 +57,27 @@ No production refresh, Daily, deployment, source activation, provider substituti
 private/runtime data repair, or writes to the 27-row overlay. Default production call
 shapes and completed Daily artifacts are preserved. No second repository writer.
 
+## Existing HPG attachment-host compatibility
+
+The source-only `HPG_EXISTING_ISSUER_ATTACHMENT_BINDING_CORRECTIVE_V1` correction binds
+HPG to the exact `file.hoaphat.com.vn` attachment host already approved under
+`issuer_ir`. Its existing issuer relationship is recorded by the HPG FY2024 locator
+in `config/promoted_fundamental_coverage_closeout_evidence.json`, document SHA-256
+`304a93a65e1587f625e0045d6ec9bcfba6647d19df4034cfd8fc1ec7b62eeb64`.
+The issuer index host and attachment host may redirect between each other only when
+the existing registry admits the attachment origin and final URL for the exact
+document class at the retained observation time. Neither a registered unrelated
+host nor another subdomain establishes an issuer relationship.
+
+The common admission still requires matching retained manifest/metadata issuer,
+original bytes/hash, native issuer/period/scope/unit/value spans, bound assurance,
+qualified state, knowledge cutoff and intended use. Synthetic common-owner tests
+prove the compatible path and rejection of wrong issuers, unknown/near-match hosts,
+cross-issuer redirects, withdrawn host/class approval and missing/altered proof.
+No host, cohort, acquisition seed, period, share, overlay or formula is added.
+The external HPG H1 packet remains candidate evidence; this compatibility correction
+alone creates no official fact, newly active ratio or production authority.
+
 ## Release gate
 
 Focused and broad financial/valuation/packet regressions, native checks and four hosted
