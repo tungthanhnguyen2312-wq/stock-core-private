@@ -4386,7 +4386,7 @@
   "successor_disposition": "OWNER_SELECTED_OFFLINE_EVIDENCE_NO_AUTOMATIC_SUCCESSOR",
   "development_control": {
     "schema": "stocklookup_development_lanes/1",
-    "revision": 21,
+    "revision": 24,
     "history": [
       {
         "operation": "INIT",
@@ -4602,6 +4602,36 @@
         "agent": "Codex",
         "observed_head": "7637d0d3ef0905efa541eeced15b23aa600c3711",
         "revision": 21
+      },
+      {
+        "operation": "TRANSITION",
+        "milestone_id": "ARCHITECTURE_IMPORT_RELIABILITY_V1",
+        "from": "REVIEW_READY",
+        "to": "ACTIVE",
+        "checkpoint": "7c067d3407c11f1ec51a8ec8132f8d608e874e0e",
+        "owner_note": "Owner program delegates in-scope fixes and integration. Independent review found G2 records import-time side effects without refusing them and ignores child exit status. Reopen review candidate for bounded test-harness correction in its already admitted file; no product/source/runtime changes. Claude handoff confirms original branch idle; delegated subagent is sole writer.",
+        "agent": "Codex",
+        "observed_head": "4b9a6be97bddb246235ffce4e8c0aaf64818ddf4",
+        "revision": 22
+      },
+      {
+        "operation": "ADMIT",
+        "milestone_id": "HPG_EXISTING_ISSUER_ATTACHMENT_BINDING_CORRECTIVE_V1",
+        "owner_note": "Owner program20261013 domains existing official financial intake and consumer correctness authorize smallest HPG already-approved attachment binding repair. Exact three-file lane only, supported by existing HPG host registry and retained issuer locator; no cohort, registry, source activation, period/assurance, runtime, frozen-source or production changes.",
+        "agent": "Codex",
+        "observed_head": "4b9a6be97bddb246235ffce4e8c0aaf64818ddf4",
+        "revision": 23
+      },
+      {
+        "operation": "TRANSITION",
+        "milestone_id": "HPG_EXISTING_ISSUER_ATTACHMENT_BINDING_CORRECTIVE_V1",
+        "from": "ADMITTED",
+        "to": "ACTIVE",
+        "checkpoint": null,
+        "owner_note": "Activate exact admitted HPG compatibility corrective under Owner program20261013. Actual common-owner reproduction proves existing approved file host blocks solely due to exact issuer seed mismatch. Subagent sole writer of admitted source/test/contract; no authority promotion, new source activation or protected data.",
+        "agent": "Codex",
+        "observed_head": "4b9a6be97bddb246235ffce4e8c0aaf64818ddf4",
+        "revision": 24
       }
     ],
     "lanes": [
@@ -4794,7 +4824,7 @@
         "consumes": {},
         "domain": "architecture-import-reliability",
         "shared_paths": [],
-        "state": "REVIEW_READY",
+        "state": "ACTIVE",
         "checkpoint": "7c067d3407c11f1ec51a8ec8132f8d608e874e0e",
         "authority_effect": "NONE",
         "admission_authority": {
@@ -4818,6 +4848,14 @@
             "to": "REVIEW_READY",
             "checkpoint": "7c067d3407c11f1ec51a8ec8132f8d608e874e0e",
             "owner_note": "Owner engineering program 20261013 explicitly delegates integration and source-only merge of PR136 under normal native and exact-head CI gates; completed Claude guard implementation at verified clean exact HEAD, integrated tests on observed main pending."
+          },
+          {
+            "operation": "TRANSITION",
+            "milestone_id": "ARCHITECTURE_IMPORT_RELIABILITY_V1",
+            "from": "REVIEW_READY",
+            "to": "ACTIVE",
+            "checkpoint": "7c067d3407c11f1ec51a8ec8132f8d608e874e0e",
+            "owner_note": "Owner program delegates in-scope fixes and integration. Independent review found G2 records import-time side effects without refusing them and ignores child exit status. Reopen review candidate for bounded test-harness correction in its already admitted file; no product/source/runtime changes. Claude handoff confirms original branch idle; delegated subagent is sole writer."
           }
         ]
       },
@@ -4930,6 +4968,55 @@
           }
         ],
         "release_sha": "a0f54b391576958c7f2569b2433fd462a4e81243"
+      },
+      {
+        "milestone_id": "HPG_EXISTING_ISSUER_ATTACHMENT_BINDING_CORRECTIVE_V1",
+        "responsible_agent": "Codex",
+        "branch": "feature/hpg-existing-source-binding-20261013",
+        "worktree": "C:\\Projects\\StockLookup\\hpg-existing-source-binding-20261013",
+        "base_sha": "a0f54b391576958c7f2569b2433fd462a4e81243",
+        "domain": "existing-hpg-issuer-attachment-binding",
+        "mode": "IMPLEMENTATION",
+        "allowed_paths": [
+          "official_financial_filing_evidence.py",
+          "tests/test_official_financial_source_integrity.py",
+          "docs/official_financial_source_qualification_integrity_corrective_v1_contract.md"
+        ],
+        "shared_paths": [],
+        "dependencies": [
+          "OFFICIAL_FINANCIAL_EVIDENCE_INTAKE_AND_QUARTERLY_SEMANTICS_V1"
+        ],
+        "provides": {
+          "existing_hpg_attachment_binding": "v1"
+        },
+        "consumes": {
+          "official_financial_intake": "v1"
+        },
+        "required_checks": [
+          "actual-common-owner-source-integrity",
+          "financial-authority-regressions",
+          "structural-frozen",
+          "offline-call-shape",
+          "hosted-producer-ci"
+        ],
+        "state": "ACTIVE",
+        "checkpoint": null,
+        "authority_effect": "NONE",
+        "admission_authority": {
+          "kind": "EXPLICIT_OWNER_DIRECTIVE",
+          "note": "Owner program20261013 domains existing official financial intake and consumer correctness authorize smallest HPG already-approved attachment binding repair. Exact three-file lane only, supported by existing HPG host registry and retained issuer locator; no cohort, registry, source activation, period/assurance, runtime, frozen-source or production changes.",
+          "integration_agent": "Codex"
+        },
+        "history": [
+          {
+            "operation": "TRANSITION",
+            "milestone_id": "HPG_EXISTING_ISSUER_ATTACHMENT_BINDING_CORRECTIVE_V1",
+            "from": "ADMITTED",
+            "to": "ACTIVE",
+            "checkpoint": null,
+            "owner_note": "Activate exact admitted HPG compatibility corrective under Owner program20261013. Actual common-owner reproduction proves existing approved file host blocks solely due to exact issuer seed mismatch. Subagent sole writer of admitted source/test/contract; no authority promotion, new source activation or protected data."
+          }
+        ]
       }
     ],
     "integration_agent": "Codex",
