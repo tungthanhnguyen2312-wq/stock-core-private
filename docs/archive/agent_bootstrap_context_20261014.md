@@ -76,3 +76,4 @@ are never mandatory. A rebaselined architecture does not by itself reopen a comp
 historical milestone, and existing retained evidence is reused, not recreated,
 wherever it already answers a question.
 
+<!-- END PRESERVED AGENT DIRECTION -->
