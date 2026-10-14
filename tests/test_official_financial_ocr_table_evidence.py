@@ -77,6 +77,34 @@ def test_shared_row_match_refuses_native_or_mixed_tokens():
     assert match_geometry_table_row(page, line_code="10", target_period="2025") is None
 
 
+@pytest.mark.parametrize("labels,expected_code,reason", [
+    ({"270": "TOTAL ASSETS"}, "270", None),
+    ({"280": "TOTAL ASSETS", "270": "NON-CURRENT ASSETS"}, "280", None),
+    ({"270": "NON-CURRENT ASSETS"}, None, "ROW_LABEL_DOES_NOT_SUPPORT_METRIC"),
+    ({"270": "TOTAL ASSETS", "280": "TOTAL ASSETS"}, None, "ROW_NOT_UNIQUE_OR_NOT_GEOMETRICALLY_RESOLVED"),
+    ({}, None, "ROW_NOT_UNIQUE_OR_NOT_GEOMETRICALLY_RESOLVED"),
+])
+def test_total_assets_layout_is_literal_unique_and_not_a_ticker_alias(monkeypatch, labels, expected_code, reason):
+    page = {"page_number": 1, "source_image_evidence": {"fixture_only": True}}
+    monkeypatch.setattr(cell_module, "_pages_by_statement_family", lambda material: {"balance_sheet": [page]})
+    def match(page, *, line_code, **kwargs):
+        if line_code not in labels:
+            return None
+        return {"page": 1, "line_text": labels[line_code], "current_raw": "1.000", "comparative_raw": "900",
+                "row_object": {"reconstructed_label": labels[line_code], "line_code": line_code}}
+    monkeypatch.setattr(cell_module, "match_geometry_table_row", match)
+    result = qualify_table_facts({"document_sha256": "a"*64, "materialization_id": "synthetic-fixture",
+                                 "pages": []}, ticker="SYNTHETIC", reporting_period="2026-H1", unit_scale=1)
+    facts = [f for f in result["qualified_facts"] if f["canonical_metric"] == "total_assets"]
+    if expected_code:
+        assert len(facts) == 1 and facts[0]["source_lineage"]["line_code"] == expected_code
+        assert facts[0]["value"] == 1000
+    else:
+        assert not facts
+        rejected = [f for f in result["blocked_candidates"] if f["canonical_metric"] == "total_assets"]
+        assert len(rejected) == 1 and rejected[0]["reason"] == reason
+
+
 def test_explicit_consolidated_scope_is_page_scoped_and_required_when_supplied():
     def token(text, order, top=10):
         return {"text": text, "token_id": str(order), "raw_token_order": order, "top": top, "bottom": top + 1,
