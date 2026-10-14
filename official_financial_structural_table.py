@@ -682,7 +682,17 @@ def _discover_column_bands_with_year(lines: Sequence[Mapping[str, Any]], target_
         except ValueError:
             continue
         amount_tokens.append(token)
-    amount_clusters = [cluster for cluster in _x_clusters(amount_tokens) if len(cluster) >= 3]
+    # Right-aligned values with different digit widths can split one printed
+    # column into two start-x clusters. Coalesce only clusters whose rendered
+    # glyph extents overlap; adjacent columns remain spatially distinct.
+    amount_clusters = []
+    for cluster in _x_clusters(amount_tokens):
+        if amount_clusters and min(float(token["x0"]) for token in cluster) <= max(
+                float(token["x1"]) for token in amount_clusters[-1]):
+            amount_clusters[-1].extend(cluster)
+        else:
+            amount_clusters.append(list(cluster))
+    amount_clusters = [cluster for cluster in amount_clusters if len(cluster) >= 3]
     if len(amount_clusters) < 2:
         return None
     first_cluster, second_cluster = amount_clusters[-2:]

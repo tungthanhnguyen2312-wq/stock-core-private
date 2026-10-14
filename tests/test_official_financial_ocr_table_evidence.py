@@ -4,7 +4,9 @@ from __future__ import annotations
 import json
 import copy
 import inspect
+import pytest
 from pathlib import Path
+import pytest
 
 from annual_financial_ocr_materialization import parse_accounting_integer
 import official_financial_ocr_table_evidence as cell_module
@@ -24,8 +26,33 @@ from official_financial_structural_table import match_geometry_ambiguous_line_co
 
 
 ROOT = Path(__file__).resolve().parents[1]
+VRE_RETAINED_ROOT = ROOT.parent / "data-landing" / "official-financial-filings-v1" / "currency-refresh-20260929"
 EVIDENCE = ROOT / "operations-review" / "governed-official-evidence-v1"
+if not (EVIDENCE / "official_document_acquisition_manifest.json").is_file():
+    EVIDENCE = ROOT.parent / "stock-core-private" / "operations-review" / "governed-official-evidence-v1"
 DOCUMENT_SHA = "630f61f6ef9f07d5c593c3bf8f65bad1d56ecbb091921296ed5c4e830ea070a4"
+
+
+@pytest.mark.skipif(not (VRE_RETAINED_ROOT / "official_document_acquisition_manifest.json").is_file(),
+                    reason="retained VRE filing unavailable")
+def test_retained_vre_h1_total_assets_requires_line_280_and_explicit_closing_column():
+    manifest = json.loads((VRE_RETAINED_ROOT / "official_document_acquisition_manifest.json").read_text(encoding="utf-8"))
+    record = next(row for row in manifest["records"] if row.get("sha256") ==
+                  "7e9b9e39901a028972fff80bc1a4f9f5cab4c1526ce4029f9b853ccff6aeaac0")
+    material = materialize_tsv_pages(record, evidence_root=VRE_RETAINED_ROOT, pages=(8,))
+    facts = qualify_table_facts(material, ticker="VRE", reporting_period="2026-H1",
+                                scoped_unit_evidence=resolve_scoped_unit_evidence(material),
+                                scoped_statement_scope_evidence=resolve_scoped_statement_scope_evidence(material))
+    assets = [row for row in facts["qualified_facts"] if row["canonical_metric"] == "total_assets"]
+    assert len(assets) == 1
+    assert assets[0]["value"] == 62_806_214_000_000
+    assert assets[0]["currency"] == "VND" and assets[0]["unit_scale"] == 1_000_000
+    assert assets[0]["source_lineage"]["line_code"] == "280"
+    row = assets[0]["source_lineage"]["row_object"]
+    assert row["current_period_label"] == "Số cuối kỳ"
+    assert row["comparative_period_label"] == "Số đầu kỳ"
+    assert row["current_raw_value"] == "62.806.214"
+    assert row["comparative_raw_value"] == "61.279.149"
 
 
 def _record() -> dict:
@@ -48,6 +75,34 @@ def test_shared_row_match_refuses_native_or_mixed_tokens():
     page = {"page_number": 1, "positioned_tokens": [{"text": "10", "x0": 1, "x1": 2, "top": 1, "bottom": 2,
              "raw_token_order": 0, "provenance": "NATIVE_PDF_POSITIONED_TOKEN"}]}
     assert match_geometry_table_row(page, line_code="10", target_period="2025") is None
+
+
+@pytest.mark.parametrize("labels,expected_code,reason", [
+    ({"270": "TOTAL ASSETS"}, "270", None),
+    ({"280": "TOTAL ASSETS", "270": "NON-CURRENT ASSETS"}, "280", None),
+    ({"270": "NON-CURRENT ASSETS"}, None, "ROW_LABEL_DOES_NOT_SUPPORT_METRIC"),
+    ({"270": "TOTAL ASSETS", "280": "TOTAL ASSETS"}, None, "ROW_NOT_UNIQUE_OR_NOT_GEOMETRICALLY_RESOLVED"),
+    ({}, None, "ROW_NOT_UNIQUE_OR_NOT_GEOMETRICALLY_RESOLVED"),
+])
+def test_total_assets_layout_is_literal_unique_and_not_a_ticker_alias(monkeypatch, labels, expected_code, reason):
+    page = {"page_number": 1, "source_image_evidence": {"fixture_only": True}}
+    monkeypatch.setattr(cell_module, "_pages_by_statement_family", lambda material: {"balance_sheet": [page]})
+    def match(page, *, line_code, **kwargs):
+        if line_code not in labels:
+            return None
+        return {"page": 1, "line_text": labels[line_code], "current_raw": "1.000", "comparative_raw": "900",
+                "row_object": {"reconstructed_label": labels[line_code], "line_code": line_code}}
+    monkeypatch.setattr(cell_module, "match_geometry_table_row", match)
+    result = qualify_table_facts({"document_sha256": "a"*64, "materialization_id": "synthetic-fixture",
+                                 "pages": []}, ticker="SYNTHETIC", reporting_period="2026-H1", unit_scale=1)
+    facts = [f for f in result["qualified_facts"] if f["canonical_metric"] == "total_assets"]
+    if expected_code:
+        assert len(facts) == 1 and facts[0]["source_lineage"]["line_code"] == expected_code
+        assert facts[0]["value"] == 1000
+    else:
+        assert not facts
+        rejected = [f for f in result["blocked_candidates"] if f["canonical_metric"] == "total_assets"]
+        assert len(rejected) == 1 and rejected[0]["reason"] == reason
 
 
 def test_explicit_consolidated_scope_is_page_scoped_and_required_when_supplied():
@@ -180,7 +235,14 @@ def test_cell_level_production_path_is_document_generic_not_ticker_specific():
 def test_panel_adapter_requires_qualified_metadata_and_complete_row_lineage():
     materialization = materialize_tsv_pages(_record(), evidence_root=EVIDENCE, pages=(12,))
     result = qualify_table_facts(materialization, ticker="FPT", reporting_period="2025")
-    facts = panel_facts_from_qualified_ocr(result, entity_type="corporate", statement_scope="consolidated",
-                                            audit_or_review_status="audited", knowledge_available_at=_record()["observed_at"], observed_at=_record()["observed_at"])
+    # Table geometry is not an auditor report. The original fixture supplied an
+    # unsupported audited claim; the mandatory retained-assurance contract must
+    # refuse it. Positive document-bound ingress is covered independently by
+    # test_reviewed_interim_canonical_ingress with explicit report evidence.
+    with pytest.raises(ValueError, match="AUDITED_STATUS_REQUIRES_RETAINED_DOCUMENT_EVIDENCE"):
+        panel_facts_from_qualified_ocr(result, entity_type="corporate", statement_scope="consolidated",
+                                      audit_or_review_status="audited", knowledge_available_at=_record()["observed_at"], observed_at=_record()["observed_at"])
+    facts = result["qualified_facts"]
     assert {fact["canonical_metric"] for fact in facts} == {"revenue", "net_income", "attributable_net_income"}
-    assert all(fact["source_lineage"]["citation_id"] and fact["qualification_state"] == "QUALIFIED" for fact in facts)
+    assert all(fact["source_lineage"]["document_sha256"] == DOCUMENT_SHA
+               and fact["source_lineage"]["row_object"] and fact["qualification_state"] == "QUALIFIED" for fact in facts)
