@@ -35,7 +35,9 @@ CELL_CODE_READ_CONFIG = {
 _VALID_LINE_CODE_RE = re.compile(r"^[0-9]{1,3}$")
 STANDARD_FACT_RULES = (
     ("cash_and_equivalents", "balance_sheet", "110"),
-    ("total_assets", "balance_sheet", "270"),
+    # Current VAS balance-sheet form: 270 is long-term other assets;
+    # total assets is the separately labelled sum at line 280.
+    ("total_assets", "balance_sheet", "280"),
     ("shareholders_equity", "balance_sheet", "400"),
     ("revenue", "income_statement", "10"),
     # Two distinct canonical concepts (canonical_financial_facts.METRIC_REGISTRY): line 60 is total

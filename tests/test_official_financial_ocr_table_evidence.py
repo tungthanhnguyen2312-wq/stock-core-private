@@ -5,6 +5,7 @@ import json
 import copy
 import inspect
 from pathlib import Path
+import pytest
 
 from annual_financial_ocr_materialization import parse_accounting_integer
 import official_financial_ocr_table_evidence as cell_module
@@ -24,8 +25,33 @@ from official_financial_structural_table import match_geometry_ambiguous_line_co
 
 
 ROOT = Path(__file__).resolve().parents[1]
+VRE_RETAINED_ROOT = ROOT.parent / "data-landing" / "official-financial-filings-v1" / "currency-refresh-20260929"
 EVIDENCE = ROOT / "operations-review" / "governed-official-evidence-v1"
+if not (EVIDENCE / "official_document_acquisition_manifest.json").is_file():
+    EVIDENCE = ROOT.parent / "stock-core-private" / "operations-review" / "governed-official-evidence-v1"
 DOCUMENT_SHA = "630f61f6ef9f07d5c593c3bf8f65bad1d56ecbb091921296ed5c4e830ea070a4"
+
+
+@pytest.mark.skipif(not (VRE_RETAINED_ROOT / "official_document_acquisition_manifest.json").is_file(),
+                    reason="retained VRE filing unavailable")
+def test_retained_vre_h1_total_assets_requires_line_280_and_explicit_closing_column():
+    manifest = json.loads((VRE_RETAINED_ROOT / "official_document_acquisition_manifest.json").read_text(encoding="utf-8"))
+    record = next(row for row in manifest["records"] if row.get("sha256") ==
+                  "7e9b9e39901a028972fff80bc1a4f9f5cab4c1526ce4029f9b853ccff6aeaac0")
+    material = materialize_tsv_pages(record, evidence_root=VRE_RETAINED_ROOT, pages=(8,))
+    facts = qualify_table_facts(material, ticker="VRE", reporting_period="2026-H1",
+                                scoped_unit_evidence=resolve_scoped_unit_evidence(material),
+                                scoped_statement_scope_evidence=resolve_scoped_statement_scope_evidence(material))
+    assets = [row for row in facts["qualified_facts"] if row["canonical_metric"] == "total_assets"]
+    assert len(assets) == 1
+    assert assets[0]["value"] == 62_806_214_000_000
+    assert assets[0]["currency"] == "VND" and assets[0]["unit_scale"] == 1_000_000
+    assert assets[0]["source_lineage"]["line_code"] == "280"
+    row = assets[0]["source_lineage"]["row_object"]
+    assert row["current_period_label"] == "Số cuối kỳ"
+    assert row["comparative_period_label"] == "Số đầu kỳ"
+    assert row["current_raw_value"] == "62.806.214"
+    assert row["comparative_raw_value"] == "61.279.149"
 
 
 def _record() -> dict:
