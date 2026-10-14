@@ -258,7 +258,17 @@ def lane_command(args, state: dict, repo: Path | None) -> dict:
         if (res._path_key(str(repo)) != res._path_key(control["integration_worktree"])
                 or res.git_branch(repo) != control["integration_branch"] or args.agent != control["integration_agent"]):
             raise res.RoadmapStateError("LANE_ONLY_BOUND_INTEGRATION_OWNER_MAY_MUTATE")
-        if args.admit_lane:
+        if args.amend_lane_declarations:
+            spec = json.loads(args.declaration_spec.read_text(encoding="utf-8")) if args.declaration_spec else None
+            state, changes = res.prepare_declaration_amendment(state, spec, repo=repo)
+            control = state["development_control"]
+            for change in changes:
+                lane = res.lane_by_id(state, change["milestone_id"])
+                lane["history"].append({"operation": "AMEND_DECLARATIONS", **change,
+                                        "owner_note": args.scope_note})
+            event = {"operation": "AMEND_DECLARATIONS", "expected_revision": spec["expected_revision"],
+                     "amendments": changes}
+        elif args.admit_lane:
             lane = json.loads(args.lane_spec.read_text(encoding="utf-8")) if args.lane_spec else None
             if not isinstance(lane, dict) or lane.get("milestone_id") != args.admit_lane:
                 raise res.RoadmapStateError("LANE_EXACT_SPEC_REQUIRED")
@@ -351,13 +361,22 @@ def main(argv: list[str] | None = None) -> int:
     lanes.add_argument("--transition-lane", metavar="ID", help="Record one lane lifecycle/checkpoint without changing legacy current.")
     lanes.add_argument("--check-lane", metavar="ID", help="Read-only branch, worktree, ownership and checkpoint validation.")
     lanes.add_argument("--integration-plan", action="store_true", help="Read-only exact-main integration order and review gate.")
+    lanes.add_argument("--amend-lane-declarations", action="store_true",
+                       help="Owner-reviewed atomic declaration-only correction; no checkpoint, lease or state changes.")
     parser.add_argument("--agent", help="Recorded integration owner identity (attestation, not authentication).")
     parser.add_argument("--lane-spec", type=Path, help="Exact admission specification; not an execution-state registry.")
     parser.add_argument("--lane-state", choices=sorted(res.LANE_STATES))
     parser.add_argument("--main-sha", help="Full independently observed remote main; verified by ls-remote without fetching.")
     parser.add_argument("--review-receipt", type=Path, help="Exact-plan reviewer/test evidence receipt; grants no merge authority.")
     parser.add_argument("--candidate-lane", help="Plan one candidate; dependent successors remain separately gated.")
+    parser.add_argument("--declaration-spec", type=Path,
+                        help="Exact versioned batch with expected revision, checkpoints and before/after declarations.")
     args = parser.parse_args(argv)
+    if args.declaration_spec and not args.amend_lane_declarations:
+        parser.error("declaration spec requires --amend-lane-declarations")
+    if args.amend_lane_declarations and any((args.lane_spec, args.lane_state, args.checkpoint_at,
+                                            args.main_sha, args.review_receipt, args.candidate_lane)):
+        parser.error("declaration correction cannot combine lifecycle or integration arguments")
 
     try:
         state = res.load_state(args.state_file)
@@ -370,7 +389,7 @@ def main(argv: list[str] | None = None) -> int:
     if state.get("development_control") and (args.admit_scope or args.continue_scope or args.complete_local_scope):
         parser.error("coordinated mode requires scoped lane operations; legacy history remains preserved")
 
-    if args.init_lanes or args.admit_lane or args.transition_lane or args.check_lane or args.integration_plan:
+    if args.init_lanes or args.admit_lane or args.transition_lane or args.check_lane or args.integration_plan or args.amend_lane_declarations:
         if args.admit_scope or args.continue_scope or args.complete_local_scope or args.can_start or args.worktrees:
             parser.error("lane operations cannot be combined with legacy operations")
         try:

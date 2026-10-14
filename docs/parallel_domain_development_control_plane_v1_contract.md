@@ -85,6 +85,41 @@ background coordinator or persistent lock ownership. A crash preserves either ol
 or new complete state, including revision/history and exact lane checkpoints.
 Legacy JSON is preserved textually; only the extension changes through lane commands.
 
+## Declaration-only correction extension
+
+`--amend-lane-declarations --declaration-spec <reviewed-batch>` adds an explicit
+metadata-only operation to the existing CLI. It uses the same native coordinator,
+bound integration owner, Owner directive, lock, byte CAS and atomic writer. The
+existing schema and legacy queries/commands remain unchanged. A locally admitted,
+validated candidate CLI may be used for this Owner-authorized local correction;
+that use does not authorize merging or releasing the extension.
+
+The batch schema is `stocklookup_lane_declaration_amendment/1`, with exact
+`expected_revision` and a nonempty `amendments` list. Each item contains only
+`milestone_id`, the preserved `checkpoint`, `before`, `after`, and `review_note`.
+Both declaration maps contain exactly `provides`, `consumes`, `dependencies`.
+Targets must be IMPLEMENTATION lanes at exact clean REVIEW_READY/COMPLETE_LOCAL
+checkpoints, with matching before-values. Duplicate targets, stale revision/HEAD,
+dirty sources, terminal lanes, reserved fields, malformed declarations, cycles,
+duplicate interface owners, mismatched versions, missing direct dependencies and
+new/orphaned consumed interfaces fail without writing anything. Existing
+dependencies cannot be removed by this narrow operation.
+
+All items are validated together before one atomic write. A correction appends a
+single global `AMEND_DECLARATIONS` event and one event per affected lane, retaining
+exact before/after declarations and review notes. Historical event prefixes and
+unrelated lanes are preserved. IDs, branches, worktrees, bases, leases, ownership,
+checkpoints, states, required checks and authority cannot be supplied or changed.
+No reopening, lease transfer, release, dependency promotion or new authority is
+performed. The normal integration plan still enforces actual released dependencies,
+main/checkpoint ancestry, file conflicts and fresh exact review/test receipts.
+
+The October14 correction distinguishes Home's optional-card builder from its
+consumer/restaging interface and OCR's extraction-qualified assets candidate.
+It removes a nonexistent financial-input publication declaration from Home; it
+does not publish that input or a financial metric. Governance source merge remains
+an explicit Owner review gate.
+
 ## Integration planning
 
 `--integration-plan --main-sha <observed-main> [--candidate-lane ID]` reads
