@@ -35,9 +35,9 @@ CELL_CODE_READ_CONFIG = {
 _VALID_LINE_CODE_RE = re.compile(r"^[0-9]{1,3}$")
 STANDARD_FACT_RULES = (
     ("cash_and_equivalents", "balance_sheet", "110"),
-    # Current VAS balance-sheet form: 270 is long-term other assets;
-    # total assets is the separately labelled sum at line 280.
-    ("total_assets", "balance_sheet", "280"),
+    # Both retained statement layouts exist. attempt resolves 270/280 by
+    # literal total-assets identity, never by code alone or ticker/year.
+    ("total_assets", "balance_sheet", "270"),
     ("shareholders_equity", "balance_sheet", "400"),
     ("revenue", "income_statement", "10"),
     # Two distinct canonical concepts (canonical_financial_facts.METRIC_REGISTRY): line 60 is total
@@ -450,22 +450,30 @@ def qualify_table_facts(materialization: Mapping[str, Any], *, ticker: str, repo
     resolved_cells = {str(item.get("canonical_metric")): item for item in (line_code_cell_resolution or {}).get("cells", [])}
     def attempt(metric: str, family: str, code: str) -> dict[str, Any] | None:
         matches = []
+        rejected_labels = []
         for page in pages_by_family.get(family, []):
-            match = match_geometry_table_row(page, line_code=code, target_period=reporting_period)
-            # Preserve an already literal, qualified physical label. TSV hierarchy
-            # is a label-only fallback for an incomplete identity, never a new
-            # amount/period candidate or a repair of OCR letters.
-            if match and not row_label_supports_metric(metric, str(match.get("line_text") or "")):
-                wrapped = match_geometry_table_row(page, line_code=code, target_period=reporting_period,
-                                                   bind_wrapped_label=True)
-                if wrapped and row_label_supports_metric(metric, str(wrapped.get("line_text") or "")):
-                    match = wrapped
-            matches.append(match)
-        matches = [match for match in matches if match is not None]
+            for candidate_code in (("270", "280") if metric == "total_assets" else (code,)):
+                match = match_geometry_table_row(page, line_code=candidate_code, target_period=reporting_period)
+                # Label-only fallback; amounts, units and periods are never repaired.
+                if match and not row_label_supports_metric(metric, str(match.get("line_text") or "")):
+                    wrapped = match_geometry_table_row(page, line_code=candidate_code, target_period=reporting_period,
+                                                       bind_wrapped_label=True)
+                    if wrapped and row_label_supports_metric(metric, str(wrapped.get("line_text") or "")):
+                        match = wrapped
+                if match and metric == "total_assets" and not row_label_supports_metric(metric,
+                        str((match.get("row_object") or {}).get("reconstructed_label") or match.get("line_text") or "")):
+                    rejected_labels.append(candidate_code)
+                    continue
+                if match is not None:
+                    matches.append((match, candidate_code))
+        if metric == "total_assets" and not matches and rejected_labels:
+            blocked.append({"canonical_metric": metric, "line_code": rejected_labels[0], "statement_family": family,
+                            "state": "BLOCKED", "reason": "ROW_LABEL_DOES_NOT_SUPPORT_METRIC"})
+            return None
         cell_resolution = resolved_cells.get(metric)
         cell_evidence = None
         if len(matches) == 1:
-            match = matches[0]
+            match, code = matches[0]
         elif cell_resolution and cell_resolution.get("state") == "QUALIFIED":
             match = cell_resolution["match"]
             cell_evidence = cell_resolution.get("cell_evidence")
