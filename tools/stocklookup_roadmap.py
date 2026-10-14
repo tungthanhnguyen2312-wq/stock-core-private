@@ -256,10 +256,28 @@ def lane_command(args, state: dict, repo: Path | None) -> dict:
     else:
         if not control:
             raise res.RoadmapStateError("LANE_COORDINATOR_NOT_INITIALIZED")
+        transfer = json.loads(args.transfer_spec.read_text(encoding="utf-8")) if args.transfer_integration_owner and args.transfer_spec else None
+        if args.transfer_integration_owner and (not isinstance(transfer, dict) or args.agent != transfer.get("to_agent")):
+            raise res.RoadmapStateError("LANE_TRANSFER_ACTING_AGENT_MUST_BE_NAMED_SUCCESSOR")
+        # A successor acts only through the exact predecessor named in the Owner's spec.
+        bound_agent = transfer.get("from_agent") if args.transfer_integration_owner else args.agent
         if (res._path_key(str(repo)) != res._path_key(control["integration_worktree"])
-                or res.git_branch(repo) != control["integration_branch"] or args.agent != control["integration_agent"]):
+                or res.git_branch(repo) != control["integration_branch"] or bound_agent != control["integration_agent"]):
             raise res.RoadmapStateError("LANE_ONLY_BOUND_INTEGRATION_OWNER_MAY_MUTATE")
-        if args.release_coupled_lanes:
+        if args.transfer_integration_owner:
+            state, change = res.prepare_integration_owner_transfer(state, transfer, repo=repo)
+            control = state["development_control"]
+            by_id = {l["milestone_id"]: l for l in control["lanes"]}
+            for item in change["successor_lanes"]:
+                by_id[item["milestone_id"]]["history"].append(
+                    {"operation": "INTEGRATION_OWNER_TRANSFER", "from_agent": change["from_agent"],
+                     "to_agent": change["to_agent"], "checkpoint": item["checkpoint"], "owner_note": args.scope_note})
+            control["integration_agent"] = change["to_agent"]
+            control.setdefault("integration_owner_succession", []).append(
+                {"from_agent": change["from_agent"], "to_agent": change["to_agent"],
+                 "revision": control["revision"] + 1, "owner_note": args.scope_note})
+            event = {"operation": "INTEGRATION_OWNER_TRANSFER", **change}
+        elif args.release_coupled_lanes:
             spec = json.loads(args.coupled_spec.read_text(encoding="utf-8")) if args.coupled_spec else None
             receipt = json.loads(args.review_receipt.read_text(encoding="utf-8")) if args.review_receipt else {}
             if spec is None:
@@ -391,6 +409,8 @@ def main(argv: list[str] | None = None) -> int:
                        help="Owner-reviewed atomic declaration-only correction; no checkpoint, lease or state changes.")
     lanes.add_argument("--release-coupled-lanes", action="store_true",
                        help="Atomic true release of two explicitly reviewed, coupled source candidates already on main.")
+    lanes.add_argument("--transfer-integration-owner", action="store_true",
+                       help="Owner-directed succession of the single integration owner from an exact revision/HEAD spec.")
     parser.add_argument("--agent", help="Recorded integration owner identity (attestation, not authentication).")
     parser.add_argument("--lane-spec", type=Path, help="Exact admission specification; not an execution-state registry.")
     parser.add_argument("--lane-state", choices=sorted(res.LANE_STATES))
@@ -400,7 +420,14 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--declaration-spec", type=Path,
                         help="Exact versioned batch with expected revision, checkpoints and before/after declarations.")
     parser.add_argument("--coupled-spec", type=Path, help="Exact two-candidate fixture and failed standalone evidence; no implicit dependency release.")
+    parser.add_argument("--transfer-spec", type=Path,
+                        help="Exact predecessor/successor, expected revision, coordinator HEAD and in-flight lane heads.")
     args = parser.parse_args(argv)
+    if bool(args.transfer_spec) != bool(args.transfer_integration_owner):
+        parser.error("integration owner transfer requires exactly --transfer-integration-owner with --transfer-spec")
+    if args.transfer_integration_owner and any((args.lane_spec, args.lane_state, args.checkpoint_at, args.main_sha,
+                                                args.review_receipt, args.candidate_lane, args.declaration_spec, args.coupled_spec)):
+        parser.error("integration owner transfer cannot combine lifecycle, integration or declaration arguments")
     if args.declaration_spec and not args.amend_lane_declarations:
         parser.error("declaration spec requires --amend-lane-declarations")
     if args.coupled_spec and not (args.integration_plan or args.release_coupled_lanes):
@@ -422,7 +449,8 @@ def main(argv: list[str] | None = None) -> int:
     if state.get("development_control") and (args.admit_scope or args.continue_scope or args.complete_local_scope):
         parser.error("coordinated mode requires scoped lane operations; legacy history remains preserved")
 
-    if args.init_lanes or args.admit_lane or args.transition_lane or args.check_lane or args.integration_plan or args.amend_lane_declarations or args.release_coupled_lanes:
+    if (args.init_lanes or args.admit_lane or args.transition_lane or args.check_lane or args.integration_plan
+            or args.amend_lane_declarations or args.release_coupled_lanes or args.transfer_integration_owner):
         if args.admit_scope or args.continue_scope or args.complete_local_scope or args.can_start or args.worktrees:
             parser.error("lane operations cannot be combined with legacy operations")
         try:

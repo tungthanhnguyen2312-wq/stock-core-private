@@ -403,3 +403,92 @@ def test_read_only_reviewer_can_overlap_shared_writer_without_a_write_lease(worl
     assert not res.check_lane(load(world), "reviewer", repo=world[0])["errors"]
     (reader / "official_source_registry.py").write_text("unauthorized = True\n")
     assert "LANE_READ_ONLY_CHANGE" in res.check_lane(load(world), "reviewer", repo=world[0])["errors"]
+
+
+def _transfer_world(world):
+    """One in-flight leased lane and one durable COMPLETE_LOCAL lease, both predecessor-owned."""
+    active, _ = add_lane(world, "inflight", "config/inflight.json", agent="OwnerIntegrator",
+                         shared_paths=["config/inflight.json"], lease_note="Owner exact in-flight lease")
+    assert transition(world, "inflight", "ACTIVE") == 0
+    done, head = candidate(world, "done", "config/done.json", agent="OwnerIntegrator",
+                           shared_paths=["config/done.json"], lease_note="Owner exact durable lease")
+    assert transition(world, "done", "COMPLETE_LOCAL", head) == 0
+    control = load(world)["development_control"]
+    spec = {"schema": "stocklookup_integration_owner_transfer/1", "expected_revision": control["revision"],
+            "from_agent": "OwnerIntegrator", "to_agent": "Successor", "coordinator_head": git(world[0], "rev-parse", "HEAD"),
+            "successor_lanes": [{"milestone_id": "inflight", "state": "ACTIVE", "checkpoint": None,
+                                 "head": git(active, "rev-parse", "HEAD")}]}
+    return active, spec
+
+
+def transfer(world, spec, agent="Successor", *extra):
+    file = world[0].parent / "transfer-spec.json"
+    file.write_text(json.dumps(spec), encoding="utf-8")
+    return world[3]("--transfer-integration-owner", "--transfer-spec", str(file), "--owner-override",
+                    "--scope-note", "Owner appoints Successor as integration owner", "--agent", agent, *extra)
+
+
+def test_owner_directed_integration_owner_transfer_preserves_history_and_durable_leases(world):
+    active, spec = _transfer_world(world)
+    before = load(world)["development_control"]
+    assert transfer(world, spec) == 0
+    after = load(world)["development_control"]
+    assert after["integration_agent"] == "Successor"
+    assert after["revision"] == before["revision"] + 1 and after["history"][:-1] == before["history"]
+    assert after["history"][-1]["operation"] == "INTEGRATION_OWNER_TRANSFER"
+    assert after["history"][-1]["from_agent"] == "OwnerIntegrator" and after["history"][-1]["agent"] == "Successor"
+    assert after["integration_owner_succession"] == [{"from_agent": "OwnerIntegrator", "to_agent": "Successor",
+                                                      "revision": after["revision"],
+                                                      "owner_note": "Owner appoints Successor as integration owner"}]
+    lanes = {l["milestone_id"]: l for l in after["lanes"]}
+    old = {l["milestone_id"]: l for l in before["lanes"]}
+    assert lanes["inflight"]["responsible_agent"] == "Successor" and lanes["inflight"]["state"] == "ACTIVE"
+    assert lanes["inflight"]["history"][:-1] == old["inflight"]["history"]
+    assert lanes["done"] == old["done"]  # durable predecessor record and lease untouched
+    assert res.validate_development_control(load(world)) == []
+    # The predecessor can no longer mutate; the successor continues through ordinary transitions.
+    assert transition(world, "inflight", "PAUSED", git(active, "rev-parse", "HEAD")) == 2
+    assert world[3]("--transition-lane", "inflight", "--lane-state", "PAUSED", "--owner-override", "--scope-note",
+                    "Owner lifecycle approval", "--agent", "Successor", "--checkpoint-at", git(active, "rev-parse", "HEAD")) == 0
+
+
+@pytest.mark.parametrize("mutate", [
+    lambda s: s.update(from_agent="Codex"),                       # stale ownership
+    lambda s: s.update(expected_revision=s["expected_revision"] - 1),  # stale revision
+    lambda s: s.update(coordinator_head="0" * 40),                # incorrect coordinator HEAD
+    lambda s: s["successor_lanes"][0].update(head="0" * 40),      # incorrect lane HEAD
+    lambda s: s["successor_lanes"][0].update(state="PAUSED"),     # stale lane state
+    lambda s: s.update(successor_lanes=[]),                       # in-flight lease left implicit
+    lambda s: s["successor_lanes"].append(dict(s["successor_lanes"][0], milestone_id="done")),  # durable lease taken over
+    lambda s: s.update(to_agent="OwnerIntegrator"),               # no-op transfer
+    lambda s: s.update(extra="field"),                            # reserved field
+])
+def test_integration_owner_transfer_refusals_leave_state_unchanged(world, mutate):
+    _, spec = _transfer_world(world)
+    mutate(spec)
+    snapshot = world[2].read_bytes()
+    assert transfer(world, spec, agent=spec.get("to_agent", "Successor")) == 2
+    assert world[2].read_bytes() == snapshot
+
+
+def test_integration_owner_transfer_requires_successor_identity_owner_directive_and_clean_coordinator(world):
+    _, spec = _transfer_world(world)
+    snapshot = world[2].read_bytes()
+    assert transfer(world, spec, agent="OwnerIntegrator") == 2  # predecessor cannot impersonate the successor
+    assert transfer(world, spec, agent="Other") == 2
+    file = world[0].parent / "transfer-spec.json"
+    assert world[3]("--transfer-integration-owner", "--transfer-spec", str(file), "--scope-note", "x", "--agent", "Successor") == 2
+    (world[0] / "README.md").write_text("concurrent coordinator writer\n", encoding="utf-8")
+    assert transfer(world, spec) == 2
+    assert world[2].read_bytes() == snapshot
+
+
+def test_predecessor_cannot_keep_an_in_flight_lease_after_transfer(world):
+    _, spec = _transfer_world(world)
+    assert transfer(world, spec) == 0
+    state = load(world)
+    res.lane_by_id(state, "inflight")["responsible_agent"] = "OwnerIntegrator"
+    assert "LANE_SHARED_LEASE_NOT_INTEGRATION_OWNER:inflight" in res.validate_development_control(state)
+    state = load(world)
+    state["development_control"]["integration_owner_succession"][0]["to_agent"] = "Other"
+    assert res.validate_development_control(state) == ["LANE_INTEGRATION_OWNER_SUCCESSION_INVALID"]
