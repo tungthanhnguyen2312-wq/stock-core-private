@@ -451,7 +451,8 @@ def test_completed_session_replay_materializes_before_publisher_without_acquisit
     root, source, _, _ = _workspace_release_fixture(tmp_path, monkeypatch)
     runtime = tmp_path / "runtime"
     completion = {"session": "2026-09-17", "record": {"daily_producer_run_identity": "run:exact"}}
-    monkeypatch.setattr(workflow, "preflight_repository", lambda *a, **k: {})
+    monkeypatch.setattr(workflow, "preflight_repository", lambda *a, **k: {"status": "PASS"})
+    monkeypatch.setattr(workflow, "preflight_consumer_repository", lambda *a, **k: {"status": "PASS"})
     monkeypatch.setattr(workflow, "verify_daily_completion", lambda *a, **k: completion)
     monkeypatch.setattr(workflow, "commit_daily_state", lambda *a, **k: {})
     monkeypatch.setattr(workflow, "_run_daily", lambda *a, **k: pytest.fail("replay must not acquire or rebuild"))
@@ -830,6 +831,40 @@ def test_restage_rederives_home_summary_from_restaged_screener(tmp_path, monkeyp
     _assert_publisher_accepts_runtime_pair(runtime)
     # Sealed Producer evidence untouched.
     assert (source.parent / "dashboard_home_summary.json").read_bytes() == sealed_home_bytes
+
+
+def test_restage_preserves_qualified_notable_cards_from_exact_presentation_workspace(tmp_path, monkeypatch):
+    import workspace_public_read_model
+
+    root, source, workspace, _ = _workspace_release_fixture(tmp_path, monkeypatch)
+    runtime = tmp_path / "runtime"
+    runtime_release.materialize_canonical_runtime_release(root, runtime, RESTAGE_SESSION)
+    enriched_workspace, new_screener, presentation_result = _presentation_with_new_screener(
+        root, workspace, source)
+    card = {"ticker": "AAA", "as_of_session": RESTAGE_SESSION,
+            "research_action_posture": "EARLY_WATCH", "entry_state": "BASE_BUILDING",
+            "evidence_currency": "CURRENT", "position_context": None, "why": [],
+            "reference_trigger": None, "counter_thesis": None}
+    index = {"contract_version": "workspace_index/v1", "as_of_session": RESTAGE_SESSION,
+             "source_artifact_identity": enriched_workspace["artifact_identity"], "cards": {"AAA": card}}
+    monkeypatch.setattr(workspace_public_read_model, "build_public_read_model", lambda payload: (index, {}))
+    expected = runtime_release.dashboard_home_summary.with_notable_cards(
+        runtime_release.dashboard_home_summary.build_home_summary(
+            new_screener, requested_at=new_screener["requested_at"]), index)
+    presentation_workspace = root / presentation_result["path"]
+    (presentation_workspace.parent / "dashboard_home_summary.json").write_text(
+        json.dumps(expected), encoding="utf-8")
+
+    result = runtime_release.restage_runtime_with_presentation_projection(runtime, root, presentation_result)
+
+    assert result["status"] == "RESTAGED"
+    served = json.loads((runtime / "data/dashboard_home_summary.json").read_text(encoding="utf-8"))
+    assert served == expected
+    assert served["source_artifact_identity"] == new_screener["artifact_identity"]
+    assert served["notable_cards"]["source_artifact_identity"] == enriched_workspace["artifact_identity"]
+    assert served["notable_cards"]["cards"] == [card]
+    assert served["artifact_identity"] == runtime_release.dashboard_home_summary.content_identity(served)["artifact_identity"]
+    runtime_release._verify_runtime_manifest_coherence(runtime)
 
 
 def test_materialize_release_ready_runtime_rebinds_home_summary_end_to_end(tmp_path, monkeypatch):

@@ -724,7 +724,8 @@ def _validate_presentation_screener(
 
 
 def _derive_restaged_home_summary(
-    screener: Mapping[str, Any], *, session: str, fallback_requested_at: Any,
+    screener: Mapping[str, Any], *, workspace: Mapping[str, Any], session: str,
+    fallback_requested_at: Any, include_notable_cards: bool = True,
 ) -> dict[str, Any]:
     """Re-derive the Home summary from the exact restaged Screener through the one governed pure
     builder -- never copy the sealed summary forward past a Screener change. ``requested_at``
@@ -735,6 +736,16 @@ def _derive_restaged_home_summary(
         raise _RestageRefused("HOME_SUMMARY_REQUESTED_AT_UNAVAILABLE")
     try:
         summary = dashboard_home_summary.build_home_summary(screener, requested_at=requested_at)
+        # Use the same pure index projection as Producer's post-handoff summary.
+        # A malformed optional index leaves the aggregate summary intact; a retained
+        # presentation twin with cards still fails the exact-identity check below.
+        if include_notable_cards:
+            try:
+                from workspace_public_read_model import build_public_read_model
+                workspace_index, _ = build_public_read_model(workspace)
+                summary = dashboard_home_summary.with_notable_cards(summary, workspace_index)
+            except (ValueError, TypeError, KeyError):
+                pass
     except Exception as exc:  # noqa: BLE001 - any derivation failure refuses the whole restage
         raise _RestageRefused(f"HOME_SUMMARY_DERIVATION_FAILED:{type(exc).__name__}:{exc}") from exc
     if (not isinstance(summary, dict)
@@ -858,9 +869,15 @@ def restage_runtime_with_presentation_projection(
                         and current_home_summary.get("as_of_session") == session):
                     home_summary_status = "ALREADY_BOUND_TO_RESTAGED_SCREENER"
                 else:
+                    # Previously retained sessions predate the optional block.
+                    # Their exact presentation twin remains the authority for
+                    # whether this restage may add it.
+                    retained_home = (json.loads(source_home_summary.read_text(encoding="utf-8"))
+                                     if source_home_summary.is_file() else None)
                     home_summary = _derive_restaged_home_summary(
-                        new_screener, session=session,
+                        new_screener, workspace=new_payload, session=session,
                         fallback_requested_at=current_home_summary.get("requested_at"),
+                        include_notable_cards=retained_home is None or "notable_cards" in retained_home,
                     )
                     home_summary_twin = _retained_presentation_home_summary(source_home_summary, home_summary)
                     home_summary_status = "RESTAGED"
