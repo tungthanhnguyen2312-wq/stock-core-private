@@ -1,5 +1,5 @@
 import pandas as pd
-from market_feature_store_v1 import build_historical,snapshot
+from stocklookup_core.tactical.market_feature_store_v1 import build_historical,snapshot
 def test_vectorized_duplicates_asof_and_insufficient_history():
  rows=[]
  for s in ('A','B'):

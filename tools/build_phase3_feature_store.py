@@ -3,7 +3,7 @@ import argparse,json,sys
 from pathlib import Path
 import pandas as pd
 ROOT=Path(__file__).resolve().parents[1];sys.path.insert(0,str(ROOT))
-from market_feature_store_v1 import FEATURE_IDS,build_historical,eligibility,snapshot,reconcile,write_partitioned,lazy_read
+from stocklookup_core.tactical.market_feature_store_v1 import FEATURE_IDS,build_historical,eligibility,snapshot,reconcile,write_partitioned,lazy_read
 p=argparse.ArgumentParser();p.add_argument('--canonical-root',required=True);p.add_argument('--output-root',required=True);p.add_argument('--as-of');a=p.parse_args();out=Path(a.output_root)
 if out.exists():p.error('--output-root must not already exist')
 raw=pd.read_parquet(Path(a.canonical_root)/'canonical_daily_market.parquet');hist,empty=build_historical(raw);snap=snapshot(hist,a.as_of);elig=eligibility(hist,empty);out.mkdir(parents=True);manifest=write_partitioned(hist,out/'historical_partitioned');snap.to_parquet(out/'snapshot_matrix.parquet',index=False);elig.to_parquet(out/'feature_eligibility.parquet',index=False)

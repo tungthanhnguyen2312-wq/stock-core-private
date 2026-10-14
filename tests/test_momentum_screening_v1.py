@@ -4,15 +4,15 @@ import json
 
 import pandas as pd
 
-from market_feature_store_v1 import build_historical
-from momentum_screening_v1 import (
+from stocklookup_core.tactical.market_feature_store_v1 import build_historical
+from stocklookup_core.tactical.momentum_screening_v1 import (
     MOMENTUM_DEPENDENCIES,
     evaluate_momentum,
     momentum_plugin,
     screen_momentum,
     write_momentum_artifacts,
 )
-from strategy_framework import load_strategy_registry
+from stocklookup_core.tactical.strategy_framework import load_strategy_registry
 
 
 AS_OF = "2026-08-11"

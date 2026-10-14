@@ -131,12 +131,13 @@ def test_frozen_source_and_relocation_contracts_remain_exact():
     for filename, expected in manifest["source_sha256_lf"].items():
         assert hashlib.sha256((ROOT / filename).read_bytes().replace(b"\r\n", b"\n")).hexdigest() == expected, filename
     layout = json.loads((ROOT / "config/repository_layout.json").read_text(encoding="utf-8"))
-    # The 120 E2/E3 mappings stay exact; the only later additions are the exact reviewed bulk cohort map.
+    # Every addition belongs to an exact reviewed, pairwise-disjoint cohort map.
     bulk = json.loads((ROOT / "tests/fixtures/bulk_root_package_consolidation_relocations.json").read_text(encoding="utf-8"))
     bulk_v2 = json.loads((ROOT / "tests/fixtures/bulk_root_package_consolidation_v2_relocations.json").read_text(encoding="utf-8"))
     hub_v3 = json.loads((ROOT / "tests/fixtures/root_hub_dependency_reduction_v3_relocations.json").read_text(encoding="utf-8"))
     w1 = json.loads((ROOT / "tests/fixtures/root_historical_surface_w1_relocations.json").read_text(encoding="utf-8"))
-    groups = [manifest["relocations"], bulk["relocations"], bulk_v2["relocations"], hub_v3["relocations"], w1["relocations"]]
+    w2 = json.loads((ROOT / "tests/fixtures/source_root_dependency_wave2_relocations.json").read_text(encoding="utf-8"))
+    groups = [manifest["relocations"], bulk["relocations"], bulk_v2["relocations"], hub_v3["relocations"], w1["relocations"], w2["relocations"]]
     assert sum(map(len, groups)) == len(set().union(*groups))  # pairwise disjoint accepted maps
     assert layout["relocations"] == {k: v for group in groups for k, v in group.items()}
 

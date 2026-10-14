@@ -20,6 +20,21 @@ from news_ticker_mapping import (  # noqa: E402
 )
 
 
+def test_standalone_news_loader_resolves_moved_guard_without_checkout_on_sys_path(tmp_path):
+    import subprocess
+    script = """
+import importlib.util, sys
+spec = importlib.util.spec_from_file_location('standalone_news', sys.argv[1])
+module = importlib.util.module_from_spec(spec)
+sys.modules[spec.name] = module
+spec.loader.exec_module(module)
+assert module.guard_alias_columns(module.guard_alias_columns.__globals__['ALIAS_REQUIRED'], 'fixture://alias')['status'] == 'valid'
+"""
+    result = subprocess.run([sys.executable, "-I", "-c", script, str(ROOT / "news_ticker_mapping.py")],
+                            cwd=tmp_path, capture_output=True, text=True)
+    assert result.returncode == 0, result.stderr
+
+
 class NewsTickerMappingPhase5Tests(unittest.TestCase):
     def setUp(self):
         self.registry = TickerAliasRegistry.from_csv(ROOT / "config" / "ticker_aliases.csv")

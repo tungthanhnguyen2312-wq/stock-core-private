@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import csv
 import hashlib
-import importlib.util
 import json
 import re
+import sys
 import unicodedata
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
@@ -15,16 +15,17 @@ from typing import Any, Iterable
 from urllib.parse import urlsplit, urlunsplit
 
 try:
-    from source_schema_guards import guard_alias_columns
-except ModuleNotFoundError:  # Loaded directly by AI ANALYZE via file location.
-    _guard_spec = importlib.util.spec_from_file_location(
-        "vnstock_source_schema_guards", Path(__file__).with_name("source_schema_guards.py")
-    )
-    if _guard_spec is None or _guard_spec.loader is None:
+    from stocklookup_core.evidence.source_schema_guards import guard_alias_columns
+except ModuleNotFoundError as exc:  # Loaded directly by AI ANALYZE via file location.
+    if exc.name != "stocklookup_core":
         raise
-    _guard_module = importlib.util.module_from_spec(_guard_spec)
-    _guard_spec.loader.exec_module(_guard_module)
-    guard_alias_columns = _guard_module.guard_alias_columns
+    # Import the same canonical guard as normal consumers, then restore the caller's path.
+    _checkout_import_path = str(Path(__file__).resolve().parent)
+    sys.path.insert(0, _checkout_import_path)
+    try:
+        from stocklookup_core.evidence.source_schema_guards import guard_alias_columns
+    finally:
+        sys.path.remove(_checkout_import_path)
 
 
 ROOT = Path(__file__).resolve().parent

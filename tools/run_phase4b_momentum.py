@@ -8,7 +8,7 @@ import sys
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
-from momentum_screening_v1 import evaluate_momentum, load_phase3_historical, write_momentum_artifacts
+from stocklookup_core.tactical.momentum_screening_v1 import evaluate_momentum, load_phase3_historical, write_momentum_artifacts
 
 
 def main() -> int:

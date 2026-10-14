@@ -7,7 +7,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from candlestick_patterns import (
+from stocklookup_core.tactical.candlestick_patterns import (
     PATTERN_REGISTRY,
     TIMEFRAMES,
     atomic_write_snapshot,

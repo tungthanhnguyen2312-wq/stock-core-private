@@ -25,7 +25,7 @@ import pandas as pd
 
 from financial_mapping import get_default_registry
 from runtime_paths import runtime_root
-from source_schema_guards import SourceSchemaError, guard_financial_statement_columns
+from stocklookup_core.evidence.source_schema_guards import SourceSchemaError, guard_financial_statement_columns
 
 # Reconfigure console stdout encoding to UTF-8 to handle Vietnamese text output safely
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")

@@ -5,7 +5,7 @@ import copy
 import json
 import tempfile
 import unittest
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 
 import current_corporate_event_context as events
@@ -65,13 +65,15 @@ def _raw(**kwargs) -> dict:
 
 
 def _build(raw_events: list[dict], tickers: list[str] | None = None,
-           supplemental: list[dict] | None = None, session: str = SESSION) -> dict:
+           supplemental: list[dict] | None = None, session: str = SESSION,
+           cutoff: str | None = None) -> dict:
     tickers = tickers or sorted({event["ticker"] for event in raw_events} | {item["ticker"] for item in (supplemental or [])})
     return events.build_artifact(
         official_universe=_signed_official(tickers),
         official_event_context=_signed_event_context(raw_events, session),
         supplemental_events=supplemental,
         research_session=session,
+        knowledge_cutoff=cutoff,
     )
 
 
@@ -204,6 +206,179 @@ class CurrentCorporateEventContextTests(unittest.TestCase):
         self.assertEqual(events.classify_event_status({"ex_date": "2026-08-28"}, as_of=as_of)[0], events.CONFIRMED_UPCOMING)
         self.assertFalse(events.known_at_ok(known_at="2026-08-22", published_at="2026-08-22", as_of=as_of))
         self.assertTrue(events.known_at_ok(known_at="2026-08-10", published_at="2026-08-10", as_of=as_of))
+
+
+class QualificationAndKnowledgeTimeCorrectiveTests(unittest.TestCase):
+    def supplemental(self, **changes) -> dict:
+        event = dict(ticker="AAA", event_type="CASH_DIVIDEND", status="ANNOUNCED",
+                     ex_date="2026-08-28", announcement_date="2026-08-10",
+                     evidence_identity="retained-issuer-record", source_authority="ISSUER_IR")
+        event.update(changes)
+        return event
+
+    def test_missing_and_unqualified_tiers_preserve_context_without_qualification(self):
+        for tier in (None, "", "UNKNOWN", "RESEARCH_ONLY", "OFFICIAL_SOURCE_TEMPORALLY_INCOMPLETE"):
+            with self.subTest(tier=tier):
+                raw = self.supplemental(authority_tier=tier)
+                original = copy.deepcopy(raw)
+                artifact = _build([], supplemental=[raw])
+                row = artifact["records"]["AAA"]
+                self.assertEqual(raw, original)
+                self.assertEqual(len(row["events"]), 1)
+                self.assertEqual(row["events"][0]["evidence_tier"], tier or "UNKNOWN")
+                self.assertEqual(row["qualified_event_count"], 0)
+                self.assertFalse(row["has_qualified_event"])
+                self.assertEqual(artifact["coverage"]["tickers_with_qualified_event"], 0)
+                self.assertEqual(artifact["coverage"]["tickers_with_no_qualified_event"], 1)
+                if not tier:
+                    self.assertIn("AUTHORITY_TIER_UNSPECIFIED", row["events"][0]["warnings"])
+
+    def test_qualified_historical_source_evidence_keeps_its_tier_and_eligibility(self):
+        artifact = _build([_raw()], tickers=["AAA", "BBB", "ZZZ"], supplemental=[
+            self.supplemental(ticker="BBB", authority_tier="OFFICIAL_QUALIFIED")])
+        for ticker in ("AAA", "BBB"):
+            row = artifact["records"][ticker]
+            self.assertTrue(row["has_qualified_event"])
+            self.assertEqual(row["qualified_event_count"], 1)
+            self.assertTrue(row["events"][0]["historical_known_at_eligible"])
+        self.assertEqual(artifact["coverage"]["tickers_with_qualified_event"], 2)
+        self.assertEqual(artifact["coverage"]["tickers_with_no_qualified_event"], 1)
+
+    def test_missing_invalid_and_same_day_date_only_proof_is_explicit_context(self):
+        cases = [(None, None, "KNOWLEDGE_TIME_MISSING"),
+                 ("malformed", None, "KNOWLEDGE_TIME_INVALID_OR_UNZONED"),
+                 (None, "2026-08-10garbage", "KNOWLEDGE_TIME_INVALID_OR_UNZONED"),
+                 (None, "2026-08-10T10:00:00", "KNOWLEDGE_TIME_INVALID_OR_UNZONED"),
+                 (None, "2026-08-21", "DATE_ONLY_CUTOFF_UNPROVEN"),
+                 ("malformed", "2026-08-10", "KNOWLEDGE_TIME_INVALID_OR_UNZONED"),
+                 ("2026-08-10", "malformed", "KNOWLEDGE_TIME_INVALID_OR_UNZONED")]
+        for known, publication, expected in cases:
+            with self.subTest(known=known, publication=publication):
+                self.assertFalse(events.known_at_ok(known_at=known, published_at=publication,
+                                                    as_of=date.fromisoformat(SESSION)))
+                official = _raw(known_at=known, published_at=publication)
+                supplemental = self.supplemental(known_at=known, published_at=publication,
+                                                announcement_date=None, authority_tier="OFFICIAL_QUALIFIED")
+                for artifact in (_build([official]), _build([], supplemental=[supplemental])):
+                    row = artifact["records"]["AAA"]["events"][0]
+                    self.assertEqual(row["knowledge_time_qualification"], expected)
+                    self.assertFalse(row["historical_known_at_eligible"])
+                    self.assertIn("HISTORICAL_KNOWN_AT_NOT_ESTABLISHED", row["blockers"])
+                    # Source qualification is retained; missing clocks cannot repair T0.
+                    self.assertEqual(row["evidence_tier"], "OFFICIAL_QUALIFIED")
+                    self.assertIn("current_research_context", row["allowed_uses"])
+                    self.assertEqual(artifact["records"]["AAA"]["historical_known_at_eligible_event_count"], 0)
+                    self.assertEqual(artifact["authority_boundary"]["pit"], "BLOCKED")
+
+    def test_same_session_before_equal_after_cutoff_and_equivalent_timezones(self):
+        for publication, accepted in [("2026-08-21T14:59:59+07:00", True),
+                                      ("2026-08-21T15:00:00+07:00", True),
+                                      ("2026-08-21T08:00:00Z", True),
+                                      ("2026-08-21T15:00:00.000001+07:00", False),
+                                      ("2026-08-21T08:00:01Z", False),
+                                      ("2026-08-20T23:30:00-10:00", False)]:
+            with self.subTest(publication=publication):
+                self.assertEqual(events.known_at_ok(known_at=None, published_at=publication,
+                                                   as_of=date.fromisoformat(SESSION)), accepted)
+                artifact = _build([_raw(known_at=None, published_at=publication)])
+                self.assertEqual(len(artifact["records"]["AAA"]["events"]), int(accepted))
+                self.assertEqual(artifact["knowledge_cutoff"], "2026-08-21T15:00:00+07:00")
+
+    def test_explicit_later_clock_cannot_hide_behind_earlier_clock(self):
+        for known, publication in [("2026-08-10", "2026-08-21T16:00:00+07:00"),
+                                   ("2026-08-21T16:00:00+07:00", "2026-08-10"),
+                                   ("invalid", "2026-08-22"),
+                                   ("2026-08-22", "invalid")]:
+            with self.subTest(known=known, publication=publication):
+                self.assertEqual(_build([_raw(known_at=known, published_at=publication)])
+                                 ["records"]["AAA"]["events"], [])
+
+    def test_precise_supplemental_publication_is_not_masked_by_announcement_date(self):
+        artifact = _build([], supplemental=[self.supplemental(
+            announcement_date="2026-08-21", published_at="2026-08-21T14:00:00+07:00")])
+        row = artifact["records"]["AAA"]["events"][0]
+        self.assertTrue(row["historical_known_at_eligible"])
+        self.assertEqual(row["announcement_date"], "2026-08-21")
+        self.assertEqual(row["published_at"], "2026-08-21T14:00:00+07:00")
+        later = _build([], supplemental=[self.supplemental(
+            announcement_date="2026-08-10", published_at="2026-08-21T16:00:00+07:00")])
+        self.assertEqual(later["records"]["AAA"]["events"], [])
+
+    def test_falsey_malformed_clocks_cannot_be_replaced_by_valid_fallbacks(self):
+        for malformed in (0, False, [], {}):
+            with self.subTest(malformed=malformed):
+                for field in ("published_at", "known_at"):
+                    raw = self.supplemental(**{field: malformed})
+                    row = _build([], supplemental=[raw])["records"]["AAA"]["events"][0]
+                    self.assertFalse(row["historical_known_at_eligible"])
+                    self.assertEqual(row[field], malformed)
+                    self.assertEqual(row["knowledge_time_qualification"], "KNOWLEDGE_TIME_INVALID_OR_UNZONED")
+
+    def test_date_only_prior_day_is_proof_but_same_day_never_infers_midnight(self):
+        as_of = date.fromisoformat(SESSION)
+        self.assertTrue(events.known_at_ok(known_at=None, published_at="2026-08-20", as_of=as_of))
+        self.assertFalse(events.known_at_ok(known_at="2026-08-21", published_at=None, as_of=as_of))
+        self.assertFalse(events.known_at_ok(known_at="2026-08-21", published_at="2026-08-21T14:00:00+07:00", as_of=as_of))
+
+    def test_explicit_earlier_cutoff_is_honored_and_cannot_widen_session_boundary(self):
+        artifact = _build([_raw(known_at="2026-08-21T14:00:00+07:00", published_at=None)],
+                          cutoff="2026-08-21T13:00:00+07:00")
+        self.assertEqual(artifact["records"]["AAA"]["events"], [])
+        for cutoff in ("invalid", "2026-08-21", "2026-08-21T15:00:00", "2026-08-22T14:00:00+07:00",
+                       "2026-08-21T16:00:00+07:00"):
+            with self.subTest(cutoff=cutoff), self.assertRaises(events.CurrentCorporateEventContextError):
+                _build([_raw()], cutoff=cutoff)
+        with self.assertRaises(events.CurrentCorporateEventContextError):
+            events.known_at_ok(known_at="2026-08-10", published_at=None,
+                              as_of=datetime(2026, 8, 21, 15))
+
+    def test_deduplication_cannot_transfer_lower_tier_clock_proof_to_qualified_source(self):
+        lower = self.supplemental(authority_tier="RESEARCH_ONLY", status=None,
+                                  record_date="2026-09-03", payment_date="2026-09-15")
+        official = _raw(known_at=None, published_at=None)
+        artifact = _build([official], supplemental=[lower])
+        row = artifact["records"]["AAA"]
+        self.assertEqual(len(row["events"]), 1)
+        self.assertEqual(row["qualified_event_count"], 1)
+        self.assertFalse(row["events"][0]["historical_known_at_eligible"])
+        support = row["events"][0]["supporting_evidence"]
+        self.assertEqual({item["evidence_tier"] for item in support}, {"OFFICIAL_QUALIFIED", "RESEARCH_ONLY"})
+        self.assertEqual({item["historical_known_at_eligible"] for item in support}, {True, False})
+
+    def test_lower_tier_duplicate_first_does_not_hide_real_qualified_evidence(self):
+        artifact = _build([], supplemental=[
+            self.supplemental(authority_tier="RESEARCH_ONLY", source_authority="THIRD_PARTY"),
+            self.supplemental(authority_tier="OFFICIAL_QUALIFIED", source_authority="ISSUER_IR")])
+        self.assertEqual(artifact["records"]["AAA"]["qualified_event_count"], 1)
+        self.assertEqual(len(artifact["records"]["AAA"]["events"]), 1)
+
+    def test_pnj_fpt_unqualified_candidate_context_does_not_become_admission(self):
+        # Candidate-shaped research records exercise the boundary, not factual admission.
+        artifact = _build([], tickers=["PNJ", "FPT"], session="2026-10-14", supplemental=[
+            self.supplemental(ticker=ticker, authority_tier="CANDIDATE_UNADMITTED",
+                              announcement_date=None, published_at=None)
+            for ticker in ("PNJ", "FPT")])
+        for row in artifact["records"].values():
+            self.assertFalse(row["has_qualified_event"])
+            self.assertFalse(row["events"][0]["historical_known_at_eligible"])
+        self.assertEqual(artifact["coverage"]["tickers_with_qualified_event"], 0)
+        self.assertEqual(artifact["coverage"]["tickers_with_no_qualified_event"], 2)
+        self.assertEqual(artifact["blocked_outputs"]["research_priority"], "NOT_MODIFIED")
+        self.assertEqual(artifact["blocked_outputs"]["entry_action"], "NOT_MODIFIED")
+
+    def test_existing_v1_artifacts_replay_without_new_temporal_fields(self):
+        historical = _build([_raw()])
+        for key in ("knowledge_cutoff", "knowledge_time_policy"):
+            historical.pop(key)
+        for row in historical["records"].values():
+            row.pop("historical_known_at_eligible_event_count")
+            for event in row["events"]:
+                event.pop("knowledge_time_qualification")
+                event.pop("historical_known_at_eligible")
+        historical.update(events.content_identity(historical))
+        original = copy.deepcopy(historical)
+        events.replay(historical)
+        self.assertEqual(historical, original)
 
 
 class ExportAttachmentTests(unittest.TestCase):

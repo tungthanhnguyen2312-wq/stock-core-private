@@ -22,28 +22,31 @@ def _historical_handoff() -> dict:
     state = ROOT / "docs" / "STATE.md"
     roadmap = ROOT / "docs" / "ROADMAP.md"
 
-    def line(path: Path, prefix: str) -> str:
-        for row in path.read_text(encoding="utf-8").splitlines():
+    def line(rows: list[str], prefix: str) -> str:
+        for row in rows:
             if row.startswith(prefix):
                 return row.split(":", 1)[1].strip()
         raise ValueError(f"missing_canonical_state:{prefix}")
 
     roadmap_text = roadmap.read_text(encoding="utf-8")
+    state_rows = state.read_text(encoding="utf-8").splitlines()
     return {
         "historical_files_read": True,
-        "active_phase": line(state, "- Active phase"),
-        "active_milestone": line(state, "- Active milestone"),
-        "production_state": line(state, "- Production state"),
+        "active_phase": line(state_rows, "- Active phase"),
+        "active_milestone": line(state_rows, "- Active milestone"),
+        "production_state": line(state_rows, "- Production state"),
         "p0_exit_gates": [row[2:] for row in roadmap_text.splitlines() if row.startswith("- Exit gates:")],
     }
 
 
-def build_handoff(*, historical: bool = False, repo: Path | None = None) -> dict:
+def build_handoff(*, historical: bool = False, repo: Path | None = None,
+                  state_file: Path | None = None, lane_id: str | None = None) -> dict:
     if historical:
         return _historical_handoff()
     repo = repo or ROOT
+    state_path = state_file or repo / "docs" / "ROADMAP_STATE.json"
     try:
-        state = res.load_state(repo / "docs" / "ROADMAP_STATE.json")
+        state = res.load_state(state_path)
     except res.RoadmapStateError:
         state = {}
     current = state.get("current") or {}
@@ -60,10 +63,22 @@ def build_handoff(*, historical: bool = False, repo: Path | None = None) -> dict
         dirty = res.git_dirty_tracked(repo)
         tracked_status = "DIRTY" if dirty else "CLEAN"
         dirty_count = len(dirty)
-        report = res.evaluate(state, repo=repo) if state else None
+        # A resume summary is not another repository-wide preflight. Preserve the
+        # native GIT_NOT_CHECKED verdict; the explicit CLI below supplies live proof.
+        report = res.evaluate(state, repo=None) if state else None
         report_overall = report.overall if report else "UNKNOWN"
         git_verification = report.git_verification if report else res.GIT_VERIFICATION_UNAVAILABLE
     notes = milestone.get("notes") if isinstance(milestone.get("notes"), str) and milestone.get("notes") else "UNKNOWN"
+    lane_scope = None
+    if lane_id is not None:
+        lane = res.lane_by_id(state, lane_id)
+        live = res.check_lane(state, lane_id, repo=repo)
+        if live["errors"]:
+            raise res.RoadmapStateError(";".join(live["errors"]))
+        lane_scope = {key: lane.get(key) for key in (
+            "milestone_id", "responsible_agent", "state", "worktree", "branch", "base_sha",
+            "checkpoint", "domain", "allowed_paths", "shared_paths", "required_checks")}
+        lane_scope.update(scope_check_errors=live["errors"], runtime_authorized=False)
     return {
         "historical_files_read": False,
         "repo": str(repo),
@@ -85,15 +100,27 @@ def build_handoff(*, historical: bool = False, repo: Path | None = None) -> dict
             "authority_effect": milestone.get("authority_effect", "UNKNOWN"),
             "exact_head_merge": "REQUIRED",
         },
-        "facts_not_checked": ["consumer_head", "dashboard_head", "hosted_ci", "disk_free", "untracked_files"],
+        "facts_not_checked": ["consumer_head", "dashboard_head", "hosted_ci", "disk_free", "untracked_files",
+                              "native_git_checkpoints", "other_lane_heads"],
+        "coordinator_state_file": str(state_path),
+        "coordinator_revision": (state.get("development_control") or {}).get("revision"),
+        "lane_scope": lane_scope,
+        "native_preflight_argv": ["python", "tools/stocklookup_roadmap.py", "--repo", str(repo),
+                                  "--state-file", str(state_path), "--check", "--json"],
     }
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--historical", action="store_true", help="Read preserved STATE.md and ROADMAP.md. Not the ordinary path.")
+    parser.add_argument("--repo", type=Path, help="Registered source worktree to summarize.")
+    parser.add_argument("--state-file", type=Path, help="Exact Owner-designated coordinator state; never infer a copied lane registry.")
+    parser.add_argument("--lane", help="Exact native lane ID; check only that lane's live scope.")
     args = parser.parse_args(argv)
-    print(json.dumps(build_handoff(historical=args.historical), sort_keys=True))
+    if args.historical and (args.state_file or args.lane):
+        parser.error("historical handoff cannot supply lane admission")
+    print(json.dumps(build_handoff(historical=args.historical, repo=args.repo,
+                                  state_file=args.state_file, lane_id=args.lane), sort_keys=True))
     return 0
 
 

@@ -22,6 +22,7 @@ Active reading set (read these instead): [AGENTS.md](../AGENTS.md) → [ACTIVE_S
 | [ROADMAP_STATE.json](ROADMAP_STATE.json) | **Machine** execution state: current/queued/blocked milestones and git-verified checkpoints (`python tools/stocklookup_roadmap.py`, `--check`, `--can-start ID`) | ~540 KB | **live machine authority for milestone state** — query it with the tool, do not read it whole |
 | [internal/](internal/) | Per-milestone acceptance artifacts, closeouts, validation records (~48 files) | — | evidence for one milestone |
 | [archive/](archive/) | Older changelogs, July decision archive, manifests | — | history |
+| [Original agent direction](archive/agent_bootstrap_context_20261014.md) | Exact former AGENTS current-direction section, including completed checkpoints and supersessions | ~4.6 KB | deep reference; removed from ordinary bootstrap in Phase B |
 | [SYSTEM_MAP.md](SYSTEM_MAP.md) | Navigation map of modules and prior milestones | — | orientation |
 | Contracts `docs/*_contract.md` | The controlling contract for each capability | small each | **authoritative** — read the one the task touches |
 
@@ -35,6 +36,7 @@ Why Phase A left the giant files untouched. Do not reformat, reorder or delete t
 - `docs/STATE.md` banners are delimited by `<!-- *_CURRENT_START -->` / `<!-- *_CURRENT_END -->`; no code parser
   was found, but milestone-update workflows rely on the convention — keep it.
 - `tools/handoff.py` ordinary mode reads the native roadmap query and does not open `STATE.md` or `ROADMAP.md`.
+  Pass `--repo <registered-worktree> --state-file <Owner-designated-coordinator>/docs/ROADMAP_STATE.json --lane <exact-ID>` for a scoped handoff. Its summary says `GIT_NOT_CHECKED`; run the emitted native preflight for live checkpoint proof. Explicit lane scope checks remain live. No coordinator is inferred from copied state.
   `--historical` is the explicit history path. It still looks for `- Active phase`, `- Active milestone`,
   `- Production state`, and `- Exit gates:` lines, which are not the ordinary bootstrap.
 

@@ -11,7 +11,7 @@ import pandas as pd
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from candlestick_patterns import resample_ohlcv
+from stocklookup_core.tactical.candlestick_patterns import resample_ohlcv
 
 
 JSON_PATH = ROOT / "data" / "candlestick_patterns.json"

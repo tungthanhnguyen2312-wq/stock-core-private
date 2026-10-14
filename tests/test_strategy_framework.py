@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from strategy_framework import (
+from stocklookup_core.tactical.strategy_framework import (
     RegistryState,
     StrategyPlugin,
     SuspectInputPolicy,

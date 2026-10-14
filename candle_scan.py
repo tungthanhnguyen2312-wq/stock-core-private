@@ -7,7 +7,7 @@ from datetime import timedelta
 import numpy as np
 import pandas as pd
 
-from candlestick_patterns import atomic_write_snapshot, build_snapshot
+from stocklookup_core.tactical.candlestick_patterns import atomic_write_snapshot, build_snapshot
 from runtime_paths import runtime_root
 from stocklookup_core.evidence.source_timestamp import resolve_source_datetime, source_timestamp
 
