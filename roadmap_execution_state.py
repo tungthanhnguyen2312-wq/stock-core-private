@@ -1023,7 +1023,8 @@ def check_lane(state: Mapping[str, Any], mid: str, *, repo: Path) -> dict[str, A
 
 
 def integration_plan(state: Mapping[str, Any], *, repo: Path, main_sha: str,
-                     receipts: Mapping[str, Any] | None = None, candidate_id: str | None = None) -> dict[str, Any]:
+                     receipts: Mapping[str, Any] | None = None, candidate_id: str | None = None,
+                     coupled_spec: Mapping[str, Any] | None = None) -> dict[str, Any]:
     """Bounded metadata-only plan. Never fetch, merge, rebase, run checks or promote."""
     errors = validate_development_control(state)
     if errors:
@@ -1050,6 +1051,39 @@ def integration_plan(state: Mapping[str, Any], *, repo: Path, main_sha: str,
         lanes = [l for l in lanes if l["milestone_id"] == candidate_id]
         if not lanes:
             raise RoadmapStateError("LANE_INTEGRATION_CANDIDATE_UNKNOWN")
+    coupled = None
+    if coupled_spec is not None:
+        if (candidate_id or not isinstance(coupled_spec, dict)
+                or set(coupled_spec) != {"schema", "checkpoints", "fixture_sha", "standalone_failures"}
+                or coupled_spec["schema"] != "stocklookup_coupled_source_release/1"
+                or not isinstance(coupled_spec["checkpoints"], dict)
+                or len(coupled_spec["checkpoints"]) != 2):
+            raise RoadmapStateError("LANE_COUPLED_EXACT_TWO_CANDIDATES_REQUIRED")
+        ids = set(coupled_spec["checkpoints"])
+        lanes = [l for l in lanes if l["milestone_id"] in ids]
+        if len(lanes) != 2 or not any(set(l["dependencies"]) & ids for l in lanes):
+            raise RoadmapStateError("LANE_COUPLED_DIRECT_DEPENDENCY_REQUIRED")
+        fixture = coupled_spec["fixture_sha"]
+        if not _full_sha(repo, fixture):
+            raise RoadmapStateError("LANE_COUPLED_EXACT_FIXTURE_REQUIRED")
+        failures = coupled_spec["standalone_failures"]
+        if (not isinstance(failures, dict) or not failures or set(failures) - ids
+                or any(not isinstance(checks, dict) or not checks for checks in failures.values())):
+            raise RoadmapStateError("LANE_COUPLED_STANDALONE_FAILURE_EVIDENCE_REQUIRED")
+        for mid, checks in failures.items():
+            lane = next(l for l in lanes if l["milestone_id"] == mid)
+            for check, result in checks.items():
+                if (check not in lane["required_checks"] or not isinstance(result, dict)
+                        or set(result) != {"status", "evidence"} or result["status"] != "FAIL"
+                        or not isinstance(result["evidence"], str) or not result["evidence"].strip()):
+                    raise RoadmapStateError("LANE_COUPLED_FAILED_STANDALONE_CHECK_REQUIRED")
+        # Both source checkpoints and the remote main must be contained in the
+        # reviewed fixture, or (post-merge) the fixture must be on exact main.
+        if not (git_is_ancestor(repo, main_sha, fixture) or git_is_ancestor(repo, fixture, main_sha)):
+            errors.append("LANE_COUPLED_FIXTURE_MAIN_ANCESTRY_REQUIRED")
+        coupled = {**coupled_spec, "coordinator_revision": control["revision"],
+                   "acceptance_scope": "EXACT_COMBINED_SOURCE_ONLY",
+                   "dependency_disposition": "PENDING_ATOMIC_RELEASE_NOT_PROMOTED"}
     rows = {l["milestone_id"]: check_lane(state, l["milestone_id"], repo=repo) for l in lanes}
     main_paths = {}
     for lane in lanes:
@@ -1059,7 +1093,14 @@ def integration_plan(state: Mapping[str, Any], *, repo: Path, main_sha: str,
             errors.append(f"LANE_DIRTY_CANDIDATE:{mid}")
         if lane["state"] not in {"REVIEW_READY", "COMPLETE_LOCAL"} or lane.get("checkpoint") != row["head"]:
             errors.append(f"LANE_NOT_EXACT_REVIEW_CANDIDATE:{mid}")
-        if not git_is_ancestor(repo, lane["base_sha"], main_sha):
+        if coupled and (coupled["checkpoints"].get(mid) != row["head"]
+                        or not git_is_ancestor(repo, row["head"], coupled["fixture_sha"])):
+            errors.append(f"LANE_COUPLED_CHECKPOINT_FIXTURE_MISMATCH:{mid}")
+        # A selected dependent base may already belong to its selected producer.
+        # It must remain an actual ancestor, not a rewritten/equivalent patch.
+        base_in_group = coupled and any(git_is_ancestor(repo, lane["base_sha"], l["checkpoint"])
+                                        for l in lanes if l["milestone_id"] in lane["dependencies"])
+        if not git_is_ancestor(repo, lane["base_sha"], main_sha) and not base_in_group:
             errors.append(f"LANE_MAIN_BASE_DIVERGED:{mid}")
         code, out, _ = git_run(repo, "diff", "--no-renames", "--name-only", "-z", lane["base_sha"], main_sha)
         main_paths[mid] = sorted(p for p in out.split("\x00") if p) if code == 0 else []
@@ -1071,7 +1112,7 @@ def integration_plan(state: Mapping[str, Any], *, repo: Path, main_sha: str,
         for dep in lane["dependencies"]:
             other = next((l for l in control["lanes"] if l["milestone_id"] == dep), None)
             legacy = _milestones_by_id(state).get(dep)
-            if other and (other["state"] != "MERGED_RELEASED" or not other.get("release_sha") or not git_is_ancestor(repo, other["release_sha"], main_sha)):
+            if other and not (coupled and dep in coupled["checkpoints"]) and (other["state"] != "MERGED_RELEASED" or not other.get("release_sha") or not git_is_ancestor(repo, other["release_sha"], main_sha)):
                 errors.append(f"LANE_DEPENDENCY_NOT_RELEASED:{mid}:{dep}")
             if legacy and (legacy.get("state") not in CLOSED_STATES or not legacy.get("checkpoint") or not git_is_ancestor(repo, legacy["checkpoint"], main_sha)):
                 errors.append(f"LANE_LEGACY_DEPENDENCY_NOT_ON_MAIN:{mid}:{dep}")
@@ -1105,6 +1146,25 @@ def integration_plan(state: Mapping[str, Any], *, repo: Path, main_sha: str,
             order.append(mid)
             del todo[mid]
     sensitive = identity_sensitive_paths(repo, main_sha)
+    if coupled:
+        fixture = coupled["fixture_sha"]
+        owned = {p for row in rows.values() for p in row["paths"]}
+        code, out, _ = git_run(repo, "diff", "--no-renames", "--name-only", "-z", main_sha, fixture)
+        if code or set(filter(None, out.split("\x00"))) - owned:
+            # Post-merge main may additionally contain reviewed, disjoint source
+            # updates. The fixture must be its ancestor in that case.
+            if not git_is_ancestor(repo, fixture, main_sha):
+                errors.append("LANE_COUPLED_FIXTURE_HAS_UNREVIEWED_PATHS")
+        for mid, row in rows.items():
+            for path in row["paths"]:
+                a, x, _ = git_run(repo, "rev-parse", row["head"] + ":" + path)
+                b, y, _ = git_run(repo, "rev-parse", fixture + ":" + path)
+                if (a != b or (a == 0 and x != y)):
+                    errors.append(f"LANE_COUPLED_SOURCE_BLOB_MISMATCH:{mid}:{path}")
+                if git_is_ancestor(repo, fixture, main_sha):
+                    c, z, _ = git_run(repo, "rev-parse", main_sha + ":" + path)
+                    if b != c or (b == 0 and y != z):
+                        errors.append(f"LANE_COUPLED_RELEASED_SOURCE_CHANGED:{mid}:{path}")
     plan = {"schema": "stocklookup_integration_plan/1", "main_sha": main_sha,
             "coordinator_head": coordinator_head, "coordinator_source_changes": source_dirty,
             "coordinator_native_state_dirty": "docs/ROADMAP_STATE.json" in coordinator_paths,
@@ -1120,6 +1180,8 @@ def integration_plan(state: Mapping[str, Any], *, repo: Path, main_sha: str,
             "required_checks": {l["milestone_id"]: l["required_checks"] for l in lanes},
             "shared_and_frozen_review": sorted({p for row in rows.values() for p in row["paths"] if shared_path(p) or p in sensitive}),
             "authority_effect": "NONE", "runtime_authorized": False, "merge_authorized": False}
+    if coupled:
+        plan["coupled_acceptance"] = coupled
     plan["plan_identity"] = stable_id(plan)
     # Human semantic/cross-repo/frozen review and actual test receipts are mandatory:
     # a static disjoint-file calculation alone cannot establish integration safety.

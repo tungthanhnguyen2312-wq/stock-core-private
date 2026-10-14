@@ -158,6 +158,37 @@ reviewed future equivalence contract; this version does not guess patch equivale
 
 ## Command example (after Owner admits each exact scope)
 
+## Explicit two-lane coupled source release
+
+The optional `--coupled-spec` on `--integration-plan` accepts exactly two clean,
+durable source candidates linked by a declared dependency, their exact checkpoints,
+one immutable integration fixture SHA and retained failed standalone checks.
+Schema: `stocklookup_coupled_source_release/1`; keys: `schema`, `checkpoints`,
+`fixture_sha`, `standalone_failures`. Failures name actual required checks with
+`status:FAIL` and evidence; they are retained separately from joint acceptance.
+
+The fixture must contain both checkpoint ancestries and exact changed source blobs,
+with no additional paths against main. A dependent base may belong to its selected
+producer only by actual ancestry. External dependencies must already be released
+on verified main. All existing lease, interface/version, cycle, clean-HEAD, main
+overlap, frozen review and required-check receipt gates remain. The exact plan binds
+the group, fixture, original failures and coordinator revision. Checks attest the
+combined fixture explicitly; no standalone PASS is inferred. Ordinary plans and
+single-lane release rules are unchanged.
+
+`--release-coupled-lanes --coupled-spec ...` uses the same bound owner, explicit
+Owner directive, lock/CAS/fsynced atomic writer. It requires a fresh exact post-merge
+joint receipt, Owner merge directive, post-merge CI evidence, both original checkpoints
+and the exact fixture actually ancestral to independently verified remote main.
+Only then are both true `MERGED_RELEASED` records appended in dependency order in
+one atomic revision. There is no intermediate dependency promotion, lease bypass or
+release before source is on main. Original checkpoints, identities, owners, leases,
+history prefixes and unrelated lanes remain. Runtime/authority effects remain NONE.
+This bounded operation permits the semantically coupled Home/restage release;
+it does not execute merges, tests, publication or deployment.
+
+## Admission example
+
 In an isolated integration checkout, initialize once using the command above.
 Create developer worktrees separately using ordinary reviewed Git procedures.
 An example financial lane spec (absolute worktree supplied locally):
