@@ -206,3 +206,14 @@ a distinctly contracted assets ROA method and canonical input/output provenance/
 fitness acceptance, followed by the full integrated checks with the above fixture
 blockers resolved. No push, merge, deploy, publication, production Daily/database
 write or authority promotion has occurred or is recommended as an automatic action.
+
+## Campaign continuation: source release
+
+The original local milestone and receipts above remain historical evidence.
+After the Owner-authorized Home/restage source release, the offline validator
+reports `OFFLINE_QUALIFICATION_PASSED_NO_PUBLICATION` and fixture-only output.
+It does not query native execution state and cannot assert unavailable leases or
+unreleased source. Qualification, provenance, refusal, protected-output, canonical
+restage and card-parity checks remain unchanged. Native release status is recorded
+separately by the bound integration owner. No financial or production activation
+is inferred from passing offline qualification.
