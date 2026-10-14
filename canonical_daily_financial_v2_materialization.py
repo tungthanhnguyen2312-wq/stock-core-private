@@ -250,6 +250,7 @@ def build_evaluated_valuation_artifact(
     semantic_rows: Sequence[Mapping[str, Any]] | None = None,
     decision_session: str | None = None,
     official_financial_facts: Sequence[Mapping[str, Any]] | None = None,
+    include_metric_research: bool = False,
 ) -> dict[str, Any]:
     """Evaluate the raw ``market_wide_current_valuation_input_scaleout`` per-ticker records
     into the ``current_research_valuation_context/v1`` shape (``methods``, ``peer_relative_
@@ -345,6 +346,13 @@ def build_evaluated_valuation_artifact(
         payload["source_entity_applicability_identity"] = entity_applicability_artifact.get("artifact_identity")
     if official_overlay_eligibility is not None:
         payload["official_overlay_eligibility"] = official_overlay_eligibility
+    if include_metric_research:
+        if not decision_session:
+            raise CanonicalFinancialV2MaterializationError("METRIC_RESEARCH_DECISION_SESSION_REQUIRED")
+        payload["metric_research_context"] = valuation_context.build_metric_research_context(
+            rows=rows, engine_artifact=engine_artifact, decision_session=decision_session,
+            source_valuation_identity=_identity(payload)["artifact_identity"],
+            raw_valuation_records=valuation_records)
     payload.update(_identity(payload))
     return payload
 

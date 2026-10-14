@@ -1425,6 +1425,183 @@ def source_session_for_valuation(valuation_artifact: Mapping[str, Any] | None) -
     return valuation_artifact.get("valuation_session") or valuation_artifact.get("session")
 
 
+METRIC_RESEARCH_CONTRACT = "financial_valuation_metric_research/v1"
+RETURN_FEATURES = {
+    "ROE_AVERAGE_BALANCE": "same_provider_roe_avg_equity",
+    "ROA_AVERAGE_BALANCE": "same_provider_roa_avg_assets",
+    "ROE_END_PERIOD_PROXY": "same_provider_roe_eop_proxy",
+    "ROA_END_PERIOD_PROXY": "same_provider_roa_eop_proxy",
+    "ROA_CROSS_PROVIDER_PROXY": "mixed_provider_roa_proxy",
+}
+ROE_REPORTED_PERIOD = "ROE_REPORTED_PERIOD_END_EQUITY_PROXY"
+METRIC_RESEARCH_METHODS = (PE_EXISTING, PE_TTM, PB, PB_CURRENT_RESEARCH, PS_EXISTING, PS_TTM,
+                          EV_EBITDA, EV_EBITDA_CALC_READY, *REPORTED_PERIOD_METHODS)
+
+
+def _metric_freshness(periods: Sequence[str], *, decision_session: str,
+                      reporting_basis: Mapping[str, Any] | None = None) -> dict[str, Any]:
+    """Age explicit ends or existing calendar-quarter labels; never resolve a fiscal label."""
+    end = (reporting_basis or {}).get("period_end")
+    period = periods[-1] if periods else None
+    if end:
+        try:
+            day = date.fromisoformat(end)
+            period = f"{day.year}-Q{(day.month - 1) // 3 + 1}"
+        except (TypeError, ValueError):
+            return {"freshness_status": UNAVAILABLE, "reason_codes": ["MALFORMED_EXPLICIT_PERIOD_END"]}
+    lag, behind, blocker = completed_quarter_lag(period, decision_session)
+    return {"freshness_status": UNAVAILABLE if blocker else
+            "CURRENT" if lag <= MAX_COMPLETED_QUARTER_LAG else "STALE_BUT_RESEARCH_USABLE",
+            "period_identity": list(periods), "explicit_period_end": end,
+            "completed_quarter_lag": lag, "quarters_behind_last_completed": behind,
+            "reason_codes": [blocker] if blocker else [], "rewritten_as_current": False}
+
+
+def build_metric_research_context(*, rows: Mapping[str, Mapping[str, Any]],
+                                  engine_artifact: Mapping[str, Any], decision_session: str,
+                                  source_valuation_identity: str | None = None,
+                                  raw_valuation_records: Mapping[str, Mapping[str, Any]] | None = None) -> dict[str, Any]:
+    """Opt-in, non-voting publication over existing numerical owners.
+
+    Original valuation/financial records, method identities, peer verdicts and policies are
+    untouched. The sole new computation reuses the V2 ratio owner over H1-admitted operands;
+    missing current shares cannot suppress a return that does not use shares.
+    """
+    import copy
+    import hashlib
+    from stocklookup_core.financial import financial_analysis_engine_v2 as engine
+    records = {}
+    engine_records = engine_artifact.get("records") or {}
+    engine_peers = attach_engine_fundamental_peers(engine_records)
+    reported_peer_rows = {}
+    for ticker, row in sorted(rows.items()):
+        methods, metrics = row.get("methods") or {}, {}
+        source_record = engine_records.get(ticker) or {}
+        features = source_record.get("features") or {}
+        raw = (raw_valuation_records or {}).get(ticker) or {}
+        for mid in METRIC_RESEARCH_METHODS:
+            source = methods.get(mid) or {"method_id": mid, "status": INPUT_BLOCKED,
+                                          "blocker_reason_codes": ["METHOD_INPUT_NOT_RETAINED"]}
+            original_fitness = ("NOT_APPLICABLE" if source.get("status") == NOT_APPLICABLE else
+                                "READY" if source.get("status") == "READY" else
+                                "RESEARCH_PROXY" if source.get("status") == "RESEARCH_USABLE" else "BLOCKED_BY_EVIDENCE")
+            periods = list(source.get("input_periods") or source.get("ttm_periods") or [])
+            if not periods and source.get("period_basis"):
+                periods = [source["period_basis"]]
+            freshness = _metric_freshness(periods, decision_session=decision_session,
+                                           reporting_basis=source.get("reporting_basis"))
+            basis = source.get("source_fact") or {}
+            monetary = source.get("equity_monetary_basis") or source.get("ttm_monetary_basis") or {}
+            metrics[mid] = {"ticker": ticker, "metric_id": mid, "method": source.get("ttm_method") or source.get("method_id"),
+                "value": source.get("value"), "producer_fitness": original_fitness,
+                "fitness": original_fitness, "freshness": freshness, "period_identity": periods,
+                "statement_scope": source.get("statement_scope"), "currency": source.get("currency") or basis.get("currency") or monetary.get("currency"),
+                "scale": source.get("scale") or basis.get("unit_scale") or monetary.get("native_scale"),
+                "share_basis": source.get("share_basis") or row.get("share_basis"),
+                "observation_time": basis.get("observed_at"), "knowledge_time": basis.get("knowledge_available_at"),
+                "formula": source.get("formula"), "formula_owner": source.get("formula_owner") or CONTRACT_VERSION,
+                "source_lineage": copy.deepcopy(source), "reason_codes": list(source.get("blocker_reason_codes") or []),
+                "limitations": sorted(set(source.get("limitations") or []) | {"CURRENT_RESEARCH_ONLY", "NOT_FOR_EXECUTION", "NOT_PIT"}),
+                "peer_context": copy.deepcopy((row.get("peer_relative") or {}).get(mid) or {"status": "NOT_COMPARABLE", "reason": "PEER_CONTEXT_NOT_RETAINED"}),
+                "peer_universe": "UPSTREAM_EVALUATED_VALUATION_UNIVERSE",
+                "is_actionable": False}
+            # The raw observations remain attached separately; never infer a publication date
+            # from their period or from this projection's creation time.
+            metrics[mid]["numerator_lineage"] = copy.deepcopy({"price_input": raw.get("price_input"), "share_basis_input": raw.get("share_basis_input")})
+        for mid, fid in RETURN_FEATURES.items():
+            feature = features.get(fid) or {"fitness": "BLOCKED_BY_EVIDENCE", "reason_codes": ["FINANCIAL_ENGINE_FEATURE_NOT_RETAINED"]}
+            if row.get("entity_class") != "corporate":
+                feature = {"fitness": "NOT_APPLICABLE", "reason_codes": ["CORPORATE_RETURN_NOT_SPECIALIST_IDENTITY"]}
+            metrics[mid] = _return_metric_projection(ticker, mid, feature, decision_session=decision_session,
+                engine_identity=engine_artifact.get("artifact_identity"),
+                peer=(engine_peers.get(ticker) or {}).get(fid),
+                knowledge_time=(source_record.get("source_identities") or {}).get("period_semantics_knowledge_time"))
+        if row.get("entity_class") != "corporate":
+            reported = {"fitness": "NOT_APPLICABLE", "reason_codes": ["CORPORATE_RETURN_NOT_SPECIALIST_IDENTITY"]}
+        else:
+            reported = engine.reported_period_eop_return(ROE_REPORTED_PERIOD,
+                income=methods.get(PE_REPORTED_PERIOD) or {}, balance=methods.get(PB_OFFICIAL_RESEARCH) or {})
+        income, equity = methods.get(PE_REPORTED_PERIOD) or {}, methods.get(PB_OFFICIAL_RESEARCH) or {}
+        metric = _return_metric_projection(ticker, ROE_REPORTED_PERIOD, reported, decision_session=decision_session,
+            engine_identity=engine_artifact.get("artifact_identity"), reporting_basis=income.get("reporting_basis"))
+        metric.update({"formula": "reported_total_net_income / reported_total_ending_equity",
+                       "formula_owner": engine.CONTRACT_VERSION, "earnings_definition": "REPORTED_TOTAL_NET_INCOME_NOT_PARENT_ATTRIBUTABLE",
+                       "equity_definition": "TOTAL_EQUITY_AS_REPORTED_NCI_NOT_DEDUCTED",
+                       "operand_lineage": copy.deepcopy({"net_income": income, "ending_equity": equity}),
+                       "observation_time": (income.get("source_fact") or {}).get("observed_at"),
+                       "knowledge_time": (income.get("source_fact") or {}).get("knowledge_available_at")})
+        if any(str(item.get("knowledge_cutoff") or "")[:10] > decision_session
+               for item in (income, equity)):
+            metric.update(fitness="BLOCKED_BY_EVIDENCE", value=None)
+            metric["reason_codes"].append("OPERAND_ADMISSION_AFTER_DECISION_SESSION")
+        if metric["fitness"] == "BLOCKED_BY_EVIDENCE":
+            metric["reason_codes"] = sorted(set(metric["reason_codes"]) | {
+                "INCOME:" + code for code in income.get("blocker_reason_codes") or []
+            } | {"EQUITY:" + code for code in equity.get("blocker_reason_codes") or []})
+        metrics[ROE_REPORTED_PERIOD] = metric
+        peer_method = {"method_id": ROE_REPORTED_PERIOD, "status": "RESEARCH_USABLE" if reported.get("fitness") == "RESEARCH_PROXY" else INPUT_BLOCKED,
+            "applicability": APPLICABLE, "value": reported.get("value"), "statement_scope": income.get("statement_scope"),
+            "share_basis": "NOT_USED", "input_periods": reported.get("period_identity") or [], "period_basis": reported.get("method"),
+            "ttm_compatibility_class": json.dumps(["OFFICIAL_REPORTED_TOTAL_INCOME_TOTAL_EQUITY", income.get("statement_scope"), income.get("reporting_basis")], sort_keys=True)}
+        reported_peer_rows[ticker] = {"entity_class": row.get("entity_class"), "methods": {ROE_REPORTED_PERIOD: peer_method}}
+        for metric in metrics.values():
+            if metric["fitness"] in {"READY", "RESEARCH_PROXY"}:
+                if not _numeric(metric.get("value")) or not math.isfinite(metric["value"]):
+                    metric.update(fitness="BLOCKED_BY_EVIDENCE", value=None)
+                    metric["reason_codes"].append("NONFINITE_OR_MISSING_PRODUCER_RESULT")
+                elif "FINANCIAL_PERIOD_AFTER_DECISION_SESSION" in metric["freshness"].get("reason_codes", []):
+                    metric.update(fitness="BLOCKED_BY_EVIDENCE", value=None)
+                    metric["reason_codes"].append("FINANCIAL_PERIOD_AFTER_DECISION_SESSION")
+                elif metric.get("knowledge_time") and str(metric["knowledge_time"])[:10] > decision_session:
+                    metric.update(fitness="BLOCKED_BY_EVIDENCE", value=None)
+                    metric["reason_codes"].append("SOURCE_KNOWLEDGE_AFTER_DECISION_SESSION")
+                elif metric["freshness"]["freshness_status"] == "STALE_BUT_RESEARCH_USABLE":
+                    metric["fitness"] = "STALE_BUT_RESEARCH_USABLE"
+            metric["reason_codes"] = sorted(set(metric["reason_codes"]))
+            if metric["fitness"] in {"BLOCKED_BY_EVIDENCE", "NOT_APPLICABLE"}:
+                metric["peer_context"] = {"status": "NOT_COMPARABLE", "reason": "METRIC_NOT_ELIGIBLE"}
+        final_return = metrics[ROE_REPORTED_PERIOD]
+        if final_return["fitness"] not in {"READY", "RESEARCH_PROXY", "STALE_BUT_RESEARCH_USABLE"}:
+            peer_method.update(status=INPUT_BLOCKED, value=None)
+        records[ticker] = {"ticker": ticker, "entity_class": row.get("entity_class"), "metrics": metrics, "is_actionable": False}
+    reported_peer_rows = attach_peer_relative(reported_peer_rows)
+    for ticker in records:
+        records[ticker]["metrics"][ROE_REPORTED_PERIOD]["peer_context"] = reported_peer_rows[ticker]["peer_relative"][ROE_REPORTED_PERIOD]
+        records[ticker]["metrics"][ROE_REPORTED_PERIOD]["peer_universe"] = "SUPPLIED_RESEARCH_COHORT"
+    payload = {"contract_version": METRIC_RESEARCH_CONTRACT, "decision_session": decision_session,
+               "source_financial_v2_identity": engine_artifact.get("artifact_identity"), "records": records,
+               "source_valuation_identity": source_valuation_identity,
+               "authority_boundary": {"is_actionable": False, "authority_promoted": False,
+                                      "existing_valuation_policy_unchanged": True, "numerical_owner": "Producer"}}
+    digest = hashlib.sha256(json.dumps(payload, sort_keys=True, ensure_ascii=False, separators=(",", ":"), allow_nan=False).encode()).hexdigest()
+    return {**payload, "artifact_sha256": digest, "artifact_identity": METRIC_RESEARCH_CONTRACT + ":" + digest}
+
+
+def _return_metric_projection(ticker: str, mid: str, feature: Mapping[str, Any], *, decision_session: str,
+                              engine_identity: str | None, peer: Mapping[str, Any] | None = None,
+                              knowledge_time: str | None = None, reporting_basis: Mapping[str, Any] | None = None) -> dict[str, Any]:
+    import copy
+    fitness = feature.get("fitness") or "BLOCKED_BY_EVIDENCE"
+    # The engine's EOP measure stays the same value; the product correctly names its method
+    # as a proxy. Cross-provider unresolved-scale proxies never enter compatible peers.
+    if mid.endswith("PROXY") and fitness == "READY":
+        fitness = "RESEARCH_PROXY"
+    periods = list(feature.get("period_identity") or [])
+    reasons = list(feature.get("reason_codes") or [])
+    return {"ticker": ticker, "metric_id": mid, "method": feature.get("method"), "value": feature.get("value"),
+            "producer_fitness": feature.get("fitness") or "BLOCKED_BY_EVIDENCE", "fitness": fitness,
+            "denominator_method": "AVERAGE_PERIOD_BOUNDARIES" if "AVERAGE_BALANCE" in mid else "END_PERIOD_BALANCE",
+            "period_identity": periods, "statement_scope": copy.deepcopy(feature.get("scope") or []),
+            "currency": feature.get("currency"), "scale": feature.get("scale"), "share_basis": "NOT_USED",
+            "observation_time": None, "knowledge_time": knowledge_time,
+            "freshness": _metric_freshness(periods, decision_session=decision_session, reporting_basis=reporting_basis),
+            "source_context_identity": engine_identity, "source_lineage": copy.deepcopy(feature),
+            "reason_codes": reasons, "limitations": sorted(set(feature.get("warnings") or []) | {"CURRENT_RESEARCH_ONLY", "NOT_PIT", "NOT_FOR_EXECUTION"}),
+            "peer_context": copy.deepcopy(peer or {"status": "NOT_COMPARABLE", "reason": "METHOD_COMPATIBLE_PEERS_NOT_RETAINED"}),
+            "peer_universe": "SUPPLIED_FINANCIAL_ENGINE_UNIVERSE",
+            "is_actionable": False}
+
+
 def freshness_for_valuation(*, decision_session: str, valuation_artifact: Mapping[str, Any] | None) -> dict[str, Any]:
     return classify_valuation_freshness(
         decision_session=decision_session,

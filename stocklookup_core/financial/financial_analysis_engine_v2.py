@@ -9,6 +9,7 @@ from __future__ import annotations
 from collections import Counter, defaultdict
 import hashlib
 import json
+import math
 import re
 from typing import Any, Mapping, Sequence
 
@@ -324,6 +325,51 @@ def _ratio(feature_id: str, pair: tuple[Mapping[str, Any], Mapping[str, Any]] | 
         return _blocked(feature_id, "ZERO_DENOMINATOR")
     return _feature(feature_id, value=numerator["reported_value"] / denominator["reported_value"], fitness="READY",
                     method=method, inputs=[numerator, denominator])
+
+
+def reported_period_eop_return(feature_id: str, *, income: Mapping[str, Any],
+                               balance: Mapping[str, Any]) -> dict[str, Any]:
+    """Reuse the ratio owner for already-admitted official duration/ending-balance facts.
+
+    Admission remains the official reported-period valuation input contract. No shares,
+    annualization, opening balance, or corporate/specialist aliases are inferred here.
+    The envelopes are its admitted denominators, even if their price/share leg is blocked.
+    """
+    method = "official_reported_duration_return_on_ending_balance_proxy/v1"
+    if any(item.get("denominator_authority") != "QUALIFIED_OFFICIAL" for item in (income, balance)):
+        return _blocked(feature_id, "OFFICIAL_RETURN_OPERAND_NOT_ADMITTED", method=method)
+    if income.get("denominator_metric") != "net_income" or balance.get("denominator_metric") != "shareholders_equity":
+        return _blocked(feature_id, "OFFICIAL_RETURN_METRIC_IDENTITY_INCOMPATIBLE", method=method)
+    a, b = income.get("reporting_basis") or {}, balance.get("reporting_basis") or {}
+    sa, sb = income.get("source_fact") or {}, balance.get("source_fact") or {}
+    if (a.get("time_basis") != "DURATION" or b.get("time_basis") != "INSTANT"
+            or not a.get("period_start") or not a.get("period_end")
+            or a["period_end"] != b.get("period_end")):
+        return _blocked(feature_id, "OFFICIAL_RETURN_DURATION_ENDING_BALANCE_MISMATCH", method=method)
+    if (not sa.get("document_sha256") or sa["document_sha256"] != sb.get("document_sha256")
+            or not income.get("knowledge_cutoff") or income["knowledge_cutoff"] != balance.get("knowledge_cutoff")
+            or income.get("statement_scope") != "consolidated" or balance.get("statement_scope") != "consolidated"
+            or any(s.get("currency") != "VND" or s.get("unit_scale") != 1
+                   or s.get("already_normalized") is not True for s in (sa, sb))):
+        return _blocked(feature_id, "OFFICIAL_RETURN_SOURCE_SCOPE_CURRENCY_SCALE_INCOMPATIBLE", method=method)
+    n, d = income.get("denominator_value_vnd"), balance.get("denominator_value_vnd")
+    if not _numeric(n) or not _numeric(d) or not math.isfinite(n) or not math.isfinite(d):
+        return _blocked(feature_id, "OFFICIAL_RETURN_NONFINITE_OR_MISSING_OPERAND", method=method)
+    if d <= 0:
+        return _blocked(feature_id, "NON_POSITIVE_ENDING_EQUITY_RETURN_NOT_MEANINGFUL", method=method)
+    def operand(item, semantic):
+        source = item["source_fact"]
+        return {"reported_value": item["denominator_value_vnd"], "native_period_label": item["period_basis"],
+                "statement_scope": item["statement_scope"], "period_semantic_state": semantic,
+                "normalized_candidate_unit": {"currency": "VND", "scale": "units"},
+                "source_lineage": {"provider": "OFFICIAL_QUALIFIED_REPORTED_PERIOD",
+                    "source_sha256": source["document_sha256"], "fact_id": source.get("citation_id")}}
+    result = _ratio(feature_id, (operand(income, "EXPLICIT_REPORTED_DURATION"),
+                                operand(balance, "POINT_IN_TIME_BALANCE_SHEET")), method=method)
+    result["fitness"] = "RESEARCH_PROXY"
+    result["warnings"] = ["REPORTED_DURATION_NOT_ANNUALIZED_NOT_TTM", "END_OF_PERIOD_BALANCE_PROXY_NOT_AVERAGE_BALANCE_RETURN",
+                          "TOTAL_NET_INCOME_OVER_TOTAL_EQUITY_NCI_NOT_DEDUCTED"]
+    return result
 
 
 def sign_transition(old: float, new: float, *, earnings: bool) -> str | None:

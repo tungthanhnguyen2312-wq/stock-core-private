@@ -1,7 +1,7 @@
 # Stock Lookup — Active State
 
-Verified release baseline for this wave: `f582bfab80dac6d206083a0bd4a0ba57db199691`.
-PR145 released; all five post-merge CI jobs PASS (38491150319).
+Verified release baseline: `a9c799397a74641a0e16c8ea84454d2dc4d0745b`.
+PR146 released; all five post-merge CI jobs PASS (38512024681); Codex native revision96.
 `git fetch origin main` / `git ls-remote origin refs/heads/main`; **local** remote-tracking refs may be stale.
 ## 0. How this file relates to the others
 | Question | Answer lives in |
@@ -29,6 +29,7 @@ Kinds: **CURRENT FACT** (verified), **HOST-LOCAL** (untracked; re-verify),
 **BLOCKED**, **DEFERRED**, **HISTORICAL**.
 
 ## 1. The operational gate
+- **LOCAL ANALYTICAL CHECKPOINT — [VN30 financial/valuation research](vn30_financial_valuation_research_scaleout_v1_contract.md):** one Owner-directed lane admitted/active at native revisions97/98. Retained August24 HOSE30 cohort, October13 inputs: one new VRE H1 ending-equity ROE research proxy; old numerical methods/provenance unchanged. Versioned opt-in Producer metric projection; default Daily identities unchanged. No production activation, source/metric authority promotion, push or successor; exact local validation/checkpoint governs closeout.
 - **RELEASED / VALIDATED SOURCE WAVE 2026-10-14:** PR145 released at `f582bfab80dac6d206083a0bd4a0ba57db199691`; all five post-merge jobs PASS (38491150319). Native rev93 admits Codex lane `STOCKLOOKUP_PRODUCER_DEEP_SIMPLIFICATION_20261014`: six existing financial/valuation computation owners, exact leases and output parity. Implementation validated: 630 tests PASS, 12 retained-data cases absent in this clean worktree; native and hosted exact-head gates govern release disposition. Conditional validated source push/PR/merge authorized; no Daily, production or authority/evidence changes. PNJ/FPT unadmitted; Oct13 seals unchanged.
 - [Oct13](daily_20261013_handoff_route_recovery_contract.md).
 - **RELEASED — [financial intake](official_financial_quarterly_intake_contract.md):** PR137; candidates; source admission gated.

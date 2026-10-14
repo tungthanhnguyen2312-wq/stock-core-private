@@ -1,11 +1,19 @@
 # Stock Lookup — Current Roadmap
 
 History: [ROADMAP.md](ROADMAP.md); execution: ROADMAP_STATE.json.
-Verified wave baseline 2026-10-14 `f582bfab80dac6d206083a0bd4a0ba57db199691`.
+Verified analytical baseline 2026-10-14 `a9c799397a74641a0e16c8ea84454d2dc4d0745b`.
 Nothing below auto-starts; native standing admission required (AI_RULES 11).
 Facts: [ACTIVE_STATE.md](ACTIVE_STATE.md).
 
-## NOW — STOCKLOOKUP_PRODUCER_DEEP_SIMPLIFICATION (VALIDATED SOURCE WAVE)
+## NOW — VN30_FINANCIAL_VALUATION_RESEARCH_SCALEOUT_V1 (LOCAL CHECKPOINT)
+
+[Bounded analytical scope](vn30_financial_valuation_research_scaleout_v1_contract.md):
+PR146 released and native predecessor revision96 verified; one lane admitted/active
+at revisions97/98. Same retained30 cohort: VRE H1 ROE +1 research proxy; other metric
+counts and numerical authority unchanged. Opt-in shared Producer projection; no
+production activation, push/merge/deploy/publication or automatic successor.
+
+## PRIOR — STOCKLOOKUP_PRODUCER_DEEP_SIMPLIFICATION (RELEASED PR146)
 
 [Scope](parallel_domain_development_control_plane_v1_contract.md): disjoint native lanes;
 Owner merge gate. PR133 released; post-merge CI PASS (38318598892).
