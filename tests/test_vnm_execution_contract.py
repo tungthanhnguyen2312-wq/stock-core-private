@@ -1,5 +1,5 @@
 ﻿import unittest
-from vnm_execution_contract import resolve_vnm_fill
+from stocklookup_core.portfolio.vnm_execution_contract import resolve_vnm_fill
 
 def signal(cutoff="2026-06-30T00:00:00Z"): return {"ticker":"VNM","snapshot_id":"s1","knowledge_cutoff":cutoff,"state":"partial"}
 def costs(**overrides):

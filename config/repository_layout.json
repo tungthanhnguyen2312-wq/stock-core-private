@@ -192,8 +192,6 @@
     "official_source_registry.py",
     "official_source_registry_owner_promotion.py",
     "operational_fundamental_context_integration.py",
-    "opportunity_snapshot.py",
-    "opportunity_snapshot_retention.py",
     "owner_daily_journal.py",
     "owner_daily_progress.py",
     "owner_focus_core_financial_panel_coverage.py",
@@ -275,7 +273,6 @@
     "share_basis_event_promotion.py",
     "shareholders_sync.py",
     "source_faithful_numeric_glyph_normalization.py",
-    "ssi_securities_pilot.py",
     "statement_taxonomy_sidecar.py",
     "stock_analyzer.py",
     "stocklookup.py",
@@ -293,7 +290,6 @@
     "vci_financial_statement_retention.py",
     "vn_indicators.py",
     "vn_time.py",
-    "vnm_execution_contract.py",
     "vnm_shadow_backtest.py",
     "volume_and_flow_context.py",
     "volume_and_flow_context_v2.py",
@@ -613,9 +609,45 @@
     "strategy_framework.py": "stocklookup_core/tactical/strategy_framework.py",
     "momentum_screening_v1.py": "stocklookup_core/tactical/momentum_screening_v1.py",
     "candlestick_patterns.py": "stocklookup_core/tactical/candlestick_patterns.py",
-    "source_schema_guards.py": "stocklookup_core/evidence/source_schema_guards.py"
+    "source_schema_guards.py": "stocklookup_core/evidence/source_schema_guards.py",
+    "opportunity_snapshot.py": "stocklookup_core/decision/opportunity_snapshot.py",
+    "opportunity_snapshot_retention.py": "stocklookup_core/decision/opportunity_snapshot.py",
+    "ssi_securities_pilot.py": "stocklookup_core/evidence/official_document_downstream_shadow.py",
+    "vnm_execution_contract.py": "stocklookup_core/portfolio/vnm_execution_contract.py"
   },
   "compatibility_entrypoints": {
     "official_document_acquisition.py": "Existing offline import CLI; delegates to the evidence package main()."
+  },
+  "root_consolidation_v4": {
+    "milestone": "PRODUCER_ROOT_MODULE_CONSOLIDATION_AND_NET_FILE_REDUCTION_V4",
+    "baseline": "416c3083a7547039386c330f550ed2dbf7eed324",
+    "relocations": {
+      "opportunity_snapshot.py": "stocklookup_core/decision/opportunity_snapshot.py",
+      "opportunity_snapshot_retention.py": "stocklookup_core/decision/opportunity_snapshot.py",
+      "ssi_securities_pilot.py": "stocklookup_core/evidence/official_document_downstream_shadow.py",
+      "vnm_execution_contract.py": "stocklookup_core/portfolio/vnm_execution_contract.py"
+    },
+    "source_sha256_lf": {
+      "opportunity_snapshot.py": "4d9156dc2d9d7a915a74a31cc175930ac37ce6c1d264dc119ac9f49cb2857541",
+      "opportunity_snapshot_retention.py": "71409480889230b85f9542b426a336a11eb411c155493257a5f3a711f00409f6",
+      "ssi_securities_pilot.py": "584b741c34ec6ae8551b521ed8cbc110e590834a092f503629eeeb4f9e35ddd7",
+      "vnm_execution_contract.py": "51cc7b0eda1ed85c42c0eba7f8a40febebabee903ee6eb6b89b89fe52e48699c"
+    },
+    "consolidations": {
+      "snapshot_and_retention": {
+        "sources": [
+          "opportunity_snapshot.py",
+          "opportunity_snapshot_retention.py"
+        ],
+        "owner": "stocklookup_core/decision/opportunity_snapshot.py"
+      },
+      "ssi_qualifier": {
+        "source": "ssi_securities_pilot.py",
+        "owner": "stocklookup_core/evidence/official_document_downstream_shadow.py",
+        "export": {
+          "evaluate": "evaluate_ssi"
+        }
+      }
+    }
   }
 }

@@ -2,7 +2,7 @@
 from stocklookup_core.decision.opportunity_ranking import evaluate_opportunity
 from stocklookup_core.research.scenario_analysis import evaluate_scenario_analysis
 from stocklookup_core.research.opportunity_contract_validation import find_prohibited_fields
-from opportunity_snapshot import build_snapshot, serialize_snapshot
+from stocklookup_core.decision.opportunity_snapshot import build_snapshot, serialize_snapshot
 
 def entry():
  f={"value":1,"period_identity":{"period":"2024","period_type":"annual"},"statement_scope":"consolidated","currency":"VND","unit_scale":1,"source":"test","observation_ids":["o"],"citation_id":"c","evidence_id":"e"}

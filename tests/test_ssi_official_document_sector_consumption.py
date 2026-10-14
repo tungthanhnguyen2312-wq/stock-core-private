@@ -1,5 +1,5 @@
 import unittest
-from ssi_securities_pilot import evaluate
+from stocklookup_core.evidence.official_document_downstream_shadow import evaluate_ssi as evaluate
 from stocklookup_core.evidence.official_document_canonical_activation import activate
 class SSIOfficialSourceTests(unittest.TestCase):
  def official(self,metric='brokerage_revenue',unit='VND'):

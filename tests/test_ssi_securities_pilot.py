@@ -1,5 +1,5 @@
 import unittest
-from ssi_securities_pilot import evaluate
+from stocklookup_core.evidence.official_document_downstream_shadow import evaluate_ssi as evaluate
 from stocklookup_core.valuation.intrinsic_valuation import evaluate_intrinsic_valuation
 from stocklookup_core.valuation.relative_valuation import evaluate_relative_valuation
 

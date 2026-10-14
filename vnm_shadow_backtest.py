@@ -3,7 +3,7 @@ from __future__ import annotations
 import argparse, hashlib, json
 from datetime import date
 from typing import Any, Mapping
-from vnm_execution_contract import resolve_vnm_fill
+from stocklookup_core.portfolio.vnm_execution_contract import resolve_vnm_fill
 
 VERSION="1.0.0"
 SIGNAL_VERSION="1.0.0"
@@ -25,7 +25,7 @@ def _qualified(row:Mapping[str,Any])->bool:return row.get("price_basis")=="raw_h
 
 def replay_return_semantics(entry: float, exit: float, costs: Mapping[str, Any] | None) -> dict[str, Any]:
  """Existing round-trip bps method; missing costs are unavailable, never zero."""
- from vnm_execution_contract import _costs
+ from stocklookup_core.portfolio.vnm_execution_contract import _costs
  import math
  if any(isinstance(x, bool) or not isinstance(x, (int, float)) or not math.isfinite(x) or x <= 0 for x in (entry, exit)):
   return {"gross_return": None, "net_return": None, "reason_codes": ["INVALID_PRICE"]}
@@ -103,7 +103,7 @@ def run_authority_gated_replay(*, snapshot: Mapping[str, Any], raw_sessions: lis
  The legacy fixed-holding exit remains explicit, with no inferred stop or policy.
  """
  from raw_pit_authority_matrix import use_case_readiness
- from vnm_execution_contract import _row_reason, _costs
+ from stocklookup_core.portfolio.vnm_execution_contract import _row_reason, _costs
  from stocklookup_core.evidence.field_identity import stable_id
  ticker = snapshot.get("ticker")
  cutoff = snapshot.get("knowledge_cutoff")
