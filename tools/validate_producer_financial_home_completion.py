@@ -241,7 +241,7 @@ def home_probe(presentation):
             "notable_tickers": tickers, "nine_field_parity": True, "legacy_twin_parity": True,
             "restage_parity": True, "empty_distinct_from_absent": True,
             "source_publication_staging_parity": True,
-            "publication": "FIXTURE_ONLY_EXISTING_CHECKPOINT_NOT_INTEGRATED_CURRENT_MAIN"}, extended
+            "publication": "FIXTURE_ONLY_NO_PUBLICATION"}, extended
 
 
 def main(argv=None):
@@ -271,7 +271,7 @@ def main(argv=None):
     compare_snapshot(input_hashes)
     preservation = compare_snapshot(protected)
     verify_checkpoint(args.candidate_checkout, args.candidate_sha)
-    result = {"disposition": "PARTIAL_BLOCKED_NATIVE_LEASE_TRANSFER_UNAVAILABLE",
+    result = {"disposition": "OFFLINE_QUALIFICATION_PASSED_NO_PUBLICATION",
               "candidate_sha": args.candidate_sha, "financial": financial, "home": home,
               "protected_outputs": preservation, "input_hashes": input_hashes,
               "authority_effect": "NONE", "production_operation": False}
