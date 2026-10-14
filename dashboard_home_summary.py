@@ -26,6 +26,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import copy
 from collections import Counter
 from typing import Any, Mapping
 
@@ -312,6 +313,53 @@ def build_home_summary(projection: Mapping[str, Any], *, requested_at: str) -> d
     }
     summary.update(content_identity(summary))
     return summary
+
+
+NOTABLE_CARDS_CONTRACT = "dashboard_home_notable_cards/v1"
+NOTABLE_SELECTION = "PUBLISHED_INSERTION_ORDER_NOTABLE_MEMBERSHIP_V1"
+NOTABLE_SELECTION_LIMIT = 4
+_CONSTRUCTIVE_POSTURES = frozenset({"INITIATE_ON_BREAKOUT", "ACCUMULATE_ON_RETEST", "EARLY_WATCH"})
+_NOTABLE_ENTRY_STATES = frozenset({"BREAKOUT_READY", "EARLY_REVERSAL_CANDIDATE", "BASE_BUILDING"})
+_NOTABLE_FIELDS = ("ticker", "as_of_session", "research_action_posture", "entry_state",
+                   "evidence_currency", "position_context", "why", "reference_trigger", "counter_thesis")
+
+
+def with_notable_cards(summary: Mapping[str, Any], workspace_index: Mapping[str, Any]) -> dict[str, Any]:
+    """Attach the Dashboard's four verbatim index cards to a versioned Home summary.
+
+    The workspace index owner chooses the thin-card fields and insertion order. This
+    projection only applies the already-published Home selection predicate; it never
+    computes a posture, eligibility verdict, ratio or rank.
+    """
+    if (summary.get("contract_version") != CONTRACT_VERSION
+            or content_identity(summary)["artifact_identity"] != summary.get("artifact_identity")
+            or workspace_index.get("contract_version") != "workspace_index/v1"
+            or workspace_index.get("as_of_session") != summary.get("as_of_session")
+            or not isinstance(workspace_index.get("source_artifact_identity"), str)
+            or not workspace_index["source_artifact_identity"]
+            or not isinstance(workspace_index.get("cards"), Mapping)):
+        raise DashboardHomeSummaryError("NOTABLE_SOURCE_OR_SESSION_INCOMPATIBLE")
+    chosen = []
+    for ticker, card in workspace_index["cards"].items():
+        if not isinstance(card, Mapping) or card.get("ticker") != ticker or card.get("as_of_session") != summary["as_of_session"]:
+            raise DashboardHomeSummaryError("NOTABLE_INDEX_CARD_INCOMPATIBLE")
+        posture, entry = card.get("research_action_posture"), card.get("entry_state")
+        if posture in _CONSTRUCTIVE_POSTURES or (entry in _NOTABLE_ENTRY_STATES and posture not in {"AVOID", "REDUCE"}):
+            chosen.append({field: copy.deepcopy(card.get(field)) for field in _NOTABLE_FIELDS})
+            if len(chosen) == NOTABLE_SELECTION_LIMIT:
+                break
+    block = {"contract_version": NOTABLE_CARDS_CONTRACT, "as_of_session": summary["as_of_session"],
+             "source_contract_version": "workspace_index/v1",
+             "source_artifact_identity": workspace_index["source_artifact_identity"],
+             "selection": NOTABLE_SELECTION, "selection_limit": NOTABLE_SELECTION_LIMIT, "cards": chosen}
+    result = {}
+    for key, value in summary.items():
+        if key == "authority_effect":
+            result["notable_cards"] = block
+        if key not in {"artifact_sha256", "artifact_identity"}:
+            result[key] = value
+    result.update(content_identity(result))
+    return result
 
 
 def js_fallback(summary: Mapping[str, Any]) -> str:

@@ -746,6 +746,13 @@ def materialize_and_write_current_product_projections(
     home_summary_status: dict[str, Any]
     try:
         home_summary = dashboard_home_summary.build_home_summary(screener_master, requested_at=requested_at)
+        try:
+            from workspace_public_read_model import build_public_read_model
+            workspace_index, _ = build_public_read_model(workspace)
+            home_summary = dashboard_home_summary.with_notable_cards(home_summary, workspace_index)
+        except (ValueError, TypeError, KeyError):
+            # The optional card shortcut must not suppress the existing Home summary.
+            pass
         home_summary_json_path = operation_dir / HOME_SUMMARY_JSON_FILENAME
         home_summary_js_path = operation_dir / HOME_SUMMARY_JS_FILENAME
         atomic_write_json(home_summary_json_path, home_summary)
