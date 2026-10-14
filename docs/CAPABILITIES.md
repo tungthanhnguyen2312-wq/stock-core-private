@@ -142,6 +142,13 @@ and no production Daily launch. Disk admission remains independently mandatory.
 
 ## C. Fundamental, valuation, decision
 
+[VN30 financial/valuation research](vn30_financial_valuation_research_scaleout_v1_contract.md):
+local `EXPERIMENTAL / NON_VOTING / OFFLINE_ONLY` compatible opt-in projection over
+existing Producer metrics, labelled freshness and unchanged source lineage. One new
+VRE reported-H1 ending-equity ROE proxy; no exact/TTM/sector/share authority change.
+The new ROE peer distribution remains below the compatible minimum; existing
+valuation peer verdicts retain their upstream scope. Default Daily behavior is unchanged.
+
 ### 11. Corporate Intelligence
 - Local projection checkpoint: exact selected session event context joins the three retained
   historical chains. Prior contexts require deterministic session projection with immutable
