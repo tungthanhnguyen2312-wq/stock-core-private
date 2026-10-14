@@ -1,8 +1,7 @@
 """Focused tests for dashboard_home_summary/v1.
 
 Includes a real retained-artifact parity check against
-C:\\Projects\\StockLookup\\market-dashboard\\data\\screener_master_projection.json (the
-real 2026-09-18 session) -- the exact numbers this test pins are the same numbers
+the retained Producer 2026-09-18 operation -- the exact numbers this test pins are the same numbers
 independently verified live in market-dashboard's own dashboard-product-summary.js
 (summarizeScreenerOverview) during MARKET_DASHBOARD_FULL_SURFACE_CONVERGENCE_AND_HOME_
 PERFORMANCE_V1 (380 up / 282 down / 194 flat, 44/197/940/28/284/190 stance counts, 956
@@ -20,7 +19,10 @@ import dashboard_home_summary as dhs
 
 
 SESSION = "2026-09-18"
-REAL_PROJECTION_PATH = Path(r"C:\Projects\StockLookup\market-dashboard\data\screener_master_projection.json")
+REAL_PROJECTION_PATH = (Path(__file__).resolve().parents[2] / "stock-core-private" /
+    "operations-review/daily-research-session-operations-v1/2026-09-18/"
+    "8a857ca4204136e42982dd2d1b953ebb857f3a6599837d7b0d20b3a820c3b95f/"
+    "screener_master_projection.json")
 
 
 def _card(*, price_status="PRICE_AVAILABLE", change_pct_status="AVAILABLE", change_pct=0.0,
@@ -112,6 +114,29 @@ def test_content_identity_excludes_volatile_fields_and_is_deterministic():
     identity_b = dhs.content_identity(later)
     assert identity_a == identity_b
     assert identity_a["artifact_identity"] == f"{dhs.CONTRACT_VERSION}:{identity_a['artifact_sha256']}"
+
+
+def test_optional_notable_cards_preserve_index_order_values_and_summary_identity():
+    summary = dhs.build_home_summary(_projection({"AAA": _card()}), requested_at="2026-09-20T00:00:00+07:00")
+    cards = {}
+    for ticker, posture in (("AAA", "AVOID"), ("BBB", "EARLY_WATCH"),
+                            ("CCC", "WAIT_FOR_CONFIRMATION"), ("DDD", "INITIATE_ON_BREAKOUT")):
+        cards[ticker] = {"ticker": ticker, "as_of_session": SESSION,
+            "research_action_posture": posture, "entry_state": None,
+            "evidence_currency": "CURRENT_SESSION", "position_context": {"status": "NOT_SUPPLIED"},
+            "why": {"deterministic_reasons": [ticker]}, "reference_trigger": {"status": "NOT_AVAILABLE"},
+            "counter_thesis": {"key_counter_thesis": []}}
+    index = {"contract_version": "workspace_index/v1", "as_of_session": SESSION,
+        "source_artifact_identity": "investment_decision_workspace_projection/v1:test", "cards": cards}
+    extended = dhs.with_notable_cards(summary, index)
+    assert [card["ticker"] for card in extended["notable_cards"]["cards"]] == ["BBB", "DDD"]
+    assert extended["notable_cards"]["cards"][0]["why"] == cards["BBB"]["why"]
+    assert {k:v for k,v in extended.items() if k not in {"notable_cards", "artifact_identity", "artifact_sha256"}} == {
+        k:v for k,v in summary.items() if k not in {"artifact_identity", "artifact_sha256"}}
+    assert dhs.content_identity(extended)["artifact_identity"] == extended["artifact_identity"]
+    assert summary["artifact_identity"] != extended["artifact_identity"]
+    with pytest.raises(dhs.DashboardHomeSummaryError, match="NOTABLE_SOURCE_OR_SESSION_INCOMPATIBLE"):
+        dhs.with_notable_cards(summary, {**index, "as_of_session": "2026-09-17"})
 
 
 def test_session_breadth_and_stance_and_tactical_counts_over_a_small_synthetic_cohort():
