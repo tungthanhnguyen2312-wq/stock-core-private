@@ -170,10 +170,20 @@ def _series_index(rows: Sequence[Mapping[str, Any]], metric: str, semantic: str,
     left out of the series (fail closed) instead of being resolved by whichever row came last.
     """
     key = key or _source_key
+    if isinstance(rows, dict):
+        query = (metric, semantic, key)
+        resolved = rows["resolved"]
+        if query not in resolved:
+            resolved[query] = _resolve_series(rows["observed"].get(query, {}))
+        return resolved[query]
     observed: dict[tuple[str, ...], dict[str, list[Mapping[str, Any]]]] = defaultdict(lambda: defaultdict(list))
     for row in rows:
         if _row_usable(row, semantic) and row.get("canonical_metric") == metric:
             observed[key(row)][_period_label(row)].append(row)
+    return _resolve_series(observed)
+
+
+def _resolve_series(observed):
     index: dict[tuple[str, ...], dict[str, Mapping[str, Any]]] = defaultdict(dict)
     for series_key, periods in observed.items():
         for label, candidates in periods.items():
@@ -181,6 +191,28 @@ def _series_index(rows: Sequence[Mapping[str, Any]], metric: str, semantic: str,
                 index[series_key][label] = min(
                     candidates, key=lambda item: str((item.get("source_lineage") or {}).get("fact_id")))
     return index
+
+
+def _index_rows(rows: Sequence[Mapping[str, Any]]) -> dict:
+    """Build this issuer's two existing series representations once; borrow input rows.
+
+    Qualification, duplicate collapse and conflict exclusion are the same as the
+    standalone selector. Resolve only queried representations; unused or unknown
+    observations retain their existing blocked context without numeric coercion.
+    """
+    observed = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
+    for row in rows:
+        if not _row_usable(row):
+            continue
+        metric = row.get("canonical_metric")
+        if not isinstance(metric, str):
+            continue
+        semantic = normalize_period_semantic(row.get("period_semantic_state"))
+        if semantic == UNKNOWN:
+            continue
+        for key in (_source_key, _representation_key):
+            observed[(metric, semantic, key)][key(row)][_period_label(row)].append(row)
+    return {"observed": observed, "resolved": {}}
 
 
 def _observation_integrity(rows: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
@@ -1248,18 +1280,19 @@ def build_ticker_context(ticker: str, rows: Sequence[Mapping[str, Any]], *, issu
         history_context = {feature_id: {"status": "NOT_APPLICABLE", "reason": "ENTITY_TYPE_NOT_SUPPORTED_THIS_MILESTONE", "sample_count": 0}
                            for feature_id in HISTORY_CONTEXT_FEATURES}
     else:
-        revenue = _best_series(rows, "revenue", FLOW_STANDALONE)
-        pbt = _best_series(rows, "profit_before_tax", FLOW_STANDALONE)
-        income = _best_series(rows, "net_income", FLOW_STANDALONE)
-        ocf = _best_series(rows, "operating_cash_flow", FLOW_STANDALONE)
-        revenue_ytd = _best_series(rows, "revenue", "YTD_CUMULATIVE_INTERIM")
-        income_ytd = _best_series(rows, "net_income", "YTD_CUMULATIVE_INTERIM")
+        series = _index_rows(rows)
+        revenue = _best_series(series, "revenue", FLOW_STANDALONE)
+        pbt = _best_series(series, "profit_before_tax", FLOW_STANDALONE)
+        income = _best_series(series, "net_income", FLOW_STANDALONE)
+        ocf = _best_series(series, "operating_cash_flow", FLOW_STANDALONE)
+        revenue_ytd = _best_series(series, "revenue", "YTD_CUMULATIVE_INTERIM")
+        income_ytd = _best_series(series, "net_income", "YTD_CUMULATIVE_INTERIM")
         revenue_ttm, revenue_ttm_inputs = _ttm_sum(revenue, "revenue_ttm")
         pbt_ttm, pbt_ttm_inputs = _ttm_sum(pbt, "profit_before_tax_ttm")
         income_ttm, income_ttm_inputs = _ttm_sum(income, "net_income_ttm")
         ocf_ttm, ocf_ttm_inputs = _ttm_sum(ocf, "operating_cash_flow_ttm")
-        net_margin = _ratio("net_margin", _same_period_pair(rows, "net_income", "revenue", FLOW_STANDALONE), method="same_provider_same_period_net_margin/v2")
-        pbt_margin = _ratio("pbt_margin", _same_period_pair(rows, "profit_before_tax", "revenue", FLOW_STANDALONE), method="same_provider_same_period_pbt_margin/v2")
+        net_margin = _ratio("net_margin", _same_period_pair(series, "net_income", "revenue", FLOW_STANDALONE), method="same_provider_same_period_net_margin/v2")
+        pbt_margin = _ratio("pbt_margin", _same_period_pair(series, "profit_before_tax", "revenue", FLOW_STANDALONE), method="same_provider_same_period_pbt_margin/v2")
         # Same-provider, same-period, standalone-quarter only: `gross_profit` is itself
         # canonicalized KBS-only (canonical_financial_facts.METRIC_REGISTRY), and this
         # pairing's own semantic gate independently keeps out any VCI-provider revenue a
@@ -1268,24 +1301,24 @@ def build_ticker_context(ticker: str, rows: Sequence[Mapping[str, Any]], *, issu
         # contract). A negative gross profit is a valid input and yields a negative
         # margin -- `_ratio` never special-cases the numerator's sign, only a zero
         # denominator.
-        gross_margin = _ratio("gross_margin", _same_period_pair(rows, "gross_profit", "revenue", FLOW_STANDALONE), method="same_provider_same_period_gross_margin/v2")
-        gross_margin_direction = _pit_ratio_direction_for(rows, "gross_profit", "revenue", "gross_margin_direction",
+        gross_margin = _ratio("gross_margin", _same_period_pair(series, "gross_profit", "revenue", FLOW_STANDALONE), method="same_provider_same_period_gross_margin/v2")
+        gross_margin_direction = _pit_ratio_direction_for(series, "gross_profit", "revenue", "gross_margin_direction",
                                                            method="same_provider_same_quarter_yoy_gross_margin/v1", semantic=FLOW_STANDALONE)
         previous_margin = None
-        pair = _same_period_pair(rows, "net_income", "revenue", FLOW_STANDALONE)
+        pair = _same_period_pair(series, "net_income", "revenue", FLOW_STANDALONE)
         if pair:
             current_q = _quarter(pair[0].get("native_period_label")); key = _source_key(pair[0])
             if current_q:
                 prior_label = f"{_prior_quarter(current_q)[0]}-Q{_prior_quarter(current_q)[1]}"
-                left = _groups(rows, "net_income", FLOW_STANDALONE).get(key, {}).get(prior_label)
-                right = _groups(rows, "revenue", FLOW_STANDALONE).get(key, {}).get(prior_label)
+                left = _groups(series, "net_income", FLOW_STANDALONE).get(key, {}).get(prior_label)
+                right = _groups(series, "revenue", FLOW_STANDALONE).get(key, {}).get(prior_label)
                 previous_margin = _ratio("net_margin_direction", (left, right) if left and right else None, method="prior_period_net_margin/v2")
         current_margin = net_margin
         if current_margin["fitness"] == "READY" and previous_margin and previous_margin["fitness"] == "READY":
             margin_direction = _feature("net_margin_direction", value=current_margin["value"] - previous_margin["value"], fitness="READY", method="consecutive_same_provider_net_margin_direction/v2", inputs=[])
         else:
             margin_direction = _blocked("net_margin_direction", "MISSING_CONSECUTIVE_COMPATIBLE_MARGIN_PERIODS")
-        cash_pair = _cross_statement_same_representation_pair(rows, "operating_cash_flow", "net_income", FLOW_STANDALONE)
+        cash_pair = _cross_statement_same_representation_pair(series, "operating_cash_flow", "net_income", FLOW_STANDALONE)
         def ttm_ratio(feature_id: str, numerator: Mapping[str, Any], numerator_inputs: Sequence[Mapping[str, Any]], denominator: Mapping[str, Any], denominator_inputs: Sequence[Mapping[str, Any]], method: str) -> dict[str, Any]:
             if numerator["fitness"] != "READY" or denominator["fitness"] != "READY" or not numerator_inputs or not denominator_inputs:
                 return _blocked(feature_id, "MISSING_COMPATIBLE_TTM_INPUTS")
@@ -1296,8 +1329,8 @@ def build_ticker_context(ticker: str, rows: Sequence[Mapping[str, Any]], *, issu
                 return _blocked(feature_id, "ZERO_DENOMINATOR")
             return _feature(feature_id, value=numerator["value"] / denominator["value"], fitness="READY", method=method,
                             inputs=list(numerator_inputs) + list(denominator_inputs), growth_basis="TTM")
-        avg_equity_series = _avg_balance_series(rows, "net_income", "shareholders_equity")
-        avg_assets_series = _avg_balance_series(rows, "net_income", "total_assets")
+        avg_equity_series = _avg_balance_series(series, "net_income", "shareholders_equity")
+        avg_assets_series = _avg_balance_series(series, "net_income", "total_assets")
         features = {
             "net_income_sign": _feature("net_income_sign", value=_latest(income)["reported_value"], fitness="READY", method="latest_compatible_standalone_sign/v2", inputs=[_latest(income)]) if _latest(income) else _blocked("net_income_sign", "MISSING_STANDALONE_NET_INCOME"),
             "net_margin": net_margin, "pbt_margin": pbt_margin, "gross_margin": gross_margin,
@@ -1323,26 +1356,26 @@ def build_ticker_context(ticker: str, rows: Sequence[Mapping[str, Any]], *, issu
             # standalone-quarter representation. It never affects readiness or decisions.
             "free_cash_flow_proxy": _signed_flow_sum(
                 "free_cash_flow_proxy",
-                _same_period_pair(rows, "operating_cash_flow", "capital_expenditure", FLOW_STANDALONE),
+                _same_period_pair(series, "operating_cash_flow", "capital_expenditure", FLOW_STANDALONE),
                 method="same_provider_same_period_operating_cash_flow_plus_signed_capex/v1"),
             "free_cash_flow_proxy_direction": _signed_flow_sum_direction(
-                rows, feature_id="free_cash_flow_proxy_direction"),
-            "equity_to_assets": _ratio("equity_to_assets", _same_period_pair(rows, "shareholders_equity", "total_assets", PIT), method="same_provider_same_period_equity_to_assets/v2"),
-            "cash_to_assets": _ratio("cash_to_assets", _same_period_pair(rows, "cash_and_cash_equivalents", "total_assets", PIT), method="same_provider_same_period_cash_to_assets/v2"),
-            "debt_to_equity": _ratio("debt_to_equity", _same_period_pair(rows, "total_interest_bearing_debt", "shareholders_equity", PIT), method="same_provider_same_period_explicit_debt_to_equity/v2"),
-            "debt_to_assets": _ratio("debt_to_assets", _same_period_pair(rows, "total_interest_bearing_debt", "total_assets", PIT), method="same_provider_same_period_explicit_debt_to_assets/v2"),
-            "debt_to_equity_direction": _pit_ratio_direction_for(rows, "total_interest_bearing_debt", "shareholders_equity", "debt_to_equity_direction"),
-            "equity_to_assets_direction": _pit_ratio_direction(rows),
-            "assets_yoy": _pit_trajectory(rows, "total_assets"), "equity_yoy": _pit_trajectory(rows, "shareholders_equity"), "cash_yoy": _pit_trajectory(rows, "cash_and_cash_equivalents"),
+                series, feature_id="free_cash_flow_proxy_direction"),
+            "equity_to_assets": _ratio("equity_to_assets", _same_period_pair(series, "shareholders_equity", "total_assets", PIT), method="same_provider_same_period_equity_to_assets/v2"),
+            "cash_to_assets": _ratio("cash_to_assets", _same_period_pair(series, "cash_and_cash_equivalents", "total_assets", PIT), method="same_provider_same_period_cash_to_assets/v2"),
+            "debt_to_equity": _ratio("debt_to_equity", _same_period_pair(series, "total_interest_bearing_debt", "shareholders_equity", PIT), method="same_provider_same_period_explicit_debt_to_equity/v2"),
+            "debt_to_assets": _ratio("debt_to_assets", _same_period_pair(series, "total_interest_bearing_debt", "total_assets", PIT), method="same_provider_same_period_explicit_debt_to_assets/v2"),
+            "debt_to_equity_direction": _pit_ratio_direction_for(series, "total_interest_bearing_debt", "shareholders_equity", "debt_to_equity_direction"),
+            "equity_to_assets_direction": _pit_ratio_direction(series),
+            "assets_yoy": _pit_trajectory(series, "total_assets"), "equity_yoy": _pit_trajectory(series, "shareholders_equity"), "cash_yoy": _pit_trajectory(series, "cash_and_cash_equivalents"),
             # Legacy IDs stay present as aliases for the explicitly named EOP proxies; the
             # old average-balance implication is removed rather than silently retained.
-            "same_provider_roa": _same_provider_eop_proxy(rows, "net_income", "total_assets", "same_provider_roa"),
-            "same_provider_roe": _same_provider_eop_proxy(rows, "net_income", "shareholders_equity", "same_provider_roe"),
-            "same_provider_roa_eop_proxy": _same_provider_eop_proxy(rows, "net_income", "total_assets", "same_provider_roa_eop_proxy"),
-            "same_provider_roe_eop_proxy": _same_provider_eop_proxy(rows, "net_income", "shareholders_equity", "same_provider_roe_eop_proxy"),
-            "same_provider_asset_turnover_eop_proxy": _same_provider_eop_proxy(rows, "revenue", "total_assets", "same_provider_asset_turnover_eop_proxy"),
-            "mixed_provider_roa_proxy": _mixed_provider_proxy(rows, "net_income", "total_assets", "mixed_provider_roa_proxy"),
-            "mixed_provider_asset_turnover_proxy": _mixed_provider_proxy(rows, "revenue", "total_assets", "mixed_provider_asset_turnover_proxy"),
+            "same_provider_roa": _same_provider_eop_proxy(series, "net_income", "total_assets", "same_provider_roa"),
+            "same_provider_roe": _same_provider_eop_proxy(series, "net_income", "shareholders_equity", "same_provider_roe"),
+            "same_provider_roa_eop_proxy": _same_provider_eop_proxy(series, "net_income", "total_assets", "same_provider_roa_eop_proxy"),
+            "same_provider_roe_eop_proxy": _same_provider_eop_proxy(series, "net_income", "shareholders_equity", "same_provider_roe_eop_proxy"),
+            "same_provider_asset_turnover_eop_proxy": _same_provider_eop_proxy(series, "revenue", "total_assets", "same_provider_asset_turnover_eop_proxy"),
+            "mixed_provider_roa_proxy": _mixed_provider_proxy(series, "net_income", "total_assets", "mixed_provider_roa_proxy"),
+            "mixed_provider_asset_turnover_proxy": _mixed_provider_proxy(series, "revenue", "total_assets", "mixed_provider_asset_turnover_proxy"),
             # Genuinely average-balance ROE/ROA, distinct from the end-of-period proxies above:
             # standalone-quarter net income over the average of that quarter's own beginning
             # (= the prior quarter's ending) and ending same-provider balance. Blocks rather
@@ -1353,13 +1386,13 @@ def build_ticker_context(ticker: str, rows: Sequence[Mapping[str, Any]], *, issu
             "same_provider_roa_avg_assets": _same_provider_avg_balance_return(
                 "same_provider_roa_avg_assets", avg_assets_series,
                 method="same_provider_standalone_flow_average_of_period_boundary_balances/v1"),
-            "net_working_capital": _difference("net_working_capital", _same_period_pair(rows, "current_assets", "current_liabilities", PIT), method="same_provider_same_period_net_working_capital/v2"),
-            "current_ratio": _ratio("current_ratio", _same_period_pair(rows, "current_assets", "current_liabilities", PIT), method="same_provider_same_period_current_ratio/v2"),
-            "net_working_capital_direction": _pit_component_direction(rows, "current_assets", "current_liabilities", "net_working_capital_direction"),
-            "current_ratio_direction": _pit_ratio_direction_for(rows, "current_assets", "current_liabilities", "current_ratio_direction", method="same_provider_point_in_time_current_ratio_yoy/v2"),
+            "net_working_capital": _difference("net_working_capital", _same_period_pair(series, "current_assets", "current_liabilities", PIT), method="same_provider_same_period_net_working_capital/v2"),
+            "current_ratio": _ratio("current_ratio", _same_period_pair(series, "current_assets", "current_liabilities", PIT), method="same_provider_same_period_current_ratio/v2"),
+            "net_working_capital_direction": _pit_component_direction(series, "current_assets", "current_liabilities", "net_working_capital_direction"),
+            "current_ratio_direction": _pit_ratio_direction_for(series, "current_assets", "current_liabilities", "current_ratio_direction", method="same_provider_point_in_time_current_ratio_yoy/v2"),
         }
         states = _feature_states(features)
-        history_context = _build_history_context(rows, features, avg_equity_series, avg_assets_series)
+        history_context = _build_history_context(series, features, avg_equity_series, avg_assets_series)
 
     # Bank specialist family: purely additive over whatever the INDUSTRIAL/LIMITED
     # branch above already produced.  Never runs for a non-bank ticker, even if

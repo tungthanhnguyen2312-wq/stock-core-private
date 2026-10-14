@@ -1,15 +1,15 @@
 # Stock Lookup — Current Roadmap
 
 History: [ROADMAP.md](ROADMAP.md); execution: ROADMAP_STATE.json.
-Observed main 2026-10-14 `bd71cb23013f0175cca22bad7df8632be65e8cad`.
+Verified wave baseline 2026-10-14 `f582bfab80dac6d206083a0bd4a0ba57db199691`.
 Nothing below auto-starts; native standing admission required (AI_RULES 11).
 Facts: [ACTIVE_STATE.md](ACTIVE_STATE.md).
 
-## NOW — PARALLEL_DOMAIN_DEVELOPMENT_CONTROL_PLANE_V1 (COMPLETE LOCAL)
+## NOW — STOCKLOOKUP_PRODUCER_DEEP_SIMPLIFICATION (VALIDATED SOURCE WAVE)
 
 [Scope](parallel_domain_development_control_plane_v1_contract.md): disjoint native lanes;
 Owner merge gate. PR133 released; post-merge CI PASS (38318598892).
-2026-10-14 Owner closeout: Codex sequentially preserves the CI corrective, completes bounded Wave2 and measured PhaseB, and prepares isolated integration/receipt. Exact coordinator state governs; no push, merge, deploy, Daily, production writes, authority promotion or successor is authorized.
+2026-10-14: PR145 and all five post-merge CI jobs released; native rev93 admitted the financial computation lane. Implementation validated; exact native receipt and hosted CI govern source release disposition. One bounded Codex-owned implementation wave; existing identities and Consumer/Dashboard interfaces preserved. Conditional validated source push/PR/merge authorized; no production/Daily/evidence writes, authority promotion or automatic successor.
 V3 PR131 merged `d11b101`; V2 PR130 merged `d53999b`.
 E5 PR127 merged `70fbba9`; post-merge CI PASS (38190156979).
 E4 PR126 merged `e9ee2fe`; four post-merge jobs PASS (38186488312).
