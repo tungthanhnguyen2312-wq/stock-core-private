@@ -12,7 +12,89 @@ from stocklookup_core.financial import fundamental_cross_sectional_scoring as sc
 from stocklookup_core.financial import fundamental_market_opportunity_ranking as ranking
 from stocklookup_core.valuation import current_research_valuation_context as valuation
 
+
+METRICS = ('revenue', 'net_income', 'gross_profit', 'profit_before_tax', 'operating_cash_flow',
+           'total_assets', 'shareholders_equity', 'cash_and_cash_equivalents',
+           'short_term_borrowings', 'long_term_borrowings', 'current_assets', 'current_liabilities')
+
+def _fixture_rows(quarters=40):
+    result = []
+    for quarter in range(quarters):
+        period = f'{2016 + quarter // 4}-Q{quarter % 4 + 1}'
+        for metric_index, metric in enumerate(METRICS):
+            flow = metric_index < 5
+            result.append(dict(ticker='AAA', canonical_metric=metric, reported_value=(quarter + 5) * (metric_index + 2),
+                native_period_label=period, period_end=period,
+                period_semantic_state='STANDALONE_QUARTER' if flow else 'POINT_IN_TIME_BALANCE_SHEET',
+                statement_family='income_statement' if metric_index < 4 else 'cash_flow' if flow else 'balance_sheet',
+                source_status='provider_reported', lineage_complete=True, source_conflicts=[],
+                statement_scope='consolidated', normalized_candidate_unit={'currency':'VND', 'scale':'units'},
+                metadata_missing={'unit':False}, source_lineage={'provider':'KBS', 'source_file':'issuer-native',
+                'source_sha256':'retained-sha', 'fact_id':f'{metric}-{period}', 'raw_item_id':metric}))
+    return result
+
+def _fixture_scoring_base(count=1507):
+    names = ('net_margin_period', 'roa_eop_proxy', 'roe_eop_proxy', 'asset_turnover_eop_proxy',
+             'total_assets_same_period_yoy', 'shareholders_equity_same_period_yoy',
+             'revenue_same_period_yoy', 'net_income_same_period_yoy')
+    return {'operational_proxy': {'records': {f'T{i:04}': {'entity_type':'corporate',
+        'fundamental_features': {name:{'research_eligible':i % 17 != 0, 'value':(i % 43 - 20) / (j + 1)}
+                                for j, name in enumerate(names)},
+        'tier_counts':{'OPERATIONAL_PROXY':1}, 'facts':[{'source':'retained'}]}
+        for i in range(count)}}}
+
+def _fixture_legacy_record():
+    return {'entity_type':'corporate', 'facts':[
+        {'reporting_period':r['native_period_label'], 'provider_raw_value':r['reported_value'],
+         'fitness_for_use':{'research_eligible':True}, 'provider':'KBS', 'statement_scope':'consolidated',
+         'canonical_metric':r['canonical_metric'], 'evidence_tier':'OPERATIONAL_PROXY'} for r in _fixture_rows(8)]}
+
+def _fixture_peer_rows(count=1507):
+    return {f'T{i:04}': {'entity_class':'corporate', 'usable_relative_method_count':1,
+        'methods': {'P/E': {'method_id':'P/E', 'applicability':'APPLICABLE', 'status':'READY',
+        'value':float(i % 43 + 1), 'share_basis':'PROVIDER_REFERENCE', 'period_basis':'2025',
+        'statement_scope':'consolidated'}}} for i in range(count)}
+
+def _fixture_cases():
+    base = _fixture_rows(8)
+    duplicate = copy.deepcopy(base)
+    duplicate.append(copy.deepcopy(duplicate[-1]))
+    duplicate[-1]['source_lineage']['fact_id'] = '000-equal'
+    conflict = copy.deepcopy(duplicate)
+    conflict[-1]['reported_value'] += 1
+    mixed = copy.deepcopy(base)
+    for i, row in enumerate(mixed):
+        if i % 7 == 0: row['lineage_complete'] = 1
+        if i % 11 == 0: row['source_lineage']['source_sha256'] = None
+        if i % 13 == 0: row['normalized_candidate_unit']['currency'] = 'USD'
+        if i % 19 == 0: row['period_semantic_state'] = 'UNKNOWN_DURATION'
+        if i % 23 == 0: row['source_conflicts'] = ['CONFLICT']
+    return {'engine': [{'rows':r, 'entity':entity} for r in (base, list(reversed(base)), duplicate, conflict, mixed)
+                       for entity in ('corporate', 'bank', 'securities')],
+            'store': [base, list(reversed(base)), duplicate, conflict, mixed],
+            'quarterly': [_fixture_legacy_record(), {'entity_type':'bank', 'facts':[]}],
+            'scoring': [_fixture_scoring_base(31), _fixture_scoring_base(0)],
+            'peers': [_fixture_peer_rows(31), _fixture_peer_rows(2)]}
+
+def _fixture_inputs():
+    inputs = _fixture_cases()
+    for kind, names in [('fundamental_peers', valuation.FUNDAMENTAL_PEER_FEATURES),
+                        ('engine_peers', valuation.ENGINE_PEER_FEATURES)]:
+        inputs[kind] = []
+        for count in (31, 2):
+            records = {}
+            for i in range(count):
+                features = {name: {'status':'READY_RESEARCH_PROXY', 'fitness':'READY', 'value':float(i % 7 - 3),
+                    'method':'qualified-native-v1', 'compatibility_class':'SAME_NATIVE_SERIES_RESEARCH_COMPATIBLE',
+                    'input_periods':['2025-Q4'], 'period_identity':['2025-Q4'], 'scope':['consolidated'],
+                    'currency':'VND', 'scale':'units', 'period_semantics':['STANDALONE_QUARTER'],
+                    'provider_source_provenance':[{'provider':'KBS'}]} for name in names}
+                records[f'T{i:04}'] = {'issuer_type':'corporate', 'entity_type':'corporate', 'features':features}
+            inputs[kind].append(records)
+    return inputs
+
 BASELINE = json.loads((Path(__file__).parent / 'fixtures/producer_financial_computation_baseline.json').read_text(encoding='utf-8'))
+BASELINE['inputs'] = _fixture_inputs()
 
 def _digest(value):
     return hashlib.sha256(json.dumps(value, sort_keys=True, ensure_ascii=False, separators=(',', ':')).encode()).hexdigest()
@@ -114,3 +196,7 @@ def test_active_quarterly_features_have_one_builder_and_retain_existing_labels()
     value = quarterly.build_ticker_features(BASELINE['inputs']['quarterly'][0])
     assert value['ttm']['status'] == 'BLOCKED_DURATION_UNKNOWN'
     assert value['piotroski_standard_score']['score'] is None
+
+
+def test_fixture_recipe_reproduces_accepted_input_bytes():
+    assert _digest(BASELINE['inputs']) == BASELINE['input_sha256']
