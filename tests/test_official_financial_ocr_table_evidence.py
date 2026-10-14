@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 import copy
 import inspect
+import pytest
 from pathlib import Path
 import pytest
 
@@ -206,7 +207,14 @@ def test_cell_level_production_path_is_document_generic_not_ticker_specific():
 def test_panel_adapter_requires_qualified_metadata_and_complete_row_lineage():
     materialization = materialize_tsv_pages(_record(), evidence_root=EVIDENCE, pages=(12,))
     result = qualify_table_facts(materialization, ticker="FPT", reporting_period="2025")
-    facts = panel_facts_from_qualified_ocr(result, entity_type="corporate", statement_scope="consolidated",
-                                            audit_or_review_status="audited", knowledge_available_at=_record()["observed_at"], observed_at=_record()["observed_at"])
+    # Table geometry is not an auditor report. The original fixture supplied an
+    # unsupported audited claim; the mandatory retained-assurance contract must
+    # refuse it. Positive document-bound ingress is covered independently by
+    # test_reviewed_interim_canonical_ingress with explicit report evidence.
+    with pytest.raises(ValueError, match="AUDITED_STATUS_REQUIRES_RETAINED_DOCUMENT_EVIDENCE"):
+        panel_facts_from_qualified_ocr(result, entity_type="corporate", statement_scope="consolidated",
+                                      audit_or_review_status="audited", knowledge_available_at=_record()["observed_at"], observed_at=_record()["observed_at"])
+    facts = result["qualified_facts"]
     assert {fact["canonical_metric"] for fact in facts} == {"revenue", "net_income", "attributable_net_income"}
-    assert all(fact["source_lineage"]["citation_id"] and fact["qualification_state"] == "QUALIFIED" for fact in facts)
+    assert all(fact["source_lineage"]["document_sha256"] == DOCUMENT_SHA
+               and fact["source_lineage"]["row_object"] and fact["qualification_state"] == "QUALIFIED" for fact in facts)

@@ -451,7 +451,8 @@ def test_completed_session_replay_materializes_before_publisher_without_acquisit
     root, source, _, _ = _workspace_release_fixture(tmp_path, monkeypatch)
     runtime = tmp_path / "runtime"
     completion = {"session": "2026-09-17", "record": {"daily_producer_run_identity": "run:exact"}}
-    monkeypatch.setattr(workflow, "preflight_repository", lambda *a, **k: {})
+    monkeypatch.setattr(workflow, "preflight_repository", lambda *a, **k: {"status": "PASS"})
+    monkeypatch.setattr(workflow, "preflight_consumer_repository", lambda *a, **k: {"status": "PASS"})
     monkeypatch.setattr(workflow, "verify_daily_completion", lambda *a, **k: completion)
     monkeypatch.setattr(workflow, "commit_daily_state", lambda *a, **k: {})
     monkeypatch.setattr(workflow, "_run_daily", lambda *a, **k: pytest.fail("replay must not acquire or rebuild"))
