@@ -829,6 +829,88 @@ def lane_by_id(state: Mapping[str, Any], mid: str) -> dict[str, Any]:
     raise RoadmapStateError(f"LANE_UNKNOWN:{mid}")
 
 
+def prepare_declaration_amendment(state: Mapping[str, Any], spec: Any, *, repo: Path) -> tuple[dict, list[dict]]:
+    """Prepare one atomic metadata-only correction; never write state or grant release.
+
+    Caller must enforce the existing bound-owner directive/identity checks and use
+    the native CAS writer. Existing state/checkpoint/ownership and history remain
+    untouched. Dependencies may be added, never dropped by this narrow operation.
+    """
+    import copy
+    fields = {"provides", "consumes", "dependencies"}
+    if (not isinstance(spec, dict) or set(spec) != {"schema", "expected_revision", "amendments"}
+            or spec.get("schema") != "stocklookup_lane_declaration_amendment/1"
+            or not isinstance(spec.get("expected_revision"), int)
+            or isinstance(spec["expected_revision"], bool)
+            or not isinstance(spec.get("amendments"), list) or not spec["amendments"]):
+        raise RoadmapStateError("LANE_DECLARATION_EXACT_SPEC_REQUIRED")
+    control = state.get("development_control") or {}
+    if spec["expected_revision"] != control.get("revision"):
+        raise RoadmapStateError("LANE_DECLARATION_REVISION_CHANGED_RELOAD_REQUIRED")
+    updated = copy.deepcopy(state)
+    changes, selected = [], set()
+    for item in spec["amendments"]:
+        if (not isinstance(item, dict)
+                or set(item) != {"milestone_id", "checkpoint", "before", "after", "review_note"}
+                or not isinstance(item["milestone_id"], str)
+                or not isinstance(item["review_note"], str) or not item["review_note"].strip()
+                or any(not isinstance(item[k], dict) or set(item[k]) != fields for k in ("before", "after"))):
+            raise RoadmapStateError("LANE_DECLARATION_RESERVED_OR_MISSING_FIELDS")
+        mid = item["milestone_id"]
+        if mid in selected:
+            raise RoadmapStateError("LANE_DECLARATION_DUPLICATE_TARGET")
+        selected.add(mid)
+        lane = lane_by_id(updated, mid)
+        if lane["mode"] != "IMPLEMENTATION" or lane["state"] not in {"REVIEW_READY", "COMPLETE_LOCAL"}:
+            raise RoadmapStateError("LANE_DECLARATION_DURABLE_UNRELEASED_CANDIDATE_REQUIRED")
+        if item["checkpoint"] != lane.get("checkpoint"):
+            raise RoadmapStateError("LANE_DECLARATION_CHECKPOINT_MISMATCH")
+        checked = check_lane(state, mid, repo=repo)
+        if checked["errors"] or not checked["clean"] or checked["head"] != lane["checkpoint"]:
+            raise RoadmapStateError("LANE_DECLARATION_EXACT_CLEAN_CHECKPOINT_REQUIRED:" + ";".join(checked["errors"]))
+        before = {k: lane[k] for k in fields}
+        if item["before"] != before:
+            raise RoadmapStateError("LANE_DECLARATION_BEFORE_CHANGED_RELOAD_REQUIRED")
+        if item["after"] == before:
+            raise RoadmapStateError("LANE_DECLARATION_NO_CHANGE")
+        deps = item["after"]["dependencies"]
+        if (not isinstance(deps, list) or not all(isinstance(d, str) for d in deps)
+                or len(deps) != len(set(deps)) or not set(before["dependencies"]).issubset(deps)):
+            raise RoadmapStateError("LANE_DECLARATION_DEPENDENCY_REMOVAL_OR_INVALID")
+        lane.update(copy.deepcopy(item["after"]))
+        changes.append(copy.deepcopy(item))
+    errors = validate_development_control(updated)
+    if errors:
+        raise RoadmapStateError(";".join(errors))
+    peers = [l for l in updated["development_control"]["lanes"]
+             if l["mode"] == "IMPLEMENTATION" and l["state"] != "ABANDONED"]
+    for i, a in enumerate(peers):
+        for b in peers[i + 1:]:
+            if not {a["milestone_id"], b["milestone_id"]} & selected:
+                continue
+            for producer, consumer in ((a, b), (b, a)):
+                for key, version in producer["provides"].items():
+                    if key in consumer["provides"]:
+                        errors.append(f"LANE_DUPLICATE_INTERFACE_OWNER:{key}")
+                    if key in consumer["consumes"]:
+                        if version != consumer["consumes"][key]:
+                            errors.append(f"LANE_INTERFACE_VERSION_CONFLICT:{key}")
+                        if producer["milestone_id"] not in consumer["dependencies"]:
+                            errors.append(f"LANE_INTERFACE_DEPENDENCY_UNDECLARED:{key}")
+    old_lanes = {l["milestone_id"]: l for l in control["lanes"]}
+    previously_provided = {k for l in old_lanes.values() if l["mode"] == "IMPLEMENTATION"
+                           and l["state"] != "ABANDONED" for k in l["provides"]}
+    provided = {k for l in peers for k in l["provides"]}
+    for lane in peers:
+        for key in lane["consumes"]:
+            newly_consumed = lane["milestone_id"] in selected and key not in old_lanes[lane["milestone_id"]]["consumes"]
+            if key not in provided and (key in previously_provided or newly_consumed):
+                errors.append(f"LANE_DECLARATION_INTERFACE_OWNER_MISSING:{key}")
+    if errors:
+        raise RoadmapStateError(";".join(sorted(set(errors))))
+    return updated, sorted(changes, key=lambda item: item["milestone_id"])
+
+
 def coordinator_host_available(state: Mapping[str, Any], repo: Path) -> bool:
     """Clone/CI metadata validation cannot certify another host's live worktrees."""
     control = state.get("development_control") if isinstance(state.get("development_control"), dict) else {}
