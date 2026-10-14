@@ -233,7 +233,8 @@ def lane_command(args, state: dict, repo: Path | None) -> dict:
         return res.check_lane(state, args.check_lane, repo=repo)
     if args.integration_plan:
         receipts = json.loads(args.review_receipt.read_text(encoding="utf-8")) if args.review_receipt else None
-        return res.integration_plan(state, repo=repo, main_sha=args.main_sha, receipts=receipts, candidate_id=args.candidate_lane)
+        coupled = json.loads(args.coupled_spec.read_text(encoding="utf-8")) if args.coupled_spec else None
+        return res.integration_plan(state, repo=repo, main_sha=args.main_sha, receipts=receipts, candidate_id=args.candidate_lane, coupled_spec=coupled)
     if not args.owner_override or not args.scope_note or not args.scope_note.strip() or not args.agent or not args.agent.strip():
         raise res.RoadmapStateError("LANE_EXPLICIT_OWNER_DIRECTIVE_AND_AGENT_REQUIRED")
     if args.state_file.resolve() != (repo / "docs/ROADMAP_STATE.json").resolve():
@@ -258,7 +259,32 @@ def lane_command(args, state: dict, repo: Path | None) -> dict:
         if (res._path_key(str(repo)) != res._path_key(control["integration_worktree"])
                 or res.git_branch(repo) != control["integration_branch"] or args.agent != control["integration_agent"]):
             raise res.RoadmapStateError("LANE_ONLY_BOUND_INTEGRATION_OWNER_MAY_MUTATE")
-        if args.amend_lane_declarations:
+        if args.release_coupled_lanes:
+            spec = json.loads(args.coupled_spec.read_text(encoding="utf-8")) if args.coupled_spec else None
+            receipt = json.loads(args.review_receipt.read_text(encoding="utf-8")) if args.review_receipt else {}
+            if spec is None:
+                raise res.RoadmapStateError("LANE_COUPLED_EXACT_SPEC_REQUIRED")
+            plan = res.integration_plan(state, repo=repo, main_sha=args.main_sha, receipts=receipt, coupled_spec=spec)
+            if plan["errors"]:
+                raise res.RoadmapStateError("LANE_COUPLED_RELEASE_REQUIRES_POST_MERGE_REVIEW:" + ";".join(plan["errors"]))
+            if (not receipt.get("owner_merge_directive") or not receipt.get("post_merge_ci_evidence")
+                    or not res.git_is_ancestor(repo, spec["fixture_sha"], args.main_sha)
+                    or any(not res.git_is_ancestor(repo, head, args.main_sha) for head in spec["checkpoints"].values())):
+                raise res.RoadmapStateError("LANE_COUPLED_ACTUAL_MAIN_OWNER_AND_CI_REQUIRED")
+            # No intermediate release/dependency promotion: one validated CAS
+            # appends both true releases after every checkpoint is on main.
+            for mid in plan["order"]:
+                lane = res.lane_by_id(state, mid)
+                prior = lane["state"]
+                lane.update(state="MERGED_RELEASED", release_sha=args.main_sha)
+                lane["history"].append({"operation": "COUPLED_RELEASE", "from": prior,
+                                        "to": "MERGED_RELEASED", "checkpoint": lane["checkpoint"],
+                                        "release_sha": args.main_sha, "plan_identity": plan["plan_identity"],
+                                        "owner_note": args.scope_note})
+            event = {"operation": "COUPLED_RELEASE", "order": plan["order"],
+                     "checkpoints": spec["checkpoints"], "release_sha": args.main_sha,
+                     "plan_identity": plan["plan_identity"], "standalone_failures": spec["standalone_failures"]}
+        elif args.amend_lane_declarations:
             spec = json.loads(args.declaration_spec.read_text(encoding="utf-8")) if args.declaration_spec else None
             state, changes = res.prepare_declaration_amendment(state, spec, repo=repo)
             control = state["development_control"]
@@ -363,6 +389,8 @@ def main(argv: list[str] | None = None) -> int:
     lanes.add_argument("--integration-plan", action="store_true", help="Read-only exact-main integration order and review gate.")
     lanes.add_argument("--amend-lane-declarations", action="store_true",
                        help="Owner-reviewed atomic declaration-only correction; no checkpoint, lease or state changes.")
+    lanes.add_argument("--release-coupled-lanes", action="store_true",
+                       help="Atomic true release of two explicitly reviewed, coupled source candidates already on main.")
     parser.add_argument("--agent", help="Recorded integration owner identity (attestation, not authentication).")
     parser.add_argument("--lane-spec", type=Path, help="Exact admission specification; not an execution-state registry.")
     parser.add_argument("--lane-state", choices=sorted(res.LANE_STATES))
@@ -371,9 +399,14 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--candidate-lane", help="Plan one candidate; dependent successors remain separately gated.")
     parser.add_argument("--declaration-spec", type=Path,
                         help="Exact versioned batch with expected revision, checkpoints and before/after declarations.")
+    parser.add_argument("--coupled-spec", type=Path, help="Exact two-candidate fixture and failed standalone evidence; no implicit dependency release.")
     args = parser.parse_args(argv)
     if args.declaration_spec and not args.amend_lane_declarations:
         parser.error("declaration spec requires --amend-lane-declarations")
+    if args.coupled_spec and not (args.integration_plan or args.release_coupled_lanes):
+        parser.error("coupled spec requires integration plan or coupled release")
+    if (args.coupled_spec or args.release_coupled_lanes) and any((args.candidate_lane, args.lane_spec, args.lane_state, args.checkpoint_at, args.declaration_spec)):
+        parser.error("coupled acceptance cannot combine single-lane or declaration arguments")
     if args.amend_lane_declarations and any((args.lane_spec, args.lane_state, args.checkpoint_at,
                                             args.main_sha, args.review_receipt, args.candidate_lane)):
         parser.error("declaration correction cannot combine lifecycle or integration arguments")
@@ -389,7 +422,7 @@ def main(argv: list[str] | None = None) -> int:
     if state.get("development_control") and (args.admit_scope or args.continue_scope or args.complete_local_scope):
         parser.error("coordinated mode requires scoped lane operations; legacy history remains preserved")
 
-    if args.init_lanes or args.admit_lane or args.transition_lane or args.check_lane or args.integration_plan or args.amend_lane_declarations:
+    if args.init_lanes or args.admit_lane or args.transition_lane or args.check_lane or args.integration_plan or args.amend_lane_declarations or args.release_coupled_lanes:
         if args.admit_scope or args.continue_scope or args.complete_local_scope or args.can_start or args.worktrees:
             parser.error("lane operations cannot be combined with legacy operations")
         try:
