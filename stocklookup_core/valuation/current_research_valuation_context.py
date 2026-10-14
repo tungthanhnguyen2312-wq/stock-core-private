@@ -8,13 +8,13 @@ from __future__ import annotations
 import calendar
 import json
 import math
+from bisect import bisect_left, bisect_right
 from collections import defaultdict
 from datetime import date
 import re
 from statistics import median
 from typing import Any, Mapping, Sequence
 
-from current_market_sector_leadership_context import _percentile
 from stocklookup_core.financial import monetary_basis_contract as basis_contract
 from stocklookup_core.valuation.market_wide_current_valuation_input_scaleout import RESEARCH_SHARE_AUTHORITIES, _applicability, _market_cap_monetary_basis
 from operational_fundamental_context_integration import MAX_COMPLETED_QUARTER_LAG
@@ -1004,6 +1004,22 @@ def _peer_key(row: Mapping[str, Any], method: Mapping[str, Any]) -> tuple[Any, .
     )
 
 
+def _peer_pool(values: list[float]) -> tuple[list[float], float | None, bool]:
+    """Prepare one qualified cohort; preserve legacy scans for nonfinite inputs."""
+    ordered = all(math.isfinite(value) for value in values)
+    pool = sorted(values) if ordered else values
+    return pool, median(pool) if len(pool) >= MIN_COHORT_MEMBERS else None, ordered
+
+
+def _percentile(values: list[float], value: float, *, ordered: bool = False) -> float:
+    if ordered:
+        left, right = bisect_left(values, value), bisect_right(values, value)
+        return (left + 0.5 * (right - left)) / len(values)
+    below = sum(item < value for item in values)
+    equal = sum(item == value for item in values)
+    return (below + 0.5 * equal) / len(values)
+
+
 def attach_peer_relative(rows: Mapping[str, Mapping[str, Any]]) -> dict[str, Any]:
     """Same-method peer comparison only; incompatible bases are excluded from the cohort."""
     cohorts: dict[tuple[Any, ...], list[tuple[str, float]]] = defaultdict(list)
@@ -1013,6 +1029,7 @@ def attach_peer_relative(rows: Mapping[str, Mapping[str, Any]]) -> dict[str, Any
             if key is None:
                 continue
             cohorts[key].append((ticker, float(method["value"])))
+    pools = {key: _peer_pool([v for _, v in members]) for key, members in cohorts.items()}
     for ticker, row in rows.items():
         relatives: dict[str, Any] = {}
         for method_id, method in (row.get("methods") or {}).items():
@@ -1029,7 +1046,7 @@ def attach_peer_relative(rows: Mapping[str, Mapping[str, Any]]) -> dict[str, Any
                     "minimum_peer_count": MIN_COHORT_MEMBERS,
                 }
                 continue
-            values = [value for _, value in cohorts[key]]
+            values, mid, ordered = pools[key]
             if len(values) < MIN_COHORT_MEMBERS:
                 relatives[method_id] = {
                     "status": "INSUFFICIENT_PEER_COUNT", "reason": "BELOW_MIN_COHORT_MEMBERS",
@@ -1040,8 +1057,7 @@ def attach_peer_relative(rows: Mapping[str, Mapping[str, Any]]) -> dict[str, Any
                     "percentile_formula": "(below + 0.5 * equal) / n",
                 }
                 continue
-            mid = median(values)
-            percentile = _percentile(values, float(method["value"]))
+            percentile = _percentile(values, float(method["value"]), ordered=ordered)
             relatives[method_id] = {
                 "status": "READY_RESEARCH_ONLY",
                 "peer_count": len(values),
@@ -1114,6 +1130,7 @@ def attach_fundamental_peers(feature_records: Mapping[str, Mapping[str, Any]],
             key = _fundamental_peer_key(envelope, feature, feature_id)
             if key is not None:
                 cohorts[key].append((ticker, float(feature["value"])))
+    pools = {key: _peer_pool([v for _, v in members]) for key, members in cohorts.items()}
     out: dict[str, dict[str, Any]] = {}
     for ticker, record in feature_records.items():
         entity = _entity(record, (valuation_rows.get(ticker) if valuation_rows else None))[0]
@@ -1130,7 +1147,7 @@ def attach_fundamental_peers(feature_records: Mapping[str, Mapping[str, Any]],
                     "compatibility_class": feature.get("compatibility_class"),
                 }
                 continue
-            values = [value for _, value in cohorts[key]]
+            values, mid, ordered = pools[key]
             if len(values) < MIN_COHORT_MEMBERS:
                 relatives[feature_id] = {
                     "status": "INSUFFICIENT_PEER_COUNT", "peer_count": len(values),
@@ -1140,8 +1157,8 @@ def attach_fundamental_peers(feature_records: Mapping[str, Mapping[str, Any]],
                 continue
             relatives[feature_id] = {
                 "status": "READY_RESEARCH_ONLY", "peer_count": len(values),
-                "peer_median": median(values),
-                "percentile": _percentile(values, float(feature["value"])),
+                "peer_median": mid,
+                "percentile": _percentile(values, float(feature["value"]), ordered=ordered),
                 "subject_value": feature["value"],
                 "method": feature.get("method"),
                 "compatibility_class": feature.get("compatibility_class"),
@@ -1238,6 +1255,7 @@ def attach_engine_fundamental_peers(engine_records: Mapping[str, Mapping[str, An
             key = _engine_peer_key(cohort_id, _engine_feature(record, feature_id), feature_id, record.get("issuer_type"))
             if key is not None:
                 cohorts[key].append(float(_engine_feature(record, feature_id)["value"]))
+    pools = {key: _peer_pool(members) for key, members in cohorts.items()}
     out: dict[str, dict[str, Any]] = {}
     for ticker, record in engine_records.items():
         cohort_id, cohort_level = cohort_of[ticker]
@@ -1255,7 +1273,7 @@ def attach_engine_fundamental_peers(engine_records: Mapping[str, Mapping[str, An
                     "method": feature.get("method"), "minimum_peer_count": MIN_COHORT_MEMBERS,
                 }
                 continue
-            values = cohorts[key]
+            values, mid, ordered = pools[key]
             if len(values) < MIN_COHORT_MEMBERS:
                 relatives[feature_id] = {
                     "status": "INSUFFICIENT_PEER_COUNT", "peer_count": len(values),
@@ -1266,7 +1284,7 @@ def attach_engine_fundamental_peers(engine_records: Mapping[str, Mapping[str, An
             subject = float(feature["value"])
             relatives[feature_id] = {
                 "status": "READY_RESEARCH_ONLY", "peer_count": len(values),
-                "peer_median": median(values), "percentile": _percentile(values, subject),
+                "peer_median": mid, "percentile": _percentile(values, subject, ordered=ordered),
                 "subject_value": subject, "cohort_id": cohort_id, "cohort_level": cohort_level,
                 "method": feature.get("method"), "as_of_period": (feature.get("period_identity") or [None])[-1],
                 "percentile_formula": "(below + 0.5 * equal) / n", "minimum_peer_count": MIN_COHORT_MEMBERS,

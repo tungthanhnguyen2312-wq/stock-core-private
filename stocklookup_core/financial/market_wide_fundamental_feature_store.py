@@ -94,11 +94,28 @@ def _usable(row: Mapping[str, Any], semantic: str | None = None) -> bool:
 
 
 def _groups(rows: Sequence[Mapping[str, Any]], metric: str, semantic: str) -> dict[tuple[str, str, str, str], dict[str, Mapping[str, Any]]]:
+    if isinstance(rows, dict):
+        return rows.get((metric, semantic), {})
     out: dict[tuple[str, str, str, str], dict[str, Mapping[str, Any]]] = defaultdict(dict)
     for row in rows:
         if _usable(row, semantic) and row.get("canonical_metric") == metric:
             out[_key(row)][str(row.get("native_period_label") or row.get("period_end"))] = row
     return out
+
+
+def _index_rows(rows: Sequence[Mapping[str, Any]]) -> dict:
+    """Index the existing native-series research groups once, with last-row wins.
+
+    This store's source-file key and truthy lineage gate remain separate from
+    Financial V2's stricter observation qualification and conflict handling.
+    """
+    groups = defaultdict(lambda: defaultdict(dict))
+    for row in rows:
+        if _usable(row):
+            metric, semantic = row.get("canonical_metric"), row.get("period_semantic_state")
+            if isinstance(metric, str) and isinstance(semantic, str):
+                groups[(metric, semantic)][_key(row)][str(row.get("native_period_label") or row.get("period_end"))] = row
+    return dict(groups)
 
 
 def _best(groups: Mapping[tuple[str, str, str, str], Mapping[str, Mapping[str, Any]]]) -> Mapping[str, Mapping[str, Any]]:
@@ -227,23 +244,24 @@ def _compact_feature(feature: Mapping[str, Any]) -> dict[str, Any]:
 
 def build_ticker_record(ticker: str, rows: Sequence[Mapping[str, Any]], profiles: Mapping[str, str]) -> dict[str, Any]:
     entity_applicability, entity_type = _entity_state(ticker, profiles)
-    revenue = _best(_groups(rows, "revenue", "STANDALONE_QUARTER"))
-    earnings = _best(_groups(rows, "net_income", "STANDALONE_QUARTER"))
-    ocf = _best(_groups(rows, "operating_cash_flow", "STANDALONE_QUARTER"))
+    series = _index_rows(rows)
+    revenue = _best(_groups(series, "revenue", "STANDALONE_QUARTER"))
+    earnings = _best(_groups(series, "net_income", "STANDALONE_QUARTER"))
+    ocf = _best(_groups(series, "operating_cash_flow", "STANDALONE_QUARTER"))
     features = {
         "revenue_same_period_yoy": _yoy(revenue, "revenue_same_period_yoy"),
         "net_income_same_period_yoy": _yoy(earnings, "net_income_same_period_yoy", earnings=True),
         "revenue_ttm_sum": _ttm(revenue, "revenue_ttm_sum"),
         "net_income_ttm_sum": _ttm(earnings, "net_income_ttm_sum"),
         "operating_cash_flow_ttm_sum": _ttm(ocf, "operating_cash_flow_ttm_sum"),
-        "net_margin": _ratio("net_margin", _same_period_pair(rows, "net_income", "revenue")),
-        "gross_margin": _ratio("gross_margin", _same_period_pair(rows, "gross_profit", "revenue")),
-        "total_assets_pit_trajectory": _trajectory(rows, "total_assets"),
-        "shareholders_equity_pit_trajectory": _trajectory(rows, "shareholders_equity"),
-        "cash_and_cash_equivalents_pit_trajectory": _trajectory(rows, "cash_and_cash_equivalents"),
-        "cash_to_assets": _pit_ratio(rows, "cash_to_assets", "cash_and_cash_equivalents", "total_assets"),
-        "equity_to_assets": _pit_ratio(rows, "equity_to_assets", "shareholders_equity", "total_assets"),
-        "debt_to_equity": _pit_ratio(rows, "debt_to_equity", "total_interest_bearing_debt", "shareholders_equity"),
+        "net_margin": _ratio("net_margin", _same_period_pair(series, "net_income", "revenue")),
+        "gross_margin": _ratio("gross_margin", _same_period_pair(series, "gross_profit", "revenue")),
+        "total_assets_pit_trajectory": _trajectory(series, "total_assets"),
+        "shareholders_equity_pit_trajectory": _trajectory(series, "shareholders_equity"),
+        "cash_and_cash_equivalents_pit_trajectory": _trajectory(series, "cash_and_cash_equivalents"),
+        "cash_to_assets": _pit_ratio(series, "cash_to_assets", "cash_and_cash_equivalents", "total_assets"),
+        "equity_to_assets": _pit_ratio(series, "equity_to_assets", "shareholders_equity", "total_assets"),
+        "debt_to_equity": _pit_ratio(series, "debt_to_equity", "total_interest_bearing_debt", "shareholders_equity"),
         "roa_eop_proxy": _blocked("roa_eop_proxy", "CROSS_PROVIDER_OR_DURATION_INCOMPATIBLE"),
         "roe_eop_proxy": _blocked("roe_eop_proxy", "CROSS_PROVIDER_OR_DURATION_INCOMPATIBLE"),
     }
@@ -256,8 +274,8 @@ def build_ticker_record(ticker: str, rows: Sequence[Mapping[str, Any]], profiles
                                                        method="same_native_latest_sign/v1", inputs=[latest_ocf],
                                                        state="POSITIVE_CFO" if latest_ocf["reported_value"] > 0 else "NEGATIVE_CFO" if latest_ocf["reported_value"] < 0 else "ZERO_CFO")
                                            if latest_ocf else _blocked("operating_cash_flow_sign", "MISSING_STANDALONE_QUARTER_CFO"))
-    features["cfo_to_net_income"] = _ratio("cfo_to_net_income", _same_period_pair(rows, "operating_cash_flow", "net_income"))
-    cash_pair = _same_period_pair(rows, "operating_cash_flow", "net_income")
+    features["cfo_to_net_income"] = _ratio("cfo_to_net_income", _same_period_pair(series, "operating_cash_flow", "net_income"))
+    cash_pair = _same_period_pair(series, "operating_cash_flow", "net_income")
     features["cash_earnings_alignment"] = (_feature("cash_earnings_alignment", value=None, status=PROXY, compatibility=NATIVE,
                                                        method="same_native_cash_earnings_sign_alignment/v1", inputs=list(cash_pair),
                                                        state="NEGATIVE_CFO_WITH_PROFIT" if cash_pair[0]["reported_value"] < 0 < cash_pair[1]["reported_value"] else "CASH_BACKED_EARNINGS" if cash_pair[0]["reported_value"] > 0 and cash_pair[1]["reported_value"] > 0 else "EARNINGS_AHEAD_OF_CASH")

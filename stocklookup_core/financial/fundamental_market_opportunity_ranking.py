@@ -7,7 +7,9 @@ quality or market classification.
 """
 from __future__ import annotations
 
+from bisect import bisect_right
 from collections import Counter
+import math
 import hashlib
 import json
 from pathlib import Path
@@ -129,8 +131,10 @@ def _valuation(valuation: Mapping[str, Any] | None, market_session: str | None) 
     }
 
 
-def _cohort_percentile(values: list[float], value: float) -> float | None:
+def _cohort_percentile(values: list[float], value: float, *, ordered: bool = False) -> float | None:
     """Inclusive empirical percentile within the actual valid corporate-quality cohort."""
+    if ordered:
+        return bisect_right(values, value) / len(values) if values else None
     return sum(candidate <= value for candidate in values) / len(values) if values else None
 
 
@@ -209,9 +213,10 @@ def build_artifact(*, fundamental: Mapping[str, Any], market: Mapping[str, Any],
         and isinstance(quality.get("rank"), (int, float))
     )
     ranking_basis = "CORPORATE_VALID_FUNDAMENTAL_QUALITY_COHORT_EMPIRICAL_PERCENTILE/v1"
+    ordered = all(not isinstance(value, float) or math.isfinite(value) for value in comparable_values)
     for ticker, quality in quality_by_ticker.items():
         if fundamental_records[ticker].get("entity_class") == "corporate" and isinstance(quality.get("rank"), (int, float)):
-            quality["actual_comparable_cohort_percentile"] = _cohort_percentile(comparable_values, quality["rank"])
+            quality["actual_comparable_cohort_percentile"] = _cohort_percentile(comparable_values, quality["rank"], ordered=ordered)
             quality["ranking_basis"] = ranking_basis
             quality["actual_comparable_cohort_size"] = len(comparable_values)
         else:

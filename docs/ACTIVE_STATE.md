@@ -1,7 +1,7 @@
 # Stock Lookup — Active State
 
-Base/main: `714d9b25dbb6e389e29631cee9f72791122d9aed`.
-PR136–140 released; four post-merge CI jobs PASS each.
+Verified release baseline for this wave: `f582bfab80dac6d206083a0bd4a0ba57db199691`.
+PR145 released; all five post-merge CI jobs PASS (38491150319).
 `git fetch origin main` / `git ls-remote origin refs/heads/main`; **local** remote-tracking refs may be stale.
 ## 0. How this file relates to the others
 | Question | Answer lives in |
@@ -29,8 +29,7 @@ Kinds: **CURRENT FACT** (verified), **HOST-LOCAL** (untracked; re-verify),
 **BLOCKED**, **DEFERRED**, **HISTORICAL**.
 
 ## 1. The operational gate
-- **Owner source-only closeout 2026-10-14:** `STOCKLOOKUP_ARCHITECTURE_SIMPLIFICATION_AND_CORRECTNESS_CLOSEOUT_20261014`; Codex alone, exact native coordinator scope/checks; prior Claude/Grok lanes superseded, `1659d643` preserved.
-  Wave2/PhaseB local source preparation only: no push, merge, deploy, Daily, production writes or authority promotion; PNJ/FPT unadmitted, Oct13 seals unchanged.
+- **RELEASED / VALIDATED SOURCE WAVE 2026-10-14:** PR145 released at `f582bfab80dac6d206083a0bd4a0ba57db199691`; all five post-merge jobs PASS (38491150319). Native rev93 admits Codex lane `STOCKLOOKUP_PRODUCER_DEEP_SIMPLIFICATION_20261014`: six existing financial/valuation computation owners, exact leases and output parity. Implementation validated: 630 tests PASS, 12 retained-data cases absent in this clean worktree; native and hosted exact-head gates govern release disposition. Conditional validated source push/PR/merge authorized; no Daily, production or authority/evidence changes. PNJ/FPT unadmitted; Oct13 seals unchanged.
 - [Oct13](daily_20261013_handoff_route_recovery_contract.md).
 - **RELEASED — [financial intake](official_financial_quarterly_intake_contract.md):** PR137; candidates; source admission gated.
 - **RELEASED — [Wave 1 replay](SYSTEM_MAP.md#wave-1-historical-replay-relocation--2026-10-13):** PR139; `tools/replay/`: 34 modules; root 325 → 291; replay unchanged.
