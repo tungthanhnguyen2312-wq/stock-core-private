@@ -81,10 +81,65 @@ def test_bulk_relocations_are_exact_without_root_path_shim_or_carried_debt():
         assert new[:-3].replace("/", ".") not in carried, new  # the E1 carry allowance is not extended
 
 
+def test_v4_consolidations_have_single_owners_and_no_root_aliases():
+    """Many original files may share an owner; none may survive as a shim."""
+    import importlib
+    v4 = LAYOUT["root_consolidation_v4"]
+    expected = {
+        "opportunity_snapshot.py": "stocklookup_core/decision/opportunity_snapshot.py",
+        "opportunity_snapshot_retention.py": "stocklookup_core/decision/opportunity_snapshot.py",
+        "ssi_securities_pilot.py": "stocklookup_core/evidence/official_document_downstream_shadow.py",
+        "vnm_execution_contract.py": "stocklookup_core/portfolio/vnm_execution_contract.py",
+    }
+    assert v4["relocations"] == expected
+    for old, new in expected.items():
+        assert LAYOUT["relocations"][old] == new
+        assert old not in LAYOUT["grandfathered_root_python"]
+        assert old not in LAYOUT["compatibility_entrypoints"]
+        assert not (ROOT / old).exists() and importlib.util.find_spec(old[:-3]) is None
+    snapshot = importlib.import_module("stocklookup_core.decision.opportunity_snapshot")
+    shadow = importlib.import_module("stocklookup_core.evidence.official_document_downstream_shadow")
+    reconstruction = importlib.import_module("tools.replay.pilots.vnm_historical_snapshot_reconstruction")
+    assert reconstruction.build_snapshot is snapshot.build_snapshot
+    assert reconstruction.append_snapshot is snapshot.append_snapshot
+    assert reconstruction.RetentionError is snapshot.RetentionError
+    assert snapshot.RANKING_VERSION is snapshot.RANKING_CONTRACT_VERSION
+    execution = importlib.import_module("stocklookup_core.portfolio.vnm_execution_contract")
+    backtest = importlib.import_module("vnm_shadow_backtest")
+    assert backtest.resolve_vnm_fill is execution.resolve_vnm_fill
+    # Preserve the existing shadow's version separately from the SSI qualifier's version.
+    assert shadow.VERSION == "1.0.0" and shadow.SSI_VERSION == "1.1.0"
+    assert shadow.evaluate_ssi is shadow.evaluate
+    assert shadow.evaluate_ssi.__name__ == "evaluate"
+    assert shadow.evaluate_ssi([])["schema_version"] == "1.1.0"
+
+
+@pytest.mark.parametrize("module,flag,expected_sha256", [
+    ("stocklookup_core.decision.opportunity_snapshot", "--frozen-pilot",
+     "d7a17eec2e881fcdff3750ce7eed8d6bab9bfe8291990b239cf0664a269e1909"),
+    ("stocklookup_core.decision.opportunity_snapshot", "--historical-pilot",
+     "cfe2a01497b3b2e9f942cc02772846f3ebd99ade53c25d30a50fcfa57a4711e0"),
+    ("stocklookup_core.portfolio.vnm_execution_contract", "--frozen-pilot",
+     "3e2e9fcc03a6755b31e4f6506595ef51469ce2b50ea5079f396838047f6a42ec"),
+])
+def test_v4_pilot_module_clis_preserve_baseline_result_identity(module, flag, expected_sha256):
+    """Digests captured by executing unchanged 416c3083 source, not generated from candidate."""
+    import hashlib
+    import subprocess
+    import sys
+    result = subprocess.run([sys.executable, "-m", module, flag], cwd=ROOT,
+                            capture_output=True, text=True, encoding="utf-8", check=True)
+    payload = json.loads(result.stdout)
+    encoded = json.dumps(payload, ensure_ascii=False, sort_keys=True,
+                         separators=(",", ":"), allow_nan=False).encode()
+    assert hashlib.sha256(encoded).hexdigest() == expected_sha256
+
+
 def test_root_names_imported_by_executed_historical_sources_are_not_relocated():
     """Parity harnesses and replays execute immutable accepted sources by their original import names."""
     import subprocess
     moved = {old[:-3] for old in BULK_RELOCATIONS}
+    moved |= {old[:-3] for old in LAYOUT["root_consolidation_v4"]["relocations"]}
     for name in BULK["retained_root_for_historical_execution"]:
         assert (ROOT / name).is_file() and name not in LAYOUT["relocations"], name
     for ref, relative in BULK["historically_executed_sources"]:

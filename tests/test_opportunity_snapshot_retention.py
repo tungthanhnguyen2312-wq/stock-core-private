@@ -1,6 +1,6 @@
 ﻿import tempfile,unittest
 from pathlib import Path
-from opportunity_snapshot_retention import RetentionError,append_snapshot,replay_vnm,validate_snapshot
+from stocklookup_core.decision.opportunity_snapshot import RetentionError,append_snapshot,replay_vnm,validate_snapshot
 
 def snapshot(cutoff="2026-06-30T00:00:00Z",sid="vnm-pit-a"):
  vintage={"identity":"v1","price_observation_cutoff":"2026-06-01T00:00:00Z","financial_statement_publication_cutoff":"2026-05-01T00:00:00Z","corporate_action_evidence_cutoff":"2026-05-01T00:00:00Z","market_risk_calculation_cutoff":"2026-06-01T00:00:00Z"}
