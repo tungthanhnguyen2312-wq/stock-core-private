@@ -728,6 +728,17 @@ def validate_development_control(state: Mapping[str, Any]) -> list[str]:
             or len(control["history"]) != control["revision"]
             or not all(control.get(k) for k in ("integration_agent", "integration_branch", "integration_worktree"))):
         return ["LANE_COORDINATOR_INVALID"]
+    succession = control.get("integration_owner_succession", [])
+    if (not isinstance(succession, list)
+            or not all(isinstance(s, dict) and isinstance(s.get("from_agent"), str) and s["from_agent"]
+                       and isinstance(s.get("to_agent"), str) and s["to_agent"] and s["from_agent"] != s["to_agent"]
+                       and isinstance(s.get("revision"), int) and not isinstance(s["revision"], bool)
+                       and isinstance(s.get("owner_note"), str) and s["owner_note"].strip() for s in succession)
+            or any(a["to_agent"] != b["from_agent"] or a["revision"] >= b["revision"] for a, b in zip(succession, succession[1:]))
+            or (succession and (succession[-1]["to_agent"] != control["integration_agent"]
+                                or succession[-1]["revision"] > control["revision"]))):
+        return ["LANE_INTEGRATION_OWNER_SUCCESSION_INVALID"]
+    predecessors = {s["from_agent"] for s in succession} - {control["integration_agent"]}
     lanes = control.get("lanes")
     if not isinstance(lanes, list) or not all(isinstance(l, dict) for l in lanes):
         return errors + ["LANE_RECORDS_INVALID"]
@@ -771,8 +782,12 @@ def validate_development_control(state: Mapping[str, Any]) -> list[str]:
             if (lane["mode"] in {"IMPLEMENTATION", "SHADOW"}
                     and (any(scope_overlap(path, p) for p in SHARED_PATHS) or shared_path(path)) and path not in leases):
                 errors.append(f"LANE_SHARED_SCOPE_REQUIRES_EXACT_LEASE:{mid}:{path}")
-        if leases and (lane.get("responsible_agent") != control["integration_agent"]
-                       or not lane.get("lease_note") or not all(p in scopes for p in leases)):
+        # A predecessor owner's lease stays valid only on its durable local or terminal
+        # record; every lane still being written must belong to the current owner.
+        lease_owner = (lane.get("responsible_agent") == control["integration_agent"]
+                       or (lane.get("responsible_agent") in predecessors
+                           and lane.get("state") in LANE_TERMINAL | {"COMPLETE_LOCAL"}))
+        if leases and (not lease_owner or not lane.get("lease_note") or not all(p in scopes for p in leases)):
             errors.append(f"LANE_SHARED_LEASE_NOT_INTEGRATION_OWNER:{mid}")
         deps = lane.get("dependencies")
         if not isinstance(deps, list) or any(d not in ids + list(legacy_ids) or d == mid for d in deps):
@@ -909,6 +924,67 @@ def prepare_declaration_amendment(state: Mapping[str, Any], spec: Any, *, repo: 
     if errors:
         raise RoadmapStateError(";".join(sorted(set(errors))))
     return updated, sorted(changes, key=lambda item: item["milestone_id"])
+
+
+TRANSFERABLE_LANE_STATES = {"ADMITTED", "ACTIVE", "PAUSED", "REVIEW_READY"}
+
+
+def prepare_integration_owner_transfer(state: Mapping[str, Any], spec: Any, *, repo: Path) -> tuple[dict, dict]:
+    """Prepare one Owner-directed succession of the single integration owner; never write state.
+
+    The caller must enforce the bound coordinator worktree/branch, the explicit Owner
+    directive and the native CAS writer. Lanes, checkpoints, states, leases and history
+    are preserved; only each named in-flight predecessor lane changes responsible agent.
+    A predecessor's COMPLETE_LOCAL or terminal record keeps its own lease until its normal
+    release, so the transfer never silently takes over or reopens unrelated work.
+    """
+    import copy
+    keys = {"schema", "expected_revision", "from_agent", "to_agent", "coordinator_head", "successor_lanes"}
+    if (not isinstance(spec, dict) or set(spec) != keys
+            or spec.get("schema") != "stocklookup_integration_owner_transfer/1"
+            or not isinstance(spec.get("expected_revision"), int) or isinstance(spec["expected_revision"], bool)
+            or not all(isinstance(spec.get(k), str) and spec[k].strip() for k in ("from_agent", "to_agent", "coordinator_head"))
+            or not isinstance(spec.get("successor_lanes"), list)):
+        raise RoadmapStateError("LANE_TRANSFER_EXACT_SPEC_REQUIRED")
+    errors = validate_development_control(state)
+    if errors:
+        raise RoadmapStateError(";".join(errors))
+    control = state.get("development_control") or {}
+    if spec["expected_revision"] != control.get("revision"):
+        raise RoadmapStateError("LANE_TRANSFER_REVISION_CHANGED_RELOAD_REQUIRED")
+    if spec["from_agent"] != control.get("integration_agent"):
+        raise RoadmapStateError("LANE_TRANSFER_STALE_INTEGRATION_OWNER")
+    if spec["to_agent"] == spec["from_agent"]:
+        raise RoadmapStateError("LANE_TRANSFER_SAME_OWNER")
+    code, status, _ = git_run(repo, "status", "--porcelain", "--untracked-files=no")
+    if git_head(repo) != spec["coordinator_head"] or code != 0 or status.strip():
+        raise RoadmapStateError("LANE_TRANSFER_EXACT_CLEAN_COORDINATOR_HEAD_REQUIRED")
+    updated = copy.deepcopy(state)
+    by_id = {l["milestone_id"]: l for l in updated["development_control"]["lanes"]}
+    named: dict[str, dict] = {}
+    for item in spec["successor_lanes"]:
+        if (not isinstance(item, dict) or set(item) != {"milestone_id", "state", "checkpoint", "head"}
+                or not isinstance(item["milestone_id"], str) or item["milestone_id"] in named):
+            raise RoadmapStateError("LANE_TRANSFER_SUCCESSOR_LANE_SPEC_INVALID")
+        named[item["milestone_id"]] = item
+    # Every in-flight predecessor lane must be explicitly named; nothing transfers implicitly.
+    in_flight = {mid for mid, l in by_id.items()
+                 if l["responsible_agent"] == spec["from_agent"] and l["state"] in TRANSFERABLE_LANE_STATES}
+    if set(named) != in_flight:
+        raise RoadmapStateError("LANE_TRANSFER_IN_FLIGHT_LANES_MUST_BE_EXACT:" + ",".join(sorted(set(named) ^ in_flight)))
+    lanes = []
+    for mid in sorted(named):
+        item, lane = named[mid], by_id[mid]
+        if item["state"] != lane["state"] or item["checkpoint"] != lane.get("checkpoint"):
+            raise RoadmapStateError("LANE_TRANSFER_LANE_STATE_CHANGED_RELOAD_REQUIRED:" + mid)
+        checked = check_lane(state, mid, repo=repo)
+        if checked["errors"] or checked["head"] != item["head"]:
+            raise RoadmapStateError("LANE_TRANSFER_EXACT_LANE_HEAD_REQUIRED:" + mid + ":" + ";".join(checked["errors"]))
+        lane["responsible_agent"] = spec["to_agent"]
+        lanes.append({"milestone_id": mid, "state": lane["state"], "checkpoint": lane.get("checkpoint"), "head": item["head"]})
+    return updated, {"from_agent": spec["from_agent"], "to_agent": spec["to_agent"],
+                     "expected_revision": spec["expected_revision"], "coordinator_head": spec["coordinator_head"],
+                     "successor_lanes": lanes}
 
 
 def coordinator_host_available(state: Mapping[str, Any], repo: Path) -> bool:

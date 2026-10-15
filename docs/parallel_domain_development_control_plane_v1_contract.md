@@ -120,6 +120,39 @@ It removes a nonexistent financial-input publication declaration from Home; it
 does not publish that input or a financial metric. Governance source merge remains
 an explicit Owner review gate.
 
+## Integration owner succession
+
+`--transfer-integration-owner --transfer-spec <owner-reviewed-spec>` hands the single
+integration-owner role to an Owner-appointed successor, for example when the bound agent
+can no longer run. It runs only in the bound coordinator worktree and branch, with the
+explicit Owner directive, lock, byte CAS and atomic writer. `--agent` must equal the
+spec's successor, and the spec must name the current owner as predecessor. That makes it
+a recorded succession, not impersonation or a second writer.
+
+The schema is `stocklookup_integration_owner_transfer/1`. It has exactly these keys:
+`expected_revision`, `from_agent`, `to_agent`, the exact clean `coordinator_head`, and
+`successor_lanes`. Each lane entry is a `milestone_id` with its exact `state`,
+`checkpoint` and worktree `head`. The list must name exactly the predecessor's in-flight
+lanes (ADMITTED, ACTIVE, PAUSED or REVIEW_READY), and only their responsible agent
+changes. The command refuses to run when:
+
+- the revision, owner or HEAD is stale;
+- the coordinator is dirty;
+- a lane's state or head has changed;
+- an in-flight lane is omitted or an extra lane is named;
+- the transfer is a no-op;
+- the spec has reserved fields;
+- the acting agent is not the named successor.
+
+A refusal writes nothing.
+
+A predecessor's COMPLETE_LOCAL and terminal records keep their agent and leases unchanged.
+Those leases stay valid until that lane's own normal release, so a transfer never takes
+over or reopens unrelated work. The command appends one global `INTEGRATION_OWNER_TRANSFER`
+event plus one event per transferred lane, and adds an `integration_owner_succession`
+chain entry. Validation then requires every in-flight leased lane to belong to the
+current owner.
+
 ## Integration planning
 
 `--integration-plan --main-sha <observed-main> [--candidate-lane ID]` reads
