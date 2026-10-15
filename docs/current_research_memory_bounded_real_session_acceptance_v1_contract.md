@@ -21,18 +21,34 @@ without changing that leased navigation file.
 
 ## Architecture choice
 
-**A — verified streaming projection** is selected. The existing
-[`artifact_stream.py`](../stocklookup_core/evidence/artifact_stream.py) hashes all
-root fields and records sequentially, using the existing strict canonical encoder
-in `bounded_json.py`. No new parser or source authority is introduced. Each source
+**A — verified streaming projection** is selected. The preview-private adapter in
+[`bounded_research_preview.py`](../stocklookup_core/decision/bounded_research_preview.py)
+subclasses the frozen E4 `ObjectStream`, reusing its sorted-unique member traversal
+and adaptive decoding. Its scoped decoder rejects nested duplicates/nonfinite
+values, bounds refills and metadata, and checks the deadline. The frozen public
+verifier has no parser-injection parameter, so the preview owns the small native
+canonical hash traversal, using the unchanged `bounded_json.py` encoder. Each source
 is completed before the next begins. Only explicitly selected original records
 survive, inside a distinct projection envelope, until the existing Action Center
 evidence/conditional/setup-transition functions render them.
 
 The root `bounded_artifact_stream.py` is a retained compatibility implementation;
 it imports retention/sanitization owners and is not copied into this path. The
-package implementation accepts strict parsing and bounds without changing the
-compatibility helper, its caller-owned sanitization, or default JSON identities.
+frozen package implementation is byte-identical to the E4 baseline; its public API,
+caller-owned sanitization and unrelated consumers retain their original behavior.
+No production monkeypatch or general-purpose parser framework is introduced.
+
+The Owner-authorized E4 corrective continues this same lane and preserves original
+checkpoint `63e662857003133cf642c7ba6b3fa76f5146dfca` in history. PR159 CI exposed
+two additional E5/E6 frozen-source failures missed by that checkpoint's bounded
+review. The earlier zero-new-failures statement below refers only to the recorded
+neighbour suite; it did not cover those freezes. The corrective restores E4 bytes
+without changing pins, manifests, existing E4/E5/E6 assertions or CI policy.
+Original V1 digest is `fa79baadcca197493b9ca70067fbd153f5e8bb7f50dfb6dbc6da53f253483d46`;
+V2 is `07c2a363df0e91a1dee230f0316a081249b247f7aa74bd67e04e45b1d1886567`.
+New exact-head acceptance and CI evidence govern the corrected candidate; the
+historical measurements below belong to the original checkpoint. Updating PR159
+and validating hosted CI are authorized; merge requires a new Owner directive.
 
 **B — compact retained artifact only** is rejected. `decision_surface_index` has
 posture, currency and priority, but lacks condition, counter-thesis, uncertainty,

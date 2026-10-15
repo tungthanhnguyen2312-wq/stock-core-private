@@ -4,12 +4,11 @@ from __future__ import annotations
 import hashlib
 import itertools
 import json
+import math
 import time
 from pathlib import Path
 
-from stocklookup_core.evidence.artifact_stream import (
-    finite_float, reject_constant, stream_artifact, strict_object,
-)
+from stocklookup_core.evidence.artifact_stream import ObjectStream
 from stocklookup_core.evidence.bounded_json import canonical_bytes
 from stocklookup_core.decision import integrated_investment_decision_product as iid
 
@@ -21,6 +20,108 @@ MAX_SOURCE_BYTES = 4 * 1024**3
 MAX_SELECTED_BYTES = 16 * 1024 * 1024
 MIN_AVAILABLE_BYTES = 1024**3
 DEADLINE_SECONDS = 600
+
+
+def strict_object(pairs):
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError("ACCEPTANCE_NESTED_DUPLICATE_KEY:" + key)
+        result[key] = value
+    return result
+
+
+def reject_constant(value):
+    raise ValueError("ACCEPTANCE_NONFINITE_NUMBER:" + value)
+
+
+def finite_float(value):
+    result = float(value)
+    if not math.isfinite(result):
+        reject_constant(value)
+    return result
+
+
+class _PreviewObjectStream(ObjectStream):
+    """Preview-only restrictions over the frozen E4 member traversal/refill strategy."""
+
+    def __init__(self, source, *, limit, deadline):
+        super().__init__(source, limit=limit)
+        self.deadline = deadline
+        self.decoder = json.JSONDecoder(object_pairs_hook=strict_object,
+                                        parse_constant=reject_constant, parse_float=finite_float)
+
+    def fill(self, size=64 * 1024):
+        if self.deadline is not None and time.monotonic() >= self.deadline:
+            raise ValueError("ACCEPTANCE_DEADLINE_EXCEEDED")
+        remaining = self.limit - (len(self.buffer) - self.position)
+        if remaining <= 0:
+            raise ValueError("ACCEPTANCE_JSON_MEMBER_LIMIT")
+        super().fill(min(size, remaining))
+
+    def peek(self):
+        # JSON permits only these four whitespace characters, unlike str.isspace().
+        while True:
+            while self.position < len(self.buffer) and self.buffer[self.position] in " \t\r\n":
+                self.position += 1
+            if self.position < len(self.buffer):
+                return self.buffer[self.position]
+            if self.eof:
+                return ""
+            self.fill()
+
+
+def _stream_artifact(path, *, excluded, on_record, member_limit=MEMBER_LIMIT,
+                     metadata_limit=METADATA_LIMIT, deadline=None):
+    """Preview-scoped native canonical hash; E4's public verifier has no parser injection.
+
+    Reuse its sorted-unique traversal and adaptive member decoding without changing
+    the frozen API or any other consumer. Hash all records, including unselected rows.
+    """
+    digest = hashlib.sha256(b"{")
+    metadata, first, count, metadata_size = {}, True, 0, 0
+
+    def encode(value):
+        digest.update(canonical_bytes(value))
+
+    with path.open(encoding="utf-8") as source:
+        parser = _PreviewObjectStream(source, limit=member_limit, deadline=deadline)
+        for key in parser.members():
+            included = key not in excluded
+            if included:
+                if not first:
+                    digest.update(b",")
+                first = False
+                encode(key)
+                digest.update(b":")
+            if key == "records":
+                if not included:
+                    raise ValueError("ACCEPTANCE_RECORDS_EXCLUDED")
+                digest.update(b"{")
+                record_first = True
+                for ticker in parser.members():
+                    row = parser.value()
+                    if not record_first:
+                        digest.update(b",")
+                    record_first = False
+                    encode(ticker)
+                    digest.update(b":")
+                    encode(row)
+                    on_record(ticker, row)
+                    count += 1
+                digest.update(b"}")
+            else:
+                value = parser.value()
+                metadata_size += len(canonical_bytes(value))
+                if metadata_size > metadata_limit:
+                    raise ValueError("ACCEPTANCE_METADATA_LIMIT")
+                metadata[key] = value
+                if included:
+                    encode(value)
+        if parser.peek():
+            raise ValueError("ACCEPTANCE_TRAILING_JSON")
+    digest.update(b"}")
+    return metadata, digest.hexdigest(), count
 
 
 def resource_gate(*, available_bytes=None):
@@ -110,9 +211,9 @@ def verified_projection(path, *, session, expected_identity, tickers, deadline,
                 raise ValueError("PREVIEW_SELECTED_PAYLOAD_LIMIT")
             selected[ticker] = row
 
-    metadata, digest, count = stream_artifact(
+    metadata, digest, count = _stream_artifact(
         path, excluded=iid._IDENTITY_EXCLUDED if excluded is None else excluded,
-        on_record=consume, strict=True, member_limit=MEMBER_LIMIT,
+        on_record=consume, member_limit=MEMBER_LIMIT,
         metadata_limit=METADATA_LIMIT, deadline=deadline,
     )
     after = path.stat()

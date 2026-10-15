@@ -214,8 +214,8 @@ def test_invalid_json_never_verified(tmp_path, text):
     p = tmp_path / "bad.json"
     p.write_text(text, encoding="utf-8")
     with pytest.raises(ValueError):
-        stream.stream_artifact(p, excluded=set(), on_record=lambda *args: None,
-                               strict=True, member_limit=4096)
+        b._stream_artifact(p, excluded=set(), on_record=lambda *args: None,
+                               member_limit=4096)
 
 
 def test_native_hash_equivalence_unicode_floats_exclusions_and_nested_keys(tmp_path):
@@ -224,8 +224,9 @@ def test_native_hash_equivalence_unicode_floats_exclusions_and_nested_keys(tmp_p
     curr["records"]["AAA_SAME"]["stress"] = {"Việt 😀": [-0.0, 1e-30, True, None, {"z": "quoted\"\n"}]}
     curr.update(iid.content_identity(curr))
     path = write(tmp_path / "oracle.json", curr)
-    metadata, digest, count = stream.stream_artifact(path, excluded=iid._IDENTITY_EXCLUDED, on_record=lambda *args: None, strict=True)
+    metadata, digest, count = b._stream_artifact(path, excluded=iid._IDENTITY_EXCLUDED, on_record=lambda *args: None)
     assert digest == iid.content_identity(curr)["artifact_sha256"] == curr["artifact_sha256"]
+    assert (metadata, digest, count) == stream.stream_artifact(path, excluded=iid._IDENTITY_EXCLUDED, on_record=lambda *args: None)
     assert count == len(curr["records"])
     assert metadata["artifact_identity"] == curr["artifact_identity"]
 
@@ -316,12 +317,12 @@ def test_source_and_selected_payload_budgets(tmp_path, monkeypatch):
 def test_parser_member_metadata_and_deadline_refusal(tmp_path):
     path = write(tmp_path / "large.json", {"records": {"A": {"x": "x" * 8000}}})
     with pytest.raises(ValueError, match="MEMBER_LIMIT"):
-        stream.stream_artifact(path, excluded=set(), on_record=lambda *args: None, member_limit=4096, strict=True)
+        b._stream_artifact(path, excluded=set(), on_record=lambda *args: None, member_limit=4096)
     with pytest.raises(ValueError, match="DEADLINE"):
-        stream.stream_artifact(path, excluded=set(), on_record=lambda *args: None, strict=True, deadline=time.monotonic()-1)
+        b._stream_artifact(path, excluded=set(), on_record=lambda *args: None, deadline=time.monotonic()-1)
     write(path, {"metadata": "x" * 100, "records": {}})
     with pytest.raises(ValueError, match="METADATA_LIMIT"):
-        stream.stream_artifact(path, excluded=set(), on_record=lambda *args: None, strict=True, metadata_limit=50)
+        b._stream_artifact(path, excluded=set(), on_record=lambda *args: None, metadata_limit=50)
 
 
 def test_stress_record_growth_does_not_retain_source_graph(tmp_path):
@@ -338,7 +339,7 @@ def test_stress_record_growth_does_not_retain_source_graph(tmp_path):
             f.write('}}')
         retained = {}
         tracemalloc.start()
-        _, _, seen = stream.stream_artifact(p, excluded=set(), strict=True,
+        _, _, seen = b._stream_artifact(p, excluded=set(),
             on_record=lambda t, row: retained.update({t: row}) if t == "T00000" else None)
         _, peak = tracemalloc.get_traced_memory()
         tracemalloc.stop()

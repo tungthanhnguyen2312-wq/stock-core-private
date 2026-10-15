@@ -1,36 +1,23 @@
 """Bounded sorted-unique JSON verification; caller owns any sanitization policy."""
 import hashlib
 import json
-import math
-import time
 from stocklookup_core.evidence.bounded_json import canonical_bytes, json_bytes
 
 
 class ObjectStream:
     """Bounded stdlib JSON object reader; never materialize the records container."""
-    def __init__(self, source, *, limit=16 * 1024 * 1024, sorted_required=True, strict=False, deadline=None):
+    def __init__(self, source, *, limit=16 * 1024 * 1024, sorted_required=True):
         # ``sorted_required=False`` is for projection-only readers that never hash canonical bytes;
         # duplicate keys are still rejected (fail closed) via the seen-set below.
         self.source, self.limit, self.sorted_required = source, limit, sorted_required
-        self.strict = strict
         self.buffer, self.position, self.eof = "", 0, False
-        self.deadline = deadline
-        self.decoder = json.JSONDecoder(**({
-            "object_pairs_hook": strict_object,
-            "parse_constant": reject_constant,
-            "parse_float": finite_float,
-        } if strict else {}))
+        self.decoder = json.JSONDecoder()
         self.hint = 0  # characters of the last large member; sizes the next refill so a record is decoded ~once
 
     def fill(self, size=64 * 1024):
-        if self.deadline is not None and time.monotonic() >= self.deadline:
-            raise ValueError("ACCEPTANCE_DEADLINE_EXCEEDED")
         self.buffer = self.buffer[self.position:]
         self.position = 0
-        remaining = self.limit - len(self.buffer)
-        if remaining <= 0:
-            raise ValueError("ACCEPTANCE_JSON_MEMBER_LIMIT")
-        chunk = self.source.read(min(size, remaining))
+        chunk = self.source.read(size)
         self.eof = not chunk
         self.buffer += chunk
         if len(self.buffer) > self.limit:
@@ -38,10 +25,7 @@ class ObjectStream:
 
     def peek(self):
         while True:
-            while self.position < len(self.buffer) and (
-                self.buffer[self.position] in " \t\r\n" if self.strict
-                else self.buffer[self.position].isspace()
-            ):
+            while self.position < len(self.buffer) and self.buffer[self.position].isspace():
                 self.position += 1
             if self.position < len(self.buffer):
                 return self.buffer[self.position]
@@ -114,31 +98,10 @@ def source_hash(path):
     return digest.hexdigest()
 
 
-def strict_object(pairs):
-    result = {}
-    for key, value in pairs:
-        if key in result:
-            raise ValueError("ACCEPTANCE_NESTED_DUPLICATE_KEY:" + key)
-        result[key] = value
-    return result
-
-
-def reject_constant(value):
-    raise ValueError("ACCEPTANCE_NONFINITE_NUMBER:" + value)
-
-
-def finite_float(value):
-    result = float(value)
-    if not math.isfinite(result):
-        reject_constant(value)
-    return result
-
-
-def stream_artifact(path, *, excluded, on_record, sanitize=None, strict=False,
-                    member_limit=16 * 1024 * 1024, metadata_limit=None, deadline=None):
+def stream_artifact(path, *, excluded, on_record, sanitize=None):
     digest = hashlib.sha256()
     digest.update(b"{")
-    metadata, first, count, metadata_size = {}, True, 0, 0
+    metadata, first, count = {}, True, 0
     def encode(value):
         if sanitize is not None:
             for chunk in json_bytes(sanitize(value)):
@@ -147,7 +110,7 @@ def stream_artifact(path, *, excluded, on_record, sanitize=None, strict=False,
             # Same canonical bytes as retention._json_bytes (verified by test), without the pure-Python iterencode path.
             digest.update(canonical_bytes(value))
     with path.open(encoding="utf-8") as source:
-        parser = ObjectStream(source, limit=member_limit, strict=strict, deadline=deadline)
+        parser = ObjectStream(source)
         for key in parser.members():
             included = key not in excluded
             if included:
@@ -168,10 +131,6 @@ def stream_artifact(path, *, excluded, on_record, sanitize=None, strict=False,
                 digest.update(b"}")
             else:
                 value = parser.value()
-                if metadata_limit is not None:
-                    metadata_size += len(canonical_bytes(value))
-                    if metadata_size > metadata_limit:
-                        raise ValueError("ACCEPTANCE_METADATA_LIMIT")
                 metadata[key] = value
                 if included: encode(value)
         if parser.peek(): raise ValueError("ACCEPTANCE_TRAILING_JSON")
