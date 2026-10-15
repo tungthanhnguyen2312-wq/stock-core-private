@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from dnse_trades_canonical_shadow import materialize_cohort
+from stocklookup_core.evidence.dnse_trades_canonical_shadow import materialize_cohort
 
 
 def main(argv: list[str] | None = None) -> int:

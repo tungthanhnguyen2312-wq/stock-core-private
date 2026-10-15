@@ -12,7 +12,7 @@ from pathlib import Path
 import stat
 import tempfile
 
-from atomic_io import AtomicWriteError
+from stocklookup_core.acquisition.artifact_io import AtomicWriteError
 
 DELIVERIES = {"ai_research_session_bundle.json", "ai_research_full_universe.ndjson"}
 CHUNK = 1024 * 1024

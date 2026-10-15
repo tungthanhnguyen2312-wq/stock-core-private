@@ -6,7 +6,7 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
-import dnse_trades_canonical_shadow as shadow
+from stocklookup_core.evidence import dnse_trades_canonical_shadow as shadow
 
 
 def _raw_page(path: Path, payload: object) -> None:

@@ -420,7 +420,7 @@ def write_operation_snapshot(path: str | Path, operation: Mapping[str, Any]) -> 
     a different snapshot (more tickers COMPLETE) at the SAME session path, and that is the
     expected, correct behavior for the mutable progress contract -- never a conflict.
     """
-    from atomic_io import atomic_write_file, validate_json_file
+    from stocklookup_core.acquisition.artifact_io import atomic_write_file, validate_json_file
 
     destination = Path(path)
     text = json.dumps(operation, ensure_ascii=False, sort_keys=True, indent=2) + "\n"

@@ -20,7 +20,7 @@ from pathlib import Path
 import dnse_current_state_market_risk as m
 import dnse_current_state_price_analytics as price_analytics
 import dnse_index_return_series_capability as index_capability
-import dnse_market_risk_evidence_store as evidence_store
+from stocklookup_core.evidence import dnse_market_risk_evidence_store as evidence_store
 from vn_time import VN_TZ
 
 _SESSION_DATES = [

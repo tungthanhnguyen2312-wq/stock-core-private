@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-import market_wide_coverage_report as coverage
+from stocklookup_core.acquisition import market_wide_coverage_report as coverage
 
 
 def _manifest(**overrides):

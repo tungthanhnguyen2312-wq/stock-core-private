@@ -36,7 +36,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from stocklookup_core.evidence import market_capability_taxonomy as taxonomy
-from atomic_io import atomic_write_file, atomic_write_json
+from stocklookup_core.acquisition.artifact_io import atomic_write_file, atomic_write_json
 
 SCHEMA_VERSION = "1.0.0"
 CONTRACT_VERSION = "capability_first_coverage_aware_digest/v1"

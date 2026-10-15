@@ -509,7 +509,7 @@ def build_current_state_price_analytics_from_evidence_store(
             include_technical_indicators=include_technical_indicators,
         )
 
-    import dnse_market_risk_evidence_store as evidence_store
+    from stocklookup_core.evidence import dnse_market_risk_evidence_store as evidence_store
     stock_record = None
     try:
         stock_record = evidence_store.read_stock_ohlc(runtime_root, normalized_ticker)

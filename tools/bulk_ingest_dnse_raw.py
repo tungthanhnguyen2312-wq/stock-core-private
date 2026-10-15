@@ -59,7 +59,7 @@ from dnse_bulk_market_data import fetch_capability_raw, is_retryable  # noqa: E4
 from dnse_secrets_env import ensure_credentials_loaded  # noqa: E402
 import market_raw_lake as lake  # noqa: E402
 from market_data_contracts import RawObservation  # noqa: E402
-from market_wide_coverage_report import build_coverage_report, save_coverage_report  # noqa: E402
+from stocklookup_core.acquisition.market_wide_coverage_report import build_coverage_report, save_coverage_report  # noqa: E402
 from runtime_paths import runtime_root as resolve_runtime_root  # noqa: E402
 import vn_time  # noqa: E402
 

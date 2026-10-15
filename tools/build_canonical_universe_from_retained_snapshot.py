@@ -45,7 +45,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from atomic_io import atomic_write_json  # noqa: E402
+from stocklookup_core.acquisition.artifact_io import atomic_write_json  # noqa: E402
 import canonical_instrument_reconciliation as c1  # noqa: E402
 import canonical_universe_tiers as c2  # noqa: E402
 import dnse_security_group_semantics as security_group_semantics  # noqa: E402

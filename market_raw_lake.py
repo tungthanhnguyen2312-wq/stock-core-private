@@ -57,7 +57,7 @@ from typing import Any, Mapping
 
 import pandas as pd
 
-from atomic_io import atomic_write_file, atomic_write_json
+from stocklookup_core.acquisition.artifact_io import atomic_write_file, atomic_write_json
 from market_data_contracts import RawObservation
 from vn_time import vn_now_iso
 

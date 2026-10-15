@@ -19,7 +19,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from atomic_io import atomic_write_json
+from stocklookup_core.acquisition.artifact_io import atomic_write_json
 from market_analysis_artifact import (
     ARTIFACT_TYPE,
     SCHEMA_VERSION,

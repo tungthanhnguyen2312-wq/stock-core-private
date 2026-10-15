@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-import dnse_market_risk_evidence_store as store
+from stocklookup_core.evidence import dnse_market_risk_evidence_store as store
 
 
 def _raw_ohlc(n: int = 3) -> dict:

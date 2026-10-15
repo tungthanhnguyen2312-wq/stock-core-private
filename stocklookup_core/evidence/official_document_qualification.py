@@ -336,7 +336,7 @@ def _publish_official_artifacts(payloads: Mapping[Path, str], *, commit_path: Pa
     Callers must complete common admission and serialization first. This helper
     cannot authorize publication. It preserves existing bytes on a failed batch.
     """
-    from atomic_io import atomic_write_file
+    from stocklookup_core.acquisition.artifact_io import atomic_write_file
     commit = Path(commit_path).resolve()
     prepared = {Path(path).resolve(): text.encode("utf8") for path, text in payloads.items()}
     if commit not in prepared or any(path.parent != commit.parent for path in prepared):

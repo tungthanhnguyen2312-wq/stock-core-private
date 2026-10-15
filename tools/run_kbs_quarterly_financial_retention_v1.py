@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from atomic_io import atomic_write_json
+from stocklookup_core.acquisition.artifact_io import atomic_write_json
 from stocklookup_core.financial.canonical_financial_facts import build_facts
 import stocklookup_core.financial.financial_flow_semantics_ttm_bridge as bridge
 import kbs_quarterly_financial_retention as kbs

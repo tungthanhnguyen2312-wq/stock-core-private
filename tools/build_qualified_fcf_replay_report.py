@@ -19,10 +19,10 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from atomic_io import atomic_write_file, atomic_write_json  # noqa: E402
+from stocklookup_core.acquisition.artifact_io import atomic_write_file, atomic_write_json  # noqa: E402
 import canonical_fact_store as canonical_store  # noqa: E402
 import stocklookup_core.financial.financial_analysis_engine_v2 as engine  # noqa: E402
-import raw_financial_store  # noqa: E402
+from stocklookup_core.financial import raw_financial_observations as raw_financial_store  # noqa: E402
 from stocklookup_core.financial.financial_analysis_product_projection import build_product_projection  # noqa: E402
 
 

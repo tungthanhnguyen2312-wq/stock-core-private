@@ -403,3 +403,78 @@ def attach_hnx_upcom_security_status(artifact: Mapping[str, Any], status_artifac
     }
     enriched.update(_identity(enriched))
     return enriched
+
+
+# Explicit, offline retention of this owner's already-qualified artifacts.
+from pathlib import Path
+from stocklookup_core.acquisition.artifact_io import atomic_copy_file
+
+RETENTION_CONTRACT_VERSION = "current_official_universe_evidence_retention/v1"
+
+STATUS_RETAINED = "RETAINED"
+STATUS_ALREADY_RETAINED_IDENTICAL = "ALREADY_RETAINED_IDENTICAL"
+
+
+class RetentionError(ValueError):
+    """A retention precondition failed; the caller must not proceed with promotion."""
+
+
+def retain_evidence(
+    *,
+    source_path: Path | str,
+    destination_path: Path | str,
+    expected_identity: str | None = None,
+) -> dict[str, Any]:
+    """Idempotently promote ``source_path`` into ``destination_path``.
+
+    Fails closed (raises ``RetentionError``) on:
+      - a missing or unreadable source, or one that is not valid JSON;
+      - a source that fails its own self-hash / contract check
+        (``current_official_market_universe.verify_retained_artifact``);
+      - a source whose ``artifact_identity`` does not match ``expected_identity`` when supplied;
+      - an existing destination whose ``artifact_identity`` differs from the source's -- this
+        function never silently overwrites a different qualification at the same governed path.
+
+    An existing destination already holding the byte-for-byte same ``artifact_identity`` is a
+    no-op success (idempotent: running the same promotion twice is safe).
+    """
+    src = Path(source_path)
+    if not src.is_file():
+        raise RetentionError(f"SOURCE_NOT_FOUND:{src}")
+    try:
+        source_text = src.read_text(encoding="utf-8")
+        artifact = json.loads(source_text)
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise RetentionError(f"SOURCE_NOT_READABLE_JSON:{src}:{exc}") from exc
+
+    verify_retained_artifact(
+        artifact, label="RETENTION_SOURCE", expected_identity=expected_identity,
+    )
+
+    dest = Path(destination_path)
+    if dest.is_file():
+        try:
+            existing = json.loads(dest.read_text(encoding="utf-8"))
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise RetentionError(f"DESTINATION_NOT_READABLE_JSON:{dest}:{exc}") from exc
+        existing_identity = existing.get("artifact_identity")
+        if existing_identity != artifact.get("artifact_identity"):
+            raise RetentionError(
+                f"DESTINATION_CONFLICT:{dest} already holds identity {existing_identity!r}; "
+                f"refusing to overwrite with {artifact.get('artifact_identity')!r}"
+            )
+        return {
+            "status": STATUS_ALREADY_RETAINED_IDENTICAL,
+            "source": str(src),
+            "destination": str(dest),
+            "artifact_identity": artifact.get("artifact_identity"),
+        }
+
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    atomic_copy_file(src, dest)
+    return {
+        "status": STATUS_RETAINED,
+        "source": str(src),
+        "destination": str(dest),
+        "artifact_identity": artifact.get("artifact_identity"),
+    }

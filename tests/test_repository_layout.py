@@ -40,6 +40,27 @@ def test_relocated_modules_have_one_implementation_and_resolve():
             assert not (ROOT / old).exists(), old
 
 
+def test_v5_io_breakout_has_exact_owners_and_only_required_root_interfaces():
+    v5 = LAYOUT["root_dependency_breakout_v5"]
+    expected = {
+        "raw_financial_store.py": "stocklookup_core/financial/raw_financial_observations.py",
+        "current_official_universe_evidence_retention.py": "stocklookup_core/evidence/current_official_market_universe.py",
+        "dnse_market_risk_evidence_store.py": "stocklookup_core/evidence/dnse_market_risk_evidence_store.py",
+        "dnse_trades_canonical_shadow.py": "stocklookup_core/evidence/dnse_trades_canonical_shadow.py",
+        "market_wide_coverage_report.py": "stocklookup_core/acquisition/market_wide_coverage_report.py",
+    }
+    assert v5["relocations"] == expected
+    assert v5["retained_historical_interfaces"] == ["atomic_io.py", "observability_events.py"]
+    for old, new in expected.items():
+        assert LAYOUT["relocations"][old] == new
+        assert old not in LAYOUT["grandfathered_root_python"]
+        assert old not in LAYOUT["compatibility_entrypoints"]
+        assert not (ROOT / old).exists() and importlib.util.find_spec(old[:-3]) is None
+    owner = ast.parse((ROOT / v5["canonical_io_owner"]).read_text(encoding="utf-8"))
+    assert not any(isinstance(n, ast.ImportFrom) and n.module in {"atomic_io", "observability_events"}
+                   for n in ast.walk(owner))
+
+
 E1_OFFICIAL_EXCHANGE_EVIDENCE = (
     "corporate_action_events", "corporate_action_evidence_registry", "hnx_disclosure_feed_parser",
     "hnx_filing_evidence_binding", "hnx_financial_filing_scaleout", "hnx_multi_attachment_binding",
@@ -140,6 +161,7 @@ def test_root_names_imported_by_executed_historical_sources_are_not_relocated():
     import subprocess
     moved = {old[:-3] for old in BULK_RELOCATIONS}
     moved |= {old[:-3] for old in LAYOUT["root_consolidation_v4"]["relocations"]}
+    moved |= {old[:-3] for old in LAYOUT["root_dependency_breakout_v5"]["relocations"]}
     for name in BULK["retained_root_for_historical_execution"]:
         assert (ROOT / name).is_file() and name not in LAYOUT["relocations"], name
     for ref, relative in BULK["historically_executed_sources"]:

@@ -57,7 +57,7 @@ import time
 from pathlib import Path
 from typing import Any, Callable, Iterable, Mapping
 
-from atomic_io import atomic_write_json
+from stocklookup_core.acquisition.artifact_io import atomic_write_json
 from provider_execution_guard import require_governed_provider_execution
 
 VERSION = "1.0.0"

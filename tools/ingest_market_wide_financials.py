@@ -39,14 +39,14 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from atomic_io import atomic_write_file, atomic_write_json  # noqa: E402
+from stocklookup_core.acquisition.artifact_io import atomic_write_file, atomic_write_json  # noqa: E402
 from market_wide_financial_coverage import (  # noqa: E402
     COVERAGE_CSV_FILENAME,
     COVERAGE_FILENAME,
     build_coverage,
     coverage_csv,
 )
-from raw_financial_store import ingest, store_root, verify  # noqa: E402
+from stocklookup_core.financial.raw_financial_observations import ingest, store_root, verify  # noqa: E402
 
 
 def _print_ingest(result: dict) -> None:

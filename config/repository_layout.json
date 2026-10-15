@@ -57,7 +57,6 @@
     "current_macro_regime.py",
     "current_market_sector_leadership_context.py",
     "current_official_event_context.py",
-    "current_official_universe_evidence_retention.py",
     "current_portfolio_risk_envelope.py",
     "current_portfolio_risk_research.py",
     "current_research_scenario_context.py",
@@ -89,10 +88,8 @@
     "dnse_intraday_history_raw.py",
     "dnse_market_data.py",
     "dnse_market_dataset_inventory.py",
-    "dnse_market_risk_evidence_store.py",
     "dnse_secrets_env.py",
     "dnse_security_group_semantics.py",
-    "dnse_trades_canonical_shadow.py",
     "dnse_trades_liquidity_basis.py",
     "dnse_volume_composition_reconciliation.py",
     "empirical_setup_outcome_calibration.py",
@@ -151,7 +148,6 @@
     "market_phase2_foundation.py",
     "market_price_volume_basis_authority.py",
     "market_raw_lake.py",
-    "market_wide_coverage_report.py",
     "market_wide_current_corporate_intelligence.py",
     "market_wide_current_descriptive_research.py",
     "market_wide_current_fundamental_research.py",
@@ -250,7 +246,6 @@
     "qualified_research_change_events.py",
     "qualified_research_snapshot.py",
     "qualified_research_snapshot_v2.py",
-    "raw_financial_store.py",
     "raw_pit_authority_matrix.py",
     "recovery_replay.py",
     "release_checkout_identity.py",
@@ -613,7 +608,12 @@
     "opportunity_snapshot.py": "stocklookup_core/decision/opportunity_snapshot.py",
     "opportunity_snapshot_retention.py": "stocklookup_core/decision/opportunity_snapshot.py",
     "ssi_securities_pilot.py": "stocklookup_core/evidence/official_document_downstream_shadow.py",
-    "vnm_execution_contract.py": "stocklookup_core/portfolio/vnm_execution_contract.py"
+    "vnm_execution_contract.py": "stocklookup_core/portfolio/vnm_execution_contract.py",
+    "raw_financial_store.py": "stocklookup_core/financial/raw_financial_observations.py",
+    "current_official_universe_evidence_retention.py": "stocklookup_core/evidence/current_official_market_universe.py",
+    "dnse_market_risk_evidence_store.py": "stocklookup_core/evidence/dnse_market_risk_evidence_store.py",
+    "dnse_trades_canonical_shadow.py": "stocklookup_core/evidence/dnse_trades_canonical_shadow.py",
+    "market_wide_coverage_report.py": "stocklookup_core/acquisition/market_wide_coverage_report.py"
   },
   "compatibility_entrypoints": {
     "official_document_acquisition.py": "Existing offline import CLI; delegates to the evidence package main()."
@@ -648,6 +648,34 @@
           "evaluate": "evaluate_ssi"
         }
       }
+    }
+  },
+  "root_dependency_breakout_v5": {
+    "base": "1471d448a514ae54728696945abe56f914287664",
+    "relocations": {
+      "raw_financial_store.py": "stocklookup_core/financial/raw_financial_observations.py",
+      "current_official_universe_evidence_retention.py": "stocklookup_core/evidence/current_official_market_universe.py",
+      "dnse_market_risk_evidence_store.py": "stocklookup_core/evidence/dnse_market_risk_evidence_store.py",
+      "dnse_trades_canonical_shadow.py": "stocklookup_core/evidence/dnse_trades_canonical_shadow.py",
+      "market_wide_coverage_report.py": "stocklookup_core/acquisition/market_wide_coverage_report.py"
+    },
+    "canonical_io_owner": "stocklookup_core/acquisition/artifact_io.py",
+    "retained_historical_interfaces": [
+      "atomic_io.py",
+      "observability_events.py"
+    ],
+    "source_sha256_lf": {
+      "raw_financial_store.py": "f23d31e3e43cf1fd533dc3e3a9c90d68ddfc3854aa4b5ee5ae6662a445ebce9a",
+      "current_official_universe_evidence_retention.py": "7c964c12f995a37279cb0777ab0989abdbc2863397ebf08d01159f0c22a2ab91",
+      "dnse_market_risk_evidence_store.py": "4374c7229b97aed356a16303bad157efd5371742e64cf78fa1d2a1cbaa7bdd00",
+      "dnse_trades_canonical_shadow.py": "692e3957962afc520a26ad3be4dec26aaef9d14dff2d73aacc11e7537ea65f99",
+      "market_wide_coverage_report.py": "18848115c21fdc745e4206032119ac452cf627b308a2fd4045b94f07059ae05f",
+      "atomic_io.py": "57de3eeccb99591be3ddcd955220ca560477cd3ca265a29d2d1c44435921c20c",
+      "observability_events.py": "e4370ecb733222af581500601e9c20069b5ce64db7784c59c3f6666a8008512f"
+    },
+    "consolidations": {
+      "raw_financial_store": "stocklookup_core/financial/raw_financial_observations.py",
+      "qualified_universe_retention": "stocklookup_core/evidence/current_official_market_universe.py"
     }
   }
 }

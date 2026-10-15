@@ -10,7 +10,7 @@ from pathlib import Path
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 import prospective_market_snapshot_contract as market
 import prospective_market_evidence_retention as retention
-from atomic_io import retain_immutable_bytes
+from stocklookup_core.acquisition.artifact_io import retain_immutable_bytes
 
 
 def register(source, *, source_sha256, retrieved_at, documentation_sha256, documentation_known_at, destination_root):

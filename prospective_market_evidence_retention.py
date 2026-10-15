@@ -11,7 +11,7 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Any, Mapping
 
-from atomic_io import retain_immutable_bytes
+from stocklookup_core.acquisition.artifact_io import retain_immutable_bytes
 import prospective_market_snapshot_contract as market
 
 CONTRACT_VERSION = "prospective_market_evidence_retention/v1"
@@ -90,7 +90,7 @@ def retain_market(exact_snapshot: Mapping[str, Any], *, session: str, root: Path
 
 def retain_universe(source_path: Path, *, root: Path) -> dict[str, Any]:
     from stocklookup_core.evidence.current_official_market_universe import verify_retained_artifact
-    from current_official_universe_evidence_retention import retain_evidence
+    from stocklookup_core.evidence.current_official_market_universe import retain_evidence
     artifact = json.loads(source_path.read_bytes())
     verify_retained_artifact(artifact, label="PROSPECTIVE_UNIVERSE")
     directory = root / "operations-review" / "prospective-universe-evidence-v1" / artifact["artifact_sha256"]

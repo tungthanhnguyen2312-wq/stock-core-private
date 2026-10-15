@@ -29,7 +29,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-import dnse_market_risk_evidence_store as store  # noqa: E402
+from stocklookup_core.evidence import dnse_market_risk_evidence_store as store  # noqa: E402
 from runtime_paths import runtime_root as resolve_runtime_root  # noqa: E402
 
 DEFAULT_STOCK_EVIDENCE = (

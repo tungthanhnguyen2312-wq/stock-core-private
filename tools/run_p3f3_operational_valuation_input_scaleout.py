@@ -22,7 +22,7 @@ if str(ROOT) not in sys.path:
 import current_valuation_input_authority as authority
 from dnse_access import credentials_for_request
 from dnse_bulk_market_data import fetch_capability_raw
-import dnse_market_risk_evidence_store as evidence_store
+from stocklookup_core.evidence import dnse_market_risk_evidence_store as evidence_store
 from dnse_secrets_env import ensure_credentials_loaded
 from field_temporal_contract import stable_id
 from freshness_history import latest_completed_market_day
