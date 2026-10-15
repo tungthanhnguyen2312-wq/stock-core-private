@@ -7,7 +7,7 @@ import argparse
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from atomic_io import atomic_write_json
+from stocklookup_core.acquisition.artifact_io import atomic_write_json
 import canonical_fact_store as store
 import provider_financial_source_metadata as metadata
 from stocklookup_core.financial.canonical_financial_facts import build_facts

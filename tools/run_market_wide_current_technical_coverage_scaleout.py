@@ -13,7 +13,7 @@ from typing import Callable, Mapping
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from atomic_io import atomic_write_json
+from stocklookup_core.acquisition.artifact_io import atomic_write_json
 from dnse_access import CREDENTIAL_ENV_PAIRS, credentials_for_request
 from dnse_bulk_market_data import fetch_capability_raw
 from dnse_secrets_env import ensure_credentials_loaded

@@ -14,7 +14,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-import dnse_market_risk_evidence_store as store  # noqa: E402
+from stocklookup_core.evidence import dnse_market_risk_evidence_store as store  # noqa: E402
 from tools.ingest_dnse_market_risk_evidence import find_ohlc_result, main, materialize  # noqa: E402
 
 # runtime_paths.runtime_root() prefers the STOCK_LOOKUP_RUNTIME_ROOT env var

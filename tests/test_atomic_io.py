@@ -23,6 +23,62 @@ from atomic_io import (
 )
 
 
+def test_v5_historical_interfaces_share_the_canonical_objects():
+    """Frozen import names survive without duplicated functions or exceptions."""
+    import atomic_io as old
+    import observability_events as events
+    from stocklookup_core.acquisition import artifact_io as owner
+    import pickle
+
+    for name in ("AtomicWriteError", "atomic_write_file", "atomic_write_json",
+                 "atomic_copy_file", "retain_immutable_bytes", "retain_immutable_file",
+                 "validate_json_file", "validate_csv_file", "os", "tempfile"):
+        assert getattr(old, name) is getattr(owner, name)
+    for name in ("EventStage", "EventOutcome", "build_observability_event",
+                 "emit_observability_event"):
+        assert getattr(events, name) is getattr(owner, name)
+    assert pickle.loads(pickle.dumps(old.AtomicWriteError("refused"))).__class__ is owner.AtomicWriteError
+    assert pickle.loads(pickle.dumps(events.EventStage.ATOMIC_PROMOTION)) is owner.EventStage.ATOMIC_PROMOTION
+    assert pickle.loads(pickle.dumps(old.atomic_write_file)) is owner.atomic_write_file
+
+
+def test_v5_both_import_orders_preserve_frozen_bindings():
+    import subprocess
+    import sys
+
+    for first in ("atomic_io", "stocklookup_core.acquisition.artifact_io", "observability_events"):
+        subprocess.run([sys.executable, "-c", f"""
+import {first}
+import sys
+if {first!r} == 'atomic_io':
+    assert 'observability_events' in sys.modules
+import atomic_io as old
+import observability_events as events
+from stocklookup_core.acquisition import artifact_io as owner
+assert old.atomic_write_file is owner.atomic_write_file
+assert old.AtomicWriteError is owner.AtomicWriteError
+assert events.EventStage is owner.EventStage
+assert old.os is owner.os
+assert old.tempfile is owner.tempfile
+"""], check=True)
+
+
+def test_v5_existing_fsync_patch_slot_fails_without_changing_old_bytes(tmp_path, monkeypatch):
+    import atomic_io as old
+    import pytest
+    from stocklookup_core.acquisition import artifact_io as owner
+
+    target = tmp_path / "artifact.json"
+    target.write_bytes(b"original")
+    def fail(*args):
+        raise OSError("INJECTED_TEMP_FSYNC")
+    monkeypatch.setattr(old.os, "fsync", fail)
+    with pytest.raises(old.AtomicWriteError):
+        owner.atomic_write_file(target, b"candidate")
+    assert target.read_bytes() == b"original"
+    assert not list(tmp_path.glob(".tmp-*"))
+
+
 class AtomicIoTests(unittest.TestCase):
     def test_successful_first_write(self):
         with tempfile.TemporaryDirectory() as tmp_dir:

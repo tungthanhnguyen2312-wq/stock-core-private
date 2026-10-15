@@ -1,0 +1,290 @@
+"""Canonical artifact writes and their structured observability events.
+
+The landing-checkpoint writer is a different contract and remains separate.
+Historical root APIs re-export these exact objects for frozen callers; new
+consumers import the owner. No acquisition or runtime operation runs at import.
+"""
+from __future__ import annotations
+import csv
+import json
+import os
+import tempfile
+from datetime import datetime, timezone
+from enum import Enum
+from pathlib import Path
+from typing import Any, Callable, Iterable, Mapping, Sequence
+
+SCHEMA_VERSION = "1.0.0"
+
+
+class EventStage(str, Enum):
+    ARTIFACT_GENERATION = "artifact_generation"
+    POST_FOCUS_STAGE = "post_focus_stage"
+    PRE_PROMOTION_VALIDATION = "pre_promotion_validation"
+    ATOMIC_PROMOTION = "atomic_promotion"
+    MANIFEST_VERIFICATION = "manifest_verification"
+    PUBLISH_DASHBOARD = "publish_dashboard"
+
+
+class EventOutcome(str, Enum):
+    SUCCESS = "success"
+    FAILED = "failed"
+    SKIPPED = "skipped"
+
+
+def build_observability_event(
+    stage: str | EventStage,
+    outcome: str | EventOutcome,
+    *,
+    artifact_filename: str | None = None,
+    sha256: str | None = None,
+    size_bytes: int | None = None,
+    price_basis: str | None = None,
+    volume_basis: str | None = None,
+    is_actionable: bool | None = None,
+    reason: str | None = None,
+    error_type: str | None = None,
+    is_live_write: bool = False,
+    target_path: str | Path | None = None,
+    provenance: Mapping[str, Any] | None = None,
+    timestamp: str | None = None,
+) -> dict[str, Any]:
+    """Build a deterministic, versioned observability event record."""
+    stage_str = str(stage.value if isinstance(stage, EventStage) else stage).strip().lower()
+    outcome_str = str(outcome.value if isinstance(outcome, EventOutcome) else outcome).strip().lower()
+
+    ts = timestamp or datetime.now(timezone.utc).isoformat(timespec="seconds")
+
+    return {
+        "schema_version": SCHEMA_VERSION,
+        "timestamp": ts,
+        "stage": stage_str,
+        "outcome": outcome_str,
+        "artifact_identity": {
+            "filename": artifact_filename,
+            "sha256": sha256,
+            "size_bytes": size_bytes,
+        },
+        "basis_contract_status": {
+            "price_basis": price_basis,
+            "volume_basis": volume_basis,
+            "is_actionable": is_actionable,
+        },
+        "failure_reason": {
+            "reason": reason,
+            "error_type": error_type,
+        } if outcome_str == EventOutcome.FAILED.value or reason else None,
+        "production_state": {
+            "is_live_write": is_live_write,
+            "target_path": str(target_path) if target_path else None,
+        },
+        "provenance": dict(provenance) if isinstance(provenance, Mapping) else None,
+    }
+
+
+def emit_observability_event(
+    event: Mapping[str, Any],
+    log_path: Path | str | None = None,
+) -> str:
+    """Serialize observability event to deterministic JSON string and optionally append to log_path."""
+    payload = json.dumps(event, ensure_ascii=False, sort_keys=True)
+    if log_path:
+        path = Path(log_path)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with path.open("a", encoding="utf-8") as handle:
+            handle.write(payload + "\n")
+    return payload
+
+
+def _emit_event(stage: str, outcome: str, target_path: Path, reason: str | None = None, error_type: str | None = None) -> None:
+    if build_observability_event and emit_observability_event:
+        try:
+            ev = build_observability_event(
+                stage,
+                outcome,
+                artifact_filename=target_path.name,
+                reason=reason,
+                error_type=error_type,
+                target_path=target_path,
+            )
+            log_dir = target_path.parent / "logs"
+            emit_observability_event(ev, log_dir / "observability_events.jsonl")
+        except Exception:
+            pass
+
+
+class AtomicWriteError(RuntimeError):
+    """Raised when an atomic write, validation, or replacement fails."""
+
+
+def retain_immutable_bytes(target_path: Path | str, content: bytes) -> bool:
+    """Publish complete bytes without replacement. Return True on exact-byte reuse.
+
+    A mismatch, including corrupt existing bytes, fails closed. The hard link makes
+    concurrent creation exclusive without exposing partially written files.
+    """
+    target = Path(target_path)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    if target.exists():
+        if target.read_bytes() != content:
+            raise AtomicWriteError(f"IMMUTABLE_BYTES_CONFLICT:{target}")
+        return True
+    descriptor, temporary = tempfile.mkstemp(prefix=".immutable-", dir=target.parent)
+    try:
+        with os.fdopen(descriptor, "wb") as handle:
+            handle.write(content)
+            handle.flush()
+            os.fsync(handle.fileno())
+        try:
+            os.link(temporary, target)
+            return False
+        except FileExistsError:
+            if target.read_bytes() != content:
+                raise AtomicWriteError(f"IMMUTABLE_BYTES_CONFLICT:{target}")
+            return True
+    finally:
+        Path(temporary).unlink(missing_ok=True)
+
+
+def retain_immutable_file(target_path: Path | str, prepared_path: Path | str) -> bool:
+    """Publish a closed, fsynced sibling file without clobber; compare in bounded blocks.
+
+    The caller owns and cleans the prepared file. Hard-link publication exposes
+    only completed bytes and arbitrates simultaneous writers atomically.
+    """
+    target, prepared = Path(target_path), Path(prepared_path)
+    def equal():
+        with target.open('rb') as existing, prepared.open('rb') as candidate:
+            while True:
+                left, right = existing.read(1024*1024), candidate.read(1024*1024)
+                if left != right: return False
+                if not left: return True
+    try:
+        os.link(prepared, target)
+        return False
+    except FileExistsError:
+        if not equal(): raise AtomicWriteError(f"IMMUTABLE_BYTES_CONFLICT:{target}")
+        return True
+
+
+def validate_json_file(path: Path) -> None:
+    """Validator: ensure file exists and parses as valid JSON."""
+    try:
+        content = path.read_text(encoding="utf-8")
+        json.loads(content)
+    except Exception as exc:
+        raise ValueError(f"Invalid JSON file {path.name}: {exc}") from exc
+
+
+def validate_csv_file(path: Path, required_columns: Iterable[str] | None = None) -> None:
+    """Validator: ensure file exists, parses as CSV, has rows, and includes required columns."""
+    try:
+        with path.open("r", encoding="utf-8-sig", newline="") as handle:
+            reader = csv.DictReader(handle)
+            rows = list(reader)
+            fieldnames = list(reader.fieldnames or [])
+        if not fieldnames:
+            raise ValueError(f"CSV file {path.name} is missing a header.")
+        if required_columns:
+            missing = set(required_columns) - set(fieldnames)
+            if missing:
+                raise ValueError(f"CSV file {path.name} is missing required columns: {sorted(missing)}")
+    except Exception as exc:
+        raise ValueError(f"Invalid CSV file {path.name}: {exc}") from exc
+
+
+def atomic_write_file(
+    target_path: Path,
+    content: str | bytes,
+    validator: Callable[[Path], None] | None = None,
+    encoding: str = "utf-8",
+    newline: str = "\n",
+) -> None:
+    """Write content to target_path atomically with optional pre-promotion validation.
+
+    1. Generates content into a temporary sibling file in target_path.parent.
+    2. Flushes and closes the file handle.
+    3. Runs validator(temp_path) if provided. If validation fails, temp_path is deleted
+       and target_path is untouched.
+    4. Atomically replaces target_path via os.replace.
+    """
+    target_path = Path(target_path).resolve()
+    target_dir = target_path.parent
+    target_dir.mkdir(parents=True, exist_ok=True)
+
+    mode = "wb" if isinstance(content, bytes) else "w"
+    fd, tmp_name = tempfile.mkstemp(
+        dir=target_dir,
+        prefix=f".tmp-{target_path.name}-",
+        suffix=".tmp",
+    )
+    tmp_path = Path(tmp_name)
+
+    try:
+        if isinstance(content, bytes):
+            with os.fdopen(fd, mode) as handle:
+                handle.write(content)
+                handle.flush()
+                os.fsync(handle.fileno())
+        else:
+            with os.fdopen(fd, mode, encoding=encoding, newline=newline) as handle:
+                handle.write(content)
+                handle.flush()
+                os.fsync(handle.fileno())
+
+        if validator is not None:
+            try:
+                validator(tmp_path)
+                _emit_event("pre_promotion_validation", "success", target_path)
+            except Exception as val_exc:
+                _emit_event("pre_promotion_validation", "failed", target_path, reason=str(val_exc), error_type=type(val_exc).__name__)
+                raise
+
+        os.replace(tmp_path, target_path)
+        _emit_event("atomic_promotion", "success", target_path)
+    except Exception as exc:
+        if not isinstance(exc, ValueError):
+            _emit_event("atomic_promotion", "failed", target_path, reason=str(exc), error_type=type(exc).__name__)
+        if tmp_path.exists():
+            try:
+                tmp_path.unlink()
+            except OSError:
+                pass
+        if isinstance(exc, (ValueError, AtomicWriteError)):
+            raise
+        raise AtomicWriteError(f"Failed atomic write to {target_path}: {exc}") from exc
+
+
+def atomic_write_json(
+    target_path: Path,
+    payload: Any,
+    validator: Callable[[Path], None] | None = validate_json_file,
+    indent: int = 2,
+) -> None:
+    """Serialize payload to JSON and write atomically to target_path."""
+    body = json.dumps(payload, ensure_ascii=False, indent=indent, allow_nan=False) + "\n"
+    atomic_write_file(target_path, body, validator=validator, encoding="utf-8")
+
+
+def atomic_copy_file(
+    source_path: Path,
+    target_path: Path,
+    validator: Callable[[Path], None] | None = None,
+) -> None:
+    """Copy source_path to target_path atomically with optional validation."""
+    source_path = Path(source_path).resolve()
+    if not source_path.exists():
+        raise FileNotFoundError(f"Source file for atomic copy not found: {source_path}")
+    content = source_path.read_bytes()
+    atomic_write_file(target_path, content, validator=validator)
+
+
+# These public objects have historical import/pickle names. Re-exporting the
+# same objects retains those identities without a second implementation.
+for _name in ("EventStage", "EventOutcome", "build_observability_event", "emit_observability_event"):
+    globals()[_name].__module__ = "observability_events"
+for _name in ("AtomicWriteError", "retain_immutable_bytes", "retain_immutable_file",
+              "validate_json_file", "validate_csv_file", "atomic_write_file",
+              "atomic_write_json", "atomic_copy_file"):
+    globals()[_name].__module__ = "atomic_io"
+del _name

@@ -212,9 +212,9 @@ def test_classification_never_mutates_the_checkout(tmp_path):
 def test_approved_prefixes_match_declared_store_relative_constants():
     import canonical_fact_store
     import dnse_foreign_flow_store
-    import dnse_market_risk_evidence_store
+    from stocklookup_core.evidence import dnse_market_risk_evidence_store as dnse_market_risk_evidence_store
     import market_raw_lake
-    import raw_financial_store
+    from stocklookup_core.financial import raw_financial_observations as raw_financial_store
 
     declared = {
         module.STORE_RELATIVE.as_posix() + "/"

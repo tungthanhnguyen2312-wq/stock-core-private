@@ -61,7 +61,7 @@ def main():
             thesis_t0_path=args.thesis_t0 or (args.source_root/thesis["t0"]["path"] if (thesis.get("t0") or {}).get("path") else None),
             thesis_current_path=args.thesis_current or (args.source_root/thesis["current"]["path"] if (thesis.get("current") or {}).get("path") else None),thesis_references=thesis,
             feedback_status_paths={"pre":args.feedback_pre,"post":args.feedback_post})
-    from atomic_io import atomic_write_json
+    from stocklookup_core.acquisition.artifact_io import atomic_write_json
     atomic_write_json(output,report)
     print(json.dumps({row["capability"]:row["state"] for row in report["rows"]},indent=2))
 

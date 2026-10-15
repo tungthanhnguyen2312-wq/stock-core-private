@@ -36,7 +36,7 @@ if str(ROOT) not in sys.path:
 import dnse_trades_liquidity_basis as descriptive_basis  # noqa: E402
 import liquidity_authority_contract as contract  # noqa: E402
 from stocklookup_core.evidence import official_exchange_trading_statistics as official  # noqa: E402
-from atomic_io import atomic_write_file, atomic_write_json  # noqa: E402
+from stocklookup_core.acquisition.artifact_io import atomic_write_file, atomic_write_json  # noqa: E402
 from stocklookup_core.evidence.governed_trading_session_calendar import load_governed_trading_session_calendar  # noqa: E402
 
 TARGET_SESSION = "2026-09-28"

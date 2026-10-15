@@ -22,7 +22,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from atomic_io import atomic_write_json  # noqa: E402
+from stocklookup_core.acquisition.artifact_io import atomic_write_json  # noqa: E402
 from dnse_access import credential_status, credentials_for_request  # noqa: E402
 from dnse_bulk_market_data import fetch_capability_raw, is_retryable  # noqa: E402
 from dnse_secrets_env import ensure_credentials_loaded  # noqa: E402

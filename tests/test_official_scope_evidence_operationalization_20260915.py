@@ -21,7 +21,7 @@ import pytest
 
 import canonical_current_product_projections as ccpp
 from stocklookup_core.evidence import current_official_market_universe as com
-from current_official_universe_evidence_retention import RetentionError, retain_evidence
+from stocklookup_core.evidence.current_official_market_universe import RetentionError, retain_evidence
 
 
 ROOT = Path(__file__).resolve().parents[1]

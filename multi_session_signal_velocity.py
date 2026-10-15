@@ -183,7 +183,7 @@ def build_artifact(*,qualified_snapshots:Sequence[Mapping[str,Any]],source_inven
 def build_from_retained_root(root:str|Path, *, progress_callback=None)->dict[str,Any]:
     discovery=discover_retained_snapshots(root, project_axes=True, **({"progress_callback": progress_callback} if progress_callback is not None else {}));return build_artifact(qualified_snapshots=discovery["qualified_snapshots"],source_inventory=discovery["inventory"])
 def write_immutable(path:str|Path,artifact:Mapping[str,Any])->Path:
-    from atomic_io import retain_immutable_file, AtomicWriteError
+    from stocklookup_core.acquisition.artifact_io import retain_immutable_file, AtomicWriteError
     destination = Path(path)
     destination.parent.mkdir(parents=True, exist_ok=True)
     temporary = None

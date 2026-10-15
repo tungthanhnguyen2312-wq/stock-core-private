@@ -28,7 +28,7 @@ if str(ROOT) not in sys.path:
 import prospective_market_snapshot_contract as contract  # noqa: E402
 from stocklookup_core.evidence import prospective_pit_evidence_analysis as analysis  # noqa: E402
 import raw_pit_authority_matrix as matrix  # noqa: E402
-from atomic_io import atomic_write_file, atomic_write_json  # noqa: E402
+from stocklookup_core.acquisition.artifact_io import atomic_write_file, atomic_write_json  # noqa: E402
 
 MILESTONE = "PROSPECTIVE_RAW_PIT_AUTHORITY_V1"
 FIRST_UNIT_RESOLVED_DAY = "2026-08-24"  # earlier snapshots carry no price_unit and are VND-scaled: excluded, not rescaled

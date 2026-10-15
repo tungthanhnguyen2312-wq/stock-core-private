@@ -31,7 +31,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 import canonical_current_product_projections as ccpp  # noqa: E402
-from current_official_universe_evidence_retention import RetentionError, retain_evidence  # noqa: E402
+from stocklookup_core.evidence.current_official_market_universe import RetentionError, retain_evidence  # noqa: E402
 
 DEFAULT_DESTINATION = PROJECT_ROOT / ccpp.CURRENT_OFFICIAL_UNIVERSE_EVIDENCE_RELATIVE
 

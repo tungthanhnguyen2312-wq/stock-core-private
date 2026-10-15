@@ -42,7 +42,7 @@ from datetime import date as _date
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
-from atomic_io import atomic_write_file, validate_json_file
+from stocklookup_core.acquisition.artifact_io import atomic_write_file, validate_json_file
 from stocklookup_core.evidence.daily_session_completion_reference import load_qualified_completed_sessions
 from stocklookup_core.evidence.dnse_foreign_flow_capability import PROVIDER, SOURCE_CONTRACT_VERSION
 

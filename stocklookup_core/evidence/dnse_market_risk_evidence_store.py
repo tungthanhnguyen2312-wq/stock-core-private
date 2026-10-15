@@ -38,7 +38,7 @@ import json
 from pathlib import Path
 from typing import Any, Mapping
 
-from atomic_io import atomic_write_file, validate_json_file
+from stocklookup_core.acquisition.artifact_io import atomic_write_file, validate_json_file
 
 STORE_SCHEMA_VERSION = "1.0.0"
 PROVIDER = "DNSE"

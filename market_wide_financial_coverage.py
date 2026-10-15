@@ -49,7 +49,7 @@ from stocklookup_core.financial.financial_entity_applicability import (
     load_entity_profiles,
 )
 from stocklookup_core.financial.raw_financial_observations import STATEMENT_FAMILIES, sha256_file
-from raw_financial_store import load_state, read_shard, shard_path
+from stocklookup_core.financial.raw_financial_observations import load_state, read_shard, shard_path
 from statement_taxonomy_sidecar import load_sidecar, taxonomy_index
 
 COVERAGE_SCHEMA_VERSION = "1.0.0"

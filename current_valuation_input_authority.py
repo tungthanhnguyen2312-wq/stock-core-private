@@ -12,7 +12,7 @@ import json
 from pathlib import Path
 from typing import Any, Iterable, Mapping, Sequence
 
-from dnse_market_risk_evidence_store import read_stock_ohlc
+from stocklookup_core.evidence.dnse_market_risk_evidence_store import read_stock_ohlc
 from stocklookup_core.evidence.field_identity import stable_id
 from freshness_history import latest_completed_market_day
 from current_state_relative_valuation import resolve_current_shares

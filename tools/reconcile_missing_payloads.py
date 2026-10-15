@@ -41,7 +41,7 @@ from missing_payload_reconciliation import (  # noqa: E402
     report_path,
     state_path,
 )
-from raw_financial_store import load_state as load_raw_state, state_index  # noqa: E402
+from stocklookup_core.financial.raw_financial_observations import load_state as load_raw_state, state_index  # noqa: E402
 
 
 def _instrument_map(runtime_root: Path) -> dict[str, str]:

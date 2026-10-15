@@ -11,7 +11,7 @@ sys.path.insert(0, str(ROOT))
 import annual_provider_financial_recovery as annual
 import canonical_fact_store as store
 import provider_financial_semantic_basis as pfsb
-from atomic_io import atomic_write_file, atomic_write_json
+from stocklookup_core.acquisition.artifact_io import atomic_write_file, atomic_write_json
 
 DEFAULT_RUNTIME = ROOT.parent / "dashboard-runtime"
 DEFAULT_OUTPUT = ROOT / "operations-review" / "annual-provider-financial-history-retention-repair-and-flow-reconciliation-v1-20260827"

@@ -41,7 +41,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from atomic_io import atomic_write_file, atomic_write_json
+from stocklookup_core.acquisition.artifact_io import atomic_write_file, atomic_write_json
 from tools.derive_cross_dimension_research_digest import (
     THRESHOLD_DEPRESSED_REL_VOL,
     THRESHOLD_DOMINANT_PUT_THROUGH,
