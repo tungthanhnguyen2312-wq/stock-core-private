@@ -1,35 +1,35 @@
-name: Bug report
-description: Report a reproducible problem in Stock Lookup
+name: Báo lỗi
+description: Báo cáo vấn đề có thể tái hiện trong Stock Lookup
 title: "[Bug]: "
 labels: []
 body:
   - type: markdown
     attributes:
       value: |
-        Thanks for reporting a problem. Please do not include credentials, private data, or runtime databases.
+        Cảm ơn bạn đã báo lỗi. Vui lòng không đưa thông tin xác thực, dữ liệu riêng tư hoặc cơ sở dữ liệu runtime vào báo cáo.
   - type: textarea
     id: summary
     attributes:
-      label: Summary
-      description: What happened, and what did you expect instead?
+      label: Tóm tắt
+      description: Điều gì đã xảy ra và bạn mong đợi kết quả nào?
     validations:
       required: true
   - type: textarea
     id: reproduce
     attributes:
-      label: Minimal reproduction
-      description: Provide the smallest reproducible steps, inputs, or code sample.
+      label: Các bước tái hiện tối thiểu
+      description: Cung cấp các bước, đầu vào hoặc mẫu mã ngắn gọn nhất đủ để tái hiện vấn đề.
     validations:
       required: true
   - type: textarea
     id: environment
     attributes:
-      label: Environment
-      description: Relevant OS, Python version, commit SHA, and configuration details with secrets removed.
+      label: Môi trường
+      description: Nêu hệ điều hành, phiên bản Python, commit SHA và chi tiết cấu hình liên quan sau khi loại bỏ thông tin bí mật.
     validations:
       required: true
   - type: textarea
     id: evidence
     attributes:
-      label: Evidence and logs
-      description: Add sanitized logs, tracebacks, or provenance details that help reproduce the issue.
+      label: Bằng chứng và nhật ký
+      description: Bổ sung nhật ký, traceback hoặc chi tiết provenance giúp tái hiện vấn đề, đã loại bỏ thông tin nhạy cảm.

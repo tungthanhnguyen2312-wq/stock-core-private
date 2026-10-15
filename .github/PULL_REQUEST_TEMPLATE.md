@@ -1,24 +1,29 @@
-## Summary
+<a id="summary"></a>
+## Tóm tắt
 
-Describe the change and the problem it solves.
+Mô tả thay đổi và vấn đề được giải quyết.
 
-## Scope
+<a id="scope"></a>
+## Phạm vi
 
-- What is intentionally changed?
-- What is explicitly out of scope?
+- Những nội dung nào được chủ động thay đổi?
+- Những nội dung nào được xác định rõ là ngoài phạm vi?
 
-## Validation
+<a id="validation"></a>
+## Kiểm chứng
 
-List the focused tests, checks, or reproducible evidence used to validate the change.
+Liệt kê các kiểm thử tập trung, bước kiểm tra hoặc evidence có thể tái hiện đã dùng để kiểm chứng thay đổi.
 
-## Data / authority impact
+<a id="data--authority-impact"></a>
+## Tác động đến dữ liệu / authority
 
-If this change touches market data, source semantics, point-in-time behavior, or analytical eligibility, state the existing authority it relies on and confirm that the change does not silently widen it. Use `UNKNOWN` / fail-closed behavior where evidence is insufficient.
+Nếu thay đổi liên quan đến dữ liệu thị trường, ngữ nghĩa nguồn, hành vi point-in-time hoặc điều kiện sử dụng trong phân tích, hãy nêu authority hiện có làm căn cứ và xác nhận thay đổi không âm thầm mở rộng authority đó. Dùng `UNKNOWN` / hành vi fail-closed khi evidence chưa đủ.
 
-## Safety checklist
+<a id="safety-checklist"></a>
+## Danh sách kiểm tra an toàn
 
-- [ ] No credentials, runtime databases, backups, or generated artifacts are included.
-- [ ] Relevant tests/checks pass.
-- [ ] `git diff --check` passes.
-- [ ] Documentation is updated only where needed.
-- [ ] Any authority or production-impacting change has explicit maintainer approval.
+- [ ] Không có thông tin xác thực, cơ sở dữ liệu runtime, bản sao lưu hoặc artifact sinh tự động trong thay đổi.
+- [ ] Các kiểm thử/bước kiểm tra liên quan đều đạt.
+- [ ] `git diff --check` đạt.
+- [ ] Chỉ cập nhật tài liệu ở những nơi cần thiết.
+- [ ] Mọi thay đổi ảnh hưởng authority hoặc production đều có phê duyệt rõ ràng của người duy trì.

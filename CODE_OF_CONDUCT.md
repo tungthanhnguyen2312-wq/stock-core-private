@@ -1,34 +1,38 @@
-# Code of Conduct
+<a id="code-of-conduct"></a>
+# Quy tắc ứng xử
 
-## Our Pledge
+<a id="our-pledge"></a>
+## Cam kết của chúng tôi
 
-We as contributors and maintainers pledge to make participation in this
-project a harassment-free experience for everyone, regardless of age, body
-size, disability, ethnicity, gender identity and expression, level of
-experience, nationality, personal appearance, race, religion, or sexual
-identity and orientation.
+Với vai trò người đóng góp và người duy trì, chúng tôi cam kết tạo môi trường
+tham gia dự án không có hành vi quấy rối cho mọi người, bất kể tuổi tác, vóc
+dáng, khuyết tật, dân tộc, bản dạng và biểu đạt giới, mức độ kinh nghiệm,
+quốc tịch, ngoại hình, chủng tộc, tôn giáo, bản dạng tính dục hay xu hướng tính dục.
 
-## Our Standards
+<a id="our-standards"></a>
+## Chuẩn mực của chúng tôi
 
-Examples of behavior that contributes to a positive environment:
+Ví dụ về hành vi góp phần tạo môi trường tích cực:
 
-- Using welcoming and inclusive language
-- Being respectful of differing viewpoints and experiences
-- Gracefully accepting constructive criticism
-- Focusing on what is best for the community
+- Sử dụng ngôn ngữ chào đón và hòa nhập
+- Tôn trọng quan điểm và trải nghiệm khác biệt
+- Tiếp nhận góp ý xây dựng với thái độ cầu thị
+- Tập trung vào lợi ích chung của cộng đồng
 
-Examples of unacceptable behavior:
+Ví dụ về hành vi không được chấp nhận:
 
-- Harassment, insulting/derogatory comments, and personal or political attacks
-- Publishing others' private information without explicit permission
-- Other conduct which could reasonably be considered inappropriate
+- Quấy rối, bình luận xúc phạm/miệt thị, công kích cá nhân hoặc chính trị
+- Công bố thông tin riêng tư của người khác khi chưa được cho phép rõ ràng
+- Các hành vi khác có thể được xem là không phù hợp một cách hợp lý
 
-## Enforcement
+<a id="enforcement"></a>
+## Thực thi
 
-Instances of unacceptable behavior may be reported by opening an issue or
-contacting the maintainer directly. All complaints will be reviewed and
-investigated promptly and fairly.
+Có thể báo cáo hành vi không được chấp nhận bằng cách mở issue hoặc liên hệ
+trực tiếp với người duy trì. Mọi phản ánh sẽ được xem xét và điều tra kịp thời,
+công bằng.
 
-## Attribution
+<a id="attribution"></a>
+## Ghi nhận nguồn
 
-This Code of Conduct is adapted from the [Contributor Covenant](https://www.contributor-covenant.org/), version 2.1.
+Quy tắc ứng xử này được điều chỉnh từ [Contributor Covenant](https://www.contributor-covenant.org/), phiên bản 2.1.

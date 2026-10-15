@@ -1,19 +1,19 @@
-name: Documentation improvement
-description: Report unclear, incomplete, or outdated developer documentation
+name: Cải thiện tài liệu
+description: Báo cáo tài liệu phát triển chưa rõ, chưa đầy đủ hoặc đã lỗi thời
 title: "[Docs]: "
 labels: []
 body:
   - type: textarea
     id: location
     attributes:
-      label: Documentation location
-      description: Which file, section, or command needs improvement?
+      label: Vị trí tài liệu
+      description: File, mục hoặc lệnh nào cần cải thiện?
     validations:
       required: true
   - type: textarea
     id: problem
     attributes:
-      label: What is unclear or incorrect?
-      description: Explain the problem and, if possible, suggest a clearer wording or example.
+      label: Nội dung nào chưa rõ hoặc chưa đúng?
+      description: Giải thích vấn đề và, nếu có thể, đề xuất cách diễn đạt hoặc ví dụ rõ hơn.
     validations:
       required: true

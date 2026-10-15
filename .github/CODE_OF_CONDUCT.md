@@ -1,11 +1,12 @@
-# Code of Conduct
+<a id="code-of-conduct"></a>
+# Quy tắc ứng xử
 
-Stock Lookup aims to be a respectful, technically rigorous open-source project. Participants should communicate constructively, focus criticism on ideas and code, respect differing levels of experience, and avoid harassment, discrimination, threats, deliberate disruption, or disclosure of private information.
+Stock Lookup hướng tới một dự án nguồn mở tôn trọng mọi người và nghiêm túc về kỹ thuật. Người tham gia cần trao đổi mang tính xây dựng, tập trung góp ý vào ý tưởng và mã nguồn, tôn trọng sự khác biệt về kinh nghiệm, đồng thời tránh quấy rối, phân biệt đối xử, đe dọa, cố ý gây gián đoạn hoặc tiết lộ thông tin riêng tư.
 
-Positive participation includes giving specific and reproducible technical feedback, asking clarifying questions before assuming intent, correcting mistakes transparently, respecting repository security and provenance requirements, and helping contributors improve tests, documentation, and maintainability.
+Sự tham gia tích cực bao gồm góp ý kỹ thuật cụ thể và có thể tái hiện, đặt câu hỏi làm rõ trước khi suy đoán ý định, sửa sai minh bạch, tôn trọng yêu cầu bảo mật và provenance của repository, đồng thời giúp người đóng góp cải thiện kiểm thử, tài liệu và khả năng bảo trì.
 
-Project maintainers may edit, hide, reject, or remove contributions or participation that violate these standards, and may restrict participation when necessary to protect contributors or the project.
+Người duy trì dự án có thể chỉnh sửa, ẩn, từ chối hoặc loại bỏ đóng góp hay sự tham gia vi phạm các chuẩn mực này, và có thể hạn chế việc tham gia khi cần bảo vệ người đóng góp hoặc dự án.
 
-For ordinary conduct concerns, contact the repository maintainer privately. For security-sensitive reports, follow [SECURITY.md](../SECURITY.md) and do not post credentials or sensitive material publicly.
+Với vấn đề ứng xử thông thường, hãy liên hệ riêng với người duy trì repository. Với báo cáo nhạy cảm về bảo mật, hãy làm theo [SECURITY.md](../SECURITY.md) và không đăng công khai thông tin xác thực hoặc nội dung nhạy cảm.
 
-This Code of Conduct applies to participation in the Stock Lookup repository and project spaces controlled by its maintainers.
+Quy tắc ứng xử này áp dụng cho việc tham gia repository Stock Lookup và các không gian dự án do người duy trì quản lý.

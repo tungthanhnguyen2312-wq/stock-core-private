@@ -1,13 +1,14 @@
-# Contribution quick start
+<a id="contribution-quick-start"></a>
+# Hướng dẫn đóng góp nhanh
 
-Before contributing, read [CONTRIBUTING.md](../CONTRIBUTING.md), [SECURITY.md](../SECURITY.md), and the repository guardrails in [AGENTS.md](../AGENTS.md).
+Trước khi đóng góp, hãy đọc [CONTRIBUTING.md](../CONTRIBUTING.md), [SECURITY.md](../SECURITY.md) và các nguyên tắc bảo vệ repository trong [AGENTS.md](../AGENTS.md).
 
-A useful contribution should be bounded, reproducible, and evidence-aware. Good starting points include:
+Một đóng góp hữu ích cần có phạm vi rõ ràng, có thể tái hiện và chú trọng evidence. Các điểm bắt đầu phù hợp gồm:
 
-- improving tests for an existing contract;
-- fixing a reproducible bug with a minimal regression case;
-- improving portable developer documentation;
-- strengthening validation, provenance, or fail-closed behavior without widening source authority; or
-- proposing a clearly scoped feature with explicit non-goals.
+- cải thiện kiểm thử cho hợp đồng hiện có;
+- sửa lỗi có thể tái hiện với ca kiểm thử hồi quy tối thiểu;
+- cải thiện tài liệu phát triển dùng được trên nhiều môi trường;
+- củng cố kiểm tra, provenance hoặc hành vi fail-closed mà không mở rộng authority của nguồn; hoặc
+- đề xuất tính năng có phạm vi rõ ràng và nêu cụ thể những nội dung không thực hiện.
 
-Do not include credentials, runtime databases, backups, generated artifacts, or machine-specific paths. If a proposed change depends on market-data semantics or point-in-time behavior that are not yet qualified, preserve the unknown state rather than guessing.
+Không đưa thông tin xác thực, cơ sở dữ liệu runtime, bản sao lưu, artifact sinh tự động hoặc đường dẫn riêng của từng máy vào đóng góp. Nếu thay đổi đề xuất phụ thuộc vào ngữ nghĩa dữ liệu thị trường hoặc hành vi point-in-time chưa đủ điều kiện xác nhận, hãy giữ trạng thái chưa biết thay vì phỏng đoán.
