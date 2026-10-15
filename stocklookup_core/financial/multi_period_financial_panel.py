@@ -73,7 +73,7 @@ from sector_financial_taxonomy import (
 )
 from financial_disclosure_recognizer import extract_sector_facts_from_sidecar
 from financial_statement_template_recognizer import extract_generic_financial_statement_facts
-from official_source_registry import ADMITTED, admit, load_registry
+from stocklookup_core.evidence.official_source_registry import ADMITTED, admit, load_registry
 
 SCHEMA_VERSION = "1.0.0"
 ARTIFACT_TYPE = "MULTI_PERIOD_FINANCIAL_FACT_PANEL"
