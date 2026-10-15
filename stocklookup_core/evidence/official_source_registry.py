@@ -50,6 +50,7 @@ WHY THE APPROVAL INSTANT IS CHECKED AT ALL
 from __future__ import annotations
 
 import json
+import sys
 import urllib.parse
 from datetime import datetime, timezone
 from pathlib import Path
@@ -85,6 +86,21 @@ VERDICT_PENDING = "pending"
 
 class RegistryError(ValueError):
     """The registry file is missing, malformed, or of an unsupported schema."""
+
+
+def _historical_binding(name: str, local: Any) -> Any:
+    """Use the root module's attribute once that module has bound it.
+
+    ``load_registry`` and ``admit`` used to resolve ``registry_path`` and
+    ``load_registry`` in ``official_source_registry``'s own globals. Replacing
+    those root attributes still redirects the call. Before the root module binds
+    the name, the package function is the implementation.
+    """
+    historical = sys.modules.get("official_source_registry")
+    if historical is None:
+        return local
+    bound = getattr(historical, name, None)
+    return local if bound is None else bound
 
 
 def _historical_repository_root() -> Path:
@@ -127,7 +143,7 @@ def _validate_registry(payload: Mapping[str, Any]) -> None:
 
 
 def load_registry(path: Path | str | None = None) -> dict[str, Any]:
-    target = Path(path) if path is not None else registry_path()
+    target = Path(path) if path is not None else _historical_binding("registry_path", registry_path)()
     try:
         payload = json.loads(target.read_text(encoding="utf-8"))
     except OSError as exc:
@@ -187,7 +203,7 @@ def host_document_types(source: Mapping[str, Any], host: str) -> frozenset[str] 
 
 def all_index_document_types(registry: Mapping[str, Any] | None = None) -> frozenset[str]:
     """Every discovery-input type any source declares, across the whole registry."""
-    registry = registry if registry is not None else load_registry()
+    registry = registry if registry is not None else _historical_binding("load_registry", load_registry)()
     return frozenset().union(*(index_document_types(source)
                                for source in source_index(registry).values())) \
         if source_index(registry) else frozenset()
@@ -231,7 +247,7 @@ def approval_instant_verdict(registry: Mapping[str, Any] | None = None, *,
     This adds a requirement to owner approval; it removes none. An unverified instant is
     never treated as approval, and nothing here writes to the registry.
     """
-    registry = registry if registry is not None else load_registry()
+    registry = registry if registry is not None else _historical_binding("load_registry", load_registry)()
     state = dict(registry.get("approval_state") or {})
     recorded = str(state.get("state") or "")
     if recorded.upper() != "APPROVED":
@@ -281,7 +297,7 @@ def admit(source_id: str, url: str, document_type: str, *,
           seconds_since_last_request: float | None = None,
           now: datetime | None = None) -> dict[str, Any]:
     """Whether one request would be permitted, with a named reason either way."""
-    registry = registry if registry is not None else load_registry()
+    registry = registry if registry is not None else _historical_binding("load_registry", load_registry)()
     sources = source_index(registry)
     source = sources.get(str(source_id))
     if source is None:
@@ -349,13 +365,13 @@ def _decision(decision: str, reason: str, source_id: Any, url: Any, document_typ
 
 
 def approved_source_ids(registry: Mapping[str, Any] | None = None) -> list[str]:
-    registry = registry if registry is not None else load_registry()
+    registry = registry if registry is not None else _historical_binding("load_registry", load_registry)()
     return sorted(source_id for source_id, source in source_index(registry).items()
                   if str(source.get("activation")) == "approved")
 
 
 def registry_summary(registry: Mapping[str, Any] | None = None) -> dict[str, Any]:
-    registry = registry if registry is not None else load_registry()
+    registry = registry if registry is not None else _historical_binding("load_registry", load_registry)()
     sources = source_index(registry)
     return {
         "policy_version": registry.get("policy_version"),

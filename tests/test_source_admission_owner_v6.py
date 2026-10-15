@@ -136,6 +136,37 @@ def test_refusal_order_and_verified_admission_are_unchanged():
     assert root.registry_summary(loaded)["source_count"] == len(loaded["sources"])
 
 
+def test_root_attribute_patches_redirect_path_and_load_registry(tmp_path):
+    missing = tmp_path / "official_source_registry.json"
+    original_path = root.registry_path
+    root.registry_path = lambda root=None: missing
+    try:
+        try:
+            owner.load_registry()
+        except root.RegistryError as exc:
+            assert str(missing) in str(exc)
+        else:
+            raise AssertionError("root registry_path patch was not followed")
+    finally:
+        root.registry_path = original_path
+    calls = []
+
+    def fake(path=None):
+        calls.append(path)
+        return _registry()
+
+    original_load = root.load_registry
+    root.load_registry = fake
+    try:
+        decision = root.admit("example", "https://issuer.example/report.pdf", "annual_report",
+                              seconds_since_last_request=30,
+                              now=datetime(2024, 1, 1, tzinfo=timezone.utc))
+    finally:
+        root.load_registry = original_load
+    assert calls == [None]
+    assert decision["decision"] == "admitted"
+
+
 def test_sealed_root_importers_remain_and_live_consumers_use_the_owner():
     for relative, snippet in SEALED_IMPORTS.items():
         assert snippet in (ROOT / relative).read_text(encoding="utf-8")

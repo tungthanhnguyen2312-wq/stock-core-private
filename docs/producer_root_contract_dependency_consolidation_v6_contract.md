@@ -17,6 +17,10 @@ alternative was rejected.
 implementation. `official_source_registry.py` re-exports the same objects.
 Public callables and `RegistryError` keep `__module__ == "official_source_registry"`
 so pickle and historical imports resolve. The code filename is the package file.
+`load_registry` and `admit` resolve `registry_path` and `load_registry` through
+the root module attribute once that module has bound it, so a replacement of
+`official_source_registry.registry_path` or `official_source_registry.load_registry`
+still redirects the call.
 
 ## Path semantics
 
