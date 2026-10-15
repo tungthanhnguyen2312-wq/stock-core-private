@@ -1,16 +1,16 @@
-name: Security question (non-sensitive)
-description: Ask about the public security model without disclosing a vulnerability
+name: Câu hỏi bảo mật (không nhạy cảm)
+description: Hỏi về mô hình bảo mật công khai mà không tiết lộ lỗ hổng
 title: "[Security]: "
 labels: []
 body:
   - type: markdown
     attributes:
       value: |
-        Do not disclose vulnerabilities, credentials, secrets, or sensitive reproduction details here. For vulnerability reports, follow SECURITY.md privately.
+        Không tiết lộ lỗ hổng, thông tin xác thực, thông tin bí mật hoặc chi tiết tái hiện nhạy cảm tại đây. Với báo cáo lỗ hổng, hãy thực hiện riêng theo SECURITY.md.
   - type: textarea
     id: question
     attributes:
-      label: Question
-      description: Ask only non-sensitive questions about the documented security model or contribution practices.
+      label: Câu hỏi
+      description: Chỉ đặt câu hỏi không nhạy cảm về mô hình bảo mật hoặc cách đóng góp đã được ghi nhận.
     validations:
       required: true

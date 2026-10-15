@@ -1,21 +1,21 @@
-name: Question
-description: Ask a technical question about using or contributing to Stock Lookup
+name: Câu hỏi
+description: Đặt câu hỏi kỹ thuật về cách sử dụng hoặc đóng góp cho Stock Lookup
 title: "[Question]: "
 labels: []
 body:
   - type: markdown
     attributes:
       value: |
-        Please keep questions reproducible and avoid posting credentials, private data, or runtime databases.
+        Vui lòng cung cấp câu hỏi có thể tái hiện và tránh đăng thông tin xác thực, dữ liệu riêng tư hoặc cơ sở dữ liệu runtime.
   - type: textarea
     id: question
     attributes:
-      label: Question
-      description: What are you trying to understand or accomplish?
+      label: Câu hỏi
+      description: Bạn đang muốn hiểu hoặc thực hiện điều gì?
     validations:
       required: true
   - type: textarea
     id: context
     attributes:
-      label: Context
-      description: Include relevant commit SHA, code snippets, expected behavior, and sanitized logs where useful.
+      label: Ngữ cảnh
+      description: Bổ sung commit SHA, đoạn mã, hành vi mong đợi và nhật ký liên quan đã loại bỏ thông tin nhạy cảm khi hữu ích.

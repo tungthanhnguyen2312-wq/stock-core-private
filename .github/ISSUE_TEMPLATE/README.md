@@ -1,3 +1,4 @@
-# Issue templates
+<a id="issue-templates"></a>
+# Biểu mẫu issue
 
-Use the most specific template that fits the request. Keep reports reproducible and sanitized. Do not post credentials, private data, runtime databases, or vulnerability details in public issues; follow the repository's `SECURITY.md` for sensitive reports.
+Dùng biểu mẫu phù hợp và cụ thể nhất với yêu cầu. Giữ báo cáo có thể tái hiện và loại bỏ thông tin nhạy cảm. Không đăng thông tin xác thực, dữ liệu riêng tư, cơ sở dữ liệu runtime hoặc chi tiết lỗ hổng trong issue công khai; làm theo `SECURITY.md` của repository với các báo cáo nhạy cảm.

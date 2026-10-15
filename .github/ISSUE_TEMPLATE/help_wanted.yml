@@ -1,19 +1,19 @@
-name: Help / contribution idea
-description: Suggest a small, reviewable contribution or ask where help is useful
+name: Hỗ trợ / ý tưởng đóng góp
+description: Đề xuất đóng góp nhỏ, dễ đánh giá hoặc hỏi nơi cần hỗ trợ
 title: "[Help]: "
 labels: []
 body:
   - type: textarea
     id: area
     attributes:
-      label: Area
-      description: Which part of the repository are you interested in improving?
+      label: Mảng nội dung
+      description: Bạn muốn cải thiện phần nào của repository?
     validations:
       required: true
   - type: textarea
     id: idea
     attributes:
-      label: Proposed contribution
-      description: Describe a small, bounded change you would like to make or ask the maintainer to help scope one.
+      label: Đóng góp đề xuất
+      description: Mô tả thay đổi nhỏ, có giới hạn mà bạn muốn thực hiện hoặc nhờ người duy trì giúp xác định phạm vi.
     validations:
       required: true

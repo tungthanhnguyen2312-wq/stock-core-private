@@ -1,29 +1,29 @@
-name: Feature request
-description: Propose a bounded improvement to Stock Lookup
+name: Đề xuất tính năng
+description: Đề xuất cải tiến có phạm vi rõ ràng cho Stock Lookup
 title: "[Feature]: "
 labels: []
 body:
   - type: textarea
     id: problem
     attributes:
-      label: Problem or use case
-      description: What user, maintainer, or research problem would this solve?
+      label: Vấn đề hoặc tình huống sử dụng
+      description: Đề xuất này giải quyết vấn đề nào của người dùng, người duy trì hoặc hoạt động nghiên cứu?
     validations:
       required: true
   - type: textarea
     id: proposal
     attributes:
-      label: Proposed change
-      description: Describe the smallest useful change and its expected behavior.
+      label: Thay đổi đề xuất
+      description: Mô tả thay đổi nhỏ nhất có ích và hành vi mong đợi.
     validations:
       required: true
   - type: textarea
     id: evidence
     attributes:
-      label: Evidence / source semantics
-      description: If the proposal depends on market-data semantics, point-in-time behavior, or external sources, describe the available evidence and any unknowns.
+      label: Evidence / ngữ nghĩa nguồn
+      description: Nếu đề xuất phụ thuộc vào ngữ nghĩa dữ liệu thị trường, hành vi point-in-time hoặc nguồn bên ngoài, hãy mô tả evidence hiện có và những điều chưa biết.
   - type: textarea
     id: scope
     attributes:
-      label: Scope and non-goals
-      description: What should explicitly remain out of scope?
+      label: Phạm vi và nội dung không thực hiện
+      description: Những nội dung nào cần được xác định rõ là ngoài phạm vi?

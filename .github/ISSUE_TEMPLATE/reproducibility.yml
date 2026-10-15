@@ -1,26 +1,26 @@
-name: Reproducibility report
-description: Report a result that cannot be reproduced from documented inputs or evidence
+name: Báo cáo khả năng tái hiện
+description: Báo cáo kết quả không thể tái hiện từ đầu vào hoặc evidence đã được ghi nhận
 title: "[Repro]: "
 labels: []
 body:
   - type: textarea
     id: claim
     attributes:
-      label: Result or claim
-      description: Which documented result, command, or behavior could not be reproduced?
+      label: Kết quả hoặc nhận định
+      description: Kết quả, lệnh hoặc hành vi nào đã được ghi nhận nhưng không thể tái hiện?
     validations:
       required: true
   - type: textarea
     id: steps
     attributes:
-      label: Reproduction attempt
-      description: Provide the exact sanitized steps, commit SHA, and inputs you used.
+      label: Lần thử tái hiện
+      description: Cung cấp chính xác các bước, commit SHA và đầu vào đã sử dụng, sau khi loại bỏ thông tin nhạy cảm.
     validations:
       required: true
   - type: textarea
     id: difference
     attributes:
-      label: Observed difference
-      description: What did you observe instead?
+      label: Khác biệt quan sát được
+      description: Bạn đã quan sát được kết quả khác như thế nào?
     validations:
       required: true
