@@ -19,7 +19,7 @@ from pathlib import Path
 from typing import Any, Mapping, Sequence
 
 from stocklookup_core.evidence.field_identity import stable_id
-from official_source_registry import ADMITTED, admit, load_registry
+from stocklookup_core.evidence.official_source_registry import ADMITTED, admit, load_registry
 
 SCHEMA_VERSION = "1.0.0"
 CONTRACT_VERSION = "official_document_qualification/v1"

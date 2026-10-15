@@ -13,7 +13,7 @@ import urllib.parse
 from typing import Any, Iterable, Mapping
 
 from stocklookup_core.evidence.official_document_acquisition import PERIODS, TICKERS, canonical_url, declared_document_types
-from official_source_registry import all_index_document_types, load_registry
+from stocklookup_core.evidence.official_source_registry import all_index_document_types, load_registry
 
 VERSION = "1.0.0"
 MAX_LISTING_PAGES = 25

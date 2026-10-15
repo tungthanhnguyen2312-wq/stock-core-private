@@ -15,8 +15,8 @@ from typing import Any, Callable, Iterable, Mapping
 
 import requests
 
-import official_source_registry as registry_module
-from official_source_registry import ADMITTED, admit, load_registry
+import stocklookup_core.evidence.official_source_registry as registry_module
+from stocklookup_core.evidence.official_source_registry import ADMITTED, admit, load_registry
 from stocklookup_core.evidence.temporal_retention import capture_raw_receipt, project_retention_to_a1
 
 VERSION = "1.2.0"
