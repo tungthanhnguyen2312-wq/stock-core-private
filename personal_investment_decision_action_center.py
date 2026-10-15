@@ -92,6 +92,231 @@ def default_action_center_root() -> Path:
     return Path(user_profile) / ".stocklookup" / "action_center" if user_profile else Path.home() / ".stocklookup" / "action_center"
 
 
+def evaluate_selected_research_preview(*, repo_root: Path, session: str, tickers: Sequence[str],
+                                       current_operation: Path, previous_operation: Path | None = None) -> dict[str, Any]:
+    """Opt-in focused preview; fully verify original sources, never invoke the full builder.
+
+    Operations are explicit locators. The previous date is selected independently from the
+    qualified registry chain, then checked against the supplied immutable operation manifest.
+    No private portfolio input, Daily invocation, or evidence/publication write exists here.
+    """
+    import time
+    from collections import Counter
+    from stocklookup_core.decision import bounded_research_preview as bounded
+    from stocklookup_core.evidence.field_identity import stable_id
+    from stocklookup_core.tactical import watchlist_tactical_entry_classifier as tactical_owner
+
+    bounded.resource_gate()
+    selected = bounded.select_tickers(tickers)
+    deadline = time.monotonic() + bounded.DEADLINE_SECONDS
+    root = Path(repo_root).resolve()
+    registry = bounded.small_json(root / "config/daily_research_session_input_registry.json")
+    if registry.get("contract_version") != "daily_research_session_input_registry/v1":
+        raise ActionCenterError("PREVIEW_REGISTRY_CONTRACT_MISMATCH")
+    _next_session._require_qualified(registry, session)
+    chain = _next_session._qualified_session_chain(registry)
+    prior_dates = [date for date in chain if date < session]
+    previous_session = prior_dates[-1] if prior_dates else None
+    if (previous_session is None) != (previous_operation is None):
+        raise ActionCenterError("PREVIEW_PREVIOUS_QUALIFIED_OPERATION_REQUIRED_OR_UNEXPECTED")
+
+    def resolve(date, operation):
+        _next_session._require_qualified(registry, date)
+        if registry["completed_sessions"][date].get("trading_day_valid") is not True:
+            raise ActionCenterError("PREVIEW_COMPLETED_TRADING_SESSION_NOT_QUALIFIED")
+        selection = _next_session.registered_session_selection(registry, date)
+        locked = _next_session.frozen_input_identities(registry, date)
+        if {k: v["artifact_identity"] for k, v in selection.items()} != locked:
+            raise ActionCenterError("PREVIEW_COMPLETED_INPUT_LOCK_MISMATCH")
+        manifest = bounded.small_json(Path(operation) / "run_manifest.json")
+        expected_operation = "daily_research_session_operation:" + stable_id(
+            {k: v for k, v in manifest.items() if k != "operation_identity"})
+        if (manifest.get("contract_version") != "daily_research_session_operation/v1"
+                or manifest.get("schema_version") != "1.0.0"
+                or manifest.get("generation_context") != "DAILY_PRODUCER_RETAINED_COMPLETED_SESSION"
+                or manifest.get("market_session") != date
+                or manifest.get("operation_identity") != expected_operation):
+            raise ActionCenterError("PREVIEW_OPERATION_IDENTITY_OR_SESSION_MISMATCH")
+        native_operation = root / "operations-review/daily-research-session-operations-v1" / date / expected_operation.split(":")[1]
+        if Path(operation).resolve() != native_operation.resolve():
+            raise ActionCenterError("PREVIEW_UNREGISTERED_OPERATION_LOCATOR")
+        manifest_inputs = manifest.get("input_artifacts") or {}
+        # build_operation adds these two separate optional inputs outside the session registry.
+        # They are not read or consumed by this preview. Every frozen input must still match.
+        if (set(manifest_inputs) - set(locked) - {"macro", "explicit_portfolio"}
+                or {k: (manifest_inputs.get(k) or {}).get("artifact_identity") for k in locked} != locked):
+            raise ActionCenterError("PREVIEW_MANIFEST_INPUT_REFERENCE_MISMATCH")
+        expected_iid = (manifest.get("outputs") or {}).get("integrated_investment_decision_product")
+        if not isinstance(expected_iid, str):
+            raise ActionCenterError("PREVIEW_MANIFEST_INTEGRATED_REFERENCE_REQUIRED")
+        # Native session locator, same path as session_artifact_paths; no latest/glob discovery.
+        iid_path = root / "operations-review" / ("integrated-investment-decision-product-v1-" + date.replace("-", "")) / "integrated_investment_decision_product_artifact.json"
+        projection = bounded.verified_projection(iid_path, session=date, expected_identity=expected_iid,
+                                                 tickers=selected, deadline=deadline)
+        tactical_entry = selection["tactical"]
+        tactical_path = (root / tactical_entry["path"]).resolve()
+        if not tactical_path.is_relative_to(root):
+            raise ActionCenterError("PREVIEW_REGISTERED_PATH_OUTSIDE_EVIDENCE_ROOT")
+        tactical = bounded.small_json(tactical_path, limit=16 * 1024 * 1024)
+        if (tactical.get("session") != date or tactical.get("contract_version") != tactical_owner.CONTRACT_VERSION
+                or tactical.get("artifact_identity") != tactical_entry["artifact_identity"]
+                or any(tactical.get(k) != v for k, v in tactical_owner.content_identity(tactical).items())):
+            raise ActionCenterError("PREVIEW_TACTICAL_SOURCE_IDENTITY_MISMATCH")
+        confirmed = {t for t in selected if (tactical.get("records", {}).get(t) or {}).get("entry_state")
+                     in _next_session.TACTICAL_CONFIRMATION_STATES}
+        projection["confirmed"] = confirmed
+        projection["operation_identity"] = expected_operation
+        projection["source_locator"] = iid_path.relative_to(root).as_posix()
+        projection["tactical_identity"] = tactical_entry["artifact_identity"]
+        return projection
+
+    # Previous source graph is discarded record by record; only selected rows survive.
+    previous = resolve(previous_session, previous_operation) if previous_session else None
+    current = resolve(session, current_operation)
+
+    def source_view(projection):
+        if projection is None:
+            return None
+        return {**projection["source_metadata"], "records": projection["selected_records"]}
+
+    prev_view, curr_view = source_view(previous), source_view(current)
+    transitions = {}
+    for ticker, row in current["selected_records"].items():
+        if previous is None:
+            continue
+        prev = previous["selected_records"].get(ticker) if previous else None
+        transitions[ticker] = {
+            "transition": _expected_posture_label(prev, row, prev_view or {}, curr_view),
+            "previous_posture": (prev or {}).get("research_action_posture"),
+            "current_posture": row.get("research_action_posture"),
+            "previous_decision_identity": (prev or {}).get("decision_identity"),
+            "current_decision_identity": row.get("decision_identity"),
+        }
+    current_confirmed = current["confirmed"]
+    previous_confirmed = previous["confirmed"] if previous else set()
+    # Explicitly a selected transition projection, NOT a next_session_decision_brief artifact.
+    context = {
+        "current_session": session, "previous_qualified_session": previous_session,
+        "posture_transition": {"records": transitions},
+        "tactical_transition": {
+            "availability": "AVAILABLE" if previous else "UNAVAILABLE",
+            "reason_codes": [] if previous else ["NO_PREVIOUS_QUALIFIED_SESSION"],
+            "gained_confirmation": sorted(current_confirmed - previous_confirmed) if previous else [],
+            "retained_confirmation": sorted(current_confirmed & previous_confirmed),
+            "lost_confirmation": sorted(previous_confirmed - current_confirmed),
+        },
+        "source_lineage": {"current": current["source_identity"],
+                           "previous": previous["source_identity"] if previous else None},
+    }
+    context["artifact_identity"] = "selected_transition_projection:" + stable_id(context)
+    entries = []
+    numeric = Counter()
+    numeric_reasons = Counter()
+    unavailable_reasons = Counter()
+    for ticker in selected:
+        record = current["selected_records"].get(ticker)
+        if record is None:
+            continue
+        bounded.validate_price_dimensions(previous["selected_records"].get(ticker) if previous else None, record)
+        lineage = record.get("evidence_currency_lineage") or {}
+        coverage = {ticker: lineage} if lineage.get("method") == _integrated.EVIDENCE_CURRENCY_SOURCE_CONTRACT else {}
+        evidence = _evidence_block(ticker, record, session=session, coverage_records=coverage)
+        # Base condensed display is narrowed to the conditional qualification rule too.
+        details = _conditional_research_details(record, evidence)
+        for role in ("trigger", "invalidation"):
+            boundary = details[role]
+            if not (boundary.get("price_basis") or {}).get("price_unit"):
+                boundary["numeric_display_status"] = "WITHHELD_UNQUALIFIED_BOUNDARY"
+                boundary["numeric_display_reason_codes"].append("PRICE_UNIT_NOT_QUALIFIED")
+                boundary[role + "_level"] = boundary["distance_to_" + role + "_pct"] = None
+                for condition_key in ("condition", "watchlist_condition"):
+                    if isinstance(boundary.get(condition_key), dict):
+                        boundary[condition_key]["reference_level"] = None
+            evidence[role] = copy.deepcopy(details[role])
+            numeric[details[role]["numeric_display_status"]] += 1
+            numeric_reasons.update(details[role]["numeric_display_reason_codes"])
+        evidence["conditional_research"] = details
+        transition = _setup_transition_for_ticker(session=session, ticker=ticker, current_artifact=curr_view,
+                                                previous_artifact=prev_view, brief=context)
+        transition["source_lineage"]["selected_transition_projection"] = transition["source_lineage"].pop("next_session_decision_brief")
+        if "source" in transition["tactical_confirmation"]:
+            transition["tactical_confirmation"]["source"] = "verified_registered_tactical_selected_projection"
+        unavailable_reasons.update(transition["reason_codes"])
+        if transition["status"] == "NOT_COMPARABLE":
+            for field in transition["setup_context"].values():
+                field["status"] = "NOT_COMPARABLE_POLICY_CHANGE"
+        prev_record = (previous["selected_records"].get(ticker) if previous else None)
+        if prev_record and not _next_session.fundamental_signals.epochs_comparable(prev_record, record):
+            transition["research_limitations"].append("FUNDAMENTAL_POLICY_EPOCH_CHANGE_NO_FUNDAMENTAL_EVOLUTION_INFERENCE")
+            transition["setup_context"]["fundamental_state"]["status"] = "NOT_COMPARABLE_POLICY_CHANGE"
+            unavailable_reasons["FUNDAMENTAL_POLICY_EPOCH_CHANGE"] += 1
+        if previous and ticker not in previous["selected_records"]:
+            unavailable_reasons["PREVIOUS_SELECTED_RECORD_ABSENT"] += 1
+        details["setup_transition"] = transition
+        entries.append({"ticker": ticker, "evidence": evidence})
+    counts = Counter(row["transition"] for row in transitions.values())
+    missing = sorted(set(selected) - set(current["selected_records"]))
+
+    def proof(projection):
+        if projection is None:
+            return None
+        return {k: projection[k] for k in ("source_identity", "source_locator", "source_record_count",
+                "source_bytes", "verification", "operation_identity", "tactical_identity")}
+
+    body = {
+        "contract_version": bounded.CONTRACT, "session": session,
+        "previous_qualified_session": previous_session,
+        "scope": {"kind": "FOCUSED_SELECTED_PREVIEW_NOT_FULL_ACTION_CENTER",
+                  "selection_rule": "EXPLICIT_TICKER_SELECTION", "selected_tickers": list(selected),
+                  "selected_record_count": len(entries), "requested_ticker_count": len(selected),
+                  "full_source_denominator": current["source_record_count"],
+                  "excluded_source_record_count": current["source_record_count"] - len(entries),
+                  "unavailable_selected_tickers": missing, "statistics_scope": "SELECTED_TICKERS_ONLY"},
+        "verification": "FULL_NATIVE_CONTENT_VERIFIED", "source_proofs": {"previous": proof(previous), "current": proof(current)},
+        "selected_statistics": {"transition_counts": dict(sorted(counts.items())),
+            "unchanged_postures": counts["POSTURE_UNCHANGED"],
+            "setup_to_confirmation_events": counts["WAIT_TO_INITIATE"] + counts["EARLY_WATCH_TO_INITIATE"],
+            "failed_or_invalidated_setups": counts["BREAKOUT_FAILED"] + counts["UPTREND_TO_BREAKDOWN"],
+            "qualified_comparable_tickers": sum(1 for e in entries if previous
+                and e["ticker"] in previous["selected_records"]
+                and e["evidence"]["conditional_research"]["setup_transition"]["status"] == "AVAILABLE"
+                and _next_session.fundamental_signals.epochs_comparable(
+                    previous["selected_records"][e["ticker"]], current["selected_records"][e["ticker"]])),
+            "early_watch_persistence": sum(1 for t in transitions.values() if t["current_posture"] == t["previous_posture"] == "EARLY_WATCH"),
+            "priority_posture_disagreements": sum(1 for e in entries if
+                (e["evidence"]["conditional_research"]["opportunity_priority"] or {}).get("research_priority_tier") == "PRIORITY_NOW"
+                and e["evidence"]["research_action_posture"] == "WAIT_FOR_CONFIRMATION"),
+            "numeric_boundaries": dict(sorted(numeric.items())),
+            "numeric_withholding_reasons": dict(sorted(numeric_reasons.items())),
+            "missing_or_noncomparable_reasons": dict(sorted(unavailable_reasons.items())),
+            "unavailable_selected_count": len(missing)},
+        "entries": entries, "private_portfolio": "NOT_REQUESTED_OR_READ",
+        "authority_boundary": {"is_actionable": False, "authority_effect": "NONE",
+                               "valuation_sizing_execution": "NO_ADDITIONAL_AUTHORITY"},
+    }
+    body.update(bounded.identity(body))
+    return body
+
+
+def selected_research_preview_markdown(artifact: Mapping[str, Any]) -> str:
+    """Render only the explicit preview contract using the existing investor evidence renderer."""
+    from stocklookup_core.decision import bounded_research_preview as bounded
+    if artifact.get("contract_version") != bounded.CONTRACT or any(
+        artifact.get(k) != v for k, v in bounded.identity(artifact).items()
+    ):
+        raise ActionCenterError("PREVIEW_RENDER_CONTRACT_OR_IDENTITY_MISMATCH")
+    scope = artifact["scope"]
+    lines = ["# Selected research preview", "", f"Session {artifact['session']}; previous qualified session {artifact['previous_qualified_session'] or 'NONE'}.",
+             f"Focused preview: {scope['selected_record_count']} selected records / {scope['full_source_denominator']} full source records; {scope['excluded_source_record_count']} excluded. Selection: {scope['selection_rule']}.",
+             f"Source verification: {artifact['verification']}. Statistics cover selected tickers only.",
+             "This is not a full Action Center. Private portfolio was not requested or read. No valuation, sizing or execution authority is added.", ""]
+    for entry in artifact["entries"]:
+        lines.extend([f"## {entry['ticker']}", "", *_md_conditional_research(entry["evidence"]), ""])
+    if scope["unavailable_selected_tickers"]:
+        lines.append("Unavailable selected tickers: " + ", ".join(scope["unavailable_selected_tickers"]))
+    return "\n".join(lines) + "\n"
+
+
 def _canon(value: Any) -> str:
     return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False)
 
