@@ -46,6 +46,7 @@ from pathlib import Path
 from typing import Any, Mapping, Sequence
 
 import asymmetric_dislocation_research as _asymmetric
+import next_session_decision_brief as _next_session
 import stocklookup_core.decision.integrated_investment_decision_product as _integrated
 import owner_research_exclusions as _owner_research_exclusions
 import owner_research_focus as _owner_focus
@@ -244,6 +245,206 @@ def _conditional_research_details(record: Mapping[str, Any], evidence: Mapping[s
         details[role] = boundary
     details["authority"] = "EXPLANATION_ONLY_NO_POSTURE_OR_EVENT_RECOMPUTATION"
     return details
+
+
+_SETUP_CONTEXT_FIELDS = (
+    "breakout_state_v3", "tactical_phase", "market_structure_state",
+    "fundamental_state", "fundamental_evidence_availability",
+)
+
+
+def _observed_field(previous: Mapping[str, Any] | None, current: Mapping[str, Any] | None, key: str) -> dict[str, Any]:
+    """Compare one already-retained label. A difference is not a cause."""
+    if not isinstance(current, Mapping):
+        return {"status": "UNAVAILABLE", "previous": None, "current": None}
+    if not isinstance(previous, Mapping):
+        return {"status": "PREVIOUS_RECORD_ABSENT", "previous": None, "current": current.get(key)}
+    previous_value, current_value = previous.get(key), current.get(key)
+    if previous_value is None and current_value is None:
+        status = "UNAVAILABLE"
+    elif previous_value == current_value:
+        status = "UNCHANGED"
+    else:
+        status = "CHANGED"
+    return {"status": status, "previous": previous_value, "current": current_value}
+
+
+def _expected_posture_label(
+    previous_record: Mapping[str, Any] | None, current_record: Mapping[str, Any] | None,
+    previous_artifact: Mapping[str, Any], current_artifact: Mapping[str, Any],
+) -> str:
+    """Mirror ``next_session_decision_brief._posture_transition``; do not add a label."""
+    previous_epoch = (previous_record or {}).get(
+        "research_action_policy_version", previous_artifact.get("research_action_policy_version", "v1"))
+    current_epoch = (current_record or {}).get(
+        "research_action_policy_version", current_artifact.get("research_action_policy_version", "v1"))
+    if previous_epoch != current_epoch:
+        return "NOT_COMPARABLE_POLICY_CHANGE"
+    return _next_session._classify_posture_transition(previous_record, current_record)
+
+
+def _require_setup_transition_brief(
+    *, session: str, current_artifact: Mapping[str, Any],
+    previous_artifact: Mapping[str, Any] | None, brief: Mapping[str, Any],
+) -> None:
+    if brief.get("contract_version") != _next_session.CONTRACT_VERSION:
+        raise ActionCenterError("SETUP_TRANSITION_CONTRACT_MISMATCH")
+    if brief.get("current_session") != session or current_artifact.get("session") != session:
+        raise ActionCenterError("SETUP_TRANSITION_CURRENT_SESSION_MISMATCH")
+    if any(brief.get(key) != value for key, value in _next_session.content_identity(brief).items()):
+        raise ActionCenterError("SETUP_TRANSITION_ARTIFACT_IDENTITY_MISMATCH")
+    boundary = brief.get("authority_boundary") or {}
+    if boundary.get("is_actionable") is not False or boundary.get("derived_evidence_not_new_factual_authority") is not True:
+        raise ActionCenterError("SETUP_TRANSITION_AUTHORITY_MISMATCH")
+    posture = brief.get("posture_transition") or {}
+    lineage = posture.get("source_lineage") or {}
+    if lineage.get("current_integrated_decision_identity") != current_artifact.get("artifact_identity"):
+        raise ActionCenterError("SETUP_TRANSITION_CURRENT_DECISION_LINEAGE_MISMATCH")
+    previous_session = brief.get("previous_qualified_session")
+    if previous_artifact is None:
+        if previous_session is not None or posture.get("records") or "NO_PREVIOUS_QUALIFIED_SESSION" not in (posture.get("reason_codes") or []):
+            raise ActionCenterError("SETUP_TRANSITION_PREVIOUS_INTEGRATED_ARTIFACT_REQUIRED")
+        return
+    if previous_artifact.get("session") != previous_session or not previous_session or previous_session >= session:
+        raise ActionCenterError("SETUP_TRANSITION_PREVIOUS_SESSION_MISMATCH")
+    if lineage.get("previous_integrated_decision_identity") != previous_artifact.get("artifact_identity"):
+        raise ActionCenterError("SETUP_TRANSITION_PREVIOUS_DECISION_LINEAGE_MISMATCH")
+    if posture.get("availability") != "AVAILABLE":
+        raise ActionCenterError("SETUP_TRANSITION_POSTURE_SECTION_NOT_AVAILABLE")
+
+
+_TACTICAL_LABEL_CONFLICTS = {
+    "WAIT_TO_INITIATE": frozenset({"LOST_CONFIRMATION"}),
+    "EARLY_WATCH_TO_INITIATE": frozenset({"LOST_CONFIRMATION"}),
+    "BREAKOUT_FAILED": frozenset({"GAINED_CONFIRMATION", "RETAINED_CONFIRMATION"}),
+}
+
+
+def _tactical_confirmation(
+    ticker: str, tactical: Mapping[str, Any] | None, *, comparable: bool, transition_label: str,
+) -> dict[str, Any]:
+    if not comparable:
+        return {"status": "NOT_INTERPRETED", "reason_codes": ["NOT_COMPARABLE_POLICY_CHANGE"]}
+    if not isinstance(tactical, Mapping):
+        return {"status": "NOT_AVAILABLE", "reason_codes": ["TACTICAL_TRANSITION_NOT_SUPPLIED"]}
+    found = [name for name in ("gained_confirmation", "retained_confirmation", "lost_confirmation") if ticker in set(tactical.get(name) or [])]
+    if len(found) > 1:
+        raise ActionCenterError("SETUP_TRANSITION_TACTICAL_MEMBERSHIP_CONFLICT:" + ticker)
+    status = "NOT_IN_CONFIRMATION_DELTA" if not found else found[0].upper()
+    if status in _TACTICAL_LABEL_CONFLICTS.get(transition_label, frozenset()):
+        raise ActionCenterError("SETUP_TRANSITION_TACTICAL_MEMBERSHIP_CONFLICT:" + ticker)
+    if not found:
+        return {"status": status, "availability": tactical.get("availability"), "reason_codes": list(tactical.get("reason_codes") or [])}
+    return {"status": status, "availability": tactical.get("availability"), "reason_codes": [], "source": "next_session_decision_brief.tactical_transition"}
+
+
+def _price_basis_identity(record: Mapping[str, Any] | None) -> tuple[Any, Any] | None:
+    basis = ((record or {}).get("trigger") or {}).get("price_basis")
+    if not isinstance(basis, Mapping):
+        return None
+    label, unit = basis.get("research_label"), basis.get("price_unit")
+    if label is None or unit is None:
+        return None
+    return (label, unit)
+
+
+def _setup_transition_for_ticker(
+    *, session: str, ticker: str, current_artifact: Mapping[str, Any],
+    previous_artifact: Mapping[str, Any] | None, brief: Mapping[str, Any],
+) -> dict[str, Any]:
+    current_records = current_artifact.get("records") or {}
+    if ticker not in current_records:
+        raise ActionCenterError("SETUP_TRANSITION_CURRENT_RECORD_MISSING:" + ticker)
+    current = current_records[ticker]
+    if previous_artifact is None:
+        return {
+            "status": "UNAVAILABLE", "reason_codes": ["NO_PREVIOUS_QUALIFIED_SESSION"],
+            "current_session": session, "previous_qualified_session": None,
+            "previous_research_action_posture": None, "current_canonical_posture": current.get("research_action_posture"),
+            "governed_transition_label": None, "transition_is_not_an_outcome": True,
+            "future_condition_is_not_a_triggered_event": True, "setup_context": {},
+            "technical_market_sector_evidence": {}, "tactical_confirmation": {"status": "NOT_AVAILABLE", "reason_codes": ["NO_PREVIOUS_QUALIFIED_SESSION"]},
+            "priority_posture_reconciliation": copy.deepcopy(current.get("priority_posture_reconciliation") or {}),
+            "research_limitations": ["NO_PREVIOUS_QUALIFIED_SESSION_NO_TRANSITION_INVENTED"],
+            "source_lineage": {"next_session_decision_brief": brief.get("artifact_identity"), "current_decision_identity": current.get("decision_identity"), "previous_decision_identity": None},
+        }
+    row = ((brief.get("posture_transition") or {}).get("records") or {}).get(ticker)
+    if not isinstance(row, Mapping):
+        raise ActionCenterError("SETUP_TRANSITION_TICKER_ROW_MISSING:" + ticker)
+    previous = (previous_artifact.get("records") or {}).get(ticker)
+    expected = _expected_posture_label(previous, current, previous_artifact, current_artifact)
+    if row.get("transition") != expected or row.get("transition") not in _next_session.POSTURE_TRANSITION_LABELS:
+        raise ActionCenterError("SETUP_TRANSITION_LABEL_MISMATCH:" + ticker)
+    if row.get("current_posture") != current.get("research_action_posture") or row.get("current_decision_identity") != current.get("decision_identity"):
+        raise ActionCenterError("SETUP_TRANSITION_CURRENT_DECISION_IDENTITY_MISMATCH:" + ticker)
+    if previous is None:
+        if row.get("previous_posture") is not None or row.get("previous_decision_identity") is not None:
+            raise ActionCenterError("SETUP_TRANSITION_PREVIOUS_DECISION_IDENTITY_MISMATCH:" + ticker)
+    elif row.get("previous_posture") != previous.get("research_action_posture") or row.get("previous_decision_identity") != previous.get("decision_identity"):
+        raise ActionCenterError("SETUP_TRANSITION_PREVIOUS_DECISION_IDENTITY_MISMATCH:" + ticker)
+    elif previous.get("as_of_session") != brief.get("previous_qualified_session"):
+        raise ActionCenterError("SETUP_TRANSITION_PREVIOUS_SESSION_MISMATCH:" + ticker)
+    previous_basis, current_basis = _price_basis_identity(previous), _price_basis_identity(current)
+    price_label_changed = False
+    if previous is not None and previous_basis is not None and current_basis is not None and previous_basis[1] != current_basis[1]:
+        raise ActionCenterError("SETUP_TRANSITION_PRICE_BASIS_CONFLICT:" + ticker)
+    if previous is not None and previous_basis is not None and current_basis is not None and previous_basis[0] != current_basis[0]:
+        price_label_changed = True
+    comparable = row.get("transition") != "NOT_COMPARABLE_POLICY_CHANGE"
+    market = brief.get("market_transition") if isinstance(brief.get("market_transition"), Mapping) else {}
+    market_transition = market.get("transition")
+    market_direction = market_transition.get("advance_ratio_direction") if isinstance(market_transition, Mapping) else market_transition if isinstance(market_transition, str) else None
+    current_market = current.get("market_sector_context") if isinstance(current.get("market_sector_context"), Mapping) else None
+    previous_market = previous.get("market_sector_context") if isinstance(previous, Mapping) and isinstance(previous.get("market_sector_context"), Mapping) else None
+    current_group = None if current_market is None else current_market.get("sector_group_key")
+    previous_group = None if previous_market is None else previous_market.get("sector_group_key")
+    if previous is not None and current_group != previous_group:
+        sector_direction = "SECTOR_GROUP_KEY_CHANGED"
+    else:
+        sector_row = (((brief.get("sector_transition") or {}).get("sectors") or {}).get(current_group) if current_group else None)
+        sector_direction = sector_row.get("transition") if isinstance(sector_row, Mapping) else None
+    limitations = []
+    if current.get("research_action_posture") == "EARLY_WATCH":
+        limitations.append("EARLY_WATCH_IS_RESEARCH_POSTURE_NOT_CAPITAL_AUTHORIZATION")
+    if (current.get("opportunity_priority") or {}).get("research_priority_tier") == "PRIORITY_NOW":
+        limitations.append("PRIORITY_NOW_IS_RESEARCH_ATTENTION_NOT_BUY_NOW")
+    if not comparable:
+        limitations.append("POLICY_EPOCH_CHANGE_BLOCKS_CROSS_SESSION_INTERPRETATION")
+    if current.get("fundamental_state") == _integrated.FUNDAMENTAL_INSUFFICIENT:
+        limitations.append("FUNDAMENTAL_GAP_DOES_NOT_REMOVE_TECHNICAL_STATE")
+    if price_label_changed:
+        limitations.append("PRICE_BASIS_LABEL_CHANGED_NUMBERS_STAY_WITHHELD")
+    reconciliation = current.get("priority_posture_reconciliation") or {}
+    if reconciliation.get("integrated_posture") != current.get("research_action_posture"):
+        raise ActionCenterError("SETUP_TRANSITION_RECONCILIATION_POSTURE_MISMATCH:" + ticker)
+    return {
+        "status": "AVAILABLE" if comparable else "NOT_COMPARABLE",
+        "reason_codes": [] if comparable else ["NOT_COMPARABLE_POLICY_CHANGE"],
+        "current_session": session, "previous_qualified_session": brief.get("previous_qualified_session"),
+        "previous_research_action_posture": None if previous is None else previous.get("research_action_posture"),
+        "current_canonical_posture": current.get("research_action_posture"),
+        "governed_transition_label": row.get("transition"),
+        "transition_is_not_an_outcome": True, "future_condition_is_not_a_triggered_event": True,
+        "setup_context": {key: _observed_field(previous, current, key) for key in _SETUP_CONTEXT_FIELDS},
+        "technical_market_sector_evidence": {
+            "market_regime": _observed_field(previous_market, current_market, "market_regime"),
+            "sector_leadership": _observed_field(previous_market, current_market, "sector_leadership"),
+            "governed_market_direction": market_direction,
+            "governed_sector_direction": sector_direction,
+            "market_weakness_is_context_not_a_new_veto": True,
+        },
+        "tactical_confirmation": _tactical_confirmation(
+            ticker, brief.get("tactical_transition") if isinstance(brief.get("tactical_transition"), Mapping) else None,
+            comparable=comparable, transition_label=row.get("transition"),
+        ),
+        "priority_posture_reconciliation": copy.deepcopy(reconciliation),
+        "research_limitations": limitations,
+        "source_lineage": {
+            "next_session_decision_brief": brief.get("artifact_identity"),
+            "current_decision_identity": current.get("decision_identity"),
+            "previous_decision_identity": None if previous is None else previous.get("decision_identity"),
+        },
+    }
 
 
 def _build_decision_surface_index(
@@ -655,6 +856,8 @@ def build_artifact(
     portfolio_snapshot: Mapping[str, Any] | None = None, quant_risk_artifact: Mapping[str, Any] | None = None,
     opportunity_cost_input: Mapping[str, Any] | None = None,
     include_conditional_research: bool = False,
+    next_session_artifact: Mapping[str, Any] | None = None,
+    previous_integrated_decision_artifact: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Pure composition over already-built artifacts for one session -- no file I/O, no
     recomputation. See ``evaluate_from_retained_artifacts`` for the real-session, file-resolving
@@ -662,6 +865,8 @@ def build_artifact(
     if integrated_decision_artifact.get("session") not in (None, session):
         raise ActionCenterError("INTEGRATED_DECISION_SESSION_MISMATCH")
     integrated_records = integrated_decision_artifact.get("records") or {}
+    if next_session_artifact is not None and not include_conditional_research:
+        raise ActionCenterError("SETUP_TRANSITION_REQUIRES_CONDITIONAL_RESEARCH")
     if include_conditional_research:
         if (integrated_decision_artifact.get("contract_version") != _integrated.CONTRACT_VERSION
                 or integrated_decision_artifact.get("session") != session
@@ -773,6 +978,23 @@ def build_artifact(
             "omission_rule": "EXISTING_WATCHLIST_HOLDINGS_DISCOVERY_SELECTION_AND_OWNER_EXCLUSIONS",
             "priority_is_research_attention_not_capital_action": True,
         }
+        if next_session_artifact is not None:
+            _require_setup_transition_brief(
+                session=session, current_artifact=integrated_decision_artifact,
+                previous_artifact=previous_integrated_decision_artifact, brief=next_session_artifact,
+            )
+            for row in rows:
+                row["evidence"]["conditional_research"]["setup_transition"] = _setup_transition_for_ticker(
+                    session=session, ticker=row["ticker"], current_artifact=integrated_decision_artifact,
+                    previous_artifact=previous_integrated_decision_artifact, brief=next_session_artifact,
+                )
+            body["conditional_research_presentation"]["setup_transition"] = {
+                "source_contract": _next_session.CONTRACT_VERSION,
+                "artifact_identity": next_session_artifact.get("artifact_identity"),
+                "current_session": session,
+                "previous_qualified_session": next_session_artifact.get("previous_qualified_session"),
+                "explanation_only": True,
+            }
     if opportunity_cost_input is not None:
         from stocklookup_core.portfolio.action_center_opportunity_cost import build_view
         view = build_view(session=session, integrated_decision=integrated_decision_artifact, request=opportunity_cost_input)
@@ -1011,6 +1233,32 @@ def _md_conditional_research(evidence: Mapping[str, Any]) -> list[str]:
         f"  - Session/as-of lineage: {_canon(details.get('evidence_currency_lineage'))}; source identities: {_canon(details.get('source_identities') or {})}; decision: {(evidence.get('source_identities') or {}).get('decision_identity')}.",
         "  - Future conditions are confirmation requirements, not observed events. Portfolio fit, sizing and execution remain separate; invalidation is analytical, not a stop-loss order.",
     ])
+    transition = details.get("setup_transition")
+    if isinstance(transition, Mapping):
+        lines.extend(_md_setup_transition(transition))
+    return lines
+
+
+def _md_setup_transition(transition: Mapping[str, Any]) -> list[str]:
+    lines = [
+        f"  - Research-state evolution: previous session {transition.get('previous_qualified_session') or 'NONE'}; current session {transition.get('current_session') or 'UNKNOWN'}; status {transition.get('status')}.",
+        f"  - Previous posture: {transition.get('previous_research_action_posture') or 'NO_PREVIOUS_RECORD'}; current canonical posture: {transition.get('current_canonical_posture') or 'UNKNOWN'}; governed transition label: {transition.get('governed_transition_label') or 'NOT_AVAILABLE'}. A transition label is not an investment outcome.",
+    ]
+    for key, observed in (transition.get("setup_context") or {}).items():
+        if not isinstance(observed, Mapping):
+            continue
+        lines.append(f"  - {key}: {observed.get('status')}; previous={_canon(observed.get('previous'))}; current={_canon(observed.get('current'))}.")
+    evidence = transition.get("technical_market_sector_evidence") or {}
+    lines.append(
+        f"  - Market direction label: {evidence.get('governed_market_direction') or 'NOT_AVAILABLE'}; sector direction label: {evidence.get('governed_sector_direction') or 'NOT_AVAILABLE'}. Market weakness is context, not a new veto."
+    )
+    confirmation = transition.get("tactical_confirmation") or {}
+    lines.append(f"  - Tactical confirmation membership: {confirmation.get('status') or 'NOT_AVAILABLE'}. This is not a new event and not capital authorization.")
+    reconciliation = transition.get("priority_posture_reconciliation") or {}
+    lines.append(f"  - Priority versus posture: {reconciliation.get('reason') or 'NOT_PROVIDED'} ({reconciliation.get('reconciliation_category') or 'NOT_PROVIDED'}).")
+    if transition.get("research_limitations"):
+        lines.append(f"  - Research limitations: {_canon(transition.get('research_limitations'))}.")
+    lines.append(f"  - Lineage: {_canon(transition.get('source_lineage') or {})}.")
     return lines
 
 
