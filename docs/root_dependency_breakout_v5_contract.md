@@ -55,6 +55,10 @@ and pickle bindings. Both import orders and the existing `atomic_io.os.fsync`
 patch slot are tested. New consumers intentionally bind the canonical owner's
 globals; arbitrary reflective rebinding of unused legacy private slots is not
 claimed as a supported plugin API.
+The historical `atomic_io` import still initializes `observability_events` before
+exporting its bindings; this observable import-order detail is tested explicitly.
+Only serialization metadata retains the original callable/type import names;
+neither module object's name nor the code filename is disguised.
 
 Eleven additional Daily orchestration/publication sources keep their baseline
 bytes as well, including canonical product/dashboard release, companions,
@@ -114,11 +118,12 @@ root implementations become required compatibility interfaces. Python files net
 minus one; this new contract adds one file, so total tracked files remain 2,637.
 No test or evidence deletion contributes to the result. No speedup is assumed.
 
-Measured graph: raw edge rows 3,929 to 4,015 and module pairs 3,730 to 3,809.
+Measured graph: raw edge rows 3,929 to 4,016 and module pairs 3,730 to 3,810.
 The increase is package-initializer reachability from explicit package imports;
-excluding initializer targets, edge rows are 2,615 to 2,611 and pairs 2,571 to
-2,567. Backward rows/pairs fall 147/143 to 144/140, and core-to-root pairs 109 to
-106. Atomic root fan-in falls 66 to 20; event root fan-in 5 to 4. The retained
+excluding initializer targets, edge rows are 2,615 to 2,612 and pairs 2,571 to
+2,568. Backward rows/pairs fall 147/143 to 144/140, and core-to-root pairs 109 to
+106. Atomic root fan-in falls 66 to 20; event root fan-in remains 5, including the
+historical atomic import binding. The retained
 Daily interfaces are counted rather than hidden. Eager/runtime SCCs remain 1/11
 with identical membership, and unresolved/unsupported sites remain 9/15.
 Implementation modules with own top-level functions/classes fall 572 to 569.

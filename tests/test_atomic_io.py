@@ -49,6 +49,9 @@ def test_v5_both_import_orders_preserve_frozen_bindings():
     for first in ("atomic_io", "stocklookup_core.acquisition.artifact_io", "observability_events"):
         subprocess.run([sys.executable, "-c", f"""
 import {first}
+import sys
+if {first!r} == 'atomic_io':
+    assert 'observability_events' in sys.modules
 import atomic_io as old
 import observability_events as events
 from stocklookup_core.acquisition import artifact_io as owner
