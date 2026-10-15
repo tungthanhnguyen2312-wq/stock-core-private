@@ -354,7 +354,7 @@ def test_conflicts_fail_closed_without_emitting_a_transition(mutation):
         artifact = _center(current, previous, brief, tickers)
         shown = _transition(artifact, "AAA_SAME")
         assert shown["governed_transition_label"] == "POSTURE_UNCHANGED"
-        assert "PRICE_BASIS_LABEL_CHANGED_NUMBERS_STAY_WITHHELD" in shown["research_limitations"]
+        assert "PRICE_BASIS_LABEL_CHANGED_NO_CROSS_SESSION_NUMERIC_COMPARISON" in shown["research_limitations"]
         assert "40.0" not in json.dumps(shown)
         return
     elif mutation == "membership":

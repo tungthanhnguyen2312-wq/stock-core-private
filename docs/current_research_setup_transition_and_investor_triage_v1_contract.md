@@ -65,7 +65,9 @@ confirmation list, or a confirmation membership that contradicts
 `WAIT_TO_INITIATE`, `EARLY_WATCH_TO_INITIATE`, or `BREAKOUT_FAILED`, is
 rejected. When both records carry a price unit, the units must be equal or the
 ticker is rejected. A research-label change with the same unit does not
-invent a distance; numeric levels stay under the existing withhold rule.
+invent a distance. The limitation is
+`PRICE_BASIS_LABEL_CHANGED_NO_CROSS_SESSION_NUMERIC_COMPARISON`.
+Current-session numeric display stays under the existing withhold rule.
 A policy-epoch mismatch keeps the governed label
 `NOT_COMPARABLE_POLICY_CHANGE` and does not interpret confirmation.
 

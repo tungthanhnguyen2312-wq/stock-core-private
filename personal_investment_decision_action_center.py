@@ -413,7 +413,7 @@ def _setup_transition_for_ticker(
     if current.get("fundamental_state") == _integrated.FUNDAMENTAL_INSUFFICIENT:
         limitations.append("FUNDAMENTAL_GAP_DOES_NOT_REMOVE_TECHNICAL_STATE")
     if price_label_changed:
-        limitations.append("PRICE_BASIS_LABEL_CHANGED_NUMBERS_STAY_WITHHELD")
+        limitations.append("PRICE_BASIS_LABEL_CHANGED_NO_CROSS_SESSION_NUMERIC_COMPARISON")
     reconciliation = current.get("priority_posture_reconciliation") or {}
     if reconciliation.get("integrated_posture") != current.get("research_action_posture"):
         raise ActionCenterError("SETUP_TRANSITION_RECONCILIATION_POSTURE_MISMATCH:" + ticker)
