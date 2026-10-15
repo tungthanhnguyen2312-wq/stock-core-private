@@ -38,6 +38,7 @@ anything; nothing here calls one.
 """
 from __future__ import annotations
 
+import copy
 import hashlib
 import json
 import os
@@ -199,6 +200,50 @@ def _evidence_block(ticker: str, record: Mapping[str, Any], *, session: str, cov
         "freshness": freshness,
         "source_identities": {"decision_identity": record.get("decision_identity")},
     }
+
+
+def _conditional_research_details(record: Mapping[str, Any], evidence: Mapping[str, Any]) -> dict[str, Any]:
+    """Restate retained conditions and independent lenses; never evaluate a future event."""
+    details = {key: copy.deepcopy(record.get(key)) for key in (
+        "opportunity_priority", "priority_posture_reconciliation", "breakout_state_v3",
+        "technical_support", "fundamental_support", "fundamental_evidence_availability",
+        "fundamental_synthesis", "exact_capabilities_unavailable", "missing_evidence_decision_effect",
+        "evidence_currency_lineage", "source_identities",
+        "legacy_comparison",
+    )}
+    for role in ("trigger", "invalidation"):
+        boundary = copy.deepcopy(record.get(role) or {})
+        basis = boundary.get("price_basis") or {}
+        condition = boundary.get("condition") or {}
+        reasons = []
+        if (evidence.get("freshness") or {}).get("price_freshness") != "CURRENT":
+            reasons.append("CURRENT_PRICE_NOT_ESTABLISHED")
+        if record.get("evidence_currency") != _integrated.EVIDENCE_CURRENCY_CURRENT_SESSION:
+            reasons.append("CANONICAL_CURRENT_EVIDENCE_NOT_ESTABLISHED")
+        if basis.get("price_basis_verified") is not True:
+            reasons.append("PRICE_BASIS_UNVERIFIED")
+        if condition.get("status") != "MACHINE_EVALUABLE":
+            reasons.append("CONDITION_NOT_MACHINE_EVALUABLE")
+        elif condition.get("reference_level") != boundary.get(f"{role}_level"):
+            reasons.append("CONDITION_AND_BOUNDARY_LEVEL_CONFLICT")
+        numeric_allowed = not reasons
+        # Descriptive conditions survive unknown basis/freshness. Numeric display is
+        # narrower than the retained measurement; never label an unverified unit VND.
+        if not numeric_allowed:
+            for key in (f"{role}_level", f"distance_to_{role}_pct"):
+                boundary[key] = None
+            for key in ("condition", "watchlist_condition"):
+                if isinstance(boundary.get(key), dict):
+                    boundary[key]["reference_level"] = None
+        for key in ("condition", "watchlist_condition"):
+            if isinstance(boundary.get(key), dict):
+                # The source hash identifies the retained condition, not this narrowed view.
+                boundary[key]["source_condition_identity"] = boundary[key].pop("condition_identity", None)
+        boundary["numeric_display_status"] = "AVAILABLE" if numeric_allowed else "WITHHELD_UNQUALIFIED_BOUNDARY"
+        boundary["numeric_display_reason_codes"] = reasons
+        details[role] = boundary
+    details["authority"] = "EXPLANATION_ONLY_NO_POSTURE_OR_EVENT_RECOMPUTATION"
+    return details
 
 
 def _build_decision_surface_index(
@@ -609,6 +654,7 @@ def build_artifact(
     sector_by_ticker: Mapping[str, str] | None = None, excluded_tickers: frozenset[str] = frozenset(),
     portfolio_snapshot: Mapping[str, Any] | None = None, quant_risk_artifact: Mapping[str, Any] | None = None,
     opportunity_cost_input: Mapping[str, Any] | None = None,
+    include_conditional_research: bool = False,
 ) -> dict[str, Any]:
     """Pure composition over already-built artifacts for one session -- no file I/O, no
     recomputation. See ``evaluate_from_retained_artifacts`` for the real-session, file-resolving
@@ -616,6 +662,18 @@ def build_artifact(
     if integrated_decision_artifact.get("session") not in (None, session):
         raise ActionCenterError("INTEGRATED_DECISION_SESSION_MISMATCH")
     integrated_records = integrated_decision_artifact.get("records") or {}
+    if include_conditional_research:
+        if (integrated_decision_artifact.get("contract_version") != _integrated.CONTRACT_VERSION
+                or integrated_decision_artifact.get("session") != session
+                or any(integrated_decision_artifact.get(k) != v for k, v in
+                       _integrated.content_identity(integrated_decision_artifact).items())):
+            raise ActionCenterError("CONDITIONAL_RESEARCH_INTEGRATED_IDENTITY_OR_SESSION_MISMATCH")
+        for ticker, record in integrated_records.items():
+            if (record.get("ticker") != ticker or record.get("as_of_session") != session
+                    or record.get("decision_identity") != _integrated.decision_identity(record)):
+                raise ActionCenterError("CONDITIONAL_RESEARCH_DECISION_IDENTITY_OR_SESSION_MISMATCH")
+        if coverage_disposition_artifact is not None and coverage_disposition_artifact.get("session") != session:
+            raise ActionCenterError("CONDITIONAL_RESEARCH_COVERAGE_SESSION_MISMATCH")
     coverage_records = (coverage_disposition_artifact or {}).get("records") if coverage_disposition_artifact else None
     asymmetric_records = (asymmetric_dislocation_artifact or {}).get("records") or {}
 
@@ -695,6 +753,26 @@ def build_artifact(
             "investment_account_values_never_alter_security_or_portfolio_action_computation": True,
         },
     }
+    if include_conditional_research:
+        # Enrich only rows selected by the existing consumer. No new discovery lane,
+        # entry action, attention bucket, portfolio inference or rank is introduced.
+        rows = list(portfolio_section.get("holdings") or []) + list(watchlist.get("entries") or [])
+        rows += [row for lane_rows in discovery["lanes"].values() for row in lane_rows]
+        for row in rows:
+            row["evidence"]["conditional_research"] = _conditional_research_details(
+                integrated_records[row["ticker"]], row["evidence"],
+            )
+            for role in ("trigger", "invalidation"):
+                boundary = row["evidence"]["conditional_research"][role]
+                if boundary["numeric_display_status"] != "AVAILABLE":
+                    row["evidence"][role][f"{role}_level"] = None
+                    row["evidence"][role][f"distance_to_{role}_pct"] = None
+        body["conditional_research_presentation"] = {
+            "version": "v1", "security_denominator": len(integrated_records),
+            "displayed_ticker_count": len({row["ticker"] for row in rows}),
+            "omission_rule": "EXISTING_WATCHLIST_HOLDINGS_DISCOVERY_SELECTION_AND_OWNER_EXCLUSIONS",
+            "priority_is_research_attention_not_capital_action": True,
+        }
     if opportunity_cost_input is not None:
         from stocklookup_core.portfolio.action_center_opportunity_cost import build_view
         view = build_view(session=session, integrated_decision=integrated_decision_artifact, request=opportunity_cost_input)
@@ -757,6 +835,7 @@ def _previous_session(repo_root: Path, session: str) -> str | None:
 
 def evaluate_from_retained_artifacts(
     *, repo_root: Path, session: str | None = None, portfolio_root: Path | None = None, requested_at: str,
+    include_conditional_research: bool = False,
 ) -> dict[str, Any]:
     """One deterministic, read-only evaluation over already-retained same-session artifacts.
 
@@ -814,6 +893,7 @@ def evaluate_from_retained_artifacts(
         owner_focus=owner_focus, portfolio_aware_decision_artifact=portfolio_aware_decision_artifact,
         sector_by_ticker=sector_by_ticker, excluded_tickers=excluded_tickers, portfolio_snapshot=portfolio_snapshot,
         quant_risk_artifact=quant_risk_artifact,
+        include_conditional_research=include_conditional_research,
     )
 
 
@@ -885,6 +965,55 @@ def _md_evidence_line(evidence: Mapping[str, Any]) -> str:
     )
 
 
+def _md_conditional_research(evidence: Mapping[str, Any]) -> list[str]:
+    details = evidence.get("conditional_research")
+    if not isinstance(details, Mapping):
+        return []
+    priority = details.get("opportunity_priority") or {}
+    reconciliation = details.get("priority_posture_reconciliation") or {}
+    fundamental = details.get("fundamental_synthesis") or {}
+    valuation = evidence.get("valuation_context_summary") or {}
+    market = evidence.get("market_sector_context") or {}
+    fundamental_reasons = {key: fundamental.get(key) for key in (
+        "supporting_reason_codes", "contradicting_reason_codes", "historical_reason_codes", "evidence_gap_reason_codes",
+    )}
+    valuation_fitness = {key: valuation.get(key) for key in (
+        "status", "peer_relative_state", "unavailable_reason_codes", "limitations",
+    )}
+    lines = [
+        _md_evidence_line(evidence),
+        f"  - Setup: {evidence.get('tactical_phase')}; structure: {evidence.get('market_structure_state')}; breakout: {details.get('breakout_state_v3') or 'NOT_PROVIDED'}; watchlist entry state: {(details.get('legacy_comparison') or {}).get('legacy_entry_state') or 'NOT_PROVIDED'}.",
+        f"  - Canonical posture: {evidence.get('research_action_posture')}; policy: {evidence.get('research_action_policy_version')}; reason: {evidence.get('posture_condition_class') or 'NOT_PROVIDED'}.",
+        f"  - Research priority: {priority.get('research_priority_tier') or 'UNAVAILABLE'} (attention only); entry lens: {reconciliation.get('entry_action') or 'NOT_PROVIDED'}; relationship: {reconciliation.get('reason') or 'NOT_PROVIDED'}.",
+    ]
+    for role in ("trigger", "invalidation"):
+        boundary = details.get(role) or {}
+        condition = boundary.get("condition") or {}
+        basis = boundary.get("price_basis") or {}
+        lines.append(
+            f"  - {role.capitalize()}: observed event state={boundary.get('trigger_state') if role == 'trigger' else 'NOT_EVALUATED_BY_THIS_VIEW'}; "
+            f"future condition={condition.get('status') or 'NOT_RETAINED'}, "
+            f"{condition.get('operator') or 'UNKNOWN_OPERATOR'} level={boundary.get(role + '_level')}; "
+            f"activation={condition.get('activation_semantics') or 'NOT_RETAINED'}; "
+            f"numeric display={boundary.get('numeric_display_status')}; "
+            f"basis={basis.get('research_label') or basis.get('observed_price_basis') or 'UNKNOWN'}, unit={basis.get('price_unit') or 'UNKNOWN'}; "
+            f"horizon={boundary.get('horizon') or 'UNKNOWN'}."
+        )
+        lines.append(f"    - Condition reasons: {_canon(condition.get('reason_codes') or [])}; numeric restrictions: {_canon(boundary.get('numeric_display_reason_codes') or [])}; basis limitations: {_canon(basis.get('limitations') or [])}; warning: {boundary.get('warning') or 'NOT_PROVIDED'}.")
+        lines.append(f"    - Condition source: {condition.get('source_condition_identity') or 'NOT_RETAINED'}; lineage: {_canon(condition.get('source_lineage') or {})}.")
+    lines.extend([
+        f"  - Technical support: {_canon(details.get('technical_support') or [])}; fundamental support: {_canon(details.get('fundamental_support') or [])}.",
+        f"  - Fundamentals: {evidence.get('fundamental_state')}; availability: {details.get('fundamental_evidence_availability') or 'NOT_PROVIDED'}; reasons: {_canon(fundamental_reasons)}.",
+        f"  - Valuation fitness: {_canon(valuation_fitness)}; market regime: {market.get('market_regime') or 'UNKNOWN'}; sector leadership: {market.get('sector_leadership') or 'UNKNOWN'}; breadth qualification: {(market.get('market_breadth') or {}).get('status') or 'NOT_PROVIDED'}.",
+        f"  - Counter-thesis: {_canon(evidence.get('counter_thesis') or [])}; uncertainties: {_canon(evidence.get('material_uncertainties') or [])}.",
+        f"  - Evidence fitness and blockers: {_canon(evidence.get('evidence_axes_summary') or {})}.",
+        f"  - Unavailable exact uses: {_canon(details.get('exact_capabilities_unavailable') or [])}; missing-evidence effect: {details.get('missing_evidence_decision_effect') or 'NOT_PROVIDED'}.",
+        f"  - Session/as-of lineage: {_canon(details.get('evidence_currency_lineage'))}; source identities: {_canon(details.get('source_identities') or {})}; decision: {(evidence.get('source_identities') or {}).get('decision_identity')}.",
+        "  - Future conditions are confirmation requirements, not observed events. Portfolio fit, sizing and execution remain separate; invalidation is analytical, not a stop-loss order.",
+    ])
+    return lines
+
+
 def markdown(artifact: Mapping[str, Any]) -> str:
     """Compact owner-readable render. Provenance/authority detail stays in short flags, not prose."""
     lines: list[str] = []
@@ -924,6 +1053,7 @@ def markdown(artifact: Mapping[str, Any]) -> str:
         for row in portfolio["holdings"]:
             lines.append(f"- **{row['ticker']}** — {row['action']} _(posture-derived; binding constraint: {row.get('binding_constraint')})_")
             lines.append(_md_evidence_line(row["evidence"]))
+            lines.extend(_md_conditional_research(row["evidence"]))
     lines.append("")
 
     lines.append("## UNRESOLVED PORTFOLIO ITEMS")
@@ -985,6 +1115,7 @@ def markdown(artifact: Mapping[str, Any]) -> str:
     for entry in watchlist.get("entries") or []:
         tag = "★" if entry.get("owner_focus") else "-"
         lines.append(f"{tag} **{entry['ticker']}** — {entry.get('action')}")
+        lines.extend(_md_conditional_research(entry["evidence"]))
     lines.append("")
 
     lines.append("## NEW OPPORTUNITIES")
@@ -994,6 +1125,10 @@ def markdown(artifact: Mapping[str, Any]) -> str:
             continue
         tickers = ", ".join(sorted({row["ticker"] for row in rows}))
         lines.append(f"- **{lane}** ({len(rows)}): {tickers}")
+        for row in rows:
+            if "conditional_research" in row["evidence"]:
+                lines.append(f"  - **{row['ticker']}** — {row.get('reason')}")
+                lines.extend(_md_conditional_research(row["evidence"]))
     lines.append("")
 
     lines.append("## CAPITAL ROTATION")
@@ -1024,6 +1159,9 @@ def markdown(artifact: Mapping[str, Any]) -> str:
 
     lines.append("## DATA / AUTHORITY WARNINGS")
     lines.append(f"- Security denominator: {(artifact.get('coverage') or {}).get('security_denominator')}")
+    if "conditional_research_presentation" in artifact:
+        presentation = artifact["conditional_research_presentation"]
+        lines.append(f"- Conditional detail coverage: {presentation['displayed_ticker_count']}/{presentation['security_denominator']}; omissions follow existing watchlist/holdings/discovery selection and owner exclusions.")
     if "opportunity_cost_research" in artifact:
         lines.append(f"- Existing portfolio decision artifact supplied: {(artifact.get('coverage') or {}).get('portfolio_supplied')}; optional owner state: {(artifact['opportunity_cost_research'].get('owner_state_status') or artifact['opportunity_cost_research']['status'])}.")
     else:
