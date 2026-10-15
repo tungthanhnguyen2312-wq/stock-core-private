@@ -139,6 +139,17 @@ Normalized exact golden: 25,566 bytes, SHA-256
 The local acceptance report records the separate broad and retained comparisons;
 these focused counts do not claim that unavailable retained tests passed.
 
+Final broad hermetic baseline and candidate each pass 5,687 tests, skip 95 and
+deselect 49, with 134 passing subtests. All primary test IDs/outcomes match;
+there are no removed cases or new regressions. Final structural selection passes
+811, and the final import/Daily supplement passes 29. Retained baseline and final
+candidate each have 8 passes, 14 skips and the same 27 failures, with exact
+failure/skip identities. Four CLI help outputs match byte-for-byte. A read-only
+import of the released Dashboard publisher verifies the same legacy helper
+objects, signatures and fixed-time event bytes; no publish function is called and
+bytecode writes are disabled. Consumer tracked source has no direct reference to
+the seven affected root names. Neither sibling repository is modified.
+
 The baseline focused selection has one existing archetype assertion failure:
 `ArchetypeTests::test_corporate_template_never_grants_a_corporate_archetype` uses
 `AAA`, whose retained classification now resolves corporate. This source refactor
@@ -158,10 +169,13 @@ No allowed-path rewrite or policy exception is used. The VRE COMPLETE_LOCAL lane
 and `ACTIVE_STATE.md` lease remain unchanged. That navigation file is deliberately
 excluded; the bound native state supplies this milestone's execution disposition.
 
-The existing release workflow already separates exact-plan technical receipts
-(integration owner), human Owner merge authorization, actual merge, hosted CI and
-native post-merge recording. A technical PASS receipt does not grant merge authority.
-GitHub Self-Approval protection remains independent and unchanged.
+The retained V4 handoff identifies two separate controls. The host classifier
+refused the author/integrator writing its own `reviewed_by` receipt as
+"Self-Approval". Separately, the PR author's GitHub account could not approve its
+own PR. The Owner personally supplied the receipt and ran the release/closeout;
+an extra JSON `owner_review` field was not itself authentication. Neither control
+is disabled here. A technical report does not grant merge authority or constitute
+an independently executed native review receipt.
 
 A future single Owner-executable PowerShell action could accept one reviewed bundle
 (repository, PR, exact candidate/main/plan hashes, technical receipt and CI locators),
@@ -172,8 +186,13 @@ immutable merge/CI evidence bundle; bound Codex would independently verify and r
 native MERGED_RELEASED. It must not manufacture an Owner signature or use `--agent`
 as proof of human approval. There is no authenticated human-approval contract in the
 current local receipt schema, so an executable approval/merge wrapper is not added
-under this source-layout wave. This bounded design removes repeated JSON assembly
-as the next reviewable option without weakening independent authorization.
+under this source-layout wave. Reuse and parameterize the existing Owner-only V4
+PowerShell closeout rather than build another coordinator. Its current hardcoded
+V4 plan/head/agent values must never be replayed for V5. The candidate implementation
+can supply an unsigned evidence bundle; the Owner-controlled execution boundary
+must supply genuine review and authorization. No boolean or agent-generated
+approval string can replace that boundary. This is the narrow future design,
+not an implemented governance extension or a new Owner approval assertion.
 
 Local source completion is not release. No V5 push, merge, Daily, database write,
 Dashboard publication, provider call, sealed-session change or VRE admission occurs.
