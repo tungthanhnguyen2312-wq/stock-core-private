@@ -613,11 +613,11 @@ def _dossier(item: Mapping[str, Any], queue_record: Mapping[str, Any], decision:
         transition["research_limitations"].append("FUNDAMENTAL_POLICY_EPOCH_CHANGE_NO_FUNDAMENTAL_EVOLUTION_INFERENCE")
     evolution = _evolution(previous, decision, transition_label, confirmation_status)
     lane = item.get("primary_lane")
+    # Decision-owned codes stay in the thesis. Queue reasons stay in discovery.
+    # Matching text is not a record-level lineage bridge.
     support = list(decision.get("technical_support") or []) + list(decision.get("fundamental_support") or [])
-    support += list(queue_record.get("priority_reasons") or [])
-    oppose = list(decision.get("counter_thesis") or []) + list(queue_record.get("blocking_reasons") or [])
     synthesis = decision.get("fundamental_synthesis") or {}
-    oppose += list(synthesis.get("contradicting_reason_codes") or [])
+    oppose = list(decision.get("counter_thesis") or []) + list(synthesis.get("contradicting_reason_codes") or [])
     return {
         "ticker": item["ticker"],
         "primary_lane": item["primary_lane"],
@@ -1003,9 +1003,11 @@ def render_markdown(artifact: Mapping[str, Any]) -> str:
             "### Sự kiện",
             f"Trạng thái {dossier['corporate']['state']}; phiên bằng chứng {dossier['corporate']['evidence_session']}; cũ hơn phiên quyết định: {dossier['corporate']['evidence_session_stale']}.",
             "### Luận điểm và phản luận điểm",
-            "Ủng hộ: " + "; ".join(str(item) for item in dossier["thesis"]["supporting"][:8]),
-            "Phản đối hoặc chặn: " + "; ".join(str(item) for item in dossier["thesis"]["opposing"][:8]),
-            "Không chắc: " + "; ".join(str(item) for item in dossier["thesis"]["uncertain"][:6]),
+            "Ủng hộ từ quyết định: " + "; ".join(str(item) for item in dossier["thesis"]["supporting"][:8]),
+            "Phản luận điểm từ quyết định: " + "; ".join(str(item) for item in dossier["thesis"]["opposing"][:8]),
+            "Lý do ưu tiên của hàng đợi phiên: " + "; ".join(str(item) for item in (dossier["discovery"].get("priority_reasons") or [])[:8]),
+            "Lý do chặn của hàng đợi phiên: " + "; ".join(str(item) for item in (dossier["discovery"].get("blocking_reasons") or [])[:8]),
+            "Không chắc, từ quyết định: " + "; ".join(str(item) for item in dossier["thesis"]["uncertain"][:6]),
             "### Xác nhận và vô hiệu",
             f"Xác nhận đã quan sát: {dossier['confirmation']['observed_confirmation']}. Điều kiện tương lai không phải sự kiện đã xảy ra: {dossier['confirmation']['future_trigger_is_not_an_observed_event']}.",
             f"Nhãn chuyển tiếp nguồn: {dossier['setup_transition'].get('governed_transition_label')}. Nhãn này không phải kết quả đầu tư đã đo.",
@@ -1013,7 +1015,13 @@ def render_markdown(artifact: Mapping[str, Any]) -> str:
         ])
         for question in dossier["research_questions"][:6]:
             lines.append(f"- {question['question']} ({question['source_code']})")
-        lines.append(f"Nguồn quyết định {dossier['source']['decision_identity']}.")
+        source = dossier["source"]
+        comparable = source.get("queue_record_identity_comparable") is True
+        linkage = source.get("priority_record_lineage") or ("SAME_QUEUE_RECORD" if comparable else "UNBOUND_DIFFERENT_QUEUE_ARTIFACT")
+        lines.append("Bản ghi hàng đợi phiên: " + str(source.get("priority_queue_record_identity")) + ".")
+        lines.append("Bản ghi ưu tiên trong quyết định: " + str(source.get("decision_priority_queue_record_identity")) + ".")
+        lines.append("Liên kết bản ghi: " + str(linkage) + ". Trùng danh tính mới được nối. Khác danh tính thì không suy ra cùng một bản ghi.")
+        lines.append(f"Nguồn quyết định {source.get('decision_identity')}.")
         lines.append("")
     if artifact["identity_mismatches"]:
         lines.append("## Lệch danh tính nguồn")

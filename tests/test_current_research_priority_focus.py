@@ -293,7 +293,16 @@ def test_end_to_end_binds_queue_to_decision_and_renders_without_a_vote(tmp_path)
     assert "PRIORITY_NOW_IS_RESEARCH_ATTENTION_NOT_BUY_NOW" in blob
     rendered = focus.render_markdown(report)
     assert "không phải khuyến nghị" in rendered
+    assert "Ủng hộ từ quyết định" in rendered
+    assert "Lý do ưu tiên của hàng đợi phiên" in rendered
+    assert "Trùng danh tính mới được nối" in rendered
     assert "REV1" in rendered and "BRK1" in rendered
+    first = report["dossiers"][0]
+    assert "EARLY_REVERSAL_REASON" in first["discovery"]["priority_reasons"]
+    assert "EARLY_REVERSAL_REASON" not in first["thesis"]["supporting"]
+    assert "FUNDAMENTAL_CONTEXT_ABSENT" in first["discovery"]["blocking_reasons"]
+    assert "FUNDAMENTAL_CONTEXT_ABSENT" not in first["thesis"]["opposing"]
+    assert first["source"]["queue_record_identity_comparable"] is True
     again = focus.evaluate_research_focus(
         repo_root=tmp_path, session=current_session, current_operation=locations[current_session],
         previous_operation=locations[previous_session], max_tickers=3)
@@ -333,3 +342,162 @@ def test_absent_queue_blocks_lane_selection_and_keeps_explicit_preview(tmp_path)
     assert report["selection_authority"] == "EXPLICIT_TICKER_PREVIEW_QUEUE_BLOCKED"
     assert report["dossiers"][0]["ticker"] == "A1"
     assert report["dossiers"][0]["primary_lane"] is None
+
+
+def _opportunity(specs, *, session, source_tag, reasons):
+    records = {}
+    for ticker, lane, tier in specs:
+        records[ticker] = {
+            "priority_tier": tier, "eligible_strategies": [lane], "lane_priority": {lane: tier},
+            "tactical_state": "EARLY_REVERSAL_CANDIDATE", "entry_action": "EARLY_ENTRY",
+            "scenario_status": "SCENARIO_PARTIAL", "event_context_status": "NONE",
+            "fundamental_context_status": "INSUFFICIENT", "data_quality_status": "SUFFICIENT",
+            "priority_reasons": list(reasons), "blocking_reasons": ["FUNDAMENTAL_CONTEXT_ABSENT"],
+            "invalidation_or_context_warnings": [], "content_identity": "opportunity:" + ticker + ":" + source_tag,
+            "source_input_identities": {"tactical": source_tag},
+            "official_current_universe_status": "CURRENT_OFFICIAL",
+        }
+    artifact = {"schema_version": "1.0.0", "contract_version": opportunity.CONTRACT_VERSION,
+                "research_session": session, "source_artifact_identities": {"synthetic": source_tag},
+                "records": records, "coverage": {"current_official_universe": len(records)}}
+    artifact.update(opportunity.content_identity(artifact))
+    queue = queues.build(opportunity=artifact, triage={
+        "high_priority_review_eligible_records": [], "cohort_definitions": {}, "artifact_identity": "triage:" + source_tag})
+    return artifact, queue
+
+
+def _seal_focus_session(root, *, session, queue, opportunity_artifact, decision_records, decision_queue_identity):
+    artifact = {"contract_version": integrated.CONTRACT_VERSION, "session": session,
+                "research_action_policy_version": integrated.RESEARCH_ACTION_POLICY_VERSION,
+                "records": decision_records,
+                "source_artifacts": {"priority_queue": decision_queue_identity}}
+    artifact, selection, _ = _install(root, artifact, queue, opportunity_artifact, tactical_state="SIDEWAYS_NEUTRAL")
+    lock = {key: value["artifact_identity"] for key, value in selection.items()}
+    registry = {"contract_version": "daily_research_session_input_registry/v1",
+                "sessions": {session: selection},
+                "completed_sessions": {session: {"status": "COMPLETED_RETAINED_EVIDENCE", "trading_day_valid": True,
+                                                 "frozen_input_identities": lock}}}
+    manifest = {"contract_version": ops.CONTRACT_VERSION, "schema_version": "1.0.0", "market_session": session,
+                "generation_context": "DAILY_PRODUCER_RETAINED_COMPLETED_SESSION",
+                "input_artifacts": {key: {"artifact_identity": value} for key, value in lock.items()},
+                "outputs": {"integrated_investment_decision_product": artifact["artifact_identity"],
+                            "daily_opportunity_decision_queue": queue["artifact_identity"],
+                            "opportunity_prioritization": opportunity_artifact["artifact_identity"]}}
+    manifest["operation_identity"] = ops._identity(manifest)
+    operation = root / "operations-review/daily-research-session-operations-v1" / session / manifest["operation_identity"].split(":")[1]
+    _write(operation / "run_manifest.json", manifest)
+    _write(operation / focus.QUEUE_FILE, queue)
+    _write(operation / focus.OPPORTUNITY_FILE, opportunity_artifact)
+    _write(root / "config/daily_research_session_input_registry.json", registry)
+    return operation
+
+
+def test_two_valid_queues_keep_tier_match_from_becoming_lineage(tmp_path):
+    session = "2026-01-02"
+    specs = [("ANT", "EARLY_REVERSAL", "PRIORITY_NOW")]
+    operation_opportunity, operation_queue = _opportunity(specs, session=session, source_tag="operation", reasons=["OPERATION_QUEUE_REASON"])
+    _decision_opportunity, decision_queue = _opportunity(specs, session=session, source_tag="decision", reasons=["DECISION_QUEUE_REASON"])
+    assert operation_queue["artifact_identity"] != decision_queue["artifact_identity"]
+    assert queues.content_identity(operation_queue)["artifact_identity"] == operation_queue["artifact_identity"]
+    assert queues.content_identity(decision_queue)["artifact_identity"] == decision_queue["artifact_identity"]
+    operation_record = operation_queue["records"]["ANT"]
+    decision_record = decision_queue["records"]["ANT"]
+    assert operation_record["research_priority_tier"] == decision_record["research_priority_tier"] == "PRIORITY_NOW"
+    assert operation_record["entry_relevant"] == decision_record["entry_relevant"]
+    assert operation_record["content_identity"] != decision_record["content_identity"]
+    built = HELPERS["_record"](session, "ANT", "REV", {"market_structure_state": "EARLY_BULLISH_REVERSAL"}, priority=decision_record)
+    assert built["research_action_posture"] in {"EARLY_WATCH", "WAIT_FOR_CONFIRMATION", "AVOID"}
+    original_posture = built["research_action_posture"]
+    operation = _seal_focus_session(
+        tmp_path, session=session, queue=operation_queue, opportunity_artifact=operation_opportunity,
+        decision_records={"ANT": built}, decision_queue_identity=decision_queue["artifact_identity"])
+    report = focus.evaluate_research_focus(repo_root=tmp_path, session=session, current_operation=operation, max_tickers=1)
+    assert report["status"] == "LANE_SELECTION_QUALIFIED_PRIORITY_RECORD_LINEAGE_UNBOUND"
+    assert report["priority_lineage"]["current"]["record_identity_comparable"] is False
+    assert report["population"]["opportunity_queue_denominator"] == 1
+    assert report["population"]["integrated_decision_denominator"] == 1
+    assert report["qualified_count"] == 1
+    assert report["selected_count"] == 1
+    dossier = report["dossiers"][0]
+    assert dossier["summary"]["research_priority_tier"] == "PRIORITY_NOW"
+    assert dossier["summary"]["research_action_posture"] == original_posture
+    assert dossier["source"]["priority_record_lineage"] == "UNBOUND_DIFFERENT_QUEUE_ARTIFACT"
+    assert dossier["source"]["queue_record_identity_comparable"] is False
+    assert dossier["source"]["priority_queue_record_identity"] == operation_record["content_identity"]
+    assert dossier["source"]["decision_priority_queue_record_identity"] == decision_record["content_identity"]
+    assert "OPERATION_QUEUE_REASON" in dossier["discovery"]["priority_reasons"]
+    assert "OPERATION_QUEUE_REASON" not in dossier["thesis"]["supporting"]
+    assert "DECISION_QUEUE_REASON" not in dossier["thesis"]["supporting"]
+    assert all(item["causal"] is False for item in dossier["relationships"])
+    rendered = focus.render_markdown(report)
+    assert "Không suy ra cùng một bản ghi" in rendered
+    assert "là cùng một bản ghi" not in rendered
+    assert operation_record["content_identity"] in rendered
+    assert decision_record["content_identity"] in rendered
+    assert "Lý do ưu tiên của hàng đợi phiên" in rendered
+    assert "Ủng hộ từ quyết định" in rendered
+    assert original_posture != "AVOID" or dossier["summary"]["research_action_posture"] == "AVOID"
+
+
+def test_unbound_queue_still_rejects_embedded_tier_disagreement_and_same_artifact_tamper():
+    _, operation_queue = _opportunity([("ANT", "EARLY_REVERSAL", "PRIORITY_NOW")], session="2026-01-02", source_tag="operation", reasons=["OPERATION_QUEUE_REASON"])
+    _, decision_queue = _opportunity([("ANT", "EARLY_REVERSAL", "SETUP_WATCH")], session="2026-01-02", source_tag="decision-tier", reasons=["DECISION_QUEUE_REASON"])
+    operation_record = operation_queue["records"]["ANT"]
+    decision = {"ticker": "ANT", "source_identities": {"priority_queue_record_identity": decision_queue["records"]["ANT"]["content_identity"]},
+                "opportunity_priority": {"status": "AVAILABLE",
+                                         "research_priority_tier": decision_queue["records"]["ANT"]["research_priority_tier"],
+                                         "entry_relevant": decision_queue["records"]["ANT"]["entry_relevant"]}}
+    opportunity_record = {"content_identity": operation_record["opportunity_record_content_identity"]}
+    unbound = focus._bind(operation_record, decision, opportunity_record, require_queue_record_identity=False)
+    assert unbound["status"] == "SOURCE_IDENTITY_MISMATCH"
+    assert "EMBEDDED_PRIORITY_TIER_MISMATCH" in unbound["reason_codes"]
+    same_artifact = focus._priority_lineage(
+        {"artifact_identity": operation_queue["artifact_identity"]},
+        {"source_artifacts": {"priority_queue": operation_queue["artifact_identity"]}})
+    assert same_artifact["status"] == "SAME_QUEUE_ARTIFACT"
+    assert same_artifact["record_identity_comparable"] is True
+    conflict = focus._bind(operation_record, decision, opportunity_record, require_queue_record_identity=True)
+    assert "PRIORITY_QUEUE_RECORD_IDENTITY_MISMATCH" in conflict["reason_codes"]
+    absent = focus._priority_lineage({"artifact_identity": operation_queue["artifact_identity"]}, {})
+    assert absent["status"] == "DECISION_PRIORITY_QUEUE_IDENTITY_ABSENT"
+    assert absent["record_identity_comparable"] is False
+
+
+def test_tampered_priority_record_and_queue_bytes_fail_closed(tmp_path):
+    session = "2026-01-02"
+    opportunity_artifact, queue = _opportunity([("ANT", "EARLY_REVERSAL", "PRIORITY_NOW")], session=session, source_tag="sealed", reasons=["OPERATION_QUEUE_REASON"])
+    path = tmp_path / "daily_opportunity_decision_queue_artifact.json"
+    tampered = copy.deepcopy(queue)
+    tampered["records"]["ANT"]["content_identity"] = "daily_opportunity_decision_record:tampered"
+    path.write_text(json.dumps(tampered), encoding="utf-8")
+    with pytest.raises(focus.ResearchFocusError, match="QUEUE_IDENTITY"):
+        focus._verified_queue(path, session=session, expected_identity=queue["artifact_identity"])
+    decision = {"ticker": "OTHER", "source_identities": {"priority_queue_record_identity": queue["records"]["ANT"]["content_identity"]},
+                "opportunity_priority": {"status": "AVAILABLE", "research_priority_tier": "PRIORITY_NOW",
+                                         "entry_relevant": queue["records"]["ANT"]["entry_relevant"]}}
+    mismatch = focus._bind(queue["records"]["ANT"], decision, {"content_identity": queue["records"]["ANT"]["opportunity_record_content_identity"]})
+    assert "TICKER_MISMATCH" in mismatch["reason_codes"]
+
+
+def test_withholding_epoch_and_insufficient_fundamental_keep_their_own_meaning():
+    current = {"research_action_posture": "EARLY_WATCH", "tactical_phase": "EARLY_REVERSAL",
+               "breakout_state_v3": "BELOW_PIVOT", "fundamental_state": integrated.FUNDAMENTAL_INSUFFICIENT,
+               "fundamental_decision_policy_version": "v1"}
+    assert focus._evolution(None, current, "NEW_EARLY_WATCH", "NOT_IN_CONFIRMATION_DELTA")["code"] == "NEW_CANDIDATE"
+    assert current["fundamental_state"] == integrated.FUNDAMENTAL_INSUFFICIENT
+    other = {**current, "fundamental_decision_policy_version": "other-epoch", "fundamental_state": integrated.FUNDAMENTAL_IMPROVING}
+    assert focus._evolution(current, other, "POSTURE_UNCHANGED", "NOT_IN_CONFIRMATION_DELTA")["code"] == "NOT_COMPARABLE"
+    confirmation = focus._confirmation(
+        {"tactical_phase": "BREAKOUT_SETUP", "trigger": {"status": "ARMED"}},
+        {"trigger": {"status": "ARMED", "numeric_display_status": "WITHHELD_UNQUALIFIED_BOUNDARY"},
+         "invalidation": {"numeric_display_status": "AVAILABLE"}},
+        None)
+    assert confirmation["numeric_levels_withheld"] is True
+    assert confirmation["observed_confirmation"] is False
+    assert confirmation["future_trigger_is_not_an_observed_event"] is True
+
+
+def test_default_preview_identity_stays_outside_this_projection():
+    assert preview.CONTRACT == "action_center_selected_research_preview/v1"
+    assert focus.CONTRACT == "current_research_priority_focus/v1"
+    assert not hasattr(action_center, "evaluate_research_focus")
