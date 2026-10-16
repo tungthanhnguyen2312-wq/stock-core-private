@@ -200,7 +200,9 @@ def test_launcher_scopes_continue_to_the_native_call_and_keeps_the_canonical_rou
     assert "[System.Management.Automation.ErrorRecord]" in after.split("Tee-Object")[0]
     # Canonical owner route unchanged when the Desktop CMD passes no seams.
     assert "$entry = Join-Path $PSScriptRoot 'run_owner_daily.py'" in source
-    assert r"$logDir = 'C:\Projects\StockLookup\run-logs'" in source
+    assert "$logDir = Join-Path $workspace 'run-logs'" in source
+    assert "workspace_profile()" in source
+    assert source.index("workspace_profile()") < source.index("New-Item -ItemType Directory")
     assert '$progress = Join-Path $logDir "stock_lookup_daily_$stamp.progress.jsonl"' in source
     assert "'--progress-path', $progress" in source
     assert "if (-not $NoPause) { Read-Host 'Nhấn Enter để đóng' }" in source

@@ -377,8 +377,9 @@ def _verification_code_digest() -> str:
     global _VERIFICATION_DIGEST
     if _VERIFICATION_DIGEST is None:
         digest = hashlib.sha256()
-        for name in ("prospective_decision_retention", "bounded_artifact_stream", "prospective_feedback_streaming"):
-            module = __import__(name)
+        for name in ("prospective_decision_retention", "bounded_artifact_stream", "prospective_feedback_streaming",
+                     "retained_evidence_catalog", "stocklookup_core.evidence.storage_portability"):
+            module = import_module(name)
             digest.update(hashlib.sha256(Path(module.__file__).read_bytes().replace(b"\r\n", b"\n")).digest())
         _VERIFICATION_DIGEST = digest.hexdigest()
     return _VERIFICATION_DIGEST
@@ -813,6 +814,12 @@ def _build_streaming_feedback(root: str | Path, output: str | Path, *, state_roo
 
     # -- Input identity (cheap: hashes already taken during discovery) --------------------------------
     code = code_digest()
+    # Preserve E4's frozen V1 digest construction. Only explicitly registered
+    # storage inputs use the additional reuse domain; historical evidence IDs stay intact.
+    from retained_evidence_catalog import load as load_storage_catalog
+    if load_storage_catalog(root):
+        code = _sha256_bytes(_canon_bytes({"domain": "storage_qualified_feedback_reuse/v1",
+            "legacy_code_digest": code, "storage_verifier_digest": _verification_code_digest()}))
     input_manifest = {
         "contracts": {"feedback": fb.CONTRACT_VERSION, "forward": forward_bridge.CONTRACT_VERSION,
                       "retention": retention.CONTRACT_VERSION, "temporal": fb.TEMPORAL_CONTRACT_VERSION,

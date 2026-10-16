@@ -16,6 +16,7 @@ import statistics
 import tempfile
 from collections import Counter, defaultdict
 from pathlib import Path
+from retained_evidence_catalog import historical_paths, original_path
 from typing import Any, Mapping, Sequence
 
 import daily_session_level2_package as level2
@@ -71,7 +72,7 @@ def _identity(payload: dict[str, Any], prefix: str, field: str = "artifact_ident
 
 def _load_json(path: Path) -> dict[str, Any] | None:
     try:
-        value = json.loads(path.read_text(encoding="utf-8"))
+        value = json.loads(original_path(path).read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
         return None
     return value if isinstance(value, dict) else None
@@ -211,9 +212,7 @@ def _load_iid(path: Path, metrics: dict[str, int] | None) -> dict[str, Any] | No
 def _operation_manifests(root: Path) -> dict[str, dict[str, Any]]:
     base = root / "operations-review" / "daily-research-session-operations-v1"
     result: dict[str, dict[str, Any]] = {}
-    if not base.is_dir():
-        return result
-    for path in sorted(base.glob("*/*/run_manifest.json")):
+    for path in historical_paths(root, "operations-review/daily-research-session-operations-v1", "*/*/run_manifest.json"):
         manifest = _load_json(path)
         if not manifest:
             continue
@@ -227,9 +226,7 @@ def _handoff_bundles(root: Path, operations: Mapping[str, Mapping[str, Any]]) ->
     """Return only complete canonical handoffs with an identity-bound decision artifact."""
     base = root / "operations-review" / "canonical-post-close-v1"
     rows: list[dict[str, Any]] = []
-    if not base.is_dir():
-        return rows
-    for path in sorted(base.glob("*/session_handoff_bundle.json")):
+    for path in historical_paths(root, "operations-review/canonical-post-close-v1", "*/session_handoff_bundle.json"):
         bundle = _load_json(path)
         if not bundle:
             continue
@@ -241,7 +238,7 @@ def _handoff_bundles(root: Path, operations: Mapping[str, Mapping[str, Any]]) ->
         proof = bundle.get("market_session_proof") or {}
         if not all(isinstance(value, str) and value for value in (session, op_identity, artifact_identity, artifact_ref)):
             continue
-        artifact_path = (root / artifact_ref).resolve()
+        artifact_path = original_path((root / artifact_ref).resolve(), root=root)
         rows.append({
             "path": _relative(root, path), "bundle": bundle, "session": session,
             "operation_identity": op_identity, "operation": operations.get(op_identity),
@@ -256,8 +253,8 @@ def _handoff_bundles(root: Path, operations: Mapping[str, Mapping[str, Any]]) ->
 def _artifact_paths(root: Path) -> list[Path]:
     operations = root / "operations-review"
     # Bounded legacy namespaces plus exact canonical handoff references; no recursive review scan.
-    found = set(operations.glob("*/integrated_investment_decision_product_artifact.json"))
-    found.update((operations / "canonical-post-close-v1").glob("*/enrichment/integrated_investment_decision_product.json"))
+    found = set(historical_paths(root, "operations-review", "*/integrated_investment_decision_product_artifact.json"))
+    found.update(historical_paths(root, "operations-review/canonical-post-close-v1", "*/enrichment/integrated_investment_decision_product.json"))
     found.update(link["artifact_path"] for link in _handoff_bundles(root, _operation_manifests(root)))
     return sorted(found)
 

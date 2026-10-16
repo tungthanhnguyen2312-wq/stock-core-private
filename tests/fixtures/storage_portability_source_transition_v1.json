@@ -1,0 +1,38 @@
+{
+  "contract_version": "storage_portability_source_transition/v1",
+  "milestone": "STOCKLOOKUP_STORAGE_PORTABILITY_AND_TIERED_RUNTIME_FOUNDATION_V1",
+  "prior_release": "c6999ac12c7080c5e4e78a3302000b104f313e4b",
+  "sources": {
+    "prospective_decision_outcome_feedback.py": {
+      "archive": "tests/fixtures/storage_portability_v1_sources/prospective_decision_outcome_feedback.py.txt",
+      "prior_sha256_lf": "fd3390b380a264d42143a1614d0dc0b4e0e3347e90e0cf208218b0f48b0c6df1",
+      "active_sha256_lf": "69e7f64da93a0575cbd134cf8252e190e89ad3f1202e2735b2172c7566f61a5b"
+    },
+    "prospective_decision_retention.py": {
+      "archive": "tests/fixtures/storage_portability_v1_sources/prospective_decision_retention.py.txt",
+      "prior_sha256_lf": "44ac7c777fa66261fef048d1e10d9fed8adfc1a66e83c3e51bafd9bba00f7290",
+      "active_sha256_lf": "3e21a7e4456316e9890f43850eead4dd8429842aeaa02d24b93e9f2d26d9ab38"
+    },
+    "prospective_feedback_streaming.py": {
+      "archive": "tests/fixtures/storage_portability_v1_sources/prospective_feedback_streaming.py.txt",
+      "prior_sha256_lf": "c6a299c4201baeaf43d9192a27ae505c199f20b7d17cda4fb60f0bd3fcdb995e",
+      "active_sha256_lf": "8640d9ac1d794d1d63303c1b72ba716167f428c9af08555ef67d931a4989d8b0"
+    },
+    "prospective_pit_capture_retention.py": {
+      "archive": "tests/fixtures/storage_portability_v1_sources/prospective_pit_capture_retention.py.txt",
+      "prior_sha256_lf": "e1e73085e646602166122cf9060d1a3ffeb3d2d18e7ad09f74b00f0a92ab11aa",
+      "active_sha256_lf": "f69a7622452ec2c0973b29c4b187e37ea7d1a05d3c9b333288196aa2e87d2ebf"
+    },
+    "runtime_paths.py": {
+      "archive": "tests/fixtures/storage_portability_v1_sources/runtime_paths.py.txt",
+      "prior_sha256_lf": "0b99eff71358db411ebf5b27b4e0a3afdb32d5e07680ab113d426df620b1a72c",
+      "active_sha256_lf": "9063580b26becacadaf9b2e89ef58457311dc191b0a11df9b64e48a92d916b4f"
+    },
+    "tools/run_owner_daily.py": {
+      "archive": "tests/fixtures/storage_portability_v1_sources/tools/run_owner_daily.py.txt",
+      "prior_sha256_lf": "18848d9f82e08dee2af6fa82c01a3491d033e1efdc7d6828461e3d0452a26311",
+      "active_sha256_lf": "4a7fe47e2658535e0de38ce13d91cb211da8758ce89b6dafdb52cdccbb1938a9"
+    }
+  },
+  "compatibility": "Historical diagnostics only. Existing E4 V1/V2 pins, origination v2 transition and archived reader remain unchanged. Active execution hashes active sources; no historical cache adoption or production activation."
+}
