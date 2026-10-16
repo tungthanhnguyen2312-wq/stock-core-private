@@ -286,3 +286,89 @@ def test_owner_view_launch_failure_is_fail_soft(monkeypatch, error):
     def fail(*args, **kwargs): raise error
     monkeypatch.setattr(owner.subprocess, "run", fail)
     assert owner.open_action_center_view("view.md")["status"] == "READY_VIEW_OPEN_FAILED"
+
+
+# Production writer/private-output regressions stay in the existing mandatory CI selection.
+import runtime_paths as runtime
+from test_storage_portability import profile_fixture, volumes
+
+@pytest.mark.parametrize("fault", [None, "old_checkout", "stale_environment", "changed_profile", "bad_schema",
+                                   "wrong_interpreter", "stale_python_environment"])
+def test_active_writer_binding_refuses_stale_process(volumes, monkeypatch, fault):
+    import hashlib
+    from tools.run_owner_daily import bind_active_workspace
+    profile, selected = profile_fixture(volumes, monkeypatch)
+    # No production binding is installed by these isolated tests.
+    binding = volumes[0] / "active_workspace.json"
+    row = dict(schema="stocklookup_active_workspace/v1", profile_path=str(selected),
+               profile_sha256=hashlib.sha256(selected.read_bytes()).hexdigest(), python_path=sys.executable)
+    if fault == "bad_schema":
+        row["schema"] = "unknown"
+    if fault == "wrong_interpreter":
+        other_python = volumes[0] / "other-python.exe"
+        other_python.write_bytes(b"not executed")
+        row["python_path"] = str(other_python)
+    binding.write_text(json.dumps(row), encoding="utf-8")
+    monkeypatch.delenv(runtime.WORKSPACE_PROFILE_ENV, raising=False)
+    # Register restoration even when the variable was initially absent: the
+    # successful binding itself sets it, outside monkeypatch's interception.
+    monkeypatch.setenv("STOCK_LOOKUP_PYTHON", "")
+    monkeypatch.delenv("STOCK_LOOKUP_PYTHON")
+    if fault == "stale_environment":
+        monkeypatch.setenv(runtime.WORKSPACE_PROFILE_ENV, str(volumes[0] / "old-profile.json"))
+    if fault == "stale_python_environment":
+        monkeypatch.setenv("STOCK_LOOKUP_PYTHON", str(volumes[0] / "old-python.exe"))
+    if fault == "changed_profile":
+        selected.write_text(selected.read_text() + " ", encoding="utf-8")
+    root = Path(profile["roles"]["producer"]) if fault != "old_checkout" else volumes[0]
+    if fault:
+        before = {name: os.environ.get(name) for name in (runtime.WORKSPACE_PROFILE_ENV, "STOCK_LOOKUP_PYTHON")}
+        with pytest.raises(ValueError, match="ACTIVE_WORKSPACE_REFUSED"):
+            bind_active_workspace(root, binding)
+        assert {name: os.environ.get(name) for name in before} == before
+    else:
+        bind_active_workspace(root, binding)
+        assert runtime.workspace_profile()["paths"]["producer"] == root
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="native Windows Owner front doors")
+@pytest.mark.parametrize("frontdoor", ["stocklookup.ps1", "tools/run_owner_daily.ps1"])
+def test_inactive_checkout_refused_before_logs(tmp_path, frontdoor):
+    import hashlib
+    import os
+    root = Path(__file__).resolve().parents[1]
+    old = tmp_path / "old-C" / "stock-core-private"
+    script = old / frontdoor
+    script.parent.mkdir(parents=True)
+    shutil.copyfile(root / frontdoor, script)
+    home = tmp_path / "owner"
+    (home / ".stocklookup").mkdir(parents=True)
+    profile = tmp_path / "active-profile.json"
+    profile.write_text(json.dumps(dict(schema="stocklookup_workspace/v1",
+        roles=dict(producer=str(tmp_path / "new-T" / "stock-core-private")))), encoding="utf-8")
+    (home / ".stocklookup/active_workspace.json").write_text(json.dumps(dict(
+        schema="stocklookup_active_workspace/v1", profile_path=str(profile),
+        profile_sha256=hashlib.sha256(profile.read_bytes()).hexdigest(), python_path=sys.executable)), encoding="utf-8")
+    env = {**os.environ, "USERPROFILE":str(home)}
+    env.pop(runtime.WORKSPACE_PROFILE_ENV, None)
+    args = ["daily"] if frontdoor == "stocklookup.ps1" else ["-NoPause"]
+    result = subprocess.run(["powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass",
+        "-File", str(script), *args], capture_output=True, text=True, env=env, timeout=30)
+    assert result.returncode != 0
+    assert "not the active production writer" in result.stderr
+    assert not (old.parent / "run-logs").exists()
+    assert not (old / "operations-review").exists()
+
+
+def test_workspace_action_center_stays_private_and_off_system_volume(volumes, monkeypatch):
+    import personal_investment_decision_action_center as action_center
+    profile, _ = profile_fixture(volumes, monkeypatch)
+    private = action_center.default_action_center_root()
+    assert private == volumes[1] / "private-action-center"
+    assert all(not private.is_relative_to(Path(profile["roles"][role]))
+               for role in ("producer", "consumer", "dashboard", "handoff", "runtime"))
+    artifact = {"session":"2026-10-16", "opportunity_cost_research":{}}
+    path = action_center.write_private_artifact(artifact)
+    assert path.is_relative_to(private) and path.is_file()
+    with pytest.raises(action_center.ActionCenterError, match="PRIVATE_ACTION_CENTER_ROOT"):
+        action_center.write_private_artifact(artifact, root=Path(profile["roles"]["handoff"]))

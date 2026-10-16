@@ -64,6 +64,7 @@ def test_legacy_no_archive_requirement(tmp_path, monkeypatch):
     assert catalog.resolve(tmp_path, "missing.json") == "NEVER_RETAINED"
 
 
+
 def test_workspace_all_roles_release_identity_and_db(volumes, monkeypatch):
     profile, _ = profile_fixture(volumes, monkeypatch)
     qualified = runtime.workspace_profile()
