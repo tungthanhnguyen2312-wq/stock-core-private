@@ -6,6 +6,7 @@ Explicit recovery streams the original once; it never seals a later recomputatio
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 import prospective_market_snapshot_contract as market
 import prospective_decision_retention as retention
@@ -127,6 +128,11 @@ class SealedBindings:
 
 
 def load_verified(ref, *, expected_snapshot_identity, session):
+    catalog_root = os.environ.get("STOCK_LOOKUP_EVIDENCE_CATALOG_ROOT")
+    if catalog_root and not ref.get("storage_location"):
+        from retained_evidence_catalog import original_path, t0_reference
+        resolved_index = original_path(Path(ref["path"]), root=Path(catalog_root))
+        ref = t0_reference(Path(catalog_root), resolved_index.parent / "prospective_decision_snapshot.json", ref)
     path = Path(ref["path"])
     if path.stat().st_size > 8*1024*1024: raise ValueError("T0_INDEX_SIZE_LIMIT")
     index = verify(json.loads(path.read_bytes()),"prospective_t0_seal_index")
@@ -136,7 +142,7 @@ def load_verified(ref, *, expected_snapshot_identity, session):
         receipt["snapshot_identity"] != expected_snapshot_identity or receipt["index_identity"] != index["artifact_identity"] or
         receipt["index_sha256"] != index["artifact_sha256"] or receipt["snapshot_file_sha256"] != index["snapshot_file_sha256"] or
         index["snapshot_file"] != "prospective_decision_snapshot.json" or
-        fingerprint(path.parent/index["snapshot_file"]) != receipt["snapshot_fingerprint"]):
+        not _snapshot_location_valid(ref, path, index, receipt)):
         raise ValueError("T0_INDEX_SNAPSHOT_OR_RECEIPT_BINDING_INVALID")
     for t,row in index["records"].items():
         if (row["ticker"] != t or row["session"] != session or
@@ -144,3 +150,30 @@ def load_verified(ref, *, expected_snapshot_identity, session):
             (not row["context_identity"] and row["technical_contract_version"] is not None)):
             raise ValueError("T0_INDEX_ENTRY_INVALID")
     return SealedBindings(index,receipt["artifact_identity"]) if index["evaluation_scope"] != "REPLAY_DIAGNOSTIC" and session >= dispatch.PRODUCTION_V2_START_SESSION else None
+
+
+def _snapshot_location_valid(ref, path, index, receipt):
+    snapshot = path.parent / index["snapshot_file"]
+    if not ref.get("storage_location"):
+        return fingerprint(snapshot) == receipt["snapshot_fingerprint"]
+    from retained_evidence_catalog import t0_location_valid
+    return t0_location_valid(ref, path, index, receipt)
+
+
+def register_portable_copy(original, location, receipt_path, *, t0_reference,
+                           artifact_identity, session, **kwargs):
+    """Compose original T0 qualification with the storage-only registration owner."""
+    from retained_evidence_catalog import register_copy, sha, require
+
+    def qualify(path, identity, day):
+        require(not t0_reference.get("storage_location"), "original native T0 reference required")
+        bindings = load_verified(t0_reference, expected_snapshot_identity=identity, session=day)
+        require(bindings is not None, "original T0 provenance unqualified")
+        index_path = Path(t0_reference["path"])
+        require(path == index_path.parent / "prospective_decision_snapshot.json", "T0 original path mismatch")
+        receipt = index_path.parent / "prospective_t0_snapshot_write_receipt.json"
+        return dict(reference=dict(t0_reference), index_sha256=sha(index_path), receipt_sha256=sha(receipt),
+                    original_fingerprint=fingerprint(path))
+
+    return register_copy(original, location, receipt_path, artifact_identity=artifact_identity,
+                         session=session, t0_qualification=qualify, **kwargs)

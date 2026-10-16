@@ -15,11 +15,37 @@ from tools import qualify_e4_infrastructure as e4
 READER = "prospective_decision_retention.py"
 ARCHIVE = "tests/fixtures/retention_reader_v1.py.txt"
 MANIFEST = "tests/fixtures/retention_reader_transition_v2.json"
+STORAGE_MANIFEST = "tests/fixtures/storage_portability_source_transition_v1.json"
+
+
+def _storage_prior_bytes(root: Path, relative: str, active: bytes) -> bytes:
+    """Conserve exact pre-storage sources without repinning either historical domain."""
+    manifest = root / STORAGE_MANIFEST
+    if not manifest.exists():
+        return active  # Released pre-storage checkout compatibility.
+    spec = json.loads(manifest.read_bytes())
+    if spec.get("contract_version") != "storage_portability_source_transition/v1":
+        raise ValueError("STORAGE_SOURCE_TRANSITION_INVALID")
+    row = spec["sources"].get(relative)
+    if row is None:
+        return active
+    expected_archive = "tests/fixtures/storage_portability_v1_sources/" + relative + ".txt"
+    if row["archive"] != expected_archive:
+        raise ValueError("STORAGE_SOURCE_ARCHIVE_PATH_INVALID")
+    prior = (root / expected_archive).read_bytes().replace(b"\r\n", b"\n")
+    pins = json.loads((root / "tests/fixtures/e2e3_frozen_sources.json").read_bytes())["source_sha256_lf"]
+    expected = (json.loads((root / MANIFEST).read_bytes())["active_sha256_lf"]
+                if relative == READER else pins[relative])
+    if (row["prior_sha256_lf"] != expected or hashlib.sha256(prior).hexdigest() != expected
+            or hashlib.sha256(active).hexdigest() != row["active_sha256_lf"]):
+        raise ValueError("STORAGE_SOURCE_TRANSITION_BINDING_INVALID")
+    return prior
 
 
 def historical_bytes(root: Path, relative: str) -> bytes:
     """Verify both sides of the one-file boundary before supplying legacy bytes."""
     content = (root / relative).read_bytes().replace(b"\r\n", b"\n")
+    content = _storage_prior_bytes(root, relative, content)
     if relative != READER:
         return content
     spec = json.loads((root / MANIFEST).read_bytes())

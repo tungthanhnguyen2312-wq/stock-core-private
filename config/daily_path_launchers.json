@@ -92,7 +92,7 @@
       ]
     },
     "tools/run_owner_daily.py": {
-      "ast_sha256": "171c0e2d6808ab34da98ec58bef879f54d4944f64d3d0624db0c79ab9971d468",
+      "ast_sha256": "5850c859d68ef2ee55527dea0616eb74562289fc5cfbad37534fa805b0181095",
       "reason": "Resolved dispatch plus exact caller AST; injected/unknown paths are not claimed as runtime proof.",
       "targets": [
         "daily_analysis_pipeline.py",
@@ -134,7 +134,7 @@
     "stocklookup.ps1": {
       "kind": "shell_dispatch",
       "reason": "Exact reviewed shell/CI command contract, normalized line endings.",
-      "sha256": "6765ce13f73000eacdf8a938d64efe1bd854d766bbe274a37d978e1153c5379c",
+      "sha256": "24f554750fdd78efaffa5c3be9db65f7054fff4217d9a9f26a75e72c32309c9f",
       "targets": [
         "stocklookup.py"
       ]

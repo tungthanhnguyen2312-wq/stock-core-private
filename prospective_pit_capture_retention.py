@@ -10,6 +10,7 @@ import json
 from collections import Counter, defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
+from retained_evidence_catalog import historical_paths, original_path
 
 from atomic_io import retain_immutable_bytes
 from governed_session_chain import CalendarCoverage, GovernedSessionChain, registered_outcome_horizons
@@ -33,7 +34,7 @@ def io_known_at():
 
 
 def _read(path):
-    return json.loads(Path(path).read_bytes())
+    return json.loads(original_path(Path(path)).read_bytes())
 
 
 def _retain_batch(root, family, value):
@@ -66,14 +67,14 @@ def retain_existing_calendar_probe(evidence, *, root):
 def load_calendars(root):
     directory = Path(root) / "operations-review/prospective-calendar-evidence-v1"
     rows = []
-    for path in sorted((directory / "receipts").glob("*.json")):
+    for path in historical_paths(Path(root), "operations-review/prospective-calendar-evidence-v1/receipts", "*.json"):
         value = _read(path)
         from governed_session_chain import verified_calendar
         verified_calendar(value)
         if path.stem != value["artifact_sha256"]: raise ValueError("CALENDAR_RECEIPT_PATH_MISMATCH")
         raw = directory / "raw" / value["payload_sha256"]
         # Bounded source body (normally ~257 dates), no date-only fabrication.
-        body = raw.read_bytes()
+        body = original_path(raw, root=Path(root)).read_bytes()
         if hashlib.sha256(body).hexdigest() != value["payload_sha256"] or len(body) != value["payload_bytes"]:
             raise ValueError("CALENDAR_RAW_BYTES_MISMATCH")
         if json.loads(body).get("workingDates") != value["sessions"]:
@@ -91,6 +92,8 @@ def calendar_evidence_at_cutoff(root, *, cutoff, static_path=None):
 
 def load_marker(root):
     path = Path(root) / STORE / "first_complete_capture_session.json"
+    from retained_evidence_catalog import guard_path
+    guard_path(Path(root), path)
     if not path.exists():
         return None
     value = capture.verify(_read(path), "first_complete_capture_session")
@@ -135,7 +138,7 @@ def listing_batch(evidence, *, session, root, created_at):
 
 def _previous_bindings(root, session, cutoff):
     # Read only the latest completed prior session's compact batch, once.
-    paths = [p for p in (Path(root) / STORE / "sessions").glob("*.json") if p.stem < session]
+    paths = [p for p in historical_paths(Path(root), STORE + "/sessions", "*.json") if p.stem < session]
     if not paths:
         return {}
     record = capture.verify(_read(max(paths)), "prospective_capture_complete_session")
@@ -283,7 +286,7 @@ def retain_registered_verifications(root, *, session, capture_result, verificati
 def load_chain(root, *, as_of):
     marker = load_marker(root)
     records = [capture.verify(_read(p), "prospective_capture_complete_session") for p in
-               sorted((Path(root) / STORE / "sessions").glob("*.json"))]
+               sorted(historical_paths(Path(root), STORE + "/sessions", "*.json"))]
     return GovernedSessionChain(records, calendar=CalendarCoverage(load_calendars(root), cutoff=as_of),
         as_of=as_of, first_complete_capture_session=marker["session"] if marker else None)
 
@@ -309,7 +312,9 @@ def verify_complete_session(root, value):
         binding["market_manifest_identity"] != manifest["artifact_identity"] or
         any(v["session"] != session or market._utc(v["created_at"], "created_at") > market._utc(known, "completion_known_at") for v in (binding, listing))):
         raise ValueError("RECOVERY_BATCH_BINDING_INVALID")
-    receipts = {r["artifact_identity"]: r for p in (Path(value["market_manifest"]["path"]).parent.parent / "receipts").glob("*.json")
+    manifest_path = original_path(Path(value["market_manifest"]["path"]), root=Path(root))
+    receipt_namespace = (manifest_path.parent.parent / "receipts").relative_to(Path(root)).as_posix()
+    receipts = {r["artifact_identity"]: r for p in historical_paths(Path(root), receipt_namespace, "*.json")
                 if (r := retention._verified(p))["artifact_identity"] in manifest["receipt_version_identities"]}
     if set(receipts) != set(manifest["receipt_version_identities"]): raise ValueError("RECOVERY_RECEIPTS_MISSING")
     complete = 0
@@ -348,7 +353,7 @@ def publish_first_marker(root, value):
             existing["capture_session_identity"] != value["artifact_identity"]):
             raise ValueError("FIRST_CAPTURE_MARKER_CONFLICT")
         return "ALREADY_PUBLISHED"
-    for path in (Path(root) / STORE / "sessions").glob("*.json"):
+    for path in historical_paths(Path(root), STORE + "/sessions", "*.json"):
         if path.stem < value["session"]:
             prior = verify_complete_session(root, _read(path))
             if prior["session"] < value["session"]: raise ValueError("EARLIER_COMPLETE_SESSION_EXISTS")
@@ -440,7 +445,7 @@ class CaptureIndex:
         # Every retained mismatch remains counted, including sessions older than
         # the rolling depth bound and capture-incomplete names. One batch at a
         # time keeps their full exact official rows out of the long-lived index.
-        for path in sorted((self.root / STORE / "verifications").glob("*/*.json")):
+        for path in sorted(historical_paths(self.root, STORE + "/verifications", "*/*.json")):
             session = path.parent.name
             value = capture.verify(_read(path), capture.VERIFICATION_CONTRACT + ":batch")
             self.scans["verification_batches"] += 1

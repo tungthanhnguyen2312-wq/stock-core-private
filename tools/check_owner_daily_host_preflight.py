@@ -177,7 +177,19 @@ def observe(root: Path, retained_root: Path | None = None) -> dict:
         disk = shutil.disk_usage("C:\\").free if os.name == "nt" else None
     except OSError:
         disk = None
-    return {**windows_memory(), "c_free_bytes": disk, "disk_path": "C:\\",
+    storage = None
+    if os.environ.get("STOCK_LOOKUP_WORKSPACE_PROFILE"):
+        try:
+            if str(ROOT) not in sys.path:
+                sys.path.insert(0, str(ROOT))
+            from runtime_paths import workspace_profile
+            from retained_evidence_catalog import capacity_admission
+            profile = workspace_profile()
+            storage = {"classification": "READY", "capacity": capacity_admission(
+                profile["capacity"], staging_bytes=profile["staging_bytes"], writer_bytes=profile["writer_bytes"])}
+        except (OSError, ValueError, KeyError, TypeError) as exc:
+            storage = {"classification": "BLOCKED", "reason": str(exc)}
+    return {**windows_memory(), "c_free_bytes": disk, "disk_path": "C:\\", "storage": storage,
             "pagefiles": inventory.get("pagefiles"), "pagefile_unit": "CIM_MEGABYTES",
             **process_summary(inventory.get("processes"), root, own_pid=os.getpid()),
             "repository": repository_observation(root),
@@ -191,6 +203,8 @@ def evaluate(observation: dict) -> dict:
     peak = int(size * 5.05) if isinstance(size, int) and size > 0 else None
     factor = max(1.0, peak / (7 * GIB)) if peak is not None else 1.0
     dimensions = {}
+    if observation.get("storage") is not None:
+        dimensions["storage"] = observation["storage"]
     reasons = []
 
     def dimension(name, value, green, floor, prefix):
