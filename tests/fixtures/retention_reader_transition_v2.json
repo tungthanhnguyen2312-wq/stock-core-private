@@ -1,0 +1,11 @@
+{
+  "contract_version": "retention_reader_source_transition/v2",
+  "milestone": "PROSPECTIVE_T0_REUSE_ORIGINATION_LINEAGE_CORRECTIVE_V1",
+  "reader_version": "prospective_t0_origination_lineage/v2",
+  "reader_path": "prospective_decision_retention.py",
+  "legacy_archive": "tests/fixtures/retention_reader_v1.py.txt",
+  "legacy_sha256_lf": "4e4dd90ffbd25d79dbb8feb003eae7ce5b5137fa904a681d6eb860c80a6215c6",
+  "active_sha256_lf": "44ac7c777fa66261fef048d1e10d9fed8adfc1a66e83c3e51bafd9bba00f7290",
+  "original_source_commit": "28e2d0e8b991433df4bd14bbd0939464e1679463",
+  "compatibility": "Legacy archive is verification-only. Active feedback and T0 verification receipt digests hash current source; no legacy receipt adoption, evidence/cache migration or production activation."
+}
