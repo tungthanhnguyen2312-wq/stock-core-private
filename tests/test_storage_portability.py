@@ -489,3 +489,27 @@ pathlib.Path(a.result_path).write_text(json.dumps(dict(status='PASS',session='20
     results = list(Path(roles["logs"]).glob("*.result.json"))
     assert len(results) == 1
     assert Path(json.loads(results[0].read_bytes())["observed_runtime"]) == Path(roles["runtime"])
+
+
+def test_draft_provider_worker_bundle_pins_portable_runtime_paths_without_profile_closure(tmp_path):
+    """The worker bundle carries runtime_paths.py alone; its profile branch must stay unreachable there."""
+    import os
+    import provider_build_manifest as build_manifest
+    root = Path(__file__).resolve().parents[1]
+    manifest = json.loads((root / "config" / "provider_build_manifest.json").read_text(encoding="utf-8"))
+    bound = {item["relative_path"]: item for item in manifest["worker"]["source_files"]}
+    assert bound["runtime_paths.py"] == build_manifest.file_identity(root / "runtime_paths.py", "runtime_paths.py")
+    assert "retained_evidence_catalog.py" not in bound
+    assert manifest["status"] == build_manifest.STATUS_DRAFT and manifest["launch_authorized"] is False
+    assert runtime.WORKSPACE_PROFILE_ENV not in manifest["environment"]["allowed_names"]
+    bundle = tmp_path / "bundle"
+    bundle.mkdir()
+    shutil.copyfile(root / "runtime_paths.py", bundle / "runtime_paths.py")
+    environment = {k: v for k, v in os.environ.items()
+                   if k not in {runtime.WORKSPACE_PROFILE_ENV, runtime.RUNTIME_ROOT_ENV}}
+    code = ("import sys; sys.path.insert(0, sys.argv[1]); import runtime_paths as r; "
+            "assert r.workspace_environment() == {}; r.runtime_root(sys.argv[1]); "
+            "assert 'retained_evidence_catalog' not in sys.modules")
+    result = subprocess.run([sys.executable, "-I", "-S", "-B", "-c", code, str(bundle)], cwd=bundle,
+                            env=environment, capture_output=True, text=True, timeout=30)
+    assert result.returncode == 0, result.stdout + result.stderr
