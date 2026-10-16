@@ -69,19 +69,33 @@ def test_old_verifier_cache_is_not_adopted(reuse):
 
 
 def test_actual_historical_verifier_rejects_new_receipt_and_reverse(reuse):
-    legacy = types.ModuleType("isolated_legacy_retention")
-    legacy.__file__ = str(ROOT / ARCHIVE)
-    exec(compile(historical_bytes(ROOT, "prospective_decision_retention.py"), ARCHIVE, "exec"), legacy.__dict__)
-    old_stream = types.ModuleType("isolated_historical_stream")
-    old_stream.__file__ = streaming.__file__
+    # Exec the historical bytes of the stream and of every E4 V1 source whose historical
+    # bytes differ from active source (the archived reader and any storage-prior source),
+    # so the isolated stream is the original verifier, not active code with one swap.
+    historical, modules = {}, {}
+    for _, relative in e4.V1_SOURCES:
+        content = historical_bytes(ROOT, relative)
+        if relative == "prospective_feedback_streaming.py" or content != (ROOT / relative).read_bytes().replace(b"\r\n", b"\n"):
+            historical[relative[:-3].replace("/", ".")] = (relative, content)
+    assert "prospective_decision_retention" in historical
     original_import = builtins.__import__
-    def old_import(name, *args, **kwargs):
-        if name == "prospective_decision_retention": return legacy
-        if name == "prospective_feedback_streaming": return old_stream
-        return original_import(name, *args, **kwargs)
-    old_stream.__dict__["__builtins__"] = {**vars(builtins), "__import__": old_import}
-    exec(compile(Path(streaming.__file__).read_text(encoding="utf-8"), streaming.__file__, "exec"), old_stream.__dict__)
-    old_stream.import_module = lambda name: legacy if name == "prospective_decision_retention" else importlib.import_module(name)
+    def load(name):
+        if name not in modules:
+            relative, content = historical[name]
+            path = reuse["root"] / "historical-sources" / relative
+            path.parent.mkdir(parents=True, exist_ok=True); path.write_bytes(content)
+            module = modules[name] = types.ModuleType("isolated_historical_" + name)
+            module.__file__ = str(path)
+            module.__dict__["__builtins__"] = {**vars(builtins), "__import__": old_import}
+            exec(compile(content, str(path), "exec"), module.__dict__)
+            if "import_module" in module.__dict__:
+                module.import_module = lambda n: load(n) if n in historical else importlib.import_module(n)
+        return modules[name]
+    def old_import(name, globals=None, locals=None, fromlist=(), level=0):
+        if level == 0 and name in historical: return load(name)
+        return original_import(name, globals, locals, fromlist, level)
+    old_stream = load("prospective_feedback_streaming")
+    assert old_stream.retention is modules["prospective_decision_retention"]
     assert old_stream.code_digest() == legacy_source_identity(ROOT, version="v1")["code_digest"]
     cache = reuse["root"] / "bidirectional-cache"
     streaming.load_snapshot_handle(reuse["path"], cache)
