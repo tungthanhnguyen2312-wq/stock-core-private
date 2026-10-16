@@ -28,7 +28,8 @@ produced from public retained artifacts alone. PORTFOLIO / UNRESOLVED_PORTFOLIO 
 require a private local portfolio and degrade to an explicit ``PRIVATE_PORTFOLIO_NOT_SUPPLIED``
 status when one is not present -- never a silent empty result indistinguishable from "no holdings".
 
-Local-only output, always: ``%USERPROFILE%\\.stocklookup\\action_center\\<session>\\``. Never
+Local-only output: the qualified workspace's private sibling when explicitly selected,
+otherwise ``%USERPROFILE%\\.stocklookup\\action_center\\<session>\\``. Never
 written to Git, ``operations-review/``, the Dashboard, or the public
 ``current_research_ai_handoff_packet``/``stocklookup-ai-handoffs`` path -- even the
 private-portfolio-free baseline, because the whole point of this product is the owner's own local
@@ -88,6 +89,13 @@ class ActionCenterError(ValueError):
 def default_action_center_root() -> Path:
     """The sole default local storage root; deliberately outside Git, a sibling of the private
     portfolio root but independent of it -- this product does not require a private portfolio."""
+    from runtime_paths import workspace_profile
+    profile = workspace_profile()
+    if profile:
+        destination = profile["paths"]["logs"].parent / "private-action-center"
+        if destination.is_symlink() or destination.is_junction():
+            raise ActionCenterError("PRIVATE_ACTION_CENTER_ROOT_REDIRECTED")
+        return destination
     user_profile = os.environ.get("USERPROFILE")
     return Path(user_profile) / ".stocklookup" / "action_center" if user_profile else Path.home() / ".stocklookup" / "action_center"
 

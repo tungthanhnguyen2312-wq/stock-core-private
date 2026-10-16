@@ -75,6 +75,11 @@ capacity, release and session gates. Absence preserves legacy operation. Source
 release does not install it. Installation/removal requires the operational gates,
 writer exclusion and preserved rollback state; it never grants evidence authority.
 
+With a qualified workspace selected, private Action Center output uses the
+`private-action-center` sibling beside the configured logs, outside all source,
+runtime, Dashboard and handoff directories. Its original private destination
+restrictions still apply. Without a selected profile, the legacy user-local root remains.
+
 Capacity admission separately verifies system and workload volumes, free bytes and
 directory create rights without writing a probe. Required workload free space is
 `max(configured reserve, 140 GiB floor) + staging_bytes + writer_bytes`; the system
