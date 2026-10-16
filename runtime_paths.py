@@ -37,6 +37,12 @@ def workspace_profile(*, observer=None) -> dict | None:
         require(set(roles) == set(ROLE_NAMES), "workspace roles incomplete")
         require(observer(parent) == profile["hot_volume"] and profile["hot_volume"].get("healthy") is True,
                 "workspace volume wrong/unavailable")
+        if "capacity" in profile:
+            workload = profile["capacity"]["workload"]
+            workload_path = Path(workload["path"])
+            require(workload_path.is_absolute() and workload_path.resolve() == parent.resolve()
+                    and workload["volume"] == profile["hot_volume"],
+                    "workspace workload capacity binding mismatch")
         paths = {}
         for role, name in ROLE_NAMES.items():
             path = Path(roles[role])

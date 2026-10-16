@@ -26,7 +26,7 @@
     "runtime_paths.py": {
       "archive": "tests/fixtures/storage_portability_v1_sources/runtime_paths.py.txt",
       "prior_sha256_lf": "0b99eff71358db411ebf5b27b4e0a3afdb32d5e07680ab113d426df620b1a72c",
-      "active_sha256_lf": "8335e98f8b1af1a36d003e0d15d4d6c6547699b1e6b9a7afc32addb50182f18a"
+      "active_sha256_lf": "9063580b26becacadaf9b2e89ef58457311dc191b0a11df9b64e48a92d916b4f"
     },
     "tools/run_owner_daily.py": {
       "archive": "tests/fixtures/storage_portability_v1_sources/tools/run_owner_daily.py.txt",

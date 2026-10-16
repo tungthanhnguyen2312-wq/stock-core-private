@@ -70,6 +70,8 @@ floor is 25 GiB on its distinct pinned volume. Invalid lower reserves refuse.
 Caller estimates require later measurement; they are not capacity guarantees.
 The actual Daily memory/commit/writer gate remains unchanged. Configured storage
 admission adds a separate BLOCKED dimension; C system observation is retained.
+The workload guard must bind the exact qualified workspace parent and hot-volume
+identity; a different disk's free space cannot qualify the hot runtime.
 Cold availability is checked only for an explicitly requested archived dependency.
 
 ## Immutable identity and storage proofs

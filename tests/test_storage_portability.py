@@ -105,7 +105,8 @@ def test_workspace_all_roles_release_identity_and_db(volumes, monkeypatch):
         monkeypatch.delenv(runtime.WORKSPACE_PROFILE_ENV)
 
 
-@pytest.mark.parametrize("fault", ["wrong_guid", "missing_disk", "missing_role", "sibling_mismatch"])
+@pytest.mark.parametrize("fault", ["wrong_guid", "missing_disk", "missing_role", "sibling_mismatch",
+                                 "capacity_wrong_volume", "capacity_wrong_path"])
 def test_workspace_fail_closed(volumes, monkeypatch, fault):
     profile, selected = profile_fixture(volumes, monkeypatch)
     if fault == "wrong_guid":
@@ -114,8 +115,12 @@ def test_workspace_fail_closed(volumes, monkeypatch, fault):
         profile["parent"] += "-missing"
     elif fault == "missing_role":
         del profile["roles"]["consumer"]
-    else:
+    elif fault == "sibling_mismatch":
         profile["roles"]["dashboard"] = str(volumes[0])
+    elif fault == "capacity_wrong_volume":
+        profile["capacity"]["workload"]["volume"] = volumes[3]["W"]
+    else:
+        profile["capacity"]["workload"]["path"] = str(volumes[2])
     selected.write_bytes(vault.canonical(profile))
     with pytest.raises(vault.Refused):
         runtime.workspace_profile()
