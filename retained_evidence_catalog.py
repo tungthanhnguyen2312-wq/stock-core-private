@@ -5,7 +5,9 @@ import json
 import os
 from pathlib import Path
 
-from tools.vault_snapshot import Refused, safe_path, sha
+from tools.vault_snapshot import Refused, safe_path, sha, require
+from tools import vault_snapshot as vault
+from stocklookup_core.evidence import storage_portability as location_core
 
 SCHEMA = "retained_evidence_cold_catalog/v1"
 STATES = {"PRESENT_ON_C", "PRESENT_QUALIFIED", "ARCHIVED_COLD", "NEVER_RETAINED", "UNKNOWN_OR_CONFLICTED"}
@@ -84,7 +86,6 @@ def resolve(root: Path, relative_path: str, *, session_identity: str | None = No
         if path.stat().st_size != entry["original_size"] or sha(path) != entry["sha256"]:
             raise EvidenceIntegrityError("LOCAL_EVIDENCE_CORRUPT:" + relative_path)
     if state == "PRESENT_QUALIFIED":
-        from stocklookup_core.storage_portability import verify_location
         target, proof = verify_location(entry["storage_location"], original_path=entry["original_path"],
                                         artifact_identity=entry["artifact_identity"], session=entry["session_identity"])
         if (target.resolve() != path.resolve() or proof["sha256"] != entry["sha256"]
@@ -176,3 +177,48 @@ def t0_reference(root: Path, snapshot_path: Path, reference: dict) -> dict:
             return {**reference, "path": str(Path(snapshot_path).parent / "prospective_t0_seal_index.json"),
                     "storage_location": entry["storage_location"], "original_snapshot_path": entry["original_path"]}
     return dict(reference)
+
+
+# Composition belongs here: the evidence-layer primitives never import root owners or tools.
+def native_volume(path):
+    return vault.native_volume(path)
+
+
+def qualify_volume(*args, **kwargs):
+    return location_core.qualify_volume(*args, backend=vault, **kwargs)
+
+
+def capacity_admission(*args, **kwargs):
+    return location_core.capacity_admission(*args, backend=vault, **kwargs)
+
+
+def verify_location(*args, **kwargs):
+    return location_core.verify_location(*args, backend=vault, **kwargs)
+
+
+def register_copy(*args, **kwargs):
+    return location_core.register_copy(*args, backend=vault, **kwargs)
+
+
+def restore_registered(*args, **kwargs):
+    return location_core.restore_registered(*args, backend=vault, **kwargs)
+
+
+def immutable_candidate(path):
+    return location_core.immutable_candidate(path, backend=vault)
+
+
+def t0_location_valid(ref, path, index, receipt):
+    snapshot = path.parent / index["snapshot_file"]
+    target, proof = verify_location(ref["storage_location"], original_path=ref["original_snapshot_path"],
+                                    artifact_identity=index["snapshot_identity"], session=index["session"])
+    original = proof.get("t0") or {}
+    # Preserve original index/receipt native bytes, fingerprint and exact reference.
+    # A storage-only restore proof cannot upgrade an unqualified original T0.
+    return (target.resolve() == snapshot.resolve()
+            and proof["sha256"] == index["snapshot_file_sha256"]
+            and original.get("original_fingerprint") == receipt["snapshot_fingerprint"]
+            and original.get("index_sha256") == sha(path)
+            and original.get("receipt_sha256") == sha(path.parent / "prospective_t0_snapshot_write_receipt.json")
+            and (original.get("reference") or {}).get("artifact_identity") == ref["artifact_identity"]
+            and (original.get("reference") or {}).get("write_receipt_identity") == ref["write_receipt_identity"])

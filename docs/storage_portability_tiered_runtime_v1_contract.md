@@ -74,7 +74,7 @@ Cold availability is checked only for an explicitly requested archived dependenc
 
 ## Immutable identity and storage proofs
 
-`stocklookup_core.storage_portability.register_copy` is an explicitly invoked,
+`retained_evidence_catalog.register_copy` is an explicitly invoked,
 bounded offline API for an already copied immutable file. It reads locked original
 and copied files, compares streamed native SHA, verifies volume and stable native
 fingerprints, then publishes an exclusive immutable receipt. The caller pins the
@@ -90,7 +90,7 @@ location never changes the historical source identity or knowledge time.
 It distinguishes invalid proof/identity, wrong or unavailable volume and changed
 content through explicit refusal reasons. No pathname-prefix replacement exists.
 
-For T0, registration additionally calls the original seal verifier against the
+For T0, `prospective_t0_seal_index.register_portable_copy` additionally calls the original seal verifier against the
 original reference. It pins the untouched original index/write-receipt native SHAs,
 reference identities and original T0 fingerprint. `load_verified` accepts a copied
 snapshot only when both the original seal and this separate location proof match.
@@ -101,8 +101,9 @@ identity, byte hash, session and cutoff checks. Storage qualification is additiv
 Historical diagnostic/V1 behavior and V2 technical-policy gates remain unchanged.
 
 No sealed JSON, manifest, capture binding, index or original receipt is rewritten.
-Streaming verification/settled-cache code digests include both catalog and storage
-proof modules; native file fingerprints and byte hashes still isolate new copies.
+Storage verification and opt-in feedback reuse digests include both catalog and
+storage proof modules. E4's frozen V1 digest construction stays intact; registered
+storage inputs have a separate reuse domain. Native fingerprints and hashes still isolate copies.
 
 ## Catalog, archive and explicit restoration
 

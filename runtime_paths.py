@@ -24,13 +24,15 @@ def workspace_profile(*, observer=None) -> dict | None:
     selected = os.environ.get(WORKSPACE_PROFILE_ENV, "").strip()
     if not selected:
         return None
-    from tools.vault_snapshot import Refused, native_volume, require
+    from retained_evidence_catalog import Refused, native_volume, require
     observer = observer or native_volume
     try:
         profile = json.loads(Path(selected).read_bytes())
         require(profile.get("schema") == "stocklookup_workspace/v1", "workspace schema invalid")
         parent = Path(profile["parent"])
         require(parent.is_absolute() and parent.is_dir(), "workspace parent missing/relative")
+        require(all(not node.is_symlink() and not node.is_junction() for node in (parent, *parent.parents)),
+                "workspace parent redirected")
         roles = profile["roles"]
         require(set(roles) == set(ROLE_NAMES), "workspace roles incomplete")
         require(observer(parent) == profile["hot_volume"] and profile["hot_volume"].get("healthy") is True,

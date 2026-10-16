@@ -156,17 +156,24 @@ def _snapshot_location_valid(ref, path, index, receipt):
     snapshot = path.parent / index["snapshot_file"]
     if not ref.get("storage_location"):
         return fingerprint(snapshot) == receipt["snapshot_fingerprint"]
-    from stocklookup_core.storage_portability import verify_location
-    from tools.vault_snapshot import sha
-    target, proof = verify_location(ref["storage_location"], original_path=ref["original_snapshot_path"],
-                                    artifact_identity=index["snapshot_identity"], session=index["session"])
-    original = proof.get("t0") or {}
-    # Preserve original index/receipt native bytes, fingerprint and exact reference.
-    # A storage-only restore proof cannot upgrade an unqualified original T0.
-    return (target.resolve() == snapshot.resolve()
-            and proof["sha256"] == index["snapshot_file_sha256"]
-            and original.get("original_fingerprint") == receipt["snapshot_fingerprint"]
-            and original.get("index_sha256") == sha(path)
-            and original.get("receipt_sha256") == sha(path.parent / "prospective_t0_snapshot_write_receipt.json")
-            and (original.get("reference") or {}).get("artifact_identity") == ref["artifact_identity"]
-            and (original.get("reference") or {}).get("write_receipt_identity") == ref["write_receipt_identity"])
+    from retained_evidence_catalog import t0_location_valid
+    return t0_location_valid(ref, path, index, receipt)
+
+
+def register_portable_copy(original, location, receipt_path, *, t0_reference,
+                           artifact_identity, session, **kwargs):
+    """Compose original T0 qualification with the storage-only registration owner."""
+    from retained_evidence_catalog import register_copy, sha, require
+
+    def qualify(path, identity, day):
+        require(not t0_reference.get("storage_location"), "original native T0 reference required")
+        bindings = load_verified(t0_reference, expected_snapshot_identity=identity, session=day)
+        require(bindings is not None, "original T0 provenance unqualified")
+        index_path = Path(t0_reference["path"])
+        require(path == index_path.parent / "prospective_decision_snapshot.json", "T0 original path mismatch")
+        receipt = index_path.parent / "prospective_t0_snapshot_write_receipt.json"
+        return dict(reference=dict(t0_reference), index_sha256=sha(index_path), receipt_sha256=sha(receipt),
+                    original_fingerprint=fingerprint(path))
+
+    return register_copy(original, location, receipt_path, artifact_identity=artifact_identity,
+                         session=session, t0_qualification=qualify, **kwargs)

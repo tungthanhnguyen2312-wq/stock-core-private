@@ -183,7 +183,7 @@ def observe(root: Path, retained_root: Path | None = None) -> dict:
             if str(ROOT) not in sys.path:
                 sys.path.insert(0, str(ROOT))
             from runtime_paths import workspace_profile
-            from stocklookup_core.storage_portability import capacity_admission
+            from retained_evidence_catalog import capacity_admission
             profile = workspace_profile()
             storage = {"classification": "READY", "capacity": capacity_admission(
                 profile["capacity"], staging_bytes=profile["staging_bytes"], writer_bytes=profile["writer_bytes"])}

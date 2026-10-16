@@ -14,7 +14,7 @@ import pytest
 import runtime_paths as runtime
 import retained_evidence_catalog as catalog
 import prospective_t0_seal_index as seals
-from stocklookup_core import storage_portability as storage
+import retained_evidence_catalog as storage
 from tools import vault_snapshot as vault
 
 
@@ -161,7 +161,7 @@ def test_portable_t0_original_copy_and_adversaries(volumes):
     assert seals.fingerprint(target) != seals.fingerprint(original)
     with pytest.raises(ValueError, match="BINDING_INVALID"):
         seals.load_verified(copied_ref, expected_snapshot_identity="snapshot:original", session="2026-10-05")
-    proof = storage.register_copy(original, target, hot / "location.json", artifact_identity="snapshot:original",
+    proof = seals.register_portable_copy(original, target, hot / "location.json", artifact_identity="snapshot:original",
         session="2026-10-05", expected_volume=ids["T"], provenance={"operation": "operation:original"}, t0_reference=ref)
     copied_ref.update(storage_location=proof, original_snapshot_path=str(original))
     bindings = seals.load_verified(copied_ref, expected_snapshot_identity="snapshot:original", session="2026-10-05")
@@ -199,7 +199,7 @@ def archive_fixture(volumes):
     manifest_rel = "snapshots/" + result["snapshot_identity"] + "/manifest.json"
     manifest = json.loads((cold / manifest_rel).read_bytes())
     row = next(row for row in manifest["files"] if row["relative_path"] == rel)
-    archive_proof = storage.register_copy(original, cold / row["vault_path"], hot / "archive-proof.json",
+    archive_proof = seals.register_portable_copy(original, cold / row["vault_path"], hot / "archive-proof.json",
         artifact_identity="snapshot:original", session="2026-10-05", expected_volume=ids["W"],
         provenance=result, t0_reference=t0_ref)
     entry = dict(relative_path=rel, original_path=str(original), session_identity="2026-10-05",
@@ -285,9 +285,11 @@ def register_fixture_tree(source, hot, ids, *, snapshot=None, reference=None):
         shutil.copyfile(original, target)
         is_t0 = original == snapshot
         identity = json.loads(original.read_bytes()).get("snapshot_identity") if is_t0 else "fixture:" + vault.sha(original)
-        proof = storage.register_copy(original, target, hot / ("proof-" + str(number) + ".json"),
+        register = seals.register_portable_copy if is_t0 else storage.register_copy
+        t0_kwargs = {"t0_reference": reference} if is_t0 else {}
+        proof = register(original, target, hot / ("proof-" + str(number) + ".json"),
             artifact_identity=identity, session="2026-10-05", expected_volume=ids["T"],
-            provenance={"fixture": "immutable exact synthetic closure"}, t0_reference=reference if is_t0 else None)
+            provenance={"fixture": "immutable exact synthetic closure"}, **t0_kwargs)
         entries.append(dict(relative_path=rel, original_path=str(original), session_identity="2026-10-05",
             artifact_identity=identity, artifact_role="t0_snapshot" if is_t0 else "fixture_dependency",
             state="PRESENT_QUALIFIED", original_size=original.stat().st_size, sha256=vault.sha(original),

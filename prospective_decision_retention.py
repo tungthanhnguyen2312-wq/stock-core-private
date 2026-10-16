@@ -529,8 +529,8 @@ def _original_reuse_reasons(root, path, snapshot, handoff, operations):
                        "device": stat.st_dev, "inode": stat.st_ino}
         fingerprint_valid = receipt.get("snapshot_fingerprint") == fingerprint
         if ref.get("storage_location"):
-            from prospective_t0_seal_index import _snapshot_location_valid
-            fingerprint_valid = _snapshot_location_valid(ref, ref_path, index, receipt)
+            from retained_evidence_catalog import t0_location_valid
+            fingerprint_valid = t0_location_valid(ref, ref_path, index, receipt)
         if (ref.get("artifact_identity") != index["artifact_identity"] or
             ref.get("write_receipt_identity") != receipt["artifact_identity"] or
             index.get("snapshot_identity") != identity or receipt.get("snapshot_identity") != identity or
