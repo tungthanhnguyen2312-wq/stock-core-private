@@ -223,11 +223,13 @@ def test_frozen_sources_e5_foundations_and_financial_authority_pins_are_unchange
     assert not set(amended)&({path for _,path in identity.V1_SOURCES}|set(identity.V2_SOURCES))
     for path in sorted(protected):
         original=subprocess.check_output(['git','show',BASE+':'+path],cwd=ROOT).replace(b'\r\n',b'\n')
-        current=(ROOT/path).read_bytes().replace(b'\r\n',b'\n')
+        from tools.verify_retention_reader_transition import historical_bytes
+        current=historical_bytes(ROOT, path)
         if path in amended:
             assert hashlib.sha256(original).hexdigest()==amended[path]['base_sha256_lf'],path
             assert hashlib.sha256(current).hexdigest()==amended[path]['sha256_lf']==frozen[path],path
             continue
         assert current==original,path
-    assert identity.source_identity(ROOT,version='v1')['code_digest']=='fa79baadcca197493b9ca70067fbd153f5e8bb7f50dfb6dbc6da53f253483d46'
-    assert identity.source_identity(ROOT,version='v2')['code_digest']=='07c2a363df0e91a1dee230f0316a081249b247f7aa74bd67e04e45b1d1886567'
+    from tools.verify_retention_reader_transition import legacy_source_identity
+    assert legacy_source_identity(ROOT,version='v1')['code_digest']=='fa79baadcca197493b9ca70067fbd153f5e8bb7f50dfb6dbc6da53f253483d46'
+    assert legacy_source_identity(ROOT,version='v2')['code_digest']=='07c2a363df0e91a1dee230f0316a081249b247f7aa74bd67e04e45b1d1886567'

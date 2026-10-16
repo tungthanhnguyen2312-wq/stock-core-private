@@ -238,7 +238,8 @@ def test_offline_qualifier_executes_candidate_and_preserves_v1_sources():
     assert all(row["byte_parity"] for row in qualified["outputs"])
     manifest = json.loads((ROOT / "tests/fixtures/e2e3_frozen_sources.json").read_text(encoding="utf-8"))
     for path, expected in manifest["source_sha256_lf"].items():
-        assert hashlib.sha256((ROOT / path).read_bytes().replace(b"\r\n", b"\n")).hexdigest() == expected
+        from tools.verify_retention_reader_transition import historical_bytes
+        assert hashlib.sha256(historical_bytes(ROOT, path)).hexdigest() == expected
 
 
 def baseline_module(relative):

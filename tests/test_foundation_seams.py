@@ -129,7 +129,8 @@ assert 'prospective_decision_retention' not in sys.modules
 def test_frozen_source_and_relocation_contracts_remain_exact():
     manifest = json.loads((ROOT / "tests/fixtures/e2e3_frozen_sources.json").read_text(encoding="utf-8"))
     for filename, expected in manifest["source_sha256_lf"].items():
-        assert hashlib.sha256((ROOT / filename).read_bytes().replace(b"\r\n", b"\n")).hexdigest() == expected, filename
+        from tools.verify_retention_reader_transition import historical_bytes
+        assert hashlib.sha256(historical_bytes(ROOT, filename)).hexdigest() == expected, filename
     layout = json.loads((ROOT / "config/repository_layout.json").read_text(encoding="utf-8"))
     # Every addition belongs to an exact reviewed, pairwise-disjoint cohort map.
     bulk = json.loads((ROOT / "tests/fixtures/bulk_root_package_consolidation_relocations.json").read_text(encoding="utf-8"))

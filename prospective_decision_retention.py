@@ -26,6 +26,7 @@ from typing import Any, Callable, Mapping, Sequence
 CONTRACT_VERSION = "prospective_decision_snapshot/v1"
 CONDITION_CONTRACT_VERSION = "retained_strategy_boundary_condition/v1"
 HEALTH_CONTRACT_VERSION = "prospective_decision_corpus_health/v2"
+LINEAGE_READER_VERSION = "prospective_t0_origination_lineage/v2"
 SNAPSHOT_PREFIX = "prospective_decision_snapshot:"
 RECORD_PREFIX = "prospective_decision_snapshot_record:"
 
@@ -433,16 +434,159 @@ def _operation_manifests(root: Path) -> dict[str, dict[str, Any]]:
     return rows
 
 
-def _handoff_by_snapshot(root: Path) -> dict[str, dict[str, Any]]:
-    result: dict[str, dict[str, Any]] = {}
+def _handoff_by_snapshot(root: Path) -> dict[str, list[dict[str, Any]]]:
+    result: dict[str, list[dict[str, Any]]] = {}
     base = root / "operations-review" / "canonical-post-close-v1"
     for path in sorted(base.glob("*/session_handoff_bundle.json")) if base.is_dir() else []:
         bundle = _load(path)
         snapshot = (bundle or {}).get("prospective_decision_snapshot") or {}
         identity = snapshot.get("identity") if isinstance(snapshot, Mapping) else None
         if isinstance(identity, str) and identity:
-            result[identity] = {"path": _relative(root, path), "bundle": bundle}
+            result.setdefault(identity, []).append({"path": _relative(root, path), "bundle": bundle})
     return result
+
+
+def _verified_origination_operation(root, operation, *, identity, session, decision):
+    """Verify the existing operation hash domain; never infer provenance from a date."""
+    from stocklookup_core.evidence.field_identity import stable_id
+
+    if not isinstance(operation, Mapping):
+        return False
+    manifest = operation["manifest"]
+    body = {k: v for k, v in manifest.items() if k != "operation_identity"}
+    try:
+        expected = "daily_research_session_operation:" + stable_id(body)
+        path = root / "operations-review/daily-research-session-operations-v1" / session / expected.split(":")[1] / "run_manifest.json"
+    except (TypeError, ValueError):
+        return False
+    return bool(identity == expected == manifest.get("operation_identity") and
+                (root / operation["path"]).resolve() == path.resolve() and
+                manifest.get("contract_version") == "daily_research_session_operation/v1" and
+                manifest.get("market_session") == session and
+                manifest.get("generation_context") == "DAILY_PRODUCER_RETAINED_COMPLETED_SESSION" and
+                (manifest.get("outputs") or {}).get("integrated_investment_decision_product") == decision)
+
+
+def _original_reuse_reasons(root, path, snapshot, handoff, operations):
+    """Two independent operation proofs joined only by the verified original seal.
+
+    Called only for explicit reuse/mismatches. Existing same-operation admission is
+    unchanged. No publication, cache writes, current-view reconstruction or prices.
+    """
+    bundle = handoff["bundle"]
+    bound = bundle.get("prospective_decision_snapshot") or {}
+    session = snapshot.get("session")
+    identity = snapshot.get("snapshot_identity")
+    source = snapshot.get("source_integrated_decision_artifact") or {}
+    original = snapshot.get("daily_session_operation_identity")
+    later = bundle.get("daily_session_operation_identity")
+    decision = source.get("artifact_identity")
+    later_decision = bundle.get("integrated_investment_decision_product_identity")
+    reasons = []
+    if bound.get("retention") != "ORIGINAL_SESSION_T0_REUSED" or bound.get("status") != "RETAINED":
+        reasons.append("ORIGINAL_T0_REUSE_NOT_PROVEN")
+    if bound.get("identity") != identity or bundle.get("session") != session:
+        reasons.append("ORIGINAL_T0_REUSE_SCOPE_MISMATCH")
+    for value in (decision, later_decision):
+        prefix = "integrated_investment_decision_product/v1:"
+        suffix = value.removeprefix(prefix) if isinstance(value, str) else ""
+        if not isinstance(value, str) or not value.startswith(prefix) or len(suffix) != 64 or any(c not in "0123456789abcdef" for c in suffix):
+            reasons.append("REUSE_DECISION_SOURCE_IDENTITY_INVALID")
+    if source.get("session") != session or source.get("contract_version") != "integrated_investment_decision_product/v1" or source.get("artifact_sha256") != str(decision).split(":")[-1]:
+        reasons.append("ORIGINAL_T0_SOURCE_BINDING_INVALID")
+    if not _verified_origination_operation(root, operations.get(original), identity=original, session=session, decision=decision):
+        reasons.append("ORIGINAL_T0_OPERATION_PROOF_INVALID")
+    if not _verified_origination_operation(root, operations.get(later), identity=later, session=session, decision=later_decision):
+        reasons.append("REUSE_HANDOFF_OPERATION_PROOF_INVALID")
+    if bound.get("source_integrated_decision_artifact_identity") != decision:
+        reasons.append("REUSE_HANDOFF_ORIGINAL_SOURCE_MISMATCH")
+    if not isinstance(bound.get("path"), str) or (root / bound["path"]).resolve() != path.resolve():
+        reasons.append("REUSE_HANDOFF_SNAPSHOT_PATH_MISMATCH")
+    if reasons:
+        return sorted(set(reasons))
+    try:
+        import prospective_market_snapshot_contract as market
+
+        ref = dict(bound.get("seal_index") or {})
+        ref_path = root / ref["path"]
+        if ref.get("status") != "RETAINED" or ref_path.resolve() != (path.parent / "prospective_t0_seal_index.json").resolve():
+            raise ValueError("SEAL_PATH_OR_STATUS")
+        receipt_path = path.parent / "prospective_t0_snapshot_write_receipt.json"
+        if ref_path.stat().st_size > 8 * 1024 * 1024 or receipt_path.stat().st_size > 64 * 1024:
+            raise ValueError("SEAL_SIZE_LIMIT")
+        index, receipt = _load(ref_path), _load(receipt_path)
+        # Consume the existing seal interface's exact content-identity domains.
+        # No import of its orchestration/technical dispatch closure is needed to
+        # prove origination, and no technical-context authority is granted here.
+        for value, kind in ((index, "prospective_t0_seal_index"), (receipt, "prospective_t0_snapshot_write_receipt")):
+            if value.get("contract_version") != kind + "/v1" or any(value.get(k) != v for k, v in market.content_identity(value, kind=kind).items()):
+                raise ValueError("SEAL_CONTENT_IDENTITY")
+        stat = path.stat()
+        fingerprint = {"bytes": stat.st_size, "mtime_ns": stat.st_mtime_ns, "ctime_ns": stat.st_ctime_ns,
+                       "device": stat.st_dev, "inode": stat.st_ino}
+        if (ref.get("artifact_identity") != index["artifact_identity"] or
+            ref.get("write_receipt_identity") != receipt["artifact_identity"] or
+            index.get("snapshot_identity") != identity or receipt.get("snapshot_identity") != identity or
+            index.get("session") != session or receipt.get("session") != session or
+            index.get("snapshot_file") != path.name or receipt.get("snapshot_fingerprint") != fingerprint or
+            receipt.get("index_identity") != index["artifact_identity"] or receipt.get("index_sha256") != index["artifact_sha256"] or
+            receipt.get("snapshot_file_sha256") != index.get("snapshot_file_sha256") or
+            index.get("operation_identity") != original or index.get("source_integrated_decision_artifact") != source or
+            index.get("evaluation_scope") != "ORIGINAL_T0_VERIFIED_PROJECTION" or
+            index.get("authority_status") != "SNAPSHOT_DERIVED_INDEX_ONLY" or
+            receipt.get("index_created_at") != index.get("index_created_at") or
+            len(index["records"]) != snapshot.get("decision_count") or not index["records"]):
+            raise ValueError("SEAL_ORIGINATION_BINDING")
+        # Use the writer's original selection rule, never a newly sealed competing
+        # same-date snapshot. This does not qualify or publish a capture session.
+        capture_path = root / "operations-review/prospective-pit-capture-v1/sessions" / (session + ".json")
+        if capture_path.exists() and capture_path.stat().st_size > 1024 * 1024:
+            raise ValueError("CAPTURE_BINDING_SIZE_LIMIT")
+        capture = _load(capture_path) if capture_path.exists() else None
+        if capture_path.exists():
+            expected = market.content_identity(capture, kind="prospective_capture_complete_session")
+            if (any(capture.get(k) != v for k, v in expected.items()) or capture.get("session") != session or
+                capture.get("contract_version") != "prospective_capture_complete_session/v1"):
+                raise ValueError("ORIGINAL_CAPTURE_BINDING_INVALID")
+        original_bound = (capture or {}).get("t0_decision_snapshot_identity")
+        if original_bound:
+            if original_bound != identity:
+                raise ValueError("COMPETING_T0_CAPTURE_BINDING")
+        else:
+            sealed = list(path.parent.parent.glob("*/prospective_t0_snapshot_write_receipt.json"))
+            if len(sealed) != 1 or sealed[0].parent.resolve() != path.parent.resolve():
+                raise ValueError("AMBIGUOUS_ORIGINAL_T0_SEALS")
+        count = 0
+        def verify_record(ticker, row):
+            nonlocal count
+            sealed = index["records"].get(ticker) or {}
+            if (row.get("decision_session") != session or row.get("canonical_operation_identity") != original or
+                row.get("source_decision_artifact_identity") != decision or
+                sealed.get("snapshot_record_identity") != row.get("prospective_snapshot_record_identity") or
+                sealed.get("source_decision_artifact_identity") != decision or
+                sealed.get("integrated_decision_identity") != row.get("integrated_decision_identity")):
+                raise ValueError("SEALED_RECORD_ORIGINATION")
+            count += 1
+        records = snapshot.get("records")
+        from bounded_artifact_stream import source_hash
+        if isinstance(records, Mapping):
+            for ticker, record in records.items():
+                verify_record(ticker, record)
+        else:
+            # Reuse the existing bounded source seam without importing the full
+            # feedback observer back into its own origination dependency.
+            from bounded_artifact_stream import stream_artifact
+            metadata, digest, _ = stream_artifact(path, excluded={"snapshot_identity"}, on_record=verify_record)
+            if metadata.get("snapshot_identity") != identity or SNAPSHOT_PREFIX + digest != identity:
+                raise ValueError("ORIGINAL_STREAM_SOURCE_CHANGED")
+        raw_sha = source_hash(path)
+        if raw_sha != index["snapshot_file_sha256"] or (not isinstance(records, Mapping) and raw_sha != snapshot.raw_sha256):
+            raise ValueError("ORIGINAL_WRITE_HASH_OR_STREAM_SOURCE_CHANGED")
+        if count != snapshot.get("decision_count"):
+            raise ValueError("SEALED_RECORD_COUNT")
+    except (OSError, ValueError, KeyError, TypeError, AttributeError):
+        return ["ORIGINAL_T0_SEAL_OR_RECORD_PROOF_INVALID"]
+    return []
 
 
 def _handoff_snapshot_inventory(root: Path) -> list[dict[str, Any]]:
@@ -484,10 +628,14 @@ def discover_snapshots(root: str | Path, *, payload_projection: Callable[[Mappin
         source = snapshot.get("source_integrated_decision_artifact") or {}
         operation_identity = snapshot.get("daily_session_operation_identity")
         operation = operations.get(operation_identity) if isinstance(operation_identity, str) else None
-        handoff = handoffs.get(identity) if isinstance(identity, str) else None
+        matches = handoffs.get(identity, []) if isinstance(identity, str) else []
+        handoff = matches[0] if len(matches) == 1 else None
         reasons: list[str] = []
+        qualified_reuse = False
         if not validate(snapshot):
             reasons.append("SNAPSHOT_CONTENT_IDENTITY_INVALID")
+        if len(matches) > 1:
+            reasons.append("AMBIGUOUS_T0_HANDOFF_BINDINGS")
         if not isinstance(operation, Mapping):
             reasons.append("DAILY_OPERATION_MANIFEST_NOT_RETAINED")
         else:
@@ -505,10 +653,17 @@ def discover_snapshots(root: str | Path, *, payload_projection: Callable[[Mappin
                 reasons.append("HANDOFF_SNAPSHOT_IDENTITY_MISMATCH")
             if bundle.get("session") != snapshot.get("session"):
                 reasons.append("HANDOFF_SESSION_MISMATCH")
+            mismatch = []
             if bundle.get("daily_session_operation_identity") != operation_identity:
-                reasons.append("HANDOFF_OPERATION_IDENTITY_MISMATCH")
+                mismatch.append("HANDOFF_OPERATION_IDENTITY_MISMATCH")
             if bundle.get("integrated_investment_decision_product_identity") != source.get("artifact_identity"):
-                reasons.append("HANDOFF_SOURCE_DECISION_IDENTITY_MISMATCH")
+                mismatch.append("HANDOFF_SOURCE_DECISION_IDENTITY_MISMATCH")
+            if mismatch or bound.get("retention") == "ORIGINAL_SESSION_T0_REUSED":
+                reuse_reasons = _original_reuse_reasons(repository, path, snapshot, handoff, operations)
+                if reuse_reasons:
+                    reasons.extend(mismatch + reuse_reasons)
+                else:
+                    qualified_reuse = True
         status = GENUINE if not reasons else EXCLUDED
         row = {
             "snapshot_path": _relative(repository, path), "snapshot_identity": identity,
@@ -523,6 +678,14 @@ def discover_snapshots(root: str | Path, *, payload_projection: Callable[[Mappin
             "canonical_handoff_path": handoff.get("path") if isinstance(handoff, Mapping) else None,
             "operation_manifest_path": operation.get("path") if isinstance(operation, Mapping) else None,
         }
+        if qualified_reuse and status == GENUINE:
+            row["proof_reason_codes"] = ["IMMUTABLE_SNAPSHOT_CONTENT_IDENTITY_VALID", "QUALIFIED_ORIGINAL_T0_REUSE",
+                                         "ORIGINAL_AND_HANDOFF_OPERATIONS_INDEPENDENTLY_VERIFIED"]
+            row["lineage_proof"] = {"contract_version": LINEAGE_READER_VERSION,
+                "origination_operation_identity": operation_identity,
+                "origination_decision_identity": source.get("artifact_identity"),
+                "handoff_operation_identity": bundle["daily_session_operation_identity"],
+                "handoff_decision_identity": bundle["integrated_investment_decision_product_identity"]}
         inventory.append(row)
         if status == GENUINE:
             genuine.append({"snapshot": payload_projection(snapshot) if payload_projection else snapshot, "inventory": row})

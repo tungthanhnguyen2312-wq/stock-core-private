@@ -142,6 +142,10 @@ proofs that permit sparse maturation.
 
 ## Normal Daily boundary and readiness
 
+The Owner-approved [versioned retention reader transition](retention_reader_versioned_transition_contract.md)
+adds independent origination/handoff proof for original T0 reuse. It preserves
+historical source verification and does not alter capture completion or this writer.
+
 **One original T0 per session (V2 seal-index sessions).** For a session at/after
 `PRODUCTION_V2_START_SESSION`, `retain_prospective_decision_snapshot` first looks up an already
 sealed T0 for the session: the capture-session record's `t0_decision_snapshot_identity` when bound,
