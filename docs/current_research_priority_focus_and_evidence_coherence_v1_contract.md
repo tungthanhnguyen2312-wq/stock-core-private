@@ -50,6 +50,8 @@ Rejected:
 
 The projection keeps full records only for the bounded dossier set. Every other qualified lane member contributes a slim source view from the same verification pass. Full-record retention stays inside the existing selected-payload byte cap. The 1 GiB physical-memory admission floor is unchanged. `artifact_stream.py` and other frozen E4/E5/E6 inputs are not edited.
 
+Filesystem qualification, registry resolution, queue verification, and Action Center helper calls live in `tools/evaluate_current_research_priority_focus.py`. `project_research_focus` accepts already verified envelopes, the queue owner's lane order as `source_lanes`, and owner-produced dossier context. The decision module does not import the queue, session-operation, next-session, or Action Center modules. No architecture baseline exception is added.
+
 ## Interface
 
 `current_research_priority_focus/v1`

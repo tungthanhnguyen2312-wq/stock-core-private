@@ -16,6 +16,7 @@ from stocklookup_core.decision import current_opportunity_prioritization as oppo
 from stocklookup_core.decision import current_research_priority_focus as focus
 from stocklookup_core.decision import integrated_investment_decision_product as integrated
 from stocklookup_core.tactical import watchlist_tactical_entry_classifier as tactical
+import tools.evaluate_current_research_priority_focus as research_focus_tool
 
 HELPERS = runpy.run_path(str(Path(__file__).with_name("test_research_setup_transition_v1.py")))
 
@@ -50,7 +51,8 @@ def test_round_robin_preserves_lane_order_without_a_cross_lane_score():
         ("C1", "BREAKOUT", "PRIORITY_NOW"), ("C2", "BREAKOUT", "SETUP_WATCH"),
         ("M1", "BREAKOUT", "MONITOR"),
     ])
-    selected = focus.select_from_queue(queue, lanes=focus.DEFAULT_LANES, tiers=focus.DEFAULT_TIERS, max_tickers=4)
+    selected = focus.select_from_queue(
+        queue, source_lanes=queues.LANES, lanes=focus.DEFAULT_LANES, tiers=focus.DEFAULT_TIERS, max_tickers=4)
     assert [item["ticker"] for item in selected["selected"]] == ["A1", "B1", "C1", "A2"]
     assert selected["lanes"][0]["selected_tickers"] == ["A1", "A2"]
     assert selected["lanes"][2]["selected_tickers"] == ["C1"]
@@ -66,8 +68,9 @@ def test_overlap_is_labeled_and_not_a_second_dossier_slot():
     queue["records"]["X1"]["eligible_strategies"] = ["EARLY_REVERSAL", "BREAKOUT"]
     queue["lane_queues"]["BREAKOUT"] = queues._lane_queue("BREAKOUT", queue["records"])
     queue.update(queues.content_identity(queue))
-    focus._assert_lane_order(queue)
-    selected = focus.select_from_queue(queue, lanes=("EARLY_REVERSAL", "BREAKOUT"), tiers=focus.DEFAULT_TIERS, max_tickers=4)
+    research_focus_tool._assert_lane_order(queue)
+    selected = focus.select_from_queue(
+        queue, source_lanes=queues.LANES, lanes=("EARLY_REVERSAL", "BREAKOUT"), tiers=focus.DEFAULT_TIERS, max_tickers=4)
     assert [item["ticker"] for item in selected["selected"]] == ["X1"]
     assert selected["overlaps"][0]["reason"] == "ALREADY_SELECTED_IN_EARLIER_REQUESTED_LANE"
     assert selected["selected"][0]["lanes"] == ["EARLY_REVERSAL", "BREAKOUT"]
@@ -80,9 +83,9 @@ def test_tampered_queue_and_unknown_lane_fail_closed(tmp_path):
     broken["lane_queues"]["EARLY_REVERSAL"]["tickers"].append({"ticker": "ZZ", "lane_priority": "PRIORITY_NOW"})
     path.write_text(json.dumps(broken), encoding="utf-8")
     with pytest.raises(focus.ResearchFocusError, match="QUEUE_IDENTITY"):
-        focus._verified_queue(path, session="2026-01-02", expected_identity=queue["artifact_identity"])
+        research_focus_tool._verified_queue(path, session="2026-01-02", expected_identity=queue["artifact_identity"])
     with pytest.raises(focus.ResearchFocusError, match="QUEUE_LANE_NOT_IN_SOURCE_CONTRACT"):
-        focus.select_from_queue(queue, lanes=("NOT_A_LANE",), tiers=focus.DEFAULT_TIERS, max_tickers=1)
+        focus.select_from_queue(queue, source_lanes=queues.LANES, lanes=("NOT_A_LANE",), tiers=focus.DEFAULT_TIERS, max_tickers=1)
 
 
 def test_different_queue_artifact_unbinds_record_identity_without_hiding_a_same_artifact_miss():
@@ -278,7 +281,7 @@ def test_end_to_end_binds_queue_to_decision_and_renders_without_a_vote(tmp_path)
     else:
         _write(locations[previous_session] / "run_manifest.json", manifest)
     _write(tmp_path / "config/daily_research_session_input_registry.json", registry)
-    report = focus.evaluate_research_focus(
+    report = research_focus_tool.evaluate_research_focus(
         repo_root=tmp_path, session=current_session, current_operation=locations[current_session],
         previous_operation=locations[previous_session], max_tickers=3)
     assert report["status"] == "COMPLETE"
@@ -303,7 +306,7 @@ def test_end_to_end_binds_queue_to_decision_and_renders_without_a_vote(tmp_path)
     assert "FUNDAMENTAL_CONTEXT_ABSENT" in first["discovery"]["blocking_reasons"]
     assert "FUNDAMENTAL_CONTEXT_ABSENT" not in first["thesis"]["opposing"]
     assert first["source"]["queue_record_identity_comparable"] is True
-    again = focus.evaluate_research_focus(
+    again = research_focus_tool.evaluate_research_focus(
         repo_root=tmp_path, session=current_session, current_operation=locations[current_session],
         previous_operation=locations[previous_session], max_tickers=3)
     assert again["artifact_identity"] == report["artifact_identity"]
@@ -334,8 +337,8 @@ def test_absent_queue_blocks_lane_selection_and_keeps_explicit_preview(tmp_path)
     _write(operation / "run_manifest.json", manifest)
     _write(tmp_path / "config/daily_research_session_input_registry.json", registry)
     with pytest.raises(focus.ResearchFocusError, match="QUEUE_OR_OPPORTUNITY_OUTPUT_NOT_IN_OPERATION_MANIFEST"):
-        focus.evaluate_research_focus(repo_root=tmp_path, session="2026-01-02", current_operation=operation, max_tickers=1)
-    report = focus.evaluate_research_focus(
+        research_focus_tool.evaluate_research_focus(repo_root=tmp_path, session="2026-01-02", current_operation=operation, max_tickers=1)
+    report = research_focus_tool.evaluate_research_focus(
         repo_root=tmp_path, session="2026-01-02", current_operation=operation, max_tickers=1,
         explicit_tickers_when_queue_blocked=["A1"])
     assert report["status"] == "SELECTION_BLOCKED_EXPLICIT_PREVIEW"
@@ -411,7 +414,7 @@ def test_two_valid_queues_keep_tier_match_from_becoming_lineage(tmp_path):
     operation = _seal_focus_session(
         tmp_path, session=session, queue=operation_queue, opportunity_artifact=operation_opportunity,
         decision_records={"ANT": built}, decision_queue_identity=decision_queue["artifact_identity"])
-    report = focus.evaluate_research_focus(repo_root=tmp_path, session=session, current_operation=operation, max_tickers=1)
+    report = research_focus_tool.evaluate_research_focus(repo_root=tmp_path, session=session, current_operation=operation, max_tickers=1)
     assert report["status"] == "LANE_SELECTION_QUALIFIED_PRIORITY_RECORD_LINEAGE_UNBOUND"
     assert report["priority_lineage"]["current"]["record_identity_comparable"] is False
     assert report["population"]["opportunity_queue_denominator"] == 1
@@ -471,7 +474,7 @@ def test_tampered_priority_record_and_queue_bytes_fail_closed(tmp_path):
     tampered["records"]["ANT"]["content_identity"] = "daily_opportunity_decision_record:tampered"
     path.write_text(json.dumps(tampered), encoding="utf-8")
     with pytest.raises(focus.ResearchFocusError, match="QUEUE_IDENTITY"):
-        focus._verified_queue(path, session=session, expected_identity=queue["artifact_identity"])
+        research_focus_tool._verified_queue(path, session=session, expected_identity=queue["artifact_identity"])
     decision = {"ticker": "OTHER", "source_identities": {"priority_queue_record_identity": queue["records"]["ANT"]["content_identity"]},
                 "opportunity_priority": {"status": "AVAILABLE", "research_priority_tier": "PRIORITY_NOW",
                                          "entry_relevant": queue["records"]["ANT"]["entry_relevant"]}}
@@ -501,3 +504,44 @@ def test_default_preview_identity_stays_outside_this_projection():
     assert preview.CONTRACT == "action_center_selected_research_preview/v1"
     assert focus.CONTRACT == "current_research_priority_focus/v1"
     assert not hasattr(action_center, "evaluate_research_focus")
+    assert not hasattr(focus, "evaluate_research_focus")
+
+
+def test_core_projection_has_no_root_orchestration_import():
+    import ast
+    tree = ast.parse(Path(focus.__file__).read_text(encoding="utf-8"))
+    imported = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            imported.update(alias.name.split(".")[0] for alias in node.names)
+        elif isinstance(node, ast.ImportFrom) and node.module:
+            imported.add(node.module.split(".")[0])
+    assert imported.isdisjoint({
+        "daily_opportunity_decision_queue",
+        "daily_research_session_operations",
+        "next_session_decision_brief",
+        "personal_investment_decision_action_center",
+        "importlib",
+    })
+
+
+def test_dossier_withholding_does_not_mutate_supplied_owner_context():
+    decision = {"research_action_posture": "EARLY_WATCH", "tactical_phase": "EARLY_REVERSAL",
+                "technical_support": [], "fundamental_support": [], "counter_thesis": [],
+                "fundamental_synthesis": {}, "why_now": ["inspect"], "evidence_axis_coherence": {}}
+    details = {
+        "trigger": {"price_basis": {}, "numeric_display_status": "AVAILABLE", "numeric_display_reason_codes": [],
+                    "trigger_level": 1, "distance_to_trigger_pct": 1},
+        "invalidation": {"price_basis": {}, "numeric_display_status": "AVAILABLE", "numeric_display_reason_codes": [],
+                         "invalidation_level": 1, "distance_to_invalidation_pct": 1},
+    }
+    supplied = {"evidence": {"kept": True}, "details": details,
+                "setup_transition": {"governed_transition_label": "NEW_EARLY_WATCH", "research_limitations": []}}
+    snapshot = copy.deepcopy(supplied)
+    queue_record = {"research_priority_tier": "PRIORITY_NOW", "entry_relevant": False, "priority_reasons": ["QUEUE"],
+                    "blocking_reasons": [], "invalidation_or_context_warnings": [], "lane_specific_priority": {"EARLY_REVERSAL": "PRIORITY_NOW"},
+                    "content_identity": "queue-record", "opportunity_record_content_identity": "opportunity-record"}
+    focus._dossier({"ticker": "ANT", "primary_lane": "EARLY_REVERSAL", "lanes": ["EARLY_REVERSAL"]},
+                   queue_record, decision, None, previous_session=None, transition_label="NEW_EARLY_WATCH",
+                   confirmation_status="NOT_IN_CONFIRMATION_DELTA", dossier_context=supplied)
+    assert supplied == snapshot

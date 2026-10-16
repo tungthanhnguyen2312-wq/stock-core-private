@@ -8,21 +8,14 @@ from __future__ import annotations
 
 import copy
 import hashlib
-import json
 from collections import Counter
-from pathlib import Path
 from typing import Any, Mapping, Sequence
 
-import daily_opportunity_decision_queue as decision_queue
-import daily_research_session_operations as operations
-import next_session_decision_brief as next_session
-import personal_investment_decision_action_center as action_center
 import stocklookup_core.financial.fundamental_signal_consumption_contract as fundamental_signals
 from stocklookup_core.decision import bounded_research_preview as bounded
 from stocklookup_core.decision import current_opportunity_prioritization as opportunity
 from stocklookup_core.decision import integrated_investment_decision_product as integrated
 from stocklookup_core.evidence.bounded_json import canonical_bytes
-from stocklookup_core.evidence.field_identity import stable_id
 
 CONTRACT = "current_research_priority_focus/v1"
 QUEUE_FILE = "daily_opportunity_decision_queue_artifact.json"
@@ -66,75 +59,17 @@ def content_identity(body: Mapping[str, Any]) -> dict[str, str]:
     return {"artifact_sha256": digest, "artifact_identity": f"{CONTRACT}:{digest}"}
 
 
-def _load_bounded_json(path: Path) -> dict[str, Any]:
-    if path.stat().st_size > SOURCE_JSON_LIMIT:
-        raise ResearchFocusError("SOURCE_JSON_LIMIT:" + path.name)
-    with path.open(encoding="utf-8") as source:
-        text = source.read(SOURCE_JSON_LIMIT + 1)
-    if len(text) > SOURCE_JSON_LIMIT:
-        raise ResearchFocusError("SOURCE_JSON_LIMIT:" + path.name)
-    return json.loads(text, object_pairs_hook=bounded.strict_object, parse_constant=bounded.reject_constant,
-                      parse_float=bounded.finite_float)
-
-
-def _verified_queue(path: Path, *, session: str, expected_identity: str) -> dict[str, Any]:
-    if not path.is_file():
-        raise ResearchFocusError("QUEUE_ARTIFACT_ABSENT")
-    artifact = _load_bounded_json(path)
-    try:
-        decision_queue.replay(artifact)
-    except ValueError as exc:
-        raise ResearchFocusError("QUEUE_IDENTITY_SESSION_OR_CONTRACT_MISMATCH") from exc
-    if (artifact.get("contract_version") != decision_queue.CONTRACT_VERSION
-            or artifact.get("research_session") != session
-            or artifact.get("artifact_identity") != expected_identity
-            or any(artifact.get(key) != value for key, value in decision_queue.content_identity(artifact).items())):
-        raise ResearchFocusError("QUEUE_IDENTITY_SESSION_OR_CONTRACT_MISMATCH")
-    _assert_lane_order(artifact)
-    return artifact
-
-
-def _verified_opportunity(path: Path, *, session: str, expected_identity: str) -> dict[str, Any]:
-    if not path.is_file():
-        raise ResearchFocusError("OPPORTUNITY_ARTIFACT_ABSENT")
-    artifact = _load_bounded_json(path)
-    if (artifact.get("contract_version") != opportunity.CONTRACT_VERSION
-            or artifact.get("research_session") != session
-            or artifact.get("artifact_identity") != expected_identity
-            or any(artifact.get(key) != value for key, value in opportunity.content_identity(artifact).items())):
-        raise ResearchFocusError("OPPORTUNITY_IDENTITY_SESSION_OR_CONTRACT_MISMATCH")
-    return artifact
-
-
-def _assert_lane_order(queue: Mapping[str, Any]) -> None:
-    records = queue.get("records")
-    lanes = queue.get("lane_queues")
-    if not isinstance(records, Mapping) or not isinstance(lanes, Mapping):
-        raise ResearchFocusError("QUEUE_SHAPE_INVALID")
-    if set(lanes) != set(decision_queue.LANES):
-        raise ResearchFocusError("QUEUE_LANE_SET_MISMATCH")
-    for lane in decision_queue.LANES:
-        members = [record for record in records.values()
-                   if isinstance(record, Mapping) and lane in (record.get("lane_specific_priority") or {})]
-        ordered = sorted(members, key=lambda record: (
-            opportunity.TIERS.index(record["lane_specific_priority"][lane]), record["ticker"]))
-        actual = (lanes.get(lane) or {}).get("tickers")
-        if not isinstance(actual, list) or [row.get("ticker") for row in actual] != [record["ticker"] for record in ordered]:
-            raise ResearchFocusError("QUEUE_LANE_ORDER_MISMATCH:" + lane)
-        for row, record in zip(actual, ordered):
-            if row.get("lane_priority") != record["lane_specific_priority"][lane]:
-                raise ResearchFocusError("QUEUE_LANE_TIER_MISMATCH:" + lane + ":" + str(row.get("ticker")))
-
-
-def select_from_queue(queue: Mapping[str, Any], *, lanes: Sequence[str], tiers: Sequence[str],
-                      max_tickers: int, include_tickers: Sequence[str] | None = None) -> dict[str, Any]:
+def select_from_queue(queue: Mapping[str, Any], *, source_lanes: Sequence[str], lanes: Sequence[str],
+                      tiers: Sequence[str], max_tickers: int, include_tickers: Sequence[str] | None = None) -> dict[str, Any]:
     """Preserve each lane's source order. Do not invent a score across lanes."""
-    if isinstance(lanes, str) or isinstance(tiers, str) or isinstance(include_tickers, str):
+    if (isinstance(source_lanes, str) or isinstance(lanes, str) or isinstance(tiers, str)
+            or isinstance(include_tickers, str)):
         raise ResearchFocusError("SELECTION_SEQUENCES_REQUIRED")
     requested = list(lanes)
     if not requested or len(set(requested)) != len(requested):
         raise ResearchFocusError("SELECTION_LANES_INVALID")
-    unknown = [lane for lane in requested if lane not in decision_queue.LANES]
+    known_lanes = list(source_lanes)
+    unknown = [lane for lane in requested if lane not in known_lanes]
     if unknown:
         raise ResearchFocusError("QUEUE_LANE_NOT_IN_SOURCE_CONTRACT:" + ",".join(unknown))
     allowed = list(tiers)
@@ -293,131 +228,6 @@ def _slim(row: Mapping[str, Any]) -> dict[str, Any]:
         "market_regime": market.get("market_regime"),
         "sector_leadership": market.get("sector_leadership"),
     }
-
-
-def _project(path: Path, *, session: str, expected_identity: str, full_tickers: set[str],
-             slim_tickers: set[str], deadline: float) -> dict[str, Any]:
-    """One native verification pass. Full objects are retained only for the dossier set."""
-    before = path.stat()
-    if not 0 < before.st_size <= bounded.MAX_SOURCE_BYTES:
-        raise ResearchFocusError("PREVIEW_SOURCE_SIZE_REFUSED")
-    full: dict[str, Any] = {}
-    slim: dict[str, Any] = {}
-    selected_bytes = 0
-    epochs: set[str] = set()
-
-    def consume(ticker: str, row: Mapping[str, Any]) -> None:
-        nonlocal selected_bytes
-        import time
-        if time.monotonic() >= deadline:
-            raise ValueError("ACCEPTANCE_DEADLINE_EXCEEDED")
-        if not isinstance(row, dict):
-            raise ValueError("PREVIEW_RECORD_INVALID:" + ticker)
-        if row.get("ticker") != ticker or row.get("as_of_session") != session:
-            raise ValueError("PREVIEW_RECORD_SESSION_OR_TICKER_MISMATCH:" + ticker)
-        if row.get("decision_identity") != integrated.decision_identity(row):
-            raise ValueError("PREVIEW_DECISION_IDENTITY_MISMATCH:" + ticker)
-        integrated.validate_posture_policy(row)
-        epochs.add(integrated.research_policy_epoch(row))
-        if ticker in full_tickers or ticker in slim_tickers:
-            slim[ticker] = _slim(row)
-        if ticker in full_tickers:
-            selected_bytes += len(canonical_bytes(row))
-            if selected_bytes > bounded.MAX_SELECTED_BYTES:
-                raise ValueError("PREVIEW_SELECTED_PAYLOAD_LIMIT")
-            full[ticker] = row
-
-    metadata, digest, count = bounded._stream_artifact(
-        path, excluded=integrated._IDENTITY_EXCLUDED, on_record=consume, member_limit=bounded.MEMBER_LIMIT,
-        metadata_limit=bounded.METADATA_LIMIT, deadline=deadline)
-    after = path.stat()
-    if (before.st_size, before.st_mtime_ns, before.st_ino) != (after.st_size, after.st_mtime_ns, after.st_ino):
-        raise ResearchFocusError("PREVIEW_SOURCE_CHANGED_DURING_VERIFICATION")
-    identity = f"{integrated.CONTRACT_VERSION}:{digest}"
-    if (metadata.get("contract_version") != integrated.CONTRACT_VERSION or metadata.get("session") != session
-            or metadata.get("schema_version") != "integrated_investment_decision_product/1.0.0"
-            or metadata.get("artifact_sha256") != digest or metadata.get("artifact_identity") != identity
-            or expected_identity != identity):
-        raise ResearchFocusError("PREVIEW_SOURCE_CONTRACT_SESSION_OR_IDENTITY_MISMATCH")
-    if epochs != {metadata.get("research_action_policy_version", "v1")}:
-        raise ResearchFocusError("PREVIEW_ROOT_RECORD_POLICY_MISMATCH")
-    coverage = metadata.get("coverage") or {}
-    if any(coverage[key] != count for key in ("universe_denominator", "integrated_context_available") if key in coverage):
-        raise ResearchFocusError("PREVIEW_SOURCE_DENOMINATOR_MISMATCH")
-    return {"full": full, "slim": slim, "metadata": metadata, "source_identity": identity,
-            "source_record_count": count, "source_bytes": before.st_size,
-            "verification": "FULL_NATIVE_CONTENT_VERIFIED"}
-
-
-def _resolve_operation(root: Path, registry: Mapping[str, Any], session: str, operation: Path, deadline: float,
-                       full_tickers: set[str], slim_tickers: set[str], *, stream: bool = True) -> dict[str, Any]:
-    next_session._require_qualified(registry, session)
-    if registry["completed_sessions"][session].get("trading_day_valid") is not True:
-        raise ResearchFocusError("PREVIEW_COMPLETED_TRADING_SESSION_NOT_QUALIFIED")
-    selection = next_session.registered_session_selection(registry, session)
-    locked = next_session.frozen_input_identities(registry, session)
-    if {key: value["artifact_identity"] for key, value in selection.items()} != locked:
-        raise ResearchFocusError("PREVIEW_COMPLETED_INPUT_LOCK_MISMATCH")
-    manifest = bounded.small_json(Path(operation) / "run_manifest.json")
-    expected_operation = "daily_research_session_operation:" + stable_id(
-        {key: value for key, value in manifest.items() if key != "operation_identity"})
-    if (manifest.get("contract_version") != operations.CONTRACT_VERSION or manifest.get("schema_version") != "1.0.0"
-            or manifest.get("generation_context") != "DAILY_PRODUCER_RETAINED_COMPLETED_SESSION"
-            or manifest.get("market_session") != session or manifest.get("operation_identity") != expected_operation):
-        raise ResearchFocusError("PREVIEW_OPERATION_IDENTITY_OR_SESSION_MISMATCH")
-    native = root / "operations-review/daily-research-session-operations-v1" / session / expected_operation.split(":")[1]
-    if Path(operation).resolve() != native.resolve():
-        raise ResearchFocusError("PREVIEW_UNREGISTERED_OPERATION_LOCATOR")
-    manifest_inputs = manifest.get("input_artifacts") or {}
-    if (set(manifest_inputs) - set(locked) - {"macro", "explicit_portfolio"}
-            or {key: (manifest_inputs.get(key) or {}).get("artifact_identity") for key in locked} != locked):
-        raise ResearchFocusError("PREVIEW_MANIFEST_INPUT_REFERENCE_MISMATCH")
-    expected_iid = (manifest.get("outputs") or {}).get("integrated_investment_decision_product")
-    if not isinstance(expected_iid, str):
-        raise ResearchFocusError("PREVIEW_MANIFEST_INTEGRATED_REFERENCE_REQUIRED")
-    iid_path = root / "operations-review" / ("integrated-investment-decision-product-v1-" + session.replace("-", "")) / "integrated_investment_decision_product_artifact.json"
-    if stream:
-        projected = _project(iid_path, session=session, expected_identity=expected_iid, full_tickers=full_tickers,
-                             slim_tickers=slim_tickers, deadline=deadline)
-    else:
-        projected = {"full": {}, "slim": {}, "metadata": {}, "source_identity": None, "source_record_count": None,
-                     "source_bytes": 0, "verification": "QUEUE_SELECTION_BEFORE_DECISION_STREAM"}
-    tactical_entry = selection["tactical"]
-    tactical_path = (root / tactical_entry["path"]).resolve()
-    if not tactical_path.is_relative_to(root):
-        raise ResearchFocusError("PREVIEW_REGISTERED_PATH_OUTSIDE_EVIDENCE_ROOT")
-    from stocklookup_core.tactical import watchlist_tactical_entry_classifier as tactical_owner
-    tactical = bounded.small_json(tactical_path, limit=16 * 1024 * 1024)
-    if (tactical.get("session") != session or tactical.get("contract_version") != tactical_owner.CONTRACT_VERSION
-            or tactical.get("artifact_identity") != tactical_entry["artifact_identity"]
-            or any(tactical.get(key) != value for key, value in tactical_owner.content_identity(tactical).items())):
-        raise ResearchFocusError("PREVIEW_TACTICAL_SOURCE_IDENTITY_MISMATCH")
-    outputs = manifest.get("outputs") or {}
-    queue_identity = outputs.get("daily_opportunity_decision_queue")
-    opportunity_identity = outputs.get("opportunity_prioritization")
-    queue = opportunity_artifact = None
-    queue_blocker = None
-    if not isinstance(queue_identity, str) or not isinstance(opportunity_identity, str):
-        queue_blocker = "QUEUE_OR_OPPORTUNITY_OUTPUT_NOT_IN_OPERATION_MANIFEST"
-    else:
-        try:
-            queue = _verified_queue(native / QUEUE_FILE, session=session, expected_identity=queue_identity)
-            opportunity_artifact = _verified_opportunity(native / OPPORTUNITY_FILE, session=session, expected_identity=opportunity_identity)
-            if queue.get("source_artifact_identities", {}).get("opportunity") != opportunity_artifact.get("artifact_identity"):
-                raise ResearchFocusError("QUEUE_OPPORTUNITY_SOURCE_MISMATCH")
-            if len(queue.get("records") or {}) != len(opportunity_artifact.get("records") or {}):
-                raise ResearchFocusError("OPPORTUNITY_QUEUE_POPULATION_MISMATCH")
-        except ResearchFocusError as exc:
-            queue_blocker = str(exc)
-            queue = opportunity_artifact = None
-    confirmed = {ticker for ticker, row in (tactical.get("records") or {}).items()
-                 if (row or {}).get("entry_state") in next_session.TACTICAL_CONFIRMATION_STATES}
-    projected.update(operation_identity=expected_operation, source_locator=iid_path.relative_to(root).as_posix(),
-                     tactical_identity=tactical_entry["artifact_identity"], queue=queue,
-                     opportunity=opportunity_artifact, queue_blocker=queue_blocker, confirmed=confirmed,
-                     queue_bytes=0 if queue is None else (native / QUEUE_FILE).stat().st_size,
-                     opportunity_bytes=0 if opportunity_artifact is None else (native / OPPORTUNITY_FILE).stat().st_size)
-    return projected
 
 
 def _evolution(previous: Mapping[str, Any] | None, current: Mapping[str, Any], transition: str,
@@ -594,21 +404,18 @@ def _confirmation(decision: Mapping[str, Any], details: Mapping[str, Any], tacti
 
 
 def _dossier(item: Mapping[str, Any], queue_record: Mapping[str, Any], decision: Mapping[str, Any],
-             previous: Mapping[str, Any] | None, *, session: str, previous_session: str | None,
-             transition_label: str, confirmation_status: str, brief: Mapping[str, Any],
-             current_view: Mapping[str, Any], previous_view: Mapping[str, Any] | None) -> dict[str, Any]:
-    lineage = decision.get("evidence_currency_lineage") or {}
-    coverage = {item["ticker"]: lineage} if lineage.get("method") == integrated.EVIDENCE_CURRENCY_SOURCE_CONTRACT else {}
-    evidence = action_center._evidence_block(item["ticker"], decision, session=session, coverage_records=coverage)
-    details = action_center._conditional_research_details(decision, evidence)
+             previous: Mapping[str, Any] | None, *, previous_session: str | None,
+             transition_label: str, confirmation_status: str, dossier_context: Mapping[str, Any]) -> dict[str, Any]:
+    if "evidence" not in dossier_context or "details" not in dossier_context or "setup_transition" not in dossier_context:
+        raise ResearchFocusError("DOSSIER_CONTEXT_INCOMPLETE")
+    details = copy.deepcopy(dossier_context["details"])
+    transition = copy.deepcopy(dossier_context["setup_transition"])
     for role in ("trigger", "invalidation"):
         boundary = details[role]
         if not (boundary.get("price_basis") or {}).get("price_unit"):
             boundary["numeric_display_status"] = "WITHHELD_UNQUALIFIED_BOUNDARY"
             boundary["numeric_display_reason_codes"].append("PRICE_UNIT_NOT_QUALIFIED")
             boundary[role + "_level"] = boundary["distance_to_" + role + "_pct"] = None
-    transition = action_center._setup_transition_for_ticker(
-        session=session, ticker=item["ticker"], current_artifact=current_view, previous_artifact=previous_view, brief=brief)
     if previous is not None and not fundamental_signals.epochs_comparable(previous, decision):
         transition["research_limitations"].append("FUNDAMENTAL_POLICY_EPOCH_CHANGE_NO_FUNDAMENTAL_EVOLUTION_INFERENCE")
     evolution = _evolution(previous, decision, transition_label, confirmation_status)
@@ -733,88 +540,23 @@ def _statistics(rows: Sequence[Mapping[str, Any]], dossiers: Sequence[Mapping[st
     }
 
 
-def evaluate_research_focus(*, repo_root: Path, session: str, current_operation: Path,
-                            previous_operation: Path | None = None, lanes: Sequence[str] = DEFAULT_LANES,
-                            tiers: Sequence[str] = DEFAULT_TIERS, max_tickers: int = 8,
-                            include_tickers: Sequence[str] | None = None,
-                            explicit_tickers_when_queue_blocked: Sequence[str] | None = None) -> dict[str, Any]:
-    """Verify one current session, and the previous qualified session when the chain has one."""
-    import time
-    bounded.resource_gate()
-    deadline = time.monotonic() + bounded.DEADLINE_SECONDS
-    root = Path(repo_root).resolve()
-    registry = bounded.small_json(root / "config/daily_research_session_input_registry.json")
-    if registry.get("contract_version") != "daily_research_session_input_registry/v1":
-        raise ResearchFocusError("PREVIEW_REGISTRY_CONTRACT_MISMATCH")
-    next_session._require_qualified(registry, session)
-    chain = next_session._qualified_session_chain(registry)
-    prior = [date for date in chain if date < session]
-    previous_session = prior[-1] if prior else None
-    if (previous_session is None) != (previous_operation is None):
-        raise ResearchFocusError("PREVIEW_PREVIOUS_QUALIFIED_OPERATION_REQUIRED_OR_UNEXPECTED")
-    # Queue first, from the small verified artifact, so the large decision file is read once.
-    current_probe = _resolve_operation(root, registry, session, current_operation, deadline, set(), set(), stream=False)
-    selection_blocker = current_probe["queue_blocker"]
-    selection = None
-    authority = "DAILY_OPPORTUNITY_DECISION_QUEUE"
-    if selection_blocker is None:
-        selection = select_from_queue(current_probe["queue"], lanes=lanes, tiers=tiers, max_tickers=max_tickers,
-                                      include_tickers=include_tickers)
-        full_names = [item["ticker"] for item in selection["selected"]]
-        slim_names = []
-        for lane in selection["lanes"]:
-            for row in current_probe["queue"]["lane_queues"][lane["lane"]]["tickers"]:
-                if row["lane_priority"] in tiers and (include_tickers is None or row["ticker"] in set(include_tickers)):
-                    slim_names.append(row["ticker"])
-        slim_names = list(dict.fromkeys(slim_names))
-    elif explicit_tickers_when_queue_blocked:
-        bounded.select_tickers(explicit_tickers_when_queue_blocked)
-        full_names = list(bounded.select_tickers(explicit_tickers_when_queue_blocked))
-        slim_names = list(full_names)
-        authority = "EXPLICIT_TICKER_PREVIEW_QUEUE_BLOCKED"
-        selection = {"lanes": [], "selected": [{"ticker": ticker, "primary_lane": None, "lanes": [], "lane_priority": None}
-                                               for ticker in full_names], "overlaps": [], "cap_excluded": [],
-                     "inclusion_exclusions": [], "queue_denominator": None, "qualified_count": None,
-                     "unique_qualified_ticker_count": None, "selected_count": len(full_names)}
-    else:
-        raise ResearchFocusError(selection_blocker)
-    full_set, slim_set = set(full_names), set(slim_names)
-    current = _resolve_operation(root, registry, session, current_operation, deadline, full_set, slim_set, stream=True)
-    previous = None
-    if previous_session is not None:
-        previous = _resolve_operation(root, registry, previous_session, previous_operation, deadline, full_set, slim_set)
+def project_research_focus(*, session: str, previous_session: str | None, selection: Mapping[str, Any],
+                           selection_authority: str, selection_blocker: str | None,
+                           current: Mapping[str, Any], previous: Mapping[str, Any] | None,
+                           transition_context: Mapping[str, Any],
+                           dossier_contexts: Mapping[str, Mapping[str, Any]],
+                           overview_transition_labels: Mapping[str, str],
+                           lanes: Sequence[str] = DEFAULT_LANES, tiers: Sequence[str] = DEFAULT_TIERS,
+                           max_tickers: int = 8, qualified_tickers: Sequence[str] = ()) -> dict[str, Any]:
+    """Assemble one report from verified envelopes and owner-produced context. No repository I/O."""
+    authority = selection_authority
     queue = current["queue"]
     opportunity_artifact = current["opportunity"]
     rows = []
     dossiers = []
     mismatches = []
-    current_view = {**current["metadata"], "records": current["full"]}
-    previous_view = None if previous is None else {**previous["metadata"], "records": previous["full"]}
-    transitions = {}
-    for ticker in full_names:
-        current_row = current["full"].get(ticker)
-        previous_row = previous["full"].get(ticker) if previous else None
-        label = action_center._expected_posture_label(previous_row, current_row, previous_view or {}, current_view) if current_row else None
-        transitions[ticker] = {
-            "transition": label,
-            "previous_posture": None if previous_row is None else previous_row.get("research_action_posture"),
-            "current_posture": None if current_row is None else current_row.get("research_action_posture"),
-            "previous_decision_identity": None if previous_row is None else previous_row.get("decision_identity"),
-            "current_decision_identity": None if current_row is None else current_row.get("decision_identity"),
-        }
-    context = {
-        "current_session": session, "previous_qualified_session": previous_session,
-        "posture_transition": {"records": transitions},
-        "tactical_transition": {
-            "availability": "AVAILABLE" if previous else "UNAVAILABLE",
-            "reason_codes": [] if previous else ["NO_PREVIOUS_QUALIFIED_SESSION"],
-            "gained_confirmation": sorted((current["confirmed"] & full_set) - (previous["confirmed"] if previous else set())) if previous else [],
-            "retained_confirmation": sorted((current["confirmed"] & full_set) & (previous["confirmed"] if previous else set())),
-            "lost_confirmation": sorted((previous["confirmed"] & full_set) - current["confirmed"]) if previous else [],
-        },
-        "source_lineage": {"current": current["source_identity"], "previous": previous["source_identity"] if previous else None},
-    }
-    context["artifact_identity"] = "selected_transition_projection:" + stable_id(context)
+    context = transition_context
+    transitions = (context.get("posture_transition") or {}).get("records") or {}
     current_lineage = _priority_lineage(queue, current["metadata"])
     previous_lineage = None if previous is None else _priority_lineage(previous["queue"], previous["metadata"])
     require_current_record = current_lineage["status"] != "INTEGRATED_DECISION_BUILT_FROM_A_DIFFERENT_PRIORITY_QUEUE"
@@ -833,9 +575,13 @@ def evaluate_research_focus(*, repo_root: Path, session: str, current_operation:
             empty_queue = {"research_priority_tier": None, "entry_relevant": None, "priority_reasons": [],
                            "blocking_reasons": [], "invalidation_or_context_warnings": [], "lane_specific_priority": {},
                            "content_identity": None, "opportunity_record_content_identity": None, "authority_note": authority}
-            dossier = _dossier(item, empty_queue, decision, previous_row, session=session, previous_session=previous_session,
-                               transition_label=label, confirmation_status=confirmation, brief=context,
-                               current_view=current_view, previous_view=previous_view)
+            supplied = dossier_contexts.get(ticker)
+            if not supplied:
+                raise ResearchFocusError("DOSSIER_CONTEXT_ABSENT:" + ticker)
+            if "error" in supplied:
+                raise supplied["error"]
+            dossier = _dossier(item, empty_queue, decision, previous_row, previous_session=previous_session,
+                               transition_label=label, confirmation_status=confirmation, dossier_context=supplied)
             dossier["selection_authority"] = authority
             dossiers.append(dossier)
             rows.append(_overview_row(item, empty_queue, current["slim"].get(ticker), dossier["evolution"]["code"], None, deep=True))
@@ -861,10 +607,15 @@ def evaluate_research_focus(*, repo_root: Path, session: str, current_operation:
                 "LOST_CONFIRMATION" if ticker in context["tactical_transition"]["lost_confirmation"] else "NOT_IN_CONFIRMATION_DELTA"))
         try:
             bounded.validate_price_dimensions(previous_row, decision)
-            dossier = _dossier(item, queue_record, decision, previous_row, session=session, previous_session=previous_session,
+            supplied = dossier_contexts.get(ticker)
+            if not supplied:
+                raise ResearchFocusError("DOSSIER_CONTEXT_ABSENT:" + ticker)
+            if "error" in supplied:
+                raise supplied["error"]
+            dossier = _dossier(item, queue_record, decision, previous_row, previous_session=previous_session,
                                transition_label=transitions[ticker]["transition"], confirmation_status=confirmation,
-                               brief=context, current_view=current_view, previous_view=previous_view)
-        except (ResearchFocusError, action_center.ActionCenterError, ValueError) as exc:
+                               dossier_context=supplied)
+        except (ResearchFocusError, ValueError) as exc:
             mismatches.append({"ticker": ticker, "status": "DOSSIER_SOURCE_CONFLICT", "reason": str(exc)})
             rows.append(_overview_row(item, queue_record, current["slim"].get(ticker), None, "DOSSIER_SOURCE_CONFLICT", deep=False))
             continue
@@ -876,7 +627,7 @@ def evaluate_research_focus(*, repo_root: Path, session: str, current_operation:
     # Qualified names that were not given a deep dossier still get a slim overview row.
     if authority == "DAILY_OPPORTUNITY_DECISION_QUEUE":
         deep = {row["ticker"] for row in rows}
-        for ticker in slim_names:
+        for ticker in qualified_tickers:
             if ticker in deep:
                 continue
             queue_record = queue["records"][ticker]
@@ -890,7 +641,7 @@ def evaluate_research_focus(*, repo_root: Path, session: str, current_operation:
             previous_slim = previous["slim"].get(ticker) if previous else None
             evolution = None
             if binding["status"] == "BOUND" and current["slim"].get(ticker) is not None:
-                label = action_center._expected_posture_label(previous_slim, current["slim"][ticker], previous_view or {}, current_view)
+                label = overview_transition_labels[ticker]
                 confirmation = "NOT_IN_CONFIRMATION_DELTA"
                 evolution = _evolution(previous_slim, current["slim"][ticker], label, confirmation)["code"]
             rows.append(_overview_row(item, queue_record, current["slim"].get(ticker), evolution,
