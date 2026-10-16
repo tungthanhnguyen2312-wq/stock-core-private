@@ -104,6 +104,11 @@ No sealed JSON, manifest, capture binding, index or original receipt is rewritte
 Storage verification and opt-in feedback reuse digests include both catalog and
 storage proof modules. E4's frozen V1 digest construction stays intact; registered
 storage inputs have a separate reuse domain. Native fingerprints and hashes still isolate copies.
+The existing historical-source diagnostic consumes a separate versioned storage
+transition with six exact pre-storage source archives. It verifies active source,
+archive hash and the original frozen pins before returning historical bytes.
+The released origination V2 transition and every E4 V1/V2 pin remain unchanged;
+these archives never execute and never supply live verification/cache identities.
 
 ## Catalog, archive and explicit restoration
 

@@ -23,7 +23,7 @@ if ($env:STOCK_LOOKUP_WORKSPACE_PROFILE) {
     $priorPythonPath = $env:PYTHONPATH
     try {
         $env:PYTHONPATH = Split-Path $PSScriptRoot -Parent
-        $resolved = & $profilePython -B -c 'import json; from runtime_paths import workspace_profile; print(json.dumps({k:str(v) for k,v in workspace_profile()["paths"].items()}))'
+        $resolved = & $profilePython -B -c 'import json; from runtime_paths import workspace_profile; print(json.dumps({k:str(v) for k,v in workspace_profile()[''paths''].items()}))'
         if ($LASTEXITCODE -ne 0) { throw 'Workspace volume qualification failed' }
         $roles = $resolved | ConvertFrom-Json
         $runtime = $roles.runtime

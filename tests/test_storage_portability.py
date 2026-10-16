@@ -245,7 +245,7 @@ def test_vault_restore_catalog_t0_continuity(volumes, monkeypatch):
         portable_t0="PASS", explicit_vault_restore="PASS", production_bytes_moved=0)))
 
 
-@pytest.mark.parametrize("fault", ["missing_volume", "corrupt_manifest", "corrupt_object", "wrong_session", "bad_proof"])
+@pytest.mark.parametrize("fault", ["missing_volume", "corrupt_manifest", "corrupt_object", "wrong_session", "bad_proof", "false_original_fingerprint"])
 def test_archive_errors_never_acquire_or_shorten_history(volumes, fault):
     source, hot, cold, ids, observer = volumes
     entry, manifest, ref = archive_fixture(volumes)
@@ -257,8 +257,14 @@ def test_archive_errors_never_acquire_or_shorten_history(volumes, fault):
         (cold / entry["vault"]["object_path"]).write_bytes(b"invalid")
     elif fault == "wrong_session":
         entry["session_identity"] = "2026-10-09"
-    else:
+    elif fault == "bad_proof":
         Path(entry["archive_location"]["path"]).write_bytes(b"invalid")
+    else:
+        row = next(r for r in manifest["files"] if r["relative_path"] == entry["relative_path"])
+        row["source_fingerprint"]["inode"] += 1
+        path = cold / entry["vault"]["manifest_path"]
+        path.write_bytes(vault.canonical(manifest))
+        entry["vault"]["manifest_sha256"] = vault.sha(path)
     with pytest.raises(vault.Refused):
         storage.restore_registered(entry, cold, hot, hot / "restore.json", expected_archive_volume=ids["W"],
                                     expected_hot_volume=ids["T"], observer=observer)
@@ -273,6 +279,41 @@ def test_mutable_storage_candidates_refused(tmp_path):
     for name in ("active.db", "active.sqlite3", "journal-wal", "accumulators/state.json", "cache/item.json"):
         with pytest.raises(vault.Refused):
             storage.immutable_candidate(tmp_path / name)
+
+
+def test_storage_only_receipt_cannot_qualify_t0(volumes):
+    source, hot, cold, ids, observer = volumes
+    original, ref = t0_fixture(source)
+    target = hot / original.relative_to(source)
+    target.parent.mkdir(parents=True)
+    shutil.copyfile(original, target)
+    for name in ("prospective_t0_seal_index.json", "prospective_t0_snapshot_write_receipt.json"):
+        shutil.copyfile(original.parent / name, target.parent / name)
+    proof = storage.register_copy(original, target, hot / "storage-only.json", artifact_identity="snapshot:original",
+        session="2026-10-05", expected_volume=ids["T"], provenance={"native_content_only": True})
+    copied = {**ref, "path": str(target.parent / "prospective_t0_seal_index.json"),
+              "storage_location": proof, "original_snapshot_path": str(original)}
+    with pytest.raises(ValueError, match="BINDING_INVALID"):
+        seals.load_verified(copied, expected_snapshot_identity="snapshot:original", session="2026-10-05")
+
+
+def test_frozen_source_transition_preserves_pins_and_rejects_tampering(tmp_path):
+    from tools.verify_retention_reader_transition import historical_bytes, STORAGE_MANIFEST
+    root = Path(__file__).resolve().parents[1]
+    spec = json.loads((root / STORAGE_MANIFEST).read_bytes())
+    pins = json.loads((root / "tests/fixtures/e2e3_frozen_sources.json").read_bytes())["source_sha256_lf"]
+    for relative in spec["sources"]:
+        assert vault.digest(historical_bytes(root, relative)) == pins[relative]
+    # Copy only this tiny diagnostic closure, with a changed active source.
+    relative = "runtime_paths.py"
+    for path in (STORAGE_MANIFEST, "tests/fixtures/e2e3_frozen_sources.json", relative,
+                 spec["sources"][relative]["archive"]):
+        target = tmp_path / path
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(root / path, target)
+    (tmp_path / relative).write_bytes(b"tampered source")
+    with pytest.raises(ValueError, match="BINDING_INVALID"):
+        historical_bytes(tmp_path, relative)
 
 
 def register_fixture_tree(source, hot, ids, *, snapshot=None, reference=None):
@@ -409,3 +450,37 @@ print(json.dumps(dict(consumer_read="PASS", dashboard_read="PASS", protected_wri
                             capture_output=True, text=True, timeout=45)
     assert result.returncode == 0, result.stderr
     assert json.loads(result.stdout.splitlines()[-1])["protected_writes"] == 0
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="native Windows PowerShell profile routing")
+def test_native_powershell_profile_router(tmp_path, monkeypatch):
+    root = Path(__file__).resolve().parents[1]
+    parent = tmp_path / "workspace"
+    roles = {role: str(parent / name) for role, name in runtime.ROLE_NAMES.items()}
+    for path in roles.values():
+        Path(path).mkdir(parents=True)
+    profile = tmp_path / "profile.json"
+    profile.write_bytes(vault.canonical(dict(schema="stocklookup_workspace/v1", parent=str(parent),
+        roles=roles, hot_volume=vault.native_volume(parent))))
+    tools = Path(roles["producer"]) / "tools"
+    tools.mkdir()
+    for name in ("run_owner_daily.ps1", "owner_daily_presentation.ps1"):
+        shutil.copyfile(root / "tools" / name, tools / name)
+    dummy = tmp_path / "dummy.py"
+    dummy.write_text('''import argparse,json,pathlib
+p=argparse.ArgumentParser()
+p.add_argument('--runtime-root');p.add_argument('--result-path');p.add_argument('--progress-path')
+a=p.parse_args()
+pathlib.Path(a.result_path).write_text(json.dumps(dict(status='PASS',session='2026-10-05',
+    telemetry=dict(elapsed_seconds=0),action_center=dict(view_open=dict(status='READY')),
+    observed_runtime=a.runtime_root)))
+''', encoding="utf-8")
+    monkeypatch.setenv(runtime.WORKSPACE_PROFILE_ENV, str(profile))
+    monkeypatch.setenv("STOCK_LOOKUP_PYTHON", sys.executable)
+    result = subprocess.run(["powershell.exe", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass",
+        "-File", str(tools / "run_owner_daily.ps1"), "-EntryScript", str(dummy), "-NoPause"],
+        cwd=root, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=45)
+    assert result.returncode == 0, result.stdout + result.stderr
+    results = list(Path(roles["logs"]).glob("*.result.json"))
+    assert len(results) == 1
+    assert Path(json.loads(results[0].read_bytes())["observed_runtime"]) == Path(roles["runtime"])
