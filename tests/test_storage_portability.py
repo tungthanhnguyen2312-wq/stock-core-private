@@ -64,6 +64,62 @@ def test_legacy_no_archive_requirement(tmp_path, monkeypatch):
     assert catalog.resolve(tmp_path, "missing.json") == "NEVER_RETAINED"
 
 
+@pytest.mark.parametrize("fault", [None, "old_checkout", "stale_environment", "changed_profile", "bad_schema"])
+def test_active_writer_binding_refuses_stale_process(volumes, monkeypatch, fault):
+    import hashlib
+    from tools.run_owner_daily import bind_active_workspace
+    profile, selected = profile_fixture(volumes, monkeypatch)
+    # No production binding is installed by these isolated tests.
+    binding = volumes[0] / "active_workspace.json"
+    row = dict(schema="stocklookup_active_workspace/v1", profile_path=str(selected),
+               profile_sha256=hashlib.sha256(selected.read_bytes()).hexdigest(), python_path=sys.executable)
+    if fault == "bad_schema":
+        row["schema"] = "unknown"
+    binding.write_text(json.dumps(row), encoding="utf-8")
+    monkeypatch.delenv(runtime.WORKSPACE_PROFILE_ENV, raising=False)
+    monkeypatch.delenv("STOCK_LOOKUP_PYTHON", raising=False)
+    if fault == "stale_environment":
+        monkeypatch.setenv(runtime.WORKSPACE_PROFILE_ENV, str(volumes[0] / "old-profile.json"))
+    if fault == "changed_profile":
+        selected.write_text(selected.read_text() + " ", encoding="utf-8")
+    root = Path(profile["roles"]["producer"]) if fault != "old_checkout" else volumes[0]
+    if fault:
+        with pytest.raises(ValueError, match="ACTIVE_WORKSPACE_REFUSED"):
+            bind_active_workspace(root, binding)
+    else:
+        bind_active_workspace(root, binding)
+        assert runtime.workspace_profile()["paths"]["producer"] == root
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="native Windows Owner front doors")
+@pytest.mark.parametrize("frontdoor", ["stocklookup.ps1", "tools/run_owner_daily.ps1"])
+def test_inactive_checkout_refused_before_logs(tmp_path, frontdoor):
+    import hashlib
+    import os
+    root = Path(__file__).resolve().parents[1]
+    old = tmp_path / "old-C" / "stock-core-private"
+    script = old / frontdoor
+    script.parent.mkdir(parents=True)
+    shutil.copyfile(root / frontdoor, script)
+    home = tmp_path / "owner"
+    (home / ".stocklookup").mkdir(parents=True)
+    profile = tmp_path / "active-profile.json"
+    profile.write_text(json.dumps(dict(schema="stocklookup_workspace/v1",
+        roles=dict(producer=str(tmp_path / "new-T" / "stock-core-private")))), encoding="utf-8")
+    (home / ".stocklookup/active_workspace.json").write_text(json.dumps(dict(
+        schema="stocklookup_active_workspace/v1", profile_path=str(profile),
+        profile_sha256=hashlib.sha256(profile.read_bytes()).hexdigest(), python_path=sys.executable)), encoding="utf-8")
+    env = {**os.environ, "USERPROFILE":str(home)}
+    env.pop(runtime.WORKSPACE_PROFILE_ENV, None)
+    args = ["daily"] if frontdoor == "stocklookup.ps1" else ["-NoPause"]
+    result = subprocess.run(["powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass",
+        "-File", str(script), *args], capture_output=True, text=True, env=env, timeout=30)
+    assert result.returncode != 0
+    assert "not the active production writer" in result.stderr
+    assert not (old.parent / "run-logs").exists()
+    assert not (old / "operations-review").exists()
+
+
 def test_workspace_all_roles_release_identity_and_db(volumes, monkeypatch):
     profile, _ = profile_fixture(volumes, monkeypatch)
     qualified = runtime.workspace_profile()

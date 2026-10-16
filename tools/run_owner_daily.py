@@ -7,6 +7,7 @@ existing optional local portfolio contract, but no private artifact reaches Git 
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import re
@@ -29,6 +30,58 @@ SESSION_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
+
+
+def bind_active_workspace(root: Path, binding_path: Path | None = None) -> None:
+    """Enforce the operator's sole writer even in a shell with stale environment.
+
+    No binding preserves the legacy C workflow. Installing/removing the small
+    owner-local binding is a separately qualified operational cutover/rollback.
+    This runs before journal, log or provider work; it never changes evidence.
+    """
+    binding_path = binding_path or Path.home() / ".stocklookup" / "active_workspace.json"
+    if not binding_path.exists() and not binding_path.is_symlink() and not binding_path.is_junction():
+        return
+    try:
+        if binding_path.stat().st_size > 1024 * 1024:
+            raise ValueError("binding too large")
+        binding = json.loads(binding_path.read_bytes())
+        if (set(binding) != {"schema", "profile_path", "profile_sha256", "python_path"}
+                or binding["schema"] != "stocklookup_active_workspace/v1"):
+            raise ValueError("binding schema")
+        selected = Path(binding["profile_path"])
+        if not selected.is_absolute() or any(
+                p.is_symlink() or p.is_junction()
+                for p in (binding_path, *binding_path.parents, selected, *selected.parents)):
+            raise ValueError("binding/profile path redirected or relative")
+        if selected.stat().st_size > 1024 * 1024:
+            raise ValueError("profile too large")
+        raw = selected.read_bytes()
+        if hashlib.sha256(raw).hexdigest() != binding["profile_sha256"]:
+            raise ValueError("active profile hash mismatch")
+        profile = json.loads(raw)
+        if profile.get("schema") != "stocklookup_workspace/v1":
+            raise ValueError("workspace schema")
+        if Path(profile["roles"]["producer"]).resolve() != root.resolve():
+            raise ValueError("checkout is not the active production writer")
+        python = Path(binding["python_path"])
+        if (not python.is_absolute() or not python.is_file()
+                or python.resolve() != Path(sys.executable).resolve()):
+            raise ValueError("interpreter is not the active production Python")
+        configured = os.environ.get("STOCK_LOOKUP_WORKSPACE_PROFILE", "").strip()
+        if configured and Path(configured).resolve() != selected.resolve():
+            raise ValueError("stale workspace environment")
+        configured_python = os.environ.get("STOCK_LOOKUP_PYTHON", "").strip()
+        if configured_python and Path(configured_python).resolve() != python.resolve():
+            raise ValueError("stale Python environment")
+        # The existing volume, capacity, role and release guards still qualify it.
+        os.environ["STOCK_LOOKUP_WORKSPACE_PROFILE"] = str(selected)
+        os.environ["STOCK_LOOKUP_PYTHON"] = str(python)
+    except (OSError, ValueError, KeyError, TypeError) as exc:
+        raise ValueError("ACTIVE_WORKSPACE_REFUSED:" + str(exc)) from exc
+
+
+bind_active_workspace(ROOT)
 
 from runtime_paths import workspace_path, workspace_profile, workspace_environment, runtime_root as configured_runtime_root
 DEFAULT_RUNTIME = configured_runtime_root(DEFAULT_RUNTIME)
@@ -1238,6 +1291,7 @@ def run_workflow(*, root: Path = ROOT, runtime_root: Path = DEFAULT_RUNTIME,
                  publish_dashboard: bool = True, dashboard_complete_publication: bool = True,
                  replay_completed_session: str | None = None,
                  telemetry: OwnerDailyProgress | None = None) -> dict[str, Any]:
+    bind_active_workspace(root)
     root, runtime_root, handoff_repo = root.resolve(), runtime_root.resolve(), handoff_repo.resolve()
     dashboard_web_dir = dashboard_web_dir.resolve()
     profile = workspace_profile()
