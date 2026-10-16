@@ -74,6 +74,20 @@ def test_workspace_all_roles_release_identity_and_db(volumes, monkeypatch):
     release = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(release)
     try:
+        # Real temporary Git repositories; no fetch/pull/push or network.
+        web = qualified["paths"]["dashboard"]
+        for role in ("producer", "consumer", "dashboard"):
+            checkout = qualified["paths"][role]
+            def git(*args):
+                result = subprocess.run(["git", "-C", str(checkout), *args], capture_output=True, text=True, check=True)
+                return result.stdout.strip()
+            git("init", "-b", "main")
+            git("-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid", "commit", "--allow-empty", "-m", "fixture")
+            git("remote", "add", "origin", "https://github.com/tungthanhnguyen2312-wq/" + checkout.name + ".git")
+            if role == "dashboard":
+                release.assert_web_checkout_identity(web, branch=git("branch", "--show-current"),
+                    origin_url=git("remote", "get-url", "origin"), git_toplevel=Path(git("rev-parse", "--show-toplevel")),
+                    head=git("rev-parse", "HEAD"), origin_main=git("rev-parse", "HEAD"), live=True)
         release.assert_web_checkout_identity(qualified["paths"]["dashboard"], branch="main",
             origin_url="https://github.com/tungthanhnguyen2312-wq/market-dashboard.git",
             live=True, head="a", origin_main="a")
@@ -223,6 +237,12 @@ def test_vault_restore_catalog_t0_continuity(volumes, monkeypatch):
     # W is no longer needed for this explicitly qualified hot dependency.
     monkeypatch.setattr(vault, "native_volume", lambda p: ids["T"])
     assert catalog.resolve(hot, entry["relative_path"]) == "PRESENT_QUALIFIED"
+    (hot / "rehearsal-measurements.json").write_bytes(vault.canonical(dict(
+        native_snapshot_bytes=entry["original_size"], closure_files=len(manifest["files"]),
+        closure_logical_bytes=sum(row["size"] for row in manifest["files"]),
+        original_fingerprint=seals.fingerprint(Path(entry["original_path"])),
+        restored_fingerprint=seals.fingerprint(target), original_identity=entry["artifact_identity"],
+        portable_t0="PASS", explicit_vault_restore="PASS", production_bytes_moved=0)))
 
 
 @pytest.mark.parametrize("fault", ["missing_volume", "corrupt_manifest", "corrupt_object", "wrong_session", "bad_proof"])

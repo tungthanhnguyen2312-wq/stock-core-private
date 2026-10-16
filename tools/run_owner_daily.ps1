@@ -42,7 +42,10 @@ $log = Join-Path $logDir "stock_lookup_daily_$stamp.log"
 $result = Join-Path $logDir "stock_lookup_daily_$stamp.result.json"
 $progress = Join-Path $logDir "stock_lookup_daily_$stamp.progress.jsonl"
 $python = 'C:\Program Files\Python313\python.exe'
-if ($env:STOCK_LOOKUP_PYTHON) { $python = $env:STOCK_LOOKUP_PYTHON }
+if ($env:STOCK_LOOKUP_PYTHON) {
+    if (-not (Test-Path -LiteralPath $env:STOCK_LOOKUP_PYTHON -PathType Leaf)) { throw 'Configured Python unavailable' }
+    $python = $env:STOCK_LOOKUP_PYTHON
+}
 if (-not (Test-Path $python)) { $python = 'python' }
 $labels = @('Kiểm tra kho mã & môi trường', 'Chạy Daily chuẩn', 'Xác minh hoàn tất Daily',
     'Công bố trạng thái Producer', 'Công bố Dashboard', 'Tạo gói bàn giao AI', 'Xác minh từ xa',

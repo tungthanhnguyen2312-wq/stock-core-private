@@ -136,7 +136,8 @@ def historical_paths(root: Path, namespace: str, pattern: str) -> list[Path]:
     prefix = namespace.rstrip("/") + "/"
     for entry in load(root):
         rel = entry["relative_path"]
-        if rel.startswith(prefix) and Path(rel[len(prefix):]).match(pattern):
+        tail = Path(rel[len(prefix):]) if rel.startswith(prefix) else None
+        if tail is not None and len(tail.parts) == len(Path(pattern).parts) and tail.match(pattern):
             state = resolve(root, rel, session_identity=entry["session_identity"])
             if state != "NEVER_RETAINED":
                 found.add(safe_path(root, rel))

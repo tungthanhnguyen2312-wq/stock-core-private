@@ -6,6 +6,10 @@ if ($Command -eq 'daily' -and $Args.Count -eq 0) {
     exit $LASTEXITCODE
 }
 $py = 'C:\Program Files\Python313\python.exe'
+if ($env:STOCK_LOOKUP_PYTHON) {
+    if (-not (Test-Path -LiteralPath $env:STOCK_LOOKUP_PYTHON -PathType Leaf)) { throw 'Configured Python unavailable' }
+    $py = $env:STOCK_LOOKUP_PYTHON
+}
 if (-not (Test-Path $py)) { $py = 'python' }
 & $py (Join-Path $PSScriptRoot 'stocklookup.py') $Command @Args
 exit $LASTEXITCODE

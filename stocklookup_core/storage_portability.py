@@ -160,7 +160,8 @@ def restore_registered(entry, vault_root, staging_root, receipt_path, *, expecte
     manifest = vault.read_manifest(vault.safe_path(archive, locator["manifest_path"]), locator["manifest_sha256"])
     vault.require(manifest["volumes"]["destination"] == expected_archive_volume
                   and manifest["plan_sha256"] == locator["snapshot_identity"]
-                  and manifest["session_identity"] == entry["session_identity"], "archive manifest binding invalid")
+                  and manifest["session_identity"] == entry["session_identity"]
+                  and manifest["source_identity"] == entry["source_seal_provenance"], "archive manifest binding invalid")
     matches = [r for r in manifest["files"] if r["relative_path"] == entry["relative_path"]
                and r["vault_path"] == locator["object_path"]]
     vault.require(len(matches) == 1, "archive exact path missing/ambiguous")

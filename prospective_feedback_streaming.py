@@ -80,7 +80,7 @@ def code_digest() -> str:
              "prospective_decision_retention", "prospective_decision_outcome_measurement",
              "prospective_feedback_streaming", "bounded_artifact_stream", "session_bar_integrity",
              "fundamental_signal_consumption_contract", "governed_session_chain", "prospective_pit_capture_retention",
-             "daily_session_level2_package")
+             "daily_session_level2_package", "retained_evidence_catalog", "stocklookup_core.storage_portability")
     digest = hashlib.sha256()
     for name in names:
         # Preserve historical hash labels, but resolve the relocated implementation.
@@ -377,7 +377,8 @@ def _verification_code_digest() -> str:
     global _VERIFICATION_DIGEST
     if _VERIFICATION_DIGEST is None:
         digest = hashlib.sha256()
-        for name in ("prospective_decision_retention", "bounded_artifact_stream", "prospective_feedback_streaming"):
+        for name in ("prospective_decision_retention", "bounded_artifact_stream", "prospective_feedback_streaming",
+                     "retained_evidence_catalog", "stocklookup_core.storage_portability"):
             module = __import__(name)
             digest.update(hashlib.sha256(Path(module.__file__).read_bytes().replace(b"\r\n", b"\n")).digest())
         _VERIFICATION_DIGEST = digest.hexdigest()
