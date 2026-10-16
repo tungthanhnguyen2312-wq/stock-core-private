@@ -310,7 +310,10 @@ def test_active_writer_binding_refuses_stale_process(volumes, monkeypatch, fault
         row["python_path"] = str(other_python)
     binding.write_text(json.dumps(row), encoding="utf-8")
     monkeypatch.delenv(runtime.WORKSPACE_PROFILE_ENV, raising=False)
-    monkeypatch.delenv("STOCK_LOOKUP_PYTHON", raising=False)
+    # Register restoration even when the variable was initially absent: the
+    # successful binding itself sets it, outside monkeypatch's interception.
+    monkeypatch.setenv("STOCK_LOOKUP_PYTHON", "")
+    monkeypatch.delenv("STOCK_LOOKUP_PYTHON")
     if fault == "stale_environment":
         monkeypatch.setenv(runtime.WORKSPACE_PROFILE_ENV, str(volumes[0] / "old-profile.json"))
     if fault == "stale_python_environment":
@@ -319,8 +322,10 @@ def test_active_writer_binding_refuses_stale_process(volumes, monkeypatch, fault
         selected.write_text(selected.read_text() + " ", encoding="utf-8")
     root = Path(profile["roles"]["producer"]) if fault != "old_checkout" else volumes[0]
     if fault:
+        before = {name: os.environ.get(name) for name in (runtime.WORKSPACE_PROFILE_ENV, "STOCK_LOOKUP_PYTHON")}
         with pytest.raises(ValueError, match="ACTIVE_WORKSPACE_REFUSED"):
             bind_active_workspace(root, binding)
+        assert {name: os.environ.get(name) for name in before} == before
     else:
         bind_active_workspace(root, binding)
         assert runtime.workspace_profile()["paths"]["producer"] == root
