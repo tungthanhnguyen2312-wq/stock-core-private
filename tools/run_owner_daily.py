@@ -29,6 +29,11 @@ SESSION_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
+
+from runtime_paths import workspace_path, workspace_profile, workspace_environment, runtime_root as configured_runtime_root
+DEFAULT_RUNTIME = configured_runtime_root(DEFAULT_RUNTIME)
+DEFAULT_HANDOFF_REPO = workspace_path("handoff", DEFAULT_HANDOFF_REPO)
+DEFAULT_RESULT_LOG_ROOT = workspace_path("logs", DEFAULT_RESULT_LOG_ROOT)
 from release_checkout_identity import CANONICAL_WEB_ROOT  # noqa: E402
 from canonical_dashboard_runtime_release import (  # noqa: E402
     CanonicalRuntimeReleaseError, materialize_canonical_runtime_release, materialize_release_ready_runtime,
@@ -233,7 +238,7 @@ def consumer_root_for(producer_root: Path) -> Path:
     ``_git_head(root.parent / "ai-core-private")`` as ``consumer_head``,
     daily_research_session_operations imports ``builders.build_ticker_context`` from it, and the
     trusted-subset release verifies bundles with it. Never a worktree or another clone."""
-    return Path(producer_root).resolve().parent / "ai-core-private"
+    return workspace_path("consumer", Path(producer_root).resolve().parent / "ai-core-private")
 
 
 def preflight_consumer_repository(consumer_root: Path, *, producer_root: Path) -> dict[str, str]:
@@ -267,7 +272,7 @@ def _load(path: Path) -> dict[str, Any]:
 
 
 def _operation_records(root: Path) -> list[tuple[dict[str, Any], Path]]:
-    base = root / "operations-review" / "canonical-daily-operation-v1"
+    base = workspace_path("retained", root) / "operations-review" / "canonical-daily-operation-v1"
     return [(_load(path), path) for path in base.glob("*/*/daily_operation_record.json")]
 
 
@@ -295,7 +300,7 @@ def verify_daily_completion(root: Path, runtime_root: Path, *, session: str | No
     runtime_manifest = runtime_root / "bundle_manifest.json"
     if not runtime_manifest.is_file():
         raise OwnerDailyError("Daily completion verification", "RUNTIME_RELEASE_MANIFEST_MISSING")
-    source_candidates = list((root / "operations-review" / "daily-research-session-operations-v1" / resolved).glob("*/ai_research_bundle_manifest.json"))
+    source_candidates = list((workspace_path("retained", root) / "operations-review" / "daily-research-session-operations-v1" / resolved).glob("*/ai_research_bundle_manifest.json"))
     operation_id = record["daily_producer_operation_identity"]
     source_candidates = [p for p in source_candidates if _load(p).get("operation_identity") == operation_id]
     if len(source_candidates) != 1:
@@ -1235,6 +1240,13 @@ def run_workflow(*, root: Path = ROOT, runtime_root: Path = DEFAULT_RUNTIME,
                  telemetry: OwnerDailyProgress | None = None) -> dict[str, Any]:
     root, runtime_root, handoff_repo = root.resolve(), runtime_root.resolve(), handoff_repo.resolve()
     dashboard_web_dir = dashboard_web_dir.resolve()
+    profile = workspace_profile()
+    if profile:
+        paths = profile["paths"]
+        if (root != paths["producer"] or runtime_root != paths["runtime"]
+                or handoff_repo != paths["handoff"] or dashboard_web_dir != paths["dashboard"]):
+            raise ValueError("WORKFLOW_WORKSPACE_PROFILE_CONFLICT")
+        os.environ.update(workspace_environment())
 
     # Read the PRE-EXISTING journal (if any) before superseding it below -- this is the only
     # source of "was a session interrupted mid-publication last time" this invocation has.

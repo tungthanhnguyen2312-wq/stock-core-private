@@ -2,12 +2,13 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 
 from tools.vault_snapshot import Refused, safe_path, sha
 
 SCHEMA = "retained_evidence_cold_catalog/v1"
-STATES = {"PRESENT_ON_C", "ARCHIVED_COLD", "NEVER_RETAINED", "UNKNOWN_OR_CONFLICTED"}
+STATES = {"PRESENT_ON_C", "PRESENT_QUALIFIED", "ARCHIVED_COLD", "NEVER_RETAINED", "UNKNOWN_OR_CONFLICTED"}
 
 
 class EvidenceIntegrityError(Refused):
@@ -41,10 +42,13 @@ def load(root: Path) -> list[dict]:
             if not all(isinstance(entry.get(k), str) and entry[k] for k in
                        ("session_identity", "artifact_identity", "artifact_role")):
                 raise ValueError("identity required")
-            if entry["state"] in {"PRESENT_ON_C", "ARCHIVED_COLD"}:
+            if entry["state"] in {"PRESENT_ON_C", "PRESENT_QUALIFIED", "ARCHIVED_COLD"}:
                 if (type(entry.get("original_size")) is not int or entry["original_size"] < 0
                         or not _hash(entry.get("sha256")) or not entry.get("source_seal_provenance")):
                     raise ValueError("native provenance required")
+            if entry["state"] == "PRESENT_QUALIFIED":
+                if not entry.get("original_path") or not entry.get("storage_location"):
+                    raise ValueError("pinned original/location proof required")
             if entry["state"] == "ARCHIVED_COLD":
                 vault = entry["vault"]
                 safe_path(root, vault["manifest_path"])
@@ -79,6 +83,13 @@ def resolve(root: Path, relative_path: str, *, session_identity: str | None = No
             raise EvidenceIntegrityError("LOCAL_EVIDENCE_MISSING:" + relative_path)
         if path.stat().st_size != entry["original_size"] or sha(path) != entry["sha256"]:
             raise EvidenceIntegrityError("LOCAL_EVIDENCE_CORRUPT:" + relative_path)
+    if state == "PRESENT_QUALIFIED":
+        from stocklookup_core.storage_portability import verify_location
+        target, proof = verify_location(entry["storage_location"], original_path=entry["original_path"],
+                                        artifact_identity=entry["artifact_identity"], session=entry["session_identity"])
+        if (target.resolve() != path.resolve() or proof["sha256"] != entry["sha256"]
+                or proof["bytes"] != entry["original_size"]):
+            raise EvidenceIntegrityError("LOCATION_CATALOG_BINDING_INVALID")
     if state == "ARCHIVED_COLD":
         # Even if a file was manually restored, require an explicit verified local event.
         raise ArchiveRestoreRequired(entry)
@@ -111,3 +122,56 @@ def guard_acquisition(root: Path, session: str):
             raise EvidenceIntegrityError("UNKNOWN_OR_CONFLICTED:completion registry invalid") from exc
         if completed.get("status") == "COMPLETED_RETAINED_EVIDENCE":
             raise EvidenceIntegrityError("COMPLETED_SESSION_EVIDENCE_MISSING:" + session)
+
+
+def historical_paths(root: Path, namespace: str, pattern: str) -> list[Path]:
+    """Union local and registered history before cohort selection.
+
+    Archived dependencies refuse explicitly instead of reducing sample depth.
+    Restoration must be explicitly qualified at the exact consumer-relative path.
+    """
+    root = Path(root)
+    base = safe_path(root, namespace)
+    found = set(base.glob(pattern))
+    prefix = namespace.rstrip("/") + "/"
+    for entry in load(root):
+        rel = entry["relative_path"]
+        if rel.startswith(prefix) and Path(rel[len(prefix):]).match(pattern):
+            state = resolve(root, rel, session_identity=entry["session_identity"])
+            if state != "NEVER_RETAINED":
+                found.add(safe_path(root, rel))
+    # Also validate any registered local paths before returning a cohort.
+    for path in found:
+        guard_path(root, path)
+    return sorted(found)
+
+
+def original_path(path: Path, *, root: Path | None = None) -> Path:
+    """Exact original absolute-path resolution; unregistered paths are unchanged.
+
+    An explicit catalog root is needed for historical absolute C paths when running
+    elsewhere. No drive-letter substitution or archive/network fallback exists.
+    """
+    selected = root or os.environ.get("STOCK_LOOKUP_EVIDENCE_CATALOG_ROOT")
+    if selected is None:
+        return Path(path)
+    root = Path(selected)
+    matches = [e for e in load(root) if e.get("original_path") == str(path)]
+    if len(matches) > 1:
+        raise EvidenceIntegrityError("ORIGINAL_LOCATION_AMBIGUOUS")
+    if not matches:
+        return Path(path)
+    entry = matches[0]
+    resolve(root, entry["relative_path"], session_identity=entry["session_identity"])
+    return safe_path(root, entry["relative_path"])
+
+
+def t0_reference(root: Path, snapshot_path: Path, reference: dict) -> dict:
+    """Attach a registered storage proof to an in-memory reference only."""
+    for entry in load(Path(root)):
+        if (entry["artifact_role"] == "t0_snapshot" and entry["state"] == "PRESENT_QUALIFIED"
+                and safe_path(Path(root), entry["relative_path"]).resolve() == Path(snapshot_path).resolve()):
+            resolve(Path(root), entry["relative_path"])
+            return {**reference, "path": str(Path(snapshot_path).parent / "prospective_t0_seal_index.json"),
+                    "storage_location": entry["storage_location"], "original_snapshot_path": entry["original_path"]}
+    return dict(reference)

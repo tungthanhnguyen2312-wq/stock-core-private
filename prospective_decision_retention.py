@@ -18,6 +18,7 @@ import json
 import math
 import os
 import tempfile
+from retained_evidence_catalog import historical_paths, original_path
 from collections import Counter
 from pathlib import Path
 from typing import Any, Callable, Mapping, Sequence
@@ -100,7 +101,7 @@ def _identity(payload: dict[str, Any], prefix: str, field: str) -> dict[str, Any
 
 def _load(path: Path) -> dict[str, Any] | None:
     try:
-        value = json.loads(path.read_text(encoding="utf-8"))
+        value = json.loads(original_path(path).read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
         return None
     return value if isinstance(value, dict) else None
@@ -426,7 +427,7 @@ def validate_snapshot(snapshot: Mapping[str, Any]) -> bool:
 def _operation_manifests(root: Path) -> dict[str, dict[str, Any]]:
     rows: dict[str, dict[str, Any]] = {}
     base = root / "operations-review" / "daily-research-session-operations-v1"
-    for path in sorted(base.glob("*/*/run_manifest.json")) if base.is_dir() else []:
+    for path in historical_paths(root, "operations-review/daily-research-session-operations-v1", "*/*/run_manifest.json"):
         manifest = _load(path)
         identity = (manifest or {}).get("operation_identity")
         if isinstance(identity, str) and identity:
@@ -437,7 +438,7 @@ def _operation_manifests(root: Path) -> dict[str, dict[str, Any]]:
 def _handoff_by_snapshot(root: Path) -> dict[str, list[dict[str, Any]]]:
     result: dict[str, list[dict[str, Any]]] = {}
     base = root / "operations-review" / "canonical-post-close-v1"
-    for path in sorted(base.glob("*/session_handoff_bundle.json")) if base.is_dir() else []:
+    for path in historical_paths(root, "operations-review/canonical-post-close-v1", "*/session_handoff_bundle.json"):
         bundle = _load(path)
         snapshot = (bundle or {}).get("prospective_decision_snapshot") or {}
         identity = snapshot.get("identity") if isinstance(snapshot, Mapping) else None
@@ -500,7 +501,7 @@ def _original_reuse_reasons(root, path, snapshot, handoff, operations):
         reasons.append("REUSE_HANDOFF_OPERATION_PROOF_INVALID")
     if bound.get("source_integrated_decision_artifact_identity") != decision:
         reasons.append("REUSE_HANDOFF_ORIGINAL_SOURCE_MISMATCH")
-    if not isinstance(bound.get("path"), str) or (root / bound["path"]).resolve() != path.resolve():
+    if not isinstance(bound.get("path"), str) or original_path(root / bound["path"], root=root).resolve() != path.resolve():
         reasons.append("REUSE_HANDOFF_SNAPSHOT_PATH_MISMATCH")
     if reasons:
         return sorted(set(reasons))
@@ -508,6 +509,8 @@ def _original_reuse_reasons(root, path, snapshot, handoff, operations):
         import prospective_market_snapshot_contract as market
 
         ref = dict(bound.get("seal_index") or {})
+        from retained_evidence_catalog import t0_reference
+        ref = t0_reference(root, path, ref)
         ref_path = root / ref["path"]
         if ref.get("status") != "RETAINED" or ref_path.resolve() != (path.parent / "prospective_t0_seal_index.json").resolve():
             raise ValueError("SEAL_PATH_OR_STATUS")
@@ -524,11 +527,15 @@ def _original_reuse_reasons(root, path, snapshot, handoff, operations):
         stat = path.stat()
         fingerprint = {"bytes": stat.st_size, "mtime_ns": stat.st_mtime_ns, "ctime_ns": stat.st_ctime_ns,
                        "device": stat.st_dev, "inode": stat.st_ino}
+        fingerprint_valid = receipt.get("snapshot_fingerprint") == fingerprint
+        if ref.get("storage_location"):
+            from prospective_t0_seal_index import _snapshot_location_valid
+            fingerprint_valid = _snapshot_location_valid(ref, ref_path, index, receipt)
         if (ref.get("artifact_identity") != index["artifact_identity"] or
             ref.get("write_receipt_identity") != receipt["artifact_identity"] or
             index.get("snapshot_identity") != identity or receipt.get("snapshot_identity") != identity or
             index.get("session") != session or receipt.get("session") != session or
-            index.get("snapshot_file") != path.name or receipt.get("snapshot_fingerprint") != fingerprint or
+            index.get("snapshot_file") != path.name or not fingerprint_valid or
             receipt.get("index_identity") != index["artifact_identity"] or receipt.get("index_sha256") != index["artifact_sha256"] or
             receipt.get("snapshot_file_sha256") != index.get("snapshot_file_sha256") or
             index.get("operation_identity") != original or index.get("source_integrated_decision_artifact") != source or
@@ -592,7 +599,7 @@ def _original_reuse_reasons(root, path, snapshot, handoff, operations):
 def _handoff_snapshot_inventory(root: Path) -> list[dict[str, Any]]:
     base = root / "operations-review" / "canonical-post-close-v1"
     rows: list[dict[str, Any]] = []
-    for path in sorted(base.glob("*/session_handoff_bundle.json")) if base.is_dir() else []:
+    for path in historical_paths(root, "operations-review/canonical-post-close-v1", "*/session_handoff_bundle.json"):
         bundle = _load(path) or {}
         declared = bundle.get("prospective_decision_snapshot") or {}
         rows.append({
@@ -620,7 +627,7 @@ def discover_snapshots(root: str | Path, *, payload_projection: Callable[[Mappin
     base = repository / "operations-review" / "prospective-decision-retention-v1"
     inventory: list[dict[str, Any]] = []
     genuine: list[dict[str, Any]] = []
-    for path in sorted(base.glob("*/*/prospective_decision_snapshot.json")) if base.is_dir() else []:
+    for path in historical_paths(repository, "operations-review/prospective-decision-retention-v1", "*/*/prospective_decision_snapshot.json"):
         snapshot = load_snapshot(path)
         if not snapshot:
             continue

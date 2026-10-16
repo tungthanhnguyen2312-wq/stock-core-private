@@ -13,8 +13,26 @@ $utf8 = [System.Text.UTF8Encoding]::new($false)
 $OutputEncoding = $utf8
 $env:PYTHONUTF8 = '1'
 $env:PYTHONIOENCODING = 'utf-8'
-$runtime = 'C:\Projects\StockLookup\dashboard-runtime'
-$logDir = 'C:\Projects\StockLookup\run-logs'
+$workspace = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
+$runtime = Join-Path $workspace 'dashboard-runtime'
+$logDir = Join-Path $workspace 'run-logs'
+if ($env:STOCK_LOOKUP_RUNTIME_ROOT) { $runtime = $env:STOCK_LOOKUP_RUNTIME_ROOT }
+if ($env:STOCK_LOOKUP_WORKSPACE_PROFILE) {
+    # Qualify through the same Python path owner BEFORE creating any operational log.
+    $profilePython = if ($env:STOCK_LOOKUP_PYTHON) { $env:STOCK_LOOKUP_PYTHON } else { 'python' }
+    $priorPythonPath = $env:PYTHONPATH
+    try {
+        $env:PYTHONPATH = Split-Path $PSScriptRoot -Parent
+        $resolved = & $profilePython -B -c 'import json; from runtime_paths import workspace_profile; print(json.dumps({k:str(v) for k,v in workspace_profile()["paths"].items()}))'
+        if ($LASTEXITCODE -ne 0) { throw 'Workspace volume qualification failed' }
+        $roles = $resolved | ConvertFrom-Json
+        $runtime = $roles.runtime
+        $logDir = $roles.logs
+        if ([IO.Path]::GetFullPath((Split-Path $PSScriptRoot -Parent)) -ne $roles.producer) {
+            throw 'Launcher must execute from the configured canonical Producer'
+        }
+    } finally { $env:PYTHONPATH = $priorPythonPath }
+}
 if ($LogDirectory) { $logDir = $LogDirectory }
 $entry = Join-Path $PSScriptRoot 'run_owner_daily.py'
 if ($EntryScript) { $entry = $EntryScript }
@@ -24,6 +42,7 @@ $log = Join-Path $logDir "stock_lookup_daily_$stamp.log"
 $result = Join-Path $logDir "stock_lookup_daily_$stamp.result.json"
 $progress = Join-Path $logDir "stock_lookup_daily_$stamp.progress.jsonl"
 $python = 'C:\Program Files\Python313\python.exe'
+if ($env:STOCK_LOOKUP_PYTHON) { $python = $env:STOCK_LOOKUP_PYTHON }
 if (-not (Test-Path $python)) { $python = 'python' }
 $labels = @('Kiểm tra kho mã & môi trường', 'Chạy Daily chuẩn', 'Xác minh hoàn tất Daily',
     'Công bố trạng thái Producer', 'Công bố Dashboard', 'Tạo gói bàn giao AI', 'Xác minh từ xa',

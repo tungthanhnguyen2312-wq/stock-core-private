@@ -16,10 +16,12 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
+from runtime_paths import workspace_path, workspace_profile
+_BOUND_PROFILE = os.environ.get("STOCK_LOOKUP_WORKSPACE_PROFILE", "")
 
-CANONICAL_WEB_ROOT = Path(r"C:\Projects\StockLookup\market-dashboard")
-CANONICAL_BACKEND_ROOT = Path(r"C:\Projects\StockLookup\dashboard-runtime")
-CANONICAL_PRODUCER_ROOT = Path(r"C:\Projects\StockLookup\stock-core-private")
+CANONICAL_WEB_ROOT = workspace_path("dashboard", Path(r"C:\Projects\StockLookup\market-dashboard"))
+CANONICAL_BACKEND_ROOT = workspace_path("runtime", Path(r"C:\Projects\StockLookup\dashboard-runtime"))
+CANONICAL_PRODUCER_ROOT = workspace_path("producer", Path(r"C:\Projects\StockLookup\stock-core-private"))
 CANONICAL_PRODUCER_PUBLISH_DASHBOARD = CANONICAL_PRODUCER_ROOT / "publish_dashboard.py"
 CANONICAL_PRODUCER_PUBLISH_RELEASE = CANONICAL_PRODUCER_ROOT / "tools" / "publish_release.py"
 CANONICAL_PRODUCER_ORCHESTRATOR = CANONICAL_PRODUCER_ROOT / "tools" / "release_orchestrator.py"
@@ -75,7 +77,20 @@ def is_test_fixture(web_dir: Path) -> bool:
 
 def origin_is_canonical(origin_url: str) -> bool:
     normalized = origin_url.strip().lower().replace("\\", "/")
-    return any(marker in normalized for marker in CANONICAL_ORIGIN_MARKERS)
+    normalized = normalized.removesuffix("/").removesuffix(".git")
+    return normalized in {"https://github.com/" + CANONICAL_ORIGIN_REPO,
+                          "git@github.com:" + CANONICAL_ORIGIN_REPO,
+                          "ssh://git@github.com/" + CANONICAL_ORIGIN_REPO}
+
+
+def _requalify_workspace():
+    if os.environ.get("STOCK_LOOKUP_WORKSPACE_PROFILE", "") != _BOUND_PROFILE:
+        raise ReleaseIdentityError("REFUSED: workspace profile changed during release process")
+    profile = workspace_profile()
+    if profile and any(profile["paths"][role] != expected for role, expected in (
+            ("producer", CANONICAL_PRODUCER_ROOT), ("runtime", CANONICAL_BACKEND_ROOT),
+            ("dashboard", CANONICAL_WEB_ROOT))):
+        raise ReleaseIdentityError("REFUSED: canonical workspace changed during release process")
 
 
 def legacy_web_marker(web_dir: Path) -> str | None:
@@ -91,6 +106,7 @@ def legacy_web_marker(web_dir: Path) -> str | None:
 
 
 def assert_producer_publisher_file(path: Path, *, role: str) -> None:
+    _requalify_workspace()
     expected = {
         "publish_dashboard": CANONICAL_PRODUCER_PUBLISH_DASHBOARD,
         "publish_release": CANONICAL_PRODUCER_PUBLISH_RELEASE,
@@ -110,6 +126,7 @@ def assert_runtime_root_identity(runtime_dir: Path) -> None:
     guard so isolated tests can construct temporary runtime/web pairs without ever making
     an alternate workspace path production-capable.
     """
+    _requalify_workspace()
     runtime = runtime_dir.resolve()
     if os.environ.get(TEST_FIXTURE_ENV, "").strip():
         return
@@ -137,6 +154,7 @@ def assert_web_checkout_identity(
     declared test fixture. Legacy workspace paths are always refused.
     """
     web = web_dir.resolve()
+    _requalify_workspace()
     marker = legacy_web_marker(web)
     if marker:
         raise ReleaseIdentityError(
