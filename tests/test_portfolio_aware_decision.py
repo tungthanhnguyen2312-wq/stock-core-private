@@ -5,6 +5,8 @@ policy figure below is fabricated for test purposes only.
 """
 from __future__ import annotations
 
+import pytest
+
 import stocklookup_core.portfolio.portfolio_aware_decision as pad
 
 
@@ -60,21 +62,26 @@ def make_snapshot(*, positions=None, account=None, policy=None, as_of_date="2026
 
 
 def make_security_decision(ticker, posture, *, trigger_level=None, invalidation_level=None,
-                            counter_thesis=None, material_uncertainties=None, as_of_session="2026-09-08"):
+                            counter_thesis=None, material_uncertainties=None, as_of_session="2026-09-08", price_unit="VND"):
+    # Synthetic boundaries explicitly declare the account unit (portfolio_monetary_unit_integrity/v1);
+    # undeclared/research-unit cases are covered by tests/test_portfolio_aware_decision.py's unit section.
+    unit_basis = {"price_unit": price_unit}
     return {
         "ticker": ticker, "as_of_session": as_of_session, "research_action_posture": posture,
-        "trigger": {"trigger_level": trigger_level, "trigger_type": "STRUCTURAL" if trigger_level else "NO_TRIGGER"},
-        "invalidation": {"invalidation_level": invalidation_level},
+        "trigger": {"trigger_level": trigger_level, "trigger_type": "STRUCTURAL" if trigger_level else "NO_TRIGGER",
+                    "price_basis": dict(unit_basis)},
+        "invalidation": {"invalidation_level": invalidation_level, "price_basis": dict(unit_basis)},
         "counter_thesis": counter_thesis or [], "material_uncertainties": material_uncertainties or [],
         "decision_identity": f"decision:{ticker}:test-{posture}",
     }
 
 
 def decide(ticker, snapshot, decision, *, prices=None, sector_by_ticker=None, position_lanes=None,
-           excluded_tickers=None, position_lane=None, reward_boundary=None, execution_capacity_envelope=None):
+           excluded_tickers=None, position_lane=None, reward_boundary=None, execution_capacity_envelope=None,
+           price_units="VND"):
     state = pad.derive_portfolio_state(
         portfolio_snapshot=snapshot, prices=prices, sector_by_ticker=sector_by_ticker,
-        position_lanes=position_lanes, excluded_tickers=excluded_tickers,
+        position_lanes=position_lanes, excluded_tickers=excluded_tickers, price_units=price_units,
     )
     return pad.build_ticker_portfolio_aware_decision(
         ticker=ticker, portfolio_state=state, security_decision=decision, position_lane=position_lane,
@@ -418,7 +425,7 @@ def test_16c_unresolved_position_excluded_from_active_position_count_and_gross_e
             "BBB": make_security_decision("BBB", "HOLD"),
         },
     }
-    state = pad.derive_portfolio_state(portfolio_snapshot=snapshot, prices={"AAA": 40, "BBB": 50}, sector_by_ticker={"AAA": "TECHNOLOGY", "BBB": "TECHNOLOGY"})
+    state = pad.derive_portfolio_state(portfolio_snapshot=snapshot, prices={"AAA": 40, "BBB": 50}, price_units="VND", sector_by_ticker={"AAA": "TECHNOLOGY", "BBB": "TECHNOLOGY"})
     # A reconciliation-unresolved position never contributes a market value to gross exposure.
     assert state["positions"]["BBB"]["current_market_value"] is None
     artifact = pad.build_artifact(session="2026-09-08", requested_at="2026-09-08T00:00:00", portfolio_state=state, integrated_decision_artifact=integrated_decision_artifact)
@@ -444,7 +451,7 @@ def test_18_artifact_is_deterministic_and_idempotent():
         positions=[make_position("AAA", 1000, cost_basis=40)],
         account={"cash_available": "50000000", "net_asset_value": "100000000"},
     )
-    state = pad.derive_portfolio_state(portfolio_snapshot=snapshot, prices={"AAA": 48}, sector_by_ticker={"AAA": "TECHNOLOGY"})
+    state = pad.derive_portfolio_state(portfolio_snapshot=snapshot, prices={"AAA": 48}, price_units="VND", sector_by_ticker={"AAA": "TECHNOLOGY"})
     integrated = {
         "artifact_identity": "integrated_investment_decision_product:test",
         "records": {"AAA": make_security_decision("AAA", "ACCUMULATE_ON_RETEST", trigger_level=50, invalidation_level=45)},
@@ -460,7 +467,7 @@ def test_18b_public_console_summary_has_no_private_values():
         positions=[make_position("AAA", 1000, cost_basis=40)],
         account={"cash_available": "50000000", "net_asset_value": "100000000", "margin_debt": "1000000"},
     )
-    state = pad.derive_portfolio_state(portfolio_snapshot=snapshot, prices={"AAA": 48}, sector_by_ticker={"AAA": "TECHNOLOGY"})
+    state = pad.derive_portfolio_state(portfolio_snapshot=snapshot, prices={"AAA": 48}, price_units="VND", sector_by_ticker={"AAA": "TECHNOLOGY"})
     integrated = {
         "artifact_identity": "integrated_investment_decision_product:test",
         "records": {"AAA": make_security_decision("AAA", "ACCUMULATE_ON_RETEST", trigger_level=50, invalidation_level=45)},
@@ -486,7 +493,7 @@ def test_19_portfolio_fit_adapter_reflects_concentration_and_sector_overlap():
         positions=[make_position("AAA", 1000000)],
         account={"cash_available": "10000000", "net_asset_value": "100000000"},
     )
-    state = pad.derive_portfolio_state(portfolio_snapshot=snapshot, prices={"AAA": 40}, sector_by_ticker={"AAA": "TECHNOLOGY"})
+    state = pad.derive_portfolio_state(portfolio_snapshot=snapshot, prices={"AAA": 40}, price_units="VND", sector_by_ticker={"AAA": "TECHNOLOGY"})
     fit = pad.project_portfolio_fit_for_integrated_decision(state, "AAA")
     assert fit["status"] == "AVAILABLE"
     assert fit["is_held"] is True
@@ -611,3 +618,261 @@ def test_no_investment_accounts_context_behaves_exactly_as_before():
     assert state["cash_available"] == 100000000.0
     assert state["effective_nav"] == 100000000.0
     assert state["investment_accounts_aggregate_status"] == "NOT_PROVIDED"
+
+
+# ── PORTFOLIO_MONETARY_UNIT_INTEGRITY_V1 ─────────────────────────────────────────────────────
+# Synthetic research-unit fixtures shaped like the retained 2026-10-16 defect: closes quoted in a
+# source-native research unit (~1/1000 of VND) multiplied into a VND NAV. None of these figures is a
+# real holding; the shape (not the values) is what the regression guards.
+
+RESEARCH_UNIT = "UNVERIFIED_RESEARCH_PRICE"
+SESSION_UNIT = "2026-10-16"
+
+
+def _research_marks(prices, *, unit=RESEARCH_UNIT, session=SESSION_UNIT, basis="ADJUSTED_RETROSPECTIVE", identity="descriptive:test"):
+    return {ticker: {"value": value, "price_unit": unit, "price_basis": basis, "source_artifact_identity": identity,
+                     "session": session} for ticker, value in prices.items()}
+
+
+def _unit_snapshot(*, positions, account=None, aggregate=None, as_of_date=SESSION_UNIT):
+    return make_snapshot(positions=positions, account=account, as_of_date=as_of_date, investment_accounts_aggregate=aggregate)
+
+
+def _held_snapshot(**overrides):
+    account = {"cash_available": "260000000", "net_asset_value": "1000000000", "margin_debt": "0"}
+    account.update(overrides.pop("account", {}))
+    positions = overrides.pop("positions", [make_position("AAA", 13000), make_position("BBB", 9000), make_position("CCC", 8000)])
+    return _unit_snapshot(positions=positions, account=account, **overrides)
+
+
+_DEFECT_PRICES = {"AAA": 20.9, "BBB": 19.45, "CCC": 21.0}
+
+
+def _research_decision(ticker, posture, **kwargs):
+    return make_security_decision(ticker, posture, price_unit=RESEARCH_UNIT, **kwargs)
+
+
+def test_unit_01_undeclared_or_research_unit_price_never_becomes_a_nav_weight():
+    snapshot = _held_snapshot()
+    for state in (pad.derive_portfolio_state(portfolio_snapshot=snapshot, prices=_DEFECT_PRICES),
+                  pad.derive_portfolio_state(portfolio_snapshot=snapshot, price_marks=_research_marks(_DEFECT_PRICES))):
+        integrity = state["monetary_unit_integrity"]
+        assert integrity["status"] == pad.UNIT_STATUS_NOT_COMPARABLE
+        assert integrity["account_monetary_unit"] == "VND"
+        for ticker in ("AAA", "BBB", "CCC"):
+            position = state["positions"][ticker]
+            assert position["current_market_value"] is None
+            assert position["current_weight"] is None
+            assert position["current_weight_status"] == pad.WEIGHT_STATUS_UNIT_NOT_COMPARABLE
+            # The unit-free equity-sleeve mix survives.
+            assert position["equity_sleeve_weight"] is not None
+        assert abs(sum(state["positions"][t]["equity_sleeve_weight"] for t in ("AAA", "BBB", "CCC")) - 1.0) < 1e-12
+        assert state["sector_weights"] == {} and state["gross_exposure_weight"] is None
+        assert state["exposure_status"] == pad.WEIGHT_STATUS_UNIT_NOT_COMPARABLE
+        assert state["nav_reconciliation"] is None  # no computed NAV from research-unit values
+
+
+def test_unit_02_explicit_account_unit_prices_keep_existing_nav_math():
+    snapshot = _held_snapshot()
+    vnd_prices = {ticker: value * 1000 for ticker, value in _DEFECT_PRICES.items()}  # a source that itself declares VND
+    state = pad.derive_portfolio_state(portfolio_snapshot=snapshot, price_marks=_research_marks(vnd_prices, unit="VND"))
+    assert state["monetary_unit_integrity"]["status"] == pad.UNIT_STATUS_VERIFIED
+    assert state["positions"]["AAA"]["current_weight"] == pytest.approx(13000 * 20900 / 1e9)
+    assert state["positions"]["AAA"]["current_market_value_method"] == pad.MARKET_VALUE_METHOD_VERIFIED
+    assert state["exposure_status"] == "AVAILABLE"
+
+
+def test_unit_03_explicit_incompatible_unit_is_not_comparable():
+    snapshot = _held_snapshot()
+    state = pad.derive_portfolio_state(portfolio_snapshot=snapshot, price_marks=_research_marks(_DEFECT_PRICES, unit="USD"))
+    assert state["monetary_unit_integrity"]["status"] == pad.UNIT_STATUS_NOT_COMPARABLE
+    assert "PRICE_UNIT_NOT_ACCOUNT_UNIT:USD" in state["monetary_unit_integrity"]["reason_codes"]
+    mixed = dict(_research_marks({"AAA": 20900.0}, unit="VND"), **_research_marks({"BBB": 19.45, "CCC": 21.0}))
+    state = pad.derive_portfolio_state(portfolio_snapshot=snapshot, price_marks=mixed)
+    assert state["monetary_unit_integrity"]["status"] == pad.UNIT_STATUS_NOT_COMPARABLE
+    assert all(state["positions"][t]["current_weight"] is None for t in ("BBB", "CCC"))
+    # Mixed sources cannot form one relative sleeve either.
+    assert state["monetary_unit_integrity"]["equity_sleeve"]["status"] == "UNAVAILABLE"
+
+
+def _anchored_snapshot(*, anchor="740000000", anchor_as_of=SESSION_UNIT, nav="1000000000", receivables="0", positions=None):
+    aggregate = {
+        "status": "AGGREGATED", "artifact_identity": "investment_accounts_portfolio_context:test",
+        "as_of_dates": {"ACCOUNT_1": anchor_as_of, "ACCOUNT_2": anchor_as_of},
+        "totals": {"total_broker_cash": "260000000", "total_reserved_cash": None, "total_margin_debt": "0",
+                   "total_broker_reported_nav": nav, "total_broker_reported_securities_market_value": anchor,
+                   "total_receivables": receivables},
+    }
+    return _held_snapshot(aggregate=aggregate, positions=positions or [make_position("AAA", 13000), make_position("BBB", 9000), make_position("CCC", 8000)])
+
+
+def test_unit_04_stale_or_mismatched_owner_anchor_is_refused():
+    stale = pad.derive_portfolio_state(portfolio_snapshot=_anchored_snapshot(anchor_as_of="2026-10-15"),
+                                       price_marks=_research_marks(_DEFECT_PRICES))
+    assert stale["monetary_unit_integrity"]["status"] == pad.UNIT_STATUS_NOT_COMPARABLE
+    assert "OWNER_ANCHOR_NOT_SAME_SESSION" in stale["monetary_unit_integrity"]["reason_codes"]
+    mismatch = pad.derive_portfolio_state(portfolio_snapshot=_anchored_snapshot(anchor="300000000"),
+                                          price_marks=_research_marks(_DEFECT_PRICES))
+    assert "OWNER_ANCHOR_NAV_IDENTITY_MISMATCH" in mismatch["monetary_unit_integrity"]["reason_codes"]
+    assert all(mismatch["positions"][t]["current_weight"] is None for t in ("AAA", "BBB", "CCC"))
+    absent = pad.derive_portfolio_state(portfolio_snapshot=_anchored_snapshot(anchor=None), price_marks=_research_marks(_DEFECT_PRICES))
+    assert "OWNER_ANCHOR_ABSENT" in absent["monetary_unit_integrity"]["reason_codes"]
+
+
+def test_unit_05_qualified_same_session_anchor_scales_the_sleeve_as_a_derived_proxy_only():
+    state = pad.derive_portfolio_state(portfolio_snapshot=_anchored_snapshot(), price_marks=_research_marks(_DEFECT_PRICES))
+    integrity = state["monetary_unit_integrity"]
+    assert integrity["status"] == pad.UNIT_STATUS_OWNER_ANCHORED
+    assert integrity["owner_market_value_anchor"]["nav_identity"]["status"] == "RECONCILED"
+    weights = {t: state["positions"][t]["current_weight"] for t in ("AAA", "BBB", "CCC")}
+    assert sum(weights.values()) == pytest.approx(0.74)
+    for t in weights:
+        assert weights[t] == pytest.approx(state["positions"][t]["equity_sleeve_weight"] * 0.74)
+        assert state["positions"][t]["current_weight_status"] == pad.WEIGHT_STATUS_OWNER_ANCHORED
+    assert state["exposure_status"] == pad.WEIGHT_STATUS_OWNER_ANCHORED
+    # The anchor scales weights only: research-unit entry prices still cannot become share counts.
+    decision = _research_decision("AAA", "ACCUMULATE_ON_RETEST", trigger_level=21.5, invalidation_level=19.8)
+    record = pad.build_ticker_portfolio_aware_decision(ticker="AAA", portfolio_state=state, security_decision=decision)
+    assert record["single_position_constraint"]["status"] == "LIMIT_BREACH"  # ~0.336 > 0.30 policy cap
+    assert record["single_position_constraint"]["weight_basis"] == "OWNER_ANCHORED_DERIVED_PROXY"
+    assert record["position_state"] == "HELD_ABOVE_POLICY_CAP"
+    assert record["portfolio_action_research"] == "OVER_LIMIT_REVIEW"
+    assert record["single_position_constraint"]["remaining_quantity"] is None
+    assert record["research_size_envelope"]["research_size_envelope_shares"] is None
+    assert record["monetary_unit_context"]["share_quantity_status"] == "BLOCKED_MONETARY_UNITS_NOT_EXPLICITLY_COMPARABLE"
+
+
+def test_unit_06_missing_unresolved_or_excluded_positions_never_hide_exposure():
+    unresolved = make_position("DDD", 0)
+    unresolved["current_quantity"] = None
+    unresolved["current_position_status"] = "CURRENT_POSITION_UNRESOLVED"
+    with_unresolved = _anchored_snapshot(positions=[make_position("AAA", 13000), make_position("BBB", 9000), unresolved])
+    state = pad.derive_portfolio_state(portfolio_snapshot=with_unresolved, price_marks=_research_marks(_DEFECT_PRICES))
+    assert "UNRESOLVED_POSITION_BLOCKS_OWNER_ANCHOR" in state["monetary_unit_integrity"]["reason_codes"]
+    assert state["exposure_status"] == "UNAVAILABLE_CURRENT_POSITION_UNRESOLVED"
+    unpriced = pad.derive_portfolio_state(portfolio_snapshot=_anchored_snapshot(), price_marks=_research_marks({"AAA": 20.9, "BBB": 19.45}))
+    assert "UNPRICED_CONFIRMED_HOLDING_BLOCKS_OWNER_ANCHOR" in unpriced["monetary_unit_integrity"]["reason_codes"]
+    assert unpriced["positions"]["CCC"]["current_weight_status"] == "UNAVAILABLE_NO_PRICE_OR_NAV"
+    # An owner-excluded holding is apportioned inside the broker total but never counted as active exposure.
+    excluded = pad.derive_portfolio_state(portfolio_snapshot=_anchored_snapshot(), price_marks=_research_marks(_DEFECT_PRICES),
+                                          excluded_tickers=["CCC"])
+    assert excluded["monetary_unit_integrity"]["status"] == pad.UNIT_STATUS_OWNER_ANCHORED
+    assert excluded["positions"]["CCC"]["current_weight"] is None
+    assert excluded["positions"]["CCC"]["current_market_value"] is not None
+    assert excluded["gross_exposure_weight"] == pytest.approx(0.74 - excluded["positions"]["CCC"]["current_market_value"] / 1e9)
+
+
+def test_unit_07_08_sector_and_gross_constraints_are_not_evaluable_without_weights():
+    state = pad.derive_portfolio_state(portfolio_snapshot=_held_snapshot(), price_marks=_research_marks(_DEFECT_PRICES),
+                                       sector_by_ticker={"AAA": "STEEL", "BBB": "STEEL", "CCC": "STEEL", "EEE": "STEEL"})
+    decision = _research_decision("EEE", "INITIATE_ON_BREAKOUT", trigger_level=30.0, invalidation_level=27.0)
+    record = pad.build_ticker_portfolio_aware_decision(ticker="EEE", portfolio_state=state, security_decision=decision)
+    # Missing holding weights are never zero sector/gross exposure for a new name.
+    assert record["sector_constraint"]["status"] == "UNAVAILABLE"
+    assert record["sector_constraint"]["evaluation"] == pad.BINDING_STATE_NOT_EVALUABLE
+    assert record["gross_exposure_constraint"]["status"] == "UNAVAILABLE"
+    assert record["gross_exposure_constraint"]["reason"] == pad.WEIGHT_STATUS_UNIT_NOT_COMPARABLE
+    assert "SECTOR" in record["constraints_not_evaluated"] and "GROSS_EXPOSURE" in record["constraints_not_evaluated"]
+    assert record["binding_constraint"] == pad.BINDING_CONSTRAINT_NOT_EVALUABLE
+
+
+def test_unit_09_10_risk_margin_and_envelope_quantities_are_blocked_not_numeric():
+    snapshot = make_snapshot(account={
+        "cash_available": "100000000", "net_asset_value": "1000000000",
+        "margin_available_minimum": "10000000", "margin_available_maximum": "50000000", "annual_margin_rate_percent": "0",
+    })
+    state = pad.derive_portfolio_state(portfolio_snapshot=snapshot, sector_by_ticker={"AAA": "TECHNOLOGY"})
+    decision = _research_decision("AAA", "INITIATE_ON_BREAKOUT", trigger_level=100, invalidation_level=90)
+    record = pad.build_ticker_portfolio_aware_decision(ticker="AAA", portfolio_state=state, security_decision=decision,
+                                                       reward_boundary=140.0)
+    assert record["risk_sizing_status"] == "UNAVAILABLE_MONETARY_UNIT_NOT_COMPARABLE"
+    assert record["portfolio_risk_quantity_ceiling"] is None and record["portfolio_risk_notional_ceiling"] is None
+    assert record["portfolio_action_research"] == "ADD_ELIGIBLE_SIZING_UNAVAILABLE"
+    assert record["cash_funding_capacity"]["max_cash_fundable_quantity"] is None
+    assert record["cash_funding_capacity"]["deployable_cash"] is not None  # an account-unit amount stays valid
+    capacity = record["margin_economics"]["research_capacity"]
+    assert record["margin_economics"]["margin_research_band"] == "MAX_BAND"  # unit-free reward/risk ratio
+    assert capacity["capacity_before_portfolio_caps_quantity"] is None
+    assert capacity["final_margin_research_capacity_quantity"] is None
+    envelope = record["research_size_envelope"]
+    assert envelope["research_size_envelope_shares"] is None and envelope["concentration_cap_shares"] is None
+    assert envelope["reason_codes"][0] == "MONETARY_UNITS_NOT_EXPLICITLY_COMPARABLE"
+    assert record["execution_qualified_quantity"] is None
+    assert "MONETARY_UNIT_NOT_COMPARABLE_ACCOUNT_AMOUNTS_AND_SHARE_QUANTITIES_BLOCKED" in record["material_uncertainties"]
+
+
+def test_unit_11_genuine_over_limit_with_verified_units_still_binds():
+    snapshot = make_snapshot(positions=[make_position("AAA", 1000000)],
+                             account={"cash_available": "10000000", "net_asset_value": "100000000"})
+    record = decide("AAA", snapshot, make_security_decision("AAA", "HOLD"), prices={"AAA": 40},
+                    sector_by_ticker={"AAA": "TECHNOLOGY"})
+    assert record["position_state"] == "HELD_ABOVE_POLICY_CAP"
+    assert record["binding_constraint"] == "SINGLE_POSITION"
+    assert record["binding_constraint_state"] == pad.BINDING_STATE_EVALUATED_BINDING
+    assert record["single_position_constraint"]["evaluation"] == pad.CONSTRAINT_EVALUATED_BREACHED
+
+
+def test_unit_12_binding_none_only_when_evaluated_or_not_applicable():
+    held_state = pad.derive_portfolio_state(portfolio_snapshot=_held_snapshot(), price_marks=_research_marks(_DEFECT_PRICES),
+                                            sector_by_ticker={"AAA": "STEEL"})
+    held = pad.build_ticker_portfolio_aware_decision(ticker="AAA", portfolio_state=held_state,
+                                                     security_decision=_research_decision("AAA", "AVOID"))
+    assert held["position_state"] == "HELD"
+    assert held["binding_constraint"] == "NOT_EVALUABLE"
+    assert held["binding_constraint_state"] == pad.BINDING_STATE_NOT_EVALUABLE
+    not_held = pad.build_ticker_portfolio_aware_decision(ticker="ZZZ", portfolio_state=held_state,
+                                                         security_decision=_research_decision("ZZZ", "WAIT_FOR_CONFIRMATION"))
+    assert (not_held["binding_constraint"], not_held["binding_constraint_state"]) == ("NONE", pad.BINDING_STATE_NOT_APPLICABLE)
+    snapshot = make_snapshot(account={"cash_available": "100000000", "net_asset_value": "100000000"})
+    evaluated = decide("AAA", snapshot, make_security_decision("AAA", "INITIATE_ON_BREAKOUT", trigger_level=50, invalidation_level=45),
+                       sector_by_ticker={"AAA": "TECHNOLOGY"})
+    assert (evaluated["binding_constraint"], evaluated["binding_constraint_state"]) == ("NONE", pad.BINDING_STATE_EVALUATED_NOT_BINDING)
+    missing_sector = decide("AAA", snapshot, make_security_decision("AAA", "INITIATE_ON_BREAKOUT", trigger_level=50, invalidation_level=45))
+    assert missing_sector["portfolio_action_research"] == "ADD_WITHIN_EVALUATED_CONSTRAINTS"
+    assert missing_sector["binding_constraint"] == "NOT_EVALUABLE"
+
+
+def test_unit_13_defect_shape_regression_no_implausible_weight_or_share_envelope():
+    """The retained 2026-10-16 shape: 1000x-small weights and ~300x-NAV share envelopes must not recur."""
+    state = pad.derive_portfolio_state(portfolio_snapshot=_held_snapshot(), price_marks=_research_marks(_DEFECT_PRICES),
+                                       sector_by_ticker={t: "STEEL" for t in _DEFECT_PRICES})
+    integrated = {"artifact_identity": "integrated:test", "session": SESSION_UNIT, "records": {
+        t: _research_decision(t, "AVOID", as_of_session=SESSION_UNIT) for t in _DEFECT_PRICES}}
+    artifact = pad.build_artifact(session=SESSION_UNIT, requested_at="2026-10-16T20:00:00", portfolio_state=state,
+                                  integrated_decision_artifact=integrated)
+    for record in artifact["records"].values():
+        assert not (record["current_weight"] is not None and record["current_weight"] < 0.01)
+        assert record["research_size_envelope"]["research_size_envelope_shares"] is None
+        assert record["binding_constraint"] != "NONE"
+    assert artifact["monetary_unit_integrity"]["status"] == pad.UNIT_STATUS_NOT_COMPARABLE
+    assert artifact["coverage"]["by_binding_constraint_state"] == {pad.BINDING_STATE_NOT_EVALUABLE: 3}
+
+
+def test_unit_14_capacity_price_without_account_unit_never_sizes_liquidity_shares():
+    from tests.test_execution_capacity_research import SESSION, _official
+    snapshot = make_snapshot(account={"cash_available": "100000000", "net_asset_value": "100000000"},
+                             policy={"max_participation_of_adtv20": "0.125", "max_days_to_liquidate": "3"})
+    state = pad.derive_portfolio_state(portfolio_snapshot=snapshot, price_marks=_research_marks({"AAA": 50.0}, session=SESSION))
+    official = {"contract_version": "official_exchange_liquidity_research/v1", "resolved_completed_session": SESSION,
+                "artifact_identity": "official_exchange_liquidity_research:synthetic", "records": {"AAA": _official(adtv="100000000")}}
+    integrated = {"artifact_identity": "integrated:test", "records": {
+        "AAA": _research_decision("AAA", "INITIATE_ON_BREAKOUT", trigger_level=50, invalidation_level=45, as_of_session=SESSION)}}
+    artifact = pad.build_artifact(session=SESSION, requested_at="2026-09-28T00:00:00", portfolio_state=state,
+                                  integrated_decision_artifact=integrated, official_liquidity_artifact=official,
+                                  capacity_price_by_ticker={"AAA": 50.0}, capacity_price_identity="price:synthetic")
+    envelope = artifact["records"]["AAA"]["research_size_envelope"]
+    assert envelope["liquidity_cap_shares"] is None
+    assert "CURRENT_PRICE_NOT_QUALIFIED" in envelope["reason_codes"]
+
+
+def test_unit_15_descriptive_marks_carry_the_artifact_declared_unit():
+    data = {"artifact_identity": "market_wide_current_descriptive_research:test", "session": SESSION_UNIT, "records": {
+        "AAA": {"technical_features": {"values": {"close": 20.9}, "price_basis": "ADJUSTED_RETROSPECTIVE",
+                                       "feature_as_of_session": SESSION_UNIT,
+                                       "price_basis_qualification": {"price_unit": RESEARCH_UNIT}}},
+        "BBB": {"technical_features": {"values": {"close": 19.45}}},
+    }}
+    marks = pad._descriptive_price_marks(data)
+    assert marks["AAA"]["price_unit"] == RESEARCH_UNIT and marks["AAA"]["session"] == SESSION_UNIT
+    assert marks["BBB"]["price_unit"] == pad.PRICE_UNIT_UNDECLARED
+    assert marks["AAA"]["source_artifact_identity"] == "market_wide_current_descriptive_research:test"

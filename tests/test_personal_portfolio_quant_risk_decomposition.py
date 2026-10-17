@@ -16,9 +16,10 @@ import stocklookup_core.portfolio.personal_portfolio_quant_risk_decomposition as
 # ── Tier 1: hand-verified pure math (no price-history plumbing) ────────────────────────────────
 
 def test_hhi_and_effective_n_hand_calculation():
+    # HHI reads the state's unit-free equity-sleeve mix (portfolio_monetary_unit_integrity/v1).
     confirmed = {
-        "AAA": {"current_market_value": 600.0},
-        "BBB": {"current_market_value": 400.0},
+        "AAA": {"equity_sleeve_weight": 0.6},
+        "BBB": {"equity_sleeve_weight": 0.4},
     }
     result = q._hhi_context(confirmed=confirmed, named_cohort=["AAA", "BBB"], excluded_confirmed=[])
     assert result["status"] == "AVAILABLE"
@@ -43,6 +44,15 @@ def _c1_joint_fixture(covariance):
     }
 
 
+def _weights(market_values, *, nav):
+    """Synthetic account-unit market values -> the two weight bases the views consume."""
+    total = sum(market_values.values())
+    return {
+        "sleeve_weight_by_ticker": {ticker: value / total for ticker, value in market_values.items()} if total else {},
+        "nav_weight_by_ticker": {ticker: value / nav for ticker, value in market_values.items()} if nav else {},
+    }
+
+
 def test_marginal_and_component_contribution_hand_calculation_and_reconciliation():
     """Same Sigma/w as above. component_pct works out to exactly [0.5, 0.5] despite the 60/40
     capital split -- capital weight and risk contribution genuinely differ."""
@@ -50,7 +60,7 @@ def test_marginal_and_component_contribution_hand_calculation_and_reconciliation
     joint = _c1_joint_fixture(covariance)
     view_result = q._portfolio_volatility_view(
         view=q.NAV_SCALED_EQUITY_RISK, lookback=20, joint=joint,
-        market_value_by_ticker={"AAA": 600.0, "BBB": 400.0}, effective_nav=1000.0,
+        **_weights({"AAA": 600.0, "BBB": 400.0}, nav=1000.0),
     )
     assert view_result["status"] == "AVAILABLE"
     assert view_result["portfolio_volatility"] == pytest.approx(0.018330302779823362)
@@ -74,7 +84,7 @@ def test_diversification_ratio_hand_reference():
     joint = _c1_joint_fixture(covariance)
     view_result = q._portfolio_volatility_view(
         view=q.NAV_SCALED_EQUITY_RISK, lookback=20, joint=joint,
-        market_value_by_ticker={"AAA": 600.0, "BBB": 400.0}, effective_nav=1000.0,
+        **_weights({"AAA": 600.0, "BBB": 400.0}, nav=1000.0),
     )
     result = q._diversification(
         view_result=view_result, covariance=covariance, pairwise_ready=[], cluster_groups=[],
@@ -91,7 +101,7 @@ def test_leave_one_position_to_cash_hand_reference():
     joint = _c1_joint_fixture(covariance)
     view_result = q._portfolio_volatility_view(
         view=q.NAV_SCALED_EQUITY_RISK, lookback=20, joint=joint,
-        market_value_by_ticker={"AAA": 600.0, "BBB": 400.0}, effective_nav=1000.0,
+        **_weights({"AAA": 600.0, "BBB": 400.0}, nav=1000.0),
     )
     sensitivity = q._leave_one_to_cash_sensitivity(view_result=view_result, covariance=covariance)
     assert sensitivity["status"] == "AVAILABLE"
@@ -108,8 +118,8 @@ def test_equity_sleeve_weights_normalize_to_one_while_nav_scaled_can_exceed_one(
     covariance = np.array([[0.0004, 0.0001], [0.0001, 0.0009]])
     joint = _c1_joint_fixture(covariance)
     market_values = {"AAA": 700.0, "BBB": 500.0}  # sums to 1200 > NAV of 1000 (margin/gross exposure)
-    equity_sleeve = q._portfolio_volatility_view(view=q.EQUITY_SLEEVE_VOLATILITY, lookback=20, joint=joint, market_value_by_ticker=market_values, effective_nav=1000.0)
-    nav_scaled = q._portfolio_volatility_view(view=q.NAV_SCALED_EQUITY_RISK, lookback=20, joint=joint, market_value_by_ticker=market_values, effective_nav=1000.0)
+    equity_sleeve = q._portfolio_volatility_view(view=q.EQUITY_SLEEVE_VOLATILITY, lookback=20, joint=joint, **_weights(market_values, nav=1000.0))
+    nav_scaled = q._portfolio_volatility_view(view=q.NAV_SCALED_EQUITY_RISK, lookback=20, joint=joint, **_weights(market_values, nav=1000.0))
     assert equity_sleeve["weight_sum"] == pytest.approx(1.0)
     assert equity_sleeve["weight_sum_exceeds_one"] is False
     assert nav_scaled["weight_sum"] == pytest.approx(1.2)
@@ -118,7 +128,7 @@ def test_equity_sleeve_weights_normalize_to_one_while_nav_scaled_can_exceed_one(
 
 def test_portfolio_volatility_unavailable_without_joint_matrix_ready():
     joint = {"status": "JOINT_MATRIX_BLOCKED_T_RELATIVE_TO_N", "included_tickers": []}
-    result = q._portfolio_volatility_view(view=q.NAV_SCALED_EQUITY_RISK, lookback=20, joint=joint, market_value_by_ticker={}, effective_nav=1000.0)
+    result = q._portfolio_volatility_view(view=q.NAV_SCALED_EQUITY_RISK, lookback=20, joint=joint, **_weights({}, nav=1000.0))
     assert result["status"] == "UNAVAILABLE"
     assert result["portfolio_volatility"] is None
     contribution = q._risk_contribution(view_result=result, covariance=None)
@@ -128,7 +138,7 @@ def test_portfolio_volatility_unavailable_without_joint_matrix_ready():
 def test_portfolio_volatility_unavailable_without_qualified_nav():
     covariance = np.array([[0.0004, 0.0001], [0.0001, 0.0009]])
     joint = _c1_joint_fixture(covariance)
-    result = q._portfolio_volatility_view(view=q.NAV_SCALED_EQUITY_RISK, lookback=20, joint=joint, market_value_by_ticker={"AAA": 600.0, "BBB": 400.0}, effective_nav=None)
+    result = q._portfolio_volatility_view(view=q.NAV_SCALED_EQUITY_RISK, lookback=20, joint=joint, **_weights({"AAA": 600.0, "BBB": 400.0}, nav=None))
     assert result["status"] == "UNAVAILABLE"
     assert result["reason"] == "WEIGHT_BASIS_UNAVAILABLE"
 
@@ -186,7 +196,7 @@ def _build(positions, *, history_tickers, sessions=25, account=None, excluded_ti
     prices = _last_closes(history, history_tickers)
     return q.build_artifact(
         requested_at="2026-02-19T17:00:00", portfolio_snapshot=snapshot, price_history_snapshot=history,
-        prices=prices, sector_by_ticker={ticker: "TECH" for ticker in history_tickers}, excluded_tickers=excluded_tickers,
+        prices=prices, price_units="VND", sector_by_ticker={ticker: "TECH" for ticker in history_tickers}, excluded_tickers=excluded_tickers,
     )
 
 
@@ -222,7 +232,7 @@ def test_one_history_unavailable_holding_yields_covered_subset():
     prices["BBB"] = 50.0
     artifact = q.build_artifact(
         requested_at="2026-02-19T17:00:00", portfolio_snapshot=snapshot, price_history_snapshot=history,
-        prices=prices, sector_by_ticker={"AAA": "TECH", "BBB": "TECH"},
+        prices=prices, price_units="VND", sector_by_ticker={"AAA": "TECH", "BBB": "TECH"},
     )
     assert artifact["exposure_and_concentration"]["named_research_cohort_count"] == 2
     # BBB's history-unavailable status keeps the horizon a covered SUBSET, never mislabeled full --
@@ -306,7 +316,7 @@ def test_singular_covariance_fails_closed():
     prices = _last_closes(history, ["AAA", "BBB", "CCC"])
     artifact = q.build_artifact(
         requested_at="2026-02-19T17:00:00", portfolio_snapshot=snapshot, price_history_snapshot=history,
-        prices=prices, sector_by_ticker={t: "TECH" for t in ("AAA", "BBB", "CCC")},
+        prices=prices, price_units="VND", sector_by_ticker={t: "TECH" for t in ("AAA", "BBB", "CCC")},
     )
     joint = artifact["covariance_integrity"]["L20"]
     assert joint["status"] == "JOINT_MATRIX_NUMERICAL_GUARD_FAILED"
@@ -322,7 +332,7 @@ def test_subset_result_never_mislabeled_full():
     prices["CCC"] = 42.0
     artifact = q.build_artifact(
         requested_at="2026-02-19T17:00:00", portfolio_snapshot=snapshot, price_history_snapshot=history,
-        prices=prices, sector_by_ticker={t: "TECH" for t in ("AAA", "BBB", "CCC")},
+        prices=prices, price_units="VND", sector_by_ticker={t: "TECH" for t in ("AAA", "BBB", "CCC")},
     )
     coverage = artifact["coverage_by_horizon"]["L20"]
     assert coverage["status"] == q.COVERED_SUBSET_RISK_READY
@@ -358,7 +368,7 @@ def test_deterministic_identity():
     history = _price_history(["AAA", "BBB"], sessions=30)
     snapshot = _snapshot(positions, account={"cash_available": "1000", "net_asset_value": "100000"})
     prices = _last_closes(history, ["AAA", "BBB"])
-    kwargs = dict(requested_at="2026-02-19T17:00:00", portfolio_snapshot=snapshot, price_history_snapshot=history, prices=prices, sector_by_ticker={"AAA": "TECH", "BBB": "TECH"})
+    kwargs = dict(requested_at="2026-02-19T17:00:00", portfolio_snapshot=snapshot, price_history_snapshot=history, prices=prices, price_units="VND", sector_by_ticker={"AAA": "TECH", "BBB": "TECH"})
     first = q.build_artifact(**kwargs)
     second = q.build_artifact(**kwargs)
     assert first["artifact_identity"] == second["artifact_identity"]
@@ -397,3 +407,49 @@ def test_source_coverage_full_when_no_unadmitted_sheets_and_no_gaps():
     ledger_clean = {"sheet_inventory": [{"sheet": "Trade"}, {"sheet": "Dividend"}, {"sheet": "Money"}, {"sheet": "margin"}, {"sheet": "AccountSnapshot"}]}
     result = q._source_coverage(confirmed_count=1, unresolved_count=0, portfolio_snapshot={}, event_ledger=ledger_clean)
     assert result["status"] == q.FULL_PORTFOLIO_COVERAGE
+
+
+# ── PORTFOLIO_MONETARY_UNIT_INTEGRITY_V1 ─────────────────────────────────────────────────────
+
+def _build_with_unit(unit, *, scale=1.0):
+    history = _price_history(["AAA", "BBB"], sessions=30)
+    snapshot = _snapshot([_position("AAA", 10), _position("BBB", 5)], account={"cash_available": "1000", "net_asset_value": "100000"})
+    closes = _last_closes(history, ["AAA", "BBB"])
+    marks = {ticker: {"value": value * scale, "price_unit": unit, "price_basis": "ADJUSTED_RETROSPECTIVE",
+                      "source_artifact_identity": "descriptive:test", "session": history["resolved_completed_session"]}
+             for ticker, value in closes.items()}
+    return q.build_artifact(requested_at="2026-02-19T17:00:00", portfolio_snapshot=snapshot, price_history_snapshot=history,
+                            price_marks=marks, sector_by_ticker={"AAA": "TECH", "BBB": "TECH"})
+
+
+def test_research_unit_marks_keep_the_unit_free_sleeve_but_block_nav_scaled_outputs():
+    verified = _build_with_unit("VND")
+    research = _build_with_unit("UNVERIFIED_RESEARCH_PRICE", scale=0.001)
+    exposure = research["exposure_and_concentration"]
+    assert exposure["monetary_unit_integrity"]["status"] == "NOT_COMPARABLE"
+    assert exposure["equity_market_value_all_confirmed"] is None and exposure["equity_exposure_to_nav"] is None
+    assert exposure["equity_exposure_to_nav_status"] == "UNAVAILABLE_NOT_COMPARABLE"
+    assert all(weight is None for weight in exposure["single_name_weights"].values())
+    assert exposure["single_name_equity_sleeve_weights"] == pytest.approx(verified["exposure_and_concentration"]["single_name_equity_sleeve_weights"])
+    # The same unit-free mix measures the same concentration and equity-sleeve risk at any price scale.
+    assert exposure["concentration"]["hhi"] == pytest.approx(verified["exposure_and_concentration"]["concentration"]["hhi"])
+    sleeve = research["risk_contribution"][q.EQUITY_SLEEVE_VOLATILITY]["L20"]
+    assert sleeve["status"] == "AVAILABLE"
+    assert sleeve["per_ticker"]["AAA"]["component_contribution_pct"] == pytest.approx(
+        verified["risk_contribution"][q.EQUITY_SLEEVE_VOLATILITY]["L20"]["per_ticker"]["AAA"]["component_contribution_pct"])
+    assert research["portfolio_volatility"][q.NAV_SCALED_EQUITY_RISK]["L20"]["status"] == "UNAVAILABLE"
+    assert research["sensitivity_leave_one_to_cash"]["L20"]["status"] == "UNAVAILABLE"
+    assert research["coverage_by_horizon"]["L20"]["included_nav_weight"] is None
+    assert verified["portfolio_volatility"][q.NAV_SCALED_EQUITY_RISK]["L20"]["status"] == "AVAILABLE"
+
+
+def test_research_unit_marks_never_qualify_account_level_position_values():
+    history = _price_history(["AAA"], sessions=30)
+    attribution = [{"account_id": "ACCOUNT_1", "attribution_status": "ATTRIBUTED", "current_quantity": "10"}]
+    snapshot = _snapshot([_position("AAA", 10, account_attribution=attribution)], account={"cash_available": "1000", "net_asset_value": "100000"})
+    marks = {"AAA": {"value": 0.1, "price_unit": "UNVERIFIED_RESEARCH_PRICE", "price_basis": "ADJUSTED_RETROSPECTIVE",
+                     "source_artifact_identity": "descriptive:test", "session": history["resolved_completed_session"]}}
+    artifact = q.build_artifact(requested_at="2026-02-19T17:00:00", portfolio_snapshot=snapshot, price_history_snapshot=history,
+                                price_marks=marks, sector_by_ticker={"AAA": "TECH"})
+    position_risk = artifact["account_level_context"]["position_risk_decomposition"]
+    assert position_risk["reason"] == "ACCOUNT_UNIT_MARKET_VALUE_UNAVAILABLE_FOR_AT_LEAST_ONE_NAMED_HOLDING"
