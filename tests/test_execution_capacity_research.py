@@ -198,7 +198,8 @@ def test_private_policy_binding_through_portfolio_builder_remains_research_only(
         account={"cash_available": "100000000", "net_asset_value": "100000000"},
         policy={"max_participation_of_adtv20": "0.125", "max_days_to_liquidate": "3"},
     )
-    state = portfolio.derive_portfolio_state(portfolio_snapshot=snapshot, prices={"AAA": 50})
+    # Synthetic price explicitly declared in the account unit (portfolio_monetary_unit_integrity/v1).
+    state = portfolio.derive_portfolio_state(portfolio_snapshot=snapshot, prices={"AAA": 50}, price_units="VND")
     official = {
         "contract_version": "official_exchange_liquidity_research/v1",
         "resolved_completed_session": SESSION,

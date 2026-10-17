@@ -120,6 +120,139 @@ MARGIN_STATUS_EVALUATED = "EVALUATED"
 
 _EPS = 1e-9
 
+# ── PORTFOLIO_MONETARY_UNIT_INTEGRITY_V1 ──────────────────────────────────────
+# private_portfolio_context's field contract makes every cash/debt/NAV/marked-value account field
+# VND unless an explicit account currency says otherwise. A price joins those amounts only when its
+# own source declares exactly that unit; it is never inferred from magnitude, formatting, a familiar
+# ticker price or a conversion factor. Quantities are shares. Unit-free ratios (equity-sleeve mix,
+# reward/risk) never need a monetary unit; NAV weights, notionals and share quantities always do.
+MONETARY_UNIT_INTEGRITY_CONTRACT = "portfolio_monetary_unit_integrity/v1"
+FIELD_CONTRACT_MONETARY_UNIT = "VND"
+QUANTITY_UNIT = "SHARES"
+PRICE_UNIT_UNDECLARED = "UNDECLARED"
+UNIT_STATUS_VERIFIED = "VERIFIED_COMPARABLE_UNITS"
+UNIT_STATUS_OWNER_ANCHORED = "OWNER_ANCHORED_DERIVED_PROXY"
+UNIT_STATUS_NOT_COMPARABLE = "NOT_COMPARABLE"
+UNIT_STATUS_NO_CONFIRMED_HOLDINGS = "NO_CONFIRMED_HOLDINGS"
+WEIGHT_STATUS_OWNER_ANCHORED = "AVAILABLE_OWNER_ANCHORED_DERIVED_PROXY"
+WEIGHT_STATUS_UNIT_NOT_COMPARABLE = "UNAVAILABLE_MONETARY_UNIT_NOT_COMPARABLE"
+MARKET_VALUE_METHOD_VERIFIED = "QUANTITY_X_PRICE_IN_ACCOUNT_MONETARY_UNIT"
+MARKET_VALUE_METHOD_OWNER_ANCHORED = "OWNER_ANCHORED_SLEEVE_APPORTIONMENT_DERIVED_PROXY"
+SHARE_QUANTITY_BLOCKED_REASON = "MONETARY_UNITS_NOT_EXPLICITLY_COMPARABLE"
+#: Constraint evaluation states. A constraint that could not be evaluated is never reported as
+#: "not binding": ``binding_constraint`` reads ``NOT_EVALUABLE`` there, never ``NONE``.
+BINDING_STATE_EVALUATED_BINDING = "EVALUATED_BINDING"
+BINDING_STATE_EVALUATED_NOT_BINDING = "EVALUATED_NOT_BINDING"
+BINDING_STATE_NOT_EVALUABLE = "NOT_EVALUABLE"
+BINDING_STATE_NOT_APPLICABLE = "NOT_APPLICABLE"
+BINDING_CONSTRAINT_NOT_EVALUABLE = "NOT_EVALUABLE"
+_OWNER_ANCHOR_NAV_IDENTITY_TOLERANCE = 0.01
+
+
+def _unit_label(value: Any) -> str:
+    return value.strip() if isinstance(value, str) and value.strip() else PRICE_UNIT_UNDECLARED
+
+
+def _declared_boundary_unit(boundary: Mapping[str, Any] | None) -> str:
+    """Unit a trigger/invalidation boundary itself declares; absent declaration is UNDECLARED."""
+    boundary = boundary or {}
+    for candidate in (boundary.get("price_unit"), boundary.get("unit"), (boundary.get("price_basis") or {}).get("price_unit")):
+        if isinstance(candidate, str) and candidate.strip():
+            return candidate.strip()
+    return PRICE_UNIT_UNDECLARED
+
+
+def _normalized_price_marks(
+    *, prices: Mapping[str, Any] | None, price_units: str | Mapping[str, Any] | None,
+    price_marks: Mapping[str, Mapping[str, Any]] | None, price_session: str | None,
+) -> dict[str, dict[str, Any]]:
+    """One mark per ticker: value plus the unit/basis/identity/session its source declares.
+
+    ``price_marks`` (as produced by ``load_descriptive_price_marks``) carry their own provenance.
+    Plain ``prices`` take their unit from ``price_units`` (one label for all, or per ticker);
+    without it the unit is ``UNDECLARED`` and no monetary comparison is possible.
+    """
+    marks: dict[str, dict[str, Any]] = {}
+    for ticker, mark in (price_marks or {}).items():
+        mark = mark if isinstance(mark, Mapping) else {}
+        marks[str(ticker).upper()] = {
+            "value": _num(mark.get("value")), "price_unit": _unit_label(mark.get("price_unit")),
+            "price_basis": mark.get("price_basis"), "source_artifact_identity": mark.get("source_artifact_identity"),
+            "session": mark.get("session") or price_session,
+        }
+    for ticker, value in (prices or {}).items():
+        key = str(ticker).upper()
+        if key in marks:
+            continue
+        unit = price_units.get(ticker, price_units.get(key)) if isinstance(price_units, Mapping) else price_units
+        marks[key] = {"value": _num(value), "price_unit": _unit_label(unit), "price_basis": None,
+                      "source_artifact_identity": None, "session": price_session}
+    return marks
+
+
+def _account_monetary_unit(account_fields: Mapping[str, Any]) -> tuple[str, str]:
+    currency = account_fields.get("currency")
+    if isinstance(currency, str) and currency.strip():
+        return currency.strip().upper(), "ACCOUNT_CURRENCY_FIELD"
+    return FIELD_CONTRACT_MONETARY_UNIT, "PRIVATE_PORTFOLIO_FIELD_CONTRACT"
+
+
+def _owner_market_value_anchor(
+    *, account_fields: Mapping[str, Any], aggregate: Mapping[str, Any], aggregate_qualified: bool,
+    cash_available: float | None, margin_debt: float | None, broker_nav: float | None,
+    price_session: str | None, account_unit: str,
+) -> dict[str, Any]:
+    """A broker-reported securities market value can scale an equity-sleeve mix to NAV weights.
+
+    It is a ``DERIVED_PROXY`` anchor only: it never converts a research price into the account
+    unit and never unlocks share quantities. It must be dated on the price session, and when the
+    broker NAV identity is evaluable (cash + securities + receivables - margin) it must reconcile.
+    """
+    totals = aggregate.get("totals") or {}
+    if aggregate_qualified:
+        value = _num(totals.get("total_broker_reported_securities_market_value"))
+        dates = {d for d in (aggregate.get("as_of_dates") or {}).values() if d}
+        as_of = next(iter(dates)) if len(dates) == 1 else None
+        receivables = _num(totals.get("total_receivables"))
+        source = "INVESTMENT_ACCOUNTS_AGGREGATE_TOTAL"
+    else:
+        value = _num(account_fields.get("gross_market_value"))
+        as_of = account_fields.get("as_of_date")
+        receivables = None
+        source = "ACCOUNT_SNAPSHOT_FIELD"
+    reasons: list[str] = []
+    if value is None:
+        reasons.append("OWNER_ANCHOR_ABSENT")
+    elif value <= 0:
+        reasons.append("OWNER_ANCHOR_NOT_POSITIVE")
+    if price_session is None:
+        reasons.append("PRICE_SESSION_UNDECLARED")
+    elif as_of != price_session:
+        reasons.append("OWNER_ANCHOR_NOT_SAME_SESSION")
+    identity: dict[str, Any] = {"status": "NOT_EVALUABLE", "residual_fraction_of_nav": None}
+    if value is not None and broker_nav and cash_available is not None and receivables is not None and margin_debt is not None:
+        implied = cash_available + value + receivables - margin_debt
+        residual = abs(broker_nav - implied) / broker_nav
+        identity = {"status": "RECONCILED" if residual <= _OWNER_ANCHOR_NAV_IDENTITY_TOLERANCE else "MISMATCH",
+                    "residual_fraction_of_nav": residual, "tolerance": _OWNER_ANCHOR_NAV_IDENTITY_TOLERANCE}
+        if identity["status"] == "MISMATCH":
+            reasons.append("OWNER_ANCHOR_NAV_IDENTITY_MISMATCH")
+    return {"status": "QUALIFIED" if not reasons else "NOT_QUALIFIED", "value": value if not reasons else None,
+            "unit": account_unit, "source": source, "as_of_date": as_of, "price_session": price_session,
+            "nav_identity": identity, "reason_codes": reasons}
+
+
+CONSTRAINT_EVALUATED_BREACHED = "EVALUATED_BREACHED"
+CONSTRAINT_EVALUATED_WITHIN_LIMIT = "EVALUATED_WITHIN_LIMIT"
+
+
+def _constraint_evaluation(status: Any) -> str:
+    if status == "LIMIT_BREACH":
+        return CONSTRAINT_EVALUATED_BREACHED
+    if status in ("WITHIN_LIMIT", "AT_LIMIT", "AVAILABLE"):
+        return CONSTRAINT_EVALUATED_WITHIN_LIMIT
+    return BINDING_STATE_NOT_EVALUABLE
+
 
 # ── Canonical identity ────────────────────────────────────────────────────────
 
@@ -282,6 +415,9 @@ def derive_portfolio_state(
     governed_sector_snapshot: Mapping[str, Any] | None = None,
     position_lanes: Mapping[str, Mapping[str, Any]] | None = None,
     excluded_tickers: Sequence[str] | None = None,
+    price_units: str | Mapping[str, Any] | None = None,
+    price_marks: Mapping[str, Mapping[str, Any]] | None = None,
+    price_session: str | None = None,
 ) -> dict[str, Any]:
     """Read-only projection of a private ``portfolio_snapshot/v1`` into decision-ready state.
 
@@ -294,8 +430,17 @@ def derive_portfolio_state(
     Owner-excluded tickers (``excluded_tickers``) are marked ``is_active: False`` and are never
     counted in sector or gross-exposure weights; they participate only as a read-only, clearly
     labelled position row (``EXCLUDED_INACTIVE``), never in active exposure/action output.
+
+    PORTFOLIO_MONETARY_UNIT_INTEGRITY_V1: a position's ``current_market_value`` (account monetary
+    unit) and NAV ``current_weight`` exist only when every priced holding's price declares the
+    account unit, or when a same-session broker-reported securities market value anchors the
+    equity-sleeve mix (an explicitly labelled derived proxy). Otherwise both are unavailable and
+    sector/gross exposure is not evaluable; ``equity_sleeve_weight`` (a unit-free ratio over a
+    common price source) is still reported. Prices carry their unit through ``price_marks`` or
+    ``price_units``; an undeclared unit is never assumed.
     """
-    prices_map = {str(ticker).upper(): _num(value) for ticker, value in (prices or {}).items()}
+    marks = _normalized_price_marks(prices=prices, price_units=price_units, price_marks=price_marks, price_session=price_session)
+    prices_map = {ticker: mark["value"] for ticker, mark in marks.items()}
     sectors, sector_sources, governed_sector_snapshot_identity = resolve_sector_by_ticker(
         explicit_sector_by_ticker=sector_by_ticker, governed_sector_snapshot=governed_sector_snapshot,
     )
@@ -311,6 +456,7 @@ def derive_portfolio_state(
             "as_of_date": None,
             "positions": {},
             "prices": prices_map,
+            "price_marks": marks,
             "sector_by_ticker": sectors,
             "sector_source_by_ticker": sector_sources,
             "effective_nav": None,
@@ -327,6 +473,9 @@ def derive_portfolio_state(
             "capacity_policy_provenance": {},
             "sector_weights": {},
             "gross_exposure_weight": None,
+            "exposure_status": "UNAVAILABLE_PRIVATE_PORTFOLIO_STATE_NOT_PROVIDED",
+            "monetary_unit_integrity": {"contract_version": MONETARY_UNIT_INTEGRITY_CONTRACT, "status": "NOT_APPLICABLE",
+                                        "reason_codes": ["PRIVATE_PORTFOLIO_STATE_NOT_PROVIDED"]},
             "investment_accounts_aggregate_status": "NOT_PROVIDED",
             "source_identities": {"portfolio_snapshot_identity": None, "governed_sector_snapshot_identity": governed_sector_snapshot_identity},
         }
@@ -367,8 +516,11 @@ def derive_portfolio_state(
     margin_max = _num(account_fields.get("margin_available_maximum"))
     annual_margin_rate_percent = _num(account_fields.get("annual_margin_rate_percent"))
 
+    account_unit, account_unit_basis = _account_monetary_unit(account_fields)
     positions: dict[str, dict[str, Any]] = {}
-    priced_market_value_sum = 0.0
+    # Quantity x research price stays private to this function: it is only a relative value inside
+    # one common price source and is never published as a market value in any monetary unit.
+    research_values: dict[str, float] = {}
     for row in portfolio_snapshot.get("positions") or []:
         ticker = str(row.get("ticker") or "").upper()
         if not ticker:
@@ -379,17 +531,23 @@ def derive_portfolio_state(
         current_position_status = row.get("current_position_status") or "CURRENT_CONFIRMED"
         reliable = current_position_status == "CURRENT_CONFIRMED"
         quantity = (_num(row.get("current_quantity")) or 0.0) if reliable else 0.0
-        price = prices_map.get(ticker)
-        market_value = quantity * price if (reliable and price is not None) else None
-        if market_value is not None:
-            priced_market_value_sum += market_value
+        mark = marks.get(ticker) or {}
+        price = mark.get("value")
+        if reliable and price is not None:
+            research_values[ticker] = quantity * price
         lane_context, lane_reconciliation = _resolve_lane_context(quantity, lanes_by_ticker.get(ticker) or {})
         positions[ticker] = {
             "ticker": ticker,
             "current_quantity": quantity if reliable else None,
+            "quantity_unit": QUANTITY_UNIT,
             "current_position_status": current_position_status,
             "current_price": price,
-            "current_market_value": market_value,
+            "price_unit": mark.get("price_unit", PRICE_UNIT_UNDECLARED),
+            "price_basis": mark.get("price_basis"),
+            "price_source_identity": mark.get("source_artifact_identity"),
+            "current_market_value": None,
+            "current_market_value_unit": None,
+            "current_market_value_method": None,
             "cost_basis_per_share": _num(row.get("current_position_cost_basis_per_share")) if reliable else None,
             "cost_basis_method": row.get("current_position_cost_basis_method") if reliable else None,
             "lifetime_cash_recovery_breakeven": _num(row.get("lifetime_cash_recovery_breakeven")),
@@ -402,7 +560,71 @@ def derive_portfolio_state(
             "lane_reconciliation": lane_reconciliation,
         }
 
-    computed_nav = (cash_available + priced_market_value_sum - (margin_debt or 0.0)) if cash_available is not None else None
+    held = sorted(t for t, p in positions.items()
+                  if p["current_position_status"] == "CURRENT_CONFIRMED" and (p["current_quantity"] or 0) > 0)
+    unresolved_tickers = sorted(t for t, p in positions.items() if p["current_position_status"] == "CURRENT_POSITION_UNRESOLVED")
+    priced = [t for t in held if t in research_values]
+    unpriced = [t for t in held if t not in research_values]
+    unit_groups = {(positions[t]["price_unit"], positions[t]["price_basis"], positions[t]["price_source_identity"]) for t in priced}
+    common_source_scale = len(unit_groups) == 1
+    sessions = {(marks.get(t) or {}).get("session") for t in priced} - {None}
+    marked_session = next(iter(sessions)) if len(sessions) == 1 else None
+    anchor = _owner_market_value_anchor(
+        account_fields=account_fields, aggregate=investment_accounts_aggregate, aggregate_qualified=aggregate_qualified,
+        cash_available=cash_available, margin_debt=margin_debt, broker_nav=broker_nav,
+        price_session=marked_session, account_unit=account_unit,
+    )
+    unit_reasons: list[str] = []
+    for t in held:
+        if positions[t]["price_unit"] != account_unit and t in research_values:
+            unit_reasons.append(f"PRICE_UNIT_NOT_ACCOUNT_UNIT:{positions[t]['price_unit']}")
+    if not held and not unresolved_tickers:
+        unit_status, value_method = UNIT_STATUS_NO_CONFIRMED_HOLDINGS, None
+    elif priced and not unit_reasons:
+        unit_status, value_method = UNIT_STATUS_VERIFIED, MARKET_VALUE_METHOD_VERIFIED
+        for t in priced:
+            positions[t]["current_market_value"] = research_values[t]
+    else:
+        anchor_reasons = list(anchor["reason_codes"])
+        if unresolved_tickers:
+            anchor_reasons.append("UNRESOLVED_POSITION_BLOCKS_OWNER_ANCHOR")
+        if unpriced:
+            anchor_reasons.append("UNPRICED_CONFIRMED_HOLDING_BLOCKS_OWNER_ANCHOR")
+        if priced and not common_source_scale:
+            anchor_reasons.append("MIXED_PRICE_SOURCES_OR_UNITS")
+        if not priced:
+            anchor_reasons.append("NO_PRICED_CONFIRMED_HOLDING")
+        if not anchor_reasons:
+            unit_status, value_method = UNIT_STATUS_OWNER_ANCHORED, MARKET_VALUE_METHOD_OWNER_ANCHORED
+            total = sum(research_values[t] for t in priced)
+            for t in priced:
+                positions[t]["current_market_value"] = (research_values[t] / total) * anchor["value"] if total > 0 else None
+        else:
+            unit_status, value_method = UNIT_STATUS_NOT_COMPARABLE, None
+            unit_reasons.extend(anchor_reasons)
+    for t, pos in positions.items():
+        if pos["current_market_value"] is not None:
+            pos["current_market_value_unit"], pos["current_market_value_method"] = account_unit, value_method
+        elif pos["current_position_status"] == "CURRENT_CONFIRMED" and not (pos["current_quantity"] or 0):
+            # Zero confirmed shares are zero exposure in any unit; nothing is inferred.
+            pos["current_market_value"], pos["current_market_value_unit"] = 0.0, account_unit
+            pos["current_market_value_method"] = "ZERO_CONFIRMED_QUANTITY"
+
+    # Unit-free equity-sleeve mix over priced, active confirmed holdings of one price source.
+    active_priced = [t for t in priced if positions[t]["is_active"]]
+    sleeve_total = sum(research_values[t] for t in active_priced)
+    sleeve_available = bool(active_priced) and common_source_scale and sleeve_total > 0
+    for t, pos in positions.items():
+        pos["equity_sleeve_weight"] = (research_values[t] / sleeve_total) if (sleeve_available and t in active_priced) else None
+    sleeve_limitations = [] if unit_status == UNIT_STATUS_VERIFIED else ["COMMON_SOURCE_SCALE_ASSUMED_UNIT_NOT_VERIFIED"]
+    if any(positions[t]["is_active"] for t in unpriced):
+        sleeve_limitations.append("UNPRICED_ACTIVE_HOLDING_OMITTED")
+    if unresolved_tickers:
+        sleeve_limitations.append("UNRESOLVED_POSITION_OMITTED")
+
+    marked_value_sum = sum(positions[t]["current_market_value"] for t in held if positions[t]["current_market_value"] is not None)
+    values_complete = all(positions[t]["current_market_value"] is not None for t in held) and not unresolved_tickers
+    computed_nav = (cash_available + marked_value_sum - (margin_debt or 0.0)) if (cash_available is not None and values_complete) else None
     if broker_nav is not None:
         effective_nav, nav_basis = broker_nav, "NAV_BROKER_REPORTED"
     elif computed_nav is not None:
@@ -428,20 +650,63 @@ def derive_portfolio_state(
                 pos["current_weight_status"] = "EXCLUDED_INACTIVE"
             elif pos["current_position_status"] != "CURRENT_CONFIRMED":
                 pos["current_weight_status"] = "UNAVAILABLE_CURRENT_POSITION_UNRESOLVED"
+            elif pos["current_price"] is not None and effective_nav and unit_status == UNIT_STATUS_NOT_COMPARABLE:
+                pos["current_weight_status"] = WEIGHT_STATUS_UNIT_NOT_COMPARABLE
             else:
                 pos["current_weight_status"] = "UNAVAILABLE_NO_PRICE_OR_NAV"
             continue
         weight = pos["current_market_value"] / effective_nav
         pos["current_weight"] = weight
-        pos["current_weight_status"] = "AVAILABLE"
+        pos["current_weight_status"] = (WEIGHT_STATUS_OWNER_ANCHORED
+                                        if pos["current_market_value_method"] == MARKET_VALUE_METHOD_OWNER_ANCHORED else "AVAILABLE")
         if pos["sector"]:
             sector_weights[pos["sector"]] = sector_weights.get(pos["sector"], 0.0) + weight
 
+    # Missing exposure is never zero exposure: sector and gross weights exist only when every
+    # active holding has a NAV weight and no position's existence is unresolved.
+    active_held = [t for t in held if positions[t]["is_active"]]
+    if not effective_nav:
+        exposure_status = "UNAVAILABLE_NO_NAV"
+    elif unresolved_tickers:
+        exposure_status = "UNAVAILABLE_CURRENT_POSITION_UNRESOLVED"
+    elif any(positions[t]["current_weight"] is None for t in active_held):
+        exposure_status = (WEIGHT_STATUS_UNIT_NOT_COMPARABLE if unit_status == UNIT_STATUS_NOT_COMPARABLE
+                           else "UNAVAILABLE_UNPRICED_ACTIVE_HOLDING")
+    elif unit_status == UNIT_STATUS_OWNER_ANCHORED:
+        exposure_status = WEIGHT_STATUS_OWNER_ANCHORED
+    else:
+        exposure_status = "AVAILABLE"
     gross_exposure_weight = None
-    if effective_nav:
+    if exposure_status in ("AVAILABLE", WEIGHT_STATUS_OWNER_ANCHORED):
         gross_exposure_weight = sum(
             (pos["current_market_value"] or 0.0) for pos in positions.values() if pos["is_active"]
         ) / effective_nav
+    else:
+        sector_weights = {}
+
+    monetary_unit_integrity = {
+        "contract_version": MONETARY_UNIT_INTEGRITY_CONTRACT,
+        "status": unit_status,
+        "account_monetary_unit": account_unit,
+        "account_monetary_unit_basis": account_unit_basis,
+        "quantity_unit": QUANTITY_UNIT,
+        "price_units_observed": sorted({positions[t]["price_unit"] for t in priced}),
+        "price_session": marked_session,
+        "market_value_method": value_method,
+        "owner_market_value_anchor": anchor,
+        "equity_sleeve": {
+            "status": "AVAILABLE" if sleeve_available else "UNAVAILABLE",
+            "basis": "COMMON_PRICE_SOURCE_RELATIVE_VALUE_UNIT_FREE",
+            "limitations": sleeve_limitations,
+        },
+        "exposure_status": exposure_status,
+        "reason_codes": list(dict.fromkeys(unit_reasons)),
+        "authority_boundary": {
+            "research_price_never_interpreted_as_account_unit": True,
+            "no_conversion_factor_inferred": True,
+            "owner_anchor_is_derived_proxy_and_never_unlocks_share_quantities": True,
+        },
+    }
 
     return {
         "schema_version": "portfolio_state_v1",
@@ -450,6 +715,7 @@ def derive_portfolio_state(
         "as_of_date": portfolio_snapshot.get("snapshot_as_of_date"),
         "positions": positions,
         "prices": prices_map,
+        "price_marks": marks,
         "sector_by_ticker": sectors,
         "sector_source_by_ticker": sector_sources,
         "effective_nav": effective_nav,
@@ -466,6 +732,8 @@ def derive_portfolio_state(
         "capacity_policy_provenance": policy.get("field_provenance") or {},
         "sector_weights": sector_weights,
         "gross_exposure_weight": gross_exposure_weight,
+        "exposure_status": exposure_status,
+        "monetary_unit_integrity": monetary_unit_integrity,
         "investment_accounts_aggregate_status": investment_accounts_aggregate.get("status", "NOT_PROVIDED"),
         "source_identities": {
             "portfolio_snapshot_identity": portfolio_snapshot.get("artifact_identity"),
@@ -477,22 +745,34 @@ def derive_portfolio_state(
 
 # ── Constraint evaluation ──────────────────────────────────────────────────────
 
-def _weight_constraint(*, observed_weight: float | None, limit: float | None, effective_nav: float | None, entry_price: float | None) -> dict[str, Any]:
+def _weight_constraint(*, observed_weight: float | None, limit: float | None, effective_nav: float | None, entry_price: float | None,
+                       share_quantity_qualified: bool = True, unavailable_reason: str | None = None,
+                       weight_basis: str | None = None) -> dict[str, Any]:
     if limit is None or observed_weight is None or not effective_nav:
-        return {"status": "UNAVAILABLE", "observed_weight": observed_weight, "limit": limit,
+        reason = ("POLICY_LIMIT_UNAVAILABLE" if limit is None else "EFFECTIVE_NAV_UNAVAILABLE" if not effective_nav
+                  else unavailable_reason or "OBSERVED_WEIGHT_UNAVAILABLE")
+        return {"status": "UNAVAILABLE", "reason": reason, "evaluation": BINDING_STATE_NOT_EVALUABLE,
+                "observed_weight": observed_weight, "limit": limit,
                 "remaining_weight": None, "remaining_notional": None, "remaining_quantity": None}
     remaining_weight = max(0.0, limit - observed_weight)
     remaining_notional = remaining_weight * effective_nav
-    remaining_quantity = math.floor(remaining_notional / entry_price) if entry_price and entry_price > 0 else None
+    # A share count needs a per-share price in the account unit; a weight/notional does not.
+    remaining_quantity = (math.floor(remaining_notional / entry_price)
+                          if (share_quantity_qualified and entry_price and entry_price > 0) else None)
     if observed_weight > limit + _EPS:
         status = "LIMIT_BREACH"
     elif observed_weight >= limit - _EPS:
         status = "AT_LIMIT"
     else:
         status = "WITHIN_LIMIT"
-    return {"status": status, "observed_weight": observed_weight, "limit": limit,
-            "remaining_weight": remaining_weight, "remaining_notional": remaining_notional,
-            "remaining_quantity": remaining_quantity}
+    result = {"status": status, "evaluation": _constraint_evaluation(status), "observed_weight": observed_weight, "limit": limit,
+              "remaining_weight": remaining_weight, "remaining_notional": remaining_notional,
+              "remaining_quantity": remaining_quantity}
+    if weight_basis:
+        result["weight_basis"] = weight_basis
+    if not share_quantity_qualified:
+        result["remaining_quantity_status"] = "BLOCKED_" + SHARE_QUANTITY_BLOCKED_REASON
+    return result
 
 
 def _floor_amount_constraint(*, observed_amount: float | None, floor_fraction: float | None, effective_nav: float | None) -> dict[str, Any]:
@@ -527,7 +807,8 @@ def _ceiling_amount_constraint(*, observed_amount: float | None, cap_fraction: f
 
 # ── Risk sizing ─────────────────────────────────────────────────────────────
 
-def _compute_risk_sizing(*, entry_price: float | None, invalidation_price: float | None, effective_nav: float | None, risk_budget_fraction: float | None) -> dict[str, Any]:
+def _compute_risk_sizing(*, entry_price: float | None, invalidation_price: float | None, effective_nav: float | None, risk_budget_fraction: float | None,
+                         units_comparable: bool = True) -> dict[str, Any]:
     if invalidation_price is None:
         return {"status": "UNAVAILABLE_MISSING_INVALIDATION", "per_share_downside": None, "risk_budget_amount": None, "risk_budget_quantity": None}
     if entry_price is None:
@@ -536,6 +817,11 @@ def _compute_risk_sizing(*, entry_price: float | None, invalidation_price: float
         return {"status": "UNAVAILABLE_MISSING_NAV", "per_share_downside": None, "risk_budget_amount": None, "risk_budget_quantity": None}
     if risk_budget_fraction is None:
         return {"status": "UNAVAILABLE_MISSING_RISK_BUDGET_POLICY", "per_share_downside": None, "risk_budget_amount": None, "risk_budget_quantity": None}
+    if not units_comparable:
+        # NAV x budget is an account-unit amount; entry/invalidation must share that unit before a
+        # per-share downside can turn it into a share count.
+        return {"status": "UNAVAILABLE_MONETARY_UNIT_NOT_COMPARABLE", "per_share_downside": None,
+                "risk_budget_amount": effective_nav * risk_budget_fraction, "risk_budget_quantity": None}
     per_share_downside = abs(entry_price - invalidation_price)
     if per_share_downside <= 0:
         return {"status": "UNAVAILABLE_DEGENERATE_DOWNSIDE", "per_share_downside": 0.0, "risk_budget_amount": None, "risk_budget_quantity": None}
@@ -607,11 +893,13 @@ def _research_size_envelope(
     single_constraint: Mapping[str, Any], sector_constraint: Mapping[str, Any],
     gross_constraint: Mapping[str, Any], sizing_policy_version: str,
     portfolio_state_identity: str | None, security_decision_identity: str | None,
+    share_quantity_qualified: bool = True,
 ) -> dict[str, Any]:
     """Combine the existing risk/concentration engine with the qualified Level-1 cap.
 
     This is a private research envelope.  It never upgrades its minimum to an executable order
-    quantity and it never invents a stop from ATR or any other volatility field.
+    quantity and it never invents a stop from ATR or any other volatility field. Without a price in
+    the account monetary unit no share cap exists, so the envelope is blocked rather than numeric.
     """
     risk_cap = risk_sizing.get("risk_budget_quantity") if risk_sizing.get("status") == "AVAILABLE" else None
     capacity = execution_capacity_envelope or {}
@@ -642,6 +930,8 @@ def _research_size_envelope(
         reasons.append("CONCENTRATION_CAP_UNAVAILABLE")
     elif len(concentration_values) != len(concentration_components):
         reasons.append("CONCENTRATION_COMPONENTS_NOT_FULLY_EVALUATED")
+    if not share_quantity_qualified:
+        reasons.insert(0, SHARE_QUANTITY_BLOCKED_REASON)
     body = {
         "schema_version": "1.0.0",
         "contract_version": RESEARCH_SIZE_ENVELOPE_CONTRACT_VERSION,
@@ -713,6 +1003,7 @@ def _evaluate_margin_economics(
     margin_available_minimum: float | None, margin_available_maximum: float | None,
     tactical_margin_holding_days: float | None, min_net_reward_risk_for_margin: float | None,
     strong_net_reward_risk_for_max_margin: float | None, max_financing_cost_fraction_of_gross_upside: float | None,
+    share_quantity_qualified: bool = True,
 ) -> dict[str, Any]:
     """Deterministic tactical-trade-only margin research-capacity band.
 
@@ -819,8 +1110,10 @@ def _evaluate_margin_economics(
         "research_capacity": {
             "capacity_before_portfolio_caps_notional": capacity_before_caps,
             "capacity_before_portfolio_caps_quantity": (
-                math.floor(capacity_before_caps / entry_price) if entry_price > 0 else 0
+                (math.floor(capacity_before_caps / entry_price) if entry_price > 0 else 0)
+                if share_quantity_qualified else None
             ),
+            "quantity_status": "AVAILABLE" if share_quantity_qualified else "BLOCKED_" + SHARE_QUANTITY_BLOCKED_REASON,
             "final_margin_research_capacity_notional": None,
             "final_margin_research_capacity_quantity": None,
             "capped_by": [],
@@ -934,6 +1227,31 @@ def _decide_portfolio_action_research(
         return within_evaluated_state, "ELIGIBLE_TO_SIZE", "NONE"
 
     return within_ceiling_state, "ELIGIBLE_TO_SIZE", "NONE"
+
+
+def _binding_constraint_state(
+    *, binding: str, position_state: str, posture: str, sizing_mode: str,
+    single_constraint: Mapping[str, Any], constraints_not_evaluated: Sequence[str],
+) -> tuple[str, str]:
+    """Separate a constraint that was evaluated and is not binding from one never evaluated.
+
+    ``NONE`` means every relevant constraint was evaluated and none binds, or no constraint is
+    relevant (not applicable). A relevant constraint that could not be evaluated -- for example a
+    held position's weight with no monetary-unit-comparable price -- reads ``NOT_EVALUABLE``.
+    """
+    if binding in BINDING_CONSTRAINT_PRIORITY:
+        return binding, BINDING_STATE_EVALUATED_BINDING
+    if position_state in ("EXCLUDED_INACTIVE", "CURRENT_POSITION_UNRESOLVED") or posture == "INSUFFICIENT_CURRENT_RESEARCH":
+        return "NONE", BINDING_STATE_NOT_APPLICABLE
+    if sizing_mode == SIZING_MODE_NOT_APPLICABLE:
+        if position_state in ("HELD", "HELD_ABOVE_POLICY_CAP"):
+            if single_constraint.get("status") in _EVALUATED_CONSTRAINT_STATUSES:
+                return "NONE", BINDING_STATE_EVALUATED_NOT_BINDING
+            return BINDING_CONSTRAINT_NOT_EVALUABLE, BINDING_STATE_NOT_EVALUABLE
+        return "NONE", BINDING_STATE_NOT_APPLICABLE
+    if constraints_not_evaluated:
+        return BINDING_CONSTRAINT_NOT_EVALUABLE, BINDING_STATE_NOT_EVALUABLE
+    return "NONE", BINDING_STATE_EVALUATED_NOT_BINDING
 
 
 # ── Narrative (deterministic, template-based -- no invented facts) ────────────
@@ -1140,6 +1458,7 @@ def _not_evaluated_record(*, ticker: str, security_decision: Mapping[str, Any], 
         "risk_budget_constraint": {"status": "UNAVAILABLE_PORTFOLIO_STATE_NOT_PROVIDED", "risk_budget_fraction": None,
                                     "risk_budget_amount": None, "per_share_downside": None, "remaining_quantity": None},
         "binding_constraint": "NONE",
+        "binding_constraint_state": BINDING_STATE_NOT_APPLICABLE,
         "portfolio_constraint_completeness": "NOT_APPLICABLE",
         "constraints_evaluated": [],
         "constraints_not_evaluated": [],
@@ -1237,10 +1556,28 @@ def build_ticker_portfolio_aware_decision(
 
     entry_price = trigger.get("trigger_level")
     entry_basis = "TRIGGER_LEVEL"
+    entry_unit = _declared_boundary_unit(trigger)
     if entry_price is None:
         entry_price = pos.get("current_price")
         entry_basis = "CURRENT_MARKET_PRICE_FALLBACK" if entry_price is not None else "UNAVAILABLE"
+        entry_unit = (((portfolio_state.get("price_marks") or {}).get(ticker) or {}).get("price_unit", PRICE_UNIT_UNDECLARED)
+                      if entry_price is not None else PRICE_UNIT_UNDECLARED)
     invalidation_price = invalidation.get("invalidation_level")
+    invalidation_unit = _declared_boundary_unit(invalidation)
+    unit_integrity = portfolio_state.get("monetary_unit_integrity") or {}
+    account_unit = unit_integrity.get("account_monetary_unit", FIELD_CONTRACT_MONETARY_UNIT)
+    # Share counts divide an account-unit amount by a per-share price: only with that same unit.
+    share_quantity_qualified = entry_price is not None and entry_unit == account_unit
+    risk_units_comparable = share_quantity_qualified and invalidation_unit == account_unit
+    monetary_unit_reasons: list[str] = []
+    if entry_price is not None and entry_unit != account_unit:
+        monetary_unit_reasons.append(f"ENTRY_REFERENCE_PRICE_UNIT_NOT_ACCOUNT_UNIT:{entry_unit}")
+    if invalidation_price is not None and invalidation_unit != account_unit:
+        monetary_unit_reasons.append(f"INVALIDATION_PRICE_UNIT_NOT_ACCOUNT_UNIT:{invalidation_unit}")
+    if pos.get("current_weight_status") == WEIGHT_STATUS_UNIT_NOT_COMPARABLE:
+        monetary_unit_reasons.append(WEIGHT_STATUS_UNIT_NOT_COMPARABLE)
+    weight_basis = ("OWNER_ANCHORED_DERIVED_PROXY" if unit_integrity.get("status") == UNIT_STATUS_OWNER_ANCHORED
+                    else "ACCOUNT_UNIT_MARKED_VALUE")
 
     add_eligible = posture in ADD_ELIGIBLE_POSTURES
     probe_eligible = (not add_eligible) and _probe_eligible(posture=posture, invalidation_price=invalidation_price, entry_price=entry_price)
@@ -1263,32 +1600,42 @@ def build_ticker_portfolio_aware_decision(
     else:
         effective_risk_budget_fraction = None
 
-    single_constraint = _weight_constraint(observed_weight=pos.get("current_weight"), limit=max_single, effective_nav=effective_nav, entry_price=entry_price)
+    single_constraint = _weight_constraint(observed_weight=pos.get("current_weight"), limit=max_single, effective_nav=effective_nav,
+                                           entry_price=entry_price, share_quantity_qualified=share_quantity_qualified,
+                                           unavailable_reason=pos.get("current_weight_status"), weight_basis=weight_basis)
 
     sector = pos.get("sector")
     sector_source = pos.get("sector_source", SECTOR_SOURCE_NOT_EVALUATED)
+    exposure_status = portfolio_state.get("exposure_status", "AVAILABLE")
+    exposure_known = exposure_status in ("AVAILABLE", WEIGHT_STATUS_OWNER_ANCHORED)
     if sector is None:
         # Missing evidence is not evidence of zero sector exposure: this is an explicit
         # not-evaluated state, never UNCONSTRAINED.
         sector_constraint = {"status": "NOT_EVALUATED_MISSING_SECTOR", "reason": "GOVERNED_SECTOR_CLASSIFICATION_NOT_AVAILABLE",
+                              "evaluation": BINDING_STATE_NOT_EVALUABLE,
                               "observed_weight": None, "limit": max_sector, "sector_source": sector_source,
                               "remaining_weight": None, "remaining_notional": None, "remaining_quantity": None}
     else:
-        sector_weight = (portfolio_state.get("sector_weights") or {}).get(sector, 0.0)
+        sector_weight = (portfolio_state.get("sector_weights") or {}).get(sector, 0.0) if exposure_known else None
         sector_constraint = {
-            **_weight_constraint(observed_weight=sector_weight, limit=max_sector, effective_nav=effective_nav, entry_price=entry_price),
+            **_weight_constraint(observed_weight=sector_weight, limit=max_sector, effective_nav=effective_nav, entry_price=entry_price,
+                                 share_quantity_qualified=share_quantity_qualified, unavailable_reason=exposure_status,
+                                 weight_basis=weight_basis),
             "sector_source": sector_source,
         }
 
-    gross_constraint = _weight_constraint(observed_weight=portfolio_state.get("gross_exposure_weight"), limit=max_gross, effective_nav=effective_nav, entry_price=entry_price)
+    gross_constraint = _weight_constraint(observed_weight=portfolio_state.get("gross_exposure_weight"), limit=max_gross, effective_nav=effective_nav,
+                                          entry_price=entry_price, share_quantity_qualified=share_quantity_qualified,
+                                          unavailable_reason=exposure_status, weight_basis=weight_basis)
     cash_reserve_constraint = _floor_amount_constraint(observed_amount=portfolio_state.get("cash_available"), floor_fraction=min_cash_reserve, effective_nav=effective_nav)
     margin_debt_constraint = _ceiling_amount_constraint(observed_amount=portfolio_state.get("margin_debt"), cap_fraction=max_margin_debt, effective_nav=effective_nav)
     margin_debt_remaining_quantity = (
         math.floor(margin_debt_constraint["remaining_amount"] / entry_price)
-        if (margin_debt_constraint.get("remaining_amount") is not None and entry_price) else None
+        if (share_quantity_qualified and margin_debt_constraint.get("remaining_amount") is not None and entry_price) else None
     )
 
-    risk_sizing = _compute_risk_sizing(entry_price=entry_price, invalidation_price=invalidation_price, effective_nav=effective_nav, risk_budget_fraction=effective_risk_budget_fraction)
+    risk_sizing = _compute_risk_sizing(entry_price=entry_price, invalidation_price=invalidation_price, effective_nav=effective_nav,
+                                       risk_budget_fraction=effective_risk_budget_fraction, units_comparable=risk_units_comparable)
 
     ceiling_candidates = [
         ("RISK_BUDGET", risk_sizing.get("risk_budget_quantity")),
@@ -1304,7 +1651,7 @@ def build_ticker_portfolio_aware_decision(
         portfolio_risk_quantity_ceiling = max(0, math.floor(tightest_value))
     portfolio_risk_notional_ceiling = (
         portfolio_risk_quantity_ceiling * entry_price
-        if (portfolio_risk_quantity_ceiling is not None and entry_price is not None) else None
+        if (share_quantity_qualified and portfolio_risk_quantity_ceiling is not None and entry_price is not None) else None
     )
 
     cash_available = portfolio_state.get("cash_available")
@@ -1313,13 +1660,15 @@ def build_ticker_portfolio_aware_decision(
     max_cash_fundable_quantity = None
     if cash_available is not None and cash_reserve_floor is not None:
         deployable_cash = max(0.0, cash_available - cash_reserve_floor)
-        if entry_price:
+        if entry_price and share_quantity_qualified:
             max_cash_fundable_quantity = math.floor(deployable_cash / entry_price)
     cash_funding_capacity = {
         "status": "AVAILABLE" if deployable_cash is not None else "UNAVAILABLE",
         "cash_available": cash_available, "cash_reserve_floor": cash_reserve_floor,
         "deployable_cash": deployable_cash, "max_cash_fundable_quantity": max_cash_fundable_quantity,
     }
+    if deployable_cash is not None and entry_price and not share_quantity_qualified:
+        cash_funding_capacity["max_cash_fundable_quantity_status"] = "BLOCKED_" + SHARE_QUANTITY_BLOCKED_REASON
 
     margin_min = portfolio_state.get("margin_available_minimum")
     margin_max = portfolio_state.get("margin_available_maximum")
@@ -1339,6 +1688,7 @@ def build_ticker_portfolio_aware_decision(
         min_net_reward_risk_for_margin=_num(min_net_reward_risk_for_margin),
         strong_net_reward_risk_for_max_margin=_num(strong_net_reward_risk_for_max_margin),
         max_financing_cost_fraction_of_gross_upside=_num(max_financing_cost_fraction_of_gross_upside),
+        share_quantity_qualified=share_quantity_qualified,
     )
     margin_economics = _apply_portfolio_caps_to_margin_capacity(
         margin_economics, entry_price=entry_price,
@@ -1365,6 +1715,10 @@ def build_ticker_portfolio_aware_decision(
         portfolio_risk_quantity_ceiling=portfolio_risk_quantity_ceiling, tightest_name=tightest_name,
         constraints_not_evaluated=constraints_not_evaluated,
     )
+    binding_constraint, binding_constraint_state = _binding_constraint_state(
+        binding=binding_constraint, position_state=position_state, posture=posture, sizing_mode=sizing_mode,
+        single_constraint=single_constraint, constraints_not_evaluated=constraints_not_evaluated,
+    )
 
     lane = position_lane if position_lane in POSITION_LANES else ("TACTICAL" if sizing_mode != SIZING_MODE_NOT_APPLICABLE else "UNSPECIFIED")
 
@@ -1373,6 +1727,24 @@ def build_ticker_portfolio_aware_decision(
         gross_constraint=gross_constraint, cash_reserve_constraint=cash_reserve_constraint, margin_debt_constraint=margin_debt_constraint,
         risk_sizing=risk_sizing, entry_basis=entry_basis, security_decision=security_decision,
     )
+    if monetary_unit_reasons or risk_sizing.get("status") == "UNAVAILABLE_MONETARY_UNIT_NOT_COMPARABLE":
+        uncertainties = list(dict.fromkeys(uncertainties + ["MONETARY_UNIT_NOT_COMPARABLE_ACCOUNT_AMOUNTS_AND_SHARE_QUANTITIES_BLOCKED"]))
+        what_would_change = list(dict.fromkeys(what_would_change + [
+            "A price source that itself declares the account monetary unit would make NAV weights and research share "
+            "quantities computable; a same-session broker-reported securities market value with complete position truth "
+            "can scale weights only (derived proxy), never share quantities.",
+        ]))
+    monetary_unit_context = {
+        "contract_version": MONETARY_UNIT_INTEGRITY_CONTRACT,
+        "account_monetary_unit": account_unit,
+        "portfolio_status": unit_integrity.get("status"),
+        "weight_status": pos.get("current_weight_status"),
+        "entry_reference_price_unit": entry_unit if entry_price is not None else None,
+        "invalidation_price_unit": invalidation_unit if invalidation_price is not None else None,
+        "share_quantity_status": ("AVAILABLE" if share_quantity_qualified else "UNAVAILABLE_NO_ENTRY_REFERENCE_PRICE"
+                                  if entry_price is None else "BLOCKED_" + SHARE_QUANTITY_BLOCKED_REASON),
+        "reason_codes": list(dict.fromkeys(monetary_unit_reasons)),
+    }
 
     portfolio_risk_sizing = {
         "contract_version": RISK_SIZING_CONTRACT_VERSION,
@@ -1393,8 +1765,10 @@ def build_ticker_portfolio_aware_decision(
         "portfolio_risk_quantity_ceiling": portfolio_risk_quantity_ceiling,
         "portfolio_risk_notional_ceiling": portfolio_risk_notional_ceiling,
         "binding_constraint": binding_constraint,
+        "binding_constraint_state": binding_constraint_state,
         "constraints_evaluated": constraints_evaluated,
         "constraints_not_evaluated": constraints_not_evaluated,
+        "monetary_unit_context": monetary_unit_context,
     }
     research_size_envelope = _research_size_envelope(
         risk_sizing=risk_sizing,
@@ -1405,6 +1779,7 @@ def build_ticker_portfolio_aware_decision(
         sizing_policy_version=_private_portfolio_context.SYSTEM_DEFAULT_POLICY_VERSION,
         portfolio_state_identity=(portfolio_state.get("source_identities") or {}).get("portfolio_snapshot_identity"),
         security_decision_identity=security_decision.get("decision_identity"),
+        share_quantity_qualified=share_quantity_qualified,
     )
     portfolio_risk_sizing["research_size_envelope"] = research_size_envelope
     portfolio_risk_sizing.update(_identity("portfolio_risk_sizing", portfolio_risk_sizing))
@@ -1424,6 +1799,8 @@ def build_ticker_portfolio_aware_decision(
         "current_position_status": current_position_status,
         "current_weight": pos.get("current_weight"),
         "current_weight_status": pos.get("current_weight_status"),
+        "equity_sleeve_weight": pos.get("equity_sleeve_weight"),
+        "monetary_unit_context": monetary_unit_context,
         "cost_basis_context": _cost_basis_context(pos),
         "incremental_action_state": incremental_action_state,
         "entry_reference_price": entry_price,
@@ -1452,6 +1829,7 @@ def build_ticker_portfolio_aware_decision(
             "remaining_quantity": risk_sizing.get("risk_budget_quantity"),
         },
         "binding_constraint": binding_constraint,
+        "binding_constraint_state": binding_constraint_state,
         "portfolio_constraint_completeness": portfolio_constraint_completeness,
         "constraints_evaluated": constraints_evaluated,
         "constraints_not_evaluated": constraints_not_evaluated,
@@ -1484,11 +1862,24 @@ def build_artifact(
     official_liquidity_artifact: Mapping[str, Any] | None = None,
     capacity_price_by_ticker: Mapping[str, Any] | None = None,
     capacity_price_identity: str | None = None,
+    capacity_price_units: str | Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     records_in = integrated_decision_artifact.get("records") or {}
     lanes_by_ticker = position_lanes_by_ticker or {}
     reward_boundaries = reward_boundary_by_ticker or {}
     capacity_by_ticker = dict(execution_capacity_by_ticker or {})
+    account_unit = (portfolio_state.get("monetary_unit_integrity") or {}).get("account_monetary_unit", FIELD_CONTRACT_MONETARY_UNIT)
+    state_marks = portfolio_state.get("price_marks") or {}
+
+    def _capacity_price(ticker: str) -> Any:
+        # Level-1 capacity divides a VND ADTV notional by a price: only an account-unit price may do so.
+        if isinstance(capacity_price_units, Mapping):
+            unit = _unit_label(capacity_price_units.get(ticker))
+        elif capacity_price_units is not None:
+            unit = _unit_label(capacity_price_units)
+        else:
+            unit = (state_marks.get(str(ticker).upper()) or {}).get("price_unit", PRICE_UNIT_UNDECLARED)
+        return (capacity_price_by_ticker or {}).get(ticker) if unit == account_unit else None
     if official_liquidity_artifact is not None:
         if official_liquidity_artifact.get("contract_version") != "official_exchange_liquidity_research/v1":
             raise ValueError("OFFICIAL_LIQUIDITY_CONTRACT_MISMATCH")
@@ -1504,7 +1895,7 @@ def build_artifact(
             if ticker not in capacity_by_ticker:
                 capacity_by_ticker[ticker] = _execution_capacity.build_envelope(
                     ticker=ticker, session=session, official_liquidity_record=official_records.get(ticker),
-                    policy=policy, current_price=(capacity_price_by_ticker or {}).get(ticker),
+                    policy=policy, current_price=_capacity_price(ticker),
                     price_identity=capacity_price_identity,
                     source_liquidity_identity=official_liquidity_artifact.get("artifact_identity"),
                 )
@@ -1514,6 +1905,7 @@ def build_artifact(
     completeness_counts: dict[str, int] = {}
     margin_band_counts: dict[str, int] = {}
     margin_status_counts: dict[str, int] = {}
+    binding_state_counts: dict[str, int] = {}
     for ticker in sorted(records_in):
         record = build_ticker_portfolio_aware_decision(
             ticker=ticker, portfolio_state=portfolio_state, security_decision=records_in[ticker],
@@ -1532,6 +1924,8 @@ def build_artifact(
         completeness_counts[completeness] = completeness_counts.get(completeness, 0) + 1
         margin_status_counts[margin_status] = margin_status_counts.get(margin_status, 0) + 1
         margin_band_counts[margin_band] = margin_band_counts.get(margin_band, 0) + 1
+        binding_state = record.get("binding_constraint_state")
+        binding_state_counts[binding_state] = binding_state_counts.get(binding_state, 0) + 1
 
     active_position_count = sum(
         1 for pos in (portfolio_state.get("positions") or {}).values()
@@ -1554,7 +1948,10 @@ def build_artifact(
             "by_portfolio_constraint_completeness": dict(sorted(completeness_counts.items())),
             "by_margin_economics_status": dict(sorted(margin_status_counts.items())),
             "by_margin_research_band": dict(sorted(margin_band_counts.items())),
+            "by_binding_constraint_state": dict(sorted(binding_state_counts.items())),
         },
+        "monetary_unit_integrity": portfolio_state.get("monetary_unit_integrity"),
+        "exposure_status": portfolio_state.get("exposure_status"),
         "source_artifact_identities": {
             "portfolio_state_identity": (portfolio_state.get("source_identities") or {}).get("portfolio_snapshot_identity"),
             "integrated_investment_decision_product_identity": integrated_decision_artifact.get("artifact_identity"),
@@ -1605,6 +2002,7 @@ def build_private_overlay_or_skip(
     position_lanes: Mapping[str, Mapping[str, Any]] | None = None, excluded_tickers: Sequence[str] | None = None,
     position_lanes_by_ticker: Mapping[str, str] | None = None, reward_boundary_by_ticker: Mapping[str, float] | None = None,
     official_liquidity_artifact: Mapping[str, Any] | None = None, capacity_price_identity: str | None = None,
+    price_units: str | Mapping[str, Any] | None = None,
 ) -> dict[str, Any] | None:
     """Shows the intended shape of a future local Daily integration: PUBLIC Current Research
     Daily -> Integrated Investment Decision -> (if private portfolio context exists) build a
@@ -1618,7 +2016,7 @@ def build_private_overlay_or_skip(
     portfolio_state = derive_portfolio_state(
         portfolio_snapshot=portfolio_snapshot, prices=prices, sector_by_ticker=sector_by_ticker,
         governed_sector_snapshot=governed_sector_snapshot, position_lanes=position_lanes,
-        excluded_tickers=excluded_tickers,
+        excluded_tickers=excluded_tickers, price_units=price_units,
     )
     return build_artifact(
         session=session, requested_at=requested_at, portfolio_state=portfolio_state,
@@ -1746,6 +2144,38 @@ def load_descriptive_prices(repo_root: Path, session: str) -> dict[str, float]:
     return prices
 
 
+def _descriptive_price_marks(data: Mapping[str, Any]) -> dict[str, dict[str, Any]]:
+    marks: dict[str, dict[str, Any]] = {}
+    for ticker, record in (data.get("records") or {}).items():
+        technical_features = (record or {}).get("technical_features") or {}
+        value = _num((technical_features.get("values") or {}).get("close"))
+        if value is None:
+            continue
+        qualification = technical_features.get("price_basis_qualification") or {}
+        marks[str(ticker).upper()] = {
+            "value": value,
+            "price_unit": _unit_label(qualification.get("price_unit")),
+            "price_basis": technical_features.get("price_basis") or qualification.get("research_label"),
+            "source_artifact_identity": data.get("artifact_identity"),
+            "session": technical_features.get("feature_as_of_session") or data.get("session"),
+        }
+    return marks
+
+
+def load_descriptive_price_marks(repo_root: Path, session: str) -> tuple[dict[str, dict[str, Any]], str | None]:
+    """Same close prices as ``load_descriptive_prices``, each with the unit, basis, source identity
+    and as-of session its own artifact declares (``price_basis_qualification.price_unit``)."""
+    nodash = session.replace("-", "")
+    path = (
+        repo_root / "operations-review" / f"market-wide-current-descriptive-research-v1-{nodash}"
+        / "market_wide_current_descriptive_research_artifact.json"
+    )
+    if not path.is_file():
+        return {}, None
+    data = json.loads(path.read_text(encoding="utf-8"))
+    return _descriptive_price_marks(data), data.get("artifact_identity")
+
+
 _DEFAULT_SECTOR_SNAPSHOT_PATH = Path("operations-review/market-wide-financial-entity-classification-scaleout-v1-20260901/exchange_industry_classification_snapshot.json")
 
 
@@ -1765,8 +2195,12 @@ def evaluate_from_retained_artifacts(
     *, repo_root: Path, session: str | None = None, portfolio_root: Path | None = None,
     sector_snapshot_path: Path | None = None, position_lanes_by_ticker: Mapping[str, str] | None = None,
     excluded_tickers: Sequence[str] | None = None, requested_at: str,
+    integrated_decision_artifact: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """One deterministic, read-only evaluation over already-retained artifacts.
+
+    ``integrated_decision_artifact`` lets a caller that already holds the same session's retained
+    Integrated Decision pass it instead of materializing a second full copy.
 
     Never runs Daily, never calls a provider, never parses the owner workbook (that is
     Foundation's job -- this only reads the private artifacts it already produced). Raises
@@ -1777,15 +2211,15 @@ def evaluate_from_retained_artifacts(
     resolved_session = session or default_latest_completed_session(repo_root)
     if not resolved_session:
         raise FileNotFoundError("NO_RETAINED_COMPLETED_INTEGRATED_DECISION_SESSION_AVAILABLE")
-    integrated_decision_artifact = load_integrated_decision_artifact(repo_root, resolved_session)
+    if integrated_decision_artifact is None:
+        integrated_decision_artifact = load_integrated_decision_artifact(repo_root, resolved_session)
+    elif integrated_decision_artifact.get("session") != resolved_session:
+        raise ValueError("SUPPLIED_INTEGRATED_DECISION_SESSION_MISMATCH")
     status = _private_portfolio_context.portfolio_status(portfolio_root=portfolio_root)
     portfolio_snapshot = status.get("snapshot") if status.get("status") == "READY" else None
-    prices = load_descriptive_prices(repo_root, resolved_session)
+    price_marks, price_identity = load_descriptive_price_marks(repo_root, resolved_session)
+    prices = {ticker: mark["value"] for ticker, mark in price_marks.items()}
     nodash = resolved_session.replace("-", "")
-    descriptive_path = (repo_root / "operations-review" /
-                        f"market-wide-current-descriptive-research-v1-{nodash}" /
-                        "market_wide_current_descriptive_research_artifact.json")
-    price_identity = json.loads(descriptive_path.read_text(encoding="utf-8")).get("artifact_identity") if descriptive_path.is_file() else None
     official_path = (repo_root / "operations-review" /
                      f"official-exchange-liquidity-research-v1-{nodash}" /
                      "official_exchange_liquidity_research_artifact.json")
@@ -1799,7 +2233,7 @@ def evaluate_from_retained_artifacts(
     )
     effective_excluded_tickers = sorted(persisted_exclusions | {str(t).upper() for t in (excluded_tickers or [])})
     portfolio_state = derive_portfolio_state(
-        portfolio_snapshot=portfolio_snapshot, prices=prices, governed_sector_snapshot=governed_sector_snapshot,
+        portfolio_snapshot=portfolio_snapshot, price_marks=price_marks, governed_sector_snapshot=governed_sector_snapshot,
         position_lanes=None, excluded_tickers=effective_excluded_tickers,
     )
     return build_artifact(
@@ -1846,9 +2280,13 @@ def project_portfolio_fit_for_integrated_decision(portfolio_state: Mapping[str, 
     )
     weight = pos.get("current_weight")
     max_single = (portfolio_state.get("effective_policy") or {}).get("max_single_position_weight")
-    concentration_flag = bool(weight is not None and max_single is not None and weight > max_single + _EPS)
+    # An unknown held weight is UNKNOWN (None), never a confident "not concentrated".
+    concentration_flag = (None if (is_held and weight is None)
+                          else bool(weight is not None and max_single is not None and weight > max_single + _EPS))
     sector = pos.get("sector") or (portfolio_state.get("sector_by_ticker") or {}).get(ticker)
+    exposure_known = portfolio_state.get("exposure_status", "AVAILABLE") in ("AVAILABLE", WEIGHT_STATUS_OWNER_ANCHORED)
     sector_weight = (portfolio_state.get("sector_weights") or {}).get(sector) if sector else None
     max_sector = (portfolio_state.get("effective_policy") or {}).get("max_sector_weight")
-    sector_overlap = bool(sector_weight is not None and max_sector is not None and sector_weight > max_sector + _EPS)
+    sector_overlap = (None if (sector and not exposure_known)
+                      else bool(sector_weight is not None and max_sector is not None and sector_weight > max_sector + _EPS))
     return {"status": "AVAILABLE", "is_held": is_held, "concentration_flag": concentration_flag, "sector_overlap": sector_overlap}

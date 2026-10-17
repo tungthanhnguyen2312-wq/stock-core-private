@@ -178,8 +178,12 @@ def _partition_positions(state: Mapping[str, Any]) -> tuple[dict[str, dict], lis
 
 
 def _hhi_context(*, confirmed: Mapping[str, dict], named_cohort: Sequence[str], excluded_confirmed: Sequence[str]) -> dict[str, Any]:
-    """Equity-sleeve concentration: HHI over priced, named (non-excluded) confirmed positions only."""
-    priced = {ticker: confirmed[ticker]["current_market_value"] for ticker in named_cohort if confirmed[ticker].get("current_market_value") is not None}
+    """Equity-sleeve concentration: HHI over priced, named (non-excluded) confirmed positions only.
+
+    Uses the portfolio state's unit-free ``equity_sleeve_weight`` (one common price source), so a
+    research-unit price never has to be read as a monetary amount to measure concentration.
+    """
+    priced = {ticker: confirmed[ticker]["equity_sleeve_weight"] for ticker in named_cohort if confirmed[ticker].get("equity_sleeve_weight") is not None}
     unpriced = sorted(ticker for ticker in named_cohort if ticker not in priced)
     total = sum(priced.values())
     if not priced or total <= 0:
@@ -276,25 +280,32 @@ def _portfolio_variance(*, weights: np.ndarray, covariance: np.ndarray) -> float
     return max(variance, 0.0)
 
 
-def _view_weights(*, view: str, included: Sequence[str], market_value_by_ticker: Mapping[str, float], effective_nav: float | None) -> dict[str, float] | None:
+def _view_weights(*, view: str, included: Sequence[str], sleeve_weight_by_ticker: Mapping[str, float],
+                  nav_weight_by_ticker: Mapping[str, float]) -> dict[str, float] | None:
+    """EQUITY_SLEEVE renormalizes the unit-free sleeve mix over the measured subset; the NAV-scaled
+    view needs a qualified NAV weight for every included holding (see portfolio_monetary_unit_integrity/v1)."""
     if view == EQUITY_SLEEVE_VOLATILITY:
-        total = sum(market_value_by_ticker.get(ticker, 0.0) for ticker in included)
+        if any(ticker not in sleeve_weight_by_ticker for ticker in included):
+            return None
+        total = sum(sleeve_weight_by_ticker[ticker] for ticker in included)
         if total <= 0:
             return None
-        return {ticker: market_value_by_ticker[ticker] / total for ticker in included}
-    if not effective_nav or effective_nav <= 0:
+        return {ticker: sleeve_weight_by_ticker[ticker] / total for ticker in included}
+    if any(ticker not in nav_weight_by_ticker for ticker in included):
         return None
-    return {ticker: market_value_by_ticker.get(ticker, 0.0) / effective_nav for ticker in included}
+    return {ticker: nav_weight_by_ticker[ticker] for ticker in included}
 
 
 def _portfolio_volatility_view(
-    *, view: str, lookback: int, joint: Mapping[str, Any], market_value_by_ticker: Mapping[str, float], effective_nav: float | None,
+    *, view: str, lookback: int, joint: Mapping[str, Any], sleeve_weight_by_ticker: Mapping[str, float],
+    nav_weight_by_ticker: Mapping[str, float],
 ) -> dict[str, Any]:
     included = joint.get("included_tickers") or []
     if joint.get("status") != "JOINT_MATRIX_READY" or not included:
         return {"status": "UNAVAILABLE", "reason": joint.get("status"), "view": view, "lookback_sessions": lookback,
                 "included_tickers": included, "portfolio_volatility": None, "portfolio_variance": None, "weights": {}}
-    weights_map = _view_weights(view=view, included=included, market_value_by_ticker=market_value_by_ticker, effective_nav=effective_nav)
+    weights_map = _view_weights(view=view, included=included, sleeve_weight_by_ticker=sleeve_weight_by_ticker,
+                                nav_weight_by_ticker=nav_weight_by_ticker)
     if weights_map is None:
         return {"status": "UNAVAILABLE", "reason": "WEIGHT_BASIS_UNAVAILABLE", "view": view, "lookback_sessions": lookback,
                 "included_tickers": included, "portfolio_volatility": None, "portfolio_variance": None, "weights": {}}
@@ -411,7 +422,8 @@ def _leave_one_to_cash_sensitivity(*, view_result: Mapping[str, Any], covariance
     }
 
 
-def _coverage_status_for_horizon(*, joint: Mapping[str, Any], named_cohort_count: int, named_cohort_nav_weight: float | None, market_value_by_ticker: Mapping[str, float], effective_nav: float | None) -> dict[str, Any]:
+def _coverage_status_for_horizon(*, joint: Mapping[str, Any], named_cohort_count: int, named_cohort_nav_weight: float | None,
+                                 nav_weight_by_ticker: Mapping[str, float], nav_weights_complete: bool) -> dict[str, Any]:
     included = joint.get("included_tickers") or []
     excluded = joint.get("excluded_tickers_and_reason") or []
     if joint.get("status") != "JOINT_MATRIX_READY" or not included:
@@ -422,10 +434,10 @@ def _coverage_status_for_horizon(*, joint: Mapping[str, Any], named_cohort_count
         status = COVERED_SUBSET_RISK_READY
     included_nav_weight = None
     excluded_nav_weight = None
-    if effective_nav:
-        included_nav_weight = sum(market_value_by_ticker.get(ticker, 0.0) for ticker in included) / effective_nav
+    if nav_weights_complete:
+        included_nav_weight = sum(nav_weight_by_ticker.get(ticker, 0.0) for ticker in included)
         excluded_tickers = [row["ticker"] for row in excluded]
-        excluded_nav_weight = sum(market_value_by_ticker.get(ticker, 0.0) for ticker in excluded_tickers) / effective_nav
+        excluded_nav_weight = sum(nav_weight_by_ticker.get(ticker, 0.0) for ticker in excluded_tickers)
     return {
         "status": status, "included_tickers": included, "included_count": len(included),
         "excluded_tickers_and_reason": excluded, "excluded_count": len(excluded),
@@ -449,11 +461,18 @@ def _account_level_context(*, portfolio_snapshot: Mapping[str, Any], named_cohor
             unqualified_tickers.append(ticker)
     position_qualified = bool(named_cohort) and not unqualified_tickers
     position_risk: dict[str, Any]
+    unvalued = sorted(ticker for ticker in named_cohort if confirmed[ticker].get("current_market_value") is None)
     if not position_qualified:
         position_risk = {
             "status": ACCOUNT_LEVEL_POSITION_RISK_NOT_QUALIFIED,
             "unqualified_tickers": sorted(unqualified_tickers),
             "reason": "EXACT_CURRENT_PER_ACCOUNT_QUANTITY_NOT_ESTABLISHED_FOR_AT_LEAST_ONE_NAMED_HOLDING",
+        }
+    elif unvalued:
+        position_risk = {
+            "status": ACCOUNT_LEVEL_POSITION_RISK_NOT_QUALIFIED,
+            "unqualified_tickers": unvalued,
+            "reason": "ACCOUNT_UNIT_MARKET_VALUE_UNAVAILABLE_FOR_AT_LEAST_ONE_NAMED_HOLDING",
         }
     else:
         by_account: dict[str, float] = {}
@@ -489,11 +508,13 @@ def build_artifact(
     *, requested_at: str, portfolio_snapshot: Mapping[str, Any], price_history_snapshot: Mapping[str, Any],
     prices: Mapping[str, Any] | None = None, sector_by_ticker: Mapping[str, Any] | None = None,
     governed_sector_snapshot: Mapping[str, Any] | None = None, excluded_tickers: Sequence[str] | None = None,
-    event_ledger: Mapping[str, Any] | None = None,
+    event_ledger: Mapping[str, Any] | None = None, price_units: str | Mapping[str, Any] | None = None,
+    price_marks: Mapping[str, Mapping[str, Any]] | None = None, price_session: str | None = None,
 ) -> dict[str, Any]:
     state = _pad.derive_portfolio_state(
         portfolio_snapshot=portfolio_snapshot, prices=prices, sector_by_ticker=sector_by_ticker,
         governed_sector_snapshot=governed_sector_snapshot, excluded_tickers=excluded_tickers,
+        price_units=price_units, price_marks=price_marks, price_session=price_session,
     )
     confirmed, named_cohort, excluded_confirmed, unresolved = _partition_positions(state)
     source_coverage = _source_coverage(
@@ -516,25 +537,39 @@ def build_artifact(
         }
         return {**body, **content_identity(body)}
 
-    equity_market_value_all_confirmed = sum(row["current_market_value"] for row in confirmed.values() if row.get("current_market_value") is not None)
-    equity_market_value_named = sum(confirmed[ticker]["current_market_value"] for ticker in named_cohort if confirmed[ticker].get("current_market_value") is not None)
-    excluded_confirmed_market_value = sum(confirmed[ticker]["current_market_value"] for ticker in excluded_confirmed if confirmed[ticker].get("current_market_value") is not None)
     effective_nav = state.get("effective_nav")
+    unit_integrity = state.get("monetary_unit_integrity") or {}
+    # PORTFOLIO_MONETARY_UNIT_INTEGRITY_V1: account-unit totals exist only when every confirmed
+    # holding has an account-unit market value; a partial sum is never reported as exposure.
+    held_values = [row.get("current_market_value") for row in confirmed.values()]
+    values_complete = all(value is not None for value in held_values)
+    equity_market_value_all_confirmed = sum(held_values) if values_complete else None
+    named_values = [confirmed[ticker].get("current_market_value") for ticker in named_cohort]
+    equity_market_value_named = sum(named_values) if all(v is not None for v in named_values) else None
+    excluded_values = [confirmed[ticker].get("current_market_value") for ticker in excluded_confirmed]
+    excluded_confirmed_market_value = sum(excluded_values) if all(v is not None for v in excluded_values) else None
+    exposure_reason = None if values_complete else (unit_integrity.get("status") if unit_integrity.get("status") == _pad.UNIT_STATUS_NOT_COMPARABLE
+                                                    else "ACCOUNT_UNIT_MARKET_VALUE_INCOMPLETE")
 
     exposure_and_concentration = {
         "nav_basis": state.get("nav_basis"), "effective_nav": effective_nav,
         "investment_accounts_aggregate_status": state.get("investment_accounts_aggregate_status"),
+        "monetary_unit_integrity": unit_integrity,
         "equity_market_value_all_confirmed": equity_market_value_all_confirmed,
         "equity_market_value_named_cohort": equity_market_value_named,
-        "equity_exposure_to_nav": (equity_market_value_all_confirmed / effective_nav) if effective_nav else None,
+        "equity_exposure_to_nav": (equity_market_value_all_confirmed / effective_nav) if (effective_nav and equity_market_value_all_confirmed is not None) else None,
+        "equity_exposure_to_nav_status": "AVAILABLE" if (effective_nav and values_complete) else ("UNAVAILABLE_" + (exposure_reason or "NO_NAV")),
         "broker_cash": state.get("cash_available"), "broker_cash_to_nav": (state.get("cash_available") / effective_nav) if (effective_nav and state.get("cash_available") is not None) else None,
         "margin_debt": state.get("margin_debt"), "margin_debt_to_nav": (state.get("margin_debt") / effective_nav) if (effective_nav and state.get("margin_debt") is not None) else None,
         "current_confirmed_holding_count": len(confirmed), "named_research_cohort_count": len(named_cohort),
         "sector_weights": state.get("sector_weights"),
+        "sector_weights_status": state.get("exposure_status"),
         "single_name_weights": {ticker: confirmed[ticker].get("current_weight") for ticker in named_cohort},
+        "single_name_weight_status": {ticker: confirmed[ticker].get("current_weight_status") for ticker in named_cohort},
+        "single_name_equity_sleeve_weights": {ticker: confirmed[ticker].get("equity_sleeve_weight") for ticker in named_cohort},
         "excluded_confirmed_exposure": (
             {"count": len(excluded_confirmed), "market_value": excluded_confirmed_market_value,
-             "nav_weight": (excluded_confirmed_market_value / effective_nav) if effective_nav else None,
+             "nav_weight": (excluded_confirmed_market_value / effective_nav) if (effective_nav and excluded_confirmed_market_value is not None) else None,
              "status": "OWNER_EXCLUDED_ANONYMIZED_RETAINED_IN_DENOMINATOR"}
             if excluded_confirmed else {"count": 0, "market_value": 0.0, "nav_weight": 0.0, "status": "NONE"}
         ),
@@ -544,7 +579,11 @@ def build_artifact(
     as_of_session = price_history_snapshot.get("resolved_completed_session")
     if not isinstance(as_of_session, str):
         raise PersonalPortfolioQuantRiskError("PRICE_HISTORY_SNAPSHOT_AS_OF_SESSION_MISSING")
-    market_value_by_ticker = {ticker: confirmed[ticker]["current_market_value"] for ticker in named_cohort if confirmed[ticker].get("current_market_value") is not None}
+    sleeve_weight_by_ticker = {ticker: confirmed[ticker]["equity_sleeve_weight"] for ticker in named_cohort
+                               if confirmed[ticker].get("equity_sleeve_weight") is not None}
+    nav_weight_by_ticker = {ticker: confirmed[ticker]["current_weight"] for ticker in named_cohort
+                            if confirmed[ticker].get("current_weight") is not None}
+    nav_weights_complete = bool(effective_nav) and len(nav_weight_by_ticker) == len(named_cohort)
 
     per_security_volatility: dict[str, Any] = {}
     pairwise_correlations: list[dict[str, Any]] = []
@@ -570,13 +609,15 @@ def build_artifact(
             joint = covariance_integrity[key]
             coverage_by_horizon[key] = _coverage_status_for_horizon(
                 joint=joint, named_cohort_count=len(named_cohort), named_cohort_nav_weight=None,
-                market_value_by_ticker=market_value_by_ticker, effective_nav=effective_nav,
+                nav_weight_by_ticker=nav_weight_by_ticker, nav_weights_complete=nav_weights_complete,
             )
             covariance = np.array(joint["covariance_matrix"], dtype=float) if joint.get("covariance_matrix") is not None else None
             ready_pairs_this_horizon = [row for row in pairwise_correlations if row["lookback_sessions"] == lookback and row["status"] == "PAIRWISE_CORRELATION_READY"]
             group_count_this_horizon = len(correlation_clusters[key].get("concentration_groups") or []) if isinstance(correlation_clusters[key], Mapping) else 0
             for view in PORTFOLIO_VOLATILITY_VIEWS:
-                view_result = _portfolio_volatility_view(view=view, lookback=lookback, joint=joint, market_value_by_ticker=market_value_by_ticker, effective_nav=effective_nav)
+                view_result = _portfolio_volatility_view(view=view, lookback=lookback, joint=joint,
+                                                         sleeve_weight_by_ticker=sleeve_weight_by_ticker,
+                                                         nav_weight_by_ticker=nav_weight_by_ticker)
                 portfolio_volatility[view][key] = view_result
                 risk_contribution[view][key] = _risk_contribution(view_result=view_result, covariance=covariance)
                 diversification[view][key] = _diversification(
@@ -672,7 +713,7 @@ def evaluate_from_retained_artifacts(*, repo_root, portfolio_root=None, session:
     if price_history_snapshot is None:
         raise FileNotFoundError(f"NO_RETAINED_PRICE_HISTORY_SNAPSHOT_FOR_SESSION:{resolved_session}")
 
-    prices = _pad.load_descriptive_prices(repo_root, resolved_session)
+    price_marks, _price_identity = _pad.load_descriptive_price_marks(repo_root, resolved_session)
     governed_sector_snapshot = _pad.load_governed_sector_snapshot(repo_root)
     sector_by_ticker, _sources, _identity = _pad.resolve_sector_by_ticker(governed_sector_snapshot=governed_sector_snapshot)
     excluded = _exclusions.excluded_ticker_set(_exclusions.load_research_exclusions(portfolio_root))
@@ -685,7 +726,7 @@ def evaluate_from_retained_artifacts(*, repo_root, portfolio_root=None, session:
 
     return build_artifact(
         requested_at=requested_at, portfolio_snapshot=portfolio_snapshot, price_history_snapshot=price_history_snapshot,
-        prices=prices, sector_by_ticker=sector_by_ticker, governed_sector_snapshot=governed_sector_snapshot,
+        price_marks=price_marks, sector_by_ticker=sector_by_ticker, governed_sector_snapshot=governed_sector_snapshot,
         excluded_tickers=sorted(excluded), event_ledger=event_ledger,
     )
 
