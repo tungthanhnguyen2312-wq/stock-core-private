@@ -77,6 +77,9 @@ The 2026-10-16 acceptance used these real comparison groups: DL1/ITC/NO1, PAN/AA
 HPG/FPT/PNJ/VNM/MWG, VCB/HPG and DL1/PAN/HPG. Each was checked through the packet, Action Center,
 AI projection and Markdown.
 
+Native local checkpoint `53b4a21c385950a8f0a5e4d3f7d8acd0999c8a77`
+(`LOCAL_IMPLEMENTATION_COMPLETE_NOT_PROMOTED`).
+
 ## Known limits
 
 - Profitability lanes are absent because margin trajectories are UNKNOWN upstream. The retained
