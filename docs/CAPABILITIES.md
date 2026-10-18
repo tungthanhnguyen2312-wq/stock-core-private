@@ -2,6 +2,13 @@
 
 Navigation; no scores. [Facts](ACTIVE_STATE.md), [authority](AUTHORITY.md), [run order](DAILY_PIPELINE.md).
 
+Local [multi-period financial research](core_financial_valuation_research_scaleout_contract.md#multi-period-cashleverage-deterioration-and-recovery--2026-10-18)
+extends the existing Financial V2 anchored ratio history with successive-change,
+recovery, mixed and insufficient-evidence explanations. Separate sequential/YoY
+observations and provenance reach existing divergence, Decision Fitness, research
+packet, compact card and AI delivery. Corporate rules exclude bank/securities;
+existing financial methods, single-period findings and policy remain unchanged.
+
 Local [valuation/balance-sheet divergence research](core_financial_valuation_research_scaleout_contract.md#market-wide-valuation-versus-balance-sheet-divergence-research--2026-10-18)
 adds sector/accounting-compatible P/B versus cash, leverage, reported profitability
 and explicit YoY directions: 332 paired issuers, 2,561 paired observations and 314

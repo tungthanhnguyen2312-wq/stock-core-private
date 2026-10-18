@@ -5,7 +5,15 @@ Verified local analytical starting baseline 2026-10-18 `61c870c82648a67eed29d184
 Nothing below auto-starts; native standing admission required (AI_RULES 11).
 Facts: [ACTIVE_STATE.md](ACTIVE_STATE.md).
 
-## NOW — MARKET_WIDE_VALUATION_BALANCE_SHEET_DIVERGENCE_RESEARCH (COMPLETE LOCALLY)
+## NOW — MULTI_PERIOD_CASH_LEVERAGE_DETERIORATION_RESEARCH_V1 (ACTIVE LOCALLY)
+
+Owner-directed from verified local `e144c9da`; fixed 317-candidate cohort. Existing
+ratio/history numerical owner, qualified standalone-flow bridge and divergence
+delivery carry source-bound sequential and separate YoY evidence. No Daily/provider,
+production/runtime/evidence writes, policy change or authority promotion.
+[Scope](core_financial_valuation_research_scaleout_contract.md#multi-period-cashleverage-deterioration-and-recovery--2026-10-18).
+
+## PRIOR — MARKET_WIDE_VALUATION_BALANCE_SHEET_DIVERGENCE_RESEARCH (COMPLETE LOCALLY)
 
 Owner-directed from `a1c79438`; [governing scope](core_financial_valuation_research_scaleout_contract.md#market-wide-valuation-versus-balance-sheet-divergence-research--2026-10-18).
 Same-cohort research, existing numerical owners and decision/AI delivery. No live
@@ -15,8 +23,8 @@ Retained October16 acceptance: 332 of 337 candidates qualify; 2,561 paired obser
 are below the same-basis sector P/B minimum; no comparison is forced.
 Native local implementation checkpoint: `79679006f1c0bcf640879cabfc996e13bcef1a6a`.
 The existing contract records validation and the unchanged-baseline legacy stamp-test
-failure. Next substantial recommendation only: multi-period cash/leverage deterioration
-research over 317 ready retained issuers. Not admitted; no automatic successor.
+failure. Its former 317-name multi-period recommendation is the separately admitted
+current job above; the completed one-period capability remains closed.
 
 ## PRIOR — CORE_FINANCIAL_VALUATION_RESEARCH_SCALEOUT (COMPLETE LOCALLY)
 

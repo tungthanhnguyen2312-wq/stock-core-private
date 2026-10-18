@@ -1583,6 +1583,56 @@ def _divergence_assessment(pb_peer, metrics):
     return assessment, supports, counters, conditions
 
 
+def _multi_period_divergence(metrics, pb_peer, *, specialist=False):
+    """Explain engine-owned trajectories without recomputing ratios or voting policy."""
+    histories, gaps = {}, {}
+    for fid in ("cash_to_assets", "debt_to_assets", "debt_to_equity", "pbt_margin", "net_margin", "gross_margin"):
+        metric = metrics[fid]
+        trajectory = (metric.get("own_history_context") or {}).get("trajectory")
+        if metric["status"] == "AVAILABLE" and trajectory:
+            histories[fid] = copy.deepcopy(trajectory)
+        else:
+            gaps[fid] = metric["reason_codes"] or ["SOURCE_ANCHORED_TRAJECTORY_ABSENT"]
+    available = {f:t for f,t in histories.items() if t["status"] == "AVAILABLE"}
+    for fid,t in histories.items():
+        if t["status"] != "AVAILABLE":
+            gaps[fid] = t["reason_codes"]
+    worsening = [f for f,t in available.items() if t["assessment"] == "PERSISTENT_DETERIORATION"]
+    improving = [f for f,t in available.items() if t["assessment"] in {"RECOVERY", "SUCCESSIVE_IMPROVEMENT"}]
+    fluctuating = [f for f,t in available.items() if t["assessment"] == "MIXED_OR_ONE_PERIOD_FLUCTUATION"]
+    paired_domains = "cash_to_assets" in available and any(f in available for f in ("debt_to_assets", "debt_to_equity"))
+    assessment = ("NOT_APPLICABLE" if specialist else "INSUFFICIENT_EVIDENCE" if not paired_domains else
+        "MIXED" if (worsening and improving) or fluctuating else
+        "PERSISTENT_DETERIORATION" if worsening else
+        "RECOVERY" if any(t["assessment"] == "RECOVERY" for t in available.values()) else
+        "SUCCESSIVE_IMPROVEMENT" if improving else "STABLE")
+    low = pb_peer.get("status") == "READY_RESEARCH_ONLY" and pb_peer["percentile"] <= .25
+    relation = ("DISCOUNT_WITH_PERSISTENT_DETERIORATION" if low and assessment == "PERSISTENT_DETERIORATION" else
+        "DISCOUNT_WITH_IMPROVING_TRAJECTORY" if low and assessment in {"RECOVERY", "SUCCESSIVE_IMPROVEMENT"} else
+        "DISCOUNT_WITH_CONFLICTING_TRAJECTORIES" if low and assessment == "MIXED" else
+        "INSUFFICIENT_EVIDENCE" if not paired_domains or specialist else "FINANCIAL_TRAJECTORY_CONTEXT")
+    return {"status": "NOT_APPLICABLE" if specialist else "AVAILABLE" if paired_domains else "UNKNOWN",
+        "assessment": assessment, "valuation_relationship": relation, "metric_trajectories": histories,
+        "supporting_evidence": [{"metric": f, "observation": available[f]["assessment"]} for f in improving],
+        "contradicting_evidence": [{"metric": f, "observation": available[f]["assessment"]} for f in worsening+fluctuating] +
+            [{"metric": f, "observation": "SAME_QUARTER_YOY_CONTRADICTS_RECENT_DIRECTION"}
+             for f,t in available.items() if t.get("seasonal_confirmation") == "CONTRADICTS_RECENT_DIRECTION"],
+        "material_gaps": gaps, "qualified_metric_trajectories": len(available),
+        "qualified_observations": sum(len(t["observations"]) for t in available.values()),
+        "conditions_to_reassess": ["NEXT_QUALIFIED_SAME_SERIES_QUARTER_CONFIRMS_OR_REVERSES_RECENT_CHANGES",
+            "SAME_QUARTER_YOY_CONFIRMATION_FOR_SEASONAL_FLOW_CHANGES", "RESTATEMENT_SCOPE_DEFINITION_OR_UNIT_CHANGE_INVALIDATES_COMPARISON"],
+        "explanation": {"PERSISTENT_DETERIORATION": "Repeated adverse changes in qualified financial ratios warrant investigation of persistent weakness.",
+            "RECOVERY": "Two successive favorable changes follow earlier weakness in the contiguous retained sequence; recovery remains a research hypothesis.",
+            "SUCCESSIVE_IMPROVEMENT": "Qualified ratios improve over successive observations; earlier deterioration is not established.",
+            "MIXED": "Financial trajectories conflict or reverse over one period; a uniform deterioration or recovery claim is unsupported.",
+            "STABLE": "Recent qualified ratios are unchanged within numerical precision.",
+            "NOT_APPLICABLE": "Corporate cash/leverage trajectory rules do not apply to this sector.",
+            "INSUFFICIENT_EVIDENCE": "Both cash and leverage need at least three contiguous compatible observations ending at their qualified subject."}[assessment],
+        "limitations": ["NON_VOTING_CURRENT_RESEARCH", "NOT_PIT", "NO_TRADE_AUTHORITY", "NO_CAUSAL_OR_MATERIALITY_CLAIM",
+            "TWO_SUCCESSIVE_CHANGES_ESTABLISH_REPEAT_OBSERVATIONS_NOT_A_FORECAST", "FLOW_SEASONALITY_REQUIRES_YOY_CONTEXT"],
+        "is_actionable": False}
+
+
 def build_balance_sheet_divergence_context(*, rows, financial_product, financial_peers,
         industry_by_ticker, decision_session, source_valuation_identity, source_evaluated_valuation_identity):
     """Non-voting synthesis over existing numerical owners, with per-measure qualification."""
@@ -1638,6 +1688,7 @@ def build_balance_sheet_divergence_context(*, rows, financial_product, financial
             "MID_RANGE_PB_WITH_FINANCIAL_CONTEXT": "Research P/B is in the middle half of its compatible sector cohort; the qualified financial observations provide context without an extreme valuation claim.",
             "NOT_APPLICABLE": "Corporate cash/leverage divergence rules do not apply to this issuer. Its sector-specific financial methods remain separate.",
         }
+        trajectory = _multi_period_divergence(metrics, peer, specialist=specialist)
         paired = sum(m["status"] == "AVAILABLE" for m in metrics.values()) if peer.get("status") == "READY_RESEARCH_ONLY" and not specialist else 0
         records[ticker] = {"ticker": ticker, "status": "NOT_APPLICABLE" if specialist else "AVAILABLE" if paired else "UNKNOWN",
             "assessment": assessment, "issuer_type": row.get("entity_class"), "decision_session": decision_session,
@@ -1645,6 +1696,7 @@ def build_balance_sheet_divergence_context(*, rows, financial_product, financial
             "valuation": {"method_id": PB_CURRENT_RESEARCH, "source_method": copy.deepcopy(pb), "peer_context": peer,
                 "cohort_id": cohorts.get(ticker), "history": {"status": "UNKNOWN", "reason": "NO_COMPATIBLE_RETAINED_PB_HISTORY_NOT_FINANCIAL_RATIO_HISTORY"}},
             "financial_measures": metrics, "valid_paired_comparisons": paired,
+            "multi_period_financial_context": trajectory,
             "supporting_evidence": supports, "contradicting_evidence": counters,
             "material_gaps": {"valuation": pb_blockers[ticker] + ([] if peer.get("status") == "READY_RESEARCH_ONLY" else ["SUITABLE_PB_PEER_COHORT_UNAVAILABLE"]),
                 **{fid: m["reason_codes"] for fid,m in metrics.items() if m["status"] != "AVAILABLE"},

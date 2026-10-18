@@ -166,3 +166,90 @@ not claimed as passed. Six such cases initially required the explicit read-only
 retained-evidence root. No old test, historical artifact or completed milestone
 was rewritten to hide that limitation. It is separate from the new capability's
 passed retained acceptance; no new failure was found in completed selections.
+
+## Multi-period cash/leverage deterioration and recovery — 2026-10-18
+
+Owner-directed `MULTI_PERIOD_CASH_LEVERAGE_DETERIORATION_RESEARCH_V1` starts from
+verified local `e144c9da`, preserving the completed divergence and ratio scaleout.
+The fixed candidate cohort is the 317 previously paired issuers with AVAILABLE or
+PARTIAL own histories for cash/assets, debt/assets and debt/equity in the completed
+divergence replay. This is eligibility for investigation, not guaranteed trends.
+
+The existing Financial V2 engine extends its source-anchored ratio history. Cash,
+explicit debt ratios and standalone pretax/net/gross margins retain observations,
+operand provenance, reporting periods, supplied dates and series accounting/unit
+identity. Only the existing flow bridge admits standalone or de-cumulated flow
+inputs. Cumulative raw flows, conflicting revisions, nonpositive denominators,
+period-end conflicts and missing quarters cannot fill a sequential gap. Missing
+dates stay missing. Unknown monetary units retain the existing research ratio
+qualification and never become known units or exact monetary authority.
+
+At least three contiguous subject-ending observations are required. Two successive
+adverse changes describe persistent deterioration; two favorable changes describe
+successive improvement, or recovery if an earlier adverse change exists in that
+contiguous suffix. Stable means unchanged within numerical precision; reversals
+and conflicting metrics remain mixed. These are observations, not forecasts,
+materiality estimates or proof of a value trap. Same-quarter YoY changes remain
+separate and can contradict the recent direction, especially for seasonal flows.
+
+The existing divergence owner synthesizes these engine observations, requiring
+both qualified cash and leverage trajectories for an issuer-level conclusion.
+Debt ratios are corroborating measurements, never two votes. Profitability may
+contradict balance-sheet improvement. Individual qualified histories survive when
+combined evidence is insufficient. Banks/securities retain their separate methods;
+corporate trajectory rules are NOT_APPLICABLE. Existing single-period assessment,
+financial values, decision policy, posture, packet scope and PIT/execution limits
+are unchanged. Nested findings use the existing Decision Fitness input, packet,
+compact-card and AI projection; AI explains Producer evidence and counter-theses.
+
+Retained acceptance uses the existing replay tool with `--trajectory-baseline`
+pointing to the preceding checkpoint's exact `research-records.jsonl.gz`. It fixes
+the 317-name list, hashes retained inputs before/after, checks exact numerical
+parity and old single-period findings, and exercises actual delivery surfaces.
+No Daily/provider, protected evidence/runtime write, release or authority promotion.
+Monday October 19 Owner Daily remains independent. No successor auto-starts.
+
+Validated retained result (October 16 inputs; Financial V2 schema 2.5.0):
+
+| Same 317 candidates | Before | Result |
+|---|---:|---:|
+| Explicit multi-period issuer assessments | 0 | 317 |
+| Qualified metric trajectories / metric-period observations | 0 / 0 | 955 / 7,540 |
+| Qualified sequential / separate YoY changes | 0 / 0 | 6,573 / 3,728 |
+| Persistent deterioration / recovery / mixed / insufficient issuer cases | no trajectory assessment | 18 / 11 / 288 / 0 |
+| Existing single-period paired observations | 2,471 | 2,471 |
+
+All 317 have qualified cash/assets, debt/assets and debt/equity trajectories.
+Qualified margin trajectories: gross 2, net 1, pretax 1; the other 947 margin
+instances remain UNKNOWN. Gaps include insufficient contiguous source-anchored
+flows (890 occurrences), current period mismatch (57), scope mismatch/unknown
+(36), and invalid/nonpositive denominators (3); reason counts can overlap.
+Reported quarter labels and equivalent supplied calendar ends are compatible;
+neither is fabricated or promoted to an exact fact date. No qualified historical
+P/B or new ROE/ROA comparison is manufactured.
+
+PAN's low-P/B case gains recovery evidence: 2025-Q3 → Q4 → 2026-Q1 cash/assets
+15.2991% → 16.8435% → 23.9768%, debt/assets 35.8496% → 23.7041% → 18.1077%.
+ITC and NO1 show low-P/B discounts alongside repeated deterioration. AAA remains
+mixed: cash/assets declines successively while debt ratios reverse over one period.
+The 82 discount cases split into 2 deterioration, 1 recovery and 79 conflicting
+trajectories; these remain research hypotheses, not trade instructions.
+
+Final acceptance: `.stocklookup/scratch/multi-period-acceptance-final/acceptance.json`
+and `research-records.jsonl.gz` in this implementation worktree. Fixed sorted-cohort
+SHA256: `62a2eb8b8053d44e115d8b9e4656cb1d32ef3c361f9659376d86df9e90c5346f`.
+Twelve input hashes, all 1,492 numerical feature objects, prior one-period findings
+and policy/posture are unchanged. Actual packet scope stays 1,507; all 317 candidate
+deliveries pass packet/card/AI/Decision Fitness equality. New metric-input coverage
+is zero: the gain is qualified temporal analysis over retained evidence.
+Validation: 360 focused/financial/valuation/decision/AI/flow-bridge tests PASS,
+6 optional retained-fixture skips; launcher guard and whitespace check PASS.
+The documented unrelated legacy pipeline stamp failure was not rerun or altered.
+
+Recommended next major capability, not admitted: sector-relative multi-period
+balance-sheet resilience research, comparing equivalent-window cash/leverage
+trajectories to distinguish issuer-specific weakness from sector-wide moves.
+The retained candidate data already form fourteen at-least-five-member same-sector,
+same-provider/scope/unit/statement-family three-quarter pools for each balance
+ratio (317 names); final method/consumer qualification belongs to that future job.
+Profitability expansion still needs genuine contiguous compatible flow evidence.

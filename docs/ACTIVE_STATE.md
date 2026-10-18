@@ -1,6 +1,6 @@
 # Stock Lookup — Active State
 
-Verified local analytical starting checkpoint (2026-10-18): `a1c794383cb4ddf8b26c170a5a3bad2b75390335`. Primary main remains at `61c870c8`; it was not reset, advanced or used as a substitute for the verified local checkpoint.
+Verified local analytical starting checkpoint (2026-10-18): `e144c9da07ab52aa4b5c503ca8c325b2a7f63f1c`. Primary main remains at `61c870c8`; it was not reset, advanced or used as a substitute for the verified local checkpoint.
 `git fetch origin main` / `git ls-remote origin refs/heads/main`; **local** remote-tracking refs may be stale.
 ## 0. How this file relates to the others
 | Question | Answer lives in |
@@ -28,6 +28,7 @@ Kinds: **CURRENT FACT** (verified), **HOST-LOCAL** (untracked; re-verify),
 **BLOCKED**, **DEFERRED**, **HISTORICAL**.
 
 ## 1. The operational gate
+- **ACTIVE LOCALLY — MULTI_PERIOD_CASH_LEVERAGE_DETERIORATION_RESEARCH_V1:** Owner-directed from verified `e144c9da`; dedicated worktree, sole Codex Producer writer. Extend the existing anchored ratio history and divergence delivery over the fixed 317-candidate retained cohort. No Daily/provider/runtime/evidence writes or authority change; Monday Owner Daily independent. [Scope](core_financial_valuation_research_scaleout_contract.md#multi-period-cashleverage-deterioration-and-recovery--2026-10-18).
 - **COMPLETE LOCALLY — [valuation/balance-sheet divergence](core_financial_valuation_research_scaleout_contract.md#market-wide-valuation-versus-balance-sheet-divergence-research--2026-10-18):** native implementation checkpoint `79679006f1c0bcf640879cabfc996e13bcef1a6a`. Same 337 candidates: 332 qualified assessments, 2,561 paired observations, 1,935 peer comparisons and 314 specific support/counter-thesis findings. All qualified cases reach the existing research packet, compact card, Decision Fitness input and AI delivery. Measurements/policy and eleven retained input hashes unchanged. Completed test selections and retained acceptance pass; an old stamp-test key-list failure reproduces on untouched `a1c79438` and is documented separately. No provider, live Daily, production/runtime/evidence write, release or authority promotion. Monday Daily independent; queue empty.
 - **COMPLETE LOCALLY — [core financial ratio research](core_financial_valuation_research_scaleout_contract.md):** native checkpoint `ead8ef2724954a02b936e8ebb9692a8b157fbe46`, sole Codex writer from verified local `61c870c8`. [Retained acceptance](internal/CORE_FINANCIAL_VALUATION_RESEARCH_SCALEOUT_20261018.md): identical 1,492 issuers, 1,698 new decision/AI peer comparisons across 431 issuers (417 outside retained VN30) and 3,572 usable own histories across 1,194 issuers. Underlying metric values, old peers/history and fundamental policy unchanged. VN30 PR147 not reopened. No provider, live Daily, production/evidence write or authority promotion; Monday October19 Daily independent. No push/merge/publication or successor authorized.
 - **[Native releases](parallel_domain_development_control_plane_v1_contract.md):** declaration correction; explicit coupled source review.

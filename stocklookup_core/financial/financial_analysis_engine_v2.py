@@ -24,7 +24,7 @@ CONTRACT_VERSION = "financial_analysis_context/v2"
 #: from the pre-existing end-of-period proxies, never relabelled as one another) and a
 #: per-ticker retrospective own-history percentile/range context (history_context) over the
 #: headline corporate ratio features.
-SCHEMA_VERSION = "2.4.0"
+SCHEMA_VERSION = "2.5.0"
 FITNESS = ("READY", "RESEARCH_PROXY", "BLOCKED_BY_EVIDENCE", "NOT_APPLICABLE")
 INDUSTRIAL = "INDUSTRIAL_FINANCIAL_ANALYSIS"
 LIMITED = "OTHER_FINANCIAL_LIMITED_ANALYSIS"
@@ -865,8 +865,115 @@ def _build_history_context(rows: Sequence[Mapping[str, Any]], features: Mapping[
     for fid, (numerator, denominator, semantic) in EXTENDED_RATIO_HISTORY_INPUTS.items():
         series_by_feature[fid] = _ratio_series(rows, numerator, semantic, denominator, semantic,
                                               subject_feature=features[fid])
-    return {feature_id: _history_entry(features[feature_id], series_by_feature[feature_id])
-            for feature_id in HISTORY_CONTEXT_FEATURES}
+    result = {feature_id: _history_entry(features[feature_id], series_by_feature[feature_id])
+              for feature_id in HISTORY_CONTEXT_FEATURES}
+    for fid, trajectory in build_ratio_trajectories(rows, features).items():
+        result[fid]["trajectory"] = trajectory
+    return result
+
+
+# Research descriptions of repeated observations; these never vote in strategy policy.
+TRAJECTORY_INPUTS = {**EXTENDED_RATIO_HISTORY_INPUTS,
+    "net_margin": ("net_income", "revenue", FLOW_STANDALONE),
+    "gross_margin": ("gross_profit", "revenue", FLOW_STANDALONE)}
+
+
+def build_ratio_trajectories(rows, features):
+    """Extend the existing anchored ratio history with auditable sequential/YoY changes.
+
+    Only the contiguous suffix ending at the actual subject can establish persistence.
+    Missing quarters, conflicting revisions and nonpositive denominators break that suffix.
+    Flow inputs must already be standalone quarters qualified by the existing flow bridge.
+    """
+    result = {}
+    for fid, (numerator, denominator, semantic) in TRAJECTORY_INPUTS.items():
+        feature = features.get(fid) or {}
+        subject = (feature.get("period_identity") or [None])[-1]
+        entry = {"status": "UNKNOWN", "assessment": "INSUFFICIENT_EVIDENCE",
+            "method": "source_anchored_ratio_trajectory/v1", "subject_period": subject,
+            "period_semantic": semantic, "observations": [], "sequential_changes": [],
+            "yoy_changes": [], "contiguous_periods": [], "reason_codes": [],
+            "limitations": ["CURRENT_RESEARCH_ONLY", "NOT_PIT", "NO_ANNUALIZATION",
+                "SEQUENTIAL_FLOW_CHANGES_MAY_BE_SEASONAL", "SOURCE_MONETARY_BASIS_NOT_UPGRADED"],
+            "is_actionable": False}
+        result[fid] = entry
+        if feature.get("fitness") == "NOT_APPLICABLE":
+            entry.update(status="NOT_APPLICABLE", reason_codes=["ISSUER_METHOD_NOT_APPLICABLE"])
+            continue
+        series = _ratio_series(rows, numerator, semantic, denominator, semantic, subject_feature=feature)
+        ns, ds = _series_index(rows, numerator, semantic), _series_index(rows, denominator, semantic)
+        sources = feature.get("provider_source_provenance") or []
+        matches = [key for key in set(ns) & set(ds) if subject in ns[key] and subject in ds[key]
+            and len(sources) == 2 and _provenance(ns[key][subject]) == sources[0]
+            and _provenance(ds[key][subject]) == sources[1]]
+        if not series or len(matches) != 1 or not _quarter(subject):
+            entry["reason_codes"] = ["QUALIFIED_SUBJECT_ANCHORED_QUARTER_SERIES_UNAVAILABLE"]
+            continue
+        key = matches[0]
+        entry["series_identity"] = dict(zip(SERIES_KEY_FIELDS, key))
+        valid = {}
+        for period, value in sorted(series.items()):
+            n, d = ns[key][period], ds[key][period]
+            if not _quarter(period) or not math.isfinite(value) or d["reported_value"] <= 0:
+                entry["reason_codes"].append("INVALID_PERIOD_OR_NONPOSITIVE_DENOMINATOR_EXCLUDED")
+                continue
+            year, quarter = _quarter(period)
+            expected_end = f"{year}-{('03-31', '06-30', '09-30', '12-31')[quarter-1]}"
+            ends = [r.get("period_end") for r in (n,d)]
+            # A supplied calendar end must agree with the reporting-quarter label.
+            # Missing ends stay missing; a label is never converted into a fact date.
+            if any(end not in (None, "", period, expected_end) for end in ends):
+                entry["reason_codes"].append("CONFLICTING_OR_NONCALENDAR_PERIOD_END_EXCLUDED")
+                continue
+            valid[period] = value
+            entry["observations"].append({"period": period, "value": value,
+                "period_end": [n.get("period_end"), d.get("period_end")],
+                "period_identity_basis": "REPORTED_QUARTER_LABEL_NO_DATE_INFERENCE",
+                "period_semantic": semantic, "source_provenance": [_provenance(n), _provenance(d)]})
+        if subject not in valid:
+            entry["reason_codes"].append("SUBJECT_DENOMINATOR_NOT_POSITIVE" if ds[key][subject]["reported_value"] <= 0
+                                         else "SUBJECT_PERIOD_BASIS_UNPROVEN")
+            continue
+        for period in sorted(valid):
+            year, quarter = _quarter(period)
+            for field, prior in (("sequential_changes", _prior_quarter((year, quarter))),
+                                 ("yoy_changes", (year-1, quarter))):
+                label = f"{prior[0]}-Q{prior[1]}"
+                if label in valid:
+                    entry[field].append({"from_period": label, "to_period": period,
+                        "ratio_point_change": valid[period]-valid[label],
+                        "comparison_basis": "SEQUENTIAL_QUARTER" if field == "sequential_changes" else "SAME_QUARTER_YOY"})
+        contiguous = [subject]
+        cursor = _quarter(subject)
+        while True:
+            cursor = _prior_quarter(cursor)
+            label = f"{cursor[0]}-Q{cursor[1]}"
+            if label not in valid:
+                break
+            contiguous.insert(0, label)
+        entry["contiguous_periods"] = contiguous
+        if len(contiguous) < 3:
+            entry["reason_codes"].append("FEWER_THAN_THREE_CONTIGUOUS_SUBJECT_ENDING_OBSERVATIONS")
+            continue
+        # Two successive changes are the minimum repeat evidence, not a forecast.
+        favorable = -1 if fid in {"debt_to_equity", "debt_to_assets"} else 1
+        deltas = [(valid[b]-valid[a])*favorable for a,b in zip(contiguous, contiguous[1:])]
+        signs = [0 if math.isclose(d, 0, abs_tol=1e-12) else 1 if d > 0 else -1 for d in deltas]
+        recent = signs[-2:]
+        assessment = ("PERSISTENT_DETERIORATION" if recent == [-1,-1] else
+            "RECOVERY" if recent == [1,1] and -1 in signs[:-2] else
+            "SUCCESSIVE_IMPROVEMENT" if recent == [1,1] else
+            "STABLE" if recent == [0,0] else "MIXED_OR_ONE_PERIOD_FLUCTUATION")
+        entry.update(status="AVAILABLE", assessment=assessment,
+            establishing_periods=contiguous[-3:],
+            recent_ratio_point_changes=[valid[b]-valid[a] for a,b in zip(contiguous[-3:], contiguous[-2:])],
+            favorable_direction="LOWER" if favorable == -1 else "HIGHER")
+        current_yoy = next((c for c in entry["yoy_changes"] if c["to_period"] == subject), None)
+        entry["seasonal_confirmation"] = ("UNAVAILABLE" if not current_yoy else
+            "CONTRADICTS_RECENT_DIRECTION" if recent[0] == recent[1] and recent[-1] != 0 and
+            current_yoy["ratio_point_change"]*favorable*recent[-1] < 0 else "YOY_CONTEXT_AVAILABLE")
+        entry["reason_codes"] = sorted(set(entry["reason_codes"]))
+    return result
 
 
 def _bank_usable(component: Mapping[str, Any], *, fitness: str) -> bool:

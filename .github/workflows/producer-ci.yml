@@ -101,6 +101,7 @@ env:
     tests/test_financial_v2_current_input_authority.py
     tests/test_financial_analysis_engine_v2.py
     tests/test_financial_ratio_research_scaleout.py
+    tests/test_multi_period_financial_deterioration.py
     tests/test_valuation_balance_sheet_divergence.py
     tests/test_financial_analysis_product_projection.py
     tests/test_market_wide_financial_analysis_v2_scaleout.py

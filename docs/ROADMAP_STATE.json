@@ -15,11 +15,32 @@
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "MARKET_WIDE_VALUATION_BALANCE_SHEET_DIVERGENCE_RESEARCH",
-    "state": "COMPLETE"
+    "milestone": "MULTI_PERIOD_CASH_LEVERAGE_DETERIORATION_RESEARCH_V1",
+    "state": "ACTIVE"
   },
   "queued_next": [],
   "milestones": [
+    {
+      "milestone_id": "MULTI_PERIOD_CASH_LEVERAGE_DETERIORATION_RESEARCH_V1",
+      "state": "ACTIVE",
+      "starting_checkpoint": "e144c9da07ab52aa4b5c503ca8c325b2a7f63f1c",
+      "candidate_branch": "feature/multi-period-cash-leverage-deterioration-v1-20261018",
+      "dependencies": [
+        "MARKET_WIDE_VALUATION_BALANCE_SHEET_DIVERGENCE_RESEARCH"
+      ],
+      "unlocks": [],
+      "owner_authorized": true,
+      "owner_override": "Owner-directed multi-period financial deterioration and recovery research over the fixed 317-candidate retained cohort; existing numerical owners and delivery; no Daily, provider, runtime, evidence or authority writes.",
+      "authority_effect": "NONE",
+      "source_doc": "docs/core_financial_valuation_research_scaleout_contract.md",
+      "state_history": [
+        "DEFERRED",
+        "ACTIVE"
+      ],
+      "checkpoint": null,
+      "terminal_disposition": null,
+      "notes": "Owner-directed multi-period financial deterioration and recovery research over the fixed 317-candidate retained cohort; existing numerical owners and delivery; no Daily, provider, runtime, evidence or authority writes."
+    },
     {
       "milestone_id": "MARKET_WIDE_VALUATION_BALANCE_SHEET_DIVERGENCE_RESEARCH",
       "state": "COMPLETE",
