@@ -15,11 +15,32 @@
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "INTEGRATED_INVESTMENT_OPPORTUNITY_COMPARISON_V1",
-    "state": "COMPLETE"
+    "milestone": "THESIS_BASED_OPPORTUNITY_DISCOVERY_V1",
+    "state": "ACTIVE"
   },
   "queued_next": [],
   "milestones": [
+    {
+      "milestone_id": "THESIS_BASED_OPPORTUNITY_DISCOVERY_V1",
+      "state": "ACTIVE",
+      "starting_checkpoint": "74a7d76b6e0961d71c33b1737e04e35841b8f43a",
+      "candidate_branch": "feature/thesis-opportunity-discovery-v1-20261018",
+      "dependencies": [
+        "INTEGRATED_INVESTMENT_OPPORTUNITY_COMPARISON_V1"
+      ],
+      "unlocks": [],
+      "owner_authorized": true,
+      "owner_override": "Owner 2026-10-18 chat directive: Claude Code lead executor with autonomous roadmap authority. Market-wide thesis-based opportunity discovery reusing the integrated comparison finding logic (valuation/financial/sector/timing/downside) into evidence-pattern research lanes ordered by existing inspection-order authority, plus cross-sector relative-position comparison axes. Opt-in Action Center and AI delivery. Local only; no Daily/provider/runtime/evidence writes, policy/authority change, push, merge or promotion.",
+      "authority_effect": "NONE",
+      "source_doc": "docs/thesis_based_opportunity_discovery_v1_contract.md",
+      "state_history": [
+        "DEFERRED",
+        "ACTIVE"
+      ],
+      "checkpoint": null,
+      "terminal_disposition": null,
+      "notes": "Owner 2026-10-18 chat directive: Claude Code lead executor with autonomous roadmap authority. Market-wide thesis-based opportunity discovery reusing the integrated comparison finding logic (valuation/financial/sector/timing/downside) into evidence-pattern research lanes ordered by existing inspection-order authority, plus cross-sector relative-position comparison axes. Opt-in Action Center and AI delivery. Local only; no Daily/provider/runtime/evidence writes, policy/authority change, push, merge or promotion."
+    },
     {
       "milestone_id": "INTEGRATED_INVESTMENT_OPPORTUNITY_COMPARISON_V1",
       "state": "COMPLETE",

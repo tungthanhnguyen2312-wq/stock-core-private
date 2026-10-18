@@ -2,6 +2,13 @@
 
 Navigation; no scores. [Facts](ACTIVE_STATE.md), [authority](AUTHORITY.md), [run order](DAILY_PIPELINE.md).
 
+Local [thesis-based opportunity discovery](thesis_opportunity_discovery_v1_contract.md)
+places every security into evidence-pattern research lanes (qualified entry with/without
+financial support or with counterevidence, discount with resilience or deterioration,
+strength awaiting confirmation, shared sector stress) in existing priority-tier order;
+research lists for `--compare`, no score or recommendation. Cross-sector comparison
+pairs now show own-cohort P/B positions and sector-relative changes, never levels.
+
 Local [integrated opportunity comparison](integrated_investment_opportunity_comparison_v1_contract.md)
 lets the owner select 2-5 securities (`stocklookup.py action-center --compare`) and
 receive an evidence-linked comparison: valuation/peer percentile, financial trajectory

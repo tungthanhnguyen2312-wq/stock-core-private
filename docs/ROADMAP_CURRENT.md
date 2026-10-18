@@ -5,7 +5,14 @@ Verified local analytical starting baseline 2026-10-18 `61c870c82648a67eed29d184
 Nothing below auto-starts; native standing admission required (AI_RULES 11).
 Facts: [ACTIVE_STATE.md](ACTIVE_STATE.md).
 
-## NOW — INTEGRATED_INVESTMENT_OPPORTUNITY_COMPARISON_V1 (COMPLETE LOCALLY)
+## NOW — THESIS_BASED_OPPORTUNITY_DISCOVERY_V1 (ACTIVE LOCALLY)
+
+Autonomy admission from `74a7d76b`. Market-wide evidence-pattern lanes reusing the
+comparison's findings; cross-sector own-cohort position axes. Opt-in delivery only.
+[Contract](thesis_opportunity_discovery_v1_contract.md). No Daily/provider/runtime/evidence
+writes, policy change, promotion or release.
+
+## PRIOR — INTEGRATED_INVESTMENT_OPPORTUNITY_COMPARISON_V1 (COMPLETE LOCALLY)
 
 Owner-directed from verified `a12517d3`; the sector-relative recommendation below.
 Selected 2-5 security comparison reusing existing decision, scenario, financial
