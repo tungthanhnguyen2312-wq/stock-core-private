@@ -16,13 +16,13 @@
   ],
   "current": {
     "milestone": "KBS_QUARTERLY_INCOME_PERIOD_ALIGNMENT_CORRECTIVE_V1",
-    "state": "ACTIVE"
+    "state": "COMPLETE"
   },
   "queued_next": [],
   "milestones": [
     {
       "milestone_id": "KBS_QUARTERLY_INCOME_PERIOD_ALIGNMENT_CORRECTIVE_V1",
-      "state": "ACTIVE",
+      "state": "COMPLETE",
       "starting_checkpoint": "3e905abaf7f1c60219c109b717c30f02acf786d8",
       "candidate_branch": "fix/kbs-quarterly-period-alignment-v1-20261019",
       "dependencies": [
@@ -35,11 +35,12 @@
       "source_doc": "docs/kbs_quarterly_income_period_alignment_corrective_v1_contract.md",
       "state_history": [
         "DEFERRED",
-        "ACTIVE"
+        "ACTIVE",
+        "COMPLETE"
       ],
-      "checkpoint": null,
-      "terminal_disposition": null,
-      "notes": "Owner 2026-10-19 chat directive: continue autonomously with work independent of the 10-19 Daily; priority 1 is restoring trustworthy multi-period profit data. Forensics on retained evidence proved KBS quarterly income payloads with duplicate period heads (~1,100 issuers) carry scrambled period labels (HPG exact vs audited FY2025; NVL/PVD vs official Q2/2026). Fail-closed consumption gate in development only; no Daily/T:/provider/evidence writes, no re-acquisition, no merge."
+      "checkpoint": "9b3afff08ad2b37adc9ac31b75348b8f8384f425",
+      "terminal_disposition": "LOCAL_IMPLEMENTATION_COMPLETE_NOT_PROMOTED",
+      "notes": "Owner 2026-10-19 chat directive: continue autonomously with work independent of the 10-19 Daily; priority 1 is restoring trustworthy multi-period profit data. Forensics on retained evidence proved KBS quarterly income payloads with duplicate period heads (~1,100 issuers) carry scrambled period labels (HPG exact vs audited FY2025; NVL/PVD vs official Q2/2026). Fail-closed consumption gate in development only; no Daily/T:/provider/evidence writes, no re-acquisition, no merge. Local closeout: Validated: official anchors HPG (FY2025 sum exact, Q1/Q2-2025 exact), NVL (Q1/25 exact), PVD (Q2/25 exact); gate covers 1,114/1,406 KBS income payloads, 18,869 standalone flow rows; full CI hermetic selection PASS locally; development only, no Daily/T:/evidence writes.; no main release, authority promotion or successor."
     },
     {
       "milestone_id": "THESIS_BASED_OPPORTUNITY_DISCOVERY_V1",
