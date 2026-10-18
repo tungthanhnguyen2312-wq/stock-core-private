@@ -16,13 +16,13 @@
   ],
   "current": {
     "milestone": "MARKET_WIDE_VALUATION_BALANCE_SHEET_DIVERGENCE_RESEARCH",
-    "state": "ACTIVE"
+    "state": "COMPLETE"
   },
   "queued_next": [],
   "milestones": [
     {
       "milestone_id": "MARKET_WIDE_VALUATION_BALANCE_SHEET_DIVERGENCE_RESEARCH",
-      "state": "ACTIVE",
+      "state": "COMPLETE",
       "starting_checkpoint": "a1c794383cb4ddf8b26c170a5a3bad2b75390335",
       "candidate_branch": "feature/valuation-balance-sheet-divergence-20261018",
       "dependencies": [
@@ -35,11 +35,12 @@
       "source_doc": "docs/core_financial_valuation_research_scaleout_contract.md",
       "state_history": [
         "DEFERRED",
-        "ACTIVE"
+        "ACTIVE",
+        "COMPLETE"
       ],
-      "checkpoint": null,
-      "terminal_disposition": null,
-      "notes": "Owner-directed 2026-10-18 substantial valuation versus financial strength divergence research; reuse existing numerical owners and decision/AI delivery; exact same-cohort retained acceptance; local commits only. Prior financial ratio scaleout complete, not reopened. No provider, Daily, production/runtime/evidence writes, push, merge, deploy, authority promotion or automatic successor; Monday Daily independent."
+      "checkpoint": "79679006f1c0bcf640879cabfc996e13bcef1a6a",
+      "terminal_disposition": "LOCAL_IMPLEMENTATION_COMPLETE_NOT_PROMOTED",
+      "notes": "Owner-directed 2026-10-18 substantial valuation versus financial strength divergence research; reuse existing numerical owners and decision/AI delivery; exact same-cohort retained acceptance; local commits only. Prior financial ratio scaleout complete, not reopened. No provider, Daily, production/runtime/evidence writes, push, merge, deploy, authority promotion or automatic successor; Monday Daily independent. Local closeout: Implemented and retained-validated valuation versus financial-strength research: same 1683 universe and 337 candidates, 332 qualified issuer assessments, 2561 paired observations including 1935 peer comparisons, 314 specific support/counter-thesis findings. All 332 reach existing 1507-row research packet plus AI and compact cards; 11 input hashes, measurements and policy preserved. Focused and completed regression selections pass; unrelated legacy stamp-test allowed-key failure reproduced on untouched a1c79438, remaining legacy replay stopped, not claimed passed. No provider, Daily, production/runtime/evidence write, authority promotion, push, merge, deploy or successor. Monday Daily remains independent.; no main release, authority promotion or successor."
     },
     {
       "milestone_id": "CORE_FINANCIAL_VALUATION_RESEARCH_SCALEOUT",

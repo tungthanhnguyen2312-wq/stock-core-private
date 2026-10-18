@@ -98,6 +98,9 @@ UNKNOWN reasons and exact end-to-end delivery. Local checkpoint only; no success
 
 ### Measured retained result
 
+Native local implementation checkpoint: `79679006f1c0bcf640879cabfc996e13bcef1a6a`,
+`LOCAL_IMPLEMENTATION_COMPLETE_NOT_PROMOTED`; successor queue empty.
+
 October16 retained valuation universe: 1,683 issuers, unchanged. Exact candidate
 set: 337 issuers, unchanged. Baseline had the individual metrics, but no combined
 divergence evaluation or delivery; no new metric-input coverage is claimed.
