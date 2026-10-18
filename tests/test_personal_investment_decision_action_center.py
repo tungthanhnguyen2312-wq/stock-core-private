@@ -460,3 +460,103 @@ def test_portfolio_quant_risk_never_alters_holding_actions_or_attention_queue():
     assert without_quant["portfolio"]["holdings"] == with_quant["portfolio"]["holdings"]
     assert without_quant["attention_queue"] == with_quant["attention_queue"]
     assert without_quant["capital_rotation"] == with_quant["capital_rotation"]
+
+
+# ── ACTION_CENTER_RETAINED_EVIDENCE_ROOT_SAFETY_V1 ────────────────────────────────────────────────
+
+import json as _json_rr
+
+import pytest as _pytest_rr
+import runtime_paths as _runtime_paths
+
+
+def _rr_profile(tmp_path):
+    producer, retained = (tmp_path / "stock-core-private").resolve(), (tmp_path / "retained-evidence").resolve()
+    return {"paths": {"producer": producer, "retained": retained}}
+
+
+def _rr_write_iid(root, session=SESSION):
+    path = root / "operations-review" / "canonical-post-close-v1" / session / "enrichment" / "integrated_investment_decision_product.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    artifact = _integrated_artifact({"AAA": _integrated_record("AAA", "EARLY_WATCH", as_of_session=session)})
+    path.write_text(_json_rr.dumps(artifact), encoding="utf-8")
+
+
+def _rr_isolate(monkeypatch, profile):
+    monkeypatch.delenv(ac.RETAINED_EVIDENCE_ROOT_ENV, raising=False)
+    monkeypatch.setattr(_runtime_paths, "workspace_profile", lambda **_: profile)
+    monkeypatch.setattr(ac._private_portfolio_context, "portfolio_status", lambda portfolio_root=None: {"status": "NOT_IMPORTED"})
+    monkeypatch.setattr(ac._owner_focus, "load_owner_research_focus", lambda: {"owner_focus_tickers": (), "broader_watchlist": ("AAA",)})
+
+
+def test_retained_root_legacy_without_profile_is_the_checkout(tmp_path, monkeypatch):
+    _rr_isolate(monkeypatch, None)
+    assert ac.retained_evidence_root(tmp_path) == tmp_path
+    _rr_write_iid(tmp_path)
+    artifact = ac.evaluate_from_retained_artifacts(repo_root=tmp_path, requested_at="x")
+    assert artifact["session"] == SESSION and artifact["watchlist"]["entries"][0]["evidence"]["research_action_posture"] == "EARLY_WATCH"
+
+
+def test_retained_root_legacy_explicit_configured_root_matches_daily_environment_contract(tmp_path, monkeypatch):
+    _rr_isolate(monkeypatch, None)
+    other = tmp_path / "configured"
+    monkeypatch.setenv(ac.RETAINED_EVIDENCE_ROOT_ENV, str(other))
+    assert ac.retained_evidence_root(tmp_path / "checkout") == other.resolve()
+
+
+def test_retained_root_qualified_profile_reads_the_retained_role_not_the_checkout(tmp_path, monkeypatch):
+    profile = _rr_profile(tmp_path)
+    _rr_isolate(monkeypatch, profile)
+    producer, retained = profile["paths"]["producer"], profile["paths"]["retained"]
+    producer.mkdir(parents=True)
+    _rr_write_iid(retained)
+    assert ac.retained_evidence_root(producer) == retained
+    monkeypatch.setenv(ac.RETAINED_EVIDENCE_ROOT_ENV, str(retained))  # what run_workflow binds before phase 8
+    artifact = ac.evaluate_from_retained_artifacts(repo_root=producer, requested_at="x")
+    assert artifact["session"] == SESSION
+    assert not (producer / "operations-review").exists()  # nothing copied into the checkout
+
+
+@_pytest_rr.mark.parametrize("fault, code", [
+    ("foreign_checkout", "ACTION_CENTER_REPO_ROOT_IS_NOT_THE_QUALIFIED_WORKSPACE_PRODUCER"),
+    ("conflicting_env", "RETAINED_EVIDENCE_ROOT_CONFLICTS_WITH_QUALIFIED_WORKSPACE"),
+])
+def test_retained_root_conflicts_refuse(tmp_path, monkeypatch, fault, code):
+    profile = _rr_profile(tmp_path)
+    _rr_isolate(monkeypatch, profile)
+    _rr_write_iid(tmp_path / "C-legacy")  # a stale legacy copy must never be used as a fallback
+    root = tmp_path / "C-legacy" if fault == "foreign_checkout" else profile["paths"]["producer"]
+    if fault == "conflicting_env":
+        monkeypatch.setenv(ac.RETAINED_EVIDENCE_ROOT_ENV, str(tmp_path / "C-legacy"))
+    with _pytest_rr.raises(ac.ActionCenterError, match=code):
+        ac.evaluate_from_retained_artifacts(repo_root=root, requested_at="x")
+
+
+def test_retained_root_unqualified_profile_refuses_before_any_read(tmp_path, monkeypatch):
+    _rr_isolate(monkeypatch, None)
+    def refused(**_):
+        raise ValueError("WORKSPACE_PROFILE_UNQUALIFIED:workspace volume wrong/unavailable")
+    monkeypatch.setattr(_runtime_paths, "workspace_profile", refused)
+    _rr_write_iid(tmp_path)
+    with _pytest_rr.raises(ValueError, match="WORKSPACE_PROFILE_UNQUALIFIED"):
+        ac.evaluate_from_retained_artifacts(repo_root=tmp_path, requested_at="x")
+
+
+def test_retained_root_missing_or_corrupt_integrated_decision_refuses(tmp_path, monkeypatch):
+    profile = _rr_profile(tmp_path)
+    _rr_isolate(monkeypatch, profile)
+    with _pytest_rr.raises(FileNotFoundError):
+        ac.evaluate_from_retained_artifacts(repo_root=profile["paths"]["producer"], session=SESSION, requested_at="x")
+    path = profile["paths"]["retained"] / "operations-review" / "canonical-post-close-v1" / SESSION / "enrichment" / "integrated_investment_decision_product.json"
+    path.parent.mkdir(parents=True)
+    path.write_text("{truncated", encoding="utf-8")
+    with _pytest_rr.raises(ValueError):
+        ac.evaluate_from_retained_artifacts(repo_root=profile["paths"]["producer"], session=SESSION, requested_at="x")
+
+
+def test_phase8_call_shape_reaches_the_resolver_unchanged():
+    import ast
+    from pathlib import Path as _P
+    tree = ast.parse((_P(__file__).resolve().parents[1] / "tools" / "run_owner_daily.py").read_text(encoding="utf-8"))
+    calls = [node for node in ast.walk(tree) if isinstance(node, ast.Call) and getattr(node.func, "attr", None) == "evaluate_from_retained_artifacts"]
+    assert len(calls) == 1 and {kw.arg for kw in calls[0].keywords} == {"repo_root", "session", "requested_at"}

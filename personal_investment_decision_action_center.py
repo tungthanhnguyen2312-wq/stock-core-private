@@ -1297,6 +1297,37 @@ def _previous_session(repo_root: Path, session: str) -> str | None:
     return f"{nodash[0:4]}-{nodash[4:6]}-{nodash[6:8]}"
 
 
+RETAINED_EVIDENCE_ROOT_ENV = "STOCK_LOOKUP_RETAINED_EVIDENCE_ROOT"
+
+
+def retained_evidence_root(repo_root: Path) -> Path:
+    """Where this checkout's completed-session evidence is read from (read-only).
+
+    ACTION_CENTER_RETAINED_EVIDENCE_ROOT_SAFETY_V1: with a qualified workspace profile selected (the
+    Owner Daily binds one before phase 8), the Daily writes ``operations-review/`` under the
+    profile's retained-evidence role, not under the Producer checkout. The profile is re-qualified
+    by ``runtime_paths.workspace_profile`` (absolute, non-redirected roles on the observed hot
+    volume); the caller's ``repo_root`` must be that profile's Producer role, and an explicitly
+    configured retained-evidence root must be the same directory. Any conflict refuses -- there is
+    no fallback to another volume or to the checkout. Without a profile the legacy contract of
+    ``daily_execution_environment.resolve_roots`` is unchanged (configured root, else checkout).
+    """
+    from runtime_paths import workspace_profile
+    profile = workspace_profile()
+    configured = os.environ.get(RETAINED_EVIDENCE_ROOT_ENV, "").strip()
+    if not profile:
+        # Same contract as daily_execution_environment.resolve_roots: an explicitly configured
+        # retained root, otherwise the Producer checkout.
+        return Path(configured).expanduser().resolve() if configured else Path(repo_root)
+    paths = profile["paths"]
+    if Path(repo_root).resolve() != paths["producer"]:
+        raise ActionCenterError("ACTION_CENTER_REPO_ROOT_IS_NOT_THE_QUALIFIED_WORKSPACE_PRODUCER")
+    retained = paths["retained"]
+    if configured and Path(configured).resolve() != retained:
+        raise ActionCenterError("RETAINED_EVIDENCE_ROOT_CONFLICTS_WITH_QUALIFIED_WORKSPACE")
+    return retained
+
+
 def evaluate_from_retained_artifacts(
     *, repo_root: Path, session: str | None = None, portfolio_root: Path | None = None, requested_at: str,
     include_conditional_research: bool = False,
@@ -1311,15 +1342,16 @@ def evaluate_from_retained_artifacts(
     and everything else (market/watchlist/discovery/a general attention queue) is produced exactly
     the same as when a private portfolio is present.
     """
-    resolved_session = session or _pad.default_latest_completed_session(repo_root)
+    evidence_root = retained_evidence_root(repo_root)
+    resolved_session = session or _pad.default_latest_completed_session(evidence_root)
     if not resolved_session:
         raise FileNotFoundError("NO_RETAINED_COMPLETED_INTEGRATED_DECISION_SESSION_AVAILABLE")
-    integrated_decision_artifact = _pad.load_integrated_decision_artifact(repo_root, resolved_session)
-    descriptive_artifact = _load_json(_descriptive_artifact_path(repo_root, resolved_session))
-    sector_leadership_artifact = _load_json(_sector_leadership_artifact_path(repo_root, resolved_session))
-    coverage_disposition_artifact = _load_json(_coverage_disposition_artifact_path(repo_root, resolved_session))
-    previous_session = _previous_session(repo_root, resolved_session)
-    previous_descriptive_artifact = _load_json(_descriptive_artifact_path(repo_root, previous_session)) if previous_session else None
+    integrated_decision_artifact = _pad.load_integrated_decision_artifact(evidence_root, resolved_session)
+    descriptive_artifact = _load_json(_descriptive_artifact_path(evidence_root, resolved_session))
+    sector_leadership_artifact = _load_json(_sector_leadership_artifact_path(evidence_root, resolved_session))
+    coverage_disposition_artifact = _load_json(_coverage_disposition_artifact_path(evidence_root, resolved_session))
+    previous_session = _previous_session(evidence_root, resolved_session)
+    previous_descriptive_artifact = _load_json(_descriptive_artifact_path(evidence_root, previous_session)) if previous_session else None
     asymmetric_dislocation_artifact = _asymmetric.build_artifact(session=resolved_session, integrated_product=integrated_decision_artifact)
 
     try:
@@ -1327,7 +1359,7 @@ def evaluate_from_retained_artifacts(
     except _owner_focus.OwnerResearchFocusError:
         owner_focus = None
 
-    governed_sector_snapshot = _pad.load_governed_sector_snapshot(repo_root)
+    governed_sector_snapshot = _pad.load_governed_sector_snapshot(evidence_root)
     sector_by_ticker, _sector_sources, _snapshot_identity = _pad.resolve_sector_by_ticker(governed_sector_snapshot=governed_sector_snapshot)
 
     status = _private_portfolio_context.portfolio_status(portfolio_root=portfolio_root)
@@ -1337,13 +1369,13 @@ def evaluate_from_retained_artifacts(
     excluded_tickers: frozenset[str] = frozenset()
     if status.get("status") == "READY":
         portfolio_aware_decision_artifact = _pad.evaluate_from_retained_artifacts(
-            repo_root=repo_root, session=resolved_session, portfolio_root=portfolio_root, requested_at=requested_at,
+            repo_root=evidence_root, session=resolved_session, portfolio_root=portfolio_root, requested_at=requested_at,
         )
         portfolio_snapshot = status.get("snapshot")
         excluded_tickers = _owner_research_exclusions.excluded_ticker_set(_owner_research_exclusions.load_research_exclusions(portfolio_root))
         try:
             quant_risk_artifact = _quant.evaluate_from_retained_artifacts(
-                repo_root=repo_root, portfolio_root=portfolio_root, session=resolved_session, requested_at=requested_at,
+                repo_root=evidence_root, portfolio_root=portfolio_root, session=resolved_session, requested_at=requested_at,
             )
         except FileNotFoundError:
             # No retained price-history snapshot for this session (or no private portfolio) --
