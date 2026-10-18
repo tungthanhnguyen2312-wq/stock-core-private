@@ -5,13 +5,20 @@ Verified local analytical starting baseline 2026-10-18 `61c870c82648a67eed29d184
 Nothing below auto-starts; native standing admission required (AI_RULES 11).
 Facts: [ACTIVE_STATE.md](ACTIVE_STATE.md).
 
-## NOW — MULTI_PERIOD_CASH_LEVERAGE_DETERIORATION_RESEARCH_V1 (ACTIVE LOCALLY)
+## NOW — MULTI_PERIOD_CASH_LEVERAGE_DETERIORATION_RESEARCH_V1 (COMPLETE LOCALLY)
 
 Owner-directed from verified local `e144c9da`; fixed 317-candidate cohort. Existing
 ratio/history numerical owner, qualified standalone-flow bridge and divergence
 delivery carry source-bound sequential and separate YoY evidence. No Daily/provider,
 production/runtime/evidence writes, policy change or authority promotion.
 [Scope](core_financial_valuation_research_scaleout_contract.md#multi-period-cashleverage-deterioration-and-recovery--2026-10-18).
+Native checkpoint `40d83ecf6dc5a82d0546e80e9e41d3aab5adaa9b`: 317 qualified issuer
+assessments, 955 trajectories and 7,540 metric-period observations; 18 deterioration,
+11 recovery, 288 mixed, zero insufficient issuer cases. All 317 delivery paths
+verified; prior one-period pairs/findings and policy unchanged. 360 tests PASS,
+six optional fixture skips; true flow-history gaps remain UNKNOWN.
+Next recommendation only: sector-relative multi-period balance-sheet resilience
+research using retained same-window peer pools. Not admitted; queue empty.
 
 ## PRIOR — MARKET_WIDE_VALUATION_BALANCE_SHEET_DIVERGENCE_RESEARCH (COMPLETE LOCALLY)
 

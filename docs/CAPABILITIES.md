@@ -8,6 +8,9 @@ recovery, mixed and insufficient-evidence explanations. Separate sequential/YoY
 observations and provenance reach existing divergence, Decision Fitness, research
 packet, compact card and AI delivery. Corporate rules exclude bank/securities;
 existing financial methods, single-period findings and policy remain unchanged.
+Validated same 317 candidates: 955 trajectories, 7,540 metric-period observations;
+18 deterioration, 11 recovery, 288 mixed issuer cases. Qualified margin histories
+remain limited to 1–2 issuers per margin; no global coverage claim is inferred.
 
 Local [valuation/balance-sheet divergence research](core_financial_valuation_research_scaleout_contract.md#market-wide-valuation-versus-balance-sheet-divergence-research--2026-10-18)
 adds sector/accounting-compatible P/B versus cash, leverage, reported profitability

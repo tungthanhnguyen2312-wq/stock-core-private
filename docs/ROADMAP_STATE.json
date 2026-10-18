@@ -16,13 +16,13 @@
   ],
   "current": {
     "milestone": "MULTI_PERIOD_CASH_LEVERAGE_DETERIORATION_RESEARCH_V1",
-    "state": "ACTIVE"
+    "state": "COMPLETE"
   },
   "queued_next": [],
   "milestones": [
     {
       "milestone_id": "MULTI_PERIOD_CASH_LEVERAGE_DETERIORATION_RESEARCH_V1",
-      "state": "ACTIVE",
+      "state": "COMPLETE",
       "starting_checkpoint": "e144c9da07ab52aa4b5c503ca8c325b2a7f63f1c",
       "candidate_branch": "feature/multi-period-cash-leverage-deterioration-v1-20261018",
       "dependencies": [
@@ -35,11 +35,12 @@
       "source_doc": "docs/core_financial_valuation_research_scaleout_contract.md",
       "state_history": [
         "DEFERRED",
-        "ACTIVE"
+        "ACTIVE",
+        "COMPLETE"
       ],
-      "checkpoint": null,
-      "terminal_disposition": null,
-      "notes": "Owner-directed multi-period financial deterioration and recovery research over the fixed 317-candidate retained cohort; existing numerical owners and delivery; no Daily, provider, runtime, evidence or authority writes."
+      "checkpoint": "40d83ecf6dc5a82d0546e80e9e41d3aab5adaa9b",
+      "terminal_disposition": "LOCAL_IMPLEMENTATION_COMPLETE_NOT_PROMOTED",
+      "notes": "Owner-directed multi-period financial deterioration and recovery research over the fixed 317-candidate retained cohort; existing numerical owners and delivery; no Daily, provider, runtime, evidence or authority writes. Local closeout: Validated same 317 candidates: 955 source-anchored trajectories, 7540 metric-period observations, 18 deterioration / 11 recovery / 288 mixed / 0 insufficient issuer cases; all 317 decision/packet/card/AI deliveries verified. Existing 2471 pairs, numerical features, policy and twelve input hashes unchanged. 360 tests passed, six optional fixture skips. Local only; no Daily, provider, runtime, evidence or authority writes; Monday Daily independent; successor recommendation only.; no main release, authority promotion or successor."
     },
     {
       "milestone_id": "MARKET_WIDE_VALUATION_BALANCE_SHEET_DIVERGENCE_RESEARCH",
