@@ -1,6 +1,8 @@
 # Core financial valuation research scaleout — retained acceptance
 
 Implemented under [the owner-directed contract](../core_financial_valuation_research_scaleout_contract.md).
+Native local implementation checkpoint: `ead8ef2724954a02b936e8ebb9692a8b157fbe46`;
+disposition `LOCAL_IMPLEMENTATION_COMPLETE_NOT_PROMOTED`. Queue remains empty.
 Starting local Git HEAD: `61c870c82648a67eed29d1842f88020e0326c4de`, independently
 verified; local main was four commits behind the recorded remote-tracking ref.
 VN30 implementation `096b8f16` was already incorporated via PR147, not redone.

@@ -16,13 +16,13 @@
   ],
   "current": {
     "milestone": "CORE_FINANCIAL_VALUATION_RESEARCH_SCALEOUT",
-    "state": "ACTIVE"
+    "state": "COMPLETE"
   },
   "queued_next": [],
   "milestones": [
     {
       "milestone_id": "CORE_FINANCIAL_VALUATION_RESEARCH_SCALEOUT",
-      "state": "ACTIVE",
+      "state": "COMPLETE",
       "starting_checkpoint": "61c870c82648a67eed29d1842f88020e0326c4de",
       "candidate_branch": "feature/core-financial-valuation-research-scaleout-20261018",
       "dependencies": [
@@ -35,11 +35,12 @@
       "source_doc": "docs/core_financial_valuation_research_scaleout_contract.md",
       "state_history": [
         "DEFERRED",
-        "ACTIVE"
+        "ACTIVE",
+        "COMPLETE"
       ],
-      "checkpoint": null,
-      "terminal_disposition": null,
-      "notes": "Owner directive 2026-10-18: Codex sole implementation writer; extend existing financial ratio history and compatible cross-sectional analysis beyond VN30 on retained inputs, integrate existing decision and AI surfaces, measure identical cohorts; local commits only; no Daily, providers, production, evidence edits, push, merge or authority promotion. VN30 checkpoint 096b8f16 is already incorporated via PR147; do not reopen."
+      "checkpoint": "ead8ef2724954a02b936e8ebb9692a8b157fbe46",
+      "terminal_disposition": "LOCAL_IMPLEMENTATION_COMPLETE_NOT_PROMOTED",
+      "notes": "Owner directive 2026-10-18: Codex sole implementation writer; extend existing financial ratio history and compatible cross-sectional analysis beyond VN30 on retained inputs, integrate existing decision and AI surfaces, measure identical cohorts; local commits only; no Daily, providers, production, evidence edits, push, merge or authority promotion. VN30 checkpoint 096b8f16 is already incorporated via PR147; do not reopen. Local closeout: Validated identical retained 1492-issuer cohort: four existing ratios now have 1698 decision/AI peer comparisons across 431 issuers (417 outside retained VN30) and 3572 delivered own histories across 1194 issuers. Underlying source feature objects, old histories/peers and posture/policy unchanged. Focused, adjacent, broader regression and offline import checks pass using an isolated test home for host-bound imports. No Daily, provider, runtime/evidence edits, authority promotion, push, merge, deploy or successor; Monday October19 Daily independent.; no main release, authority promotion or successor."
     },
     {
       "milestone_id": "PARALLEL_DOMAIN_DEVELOPMENT_CONTROL_PLANE_V1",

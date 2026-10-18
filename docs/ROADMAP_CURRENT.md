@@ -5,7 +5,7 @@ Verified local analytical starting baseline 2026-10-18 `61c870c82648a67eed29d184
 Nothing below auto-starts; native standing admission required (AI_RULES 11).
 Facts: [ACTIVE_STATE.md](ACTIVE_STATE.md).
 
-## NOW — CORE_FINANCIAL_VALUATION_RESEARCH_SCALEOUT (OWNER-DIRECTED)
+## NOW — CORE_FINANCIAL_VALUATION_RESEARCH_SCALEOUT (COMPLETE LOCALLY)
 
 [Scope](core_financial_valuation_research_scaleout_contract.md): local baseline
 `61c870c8`, sole Codex writer. Extend pretax margin, cash/assets and explicit-debt
@@ -14,6 +14,9 @@ pinned financial universe. [Retained acceptance](internal/CORE_FINANCIAL_VALUATI
 1,492 issuers, 1,698 new decision/AI peer comparisons and 3,572 own histories;
 underlying metric values unchanged. No live Daily, provider, production, evidence or authority changes.
 Monday October 19 Owner Daily remains independent; no automatic successor.
+Native implementation checkpoint: `ead8ef2724954a02b936e8ebb9692a8b157fbe46`.
+Next major recommendation only: valuation versus balance-sheet divergence research
+over 337 retained issuers with both usable peer context and research P/B. Not admitted.
 
 ## PRIOR — VN30_FINANCIAL_VALUATION_RESEARCH_SCALEOUT_V1 (INCORPORATED PR147)
 
