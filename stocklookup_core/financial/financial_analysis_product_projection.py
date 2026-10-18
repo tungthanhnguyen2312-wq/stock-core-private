@@ -290,6 +290,7 @@ def financial_peer_contexts(*, materialization: Mapping[str, Any] | None,
     from operational_fundamental_context_integration import MAX_COMPLETED_QUARTER_LAG
     from sector_relative_research_context import MIN_COHORT_MEMBERS
     from stocklookup_core.valuation.current_research_valuation_context import ENGINE_PEER_FEATURES
+    from stocklookup_core.financial.financial_analysis_engine_v2 import EXTENDED_RATIO_HISTORY_INPUTS
     contract = "canonical_daily_financial_v2_materialization/v1"
     expected = _identity(materialization, contract)
     nested = materialization.get("financial_analysis_product")
@@ -314,6 +315,11 @@ def financial_peer_contexts(*, materialization: Mapping[str, Any] | None,
             if metric not in ENGINE_PEER_FEATURES or not isinstance(source, Mapping):
                 continue
             entry = copy.deepcopy(dict(source))
+            if metric in EXTENDED_RATIO_HISTORY_INPUTS and metric in (compact.get("history_context") or {}):
+                # Own-provider retrospective history stays useful when scope or
+                # cohort size blocks cross-sectional comparison. Preserve its exact
+                # source fitness/basis; neither comparison can confer PIT authority.
+                entry["own_history_context"] = copy.deepcopy(compact["history_context"][metric])
             basis = entry.get("comparability_basis") or {}
             # Blocked/small-cohort producer views omit the display period, but the
             # exact feature basis may still know it. Absence of comparison fitness
@@ -323,6 +329,13 @@ def financial_peer_contexts(*, materialization: Mapping[str, Any] | None,
             freshness = classify_financial_period_freshness(
                 source_period=entry.get("as_of_period"), decision_session=session,
                 maximum_completed_quarter_lag=MAX_COMPLETED_QUARTER_LAG)
+            if ((entry.get("own_history_context") or {}).get("status") in {"AVAILABLE", "PARTIAL", "INSUFFICIENT_HISTORY"}
+                    and freshness["freshness_status"] == "UNAVAILABLE"):
+                entry["own_history_context"] = {
+                    "status": "UNAVAILABLE", "reason": "HISTORY_SUBJECT_PERIOD_NOT_ELIGIBLE_AT_DECISION_SESSION",
+                    "source_status": entry["own_history_context"].get("status"),
+                    "reason_codes": list(freshness["reason_codes"]),
+                }
             entry["freshness"] = freshness
             entry["metric_id"] = metric
             # Preserve the exact producer reason even when the consumer blocks use.

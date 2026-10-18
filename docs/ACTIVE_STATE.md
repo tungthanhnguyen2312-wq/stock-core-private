@@ -1,6 +1,6 @@
 # Stock Lookup — Active State
 
-Verified release baseline: `a9c799397a74641a0e16c8ea84454d2dc4d0745b`. PR146 released; all five post-merge CI jobs PASS (38512024681); Codex native revision96.
+Verified local implementation baseline (2026-10-18): `61c870c82648a67eed29d1842f88020e0326c4de`, including VN30 PR147. PR146 CI/revision96 below is preserved release history.
 `git fetch origin main` / `git ls-remote origin refs/heads/main`; **local** remote-tracking refs may be stale.
 ## 0. How this file relates to the others
 | Question | Answer lives in |
@@ -28,8 +28,9 @@ Kinds: **CURRENT FACT** (verified), **HOST-LOCAL** (untracked; re-verify),
 **BLOCKED**, **DEFERRED**, **HISTORICAL**.
 
 ## 1. The operational gate
+- **OWNER-DIRECTED LOCAL ANALYTICAL JOB — [core financial ratio research](core_financial_valuation_research_scaleout_contract.md):** native scope admitted from verified local `61c870c8`; sole Codex writer in a dedicated worktree. Existing pretax-margin, cash/assets and explicit-debt ratios gain compatible history and peer analysis through established decision/AI surfaces. Retained identical-cohort acceptance governs results. VN30 checkpoint `096b8f16` is already incorporated via PR147 and is not reopened. No provider calls, live Daily, production/evidence writes or authority promotion; Monday October 19 Daily independent. No push/merge/publication or successor authorized.
 - **[Native releases](parallel_domain_development_control_plane_v1_contract.md):** declaration correction; explicit coupled source review.
-- **LOCAL ANALYTICAL CHECKPOINT — [VN30 financial/valuation research](vn30_financial_valuation_research_scaleout_v1_contract.md):** one Owner-directed lane admitted/active at native revisions97/98. Retained August24 HOSE30 cohort, October13 inputs: one new VRE H1 ending-equity ROE research proxy; old numerical methods/provenance unchanged. Versioned opt-in Producer metric projection; default Daily identities unchanged. No production activation, source/metric authority promotion, push or successor; exact local validation/checkpoint governs closeout.
+- **INCORPORATED PR147 — [VN30 financial/valuation research](vn30_financial_valuation_research_scaleout_v1_contract.md):** `096b8f16` is an ancestor of the verified local baseline. Retained30-cohort VRE H1 ending-equity ROE and opt-in Producer metric projection are complete; not reopened. Source/metric authority and completed sessions unchanged.
 - **RELEASED / VALIDATED SOURCE WAVE 2026-10-14:** PR145 released at `f582bfab80dac6d206083a0bd4a0ba57db199691`; all five post-merge jobs PASS (38491150319). Native rev93 admits Codex lane `STOCKLOOKUP_PRODUCER_DEEP_SIMPLIFICATION_20261014`: six existing financial/valuation computation owners, exact leases and output parity. Implementation validated: 630 tests PASS, 12 retained-data cases absent in this clean worktree; native and hosted exact-head gates govern release disposition. Conditional validated source push/PR/merge authorized; no Daily, production or authority/evidence changes. PNJ/FPT unadmitted; Oct13 seals unchanged.
 - [Oct13](daily_20261013_handoff_route_recovery_contract.md).
 - **RELEASED — [financial intake](official_financial_quarterly_intake_contract.md):** PR137; candidates; source admission gated.

@@ -15,11 +15,32 @@
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "PARALLEL_DOMAIN_DEVELOPMENT_CONTROL_PLANE_V1",
-    "state": "COMPLETE"
+    "milestone": "CORE_FINANCIAL_VALUATION_RESEARCH_SCALEOUT",
+    "state": "ACTIVE"
   },
   "queued_next": [],
   "milestones": [
+    {
+      "milestone_id": "CORE_FINANCIAL_VALUATION_RESEARCH_SCALEOUT",
+      "state": "ACTIVE",
+      "starting_checkpoint": "61c870c82648a67eed29d1842f88020e0326c4de",
+      "candidate_branch": "feature/core-financial-valuation-research-scaleout-20261018",
+      "dependencies": [
+        "PARALLEL_DOMAIN_DEVELOPMENT_CONTROL_PLANE_V1"
+      ],
+      "unlocks": [],
+      "owner_authorized": true,
+      "owner_override": "Owner directive 2026-10-18: Codex sole implementation writer; extend existing financial ratio history and compatible cross-sectional analysis beyond VN30 on retained inputs, integrate existing decision and AI surfaces, measure identical cohorts; local commits only; no Daily, providers, production, evidence edits, push, merge or authority promotion. VN30 checkpoint 096b8f16 is already incorporated via PR147; do not reopen.",
+      "authority_effect": "NONE",
+      "source_doc": "docs/core_financial_valuation_research_scaleout_contract.md",
+      "state_history": [
+        "DEFERRED",
+        "ACTIVE"
+      ],
+      "checkpoint": null,
+      "terminal_disposition": null,
+      "notes": "Owner directive 2026-10-18: Codex sole implementation writer; extend existing financial ratio history and compatible cross-sectional analysis beyond VN30 on retained inputs, integrate existing decision and AI surfaces, measure identical cohorts; local commits only; no Daily, providers, production, evidence edits, push, merge or authority promotion. VN30 checkpoint 096b8f16 is already incorporated via PR147; do not reopen."
+    },
     {
       "milestone_id": "PARALLEL_DOMAIN_DEVELOPMENT_CONTROL_PLANE_V1",
       "state": "COMPLETE",

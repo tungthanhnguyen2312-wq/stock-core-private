@@ -2,6 +2,17 @@
 
 Navigation; no scores. [Facts](ACTIVE_STATE.md), [authority](AUTHORITY.md), [run order](DAILY_PIPELINE.md).
 
+Local [core financial ratio research expansion](core_financial_valuation_research_scaleout_contract.md)
+adds pretax-margin, cash/assets, explicit debt/equity and debt/assets history and
+peer comparisons to existing Financial V2 and decision/AI delivery. `NON_VOTING`;
+source fitness/applicability and consumer freshness gates remain unchanged. Local
+retained acceptance only; production activation requires separate release approval.
+
+[Validated result](internal/CORE_FINANCIAL_VALUATION_RESEARCH_SCALEOUT_20261018.md):
+1,698 new peer comparisons (431 issuers) and 3,572 own histories (1,194 issuers),
+verified through decision and AI delivery on an identical 1,492-issuer cohort.
+Underlying metric-input coverage is unchanged.
+
 **Runtime status vocabulary:** `ACTIVE` (runs in production, failure blocks that stage) ·
 `ACTIVE_FAILSOFT` (runs in production, failure is component-local `UNAVAILABLE`, never revises sealed
 results) · `FROZEN_HISTORICAL` (code/artifacts preserved, not the production path) ·

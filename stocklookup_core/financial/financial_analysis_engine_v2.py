@@ -24,7 +24,7 @@ CONTRACT_VERSION = "financial_analysis_context/v2"
 #: from the pre-existing end-of-period proxies, never relabelled as one another) and a
 #: per-ticker retrospective own-history percentile/range context (history_context) over the
 #: headline corporate ratio features.
-SCHEMA_VERSION = "2.3.0"
+SCHEMA_VERSION = "2.4.0"
 FITNESS = ("READY", "RESEARCH_PROXY", "BLOCKED_BY_EVIDENCE", "NOT_APPLICABLE")
 INDUSTRIAL = "INDUSTRIAL_FINANCIAL_ANALYSIS"
 LIMITED = "OTHER_FINANCIAL_LIMITED_ANALYSIS"
@@ -741,17 +741,34 @@ def _same_provider_avg_balance_return(feature_id: str,
 
 
 def _ratio_series(rows: Sequence[Mapping[str, Any]], numerator_metric: str, numerator_semantic: str,
-                  denominator_metric: str, denominator_semantic: str) -> dict[str, float]:
+                  denominator_metric: str, denominator_semantic: str,
+                  *, subject_feature: Mapping[str, Any] | None = None) -> dict[str, float]:
     """Every period's ratio value for the single best (longest, most-recently-ending)
     same-provider/scope/currency/scale source key -- the own-history basis for a same-
     period ratio feature (a margin, a P-I-T stock ratio, or a cross-semantic EOP proxy).
+    With a subject feature, bind its exact same-statement operands instead of
+    ranking competing series, excluding periods later than the subject.
     """
-    numerators = _series_index(rows, numerator_metric, numerator_semantic, key=_representation_key)
-    denominators = _series_index(rows, denominator_metric, denominator_semantic, key=_representation_key)
+    # New same-statement history must bind to the actual subject operands, not a
+    # longer provider series that happens to contain the same quarter label.
+    key_function = _source_key if subject_feature is not None else _representation_key
+    numerators = _series_index(rows, numerator_metric, numerator_semantic, key=key_function)
+    denominators = _series_index(rows, denominator_metric, denominator_semantic, key=key_function)
+    subject_periods = (subject_feature or {}).get("period_identity") or []
+    subject_period = subject_periods[-1] if subject_periods else None
+    subject_sources = (subject_feature or {}).get("provider_source_provenance") or []
     best_series: dict[str, float] = {}
     for key in set(numerators) & set(denominators):
+        if subject_feature is not None:
+            n, d = numerators[key].get(subject_period), denominators[key].get(subject_period)
+            if (subject_feature.get("fitness") != "READY" or len(subject_sources) != 2
+                    or not n or not d or _provenance(n) != subject_sources[0]
+                    or _provenance(d) != subject_sources[1]):
+                continue
         series: dict[str, float] = {}
         for label in set(numerators[key]) & set(denominators[key]):
+            if subject_feature is not None and label > subject_period:
+                continue
             denominator = denominators[key][label]["reported_value"]
             if denominator != 0:
                 series[label] = numerators[key][label]["reported_value"] / denominator
@@ -762,7 +779,7 @@ def _ratio_series(rows: Sequence[Mapping[str, Any]], numerator_metric: str, nume
     return best_series
 
 
-#: Minimum retained same-source-key periods (including the current one) for own-history
+#: Minimum prior retained same-source-key periods (excluding the subject) for own-history
 #: context: below PARTIAL, a percentile would rest on too few points to mean anything; below
 #: AVAILABLE, it is real but thin. Deliberately lower than the 20/10 daily-price thresholds
 #: `market_wide_historical_research_context.py` uses -- quarterly financial history is
@@ -820,7 +837,17 @@ HISTORY_CONTEXT_FEATURES = (
     "gross_margin", "net_margin", "equity_to_assets", "current_ratio",
     "same_provider_roe_avg_equity", "same_provider_roa_avg_assets",
     "same_provider_roe_eop_proxy", "same_provider_roa_eop_proxy",
+    "pbt_margin", "cash_to_assets", "debt_to_equity", "debt_to_assets",
 )
+
+# Reuse the existing ratio owner and its exact metric vocabulary. Liabilities are
+# never a substitute for explicit interest-bearing debt; cash is not free cash flow.
+EXTENDED_RATIO_HISTORY_INPUTS = {
+    "pbt_margin": ("profit_before_tax", "revenue", FLOW_STANDALONE),
+    "cash_to_assets": ("cash_and_cash_equivalents", "total_assets", PIT),
+    "debt_to_equity": ("total_interest_bearing_debt", "shareholders_equity", PIT),
+    "debt_to_assets": ("total_interest_bearing_debt", "total_assets", PIT),
+}
 
 
 def _build_history_context(rows: Sequence[Mapping[str, Any]], features: Mapping[str, Mapping[str, Any]],
@@ -835,6 +862,9 @@ def _build_history_context(rows: Sequence[Mapping[str, Any]], features: Mapping[
         "same_provider_roe_eop_proxy": _ratio_series(rows, "net_income", FLOW_STANDALONE, "shareholders_equity", PIT),
         "same_provider_roa_eop_proxy": _ratio_series(rows, "net_income", FLOW_STANDALONE, "total_assets", PIT),
     }
+    for fid, (numerator, denominator, semantic) in EXTENDED_RATIO_HISTORY_INPUTS.items():
+        series_by_feature[fid] = _ratio_series(rows, numerator, semantic, denominator, semantic,
+                                              subject_feature=features[fid])
     return {feature_id: _history_entry(features[feature_id], series_by_feature[feature_id])
             for feature_id in HISTORY_CONTEXT_FEATURES}
 

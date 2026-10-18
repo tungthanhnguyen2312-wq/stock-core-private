@@ -1177,6 +1177,7 @@ def attach_fundamental_peers(feature_records: Mapping[str, Mapping[str, Any]],
 ENGINE_PEER_FEATURES = (
     "gross_margin", "net_margin", "equity_to_assets", "current_ratio",
     "same_provider_roe_avg_equity", "same_provider_roa_avg_assets",
+    "pbt_margin", "cash_to_assets", "debt_to_equity", "debt_to_assets",
 )
 SECTOR_COHORT_LEVEL = "SECTOR_INDUSTRY_DESCRIPTIVE"
 ENTITY_CLASS_COHORT_LEVEL = "ENTITY_CLASS_FALLBACK"
