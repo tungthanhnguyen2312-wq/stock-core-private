@@ -2,6 +2,13 @@
 
 Navigation; no scores. [Facts](ACTIVE_STATE.md), [authority](AUTHORITY.md), [run order](DAILY_PIPELINE.md).
 
+Local [sector-relative financial resilience](core_financial_valuation_research_scaleout_contract.md#sector-relative-financial-resilience--2026-10-18)
+reuses qualified trajectories and existing peer statistics: same 317 candidates,
+951 metric-peer comparisons, 1,902 interval comparisons. Separates firm-specific
+weakness, resilience and shared sector-sample conditions; 102 formerly mixed cases
+gain differentiated research context. Existing decision/AI surfaces carry evidence
+and counter-theses without policy changes. Profitability peer evidence is insufficient.
+
 Local [multi-period financial research](core_financial_valuation_research_scaleout_contract.md#multi-period-cashleverage-deterioration-and-recovery--2026-10-18)
 extends the existing Financial V2 anchored ratio history with successive-change,
 recovery, mixed and insufficient-evidence explanations. Separate sequential/YoY

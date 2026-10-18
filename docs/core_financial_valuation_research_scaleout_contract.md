@@ -257,3 +257,103 @@ Profitability expansion still needs genuine contiguous compatible flow evidence.
 Native local implementation checkpoint: `40d83ecf6dc5a82d0546e80e9e41d3aab5adaa9b`.
 `LOCAL_IMPLEMENTATION_COMPLETE_NOT_PROMOTED`; no queued successor, push, merge,
 deployment, Daily execution or authority promotion.
+
+## Sector-relative financial resilience — 2026-10-18
+
+Owner-directed `SECTOR_RELATIVE_FINANCIAL_RESILIENCE_RESEARCH_V1` starts from
+verified `c3f5e8be` / `40d83ecf`; those completed capabilities remain closed.
+The candidate denominator is the same sorted 317 issuers, cohort SHA256
+`62a2eb8b8053d44e115d8b9e4656cb1d32ef3c361f9659376d86df9e90c5346f`.
+
+The existing valuation/peer numerical owner compares Financial V2's two already
+qualified sequential ratio-point changes ending at the subject. Three contiguous
+reporting quarters, a current/resolved subject, exact current-feature binding and
+complete observation provenance are required. Pool keys preserve retained sector,
+corporate applicability, metric and trajectory methods, period semantic, all three
+periods, provider, statement scope, currency/scale and statement family. Unknown
+monetary units retain the existing same-source research ratio basis, never exact
+monetary authority. No inferred sector or entity-class fallback; banks/securities
+remain outside corporate resilience rules. Sequential changes never mix with YoY.
+
+Each interval uses the existing `_peer_pool` median and `_percentile` tie-aware
+formula, with the unchanged `MIN_COHORT_MEMBERS` of five including the subject.
+The same members must qualify both intervals. Peer membership, basis and per-member
+source-window SHA256 fingerprints are retained; the parent divergence identity
+binds every referenced source observation. No ratio or trajectory is recomputed
+by this owner. Resilience means repeated favorable changes against adverse peer
+medians (or stable observations against adverse medians); firm-specific weakness
+means repeated adverse changes despite non-adverse peer medians. Shared adverse
+or favorable changes describe the qualified retained sample, not all sector
+issuers or a causal sector effect. One-period/mixed evidence stays mixed.
+
+Issuer-level availability requires both cash and at least one debt comparison.
+Opposing qualified supportive/adverse metrics produce conflicting evidence;
+debt ratios corroborate rather than vote independently. Individual comparisons
+remain visible when combined evidence is insufficient. Existing P/B quartiles
+connect discounts with company-specific weakness warnings, resilience counter-
+theses or shared peer-sample weakness. These remain descriptive hypotheses, not
+price targets, probabilities, investment thresholds, scores or execution authority.
+Existing one-period/multi-period findings, values and policy/posture are unchanged.
+
+The existing divergence record carries findings through Decision Fitness, actual
+research packets, compact cards and AI projection. AI explains deterministic
+observations, supporting/counter evidence and reassessment conditions. It does not
+generate independent numbers. The original YoY counterevidence remains available.
+
+Retained acceptance uses the existing replay tool's `--sector-baseline` option and
+the completed multi-period records/acceptance. It reuses saved qualified histories;
+only two withheld pretax-history cache entries need recovery from the same pinned
+source through the existing engine/flow bridge. Both the complete prior engine
+identity and divergence identity must reproduce exactly before evaluating the new
+comparison. All fourteen input hashes, old findings and numerical outputs are
+checked unchanged; outputs stay in this worktree's ignored scratch directory.
+No provider, Daily, protected evidence/runtime write, promotion or release.
+Monday October 19 Owner Daily remains independent; no successor auto-starts.
+
+Validated same-cohort result (retained October 16 context):
+
+| Same 317 candidates | Baseline | Result |
+|---|---:|---:|
+| Qualified sector-relative issuer assessments | 0 | 317 |
+| Metric-to-peer / interval-to-peer comparisons | 0 / 0 | 951 / 1,902 |
+| Company-specific weakness | no comparative assessment | 40 |
+| Resilience against weakening peers | no comparative assessment | 25 |
+| Deterioration shared with sector sample | no comparative assessment | 51 |
+| Recovery/improvement shared with peers | no comparative assessment | 4 |
+| Conflicting / mixed-or-stable / insufficient issuer cases | no comparative assessment | 3 / 194 / 0 |
+
+All 317 qualify separately for cash/assets, debt/assets and debt/equity. All 951
+margin comparison instances remain UNKNOWN: 947 lack an inherited qualified
+multi-period metric and four qualified trajectories are below the five-member
+compatible peer minimum. No claim is made about unsupported raw flow histories.
+The 123 differentiated/conflicting comparative cases include 102 formerly MIXED
+multi-period cases; this is new analytical interpretation, not new source coverage.
+The prior 955 trajectories, 7,540 observations and all previous findings persist.
+
+For 2025-Q3 → Q4 → 2026-Q1, DL1 cash/assets changes +4.8964 / +0.3119 percentage
+points while its 32-member sector sample median changes -0.4573 / -0.6511 points:
+resilience counter-thesis alongside its P/B discount. ITC's discounted valuation
+has company-specific leverage weakness versus stable/improving peer medians,
+while NO1's adverse changes share weakness with its sector sample. PAN gains a
+resilience counter-thesis; AAA remains mixed. Seven discount cases carry company-
+specific weakness warnings, six resilience counter-theses and twelve shared sample
+weakness; fifty-seven retain mixed/other context. These are research follow-up
+priorities, not executable recommendations or proof of economic causation.
+
+Acceptance: `.stocklookup/scratch/sector-relative-acceptance-verified/acceptance.json`
+and `research-records.jsonl.gz` in this dedicated worktree. Both the completed
+engine and old divergence identities reproduce exactly; all 1,683 old records
+match after removing only the new additive field and updated context reference.
+All 317 candidate deliveries pass actual Decision Fitness/packet/card/AI equality;
+packet scope remains 1,507. Fourteen source/checkpoint input hashes, numerical
+outputs and decision policy/posture remain unchanged. Validation: 386 focused and
+financial/valuation/decision/AI/flow-bridge tests PASS, six optional retained-fixture
+skips; launcher and whitespace guards PASS. The unrelated known legacy stamp-test
+failure was not rerun or changed.
+
+Recommended next major product capability, not admitted: extend the existing
+thesis/packet product into an investor-facing opportunity-comparison workbench,
+combining qualified valuation/resilience, technical timing, liquidity and downside
+counter-theses into evidence-linked research cases and watch conditions. Reuse
+existing thesis and decision owners; do not start another incremental ratio layer,
+invent targets/probabilities or widen investment/execution policy. Queue stays empty.

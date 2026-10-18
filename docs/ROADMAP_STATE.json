@@ -15,11 +15,32 @@
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "MULTI_PERIOD_CASH_LEVERAGE_DETERIORATION_RESEARCH_V1",
-    "state": "COMPLETE"
+    "milestone": "SECTOR_RELATIVE_FINANCIAL_RESILIENCE_RESEARCH_V1",
+    "state": "ACTIVE"
   },
   "queued_next": [],
   "milestones": [
+    {
+      "milestone_id": "SECTOR_RELATIVE_FINANCIAL_RESILIENCE_RESEARCH_V1",
+      "state": "ACTIVE",
+      "starting_checkpoint": "c3f5e8be1c623dabebd6f2ab62ca4790df81d9c4",
+      "candidate_branch": "feature/sector-relative-financial-resilience-v1-20261018",
+      "dependencies": [
+        "MULTI_PERIOD_CASH_LEVERAGE_DETERIORATION_RESEARCH_V1"
+      ],
+      "unlocks": [],
+      "owner_authorized": true,
+      "owner_override": "Owner-directed sector-relative financial resilience over the fixed 317 candidates; reuse existing trajectory and peer owners and existing decision/AI delivery; local only, no Daily/provider/runtime/evidence/authority writes.",
+      "authority_effect": "NONE",
+      "source_doc": "docs/core_financial_valuation_research_scaleout_contract.md",
+      "state_history": [
+        "DEFERRED",
+        "ACTIVE"
+      ],
+      "checkpoint": null,
+      "terminal_disposition": null,
+      "notes": "Owner-directed sector-relative financial resilience over the fixed 317 candidates; reuse existing trajectory and peer owners and existing decision/AI delivery; local only, no Daily/provider/runtime/evidence/authority writes."
+    },
     {
       "milestone_id": "MULTI_PERIOD_CASH_LEVERAGE_DETERIORATION_RESEARCH_V1",
       "state": "COMPLETE",

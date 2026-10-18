@@ -64,9 +64,12 @@ def main(argv=None):
     p.add_argument("--opportunity-artifact", type=Path, help="Optional exact-session retained opportunity input for research-packet acceptance.")
     p.add_argument("--output", required=True, type=Path)
     p.add_argument("--trajectory-baseline", type=Path, help="Completed divergence research-records.jsonl.gz; fixes the 317-name trajectory cohort.")
+    p.add_argument("--sector-baseline", type=Path, help="Completed multi-period research-records.jsonl.gz; reuse qualified histories and verify the adjacent acceptance.json.")
     args = p.parse_args(argv)
     if args.trajectory_baseline and not args.opportunity_artifact:
         p.error("--trajectory-baseline requires --opportunity-artifact for actual packet acceptance")
+    if args.sector_baseline and not args.trajectory_baseline:
+        p.error("--sector-baseline requires --trajectory-baseline")
     root, output = args.retained_root.resolve(), args.output.resolve()
     if output.exists() or output == root or root in output.parents:
         raise ValueError("OUTPUT_MUST_BE_NEW_OUTSIDE_RETAINED_ROOT")
@@ -79,6 +82,8 @@ def main(argv=None):
         paths.append(args.opportunity_artifact.resolve())
     if args.trajectory_baseline:
         paths.append(args.trajectory_baseline.resolve())
+    if args.sector_baseline:
+        paths.extend([args.sector_baseline.resolve(),args.sector_baseline.resolve().parent/"acceptance.json"])
     if any(output == path or output in path.parents or output == path.parent for path in paths):
         raise ValueError("OUTPUT_OVERLAPS_INPUTS")
     hashes = {str(path): sha(path) for path in paths}
@@ -95,7 +100,14 @@ def main(argv=None):
     assert set(old_engine["records"]) == set(financial["records"])
     for ticker, record in old_engine["records"].items():
         assert record["features"] == financial["records"][ticker]["features"], ticker
-    trajectory_baseline, trajectory_names = {}, set()
+    trajectory_baseline, trajectory_names, sector_baseline = {}, set(), {}
+    if args.sector_baseline:
+        with gzip.open(args.sector_baseline,"rt",encoding="utf8") as handle:
+            sector_baseline = {r["ticker"]:r for r in map(json.loads,handle)}
+        prior_acceptance = load(args.sector_baseline.resolve().parent/"acceptance.json")
+        assert prior_acceptance["session"] == args.session
+        for path,digest in prior_acceptance["input_hashes_unchanged"].items():
+            assert hashes[path] == digest, ("COMPLETED_INPUT_HASH_CHANGED",path)
     if args.trajectory_baseline:
         with gzip.open(args.trajectory_baseline, "rt", encoding="utf8") as handle:
             trajectory_baseline = {r["ticker"]: r for r in map(json.loads, handle)}
@@ -105,24 +117,39 @@ def main(argv=None):
         assert len(trajectory_names) == 317, "TRAJECTORY_COHORT_DRIFT"
         # Reuse the same qualified-flow bridge and composed-lineage binding as production.
         # Only additive history is rebuilt; original numerical feature objects stay exact.
-        semantic_rows, _ = material.load_semantic_rows(authority)
-        semantic_rows = [r for r in semantic_rows if r.get("ticker") in trajectory_names]
-        bound, _ = scaleout.bind_composed_fact_lineage(semantic_rows)
-        flow = scaleout.build_qualified_flow_artifact(semantic_rows=semantic_rows,
-            feature_records={t: {"entity_type": financial["records"][t]["issuer_type"]} for t in trajectory_names}, requested_at="retained-replay")
-        qualified = scaleout.qualified_flow.engine_rows_from_artifact(flow)
-        by_ticker = {t: [] for t in trajectory_names}
-        for r in [r for r in bound if r.get("canonical_metric") not in scaleout.qualified_flow.FLOW_METRICS] + qualified:
-            if r.get("ticker") in by_ticker:
-                by_ticker[r["ticker"]].append(r)
-        for ticker in sorted(trajectory_names):
-            record = financial["records"][ticker]
-            trajectories = engine_owner.build_ratio_trajectories(engine_owner._index_rows(by_ticker[ticker]), record["features"])
-            for fid, trajectory in trajectories.items():
-                record["history_context"][fid]["trajectory"] = trajectory
+        needed = {}
+        if sector_baseline:
+            assert sorted(trajectory_names) == prior_acceptance["multi_period_same_cohort"]["candidate_tickers"]
+            for ticker in sorted(trajectory_names):
+                for fid in engine_owner.TRAJECTORY_INPUTS:
+                    retained = (sector_baseline[ticker]["financial_measures"][fid].get("own_history_context") or {}).get("trajectory")
+                    if retained:
+                        financial["records"][ticker]["history_context"][fid]["trajectory"] = copy.deepcopy(retained)
+                    else:
+                        needed.setdefault(ticker,set()).add(fid)
+        else:
+            needed = {t:set(engine_owner.TRAJECTORY_INPUTS) for t in trajectory_names}
+        if needed:
+            semantic_rows, _ = material.load_semantic_rows(authority)
+            semantic_rows = [r for r in semantic_rows if r.get("ticker") in needed]
+            bound, _ = scaleout.bind_composed_fact_lineage(semantic_rows)
+            flow = scaleout.build_qualified_flow_artifact(semantic_rows=semantic_rows,
+                feature_records={t: {"entity_type": financial["records"][t]["issuer_type"]} for t in needed}, requested_at="retained-replay")
+            qualified = scaleout.qualified_flow.engine_rows_from_artifact(flow)
+            by_ticker = {t: [] for t in needed}
+            for r in [r for r in bound if r.get("canonical_metric") not in scaleout.qualified_flow.FLOW_METRICS] + qualified:
+                if r.get("ticker") in by_ticker:
+                    by_ticker[r["ticker"]].append(r)
+            for ticker in sorted(needed):
+                record = financial["records"][ticker]
+                trajectories = engine_owner.build_ratio_trajectories(engine_owner._index_rows(by_ticker[ticker]), record["features"])
+                for fid in needed[ticker]:
+                    record["history_context"][fid]["trajectory"] = trajectories[fid]
+            del semantic_rows, bound, flow, qualified, by_ticker
         financial["schema_version"] = engine_owner.SCHEMA_VERSION
         financial.update(engine_owner.content_identity(financial))
-        del semantic_rows, bound, flow, qualified, by_ticker
+        if sector_baseline:
+            assert financial["artifact_identity"] == prior_acceptance["numerical_source_binding"]["current_financial_engine_identity"], "COMPLETED_ENGINE_IDENTITY_NOT_REPRODUCED"
         print("Fixed 317-name cohort: source-bound trajectory histories built.", flush=True)
     # New local derivative, with an explicit verified cross-version numerical binding.
     # Original artifact/files and original method objects remain unchanged.
@@ -148,6 +175,15 @@ def main(argv=None):
     for key in before:
         if key not in {"artifact_identity", "artifact_sha256"}:
             assert before[key] == after[key], key
+    if sector_baseline:
+        before = copy.deepcopy(after)
+        old_context = before[valuation.DIVERGENCE_MEMBER]
+        for ticker,record in old_context["records"].items():
+            record.pop("sector_relative_financial_resilience")
+            assert record == {k:v for k,v in sector_baseline[ticker].items() if k != "source_context_identity"}, ticker
+        old_context.update(valuation._research_identity(old_context,valuation.DIVERGENCE_CONTRACT))
+        assert old_context["artifact_identity"] == prior_acceptance["divergence_identity"], "COMPLETED_DIVERGENCE_IDENTITY_NOT_REPRODUCED"
+        before.update(material._identity(before))
     kwargs = dict(session=args.session, requested_at=args.session+"T16:00:00+07:00",
         technical_structure_artifact={"records": {}}, financial_analysis_artifact=wrapper["financial_analysis_product"],
         financial_peer_materialization_artifact=wrapper)
@@ -161,7 +197,8 @@ def main(argv=None):
     with gzip.open(output/"research-records.jsonl.gz", "wt", encoding="utf8") as handle:
         for ticker in sorted(names):
             old, new = baseline_product["records"][ticker], result_product["records"][ticker]
-            assert "valuation_balance_sheet_divergence" not in old
+            if not sector_baseline:
+                assert "valuation_balance_sheet_divergence" not in old
             for field in ("research_action_posture", "fundamental_state", "fundamental_synthesis", "valuation_methods", "evidence_axis_coherence"):
                 assert old[field] == new[field], (ticker, field)
             delivered = project_integrated_decision_for_ai_delivery(new)
@@ -211,6 +248,29 @@ def main(argv=None):
                 "gap_reason_occurrences": dict(Counter(c for t in trends.values() for codes in t["material_gaps"].values() for c in codes)),
                 "single_period_paired_comparisons": sum(context["records"][t]["valid_paired_comparisons"] for t in trajectory_names)},
             "existing_single_period_findings_unchanged": True, "all_317_decision_packet_card_ai_deliveries_verified": True}
+    if sector_baseline:
+        results = {t:context["records"][t]["sector_relative_financial_resilience"] for t in sorted(trajectory_names)}
+        summary["before"].update(combined_divergence_cases=prior_acceptance["result"]["paired_issuers"],
+            valid_paired_divergence_comparisons=prior_acceptance["result"]["valid_paired_comparisons"])
+        summary["multi_period_same_cohort"]["before"].update(multi_period_assessments=317,
+            qualified_trend_observations=prior_acceptance["multi_period_same_cohort"]["result"]["qualified_trend_observations"])
+        summary["sector_relative_same_cohort"] = {"candidate_tickers":sorted(trajectory_names),
+            "cohort_sha256":summary["multi_period_same_cohort"]["cohort_sha256"],
+            "baseline_divergence_identity":prior_acceptance["divergence_identity"],
+            "before":{"issuers":317,"eligible_sector_relative_assessments":0,"metric_peer_comparisons":0,
+                "interval_peer_comparisons":0,"multi_period_assessments":317},
+            "result":{"issuers":317,"eligible_sector_relative_assessments":sum(r["status"] == "AVAILABLE" for r in results.values()),
+                "status":dict(Counter(r["status"] for r in results.values())),
+                "assessments":dict(Counter(r["assessment"] for r in results.values())),
+                "valuation_relationships":dict(Counter(r["valuation_relationship"] for r in results.values())),
+                "metric_peer_comparisons":sum(r["qualified_metric_comparisons"] for r in results.values()),
+                "interval_peer_comparisons":sum(r["qualified_interval_comparisons"] for r in results.values()),
+                "metric_assessments":dict(Counter(c.get("assessment","UNKNOWN") for r in results.values() for c in r["metric_comparisons"].values())),
+                "exclusion_reason_occurrences":dict(Counter(c for r in results.values() for reasons in r["material_gaps"].values() for c in reasons)),
+                "peer_eligibility_by_metric":{f:dict(Counter(r["metric_comparisons"][f]["status"] for r in results.values())) for f in engine_owner.TRAJECTORY_INPUTS}},
+            "completed_engine_and_divergence_identities_reproduced":True,
+            "previous_numerical_outputs_and_findings_unchanged":True,"all_317_delivery_paths_verified":True,
+            "peer_population":"RETAINED_317_QUALIFIED_TRAJECTORY_SAMPLE_NOT_COMPLETE_SECTORS"}
     (output/"acceptance.json").write_text(json.dumps(summary, indent=2, sort_keys=True)+"\n", encoding="utf8")
     print(json.dumps({"issuers": len(names), "candidates": len(candidates),
         "paired_issuers": summary["result"]["paired_issuers"],

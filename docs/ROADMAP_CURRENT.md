@@ -5,7 +5,16 @@ Verified local analytical starting baseline 2026-10-18 `61c870c82648a67eed29d184
 Nothing below auto-starts; native standing admission required (AI_RULES 11).
 Facts: [ACTIVE_STATE.md](ACTIVE_STATE.md).
 
-## NOW — MULTI_PERIOD_CASH_LEVERAGE_DETERIORATION_RESEARCH_V1 (COMPLETE LOCALLY)
+## NOW — SECTOR_RELATIVE_FINANCIAL_RESILIENCE_RESEARCH_V1 (ACTIVE LOCALLY)
+
+Owner-directed from verified `c3f5e8be`. Fixed 317 candidates; existing Financial V2
+trajectories, peer statistics and decision/AI delivery. Compare equivalent windows
+and source/accounting bases; no entity-class fallback or universal resilience score.
+[Scope](core_financial_valuation_research_scaleout_contract.md#sector-relative-financial-resilience--2026-10-18).
+No Daily/provider/runtime/evidence writes, policy change, promotion or release.
+Monday Owner Daily independent; no automatic successor.
+
+## PRIOR — MULTI_PERIOD_CASH_LEVERAGE_DETERIORATION_RESEARCH_V1 (COMPLETE LOCALLY)
 
 Owner-directed from verified local `e144c9da`; fixed 317-candidate cohort. Existing
 ratio/history numerical owner, qualified standalone-flow bridge and divergence
@@ -17,8 +26,8 @@ assessments, 955 trajectories and 7,540 metric-period observations; 18 deteriora
 11 recovery, 288 mixed, zero insufficient issuer cases. All 317 delivery paths
 verified; prior one-period pairs/findings and policy unchanged. 360 tests PASS,
 six optional fixture skips; true flow-history gaps remain UNKNOWN.
-Next recommendation only: sector-relative multi-period balance-sheet resilience
-research using retained same-window peer pools. Not admitted; queue empty.
+Its former sector-relative recommendation is the Owner-admitted job above;
+the completed multi-period capability remains closed.
 
 ## PRIOR — MARKET_WIDE_VALUATION_BALANCE_SHEET_DIVERGENCE_RESEARCH (COMPLETE LOCALLY)
 

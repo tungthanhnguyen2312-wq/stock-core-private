@@ -17,6 +17,7 @@ from statistics import median
 from typing import Any, Mapping, Sequence
 
 from stocklookup_core.financial import monetary_basis_contract as basis_contract
+from stocklookup_core.financial import financial_analysis_engine_v2 as financial_engine
 from stocklookup_core.valuation.market_wide_current_valuation_input_scaleout import RESEARCH_SHARE_AUTHORITIES, _applicability, _market_cap_monetary_basis
 from operational_fundamental_context_integration import MAX_COMPLETED_QUARTER_LAG
 from stocklookup_core.evidence.temporal_freshness import UNAVAILABLE, completed_quarter_lag
@@ -1633,6 +1634,148 @@ def _multi_period_divergence(metrics, pb_peer, *, specialist=False):
         "is_actionable": False}
 
 
+def _trajectory_peer_window(record, fid, session):
+    """Select existing engine changes, never recompute a financial measurement."""
+    metric = (record.get("financial_measures") or {}).get(fid) or {}
+    source = metric.get("source_feature_context") or {}
+    trajectory = ((record.get("multi_period_financial_context") or {}).get("metric_trajectories") or {}).get(fid) or {}
+    sector = (record.get("valuation") or {}).get("cohort_id")
+    if record.get("issuer_type") != "corporate":
+        return None, "CORPORATE_TRAJECTORY_PEERS_NOT_APPLICABLE"
+    if not sector or not sector.startswith("SECTOR:"):
+        return None, "RETAINED_SECTOR_LABEL_ABSENT"
+    if metric.get("status") != "AVAILABLE" or trajectory.get("status") != "AVAILABLE":
+        return None, "QUALIFIED_MULTI_PERIOD_METRIC_ABSENT"
+    periods = trajectory.get("contiguous_periods", [])[-3:]
+    quarters = [financial_engine._quarter(p) for p in periods]
+    basis = trajectory.get("series_identity") or {}
+    semantic = trajectory.get("period_semantic")
+    if (len(periods) != 3 or not all(quarters)
+            or any(financial_engine._prior_quarter(b) != a for a,b in zip(quarters,quarters[1:]))
+            or periods[-1] != trajectory.get("subject_period")
+            or periods[-1] != (source.get("period_identity") or [None])[-1]
+            or _metric_freshness([periods[-1]], decision_session=session)["freshness_status"] != "CURRENT"):
+        return None, "TRAJECTORY_WINDOW_NOT_CURRENT_OR_RESOLVED"
+    if (trajectory.get("method") != "source_anchored_ratio_trajectory/v1" or not source.get("method") or source.get("feature_id") != fid
+            or not basis_contract.known(basis.get("provider"))
+            or not basis_contract.known(basis.get("statement_family"))
+            or not basis_contract.known(basis.get("statement_scope"))
+            or basis["statement_scope"] in UNPROVEN_STATEMENT_SCOPES
+            or source.get("scope") != [basis["statement_scope"]]
+            or {p.get("provider") for p in source.get("source_fact_refs", [])} != {basis["provider"]}
+            or semantic not in {"POINT_IN_TIME_BALANCE_SHEET", "STANDALONE_QUARTER"}
+            or source.get("period_semantics") != [semantic]):
+        return None, "TRAJECTORY_ACCOUNTING_OR_METHOD_BASIS_UNPROVEN"
+    observations = {o["period"]:o for o in trajectory.get("observations", []) if o.get("period") in periods}
+    if len(observations) != 3 or any(not _numeric(o.get("value")) or not math.isfinite(o["value"])
+            or len(o.get("source_provenance", [])) != 2
+            or any(p.get("provider") != basis["provider"] or not all(p.get(k) for k in ("source_sha256", "source_file", "fact_id"))
+                   for p in o["source_provenance"]) for o in observations.values()):
+        return None, "TRAJECTORY_OBSERVATION_PROVENANCE_INCOMPLETE"
+    if observations[periods[-1]]["value"] != metric.get("value") or source.get("value") != metric.get("value"):
+        return None, "TRAJECTORY_SUBJECT_NOT_BOUND_TO_CURRENT_FEATURE"
+    changes = {(c.get("from_period"),c.get("to_period")):c for c in trajectory.get("sequential_changes", [])}
+    selected = [changes.get(pair) for pair in zip(periods,periods[1:])]
+    if any(not c or c.get("comparison_basis") != "SEQUENTIAL_QUARTER" or not _numeric(c.get("ratio_point_change"))
+           or not math.isfinite(c["ratio_point_change"]) for c in selected):
+        return None, "TWO_ENGINE_OWNED_SEQUENTIAL_CHANGES_ABSENT"
+    key = (fid,sector,"corporate",source["method"],trajectory["method"],semantic,tuple(periods),
+        *(basis.get(k) for k in ("provider","statement_scope","currency","scale","statement_family")))
+    evidence = {"metric":fid,"method":source["method"],"series_identity":basis,
+                "observations":[observations[p] for p in periods],"changes":selected}
+    return {"key":key,"periods":periods,"changes":selected,"trajectory_assessment":trajectory["assessment"],
+        "evidence_sha256":_research_identity(evidence,DIVERGENCE_CONTRACT)["artifact_sha256"],
+        "basis": {"sector":sector,"issuer_type":"corporate","metric_method":source["method"],
+            "trajectory_method":trajectory["method"],"period_semantic":semantic,
+            **{k:v for k,v in basis.items() if k != "ticker"}}}, None
+
+
+def attach_sector_trajectory_peers(records, *, decision_session):
+    """Existing median/percentile owner over same-member, same-window ratio changes.
+
+    The standing minimum includes the subject. A sector sample is descriptive, not
+    proof of a sector-wide condition or cause. No entity-class fallback is admitted.
+    """
+    features = ("cash_to_assets","debt_to_assets","debt_to_equity","pbt_margin","net_margin","gross_margin")
+    selected, groups = {}, defaultdict(dict)
+    for ticker,record in sorted(records.items()):
+        for fid in features:
+            window,reason = _trajectory_peer_window(record,fid,decision_session)
+            selected[ticker,fid] = window,reason
+            if window:
+                groups[window["key"]][ticker] = window
+    pools = {key:[_peer_pool([w["changes"][i]["ratio_point_change"] for w in members.values()]) for i in (0,1)]
+             for key,members in groups.items()}
+    for ticker,record in sorted(records.items()):
+        comparisons = {}
+        for fid in features:
+            window,reason = selected[ticker,fid]
+            item = {"status":"UNKNOWN","reason_codes":[reason] if reason else [],"minimum_peer_count":MIN_COHORT_MEMBERS,
+                "peer_count":0,"peer_count_includes_subject":True,"is_actionable":False}
+            comparisons[fid] = item
+            if not window:
+                continue
+            members = groups[window["key"]]
+            item.update(peer_count=len(members),periods=window["periods"],comparability_basis=window["basis"],
+                peer_members=sorted(members),member_window_evidence_sha256={t:w["evidence_sha256"] for t,w in members.items()},
+                subject_trajectory_assessment=window["trajectory_assessment"])
+            if len(members) < MIN_COHORT_MEMBERS:
+                item["reason_codes"] = ["INSUFFICIENT_COMPATIBLE_SECTOR_TRAJECTORY_PEERS"]
+                continue
+            intervals = []
+            for i,(values,mid,ordered) in enumerate(pools[window["key"]]):
+                change = window["changes"][i]
+                value = change["ratio_point_change"]
+                intervals.append({**change,"peer_median_ratio_point_change":mid,"subject_value":value,
+                    "percentile":_percentile(values,value,ordered=ordered),"percentile_formula":"(below + 0.5 * equal) / n"})
+            favorable = -1 if fid in {"debt_to_assets","debt_to_equity"} else 1
+            sign = lambda x: 0 if math.isclose(x,0,abs_tol=1e-12) else 1 if x*favorable > 0 else -1
+            own = [sign(c["subject_value"]) for c in intervals]
+            peer = [sign(c["peer_median_ratio_point_change"]) for c in intervals]
+            assessment = ("STRENGTHENING_AGAINST_WEAKENING_PEERS" if own == [1,1] and peer == [-1,-1] else
+                "STABLE_AGAINST_WEAKENING_PEERS" if own == [0,0] and peer == [-1,-1] else
+                "WEAKENING_AGAINST_STABLE_OR_IMPROVING_PEERS" if own == [-1,-1] and min(peer) >= 0 else
+                "DETERIORATION_SHARED_WITH_PEER_SAMPLE" if own == peer == [-1,-1] else
+                "IMPROVEMENT_SHARED_WITH_PEER_SAMPLE" if own == peer == [1,1] else
+                "MIXED_OR_STABLE_COMPARATIVE_EVIDENCE")
+            item.update(status="AVAILABLE",assessment=assessment,intervals=intervals,
+                favorable_direction="LOWER" if favorable == -1 else "HIGHER")
+        usable = {f:c for f,c in comparisons.items() if c["status"] == "AVAILABLE"}
+        eligible = "cash_to_assets" in usable and any(f in usable for f in ("debt_to_assets","debt_to_equity"))
+        firm_risk = [f for f,c in usable.items() if c["assessment"] == "WEAKENING_AGAINST_STABLE_OR_IMPROVING_PEERS"]
+        resilient = [f for f,c in usable.items() if c["assessment"] in {"STRENGTHENING_AGAINST_WEAKENING_PEERS","STABLE_AGAINST_WEAKENING_PEERS"}]
+        shared_down = [f for f,c in usable.items() if c["assessment"] == "DETERIORATION_SHARED_WITH_PEER_SAMPLE"]
+        shared_up = [f for f,c in usable.items() if c["assessment"] == "IMPROVEMENT_SHARED_WITH_PEER_SAMPLE"]
+        specialist = record.get("issuer_type") in {"bank","securities","insurance","finance_company"}
+        assessment = ("NOT_APPLICABLE" if specialist else "INSUFFICIENT_EVIDENCE" if not eligible else
+            "CONFLICTING_FINANCIAL_RESILIENCE" if (firm_risk or shared_down) and (resilient or shared_up) else
+            "COMPANY_SPECIFIC_WEAKNESS" if firm_risk else "RESILIENCE_AGAINST_WEAK_PEERS" if resilient else
+            "DETERIORATION_SHARED_WITH_SECTOR_SAMPLE" if shared_down else
+            "RECOVERY_OR_IMPROVEMENT_WITH_PEERS" if shared_up else "MIXED_OR_STABLE_COMPARATIVE_EVIDENCE")
+        pb_peer = (record.get("valuation") or {}).get("peer_context") or {}
+        low = pb_peer.get("status") == "READY_RESEARCH_ONLY" and pb_peer["percentile"] <= .25
+        relation = ("DISCOUNT_WITH_COMPANY_SPECIFIC_WEAKNESS_WARNING" if low and assessment == "COMPANY_SPECIFIC_WEAKNESS" else
+            "DISCOUNT_WITH_RESILIENCE_COUNTERTHESIS" if low and assessment == "RESILIENCE_AGAINST_WEAK_PEERS" else
+            "DISCOUNT_WITH_SHARED_SECTOR_SAMPLE_WEAKNESS" if low and assessment == "DETERIORATION_SHARED_WITH_SECTOR_SAMPLE" else
+            "DISCOUNT_WITH_MIXED_OR_OTHER_PEER_CONTEXT" if low and eligible else "SECTOR_RELATIVE_FINANCIAL_CONTEXT" if eligible else "INSUFFICIENT_EVIDENCE")
+        record["sector_relative_financial_resilience"] = {"status":"NOT_APPLICABLE" if specialist else "AVAILABLE" if eligible else "UNKNOWN",
+            "assessment":assessment,"valuation_relationship":relation,"metric_comparisons":comparisons,
+            "qualified_metric_comparisons":len(usable),"qualified_interval_comparisons":2*len(usable),
+            "supporting_evidence":[{"metric":f,"observation":usable[f]["assessment"]} for f in resilient+shared_up],
+            "contradicting_evidence":[{"metric":f,"observation":usable[f]["assessment"]} for f in firm_risk+shared_down],
+            "mixed_evidence":[f for f,c in usable.items() if c["assessment"] == "MIXED_OR_STABLE_COMPARATIVE_EVIDENCE"],
+            "material_gaps":{f:c["reason_codes"] for f,c in comparisons.items() if c["status"] != "AVAILABLE"},
+            "explanation":"Compares each qualified measure's two successive changes with the median changes of the same compatible retained sector members. Findings identify supported measures; other measures may contradict them. Shared weakness describes this sample and does not establish a sector-wide cause or prove a value trap.",
+            "conditions_to_reassess":["NEXT_SAME_BASIS_QUARTER_CONFIRMS_OR_REVERSES_BOTH_COMPANY_AND_PEER_TRAJECTORIES",
+                "REASSESS_IF_SECTOR_MEMBERSHIP_OR_ACCOUNTING_SOURCE_METHOD_SCOPE_UNIT_CHANGES",
+                "CHECK_SEPARATE_YOY_COUNTEREVIDENCE_AND_MISSING_PROFITABILITY_BEFORE_FORMING_A_THESIS"],
+            "limitations":["CURRENT_RESEARCH_ONLY","NON_VOTING","NOT_PIT","NO_INVESTMENT_SCORE_OR_TRADE_AUTHORITY",
+                "DESCRIPTIVE_RETAINED_ELIGIBLE_SECTOR_SAMPLE_NOT_ALL_SECTOR_ISSUERS","SUBJECT_INCLUDED_IN_STANDING_PEER_MINIMUM",
+                "DEBT_RATIOS_ARE_CORROBORATION_NOT_INDEPENDENT_VOTES","UNKNOWN_SOURCE_MONETARY_UNITS_NOT_UPGRADED"],
+            "is_actionable":False}
+    return records
+
+
 def build_balance_sheet_divergence_context(*, rows, financial_product, financial_peers,
         industry_by_ticker, decision_session, source_valuation_identity, source_evaluated_valuation_identity):
     """Non-voting synthesis over existing numerical owners, with per-measure qualification."""
@@ -1706,6 +1849,7 @@ def build_balance_sheet_divergence_context(*, rows, financial_product, financial
             "interpretation": "RELATIVE_RESEARCH_HYPOTHESIS_VALUE_TRAP_WARNING_IS_NOT_PROOF_OR_TRADE_INSTRUCTION",
             "limitations": sorted(set(pb.get("limitations") or []) | {"CURRENT_RESEARCH_ONLY", "NON_VOTING", "NOT_PIT", "NO_INTRINSIC_VALUE_OR_TARGET_PRICE"}),
             "is_actionable": False}
+    attach_sector_trajectory_peers(records,decision_session=decision_session)
     payload = {"contract_version": DIVERGENCE_CONTRACT, "decision_session": decision_session,
         "source_valuation_identity": source_valuation_identity, "source_evaluated_valuation_identity": source_evaluated_valuation_identity,
         "source_financial_engine_identity": financial_product.get("source_context_identity"),
