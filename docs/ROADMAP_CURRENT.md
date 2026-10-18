@@ -5,7 +5,7 @@ Verified local analytical starting baseline 2026-10-18 `61c870c82648a67eed29d184
 Nothing below auto-starts; native standing admission required (AI_RULES 11).
 Facts: [ACTIVE_STATE.md](ACTIVE_STATE.md).
 
-## NOW — SECTOR_RELATIVE_FINANCIAL_RESILIENCE_RESEARCH_V1 (ACTIVE LOCALLY)
+## NOW — SECTOR_RELATIVE_FINANCIAL_RESILIENCE_RESEARCH_V1 (COMPLETE LOCALLY)
 
 Owner-directed from verified `c3f5e8be`. Fixed 317 candidates; existing Financial V2
 trajectories, peer statistics and decision/AI delivery. Compare equivalent windows
@@ -13,6 +13,14 @@ and source/accounting bases; no entity-class fallback or universal resilience sc
 [Scope](core_financial_valuation_research_scaleout_contract.md#sector-relative-financial-resilience--2026-10-18).
 No Daily/provider/runtime/evidence writes, policy change, promotion or release.
 Monday Owner Daily independent; no automatic successor.
+Native checkpoint `72bee900c04b33c3e4d12b12bd0ed5cad434d8af`: all 317 qualify,
+951 metric-peer comparisons and 1,902 intervals; 102 formerly mixed cases gain
+differentiated peer context. 386 tests PASS, six optional fixture skips; retained
+delivery acceptance and fourteen unchanged input hashes verified. Prior engine,
+divergence and numerical outputs reproduce unchanged; profitability peers insufficient.
+Next major recommendation only: extend existing thesis/packet delivery into an
+investor-facing opportunity-comparison workflow covering valuation/resilience,
+technical timing, liquidity and downside counter-theses. Not admitted; queue empty.
 
 ## PRIOR — MULTI_PERIOD_CASH_LEVERAGE_DETERIORATION_RESEARCH_V1 (COMPLETE LOCALLY)
 
