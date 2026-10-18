@@ -54,7 +54,7 @@
       ]
     },
     "stocklookup.py": {
-      "ast_sha256": "e49991c2197840c19706682e90f65178346811783713da94002b15e95e2fb363",
+      "ast_sha256": "42cbea047c7ad991cd1d1b8a87b2a76295e88d02d41212f26165f93e561d09cf",
       "reason": "Resolved dispatch plus exact caller AST; injected/unknown paths are not claimed as runtime proof.",
       "targets": [
         "daily_analysis_pipeline.py",
@@ -119,7 +119,7 @@
     ".github/workflows/producer-ci.yml": {
       "kind": "compile_and_cli",
       "reason": "Exact reviewed shell/CI command contract, normalized line endings.",
-      "sha256": "49484c12ad67096810c3f8e31aac289826fbbb2628c58a22ca29979dc6ab6be4",
+      "sha256": "f201145d2380db0a059b2ee7bd03a9369eb5d9804ccd070c1c97adb2ad2baf83",
       "targets": [
         "canonical_daily_operation.py",
         "daily_analysis_pipeline.py",

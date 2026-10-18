@@ -15,11 +15,32 @@
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "SECTOR_RELATIVE_FINANCIAL_RESILIENCE_RESEARCH_V1",
-    "state": "COMPLETE"
+    "milestone": "INTEGRATED_INVESTMENT_OPPORTUNITY_COMPARISON_V1",
+    "state": "ACTIVE"
   },
   "queued_next": [],
   "milestones": [
+    {
+      "milestone_id": "INTEGRATED_INVESTMENT_OPPORTUNITY_COMPARISON_V1",
+      "state": "ACTIVE",
+      "starting_checkpoint": "a12517d3d7df6105455a92aa841398f47b924d54",
+      "candidate_branch": "feature/integrated-investment-opportunity-comparison-v1-20261018",
+      "dependencies": [
+        "SECTOR_RELATIVE_FINANCIAL_RESILIENCE_RESEARCH_V1"
+      ],
+      "unlocks": [],
+      "owner_authorized": true,
+      "owner_override": "Owner-directed selected 2–5 security opportunity comparison integrating existing decision, financial resilience, tactical/liquidity and thesis evidence through existing comparison/Workspace/Action Center/AI paths. Local only; no Daily, provider, protected evidence/runtime writes, merge, deployment or authority/policy changes.",
+      "authority_effect": "NONE",
+      "source_doc": "docs/integrated_investment_opportunity_comparison_v1_contract.md",
+      "state_history": [
+        "DEFERRED",
+        "ACTIVE"
+      ],
+      "checkpoint": null,
+      "terminal_disposition": null,
+      "notes": "Owner-directed selected 2–5 security opportunity comparison integrating existing decision, financial resilience, tactical/liquidity and thesis evidence through existing comparison/Workspace/Action Center/AI paths. Local only; no Daily, provider, protected evidence/runtime writes, merge, deployment or authority/policy changes."
+    },
     {
       "milestone_id": "SECTOR_RELATIVE_FINANCIAL_RESILIENCE_RESEARCH_V1",
       "state": "COMPLETE",

@@ -2,6 +2,14 @@
 
 Navigation; no scores. [Facts](ACTIVE_STATE.md), [authority](AUTHORITY.md), [run order](DAILY_PIPELINE.md).
 
+Local [integrated opportunity comparison](integrated_investment_opportunity_comparison_v1_contract.md)
+lets the owner select 2-5 securities (`stocklookup.py action-center --compare`) and
+receive an evidence-linked comparison: valuation/peer percentile, financial trajectory
+and sector-relative resilience, technical trigger/invalidation, liquidity and existing
+bull/base/bear cases with counter-theses. Numerical pairs only on the same qualified
+sector basis; no winner, score, target, sizing or portfolio assumption. Opt-in in
+Action Center, research packet, Workspace and AI delivery.
+
 Local [sector-relative financial resilience](core_financial_valuation_research_scaleout_contract.md#sector-relative-financial-resilience--2026-10-18)
 reuses qualified trajectories and existing peer statistics: same 317 candidates,
 951 metric-peer comparisons, 1,902 interval comparisons. Separates firm-specific

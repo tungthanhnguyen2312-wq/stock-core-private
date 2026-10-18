@@ -5,7 +5,14 @@ Verified local analytical starting baseline 2026-10-18 `61c870c82648a67eed29d184
 Nothing below auto-starts; native standing admission required (AI_RULES 11).
 Facts: [ACTIVE_STATE.md](ACTIVE_STATE.md).
 
-## NOW — SECTOR_RELATIVE_FINANCIAL_RESILIENCE_RESEARCH_V1 (COMPLETE LOCALLY)
+## NOW — INTEGRATED_INVESTMENT_OPPORTUNITY_COMPARISON_V1 (ACTIVE LOCALLY)
+
+Owner-directed from verified `a12517d3`; the sector-relative recommendation below.
+Selected 2-5 security comparison reusing existing decision, scenario, financial
+research and delivery owners. [Contract](integrated_investment_opportunity_comparison_v1_contract.md).
+No Daily/provider/runtime/evidence writes, policy change, promotion or release.
+
+## PRIOR — SECTOR_RELATIVE_FINANCIAL_RESILIENCE_RESEARCH_V1 (COMPLETE LOCALLY)
 
 Owner-directed from verified `c3f5e8be`. Fixed 317 candidates; existing Financial V2
 trajectories, peer statistics and decision/AI delivery. Compare equivalent windows

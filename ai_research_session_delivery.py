@@ -652,7 +652,12 @@ def build_dashboard_projection(
     return projection
 
 
-def build_delivery(operation: Mapping[str, Any], inputs: Mapping[str, Any]) -> dict[str, Any]:
+def project_opportunity_comparison_for_ai_delivery(comparison):
+    from stocklookup_core.research.evidence_aware_candidate_comparison import verified_integrated_comparison
+    return verified_integrated_comparison(comparison)
+
+
+def build_delivery(operation: Mapping[str, Any], inputs: Mapping[str, Any], *, opportunity_comparison_request=None) -> dict[str, Any]:
     """Return primary JSON, NDJSON companion, manifest, brief, and cockpit projection bytes."""
     product, manifest = operation["product"], operation["manifest"]
     session = manifest["market_session"]
@@ -712,6 +717,14 @@ def build_delivery(operation: Mapping[str, Any], inputs: Mapping[str, Any]) -> d
         # surface is deliberately additive and versioned on each available card.
         for ticker, context in primary["ticker_research_contexts"].items():
             context["integrated_decision_v1"] = copy.deepcopy((integrated_overlay["records"] or {}).get(ticker))
+    if opportunity_comparison_request is not None:
+        from current_evidence_bound_scenario import bind_integrated_scenarios
+        from stocklookup_core.research.evidence_aware_candidate_comparison import build_integrated_comparison
+        if integrated_decision is None:
+            raise ValueError("SELECTED_COMPARISON_REQUIRES_VERIFIED_INTEGRATED_DECISION")
+        primary["selected_opportunity_comparison"] = project_opportunity_comparison_for_ai_delivery(
+            build_integrated_comparison(opportunity_comparison_request, integrated_decision=integrated_decision,
+                                        bind_scenarios=bind_integrated_scenarios))
     primary_bytes = (_canon(primary) + "\n").encode("utf-8")
     # Keep the bytes-returning contract, without a universe-sized Unicode row
     # list, joined string, newline copy and UTF-8 copy alive at the same time.

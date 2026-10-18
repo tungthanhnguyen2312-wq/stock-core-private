@@ -683,6 +683,7 @@ def build_artifacts(
     technical_coverage_disposition: Mapping[str, Any] | None = None,
     technical_history_recovery: Mapping[str, Any] | None = None,
     integrated_decision_artifact: Mapping[str, Any] | None = None,
+    selected_opportunity_comparison: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Join a matched opportunity_context/v1 + security_decision_context/v1 pair into the
     compact investment_decision_workspace_projection/v1 artifact. Raises fail-closed if the two
@@ -910,5 +911,14 @@ def build_artifacts(
         # Per-ticker display_state/value live at card["display_metrics"][metric_id].
         "display_metric_catalog": indicator_display_state.DISPLAY_METRIC_CATALOG,
     }
+    if selected_opportunity_comparison is not None:
+        # Built upstream by the composition root (Action Center/packet owner); embedded only
+        # after its identity, Integrated Decision source, session and card scope verify.
+        from stocklookup_core.research.evidence_aware_candidate_comparison import verified_comparison_for_source
+        try:
+            artifact["selected_opportunity_comparison"] = verified_comparison_for_source(
+                selected_opportunity_comparison, integrated_decision=integrated_decision_artifact, tickers_in_scope=cards)
+        except ValueError as exc:
+            raise InvestmentDecisionWorkspaceError(str(exc)) from exc
     artifact.update(content_identity(artifact))
     return artifact
