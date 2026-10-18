@@ -45,3 +45,121 @@ Local source/checkpoint commits are authorized. No provider calls, live Daily,
 production/runtime writes, protected evidence edits, sealed-session rewrites, push,
 merge, publication, deployment, authority promotion or automatic successor.
 Monday 2026-10-19 Owner Daily remains independent.
+
+## Market-wide valuation versus balance-sheet divergence research — 2026-10-18
+
+Owner-directed `MARKET_WIDE_VALUATION_BALANCE_SHEET_DIVERGENCE_RESEARCH` starts at
+`a1c794383cb4ddf8b26c170a5a3bad2b75390335`; the completed ratio-scaleout above is
+not reopened. One isolated Producer writer; the same local-only boundaries apply.
+
+Existing valuation peer arithmetic supplies P/B medians and tie-aware percentiles.
+For this use, cohorts additionally partition by retained sector, book period,
+issuer class, share basis, scope, equity definition/provider, monetary basis and
+method identity. Absent sector labels do not become guessed peer groups. Existing
+legacy peer results and numerical feature values are unchanged.
+
+The existing Financial V2 compact product and verified financial-peer materialization
+supply each ratio and explicit YoY direction. Each observation independently requires
+known matching scope and P/B book period, source provenance, established fitness and
+finite value. Balance-sheet operands bind to the retained P/B equity source. Ratios
+remain dimensionless within their own reported representations; no currency/scale
+is inferred and no cross-provider monetary operands are merged. An independently
+qualified same-period margin may supply profitability context with its own provider
+provenance. Average-balance and EOP ROE/ROA identities stay distinct; unresolved
+mixed-provider return proxies never substitute for them.
+
+The standing valuation quartiles (<=25%, >=75%) identify lower/higher relative P/B.
+Lower P/B with sector-supported cash/assets and debt/assets plus positive reported
+margin supports a financial-strength hypothesis only absent contradictions. Explicit
+debt/equity deterioration, falling equity/assets or nonpositive margin raises a
+value-trap warning, not proof. Weak levels without a time comparison are balance-sheet
+risk, not demonstrated deterioration. Conflicting observations stay visible; missing
+independent methods do not erase valid ones. No vote count or aggregate buy score.
+
+`valuation_balance_sheet_divergence_research/v1` is an additive, non-voting member
+of evaluated valuation, bound to the raw valuation session/identity, original
+evaluated values and exact financial product. The integrated decision, Decision
+Fitness input, existing research packet, compact decision card and AI delivery pass through the findings, support/counter-evidence,
+gaps and reassessment conditions. Existing posture and policy are unchanged.
+Library callers without the explicit financial materialization keep their existing
+output. The canonical source wiring opts into the same established materialization;
+this job never runs it against live Daily outputs.
+
+Banks/securities/insurance/finance companies receive NOT_APPLICABLE for these
+corporate rules and retain their specialist method gaps. Unknown class/scope/period
+or incompatible source bases remain UNKNOWN. No compatible retained P/B own-history
+distribution exists on this latest-only path; financial-ratio history cannot stand
+in for valuation history. This gap cannot block valid cross-sectional research.
+
+Acceptance uses the same 1,683-issuer evaluated-valuation denominator and separately
+reports the exact 337-name candidate cohort. It verifies unchanged retained input
+hashes/methods, valid paired observations, useful supported/conflicting/risk cases,
+UNKNOWN reasons and exact end-to-end delivery. Local checkpoint only; no successor.
+
+### Measured retained result
+
+October16 retained valuation universe: 1,683 issuers, unchanged. Exact candidate
+set: 337 issuers, unchanged. Baseline had the individual metrics, but no combined
+divergence evaluation or delivery; no new metric-input coverage is claimed.
+
+| Analytical result | Before | After |
+|---|---:|---:|
+| Qualified combined issuer assessments | 0 | 332 |
+| Valuation/financial paired observations | 0 | 2,561 |
+| Of those, peer-relative financial comparisons | 0 | 1,935 |
+| Specific support or counter-thesis findings | 0 | 314 |
+
+Within the candidate set: 2 lower-P/B financial-support hypotheses, 57 lower-P/B
+value-trap warnings (53 with explicit deterioration, 4 with nonpositive margin),
+23 lower-P/B conflicts and 3 lower-P/B balance-sheet-risk cases. Higher-P/B cases
+include 11 with financial support, 73 with weak/conflicting evidence and 1 with
+insufficient financial evidence. Middle-range P/B has 145 financial divergences
+and 17 context-only cases. Five candidates remain UNKNOWN: ADG/EID/VNZ/YEG have
+four comparable P/B observations, API one, below the standing minimum five.
+Across all 1,683 issuers: 332 AVAILABLE, 1,268 UNKNOWN and 83 NOT_APPLICABLE.
+
+Each cash/assets and explicit-debt ratio has 332 valid pairings; each reported
+margin and explicit YoY direction has 313. Comparable ROE/ROA remains zero in
+this paired cohort; missing qualified returns and P/B history do not block the
+other eight methods. Reported margins do not establish normalized/recurring earnings.
+
+Examples are dated research proxies on 2026-Q1 books, not current recommendations:
+PAN has P/B 0.473566 versus sector median 1.150835, cash/assets 0.239768 versus
+0.031583 and debt/assets 0.181077 versus 0.317357, with a positive reported margin.
+AAA has P/B 0.448599 versus 0.938962, but debt/assets 0.233116 versus 0.144125 and
+a YoY equity/assets decline of 0.016205. AGG has lower-quartile P/B and supportive
+reported margins but weak sector-relative cash/assets and debt/assets. Their
+support, counter-evidence, actual basis, gaps and reassessment conditions reach
+the existing integrated record, Decision Fitness valuation dimension and AI delivery.
+
+The replay validates eleven retained input hashes and unchanged source methods, source
+feature objects and policy. It explicitly binds the older evaluated-valuation
+engine to the completed scaleout engine only after exact numerical-feature parity;
+this is a new local research derivative, not a rewrite of the original artifact.
+All 1,683 AI/card records and the existing 1,507-issuer research-packet scope are
+verified; all 332 qualified findings are within that packet scope. No packet
+denominator or existing decision/fitness policy is widened.
+Detailed acceptance and issuer records remain in the implementation worktree's
+ignored `.stocklookup/scratch/divergence-delivery-acceptance/`; reproduce with
+`tools/replay_valuation_balance_sheet_divergence.py` and explicit retained paths.
+
+Recommended next substantial capability, not admitted: multi-period cash/leverage
+deterioration research. There are 317 qualified issuers with usable histories for
+all three cash/debt ratios, providing a ready retained-data cohort without provider
+calls, forecast assumptions, new scoring or PIT promotion.
+
+Validation: 29 new focused tests pass; broader decision/AI/financial/specialist
+selection 178 pass; canonical/materialization/import/layout selection 244 pass;
+delivery/packet selection 61 pass with 3 optional legacy-fixture skips; native
+roadmap regressions 51 pass. Full retained acceptance verifies the 1,683-name
+universe, exact 337-name candidate set, 1,507 packet rows and all qualified findings.
+Compilation, reviewed launcher-contract checks and whitespace checks pass.
+
+Legacy regression limitation: the old August25 pipeline stamp test fails on the
+untouched `a1c79438` baseline because its allowed result-key set omits the already
+existing `official_liquidity_component`. The expensive legacy replay selection
+was stopped after this baseline failure was established; its remaining cases are
+not claimed as passed. Six such cases initially required the explicit read-only
+retained-evidence root. No old test, historical artifact or completed milestone
+was rewritten to hide that limitation. It is separate from the new capability's
+passed retained acceptance; no new failure was found in completed selections.

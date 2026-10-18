@@ -251,6 +251,8 @@ def build_evaluated_valuation_artifact(
     decision_session: str | None = None,
     official_financial_facts: Sequence[Mapping[str, Any]] | None = None,
     include_metric_research: bool = False,
+    divergence_financial_materialization: Mapping[str, Any] | None = None,
+    divergence_industry_by_ticker: Mapping[str, str] | None = None,
 ) -> dict[str, Any]:
     """Evaluate the raw ``market_wide_current_valuation_input_scaleout`` per-ticker records
     into the ``current_research_valuation_context/v1`` shape (``methods``, ``peer_relative_
@@ -353,6 +355,35 @@ def build_evaluated_valuation_artifact(
             rows=rows, engine_artifact=engine_artifact, decision_session=decision_session,
             source_valuation_identity=_identity(payload)["artifact_identity"],
             raw_valuation_records=valuation_records)
+    if divergence_financial_materialization is not None:
+        try:
+            attach_balance_sheet_divergence(payload, financial_materialization=divergence_financial_materialization,
+                industry_by_ticker=divergence_industry_by_ticker or {}, decision_session=decision_session,
+                raw_valuation_artifact=raw_valuation_artifact)
+        except (ValueError, TypeError, KeyError) as exc:
+            # A missing/mismatched optional valuation leg cannot erase otherwise
+            # legitimate financial Current Research. Consumers fail this member closed.
+            payload[valuation_context.DIVERGENCE_MEMBER] = {"status": "UNKNOWN",
+                "reason_codes": ["DIVERGENCE_INPUT_BINDING_UNAVAILABLE", type(exc).__name__]}
+    payload.update(_identity(payload))
+    return payload
+
+
+def attach_balance_sheet_divergence(payload, *, financial_materialization, industry_by_ticker,
+                                   decision_session, raw_valuation_artifact):
+    """Attach research to existing evaluated values; no method is recomputed here."""
+    if (not decision_session or (raw_valuation_artifact or {}).get("valuation_session") != decision_session
+            or payload.get("source_valuation_identity") != raw_valuation_artifact.get("artifact_identity")
+            or payload.get("source_financial_v2_identity") != financial_materialization.get("financial_v2_engine_identity")):
+        raise ValueError("DIVERGENCE_VALUATION_FINANCIAL_SESSION_BINDING_INVALID")
+    product = financial_materialization["financial_analysis_product"]
+    peers = product_projection.financial_peer_contexts(materialization=financial_materialization,
+        product=product, session=decision_session)
+    payload[valuation_context.DIVERGENCE_MEMBER] = valuation_context.build_balance_sheet_divergence_context(
+        rows=payload["records"], financial_product=product, financial_peers=peers,
+        industry_by_ticker=industry_by_ticker, decision_session=decision_session,
+        source_valuation_identity=payload["source_valuation_identity"],
+        source_evaluated_valuation_identity=_identity(payload)["artifact_identity"])
     payload.update(_identity(payload))
     return payload
 

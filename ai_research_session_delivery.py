@@ -173,6 +173,8 @@ def project_integrated_decision_for_ai_delivery(record: Any, *, integrated_ident
         "evidence_axis_coherence": copy.deepcopy(record.get("evidence_axis_coherence")),
         "evidence_axes": copy.deepcopy(record.get("evidence_axes")),
         **({"financial_peer_context": copy.deepcopy(record["financial_peer_context"])} if "financial_peer_context" in record else {}),
+        **({"valuation_balance_sheet_divergence": copy.deepcopy(record["valuation_balance_sheet_divergence"])}
+           if "valuation_balance_sheet_divergence" in record else {}),
         "financial_composite_context": copy.deepcopy(record.get("financial_composite_context")),
         "corporate_intelligence_context": copy.deepcopy(record.get("corporate_intelligence_context")),
         "material_uncertainties": copy.deepcopy(record.get("material_uncertainties")),
@@ -264,6 +266,8 @@ def _decision_card(ticker: str, record: Mapping[str, Any], daily_brief: Mapping[
         "valuation": {
             "context": copy.deepcopy(delivered.get("valuation_context_summary")),
             "methods": copy.deepcopy(delivered.get("valuation_methods")),
+            **({"balance_sheet_divergence": copy.deepcopy(delivered["valuation_balance_sheet_divergence"])}
+               if "valuation_balance_sheet_divergence" in delivered else {}),
         },
         "catalyst": copy.deepcopy(delivered.get("corporate_intelligence_context")),
         "risk_context": {

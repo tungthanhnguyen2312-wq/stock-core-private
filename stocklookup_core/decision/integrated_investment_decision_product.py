@@ -1557,6 +1557,7 @@ def build_ticker_integrated_decision(
     entity_applicability_record: Mapping[str, Any] | None = None,
     official_liquidity_record: Mapping[str, Any] | None = None,
     financial_peer_context: Mapping[str, Any] | None = None,
+    valuation_balance_sheet_divergence: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Assemble one complete, self-contained integrated investment decision record.
 
@@ -1773,6 +1774,8 @@ def build_ticker_integrated_decision(
     evidence_axis_coherence = evaluate_evidence_axis_coherence(evidence_axes)
     if financial_peer_context is not None:
         evidence_axes["FUNDAMENTAL"].setdefault("context", {})["financial_peer_context"] = copy.deepcopy(dict(financial_peer_context))
+    if valuation_balance_sheet_divergence is not None:
+        evidence_axes["VALUATION"].setdefault("context", {})["balance_sheet_divergence"] = copy.deepcopy(dict(valuation_balance_sheet_divergence))
 
     # Legacy stance comparison
     legacy_stance = None
@@ -1866,6 +1869,8 @@ def build_ticker_integrated_decision(
     if financial_peer_context is not None:
         record["financial_peer_context"] = copy.deepcopy(dict(financial_peer_context))
         record["source_identities"]["financial_peer_materialization_identity"] = financial_peer_context.get("source_materialization_identity")
+    if valuation_balance_sheet_divergence is not None:
+        record["valuation_balance_sheet_divergence"] = copy.deepcopy(dict(valuation_balance_sheet_divergence))
     validate_posture_policy(record)
     record["decision_identity"] = decision_identity(record)
     if bridge_consulted:
@@ -2013,6 +2018,8 @@ def build_artifact(
     fa_records = (financial_analysis_artifact or {}).get("records") or {}
     financial_peers = fa_product_projection.financial_peer_contexts(
         materialization=financial_peer_materialization_artifact, product=financial_analysis_artifact, session=session)
+    from stocklookup_core.valuation.current_research_valuation_context import verified_divergence_records
+    divergence_records = verified_divergence_records(current_valuation_artifact, financial_analysis_artifact, session)
     operational_records: Mapping[str, Any] = {}
     if operational_fundamental_integration_artifact is not None:
         integration = operational_fundamental_integration_artifact
@@ -2177,6 +2184,7 @@ def build_artifact(
             entity_applicability_record=applicability_records.get(ticker),
             official_liquidity_record=official_liquidity_records.get(ticker),
             financial_peer_context=financial_peers.get(ticker),
+            valuation_balance_sheet_divergence=divergence_records.get(ticker),
         )
         if historical_context_artifact is not None:
             dec["market_sector_context"]["multi_timeframe"] = market_bars.get(ticker, {
@@ -2317,6 +2325,9 @@ def build_artifact(
     coverage["fundamental_risk_level"] = dict(sorted(Counter(
         str((record.get("fundamental_risk_level") or {}).get("state")) for record in records.values()).items()))
     coverage["current_research_decision_input"] = decision_input.coverage(records)
+    if divergence_records:
+        coverage["valuation_balance_sheet_divergence"] = dict(Counter(
+            (r.get("valuation_balance_sheet_divergence") or {}).get("assessment", "UNKNOWN") for r in records.values()))
 
     payload: dict[str, Any] = {
         "schema_version": "integrated_investment_decision_product/1.0.0",

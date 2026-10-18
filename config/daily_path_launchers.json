@@ -18,7 +18,7 @@
       ]
     },
     "canonical_post_close_pipeline.py": {
-      "ast_sha256": "244f417e7280848e566437daf10e12433d20a8d37f2aa9465d9b34ef568aab1f",
+      "ast_sha256": "df524b67dfad3924732a7fdc2b587e59f376fa8a7f8e0dcd42bc036523ab93e1",
       "reason": "Child argv passed to imported run_observed_subprocess and progress wrapper; exact source contract covers delegation.",
       "targets": [
         "tools/run_prospective_decision_outcome_feedback.py",
@@ -119,7 +119,7 @@
     ".github/workflows/producer-ci.yml": {
       "kind": "compile_and_cli",
       "reason": "Exact reviewed shell/CI command contract, normalized line endings.",
-      "sha256": "df626efc0b8997db92a9c165e2fc2ad411a7d5ee65418a4ffeb331d743e72618",
+      "sha256": "b7a9c5435408c1d59d6cebcf3ddca30156620a7df2dd91f1be1f141b1b97098f",
       "targets": [
         "canonical_daily_operation.py",
         "daily_analysis_pipeline.py",

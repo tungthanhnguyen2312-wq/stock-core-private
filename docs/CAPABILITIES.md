@@ -2,6 +2,12 @@
 
 Navigation; no scores. [Facts](ACTIVE_STATE.md), [authority](AUTHORITY.md), [run order](DAILY_PIPELINE.md).
 
+Local [valuation/balance-sheet divergence research](core_financial_valuation_research_scaleout_contract.md#market-wide-valuation-versus-balance-sheet-divergence-research--2026-10-18)
+adds sector/accounting-compatible P/B versus cash, leverage, reported profitability
+and explicit YoY directions: 332 paired issuers, 2,561 paired observations and 314
+specific support/counter-thesis findings. Existing measurements and policy remain
+unchanged; findings are non-voting research, verified through Decision Fitness and AI.
+
 Local [core financial ratio research expansion](core_financial_valuation_research_scaleout_contract.md)
 adds pretax-margin, cash/assets, explicit debt/equity and debt/assets history and
 peer comparisons to existing Financial V2 and decision/AI delivery. `NON_VOTING`;

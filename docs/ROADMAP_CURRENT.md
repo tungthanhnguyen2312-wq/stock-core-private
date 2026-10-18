@@ -5,7 +5,16 @@ Verified local analytical starting baseline 2026-10-18 `61c870c82648a67eed29d184
 Nothing below auto-starts; native standing admission required (AI_RULES 11).
 Facts: [ACTIVE_STATE.md](ACTIVE_STATE.md).
 
-## NOW — CORE_FINANCIAL_VALUATION_RESEARCH_SCALEOUT (COMPLETE LOCALLY)
+## NOW — MARKET_WIDE_VALUATION_BALANCE_SHEET_DIVERGENCE_RESEARCH (ACTIVE LOCALLY)
+
+Owner-directed from `a1c79438`; [governing scope](core_financial_valuation_research_scaleout_contract.md#market-wide-valuation-versus-balance-sheet-divergence-research--2026-10-18).
+Same-cohort research, existing numerical owners and decision/AI delivery. No live
+Daily, provider, production/runtime/evidence changes, authority promotion or release.
+Retained October16 acceptance: 332 of 337 candidates qualify; 2,561 paired observations,
+1,935 peer comparisons, 314 specific support/counter-thesis findings. Five candidates
+are below the same-basis sector P/B minimum; no comparison is forced.
+
+## PRIOR — CORE_FINANCIAL_VALUATION_RESEARCH_SCALEOUT (COMPLETE LOCALLY)
 
 [Scope](core_financial_valuation_research_scaleout_contract.md): local baseline
 `61c870c8`, sole Codex writer. Extend pretax margin, cash/assets and explicit-debt
@@ -15,8 +24,8 @@ pinned financial universe. [Retained acceptance](internal/CORE_FINANCIAL_VALUATI
 underlying metric values unchanged. No live Daily, provider, production, evidence or authority changes.
 Monday October 19 Owner Daily remains independent; no automatic successor.
 Native implementation checkpoint: `ead8ef2724954a02b936e8ebb9692a8b157fbe46`.
-Next major recommendation only: valuation versus balance-sheet divergence research
-over 337 retained issuers with both usable peer context and research P/B. Not admitted.
+Its former 337-name divergence recommendation is the separately admitted job above;
+the completed scaleout itself remains closed.
 
 ## PRIOR — VN30_FINANCIAL_VALUATION_RESEARCH_SCALEOUT_V1 (INCORPORATED PR147)
 

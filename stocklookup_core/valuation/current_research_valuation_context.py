@@ -6,6 +6,7 @@ semantics. It does not invent DCF, fair-value, consensus, target prices, or prob
 from __future__ import annotations
 
 import calendar
+import copy
 import json
 import math
 from bisect import bisect_left, bisect_right
@@ -1020,12 +1021,22 @@ def _percentile(values: list[float], value: float, *, ordered: bool = False) -> 
     return (below + 0.5 * equal) / len(values)
 
 
-def attach_peer_relative(rows: Mapping[str, Mapping[str, Any]]) -> dict[str, Any]:
+def attach_peer_relative(rows: Mapping[str, Mapping[str, Any]], *,
+                         cohort_by_ticker: Mapping[str, str] | None = None) -> dict[str, Any]:
     """Same-method peer comparison only; incompatible bases are excluded from the cohort."""
+    def comparison_key(ticker, row, method):
+        key = _peer_key(row, method)
+        if key is not None and cohort_by_ticker is not None:
+            cohort = cohort_by_ticker.get(ticker)
+            if not cohort:
+                return None
+            key = (*key, cohort)
+        return key
+
     cohorts: dict[tuple[Any, ...], list[tuple[str, float]]] = defaultdict(list)
     for ticker, row in rows.items():
         for method in (row.get("methods") or {}).values():
-            key = _peer_key(row, method)
+            key = comparison_key(ticker, row, method)
             if key is None:
                 continue
             cohorts[key].append((ticker, float(method["value"])))
@@ -1033,7 +1044,7 @@ def attach_peer_relative(rows: Mapping[str, Mapping[str, Any]]) -> dict[str, Any
     for ticker, row in rows.items():
         relatives: dict[str, Any] = {}
         for method_id, method in (row.get("methods") or {}).items():
-            key = _peer_key(row, method)
+            key = comparison_key(ticker, row, method)
             if key is None:
                 relatives[method_id] = {
                     "status": "NOT_COMPARABLE",
@@ -1424,6 +1435,258 @@ def source_session_for_valuation(valuation_artifact: Mapping[str, Any] | None) -
     if not isinstance(valuation_artifact, Mapping):
         return None
     return valuation_artifact.get("valuation_session") or valuation_artifact.get("session")
+
+
+DIVERGENCE_CONTRACT = "valuation_balance_sheet_divergence_research/v1"
+DIVERGENCE_MEMBER = "valuation_balance_sheet_divergence_context"
+DIVERGENCE_FEATURES = (
+    "cash_to_assets", "debt_to_equity", "debt_to_assets", "pbt_margin", "net_margin",
+    "gross_margin", "same_provider_roe_avg_equity", "same_provider_roa_avg_assets",
+    "same_provider_roe_eop_proxy", "same_provider_roa_eop_proxy",
+    "debt_to_equity_direction", "equity_to_assets_direction",
+)
+
+
+def _research_identity(payload, contract):
+    import hashlib
+    body = {k:v for k,v in payload.items() if k not in {"artifact_identity", "artifact_sha256", "requested_at"}}
+    digest = hashlib.sha256(json.dumps(body, ensure_ascii=False, sort_keys=True,
+        separators=(",", ":"), allow_nan=False).encode()).hexdigest()
+    return {"artifact_identity": f"{contract}:{digest}", "artifact_sha256": digest}
+
+
+def _divergence_pb_blockers(row, method, session):
+    reasons = []
+    if row.get("entity_class") != "corporate":
+        reasons.append("CORPORATE_DIVERGENCE_NOT_APPLICABLE")
+    if (method.get("status") not in {"RESEARCH_USABLE", "READY"}
+            or not _numeric(method.get("value")) or not math.isfinite(method.get("value", float("nan")))
+            or method.get("value", 0) <= 0):
+        reasons.append("USABLE_POSITIVE_RESEARCH_PB_ABSENT")
+    scope = method.get("statement_scope")
+    if scope in UNPROVEN_STATEMENT_SCOPES or not scope:
+        reasons.append("PB_STATEMENT_SCOPE_UNKNOWN")
+    if _metric_freshness([method.get("book_period")], decision_session=session)["freshness_status"] != "CURRENT":
+        reasons.append("PB_BOOK_PERIOD_NOT_CURRENT_OR_RESOLVED")
+    if method.get("input_periods") != [method.get("book_period")]:
+        reasons.append("PB_BOOK_PERIOD_IDENTITIES_CONFLICT")
+    if method.get("share_basis") not in {EXACT_OR_QUALIFIED, CURRENT_SHARE_RESEARCH_PROXY, PROVIDER_VALUATION_PROXY}:
+        reasons.append("PB_SHARE_BASIS_UNAVAILABLE")
+    if (not basis_contract.known(method.get("equity_definition")) or method.get("period_basis") != "POINT_IN_TIME_BALANCE_SHEET"):
+        reasons.append("PB_EQUITY_DEFINITION_OR_PERIOD_BASIS_UNPROVEN")
+    basis, price_basis = method.get("equity_monetary_basis") or {}, method.get("market_cap_monetary_basis") or {}
+    if not basis_contract.compatible(basis, price_basis)[0]:
+        reasons.append("PB_MONETARY_BASES_INCOMPATIBLE")
+    lineage = method.get("equity_lineage") or {}
+    if not all(basis_contract.known(lineage.get(k)) for k in ("provider", "source_sha256", "source_file")):
+        reasons.append("PB_EQUITY_PROVENANCE_INCOMPLETE")
+    return reasons
+
+
+def _divergence_metric(fid, compact, financial_peer, pb, pb_cohort):
+    """Qualify independent ratio observations; never merge monetary operands."""
+    feature = (compact.get("feature_fitness") or {}).get(fid) or {}
+    source = feature.get("source_feature_context") or {}
+    peer = (financial_peer.get("metrics") or {}).get(fid) or {}
+    reasons = []
+    specialist = compact.get("issuer_type") in {"bank", "securities", "insurance", "finance_company"}
+    if compact.get("issuer_type") != "corporate":
+        reasons.append("CORPORATE_MEASURE_NOT_APPLICABLE_TO_ISSUER")
+    value = source.get("value")
+    if feature.get("fitness") != "READY" or not _numeric(value) or not math.isfinite(value):
+        reasons.extend(feature.get("reason_codes") or ["QUALIFIED_SAME_PROVIDER_MEASURE_ABSENT"])
+    periods, scope = source.get("period_identity") or [], source.get("scope") or []
+    if not periods or periods[-1] != pb.get("book_period"):
+        reasons.append("FINANCIAL_PERIOD_DIFFERS_FROM_PB_BOOK_PERIOD")
+    if scope != [pb.get("statement_scope")] or not scope or scope[0] in UNPROVEN_STATEMENT_SCOPES:
+        reasons.append("FINANCIAL_SCOPE_DIFFERS_FROM_PB_OR_UNKNOWN")
+    if source.get("currency") and source["currency"] != (pb.get("equity_monetary_basis") or {}).get("currency"):
+        reasons.append("KNOWN_REPORTING_CURRENCY_DIFFERS")
+    semantics = set(source.get("period_semantics") or [])
+    return_method = fid.startswith("same_provider_ro")
+    expected_semantics = ({"STANDALONE_QUARTER", "POINT_IN_TIME_BALANCE_SHEET"} if return_method else
+        {"STANDALONE_QUARTER"} if fid in {"pbt_margin", "net_margin", "gross_margin"} else {"POINT_IN_TIME_BALANCE_SHEET"})
+    if semantics != expected_semantics or not source.get("method") or source.get("feature_id") != fid:
+        reasons.append("FINANCIAL_METHOD_OR_PERIOD_SEMANTICS_UNPROVEN")
+    if fid.endswith("direction"):
+        period = pb.get("book_period") or ""
+        prior = f"{int(period[:4])-1}{period[4:]}" if re.fullmatch(r"\d{4}-Q[1-4]", period) else None
+        if feature.get("growth_basis") != "POINT_IN_TIME_YOY" or periods != [prior, prior, period, period]:
+            reasons.append("FINANCIAL_YOY_DIRECTION_BOUNDARIES_UNPROVEN")
+    refs = source.get("source_fact_refs") or []
+    if not refs or any(not all(r.get(k) for k in ("provider", "source_sha256", "fact_id")) for r in refs):
+        reasons.append("FINANCIAL_SOURCE_FACT_PROVENANCE_INCOMPLETE")
+    if fid in {"cash_to_assets", "debt_to_equity", "debt_to_assets", "debt_to_equity_direction", "equity_to_assets_direction"}:
+        equity = pb.get("equity_lineage") or {}
+        # Direction owners order prior operands first, subject operands last.
+        if not refs or any((r.get("provider"), r.get("source_sha256")) !=
+                           (equity.get("provider"), equity.get("source_sha256")) for r in refs[-2:]):
+            reasons.append("BALANCE_SHEET_SOURCE_NOT_BOUND_TO_PB_EQUITY")
+    peer_ready = (not reasons and peer.get("status") == "READY_RESEARCH_ONLY"
+                  and peer.get("cohort_id") == pb_cohort
+                  and peer.get("subject_value") == value
+                  and peer.get("method") == source.get("method")
+                  and (peer.get("freshness") or {}).get("freshness_status") == "CURRENT")
+    return {"status": "NOT_APPLICABLE" if specialist else "UNKNOWN" if reasons else "AVAILABLE", "value": value if not reasons else None,
+        "method": source.get("method"), "reason_codes": sorted(set(reasons)),
+        "source_fitness": feature.get("fitness"), "source_feature_context": copy.deepcopy(source),
+        "peer_context": copy.deepcopy(peer), "peer_comparison_usable": bool(peer_ready),
+        "own_history_context": copy.deepcopy(peer.get("own_history_context") or
+            (compact.get("history_context") or {}).get(fid)),
+        "comparison_basis": "INDEPENDENT_SAME_PERIOD_SAME_SCOPE_RATIO_NO_MONETARY_OPERAND_MERGE"}
+
+
+def _divergence_assessment(pb_peer, metrics):
+    supports, counters, conditions = [], [], []
+    for fid, metric in metrics.items():
+        if metric["status"] != "AVAILABLE":
+            continue
+        value = metric["value"]
+        peer = metric["peer_context"]
+        if fid in {"cash_to_assets", "debt_to_equity", "debt_to_assets", "pbt_margin", "net_margin"} and metric["peer_comparison_usable"]:
+            favorable = value >= peer["peer_median"] if fid in {"cash_to_assets", "pbt_margin", "net_margin"} else value <= peer["peer_median"]
+            item = {"metric": fid, "observation": "AT_OR_BETTER_THAN_SECTOR_MEDIAN" if favorable else "WEAKER_THAN_SECTOR_MEDIAN",
+                    "value": value, "peer_median": peer["peer_median"], "percentile": peer["percentile"]}
+            (supports if favorable else counters).append(item)
+        if fid in {"pbt_margin", "net_margin"} and value <= 0:
+            counters.append({"metric": fid, "observation": "NON_POSITIVE_REPORTED_MARGIN", "value": value})
+        if fid in {"debt_to_equity_direction", "equity_to_assets_direction"}:
+            adverse = value > 0 if fid == "debt_to_equity_direction" else value < 0
+            if value:
+                (counters if adverse else supports).append({"metric": fid,
+                    "observation": "BALANCE_SHEET_DETERIORATION_YOY" if adverse else "BALANCE_SHEET_IMPROVEMENT_YOY", "value": value})
+            conditions.append({"metric": fid, "condition": "REASSESS_ON_NEXT_QUALIFIED_SAME_SCOPE_YOY_DIRECTION"})
+    available = [fid for fid, metric in metrics.items() if metric["status"] == "AVAILABLE"]
+    if pb_peer.get("status") != "READY_RESEARCH_ONLY":
+        return "UNKNOWN", supports, counters, conditions
+    percentile = pb_peer["percentile"]
+    low, high = percentile <= .25, percentile >= .75  # Standing valuation owner's quartile boundaries.
+    cash_support = any(e["metric"] == "cash_to_assets" for e in supports)
+    debt_support = any(e["metric"] == "debt_to_assets" for e in supports)
+    profitable = any(metrics[f]["status"] == "AVAILABLE" and metrics[f]["value"] > 0 for f in ("pbt_margin", "net_margin"))
+    deterioration = any(e["observation"] in {"BALANCE_SHEET_DETERIORATION_YOY", "NON_POSITIVE_REPORTED_MARGIN"} for e in counters)
+    supported = cash_support and debt_support and profitable
+    if low:
+        assessment = ("LOW_PB_WITH_VALUE_TRAP_WARNINGS" if deterioration else
+            "LOW_PB_WITH_CONFLICTING_EVIDENCE" if supports and counters else
+            "LOW_PB_WITH_FINANCIAL_SUPPORT" if supported else
+            "LOW_PB_WITH_BALANCE_SHEET_RISK" if counters else "LOW_PB_INSUFFICIENT_FINANCIAL_EVIDENCE")
+    elif high:
+        assessment = "HIGH_PB_WITH_FINANCIAL_SUPPORT" if supported and not counters else (
+            "HIGH_PB_WITH_WEAK_OR_CONFLICTING_FINANCIALS" if counters else "HIGH_PB_INSUFFICIENT_FINANCIAL_EVIDENCE")
+    else:
+        assessment = "MID_RANGE_PB_WITH_FINANCIAL_DIVERGENCE" if counters else "MID_RANGE_PB_WITH_FINANCIAL_CONTEXT"
+    if not available:
+        assessment = "INSUFFICIENT_FINANCIAL_EVIDENCE"
+    conditions.extend([{"metric": PB_CURRENT_RESEARCH, "condition": "REASSESS_IF_SAME_BASIS_SECTOR_PB_QUARTILE_CHANGES"},
+        {"metric": "source_fitness", "condition": "REASSESS_ON_SCOPE_PERIOD_SHARE_OR_MONETARY_BASIS_REVISION"}])
+    return assessment, supports, counters, conditions
+
+
+def build_balance_sheet_divergence_context(*, rows, financial_product, financial_peers,
+        industry_by_ticker, decision_session, source_valuation_identity, source_evaluated_valuation_identity):
+    """Non-voting synthesis over existing numerical owners, with per-measure qualification."""
+    import copy
+    projections, cohorts, pb_blockers = {}, {}, {}
+    for ticker, row in sorted(rows.items()):
+        method = row.get("methods", {}).get(PB_CURRENT_RESEARCH) or {}
+        blockers = _divergence_pb_blockers(row, method, decision_session)
+        compact_issuer = (financial_product.get("records", {}).get(ticker) or {}).get("issuer_type")
+        if compact_issuer != row.get("entity_class"):
+            blockers.append("VALUATION_FINANCIAL_ISSUER_CLASS_MISMATCH")
+        sector = (industry_by_ticker or {}).get(ticker)
+        if not isinstance(sector, str) or not sector.strip():
+            blockers.append("RETAINED_SECTOR_LABEL_ABSENT")
+        pb_blockers[ticker] = blockers
+        if blockers:
+            continue
+        cohort = "SECTOR:" + sector.strip().casefold()
+        basis = method["equity_monetary_basis"]
+        projected = copy.deepcopy(method)
+        projected["ttm_compatibility_class"] = json.dumps([method.get("ttm_compatibility_class"),
+            method["book_period"], method["statement_scope"], method["equity_definition"], method["equity_lineage"]["provider"],
+            basis.get("currency"), basis.get("normalized_unit"), basis.get("native_scale"),
+            basis.get("basis_status"), (method.get("market_cap_monetary_basis") or {}).get("basis_status"),
+            (method.get("market_cap_monetary_basis") or {}).get("basis_source")], sort_keys=True)
+        projections[ticker] = {"entity_class": row["entity_class"], "methods": {PB_CURRENT_RESEARCH: projected}}
+        cohorts[ticker] = cohort
+    ranked = attach_peer_relative(projections, cohort_by_ticker=cohorts)
+    records = {}
+    for ticker, row in sorted(rows.items()):
+        pb = row.get("methods", {}).get(PB_CURRENT_RESEARCH) or {}
+        compact = financial_product.get("records", {}).get(ticker) or {}
+        peer = (ranked.get(ticker, {}).get("peer_relative") or {}).get(PB_CURRENT_RESEARCH) or {
+            "status": "NOT_COMPARABLE", "reason": pb_blockers[ticker], "peer_count": 0}
+        metrics = {fid: _divergence_metric(fid, compact, financial_peers.get(ticker) or {}, pb, cohorts.get(ticker)) for fid in DIVERGENCE_FEATURES}
+        if "VALUATION_FINANCIAL_ISSUER_CLASS_MISMATCH" in pb_blockers[ticker]:
+            for metric in metrics.values():
+                metric.update(status="UNKNOWN", value=None, peer_comparison_usable=False)
+                metric["reason_codes"] = sorted(set(metric["reason_codes"]) | {"VALUATION_FINANCIAL_ISSUER_CLASS_MISMATCH"})
+        assessment, supports, counters, conditions = _divergence_assessment(peer, metrics)
+        specialist = row.get("entity_class") in {"bank", "securities", "insurance", "finance_company"}
+        if specialist:
+            assessment = "NOT_APPLICABLE"
+        explanations = {
+            "LOW_PB_WITH_FINANCIAL_SUPPORT": "Lower-quartile research P/B is supported by sector-relative cash/assets and debt/assets plus a positive reported margin. Intrinsic value and future returns remain unestablished.",
+            "LOW_PB_WITH_VALUE_TRAP_WARNINGS": "Lower-quartile research P/B coincides with reported deterioration or nonpositive margin. The discount may reflect financial risk; this is a value-trap warning, not proof.",
+            "LOW_PB_WITH_CONFLICTING_EVIDENCE": "A low relative P/B contrasts with mixed financial observations. Read both supporting and contradicting measures before treating the discount as attractive.",
+            "LOW_PB_WITH_BALANCE_SHEET_RISK": "A low relative P/B accompanies weak financial comparisons. Weak levels alone do not establish deterioration over time.",
+            "LOW_PB_INSUFFICIENT_FINANCIAL_EVIDENCE": "The relative P/B discount is observable, but qualified cash, leverage or profitability support is incomplete.",
+            "HIGH_PB_WITH_FINANCIAL_SUPPORT": "Higher-quartile research P/B accompanies supportive cash, leverage and profitability observations. These observations do not establish that the premium is justified.",
+            "HIGH_PB_WITH_WEAK_OR_CONFLICTING_FINANCIALS": "A higher-quartile research P/B contrasts with weak or conflicting financial observations; review the premium and its counter-evidence.",
+            "MID_RANGE_PB_WITH_FINANCIAL_DIVERGENCE": "Research P/B is in the middle half of its compatible sector cohort while financial measures show adverse or conflicting observations.",
+            "MID_RANGE_PB_WITH_FINANCIAL_CONTEXT": "Research P/B is in the middle half of its compatible sector cohort; the qualified financial observations provide context without an extreme valuation claim.",
+            "NOT_APPLICABLE": "Corporate cash/leverage divergence rules do not apply to this issuer. Its sector-specific financial methods remain separate.",
+        }
+        paired = sum(m["status"] == "AVAILABLE" for m in metrics.values()) if peer.get("status") == "READY_RESEARCH_ONLY" and not specialist else 0
+        records[ticker] = {"ticker": ticker, "status": "NOT_APPLICABLE" if specialist else "AVAILABLE" if paired else "UNKNOWN",
+            "assessment": assessment, "issuer_type": row.get("entity_class"), "decision_session": decision_session,
+            "explanation": explanations.get(assessment, "A suitable valuation/financial pairing is not established. Independent qualified observations remain visible with their gaps."),
+            "valuation": {"method_id": PB_CURRENT_RESEARCH, "source_method": copy.deepcopy(pb), "peer_context": peer,
+                "cohort_id": cohorts.get(ticker), "history": {"status": "UNKNOWN", "reason": "NO_COMPATIBLE_RETAINED_PB_HISTORY_NOT_FINANCIAL_RATIO_HISTORY"}},
+            "financial_measures": metrics, "valid_paired_comparisons": paired,
+            "supporting_evidence": supports, "contradicting_evidence": counters,
+            "material_gaps": {"valuation": pb_blockers[ticker] + ([] if peer.get("status") == "READY_RESEARCH_ONLY" else ["SUITABLE_PB_PEER_COHORT_UNAVAILABLE"]),
+                **{fid: m["reason_codes"] for fid,m in metrics.items() if m["status"] != "AVAILABLE"},
+                **{fid+"_peer": ["COMPATIBLE_FINANCIAL_PEER_COMPARISON_UNAVAILABLE"] for fid,m in metrics.items()
+                   if fid in ENGINE_PEER_FEATURES and m["status"] == "AVAILABLE" and not m["peer_comparison_usable"]}},
+            "conditions_to_reassess": conditions,
+            "interpretation": "RELATIVE_RESEARCH_HYPOTHESIS_VALUE_TRAP_WARNING_IS_NOT_PROOF_OR_TRADE_INSTRUCTION",
+            "limitations": sorted(set(pb.get("limitations") or []) | {"CURRENT_RESEARCH_ONLY", "NON_VOTING", "NOT_PIT", "NO_INTRINSIC_VALUE_OR_TARGET_PRICE"}),
+            "is_actionable": False}
+    payload = {"contract_version": DIVERGENCE_CONTRACT, "decision_session": decision_session,
+        "source_valuation_identity": source_valuation_identity, "source_evaluated_valuation_identity": source_evaluated_valuation_identity,
+        "source_financial_engine_identity": financial_product.get("source_context_identity"),
+        "source_financial_product_identity": financial_product.get("artifact_identity"), "records": records}
+    payload["source_financial_peer_materialization_identity"] = next((p.get("source_materialization_identity") for p in financial_peers.values()), None)
+    payload["source_sector_mapping_identity"] = _research_identity(dict(industry_by_ticker or {}), "retained_sector_mapping")["artifact_identity"]
+    payload.update(_research_identity(payload, DIVERGENCE_CONTRACT))
+    return payload
+
+
+def verified_divergence_records(artifact, financial_product, session):
+    """Bind additive research to its verified parent and exact financial product."""
+    context = (artifact or {}).get(DIVERGENCE_MEMBER)
+    if context is None:
+        return {}
+    try:
+        parent = {k:v for k,v in artifact.items() if k != DIVERGENCE_MEMBER}
+        valid = (all(artifact.get(k) == v for k,v in _research_identity(artifact, "canonical_daily_financial_v2_materialization/v1").items())
+            and all(context.get(k) == v for k,v in _research_identity(context, DIVERGENCE_CONTRACT).items())
+            and isinstance(financial_product, Mapping)
+            and financial_product.get("contract_version") == "financial_analysis_product_integration/v1"
+            and all(financial_product.get(k) == v for k,v in _research_identity(financial_product, "financial_analysis_product_integration/v1").items())
+            and context.get("contract_version") == DIVERGENCE_CONTRACT and context.get("decision_session") == session
+            and context.get("source_valuation_identity") == artifact.get("source_valuation_identity")
+            and context.get("source_evaluated_valuation_identity") == _research_identity(parent, "canonical_daily_financial_v2_materialization/v1")["artifact_identity"]
+            and context.get("source_financial_engine_identity") == artifact.get("source_financial_v2_identity") == (financial_product or {}).get("source_context_identity")
+            and context.get("source_financial_product_identity") == (financial_product or {}).get("artifact_identity"))
+    except (TypeError, ValueError, KeyError):
+        valid = False
+    if not valid:
+        return {t: {"status": "UNKNOWN", "assessment": "UNKNOWN", "reason_codes": ["DIVERGENCE_SOURCE_BINDING_INVALID", *(context.get("reason_codes") or [])],
+            "is_actionable": False} for t in (artifact or {}).get("records", {})}
+    return {t: {**copy.deepcopy(r), "source_context_identity": context["artifact_identity"]} for t,r in context["records"].items()}
 
 
 METRIC_RESEARCH_CONTRACT = "financial_valuation_metric_research/v1"
