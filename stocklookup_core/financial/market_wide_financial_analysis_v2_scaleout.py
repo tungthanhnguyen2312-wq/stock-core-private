@@ -31,6 +31,8 @@ _FEATURE_MAP = {
     "cash_and_cash_equivalents_pit_trajectory": "cash_yoy", "roa_eop_proxy": "mixed_provider_roa_proxy",
     "roe_eop_proxy": "same_provider_roe",
 }
+_FLOW_DERIVED_FALLBACKS = frozenset({"net_income_sign", "net_margin", "cfo_to_net_income",
+                                     "mixed_provider_roa_proxy", "same_provider_roe"})
 _ADVANCED = frozenset({"revenue_qoq", "profit_before_tax_qoq", "net_income_qoq", "operating_cash_flow_qoq",
                        "revenue_same_quarter_yoy", "profit_before_tax_same_quarter_yoy", "net_income_same_quarter_yoy", "operating_cash_flow_same_quarter_yoy",
                        "revenue_ttm", "profit_before_tax_ttm", "net_income_ttm", "operating_cash_flow_ttm",
@@ -265,6 +267,9 @@ def build_scaleout(*, semantic_rows: Sequence[Mapping[str, Any]], feature_record
     # Flow rows are admitted only through the bridge when supplied.  P-I-T rows keep their own
     # semantic facts; a registry-composed fact only regains the lineage its components prove.
     bound_rows, composed_lineage = bind_composed_fact_lineage(semantic_rows)
+    # Feature-store proxies for these issuers were built from the same misaligned KBS labels.
+    period_misaligned = {str(row.get("ticker")) for row in semantic_rows
+                         if qualified_flow.KBS_PERIOD_ALIGNMENT_BLOCKER in (row.get("blocker_reason_codes") or [])}
     bridge_metrics = set(qualified_flow.FLOW_METRICS)
     engine_rows = ([row for row in bound_rows if row.get("canonical_metric") not in bridge_metrics] + qualified_rows
                    if qualified_flow_artifact is not None else list(bound_rows))
@@ -305,6 +310,8 @@ def build_scaleout(*, semantic_rows: Sequence[Mapping[str, Any]], feature_record
             continue
         for source_id, target_id in _FEATURE_MAP.items():
             existing = record["features"][target_id]
+            if ticker in period_misaligned and target_id in _FLOW_DERIVED_FALLBACKS:
+                continue
             fallback = _store_feature((store_record.get("features") or {}).get(source_id) or {}, target_id, str(feature_store_artifact.get("artifact_identity")))
             if fallback and existing["fitness"] in {"BLOCKED_BY_EVIDENCE", "NOT_APPLICABLE"}:
                 record["features"][target_id] = fallback
