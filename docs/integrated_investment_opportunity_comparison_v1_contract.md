@@ -94,6 +94,9 @@ Representative 2026-10-16 research findings:
 - **DL1 and NO1** were the only pair with a fully qualified numerical comparison: P/B,
   cash/assets, debt/assets and debt/equity on the same sector basis.
 
+Native local checkpoint: `7406176a443724fca24b06b5467dd4dd3d1dcb50`
+(`LOCAL_IMPLEMENTATION_COMPLETE_NOT_PROMOTED`); no push, merge, release or successor.
+
 ## Known limits
 
 - Numerical pairwise axes need same-sector, same-basis peers. Only 1 of the 15 accepted

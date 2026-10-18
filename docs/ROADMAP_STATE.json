@@ -16,13 +16,13 @@
   ],
   "current": {
     "milestone": "INTEGRATED_INVESTMENT_OPPORTUNITY_COMPARISON_V1",
-    "state": "ACTIVE"
+    "state": "COMPLETE"
   },
   "queued_next": [],
   "milestones": [
     {
       "milestone_id": "INTEGRATED_INVESTMENT_OPPORTUNITY_COMPARISON_V1",
-      "state": "ACTIVE",
+      "state": "COMPLETE",
       "starting_checkpoint": "a12517d3d7df6105455a92aa841398f47b924d54",
       "candidate_branch": "feature/integrated-investment-opportunity-comparison-v1-20261018",
       "dependencies": [
@@ -35,11 +35,12 @@
       "source_doc": "docs/integrated_investment_opportunity_comparison_v1_contract.md",
       "state_history": [
         "DEFERRED",
-        "ACTIVE"
+        "ACTIVE",
+        "COMPLETE"
       ],
-      "checkpoint": null,
-      "terminal_disposition": null,
-      "notes": "Owner-directed selected 2–5 security opportunity comparison integrating existing decision, financial resilience, tactical/liquidity and thesis evidence through existing comparison/Workspace/Action Center/AI paths. Local only; no Daily, provider, protected evidence/runtime writes, merge, deployment or authority/policy changes."
+      "checkpoint": "7406176a443724fca24b06b5467dd4dd3d1dcb50",
+      "terminal_disposition": "LOCAL_IMPLEMENTATION_COMPLETE_NOT_PROMOTED",
+      "notes": "Owner-directed selected 2–5 security opportunity comparison integrating existing decision, financial resilience, tactical/liquidity and thesis evidence through existing comparison/Workspace/Action Center/AI paths. Local only; no Daily, provider, protected evidence/runtime writes, merge, deployment or authority/policy changes. Local closeout: Owner 2026-10-18 chat directive to Claude Code (lead executor): recover Codex WIP, finish and locally checkpoint. Validated: selected 2-5 security comparison via existing owners; Action Center --compare, packet, Workspace, AI delivery opt-in; retained 2026-10-16 acceptance on 4 real groups (DL1/ITC/NO1, PAN/AAA, HPG/FPT/PNJ/VNM/MWG, VCB/HPG), trigger/invalidation/currency equal 1683/1683 vs retained IID; 21 new tests; 111 pre-existing retained-fixture failures identical on a12517d3. Local only; no Daily/provider/runtime/evidence writes, push, merge or promotion.; no main release, authority promotion or successor."
     },
     {
       "milestone_id": "SECTOR_RELATIVE_FINANCIAL_RESILIENCE_RESEARCH_V1",

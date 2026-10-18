@@ -5,12 +5,16 @@ Verified local analytical starting baseline 2026-10-18 `61c870c82648a67eed29d184
 Nothing below auto-starts; native standing admission required (AI_RULES 11).
 Facts: [ACTIVE_STATE.md](ACTIVE_STATE.md).
 
-## NOW — INTEGRATED_INVESTMENT_OPPORTUNITY_COMPARISON_V1 (ACTIVE LOCALLY)
+## NOW — INTEGRATED_INVESTMENT_OPPORTUNITY_COMPARISON_V1 (COMPLETE LOCALLY)
 
 Owner-directed from verified `a12517d3`; the sector-relative recommendation below.
 Selected 2-5 security comparison reusing existing decision, scenario, financial
 research and delivery owners. [Contract](integrated_investment_opportunity_comparison_v1_contract.md).
 No Daily/provider/runtime/evidence writes, policy change, promotion or release.
+Native checkpoint `7406176a443724fca24b06b5467dd4dd3d1dcb50`; retained 2026-10-16
+acceptance on DL1/ITC/NO1, PAN/AAA, HPG/FPT/PNJ/VNM/MWG and VCB/HPG. Numerical pairs
+qualify only on the same sector basis (1 of 15 accepted pairs). Live use needs the
+predecessor financial research released into Daily; that stays Owner-gated.
 
 ## PRIOR — SECTOR_RELATIVE_FINANCIAL_RESILIENCE_RESEARCH_V1 (COMPLETE LOCALLY)
 
