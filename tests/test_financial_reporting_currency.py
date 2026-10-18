@@ -440,9 +440,12 @@ def test_no_currency_import_or_default_activation_in_production_owners():
 def test_released_default_financial_golden_values_and_identity():
     # Captured by executing the exact 3d9abf8 main engine and compact sources:
     # both full dictionaries matched the candidate default sources byte-for-byte.
+    # Re-pinned for the financial research stack (main 9fefb535 -> candidate): a full
+    # dictionary diff shows only additive history_context trajectories plus the content
+    # identities that hash them; every feature value and fitness field is unchanged.
     context = financial()
-    assert context["source_context_identity"] == "financial_analysis_context/v2:80ff5d53015302a6bb630b8e94a58990a2a9e111012cb1b176691bbb20f72a50"
-    assert context["artifact_identity"] == "financial_analysis_product_integration/v1:d6298fd7fbf91bee1ff0c58167e6850460e2ea94976d777b23f18d7b1ef481d7"
+    assert context["source_context_identity"] == "financial_analysis_context/v2:1df08d6681ee6b452a0b2cf0f6910594c4f34077ef915be91e4a89120bdcc5cc"
+    assert context["artifact_identity"] == "financial_analysis_product_integration/v1:5559d5462e51d23d6e293954b66b9b3f5599f1774242b301b8b600972e5fe1db"
     fields = context["records"]["PNJ"]["feature_fitness"]
     assert fields["net_margin"]["source_feature_context"]["value"] == 0.1
     assert fields["equity_to_assets"]["source_feature_context"]["value"] == 0.4

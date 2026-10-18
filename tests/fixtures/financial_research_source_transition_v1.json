@@ -1,0 +1,23 @@
+{
+  "compatibility": "Historical diagnostics only. E2/E3 and E4 V1/V2 pins stay unchanged; archived prior bytes from prior_release reproduce them. Active execution hashes active sources.",
+  "contract_version": "financial_research_source_transition/v1",
+  "milestone": "LOCAL_FINANCIAL_RESEARCH_STACK_RELEASE (divergence pipeline leg, IID research fields, opt-in Action Center flags)",
+  "prior_release": "9fefb535c3c57622c3b67d43251d9e8b0aa845da",
+  "sources": {
+    "canonical_post_close_pipeline.py": {
+      "active_sha256_lf": "c9f57e99f9018d76000f8071db554780d94addbeba86d4398401e9330e238b68",
+      "archive": "tests/fixtures/financial_research_v1_sources/canonical_post_close_pipeline.py.txt",
+      "prior_sha256_lf": "db6e78370b57739888211d3c4381206daed7a542ac7123416bb0870c2427236a"
+    },
+    "stocklookup.py": {
+      "active_sha256_lf": "6e3e63ae4379b39723a0c94c71a89d80af335c89310adeb305f02905f42d13d5",
+      "archive": "tests/fixtures/financial_research_v1_sources/stocklookup.py.txt",
+      "prior_sha256_lf": "640a09ee27e87a2a2901a98f06e6d9a8ee33ab5882aeb6112077c52a63e1309c"
+    },
+    "stocklookup_core/decision/integrated_investment_decision_product.py": {
+      "active_sha256_lf": "d878ff78dbc583fabfaffac4778234bd3a9a545c5ca64ba55e3262b16ba2698a",
+      "archive": "tests/fixtures/financial_research_v1_sources/stocklookup_core/decision/integrated_investment_decision_product.py.txt",
+      "prior_sha256_lf": "066522aad2061011cec1ace8dfc0882fa46aca938f174a78afa4880a4729c541"
+    }
+  }
+}

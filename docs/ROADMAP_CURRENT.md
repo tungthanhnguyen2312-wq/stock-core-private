@@ -1,94 +1,14 @@
 # Stock Lookup — Current Roadmap
 
 History: [ROADMAP.md](ROADMAP.md); execution: ROADMAP_STATE.json.
-Verified local analytical starting baseline 2026-10-18 `61c870c82648a67eed29d1842f88020e0326c4de`.
+Verified analytical baseline 2026-10-14 `a9c799397a74641a0e16c8ea84454d2dc4d0745b`.
 Nothing below auto-starts; native standing admission required (AI_RULES 11).
 Facts: [ACTIVE_STATE.md](ACTIVE_STATE.md).
 
-## NOW — THESIS_BASED_OPPORTUNITY_DISCOVERY_V1 (COMPLETE LOCALLY)
+## NOW — FINANCIAL RESEARCH STACK (PR167, OWNER MERGE GATE)
 
-Autonomy admission from `74a7d76b`. Market-wide evidence-pattern lanes reusing the
-comparison's findings; cross-sector own-cohort position axes. Opt-in delivery only.
-[Contract](thesis_opportunity_discovery_v1_contract.md). No Daily/provider/runtime/evidence
-writes, policy change, promotion or release. Native checkpoint `53b4a21c`; release of the
-whole local financial-research stack (integration branch on origin/main) is Owner-gated.
-
-## PRIOR — INTEGRATED_INVESTMENT_OPPORTUNITY_COMPARISON_V1 (COMPLETE LOCALLY)
-
-Owner-directed from verified `a12517d3`; the sector-relative recommendation below.
-Selected 2-5 security comparison reusing existing decision, scenario, financial
-research and delivery owners. [Contract](integrated_investment_opportunity_comparison_v1_contract.md).
-No Daily/provider/runtime/evidence writes, policy change, promotion or release.
-Native checkpoint `7406176a443724fca24b06b5467dd4dd3d1dcb50`; retained 2026-10-16
-acceptance on DL1/ITC/NO1, PAN/AAA, HPG/FPT/PNJ/VNM/MWG and VCB/HPG. Numerical pairs
-qualify only on the same sector basis (1 of 15 accepted pairs). Live use needs the
-predecessor financial research released into Daily; that stays Owner-gated.
-
-## PRIOR — SECTOR_RELATIVE_FINANCIAL_RESILIENCE_RESEARCH_V1 (COMPLETE LOCALLY)
-
-Owner-directed from verified `c3f5e8be`. Fixed 317 candidates; existing Financial V2
-trajectories, peer statistics and decision/AI delivery. Compare equivalent windows
-and source/accounting bases; no entity-class fallback or universal resilience score.
-[Scope](core_financial_valuation_research_scaleout_contract.md#sector-relative-financial-resilience--2026-10-18).
-No Daily/provider/runtime/evidence writes, policy change, promotion or release.
-Monday Owner Daily independent; no automatic successor.
-Native checkpoint `72bee900c04b33c3e4d12b12bd0ed5cad434d8af`: all 317 qualify,
-951 metric-peer comparisons and 1,902 intervals; 102 formerly mixed cases gain
-differentiated peer context. 386 tests PASS, six optional fixture skips; retained
-delivery acceptance and fourteen unchanged input hashes verified. Prior engine,
-divergence and numerical outputs reproduce unchanged; profitability peers insufficient.
-Next major recommendation only: extend existing thesis/packet delivery into an
-investor-facing opportunity-comparison workflow covering valuation/resilience,
-technical timing, liquidity and downside counter-theses. Not admitted; queue empty.
-
-## PRIOR — MULTI_PERIOD_CASH_LEVERAGE_DETERIORATION_RESEARCH_V1 (COMPLETE LOCALLY)
-
-Owner-directed from verified local `e144c9da`; fixed 317-candidate cohort. Existing
-ratio/history numerical owner, qualified standalone-flow bridge and divergence
-delivery carry source-bound sequential and separate YoY evidence. No Daily/provider,
-production/runtime/evidence writes, policy change or authority promotion.
-[Scope](core_financial_valuation_research_scaleout_contract.md#multi-period-cashleverage-deterioration-and-recovery--2026-10-18).
-Native checkpoint `40d83ecf6dc5a82d0546e80e9e41d3aab5adaa9b`: 317 qualified issuer
-assessments, 955 trajectories and 7,540 metric-period observations; 18 deterioration,
-11 recovery, 288 mixed, zero insufficient issuer cases. All 317 delivery paths
-verified; prior one-period pairs/findings and policy unchanged. 360 tests PASS,
-six optional fixture skips; true flow-history gaps remain UNKNOWN.
-Its former sector-relative recommendation is the Owner-admitted job above;
-the completed multi-period capability remains closed.
-
-## PRIOR — MARKET_WIDE_VALUATION_BALANCE_SHEET_DIVERGENCE_RESEARCH (COMPLETE LOCALLY)
-
-Owner-directed from `a1c79438`; [governing scope](core_financial_valuation_research_scaleout_contract.md#market-wide-valuation-versus-balance-sheet-divergence-research--2026-10-18).
-Same-cohort research, existing numerical owners and decision/AI delivery. No live
-Daily, provider, production/runtime/evidence changes, authority promotion or release.
-Retained October16 acceptance: 332 of 337 candidates qualify; 2,561 paired observations,
-1,935 peer comparisons, 314 specific support/counter-thesis findings. Five candidates
-are below the same-basis sector P/B minimum; no comparison is forced.
-Native local implementation checkpoint: `79679006f1c0bcf640879cabfc996e13bcef1a6a`.
-The existing contract records validation and the unchanged-baseline legacy stamp-test
-failure. Its former 317-name multi-period recommendation is the separately admitted
-current job above; the completed one-period capability remains closed.
-
-## PRIOR — CORE_FINANCIAL_VALUATION_RESEARCH_SCALEOUT (COMPLETE LOCALLY)
-
-[Scope](core_financial_valuation_research_scaleout_contract.md): local baseline
-`61c870c8`, sole Codex writer. Extend pretax margin, cash/assets and explicit-debt
-ratios through existing history/peer owners and decision/AI surfaces over the same
-pinned financial universe. [Retained acceptance](internal/CORE_FINANCIAL_VALUATION_RESEARCH_SCALEOUT_20261018.md):
-1,492 issuers, 1,698 new decision/AI peer comparisons and 3,572 own histories;
-underlying metric values unchanged. No live Daily, provider, production, evidence or authority changes.
-Monday October 19 Owner Daily remains independent; no automatic successor.
-Native implementation checkpoint: `ead8ef2724954a02b936e8ebb9692a8b157fbe46`.
-Its former 337-name divergence recommendation is the separately admitted job above;
-the completed scaleout itself remains closed.
-
-## PRIOR — VN30_FINANCIAL_VALUATION_RESEARCH_SCALEOUT_V1 (INCORPORATED PR147)
-
-[Bounded analytical scope](vn30_financial_valuation_research_scaleout_v1_contract.md):
-Implementation `096b8f16` incorporated through PR147; revisions97/98 describe its
-historical admission. Same retained30 cohort: VRE H1 ROE +1 research proxy; other metric
-counts and numerical authority unchanged. Opt-in shared Producer projection; no
-production activation, push/merge/deploy/publication or automatic successor.
+Ratio, divergence, multi-period, sector-relative, comparison and discovery research
+(PR167 [comparison](integrated_investment_opportunity_comparison_v1_contract.md)/[discovery](thesis_opportunity_discovery_v1_contract.md)). Opt-in; policy unchanged.
 
 ## PRIOR — STOCKLOOKUP_PRODUCER_DEEP_SIMPLIFICATION (RELEASED PR146)
 

@@ -16,6 +16,32 @@ READER = "prospective_decision_retention.py"
 ARCHIVE = "tests/fixtures/retention_reader_v1.py.txt"
 MANIFEST = "tests/fixtures/retention_reader_transition_v2.json"
 STORAGE_MANIFEST = "tests/fixtures/storage_portability_source_transition_v1.json"
+FINANCIAL_RESEARCH_MANIFEST = "tests/fixtures/financial_research_source_transition_v1.json"
+
+
+def _financial_research_prior_bytes(root: Path, relative: str, active: bytes) -> bytes:
+    """Same conservation rule as the storage transition, for the divergence pipeline leg."""
+    manifest = root / FINANCIAL_RESEARCH_MANIFEST
+    if not manifest.exists():
+        return active
+    spec = json.loads(manifest.read_bytes())
+    if spec.get("contract_version") != "financial_research_source_transition/v1":
+        raise ValueError("FINANCIAL_RESEARCH_SOURCE_TRANSITION_INVALID")
+    row = spec["sources"].get(relative)
+    if row is None:
+        return active
+    expected_archive = "tests/fixtures/financial_research_v1_sources/" + relative + ".txt"
+    if row["archive"] != expected_archive:
+        raise ValueError("FINANCIAL_RESEARCH_SOURCE_ARCHIVE_PATH_INVALID")
+    prior = (root / expected_archive).read_bytes().replace(b"\r\n", b"\n")
+    pins = json.loads((root / "tests/fixtures/e2e3_frozen_sources.json").read_bytes())["source_sha256_lf"]
+    # E2/E3-pinned files must reproduce their pin; E4 V2-only files bind to the archived
+    # prior-release bytes (their own digest test then reproduces the historical code digest).
+    expected = pins.get(relative, row["prior_sha256_lf"])
+    if (row["prior_sha256_lf"] != expected or hashlib.sha256(prior).hexdigest() != expected
+            or hashlib.sha256(active).hexdigest() != row["active_sha256_lf"]):
+        raise ValueError("FINANCIAL_RESEARCH_SOURCE_TRANSITION_BINDING_INVALID")
+    return prior
 
 
 def _storage_prior_bytes(root: Path, relative: str, active: bytes) -> bytes:
@@ -46,6 +72,7 @@ def historical_bytes(root: Path, relative: str) -> bytes:
     """Verify both sides of the one-file boundary before supplying legacy bytes."""
     content = (root / relative).read_bytes().replace(b"\r\n", b"\n")
     content = _storage_prior_bytes(root, relative, content)
+    content = _financial_research_prior_bytes(root, relative, content)
     if relative != READER:
         return content
     spec = json.loads((root / MANIFEST).read_bytes())

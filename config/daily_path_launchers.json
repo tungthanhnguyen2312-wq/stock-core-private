@@ -18,7 +18,7 @@
       ]
     },
     "canonical_post_close_pipeline.py": {
-      "ast_sha256": "df524b67dfad3924732a7fdc2b587e59f376fa8a7f8e0dcd42bc036523ab93e1",
+      "ast_sha256": "44eb21a6d2fe442d1ac349eba244f38a512b314a56ce72839349209e975c8e13",
       "reason": "Child argv passed to imported run_observed_subprocess and progress wrapper; exact source contract covers delegation.",
       "targets": [
         "tools/run_prospective_decision_outcome_feedback.py",

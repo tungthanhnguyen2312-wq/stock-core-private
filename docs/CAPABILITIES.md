@@ -2,54 +2,8 @@
 
 Navigation; no scores. [Facts](ACTIVE_STATE.md), [authority](AUTHORITY.md), [run order](DAILY_PIPELINE.md).
 
-Local [thesis-based opportunity discovery](thesis_opportunity_discovery_v1_contract.md)
-places every security into evidence-pattern research lanes (qualified entry with/without
-financial support or with counterevidence, discount with resilience or deterioration,
-strength awaiting confirmation, shared sector stress) in existing priority-tier order;
-research lists for `--compare`, no score or recommendation. Cross-sector comparison
-pairs now show own-cohort P/B positions and sector-relative changes, never levels.
-
-Local [integrated opportunity comparison](integrated_investment_opportunity_comparison_v1_contract.md)
-lets the owner select 2-5 securities (`stocklookup.py action-center --compare`) and
-receive an evidence-linked comparison: valuation/peer percentile, financial trajectory
-and sector-relative resilience, technical trigger/invalidation, liquidity and existing
-bull/base/bear cases with counter-theses. Numerical pairs only on the same qualified
-sector basis; no winner, score, target, sizing or portfolio assumption. Opt-in in
-Action Center, research packet, Workspace and AI delivery.
-
-Local [sector-relative financial resilience](core_financial_valuation_research_scaleout_contract.md#sector-relative-financial-resilience--2026-10-18)
-reuses qualified trajectories and existing peer statistics: same 317 candidates,
-951 metric-peer comparisons, 1,902 interval comparisons. Separates firm-specific
-weakness, resilience and shared sector-sample conditions; 102 formerly mixed cases
-gain differentiated research context. Existing decision/AI surfaces carry evidence
-and counter-theses without policy changes. Profitability peer evidence is insufficient.
-
-Local [multi-period financial research](core_financial_valuation_research_scaleout_contract.md#multi-period-cashleverage-deterioration-and-recovery--2026-10-18)
-extends the existing Financial V2 anchored ratio history with successive-change,
-recovery, mixed and insufficient-evidence explanations. Separate sequential/YoY
-observations and provenance reach existing divergence, Decision Fitness, research
-packet, compact card and AI delivery. Corporate rules exclude bank/securities;
-existing financial methods, single-period findings and policy remain unchanged.
-Validated same 317 candidates: 955 trajectories, 7,540 metric-period observations;
-18 deterioration, 11 recovery, 288 mixed issuer cases. Qualified margin histories
-remain limited to 1–2 issuers per margin; no global coverage claim is inferred.
-
-Local [valuation/balance-sheet divergence research](core_financial_valuation_research_scaleout_contract.md#market-wide-valuation-versus-balance-sheet-divergence-research--2026-10-18)
-adds sector/accounting-compatible P/B versus cash, leverage, reported profitability
-and explicit YoY directions: 332 paired issuers, 2,561 paired observations and 314
-specific support/counter-thesis findings. Existing measurements and policy remain
-unchanged; findings are non-voting research, verified through Decision Fitness and AI.
-
-Local [core financial ratio research expansion](core_financial_valuation_research_scaleout_contract.md)
-adds pretax-margin, cash/assets, explicit debt/equity and debt/assets history and
-peer comparisons to existing Financial V2 and decision/AI delivery. `NON_VOTING`;
-source fitness/applicability and consumer freshness gates remain unchanged. Local
-retained acceptance only; production activation requires separate release approval.
-
-[Validated result](internal/CORE_FINANCIAL_VALUATION_RESEARCH_SCALEOUT_20261018.md):
-1,698 new peer comparisons (431 issuers) and 3,572 own histories (1,194 issuers),
-verified through decision and AI delivery on an identical 1,492-issuer cohort.
-Underlying metric-input coverage is unchanged.
+Local PR167 [comparison](integrated_investment_opportunity_comparison_v1_contract.md)/[discovery](thesis_opportunity_discovery_v1_contract.md): ratio, divergence and trajectory research;
+`action-center --compare` / `--thesis-discovery`. Non-voting; no score or posture change.
 
 **Runtime status vocabulary:** `ACTIVE` (runs in production, failure blocks that stage) ·
 `ACTIVE_FAILSOFT` (runs in production, failure is component-local `UNAVAILABLE`, never revises sealed

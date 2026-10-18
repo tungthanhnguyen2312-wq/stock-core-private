@@ -253,6 +253,7 @@ def build_evaluated_valuation_artifact(
     include_metric_research: bool = False,
     divergence_financial_materialization: Mapping[str, Any] | None = None,
     divergence_industry_by_ticker: Mapping[str, str] | None = None,
+    divergence_industry_authority: input_authority.FinancialV2InputAuthority | None = None,
 ) -> dict[str, Any]:
     """Evaluate the raw ``market_wide_current_valuation_input_scaleout`` per-ticker records
     into the ``current_research_valuation_context/v1`` shape (``methods``, ``peer_relative_
@@ -357,10 +358,13 @@ def build_evaluated_valuation_artifact(
             raw_valuation_records=valuation_records)
     if divergence_financial_materialization is not None:
         try:
+            # Loaded inside the optional leg: an unusable industry snapshot fails this member closed.
+            industry = (divergence_industry_by_ticker if divergence_industry_by_ticker is not None else
+                        load_industry_by_ticker(divergence_industry_authority) if divergence_industry_authority is not None else {})
             attach_balance_sheet_divergence(payload, financial_materialization=divergence_financial_materialization,
-                industry_by_ticker=divergence_industry_by_ticker or {}, decision_session=decision_session,
+                industry_by_ticker=industry, decision_session=decision_session,
                 raw_valuation_artifact=raw_valuation_artifact)
-        except (ValueError, TypeError, KeyError) as exc:
+        except (ValueError, TypeError, KeyError, AttributeError, OSError) as exc:
             # A missing/mismatched optional valuation leg cannot erase otherwise
             # legitimate financial Current Research. Consumers fail this member closed.
             payload[valuation_context.DIVERGENCE_MEMBER] = {"status": "UNKNOWN",
