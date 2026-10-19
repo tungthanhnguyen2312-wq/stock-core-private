@@ -51,15 +51,11 @@ def test_single_root_is_unchanged(tmp_path, monkeypatch):
     assert evidence_roots.governed_evidence_roots(tmp_path) == [tmp_path.resolve()]
 
 
-def test_unqualified_profile_adds_no_root(tmp_path, monkeypatch):
-    import runtime_paths
-
-    def refuse(**_k):
-        raise RuntimeError("workspace volume wrong/unavailable")
-
+def test_core_resolver_does_not_consult_the_root_profile_module(tmp_path, monkeypatch):
     monkeypatch.delenv(evidence_roots.OPERATION_OUTPUT_ROOT_ENV, raising=False)
     monkeypatch.delenv(evidence_roots.RETAINED_EVIDENCE_ROOT_ENV, raising=False)
-    monkeypatch.setattr(runtime_paths, "workspace_profile", refuse)
+    # Layering: only the bound environment adds roots (runtime_paths.workspace_environment).
+    assert "runtime_paths" not in Path(evidence_roots.__file__).read_text(encoding="utf-8").split('"""', 2)[2]
     assert evidence_roots.governed_evidence_roots(tmp_path) == [tmp_path.resolve()]
 
 
