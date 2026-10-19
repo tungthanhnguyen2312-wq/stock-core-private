@@ -125,3 +125,30 @@ def test_publisher_single_root_relative_directory_still_matches(tmp_path, monkey
     (runs / "LATEST_COMPLETED_RUN.json").write_text(json.dumps(
         {"session": SESSION, "run_identity": "daily_producer_run:abc", "relative_directory": f"{SESSION}/abc"}), encoding="utf-8")
     assert publisher._current_producer_run_identity(SESSION, tmp_path / rel) == "daily_producer_run:abc"
+
+
+def test_presentation_attestation_is_read_from_the_operation_output_root(split):
+    import post_handoff_presentation_attestation as attestation
+    producer, retained = split
+    path = attestation.attestation_path(retained, SESSION)
+    path.parent.mkdir(parents=True)
+    path.write_text(json.dumps({"session": SESSION, "contract_version": "x"}), encoding="utf-8")
+    assert attestation.read_attestation(producer, SESSION) == {"session": SESSION, "contract_version": "x"}
+
+
+def test_presentation_attestation_single_root_unchanged(tmp_path, monkeypatch):
+    import post_handoff_presentation_attestation as attestation
+    monkeypatch.delenv(evidence_roots.OPERATION_OUTPUT_ROOT_ENV, raising=False)
+    monkeypatch.delenv(evidence_roots.RETAINED_EVIDENCE_ROOT_ENV, raising=False)
+    assert attestation.read_attestation(tmp_path, SESSION) is None
+
+
+def test_integrated_decision_candidates_cover_the_retained_root_in_order(split):
+    from stocklookup_core.portfolio import portfolio_aware_decision as pad
+    producer, retained = split
+    candidates = pad.operation_bound_integrated_decision_candidates(producer, SESSION)
+    assert candidates[:2] == [
+        producer.resolve() / "operations-review/canonical-post-close-v1" / SESSION / "enrichment/integrated_investment_decision_product.json",
+        producer.resolve() / "operations-review/integrated-investment-decision-product-v1-20261019/integrated_investment_decision_product_artifact.json",
+    ]
+    assert candidates[2].is_relative_to(retained.resolve()) and len(candidates) == 4
