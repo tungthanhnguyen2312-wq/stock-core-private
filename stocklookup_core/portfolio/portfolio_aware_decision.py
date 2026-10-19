@@ -2074,11 +2074,14 @@ def operation_bound_integrated_decision_candidates(repo_root: Path, session: str
     Never a "latest" scan and never another session's path. The canonical post-close enrichment
     view comes first; the Integrated Decision builder's own retained artifact is the second copy.
     """
-    ops = repo_root / "operations-review"
-    return [
-        ops / "canonical-post-close-v1" / session / "enrichment" / "integrated_investment_decision_product.json",
-        ops / f"integrated-investment-decision-product-v1-{session.replace('-', '')}" / "integrated_investment_decision_product_artifact.json",
-    ]
+    from stocklookup_core.evidence.evidence_roots import governed_evidence_roots
+    relatives = (
+        Path("canonical-post-close-v1") / session / "enrichment" / "integrated_investment_decision_product.json",
+        Path(f"integrated-investment-decision-product-v1-{session.replace('-', '')}") / "integrated_investment_decision_product_artifact.json",
+    )
+    # Split code/evidence roots: the same exact relative locations under each governed root
+    # (checkout first, then the operation-output / retained root the Daily writes to).
+    return [base / "operations-review" / rel for base in governed_evidence_roots(repo_root) for rel in relatives]
 
 
 def resolve_operation_bound_integrated_decision(repo_root: Path, session: str, declared_identity: str) -> tuple[dict[str, Any], Path]:
