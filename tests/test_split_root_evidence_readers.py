@@ -152,3 +152,26 @@ def test_integrated_decision_candidates_cover_the_retained_root_in_order(split):
         producer.resolve() / "operations-review/integrated-investment-decision-product-v1-20261019/integrated_investment_decision_product_artifact.json",
     ]
     assert candidates[2].is_relative_to(retained.resolve()) and len(candidates) == 4
+
+
+def test_current_product_supplementary_axes_resolve_from_retained_root(split):
+    import canonical_current_product_projections as projections
+    producer, retained = split
+    rel = Path("operations-review/financial-analysis-product-v2-20261019/financial_analysis_product_artifact.json")
+    (retained / rel).parent.mkdir(parents=True)
+    (retained / rel).write_text(json.dumps({"financial_analysis_product": {
+        "contract_version": "financial_analysis_product_integration/v1"}}), encoding="utf-8")
+    resolved = projections.resolve_supplementary_inputs(producer, SESSION)
+    assert resolved["financial_analysis_product_v2"] is not None
+    assert projections._financial_analysis_product_context(resolved) is not None
+    assert resolved["tactical_boundaries"] is None  # absent everywhere: still a legitimate None
+
+
+def test_current_product_supplementary_checkout_copy_wins(split):
+    import canonical_current_product_projections as projections
+    producer, retained = split
+    rel = Path("operations-review/current-market-sector-leadership-context-v1-20261019/current_market_sector_leadership_context_artifact.json")
+    for base, marker in ((producer, "checkout"), (retained, "retained")):
+        (base / rel).parent.mkdir(parents=True)
+        (base / rel).write_text(json.dumps({"marker": marker}), encoding="utf-8")
+    assert projections.resolve_supplementary_inputs(producer, SESSION)["leadership"] == {"marker": "checkout"}
