@@ -174,7 +174,7 @@ def test_low_coverage_fails_immediately_before_liquidity_technical_recovery_or_t
     paths = level2.session_artifact_paths(tmp_path, session)
     now = datetime(2026, 8, 27, 10, 0, tzinfo=VN_TZ)  # past the same-day gate; isolates the coverage check
 
-    def fake_ensure_snapshot(root, sess, runtime_root, workers=12, now=None, execution_root=None, retained_evidence_root=None):
+    def fake_ensure_snapshot(root, sess, runtime_root, workers=12, now=None, execution_root=None):
         return _write_snapshot(paths, session, requested_at=f"{session}T16:07:09+07:00", exact=17, total=1683)
 
     def _forbidden(name):
@@ -199,7 +199,7 @@ def test_degraded_recovery_completed_but_still_insufficient_coverage_fails_close
     paths = level2.session_artifact_paths(tmp_path, session)
     now = datetime(2026, 8, 27, 10, 0, tzinfo=VN_TZ)
 
-    def fake_ensure_snapshot(root, sess, runtime_root, workers=12, now=None, execution_root=None, retained_evidence_root=None):
+    def fake_ensure_snapshot(root, sess, runtime_root, workers=12, now=None, execution_root=None):
         return _write_snapshot(
             paths, session, requested_at=f"{session}T16:07:09+07:00", exact=50, total=1683,
             dnse_provider_health_state="DNSE_BROAD_STALE_OR_INCOMPLETE_EOD",
@@ -306,7 +306,7 @@ def test_acquisition_provenance_passthrough(tmp_path, monkeypatch):
     now = datetime(2026, 8, 27, 10, 0, tzinfo=VN_TZ)  # past the same-day gate
     materialize_calls = []
 
-    def fake_ensure_snapshot(root, sess, runtime_root, workers=12, now=None, execution_root=None, retained_evidence_root=None):
+    def fake_ensure_snapshot(root, sess, runtime_root, workers=12, now=None, execution_root=None):
         return _write_snapshot(
             paths, session, requested_at=f"{session}T19:05:00+07:00", exact=500, total=1000,
             provider="DNSE", artifact_identity="p3f9_exact_session_mva_snapshot:deadbeef",
@@ -341,7 +341,7 @@ def test_acquisition_never_writes_into_runtime_root(tmp_path, monkeypatch):
     paths = level2.session_artifact_paths(tmp_path, session)
     now = datetime(2026, 8, 27, 10, 0, tzinfo=VN_TZ)  # past the same-day gate
 
-    def fake_ensure_snapshot(root, sess, runtime_root_arg, workers=12, now=None, execution_root=None, retained_evidence_root=None):
+    def fake_ensure_snapshot(root, sess, runtime_root_arg, workers=12, now=None, execution_root=None):
         assert runtime_root_arg == runtime_root
         return _write_snapshot(paths, session, requested_at=f"{session}T19:05:00+07:00", exact=50, total=100)
 
@@ -874,7 +874,7 @@ def test_acquired_session_mismatch_never_silently_substituted(tmp_path, monkeypa
     requested = "2026-08-27"
     now = datetime(2026, 8, 27, 19, 0, tzinfo=VN_TZ)
 
-    def fake_ensure_snapshot(root, sess, runtime_root, workers=12, now=None, execution_root=None, retained_evidence_root=None):
+    def fake_ensure_snapshot(root, sess, runtime_root, workers=12, now=None, execution_root=None):
         raise ValueError("P3F9B_ACQUIRED_SESSION_MISMATCH:requested=2026-08-27:resolved=2026-08-26")
 
     monkeypatch.setattr(cpc.level2, "ensure_exact_session_snapshot", fake_ensure_snapshot)
@@ -934,7 +934,7 @@ def test_pre_cutoff_artifact_not_reused_stays_preserved_and_fresh_attempt_coexis
 
     now = datetime(2026, 8, 26, 19, 0, tzinfo=VN_TZ)  # past the cutoff
 
-    def fake_ensure_snapshot(root, sess, runtime_root, workers=12, now=None, execution_root=None, retained_evidence_root=None):
+    def fake_ensure_snapshot(root, sess, runtime_root, workers=12, now=None, execution_root=None):
         fresh_paths = level2.session_artifact_paths(root, sess)
         return _write_snapshot(fresh_paths, session, requested_at=f"{session}T19:05:00+07:00", exact=1200, total=1683)
 
@@ -994,7 +994,7 @@ def test_degraded_unresolved_artifact_not_reused_stays_preserved_and_redirects(t
 
     now = datetime(2026, 9, 3, 20, 0, tzinfo=VN_TZ)
 
-    def fake_ensure_snapshot(root, sess, runtime_root, workers=12, now=None, execution_root=None, retained_evidence_root=None):
+    def fake_ensure_snapshot(root, sess, runtime_root, workers=12, now=None, execution_root=None):
         fresh_paths = level2.session_artifact_paths(root, sess)
         snapshot = _write_snapshot(
             fresh_paths, session, requested_at=f"{session}T20:05:00+07:00", exact=772, total=1683,
@@ -1065,7 +1065,7 @@ def test_redirected_attempt_propagates_artifact_and_execution_roots(tmp_path, mo
     calls = {}
     now = datetime(2026, 8, 26, 19, 0, tzinfo=VN_TZ)
 
-    def fake_ensure_snapshot(artifact_root, sess, runtime_root, workers=12, now=None, execution_root=None, retained_evidence_root=None):
+    def fake_ensure_snapshot(artifact_root, sess, runtime_root, workers=12, now=None, execution_root=None):
         calls["ensure_snapshot"] = (artifact_root, execution_root)
         return _write_snapshot(
             level2.session_artifact_paths(artifact_root, sess),
