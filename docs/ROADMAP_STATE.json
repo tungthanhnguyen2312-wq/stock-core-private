@@ -16,13 +16,13 @@
   ],
   "current": {
     "milestone": "OFFICIAL_UNREVIEWED_QUARTERLY_STATEMENT_INTAKE_V1",
-    "state": "ACTIVE"
+    "state": "COMPLETE"
   },
   "queued_next": [],
   "milestones": [
     {
       "milestone_id": "OFFICIAL_UNREVIEWED_QUARTERLY_STATEMENT_INTAKE_V1",
-      "state": "ACTIVE",
+      "state": "COMPLETE",
       "starting_checkpoint": "331d08d306a6f898ad171fc44e9a70460e5c1b3e",
       "candidate_branch": "feature/official-unreviewed-quarterly-intake-v1-20261019",
       "dependencies": [
@@ -35,11 +35,12 @@
       "source_doc": "docs/official_unreviewed_quarterly_statement_intake_v1_contract.md",
       "state_history": [
         "DEFERRED",
-        "ACTIVE"
+        "ACTIVE",
+        "COMPLETE"
       ],
-      "checkpoint": null,
-      "terminal_disposition": null,
-      "notes": "Owner 2026-10-19 decision D-1: admit official unreviewed quarterly statements into a separate research tier labelled UNREVIEWED_QUARTERLY on every fact, never upgraded to reviewed/audited. Milestone: four-column quarterly layout support and non-amount superscript-digit normalization (variant A) over the retained Q2/2026 reports of HPG, NVL, PVD, PNJ and FPT. Offline, retained evidence only; no network, no T:/Daily/evidence writes, no merge."
+      "checkpoint": "ffa613161194a2c2592d3556837f86b28e1b5ed1",
+      "terminal_disposition": "LOCAL_IMPLEMENTATION_COMPLETE_NOT_PROMOTED",
+      "notes": "Owner 2026-10-19 decision D-1: admit official unreviewed quarterly statements into a separate research tier labelled UNREVIEWED_QUARTERLY on every fact, never upgraded to reviewed/audited. Milestone: four-column quarterly layout support and non-amount superscript-digit normalization (variant A) over the retained Q2/2026 reports of HPG, NVL, PVD, PNJ and FPT. Offline, retained evidence only; no network, no T:/Daily/evidence writes, no merge. Local closeout: Validated: 6 UNREVIEWED_QUARTERLY facts (PNJ revenue/net income, NVL net income for 2026-Q2 and 2025-Q2) from retained Q2/2026 reports, cross-checked against page image, native text and line identity; HPG/FPT/PVD fail closed; full CI hermetic selection PASS locally.; no main release, authority promotion or successor."
     },
     {
       "milestone_id": "KBS_QUARTERLY_INCOME_PERIOD_ALIGNMENT_CORRECTIVE_V1",
