@@ -137,6 +137,8 @@ def test_separate_roots_keep_registry_in_producer_and_static_inputs_in_retained_
     assert registry["path"] == str(producer / "config" / "daily_research_session_input_registry.json")
     assert all(
         row["contract"] == "producer_session_input_registry"
+        or row["contract"] == "daily_static_inputs_manifest"
+        or row["contract"].startswith("static_input:producer:")
         or row["path"] is None
         or str(row["path"]).startswith(str(retained))
         for row in items
@@ -240,3 +242,71 @@ def test_vci_snapshot_only_in_producer_checkout_is_not_accepted_for_split_roots(
     (retained / rel).parent.mkdir(parents=True)
     (retained / rel).write_bytes((producer / rel).read_bytes())
     assert vci_row()["status"] == "AVAILABLE"
+
+
+# --- daily_static_inputs/v1 (2026-10-19 split-root incident) ---------------------------------
+
+def _static_manifest(producer: Path, entries: list[dict]) -> None:
+    (producer / "config").mkdir(parents=True, exist_ok=True)
+    (producer / env.STATIC_INPUTS_MANIFEST).write_text(json.dumps({
+        "contract_version": "daily_static_inputs/v1", "inputs": entries,
+    }), encoding="utf-8")
+
+
+def test_static_inputs_resolve_against_their_role_root(tmp_path):
+    producer, retained = tmp_path / "producer", tmp_path / "retained"
+    _static_manifest(producer, [
+        {"role": "producer", "path": "operations-review/a/x.json"},
+        {"role": "retained", "path": "operations-review/b/y.json"},
+    ])
+    (producer / "operations-review/a").mkdir(parents=True)
+    (producer / "operations-review/a/x.json").write_text("{}", encoding="utf-8")
+    # The retained input exists only beside the checkout: wrong root, must be refused.
+    (producer / "operations-review/b").mkdir(parents=True)
+    (producer / "operations-review/b/y.json").write_text("{}", encoding="utf-8")
+    rows = {r["contract"]: r for r in env.static_input_rows(producer, retained)}
+    assert rows["static_input:producer:operations-review/a/x.json"]["status"] == "AVAILABLE"
+    assert rows["static_input:retained:operations-review/b/y.json"]["reason_code"] == "MISSING"
+
+
+def test_static_input_manifest_missing_is_a_refusal_row(tmp_path):
+    rows = env.static_input_rows(tmp_path / "producer", tmp_path / "retained")
+    assert rows == [{
+        "contract": "daily_static_inputs_manifest",
+        "path": str(tmp_path / "producer" / env.STATIC_INPUTS_MANIFEST),
+        "expected_contract_version": "daily_static_inputs/v1",
+        "status": "UNAVAILABLE", "reason_code": "MANIFEST_MISSING_OR_INVALID",
+    }]
+
+
+def test_static_input_entries_cannot_escape_their_root(tmp_path):
+    producer = tmp_path / "producer"
+    _static_manifest(producer, [
+        {"role": "producer", "path": "../outside.json"},
+        {"role": "producer", "path": str(tmp_path / "abs.json")},
+        {"role": "unknown", "path": "x.json"},
+    ])
+    rows = env.static_input_rows(producer, tmp_path / "retained")
+    assert [r["reason_code"] for r in rows] == ["MANIFEST_ENTRY_INVALID"] * 3
+
+
+def test_static_inputs_join_the_pre_acquisition_closure(tmp_path):
+    producer, retained = tmp_path / "producer", tmp_path / "retained"
+    _static_manifest(producer, [{"role": "producer", "path": "registry_snapshots/metadata/s.jsonl"}])
+    retained.mkdir()
+    items = env.required_retained_inputs(retained, SESSION, producer_registry_root=producer)
+    row = next(r for r in items if r["contract"].startswith("static_input:"))
+    assert row["status"] == "UNAVAILABLE" and row["reason_code"] == "MISSING"
+
+
+def test_repository_static_manifest_is_well_formed():
+    root = Path(__file__).resolve().parents[1]
+    manifest = json.loads((root / env.STATIC_INPUTS_MANIFEST).read_text(encoding="utf-8"))
+    assert manifest["contract_version"] == "daily_static_inputs/v1"
+    seen = set()
+    for entry in manifest["inputs"]:
+        assert entry["role"] in {"producer", "retained"}
+        rel = Path(entry["path"])
+        assert not rel.is_absolute() and ".." not in rel.parts
+        assert (entry["role"], entry["path"]) not in seen
+        seen.add((entry["role"], entry["path"]))
