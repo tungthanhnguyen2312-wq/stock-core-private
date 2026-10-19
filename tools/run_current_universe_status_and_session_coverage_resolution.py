@@ -19,10 +19,10 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from stocklookup_core.evidence.current_universe_status_and_session_coverage_resolution import build_artifact
+from daily_recovery_eligibility_projection import default_vci_exchange_snapshot_path
 
 DEFAULT_BREADTH_FOUNDATION = ROOT / "operations-review/current-market-universe-breadth-foundation-v1-20260823/current_market_universe_breadth_foundation_artifact.json"
 DEFAULT_P3F9B_SNAPSHOT = ROOT / "operations-review/p3f9b-market-wide-exact-session-scaleout-20260821/p3f9b_mva_exact_session_snapshot.json"
-DEFAULT_VCI_SNAPSHOT = ROOT / "operations-review/vci-exchange-reference-snapshot-v1-20260823/vci_exchange_reference_snapshot_artifact.json"
 DEFAULT_OUTPUT = ROOT / "operations-review/current-universe-status-and-session-coverage-resolution-v1-20260823/current_universe_status_and_session_coverage_resolution_artifact.json"
 
 
@@ -34,13 +34,17 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--breadth-foundation-artifact", default=str(DEFAULT_BREADTH_FOUNDATION))
     parser.add_argument("--p3f9b-snapshot", default=str(DEFAULT_P3F9B_SNAPSHOT))
-    parser.add_argument("--vci-exchange-reference-snapshot", default=str(DEFAULT_VCI_SNAPSHOT))
+    # Static retained input: resolved from the governed retained-evidence root, never assumed to
+    # sit beside the Producer checkout (2026-10-19 T: Daily FileNotFoundError).
+    parser.add_argument("--vci-exchange-reference-snapshot", default=None)
     parser.add_argument("--output", default=str(DEFAULT_OUTPUT))
     args = parser.parse_args(argv)
 
     breadth_foundation = _load(Path(args.breadth_foundation_artifact))
     p3f9b_snapshot = _load(Path(args.p3f9b_snapshot))
-    vci_snapshot = _load(Path(args.vci_exchange_reference_snapshot))
+    vci_path = (Path(args.vci_exchange_reference_snapshot) if args.vci_exchange_reference_snapshot
+                else default_vci_exchange_snapshot_path())
+    vci_snapshot = _load(vci_path)
 
     artifact = build_artifact(
         breadth_foundation_artifact=breadth_foundation,
