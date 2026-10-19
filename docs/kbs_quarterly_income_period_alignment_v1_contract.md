@@ -51,6 +51,27 @@ PBT, net income and attributable net income, and 2,472 interest expense. 292 pay
 standalone flows. Expect lower READY counts for current net and PBT margins, P/E and ROE, for
 those issuers. That loss is intended: the gate fails closed on demonstrably wrong periods.
 
+## Raw-API check (2026-10-19, offline)
+
+All five retained raw KBS KQKD responses are internally contradictory: CMG, CTD, HPG, SBT and SLS
+(page 1, retained 2026-08-28 with full Head metadata). Each one repeats a period head with
+identical PeriodBegin/PeriodEnd. Each also contains value slots that are equal on **every** line
+item, yet are labelled as different periods:
+
+| Ticker | Equal slots |
+|---|---|
+| CMG | Q1/26 = Q3/25 |
+| CTD | Q4/26 = Q1/26; Q3/26 = Q4/25 |
+| HPG | Q4/25 = Q3/25 |
+| SBT | Q4/25 = Q1/25; Q3/25 = Q4/24 |
+| SLS | Q4/26 = Q1/26; Q3/26 = Q4/25 |
+
+So the contradiction exists in the provider response itself. Retaining heads does not repair it.
+Only HPG's first two slots (Q2/26 and Q1/26) match official reports. A bounded re-acquisition is
+worth trying only with a different request parameterization: page size, page or term type,
+on about 3–5 issuers. If that is still contradictory, official quarterly reports become the
+recovery source.
+
 ## Recovery path (Owner-gated)
 
 A relabel inferred from three anchors is not admitted, even though the HPG mapping is exact
