@@ -129,6 +129,9 @@ def test_separate_roots_keep_registry_in_producer_and_static_inputs_in_retained_
     assert roots.output_root == output.resolve()
     items = env.required_retained_inputs(retained, SESSION, producer_registry_root=producer)
     assert any(row["contract"] == "research_universe_qualification" for row in items)
+    vci = next(row for row in items if row["contract"] == "vci_exchange_reference_snapshot")
+    assert vci["status"] == "UNAVAILABLE" and vci["reason_code"] == "MISSING"
+    assert vci["path"].startswith(str(retained))
     assert any(row["status"] == "UNAVAILABLE" for row in items)
     registry = next(row for row in items if row["contract"] == "producer_session_input_registry")
     assert registry["path"] == str(producer / "config" / "daily_research_session_input_registry.json")
@@ -214,3 +217,26 @@ def test_owner_daily_cli_preserves_default_command_and_exposes_guard_flags(tmp_p
     ]) == 0
     assert calls and calls[0]["no_new_provider_acquisition"] is True
     assert "OWNER_DRY_PREFLIGHT" in capsys.readouterr().out
+
+
+def test_vci_snapshot_only_in_producer_checkout_is_not_accepted_for_split_roots(tmp_path):
+    # 2026-10-19 incident shape: the static file sat beside the old single-root checkout and never
+    # reached the retained-evidence root. Preflight must name it before acquisition starts.
+    producer = tmp_path / "producer"
+    retained = tmp_path / "retained"
+    rel = Path("operations-review/vci-exchange-reference-snapshot-v1-20260823/vci_exchange_reference_snapshot_artifact.json")
+    (producer / rel).parent.mkdir(parents=True)
+    (producer / rel).write_text(json.dumps({
+        "contract_version": "vci_exchange_reference_snapshot/v1",
+        "snapshot_identity": "vci_exchange_reference_snapshot:x",
+    }), encoding="utf-8")
+    retained.mkdir()
+
+    def vci_row():
+        items = env.required_retained_inputs(retained, SESSION, producer_registry_root=producer)
+        return next(row for row in items if row["contract"] == "vci_exchange_reference_snapshot")
+
+    assert vci_row()["status"] == "UNAVAILABLE"
+    (retained / rel).parent.mkdir(parents=True)
+    (retained / rel).write_bytes((producer / rel).read_bytes())
+    assert vci_row()["status"] == "AVAILABLE"

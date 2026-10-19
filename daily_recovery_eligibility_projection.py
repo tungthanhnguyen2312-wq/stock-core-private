@@ -45,6 +45,7 @@ AUTHORITY BOUNDARY
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -54,14 +55,37 @@ from stocklookup_core.evidence import current_universe_status_and_session_covera
 CONTRACT_VERSION = "daily_recovery_eligibility_projection/v1"
 
 REPO_ROOT = Path(__file__).resolve().parent
-DEFAULT_QUALIFICATION_ARTIFACT_PATH = (
-    REPO_ROOT / "operations-review" / "market-wide-current-research-universe-qualification-v1-20260823"
-    / "market_wide_current_research_universe_artifact.json"
+QUALIFICATION_ARTIFACT_RELATIVE_PATH = Path(
+    "operations-review/market-wide-current-research-universe-qualification-v1-20260823"
+    "/market_wide_current_research_universe_artifact.json"
 )
-DEFAULT_VCI_EXCHANGE_SNAPSHOT_PATH = (
-    REPO_ROOT / "operations-review" / "vci-exchange-reference-snapshot-v1-20260823"
-    / "vci_exchange_reference_snapshot_artifact.json"
+VCI_EXCHANGE_SNAPSHOT_RELATIVE_PATH = Path(
+    "operations-review/vci-exchange-reference-snapshot-v1-20260823"
+    "/vci_exchange_reference_snapshot_artifact.json"
 )
+# Legacy single-root locations (Producer checkout). Kept for callers that pin them explicitly.
+DEFAULT_QUALIFICATION_ARTIFACT_PATH = REPO_ROOT / QUALIFICATION_ARTIFACT_RELATIVE_PATH
+DEFAULT_VCI_EXCHANGE_SNAPSHOT_PATH = REPO_ROOT / VCI_EXCHANGE_SNAPSHOT_RELATIVE_PATH
+
+
+def governed_retained_evidence_root() -> Path:
+    """Static retained inputs live under the retained-evidence root, not the Producer checkout.
+
+    Same order as the Daily execution roots: a qualified workspace profile's ``retained`` role,
+    else ``STOCK_LOOKUP_RETAINED_EVIDENCE_ROOT``, else this checkout (legacy single root). The
+    2026-10-19 T: Daily failed because these were resolved from the checkout after the split.
+    """
+    from runtime_paths import workspace_path
+    configured = os.environ.get("STOCK_LOOKUP_RETAINED_EVIDENCE_ROOT", "").strip()
+    return workspace_path("retained", configured or REPO_ROOT)
+
+
+def default_qualification_artifact_path() -> Path:
+    return governed_retained_evidence_root() / QUALIFICATION_ARTIFACT_RELATIVE_PATH
+
+
+def default_vci_exchange_snapshot_path() -> Path:
+    return governed_retained_evidence_root() / VCI_EXCHANGE_SNAPSHOT_RELATIVE_PATH
 
 # activity_and_session_state values (current_universe_status_and_session_coverage_resolution)
 # that make a still-gapped ticker worth a secondary-provider request.
@@ -105,8 +129,8 @@ def _degraded(reason: str, *, candidates: Mapping[str, Any]) -> dict[str, Any]:
 def project_recovery_eligibility(
     dnse_snapshot: Mapping[str, Any],
     *,
-    qualification_artifact_path: Path = DEFAULT_QUALIFICATION_ARTIFACT_PATH,
-    vci_exchange_snapshot_path: Path = DEFAULT_VCI_EXCHANGE_SNAPSHOT_PATH,
+    qualification_artifact_path: Path | None = None,
+    vci_exchange_snapshot_path: Path | None = None,
 ) -> dict[str, Any]:
     """Project existing current-universe/activity evidence onto ``dnse_snapshot`` (Pass 1's own
     DNSE-only output -- never a post-recovery snapshot).
@@ -120,6 +144,13 @@ def project_recovery_eligibility(
     candidates = dnse_snapshot.get("records")
     if not isinstance(candidates, Mapping) or not candidates:
         return _degraded("DNSE_SNAPSHOT_RECORDS_MISSING", candidates=candidates or {})
+    try:
+        if qualification_artifact_path is None:
+            qualification_artifact_path = default_qualification_artifact_path()
+        if vci_exchange_snapshot_path is None:
+            vci_exchange_snapshot_path = default_vci_exchange_snapshot_path()
+    except Exception:  # noqa: BLE001 -- fail-open projection: an unqualified profile never blocks Daily
+        return _degraded("RETAINED_EVIDENCE_ROOT_UNRESOLVED", candidates=candidates)
 
     qualification = _load_json(qualification_artifact_path)
     vci_snapshot = _load_json(vci_exchange_snapshot_path)

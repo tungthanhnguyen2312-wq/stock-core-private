@@ -171,6 +171,8 @@ def required_retained_inputs(
     paths = session_artifact_paths(root, session)
     items: list[tuple[str, Path, str | None]] = [
         ("research_universe_qualification", root / "operations-review" / "market-wide-current-research-universe-qualification-v1-20260823" / "market_wide_current_research_universe_artifact.json", "market_wide_current_research_universe/v1"),
+        # Read by the universe-status resolution step through its retained-root default.
+        ("vci_exchange_reference_snapshot", root / "operations-review" / "vci-exchange-reference-snapshot-v1-20260823" / "vci_exchange_reference_snapshot_artifact.json", "vci_exchange_reference_snapshot/v1"),
         ("fundamental_retained_context", paths["fundamental"], "market_wide_current_fundamental_research/v1"),
         ("official_universe", paths["official_universe"], "current_official_market_universe/v1"),
         ("official_event_context", paths["official_event_context"], "current_official_event_context/v1"),
