@@ -106,6 +106,7 @@ env:
     tests/test_integrated_opportunity_comparison.py
     tests/test_thesis_opportunity_discovery.py
     tests/test_kbs_period_alignment.py
+    tests/test_unreviewed_quarterly_official_intake.py
     tests/test_valuation_balance_sheet_divergence.py
     tests/test_financial_analysis_product_projection.py
     tests/test_market_wide_financial_analysis_v2_scaleout.py

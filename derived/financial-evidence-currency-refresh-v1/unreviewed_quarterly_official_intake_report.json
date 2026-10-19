@@ -1,0 +1,211 @@
+{
+  "contract_version": "unreviewed_quarterly_official_facts/v1",
+  "coverage": [
+    [
+      "NVL",
+      "2025-Q2",
+      "net_income"
+    ],
+    [
+      "NVL",
+      "2026-Q2",
+      "net_income"
+    ],
+    [
+      "PNJ",
+      "2025-Q2",
+      "net_income"
+    ],
+    [
+      "PNJ",
+      "2025-Q2",
+      "revenue"
+    ],
+    [
+      "PNJ",
+      "2026-Q2",
+      "net_income"
+    ],
+    [
+      "PNJ",
+      "2026-Q2",
+      "revenue"
+    ]
+  ],
+  "documents": [
+    {
+      "assurance": {
+        "audit_or_review_status": null,
+        "reason": "ASSURANCE_STATUS_NOT_EXPLICIT",
+        "state": "BLOCKED"
+      },
+      "blocked": [
+        {
+          "canonical_metric": "revenue",
+          "column_role": null,
+          "line_code": "10",
+          "reason": "ROW_NOT_UNIQUE_OR_NOT_GEOMETRICALLY_RESOLVED"
+        },
+        {
+          "canonical_metric": "net_income",
+          "column_role": null,
+          "line_code": "60",
+          "reason": "ROW_NOT_UNIQUE_OR_NOT_GEOMETRICALLY_RESOLVED"
+        },
+        {
+          "canonical_metric": "attributable_net_income",
+          "column_role": null,
+          "line_code": "61",
+          "reason": "ROW_NOT_UNIQUE_OR_NOT_GEOMETRICALLY_RESOLVED"
+        }
+      ],
+      "disposition": "UNREVIEWED_QUARTERLY_TIER",
+      "document_sha256": "1f5c4b14f867d2683fd3a84fe0f31fed6fc9920fdcd768c0eaaa1a6e9d19ea71",
+      "facts": [],
+      "ticker": "HPG"
+    },
+    {
+      "assurance": {
+        "audit_or_review_status": null,
+        "reason": "ASSURANCE_STATUS_NOT_EXPLICIT",
+        "state": "BLOCKED"
+      },
+      "blocked": [
+        {
+          "canonical_metric": "revenue",
+          "column_role": null,
+          "line_code": "10",
+          "reason": "ROW_NOT_UNIQUE_OR_NOT_GEOMETRICALLY_RESOLVED"
+        },
+        {
+          "canonical_metric": "attributable_net_income",
+          "column_role": null,
+          "line_code": "61",
+          "reason": "ROW_NOT_UNIQUE_OR_NOT_GEOMETRICALLY_RESOLVED"
+        }
+      ],
+      "disposition": "UNREVIEWED_QUARTERLY_TIER",
+      "document_sha256": "52d827fa2a5f8d07e07a08a6b57251d172d06aa4d4c7cd80127df2079e12d182",
+      "facts": [
+        [
+          "net_income",
+          "2026-Q2",
+          912001107054
+        ],
+        [
+          "net_income",
+          "2025-Q2",
+          -189868378915
+        ]
+      ],
+      "ticker": "NVL"
+    },
+    {
+      "assurance": {
+        "audit_or_review_status": null,
+        "reason": "ASSURANCE_STATUS_NOT_EXPLICIT",
+        "state": "BLOCKED"
+      },
+      "blocked": [
+        {
+          "canonical_metric": "revenue",
+          "column_role": null,
+          "line_code": "10",
+          "reason": "ROW_NOT_UNIQUE_OR_NOT_GEOMETRICALLY_RESOLVED"
+        },
+        {
+          "canonical_metric": "net_income",
+          "column_role": null,
+          "line_code": "60",
+          "reason": "ROW_NOT_UNIQUE_OR_NOT_GEOMETRICALLY_RESOLVED"
+        },
+        {
+          "canonical_metric": "attributable_net_income",
+          "column_role": null,
+          "line_code": "61",
+          "reason": "ROW_NOT_UNIQUE_OR_NOT_GEOMETRICALLY_RESOLVED"
+        }
+      ],
+      "disposition": "UNREVIEWED_QUARTERLY_TIER",
+      "document_sha256": "535967018d6704bca01f0bc19ddce55a6d5b72c091a1bcdcd9129e29274c5c98",
+      "facts": [],
+      "ticker": "PVD"
+    },
+    {
+      "assurance": {
+        "audit_or_review_status": null,
+        "reason": "ASSURANCE_STATUS_NOT_EXPLICIT",
+        "state": "BLOCKED"
+      },
+      "blocked": [
+        {
+          "canonical_metric": "attributable_net_income",
+          "column_role": null,
+          "line_code": "61",
+          "reason": "ROW_LABEL_DOES_NOT_SUPPORT_METRIC"
+        }
+      ],
+      "disposition": "UNREVIEWED_QUARTERLY_TIER",
+      "document_sha256": "a5d860ad579820f9532d037d476ce0d09ce8a078572159a6dfebac0c7b32cbf3",
+      "facts": [
+        [
+          "revenue",
+          "2026-Q2",
+          8483734461474
+        ],
+        [
+          "net_income",
+          "2026-Q2",
+          -283029272213
+        ],
+        [
+          "revenue",
+          "2025-Q2",
+          7582449574137
+        ],
+        [
+          "net_income",
+          "2025-Q2",
+          436997250814
+        ]
+      ],
+      "ticker": "PNJ"
+    },
+    {
+      "assurance": {
+        "audit_or_review_status": null,
+        "reason": "ASSURANCE_STATUS_NOT_EXPLICIT",
+        "state": "BLOCKED"
+      },
+      "blocked": [
+        {
+          "canonical_metric": "revenue",
+          "column_role": null,
+          "line_code": "10",
+          "reason": "ROW_NOT_UNIQUE_OR_NOT_GEOMETRICALLY_RESOLVED"
+        },
+        {
+          "canonical_metric": "net_income",
+          "column_role": null,
+          "line_code": "60",
+          "reason": "ROW_NOT_UNIQUE_OR_NOT_GEOMETRICALLY_RESOLVED"
+        },
+        {
+          "canonical_metric": "attributable_net_income",
+          "column_role": null,
+          "line_code": "61",
+          "reason": "ROW_NOT_UNIQUE_OR_NOT_GEOMETRICALLY_RESOLVED"
+        }
+      ],
+      "disposition": "UNREVIEWED_QUARTERLY_TIER",
+      "document_sha256": "024b14f8ceffa46d1df30180c8dee17c2f191a8c6dbe839aa9254afe051fdb60",
+      "facts": [],
+      "ticker": "FPT"
+    }
+  ],
+  "fact_count": 6,
+  "facts_identity": "2239571d5e810eb53373bde5a197290098a4aa237e24f19343b52c26d2cd085d",
+  "milestone_id": "OFFICIAL_UNREVIEWED_QUARTERLY_STATEMENT_INTAKE_V1",
+  "network_used": false,
+  "period": "2026-Q2"
+}

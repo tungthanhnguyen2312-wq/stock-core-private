@@ -18,7 +18,7 @@ from typing import Any, Mapping, Sequence
 from annual_financial_ocr_materialization import DEFAULT_ENGINE, parse_accounting_integer, sha256_file
 from official_financial_assurance_evidence import REVIEWED, validate_assurance_claim
 from official_financial_period_identity import period_bounds
-from official_financial_structural_table import match_geometry_ambiguous_line_code_cell, match_geometry_table_row
+from official_financial_structural_table import match_geometry_ambiguous_line_code_cell, match_geometry_table_row, match_quarterly_four_column_row
 from financial_statement_unit_resolution import declaration_from_tokens, resolve_unit_for_scope
 
 
@@ -134,8 +134,59 @@ def _render_image_bytes(source: Path, page_number: int) -> tuple[bytes, dict[str
         document.close()
 
 
+# OFFICIAL_UNREVIEWED_QUARTERLY_STATEMENT_INTAKE_V1 opt-in adapters.  Both are off by
+# default, so every existing materialization, token id and identity is byte-identical.
+ORIENTATION_CONTRACT = "tesseract_osd_orientation_correction/v1"
+ORIENTATION_MIN_CONFIDENCE = 5.0
+GLYPH_NORMALIZATION_CONTRACT = "superscript_digit_to_ascii_non_amount/v1"
+_SUPERSCRIPT_DIGITS = str.maketrans("⁰¹²³⁴⁵⁶⁷⁸⁹", "0123456789")
+# An amount cell (grouped digits, optional parentheses/sign) is never normalized: the
+# existing numeric policy keeps a damaged amount ambiguous rather than repairing it.
+_AMOUNT_TOKEN = re.compile(r"^[(\-—]?[\d⁰¹²³⁴⁵⁶⁷⁸⁹]{1,3}([.,][\d⁰¹²³⁴⁵⁶⁷⁸⁹]{3})+[)]?$")
+
+
+def _osd_orientation(engine: Path, image_bytes: bytes) -> dict[str, Any] | None:
+    result = subprocess.run([str(engine), "stdin", "stdout", "--psm", "0"], input=image_bytes, capture_output=True)
+    text = result.stdout.decode("utf-8", errors="ignore")
+    rotate = re.search(r"Rotate:\s*(\d+)", text)
+    confidence = re.search(r"Orientation confidence:\s*([\d.]+)", text)
+    if result.returncode != 0 or rotate is None or confidence is None:
+        return None
+    return {"rotate_degrees": int(rotate.group(1)), "confidence": float(confidence.group(1))}
+
+
+def _corrected_orientation(engine: Path, image_bytes: bytes) -> tuple[bytes, dict[str, Any] | None]:
+    """Rotate a rendered page only when Tesseract OSD is confident the content is rotated."""
+    osd = _osd_orientation(engine, image_bytes)
+    if osd is None or osd["rotate_degrees"] not in {90, 180, 270} or osd["confidence"] < ORIENTATION_MIN_CONFIDENCE:
+        return image_bytes, None
+    import io
+    from PIL import Image
+    corrected = io.BytesIO()
+    Image.open(io.BytesIO(image_bytes)).rotate(-osd["rotate_degrees"], expand=True).save(corrected, "PNG")
+    data = corrected.getvalue()
+    return data, {"contract_version": ORIENTATION_CONTRACT, **osd, "min_confidence": ORIENTATION_MIN_CONFIDENCE,
+                  "rendered_image_sha256": hashlib.sha256(image_bytes).hexdigest(),
+                  "corrected_image_sha256": hashlib.sha256(data).hexdigest()}
+
+
+def _normalize_glyph_digits(tokens: list[dict[str, Any]]) -> int:
+    changed = 0
+    for token in tokens:
+        text = token["text"]
+        if _AMOUNT_TOKEN.match(text):
+            continue
+        fixed = text.translate(_SUPERSCRIPT_DIGITS)
+        if fixed != text:
+            token["source_text"], token["text"] = text, fixed
+            token["glyph_normalization"] = GLYPH_NORMALIZATION_CONTRACT
+            changed += 1
+    return changed
+
+
 def materialize_tsv_pages(record: Mapping[str, Any], *, evidence_root: Path, pages: Sequence[int], engine: Path = DEFAULT_ENGINE,
-                          allow_unqualified_native_fallback: bool = False) -> dict[str, Any]:
+                          allow_unqualified_native_fallback: bool = False, detect_orientation: bool = False,
+                          normalize_superscript_digits: bool = False) -> dict[str, Any]:
     """Render fixed pages after native routing and preserve raw positioned TSV tokens."""
     import fitz
     root = Path(evidence_root)
@@ -176,10 +227,20 @@ def materialize_tsv_pages(record: Mapping[str, Any], *, evidence_root: Path, pag
             materialized_pages.append({"page_number": number, "route": "NATIVE_TEXT_AVAILABLE_USE_NATIVE_PATH"})
             continue
         image_bytes, render = _render_image_bytes(source, number)
-        image_sha256 = render["rendered_image_sha256"]
+        orientation = None
+        if detect_orientation:
+            image_bytes, orientation = _corrected_orientation(engine, image_bytes)
+        image_sha256 = orientation["corrected_image_sha256"] if orientation else render["rendered_image_sha256"]
         result = subprocess.run([str(engine), "stdin", "stdout", "-l", OCR_CONFIG["language"], "--psm", str(OCR_CONFIG["psm"]), "tsv"], input=image_bytes, capture_output=True, check=True)
         tokens = _parse_tsv(result.stdout, page_number=number, image_sha256=image_sha256)
-        materialized_pages.append({
+        adapters = {}
+        if orientation:
+            adapters["orientation_correction"] = orientation
+        if normalize_superscript_digits:
+            changed = _normalize_glyph_digits(tokens)
+            if changed:
+                adapters["glyph_normalization"] = {"contract_version": GLYPH_NORMALIZATION_CONTRACT, "tokens_normalized": changed}
+        materialized_pages.append({**({"ocr_adapters": adapters} if adapters else {}),
             "page_number": number, "route": "UNQUALIFIED_NATIVE_TSV_OCR" if native_text_pages[number] else "IMAGE_ONLY_TSV_OCR",
             **({"native_failure_evidence": native_failure} if native_text_pages[number] else {}),
             "positioned_token_provenance": "OCR_TSV_POSITIONED_TOKEN", "source_image_evidence": {"document_sha256": record["sha256"], "source_page": number, **render},
@@ -438,12 +499,29 @@ def resolve_ambiguous_debt_line_code_cells(
             "resolution_id": _hash({"document_sha256": materialization["document_sha256"], "materialization_id": materialization["materialization_id"], "cells": cells})}
 
 
+_PROFIT_LOSS_QUALIFIER = re.compile(r"(nhuan)\s*/?\s*\([^)]{1,3}\)")
+
+
+def _quarterly_label_supports_metric(metric: str, label: str) -> bool:
+    """Quarterly path only: "Lợi nhuận/(lỗ)" carries a short sign qualifier in parentheses.
+
+    The qualifier (and its OCR damage, e.g. "(Ié)") is dropped only directly after "nhuận";
+    every identity-bearing and forbidden term of the existing contract still applies.
+    """
+    from stocklookup_core.evidence.financial_row_identity import _identity_fold
+    folded = _PROFIT_LOSS_QUALIFIER.sub(lambda match: match.group(1), _identity_fold(label))
+    return folded != _identity_fold(label) and row_label_supports_metric(metric, folded)
+
+
 def qualify_table_facts(materialization: Mapping[str, Any], *, ticker: str, reporting_period: str, currency: str = "VND", unit_scale: int = 1,
                         include_earnings_quality_components: bool = False,
                         line_code_cell_resolution: Mapping[str, Any] | None = None,
                         scoped_unit_evidence: Mapping[str, Any] | None = None,
-                        scoped_statement_scope_evidence: Mapping[str, Any] | None = None) -> dict[str, Any]:
+                        scoped_statement_scope_evidence: Mapping[str, Any] | None = None,
+                        quarterly_four_column: bool = False) -> dict[str, Any]:
     """Produce qualified and blocked candidates; no panel mutation occurs here."""
+    if quarterly_four_column and not re.fullmatch(r"20[0-3]\d-Q[1-4]", str(reporting_period)):
+        raise ValueError("QUARTERLY_FOUR_COLUMN_REQUIRES_QUARTER_PERIOD")
     qualified: list[dict[str, Any]] = []
     blocked: list[dict[str, Any]] = []
     pages_by_family = _pages_by_statement_family(materialization)
@@ -453,9 +531,13 @@ def qualify_table_facts(materialization: Mapping[str, Any], *, ticker: str, repo
         rejected_labels = []
         for page in pages_by_family.get(family, []):
             for candidate_code in (("270", "280") if metric == "total_assets" else (code,)):
-                match = match_geometry_table_row(page, line_code=candidate_code, target_period=reporting_period)
+                if quarterly_four_column:
+                    # A quarterly target never falls back to the two-column (year-to-date) engine.
+                    match = match_quarterly_four_column_row(page, line_code=candidate_code, target_period=reporting_period)
+                else:
+                    match = match_geometry_table_row(page, line_code=candidate_code, target_period=reporting_period)
                 # Label-only fallback; amounts, units and periods are never repaired.
-                if match and not row_label_supports_metric(metric, str(match.get("line_text") or "")):
+                if match and not quarterly_four_column and not row_label_supports_metric(metric, str(match.get("line_text") or "")):
                     wrapped = match_geometry_table_row(page, line_code=candidate_code, target_period=reporting_period,
                                                        bind_wrapped_label=True)
                     if wrapped and row_label_supports_metric(metric, str(wrapped.get("line_text") or "")):
@@ -480,7 +562,8 @@ def qualify_table_facts(materialization: Mapping[str, Any], *, ticker: str, repo
         else:
             blocked.append({"canonical_metric": metric, "line_code": code, "statement_family": family, "state": "BLOCKED", "reason": "ROW_NOT_UNIQUE_OR_NOT_GEOMETRICALLY_RESOLVED", "match_count": len(matches)})
             return None
-        if not row_label_supports_metric(metric, str((match.get("row_object") or {}).get("reconstructed_label") or match.get("line_text") or "")):
+        label_text = str((match.get("row_object") or {}).get("reconstructed_label") or match.get("line_text") or "")
+        if not (row_label_supports_metric(metric, label_text) or (quarterly_four_column and _quarterly_label_supports_metric(metric, label_text))):
             blocked.append({"canonical_metric": metric, "line_code": code, "statement_family": family, "state": "BLOCKED",
                             "reason": "ROW_LABEL_DOES_NOT_SUPPORT_METRIC"})
             return None
@@ -508,6 +591,8 @@ def qualify_table_facts(materialization: Mapping[str, Any], *, ticker: str, repo
             blocked.append({"canonical_metric": metric, "line_code": code, "statement_family": family, "state": "BLOCKED", "reason": "OCR_NUMERIC_AMBIGUITY", "raw_value": match["current_raw"]})
             return None
         reason_codes = ["OFFICIAL_EVIDENCE_QUALIFIED", "IMAGE_ONLY_TSV_OCR_GEOMETRY", "EXACT_LINE_CODE"]
+        if quarterly_four_column:
+            reason_codes = ["OFFICIAL_QUARTERLY_STATEMENT_ROW", "IMAGE_ONLY_TSV_OCR_QUARTERLY_FOUR_COLUMN", "EXACT_LINE_CODE"]
         source_page = next(page for page in pages_by_family[family] if page["page_number"] == match["page"])
         if source_page.get("native_failure_evidence"):
             reason_codes[1] = "UNQUALIFIED_NATIVE_TSV_OCR_GEOMETRY"
@@ -521,11 +606,33 @@ def qualify_table_facts(materialization: Mapping[str, Any], *, ticker: str, repo
             lineage["native_failure_evidence"] = source_page["native_failure_evidence"]
         if cell_evidence:
             lineage["line_code_cell_evidence"] = cell_evidence
-        return {"canonical_metric": metric, "value": value, "currency": unit["currency"], "unit_scale": unit["unit_scale"], "reporting_period": reporting_period, "statement_family": family, "qualification_state": "QUALIFIED", "reason_codes": reason_codes, "source_lineage": lineage}
-    for rule in STANDARD_FACT_RULES:
+        fact = {"canonical_metric": metric, "value": value, "currency": unit["currency"], "unit_scale": unit["unit_scale"], "reporting_period": reporting_period, "statement_family": family, "qualification_state": "QUALIFIED", "reason_codes": reason_codes, "source_lineage": lineage}
+        if quarterly_four_column:
+            fact["column_role"] = "CURRENT_QUARTER"
+            try:
+                prior_value = parse_accounting_integer(match["comparative_raw"])[0] * int(unit["unit_scale"])
+            except ValueError:
+                blocked.append({"canonical_metric": metric, "line_code": code, "statement_family": family, "state": "BLOCKED",
+                                "reason": "OCR_NUMERIC_AMBIGUITY", "raw_value": match["comparative_raw"], "column_role": "PRIOR_YEAR_QUARTER"})
+            else:
+                year, quarter = reporting_period.split("-")
+                prior_period = f"{int(year) - 1}-{quarter}"
+                comparatives.append({**fact, "value": prior_value, "reporting_period": prior_period, "column_role": "PRIOR_YEAR_QUARTER",
+                                     "reason_codes": [*reason_codes, "COMPARATIVE_COLUMN_OF_LATER_REPORT"]})
+        return fact
+    comparatives: list[dict[str, Any]] = []
+    rules = [rule for rule in STANDARD_FACT_RULES if rule[1] == "income_statement"] if quarterly_four_column else STANDARD_FACT_RULES
+    for rule in rules:
         fact = attempt(*rule)
         if fact:
             qualified.append(fact)
+    if quarterly_four_column:
+        # Quarterly scope is the income statement: balance sheets equal the reviewed H1 date and
+        # quarterly cash flows are cumulative.  Comparatives are separate prior-year facts.
+        qualified.extend(comparatives)
+        return {"contract_version": CONTRACT_VERSION, "ticker": ticker, "document_sha256": materialization["document_sha256"],
+                "reporting_period": reporting_period, "qualified_facts": qualified, "blocked_candidates": blocked,
+                "candidate_count": len(qualified) + len(blocked)}
     if include_earnings_quality_components:
         for name, family, code in EARNINGS_COMPONENT_RULES:
             component = attempt(name, family, code)
