@@ -336,8 +336,9 @@ def test_materialize_independent_components_delegates_snapshot_acquisition_to_th
     paths = level2.session_artifact_paths(tmp_path, session)
     calls = []
 
-    def fake_ensure(artifact_root, sess, runtime_root, workers, now, *, execution_root=None):
-        calls.append((artifact_root, sess, execution_root))
+    def fake_ensure(artifact_root, sess, runtime_root, workers, now, *, execution_root=None,
+                    retained_evidence_root=None):
+        calls.append((artifact_root, sess, execution_root, retained_evidence_root))
         _write_json(paths["exact_session_snapshot"], {"resolved_completed_session": session})
         return paths["exact_session_snapshot"]
 
@@ -347,7 +348,71 @@ def test_materialize_independent_components_delegates_snapshot_acquisition_to_th
          patch.object(level2, "resolve_technical_recovery_artifact", return_value={"selected_path": paths["technical_recovery"]}):
         level2.materialize_independent_components(tmp_path, session, tmp_path / "runtime")
 
-    assert calls == [(tmp_path, session, tmp_path)]
+    assert calls == [(tmp_path, session, tmp_path, tmp_path)]
+
+
+class _StopAfterUniverseResolution(Exception):
+    pass
+
+
+def test_universe_resolution_reads_vci_snapshot_from_retained_root_not_producer_checkout(tmp_path):
+    # 2026-10-19 live incident: Daily omitted --vci-exchange-reference-snapshot, so the tool fell
+    # back to <producer checkout>/operations-review/... . That only worked while the checkout and
+    # the retained-evidence root were one directory (C:). After the T: split it raised
+    # FileNotFoundError and failed Daily at [2/9].
+    session = "2026-10-19"
+    producer = tmp_path / "producer"
+    retained = tmp_path / "retained"
+    attempt = tmp_path / "attempt"
+    paths = level2.session_artifact_paths(attempt, session)
+    _prime_materialization_outputs(paths)
+    paths["universe_resolution"].unlink()
+    seen: list[list[str]] = []
+
+    def fake_ensure(*_a, **_k):
+        _write_json(paths["exact_session_snapshot"], {"resolved_completed_session": session})
+        return paths["exact_session_snapshot"]
+
+    def fake_run_cmd(_root, args, *_a, **_k):
+        seen.append([str(x) for x in args])
+        if args[0] == "tools/run_current_universe_status_and_session_coverage_resolution.py":
+            raise _StopAfterUniverseResolution
+
+    with patch.object(level2, "bind_session_retained_paths"), \
+         patch.object(level2, "ensure_exact_session_snapshot", fake_ensure), \
+         patch.object(level2, "run_cmd", fake_run_cmd), \
+         pytest.raises(_StopAfterUniverseResolution):
+        level2.materialize_independent_components(
+            attempt, session, tmp_path / "runtime",
+            execution_root=producer, retained_evidence_root=retained,
+        )
+
+    args = seen[-1]
+    vci = args[args.index("--vci-exchange-reference-snapshot") + 1]
+    assert vci == str(level2.retained_vci_exchange_reference_snapshot_path(retained))
+    assert not vci.startswith(str(producer))
+
+
+def test_exact_session_eligibility_projection_reads_static_inputs_from_retained_root(tmp_path):
+    session = "2026-08-26"
+    retained = tmp_path / "retained"
+    patches, _calls = _patch_resolved_acquisition(session)
+    import daily_recovery_eligibility_projection as eligibility
+    seen: dict = {}
+    real = eligibility.project_recovery_eligibility
+
+    def spy(snapshot, **kwargs):
+        seen.update(kwargs)
+        return real(snapshot, **kwargs)
+
+    with patches[0], patches[1], patches[2], patches[3], patches[4], \
+         patch.object(eligibility, "project_recovery_eligibility", spy):
+        level2.ensure_exact_session_snapshot(
+            tmp_path, session, tmp_path / "runtime", retained_evidence_root=retained,
+        )
+
+    assert seen["vci_exchange_snapshot_path"] == level2.retained_vci_exchange_reference_snapshot_path(retained)
+    assert seen["qualification_artifact_path"] == level2.retained_research_universe_qualification_path(retained)
 
 
 def test_materialization_separates_attempt_artifact_root_from_execution_root(tmp_path):
@@ -453,7 +518,7 @@ def _stale_technical_recovery_payload(session: str, snapshot_identity: str) -> d
 
 
 def _fake_ensure_exact_session_snapshot(paths):
-    def fake_ensure(artifact_root, sess, runtime_root, workers, now, *, execution_root=None):
+    def fake_ensure(artifact_root, sess, runtime_root, workers, now, *, execution_root=None, retained_evidence_root=None):
         return paths["exact_session_snapshot"]
     return fake_ensure
 

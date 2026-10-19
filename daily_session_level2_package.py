@@ -1410,6 +1410,19 @@ def _write_supplemental_block(
         path.write_text(json.dumps(diagnostic, ensure_ascii=False, sort_keys=True, indent=2) + "\n", encoding="utf-8")
 
 
+def retained_research_universe_qualification_path(retained_evidence_root: Path) -> Path:
+    return (Path(retained_evidence_root) / "operations-review"
+            / "market-wide-current-research-universe-qualification-v1-20260823"
+            / "market_wide_current_research_universe_artifact.json")
+
+
+def retained_vci_exchange_reference_snapshot_path(retained_evidence_root: Path) -> Path:
+    """Static VCI exchange-reference snapshot; never resolved from the Producer checkout."""
+    return (Path(retained_evidence_root) / "operations-review"
+            / "vci-exchange-reference-snapshot-v1-20260823"
+            / "vci_exchange_reference_snapshot_artifact.json")
+
+
 def ensure_exact_session_snapshot(
     artifact_root: Path,
     session: str,
@@ -1420,6 +1433,7 @@ def ensure_exact_session_snapshot(
     execution_root: Path | None = None,
     historical_compatibility: bool = False,
     progress_callback: Callable[[Mapping[str, Any]], None] | None = None,
+    retained_evidence_root: Path | None = None,
 ) -> Path:
     """Idempotently acquire the resolved exact-session snapshot for ``session`` under
     ``artifact_root``.
@@ -1556,7 +1570,15 @@ def ensure_exact_session_snapshot(
     # Degrades to "no filter" on any missing/stale/mismatched retained evidence -- never a hard
     # Daily dependency.
     import daily_recovery_eligibility_projection as eligibility_projection
-    recovery_eligibility = eligibility_projection.project_recovery_eligibility(dnse_snapshot)
+    # Static retained inputs live under the retained-evidence root, which is not the Producer
+    # checkout once the two roots are split (T: cutover 2026-10-19).
+    eligibility_kwargs: dict[str, Any] = {}
+    if retained_evidence_root is not None:
+        eligibility_kwargs = {
+            "qualification_artifact_path": retained_research_universe_qualification_path(retained_evidence_root),
+            "vci_exchange_snapshot_path": retained_vci_exchange_reference_snapshot_path(retained_evidence_root),
+        }
+    recovery_eligibility = eligibility_projection.project_recovery_eligibility(dnse_snapshot, **eligibility_kwargs)
     eligible_set = eligibility_projection.recovery_eligible_ticker_set(recovery_eligibility)
     dnse_missing_tickers = [t for t in all_tickers if t not in set(dnse_exact_tickers)]
     recovery_eligible_missing_tickers = (
@@ -1827,11 +1849,12 @@ def materialize_independent_components(
                                authority_root=execution_root, session=session, corporate_inputs=corporate_inputs)
     p3f9b_snapshot = ensure_exact_session_snapshot(
         artifact_root, session, runtime_root, workers, now, execution_root=execution_root,
+        retained_evidence_root=retained_evidence_root,
         **({"progress_callback": progress_callback} if progress_callback is not None else {}),
     )
     breadth_out = paths["breadth_foundation"]
     if not breadth_out.exists():
-        qualification = retained_evidence_root / "operations-review" / "market-wide-current-research-universe-qualification-v1-20260823" / "market_wide_current_research_universe_artifact.json"
+        qualification = retained_research_universe_qualification_path(retained_evidence_root)
         run_cmd(execution_root, [
             "tools/build_current_market_universe_breadth_foundation.py",
             "--qualification-artifact", str(qualification),
@@ -1843,6 +1866,8 @@ def materialize_independent_components(
             "tools/run_current_universe_status_and_session_coverage_resolution.py",
             "--breadth-foundation-artifact", str(breadth_out),
             "--p3f9b-snapshot", str(p3f9b_snapshot),
+            "--vci-exchange-reference-snapshot",
+            str(retained_vci_exchange_reference_snapshot_path(retained_evidence_root)),
             "--output", str(ur_out),
         ])
     liq_out = paths["liquidity_research"]

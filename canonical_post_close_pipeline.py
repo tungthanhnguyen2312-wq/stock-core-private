@@ -679,6 +679,7 @@ def acquire_and_materialize(
             ensure_kwargs["progress_callback"] = progress_callback
         level2.ensure_exact_session_snapshot(
             artifact_root, session, runtime_root, workers=workers, now=now, execution_root=root,
+            retained_evidence_root=retained_evidence_root,
             **({"historical_compatibility": True} if historical_compatibility else {}),
             **ensure_kwargs,
         )
