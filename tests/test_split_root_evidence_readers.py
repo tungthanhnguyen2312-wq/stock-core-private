@@ -175,3 +175,26 @@ def test_current_product_supplementary_checkout_copy_wins(split):
         (base / rel).parent.mkdir(parents=True)
         (base / rel).write_text(json.dumps({"marker": marker}), encoding="utf-8")
     assert projections.resolve_supplementary_inputs(producer, SESSION)["leadership"] == {"marker": "checkout"}
+
+
+def _all_supplementary_relatives():
+    import canonical_current_product_projections as projections
+    compact = SESSION.replace("-", "")
+    rows = [("supplementary", name, Path("operations-review") / d.format(session=compact) / f)
+            for name, (d, f) in projections.SUPPLEMENTARY_INPUT_TEMPLATES.items()]
+    rows += [("velocity_flow", name, Path("operations-review") / d / SESSION / f)
+             for name, (d, f) in projections.VELOCITY_FLOW_PRICE_INPUT_PATHS.items()]
+    return rows
+
+
+@pytest.mark.parametrize("kind,name,relative", _all_supplementary_relatives(), ids=lambda v: str(v))
+def test_every_current_product_axis_resolves_when_only_the_retained_root_has_it(split, kind, name, relative):
+    # Guard against the 2026-10-19 mass degradation: an axis sealed only under the governed
+    # operation-output root must never silently resolve to None (every card UNAVAILABLE).
+    import canonical_current_product_projections as projections
+    producer, retained = split
+    (retained / relative).parent.mkdir(parents=True, exist_ok=True)
+    (retained / relative).write_text(json.dumps({"axis": name}), encoding="utf-8")
+    resolver = (projections.resolve_supplementary_inputs if kind == "supplementary"
+                else projections.resolve_velocity_and_flow_price_inputs)
+    assert resolver(producer, SESSION)[name] == {"axis": name}
