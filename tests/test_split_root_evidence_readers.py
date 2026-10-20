@@ -37,6 +37,41 @@ def _run(root: Path, run: str = "abc") -> Path:
     return path
 
 
+def test_resolve_existing_evidence_file_reads_the_retained_copy(split):
+    producer, retained = split
+    relative = Path("operations-review/p3f9b-market-wide-exact-session-scaleout-20261020/p3f9b_mva_exact_session_snapshot.json")
+    (retained / relative).parent.mkdir(parents=True)
+    (retained / relative).write_text("{}", encoding="utf-8")
+    checkout_path = producer / relative
+    assert evidence_roots.resolve_existing_evidence_file(producer, checkout_path) == (retained / relative).resolve()
+    assert evidence_roots.resolve_existing_evidence_file(producer, relative) == (retained / relative).resolve()
+
+
+def test_resolve_existing_evidence_file_prefers_the_checkout_copy(split):
+    producer, retained = split
+    relative = Path("operations-review/same.json")
+    for base, text in ((producer, "checkout"), (retained, "retained")):
+        (base / relative).parent.mkdir(parents=True, exist_ok=True)
+        (base / relative).write_text(text, encoding="utf-8")
+    resolved = evidence_roots.resolve_existing_evidence_file(producer, producer / relative)
+    assert resolved == (producer / relative).resolve()
+    assert resolved.read_text(encoding="utf-8") == "checkout"
+
+
+def test_resolve_existing_evidence_file_keeps_a_missing_checkout_path(split):
+    producer, _retained = split
+    relative = Path("operations-review/absent.json")
+    assert evidence_roots.resolve_existing_evidence_file(producer, producer / relative) == (producer / relative).resolve()
+
+
+def test_resolve_existing_evidence_file_keeps_an_absolute_hit(split):
+    _producer, retained = split
+    path = retained / "operations-review/already-absolute.json"
+    path.parent.mkdir(parents=True)
+    path.write_text("{}", encoding="utf-8")
+    assert evidence_roots.resolve_existing_evidence_file(split[0], path) == path.resolve()
+
+
 def test_governed_roots_order_and_dedupe(split, monkeypatch):
     producer, retained = split
     monkeypatch.setenv(evidence_roots.RETAINED_EVIDENCE_ROOT_ENV, str(retained))

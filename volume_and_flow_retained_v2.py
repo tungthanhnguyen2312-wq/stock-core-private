@@ -59,13 +59,16 @@ def flow_index(runtime_root, session, dates, registry_dates, calendar_evidence=N
 def collect(*, source_root, runtime_root, session, feature_batch=None, feature_batch_sha256=None,
             velocity_artifact=None, sealed_snapshot=None, allow_legacy_bridge=False):
     root = Path(source_root)
+    from stocklookup_core.evidence.evidence_roots import resolve_existing_evidence_file
+    def bind(path):
+        return resolve_existing_evidence_file(root, path)
     paths = level2.session_artifact_paths(root, session)
-    paths = {k: paths[k] for k in ("exact_session_snapshot", "universe_resolution", "technical_recovery")}
+    paths = {k: bind(paths[k]) for k in ("exact_session_snapshot", "universe_resolution", "technical_recovery")}
     paths["input_registry"] = root / "config/daily_research_session_input_registry.json"
     registry = json.loads(paths["input_registry"].read_text(encoding="utf-8"))
     binding = registry["sessions"][session]
-    paths["events"] = root / binding["event_context"]["path"]
-    paths["descriptive"] = root / binding["descriptive"]["path"]
+    paths["events"] = bind(root / binding["event_context"]["path"])
+    paths["descriptive"] = bind(root / binding["descriptive"]["path"])
     paths["calendar"] = root / "config/governed_trading_session_calendar_v1.json"
     paths.update({"flow_"+p.stem: p for p in store.observations_root(runtime_root).glob("*.json")})
     db = Path(runtime_root)/"vn_stock.db"
@@ -76,7 +79,7 @@ def collect(*, source_root, runtime_root, session, feature_batch=None, feature_b
         if source_hash(paths["technical_batch"]) != feature_batch_sha256:
             raise ValueError("FEATURE_BATCH_HASH_INVALID")
     else:
-        paths["technical_batch"] = root / "operations-review/canonical-post-close-v1" / session / "enrichment/historical_context.json"
+        paths["technical_batch"] = bind(root / "operations-review/canonical-post-close-v1" / session / "enrichment/historical_context.json")
     before = {k: source_hash(p) for k,p in paths.items()}
     universe = json.loads(paths["universe_resolution"].read_text(encoding="utf-8"))
     history._verify_hashed_identity(universe, label="VOLUME_UNIVERSE")
