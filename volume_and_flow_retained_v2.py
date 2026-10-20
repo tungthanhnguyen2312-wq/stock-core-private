@@ -21,6 +21,34 @@ from bounded_artifact_stream import header, source_hash, stream_artifact
 from stocklookup_core.evidence.daily_session_completion_reference import load_qualified_completed_sessions
 
 
+def calendar_for_sealed_features(producer_root, feature_path, cutoff):
+    """Use the calendar projection that sealed the feature batch.
+
+    Weekly and monthly bar identities include that projection. The historical
+    context builder loads working-date receipts from the retained evidence root
+    and the static session ledger from the producer checkout. A checkout-only
+    lookup has no receipts, so its calendar identity differs and the volume
+    binding guard refuses the series. A feature file inside the producer root
+    keeps the single-root lookup.
+    """
+    from prospective_pit_capture_retention import calendar_evidence_at_cutoff
+    from stocklookup_core.evidence.evidence_roots import governed_evidence_roots
+    producer = Path(producer_root).resolve()
+    feature = Path(feature_path).resolve()
+    # The checkout path can be a longer string than the retained-evidence
+    # sibling. Select only roots that actually contain the sealed feature file.
+    containing = []
+    for root in governed_evidence_roots(producer):
+        try:
+            feature.relative_to(root)
+        except ValueError:
+            continue
+        containing.append(root)
+    receipt_root = max(containing, key=lambda root: (len(root.parts), len(str(root)))) if containing else producer
+    static_path = producer / "config" / "governed_trading_session_calendar_v1.json"
+    return calendar_evidence_at_cutoff(receipt_root, cutoff=cutoff, static_path=static_path)
+
+
 def trading_date_index(runtime_root):
     path = Path(runtime_root) / "vn_stock.db"
     dates = defaultdict(set)
@@ -120,8 +148,7 @@ def collect(*, source_root, runtime_root, session, feature_batch=None, feature_b
         producer = context
     v2_consumer = version == dispatch.V2 or allow_legacy_bridge
     if v2_consumer:
-        from prospective_pit_capture_retention import calendar_evidence_at_cutoff
-        calendar = calendar_evidence_at_cutoff(root, cutoff=source_header["requested_at"])
+        calendar = calendar_for_sealed_features(root, paths["technical_batch"], source_header["requested_at"])
     if sealed_snapshot is not None and not (producer._is_sealed_bindings(sealed_snapshot) if v2_consumer else isinstance(sealed_snapshot, producer.SealedTechnicalBindings)):
         sealed_snapshot = producer.SealedTechnicalBindings(sealed_snapshot)
     views = {t: bridge.build_views(c) for t,c in technical.items()} if v2_consumer else technical
