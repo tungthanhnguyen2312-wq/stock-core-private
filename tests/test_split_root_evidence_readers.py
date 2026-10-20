@@ -198,3 +198,18 @@ def test_every_current_product_axis_resolves_when_only_the_retained_root_has_it(
     resolver = (projections.resolve_supplementary_inputs if kind == "supplementary"
                 else projections.resolve_velocity_and_flow_price_inputs)
     assert resolver(producer, SESSION)[name] == {"axis": name}
+
+
+def test_velocity_discovery_reads_handoffs_and_operations_from_retained_root(split):
+    import multi_session_signal_velocity as velocity
+    producer, retained = split
+    handoff = Path("operations-review/canonical-post-close-v1") / SESSION / "session_handoff_bundle.json"
+    (retained / handoff).parent.mkdir(parents=True)
+    (retained / handoff).write_text("{}", encoding="utf-8")
+    assert velocity._evidence(producer, handoff) == retained.resolve() / handoff
+    op = retained / "operations-review/daily-research-session-operations-v1" / SESSION / "abc" / "run_manifest.json"
+    op.parent.mkdir(parents=True)
+    op.write_text(json.dumps({"operation_identity": "op:1", "market_session": SESSION,
+                              "generation_context": "DAILY_PRODUCER_RETAINED_COMPLETED_SESSION"}), encoding="utf-8")
+    assert velocity._operation(producer, SESSION, "op:1") == {"path": str(op.resolve())}
+    assert velocity._operation(producer, SESSION, "op:other") is None

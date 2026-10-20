@@ -29,8 +29,17 @@ def _rel(root:Path,path:Path)->str:
     try:return path.resolve().relative_to(root.resolve()).as_posix()
     except ValueError:return str(path)
 
+def _evidence(root:Path,relative:Path)->Path:
+    """Exact retained path under the first governed evidence root holding it (checkout first).
+
+    Split code/evidence roots (2026-10-19 T: cutover): the completed-session ledger stays in the
+    Producer checkout while handoffs, T0 snapshots and operations are sealed under the
+    operation-output root; reading them beside the checkout excluded every session."""
+    from stocklookup_core.evidence.evidence_roots import governed_evidence_roots
+    return next((base/relative for base in governed_evidence_roots(root) if (base/relative).exists()), Path(root)/relative)
+
 def _operation(root:Path,session:str,identity:str)->dict[str,Any]|None:
-    base=root/"operations-review"/"daily-research-session-operations-v1"/session
+    base=_evidence(root,Path("operations-review")/"daily-research-session-operations-v1"/session)
     rows=[(p,_load(p)) for p in sorted(base.glob("*/run_manifest.json"))] if base.is_dir() else []
     rows=[(p,m) for p,m in rows if m and m.get("operation_identity")==identity]
     if len(rows)!=1:return None
@@ -80,8 +89,8 @@ def discover_retained_snapshots(root:str|Path, *, project_axes: bool = False, pr
             "completed": len(inventory), "total": len(sessions), "status": status})
     report("BEGIN")
     for session in sessions:
-        handoff_path=repo/"operations-review"/"canonical-post-close-v1"/session/"session_handoff_bundle.json"; handoff=_load(handoff_path); declared=(handoff or {}).get("prospective_decision_snapshot") or {}; ident=declared.get("identity") if isinstance(declared,Mapping) else None
-        digest=ident.removeprefix(retention.SNAPSHOT_PREFIX) if isinstance(ident,str) else ""; path=repo/"operations-review"/"prospective-decision-retention-v1"/session/digest/"prospective_decision_snapshot.json"
+        handoff_path=_evidence(repo,Path("operations-review")/"canonical-post-close-v1"/session/"session_handoff_bundle.json"); handoff=_load(handoff_path); declared=(handoff or {}).get("prospective_decision_snapshot") or {}; ident=declared.get("identity") if isinstance(declared,Mapping) else None
+        digest=ident.removeprefix(retention.SNAPSHOT_PREFIX) if isinstance(ident,str) else ""; path=_evidence(repo,Path("operations-review")/"prospective-decision-retention-v1"/session/digest/"prospective_decision_snapshot.json")
         snap, valid = _project_snapshot(path) if project_axes else (_load(path), None)
         reasons=[]; operation=None
         if not snap: reasons.append("EXACT_HANDOFF_SNAPSHOT_NOT_RETAINED_OR_UNREADABLE")
