@@ -208,9 +208,18 @@ def resolve_supplementary_inputs(root: Path, session: str) -> dict[str, dict[str
     resolved: dict[str, dict[str, Any] | None] = {}
     session_compact = _session_compact(session)
     for name, (dir_template, filename) in SUPPLEMENTARY_INPUT_TEMPLATES.items():
-        path = root / "operations-review" / dir_template.format(session=session_compact) / filename
+        path = _first_governed_path(root, Path("operations-review") / dir_template.format(session=session_compact) / filename)
         resolved[name] = _load_json(path) if path.is_file() else None
     return resolved
+
+
+def _first_governed_path(root: Path, relative: Path) -> Path:
+    """The same one deterministic relative path, under the first governed evidence root that has
+    it (checkout first). Split code/evidence roots (2026-10-19 T: cutover) seal these per-session
+    artifacts under the operation-output root; searching only the checkout silently turned every
+    supplementary axis (Financial V2, tactical boundaries, ...) UNAVAILABLE."""
+    from stocklookup_core.evidence.evidence_roots import governed_evidence_roots
+    return next((base / relative for base in governed_evidence_roots(root) if (base / relative).is_file()), Path(root) / relative)
 
 
 #: Signal Velocity / Flow-Price Divergence use each engine's own established retained-artifact
@@ -231,7 +240,7 @@ def resolve_velocity_and_flow_price_inputs(root: Path, session: str) -> dict[str
     root = Path(root)
     resolved: dict[str, dict[str, Any] | None] = {}
     for name, (dir_slug, filename) in VELOCITY_FLOW_PRICE_INPUT_PATHS.items():
-        path = root / "operations-review" / dir_slug / session / filename
+        path = _first_governed_path(root, Path("operations-review") / dir_slug / session / filename)
         resolved[name] = _load_json(path) if path.is_file() else None
     return resolved
 

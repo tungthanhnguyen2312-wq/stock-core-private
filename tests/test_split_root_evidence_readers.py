@@ -152,3 +152,64 @@ def test_integrated_decision_candidates_cover_the_retained_root_in_order(split):
         producer.resolve() / "operations-review/integrated-investment-decision-product-v1-20261019/integrated_investment_decision_product_artifact.json",
     ]
     assert candidates[2].is_relative_to(retained.resolve()) and len(candidates) == 4
+
+
+def test_current_product_supplementary_axes_resolve_from_retained_root(split):
+    import canonical_current_product_projections as projections
+    producer, retained = split
+    rel = Path("operations-review/financial-analysis-product-v2-20261019/financial_analysis_product_artifact.json")
+    (retained / rel).parent.mkdir(parents=True)
+    (retained / rel).write_text(json.dumps({"financial_analysis_product": {
+        "contract_version": "financial_analysis_product_integration/v1"}}), encoding="utf-8")
+    resolved = projections.resolve_supplementary_inputs(producer, SESSION)
+    assert resolved["financial_analysis_product_v2"] is not None
+    assert projections._financial_analysis_product_context(resolved) is not None
+    assert resolved["tactical_boundaries"] is None  # absent everywhere: still a legitimate None
+
+
+def test_current_product_supplementary_checkout_copy_wins(split):
+    import canonical_current_product_projections as projections
+    producer, retained = split
+    rel = Path("operations-review/current-market-sector-leadership-context-v1-20261019/current_market_sector_leadership_context_artifact.json")
+    for base, marker in ((producer, "checkout"), (retained, "retained")):
+        (base / rel).parent.mkdir(parents=True)
+        (base / rel).write_text(json.dumps({"marker": marker}), encoding="utf-8")
+    assert projections.resolve_supplementary_inputs(producer, SESSION)["leadership"] == {"marker": "checkout"}
+
+
+def _all_supplementary_relatives():
+    import canonical_current_product_projections as projections
+    compact = SESSION.replace("-", "")
+    rows = [("supplementary", name, Path("operations-review") / d.format(session=compact) / f)
+            for name, (d, f) in projections.SUPPLEMENTARY_INPUT_TEMPLATES.items()]
+    rows += [("velocity_flow", name, Path("operations-review") / d / SESSION / f)
+             for name, (d, f) in projections.VELOCITY_FLOW_PRICE_INPUT_PATHS.items()]
+    return rows
+
+
+@pytest.mark.parametrize("kind,name,relative", _all_supplementary_relatives(), ids=lambda v: str(v))
+def test_every_current_product_axis_resolves_when_only_the_retained_root_has_it(split, kind, name, relative):
+    # Guard against the 2026-10-19 mass degradation: an axis sealed only under the governed
+    # operation-output root must never silently resolve to None (every card UNAVAILABLE).
+    import canonical_current_product_projections as projections
+    producer, retained = split
+    (retained / relative).parent.mkdir(parents=True, exist_ok=True)
+    (retained / relative).write_text(json.dumps({"axis": name}), encoding="utf-8")
+    resolver = (projections.resolve_supplementary_inputs if kind == "supplementary"
+                else projections.resolve_velocity_and_flow_price_inputs)
+    assert resolver(producer, SESSION)[name] == {"axis": name}
+
+
+def test_velocity_discovery_reads_handoffs_and_operations_from_retained_root(split):
+    import multi_session_signal_velocity as velocity
+    producer, retained = split
+    handoff = Path("operations-review/canonical-post-close-v1") / SESSION / "session_handoff_bundle.json"
+    (retained / handoff).parent.mkdir(parents=True)
+    (retained / handoff).write_text("{}", encoding="utf-8")
+    assert velocity._evidence(producer, handoff) == retained.resolve() / handoff
+    op = retained / "operations-review/daily-research-session-operations-v1" / SESSION / "abc" / "run_manifest.json"
+    op.parent.mkdir(parents=True)
+    op.write_text(json.dumps({"operation_identity": "op:1", "market_session": SESSION,
+                              "generation_context": "DAILY_PRODUCER_RETAINED_COMPLETED_SESSION"}), encoding="utf-8")
+    assert velocity._operation(producer, SESSION, "op:1") == {"path": str(op.resolve())}
+    assert velocity._operation(producer, SESSION, "op:other") is None
