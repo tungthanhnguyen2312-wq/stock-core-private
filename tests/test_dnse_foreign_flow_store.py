@@ -7,12 +7,16 @@ import unittest
 from pathlib import Path
 
 from stocklookup_core.evidence.dnse_foreign_flow_capability import normalize_record
+from datetime import datetime, timezone
+from unittest import mock
+
 from dnse_foreign_flow_store import (
     STATUS_AVAILABLE,
     STATUS_MISSING,
     VALUE_QUALIFICATION_STATUS,
     DnseForeignFlowStoreError,
     build_series,
+    flow_known_at,
     read_observations,
     write_observations,
 )
@@ -49,6 +53,40 @@ def _make_runtime_with_ohlcv(tmp_dir: str, ticker: str, dates: list[str]) -> Pat
     conn.commit()
     conn.close()
     return root
+
+
+class FlowKnownAtTests(unittest.TestCase):
+    def test_naive_dnse_wall_clock_is_ho_chi_minh_not_utc(self):
+        known = flow_known_at("2026-10-20 15:33:08.052")
+        self.assertEqual(timezone.utc, known.tzinfo)
+        self.assertEqual(8, known.hour)
+        self.assertEqual(33, known.minute)
+        self.assertEqual(20, known.day)
+
+    def test_explicit_offset_is_unchanged(self):
+        known = flow_known_at("2026-10-20T15:33:08.052+07:00")
+        self.assertEqual(8, known.astimezone(timezone.utc).hour)
+
+    def test_build_series_accepts_retained_naive_clock_for_the_calendar_cutoff(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = _make_runtime_with_ohlcv(tmp, "HPG", ["2026-10-19", "2026-10-20"])
+            write_observations(root, "HPG", [_normalized("2026-10-19"), _normalized("2026-10-20")])
+            registry = Path(tmp) / "config" / "daily_research_session_input_registry.json"
+            registry.parent.mkdir()
+            registry.write_text("{}", encoding="utf-8")
+            seen = {}
+
+            def fake(_root, *, cutoff, static_path=None):
+                seen["cutoff"] = cutoff
+                return None
+
+            with mock.patch("prospective_pit_capture_retention.calendar_evidence_at_cutoff", fake):
+                series = build_series(root, "HPG", reference_session_date="2026-10-20",
+                                       qualified_session_registry_path=registry)
+            self.assertEqual("current", series["freshness"]["status"])
+            parsed = datetime.fromisoformat(seen["cutoff"])
+            self.assertEqual(8, parsed.astimezone(timezone.utc).hour)
+            self.assertEqual(33, parsed.minute)
 
 
 class WriteObservationsTests(unittest.TestCase):

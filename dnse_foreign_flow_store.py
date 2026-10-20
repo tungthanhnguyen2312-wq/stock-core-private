@@ -34,17 +34,41 @@ NO NETWORK I/O, NO SECRETS
 from __future__ import annotations
 
 import json
-from prospective_pit_capture import CAPTURE_START_NOT_BEFORE
-from contextvars import ContextVar
-from contextlib import contextmanager
 import sqlite3
-from datetime import date as _date
+from contextlib import contextmanager
+from contextvars import ContextVar
+from datetime import date as _date, datetime, timezone
 from pathlib import Path
 from typing import Any, Mapping, Sequence
+from zoneinfo import ZoneInfo
+
+from prospective_pit_capture import CAPTURE_START_NOT_BEFORE
 
 from stocklookup_core.acquisition.artifact_io import atomic_write_file, validate_json_file
 from stocklookup_core.evidence.daily_session_completion_reference import load_qualified_completed_sessions
 from stocklookup_core.evidence.dnse_foreign_flow_capability import PROVIDER, SOURCE_CONTRACT_VERSION
+
+# DNSE foreign-trading `time` is retained verbatim. It is an exchange wall clock
+# with no offset; the session date is the Asia/Ho_Chi_Minh civil date of that clock.
+_DNSE_FLOW_WALL_ZONE = ZoneInfo("Asia/Ho_Chi_Minh")
+
+
+def flow_known_at(value: str) -> datetime:
+    """Knowledge instant for calendar continuity. Naive source clocks stay +07, never UTC."""
+    from prospective_market_snapshot_contract import SnapshotContractError, _utc
+    if not isinstance(value, str) or not value.strip():
+        raise SnapshotContractError("flow_known_at_datetime_or_iso8601_required")
+    text = value.strip()
+    if text.endswith(("Z", "z")) or "+" in text[10:] or (len(text) > 10 and "-" in text[10:]):
+        return _utc(text, "flow_known_at")
+    try:
+        parsed = datetime.fromisoformat(text)
+    except ValueError as error:
+        raise SnapshotContractError("flow_known_at_not_iso8601") from error
+    if parsed.tzinfo is not None and parsed.utcoffset() is not None:
+        return _utc(parsed, "flow_known_at")
+    return parsed.replace(tzinfo=_DNSE_FLOW_WALL_ZONE).astimezone(timezone.utc)
+
 
 _GOVERNED_CALENDAR = ContextVar("foreign_flow_governed_calendar", default=None)
 
@@ -481,8 +505,10 @@ def build_series(
         from prospective_pit_capture_retention import calendar_evidence_at_cutoff
         known = [o["observed_at"] for o in observations if o.get("observed_at")]
         if known:
+            # max(key=) would order by the aware instant but still pass the raw
+            # naive source string into the cutoff contract, which rejects it.
             calendar_evidence = calendar_evidence_at_cutoff(Path(qualified_session_registry_path).resolve().parent.parent,
-                cutoff=max(known, key=lambda t: __import__("prospective_market_snapshot_contract")._utc(t,"flow_known_at")))
+                cutoff=max(flow_known_at(t) for t in known).isoformat())
 
     status = STATUS_AVAILABLE if observations else STATUS_MISSING
     qualified_with_net = [o for o in observations if o["foreign_net_value_vnd"] is not None]

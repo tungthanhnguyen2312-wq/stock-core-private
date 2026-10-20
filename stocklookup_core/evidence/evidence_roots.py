@@ -29,3 +29,29 @@ def governed_evidence_roots(producer_root: str | os.PathLike[str]) -> list[Path]
         if root not in unique:
             unique.append(root)
     return unique
+
+
+def resolve_existing_evidence_file(producer_root: str | os.PathLike[str], path: str | os.PathLike[str]) -> Path:
+    """First governed root that already holds this evidence file.
+
+    An absolute path that exists is returned unchanged (the completed-session
+    registry already records some inputs that way). A checkout-relative path is
+    searched in ``governed_evidence_roots`` order, checkout first. A missing
+    file stays on the checkout path so the caller still fail-closes.
+    """
+    producer = Path(producer_root).resolve()
+    candidate = Path(path)
+    if candidate.is_absolute() and candidate.is_file():
+        return candidate
+    if candidate.is_absolute():
+        try:
+            relative = candidate.resolve().relative_to(producer)
+        except ValueError:
+            return candidate
+    else:
+        relative = candidate
+    for base in governed_evidence_roots(producer):
+        found = base / relative
+        if found.is_file():
+            return found
+    return producer / relative
