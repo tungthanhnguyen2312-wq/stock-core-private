@@ -227,6 +227,21 @@ def test_build_packet_unions_workspace_and_screener_never_intersects():
     assert packet["coverage"]["zero_silent_ticker_drops"] is True
 
 
+def test_missing_financial_analysis_stays_null_and_is_not_synthesized():
+    card = _workspace_card("HPG")
+    card["why"]["financial_analysis"] = None
+    card["counter_thesis"].pop("financial_analysis")
+    workspace = _workspace_artifact({"HPG": card})
+    screener = _screener_artifact({"HPG": _screener_card("HPG")})
+    packet = build_packet(session=SESSION, requested_at="now", producer_commit="abc", daily_operation_identity="op:abc",
+                          workspace_artifact=workspace, screener_artifact=screener)
+    thesis = packet["cards"]["HPG"]["thesis"]
+    counter = packet["cards"]["HPG"]["counter_thesis"]
+    assert thesis["financial_analysis"] is None
+    assert counter["financial_analysis"] is None
+    assert "profitability_state" not in json.dumps(thesis["financial_analysis"])
+
+
 def test_watchlist_subset_never_drops_a_requested_ticker():
     workspace = _workspace_artifact({"AAA": _workspace_card("AAA")})
     screener = _screener_artifact({"AAA": _screener_card("AAA")})

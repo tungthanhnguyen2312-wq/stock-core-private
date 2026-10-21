@@ -149,6 +149,89 @@ def verify_complete(directory):
     return manifest
 
 
+def _knowledge_cutoff_session_date(value):
+    """Calendar date in Asia/Ho_Chi_Minh. A same-evening cutoff stays on the session date."""
+    from datetime import datetime, timedelta, timezone
+    if not isinstance(value, str) or not value:
+        return None
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        return None
+    return parsed.astimezone(timezone(timedelta(hours=7))).date().isoformat()
+
+
+def enrichment_historical_context_path(root, session):
+    path = Path(root) / "operations-review" / "canonical-post-close-v1" / session / "enrichment" / "historical_context.json"
+    return path if path.is_file() else None
+
+
+def stage_qualified_v2_technical(path, session, put, context_digest, root):
+    """Adopt only verified same-session V2 contexts from the retained enrichment batch.
+
+    The frozen Thesis caller looks for ``historical_context.json`` beside the Level-2
+    decision product. That sibling does not exist. The batch that actually carries
+    ``contextual_technical`` is the session enrichment file. Raw V1 rows, a cutoff on a
+    later Ho Chi Minh calendar date, and any context that fails verification stay out.
+    This function never rewrites the source file and never admits rows into T0; the
+    caller invokes it only for the current stage.
+    """
+    import stocklookup_core.tactical.contextual_technical_dispatch as dispatch
+    path = Path(path)
+    fingerprint_before = seals.fingerprint(path)
+    accepted = {}
+    skipped = Counter()
+    def retain(ticker, row):
+        context = row.get("contextual_technical") if isinstance(row, dict) else None
+        if not isinstance(context, dict):
+            skipped["CONTEXT_ABSENT"] += 1
+            return
+        if context.get("contract_version") != dispatch.V2:
+            skipped["NOT_V2"] += 1
+            return
+        if context.get("as_of_session") != session:
+            skipped["SESSION_MISMATCH"] += 1
+            return
+        cutoff_day = _knowledge_cutoff_session_date(context.get("knowledge_cutoff"))
+        if cutoff_day is None or cutoff_day > session:
+            skipped["KNOWLEDGE_CUTOFF_AFTER_SESSION_OR_UNPARSEABLE"] += 1
+            return
+        try:
+            dispatch.verify_context(context, ticker=ticker, session=session)
+        except (ValueError, TypeError, KeyError):
+            skipped["VERIFY_FAILED"] += 1
+            return
+        accepted[ticker] = context
+    try:
+        metadata, digest, _ = stream_artifact(path, excluded={"artifact_identity", "artifact_sha256"}, on_record=retain)
+    except (OSError, UnicodeError, json.JSONDecodeError, ValueError):
+        return {"status": "NOT_ADOPTED", "reason": "TECHNICAL_V2_SOURCE_UNREADABLE"}
+    if seals.fingerprint(path) != fingerprint_before:
+        return {"status": "NOT_ADOPTED", "reason": "TECHNICAL_V2_SOURCE_CHANGED_DURING_READ"}
+    if metadata.get("session") != session or metadata.get("artifact_sha256") != digest:
+        return {"status": "NOT_ADOPTED", "reason": "TECHNICAL_V2_SOURCE_HASH_OR_SESSION_INVALID"}
+    if not accepted:
+        return {"status": "NOT_ADOPTED", "reason": "TECHNICAL_V2_NONE_QUALIFIED", "skipped": dict(skipped)}
+    for ticker, context in sorted(accepted.items()):
+        context_digest.update(c.canonical([
+            ticker, context["contract_version"], context["artifact_identity"], context.get("knowledge_cutoff"),
+        ]).encode())
+        put("technical", ticker, context)
+    return {"status": "ADOPTED", "source": {
+        "identity": metadata.get("artifact_identity"),
+        "sha256": source_hash(path),
+        "path": os.path.relpath(path, root).replace("\\", "/"),
+        "contract_version": dispatch.V2,
+        "session": session,
+        "accepted_count": len(accepted),
+        "skipped": dict(skipped),
+        "knowledge_cutoff_bound": "ASIA_HO_CHI_MINH_CALENDAR_DATE",
+        "post_t0_not_admitted_to_t0": True,
+    }}
+
+
 def status_ref(directory,manifest,root,*,reused=False):
     return {"status":"ALREADY_RETAINED" if reused else manifest["status"],"component_status":manifest["status"],
         "session":manifest["session"],"artifact_identity":manifest["artifact_identity"],
@@ -202,7 +285,18 @@ def build(*,root,output_root,session,stage,decision_path=None,technical_path=Non
             sha256=source_hash(path)
             if seals.fingerprint(path)!=fingerprint_before:raise ValueError("THESIS_SOURCE_CHANGED_DURING_READ:"+kind)
             sources[kind]={"identity":metadata["artifact_identity"],"sha256":sha256,"path":os.path.relpath(path,root).replace("\\","/")}
-        stage_source(decision_path,"decision");stage_source(technical_path,"technical")
+        stage_source(decision_path,"decision")
+        if technical_path:
+            stage_source(technical_path,"technical")
+        elif stage=="current":
+            # Frozen caller passes no technical file when Level-2 decision has no sibling batch.
+            # Adopt the retained enrichment batch only after V2, session, and cutoff checks.
+            candidate=enrichment_historical_context_path(root, session)
+            if candidate is not None:
+                adopted=stage_qualified_v2_technical(candidate, session, put, context_digest, root)
+                if adopted.get("status")=="ADOPTED":
+                    parses["technical"]+=1
+                    sources["technical"]=adopted["source"]
         if stage=="current":stage_source(flow_path,"flow")
         if sealed_decision_path:
             if not bound:raise ValueError("THESIS_SEALED_DECISION_INDEX_REQUIRED")

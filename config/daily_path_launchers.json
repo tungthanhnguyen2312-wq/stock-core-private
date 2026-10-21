@@ -10,16 +10,16 @@
       ]
     },
     "canonical_daily_operation.py": {
-      "ast_sha256": "8b34591e3ab193ea6cfb6006493559505c7b16d8df03bbde8ef6accfe8f637ed",
-      "reason": "Macro argv resolved; release_orchestrator called in-process via import/parse_args, injected runner is bounded.",
+      "ast_sha256": "835efc0bd2e4c2ae7efc7808867a6722622f22b2bbc702c17ed84b9512ae5e7b",
+      "reason": "Macro argv resolved; release_orchestrator called in-process via import/parse_args, injected runner is bounded. 2026-10-21 review: AST refresh is the approved evaluated-valuation read only; resolved subprocess argv is unchanged from origin/main.",
       "targets": [
         "macro_sync.py",
         "tools/release_orchestrator.py"
       ]
     },
     "canonical_post_close_pipeline.py": {
-      "ast_sha256": "244f417e7280848e566437daf10e12433d20a8d37f2aa9465d9b34ef568aab1f",
-      "reason": "Child argv passed to imported run_observed_subprocess and progress wrapper; exact source contract covers delegation.",
+      "ast_sha256": "8f840c19e83d1d163aa11055d1649c366f758f1461d676b9d70541de8f5563ed",
+      "reason": "Child argv passed to imported run_observed_subprocess and progress wrapper; exact source contract covers delegation. 2026-10-21 review: AST refresh is the approved evaluated-valuation join only; resolved subprocess argv is unchanged from origin/main.",
       "targets": [
         "tools/run_prospective_decision_outcome_feedback.py",
         "tools/run_prospective_research_cohort_collection.py",

@@ -213,11 +213,15 @@ def diagnose_methods(observations: Sequence[Mapping[str, Any]]) -> dict[str, Any
     }
 
 
+_PLANNED_LIFECYCLES = frozenset({"PLANNED", "PROPOSED", "ANNOUNCED", "APPROVED", "CONFIRMED_UPCOMING"})
+_EXECUTED_LIFECYCLES = frozenset({"EXECUTED", "REGISTERED", "SHARES_OUTSTANDING_EFFECTIVE", "CONFIRMED_RECENT"})
+
+
 def project_corporate_event_binding(event: Mapping[str, Any]) -> dict[str, Any]:
     """Project an already-qualified event. Never infer an ex-date or executed shares."""
     lifecycle = str(event.get("lifecycle") or event.get("event_status") or UNKNOWN)
-    planned = lifecycle in {"PLANNED", "PROPOSED", "ANNOUNCED", "CONFIRMED_UPCOMING"}
-    executed = lifecycle in {"EXECUTED", "CONFIRMED_RECENT"} and event.get("execution_evidence_qualified") is True
+    planned = lifecycle in _PLANNED_LIFECYCLES
+    executed = lifecycle in _EXECUTED_LIFECYCLES and event.get("execution_evidence_qualified") is True
     ex_date = event.get("ex_date") if event.get("ex_date_qualified") is True else None
     share_delta = event.get("share_delta") if executed else None
     return {
@@ -238,6 +242,49 @@ def project_corporate_event_binding(event: Mapping[str, Any]) -> dict[str, Any]:
         "freshness": event.get("freshness") or UNKNOWN,
         "evidence_tier": event.get("evidence_tier") or UNKNOWN,
         "issuer_route_promoted": False,
+    }
+
+
+def qualify_share_basis_for_price_session(evidence: Mapping[str, Any]) -> dict[str, Any]:
+    """Decide whether a share count may sit under a price session.
+
+    ``market_cap / price`` is a cross-check only. A plan is not issued shares.
+    A missing official ex-date keeps continuity blocked. A restated price is not
+    the original price when the price basis is unqualified.
+    """
+    lifecycle = str(evidence.get("lifecycle") or evidence.get("event_status") or UNKNOWN)
+    reasons: list[str] = []
+    shares = evidence.get("shares")
+    if evidence.get("market_cap") is not None and evidence.get("price") is not None and shares is None:
+        reasons.append("SHARE_AUTHORITY_NOT_INFERRED_FROM_MARKET_CAP_OVER_PRICE")
+    if evidence.get("price_basis") == "ADJUSTED_RETROSPECTIVE":
+        reasons.append("RESTATED_PRICE_IS_NOT_ORIGINAL_PRICE")
+    if evidence.get("share_continuity_evidence") is not True:
+        reasons.append("CURRENT_COMMON_OUTSTANDING_COVERAGE_NOT_PROVEN")
+    if lifecycle in _PLANNED_LIFECYCLES or evidence.get("execution_evidence_qualified") is not True:
+        reasons.append("PLANNED_OR_UNEXECUTED_ACTION_IS_NOT_SHARES_OUTSTANDING")
+    ex_date = evidence.get("ex_date") if evidence.get("ex_date_qualified") is True else None
+    effective = evidence.get("effective_date") if evidence.get("effective_date_qualified") is True else None
+    if ex_date is None:
+        reasons.append("MISSING_EXPLICIT_OFFICIAL_EX_DATE")
+    session = str(evidence.get("price_session") or "")[:10]
+    if effective and session and str(effective) > session:
+        reasons.append("EFFECTIVE_DATE_AFTER_PRICE_SESSION")
+    usable = not reasons and lifecycle in _EXECUTED_LIFECYCLES and shares is not None
+    return {
+        "contract_version": CONTRACT_VERSION,
+        "lifecycle": lifecycle,
+        "shares": shares if usable else None,
+        "share_authority": "QUALIFIED_EFFECTIVE_SHARES" if usable else "BLOCKED",
+        "share_continuity": "QUALIFIED" if usable else "BLOCKED",
+        "ex_date": ex_date,
+        "ex_date_inferred": False,
+        "effective_date": effective if usable or "EFFECTIVE_DATE_AFTER_PRICE_SESSION" in reasons else None,
+        "planned_shares_converted_to_executed": False,
+        "market_cap_over_price_used_as_shares": False,
+        "original_price": None if "RESTATED_PRICE_IS_NOT_ORIGINAL_PRICE" in reasons else evidence.get("price"),
+        "reason_codes": reasons,
+        "is_actionable": False,
     }
 
 

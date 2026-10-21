@@ -2,11 +2,13 @@
 from __future__ import annotations
 
 from collections import Counter
+import copy
 import hashlib
 import json
 from typing import Any, Mapping
 
 from stocklookup_core.valuation.current_research_valuation_context import (
+    CONTRACT_VERSION as VALUATION_CONTEXT_CONTRACT,
     attach_fundamental_peers, attach_peer_relative, evaluate_ticker_valuation, freshness_for_valuation,
     source_session_for_valuation,
 )
@@ -22,6 +24,7 @@ from stocklookup_core.financial.financial_analysis_product_projection import con
 
 SCHEMA_VERSION = "1.0.0"
 MILESTONE = "CURRENT_VALUATION_AND_OPPORTUNITY_INTEGRATION_V1"
+EVALUATED_VALUATION_PRODUCT_COPY = "current_research_valuation_context_artifact.json"
 _IDENTITY_EXCLUDED = {"artifact_sha256", "artifact_identity", "requested_at"}
 
 
@@ -43,6 +46,75 @@ def _tickers(*artifacts: Mapping[str, Any] | None) -> list[str]:
     return sorted(names)
 
 
+def accept_evaluated_valuation(payload: Mapping[str, Any] | None) -> Mapping[str, Any] | None:
+    """Accept the versioned Producer valuation context, or nothing.
+
+    A missing artifact stays on the raw research path. A present artifact with the
+    wrong contract, records, or identity is refused. This function does not
+    recompute a multiple.
+    """
+    if payload is None:
+        return None
+    if not isinstance(payload, Mapping):
+        raise ValueError("EVALUATED_VALUATION_RECORDS_INVALID")
+    if payload.get("contract_version") != VALUATION_CONTEXT_CONTRACT:
+        raise ValueError("EVALUATED_VALUATION_CONTRACT_MISMATCH")
+    if not isinstance(payload.get("records"), Mapping):
+        raise ValueError("EVALUATED_VALUATION_RECORDS_INVALID")
+    if not payload.get("artifact_identity"):
+        raise ValueError("EVALUATED_VALUATION_IDENTITY_MISSING")
+    return payload
+
+
+def evaluated_valuation_for_presentation(
+    lineage: Mapping[str, Any] | None, loaded: Mapping[str, Any] | None,
+) -> Mapping[str, Any] | None:
+    """Reload the exact evaluated artifact the sealed workspace already consumed.
+
+    A sealed workspace that does not cite one keeps the historical join. A cited
+    identity that is missing or different is a hard divergence, not a fresh valuation.
+    """
+    if lineage is None:
+        return None
+    expected = (lineage.get("source_artifacts") or {}).get("current_research_valuation_context")
+    if not expected:
+        return None
+    accepted = accept_evaluated_valuation(loaded)
+    if accepted is None or accepted.get("artifact_identity") != expected:
+        raise ValueError("EVALUATED_VALUATION_LINEAGE_DIVERGED")
+    return accepted
+
+
+def _valuation_rows_for_join(
+    tickers: list[str], *, features: Mapping[str, Any], valuation_records: Mapping[str, Any],
+    financial_analysis_records: Mapping[str, Any], financial_analysis_context: Mapping[str, Any] | None,
+    evaluated_valuation: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    """Use Producer-evaluated rows where they exist. Do not re-evaluate those rows.
+
+    Tickers absent from the evaluated artifact stay on the raw ``evaluate_ticker_valuation``
+    path. Peer context already attached by the Producer is left in place. Raw rows are
+    compared only with other raw rows, so a missing ticker cannot rewrite the Producer cohort.
+    """
+    adopted: dict[str, Any] = {}
+    records = (evaluated_valuation or {}).get("records") or {}
+    for ticker in tickers:
+        row = records.get(ticker)
+        if isinstance(row, Mapping) and isinstance(row.get("methods"), Mapping):
+            adopted[ticker] = copy.deepcopy(dict(row))
+    raw_rows = {
+        ticker: evaluate_ticker_valuation(
+            ticker=ticker, feature_record=features.get(ticker), valuation_record=valuation_records.get(ticker),
+            financial_analysis_record=financial_analysis_records.get(ticker),
+            financial_analysis_context_identity=(financial_analysis_context or {}).get("artifact_identity"),
+        )
+        for ticker in tickers if ticker not in adopted
+    }
+    if raw_rows:
+        raw_rows = attach_peer_relative(raw_rows)
+    return {ticker: adopted.get(ticker) or raw_rows[ticker] for ticker in tickers}
+
+
 def build_artifacts(
     *,
     as_of_session: str,
@@ -57,6 +129,7 @@ def build_artifacts(
     portfolio: Mapping[str, Any] | None = None,
     financial_analysis_product_context: Mapping[str, Any] | None = None,
     financial_analysis_context: Mapping[str, Any] | None = None,
+    evaluated_valuation: Mapping[str, Any] | None = None,
     requested_at: str,
 ) -> dict[str, Any]:
     """Join retained current-research artifacts into opportunity and decision contexts.
@@ -96,15 +169,13 @@ def build_artifacts(
     if not tickers:
         raise ValueError("EMPTY_OPPORTUNITY_DENOMINATOR")
 
-    valuation_rows = {
-        ticker: evaluate_ticker_valuation(
-            ticker=ticker, feature_record=features.get(ticker), valuation_record=valuation_records.get(ticker),
-            financial_analysis_record=financial_analysis_records.get(ticker),
-            financial_analysis_context_identity=(financial_analysis_context or {}).get("artifact_identity"),
-        )
-        for ticker in tickers
-    }
-    valuation_rows = attach_peer_relative(valuation_rows)
+    evaluated_valuation = accept_evaluated_valuation(evaluated_valuation)
+    valuation_rows = _valuation_rows_for_join(
+        tickers, features=features, valuation_records=valuation_records,
+        financial_analysis_records=financial_analysis_records,
+        financial_analysis_context=financial_analysis_context,
+        evaluated_valuation=evaluated_valuation,
+    )
     fundamental_peers = attach_fundamental_peers(features, valuation_rows)
     valuation_freshness = freshness_for_valuation(decision_session=as_of_session, valuation_artifact=valuation)
     portfolio_session = _session(portfolio, "as_of_session") or ((portfolio or {}).get("metadata") or {}).get("as_of_session")
@@ -175,6 +246,8 @@ def build_artifacts(
         "financial_analysis_product_integration": (financial_analysis_product_context or {}).get("artifact_identity"),
         "financial_analysis_context": (financial_analysis_context or {}).get("artifact_identity"),
     }
+    if evaluated_valuation is not None:
+        source_artifacts["current_research_valuation_context"] = evaluated_valuation.get("artifact_identity")
     opportunity = _opportunity_artifact(
         as_of_session=as_of_session, requested_at=requested_at, records=opportunity_records,
         source_artifacts=source_artifacts, valuation_rows=valuation_rows, fundamental_peers=fundamental_peers,

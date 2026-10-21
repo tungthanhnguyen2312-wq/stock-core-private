@@ -282,6 +282,7 @@ def run_daily_producer(
     runtime_root_override: Path | None = None,
     now: datetime | None = None,
     reuse_immutable_delivery: bool = False,
+    evaluated_valuation: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Run the one-command retained completed-session producer pipeline."""
     if bool(session) == bool(latest_completed_session):
@@ -342,6 +343,7 @@ def run_daily_producer(
         requested_at=vn_now().isoformat(timespec="seconds"),
         runtime_root_override=runtime_root_override,
         integrated_investment_decision_product=integrated_investment_decision_product,
+        evaluated_valuation=evaluated_valuation,
     )
     run_identity = _run_identity(selected, producer_head, consumer_head, plan, operation["manifest"]["operation_identity"])
     run_dir = output_root / selected / run_identity.split(":", 1)[1]

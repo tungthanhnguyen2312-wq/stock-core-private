@@ -1666,6 +1666,14 @@ def run_post_handoff_presentation_projection(
 
         registry = load_registry(root)
         registry_inputs, _metadata = resolve_inputs(root, session, registry)
+        from stocklookup_core.valuation.current_valuation_opportunity_integration import (
+            EVALUATED_VALUATION_PRODUCT_COPY, evaluated_valuation_for_presentation,
+        )
+        evaluated_valuation = None
+        if lineage is not None:
+            evaluated_valuation = evaluated_valuation_for_presentation(
+                lineage, _load(lineage["operation_dir"] / EVALUATED_VALUATION_PRODUCT_COPY),
+            )
         presentation_dir = output_root / "operations-review" / "post-handoff-presentation-projection-v1" / session
         if current_corporate_knowledge_overlay is not None:
             presentation_dir = (output_root / "operations-review" / "current-corporate-product-projection-v1"
@@ -1675,6 +1683,7 @@ def run_post_handoff_presentation_projection(
             root=root, session=session, operation_dir=presentation_dir, registry_inputs=registry_inputs,
             requested_at=vn_now().isoformat(timespec="seconds"), runtime_root_override=runtime_root,
             integrated_investment_decision_product=integrated,
+            evaluated_valuation=evaluated_valuation,
             **({"current_corporate_knowledge_overlay": current_corporate_knowledge_overlay}
                if current_corporate_knowledge_overlay is not None else {}),
         )

@@ -27,7 +27,8 @@ _END = {1: ("01-01", "03-31"), 2: ("04-01", "06-30"), 3: ("07-01", "09-30"), 4: 
 
 def sem(metric, value, period="2026-Q1", *, ticker="AAA", provider="KBS", family="income_statement",
         semantic="STANDALONE_QUARTER", scope="consolidated", currency="unknown", scale="unknown", source=None,
-        sha=None, status="provider_reported", cumulative="period_only", observations=None, **changes):
+        sha=None, status="provider_reported", cumulative="period_only", observations=None,
+        period_qualified=True, **changes):
     """A retained `market_wide_structured_financial_period_semantics/v1` row."""
     start, end = _END[int(period[-1])]
     row = {"ticker": ticker, "canonical_metric": metric, "reported_value": value, "native_period_label": period,
@@ -40,6 +41,13 @@ def sem(metric, value, period="2026-Q1", *, ticker="AAA", provider="KBS", family
                               "source_sha256": sha or f"sha-{ticker}-{family}", "fact_id": f"{ticker}-{metric}-{period}-{provider}",
                               "source_observation_ids": observations if observations is not None else [f"o-{ticker}-{metric}-{period}"]}}
     row.update(changes)
+    # Fixture rows that name a period are treated as already qualified for that stated
+    # period. Production rows do not receive this field. Pass period_qualified=False to
+    # keep a raw KBS label.
+    if (period_qualified and provider == "KBS" and family == "income_statement"
+            and "qualified_normalized_period" not in changes):
+        row["qualified_normalized_period"] = period
+        row["period_normalization"] = "FIXTURE_STATED_PERIOD"
     return row
 
 

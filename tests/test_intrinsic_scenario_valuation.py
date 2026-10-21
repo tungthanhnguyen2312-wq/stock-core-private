@@ -297,6 +297,69 @@ def test_invalid_config_identity_cannot_preserve_numeric_assumptions():
     assert projection["methods"]["FCFF_DCF"]["readiness"] == "BLOCKED"
 
 
+def test_workspace_axis_copies_retained_intrinsic_projection_without_recomputing():
+    import stocklookup_core.valuation.current_research_valuation_context as valuation
+    retained = {"projection_identity": "retained", "authority_effect": "NONE"}
+    row = {
+        "methods": {"P/B_CURRENT_RESEARCH": {
+            "applicability": "APPLICABLE", "status": "RESEARCH_USABLE", "value": 1.0,
+        }},
+        "intrinsic_scenario_valuation": retained,
+        "relative_research_state": "UNAVAILABLE",
+    }
+    axis = valuation.valuation_axis(
+        ticker="HPG", decision_session="2026-10-20", valuation_artifact=None,
+        feature_store=None, row=row, freshness={"freshness_status": "STALE"},
+    )
+    assert axis["intrinsic_scenario_valuation"] == retained
+    assert axis["intrinsic_scenario_valuation"] is not retained
+    assert axis["applicable_methods"]["P/B_CURRENT_RESEARCH"]["value"] == 1.0
+    assert axis["applicable_methods"]["P/B_CURRENT_RESEARCH"]["status"] == "RESEARCH_USABLE"
+
+
+def test_workspace_view_keeps_monetary_basis_and_period_identity():
+    import stocklookup_core.valuation.current_research_valuation_context as valuation
+    from stocklookup_core.decision.investment_decision_workspace_projection import _valuation_view
+    basis = {"basis_status": "RESEARCH_PROXY", "currency": "VND"}
+    row = {
+        "methods": {
+            "market_cap": {
+                "applicability": "APPLICABLE", "status": "RESEARCH_USABLE", "value": 10.0,
+                "monetary_basis": basis,
+            },
+            "P/B_CURRENT_RESEARCH": {
+                "applicability": "APPLICABLE", "status": "RESEARCH_USABLE", "value": 1.2,
+                "equity_monetary_basis": basis, "book_period": "2025-Q4",
+                "share_basis": "CURRENT_SHARE_RESEARCH_PROXY",
+            },
+            "P/E_TTM": {
+                "applicability": "APPLICABLE", "status": "INPUT_BLOCKED", "value": None,
+                "ttm_monetary_basis": basis, "ttm_periods": ["2025-Q1", "2025-Q2"],
+                "ttm_source_context_identity": "ctx:1", "market_cap_monetary_basis": basis,
+            },
+        },
+        "relative_research_state": "UNAVAILABLE",
+    }
+    axis = valuation.valuation_axis(
+        ticker="HPG", decision_session="2026-10-20", valuation_artifact=None,
+        feature_store=None, row=row, freshness={"freshness_status": "STALE"},
+    )
+    view = _valuation_view({"valuation": axis})
+    diagnostics = view["method_diagnostics"]
+    assert diagnostics["market_cap"]["monetary_basis"] == basis
+    assert diagnostics["market_cap"]["monetary_basis"] is not basis
+    assert diagnostics["P/B_CURRENT_RESEARCH"]["equity_monetary_basis"] == basis
+    assert diagnostics["P/B_CURRENT_RESEARCH"]["book_period"] == "2025-Q4"
+    assert diagnostics["P/B_CURRENT_RESEARCH"]["share_basis"] == "CURRENT_SHARE_RESEARCH_PROXY"
+    assert diagnostics["P/B_CURRENT_RESEARCH"]["status"] == "RESEARCH_USABLE"
+    assert diagnostics["P/E_TTM"]["ttm_periods"] == ["2025-Q1", "2025-Q2"]
+    assert diagnostics["P/E_TTM"]["ttm_source_context_identity"] == "ctx:1"
+    assert diagnostics["P/E_TTM"]["status"] == "INPUT_BLOCKED"
+    assert view["research_readiness"]["methods"]["market_cap"]["readiness"] == "RESEARCH_PROXY"
+    assert view["research_readiness"]["probability_status"] == "NOT_EMITTED"
+    assert "target_price" not in view
+
+
 @pytest.mark.parametrize("conflict", ["different_value", "source_flag"])
 def test_semantic_share_conflicts_never_select_a_denominator(conflict):
     row = dict(ticker="TEST", canonical_metric="shares_outstanding", period_end="2025-12-31",

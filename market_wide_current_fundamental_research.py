@@ -175,15 +175,30 @@ def _period_basis(fact: Mapping[str, Any], source_metric: str) -> dict[str, Any]
             result["duration_basis"] = "YTD_CUMULATIVE"
             result["evidence"] = "retained_cash_flow_beginning_cash_basis_resolver"
     elif source_metric in {"revenue", "net_income"} and fact.get("provider") == "KBS":
-        result.update({
-            "duration_basis": "SINGLE_QUARTER",
-            "original_basis": "DIRECT_SINGLE_QUARTER",
-            "resulting_comparable_basis": "SINGLE_QUARTER",
-            "transformation_method": "NONE_DIRECT_PROVIDER_PERIOD",
-            "semantic_contract_version": INCOME_STATEMENT_PERIOD_SEMANTICS_VERSION,
-            "evidence": KBS_KQKD_QUARTER_SEMANTICS["evidence"],
-            "provider_endpoint": KBS_KQKD_QUARTER_SEMANTICS["endpoint"],
-        })
+        # A raw KBS quarter label is not fiscal-period proof. Same-period growth uses a
+        # qualified normalized period only. This does not apply a +1 or +3 offset.
+        if _period_key(fact.get("qualified_normalized_period")):
+            result.update({
+                "duration_basis": "SINGLE_QUARTER",
+                "original_basis": "DIRECT_SINGLE_QUARTER",
+                "resulting_comparable_basis": "SINGLE_QUARTER",
+                "transformation_method": "QUALIFIED_NORMALIZED_PERIOD",
+                "semantic_contract_version": INCOME_STATEMENT_PERIOD_SEMANTICS_VERSION,
+                "evidence": str(fact.get("period_normalization") or "qualified_normalized_period"),
+                "provider_endpoint": KBS_KQKD_QUARTER_SEMANTICS["endpoint"],
+                "fiscal_period": str(fact.get("qualified_normalized_period")),
+            })
+        else:
+            result.update({
+                "duration_basis": "UNKNOWN",
+                "original_basis": "RAW_KBS_QUARTER_LABEL",
+                "resulting_comparable_basis": "UNKNOWN",
+                "transformation_method": "NONE_PERIOD_IDENTITY_UNVERIFIED",
+                "semantic_contract_version": INCOME_STATEMENT_PERIOD_SEMANTICS_VERSION,
+                "evidence": "raw_kbs_quarter_label_retained_not_period_proof",
+                "reason": "KBS_PERIOD_IDENTITY_UNVERIFIED",
+                "provider_endpoint": KBS_KQKD_QUARTER_SEMANTICS["endpoint"],
+            })
     elif source_metric in {"revenue", "net_income"} and fact.get("provider") == "VCI":
         result.update({
             "original_basis": "UNKNOWN",
@@ -213,6 +228,8 @@ def _pair_basis_eligibility(previous: Mapping[str, Any], current: Mapping[str, A
         return True, None, bases
     if source_metric == "operating_cash_flow" and any(item["duration_basis"] == "YTD_CUMULATIVE" for item in bases):
         return False, "YTD_CUMULATIVE_DIRECT_COMPARISON_FORBIDDEN", bases
+    if source_metric in {"revenue", "net_income"} and any(item.get("reason") == "KBS_PERIOD_IDENTITY_UNVERIFIED" for item in bases):
+        return False, "KBS_PERIOD_IDENTITY_UNVERIFIED", bases
     if source_metric in {"revenue", "net_income"} and all(item["duration_basis"] == "SINGLE_QUARTER" for item in bases):
         return True, None, bases
     return False, "PERIOD_FLOW_DURATION_BASIS_UNEVIDENCED", bases
@@ -633,6 +650,13 @@ def _official_ticker_record(readiness_row: Mapping[str, Any], frozen_row: Mappin
     return record
 
 
+def _fiscal_period(fact: Mapping[str, Any]) -> str:
+    qualified = fact.get("qualified_normalized_period")
+    if _period_key(qualified):
+        return str(qualified)
+    return str(fact.get("reporting_period") or "")
+
+
 def _period_key(period: Any) -> tuple[int, int] | None:
     """Return a sortable quarterly key, rejecting annual/opaque retained periods."""
     text = str(period)
@@ -653,7 +677,7 @@ def _comparison_record(*, previous: Mapping[str, Any], current: Mapping[str, Any
         "comparison_type": comparison_type,
         "status": "BLOCKED",
         "provider": str(current["provider"]),
-        "periods": [str(previous["reporting_period"]), str(current["reporting_period"])],
+        "periods": [_fiscal_period(previous), _fiscal_period(current)],
         "lineage": [
             {"fact_id": previous.get("fact_id"), "source_observation_ids": list(previous.get("source_observation_ids") or []),
              "source_sha256": previous.get("source_sha256"), "status": previous.get("status")},
@@ -663,6 +687,9 @@ def _comparison_record(*, previous: Mapping[str, Any], current: Mapping[str, Any
         "metric_family_classification": METRIC_FAMILY_CLASSIFICATION[source_metric],
         "blocked_reason": None,
     }
+    raw_periods = [str(previous.get("reporting_period") or ""), str(current.get("reporting_period") or "")]
+    if raw_periods != record["periods"]:
+        record["raw_period_labels"] = raw_periods
     eligible, blocker, bases = _pair_basis_eligibility(previous, current, source_metric)
     record["period_basis"] = bases
     if not eligible:
@@ -719,30 +746,37 @@ def _provider_series_metric(*, ticker: str, metric_id: str, source_metric: str,
         if fact.get("canonical_metric") == source_metric
         and fact.get("status") == "provider_reported"
         and fact.get("provider")
-        and _period_key(fact.get("reporting_period")) is not None
+        and (_period_key(fact.get("reporting_period")) is not None or _period_key(fact.get("qualified_normalized_period")) is not None)
         and isinstance(fact.get("value"), (int, float))
         and not isinstance(fact.get("value"), bool)
     ]
     if not candidates:
         return base
-    candidates.sort(key=lambda fact: (_period_key(fact["reporting_period"]), str(fact["provider"]), str(fact["fact_id"])))
+    candidates.sort(key=lambda fact: (_period_key(_fiscal_period(fact)) or (0, 0), str(fact["provider"]), str(fact["fact_id"])))
     by_provider: dict[str, list[Mapping[str, Any]]] = defaultdict(list)
     for fact in candidates:
         by_provider[str(fact["provider"])].append(fact)
     qoq_pairs: list[tuple[Mapping[str, Any], Mapping[str, Any]]] = []
     yoy_pairs: list[tuple[Mapping[str, Any], Mapping[str, Any]]] = []
+    duplicate_fiscal = False
     for provider_facts in by_provider.values():
-        for previous, current in zip(provider_facts, provider_facts[1:]):
-            if _is_consecutive_quarter(str(previous["reporting_period"]), str(current["reporting_period"])):
+        fiscal_keys = [_period_key(_fiscal_period(fact)) for fact in provider_facts]
+        qualified_keys = [key for fact, key in zip(provider_facts, fiscal_keys) if fact.get("qualified_normalized_period")]
+        if qualified_keys and len(qualified_keys) != len(set(qualified_keys)):
+            duplicate_fiscal = True
+            continue
+        ordered = [fact for fact in provider_facts if _period_key(_fiscal_period(fact))]
+        for previous, current in zip(ordered, ordered[1:]):
+            if _is_consecutive_quarter(_fiscal_period(previous), _fiscal_period(current)):
                 qoq_pairs.append((previous, current))
-        by_period = {_period_key(fact["reporting_period"]): fact for fact in provider_facts}
-        for current in provider_facts:
-            year, quarter = _period_key(current["reporting_period"])
+        by_period = {_period_key(_fiscal_period(fact)): fact for fact in ordered}
+        for current in ordered:
+            year, quarter = _period_key(_fiscal_period(current))
             previous = by_period.get((year - 1, quarter))
-            if previous is not None:
+            if previous is not None and previous is not current:
                 yoy_pairs.append((previous, current))
     if not qoq_pairs:
-        base["blocked_reason"] = "NO_SAME_PROVIDER_CONSECUTIVE_QUARTER_PAIR"
+        base["blocked_reason"] = "SAME_FISCAL_PERIOD_COUNTED_TWICE" if duplicate_fiscal else "NO_SAME_PROVIDER_CONSECUTIVE_QUARTER_PAIR"
         return base
     qoq = _latest_comparison(
         candidates=qoq_pairs, source_metric=source_metric, mode=mode, comparison_type="QoQ",

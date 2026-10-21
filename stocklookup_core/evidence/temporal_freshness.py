@@ -49,6 +49,64 @@ def _envelope(axis: str, decision_session: str, source_session: str | None, know
     }
 
 
+def separate_financial_clock(*, financial_period: Any, financial_period_end: Any,
+                             price_as_of: Any, knowledge_available_at: Any,
+                             decision_session: str, maximum_completed_quarter_lag: int) -> dict[str, Any]:
+    """Age the financial period. A price session never becomes the financial clock.
+
+    Annual labels are read as that year's fourth calendar quarter here only.
+    ``completed_quarter_lag`` itself still accepts only ``YYYY-Qn``.
+    """
+    end = str(financial_period_end)[:10] if financial_period_end else None
+    price = str(price_as_of)[:10] if price_as_of else None
+    price_was_not_period_end = False
+    if end and price and end == price:
+        end = None
+        price_was_not_period_end = True
+    label = None
+    implied_end = None
+    text = str(financial_period or "")
+    quarter = re.fullmatch(r"(\d{4})-Q([1-4])", text)
+    annual = re.fullmatch(r"(?:FY)?(\d{4})(?:-FY)?", text)
+    if end:
+        try:
+            day = date.fromisoformat(end)
+            label = f"{day.year}-Q{(day.month - 1) // 3 + 1}"
+        except ValueError:
+            label = None
+    elif quarter:
+        label = text
+    elif annual:
+        label = f"{annual[1]}-Q4"
+        implied_end = f"{annual[1]}-12-31"
+    if label is None:
+        lag, behind, blocker = None, None, "FINANCIAL_SOURCE_PERIOD_UNRESOLVED" if financial_period else "FINANCIAL_SOURCE_PERIOD_ABSENT"
+    else:
+        lag, behind, blocker = completed_quarter_lag(label, decision_session)
+    if blocker:
+        state, reasons = UNAVAILABLE, [blocker]
+    elif lag > maximum_completed_quarter_lag:
+        state, reasons = STALE_BUT_RESEARCH_USABLE, ["FINANCIAL_PERIOD_BEYOND_MAXIMUM_COMPLETED_QUARTER_LAG"]
+    else:
+        state, reasons = CURRENT, []
+    return {
+        "price_as_of": price_as_of,
+        "financial_period": financial_period,
+        "financial_period_end": end or implied_end,
+        "knowledge_available_at": knowledge_available_at,
+        "resolved_quarter_label": label,
+        "freshness_status": state,
+        "financial_freshness": state,
+        "completed_quarter_lag": lag,
+        "quarters_behind_last_completed": behind,
+        "reason_codes": reasons,
+        "price_session_does_not_set_financial_freshness": True,
+        "price_session_not_used_as_financial_period_end": price_was_not_period_end,
+        "rewritten_as_current": False,
+        "research_usable": state in {CURRENT, STALE_BUT_RESEARCH_USABLE},
+    }
+
+
 def completed_quarter_lag(source_period: Any, decision_session: str) -> tuple[int | None, int | None, str | None]:
     """``(lag, quarters_behind_last_completed, blocker)`` for one ``YYYY-Qn`` financial period.
 
@@ -172,6 +230,31 @@ def classify_freshness(
     if not isinstance(decision_session, str) or not decision_session:
         raise ValueError("DECISION_SESSION_REQUIRED")
     source = _session(source_session)
+    if source is not None and source > decision_session:
+        raise FutureInformationError(f"FUTURE_INFORMATION_PROHIBITED:{axis}:{source}>{decision_session}")
+    if contract.get("period_based") and source is not None and source_period:
+        clock = separate_financial_clock(
+            financial_period=source_period, financial_period_end=None, price_as_of=source,
+            knowledge_available_at=known_at, decision_session=decision_session,
+            maximum_completed_quarter_lag=4,
+        )
+        # Unresolved labels such as 2026-H1 keep the session contract. A resolved
+        # annual or quarter label is aged on its own and cannot inherit CURRENT
+        # from the price session.
+        if clock["resolved_quarter_label"]:
+            state = clock["freshness_status"]
+            compatibility = COMPATIBLE if state != UNAVAILABLE else MISSING
+            envelope = _envelope(axis, decision_session, source, known_at, source_period,
+                                 source_artifact_identity, state, compatibility, contract)
+            envelope.update({
+                "financial_freshness": state,
+                "price_as_of": source,
+                "knowledge_available_at": known_at,
+                "financial_period_end": clock["financial_period_end"],
+                "price_session_does_not_set_financial_freshness": True,
+                "reason_codes": list(clock["reason_codes"]),
+            })
+            return envelope
     if source is None:
         if contract.get("period_based") and source_period:
             state, compatibility = STALE_BUT_RESEARCH_USABLE, COMPATIBLE

@@ -10,7 +10,9 @@ from stocklookup_core.valuation.current_research_valuation_context import (
     CURRENT_SHARE_RESEARCH_PROXY, EXACT_OR_QUALIFIED, INPUT_BLOCKED, NOT_APPLICABLE,
     PE_NOT_MEANINGFUL, PE_TTM, PS_TTM, attach_peer_relative, evaluate_ticker_valuation, share_basis_class,
 )
-from stocklookup_core.valuation.current_valuation_opportunity_integration import build_artifacts, content_identity
+from stocklookup_core.valuation.current_valuation_opportunity_integration import (
+    build_artifacts, content_identity, evaluated_valuation_for_presentation,
+)
 from stocklookup_core.decision.opportunity_axis_freshness import (
     CURRENT, STALE_BUT_RESEARCH_USABLE, STALE_NOT_USABLE_FOR_THIS_AXIS, UNAVAILABLE,
     FutureInformationError, classify_axis_freshness,
@@ -619,3 +621,74 @@ def test_wait_for_confirmation_with_loss_making_fundamental_carries_weakness_in_
     assert result["research_stance"] == "WAIT_FOR_CONFIRMATION"
     assert "LOSS_MAKING" in result["reasons"]
     assert "LOSS_MAKING" in result["counter_thesis"]
+
+
+def _one_name_join(evaluated=None):
+    ticker = "HPG"
+    return build_artifacts(
+        as_of_session=DECISION,
+        feature_store=feature_store({ticker: feature_record(ticker)}),
+        tactical_behavior=artifact({ticker: behavior(ticker)}, session=DECISION, kind="tactical"),
+        watchlist=artifact({ticker: watchlist(ticker)}, session=DECISION, kind="watch"),
+        valuation={"valuation_session": DECISION, "artifact_identity": _identity("val"), "records": {ticker: valuation_record(ticker)}},
+        requested_at="2026-08-31T00:00:00+07:00",
+        evaluated_valuation=evaluated,
+    )
+
+
+def test_raw_join_does_not_invent_research_pb_and_evaluated_owner_is_forwarded():
+    raw = _one_name_join()
+    raw_methods = raw["opportunity_context"]["records"]["HPG"]["valuation"]["applicable_methods"]
+    assert raw_methods["P/B_CURRENT_RESEARCH"]["status"] == INPUT_BLOCKED
+    assert raw_methods["P/B_CURRENT_RESEARCH"]["value"] is None
+    assert "current_research_valuation_context" not in raw["opportunity_context"]["source_artifacts"]
+    repeated = _one_name_join()
+    assert content_identity(raw["opportunity_context"]) == content_identity(repeated["opportunity_context"])
+
+    research_pb = {
+        "method_id": "P/B_CURRENT_RESEARCH", "applicability": "APPLICABLE", "status": "RESEARCH_USABLE",
+        "value": 1.2744617776030467, "share_basis": CURRENT_SHARE_RESEARCH_PROXY,
+        "period_basis": "CURRENT_PRICE_ON_OLDER_BOOK", "equity_definition": "TOTAL_EQUITY_INCLUDING_NCI",
+        "statement_scope": "CONSOLIDATED", "limitations": ["RESEARCH_PROXY_NOT_OFFICIAL_EXACT_PB"],
+        "blocker_reason_codes": [],
+    }
+    ev_ebitda = {
+        "method_id": "EV/EBITDA", "applicability": "NOT_APPLICABLE", "status": "NOT_APPLICABLE",
+        "value": None, "blocker_reason_codes": ["ORDINARY_EV_EBITDA_NOT_APPLICABLE"],
+    }
+    owner = {
+        "contract_version": "current_research_valuation_context/v1",
+        "artifact_identity": "current_research_valuation_context/v1:owner",
+        "records": {"HPG": {
+            "ticker": "HPG", "entity_class": "corporate_industrial", "share_basis": CURRENT_SHARE_RESEARCH_PROXY,
+            "methods": {"P/B_CURRENT_RESEARCH": research_pb, "EV/EBITDA": ev_ebitda},
+            "usable_relative_method_count": 1, "has_usable_method": True,
+            "peer_relative": {"P/B_CURRENT_RESEARCH": {"status": "INSUFFICIENT_PEER_COUNT", "peer_count": 0}},
+            "relative_research_state": "ABSOLUTE_RESEARCH_ONLY", "earnings_state": "UNKNOWN",
+        }},
+    }
+    forwarded = _one_name_join(owner)
+    methods = forwarded["opportunity_context"]["records"]["HPG"]["valuation"]["applicable_methods"]
+    assert methods["P/B_CURRENT_RESEARCH"]["value"] == 1.2744617776030467
+    assert methods["P/B_CURRENT_RESEARCH"]["status"] == "RESEARCH_USABLE"
+    assert methods["P/B_CURRENT_RESEARCH"]["limitations"] == ["RESEARCH_PROXY_NOT_OFFICIAL_EXACT_PB"]
+    assert methods["P/B_CURRENT_RESEARCH"]["equity_definition"] == "TOTAL_EQUITY_INCLUDING_NCI"
+    assert methods["P/B_CURRENT_RESEARCH"]["statement_scope"] == "CONSOLIDATED"
+    assert methods["EV/EBITDA"]["status"] == "NOT_APPLICABLE"
+    assert methods["EV/EBITDA"]["value"] is None
+    assert forwarded["opportunity_context"]["source_artifacts"]["current_research_valuation_context"] == owner["artifact_identity"]
+    assert forwarded["security_decision_context"]["source_artifacts"]["current_research_valuation_context"] == owner["artifact_identity"]
+    with pytest.raises(ValueError, match="EVALUATED_VALUATION_CONTRACT_MISMATCH"):
+        _one_name_join({"contract_version": "other", "records": {}, "artifact_identity": "x"})
+
+
+def test_presentation_reload_uses_only_the_sealed_evaluated_identity():
+    owner = {"contract_version": "current_research_valuation_context/v1", "artifact_identity": "current_research_valuation_context/v1:owner", "records": {}}
+    assert evaluated_valuation_for_presentation(None, owner) is None
+    assert evaluated_valuation_for_presentation({"source_artifacts": {}}, owner) is None
+    rebound = evaluated_valuation_for_presentation(
+        {"source_artifacts": {"current_research_valuation_context": owner["artifact_identity"]}}, owner)
+    assert rebound["artifact_identity"] == owner["artifact_identity"]
+    with pytest.raises(ValueError, match="EVALUATED_VALUATION_LINEAGE_DIVERGED"):
+        evaluated_valuation_for_presentation(
+            {"source_artifacts": {"current_research_valuation_context": "current_research_valuation_context/v1:other"}}, owner)

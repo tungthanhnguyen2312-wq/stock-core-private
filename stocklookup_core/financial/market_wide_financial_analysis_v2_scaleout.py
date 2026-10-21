@@ -201,7 +201,7 @@ def _bridge_fact(row: Mapping[str, Any]) -> dict[str, Any]:
     every value already exists on `row`, just under a different key."""
     lineage = row.get("source_lineage") or {}
     unit = row.get("normalized_candidate_unit") or {}
-    return {
+    fact = {
         "ticker": row.get("ticker"), "canonical_metric": row.get("canonical_metric"),
         "statement_family": row.get("statement_family"), "reporting_period": row.get("native_period_label"),
         "period_start": row.get("period_start"), "period_end": row.get("period_end"),
@@ -213,6 +213,23 @@ def _bridge_fact(row: Mapping[str, Any]) -> dict[str, Any]:
         "scale": unit.get("scale", row.get("reported_scale")),
         "cumulative_state": row.get("reported_cumulative_state"),
     }
+    if row.get("qualified_normalized_period"):
+        fact["qualified_normalized_period"] = row["qualified_normalized_period"]
+        fact["period_normalization"] = row.get("period_normalization")
+    return fact
+
+
+def _feature_uses_unverified_metric(feature_id: str, metrics: set[str]) -> bool:
+    """True when a blocked feature would be recalculated from an unverified KBS period."""
+    explicit = {
+        "net_income": {"net_income_sign", "net_margin", "net_margin_direction", "ttm_net_margin",
+                       "cfo_to_net_income", "cfo_to_net_income_ttm"},
+        "revenue": {"net_margin", "pbt_margin", "gross_margin", "gross_margin_direction",
+                    "net_margin_direction", "ttm_net_margin", "ttm_pbt_margin"},
+        "profit_before_tax": {"pbt_margin", "ttm_pbt_margin"},
+        "operating_cash_flow": {"operating_cash_flow_sign", "cfo_to_net_income", "cfo_to_net_income_ttm"},
+    }
+    return any(metric in feature_id or feature_id in explicit.get(metric, ()) for metric in metrics)
 
 
 def build_qualified_flow_artifact(*, semantic_rows: Sequence[Mapping[str, Any]],
@@ -282,6 +299,7 @@ def build_scaleout(*, semantic_rows: Sequence[Mapping[str, Any]], feature_record
     )
     for ticker, record in artifact["records"].items():
         store_record = feature_records[ticker]
+        flow_record: Mapping[str, Any] = {}
         if qualified_flow_artifact is not None:
             flow_record = (qualified_flow_artifact.get("records") or {}).get(ticker) or {}
             flow_state = ((flow_record.get("qualitative_states") or {}).get("earnings_turnaround_state"))
@@ -303,11 +321,25 @@ def build_scaleout(*, semantic_rows: Sequence[Mapping[str, Any]], feature_record
             for feature in record["features"].values():
                 feature.setdefault("source_tier", "ENTITY_APPLICABILITY")
             continue
+        observations = list(flow_record.get("research_observations") or [])
+        if observations:
+            record["research_observations"] = observations
+        unverified_metrics = {str(item.get("canonical_metric")) for item in observations}
         for source_id, target_id in _FEATURE_MAP.items():
             existing = record["features"][target_id]
             fallback = _store_feature((store_record.get("features") or {}).get(source_id) or {}, target_id, str(feature_store_artifact.get("artifact_identity")))
-            if fallback and existing["fitness"] in {"BLOCKED_BY_EVIDENCE", "NOT_APPLICABLE"}:
+            if (fallback and existing["fitness"] in {"BLOCKED_BY_EVIDENCE", "NOT_APPLICABLE"}
+                    and not _feature_uses_unverified_metric(target_id, unverified_metrics)):
                 record["features"][target_id] = fallback
+        for feature_id, feature in record["features"].items():
+            if feature.get("fitness") != "BLOCKED_BY_EVIDENCE" or not _feature_uses_unverified_metric(feature_id, unverified_metrics):
+                continue
+            codes = list(feature.get("reason_codes") or [])
+            if qualified_flow.KBS_PERIOD_IDENTITY_UNVERIFIED not in codes:
+                feature["reason_codes"] = [qualified_flow.KBS_PERIOD_IDENTITY_UNVERIFIED, *codes]
+            warnings = list(feature.get("warnings") or [])
+            if qualified_flow.RAW_KBS_PERIOD_LABEL_RETAINED not in warnings:
+                feature["warnings"] = [*warnings, qualified_flow.RAW_KBS_PERIOD_LABEL_RETAINED]
         for feature in record["features"].values():
             feature.setdefault("source_tier", "ADVANCED_TTM_OR_STANDALONE" if feature["feature_id"] in _ADVANCED else "PERIOD_SEMANTIC_FACTS")
         # Only V2 READY means current research ready; Feature Store proxies never light it.

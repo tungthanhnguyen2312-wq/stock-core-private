@@ -157,8 +157,43 @@ def _source_key(row: Mapping[str, Any]) -> tuple[str, str, str, str, str, str]:
     return (*_representation_key(row), str(row.get("statement_family")))
 
 
+KBS_PERIOD_IDENTITY_UNVERIFIED = "KBS_PERIOD_IDENTITY_UNVERIFIED"
+RAW_PERIOD_LABEL_DIFFERS_FROM_QUALIFIED_PERIOD = "RAW_PERIOD_LABEL_DIFFERS_FROM_QUALIFIED_PERIOD"
+RAW_KBS_PERIOD_LABEL_RETAINED = "RAW_KBS_PERIOD_LABEL_RETAINED_NOT_PERIOD_PROOF"
+
+
 def _period_label(row: Mapping[str, Any]) -> str:
+    qualified = row.get("qualified_normalized_period")
+    if qualified:
+        return str(qualified)
     return str(row.get("native_period_label") or row.get("period_end"))
+
+
+def _kbs_income_unverified(row: Mapping[str, Any]) -> bool:
+    """KBS income whose raw quarter label has no qualified fiscal period.
+
+    Rows that do not name an income-statement family keep their existing fixture
+    behavior. Production semantic rows and bridge rows do name that family.
+    """
+    provider = str((row.get("source_lineage") or {}).get("provider") or row.get("provider") or "")
+    if provider != "KBS" or row.get("statement_family") != "income_statement":
+        return False
+    return not row.get("qualified_normalized_period")
+
+
+def _arithmetic_quarter(row: Mapping[str, Any] | None) -> tuple[int, int] | None:
+    """Fiscal quarter used for QoQ, YoY, and TTM. Never the raw label when a qualified period exists."""
+    if not row or _kbs_income_unverified(row):
+        return None
+    return _quarter(_period_label(row))
+
+
+def _period_label_warning(row: Mapping[str, Any]) -> str | None:
+    qualified = row.get("qualified_normalized_period")
+    native = str(row.get("native_period_label") or row.get("period_end") or "")
+    if qualified and native and str(qualified) != native:
+        return RAW_PERIOD_LABEL_DIFFERS_FROM_QUALIFIED_PERIOD
+    return None
 
 
 def _series_index(rows: Sequence[Mapping[str, Any]], metric: str, semantic: str,
@@ -263,16 +298,19 @@ def _feature(feature_id: str, *, value: Any = None, fitness: str = "BLOCKED_BY_E
     # here must never read back as a known, agreed currency or scale.
     currency = basis_contract.agree({(row.get("normalized_candidate_unit") or {}).get("currency") for row in inputs})
     scale = basis_contract.agree({(row.get("normalized_candidate_unit") or {}).get("scale") for row in inputs})
+    label_warnings = [item for item in (_period_label_warning(row) for row in inputs) if item]
+    if any(_kbs_income_unverified(row) for row in inputs):
+        label_warnings.append(RAW_KBS_PERIOD_LABEL_RETAINED)
     return {
         "feature_id": feature_id, "value": value, "fitness": fitness, "method": method,
         "growth_basis": growth_basis, "semantic_transition": semantic_transition,
-        "period_identity": [str(row.get("native_period_label") or row.get("period_end")) for row in inputs],
+        "period_identity": [_period_label(row) for row in inputs],
         "provider_source_provenance": [_provenance(row) for row in inputs],
         "scope": sorted({str(row.get("statement_scope")) for row in inputs}),
         "currency": currency,
         "scale": scale,
         "period_semantics": sorted({str(row.get("period_semantic_state")) for row in inputs}),
-        "reason_codes": list(reason_codes), "warnings": list(warnings), "is_actionable": False,
+        "reason_codes": list(reason_codes), "warnings": list(warnings) + label_warnings, "is_actionable": False,
     }
 
 
@@ -395,7 +433,9 @@ def _growth(feature_id: str, series: Mapping[str, Mapping[str, Any]], *, basis: 
     current = _latest(series)
     if not current:
         return _blocked(feature_id, "MISSING_COMPATIBLE_SERIES", growth_basis=basis)
-    current_key = _quarter(current.get("native_period_label"))
+    if _kbs_income_unverified(current):
+        return _blocked(feature_id, KBS_PERIOD_IDENTITY_UNVERIFIED, growth_basis=basis)
+    current_key = _arithmetic_quarter(current)
     if not current_key:
         return _blocked(feature_id, "PERIOD_LABEL_NOT_QUARTER_KEY", growth_basis=basis)
     if basis == "QOQ_STANDALONE":
@@ -408,6 +448,8 @@ def _growth(feature_id: str, series: Mapping[str, Mapping[str, Any]], *, basis: 
             return _blocked(feature_id, "MISSING_SAME_QUARTER_PRIOR_YEAR", growth_basis=basis)
     else:
         return _blocked(feature_id, "UNSUPPORTED_GROWTH_BASIS", growth_basis=basis)
+    if _kbs_income_unverified(prior) or _kbs_income_unverified(current):
+        return _blocked(feature_id, KBS_PERIOD_IDENTITY_UNVERIFIED, growth_basis=basis)
     old, new = prior["reported_value"], current["reported_value"]
     transition = sign_transition(old, new, earnings=earnings)
     if transition:
@@ -424,7 +466,9 @@ def _sign_transition_warning(old: float) -> str:
 
 def _ttm_sum(series: Mapping[str, Mapping[str, Any]], feature_id: str) -> tuple[dict[str, Any], list[Mapping[str, Any]]]:
     current = _latest(series)
-    current_key = _quarter(current.get("native_period_label")) if current else None
+    if current and _kbs_income_unverified(current):
+        return _blocked(feature_id, KBS_PERIOD_IDENTITY_UNVERIFIED, method="ttm_rolling_four/v2"), []
+    current_key = _arithmetic_quarter(current)
     if not current_key:
         return _blocked(feature_id, "MISSING_CONSECUTIVE_STANDALONE_QUARTER_INPUTS", method="ttm_rolling_four/v2"), []
     labels = []
@@ -436,6 +480,11 @@ def _ttm_sum(series: Mapping[str, Mapping[str, Any]], feature_id: str) -> tuple[
     if any(row is None for row in inputs):
         return _blocked(feature_id, "MISSING_CONSECUTIVE_STANDALONE_QUARTER_INPUTS", method="ttm_rolling_four/v2"), []
     concrete = [row for row in inputs if row is not None]
+    if any(_kbs_income_unverified(row) for row in concrete):
+        return _blocked(feature_id, KBS_PERIOD_IDENTITY_UNVERIFIED, method="ttm_rolling_four/v2"), []
+    fiscal = [_period_label(row) for row in concrete]
+    if len(fiscal) != len(set(fiscal)):
+        return _blocked(feature_id, "SAME_FISCAL_PERIOD_COUNTED_TWICE", method="ttm_rolling_four/v2"), []
     return _feature(feature_id, value=sum(row["reported_value"] for row in concrete), fitness="READY",
                     method="four_consecutive_compatible_standalone_quarters/v2", inputs=concrete,
                     growth_basis="TTM"), concrete
@@ -447,11 +496,13 @@ def _ttm_yoy(feature_id: str, series: Mapping[str, Mapping[str, Any]], *, earnin
         return _blocked(feature_id, "MISSING_CONSECUTIVE_STANDALONE_QUARTER_INPUTS", growth_basis="TTM")
     prior_inputs = []
     for row in inputs:
-        key = _quarter(row.get("native_period_label"))
+        key = _arithmetic_quarter(row)
+        if row and _kbs_income_unverified(row):
+            return _blocked(feature_id, KBS_PERIOD_IDENTITY_UNVERIFIED, growth_basis="TTM")
         label = f"{key[0] - 1}-Q{key[1]}" if key else ""
         prior = series.get(label)
-        if not prior:
-            return _blocked(feature_id, "MISSING_PRIOR_YEAR_TTM_WINDOW", growth_basis="TTM")
+        if not prior or _kbs_income_unverified(prior) or _kbs_income_unverified(row):
+            return _blocked(feature_id, "KBS_PERIOD_IDENTITY_UNVERIFIED" if (prior and _kbs_income_unverified(prior)) or _kbs_income_unverified(row) else "MISSING_PRIOR_YEAR_TTM_WINDOW", growth_basis="TTM")
         prior_inputs.append(prior)
     old = sum(row["reported_value"] for row in prior_inputs)
     new = current["value"]
@@ -471,7 +522,9 @@ def _pit_trajectory(rows: Sequence[Mapping[str, Any]], metric: str) -> dict[str,
     if len(series) < 2:
         return _blocked(f"{metric}_yoy", "MISSING_COMPATIBLE_POINT_IN_TIME_SERIES")
     current = _latest(series)
-    key = _quarter(current.get("native_period_label")) if current else None
+    if current and _kbs_income_unverified(current):
+        return _blocked(f"{metric}_yoy", KBS_PERIOD_IDENTITY_UNVERIFIED)
+    key = _arithmetic_quarter(current)
     prior = series.get(f"{key[0] - 1}-Q{key[1]}") if key else None
     if not prior:
         return _blocked(f"{metric}_yoy", "MISSING_SAME_POINT_IN_TIME_PRIOR_YEAR")
@@ -522,6 +575,7 @@ def _pit_ratio_direction_for(rows: Sequence[Mapping[str, Any]], numerator_metric
     numerator = _groups(rows, numerator_metric, semantic)
     denominator = _groups(rows, denominator_metric, semantic)
     candidates = []
+    saw_unverified = False
     for key in set(numerator) & set(denominator):
         periods = sorted(set(numerator[key]) & set(denominator[key]))
         if len(periods) < 2:
@@ -533,11 +587,14 @@ def _pit_ratio_direction_for(rows: Sequence[Mapping[str, Any]], numerator_metric
             continue
         prior_num, prior_den = numerator[key][prior_label], denominator[key][prior_label]
         current_num, current_den = numerator[key][current_label], denominator[key][current_label]
+        if any(_kbs_income_unverified(item) for item in (prior_num, prior_den, current_num, current_den)):
+            saw_unverified = True
+            continue
         if prior_den["reported_value"] == 0 or current_den["reported_value"] == 0:
             continue
         candidates.append((current_label, prior_num, prior_den, current_num, current_den))
     if not candidates:
-        return _blocked(feature_id, "MISSING_SAME_POINT_IN_TIME_PRIOR_YEAR_RATIO_PAIR")
+        return _blocked(feature_id, KBS_PERIOD_IDENTITY_UNVERIFIED if saw_unverified else "MISSING_SAME_POINT_IN_TIME_PRIOR_YEAR_RATIO_PAIR")
     _, prior_num, prior_den, current_num, current_den = max(candidates, key=lambda item: item[0])
     value = (current_num["reported_value"] / current_den["reported_value"]
              - prior_num["reported_value"] / prior_den["reported_value"])
@@ -646,7 +703,9 @@ def _mixed_provider_proxy(rows: Sequence[Mapping[str, Any]], numerator: str, den
     current = _latest(flows)
     if not current:
         return _blocked(feature_id, "MISSING_COMPATIBLE_FLOW_INPUT")
-    target = str(current.get("native_period_label"))
+    if _kbs_income_unverified(current):
+        return _blocked(feature_id, KBS_PERIOD_IDENTITY_UNVERIFIED)
+    target = _period_label(current)
     stock = stocks.get(target)
     if not stock:
         return _blocked(feature_id, "MISSING_SAME_PERIOD_BALANCE_SHEET_INPUT")
@@ -1350,20 +1409,23 @@ def build_ticker_context(ticker: str, rows: Sequence[Mapping[str, Any]], *, issu
         gross_margin = _ratio("gross_margin", _same_period_pair(series, "gross_profit", "revenue", FLOW_STANDALONE), method="same_provider_same_period_gross_margin/v2")
         gross_margin_direction = _pit_ratio_direction_for(series, "gross_profit", "revenue", "gross_margin_direction",
                                                            method="same_provider_same_quarter_yoy_gross_margin/v1", semantic=FLOW_STANDALONE)
-        previous_margin = None
         pair = _same_period_pair(series, "net_income", "revenue", FLOW_STANDALONE)
-        if pair:
-            current_q = _quarter(pair[0].get("native_period_label")); key = _source_key(pair[0])
-            if current_q:
-                prior_label = f"{_prior_quarter(current_q)[0]}-Q{_prior_quarter(current_q)[1]}"
-                left = _groups(series, "net_income", FLOW_STANDALONE).get(key, {}).get(prior_label)
-                right = _groups(series, "revenue", FLOW_STANDALONE).get(key, {}).get(prior_label)
-                previous_margin = _ratio("net_margin_direction", (left, right) if left and right else None, method="prior_period_net_margin/v2")
-        current_margin = net_margin
-        if current_margin["fitness"] == "READY" and previous_margin and previous_margin["fitness"] == "READY":
-            margin_direction = _feature("net_margin_direction", value=current_margin["value"] - previous_margin["value"], fitness="READY", method="consecutive_same_provider_net_margin_direction/v2", inputs=[])
+        if pair and (_kbs_income_unverified(pair[0]) or _kbs_income_unverified(pair[1])):
+            margin_direction = _blocked("net_margin_direction", KBS_PERIOD_IDENTITY_UNVERIFIED)
         else:
-            margin_direction = _blocked("net_margin_direction", "MISSING_CONSECUTIVE_COMPATIBLE_MARGIN_PERIODS")
+            previous_margin = None
+            if pair:
+                current_q = _arithmetic_quarter(pair[0]); key = _source_key(pair[0])
+                if current_q:
+                    prior_label = f"{_prior_quarter(current_q)[0]}-Q{_prior_quarter(current_q)[1]}"
+                    left = _groups(series, "net_income", FLOW_STANDALONE).get(key, {}).get(prior_label)
+                    right = _groups(series, "revenue", FLOW_STANDALONE).get(key, {}).get(prior_label)
+                    previous_margin = _ratio("net_margin_direction", (left, right) if left and right else None, method="prior_period_net_margin/v2")
+            current_margin = net_margin
+            if current_margin["fitness"] == "READY" and previous_margin and previous_margin["fitness"] == "READY":
+                margin_direction = _feature("net_margin_direction", value=current_margin["value"] - previous_margin["value"], fitness="READY", method="consecutive_same_provider_net_margin_direction/v2", inputs=[])
+            else:
+                margin_direction = _blocked("net_margin_direction", "MISSING_CONSECUTIVE_COMPATIBLE_MARGIN_PERIODS")
         cash_pair = _cross_statement_same_representation_pair(series, "operating_cash_flow", "net_income", FLOW_STANDALONE)
         def ttm_ratio(feature_id: str, numerator: Mapping[str, Any], numerator_inputs: Sequence[Mapping[str, Any]], denominator: Mapping[str, Any], denominator_inputs: Sequence[Mapping[str, Any]], method: str) -> dict[str, Any]:
             if numerator["fitness"] != "READY" or denominator["fitness"] != "READY" or not numerator_inputs or not denominator_inputs:
@@ -1377,8 +1439,15 @@ def build_ticker_context(ticker: str, rows: Sequence[Mapping[str, Any]], *, issu
                             inputs=list(numerator_inputs) + list(denominator_inputs), growth_basis="TTM")
         avg_equity_series = _avg_balance_series(series, "net_income", "shareholders_equity")
         avg_assets_series = _avg_balance_series(series, "net_income", "total_assets")
+        latest_income = _latest(income)
+        if latest_income and _kbs_income_unverified(latest_income):
+            net_income_sign = _blocked("net_income_sign", KBS_PERIOD_IDENTITY_UNVERIFIED)
+        elif latest_income:
+            net_income_sign = _feature("net_income_sign", value=latest_income["reported_value"], fitness="READY", method="latest_compatible_standalone_sign/v2", inputs=[latest_income])
+        else:
+            net_income_sign = _blocked("net_income_sign", "MISSING_STANDALONE_NET_INCOME")
         features = {
-            "net_income_sign": _feature("net_income_sign", value=_latest(income)["reported_value"], fitness="READY", method="latest_compatible_standalone_sign/v2", inputs=[_latest(income)]) if _latest(income) else _blocked("net_income_sign", "MISSING_STANDALONE_NET_INCOME"),
+            "net_income_sign": net_income_sign,
             "net_margin": net_margin, "pbt_margin": pbt_margin, "gross_margin": gross_margin,
             "net_margin_direction": margin_direction, "gross_margin_direction": gross_margin_direction,
             "revenue_qoq": _growth("revenue_qoq", revenue, basis="QOQ_STANDALONE"),
