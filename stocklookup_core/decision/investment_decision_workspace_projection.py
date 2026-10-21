@@ -854,6 +854,9 @@ def build_artifacts(
         ),
         "integrated_investment_decision_product": integrated_decision_artifact.get("artifact_identity"),
     }
+    evaluated_identity = (opportunity_artifact.get("source_artifacts") or {}).get("current_research_valuation_context")
+    if evaluated_identity:
+        source_artifacts["current_research_valuation_context"] = evaluated_identity
 
     artifact: dict[str, Any] = {
         "schema_version": SCHEMA_VERSION, "contract_version": CONTRACT_VERSION, "milestone": MILESTONE,

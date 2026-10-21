@@ -986,6 +986,15 @@ def run_canonical_daily_operation(
         )
         if producer_fn is None:
             producer_kwargs["runtime_root_override"] = runtime_root
+            from daily_session_level2_package import session_artifact_paths
+            from stocklookup_core.valuation.current_valuation_opportunity_integration import accept_evaluated_valuation
+            evaluated_path = session_artifact_paths(artifact_root, resolved_session)["current_valuation_evaluated"]
+            if evaluated_path.is_file():
+                try:
+                    producer_kwargs["evaluated_valuation"] = accept_evaluated_valuation(
+                        json.loads(evaluated_path.read_text(encoding="utf-8")))
+                except (OSError, UnicodeError, json.JSONDecodeError, ValueError):
+                    producer_kwargs["evaluated_valuation"] = None
         if operation_output_root != root:
             producer_kwargs.update(
                 output_root=operation_output_root / "operations-review" / "daily-producer-runs-v1",

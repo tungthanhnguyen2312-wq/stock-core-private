@@ -526,6 +526,7 @@ def materialize_current_investment_decision_workspace(
     root: Path | None = None,
     integrated_investment_decision_product: Mapping[str, Any] | None = None,
     runtime_root_override: Path | None = None,
+    evaluated_valuation: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build the current-session Investment Decision Workspace from already-resolved inputs.
 
@@ -593,6 +594,7 @@ def materialize_current_investment_decision_workspace(
         portfolio=None,
         financial_analysis_product_context=financial_analysis_product_context,
         financial_analysis_context=None,
+        evaluated_valuation=evaluated_valuation,
         requested_at=requested_at,
     )
     flow_research_cohort_tickers = resolve_flow_research_cohort_tickers()
@@ -677,6 +679,7 @@ def materialize_and_write_current_product_projections(
     runtime_root_override: Path | None = None,
     integrated_investment_decision_product: Mapping[str, Any] | None = None,
     current_corporate_knowledge_overlay: Mapping[str, Any] | None = None,
+    evaluated_valuation: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Top-level entry point: materialize both current products and write them into
     ``operation_dir`` (the same Daily Research Session Operation directory
@@ -717,6 +720,7 @@ def materialize_and_write_current_product_projections(
             tactical_behavior=tactical_behavior_artifact, current_research_scope=current_research_scope,
             root=root, integrated_investment_decision_product=integrated_investment_decision_product,
             runtime_root_override=runtime_root_override,
+            evaluated_valuation=evaluated_valuation,
         )
         workspace = workspace_bundle["workspace"]
         if current_corporate_knowledge_overlay is not None:
@@ -738,6 +742,11 @@ def materialize_and_write_current_product_projections(
         }
 
     operation_dir.mkdir(parents=True, exist_ok=True)
+    if evaluated_valuation is not None:
+        atomic_write_json(
+            operation_dir / current_valuation_opportunity_integration.EVALUATED_VALUATION_PRODUCT_COPY,
+            evaluated_valuation,
+        )
     workspace_path = operation_dir / WORKSPACE_ARTIFACT_FILENAME
     screener_json_path = operation_dir / SCREENER_MASTER_JSON_FILENAME
     screener_js_path = operation_dir / SCREENER_MASTER_JS_FILENAME
