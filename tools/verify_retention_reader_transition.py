@@ -1,8 +1,8 @@
-"""Offline source conservation for the Owner-approved retention reader transition.
+"""Offline source conservation for Owner-approved source transitions.
 
-The original manifest/pins stay unchanged. Only the exact archived reader supplies
-historical bytes. Active execution always hashes active source; no digest spoofing
-or historical receipt adoption is provided by this diagnostic.
+The original manifest/pins stay unchanged. Historical bytes come only from the exact
+archived source after both sides have been read and hashed. Active execution always
+hashes active source; no digest spoofing or historical receipt adoption is provided.
 """
 from __future__ import annotations
 
@@ -16,6 +16,13 @@ READER = "prospective_decision_retention.py"
 ARCHIVE = "tests/fixtures/retention_reader_v1.py.txt"
 MANIFEST = "tests/fixtures/retention_reader_transition_v2.json"
 STORAGE_MANIFEST = "tests/fixtures/storage_portability_source_transition_v1.json"
+VALUATION_MANIFEST = "tests/fixtures/evidence_valuation_orchestration_source_transition_v1.json"
+VALUATION_CONTRACT = "evidence_valuation_orchestration_source_transition/v1"
+VALUATION_BASE = "de90c6b94c7bb2377bedd7e2a1c809498d22926a"
+VALUATION_SOURCES = (
+    "canonical_daily_operation.py",
+    "canonical_post_close_pipeline.py",
+)
 
 
 def _storage_prior_bytes(root: Path, relative: str, active: bytes) -> bytes:
@@ -42,10 +49,50 @@ def _storage_prior_bytes(root: Path, relative: str, active: bytes) -> bytes:
     return prior
 
 
+def _valuation_orchestration_prior_bytes(root: Path, relative: str) -> bytes:
+    """Return archived origin/main bytes for the two approved orchestration sources.
+
+    The closed set is the code constant above. A manifest that names any other
+    file, or omits either approved file, is refused. Both the archive and the
+    live file are hashed on every call.
+    """
+    if relative not in VALUATION_SOURCES:
+        raise ValueError("VALUATION_SOURCE_TRANSITION_SCOPE_INVALID")
+    manifest = root / VALUATION_MANIFEST
+    if not manifest.is_file():
+        raise ValueError("VALUATION_SOURCE_TRANSITION_INVALID")
+    spec = json.loads(manifest.read_bytes())
+    sources = spec.get("sources")
+    admitted = spec.get("admitted_sources")
+    if (spec.get("contract_version") != VALUATION_CONTRACT or spec.get("base_commit") != VALUATION_BASE
+            or spec.get("exception_scope") != "EXACT_TWO_FILE_OWNER_APPROVED_NOT_A_GENERAL_TRANSITION"
+            or spec.get("release_authority") != "NOT_GRANTED"
+            or not isinstance(sources, dict) or not isinstance(admitted, list)
+            or admitted != list(VALUATION_SOURCES) or list(sources) != list(VALUATION_SOURCES)):
+        raise ValueError("VALUATION_SOURCE_TRANSITION_SCOPE_INVALID")
+    row = sources[relative]
+    expected_archive = "tests/fixtures/evidence_valuation_v1_sources/" + relative + ".txt"
+    if not isinstance(row, dict) or row.get("archive") != expected_archive:
+        raise ValueError("VALUATION_SOURCE_ARCHIVE_PATH_INVALID")
+    if row.get("base_commit") != VALUATION_BASE:
+        raise ValueError("VALUATION_SOURCE_TRANSITION_BASE_INVALID")
+    active = (root / relative).read_bytes().replace(b"\r\n", b"\n")
+    prior = (root / expected_archive).read_bytes().replace(b"\r\n", b"\n")
+    pins = json.loads((root / "tests/fixtures/e2e3_frozen_sources.json").read_bytes())["source_sha256_lf"]
+    prior_sha = hashlib.sha256(prior).hexdigest()
+    active_sha = hashlib.sha256(active).hexdigest()
+    if (row.get("prior_sha256_lf") != pins[relative] or prior_sha != pins[relative]
+            or row.get("active_sha256_lf") != active_sha or active_sha == prior_sha):
+        raise ValueError("VALUATION_SOURCE_TRANSITION_BINDING_INVALID")
+    return prior
+
+
 def historical_bytes(root: Path, relative: str) -> bytes:
-    """Verify both sides of the one-file boundary before supplying legacy bytes."""
+    """Verify both sides of an approved boundary before supplying legacy bytes."""
     content = (root / relative).read_bytes().replace(b"\r\n", b"\n")
     content = _storage_prior_bytes(root, relative, content)
+    if relative in VALUATION_SOURCES:
+        return _valuation_orchestration_prior_bytes(root, relative)
     if relative != READER:
         return content
     spec = json.loads((root / MANIFEST).read_bytes())
@@ -72,6 +119,36 @@ def legacy_source_identity(root: Path, *, version: str) -> dict:
     for label, relative in sources:
         digest.update(label.encode() + b"\0" + hashlib.sha256(historical_bytes(root, relative)).digest())
     return {"source_version": version, "code_digest": digest.hexdigest(), "verification_scope": "HISTORICAL_SOURCE_ONLY"}
+
+
+def active_valuation_orchestration_identity(root: Path) -> dict:
+    """Attest the live orchestration sources without adopting their historical digest."""
+    spec = json.loads((root / VALUATION_MANIFEST).read_bytes())
+    execution = e4.source_identity(root, version="v1")
+    execution_paths = {row["path"] for row in execution["sources"].values()}
+    if set(VALUATION_SOURCES) & execution_paths:
+        raise ValueError("VALUATION_SOURCE_EXECUTION_DOMAIN_INVALID")
+    rows = {}
+    for relative in VALUATION_SOURCES:
+        historical = historical_bytes(root, relative)
+        active = (root / relative).read_bytes().replace(b"\r\n", b"\n")
+        historical_sha = hashlib.sha256(historical).hexdigest()
+        active_sha = hashlib.sha256(active).hexdigest()
+        declared = spec["sources"][relative]
+        if (historical_sha != declared["prior_sha256_lf"] or active_sha != declared["active_sha256_lf"]
+                or active_sha == historical_sha):
+            raise ValueError("VALUATION_SOURCE_TRANSITION_BINDING_INVALID")
+        rows[relative] = {"historical_sha256_lf": historical_sha, "active_sha256_lf": active_sha}
+    return {
+        "contract_version": VALUATION_CONTRACT,
+        "base_commit": VALUATION_BASE,
+        "sources": rows,
+        "execution_code_digest": execution["code_digest"],
+        "execution_source_version": execution["source_version"],
+        "historical_receipt_adoption": False,
+        "cache_policy": "EXACT_ACTIVE_BYTES_REQUIRED_NO_HISTORICAL_RECEIPT_ADOPTION",
+        "release_authority": "NOT_GRANTED",
+    }
 
 
 def active_reader_identity(root: Path) -> dict:
