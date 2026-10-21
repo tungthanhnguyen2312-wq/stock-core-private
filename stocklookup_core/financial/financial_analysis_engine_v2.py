@@ -158,6 +158,9 @@ def _source_key(row: Mapping[str, Any]) -> tuple[str, str, str, str, str, str]:
 
 
 def _period_label(row: Mapping[str, Any]) -> str:
+    qualified = row.get("qualified_normalized_period")
+    if qualified:
+        return str(qualified)
     return str(row.get("native_period_label") or row.get("period_end"))
 
 
@@ -436,6 +439,9 @@ def _ttm_sum(series: Mapping[str, Mapping[str, Any]], feature_id: str) -> tuple[
     if any(row is None for row in inputs):
         return _blocked(feature_id, "MISSING_CONSECUTIVE_STANDALONE_QUARTER_INPUTS", method="ttm_rolling_four/v2"), []
     concrete = [row for row in inputs if row is not None]
+    fiscal = [_period_label(row) for row in concrete]
+    if len(fiscal) != len(set(fiscal)):
+        return _blocked(feature_id, "SAME_FISCAL_PERIOD_COUNTED_TWICE", method="ttm_rolling_four/v2"), []
     return _feature(feature_id, value=sum(row["reported_value"] for row in concrete), fitness="READY",
                     method="four_consecutive_compatible_standalone_quarters/v2", inputs=concrete,
                     growth_basis="TTM"), concrete
