@@ -260,6 +260,9 @@ def test_flow_bridge_detects_profit_to_loss_for_earnings_only() -> None:
               "statement_scope": "consolidated", "currency": "unknown", "scale": "unknown",
               "source_sha256": "s", "fact_id": f"{metric}-{period}"}
              for metric in ("net_income", "revenue") for period, value in (("2025-Q2", 10), ("2026-Q1", 3), ("2026-Q2", -5))]
+    for fact in facts:
+        fact["qualified_normalized_period"] = fact["reporting_period"]
+        fact["period_normalization"] = "FIXTURE_STATED_PERIOD"
     record = bridge.build_ticker_record(ticker="AAA", entity_type="corporate", facts=facts)
     assert record["growth"]["net_income"]["same_quarter_yoy"]["semantic_transition"] == "PROFIT_TO_LOSS"
     assert "value" not in record["growth"]["net_income"]["same_quarter_yoy"]

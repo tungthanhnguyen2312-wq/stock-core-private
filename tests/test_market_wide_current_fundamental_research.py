@@ -250,15 +250,34 @@ class BuildArtifactJoinLogic(unittest.TestCase):
             requested_at="t", provider_series_by_ticker=facts,
         )
         revenue = artifact["records"]["AAA"]["provider_series_trends"]["metrics"]["revenue_growth"]
+        self.assertEqual(revenue["status"], "BLOCKED")
+        self.assertEqual(revenue["blocked_reason"], "KBS_PERIOD_IDENTITY_UNVERIFIED")
+        earnings = artifact["records"]["AAA"]["provider_series_trends"]["metrics"]["earnings_growth"]
+        self.assertEqual(earnings["status"], "BLOCKED")
+        self.assertEqual(earnings["blocked_reason"], "PERIOD_FLOW_DURATION_BASIS_UNEVIDENCED")
+
+    def test_qualified_kbs_period_recovers_direct_qoq_and_yoy(self) -> None:
+        self.rows[0]["reporting_periods"] = ["2025-Q1", "2025-Q2", "2026-Q1", "2026-Q2"]
+        facts = {"AAA": [
+            {"canonical_metric": "revenue", "status": "provider_reported", "provider": "KBS",
+             "statement_family": "income_statement", "statement_scope": "consolidated", "source_sha256": "same",
+             "reporting_period": period, "qualified_normalized_period": period,
+             "period_normalization": "FIXTURE_STATED_PERIOD",
+             "value": value, "fact_id": f"r-{period}", "source_observation_ids": [f"r-{period}"]}
+            for period, value in (("2025-Q1", 10), ("2025-Q2", 20), ("2026-Q1", 15), ("2026-Q2", 30))
+        ]}
+        artifact = build_artifact(
+            p3f10_frozen=self.p3f10_frozen, p3f13_current=self.p3f13_current,
+            requested_at="t", provider_series_by_ticker=facts,
+        )
+        revenue = artifact["records"]["AAA"]["provider_series_trends"]["metrics"]["revenue_growth"]
         self.assertEqual(revenue["status"], "AVAILABLE")
         self.assertEqual(revenue["provider"], "KBS")
         self.assertEqual(revenue["period_basis"][0]["duration_basis"], "SINGLE_QUARTER")
         self.assertEqual(revenue["comparisons"]["qoq"]["periods"], ["2026-Q1", "2026-Q2"])
         self.assertEqual(revenue["comparisons"]["yoy"]["periods"], ["2025-Q2", "2026-Q2"])
         self.assertEqual(revenue["comparisons"]["yoy"]["status"], "AVAILABLE")
-        earnings = artifact["records"]["AAA"]["provider_series_trends"]["metrics"]["earnings_growth"]
-        self.assertEqual(earnings["status"], "BLOCKED")
-        self.assertEqual(earnings["blocked_reason"], "PERIOD_FLOW_DURATION_BASIS_UNEVIDENCED")
+        self.assertNotIn("raw_period_labels", revenue["comparisons"]["qoq"])
 
     def test_blocked_no_source_tier_has_no_allowed_uses(self) -> None:
         artifact = build_artifact(p3f10_frozen=self.p3f10_frozen, p3f13_current=self.p3f13_current, requested_at="t")

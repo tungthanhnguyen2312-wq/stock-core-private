@@ -73,6 +73,9 @@ HPG_KBS_FY2025_ANCHORS = {
 }
 SAME_FISCAL_PERIOD_COUNTED_TWICE = "SAME_FISCAL_PERIOD_COUNTED_TWICE"
 KBS_PERIOD_ALIGNMENT_UNRECONCILED = "KBS_PERIOD_ALIGNMENT_UNRECONCILED"
+#: A parseable KBS quarter label is provenance only. Period arithmetic needs a qualified fiscal period.
+KBS_PERIOD_IDENTITY_UNVERIFIED = "KBS_PERIOD_IDENTITY_UNVERIFIED"
+RAW_KBS_PERIOD_LABEL_RETAINED = "RAW_KBS_PERIOD_LABEL_RETAINED_NOT_PERIOD_PROOF"
 
 
 def _fiscal_label(row: Mapping[str, Any]) -> str:
@@ -181,13 +184,23 @@ def flow_semantics(fact: Mapping[str, Any]) -> dict[str, Any]:
             and fact.get("ttm_blocker")):
         result["reason"] = str(fact["ttm_blocker"])
         return result
-    if (fact.get("provider") == "KBS" and fact.get("statement_family") == "income_statement"
-            and _period_key(fact.get("qualified_normalized_period") or fact.get("reporting_period"))):
-        result.update({"flow_period_basis": "STANDALONE_QUARTER", "method": "DIRECT_KBS_KQKD_QUARTER",
-                       "evidence": KBS_KQKD_QUARTER_SEMANTICS["evidence"], "reason": None,
-                       "duration_months": 3,
-                       "semantic_contract_version": INCOME_STATEMENT_PERIOD_SEMANTICS_VERSION})
-        return result
+    # The raw KBS quarter label stays on the fact. It is not fiscal-period proof for QoQ,
+    # YoY, TTM, margin trend, or earnings turnaround. A qualified normalized period is the
+    # only label this path may treat as the fiscal quarter, and only for this issuer,
+    # provider, family, scope, currency, and scale. No +1 or +3 offset is applied here.
+    if fact.get("provider") == "KBS" and fact.get("statement_family") == "income_statement":
+        qualified_key = _period_key(fact.get("qualified_normalized_period"))
+        raw_key = _period_key(fact.get("reporting_period") or fact.get("native_period_label"))
+        if raw_key and not qualified_key:
+            result["reason"] = KBS_PERIOD_IDENTITY_UNVERIFIED
+            result["evidence"] = RAW_KBS_PERIOD_LABEL_RETAINED
+            return result
+        if qualified_key:
+            result.update({"flow_period_basis": "STANDALONE_QUARTER", "method": "DIRECT_KBS_KQKD_QUARTER",
+                           "evidence": str(fact.get("period_normalization") or KBS_KQKD_QUARTER_SEMANTICS["evidence"]),
+                           "reason": None, "duration_months": 3,
+                           "semantic_contract_version": INCOME_STATEMENT_PERIOD_SEMANTICS_VERSION})
+            return result
     # Cash-flow resolver evidence is intentionally narrower than a provider-wide claim.
     if (fact.get("canonical_metric") == "operating_cash_flow" and fact.get("cumulative_state") == "period_only"
             and fact.get("period_start") and fact.get("period_end")):
@@ -576,8 +589,36 @@ def facts_from_structured_semantic_rows(rows: Sequence[Mapping[str, Any]]) -> di
                 fact["cumulative_state"] = "period_only"
             elif row.get("period_semantic_state") == "YTD_CUMULATIVE_INTERIM":
                 fact["cumulative_state"] = "cumulative_ytd"
+        if row.get("qualified_normalized_period"):
+            fact["qualified_normalized_period"] = row["qualified_normalized_period"]
+            fact["period_normalization"] = row.get("period_normalization")
         output[ticker].append(fact)
     return dict(output)
+
+
+def research_observations(facts: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]:
+    """Raw KBS values whose quarter label is not fiscal-period proof.
+
+    The value, provider, scope, unit, and native label stay attached. They are not a
+    standalone quarter and cannot feed growth, TTM, or earnings turnaround.
+    """
+    observations = []
+    for fact in qualify_proven_kbs_income_period(facts):
+        if not _usable(fact) or fact.get("canonical_metric") not in FLOW_METRICS:
+            continue
+        if flow_semantics(fact).get("reason") != KBS_PERIOD_IDENTITY_UNVERIFIED:
+            continue
+        observations.append({
+            "ticker": fact.get("ticker"), "canonical_metric": fact.get("canonical_metric"),
+            "provider": fact.get("provider"), "statement_family": fact.get("statement_family"),
+            "statement_scope": fact.get("statement_scope"), "currency": fact.get("currency"),
+            "scale": fact.get("scale"), "native_period_label": fact.get("reporting_period"),
+            "value": fact.get("value"), "source_sha256": fact.get("source_sha256"),
+            "source_file": fact.get("source_file"), "fact_id": fact.get("fact_id"),
+            "warning": RAW_KBS_PERIOD_LABEL_RETAINED,
+            "reason_code": KBS_PERIOD_IDENTITY_UNVERIFIED, "is_actionable": False,
+        })
+    return observations
 
 
 def engine_rows_from_artifact(artifact: Mapping[str, Any]) -> list[dict[str, Any]]:
@@ -608,6 +649,24 @@ def engine_rows_from_artifact(artifact: Mapping[str, Any]) -> list[dict[str, Any
             if row.get("qualified_normalized_period"):
                 engine_row["qualified_normalized_period"] = row["qualified_normalized_period"]
             rows.append(engine_row)
+        # Same-column ratios may still see the raw value. Growth, TTM, and trend code
+        # refuse these rows because they carry no qualified fiscal period.
+        for obs in record.get("research_observations") or []:
+            source_file = obs.get("source_file") or "retained_kbs_income_payload"
+            rows.append({
+                "ticker": obs.get("ticker"), "canonical_metric": obs.get("canonical_metric"),
+                "reported_value": obs.get("value"), "native_period_label": obs.get("native_period_label"),
+                "period_end": obs.get("native_period_label"), "period_semantic_state": "STANDALONE_QUARTER",
+                "source_status": "provider_reported", "lineage_complete": True, "source_conflicts": [],
+                "statement_scope": obs.get("statement_scope"), "statement_family": obs.get("statement_family"),
+                "normalized_candidate_unit": {"currency": obs.get("currency"), "scale": obs.get("scale")},
+                "source_lineage": {
+                    "provider": obs.get("provider"), "source_file": source_file,
+                    "source_sha256": obs.get("source_sha256"), "fact_id": obs.get("fact_id"),
+                    "lineage_method": RAW_KBS_PERIOD_LABEL_RETAINED,
+                },
+                "bridge_qualified": False,
+            })
     return rows
 
 
@@ -615,8 +674,10 @@ def build_ticker_record(*, ticker: str, entity_type: str | None,
                         facts: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
     if entity_type not in SUPPORTED_ENTITY_TYPES:
         return {"ticker": ticker, "entity_type": entity_type, "status": "BLOCKED", "blocker": "ENTITY_TYPE_NOT_SUPPORTED_THIS_MILESTONE",
-                "standalone_quarters": [], "ttm": {}, "derived_metrics": {}, "is_actionable": False}
+                "standalone_quarters": [], "ttm": {}, "derived_metrics": {}, "is_actionable": False,
+                "research_observations": research_observations(facts)}
     quarters, blockers = standalone_quarters(facts)
+    observations = research_observations(facts)
     by_metric: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for row in quarters:
         by_metric[row["canonical_metric"]].append(row)
@@ -654,7 +715,8 @@ def build_ticker_record(*, ticker: str, entity_type: str | None,
             "qualitative_states": {"earnings_turnaround_state": _turnaround_state(growth.get("net_income", {})),
                                    "cash_conversion_state": ("HEALTHY" if derived["ttm_cfo_to_net_income"].get("status") == "AVAILABLE" and derived["ttm_cfo_to_net_income"]["value"] > 0
                                                              else "WEAK" if derived["ttm_cfo_to_net_income"].get("status") == "AVAILABLE" else "UNAVAILABLE")},
-            "flow_blockers": dict(sorted(blockers.items())), "is_actionable": False}
+            "flow_blockers": dict(sorted(blockers.items())), "research_observations": observations,
+            "is_actionable": False}
 
 
 def build_artifact(*, tickers: Sequence[str], facts_by_ticker: Mapping[str, Sequence[Mapping[str, Any]]],
