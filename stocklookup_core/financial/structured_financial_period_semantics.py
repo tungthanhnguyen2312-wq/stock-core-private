@@ -64,6 +64,34 @@ REQUIRED_LINEAGE_FIELDS = ("ticker", "canonical_metric", "provider", "statement_
                            "reporting_period", "source_sha256", "source_file", "fact_id")
 
 
+def _cumulative_quarter_title(text: str, normalized: list[tuple[str, int]], distinct_quarters: set[tuple[str, int]]) -> dict[str, Any]:
+    """A cumulative title that names its end quarter is not that standalone quarter.
+
+    ``Lũy kế từ đầu năm đến cuối Quý II`` is the six-month column. It does not
+    prove 1 January. A second quarter token outside that phrase stays ambiguous.
+    """
+    if not re.search(r"l[ũu]y\s*k[ếe]|từ\s+đầu\s+năm", text, re.IGNORECASE):
+        return {}
+    for match in re.finditer(
+            r"qu[ýy]\s*(IV|III|II|I|[1-4])(?:\s+n[ăa]m)?\s*(20\d{2})", text, re.IGNORECASE):
+        window = text[max(0, match.start() - 48):match.start()]
+        if not re.search(r"l[ũu]y\s*k[ếe]|từ\s+đầu\s+năm|cuối", window, re.IGNORECASE):
+            return {"blocker": "QUARTER_CUMULATIVE_COLUMN_AMBIGUOUS"}
+    if len(distinct_quarters) != 1:
+        return {"blocker": "QUARTER_CUMULATIVE_COLUMN_AMBIGUOUS"}
+    year, number = normalized[0]
+    if number == 1:
+        return {"reporting_period": f"{year}-Q1", "period_semantic_state": STANDALONE_QUARTER,
+                "reported_duration_months": 3}
+    if number == 2:
+        return {"reporting_period": f"{year}-H1", "period_semantic_state": UNKNOWN_DURATION,
+                "reported_duration_months": 6}
+    if number == 3:
+        return {"reporting_period": f"{year}-9M", "period_semantic_state": YTD_CUMULATIVE_INTERIM,
+                "reported_duration_months": 9}
+    return {"reporting_period": year, "period_semantic_state": ANNUAL, "reported_duration_months": None}
+
+
 def _vietnamese_flow_column(text: str) -> dict[str, Any]:
     """Classify a Vietnamese statement title. Dates in the title are not covered bounds."""
     quarters = re.findall(
@@ -81,6 +109,9 @@ def _vietnamese_flow_column(text: str) -> dict[str, Any]:
         return {"blocker": "MULTIPLE_REPORTED_CUMULATIVE_COLUMNS"}
     if distinct_quarters and (six or nine):
         return {"blocker": "QUARTER_CUMULATIVE_COLUMN_AMBIGUOUS"}
+    cumulative_through_quarter = _cumulative_quarter_title(text, normalized, distinct_quarters)
+    if cumulative_through_quarter:
+        return cumulative_through_quarter
     if distinct_quarters:
         year, number = normalized[0]
         return {"reporting_period": f"{year}-Q{number}", "period_semantic_state": STANDALONE_QUARTER,

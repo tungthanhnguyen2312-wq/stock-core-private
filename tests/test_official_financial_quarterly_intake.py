@@ -7,7 +7,8 @@ import pytest
 from official_financial_period_identity import recognize_statement_period
 from stocklookup_core.financial.structured_financial_period_semantics import recognize_reported_column_period
 from official_financial_value_evidence import parse_accounting_integer
-from stocklookup_core.evidence.approved_issuer_ir_financial_evidence import prepare_financial_intake_candidate, APPROVED_ROUTES
+from stocklookup_core.evidence.approved_issuer_ir_financial_evidence import (
+    APPROVED_ROUTES, cross_period_document_binding, document_links, prepare_financial_intake_candidate, same_approved_host)
 from stocklookup_core.evidence.financial_row_identity import resolve_reported_row_identity
 
 
@@ -440,3 +441,123 @@ def test_wave5_t22_share_note_charter_capital_and_knowledge_cutoff_stay_separate
     assert prospective["knowledge_cutoff_eligible"]
     assert not prospective["source_admission_eligible"] and not prospective["official_fact_admitted"]
     assert "ACQUISITION_TIME_IS_NOT_PUBLICATION" in prospective["publication_blockers"]
+
+
+def test_wave6_t23_q1_index_title_cannot_bind_q2_file():
+    title = "BCTC 3 tháng đầu năm 2026 Techcombank – phát hành ngày 21/04/2026"
+    q2 = "https://techcombank.com/content/dam/techcombank/public-site/documents/techcombank-vas-bao-cao-tai-chinh-hop-nhat-2q26.pdf"
+    q1 = "https://techcombank.com/content/dam/techcombank/public-site/documents/techcombank-vas-bao-cao-tai-chinh-hop-nhat-1q26-searchable.pdf"
+    half = "BCTC 6 tháng đầu năm 2026 Techcombank – phát hành ngày 21/07/2026"
+    assert cross_period_document_binding(title, q2) == "CROSS_PERIOD_DOCUMENT_BINDING"
+    assert cross_period_document_binding(title, q1) is None
+    assert cross_period_document_binding(half, q2) is None
+    page = f'<a href="{q2}">{title}</a><a href="{q1}">{title}</a>'.encode()
+    assert document_links("https://techcombank.com/", page) == [q1]
+
+
+def test_wave6_t24_day_precision_release_is_not_before_cutoff():
+    row, doc, raw = inputs(code="", label="Thu nhập lãi thuần", period="Quý III 2026", value="11.700.026")
+    row["ticker"] = doc["ticker"] = doc["issuer_identity"] = "TCB"
+    row["unit_scale"] = doc["unit_scale"] = 1000000
+    row["knowledge_available_at"] = doc["observed_at"] = doc["published_at"] = "2026-10-20T00:00:00+07:00"
+    doc["publication_time_precision"] = "day"
+    result = prepared(row, doc, raw, cutoff="2026-10-20T15:00:00+07:00")
+    assert "DAY_PRECISION_PUBLICATION_IS_NOT_A_CUTOFF_TIMESTAMP" in result["publication_blockers"]
+    assert "DAY_PRECISION_PUBLICATION_IS_NOT_A_CUTOFF_TIMESTAMP" in result["knowledge_blockers"]
+    assert result["candidate"]["publication_date"] is None
+    assert not result["knowledge_cutoff_eligible"] and not result["official_fact_admitted"]
+    bare, bare_doc, bare_raw = inputs()
+    bare["knowledge_available_at"] = bare_doc["published_at"] = "2026-10-20"
+    bare_result = prepared(bare, bare_doc, bare_raw, cutoff="2026-10-20T15:00:00+07:00")
+    assert not bare_result["knowledge_cutoff_eligible"]
+    assert bare_result["candidate"]["publication_date"] is None
+
+
+def test_wave6_t25_cms_timestamp_is_not_publication():
+    row, doc, raw = inputs()
+    doc["issuer_cms_record_timestamp"] = "created_at 2026-02-27T04:07:32Z"
+    untouched = prepared(row, doc, raw)
+    assert untouched["candidate"]["publication_date"] is None
+    assert "SOURCE_PUBLICATION_TIMESTAMP_UNKNOWN_NO_HISTORICAL_PIT" in untouched["publication_blockers"]
+    doc["published_at"] = "2026-02-27T04:07:32Z"
+    doc["publication_time_basis"] = "cms"
+    promoted = prepared(row, doc, raw)
+    assert promoted["candidate"]["publication_date"] is None
+    assert "CMS_TIMESTAMP_IS_NOT_PUBLICATION" in promoted["publication_blockers"]
+    assert not promoted["official_fact_admitted"]
+
+
+def test_wave6_t26_total_pat_line_is_not_parent_pat():
+    identity = resolve_reported_row_identity("income_statement", "XIII", "Lợi nhuận sau thuế")
+    assert identity["accounting_identity"] == "TOTAL_PROFIT_AFTER_TAX"
+    assert identity["canonical_metric"] != "net_profit_parent"
+    row, doc, raw = inputs(code="XIII", label="Lợi nhuận sau thuế", period="Quý II năm 2026", value="4.292.478")
+    row["ticker"] = doc["ticker"] = doc["issuer_identity"] = "ACB"
+    row["unit_scale"] = doc["unit_scale"] = 1000000
+    result = prepared(row, doc, raw)
+    assert result["candidate"]["accounting_identity"] == "TOTAL_PROFIT_AFTER_TAX"
+    assert result["candidate"]["canonical_metric"] != "net_profit_parent"
+    assert "BANK_TAXONOMY_VIOLATION" in result["source_admission_blockers"]
+    assert not result["official_fact_admitted"]
+
+
+def test_wave6_t27_share_issue_note_is_not_current_shares():
+    identity = resolve_reported_row_identity("general_info_note", "1(b)", "phát hành 5.804.421.957 cổ phiếu phổ thông")
+    assert identity["accounting_identity"] == "UNKNOWN"
+    row, doc, raw = inputs(family="general_info_note", code="1(b)", label="phát hành 5.804.421.957 cổ phiếu phổ thông",
+                           period="30.6.2026", value="5.804.421.957")
+    row.update(unit="shares", currency=None, ticker="ACB", unit_scale=1)
+    doc.update(ticker="ACB", issuer_identity="ACB", unit_scale=1)
+    result = prepared(row, doc, raw)
+    assert "CURRENT_SHARES_NOT_ESTABLISHED" in result["valuation_blockers"]
+    assert result["candidate"]["accounting_identity"] != "SHARE_COUNT_NOTE"
+    assert "STATEMENT_FAMILY_NOT_SUPPORTED" in result["semantic_blockers"]
+    assert not result["official_fact_admitted"]
+
+
+def test_wave6_t28_same_host_and_unlisted_file_are_distinct():
+    assert same_approved_host("https://www.acb.com.vn/", "https://acb.com.vn/nha-dau-tu")
+    listed = "https://acb.com.vn/acbwebsite/files/listed.pdf"
+    page = f'<a href="{listed}">Bao cao tai chinh</a>'.encode()
+    assert document_links("https://www.acb.com.vn/", page) == [listed]
+    assert document_links("https://www.acb.com.vn/", b"<html>no filing link</html>") == []
+
+
+def test_wave6_t30_creation_after_claimed_publication_is_not_rewritten():
+    row, doc, raw = inputs()
+    claimed = "2026-03-16T00:00:00+07:00"
+    doc["published_at"] = claimed
+    doc["pdf_creation_time"] = "2026-03-17T06:50:43Z"
+    row["knowledge_available_at"] = doc["observed_at"] = "2026-03-17T13:50:43+07:00"
+    result = prepared(row, doc, raw, cutoff="2026-10-20T15:00:00+07:00")
+    assert "PDF_CREATION_AFTER_CLAIMED_PUBLICATION" in result["publication_blockers"]
+    assert result["candidate"]["publication_date"] == claimed
+    assert not result["official_fact_admitted"]
+
+
+def test_wave6_t31_wrapped_bank_line_is_not_parent_profit():
+    fragment = resolve_reported_row_identity("income_statement", "", "Ngân hàng")
+    full = resolve_reported_row_identity("income_statement", "", "Lợi nhuận thuần của cổ đông của Ngân hàng")
+    reserve = resolve_reported_row_identity("balance_sheet", "10", "Dự phòng rủi ro cho vay khách hàng")
+    assert fragment["accounting_identity"] == "UNKNOWN"
+    assert "FULL_ACCOUNTING_ROW_LABEL_NOT_IN_SOURCE_SPAN" in fragment["blockers"]
+    assert full["accounting_identity"] == "PARENT_PROFIT_AFTER_TAX" and full["canonical_metric"] is None
+    assert reserve["accounting_identity"] == "UNKNOWN"
+    row, doc, raw = inputs(code="", label="Ngân hàng", period="Quý III 2026", value="7.942.932")
+    row["ticker"] = doc["ticker"] = doc["issuer_identity"] = "TCB"
+    row["unit_scale"] = doc["unit_scale"] = 1000000
+    row["source_span"]["text"] = "Ngân hàng 7.942.932 6.419.344 21.964.072 18.614.668"
+    row["numeric_evidence_layer"] = "native_text"
+    doc["searchable_copy_not_signed"] = True
+    doc["publication_time_precision"] = "day"
+    result = prepared(row, doc, raw, cutoff="2026-10-20T15:00:00+07:00")
+    assert result["candidate"]["accounting_identity"] != "PARENT_PROFIT_AFTER_TAX"
+    assert "FULL_ACCOUNTING_ROW_NOT_IN_REVIEW_SPAN" in result["citation_blockers"]
+    assert "REPORTED_COLUMN_NOT_ISOLATED_IN_REVIEW_SPAN" in result["citation_blockers"]
+    assert "SEARCHABLE_COPY_IS_NOT_SIGNED_DOCUMENT" in result["source_admission_blockers"]
+    assert not result["native_numeric_literal_proven"] and not result["official_fact_admitted"]
+    cumulative = recognize_reported_column_period(
+        "Lũy kế từ đầu năm đến cuối Quý II Năm 2026", statement_family="income_statement")
+    assert cumulative["reporting_period"] == "2026-H1"
+    assert cumulative["period_semantic_state"] == "UNKNOWN_DURATION"
+    assert cumulative["period_start"] is None and cumulative["reported_duration_months"] == 6

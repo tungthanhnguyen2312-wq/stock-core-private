@@ -56,12 +56,41 @@ def same_approved_host(index_url: str, target_url: str) -> bool:
     return bool(source and target and source.lower().removeprefix("www.") == target.lower().removeprefix("www."))
 
 
+def cross_period_document_binding(title: str, document_name: str) -> str | None:
+    """Refuse a link whose filename quarter is not the period named by the index title.
+
+    A six-month or nine-month title may use that period's quarter number in the
+    filename. A first-quarter title may not point at a second-quarter file.
+    """
+    match = re.search(r"(?<![0-9])([1-4])q(\d{2})(?![0-9])", document_name.casefold())
+    if match is None:
+        return None
+    file_quarter = int(match.group(1))
+    text = str(title or "").casefold()
+    if re.search(r"(?<![0-9])9\s*th[áa]ng|chín\s+th", text):
+        expected = 3
+    elif re.search(r"(?<![0-9])6\s*th[áa]ng|sáu\s+th", text):
+        expected = 2
+    elif re.search(r"(?<![0-9])3\s*th[áa]ng|ba\s+th", text):
+        expected = 1
+    else:
+        quarter = re.search(r"qu[ýy]\s*(iv|iii|ii|i|[1-4])", text)
+        if quarter is None:
+            return None
+        expected = {"i": 1, "ii": 2, "iii": 3, "iv": 4, "1": 1, "2": 2, "3": 3, "4": 4}[quarter.group(1)]
+    if file_quarter != expected:
+        return "CROSS_PERIOD_DOCUMENT_BINDING"
+    return None
+
+
 def document_links(index_url: str, raw: bytes) -> list[str]:
     parser = _Links(); parser.feed(raw.decode("utf-8", errors="replace"))
     links: list[str] = []
     for href, label in parser.links:
         target = urljoin(index_url, href)
         haystack = f"{label} {target}".casefold()
+        if cross_period_document_binding(label, target):
+            continue
         if same_approved_host(index_url, target) and (target.casefold().split("?")[0].endswith(".pdf") or any(t in haystack for t in FINANCIAL_TERMS)):
             if target not in links: links.append(target)
     return links[:MAX_DOCUMENTS_PER_ISSUER]
@@ -165,6 +194,13 @@ def prepare_financial_intake_candidate(candidate: Mapping[str, Any], *, document
         citation.append("REVIEW_SPAN_PAGE_NOT_BOUND")
     if str(row.get("raw_row_label") or "") not in str(span.get("text") or ""):
         citation.append("ROW_LABEL_NOT_IN_REVIEW_SPAN")
+    if "FULL_ACCOUNTING_ROW_LABEL_NOT_IN_SOURCE_SPAN" in identity["blockers"]:
+        citation.append("FULL_ACCOUNTING_ROW_NOT_IN_REVIEW_SPAN")
+    span_text = str(span.get("text") or "")
+    period_label = str(row.get("native_period_label") or "")
+    column_tokens = re.findall(r"\(?\d{1,3}(?:[.,]\d{3})+\)?", span_text)
+    if period_label and period_label not in span_text and len(column_tokens) > 1:
+        citation.append("REPORTED_COLUMN_NOT_ISOLATED_IN_REVIEW_SPAN")
     semantic.extend(identity["blockers"])
     if row.get("canonical_metric") is not None and row["canonical_metric"] != identity["canonical_metric"]:
         semantic.append("CANONICAL_METRIC_IDENTITY_CONFLICT")
@@ -261,12 +297,24 @@ def prepare_financial_intake_candidate(candidate: Mapping[str, Any], *, document
         knowledge.append("AFTER_KNOWLEDGE_CUTOFF")
     if published and known and published > known:
         knowledge.append("PUBLICATION_AFTER_KNOWLEDGE")
-    acquisition_claimed_as_publication = doc.get("publication_time_basis") == "acquisition"
-    if acquisition_claimed_as_publication:
+    publication_basis = doc.get("publication_time_basis")
+    acquisition_claimed_as_publication = publication_basis == "acquisition"
+    cms_claimed_as_publication = publication_basis == "cms"
+    day_precision_publication = doc.get("publication_time_precision") == "day"
+    if acquisition_claimed_as_publication or cms_claimed_as_publication or day_precision_publication:
         published = None
     publication_blockers = [] if published else ["SOURCE_PUBLICATION_TIMESTAMP_UNKNOWN_NO_HISTORICAL_PIT"]
     if acquisition_claimed_as_publication:
         publication_blockers.append("ACQUISITION_TIME_IS_NOT_PUBLICATION")
+    if cms_claimed_as_publication:
+        publication_blockers.append("CMS_TIMESTAMP_IS_NOT_PUBLICATION")
+    if day_precision_publication:
+        publication_blockers.append("DAY_PRECISION_PUBLICATION_IS_NOT_A_CUTOFF_TIMESTAMP")
+        knowledge.append("DAY_PRECISION_PUBLICATION_IS_NOT_A_CUTOFF_TIMESTAMP")
+    created = instant(doc.get("pdf_creation_time"))
+    claimed_publication = instant(doc.get("published_at"))
+    if claimed_publication and created and created > claimed_publication:
+        publication_blockers.append("PDF_CREATION_AFTER_CLAIMED_PUBLICATION")
     layer = row.get("numeric_evidence_layer")
     binding = row.get("literal_byte_binding") if isinstance(row.get("literal_byte_binding"), Mapping) else {}
     token_in_source = isinstance(raw, str) and raw.encode("utf-8") in retained_bytes
@@ -299,7 +347,7 @@ def prepare_financial_intake_candidate(candidate: Mapping[str, Any], *, document
                  "value": normalized, "normalized_value": normalized, "source_unit_scale": scale, "unit_scale": 1,
                  "already_normalized": normalized is not None, "audit_or_review_status": assurance,
                  "qualification_state": "CANDIDATE_ONLY",
-                 "publication_date": None if acquisition_claimed_as_publication else doc.get("published_at"),
+                 "publication_date": doc.get("published_at") if published else None,
                  "numeric_evidence_layer": judged_layer}
     canonical["value_unit"] = "shares" if quantity else (str(row.get("currency")) + "/share" if identity["accounting_identity"] == "REPORTED_BASIC_EPS" else row.get("currency"))
     # This preserves the existing gate, including TICKER_NOT_IN_APPROVED_COHORT.
@@ -328,6 +376,8 @@ def prepare_financial_intake_candidate(candidate: Mapping[str, Any], *, document
             source_blockers.append("DOCUMENT_METADATA_DIMENSION_MISMATCH")
     if route.get("decision") != "admitted" or not route_bound:
         source_blockers.append("REGISTRY_SOURCE_ROUTE_NOT_ADMITTED")
+    if doc.get("searchable_copy_not_signed") is True:
+        source_blockers.append("SEARCHABLE_COPY_IS_NOT_SIGNED_DOCUMENT")
     valuation_blocks = ["OFFICIAL_FACT_ADMISSION_NOT_ESTABLISHED", "NO_ANNUALIZATION_OR_TTM", "CURRENT_SHARES_NOT_ESTABLISHED"]
     if identity["accounting_identity"] == "TOTAL_EQUITY_INCLUDING_NCI":
         valuation_blocks.append("TOTAL_EQUITY_IS_NOT_PARENT_BOOK_EQUITY")

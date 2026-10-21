@@ -71,6 +71,10 @@ def _label_only_bank_identity(statement_family: str, folded: str) -> dict | None
     """Printed bank lines with no line code. Nothing here is derived or admitted."""
     if statement_family not in {"income_statement", "balance_sheet", "notes"}:
         return None
+    # A wrapped second line is not the accounting row. Do not reconstruct the missing line.
+    if statement_family == "income_statement" and folded in {"ngan hang", "the bank"}:
+        return dict(canonical_metric=None, accounting_identity="UNKNOWN",
+                    blockers=["FULL_ACCOUNTING_ROW_LABEL_NOT_IN_SOURCE_SPAN"])
     share = any(term in folded for term in ("so luong co phieu", "so co phieu dang luu hanh", "co phieu dang luu hanh"))
     charter = "von dieu le" in folded
     if share and charter:
@@ -80,6 +84,7 @@ def _label_only_bank_identity(statement_family: str, folded: str) -> dict | None
         ("thu nhap lai thuan", None, "NET_INTEREST_INCOME"),
         ("cho vay khach hang", None, "CUSTOMER_LOANS"),
         ("du phong rui ro tin dung", None, "CREDIT_LOSS_PROVISION"),
+        ("loi nhuan thuan cua co dong", None, "PARENT_PROFIT_AFTER_TAX"),
         ("loi nhuan sau thue cua co dong", None, "PARENT_PROFIT_AFTER_TAX"),
         ("loi nhuan sau thue cua chu so huu", None, "PARENT_PROFIT_AFTER_TAX"),
         ("profit after tax of the parent", None, "PARENT_PROFIT_AFTER_TAX"),
@@ -101,6 +106,9 @@ def _label_only_bank_identity(statement_family: str, folded: str) -> dict | None
     if statement_family == "balance_sheet":
         for phrase, metric, concept in specific:
             if phrase in folded and concept in {"CUSTOMER_LOANS", "PARENT_BOOK_EQUITY_PRINTED_NOT_DERIVED"}:
+                # The loan-loss reserve prints the loan words after "dự phòng".
+                if concept == "CUSTOMER_LOANS" and "du phong" in folded:
+                    continue
                 return dict(canonical_metric=metric, accounting_identity=concept, blockers=[])
         if charter:
             return dict(canonical_metric=None, accounting_identity="CHARTER_CAPITAL_AMOUNT", blockers=[])
@@ -165,6 +173,10 @@ def resolve_reported_row_identity(statement_family: str, line_code: str, label: 
     entry = entries.get((statement_family, str(line_code)))
     blockers = []
     if entry is None:
+        # Bank forms use their own codes. The printed label still has to carry the concept.
+        label_only = _label_only_bank_identity(statement_family, folded)
+        if label_only is not None:
+            return label_only
         return dict(canonical_metric=None, accounting_identity="UNKNOWN", blockers=["ROW_IDENTITY_NOT_MAPPED"])
     metric, concept, phrases = entry
     if not any(term in folded for term in phrases):
