@@ -67,13 +67,65 @@ def row_label_supports_metric(metric: str, label: str, *, normalizer=None) -> bo
 LINE_CODE_IDENTITY_CONFLICTS = frozenset({("net_income", "61"), ("attributable_net_income", "60")})
 
 
+def _label_only_bank_identity(statement_family: str, folded: str) -> dict | None:
+    """Printed bank lines with no line code. Nothing here is derived or admitted."""
+    if statement_family not in {"income_statement", "balance_sheet", "notes"}:
+        return None
+    share = any(term in folded for term in ("so luong co phieu", "so co phieu dang luu hanh", "co phieu dang luu hanh"))
+    charter = "von dieu le" in folded
+    if share and charter:
+        return dict(canonical_metric=None, accounting_identity="UNKNOWN",
+                    blockers=["SHARE_NOTE_AND_CHARTER_CAPITAL_CONFLICT"])
+    specific = (
+        ("thu nhap lai thuan", None, "NET_INTEREST_INCOME"),
+        ("cho vay khach hang", None, "CUSTOMER_LOANS"),
+        ("du phong rui ro tin dung", None, "CREDIT_LOSS_PROVISION"),
+        ("loi nhuan sau thue cua co dong", None, "PARENT_PROFIT_AFTER_TAX"),
+        ("loi nhuan sau thue cua chu so huu", None, "PARENT_PROFIT_AFTER_TAX"),
+        ("profit after tax of the parent", None, "PARENT_PROFIT_AFTER_TAX"),
+        ("von chu so huu cua co dong", None, "PARENT_BOOK_EQUITY_PRINTED_NOT_DERIVED"),
+    )
+    if statement_family == "income_statement":
+        for phrase, metric, concept in specific:
+            if phrase in folded and concept == "PARENT_PROFIT_AFTER_TAX":
+                if any(term in folded for term in ("khong kiem soat", "non controlling", "non-controlling")):
+                    return dict(canonical_metric=None, accounting_identity="UNKNOWN",
+                                blockers=["PARENT_NCI_PROFIT_IDENTITY_CONFLICT"])
+                return dict(canonical_metric=metric, accounting_identity=concept, blockers=[])
+        if "loi nhuan sau thue" in folded and not any(
+                term in folded for term in ("cong ty me", "co dong", "chu so huu", "parent", "khong kiem soat", "non controlling", "non-controlling")):
+            return dict(canonical_metric="net_income", accounting_identity="TOTAL_PROFIT_AFTER_TAX", blockers=[])
+        for phrase, metric, concept in specific:
+            if phrase in folded and concept in {"NET_INTEREST_INCOME", "CREDIT_LOSS_PROVISION"}:
+                return dict(canonical_metric=metric, accounting_identity=concept, blockers=[])
+    if statement_family == "balance_sheet":
+        for phrase, metric, concept in specific:
+            if phrase in folded and concept in {"CUSTOMER_LOANS", "PARENT_BOOK_EQUITY_PRINTED_NOT_DERIVED"}:
+                return dict(canonical_metric=metric, accounting_identity=concept, blockers=[])
+        if charter:
+            return dict(canonical_metric=None, accounting_identity="CHARTER_CAPITAL_AMOUNT", blockers=[])
+        if "von chu so huu" in folded and "co dong" not in folded:
+            return dict(canonical_metric=None, accounting_identity="TOTAL_EQUITY_INCLUDING_NCI", blockers=[])
+    if statement_family == "notes" and share:
+        return dict(canonical_metric=None, accounting_identity="SHARE_COUNT_NOTE", blockers=[])
+    if statement_family == "balance_sheet" and share:
+        return dict(canonical_metric=None, accounting_identity="SHARE_COUNT_NOTE", blockers=[])
+    return None
+
+
 def resolve_reported_row_identity(statement_family: str, line_code: str, label: str) -> dict:
     """Candidate-only literal row mapping; never changes standing fact admission.
 
     Codes are scoped to the statement. Total equity and lease-inclusive debt keep
     their distinct source concepts, even where the canonical vocabulary is narrower.
+    A blank line code may use only a printed bank literal. Parent equity is never
+    total equity minus non-controlling interest.
     """
     folded = _identity_fold(label)
+    if str(line_code or "") == "":
+        label_only = _label_only_bank_identity(statement_family, folded)
+        if label_only is not None:
+            return label_only
     if statement_family == "eps_note":
         for phrase, concept in (("profit attributable to ordinary shareholders", "EPS_ORDINARY_SHAREHOLDER_PROFIT"),
                 ("shares in circulation for the period", "EPS_DENOMINATOR_SHARES"),

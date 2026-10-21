@@ -129,15 +129,22 @@ def prepare_financial_intake_candidate(candidate: Mapping[str, Any], *, document
     """
     from stocklookup_core.evidence.financial_row_identity import resolve_reported_row_identity
     row, doc = dict(candidate), dict(document)
+    # A caller cannot write the qualification output. The guard below owns it.
+    row.pop("native_numeric_literal_proven", None)
     schema, semantic, citation, knowledge = [], [], [], []
     digest = sha256(retained_bytes).hexdigest()
     if digest != doc.get("sha256") or digest != row.get("document_sha256"):
         citation.append("ORIGINAL_DOCUMENT_HASH_MISMATCH")
     if not doc.get("ticker") or row.get("ticker") != doc.get("ticker"):
         schema.append("DOCUMENT_ISSUER_MISMATCH")
+    identity = resolve_reported_row_identity(str(row.get("statement_family") or ""),
+        str(row.get("line_code") or ""), str(row.get("raw_row_label") or ""))
+    label_only_candidate = str(row.get("line_code") or "") == "" and identity["accounting_identity"] != "UNKNOWN" and not identity["blockers"]
     required_fields = ["statement_family", "raw_row_label", "native_period_label", "statement_scope", "unit_scale"]
-    if row.get("statement_family") != "eps_note":
+    if row.get("statement_family") != "eps_note" and not label_only_candidate:
         required_fields += ["line_code", "currency"]
+    elif identity["accounting_identity"] not in {"SHARE_COUNT_NOTE", "EPS_DENOMINATOR_SHARES", "EPS_OPENING_SHARES", "EPS_RESTATED_DIVIDEND_IMPACT"} and row.get("statement_family") != "eps_note":
+        required_fields += ["currency"]
     for key in required_fields:
         if row.get(key) in (None, ""):
             schema.append(key.upper() + "_MISSING")
@@ -158,8 +165,6 @@ def prepare_financial_intake_candidate(candidate: Mapping[str, Any], *, document
         citation.append("REVIEW_SPAN_PAGE_NOT_BOUND")
     if str(row.get("raw_row_label") or "") not in str(span.get("text") or ""):
         citation.append("ROW_LABEL_NOT_IN_REVIEW_SPAN")
-    identity = resolve_reported_row_identity(str(row.get("statement_family") or ""),
-        str(row.get("line_code") or ""), str(row.get("raw_row_label") or ""))
     semantic.extend(identity["blockers"])
     if row.get("canonical_metric") is not None and row["canonical_metric"] != identity["canonical_metric"]:
         semantic.append("CANONICAL_METRIC_IDENTITY_CONFLICT")
@@ -169,7 +174,7 @@ def prepare_financial_intake_candidate(candidate: Mapping[str, Any], *, document
     scale = row.get("unit_scale")
     if type(scale) is not int or scale <= 0:
         semantic.append("UNIT_SCALE_NOT_EXPLICIT")
-    quantity = identity["accounting_identity"] in {"EPS_DENOMINATOR_SHARES", "EPS_OPENING_SHARES", "EPS_RESTATED_DIVIDEND_IMPACT"}
+    quantity = identity["accounting_identity"] in {"EPS_DENOMINATOR_SHARES", "EPS_OPENING_SHARES", "EPS_RESTATED_DIVIDEND_IMPACT", "SHARE_COUNT_NOTE"}
     per_share = identity["accounting_identity"] == "REPORTED_BASIC_EPS"
     unsupported_special_scale = (quantity or per_share) and (scale != 1 or doc.get("unit_scale") != 1)
     if unsupported_special_scale:
@@ -182,7 +187,6 @@ def prepare_financial_intake_candidate(candidate: Mapping[str, Any], *, document
         semantic.append("DOCUMENT_CURRENCY_SCALE_MISMATCH")
     raw = row.get("raw_value_text")
     value = row.get("reviewed_integer_value")
-    native_literal_proven = raw is not None
     try:
         if raw is not None:
             parsed = value_parser(raw)
@@ -257,12 +261,46 @@ def prepare_financial_intake_candidate(candidate: Mapping[str, Any], *, document
         knowledge.append("AFTER_KNOWLEDGE_CUTOFF")
     if published and known and published > known:
         knowledge.append("PUBLICATION_AFTER_KNOWLEDGE")
+    acquisition_claimed_as_publication = doc.get("publication_time_basis") == "acquisition"
+    if acquisition_claimed_as_publication:
+        published = None
     publication_blockers = [] if published else ["SOURCE_PUBLICATION_TIMESTAMP_UNKNOWN_NO_HISTORICAL_PIT"]
+    if acquisition_claimed_as_publication:
+        publication_blockers.append("ACQUISITION_TIME_IS_NOT_PUBLICATION")
+    layer = row.get("numeric_evidence_layer")
+    binding = row.get("literal_byte_binding") if isinstance(row.get("literal_byte_binding"), Mapping) else {}
+    token_in_source = isinstance(raw, str) and raw.encode("utf-8") in retained_bytes
+    def native_bytes_bound() -> bool:
+        start, end = binding.get("byte_start"), binding.get("byte_end")
+        return (isinstance(raw, str) and binding.get("document_sha256") == digest and binding.get("source_page") == page
+                and type(start) is int and type(end) is int and 0 <= start < end <= len(retained_bytes)
+                and retained_bytes[start:end] == raw.encode("utf-8"))
+    if layer in {"ocr_text", "reviewed_visual_integer", "unknown"}:
+        # Parser success and a copied raw token never promote OCR or a visual read.
+        judged_layer, native_literal_proven = layer, False
+    elif layer == "native_text":
+        if native_bytes_bound() and normalized is not None and not citation:
+            judged_layer, native_literal_proven = "native_text", True
+        else:
+            judged_layer, native_literal_proven = "unknown", False
+            citation.append("NATIVE_LITERAL_NOT_BOUND_TO_SOURCE_BYTES")
+    elif layer not in (None, ""):
+        judged_layer, native_literal_proven = "unknown", False
+        semantic.append("NUMERIC_EVIDENCE_LAYER_UNKNOWN")
+    elif raw is None and type(value) is int:
+        judged_layer, native_literal_proven = "reviewed_visual_integer", False
+    elif raw is not None and token_in_source and normalized is not None and not citation:
+        # Old native literals remain native when the original bytes still contain the token.
+        judged_layer, native_literal_proven = "native_text", True
+    else:
+        judged_layer, native_literal_proven = "unknown", False
     canonical = {**row, "canonical_metric": identity["canonical_metric"], "accounting_identity": identity["accounting_identity"],
                  "reporting_period": period.get("reporting_period"), "period_semantic_state": period["period_semantic_state"],
                  "value": normalized, "normalized_value": normalized, "source_unit_scale": scale, "unit_scale": 1,
                  "already_normalized": normalized is not None, "audit_or_review_status": assurance,
-                 "qualification_state": "CANDIDATE_ONLY", "publication_date": doc.get("published_at")}
+                 "qualification_state": "CANDIDATE_ONLY",
+                 "publication_date": None if acquisition_claimed_as_publication else doc.get("published_at"),
+                 "numeric_evidence_layer": judged_layer}
     canonical["value_unit"] = "shares" if quantity else (str(row.get("currency")) + "/share" if identity["accounting_identity"] == "REPORTED_BASIC_EPS" else row.get("currency"))
     # This preserves the existing gate, including TICKER_NOT_IN_APPROVED_COHORT.
     legacy = validate_fact({**row, "canonical_metric": identity["canonical_metric"],
@@ -303,9 +341,16 @@ def prepare_financial_intake_candidate(candidate: Mapping[str, Any], *, document
         valuation_blocks.append("EPS_SHARE_BASIS_IS_NOT_CURRENT_OUTSTANDING_SHARES")
     if identity["accounting_identity"] == "EPS_ORDINARY_SHAREHOLDER_PROFIT":
         valuation_blocks.append("EPS_NUMERATOR_IS_NOT_PARENT_OR_TOTAL_PROFIT")
+    if identity["accounting_identity"] == "SHARE_COUNT_NOTE":
+        valuation_blocks.append("SHARE_NOTE_IS_NOT_OUTSTANDING_SHARE_AUTHORITY")
+    if identity["accounting_identity"] == "CHARTER_CAPITAL_AMOUNT":
+        valuation_blocks.append("CHARTER_CAPITAL_IS_NOT_A_SHARE_COUNT")
+    if str(row.get("ticker") or "").upper() in BANKS:
+        valuation_blocks.append("BANK_OUTSIDE_INDUSTRIAL_EV_EBITDA")
     result = dict(contract_version="official_financial_intake_candidate/v1", candidate=canonical,
         schema_valid=not schema, semantic_valid=not (schema + semantic + citation),
-        native_numeric_literal_proven=native_literal_proven and normalized is not None and not citation,
+        native_numeric_literal_proven=bool(native_literal_proven) and normalized is not None and not citation,
+        numeric_evidence_layer=judged_layer,
         schema_blockers=sorted(set(schema)), semantic_blockers=sorted(set(semantic)),
         citation_blockers=sorted(set(citation)), source_admission_blockers=sorted(set(source_blockers)),
         knowledge_blockers=sorted(set(knowledge)), publication_blockers=publication_blockers,

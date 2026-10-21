@@ -64,6 +64,45 @@ REQUIRED_LINEAGE_FIELDS = ("ticker", "canonical_metric", "provider", "statement_
                            "reporting_period", "source_sha256", "source_file", "fact_id")
 
 
+def _vietnamese_flow_column(text: str) -> dict[str, Any]:
+    """Classify a Vietnamese statement title. Dates in the title are not covered bounds."""
+    quarters = re.findall(
+        r"qu[ýy]\s*(IV|III|II|I|[1-4])(?:\s+n[ăa]m)?\s*(20\d{2})", text, re.IGNORECASE)
+    normalized = []
+    for token, year in quarters:
+        number = {"I": 1, "II": 2, "III": 3, "IV": 4}.get(token.upper()) or int(token)
+        normalized.append((year, number))
+    distinct_quarters = set(normalized)
+    six = re.findall(r"(?:sáu|6)\s+th[áa]ng.{0,80}?(20\d{2})", text, re.IGNORECASE)
+    nine = re.findall(r"(?:chín|9)\s+th[áa]ng.{0,80}?(20\d{2})", text, re.IGNORECASE)
+    if len(distinct_quarters) > 1:
+        return {"blocker": "MULTIPLE_REPORTED_QUARTER_COLUMNS"}
+    if len(set(six)) > 1 or len(set(nine)) > 1 or (six and nine):
+        return {"blocker": "MULTIPLE_REPORTED_CUMULATIVE_COLUMNS"}
+    if distinct_quarters and (six or nine):
+        return {"blocker": "QUARTER_CUMULATIVE_COLUMN_AMBIGUOUS"}
+    if distinct_quarters:
+        year, number = normalized[0]
+        return {"reporting_period": f"{year}-Q{number}", "period_semantic_state": STANDALONE_QUARTER,
+                "reported_duration_months": 3}
+    if nine:
+        return {"reporting_period": f"{nine[0]}-9M", "period_semantic_state": YTD_CUMULATIVE_INTERIM,
+                "reported_duration_months": 9}
+    if six:
+        # The six-month title is not covered-date proof and does not imply 1 January.
+        return {"reporting_period": f"{six[0]}-H1", "period_semantic_state": UNKNOWN_DURATION,
+                "reported_duration_months": 6}
+    years = re.findall(r"(?:kỳ\s+)?n[ăa]m(?:\s+tài\s+chính)?\s+(20\d{2})", text, re.IGNORECASE)
+    distinct_years = set(years)
+    if len(distinct_years) > 1:
+        return {"blocker": "MULTIPLE_REPORTED_CUMULATIVE_COLUMNS"}
+    if distinct_years:
+        # A year title names the column. It does not prove a twelve-month span.
+        return {"reporting_period": years[0], "period_semantic_state": ANNUAL,
+                "reported_duration_months": None}
+    return {}
+
+
 def recognize_reported_column_period(label: str, *, statement_family: str,
                                      explicit_start: str | None = None,
                                      explicit_end: str | None = None) -> dict[str, Any]:
@@ -99,6 +138,10 @@ def recognize_reported_column_period(label: str, *, statement_family: str,
             for month_name, day, year in re.findall(rf"\b({month_pattern})\s+(\d{{1,2}}),?\s+(20\d{{2}})\b", text, re.IGNORECASE):
                 month = next(i for i, name in enumerate(month_names, 1) if name.casefold() == month_name.casefold())
                 literal_dates.append(f"{year}-{month:02d}-{int(day):02d}")
+            for day, month, year in re.findall(r"\b(\d{1,2})[/.-](\d{1,2})[/.-](20\d{2})\b", text):
+                literal_dates.append(f"{year}-{int(month):02d}-{int(day):02d}")
+            for day, month, year in re.findall(r"ng[àa]y\s+(\d{1,2})\s+th[áa]ng\s+(\d{1,2})\s+n[ăa]m\s+(20\d{2})", text, re.IGNORECASE):
+                literal_dates.append(f"{year}-{int(month):02d}-{int(day):02d}")
             if any(value != explicit_end for value in literal_dates):
                 result["blockers"].append("REPORTED_BALANCE_INSTANT_CONFLICT")
         else:
@@ -137,7 +180,16 @@ def recognize_reported_column_period(label: str, *, statement_family: str,
                       period_semantic_state=YTD_CUMULATIVE_INTERIM if months == 9 else UNKNOWN_DURATION,
                       reported_duration_months=months)
     else:
-        result["blockers"].append("REPORTED_FLOW_PERIOD_UNKNOWN")
+        vietnamese = _vietnamese_flow_column(text)
+        if vietnamese.get("blocker"):
+            result["blockers"].append(vietnamese["blocker"])
+            return result
+        if vietnamese.get("reporting_period"):
+            result.update(reporting_period=vietnamese["reporting_period"],
+                          period_semantic_state=vietnamese["period_semantic_state"],
+                          reported_duration_months=vietnamese["reported_duration_months"])
+        else:
+            result["blockers"].append("REPORTED_FLOW_PERIOD_UNKNOWN")
     if result["reporting_period"] and explicit_end and not result["reporting_period"].startswith(explicit_end[:4]):
         result["blockers"].append("PERIOD_END_YEAR_CONFLICT")
     months = result["reported_duration_months"]
@@ -149,6 +201,8 @@ def recognize_reported_column_period(label: str, *, statement_family: str,
             result["blockers"].append("COVERED_DURATION_CONFLICTS_WITH_REPORTED_COLUMN")
     if statement_family == "cash_flow" and result["period_semantic_state"] == STANDALONE_QUARTER:
         result["blockers"].append("CASH_FLOW_QUARTER_DURATION_NOT_PROVEN")
+    if statement_family == "cash_flow" and result["period_semantic_state"] == ANNUAL:
+        result["blockers"].append("CASH_FLOW_DURATION_NOT_PROVEN")
     return result
 
 
