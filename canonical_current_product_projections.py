@@ -614,6 +614,19 @@ def materialize_current_investment_decision_workspace(
         )
         if root is not None else None
     )
+    scenario_binding = None
+    if isinstance(integrated_investment_decision_product, Mapping) and isinstance(integrated_investment_decision_product.get("records"), Mapping):
+        requested = sorted(set(integrated_investment_decision_product["records"]) & set(daily_tickers))
+        if requested:
+            try:
+                from current_evidence_bound_scenario import IntegratedScenarioBindingError, bind_integrated_scenarios
+                scenario_binding = bind_integrated_scenarios(
+                    session=session,
+                    integrated_decision=integrated_investment_decision_product,
+                    tickers=requested,
+                )
+            except (IntegratedScenarioBindingError, ValueError, TypeError, KeyError):
+                scenario_binding = None
     workspace = investment_decision_workspace_projection.build_artifacts(
         opportunity_artifact=opportunity_and_decision["opportunity_context"],
         decision_artifact=opportunity_and_decision["security_decision_context"],
@@ -626,6 +639,7 @@ def materialize_current_investment_decision_workspace(
         flow_price_artifact=flow_price_artifact,
         flow_research_cohort_tickers=flow_research_cohort_tickers,
         integrated_decision_artifact=integrated_investment_decision_product,
+        integrated_scenario_binding=scenario_binding,
     )
     return {
         "opportunity_context": opportunity_and_decision["opportunity_context"],

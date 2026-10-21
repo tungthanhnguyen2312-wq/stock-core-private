@@ -65,6 +65,73 @@ def content_identity(value: Mapping[str, Any]) -> dict[str, str]:
     return {"artifact_sha256": digest, "artifact_identity": f"{CONTRACT_VERSION}:{digest}"}
 
 
+def classify_method_readiness(detail: Mapping[str, Any]) -> str:
+    """Map an existing method record onto the product readiness vocabulary.
+
+    This does not compute a multiple. A research-usable or reference-only value stays a
+    research proxy. Official availability requires an already qualified method with no
+    research-only limitation.
+    """
+    status = str(detail.get("status") or "")
+    availability = str(detail.get("availability_state") or "")
+    limitations = detail.get("limitations") if isinstance(detail.get("limitations"), list) else []
+    tokens = " ".join([status, availability, *[str(item) for item in limitations]])
+    if "NOT_APPLICABLE" in tokens:
+        return "NOT_APPLICABLE"
+    research_only = any(flag in tokens for flag in (
+        "RESEARCH_USABLE", "RESEARCH_PROXY", "READY_RESEARCH_ONLY", "AVAILABLE_REFERENCE_ONLY",
+        "CURRENT_RESEARCH_ONLY", "NOT_AUTHORITATIVE", "NOT_PIT",
+    ))
+    stale = "STALE" in tokens
+    if research_only and stale and detail.get("value") is not None:
+        return "STALE_BUT_USABLE"
+    if research_only and detail.get("value") is not None:
+        return "RESEARCH_PROXY"
+    if any(flag in tokens for flag in ("BLOCKED", "INPUT_BLOCKED", "UNAVAILABLE", "NOT_AVAILABLE", "PE_NOT_MEANINGFUL")):
+        return "BLOCKED"
+    if availability == "AVAILABLE_QUALIFIED" and detail.get("value") is not None:
+        return "AVAILABLE"
+    if detail.get("value") is not None:
+        return "RESEARCH_PROXY"
+    return "BLOCKED"
+
+
+def research_readiness_view(method_diagnostics: Mapping[str, Any]) -> dict[str, Any]:
+    """State which retained methods can be shown, and which admitted gaps stay blocked."""
+    methods = {
+        method_id: {
+            "readiness": classify_method_readiness(detail),
+            "status": detail.get("status"),
+            "blocker_reason_codes": list(detail.get("blocker_reason_codes") or []),
+            "period_basis": detail.get("period_basis"),
+        }
+        for method_id, detail in method_diagnostics.items()
+        if isinstance(detail, Mapping)
+    }
+    share_blockers = sorted({
+        code for row in methods.values() for code in row["blocker_reason_codes"]
+        if any(token in str(code) for token in (
+            "SHARE", "COMMON_OUTSTANDING", "EX_DATE", "PLANNED_OR_UNEXECUTED", "MARKET_CAP_OVER_PRICE",
+        ))
+    })
+    return {
+        "methods": methods,
+        "share_or_corporate_action_blockers": share_blockers,
+        "normalized_earnings": {
+            "readiness": "BLOCKED",
+            "reason_code": "NORMALIZED_EARNINGS_CONTRACT_NOT_ADMITTED",
+            "missing": "A qualified recurring-earnings series and its period, scope, and publication time.",
+        },
+        "intrinsic_value": {
+            "readiness": "BLOCKED",
+            "reason_code": "INTRINSIC_VALUE_METHOD_NOT_ADMITTED",
+            "missing": "An admitted intrinsic method and its qualified inputs. No residual-income or target price is created here.",
+        },
+        "probability_status": "NOT_EMITTED",
+        "official_target_price_status": "NOT_EMITTED",
+    }
+
+
 def qualified_relative_methods(methods: Mapping[str, Any]) -> list[dict[str, Any]]:
     """Peer-relative methods that may support a relative label: a true relative method whose
     upstream peer status is READY_RESEARCH_ONLY. A method name alone never qualifies."""
@@ -144,6 +211,7 @@ def _valuation_view(opportunity_record: Mapping[str, Any]) -> dict[str, Any]:
         "readiness": valuation.get("readiness"),
         "freshness_status": (valuation.get("freshness") or {}).get("freshness_status"),
         "source_session": (valuation.get("freshness") or {}).get("source_session"),
+        "research_readiness": research_readiness_view(method_diagnostics),
     }
 
 
@@ -505,6 +573,7 @@ def build_ticker_card(
     technical_coverage_disposition_records: Mapping[str, Any] | None = None,
     technical_history_recovery_records: Mapping[str, Any] | None = None,
     integrated_record: Mapping[str, Any] | None = None,
+    conditional_scenario: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Compose one seven-section decision-workspace card for a single ticker.
 
@@ -660,12 +729,59 @@ def build_ticker_card(
     # bridge -- reconciles fields already on this exact card into the six-state
     # indicator_metric_display_state/v1 contract. Computes nothing new; see
     # indicator_metric_availability.py / indicator_metric_display_state.py.
+    if conditional_scenario is not None:
+        card["conditional_scenarios"] = conditional_scenario
     card["display_metrics"] = indicator_display_state.build_ticker_display_metrics(
         ticker, card, cohort_tickers=flow_research_cohort_tickers,
         technical_coverage_disposition_record=(technical_coverage_disposition_records or {}).get(ticker),
         technical_history_recovery_record=(technical_history_recovery_records or {}).get(ticker),
     )
     return card
+
+
+def _conditional_case_view(row: Mapping[str, Any] | None) -> dict[str, Any]:
+    if not isinstance(row, Mapping) or row.get("is_actionable") is True or "probability" in row or "target_price" in row:
+        return {
+            "case_status": "BLOCKED",
+            "reason_code": "CASE_MISSING_OR_TARGET_NOT_ADMITTED",
+            "probability_status": "UNKNOWN_UNCALIBRATED",
+            "is_actionable": False,
+        }
+    return {
+        "case_status": row.get("case_status"),
+        "reason_code": row.get("reason_code"),
+        "probability_status": "UNKNOWN_UNCALIBRATED",
+        "is_actionable": False,
+    }
+
+
+def conditional_scenario_view(record: Mapping[str, Any]) -> dict[str, Any]:
+    """Compact an already bound Bear/Base/Bull record. No new case and no price target."""
+    return {
+        "source_contract": "current_evidence_bound_scenario_integrated_binding/v1",
+        "probability_status": "NOT_EMITTED",
+        "official_target_price_status": "NOT_EMITTED",
+        "is_actionable": False,
+        "bear": _conditional_case_view(record.get("bear_case")),
+        "base": _conditional_case_view(record.get("base_case")),
+        "bull": _conditional_case_view(record.get("bull_case")),
+        "limitations": list(record.get("limitations") or []),
+    }
+
+
+def _accepted_scenario_binding(binding: Mapping[str, Any] | None, session: str | None) -> Mapping[str, Any] | None:
+    if not isinstance(binding, Mapping) or not session:
+        return None
+    if binding.get("contract_version") != "current_evidence_bound_scenario_integrated_binding/v1":
+        return None
+    if binding.get("session") != session or binding.get("is_actionable") is not False:
+        return None
+    if binding.get("probability_status") != "UNKNOWN_UNCALIBRATED":
+        return None
+    records = binding.get("records")
+    if not isinstance(records, Mapping):
+        return None
+    return binding
 
 
 def build_artifacts(
@@ -683,6 +799,7 @@ def build_artifacts(
     technical_coverage_disposition: Mapping[str, Any] | None = None,
     technical_history_recovery: Mapping[str, Any] | None = None,
     integrated_decision_artifact: Mapping[str, Any] | None = None,
+    integrated_scenario_binding: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Join a matched opportunity_context/v1 + security_decision_context/v1 pair into the
     compact investment_decision_workspace_projection/v1 artifact. Raises fail-closed if the two
@@ -760,6 +877,9 @@ def build_artifacts(
         isinstance(current_research_scope, Mapping) and current_research_scope.get("temporally_eligible")
     )
 
+    as_of_session = opportunity_artifact.get("as_of_session") or decision_artifact.get("as_of_session")
+    scenario_binding = _accepted_scenario_binding(integrated_scenario_binding, as_of_session)
+    scenario_records = (scenario_binding or {}).get("records") if isinstance(scenario_binding, Mapping) else {}
     cards: dict[str, Any] = {}
     for ticker in tickers:
         sector = _sector_label(leadership_records, ticker)
@@ -777,6 +897,11 @@ def build_artifacts(
             technical_coverage_disposition_records=technical_disposition_records,
             technical_history_recovery_records=technical_recovery_records,
             integrated_record=integrated_records[ticker],
+            conditional_scenario=(
+                conditional_scenario_view(scenario_records[ticker])
+                if isinstance(scenario_records, Mapping) and isinstance(scenario_records.get(ticker), Mapping)
+                else None
+            ),
         )
         if current_research_scope_supplied:
             card["official_research_scope"] = current_research_official_universe_scope_module.ticker_scope_view(
@@ -854,6 +979,8 @@ def build_artifacts(
         ),
         "integrated_investment_decision_product": integrated_decision_artifact.get("artifact_identity"),
     }
+    if scenario_binding is not None:
+        source_artifacts["current_evidence_bound_scenario_integrated_binding"] = scenario_binding.get("artifact_identity")
     evaluated_identity = (opportunity_artifact.get("source_artifacts") or {}).get("current_research_valuation_context")
     if evaluated_identity:
         source_artifacts["current_research_valuation_context"] = evaluated_identity
