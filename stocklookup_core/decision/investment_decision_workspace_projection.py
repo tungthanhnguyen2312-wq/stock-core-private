@@ -181,7 +181,13 @@ def _valuation_view(opportunity_record: Mapping[str, Any]) -> dict[str, Any]:
             # Preserve the producer's equity attribution beside its displayed multiple.
             # Older methods without these fields keep their original projection shape.
             **{key: copy.deepcopy(detail[key]) for key in (
-                "equity_definition", "statement_scope", "limitations") if key in detail},
+                "equity_definition", "statement_scope", "limitations",
+                "monetary_basis", "ttm_monetary_basis", "market_cap_monetary_basis",
+                "equity_monetary_basis", "book_period", "book_period_lag_quarters",
+                "ttm_periods", "ttm_source_context_identity", "ttm_input_source",
+                "ttm_feature_id", "ttm_method", "ttm_provider", "ttm_currency",
+                "ttm_scale", "ttm_fitness", "ttm_source_conflict",
+            ) if key in detail and detail[key] is not None},
             **({key: detail[key] for key in (
                 "reporting_basis", "source_fact", "denominator_period_semantics", "denominator_authority",
                 "denominator_metric", "denominator_value_vnd", "numerator_value_vnd", "numerator_monetary_basis",

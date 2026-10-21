@@ -1355,6 +1355,7 @@ def _valuation_display_summary(methods_view: Mapping[str, Mapping[str, Any]]) ->
 def valuation_axis(*, ticker: str, decision_session: str, valuation_artifact: Mapping[str, Any] | None,
                    feature_store: Mapping[str, Any] | None, row: Mapping[str, Any],
                    freshness: Mapping[str, Any]) -> dict[str, Any]:
+    import copy
     usable = axis_is_research_usable(freshness) and (
         row.get("has_usable_method") or row.get("relative_research_state") not in {None, "UNAVAILABLE"}
     )
@@ -1384,6 +1385,7 @@ def valuation_axis(*, ticker: str, decision_session: str, valuation_artifact: Ma
             "equity_definition": method.get("equity_definition"),
             "statement_scope": method.get("statement_scope"),
             "limitations": method.get("limitations"),
+            **({key: method[key] for key in ("monetary_basis",) if key in method and method[key] is not None}),
             "peer_relative": (row.get("peer_relative") or {}).get(method_id),
             "availability_state": method_availability_state(method, (row.get("peer_relative") or {}).get(method_id)),
             **({key: method[key] for key in (
