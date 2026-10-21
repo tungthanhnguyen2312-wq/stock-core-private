@@ -179,3 +179,97 @@ def test_reuses_existing_contracts_not_a_new_state(tmp_path):
     assert project._RECOVERY_ELIGIBLE_STATES == frozenset({
         status_mod.ACTIVE_LISTED_OBSERVED, status_mod.ACTIVE_LISTED_NO_QUALIFIED_SESSION_OBSERVATION,
     })
+
+
+# --- 2026-10-19 live incident: static inputs resolve from the retained-evidence root -------------
+#
+# The first T: Daily failed because the VCI exchange snapshot was resolved beside the Producer
+# checkout. After the code/evidence root split the file only exists under the retained root.
+
+def _place_static_inputs(root: Path, qualification: dict, vci_snapshot: dict) -> None:
+    for rel, data in (
+        (project.QUALIFICATION_ARTIFACT_RELATIVE_PATH, qualification),
+        (project.VCI_EXCHANGE_SNAPSHOT_RELATIVE_PATH, vci_snapshot),
+    ):
+        (root / rel).parent.mkdir(parents=True, exist_ok=True)
+        (root / rel).write_text(json.dumps(data), encoding="utf-8")
+
+
+def test_default_static_inputs_come_from_profile_retained_role_not_checkout(tmp_path, monkeypatch):
+    import runtime_paths
+    retained = tmp_path / "retained"
+    monkeypatch.delenv("STOCK_LOOKUP_RETAINED_EVIDENCE_ROOT", raising=False)
+    monkeypatch.setattr(runtime_paths, "workspace_profile", lambda **_k: {"paths": {"retained": retained}})
+    assert project.default_vci_exchange_snapshot_path() == retained / project.VCI_EXCHANGE_SNAPSHOT_RELATIVE_PATH
+    assert project.default_qualification_artifact_path() == retained / project.QUALIFICATION_ARTIFACT_RELATIVE_PATH
+    assert not str(project.default_vci_exchange_snapshot_path()).startswith(str(project.REPO_ROOT))
+
+
+def test_default_static_inputs_use_configured_retained_root_without_profile(tmp_path, monkeypatch):
+    import runtime_paths
+    monkeypatch.setattr(runtime_paths, "workspace_profile", lambda **_k: None)
+    monkeypatch.setenv("STOCK_LOOKUP_RETAINED_EVIDENCE_ROOT", str(tmp_path))
+    assert project.default_vci_exchange_snapshot_path() == tmp_path.resolve() / project.VCI_EXCHANGE_SNAPSHOT_RELATIVE_PATH
+
+
+def test_legacy_single_root_default_is_unchanged(monkeypatch):
+    import runtime_paths
+    monkeypatch.setattr(runtime_paths, "workspace_profile", lambda **_k: None)
+    monkeypatch.delenv("STOCK_LOOKUP_RETAINED_EVIDENCE_ROOT", raising=False)
+    assert project.default_vci_exchange_snapshot_path() == project.DEFAULT_VCI_EXCHANGE_SNAPSHOT_PATH
+
+
+def test_projection_without_explicit_paths_reads_split_retained_root(tmp_path, monkeypatch):
+    import runtime_paths
+    tickers = ["AAA", "BBB"]
+    dnse_snapshot, qual_path, vci_path = _build(
+        tmp_path, tickers=tickers,
+        dispositions={"AAA": "PROVIDER_REJECTED", "BBB": "SESSION_MISSING"},
+        instrument_classes={"AAA": "EQUITY", "BBB": "EQUITY"},
+        exchanges={"AAA": "DELISTED", "BBB": "HOSE"},
+    )
+    retained = tmp_path / "retained"
+    _place_static_inputs(retained, json.loads(qual_path.read_text("utf-8")), json.loads(vci_path.read_text("utf-8")))
+    monkeypatch.setattr(runtime_paths, "workspace_profile", lambda **_k: {"paths": {"retained": retained}})
+    result = project.project_recovery_eligibility(dnse_snapshot)
+    assert result["available"] is True
+    assert result["per_ticker"]["AAA"]["recovery_eligible"] is False
+
+
+def test_unqualified_profile_degrades_instead_of_blocking_daily(monkeypatch):
+    import runtime_paths
+
+    def refuse(**_k):
+        raise RuntimeError("workspace volume wrong/unavailable")
+
+    monkeypatch.setattr(runtime_paths, "workspace_profile", refuse)
+    result = project.project_recovery_eligibility(_dnse_snapshot({"AAA": {"disposition": "SESSION_MISSING"}}))
+    assert result["available"] is False
+    assert result["degraded_reason"] == "RETAINED_EVIDENCE_ROOT_UNRESOLVED"
+
+
+def test_universe_status_tool_default_vci_path_is_the_retained_root(tmp_path, monkeypatch):
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(
+        "run_universe_status_tool",
+        project.REPO_ROOT / "tools/run_current_universe_status_and_session_coverage_resolution.py",
+    )
+    tool = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(tool)
+    expected = tmp_path / "retained" / project.VCI_EXCHANGE_SNAPSHOT_RELATIVE_PATH
+    monkeypatch.setattr(tool, "default_vci_exchange_snapshot_path", lambda: expected)
+    loaded: list[Path] = []
+
+    def fake_load(path):
+        loaded.append(Path(path))
+        if Path(path) == expected:
+            raise FileNotFoundError(str(path))
+        return {}
+
+    monkeypatch.setattr(tool, "_load", fake_load)
+    try:
+        tool.main(["--breadth-foundation-artifact", str(tmp_path / "b.json"),
+                   "--p3f9b-snapshot", str(tmp_path / "s.json"), "--output", str(tmp_path / "o.json")])
+    except FileNotFoundError:
+        pass
+    assert loaded[-1] == expected

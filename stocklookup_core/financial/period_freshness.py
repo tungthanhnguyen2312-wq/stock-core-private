@@ -4,6 +4,7 @@ from typing import Any
 from stocklookup_core.evidence.temporal_freshness import (
     CONTRACT_VERSION, FINANCIAL_PERIOD_FRESHNESS_CONTRACT, CURRENT,
     STALE_BUT_RESEARCH_USABLE, UNAVAILABLE, completed_quarter_lag,
+    separate_financial_clock,
 )
 
 # One shared domain contract, also exposed by the legacy decision-axis mapping.

@@ -208,9 +208,18 @@ def resolve_supplementary_inputs(root: Path, session: str) -> dict[str, dict[str
     resolved: dict[str, dict[str, Any] | None] = {}
     session_compact = _session_compact(session)
     for name, (dir_template, filename) in SUPPLEMENTARY_INPUT_TEMPLATES.items():
-        path = root / "operations-review" / dir_template.format(session=session_compact) / filename
+        path = _first_governed_path(root, Path("operations-review") / dir_template.format(session=session_compact) / filename)
         resolved[name] = _load_json(path) if path.is_file() else None
     return resolved
+
+
+def _first_governed_path(root: Path, relative: Path) -> Path:
+    """The same one deterministic relative path, under the first governed evidence root that has
+    it (checkout first). Split code/evidence roots (2026-10-19 T: cutover) seal these per-session
+    artifacts under the operation-output root; searching only the checkout silently turned every
+    supplementary axis (Financial V2, tactical boundaries, ...) UNAVAILABLE."""
+    from stocklookup_core.evidence.evidence_roots import governed_evidence_roots
+    return next((base / relative for base in governed_evidence_roots(root) if (base / relative).is_file()), Path(root) / relative)
 
 
 #: Signal Velocity / Flow-Price Divergence use each engine's own established retained-artifact
@@ -231,7 +240,7 @@ def resolve_velocity_and_flow_price_inputs(root: Path, session: str) -> dict[str
     root = Path(root)
     resolved: dict[str, dict[str, Any] | None] = {}
     for name, (dir_slug, filename) in VELOCITY_FLOW_PRICE_INPUT_PATHS.items():
-        path = root / "operations-review" / dir_slug / session / filename
+        path = _first_governed_path(root, Path("operations-review") / dir_slug / session / filename)
         resolved[name] = _load_json(path) if path.is_file() else None
     return resolved
 
@@ -517,6 +526,7 @@ def materialize_current_investment_decision_workspace(
     root: Path | None = None,
     integrated_investment_decision_product: Mapping[str, Any] | None = None,
     runtime_root_override: Path | None = None,
+    evaluated_valuation: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build the current-session Investment Decision Workspace from already-resolved inputs.
 
@@ -584,6 +594,7 @@ def materialize_current_investment_decision_workspace(
         portfolio=None,
         financial_analysis_product_context=financial_analysis_product_context,
         financial_analysis_context=None,
+        evaluated_valuation=evaluated_valuation,
         requested_at=requested_at,
     )
     flow_research_cohort_tickers = resolve_flow_research_cohort_tickers()
@@ -603,6 +614,19 @@ def materialize_current_investment_decision_workspace(
         )
         if root is not None else None
     )
+    scenario_binding = None
+    if isinstance(integrated_investment_decision_product, Mapping) and isinstance(integrated_investment_decision_product.get("records"), Mapping):
+        requested = sorted(set(integrated_investment_decision_product["records"]) & set(daily_tickers))
+        if requested:
+            try:
+                from current_evidence_bound_scenario import IntegratedScenarioBindingError, bind_integrated_scenarios
+                scenario_binding = bind_integrated_scenarios(
+                    session=session,
+                    integrated_decision=integrated_investment_decision_product,
+                    tickers=requested,
+                )
+            except (IntegratedScenarioBindingError, ValueError, TypeError, KeyError):
+                scenario_binding = None
     workspace = investment_decision_workspace_projection.build_artifacts(
         opportunity_artifact=opportunity_and_decision["opportunity_context"],
         decision_artifact=opportunity_and_decision["security_decision_context"],
@@ -615,6 +639,7 @@ def materialize_current_investment_decision_workspace(
         flow_price_artifact=flow_price_artifact,
         flow_research_cohort_tickers=flow_research_cohort_tickers,
         integrated_decision_artifact=integrated_investment_decision_product,
+        integrated_scenario_binding=scenario_binding,
     )
     return {
         "opportunity_context": opportunity_and_decision["opportunity_context"],
@@ -668,6 +693,7 @@ def materialize_and_write_current_product_projections(
     runtime_root_override: Path | None = None,
     integrated_investment_decision_product: Mapping[str, Any] | None = None,
     current_corporate_knowledge_overlay: Mapping[str, Any] | None = None,
+    evaluated_valuation: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Top-level entry point: materialize both current products and write them into
     ``operation_dir`` (the same Daily Research Session Operation directory
@@ -708,6 +734,7 @@ def materialize_and_write_current_product_projections(
             tactical_behavior=tactical_behavior_artifact, current_research_scope=current_research_scope,
             root=root, integrated_investment_decision_product=integrated_investment_decision_product,
             runtime_root_override=runtime_root_override,
+            evaluated_valuation=evaluated_valuation,
         )
         workspace = workspace_bundle["workspace"]
         if current_corporate_knowledge_overlay is not None:
@@ -729,6 +756,11 @@ def materialize_and_write_current_product_projections(
         }
 
     operation_dir.mkdir(parents=True, exist_ok=True)
+    if evaluated_valuation is not None:
+        atomic_write_json(
+            operation_dir / current_valuation_opportunity_integration.EVALUATED_VALUATION_PRODUCT_COPY,
+            evaluated_valuation,
+        )
     workspace_path = operation_dir / WORKSPACE_ARTIFACT_FILENAME
     screener_json_path = operation_dir / SCREENER_MASTER_JSON_FILENAME
     screener_js_path = operation_dir / SCREENER_MASTER_JS_FILENAME

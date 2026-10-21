@@ -20,7 +20,7 @@ from stocklookup_core.financial import monetary_basis_contract as basis_contract
 from stocklookup_core.financial import financial_analysis_engine_v2 as financial_engine
 from stocklookup_core.valuation.market_wide_current_valuation_input_scaleout import RESEARCH_SHARE_AUTHORITIES, _applicability, _market_cap_monetary_basis
 from operational_fundamental_context_integration import MAX_COMPLETED_QUARTER_LAG
-from stocklookup_core.evidence.temporal_freshness import UNAVAILABLE, completed_quarter_lag
+from stocklookup_core.evidence.temporal_freshness import UNAVAILABLE, completed_quarter_lag, separate_financial_clock
 from stocklookup_core.valuation.freshness import classify_valuation_freshness, axis_is_research_usable
 from sector_relative_research_context import MIN_COHORT_MEMBERS
 
@@ -1368,6 +1368,7 @@ def _valuation_display_summary(methods_view: Mapping[str, Mapping[str, Any]]) ->
 def valuation_axis(*, ticker: str, decision_session: str, valuation_artifact: Mapping[str, Any] | None,
                    feature_store: Mapping[str, Any] | None, row: Mapping[str, Any],
                    freshness: Mapping[str, Any]) -> dict[str, Any]:
+    import copy
     usable = axis_is_research_usable(freshness) and (
         row.get("has_usable_method") or row.get("relative_research_state") not in {None, "UNAVAILABLE"}
     )
@@ -1397,6 +1398,7 @@ def valuation_axis(*, ticker: str, decision_session: str, valuation_artifact: Ma
             "equity_definition": method.get("equity_definition"),
             "statement_scope": method.get("statement_scope"),
             "limitations": method.get("limitations"),
+            **({key: method[key] for key in ("monetary_basis",) if key in method and method[key] is not None}),
             "peer_relative": (row.get("peer_relative") or {}).get(method_id),
             "availability_state": method_availability_state(method, (row.get("peer_relative") or {}).get(method_id)),
             **({key: method[key] for key in (
@@ -1899,22 +1901,37 @@ METRIC_RESEARCH_METHODS = (PE_EXISTING, PE_TTM, PB, PB_CURRENT_RESEARCH, PS_EXIS
 
 
 def _metric_freshness(periods: Sequence[str], *, decision_session: str,
-                      reporting_basis: Mapping[str, Any] | None = None) -> dict[str, Any]:
-    """Age explicit ends or existing calendar-quarter labels; never resolve a fiscal label."""
-    end = (reporting_basis or {}).get("period_end")
-    period = periods[-1] if periods else None
+                      reporting_basis: Mapping[str, Any] | None = None,
+                      price_as_of: Any = None, knowledge_available_at: Any = None) -> dict[str, Any]:
+    """Age the financial period. A joined price session is not that period."""
+    basis = reporting_basis or {}
+    end = basis.get("period_end")
+    price = price_as_of or basis.get("price_as_of") or basis.get("price_session")
+    knowledge = knowledge_available_at or basis.get("knowledge_available_at")
+    period = periods[-1] if periods else basis.get("reporting_period")
     if end:
         try:
-            day = date.fromisoformat(end)
-            period = f"{day.year}-Q{(day.month - 1) // 3 + 1}"
+            date.fromisoformat(str(end)[:10])
         except (TypeError, ValueError):
-            return {"freshness_status": UNAVAILABLE, "reason_codes": ["MALFORMED_EXPLICIT_PERIOD_END"]}
-    lag, behind, blocker = completed_quarter_lag(period, decision_session)
-    return {"freshness_status": UNAVAILABLE if blocker else
-            "CURRENT" if lag <= MAX_COMPLETED_QUARTER_LAG else "STALE_BUT_RESEARCH_USABLE",
-            "period_identity": list(periods), "explicit_period_end": end,
-            "completed_quarter_lag": lag, "quarters_behind_last_completed": behind,
-            "reason_codes": [blocker] if blocker else [], "rewritten_as_current": False}
+            return {"freshness_status": UNAVAILABLE, "reason_codes": ["MALFORMED_EXPLICIT_PERIOD_END"],
+                    "period_identity": list(periods), "explicit_period_end": end,
+                    "price_as_of": price, "knowledge_available_at": knowledge,
+                    "financial_freshness": UNAVAILABLE, "rewritten_as_current": False,
+                    "price_session_does_not_set_financial_freshness": True}
+    clock = separate_financial_clock(
+        financial_period=period, financial_period_end=end, price_as_of=price,
+        knowledge_available_at=knowledge, decision_session=decision_session,
+        maximum_completed_quarter_lag=MAX_COMPLETED_QUARTER_LAG,
+    )
+    return {"freshness_status": clock["freshness_status"], "financial_freshness": clock["financial_freshness"],
+            "period_identity": list(periods), "explicit_period_end": clock["financial_period_end"],
+            "price_as_of": price, "financial_period_end": clock["financial_period_end"],
+            "knowledge_available_at": knowledge, "completed_quarter_lag": clock["completed_quarter_lag"],
+            "quarters_behind_last_completed": clock["quarters_behind_last_completed"],
+            "reason_codes": list(clock["reason_codes"]), "rewritten_as_current": False,
+            "price_session_does_not_set_financial_freshness": True,
+            "price_session_not_used_as_financial_period_end": clock["price_session_not_used_as_financial_period_end"],
+            "research_usable": clock["research_usable"]}
 
 
 def build_metric_research_context(*, rows: Mapping[str, Mapping[str, Any]],

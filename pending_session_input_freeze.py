@@ -86,22 +86,45 @@ def _additive_session(before: object, after: object) -> str | None:
     return session
 
 
+def _governed_retained_root(root: Path) -> Path | None:
+    """The workspace retained-evidence role, when one is bound (split code/evidence roots)."""
+    try:
+        from runtime_paths import workspace_path
+        configured = os.environ.get("STOCK_LOOKUP_RETAINED_EVIDENCE_ROOT", "").strip()
+        retained = workspace_path("retained", configured or root)
+    except Exception:  # noqa: BLE001 -- an unqualified profile admits nothing extra
+        return None
+    return None if Path(retained).resolve() == root.resolve() else Path(retained)
+
+
+def _within(path: Path, base: Path) -> bool:
+    prefix = os.path.normcase(str(base.resolve()) + os.sep)
+    return os.path.normcase(str(path)).startswith(prefix)
+
+
 def _artifact_matches(root: Path, entry: object, identity: object) -> bool:
     if not isinstance(entry, dict) or set(entry) != {"path", "artifact_identity"}:
         return False
     if not isinstance(identity, str) or not identity or entry.get("artifact_identity") != identity:
         return False
-    relative = entry.get("path")
-    if not isinstance(relative, str) or not relative or os.path.isabs(relative):
+    recorded = entry.get("path")
+    if not isinstance(recorded, str) or not recorded:
         return False
-    parts = Path(relative).parts
-    if ".." in parts or any(part.endswith(":") for part in parts):
-        return False
-    path = (root / relative).resolve()
-    root_resolved = root.resolve()
-    prefix = os.path.normcase(str(root_resolved) + os.sep)
-    if not os.path.normcase(str(path)).startswith(prefix):
-        return False
+    if os.path.isabs(recorded):
+        # canonical_post_close_pipeline records retained artifacts outside the checkout as
+        # absolute paths once code and evidence roots are split (2026-10-19 T: cutover). Admit
+        # them only inside the governed retained-evidence root, never anywhere else.
+        retained = _governed_retained_root(root)
+        path = Path(recorded).resolve()
+        if retained is None or ".." in Path(recorded).parts or not _within(path, retained):
+            return False
+    else:
+        parts = Path(recorded).parts
+        if ".." in parts or any(part.endswith(":") for part in parts):
+            return False
+        path = (root / recorded).resolve()
+        if not _within(path, root):
+            return False
     if not path.is_file():
         return False
     try:

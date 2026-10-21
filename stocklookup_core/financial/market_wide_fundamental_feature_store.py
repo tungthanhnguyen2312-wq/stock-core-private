@@ -82,9 +82,45 @@ def _feature(feature_id: str, *, value: Any, status: str, compatibility: str, me
     }
 
 
-def _blocked(feature_id: str, *reasons: str, state: str | None = None) -> dict[str, Any]:
+KBS_PERIOD_IDENTITY_UNVERIFIED = "KBS_PERIOD_IDENTITY_UNVERIFIED"
+_UNVERIFIED_BLOCK_CODES = (
+    ["MISSING_COMPATIBLE_STANDALONE_QUARTER_SERIES"],
+    ["MISSING_CONSECUTIVE_STANDALONE_QUARTER_INPUTS"],
+    ["MISSING_SAME_NATIVE_PERIOD_SCOPE_SERIES"],
+    ["MISSING_STANDALONE_QUARTER_EARNINGS"],
+    ["MISSING_STANDALONE_QUARTER_CFO"],
+)
+
+
+def _blocked(feature_id: str, *reasons: str, state: str | None = None,
+             inputs: Sequence[Mapping[str, Any]] = ()) -> dict[str, Any]:
     return _feature(feature_id, value=None, status=FEATURE_BLOCKED, compatibility=BLOCKED,
-                    method="blocked_feature_contract/v1", blockers=reasons, state=state)
+                    method="blocked_feature_contract/v1", blockers=reasons, state=state, inputs=inputs)
+
+
+def _kbs_income_unverified(row: Mapping[str, Any]) -> bool:
+    provider = str((row.get("source_lineage") or {}).get("provider") or "")
+    if provider != "KBS" or row.get("statement_family") != "income_statement":
+        return False
+    return not row.get("qualified_normalized_period")
+
+
+def _series_label(row: Mapping[str, Any]) -> str:
+    qualified = row.get("qualified_normalized_period")
+    if qualified:
+        return str(qualified)
+    return str(row.get("native_period_label") or row.get("period_end"))
+
+
+def _with_unverified(feature: Mapping[str, Any], feature_id: str, raw_rows: Sequence[Mapping[str, Any]],
+                     metrics: Sequence[str]) -> dict[str, Any]:
+    if feature.get("status") != FEATURE_BLOCKED or list(feature.get("blocker_reason_codes") or []) not in _UNVERIFIED_BLOCK_CODES:
+        return dict(feature)
+    observed = [row for row in raw_rows if _kbs_income_unverified(row) and row.get("canonical_metric") in metrics
+                and _usable(row)]
+    if not observed:
+        return dict(feature)
+    return _blocked(feature_id, KBS_PERIOD_IDENTITY_UNVERIFIED, inputs=observed)
 
 
 def _usable(row: Mapping[str, Any], semantic: str | None = None) -> bool:
@@ -98,8 +134,8 @@ def _groups(rows: Sequence[Mapping[str, Any]], metric: str, semantic: str) -> di
         return rows.get((metric, semantic), {})
     out: dict[tuple[str, str, str, str], dict[str, Mapping[str, Any]]] = defaultdict(dict)
     for row in rows:
-        if _usable(row, semantic) and row.get("canonical_metric") == metric:
-            out[_key(row)][str(row.get("native_period_label") or row.get("period_end"))] = row
+        if _usable(row, semantic) and row.get("canonical_metric") == metric and not _kbs_income_unverified(row):
+            out[_key(row)][_series_label(row)] = row
     return out
 
 
@@ -113,8 +149,8 @@ def _index_rows(rows: Sequence[Mapping[str, Any]]) -> dict:
     for row in rows:
         if _usable(row):
             metric, semantic = row.get("canonical_metric"), row.get("period_semantic_state")
-            if isinstance(metric, str) and isinstance(semantic, str):
-                groups[(metric, semantic)][_key(row)][str(row.get("native_period_label") or row.get("period_end"))] = row
+            if isinstance(metric, str) and isinstance(semantic, str) and not _kbs_income_unverified(row):
+                groups[(metric, semantic)][_key(row)][_series_label(row)] = row
     return dict(groups)
 
 
@@ -152,7 +188,7 @@ def _same_period_pair(rows: Sequence[Mapping[str, Any]], numerator: str, denomin
 
 def _yoy(rows: Mapping[str, Mapping[str, Any]], feature_id: str, *, earnings: bool = False) -> dict[str, Any]:
     current = _latest(rows)
-    current_key = _quarter_key(current.get("native_period_label")) if current else None
+    current_key = _quarter_key(_series_label(current)) if current else None
     if not current or not current_key:
         return _blocked(feature_id, "MISSING_COMPATIBLE_STANDALONE_QUARTER_SERIES")
     prior_label = _quarter_label(current_key[0] - 1, current_key[1])
@@ -175,7 +211,7 @@ def _yoy(rows: Mapping[str, Mapping[str, Any]], feature_id: str, *, earnings: bo
 def _ttm(rows: Mapping[str, Mapping[str, Any]], feature_id: str) -> dict[str, Any]:
     """Return a four-consecutive-quarter sum from one compatible native series only."""
     current = _latest(rows)
-    current_key = _quarter_key(current.get("native_period_label")) if current else None
+    current_key = _quarter_key(_series_label(current)) if current else None
     if not current or not current_key:
         return _blocked(feature_id, "MISSING_CONSECUTIVE_STANDALONE_QUARTER_INPUTS")
     required_labels: list[str] = []
@@ -249,13 +285,13 @@ def build_ticker_record(ticker: str, rows: Sequence[Mapping[str, Any]], profiles
     earnings = _best(_groups(series, "net_income", "STANDALONE_QUARTER"))
     ocf = _best(_groups(series, "operating_cash_flow", "STANDALONE_QUARTER"))
     features = {
-        "revenue_same_period_yoy": _yoy(revenue, "revenue_same_period_yoy"),
-        "net_income_same_period_yoy": _yoy(earnings, "net_income_same_period_yoy", earnings=True),
-        "revenue_ttm_sum": _ttm(revenue, "revenue_ttm_sum"),
-        "net_income_ttm_sum": _ttm(earnings, "net_income_ttm_sum"),
-        "operating_cash_flow_ttm_sum": _ttm(ocf, "operating_cash_flow_ttm_sum"),
-        "net_margin": _ratio("net_margin", _same_period_pair(series, "net_income", "revenue")),
-        "gross_margin": _ratio("gross_margin", _same_period_pair(series, "gross_profit", "revenue")),
+        "revenue_same_period_yoy": _with_unverified(_yoy(revenue, "revenue_same_period_yoy"), "revenue_same_period_yoy", rows, ("revenue",)),
+        "net_income_same_period_yoy": _with_unverified(_yoy(earnings, "net_income_same_period_yoy", earnings=True), "net_income_same_period_yoy", rows, ("net_income",)),
+        "revenue_ttm_sum": _with_unverified(_ttm(revenue, "revenue_ttm_sum"), "revenue_ttm_sum", rows, ("revenue",)),
+        "net_income_ttm_sum": _with_unverified(_ttm(earnings, "net_income_ttm_sum"), "net_income_ttm_sum", rows, ("net_income",)),
+        "operating_cash_flow_ttm_sum": _with_unverified(_ttm(ocf, "operating_cash_flow_ttm_sum"), "operating_cash_flow_ttm_sum", rows, ("operating_cash_flow",)),
+        "net_margin": _with_unverified(_ratio("net_margin", _same_period_pair(series, "net_income", "revenue")), "net_margin", rows, ("net_income", "revenue")),
+        "gross_margin": _with_unverified(_ratio("gross_margin", _same_period_pair(series, "gross_profit", "revenue")), "gross_margin", rows, ("gross_profit", "revenue")),
         "total_assets_pit_trajectory": _trajectory(series, "total_assets"),
         "shareholders_equity_pit_trajectory": _trajectory(series, "shareholders_equity"),
         "cash_and_cash_equivalents_pit_trajectory": _trajectory(series, "cash_and_cash_equivalents"),
@@ -266,10 +302,11 @@ def build_ticker_record(ticker: str, rows: Sequence[Mapping[str, Any]], profiles
         "roe_eop_proxy": _blocked("roe_eop_proxy", "CROSS_PROVIDER_OR_DURATION_INCOMPATIBLE"),
     }
     latest_earnings, latest_ocf = _latest(earnings), _latest(ocf)
-    features["profit_state"] = (_feature("profit_state", value=latest_earnings["reported_value"], status=PROXY, compatibility=NATIVE,
+    features["profit_state"] = _with_unverified((_feature("profit_state", value=latest_earnings["reported_value"], status=PROXY, compatibility=NATIVE,
                                           method="same_native_latest_sign/v1", inputs=[latest_earnings],
                                           state="PROFITABLE" if latest_earnings["reported_value"] > 0 else "LOSS_MAKING" if latest_earnings["reported_value"] < 0 else "BREAK_EVEN")
-                                if latest_earnings else _blocked("profit_state", "MISSING_STANDALONE_QUARTER_EARNINGS"))
+                                if latest_earnings else _blocked("profit_state", "MISSING_STANDALONE_QUARTER_EARNINGS")),
+                               "profit_state", rows, ("net_income",))
     features["operating_cash_flow_sign"] = (_feature("operating_cash_flow_sign", value=latest_ocf["reported_value"], status=PROXY, compatibility=NATIVE,
                                                        method="same_native_latest_sign/v1", inputs=[latest_ocf],
                                                        state="POSITIVE_CFO" if latest_ocf["reported_value"] > 0 else "NEGATIVE_CFO" if latest_ocf["reported_value"] < 0 else "ZERO_CFO")

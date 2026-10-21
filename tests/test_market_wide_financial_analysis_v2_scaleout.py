@@ -60,6 +60,9 @@ def test_qualified_flow_artifact_is_the_only_flow_input_and_carries_coverage():
               "currency": "VND", "scale": "ONE", "source_sha256": "x", "source_file": "income", "fact_id": f"{metric}-{label}"}
              for label in ("2025-Q3", "2025-Q4", "2026-Q1", "2026-Q2")
              for metric, value in (("revenue", 100), ("profit_before_tax", 10), ("net_income", 8))]
+    for fact in facts:
+        fact["qualified_normalized_period"] = fact["reporting_period"]
+        fact["period_normalization"] = "FIXTURE_STATED_PERIOD"
     qualified = bridge.build_artifact(tickers=["AAA"], facts_by_ticker={"AAA": facts}, entity_type_by_ticker={"AAA": "corporate"}, requested_at="t")
     artifact = build_scaleout(semantic_rows=[_row("revenue", 999)], feature_records={"AAA": _store()},
                               feature_store_artifact={"artifact_identity": "store:1"}, period_semantics_identity="sem:1",
@@ -93,9 +96,13 @@ def test_build_qualified_flow_artifact_groups_semantic_rows_by_ticker():
     passed such rows to the bridge unadapted, which silently qualified nothing (every bridge
     field read resolved to None) and caused a real production regression, only caught by the
     end-to-end `current_research_ready_count` regression lock, not by a unit test in isolation."""
-    rows = [_semantic_row(metric, value, label)
-            for label in ("2025-Q3", "2025-Q4", "2026-Q1", "2026-Q2")
-            for metric, value in (("revenue", 100), ("profit_before_tax", 10), ("net_income", 8))]
+    rows = []
+    for label in ("2025-Q3", "2025-Q4", "2026-Q1", "2026-Q2"):
+        for metric, value in (("revenue", 100), ("profit_before_tax", 10), ("net_income", 8)):
+            row = _semantic_row(metric, value, label)
+            row["qualified_normalized_period"] = label
+            row["period_normalization"] = "FIXTURE_STATED_PERIOD"
+            rows.append(row)
     # A second ticker with no rows at all must not crash or appear with a spurious record.
     qualified = build_qualified_flow_artifact(
         semantic_rows=rows, feature_records={"AAA": _store(), "BBB": _store(ticker="BBB")}, requested_at="t",

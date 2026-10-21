@@ -4,7 +4,7 @@ import stocklookup_core.financial.financial_flow_semantics_ttm_bridge as bridge
 
 
 def _fact(period: str, value: float, *, provider: str = "KBS", metric: str = "revenue",
-          basis: str | None = None, family: str = "income_statement") -> dict:
+          basis: str | None = None, family: str = "income_statement", qualified: bool = False) -> dict:
     fact = {
         "ticker": "AAA", "canonical_metric": metric, "provider": provider,
         "statement_family": family, "reporting_period": period, "period_type": "quarterly",
@@ -13,16 +13,25 @@ def _fact(period: str, value: float, *, provider: str = "KBS", metric: str = "re
     }
     if basis:
         fact["flow_period_basis"] = basis
+    if qualified:
+        fact["qualified_normalized_period"] = period
+        fact["period_normalization"] = "FIXTURE_STATED_PERIOD"
     return fact
 
 
 def test_kbs_income_statement_contract_is_direct_standalone_quarter() -> None:
     fact = _fact("2025-Q2", 20)
     semantic = bridge.flow_semantics(fact)
-    assert semantic["flow_period_basis"] == "STANDALONE_QUARTER"
-    assert semantic["method"] == "DIRECT_KBS_KQKD_QUARTER"
-    assert semantic["duration_months"] == 3
+    assert semantic["flow_period_basis"] == "UNKNOWN"
+    assert semantic["reason"] == bridge.KBS_PERIOD_IDENTITY_UNVERIFIED
+    assert semantic["evidence"] == bridge.RAW_KBS_PERIOD_LABEL_RETAINED
     assert fact["period_type"] == "quarterly"  # no repurposing of the existing field
+    assert fact["reporting_period"] == "2025-Q2"
+    qualified = _fact("2025-Q2", 20, qualified=True)
+    restored = bridge.flow_semantics(qualified)
+    assert restored["flow_period_basis"] == "STANDALONE_QUARTER"
+    assert restored["method"] == "DIRECT_KBS_KQKD_QUARTER"
+    assert restored["duration_months"] == 3
 
 
 def test_explicit_raw_flow_metadata_propagates_without_guessing() -> None:
@@ -135,7 +144,7 @@ def test_currency_or_scale_mismatch_blocks_ytd_subtraction() -> None:
 
 
 def test_exact_ebitda_never_uses_a_proxy() -> None:
-    facts = [_fact(f"2025-Q{q}", q) for q in range(1, 5)]
+    facts = [_fact(f"2025-Q{q}", q, qualified=True) for q in range(1, 5)]
     record = bridge.build_ticker_record(ticker="AAA", entity_type="corporate", facts=facts)
     assert record["derived_metrics"]["ttm_ebitda"]["status"] == "BLOCKED"
     assert "EXACT_EBIT_IDENTITY_NOT_RETAINED" in record["derived_metrics"]["ttm_ebitda"]["blocker"]
@@ -145,8 +154,8 @@ def test_pbt_growth_ttm_margin_and_cfo_ni_need_matching_representation() -> None
     facts = []
     for year, quarter in ((2025, 1), (2025, 2), (2025, 3), (2025, 4), (2026, 1)):
         period = f"{year}-Q{quarter}"
-        facts.extend([_fact(period, 100, metric="revenue"), _fact(period, 10, metric="profit_before_tax"),
-                      _fact(period, 8, metric="net_income"), _fact(period, 12, metric="operating_cash_flow", family="cash_flow")])
+        facts.extend([_fact(period, 100, metric="revenue", qualified=True), _fact(period, 10, metric="profit_before_tax", qualified=True),
+                      _fact(period, 8, metric="net_income", qualified=True), _fact(period, 12, metric="operating_cash_flow", family="cash_flow")])
         facts[-1].update({"cumulative_state": "period_only", "period_start": "2025-01-01", "period_end": "2025-03-31"})
     record = bridge.build_ticker_record(ticker="AAA", entity_type="corporate", facts=facts)
     assert record["ttm"]["profit_before_tax"]["value"] == 40
@@ -156,7 +165,8 @@ def test_pbt_growth_ttm_margin_and_cfo_ni_need_matching_representation() -> None
 
 
 def test_missing_quarter_and_representation_mismatch_block_ttm() -> None:
-    facts = [_fact("2025-Q1", 10), _fact("2025-Q2", 10), _fact("2025-Q4", 10), _fact("2026-Q1", 10)]
+    facts = [_fact("2025-Q1", 10, qualified=True), _fact("2025-Q2", 10, qualified=True),
+             _fact("2025-Q4", 10, qualified=True), _fact("2026-Q1", 10, qualified=True)]
     facts[-1]["scale"] = "THOUSAND"
     record = bridge.build_ticker_record(ticker="AAA", entity_type="corporate", facts=facts)
     assert "revenue" not in record["ttm"]
@@ -168,7 +178,8 @@ def test_full_universe_adapter_admits_only_qualified_rows_and_never_vci_income()
             "lineage_complete": True, "source_conflicts": [], "statement_scope": "consolidated", "native_period_label": "2025-Q1",
             "native_period_type": "quarterly", "period_start": "2025-01-01", "period_end": "2025-03-31",
             "normalized_candidate_unit": {"currency": "VND", "scale": "ONE"}, "source_lineage": {"provider": "KBS", "source_file": "x", "source_sha256": "y", "fact_id": "z"},
-            "statement_family": "income_statement"}
+            "statement_family": "income_statement", "qualified_normalized_period": "2025-Q1",
+            "period_normalization": "FIXTURE_STATED_PERIOD"}
     vci = {**base, "ticker": "BBB", "source_lineage": {**base["source_lineage"], "provider": "VCI"}}
     bad = {**base, "ticker": "CCC", "lineage_complete": False}
     facts = bridge.facts_from_structured_semantic_rows([base, vci, bad])

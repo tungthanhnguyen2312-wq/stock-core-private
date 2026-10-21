@@ -21,6 +21,7 @@ from pathlib import Path
 from typing import Any, Mapping
 
 from atomic_io import atomic_write_file, validate_json_file
+from stocklookup_core.evidence.evidence_roots import governed_evidence_roots
 from stocklookup_core.evidence.session_registry import load_registry
 
 CONTRACT_VERSION = "dashboard_session_companions/v1"
@@ -98,8 +99,10 @@ def compute_session_companions(
     if not SESSION_RE.fullmatch(session or ""):
         raise DashboardSessionCompanionError(f"INVALID_SESSION:{session}")
     manifest_relpath, report_relpath = companion_relpaths(session)
-    handoff_path = (
-        root / "operations-review" / "canonical-post-close-v1" / session / "session_handoff_bundle.json"
+    handoff_relative = Path("operations-review") / "canonical-post-close-v1" / session / "session_handoff_bundle.json"
+    handoff_path = next(
+        (base / handoff_relative for base in governed_evidence_roots(root) if (base / handoff_relative).is_file()),
+        root / handoff_relative,
     )
     if not handoff_path.is_file():
         return SessionCompanionPlan(
@@ -286,11 +289,16 @@ def _unique_producer_run(
     root: Path, session: str, *, run_identity: str | None = None,
 ) -> tuple[Path, dict[str, Any]]:
     matches: list[tuple[Path, dict[str, Any]]] = []
-    base = root / "operations-review" / "daily-producer-runs-v1" / session
-    for path in sorted(base.glob("*/run_manifest.json")):
-        data = _load_object(path)
-        if data.get("target_market_session") == session:
-            matches.append((path, data))
+    seen: set[Path] = set()
+    for evidence_root in governed_evidence_roots(root):
+        base = evidence_root / "operations-review" / "daily-producer-runs-v1" / session
+        for path in sorted(base.glob("*/run_manifest.json")):
+            if path.resolve() in seen:
+                continue
+            seen.add(path.resolve())
+            data = _load_object(path)
+            if data.get("target_market_session") == session:
+                matches.append((path, data))
     if run_identity is not None:
         matches = [(path, data) for path, data in matches if data.get("run_identity") == run_identity]
     if len(matches) != 1:
@@ -318,7 +326,9 @@ def _optional_registry_artifact(
 
 
 def _rel(root: Path, path: Path) -> str:
-    return path.resolve().relative_to(root.resolve()).as_posix()
+    # Split roots: retained evidence outside the checkout is recorded absolute (registry contract).
+    resolved, base = path.resolve(), root.resolve()
+    return resolved.relative_to(base).as_posix() if resolved.is_relative_to(base) else str(resolved)
 
 
 def _descriptor(value: Any) -> str | None:

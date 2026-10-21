@@ -83,8 +83,18 @@ def write_attestation(
 
 
 def read_attestation(output_root: Path, session: str) -> dict[str, Any] | None:
-    """Read-only. Never raises: a missing or corrupted attestation is simply "not attested yet"."""
-    path = attestation_path(output_root, session)
+    """Read-only. Never raises: a missing or corrupted attestation is simply "not attested yet".
+
+    Split code/evidence roots (2026-10-19 T: cutover): the kernel writes the attestation under
+    the operation-output root while the owner workflow asks with the Producer checkout. The
+    attestation is looked up in the governed evidence roots only, never an arbitrary path.
+    """
+    from stocklookup_core.evidence.evidence_roots import governed_evidence_roots
+    path = next(
+        (candidate for candidate in (attestation_path(base, session) for base in governed_evidence_roots(output_root))
+         if candidate.is_file()),
+        attestation_path(output_root, session),
+    )
     if not path.is_file():
         return None
     try:

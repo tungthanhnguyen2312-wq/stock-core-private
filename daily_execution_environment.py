@@ -151,6 +151,44 @@ def _artifact_contract(path: Path, expected_contract: str | None) -> str | None:
     return None
 
 
+STATIC_INPUTS_MANIFEST = Path("config") / "daily_static_inputs.json"
+
+
+def static_input_rows(producer_root: Path, retained_root: Path) -> list[dict[str, Any]]:
+    """Existence rows for immutable pre-cutover inputs the Daily reads without an override.
+
+    2026-10-19: the first split-root (T:) Daily failed six times mid-acquisition, each on one
+    such file. Listing them in ``config/daily_static_inputs.json`` makes a missing copy refuse
+    here, before any provider budget is spent. A missing or invalid manifest is itself a row.
+    """
+    manifest_path = Path(producer_root) / STATIC_INPUTS_MANIFEST
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        entries = manifest["inputs"] if manifest.get("contract_version") == "daily_static_inputs/v1" else None
+    except (OSError, ValueError, KeyError, TypeError, AttributeError):
+        entries = None
+    if not isinstance(entries, list):
+        return [{"contract": "daily_static_inputs_manifest", "path": str(manifest_path),
+                 "expected_contract_version": "daily_static_inputs/v1",
+                 "status": "UNAVAILABLE", "reason_code": "MANIFEST_MISSING_OR_INVALID"}]
+    bases = {"producer": Path(producer_root), "retained": Path(retained_root)}
+    rows = []
+    for entry in entries:
+        role, relative = entry.get("role"), entry.get("path")
+        base = bases.get(role)
+        if base is None or not isinstance(relative, str) or Path(relative).is_absolute() or ".." in Path(relative).parts:
+            reason, path = "MANIFEST_ENTRY_INVALID", None
+        else:
+            path = base / relative
+            reason = None if path.is_file() and path.stat().st_size > 0 else "MISSING"
+        rows.append({
+            "contract": f"static_input:{role}:{relative}", "path": str(path) if path else None,
+            "expected_contract_version": None,
+            "status": "AVAILABLE" if reason is None else "UNAVAILABLE", "reason_code": reason,
+        })
+    return rows
+
+
 def required_retained_inputs(
     retained_root: Path,
     session: str,
@@ -171,6 +209,8 @@ def required_retained_inputs(
     paths = session_artifact_paths(root, session)
     items: list[tuple[str, Path, str | None]] = [
         ("research_universe_qualification", root / "operations-review" / "market-wide-current-research-universe-qualification-v1-20260823" / "market_wide_current_research_universe_artifact.json", "market_wide_current_research_universe/v1"),
+        # Read by the universe-status resolution step through its retained-root default.
+        ("vci_exchange_reference_snapshot", root / "operations-review" / "vci-exchange-reference-snapshot-v1-20260823" / "vci_exchange_reference_snapshot_artifact.json", "vci_exchange_reference_snapshot/v1"),
         ("fundamental_retained_context", paths["fundamental"], "market_wide_current_fundamental_research/v1"),
         ("official_universe", paths["official_universe"], "current_official_market_universe/v1"),
         ("official_event_context", paths["official_event_context"], "current_official_event_context/v1"),
@@ -198,6 +238,8 @@ def required_retained_inputs(
             "contract": name, "path": str(path), "expected_contract_version": contract,
             "status": "AVAILABLE" if reason is None else "UNAVAILABLE", "reason_code": reason,
         })
+
+    result.extend(static_input_rows(registry_root, root))
 
     # The registry is intentionally resolved from the Producer checkout.  It is mutable control
     # state, so allowing a retained-evidence checkout to supply it would silently let a different

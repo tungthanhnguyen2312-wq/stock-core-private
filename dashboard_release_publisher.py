@@ -105,7 +105,16 @@ def _read_csv_rows(path: Path) -> list[dict[str, Any]]:
 
 
 def _current_producer_run_identity(session: str, operation_dir: Path) -> str:
-    pointer_path = PRODUCER_ROOT / "operations-review" / "daily-producer-runs-v1" / "LATEST_COMPLETED_RUN.json"
+    # Split code/evidence roots (2026-10-19 T: cutover): the Producer seals runs and the
+    # navigation pointer under the governed operation-output root, not beside this checkout.
+    from stocklookup_core.evidence.evidence_roots import governed_evidence_roots
+    runs_relative = Path("operations-review") / "daily-producer-runs-v1"
+    evidence_root = next(
+        (base for base in governed_evidence_roots(PRODUCER_ROOT)
+         if (base / runs_relative / "LATEST_COMPLETED_RUN.json").is_file()),
+        PRODUCER_ROOT,
+    )
+    pointer_path = evidence_root / runs_relative / "LATEST_COMPLETED_RUN.json"
     pointer = _load_json_object(pointer_path, "LATEST_COMPLETED_RUN")
     if pointer.get("session") != session or not isinstance(pointer.get("run_identity"), str):
         raise DashboardReleaseError("CURRENT_DAILY_PRODUCER_RUN_UNRESOLVED")
@@ -113,15 +122,15 @@ def _current_producer_run_identity(session: str, operation_dir: Path) -> str:
     if not isinstance(relative, str):
         raise DashboardReleaseError("CURRENT_DAILY_PRODUCER_POINTER_MALFORMED")
     manifest = _load_json_object(
-        PRODUCER_ROOT / "operations-review" / "daily-producer-runs-v1" / relative / "run_manifest.json",
+        evidence_root / runs_relative / relative / "run_manifest.json",
         "CURRENT_DAILY_PRODUCER_MANIFEST",
     )
     expected_operation = ((manifest.get("daily_session_operation") or {}).get("directory"))
-    try:
-        actual_operation = str(operation_dir.resolve().relative_to(PRODUCER_ROOT.resolve())).replace("\\", "/")
-    except ValueError as exc:
-        raise DashboardReleaseError("CURRENT_DAILY_OPERATION_OUTSIDE_PRODUCER") from exc
-    if expected_operation != actual_operation:
+    if not isinstance(expected_operation, str) or not expected_operation:
+        raise DashboardReleaseError("CURRENT_DAILY_OPERATION_LINEAGE_MISMATCH")
+    # The manifest records the operation directory relative to the Producer root when it lies
+    # inside it (single root) and absolute otherwise (split roots). Compare resolved locations.
+    if (PRODUCER_ROOT / expected_operation).resolve() != operation_dir.resolve():
         raise DashboardReleaseError("CURRENT_DAILY_OPERATION_LINEAGE_MISMATCH")
     return pointer["run_identity"]
 

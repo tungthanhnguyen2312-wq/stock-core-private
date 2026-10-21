@@ -1,0 +1,29 @@
+{
+  "contract_version": "daily_static_inputs/v1",
+  "purpose": "Immutable pre-cutover evidence that the canonical Daily reads without a session-specific override. Preflight refuses before acquisition when any entry is absent from its role root.",
+  "roles": {
+    "producer": "Producer checkout (code root). Read through ROOT-relative defaults.",
+    "retained": "Governed retained-evidence root (workspace profile 'retained' role)."
+  },
+  "inputs": [
+    {"role": "producer", "path": "operations-review/p2e-evidence-backed-entity-classification-20260819/p2e_entity_classification_artifact.json", "reader": "sector_relative_research_context.load_qualified_entity_classes"},
+    {"role": "producer", "path": "operations-review/p2e3-bounded-entity-classification-promotion-20260819/p2e3_entity_classification_promotion_artifact.json", "reader": "sector_relative_research_context.load_qualified_entity_classes"},
+    {"role": "producer", "path": "registry_snapshots/metadata/vnstock_metadata_snapshot_20260728T122548Z_16fe54ee3497.jsonl", "reader": "sector_relative_research_context.load_provider_descriptive_industry_classes"},
+    {"role": "producer", "path": "operations-review/current-official-market-universe-integration-v1-20260824/current_official_market_universe_artifact.json", "reader": "tools/run_current_research_risk_register.py default"},
+    {"role": "producer", "path": "operations-review/market-wide-historical-research-context-v1-20260824/market_wide_historical_research_context_artifact.json", "reader": "tools/run_current_research_risk_register.py default"},
+    {"role": "producer", "path": "operations-review/current-financial-momentum-context-v1/current_financial_momentum_context_artifact.json", "reader": "tools/run_current_research_risk_register.py default"},
+    {"role": "producer", "path": "operations-review/current-corporate-event-context-v1/current_corporate_event_context_artifact.json", "reader": "tools/run_current_research_risk_register.py default; daily_session_shadow_recommendation"},
+    {"role": "producer", "path": "operations-review/market-wide-fundamental-research-cohort-scaleout-v1-20260830/fundamental_cross_sectional_scoring_wide_artifact.json", "reader": "fundamental_research_cohort_selection (CURRENT_WIDE_GOVERNED_V1)"},
+    {"role": "producer", "path": "operations-review/market-wide-fundamental-research-cohort-scaleout-v1-20260830/root_cause_reconciliation_report.json", "reader": "fundamental_research_cohort_selection (CURRENT_WIDE_GOVERNED_V1)"},
+    {"role": "producer", "path": "operations-review/current-valuation-research-proxy-and-relative-value-axis-v1-20260828/artifact.json", "reader": "daily_session_shadow_recommendation"},
+    {"role": "producer", "path": "operations-review/financial-flow-semantics-and-ttm-bridge-foundation-v1-20260828/artifact.json", "reader": "daily_session_shadow_recommendation"},
+    {"role": "producer", "path": "operations-review/current-portfolio-risk-research-v1-20260829/artifact.json", "reader": "daily_session_shadow_recommendation"},
+    {"role": "producer", "path": "operations-review/a1-bitemporal-semantic-contract-v1-20260828/artifact.json", "reader": "daily_session_shadow_recommendation"},
+    {"role": "producer", "path": "operations-review/a2-provider-publication-first-seen-retention-v1-20260829/artifact.json", "reader": "daily_session_shadow_recommendation"},
+    {"role": "retained", "path": "operations-review/market-wide-current-research-universe-qualification-v1-20260823/market_wide_current_research_universe_artifact.json", "reader": "breadth foundation; recovery eligibility"},
+    {"role": "retained", "path": "operations-review/vci-exchange-reference-snapshot-v1-20260823/vci_exchange_reference_snapshot_artifact.json", "reader": "universe-status resolution; recovery eligibility"},
+    {"role": "retained", "path": "operations-review/catalyst-event-research-context-v1-20260820/catalyst_event_research_context_artifact.json", "reader": "market_wide_current_corporate_intelligence.load_retained_events"},
+    {"role": "retained", "path": "operations-review/vnm-2024-cash-dividend-official-evidence/source-manifest.json", "reader": "market_wide_current_corporate_intelligence.load_retained_events"},
+    {"role": "retained", "path": "operations-review/non-cash-corporate-action-official-evidence/source-manifest.json", "reader": "market_wide_current_corporate_intelligence.load_retained_events"}
+  ]
+}

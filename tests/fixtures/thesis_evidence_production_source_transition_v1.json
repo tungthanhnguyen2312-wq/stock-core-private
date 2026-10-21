@@ -1,0 +1,15 @@
+{
+  "contract_version": "thesis_evidence_production_source_transition/v1",
+  "workstream": "STOCKLOOKUP_20261020_EVIDENCE_VALUATION_AND_PRODUCT_CORRECTIVE",
+  "base_commit": "de90c6b94c7bb2377bedd7e2a1c809498d22926a",
+  "source_path": "stocklookup_core/research/thesis_evidence_production.py",
+  "archive": "tests/fixtures/thesis_evidence_v1_sources/thesis_evidence_production.py.txt",
+  "prior_sha256_lf": "10aea634a50e83d5e8db4951155c5a7b6f753e3f091305bf7bee1ecadc463367",
+  "active_sha256_lf": "9f384915d23661497e9132091a2aaac0030e5d54bc5060caeda89094b33901c7",
+  "historical_e4_v2_digest": "07c2a363df0e91a1dee230f0316a081249b247f7aa74bd67e04e45b1d1886567",
+  "active_e4_v2_digest": "23595d916d6e49400cbcb2d1b5b62c4eef4241a8afee6e129b76ea1df609154d",
+  "rejected_mixed_digest": "c705b386c927a49adaf97be0a711cda5b27b2432cae2aaaa098a087a58b88698",
+  "exception_scope": "EXACT_ONE_FILE_OWNER_APPROVED_NOT_A_GENERAL_TRANSITION",
+  "release_authority": "NOT_GRANTED",
+  "compatibility": "Historical E4 V2 qualification reads the archived origin/main bytes. Active E4 qualification hashes the live file. The mixed digest recorded here is the pre-transition historical verifier output and is rejected. No other source is admitted."
+}

@@ -20,6 +20,7 @@ from stocklookup_core.evidence.session_registry import load_registry
 from stocklookup_core.evidence.field_identity import stable_id
 import release_session_contract
 import dashboard_home_summary
+from stocklookup_core.evidence.evidence_roots import governed_evidence_roots
 import stocklookup_core.decision.investment_decision_workspace_projection as workspace_contract
 from stocklookup_core.decision import screener_master_projection as screener_contract
 
@@ -104,10 +105,15 @@ def _producer_run(
     root: Path, session: str, sources: Mapping[str, tuple[Path, dict[str, Any]]], *, run_identity: str | None = None,
 ) -> tuple[Path, dict[str, Any], Path, dict[str, Any]]:
     candidates: list[tuple[Path, dict[str, Any]]] = []
-    for manifest_path in (root / "operations-review" / "daily-producer-runs-v1" / session).glob("*/run_manifest.json"):
-        manifest = _load(manifest_path)
-        if manifest.get("target_market_session") == session:
-            candidates.append((manifest_path, manifest))
+    seen: set[Path] = set()
+    for base in governed_evidence_roots(root):
+        for manifest_path in (base / "operations-review" / "daily-producer-runs-v1" / session).glob("*/run_manifest.json"):
+            if manifest_path.resolve() in seen:
+                continue
+            seen.add(manifest_path.resolve())
+            manifest = _load(manifest_path)
+            if manifest.get("target_market_session") == session:
+                candidates.append((manifest_path, manifest))
     if run_identity is not None:
         candidates = [(path, manifest) for path, manifest in candidates if manifest.get("run_identity") == run_identity]
     if len(candidates) != 1:
@@ -138,7 +144,12 @@ def _p3_snapshot(root: Path, session: str, sources: Mapping[str, tuple[Path, dic
     """
     descriptive_path = sources["descriptive"][0]
     attempt_root = next((parent for parent in descriptive_path.parents if parent.name.startswith("post-close-attempt-")), None)
-    search_root = attempt_root or (root / "operations-review" / f"p3f9b-market-wide-exact-session-scaleout-{session.replace('-', '')}")
+    scaleout = f"p3f9b-market-wide-exact-session-scaleout-{session.replace('-', '')}"
+    search_root = attempt_root or next(
+        (base / "operations-review" / scaleout for base in governed_evidence_roots(root)
+         if (base / "operations-review" / scaleout).is_dir()),
+        root / "operations-review" / scaleout,
+    )
     if not search_root.is_dir():
         raise CanonicalRuntimeReleaseError("FROZEN_DESCRIPTIVE_ATTEMPT_ROOT_MISSING")
     candidates = []
@@ -157,7 +168,8 @@ def _verify_retained_tier_lineage(root: Path, session: str, run_manifest: Mappin
     Future one-command runs materialize before tier construction, so absence is valid there;
     a present handoff is nevertheless governed evidence and must agree exactly.
     """
-    path = root / "operations-review" / "canonical-post-close-v1" / session / "session_handoff_bundle.json"
+    relative = Path("operations-review") / "canonical-post-close-v1" / session / "session_handoff_bundle.json"
+    path = next((base / relative for base in governed_evidence_roots(root) if (base / relative).is_file()), root / relative)
     if not path.is_file():
         return None
     handoff = _load(path)
@@ -175,7 +187,7 @@ def _verify_retained_tier_lineage(root: Path, session: str, run_manifest: Mappin
         expected = (run_sources.get(name) or {}).get("artifact_identity")
         if not expected or observed != expected:
             raise CanonicalRuntimeReleaseError(f"TIER_HANDOFF_SOURCE_LINEAGE_MISMATCH:{name}")
-    return {"sha256": _sha256(path), "path": str(path.relative_to(root)),
+    return {"sha256": _sha256(path), "path": _root_relative_native(root, path),
             "retained_daily_producer_run_identity": (handoff.get("daily_producer") or {}).get("run_identity"),
             "runtime_daily_producer_run_identity": run_manifest.get("run_identity"),
             "source_lineage_status": "PASS",
@@ -484,10 +496,12 @@ def _build_release(root: Path, session: str, staging: Path, *, producer_run_iden
         "advance_ratio": breadth.get("advance_ratio", ""), "availability": "DIRECT_CANONICAL_MAPPING",
     }])
 
-    lineage = {name: {"artifact_identity": data.get("artifact_identity"), "sha256": _sha256(path), "path": str(path.relative_to(root))}
+    # Split roots: retained evidence is outside the checkout, recorded absolute (same contract as
+    # _root_relative and the session registry); single-root paths stay checkout-relative.
+    lineage = {name: {"artifact_identity": data.get("artifact_identity"), "sha256": _sha256(path), "path": _root_relative_native(root, path)}
                for name, (path, data) in sources.items()}
-    lineage["daily_producer_run"] = {"run_identity": run_manifest.get("run_identity"), "sha256": _sha256(run_path), "path": str(run_path.relative_to(root))}
-    lineage["daily_producer_bundle"] = {"sha256": _sha256(bundle_path), "path": str(bundle_path.relative_to(root))}
+    lineage["daily_producer_run"] = {"run_identity": run_manifest.get("run_identity"), "sha256": _sha256(run_path), "path": _root_relative_native(root, run_path)}
+    lineage["daily_producer_bundle"] = {"sha256": _sha256(bundle_path), "path": _root_relative_native(root, bundle_path)}
     lineage["investment_decision_workspace"] = workspace_lineage
     lineage["screener_master_projection"] = screener_lineage
     if home_summary_lineage is not None:
@@ -585,6 +599,12 @@ _PHYSICAL_ARTIFACT_KEYS = ("path", "path_root", "sha256", "artifact_identity", "
 
 class _RestageRefused(Exception):
     """Internal: a proposed presentation replacement failed validation -- restage is SKIPPED."""
+
+
+def _root_relative_native(root: Path, path: Path) -> str:
+    """``str(path.relative_to(root))`` (native separators, as before) inside ``root``; absolute outside."""
+    resolved, base = Path(path).resolve(), Path(root).resolve()
+    return str(resolved.relative_to(base)) if resolved.is_relative_to(base) else str(resolved)
 
 
 def _root_relative(root: Path, path: Path) -> str:

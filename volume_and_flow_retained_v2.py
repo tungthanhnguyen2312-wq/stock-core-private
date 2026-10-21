@@ -21,6 +21,34 @@ from bounded_artifact_stream import header, source_hash, stream_artifact
 from stocklookup_core.evidence.daily_session_completion_reference import load_qualified_completed_sessions
 
 
+def calendar_for_sealed_features(producer_root, feature_path, cutoff):
+    """Use the calendar projection that sealed the feature batch.
+
+    Weekly and monthly bar identities include that projection. The historical
+    context builder loads working-date receipts from the retained evidence root
+    and the static session ledger from the producer checkout. A checkout-only
+    lookup has no receipts, so its calendar identity differs and the volume
+    binding guard refuses the series. A feature file inside the producer root
+    keeps the single-root lookup.
+    """
+    from prospective_pit_capture_retention import calendar_evidence_at_cutoff
+    from stocklookup_core.evidence.evidence_roots import governed_evidence_roots
+    producer = Path(producer_root).resolve()
+    feature = Path(feature_path).resolve()
+    # The checkout path can be a longer string than the retained-evidence
+    # sibling. Select only roots that actually contain the sealed feature file.
+    containing = []
+    for root in governed_evidence_roots(producer):
+        try:
+            feature.relative_to(root)
+        except ValueError:
+            continue
+        containing.append(root)
+    receipt_root = max(containing, key=lambda root: (len(root.parts), len(str(root)))) if containing else producer
+    static_path = producer / "config" / "governed_trading_session_calendar_v1.json"
+    return calendar_evidence_at_cutoff(receipt_root, cutoff=cutoff, static_path=static_path)
+
+
 def trading_date_index(runtime_root):
     path = Path(runtime_root) / "vn_stock.db"
     dates = defaultdict(set)
@@ -59,13 +87,16 @@ def flow_index(runtime_root, session, dates, registry_dates, calendar_evidence=N
 def collect(*, source_root, runtime_root, session, feature_batch=None, feature_batch_sha256=None,
             velocity_artifact=None, sealed_snapshot=None, allow_legacy_bridge=False):
     root = Path(source_root)
+    from stocklookup_core.evidence.evidence_roots import resolve_existing_evidence_file
+    def bind(path):
+        return resolve_existing_evidence_file(root, path)
     paths = level2.session_artifact_paths(root, session)
-    paths = {k: paths[k] for k in ("exact_session_snapshot", "universe_resolution", "technical_recovery")}
+    paths = {k: bind(paths[k]) for k in ("exact_session_snapshot", "universe_resolution", "technical_recovery")}
     paths["input_registry"] = root / "config/daily_research_session_input_registry.json"
     registry = json.loads(paths["input_registry"].read_text(encoding="utf-8"))
     binding = registry["sessions"][session]
-    paths["events"] = root / binding["event_context"]["path"]
-    paths["descriptive"] = root / binding["descriptive"]["path"]
+    paths["events"] = bind(root / binding["event_context"]["path"])
+    paths["descriptive"] = bind(root / binding["descriptive"]["path"])
     paths["calendar"] = root / "config/governed_trading_session_calendar_v1.json"
     paths.update({"flow_"+p.stem: p for p in store.observations_root(runtime_root).glob("*.json")})
     db = Path(runtime_root)/"vn_stock.db"
@@ -76,7 +107,7 @@ def collect(*, source_root, runtime_root, session, feature_batch=None, feature_b
         if source_hash(paths["technical_batch"]) != feature_batch_sha256:
             raise ValueError("FEATURE_BATCH_HASH_INVALID")
     else:
-        paths["technical_batch"] = root / "operations-review/canonical-post-close-v1" / session / "enrichment/historical_context.json"
+        paths["technical_batch"] = bind(root / "operations-review/canonical-post-close-v1" / session / "enrichment/historical_context.json")
     before = {k: source_hash(p) for k,p in paths.items()}
     universe = json.loads(paths["universe_resolution"].read_text(encoding="utf-8"))
     history._verify_hashed_identity(universe, label="VOLUME_UNIVERSE")
@@ -117,8 +148,7 @@ def collect(*, source_root, runtime_root, session, feature_batch=None, feature_b
         producer = context
     v2_consumer = version == dispatch.V2 or allow_legacy_bridge
     if v2_consumer:
-        from prospective_pit_capture_retention import calendar_evidence_at_cutoff
-        calendar = calendar_evidence_at_cutoff(root, cutoff=source_header["requested_at"])
+        calendar = calendar_for_sealed_features(root, paths["technical_batch"], source_header["requested_at"])
     if sealed_snapshot is not None and not (producer._is_sealed_bindings(sealed_snapshot) if v2_consumer else isinstance(sealed_snapshot, producer.SealedTechnicalBindings)):
         sealed_snapshot = producer.SealedTechnicalBindings(sealed_snapshot)
     views = {t: bridge.build_views(c) for t,c in technical.items()} if v2_consumer else technical

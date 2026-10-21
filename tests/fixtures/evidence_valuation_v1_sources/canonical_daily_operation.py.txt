@@ -1,0 +1,1446 @@
+"""Canonical daily one-command operation: post-close eligibility through publication.
+
+Operational composition over existing modules. Not a second orchestrator and not a
+second market-acquisition owner.
+
+CHAIN
+    resolve intended session
+    -> Phase A attempt eligibility (ATTEMPT_ELIGIBLE)
+    -> exactly one governed market-wide acquisition (canonical P3F9B / existing
+       canonical_post_close_pipeline.acquire_and_materialize)
+    -> Phase B exact-session completion (EXACT_SESSION_OBSERVED_AFTER_SAFETY_FLOOR)
+    -> existing current-research / Level-2 materialization (owned by acquire_and_materialize)
+    -> exact input registration (only after Phase B)
+    -> Canonical Daily Producer
+    -> decision packet
+    -> prospective cohort collection
+    -> canonical Dashboard runtime materialization
+    -> canonical trusted-subset materialization
+    -> optional tools/release_orchestrator.py all --live --expected-session --complete-publication
+    -> one terminal daily-operation attestation
+
+Acquisition owner decision (from actual contracts, not assumption):
+    tools/collect_market_evidence.py emits capability_first_eod_collector/v1 packets
+    (default STANDARD_COHORT, max_requests=50). That packet cannot satisfy
+    canonical_post_close_pipeline.assert_post_close_eligible, which requires
+    p3f9_exact_session_mva_snapshot/v2 + FULL_CANONICAL_CANDIDATE_SET. Daily Producer,
+    runtime release, and trusted subset all consume that canonical snapshot.
+    Therefore the canonical P3F9B route is the single market-wide acquisition owner
+    for this command. Capability-first EOD remains an independent lower-level
+    capability and is never invoked here.
+
+Authority effect remains NONE. No OS scheduler, poll, sleep, or background loop.
+"""
+from __future__ import annotations
+
+from owner_daily_progress import CanonicalCheckpointProgress, observe_canonical_failure
+
+import argparse
+import hashlib
+import json
+import os
+import subprocess
+import sys
+from datetime import datetime
+from pathlib import Path
+from typing import Any, Callable, Mapping
+
+from canonical_dashboard_runtime_release import (
+    CanonicalRuntimeReleaseError,
+    materialize_canonical_runtime_release,
+    restage_runtime_with_presentation_projection,
+)
+from canonical_post_close_pipeline import (
+    CanonicalPostCloseError,
+    NORMAL_DAILY_ENABLE_CURRENT_FOREIGN_FLOW_LIVE,
+    NORMAL_DAILY_ENABLE_OFFICIAL_LIQUIDITY_ROLLFORWARD,
+    PreCutoffArtifactError,
+    SupplementalProviderBlockError,
+    acquire_and_materialize,
+    assert_post_close_eligible,
+    build_decision_packet,
+    build_enrichment_components,
+    build_tiered_bundle,
+    evaluate_dashboard_runtime_readiness,
+    register_session_inputs,
+    retain_prospective_decision_snapshot,
+    run_thesis_t0_sidecar,
+    run_post_handoff_observers,
+    run_post_handoff_presentation_projection,
+    run_post_handoff_prospective_outcome_feedback,
+    run_prospective_collection,
+    run_tactical_reversal_shadow_collection,
+    validate_and_freeze_completed_session,
+)
+from canonical_trusted_subset_release import (
+    CanonicalTrustedSubsetError,
+    materialize_canonical_trusted_subset,
+)
+from completed_market_session_gate import (
+    AUTHORITY_BOUNDARIES,
+    DEFAULT_POST_CLOSE_ATTEMPT_FLOOR,
+    OPERATING_TIMEZONE,
+    READY_SEMANTIC,
+    STATUS_ATTEMPT_ELIGIBLE,
+    STATUS_BLOCKED,
+    STATUS_NON_WORKING_DATE,
+    STATUS_PROVIDER_EVIDENCE_UNAVAILABLE,
+    STATUS_READY,
+    STATUS_SESSION_MISMATCH,
+    STATUS_TOO_EARLY,
+    CompletedSessionGateError,
+    evaluate_attempt_eligibility,
+    evaluate_completed_market_session_gate,
+    load_exact_session_evidence_from_root,
+    load_json_mapping,
+    normalize_working_dates_evidence,
+    parse_requested_at,
+    parse_session_date,
+    resolve_latest_qualified_completed_session,
+    retained_exact_session_resume_eligible,
+)
+from daily_producer_pipeline import DailyProducerError, run_daily_producer
+from daily_research_session_operations import load_registry
+from governed_previous_operation import AVAILABLE as PREVIOUS_OPERATION_AVAILABLE
+from governed_previous_operation import resolve_governed_previous_operation
+from field_temporal_contract import stable_id
+import macro_presentation_context as macro_presentation_context_module
+from governed_publication_completion import PublicationCompletionError
+from vn_time import VN_TZ, vn_now
+
+ROOT = Path(__file__).resolve().parent
+CONTRACT_VERSION = "canonical_daily_operation/v1"
+MARKET_ACQUISITION_OWNER = "canonical_p3f9b_exact_session"
+AUTHORITY_EFFECT = "NONE"
+
+STATE_PUBLISHED = "PUBLISHED"
+STATE_LOCAL_COMPLETE = "LOCAL_COMPLETE"
+
+STAGE_TOO_EARLY = "TOO_EARLY"
+STAGE_NON_WORKING_DATE = "NON_WORKING_DATE"
+STAGE_FUTURE_SESSION = "FUTURE_SESSION"
+STAGE_PROVIDER_EVIDENCE_UNAVAILABLE = "PROVIDER_EVIDENCE_UNAVAILABLE"
+STAGE_BLOCKED_PRE_ACQUISITION = "BLOCKED_PRE_ACQUISITION_SESSION_EVIDENCE"
+STAGE_BLOCKED_ACQUISITION = "BLOCKED_ACQUISITION"
+STAGE_BLOCKED_POST_ACQUISITION = "BLOCKED_POST_ACQUISITION_SESSION_MISMATCH"
+# An unexpected exception from the acquisition stage (FileNotFoundError, CalledProcessError, a
+# programming defect, ...) is a genuine pipeline failure, never routine thin/lagging session
+# evidence. Deliberately NOT a member of PRE_ACQUISITION_NOT_READY_STAGES/
+# POST_ACQUISITION_NOT_READY_STAGES/NOT_READY_STAGES below, so it prints as a real failure (not
+# POST_CLOSE_DATA_NOT_READY) and exits 1 (not the not-ready exit class). STAGE_BLOCKED_ACQUISITION
+# stays reserved for CanonicalPostCloseError -- acquire_and_materialize's own deliberate,
+# evidence-based refusals (thin coverage, session mismatch, missing snapshot, ...).
+STAGE_FAILED_ACQUISITION_PIPELINE = "FAILED_ACQUISITION_PIPELINE"
+# PROVIDER_RUNTIME_ISOLATION_V1 governed blocks (never FAILED_ACQUISITION_PIPELINE, never
+# "not ready -- rerun later"): the retained DNSE evidence stands, but ordinary Daily may not
+# complete until the owner changes the provider policy/runtime (runtime block) or a rerun obtains
+# a qualifying DNSE quality license (quality block). No degraded publication exists in V1, and a
+# blocked run never satisfies M1 live acceptance (see M1_LIVE_ACCEPTANCE_ELIGIBLE below).
+STAGE_BLOCKED_SUPPLEMENTAL_PROVIDER_RUNTIME = "BLOCKED_SUPPLEMENTAL_PROVIDER_RUNTIME"
+STAGE_BLOCKED_DNSE_QUALITY_UNLICENSED = "BLOCKED_DNSE_QUALITY_UNLICENSED"
+SUPPLEMENTAL_PROVIDER_BLOCK_STAGES = frozenset({
+    STAGE_BLOCKED_SUPPLEMENTAL_PROVIDER_RUNTIME, STAGE_BLOCKED_DNSE_QUALITY_UNLICENSED,
+})
+STAGE_BLOCKED_INPUT_REGISTRATION = "BLOCKED_INPUT_REGISTRATION"
+STAGE_BLOCKED_DAILY_PRODUCER = "BLOCKED_DAILY_PRODUCER"
+STAGE_BLOCKED_RUNTIME_RELEASE = "BLOCKED_RUNTIME_RELEASE"
+STAGE_BLOCKED_TRUSTED_SUBSET = "BLOCKED_TRUSTED_SUBSET"
+STAGE_BLOCKED_SESSION_IDENTITY = "BLOCKED_SESSION_IDENTITY_MISMATCH"
+
+# Stages that mean "not ready yet" (pre-floor, non-working date, future, provider evidence
+# thin/absent, or evidence not yet sufficient after a genuine attempt) rather than a pipeline
+# defect. Owner CLIs (stocklookup.py, daily_analysis_pipeline.py) use this to avoid labelling a
+# routine early or lagging run as a generic failure; see docs/DECISIONS.md 2026-09-03 post-close
+# stabilization gate.
+PRE_ACQUISITION_NOT_READY_STAGES = frozenset({
+    STAGE_TOO_EARLY, STAGE_NON_WORKING_DATE, STAGE_FUTURE_SESSION,
+    STAGE_PROVIDER_EVIDENCE_UNAVAILABLE, STAGE_BLOCKED_PRE_ACQUISITION,
+})
+POST_ACQUISITION_NOT_READY_STAGES = frozenset({
+    STAGE_BLOCKED_ACQUISITION, STAGE_BLOCKED_POST_ACQUISITION,
+})
+NOT_READY_STAGES = PRE_ACQUISITION_NOT_READY_STAGES | POST_ACQUISITION_NOT_READY_STAGES
+
+OPERATING_MODE_ORDINARY_DAILY = "ORDINARY_DAILY"
+# Any explicit diagnostic/override invocation of the canonical operation (retained-evidence/output
+# root overrides, --no-new-provider-acquisition, offline working dates, a pinned requested-at).
+OPERATING_MODE_DIAGNOSTIC = "DIAGNOSTIC_OVERRIDE"
+# tools/run_recovery_replay.py -- never runs through this module's operation at all.
+OPERATING_MODE_RECOVERY_REPLAY = "RECOVERY_REPLAY"
+CANONICAL_OPERATION_MODES = frozenset({OPERATING_MODE_ORDINARY_DAILY, OPERATING_MODE_DIAGNOSTIC})
+
+
+def m1_live_acceptance_eligible(record_or_stage: Mapping[str, Any] | str) -> bool:
+    """Only a completed, live ordinary Daily can be offered to M1 live acceptance.
+
+    Does not redefine M1 acceptance; it states its preconditions:
+      * a real ``ORDINARY_DAILY`` operating mode -- never ``RECOVERY_REPLAY``, a diagnostic
+        override, an idempotent/offline replay record or any record carrying a recovery marker;
+      * a completed Core Daily (``LOCAL_COMPLETE`` / ``PUBLISHED``), so every mandatory
+        DNSE/session/coverage/producer gate passed -- a blocked run (any refusal stage) never is;
+      * a recorded provider-runtime state (a pre-V1 record that carries none is not eligible) and a
+        DNSE quality license that satisfies the Core-Daily proceed predicate
+        (``license_qualifies_for_core_daily``) -- NOT the corroboration predicate.
+    2026-09-26 DNSE-first rebaseline: the OPTIONAL_SUPPLEMENTAL provider runtime no longer has to
+    be ``AVAILABLE``; ``UNASSESSED_SUPPLEMENTAL_RUNTIME_UNAVAILABLE`` proceeds on its explicit
+    DNSE_PRIMARY_UNCORROBORATED basis (its values stay uncorroborated). ``DATA_QUALITY_FAILED``, ``NOT_EVALUATED`` and D2's
+    ``UNASSESSED_NO_SECONDARY_OBSERVATION`` never qualify.
+    """
+    if not isinstance(record_or_stage, Mapping):
+        return False
+    if record_or_stage.get("daily_operation_state") not in (STATE_LOCAL_COMPLETE, STATE_PUBLISHED):
+        return False
+    if record_or_stage.get("operating_mode") != OPERATING_MODE_ORDINARY_DAILY:
+        return False
+    if record_or_stage.get("is_idempotent_replay") is True or "recovery_replay" in record_or_stage:
+        return False
+    acquisition = record_or_stage.get("acquisition") if isinstance(record_or_stage.get("acquisition"), Mapping) else {}
+    if acquisition.get("operating_mode") not in (None, OPERATING_MODE_ORDINARY_DAILY) or "recovery_replay" in acquisition:
+        return False
+    runtime_state = acquisition.get("provider_runtime_state")
+    if not isinstance(runtime_state, str) or not runtime_state:
+        return False
+    license_ = acquisition.get("dnse_quality_license") if isinstance(acquisition.get("dnse_quality_license"), Mapping) else {}
+    from multi_source_market_evidence_contract import (
+        LICENSE_UNASSESSED_SUPPLEMENTAL_RUNTIME_UNAVAILABLE, license_qualifies_for_core_daily,
+    )
+    name = license_.get("license")
+    # Re-derived from the license NAME: a stored boolean label can never smuggle a non-qualifying
+    # license (DATA_QUALITY_FAILED, NOT_EVALUATED, D2's UNASSESSED_NO_SECONDARY_OBSERVATION) through.
+    if not license_qualifies_for_core_daily(name):
+        return False
+    stored = license_.get("qualifies_for_core_daily", license_.get("qualifies_for_ordinary_daily"))
+    if stored is False:
+        return False
+    # The DNSE-primary license is only coherent with a runtime that really was not AVAILABLE.
+    return not (name == LICENSE_UNASSESSED_SUPPLEMENTAL_RUNTIME_UNAVAILABLE and runtime_state == "AVAILABLE")
+
+
+class CanonicalDailyOperationError(CanonicalPostCloseError):
+    """Fail-closed refusal at an exact daily-operation stage."""
+
+    def __init__(self, stage: str, message: str | None = None, *, local_state: Mapping[str, Any] | None = None):
+        self.stage = stage
+        self.local_state = dict(local_state or {})
+        super().__init__(message or stage)
+
+
+def _git_head(path: Path) -> str | None:
+    try:
+        return subprocess.run(
+            ["git", "-C", str(path), "rev-parse", "HEAD"],
+            capture_output=True, text=True, check=True,
+        ).stdout.strip()
+    except Exception:
+        return None
+
+
+def _write_json(path: Path, value: Mapping[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    encoded = json.dumps(value, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
+    if path.exists() and path.read_text(encoding="utf-8") != encoded:
+        raise CanonicalDailyOperationError("IMMUTABLE_OPERATION_RECORD_CONFLICT", path.name)
+    if not path.exists():
+        path.write_text(encoded, encoding="utf-8")
+
+
+# Total wall-clock budget for the optional macro subprocess. Bounded generously above normal
+# execution (17 series, each individually timeout/retry-bounded in macro_sync.py) so a
+# transient slow source doesn't false-positive, while still guaranteeing this optional step
+# can never hang core Daily indefinitely if a source stalls past its own bounded retry logic.
+MACRO_SYNC_SUBPROCESS_TIMEOUT_SECONDS = 300
+
+
+def refresh_macro_snapshot(root: Path, runtime_root: Path) -> dict[str, Any]:
+    """Run the existing bounded macro synchronizer once, without blocking core research.
+
+    Macro is optional context: a source failure (including a total-deadline timeout) is
+    recorded for the presentation contract, while the exact-session market/research path
+    remains authoritative and completes.
+    """
+    env = os.environ.copy()
+    env["STOCK_LOOKUP_RUNTIME_ROOT"] = str(runtime_root)
+    try:
+        result = subprocess.run(
+            [sys.executable, str(root / "macro_sync.py")], cwd=root, env=env,
+            capture_output=True, text=True, encoding="utf-8", errors="replace", check=False,
+            timeout=MACRO_SYNC_SUBPROCESS_TIMEOUT_SECONDS,
+        )
+    except subprocess.TimeoutExpired as exc:
+        detail = (exc.stderr or exc.stdout or "")
+        detail = detail.strip()[-500:] if isinstance(detail, str) else ""
+        return {"status": "FAILED", "reason_code": "MACRO_SYNC_SUBPROCESS_TIMEOUT",
+                "timeout_seconds": MACRO_SYNC_SUBPROCESS_TIMEOUT_SECONDS, "detail": detail}
+    except OSError as exc:
+        return {"status": "FAILED", "reason_code": "MACRO_SYNC_EXECUTION_FAILED", "detail": type(exc).__name__}
+    if result.returncode:
+        return {"status": "FAILED", "reason_code": "MACRO_SYNC_EXTERNAL_OR_PIPELINE_FAILURE",
+                "returncode": result.returncode, "detail": (result.stderr or result.stdout).strip()[-500:]}
+    return {"status": "REFRESHED", "reason_code": None}
+
+
+def prepare_macro_delivery(root: Path, session: str, *, artifact_root: Path, enrichment: Mapping[str, Any], acquire_fn=None, cutoff_fn=None) -> dict[str, Any]:
+    """Acquire once for a new session; bind exact selected market inputs, never latest files.
+
+    This cutoff describes current research delivery after acquisition, not the
+    immutable market/financial session lock or historical PIT knowledge.
+    """
+    if session <= "2026-10-07":
+        return {}
+    if cutoff_fn is None and datetime.now(VN_TZ).date().isoformat() != session:
+        return {}  # Retained historical replay performs no fresh macro I/O.
+    from current_macro_regime import acquire
+    import daily_session_level2_package as level2
+    from canonical_post_close_pipeline import _load
+    from prospective_pit_capture_retention import io_known_at
+    try:
+        macro = (acquire_fn or acquire)()
+    except Exception:
+        macro = None  # Optional acquisition failure never revises security decisions.
+    if not isinstance(macro, Mapping):
+        macro = None
+    cutoff = (cutoff_fn or io_known_at)()
+    from freshness_history import parse_timestamp
+    reference = parse_timestamp(cutoff)
+    if reference is None or reference.astimezone(VN_TZ).date().isoformat() != session:
+        return {}  # A later replay cannot attach newly acquired evidence to a past session.
+    paths = level2.session_artifact_paths(artifact_root, session)
+    packet_inputs = {key: _load(paths[path_key]) for key, path_key in (("market_sector", "sector_leadership"), ("risk_register", "risk_register"))}
+    sector = packet_inputs["market_sector"]
+    if sector is not None:
+        from current_market_sector_leadership_context import content_identity
+        if sector.get("session") != session or any(sector.get(k) != v for k, v in content_identity(sector).items()):
+            packet_inputs["market_sector"] = None  # Local optional input rejection, not a core Daily failure.
+    for key, component in (("financial_momentum", "financial_momentum"), ("corporate_event", "corporate_event_context"), ("historical", "historical_context")):
+        packet_inputs[key] = (enrichment.get(component) or {}).get("artifact")
+    return {"macro": macro, "macro_cutoff": cutoff, "decision_packet_inputs": packet_inputs}
+
+
+def build_macro_presentation_context(
+    root: Path, runtime_root: Path, *, macro_refresh: Mapping[str, Any], generated_at: datetime,
+) -> dict[str, Any]:
+    """Load whatever the runtime macro snapshot already has on disk (refreshed at most once,
+    by ``refresh_macro_snapshot`` above) and reshape it for AI-handoff presentation. Never
+    performs its own network/subprocess call: a failed or skipped refresh still lets this
+    load an older retained snapshot rather than losing macro context entirely.
+    """
+    return macro_presentation_context_module.build_from_runtime(
+        root, runtime_root, generated_at=generated_at.isoformat(),
+        refresh_status=macro_refresh.get("status"), refresh_reason_code=macro_refresh.get("reason_code"),
+    )
+
+
+def _working_dates_probe() -> dict[str, Any]:
+    """Exactly one DNSE working_dates GET. Not a market-wide acquisition."""
+    from dnse_access import credential_status, credentials_for_request
+    from dnse_bulk_market_data import fetch_capability_raw
+    from dnse_secrets_env import ensure_credentials_loaded
+
+    ensure_credentials_loaded()
+    status = credential_status()
+    if not status.get("configured"):
+        raise CanonicalDailyOperationError(STAGE_PROVIDER_EVIDENCE_UNAVAILABLE, "DNSE_CREDENTIAL_INJECTION_REQUIRED")
+    api_key, api_secret = credentials_for_request()
+    response = fetch_capability_raw("working_dates", api_key=api_key, api_secret=api_secret, query={}, retain_raw_bytes=True)
+    # Timestamp the actual completed I/O, never the earlier operation request.
+    from prospective_pit_capture_retention import io_known_at
+    received_at = io_known_at()
+    if not response.get("ok"):
+        raise CanonicalDailyOperationError(
+            STAGE_PROVIDER_EVIDENCE_UNAVAILABLE,
+            "WORKING_DATES_PROBE_FAILED:" + str(response.get("error_code")),
+        )
+    raw = response.get("raw_bytes")
+    body = json.loads(raw) if isinstance(raw, bytes) and raw else response.get("body")
+    if not isinstance(body, dict):
+        raise CanonicalDailyOperationError(STAGE_PROVIDER_EVIDENCE_UNAVAILABLE, "WORKING_DATES_PROBE_BODY_NOT_OBJECT")
+    return {"body": body, "raw_bytes": raw, "retrieved_at": response.get("retrieved_at") or received_at}
+
+
+def map_phase_a_stage(gate: Mapping[str, Any]) -> str:
+    status = gate.get("attempt_gate_status")
+    reasons = list(gate.get("reason_codes") or [])
+    if status == STATUS_TOO_EARLY:
+        return STAGE_TOO_EARLY
+    if status == STATUS_NON_WORKING_DATE:
+        return STAGE_NON_WORKING_DATE
+    if status == STATUS_PROVIDER_EVIDENCE_UNAVAILABLE:
+        return STAGE_PROVIDER_EVIDENCE_UNAVAILABLE
+    if status == STATUS_SESSION_MISMATCH:
+        return STAGE_BLOCKED_PRE_ACQUISITION
+    if status == STATUS_BLOCKED and "FUTURE_SESSION" in reasons:
+        return STAGE_FUTURE_SESSION
+    return STAGE_BLOCKED_PRE_ACQUISITION
+
+
+def map_phase_b_stage(gate: Mapping[str, Any]) -> str:
+    status = gate.get("completion_gate_status")
+    if status == STATUS_READY:
+        return STATUS_READY
+    return STAGE_BLOCKED_POST_ACQUISITION
+
+
+def release_orchestrator_argv(
+    session: str,
+    *,
+    runtime_root: Path,
+    producer_root: Path,
+    web_dir: Path | None = None,
+) -> list[str]:
+    argv = [
+        "all",
+        "--live",
+        "--expected-session", session,
+        "--complete-publication",
+        "--backend-dir", str(Path(runtime_root)),
+        "--producer-dir", str(Path(producer_root)),
+    ]
+    if web_dir is not None:
+        argv += ["--web-dir", str(Path(web_dir))]
+    return argv
+
+
+def invoke_release_orchestrator_complete_publication(
+    session: str,
+    *,
+    runtime_root: Path,
+    producer_root: Path,
+    web_dir: Path | None = None,
+    runner: Callable[[list[str]], Any] | None = None,
+) -> dict[str, Any]:
+    """Delegate fully to the existing orchestrator. Do not reimplement CI/Pages."""
+    argv = release_orchestrator_argv(
+        session, runtime_root=runtime_root, producer_root=producer_root, web_dir=web_dir,
+    )
+    command = [sys.executable, str(producer_root / "tools" / "release_orchestrator.py"), *argv]
+    if runner is not None:
+        result = runner(argv)
+        if isinstance(result, Mapping):
+            payload = dict(result)
+            payload.setdefault("argv", argv)
+            payload.setdefault("command", command)
+            return payload
+        return {"argv": argv, "command": command, "runner_result": result}
+    tools_dir = str(Path(producer_root) / "tools")
+    if tools_dir not in sys.path:
+        sys.path.insert(0, tools_dir)
+    import release_orchestrator
+
+    args = release_orchestrator.build_parser().parse_args(argv)
+    rc = release_orchestrator.orchestrate(args)
+    if rc != 0:
+        raise CanonicalDailyOperationError(
+            "BLOCKED_PUBLICATION_ORCHESTRATOR_EXIT",
+            f"release_orchestrator_exit={rc}",
+        )
+    return {
+        "argv": argv,
+        "command": command,
+        "orchestrator_exit": rc,
+        "publication_state": STATE_PUBLISHED,
+    }
+
+
+def _producer_session(producer_result: Mapping[str, Any], fallback: str) -> str:
+    return str(producer_result.get("session") or fallback)
+
+
+def print_daily_operation_handoff(record: Mapping[str, Any]) -> None:
+    publication = record.get("publication") if isinstance(record.get("publication"), Mapping) else {}
+    acquisition = record.get("acquisition") if isinstance(record.get("acquisition"), Mapping) else {}
+    health_state = acquisition.get("dnse_provider_health_state")
+    if health_state == "DNSE_BROAD_STALE_OR_INCOMPLETE_EOD":
+        recovery = acquisition.get("degraded_provider_recovery") if isinstance(acquisition.get("degraded_provider_recovery"), Mapping) else {}
+        coverage = acquisition.get("coverage") if isinstance(acquisition.get("coverage"), Mapping) else {}
+        contributions = acquisition.get("provider_contribution_counts") if isinstance(acquisition.get("provider_contribution_counts"), Mapping) else {}
+        print("DNSE_PROVIDER_HEALTH: DEGRADED")
+        print(f"DEGRADED_PROVIDER_RECOVERY_MODE: {'ACTIVE' if recovery.get('mode') == 'COMPLETED' else 'INCOMPLETE'}")
+        print(f"DNSE_EXACT: {contributions.get('DNSE', 0)}")
+        print(f"VCI_RECOVERED: {contributions.get('VCI', 0)}")
+        print(f"KBS_RECOVERED: {contributions.get('KBS', 0)}")
+        print(f"FINAL_RESOLVED: {coverage.get('exact_session_retained_count')} / {coverage.get('total_candidates')}")
+        print(f"MISSING: {(coverage.get('total_candidates') or 0) - (coverage.get('exact_session_retained_count') or 0)}")
+    print(f"DAILY_OPERATION_STATE={record.get('daily_operation_state')}")
+    if record.get("daily_operation_state") == STATE_LOCAL_COMPLETE:
+        print("CANONICAL_DAILY_LOCAL_COMPLETE - wrapper publication/verification phases still pending")
+    print(f"SESSION={record.get('session')}")
+    print(f"SESSION_GATE={record.get('session_gate_semantic') or record.get('session_gate')}")
+    print(f"DAILY_PRODUCER={record.get('daily_producer_status')}")
+    print(f"RUNTIME_RELEASE={record.get('runtime_release_status')}")
+    print(f"TRUSTED_SUBSET={record.get('trusted_subset_status')}")
+    print(f"DASHBOARD_RELEASE_SHA={publication.get('release_source_sha') or publication.get('dashboard_release_sha') or ''}")
+    print(f"DASHBOARD_CI={publication.get('dashboard_ci_status') or ''}")
+    print(f"DEPLOY_PAGES={publication.get('deploy_pages_status') or ''}")
+    print(f"PUBLIC_BYTE_IDENTITY={publication.get('public_byte_identity') or ''}")
+    print(f"AUTHORITY_EFFECT={record.get('authority_effect')}")
+    print(f"MARKET_ACQUISITION_OWNER={record.get('market_acquisition_owner')}")
+    print(f"OPERATION_IDENTITY={record.get('operation_identity')}")
+    shadow_collection = record.get("tactical_reversal_shadow_collection") if isinstance(record.get("tactical_reversal_shadow_collection"), Mapping) else {}
+    print(f"TACTICAL_REVERSAL_SHADOW_COLLECTION={shadow_collection.get('status')}")
+    post_handoff = record.get("post_handoff_observers") if isinstance(record.get("post_handoff_observers"), Mapping) else {}
+    velocity = post_handoff.get("multi_session_signal_velocity") if isinstance(post_handoff.get("multi_session_signal_velocity"), Mapping) else {}
+    flow_price = post_handoff.get("flow_price_divergence_shadow") if isinstance(post_handoff.get("flow_price_divergence_shadow"), Mapping) else {}
+    post_handoff_feedback = record.get("post_handoff_prospective_decision_feedback") if isinstance(record.get("post_handoff_prospective_decision_feedback"), Mapping) else {}
+    print(f"SIGNAL_VELOCITY={velocity.get('status')}")
+    foreign_flow = post_handoff.get("current_foreign_flow_enrichment") if isinstance(post_handoff.get("current_foreign_flow_enrichment"), Mapping) else {}
+    print(f"CURRENT_FOREIGN_FLOW_ENRICHMENT={foreign_flow.get('status')}")
+    if foreign_flow.get("complete_count") is not None or foreign_flow.get("requested_count") is not None:
+        print(f"CURRENT_FOREIGN_FLOW_COMPLETE={foreign_flow.get('complete_count')}/{foreign_flow.get('requested_count')}")
+    if foreign_flow.get("network_calls_made") is not None:
+        print(f"CURRENT_FOREIGN_FLOW_NETWORK_CALLS={foreign_flow.get('network_calls_made')}")
+    if foreign_flow.get("reason"):
+        print(f"CURRENT_FOREIGN_FLOW_REASON={foreign_flow.get('reason')}")
+    print(f"FLOW_PRICE_DIVERGENCE={flow_price.get('status')}")
+    print(f"POST_HANDOFF_PROSPECTIVE_DECISION_FEEDBACK={post_handoff_feedback.get('status')}")
+    if post_handoff_feedback.get("reason_code"):
+        # A resource/defect reason, never a feedback or investment state (OWNER_DAILY_FEEDBACK_RESOURCE_CONTAINMENT_V1).
+        print(f"POST_HANDOFF_PROSPECTIVE_DECISION_FEEDBACK_REASON={post_handoff_feedback.get('reason_code')}")
+    presentation = record.get("post_handoff_presentation_projection") if isinstance(record.get("post_handoff_presentation_projection"), Mapping) else {}
+    print(f"POST_HANDOFF_PRESENTATION_PROJECTION={presentation.get('status')}")
+    restage = record.get("post_handoff_runtime_restage") if isinstance(record.get("post_handoff_runtime_restage"), Mapping) else {}
+    print(f"POST_HANDOFF_RUNTIME_RESTAGE={restage.get('status')}")
+    if record.get("stage"):
+        print(f"STAGE={record.get('stage')}")
+
+
+def format_owner_daily_status(
+    exc: "CanonicalDailyOperationError",
+    *,
+    now: datetime,
+    producer_root: Path | None = None,
+) -> str:
+    """Clean owner-facing block for a Phase A/B refusal, for stocklookup.py/daily_analysis_pipeline.py
+    to print verbatim instead of a generic FAILED_PRODUCER.
+
+    Distinguishes three cases: CURRENT_SESSION_STABILIZING (pre-floor, no acquisition attempted --
+    STAGE_TOO_EARLY), POST_CLOSE_DATA_NOT_READY (an attempt was made at/after the floor but exact-
+    session evidence is not yet sufficient -- PRE_ACQUISITION/POST_ACQUISITION_NOT_READY_STAGES
+    minus TOO_EARLY), and a genuine pipeline defect (everything else, e.g. producer/runtime/
+    trusted-subset/publication failure). Never claims a deeper stage is merely "not ready yet".
+    """
+    phase_a = exc.local_state.get("phase_a") if isinstance(exc.local_state.get("phase_a"), Mapping) else {}
+    phase_b = exc.local_state.get("phase_b") if isinstance(exc.local_state.get("phase_b"), Mapping) else {}
+    session = phase_a.get("resolved_session") or phase_a.get("requested_session") or now.date().isoformat()
+    lines = ["STOCK LOOKUP DAILY"]
+    if exc.stage == STAGE_TOO_EARLY:
+        latest_completed = None
+        if producer_root is not None:
+            try:
+                found = resolve_latest_qualified_completed_session(Path(producer_root), session)
+                latest_completed = found["session"] if found else None
+            except Exception:
+                latest_completed = None
+        floor_text = phase_a.get("safety_floor") or DEFAULT_POST_CLOSE_ATTEMPT_FLOOR.isoformat(timespec="minutes")
+        lines += [
+            "Status: CURRENT_SESSION_STABILIZING",
+            f"Current time: {now.isoformat(timespec='seconds')}",
+            f"Session candidate: {session}",
+            f"Earliest normal daily start: {floor_text} {OPERATING_TIMEZONE}",
+            f"Latest completed session: {latest_completed or 'none retained'}",
+            "Publication: NOT ATTEMPTED",
+            "Action: rerun at/after the stabilization floor",
+        ]
+    elif exc.stage in SUPPLEMENTAL_PROVIDER_BLOCK_STAGES:
+        block = exc.local_state.get("supplemental_provider") if isinstance(exc.local_state.get("supplemental_provider"), Mapping) else {}
+        runtime = block.get("provider_runtime") if isinstance(block.get("provider_runtime"), Mapping) else {}
+        license_ = block.get("dnse_quality_license") if isinstance(block.get("dnse_quality_license"), Mapping) else {}
+        lines += [
+            f"Status: {exc.stage}",
+            f"Session: {session}",
+            f"Provider runtime: {runtime.get('state')} ({runtime.get('reason_code')})",
+            f"DNSE quality license: {license_.get('license') or 'NOT_ASSESSED'}",
+            "DNSE evidence: RETAINED",
+            "Publication: BLOCKED",
+            "M1 live acceptance: NOT_SATISFIED_BY_THIS_RUN",
+            (
+                "Action: supplemental runtime failed mid-operation; rerun Daily (the OPTIONAL_SUPPLEMENTAL "
+                "runtime is not required when it is unavailable at preflight)"
+                if exc.stage == STAGE_BLOCKED_SUPPLEMENTAL_PROVIDER_RUNTIME
+                else "Action: DNSE quality license not qualified (data-quality/unassessed); review the "
+                     "retained supplemental_provider_block.json before any rerun"
+            ),
+        ]
+    elif exc.stage in POST_ACQUISITION_NOT_READY_STAGES:
+        reasons = ",".join(phase_b.get("reason_codes") or []) or str(exc)
+        lines += [
+            "Status: POST_CLOSE_DATA_NOT_READY",
+            f"Session: {session}",
+            "Publication: BLOCKED",
+            f"Reason: {reasons}",
+            "Action: rerun later",
+        ]
+    else:
+        lines += [
+            f"Status: {exc.stage}",
+            f"Reason: {exc}",
+            "RECOVERY_ACTION: inspect canonical daily stage output",
+        ]
+    return "\n".join(lines)
+
+
+def _integrated_delivery_for_session(enrichment: Mapping[str, Any], session: str) -> Mapping[str, Any]:
+    """Return the exact rich-decision input that must exist before Daily sealing.
+
+    ``build_enrichment_components`` is invoked only after registration and the
+    completed-session freeze.  This boundary deliberately accepts the returned
+    object by identity; it never discovers a similarly named or newer artifact.
+    """
+    integrated = (enrichment.get("integrated_investment_decision_product") or {}).get("artifact")
+    if not isinstance(integrated, Mapping):
+        raise CanonicalDailyOperationError(
+            STAGE_BLOCKED_DAILY_PRODUCER,
+            "INTEGRATED_DECISION_DELIVERY_INPUT_UNAVAILABLE",
+        )
+    if integrated.get("session") != session:
+        raise CanonicalDailyOperationError(
+            STAGE_BLOCKED_DAILY_PRODUCER,
+            f"INTEGRATED_DECISION_DELIVERY_SESSION_MISMATCH:expected={session}:observed={integrated.get('session')}",
+        )
+    if integrated.get("contract_version") != "integrated_investment_decision_product/v1":
+        raise CanonicalDailyOperationError(STAGE_BLOCKED_DAILY_PRODUCER, "INTEGRATED_DECISION_DELIVERY_CONTRACT_MISMATCH")
+    if not isinstance(integrated.get("artifact_identity"), str) or not integrated["artifact_identity"]:
+        raise CanonicalDailyOperationError(STAGE_BLOCKED_DAILY_PRODUCER, "INTEGRATED_DECISION_DELIVERY_IDENTITY_MISSING")
+    if not isinstance(integrated.get("records"), Mapping):
+        raise CanonicalDailyOperationError(STAGE_BLOCKED_DAILY_PRODUCER, "INTEGRATED_DECISION_DELIVERY_RECORDS_MISSING")
+    return integrated
+
+
+def _previous_qualified_operation_source(
+    root: Path, *, session: str, registry: Mapping[str, Any],
+) -> tuple[str, Path] | None:
+    """Resolve pre-seal transition context through the shared governed selector."""
+    previous = resolve_governed_previous_operation(session, registry, root)
+    if previous["status"] == PREVIOUS_OPERATION_AVAILABLE:
+        return str(previous["previous_session"]), Path(str(previous["operation_directory"]))
+    if previous["status"] == "NO_PRIOR_GOVERNED_SESSION":
+        return None
+    raise CanonicalDailyOperationError(
+        STAGE_BLOCKED_DAILY_PRODUCER,
+        f"PRESEAL_PREVIOUS_OPERATION_{previous['status']}:{previous.get('previous_session') or 'none'}",
+    )
+
+
+def _build_preseal_daily_integrated_brief(
+    root: Path, *, session: str, operation: Mapping[str, Any], registry: Mapping[str, Any],
+) -> Mapping[str, Any]:
+    """Build the canonical Daily Brief from exact in-memory pre-seal inputs.
+
+    The draft delivery exists only in memory to obtain the existing transition
+    projection's current-session bundle shape.  It is neither a retained
+    operation nor a post-hoc repair; only the subsequently Brief-bound operation
+    is materialized.  All Analytical inputs are caller-owned/session-addressed.
+    """
+    from ai_research_session_delivery import build_delivery
+    from stocklookup_core.decision.daily_integrated_decision_brief import build_from_session
+    from next_session_decision_brief import build_from_current_delivery_payload
+
+    binding = operation.get("integrated_delivery")
+    if not isinstance(binding, Mapping):
+        raise CanonicalDailyOperationError(STAGE_BLOCKED_DAILY_PRODUCER, "PRESEAL_INTEGRATED_DELIVERY_MISSING")
+    integrated = binding.get("integrated_investment_decision_product")
+    if not isinstance(integrated, Mapping):
+        raise CanonicalDailyOperationError(STAGE_BLOCKED_DAILY_PRODUCER, "PRESEAL_INTEGRATED_DECISION_MISSING")
+    delivery_inputs = dict(operation.get("inputs") or {})
+    delivery_inputs["integrated_investment_decision_product"] = integrated
+    draft_delivery = build_delivery(operation, delivery_inputs)
+    draft_bundle_bytes = draft_delivery["primary"]
+    draft_bundle = json.loads(draft_bundle_bytes.decode("utf-8"))
+    previous = _previous_qualified_operation_source(root, session=session, registry=registry)
+    next_brief = build_from_current_delivery_payload(
+        root=root,
+        current_session=session,
+        current_manifest=operation["manifest"],
+        current_bundle=draft_bundle,
+        current_bundle_sha256=hashlib.sha256(draft_bundle_bytes).hexdigest(),
+        current_queue=operation.get("decision_queue"),
+        previous_session=previous[0] if previous else None,
+        previous_source=previous[1] if previous else None,
+        registry=registry,
+    )
+    brief = build_from_session(root=root, session=session, next_session_brief=next_brief)
+    if not isinstance(brief, Mapping):
+        raise CanonicalDailyOperationError(STAGE_BLOCKED_DAILY_PRODUCER, "PRESEAL_DAILY_INTEGRATED_BRIEF_UNAVAILABLE")
+    return brief
+
+
+@observe_canonical_failure
+def run_canonical_daily_operation(
+    root: Path,
+    runtime_root: Path,
+    session: str | None = None,
+    *,
+    now: datetime | None = None,
+    workers: int = 12,
+    complete_publication: bool = False,
+    working_dates_evidence: Mapping[str, Any] | None = None,
+    exact_session_evidence: Mapping[str, Any] | None = None,
+    working_dates_fetcher: Callable[[], Mapping[str, Any]] | None = None,
+    allow_provider_probe: bool = False,
+    acquire_fn: Callable[..., Mapping[str, Any]] | None = None,
+    producer_fn: Callable[..., Mapping[str, Any]] | None = None,
+    runtime_fn: Callable[..., Mapping[str, Any]] | None = None,
+    trusted_fn: Callable[..., Mapping[str, Any]] | None = None,
+    publication_runner: Callable[[list[str]], Any] | None = None,
+    macro_refresh_fn: Callable[[Path, Path], Mapping[str, Any]] | None = None,
+    macro_presentation_context_fn: Callable[..., Mapping[str, Any]] | None = None,
+    macro_regime_acquirer: Callable[[], Mapping[str, Any]] | None = None,
+    macro_cutoff_fn: Callable[[], str] | None = None,
+    daily_integrated_decision_brief_builder: Callable[[Mapping[str, Any]], Mapping[str, Any]] | None = None,
+    web_dir: Path | None = None,
+    out_dir: Path | str | None = None,
+    consumer_root: Path | None = None,
+    retained_evidence_root: Path | None = None,
+    operation_output_root: Path | None = None,
+    no_new_provider_acquisition: bool = False,
+    operating_mode: str = OPERATING_MODE_ORDINARY_DAILY,
+    progress_callback: Callable[[Mapping[str, Any]], None] | None = None,
+) -> dict[str, Any]:
+    """Foreground one-shot daily operation. Tests must inject ``now`` / ``requested_at``.
+
+    ``operating_mode`` is ``ORDINARY_DAILY`` (the zero-flag owner Daily) or ``DIAGNOSTIC_OVERRIDE``.
+    ``RECOVERY_REPLAY`` is refused: recovery is its own isolated runner and never produces an
+    ordinary Daily record."""
+    if operating_mode not in CANONICAL_OPERATION_MODES:
+        raise CanonicalDailyOperationError(
+            STAGE_BLOCKED_PRE_ACQUISITION,
+            f"OPERATING_MODE_NOT_PERMITTED_FOR_CANONICAL_DAILY:{operating_mode}",
+        )
+    checkpoints = CanonicalCheckpointProgress(progress_callback)
+    checkpoints.begin()
+    # Legacy companion-less snapshot reuse is scoped by operating mode, never by trusting absence:
+    # only an explicit DIAGNOSTIC_OVERRIDE historical replay that forbids new provider acquisition
+    # may use it. ORDINARY_DAILY never can.
+    historical_compatibility = operating_mode == OPERATING_MODE_DIAGNOSTIC and no_new_provider_acquisition
+    root = Path(root)
+    runtime_root = Path(runtime_root)
+    instant = now or vn_now()
+    if instant.tzinfo is None:
+        instant = instant.replace(tzinfo=VN_TZ)
+    else:
+        instant = instant.astimezone(VN_TZ)
+    explicit_retained_evidence_root = retained_evidence_root is not None
+    retained_evidence_root = Path(retained_evidence_root or root)
+    operation_output_root = Path(operation_output_root or root)
+    # ``out_dir`` is a legacy explicit override. Otherwise every fresh operation record belongs
+    # to the declared output root, never to retained evidence or merely to the code checkout.
+    output_root = Path(out_dir) if out_dir else operation_output_root / "operations-review"
+    acquire = acquire_fn or acquire_and_materialize
+    produce = producer_fn or run_daily_producer
+    runtime_materialize = runtime_fn or materialize_canonical_runtime_release
+    trusted_materialize = trusted_fn or materialize_canonical_trusted_subset
+    probe = working_dates_fetcher
+    if probe is None and allow_provider_probe:
+        probe = _working_dates_probe
+
+    explicit_session = parse_session_date(session) if session else None
+    # A historical completed session may have fallen out of DNSE's current
+    # forward working_dates window.  Reuse only the existing retained DNSE
+    # exact-session evidence for that exact request; this is read-only and
+    # never turns a different session, a weekday, or civil time into proof.
+    resolved_exact_evidence = exact_session_evidence
+    if resolved_exact_evidence is None and explicit_session:
+        resolved_exact_evidence = load_exact_session_evidence_from_root(root, explicit_session)
+    # If retained exact-session evidence already qualifies the explicit intended session, a
+    # working_dates probe buys nothing -- skip it outright rather than issue the network call
+    # and merely tolerate its failure afterward (a retained resume must not depend on a fresh
+    # DNSE working_dates GET when it already has everything it needs).
+    retained_resume_eligible = False
+    if working_dates_evidence is None and explicit_session is not None:
+        retained_resume_eligible, _retained_resume_reasons = retained_exact_session_resume_eligible(
+            requested_at=instant,
+            session=explicit_session,
+            safety_floor=DEFAULT_POST_CLOSE_ATTEMPT_FLOOR,
+            exact_session_evidence=resolved_exact_evidence,
+        )
+    phase_working_dates = working_dates_evidence
+    if phase_working_dates is None and probe is not None and not retained_resume_eligible:
+        phase_working_dates = probe()
+        probe = None
+    elif retained_resume_eligible:
+        probe = None
+    import prospective_pit_capture_retention as capture_retention
+    import prospective_market_evidence_retention as pit_retention
+    retained_calendar = pit_retention.attempt(
+        capture_retention.retain_existing_calendar_probe, phase_working_dates, root=operation_output_root)
+    phase_session = explicit_session
+    automatic_non_trading_resolution: dict[str, Any] | None = None
+    if phase_session is None:
+        current_calendar = normalize_working_dates_evidence(phase_working_dates, retrieved_at=instant.isoformat())
+        if current_calendar.get("status") == "OBSERVED" and instant.date().isoformat() not in current_calendar.get("working_dates", []):
+            automatic_non_trading_resolution = resolve_latest_qualified_completed_session(root, instant.date().isoformat())
+            if automatic_non_trading_resolution is not None:
+                phase_session = str(automatic_non_trading_resolution["session"])
+                resolved_exact_evidence = automatic_non_trading_resolution["exact_session_evidence"]
+    try:
+        phase_a = evaluate_attempt_eligibility(
+            requested_at=instant,
+            requested_session=phase_session,
+            timezone_name=OPERATING_TIMEZONE,
+            safety_floor=DEFAULT_POST_CLOSE_ATTEMPT_FLOOR,
+            working_dates_evidence=phase_working_dates,
+            exact_session_evidence=resolved_exact_evidence,
+            working_dates_fetcher=probe,
+            allow_provider_probe=allow_provider_probe,
+            allow_historical_target_session_acquisition=True,
+        )
+    except CompletedSessionGateError as exc:
+        raise CanonicalDailyOperationError(STAGE_BLOCKED_PRE_ACQUISITION, str(exc)) from exc
+
+    if phase_a.get("attempt_gate_status") != STATUS_ATTEMPT_ELIGIBLE:
+        raise CanonicalDailyOperationError(
+            map_phase_a_stage(phase_a),
+            ",".join(phase_a.get("reason_codes") or [str(phase_a.get("attempt_gate_status"))]),
+            local_state={"phase_a": phase_a},
+        )
+    if automatic_non_trading_resolution is not None:
+        phase_a = {
+            **phase_a,
+            "automatic_non_trading_resolution": {
+                "session": automatic_non_trading_resolution["session"],
+                "selection_basis": automatic_non_trading_resolution["selection_basis"],
+            },
+        }
+    resolved_session = str(phase_a.get("resolved_session") or "")
+    if not resolved_session:
+        raise CanonicalDailyOperationError(STAGE_BLOCKED_PRE_ACQUISITION, "INTENDED_SESSION_UNRESOLVED")
+
+    checkpoints.finish()  # SESSION_RESOLVED
+    acquisition_calls = 0
+
+    def _acquire() -> Mapping[str, Any]:
+        nonlocal acquisition_calls
+        acquisition_calls += 1
+        kwargs: dict[str, Any] = {"workers": workers, "now": instant}
+        if progress_callback is not None:
+            kwargs["progress_callback"] = progress_callback
+        if historical_compatibility:
+            kwargs["historical_compatibility"] = True
+        if explicit_retained_evidence_root or operation_output_root != root or no_new_provider_acquisition:
+            kwargs.update(
+                retained_evidence_root=retained_evidence_root,
+                output_root=operation_output_root,
+                no_new_provider_acquisition=no_new_provider_acquisition,
+            )
+        kwargs["enable_official_liquidity_rollforward"] = (
+            NORMAL_DAILY_ENABLE_OFFICIAL_LIQUIDITY_ROLLFORWARD and not no_new_provider_acquisition
+        )
+        kwargs["enable_corporate_currency_rollforward"] = not historical_compatibility
+        return acquire(root, resolved_session, runtime_root, **kwargs)
+
+    try:
+        if progress_callback is not None:
+            try:
+                progress_callback({
+                    "component": "Canonical Daily", "subtask": "market_acquisition",
+                    "progress_kind": "PIPELINE", "status": "BEGIN",
+                })
+            except Exception:
+                pass
+        acquisition = _acquire()
+    except SupplementalProviderBlockError as exc:
+        # A governed block -- not routine data lag, not a pipeline defect.
+        stage = (
+            STAGE_BLOCKED_SUPPLEMENTAL_PROVIDER_RUNTIME
+            if exc.kind == "SUPPLEMENTAL_PROVIDER_RUNTIME_UNAVAILABLE" else STAGE_BLOCKED_DNSE_QUALITY_UNLICENSED
+        )
+        raise CanonicalDailyOperationError(stage, str(exc), local_state={
+            "phase_a": phase_a,
+            "supplemental_provider": {
+                "block_kind": exc.kind,
+                "provider_runtime": exc.runtime_state,
+                "dnse_quality_license": exc.quality_license,
+                "diagnostic_path": str(exc.diagnostic_path) if exc.diagnostic_path else None,
+                "dnse_raw_evidence": "RETAINED",
+                "publication": "NOT_ATTEMPTED",
+                "m1_live_acceptance_eligible": False,
+            },
+        }) from exc
+    except CanonicalPostCloseError as exc:
+        # A deliberate, evidence-based refusal (thin/partial coverage, session mismatch, missing
+        # snapshot after acquisition, pre-cutoff artifact, ...) -- genuinely "not ready yet".
+        raise CanonicalDailyOperationError(STAGE_BLOCKED_ACQUISITION, str(exc), local_state={"phase_a": phase_a}) from exc
+    except Exception as exc:
+        # Anything else (FileNotFoundError, subprocess.CalledProcessError, a programming defect,
+        # ...) is a genuine pipeline failure, never routine data lag -- see STAGE_FAILED_ACQUISITION_
+        # PIPELINE's own comment. Must never collapse into STAGE_BLOCKED_ACQUISITION here: today's
+        # live defect was exactly this collapse, which made a real FileNotFoundError print as
+        # POST_CLOSE_DATA_NOT_READY.
+        raise CanonicalDailyOperationError(
+            STAGE_FAILED_ACQUISITION_PIPELINE, f"{type(exc).__name__}:{exc}", local_state={"phase_a": phase_a},
+        ) from exc
+
+    if acquisition_calls != 1:
+        raise CanonicalDailyOperationError(STAGE_BLOCKED_ACQUISITION, "DUPLICATE_MARKET_ACQUISITION")
+
+    if progress_callback is not None:
+        try:
+            progress_callback({
+                "component": "Canonical Daily", "subtask": "market_acquisition",
+                "progress_kind": "PIPELINE", "status": "END",
+                "qualified_count": ((acquisition.get("snapshot") or {}).get("exact_session_observed_count")
+                                    if isinstance(acquisition, Mapping) else None),
+                "coverage_denominator": ((acquisition.get("snapshot") or {}).get("candidate_count")
+                                       if isinstance(acquisition, Mapping) else None),
+            })
+        except Exception:
+            pass
+
+    snapshot = acquisition.get("snapshot") if isinstance(acquisition, Mapping) else None
+    if not isinstance(snapshot, Mapping):
+        raise CanonicalDailyOperationError(STAGE_BLOCKED_ACQUISITION, "EXACT_SESSION_SNAPSHOT_MISSING_AFTER_ACQUISITION")
+    if str(acquisition.get("resolved_completed_session") or snapshot.get("resolved_completed_session")) != resolved_session:
+        raise CanonicalDailyOperationError(
+            STAGE_BLOCKED_POST_ACQUISITION,
+            "P3F9B_ACQUIRED_SESSION_MISMATCH",
+            local_state={"phase_a": phase_a, "acquisition": {"resolved": acquisition.get("resolved_completed_session")}},
+        )
+    if snapshot.get("contract_version") == "p3f9_exact_session_mva_snapshot/v2":
+        try:
+            assert_post_close_eligible(
+                snapshot, resolved_session, now=instant,
+                artifact_root=Path(acquisition.get("artifact_root") or root),
+                historical_compatibility=historical_compatibility,
+            )
+        except PreCutoffArtifactError as exc:
+            raise CanonicalDailyOperationError(STAGE_BLOCKED_POST_ACQUISITION, str(exc), local_state={"phase_a": phase_a}) from exc
+
+    phase_b_working = working_dates_evidence
+    if phase_b_working is None:
+        phase_b_working = {"workingDates": list(phase_a.get("working_dates") or [])}
+    phase_b = evaluate_completed_market_session_gate(
+        requested_at=instant,
+        requested_session=resolved_session,
+        timezone_name=OPERATING_TIMEZONE,
+        safety_floor=DEFAULT_POST_CLOSE_ATTEMPT_FLOOR,
+        working_dates_evidence=phase_b_working,
+        exact_session_evidence=snapshot,
+        allow_provider_probe=False,
+    )
+    if phase_b.get("completion_gate_status") != STATUS_READY:
+        raise CanonicalDailyOperationError(
+            map_phase_b_stage(phase_b),
+            ",".join(phase_b.get("reason_codes") or [str(phase_b.get("completion_gate_status"))]),
+            local_state={"phase_a": phase_a, "phase_b": phase_b, "acquisition": acquisition},
+        )
+
+    checkpoints.finish()  # MARKET_EVIDENCE_READY (including Phase B)
+    artifact_root = Path(acquisition.get("artifact_root") or root)
+    try:
+        registration = register_session_inputs(
+            root, resolved_session, artifact_root=artifact_root,
+            retained_evidence_root=retained_evidence_root,
+            **({"corporate_frozen_inputs": acquisition["corporate_frozen_inputs"]}
+               if acquisition.get("corporate_frozen_inputs") is not None else {}),
+        )
+        freeze = validate_and_freeze_completed_session(root, resolved_session)
+    except CanonicalPostCloseError as exc:
+        raise CanonicalDailyOperationError(STAGE_BLOCKED_INPUT_REGISTRATION, str(exc)) from exc
+
+    checkpoints.finish()  # INPUTS_FROZEN
+    # The immutable Daily operation owns the AI handoff and cockpit projection.
+    # Build and validate its exact-session Integrated Decision after the input
+    # ledger is frozen, then pass that object explicitly into the producer.
+    # This matches canonical_post_close_pipeline and leaves no post-hoc route
+    # for attaching a rich-decision delivery surface to a sealed operation.
+    enrichment = build_enrichment_components(
+        root, resolved_session,
+        **({"corporate_currency_rollforward": acquisition["corporate_currency_rollforward"]} if acquisition.get("corporate_currency_rollforward") is not None else {}), artifact_root=artifact_root, runtime_root=runtime_root,
+        retained_evidence_root=retained_evidence_root,
+        output_root=operation_output_root,
+        **({"progress_callback": progress_callback} if progress_callback is not None else {}),
+    )
+    integrated_delivery = _integrated_delivery_for_session(enrichment, resolved_session)
+
+    checkpoints.finish()  # DECISION_SURFACE_READY, after required delivery verification
+    # Single-refresh invariant: the macro synchronizer runs at most once per operation, and
+    # runs here -- before the Daily Producer -- so the AI handoff can carry the exact same
+    # retained snapshot the Dashboard later reuses from disk. A refresh failure never blocks
+    # or weakens the exact-session equity core: macro presentation context degrades to an
+    # explicit unavailable/partial state instead.
+    macro_refresh = dict((macro_refresh_fn or refresh_macro_snapshot)(root, runtime_root))
+    macro_presentation_context = dict(
+        (macro_presentation_context_fn or build_macro_presentation_context)(
+            root, runtime_root, macro_refresh=macro_refresh, generated_at=instant,
+        )
+    )
+    macro_delivery = prepare_macro_delivery(root, resolved_session, artifact_root=artifact_root, enrichment=enrichment, acquire_fn=macro_regime_acquirer, cutoff_fn=macro_cutoff_fn)
+
+    producer_head, consumer_head = _git_head(root), _git_head(root.parent / "ai-core-private")
+    preseal_brief_builder = daily_integrated_decision_brief_builder
+    # Injected producer functions are test/diagnostic seams with their own
+    # declared contract.  The production producer always receives the canonical
+    # pre-seal builder; an injected seam may opt in explicitly.
+    if preseal_brief_builder is None and producer_fn is None:
+        registry_for_brief = load_registry(root)
+        preseal_brief_builder = lambda operation: _build_preseal_daily_integrated_brief(
+            retained_evidence_root, session=resolved_session, operation=operation, registry=registry_for_brief,
+        )
+    try:
+        producer_kwargs: dict[str, Any] = dict(
+            session=resolved_session, latest_completed_session=False,
+            producer_head=producer_head or "UNKNOWN", consumer_head=consumer_head or "UNKNOWN",
+            integrated_investment_decision_product=integrated_delivery, now=instant,
+            macro_presentation_context=macro_presentation_context,
+            **macro_delivery,
+            **({"daily_integrated_decision_brief_builder": preseal_brief_builder} if preseal_brief_builder is not None else {}),
+        )
+        if producer_fn is None:
+            producer_kwargs["runtime_root_override"] = runtime_root
+        if operation_output_root != root:
+            producer_kwargs.update(
+                output_root=operation_output_root / "operations-review" / "daily-producer-runs-v1",
+                operation_output_root=operation_output_root / "operations-review" / "daily-research-session-operations-v1",
+                shadow_artifact_output_root=operation_output_root / "operations-review" / "daily-session-shadow-recommendation-v1",
+            )
+        producer_result = produce(root, **producer_kwargs)
+    except DailyProducerError as exc:
+        raise CanonicalDailyOperationError(STAGE_BLOCKED_DAILY_PRODUCER, str(exc)) from exc
+    except CanonicalPostCloseError as exc:
+        raise CanonicalDailyOperationError(STAGE_BLOCKED_DAILY_PRODUCER, str(exc)) from exc
+
+    if not isinstance(producer_result, Mapping) or producer_result.get("status") not in {None, "COMPLETED", "PASS"}:
+        status = None if not isinstance(producer_result, Mapping) else producer_result.get("status")
+        if status not in {"COMPLETED", "PASS"} and producer_result.get("run_identity"):
+            # Daily Producer historically returns status COMPLETED; tolerate run_identity as success.
+            pass
+        elif status not in {"COMPLETED", "PASS"}:
+            raise CanonicalDailyOperationError(STAGE_BLOCKED_DAILY_PRODUCER, f"DAILY_PRODUCER_STATUS:{status}")
+
+    producer_session = _producer_session(producer_result, resolved_session)
+    if producer_session != resolved_session:
+        raise CanonicalDailyOperationError(
+            STAGE_BLOCKED_SESSION_IDENTITY,
+            f"DAILY_PRODUCER_SESSION_MISMATCH:expected={resolved_session}:observed={producer_session}",
+        )
+
+    shadow_autosourcing = (
+        (producer_result.get("manifest") or {}).get("daily_session_shadow_recommendation")
+        if isinstance(producer_result, Mapping) else None
+    )
+    if not isinstance(shadow_autosourcing, Mapping) or shadow_autosourcing.get("session") != resolved_session:
+        raise CanonicalDailyOperationError(
+            STAGE_BLOCKED_DAILY_PRODUCER,
+            "DAILY_SHADOW_AUTOSOURCE_LINEAGE_MISSING_OR_SESSION_MISMATCH",
+        )
+
+    checkpoints.finish()  # PRODUCER_SEALED, after session/lineage checks
+    try:
+        runtime_materialized = runtime_materialize(
+            root, runtime_root, resolved_session, producer_run_identity=producer_result.get("run_identity"),
+        )
+    except CanonicalRuntimeReleaseError as exc:
+        raise CanonicalDailyOperationError(STAGE_BLOCKED_RUNTIME_RELEASE, str(exc)) from exc
+
+    runtime_release = evaluate_dashboard_runtime_readiness(runtime_root, resolved_session)
+    runtime_session = str(
+        (runtime_materialized or {}).get("session")
+        or runtime_release.get("resolved_session")
+        or ""
+    )
+    if not runtime_release.get("ready") or runtime_session != resolved_session:
+        raise CanonicalDailyOperationError(
+            STAGE_BLOCKED_RUNTIME_RELEASE,
+            runtime_release.get("reason") or f"RUNTIME_SESSION_MISMATCH:{runtime_session}",
+        )
+
+    try:
+        trusted = trusted_materialize(
+            root, runtime_root, resolved_session, consumer_root=consumer_root,
+        )
+    except CanonicalTrustedSubsetError as exc:
+        raise CanonicalDailyOperationError(STAGE_BLOCKED_TRUSTED_SUBSET, str(exc)) from exc
+
+    trusted_session = str((trusted or {}).get("session") or "")
+    if not trusted.get("trusted_subset_ready") or trusted_session != resolved_session:
+        raise CanonicalDailyOperationError(
+            STAGE_BLOCKED_TRUSTED_SUBSET,
+            f"TRUSTED_SUBSET_SESSION_MISMATCH:expected={resolved_session}:observed={trusted_session}",
+        )
+    if not (producer_session == runtime_session == trusted_session == resolved_session):
+        raise CanonicalDailyOperationError(
+            STAGE_BLOCKED_SESSION_IDENTITY,
+            "runtime={}:trusted={}:producer={}:expected={}".format(
+                runtime_session, trusted_session, producer_session, resolved_session,
+            ),
+        )
+
+    checkpoints.finish()  # RUNTIME_TRUSTED_READY
+    operation = producer_result.get("operation") if isinstance(producer_result.get("operation"), Mapping) else {}
+    prospective_snapshot_kwargs: dict[str, Any] = {}
+    if operation_output_root != root:
+        prospective_snapshot_kwargs["output_root"] = operation_output_root
+    prospective_decision_snapshot = retain_prospective_decision_snapshot(
+        root, resolved_session, producer_result=producer_result, enrichment=enrichment,
+        exact_session_snapshot=snapshot, **prospective_snapshot_kwargs,
+        **({"progress_callback": progress_callback} if progress_callback is not None else {}),
+    )
+    prospective_evidence = dict(acquisition.get("prospective_market_evidence") or {})
+    prospective_evidence["calendar"] = retained_calendar
+    prospective_capture_readiness = pit_retention.attempt(
+        capture_retention.daily_boundary, operation_output_root, session=resolved_session,
+        gate=phase_b, evidence=prospective_evidence, known_at=capture_retention.io_known_at(),
+        t0_snapshot_identity=((prospective_decision_snapshot or {}).get("artifact") or {}).get("snapshot_identity"))
+    checkpoints.finish()  # T0_CAPTURE_HANDLED (soft outcomes preserved)
+    thesis_t0 = run_thesis_t0_sidecar(root,resolved_session,prospective_decision_snapshot,enrichment,output_root=operation_output_root)
+    decision_packet = build_decision_packet(
+        root, resolved_session, opportunity=operation.get("opportunity"), enrichment=enrichment,
+        artifact_root=artifact_root,
+        packet=operation.get("canonical_decision_packet"),
+    )
+    checkpoints.finish()  # DECISION_PACKET_READY
+    prospective_kwargs: dict[str, Any] = {}
+    tier_kwargs: dict[str, Any] = {}
+    if operation_output_root != root:
+        prospective_kwargs["output_root"] = operation_output_root
+        tier_kwargs["output_root"] = operation_output_root
+    prospective = run_prospective_collection(
+        root, resolved_session, artifact_root=artifact_root, **prospective_kwargs,
+    )
+    # Distinct from `prospective` above (Decision-Workspace research-thesis admission):
+    # this is TACTICAL_REVERSAL_SHADOW_PROBE_POLICY_V1's own A/B observation collector.
+    # Both are post-hoc and non-blocking -- a failure in either never revises the Daily
+    # Producer result already finalized above.
+    tactical_shadow_collection = run_tactical_reversal_shadow_collection(
+        root, resolved_session, artifact_root=artifact_root,
+        **({"output_root": operation_output_root} if operation_output_root != root else {}),
+    )
+    checkpoints.finish()  # PROSPECTIVE_COLLECTION_HANDLED
+    tiers = build_tiered_bundle(
+        root, resolved_session, acquisition=acquisition, producer_result=producer_result,
+        decision_packet=decision_packet, prospective=prospective, enrichment=enrichment,
+        producer_head=producer_head, consumer_head=consumer_head, prospective_snapshot=prospective_decision_snapshot,
+        artifact_root=artifact_root,
+        runtime_release=runtime_release,
+        **tier_kwargs,
+        **({"thesis_t0":thesis_t0} if thesis_t0.get("status")!="NOT_APPLICABLE" else {}),
+    )
+
+    checkpoints.finish()  # HANDOFF_READY
+    # CANONICAL_DAILY_POST_HANDOFF_AND_OWNER_WORKFLOW_RECONCILIATION_V1: run every
+    # already-approved post-handoff observer now that build_tiered_bundle has written
+    # today's canonical handoff binding. Same shared helper the diagnostic
+    # run_canonical_post_close() uses, so normal Daily and that diagnostic path cannot
+    # silently diverge again. CURRENT_FOREIGN_FLOW_DAILY_ACTIVATION_V1: production Daily
+    # now enables the already-productionized current-foreign-flow collector for the exact
+    # qualified session. Failure degrades in the observer itself and never revises the
+    # already-completed Daily Producer result or blocks publication below.
+    post_handoff_observers = run_post_handoff_observers(
+        root, runtime_root, resolved_session, tiers,
+        enable_current_foreign_flow_live=NORMAL_DAILY_ENABLE_CURRENT_FOREIGN_FLOW_LIVE,
+        **({"progress_callback": progress_callback} if progress_callback is not None else {}),
+    )
+    checkpoints.finish()  # OBSERVERS_HANDLED
+    post_handoff_prospective_decision_feedback = run_post_handoff_prospective_outcome_feedback(
+        root, resolved_session, output_root=operation_output_root,
+    )
+    checkpoints.finish()  # FEEDBACK_HANDLED
+    # CANONICAL_DAILY_OWNER_PUBLICATION_RESUME_AND_PRESENTATION_JOIN_V1: now that Signal
+    # Velocity / Flow-Price exist for this exact session, additively re-join the current-product
+    # projections (Workspace/Screener) with those now-available axes into a NEW artifact set --
+    # never the sealed Producer operation directory. Presentation-only: no IID recalculation, no
+    # policy mutation. Non-blocking.
+    post_handoff_presentation_projection = run_post_handoff_presentation_projection(
+        root, runtime_root, resolved_session,
+        producer_run_dir=producer_result.get("run_dir"), output_root=operation_output_root,
+        integrated_investment_decision_product=integrated_delivery,
+        **({"current_corporate_knowledge_overlay": enrichment["current_corporate_knowledge_overlay"]["artifact"]}
+           if not historical_compatibility and enrichment.get("current_corporate_knowledge_overlay") else {}),
+    )
+    # Overlay the already-promoted runtime-served Workspace/Screener bytes with the enriched
+    # presentation projection above -- so the same-session Signal Velocity/Flow-Price that
+    # normal Daily can now genuinely produce actually reaches the Dashboard/AI surfaces that
+    # read from runtime_root, not merely a side artifact nothing consumes. Sealed Producer
+    # evidence is never touched; a no-op/failure here silently leaves the sealed (pre-handoff)
+    # bytes already promoted by materialize_canonical_runtime_release above.
+    post_handoff_runtime_restage = restage_runtime_with_presentation_projection(
+        runtime_root, root, post_handoff_presentation_projection,
+    )
+
+    publication: dict[str, Any] | None = None
+    state = STATE_LOCAL_COMPLETE
+    if complete_publication:
+        try:
+            publication = invoke_release_orchestrator_complete_publication(
+                resolved_session,
+                runtime_root=runtime_root,
+                producer_root=root,
+                web_dir=web_dir,
+                runner=publication_runner,
+            )
+        except PublicationCompletionError as exc:
+            local = {
+                "phase_a": phase_a,
+                "phase_b": phase_b,
+                "acquisition": acquisition,
+                "producer_result": {"status": producer_result.get("status"), "run_identity": producer_result.get("run_identity")},
+                "runtime_release": runtime_release,
+                "trusted_subset": {"session": trusted_session, "ready": True},
+            }
+            raise CanonicalDailyOperationError(
+                "BLOCKED_PUBLICATION_" + str(exc.code),
+                str(exc),
+                local_state=local,
+            ) from exc
+        except CanonicalDailyOperationError:
+            raise
+        except Exception as exc:
+            raise CanonicalDailyOperationError(
+                "BLOCKED_PUBLICATION_ORCHESTRATOR_EXIT",
+                f"{type(exc).__name__}:{exc}",
+                local_state={"runtime_release": runtime_release, "trusted_subset": {"session": trusted_session}},
+            ) from exc
+        if str(publication.get("publication_state") or "").upper() == STATE_PUBLISHED:
+            state = STATE_PUBLISHED
+        elif publication.get("orchestrator_exit") == 0 and complete_publication:
+            state = STATE_PUBLISHED
+            publication.setdefault("publication_state", STATE_PUBLISHED)
+
+    producer_status = "COMPLETED" if producer_result.get("run_identity") or producer_result.get("status") in {"COMPLETED", "PASS"} else str(producer_result.get("status"))
+    identity_payload = {
+        "contract_version": CONTRACT_VERSION,
+        "session": resolved_session,
+        "phase_a_identity": phase_a.get("gate_identity"),
+        "phase_b_identity": phase_b.get("gate_identity"),
+        "acquisition_identity": snapshot.get("snapshot_identity") or snapshot.get("artifact_identity"),
+        "daily_producer_run_identity": producer_result.get("run_identity"),
+        "daily_session_shadow_recommendation_identity": shadow_autosourcing.get("artifact_identity"),
+        "decision_packet_identity": (decision_packet or {}).get("artifact_identity"),
+        "prospective_identity": ((prospective or {}).get("snapshot") or {}).get("snapshot_id"),
+        "prospective_decision_snapshot_identity": ((prospective_decision_snapshot or {}).get("artifact") or {}).get("snapshot_identity"),
+        "runtime_session": runtime_session,
+        "trusted_session": trusted_session,
+        "publication_state": state,
+        "authority_effect": AUTHORITY_EFFECT,
+    }
+    digest = stable_id(identity_payload)
+    operation_identity = f"canonical_daily_operation:{digest}"
+
+    # CANONICAL_DAILY_OWNER_PUBLICATION_RESUME_AND_PRESENTATION_JOIN_V1 section 4: a dedicated,
+    # additive record of the presentation-binding outcome -- never folded into `persistable`
+    # below (that immutable record deliberately excludes these volatile post-handoff fields).
+    # This is what the owner journal / release-ready runtime materializer / AI handoff consume
+    # to know whether a presentation projection was genuinely collected, never merely "expected
+    # to have been attempted". Best-effort: must never revise or block the already-sealed Daily
+    # result above.
+    try:
+        from post_handoff_presentation_attestation import write_attestation
+        write_attestation(
+            operation_output_root, resolved_session,
+            presentation_projection=post_handoff_presentation_projection,
+            signal_velocity=post_handoff_observers.get("multi_session_signal_velocity"),
+            current_foreign_flow_enrichment=post_handoff_observers.get("current_foreign_flow_enrichment"),
+            flow_price_divergence=post_handoff_observers.get("flow_price_divergence_shadow"),
+            post_handoff_prospective_decision_feedback=post_handoff_prospective_decision_feedback,
+            runtime_restage=post_handoff_runtime_restage,
+            daily_producer_run_identity=producer_result.get("run_identity"),
+            canonical_daily_operation_identity=operation_identity,
+            **({"thesis_evidence":post_handoff_observers["thesis_evidence"]} if "thesis_evidence" in post_handoff_observers else {}),
+        )
+    except Exception:
+        pass
+
+    run_dir = output_root / "canonical-daily-operation-v1" / resolved_session / f"op-{digest}"
+    record = {
+        "schema_version": CONTRACT_VERSION,
+        "session": resolved_session,
+        "requested_at": instant.isoformat(),
+        "daily_operation_state": state,
+        "session_gate_semantic": READY_SEMANTIC if state in {STATE_PUBLISHED, STATE_LOCAL_COMPLETE} else None,
+        "session_gate": READY_SEMANTIC,
+        "phase_a": {
+            "identity": phase_a.get("gate_identity"),
+            "status": phase_a.get("attempt_gate_status"),
+            "resolved_session": phase_a.get("resolved_session"),
+            "automatic_non_trading_resolution": phase_a.get("automatic_non_trading_resolution"),
+        },
+        "phase_b": {
+            "identity": phase_b.get("gate_identity"),
+            "status": phase_b.get("completion_gate_status"),
+            "ready_semantic": phase_b.get("ready_semantic"),
+        },
+        "market_acquisition_owner": MARKET_ACQUISITION_OWNER,
+        "capability_first_collector_invoked": False,
+        "canonical_p3f9b_invoked": True,
+        "market_acquisition_attempts": acquisition_calls,
+        "acquisition": {
+            "resolved_completed_session": acquisition.get("resolved_completed_session"),
+            "snapshot_identity": snapshot.get("snapshot_identity") or snapshot.get("artifact_identity"),
+            "coverage": acquisition.get("coverage"),
+            "eligibility": acquisition.get("eligibility"),
+            "dnse_provider_health_state": snapshot.get("dnse_provider_health_state"),
+            "degraded_provider_recovery": snapshot.get("degraded_provider_recovery"),
+            "provider_contribution_counts": acquisition.get("provider_contribution_counts"),
+        },
+        "corporate_currency_rollforward": acquisition["corporate_currency_rollforward"].receipt() if acquisition.get("corporate_currency_rollforward") is not None else None,
+        "prospective_market_evidence": ({k: v for k, v in acquisition["prospective_market_evidence"].items()
+            if k not in {"capture", "official_verification", "calendar"}} if isinstance(acquisition.get("prospective_market_evidence"), Mapping) else
+            acquisition.get("prospective_market_evidence")),
+        "prospective_pit_capture_readiness": prospective_capture_readiness,
+        "registration": registration,
+        "freeze": freeze,
+        "daily_producer_status": producer_status,
+        "daily_producer_run_identity": producer_result.get("run_identity"),
+        "daily_producer_operation_identity": ((operation.get("manifest") or {}).get("operation_identity")
+                                              if isinstance(operation, Mapping) else None),
+        "daily_session_shadow_recommendation": dict(shadow_autosourcing),
+        "decision_packet_identity": (decision_packet or {}).get("artifact_identity"),
+        "prospective_cohort_identity": ((prospective or {}).get("snapshot") or {}).get("snapshot_id"),
+        "prospective_decision_snapshot": {
+            "status": (prospective_decision_snapshot or {}).get("status"),
+            "reason": (prospective_decision_snapshot or {}).get("reason"),
+            "identity": ((prospective_decision_snapshot or {}).get("artifact") or {}).get("snapshot_identity"),
+            "source_integrated_decision_identity": (
+                ((prospective_decision_snapshot or {}).get("artifact") or {})
+                .get("source_integrated_decision_artifact", {}).get("artifact_identity")
+            ),
+        },
+        "runtime_release_status": "READY" if runtime_release.get("ready") else "NOT_READY",
+        "runtime_release": runtime_release,
+        "macro_refresh": macro_refresh,
+        "macro_presentation_context_status": macro_presentation_context.get("status"),
+        "trusted_subset_status": "READY" if trusted.get("trusted_subset_ready") else "NOT_READY",
+        "trusted_subset": {
+            "session": trusted_session,
+            "trusted_subset_ready": trusted.get("trusted_subset_ready"),
+            "records_fingerprint": trusted.get("records_fingerprint"),
+        },
+        "publication": publication,
+        "tiers": {
+            "session_handoff_bundle": _rel(root, Path(tiers["bundle_dir"]) / "session_handoff_bundle.json") if isinstance(tiers, Mapping) and tiers.get("bundle_dir") else None,
+        },
+        "authority_effect": AUTHORITY_EFFECT,
+        "authority_boundaries": dict(AUTHORITY_BOUNDARIES),
+        "is_idempotent_replay": bool((acquisition.get("eligibility") or {}).get("reused_existing_eligible_artifact")),
+        "operation_identity": operation_identity,
+        "operation_directory": str(run_dir.as_posix()),
+        "producer_result": producer_result,
+        "decision_packet": decision_packet,
+        "prospective": prospective,
+        "prospective_decision_snapshot_detail": prospective_decision_snapshot,
+        "enrichment": enrichment,
+        # Excluded from `persistable`/idempotent-rerun comparison below, exactly like
+        # `prospective` above: its status can genuinely vary run-to-run (a transient
+        # subprocess hiccup, or a later run maturing more horizons) without that variance
+        # meaning the Daily production result itself changed. Embedding a volatile status
+        # inside the compared record would risk a spurious IMMUTABLE_OPERATION_RECORD_CONFLICT
+        # on an otherwise-identical rerun.
+        "tactical_reversal_shadow_collection": tactical_shadow_collection,
+        # Same exclusion rationale as `tactical_reversal_shadow_collection` above: these
+        # post-handoff observers are best-effort and their status can genuinely vary
+        # run-to-run (network/provider hiccups, newly matured cohorts) without meaning
+        # the Daily production result itself changed.
+        "post_handoff_observers": post_handoff_observers,
+        "post_handoff_prospective_decision_feedback": post_handoff_prospective_decision_feedback,
+        "post_handoff_presentation_projection": post_handoff_presentation_projection,
+        "post_handoff_runtime_restage": post_handoff_runtime_restage,
+    }
+    # PROVIDER_RUNTIME_ISOLATION_V1: both axes, stamped by the acquisition boundary. Added only when
+    # the snapshot carries them, so an idempotent replay of a pre-V1 operation keeps its immutable
+    # record byte-identical (and such a replay is then not M1-eligible).
+    if snapshot.get("provider_runtime_state") is not None:
+        record["acquisition"]["provider_runtime_state"] = snapshot.get("provider_runtime_state")
+        record["acquisition"]["dnse_quality_license"] = snapshot.get("dnse_quality_license")
+        record["operating_mode"] = operating_mode
+    persistable = {k: v for k, v in record.items() if k not in {
+        "producer_result", "decision_packet", "prospective", "prospective_decision_snapshot_detail", "enrichment",
+        "tactical_reversal_shadow_collection", "post_handoff_observers", "post_handoff_prospective_decision_feedback",
+        "post_handoff_presentation_projection", "post_handoff_runtime_restage", "prospective_pit_capture_readiness",
+    }}
+    persistable["lineage"] = {
+        "session_gate_phase_a": phase_a.get("gate_identity"),
+        "session_gate_phase_b": phase_b.get("gate_identity"),
+        "acquisition": snapshot.get("snapshot_identity") or snapshot.get("artifact_identity"),
+        "daily_producer": producer_result.get("run_identity"),
+        "daily_session_shadow_recommendation": shadow_autosourcing.get("artifact_identity"),
+        "decision_packet": (decision_packet or {}).get("artifact_identity"),
+        "prospective_cohort": ((prospective or {}).get("snapshot") or {}).get("snapshot_id"),
+        "prospective_decision_snapshot": ((prospective_decision_snapshot or {}).get("artifact") or {}).get("snapshot_identity"),
+        "runtime_release_session": runtime_session,
+        "trusted_subset_session": trusted_session,
+        "publication_attestation": None if not publication else publication.get("attestation_identity"),
+    }
+    existing = run_dir / "daily_operation_record.json"
+    if existing.is_file():
+        prior = json.loads(existing.read_text(encoding="utf-8"))
+        skip = {"is_idempotent_replay"}
+        comparable_prior = {k: v for k, v in prior.items() if k not in skip}
+        comparable_new = {k: v for k, v in persistable.items() if k not in skip}
+        if comparable_prior == comparable_new:
+            merged = dict(record)
+            merged.update(prior)
+            merged["is_idempotent_replay"] = True
+            checkpoints.finish()  # verified idempotent canonical record
+            return merged
+        raise CanonicalDailyOperationError("IMMUTABLE_OPERATION_RECORD_CONFLICT")
+    run_dir.mkdir(parents=True, exist_ok=True)
+    _write_json(run_dir / "phase_a_gate.json", phase_a)
+    _write_json(run_dir / "phase_b_gate.json", phase_b)
+    _write_json(existing, persistable)
+    checkpoints.finish()  # CANONICAL_RECORD_VERIFIED; publication (if requested) finished
+    return record
+
+
+def _rel(root: Path, path: Path) -> str:
+    try:
+        return path.resolve().relative_to(root.resolve()).as_posix()
+    except ValueError:
+        return path.as_posix()
+
+
+def parse_cli_args(argv: list[str] | None = None) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Canonical daily one-command operation.")
+    parser.add_argument("--runtime-root", default=None)
+    parser.add_argument("--session", default=None)
+    parser.add_argument("--workers", type=int, default=12)
+    parser.add_argument("--complete-publication", action="store_true")
+    parser.add_argument("--requested-at", default=None)
+    parser.add_argument("--working-dates-path", default=None)
+    parser.add_argument("--offline", action="store_true")
+    parser.add_argument("--allow-provider-probe", action="store_true")
+    parser.add_argument("--web-dir", default=None)
+    parser.add_argument("--out-dir", default=None)
+    return parser.parse_args(argv)
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = parse_cli_args(argv)
+    from runtime_paths import RUNTIME_ROOT_ENV, runtime_root as resolve_runtime_root
+
+    configured = args.runtime_root or None
+    root_path = resolve_runtime_root(configured) if configured or __import__("os").environ.get(RUNTIME_ROOT_ENV) else None
+    if root_path is None:
+        print("[canonical_daily_operation] --runtime-root or STOCK_LOOKUP_RUNTIME_ROOT is required", file=sys.stderr)
+        return 2
+    if not Path(root_path).is_dir():
+        print(f"[canonical_daily_operation] runtime root does not exist: {root_path}", file=sys.stderr)
+        return 2
+    probe = bool(args.allow_provider_probe) and not args.offline
+    if not args.offline and args.working_dates_path is None and not args.allow_provider_probe:
+        probe = True
+    instant = parse_requested_at(args.requested_at) if args.requested_at else vn_now()
+    try:
+        record = run_canonical_daily_operation(
+            ROOT,
+            Path(root_path),
+            args.session,
+            now=instant,
+            workers=args.workers,
+            complete_publication=args.complete_publication,
+            working_dates_evidence=load_json_mapping(args.working_dates_path) if args.working_dates_path else None,
+            working_dates_fetcher=_working_dates_probe if probe else None,
+            allow_provider_probe=probe,
+            web_dir=Path(args.web_dir) if args.web_dir else None,
+            out_dir=args.out_dir,
+        )
+    except CanonicalDailyOperationError as exc:
+        print(f"DAILY_OPERATION_STATE={exc.stage}")
+        print(f"STAGE={exc.stage}")
+        print(f"REASON={exc}")
+        print(format_owner_daily_status(exc, now=instant, producer_root=ROOT))
+        return 2 if exc.stage in NOT_READY_STAGES else 1
+    print_daily_operation_handoff(record)
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -1,0 +1,26 @@
+{
+  "contract_version": "evidence_valuation_orchestration_source_transition/v1",
+  "workstream": "STOCKLOOKUP_20261020_EVIDENCE_VALUATION_AND_PRODUCT_CORRECTIVE",
+  "base_commit": "de90c6b94c7bb2377bedd7e2a1c809498d22926a",
+  "exception_scope": "EXACT_TWO_FILE_OWNER_APPROVED_NOT_A_GENERAL_TRANSITION",
+  "release_authority": "NOT_GRANTED",
+  "admitted_sources": [
+    "canonical_daily_operation.py",
+    "canonical_post_close_pipeline.py"
+  ],
+  "sources": {
+    "canonical_daily_operation.py": {
+      "archive": "tests/fixtures/evidence_valuation_v1_sources/canonical_daily_operation.py.txt",
+      "base_commit": "de90c6b94c7bb2377bedd7e2a1c809498d22926a",
+      "prior_sha256_lf": "a4151d55564105df60b29e49036e35ae98287366daba1dc5f96444da3b31b730",
+      "active_sha256_lf": "487a0b91b4ef8699bdacdd46111a12fb40b4731994acf8e83b80540631daf829"
+    },
+    "canonical_post_close_pipeline.py": {
+      "archive": "tests/fixtures/evidence_valuation_v1_sources/canonical_post_close_pipeline.py.txt",
+      "base_commit": "de90c6b94c7bb2377bedd7e2a1c809498d22926a",
+      "prior_sha256_lf": "db6e78370b57739888211d3c4381206daed7a542ac7123416bb0870c2427236a",
+      "active_sha256_lf": "83b984f28bcded8ce3c1ecc395e5ae31f7b48d7cecf9d944d6594b0ad3cfdbe3"
+    }
+  },
+  "compatibility": "Historical diagnostics read the archived origin/main bytes only. Active execution and E4 code digests hash live sources. A historical receipt cannot adopt the pre-transition digest. This transition admits no other frozen source."
+}
