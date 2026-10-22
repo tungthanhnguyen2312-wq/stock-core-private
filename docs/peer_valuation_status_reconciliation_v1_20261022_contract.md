@@ -1,6 +1,9 @@
-# Peer-valuation status reconciliation (2026-10-22)
+# Peer-valuation status reconciliation V1 (2026-10-22)
 
-Milestone `PEER_VALUATION_STATUS_RECONCILIATION_V1_20261022`, Owner-admitted 2026-10-22. Producer only.
+Milestone `PEER_VALUATION_STATUS_RECONCILIATION_V1_20261022`, Owner-admitted 2026-10-22 on release
+`b473321ba01d2654ada196f259a8ad8f92ff6bd8`. Authority effect: **NONE**. Producer only; no Daily run,
+no production write. Controlling valuation authority is unchanged: [AUTHORITY.md](AUTHORITY.md) Valuation
+row and [current_state_relative_valuation_contract.md](current_state_relative_valuation_contract.md).
 
 ## Defect
 `sector_aware_relative_research` never evaluates valuation; its fixed `VALUATION_PEER_CONTEXT_UNAVAILABLE`
