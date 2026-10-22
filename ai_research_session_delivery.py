@@ -14,7 +14,9 @@ import json
 from typing import Any, Mapping
 
 from stocklookup_core.evidence.field_identity import stable_id
-from stocklookup_core.decision.current_daily_decision_research_product import ABSENT_OWNER_FOCUS_STATUS, is_present_research_card
+from stocklookup_core.decision.current_daily_decision_research_product import (
+    ABSENT_OWNER_FOCUS_STATUS, INTEGRATED_PEER_VERDICTS, is_present_research_card, reconcile_card_peer_valuation,
+)
 from owner_research_focus import load_owner_research_focus, owner_focus_tickers
 from stocklookup_core.financial.financial_analysis_product_projection import context_for_ticker, validate_product_context
 
@@ -540,7 +542,9 @@ def _owner_focus_contexts(product: Mapping[str, Any], integrated_overlay: Mappin
         # projection as every other scoped context (the record exists for the whole universe,
         # including an owner-focus name without a Product V2 card).
         if integrated_overlay is not None:
-            rows[-1]["integrated_decision_v1"] = copy.deepcopy((integrated_overlay.get("records") or {}).get(ticker))
+            record = (integrated_overlay.get("records") or {}).get(ticker)
+            rows[-1] = reconcile_card_peer_valuation(rows[-1], record)
+            rows[-1]["integrated_decision_v1"] = copy.deepcopy(record)
     return rows
 
 
@@ -637,6 +641,19 @@ def build_dashboard_projection(
         # value itself comes only from the rich Integrated Decision record (and,
         # when supplied, the Daily Integrated Decision Brief's transition view).
         watchlist_tickers = list((product.get("watchlist") or {}).get("tickers") or [])
+        # Product V2 cards are built before the Integrated Decision; their sector-aware
+        # "peer valuation unavailable" statement must not contradict a governed verdict
+        # shown for the same ticker on the same page.
+        records = integrated_decision.get("records") or {}
+        projection["ticker_cards"] = {
+            ticker: reconcile_card_peer_valuation(card, records.get(ticker))
+            for ticker, card in projection["ticker_cards"].items()
+        }
+        verdicts = sum(((record or {}).get("valuation_context_summary") or {}).get("peer_relative_state") in INTEGRATED_PEER_VERDICTS
+                       for record in records.values() if isinstance(record, Mapping))
+        gaps = projection["risk_data_gaps"]
+        if isinstance(gaps, dict) and isinstance(gaps.get("valuation_peer_context_unavailable"), int):
+            gaps["valuation_peer_context_unavailable"] = max(0, gaps["valuation_peer_context_unavailable"] - verdicts)
         projection["decision_card_v1"] = {
             ticker: _decision_card(ticker, record, daily_integrated_brief,
                                   source_session=integrated_decision.get("session"))
@@ -716,8 +733,11 @@ def build_delivery(operation: Mapping[str, Any], inputs: Mapping[str, Any], *, o
         }
         # Existing Product V2 contexts retain their original keys.  The rich
         # surface is deliberately additive and versioned on each available card.
-        for ticker, context in primary["ticker_research_contexts"].items():
-            context["integrated_decision_v1"] = copy.deepcopy((integrated_overlay["records"] or {}).get(ticker))
+        for ticker in list(primary["ticker_research_contexts"]):
+            record = (integrated_overlay["records"] or {}).get(ticker)
+            context = reconcile_card_peer_valuation(primary["ticker_research_contexts"][ticker], record)
+            context["integrated_decision_v1"] = copy.deepcopy(record)
+            primary["ticker_research_contexts"][ticker] = context
     if opportunity_comparison_request is not None:
         from current_evidence_bound_scenario import bind_integrated_scenarios
         from stocklookup_core.research.evidence_aware_candidate_comparison import build_integrated_comparison

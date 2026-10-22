@@ -15,11 +15,32 @@
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "THESIS_BASED_OPPORTUNITY_DISCOVERY_V1",
-    "state": "COMPLETE"
+    "milestone": "PEER_VALUATION_STATUS_RECONCILIATION_V1_20261022",
+    "state": "ACTIVE"
   },
   "queued_next": [],
   "milestones": [
+    {
+      "milestone_id": "PEER_VALUATION_STATUS_RECONCILIATION_V1_20261022",
+      "state": "ACTIVE",
+      "starting_checkpoint": "b473321ba01d2654ada196f259a8ad8f92ff6bd8",
+      "candidate_branch": "fix/peer-valuation-status-reconciliation-20261022",
+      "dependencies": [
+        "THESIS_BASED_OPPORTUNITY_DISCOVERY_V1"
+      ],
+      "unlocks": [],
+      "owner_authorized": true,
+      "owner_override": "Owner 2026-10-22: admit bounded peer-valuation status reconciliation. Producer-only: stop presenting the sector-aware layer's not-evaluated valuation status as a record-level data gap; reconcile card valuation status with integrated_decision_v1 peer verdict at AI delivery and Dashboard projection; strict-valuation and shadow-proxy fail-closed rules unchanged; no new verdict, authority, Daily run or production write.",
+      "authority_effect": "NONE",
+      "source_doc": "docs/peer_valuation_status_reconciliation_v1_20261022_contract.md",
+      "state_history": [
+        "DEFERRED",
+        "ACTIVE"
+      ],
+      "checkpoint": null,
+      "terminal_disposition": null,
+      "notes": "Owner 2026-10-22: admit bounded peer-valuation status reconciliation. Producer-only: stop presenting the sector-aware layer's not-evaluated valuation status as a record-level data gap; reconcile card valuation status with integrated_decision_v1 peer verdict at AI delivery and Dashboard projection; strict-valuation and shadow-proxy fail-closed rules unchanged; no new verdict, authority, Daily run or production write."
+    },
     {
       "milestone_id": "THESIS_BASED_OPPORTUNITY_DISCOVERY_V1",
       "state": "COMPLETE",
