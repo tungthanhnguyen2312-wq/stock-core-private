@@ -196,6 +196,27 @@ def _period_label_warning(row: Mapping[str, Any]) -> str | None:
     return None
 
 
+def _calendar_quarter_end(year: int, quarter: int) -> str:
+    return f"{year}-{('03-31', '06-30', '09-30', '12-31')[quarter - 1]}"
+
+
+def _period_end_agrees(row: Mapping[str, Any], arithmetic_period: str) -> bool:
+    """Accept a missing end, the arithmetic period, or that quarter's calendar end.
+
+    A qualified KBS row keeps its raw label on ``period_end``. That label is
+    provenance. It is not a second fiscal date and it is not turned into one.
+    """
+    end = row.get("period_end")
+    if end in (None, "", arithmetic_period):
+        return True
+    parsed = _quarter(arithmetic_period)
+    if parsed and end == _calendar_quarter_end(*parsed):
+        return True
+    qualified = row.get("qualified_normalized_period")
+    native = str(row.get("native_period_label") or "")
+    return bool(qualified) and str(qualified) == arithmetic_period and end == native
+
+
 def _series_index(rows: Sequence[Mapping[str, Any]], metric: str, semantic: str,
                   key: Any = None) -> dict[tuple[str, ...], dict[str, Mapping[str, Any]]]:
     """``{series key: {period label: row}}`` over usable rows, one row per semantic observation.
@@ -828,9 +849,18 @@ def _ratio_series(rows: Sequence[Mapping[str, Any]], numerator_metric: str, nume
         for label in set(numerators[key]) & set(denominators[key]):
             if subject_feature is not None and label > subject_period:
                 continue
-            denominator = denominators[key][label]["reported_value"]
+            numerator_row = numerators[key][label]
+            denominator_row = denominators[key][label]
+            # A raw KBS quarter label is not an arithmetic period. Same-column
+            # ratios may still read the value; a trajectory or history series may not.
+            if _kbs_income_unverified(numerator_row) or _kbs_income_unverified(denominator_row):
+                continue
+            arithmetic = _arithmetic_quarter(numerator_row) or _arithmetic_quarter(denominator_row)
+            if arithmetic and f"{arithmetic[0]}-Q{arithmetic[1]}" != label:
+                continue
+            denominator = denominator_row["reported_value"]
             if denominator != 0:
-                series[label] = numerators[key][label]["reported_value"] / denominator
+                series[label] = numerator_row["reported_value"] / denominator
         candidate_rank = (len(series), max(series) if series else "")
         best_rank = (len(best_series), max(best_series) if best_series else "")
         if candidate_rank > best_rank:
@@ -942,7 +972,8 @@ def build_ratio_trajectories(rows, features):
 
     Only the contiguous suffix ending at the actual subject can establish persistence.
     Missing quarters, conflicting revisions and nonpositive denominators break that suffix.
-    Flow inputs must already be standalone quarters qualified by the existing flow bridge.
+    Margin QoQ and YoY use the qualified arithmetic period. A raw KBS income label
+    is refused with ``KBS_PERIOD_IDENTITY_UNVERIFIED`` and cannot establish a direction.
     """
     result = {}
     for fid, (numerator, denominator, semantic) in TRAJECTORY_INPUTS.items():
@@ -965,6 +996,10 @@ def build_ratio_trajectories(rows, features):
         matches = [key for key in set(ns) & set(ds) if subject in ns[key] and subject in ds[key]
             and len(sources) == 2 and _provenance(ns[key][subject]) == sources[0]
             and _provenance(ds[key][subject]) == sources[1]]
+        subject_operands = [row for key in matches for row in (ns[key].get(subject), ds[key].get(subject)) if row]
+        if any(_kbs_income_unverified(row) for row in subject_operands):
+            entry["reason_codes"] = [KBS_PERIOD_IDENTITY_UNVERIFIED]
+            continue
         if not series or len(matches) != 1 or not _quarter(subject):
             entry["reason_codes"] = ["QUALIFIED_SUBJECT_ANCHORED_QUARTER_SERIES_UNAVAILABLE"]
             continue
@@ -973,21 +1008,24 @@ def build_ratio_trajectories(rows, features):
         valid = {}
         for period, value in sorted(series.items()):
             n, d = ns[key][period], ds[key][period]
-            if not _quarter(period) or not math.isfinite(value) or d["reported_value"] <= 0:
+            if _kbs_income_unverified(n) or _kbs_income_unverified(d):
+                entry["reason_codes"].append(KBS_PERIOD_IDENTITY_UNVERIFIED)
+                continue
+            arithmetic = _arithmetic_quarter(n) or _arithmetic_quarter(d)
+            arithmetic_period = f"{arithmetic[0]}-Q{arithmetic[1]}" if arithmetic else None
+            if arithmetic_period != period or not math.isfinite(value) or d["reported_value"] <= 0:
                 entry["reason_codes"].append("INVALID_PERIOD_OR_NONPOSITIVE_DENOMINATOR_EXCLUDED")
                 continue
-            year, quarter = _quarter(period)
-            expected_end = f"{year}-{('03-31', '06-30', '09-30', '12-31')[quarter-1]}"
-            ends = [r.get("period_end") for r in (n,d)]
-            # A supplied calendar end must agree with the reporting-quarter label.
-            # Missing ends stay missing; a label is never converted into a fact date.
-            if any(end not in (None, "", period, expected_end) for end in ends):
+            # A supplied calendar end must agree with the arithmetic quarter.
+            # Missing ends stay missing; a raw label is never converted into a fact date.
+            if not _period_end_agrees(n, arithmetic_period) or not _period_end_agrees(d, arithmetic_period):
                 entry["reason_codes"].append("CONFLICTING_OR_NONCALENDAR_PERIOD_END_EXCLUDED")
                 continue
             valid[period] = value
-            entry["observations"].append({"period": period, "value": value,
+            qualified_period = bool(n.get("qualified_normalized_period") or d.get("qualified_normalized_period"))
+            entry["observations"].append({"period": arithmetic_period, "value": value,
                 "period_end": [n.get("period_end"), d.get("period_end")],
-                "period_identity_basis": "REPORTED_QUARTER_LABEL_NO_DATE_INFERENCE",
+                "period_identity_basis": "QUALIFIED_ARITHMETIC_PERIOD" if qualified_period else "REPORTED_QUARTER_LABEL_NO_DATE_INFERENCE",
                 "period_semantic": semantic, "source_provenance": [_provenance(n), _provenance(d)]})
         if subject not in valid:
             entry["reason_codes"].append("SUBJECT_DENOMINATOR_NOT_POSITIVE" if ds[key][subject]["reported_value"] <= 0
