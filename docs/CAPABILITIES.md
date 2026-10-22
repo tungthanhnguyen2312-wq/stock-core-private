@@ -169,7 +169,7 @@ valuation peer verdicts retain their upstream scope. Default Daily behavior is u
 [CI extension](CI_AND_DEPENDENCY_TIERS.md): G2/business/quarterly mandatory; 367 files nonblocking; release via native lanes.
 
 ### 12. Current financial evidence
-- Local PR168/PR169 integration: repeated-head KBS income payloads fail closed through the semantic/flow/fallback chain; six retained PNJ/NVL quarterly rows remain in a separate `UNREVIEWED_QUARTERLY` research file. Reviewed overlay, PIT, strict valuation and strategy authority are unchanged. [Period guard](kbs_quarterly_income_period_alignment_v1_contract.md); [tier limits](official_unreviewed_quarterly_statement_intake_v1_contract.md). Not a production activation.
+- PR168/169 local: tainted KBS periods blocked; six unreviewed research rows remain separate. Authority unchanged; [release gate](ACTIVE_STATE.md).
 - Local projection checkpoint: the frozen August-23 baseline remains immutable. Session
   projections add qualified PNJ/VRE 2026-H1 revenue/profit and three PVD USD income fields
   as exact-field official facts. USD remains context only, excluded from the VND citation

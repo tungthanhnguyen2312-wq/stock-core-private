@@ -7,8 +7,9 @@ Facts: [ACTIVE_STATE.md](ACTIVE_STATE.md).
 
 ## NOW — EXISTING FINANCIAL QUARTERLY CORRECTIVE INTEGRATION (PR168 / PR169)
 
-Ratio, divergence, multi-period, sector-relative, comparison and discovery research
-(PR167 [comparison](integrated_investment_opportunity_comparison_v1_contract.md)/[discovery](thesis_opportunity_discovery_v1_contract.md)) is released at `561c6739`; related PR176 and PR177 are also merged. Existing [PR168 period guards](kbs_quarterly_income_period_alignment_v1_contract.md) and [PR169 research-tier intake](official_unreviewed_quarterly_statement_intake_v1_contract.md) are integrated locally on `7a5195de`; Owner remote release remains gated. This is completion of those existing corrections, not a new milestone. Machine state is unchanged; no automatic successor, Daily, evidence write or authority promotion.
+PR167/176/177 released. Existing PR168/169 corrections integrated on `7a5195de`;
+Owner remote release gated. See [contracts and status](ACTIVE_STATE.md).
+No new milestone, machine-state admission, production or authority change.
 
 ## PRIOR — STOCKLOOKUP_PRODUCER_DEEP_SIMPLIFICATION (RELEASED PR146)
 
