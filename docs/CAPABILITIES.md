@@ -169,6 +169,7 @@ valuation peer verdicts retain their upstream scope. Default Daily behavior is u
 [CI extension](CI_AND_DEPENDENCY_TIERS.md): G2/business/quarterly mandatory; 367 files nonblocking; release via native lanes.
 
 ### 12. Current financial evidence
+- PR168/169 local: tainted KBS periods blocked; six unreviewed research rows remain separate. Authority unchanged; [release gate](ACTIVE_STATE.md).
 - Local projection checkpoint: the frozen August-23 baseline remains immutable. Session
   projections add qualified PNJ/VRE 2026-H1 revenue/profit and three PVD USD income fields
   as exact-field official facts. USD remains context only, excluded from the VND citation

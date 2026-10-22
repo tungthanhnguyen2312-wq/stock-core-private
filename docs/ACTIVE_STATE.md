@@ -28,7 +28,7 @@ Kinds: **CURRENT FACT** (verified), **HOST-LOCAL** (untracked; re-verify),
 **BLOCKED**, **DEFERRED**, **HISTORICAL**.
 
 ## 1. The operational gate
-- **PR167 OPEN — financial research stack** ([comparison](integrated_investment_opportunity_comparison_v1_contract.md), [discovery](thesis_opportunity_discovery_v1_contract.md)): `ead8ef27`…`53b4a21c` on main `9fefb535`; retained acceptance; Owner merge gate. VN30 ([PR147](vn30_financial_valuation_research_scaleout_v1_contract.md), `096b8f16`) is complete.
+- **PR167/176/177 RELEASED.** PR168 [period guard](kbs_quarterly_income_period_alignment_v1_contract.md) and PR169 [unreviewed tier](official_unreviewed_quarterly_statement_intake_v1_contract.md) integrated on `7a5195de`; Owner source release gated. Research only; no production or authority change.
 - **[Native releases](parallel_domain_development_control_plane_v1_contract.md):** declaration correction; explicit coupled source review.
 - **RELEASED / VALIDATED SOURCE WAVE 2026-10-14:** PR145 released at `f582bfab80dac6d206083a0bd4a0ba57db199691`; all five post-merge jobs PASS (38491150319). Native rev93 admits Codex lane `STOCKLOOKUP_PRODUCER_DEEP_SIMPLIFICATION_20261014`: six existing financial/valuation computation owners, exact leases and output parity. Implementation validated: 630 tests PASS, 12 retained-data cases absent in this clean worktree; native and hosted exact-head gates govern release disposition. Conditional validated source push/PR/merge authorized; no Daily, production or authority/evidence changes. PNJ/FPT unadmitted; Oct13 seals unchanged.
 - [Oct13](daily_20261013_handoff_route_recovery_contract.md).
