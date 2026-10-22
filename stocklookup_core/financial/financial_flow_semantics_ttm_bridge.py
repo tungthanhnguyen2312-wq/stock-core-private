@@ -92,7 +92,7 @@ def qualify_proven_kbs_income_period(rows: Sequence[Mapping[str, Any]]) -> list[
     output = [dict(row) for row in rows]
     groups: dict[tuple, list[dict[str, Any]]] = defaultdict(list)
     for row in output:
-        if (row.get("ticker") == "HPG" and row.get("provider") == "KBS"
+        if (not row.get("ttm_blocker") and row.get("ticker") == "HPG" and row.get("provider") == "KBS"
                 and row.get("statement_family") == "income_statement"
                 and row.get("canonical_metric") in HPG_KBS_FY2025_ANCHORS):
             groups[(row.get("canonical_metric"), row.get("statement_scope"),
@@ -147,6 +147,53 @@ def refuse_duplicate_fiscal_period(rows: Sequence[Mapping[str, Any]]) -> dict[st
     return None
 
 
+KBS_PERIOD_ALIGNMENT_BLOCKER = "KBS_DUPLICATE_PERIOD_HEAD_ALIGNMENT_UNVERIFIED"
+_DUPLICATE_HEAD_CONFLICT = "restated_period_column_disagrees"
+
+
+def _kbs_income_payload(row: Mapping[str, Any]) -> tuple[str, str] | None:
+    lineage = row.get("source_lineage") or {}
+    if lineage.get("provider") != "KBS" or row.get("statement_family") != "income_statement":
+        return None
+    return str(row.get("ticker")), str(lineage.get("source_file") or lineage.get("source_sha256") or "")
+
+
+def misaligned_kbs_income_payloads(rows: Sequence[Mapping[str, Any]]) -> set[tuple[str, str]]:
+    """KBS quarterly income payloads whose period heads repeat.
+
+    Retained official anchors (HPG audited FY2025 to the VND; NVL and PVD reviewed Q2/2026
+    comparatives) show that once a KBS response repeats a period head, *every* column of
+    that payload can carry another quarter's values, not only the duplicated one.
+    """
+    return {key for row in rows if (key := _kbs_income_payload(row))
+            and any((c or {}).get("kind") == _DUPLICATE_HEAD_CONFLICT for c in row.get("source_conflicts") or [])}
+
+
+def gate_kbs_period_alignment(rows: Sequence[Mapping[str, Any]]) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    """Fail closed: standalone-quarter flows from a misaligned KBS payload lose duration.
+
+    Values, provenance and the original semantic state are preserved on the row; only the
+    duration claim is withdrawn so no margin, QoQ, YoY or TTM is built on a wrong period.
+    """
+    bad = misaligned_kbs_income_payloads(rows)
+    gated, affected = [], Counter()
+    for row in rows:
+        key = _kbs_income_payload(row)
+        if key in bad and KBS_PERIOD_ALIGNMENT_BLOCKER not in (row.get("blocker_reason_codes") or []):
+            row = dict(row)
+            row["period_alignment_gate"] = {"original_period_semantic_state": row.get("period_semantic_state"),
+                                            "original_research_semantic_state": row.get("research_semantic_state"),
+                                            "reason": KBS_PERIOD_ALIGNMENT_BLOCKER}
+            if row.get("period_semantic_state") == "STANDALONE_QUARTER":
+                row["period_semantic_state"] = "UNKNOWN_DURATION"
+                affected[row.get("canonical_metric")] += 1
+            row["research_semantic_state"] = "RESEARCH_SEMANTIC_BLOCKED_OR_BOUNDED"
+            row["blocker_reason_codes"] = sorted(set(row.get("blocker_reason_codes") or []) | {KBS_PERIOD_ALIGNMENT_BLOCKER})
+        gated.append(row)
+    return gated, {"misaligned_payloads": len(bad), "misaligned_tickers": sorted({t for t, _ in bad}),
+                   "gated_rows_by_metric": dict(sorted(affected.items())), "reason": KBS_PERIOD_ALIGNMENT_BLOCKER}
+
+
 def flow_semantics(fact: Mapping[str, Any]) -> dict[str, Any]:
     """Classify one flow fact from retained explicit evidence only.
 
@@ -162,6 +209,9 @@ def flow_semantics(fact: Mapping[str, Any]) -> dict[str, Any]:
         "source_sha256": fact.get("source_sha256"), "method": "NONE_SEMANTICS_UNRESOLVED",
         "evidence": "retained_canonical_fact_fields", "reason": "FLOW_PERIOD_BASIS_UNKNOWN",
     }
+    if fact.get("ttm_blocker") == KBS_PERIOD_ALIGNMENT_BLOCKER:
+        result["reason"] = KBS_PERIOD_ALIGNMENT_BLOCKER
+        return result
     # VCI's retained Q label/yearReport/lengthReport fields do not establish a flow
     # duration.  Not even an incidental copied flow-basis field may bypass the separate
     # cash-flow resolver contract below.
@@ -566,6 +616,7 @@ def facts_from_structured_semantic_rows(rows: Sequence[Mapping[str, Any]]) -> di
     ``lengthReport`` remains merely copied metadata and never receives a duration basis.
     The only cash-flow exception is the already-emitted independent resolver method.
     """
+    rows, _ = gate_kbs_period_alignment(rows)
     output: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for row in rows:
         ticker = str(row.get("ticker") or "").upper()
@@ -584,6 +635,8 @@ def facts_from_structured_semantic_rows(rows: Sequence[Mapping[str, Any]]) -> di
                 "currency": unit.get("currency"), "scale": unit.get("scale"),
                 "source_sha256": lineage.get("source_sha256"), "source_file": lineage.get("source_file"),
                 "fact_id": lineage.get("fact_id"), "provider_report_metadata": dict(row.get("provider_report_metadata") or {})}
+        if KBS_PERIOD_ALIGNMENT_BLOCKER in (row.get("blocker_reason_codes") or []):
+            fact["ttm_blocker"] = KBS_PERIOD_ALIGNMENT_BLOCKER
         if metric == "operating_cash_flow" and row.get("period_semantic_method") == "retained_cash_flow_cumulative_state_resolver/v1":
             if row.get("period_semantic_state") == "STANDALONE_QUARTER":
                 fact["cumulative_state"] = "period_only"

@@ -31,6 +31,8 @@ _FEATURE_MAP = {
     "cash_and_cash_equivalents_pit_trajectory": "cash_yoy", "roa_eop_proxy": "mixed_provider_roa_proxy",
     "roe_eop_proxy": "same_provider_roe",
 }
+_FLOW_DERIVED_FALLBACKS = frozenset({"net_income_sign", "net_margin", "cfo_to_net_income",
+                                     "mixed_provider_roa_proxy", "same_provider_roe"})
 _ADVANCED = frozenset({"revenue_qoq", "profit_before_tax_qoq", "net_income_qoq", "operating_cash_flow_qoq",
                        "revenue_same_quarter_yoy", "profit_before_tax_same_quarter_yoy", "net_income_same_quarter_yoy", "operating_cash_flow_same_quarter_yoy",
                        "revenue_ttm", "profit_before_tax_ttm", "net_income_ttm", "operating_cash_flow_ttm",
@@ -216,6 +218,8 @@ def _bridge_fact(row: Mapping[str, Any]) -> dict[str, Any]:
     if row.get("qualified_normalized_period"):
         fact["qualified_normalized_period"] = row["qualified_normalized_period"]
         fact["period_normalization"] = row.get("period_normalization")
+    if qualified_flow.KBS_PERIOD_ALIGNMENT_BLOCKER in (row.get("blocker_reason_codes") or []):
+        fact["ttm_blocker"] = qualified_flow.KBS_PERIOD_ALIGNMENT_BLOCKER
     return fact
 
 
@@ -242,6 +246,7 @@ def build_qualified_flow_artifact(*, semantic_rows: Sequence[Mapping[str, Any]],
     NORMALIZATION_AND_ANALYTICAL_PANEL_V1: the bridge was previously built and tested but never
     invoked by any real caller of `build_scaleout`, so it never actually qualified a flow row
     market-wide despite being wired by import)."""
+    semantic_rows, _ = qualified_flow.gate_kbs_period_alignment(semantic_rows)
     names = sorted(feature_records)
     facts_by_ticker: dict[str, list[Mapping[str, Any]]] = defaultdict(list)
     for row in semantic_rows:
@@ -265,6 +270,7 @@ def build_scaleout(*, semantic_rows: Sequence[Mapping[str, Any]], feature_record
     artifact: every fact in it was known by then. Lineage only (it computes nothing); the
     fundamental consumption contract uses it to tell a non-calendar fiscal label known by a
     decision session from possible future information."""
+    semantic_rows, _ = qualified_flow.gate_kbs_period_alignment(semantic_rows)
     names = sorted(feature_records)
     issuer_types = {ticker: feature_records[ticker].get("entity_type") for ticker in names}
     legacy_records = {ticker: record for ticker, record in (legacy_records or {}).items() if ticker in feature_records}
@@ -278,10 +284,16 @@ def build_scaleout(*, semantic_rows: Sequence[Mapping[str, Any]], feature_record
         if qualified_flow_artifact.get("artifact_sha256") != expected["artifact_sha256"]:
             raise FinancialAnalysisScaleoutError("QUALIFIED_FLOW_IDENTITY_MISMATCH")
         qualified_rows = qualified_flow.engine_rows_from_artifact(qualified_flow_artifact)
+        bad_payloads = qualified_flow.misaligned_kbs_income_payloads(semantic_rows)
+        if any(qualified_flow._kbs_income_payload(row) in bad_payloads for row in qualified_rows):
+            raise FinancialAnalysisScaleoutError("QUALIFIED_FLOW_RETAINS_MISALIGNED_KBS_PAYLOAD")
         qualified_coverage = ((qualified_flow_artifact.get("coverage") or {}).get("qualified_flow_before_after"))
     # Flow rows are admitted only through the bridge when supplied.  P-I-T rows keep their own
     # semantic facts; a registry-composed fact only regains the lineage its components prove.
     bound_rows, composed_lineage = bind_composed_fact_lineage(semantic_rows)
+    # Feature-store proxies for these issuers were built from the same misaligned KBS labels.
+    period_misaligned = {str(row.get("ticker")) for row in semantic_rows
+                         if qualified_flow.KBS_PERIOD_ALIGNMENT_BLOCKER in (row.get("blocker_reason_codes") or [])}
     bridge_metrics = set(qualified_flow.FLOW_METRICS)
     engine_rows = ([row for row in bound_rows if row.get("canonical_metric") not in bridge_metrics] + qualified_rows
                    if qualified_flow_artifact is not None else list(bound_rows))
@@ -303,7 +315,7 @@ def build_scaleout(*, semantic_rows: Sequence[Mapping[str, Any]], feature_record
         if qualified_flow_artifact is not None:
             flow_record = (qualified_flow_artifact.get("records") or {}).get(ticker) or {}
             flow_state = ((flow_record.get("qualitative_states") or {}).get("earnings_turnaround_state"))
-            if flow_state and record["analysis_family"] == engine.INDUSTRIAL:
+            if flow_state and ticker not in period_misaligned and record["analysis_family"] == engine.INDUSTRIAL:
                 # The bridge owns exact quarter continuity and its loss-base transition;
                 # preserve that qualified state instead of reselecting another series here.
                 record["states"]["earnings_turnaround_state"] = flow_state
@@ -327,6 +339,8 @@ def build_scaleout(*, semantic_rows: Sequence[Mapping[str, Any]], feature_record
         unverified_metrics = {str(item.get("canonical_metric")) for item in observations}
         for source_id, target_id in _FEATURE_MAP.items():
             existing = record["features"][target_id]
+            if ticker in period_misaligned and target_id in _FLOW_DERIVED_FALLBACKS:
+                continue
             fallback = _store_feature((store_record.get("features") or {}).get(source_id) or {}, target_id, str(feature_store_artifact.get("artifact_identity")))
             if (fallback and existing["fitness"] in {"BLOCKED_BY_EVIDENCE", "NOT_APPLICABLE"}
                     and not _feature_uses_unverified_metric(target_id, unverified_metrics)):

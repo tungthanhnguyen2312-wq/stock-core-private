@@ -1683,3 +1683,198 @@ def reconcile_against_existing_panel(candidates: Sequence[Mapping[str, Any]], ex
             "eligible_for_ingress": False,
         })
     return records
+
+
+# OFFICIAL_UNREVIEWED_QUARTERLY_STATEMENT_INTAKE_V1 ----------------------------------------
+# Vietnamese quarterly income statements print four value columns: this quarter, the same
+# quarter of the prior year, and year-to-date for both years.  The two-column band engine
+# above must never bind a quarterly target to the year-to-date (date-labelled) pair, so a
+# quarterly target is resolved only here, with explicit quarter-versus-cumulative evidence.
+QUARTERLY_FOUR_COLUMN_RECOGNIZER = "quarterly_four_column_income_statement/v1"
+_QUARTER_WORDS = frozenset({"quy", "quarter", "uy"})
+_QUARTER_NUMERALS = {1: {"i", "1", "01"}, 2: {"ii", "2", "02"}, 3: {"iii", "3", "03"}, 4: {"iv", "4", "04"}}
+_CUMULATIVE_PHRASES = (("luy", "ke"), ("year", "to", "date"), ("6", "thang"), ("06", "thang"), ("sau", "thang"))
+_AMOUNT_RE = re.compile(r"^\(?-?\d{1,3}(?:[.,]\d{3})+\)?$")
+
+
+def _quarter_marker_tokens(line_tokens: Sequence[Mapping[str, Any]], quarter: int, year: int) -> list[Mapping[str, Any]]:
+    words = [_normalize_text(str(token["text"])) for token in line_tokens]
+    found = []
+    for index, word in enumerate(words):
+        compact = re.fullmatch(rf"0?{quarter}/(20[0-3]\d)", word)
+        if compact and index and words[index - 1] in _QUARTER_WORDS:
+            found.append(line_tokens[index - 1])
+            continue
+        if word in _QUARTER_WORDS and index + 1 < len(words) and words[index + 1] in _QUARTER_NUMERALS[quarter]:
+            found.append(line_tokens[index])
+    return found
+
+
+_QUARTER_END = {1: (31, 3), 2: (30, 6), 3: (30, 9), 4: (31, 12)}
+
+
+def _is_period_end_date(word: str, quarter: int, year: int) -> bool:
+    match = re.fullmatch(r"(\d{1,2})/(\d{1,2})/(20[0-3]\d)", word)
+    return bool(match) and (int(match.group(1)), int(match.group(2))) == _QUARTER_END[quarter] and int(match.group(3)) in {year, year - 1}
+
+
+def _cumulative_marker_tokens(line_tokens: Sequence[Mapping[str, Any]], quarter: int, year: int) -> list[Mapping[str, Any]]:
+    words = [_normalize_text(str(token["text"])) for token in line_tokens]
+    found = []
+    for index in range(len(words)):
+        if any(tuple(words[index:index + len(phrase)]) == phrase for phrase in _CUMULATIVE_PHRASES):
+            found.append(line_tokens[index])
+        elif _is_period_end_date(words[index], quarter, year):
+            found.append(line_tokens[index])  # only the period-end date, never a circular's issue date
+    return found
+
+
+def _period_side_tokens(line_tokens: Sequence[Mapping[str, Any]], year: int, quarter: int) -> tuple[list[Mapping[str, Any]], list[Mapping[str, Any]]]:
+    current, prior = [], []
+    words = [_normalize_text(str(token["text"])) for token in line_tokens]
+    for index, word in enumerate(words):
+        token = line_tokens[index]
+        # Only a bare year, a "q/yyyy" quarter cell or the exact period-end date names a column.
+        bare = re.fullmatch(r"(20[0-3]\d)", word) or re.fullmatch(rf"0?{quarter}/(20[0-3]\d)", word)
+        dated = re.fullmatch(r"\d{1,2}/\d{1,2}/(20[0-3]\d)", word) if _is_period_end_date(word, quarter, year) else None
+        column_year = int((bare or dated).group(1)) if (bare or dated) else None
+        if column_year == year:
+            current.append(token)
+        elif column_year == year - 1:
+            prior.append(token)
+        elif word == "nam" and index + 1 < len(words) and words[index + 1] == "nay":
+            current.append(token)
+        elif word == "nam" and index + 1 < len(words) and words[index + 1] == "truoc":
+            prior.append(token)
+    return current, prior
+
+
+def _centre_y(token: Mapping[str, Any]) -> float:
+    return (float(token["top"]) + float(token["bottom"])) / 2.0
+
+
+def _tsv_lines(tokens: Sequence[Mapping[str, Any]]) -> list[list[Mapping[str, Any]]]:
+    groups: dict[tuple, list[Mapping[str, Any]]] = {}
+    for token in tokens:
+        h = token.get("tsv_hierarchy") or {}
+        groups.setdefault((h.get("block_num"), h.get("par_num"), h.get("line_num")), []).append(token)
+    return [sorted(group, key=lambda t: float(t["x0"])) for group in groups.values()]
+
+
+def match_quarterly_four_column_row(page: Mapping[str, Any], *, line_code: str, target_period: str) -> dict[str, Any] | None:
+    """Return this-quarter and prior-year-quarter amounts of one coded row, or None (fail closed)."""
+    target = re.fullmatch(r"(20[0-3]\d)-Q([1-4])", str(target_period))
+    tokens = [t for t in (page.get("positioned_tokens") or []) if str(t.get("text", "")).strip()]
+    if target is None or not tokens or {str(t.get("provenance", "")) for t in tokens} != {"OCR_TSV_POSITIONED_TOKEN"}:
+        return None
+    year, quarter = int(target.group(1)), int(target.group(2))
+    amounts_all = [t for t in tokens if _AMOUNT_RE.fullmatch(str(t["text"]).strip())]
+    if not amounts_all:
+        return None
+    height = sorted(float(t["bottom"]) - float(t["top"]) for t in amounts_all)[len(amounts_all) // 2]
+    first_amount_x = min(float(t["x0"]) for t in amounts_all)
+    code_re = re.compile(r"^\d{2}[a-z]?$")
+    # A coded row is anchored on its two-digit line code (left of every amount column);
+    # its amounts are the grouped figures whose vertical centre lies in the code's band.
+    codes = [t for t in tokens if code_re.fullmatch(_normalize_text(str(t["text"]))) and float(t["x1"]) < first_amount_x]
+
+    def coded_rows(slope: float, window: float) -> list[dict[str, Any]]:
+        found = []
+        for code in codes:
+            band = [t for t in amounts_all if abs(_centre_y(t) - (_centre_y(code) + slope * (float(t["x1"]) - float(code["x1"])))) <= height * window]
+            if band:
+                found.append({"code": _normalize_text(str(code["text"])), "code_token": code,
+                              "amounts": sorted(band, key=lambda t: float(t["x0"]))})
+        return found
+    # Page skew is measured, not assumed: the median slope of rows that already show four
+    # amounts on a near-horizontal band.  Rows are then grouped along that slope.
+    seed = [row for row in coded_rows(0.0, 0.7) if len(row["amounts"]) == 4]
+    slopes = sorted((_centre_y(row["amounts"][-1]) - _centre_y(row["code_token"])) /
+                    max(1.0, float(row["amounts"][-1]["x1"]) - float(row["code_token"]["x1"])) for row in seed)
+    slope = slopes[len(slopes) // 2] if len(slopes) >= 3 else 0.0
+    rows = coded_rows(slope, 0.6)
+    if len(rows) < 3:
+        return None
+    # The code column is the aligned x position shared by the coded rows; a two-digit
+    # token elsewhere (a date in the title, a note number) is not a line code.
+    code_x = sorted(float(row["code_token"]["x0"]) for row in rows)[len(rows) // 2]
+    rows = [row for row in rows if abs(float(row["code_token"]["x0"]) - code_x) <= height * 1.5]
+    if not rows:
+        return None
+    first_row_top = min(_centre_y(row["code_token"]) for row in rows) - height
+    header_lines = [[t for t in line if _centre_y(t) < first_row_top] for line in _tsv_lines(tokens)]
+    header_lines = [line for line in header_lines if line]
+    quarter_marks = [t for line in header_lines for t in _quarter_marker_tokens(line, quarter, year)]
+    cumulative_marks = [t for line in header_lines for t in _cumulative_marker_tokens(line, quarter, year)]
+    if not quarter_marks or not cumulative_marks or min(float(t["x0"]) for t in quarter_marks) >= min(float(t["x0"]) for t in cumulative_marks):
+        return None
+    full = [row for row in rows if len(row["amounts"]) == 4]
+    if len(full) < 3:
+        return None
+    edges = [sorted(float(row["amounts"][i]["x1"]) for row in full)[len(full) // 2] for i in range(4)]
+    spacing = min(b - a for a, b in zip(edges, edges[1:]))
+    if spacing <= 0:
+        return None
+    tolerance = spacing * 0.35
+    cumulative_left = min(float(t["x0"]) for t in cumulative_marks)
+    if not edges[1] < cumulative_left + spacing * 0.5 <= edges[3] + tolerance:
+        return None  # the cumulative heading must sit over the right-hand pair
+    # Column headings live in the band between the quarter/cumulative headings and the first
+    # coded row; page titles ("Quý II năm 2026", "1 January ... 30 June 2026") are outside it.
+    heading_top = min(_centre_y(t) for t in quarter_marks + cumulative_marks) - height * 2.0
+    band_lines = [[t for t in line if _centre_y(t) >= heading_top] for line in header_lines]
+    current_side, prior_side = [], []
+    for line in band_lines:
+        c, p = _period_side_tokens(line, year, quarter)
+        current_side += c
+        prior_side += p
+    def column_of(token):
+        # Headings may be centred or right aligned; bind by the nearest amount right edge.
+        right = float(token["x1"])
+        column = min(range(4), key=lambda i: abs(edges[i] - right))
+        return column if abs(edges[column] - right) <= spacing * 0.6 else None
+    columns_current = {column_of(t) for t in current_side} - {None}
+    columns_prior = {column_of(t) for t in prior_side} - {None}
+    if columns_current & columns_prior or 0 in columns_prior or 1 in columns_current:
+        return None
+    if 0 in columns_current and 1 in columns_prior:
+        period_binding = "EXPLICIT_QUARTER_COLUMN_YEARS"
+    elif not ({0, 1} & (columns_current | columns_prior)) and len(quarter_marks) >= 2             and 2 in columns_current and 3 in columns_prior:
+        # Both quarter headings are visible but their year cells are illegible; the
+        # cumulative pair names both years current-then-prior (prescribed B02a order).
+        period_binding = "QUARTER_PAIR_BY_EXPLICIT_CUMULATIVE_ORDER"
+    else:
+        return None
+    matches = [row for row in rows if row["code"] == str(line_code)]
+    if len(matches) != 1:
+        return None
+    row = matches[0]
+    assigned: dict[int, Mapping[str, Any]] = {}
+    for amount in row["amounts"]:
+        distances = [abs(float(amount["x1"]) - edge) for edge in edges]
+        column = min(range(4), key=lambda i: distances[i])
+        if distances[column] > tolerance or column in assigned:
+            return None
+        assigned[column] = amount
+    if 0 not in assigned or 1 not in assigned:
+        return None
+    code_token = row["code_token"]
+    label_tokens = sorted((t for t in tokens if abs(_centre_y(t) - _centre_y(code_token)) <= height * 0.7
+                           and float(t["x1"]) < float(row["amounts"][0]["x0"]) and t is not code_token
+                           and any(ch.isalpha() for ch in str(t["text"]))), key=lambda t: float(t["x0"]))
+    label = " ".join(str(t["text"]) for t in label_tokens)
+    return {
+        "page": int(page["page_number"]), "line_text": label, "matched_anchor": None,
+        "current_raw": str(assigned[0]["text"]), "comparative_raw": str(assigned[1]["text"]),
+        "has_code": True, "note_reference": None, "layout": "quarterly_four_column_geometry",
+        "row_object": {"document_sha": page.get("document_sha256"), "page": int(page["page_number"]), "table_id": None,
+            "statement_family": page.get("statement_family"), "reconstructed_label": label, "line_code": str(line_code),
+            "current_period_label": f"{year}-Q{quarter}", "comparative_period_label": f"{year - 1}-Q{quarter}",
+            "current_raw_value": str(assigned[0]["text"]), "comparative_raw_value": str(assigned[1]["text"]),
+            "current_value_bbox": {k: assigned[0][k] for k in ("x0", "x1", "top", "bottom")},
+            "comparative_value_bbox": {k: assigned[1][k] for k in ("x0", "x1", "top", "bottom")},
+            "year_to_date_values_ignored": sorted(int(i) for i in assigned if i >= 2),
+            "column_right_edges": edges, "quarter_marker_orders": sorted(int(t["raw_token_order"]) for t in quarter_marks),
+            "cumulative_marker_orders": sorted(int(t["raw_token_order"]) for t in cumulative_marks),
+            "period_binding": period_binding, "measured_skew_slope": slope, "recognizer_version": QUARTERLY_FOUR_COLUMN_RECOGNIZER},
+    }

@@ -30,6 +30,7 @@ env:
     tests/test_e6_financial_boundary.py
     tests/test_official_financial_source_integrity.py
     tests/test_official_financial_quarterly_intake.py
+    tests/test_unreviewed_quarterly_official_intake.py
     tests/test_business_update_observations.py
     tests/test_financial_reporting_currency.py
     tests/test_action_center_opportunity_cost_consumer.py
@@ -110,6 +111,7 @@ env:
     tests/test_market_wide_financial_analysis_v2_scaleout.py
     tests/test_financial_v2_analysis_input_integrity.py
     tests/test_financial_flow_semantics_ttm_bridge.py
+    tests/test_kbs_period_alignment.py
     tests/test_structured_financial_period_semantics.py
     tests/test_canonical_financial_analytical_panel.py
     tests/test_multi_period_financial_panel.py

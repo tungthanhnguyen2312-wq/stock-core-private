@@ -5,10 +5,10 @@ Verified analytical baseline 2026-10-14 `a9c799397a74641a0e16c8ea84454d2dc4d0745
 Nothing below auto-starts; native standing admission required (AI_RULES 11).
 Facts: [ACTIVE_STATE.md](ACTIVE_STATE.md).
 
-## NOW — FINANCIAL RESEARCH STACK (PR167, OWNER MERGE GATE)
+## NOW — EXISTING FINANCIAL QUARTERLY CORRECTIVE INTEGRATION (PR168 / PR169)
 
 Ratio, divergence, multi-period, sector-relative, comparison and discovery research
-(PR167 [comparison](integrated_investment_opportunity_comparison_v1_contract.md)/[discovery](thesis_opportunity_discovery_v1_contract.md)). Opt-in; policy unchanged.
+(PR167 [comparison](integrated_investment_opportunity_comparison_v1_contract.md)/[discovery](thesis_opportunity_discovery_v1_contract.md)) is released at `561c6739`; related PR176 and PR177 are also merged. Existing [PR168 period guards](kbs_quarterly_income_period_alignment_v1_contract.md) and [PR169 research-tier intake](official_unreviewed_quarterly_statement_intake_v1_contract.md) are integrated locally on `7a5195de`; Owner remote release remains gated. This is completion of those existing corrections, not a new milestone. Machine state is unchanged; no automatic successor, Daily, evidence write or authority promotion.
 
 ## PRIOR — STOCKLOOKUP_PRODUCER_DEEP_SIMPLIFICATION (RELEASED PR146)
 
