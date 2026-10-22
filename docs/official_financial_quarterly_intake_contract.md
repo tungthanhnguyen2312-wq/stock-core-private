@@ -78,6 +78,22 @@ without invalidating an otherwise proven numerical research candidate.
 
 ## Consumer and release boundary
 
+`numeric_evidence_layer` is `native_text`, `ocr_text`, `reviewed_visual_integer`
+or `unknown`. A caller flag cannot make OCR or a visual integer native. An
+explicit native claim needs the token at a page-bound byte span of the original
+document. Legacy rows with no layer stay native only when that token is already
+in the original bytes; span text alone is not a new native proof. Acquisition
+time is not publication time. A Vietnamese quarter, six-month, year or balance
+title is a column label only. Six-month and year titles do not create a start
+date, and a blank bank line code maps only a printed literal. A wrapped second
+line such as "Ngân hàng" is not the full row and is not parent profit. "Lũy kế
+đến cuối Quý II" is the six-month column, not standalone Q2. A multi-column
+span does not isolate a reported column. Day precision, a CMS timestamp, and a
+PDF creation time later than a claimed publication are scrutiny blockers; none
+of them is rewritten into a publication timestamp. An index title that names
+one quarter cannot bind a file named for another quarter. A searchable copy is
+not the signed copy.
+
 Output separates schema_valid, semantic_valid, native_numeric_literal_proven,
 source_admission_eligible, knowledge_cutoff_eligible and their blockers. It carries
 original source identity, exact canonical candidate values/units, attribution,

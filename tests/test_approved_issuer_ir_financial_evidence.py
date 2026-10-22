@@ -58,6 +58,21 @@ def test_document_hash_and_replay_are_deterministic(tmp_path: Path) -> None:
     assert first["artifact_sha256"] == second["artifact_sha256"]
 
 
+def test_identical_pdf_bytes_under_two_names_are_one_evidence_identity(tmp_path: Path) -> None:
+    body = b"%PDF-1.7\nSAME"
+    def fake(url: str):
+        if url == subject.APPROVED_ROUTES["AAA"]:
+            page = b'<a href="one.pdf">Financial statement</a><a href="two.pdf">Financial statement</a>'
+            return 200, {"Content-Type": "text/html"}, page, url
+        if url.endswith(".pdf"):
+            return 200, {"Content-Type": "application/pdf"}, body, url
+        return 404, {}, b"", url
+    artifact = subject.acquire(output_root=tmp_path, fetcher=fake, now=lambda: "2026-08-27T00:00:00Z")
+    assert len({row["sha256"] for row in artifact["documents"]}) == 1
+    assert artifact["document_budget"]["actual"] == 1
+    assert any(row["retention_status"] == "DUPLICATE_DOCUMENT_NO_OP" for row in artifact["documents"])
+
+
 def test_duplicate_document_is_retention_no_op(tmp_path: Path) -> None:
     def fake(url: str):
         if url == subject.APPROVED_ROUTES["AAA"]: return 200, {}, b'<a href="report.pdf">Financial statement</a>', url
