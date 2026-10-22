@@ -684,3 +684,34 @@ def test_integrated_projection_never_recomputes_or_fabricates_decision_fields():
         assert row["evidence_currency_lineage"] is None
     source = open(__import__("ai_research_session_delivery").__file__, encoding="utf-8").read()
     assert "research_stance" not in source
+
+
+def test_delivery_and_cockpit_never_pair_a_peer_verdict_with_a_peer_valuation_gap():
+    operation = _operation()
+    operation["product"]["detailed_research_cards"]["AAA"].update({
+        "valuation_context": {"strict_valuation_status": "UNAVAILABLE", "peer_valuation_status": "VALUATION_PEER_CONTEXT_UNAVAILABLE"},
+        "peer_context": {"limitations": ["VALUATION_PEER_CONTEXT_UNAVAILABLE"], "expectations_context": {"counter_evidence": ["VALUATION_PEER_CONTEXT_UNAVAILABLE"]}},
+        "thesis_counter_thesis": {"thesis": [], "questions_to_verify": [], "counter_thesis": [
+            {"type": "DATA_GAP", "claim": "VALUATION_PEER_CONTEXT_UNAVAILABLE", "evidence_field": "peer_relative.data_gaps", "authority": "BLOCKED_OR_UNAVAILABLE"}]},
+    })
+    operation["product"]["risk_data_gap_panel"]["valuation_peer_context_unavailable"] = 1
+    integrated = _integrated_delivery_fixture()
+    integrated["records"]["AAA"]["valuation_context_summary"]["peer_relative_state"] = "CHEAP_VS_PEERS"
+    inputs = {
+        "descriptive": {"records": {"AAA": {}}}, "tactical": {"records": {"AAA": {}}},
+        "fundamental": {"records": {}}, "valuation": {"records": {}},
+        "market_flow_positioning": {"records": {}}, "corporate_intelligence": {"records": {}},
+        "integrated_investment_decision_product": integrated,
+        "daily_integrated_decision_brief": _daily_brief_fixture(integrated),
+    }
+    delivered = build_delivery(operation, inputs)
+    primary, projection = json.loads(delivered["primary"]), json.loads(delivered["projection"])
+    for card in (primary["ticker_research_contexts"]["AAA"], projection["ticker_cards"]["AAA"]):
+        assert card["valuation_context"]["peer_valuation_status"] == "PEER_RELATIVE_RESEARCH_IN_INTEGRATED_DECISION"
+        assert card["valuation_context"]["peer_valuation_reconciliation"]["integrated_peer_relative_state"] == "CHEAP_VS_PEERS"
+        assert "VALUATION_PEER_CONTEXT_UNAVAILABLE" not in json.dumps({key: card[key] for key in ("peer_context", "thesis_counter_thesis")})
+        assert card["valuation_context"]["strict_valuation_status"] == "UNAVAILABLE"
+    assert projection["risk_data_gaps"]["valuation_peer_context_unavailable"] == 0
+    assert projection["decision_card_v1"]["AAA"]["valuation"]["context"]["peer_relative_state"] == "CHEAP_VS_PEERS"
+    # The Product V2 artifact itself is never rewritten by delivery.
+    assert operation["product"]["detailed_research_cards"]["AAA"]["valuation_context"]["peer_valuation_status"] == "VALUATION_PEER_CONTEXT_UNAVAILABLE"

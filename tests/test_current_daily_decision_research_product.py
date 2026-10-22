@@ -264,3 +264,57 @@ def test_content_identity_deterministic_with_retained_decision_context():
     second = build(**_inputs(), shadow_security_recommendation=shadow)
     assert first["artifact_sha256"] == second["artifact_sha256"]
     assert content_identity(first)["artifact_sha256"] == first["artifact_sha256"]
+
+
+def _gap_card():
+    from stocklookup_core.decision.current_daily_decision_research_product import _claims, _peer_summary, _valuation_summary
+    peer = {"peer_membership": {"peer_group_label": "G", "member_count": 9}, "technical_peer_context": {"status": "AVAILABLE", "eligible_count": 9, "metrics": {}},
+            "valuation_peer_context": {"status": "VALUATION_PEER_CONTEXT_UNAVAILABLE", "eligible_count": 0},
+            "expectations_context": {"state": "TECHNICAL_RECOVERY_WITH_FUNDAMENTAL_UNCERTAINTY", "descriptive_only": True, "counter_evidence": ["VALUATION_PEER_CONTEXT_UNAVAILABLE"]},
+            "data_gaps": ["VALUATION_PEER_CONTEXT_UNAVAILABLE", "INSUFFICIENT_COHORT"]}
+    return {"ticker": "AAA", "peer_context": _peer_summary(peer, "BASE_BUILDING"), "valuation_context": _valuation_summary({"status": "UNAVAILABLE"}, peer),
+            "thesis_counter_thesis": _claims("AAA", {"entry_state": "BASE_BUILDING"}, peer, {})}
+
+
+def test_card_peer_valuation_status_is_scoped_to_the_sector_aware_layer():
+    card = _gap_card()
+    valuation = card["valuation_context"]
+    assert valuation["strict_valuation_status"] == "UNAVAILABLE"
+    assert valuation["peer_valuation_status"] == "VALUATION_PEER_CONTEXT_UNAVAILABLE"
+    assert valuation["peer_valuation_status_scope"] == "SECTOR_AWARE_RELATIVE_RESEARCH_LAYER_DOES_NOT_EVALUATE_VALUATION"
+    assert valuation["authority_warning"].startswith("Shadow proxy is descriptive/non-authoritative")
+    assert "the shadow proxy supports no cheap/expensive" in valuation["authority_warning"]
+
+
+def test_reconcile_references_integrated_verdict_and_removes_only_the_layer_gap():
+    from stocklookup_core.decision.current_daily_decision_research_product import reconcile_card_peer_valuation
+    card = _gap_card()
+    before = json.dumps(card, sort_keys=True)
+    record = {"valuation_context_summary": {"peer_relative_state": "EXPENSIVE_VS_PEERS", "peer_relative_basis": {"P/B": {"peer_count": 5, "percentile": 0.9}}}}
+    out = reconcile_card_peer_valuation(card, record)
+    assert json.dumps(card, sort_keys=True) == before  # input is never mutated
+    valuation = out["valuation_context"]
+    assert valuation["peer_valuation_status"] == "PEER_RELATIVE_RESEARCH_IN_INTEGRATED_DECISION"
+    assert valuation["strict_valuation_status"] == "UNAVAILABLE"
+    reconciliation = valuation["peer_valuation_reconciliation"]
+    assert reconciliation["integrated_peer_relative_state"] == "EXPENSIVE_VS_PEERS"
+    assert reconciliation["sector_aware_layer_status"] == "VALUATION_PEER_CONTEXT_UNAVAILABLE"
+    assert reconciliation["peer_relative_basis"] == {"P/B": {"peer_count": 5, "percentile": 0.9}}
+    assert reconciliation["is_actionable"] is False
+    assert out["peer_context"]["limitations"] == ["INSUFFICIENT_COHORT"]
+    assert out["peer_context"]["expectations_context"]["counter_evidence"] == []
+    assert out["peer_context"]["expectations_context"]["state"] == "TECHNICAL_RECOVERY_WITH_FUNDAMENTAL_UNCERTAINTY"
+    claims = [item["claim"] for item in out["thesis_counter_thesis"]["counter_thesis"]]
+    assert "VALUATION_PEER_CONTEXT_UNAVAILABLE" not in claims and "INSUFFICIENT_COHORT" in claims
+
+
+def test_reconcile_keeps_truthful_gap_without_integrated_verdict():
+    from stocklookup_core.decision.current_daily_decision_research_product import reconcile_card_peer_valuation
+    for record in (None, {}, {"valuation_context_summary": {"peer_relative_state": "NOT_APPLICABLE"}}):
+        out = reconcile_card_peer_valuation(_gap_card(), record)
+        assert out["valuation_context"]["peer_valuation_status"] == "VALUATION_PEER_CONTEXT_UNAVAILABLE"
+        assert out["valuation_context"]["peer_valuation_reconciliation"]["status"] == "NO_INTEGRATED_PEER_VERDICT"
+        assert "VALUATION_PEER_CONTEXT_UNAVAILABLE" in out["peer_context"]["limitations"]
+        assert any(item["claim"] == "VALUATION_PEER_CONTEXT_UNAVAILABLE" for item in out["thesis_counter_thesis"]["counter_thesis"])
+    absent = {"ticker": "ZZZ", "status": ABSENT_OWNER_FOCUS_STATUS}
+    assert reconcile_card_peer_valuation(absent, {"valuation_context_summary": {"peer_relative_state": "CHEAP_VS_PEERS"}}) == absent
