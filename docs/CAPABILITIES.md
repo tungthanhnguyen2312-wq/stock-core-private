@@ -2,6 +2,9 @@
 
 Navigation; no scores. [Facts](ACTIVE_STATE.md), [authority](AUTHORITY.md), [run order](DAILY_PIPELINE.md).
 
+Local PR167 [comparison](integrated_investment_opportunity_comparison_v1_contract.md)/[discovery](thesis_opportunity_discovery_v1_contract.md): ratio, divergence and trajectory research;
+`action-center --compare` / `--thesis-discovery`. Non-voting; no score or posture change.
+
 **Runtime status vocabulary:** `ACTIVE` (runs in production, failure blocks that stage) ·
 `ACTIVE_FAILSOFT` (runs in production, failure is component-local `UNAVAILABLE`, never revises sealed
 results) · `FROZEN_HISTORICAL` (code/artifacts preserved, not the production path) ·

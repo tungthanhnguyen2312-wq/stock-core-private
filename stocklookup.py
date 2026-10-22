@@ -297,6 +297,8 @@ def main(argv=None) -> int:
     action_center.add_argument("--session", default=None, help="Explicit YYYY-MM-DD session (default: latest retained completed session).")
     action_center.add_argument("--portfolio-root", type=Path, default=None, help="Private local artifact root (default: %%USERPROFILE%%\\.stocklookup\\portfolio).")
     action_center.add_argument("--action-center-root", type=Path, default=None, help="Local output root (default: %%USERPROFILE%%\\.stocklookup\\action_center).")
+    action_center.add_argument("--thesis-discovery", action="store_true", help="Add market-wide thesis-based research lanes (research lists only).")
+    action_center.add_argument("--compare", default=None, help="Optional 2-5 comma-separated tickers for a selected opportunity comparison (research only, no portfolio or execution authority).")
     a = p.parse_args(argv)
 
     if a.command == "research":
@@ -411,8 +413,16 @@ def main(argv=None) -> int:
             artifact = ac.evaluate_from_retained_artifacts(
                 repo_root=ROOT, session=a.session, portfolio_root=a.portfolio_root,
                 requested_at=_dt_ac.datetime.now().isoformat(timespec="seconds"),
+                opportunity_comparison_tickers=[t.strip() for t in a.compare.split(",")] if a.compare else None,
+                include_thesis_discovery=a.thesis_discovery,
             )
         except FileNotFoundError as exc:
+            print(json.dumps({"status": "BLOCKED", "reason_code": str(exc)}, ensure_ascii=False, sort_keys=True))
+            return 2
+        except ValueError as exc:
+            if not a.compare:
+                raise
+            # Fail-closed comparison request (unknown/duplicate/out-of-range tickers); no partial output.
             print(json.dumps({"status": "BLOCKED", "reason_code": str(exc)}, ensure_ascii=False, sort_keys=True))
             return 2
         destination = ac.write_private_artifact(artifact, root=a.action_center_root)

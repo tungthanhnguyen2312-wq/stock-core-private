@@ -1088,6 +1088,8 @@ def build_artifact(
     sector_by_ticker: Mapping[str, str] | None = None, excluded_tickers: frozenset[str] = frozenset(),
     portfolio_snapshot: Mapping[str, Any] | None = None, quant_risk_artifact: Mapping[str, Any] | None = None,
     opportunity_cost_input: Mapping[str, Any] | None = None,
+    opportunity_comparison_request: Mapping[str, Any] | None = None,
+    include_thesis_discovery: bool = False,
     include_conditional_research: bool = False,
     next_session_artifact: Mapping[str, Any] | None = None,
     previous_integrated_decision_artifact: Mapping[str, Any] | None = None,
@@ -1243,6 +1245,20 @@ def build_artifact(
             if not expected_snapshot or expected_snapshot != snapshot_identity:
                 raise ActionCenterError("OPPORTUNITY_COST_PORTFOLIO_DECISION_SOURCE_MISMATCH")
         body["opportunity_cost_research"] = view
+    if opportunity_comparison_request is not None:
+        from current_evidence_bound_scenario import bind_integrated_scenarios
+        from stocklookup_core.research.evidence_aware_candidate_comparison import build_integrated_comparison
+        if set(opportunity_comparison_request.get("tickers") or []) & set(excluded_tickers):
+            raise ActionCenterError("SELECTED_COMPARISON_CONTAINS_EXCLUDED_TICKER")
+        body["selected_opportunity_comparison"] = build_integrated_comparison(
+            opportunity_comparison_request, integrated_decision=integrated_decision_artifact,
+            bind_scenarios=bind_integrated_scenarios)
+    if include_thesis_discovery:
+        from current_evidence_bound_scenario import bind_integrated_scenarios
+        from stocklookup_core.research.evidence_aware_candidate_comparison import build_thesis_discovery
+        body["thesis_opportunity_discovery"] = build_thesis_discovery(
+            integrated_decision=integrated_decision_artifact, bind_scenarios=bind_integrated_scenarios,
+            excluded_tickers=frozenset(excluded_tickers))
     return {**body, **_identity(body)}
 
 
@@ -1322,6 +1338,8 @@ def retained_evidence_root(repo_root: Path) -> Path:
 def evaluate_from_retained_artifacts(
     *, repo_root: Path, session: str | None = None, portfolio_root: Path | None = None, requested_at: str,
     include_conditional_research: bool = False,
+    opportunity_comparison_tickers: Sequence[str] | None = None,
+    include_thesis_discovery: bool = False,
 ) -> dict[str, Any]:
     """One deterministic, read-only evaluation over already-retained same-session artifacts.
 
@@ -1381,6 +1399,9 @@ def evaluate_from_retained_artifacts(
         sector_by_ticker=sector_by_ticker, excluded_tickers=excluded_tickers, portfolio_snapshot=portfolio_snapshot,
         quant_risk_artifact=quant_risk_artifact,
         include_conditional_research=include_conditional_research,
+        opportunity_comparison_request=({"research_session": resolved_session, "tickers": list(opportunity_comparison_tickers)}
+                                        if opportunity_comparison_tickers else None),
+        include_thesis_discovery=include_thesis_discovery,
     )
 
 
@@ -1437,6 +1458,9 @@ def public_console_summary(artifact: Mapping[str, Any], *, destination: Path | N
         "discovery_lane_counts": (artifact.get("discovery") or {}).get("lane_counts"),
         "attention_bucket_counts": (artifact.get("attention_queue") or {}).get("bucket_counts"),
         "coverage": coverage,
+        "selected_opportunity_comparison_status": ("READY" if "selected_opportunity_comparison" in artifact else "NOT_REQUESTED"),
+        "thesis_discovery_lane_counts": ({lane: row["count"] for lane, row in artifact["thesis_opportunity_discovery"]["lanes"].items()}
+                                         if "thesis_opportunity_discovery" in artifact else "NOT_REQUESTED"),
         "written_to": str(destination) if destination is not None else None,
         "markdown_written_to": str(markdown_destination) if markdown_destination is not None else None,
     }
@@ -1679,6 +1703,12 @@ def markdown(artifact: Mapping[str, Any]) -> str:
         lines.append(f"- Existing portfolio decision artifact supplied: {(artifact.get('coverage') or {}).get('portfolio_supplied')}; optional owner state: {(artifact['opportunity_cost_research'].get('owner_state_status') or artifact['opportunity_cost_research']['status'])}.")
     else:
         lines.append(f"- Portfolio supplied: {(artifact.get('coverage') or {}).get('portfolio_supplied')}")
+    if "selected_opportunity_comparison" in artifact:
+        from stocklookup_core.research.evidence_aware_candidate_comparison import integrated_comparison_markdown
+        lines.append(integrated_comparison_markdown(artifact["selected_opportunity_comparison"]))
+    if "thesis_opportunity_discovery" in artifact:
+        from stocklookup_core.research.evidence_aware_candidate_comparison import thesis_discovery_markdown
+        lines.append(thesis_discovery_markdown(artifact["thesis_opportunity_discovery"]))
     lines.append("- No universal score, no fabricated probability/target price, no execution order anywhere in this file.")
     lines.append("")
     return "\n".join(lines)

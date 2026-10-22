@@ -24,7 +24,7 @@ CONTRACT_VERSION = "financial_analysis_context/v2"
 #: from the pre-existing end-of-period proxies, never relabelled as one another) and a
 #: per-ticker retrospective own-history percentile/range context (history_context) over the
 #: headline corporate ratio features.
-SCHEMA_VERSION = "2.3.0"
+SCHEMA_VERSION = "2.5.0"
 FITNESS = ("READY", "RESEARCH_PROXY", "BLOCKED_BY_EVIDENCE", "NOT_APPLICABLE")
 INDUSTRIAL = "INDUSTRIAL_FINANCIAL_ANALYSIS"
 LIMITED = "OTHER_FINANCIAL_LIMITED_ANALYSIS"
@@ -194,6 +194,27 @@ def _period_label_warning(row: Mapping[str, Any]) -> str | None:
     if qualified and native and str(qualified) != native:
         return RAW_PERIOD_LABEL_DIFFERS_FROM_QUALIFIED_PERIOD
     return None
+
+
+def _calendar_quarter_end(year: int, quarter: int) -> str:
+    return f"{year}-{('03-31', '06-30', '09-30', '12-31')[quarter - 1]}"
+
+
+def _period_end_agrees(row: Mapping[str, Any], arithmetic_period: str) -> bool:
+    """Accept a missing end, the arithmetic period, or that quarter's calendar end.
+
+    A qualified KBS row keeps its raw label on ``period_end``. That label is
+    provenance. It is not a second fiscal date and it is not turned into one.
+    """
+    end = row.get("period_end")
+    if end in (None, "", arithmetic_period):
+        return True
+    parsed = _quarter(arithmetic_period)
+    if parsed and end == _calendar_quarter_end(*parsed):
+        return True
+    qualified = row.get("qualified_normalized_period")
+    native = str(row.get("native_period_label") or "")
+    return bool(qualified) and str(qualified) == arithmetic_period and end == native
 
 
 def _series_index(rows: Sequence[Mapping[str, Any]], metric: str, semantic: str,
@@ -800,20 +821,46 @@ def _same_provider_avg_balance_return(feature_id: str,
 
 
 def _ratio_series(rows: Sequence[Mapping[str, Any]], numerator_metric: str, numerator_semantic: str,
-                  denominator_metric: str, denominator_semantic: str) -> dict[str, float]:
+                  denominator_metric: str, denominator_semantic: str,
+                  *, subject_feature: Mapping[str, Any] | None = None) -> dict[str, float]:
     """Every period's ratio value for the single best (longest, most-recently-ending)
     same-provider/scope/currency/scale source key -- the own-history basis for a same-
     period ratio feature (a margin, a P-I-T stock ratio, or a cross-semantic EOP proxy).
+    With a subject feature, bind its exact same-statement operands instead of
+    ranking competing series, excluding periods later than the subject.
     """
-    numerators = _series_index(rows, numerator_metric, numerator_semantic, key=_representation_key)
-    denominators = _series_index(rows, denominator_metric, denominator_semantic, key=_representation_key)
+    # New same-statement history must bind to the actual subject operands, not a
+    # longer provider series that happens to contain the same quarter label.
+    key_function = _source_key if subject_feature is not None else _representation_key
+    numerators = _series_index(rows, numerator_metric, numerator_semantic, key=key_function)
+    denominators = _series_index(rows, denominator_metric, denominator_semantic, key=key_function)
+    subject_periods = (subject_feature or {}).get("period_identity") or []
+    subject_period = subject_periods[-1] if subject_periods else None
+    subject_sources = (subject_feature or {}).get("provider_source_provenance") or []
     best_series: dict[str, float] = {}
     for key in set(numerators) & set(denominators):
+        if subject_feature is not None:
+            n, d = numerators[key].get(subject_period), denominators[key].get(subject_period)
+            if (subject_feature.get("fitness") != "READY" or len(subject_sources) != 2
+                    or not n or not d or _provenance(n) != subject_sources[0]
+                    or _provenance(d) != subject_sources[1]):
+                continue
         series: dict[str, float] = {}
         for label in set(numerators[key]) & set(denominators[key]):
-            denominator = denominators[key][label]["reported_value"]
+            if subject_feature is not None and label > subject_period:
+                continue
+            numerator_row = numerators[key][label]
+            denominator_row = denominators[key][label]
+            # A raw KBS quarter label is not an arithmetic period. Same-column
+            # ratios may still read the value; a trajectory or history series may not.
+            if _kbs_income_unverified(numerator_row) or _kbs_income_unverified(denominator_row):
+                continue
+            arithmetic = _arithmetic_quarter(numerator_row) or _arithmetic_quarter(denominator_row)
+            if arithmetic and f"{arithmetic[0]}-Q{arithmetic[1]}" != label:
+                continue
+            denominator = denominator_row["reported_value"]
             if denominator != 0:
-                series[label] = numerators[key][label]["reported_value"] / denominator
+                series[label] = numerator_row["reported_value"] / denominator
         candidate_rank = (len(series), max(series) if series else "")
         best_rank = (len(best_series), max(best_series) if best_series else "")
         if candidate_rank > best_rank:
@@ -821,7 +868,7 @@ def _ratio_series(rows: Sequence[Mapping[str, Any]], numerator_metric: str, nume
     return best_series
 
 
-#: Minimum retained same-source-key periods (including the current one) for own-history
+#: Minimum prior retained same-source-key periods (excluding the subject) for own-history
 #: context: below PARTIAL, a percentile would rest on too few points to mean anything; below
 #: AVAILABLE, it is real but thin. Deliberately lower than the 20/10 daily-price thresholds
 #: `market_wide_historical_research_context.py` uses -- quarterly financial history is
@@ -879,7 +926,17 @@ HISTORY_CONTEXT_FEATURES = (
     "gross_margin", "net_margin", "equity_to_assets", "current_ratio",
     "same_provider_roe_avg_equity", "same_provider_roa_avg_assets",
     "same_provider_roe_eop_proxy", "same_provider_roa_eop_proxy",
+    "pbt_margin", "cash_to_assets", "debt_to_equity", "debt_to_assets",
 )
+
+# Reuse the existing ratio owner and its exact metric vocabulary. Liabilities are
+# never a substitute for explicit interest-bearing debt; cash is not free cash flow.
+EXTENDED_RATIO_HISTORY_INPUTS = {
+    "pbt_margin": ("profit_before_tax", "revenue", FLOW_STANDALONE),
+    "cash_to_assets": ("cash_and_cash_equivalents", "total_assets", PIT),
+    "debt_to_equity": ("total_interest_bearing_debt", "shareholders_equity", PIT),
+    "debt_to_assets": ("total_interest_bearing_debt", "total_assets", PIT),
+}
 
 
 def _build_history_context(rows: Sequence[Mapping[str, Any]], features: Mapping[str, Mapping[str, Any]],
@@ -894,8 +951,126 @@ def _build_history_context(rows: Sequence[Mapping[str, Any]], features: Mapping[
         "same_provider_roe_eop_proxy": _ratio_series(rows, "net_income", FLOW_STANDALONE, "shareholders_equity", PIT),
         "same_provider_roa_eop_proxy": _ratio_series(rows, "net_income", FLOW_STANDALONE, "total_assets", PIT),
     }
-    return {feature_id: _history_entry(features[feature_id], series_by_feature[feature_id])
-            for feature_id in HISTORY_CONTEXT_FEATURES}
+    for fid, (numerator, denominator, semantic) in EXTENDED_RATIO_HISTORY_INPUTS.items():
+        series_by_feature[fid] = _ratio_series(rows, numerator, semantic, denominator, semantic,
+                                              subject_feature=features[fid])
+    result = {feature_id: _history_entry(features[feature_id], series_by_feature[feature_id])
+              for feature_id in HISTORY_CONTEXT_FEATURES}
+    for fid, trajectory in build_ratio_trajectories(rows, features).items():
+        result[fid]["trajectory"] = trajectory
+    return result
+
+
+# Research descriptions of repeated observations; these never vote in strategy policy.
+TRAJECTORY_INPUTS = {**EXTENDED_RATIO_HISTORY_INPUTS,
+    "net_margin": ("net_income", "revenue", FLOW_STANDALONE),
+    "gross_margin": ("gross_profit", "revenue", FLOW_STANDALONE)}
+
+
+def build_ratio_trajectories(rows, features):
+    """Extend the existing anchored ratio history with auditable sequential/YoY changes.
+
+    Only the contiguous suffix ending at the actual subject can establish persistence.
+    Missing quarters, conflicting revisions and nonpositive denominators break that suffix.
+    Margin QoQ and YoY use the qualified arithmetic period. A raw KBS income label
+    is refused with ``KBS_PERIOD_IDENTITY_UNVERIFIED`` and cannot establish a direction.
+    """
+    result = {}
+    for fid, (numerator, denominator, semantic) in TRAJECTORY_INPUTS.items():
+        feature = features.get(fid) or {}
+        subject = (feature.get("period_identity") or [None])[-1]
+        entry = {"status": "UNKNOWN", "assessment": "INSUFFICIENT_EVIDENCE",
+            "method": "source_anchored_ratio_trajectory/v1", "subject_period": subject,
+            "period_semantic": semantic, "observations": [], "sequential_changes": [],
+            "yoy_changes": [], "contiguous_periods": [], "reason_codes": [],
+            "limitations": ["CURRENT_RESEARCH_ONLY", "NOT_PIT", "NO_ANNUALIZATION",
+                "SEQUENTIAL_FLOW_CHANGES_MAY_BE_SEASONAL", "SOURCE_MONETARY_BASIS_NOT_UPGRADED"],
+            "is_actionable": False}
+        result[fid] = entry
+        if feature.get("fitness") == "NOT_APPLICABLE":
+            entry.update(status="NOT_APPLICABLE", reason_codes=["ISSUER_METHOD_NOT_APPLICABLE"])
+            continue
+        series = _ratio_series(rows, numerator, semantic, denominator, semantic, subject_feature=feature)
+        ns, ds = _series_index(rows, numerator, semantic), _series_index(rows, denominator, semantic)
+        sources = feature.get("provider_source_provenance") or []
+        matches = [key for key in set(ns) & set(ds) if subject in ns[key] and subject in ds[key]
+            and len(sources) == 2 and _provenance(ns[key][subject]) == sources[0]
+            and _provenance(ds[key][subject]) == sources[1]]
+        subject_operands = [row for key in matches for row in (ns[key].get(subject), ds[key].get(subject)) if row]
+        if any(_kbs_income_unverified(row) for row in subject_operands):
+            entry["reason_codes"] = [KBS_PERIOD_IDENTITY_UNVERIFIED]
+            continue
+        if not series or len(matches) != 1 or not _quarter(subject):
+            entry["reason_codes"] = ["QUALIFIED_SUBJECT_ANCHORED_QUARTER_SERIES_UNAVAILABLE"]
+            continue
+        key = matches[0]
+        entry["series_identity"] = dict(zip(SERIES_KEY_FIELDS, key))
+        valid = {}
+        for period, value in sorted(series.items()):
+            n, d = ns[key][period], ds[key][period]
+            if _kbs_income_unverified(n) or _kbs_income_unverified(d):
+                entry["reason_codes"].append(KBS_PERIOD_IDENTITY_UNVERIFIED)
+                continue
+            arithmetic = _arithmetic_quarter(n) or _arithmetic_quarter(d)
+            arithmetic_period = f"{arithmetic[0]}-Q{arithmetic[1]}" if arithmetic else None
+            if arithmetic_period != period or not math.isfinite(value) or d["reported_value"] <= 0:
+                entry["reason_codes"].append("INVALID_PERIOD_OR_NONPOSITIVE_DENOMINATOR_EXCLUDED")
+                continue
+            # A supplied calendar end must agree with the arithmetic quarter.
+            # Missing ends stay missing; a raw label is never converted into a fact date.
+            if not _period_end_agrees(n, arithmetic_period) or not _period_end_agrees(d, arithmetic_period):
+                entry["reason_codes"].append("CONFLICTING_OR_NONCALENDAR_PERIOD_END_EXCLUDED")
+                continue
+            valid[period] = value
+            qualified_period = bool(n.get("qualified_normalized_period") or d.get("qualified_normalized_period"))
+            entry["observations"].append({"period": arithmetic_period, "value": value,
+                "period_end": [n.get("period_end"), d.get("period_end")],
+                "period_identity_basis": "QUALIFIED_ARITHMETIC_PERIOD" if qualified_period else "REPORTED_QUARTER_LABEL_NO_DATE_INFERENCE",
+                "period_semantic": semantic, "source_provenance": [_provenance(n), _provenance(d)]})
+        if subject not in valid:
+            entry["reason_codes"].append("SUBJECT_DENOMINATOR_NOT_POSITIVE" if ds[key][subject]["reported_value"] <= 0
+                                         else "SUBJECT_PERIOD_BASIS_UNPROVEN")
+            continue
+        for period in sorted(valid):
+            year, quarter = _quarter(period)
+            for field, prior in (("sequential_changes", _prior_quarter((year, quarter))),
+                                 ("yoy_changes", (year-1, quarter))):
+                label = f"{prior[0]}-Q{prior[1]}"
+                if label in valid:
+                    entry[field].append({"from_period": label, "to_period": period,
+                        "ratio_point_change": valid[period]-valid[label],
+                        "comparison_basis": "SEQUENTIAL_QUARTER" if field == "sequential_changes" else "SAME_QUARTER_YOY"})
+        contiguous = [subject]
+        cursor = _quarter(subject)
+        while True:
+            cursor = _prior_quarter(cursor)
+            label = f"{cursor[0]}-Q{cursor[1]}"
+            if label not in valid:
+                break
+            contiguous.insert(0, label)
+        entry["contiguous_periods"] = contiguous
+        if len(contiguous) < 3:
+            entry["reason_codes"].append("FEWER_THAN_THREE_CONTIGUOUS_SUBJECT_ENDING_OBSERVATIONS")
+            continue
+        # Two successive changes are the minimum repeat evidence, not a forecast.
+        favorable = -1 if fid in {"debt_to_equity", "debt_to_assets"} else 1
+        deltas = [(valid[b]-valid[a])*favorable for a,b in zip(contiguous, contiguous[1:])]
+        signs = [0 if math.isclose(d, 0, abs_tol=1e-12) else 1 if d > 0 else -1 for d in deltas]
+        recent = signs[-2:]
+        assessment = ("PERSISTENT_DETERIORATION" if recent == [-1,-1] else
+            "RECOVERY" if recent == [1,1] and -1 in signs[:-2] else
+            "SUCCESSIVE_IMPROVEMENT" if recent == [1,1] else
+            "STABLE" if recent == [0,0] else "MIXED_OR_ONE_PERIOD_FLUCTUATION")
+        entry.update(status="AVAILABLE", assessment=assessment,
+            establishing_periods=contiguous[-3:],
+            recent_ratio_point_changes=[valid[b]-valid[a] for a,b in zip(contiguous[-3:], contiguous[-2:])],
+            favorable_direction="LOWER" if favorable == -1 else "HIGHER")
+        current_yoy = next((c for c in entry["yoy_changes"] if c["to_period"] == subject), None)
+        entry["seasonal_confirmation"] = ("UNAVAILABLE" if not current_yoy else
+            "CONTRADICTS_RECENT_DIRECTION" if recent[0] == recent[1] and recent[-1] != 0 and
+            current_yoy["ratio_point_change"]*favorable*recent[-1] < 0 else "YOY_CONTEXT_AVAILABLE")
+        entry["reason_codes"] = sorted(set(entry["reason_codes"]))
+    return result
 
 
 def _bank_usable(component: Mapping[str, Any], *, fitness: str) -> bool:

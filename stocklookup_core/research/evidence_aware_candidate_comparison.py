@@ -2,13 +2,447 @@
 from __future__ import annotations
 import hashlib, json
 from typing import Any, Mapping, Sequence
+import copy
+from itertools import combinations
 
 TECHNICAL = ("close", "momentum_20d", "volatility_20d", "relative_volume_provider_scoped")
 SUPPORTED = frozenset(("CURRENT_OBSERVABLE_STATE", "RELATIVE_CONTEXT", "FUNDAMENTAL_EVIDENCE",
                        "RESEARCH_LENS_AVAILABILITY", "SCENARIO_COUNTER_THESIS", "EVIDENCE_QUALITY"))
+INTEGRATED_EXPLANATIONS = {
+    "VALUATION_DISCOUNT_WITH_FINANCIAL_DETERIORATION":"The sector-relative valuation discount coexists with repeated or company-specific financial weakness; investigate a value-trap thesis before treating cheapness as support.",
+    "VALUATION_DISCOUNT_WITH_RESILIENCE_COUNTERTHESIS":"The sector-relative valuation discount has recovery or relative-resilience support; missing profitability and contrary evidence can still invalidate that thesis.",
+    "FINANCIAL_STRENGTH_WITHOUT_FRESH_ENTRY_CONFIRMATION":"Financial improvement does not establish a qualified current entry; the existing strategy confirmation and invalidation conditions remain controlling.",
+    "EXISTING_POLICY_QUALIFIED_ENTRY_CONDITION":"The existing strategy owner admits a qualified conditional entry case; this comparison grants no execution or sizing authority.",
+    "QUALIFIED_ENTRY_WITH_FINANCIAL_SUPPORT":"The qualified entry case coincides with qualified financial recovery or sector-relative resilience; both remain conditional research evidence.",
+    "QUALIFIED_ENTRY_CONDITION_WITH_FINANCIAL_COUNTEREVIDENCE":"The existing conditional entry case has financial counterevidence; tactical confirmation does not erase the financial risk.",
+    "FINANCIAL_WEAKNESS_SHARED_WITH_RETAINED_SECTOR_SAMPLE":"Adverse financial changes are shared with the retained compatible sector sample; this alone does not establish company-specific failure or economic causation.",
+    "CURRENT_TIMING_COMPARISON_UNKNOWN":"Current-session tactical evidence is unavailable; historical financial evidence must not substitute for a current trading signal.",
+    "QUALIFIED_VALUATION_FINANCIAL_COMPARISON_UNKNOWN":"Qualified valuation versus financial evidence is insufficient; retain the independent evidence and its gaps.",
+    "OBSERVED_ADVERSE_STRUCTURE_DOWNSIDE_CONDITION":"The existing strategy owner observes an adverse structural condition now; the bear case, invalidation boundary and counter-thesis govern downside research regardless of valuation or financial support."}
+# Fitness members the profile already carries elsewhere (or that duplicate the full Integrated
+# Decision record) are summarized and referenced by the source decision identity, not re-copied.
+_SUMMARY_ONLY_DIMENSIONS = frozenset(("VALUATION", "FUNDAMENTAL", "CORPORATE"))
+_COMPARED_MEASURES = ("cash_to_assets","debt_to_assets","debt_to_equity","pbt_margin","net_margin","gross_margin")
 
 def _canon(x: Any) -> str: return json.dumps(x, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
 def _hash(x: Any) -> str: return hashlib.sha256(_canon(x).encode()).hexdigest()
+
+
+def _integrated_profile(ticker, record, bound, source, session):
+    research = record.get("valuation_balance_sheet_divergence") or {}
+    trajectory = research.get("multi_period_financial_context") or {}
+    resilience = research.get("sector_relative_financial_resilience") or {}
+    dimensions = (record.get("current_research_decision_input") or {}).get("dimensions") or {}
+    low = research.get("status") == "AVAILABLE" and research.get("assessment", "").startswith("LOW_PB_")
+    weak = trajectory.get("assessment") == "PERSISTENT_DETERIORATION" or resilience.get("assessment") == "COMPANY_SPECIFIC_WEAKNESS"
+    strong = trajectory.get("assessment") in {"RECOVERY", "SUCCESSIVE_IMPROVEMENT"} or resilience.get("assessment") == "RESILIENCE_AGAINST_WEAK_PEERS"
+    technical = dimensions.get("TECHNICAL") or {"state":"BLOCKED","reason_codes":["QUALIFIED_TECHNICAL_CONTEXT_ABSENT"]}
+    timing_known = technical.get("state") in {"AVAILABLE","PARTIAL"} and record.get("evidence_currency") == "CURRENT_SESSION"
+    condition = record.get("posture_condition_class")
+    qualified_entry = timing_known and (bound.get("bull_case") or {}).get("case_status") == "CONDITIONAL"
+    findings = []
+    if low and weak:
+        findings.append("VALUATION_DISCOUNT_WITH_FINANCIAL_DETERIORATION")
+    if low and strong:
+        findings.append("VALUATION_DISCOUNT_WITH_RESILIENCE_COUNTERTHESIS")
+    if strong and timing_known and not qualified_entry:
+        findings.append("FINANCIAL_STRENGTH_WITHOUT_FRESH_ENTRY_CONFIRMATION")
+    if qualified_entry:
+        findings.append("EXISTING_POLICY_QUALIFIED_ENTRY_CONDITION" if not weak else "QUALIFIED_ENTRY_CONDITION_WITH_FINANCIAL_COUNTEREVIDENCE")
+        if strong and not weak:
+            findings.append("QUALIFIED_ENTRY_WITH_FINANCIAL_SUPPORT")
+    if resilience.get("assessment") == "DETERIORATION_SHARED_WITH_SECTOR_SAMPLE":
+        findings.append("FINANCIAL_WEAKNESS_SHARED_WITH_RETAINED_SECTOR_SAMPLE")
+    if not timing_known:
+        findings.append("CURRENT_TIMING_COMPARISON_UNKNOWN")
+    if research.get("status") != "AVAILABLE":
+        findings.append("QUALIFIED_VALUATION_FINANCIAL_COMPARISON_UNKNOWN")
+    if timing_known and (bound.get("bear_case") or {}).get("observed_adverse") is True:
+        findings.append("OBSERVED_ADVERSE_STRUCTURE_DOWNSIDE_CONDITION")
+    return {"ticker":ticker,"research_session":session,"source_integrated_identity":source,
+        "source_decision_identity":record["decision_identity"],
+        "research_action_posture":record["research_action_posture"],"posture_condition_class":condition,
+        "research_action_policy_version":record["research_action_policy_version"],
+        "evidence_currency":record.get("evidence_currency"),"finding_codes":findings,
+        "research_conclusion":" ".join(INTEGRATED_EXPLANATIONS[f] for f in findings) or "The available sources do not establish a differentiated financial/timing thesis; inspect the independent evidence and gaps.",
+        "valuation_financial_research":copy.deepcopy(research),
+        "fundamental_synthesis":copy.deepcopy(record.get("fundamental_synthesis")),
+        "timing_and_conditions":{k:copy.deepcopy(v) for k,v in bound.items() if k != "integrated_context"},
+        "decision_fitness_dimensions":{name:({"state":d.get("state"),"reason_codes":copy.deepcopy(d.get("reason_codes")),
+                "authority":copy.deepcopy(d.get("authority")),"detail":"SEE_SOURCE_DECISION_IDENTITY"}
+            if name in _SUMMARY_ONLY_DIMENSIONS else copy.deepcopy(d)) for name,d in dimensions.items()},
+        "trigger":copy.deepcopy(record.get("trigger")),"invalidation":copy.deepcopy(record.get("invalidation")),
+        "counter_thesis":copy.deepcopy(record.get("counter_thesis") or []),
+        "material_uncertainties":copy.deepcopy(record.get("material_uncertainties") or []),
+        "corporate_evidence":copy.deepcopy(record.get("corporate_intelligence_context") or {}),
+        "participation":copy.deepcopy(record.get("participation") or {}),
+        "source_identities":copy.deepcopy(record.get("source_identities") or {}),
+        "liquidity":copy.deepcopy(dimensions.get("LIQUIDITY") or {"state":"BLOCKED","reason_codes":["LIQUIDITY_RESEARCH_ABSENT"]}),
+        "limitations":["CONDITIONAL_CURRENT_RESEARCH_NOT_AN_EXECUTION_INSTRUCTION","FINANCIAL_REPORT_PERIODS_ARE_NOT_CURRENT_TRADING_SIGNALS",
+            "OWNER_POLICY_IS_PASSED_THROUGH_UNCHANGED","NO_PORTFOLIO_OR_HOLDINGS_ASSUMED"],"is_actionable":False}
+
+
+def _pb_signature(research):
+    """Same source/accounting keys used by the existing divergence peer owner."""
+    from stocklookup_core.valuation import current_research_valuation_context as owner
+    valuation = research.get("valuation") or {}
+    method = valuation.get("source_method") or {}
+    peer = valuation.get("peer_context") or {}
+    if research.get("status") != "AVAILABLE" or peer.get("status") != "READY_RESEARCH_ONLY":
+        return None
+    basis = method.get("equity_monetary_basis") or {}
+    price_basis = method.get("market_cap_monetary_basis") or {}
+    return (owner._peer_key({"entity_class":research.get("issuer_type")},method),valuation.get("cohort_id"),
+        method.get("book_period"),method.get("statement_scope"),method.get("equity_definition"),
+        (method.get("equity_lineage") or {}).get("provider"),basis.get("currency"),basis.get("normalized_unit"),
+        basis.get("native_scale"),basis.get("basis_status"),price_basis.get("basis_status"),price_basis.get("basis_source"))
+
+
+def _pb_position(research):
+    valuation = research.get("valuation") or {}
+    peer = valuation.get("peer_context") or {}
+    if research.get("status") != "AVAILABLE" or peer.get("status") != "READY_RESEARCH_ONLY" or peer.get("percentile") is None:
+        return None
+    return {"percentile":peer["percentile"],"cohort_id":valuation.get("cohort_id"),
+            "peer_count":peer.get("peer_count") or peer.get("cohort_size") or peer.get("sample_count")}
+
+
+def _sector_resilience_positions(ar, br):
+    """Cross-cohort: each issuer's existing sector-relative assessment for the same measure."""
+    rows = {}
+    ac = (ar.get("sector_relative_financial_resilience") or {}).get("metric_comparisons") or {}
+    bc = (br.get("sector_relative_financial_resilience") or {}).get("metric_comparisons") or {}
+    for fid in _COMPARED_MEASURES:
+        x,y = ac.get(fid) or {},bc.get(fid) or {}
+        if x.get("status") == y.get("status") == "AVAILABLE":
+            rows[f"{fid}_own_sector_relative_change"] = {"left_assessment":x.get("assessment"),"right_assessment":y.get("assessment"),
+                "left_periods":list(x.get("periods") or []),"right_periods":list(y.get("periods") or []),
+                "basis":"EACH_CHANGE_VERSUS_ITS_OWN_QUALIFIED_SECTOR_SAMPLE_NOT_A_LEVEL_COMPARISON"}
+    return rows
+
+
+def _integrated_pair(left, right, profiles):
+    a,b = profiles[left],profiles[right]
+    ar,br = a["valuation_financial_research"],b["valuation_financial_research"]
+    numeric,exclusions = {},{}
+    signature = _pb_signature(ar)
+    if signature and signature[0] and signature == _pb_signature(br):
+        numeric["research_pb"] = {"left":ar["valuation"]["source_method"]["value"],"right":br["valuation"]["source_method"]["value"],
+            "left_percentile":ar["valuation"]["peer_context"]["percentile"],"right_percentile":br["valuation"]["peer_context"]["percentile"],
+            "basis":copy.deepcopy(ar["valuation"]["source_method"]),"source_paths":[f"profiles.{t}.valuation_financial_research.valuation" for t in (left,right)]}
+    else:
+        exclusions["research_pb"] = "SAME_SECTOR_METHOD_PERIOD_SCOPE_SHARE_AND_MONETARY_BASIS_NOT_ESTABLISHED"
+        positions = [_pb_position(r) for r in (ar, br)]
+        if all(positions):
+            # Each security's position inside its own qualified peer cohort. Levels never cross
+            # cohorts; only the existing tie-aware percentiles are placed side by side.
+            numeric["research_pb_own_sector_position"] = {
+                "left_percentile":positions[0]["percentile"],"right_percentile":positions[1]["percentile"],
+                "left_cohort":positions[0]["cohort_id"],"right_cohort":positions[1]["cohort_id"],
+                "left_peer_count":positions[0]["peer_count"],"right_peer_count":positions[1]["peer_count"],
+                "basis":"EACH_PERCENTILE_WITHIN_ITS_OWN_QUALIFIED_PEER_COHORT_NOT_A_LEVEL_COMPARISON",
+                "source_paths":[f"profiles.{t}.valuation_financial_research.valuation.peer_context" for t in (left,right)]}
+    ac = (ar.get("sector_relative_financial_resilience") or {}).get("metric_comparisons") or {}
+    bc = (br.get("sector_relative_financial_resilience") or {}).get("metric_comparisons") or {}
+    for fid in _COMPARED_MEASURES:
+        x,y = ac.get(fid) or {},bc.get(fid) or {}
+        if (x.get("status") == y.get("status") == "AVAILABLE" and x.get("comparability_basis") == y.get("comparability_basis")
+                and x.get("periods") == y.get("periods") and x.get("peer_members") == y.get("peer_members")):
+            numeric[fid] = {"left":((ar.get("financial_measures") or {}).get(fid) or {}).get("value"),
+                "right":((br.get("financial_measures") or {}).get(fid) or {}).get("value"),
+                "basis":copy.deepcopy(x["comparability_basis"]),"periods":list(x["periods"]),
+                "left_trajectory":copy.deepcopy(x),"right_trajectory":copy.deepcopy(y),
+                "source_paths":[f"profiles.{t}.valuation_financial_research.financial_measures.{fid}" for t in (left,right)]}
+        else:
+            exclusions[fid] = "QUALIFIED_SAME_WINDOW_SECTOR_ACCOUNTING_PEER_COMPARISON_UNAVAILABLE"
+    contrasts = []
+    if a["finding_codes"] != b["finding_codes"]:
+        contrasts.append({"observation":"DIFFERENT_FINANCIAL_OR_TIMING_RESEARCH_CONDITIONS",
+            "left":a["finding_codes"],"right":b["finding_codes"],"source_paths":[f"profiles.{t}.finding_codes" for t in (left,right)]})
+    if a["posture_condition_class"] != b["posture_condition_class"]:
+        contrasts.append({"observation":"DIFFERENT_EXISTING_STRATEGY_CONDITIONS","left":a["posture_condition_class"],
+            "right":b["posture_condition_class"],"source_paths":[f"profiles.{t}.timing_and_conditions" for t in (left,right)]})
+    level_axes = [axis for axis in numeric if axis != "research_pb_own_sector_position"]
+    comparability = ("PARTIALLY_COMPARABLE" if level_axes else
+                     "RELATIVE_POSITION_ONLY" if numeric else "INDEPENDENT_RESEARCH_CONTEXT_ONLY")
+    if not level_axes:
+        for axis,row in _sector_resilience_positions(ar, br).items():
+            numeric[axis] = row
+    return {"left":left,"right":right,"comparability":comparability,
+        "qualified_numerical_axes":numeric,"exclusions":exclusions,"conditional_contrasts":contrasts,
+        "conclusion":"Compare the cited financial theses alongside each security's unchanged policy conditions and counterevidence. A valuation discount does not override deterioration or an unconfirmed entry condition.",
+        "risk_reward":"SOURCE_TRIGGER_AND_INVALIDATION_CONDITIONS_ONLY_NO_RETURN_OR_RISK_REWARD_ESTIMATE",
+        "preference":"NO_WINNER_OR_ALLOCATION_INFERRED","is_actionable":False}
+
+
+def build_integrated_comparisons(requests, *, integrated_decision, bind_scenarios):
+    """Existing shortlist comparison, using verified current decision inputs (2–5 selected securities).
+
+    Batch admission verifies the source once. No caller-provided measurements, lenses,
+    policy, portfolio state or prevalidated-token shortcut can enter this boundary.
+    ``bind_scenarios`` is the existing root owner ``current_evidence_bound_scenario.
+    bind_integrated_scenarios``, supplied by the composition root so this core module takes
+    no backward dependency; its output is re-checked against the verified source below.
+    """
+    if not isinstance(integrated_decision, Mapping):
+        raise ValueError("SELECTED_COMPARISON_REQUIRES_VERIFIED_INTEGRATED_DECISION")
+    session = integrated_decision.get("session")
+    selections = []
+    for request in requests:
+        if not isinstance(request,Mapping) or set(request) - {"tickers","research_session"}:
+            raise ValueError("UNSUPPORTED_SELECTED_COMPARISON_REQUEST")
+        raw = request.get("tickers")
+        if not isinstance(raw,(list,tuple)) or not all(isinstance(t,str) and t == t.strip().upper() for t in raw):
+            raise ValueError("EXPLICIT_UNIQUE_UPPERCASE_TICKERS_REQUIRED")
+        if not 2 <= len(raw) <= 5 or len(set(raw)) != len(raw):
+            raise ValueError("SELECT_TWO_TO_FIVE_UNIQUE_SECURITIES")
+        if request.get("research_session") != session:
+            raise ValueError("MIXED_OR_UNKNOWN_RESEARCH_SESSION")
+        selections.append(tuple(raw))
+    if not selections:
+        raise ValueError("EXPLICIT_COMPARISON_REQUEST_REQUIRED")
+    tickers = sorted({t for selected in selections for t in selected})
+    binding = bind_scenarios(session=session,integrated_decision=integrated_decision,tickers=tickers)
+    if (binding.get("integrated_artifact_identity") != integrated_decision.get("artifact_identity")
+            or binding.get("session") != session or binding.get("research_action_policy_version") != "v2"
+            or set(binding.get("records") or {}) != set(tickers)
+            or any(binding["records"][t].get("decision_identity") != integrated_decision["records"][t].get("decision_identity") for t in tickers)):
+        raise ValueError("SELECTED_COMPARISON_SCENARIO_BINDING_MISMATCH")
+    profiles = {t:_integrated_profile(t,integrated_decision["records"][t],binding["records"][t],
+        integrated_decision["artifact_identity"],session) for t in tickers}
+    outputs = []
+    for request,selected in zip(requests,selections):
+        output = {"schema_version":"1.1.0","contract_version":"evidence_aware_candidate_comparison/v1",
+            "mode":"INTEGRATED_CURRENT_RESEARCH","comparison_request":dict(request),"research_session":session,
+            "ordered_tickers":list(selected),"source_artifact_identities":{"integrated_decision":integrated_decision["artifact_identity"],
+                **copy.deepcopy(integrated_decision.get("source_artifacts") or {})},
+            "profiles":{t:copy.deepcopy(profiles[t]) for t in selected},
+            "pairwise":[_integrated_pair(a,b,profiles) for a,b in combinations(selected,2)],
+            "questions_requiring_human_judgment":["Do the next compatible financial observations confirm the thesis or expose one-off balance-sheet movements?",
+                "Are the source's confirmation and invalidation conditions still qualified for the intended research session?",
+                "Could missing profitability, catalysts or liquidity evidence invalidate the apparent opportunity?"],
+            "authority_boundary":{"not_ranking_or_recommendation":True,"no_composite_score_or_winner":True,
+                "no_mutation_of_source_artifacts":True,"historical_pit_liquidity_sizing_valuation":"NOT_PROMOTED"}}
+        output["comparison_identity"] = "candidate_comparison:"+_hash(output)
+        output["output_identity"] = "candidate_comparison_output:"+_hash(output)
+        outputs.append(output)
+    return outputs
+
+
+def build_integrated_comparison(request, *, integrated_decision, bind_scenarios):
+    return build_integrated_comparisons([request],integrated_decision=integrated_decision,bind_scenarios=bind_scenarios)[0]
+
+
+def verified_comparison_for_source(comparison, *, integrated_decision, tickers_in_scope):
+    """Embed a comparison built upstream: identity, source and scope must all match."""
+    view = verified_integrated_comparison(comparison)
+    if (not isinstance(integrated_decision, Mapping)
+            or view["source_artifact_identities"].get("integrated_decision") != integrated_decision.get("artifact_identity")
+            or view["research_session"] != integrated_decision.get("session")):
+        raise ValueError("SELECTED_COMPARISON_SOURCE_MISMATCH")
+    if not set(view["ordered_tickers"]) <= set(tickers_in_scope):
+        raise ValueError("SELECTED_COMPARISON_OUTSIDE_SCOPE")
+    return view
+
+
+THESIS_DISCOVERY_CONTRACT = "thesis_opportunity_discovery/v1"
+_TIER_ORDER = {"PRIORITY_NOW":0,"SETUP_WATCH":1,"MONITOR":2,"DATA_LIMITED":3}
+# Each lane is a conjunction of existing finding codes; a security may sit in several lanes.
+THESIS_LANES = {
+    "QUALIFIED_ENTRY_WITH_FINANCIAL_SUPPORT":(
+        "Existing policy admits a conditional entry case and qualified financial research shows recovery or sector-relative resilience.",
+        lambda f: "QUALIFIED_ENTRY_WITH_FINANCIAL_SUPPORT" in f),
+    "QUALIFIED_ENTRY_WITHOUT_FINANCIAL_CONFIRMATION":(
+        "Existing policy admits a conditional entry case; financial research neither confirms it (no recovery or resilience) nor shows persistent/company-specific weakness, or is unavailable. Valuation warnings and shared sector stress stay visible per member; not a financial endorsement.",
+        lambda f: "EXISTING_POLICY_QUALIFIED_ENTRY_CONDITION" in f and "QUALIFIED_ENTRY_WITH_FINANCIAL_SUPPORT" not in f),
+    "QUALIFIED_ENTRY_WITH_FINANCIAL_COUNTEREVIDENCE":(
+        "Existing policy admits a conditional entry case, but financial deterioration or company-specific weakness contradicts it.",
+        lambda f: "QUALIFIED_ENTRY_CONDITION_WITH_FINANCIAL_COUNTEREVIDENCE" in f),
+    "DISCOUNT_WITH_RESILIENCE_AWAITING_STRUCTURE":(
+        "Sector-relative valuation discount with recovery/resilience support, but no qualified current entry and no observed adverse structure.",
+        lambda f: "VALUATION_DISCOUNT_WITH_RESILIENCE_COUNTERTHESIS" in f and "OBSERVED_ADVERSE_STRUCTURE_DOWNSIDE_CONDITION" not in f),
+    "DISCOUNT_WITH_RESILIENCE_UNDER_ADVERSE_STRUCTURE":(
+        "Sector-relative valuation discount with resilience support while the existing strategy observes adverse structure now.",
+        lambda f: "VALUATION_DISCOUNT_WITH_RESILIENCE_COUNTERTHESIS" in f and "OBSERVED_ADVERSE_STRUCTURE_DOWNSIDE_CONDITION" in f),
+    "DISCOUNT_WITH_FINANCIAL_DETERIORATION":(
+        "Sector-relative valuation discount alongside repeated or company-specific financial weakness: a value-trap investigation list.",
+        lambda f: "VALUATION_DISCOUNT_WITH_FINANCIAL_DETERIORATION" in f),
+    "FINANCIAL_STRENGTH_AWAITING_CONFIRMATION":(
+        "Financial recovery or resilience without a qualified current entry or observed adverse structure.",
+        lambda f: "FINANCIAL_STRENGTH_WITHOUT_FRESH_ENTRY_CONFIRMATION" in f and "OBSERVED_ADVERSE_STRUCTURE_DOWNSIDE_CONDITION" not in f),
+    "SHARED_SECTOR_FINANCIAL_STRESS":(
+        "Adverse financial changes shared with the retained compatible sector sample; sector-level investigation, not company-specific failure.",
+        lambda f: "FINANCIAL_WEAKNESS_SHARED_WITH_RETAINED_SECTOR_SAMPLE" in f),
+}
+
+
+def build_thesis_discovery(*, integrated_decision, bind_scenarios, excluded_tickers=frozenset()):
+    """Market-wide evidence-pattern lanes from the same per-security findings as the comparison.
+
+    Inspection order is the existing ``opportunity_priority.research_priority_tier`` authority
+    (then ticker for a complete, deterministic listing); no new score, rank or threshold.
+    """
+    if not isinstance(integrated_decision, Mapping) or not isinstance(integrated_decision.get("records"), Mapping):
+        raise ValueError("THESIS_DISCOVERY_REQUIRES_VERIFIED_INTEGRATED_DECISION")
+    session = integrated_decision.get("session")
+    records = integrated_decision["records"]
+    tickers = sorted(records)
+    binding = bind_scenarios(session=session,integrated_decision=integrated_decision,tickers=tickers)
+    if (binding.get("integrated_artifact_identity") != integrated_decision.get("artifact_identity")
+            or set(binding.get("records") or {}) != set(tickers)):
+        raise ValueError("THESIS_DISCOVERY_SCENARIO_BINDING_MISMATCH")
+    lanes = {lane:[] for lane in THESIS_LANES}
+    research_available = timing_current = 0
+    for ticker in tickers:
+        if ticker in excluded_tickers:
+            continue  # owner research exclusion: counted, never listed
+        record = records[ticker]
+        profile = _integrated_profile(ticker,record,binding["records"][ticker],integrated_decision["artifact_identity"],session)
+        research = profile["valuation_financial_research"]
+        research_available += research.get("status") == "AVAILABLE"
+        timing_current += "CURRENT_TIMING_COMPARISON_UNKNOWN" not in profile["finding_codes"]
+        priority = record.get("opportunity_priority") or {}
+        tier = priority.get("research_priority_tier") if priority.get("status") == "AVAILABLE" else None
+        valuation = research.get("valuation") or {}
+        member = {"ticker":ticker,"research_priority_tier":tier or "UNAVAILABLE",
+            "research_action_posture":profile["research_action_posture"],"posture_condition_class":profile["posture_condition_class"],
+            "finding_codes":list(profile["finding_codes"]),"valuation_research":research.get("assessment"),
+            "pb_own_sector_percentile":(valuation.get("peer_context") or {}).get("percentile"),"cohort_id":valuation.get("cohort_id"),
+            "trajectory":(research.get("multi_period_financial_context") or {}).get("assessment"),
+            "sector_relative":(research.get("sector_relative_financial_resilience") or {}).get("assessment"),
+            "liquidity_state":profile["liquidity"].get("state"),"source_decision_identity":profile["source_decision_identity"]}
+        for lane,(_text,rule) in THESIS_LANES.items():
+            if rule(profile["finding_codes"]):
+                lanes[lane].append(member)
+    order = lambda m: (_TIER_ORDER.get(m["research_priority_tier"],len(_TIER_ORDER)), m["ticker"])
+    artifact = {"schema_version":"1.0.0","contract_version":THESIS_DISCOVERY_CONTRACT,"research_session":session,
+        "source_integrated_identity":integrated_decision["artifact_identity"],
+        "denominator":{"issuers":len(tickers),"owner_excluded":len(set(tickers) & set(excluded_tickers)),
+                       "qualified_valuation_financial_research":research_available,
+                       "current_session_timing":timing_current},
+        "ordering_method":"EXISTING_RESEARCH_PRIORITY_TIER_THEN_TICKER_INSPECTION_ORDER_ONLY",
+        "lanes":{lane:{"definition":THESIS_LANES[lane][0],"count":len(rows),"members":sorted(rows,key=order)} for lane,rows in lanes.items()},
+        "next_step":"Select 2-5 members for the integrated opportunity comparison; lanes are research lists, not recommendations.",
+        "authority_boundary":{"not_ranking_or_recommendation":True,"no_composite_score_or_winner":True,
+            "no_new_threshold_or_policy":True,"no_portfolio_or_holdings_assumed":True,"is_actionable":False}}
+    artifact["artifact_identity"] = THESIS_DISCOVERY_CONTRACT+":"+_hash(artifact)
+    return artifact
+
+
+def verified_thesis_discovery(artifact):
+    body = {k:v for k,v in artifact.items() if k != "artifact_identity"}
+    if artifact.get("contract_version") != THESIS_DISCOVERY_CONTRACT or artifact.get("artifact_identity") != THESIS_DISCOVERY_CONTRACT+":"+_hash(body):
+        raise ValueError("THESIS_DISCOVERY_IDENTITY_INVALID")
+    return copy.deepcopy(artifact)
+
+
+def thesis_discovery_markdown(artifact, *, members_per_lane=12):
+    view = verified_thesis_discovery(artifact)
+    d = view["denominator"]
+    lines = ["## Thesis-based opportunity discovery", "",
+        f"Session {view['research_session']}; {d['issuers']} issuers, {d['qualified_valuation_financial_research']} with qualified valuation/financial research, "
+        f"{d['current_session_timing']} with current-session timing. Order: existing research priority tier, then ticker. Research lists only.", ""]
+    for lane,row in view["lanes"].items():
+        lines += [f"### {lane.replace('_',' ').title()} ({row['count']})", "", row["definition"], ""]
+        if not row["members"]:
+            lines += ["- none in this session", ""]
+            continue
+        lines += ["| Ticker | Priority tier | Existing policy | Valuation research | Trajectory | Sector-relative | P/B sector pct |", "|---|---|---|---|---|---|---|"]
+        for m in row["members"][:members_per_lane]:
+            lines.append(f"| {m['ticker']} | {m['research_priority_tier']} | {m['research_action_posture']} / {m['posture_condition_class']} | "
+                         f"{m['valuation_research'] or 'UNKNOWN'} | {m['trajectory'] or 'UNKNOWN'} | {m['sector_relative'] or 'UNKNOWN'} | {_md_value(m['pb_own_sector_percentile'])} |")
+        if row["count"] > members_per_lane:
+            lines.append(f"| … | {row['count'] - members_per_lane} more in the JSON, same order | | | | | |")
+        lines.append("")
+    lines += [view["next_step"]]
+    return "\n".join(lines) + "\n"
+
+
+def verified_integrated_comparison(comparison):
+    body = {k:v for k,v in comparison.items() if k not in {"output_identity","comparison_identity"}}
+    if (comparison.get("contract_version") != "evidence_aware_candidate_comparison/v1"
+            or comparison.get("mode") != "INTEGRATED_CURRENT_RESEARCH"
+            or comparison.get("comparison_identity") != "candidate_comparison:"+_hash(body)
+            or comparison.get("output_identity") != "candidate_comparison_output:"+_hash({**body,"comparison_identity":comparison["comparison_identity"]})):
+        raise ValueError("SELECTED_COMPARISON_IDENTITY_INVALID")
+    return copy.deepcopy(comparison)
+
+
+def _md_value(value):
+    return "UNKNOWN" if value is None else (f"{value:.4g}" if isinstance(value,float) else str(value))
+
+
+def _md_list(value):
+    return ", ".join(map(str, value if isinstance(value, (list, tuple)) else [value])) or "none"
+
+
+def _md_boundary(row, level_key, distance_key):
+    row = row or {}
+    condition = row.get("condition") or {}
+    text = str(row.get("trigger_type") or row.get("invalidation_method") or "UNKNOWN")
+    if row.get(level_key) is not None:
+        text += f" at {_md_value(row.get(level_key))} (close {condition.get('operator') or '?'} level; distance {_md_value(row.get(distance_key))})"
+    if row.get("trigger_state"):
+        text += f"; state {row['trigger_state']}"
+    return text + f"; machine evaluation {condition.get('status', 'UNKNOWN')}"
+
+
+def integrated_comparison_markdown(comparison):
+    view = verified_integrated_comparison(comparison)
+    lines = ["## Selected investment opportunity research", "",
+        f"Session: {view['research_session']}; source: `{view['source_artifact_identities']['integrated_decision']}`; comparison: `{view['comparison_identity']}`.", ""]
+    for ticker,profile in view["profiles"].items():
+        cases = profile["timing_and_conditions"]
+        dims = profile["decision_fitness_dimensions"]
+        research = profile["valuation_financial_research"]
+        valuation = research.get("valuation") or {}
+        method = valuation.get("source_method") or {}
+        peer = valuation.get("peer_context") or {}
+        liquidity = profile["liquidity"]
+        lines += [f"### {ticker}", "",
+            f"- Existing policy (unchanged): **{profile['research_action_posture']}** / {profile['posture_condition_class']}; evidence currency {profile['evidence_currency']}.",
+            f"- Research conclusion: {profile['research_conclusion']}",
+            f"- Valuation: research P/B {_md_value(method.get('value'))} (book {method.get('book_period', 'UNKNOWN')}, {method.get('statement_scope', 'UNKNOWN')}, share basis {method.get('share_basis', 'UNKNOWN')}); "
+            f"peer percentile {_md_value(peer.get('percentile'))} in `{valuation.get('cohort_id', 'UNKNOWN')}`; finding {research.get('assessment', 'UNKNOWN')}.",
+            f"- Financial trajectory: {(research.get('multi_period_financial_context') or {}).get('assessment', 'UNKNOWN')}; "
+            f"sector-relative: {(research.get('sector_relative_financial_resilience') or {}).get('assessment', 'UNKNOWN')}.",
+            f"- Technical structure: {(dims.get('TECHNICAL') or {}).get('state', 'UNKNOWN')}. Confirmation: {_md_boundary(profile['trigger'], 'trigger_level', 'distance_to_trigger_pct')}.",
+            f"- Invalidation: {_md_boundary(profile['invalidation'], 'invalidation_level', 'distance_to_invalidation_pct')}.",
+            "- Existing scenario cases: " + "; ".join(
+                f"{name.split('_')[0]} {(cases.get(name) or {}).get('case_status', 'UNKNOWN')} ({(cases.get(name) or {}).get('reason_code', 'UNKNOWN')})"
+                for name in ("bull_case", "base_case", "bear_case")) + "; probabilities uncalibrated.",
+            f"- Liquidity research: {liquidity.get('state', 'UNKNOWN')}; execution capacity {(liquidity.get('execution') or {}).get('state', 'UNKNOWN')} (no sizing authority).",
+            f"- Counter-thesis: {_md_list(profile['counter_thesis']) if profile['counter_thesis'] else 'none recorded'}.",
+            f"- Material uncertainties: {_md_list(profile['material_uncertainties']) if profile['material_uncertainties'] else 'none recorded'}.",
+            "", "| Financial measure | Reported ratio | Own trajectory | Sector-relative evidence |", "|---|---|---|---|"]
+        for fid in _COMPARED_MEASURES:
+            metric = (research.get("financial_measures") or {}).get(fid)
+            if metric is None:
+                continue
+            trend = (((research.get("multi_period_financial_context") or {}).get("metric_trajectories") or {}).get(fid) or {})
+            sector = (((research.get("sector_relative_financial_resilience") or {}).get("metric_comparisons") or {}).get(fid) or {})
+            value = _md_value(metric.get("value")) if metric.get("status") == "AVAILABLE" else "UNKNOWN"
+            lines.append(f"| {fid} | {value} | {trend.get('assessment', 'UNKNOWN')} | {sector.get('assessment', 'UNKNOWN')} |")
+        lines += ["", f"Financial evidence: `{research.get('source_context_identity', 'UNKNOWN')}`; exact periods and source observations remain in the companion JSON.", ""]
+    for pair in view["pairwise"]:
+        lines += [f"### {pair['left']} versus {pair['right']}", "", f"- Comparability: {pair['comparability']}."]
+        for axis,row in pair["qualified_numerical_axes"].items():
+            if axis == "research_pb_own_sector_position":
+                lines.append(f"- P/B position within own sector cohort: {pair['left']} {_md_value(row['left_percentile'])} in `{row['left_cohort']}` "
+                             f"vs {pair['right']} {_md_value(row['right_percentile'])} in `{row['right_cohort']}` (positions, not levels).")
+            elif axis.endswith("_own_sector_relative_change"):
+                lines.append(f"- {axis.replace('_own_sector_relative_change','')} versus own sector sample: {pair['left']} {row['left_assessment']}; {pair['right']} {row['right_assessment']}.")
+            else:
+                lines.append(f"- {axis}: {pair['left']} {_md_value(row.get('left'))} vs {pair['right']} {_md_value(row.get('right'))} (same qualified sector/method/period basis).")
+        for contrast in pair["conditional_contrasts"]:
+            lines.append(f"- {contrast['observation']}: {pair['left']} {_md_list(contrast['left'])}; {pair['right']} {_md_list(contrast['right'])}.")
+        if pair["exclusions"]:
+            reasons = sorted(set(pair["exclusions"].values()))
+            lines.append(f"- Not numerically comparable: {', '.join(pair['exclusions'])} ({'; '.join(reasons)}).")
+        lines += [f"- {pair['conclusion']}", ""]
+    lines += ["Current Research only. Source reporting periods are preserved; no target price, probability, score, winner, portfolio sizing or execution authority."]
+    return "\n".join(lines) + "\n"
+
 
 def validate_request(request: Mapping[str, Any], known: set[str], session: str) -> tuple[str, ...]:
     tickers = tuple(str(x).upper() for x in request.get("tickers", ()))

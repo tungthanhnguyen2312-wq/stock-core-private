@@ -59,7 +59,7 @@ def _financial(row):
 def _scenario(row):
  return {k:copy.deepcopy(row.get(k)) for k in ("scenario_disposition","current_state","bear_case","base_case","bull_case","authority_limitations")}
 
-def build_artifact(*, opportunity: Mapping[str,Any], scenario: Mapping[str,Any]|None=None, risk_register: Mapping[str,Any]|None=None, market_sector: Mapping[str,Any]|None=None, financial_momentum: Mapping[str,Any]|None=None, corporate_event: Mapping[str,Any]|None=None, valuation: Mapping[str,Any]|None=None, historical: Mapping[str,Any]|None=None, field_claims: Mapping[str, Mapping[str, Any]]|None=None, regime_context: Mapping[str,Any]|None=None, integrated_decision: Mapping[str,Any]|None=None, integrated_scenario_binding: Mapping[str,Any]|None=None)->dict[str,Any]:
+def build_artifact(*, opportunity: Mapping[str,Any], scenario: Mapping[str,Any]|None=None, risk_register: Mapping[str,Any]|None=None, market_sector: Mapping[str,Any]|None=None, financial_momentum: Mapping[str,Any]|None=None, corporate_event: Mapping[str,Any]|None=None, valuation: Mapping[str,Any]|None=None, historical: Mapping[str,Any]|None=None, field_claims: Mapping[str, Mapping[str, Any]]|None=None, regime_context: Mapping[str,Any]|None=None, integrated_decision: Mapping[str,Any]|None=None, integrated_scenario_binding: Mapping[str,Any]|None=None, opportunity_comparison_request: Mapping[str,Any]|None=None)->dict[str,Any]:
  if opportunity.get("contract_version")!="current_opportunity_prioritization/v1" or opportunity.get("artifact_sha256")!=opportunity_identity(opportunity).get("artifact_sha256") or not isinstance(opportunity.get("records"),Mapping):raise CurrentResearchDecisionPacketError("CURRENT_DECISION_CONTEXT_INVALID")
  supplied={"scenario":scenario,"risk_register":risk_register,"market_sector":market_sector,"financial_momentum":financial_momentum,"corporate_event":corporate_event,"valuation":valuation,"historical":historical}
  manifest={name:_manifest(name,a) for name,a in supplied.items()}
@@ -118,6 +118,8 @@ def build_artifact(*, opportunity: Mapping[str,Any], scenario: Mapping[str,Any]|
    business_context=((security.get("corporate_intelligence_context") or {}).get("forward_driver_context") or {}).get("business_update_context")
    if business_context is not None:
     row["components"]["business_update_context"]=copy.deepcopy(business_context)
+   if "valuation_balance_sheet_divergence" in security:
+    row["components"]["valuation_balance_sheet_divergence"]=copy.deepcopy(security["valuation_balance_sheet_divergence"])
    row["security_decision"]={key:copy.deepcopy(security.get(key)) for key in (
     "research_action_posture", "posture_condition_class", "research_action_policy_version",
     "evidence_currency", "decision_identity", "why_now", "trigger", "invalidation")}
@@ -137,6 +139,11 @@ def build_artifact(*, opportunity: Mapping[str,Any], scenario: Mapping[str,Any]|
   validate_context(regime_context, opportunity.get("research_session"))
   artifact["macro_market_regime_context"]=copy.deepcopy(regime_context)
   artifact["source_artifact_identities"]["macro_market_regime_context"]=regime_context["artifact_identity"]
+ if opportunity_comparison_request is not None:
+  from current_evidence_bound_scenario import bind_integrated_scenarios
+  from stocklookup_core.research.evidence_aware_candidate_comparison import build_integrated_comparison
+  if not set(opportunity_comparison_request.get("tickers") or []) <= set(records):raise CurrentResearchDecisionPacketError("SELECTED_COMPARISON_OUTSIDE_PACKET_SCOPE")
+  artifact["selected_opportunity_comparison"]=build_integrated_comparison(opportunity_comparison_request,integrated_decision=integrated_decision,bind_scenarios=bind_integrated_scenarios)
  artifact.update(content_identity(artifact));return artifact
 def replay(a:Mapping[str,Any])->None:
  if a.get("macro_market_regime_context") is not None:

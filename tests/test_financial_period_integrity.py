@@ -214,6 +214,179 @@ def test_scaleout_does_not_revive_an_unverified_income_proxy_over_a_ready_balanc
     assert record["research_observations"]
 
 
+def _income_engine_rows(ticker: str, metric_values: dict[str, dict[str, float]], *,
+                       provider: str = "KBS", qualified: dict[str, str] | None = None) -> list[dict]:
+    rows = []
+    for metric, by_period in metric_values.items():
+        for raw, value in by_period.items():
+            rows.append(_engine_row(
+                metric, value, raw, qualified=None if qualified is None else qualified[raw],
+                provider=provider, family="income_statement",
+            ))
+            rows[-1]["ticker"] = ticker
+    return rows
+
+
+def _balance_rows(ticker: str, periods: list[str]) -> list[dict]:
+    rows = []
+    for period in periods:
+        for metric, value in (
+            ("cash_and_cash_equivalents", 20), ("total_assets", 100),
+            ("total_interest_bearing_debt", 10), ("shareholders_equity", 80),
+        ):
+            item = _engine_row(metric, value, period, provider="VCI", family="balance_sheet",
+                               semantic="POINT_IN_TIME_BALANCE_SHEET")
+            item["ticker"] = ticker
+            rows.append(item)
+    return rows
+
+
+def _trajectory_metrics(context: dict) -> dict:
+    from stocklookup_core.valuation import current_research_valuation_context as valuation
+    metrics = {fid: {"status": "UNKNOWN", "reason_codes": ["ABSENT"], "own_history_context": {}}
+               for fid in valuation.DIVERGENCE_FEATURES}
+    for fid in ("cash_to_assets", "debt_to_assets", "debt_to_equity", "pbt_margin", "net_margin", "gross_margin"):
+        feature = context["features"][fid]
+        history = context["history_context"][fid]
+        ready = feature["fitness"] == "READY"
+        metrics[fid] = {
+            "status": "AVAILABLE" if ready else "UNKNOWN",
+            "reason_codes": list(feature.get("reason_codes") or []),
+            "value": feature.get("value") if ready else None,
+            "own_history_context": {"trajectory": history["trajectory"]} if history.get("trajectory") else {},
+        }
+    return metrics
+
+
+def _opportunity_profile(divergence: dict):
+    from stocklookup_core.research.evidence_aware_candidate_comparison import _integrated_profile
+    record = {
+        "decision_identity": "retained-decision",
+        "research_action_posture": "RESEARCH_ONLY",
+        "posture_condition_class": "NO_QUALIFIED_ENTRY",
+        "research_action_policy_version": "retained",
+        "evidence_currency": "CURRENT_SESSION",
+        "valuation_balance_sheet_divergence": {
+            "status": "AVAILABLE",
+            "assessment": "LOW_PB_WITH_FINANCIAL_SUPPORT",
+            "multi_period_financial_context": divergence,
+        },
+        "current_research_decision_input": {"dimensions": {"TECHNICAL": {"state": "AVAILABLE", "reason_codes": []}}},
+    }
+    return _integrated_profile("T0", record, {}, "source", "2026-10-21")
+
+
+HPG_RAW_TO_FISCAL = {
+    "2025-Q1": "2024-Q4",
+    "2025-Q4_1": "2025-Q1",
+    "2025-Q3": "2025-Q2",
+    "2025-Q4": "2025-Q3",
+    "2026-Q1": "2025-Q4",
+}
+# Values sit on the raw label. Fiscal order is not the raw-label order.
+HPG_FLOW_VALUES = {
+    "revenue": {label: 100.0 for label in HPG_RAW_TO_FISCAL},
+    "net_income": {"2025-Q1": 50, "2025-Q4_1": 40, "2025-Q3": 10, "2025-Q4": 20, "2026-Q1": 30},
+    "profit_before_tax": {"2025-Q1": 50, "2025-Q4_1": 40, "2025-Q3": 10, "2025-Q4": 20, "2026-Q1": 30},
+    "gross_profit": {"2025-Q1": 50, "2025-Q4_1": 40, "2025-Q3": 10, "2025-Q4": 20, "2026-Q1": 30},
+}
+
+
+def test_unverified_kbs_margin_trajectories_do_not_become_deterioration() -> None:
+    periods = ["2024-Q4", "2025-Q1", "2025-Q2", "2025-Q3", "2025-Q4"]
+    flows = {
+        metric: {period: 100 if metric == "revenue" else 50 - index * 10
+                 for index, period in enumerate(periods)}
+        for metric in ("revenue", "net_income", "profit_before_tax", "gross_profit")
+    }
+    rows = _income_engine_rows("HCM", flows) + _balance_rows("HCM", periods[1:])
+    context = engine.build_ticker_context("HCM", rows, issuer_type="corporate", source_identities={})
+    for fid in ("net_margin", "gross_margin", "pbt_margin"):
+        trajectory = context["history_context"][fid]["trajectory"]
+        assert trajectory["status"] == "UNKNOWN"
+        assert trajectory["assessment"] == "INSUFFICIENT_EVIDENCE"
+        assert trajectory["observations"] == []
+        assert trajectory["sequential_changes"] == []
+        assert trajectory["yoy_changes"] == []
+        assert engine.KBS_PERIOD_IDENTITY_UNVERIFIED in trajectory["reason_codes"]
+        assert "PERSISTENT_DETERIORATION" not in trajectory.values()
+    assert context["features"]["net_margin"]["fitness"] == "READY"
+    assert engine.KBS_PERIOD_IDENTITY_UNVERIFIED in context["features"]["net_margin_direction"]["reason_codes"]
+    assert engine.KBS_PERIOD_IDENTITY_UNVERIFIED in context["features"]["gross_margin_direction"]["reason_codes"]
+    assert engine.KBS_PERIOD_IDENTITY_UNVERIFIED in context["features"]["net_income_same_quarter_yoy"]["reason_codes"]
+    assert context["features"]["net_income_qoq"]["fitness"] == "BLOCKED_BY_EVIDENCE"
+    assert context["history_context"]["cash_to_assets"]["trajectory"]["status"] == "AVAILABLE"
+    assert context["history_context"]["cash_to_assets"]["trajectory"]["assessment"] == "STABLE"
+    from stocklookup_core.valuation import current_research_valuation_context as valuation
+    divergence = valuation._multi_period_divergence(_trajectory_metrics(context), {"status": "READY_RESEARCH_ONLY", "percentile": 0.1})
+    assert divergence["assessment"] == "STABLE"
+    assert divergence["valuation_relationship"] != "DISCOUNT_WITH_PERSISTENT_DETERIORATION"
+    for fid in ("net_margin", "gross_margin", "pbt_margin"):
+        assert engine.KBS_PERIOD_IDENTITY_UNVERIFIED in divergence["material_gaps"][fid]
+        assert fid not in {item["metric"] for item in divergence["contradicting_evidence"]}
+    profile = _opportunity_profile(divergence)
+    assert profile["source_decision_identity"] == "retained-decision"
+    assert profile["valuation_financial_research"]["multi_period_financial_context"]["assessment"] == "STABLE"
+    assert "VALUATION_DISCOUNT_WITH_FINANCIAL_DETERIORATION" not in profile["finding_codes"]
+    assert "FINANCIAL_STRENGTH_WITHOUT_FRESH_ENTRY_CONFIRMATION" not in profile["finding_codes"]
+
+
+def test_qualified_hpg_margin_trajectory_uses_arithmetic_period_through_opportunity() -> None:
+    rows = _income_engine_rows("HPG", HPG_FLOW_VALUES, qualified=HPG_RAW_TO_FISCAL)
+    rows += _balance_rows("HPG", ["2024-Q4", "2025-Q1", "2025-Q2", "2025-Q3", "2025-Q4"])
+    context = engine.build_ticker_context("HPG", rows, issuer_type="corporate", source_identities={})
+    trajectory = context["history_context"]["net_margin"]["trajectory"]
+    assert trajectory["status"] == "AVAILABLE"
+    assert trajectory["assessment"] == "RECOVERY"
+    assert trajectory["subject_period"] == "2025-Q4"
+    assert [item["period"] for item in trajectory["observations"]] == [
+        "2024-Q4", "2025-Q1", "2025-Q2", "2025-Q3", "2025-Q4"]
+    assert all(item["period_identity_basis"] == "QUALIFIED_ARITHMETIC_PERIOD" for item in trajectory["observations"])
+    assert trajectory["sequential_changes"][-1]["comparison_basis"] == "SEQUENTIAL_QUARTER"
+    assert trajectory["sequential_changes"][-1]["from_period"] == "2025-Q3"
+    assert trajectory["sequential_changes"][-1]["to_period"] == "2025-Q4"
+    assert trajectory["yoy_changes"][-1]["comparison_basis"] == "SAME_QUARTER_YOY"
+    assert trajectory["yoy_changes"][-1]["from_period"] == "2024-Q4"
+    assert trajectory["yoy_changes"][-1]["to_period"] == "2025-Q4"
+    assert "2026-Q1" not in {item["period"] for item in trajectory["observations"]}
+    for fid in ("gross_margin", "pbt_margin"):
+        assert context["history_context"][fid]["trajectory"]["assessment"] == "RECOVERY"
+        assert context["history_context"][fid]["trajectory"]["subject_period"] == "2025-Q4"
+    qoq = context["features"]["net_income_qoq"]
+    assert qoq["fitness"] == "READY"
+    assert qoq["period_identity"] == ["2025-Q3", "2025-Q4"]
+    assert qoq["value"] == 0.5
+    direction = context["features"]["net_margin_direction"]
+    assert direction["fitness"] == "READY"
+    assert abs(direction["value"] - 0.1) < 1e-9
+    from stocklookup_core.valuation import current_research_valuation_context as valuation
+    divergence = valuation._multi_period_divergence(
+        _trajectory_metrics(context), {"status": "READY_RESEARCH_ONLY", "percentile": 0.1})
+    assert divergence["assessment"] == "RECOVERY"
+    assert divergence["metric_trajectories"]["net_margin"]["subject_period"] == "2025-Q4"
+    profile = _opportunity_profile(divergence)
+    assert profile["source_decision_identity"] == "retained-decision"
+    assert profile["valuation_financial_research"]["multi_period_financial_context"]["assessment"] == "RECOVERY"
+    assert "FINANCIAL_STRENGTH_WITHOUT_FRESH_ENTRY_CONFIRMATION" in profile["finding_codes"]
+    assert "VALUATION_DISCOUNT_WITH_FINANCIAL_DETERIORATION" not in profile["finding_codes"]
+
+
+def test_non_kbs_income_trajectory_keeps_its_reported_quarter() -> None:
+    periods = ["2025-Q1", "2025-Q2", "2025-Q3", "2025-Q4"]
+    flows = {
+        metric: {period: 100 if metric == "revenue" else 40 - index * 10
+                 for index, period in enumerate(periods)}
+        for metric in ("revenue", "net_income", "profit_before_tax", "gross_profit")
+    }
+    rows = _income_engine_rows("FPT", flows, provider="VCI")
+    context = engine.build_ticker_context("FPT", rows, issuer_type="corporate", source_identities={})
+    trajectory = context["history_context"]["pbt_margin"]["trajectory"]
+    assert trajectory["status"] == "AVAILABLE"
+    assert trajectory["assessment"] == "PERSISTENT_DETERIORATION"
+    assert [item["period"] for item in trajectory["observations"]] == periods
+    assert all(item["period_identity_basis"] == "REPORTED_QUARTER_LABEL_NO_DATE_INFERENCE" for item in trajectory["observations"])
+
+
 def test_explicit_retained_flow_basis_still_builds_ttm() -> None:
     facts = []
     for quarter in range(1, 5):

@@ -16,7 +16,7 @@ ROOT = Path(__file__).resolve().parents[1]
 PRIOR = "10aea634a50e83d5e8db4951155c5a7b6f753e3f091305bf7bee1ecadc463367"
 ACTIVE = "9f384915d23661497e9132091a2aaac0030e5d54bc5060caeda89094b33901c7"
 HISTORICAL_V2 = "07c2a363df0e91a1dee230f0316a081249b247f7aa74bd67e04e45b1d1886567"
-ACTIVE_V2 = "f9477a9193ea4444187819a9aa8200d59a9c94e2bfc418321423c7dee3b34d2c"
+ACTIVE_V2 = "23595d916d6e49400cbcb2d1b5b62c4eef4241a8afee6e129b76ea1df609154d"
 MIXED_V2 = "c705b386c927a49adaf97be0a711cda5b27b2432cae2aaaa098a087a58b88698"
 HISTORICAL_V1 = "fa79baadcca197493b9ca70067fbd153f5e8bb7f50dfb6dbc6da53f253483d46"
 EMPTY = hashlib.sha256(b"").hexdigest()
@@ -52,6 +52,9 @@ def _copy_domain(tmp_path: Path) -> None:
     relatives.extend(
         row["archive"] for row in json.loads((ROOT / VALUATION_MANIFEST).read_bytes())["sources"].values()
     )
+    research = "tests/fixtures/financial_research_source_transition_v1.json"
+    relatives.append(research)
+    relatives.extend(row["archive"] for row in json.loads((ROOT / research).read_bytes())["sources"].values())
     for relative in relatives:
         _copy_file(tmp_path, relative)
 

@@ -1,0 +1,394 @@
+{
+  "acceptance_mode": "ISOLATED_FINANCIAL_DECISION_JOIN_NOT_A_REPLAYED_OR_REWRITTEN_SEALED_SESSION",
+  "after_engine_identity": "financial_analysis_context/v2:e51524342b40b12b3f16e7f397003fd3c2dfa63e576fa7d796333d6f1e0f5128",
+  "ai_delivered_comparisons": {
+    "cash_to_assets": 430,
+    "debt_to_assets": 430,
+    "debt_to_equity": 430,
+    "pbt_margin": 408
+  },
+  "ai_delivered_history": {
+    "cash_to_assets": 1149,
+    "debt_to_assets": 1149,
+    "debt_to_equity": 1149,
+    "pbt_margin": 125
+  },
+  "authority_promoted": false,
+  "baseline": {
+    "cash_to_assets": {
+      "decision_blockers": {},
+      "decision_history_status": {
+        "NOT_IMPLEMENTED": 1492
+      },
+      "decision_status": {
+        "NOT_IMPLEMENTED": 1492
+      },
+      "decision_usable_comparisons": 0,
+      "history": {
+        "NOT_IMPLEMENTED": 1492
+      },
+      "peer_reasons": {},
+      "peer_status": {
+        "NOT_IMPLEMENTED": 1492
+      },
+      "underlying_blocked_reasons": {
+        "ENTITY_TYPE_NOT_SUPPORTED_THIS_MILESTONE": 89,
+        "FEATURE_STORE_RESEARCH_PROXY": 21,
+        "MISSING_SAME_PROVIDER_TICKER_PERIOD_SCOPE_REPRESENTATION": 106
+      },
+      "underlying_feature_fitness": {
+        "BLOCKED_BY_EVIDENCE": 106,
+        "NOT_APPLICABLE": 89,
+        "READY": 1276,
+        "RESEARCH_PROXY": 21
+      }
+    },
+    "debt_to_assets": {
+      "decision_blockers": {},
+      "decision_history_status": {
+        "NOT_IMPLEMENTED": 1492
+      },
+      "decision_status": {
+        "NOT_IMPLEMENTED": 1492
+      },
+      "decision_usable_comparisons": 0,
+      "history": {
+        "NOT_IMPLEMENTED": 1492
+      },
+      "peer_reasons": {},
+      "peer_status": {
+        "NOT_IMPLEMENTED": 1492
+      },
+      "underlying_blocked_reasons": {
+        "ENTITY_TYPE_NOT_SUPPORTED_THIS_MILESTONE": 110,
+        "MISSING_SAME_PROVIDER_TICKER_PERIOD_SCOPE_REPRESENTATION": 106
+      },
+      "underlying_feature_fitness": {
+        "BLOCKED_BY_EVIDENCE": 106,
+        "NOT_APPLICABLE": 110,
+        "READY": 1276
+      }
+    },
+    "debt_to_equity": {
+      "decision_blockers": {},
+      "decision_history_status": {
+        "NOT_IMPLEMENTED": 1492
+      },
+      "decision_status": {
+        "NOT_IMPLEMENTED": 1492
+      },
+      "decision_usable_comparisons": 0,
+      "history": {
+        "NOT_IMPLEMENTED": 1492
+      },
+      "peer_reasons": {},
+      "peer_status": {
+        "NOT_IMPLEMENTED": 1492
+      },
+      "underlying_blocked_reasons": {
+        "ENTITY_TYPE_NOT_SUPPORTED_THIS_MILESTONE": 110,
+        "MISSING_SAME_PROVIDER_TICKER_PERIOD_SCOPE_REPRESENTATION": 106
+      },
+      "underlying_feature_fitness": {
+        "BLOCKED_BY_EVIDENCE": 106,
+        "NOT_APPLICABLE": 110,
+        "READY": 1276
+      }
+    },
+    "pbt_margin": {
+      "decision_blockers": {},
+      "decision_history_status": {
+        "NOT_IMPLEMENTED": 1492
+      },
+      "decision_status": {
+        "NOT_IMPLEMENTED": 1492
+      },
+      "decision_usable_comparisons": 0,
+      "history": {
+        "NOT_IMPLEMENTED": 1492
+      },
+      "peer_reasons": {},
+      "peer_status": {
+        "NOT_IMPLEMENTED": 1492
+      },
+      "underlying_blocked_reasons": {
+        "ENTITY_TYPE_NOT_SUPPORTED_THIS_MILESTONE": 110,
+        "MISSING_SAME_PROVIDER_TICKER_PERIOD_SCOPE_REPRESENTATION": 98
+      },
+      "underlying_feature_fitness": {
+        "BLOCKED_BY_EVIDENCE": 98,
+        "NOT_APPLICABLE": 110,
+        "READY": 1284
+      }
+    }
+  },
+  "baseline_engine_identity": "financial_analysis_context/v2:52be4f6da6b33c286419e7565a5be98acb47ac917851d5c860991cbc24e5d547",
+  "cohort_count": 1492,
+  "cohort_semantics": "PINNED_FINANCIAL_EVIDENCE_UNIVERSE_NOT_CURRENT_EXCHANGE_MEMBERSHIP",
+  "daily_or_runtime_write": false,
+  "input_hashes_unchanged": {
+    "local_acceptance_inputs/baseline-engine.json": "9164f6f7f8a32d710c41e7e7dcbcf920cd63ae84d34a52e596bb77711a0aaa1f",
+    "local_acceptance_inputs/candidate-engine.json.gz": "b244bbfb1565784a45367c3f2407c15c8a88e2c69b310eebaf85618054b6009b",
+    "operations-review/hose-public-xhr-and-periodic-series-recon-v1-20260824/hose_public_xhr_artifact.json": "5008736cb1013121ed8198f5964e1d8aee57ee416e885f5e70cd65a5f8d6e102",
+    "operations-review/market-wide-financial-entity-classification-scaleout-v1-20260901/exchange_industry_classification_snapshot.json": "343d612125efb6db506247852e7eb3d7060a80ed9cd8b15cb292eb23ffd2a40c",
+    "operations-review/market-wide-financial-entity-classification-scaleout-v1-20260901/scaleout_classification_diagnostics.json": "7147118eca3a0203d5197030b176129f861516e464df0f92c8a751a506ddf282",
+    "operations-review/market-wide-fundamental-feature-store-v1-20260831/market_wide_fundamental_feature_store_artifact.json": "4981299905256029dd4b30dbcdd83f25a1f1c2f9088c3b63e4a046d86c3bb781",
+    "operations-review/market-wide-fundamental-feature-store-v1-20260831/market_wide_fundamental_feature_store_records.jsonl.gz": "bc9d0c41dc9bfb3c538d9a18a7b4ba44b6f5600629ef573cac90b5d9c31e8161",
+    "operations-review/market-wide-structured-financial-period-semantics-v1-20260905/structured_financial_period_semantics_artifact.json": "8da0ceb342635cbc3836915c1898bec912a41212b87e08626fda5d55bfa7a178",
+    "operations-review/market-wide-structured-financial-period-semantics-v1-20260905/structured_financial_period_semantics_facts.jsonl.gz": "47a4e6d11df339267ba9d4107b34efc1c4c1f563f5fd08e8a2edda23cc5c2e5f"
+  },
+  "local_baseline_commit": "61c870c82648a67eed29d1842f88020e0326c4de",
+  "membership": {
+    "cohort_label": "RETAINED_HOSE_VN30_OBSERVATION_NOT_EXACT_TARGET_MEMBERSHIP",
+    "exact_target_membership_qualified": false,
+    "membership_artifact_identity": "hose_public_xhr_and_periodic_series_recon:6d89ba818f9577efcdf99fea0b912e41e953549812cb85ccce036cff0d110981",
+    "membership_as_of_date": "2026-08-24",
+    "membership_effective_intervals": "UNKNOWN",
+    "membership_observation_time": "2026-08-24T05:36:47Z",
+    "membership_raw_sha256": "f9430c3ed84e22a5e42af92c48c1fa44c233c84e62ff724289854cdd03e584ef",
+    "target_session": "2026-10-16",
+    "tickers": [
+      "ACB",
+      "BID",
+      "CTG",
+      "DGC",
+      "FPT",
+      "GAS",
+      "GVR",
+      "HDB",
+      "HPG",
+      "LPB",
+      "MBB",
+      "MSN",
+      "MWG",
+      "PLX",
+      "SAB",
+      "SHB",
+      "SSB",
+      "SSI",
+      "STB",
+      "TCB",
+      "TPB",
+      "VCB",
+      "VHM",
+      "VIB",
+      "VIC",
+      "VJC",
+      "VNM",
+      "VPB",
+      "VPL",
+      "VRE"
+    ]
+  },
+  "new_metric_input_coverage": 0,
+  "newly_computed_history_methods": 4,
+  "newly_computed_peer_methods": 4,
+  "old_history_and_peers_unchanged": true,
+  "outside_retained_vn30_comparisons": {
+    "cash_to_assets": 416,
+    "debt_to_assets": 416,
+    "debt_to_equity": 416,
+    "pbt_margin": 394
+  },
+  "posture_and_fundamental_policy_unchanged": true,
+  "recommended_next_job": {
+    "admitted_or_started": false,
+    "capability": "MARKET_WIDE_VALUATION_BALANCE_SHEET_DIVERGENCE_RESEARCH",
+    "ready_peer_pb_overlap": 337,
+    "ready_retained_pb_observations": 764,
+    "source_valuation_identity": "canonical_daily_financial_v2_materialization/v1:98ec541d7d1e7109b57e2cf3c50fb698c0a4c70cb8f77ab0a7fa48580b1cc261"
+  },
+  "result": {
+    "cash_to_assets": {
+      "decision_blockers": {
+        "CORPORATE_PEER_NOT_APPLICABLE": 110
+      },
+      "decision_history_status": {
+        "AVAILABLE": 1093,
+        "INSUFFICIENT_HISTORY": 127,
+        "NOT_APPLICABLE": 110,
+        "PARTIAL": 56,
+        "UNAVAILABLE": 106
+      },
+      "decision_status": {
+        "INSUFFICIENT_PEER_COUNT": 44,
+        "NOT_COMPARABLE": 1018,
+        "READY_RESEARCH_ONLY": 430
+      },
+      "decision_usable_comparisons": 430,
+      "history": {
+        "AVAILABLE": 1093,
+        "INSUFFICIENT_HISTORY": 127,
+        "NOT_APPLICABLE": 110,
+        "PARTIAL": 56,
+        "UNAVAILABLE": 106
+      },
+      "peer_reasons": {
+        "ENTITY_TYPE_NOT_SUPPORTED_THIS_MILESTONE": 89,
+        "FEATURE_STORE_RESEARCH_PROXY": 21,
+        "MISSING_SAME_PROVIDER_TICKER_PERIOD_SCOPE_REPRESENTATION": 106,
+        "STATEMENT_SCOPE_UNKNOWN_NOT_PEER_COMPARABLE": 802
+      },
+      "peer_status": {
+        "INSUFFICIENT_PEER_COUNT": 44,
+        "NOT_COMPARABLE": 1018,
+        "READY_RESEARCH_ONLY": 430
+      },
+      "underlying_blocked_reasons": {
+        "ENTITY_TYPE_NOT_SUPPORTED_THIS_MILESTONE": 89,
+        "FEATURE_STORE_RESEARCH_PROXY": 21,
+        "MISSING_SAME_PROVIDER_TICKER_PERIOD_SCOPE_REPRESENTATION": 106
+      },
+      "underlying_feature_fitness": {
+        "BLOCKED_BY_EVIDENCE": 106,
+        "NOT_APPLICABLE": 89,
+        "READY": 1276,
+        "RESEARCH_PROXY": 21
+      }
+    },
+    "debt_to_assets": {
+      "decision_blockers": {
+        "CORPORATE_PEER_NOT_APPLICABLE": 110
+      },
+      "decision_history_status": {
+        "AVAILABLE": 1093,
+        "INSUFFICIENT_HISTORY": 127,
+        "NOT_APPLICABLE": 110,
+        "PARTIAL": 56,
+        "UNAVAILABLE": 106
+      },
+      "decision_status": {
+        "INSUFFICIENT_PEER_COUNT": 44,
+        "NOT_COMPARABLE": 1018,
+        "READY_RESEARCH_ONLY": 430
+      },
+      "decision_usable_comparisons": 430,
+      "history": {
+        "AVAILABLE": 1093,
+        "INSUFFICIENT_HISTORY": 127,
+        "NOT_APPLICABLE": 110,
+        "PARTIAL": 56,
+        "UNAVAILABLE": 106
+      },
+      "peer_reasons": {
+        "ENTITY_TYPE_NOT_SUPPORTED_THIS_MILESTONE": 110,
+        "MISSING_SAME_PROVIDER_TICKER_PERIOD_SCOPE_REPRESENTATION": 106,
+        "STATEMENT_SCOPE_UNKNOWN_NOT_PEER_COMPARABLE": 802
+      },
+      "peer_status": {
+        "INSUFFICIENT_PEER_COUNT": 44,
+        "NOT_COMPARABLE": 1018,
+        "READY_RESEARCH_ONLY": 430
+      },
+      "underlying_blocked_reasons": {
+        "ENTITY_TYPE_NOT_SUPPORTED_THIS_MILESTONE": 110,
+        "MISSING_SAME_PROVIDER_TICKER_PERIOD_SCOPE_REPRESENTATION": 106
+      },
+      "underlying_feature_fitness": {
+        "BLOCKED_BY_EVIDENCE": 106,
+        "NOT_APPLICABLE": 110,
+        "READY": 1276
+      }
+    },
+    "debt_to_equity": {
+      "decision_blockers": {
+        "CORPORATE_PEER_NOT_APPLICABLE": 110
+      },
+      "decision_history_status": {
+        "AVAILABLE": 1093,
+        "INSUFFICIENT_HISTORY": 127,
+        "NOT_APPLICABLE": 110,
+        "PARTIAL": 56,
+        "UNAVAILABLE": 106
+      },
+      "decision_status": {
+        "INSUFFICIENT_PEER_COUNT": 44,
+        "NOT_COMPARABLE": 1018,
+        "READY_RESEARCH_ONLY": 430
+      },
+      "decision_usable_comparisons": 430,
+      "history": {
+        "AVAILABLE": 1093,
+        "INSUFFICIENT_HISTORY": 127,
+        "NOT_APPLICABLE": 110,
+        "PARTIAL": 56,
+        "UNAVAILABLE": 106
+      },
+      "peer_reasons": {
+        "ENTITY_TYPE_NOT_SUPPORTED_THIS_MILESTONE": 110,
+        "MISSING_SAME_PROVIDER_TICKER_PERIOD_SCOPE_REPRESENTATION": 106,
+        "STATEMENT_SCOPE_UNKNOWN_NOT_PEER_COMPARABLE": 802
+      },
+      "peer_status": {
+        "INSUFFICIENT_PEER_COUNT": 44,
+        "NOT_COMPARABLE": 1018,
+        "READY_RESEARCH_ONLY": 430
+      },
+      "underlying_blocked_reasons": {
+        "ENTITY_TYPE_NOT_SUPPORTED_THIS_MILESTONE": 110,
+        "MISSING_SAME_PROVIDER_TICKER_PERIOD_SCOPE_REPRESENTATION": 106
+      },
+      "underlying_feature_fitness": {
+        "BLOCKED_BY_EVIDENCE": 106,
+        "NOT_APPLICABLE": 110,
+        "READY": 1276
+      }
+    },
+    "pbt_margin": {
+      "decision_blockers": {
+        "CORPORATE_PEER_NOT_APPLICABLE": 110
+      },
+      "decision_history_status": {
+        "INSUFFICIENT_HISTORY": 1157,
+        "NOT_APPLICABLE": 110,
+        "PARTIAL": 125,
+        "UNAVAILABLE": 100
+      },
+      "decision_status": {
+        "INSUFFICIENT_PEER_COUNT": 42,
+        "NOT_COMPARABLE": 1042,
+        "READY_RESEARCH_ONLY": 408
+      },
+      "decision_usable_comparisons": 408,
+      "history": {
+        "INSUFFICIENT_HISTORY": 1159,
+        "NOT_APPLICABLE": 110,
+        "PARTIAL": 125,
+        "UNAVAILABLE": 98
+      },
+      "peer_reasons": {
+        "ENTITY_TYPE_NOT_SUPPORTED_THIS_MILESTONE": 110,
+        "MISSING_SAME_PROVIDER_TICKER_PERIOD_SCOPE_REPRESENTATION": 98,
+        "STATEMENT_SCOPE_UNKNOWN_NOT_PEER_COMPARABLE": 834
+      },
+      "peer_status": {
+        "INSUFFICIENT_PEER_COUNT": 42,
+        "NOT_COMPARABLE": 1042,
+        "READY_RESEARCH_ONLY": 408
+      },
+      "underlying_blocked_reasons": {
+        "ENTITY_TYPE_NOT_SUPPORTED_THIS_MILESTONE": 110,
+        "MISSING_SAME_PROVIDER_TICKER_PERIOD_SCOPE_REPRESENTATION": 98
+      },
+      "underlying_feature_fitness": {
+        "BLOCKED_BY_EVIDENCE": 98,
+        "NOT_APPLICABLE": 110,
+        "READY": 1284
+      }
+    }
+  },
+  "session": "2026-10-16",
+  "source_feature_objects_unchanged": true,
+  "source_identities": {
+    "classification_diagnostics_identity": "9306fa0ae7b04f04599aad41346babe6b82aee57ba2c444a89927a77863c469e",
+    "feature_store_artifact_identity": "market_wide_fundamental_feature_store/v1:3a2c6273cf23015140e87229d3f4c5875db75d52ddb8115a564227db1e2a969e",
+    "feature_store_contract": "market_wide_fundamental_feature_store/v1",
+    "period_semantics_contract": "market_wide_structured_financial_period_semantics/v1",
+    "period_semantics_identity": "market_wide_structured_financial_period_semantics/v1:ca7c2a28a9dd9e00774dcd10c2b9aa993a0fc4664e551236408287c830ad4457",
+    "period_semantics_knowledge_time": "2026-09-05T00:00:00+07:00",
+    "qualified_flow_artifact_identity": "financial_flow_semantics_and_ttm_bridge/v2:7f61bf6e7f08d79a3a89f7cbd11fa2e501598042d302840f459aa32a80f65e0a"
+  },
+  "unique_history_tickers": 1194,
+  "unique_peer_tickers": 431,
+  "unique_peer_tickers_outside_retained_vn30": 417
+}

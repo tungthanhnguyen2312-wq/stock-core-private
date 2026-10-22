@@ -15,11 +15,143 @@
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "PARALLEL_DOMAIN_DEVELOPMENT_CONTROL_PLANE_V1",
+    "milestone": "THESIS_BASED_OPPORTUNITY_DISCOVERY_V1",
     "state": "COMPLETE"
   },
   "queued_next": [],
   "milestones": [
+    {
+      "milestone_id": "THESIS_BASED_OPPORTUNITY_DISCOVERY_V1",
+      "state": "COMPLETE",
+      "starting_checkpoint": "74a7d76b6e0961d71c33b1737e04e35841b8f43a",
+      "candidate_branch": "feature/thesis-opportunity-discovery-v1-20261018",
+      "dependencies": [
+        "INTEGRATED_INVESTMENT_OPPORTUNITY_COMPARISON_V1"
+      ],
+      "unlocks": [],
+      "owner_authorized": true,
+      "owner_override": "Owner 2026-10-18 chat directive: Claude Code lead executor with autonomous roadmap authority. Market-wide thesis-based opportunity discovery reusing the integrated comparison finding logic (valuation/financial/sector/timing/downside) into evidence-pattern research lanes ordered by existing inspection-order authority, plus cross-sector relative-position comparison axes. Opt-in Action Center and AI delivery. Local only; no Daily/provider/runtime/evidence writes, policy/authority change, push, merge or promotion.",
+      "authority_effect": "NONE",
+      "source_doc": "docs/thesis_based_opportunity_discovery_v1_contract.md",
+      "state_history": [
+        "DEFERRED",
+        "ACTIVE",
+        "COMPLETE"
+      ],
+      "checkpoint": "53b4a21c385950a8f0a5e4d3f7d8acd0999c8a77",
+      "terminal_disposition": "LOCAL_IMPLEMENTATION_COMPLETE_NOT_PROMOTED",
+      "notes": "Owner 2026-10-18 chat directive: Claude Code lead executor with autonomous roadmap authority. Market-wide thesis-based opportunity discovery reusing the integrated comparison finding logic (valuation/financial/sector/timing/downside) into evidence-pattern research lanes ordered by existing inspection-order authority, plus cross-sector relative-position comparison axes. Opt-in Action Center and AI delivery. Local only; no Daily/provider/runtime/evidence writes, policy/authority change, push, merge or promotion. Local closeout: Validated: 8 evidence-pattern lanes over 1,683 issuers (332 qualified research) on retained 2026-10-16 full-source research IID; lane counts 1/24/2/1/5/8/14/51; comparable cross-sector pairs 1/18 -> 13/18; Action Center and AI delivery opt-in additive; 31 targeted tests; zero new failures vs 111 pre-existing fixture failures; launcher/layout guards pass. Local only.; no main release, authority promotion or successor."
+    },
+    {
+      "milestone_id": "INTEGRATED_INVESTMENT_OPPORTUNITY_COMPARISON_V1",
+      "state": "COMPLETE",
+      "starting_checkpoint": "a12517d3d7df6105455a92aa841398f47b924d54",
+      "candidate_branch": "feature/integrated-investment-opportunity-comparison-v1-20261018",
+      "dependencies": [
+        "SECTOR_RELATIVE_FINANCIAL_RESILIENCE_RESEARCH_V1"
+      ],
+      "unlocks": [],
+      "owner_authorized": true,
+      "owner_override": "Owner-directed selected 2–5 security opportunity comparison integrating existing decision, financial resilience, tactical/liquidity and thesis evidence through existing comparison/Workspace/Action Center/AI paths. Local only; no Daily, provider, protected evidence/runtime writes, merge, deployment or authority/policy changes.",
+      "authority_effect": "NONE",
+      "source_doc": "docs/integrated_investment_opportunity_comparison_v1_contract.md",
+      "state_history": [
+        "DEFERRED",
+        "ACTIVE",
+        "COMPLETE"
+      ],
+      "checkpoint": "7406176a443724fca24b06b5467dd4dd3d1dcb50",
+      "terminal_disposition": "LOCAL_IMPLEMENTATION_COMPLETE_NOT_PROMOTED",
+      "notes": "Owner-directed selected 2–5 security opportunity comparison integrating existing decision, financial resilience, tactical/liquidity and thesis evidence through existing comparison/Workspace/Action Center/AI paths. Local only; no Daily, provider, protected evidence/runtime writes, merge, deployment or authority/policy changes. Local closeout: Owner 2026-10-18 chat directive to Claude Code (lead executor): recover Codex WIP, finish and locally checkpoint. Validated: selected 2-5 security comparison via existing owners; Action Center --compare, packet, Workspace, AI delivery opt-in; retained 2026-10-16 acceptance on 4 real groups (DL1/ITC/NO1, PAN/AAA, HPG/FPT/PNJ/VNM/MWG, VCB/HPG), trigger/invalidation/currency equal 1683/1683 vs retained IID; 21 new tests; 111 pre-existing retained-fixture failures identical on a12517d3. Local only; no Daily/provider/runtime/evidence writes, push, merge or promotion.; no main release, authority promotion or successor."
+    },
+    {
+      "milestone_id": "SECTOR_RELATIVE_FINANCIAL_RESILIENCE_RESEARCH_V1",
+      "state": "COMPLETE",
+      "starting_checkpoint": "c3f5e8be1c623dabebd6f2ab62ca4790df81d9c4",
+      "candidate_branch": "feature/sector-relative-financial-resilience-v1-20261018",
+      "dependencies": [
+        "MULTI_PERIOD_CASH_LEVERAGE_DETERIORATION_RESEARCH_V1"
+      ],
+      "unlocks": [],
+      "owner_authorized": true,
+      "owner_override": "Owner-directed sector-relative financial resilience over the fixed 317 candidates; reuse existing trajectory and peer owners and existing decision/AI delivery; local only, no Daily/provider/runtime/evidence/authority writes.",
+      "authority_effect": "NONE",
+      "source_doc": "docs/core_financial_valuation_research_scaleout_contract.md",
+      "state_history": [
+        "DEFERRED",
+        "ACTIVE",
+        "COMPLETE"
+      ],
+      "checkpoint": "72bee900c04b33c3e4d12b12bd0ed5cad434d8af",
+      "terminal_disposition": "LOCAL_IMPLEMENTATION_COMPLETE_NOT_PROMOTED",
+      "notes": "Owner-directed sector-relative financial resilience over the fixed 317 candidates; reuse existing trajectory and peer owners and existing decision/AI delivery; local only, no Daily/provider/runtime/evidence/authority writes. Local closeout: Validated same 317 candidates: 951 metric-peer and 1902 interval comparisons; 40 company-specific weakness, 25 resilience, 51 shared deterioration, 4 shared improvement, 3 conflicting, 194 mixed/stable. 102 previously mixed cases differentiated. All decision/packet/card/AI deliveries verified; prior engine and divergence identities reproduced; fourteen input hashes and all previous numerical outputs/policy unchanged. 386 tests passed, six optional fixture skips. Local only; Monday Daily independent; no successor admitted.; no main release, authority promotion or successor."
+    },
+    {
+      "milestone_id": "MULTI_PERIOD_CASH_LEVERAGE_DETERIORATION_RESEARCH_V1",
+      "state": "COMPLETE",
+      "starting_checkpoint": "e144c9da07ab52aa4b5c503ca8c325b2a7f63f1c",
+      "candidate_branch": "feature/multi-period-cash-leverage-deterioration-v1-20261018",
+      "dependencies": [
+        "MARKET_WIDE_VALUATION_BALANCE_SHEET_DIVERGENCE_RESEARCH"
+      ],
+      "unlocks": [],
+      "owner_authorized": true,
+      "owner_override": "Owner-directed multi-period financial deterioration and recovery research over the fixed 317-candidate retained cohort; existing numerical owners and delivery; no Daily, provider, runtime, evidence or authority writes.",
+      "authority_effect": "NONE",
+      "source_doc": "docs/core_financial_valuation_research_scaleout_contract.md",
+      "state_history": [
+        "DEFERRED",
+        "ACTIVE",
+        "COMPLETE"
+      ],
+      "checkpoint": "40d83ecf6dc5a82d0546e80e9e41d3aab5adaa9b",
+      "terminal_disposition": "LOCAL_IMPLEMENTATION_COMPLETE_NOT_PROMOTED",
+      "notes": "Owner-directed multi-period financial deterioration and recovery research over the fixed 317-candidate retained cohort; existing numerical owners and delivery; no Daily, provider, runtime, evidence or authority writes. Local closeout: Validated same 317 candidates: 955 source-anchored trajectories, 7540 metric-period observations, 18 deterioration / 11 recovery / 288 mixed / 0 insufficient issuer cases; all 317 decision/packet/card/AI deliveries verified. Existing 2471 pairs, numerical features, policy and twelve input hashes unchanged. 360 tests passed, six optional fixture skips. Local only; no Daily, provider, runtime, evidence or authority writes; Monday Daily independent; successor recommendation only.; no main release, authority promotion or successor."
+    },
+    {
+      "milestone_id": "MARKET_WIDE_VALUATION_BALANCE_SHEET_DIVERGENCE_RESEARCH",
+      "state": "COMPLETE",
+      "starting_checkpoint": "a1c794383cb4ddf8b26c170a5a3bad2b75390335",
+      "candidate_branch": "feature/valuation-balance-sheet-divergence-20261018",
+      "dependencies": [
+        "CORE_FINANCIAL_VALUATION_RESEARCH_SCALEOUT"
+      ],
+      "unlocks": [],
+      "owner_authorized": true,
+      "owner_override": "Owner-directed 2026-10-18 substantial valuation versus financial strength divergence research; reuse existing numerical owners and decision/AI delivery; exact same-cohort retained acceptance; local commits only. Prior financial ratio scaleout complete, not reopened. No provider, Daily, production/runtime/evidence writes, push, merge, deploy, authority promotion or automatic successor; Monday Daily independent.",
+      "authority_effect": "NONE",
+      "source_doc": "docs/core_financial_valuation_research_scaleout_contract.md",
+      "state_history": [
+        "DEFERRED",
+        "ACTIVE",
+        "COMPLETE"
+      ],
+      "checkpoint": "79679006f1c0bcf640879cabfc996e13bcef1a6a",
+      "terminal_disposition": "LOCAL_IMPLEMENTATION_COMPLETE_NOT_PROMOTED",
+      "notes": "Owner-directed 2026-10-18 substantial valuation versus financial strength divergence research; reuse existing numerical owners and decision/AI delivery; exact same-cohort retained acceptance; local commits only. Prior financial ratio scaleout complete, not reopened. No provider, Daily, production/runtime/evidence writes, push, merge, deploy, authority promotion or automatic successor; Monday Daily independent. Local closeout: Implemented and retained-validated valuation versus financial-strength research: same 1683 universe and 337 candidates, 332 qualified issuer assessments, 2561 paired observations including 1935 peer comparisons, 314 specific support/counter-thesis findings. All 332 reach existing 1507-row research packet plus AI and compact cards; 11 input hashes, measurements and policy preserved. Focused and completed regression selections pass; unrelated legacy stamp-test allowed-key failure reproduced on untouched a1c79438, remaining legacy replay stopped, not claimed passed. No provider, Daily, production/runtime/evidence write, authority promotion, push, merge, deploy or successor. Monday Daily remains independent.; no main release, authority promotion or successor."
+    },
+    {
+      "milestone_id": "CORE_FINANCIAL_VALUATION_RESEARCH_SCALEOUT",
+      "state": "COMPLETE",
+      "starting_checkpoint": "61c870c82648a67eed29d1842f88020e0326c4de",
+      "candidate_branch": "feature/core-financial-valuation-research-scaleout-20261018",
+      "dependencies": [
+        "PARALLEL_DOMAIN_DEVELOPMENT_CONTROL_PLANE_V1"
+      ],
+      "unlocks": [],
+      "owner_authorized": true,
+      "owner_override": "Owner directive 2026-10-18: Codex sole implementation writer; extend existing financial ratio history and compatible cross-sectional analysis beyond VN30 on retained inputs, integrate existing decision and AI surfaces, measure identical cohorts; local commits only; no Daily, providers, production, evidence edits, push, merge or authority promotion. VN30 checkpoint 096b8f16 is already incorporated via PR147; do not reopen.",
+      "authority_effect": "NONE",
+      "source_doc": "docs/core_financial_valuation_research_scaleout_contract.md",
+      "state_history": [
+        "DEFERRED",
+        "ACTIVE",
+        "COMPLETE"
+      ],
+      "checkpoint": "ead8ef2724954a02b936e8ebb9692a8b157fbe46",
+      "terminal_disposition": "LOCAL_IMPLEMENTATION_COMPLETE_NOT_PROMOTED",
+      "notes": "Owner directive 2026-10-18: Codex sole implementation writer; extend existing financial ratio history and compatible cross-sectional analysis beyond VN30 on retained inputs, integrate existing decision and AI surfaces, measure identical cohorts; local commits only; no Daily, providers, production, evidence edits, push, merge or authority promotion. VN30 checkpoint 096b8f16 is already incorporated via PR147; do not reopen. Local closeout: Validated identical retained 1492-issuer cohort: four existing ratios now have 1698 decision/AI peer comparisons across 431 issuers (417 outside retained VN30) and 3572 delivered own histories across 1194 issuers. Underlying source feature objects, old histories/peers and posture/policy unchanged. Focused, adjacent, broader regression and offline import checks pass using an isolated test home for host-bound imports. No Daily, provider, runtime/evidence edits, authority promotion, push, merge, deploy or successor; Monday October19 Daily independent.; no main release, authority promotion or successor."
+    },
     {
       "milestone_id": "PARALLEL_DOMAIN_DEVELOPMENT_CONTROL_PLANE_V1",
       "state": "COMPLETE",

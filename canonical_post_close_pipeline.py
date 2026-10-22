@@ -1212,6 +1212,8 @@ def build_enrichment_components(
             calculation_readiness_context=readiness_context,
             entity_applicability_artifact=entity_applicability,
             semantic_rows=semantic_rows, decision_session=session,
+            divergence_financial_materialization=financial_session_artifact,
+            divergence_industry_authority=fin_authority,
         )
         _write_json(paths["financial_analysis_product"], financial_session_artifact)
         _write_json(paths["current_valuation_evaluated"], evaluated_valuation)

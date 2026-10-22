@@ -173,6 +173,8 @@ def project_integrated_decision_for_ai_delivery(record: Any, *, integrated_ident
         "evidence_axis_coherence": copy.deepcopy(record.get("evidence_axis_coherence")),
         "evidence_axes": copy.deepcopy(record.get("evidence_axes")),
         **({"financial_peer_context": copy.deepcopy(record["financial_peer_context"])} if "financial_peer_context" in record else {}),
+        **({"valuation_balance_sheet_divergence": copy.deepcopy(record["valuation_balance_sheet_divergence"])}
+           if "valuation_balance_sheet_divergence" in record else {}),
         "financial_composite_context": copy.deepcopy(record.get("financial_composite_context")),
         "corporate_intelligence_context": copy.deepcopy(record.get("corporate_intelligence_context")),
         "material_uncertainties": copy.deepcopy(record.get("material_uncertainties")),
@@ -264,6 +266,8 @@ def _decision_card(ticker: str, record: Mapping[str, Any], daily_brief: Mapping[
         "valuation": {
             "context": copy.deepcopy(delivered.get("valuation_context_summary")),
             "methods": copy.deepcopy(delivered.get("valuation_methods")),
+            **({"balance_sheet_divergence": copy.deepcopy(delivered["valuation_balance_sheet_divergence"])}
+               if "valuation_balance_sheet_divergence" in delivered else {}),
         },
         "catalyst": copy.deepcopy(delivered.get("corporate_intelligence_context")),
         "risk_context": {
@@ -648,7 +652,13 @@ def build_dashboard_projection(
     return projection
 
 
-def build_delivery(operation: Mapping[str, Any], inputs: Mapping[str, Any]) -> dict[str, Any]:
+def project_opportunity_comparison_for_ai_delivery(comparison):
+    from stocklookup_core.research.evidence_aware_candidate_comparison import verified_integrated_comparison
+    return verified_integrated_comparison(comparison)
+
+
+def build_delivery(operation: Mapping[str, Any], inputs: Mapping[str, Any], *, opportunity_comparison_request=None,
+                   include_thesis_discovery: bool = False) -> dict[str, Any]:
     """Return primary JSON, NDJSON companion, manifest, brief, and cockpit projection bytes."""
     product, manifest = operation["product"], operation["manifest"]
     session = manifest["market_session"]
@@ -708,6 +718,21 @@ def build_delivery(operation: Mapping[str, Any], inputs: Mapping[str, Any]) -> d
         # surface is deliberately additive and versioned on each available card.
         for ticker, context in primary["ticker_research_contexts"].items():
             context["integrated_decision_v1"] = copy.deepcopy((integrated_overlay["records"] or {}).get(ticker))
+    if opportunity_comparison_request is not None:
+        from current_evidence_bound_scenario import bind_integrated_scenarios
+        from stocklookup_core.research.evidence_aware_candidate_comparison import build_integrated_comparison
+        if integrated_decision is None:
+            raise ValueError("SELECTED_COMPARISON_REQUIRES_VERIFIED_INTEGRATED_DECISION")
+        primary["selected_opportunity_comparison"] = project_opportunity_comparison_for_ai_delivery(
+            build_integrated_comparison(opportunity_comparison_request, integrated_decision=integrated_decision,
+                                        bind_scenarios=bind_integrated_scenarios))
+    if include_thesis_discovery:
+        from current_evidence_bound_scenario import bind_integrated_scenarios
+        from stocklookup_core.research.evidence_aware_candidate_comparison import build_thesis_discovery, verified_thesis_discovery
+        if integrated_decision is None:
+            raise ValueError("THESIS_DISCOVERY_REQUIRES_VERIFIED_INTEGRATED_DECISION")
+        primary["thesis_opportunity_discovery"] = verified_thesis_discovery(
+            build_thesis_discovery(integrated_decision=integrated_decision, bind_scenarios=bind_integrated_scenarios))
     primary_bytes = (_canon(primary) + "\n").encode("utf-8")
     # Keep the bytes-returning contract, without a universe-sized Unicode row
     # list, joined string, newline copy and UTF-8 copy alive at the same time.

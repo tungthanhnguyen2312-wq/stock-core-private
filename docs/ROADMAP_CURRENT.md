@@ -5,13 +5,10 @@ Verified analytical baseline 2026-10-14 `a9c799397a74641a0e16c8ea84454d2dc4d0745
 Nothing below auto-starts; native standing admission required (AI_RULES 11).
 Facts: [ACTIVE_STATE.md](ACTIVE_STATE.md).
 
-## NOW — VN30_FINANCIAL_VALUATION_RESEARCH_SCALEOUT_V1 (LOCAL CHECKPOINT)
+## NOW — FINANCIAL RESEARCH STACK (PR167, OWNER MERGE GATE)
 
-[Bounded analytical scope](vn30_financial_valuation_research_scaleout_v1_contract.md):
-PR146 released and native predecessor revision96 verified; one lane admitted/active
-at revisions97/98. Same retained30 cohort: VRE H1 ROE +1 research proxy; other metric
-counts and numerical authority unchanged. Opt-in shared Producer projection; no
-production activation, push/merge/deploy/publication or automatic successor.
+Ratio, divergence, multi-period, sector-relative, comparison and discovery research
+(PR167 [comparison](integrated_investment_opportunity_comparison_v1_contract.md)/[discovery](thesis_opportunity_discovery_v1_contract.md)). Opt-in; policy unchanged.
 
 ## PRIOR — STOCKLOOKUP_PRODUCER_DEEP_SIMPLIFICATION (RELEASED PR146)
 
