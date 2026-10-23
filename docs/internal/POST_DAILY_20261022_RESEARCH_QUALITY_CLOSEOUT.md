@@ -96,3 +96,5 @@ failed groups are rechecked separately. Launcher tests use an isolated test home
 including child processes; the actual operator binding and production guard are
 unchanged. Targeted real-session/semantic checks and structural smoke are retained
 in the development worktree's scratch logs; hosted CI independently gates the PR.
+
+Final local verification: recovery group 519 PASS with one historical source-binding failure, then that final failure and impacted regression cases 156 PASS. Compact/real-session/coherence check 51 PASS; structural suite 186 PASS; native closeout checkpoint `5a36ee58`. No unresolved implementation test regression remains in the exercised scope. Hosted CI is the independent full clean-host gate.
