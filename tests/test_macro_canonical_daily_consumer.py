@@ -209,7 +209,7 @@ def test_real_daily_to_packet_handoff_and_cockpit(monkeypatch, tmp_path, missing
     assert cockpit["decision_card_v1"]["AAA"]["posture_condition_class"] == security["posture_condition_class"]
     files, publication = build_package(captured["operation_dir"], SESSION)
     assert publication["status"] == "READY_FOR_AI"
-    assert json.loads(files["ai_research_session_bundle.json"].read_text())["macro_market_regime_context"] == context
+    assert json.loads(files["ai_research_session_bundle.json"].read_text(encoding="utf-8"))["macro_market_regime_context"] == context
     forged = copy.deepcopy(packet)
     forged["macro_market_regime_context"]["dimensions"]["GLOBAL_RATES"]["state"] = "EASING"
     assert verified_packet(forged) is None
