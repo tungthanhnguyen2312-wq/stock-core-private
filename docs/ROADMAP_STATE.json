@@ -16,13 +16,13 @@
   ],
   "current": {
     "milestone": "POST_DAILY_20261022_RESEARCH_DECISION_QUALITY_CLOSEOUT",
-    "state": "ACTIVE"
+    "state": "COMPLETE"
   },
   "queued_next": [],
   "milestones": [
     {
       "milestone_id": "POST_DAILY_20261022_RESEARCH_DECISION_QUALITY_CLOSEOUT",
-      "state": "ACTIVE",
+      "state": "COMPLETE",
       "starting_checkpoint": "ec3044245ecfb1b53531fe2613113bf870d31c1c",
       "candidate_branch": "fix/research-decision-quality-20261022",
       "dependencies": [
@@ -40,11 +40,12 @@
         "DEFERRED",
         "ACTIVE",
         "COMPLETE",
-        "ACTIVE"
+        "ACTIVE",
+        "COMPLETE"
       ],
-      "checkpoint": null,
-      "terminal_disposition": null,
-      "notes": "Owner 2026-10-23 continues existing PR180 scope for release-grade validation and PNJ historical golden CI recovery; preserve original completion and authority NONE. No successor, production or merge.",
+      "checkpoint": "833ce7cd0807cc7f418eeb00e4a6b0567662c3a0",
+      "terminal_disposition": "LOCAL_IMPLEMENTATION_COMPLETE_NOT_PROMOTED",
+      "notes": "Owner 2026-10-23 continues existing PR180 scope for release-grade validation and PNJ historical golden CI recovery; preserve original completion and authority NONE. No successor, production or merge. Local closeout: Existing Owner scope CI recovery: historical golden conserved, corrected semantics separately verified; retained cohort replay unchanged at 876/157/719, zero baseline policy mismatches. No production, authority change or merge.; no main release, authority promotion or successor.",
       "scope_continuations": [
         {
           "prior_state": "COMPLETE",
