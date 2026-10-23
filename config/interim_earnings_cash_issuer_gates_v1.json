@@ -1,0 +1,129 @@
+{
+  "contract_version": "interim_earnings_cash_issuer_gates/v1",
+  "milestone": "REVIEWED_INTERIM_EARNINGS_AND_CASH_RESEARCH_V1",
+  "closed_set": true,
+  "authority_effect": "NONE",
+  "use": "Refuse or explain comparisons only. No entry supplies an amount, a vote, a valuation input or an overlay row.",
+  "candidate_source": "https://github.com/tungthanhnguyen2312-wq/ai-agent-inbox/issues/30 (report commit 25604d8)",
+  "issuers": {
+    "VNM": {
+      "document": {
+        "document_sha256": "a6155aa757b320b893a78093b0454473f4a581aead225af4eb4ef1fbd6628561",
+        "locator": "https://d8um25gjecm9v.cloudfront.net/cms/20260730_VNM_BCTC_da_soat_xet_Q2_2026_Hop_nhat_76ef2e29c1.pdf",
+        "statement": "reviewed interim consolidated Q2 and six months to 2026-06-30, TT43/2026 forms B02a/B03a",
+        "assurance": "reviewed (KPMG; existing assurance evidence QUALIFIED)",
+        "producer_bytes_state": "RETAINED_SHA256_VERIFIED",
+        "publication_clock": "DATE_ONLY"
+      },
+      "candidate_rows": [
+        {"canonical_metric": "revenue", "line_code": "10", "source_page": 11, "governed_ocr_literal": "CURRENT_AND_Q2_CLEAN_SIX_MONTH_COMPARATIVE_GLYPH_DAMAGED"},
+        {"canonical_metric": "net_income", "line_code": "60", "source_page": 12, "governed_ocr_literal": "CLEAN"},
+        {"canonical_metric": "attributable_net_income", "line_code": "61", "source_page": 12, "governed_ocr_literal": "CLEAN"},
+        {"canonical_metric": "operating_cash_flow", "line_code": "20", "source_page": 13, "governed_ocr_literal": "AMOUNTS_CLEAN_LINE_CODE_CELL_DAMAGED"}
+      ],
+      "qualification_blockers": [
+        "INCOME_FOUR_COLUMN_QUARTER_AND_SIX_MONTH_LAYOUT_ROW_NOT_GEOMETRICALLY_RESOLVED",
+        "CASH_FLOW_LINE_CODE_CELL_OCR_DAMAGED_NOT_REPAIRED",
+        "ISSUER_SOURCE_DOMAIN_MISMATCH_CMS_HOST_NOT_ADMITTED_ROUTE",
+        "RETAINED_ISSUER_LITERAL_PROOF_UNAVAILABLE",
+        "VALUE_SPAN_NOT_IN_RETAINED_DOCUMENT"
+      ],
+      "owner_decisions_required": [
+        "ADMIT_EXACT_VNM_CMS_ATTACHMENT_HOST_FOR_ISSUER_IR",
+        "ADMIT_INTERIM_MULTI_COLUMN_PERIOD_BINDING_FOR_IMAGE_ONLY_STATEMENTS"
+      ],
+      "comparability_cautions": [
+        {"caution_id": "VNM_2026H1_COMPARATIVES_RECLASSIFIED", "kind": "COMPARATIVES_RECLASSIFIED",
+         "statement_families": ["income_statement", "cash_flow", "balance_sheet"], "document_sha256": "a6155aa757b320b893a78093b0454473f4a581aead225af4eb4ef1fbd6628561",
+         "source_pages": [11, 12, 13], "literal_label": "(Phân loại lại)", "reason_disclosed": "UNKNOWN",
+         "effect": "PRIOR_FILING_VALUE_NOT_COMPARABLE_USE_RECLASSIFIED_COMPARATIVE_ONLY"},
+        {"caution_id": "VNM_2026H1_TIMING_SENSITIVE_CASH_LINES", "kind": "TIMING_SENSITIVE_CASH_COMPONENTS",
+         "statement_families": ["cash_flow"], "document_sha256": "a6155aa757b320b893a78093b0454473f4a581aead225af4eb4ef1fbd6628561",
+         "source_pages": [13, 14], "line_codes": ["15", "36"],
+         "literal_labels": ["Thuế thu nhập doanh nghiệp đã nộp", "Tiền chi trả cổ tức"],
+         "effect": "CASH_CHANGE_ATTRIBUTION_UNKNOWN_TAX_AND_DIVIDEND_TIMING_LINES_UNQUALIFIED"}
+      ]
+    },
+    "FPT": {
+      "document": {
+        "document_sha256": "45636554f28c7e6c2f38458b9a22410ed1f67e80627d672b827019a67f299df8",
+        "locator": "https://fpt.com/api/media/20260821_FPT_BCTC_hop_nhat_ban_nien_da_soat_xet_nam_2026_3b1ebb3536.pdf",
+        "statement": "reviewed interim consolidated six months to 2026-06-30, forms B02a/B03a",
+        "assurance": "reviewed (PwC review report HAN 4580, unmodified conclusion read on page 7)",
+        "producer_bytes_state": "NOT_RETAINED_SHA256_VERIFIED_IN_ISOLATED_SCRATCH_ONLY",
+        "publication_clock": "DATE_ONLY"
+      },
+      "candidate_rows": [
+        {"canonical_metric": "revenue", "line_code": "10", "source_page": 12, "governed_ocr_literal": "CLEAN"},
+        {"canonical_metric": "attributable_net_income", "line_code": "61", "source_page": 12, "governed_ocr_literal": "CURRENT_CLEAN_COMPARATIVE_SEPARATOR_DAMAGED"},
+        {"canonical_metric": "operating_cash_flow", "line_code": "20", "source_page": 13, "governed_ocr_literal": "AMOUNTS_CLEAN_LINE_CODE_CELL_DAMAGED"},
+        {"canonical_metric": "like_for_like_income_comparison", "line_code": "10/50/60/61", "source_page": 18, "governed_ocr_literal": "PARTLY_GLYPH_DAMAGED"}
+      ],
+      "qualification_blockers": [
+        "ORIGINAL_BYTES_NOT_RETAINED_BY_PRODUCER_ACQUISITION",
+        "SUPPLEMENTARY_LIKE_FOR_LIKE_NOTE_TABLE_HAS_NO_ADMITTED_METRIC_CONTRACT",
+        "VALUE_SPAN_NOT_IN_RETAINED_DOCUMENT"
+      ],
+      "owner_decisions_required": [
+        "AUTHORIZE_BOUNDED_FPT_2026H1_ACQUISITION_ON_EXISTING_ISSUER_ROUTE",
+        "ADMIT_ISSUER_RESTATED_LIKE_FOR_LIKE_COMPARATIVE_CONTRACT"
+      ],
+      "comparability_cautions": [
+        {"caution_id": "FPT_2026_FTEL_CONSOLIDATION_TO_EQUITY_METHOD", "kind": "CONSOLIDATION_SCOPE_CHANGE",
+         "effective_from": "2026-01-01", "statement_families": ["income_statement", "cash_flow", "balance_sheet"],
+         "document_sha256": "45636554f28c7e6c2f38458b9a22410ed1f67e80627d672b827019a67f299df8", "source_pages": [12, 18],
+         "literal_label": "từ hợp nhất toàn bộ (áp dụng đối với công ty con) sang hợp nhất theo phương pháp vốn chủ sở hữu",
+         "like_for_like_basis": {"statement_families": ["income_statement"], "line_codes": ["10", "50", "60", "61"], "source_page": 18},
+         "effect": "REFUSE_CROSS_SCOPE_COMPARISON_WITHOUT_ISSUER_LIKE_FOR_LIKE_BASIS"},
+        {"caution_id": "FPT_2026H1_DECONSOLIDATED_SUBSIDIARY_CASH", "kind": "DECONSOLIDATION_CASH_OUTFLOW",
+         "effective_from": "2026-01-01", "statement_families": ["cash_flow"], "line_codes": ["26b"], "source_pages": [13],
+         "document_sha256": "45636554f28c7e6c2f38458b9a22410ed1f67e80627d672b827019a67f299df8",
+         "literal_label": "Tiền và các khoản tương đương tiền tại công ty con tại thời điểm mất quyền kiểm soát",
+         "effect": "INVESTING_LINE_NOT_OPERATING_CASH_GENERATION"},
+        {"caution_id": "FPT_2026_9M_PRESS_RELEASE_NOT_FINANCIAL_STATEMENT", "kind": "UNREVIEWED_BUSINESS_RELEASE",
+         "statement_families": ["income_statement"], "document_sha256": "4ca385fba37eb04d0c3ae8a8fdf7a9d1eef1abcc15d49d5ef25f9a80b544645c",
+         "literal_label": "Kết quả kinh doanh 9 tháng năm 2026",
+         "effect": "NOT_A_SIGNED_Q3_STATEMENT_NO_9M_OR_Q3_DERIVATION"}
+      ]
+    },
+    "QNS": {
+      "document": {
+        "document_sha256": "5a06a40f34a6d9b30233926f9c9d909d684744de2bf2ad0956edd367d5f7b068",
+        "locator": "https://www.qns.com.vn/upload/product/2026q2-bctc-hop-nhat-sau-kt-1786788334.pdf",
+        "statement": "reviewed interim consolidated six months 2026, TT43/2026 forms B01/B02/B03-DN/HN",
+        "assurance": "reviewed (AAC; existing assurance evidence QUALIFIED)",
+        "producer_bytes_state": "RETAINED_SHA256_VERIFIED",
+        "publication_clock": "DATE_ONLY"
+      },
+      "candidate_rows": [
+        {"canonical_metric": "revenue", "line_code": "10", "source_page": 8, "governed_ocr_literal": "CLEAN"},
+        {"canonical_metric": "net_income", "line_code": "60", "source_page": 8, "governed_ocr_literal": "CLEAN"},
+        {"canonical_metric": "attributable_net_income", "line_code": "61", "source_page": 8, "governed_ocr_literal": "CLEAN"},
+        {"canonical_metric": "operating_cash_flow", "line_code": "20", "source_page": 9, "governed_ocr_literal": "CLEAN"},
+        {"canonical_metric": "short_term_borrowings_and_finance_leases", "line_code": "321", "source_page": 7, "governed_ocr_literal": "CLEAN"}
+      ],
+      "qualification_blockers": [
+        "EMBEDDED_TEXT_LAYER_GARBLED_NATIVE_ZERO_CANDIDATES",
+        "TABLE_ROWS_NOT_GEOMETRICALLY_RESOLVED_UNDER_FIXED_RULES",
+        "TT43_LINE_CODE_MAP_NOT_ADMITTED_BORROWINGS_321",
+        "RETAINED_ISSUER_LITERAL_PROOF_UNAVAILABLE",
+        "VALUE_SPAN_NOT_IN_RETAINED_DOCUMENT"
+      ],
+      "owner_decisions_required": [
+        "ADMIT_TT43_2026_STATEMENT_LINE_CODE_MAP",
+        "ADMIT_ISSUER_NAME_LITERAL_BINDING_FOR_IMAGE_STATEMENTS"
+      ],
+      "comparability_cautions": [
+        {"caution_id": "QNS_2026_TT43_TEMPLATE_LINE_CODES", "kind": "TEMPLATE_LINE_CODE_CHANGE",
+         "effective_from": "2026-01-01", "statement_families": ["balance_sheet"], "line_codes": ["320", "321"], "source_pages": [7],
+         "document_sha256": "5a06a40f34a6d9b30233926f9c9d909d684744de2bf2ad0956edd367d5f7b068",
+         "literal_labels": ["Phải trả ngắn hạn khác", "Vay và nợ thuê tài chính ngắn hạn"],
+         "effect": "REFUSE_PRIOR_TEMPLATE_LINE_CODE_IDENTITY"},
+        {"caution_id": "QNS_2026H1_CASH_DEPOSITS_BORROWINGS_SEPARATE", "kind": "NET_CASH_DEFINITION_UNQUALIFIED",
+         "statement_families": ["balance_sheet"], "line_codes": ["110", "123", "321"], "source_pages": [6, 7],
+         "document_sha256": "5a06a40f34a6d9b30233926f9c9d909d684744de2bf2ad0956edd367d5f7b068",
+         "effect": "NET_CASH_NOT_CALCULATED_COMPONENTS_KEPT_SEPARATE"}
+      ]
+    }
+  }
+}

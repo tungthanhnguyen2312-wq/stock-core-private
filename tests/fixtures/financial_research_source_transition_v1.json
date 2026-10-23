@@ -15,7 +15,7 @@
       "prior_sha256_lf": "066522aad2061011cec1ace8dfc0882fa46aca938f174a78afa4880a4729c541"
     },
     "stocklookup_core/financial/fundamental_signal_consumption_contract.py": {
-      "active_sha256_lf": "5ce7149e2d4ad5f4b7043154eb70d5feceb1112ac570b6f7921831770d424c8c",
+      "active_sha256_lf": "c7a46b5a80c01437b73a93eddda7df72e6f89b67c1e6d595e98122c55b6eb041",
       "archive": "tests/fixtures/financial_research_v1_sources/stocklookup_core/financial/fundamental_signal_consumption_contract.py.txt",
       "prior_sha256_lf": "6350e66db2b82e8697e09ac4271a86ce9ec173a5cacb27e1d8cf851b6d1d9371"
     },

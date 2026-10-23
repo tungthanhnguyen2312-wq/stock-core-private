@@ -5,11 +5,11 @@ Verified analytical baseline 2026-10-14 `a9c799397a74641a0e16c8ea84454d2dc4d0745
 Nothing below auto-starts; native standing admission required (AI_RULES 11).
 Facts: [ACTIVE_STATE.md](ACTIVE_STATE.md).
 
-## NOW — OFFICIAL INCOME RESEARCH CONSUMPTION V1
+## NOW — REVIEWED INTERIM EARNINGS AND CASH RESEARCH V1
 
-[Owner scope](official_income_statement_research_consumption_v1_contract.md): additive non-voting
-income/basis context; D-1 unchanged. Stacked on open PR180 `f52cc616`; merge gated.
-COMPLETE_LOCAL `d6f23ea3`; native closeout recorded. No production, authority change or successor.
+[Owner scope](reviewed_interim_earnings_and_cash_research_v1_contract.md): non-voting earnings/cash
+conversion and comparability context; VNM/FPT/QNS H1 rows remain candidates. Stacked on open PR182
+`effc9b8a`; merge gated. Income research V1 released in PR181. No production, authority change or successor.
 
 ## PRIOR — STOCKLOOKUP_PRODUCER_DEEP_SIMPLIFICATION (RELEASED PR146)
 
