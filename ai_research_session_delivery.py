@@ -180,7 +180,7 @@ def project_integrated_decision_for_ai_delivery(record: Any, *, integrated_ident
         **({"financial_peer_context": copy.deepcopy(record["financial_peer_context"])} if "financial_peer_context" in record else {}),
         **({"valuation_balance_sheet_divergence": copy.deepcopy(record["valuation_balance_sheet_divergence"])}
            if "valuation_balance_sheet_divergence" in record else {}),
-        "financial_composite_context": copy.deepcopy(record.get("financial_composite_context")),
+        "financial_composite_context": financial_research_composite(record),
         "corporate_intelligence_context": copy.deepcopy(record.get("corporate_intelligence_context")),
         "material_uncertainties": copy.deepcopy(record.get("material_uncertainties")),
         "counter_thesis": copy.deepcopy(record.get("counter_thesis")),
@@ -201,6 +201,28 @@ def project_integrated_decision_for_ai_delivery(record: Any, *, integrated_ident
         "no_calibrated_probability": True,
         "no_position_size": True,
     }
+
+
+def financial_research_composite(record: Mapping[str, Any]) -> Any:
+    """Scope the existing verdict without changing state, votes or identity."""
+    from stocklookup_core.financial.fundamental_signal_consumption_contract import research_evidence_basis
+    composite = copy.deepcopy(record.get("financial_composite_context"))
+    if isinstance(composite, dict):
+        context = ((record.get("evidence_axes") or {}).get("FUNDAMENTAL") or {}).get("context")
+        if isinstance(context, Mapping) and context.get("synthesis_contract"):
+            composite["evidence_basis"] = research_evidence_basis(context)
+    return composite
+
+
+def financial_research_card(card: Mapping[str, Any], fundamental: Mapping[str, Any] | None,
+                            integrated: Mapping[str, Any] | None, *, cutoff: str | None) -> dict[str, Any]:
+    from stocklookup_core.financial.fundamental_signal_consumption_contract import official_income_research_context
+    result = copy.deepcopy(dict(card))
+    result["fundamental_research_context"] = {
+        "composite": financial_research_composite(integrated or {}),
+        "official_income": official_income_research_context(fundamental, cutoff=cutoff, ticker=card.get("ticker")),
+        "use": "NON_VOTING_RESEARCH_ONLY", "is_actionable": False}
+    return result
 
 
 def _integrated_overlay_header(session: str, integrated: Mapping[str, Any], daily_brief: Mapping[str, Any] | None) -> dict[str, Any]:
@@ -431,6 +453,9 @@ def _compact_context(ticker: str, operation: Mapping[str, Any], inputs: Mapping[
         "authority_boundary": boundary,
     }
     fundamental = _records(inputs.get("fundamental")).get(ticker) or {}
+    result = financial_research_card(result, fundamental,
+        ((integrated_overlay or {}).get("records") or {}).get(ticker),
+        cutoff=(inputs.get("fundamental") or {}).get("session_cutoff"))
     if "official_field_context" in fundamental:
         # These bounded canonical facts must survive the generic nested-context
         # compactor, including their exact period/use limits and citation identity.
@@ -663,6 +688,13 @@ def build_dashboard_projection(
             for ticker, record in sorted((integrated_decision.get("records") or {}).items())
             if ticker in watchlist_tickers
         }
+        for ticker, decision_card in projection["decision_card_v1"].items():
+            source_card = projection["ticker_cards"].get(ticker) or {}
+            income = (source_card.get("fundamental_research_context") or {}).get("official_income")
+            if income is None:
+                income = (source_card.get("fundamental_context") or {}).get("official_income_research_context")
+            if income is not None and isinstance(decision_card.get("fundamental"), dict):
+                decision_card["fundamental"]["official_income_research_context"] = copy.deepcopy(income)
         projection["integrated_decision_overlay_v1"] = {
             key: copy.deepcopy(value)
             for key, value in overlay.items()
@@ -693,6 +725,14 @@ def build_delivery(operation: Mapping[str, Any], inputs: Mapping[str, Any], *, o
         project_integrated_decision_delivery_overlay(session, integrated_decision, daily_integrated_brief)
         if integrated_decision is not None else None
     )
+    # A presentation copy only: immutable producer records/identities are untouched.
+    product = {**product, "detailed_research_cards": {
+        ticker: financial_research_card(card, _records(inputs.get("fundamental")).get(ticker),
+            ((integrated_decision or {}).get("records") or {}).get(ticker),
+            cutoff=(inputs.get("fundamental") or {}).get("session_cutoff"))
+        for ticker, card in cards.items()}}
+    operation = {**operation, "product": product}
+    cards = product["detailed_research_cards"]
     financial_context = validate_product_context(inputs.get("financial_analysis_product_context"))
     financial_summary = None
     financial_index = None

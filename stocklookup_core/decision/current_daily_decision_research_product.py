@@ -38,7 +38,11 @@ def _peer_summary(peer: Mapping[str, Any] | None, entry_state: str | None) -> di
 
 def _fundamental_summary(fundamental: Mapping[str, Any] | None) -> dict[str, Any]:
     row = fundamental or {}; context = row.get("fundamental_trajectory_context") or {}; alignment = context.get("revenue_vs_earnings_alignment")
-    return {"authority_tier": row.get("authority_tier"), "revenue_direction": context.get("revenue_direction"), "earnings_direction": context.get("earnings_direction"), "revenue_vs_earnings_alignment": alignment, "operating_cash_flow_direction": context.get("operating_cash_flow_direction"), "limitations": context.get("data_limitations") or context.get("unavailable_or_partial_reasons") or ["FUNDAMENTAL_CONTEXT_UNAVAILABLE"]}
+    summary = {"authority_tier": row.get("authority_tier"), "revenue_direction": context.get("revenue_direction"), "earnings_direction": context.get("earnings_direction"), "revenue_vs_earnings_alignment": alignment, "operating_cash_flow_direction": context.get("operating_cash_flow_direction"), "limitations": context.get("data_limitations") or context.get("unavailable_or_partial_reasons") or ["FUNDAMENTAL_CONTEXT_UNAVAILABLE"]}
+
+    if row.get("official_income_research_context") is not None:
+        summary["official_income_research_context"] = copy.deepcopy(row["official_income_research_context"])
+    return summary
 
 
 def _valuation_summary(valuation: Mapping[str, Any] | None, peer: Mapping[str, Any] | None) -> dict[str, Any]:

@@ -1,0 +1,1136 @@
+{
+  "authority_effect": "NONE",
+  "baseline": "f52cc61617f460b1e38ea89df92032e2c7ea4c50",
+  "production_writes": 0,
+  "sessions": {
+    "2026-10-20": {
+      "admitted_exact_income_facts": 11,
+      "cards": 67,
+      "counts": {
+        "MULTI_FAMILY": 59,
+        "NO_CURRENT_DIRECTIONAL_VOTE": 8
+      },
+      "decision_projection_deltas_excluding_additive_basis": 0,
+      "focus": {
+        "EVF": {
+          "before_composite": "FUNDAMENTALS_STABLE",
+          "evidence_scope": "MULTI_FAMILY",
+          "facts": [],
+          "legacy_qualified_income_comparison_count": 0,
+          "new_direction": "UNKNOWN",
+          "new_pair_blockers": [],
+          "posture_unchanged": "AVOID",
+          "source_periods": [
+            "2026-Q1"
+          ]
+        },
+        "FPT": {
+          "before_composite": "FUNDAMENTALS_MIXED",
+          "evidence_scope": "MULTI_FAMILY",
+          "facts": [
+            {
+              "audit_or_review_status": "audited",
+              "canonical_metric": "revenue",
+              "citation_id": "28fcc0b64275294b31aebfdedd441b89884856f726c8c7a26b41972f14eaa9a8",
+              "document_sha256": "bb14bafff1a7849217f34cf4b50e0e3d69d91968f217a66d7c68f07d4c1af284",
+              "normalized_value": 70112825100710,
+              "period_end": "2025-12-31",
+              "period_start": "2025-01-01",
+              "period_type": "annual",
+              "qualification_state": "QUALIFIED",
+              "reporting_period": "2025",
+              "research_freshness": {
+                "completed_quarter_lag": 4,
+                "financial_freshness": "CURRENT",
+                "financial_period": "2025",
+                "financial_period_end": "2025-12-31",
+                "freshness_status": "CURRENT",
+                "knowledge_available_at": "2026-10-08T00:07:56.779802+00:00",
+                "price_as_of": null,
+                "price_session_does_not_set_financial_freshness": true,
+                "price_session_not_used_as_financial_period_end": false,
+                "quarters_behind_last_completed": 3,
+                "reason_codes": [],
+                "research_usable": true,
+                "resolved_quarter_label": "2025-Q4",
+                "rewritten_as_current": false
+              },
+              "statement_scope": "consolidated"
+            }
+          ],
+          "legacy_qualified_income_comparison_count": 0,
+          "new_direction": "UNKNOWN",
+          "new_pair_blockers": [
+            {
+              "citation_ids": [
+                "28fcc0b64275294b31aebfdedd441b89884856f726c8c7a26b41972f14eaa9a8"
+              ],
+              "comparison_only": true,
+              "metric": "revenue",
+              "reason_codes": [
+                "SAME_METRIC_SCOPE_ASSURANCE_DURATION_PRIOR_YEAR_REQUIRED"
+              ]
+            }
+          ],
+          "posture_unchanged": "AVOID",
+          "source_periods": [
+            "2026-Q1"
+          ]
+        },
+        "HPG": {
+          "before_composite": "FUNDAMENTALS_IMPROVING",
+          "evidence_scope": "MULTI_FAMILY",
+          "facts": [
+            {
+              "audit_or_review_status": "audited",
+              "canonical_metric": "revenue",
+              "citation_id": "703f3b51683204b9f69f6a316daba4005af23582b283b60ba4562563625b8bd1",
+              "document_sha256": "f38c5f75becf7d3f145d27183eec81f119fd4f75e378b983a2763ddc3f7e0c07",
+              "normalized_value": 156116094618482,
+              "period_end": "2025-12-31",
+              "period_start": "2025-01-01",
+              "period_type": "annual",
+              "qualification_state": "QUALIFIED",
+              "reporting_period": "2025",
+              "research_freshness": {
+                "completed_quarter_lag": 4,
+                "financial_freshness": "CURRENT",
+                "financial_period": "2025",
+                "financial_period_end": "2025-12-31",
+                "freshness_status": "CURRENT",
+                "knowledge_available_at": "2026-10-07T15:33:12Z",
+                "price_as_of": null,
+                "price_session_does_not_set_financial_freshness": true,
+                "price_session_not_used_as_financial_period_end": false,
+                "quarters_behind_last_completed": 3,
+                "reason_codes": [],
+                "research_usable": true,
+                "resolved_quarter_label": "2025-Q4",
+                "rewritten_as_current": false
+              },
+              "statement_scope": "consolidated"
+            },
+            {
+              "audit_or_review_status": "audited",
+              "canonical_metric": "net_income",
+              "citation_id": "c9c24b64898e69a1550470ea1716fc701f7d895015b83b7d449d9de640204728",
+              "document_sha256": "f38c5f75becf7d3f145d27183eec81f119fd4f75e378b983a2763ddc3f7e0c07",
+              "normalized_value": 15514931571606,
+              "period_end": "2025-12-31",
+              "period_start": "2025-01-01",
+              "period_type": "annual",
+              "qualification_state": "QUALIFIED",
+              "reporting_period": "2025",
+              "research_freshness": {
+                "completed_quarter_lag": 4,
+                "financial_freshness": "CURRENT",
+                "financial_period": "2025",
+                "financial_period_end": "2025-12-31",
+                "freshness_status": "CURRENT",
+                "knowledge_available_at": "2026-10-07T15:33:12Z",
+                "price_as_of": null,
+                "price_session_does_not_set_financial_freshness": true,
+                "price_session_not_used_as_financial_period_end": false,
+                "quarters_behind_last_completed": 3,
+                "reason_codes": [],
+                "research_usable": true,
+                "resolved_quarter_label": "2025-Q4",
+                "rewritten_as_current": false
+              },
+              "statement_scope": "consolidated"
+            }
+          ],
+          "legacy_qualified_income_comparison_count": 4,
+          "new_direction": "UNKNOWN",
+          "new_pair_blockers": [
+            {
+              "citation_ids": [
+                "c9c24b64898e69a1550470ea1716fc701f7d895015b83b7d449d9de640204728"
+              ],
+              "comparison_only": true,
+              "metric": "net_income",
+              "reason_codes": [
+                "SAME_METRIC_SCOPE_ASSURANCE_DURATION_PRIOR_YEAR_REQUIRED"
+              ]
+            },
+            {
+              "citation_ids": [
+                "703f3b51683204b9f69f6a316daba4005af23582b283b60ba4562563625b8bd1"
+              ],
+              "comparison_only": true,
+              "metric": "revenue",
+              "reason_codes": [
+                "SAME_METRIC_SCOPE_ASSURANCE_DURATION_PRIOR_YEAR_REQUIRED"
+              ]
+            }
+          ],
+          "posture_unchanged": "AVOID",
+          "source_periods": [
+            "2026-Q1"
+          ]
+        },
+        "NVL": {
+          "before_composite": "FUNDAMENTALS_IMPROVING",
+          "evidence_scope": "MULTI_FAMILY",
+          "facts": [],
+          "legacy_qualified_income_comparison_count": 0,
+          "new_direction": "UNKNOWN",
+          "new_pair_blockers": [],
+          "posture_unchanged": "WAIT_FOR_CONFIRMATION",
+          "source_periods": [
+            "2026-Q1"
+          ]
+        },
+        "PAN": {
+          "before_composite": "FUNDAMENTALS_IMPROVING",
+          "evidence_scope": "MULTI_FAMILY",
+          "facts": [],
+          "legacy_qualified_income_comparison_count": 0,
+          "new_direction": "UNKNOWN",
+          "new_pair_blockers": [],
+          "posture_unchanged": "EARLY_WATCH",
+          "source_periods": [
+            "2026-Q1"
+          ]
+        },
+        "PNJ": {
+          "before_composite": "FUNDAMENTALS_IMPROVING",
+          "evidence_scope": "MULTI_FAMILY",
+          "facts": [
+            {
+              "audit_or_review_status": "reviewed",
+              "canonical_metric": "net_income",
+              "citation_id": "4c33e154f0442df62e420ca335f5b9acbde2299148b029fc887c14afcc95f72d",
+              "document_sha256": "db877169e7c19b4b81d60b37d5aab8f9938129a66b582c2229ffffebdca2a43d",
+              "normalized_value": 728386009054,
+              "period_end": "2026-06-30",
+              "period_start": "2026-01-01",
+              "period_type": "interim",
+              "qualification_state": "QUALIFIED",
+              "reporting_period": "2026-H1",
+              "research_freshness": {
+                "completed_quarter_lag": 2,
+                "financial_freshness": "CURRENT",
+                "financial_period": "2026-H1",
+                "financial_period_end": "2026-06-30",
+                "freshness_status": "CURRENT",
+                "knowledge_available_at": "2026-09-29T11:31:14.408633Z",
+                "price_as_of": null,
+                "price_session_does_not_set_financial_freshness": true,
+                "price_session_not_used_as_financial_period_end": false,
+                "quarters_behind_last_completed": 1,
+                "reason_codes": [],
+                "research_usable": true,
+                "resolved_quarter_label": "2026-Q2",
+                "rewritten_as_current": false
+              },
+              "statement_scope": "consolidated"
+            },
+            {
+              "audit_or_review_status": "reviewed",
+              "canonical_metric": "revenue",
+              "citation_id": "d619f485f6ca80b689910400c62263669f1d9a71bc1c8e3c81a653ec35386db1",
+              "document_sha256": "db877169e7c19b4b81d60b37d5aab8f9938129a66b582c2229ffffebdca2a43d",
+              "normalized_value": 25709196846401,
+              "period_end": "2026-06-30",
+              "period_start": "2026-01-01",
+              "period_type": "interim",
+              "qualification_state": "QUALIFIED",
+              "reporting_period": "2026-H1",
+              "research_freshness": {
+                "completed_quarter_lag": 2,
+                "financial_freshness": "CURRENT",
+                "financial_period": "2026-H1",
+                "financial_period_end": "2026-06-30",
+                "freshness_status": "CURRENT",
+                "knowledge_available_at": "2026-09-29T11:31:14.408633Z",
+                "price_as_of": null,
+                "price_session_does_not_set_financial_freshness": true,
+                "price_session_not_used_as_financial_period_end": false,
+                "quarters_behind_last_completed": 1,
+                "reason_codes": [],
+                "research_usable": true,
+                "resolved_quarter_label": "2026-Q2",
+                "rewritten_as_current": false
+              },
+              "statement_scope": "consolidated"
+            },
+            {
+              "audit_or_review_status": "reviewed",
+              "canonical_metric": "attributable_net_income",
+              "citation_id": "e6e869cee1c314cf68ded5dfebaad8f53eedcd647ac64a3d432119268c89d663",
+              "document_sha256": "db877169e7c19b4b81d60b37d5aab8f9938129a66b582c2229ffffebdca2a43d",
+              "normalized_value": 728529788872,
+              "period_end": "2026-06-30",
+              "period_start": "2026-01-01",
+              "period_type": "interim",
+              "qualification_state": "QUALIFIED",
+              "reporting_period": "2026-H1",
+              "research_freshness": {
+                "completed_quarter_lag": 2,
+                "financial_freshness": "CURRENT",
+                "financial_period": "2026-H1",
+                "financial_period_end": "2026-06-30",
+                "freshness_status": "CURRENT",
+                "knowledge_available_at": "2026-09-29T11:31:14.408633Z",
+                "price_as_of": null,
+                "price_session_does_not_set_financial_freshness": true,
+                "price_session_not_used_as_financial_period_end": false,
+                "quarters_behind_last_completed": 1,
+                "reason_codes": [],
+                "research_usable": true,
+                "resolved_quarter_label": "2026-Q2",
+                "rewritten_as_current": false
+              },
+              "statement_scope": "consolidated"
+            }
+          ],
+          "legacy_qualified_income_comparison_count": 0,
+          "new_direction": "UNKNOWN",
+          "new_pair_blockers": [
+            {
+              "citation_id": "4c33e154f0442df62e420ca335f5b9acbde2299148b029fc887c14afcc95f72d",
+              "comparison_only": true,
+              "reason_codes": [
+                "FLOW_DURATION_NOT_PROVEN_BY_QUARTER_LABEL"
+              ]
+            },
+            {
+              "citation_id": "d619f485f6ca80b689910400c62263669f1d9a71bc1c8e3c81a653ec35386db1",
+              "comparison_only": true,
+              "reason_codes": [
+                "FLOW_DURATION_NOT_PROVEN_BY_QUARTER_LABEL"
+              ]
+            },
+            {
+              "citation_id": "e6e869cee1c314cf68ded5dfebaad8f53eedcd647ac64a3d432119268c89d663",
+              "comparison_only": true,
+              "reason_codes": [
+                "FLOW_DURATION_NOT_PROVEN_BY_QUARTER_LABEL"
+              ]
+            }
+          ],
+          "posture_unchanged": "INITIATE_ON_BREAKOUT",
+          "source_periods": [
+            "2026-Q1"
+          ]
+        },
+        "POW": {
+          "before_composite": "FUNDAMENTALS_MIXED",
+          "evidence_scope": "MULTI_FAMILY",
+          "facts": [],
+          "legacy_qualified_income_comparison_count": 0,
+          "new_direction": "UNKNOWN",
+          "new_pair_blockers": [],
+          "posture_unchanged": "AVOID",
+          "source_periods": [
+            "2026-Q1"
+          ]
+        },
+        "PVD": {
+          "before_composite": "FUNDAMENTALS_MIXED",
+          "evidence_scope": "MULTI_FAMILY",
+          "facts": [
+            {
+              "audit_or_review_status": "reviewed",
+              "canonical_metric": "net_income",
+              "citation_id": "6e92fa09ee83ca4e2d2f74ffa788887080b719749035bd2b8f1c12bb2f46cc10",
+              "document_sha256": "a7360d2fc9a8a67a1535820813cda2bb8ef288466cd36c949e050c2f2a1b290a",
+              "normalized_value": 18272708,
+              "period_end": "2026-06-30",
+              "period_start": "2026-01-01",
+              "period_type": "interim",
+              "qualification_state": "QUALIFIED",
+              "reporting_period": "2026-H1",
+              "research_freshness": {
+                "completed_quarter_lag": 2,
+                "financial_freshness": "CURRENT",
+                "financial_period": "2026-H1",
+                "financial_period_end": "2026-06-30",
+                "freshness_status": "CURRENT",
+                "knowledge_available_at": "2026-09-29T11:31:14.408633Z",
+                "price_as_of": null,
+                "price_session_does_not_set_financial_freshness": true,
+                "price_session_not_used_as_financial_period_end": false,
+                "quarters_behind_last_completed": 1,
+                "reason_codes": [],
+                "research_usable": true,
+                "resolved_quarter_label": "2026-Q2",
+                "rewritten_as_current": false
+              },
+              "statement_scope": "consolidated"
+            },
+            {
+              "audit_or_review_status": "audited",
+              "canonical_metric": "net_income",
+              "citation_id": "ab3855e1fa469f9d37450443d7025e9a38d3a1d20bc21aab28d0763709610a38",
+              "document_sha256": "6ee20a554891c449a8ee72fffe6358bc9b32145d066a7e52d8492d88f305139c",
+              "normalized_value": 1051572991932,
+              "period_end": "2025-12-31",
+              "period_start": "2025-01-01",
+              "period_type": "annual",
+              "qualification_state": "QUALIFIED",
+              "reporting_period": "2025",
+              "research_freshness": {
+                "completed_quarter_lag": 4,
+                "financial_freshness": "CURRENT",
+                "financial_period": "2025",
+                "financial_period_end": "2025-12-31",
+                "freshness_status": "CURRENT",
+                "knowledge_available_at": "2026-10-07T23:18:13.632873+00:00",
+                "price_as_of": null,
+                "price_session_does_not_set_financial_freshness": true,
+                "price_session_not_used_as_financial_period_end": false,
+                "quarters_behind_last_completed": 3,
+                "reason_codes": [],
+                "research_usable": true,
+                "resolved_quarter_label": "2025-Q4",
+                "rewritten_as_current": false
+              },
+              "statement_scope": "consolidated"
+            },
+            {
+              "audit_or_review_status": "audited",
+              "canonical_metric": "revenue",
+              "citation_id": "c3b5e4424528bf8da3006f3d2f491e810bcda30c86dc3e31f79527190c4a2742",
+              "document_sha256": "6ee20a554891c449a8ee72fffe6358bc9b32145d066a7e52d8492d88f305139c",
+              "normalized_value": 10896989276040,
+              "period_end": "2025-12-31",
+              "period_start": "2025-01-01",
+              "period_type": "annual",
+              "qualification_state": "QUALIFIED",
+              "reporting_period": "2025",
+              "research_freshness": {
+                "completed_quarter_lag": 4,
+                "financial_freshness": "CURRENT",
+                "financial_period": "2025",
+                "financial_period_end": "2025-12-31",
+                "freshness_status": "CURRENT",
+                "knowledge_available_at": "2026-10-07T23:18:13.632873+00:00",
+                "price_as_of": null,
+                "price_session_does_not_set_financial_freshness": true,
+                "price_session_not_used_as_financial_period_end": false,
+                "quarters_behind_last_completed": 3,
+                "reason_codes": [],
+                "research_usable": true,
+                "resolved_quarter_label": "2025-Q4",
+                "rewritten_as_current": false
+              },
+              "statement_scope": "consolidated"
+            },
+            {
+              "audit_or_review_status": "reviewed",
+              "canonical_metric": "revenue",
+              "citation_id": "b3ede3e3db59872fee8c04c58ed23c0f9f8a0b48ad6acce7af4a22bc410d5b6a",
+              "document_sha256": "a7360d2fc9a8a67a1535820813cda2bb8ef288466cd36c949e050c2f2a1b290a",
+              "normalized_value": 245730824,
+              "period_end": "2026-06-30",
+              "period_start": "2026-01-01",
+              "period_type": "interim",
+              "qualification_state": "QUALIFIED",
+              "reporting_period": "2026-H1",
+              "research_freshness": {
+                "completed_quarter_lag": 2,
+                "financial_freshness": "CURRENT",
+                "financial_period": "2026-H1",
+                "financial_period_end": "2026-06-30",
+                "freshness_status": "CURRENT",
+                "knowledge_available_at": "2026-09-29T11:31:14.408633Z",
+                "price_as_of": null,
+                "price_session_does_not_set_financial_freshness": true,
+                "price_session_not_used_as_financial_period_end": false,
+                "quarters_behind_last_completed": 1,
+                "reason_codes": [],
+                "research_usable": true,
+                "resolved_quarter_label": "2026-Q2",
+                "rewritten_as_current": false
+              },
+              "statement_scope": "consolidated"
+            },
+            {
+              "audit_or_review_status": "reviewed",
+              "canonical_metric": "attributable_net_income",
+              "citation_id": "09055eeae69f562bd778906c75095d2892b5e754f44a6db797d98d4a2a66ce1d",
+              "document_sha256": "a7360d2fc9a8a67a1535820813cda2bb8ef288466cd36c949e050c2f2a1b290a",
+              "normalized_value": 17920760,
+              "period_end": "2026-06-30",
+              "period_start": "2026-01-01",
+              "period_type": "interim",
+              "qualification_state": "QUALIFIED",
+              "reporting_period": "2026-H1",
+              "research_freshness": {
+                "completed_quarter_lag": 2,
+                "financial_freshness": "CURRENT",
+                "financial_period": "2026-H1",
+                "financial_period_end": "2026-06-30",
+                "freshness_status": "CURRENT",
+                "knowledge_available_at": "2026-09-29T11:31:14.408633Z",
+                "price_as_of": null,
+                "price_session_does_not_set_financial_freshness": true,
+                "price_session_not_used_as_financial_period_end": false,
+                "quarters_behind_last_completed": 1,
+                "reason_codes": [],
+                "research_usable": true,
+                "resolved_quarter_label": "2026-Q2",
+                "rewritten_as_current": false
+              },
+              "statement_scope": "consolidated"
+            }
+          ],
+          "legacy_qualified_income_comparison_count": 4,
+          "new_direction": "UNKNOWN",
+          "new_pair_blockers": [
+            {
+              "citation_id": "6e92fa09ee83ca4e2d2f74ffa788887080b719749035bd2b8f1c12bb2f46cc10",
+              "comparison_only": true,
+              "reason_codes": [
+                "FLOW_DURATION_NOT_PROVEN_BY_QUARTER_LABEL"
+              ]
+            },
+            {
+              "citation_id": "b3ede3e3db59872fee8c04c58ed23c0f9f8a0b48ad6acce7af4a22bc410d5b6a",
+              "comparison_only": true,
+              "reason_codes": [
+                "FLOW_DURATION_NOT_PROVEN_BY_QUARTER_LABEL"
+              ]
+            },
+            {
+              "citation_id": "09055eeae69f562bd778906c75095d2892b5e754f44a6db797d98d4a2a66ce1d",
+              "comparison_only": true,
+              "reason_codes": [
+                "FLOW_DURATION_NOT_PROVEN_BY_QUARTER_LABEL"
+              ]
+            },
+            {
+              "citation_ids": [
+                "ab3855e1fa469f9d37450443d7025e9a38d3a1d20bc21aab28d0763709610a38"
+              ],
+              "comparison_only": true,
+              "metric": "net_income",
+              "reason_codes": [
+                "SAME_METRIC_SCOPE_ASSURANCE_DURATION_PRIOR_YEAR_REQUIRED"
+              ]
+            },
+            {
+              "citation_ids": [
+                "c3b5e4424528bf8da3006f3d2f491e810bcda30c86dc3e31f79527190c4a2742"
+              ],
+              "comparison_only": true,
+              "metric": "revenue",
+              "reason_codes": [
+                "SAME_METRIC_SCOPE_ASSURANCE_DURATION_PRIOR_YEAR_REQUIRED"
+              ]
+            }
+          ],
+          "posture_unchanged": "AVOID",
+          "source_periods": [
+            "2026-Q1"
+          ]
+        },
+        "QNS": {
+          "before_composite": "FUNDAMENTALS_MIXED",
+          "evidence_scope": "MULTI_FAMILY",
+          "facts": [],
+          "legacy_qualified_income_comparison_count": 0,
+          "new_direction": "UNKNOWN",
+          "new_pair_blockers": [],
+          "posture_unchanged": "AVOID",
+          "source_periods": [
+            "2026-Q1"
+          ]
+        },
+        "SSI": {
+          "before_composite": "FUNDAMENTALS_STABLE",
+          "evidence_scope": "MULTI_FAMILY",
+          "facts": [],
+          "legacy_qualified_income_comparison_count": 1,
+          "new_direction": "UNKNOWN",
+          "new_pair_blockers": [],
+          "posture_unchanged": "AVOID",
+          "source_periods": [
+            "2026-Q1"
+          ]
+        },
+        "VNM": {
+          "before_composite": "FUNDAMENTALS_MIXED",
+          "evidence_scope": "MULTI_FAMILY",
+          "facts": [],
+          "legacy_qualified_income_comparison_count": 0,
+          "new_direction": "UNKNOWN",
+          "new_pair_blockers": [],
+          "posture_unchanged": "AVOID",
+          "source_periods": [
+            "2026-Q1"
+          ]
+        }
+      },
+      "new_compatible_pairs": 0,
+      "original_card_deltas_excluding_additive_research": 0,
+      "retained_qualified_income_comparisons": 9,
+      "retained_source_hashes_unchanged": true
+    },
+    "2026-10-22": {
+      "admitted_exact_income_facts": 11,
+      "cards": 72,
+      "counts": {
+        "BALANCE_SHEET_ONLY": 59,
+        "NO_CURRENT_DIRECTIONAL_VOTE": 13,
+        "sufficient_balance_only": 51
+      },
+      "decision_projection_deltas_excluding_additive_basis": 0,
+      "focus": {
+        "EVF": {
+          "before_composite": "INSUFFICIENT_EVIDENCE",
+          "evidence_scope": "NO_CURRENT_DIRECTIONAL_VOTE",
+          "facts": [],
+          "legacy_qualified_income_comparison_count": 0,
+          "new_direction": "UNKNOWN",
+          "new_pair_blockers": [],
+          "posture_unchanged": "INITIATE_ON_BREAKOUT",
+          "source_periods": []
+        },
+        "FPT": {
+          "before_composite": "FUNDAMENTALS_MIXED",
+          "evidence_scope": "BALANCE_SHEET_ONLY",
+          "facts": [
+            {
+              "audit_or_review_status": "audited",
+              "canonical_metric": "revenue",
+              "citation_id": "28fcc0b64275294b31aebfdedd441b89884856f726c8c7a26b41972f14eaa9a8",
+              "document_sha256": "bb14bafff1a7849217f34cf4b50e0e3d69d91968f217a66d7c68f07d4c1af284",
+              "normalized_value": 70112825100710,
+              "period_end": "2025-12-31",
+              "period_start": "2025-01-01",
+              "period_type": "annual",
+              "qualification_state": "QUALIFIED",
+              "reporting_period": "2025",
+              "research_freshness": {
+                "completed_quarter_lag": 4,
+                "financial_freshness": "CURRENT",
+                "financial_period": "2025",
+                "financial_period_end": "2025-12-31",
+                "freshness_status": "CURRENT",
+                "knowledge_available_at": "2026-10-08T00:07:56.779802+00:00",
+                "price_as_of": null,
+                "price_session_does_not_set_financial_freshness": true,
+                "price_session_not_used_as_financial_period_end": false,
+                "quarters_behind_last_completed": 3,
+                "reason_codes": [],
+                "research_usable": true,
+                "resolved_quarter_label": "2025-Q4",
+                "rewritten_as_current": false
+              },
+              "statement_scope": "consolidated"
+            }
+          ],
+          "legacy_qualified_income_comparison_count": 0,
+          "new_direction": "UNKNOWN",
+          "new_pair_blockers": [
+            {
+              "citation_ids": [
+                "28fcc0b64275294b31aebfdedd441b89884856f726c8c7a26b41972f14eaa9a8"
+              ],
+              "comparison_only": true,
+              "metric": "revenue",
+              "reason_codes": [
+                "SAME_METRIC_SCOPE_ASSURANCE_DURATION_PRIOR_YEAR_REQUIRED"
+              ]
+            }
+          ],
+          "posture_unchanged": "WAIT_FOR_CONFIRMATION",
+          "source_periods": [
+            "2026-Q1"
+          ]
+        },
+        "HPG": {
+          "before_composite": "FUNDAMENTALS_IMPROVING",
+          "evidence_scope": "BALANCE_SHEET_ONLY",
+          "facts": [
+            {
+              "audit_or_review_status": "audited",
+              "canonical_metric": "revenue",
+              "citation_id": "703f3b51683204b9f69f6a316daba4005af23582b283b60ba4562563625b8bd1",
+              "document_sha256": "f38c5f75becf7d3f145d27183eec81f119fd4f75e378b983a2763ddc3f7e0c07",
+              "normalized_value": 156116094618482,
+              "period_end": "2025-12-31",
+              "period_start": "2025-01-01",
+              "period_type": "annual",
+              "qualification_state": "QUALIFIED",
+              "reporting_period": "2025",
+              "research_freshness": {
+                "completed_quarter_lag": 4,
+                "financial_freshness": "CURRENT",
+                "financial_period": "2025",
+                "financial_period_end": "2025-12-31",
+                "freshness_status": "CURRENT",
+                "knowledge_available_at": "2026-10-07T15:33:12Z",
+                "price_as_of": null,
+                "price_session_does_not_set_financial_freshness": true,
+                "price_session_not_used_as_financial_period_end": false,
+                "quarters_behind_last_completed": 3,
+                "reason_codes": [],
+                "research_usable": true,
+                "resolved_quarter_label": "2025-Q4",
+                "rewritten_as_current": false
+              },
+              "statement_scope": "consolidated"
+            },
+            {
+              "audit_or_review_status": "audited",
+              "canonical_metric": "net_income",
+              "citation_id": "c9c24b64898e69a1550470ea1716fc701f7d895015b83b7d449d9de640204728",
+              "document_sha256": "f38c5f75becf7d3f145d27183eec81f119fd4f75e378b983a2763ddc3f7e0c07",
+              "normalized_value": 15514931571606,
+              "period_end": "2025-12-31",
+              "period_start": "2025-01-01",
+              "period_type": "annual",
+              "qualification_state": "QUALIFIED",
+              "reporting_period": "2025",
+              "research_freshness": {
+                "completed_quarter_lag": 4,
+                "financial_freshness": "CURRENT",
+                "financial_period": "2025",
+                "financial_period_end": "2025-12-31",
+                "freshness_status": "CURRENT",
+                "knowledge_available_at": "2026-10-07T15:33:12Z",
+                "price_as_of": null,
+                "price_session_does_not_set_financial_freshness": true,
+                "price_session_not_used_as_financial_period_end": false,
+                "quarters_behind_last_completed": 3,
+                "reason_codes": [],
+                "research_usable": true,
+                "resolved_quarter_label": "2025-Q4",
+                "rewritten_as_current": false
+              },
+              "statement_scope": "consolidated"
+            }
+          ],
+          "legacy_qualified_income_comparison_count": 4,
+          "new_direction": "UNKNOWN",
+          "new_pair_blockers": [
+            {
+              "citation_ids": [
+                "c9c24b64898e69a1550470ea1716fc701f7d895015b83b7d449d9de640204728"
+              ],
+              "comparison_only": true,
+              "metric": "net_income",
+              "reason_codes": [
+                "SAME_METRIC_SCOPE_ASSURANCE_DURATION_PRIOR_YEAR_REQUIRED"
+              ]
+            },
+            {
+              "citation_ids": [
+                "703f3b51683204b9f69f6a316daba4005af23582b283b60ba4562563625b8bd1"
+              ],
+              "comparison_only": true,
+              "metric": "revenue",
+              "reason_codes": [
+                "SAME_METRIC_SCOPE_ASSURANCE_DURATION_PRIOR_YEAR_REQUIRED"
+              ]
+            }
+          ],
+          "posture_unchanged": "WAIT_FOR_CONFIRMATION",
+          "source_periods": [
+            "2026-Q1"
+          ]
+        },
+        "NVL": {
+          "before_composite": "FUNDAMENTALS_IMPROVING",
+          "evidence_scope": "BALANCE_SHEET_ONLY",
+          "facts": [],
+          "legacy_qualified_income_comparison_count": 0,
+          "new_direction": "UNKNOWN",
+          "new_pair_blockers": [],
+          "posture_unchanged": "INITIATE_ON_BREAKOUT",
+          "source_periods": [
+            "2026-Q1"
+          ]
+        },
+        "PAN": {
+          "before_composite": "FUNDAMENTALS_IMPROVING",
+          "evidence_scope": "BALANCE_SHEET_ONLY",
+          "facts": [],
+          "legacy_qualified_income_comparison_count": 0,
+          "new_direction": "UNKNOWN",
+          "new_pair_blockers": [],
+          "posture_unchanged": "EARLY_WATCH",
+          "source_periods": [
+            "2026-Q1"
+          ]
+        },
+        "PNJ": {
+          "before_composite": "FUNDAMENTALS_IMPROVING",
+          "evidence_scope": "BALANCE_SHEET_ONLY",
+          "facts": [
+            {
+              "audit_or_review_status": "reviewed",
+              "canonical_metric": "net_income",
+              "citation_id": "4c33e154f0442df62e420ca335f5b9acbde2299148b029fc887c14afcc95f72d",
+              "document_sha256": "db877169e7c19b4b81d60b37d5aab8f9938129a66b582c2229ffffebdca2a43d",
+              "normalized_value": 728386009054,
+              "period_end": "2026-06-30",
+              "period_start": "2026-01-01",
+              "period_type": "interim",
+              "qualification_state": "QUALIFIED",
+              "reporting_period": "2026-H1",
+              "research_freshness": {
+                "completed_quarter_lag": 2,
+                "financial_freshness": "CURRENT",
+                "financial_period": "2026-H1",
+                "financial_period_end": "2026-06-30",
+                "freshness_status": "CURRENT",
+                "knowledge_available_at": "2026-09-29T11:31:14.408633Z",
+                "price_as_of": null,
+                "price_session_does_not_set_financial_freshness": true,
+                "price_session_not_used_as_financial_period_end": false,
+                "quarters_behind_last_completed": 1,
+                "reason_codes": [],
+                "research_usable": true,
+                "resolved_quarter_label": "2026-Q2",
+                "rewritten_as_current": false
+              },
+              "statement_scope": "consolidated"
+            },
+            {
+              "audit_or_review_status": "reviewed",
+              "canonical_metric": "revenue",
+              "citation_id": "d619f485f6ca80b689910400c62263669f1d9a71bc1c8e3c81a653ec35386db1",
+              "document_sha256": "db877169e7c19b4b81d60b37d5aab8f9938129a66b582c2229ffffebdca2a43d",
+              "normalized_value": 25709196846401,
+              "period_end": "2026-06-30",
+              "period_start": "2026-01-01",
+              "period_type": "interim",
+              "qualification_state": "QUALIFIED",
+              "reporting_period": "2026-H1",
+              "research_freshness": {
+                "completed_quarter_lag": 2,
+                "financial_freshness": "CURRENT",
+                "financial_period": "2026-H1",
+                "financial_period_end": "2026-06-30",
+                "freshness_status": "CURRENT",
+                "knowledge_available_at": "2026-09-29T11:31:14.408633Z",
+                "price_as_of": null,
+                "price_session_does_not_set_financial_freshness": true,
+                "price_session_not_used_as_financial_period_end": false,
+                "quarters_behind_last_completed": 1,
+                "reason_codes": [],
+                "research_usable": true,
+                "resolved_quarter_label": "2026-Q2",
+                "rewritten_as_current": false
+              },
+              "statement_scope": "consolidated"
+            },
+            {
+              "audit_or_review_status": "reviewed",
+              "canonical_metric": "attributable_net_income",
+              "citation_id": "e6e869cee1c314cf68ded5dfebaad8f53eedcd647ac64a3d432119268c89d663",
+              "document_sha256": "db877169e7c19b4b81d60b37d5aab8f9938129a66b582c2229ffffebdca2a43d",
+              "normalized_value": 728529788872,
+              "period_end": "2026-06-30",
+              "period_start": "2026-01-01",
+              "period_type": "interim",
+              "qualification_state": "QUALIFIED",
+              "reporting_period": "2026-H1",
+              "research_freshness": {
+                "completed_quarter_lag": 2,
+                "financial_freshness": "CURRENT",
+                "financial_period": "2026-H1",
+                "financial_period_end": "2026-06-30",
+                "freshness_status": "CURRENT",
+                "knowledge_available_at": "2026-09-29T11:31:14.408633Z",
+                "price_as_of": null,
+                "price_session_does_not_set_financial_freshness": true,
+                "price_session_not_used_as_financial_period_end": false,
+                "quarters_behind_last_completed": 1,
+                "reason_codes": [],
+                "research_usable": true,
+                "resolved_quarter_label": "2026-Q2",
+                "rewritten_as_current": false
+              },
+              "statement_scope": "consolidated"
+            }
+          ],
+          "legacy_qualified_income_comparison_count": 0,
+          "new_direction": "UNKNOWN",
+          "new_pair_blockers": [
+            {
+              "citation_id": "4c33e154f0442df62e420ca335f5b9acbde2299148b029fc887c14afcc95f72d",
+              "comparison_only": true,
+              "reason_codes": [
+                "FLOW_DURATION_NOT_PROVEN_BY_QUARTER_LABEL"
+              ]
+            },
+            {
+              "citation_id": "d619f485f6ca80b689910400c62263669f1d9a71bc1c8e3c81a653ec35386db1",
+              "comparison_only": true,
+              "reason_codes": [
+                "FLOW_DURATION_NOT_PROVEN_BY_QUARTER_LABEL"
+              ]
+            },
+            {
+              "citation_id": "e6e869cee1c314cf68ded5dfebaad8f53eedcd647ac64a3d432119268c89d663",
+              "comparison_only": true,
+              "reason_codes": [
+                "FLOW_DURATION_NOT_PROVEN_BY_QUARTER_LABEL"
+              ]
+            }
+          ],
+          "posture_unchanged": "EARLY_WATCH",
+          "source_periods": [
+            "2026-Q1"
+          ]
+        },
+        "POW": {
+          "before_composite": "FUNDAMENTALS_MIXED",
+          "evidence_scope": "BALANCE_SHEET_ONLY",
+          "facts": [],
+          "legacy_qualified_income_comparison_count": 0,
+          "new_direction": "UNKNOWN",
+          "new_pair_blockers": [],
+          "posture_unchanged": "AVOID",
+          "source_periods": [
+            "2026-Q1"
+          ]
+        },
+        "PVD": {
+          "before_composite": "FUNDAMENTALS_DETERIORATING",
+          "evidence_scope": "BALANCE_SHEET_ONLY",
+          "facts": [
+            {
+              "audit_or_review_status": "reviewed",
+              "canonical_metric": "net_income",
+              "citation_id": "6e92fa09ee83ca4e2d2f74ffa788887080b719749035bd2b8f1c12bb2f46cc10",
+              "document_sha256": "a7360d2fc9a8a67a1535820813cda2bb8ef288466cd36c949e050c2f2a1b290a",
+              "normalized_value": 18272708,
+              "period_end": "2026-06-30",
+              "period_start": "2026-01-01",
+              "period_type": "interim",
+              "qualification_state": "QUALIFIED",
+              "reporting_period": "2026-H1",
+              "research_freshness": {
+                "completed_quarter_lag": 2,
+                "financial_freshness": "CURRENT",
+                "financial_period": "2026-H1",
+                "financial_period_end": "2026-06-30",
+                "freshness_status": "CURRENT",
+                "knowledge_available_at": "2026-09-29T11:31:14.408633Z",
+                "price_as_of": null,
+                "price_session_does_not_set_financial_freshness": true,
+                "price_session_not_used_as_financial_period_end": false,
+                "quarters_behind_last_completed": 1,
+                "reason_codes": [],
+                "research_usable": true,
+                "resolved_quarter_label": "2026-Q2",
+                "rewritten_as_current": false
+              },
+              "statement_scope": "consolidated"
+            },
+            {
+              "audit_or_review_status": "audited",
+              "canonical_metric": "net_income",
+              "citation_id": "ab3855e1fa469f9d37450443d7025e9a38d3a1d20bc21aab28d0763709610a38",
+              "document_sha256": "6ee20a554891c449a8ee72fffe6358bc9b32145d066a7e52d8492d88f305139c",
+              "normalized_value": 1051572991932,
+              "period_end": "2025-12-31",
+              "period_start": "2025-01-01",
+              "period_type": "annual",
+              "qualification_state": "QUALIFIED",
+              "reporting_period": "2025",
+              "research_freshness": {
+                "completed_quarter_lag": 4,
+                "financial_freshness": "CURRENT",
+                "financial_period": "2025",
+                "financial_period_end": "2025-12-31",
+                "freshness_status": "CURRENT",
+                "knowledge_available_at": "2026-10-07T23:18:13.632873+00:00",
+                "price_as_of": null,
+                "price_session_does_not_set_financial_freshness": true,
+                "price_session_not_used_as_financial_period_end": false,
+                "quarters_behind_last_completed": 3,
+                "reason_codes": [],
+                "research_usable": true,
+                "resolved_quarter_label": "2025-Q4",
+                "rewritten_as_current": false
+              },
+              "statement_scope": "consolidated"
+            },
+            {
+              "audit_or_review_status": "audited",
+              "canonical_metric": "revenue",
+              "citation_id": "c3b5e4424528bf8da3006f3d2f491e810bcda30c86dc3e31f79527190c4a2742",
+              "document_sha256": "6ee20a554891c449a8ee72fffe6358bc9b32145d066a7e52d8492d88f305139c",
+              "normalized_value": 10896989276040,
+              "period_end": "2025-12-31",
+              "period_start": "2025-01-01",
+              "period_type": "annual",
+              "qualification_state": "QUALIFIED",
+              "reporting_period": "2025",
+              "research_freshness": {
+                "completed_quarter_lag": 4,
+                "financial_freshness": "CURRENT",
+                "financial_period": "2025",
+                "financial_period_end": "2025-12-31",
+                "freshness_status": "CURRENT",
+                "knowledge_available_at": "2026-10-07T23:18:13.632873+00:00",
+                "price_as_of": null,
+                "price_session_does_not_set_financial_freshness": true,
+                "price_session_not_used_as_financial_period_end": false,
+                "quarters_behind_last_completed": 3,
+                "reason_codes": [],
+                "research_usable": true,
+                "resolved_quarter_label": "2025-Q4",
+                "rewritten_as_current": false
+              },
+              "statement_scope": "consolidated"
+            },
+            {
+              "audit_or_review_status": "reviewed",
+              "canonical_metric": "revenue",
+              "citation_id": "b3ede3e3db59872fee8c04c58ed23c0f9f8a0b48ad6acce7af4a22bc410d5b6a",
+              "document_sha256": "a7360d2fc9a8a67a1535820813cda2bb8ef288466cd36c949e050c2f2a1b290a",
+              "normalized_value": 245730824,
+              "period_end": "2026-06-30",
+              "period_start": "2026-01-01",
+              "period_type": "interim",
+              "qualification_state": "QUALIFIED",
+              "reporting_period": "2026-H1",
+              "research_freshness": {
+                "completed_quarter_lag": 2,
+                "financial_freshness": "CURRENT",
+                "financial_period": "2026-H1",
+                "financial_period_end": "2026-06-30",
+                "freshness_status": "CURRENT",
+                "knowledge_available_at": "2026-09-29T11:31:14.408633Z",
+                "price_as_of": null,
+                "price_session_does_not_set_financial_freshness": true,
+                "price_session_not_used_as_financial_period_end": false,
+                "quarters_behind_last_completed": 1,
+                "reason_codes": [],
+                "research_usable": true,
+                "resolved_quarter_label": "2026-Q2",
+                "rewritten_as_current": false
+              },
+              "statement_scope": "consolidated"
+            },
+            {
+              "audit_or_review_status": "reviewed",
+              "canonical_metric": "attributable_net_income",
+              "citation_id": "09055eeae69f562bd778906c75095d2892b5e754f44a6db797d98d4a2a66ce1d",
+              "document_sha256": "a7360d2fc9a8a67a1535820813cda2bb8ef288466cd36c949e050c2f2a1b290a",
+              "normalized_value": 17920760,
+              "period_end": "2026-06-30",
+              "period_start": "2026-01-01",
+              "period_type": "interim",
+              "qualification_state": "QUALIFIED",
+              "reporting_period": "2026-H1",
+              "research_freshness": {
+                "completed_quarter_lag": 2,
+                "financial_freshness": "CURRENT",
+                "financial_period": "2026-H1",
+                "financial_period_end": "2026-06-30",
+                "freshness_status": "CURRENT",
+                "knowledge_available_at": "2026-09-29T11:31:14.408633Z",
+                "price_as_of": null,
+                "price_session_does_not_set_financial_freshness": true,
+                "price_session_not_used_as_financial_period_end": false,
+                "quarters_behind_last_completed": 1,
+                "reason_codes": [],
+                "research_usable": true,
+                "resolved_quarter_label": "2026-Q2",
+                "rewritten_as_current": false
+              },
+              "statement_scope": "consolidated"
+            }
+          ],
+          "legacy_qualified_income_comparison_count": 4,
+          "new_direction": "UNKNOWN",
+          "new_pair_blockers": [
+            {
+              "citation_id": "6e92fa09ee83ca4e2d2f74ffa788887080b719749035bd2b8f1c12bb2f46cc10",
+              "comparison_only": true,
+              "reason_codes": [
+                "FLOW_DURATION_NOT_PROVEN_BY_QUARTER_LABEL"
+              ]
+            },
+            {
+              "citation_id": "b3ede3e3db59872fee8c04c58ed23c0f9f8a0b48ad6acce7af4a22bc410d5b6a",
+              "comparison_only": true,
+              "reason_codes": [
+                "FLOW_DURATION_NOT_PROVEN_BY_QUARTER_LABEL"
+              ]
+            },
+            {
+              "citation_id": "09055eeae69f562bd778906c75095d2892b5e754f44a6db797d98d4a2a66ce1d",
+              "comparison_only": true,
+              "reason_codes": [
+                "FLOW_DURATION_NOT_PROVEN_BY_QUARTER_LABEL"
+              ]
+            },
+            {
+              "citation_ids": [
+                "ab3855e1fa469f9d37450443d7025e9a38d3a1d20bc21aab28d0763709610a38"
+              ],
+              "comparison_only": true,
+              "metric": "net_income",
+              "reason_codes": [
+                "SAME_METRIC_SCOPE_ASSURANCE_DURATION_PRIOR_YEAR_REQUIRED"
+              ]
+            },
+            {
+              "citation_ids": [
+                "c3b5e4424528bf8da3006f3d2f491e810bcda30c86dc3e31f79527190c4a2742"
+              ],
+              "comparison_only": true,
+              "metric": "revenue",
+              "reason_codes": [
+                "SAME_METRIC_SCOPE_ASSURANCE_DURATION_PRIOR_YEAR_REQUIRED"
+              ]
+            }
+          ],
+          "posture_unchanged": "AVOID",
+          "source_periods": [
+            "2026-Q1"
+          ]
+        },
+        "QNS": {
+          "before_composite": "FUNDAMENTALS_MIXED",
+          "evidence_scope": "BALANCE_SHEET_ONLY",
+          "facts": [],
+          "legacy_qualified_income_comparison_count": 0,
+          "new_direction": "UNKNOWN",
+          "new_pair_blockers": [],
+          "posture_unchanged": "AVOID",
+          "source_periods": [
+            "2026-Q1"
+          ]
+        },
+        "SSI": {
+          "before_composite": "INSUFFICIENT_EVIDENCE",
+          "evidence_scope": "NO_CURRENT_DIRECTIONAL_VOTE",
+          "facts": [],
+          "legacy_qualified_income_comparison_count": 1,
+          "new_direction": "UNKNOWN",
+          "new_pair_blockers": [],
+          "posture_unchanged": "AVOID",
+          "source_periods": []
+        },
+        "VNM": {
+          "before_composite": "FUNDAMENTALS_DETERIORATING",
+          "evidence_scope": "BALANCE_SHEET_ONLY",
+          "facts": [],
+          "legacy_qualified_income_comparison_count": 0,
+          "new_direction": "UNKNOWN",
+          "new_pair_blockers": [],
+          "posture_unchanged": "AVOID",
+          "source_periods": [
+            "2026-Q1"
+          ]
+        }
+      },
+      "new_compatible_pairs": 0,
+      "original_card_deltas_excluding_additive_research": 0,
+      "retained_qualified_income_comparisons": 9,
+      "retained_source_hashes_unchanged": true
+    }
+  }
+}

@@ -1,5 +1,7 @@
 # Stock Lookup — Authority Map
 
+[Income research](official_income_statement_research_consumption_v1_contract.md): NON_VOTING; D-1 unchanged.
+
 Who may speak for what. This file **summarizes** authority; it promotes nothing. The controlling
 contract named in each row decides disputes. Written 2026-10-04 on main `920d579`. Current-state
 facts live in [ACTIVE_STATE.md](ACTIVE_STATE.md); capabilities in [CAPABILITIES.md](CAPABILITIES.md).

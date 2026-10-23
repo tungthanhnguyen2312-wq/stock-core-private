@@ -1497,6 +1497,8 @@ def project_session(*, baseline: Mapping[str, Any], official_rows: list[Mapping[
                 "current_interim_evidence": False, "valuation_effect": "NONE",
                 "component_evidence": historical_components,
             }
+        from stocklookup_core.financial.fundamental_signal_consumption_contract import official_income_research_context
+        record["official_income_research_context"] = official_income_research_context(record, cutoff=cutoff, ticker=ticker)
     cohort = {}
     for ticker in COHORT:
         fields = by_ticker.get(ticker, [])

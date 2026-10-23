@@ -25,7 +25,7 @@ triggers TURNAROUND, and a period after the decision session never enters at all
 qualified fundamental evidence exists (``evidence_availability``) is reported apart from whether
 the current direction is sufficient (``fundamental_state``).
 
-It computes no ratio, no threshold and no score, and it promotes no authority: a proxy stays a
+The voting synthesis computes no ratio, threshold or score and promotes no authority: a proxy stays a
 proxy and a stale period stays labelled stale. ``fundamental_state`` is derived from explicit
 current dimension votes by the unchanged Integrated Decision fundamental policy; the components
 stay alongside it.
@@ -73,6 +73,167 @@ LEGACY_POLICY_EPOCH = "legacy_unversioned_fundamental_reader/v0"
 CONSUMPTION_POLICY_EPOCH = "fundamental_signal_consumption/v1"
 POLICY_EPOCHS = (LEGACY_POLICY_EPOCH, CONSUMPTION_POLICY_EPOCH, "fundamental_signal_policy_hardening/v1",
                  DECISION_POLICY_VERSION)
+
+
+def research_evidence_basis(context: Mapping[str, Any] | None) -> dict[str, Any]:
+    """Describe already-produced votes; never recompute or strengthen their verdict."""
+    context = context or {}
+    votes = sorted(set(context.get("favorable_votes", []) + context.get("adverse_votes", [])))
+    dimensions = sorted({vote.split(".")[0] for vote in votes})
+    balance = {"CAPITAL_STRUCTURE", "SHORT_TERM_LIQUIDITY", "WORKING_CAPITAL"}
+    only_balance = bool(dimensions) and set(dimensions) <= balance
+    evidence = (context.get("thesis_context") or {}).get("evidence") or {}
+    observations = []
+    for identity, signal in sorted(evidence.items()):
+        fitness = signal.get("fitness") or {}
+        observations.append({"signal_id": identity, "dimension": signal.get("dimension"),
+            "decision_eligible": signal.get("decision_eligible"),
+            "period": fitness.get("as_of_period"), "freshness": fitness.get("freshness"),
+            "completed_quarter_lag": fitness.get("completed_quarter_lag"),
+            "qualification": fitness.get("qualification"),
+            "source_feature_context": copy.deepcopy(fitness.get("source_feature_context")),
+            "assurance": "UNKNOWN_UNLESS_EXPLICIT_IN_SOURCE_CONTEXT"})
+    return {"contract_version": "fundamental_research_evidence_basis/v1",
+        "scope": "BALANCE_SHEET_ONLY" if only_balance else "MULTI_FAMILY" if dimensions else "NO_CURRENT_DIRECTIONAL_VOTE",
+        "represented_vote_dimensions": dimensions, "vote_ids": votes,
+        "directional_sufficiency_scope": "REPRESENTED_DIMENSIONS_ONLY",
+        "source_directional_sufficiency": context.get("directional_sufficiency"),
+        "source_periods": sorted({str(row["period"]) for row in observations if row["period"]}),
+        "observations": observations,
+        "missing_income_components": ["QUALIFIED_COMPARABLE_REVENUE_AND_EARNINGS"] if only_balance else [],
+        "limitations": (["BALANCE_SHEET_DIRECTION_IS_NOT_REVENUE_OR_EARNINGS_CONFIRMATION",
+                          "NO_BUSINESS_WIDE_QUALITY_OR_VALUATION_CONCLUSION"] if only_balance else []),
+        "is_actionable": False, "vote_effect": "NONE"}
+
+
+def official_income_research_context(record: Mapping[str, Any] | None, *, cutoff: str | None,
+                                     ticker: str | None = None) -> dict[str, Any]:
+    """Non-voting view of the existing admitted exact-field projection, never an intake.
+
+    Unreviewed rows are refused even if all their other fields look qualified.
+    Dates, normalization and accounting identity must already be explicit.
+    """
+    from datetime import datetime
+    from stocklookup_core.evidence.temporal_freshness import reporting_period_basis, separate_financial_clock
+    from stocklookup_core.financial.financial_analysis_engine_v2 import sign_transition
+    import math
+    record = record or {}
+    admitted, rejected, comparisons = [], [], []
+    try:
+        boundary = datetime.fromisoformat(str(cutoff).replace("Z", "+00:00"))
+        if boundary.tzinfo is None:
+            boundary = None
+    except ValueError:
+        boundary = None
+    entity = record.get("entity_class")
+    for row in record.get("official_field_context") or []:
+        if row.get("canonical_metric") not in {"revenue", "net_income", "attributable_net_income"}:
+            continue
+        reasons = []
+        if (row.get("evidence_tier") == "UNREVIEWED_QUARTERLY" or row.get("audit_or_review_status") == "unreviewed"
+                or row.get("existing_consumer_usable") is False):
+            reasons.append("D1_EXISTING_CONSUMER_USE_REFUSED")
+        if row.get("qualification_state") != "QUALIFIED" or row.get("factual_status") != "qualified":
+            reasons.append("EXISTING_EXACT_FIELD_QUALIFICATION_REQUIRED")
+        if row.get("audit_or_review_status") not in {"reviewed", "audited"}:
+            reasons.append("APPROVED_REVIEWED_OR_AUDITED_TIER_REQUIRED")
+        if entity != "corporate":
+            reasons.append("INDUSTRIAL_INCOME_IDENTITY_NOT_ADMITTED_FOR_ENTITY")
+        if not row.get("ticker") or (ticker and row.get("ticker") != ticker):
+            reasons.append("ISSUER_IDENTITY_MISMATCH")
+        if (row.get("period_type") not in {"annual", "interim", "quarter", "half_year", "nine_month"}
+                or not row.get("reporting_period")):
+            reasons.append("EXPLICIT_REPORTING_PERIOD_TYPE_REQUIRED")
+        if (row.get("statement_family") != "income_statement" or row.get("statement_scope") not in {"consolidated", "standalone"}
+                or not row.get("document_sha256") or not row.get("citation_id") or not row.get("source_identity")):
+            reasons.append("SOURCE_STATEMENT_IDENTITY_INCOMPLETE")
+        value = row.get("normalized_value")
+        if (not isinstance(value, (float, int)) or isinstance(value, bool) or not math.isfinite(value)
+                or isinstance(row.get("unit_scale"), bool) or row.get("unit_scale") != 1
+                or row.get("already_normalized") is not True or not row.get("currency")):
+            reasons.append("NORMALIZED_SOURCE_UNIT_REQUIRED")
+        try:
+            known = datetime.fromisoformat(str(row.get("knowledge_available_at")).replace("Z", "+00:00"))
+            start, end = date.fromisoformat(row["period_start"]), date.fromisoformat(row["period_end"])
+            if boundary is None or known.tzinfo is None or known > boundary or end > boundary.date() or start > end:
+                reasons.append("SOURCE_NOT_ELIGIBLE_AT_EXACT_CUTOFF")
+        except (ValueError, TypeError, KeyError):
+            reasons.append("EXPLICIT_PERIOD_AND_KNOWLEDGE_TIME_REQUIRED")
+        if reasons:
+            rejected.append({"citation_id": row.get("citation_id"), "reason_codes": sorted(set(reasons))})
+            continue
+        fact = copy.deepcopy(dict(row))
+        fact["reporting_period_basis"] = reporting_period_basis(row)
+        fact["research_freshness"] = separate_financial_clock(
+            financial_period=row["reporting_period"], financial_period_end=row["period_end"],
+            price_as_of=None, knowledge_available_at=row["knowledge_available_at"],
+            decision_session=boundary.date().isoformat(), maximum_completed_quarter_lag=MAX_COMPLETED_QUARTER_LAG)
+        admitted.append(fact)
+    # Never choose a winner among conflicting observations of one semantic key.
+    def key(row):
+        return (row["ticker"], row["canonical_metric"], row["statement_scope"], row["period_type"],
+                row["currency"], row["unit_scale"], row.get("accounting_definition") or row["canonical_metric"],
+                row.get("line_code"),
+                row["audit_or_review_status"], row["reporting_period_basis"]["period_family"],
+                row["reporting_period_basis"]["cumulative_basis"])
+    groups = {}
+    for row in admitted:
+        period_blockers = set(row["reporting_period_basis"]["reason_codes"]) - {"FISCAL_CALENDAR_NOT_PROVEN_BY_LABEL"}
+        if period_blockers:
+            rejected.append({"citation_id": row["citation_id"], "comparison_only": True,
+                             "reason_codes": sorted(period_blockers)})
+            continue
+        groups.setdefault(key(row), []).append(row)
+    for identity, rows in sorted(groups.items(), key=lambda item: str(item[0])):
+        periods = {}
+        for row in rows:
+            periods.setdefault((row["period_start"], row["period_end"]), []).append(row)
+        compatible = [values[0] for values in periods.values()
+                      if len({r["normalized_value"] for r in values}) == 1]
+        if len(compatible) != len(periods):
+            rejected.append({"reason_codes": ["CONFLICTING_OFFICIAL_INCOME_VALUES"]})
+            continue
+        compatible.sort(key=lambda row: row["period_end"])
+        before_count = len(comparisons)
+        for prior, current in zip(compatible, compatible[1:]):
+            old_start, old_end = date.fromisoformat(prior["period_start"]), date.fromisoformat(prior["period_end"])
+            new_start, new_end = date.fromisoformat(current["period_start"]), date.fromisoformat(current["period_end"])
+            if not (new_start.year == old_start.year + 1 and new_end.year == old_end.year + 1
+                    and (new_start.month, new_start.day, new_end.month, new_end.day) ==
+                        (old_start.month, old_start.day, old_end.month, old_end.day)):
+                continue
+            delta = current["normalized_value"] - prior["normalized_value"]
+            transition = sign_transition(prior["normalized_value"], current["normalized_value"],
+                                         earnings=current["canonical_metric"] != "revenue")
+            comparisons.append({"metric": current["canonical_metric"], "statement_scope": current["statement_scope"],
+                "period_type": current["period_type"], "currency": current["currency"], "entity_class": entity,
+                "prior_citation_id": prior["citation_id"], "current_citation_id": current["citation_id"],
+                "prior_period": prior["reporting_period"], "current_period": current["reporting_period"],
+                "change": delta, "direction": "INCREASED" if delta > 0 else "DECREASED" if delta < 0 else "UNCHANGED",
+                "growth_ratio": delta / prior["normalized_value"] if prior["normalized_value"] > 0 else None,
+                "semantic_transition": transition, "assurance": current["audit_or_review_status"],
+                "method": "same_metric_scope_currency_duration_explicit_calendar_yoy/v1",
+                "limitations": ["REPORTED_CHANGE_NOT_BUSINESS_QUALITY", "RECURRENCE_UNKNOWN", "NON_VOTING"]})
+        if len(comparisons) == before_count:
+            rejected.append({"metric": identity[1], "comparison_only": True,
+                "citation_ids": sorted(row["citation_id"] for row in rows),
+                "reason_codes": ["SAME_METRIC_SCOPE_ASSURANCE_DURATION_PRIOR_YEAR_REQUIRED"]})
+    return {"contract_version": "official_income_research_context/v1", "facts": admitted,
+        "comparisons": comparisons, "direction_status": "MEASURED_REPORTED_CHANGE" if comparisons else "UNKNOWN",
+        "blocker_reason_codes": [] if comparisons else ["NO_QUALIFIED_COMPATIBLE_INCOME_PAIR"],
+        "rejected": rejected, "cutoff": cutoff, "entity_class": entity,
+        "availability_basis": "KNOWLEDGE_AT_RESEARCH_CUTOFF_NOT_PUBLICATION_OR_HISTORICAL_PIT_PROOF",
+        "earnings_quality_context": copy.deepcopy(record.get("earnings_quality_context")),
+        "historical_earnings_quality_context": copy.deepcopy(record.get("historical_earnings_quality_context")),
+        "retained_qualified_income_comparisons": [copy.deepcopy(metric) for metric in record.get("metrics") or []
+            if record.get("authority_tier") == "OFFICIAL_QUALIFIED" and metric.get("status") == "EXACT_QUALIFIED"
+            and metric.get("metric_id") in {"revenue_growth_yoy", "earnings_growth_yoy"}],
+        "direction_status_scope": "NEW_EXACT_FIELD_STREAM_ONLY_RETAINED_COMPARISONS_UNCHANGED",
+        "existing_income_research": {name: copy.deepcopy(record.get(name)) for name in (
+            "metrics", "fundamental_trajectory_context", "current_financial_momentum_context",
+            "baseline_metric_temporal_context") if name in record},
+        "d1_gate": "UNREVIEWED_EXISTING_CONSUMER_USE_REFUSED", "vote_effect": "NONE",
+        "strict_valuation_effect": "NONE", "is_actionable": False}
 NOT_COMPARABLE_POLICY_CHANGE = "NOT_COMPARABLE_POLICY_CHANGE"
 DERIVATION_RULE = "integrated_fundamental_direction_policy_over_dimension_votes/v1"
 VOTE_ELIGIBILITY_RULE = "current_period_comparable_basis_applicable_entity_decision_signals_only/v2"
