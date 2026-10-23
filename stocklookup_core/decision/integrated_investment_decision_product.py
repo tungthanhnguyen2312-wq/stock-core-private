@@ -1443,10 +1443,22 @@ def decide_research_action_posture(
             return POSTURE_WAIT_FOR_CONFIRMATION, why, EFFECT_DOES_NOT_BLOCK, "BEARISH_BREADTH_NARROWS_FRESH_ENTRY"
 
         lead_note = " with supportive sector leadership" if is_sector_leader else ""
-        participation_note = ("supportive participation" if part_supports else
+        participation_note = ("elevated measured participation (volume magnitude only, not bullish confirmation)" if part_supports else
                               "no observed participation contradiction" if part_available else
                               "participation evidence unavailable")
-        why = f"{ticker}: Valid structural breakout trigger fired at pivot level with non-conflicting fundamentals and {participation_note}{lead_note}; actionable initiation setup."
+        if fundamental_state == FUNDAMENTAL_INSUFFICIENT:
+            fundamental_note = ("fundamental direction unconfirmed "
+                                f"({fundamental_evidence_availability or fundamental_signals.ABSENT}); "
+                                "missing direction is not fundamental support")
+        elif fundamental_state == FUNDAMENTAL_MIXED:
+            fundamental_note = "mixed fundamental evidence requiring separate review"
+        else:
+            fundamental_note = f"fundamental direction {fundamental_state}"
+        why = (f"{ticker}: Valid structural breakout trigger fired at pivot level; {fundamental_note}; "
+               f"{participation_note}{lead_note}. Conditional research setup, not execution authority.")
+        if ms == "EARLY_BEARISH_REVERSAL" or choch == "BEARISH_CHOCH_DETECTED_BY_RULE":
+            why += (" The fired trigger is a recovery attempt against bearish swing structure; "
+                    "it does not erase that structural counter-evidence.")
         return POSTURE_INITIATE_ON_BREAKOUT, why, EFFECT_DOES_NOT_BLOCK, "FRESH_ENTRY_TRIGGER"
 
     # 5. RETEST OF BROKEN PIVOT -> ACCUMULATE_ON_RETEST
@@ -1727,6 +1739,9 @@ def build_ticker_integrated_decision(
     }
     invalidation = {
         "horizon": tactical.get("invalidation_horizon"),
+        "thesis_scope": tactical.get("invalidation_thesis_scope", "UNKNOWN"),
+        "shared_level_status": tactical.get("shared_level_status"),
+        "limitations": list(tactical.get("warnings") or []),
         "price_basis": copy.deepcopy(tactical.get("price_basis_qualification")),
         "invalidation_level": tactical.get("invalidation_level"),
         "invalidation_method": tactical.get("invalidation_method") or "CONFIRMED_SWING_LEVEL_OR_SUPPORT_FALLBACK",

@@ -199,11 +199,17 @@ def test_boundary_numeric_and_operator_parity_with_unverified_lineage():
 
 
 def test_baseline_golden_structure_states_levels_and_lineage_are_unchanged():
+    import runpy
+    from tools.verify_retention_reader_transition import historical_bytes
+    root = Path(__file__).resolve().parents[1]
+    archive = root / "tests/fixtures/financial_research_v1_sources/technical_structure_context.py.txt"
+    assert archive.read_bytes().replace(b"\r\n", b"\n") == historical_bytes(root, "technical_structure_context.py")
+    historical = runpy.run_path(str(archive))
     path = Path(__file__).parent / "fixtures" / "price_basis_corrective_synthetic_golden.json"
     before = hashlib.sha256(path.read_bytes()).hexdigest()
     fixture = json.loads(path.read_text(encoding="utf-8"))
     source = fixture["rows"]
-    record = structure._classify_ticker("PNJ", descriptive_record=fixture["descriptive"],
+    record = historical["_classify_ticker"]("PNJ", descriptive_record=fixture["descriptive"],
         pf_record={"observations": source}, target_session=source[-1]["session"])
     qualification = record["price_basis_qualification"]
     for name in ("trend_context", "structure_context", "swing_structure", "bos_context", "pivot_context", "trigger_context", "invalidation_context"):
@@ -219,6 +225,41 @@ def test_baseline_golden_structure_states_levels_and_lineage_are_unchanged():
     refused = structure._classify_ticker("PNJ", descriptive_record=fixture["descriptive"],
         pf_record={"observations": source}, target_session=source[-1]["session"])
     assert "REFERENCE_WINDOW_PRICE_BASIS_INCOMPATIBLE" in refused["blockers"]
+
+
+def test_current_equal_swing_golden_has_consistent_bearish_range_break():
+    path = Path(__file__).parent / "fixtures/price_basis_corrective_synthetic_golden.json"
+    sealed = path.read_bytes()
+    fixture = json.loads(sealed)
+    source = deepcopy(fixture["rows"])
+    record = structure._classify_ticker("PNJ", descriptive_record=fixture["descriptive"],
+        pf_record={"observations": source}, target_session=source[-1]["session"])
+    swing = record["swing_structure"]
+    assert (swing["swing_high_sequence"], swing["swing_low_sequence"], swing["market_structure_state"]) == ("EH", "EL", "RANGE")
+    assert swing["last_confirmed_swing_high"]["price"] == swing["previous_confirmed_swing_high"]["price"] == 36.9
+    assert swing["last_confirmed_swing_low"]["price"] == swing["previous_confirmed_swing_low"]["price"] == 31.0
+    assert record["bos_context"]["bos_state"] == "BEARISH_BOS_DETECTED_BY_RULE"
+    assert record["choch_context"]["choch_state"] == "NO_CHOCH"
+    assert record["trigger_context"]["trigger_type"] == "CONFIRMED_BOS_TRIGGER"
+    assert record["trigger_context"]["trigger_state"] == "TRIGGERED"
+    assert record["trigger_context"]["trigger_level"] == record["invalidation_context"]["invalidation_level"] == 31.0
+    projected = projection._project_ticker("PNJ", record, source[-1]["session"])
+    assert projected["trigger_close_comparison_operator"] == projected["invalidation_close_comparison_operator"] == "<"
+    assert projected["invalidation_thesis_scope"] == "BULLISH_OR_RANGE_STRUCTURE"
+    assert record["price_basis_qualification"]["price_basis_verified"] is False
+    def without_basis(value):
+        if isinstance(value, dict):
+            return {k: without_basis(v) for k, v in value.items() if k != "price_basis_qualification"}
+        if isinstance(value, list):
+            return [without_basis(v) for v in value]
+        return value
+    changed = {"swing_structure", "bos_context", "trigger_context", "invalidation_context"}
+    for key, historical in fixture["expected_structure"].items():
+        if key not in changed:
+            assert without_basis(record[key]) == historical
+    assert swing["last_confirmed_swing_low"]["index"] + structure.SWING_N < len(source)
+    assert swing["last_confirmed_swing_high"]["index"] + structure.SWING_N < len(source)
+    assert source == fixture["rows"] and path.read_bytes() == sealed
 
 
 @pytest.mark.parametrize("adapter_version", ["v1", "v2"])

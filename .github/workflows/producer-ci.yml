@@ -65,6 +65,7 @@ env:
     tests/test_tactical_confirmation_invalidation_boundaries.py
     tests/test_watchlist_tactical_entry_classifier.py
     tests/test_technical_structure_context.py
+    tests/test_research_quality_20261022.py
     tests/test_feature_input_fitness_contract.py
     tests/test_current_research_ai_handoff_packet.py
     tests/test_current_opportunity_prioritization.py

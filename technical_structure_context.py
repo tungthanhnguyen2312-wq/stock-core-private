@@ -339,7 +339,7 @@ def _confirm_swings(closes: list[float], sessions: list[str], *, n: int = SWING_
 
 
 def _swing_structure_context(swings: list[dict[str, Any]]) -> dict[str, Any]:
-    """Determine HH/HL/LH/LL sequence and market structure state."""
+    """Compare confirmed swings strictly; equal levels are not lower levels."""
     highs = [s for s in swings if s["kind"] == "HIGH"]
     lows = [s for s in swings if s["kind"] == "LOW"]
 
@@ -359,14 +359,16 @@ def _swing_structure_context(swings: list[dict[str, Any]]) -> dict[str, Any]:
     l2, l1 = lows[-2], lows[-1]
     hh = h1["price"] > h2["price"]
     hl = l1["price"] > l2["price"]
+    lh = h1["price"] < h2["price"]
+    ll = l1["price"] < l2["price"]
 
     if hh and hl:
         state = "UPTREND"
-    elif not hh and not hl:
+    elif lh and ll:
         state = "DOWNTREND"
-    elif hh and not hl:
+    elif hh and ll:
         state = "EARLY_BULLISH_REVERSAL"
-    elif not hh and hl:
+    elif lh and hl:
         state = "EARLY_BEARISH_REVERSAL"
     else:
         state = "RANGE"
@@ -374,8 +376,8 @@ def _swing_structure_context(swings: list[dict[str, Any]]) -> dict[str, Any]:
     return {
         "status": "AVAILABLE",
         "market_structure_state": state,
-        "swing_high_sequence": "HH" if hh else "LH",
-        "swing_low_sequence": "HL" if hl else "LL",
+        "swing_high_sequence": "HH" if hh else "LH" if lh else "EH",
+        "swing_low_sequence": "HL" if hl else "LL" if ll else "EL",
         "confirmed_swing_count": len(swings),
         "last_confirmed_swing_high": h1,
         "last_confirmed_swing_low": l1,

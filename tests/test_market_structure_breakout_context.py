@@ -278,6 +278,22 @@ class V3SwingTests(unittest.TestCase):
 class V3MarketStructureTests(unittest.TestCase):
     """HH/HL/LH/LL and market structure state."""
 
+    def test_equal_confirmed_levels_are_not_directional(self) -> None:
+        # Exhaust the relation matrix: equality must not become LH or LL, nor
+        # create a reversal from the direction of only one side of a range.
+        states = {(1, 1): "UPTREND", (-1, -1): "DOWNTREND",
+                  (1, -1): "EARLY_BULLISH_REVERSAL", (-1, 1): "EARLY_BEARISH_REVERSAL"}
+        for high_change in (-1, 0, 1):
+            for low_change in (-1, 0, 1):
+                with self.subTest(high=high_change, low=low_change):
+                    swings = [{"kind": "HIGH", "price": 12}, {"kind": "LOW", "price": 8},
+                              {"kind": "HIGH", "price": 12 + high_change},
+                              {"kind": "LOW", "price": 8 + low_change}]
+                    result = structure._swing_structure_context(swings)
+                    self.assertEqual(result["market_structure_state"], states.get((high_change, low_change), "RANGE"))
+                    self.assertEqual(result["swing_high_sequence"], {-1: "LH", 0: "EH", 1: "HH"}[high_change])
+                    self.assertEqual(result["swing_low_sequence"], {-1: "LL", 0: "EL", 1: "HL"}[low_change])
+
     def test_uptrend_detected(self) -> None:
         closes = _uptrend_closes()
         art = _build({"T": _ticker_spec(closes[-1], closes[-1])}, {"T": closes})
