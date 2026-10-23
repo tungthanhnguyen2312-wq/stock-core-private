@@ -7,16 +7,8 @@ Facts: [ACTIVE_STATE.md](ACTIVE_STATE.md).
 
 ## NOW — QUALIFIED QUARTERLY STATEMENT THROUGHPUT V1
 
-[Owner scope](qualified_quarterly_statement_throughput_v1_contract.md): non-voting cross-document
-pairing of admitted official income facts with qualified prior-period originals; comparative
-columns are Owner-gated candidates; D-1 unchanged. COMPLETE_LOCAL; Daily caller not wired (frozen).
-PR182/PR183 untouched; merge gated. No production, authority change or successor.
-
-## PRIOR — OFFICIAL INCOME RESEARCH CONSUMPTION V1
-
-[Owner scope](official_income_statement_research_consumption_v1_contract.md): additive non-voting
-income/basis context; D-1 unchanged. Stacked on open PR180 `f52cc616`; merge gated.
-COMPLETE_LOCAL `d6f23ea3`; native closeout recorded. No production, authority change or successor.
+[Scope](qualified_quarterly_statement_throughput_v1_contract.md): non-voting prior-period income
+pairing; gates off; D-1 unchanged; Daily not wired. PR184 merge gated. PR181 released.
 
 ## PRIOR — STOCKLOOKUP_PRODUCER_DEEP_SIMPLIFICATION (RELEASED PR146)
 
