@@ -24,3 +24,6 @@ operations-review/**/raw/* -text
 operations-review/**/official-documentation/* -text
 # This closure's exact HTTP bodies include upstream CRLF/trailing spaces.
 operations-review/pit-minimum-viable-evidence-closure-v1-20261002/raw/* binary
+
+# Exact retained NSO CPI HTTP bodies; hash-bound test evidence.
+tests/fixtures/nso_cpi/*.html -text
