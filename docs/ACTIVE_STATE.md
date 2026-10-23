@@ -28,7 +28,7 @@ Kinds: **CURRENT FACT** (verified), **HOST-LOCAL** (untracked; re-verify),
 **BLOCKED**, **DEFERRED**, **HISTORICAL**.
 
 ## 1. The operational gate
-- **Stacked on open PR182** `effc9b8a`: [earnings/cash research](reviewed_interim_earnings_and_cash_research_v1_contract.md) non-voting; VNM/FPT/QNS H1 income/cash rows candidate-only (admission blockers named); D-1/merge gated.
+- **PR183 on PR182:** [earnings/cash](reviewed_interim_earnings_and_cash_research_v1_contract.md) non-voting; VNM/FPT/QNS H1 candidates; merge gated.
 - **[Native releases](parallel_domain_development_control_plane_v1_contract.md):** declaration correction; explicit coupled source review.
 - **RELEASED / VALIDATED SOURCE WAVE 2026-10-14:** PR145 released at `f582bfab80dac6d206083a0bd4a0ba57db199691`; all five post-merge jobs PASS (38491150319). Native rev93 admits Codex lane `STOCKLOOKUP_PRODUCER_DEEP_SIMPLIFICATION_20261014`: six existing financial/valuation computation owners, exact leases and output parity. Implementation validated: 630 tests PASS, 12 retained-data cases absent in this clean worktree; native and hosted exact-head gates govern release disposition. Conditional validated source push/PR/merge authorized; no Daily, production or authority/evidence changes. PNJ/FPT unadmitted; Oct13 seals unchanged.
 - [Oct13](daily_20261013_handoff_route_recovery_contract.md).

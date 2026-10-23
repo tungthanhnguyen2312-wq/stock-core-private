@@ -7,9 +7,8 @@ Facts: [ACTIVE_STATE.md](ACTIVE_STATE.md).
 
 ## NOW — REVIEWED INTERIM EARNINGS AND CASH RESEARCH V1
 
-[Owner scope](reviewed_interim_earnings_and_cash_research_v1_contract.md): non-voting earnings/cash
-conversion and comparability context; VNM/FPT/QNS H1 rows remain candidates. Stacked on open PR182
-`effc9b8a`; merge gated. Income research V1 released in PR181. No production, authority change or successor.
+[Scope](reviewed_interim_earnings_and_cash_research_v1_contract.md): non-voting earnings/cash context;
+VNM/FPT/QNS H1 candidates. PR183 on PR182; merge gated. No production, authority change or successor.
 
 ## PRIOR — STOCKLOOKUP_PRODUCER_DEEP_SIMPLIFICATION (RELEASED PR146)
 
