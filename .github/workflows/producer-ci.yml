@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
   pull_request:
-    branches: [main, fix/research-decision-quality-20261022]
+    branches: [main, fix/research-decision-quality-20261022, fix/nso-cpi-acquisition-parser-freshness-20261023]
 
 permissions:
   contents: read

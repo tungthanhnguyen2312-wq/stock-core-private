@@ -1,0 +1,326 @@
+{
+ "contract_version": "interim_earnings_cash_candidate_preview/v1",
+ "qualification_state": "CANDIDATE_NOT_QUALIFIED",
+ "use": "ISOLATED_OFFLINE_INTERFACE_PREVIEW_ONLY; never an overlay row, consumer input, vote or valuation input",
+ "candidate_source": "GrokBot Issue #30 report 25604d8 (visual read of issuer originals)",
+ "producer_corroboration": "Governed fixed OCR profile (tesseract vie+eng psm6, 240 dpi gray) on SHA-verified original bytes; governed_ocr_reading is the literal token text, glyph damage preserved, never repaired",
+ "preview_cutoff": "2026-10-23T15:00:00+07:00",
+ "preview_knowledge_available_at": "2026-10-23T02:41:00+00:00",
+ "issuers": {
+  "VNM": {
+   "document_sha256": "a6155aa757b320b893a78093b0454473f4a581aead225af4eb4ef1fbd6628561",
+   "statement_scope": "consolidated",
+   "rows": [
+    {
+     "canonical_metric": "revenue",
+     "line_code": "10",
+     "reporting_period": "2026-H1",
+     "period_start": "2026-01-01",
+     "period_end": "2026-06-30",
+     "value": 34996005336611,
+     "comparative_basis": null,
+     "source_page": 11,
+     "governed_ocr_reading": "34.996.005.336.611"
+    },
+    {
+     "canonical_metric": "net_income",
+     "line_code": "60",
+     "reporting_period": "2026-H1",
+     "period_start": "2026-01-01",
+     "period_end": "2026-06-30",
+     "value": 5642622644280,
+     "comparative_basis": null,
+     "source_page": 12,
+     "governed_ocr_reading": "5.642.622.644.280"
+    },
+    {
+     "canonical_metric": "attributable_net_income",
+     "line_code": "61",
+     "reporting_period": "2026-H1",
+     "period_start": "2026-01-01",
+     "period_end": "2026-06-30",
+     "value": 5595750943516,
+     "comparative_basis": null,
+     "source_page": 12,
+     "governed_ocr_reading": "5.595.750.943.516"
+    },
+    {
+     "canonical_metric": "operating_cash_flow",
+     "line_code": "20",
+     "reporting_period": "2026-H1",
+     "period_start": "2026-01-01",
+     "period_end": "2026-06-30",
+     "value": 3473788102329,
+     "comparative_basis": null,
+     "source_page": 13,
+     "governed_ocr_reading": "3.473.788.102.329"
+    },
+    {
+     "canonical_metric": "revenue",
+     "line_code": "10",
+     "reporting_period": "2025-H1",
+     "period_start": "2025-01-01",
+     "period_end": "2025-06-30",
+     "value": 29705912949019,
+     "comparative_basis": "RECLASSIFIED_COMPARATIVE",
+     "source_page": 11,
+     "governed_ocr_reading": "²9.705.91².949.019"
+    },
+    {
+     "canonical_metric": "net_income",
+     "line_code": "60",
+     "reporting_period": "2025-H1",
+     "period_start": "2025-01-01",
+     "period_end": "2025-06-30",
+     "value": 4075857948334,
+     "comparative_basis": "RECLASSIFIED_COMPARATIVE",
+     "source_page": 12,
+     "governed_ocr_reading": "4.075.857.948.334"
+    },
+    {
+     "canonical_metric": "attributable_net_income",
+     "line_code": "61",
+     "reporting_period": "2025-H1",
+     "period_start": "2025-01-01",
+     "period_end": "2025-06-30",
+     "value": 4043067486099,
+     "comparative_basis": "RECLASSIFIED_COMPARATIVE",
+     "source_page": 12,
+     "governed_ocr_reading": "4.043.067.486.099"
+    },
+    {
+     "canonical_metric": "operating_cash_flow",
+     "line_code": "20",
+     "reporting_period": "2025-H1",
+     "period_start": "2025-01-01",
+     "period_end": "2025-06-30",
+     "value": 3820350421923,
+     "comparative_basis": "RECLASSIFIED_COMPARATIVE",
+     "source_page": 13,
+     "governed_ocr_reading": "3,820.350.421.923"
+    }
+   ]
+  },
+  "FPT": {
+   "document_sha256": "45636554f28c7e6c2f38458b9a22410ed1f67e80627d672b827019a67f299df8",
+   "statement_scope": "consolidated",
+   "rows": [
+    {
+     "canonical_metric": "revenue",
+     "line_code": "10",
+     "reporting_period": "2026-H1",
+     "period_start": "2026-01-01",
+     "period_end": "2026-06-30",
+     "value": 26268500667974,
+     "comparative_basis": null,
+     "source_page": 12,
+     "governed_ocr_reading": "26.268.500.667.974"
+    },
+    {
+     "canonical_metric": "net_income",
+     "line_code": "60",
+     "reporting_period": "2026-H1",
+     "period_start": "2026-01-01",
+     "period_end": "2026-06-30",
+     "value": 5047128933102,
+     "comparative_basis": null,
+     "source_page": 12,
+     "governed_ocr_reading": "5.047,1²8.933.10²"
+    },
+    {
+     "canonical_metric": "attributable_net_income",
+     "line_code": "61",
+     "reporting_period": "2026-H1",
+     "period_start": "2026-01-01",
+     "period_end": "2026-06-30",
+     "value": 5054958601533,
+     "comparative_basis": null,
+     "source_page": 12,
+     "governed_ocr_reading": "5.054.958.601.533"
+    },
+    {
+     "canonical_metric": "operating_cash_flow",
+     "line_code": "20",
+     "reporting_period": "2026-H1",
+     "period_start": "2026-01-01",
+     "period_end": "2026-06-30",
+     "value": -1145666005788,
+     "comparative_basis": null,
+     "source_page": 13,
+     "governed_ocr_reading": "(1.145.666.005.788)"
+    },
+    {
+     "canonical_metric": "revenue",
+     "line_code": "10",
+     "reporting_period": "2025-H1",
+     "period_start": "2025-01-01",
+     "period_end": "2025-06-30",
+     "value": 32682853982527,
+     "comparative_basis": "AS_PREVIOUSLY_REPORTED",
+     "source_page": 12,
+     "governed_ocr_reading": "32.682.853.982.527"
+    },
+    {
+     "canonical_metric": "net_income",
+     "line_code": "60",
+     "reporting_period": "2025-H1",
+     "period_start": "2025-01-01",
+     "period_end": "2025-06-30",
+     "value": 5335828880987,
+     "comparative_basis": "AS_PREVIOUSLY_REPORTED",
+     "source_page": 12,
+     "governed_ocr_reading": "5.335.8²8.880.987"
+    },
+    {
+     "canonical_metric": "attributable_net_income",
+     "line_code": "61",
+     "reporting_period": "2025-H1",
+     "period_start": "2025-01-01",
+     "period_end": "2025-06-30",
+     "value": 4431763974648,
+     "comparative_basis": "AS_PREVIOUSLY_REPORTED",
+     "source_page": 12,
+     "governed_ocr_reading": "4:431.763.974.648"
+    },
+    {
+     "canonical_metric": "operating_cash_flow",
+     "line_code": "20",
+     "reporting_period": "2025-H1",
+     "period_start": "2025-01-01",
+     "period_end": "2025-06-30",
+     "value": 1683573278329,
+     "comparative_basis": "AS_PREVIOUSLY_REPORTED",
+     "source_page": 13,
+     "governed_ocr_reading": "1.683.573.²78.3²9"
+    },
+    {
+     "canonical_metric": "revenue",
+     "line_code": "10",
+     "reporting_period": "2025-H1",
+     "period_start": "2025-01-01",
+     "period_end": "2025-06-30",
+     "value": 23325685794923,
+     "comparative_basis": "ISSUER_LIKE_FOR_LIKE_RESTATEMENT",
+     "source_page": 18,
+     "governed_ocr_reading": "²3.3²5.685.794.9²3"
+    },
+    {
+     "canonical_metric": "net_income",
+     "line_code": "60",
+     "reporting_period": "2025-H1",
+     "period_start": "2025-01-01",
+     "period_end": "2025-06-30",
+     "value": 4427462420799,
+     "comparative_basis": "ISSUER_LIKE_FOR_LIKE_RESTATEMENT",
+     "source_page": 18,
+     "governed_ocr_reading": "4.4²7.46².4²0.799"
+    },
+    {
+     "canonical_metric": "attributable_net_income",
+     "line_code": "61",
+     "reporting_period": "2025-H1",
+     "period_start": "2025-01-01",
+     "period_end": "2025-06-30",
+     "value": 4431763974648,
+     "comparative_basis": "ISSUER_LIKE_FOR_LIKE_RESTATEMENT",
+     "source_page": 18,
+     "governed_ocr_reading": "4.431.763.974.648"
+    }
+   ]
+  },
+  "QNS": {
+   "document_sha256": "5a06a40f34a6d9b30233926f9c9d909d684744de2bf2ad0956edd367d5f7b068",
+   "statement_scope": "consolidated",
+   "rows": [
+    {
+     "canonical_metric": "revenue",
+     "line_code": "10",
+     "reporting_period": "2026-H1",
+     "period_start": "2026-01-01",
+     "period_end": "2026-06-30",
+     "value": 6052122260974,
+     "comparative_basis": null,
+     "source_page": 8,
+     "governed_ocr_reading": "6.052.122.260.974"
+    },
+    {
+     "canonical_metric": "net_income",
+     "line_code": "60",
+     "reporting_period": "2026-H1",
+     "period_start": "2026-01-01",
+     "period_end": "2026-06-30",
+     "value": 957549911069,
+     "comparative_basis": null,
+     "source_page": 8,
+     "governed_ocr_reading": "957.549.911.069"
+    },
+    {
+     "canonical_metric": "attributable_net_income",
+     "line_code": "61",
+     "reporting_period": "2026-H1",
+     "period_start": "2026-01-01",
+     "period_end": "2026-06-30",
+     "value": 957549911069,
+     "comparative_basis": null,
+     "source_page": 8,
+     "governed_ocr_reading": "957.549.911.069"
+    },
+    {
+     "canonical_metric": "operating_cash_flow",
+     "line_code": "20",
+     "reporting_period": "2026-H1",
+     "period_start": "2026-01-01",
+     "period_end": "2026-06-30",
+     "value": 456779788250,
+     "comparative_basis": null,
+     "source_page": 9,
+     "governed_ocr_reading": "456.779.788.250"
+    },
+    {
+     "canonical_metric": "revenue",
+     "line_code": "10",
+     "reporting_period": "2025-H1",
+     "period_start": "2025-01-01",
+     "period_end": "2025-06-30",
+     "value": 5187333192283,
+     "comparative_basis": "AS_PREVIOUSLY_REPORTED",
+     "source_page": 8,
+     "governed_ocr_reading": "5.187.333.192.283"
+    },
+    {
+     "canonical_metric": "net_income",
+     "line_code": "60",
+     "reporting_period": "2025-H1",
+     "period_start": "2025-01-01",
+     "period_end": "2025-06-30",
+     "value": 937668685740,
+     "comparative_basis": "AS_PREVIOUSLY_REPORTED",
+     "source_page": 8,
+     "governed_ocr_reading": "937.668.685.740"
+    },
+    {
+     "canonical_metric": "attributable_net_income",
+     "line_code": "61",
+     "reporting_period": "2025-H1",
+     "period_start": "2025-01-01",
+     "period_end": "2025-06-30",
+     "value": 937668685740,
+     "comparative_basis": "AS_PREVIOUSLY_REPORTED",
+     "source_page": 8,
+     "governed_ocr_reading": "937.668.685.740"
+    },
+    {
+     "canonical_metric": "operating_cash_flow",
+     "line_code": "20",
+     "reporting_period": "2025-H1",
+     "period_start": "2025-01-01",
+     "period_end": "2025-06-30",
+     "value": 353919373121,
+     "comparative_basis": "AS_PREVIOUSLY_REPORTED",
+     "source_page": 9,
+     "governed_ocr_reading": "353.919.373.121"
+    }
+   ]
+  }
+ }
+}

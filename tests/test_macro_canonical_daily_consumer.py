@@ -198,8 +198,9 @@ def test_real_daily_to_packet_handoff_and_cockpit(monkeypatch, tmp_path, missing
         assert context["conflicts"][0]["winner"] is None
         evidence = context["dimensions"]["GLOBAL_RATES"]["evidence"][0]
         assert all(key in evidence for key in ("source_identity", "indicator_id", "observation_date", "released_at", "retrieved_at", "knowledge_time", "freshness", "authority"))
-    bundle = json.loads((captured["operation_dir"] / "ai_research_session_bundle.json").read_text())
-    cockpit = json.loads((captured["run_dir"] / "dashboard/current_decision_cockpit_projection.json").read_text())
+    # Delivery writes UTF-8 bytes; read them as such rather than with the host locale codec.
+    bundle = json.loads((captured["operation_dir"] / "ai_research_session_bundle.json").read_text(encoding="utf-8"))
+    cockpit = json.loads((captured["run_dir"] / "dashboard/current_decision_cockpit_projection.json").read_text(encoding="utf-8"))
     assert bundle["macro_market_regime_context"] == cockpit["macro_market_regime_context"] == context
     assert bundle["canonical_decision_packet_identity"] == cockpit["canonical_decision_packet_identity"] == packet["artifact_identity"]
     assert integrated == original
@@ -208,7 +209,7 @@ def test_real_daily_to_packet_handoff_and_cockpit(monkeypatch, tmp_path, missing
     assert cockpit["decision_card_v1"]["AAA"]["posture_condition_class"] == security["posture_condition_class"]
     files, publication = build_package(captured["operation_dir"], SESSION)
     assert publication["status"] == "READY_FOR_AI"
-    assert json.loads(files["ai_research_session_bundle.json"].read_text())["macro_market_regime_context"] == context
+    assert json.loads(files["ai_research_session_bundle.json"].read_text(encoding="utf-8"))["macro_market_regime_context"] == context
     forged = copy.deepcopy(packet)
     forged["macro_market_regime_context"]["dimensions"]["GLOBAL_RATES"]["state"] = "EASING"
     assert verified_packet(forged) is None

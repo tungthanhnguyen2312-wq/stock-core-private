@@ -42,6 +42,8 @@ def _fundamental_summary(fundamental: Mapping[str, Any] | None) -> dict[str, Any
 
     if row.get("official_income_research_context") is not None:
         summary["official_income_research_context"] = copy.deepcopy(row["official_income_research_context"])
+    if row.get("interim_earnings_cash_research_context") is not None:
+        summary["interim_earnings_cash_research_context"] = copy.deepcopy(row["interim_earnings_cash_research_context"])
     return summary
 
 

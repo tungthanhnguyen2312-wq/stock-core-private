@@ -8,7 +8,7 @@ Facts: [ACTIVE_STATE.md](ACTIVE_STATE.md).
 ## NOW — QUALIFIED QUARTERLY STATEMENT THROUGHPUT V1
 
 [Scope](qualified_quarterly_statement_throughput_v1_contract.md): non-voting prior-period income
-pairing; gates off; D-1 unchanged; Daily not wired. PR184 merge gated. PR181 released.
+pairing; gates off; D-1 unchanged; Daily not wired. PR182-184 Owner-merged 10-23.
 
 ## PRIOR — STOCKLOOKUP_PRODUCER_DEEP_SIMPLIFICATION (RELEASED PR146)
 
