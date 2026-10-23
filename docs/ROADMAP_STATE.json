@@ -16,13 +16,13 @@
   ],
   "current": {
     "milestone": "REVIEWED_INTERIM_EARNINGS_AND_CASH_RESEARCH_V1",
-    "state": "ACTIVE"
+    "state": "COMPLETE"
   },
   "queued_next": [],
   "milestones": [
     {
       "milestone_id": "REVIEWED_INTERIM_EARNINGS_AND_CASH_RESEARCH_V1",
-      "state": "ACTIVE",
+      "state": "COMPLETE",
       "starting_checkpoint": "effc9b8ab8c55429e4c758ab57d475d65b641b8b",
       "candidate_branch": "feat/interim-earnings-cash-research-v1",
       "dependencies": [
@@ -35,11 +35,12 @@
       "source_doc": "docs/reviewed_interim_earnings_and_cash_research_v1_contract.md",
       "state_history": [
         "DEFERRED",
-        "ACTIVE"
+        "ACTIVE",
+        "COMPLETE"
       ],
-      "checkpoint": null,
-      "terminal_disposition": null,
-      "notes": "Owner 2026-10-23 authorizes bounded non-voting reviewed interim earnings and cash-conversion research for VNM/FPT/QNS extending OFFICIAL_INCOME_STATEMENT_RESEARCH_CONSUMPTION_V1, stacked on unmerged PR182 effc9b8a; qualified/permitted facts only, GrokBot #30 values remain candidates; D-1, votes, posture, identity, valuation and PIT unchanged. No fact registration, route/OCR/qualifier policy change, production write, Daily, merge or successor."
+      "checkpoint": "fee43e4bb6812de81c13cd75e7f35349efdaa01c",
+      "terminal_disposition": "LOCAL_IMPLEMENTATION_COMPLETE_NOT_PROMOTED",
+      "notes": "Owner 2026-10-23 authorizes bounded non-voting reviewed interim earnings and cash-conversion research for VNM/FPT/QNS extending OFFICIAL_INCOME_STATEMENT_RESEARCH_CONSUMPTION_V1, stacked on unmerged PR182 effc9b8a; qualified/permitted facts only, GrokBot #30 values remain candidates; D-1, votes, posture, identity, valuation and PIT unchanged. No fact registration, route/OCR/qualifier policy change, production write, Daily, merge or successor. Local closeout: Owner-authorized local checkpoint: 40 new tests PASS, 467 layout/roadmap/consumer/source tests PASS, broad 198 pre-existing failures identical on base; retained October20/22 523-record replays read-only and byte-identical, VRE measured, VNM/FPT/QNS UNKNOWN/partial with exact blockers; zero new qualified facts. Stacked PR182; no main release, authority promotion or successor."
     },
     {
       "milestone_id": "NSO_CPI_ACQUISITION_PARSER_FRESHNESS_CORRECTIVE_20261023",
