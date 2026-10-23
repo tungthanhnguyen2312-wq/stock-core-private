@@ -5,7 +5,14 @@ Verified analytical baseline 2026-10-14 `a9c799397a74641a0e16c8ea84454d2dc4d0745
 Nothing below auto-starts; native standing admission required (AI_RULES 11).
 Facts: [ACTIVE_STATE.md](ACTIVE_STATE.md).
 
-## NOW — OFFICIAL INCOME RESEARCH CONSUMPTION V1
+## NOW — QUALIFIED QUARTERLY STATEMENT THROUGHPUT V1
+
+[Owner scope](qualified_quarterly_statement_throughput_v1_contract.md): non-voting cross-document
+pairing of admitted official income facts with qualified prior-period originals; comparative
+columns are Owner-gated candidates; D-1 unchanged. COMPLETE_LOCAL; Daily caller not wired (frozen).
+PR182/PR183 untouched; merge gated. No production, authority change or successor.
+
+## PRIOR — OFFICIAL INCOME RESEARCH CONSUMPTION V1
 
 [Owner scope](official_income_statement_research_consumption_v1_contract.md): additive non-voting
 income/basis context; D-1 unchanged. Stacked on open PR180 `f52cc616`; merge gated.
