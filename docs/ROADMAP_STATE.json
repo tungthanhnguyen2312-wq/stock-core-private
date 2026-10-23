@@ -15,11 +15,33 @@
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "OFFICIAL_INCOME_STATEMENT_RESEARCH_CONSUMPTION_V1",
+    "milestone": "NSO_CPI_ACQUISITION_PARSER_FRESHNESS_CORRECTIVE_20261023",
     "state": "COMPLETE"
   },
   "queued_next": [],
   "milestones": [
+    {
+      "milestone_id": "NSO_CPI_ACQUISITION_PARSER_FRESHNESS_CORRECTIVE_20261023",
+      "state": "COMPLETE",
+      "starting_checkpoint": "5837372a4c609df60df54360b2bb3ce2b80b80a5",
+      "candidate_branch": "",
+      "dependencies": [
+        "OFFICIAL_INCOME_STATEMENT_RESEARCH_CONSUMPTION_V1"
+      ],
+      "unlocks": [],
+      "owner_authorized": true,
+      "owner_override": "Owner 2026-10-23: admit bounded NSO CPI corrective in stocklookup_core/evidence/vietnam_official_macro_evidence.py: bounded official homepage CPI release discovery, YoY wording parser repair, calendar supersession with bounded CURRENT_NEXT_RELEASE_UNANNOUNCED (ceiling 2026-11-30 for Sept 2026 CPI), adjacent-month direction rule (Jul->Sep UNKNOWN). Branch+PR only; no merge, Daily, production write, SBV bypass or authority promotion.",
+      "authority_effect": "NONE",
+      "source_doc": "docs/nso_cpi_acquisition_parser_freshness_corrective_20261023_contract.md",
+      "state_history": [
+        "DEFERRED",
+        "ACTIVE",
+        "COMPLETE"
+      ],
+      "checkpoint": "abc7f05e343299b22385a1d9c5ee6897320a2afe",
+      "terminal_disposition": "LOCAL_IMPLEMENTATION_COMPLETE_NOT_PROMOTED",
+      "notes": "Owner 2026-10-23: admit bounded NSO CPI corrective in stocklookup_core/evidence/vietnam_official_macro_evidence.py: bounded official homepage CPI release discovery, YoY wording parser repair, calendar supersession with bounded CURRENT_NEXT_RELEASE_UNANNOUNCED (ceiling 2026-11-30 for Sept 2026 CPI), adjacent-month direction rule (Jul->Sep UNKNOWN). Branch+PR only; no merge, Daily, production write, SBV bypass or authority promotion. Local closeout: Owner 2026-10-23 authorized bounded implementation, branch push and PR; local closeout only, no merge, no Daily, no production write.; no main release, authority promotion or successor."
+    },
     {
       "milestone_id": "OFFICIAL_INCOME_STATEMENT_RESEARCH_CONSUMPTION_V1",
       "state": "COMPLETE",

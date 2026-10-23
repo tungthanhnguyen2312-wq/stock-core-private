@@ -145,6 +145,8 @@ def session_context(macro: Mapping[str, Any] | None, session: str, *, cutoff: st
         freshness["historical_pit"] = "NOT_PROMOTED"
         next_release = freshness.get("next_expected_official_release")
         # NSO has its own retained release-calendar rule; never replace it with a day threshold.
+        # valid_through is the source's own hard ceiling (e.g. a bounded next-release-unannounced state).
+        if freshness.get("valid_through") and session > str(freshness["valid_through"])[:10]: reasons.append("FRESHNESS_CEILING_EXCEEDED")
         if next_release:
             if session >= str(next_release)[:10]: reasons.append("NEXT_OFFICIAL_RELEASE_DUE")
         elif identifier in FRED:
