@@ -23,14 +23,25 @@ NSO_CPI_RELEASES = (
 NSO_HOMEPAGE = "https://www.nso.gov.vn/en/homepage/"
 # Only official NSO CPI release pages linked from the retained homepage are followed; nothing is inferred from a calendar.
 NSO_CPI_RELEASE_LOCATOR = re.compile(r"^https://www\.nso\.gov\.vn/en/data-and-statistics/\d{4}/\d{2}/consumer-price-index-gold-price-index-and-us-dollar-price-index-in-[a-z0-9-]+/$")
-MAX_DISCOVERED_RELEASES = 3
+# Inventory and fetch budget are separate: every matching homepage link is inventoried (bounded;
+# exceeding the bound blocks currency), while at most MAX_FETCHED_DISCOVERED_RELEASES are fetched.
+# An inventoried link that is not fetched is retained as NOT_FETCHED and also blocks currency.
+MAX_DISCOVERY_INVENTORY = 32
+MAX_FETCHED_DISCOVERED_RELEASES = 3
 MONTHS = ("january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december")
 # CURRENT_NEXT_RELEASE_UNANNOUNCED ends with the month after the next expected reference period (2026-09 CPI -> 2026-11-30).
 UNANNOUNCED_CEILING_MONTHS_AFTER_PERIOD = 2
-_VERBS = r"rose|increased|decreased|fell"
-_YOY = re.compile(r"(?:\b(" + _VERBS + r")\s+)?\bby\s+(-?[0-9]+(?:\.[0-9]+)?)%\s*(?:year[- ]on[- ]year|over the same period last year|compared (?:with|to) the same period (?:of )?last year)", re.I)
-_MOM = re.compile(r"(?:\b(" + _VERBS + r")\s+)?\bby\s+(-?[0-9]+(?:\.[0-9]+)?)%\s*compared (?:with|to) the previous month|month-on-month (increase|decrease) of\s+(-?[0-9]+(?:\.[0-9]+)?)%", re.I)
-_VERB = re.compile(r"\b(" + _VERBS + r")\b", re.I)
+# Documented NSO lead grammar: inside a sentence whose subject is the CPI, a list of clauses
+# "<verb> by X% <comparator>" joined by ", " / " and " / ", and ". A clause without its own verb
+# ("by X% ...") is elliptical and inherits the immediately preceding clause's verb only across
+# such a bare list separator. Any other word before "by" (declined, changed, but, ...) is outside
+# the grammar and blocks the whole lead rather than inheriting a sign.
+_SUPPORTED_VERBS = {"rose": 1, "increased": 1, "decreased": -1, "fell": -1}
+_CLAUSE = re.compile(r"(?:\b([a-z]+)\s+)?\bby\s+(-?[0-9]+(?:\.[0-9]+)?)%\s*(year[- ]on[- ]year|over the same period last year|compared (?:with|to) the same period (?:of )?last year|compared (?:with|to) the previous month|compared (?:with|to) December [0-9]{4})?", re.I)
+_MOM_NOUN = re.compile(r"month-on-month (increase|decrease) of\s+(-?[0-9]+(?:\.[0-9]+)?)%", re.I)
+_LIST_SEPARATOR = re.compile(r"\s*,?\s*(?:and\s*)?", re.I)
+_CPI_SUBJECT = re.compile(r"consumer price index \(CPI\)|\bthe CPI\b|\bCPI\b", re.I)
+_SUBJECT_TO_VERB = re.compile(r"\s*(?:in [a-z]+(?:\s+[0-9]{4})?)?\s*", re.I)
 TARGET_METRICS = (
     ("vn_cpi_yoy", "inflation", "percent_yoy"),
     ("vn_policy_rate", "domestic_rates", "percent_per_annum"),
@@ -68,18 +79,25 @@ def _fetch_failed_record(*, url: str, retrieved_at: str, error: Exception, disco
     return {"source_id": SOURCE_ID, "locator": url, "retrieval_timestamp": retrieved_at, "publication_date": None, "http_status": getattr(error, "code", None), "content_type": None, "payload_sha256": None, "payload_base64": None, "parse_status": "FETCH_FAILED:" + type(error).__name__, "discovered_from": dict(discovered_from)}
 
 
-def discover_cpi_release_locators(homepage: Mapping[str, Any] | None) -> list[str]:
-    """Official CPI release links present in the retained homepage bytes, newest publication path first, bounded."""
+def discover_cpi_release_inventory(homepage: Mapping[str, Any] | None) -> tuple[list[str], bool]:
+    """(Every official CPI release link in the retained homepage bytes in a deterministic order, truncated?).
+
+    The order only makes acquisition deterministic; it is never evidence of publication period.
+    """
     if not homepage or not homepage.get("payload_base64"):
-        return []
+        return [], False
     page = base64.b64decode(str(homepage["payload_base64"])).decode("utf-8", errors="replace")
     found = {html.unescape(href) for href in re.findall(r"href\s*=\s*[\"']([^\"']+)[\"']", page, re.I)}
-    return sorted((url for url in found if NSO_CPI_RELEASE_LOCATOR.match(url)), reverse=True)[:MAX_DISCOVERED_RELEASES]
+    matched = sorted((url for url in found if NSO_CPI_RELEASE_LOCATOR.match(url)), reverse=True)
+    return matched[:MAX_DISCOVERY_INVENTORY], len(matched) > MAX_DISCOVERY_INVENTORY
 
 
-def _locator_publication_month(url: str) -> str | None:
-    match = re.search(r"/data-and-statistics/(\d{4})/(\d{2})/", url)
-    return f"{match.group(1)}-{match.group(2)}" if match else None
+def discover_cpi_release_locators(homepage: Mapping[str, Any] | None) -> list[str]:
+    return discover_cpi_release_inventory(homepage)[0]
+
+
+def _not_fetched_record(*, url: str, retrieved_at: str, discovered_from: Mapping[str, Any]) -> dict[str, Any]:
+    return {"source_id": SOURCE_ID, "locator": url, "retrieval_timestamp": retrieved_at, "publication_date": None, "http_status": None, "content_type": None, "payload_sha256": None, "payload_base64": None, "parse_status": "NOT_FETCHED:FETCH_BUDGET_EXCEEDED", "discovered_from": dict(discovered_from)}
 
 
 def _add_months(period: str, months: int) -> str:
@@ -92,21 +110,50 @@ def _unannounced_ceiling(period: str) -> str:
     return date(year, month, calendar.monthrange(year, month)[1]).isoformat()
 
 
-def _signed(verb: str | None, number: str) -> float:
+def _signed(direction: int, number: str) -> float:
     value = float(number)
-    if verb and verb.lower() in {"decreased", "fell", "decrease"}:
+    if direction < 0:
         if value < 0:
             raise ValueError("NSO_CPI_AMBIGUOUS_SIGN")
         return -value
     return value
 
 
-def _governing_verb(segment: str, position: int, explicit: str | None) -> str | None:
-    # "increased by 0.62% ..., by 4.20% ..., and by 5.08% year on year": a bare "by" inherits the nearest preceding verb.
-    if explicit:
-        return explicit
-    verbs = list(_VERB.finditer(segment, 0, position))
-    return verbs[-1].group(1) if verbs else None
+def _lead_claims(segment: str) -> tuple[set[float], set[float]]:
+    """(YoY values, MoM values) from CPI-subject sentences under the documented clause grammar."""
+    yoy: set[float] = set(); mom: set[float] = set()
+    for sentence in re.split(r"(?<=[0-9a-z%)])\.\s+", segment):
+        clauses, nouns = list(_CLAUSE.finditer(sentence)), list(_MOM_NOUN.finditer(sentence))
+        if not clauses and not nouns:
+            continue
+        subjects = list(_CPI_SUBJECT.finditer(sentence, 0, min(m.start() for m in clauses + nouns)))
+        if not subjects:
+            raise ValueError("NSO_CPI_CLAIM_SUBJECT_UNRESOLVED")
+        for noun in nouns:
+            mom.add(_signed(-1 if noun.group(1).lower() == "decrease" else 1, noun.group(2)))
+        direction, previous_end = None, None
+        for clause in clauses:
+            word = (clause.group(1) or "").lower()
+            if word in _SUPPORTED_VERBS:
+                # A verb opens the chain right after the CPI subject, or continues it across a bare separator.
+                gap = sentence[subjects[-1].end() if previous_end is None else previous_end:clause.start(1)]
+                if not (_SUBJECT_TO_VERB if previous_end is None else _LIST_SEPARATOR).fullmatch(gap):
+                    raise ValueError("NSO_CPI_CLAIM_SUBJECT_UNRESOLVED")
+                direction = _SUPPORTED_VERBS[word]
+            elif word in {"", "and"}:
+                if direction is None or previous_end is None or not _LIST_SEPARATOR.fullmatch(sentence[previous_end:clause.start()]):
+                    raise ValueError("NSO_CPI_GOVERNING_VERB_UNRESOLVED")
+            else:
+                raise ValueError("NSO_CPI_UNSUPPORTED_GOVERNING_VERB")
+            previous_end = clause.end()
+            comparator = (clause.group(3) or "").lower()
+            if comparator.startswith("compared") and "december" in comparator:
+                continue  # year-to-date change: inside the grammar, neither YoY nor MoM
+            if comparator.endswith("previous month"):
+                mom.add(_signed(direction, clause.group(2)))
+            elif comparator:
+                yoy.add(_signed(direction, clause.group(2)))
+    return yoy, mom
 
 
 def _lead_cpi_segment(text: str) -> str:
@@ -134,13 +181,11 @@ def _parse_cpi(record: Mapping[str, Any]) -> dict[str, Any]:
     month, year = period.groups()
     if _release_months(raw_html, text) != {MONTHS[int(month) - 1]}:
         raise ValueError("NSO_CPI_TITLE_REFERENCE_PERIOD_MISMATCH")
-    segment = _lead_cpi_segment(text)
-    yoy = {_signed(_governing_verb(segment, match.start(), match.group(1)), match.group(2)) for match in _YOY.finditer(segment)}
+    yoy, mom = _lead_claims(_lead_cpi_segment(text))
     if not yoy:
         raise ValueError("NSO_CPI_REQUIRED_PUBLICATION_METADATA_OR_YOY_CLAIM_NOT_FOUND")
     if len(yoy) > 1:
         raise ValueError("NSO_CPI_AMBIGUOUS_YOY_CLAIM")
-    mom = {_signed(match.group(3), match.group(4)) if match.group(3) else _signed(_governing_verb(segment, match.start(), match.group(1)), match.group(2)) for match in _MOM.finditer(segment)}
     month_on_month = {"metric_id": "vn_cpi_mom", "value": next(iter(mom)) if len(mom) == 1 else None, "unit": "percent_mom", "status": "PARSED" if len(mom) == 1 else "AMBIGUOUS_NOT_EMITTED" if mom else "NOT_STATED_IN_LEAD", "regime_input": "NOT_AN_AXIS"}
     publication_date = _date(issued.group(1)); url = str(record["locator"])
     observation = {"metric_id": "vn_cpi_yoy", "value": next(iter(yoy)), "unit": "percent_yoy", "observation_period": f"{year}-{int(month):02d}", "effective_period": f"{year}-{int(month):02d}", "publication_date": publication_date, "retrieval_timestamp": record["retrieval_timestamp"], "source_document_identity": f"{SOURCE_ID}:{publication_date}:{hashlib.sha256(url.encode()).hexdigest()[:16]}", "source_id": SOURCE_ID, "source": SOURCE_NAME, "locator": url, "raw_payload_sha256": record["payload_sha256"], "raw_content_type": record["content_type"], "parse_status": "PARSED", "semantic_qualification": "QUALIFIED_OFFICIAL_RELEASE_TEXT", "month_on_month": month_on_month, "warnings": ["Monthly CPI year-on-year percentage stated in the retained NSO release.", "Publication date is date-level metadata; intraday historical-PIT timing is not asserted."], "fitness_for_use": {"current_descriptive": "QUALIFIED", "historical_pit": "DATE_LEVEL_QUALIFIED_AFTER_PUBLICATION_DATE", "trend_comparison": "QUALIFIED_WITH_SAME_METRIC_PREDECESSOR", "regime_input": "QUALIFIED"}}
@@ -153,29 +198,51 @@ def _unavailable(metric_id: str, category: str, unit: str, retrieved_at: str) ->
     return {"metric_id": metric_id, "value": None, "unit": unit, "observation_period": None, "effective_period": None, "publication_date": None, "retrieval_timestamp": retrieved_at, "source_document_identity": None, "source_id": None, "source": None, "locator": None, "raw_payload_sha256": None, "raw_content_type": None, "parse_status": "NOT_ATTEMPTED_WITHOUT_QUALIFIED_SOURCE_DOCUMENT", "semantic_qualification": "UNAVAILABLE", "warnings": ["NO_RETAINED_FIRST_PARTY_RELEASE_WITH_AN_EXPLICIT_CURRENT_METRIC", f"category:{category}"], "fitness_for_use": {"current_descriptive": "UNAVAILABLE", "historical_pit": "BLOCKED", "trend_comparison": "BLOCKED", "regime_input": "BLOCKED"}}
 
 
-def _next_cpi_release(homepage: Mapping[str, Any] | None) -> tuple[str | None, str | None]:
-    """The NSO "Next releases" CPI entry as (release date, named reference period or None)."""
+#: The bounded "Next releases" block read for calendar entries (characters after the heading).
+CALENDAR_BLOCK_CHARS = 1600
+
+
+def _cpi_calendar_entries(homepage: Mapping[str, Any] | None) -> list[dict[str, Any]]:
+    """Every NSO "Next releases" CPI entry in the bounded block, as {release_date, reference_period or None}."""
     if not homepage or not homepage.get("payload_base64"):
-        return None, None
+        return []
     text = _text(base64.b64decode(str(homepage["payload_base64"])))
-    match = re.search(r"(?:Next releases|next release).{0,240}?([0-9]{1,2}/[0-9]{1,2}/[0-9]{4}):\s*Consumer price index([^:]{0,160})", text, re.I)
-    if not match:
-        return None, None
-    named = re.search(r"\bin (" + "|".join(MONTHS) + r") ([0-9]{4})", match.group(2), re.I)
-    return _date(match.group(1)), (f"{named.group(2)}-{MONTHS.index(named.group(1).lower()) + 1:02d}" if named else None)
+    heading = re.search(r"Next releases|next release", text, re.I)
+    if not heading:
+        return []
+    block = text[heading.end():heading.end() + CALENDAR_BLOCK_CHARS]
+    dates = list(re.finditer(r"([0-9]{1,2}/[0-9]{1,2}/[0-9]{4}):", block))
+    entries = []
+    for index, match in enumerate(dates):
+        body = block[match.end():dates[index + 1].start() if index + 1 < len(dates) else len(block)]
+        if not re.match(r"\s*Consumer price index", body, re.I):
+            continue
+        named = re.search(r"\bin (" + "|".join(MONTHS) + r") ([0-9]{4})", body[:160], re.I)
+        entries.append({"release_date": _date(match.group(1)),
+                        "reference_period": f"{named.group(2)}-{MONTHS.index(named.group(1).lower()) + 1:02d}" if named else None})
+    return sorted(entries, key=lambda row: (row["release_date"], str(row["reference_period"])))
 
 
 def _cpi_freshness(*, parsed: list[Mapping[str, Any]], cpi_raw: list[Mapping[str, Any]], discovery: Mapping[str, Any], homepage: Mapping[str, Any] | None, retrieved_at: str) -> dict[str, Any]:
-    next_release, next_period = _next_cpi_release(homepage); session = retrieved_at[:10]
-    freshness: dict[str, Any] = {"rule": "CURRENT through the explicitly retained next NSO CPI release date; thereafter stale until a later retained release is parsed. No generic day threshold. A calendar entry already covered by a parsed release is superseded; CURRENT_NEXT_RELEASE_UNANNOUNCED then holds only through valid_through (end of the month after the next expected reference period) and never while a discovered release is unqualified.", "next_expected_official_release": next_release, "status": "STALE_OR_UNAVAILABLE", "valid_through": None, "reason_codes": []}
+    entries = _cpi_calendar_entries(homepage); session = retrieved_at[:10]
+    freshness: dict[str, Any] = {"rule": "CURRENT through the day before the earliest outstanding retained NSO CPI calendar release; thereafter stale until a later retained release is parsed. No generic day threshold. Each calendar entry already covered by a parsed release is superseded individually; CURRENT_NEXT_RELEASE_UNANNOUNCED applies only when no entry is outstanding, holds only through valid_through (end of the month after the next expected reference period, a ceiling that never extends an earlier official deadline) and never while any discovered or retained release is unqualified. Publication period is never inferred from a locator.", "next_expected_official_release": entries[0]["release_date"] if entries else None, "calendar_entries": entries, "status": "STALE_OR_UNAVAILABLE", "valid_through": None, "reason_codes": []}
     if not parsed:
         freshness["reason_codes"].append("NO_PARSED_RETAINED_NSO_CPI_RELEASE"); return freshness
-    latest = parsed[-1]; ceiling = _unannounced_ceiling(str(latest["observation_period"])); latest_month = str(latest["publication_date"])[:7]
-    # A same-or-later official release that is known but not qualified blocks currency; an unknown publication path is treated as later.
-    unresolved = sorted({str(row.get("locator")) for row in cpi_raw if row.get("parse_status") != "PARSED" and (_locator_publication_month(str(row.get("locator"))) or "9999-99") >= latest_month}
-                        | {url for url, state in discovery["locator_status"].items() if state == "DISCOVERED_NOT_RETAINED" and (_locator_publication_month(url) or "9999-99") >= latest_month})
-    if next_release and ((next_period is not None and next_period <= str(latest["observation_period"])) or next_release <= str(latest["publication_date"])):
-        freshness.update(next_expected_official_release=None, superseded_calendar_entry={"release_date": next_release, "reference_period": next_period}); freshness["reason_codes"].append("CALENDAR_ENTRY_ALREADY_RETAINED"); next_release = None
+    latest = parsed[-1]; ceiling = _unannounced_ceiling(str(latest["observation_period"]))
+    # Any retained or discovered CPI release that is not parsed may be newer: its period is unknown,
+    # whatever its locator says, so it always blocks currency.
+    unresolved = sorted({str(row.get("locator")) for row in cpi_raw if row.get("parse_status") != "PARSED"}
+                        | {url for url, state in discovery["locator_status"].items() if state != "PARSED"})
+    covered = [e for e in entries if (e["reference_period"] is not None and e["reference_period"] <= str(latest["observation_period"]))
+               or (e["reference_period"] is None and e["release_date"] <= str(latest["publication_date"]))]
+    outstanding = [e for e in entries if e not in covered]
+    next_release = outstanding[0]["release_date"] if outstanding else None
+    freshness["next_expected_official_release"] = next_release
+    if covered:
+        freshness["superseded_calendar_entry"] = covered[0]; freshness["superseded_calendar_entries"] = covered
+        freshness["reason_codes"].append("CALENDAR_ENTRY_ALREADY_RETAINED")
+    if discovery.get("inventory_truncated"):
+        freshness["reason_codes"].append("DISCOVERY_INVENTORY_LIMIT_EXCEEDED"); return freshness
     if unresolved:
         freshness["reason_codes"].append("NEWER_DISCOVERED_RELEASE_NOT_QUALIFIED"); freshness["unqualified_discovered_locators"] = unresolved
         return freshness
@@ -220,8 +287,8 @@ def build(*, raw_records: list[Mapping[str, Any]], retrieved_at: str) -> dict[st
         revision_chains.setdefault(str(observation["source_document_identity"]), []).append(str(observation["raw_payload_sha256"]))
     homepage = next((row for row in records if row.get("source_id") == "NSO_RELEASE_CALENDAR"), None)
     retained_status = {str(row.get("locator")): str(row.get("parse_status")).split(":")[0] for row in cpi_raw}
-    discovered = discover_cpi_release_locators(homepage)
-    discovery = {"homepage_locator": homepage.get("locator") if homepage else None, "homepage_payload_sha256": homepage.get("payload_sha256") if homepage else None, "max_discovered_releases": MAX_DISCOVERED_RELEASES, "discovered_locators": discovered, "locator_status": {url: retained_status.get(url, "DISCOVERED_NOT_RETAINED") for url in discovered}}
+    discovered, truncated = discover_cpi_release_inventory(homepage)
+    discovery = {"homepage_locator": homepage.get("locator") if homepage else None, "homepage_payload_sha256": homepage.get("payload_sha256") if homepage else None, "max_discovery_inventory": MAX_DISCOVERY_INVENTORY, "max_fetched_discovered_releases": MAX_FETCHED_DISCOVERED_RELEASES, "inventory_truncated": truncated, "discovered_locators": discovered, "locator_status": {url: retained_status.get(url, "DISCOVERED_NOT_RETAINED") for url in discovered}}
     observations: dict[str, list[dict[str, Any]]] = {"vn_cpi_yoy": parsed}
     for metric_id, category, unit in TARGET_METRICS[1:]:
         observations[metric_id] = [_unavailable(metric_id, category, unit, retrieved_at)]
@@ -256,9 +323,13 @@ def acquire(*, retrieved_at: str | None = None) -> dict[str, Any]:
         with urlopen(Request(url, headers=headers), timeout=30) as response:
             records.append(_raw_record(source_id=SOURCE_ID, url=url, raw=response.read(), content_type=response.headers.get_content_type(), retrieved_at=retrieved_at, http_status=response.status))
     provenance = {"source_id": "NSO_RELEASE_CALENDAR", "locator": NSO_HOMEPAGE, "payload_sha256": homepage["payload_sha256"]}
+    fetched = 0
     for url in discover_cpi_release_locators(homepage):
         if url in NSO_CPI_RELEASES:
             continue
+        if fetched >= MAX_FETCHED_DISCOVERED_RELEASES:
+            records.append(_not_fetched_record(url=url, retrieved_at=retrieved_at, discovered_from=provenance)); continue
+        fetched += 1
         try:
             with urlopen(Request(url, headers=headers), timeout=30) as response:
                 records.append(_raw_record(source_id=SOURCE_ID, url=url, raw=response.read(), content_type=response.headers.get_content_type(), retrieved_at=retrieved_at, http_status=response.status, discovered_from=provenance))
