@@ -5,10 +5,10 @@ Verified analytical baseline 2026-10-14 `a9c799397a74641a0e16c8ea84454d2dc4d0745
 Nothing below auto-starts; native standing admission required (AI_RULES 11).
 Facts: [ACTIVE_STATE.md](ACTIVE_STATE.md).
 
-## NOW — REVIEWED INTERIM EARNINGS AND CASH RESEARCH V1
+## NOW — QUALIFIED QUARTERLY STATEMENT THROUGHPUT V1
 
-[Scope](reviewed_interim_earnings_and_cash_research_v1_contract.md): non-voting earnings/cash context;
-VNM/FPT/QNS H1 candidates. PR183 on PR182; merge gated. No production, authority change or successor.
+[Scope](qualified_quarterly_statement_throughput_v1_contract.md): non-voting prior-period income
+pairing; gates off; D-1 unchanged; Daily not wired. PR182-184 Owner-merged 10-23.
 
 ## PRIOR — STOCKLOOKUP_PRODUCER_DEEP_SIMPLIFICATION (RELEASED PR146)
 

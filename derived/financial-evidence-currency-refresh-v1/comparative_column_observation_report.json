@@ -1,0 +1,85 @@
+{
+  "candidate_without_blockers": 4,
+  "contract_version": "comparative_column_observation/v1",
+  "documents": [
+    {
+      "admitted_income_facts": 1,
+      "blocked": [],
+      "document_sha256": "bb14bafff1a7849217f34cf4b50e0e3d69d91968f217a66d7c68f07d4c1af284",
+      "observations": 1,
+      "pages": [
+        12
+      ],
+      "reporting_period": "2025",
+      "ticker": "FPT"
+    },
+    {
+      "admitted_income_facts": 2,
+      "blocked": [
+        "OCR_NUMERIC_AMBIGUITY"
+      ],
+      "document_sha256": "f38c5f75becf7d3f145d27183eec81f119fd4f75e378b983a2763ddc3f7e0c07",
+      "observations": 2,
+      "pages": [
+        10
+      ],
+      "reporting_period": "2025",
+      "ticker": "HPG"
+    },
+    {
+      "admitted_income_facts": 3,
+      "blocked": [
+        "COMPARATIVE_PERIOD_LABEL_NOT_YEAR_BOUND"
+      ],
+      "document_sha256": "db877169e7c19b4b81d60b37d5aab8f9938129a66b582c2229ffffebdca2a43d",
+      "observations": 3,
+      "pages": [
+        10
+      ],
+      "reporting_period": "2026-H1",
+      "ticker": "PNJ"
+    },
+    {
+      "admitted_income_facts": 2,
+      "blocked": [],
+      "document_sha256": "6ee20a554891c449a8ee72fffe6358bc9b32145d066a7e52d8492d88f305139c",
+      "observations": 2,
+      "pages": [
+        9
+      ],
+      "reporting_period": "2025",
+      "ticker": "PVD"
+    },
+    {
+      "admitted_income_facts": 3,
+      "blocked": [
+        "COMPARATIVE_PERIOD_LABEL_NOT_YEAR_BOUND"
+      ],
+      "document_sha256": "a7360d2fc9a8a67a1535820813cda2bb8ef288466cd36c949e050c2f2a1b290a",
+      "observations": 3,
+      "pages": [
+        8
+      ],
+      "reporting_period": "2026-H1",
+      "ticker": "PVD"
+    },
+    {
+      "admitted_income_facts": 2,
+      "blocked": [
+        "COMPARATIVE_PERIOD_LABEL_NOT_YEAR_BOUND"
+      ],
+      "document_sha256": "7e9b9e39901a028972fff80bc1a4f9f5cab4c1526ce4029f9b853ccff6aeaac0",
+      "observations": 2,
+      "pages": [
+        11
+      ],
+      "reporting_period": "2026-H1",
+      "ticker": "VRE"
+    }
+  ],
+  "milestone_id": "QUALIFIED_QUARTERLY_STATEMENT_THROUGHPUT_V1",
+  "network_used": false,
+  "observation_count": 13,
+  "observations_identity": "adeb180fb5238084da27217d2a8bc7142a1cb782d4b62a3d2859eacdfd0502fe",
+  "overlay_written": false
+}

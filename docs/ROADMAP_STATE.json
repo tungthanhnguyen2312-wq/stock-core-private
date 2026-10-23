@@ -15,11 +15,33 @@
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "REVIEWED_INTERIM_EARNINGS_AND_CASH_RESEARCH_V1",
+    "milestone": "QUALIFIED_QUARTERLY_STATEMENT_THROUGHPUT_V1",
     "state": "COMPLETE"
   },
   "queued_next": [],
   "milestones": [
+    {
+      "milestone_id": "QUALIFIED_QUARTERLY_STATEMENT_THROUGHPUT_V1",
+      "state": "COMPLETE",
+      "starting_checkpoint": "e15c8f3a4cf1c92d435b43a3f8f79c4c7b7e4ed7",
+      "candidate_branch": "feat/qualified-quarterly-statement-throughput-v1",
+      "dependencies": [
+        "OFFICIAL_INCOME_STATEMENT_RESEARCH_CONSUMPTION_V1"
+      ],
+      "unlocks": [],
+      "owner_authorized": true,
+      "owner_override": "Owner 2026-10-23 selects financial evidence throughput: implement under existing source/tier/authority rules, one local checkpoint, feature push and one PR. No D-1 relaxation, voting change, automatic qualification of blocked sources, merge, Daily, production or dashboard writes.",
+      "authority_effect": "NONE",
+      "source_doc": "docs/qualified_quarterly_statement_throughput_v1_contract.md",
+      "state_history": [
+        "DEFERRED",
+        "ACTIVE",
+        "COMPLETE"
+      ],
+      "checkpoint": "54e1c060c3f8eeaba9f883552d66408c5d403ea0",
+      "terminal_disposition": "LOCAL_IMPLEMENTATION_COMPLETE_NOT_PROMOTED",
+      "notes": "Owner 2026-10-23 selects financial evidence throughput: implement under existing source/tier/authority rules, one local checkpoint, feature push and one PR. No D-1 relaxation, voting change, automatic qualification of blocked sources, merge, Daily, production or dashboard writes. Local closeout: Owner-authorized local checkpoint: HPG FY2025/FY2024 audited revenue +12.43% and net income +29.08% newly paired (October20/22/23 read-only replay, sealed files unchanged, October23 identity reproduced, additive-only delta); 14 of 18 prior-period rows qualified; 13 comparative candidates (4 unblocked) remain Owner-gated; FPT/PVD/PNJ/VRE stay UNKNOWN with exact blockers; TTM UNAVAILABLE; valuation unchanged; frozen Daily caller not wired. No main release, authority promotion or successor."
+    },
     {
       "milestone_id": "REVIEWED_INTERIM_EARNINGS_AND_CASH_RESEARCH_V1",
       "state": "COMPLETE",

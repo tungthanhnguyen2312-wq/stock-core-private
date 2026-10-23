@@ -1331,11 +1331,14 @@ def execute(*, p3f10_frozen_path: Path = DEFAULT_P3F10_FROZEN, requested_at: str
 
 
 def project_session(*, baseline: Mapping[str, Any], official_rows: list[Mapping[str, Any]],
-                    session: str, cutoff: str, cohort_report: Mapping[str, Any] | None = None) -> dict[str, Any]:
+                    session: str, cutoff: str, cohort_report: Mapping[str, Any] | None = None,
+                    prior_period_inputs: Mapping[str, Any] | None = None) -> dict[str, Any]:
     """Add exact-field official context without replacing the frozen annual research layer.
 
     Qualification and annual research permission remain separate. This projection never
     supplies interim amounts to a ratio engine or upgrades the record's authority tier.
+    ``prior_period_inputs`` (default None: output unchanged) adds the non-voting
+    prior-period pairing inside each official income research context.
     """
     import copy
     from financial_evidence_currency_contract import COHORT, TARGET_INTERIM_PERIODS
@@ -1361,7 +1364,8 @@ def project_session(*, baseline: Mapping[str, Any], official_rows: list[Mapping[
     artifact["source_artifacts"] = dict(artifact.get("source_artifacts") or {}) | {
         "frozen_annual_baseline": baseline["artifact_identity"],
         "official_overlay_rows": "official_overlay_rows:" + _hash(official_rows),
-    }
+    } | ({"official_income_prior_period_inputs": "official_income_prior_period_inputs:" + _hash(prior_period_inputs)}
+         if prior_period_inputs is not None else {})
     rejected, by_ticker = [], defaultdict(list)
     seen = set()
     values_by_key = defaultdict(set)
@@ -1514,6 +1518,11 @@ def project_session(*, baseline: Mapping[str, Any], official_rows: list[Mapping[
             "HISTORICAL_OFFICIAL_FACT" if prior else "TARGET_PERIOD_NOT_FOUND")
         cohort[ticker] = {"state": state, "projected_field_count": len(fields), "retained_blockers": blockers,
                           "historical_baseline_available": prior}
+    if prior_period_inputs is not None:
+        from stocklookup_core.financial.official_income_prior_period_pairing import attach_prior_period_pairing
+        attach_prior_period_pairing(artifact["records"], prior_rows=prior_period_inputs.get("rows") or [],
+                                    comparative_observations=prior_period_inputs.get("comparative_observations") or [],
+                                    cutoff=cutoff, load_blockers=prior_period_inputs.get("load_blockers") or [])
     artifact["official_projection"] = {"cohort": cohort, "rejected_fields": rejected,
         "current_official_field_count": sum(f["temporal_status"] == "CURRENT_OFFICIAL_FACT" for fs in by_ticker.values() for f in fs),
         "historical_official_overlay_field_count": sum(f["temporal_status"] == "HISTORICAL_OFFICIAL_FACT" for fs in by_ticker.values() for f in fs),
