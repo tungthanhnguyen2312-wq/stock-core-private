@@ -98,3 +98,22 @@ unchanged. Targeted real-session/semantic checks and structural smoke are retain
 in the development worktree's scratch logs; hosted CI independently gates the PR.
 
 Final local verification: recovery group 519 PASS with one historical source-binding failure, then that final failure and impacted regression cases 156 PASS. Compact/real-session/coherence check 51 PASS; structural suite 186 PASS; native closeout checkpoint `5a36ee58`. No unresolved implementation test regression remains in the exercised scope. Hosted CI is the independent full clean-host gate.
+
+## PR180 extended CI recovery (October 23)
+
+Run 39875521741 passed four jobs but failed the non-blocking extended job.
+The historical PNJ synthetic golden was incorrectly passed to the active
+implementation. Its equal highs 36.9/36.9 and lows 31.0/31.0 historically became
+LH/LL and DOWNTREND. The corrected EH/EL RANGE permits the existing range-break
+rule to detect the close 18.25 below 31.0: bearish BOS, fired bearish BOS trigger
+below 31.0 and range invalidation below 31.0, rather than the old bearish-thesis
+invalidation above 36.9. CHoCH, chronology, price basis and unrelated fields stay
+unchanged. This is an expected dependency change and a historical/active test
+boundary error, not a new production regression or a ticker exception.
+
+The original golden bytes remain unchanged. The historical test now verifies
+the existing archived source through `historical_bytes` before replaying it.
+A separate active-semantics test pins the strict equal-level classification,
+downstream BOS/trigger/invalidation directions, confirmed-swing lag, unchanged
+fields, source observations and fixture bytes. Neither test is disabled or
+weakened; no production calculation changes are needed for this recovery.

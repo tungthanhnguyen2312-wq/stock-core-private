@@ -16,13 +16,13 @@
   ],
   "current": {
     "milestone": "POST_DAILY_20261022_RESEARCH_DECISION_QUALITY_CLOSEOUT",
-    "state": "COMPLETE"
+    "state": "ACTIVE"
   },
   "queued_next": [],
   "milestones": [
     {
       "milestone_id": "POST_DAILY_20261022_RESEARCH_DECISION_QUALITY_CLOSEOUT",
-      "state": "COMPLETE",
+      "state": "ACTIVE",
       "starting_checkpoint": "ec3044245ecfb1b53531fe2613113bf870d31c1c",
       "candidate_branch": "fix/research-decision-quality-20261022",
       "dependencies": [
@@ -30,17 +30,31 @@
       ],
       "unlocks": [],
       "owner_authorized": true,
-      "owner_override": "Owner 2026-10-22 explicitly admits one bounded research decision quality closeout: current-session evidence integration, cross-layer coherence, output interpretation and fitness checks; retained October 22 replay, one writer, deterministic tests, local checkpoints, normal feature push and PR/CI repairs. Authority NONE; no production, sealed rewrite, merge, deployment or successor.",
+      "owner_override": {
+        "allows_reopen": true,
+        "directive": "Owner 2026-10-23 continues existing PR180 scope for release-grade validation and PNJ historical golden CI recovery; preserve original completion and authority NONE. No successor, production or merge."
+      },
       "authority_effect": "NONE",
       "source_doc": "docs/post_daily_20261022_research_decision_quality_closeout_contract.md",
       "state_history": [
         "DEFERRED",
         "ACTIVE",
-        "COMPLETE"
+        "COMPLETE",
+        "ACTIVE"
       ],
-      "checkpoint": "5a36ee58e4b2f47f9fc54d93aa7c5176b2c01d65",
-      "terminal_disposition": "LOCAL_IMPLEMENTATION_COMPLETE_NOT_PROMOTED",
-      "notes": "Owner 2026-10-22 explicitly admits one bounded research decision quality closeout: current-session evidence integration, cross-layer coherence, output interpretation and fitness checks; retained October 22 replay, one writer, deterministic tests, local checkpoints, normal feature push and PR/CI repairs. Authority NONE; no production, sealed rewrite, merge, deployment or successor. Local closeout: Owner authorized bounded source correction and local checkpoint; actual October 22 acceptance complete. No production, authority promotion, merge or successor.; no main release, authority promotion or successor."
+      "checkpoint": null,
+      "terminal_disposition": null,
+      "notes": "Owner 2026-10-23 continues existing PR180 scope for release-grade validation and PNJ historical golden CI recovery; preserve original completion and authority NONE. No successor, production or merge.",
+      "scope_continuations": [
+        {
+          "prior_state": "COMPLETE",
+          "prior_checkpoint": "5a36ee58e4b2f47f9fc54d93aa7c5176b2c01d65",
+          "prior_terminal_disposition": "LOCAL_IMPLEMENTATION_COMPLETE_NOT_PROMOTED",
+          "prior_owner_override": "Owner 2026-10-22 explicitly admits one bounded research decision quality closeout: current-session evidence integration, cross-layer coherence, output interpretation and fitness checks; retained October 22 replay, one writer, deterministic tests, local checkpoints, normal feature push and PR/CI repairs. Authority NONE; no production, sealed rewrite, merge, deployment or successor.",
+          "prior_notes": "Owner 2026-10-22 explicitly admits one bounded research decision quality closeout: current-session evidence integration, cross-layer coherence, output interpretation and fitness checks; retained October 22 replay, one writer, deterministic tests, local checkpoints, normal feature push and PR/CI repairs. Authority NONE; no production, sealed rewrite, merge, deployment or successor. Local closeout: Owner authorized bounded source correction and local checkpoint; actual October 22 acceptance complete. No production, authority promotion, merge or successor.; no main release, authority promotion or successor.",
+          "owner_scope_note": "Owner 2026-10-23 continues existing PR180 scope for release-grade validation and PNJ historical golden CI recovery; preserve original completion and authority NONE. No successor, production or merge."
+        }
+      ]
     },
     {
       "milestone_id": "PEER_VALUATION_STATUS_RECONCILIATION_V1_20261022",
