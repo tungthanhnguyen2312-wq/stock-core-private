@@ -1,0 +1,1236 @@
+{
+ "authority_effect": "NONE",
+ "base": "effc9b8ab8c55429e4c758ab57d475d65b641b8b",
+ "contract_version": "interim_earnings_cash_research_acceptance/v1",
+ "milestone": "REVIEWED_INTERIM_EARNINGS_AND_CASH_RESEARCH_V1",
+ "offline_candidate_preview": {
+  "cutoff": "2026-10-23T15:00:00+07:00",
+  "issuers": {
+   "FPT": {
+    "co_movement": [],
+    "conversion_changes": [],
+    "current_conversion": [
+     {
+      "conversion_ratio": -0.22699360784585026,
+      "operating_cash_flow": -1145666005788,
+      "profit": 5047128933102,
+      "profit_metric": "net_income",
+      "relationship": "POSITIVE_PROFIT_NEGATIVE_OPERATING_CASH"
+     },
+     {
+      "conversion_ratio": -0.2266420155133531,
+      "operating_cash_flow": -1145666005788,
+      "profit": 5054958601533,
+      "profit_metric": "attributable_net_income",
+      "relationship": "POSITIVE_PROFIT_NEGATIVE_OPERATING_CASH"
+     }
+    ],
+    "matched": [
+     {
+      "direction": "INCREASED",
+      "growth_ratio": 0.14061999475829445,
+      "metric": "attributable_net_income",
+      "prior_basis": "ISSUER_LIKE_FOR_LIKE_RESTATEMENT"
+     },
+     {
+      "direction": "INCREASED",
+      "growth_ratio": 0.13995974520121893,
+      "metric": "net_income",
+      "prior_basis": "ISSUER_LIKE_FOR_LIKE_RESTATEMENT"
+     },
+     {
+      "direction": "INCREASED",
+      "growth_ratio": 0.12616198721546376,
+      "metric": "revenue",
+      "prior_basis": "ISSUER_LIKE_FOR_LIKE_RESTATEMENT"
+     }
+    ],
+    "refused": [
+     {
+      "metric": "attributable_net_income",
+      "prior_basis": "AS_PREVIOUSLY_REPORTED",
+      "reason_codes": [
+       "COMPARATIVE_NOT_RESTATED_FOR_SCOPE_CHANGE:FPT_2026_FTEL_CONSOLIDATION_TO_EQUITY_METHOD"
+      ]
+     },
+     {
+      "metric": "net_income",
+      "prior_basis": "AS_PREVIOUSLY_REPORTED",
+      "reason_codes": [
+       "COMPARATIVE_NOT_RESTATED_FOR_SCOPE_CHANGE:FPT_2026_FTEL_CONSOLIDATION_TO_EQUITY_METHOD"
+      ]
+     },
+     {
+      "metric": "operating_cash_flow",
+      "prior_basis": "AS_PREVIOUSLY_REPORTED",
+      "reason_codes": [
+       "COMPARATIVE_NOT_RESTATED_FOR_SCOPE_CHANGE:FPT_2026_FTEL_CONSOLIDATION_TO_EQUITY_METHOD"
+      ]
+     },
+     {
+      "metric": "revenue",
+      "prior_basis": "AS_PREVIOUSLY_REPORTED",
+      "reason_codes": [
+       "COMPARATIVE_NOT_RESTATED_FOR_SCOPE_CHANGE:FPT_2026_FTEL_CONSOLIDATION_TO_EQUITY_METHOD"
+      ]
+     }
+    ]
+   },
+   "QNS": {
+    "co_movement": [
+     "PROFIT_INCREASED_OPERATING_CASH_INCREASED",
+     "PROFIT_INCREASED_OPERATING_CASH_INCREASED"
+    ],
+    "conversion_changes": [
+     {
+      "current_ratio": 0.477029743274745,
+      "direction": "HIGHER",
+      "prior_ratio": 0.37744608357235465,
+      "profit_metric": "attributable_net_income"
+     },
+     {
+      "current_ratio": 0.477029743274745,
+      "direction": "HIGHER",
+      "prior_ratio": 0.37744608357235465,
+      "profit_metric": "net_income"
+     }
+    ],
+    "current_conversion": [
+     {
+      "conversion_ratio": 0.477029743274745,
+      "operating_cash_flow": 456779788250,
+      "profit": 957549911069,
+      "profit_metric": "net_income",
+      "relationship": "OPERATING_CASH_BELOW_PROFIT"
+     },
+     {
+      "conversion_ratio": 0.477029743274745,
+      "operating_cash_flow": 456779788250,
+      "profit": 957549911069,
+      "profit_metric": "attributable_net_income",
+      "relationship": "OPERATING_CASH_BELOW_PROFIT"
+     }
+    ],
+    "matched": [
+     {
+      "direction": "INCREASED",
+      "growth_ratio": 0.021202825295706565,
+      "metric": "attributable_net_income",
+      "prior_basis": "AS_PREVIOUSLY_REPORTED"
+     },
+     {
+      "direction": "INCREASED",
+      "growth_ratio": 0.021202825295706565,
+      "metric": "net_income",
+      "prior_basis": "AS_PREVIOUSLY_REPORTED"
+     },
+     {
+      "direction": "INCREASED",
+      "growth_ratio": 0.29063233872149036,
+      "metric": "operating_cash_flow",
+      "prior_basis": "AS_PREVIOUSLY_REPORTED"
+     },
+     {
+      "direction": "INCREASED",
+      "growth_ratio": 0.16671168722639873,
+      "metric": "revenue",
+      "prior_basis": "AS_PREVIOUSLY_REPORTED"
+     }
+    ],
+    "refused": []
+   },
+   "VNM": {
+    "co_movement": [
+     "PROFIT_INCREASED_OPERATING_CASH_DECREASED",
+     "PROFIT_INCREASED_OPERATING_CASH_DECREASED"
+    ],
+    "conversion_changes": [
+     {
+      "current_ratio": 0.620790334915496,
+      "direction": "LOWER",
+      "prior_ratio": 0.9449138395681613,
+      "profit_metric": "attributable_net_income"
+     },
+     {
+      "current_ratio": 0.6156336018412332,
+      "direction": "LOWER",
+      "prior_ratio": 0.9373119648305117,
+      "profit_metric": "net_income"
+     }
+    ],
+    "current_conversion": [
+     {
+      "conversion_ratio": 0.6156336018412332,
+      "operating_cash_flow": 3473788102329,
+      "profit": 5642622644280,
+      "profit_metric": "net_income",
+      "relationship": "OPERATING_CASH_BELOW_PROFIT"
+     },
+     {
+      "conversion_ratio": 0.620790334915496,
+      "operating_cash_flow": 3473788102329,
+      "profit": 5595750943516,
+      "profit_metric": "attributable_net_income",
+      "relationship": "OPERATING_CASH_BELOW_PROFIT"
+     }
+    ],
+    "matched": [
+     {
+      "direction": "INCREASED",
+      "growth_ratio": 0.3840359981018087,
+      "metric": "attributable_net_income",
+      "prior_basis": "RECLASSIFIED_COMPARATIVE"
+     },
+     {
+      "direction": "INCREASED",
+      "growth_ratio": 0.384401202349658,
+      "metric": "net_income",
+      "prior_basis": "RECLASSIFIED_COMPARATIVE"
+     },
+     {
+      "direction": "DECREASED",
+      "growth_ratio": -0.09071479872769249,
+      "metric": "operating_cash_flow",
+      "prior_basis": "RECLASSIFIED_COMPARATIVE"
+     },
+     {
+      "direction": "INCREASED",
+      "growth_ratio": 0.17808213457942887,
+      "metric": "revenue",
+      "prior_basis": "RECLASSIFIED_COMPARATIVE"
+     }
+    ],
+    "refused": []
+   }
+  },
+  "state": "CANDIDATE_NOT_QUALIFIED_ISOLATED_PREVIEW"
+ },
+ "production_writes": 0,
+ "qualification_probe": {
+  "FPT": {
+   "bytes": "NOT_RETAINED; issuer original downloaded to isolated scratch only, sha256 45636554f28c7e6c2f38458b9a22410ed1f67e80627d672b827019a67f299df8 (9,260,382 B) matches candidate",
+   "qualified_new_rows": 0
+  },
+  "QNS": {
+   "bytes": "RETAINED_SHA256_VERIFIED",
+   "modern_admission_reasons_even_for_retained_equity": [
+    "DOCUMENT_METADATA_NOT_QUALIFIED",
+    "DOCUMENT_UNIT_SCALE_MISMATCH",
+    "METADATA_LITERAL_NOT_IN_RETAINED_DOCUMENT",
+    "RETAINED_ISSUER_LITERAL_PROOF_UNAVAILABLE",
+    "VALUE_SPAN_NOT_IN_RETAINED_DOCUMENT"
+   ],
+   "qualified_new_rows": 0,
+   "qualifier_reason": "ROW_NOT_UNIQUE_OR_NOT_GEOMETRICALLY_RESOLVED (10/60/61/20); 320/338 label refusal"
+  },
+  "VNM": {
+   "bytes": "RETAINED_SHA256_VERIFIED",
+   "modern_admission_reasons_even_for_retained_cash": [
+    "DOCUMENT_METADATA_NOT_QUALIFIED",
+    "DOCUMENT_REPORTING_PERIOD_MISMATCH",
+    "DOCUMENT_UNIT_SCALE_MISMATCH",
+    "ISSUER_SOURCE_DOMAIN_MISMATCH",
+    "METADATA_LITERAL_NOT_IN_RETAINED_DOCUMENT",
+    "OFFICIAL_SOURCE_NOT_ADMITTED",
+    "RETAINED_ISSUER_LITERAL_PROOF_UNAVAILABLE",
+    "RETAINED_STATEMENT_PERIOD_MISMATCH",
+    "STATEMENT_PERIOD_NOT_EXPLICIT",
+    "VALUE_SPAN_NOT_IN_RETAINED_DOCUMENT"
+   ],
+   "qualified_new_rows": 0,
+   "qualifier_reason": "ROW_NOT_UNIQUE_OR_NOT_GEOMETRICALLY_RESOLVED (10/60/61/20)"
+  },
+  "governed_ocr_literal_corroboration": "all GrokBot #30 target amounts read literally on SHA-verified bytes; glyph/separator damage preserved, never repaired (e.g. FPT p12 NCI comparative read 504... vs 904... on p18)",
+  "method": "existing tools/run_reviewed_interim_canonical_ingress.run with existing options, no --write, retained bytes, fixed OCR profile"
+ },
+ "sessions": {
+  "2026-10-20": {
+   "bundle_cards_replayed": "ALL_CARDS_UNCHANGED_EXCEPT_ADDITIVE_CONTEXT",
+   "cutoff": "2026-10-20T15:00:00+07:00",
+   "economics_status_counts": {
+    "MEASURED": 1,
+    "NOT_APPLICABLE": 71,
+    "PARTIAL_FACTS_NO_MEASUREMENT": 4,
+    "UNKNOWN": 447
+   },
+   "focus": {
+    "FPT": {
+     "after_earnings_cash": {
+      "applicability": "CORPORATE_INDUSTRIAL_CASH_CONVERSION",
+      "cash_conversion": {
+       "blockers": [],
+       "measurements": []
+      },
+      "economics_status": "PARTIAL_FACTS_NO_MEASUREMENT",
+      "explanation": [
+       {
+        "code": "CONSOLIDATION_SCOPE_CHANGE",
+        "text": "Source-declared caution FPT_2026_FTEL_CONSOLIDATION_TO_EQUITY_METHOD: REFUSE_CROSS_SCOPE_COMPARISON_WITHOUT_ISSUER_LIKE_FOR_LIKE_BASIS."
+       },
+       {
+        "code": "DECONSOLIDATION_CASH_OUTFLOW",
+        "text": "Source-declared caution FPT_2026H1_DECONSOLIDATED_SUBSIDIARY_CASH: INVESTING_LINE_NOT_OPERATING_CASH_GENERATION."
+       },
+       {
+        "code": "UNREVIEWED_BUSINESS_RELEASE",
+        "text": "Source-declared caution FPT_2026_9M_PRESS_RELEASE_NOT_FINANCIAL_STATEMENT: NOT_A_SIGNED_Q3_STATEMENT_NO_9M_OR_Q3_DERIVATION."
+       },
+       {
+        "code": "CURRENT_INCOME_AND_CASH_FACTS_NOT_QUALIFIED",
+        "text": "Reviewed statement 45636554f28c is identified, but its income and cash-flow rows are not qualified: ORIGINAL_BYTES_NOT_RETAINED_BY_PRODUCER_ACQUISITION, SUPPLEMENTARY_LIKE_FOR_LIKE_NOTE_TABLE_HAS_NO_ADMITTED_METRIC_CONTRACT, VALUE_SPAN_NOT_IN_RETAINED_DOCUMENT."
+       }
+      ],
+      "facts": [
+       {
+        "audit_or_review_status": "audited",
+        "canonical_metric": "revenue",
+        "document_sha256": "bb14bafff1a7849217f34cf4b50e0e3d69d91968f217a66d7c68f07d4c1af284",
+        "normalized_value": 70112825100710,
+        "reporting_period": "2025",
+        "statement_family": "income_statement"
+       },
+       {
+        "audit_or_review_status": "audited",
+        "canonical_metric": "provision_charge_or_reversal_adjustment",
+        "document_sha256": "bb14bafff1a7849217f34cf4b50e0e3d69d91968f217a66d7c68f07d4c1af284",
+        "normalized_value": 651406282654,
+        "reporting_period": "2025",
+        "statement_family": "cash_flow"
+       }
+      ],
+      "matched_comparisons": [],
+      "refused_comparisons": [],
+      "unresolved_components": [
+       "QUALIFIED_SHARE_BASIS_UNAVAILABLE",
+       "OPERATING_PROFIT_LINE_NOT_ADMITTED",
+       "WORKING_CAPITAL_COMPONENTS_NOT_QUALIFIED",
+       "OPERATING_CASH_CONVERSION_UNKNOWN",
+       "EXCEPTIONAL_ITEMS_NOT_EXPLICITLY_QUALIFIED"
+      ]
+     },
+     "before_official_income": {
+      "direction_status": "UNKNOWN",
+      "facts": [
+       [
+        "revenue",
+        "2025"
+       ]
+      ]
+     }
+    },
+    "HPG": {
+     "after_earnings_cash": {
+      "applicability": "CORPORATE_INDUSTRIAL_CASH_CONVERSION",
+      "cash_conversion": {
+       "blockers": [
+        {
+         "bounds": [
+          "2025-01-01",
+          "2025-12-31"
+         ],
+         "comparative_basis": "CURRENT_COLUMN",
+         "document_sha256": "f38c5f75becf7d3f145d27183eec81f119fd4f75e378b983a2763ddc3f7e0c07",
+         "operating_cash_flow_periods": [],
+         "reason_codes": [
+          "NO_SAME_STATEMENT_SET_OPERATING_CASH_FLOW"
+         ],
+         "statement_scope": "consolidated"
+        }
+       ],
+       "measurements": []
+      },
+      "economics_status": "PARTIAL_FACTS_NO_MEASUREMENT",
+      "explanation": [
+       {
+        "code": "NO_SAME_STATEMENT_SET_OPERATING_CASH_FLOW",
+        "text": "2025-01-01..2025-12-31: no same-period operating cash flow and profit pair, so cash conversion is UNKNOWN."
+       }
+      ],
+      "facts": [
+       {
+        "audit_or_review_status": "audited",
+        "canonical_metric": "revenue",
+        "document_sha256": "f38c5f75becf7d3f145d27183eec81f119fd4f75e378b983a2763ddc3f7e0c07",
+        "normalized_value": 156116094618482,
+        "reporting_period": "2025",
+        "statement_family": "income_statement"
+       },
+       {
+        "audit_or_review_status": "audited",
+        "canonical_metric": "net_income",
+        "document_sha256": "f38c5f75becf7d3f145d27183eec81f119fd4f75e378b983a2763ddc3f7e0c07",
+        "normalized_value": 15514931571606,
+        "reporting_period": "2025",
+        "statement_family": "income_statement"
+       }
+      ],
+      "matched_comparisons": [],
+      "refused_comparisons": [],
+      "unresolved_components": [
+       "QUALIFIED_SHARE_BASIS_UNAVAILABLE",
+       "OPERATING_PROFIT_LINE_NOT_ADMITTED",
+       "WORKING_CAPITAL_COMPONENTS_NOT_QUALIFIED",
+       "OPERATING_CASH_CONVERSION_UNKNOWN",
+       "EXCEPTIONAL_ITEMS_NOT_EXPLICITLY_QUALIFIED"
+      ]
+     },
+     "before_official_income": {
+      "direction_status": "UNKNOWN",
+      "facts": [
+       [
+        "revenue",
+        "2025"
+       ],
+       [
+        "net_income",
+        "2025"
+       ]
+      ]
+     }
+    },
+    "PNJ": {
+     "after_earnings_cash": {
+      "applicability": "CORPORATE_INDUSTRIAL_CASH_CONVERSION",
+      "cash_conversion": {
+       "blockers": [
+        {
+         "bounds": [
+          "2025-01-01",
+          "2025-12-31"
+         ],
+         "comparative_basis": "CURRENT_COLUMN",
+         "document_sha256": "309f86836d9f00b37e3cccb25da9e7ffd0dab6c531be995618542004acccdf1d",
+         "reason_codes": [
+          "NO_SAME_STATEMENT_SET_QUALIFIED_PROFIT"
+         ],
+         "statement_scope": "consolidated"
+        },
+        {
+         "bounds": [
+          "2026-01-01",
+          "2026-06-30"
+         ],
+         "comparative_basis": "CURRENT_COLUMN",
+         "document_sha256": "db877169e7c19b4b81d60b37d5aab8f9938129a66b582c2229ffffebdca2a43d",
+         "operating_cash_flow_periods": [
+          [
+           "2025-01-01",
+           "2025-12-31"
+          ]
+         ],
+         "reason_codes": [
+          "NO_SAME_STATEMENT_SET_OPERATING_CASH_FLOW",
+          "OPERATING_CASH_FLOW_ONLY_FOR_OTHER_PERIODS"
+         ],
+         "statement_scope": "consolidated"
+        }
+       ],
+       "measurements": []
+      },
+      "economics_status": "PARTIAL_FACTS_NO_MEASUREMENT",
+      "explanation": [
+       {
+        "code": "NO_SAME_STATEMENT_SET_QUALIFIED_PROFIT",
+        "text": "2025-01-01..2025-12-31: no same-period operating cash flow and profit pair, so cash conversion is UNKNOWN."
+       },
+       {
+        "code": "OPERATING_CASH_FLOW_ONLY_FOR_OTHER_PERIODS",
+        "text": "2026-01-01..2026-06-30: no same-period operating cash flow and profit pair, so cash conversion is UNKNOWN."
+       }
+      ],
+      "facts": [
+       {
+        "audit_or_review_status": "audited",
+        "canonical_metric": "cash_and_equivalents",
+        "document_sha256": "309f86836d9f00b37e3cccb25da9e7ffd0dab6c531be995618542004acccdf1d",
+        "normalized_value": 522025257031,
+        "reporting_period": "2025",
+        "statement_family": "balance_sheet"
+       },
+       {
+        "audit_or_review_status": "reviewed",
+        "canonical_metric": "net_income",
+        "document_sha256": "db877169e7c19b4b81d60b37d5aab8f9938129a66b582c2229ffffebdca2a43d",
+        "normalized_value": 728386009054,
+        "reporting_period": "2026-H1",
+        "statement_family": "income_statement"
+       },
+       {
+        "audit_or_review_status": "reviewed",
+        "canonical_metric": "provision_charge_or_reversal_adjustment",
+        "document_sha256": "db877169e7c19b4b81d60b37d5aab8f9938129a66b582c2229ffffebdca2a43d",
+        "normalized_value": 2667248523366,
+        "reporting_period": "2026-H1",
+        "statement_family": "cash_flow"
+       },
+       {
+        "audit_or_review_status": "reviewed",
+        "canonical_metric": "revenue",
+        "document_sha256": "db877169e7c19b4b81d60b37d5aab8f9938129a66b582c2229ffffebdca2a43d",
+        "normalized_value": 25709196846401,
+        "reporting_period": "2026-H1",
+        "statement_family": "income_statement"
+       },
+       {
+        "audit_or_review_status": "audited",
+        "canonical_metric": "operating_cash_flow",
+        "document_sha256": "309f86836d9f00b37e3cccb25da9e7ffd0dab6c531be995618542004acccdf1d",
+        "normalized_value": 18890403841,
+        "reporting_period": "2025",
+        "statement_family": "cash_flow"
+       },
+       {
+        "audit_or_review_status": "reviewed",
+        "canonical_metric": "attributable_net_income",
+        "document_sha256": "db877169e7c19b4b81d60b37d5aab8f9938129a66b582c2229ffffebdca2a43d",
+        "normalized_value": 728529788872,
+        "reporting_period": "2026-H1",
+        "statement_family": "income_statement"
+       }
+      ],
+      "matched_comparisons": [],
+      "refused_comparisons": [],
+      "unresolved_components": [
+       "QUALIFIED_SHARE_BASIS_UNAVAILABLE",
+       "OPERATING_PROFIT_LINE_NOT_ADMITTED",
+       "WORKING_CAPITAL_COMPONENTS_NOT_QUALIFIED",
+       "OPERATING_CASH_CONVERSION_UNKNOWN",
+       "EXCEPTIONAL_ITEMS_NOT_EXPLICITLY_QUALIFIED"
+      ]
+     },
+     "before_official_income": {
+      "direction_status": "UNKNOWN",
+      "facts": [
+       [
+        "net_income",
+        "2026-H1"
+       ],
+       [
+        "revenue",
+        "2026-H1"
+       ],
+       [
+        "attributable_net_income",
+        "2026-H1"
+       ]
+      ]
+     }
+    },
+    "PVD": {
+     "after_earnings_cash": {
+      "applicability": "CORPORATE_INDUSTRIAL_CASH_CONVERSION",
+      "cash_conversion": {
+       "blockers": [
+        {
+         "bounds": [
+          "2025-01-01",
+          "2025-12-31"
+         ],
+         "comparative_basis": "CURRENT_COLUMN",
+         "document_sha256": "6ee20a554891c449a8ee72fffe6358bc9b32145d066a7e52d8492d88f305139c",
+         "operating_cash_flow_periods": [],
+         "reason_codes": [
+          "NO_SAME_STATEMENT_SET_OPERATING_CASH_FLOW"
+         ],
+         "statement_scope": "consolidated"
+        },
+        {
+         "bounds": [
+          "2026-01-01",
+          "2026-06-30"
+         ],
+         "comparative_basis": "CURRENT_COLUMN",
+         "document_sha256": "a7360d2fc9a8a67a1535820813cda2bb8ef288466cd36c949e050c2f2a1b290a",
+         "operating_cash_flow_periods": [],
+         "reason_codes": [
+          "NO_SAME_STATEMENT_SET_OPERATING_CASH_FLOW"
+         ],
+         "statement_scope": "consolidated"
+        }
+       ],
+       "measurements": []
+      },
+      "economics_status": "PARTIAL_FACTS_NO_MEASUREMENT",
+      "explanation": [
+       {
+        "code": "NO_SAME_STATEMENT_SET_OPERATING_CASH_FLOW",
+        "text": "2025-01-01..2025-12-31: no same-period operating cash flow and profit pair, so cash conversion is UNKNOWN."
+       },
+       {
+        "code": "NO_SAME_STATEMENT_SET_OPERATING_CASH_FLOW",
+        "text": "2026-01-01..2026-06-30: no same-period operating cash flow and profit pair, so cash conversion is UNKNOWN."
+       }
+      ],
+      "facts": [
+       {
+        "audit_or_review_status": "reviewed",
+        "canonical_metric": "net_income",
+        "document_sha256": "a7360d2fc9a8a67a1535820813cda2bb8ef288466cd36c949e050c2f2a1b290a",
+        "normalized_value": 18272708,
+        "reporting_period": "2026-H1",
+        "statement_family": "income_statement"
+       },
+       {
+        "audit_or_review_status": "audited",
+        "canonical_metric": "net_income",
+        "document_sha256": "6ee20a554891c449a8ee72fffe6358bc9b32145d066a7e52d8492d88f305139c",
+        "normalized_value": 1051572991932,
+        "reporting_period": "2025",
+        "statement_family": "income_statement"
+       },
+       {
+        "audit_or_review_status": "audited",
+        "canonical_metric": "revenue",
+        "document_sha256": "6ee20a554891c449a8ee72fffe6358bc9b32145d066a7e52d8492d88f305139c",
+        "normalized_value": 10896989276040,
+        "reporting_period": "2025",
+        "statement_family": "income_statement"
+       },
+       {
+        "audit_or_review_status": "reviewed",
+        "canonical_metric": "revenue",
+        "document_sha256": "a7360d2fc9a8a67a1535820813cda2bb8ef288466cd36c949e050c2f2a1b290a",
+        "normalized_value": 245730824,
+        "reporting_period": "2026-H1",
+        "statement_family": "income_statement"
+       },
+       {
+        "audit_or_review_status": "reviewed",
+        "canonical_metric": "attributable_net_income",
+        "document_sha256": "a7360d2fc9a8a67a1535820813cda2bb8ef288466cd36c949e050c2f2a1b290a",
+        "normalized_value": 17920760,
+        "reporting_period": "2026-H1",
+        "statement_family": "income_statement"
+       }
+      ],
+      "matched_comparisons": [],
+      "refused_comparisons": [],
+      "unresolved_components": [
+       "QUALIFIED_SHARE_BASIS_UNAVAILABLE",
+       "OPERATING_PROFIT_LINE_NOT_ADMITTED",
+       "WORKING_CAPITAL_COMPONENTS_NOT_QUALIFIED",
+       "OPERATING_CASH_CONVERSION_UNKNOWN",
+       "EXCEPTIONAL_ITEMS_NOT_EXPLICITLY_QUALIFIED"
+      ]
+     },
+     "before_official_income": {
+      "direction_status": "UNKNOWN",
+      "facts": [
+       [
+        "net_income",
+        "2026-H1"
+       ],
+       [
+        "net_income",
+        "2025"
+       ],
+       [
+        "revenue",
+        "2025"
+       ],
+       [
+        "revenue",
+        "2026-H1"
+       ],
+       [
+        "attributable_net_income",
+        "2026-H1"
+       ]
+      ]
+     }
+    },
+    "QNS": {
+     "after_earnings_cash": {
+      "applicability": "CORPORATE_INDUSTRIAL_CASH_CONVERSION",
+      "cash_conversion": {
+       "blockers": [],
+       "measurements": []
+      },
+      "economics_status": "UNKNOWN",
+      "explanation": [
+       {
+        "code": "TEMPLATE_LINE_CODE_CHANGE",
+        "text": "Source-declared caution QNS_2026_TT43_TEMPLATE_LINE_CODES: REFUSE_PRIOR_TEMPLATE_LINE_CODE_IDENTITY."
+       },
+       {
+        "code": "NET_CASH_DEFINITION_UNQUALIFIED",
+        "text": "Source-declared caution QNS_2026H1_CASH_DEPOSITS_BORROWINGS_SEPARATE: NET_CASH_NOT_CALCULATED_COMPONENTS_KEPT_SEPARATE."
+       },
+       {
+        "code": "CURRENT_INCOME_AND_CASH_FACTS_NOT_QUALIFIED",
+        "text": "Reviewed statement 5a06a40f34a6 is identified, but its income and cash-flow rows are not qualified: EMBEDDED_TEXT_LAYER_GARBLED_NATIVE_ZERO_CANDIDATES, TABLE_ROWS_NOT_GEOMETRICALLY_RESOLVED_UNDER_FIXED_RULES, TT43_LINE_CODE_MAP_NOT_ADMITTED_BORROWINGS_321, RETAINED_ISSUER_LITERAL_PROOF_UNAVAILABLE, VALUE_SPAN_NOT_IN_RETAINED_DOCUMENT."
+       }
+      ],
+      "facts": [],
+      "matched_comparisons": [],
+      "refused_comparisons": [],
+      "unresolved_components": [
+       "QUALIFIED_SHARE_BASIS_UNAVAILABLE",
+       "OPERATING_PROFIT_LINE_NOT_ADMITTED",
+       "WORKING_CAPITAL_COMPONENTS_NOT_QUALIFIED",
+       "OPERATING_CASH_CONVERSION_UNKNOWN",
+       "EXCEPTIONAL_ITEMS_NOT_EXPLICITLY_QUALIFIED"
+      ]
+     },
+     "before_official_income": {
+      "direction_status": "UNKNOWN",
+      "facts": []
+     }
+    },
+    "VNM": {
+     "after_earnings_cash": {
+      "applicability": "CORPORATE_INDUSTRIAL_CASH_CONVERSION",
+      "cash_conversion": {
+       "blockers": [],
+       "measurements": []
+      },
+      "economics_status": "UNKNOWN",
+      "explanation": [
+       {
+        "code": "COMPARATIVES_RECLASSIFIED",
+        "text": "Source-declared caution VNM_2026H1_COMPARATIVES_RECLASSIFIED: PRIOR_FILING_VALUE_NOT_COMPARABLE_USE_RECLASSIFIED_COMPARATIVE_ONLY."
+       },
+       {
+        "code": "TIMING_SENSITIVE_CASH_COMPONENTS",
+        "text": "Source-declared caution VNM_2026H1_TIMING_SENSITIVE_CASH_LINES: CASH_CHANGE_ATTRIBUTION_UNKNOWN_TAX_AND_DIVIDEND_TIMING_LINES_UNQUALIFIED."
+       },
+       {
+        "code": "CURRENT_INCOME_AND_CASH_FACTS_NOT_QUALIFIED",
+        "text": "Reviewed statement a6155aa757b3 is identified, but its income and cash-flow rows are not qualified: INCOME_FOUR_COLUMN_QUARTER_AND_SIX_MONTH_LAYOUT_ROW_NOT_GEOMETRICALLY_RESOLVED, CASH_FLOW_LINE_CODE_CELL_OCR_DAMAGED_NOT_REPAIRED, ISSUER_SOURCE_DOMAIN_MISMATCH_CMS_HOST_NOT_ADMITTED_ROUTE, RETAINED_ISSUER_LITERAL_PROOF_UNAVAILABLE, VALUE_SPAN_NOT_IN_RETAINED_DOCUMENT."
+       }
+      ],
+      "facts": [
+       {
+        "audit_or_review_status": "reviewed",
+        "canonical_metric": "cash_and_equivalents",
+        "document_sha256": "a6155aa757b320b893a78093b0454473f4a581aead225af4eb4ef1fbd6628561",
+        "normalized_value": 4535672366831,
+        "reporting_period": "2026-H1",
+        "statement_family": "balance_sheet"
+       }
+      ],
+      "matched_comparisons": [],
+      "refused_comparisons": [],
+      "unresolved_components": [
+       "QUALIFIED_SHARE_BASIS_UNAVAILABLE",
+       "OPERATING_PROFIT_LINE_NOT_ADMITTED",
+       "WORKING_CAPITAL_COMPONENTS_NOT_QUALIFIED",
+       "OPERATING_CASH_CONVERSION_UNKNOWN",
+       "EXCEPTIONAL_ITEMS_NOT_EXPLICITLY_QUALIFIED"
+      ]
+     },
+     "before_official_income": {
+      "direction_status": "UNKNOWN",
+      "facts": []
+     }
+    }
+   },
+   "fundamental_records": 523,
+   "measurements": 1,
+   "refused_comparisons": 0,
+   "sealed_byte_identical": true,
+   "sealed_hashes_after": {
+    "bundle": "41842aaab6cc71e59e9ff4b4acfb0db801a7a1132ffd73118df1036c017a2b35",
+    "fundamental": "9ac16f328189ca4d124a47f30028477706adc211f28fdb6ef9de054e2f3421ee"
+   },
+   "sealed_hashes_before": {
+    "bundle": "41842aaab6cc71e59e9ff4b4acfb0db801a7a1132ffd73118df1036c017a2b35",
+    "fundamental": "9ac16f328189ca4d124a47f30028477706adc211f28fdb6ef9de054e2f3421ee"
+   }
+  },
+  "2026-10-22": {
+   "bundle_cards_replayed": "ALL_CARDS_UNCHANGED_EXCEPT_ADDITIVE_CONTEXT",
+   "cutoff": "2026-10-22T15:00:00+07:00",
+   "economics_status_counts": {
+    "MEASURED": 1,
+    "NOT_APPLICABLE": 71,
+    "PARTIAL_FACTS_NO_MEASUREMENT": 4,
+    "UNKNOWN": 447
+   },
+   "focus": {
+    "FPT": {
+     "after_earnings_cash": {
+      "applicability": "CORPORATE_INDUSTRIAL_CASH_CONVERSION",
+      "cash_conversion": {
+       "blockers": [],
+       "measurements": []
+      },
+      "economics_status": "PARTIAL_FACTS_NO_MEASUREMENT",
+      "explanation": [
+       {
+        "code": "CONSOLIDATION_SCOPE_CHANGE",
+        "text": "Source-declared caution FPT_2026_FTEL_CONSOLIDATION_TO_EQUITY_METHOD: REFUSE_CROSS_SCOPE_COMPARISON_WITHOUT_ISSUER_LIKE_FOR_LIKE_BASIS."
+       },
+       {
+        "code": "DECONSOLIDATION_CASH_OUTFLOW",
+        "text": "Source-declared caution FPT_2026H1_DECONSOLIDATED_SUBSIDIARY_CASH: INVESTING_LINE_NOT_OPERATING_CASH_GENERATION."
+       },
+       {
+        "code": "UNREVIEWED_BUSINESS_RELEASE",
+        "text": "Source-declared caution FPT_2026_9M_PRESS_RELEASE_NOT_FINANCIAL_STATEMENT: NOT_A_SIGNED_Q3_STATEMENT_NO_9M_OR_Q3_DERIVATION."
+       },
+       {
+        "code": "CURRENT_INCOME_AND_CASH_FACTS_NOT_QUALIFIED",
+        "text": "Reviewed statement 45636554f28c is identified, but its income and cash-flow rows are not qualified: ORIGINAL_BYTES_NOT_RETAINED_BY_PRODUCER_ACQUISITION, SUPPLEMENTARY_LIKE_FOR_LIKE_NOTE_TABLE_HAS_NO_ADMITTED_METRIC_CONTRACT, VALUE_SPAN_NOT_IN_RETAINED_DOCUMENT."
+       }
+      ],
+      "facts": [
+       {
+        "audit_or_review_status": "audited",
+        "canonical_metric": "revenue",
+        "document_sha256": "bb14bafff1a7849217f34cf4b50e0e3d69d91968f217a66d7c68f07d4c1af284",
+        "normalized_value": 70112825100710,
+        "reporting_period": "2025",
+        "statement_family": "income_statement"
+       },
+       {
+        "audit_or_review_status": "audited",
+        "canonical_metric": "provision_charge_or_reversal_adjustment",
+        "document_sha256": "bb14bafff1a7849217f34cf4b50e0e3d69d91968f217a66d7c68f07d4c1af284",
+        "normalized_value": 651406282654,
+        "reporting_period": "2025",
+        "statement_family": "cash_flow"
+       }
+      ],
+      "matched_comparisons": [],
+      "refused_comparisons": [],
+      "unresolved_components": [
+       "QUALIFIED_SHARE_BASIS_UNAVAILABLE",
+       "OPERATING_PROFIT_LINE_NOT_ADMITTED",
+       "WORKING_CAPITAL_COMPONENTS_NOT_QUALIFIED",
+       "OPERATING_CASH_CONVERSION_UNKNOWN",
+       "EXCEPTIONAL_ITEMS_NOT_EXPLICITLY_QUALIFIED"
+      ]
+     },
+     "before_official_income": {
+      "direction_status": "UNKNOWN",
+      "facts": [
+       [
+        "revenue",
+        "2025"
+       ]
+      ]
+     }
+    },
+    "HPG": {
+     "after_earnings_cash": {
+      "applicability": "CORPORATE_INDUSTRIAL_CASH_CONVERSION",
+      "cash_conversion": {
+       "blockers": [
+        {
+         "bounds": [
+          "2025-01-01",
+          "2025-12-31"
+         ],
+         "comparative_basis": "CURRENT_COLUMN",
+         "document_sha256": "f38c5f75becf7d3f145d27183eec81f119fd4f75e378b983a2763ddc3f7e0c07",
+         "operating_cash_flow_periods": [],
+         "reason_codes": [
+          "NO_SAME_STATEMENT_SET_OPERATING_CASH_FLOW"
+         ],
+         "statement_scope": "consolidated"
+        }
+       ],
+       "measurements": []
+      },
+      "economics_status": "PARTIAL_FACTS_NO_MEASUREMENT",
+      "explanation": [
+       {
+        "code": "NO_SAME_STATEMENT_SET_OPERATING_CASH_FLOW",
+        "text": "2025-01-01..2025-12-31: no same-period operating cash flow and profit pair, so cash conversion is UNKNOWN."
+       }
+      ],
+      "facts": [
+       {
+        "audit_or_review_status": "audited",
+        "canonical_metric": "revenue",
+        "document_sha256": "f38c5f75becf7d3f145d27183eec81f119fd4f75e378b983a2763ddc3f7e0c07",
+        "normalized_value": 156116094618482,
+        "reporting_period": "2025",
+        "statement_family": "income_statement"
+       },
+       {
+        "audit_or_review_status": "audited",
+        "canonical_metric": "net_income",
+        "document_sha256": "f38c5f75becf7d3f145d27183eec81f119fd4f75e378b983a2763ddc3f7e0c07",
+        "normalized_value": 15514931571606,
+        "reporting_period": "2025",
+        "statement_family": "income_statement"
+       }
+      ],
+      "matched_comparisons": [],
+      "refused_comparisons": [],
+      "unresolved_components": [
+       "QUALIFIED_SHARE_BASIS_UNAVAILABLE",
+       "OPERATING_PROFIT_LINE_NOT_ADMITTED",
+       "WORKING_CAPITAL_COMPONENTS_NOT_QUALIFIED",
+       "OPERATING_CASH_CONVERSION_UNKNOWN",
+       "EXCEPTIONAL_ITEMS_NOT_EXPLICITLY_QUALIFIED"
+      ]
+     },
+     "before_official_income": {
+      "direction_status": "UNKNOWN",
+      "facts": [
+       [
+        "revenue",
+        "2025"
+       ],
+       [
+        "net_income",
+        "2025"
+       ]
+      ]
+     }
+    },
+    "PNJ": {
+     "after_earnings_cash": {
+      "applicability": "CORPORATE_INDUSTRIAL_CASH_CONVERSION",
+      "cash_conversion": {
+       "blockers": [
+        {
+         "bounds": [
+          "2025-01-01",
+          "2025-12-31"
+         ],
+         "comparative_basis": "CURRENT_COLUMN",
+         "document_sha256": "309f86836d9f00b37e3cccb25da9e7ffd0dab6c531be995618542004acccdf1d",
+         "reason_codes": [
+          "NO_SAME_STATEMENT_SET_QUALIFIED_PROFIT"
+         ],
+         "statement_scope": "consolidated"
+        },
+        {
+         "bounds": [
+          "2026-01-01",
+          "2026-06-30"
+         ],
+         "comparative_basis": "CURRENT_COLUMN",
+         "document_sha256": "db877169e7c19b4b81d60b37d5aab8f9938129a66b582c2229ffffebdca2a43d",
+         "operating_cash_flow_periods": [
+          [
+           "2025-01-01",
+           "2025-12-31"
+          ]
+         ],
+         "reason_codes": [
+          "NO_SAME_STATEMENT_SET_OPERATING_CASH_FLOW",
+          "OPERATING_CASH_FLOW_ONLY_FOR_OTHER_PERIODS"
+         ],
+         "statement_scope": "consolidated"
+        }
+       ],
+       "measurements": []
+      },
+      "economics_status": "PARTIAL_FACTS_NO_MEASUREMENT",
+      "explanation": [
+       {
+        "code": "NO_SAME_STATEMENT_SET_QUALIFIED_PROFIT",
+        "text": "2025-01-01..2025-12-31: no same-period operating cash flow and profit pair, so cash conversion is UNKNOWN."
+       },
+       {
+        "code": "OPERATING_CASH_FLOW_ONLY_FOR_OTHER_PERIODS",
+        "text": "2026-01-01..2026-06-30: no same-period operating cash flow and profit pair, so cash conversion is UNKNOWN."
+       }
+      ],
+      "facts": [
+       {
+        "audit_or_review_status": "audited",
+        "canonical_metric": "cash_and_equivalents",
+        "document_sha256": "309f86836d9f00b37e3cccb25da9e7ffd0dab6c531be995618542004acccdf1d",
+        "normalized_value": 522025257031,
+        "reporting_period": "2025",
+        "statement_family": "balance_sheet"
+       },
+       {
+        "audit_or_review_status": "reviewed",
+        "canonical_metric": "net_income",
+        "document_sha256": "db877169e7c19b4b81d60b37d5aab8f9938129a66b582c2229ffffebdca2a43d",
+        "normalized_value": 728386009054,
+        "reporting_period": "2026-H1",
+        "statement_family": "income_statement"
+       },
+       {
+        "audit_or_review_status": "reviewed",
+        "canonical_metric": "provision_charge_or_reversal_adjustment",
+        "document_sha256": "db877169e7c19b4b81d60b37d5aab8f9938129a66b582c2229ffffebdca2a43d",
+        "normalized_value": 2667248523366,
+        "reporting_period": "2026-H1",
+        "statement_family": "cash_flow"
+       },
+       {
+        "audit_or_review_status": "reviewed",
+        "canonical_metric": "revenue",
+        "document_sha256": "db877169e7c19b4b81d60b37d5aab8f9938129a66b582c2229ffffebdca2a43d",
+        "normalized_value": 25709196846401,
+        "reporting_period": "2026-H1",
+        "statement_family": "income_statement"
+       },
+       {
+        "audit_or_review_status": "audited",
+        "canonical_metric": "operating_cash_flow",
+        "document_sha256": "309f86836d9f00b37e3cccb25da9e7ffd0dab6c531be995618542004acccdf1d",
+        "normalized_value": 18890403841,
+        "reporting_period": "2025",
+        "statement_family": "cash_flow"
+       },
+       {
+        "audit_or_review_status": "reviewed",
+        "canonical_metric": "attributable_net_income",
+        "document_sha256": "db877169e7c19b4b81d60b37d5aab8f9938129a66b582c2229ffffebdca2a43d",
+        "normalized_value": 728529788872,
+        "reporting_period": "2026-H1",
+        "statement_family": "income_statement"
+       }
+      ],
+      "matched_comparisons": [],
+      "refused_comparisons": [],
+      "unresolved_components": [
+       "QUALIFIED_SHARE_BASIS_UNAVAILABLE",
+       "OPERATING_PROFIT_LINE_NOT_ADMITTED",
+       "WORKING_CAPITAL_COMPONENTS_NOT_QUALIFIED",
+       "OPERATING_CASH_CONVERSION_UNKNOWN",
+       "EXCEPTIONAL_ITEMS_NOT_EXPLICITLY_QUALIFIED"
+      ]
+     },
+     "before_official_income": {
+      "direction_status": "UNKNOWN",
+      "facts": [
+       [
+        "net_income",
+        "2026-H1"
+       ],
+       [
+        "revenue",
+        "2026-H1"
+       ],
+       [
+        "attributable_net_income",
+        "2026-H1"
+       ]
+      ]
+     }
+    },
+    "PVD": {
+     "after_earnings_cash": {
+      "applicability": "CORPORATE_INDUSTRIAL_CASH_CONVERSION",
+      "cash_conversion": {
+       "blockers": [
+        {
+         "bounds": [
+          "2025-01-01",
+          "2025-12-31"
+         ],
+         "comparative_basis": "CURRENT_COLUMN",
+         "document_sha256": "6ee20a554891c449a8ee72fffe6358bc9b32145d066a7e52d8492d88f305139c",
+         "operating_cash_flow_periods": [],
+         "reason_codes": [
+          "NO_SAME_STATEMENT_SET_OPERATING_CASH_FLOW"
+         ],
+         "statement_scope": "consolidated"
+        },
+        {
+         "bounds": [
+          "2026-01-01",
+          "2026-06-30"
+         ],
+         "comparative_basis": "CURRENT_COLUMN",
+         "document_sha256": "a7360d2fc9a8a67a1535820813cda2bb8ef288466cd36c949e050c2f2a1b290a",
+         "operating_cash_flow_periods": [],
+         "reason_codes": [
+          "NO_SAME_STATEMENT_SET_OPERATING_CASH_FLOW"
+         ],
+         "statement_scope": "consolidated"
+        }
+       ],
+       "measurements": []
+      },
+      "economics_status": "PARTIAL_FACTS_NO_MEASUREMENT",
+      "explanation": [
+       {
+        "code": "NO_SAME_STATEMENT_SET_OPERATING_CASH_FLOW",
+        "text": "2025-01-01..2025-12-31: no same-period operating cash flow and profit pair, so cash conversion is UNKNOWN."
+       },
+       {
+        "code": "NO_SAME_STATEMENT_SET_OPERATING_CASH_FLOW",
+        "text": "2026-01-01..2026-06-30: no same-period operating cash flow and profit pair, so cash conversion is UNKNOWN."
+       }
+      ],
+      "facts": [
+       {
+        "audit_or_review_status": "reviewed",
+        "canonical_metric": "net_income",
+        "document_sha256": "a7360d2fc9a8a67a1535820813cda2bb8ef288466cd36c949e050c2f2a1b290a",
+        "normalized_value": 18272708,
+        "reporting_period": "2026-H1",
+        "statement_family": "income_statement"
+       },
+       {
+        "audit_or_review_status": "audited",
+        "canonical_metric": "net_income",
+        "document_sha256": "6ee20a554891c449a8ee72fffe6358bc9b32145d066a7e52d8492d88f305139c",
+        "normalized_value": 1051572991932,
+        "reporting_period": "2025",
+        "statement_family": "income_statement"
+       },
+       {
+        "audit_or_review_status": "audited",
+        "canonical_metric": "revenue",
+        "document_sha256": "6ee20a554891c449a8ee72fffe6358bc9b32145d066a7e52d8492d88f305139c",
+        "normalized_value": 10896989276040,
+        "reporting_period": "2025",
+        "statement_family": "income_statement"
+       },
+       {
+        "audit_or_review_status": "reviewed",
+        "canonical_metric": "revenue",
+        "document_sha256": "a7360d2fc9a8a67a1535820813cda2bb8ef288466cd36c949e050c2f2a1b290a",
+        "normalized_value": 245730824,
+        "reporting_period": "2026-H1",
+        "statement_family": "income_statement"
+       },
+       {
+        "audit_or_review_status": "reviewed",
+        "canonical_metric": "attributable_net_income",
+        "document_sha256": "a7360d2fc9a8a67a1535820813cda2bb8ef288466cd36c949e050c2f2a1b290a",
+        "normalized_value": 17920760,
+        "reporting_period": "2026-H1",
+        "statement_family": "income_statement"
+       }
+      ],
+      "matched_comparisons": [],
+      "refused_comparisons": [],
+      "unresolved_components": [
+       "QUALIFIED_SHARE_BASIS_UNAVAILABLE",
+       "OPERATING_PROFIT_LINE_NOT_ADMITTED",
+       "WORKING_CAPITAL_COMPONENTS_NOT_QUALIFIED",
+       "OPERATING_CASH_CONVERSION_UNKNOWN",
+       "EXCEPTIONAL_ITEMS_NOT_EXPLICITLY_QUALIFIED"
+      ]
+     },
+     "before_official_income": {
+      "direction_status": "UNKNOWN",
+      "facts": [
+       [
+        "net_income",
+        "2026-H1"
+       ],
+       [
+        "net_income",
+        "2025"
+       ],
+       [
+        "revenue",
+        "2025"
+       ],
+       [
+        "revenue",
+        "2026-H1"
+       ],
+       [
+        "attributable_net_income",
+        "2026-H1"
+       ]
+      ]
+     }
+    },
+    "QNS": {
+     "after_earnings_cash": {
+      "applicability": "CORPORATE_INDUSTRIAL_CASH_CONVERSION",
+      "cash_conversion": {
+       "blockers": [],
+       "measurements": []
+      },
+      "economics_status": "UNKNOWN",
+      "explanation": [
+       {
+        "code": "TEMPLATE_LINE_CODE_CHANGE",
+        "text": "Source-declared caution QNS_2026_TT43_TEMPLATE_LINE_CODES: REFUSE_PRIOR_TEMPLATE_LINE_CODE_IDENTITY."
+       },
+       {
+        "code": "NET_CASH_DEFINITION_UNQUALIFIED",
+        "text": "Source-declared caution QNS_2026H1_CASH_DEPOSITS_BORROWINGS_SEPARATE: NET_CASH_NOT_CALCULATED_COMPONENTS_KEPT_SEPARATE."
+       },
+       {
+        "code": "CURRENT_INCOME_AND_CASH_FACTS_NOT_QUALIFIED",
+        "text": "Reviewed statement 5a06a40f34a6 is identified, but its income and cash-flow rows are not qualified: EMBEDDED_TEXT_LAYER_GARBLED_NATIVE_ZERO_CANDIDATES, TABLE_ROWS_NOT_GEOMETRICALLY_RESOLVED_UNDER_FIXED_RULES, TT43_LINE_CODE_MAP_NOT_ADMITTED_BORROWINGS_321, RETAINED_ISSUER_LITERAL_PROOF_UNAVAILABLE, VALUE_SPAN_NOT_IN_RETAINED_DOCUMENT."
+       }
+      ],
+      "facts": [],
+      "matched_comparisons": [],
+      "refused_comparisons": [],
+      "unresolved_components": [
+       "QUALIFIED_SHARE_BASIS_UNAVAILABLE",
+       "OPERATING_PROFIT_LINE_NOT_ADMITTED",
+       "WORKING_CAPITAL_COMPONENTS_NOT_QUALIFIED",
+       "OPERATING_CASH_CONVERSION_UNKNOWN",
+       "EXCEPTIONAL_ITEMS_NOT_EXPLICITLY_QUALIFIED"
+      ]
+     },
+     "before_official_income": {
+      "direction_status": "UNKNOWN",
+      "facts": []
+     }
+    },
+    "VNM": {
+     "after_earnings_cash": {
+      "applicability": "CORPORATE_INDUSTRIAL_CASH_CONVERSION",
+      "cash_conversion": {
+       "blockers": [],
+       "measurements": []
+      },
+      "economics_status": "UNKNOWN",
+      "explanation": [
+       {
+        "code": "COMPARATIVES_RECLASSIFIED",
+        "text": "Source-declared caution VNM_2026H1_COMPARATIVES_RECLASSIFIED: PRIOR_FILING_VALUE_NOT_COMPARABLE_USE_RECLASSIFIED_COMPARATIVE_ONLY."
+       },
+       {
+        "code": "TIMING_SENSITIVE_CASH_COMPONENTS",
+        "text": "Source-declared caution VNM_2026H1_TIMING_SENSITIVE_CASH_LINES: CASH_CHANGE_ATTRIBUTION_UNKNOWN_TAX_AND_DIVIDEND_TIMING_LINES_UNQUALIFIED."
+       },
+       {
+        "code": "CURRENT_INCOME_AND_CASH_FACTS_NOT_QUALIFIED",
+        "text": "Reviewed statement a6155aa757b3 is identified, but its income and cash-flow rows are not qualified: INCOME_FOUR_COLUMN_QUARTER_AND_SIX_MONTH_LAYOUT_ROW_NOT_GEOMETRICALLY_RESOLVED, CASH_FLOW_LINE_CODE_CELL_OCR_DAMAGED_NOT_REPAIRED, ISSUER_SOURCE_DOMAIN_MISMATCH_CMS_HOST_NOT_ADMITTED_ROUTE, RETAINED_ISSUER_LITERAL_PROOF_UNAVAILABLE, VALUE_SPAN_NOT_IN_RETAINED_DOCUMENT."
+       }
+      ],
+      "facts": [
+       {
+        "audit_or_review_status": "reviewed",
+        "canonical_metric": "cash_and_equivalents",
+        "document_sha256": "a6155aa757b320b893a78093b0454473f4a581aead225af4eb4ef1fbd6628561",
+        "normalized_value": 4535672366831,
+        "reporting_period": "2026-H1",
+        "statement_family": "balance_sheet"
+       }
+      ],
+      "matched_comparisons": [],
+      "refused_comparisons": [],
+      "unresolved_components": [
+       "QUALIFIED_SHARE_BASIS_UNAVAILABLE",
+       "OPERATING_PROFIT_LINE_NOT_ADMITTED",
+       "WORKING_CAPITAL_COMPONENTS_NOT_QUALIFIED",
+       "OPERATING_CASH_CONVERSION_UNKNOWN",
+       "EXCEPTIONAL_ITEMS_NOT_EXPLICITLY_QUALIFIED"
+      ]
+     },
+     "before_official_income": {
+      "direction_status": "UNKNOWN",
+      "facts": []
+     }
+    }
+   },
+   "fundamental_records": 523,
+   "measurements": 1,
+   "refused_comparisons": 0,
+   "sealed_byte_identical": true,
+   "sealed_hashes_after": {
+    "bundle": "02740143933e612bb6edd871074d33215c2b97fb688a929f9fc109ee70e3c509",
+    "fundamental": "204b21c941dd4d774b49586e6e145dc1012098acaba198d09c5ca088cd578832"
+   },
+   "sealed_hashes_before": {
+    "bundle": "02740143933e612bb6edd871074d33215c2b97fb688a929f9fc109ee70e3c509",
+    "fundamental": "204b21c941dd4d774b49586e6e145dc1012098acaba198d09c5ca088cd578832"
+   }
+  }
+ }
+}

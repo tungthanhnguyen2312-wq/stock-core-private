@@ -106,6 +106,44 @@ def research_evidence_basis(context: Mapping[str, Any] | None) -> dict[str, Any]
         "is_actionable": False, "vote_effect": "NONE"}
 
 
+def official_research_row_reasons(row: Mapping[str, Any], *, boundary: Any, entity: Any, ticker: str | None,
+                                  statement_family: str) -> list[str]:
+    """The one admission gate for official exact-field research rows (D-1, tier, entity, cutoff)."""
+    from datetime import datetime
+    import math
+    reasons = []
+    if (row.get("evidence_tier") == "UNREVIEWED_QUARTERLY" or row.get("audit_or_review_status") == "unreviewed"
+            or row.get("existing_consumer_usable") is False):
+        reasons.append("D1_EXISTING_CONSUMER_USE_REFUSED")
+    if row.get("qualification_state") != "QUALIFIED" or row.get("factual_status") != "qualified":
+        reasons.append("EXISTING_EXACT_FIELD_QUALIFICATION_REQUIRED")
+    if row.get("audit_or_review_status") not in {"reviewed", "audited"}:
+        reasons.append("APPROVED_REVIEWED_OR_AUDITED_TIER_REQUIRED")
+    if entity != "corporate":
+        reasons.append("INDUSTRIAL_INCOME_IDENTITY_NOT_ADMITTED_FOR_ENTITY")
+    if not row.get("ticker") or (ticker and row.get("ticker") != ticker):
+        reasons.append("ISSUER_IDENTITY_MISMATCH")
+    if (row.get("period_type") not in {"annual", "interim", "quarter", "half_year", "nine_month"}
+            or not row.get("reporting_period")):
+        reasons.append("EXPLICIT_REPORTING_PERIOD_TYPE_REQUIRED")
+    if (row.get("statement_family") != statement_family or row.get("statement_scope") not in {"consolidated", "standalone"}
+            or not row.get("document_sha256") or not row.get("citation_id") or not row.get("source_identity")):
+        reasons.append("SOURCE_STATEMENT_IDENTITY_INCOMPLETE")
+    value = row.get("normalized_value")
+    if (not isinstance(value, (float, int)) or isinstance(value, bool) or not math.isfinite(value)
+            or isinstance(row.get("unit_scale"), bool) or row.get("unit_scale") != 1
+            or row.get("already_normalized") is not True or not row.get("currency")):
+        reasons.append("NORMALIZED_SOURCE_UNIT_REQUIRED")
+    try:
+        known = datetime.fromisoformat(str(row.get("knowledge_available_at")).replace("Z", "+00:00"))
+        start, end = date.fromisoformat(row["period_start"]), date.fromisoformat(row["period_end"])
+        if boundary is None or known.tzinfo is None or known > boundary or end > boundary.date() or start > end:
+            reasons.append("SOURCE_NOT_ELIGIBLE_AT_EXACT_CUTOFF")
+    except (ValueError, TypeError, KeyError):
+        reasons.append("EXPLICIT_PERIOD_AND_KNOWLEDGE_TIME_REQUIRED")
+    return reasons
+
+
 def official_income_research_context(record: Mapping[str, Any] | None, *, cutoff: str | None,
                                      ticker: str | None = None) -> dict[str, Any]:
     """Non-voting view of the existing admitted exact-field projection, never an intake.
@@ -116,7 +154,6 @@ def official_income_research_context(record: Mapping[str, Any] | None, *, cutoff
     from datetime import datetime
     from stocklookup_core.evidence.temporal_freshness import reporting_period_basis, separate_financial_clock
     from stocklookup_core.financial.financial_analysis_engine_v2 import sign_transition
-    import math
     record = record or {}
     admitted, rejected, comparisons = [], [], []
     try:
@@ -129,36 +166,8 @@ def official_income_research_context(record: Mapping[str, Any] | None, *, cutoff
     for row in record.get("official_field_context") or []:
         if row.get("canonical_metric") not in {"revenue", "net_income", "attributable_net_income"}:
             continue
-        reasons = []
-        if (row.get("evidence_tier") == "UNREVIEWED_QUARTERLY" or row.get("audit_or_review_status") == "unreviewed"
-                or row.get("existing_consumer_usable") is False):
-            reasons.append("D1_EXISTING_CONSUMER_USE_REFUSED")
-        if row.get("qualification_state") != "QUALIFIED" or row.get("factual_status") != "qualified":
-            reasons.append("EXISTING_EXACT_FIELD_QUALIFICATION_REQUIRED")
-        if row.get("audit_or_review_status") not in {"reviewed", "audited"}:
-            reasons.append("APPROVED_REVIEWED_OR_AUDITED_TIER_REQUIRED")
-        if entity != "corporate":
-            reasons.append("INDUSTRIAL_INCOME_IDENTITY_NOT_ADMITTED_FOR_ENTITY")
-        if not row.get("ticker") or (ticker and row.get("ticker") != ticker):
-            reasons.append("ISSUER_IDENTITY_MISMATCH")
-        if (row.get("period_type") not in {"annual", "interim", "quarter", "half_year", "nine_month"}
-                or not row.get("reporting_period")):
-            reasons.append("EXPLICIT_REPORTING_PERIOD_TYPE_REQUIRED")
-        if (row.get("statement_family") != "income_statement" or row.get("statement_scope") not in {"consolidated", "standalone"}
-                or not row.get("document_sha256") or not row.get("citation_id") or not row.get("source_identity")):
-            reasons.append("SOURCE_STATEMENT_IDENTITY_INCOMPLETE")
-        value = row.get("normalized_value")
-        if (not isinstance(value, (float, int)) or isinstance(value, bool) or not math.isfinite(value)
-                or isinstance(row.get("unit_scale"), bool) or row.get("unit_scale") != 1
-                or row.get("already_normalized") is not True or not row.get("currency")):
-            reasons.append("NORMALIZED_SOURCE_UNIT_REQUIRED")
-        try:
-            known = datetime.fromisoformat(str(row.get("knowledge_available_at")).replace("Z", "+00:00"))
-            start, end = date.fromisoformat(row["period_start"]), date.fromisoformat(row["period_end"])
-            if boundary is None or known.tzinfo is None or known > boundary or end > boundary.date() or start > end:
-                reasons.append("SOURCE_NOT_ELIGIBLE_AT_EXACT_CUTOFF")
-        except (ValueError, TypeError, KeyError):
-            reasons.append("EXPLICIT_PERIOD_AND_KNOWLEDGE_TIME_REQUIRED")
+        reasons = official_research_row_reasons(row, boundary=boundary, entity=entity, ticker=ticker,
+                                                statement_family="income_statement")
         if reasons:
             rejected.append({"citation_id": row.get("citation_id"), "reason_codes": sorted(set(reasons))})
             continue

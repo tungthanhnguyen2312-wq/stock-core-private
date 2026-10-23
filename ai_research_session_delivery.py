@@ -217,10 +217,12 @@ def financial_research_composite(record: Mapping[str, Any]) -> Any:
 def financial_research_card(card: Mapping[str, Any], fundamental: Mapping[str, Any] | None,
                             integrated: Mapping[str, Any] | None, *, cutoff: str | None) -> dict[str, Any]:
     from stocklookup_core.financial.fundamental_signal_consumption_contract import official_income_research_context
+    from stocklookup_core.financial.interim_earnings_cash_research import interim_earnings_cash_research_context
     result = copy.deepcopy(dict(card))
     result["fundamental_research_context"] = {
         "composite": financial_research_composite(integrated or {}),
         "official_income": official_income_research_context(fundamental, cutoff=cutoff, ticker=card.get("ticker")),
+        "earnings_cash": interim_earnings_cash_research_context(fundamental, cutoff=cutoff, ticker=card.get("ticker")),
         "use": "NON_VOTING_RESEARCH_ONLY", "is_actionable": False}
     return result
 
@@ -695,6 +697,11 @@ def build_dashboard_projection(
                 income = (source_card.get("fundamental_context") or {}).get("official_income_research_context")
             if income is not None and isinstance(decision_card.get("fundamental"), dict):
                 decision_card["fundamental"]["official_income_research_context"] = copy.deepcopy(income)
+            earnings_cash = (source_card.get("fundamental_research_context") or {}).get("earnings_cash")
+            if earnings_cash is None:
+                earnings_cash = (source_card.get("fundamental_context") or {}).get("interim_earnings_cash_research_context")
+            if earnings_cash is not None and isinstance(decision_card.get("fundamental"), dict):
+                decision_card["fundamental"]["interim_earnings_cash_research_context"] = copy.deepcopy(earnings_cash)
         projection["integrated_decision_overlay_v1"] = {
             key: copy.deepcopy(value)
             for key, value in overlay.items()
