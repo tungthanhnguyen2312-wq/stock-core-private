@@ -9,7 +9,7 @@ Facts: [ACTIVE_STATE.md](ACTIVE_STATE.md).
 
 [Owner scope](official_income_statement_research_consumption_v1_contract.md): additive non-voting
 income/basis context; D-1 unchanged. Stacked on open PR180 `f52cc616`; merge gated.
-Native state governs local closeout; no production, authority change or successor.
+COMPLETE_LOCAL `d6f23ea3`; native closeout recorded. No production, authority change or successor.
 
 ## PRIOR — STOCKLOOKUP_PRODUCER_DEEP_SIMPLIFICATION (RELEASED PR146)
 

@@ -16,13 +16,13 @@
   ],
   "current": {
     "milestone": "OFFICIAL_INCOME_STATEMENT_RESEARCH_CONSUMPTION_V1",
-    "state": "ACTIVE"
+    "state": "COMPLETE"
   },
   "queued_next": [],
   "milestones": [
     {
       "milestone_id": "OFFICIAL_INCOME_STATEMENT_RESEARCH_CONSUMPTION_V1",
-      "state": "ACTIVE",
+      "state": "COMPLETE",
       "starting_checkpoint": "f52cc61617f460b1e38ea89df92032e2c7ea4c50",
       "candidate_branch": "feat/official-income-research-v1",
       "dependencies": [
@@ -35,11 +35,12 @@
       "source_doc": "docs/official_income_statement_research_consumption_v1_contract.md",
       "state_history": [
         "DEFERRED",
-        "ACTIVE"
+        "ACTIVE",
+        "COMPLETE"
       ],
-      "checkpoint": null,
-      "terminal_disposition": null,
-      "notes": "Owner 2026-10-23 authorizes additive official income research consumption and evidence-basis semantics, stacked on unmerged PR180; preserve D-1 existing_consumer_usable=false, all votes/posture/identity and authority NONE. No production, merge or successor."
+      "checkpoint": "d6f23ea34d187f8ccb7336edab5074f5981dc514",
+      "terminal_disposition": "LOCAL_IMPLEMENTATION_COMPLETE_NOT_PROMOTED",
+      "notes": "Owner 2026-10-23 authorizes additive official income research consumption and evidence-basis semantics, stacked on unmerged PR180; preserve D-1 existing_consumer_usable=false, all votes/posture/identity and authority NONE. No production, merge or successor. Local closeout: Owner-authorized local checkpoint: 1005 targeted tests PASS, 65 consumer/import tests PASS; immutable October20/22 replay 139 cards with zero unintended decision deltas; 51 sufficient balance-only cards explained, 11 exact facts and nine retained FY comparisons per session, zero new compatible pairs. Stacked PR180; D-1 unchanged; source and merge release gates retained.; no main release, authority promotion or successor."
     },
     {
       "milestone_id": "POST_DAILY_20261022_RESEARCH_DECISION_QUALITY_CLOSEOUT",
