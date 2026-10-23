@@ -10,9 +10,14 @@
       "prior_sha256_lf": "640a09ee27e87a2a2901a98f06e6d9a8ee33ab5882aeb6112077c52a63e1309c"
     },
     "stocklookup_core/decision/integrated_investment_decision_product.py": {
-      "active_sha256_lf": "d878ff78dbc583fabfaffac4778234bd3a9a545c5ca64ba55e3262b16ba2698a",
+      "active_sha256_lf": "d4c4c187e9c8bd60c7c7f6ccf0a046aeb0cf2b5c3a82e23e1fa45ba39a2044ce",
       "archive": "tests/fixtures/financial_research_v1_sources/stocklookup_core/decision/integrated_investment_decision_product.py.txt",
       "prior_sha256_lf": "066522aad2061011cec1ace8dfc0882fa46aca938f174a78afa4880a4729c541"
+    },
+    "technical_structure_context.py": {
+      "active_sha256_lf": "bd0a852b2f531863bf3294bf5cd68c32bed9e09b742321a712b31a2477cbd0f0",
+      "archive": "tests/fixtures/financial_research_v1_sources/technical_structure_context.py.txt",
+      "prior_sha256_lf": "c56569dbd5d76b56dc3778df520e70015ce1f0e98a981c7537edf7c98431c51d"
     }
   }
 }

@@ -20,7 +20,7 @@ def test_bearish_structure_cannot_be_aligned_with_constructive_fundamentals(phas
 @pytest.mark.parametrize('status,supports,expected', [
     ('AVAILABLE', [], 'no observed participation contradiction'),
     ('NOT_AVAILABLE', [], 'participation evidence unavailable'),
-    ('AVAILABLE', ['VOLUME_ACCELERATION_HIGH_1.80X'], 'supportive participation')])
+    ('AVAILABLE', ['VOLUME_ACCELERATION_HIGH_1.80X'], 'volume magnitude only, not bullish confirmation')])
 def test_valid_breakout_retains_posture_without_inventing_participation_support(status,supports,expected):
     posture, why, effect, condition_class = product.decide_research_action_posture(ticker='HPG',
         fundamental_state=product.FUNDAMENTAL_STABLE, tactical_phase=product.TACTICAL_BREAKOUT_CONFIRMED,

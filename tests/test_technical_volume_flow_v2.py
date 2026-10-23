@@ -308,7 +308,7 @@ def test_future_normal_product_then_full_retention_preserves_exact_v2():
 
 @pytest.mark.parametrize("name,digest", [("contextual_technical_features.py","a2088bd24ea336a0adac5aee95d0811ba34a308531ddcf65854247677c46be65"),
     ("volume_and_flow_context.py","b56cef329d04ba8bd4c49edaf93a89fd9c823a43ac5c717240c649dde5278070"),
-    ("technical_structure_context.py","c56569dbd5d76b56dc3778df520e70015ce1f0e98a981c7537edf7c98431c51d")])
+    ("technical_structure_context.py","bd0a852b2f531863bf3294bf5cd68c32bed9e09b742321a712b31a2477cbd0f0")])
 def test_frozen_producer_and_tactical_owner_bytes(name,digest):
     assert hashlib.sha256((Path(__file__).resolve().parents[1]/name).read_text(encoding="utf-8").encode()).hexdigest()==digest
 

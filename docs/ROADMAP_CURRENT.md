@@ -5,11 +5,11 @@ Verified analytical baseline 2026-10-14 `a9c799397a74641a0e16c8ea84454d2dc4d0745
 Nothing below auto-starts; native standing admission required (AI_RULES 11).
 Facts: [ACTIVE_STATE.md](ACTIVE_STATE.md).
 
-## NOW — EXISTING FINANCIAL QUARTERLY CORRECTIVE INTEGRATION (PR168 / PR169)
+## NOW — OCTOBER 22 RESEARCH DECISION QUALITY CLOSEOUT
 
-PR167/176/177 released. Existing PR168/169 corrections integrated on `7a5195de`;
-Owner remote release gated. See [contracts and status](ACTIVE_STATE.md).
-No new milestone, machine-state admission, production or authority change.
+PR178/179 released at `ec304424`. Owner explicitly admits
+[bounded source correctness work](post_daily_20261022_research_decision_quality_closeout_contract.md).
+Native state governs implementation closeout; Owner merge gate, no production or authority change.
 
 ## PRIOR — STOCKLOOKUP_PRODUCER_DEEP_SIMPLIFICATION (RELEASED PR146)
 

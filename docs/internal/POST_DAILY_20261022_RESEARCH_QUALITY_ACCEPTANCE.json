@@ -1,0 +1,1354 @@
+{
+  "baseline_source_matches": 876,
+  "measurement_changes": [
+    "AAV",
+    "ABI",
+    "ABW",
+    "ADP",
+    "AGP",
+    "AMV",
+    "APF",
+    "BCF",
+    "BLF",
+    "BLT",
+    "BVG",
+    "BVS",
+    "CAG",
+    "CCA",
+    "CCS",
+    "CDR",
+    "CIA",
+    "CIP",
+    "CLX",
+    "CMS",
+    "CNC",
+    "CPC",
+    "CRE",
+    "CSM",
+    "CTI",
+    "CTP",
+    "CVN",
+    "D11",
+    "DBD",
+    "DC1",
+    "DDG",
+    "DHB",
+    "DIH",
+    "DMN",
+    "DTI",
+    "DTK",
+    "DXG",
+    "EIN",
+    "EVE",
+    "EVF",
+    "GDT",
+    "GHC",
+    "GPC",
+    "HAD",
+    "HCM",
+    "HDM",
+    "HEP",
+    "HMC",
+    "HOM",
+    "HPD",
+    "HTE",
+    "HTI",
+    "HU3",
+    "HU6",
+    "ICG",
+    "ICT",
+    "IDV",
+    "IFS",
+    "ILA",
+    "ILB",
+    "ILS",
+    "ISH",
+    "ITQ",
+    "KHP",
+    "KHS",
+    "KMR",
+    "L18",
+    "LDG",
+    "LDP",
+    "LIG",
+    "LKW",
+    "LSS",
+    "MCF",
+    "MCG",
+    "MCH",
+    "MCM",
+    "MPC",
+    "MZG",
+    "NBB",
+    "NBT",
+    "NCG",
+    "NDT",
+    "NED",
+    "NHH",
+    "NRC",
+    "NSH",
+    "NTF",
+    "ODE",
+    "OIL",
+    "PAS",
+    "PBC",
+    "PCH",
+    "PDR",
+    "PFL",
+    "PGB",
+    "PGS",
+    "PIV",
+    "PMB",
+    "POV",
+    "PRO",
+    "PRT",
+    "PSB",
+    "PSI",
+    "PTS",
+    "PV2",
+    "PVB",
+    "PVG",
+    "PVO",
+    "PXL",
+    "QTP",
+    "RCL",
+    "REE",
+    "RYG",
+    "SAM",
+    "SBD",
+    "SBH",
+    "SBT",
+    "SDT",
+    "SFG",
+    "SGR",
+    "SHE",
+    "SHI",
+    "SHN",
+    "SID",
+    "SJD",
+    "SKV",
+    "SLS",
+    "SZB",
+    "TDT",
+    "THG",
+    "THT",
+    "THW",
+    "TIG",
+    "TOT",
+    "TV2",
+    "TVD",
+    "V21",
+    "VAV",
+    "VC9",
+    "VCM",
+    "VE1",
+    "VFS",
+    "VGR",
+    "VHE",
+    "VHL",
+    "VIF",
+    "VLC",
+    "VNF",
+    "VNM",
+    "VPD",
+    "VPS",
+    "VRC",
+    "VSA",
+    "VSN",
+    "VTB",
+    "VTH",
+    "VTZ"
+  ],
+  "policy_baseline_mismatches": [],
+  "posture_changes": [
+    {
+      "after": [
+        "WAIT_FOR_CONFIRMATION",
+        "FUNDAMENTAL_DETERIORATION_VETO_NO_NEW_ENTRY"
+      ],
+      "before": [
+        "AVOID",
+        "BEARISH_STRUCTURE_ADVERSE"
+      ],
+      "ticker": "AAV"
+    },
+    {
+      "after": [
+        "WAIT_FOR_CONFIRMATION",
+        "PENDING_DEFINED_CONFIRMATION"
+      ],
+      "before": [
+        "AVOID",
+        "BEARISH_STRUCTURE_ADVERSE"
+      ],
+      "ticker": "ABW"
+    },
+    {
+      "after": [
+        "EARLY_WATCH",
+        "BASE_UNCONFIRMED"
+      ],
+      "before": [
+        "EARLY_WATCH",
+        "EARLY_MONITOR_NO_TRIGGER"
+      ],
+      "ticker": "AGP"
+    },
+    {
+      "after": [
+        "WAIT_FOR_CONFIRMATION",
+        "FUNDAMENTAL_DETERIORATION_VETO_NO_NEW_ENTRY"
+      ],
+      "before": [
+        "AVOID",
+        "BEARISH_STRUCTURE_ADVERSE"
+      ],
+      "ticker": "AMV"
+    },
+    {
+      "after": [
+        "EARLY_WATCH",
+        "BASE_UNCONFIRMED"
+      ],
+      "before": [
+        "EARLY_WATCH",
+        "EARLY_MONITOR_NO_TRIGGER"
+      ],
+      "ticker": "BLF"
+    },
+    {
+      "after": [
+        "EARLY_WATCH",
+        "EARLY_MONITOR_NO_TRIGGER"
+      ],
+      "before": [
+        "AVOID",
+        "BEARISH_STRUCTURE_ADVERSE"
+      ],
+      "ticker": "BLT"
+    },
+    {
+      "after": [
+        "WAIT_FOR_CONFIRMATION",
+        "PENDING_DEFINED_CONFIRMATION"
+      ],
+      "before": [
+        "AVOID",
+        "BEARISH_STRUCTURE_ADVERSE"
+      ],
+      "ticker": "BVG"
+    },
+    {
+      "after": [
+        "EARLY_WATCH",
+        "BASE_UNCONFIRMED"
+      ],
+      "before": [
+        "AVOID",
+        "BEARISH_STRUCTURE_ADVERSE"
+      ],
+      "ticker": "CAG"
+    },
+    {
+      "after": [
+        "WAIT_FOR_CONFIRMATION",
+        "PENDING_DEFINED_CONFIRMATION"
+      ],
+      "before": [
+        "AVOID",
+        "BEARISH_STRUCTURE_ADVERSE"
+      ],
+      "ticker": "CCA"
+    },
+    {
+      "after": [
+        "EARLY_WATCH",
+        "BASE_UNCONFIRMED"
+      ],
+      "before": [
+        "EARLY_WATCH",
+        "EARLY_MONITOR_NO_TRIGGER"
+      ],
+      "ticker": "CCS"
+    },
+    {
+      "after": [
+        "EARLY_WATCH",
+        "EARLY_MONITOR_NO_TRIGGER"
+      ],
+      "before": [
+        "AVOID",
+        "BEARISH_STRUCTURE_ADVERSE"
+      ],
+      "ticker": "CDR"
+    },
+    {
+      "after": [
+        "WAIT_FOR_CONFIRMATION",
+        "FUNDAMENTAL_DETERIORATION_VETO_NO_NEW_ENTRY"
+      ],
+      "before": [
+        "AVOID",
+        "BEARISH_STRUCTURE_ADVERSE"
+      ],
+      "ticker": "CIA"
+    },
+    {
+      "after": [
+        "WAIT_FOR_CONFIRMATION",
+        "PENDING_DEFINED_CONFIRMATION"
+      ],
+      "before": [
+        "AVOID",
+        "BEARISH_STRUCTURE_ADVERSE"
+      ],
+      "ticker": "CLX"
+    },
+    {
+      "after": [
+        "EARLY_WATCH",
+        "BASE_UNCONFIRMED"
+      ],
+      "before": [
+        "AVOID",
+        "BEARISH_STRUCTURE_ADVERSE"
+      ],
+      "ticker": "CMS"
+    },
+    {
+      "after": [
+        "WAIT_FOR_CONFIRMATION",
+        "PENDING_DEFINED_CONFIRMATION"
+      ],
+      "before": [
+        "AVOID",
+        "BEARISH_STRUCTURE_ADVERSE"
+      ],
+      "ticker": "CNC"
+    },
+    {
+      "after": [
+        "AVOID",
+        "BEARISH_STRUCTURE_ADVERSE"
+      ],
+      "before": [
+        "EARLY_WATCH",
+        "EARLY_MONITOR_NO_TRIGGER"
+      ],
+      "ticker": "CRE"
+    },
+    {
+      "after": [
+        "HOLD_DO_NOT_ADD",
+        "EXTENDED_NO_CHASE"
+      ],
+      "before": [
+        "AVOID",
+        "DISTRIBUTION_OR_BREAKDOWN_WITH_DETERIORATION"
+      ],
+      "ticker": "CTP"
+    },
+    {
+      "after": [
+        "EARLY_WATCH",
+        "BASE_UNCONFIRMED"
+      ],
+      "before": [
+        "EARLY_WATCH",
+        "EARLY_MONITOR_NO_TRIGGER"
+      ],
+      "ticker": "CVN"
+    },
+    {
+      "after": [
+        "WAIT_FOR_CONFIRMATION",
+        "PENDING_DEFINED_CONFIRMATION"
+      ],
+      "before": [
+        "AVOID",
+        "BEARISH_STRUCTURE_ADVERSE"
+      ],
+      "ticker": "D11"
+    },
+    {
+      "after": [
+        "WAIT_FOR_CONFIRMATION",
+        "FUNDAMENTAL_DETERIORATION_VETO_NO_NEW_ENTRY"
+      ],
+      "before": [
+        "AVOID",
+        "BEARISH_STRUCTURE_ADVERSE"
+      ],
+      "ticker": "DBD"
+    },
+    {
+      "after": [
+        "EARLY_WATCH",
+        "BASE_UNCONFIRMED"
+      ],
+      "before": [
+        "AVOID",
+        "BEARISH_STRUCTURE_ADVERSE"
+      ],
+      "ticker": "DHB"
+    },
+    {
+      "after": [
+        "WAIT_FOR_CONFIRMATION",
+        "PENDING_DEFINED_CONFIRMATION"
+      ],
+      "before": [
+        "AVOID",
+        "BEARISH_STRUCTURE_ADVERSE"
+      ],
+      "ticker": "DIH"
+    },
+    {
+      "after": [
+        "EARLY_WATCH",
+        "BASE_UNCONFIRMED"
+      ],
+      "before": [
+        "AVOID",
+        "BEARISH_STRUCTURE_ADVERSE"
+      ],
+      "ticker": "DTK"
+    },
+    {
+      "after": [
+        "INITIATE_ON_BREAKOUT",
+        "FRESH_ENTRY_TRIGGER"
+      ],
+      "before": [
+        "WAIT_FOR_CONFIRMATION",
+        "EARLY_REVERSAL_AWAITING_HIGHER_LOW"
+      ],
+      "ticker": "DXG"
+    },
+    {
+      "after": [
+        "WAIT_FOR_CONFIRMATION",
+        "FUNDAMENTAL_DETERIORATION_VETO_NO_NEW_ENTRY"
+      ],
+      "before": [
+        "AVOID",
+        "BEARISH_STRUCTURE_ADVERSE"
+      ],
+      "ticker": "EIN"
+    },
+    {
+      "after": [
+        "WAIT_FOR_CONFIRMATION",
+        "FUNDAMENTAL_DETERIORATION_VETO_NO_NEW_ENTRY"
+      ],
+      "before": [
+        "AVOID",
+        "DISTRIBUTION_OR_BREAKDOWN_WITH_DETERIORATION"
+      ],
+      "ticker": "EVE"
+    },
+    {
+      "after": [
+        "INITIATE_ON_BREAKOUT",
+        "FRESH_ENTRY_TRIGGER"
+      ],
+      "before": [
+        "WAIT_FOR_CONFIRMATION",
+        "EARLY_REVERSAL_AWAITING_HIGHER_LOW"
+      ],
+      "ticker": "GDT"
+    },
+    {
+      "after": [
+        "EARLY_WATCH",
+        "BASE_UNCONFIRMED"
+      ],
+      "before": [
+        "WAIT_FOR_CONFIRMATION",
+        "DISTRIBUTION_RISK_NO_FRESH_ENTRY"
+      ],
+      "ticker": "GPC"
+    },
+    {
+      "after": [
+        "INITIATE_ON_BREAKOUT",
+        "FRESH_ENTRY_TRIGGER"
+      ],
+      "before": [
+        "WAIT_FOR_CONFIRMATION",
+        "EARLY_REVERSAL_AWAITING_HIGHER_LOW"
+      ],
+      "ticker": "HCM"
+    },
+    {
+      "after": [
+        "EARLY_WATCH",
+        "BASE_UNCONFIRMED"
+      ],
+      "before": [
+        "EARLY_WATCH",
+        "EARLY_MONITOR_NO_TRIGGER"
+      ],
+      "ticker": "HEP"
+    },
+    {
+      "after": [
+        "EARLY_WATCH",
+        "BASE_UNCONFIRMED"
+      ],
+      "before": [
+        "AVOID",
+        "BEARISH_STRUCTURE_ADVERSE"
+      ],
+      "ticker": "HOM"
+    },
+    {
+      "after": [
+        "WAIT_FOR_CONFIRMATION",
+        "FUNDAMENTAL_DETERIORATION_VETO_NO_NEW_ENTRY"
+      ],
+      "before": [
+        "AVOID",
+        "BEARISH_STRUCTURE_ADVERSE"
+      ],
+      "ticker": "HPD"
+    },
+    {
+      "after": [
+        "EARLY_WATCH",
+        "EARLY_MONITOR_NO_TRIGGER"
+      ],
+      "before": [
+        "AVOID",
+        "BEARISH_STRUCTURE_ADVERSE"
+      ],
+      "ticker": "HTE"
+    },
+    {
+      "after": [
+        "EARLY_WATCH",
+        "BASE_UNCONFIRMED"
+      ],
+      "before": [
+        "AVOID",
+        "BEARISH_STRUCTURE_ADVERSE"
+      ],
+      "ticker": "HU3"
+    },
+    {
+      "after": [
+        "EARLY_WATCH",
+        "BASE_UNCONFIRMED"
+      ],
+      "before": [
+        "AVOID",
+        "BEARISH_STRUCTURE_ADVERSE"
+      ],
+      "ticker": "HU6"
+    },
+    {
+      "after": [
+        "HOLD_DO_NOT_ADD",
+        "EXTENDED_NO_CHASE"
+      ],
+      "before": [
+        "AVOID",
+        "DISTRIBUTION_OR_BREAKDOWN_WITH_DETERIORATION"
+      ],
+      "ticker": "ICG"
+    },
+    {
+      "after": [
+        "WAIT_FOR_CONFIRMATION",
+        "FUNDAMENTAL_DETERIORATION_VETO_NO_NEW_ENTRY"
+      ],
+      "before": [
+        "AVOID",
+        "DISTRIBUTION_OR_BREAKDOWN_WITH_DETERIORATION"
+      ],
+      "ticker": "ICT"
+    },
+    {
+      "after": [
+        "WAIT_FOR_CONFIRMATION",
+        "FUNDAMENTAL_DETERIORATION_VETO_NO_NEW_ENTRY"
+      ],
+      "before": [
+        "AVOID",
+        "DISTRIBUTION_OR_BREAKDOWN_WITH_DETERIORATION"
+      ],
+      "ticker": "IFS"
+    },
+    {
+      "after": [
+        "WAIT_FOR_CONFIRMATION",
+        "PENDING_DEFINED_CONFIRMATION"
+      ],
+      "before": [
+        "AVOID",
+        "BEARISH_STRUCTURE_ADVERSE"
+      ],
+      "ticker": "ILB"
+    },
+    {
+      "after": [
+        "EARLY_WATCH",
+        "BASE_UNCONFIRMED"
+      ],
+      "before": [
+        "AVOID",
+        "BEARISH_STRUCTURE_ADVERSE"
+      ],
+      "ticker": "ILS"
+    },
+    {
+      "after": [
+        "WAIT_FOR_CONFIRMATION",
+        "FUNDAMENTAL_DETERIORATION_VETO_NO_NEW_ENTRY"
+      ],
+      "before": [
+        "AVOID",
+        "BEARISH_STRUCTURE_ADVERSE"
+      ],
+      "ticker": "ITQ"
+    },
+    {
+      "after": [
+        "WAIT_FOR_CONFIRMATION",
+        "PARTICIPATION_CONTRADICTION_NARROWS_ENTRY"
+      ],
+      "before": [
+        "WAIT_FOR_CONFIRMATION",
+        "EARLY_REVERSAL_AWAITING_HIGHER_LOW"
+      ],
+      "ticker": "KMR"
+    },
+    {
+      "after": [
+        "EARLY_WATCH",
+        "EARLY_MONITOR_NO_TRIGGER"
+      ],
+      "before": [
+        "AVOID",
+        "BEARISH_STRUCTURE_ADVERSE"
+      ],
+      "ticker": "L18"
+    },
+    {
+      "after": [
+        "WAIT_FOR_CONFIRMATION",
+        "PENDING_DEFINED_CONFIRMATION"
+      ],
+      "before": [
+        "AVOID",
+        "BEARISH_STRUCTURE_ADVERSE"
+      ],
+      "ticker": "LDG"
+    },
+    {
+      "after": [
+        "EARLY_WATCH",
+        "BASE_UNCONFIRMED"
+      ],
+      "before": [
+        "AVOID",
+        "BEARISH_STRUCTURE_ADVERSE"
+      ],
+      "ticker": "LDP"
+    },
+    {
+      "after": [
+        "EARLY_WATCH",
+        "BASE_UNCONFIRMED"
+      ],
+      "before": [
+        "EARLY_WATCH",
+        "EARLY_MONITOR_NO_TRIGGER"
+      ],
+      "ticker": "LKW"
+    },
+    {
+      "after": [
+        "WAIT_FOR_CONFIRMATION",
+        "PENDING_DEFINED_CONFIRMATION"
+      ],
+      "before": [
+        "AVOID",
+        "BEARISH_STRUCTURE_ADVERSE"
+      ],
+      "ticker": "LSS"
+    },
+    {
+      "after": [
+        "EARLY_WATCH",
+        "BASE_UNCONFIRMED"
+      ],
+      "before": [
+        "EARLY_WATCH",
+        "EARLY_MONITOR_NO_TRIGGER"
+      ],
+      "ticker": "MCF"
+    },
+    {
+      "after": [
+        "AVOID",
+        "BEARISH_STRUCTURE_ADVERSE"
+      ],
+      "before": [
+        "WAIT_FOR_CONFIRMATION",
+        "PENDING_DEFINED_CONFIRMATION"
+      ],
+      "ticker": "MCH"
+    },
+    {
+      "after": [
+        "EARLY_WATCH",
+        "BASE_UNCONFIRMED"
+      ],
+      "before": [
+        "AVOID",
+        "BEARISH_STRUCTURE_ADVERSE"
+      ],
+      "ticker": "MCM"
+    },
+    {
+      "after": [
+        "WAIT_FOR_CONFIRMATION",
+        "PENDING_DEFINED_CONFIRMATION"
+      ],
+      "before": [
+        "AVOID",
+        "BEARISH_STRUCTURE_ADVERSE"
+      ],
+      "ticker": "NBB"
+    },
+    {
+      "after": [
+        "EARLY_WATCH",
+        "EARLY_MONITOR_NO_TRIGGER"
+      ],
+      "before": [
+        "AVOID",
+        "BEARISH_STRUCTURE_ADVERSE"
+      ],
+      "ticker": "NBT"
+    },
+    {
+      "after": [
+        "EARLY_WATCH",
+        "BASE_UNCONFIRMED"
+      ],
+      "before": [
+        "AVOID",
+        "BEARISH_STRUCTURE_ADVERSE"
+      ],
+      "ticker": "NCG"
+    },
+    {
+      "after": [
+        "EARLY_WATCH",
+        "BASE_UNCONFIRMED"
+      ],
+      "before": [
+        "EARLY_WATCH",
+        "EARLY_MONITOR_NO_TRIGGER"
+      ],
+      "ticker": "NED"
+    },
+    {
+      "after": [
+        "WAIT_FOR_CONFIRMATION",
+        "PENDING_DEFINED_CONFIRMATION"
+      ],
+      "before": [
+        "AVOID",
+        "BEARISH_STRUCTURE_ADVERSE"
+      ],
+      "ticker": "NHH"
+    },
+    {
+      "after": [
+        "EARLY_WATCH",
+        "BASE_UNCONFIRMED"
+      ],
+      "before": [
+        "WAIT_FOR_CONFIRMATION",
+        "DISTRIBUTION_RISK_NO_FRESH_ENTRY"
+      ],
+      "ticker": "NRC"
+    },
+    {
+      "after": [
+        "EARLY_WATCH",
+        "EARLY_MONITOR_NO_TRIGGER"
+      ],
+      "before": [
+        "AVOID",
+        "BEARISH_STRUCTURE_ADVERSE"
+      ],
+      "ticker": "NSH"
+    },
+    {
+      "after": [
+        "EARLY_WATCH",
+        "BASE_UNCONFIRMED"
+      ],
+      "before": [
+        "AVOID",
+        "BEARISH_STRUCTURE_ADVERSE"
+      ],
+      "ticker": "NTF"
+    },
+    {
+      "after": [
+        "WAIT_FOR_CONFIRMATION",
+        "FUNDAMENTAL_DETERIORATION_VETO_NO_NEW_ENTRY"
+      ],
+      "before": [
+        "AVOID",
+        "BEARISH_STRUCTURE_ADVERSE"
+      ],
+      "ticker": "OIL"
+    },
+    {
+      "after": [
+        "EARLY_WATCH",
+        "BASE_UNCONFIRMED"
+      ],
+      "before": [
+        "AVOID",
+        "BEARISH_STRUCTURE_ADVERSE"
+      ],
+      "ticker": "PBC"
+    },
+    {
+      "after": [
+        "WAIT_FOR_CONFIRMATION",
+        "PENDING_DEFINED_CONFIRMATION"
+      ],
+      "before": [
+        "AVOID",
+        "BEARISH_STRUCTURE_ADVERSE"
+      ],
+      "ticker": "PCH"
+    },
+    {
+      "after": [
+        "EARLY_WATCH",
+        "BASE_UNCONFIRMED"
+      ],
+      "before": [
+        "AVOID",
+        "BEARISH_STRUCTURE_ADVERSE"
+      ],
+      "ticker": "PFL"
+    },
+    {
+      "after": [
+        "EARLY_WATCH",
+        "BASE_UNCONFIRMED"
+      ],
+      "before": [
+        "AVOID",
+        "BEARISH_STRUCTURE_ADVERSE"
+      ],
+      "ticker": "PGB"
+    },
+    {
+      "after": [
+        "EARLY_WATCH",
+        "BASE_UNCONFIRMED"
+      ],
+      "before": [
+        "AVOID",
+        "BEARISH_STRUCTURE_ADVERSE"
+      ],
+      "ticker": "PGS"
+    },
+    {
+      "after": [
+        "WAIT_FOR_CONFIRMATION",
+        "PENDING_DEFINED_CONFIRMATION"
+      ],
+      "before": [
+        "AVOID",
+        "BEARISH_STRUCTURE_ADVERSE"
+      ],
+      "ticker": "PRO"
+    },
+    {
+      "after": [
+        "EARLY_WATCH",
+        "BASE_UNCONFIRMED"
+      ],
+      "before": [
+        "EARLY_WATCH",
+        "EARLY_MONITOR_NO_TRIGGER"
+      ],
+      "ticker": "PRT"
+    },
+    {
+      "after": [
+        "WAIT_FOR_CONFIRMATION",
+        "PENDING_DEFINED_CONFIRMATION"
+      ],
+      "before": [
+        "AVOID",
+        "BEARISH_STRUCTURE_ADVERSE"
+      ],
+      "ticker": "PSI"
+    },
+    {
+      "after": [
+        "WAIT_FOR_CONFIRMATION",
+        "PENDING_DEFINED_CONFIRMATION"
+      ],
+      "before": [
+        "AVOID",
+        "BEARISH_STRUCTURE_ADVERSE"
+      ],
+      "ticker": "PTS"
+    },
+    {
+      "after": [
+        "WAIT_FOR_CONFIRMATION",
+        "FUNDAMENTAL_DETERIORATION_VETO_NO_NEW_ENTRY"
+      ],
+      "before": [
+        "AVOID",
+        "BEARISH_STRUCTURE_ADVERSE"
+      ],
+      "ticker": "PVB"
+    },
+    {
+      "after": [
+        "EARLY_WATCH",
+        "BASE_UNCONFIRMED"
+      ],
+      "before": [
+        "EARLY_WATCH",
+        "EARLY_MONITOR_NO_TRIGGER"
+      ],
+      "ticker": "PVG"
+    },
+    {
+      "after": [
+        "INITIATE_ON_BREAKOUT",
+        "FRESH_ENTRY_TRIGGER"
+      ],
+      "before": [
+        "WAIT_FOR_CONFIRMATION",
+        "EARLY_REVERSAL_AWAITING_HIGHER_LOW"
+      ],
+      "ticker": "QTP"
+    },
+    {
+      "after": [
+        "INITIATE_ON_BREAKOUT",
+        "FRESH_ENTRY_TRIGGER"
+      ],
+      "before": [
+        "WAIT_FOR_CONFIRMATION",
+        "EARLY_REVERSAL_AWAITING_HIGHER_LOW"
+      ],
+      "ticker": "RCL"
+    },
+    {
+      "after": [
+        "WAIT_FOR_CONFIRMATION",
+        "PARTICIPATION_CONTRADICTION_NARROWS_ENTRY"
+      ],
+      "before": [
+        "WAIT_FOR_CONFIRMATION",
+        "EARLY_REVERSAL_AWAITING_HIGHER_LOW"
+      ],
+      "ticker": "REE"
+    },
+    {
+      "after": [
+        "WAIT_FOR_CONFIRMATION",
+        "PENDING_DEFINED_CONFIRMATION"
+      ],
+      "before": [
+        "AVOID",
+        "BEARISH_STRUCTURE_ADVERSE"
+      ],
+      "ticker": "SAM"
+    },
+    {
+      "after": [
+        "EARLY_WATCH",
+        "BASE_UNCONFIRMED"
+      ],
+      "before": [
+        "EARLY_WATCH",
+        "EARLY_MONITOR_NO_TRIGGER"
+      ],
+      "ticker": "SBD"
+    },
+    {
+      "after": [
+        "WAIT_FOR_CONFIRMATION",
+        "PENDING_DEFINED_CONFIRMATION"
+      ],
+      "before": [
+        "AVOID",
+        "BEARISH_STRUCTURE_ADVERSE"
+      ],
+      "ticker": "SBH"
+    },
+    {
+      "after": [
+        "EARLY_WATCH",
+        "BASE_UNCONFIRMED"
+      ],
+      "before": [
+        "AVOID",
+        "BEARISH_STRUCTURE_ADVERSE"
+      ],
+      "ticker": "SBT"
+    },
+    {
+      "after": [
+        "WAIT_FOR_CONFIRMATION",
+        "FUNDAMENTAL_DETERIORATION_VETO_NO_NEW_ENTRY"
+      ],
+      "before": [
+        "AVOID",
+        "BEARISH_STRUCTURE_ADVERSE"
+      ],
+      "ticker": "SFG"
+    },
+    {
+      "after": [
+        "WAIT_FOR_CONFIRMATION",
+        "FUNDAMENTAL_DETERIORATION_VETO_NO_NEW_ENTRY"
+      ],
+      "before": [
+        "AVOID",
+        "BEARISH_STRUCTURE_ADVERSE"
+      ],
+      "ticker": "SHE"
+    },
+    {
+      "after": [
+        "WAIT_FOR_CONFIRMATION",
+        "FUNDAMENTAL_DETERIORATION_VETO_NO_NEW_ENTRY"
+      ],
+      "before": [
+        "AVOID",
+        "BEARISH_STRUCTURE_ADVERSE"
+      ],
+      "ticker": "SHI"
+    },
+    {
+      "after": [
+        "AVOID",
+        "BEARISH_STRUCTURE_ADVERSE"
+      ],
+      "before": [
+        "EARLY_WATCH",
+        "EARLY_MONITOR_NO_TRIGGER"
+      ],
+      "ticker": "SID"
+    },
+    {
+      "after": [
+        "WAIT_FOR_CONFIRMATION",
+        "PENDING_DEFINED_CONFIRMATION"
+      ],
+      "before": [
+        "AVOID",
+        "BEARISH_STRUCTURE_ADVERSE"
+      ],
+      "ticker": "SJD"
+    },
+    {
+      "after": [
+        "WAIT_FOR_CONFIRMATION",
+        "PENDING_DEFINED_CONFIRMATION"
+      ],
+      "before": [
+        "AVOID",
+        "BEARISH_STRUCTURE_ADVERSE"
+      ],
+      "ticker": "SKV"
+    },
+    {
+      "after": [
+        "EARLY_WATCH",
+        "BASE_UNCONFIRMED"
+      ],
+      "before": [
+        "EARLY_WATCH",
+        "EARLY_MONITOR_NO_TRIGGER"
+      ],
+      "ticker": "TDT"
+    },
+    {
+      "after": [
+        "EARLY_WATCH",
+        "BASE_UNCONFIRMED"
+      ],
+      "before": [
+        "AVOID",
+        "BEARISH_STRUCTURE_ADVERSE"
+      ],
+      "ticker": "THG"
+    },
+    {
+      "after": [
+        "WAIT_FOR_CONFIRMATION",
+        "PENDING_DEFINED_CONFIRMATION"
+      ],
+      "before": [
+        "AVOID",
+        "BEARISH_STRUCTURE_ADVERSE"
+      ],
+      "ticker": "THT"
+    },
+    {
+      "after": [
+        "WAIT_FOR_CONFIRMATION",
+        "PENDING_DEFINED_CONFIRMATION"
+      ],
+      "before": [
+        "AVOID",
+        "BEARISH_STRUCTURE_ADVERSE"
+      ],
+      "ticker": "THW"
+    },
+    {
+      "after": [
+        "WAIT_FOR_CONFIRMATION",
+        "PENDING_DEFINED_CONFIRMATION"
+      ],
+      "before": [
+        "AVOID",
+        "BEARISH_STRUCTURE_ADVERSE"
+      ],
+      "ticker": "TOT"
+    },
+    {
+      "after": [
+        "INITIATE_ON_BREAKOUT",
+        "FRESH_ENTRY_TRIGGER"
+      ],
+      "before": [
+        "WAIT_FOR_CONFIRMATION",
+        "EARLY_REVERSAL_AWAITING_HIGHER_LOW"
+      ],
+      "ticker": "TV2"
+    },
+    {
+      "after": [
+        "WAIT_FOR_CONFIRMATION",
+        "FUNDAMENTAL_DETERIORATION_VETO_NO_NEW_ENTRY"
+      ],
+      "before": [
+        "AVOID",
+        "BEARISH_STRUCTURE_ADVERSE"
+      ],
+      "ticker": "TVD"
+    },
+    {
+      "after": [
+        "EARLY_WATCH",
+        "BASE_UNCONFIRMED"
+      ],
+      "before": [
+        "AVOID",
+        "BEARISH_STRUCTURE_ADVERSE"
+      ],
+      "ticker": "V21"
+    },
+    {
+      "after": [
+        "EARLY_WATCH",
+        "BASE_UNCONFIRMED"
+      ],
+      "before": [
+        "AVOID",
+        "BEARISH_STRUCTURE_ADVERSE"
+      ],
+      "ticker": "VC9"
+    },
+    {
+      "after": [
+        "EARLY_WATCH",
+        "BASE_UNCONFIRMED"
+      ],
+      "before": [
+        "AVOID",
+        "BEARISH_STRUCTURE_ADVERSE"
+      ],
+      "ticker": "VCM"
+    },
+    {
+      "after": [
+        "WAIT_FOR_CONFIRMATION",
+        "FUNDAMENTAL_DETERIORATION_VETO_NO_NEW_ENTRY"
+      ],
+      "before": [
+        "AVOID",
+        "BEARISH_STRUCTURE_ADVERSE"
+      ],
+      "ticker": "VE1"
+    },
+    {
+      "after": [
+        "WAIT_FOR_CONFIRMATION",
+        "FUNDAMENTAL_DETERIORATION_VETO_NO_NEW_ENTRY"
+      ],
+      "before": [
+        "AVOID",
+        "DISTRIBUTION_OR_BREAKDOWN_WITH_DETERIORATION"
+      ],
+      "ticker": "VGR"
+    },
+    {
+      "after": [
+        "WAIT_FOR_CONFIRMATION",
+        "FUNDAMENTAL_DETERIORATION_VETO_NO_NEW_ENTRY"
+      ],
+      "before": [
+        "AVOID",
+        "BEARISH_STRUCTURE_ADVERSE"
+      ],
+      "ticker": "VHE"
+    },
+    {
+      "after": [
+        "EARLY_WATCH",
+        "EARLY_MONITOR_NO_TRIGGER"
+      ],
+      "before": [
+        "AVOID",
+        "BEARISH_STRUCTURE_ADVERSE"
+      ],
+      "ticker": "VHL"
+    },
+    {
+      "after": [
+        "EARLY_WATCH",
+        "EARLY_MONITOR_NO_TRIGGER"
+      ],
+      "before": [
+        "AVOID",
+        "BEARISH_STRUCTURE_ADVERSE"
+      ],
+      "ticker": "VLC"
+    },
+    {
+      "after": [
+        "EARLY_WATCH",
+        "BASE_UNCONFIRMED"
+      ],
+      "before": [
+        "AVOID",
+        "BEARISH_STRUCTURE_ADVERSE"
+      ],
+      "ticker": "VNF"
+    },
+    {
+      "after": [
+        "WAIT_FOR_CONFIRMATION",
+        "FUNDAMENTAL_DETERIORATION_VETO_NO_NEW_ENTRY"
+      ],
+      "before": [
+        "AVOID",
+        "BEARISH_STRUCTURE_ADVERSE"
+      ],
+      "ticker": "VNM"
+    },
+    {
+      "after": [
+        "WAIT_FOR_CONFIRMATION",
+        "PENDING_DEFINED_CONFIRMATION"
+      ],
+      "before": [
+        "AVOID",
+        "BEARISH_STRUCTURE_ADVERSE"
+      ],
+      "ticker": "VPD"
+    },
+    {
+      "after": [
+        "WAIT_FOR_CONFIRMATION",
+        "PENDING_DEFINED_CONFIRMATION"
+      ],
+      "before": [
+        "AVOID",
+        "BEARISH_STRUCTURE_ADVERSE"
+      ],
+      "ticker": "VPS"
+    },
+    {
+      "after": [
+        "EARLY_WATCH",
+        "BASE_UNCONFIRMED"
+      ],
+      "before": [
+        "EARLY_WATCH",
+        "EARLY_MONITOR_NO_TRIGGER"
+      ],
+      "ticker": "VRC"
+    },
+    {
+      "after": [
+        "AVOID",
+        "BEARISH_STRUCTURE_ADVERSE"
+      ],
+      "before": [
+        "EARLY_WATCH",
+        "EARLY_MONITOR_NO_TRIGGER"
+      ],
+      "ticker": "VSA"
+    },
+    {
+      "after": [
+        "WAIT_FOR_CONFIRMATION",
+        "FUNDAMENTAL_DETERIORATION_VETO_NO_NEW_ENTRY"
+      ],
+      "before": [
+        "AVOID",
+        "BEARISH_STRUCTURE_ADVERSE"
+      ],
+      "ticker": "VTH"
+    },
+    {
+      "after": [
+        "WAIT_FOR_CONFIRMATION",
+        "FUNDAMENTAL_DETERIORATION_VETO_NO_NEW_ENTRY"
+      ],
+      "before": [
+        "AVOID",
+        "BEARISH_STRUCTURE_ADVERSE"
+      ],
+      "ticker": "VTZ"
+    }
+  ],
+  "posture_counts_after": {
+    "ACCUMULATE_ON_RETEST": 9,
+    "AVOID": 311,
+    "EARLY_WATCH": 160,
+    "HOLD_DO_NOT_ADD": 71,
+    "INITIATE_ON_BREAKOUT": 56,
+    "WAIT_FOR_CONFIRMATION": 269
+  },
+  "posture_counts_before": {
+    "ACCUMULATE_ON_RETEST": 9,
+    "AVOID": 386,
+    "EARLY_WATCH": 131,
+    "HOLD_DO_NOT_ADD": 69,
+    "INITIATE_ON_BREAKOUT": 50,
+    "WAIT_FOR_CONFIRMATION": 231
+  },
+  "posture_token_changes": 91,
+  "posture_unchanged": 770,
+  "session": "2026-10-22",
+  "source_checkpoint": "ec3044245ecfb1b53531fe2613113bf870d31c1c",
+  "source_excluded_count": 807,
+  "source_exclusion_scope": "Records without reproducible P3F9B source binding (principally no current/qualified history); never reinterpreted.",
+  "strict_measurements_unchanged": 719
+}

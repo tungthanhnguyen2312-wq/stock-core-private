@@ -119,6 +119,10 @@ def _project_ticker(ticker: str, record: Mapping[str, Any], session: str) -> dic
         "invalidation_level": invalid.get("invalidation_level"),
         "invalidation_method": invalid.get("invalidation_method"),
         "invalidation_close_comparison_operator": invalidation_operator,
+        "invalidation_thesis_scope": (
+            "BEARISH_STRUCTURE" if invalidation_operator == ">" else
+            "BULLISH_OR_RANGE_STRUCTURE" if invalidation_operator == "<" else "UNKNOWN"
+        ),
         "distance_to_invalidation_pct": invalid.get("distance_to_invalidation_pct"),
         # Metadata
         "high_low_basis": (record.get("high_low_basis") or {}).get("status"),

@@ -340,7 +340,12 @@ def test_absent_invalid_or_noncanonical_source_session_keeps_legacy_projection(s
 @pytest.mark.parametrize("session", ["2026-10-13", "2026-10-14", "2026-10-15"])
 def test_actual_delivery_verifier_and_cockpit_preserve_prospective_accounting_labels(session, monkeypatch, tmp_path):
     import ai_research_session_delivery as delivery
-    from tools import run_owner_daily as workflow
+    from pathlib import Path
+    # This imports verifier functions, not the production launcher. An operator's
+    # active-writer binding on the test host must not authorize/refuse a fixture.
+    with monkeypatch.context() as isolated:
+        isolated.setattr(Path, "home", lambda: tmp_path)
+        from tools import run_owner_daily as workflow
 
     monkeypatch.setattr(delivery, "owner_focus_tickers", lambda: ("AAA",))
     operation, integrated, brief, inputs = _accounting_delivery_inputs(session)

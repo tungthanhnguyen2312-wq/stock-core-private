@@ -289,6 +289,11 @@ def _bound_record(record: Mapping[str, Any], source: str, session: str, context)
     usable = klass not in UNUSABLE_CLASSES and record["evidence_currency"] != "NO_CURRENT_EVIDENCE"
     trigger_qualified = usable and _qualified_condition(record, "trigger", session)
     invalidation_qualified = usable and _qualified_condition(record, "invalidation", session)
+    # An upward boundary that invalidates bearish structure is an upside
+    # resolution, not downside evidence against a bullish setup. Preserve it on
+    # the copied source record, but never turn it into a Bear activation.
+    bearish_structure_resolution = (record.get("invalidation") or {}).get("thesis_scope") == "BEARISH_STRUCTURE"
+    downside_invalidation = invalidation_qualified and not bearish_structure_resolution
     # Retest is admitted by the released class; the corresponding fixed structural
     # condition must still qualify. Watchlist prose never substitutes for it.
     entry = (klass in ENTRY_CLASSES and trigger_qualified
@@ -305,6 +310,8 @@ def _bound_record(record: Mapping[str, Any], source: str, session: str, context)
     axes = record.get("evidence_axes") or {}
     price_basis = {role: copy.deepcopy((record.get(role) or {}).get("price_basis") or ((record.get(role) or {}).get("condition") or {}).get("price_basis")) for role in ("trigger", "invalidation")}
     limitations = ["REFERENCE_CASE_NOT_MOST_PROBABLE", "RESEARCH_ONLY_NOT_EXECUTION"]
+    if bearish_structure_resolution:
+        limitations.append("UPWARD_INVALIDATION_RESOLVES_BEARISH_STRUCTURE_NOT_LONG_SETUP")
     if (not all(isinstance(v, Mapping) and v.get("price_basis_verified") is True for v in price_basis.values())
             or price_basis["trigger"] != price_basis["invalidation"]):
         limitations.append("PRICE_BASIS_UNVERIFIED_OR_MIXED")
@@ -323,10 +330,10 @@ def _bound_record(record: Mapping[str, Any], source: str, session: str, context)
                           "current_state": {k: copied[k] for k in ("tactical_phase", "research_action_posture", "posture_condition_class", "fundamental_state", "evidence_currency")}},
             "bull_case": {**common, "case_status": "CONDITIONAL" if entry else "NOT_ADMITTED", "reason_code": "QUALIFIED_INTEGRATED_ENTRY_TRIGGER" if entry else "NO_QUALIFIED_ENTRY_TRIGGER",
                           "trigger": copy.deepcopy(record["trigger"]) if entry else None},
-            "bear_case": {**common, "case_status": "CONDITIONAL" if invalidation_qualified or adverse else "INSUFFICIENT_EVIDENCE",
-                          "reason_code": klass if adverse else "QUALIFIED_INTEGRATED_INVALIDATION" if invalidation_qualified else "NO_QUALIFIED_INVALIDATION_OR_ADVERSE_EVIDENCE",
+            "bear_case": {**common, "case_status": "CONDITIONAL" if downside_invalidation or adverse else "INSUFFICIENT_EVIDENCE",
+                          "reason_code": klass if adverse else "QUALIFIED_INTEGRATED_INVALIDATION" if downside_invalidation else "NO_QUALIFIED_INVALIDATION_OR_ADVERSE_EVIDENCE",
                           "source_condition_class": klass,
-                          "observed_adverse": adverse, "invalidation": copy.deepcopy(record["invalidation"]) if invalidation_qualified else None}}
+                          "observed_adverse": adverse, "invalidation": copy.deepcopy(record["invalidation"]) if downside_invalidation else None}}
 
 
 def bind_integrated_scenarios(*, session: str, integrated_decision: Mapping[str, Any], tickers, optional_context: Mapping[str, Any] | None = None) -> dict[str, Any]:

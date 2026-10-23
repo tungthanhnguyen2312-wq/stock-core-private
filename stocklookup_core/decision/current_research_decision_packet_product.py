@@ -464,7 +464,7 @@ def ticker_markdown(view: Mapping[str, Any]) -> list[str]:
         f"- Scenario lens: {scenario.get('research_lens', {}).get('label')}; disposition={scenario.get('scenario_disposition')}. This is not CONSERVATIVE/BASE/SPECULATIVE and is not probability.",
         f"- Risk register: {risk.get('risk_register_status')}. NO_MATERIAL_RISK_ESTABLISHED is not LOW_RISK.",
         f"- Valuation: RESEARCH_USABLE={valuation.get('research_usable_metrics')}; BLOCKED={valuation.get('blocked_metrics')}; READY={valuation.get('authoritative_ready_metrics')}. RESEARCH_USABLE is not authoritative READY.",
-        f"- Financial momentum: state={financial.get('financial_momentum_state')}; coverage={financial.get('coverage_status')}; evidence_tier={financial.get('evidence_tier')}.",
+        f"- Financial momentum: state={financial.get('financial_momentum_state')}; financial_period={financial.get('as_of_financial_period') or 'UNKNOWN'}; coverage={financial.get('coverage_status')}; evidence_tier={financial.get('evidence_tier')}. Retained period context, not current-session fundamental confirmation.",
         f"- Corporate events: planned_unresolved={events.get('planned_unresolved_count')}; planned/approved is not executed; record date is not ex-date.",
         f"- Historical: context_status={historical.get('context_status')}; price_basis={historical.get('price_basis')}; RAW_AS_TRADED={historical.get('raw_as_traded')}; PIT={historical.get('pit')}. ADJUSTED_RETROSPECTIVE is not RAW_AS_TRADED; retrospective history is not PIT.",
         f"- Unresolved components: {view.get('unresolved_components') or []}.",

@@ -149,11 +149,14 @@ def project_integrated_decision_for_ai_delivery(record: Any, *, integrated_ident
     if not isinstance(record, Mapping):
         return None
     trigger = _selected_fields(record.get("trigger"), (
+        "horizon", "price_basis", "warning",
         "trigger_type", "trigger_level", "trigger_state", "distance_to_trigger_pct",
         "condition", "watchlist_condition",
     ))
     invalidation = _selected_fields(record.get("invalidation"), (
+        "horizon", "price_basis", "warning",
         "invalidation_level", "invalidation_method", "distance_to_invalidation_pct",
+        "thesis_scope", "shared_level_status", "limitations",
         "condition", "watchlist_condition",
     ))
     return {
