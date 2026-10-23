@@ -1,0 +1,2623 @@
+{
+ "authority_effect": "NONE",
+ "baseline_identity": "market_wide_current_fundamental_research:fc7619fcd7d0f5077a396c9e05fcdce14e97bdcdc078722c49e67070990d0feb",
+ "comparative_observations": [
+  {
+   "assurance_basis": "PRESENTED_AS_COMPARATIVE_IN_LATER_AUDITED_REPORT",
+   "blockers": [],
+   "canonical_metric": "revenue",
+   "comparative_period_label": "2024",
+   "currency": "VND",
+   "knowledge_available_at": "2026-10-23T12:13:07.203641+00:00",
+   "limitations": null,
+   "period_label_binding": "EXPLICIT_PRIOR_YEAR_LABEL",
+   "raw_token": "62,848,794,351,367",
+   "reporting_period": "2024",
+   "source_document_sha256": "bb14bafff1a7849217f34cf4b50e0e3d69d91968f217a66d7c68f07d4c1af284",
+   "ticker": "FPT",
+   "value": 62848794351367
+  },
+  {
+   "assurance_basis": "PRESENTED_AS_COMPARATIVE_IN_LATER_AUDITED_REPORT",
+   "blockers": [
+    "OCR_NUMERIC_AMBIGUITY"
+   ],
+   "canonical_metric": "net_income",
+   "comparative_period_label": "Năm trước",
+   "currency": "VND",
+   "knowledge_available_at": "2026-10-23T12:13:07.203641+00:00",
+   "limitations": null,
+   "period_label_binding": "PRIOR_YEAR_PHRASE",
+   "raw_token": "1².0²0.0²3.6²1.²71",
+   "reporting_period": "2024",
+   "source_document_sha256": "f38c5f75becf7d3f145d27183eec81f119fd4f75e378b983a2763ddc3f7e0c07",
+   "ticker": "HPG",
+   "value": null
+  },
+  {
+   "assurance_basis": "PRESENTED_AS_COMPARATIVE_IN_LATER_AUDITED_REPORT",
+   "blockers": [],
+   "canonical_metric": "revenue",
+   "comparative_period_label": "Năm trước",
+   "currency": "VND",
+   "knowledge_available_at": "2026-10-23T12:13:07.203641+00:00",
+   "limitations": null,
+   "period_label_binding": "PRIOR_YEAR_PHRASE",
+   "raw_token": "138.855.112.131.387",
+   "reporting_period": "2024",
+   "source_document_sha256": "f38c5f75becf7d3f145d27183eec81f119fd4f75e378b983a2763ddc3f7e0c07",
+   "ticker": "HPG",
+   "value": 138855112131387
+  },
+  {
+   "assurance_basis": "PRESENTED_AS_COMPARATIVE_IN_LATER_REVIEWED_REPORT",
+   "blockers": [
+    "COMPARATIVE_PERIOD_LABEL_NOT_YEAR_BOUND"
+   ],
+   "canonical_metric": "attributable_net_income",
+   "comparative_period_label": "Ky trước",
+   "currency": "VND",
+   "knowledge_available_at": "2026-10-23T12:13:07.203641+00:00",
+   "limitations": [
+    "IDENTICAL_COMPARATIVE_VALUE_ON_DISTINCT_PHYSICAL_ROWS"
+   ],
+   "period_label_binding": "PRIOR_PERIOD_PHRASE_YEAR_NOT_LITERAL",
+   "raw_token": "1.114.725.168.939",
+   "reporting_period": "2025-H1",
+   "source_document_sha256": "db877169e7c19b4b81d60b37d5aab8f9938129a66b582c2229ffffebdca2a43d",
+   "ticker": "PNJ",
+   "value": 1114725168939
+  },
+  {
+   "assurance_basis": "PRESENTED_AS_COMPARATIVE_IN_LATER_REVIEWED_REPORT",
+   "blockers": [
+    "COMPARATIVE_PERIOD_LABEL_NOT_YEAR_BOUND"
+   ],
+   "canonical_metric": "net_income",
+   "comparative_period_label": "Ky trước",
+   "currency": "VND",
+   "knowledge_available_at": "2026-10-23T12:13:07.203641+00:00",
+   "limitations": [
+    "IDENTICAL_COMPARATIVE_VALUE_ON_DISTINCT_PHYSICAL_ROWS"
+   ],
+   "period_label_binding": "PRIOR_PERIOD_PHRASE_YEAR_NOT_LITERAL",
+   "raw_token": "1.114.725.168.939",
+   "reporting_period": "2025-H1",
+   "source_document_sha256": "db877169e7c19b4b81d60b37d5aab8f9938129a66b582c2229ffffebdca2a43d",
+   "ticker": "PNJ",
+   "value": 1114725168939
+  },
+  {
+   "assurance_basis": "PRESENTED_AS_COMPARATIVE_IN_LATER_REVIEWED_REPORT",
+   "blockers": [
+    "COMPARATIVE_PERIOD_LABEL_NOT_YEAR_BOUND"
+   ],
+   "canonical_metric": "revenue",
+   "comparative_period_label": "Ky trước",
+   "currency": "VND",
+   "knowledge_available_at": "2026-10-23T12:13:07.203641+00:00",
+   "limitations": null,
+   "period_label_binding": "PRIOR_PERIOD_PHRASE_YEAR_NOT_LITERAL",
+   "raw_token": "17.217.545.988.639",
+   "reporting_period": "2025-H1",
+   "source_document_sha256": "db877169e7c19b4b81d60b37d5aab8f9938129a66b582c2229ffffebdca2a43d",
+   "ticker": "PNJ",
+   "value": 17217545988639
+  },
+  {
+   "assurance_basis": "PRESENTED_AS_COMPARATIVE_IN_LATER_AUDITED_REPORT",
+   "blockers": [],
+   "canonical_metric": "net_income",
+   "comparative_period_label": "Năm trước",
+   "currency": "VND",
+   "knowledge_available_at": "2026-10-23T12:13:07.203641+00:00",
+   "limitations": null,
+   "period_label_binding": "PRIOR_YEAR_PHRASE",
+   "raw_token": "697.970.710.425",
+   "reporting_period": "2024",
+   "source_document_sha256": "6ee20a554891c449a8ee72fffe6358bc9b32145d066a7e52d8492d88f305139c",
+   "ticker": "PVD",
+   "value": 697970710425
+  },
+  {
+   "assurance_basis": "PRESENTED_AS_COMPARATIVE_IN_LATER_AUDITED_REPORT",
+   "blockers": [],
+   "canonical_metric": "revenue",
+   "comparative_period_label": "Năm trước",
+   "currency": "VND",
+   "knowledge_available_at": "2026-10-23T12:13:07.203641+00:00",
+   "limitations": null,
+   "period_label_binding": "PRIOR_YEAR_PHRASE",
+   "raw_token": "9.288.059.307.546",
+   "reporting_period": "2024",
+   "source_document_sha256": "6ee20a554891c449a8ee72fffe6358bc9b32145d066a7e52d8492d88f305139c",
+   "ticker": "PVD",
+   "value": 9288059307546
+  },
+  {
+   "assurance_basis": "PRESENTED_AS_COMPARATIVE_IN_LATER_REVIEWED_REPORT",
+   "blockers": [
+    "COMPARATIVE_PERIOD_LABEL_NOT_YEAR_BOUND"
+   ],
+   "canonical_metric": "attributable_net_income",
+   "comparative_period_label": "Ky trước",
+   "currency": "USD",
+   "knowledge_available_at": "2026-10-23T12:13:07.203641+00:00",
+   "limitations": null,
+   "period_label_binding": "PRIOR_PERIOD_PHRASE_YEAR_NOT_LITERAL",
+   "raw_token": "15.389.903",
+   "reporting_period": "2025-H1",
+   "source_document_sha256": "a7360d2fc9a8a67a1535820813cda2bb8ef288466cd36c949e050c2f2a1b290a",
+   "ticker": "PVD",
+   "value": 15389903
+  },
+  {
+   "assurance_basis": "PRESENTED_AS_COMPARATIVE_IN_LATER_REVIEWED_REPORT",
+   "blockers": [
+    "COMPARATIVE_PERIOD_LABEL_NOT_YEAR_BOUND"
+   ],
+   "canonical_metric": "net_income",
+   "comparative_period_label": "Ky trước",
+   "currency": "USD",
+   "knowledge_available_at": "2026-10-23T12:13:07.203641+00:00",
+   "limitations": null,
+   "period_label_binding": "PRIOR_PERIOD_PHRASE_YEAR_NOT_LITERAL",
+   "raw_token": "15.401.164",
+   "reporting_period": "2025-H1",
+   "source_document_sha256": "a7360d2fc9a8a67a1535820813cda2bb8ef288466cd36c949e050c2f2a1b290a",
+   "ticker": "PVD",
+   "value": 15401164
+  },
+  {
+   "assurance_basis": "PRESENTED_AS_COMPARATIVE_IN_LATER_REVIEWED_REPORT",
+   "blockers": [
+    "COMPARATIVE_PERIOD_LABEL_NOT_YEAR_BOUND"
+   ],
+   "canonical_metric": "revenue",
+   "comparative_period_label": "Ky trước",
+   "currency": "USD",
+   "knowledge_available_at": "2026-10-23T12:13:07.203641+00:00",
+   "limitations": null,
+   "period_label_binding": "PRIOR_PERIOD_PHRASE_YEAR_NOT_LITERAL",
+   "raw_token": "154.869.579",
+   "reporting_period": "2025-H1",
+   "source_document_sha256": "a7360d2fc9a8a67a1535820813cda2bb8ef288466cd36c949e050c2f2a1b290a",
+   "ticker": "PVD",
+   "value": 154869579
+  },
+  {
+   "assurance_basis": "PRESENTED_AS_COMPARATIVE_IN_LATER_REVIEWED_REPORT",
+   "blockers": [
+    "COMPARATIVE_PERIOD_LABEL_NOT_YEAR_BOUND"
+   ],
+   "canonical_metric": "net_income",
+   "comparative_period_label": "Kỳ trước",
+   "currency": "VND",
+   "knowledge_available_at": "2026-10-23T12:13:07.203641+00:00",
+   "limitations": null,
+   "period_label_binding": "PRIOR_PERIOD_PHRASE_YEAR_NOT_LITERAL",
+   "raw_token": "2.410.658",
+   "reporting_period": "2025-H1",
+   "source_document_sha256": "7e9b9e39901a028972fff80bc1a4f9f5cab4c1526ce4029f9b853ccff6aeaac0",
+   "ticker": "VRE",
+   "value": 2410658000000
+  },
+  {
+   "assurance_basis": "PRESENTED_AS_COMPARATIVE_IN_LATER_REVIEWED_REPORT",
+   "blockers": [
+    "COMPARATIVE_PERIOD_LABEL_NOT_YEAR_BOUND"
+   ],
+   "canonical_metric": "revenue",
+   "comparative_period_label": "Kỳ trước",
+   "currency": "VND",
+   "knowledge_available_at": "2026-10-23T12:13:07.203641+00:00",
+   "limitations": null,
+   "period_label_binding": "PRIOR_PERIOD_PHRASE_YEAR_NOT_LITERAL",
+   "raw_token": "4.274.054",
+   "reporting_period": "2025-H1",
+   "source_document_sha256": "7e9b9e39901a028972fff80bc1a4f9f5cab4c1526ce4029f9b853ccff6aeaac0",
+   "ticker": "VRE",
+   "value": 4274054000000
+  }
+ ],
+ "focus_cohort": [
+  "HPG",
+  "VNM",
+  "FPT",
+  "PNJ",
+  "PAN",
+  "PVD",
+  "NVL",
+  "POW",
+  "SSI",
+  "GAS",
+  "VRE",
+  "VCB",
+  "QNS",
+  "EVF"
+ ],
+ "load_blockers": [],
+ "milestone": "QUALIFIED_QUARTERLY_STATEMENT_THROUGHPUT_V1",
+ "network_used": false,
+ "prior_period_rows": [
+  {
+   "admission_state": "QUALIFIED_PRIOR_PERIOD_FACT",
+   "audit_or_review_status": "audited",
+   "canonical_metric": "net_income",
+   "currency": "VND",
+   "document_sha256": "630f61f6ef9f07d5c593c3bf8f65bad1d56ecbb091921296ed5c4e830ea070a4",
+   "normalized_value": 11232339450734,
+   "printed_label": "Lợi nhuận sau thuế TNDN",
+   "reason_codes": [],
+   "reporting_period": "2025",
+   "source_owner": "governed_official_evidence_identity_citation",
+   "ticker": "FPT"
+  },
+  {
+   "admission_state": "QUALIFIED_PRIOR_PERIOD_FACT",
+   "audit_or_review_status": "audited",
+   "canonical_metric": "net_income",
+   "currency": "VND",
+   "document_sha256": "4fb8f8e0f8dd5dc429533e548e4cfd045c9a81f9d26a51a5e3cf1cee53498074",
+   "normalized_value": 8444429054516,
+   "printed_label": "Net profit after tax",
+   "reason_codes": [],
+   "reporting_period": "2022",
+   "source_owner": "governed_official_evidence_identity_citation",
+   "ticker": "HPG"
+  },
+  {
+   "admission_state": "QUALIFIED_PRIOR_PERIOD_FACT",
+   "audit_or_review_status": "audited",
+   "canonical_metric": "net_income",
+   "currency": "VND",
+   "document_sha256": "44919df68306d2389509d5701369c70966f3669fb5b2ce20f609b28322cfef0e",
+   "normalized_value": 6800388315081,
+   "printed_label": "Net profit after tax",
+   "reason_codes": [],
+   "reporting_period": "2023",
+   "source_owner": "governed_official_evidence_identity_citation",
+   "ticker": "HPG"
+  },
+  {
+   "admission_state": "QUALIFIED_PRIOR_PERIOD_FACT",
+   "audit_or_review_status": "audited",
+   "canonical_metric": "net_income",
+   "currency": "VND",
+   "document_sha256": "304a93a65e1587f625e0045d6ec9bcfba6647d19df4034cfd8fc1ec7b62eeb64",
+   "normalized_value": 12020023621271,
+   "printed_label": "Loi nhuan sau thué TNDN",
+   "reason_codes": [],
+   "reporting_period": "2024",
+   "source_owner": "governed_official_evidence_identity_citation",
+   "ticker": "HPG"
+  },
+  {
+   "admission_state": "QUALIFIED_PRIOR_PERIOD_FACT",
+   "audit_or_review_status": "audited",
+   "canonical_metric": "revenue",
+   "currency": "VND",
+   "document_sha256": "304a93a65e1587f625e0045d6ec9bcfba6647d19df4034cfd8fc1ec7b62eeb64",
+   "normalized_value": 138855112131387,
+   "printed_label": "Doanh thu thuan",
+   "reason_codes": [],
+   "reporting_period": "2024",
+   "source_owner": "p3e_promoted_fundamental_coverage_closeout",
+   "ticker": "HPG"
+  },
+  {
+   "admission_state": "QUALIFIED_PRIOR_PERIOD_FACT",
+   "audit_or_review_status": "audited",
+   "canonical_metric": "net_income",
+   "currency": "VND",
+   "document_sha256": "078fe614549d6f139b3cd3e9bdcd9f99a533b03c067c5018a989166cb2eab3d3",
+   "normalized_value": -4394642203703,
+   "printed_label": "18. Loi nhuan sau thué thu nhip doanh nghiép",
+   "reason_codes": [],
+   "reporting_period": "2024",
+   "source_owner": "governed_official_evidence_identity_citation",
+   "ticker": "NVL"
+  },
+  {
+   "admission_state": "BLOCKED",
+   "audit_or_review_status": "audited",
+   "canonical_metric": "revenue",
+   "currency": "VND",
+   "document_sha256": "078fe614549d6f139b3cd3e9bdcd9f99a533b03c067c5018a989166cb2eab3d3",
+   "normalized_value": 9073375473961,
+   "printed_label": "Doanh thu thudn",
+   "reason_codes": [
+    "PRIOR_ROW_LITERAL_IDENTITY_NOT_PROVEN"
+   ],
+   "reporting_period": "2024",
+   "source_owner": "p3e_promoted_fundamental_coverage_closeout",
+   "ticker": "NVL"
+  },
+  {
+   "admission_state": "QUALIFIED_PRIOR_PERIOD_FACT",
+   "audit_or_review_status": "audited",
+   "canonical_metric": "net_income",
+   "currency": "VND",
+   "document_sha256": "f1d6fb0dde557d9e098e13cc10ca0b0506e10e446f3ac6dc8122c4fa560df006",
+   "normalized_value": 1167068107309,
+   "printed_label": "Net profit after corporate income tax",
+   "reason_codes": [],
+   "reporting_period": "2024",
+   "source_owner": "governed_official_evidence_identity_citation",
+   "ticker": "PAN"
+  },
+  {
+   "admission_state": "QUALIFIED_PRIOR_PERIOD_FACT",
+   "audit_or_review_status": "audited",
+   "canonical_metric": "revenue",
+   "currency": "VND",
+   "document_sha256": "f1d6fb0dde557d9e098e13cc10ca0b0506e10e446f3ac6dc8122c4fa560df006",
+   "normalized_value": 16181632412859,
+   "printed_label": "Net revenue",
+   "reason_codes": [],
+   "reporting_period": "2024",
+   "source_owner": "p3e_promoted_fundamental_coverage_closeout",
+   "ticker": "PAN"
+  },
+  {
+   "admission_state": "QUALIFIED_PRIOR_PERIOD_FACT",
+   "audit_or_review_status": "audited",
+   "canonical_metric": "net_income",
+   "currency": "VND",
+   "document_sha256": "e2f6e74e1702d406473a427c0036a543c5d49c57e3b9a03469fa97d597a9e1a3",
+   "normalized_value": 1211341955166,
+   "printed_label": "Lợi nhuận sau thuế thu nhập doanh nghiệp",
+   "reason_codes": [],
+   "reporting_period": "2024",
+   "source_owner": "governed_official_evidence_identity_citation",
+   "ticker": "POW"
+  },
+  {
+   "admission_state": "QUALIFIED_PRIOR_PERIOD_FACT",
+   "audit_or_review_status": "audited",
+   "canonical_metric": "revenue",
+   "currency": "VND",
+   "document_sha256": "e2f6e74e1702d406473a427c0036a543c5d49c57e3b9a03469fa97d597a9e1a3",
+   "normalized_value": 30305634268649,
+   "printed_label": "Doanh thu thuan",
+   "reason_codes": [],
+   "reporting_period": "2024",
+   "source_owner": "p3e_promoted_fundamental_coverage_closeout",
+   "ticker": "POW"
+  },
+  {
+   "admission_state": "QUALIFIED_PRIOR_PERIOD_FACT",
+   "audit_or_review_status": "audited",
+   "canonical_metric": "net_income",
+   "currency": "USD",
+   "document_sha256": "5fc2a5b4e528c381a4bd54a22e4549b529d423ae6ae5c85816c5109a0a576364",
+   "normalized_value": -6653052,
+   "printed_label": "Net (loss)/profit after corporate income tax",
+   "reason_codes": [],
+   "reporting_period": "2022",
+   "source_owner": "governed_official_evidence_identity_citation",
+   "ticker": "PVD"
+  },
+  {
+   "admission_state": "BLOCKED",
+   "audit_or_review_status": "audited",
+   "canonical_metric": "net_income",
+   "currency": "USD",
+   "document_sha256": "a28d4c2647ac9b1758778eee18ca7da1ab46cdc0d48ee633ef55299eea16011b",
+   "normalized_value": 23061808,
+   "printed_label": "Net profit/(loss) after corporate income tax",
+   "reason_codes": [
+    "PRIOR_ROW_LITERAL_IDENTITY_NOT_PROVEN"
+   ],
+   "reporting_period": "2023",
+   "source_owner": "governed_official_evidence_identity_citation",
+   "ticker": "PVD"
+  },
+  {
+   "admission_state": "QUALIFIED_PRIOR_PERIOD_FACT",
+   "audit_or_review_status": "audited",
+   "canonical_metric": "net_income",
+   "currency": "USD",
+   "document_sha256": "ba70100acf9391a85992e67ebc1a3d68da33e50402a17e860f579e320f5f2d14",
+   "normalized_value": 28074925,
+   "printed_label": "Net profit after corporate income tax",
+   "reason_codes": [],
+   "reporting_period": "2024",
+   "source_owner": "governed_official_evidence_identity_citation",
+   "ticker": "PVD"
+  },
+  {
+   "admission_state": "QUALIFIED_PRIOR_PERIOD_FACT",
+   "audit_or_review_status": "audited",
+   "canonical_metric": "net_income",
+   "currency": "VND",
+   "document_sha256": "faaa54465d1d6a3ca98bebf2a47a45096e21ee6ac3d1cfe3c95db3b1c0bae3e3",
+   "normalized_value": 2376694252532,
+   "printed_label": "Lợi nhuận sau thuế TNDN",
+   "reason_codes": [],
+   "reporting_period": "2024",
+   "source_owner": "governed_official_evidence_identity_citation",
+   "ticker": "QNS"
+  },
+  {
+   "admission_state": "QUALIFIED_PRIOR_PERIOD_FACT",
+   "audit_or_review_status": "audited",
+   "canonical_metric": "revenue",
+   "currency": "VND",
+   "document_sha256": "faaa54465d1d6a3ca98bebf2a47a45096e21ee6ac3d1cfe3c95db3b1c0bae3e3",
+   "normalized_value": 10243265405026,
+   "printed_label": "Doanh thu thuan",
+   "reason_codes": [],
+   "reporting_period": "2024",
+   "source_owner": "p3e_promoted_fundamental_coverage_closeout",
+   "ticker": "QNS"
+  },
+  {
+   "admission_state": "BLOCKED",
+   "audit_or_review_status": "audited",
+   "canonical_metric": "net_income",
+   "currency": "VND",
+   "document_sha256": "4313d34c5d2131803e87c11bdd34ff3313d607e901dd37ea6e09f5600441a6ab",
+   "normalized_value": 8686245000000,
+   "printed_label": "Net profit",
+   "reason_codes": [
+    "APPROVED_AUDITED_OR_REVIEWED_STATEMENT_DOCUMENT_REQUIRED",
+    "NORMALIZED_SOURCE_UNIT_REQUIRED",
+    "PRIOR_ROW_LITERAL_IDENTITY_NOT_PROVEN"
+   ],
+   "reporting_period": "2024",
+   "source_owner": "governed_official_evidence_identity_citation",
+   "ticker": "VNM"
+  },
+  {
+   "admission_state": "BLOCKED",
+   "audit_or_review_status": "audited",
+   "canonical_metric": "revenue",
+   "currency": "VND",
+   "document_sha256": "4313d34c5d2131803e87c11bdd34ff3313d607e901dd37ea6e09f5600441a6ab",
+   "normalized_value": 52576991000000,
+   "printed_label": "Revenue",
+   "reason_codes": [
+    "APPROVED_AUDITED_OR_REVIEWED_STATEMENT_DOCUMENT_REQUIRED",
+    "NORMALIZED_SOURCE_UNIT_REQUIRED",
+    "PRIOR_ROW_LITERAL_IDENTITY_NOT_PROVEN"
+   ],
+   "reporting_period": "2024",
+   "source_owner": "p3e_promoted_fundamental_coverage_closeout",
+   "ticker": "VNM"
+  }
+ ],
+ "production_writes": 0,
+ "prospective_next_session_cutoff": {
+  "basis": "SEALED_20261023_RECORDS_NOT_A_SEALED_SESSION",
+  "cutoff": "2026-10-26T15:00:00+07:00",
+  "issuers": {
+   "FPT": {
+    "comparisons": [],
+    "direction_status": "UNKNOWN",
+    "earnings_direction_research": null,
+    "owner_gated_comparative_column": [
+     {
+      "currency": "VND",
+      "current_assurance": "audited",
+      "current_document_sha256": "bb14bafff1a7849217f34cf4b50e0e3d69d91968f217a66d7c68f07d4c1af284",
+      "current_period": "2025",
+      "current_value": 70112825100710,
+      "direction": "INCREASED",
+      "growth_ratio": 0.11557947649293296,
+      "metric": "revenue",
+      "prior_assurance": "PRESENTED_AS_COMPARATIVE_IN_LATER_AUDITED_REPORT",
+      "prior_basis": "COMPARATIVE_COLUMN_OF_LATER_REPORT",
+      "prior_document_sha256": "bb14bafff1a7849217f34cf4b50e0e3d69d91968f217a66d7c68f07d4c1af284",
+      "prior_period": "2024",
+      "prior_value": 62848794351367,
+      "restatement_check": "NOT_APPLICABLE_SAME_DOCUMENT"
+     }
+    ],
+    "owner_gated_unreviewed_quarterly": [],
+    "pair_blockers": [
+     "NO_INDEPENDENTLY_QUALIFIED_PRIOR_PERIOD_FACT"
+    ],
+    "revenue_direction_research": null
+   },
+   "HPG": {
+    "comparisons": [
+     {
+      "currency": "VND",
+      "current_assurance": "audited",
+      "current_document_sha256": "f38c5f75becf7d3f145d27183eec81f119fd4f75e378b983a2763ddc3f7e0c07",
+      "current_period": "2025",
+      "current_value": 15514931571606,
+      "direction": "INCREASED",
+      "growth_ratio": 0.2907571615874618,
+      "metric": "net_income",
+      "prior_assurance": "audited",
+      "prior_basis": "INDEPENDENTLY_QUALIFIED_ORIGINAL_REPORT",
+      "prior_document_sha256": "304a93a65e1587f625e0045d6ec9bcfba6647d19df4034cfd8fc1ec7b62eeb64",
+      "prior_period": "2024",
+      "prior_value": 12020023621271,
+      "restatement_check": "COMPARATIVE_CROSS_CHECK_OCR_AMBIGUOUS"
+     },
+     {
+      "currency": "VND",
+      "current_assurance": "audited",
+      "current_document_sha256": "f38c5f75becf7d3f145d27183eec81f119fd4f75e378b983a2763ddc3f7e0c07",
+      "current_period": "2025",
+      "current_value": 156116094618482,
+      "direction": "INCREASED",
+      "growth_ratio": 0.12430930501688964,
+      "metric": "revenue",
+      "prior_assurance": "audited",
+      "prior_basis": "INDEPENDENTLY_QUALIFIED_ORIGINAL_REPORT",
+      "prior_document_sha256": "304a93a65e1587f625e0045d6ec9bcfba6647d19df4034cfd8fc1ec7b62eeb64",
+      "prior_period": "2024",
+      "prior_value": 138855112131387,
+      "restatement_check": "COMPARATIVE_COLUMN_MATCHES_ORIGINAL"
+     }
+    ],
+    "direction_status": "MEASURED_REPORTED_CHANGE",
+    "earnings_direction_research": "INCREASED",
+    "owner_gated_comparative_column": [],
+    "owner_gated_unreviewed_quarterly": [],
+    "pair_blockers": [],
+    "revenue_direction_research": "INCREASED"
+   },
+   "PNJ": {
+    "comparisons": [],
+    "direction_status": "UNKNOWN",
+    "earnings_direction_research": null,
+    "owner_gated_comparative_column": [],
+    "owner_gated_unreviewed_quarterly": [
+     {
+      "assurance": "unreviewed",
+      "change": -720026523027,
+      "current_period": "2026-Q2",
+      "current_value": -283029272213,
+      "d1_existing_consumer_usable": false,
+      "direction": "DECREASED",
+      "growth_ratio": -1.6476683129832006,
+      "metric": "net_income",
+      "owner_gate": "OWNER_GATE_D1_UNREVIEWED_QUARTERLY_DIRECTION_PREVIEW",
+      "period_family": "STANDALONE_QUARTER",
+      "prior_period": "2025-Q2",
+      "prior_value": 436997250814
+     },
+     {
+      "assurance": "unreviewed",
+      "change": 901284887337,
+      "current_period": "2026-Q2",
+      "current_value": 8483734461474,
+      "d1_existing_consumer_usable": false,
+      "direction": "INCREASED",
+      "growth_ratio": 0.11886460681666718,
+      "metric": "revenue",
+      "owner_gate": "OWNER_GATE_D1_UNREVIEWED_QUARTERLY_DIRECTION_PREVIEW",
+      "period_family": "STANDALONE_QUARTER",
+      "prior_period": "2025-Q2",
+      "prior_value": 7582449574137
+     }
+    ],
+    "pair_blockers": [
+     "NO_INDEPENDENTLY_QUALIFIED_PRIOR_PERIOD_FACT"
+    ],
+    "revenue_direction_research": null
+   },
+   "PVD": {
+    "comparisons": [],
+    "direction_status": "UNKNOWN",
+    "earnings_direction_research": null,
+    "owner_gated_comparative_column": [
+     {
+      "currency": "VND",
+      "current_assurance": "audited",
+      "current_document_sha256": "6ee20a554891c449a8ee72fffe6358bc9b32145d066a7e52d8492d88f305139c",
+      "current_period": "2025",
+      "current_value": 1051572991932,
+      "direction": "INCREASED",
+      "growth_ratio": 0.5066147851557965,
+      "metric": "net_income",
+      "prior_assurance": "PRESENTED_AS_COMPARATIVE_IN_LATER_AUDITED_REPORT",
+      "prior_basis": "COMPARATIVE_COLUMN_OF_LATER_REPORT",
+      "prior_document_sha256": "6ee20a554891c449a8ee72fffe6358bc9b32145d066a7e52d8492d88f305139c",
+      "prior_period": "2024",
+      "prior_value": 697970710425,
+      "restatement_check": "NOT_APPLICABLE_SAME_DOCUMENT"
+     },
+     {
+      "currency": "VND",
+      "current_assurance": "audited",
+      "current_document_sha256": "6ee20a554891c449a8ee72fffe6358bc9b32145d066a7e52d8492d88f305139c",
+      "current_period": "2025",
+      "current_value": 10896989276040,
+      "direction": "INCREASED",
+      "growth_ratio": 0.17322563467987756,
+      "metric": "revenue",
+      "prior_assurance": "PRESENTED_AS_COMPARATIVE_IN_LATER_AUDITED_REPORT",
+      "prior_basis": "COMPARATIVE_COLUMN_OF_LATER_REPORT",
+      "prior_document_sha256": "6ee20a554891c449a8ee72fffe6358bc9b32145d066a7e52d8492d88f305139c",
+      "prior_period": "2024",
+      "prior_value": 9288059307546,
+      "restatement_check": "NOT_APPLICABLE_SAME_DOCUMENT"
+     }
+    ],
+    "owner_gated_unreviewed_quarterly": [],
+    "pair_blockers": [
+     "NO_INDEPENDENTLY_QUALIFIED_PRIOR_PERIOD_FACT",
+     "PRIOR_CURRENCY_DIFFERS_NO_FX"
+    ],
+    "revenue_direction_research": null
+   },
+   "VRE": {
+    "comparisons": [],
+    "direction_status": "UNKNOWN",
+    "earnings_direction_research": null,
+    "owner_gated_comparative_column": [],
+    "owner_gated_unreviewed_quarterly": [],
+    "pair_blockers": [
+     "NO_INDEPENDENTLY_QUALIFIED_PRIOR_PERIOD_FACT"
+    ],
+    "revenue_direction_research": null
+   }
+  }
+ },
+ "sessions": {
+  "2026-10-20": {
+   "issuers": {
+    "EVF": {
+     "admitted_current_income_facts": [],
+     "after": {
+      "blocker_reason_codes": [
+       "NO_ADMITTED_CURRENT_OFFICIAL_INCOME_FACT"
+      ],
+      "comparisons": [],
+      "direction_status": "UNKNOWN",
+      "earnings_direction_research": null,
+      "pair_blockers": [],
+      "revenue_direction_research": null,
+      "ttm_inputs": {
+       "qualified_standalone_quarters": [],
+       "required_consecutive_standalone_quarters": 4,
+       "status": "UNAVAILABLE",
+       "synthetic_q4_or_ytd_subtraction": "NOT_PERMITTED"
+      },
+      "vote_effect": "NONE"
+     },
+     "authority_tier": "PROVIDER_RESEARCH",
+     "before": {
+      "exact_field_direction_status": "UNKNOWN",
+      "retained_fy_comparisons": 0,
+      "trajectory_earnings_direction": null
+     },
+     "entity_class": "finance_company",
+     "income_context_recomputed_in_memory": true,
+     "owner_gated_preview_if_enabled": {
+      "comparative_column": [],
+      "unreviewed_quarterly": []
+     }
+    },
+    "FPT": {
+     "admitted_current_income_facts": [
+      [
+       "revenue",
+       "2025",
+       "audited"
+      ]
+     ],
+     "after": {
+      "blocker_reason_codes": [
+       "NO_COMPATIBLE_QUALIFIED_PRIOR_PERIOD_PAIR"
+      ],
+      "comparisons": [],
+      "direction_status": "UNKNOWN",
+      "earnings_direction_research": null,
+      "pair_blockers": [
+       "NO_INDEPENDENTLY_QUALIFIED_PRIOR_PERIOD_FACT"
+      ],
+      "revenue_direction_research": null,
+      "ttm_inputs": {
+       "qualified_standalone_quarters": [],
+       "required_consecutive_standalone_quarters": 4,
+       "status": "UNAVAILABLE",
+       "synthetic_q4_or_ytd_subtraction": "NOT_PERMITTED"
+      },
+      "vote_effect": "NONE"
+     },
+     "authority_tier": "OFFICIAL_QUALIFIED",
+     "before": {
+      "exact_field_direction_status": "UNKNOWN",
+      "retained_fy_comparisons": 0,
+      "trajectory_earnings_direction": null
+     },
+     "entity_class": "corporate",
+     "income_context_recomputed_in_memory": true,
+     "owner_gated_preview_if_enabled": {
+      "comparative_column": [],
+      "unreviewed_quarterly": []
+     }
+    },
+    "GAS": {
+     "admitted_current_income_facts": [],
+     "after": {
+      "blocker_reason_codes": [
+       "NO_ADMITTED_CURRENT_OFFICIAL_INCOME_FACT"
+      ],
+      "comparisons": [],
+      "direction_status": "UNKNOWN",
+      "earnings_direction_research": null,
+      "pair_blockers": [],
+      "revenue_direction_research": null,
+      "ttm_inputs": {
+       "qualified_standalone_quarters": [],
+       "required_consecutive_standalone_quarters": 4,
+       "status": "UNAVAILABLE",
+       "synthetic_q4_or_ytd_subtraction": "NOT_PERMITTED"
+      },
+      "vote_effect": "NONE"
+     },
+     "authority_tier": "OFFICIAL_QUALIFIED",
+     "before": {
+      "exact_field_direction_status": "UNKNOWN",
+      "retained_fy_comparisons": 0,
+      "trajectory_earnings_direction": null
+     },
+     "entity_class": "corporate",
+     "income_context_recomputed_in_memory": true,
+     "owner_gated_preview_if_enabled": {
+      "comparative_column": [],
+      "unreviewed_quarterly": []
+     }
+    },
+    "HPG": {
+     "admitted_current_income_facts": [
+      [
+       "revenue",
+       "2025",
+       "audited"
+      ],
+      [
+       "net_income",
+       "2025",
+       "audited"
+      ]
+     ],
+     "after": {
+      "blocker_reason_codes": [],
+      "comparisons": [
+       {
+        "currency": "VND",
+        "current_assurance": "audited",
+        "current_document_sha256": "f38c5f75becf7d3f145d27183eec81f119fd4f75e378b983a2763ddc3f7e0c07",
+        "current_period": "2025",
+        "current_value": 15514931571606,
+        "direction": "INCREASED",
+        "growth_ratio": 0.2907571615874618,
+        "metric": "net_income",
+        "prior_assurance": "audited",
+        "prior_basis": "INDEPENDENTLY_QUALIFIED_ORIGINAL_REPORT",
+        "prior_document_sha256": "304a93a65e1587f625e0045d6ec9bcfba6647d19df4034cfd8fc1ec7b62eeb64",
+        "prior_period": "2024",
+        "prior_value": 12020023621271,
+        "restatement_check": "COMPARATIVE_CROSS_CHECK_NOT_AVAILABLE"
+       },
+       {
+        "currency": "VND",
+        "current_assurance": "audited",
+        "current_document_sha256": "f38c5f75becf7d3f145d27183eec81f119fd4f75e378b983a2763ddc3f7e0c07",
+        "current_period": "2025",
+        "current_value": 156116094618482,
+        "direction": "INCREASED",
+        "growth_ratio": 0.12430930501688964,
+        "metric": "revenue",
+        "prior_assurance": "audited",
+        "prior_basis": "INDEPENDENTLY_QUALIFIED_ORIGINAL_REPORT",
+        "prior_document_sha256": "304a93a65e1587f625e0045d6ec9bcfba6647d19df4034cfd8fc1ec7b62eeb64",
+        "prior_period": "2024",
+        "prior_value": 138855112131387,
+        "restatement_check": "COMPARATIVE_CROSS_CHECK_NOT_AVAILABLE"
+       }
+      ],
+      "direction_status": "MEASURED_REPORTED_CHANGE",
+      "earnings_direction_research": "INCREASED",
+      "pair_blockers": [],
+      "revenue_direction_research": "INCREASED",
+      "ttm_inputs": {
+       "qualified_standalone_quarters": [],
+       "required_consecutive_standalone_quarters": 4,
+       "status": "UNAVAILABLE",
+       "synthetic_q4_or_ytd_subtraction": "NOT_PERMITTED"
+      },
+      "vote_effect": "NONE"
+     },
+     "authority_tier": "OFFICIAL_QUALIFIED",
+     "before": {
+      "exact_field_direction_status": "UNKNOWN",
+      "retained_fy_comparisons": 4,
+      "trajectory_earnings_direction": null
+     },
+     "entity_class": "corporate",
+     "income_context_recomputed_in_memory": true,
+     "owner_gated_preview_if_enabled": {
+      "comparative_column": [],
+      "unreviewed_quarterly": []
+     }
+    },
+    "NVL": {
+     "admitted_current_income_facts": [],
+     "after": {
+      "blocker_reason_codes": [
+       "NO_ADMITTED_CURRENT_OFFICIAL_INCOME_FACT"
+      ],
+      "comparisons": [],
+      "direction_status": "UNKNOWN",
+      "earnings_direction_research": null,
+      "pair_blockers": [],
+      "revenue_direction_research": null,
+      "ttm_inputs": {
+       "qualified_standalone_quarters": [],
+       "required_consecutive_standalone_quarters": 4,
+       "status": "UNAVAILABLE",
+       "synthetic_q4_or_ytd_subtraction": "NOT_PERMITTED"
+      },
+      "vote_effect": "NONE"
+     },
+     "authority_tier": "OFFICIAL_QUALIFIED",
+     "before": {
+      "exact_field_direction_status": "UNKNOWN",
+      "retained_fy_comparisons": 0,
+      "trajectory_earnings_direction": null
+     },
+     "entity_class": "corporate",
+     "income_context_recomputed_in_memory": true,
+     "owner_gated_preview_if_enabled": {
+      "comparative_column": [],
+      "unreviewed_quarterly": [
+       {
+        "assurance": "unreviewed",
+        "change": 1101869485969,
+        "current_period": "2026-Q2",
+        "current_value": 912001107054,
+        "d1_existing_consumer_usable": false,
+        "direction": "INCREASED",
+        "growth_ratio": null,
+        "metric": "net_income",
+        "owner_gate": "OWNER_GATE_D1_UNREVIEWED_QUARTERLY_DIRECTION_PREVIEW",
+        "period_family": "STANDALONE_QUARTER",
+        "prior_period": "2025-Q2",
+        "prior_value": -189868378915
+       }
+      ]
+     }
+    },
+    "PAN": {
+     "admitted_current_income_facts": [],
+     "after": {
+      "blocker_reason_codes": [
+       "NO_ADMITTED_CURRENT_OFFICIAL_INCOME_FACT"
+      ],
+      "comparisons": [],
+      "direction_status": "UNKNOWN",
+      "earnings_direction_research": null,
+      "pair_blockers": [],
+      "revenue_direction_research": null,
+      "ttm_inputs": {
+       "qualified_standalone_quarters": [],
+       "required_consecutive_standalone_quarters": 4,
+       "status": "UNAVAILABLE",
+       "synthetic_q4_or_ytd_subtraction": "NOT_PERMITTED"
+      },
+      "vote_effect": "NONE"
+     },
+     "authority_tier": "OFFICIAL_QUALIFIED",
+     "before": {
+      "exact_field_direction_status": "UNKNOWN",
+      "retained_fy_comparisons": 0,
+      "trajectory_earnings_direction": null
+     },
+     "entity_class": "corporate",
+     "income_context_recomputed_in_memory": true,
+     "owner_gated_preview_if_enabled": {
+      "comparative_column": [],
+      "unreviewed_quarterly": []
+     }
+    },
+    "PNJ": {
+     "admitted_current_income_facts": [
+      [
+       "net_income",
+       "2026-H1",
+       "reviewed"
+      ],
+      [
+       "revenue",
+       "2026-H1",
+       "reviewed"
+      ],
+      [
+       "attributable_net_income",
+       "2026-H1",
+       "reviewed"
+      ]
+     ],
+     "after": {
+      "blocker_reason_codes": [
+       "NO_COMPATIBLE_QUALIFIED_PRIOR_PERIOD_PAIR"
+      ],
+      "comparisons": [],
+      "direction_status": "UNKNOWN",
+      "earnings_direction_research": null,
+      "pair_blockers": [
+       "NO_INDEPENDENTLY_QUALIFIED_PRIOR_PERIOD_FACT"
+      ],
+      "revenue_direction_research": null,
+      "ttm_inputs": {
+       "qualified_standalone_quarters": [],
+       "required_consecutive_standalone_quarters": 4,
+       "status": "UNAVAILABLE",
+       "synthetic_q4_or_ytd_subtraction": "NOT_PERMITTED"
+      },
+      "vote_effect": "NONE"
+     },
+     "authority_tier": "OFFICIAL_QUALIFIED",
+     "before": {
+      "exact_field_direction_status": "UNKNOWN",
+      "retained_fy_comparisons": 0,
+      "trajectory_earnings_direction": null
+     },
+     "entity_class": "corporate",
+     "income_context_recomputed_in_memory": true,
+     "owner_gated_preview_if_enabled": {
+      "comparative_column": [],
+      "unreviewed_quarterly": [
+       {
+        "assurance": "unreviewed",
+        "change": -720026523027,
+        "current_period": "2026-Q2",
+        "current_value": -283029272213,
+        "d1_existing_consumer_usable": false,
+        "direction": "DECREASED",
+        "growth_ratio": -1.6476683129832006,
+        "metric": "net_income",
+        "owner_gate": "OWNER_GATE_D1_UNREVIEWED_QUARTERLY_DIRECTION_PREVIEW",
+        "period_family": "STANDALONE_QUARTER",
+        "prior_period": "2025-Q2",
+        "prior_value": 436997250814
+       },
+       {
+        "assurance": "unreviewed",
+        "change": 901284887337,
+        "current_period": "2026-Q2",
+        "current_value": 8483734461474,
+        "d1_existing_consumer_usable": false,
+        "direction": "INCREASED",
+        "growth_ratio": 0.11886460681666718,
+        "metric": "revenue",
+        "owner_gate": "OWNER_GATE_D1_UNREVIEWED_QUARTERLY_DIRECTION_PREVIEW",
+        "period_family": "STANDALONE_QUARTER",
+        "prior_period": "2025-Q2",
+        "prior_value": 7582449574137
+       }
+      ]
+     }
+    },
+    "POW": {
+     "admitted_current_income_facts": [],
+     "after": {
+      "blocker_reason_codes": [
+       "NO_ADMITTED_CURRENT_OFFICIAL_INCOME_FACT"
+      ],
+      "comparisons": [],
+      "direction_status": "UNKNOWN",
+      "earnings_direction_research": null,
+      "pair_blockers": [],
+      "revenue_direction_research": null,
+      "ttm_inputs": {
+       "qualified_standalone_quarters": [],
+       "required_consecutive_standalone_quarters": 4,
+       "status": "UNAVAILABLE",
+       "synthetic_q4_or_ytd_subtraction": "NOT_PERMITTED"
+      },
+      "vote_effect": "NONE"
+     },
+     "authority_tier": "OFFICIAL_QUALIFIED",
+     "before": {
+      "exact_field_direction_status": "UNKNOWN",
+      "retained_fy_comparisons": 0,
+      "trajectory_earnings_direction": null
+     },
+     "entity_class": "corporate",
+     "income_context_recomputed_in_memory": true,
+     "owner_gated_preview_if_enabled": {
+      "comparative_column": [],
+      "unreviewed_quarterly": []
+     }
+    },
+    "PVD": {
+     "admitted_current_income_facts": [
+      [
+       "net_income",
+       "2026-H1",
+       "reviewed"
+      ],
+      [
+       "net_income",
+       "2025",
+       "audited"
+      ],
+      [
+       "revenue",
+       "2025",
+       "audited"
+      ],
+      [
+       "revenue",
+       "2026-H1",
+       "reviewed"
+      ],
+      [
+       "attributable_net_income",
+       "2026-H1",
+       "reviewed"
+      ]
+     ],
+     "after": {
+      "blocker_reason_codes": [
+       "NO_COMPATIBLE_QUALIFIED_PRIOR_PERIOD_PAIR"
+      ],
+      "comparisons": [],
+      "direction_status": "UNKNOWN",
+      "earnings_direction_research": null,
+      "pair_blockers": [
+       "NO_INDEPENDENTLY_QUALIFIED_PRIOR_PERIOD_FACT",
+       "PRIOR_CURRENCY_DIFFERS_NO_FX"
+      ],
+      "revenue_direction_research": null,
+      "ttm_inputs": {
+       "qualified_standalone_quarters": [],
+       "required_consecutive_standalone_quarters": 4,
+       "status": "UNAVAILABLE",
+       "synthetic_q4_or_ytd_subtraction": "NOT_PERMITTED"
+      },
+      "vote_effect": "NONE"
+     },
+     "authority_tier": "OFFICIAL_QUALIFIED",
+     "before": {
+      "exact_field_direction_status": "UNKNOWN",
+      "retained_fy_comparisons": 4,
+      "trajectory_earnings_direction": null
+     },
+     "entity_class": "corporate",
+     "income_context_recomputed_in_memory": true,
+     "owner_gated_preview_if_enabled": {
+      "comparative_column": [],
+      "unreviewed_quarterly": []
+     }
+    },
+    "QNS": {
+     "admitted_current_income_facts": [],
+     "after": {
+      "blocker_reason_codes": [
+       "NO_ADMITTED_CURRENT_OFFICIAL_INCOME_FACT"
+      ],
+      "comparisons": [],
+      "direction_status": "UNKNOWN",
+      "earnings_direction_research": null,
+      "pair_blockers": [],
+      "revenue_direction_research": null,
+      "ttm_inputs": {
+       "qualified_standalone_quarters": [],
+       "required_consecutive_standalone_quarters": 4,
+       "status": "UNAVAILABLE",
+       "synthetic_q4_or_ytd_subtraction": "NOT_PERMITTED"
+      },
+      "vote_effect": "NONE"
+     },
+     "authority_tier": "OFFICIAL_QUALIFIED",
+     "before": {
+      "exact_field_direction_status": "UNKNOWN",
+      "retained_fy_comparisons": 0,
+      "trajectory_earnings_direction": null
+     },
+     "entity_class": "corporate",
+     "income_context_recomputed_in_memory": true,
+     "owner_gated_preview_if_enabled": {
+      "comparative_column": [],
+      "unreviewed_quarterly": []
+     }
+    },
+    "SSI": {
+     "admitted_current_income_facts": [],
+     "after": {
+      "blocker_reason_codes": [
+       "NO_ADMITTED_CURRENT_OFFICIAL_INCOME_FACT"
+      ],
+      "comparisons": [],
+      "direction_status": "UNKNOWN",
+      "earnings_direction_research": null,
+      "pair_blockers": [],
+      "revenue_direction_research": null,
+      "ttm_inputs": {
+       "qualified_standalone_quarters": [],
+       "required_consecutive_standalone_quarters": 4,
+       "status": "UNAVAILABLE",
+       "synthetic_q4_or_ytd_subtraction": "NOT_PERMITTED"
+      },
+      "vote_effect": "NONE"
+     },
+     "authority_tier": "OFFICIAL_QUALIFIED",
+     "before": {
+      "exact_field_direction_status": "UNKNOWN",
+      "retained_fy_comparisons": 1,
+      "trajectory_earnings_direction": null
+     },
+     "entity_class": "securities",
+     "income_context_recomputed_in_memory": true,
+     "owner_gated_preview_if_enabled": {
+      "comparative_column": [],
+      "unreviewed_quarterly": []
+     }
+    },
+    "VCB": {
+     "admitted_current_income_facts": [],
+     "after": {
+      "blocker_reason_codes": [
+       "NO_ADMITTED_CURRENT_OFFICIAL_INCOME_FACT"
+      ],
+      "comparisons": [],
+      "direction_status": "UNKNOWN",
+      "earnings_direction_research": null,
+      "pair_blockers": [],
+      "revenue_direction_research": null,
+      "ttm_inputs": {
+       "qualified_standalone_quarters": [],
+       "required_consecutive_standalone_quarters": 4,
+       "status": "UNAVAILABLE",
+       "synthetic_q4_or_ytd_subtraction": "NOT_PERMITTED"
+      },
+      "vote_effect": "NONE"
+     },
+     "authority_tier": "OFFICIAL_QUALIFIED",
+     "before": {
+      "exact_field_direction_status": "UNKNOWN",
+      "retained_fy_comparisons": 0,
+      "trajectory_earnings_direction": null
+     },
+     "entity_class": "bank",
+     "income_context_recomputed_in_memory": true,
+     "owner_gated_preview_if_enabled": {
+      "comparative_column": [],
+      "unreviewed_quarterly": []
+     }
+    },
+    "VNM": {
+     "admitted_current_income_facts": [],
+     "after": {
+      "blocker_reason_codes": [
+       "NO_ADMITTED_CURRENT_OFFICIAL_INCOME_FACT"
+      ],
+      "comparisons": [],
+      "direction_status": "UNKNOWN",
+      "earnings_direction_research": null,
+      "pair_blockers": [],
+      "revenue_direction_research": null,
+      "ttm_inputs": {
+       "qualified_standalone_quarters": [],
+       "required_consecutive_standalone_quarters": 4,
+       "status": "UNAVAILABLE",
+       "synthetic_q4_or_ytd_subtraction": "NOT_PERMITTED"
+      },
+      "vote_effect": "NONE"
+     },
+     "authority_tier": "OFFICIAL_QUALIFIED",
+     "before": {
+      "exact_field_direction_status": "UNKNOWN",
+      "retained_fy_comparisons": 0,
+      "trajectory_earnings_direction": null
+     },
+     "entity_class": "corporate",
+     "income_context_recomputed_in_memory": true,
+     "owner_gated_preview_if_enabled": {
+      "comparative_column": [],
+      "unreviewed_quarterly": []
+     }
+    },
+    "VRE": {
+     "admitted_current_income_facts": [
+      [
+       "revenue",
+       "2026-H1",
+       "reviewed"
+      ],
+      [
+       "net_income",
+       "2026-H1",
+       "reviewed"
+      ]
+     ],
+     "after": {
+      "blocker_reason_codes": [
+       "NO_COMPATIBLE_QUALIFIED_PRIOR_PERIOD_PAIR"
+      ],
+      "comparisons": [],
+      "direction_status": "UNKNOWN",
+      "earnings_direction_research": null,
+      "pair_blockers": [
+       "NO_INDEPENDENTLY_QUALIFIED_PRIOR_PERIOD_FACT"
+      ],
+      "revenue_direction_research": null,
+      "ttm_inputs": {
+       "qualified_standalone_quarters": [],
+       "required_consecutive_standalone_quarters": 4,
+       "status": "UNAVAILABLE",
+       "synthetic_q4_or_ytd_subtraction": "NOT_PERMITTED"
+      },
+      "vote_effect": "NONE"
+     },
+     "authority_tier": "OFFICIAL_QUALIFIED",
+     "before": {
+      "exact_field_direction_status": "UNKNOWN",
+      "retained_fy_comparisons": 0,
+      "trajectory_earnings_direction": null
+     },
+     "entity_class": "corporate",
+     "income_context_recomputed_in_memory": true,
+     "owner_gated_preview_if_enabled": {
+      "comparative_column": [],
+      "unreviewed_quarterly": []
+     }
+    }
+   },
+   "paired_identity_additive_only": true,
+   "paired_projection_identity": "market_wide_current_fundamental_research:55017886dc5f2184f9a063a88514e6e45fb2291cd996656b8caacfe8c0484e5f",
+   "reproduced_identity_without_inputs": "market_wide_current_fundamental_research:f73fbb086885a6415a615f1ff9f8a6cb6e72f1a504bb0eacef40b904530bb9b0",
+   "sealed_artifact_sha256": "9ac16f328189ca4d124a47f30028477706adc211f28fdb6ef9de054e2f3421ee",
+   "sealed_artifact_unchanged_after_replay": true,
+   "sealed_identity": "market_wide_current_fundamental_research:66bae94f46e18dbbe936d3dd27a37405a98d0cc4b4343be1d113e4bdd7a9ca0b",
+   "sealed_identity_reproduced": false
+  },
+  "2026-10-22": {
+   "issuers": {
+    "EVF": {
+     "admitted_current_income_facts": [],
+     "after": {
+      "blocker_reason_codes": [
+       "NO_ADMITTED_CURRENT_OFFICIAL_INCOME_FACT"
+      ],
+      "comparisons": [],
+      "direction_status": "UNKNOWN",
+      "earnings_direction_research": null,
+      "pair_blockers": [],
+      "revenue_direction_research": null,
+      "ttm_inputs": {
+       "qualified_standalone_quarters": [],
+       "required_consecutive_standalone_quarters": 4,
+       "status": "UNAVAILABLE",
+       "synthetic_q4_or_ytd_subtraction": "NOT_PERMITTED"
+      },
+      "vote_effect": "NONE"
+     },
+     "authority_tier": "PROVIDER_RESEARCH",
+     "before": {
+      "exact_field_direction_status": "UNKNOWN",
+      "retained_fy_comparisons": 0,
+      "trajectory_earnings_direction": null
+     },
+     "entity_class": "finance_company",
+     "income_context_recomputed_in_memory": true,
+     "owner_gated_preview_if_enabled": {
+      "comparative_column": [],
+      "unreviewed_quarterly": []
+     }
+    },
+    "FPT": {
+     "admitted_current_income_facts": [
+      [
+       "revenue",
+       "2025",
+       "audited"
+      ]
+     ],
+     "after": {
+      "blocker_reason_codes": [
+       "NO_COMPATIBLE_QUALIFIED_PRIOR_PERIOD_PAIR"
+      ],
+      "comparisons": [],
+      "direction_status": "UNKNOWN",
+      "earnings_direction_research": null,
+      "pair_blockers": [
+       "NO_INDEPENDENTLY_QUALIFIED_PRIOR_PERIOD_FACT"
+      ],
+      "revenue_direction_research": null,
+      "ttm_inputs": {
+       "qualified_standalone_quarters": [],
+       "required_consecutive_standalone_quarters": 4,
+       "status": "UNAVAILABLE",
+       "synthetic_q4_or_ytd_subtraction": "NOT_PERMITTED"
+      },
+      "vote_effect": "NONE"
+     },
+     "authority_tier": "OFFICIAL_QUALIFIED",
+     "before": {
+      "exact_field_direction_status": "UNKNOWN",
+      "retained_fy_comparisons": 0,
+      "trajectory_earnings_direction": null
+     },
+     "entity_class": "corporate",
+     "income_context_recomputed_in_memory": true,
+     "owner_gated_preview_if_enabled": {
+      "comparative_column": [],
+      "unreviewed_quarterly": []
+     }
+    },
+    "GAS": {
+     "admitted_current_income_facts": [],
+     "after": {
+      "blocker_reason_codes": [
+       "NO_ADMITTED_CURRENT_OFFICIAL_INCOME_FACT"
+      ],
+      "comparisons": [],
+      "direction_status": "UNKNOWN",
+      "earnings_direction_research": null,
+      "pair_blockers": [],
+      "revenue_direction_research": null,
+      "ttm_inputs": {
+       "qualified_standalone_quarters": [],
+       "required_consecutive_standalone_quarters": 4,
+       "status": "UNAVAILABLE",
+       "synthetic_q4_or_ytd_subtraction": "NOT_PERMITTED"
+      },
+      "vote_effect": "NONE"
+     },
+     "authority_tier": "OFFICIAL_QUALIFIED",
+     "before": {
+      "exact_field_direction_status": "UNKNOWN",
+      "retained_fy_comparisons": 0,
+      "trajectory_earnings_direction": null
+     },
+     "entity_class": "corporate",
+     "income_context_recomputed_in_memory": true,
+     "owner_gated_preview_if_enabled": {
+      "comparative_column": [],
+      "unreviewed_quarterly": []
+     }
+    },
+    "HPG": {
+     "admitted_current_income_facts": [
+      [
+       "revenue",
+       "2025",
+       "audited"
+      ],
+      [
+       "net_income",
+       "2025",
+       "audited"
+      ]
+     ],
+     "after": {
+      "blocker_reason_codes": [],
+      "comparisons": [
+       {
+        "currency": "VND",
+        "current_assurance": "audited",
+        "current_document_sha256": "f38c5f75becf7d3f145d27183eec81f119fd4f75e378b983a2763ddc3f7e0c07",
+        "current_period": "2025",
+        "current_value": 15514931571606,
+        "direction": "INCREASED",
+        "growth_ratio": 0.2907571615874618,
+        "metric": "net_income",
+        "prior_assurance": "audited",
+        "prior_basis": "INDEPENDENTLY_QUALIFIED_ORIGINAL_REPORT",
+        "prior_document_sha256": "304a93a65e1587f625e0045d6ec9bcfba6647d19df4034cfd8fc1ec7b62eeb64",
+        "prior_period": "2024",
+        "prior_value": 12020023621271,
+        "restatement_check": "COMPARATIVE_CROSS_CHECK_NOT_AVAILABLE"
+       },
+       {
+        "currency": "VND",
+        "current_assurance": "audited",
+        "current_document_sha256": "f38c5f75becf7d3f145d27183eec81f119fd4f75e378b983a2763ddc3f7e0c07",
+        "current_period": "2025",
+        "current_value": 156116094618482,
+        "direction": "INCREASED",
+        "growth_ratio": 0.12430930501688964,
+        "metric": "revenue",
+        "prior_assurance": "audited",
+        "prior_basis": "INDEPENDENTLY_QUALIFIED_ORIGINAL_REPORT",
+        "prior_document_sha256": "304a93a65e1587f625e0045d6ec9bcfba6647d19df4034cfd8fc1ec7b62eeb64",
+        "prior_period": "2024",
+        "prior_value": 138855112131387,
+        "restatement_check": "COMPARATIVE_CROSS_CHECK_NOT_AVAILABLE"
+       }
+      ],
+      "direction_status": "MEASURED_REPORTED_CHANGE",
+      "earnings_direction_research": "INCREASED",
+      "pair_blockers": [],
+      "revenue_direction_research": "INCREASED",
+      "ttm_inputs": {
+       "qualified_standalone_quarters": [],
+       "required_consecutive_standalone_quarters": 4,
+       "status": "UNAVAILABLE",
+       "synthetic_q4_or_ytd_subtraction": "NOT_PERMITTED"
+      },
+      "vote_effect": "NONE"
+     },
+     "authority_tier": "OFFICIAL_QUALIFIED",
+     "before": {
+      "exact_field_direction_status": "UNKNOWN",
+      "retained_fy_comparisons": 4,
+      "trajectory_earnings_direction": null
+     },
+     "entity_class": "corporate",
+     "income_context_recomputed_in_memory": true,
+     "owner_gated_preview_if_enabled": {
+      "comparative_column": [],
+      "unreviewed_quarterly": []
+     }
+    },
+    "NVL": {
+     "admitted_current_income_facts": [],
+     "after": {
+      "blocker_reason_codes": [
+       "NO_ADMITTED_CURRENT_OFFICIAL_INCOME_FACT"
+      ],
+      "comparisons": [],
+      "direction_status": "UNKNOWN",
+      "earnings_direction_research": null,
+      "pair_blockers": [],
+      "revenue_direction_research": null,
+      "ttm_inputs": {
+       "qualified_standalone_quarters": [],
+       "required_consecutive_standalone_quarters": 4,
+       "status": "UNAVAILABLE",
+       "synthetic_q4_or_ytd_subtraction": "NOT_PERMITTED"
+      },
+      "vote_effect": "NONE"
+     },
+     "authority_tier": "OFFICIAL_QUALIFIED",
+     "before": {
+      "exact_field_direction_status": "UNKNOWN",
+      "retained_fy_comparisons": 0,
+      "trajectory_earnings_direction": null
+     },
+     "entity_class": "corporate",
+     "income_context_recomputed_in_memory": true,
+     "owner_gated_preview_if_enabled": {
+      "comparative_column": [],
+      "unreviewed_quarterly": [
+       {
+        "assurance": "unreviewed",
+        "change": 1101869485969,
+        "current_period": "2026-Q2",
+        "current_value": 912001107054,
+        "d1_existing_consumer_usable": false,
+        "direction": "INCREASED",
+        "growth_ratio": null,
+        "metric": "net_income",
+        "owner_gate": "OWNER_GATE_D1_UNREVIEWED_QUARTERLY_DIRECTION_PREVIEW",
+        "period_family": "STANDALONE_QUARTER",
+        "prior_period": "2025-Q2",
+        "prior_value": -189868378915
+       }
+      ]
+     }
+    },
+    "PAN": {
+     "admitted_current_income_facts": [],
+     "after": {
+      "blocker_reason_codes": [
+       "NO_ADMITTED_CURRENT_OFFICIAL_INCOME_FACT"
+      ],
+      "comparisons": [],
+      "direction_status": "UNKNOWN",
+      "earnings_direction_research": null,
+      "pair_blockers": [],
+      "revenue_direction_research": null,
+      "ttm_inputs": {
+       "qualified_standalone_quarters": [],
+       "required_consecutive_standalone_quarters": 4,
+       "status": "UNAVAILABLE",
+       "synthetic_q4_or_ytd_subtraction": "NOT_PERMITTED"
+      },
+      "vote_effect": "NONE"
+     },
+     "authority_tier": "OFFICIAL_QUALIFIED",
+     "before": {
+      "exact_field_direction_status": "UNKNOWN",
+      "retained_fy_comparisons": 0,
+      "trajectory_earnings_direction": null
+     },
+     "entity_class": "corporate",
+     "income_context_recomputed_in_memory": true,
+     "owner_gated_preview_if_enabled": {
+      "comparative_column": [],
+      "unreviewed_quarterly": []
+     }
+    },
+    "PNJ": {
+     "admitted_current_income_facts": [
+      [
+       "net_income",
+       "2026-H1",
+       "reviewed"
+      ],
+      [
+       "revenue",
+       "2026-H1",
+       "reviewed"
+      ],
+      [
+       "attributable_net_income",
+       "2026-H1",
+       "reviewed"
+      ]
+     ],
+     "after": {
+      "blocker_reason_codes": [
+       "NO_COMPATIBLE_QUALIFIED_PRIOR_PERIOD_PAIR"
+      ],
+      "comparisons": [],
+      "direction_status": "UNKNOWN",
+      "earnings_direction_research": null,
+      "pair_blockers": [
+       "NO_INDEPENDENTLY_QUALIFIED_PRIOR_PERIOD_FACT"
+      ],
+      "revenue_direction_research": null,
+      "ttm_inputs": {
+       "qualified_standalone_quarters": [],
+       "required_consecutive_standalone_quarters": 4,
+       "status": "UNAVAILABLE",
+       "synthetic_q4_or_ytd_subtraction": "NOT_PERMITTED"
+      },
+      "vote_effect": "NONE"
+     },
+     "authority_tier": "OFFICIAL_QUALIFIED",
+     "before": {
+      "exact_field_direction_status": "UNKNOWN",
+      "retained_fy_comparisons": 0,
+      "trajectory_earnings_direction": null
+     },
+     "entity_class": "corporate",
+     "income_context_recomputed_in_memory": true,
+     "owner_gated_preview_if_enabled": {
+      "comparative_column": [],
+      "unreviewed_quarterly": [
+       {
+        "assurance": "unreviewed",
+        "change": -720026523027,
+        "current_period": "2026-Q2",
+        "current_value": -283029272213,
+        "d1_existing_consumer_usable": false,
+        "direction": "DECREASED",
+        "growth_ratio": -1.6476683129832006,
+        "metric": "net_income",
+        "owner_gate": "OWNER_GATE_D1_UNREVIEWED_QUARTERLY_DIRECTION_PREVIEW",
+        "period_family": "STANDALONE_QUARTER",
+        "prior_period": "2025-Q2",
+        "prior_value": 436997250814
+       },
+       {
+        "assurance": "unreviewed",
+        "change": 901284887337,
+        "current_period": "2026-Q2",
+        "current_value": 8483734461474,
+        "d1_existing_consumer_usable": false,
+        "direction": "INCREASED",
+        "growth_ratio": 0.11886460681666718,
+        "metric": "revenue",
+        "owner_gate": "OWNER_GATE_D1_UNREVIEWED_QUARTERLY_DIRECTION_PREVIEW",
+        "period_family": "STANDALONE_QUARTER",
+        "prior_period": "2025-Q2",
+        "prior_value": 7582449574137
+       }
+      ]
+     }
+    },
+    "POW": {
+     "admitted_current_income_facts": [],
+     "after": {
+      "blocker_reason_codes": [
+       "NO_ADMITTED_CURRENT_OFFICIAL_INCOME_FACT"
+      ],
+      "comparisons": [],
+      "direction_status": "UNKNOWN",
+      "earnings_direction_research": null,
+      "pair_blockers": [],
+      "revenue_direction_research": null,
+      "ttm_inputs": {
+       "qualified_standalone_quarters": [],
+       "required_consecutive_standalone_quarters": 4,
+       "status": "UNAVAILABLE",
+       "synthetic_q4_or_ytd_subtraction": "NOT_PERMITTED"
+      },
+      "vote_effect": "NONE"
+     },
+     "authority_tier": "OFFICIAL_QUALIFIED",
+     "before": {
+      "exact_field_direction_status": "UNKNOWN",
+      "retained_fy_comparisons": 0,
+      "trajectory_earnings_direction": null
+     },
+     "entity_class": "corporate",
+     "income_context_recomputed_in_memory": true,
+     "owner_gated_preview_if_enabled": {
+      "comparative_column": [],
+      "unreviewed_quarterly": []
+     }
+    },
+    "PVD": {
+     "admitted_current_income_facts": [
+      [
+       "net_income",
+       "2026-H1",
+       "reviewed"
+      ],
+      [
+       "net_income",
+       "2025",
+       "audited"
+      ],
+      [
+       "revenue",
+       "2025",
+       "audited"
+      ],
+      [
+       "revenue",
+       "2026-H1",
+       "reviewed"
+      ],
+      [
+       "attributable_net_income",
+       "2026-H1",
+       "reviewed"
+      ]
+     ],
+     "after": {
+      "blocker_reason_codes": [
+       "NO_COMPATIBLE_QUALIFIED_PRIOR_PERIOD_PAIR"
+      ],
+      "comparisons": [],
+      "direction_status": "UNKNOWN",
+      "earnings_direction_research": null,
+      "pair_blockers": [
+       "NO_INDEPENDENTLY_QUALIFIED_PRIOR_PERIOD_FACT",
+       "PRIOR_CURRENCY_DIFFERS_NO_FX"
+      ],
+      "revenue_direction_research": null,
+      "ttm_inputs": {
+       "qualified_standalone_quarters": [],
+       "required_consecutive_standalone_quarters": 4,
+       "status": "UNAVAILABLE",
+       "synthetic_q4_or_ytd_subtraction": "NOT_PERMITTED"
+      },
+      "vote_effect": "NONE"
+     },
+     "authority_tier": "OFFICIAL_QUALIFIED",
+     "before": {
+      "exact_field_direction_status": "UNKNOWN",
+      "retained_fy_comparisons": 4,
+      "trajectory_earnings_direction": null
+     },
+     "entity_class": "corporate",
+     "income_context_recomputed_in_memory": true,
+     "owner_gated_preview_if_enabled": {
+      "comparative_column": [],
+      "unreviewed_quarterly": []
+     }
+    },
+    "QNS": {
+     "admitted_current_income_facts": [],
+     "after": {
+      "blocker_reason_codes": [
+       "NO_ADMITTED_CURRENT_OFFICIAL_INCOME_FACT"
+      ],
+      "comparisons": [],
+      "direction_status": "UNKNOWN",
+      "earnings_direction_research": null,
+      "pair_blockers": [],
+      "revenue_direction_research": null,
+      "ttm_inputs": {
+       "qualified_standalone_quarters": [],
+       "required_consecutive_standalone_quarters": 4,
+       "status": "UNAVAILABLE",
+       "synthetic_q4_or_ytd_subtraction": "NOT_PERMITTED"
+      },
+      "vote_effect": "NONE"
+     },
+     "authority_tier": "OFFICIAL_QUALIFIED",
+     "before": {
+      "exact_field_direction_status": "UNKNOWN",
+      "retained_fy_comparisons": 0,
+      "trajectory_earnings_direction": null
+     },
+     "entity_class": "corporate",
+     "income_context_recomputed_in_memory": true,
+     "owner_gated_preview_if_enabled": {
+      "comparative_column": [],
+      "unreviewed_quarterly": []
+     }
+    },
+    "SSI": {
+     "admitted_current_income_facts": [],
+     "after": {
+      "blocker_reason_codes": [
+       "NO_ADMITTED_CURRENT_OFFICIAL_INCOME_FACT"
+      ],
+      "comparisons": [],
+      "direction_status": "UNKNOWN",
+      "earnings_direction_research": null,
+      "pair_blockers": [],
+      "revenue_direction_research": null,
+      "ttm_inputs": {
+       "qualified_standalone_quarters": [],
+       "required_consecutive_standalone_quarters": 4,
+       "status": "UNAVAILABLE",
+       "synthetic_q4_or_ytd_subtraction": "NOT_PERMITTED"
+      },
+      "vote_effect": "NONE"
+     },
+     "authority_tier": "OFFICIAL_QUALIFIED",
+     "before": {
+      "exact_field_direction_status": "UNKNOWN",
+      "retained_fy_comparisons": 1,
+      "trajectory_earnings_direction": null
+     },
+     "entity_class": "securities",
+     "income_context_recomputed_in_memory": true,
+     "owner_gated_preview_if_enabled": {
+      "comparative_column": [],
+      "unreviewed_quarterly": []
+     }
+    },
+    "VCB": {
+     "admitted_current_income_facts": [],
+     "after": {
+      "blocker_reason_codes": [
+       "NO_ADMITTED_CURRENT_OFFICIAL_INCOME_FACT"
+      ],
+      "comparisons": [],
+      "direction_status": "UNKNOWN",
+      "earnings_direction_research": null,
+      "pair_blockers": [],
+      "revenue_direction_research": null,
+      "ttm_inputs": {
+       "qualified_standalone_quarters": [],
+       "required_consecutive_standalone_quarters": 4,
+       "status": "UNAVAILABLE",
+       "synthetic_q4_or_ytd_subtraction": "NOT_PERMITTED"
+      },
+      "vote_effect": "NONE"
+     },
+     "authority_tier": "OFFICIAL_QUALIFIED",
+     "before": {
+      "exact_field_direction_status": "UNKNOWN",
+      "retained_fy_comparisons": 0,
+      "trajectory_earnings_direction": null
+     },
+     "entity_class": "bank",
+     "income_context_recomputed_in_memory": true,
+     "owner_gated_preview_if_enabled": {
+      "comparative_column": [],
+      "unreviewed_quarterly": []
+     }
+    },
+    "VNM": {
+     "admitted_current_income_facts": [],
+     "after": {
+      "blocker_reason_codes": [
+       "NO_ADMITTED_CURRENT_OFFICIAL_INCOME_FACT"
+      ],
+      "comparisons": [],
+      "direction_status": "UNKNOWN",
+      "earnings_direction_research": null,
+      "pair_blockers": [],
+      "revenue_direction_research": null,
+      "ttm_inputs": {
+       "qualified_standalone_quarters": [],
+       "required_consecutive_standalone_quarters": 4,
+       "status": "UNAVAILABLE",
+       "synthetic_q4_or_ytd_subtraction": "NOT_PERMITTED"
+      },
+      "vote_effect": "NONE"
+     },
+     "authority_tier": "OFFICIAL_QUALIFIED",
+     "before": {
+      "exact_field_direction_status": "UNKNOWN",
+      "retained_fy_comparisons": 0,
+      "trajectory_earnings_direction": null
+     },
+     "entity_class": "corporate",
+     "income_context_recomputed_in_memory": true,
+     "owner_gated_preview_if_enabled": {
+      "comparative_column": [],
+      "unreviewed_quarterly": []
+     }
+    },
+    "VRE": {
+     "admitted_current_income_facts": [
+      [
+       "revenue",
+       "2026-H1",
+       "reviewed"
+      ],
+      [
+       "net_income",
+       "2026-H1",
+       "reviewed"
+      ]
+     ],
+     "after": {
+      "blocker_reason_codes": [
+       "NO_COMPATIBLE_QUALIFIED_PRIOR_PERIOD_PAIR"
+      ],
+      "comparisons": [],
+      "direction_status": "UNKNOWN",
+      "earnings_direction_research": null,
+      "pair_blockers": [
+       "NO_INDEPENDENTLY_QUALIFIED_PRIOR_PERIOD_FACT"
+      ],
+      "revenue_direction_research": null,
+      "ttm_inputs": {
+       "qualified_standalone_quarters": [],
+       "required_consecutive_standalone_quarters": 4,
+       "status": "UNAVAILABLE",
+       "synthetic_q4_or_ytd_subtraction": "NOT_PERMITTED"
+      },
+      "vote_effect": "NONE"
+     },
+     "authority_tier": "OFFICIAL_QUALIFIED",
+     "before": {
+      "exact_field_direction_status": "UNKNOWN",
+      "retained_fy_comparisons": 0,
+      "trajectory_earnings_direction": null
+     },
+     "entity_class": "corporate",
+     "income_context_recomputed_in_memory": true,
+     "owner_gated_preview_if_enabled": {
+      "comparative_column": [],
+      "unreviewed_quarterly": []
+     }
+    }
+   },
+   "paired_identity_additive_only": true,
+   "paired_projection_identity": "market_wide_current_fundamental_research:db4c95502ec93a9d969a3f29998d4de71ce2007a9082fa7266c58eb730036fc9",
+   "reproduced_identity_without_inputs": "market_wide_current_fundamental_research:cf066ed81a236bf081d84637329989867de0d06ced1884a2c2d4f784ab6535ab",
+   "sealed_artifact_sha256": "204b21c941dd4d774b49586e6e145dc1012098acaba198d09c5ca088cd578832",
+   "sealed_artifact_unchanged_after_replay": true,
+   "sealed_identity": "market_wide_current_fundamental_research:a6bdd78a36489aff45811268168d508ed2fed0c4b572fc43bf1ce4b88816bfad",
+   "sealed_identity_reproduced": false
+  },
+  "2026-10-23": {
+   "issuers": {
+    "EVF": {
+     "admitted_current_income_facts": [],
+     "after": {
+      "blocker_reason_codes": [
+       "NO_ADMITTED_CURRENT_OFFICIAL_INCOME_FACT"
+      ],
+      "comparisons": [],
+      "direction_status": "UNKNOWN",
+      "earnings_direction_research": null,
+      "pair_blockers": [],
+      "revenue_direction_research": null,
+      "ttm_inputs": {
+       "qualified_standalone_quarters": [],
+       "required_consecutive_standalone_quarters": 4,
+       "status": "UNAVAILABLE",
+       "synthetic_q4_or_ytd_subtraction": "NOT_PERMITTED"
+      },
+      "vote_effect": "NONE"
+     },
+     "authority_tier": "PROVIDER_RESEARCH",
+     "before": {
+      "exact_field_direction_status": "UNKNOWN",
+      "retained_fy_comparisons": 0,
+      "trajectory_earnings_direction": null
+     },
+     "entity_class": "finance_company",
+     "income_context_recomputed_in_memory": false,
+     "owner_gated_preview_if_enabled": {
+      "comparative_column": [],
+      "unreviewed_quarterly": []
+     }
+    },
+    "FPT": {
+     "admitted_current_income_facts": [
+      [
+       "revenue",
+       "2025",
+       "audited"
+      ]
+     ],
+     "after": {
+      "blocker_reason_codes": [
+       "NO_COMPATIBLE_QUALIFIED_PRIOR_PERIOD_PAIR"
+      ],
+      "comparisons": [],
+      "direction_status": "UNKNOWN",
+      "earnings_direction_research": null,
+      "pair_blockers": [
+       "NO_INDEPENDENTLY_QUALIFIED_PRIOR_PERIOD_FACT"
+      ],
+      "revenue_direction_research": null,
+      "ttm_inputs": {
+       "qualified_standalone_quarters": [],
+       "required_consecutive_standalone_quarters": 4,
+       "status": "UNAVAILABLE",
+       "synthetic_q4_or_ytd_subtraction": "NOT_PERMITTED"
+      },
+      "vote_effect": "NONE"
+     },
+     "authority_tier": "OFFICIAL_QUALIFIED",
+     "before": {
+      "exact_field_direction_status": "UNKNOWN",
+      "retained_fy_comparisons": 0,
+      "trajectory_earnings_direction": null
+     },
+     "entity_class": "corporate",
+     "income_context_recomputed_in_memory": false,
+     "owner_gated_preview_if_enabled": {
+      "comparative_column": [],
+      "unreviewed_quarterly": []
+     }
+    },
+    "GAS": {
+     "admitted_current_income_facts": [],
+     "after": {
+      "blocker_reason_codes": [
+       "NO_ADMITTED_CURRENT_OFFICIAL_INCOME_FACT"
+      ],
+      "comparisons": [],
+      "direction_status": "UNKNOWN",
+      "earnings_direction_research": null,
+      "pair_blockers": [],
+      "revenue_direction_research": null,
+      "ttm_inputs": {
+       "qualified_standalone_quarters": [],
+       "required_consecutive_standalone_quarters": 4,
+       "status": "UNAVAILABLE",
+       "synthetic_q4_or_ytd_subtraction": "NOT_PERMITTED"
+      },
+      "vote_effect": "NONE"
+     },
+     "authority_tier": "OFFICIAL_QUALIFIED",
+     "before": {
+      "exact_field_direction_status": "UNKNOWN",
+      "retained_fy_comparisons": 0,
+      "trajectory_earnings_direction": null
+     },
+     "entity_class": "corporate",
+     "income_context_recomputed_in_memory": false,
+     "owner_gated_preview_if_enabled": {
+      "comparative_column": [],
+      "unreviewed_quarterly": []
+     }
+    },
+    "HPG": {
+     "admitted_current_income_facts": [
+      [
+       "revenue",
+       "2025",
+       "audited"
+      ],
+      [
+       "net_income",
+       "2025",
+       "audited"
+      ]
+     ],
+     "after": {
+      "blocker_reason_codes": [],
+      "comparisons": [
+       {
+        "currency": "VND",
+        "current_assurance": "audited",
+        "current_document_sha256": "f38c5f75becf7d3f145d27183eec81f119fd4f75e378b983a2763ddc3f7e0c07",
+        "current_period": "2025",
+        "current_value": 15514931571606,
+        "direction": "INCREASED",
+        "growth_ratio": 0.2907571615874618,
+        "metric": "net_income",
+        "prior_assurance": "audited",
+        "prior_basis": "INDEPENDENTLY_QUALIFIED_ORIGINAL_REPORT",
+        "prior_document_sha256": "304a93a65e1587f625e0045d6ec9bcfba6647d19df4034cfd8fc1ec7b62eeb64",
+        "prior_period": "2024",
+        "prior_value": 12020023621271,
+        "restatement_check": "COMPARATIVE_CROSS_CHECK_NOT_AVAILABLE"
+       },
+       {
+        "currency": "VND",
+        "current_assurance": "audited",
+        "current_document_sha256": "f38c5f75becf7d3f145d27183eec81f119fd4f75e378b983a2763ddc3f7e0c07",
+        "current_period": "2025",
+        "current_value": 156116094618482,
+        "direction": "INCREASED",
+        "growth_ratio": 0.12430930501688964,
+        "metric": "revenue",
+        "prior_assurance": "audited",
+        "prior_basis": "INDEPENDENTLY_QUALIFIED_ORIGINAL_REPORT",
+        "prior_document_sha256": "304a93a65e1587f625e0045d6ec9bcfba6647d19df4034cfd8fc1ec7b62eeb64",
+        "prior_period": "2024",
+        "prior_value": 138855112131387,
+        "restatement_check": "COMPARATIVE_CROSS_CHECK_NOT_AVAILABLE"
+       }
+      ],
+      "direction_status": "MEASURED_REPORTED_CHANGE",
+      "earnings_direction_research": "INCREASED",
+      "pair_blockers": [],
+      "revenue_direction_research": "INCREASED",
+      "ttm_inputs": {
+       "qualified_standalone_quarters": [],
+       "required_consecutive_standalone_quarters": 4,
+       "status": "UNAVAILABLE",
+       "synthetic_q4_or_ytd_subtraction": "NOT_PERMITTED"
+      },
+      "vote_effect": "NONE"
+     },
+     "authority_tier": "OFFICIAL_QUALIFIED",
+     "before": {
+      "exact_field_direction_status": "UNKNOWN",
+      "retained_fy_comparisons": 4,
+      "trajectory_earnings_direction": null
+     },
+     "entity_class": "corporate",
+     "income_context_recomputed_in_memory": false,
+     "owner_gated_preview_if_enabled": {
+      "comparative_column": [],
+      "unreviewed_quarterly": []
+     }
+    },
+    "NVL": {
+     "admitted_current_income_facts": [],
+     "after": {
+      "blocker_reason_codes": [
+       "NO_ADMITTED_CURRENT_OFFICIAL_INCOME_FACT"
+      ],
+      "comparisons": [],
+      "direction_status": "UNKNOWN",
+      "earnings_direction_research": null,
+      "pair_blockers": [],
+      "revenue_direction_research": null,
+      "ttm_inputs": {
+       "qualified_standalone_quarters": [],
+       "required_consecutive_standalone_quarters": 4,
+       "status": "UNAVAILABLE",
+       "synthetic_q4_or_ytd_subtraction": "NOT_PERMITTED"
+      },
+      "vote_effect": "NONE"
+     },
+     "authority_tier": "OFFICIAL_QUALIFIED",
+     "before": {
+      "exact_field_direction_status": "UNKNOWN",
+      "retained_fy_comparisons": 0,
+      "trajectory_earnings_direction": null
+     },
+     "entity_class": "corporate",
+     "income_context_recomputed_in_memory": false,
+     "owner_gated_preview_if_enabled": {
+      "comparative_column": [],
+      "unreviewed_quarterly": [
+       {
+        "assurance": "unreviewed",
+        "change": 1101869485969,
+        "current_period": "2026-Q2",
+        "current_value": 912001107054,
+        "d1_existing_consumer_usable": false,
+        "direction": "INCREASED",
+        "growth_ratio": null,
+        "metric": "net_income",
+        "owner_gate": "OWNER_GATE_D1_UNREVIEWED_QUARTERLY_DIRECTION_PREVIEW",
+        "period_family": "STANDALONE_QUARTER",
+        "prior_period": "2025-Q2",
+        "prior_value": -189868378915
+       }
+      ]
+     }
+    },
+    "PAN": {
+     "admitted_current_income_facts": [],
+     "after": {
+      "blocker_reason_codes": [
+       "NO_ADMITTED_CURRENT_OFFICIAL_INCOME_FACT"
+      ],
+      "comparisons": [],
+      "direction_status": "UNKNOWN",
+      "earnings_direction_research": null,
+      "pair_blockers": [],
+      "revenue_direction_research": null,
+      "ttm_inputs": {
+       "qualified_standalone_quarters": [],
+       "required_consecutive_standalone_quarters": 4,
+       "status": "UNAVAILABLE",
+       "synthetic_q4_or_ytd_subtraction": "NOT_PERMITTED"
+      },
+      "vote_effect": "NONE"
+     },
+     "authority_tier": "OFFICIAL_QUALIFIED",
+     "before": {
+      "exact_field_direction_status": "UNKNOWN",
+      "retained_fy_comparisons": 0,
+      "trajectory_earnings_direction": null
+     },
+     "entity_class": "corporate",
+     "income_context_recomputed_in_memory": false,
+     "owner_gated_preview_if_enabled": {
+      "comparative_column": [],
+      "unreviewed_quarterly": []
+     }
+    },
+    "PNJ": {
+     "admitted_current_income_facts": [
+      [
+       "net_income",
+       "2026-H1",
+       "reviewed"
+      ],
+      [
+       "revenue",
+       "2026-H1",
+       "reviewed"
+      ],
+      [
+       "attributable_net_income",
+       "2026-H1",
+       "reviewed"
+      ]
+     ],
+     "after": {
+      "blocker_reason_codes": [
+       "NO_COMPATIBLE_QUALIFIED_PRIOR_PERIOD_PAIR"
+      ],
+      "comparisons": [],
+      "direction_status": "UNKNOWN",
+      "earnings_direction_research": null,
+      "pair_blockers": [
+       "NO_INDEPENDENTLY_QUALIFIED_PRIOR_PERIOD_FACT"
+      ],
+      "revenue_direction_research": null,
+      "ttm_inputs": {
+       "qualified_standalone_quarters": [],
+       "required_consecutive_standalone_quarters": 4,
+       "status": "UNAVAILABLE",
+       "synthetic_q4_or_ytd_subtraction": "NOT_PERMITTED"
+      },
+      "vote_effect": "NONE"
+     },
+     "authority_tier": "OFFICIAL_QUALIFIED",
+     "before": {
+      "exact_field_direction_status": "UNKNOWN",
+      "retained_fy_comparisons": 0,
+      "trajectory_earnings_direction": null
+     },
+     "entity_class": "corporate",
+     "income_context_recomputed_in_memory": false,
+     "owner_gated_preview_if_enabled": {
+      "comparative_column": [],
+      "unreviewed_quarterly": [
+       {
+        "assurance": "unreviewed",
+        "change": -720026523027,
+        "current_period": "2026-Q2",
+        "current_value": -283029272213,
+        "d1_existing_consumer_usable": false,
+        "direction": "DECREASED",
+        "growth_ratio": -1.6476683129832006,
+        "metric": "net_income",
+        "owner_gate": "OWNER_GATE_D1_UNREVIEWED_QUARTERLY_DIRECTION_PREVIEW",
+        "period_family": "STANDALONE_QUARTER",
+        "prior_period": "2025-Q2",
+        "prior_value": 436997250814
+       },
+       {
+        "assurance": "unreviewed",
+        "change": 901284887337,
+        "current_period": "2026-Q2",
+        "current_value": 8483734461474,
+        "d1_existing_consumer_usable": false,
+        "direction": "INCREASED",
+        "growth_ratio": 0.11886460681666718,
+        "metric": "revenue",
+        "owner_gate": "OWNER_GATE_D1_UNREVIEWED_QUARTERLY_DIRECTION_PREVIEW",
+        "period_family": "STANDALONE_QUARTER",
+        "prior_period": "2025-Q2",
+        "prior_value": 7582449574137
+       }
+      ]
+     }
+    },
+    "POW": {
+     "admitted_current_income_facts": [],
+     "after": {
+      "blocker_reason_codes": [
+       "NO_ADMITTED_CURRENT_OFFICIAL_INCOME_FACT"
+      ],
+      "comparisons": [],
+      "direction_status": "UNKNOWN",
+      "earnings_direction_research": null,
+      "pair_blockers": [],
+      "revenue_direction_research": null,
+      "ttm_inputs": {
+       "qualified_standalone_quarters": [],
+       "required_consecutive_standalone_quarters": 4,
+       "status": "UNAVAILABLE",
+       "synthetic_q4_or_ytd_subtraction": "NOT_PERMITTED"
+      },
+      "vote_effect": "NONE"
+     },
+     "authority_tier": "OFFICIAL_QUALIFIED",
+     "before": {
+      "exact_field_direction_status": "UNKNOWN",
+      "retained_fy_comparisons": 0,
+      "trajectory_earnings_direction": null
+     },
+     "entity_class": "corporate",
+     "income_context_recomputed_in_memory": false,
+     "owner_gated_preview_if_enabled": {
+      "comparative_column": [],
+      "unreviewed_quarterly": []
+     }
+    },
+    "PVD": {
+     "admitted_current_income_facts": [
+      [
+       "net_income",
+       "2026-H1",
+       "reviewed"
+      ],
+      [
+       "net_income",
+       "2025",
+       "audited"
+      ],
+      [
+       "revenue",
+       "2025",
+       "audited"
+      ],
+      [
+       "revenue",
+       "2026-H1",
+       "reviewed"
+      ],
+      [
+       "attributable_net_income",
+       "2026-H1",
+       "reviewed"
+      ]
+     ],
+     "after": {
+      "blocker_reason_codes": [
+       "NO_COMPATIBLE_QUALIFIED_PRIOR_PERIOD_PAIR"
+      ],
+      "comparisons": [],
+      "direction_status": "UNKNOWN",
+      "earnings_direction_research": null,
+      "pair_blockers": [
+       "NO_INDEPENDENTLY_QUALIFIED_PRIOR_PERIOD_FACT",
+       "PRIOR_CURRENCY_DIFFERS_NO_FX"
+      ],
+      "revenue_direction_research": null,
+      "ttm_inputs": {
+       "qualified_standalone_quarters": [],
+       "required_consecutive_standalone_quarters": 4,
+       "status": "UNAVAILABLE",
+       "synthetic_q4_or_ytd_subtraction": "NOT_PERMITTED"
+      },
+      "vote_effect": "NONE"
+     },
+     "authority_tier": "OFFICIAL_QUALIFIED",
+     "before": {
+      "exact_field_direction_status": "UNKNOWN",
+      "retained_fy_comparisons": 4,
+      "trajectory_earnings_direction": null
+     },
+     "entity_class": "corporate",
+     "income_context_recomputed_in_memory": false,
+     "owner_gated_preview_if_enabled": {
+      "comparative_column": [],
+      "unreviewed_quarterly": []
+     }
+    },
+    "QNS": {
+     "admitted_current_income_facts": [],
+     "after": {
+      "blocker_reason_codes": [
+       "NO_ADMITTED_CURRENT_OFFICIAL_INCOME_FACT"
+      ],
+      "comparisons": [],
+      "direction_status": "UNKNOWN",
+      "earnings_direction_research": null,
+      "pair_blockers": [],
+      "revenue_direction_research": null,
+      "ttm_inputs": {
+       "qualified_standalone_quarters": [],
+       "required_consecutive_standalone_quarters": 4,
+       "status": "UNAVAILABLE",
+       "synthetic_q4_or_ytd_subtraction": "NOT_PERMITTED"
+      },
+      "vote_effect": "NONE"
+     },
+     "authority_tier": "OFFICIAL_QUALIFIED",
+     "before": {
+      "exact_field_direction_status": "UNKNOWN",
+      "retained_fy_comparisons": 0,
+      "trajectory_earnings_direction": null
+     },
+     "entity_class": "corporate",
+     "income_context_recomputed_in_memory": false,
+     "owner_gated_preview_if_enabled": {
+      "comparative_column": [],
+      "unreviewed_quarterly": []
+     }
+    },
+    "SSI": {
+     "admitted_current_income_facts": [],
+     "after": {
+      "blocker_reason_codes": [
+       "NO_ADMITTED_CURRENT_OFFICIAL_INCOME_FACT"
+      ],
+      "comparisons": [],
+      "direction_status": "UNKNOWN",
+      "earnings_direction_research": null,
+      "pair_blockers": [],
+      "revenue_direction_research": null,
+      "ttm_inputs": {
+       "qualified_standalone_quarters": [],
+       "required_consecutive_standalone_quarters": 4,
+       "status": "UNAVAILABLE",
+       "synthetic_q4_or_ytd_subtraction": "NOT_PERMITTED"
+      },
+      "vote_effect": "NONE"
+     },
+     "authority_tier": "OFFICIAL_QUALIFIED",
+     "before": {
+      "exact_field_direction_status": "UNKNOWN",
+      "retained_fy_comparisons": 1,
+      "trajectory_earnings_direction": null
+     },
+     "entity_class": "securities",
+     "income_context_recomputed_in_memory": false,
+     "owner_gated_preview_if_enabled": {
+      "comparative_column": [],
+      "unreviewed_quarterly": []
+     }
+    },
+    "VCB": {
+     "admitted_current_income_facts": [],
+     "after": {
+      "blocker_reason_codes": [
+       "NO_ADMITTED_CURRENT_OFFICIAL_INCOME_FACT"
+      ],
+      "comparisons": [],
+      "direction_status": "UNKNOWN",
+      "earnings_direction_research": null,
+      "pair_blockers": [],
+      "revenue_direction_research": null,
+      "ttm_inputs": {
+       "qualified_standalone_quarters": [],
+       "required_consecutive_standalone_quarters": 4,
+       "status": "UNAVAILABLE",
+       "synthetic_q4_or_ytd_subtraction": "NOT_PERMITTED"
+      },
+      "vote_effect": "NONE"
+     },
+     "authority_tier": "OFFICIAL_QUALIFIED",
+     "before": {
+      "exact_field_direction_status": "UNKNOWN",
+      "retained_fy_comparisons": 0,
+      "trajectory_earnings_direction": null
+     },
+     "entity_class": "bank",
+     "income_context_recomputed_in_memory": false,
+     "owner_gated_preview_if_enabled": {
+      "comparative_column": [],
+      "unreviewed_quarterly": []
+     }
+    },
+    "VNM": {
+     "admitted_current_income_facts": [],
+     "after": {
+      "blocker_reason_codes": [
+       "NO_ADMITTED_CURRENT_OFFICIAL_INCOME_FACT"
+      ],
+      "comparisons": [],
+      "direction_status": "UNKNOWN",
+      "earnings_direction_research": null,
+      "pair_blockers": [],
+      "revenue_direction_research": null,
+      "ttm_inputs": {
+       "qualified_standalone_quarters": [],
+       "required_consecutive_standalone_quarters": 4,
+       "status": "UNAVAILABLE",
+       "synthetic_q4_or_ytd_subtraction": "NOT_PERMITTED"
+      },
+      "vote_effect": "NONE"
+     },
+     "authority_tier": "OFFICIAL_QUALIFIED",
+     "before": {
+      "exact_field_direction_status": "UNKNOWN",
+      "retained_fy_comparisons": 0,
+      "trajectory_earnings_direction": null
+     },
+     "entity_class": "corporate",
+     "income_context_recomputed_in_memory": false,
+     "owner_gated_preview_if_enabled": {
+      "comparative_column": [],
+      "unreviewed_quarterly": []
+     }
+    },
+    "VRE": {
+     "admitted_current_income_facts": [
+      [
+       "revenue",
+       "2026-H1",
+       "reviewed"
+      ],
+      [
+       "net_income",
+       "2026-H1",
+       "reviewed"
+      ]
+     ],
+     "after": {
+      "blocker_reason_codes": [
+       "NO_COMPATIBLE_QUALIFIED_PRIOR_PERIOD_PAIR"
+      ],
+      "comparisons": [],
+      "direction_status": "UNKNOWN",
+      "earnings_direction_research": null,
+      "pair_blockers": [
+       "NO_INDEPENDENTLY_QUALIFIED_PRIOR_PERIOD_FACT"
+      ],
+      "revenue_direction_research": null,
+      "ttm_inputs": {
+       "qualified_standalone_quarters": [],
+       "required_consecutive_standalone_quarters": 4,
+       "status": "UNAVAILABLE",
+       "synthetic_q4_or_ytd_subtraction": "NOT_PERMITTED"
+      },
+      "vote_effect": "NONE"
+     },
+     "authority_tier": "OFFICIAL_QUALIFIED",
+     "before": {
+      "exact_field_direction_status": "UNKNOWN",
+      "retained_fy_comparisons": 0,
+      "trajectory_earnings_direction": null
+     },
+     "entity_class": "corporate",
+     "income_context_recomputed_in_memory": false,
+     "owner_gated_preview_if_enabled": {
+      "comparative_column": [],
+      "unreviewed_quarterly": []
+     }
+    }
+   },
+   "paired_identity_additive_only": true,
+   "paired_projection_identity": "market_wide_current_fundamental_research:4d1ef84fd45cb4d3ef0f7dd492d1d3dd000b1c14c35c5adad862d52c40f374a9",
+   "reproduced_identity_without_inputs": "market_wide_current_fundamental_research:1805a6e928efa4ef9b96f2f9d533c7599a3b3211e1b393d4ae8a8d02fc7ac469",
+   "sealed_artifact_sha256": "55219f49d7b2a1d6ee298a37600a5cda71c5733e9c92bbc1cd6d5212de012fcf",
+   "sealed_artifact_unchanged_after_replay": true,
+   "sealed_identity": "market_wide_current_fundamental_research:1805a6e928efa4ef9b96f2f9d533c7599a3b3211e1b393d4ae8a8d02fc7ac469",
+   "sealed_identity_reproduced": true
+  }
+ },
+ "valuation_20261023": {
+  "artifact_sha256": "12c47b4898c923a970873aa1c81f291256e11d9f464949ecb2f4ccdfaf13bfb5",
+  "issuers": {
+   "EVF": {
+    "reads_prior_period_pairing": false,
+    "share_basis_authoritative_market_cap_eligible": false,
+    "share_basis_blocked_reasons": [
+     "CURRENT_COMMON_OUTSTANDING_COVERAGE_NOT_PROVEN_THROUGH_PRICE_SESSION",
+     "observation predates the session; no ledger proves the absence of a share-changing event in between"
+    ]
+   },
+   "FPT": {
+    "reads_prior_period_pairing": false,
+    "share_basis_authoritative_market_cap_eligible": false,
+    "share_basis_blocked_reasons": [
+     "CURRENT_COMMON_OUTSTANDING_COVERAGE_NOT_PROVEN_THROUGH_PRICE_SESSION",
+     "observation predates the session; no ledger proves the absence of a share-changing event in between"
+    ]
+   },
+   "GAS": {
+    "reads_prior_period_pairing": false,
+    "share_basis_authoritative_market_cap_eligible": false,
+    "share_basis_blocked_reasons": [
+     "CURRENT_COMMON_OUTSTANDING_COVERAGE_NOT_PROVEN_THROUGH_PRICE_SESSION",
+     "observation predates the session; no ledger proves the absence of a share-changing event in between"
+    ]
+   },
+   "HPG": {
+    "reads_prior_period_pairing": false,
+    "share_basis_authoritative_market_cap_eligible": false,
+    "share_basis_blocked_reasons": [
+     "CURRENT_COMMON_OUTSTANDING_COVERAGE_NOT_PROVEN_THROUGH_PRICE_SESSION",
+     "observation predates the session; no ledger proves the absence of a share-changing event in between"
+    ]
+   },
+   "NVL": {
+    "reads_prior_period_pairing": false,
+    "share_basis_authoritative_market_cap_eligible": false,
+    "share_basis_blocked_reasons": [
+     "CURRENT_COMMON_OUTSTANDING_COVERAGE_NOT_PROVEN_THROUGH_PRICE_SESSION",
+     "observation predates the session; no ledger proves the absence of a share-changing event in between"
+    ]
+   },
+   "PAN": {
+    "reads_prior_period_pairing": false,
+    "share_basis_authoritative_market_cap_eligible": false,
+    "share_basis_blocked_reasons": [
+     "CURRENT_COMMON_OUTSTANDING_COVERAGE_NOT_PROVEN_THROUGH_PRICE_SESSION",
+     "observation predates the session; no ledger proves the absence of a share-changing event in between"
+    ]
+   },
+   "PNJ": {
+    "reads_prior_period_pairing": false,
+    "share_basis_authoritative_market_cap_eligible": false,
+    "share_basis_blocked_reasons": [
+     "CURRENT_COMMON_OUTSTANDING_COVERAGE_NOT_PROVEN_THROUGH_PRICE_SESSION",
+     "observation predates the session; no ledger proves the absence of a share-changing event in between"
+    ]
+   },
+   "POW": {
+    "reads_prior_period_pairing": false,
+    "share_basis_authoritative_market_cap_eligible": false,
+    "share_basis_blocked_reasons": [
+     "CURRENT_COMMON_OUTSTANDING_COVERAGE_NOT_PROVEN_THROUGH_PRICE_SESSION",
+     "observation predates the session; no ledger proves the absence of a share-changing event in between"
+    ]
+   },
+   "PVD": {
+    "reads_prior_period_pairing": false,
+    "share_basis_authoritative_market_cap_eligible": false,
+    "share_basis_blocked_reasons": [
+     "CURRENT_COMMON_OUTSTANDING_COVERAGE_NOT_PROVEN_THROUGH_PRICE_SESSION",
+     "observation predates the session; no ledger proves the absence of a share-changing event in between"
+    ]
+   },
+   "QNS": {
+    "reads_prior_period_pairing": false,
+    "share_basis_authoritative_market_cap_eligible": false,
+    "share_basis_blocked_reasons": [
+     "CURRENT_COMMON_OUTSTANDING_COVERAGE_NOT_PROVEN_THROUGH_PRICE_SESSION",
+     "observation predates the session; no ledger proves the absence of a share-changing event in between"
+    ]
+   },
+   "SSI": {
+    "reads_prior_period_pairing": false,
+    "share_basis_authoritative_market_cap_eligible": false,
+    "share_basis_blocked_reasons": [
+     "CURRENT_COMMON_OUTSTANDING_COVERAGE_NOT_PROVEN_THROUGH_PRICE_SESSION",
+     "STALE_SHARE_FAIL_CLOSED_CORPORATE_ACTION_OR_UNVERIFIABLE_FRESHNESS",
+     "missing_explicit_official_ex_date_on_share_relevant_event"
+    ]
+   },
+   "VCB": {
+    "reads_prior_period_pairing": false,
+    "share_basis_authoritative_market_cap_eligible": false,
+    "share_basis_blocked_reasons": [
+     "CURRENT_COMMON_OUTSTANDING_COVERAGE_NOT_PROVEN_THROUGH_PRICE_SESSION",
+     "STALE_SHARE_FAIL_CLOSED_CORPORATE_ACTION_OR_UNVERIFIABLE_FRESHNESS",
+     "missing_explicit_official_ex_date_on_share_relevant_event"
+    ]
+   },
+   "VNM": {
+    "reads_prior_period_pairing": false,
+    "share_basis_authoritative_market_cap_eligible": false,
+    "share_basis_blocked_reasons": [
+     "CURRENT_COMMON_OUTSTANDING_COVERAGE_NOT_PROVEN_THROUGH_PRICE_SESSION",
+     "observation predates the session; no ledger proves the absence of a share-changing event in between"
+    ]
+   },
+   "VRE": {
+    "reads_prior_period_pairing": false,
+    "share_basis_authoritative_market_cap_eligible": false,
+    "share_basis_blocked_reasons": [
+     "CURRENT_COMMON_OUTSTANDING_COVERAGE_NOT_PROVEN_THROUGH_PRICE_SESSION",
+     "observation predates the session; no ledger proves the absence of a share-changing event in between"
+    ]
+   }
+  }
+ }
+}
