@@ -72,7 +72,7 @@ def test_actual_historical_verifier_rejects_new_receipt_and_reverse(reuse):
     # Exec the historical bytes of the stream and of every E4 V1 source whose historical
     # bytes differ from active source (the archived reader and any storage-prior source),
     # so the isolated stream is the original verifier, not active code with one swap.
-    historical, modules = {}, {}
+    historical, modules, packages = {}, {}, {}
     for _, relative in e4.V1_SOURCES:
         content = historical_bytes(ROOT, relative)
         if relative == "prospective_feedback_streaming.py" or content != (ROOT / relative).read_bytes().replace(b"\r\n", b"\n"):
@@ -92,7 +92,20 @@ def test_actual_historical_verifier_rejects_new_receipt_and_reverse(reuse):
                 module.import_module = lambda n: load(n) if n in historical else importlib.import_module(n)
         return modules[name]
     def old_import(name, globals=None, locals=None, fromlist=(), level=0):
-        if level == 0 and name in historical: return load(name)
+        if level == 0 and name in historical:
+            module = load(name)
+            if fromlist or "." not in name:
+                return module
+            # Python's plain dotted import returns the root package. Keep an
+            # isolated package tree rather than mutating real imported packages.
+            parts = name.split(".")
+            for index in range(1, len(parts)):
+                prefix = ".".join(parts[:index])
+                package = packages.setdefault(prefix, types.ModuleType("isolated_" + prefix))
+                child = module if index == len(parts) - 1 else packages.setdefault(
+                    ".".join(parts[:index + 1]), types.ModuleType("isolated_" + ".".join(parts[:index + 1])))
+                setattr(package, parts[index], child)
+            return packages[parts[0]]
         return original_import(name, globals, locals, fromlist, level)
     old_stream = load("prospective_feedback_streaming")
     assert old_stream.retention is modules["prospective_decision_retention"]

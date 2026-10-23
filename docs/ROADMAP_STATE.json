@@ -15,11 +15,32 @@
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "POST_DAILY_20261022_RESEARCH_DECISION_QUALITY_CLOSEOUT",
-    "state": "COMPLETE"
+    "milestone": "OFFICIAL_INCOME_STATEMENT_RESEARCH_CONSUMPTION_V1",
+    "state": "ACTIVE"
   },
   "queued_next": [],
   "milestones": [
+    {
+      "milestone_id": "OFFICIAL_INCOME_STATEMENT_RESEARCH_CONSUMPTION_V1",
+      "state": "ACTIVE",
+      "starting_checkpoint": "f52cc61617f460b1e38ea89df92032e2c7ea4c50",
+      "candidate_branch": "feat/official-income-research-v1",
+      "dependencies": [
+        "POST_DAILY_20261022_RESEARCH_DECISION_QUALITY_CLOSEOUT"
+      ],
+      "unlocks": [],
+      "owner_authorized": true,
+      "owner_override": "Owner 2026-10-23 authorizes additive official income research consumption and evidence-basis semantics, stacked on unmerged PR180; preserve D-1 existing_consumer_usable=false, all votes/posture/identity and authority NONE. No production, merge or successor.",
+      "authority_effect": "NONE",
+      "source_doc": "docs/official_income_statement_research_consumption_v1_contract.md",
+      "state_history": [
+        "DEFERRED",
+        "ACTIVE"
+      ],
+      "checkpoint": null,
+      "terminal_disposition": null,
+      "notes": "Owner 2026-10-23 authorizes additive official income research consumption and evidence-basis semantics, stacked on unmerged PR180; preserve D-1 existing_consumer_usable=false, all votes/posture/identity and authority NONE. No production, merge or successor."
+    },
     {
       "milestone_id": "POST_DAILY_20261022_RESEARCH_DECISION_QUALITY_CLOSEOUT",
       "state": "COMPLETE",

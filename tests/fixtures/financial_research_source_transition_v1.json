@@ -10,9 +10,14 @@
       "prior_sha256_lf": "640a09ee27e87a2a2901a98f06e6d9a8ee33ab5882aeb6112077c52a63e1309c"
     },
     "stocklookup_core/decision/integrated_investment_decision_product.py": {
-      "active_sha256_lf": "d4c4c187e9c8bd60c7c7f6ccf0a046aeb0cf2b5c3a82e23e1fa45ba39a2044ce",
+      "active_sha256_lf": "893c97e405d3c1bc1bc4830a471f6f505443ec6980153d4fac771398326ad2b1",
       "archive": "tests/fixtures/financial_research_v1_sources/stocklookup_core/decision/integrated_investment_decision_product.py.txt",
       "prior_sha256_lf": "066522aad2061011cec1ace8dfc0882fa46aca938f174a78afa4880a4729c541"
+    },
+    "stocklookup_core/financial/fundamental_signal_consumption_contract.py": {
+      "active_sha256_lf": "5ce7149e2d4ad5f4b7043154eb70d5feceb1112ac570b6f7921831770d424c8c",
+      "archive": "tests/fixtures/financial_research_v1_sources/stocklookup_core/financial/fundamental_signal_consumption_contract.py.txt",
+      "prior_sha256_lf": "6350e66db2b82e8697e09ac4271a86ce9ec173a5cacb27e1d8cf851b6d1d9371"
     },
     "technical_structure_context.py": {
       "active_sha256_lf": "bd0a852b2f531863bf3294bf5cd68c32bed9e09b742321a712b31a2477cbd0f0",

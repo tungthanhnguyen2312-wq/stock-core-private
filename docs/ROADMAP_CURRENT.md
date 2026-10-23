@@ -5,11 +5,11 @@ Verified analytical baseline 2026-10-14 `a9c799397a74641a0e16c8ea84454d2dc4d0745
 Nothing below auto-starts; native standing admission required (AI_RULES 11).
 Facts: [ACTIVE_STATE.md](ACTIVE_STATE.md).
 
-## NOW — OCTOBER 22 RESEARCH DECISION QUALITY CLOSEOUT
+## NOW — OFFICIAL INCOME RESEARCH CONSUMPTION V1
 
-PR178/179 released at `ec304424`. Owner explicitly admits
-[bounded source correctness work](post_daily_20261022_research_decision_quality_closeout_contract.md).
-Native state governs implementation closeout; Owner merge gate, no production or authority change.
+[Owner scope](official_income_statement_research_consumption_v1_contract.md): additive non-voting
+income/basis context; D-1 unchanged. Stacked on open PR180 `f52cc616`; merge gated.
+Native state governs local closeout; no production, authority change or successor.
 
 ## PRIOR — STOCKLOOKUP_PRODUCER_DEEP_SIMPLIFICATION (RELEASED PR146)
 

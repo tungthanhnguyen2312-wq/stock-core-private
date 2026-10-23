@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
   pull_request:
-    branches: [main]
+    branches: [main, fix/research-decision-quality-20261022]
 
 permissions:
   contents: read
@@ -66,6 +66,7 @@ env:
     tests/test_watchlist_tactical_entry_classifier.py
     tests/test_technical_structure_context.py
     tests/test_research_quality_20261022.py
+    tests/test_official_income_research_consumption.py
     tests/test_feature_input_fitness_contract.py
     tests/test_current_research_ai_handoff_packet.py
     tests/test_current_opportunity_prioritization.py

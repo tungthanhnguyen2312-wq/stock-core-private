@@ -1787,6 +1787,8 @@ def build_ticker_integrated_decision(
         fundamental_synthesis=fund_synthesis,
     )
     evidence_axis_coherence = evaluate_evidence_axis_coherence(evidence_axes)
+    financial_composite_context["evidence_basis"] = fundamental_signals.research_evidence_basis(
+        evidence_axes["FUNDAMENTAL"].get("context"))
     if financial_peer_context is not None:
         evidence_axes["FUNDAMENTAL"].setdefault("context", {})["financial_peer_context"] = copy.deepcopy(dict(financial_peer_context))
     if valuation_balance_sheet_divergence is not None:
