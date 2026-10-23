@@ -99,7 +99,8 @@ def test_homepage_discovery_is_bounded_and_yields_only_the_september_release():
     links = "".join(f'<a href="https://www.nso.gov.vn/en/data-and-statistics/2026/{month:02d}{stem}">x</a>' for month in range(1, 9))
     links += f'<a href="https://evil.example/en/data-and-statistics/2026/12{stem}">x</a>'
     found = nso.discover_cpi_release_locators(fixture_record("", "NSO_RELEASE_CALENDAR", nso.NSO_HOMEPAGE, body=links.encode()))
-    assert found == [f"https://www.nso.gov.vn/en/data-and-statistics/2026/{month:02d}{stem}" for month in (8, 7, 6)]
+    # The whole bounded inventory survives; the fetch budget applies only in acquire().
+    assert found == [f"https://www.nso.gov.vn/en/data-and-statistics/2026/{month:02d}{stem}" for month in range(8, 0, -1)]
 
 
 def test_retained_october22_inputs_fail_closed_because_the_linked_september_release_was_not_retained():
@@ -194,6 +195,123 @@ def test_a_genuinely_future_calendar_entry_keeps_the_stricter_release_date_rule(
     assert (current["status"], current["next_expected_official_release"], current["valid_through"]) == ("CURRENT", "2026-11-03", "2026-11-02")
     due = build(raw_records=[sept("2026-11-03T09:00:00Z"), page], retrieved_at="2026-11-03T09:00:00Z")["freshness_rules"]["vn_cpi_yoy"]
     assert due["status"] == "STALE_OR_UNAVAILABLE" and due["reason_codes"] == ["NEXT_OFFICIAL_RELEASE_DUE"]
+
+
+# --- PR182 review corrective: Codex counterexamples ---
+def sept_lead(lead):
+    return synthetic(f"<p>The Consumer Price Index (CPI) in September 2026 {lead}</p><p>Reference period: 9/2026 Date of issue: 03/10/2026</p>")
+
+
+@pytest.mark.parametrize("lead, reason", [
+    ("increased by 0.62% compared to the previous month, but declined by 0.30% year on year.", "NSO_CPI_UNSUPPORTED_GOVERNING_VERB"),
+    ("increased by 0.62% compared to the previous month, but by 0.30% year on year.", "NSO_CPI_UNSUPPORTED_GOVERNING_VERB"),
+    ("changed by 5.08% year on year.", "NSO_CPI_UNSUPPORTED_GOVERNING_VERB"),
+    ("by 5.08% year on year.", "NSO_CPI_GOVERNING_VERB_UNRESOLVED"),
+    ("increased by 0.62% compared to the previous month, while food prices rose by 7.10% year on year.", "NSO_CPI_CLAIM_SUBJECT_UNRESOLVED"),
+])
+def test_unsupported_missing_or_foreign_governing_verbs_never_inherit_a_sign(lead, reason):
+    artifact = build(raw_records=[sept_lead(lead)], retrieved_at=RETRIEVED)
+    assert artifact["observations"]["vn_cpi_yoy"] == [] and artifact["parse_failures"] == [reason]
+
+
+@pytest.mark.parametrize("lead, value", [
+    ("increased by 0.62% compared with the previous month, by 4.20% compared with December 2025, and by 5.08% year on year.", 5.08),
+    ("fell by 0.10% compared with the previous month and by 0.30% year on year.", -0.30),
+])
+def test_validated_elliptical_clauses_inherit_only_across_a_bare_list_separator(lead, value):
+    assert build(raw_records=[sept_lead(lead)], retrieved_at=RETRIEVED)["observations"]["vn_cpi_yoy"][0]["value"] == value
+
+
+def calendar_page(entries):
+    return fixture_record("", "NSO_RELEASE_CALENDAR", nso.NSO_HOMEPAGE, body=("<p>Next releases " + " ".join(entries) + "</p>").encode())
+
+
+@pytest.mark.parametrize("retrieved, status, reasons", [
+    ("2026-11-02T09:00:00Z", "CURRENT", ["CALENDAR_ENTRY_ALREADY_RETAINED"]),
+    ("2026-11-04T09:00:00Z", "STALE_OR_UNAVAILABLE", ["CALENDAR_ENTRY_ALREADY_RETAINED", "NEXT_OFFICIAL_RELEASE_DUE"]),
+])
+def test_each_calendar_entry_is_superseded_individually_and_the_earliest_outstanding_deadline_governs(retrieved, status, reasons):
+    page = calendar_page(["03/10/2026: Consumer price index, gold, and USD price indexes in September 2026",
+                          "03/10/2026: Industrial Production Index in September 2026",
+                          "03/11/2026: Consumer price index, gold, and USD price indexes in October 2026"])
+    freshness = build(raw_records=[sept(retrieved), page], retrieved_at=retrieved)["freshness_rules"]["vn_cpi_yoy"]
+    assert freshness["superseded_calendar_entries"] == [{"release_date": "2026-10-03", "reference_period": "2026-09"}]
+    assert (freshness["next_expected_official_release"], freshness["valid_through"]) == ("2026-11-03", "2026-11-02")
+    assert freshness["status"] == status and freshness["reason_codes"] == reasons
+
+
+def test_unannounced_ceiling_never_overrides_an_earlier_official_deadline():
+    page = calendar_page(["03/11/2026: Consumer price index, gold, and USD price indexes in October 2026"])
+    freshness = build(raw_records=[sept("2026-11-20T09:00:00Z"), page], retrieved_at="2026-11-20T09:00:00Z")["freshness_rules"]["vn_cpi_yoy"]
+    assert freshness["status"] == "STALE_OR_UNAVAILABLE" and freshness["valid_through"] == "2026-11-02"
+
+
+FOUR_LINK_STEM = "https://www.nso.gov.vn/en/data-and-statistics/2026/10/consumer-price-index-gold-price-index-and-us-dollar-price-index-in-"
+SEPT_VARIANTS = [FOUR_LINK_STEM + suffix for suffix in ("september-2026-v3/", "september-2026-v2/", "september-2026-v1/")]
+OCTOBER = FOUR_LINK_STEM + "october-2026/"
+
+
+def four_link_homepage():
+    links = "".join(f'<a href="{url}">x</a>' for url in [OCTOBER, *SEPT_VARIANTS])
+    return fixture_record("", "NSO_RELEASE_CALENDAR", nso.NSO_HOMEPAGE, body=links.encode())
+
+
+def test_four_link_inventory_keeps_the_october_candidate_beyond_the_fetch_budget():
+    page = four_link_homepage()
+    inventory = nso.discover_cpi_release_locators(page)
+    assert inventory[:3] == SEPT_VARIANTS and inventory[3] == OCTOBER  # lexicographic order is not period evidence
+    september = [fixture_record("cpi_2026-09_release.html", nso.SOURCE_ID, url, discovered_from=PROVENANCE) for url in SEPT_VARIANTS]
+    not_fetched = nso._not_fetched_record(url=OCTOBER, retrieved_at=RETRIEVED, discovered_from=PROVENANCE)
+    artifact = build(raw_records=[*september, not_fetched, page], retrieved_at=RETRIEVED)
+    assert artifact["release_discovery"]["locator_status"][OCTOBER] == "NOT_FETCHED"
+    freshness = artifact["freshness_rules"]["vn_cpi_yoy"]
+    assert freshness["status"] == "STALE_OR_UNAVAILABLE" and freshness["unqualified_discovered_locators"] == [OCTOBER]
+    assert artifact["observations"]["vn_cpi_yoy"][-1]["value"] == 5.08
+
+
+def test_acquire_inventories_every_link_and_retains_budget_exceeded_candidates(monkeypatch):
+    page = four_link_homepage()
+    bodies = {nso.NSO_HOMEPAGE: base64.b64decode(page["payload_base64"]),
+              JUNE_URL: (FIXTURES / "cpi_2026-06_release.html").read_bytes(),
+              JULY_URL: (FIXTURES / "cpi_2026-07_release.html").read_bytes(),
+              **{url: (FIXTURES / "cpi_2026-09_release.html").read_bytes() for url in SEPT_VARIANTS}}
+    requested = []
+
+    class Response:
+        def __init__(self, url):
+            self.body, self.status, self.headers = bodies[url], 200, Message()
+            self.headers["Content-Type"] = "text/html"
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+        def read(self):
+            return self.body
+
+    def fake_urlopen(request, timeout):
+        requested.append(request.full_url)
+        return Response(request.full_url)
+
+    monkeypatch.setattr(nso, "urlopen", fake_urlopen)
+    artifact = nso.acquire(retrieved_at=RETRIEVED)
+    assert OCTOBER not in requested and [u for u in requested if u in SEPT_VARIANTS] == SEPT_VARIANTS
+    assert artifact["release_discovery"]["discovered_locators"][3] == OCTOBER
+    october = next(row for row in artifact["raw_payloads"] if row.get("locator") == OCTOBER)
+    assert october["parse_status"] == "NOT_FETCHED:FETCH_BUDGET_EXCEEDED" and october["discovered_from"]["locator"] == nso.NSO_HOMEPAGE
+    assert artifact["freshness_rules"]["vn_cpi_yoy"]["status"] == "STALE_OR_UNAVAILABLE"
+
+
+def test_inventory_beyond_its_bound_blocks_currency(monkeypatch):
+    monkeypatch.setattr(nso, "MAX_DISCOVERY_INVENTORY", 2)
+    page = four_link_homepage()
+    september = [fixture_record("cpi_2026-09_release.html", nso.SOURCE_ID, url, discovered_from=PROVENANCE) for url in SEPT_VARIANTS[:2]]
+    artifact = build(raw_records=[*september, page], retrieved_at=RETRIEVED)
+    freshness = artifact["freshness_rules"]["vn_cpi_yoy"]
+    assert artifact["release_discovery"]["inventory_truncated"] is True
+    assert freshness["status"] == "STALE_OR_UNAVAILABLE" and "DISCOVERY_INVENTORY_LIMIT_EXCEEDED" in freshness["reason_codes"]
 
 
 class _Response:
