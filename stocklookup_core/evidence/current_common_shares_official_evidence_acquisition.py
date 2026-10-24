@@ -20,6 +20,148 @@ NEEDS_ROUTE = "NEEDS_OWNER_SOURCE_ROUTE_APPROVAL"
 NOT_FOUND = "OFFICIAL_EVIDENCE_NOT_FOUND"
 
 
+def qualify_retained_share_capital_note(*, document, materialization, assurance,
+                                      knowledge_available_at):
+    """Finite, visually reviewed capital-note layouts; historical research only.
+
+    These three exact originals are field-level extensions of the retained-note
+    owner, not templates for future filings. No caller supplies a value, scope,
+    date or lifecycle. Native words / literal TSV cells remain the citations.
+    """
+    from stocklookup_core.evidence.official_document_qualification import retained_assurance_is_bound
+    sha = document.get('sha256')
+    if not re.fullmatch('[0-9a-f]{64}', str(sha)) or materialization.get('document_sha256') != sha:
+        raise ValueError('RETAINED_SOURCE_HASH_MISMATCH')
+    if document.get('acquisition_status') != 'retained' or document.get('source_id') != 'issuer_ir':
+        raise ValueError('RETAINED_FIRST_PARTY_RECEIPT_REQUIRED')
+    known = datetime.fromisoformat(knowledge_available_at.replace('Z', '+00:00'))
+    observed = datetime.fromisoformat(document['observed_at'].replace('Z', '+00:00'))
+    published = document.get('published_at')
+    if known.utcoffset() is None or observed.utcoffset() is None or known < observed:
+        raise ValueError('KNOWLEDGE_TIME_BACKDATING_REFUSED')
+    if published is not None:
+        pub = datetime.fromisoformat(published.replace('Z', '+00:00'))
+        if pub.utcoffset() is None or pub > observed:
+            raise ValueError('SOURCE_CLOCK_ORDER_INVALID')
+    tokens = materialization.get('tokens') or []
+    if not tokens or any(not t.get('token_id') or t.get('provenance') not in
+            {'OCR_TSV_POSITIONED_TOKEN', 'NATIVE_PDF_POSITIONED_WORD'} for t in tokens):
+        raise ValueError('POSITIONED_SOURCE_TOKENS_REQUIRED')
+
+    def region(box):
+        x0, y0, x1, y1 = box
+        return [t for t in tokens if x0 <= t['x0'] < x1 and y0 <= t['top'] < y1]
+
+    def require(box, phrase):
+        raw = ' '.join(t['text'] for t in sorted(region(box), key=lambda t: t['raw_token_order']))
+        if phrase not in raw:
+            raise ValueError('EXPLICIT_CAPITAL_LABEL_OR_DATE_MISSING')
+
+    issuer, page = document.get('ticker'), materialization.get('page_number')
+    # Coordinates belong only to these byte-pinned pages, with the retained
+    # renderer (TSV) or native PDF points. No font/OCR character repair.
+    if sha == '309f86836d9f00b37e3cccb25da9e7ffd0dab6c531be995618542004acccdf1d':
+        expected = ('PNJ', 89, '2025')
+        require((0, 1780, 1200, 1840), 'Number of ordinary shares')
+        require((0, 2080, 1200, 2150), 'Number of shares issued')
+        require((0, 2150, 1200, 2210), 'Number of shares repurchased')
+        require((0, 2210, 1200, 2290), 'Number of existing shares in circulation')
+        # Existing metadata-only heading fold; amounts never pass through it.
+        from stocklookup_core.evidence.financial_document_text import _normalize
+        header = region((1200, 1870, 1900, 1940))
+        if [_normalize(t['text']) for t in sorted(header, key=lambda t: t['x0'])] != ['2025', '2024']:
+            raise ValueError('EXPLICIT_CAPITAL_LABEL_OR_DATE_MISSING')
+        columns, dates = [(1200, 1500), (1550, 1900)], ['2025-12-31', '2024-12-31']
+        rows = [('ISSUED_SHARES', 2100, 2145), ('TREASURY_SHARES', 2150, 2200),
+                ('OUTSTANDING_SHARES', 2230, 2290)]
+        scope, share_class, separator = 'issuer', 'ordinary', ','
+    elif sha == 'a7360d2fc9a8a67a1535820813cda2bb8ef288466cd36c949e050c2f2a1b290a':
+        expected = ('PVD', 34, '2026-H1')
+        require((0, 1480, 1950, 1540), 'Tai ngay 30 thang 06 năm 2026')
+        require((0, 1800, 800, 1860), 'cổ phan da phat hanh')
+        require((0, 1940, 1000, 1990), 'mua lai cua chinh minh')
+        require((0, 2120, 1000, 2160), 'cổ phan hién dang Lưu hanh')
+        require((0, 2270, 1900, 2320), 'chi co mot loai')
+        columns, dates = [(800, 1010), (1330, 1540)], ['2026-06-30', '2025-12-31']
+        rows = [('ISSUED_SHARES', 1870, 1910), ('TREASURY_SHARES', 1990, 2025),
+                ('OUTSTANDING_SHARES', 2160, 2200)]
+        scope, share_class, separator = 'issuer_self_held_treasury', 'ordinary', '.'
+    elif sha == '53ec367048e5fc6b5e34620b3d1f9f08d2026309c37f847cbee9a10d573bfb58':
+        expected = ('SSI', 2, '2026')
+        require((0, 95, 630, 125), 'Previous Change After')
+        require((0, 390, 800, 425), '15/6/2026.')
+        require((630, 150, 800, 235), '18/8/2026)')
+        require((0, 175, 320, 225), 'Total number of shares')
+        require((0, 235, 320, 275), 'Number of treasury stock')
+        require((0, 275, 320, 335), 'Number of outstanding voting shares')
+        support = materialization.get('supporting_native_pages') or {}
+        if ('SSI SECURITIES CORPORATION' not in support.get('1', '')
+                or 'August 18th, 2026' not in support.get('1', '')
+                or 'August 27th, 2026' not in support.get('3', '')):
+            raise ValueError('ISSUER_NOTICE_DATE_BINDING_MISSING')
+        columns, dates = [(320, 425), (530, 635)], ['2026-06-15', '2026-08-18']
+        rows = [('CHARTER_CAPITAL', 140, 155), ('TOTAL_SHARES', 188, 200),
+                ('TREASURY_SHARES', 235, 250), ('VOTING_SHARES', 295, 312)]
+        scope, share_class, separator = 'issuer_notice', 'all_reported_classes', '.'
+        if assurance is not None:
+            raise ValueError('ISSUER_NOTICE_IS_NOT_AUDITOR_ASSURANCE')
+    else:
+        raise ValueError('CAPITAL_NOTE_LAYOUT_NOT_REVIEWED')
+    if (issuer, page, document.get('reporting_period')) != expected:
+        raise ValueError('CAPITAL_NOTE_ISSUER_PAGE_PERIOD_MISMATCH')
+    if issuer != 'SSI' and not retained_assurance_is_bound(
+            'audited' if issuer == 'PNJ' else 'reviewed', assurance, document_sha256=sha):
+        raise ValueError('AUDITOR_EVIDENCE_NOT_QUALIFIED')
+    claims = []
+
+    def claim(kind, value, day, selected, *, state='DATED_OBSERVATION', consideration=None):
+        citation = dict(pdf_page=page, selected_tokens=selected,
+            rendered_image_sha256=materialization['rendered_image_sha256'])
+        row = dict(ticker=issuer, kind=kind, state=state, subject=kind.lower(), value=value,
+            unit='VND' if kind == 'CHARTER_CAPITAL' else 'shares', scope=scope,
+            share_class=share_class, denominator_basis='EXPLICIT_'+kind,
+            effective_date=day, consideration=consideration, source_owner='retained_common_share_note',
+            source_identity=document['document_id'], source_locator=document['canonical_url'],
+            source_page=page, document_sha256=sha, published_at=published,
+            observed_at=document['observed_at'], knowledge_available_at=knowledge_available_at,
+            qualification_state='QUALIFIED', field_qualification='QUALIFIED',
+            coverage_kind='REAL_RETAINED_INPUT', historical_pit_eligible=False,
+            assurance_evidence=assurance, source_citation=citation,
+            limitations=['POINT_OBSERVATION_ONLY', 'LATER_CONTINUITY_UNKNOWN',
+                         'NO_STRICT_VALUATION_OR_FACTOR_AUTHORITY', 'NO_HISTORICAL_PIT'])
+        if kind == 'ISSUANCE':
+            row.update(execution_evidence_qualified=True, event_id='SSI_BONUS_20260818',
+                       issuance_end_date=day, effective_date_type='ISSUANCE_END')
+        row['citation_id'] = stable_id(row)
+        claims.append(row)
+
+    for kind, y0, y1 in rows:
+        for (x0, x1), day in zip(columns, dates):
+            selected = region((x0, y0, x1, y1))
+            if len(selected) != 1:
+                raise ValueError('CAPITAL_NUMERIC_CELL_AMBIGUOUS')
+            literal = selected[0]['text']
+            # Parentheses denote a treasury subtraction, not negative shares.
+            if kind == 'TREASURY_SHARES' and literal.startswith('(') and literal.endswith(')'):
+                literal = literal[1:-1]
+            if not re.fullmatch(r'[1-9][0-9]{0,2}(?:' + re.escape(separator) + r'[0-9]{3})+', literal):
+                raise ValueError('CAPITAL_NUMERIC_CELL_AMBIGUOUS')
+            claim(kind, int(literal.replace(separator, '')), day, selected)
+    if issuer == 'SSI':
+        require((630, 150, 800, 305), 'Completed the issuance of')
+        require((630, 150, 800, 305), 'owner’s')
+        selected = region((635, 160, 700, 175))
+        if len(selected) != 1 or selected[0]['text'] != '500.204.581':
+            raise ValueError('EXECUTED_ISSUANCE_QUANTITY_AMBIGUOUS')
+        claim('ISSUANCE', 500204581, '2026-08-18', selected,
+              state='EXECUTED', consideration='BONUS_FROM_EQUITY')
+    note = dict(contract_version='retained_share_capital_note/v1', document=dict(document),
+        materialization=dict(materialization), assurance=assurance,
+        knowledge_available_at=knowledge_available_at, ticker=issuer, claims=claims)
+    note['citation_id'] = stable_id(note)
+    return note
+
+
 def qualify_retained_common_share_note(*, materialization: Mapping[str, Any],
         document: Mapping[str, Any], assurance: Mapping[str, Any], effective_date: str,
         knowledge_available_at: str) -> dict[str, Any]:

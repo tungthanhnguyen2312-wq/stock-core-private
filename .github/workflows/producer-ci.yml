@@ -71,6 +71,7 @@ env:
     tests/test_official_prior_period_pairing_daily.py
     tests/test_shareholder_economics.py
     tests/test_shareholder_dilution_research.py
+    tests/test_retained_share_capital_scaleout.py
     tests/test_feature_input_fitness_contract.py
     tests/test_current_research_ai_handoff_packet.py
     tests/test_current_opportunity_prioritization.py
