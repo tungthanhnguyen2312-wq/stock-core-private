@@ -16,7 +16,7 @@ sidecar's authority level. This document only covers publication.
 | Destination (served checkout) | `C:\Projects\StockLookup\market-dashboard` — the only live Dashboard publication checkout: a **normal clone** of `tungthanhnguyen2312-wq/market-dashboard` on **`main`**. |
 | Authoritative branch | `main`. GitHub Pages is configured `source.branch = main`, `build_type = workflow`. |
 | Serving pipeline | push to `main` → `.github/workflows/dashboard-ci.yml` (*Dashboard CI*) → on success `deploy-pages.yml` (`workflow_run`) checks out the validated SHA and deploys the whole repo root. |
-| Served origin | <https://tungthanhnguyen2312-wq.github.io/market-dashboard/> |
+| Served origin | <https://tungthanhnguyen2312-wq.github.io/stocklookup-dashboard/> (the repository rename on 2026-10-24 moved it from `/market-dashboard/`, which now returns 404; GitHub project Pages do not redirect) |
 
 Live release refuses any other web checkout, including `worktrees/market-dashboard-main`,
 `publish/market-dashboard-main`, and `dashboard-runtime`. `dashboard-runtime` is DATA/RUNTIME
@@ -223,7 +223,7 @@ reached exactly two ways, and only one of them may commit or push:
 ```
 python stock-core-private/tools/release_orchestrator.py trusted-ai \
     [--generate] [--expected-session YYYY-MM-DD] \
-    [--live] [--verify-live-url https://tungthanhnguyen2312-wq.github.io/market-dashboard]
+    [--live] [--verify-live-url https://tungthanhnguyen2312-wq.github.io/stocklookup-dashboard]
 ```
 
 **`tools/release_orchestrator.py` is the single supported live-publish authority** — for this
