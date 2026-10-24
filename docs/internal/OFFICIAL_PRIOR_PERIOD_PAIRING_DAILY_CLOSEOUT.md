@@ -95,8 +95,9 @@ pass at valid cutoffs; all four plain projections match independently executed m
 Launcher hashes and `git diff --check` PASS. Active reading set: 102077 bytes before the
 final compact closeout label (limit 102400). Native roadmap: ON_TRACK, writer check PASS. No production Daily, DB writes, dashboard
 publication, push, merge or hosted CI were run. Active control-plane docs remain within the
-102400-byte aggregate budget. Native roadmap local completion records the implementation
-checkpoint; the successor queue stays empty.
+102400-byte aggregate budget. Implementation checkpoint: `e51369a407e398f34bda2211070a5bff1238b6f6` (21 changed files).
+Native roadmap records COMPLETE / LOCAL_IMPLEMENTATION_COMPLETE_NOT_PROMOTED;
+the successor queue stays empty.
 
 PR-ready title: **Integrate qualified prior-period pairing into Daily historical research cards**
 

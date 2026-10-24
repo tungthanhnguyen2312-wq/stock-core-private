@@ -5,7 +5,7 @@ Verified analytical baseline 2026-10-14 `a9c799397a74641a0e16c8ea84454d2dc4d0745
 Nothing below auto-starts; native standing admission required (AI_RULES 11).
 Facts: [ACTIVE_STATE.md](ACTIVE_STATE.md).
 
-## NOW — OFFICIAL PRIOR-PERIOD PAIRING DAILY TRANSITION V1
+## LOCAL COMPLETE — OFFICIAL PRIOR-PERIOD PAIRING DAILY TRANSITION V1
 
 [Scope](official_prior_period_pairing_daily_frozen_source_transition_v1_contract.md): existing
 qualified loader into frozen Daily caller; historical non-voting cards. Local checkpoint only;
