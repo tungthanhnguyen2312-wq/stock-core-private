@@ -4,7 +4,7 @@ from __future__ import annotations
 import unittest
 from pathlib import Path
 
-from wave2_official_financial_evidence_scaleout import (
+from tools.replay.official_financial_evidence.wave2_official_financial_evidence_scaleout import (
     execute,
     build_wave2_scaleout_artifact,
     select_wave2_candidate_cohort,

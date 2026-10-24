@@ -8,7 +8,7 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from p3f11_official_financial_filing_evidence import execute
+from tools.replay.official_financial_evidence.p3f11_official_financial_filing_evidence import execute
 
 DEFAULT_OUTPUT = ROOT / "operations-review" / "p3f11-official-financial-filing-evidence-20260820" / "p3f11_official_financial_filing_evidence_artifact.json"
 

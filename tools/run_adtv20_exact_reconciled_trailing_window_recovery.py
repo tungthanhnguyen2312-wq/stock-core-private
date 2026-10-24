@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from adtv20_exact_reconciled_trailing_window_recovery import (
+from tools.replay.market_data_recovery.adtv20_exact_reconciled_trailing_window_recovery import (
     DEFAULT_OUT_DIR,
     DEFAULT_REQUEST_BUDGET,
     acquisition_plan,

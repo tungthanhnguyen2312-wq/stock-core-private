@@ -1,0 +1,68 @@
+{
+  "milestone": "STOCKLOOKUP_REPOSITORY_RENAME_AND_STRUCTURAL_CONSOLIDATION_20261024",
+  "baseline": "f1a9ec4aee861d9dafd4a739d9f4419b3a00acca",
+  "selection": "Root modules not frozen-pinned, not launched by path, not imported by a frozen/launcher/transition-pinned file, not imported by historically executed sources, not mirrored by the Dashboard or imported by the Consumer; tools/replay targets are imported only by tools/ and tests; core targets import no root module.",
+  "cohorts": {
+    "stocklookup_core/evidence": {
+      "purpose": "Canonical universe tiers and instrument reconciliation: leaf evidence modules with no root imports.",
+      "modules": [
+        "canonical_instrument_reconciliation.py",
+        "canonical_universe_tiers.py"
+      ]
+    },
+    "tools/replay/market_data_recovery": {
+      "purpose": "Completed market-data recovery and qualification engines (ADTV20 window, DNSE regime price basis, intraday history raw, dataset inventory, cross-sectional export, period-end shadow, foreign-flow bridge); each is run only by its tools/ runner and tests.",
+      "modules": [
+        "adtv20_exact_reconciled_trailing_window_recovery.py",
+        "corroborated_period_end_shadow.py",
+        "cross_sectional_export.py",
+        "current_foreign_flow_positioning_bridge.py",
+        "dnse_current_regime_price_basis.py",
+        "dnse_intraday_history_raw.py",
+        "dnse_market_dataset_inventory.py"
+      ]
+    },
+    "tools/replay/official_financial_evidence": {
+      "purpose": "Completed single-milestone official financial evidence engines (P3-D/E/F11/F12, QNS H1, wave-2 and retained-PDF scale-outs, owner-focus OCR batch, governed extraction); each is run only by its tools/ runner and tests.",
+      "modules": [
+        "governed_financial_evidence_extraction.py",
+        "owner_focus_image_only_corporate_ocr_batch.py",
+        "p3d_residual_comparative_financial_evidence.py",
+        "p3e_fundamental_coverage_closeout.py",
+        "p3f11_official_financial_filing_evidence.py",
+        "p3f12_value_level_financial_evidence.py",
+        "qns_h1_official_detail_resolver.py",
+        "retained_official_financial_pdf_scaleout.py",
+        "wave2_official_financial_evidence_scaleout.py"
+      ]
+    },
+    "tools/replay/pilots": {
+      "purpose": "Temporal evidence registry used only by the archived temporal-evidence pilot and its tests.",
+      "modules": [
+        "temporal_evidence_registry.py"
+      ]
+    }
+  },
+  "relocations": {
+    "adtv20_exact_reconciled_trailing_window_recovery.py": "tools/replay/market_data_recovery/adtv20_exact_reconciled_trailing_window_recovery.py",
+    "canonical_instrument_reconciliation.py": "stocklookup_core/evidence/canonical_instrument_reconciliation.py",
+    "canonical_universe_tiers.py": "stocklookup_core/evidence/canonical_universe_tiers.py",
+    "corroborated_period_end_shadow.py": "tools/replay/market_data_recovery/corroborated_period_end_shadow.py",
+    "cross_sectional_export.py": "tools/replay/market_data_recovery/cross_sectional_export.py",
+    "current_foreign_flow_positioning_bridge.py": "tools/replay/market_data_recovery/current_foreign_flow_positioning_bridge.py",
+    "dnse_current_regime_price_basis.py": "tools/replay/market_data_recovery/dnse_current_regime_price_basis.py",
+    "dnse_intraday_history_raw.py": "tools/replay/market_data_recovery/dnse_intraday_history_raw.py",
+    "dnse_market_dataset_inventory.py": "tools/replay/market_data_recovery/dnse_market_dataset_inventory.py",
+    "governed_financial_evidence_extraction.py": "tools/replay/official_financial_evidence/governed_financial_evidence_extraction.py",
+    "owner_focus_image_only_corporate_ocr_batch.py": "tools/replay/official_financial_evidence/owner_focus_image_only_corporate_ocr_batch.py",
+    "p3d_residual_comparative_financial_evidence.py": "tools/replay/official_financial_evidence/p3d_residual_comparative_financial_evidence.py",
+    "p3e_fundamental_coverage_closeout.py": "tools/replay/official_financial_evidence/p3e_fundamental_coverage_closeout.py",
+    "p3f11_official_financial_filing_evidence.py": "tools/replay/official_financial_evidence/p3f11_official_financial_filing_evidence.py",
+    "p3f12_value_level_financial_evidence.py": "tools/replay/official_financial_evidence/p3f12_value_level_financial_evidence.py",
+    "qns_h1_official_detail_resolver.py": "tools/replay/official_financial_evidence/qns_h1_official_detail_resolver.py",
+    "retained_official_financial_pdf_scaleout.py": "tools/replay/official_financial_evidence/retained_official_financial_pdf_scaleout.py",
+    "temporal_evidence_registry.py": "tools/replay/pilots/temporal_evidence_registry.py",
+    "wave2_official_financial_evidence_scaleout.py": "tools/replay/official_financial_evidence/wave2_official_financial_evidence_scaleout.py"
+  },
+  "allowed_non_import_change": "Moved tools/replay modules resolve the checkout root with Path(__file__).resolve().parents[3]"
+}

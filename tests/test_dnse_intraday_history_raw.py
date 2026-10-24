@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import unittest
 
-import dnse_intraday_history_raw as contract
+import tools.replay.market_data_recovery.dnse_intraday_history_raw as contract
 
 
 class IntradayHistoryContractTests(unittest.TestCase):

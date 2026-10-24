@@ -8,7 +8,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-import canonical_universe_tiers as tiers
+import stocklookup_core.evidence.canonical_universe_tiers as tiers
 
 
 def candidate(symbol: str, instrument_class: str | None, *, listing: str | None = "UNKNOWN",

@@ -28,7 +28,7 @@ from typing import Any, Iterable, Mapping, Sequence
 
 import pandas as pd
 
-from canonical_universe_tiers import (
+from stocklookup_core.evidence.canonical_universe_tiers import (
     ACTIVE_UNIVERSE,
     EXCLUDED,
     INCLUDED,

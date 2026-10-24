@@ -138,7 +138,8 @@ def test_frozen_source_and_relocation_contracts_remain_exact():
     hub_v3 = json.loads((ROOT / "tests/fixtures/root_hub_dependency_reduction_v3_relocations.json").read_text(encoding="utf-8"))
     w1 = json.loads((ROOT / "tests/fixtures/root_historical_surface_w1_relocations.json").read_text(encoding="utf-8"))
     w2 = json.loads((ROOT / "tests/fixtures/source_root_dependency_wave2_relocations.json").read_text(encoding="utf-8"))
-    groups = [manifest["relocations"], bulk["relocations"], bulk_v2["relocations"], hub_v3["relocations"], w1["relocations"], w2["relocations"], layout["root_consolidation_v4"]["relocations"], layout["root_dependency_breakout_v5"]["relocations"]]
+    w3 = json.loads((ROOT / "tests/fixtures/root_tool_engine_w3_relocations.json").read_text(encoding="utf-8"))
+    groups = [manifest["relocations"], bulk["relocations"], bulk_v2["relocations"], hub_v3["relocations"], w1["relocations"], w2["relocations"], w3["relocations"], layout["root_consolidation_v4"]["relocations"], layout["root_dependency_breakout_v5"]["relocations"]]
     assert sum(map(len, groups)) == len(set().union(*groups))  # pairwise disjoint accepted maps
     assert layout["relocations"] == {k: v for group in groups for k, v in group.items()}
 

@@ -24,7 +24,7 @@ from official_financial_value_evidence import qualify_value_evidence
 from stocklookup_core.evidence.official_route_ownership_evidence import qualify as qualify_route_ownership
 
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parents[3]
 VERSION = "1.0.0"
 CONTRACT_VERSION = "wave2_official_financial_evidence_scaleout/v1"
 ARTIFACT_TYPE = "OFFICIAL_FINANCIAL_EVIDENCE_SCALEOUT_WAVE2"

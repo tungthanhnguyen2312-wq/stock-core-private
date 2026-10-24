@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from owner_focus_image_only_corporate_ocr_batch import execute
+from tools.replay.official_financial_evidence.owner_focus_image_only_corporate_ocr_batch import execute
 
 
 def main() -> int:

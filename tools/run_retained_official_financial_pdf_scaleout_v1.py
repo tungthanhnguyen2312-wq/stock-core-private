@@ -7,7 +7,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 import p3f13_official_financial_evidence_scaleout as p3f13
-from retained_official_financial_pdf_scaleout import build_artifact
+from tools.replay.official_financial_evidence.retained_official_financial_pdf_scaleout import build_artifact
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

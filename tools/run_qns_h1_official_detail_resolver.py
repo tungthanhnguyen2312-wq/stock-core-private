@@ -19,7 +19,7 @@ if str(ROOT) not in sys.path:
 
 from financial_evidence_currency_contract import DEFAULT_LANDING_ROOT
 from stocklookup_core.evidence.official_document_acquisition import fetch_http
-import qns_h1_official_detail_resolver as resolver
+import tools.replay.official_financial_evidence.qns_h1_official_detail_resolver as resolver
 
 FIXTURE = ROOT / "tests/fixtures/triad_current_h1/qns_h1_positioned_tokens.json"
 PDF = Path(DEFAULT_LANDING_ROOT) / "triad-h1-evidence-20261008/documents/QNS/2026-H1/reviewed_interim_financial_statements" / f"{resolver.RETAINED_PDF_SHA256}.pdf"

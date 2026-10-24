@@ -4,7 +4,7 @@ import argparse,hashlib,json,os,sys,uuid
 from datetime import datetime,timezone
 from pathlib import Path
 from typing import Any
-from temporal_evidence_registry import authority_read,canonical,run_promoted_vertical_slice,run_replay_parity,run_shadow_dual_read
+from tools.replay.pilots.temporal_evidence_registry import authority_read,canonical,run_promoted_vertical_slice,run_replay_parity,run_shadow_dual_read
 LEDGER_VERSION="1.0.0";STAGES=("temporary_registry_replay","parity_validation","shadow_dual_read_validation","cutover_gate_evaluation","cleanup_authority_baseline_verification")
 class OperationalPilotError(RuntimeError):pass
 class OperationalLockError(OperationalPilotError):pass

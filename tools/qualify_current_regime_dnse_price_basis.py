@@ -23,7 +23,7 @@ if str(ROOT) not in sys.path:
 
 from dnse_access import credentials_for_request
 from dnse_bulk_market_data import fetch_capability_raw
-from dnse_current_regime_price_basis import (
+from tools.replay.market_data_recovery.dnse_current_regime_price_basis import (
     DATASET, promotion_analysis, qualify_event, query_for_window, reconcile, select_cohort,
     snapshot_coverage,
 )

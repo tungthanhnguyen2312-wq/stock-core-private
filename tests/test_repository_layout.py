@@ -433,3 +433,43 @@ def test_w1_historical_surface_is_archived_under_tools_replay_without_root_shim(
             names = [a.name for a in node.names] if isinstance(node, ast.Import) else \
                 [node.module] if isinstance(node, ast.ImportFrom) and node.module and not node.level else []
             assert not moved.intersection(n.split(".")[0] for n in names), (ref, relative, names)
+
+
+W3 = json.loads((ROOT / "tests/fixtures/root_tool_engine_w3_relocations.json").read_text(encoding="utf-8"))
+
+
+def test_w3_engines_leave_the_root_without_shim_or_pinned_caller():
+    """Wave 3 (2026-10-24): single-milestone engines move beside their runners; two leaf evidence modules join the package."""
+    import subprocess
+    launch = json.loads((ROOT / "config/daily_path_launchers.json").read_text(encoding="utf-8"))
+    pinned = {item["path"] for item in launch["targets"]} | set(launch["python_callers"])
+    pinned |= set(json.loads((ROOT / "tests/fixtures/e2e3_frozen_sources.json").read_text(encoding="utf-8"))["source_sha256_lf"])
+    assert sorted(W3["relocations"]) == sorted(m for c in W3["cohorts"].values() for m in c["modules"])
+    assert len(W3["relocations"]) == 19
+    for old, new in W3["relocations"].items():
+        assert LAYOUT["relocations"][old] == new
+        assert old not in LAYOUT["grandfathered_root_python"] and old not in LAYOUT["compatibility_entrypoints"]
+        assert old not in pinned and new not in pinned, old
+        assert not (ROOT / old).exists() and importlib.util.find_spec(old[:-3]) is None, old
+        assert Path(importlib.util.find_spec(new[:-3].replace("/", ".")).origin) == ROOT / new
+        if new.startswith("tools/replay/"):
+            assert new.count("/") == 3, new
+            source = (ROOT / new).read_text(encoding="utf-8")
+            assert "Path(__file__).resolve().parent\n" not in source, new
+    moved = {old[:-3] for old in W3["relocations"]}
+    for ref, relative in BULK["historically_executed_sources"]:
+        tree = ast.parse(subprocess.check_output(["git", "show", f"{ref}:{relative}"], cwd=ROOT))
+        for node in ast.walk(tree):
+            names = [a.name for a in node.names] if isinstance(node, ast.Import) else \
+                [node.module] if isinstance(node, ast.ImportFrom) and node.module and not node.level else []
+            assert not moved.intersection(n.split(".")[0] for n in names), (ref, relative, names)
+
+
+def test_w3_moved_engines_keep_the_checkout_root(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    for new in W3["relocations"].values():
+        if not new.startswith("tools/replay/"):
+            continue
+        module = importlib.import_module(new[:-3].replace("/", "."))
+        if hasattr(module, "ROOT"):
+            assert Path(module.ROOT).resolve() == ROOT.resolve(), new
