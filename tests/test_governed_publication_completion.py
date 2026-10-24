@@ -25,7 +25,7 @@ CI_ID = 32986483019
 PAGES_ID = 32986911616
 SESSION = "2026-08-26"
 PUBLIC_LINE = f"PUBLIC_BYTE_IDENTITY_PASS attempt=1 session={SESSION} sha={SOURCE_SHA}"
-CANONICAL_ORIGIN = "https://github.com/tungthanhnguyen2312-wq/market-dashboard.git"
+CANONICAL_ORIGIN = "https://github.com/tungthanhnguyen2312-wq/stocklookup-dashboard.git"
 
 
 def _cp(returncode=0, stdout="", stderr=""):

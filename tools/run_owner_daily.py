@@ -87,7 +87,7 @@ from runtime_paths import workspace_path, workspace_profile, workspace_environme
 DEFAULT_RUNTIME = configured_runtime_root(DEFAULT_RUNTIME)
 DEFAULT_HANDOFF_REPO = workspace_path("handoff", DEFAULT_HANDOFF_REPO)
 DEFAULT_RESULT_LOG_ROOT = workspace_path("logs", DEFAULT_RESULT_LOG_ROOT)
-from release_checkout_identity import CANONICAL_WEB_ROOT  # noqa: E402
+from release_checkout_identity import CANONICAL_WEB_ROOT, origin_matches_checkout, origin_repository  # noqa: E402
 from canonical_dashboard_runtime_release import (  # noqa: E402
     CanonicalRuntimeReleaseError, materialize_canonical_runtime_release, materialize_release_ready_runtime,
 )
@@ -206,8 +206,12 @@ def preflight_repository(root: Path, *, expected_name: str, expected_remote_frag
     if root.name != expected_name or not (root / ".git").exists():
         raise OwnerDailyError("Repository preflight", "WRONG_REPOSITORY", f"Expected {expected_name} checkout.")
     remote = _git(root, "remote", "get-url", "origin")
-    if expected_remote_fragment not in remote:
-        raise OwnerDailyError("Repository preflight", "WRONG_ORIGIN", "Restore the configured private origin.")
+    # A GitHub origin must be exactly one admitted for this checkout folder (canonical name or
+    # its pre-rename name); only a non-GitHub origin (local rehearsal/fixture) uses the fragment.
+    admitted = (origin_matches_checkout(remote, expected_name) if origin_repository(remote) is not None
+                else expected_remote_fragment in remote)
+    if not admitted:
+        raise OwnerDailyError("Repository preflight", "WRONG_ORIGIN", "Restore the configured origin repository.")
     _git(root, "fetch", "origin")
     if _git(root, "branch", "--show-current") != "main":
         raise OwnerDailyError("Repository preflight", "BRANCH_IS_NOT_MAIN", "Switch to main without discarding work.")

@@ -90,7 +90,7 @@ def test_workspace_all_roles_release_identity_and_db(volumes, monkeypatch):
                     origin_url=git("remote", "get-url", "origin"), git_toplevel=Path(git("rev-parse", "--show-toplevel")),
                     head=git("rev-parse", "HEAD"), origin_main=git("rev-parse", "HEAD"), live=True)
         release.assert_web_checkout_identity(qualified["paths"]["dashboard"], branch="main",
-            origin_url="https://github.com/tungthanhnguyen2312-wq/market-dashboard.git",
+            origin_url="https://github.com/tungthanhnguyen2312-wq/stocklookup-dashboard.git",
             live=True, head="a", origin_main="a")
         for kwargs in ({"branch": "feature/test"}, {"origin_url": "https://other/repo"},
                        {"live": True, "head": "a", "origin_main": "b"}):
