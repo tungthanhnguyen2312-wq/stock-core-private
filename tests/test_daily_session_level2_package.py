@@ -356,6 +356,10 @@ def test_materialization_separates_attempt_artifact_root_from_execution_root(tmp
     # at all, so this test now asserts the acquisition OUTPUT lands under attempt_root regardless
     # of execution_root, and that every remaining (already-primed) step still never touches run_cmd.
     session = "2026-08-26"
+    # Use an isolated code root: the real repository correctly refuses reacquisition
+    # for this already-completed session, independently of the attempt output root.
+    execution_root = tmp_path / "execution"
+    execution_root.mkdir()
     attempt_root = tmp_path / "operations-review" / "canonical-post-close-v1" / session / "post-close-attempt-190500"
     paths = level2.session_artifact_paths(attempt_root, session)
     _prime_materialization_outputs(paths)
@@ -369,7 +373,7 @@ def test_materialization_separates_attempt_artifact_root_from_execution_root(tmp
             attempt_root,
             session,
             tmp_path / "runtime",
-            execution_root=ROOT,
+            execution_root=execution_root,
         )
 
     mocked_run_cmd.assert_not_called()

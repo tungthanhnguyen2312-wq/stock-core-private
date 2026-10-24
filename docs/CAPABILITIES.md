@@ -1,5 +1,8 @@
 # Stock Lookup — Capability Registry
 
+[Historical pairing](official_prior_period_pairing_daily_frozen_source_transition_v1_contract.md):
+local Daily integration/card validation; non-voting, gate/authority unchanged.
+
 Navigation; no scores. [Facts](ACTIVE_STATE.md), [authority](AUTHORITY.md), [run order](DAILY_PIPELINE.md).
 
 Local PR167 [comparison](integrated_investment_opportunity_comparison_v1_contract.md)/[discovery](thesis_opportunity_discovery_v1_contract.md): ratio, divergence and trajectory research;

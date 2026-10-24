@@ -68,6 +68,7 @@ env:
     tests/test_research_quality_20261022.py
     tests/test_official_income_research_consumption.py
     tests/test_official_income_prior_period_pairing.py
+    tests/test_official_prior_period_pairing_daily.py
     tests/test_feature_input_fitness_contract.py
     tests/test_current_research_ai_handoff_packet.py
     tests/test_current_opportunity_prioritization.py

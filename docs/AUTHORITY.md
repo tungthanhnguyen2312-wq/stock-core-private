@@ -1,6 +1,6 @@
 # Stock Lookup — Authority Map
 
-[Income](official_income_statement_research_consumption_v1_contract.md)/[pairing](qualified_quarterly_statement_throughput_v1_contract.md): NON_VOTING; D-1 unchanged.
+[Historical income pairing](official_prior_period_pairing_daily_frozen_source_transition_v1_contract.md): NON_VOTING; no current earnings, valuation, TTM or D-1 effect.
 
 Who may speak for what. This file **summarizes** authority; it promotes nothing. The controlling
 contract named in each row decides disputes. Written 2026-10-04 on main `920d579`. Current-state

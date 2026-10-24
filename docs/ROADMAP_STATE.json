@@ -15,11 +15,32 @@
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "QUALIFIED_QUARTERLY_STATEMENT_THROUGHPUT_V1",
-    "state": "COMPLETE"
+    "milestone": "OFFICIAL_PRIOR_PERIOD_PAIRING_DAILY_FROZEN_SOURCE_TRANSITION_V1",
+    "state": "ACTIVE"
   },
   "queued_next": [],
   "milestones": [
+    {
+      "milestone_id": "OFFICIAL_PRIOR_PERIOD_PAIRING_DAILY_FROZEN_SOURCE_TRANSITION_V1",
+      "state": "ACTIVE",
+      "starting_checkpoint": "829500e7c132e4289147e5fa61764da47f3dce67",
+      "candidate_branch": "feat/official-prior-period-pairing-daily-v1",
+      "dependencies": [
+        "QUALIFIED_QUARTERLY_STATEMENT_THROUGHPUT_V1"
+      ],
+      "unlocks": [],
+      "owner_authorized": true,
+      "owner_override": "Owner 2026-10-24 authorizes one isolated Producer milestone: existing qualified prior-period loader and pairing into exact frozen Daily caller via source transition plus existing non-voting historical income research cards. Local implementation/test/checkpoint and PR-ready handoff only; no push, merge, deploy, Daily production, DB writes, authority promotion, D-1/comparative gates, policy/trajectory/valuation/TTM changes or successor. Shareholder worktree untouched.",
+      "authority_effect": "NONE",
+      "source_doc": "docs/official_prior_period_pairing_daily_frozen_source_transition_v1_contract.md",
+      "state_history": [
+        "DEFERRED",
+        "ACTIVE"
+      ],
+      "checkpoint": null,
+      "terminal_disposition": null,
+      "notes": "Owner 2026-10-24 authorizes one isolated Producer milestone: existing qualified prior-period loader and pairing into exact frozen Daily caller via source transition plus existing non-voting historical income research cards. Local implementation/test/checkpoint and PR-ready handoff only; no push, merge, deploy, Daily production, DB writes, authority promotion, D-1/comparative gates, policy/trajectory/valuation/TTM changes or successor. Shareholder worktree untouched."
+    },
     {
       "milestone_id": "QUALIFIED_QUARTERLY_STATEMENT_THROUGHPUT_V1",
       "state": "COMPLETE",

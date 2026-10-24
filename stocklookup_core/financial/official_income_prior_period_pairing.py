@@ -21,6 +21,7 @@ or changes valuation eligibility.  Owner gates are disabled unless a caller name
 from __future__ import annotations
 
 import hashlib
+import copy
 import json
 import re
 from datetime import date, datetime
@@ -197,7 +198,12 @@ def load_prior_official_income_rows(*, runtime_root: Path | str | None, repo_roo
     corrections: list[dict[str, Any]] = []
     correction_path = repo_root / "derived" / "financial-evidence-currency-refresh-v1" / "semantic_metric_relabel_corrections.jsonl"
     if correction_path.is_file():
-        corrections = [json.loads(line) for line in correction_path.read_text(encoding="utf-8").splitlines() if line.strip()]
+        try:
+            corrections = [json.loads(line) for line in correction_path.read_text(encoding="utf-8").splitlines() if line.strip()]
+            if any(not isinstance(row, dict) for row in corrections):
+                raise ValueError("SEMANTIC_CORRECTION_INVALID")
+        except (OSError, ValueError):
+            return {"rows": [], "load_blockers": ["SEMANTIC_CORRECTIONS_UNREADABLE"]}
     evidence = Path(runtime_root) / "data" / "official-evidence" if runtime_root else None
     if evidence is None or not (evidence / "financial_identity_citations.jsonl").is_file() or not (evidence / "manifest.json").is_file():
         blockers.append("GOVERNED_OFFICIAL_EVIDENCE_NOT_RETAINED_ON_HOST")
@@ -206,7 +212,7 @@ def load_prior_official_income_rows(*, runtime_root: Path | str | None, repo_roo
             citations = [json.loads(line) for line in (evidence / "financial_identity_citations.jsonl").read_text(encoding="utf-8").splitlines() if line.strip()]
             manifest = json.loads((evidence / "manifest.json").read_text(encoding="utf-8")).get("records") or []
             rows.extend(prior_rows_from_governed_citations(citations, manifest, corrections))
-        except (OSError, ValueError, AttributeError):
+        except (OSError, ValueError, AttributeError, TypeError, KeyError):
             blockers.append("GOVERNED_OFFICIAL_EVIDENCE_UNREADABLE")
     try:
         from stocklookup_core.financial.multi_period_financial_panel import load_promoted_fundamental_coverage_closeout_citations
@@ -225,11 +231,39 @@ def load_prior_period_inputs(*, runtime_root: Path | str | None, repo_root: Path
     loaded = load_prior_official_income_rows(runtime_root=runtime_root, repo_root=repo_root)
     try:
         observations = load_comparative_column_observations(public_root)
-    except (OSError, ValueError):
+    except (OSError, ValueError, AttributeError, TypeError):
         observations = []
         loaded["load_blockers"] = sorted(set(loaded["load_blockers"]) | {"COMPARATIVE_COLUMN_OBSERVATIONS_UNREADABLE"})
     return {"contract_version": CONTRACT_VERSION, "rows": loaded["rows"], "load_blockers": loaded["load_blockers"],
             "comparative_observations": observations}
+
+
+def qualified_prior_inputs_at_cutoff(inputs: Mapping[str, Any], *, cutoff: str) -> dict[str, Any] | None:
+    """Omit absent/unqualified/future prior inputs, preserving the no-input Daily identity."""
+    boundary = _instant(cutoff)
+    if boundary is None or not any(
+        row.get("admission_state") == "QUALIFIED_PRIOR_PERIOD_FACT" and not row.get("reason_codes")
+        and (known := _instant(row.get("knowledge_available_at"))) is not None and known <= boundary
+        for row in inputs.get("rows") or []
+    ):
+        return None
+    return copy.deepcopy(dict(inputs))
+
+
+def research_card_pairing(record: Mapping[str, Any] | None, income: Mapping[str, Any], *,
+                          ticker: str | None, cutoff: str | None) -> dict[str, Any] | None:
+    """Carry the existing source-owned pairing only for the same admitted facts and cutoff."""
+    source = (record or {}).get("official_income_research_context") or {}
+    pairing = source.get("prior_period_pairing")
+    boundary = _instant(cutoff)
+    if (not isinstance(pairing, Mapping) or boundary is None
+            or pairing.get("contract_version") != CONTRACT_VERSION or pairing.get("ticker") != ticker
+            or _instant(pairing.get("cutoff")) != boundary
+            or source.get("facts") != income.get("facts")
+            or any(pairing.get(k) != "NONE" for k in ("vote_effect", "strict_valuation_effect", "ttm_effect"))
+            or (pairing.get("owner_gated_preview") or {}).get("enabled_gates")):
+        return None
+    return copy.deepcopy(dict(pairing))
 
 
 def validate_comparative_observation(row: Mapping[str, Any]) -> list[str]:
@@ -282,6 +316,14 @@ def _comparison(prior: Mapping[str, Any], current: Mapping[str, Any], *, entity:
             "prior_assurance": prior.get("audit_or_review_status") or prior.get("assurance_basis"),
             "current_citation_id": current["citation_id"], "current_document_sha256": current["document_sha256"],
             "current_assurance": current["audit_or_review_status"], "method": METHOD,
+            "unit_scale": current["unit_scale"],
+            "prior_period_start": prior.get("period_start"), "prior_period_end": prior.get("period_end"),
+            "current_period_start": current["period_start"], "current_period_end": current["period_end"],
+            "prior_source_locator": prior.get("source_locator"), "prior_source_page": prior.get("source_page"),
+            "current_source_identity": current.get("source_identity"),
+            "current_source_locator": current.get("source_locator"), "current_source_page": current.get("source_page"),
+            "prior_knowledge_available_at": prior.get("knowledge_available_at"),
+            "current_knowledge_available_at": current.get("knowledge_available_at"),
             "limitations": ["REPORTED_CHANGE_NOT_BUSINESS_QUALITY", "RECURRENCE_UNKNOWN", "NON_VOTING",
                             "NO_ANNUALIZATION_NO_TTM_NO_FX"]}
 
@@ -301,6 +343,17 @@ def official_income_prior_period_context(record: Mapping[str, Any] | None, *, pr
     current_facts = [fact for fact in income.get("facts") or []
                      if fact.get("ticker") == ticker and fact.get("canonical_metric") in INCOME_METRICS]
     rejected, comparisons, preview = [], [], []
+    from stocklookup_core.financial.fundamental_signal_consumption_contract import official_research_row_reasons
+    current_at_cutoff = []
+    for fact in current_facts:
+        reasons = official_research_row_reasons(fact, boundary=boundary, entity=entity, ticker=ticker,
+                                                statement_family="income_statement")
+        if reasons:
+            rejected.append({"side": "CURRENT", "citation_id": fact.get("citation_id"),
+                             "metric": fact.get("canonical_metric"), "reason_codes": sorted(set(reasons))})
+        else:
+            current_at_cutoff.append(fact)
+    current_facts = current_at_cutoff
 
     def known(row: Mapping[str, Any]) -> bool:
         instant = _instant(row.get("knowledge_available_at"))
@@ -311,6 +364,8 @@ def official_income_prior_period_context(record: Mapping[str, Any] | None, *, pr
         if row.get("ticker") != ticker:
             continue
         reasons = list(row.get("reason_codes") or [])
+        if row.get("admission_state") != "QUALIFIED_PRIOR_PERIOD_FACT" or row.get("contract_version") != CONTRACT_VERSION:
+            reasons.append("QUALIFIED_PRIOR_PERIOD_FACT_REQUIRED")
         if entity != "corporate":
             reasons.append("INDUSTRIAL_INCOME_IDENTITY_NOT_ADMITTED_FOR_ENTITY")
         if not known(row):
@@ -427,6 +482,7 @@ def official_income_prior_period_context(record: Mapping[str, Any] | None, *, pr
             "unreviewed_quarterly_comparisons": unreviewed_preview if UNREVIEWED_GATE in gates else [],
             "effect": "NONE_PREVIEW_ONLY_NOT_FED_TO_ANY_CONSUMER"},
         "availability_basis": "KNOWLEDGE_AT_RESEARCH_CUTOFF_NOT_PUBLICATION_OR_HISTORICAL_PIT_PROOF",
+        "interpretation": "HISTORICAL_REPORTED_CHANGE_NOT_CURRENT_EARNINGS_MOMENTUM",
         "vote_effect": "NONE", "strict_valuation_effect": "NONE", "ttm_effect": "NONE", "is_actionable": False,
     }
 
@@ -446,6 +502,6 @@ def attach_prior_period_pairing(records: Mapping[str, Any], *, prior_rows: Seque
 
 __all__ = ["COMPARATIVE_GATE", "UNREVIEWED_GATE", "OWNER_GATES", "attach_prior_period_pairing",
            "literal_row_identity", "load_comparative_column_observations", "load_prior_official_income_rows",
-           "load_prior_period_inputs",
+           "load_prior_period_inputs", "qualified_prior_inputs_at_cutoff", "research_card_pairing",
            "official_income_prior_period_context", "prior_rows_from_governed_citations",
            "prior_rows_from_promoted_closeout", "validate_comparative_observation"]

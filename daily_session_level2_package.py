@@ -1916,11 +1916,19 @@ def materialize_independent_components(
         from financial_evidence_currency_refresh import load_public_official_fact_rows
         from market_wide_current_fundamental_research import project_session
         from financial_evidence_currency_contract import PUBLIC_ARTIFACT_DIR
+        from stocklookup_core.financial.official_income_prior_period_pairing import (
+            load_prior_period_inputs, qualified_prior_inputs_at_cutoff,
+        )
         baseline = _load(retained_paths["fundamental"])
         report_path = execution_root / PUBLIC_ARTIFACT_DIR / "cohort_report.json"
+        cutoff = f"{session}T15:00:00+07:00"
+        prior_inputs = qualified_prior_inputs_at_cutoff(load_prior_period_inputs(
+            runtime_root=runtime_root, repo_root=execution_root,
+            public_root=execution_root / PUBLIC_ARTIFACT_DIR), cutoff=cutoff)
         projection = project_session(baseline=baseline,
             official_rows=load_public_official_fact_rows(execution_root), session=session,
-            cutoff=f"{session}T15:00:00+07:00", cohort_report=_load(report_path))
+            cutoff=cutoff, cohort_report=_load(report_path),
+            **({"prior_period_inputs": prior_inputs} if prior_inputs is not None else {}))
         projected_path.parent.mkdir(parents=True, exist_ok=True)
         projected_path.write_text(json.dumps(projection, ensure_ascii=False, sort_keys=True, indent=2) + "\n", encoding="utf-8")
     if projected_path.exists() and completed.get("status") != "COMPLETED_RETAINED_EVIDENCE":
