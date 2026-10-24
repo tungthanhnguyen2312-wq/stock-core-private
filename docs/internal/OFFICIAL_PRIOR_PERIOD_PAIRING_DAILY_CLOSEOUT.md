@@ -137,3 +137,12 @@ later Owner instruction. No next milestone is started.
 - `tests/test_official_prior_period_pairing_daily.py`
 - `tests/test_thesis_evidence_source_transition.py`
 - `tools/replay_official_prior_period_pairing_daily.py`
+
+## Hosted CI correction — PR185
+
+Owner subsequently authorized push, PR creation and scoped CI corrections. Initial hosted
+run 40050094813 passed four jobs; focused regressions had 6718 passes and one docs failure:
+the closeout heading replaced the required NOW horizon. The heading now preserves NOW
+and labels this same milestone LOCAL COMPLETE. No roadmap admission, implementation,
+policy, authority or runtime behavior changes. The active-control-plane suite and native
+roadmap check are rerun before pushing the correction.
