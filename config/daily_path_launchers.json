@@ -92,7 +92,7 @@
       ]
     },
     "tools/run_owner_daily.py": {
-      "ast_sha256": "389220f5ce2ef9f26bce2d31d86e8551aaf519cfe0326d648be75212db3c6df9",
+      "ast_sha256": "5708d50af2c870ef644cb56b0ae93d50a219eabffd5240ef0952288a0a6319df",
       "reason": "Resolved dispatch plus exact caller AST; injected/unknown paths are not claimed as runtime proof.",
       "targets": [
         "daily_analysis_pipeline.py",
