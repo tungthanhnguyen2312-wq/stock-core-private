@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import current_foreign_flow_positioning_bridge as bridge
+import tools.replay.market_data_recovery.current_foreign_flow_positioning_bridge as bridge
 import current_foreign_flow_retention as retention
 from stocklookup_core.evidence.dnse_foreign_flow_capability import normalize_record
 

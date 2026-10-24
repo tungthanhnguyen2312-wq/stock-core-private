@@ -10,7 +10,7 @@ from stocklookup_core.financial.multi_period_financial_panel import (
     MultiPeriodPanelError,
     load_promoted_residual_comparative_financial_citations,
 )
-from p3d_residual_comparative_financial_evidence import (
+from tools.replay.official_financial_evidence.p3d_residual_comparative_financial_evidence import (
     build_p3d_closeout,
     build_reconciled_residual_gap_inventory,
     verify_retained_document_bytes,

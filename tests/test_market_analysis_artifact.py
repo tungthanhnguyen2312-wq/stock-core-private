@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 
 import pandas as pd
 
-from canonical_universe_tiers import INCLUDED, UNKNOWN, EXCLUDED
+from stocklookup_core.evidence.canonical_universe_tiers import INCLUDED, UNKNOWN, EXCLUDED
 from field_temporal_contract import FreshnessState, PitStatus
 from market_data_contracts import PriceBasis
 from market_analysis_artifact import (

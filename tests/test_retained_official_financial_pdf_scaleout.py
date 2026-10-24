@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from retained_official_financial_pdf_scaleout import _layout, _path_classification, discover_pdf_bytes
+from tools.replay.official_financial_evidence.retained_official_financial_pdf_scaleout import _layout, _path_classification, discover_pdf_bytes
 
 
 def test_duplicate_pdf_sha_is_one_document_with_multiple_provenance_paths(tmp_path: Path):

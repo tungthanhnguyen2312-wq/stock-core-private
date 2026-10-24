@@ -7,8 +7,8 @@ from types import SimpleNamespace
 
 import inspect
 
-import owner_focus_image_only_corporate_ocr_batch as batch
-from owner_focus_image_only_corporate_ocr_batch import BATCH_TICKERS, CORE_METRICS, DISCOVERY_CONFIG, DISCOVERY_FALLBACK_CONFIG, build_batch_manifest
+import tools.replay.official_financial_evidence.owner_focus_image_only_corporate_ocr_batch as batch
+from tools.replay.official_financial_evidence.owner_focus_image_only_corporate_ocr_batch import BATCH_TICKERS, CORE_METRICS, DISCOVERY_CONFIG, DISCOVERY_FALLBACK_CONFIG, build_batch_manifest
 
 
 ROOT = Path(__file__).resolve().parents[1]

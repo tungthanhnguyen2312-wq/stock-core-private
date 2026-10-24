@@ -14,7 +14,7 @@ from typing import Any, Mapping
 from official_financial_filing_evidence import METADATA_QUALIFIED, qualify_document_metadata
 
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parents[3]
 VERSION = "1.0.0"
 CONTRACT_VERSION = "p3f11_official_financial_filing_evidence/v1"
 DEFAULT_MANIFEST = ROOT / "operations-review" / "governed-official-evidence-v1" / "official_document_acquisition_manifest.json"

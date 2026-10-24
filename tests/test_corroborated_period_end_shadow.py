@@ -16,7 +16,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-import corroborated_period_end_shadow as shadow  # noqa: E402
+import tools.replay.market_data_recovery.corroborated_period_end_shadow as shadow  # noqa: E402
 import market_wide_current_shares_resolver as prod  # noqa: E402
 from tests.test_b1_share_basis_event_promotion import (  # noqa: E402
     event_anchor, period_end_anchor, write_runtime,

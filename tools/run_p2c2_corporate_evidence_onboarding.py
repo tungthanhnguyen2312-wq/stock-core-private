@@ -46,7 +46,7 @@ from financial_statement_template_recognizer import (
     CANONICAL_NET_INCOME_SEMANTIC,
     CONTRACT_VERSION as TEMPLATE_RECOGNIZER_CONTRACT,
 )
-from governed_financial_evidence_extraction import extract_governed_issuer_citations
+from tools.replay.official_financial_evidence.governed_financial_evidence_extraction import extract_governed_issuer_citations
 
 SCHEMA_VERSION = "1.2.0"
 CONTRACT_VERSION = "p2d_generic_corporate_onboarding/v1"

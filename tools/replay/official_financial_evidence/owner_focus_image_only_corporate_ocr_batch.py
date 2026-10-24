@@ -29,7 +29,7 @@ import market_wide_current_fundamental_research as current_fundamental
 import p3f13_official_financial_evidence_scaleout as p3f13
 
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parents[3]
 EVIDENCE_ROOT = ROOT / "operations-review" / "governed-official-evidence-v1"
 CONTRACT_VERSION = "owner_focus_image_only_corporate_ocr_batch/v1"
 BATCH_TICKERS = ("PNJ", "PVD", "NVL", "POW")

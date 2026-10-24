@@ -87,7 +87,7 @@ OUTCOME_A = "OUTCOME_A_TRAILING20_QUALIFICATION_DEEPENED"
 OUTCOME_B = "OUTCOME_B_BOUNDED_ACQUISITION_PARTIAL"
 OUTCOME_C = "OUTCOME_C_CURRENT_SOURCE_CEILING_ESTABLISHED"
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_OFFICIAL_UNIVERSE = (
     ROOT / "operations-review" / "current-official-market-universe-integration-v1-20260824"
     / "current_official_market_universe_artifact.json"

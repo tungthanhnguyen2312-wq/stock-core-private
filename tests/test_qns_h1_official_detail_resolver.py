@@ -5,7 +5,7 @@ from pathlib import Path
 import market_wide_current_fundamental_research as fundamental
 from official_financial_ocr_table_evidence import row_label_supports_metric
 from source_faithful_numeric_glyph_normalization import normalization_decision
-import qns_h1_official_detail_resolver as resolver
+import tools.replay.official_financial_evidence.qns_h1_official_detail_resolver as resolver
 
 ROOT = Path(__file__).resolve().parents[1]
 FIXTURE = ROOT / "tests/fixtures/triad_current_h1/qns_h1_positioned_tokens.json"

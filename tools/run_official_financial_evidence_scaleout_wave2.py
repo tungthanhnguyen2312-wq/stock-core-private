@@ -15,7 +15,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from wave2_official_financial_evidence_scaleout import execute
+from tools.replay.official_financial_evidence.wave2_official_financial_evidence_scaleout import execute
 OUTPUT_DIR = ROOT / "operations-review" / "official-financial-evidence-scaleout-wave2-20260821"
 ARTIFACT_PATH = OUTPUT_DIR / "wave2_official_financial_evidence_scaleout_artifact.json"
 SUMMARY_PATH = OUTPUT_DIR / "wave2_official_financial_evidence_scaleout_summary.md"

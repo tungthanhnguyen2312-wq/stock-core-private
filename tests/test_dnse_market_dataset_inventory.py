@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import unittest
 
-import dnse_market_dataset_inventory as inventory
+import tools.replay.market_data_recovery.dnse_market_dataset_inventory as inventory
 from dnse_market_data import MARKET_DATA_ENDPOINTS
 
 

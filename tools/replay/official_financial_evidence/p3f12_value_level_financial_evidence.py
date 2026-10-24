@@ -9,7 +9,7 @@ from typing import Any, Mapping
 
 from official_financial_value_evidence import qualify_value_evidence
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parents[3]
 VERSION = "1.0.0"
 P3E = ROOT / "operations-review" / "p3e-fundamental-coverage-closeout-20260820" / "p3e_fundamental_coverage_closeout_artifact.json"
 P2F1 = ROOT / "operations-review" / "p2f1-sector-financial-taxonomy-foundation-20260819" / "p2f1_sector_financial_taxonomy_artifact.json"

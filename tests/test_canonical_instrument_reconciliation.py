@@ -6,7 +6,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-import canonical_instrument_reconciliation as reconciliation
+import stocklookup_core.evidence.canonical_instrument_reconciliation as reconciliation
 
 
 def dnse(symbol: str, **overrides):
