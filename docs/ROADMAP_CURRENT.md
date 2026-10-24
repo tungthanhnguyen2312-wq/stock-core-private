@@ -5,8 +5,6 @@ Verified analytical baseline 2026-10-14 `a9c799397a74641a0e16c8ea84454d2dc4d0745
 Nothing below auto-starts; native standing admission required (AI_RULES 11).
 Facts: [ACTIVE_STATE.md](ACTIVE_STATE.md).
 
-Owner-authorized local integration: [shareholder economics / dilution](corporate_shareholder_economics_research_v1_contract.md), reusing completed `119a9e1e` on renamed main `e86b5f96`. Offline/opt-in research only; no predecessor reopening, new authority, release or successor. Native completion history remains preserved.
-
 ## NOW — OFFICIAL PRIOR-PERIOD PAIRING DAILY TRANSITION V1 (LOCAL COMPLETE)
 
 [Scope](official_prior_period_pairing_daily_frozen_source_transition_v1_contract.md): existing

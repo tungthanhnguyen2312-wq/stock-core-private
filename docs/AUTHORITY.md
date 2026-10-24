@@ -1,7 +1,5 @@
 # Stock Lookup — Authority Map
 
-[Shareholder/dilution research](corporate_shareholder_economics_research_v1_contract.md): offline/opt-in, NON_VOTING. Qualified point arithmetic does not establish continuous outstanding shares, wealth dilution, PIT or price/valuation eligibility. Hub #39 and matched PDFs do not qualify new fields.
-
 [Historical income pairing](official_prior_period_pairing_daily_frozen_source_transition_v1_contract.md): NON_VOTING; no current earnings, valuation, TTM or D-1 effect.
 
 Who may speak for what. This file **summarizes** authority; it promotes nothing. The controlling
