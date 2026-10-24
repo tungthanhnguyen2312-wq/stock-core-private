@@ -1,6 +1,7 @@
 # Stock Lookup — Canonical Daily Pipeline
 
 Canonical Daily order, including the Macro V1 corrective. Code governs this view.
+[Shareholder economics](corporate_shareholder_economics_research_v1_contract.md) adds a source-gated explanatory context at existing corporate enrichment/delivery; no new stage or acquisition.
 Current-state facts: [ACTIVE_STATE.md](ACTIVE_STATE.md). Authority per output: [AUTHORITY.md](AUTHORITY.md).
 
 [Capacity](capacity_recovery_phase1_contract.md): adapter offline; delivery reuse disabled.

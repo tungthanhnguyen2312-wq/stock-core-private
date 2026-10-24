@@ -1016,6 +1016,14 @@ def build_enrichment_components(
             raise CanonicalPostCloseError("REQUIRED_INPUT_MISSING")
         return build(current_official_universe=official_universe, current_fundamental=fundamental, current_descriptive=descriptive)
 
+    def _corporate_economic_records():
+        # Only the official exact-field stream is eligible for this explanatory join.
+        # Legacy computed fundamentals never become Financial V2 numerical inputs.
+        source = _load(retained_paths["fundamental"]) or {}
+        return {ticker: {"entity_class": row.get("entity_class"),
+                         "official_field_context": row.get("official_field_context") or []}
+                for ticker, row in (source.get("records") or {}).items()}
+
     def _corporate_event_context():
         from current_corporate_event_context import build_artifact as build, load_supplemental_retained_events
         official_universe = _load(retained_paths["official_universe"])
@@ -1303,6 +1311,8 @@ def build_enrichment_components(
                     root=retained_evidence_root,
                     research_session=official_event_context_ci.get("research_session"),
                     market_wide_current_corporate_intelligence=market_wide_ci,
+                    financial_records=_corporate_economic_records(),
+                    valuation_records=(raw_val or {}).get("records") or {},
                     **({"include_supplemental_events": False} if corporate_currency_rollforward is not None else {}),
                 )
         except Exception:

@@ -28,6 +28,7 @@ Kinds: **CURRENT FACT** (verified), **HOST-LOCAL** (untracked; re-verify),
 **BLOCKED**, **DEFERRED**, **HISTORICAL**.
 
 ## 1. The operational gate
+- **Shareholder/dilution local integration:** [scope and invocation](corporate_shareholder_economics_research_v1_contract.md#shareholder-economics-and-dilution-integration-v1-local-2026-10-24): reuse `119a9e1e` on renamed main `e86b5f96`; offline/opt-in qualified-point arithmetic and candidate #39 inspection. No authority, production activation or release; original completion records preserved.
 - **Prior-period Daily integration:** [scope](official_prior_period_pairing_daily_frozen_source_transition_v1_contract.md); base PR182-184 merged; source transition + historical non-voting cards; LOCAL COMPLETE / NOT PROMOTED.
 - **[Native releases](parallel_domain_development_control_plane_v1_contract.md):** declaration correction; explicit coupled source review.
 - **RELEASED:** PR145/146 source wave; exact historical acceptance remains in [SYSTEM_MAP](SYSTEM_MAP.md). No new source authority or production admission follows.

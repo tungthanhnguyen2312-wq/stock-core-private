@@ -281,7 +281,7 @@ def classify_catalyst_risk(
         return INFORMATIONAL, ["BONUS_OR_STOCK_DIVIDEND_IS_SHARE_COUNT_NEUTRAL_NOT_DILUTIVE_BY_ITSELF"]
     if event_type in {RIGHTS_ISSUE, SHARE_ISSUANCE, CAPITAL_INCREASE}:
         if status == EXECUTED:
-            return MIXED, ["EXECUTED_ISSUANCE_RAISES_CAPITAL", "EXECUTED_ISSUANCE_MAY_DILUTE_EXISTING_HOLDERS"]
+            return MIXED, ["EXECUTED_ISSUANCE_CASH_RECEIPT_NOT_ESTABLISHED", "EXECUTED_ISSUANCE_MAY_DILUTE_EXISTING_HOLDERS"]
         return POTENTIAL_RISK, ["PLANNED_OR_APPROVED_ISSUANCE_MAY_DILUTE_PENDING_EXECUTION"]
     if event_type == SHARE_REPURCHASE:
         if status == EXECUTED:
@@ -448,6 +448,9 @@ def build_artifact(
     market_wide_current_corporate_intelligence: Mapping[str, Any] | None = None,
     include_supplemental_events: bool = True,
     business_update_observations: Sequence[Mapping[str, Any]] = (),
+    shareholder_economics_observations: Sequence[Mapping[str, Any]] = (),
+    financial_records: Mapping[str, Any] | None = None,
+    valuation_records: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build the market-wide Corporate Intelligence axis artifact for one Current-Research
     session. `root` is the Producer workspace root used only to read the already-retained
@@ -472,6 +475,13 @@ def build_artifact(
     for ticker, row in sorted(event_context_artifact.get("records", {}).items()):
         classified = [classify_event(event, as_of=as_of) for event in row.get("events", [])]
         records[ticker] = _ticker_axis(ticker, session, classified)
+        if financial_records is not None or shareholder_economics_observations:
+            from stocklookup_core.research.shareholder_economics import project_context
+            records[ticker]["shareholder_economics_context"] = project_context(
+                ticker=ticker, cutoff=f"{session}T15:00:00+07:00",
+                observations=[r for r in shareholder_economics_observations if r.get("ticker") == ticker],
+                financial_record=(financial_records or {}).get(ticker),
+                share_basis=((valuation_records or {}).get(ticker) or {}).get("share_basis_input"))
         if business_update_observations:
             from stocklookup_core.evidence.business_update_observations import research_context, session_cutoff
             records[ticker]["business_update_context"] = research_context(
@@ -685,6 +695,12 @@ def build_forward_driver_context(record: Mapping[str, Any] | None, *,
         payload["business_update_context"] = research_context(
             source["business_update_context"]["documents"], ticker=source.get("ticker") or ticker,
             cutoff=session_cutoff(as_of_session))
+    if source.get("shareholder_economics_context") and session_usable:
+        from stocklookup_core.research.shareholder_economics import at_cutoff
+        economics = at_cutoff(source["shareholder_economics_context"],
+            ticker=source.get("ticker") or ticker, cutoff=f"{as_of_session}T15:00:00+07:00")
+        if economics is not None:
+            payload["shareholder_economics_context"] = economics
     payload["context_identity"] = FORWARD_DRIVER_VERSION + ":" + hashlib.sha256(
         json.dumps(payload, sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode("utf-8")).hexdigest()
     return payload

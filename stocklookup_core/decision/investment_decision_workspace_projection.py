@@ -732,6 +732,9 @@ def build_ticker_card(
     business_context = (((integrated_record or {}).get("corporate_intelligence_context") or {}).get("forward_driver_context") or {}).get("business_update_context")
     if business_context is not None:
         card["business_update_context"] = copy.deepcopy(business_context)
+    economics = (((integrated_record or {}).get("corporate_intelligence_context") or {}).get("forward_driver_context") or {}).get("shareholder_economics_context")
+    if economics is not None:
+        card["shareholder_economics_context"] = copy.deepcopy(economics)
     # bridge -- reconciles fields already on this exact card into the six-state
     # indicator_metric_display_state/v1 contract. Computes nothing new; see
     # indicator_metric_availability.py / indicator_metric_display_state.py.

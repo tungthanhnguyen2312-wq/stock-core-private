@@ -19,7 +19,7 @@ PINS = {
 }
 ACTIVE = {
     "canonical_daily_operation.py": "487a0b91b4ef8699bdacdd46111a12fb40b4731994acf8e83b80540631daf829",
-    "canonical_post_close_pipeline.py": "83b984f28bcded8ce3c1ecc395e5ae31f7b48d7cecf9d944d6594b0ad3cfdbe3",
+    "canonical_post_close_pipeline.py": "717cc48d90e25afca8271e0d159d55226a29f90ff5a7eb762f67b28893f997b8",
 }
 V1_DIGEST = "fa79baadcca197493b9ca70067fbd153f5e8bb7f50dfb6dbc6da53f253483d46"
 

@@ -19,7 +19,7 @@
       "archive": "tests/fixtures/evidence_valuation_v1_sources/canonical_post_close_pipeline.py.txt",
       "base_commit": "de90c6b94c7bb2377bedd7e2a1c809498d22926a",
       "prior_sha256_lf": "db6e78370b57739888211d3c4381206daed7a542ac7123416bb0870c2427236a",
-      "active_sha256_lf": "83b984f28bcded8ce3c1ecc395e5ae31f7b48d7cecf9d944d6594b0ad3cfdbe3"
+      "active_sha256_lf": "717cc48d90e25afca8271e0d159d55226a29f90ff5a7eb762f67b28893f997b8"
     }
   },
   "compatibility": "Historical diagnostics read the archived origin/main bytes only. Active execution and E4 code digests hash live sources. A historical receipt cannot adopt the pre-transition digest. This transition admits no other frozen source."

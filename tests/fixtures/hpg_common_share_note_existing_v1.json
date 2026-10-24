@@ -1,0 +1,1477 @@
+{
+  "contract_version": "retained_common_share_note/v1",
+  "ticker": "HPG",
+  "identity": "common_shares_outstanding",
+  "share_count_identity": "common_shares_outstanding",
+  "share_class": "common_outstanding",
+  "value": 7675465855,
+  "unit": "shares",
+  "effective_date": "2025-12-31",
+  "coverage_through": "2025-12-31",
+  "observed_at": "2026-10-07T15:02:46.809385Z",
+  "knowledge_available_at": "2026-10-07T23:04:02.016200+00:00",
+  "published_at": null,
+  "source": "official_retained_evidence",
+  "source_url": "https://file.hoaphat.com.vn/hoaphat-com-vn/2026/03/20260327-hpg-bctc-hop-nhat-nam-2025-sau-kiem-toan.pdf",
+  "document_sha256": "f38c5f75becf7d3f145d27183eec81f119fd4f75e378b983a2763ddc3f7e0c07",
+  "evidence_id": "61bd40a3b6dc8322c2c017594babcb1b113c3d5e80429ea2e7edca204ed60e92",
+  "qualification_state": "QUALIFIED",
+  "lifecycle_state": "AUDITED_PERIOD_END_OBSERVATION",
+  "citation": {
+    "pdf_page": 41,
+    "parent_label": "Số lượng cổ phiếu đang lưu hành",
+    "share_class_label": "Cổ phiếu phổ thông",
+    "column_label": "Số cuối năm",
+    "source_tokens": [
+      {
+        "text": "Số",
+        "x0": 245.0,
+        "x1": 266.0,
+        "top": 695.0,
+        "bottom": 711.0,
+        "bbox": {
+          "left": 245.0,
+          "top": 695.0,
+          "width": 21.0,
+          "height": 16.0,
+          "coordinate_system": "rendered_image_pixels_top_left"
+        },
+        "confidence": 92.077492,
+        "raw_token_order": 242,
+        "tsv_hierarchy": {
+          "level": 5,
+          "page_num": 1,
+          "block_num": 1,
+          "par_num": 3,
+          "line_num": 15,
+          "word_num": 1
+        },
+        "provenance": "OCR_TSV_POSITIONED_TOKEN",
+        "token_id": "d7d77a24a194c2c1779bc9c0b4189ca917777477ff7e82d89c08f5b28439fc3a"
+      },
+      {
+        "text": "lượng",
+        "x0": 272.0,
+        "x1": 320.0,
+        "top": 697.0,
+        "bottom": 715.0,
+        "bbox": {
+          "left": 272.0,
+          "top": 697.0,
+          "width": 48.0,
+          "height": 18.0,
+          "coordinate_system": "rendered_image_pixels_top_left"
+        },
+        "confidence": 92.192024,
+        "raw_token_order": 243,
+        "tsv_hierarchy": {
+          "level": 5,
+          "page_num": 1,
+          "block_num": 1,
+          "par_num": 3,
+          "line_num": 15,
+          "word_num": 2
+        },
+        "provenance": "OCR_TSV_POSITIONED_TOKEN",
+        "token_id": "f4c03e62289ba6f25c12060d3e17a24daf30f6c5121e7715dc17815b0a30a3cb"
+      },
+      {
+        "text": "cổ",
+        "x0": 325.0,
+        "x1": 345.0,
+        "top": 694.0,
+        "bottom": 711.0,
+        "bbox": {
+          "left": 325.0,
+          "top": 694.0,
+          "width": 20.0,
+          "height": 17.0,
+          "coordinate_system": "rendered_image_pixels_top_left"
+        },
+        "confidence": 91.651321,
+        "raw_token_order": 244,
+        "tsv_hierarchy": {
+          "level": 5,
+          "page_num": 1,
+          "block_num": 1,
+          "par_num": 3,
+          "line_num": 15,
+          "word_num": 3
+        },
+        "provenance": "OCR_TSV_POSITIONED_TOKEN",
+        "token_id": "f99e0dc995463ac7ac618a7d847158f323309ba66730fc9f679ac0211c722452"
+      },
+      {
+        "text": "phiếu",
+        "x0": 351.0,
+        "x1": 397.0,
+        "top": 695.0,
+        "bottom": 714.0,
+        "bbox": {
+          "left": 351.0,
+          "top": 695.0,
+          "width": 46.0,
+          "height": 19.0,
+          "coordinate_system": "rendered_image_pixels_top_left"
+        },
+        "confidence": 92.581696,
+        "raw_token_order": 245,
+        "tsv_hierarchy": {
+          "level": 5,
+          "page_num": 1,
+          "block_num": 1,
+          "par_num": 3,
+          "line_num": 15,
+          "word_num": 4
+        },
+        "provenance": "OCR_TSV_POSITIONED_TOKEN",
+        "token_id": "3184cda071ec5d3da3fbdb020771ee190dab2fa16541a071f02ba109eb7e70cd"
+      },
+      {
+        "text": "dang",
+        "x0": 403.0,
+        "x1": 445.0,
+        "top": 697.0,
+        "bottom": 715.0,
+        "bbox": {
+          "left": 403.0,
+          "top": 697.0,
+          "width": 42.0,
+          "height": 18.0,
+          "coordinate_system": "rendered_image_pixels_top_left"
+        },
+        "confidence": 85.690903,
+        "raw_token_order": 246,
+        "tsv_hierarchy": {
+          "level": 5,
+          "page_num": 1,
+          "block_num": 1,
+          "par_num": 3,
+          "line_num": 15,
+          "word_num": 5
+        },
+        "provenance": "OCR_TSV_POSITIONED_TOKEN",
+        "token_id": "0511915c8a1114c7d902cf7e20fcdad3a39fdfe702c245b3c789739dee9ab996"
+      },
+      {
+        "text": "lưu",
+        "x0": 450.0,
+        "x1": 477.0,
+        "top": 697.0,
+        "bottom": 711.0,
+        "bbox": {
+          "left": 450.0,
+          "top": 697.0,
+          "width": 27.0,
+          "height": 14.0,
+          "coordinate_system": "rendered_image_pixels_top_left"
+        },
+        "confidence": 88.202156,
+        "raw_token_order": 247,
+        "tsv_hierarchy": {
+          "level": 5,
+          "page_num": 1,
+          "block_num": 1,
+          "par_num": 3,
+          "line_num": 15,
+          "word_num": 6
+        },
+        "provenance": "OCR_TSV_POSITIONED_TOKEN",
+        "token_id": "3470127d48cac235d73d94e46fe510df631be301dcfbf6207fc4b145c6c99f6f"
+      },
+      {
+        "text": "hành",
+        "x0": 483.0,
+        "x1": 525.0,
+        "top": 696.0,
+        "bottom": 711.0,
+        "bbox": {
+          "left": 483.0,
+          "top": 696.0,
+          "width": 42.0,
+          "height": 15.0,
+          "coordinate_system": "rendered_image_pixels_top_left"
+        },
+        "confidence": 93.00724,
+        "raw_token_order": 248,
+        "tsv_hierarchy": {
+          "level": 5,
+          "page_num": 1,
+          "block_num": 1,
+          "par_num": 3,
+          "line_num": 15,
+          "word_num": 7
+        },
+        "provenance": "OCR_TSV_POSITIONED_TOKEN",
+        "token_id": "793138d9db51cfac693bf83482eb1358ddee355f266487a7c91d284ca3a4e19d"
+      },
+      {
+        "text": "7.675.465.855",
+        "x0": 1116.0,
+        "x1": 1238.0,
+        "top": 695.0,
+        "bottom": 709.0,
+        "bbox": {
+          "left": 1116.0,
+          "top": 695.0,
+          "width": 122.0,
+          "height": 14.0,
+          "coordinate_system": "rendered_image_pixels_top_left"
+        },
+        "confidence": 69.766045,
+        "raw_token_order": 249,
+        "tsv_hierarchy": {
+          "level": 5,
+          "page_num": 1,
+          "block_num": 1,
+          "par_num": 3,
+          "line_num": 15,
+          "word_num": 8
+        },
+        "provenance": "OCR_TSV_POSITIONED_TOKEN",
+        "token_id": "74f9bc0714deda73b15de07f7ffe827d78663a2ddfeb63024327e37b2314477e"
+      },
+      {
+        "text": "6.396.²50.²00",
+        "x0": 1455.0,
+        "x1": 1577.0,
+        "top": 695.0,
+        "bottom": 709.0,
+        "bbox": {
+          "left": 1455.0,
+          "top": 695.0,
+          "width": 122.0,
+          "height": 14.0,
+          "coordinate_system": "rendered_image_pixels_top_left"
+        },
+        "confidence": 88.674149,
+        "raw_token_order": 250,
+        "tsv_hierarchy": {
+          "level": 5,
+          "page_num": 1,
+          "block_num": 1,
+          "par_num": 3,
+          "line_num": 15,
+          "word_num": 9
+        },
+        "provenance": "OCR_TSV_POSITIONED_TOKEN",
+        "token_id": "e01ee39e5530338a4ddceab7986013ee38ed12487554bb915e7aaf61f54d3a3f"
+      },
+      {
+        "text": "Cổ",
+        "x0": 245.0,
+        "x1": 270.0,
+        "top": 720.0,
+        "bottom": 737.0,
+        "bbox": {
+          "left": 245.0,
+          "top": 720.0,
+          "width": 25.0,
+          "height": 17.0,
+          "coordinate_system": "rendered_image_pixels_top_left"
+        },
+        "confidence": 90.485329,
+        "raw_token_order": 252,
+        "tsv_hierarchy": {
+          "level": 5,
+          "page_num": 1,
+          "block_num": 1,
+          "par_num": 3,
+          "line_num": 16,
+          "word_num": 1
+        },
+        "provenance": "OCR_TSV_POSITIONED_TOKEN",
+        "token_id": "771e236cffcc01797e0bd16884220c9cfc20ecac1afcc261091080522c3fc306"
+      },
+      {
+        "text": "phiếu",
+        "x0": 273.0,
+        "x1": 321.0,
+        "top": 721.0,
+        "bottom": 740.0,
+        "bbox": {
+          "left": 273.0,
+          "top": 721.0,
+          "width": 48.0,
+          "height": 19.0,
+          "coordinate_system": "rendered_image_pixels_top_left"
+        },
+        "confidence": 87.707909,
+        "raw_token_order": 253,
+        "tsv_hierarchy": {
+          "level": 5,
+          "page_num": 1,
+          "block_num": 1,
+          "par_num": 3,
+          "line_num": 16,
+          "word_num": 2
+        },
+        "provenance": "OCR_TSV_POSITIONED_TOKEN",
+        "token_id": "9bcf7e99e9592edbdbb8775ba6862ed93b6b0d31c6fa9afede9a506fd8f2276d"
+      },
+      {
+        "text": "phổ",
+        "x0": 326.0,
+        "x1": 360.0,
+        "top": 720.0,
+        "bottom": 740.0,
+        "bbox": {
+          "left": 326.0,
+          "top": 720.0,
+          "width": 34.0,
+          "height": 20.0,
+          "coordinate_system": "rendered_image_pixels_top_left"
+        },
+        "confidence": 89.400558,
+        "raw_token_order": 254,
+        "tsv_hierarchy": {
+          "level": 5,
+          "page_num": 1,
+          "block_num": 1,
+          "par_num": 3,
+          "line_num": 16,
+          "word_num": 3
+        },
+        "provenance": "OCR_TSV_POSITIONED_TOKEN",
+        "token_id": "b8206642fb44e4feb231b2922a9b848974b6acce6fe19bcb851447d4646b41bf"
+      },
+      {
+        "text": "thông",
+        "x0": 365.0,
+        "x1": 414.0,
+        "top": 722.0,
+        "bottom": 740.0,
+        "bbox": {
+          "left": 365.0,
+          "top": 722.0,
+          "width": 49.0,
+          "height": 18.0,
+          "coordinate_system": "rendered_image_pixels_top_left"
+        },
+        "confidence": 92.25946,
+        "raw_token_order": 255,
+        "tsv_hierarchy": {
+          "level": 5,
+          "page_num": 1,
+          "block_num": 1,
+          "par_num": 3,
+          "line_num": 16,
+          "word_num": 4
+        },
+        "provenance": "OCR_TSV_POSITIONED_TOKEN",
+        "token_id": "8cf786751cda23598ebd8e91b62b8cec40f2fa7dd8e8cc8e33ded993289d47d5"
+      },
+      {
+        "text": "7.675.465.855",
+        "x0": 1117.0,
+        "x1": 1238.0,
+        "top": 715.0,
+        "bottom": 743.0,
+        "bbox": {
+          "left": 1117.0,
+          "top": 715.0,
+          "width": 121.0,
+          "height": 28.0,
+          "coordinate_system": "rendered_image_pixels_top_left"
+        },
+        "confidence": 71.797836,
+        "raw_token_order": 256,
+        "tsv_hierarchy": {
+          "level": 5,
+          "page_num": 1,
+          "block_num": 1,
+          "par_num": 3,
+          "line_num": 16,
+          "word_num": 5
+        },
+        "provenance": "OCR_TSV_POSITIONED_TOKEN",
+        "token_id": "b55d94ebc020dea8d0ccc0b9036b56b3628b2e0455c48b468d1e0ac23446e85f"
+      },
+      {
+        "text": "6.396.²50.²00",
+        "x0": 1455.0,
+        "x1": 1578.0,
+        "top": 720.0,
+        "bottom": 734.0,
+        "bbox": {
+          "left": 1455.0,
+          "top": 720.0,
+          "width": 123.0,
+          "height": 14.0,
+          "coordinate_system": "rendered_image_pixels_top_left"
+        },
+        "confidence": 89.209473,
+        "raw_token_order": 257,
+        "tsv_hierarchy": {
+          "level": 5,
+          "page_num": 1,
+          "block_num": 1,
+          "par_num": 3,
+          "line_num": 16,
+          "word_num": 6
+        },
+        "provenance": "OCR_TSV_POSITIONED_TOKEN",
+        "token_id": "da8c602228d94b17c7fbcb19df06a79d4e56095152a1a4f0fc000283e21d58c8"
+      },
+      {
+        "text": "Số",
+        "x0": 1128.0,
+        "x1": 1151.0,
+        "top": 615.0,
+        "bottom": 632.0,
+        "bbox": {
+          "left": 1128.0,
+          "top": 615.0,
+          "width": 23.0,
+          "height": 17.0,
+          "coordinate_system": "rendered_image_pixels_top_left"
+        },
+        "confidence": 92.592804,
+        "raw_token_order": 216,
+        "tsv_hierarchy": {
+          "level": 5,
+          "page_num": 1,
+          "block_num": 1,
+          "par_num": 3,
+          "line_num": 12,
+          "word_num": 1
+        },
+        "provenance": "OCR_TSV_POSITIONED_TOKEN",
+        "token_id": "265fadbcfa35c5d5ee1b816df304f4e0e3b2ba82e91e2a2443e6fdb6294658ba"
+      },
+      {
+        "text": "cuối",
+        "x0": 1156.0,
+        "x1": 1194.0,
+        "top": 615.0,
+        "bottom": 632.0,
+        "bbox": {
+          "left": 1156.0,
+          "top": 615.0,
+          "width": 38.0,
+          "height": 17.0,
+          "coordinate_system": "rendered_image_pixels_top_left"
+        },
+        "confidence": 91.849312,
+        "raw_token_order": 217,
+        "tsv_hierarchy": {
+          "level": 5,
+          "page_num": 1,
+          "block_num": 1,
+          "par_num": 3,
+          "line_num": 12,
+          "word_num": 2
+        },
+        "provenance": "OCR_TSV_POSITIONED_TOKEN",
+        "token_id": "67de723a5377b99f047bbb48e4239f4cac1fef1e38861559a8be6fd899595730"
+      },
+      {
+        "text": "năm",
+        "x0": 1200.0,
+        "x1": 1238.0,
+        "top": 617.0,
+        "bottom": 631.0,
+        "bbox": {
+          "left": 1200.0,
+          "top": 617.0,
+          "width": 38.0,
+          "height": 14.0,
+          "coordinate_system": "rendered_image_pixels_top_left"
+        },
+        "confidence": 91.849312,
+        "raw_token_order": 218,
+        "tsv_hierarchy": {
+          "level": 5,
+          "page_num": 1,
+          "block_num": 1,
+          "par_num": 3,
+          "line_num": 12,
+          "word_num": 3
+        },
+        "provenance": "OCR_TSV_POSITIONED_TOKEN",
+        "token_id": "cae2b858c1806b82152580b01c8f590b53dd6c8c5af5d9bc8e8496b159ccbc1c"
+      },
+      {
+        "text": "Số",
+        "x0": 1472.0,
+        "x1": 1495.0,
+        "top": 615.0,
+        "bottom": 631.0,
+        "bbox": {
+          "left": 1472.0,
+          "top": 615.0,
+          "width": 23.0,
+          "height": 16.0,
+          "coordinate_system": "rendered_image_pixels_top_left"
+        },
+        "confidence": 92.854248,
+        "raw_token_order": 219,
+        "tsv_hierarchy": {
+          "level": 5,
+          "page_num": 1,
+          "block_num": 1,
+          "par_num": 3,
+          "line_num": 12,
+          "word_num": 4
+        },
+        "provenance": "OCR_TSV_POSITIONED_TOKEN",
+        "token_id": "e826d2ae0ed1c5f6df8dc64892e897c43a96c66f28b8c06c59e2a9616598296f"
+      },
+      {
+        "text": "đầu",
+        "x0": 1500.0,
+        "x1": 1533.0,
+        "top": 615.0,
+        "bottom": 631.0,
+        "bbox": {
+          "left": 1500.0,
+          "top": 615.0,
+          "width": 33.0,
+          "height": 16.0,
+          "coordinate_system": "rendered_image_pixels_top_left"
+        },
+        "confidence": 92.97419,
+        "raw_token_order": 220,
+        "tsv_hierarchy": {
+          "level": 5,
+          "page_num": 1,
+          "block_num": 1,
+          "par_num": 3,
+          "line_num": 12,
+          "word_num": 5
+        },
+        "provenance": "OCR_TSV_POSITIONED_TOKEN",
+        "token_id": "3ccdedabad4751d439010dc4250c3ab155044fab4fa7ec6bd39264722c0ffe0a"
+      },
+      {
+        "text": "năm",
+        "x0": 1539.0,
+        "x1": 1577.0,
+        "top": 617.0,
+        "bottom": 631.0,
+        "bbox": {
+          "left": 1539.0,
+          "top": 617.0,
+          "width": 38.0,
+          "height": 14.0,
+          "coordinate_system": "rendered_image_pixels_top_left"
+        },
+        "confidence": 93.185432,
+        "raw_token_order": 221,
+        "tsv_hierarchy": {
+          "level": 5,
+          "page_num": 1,
+          "block_num": 1,
+          "par_num": 3,
+          "line_num": 12,
+          "word_num": 6
+        },
+        "provenance": "OCR_TSV_POSITIONED_TOKEN",
+        "token_id": "dfa53bbeda1c85ba4d1ebe188469d1f234e4dda179e05641424e4e6b91a5e35d"
+      }
+    ],
+    "rendered_image_sha256": "36b118a39411814b25e5d26ef77c22d933b937f7f3728c8930933201318fd971",
+    "date_tokens": [
+      {
+        "text": "Tai",
+        "x0": 238.0,
+        "x1": 262.0,
+        "top": 286.0,
+        "bottom": 303.0,
+        "bbox": {
+          "left": 238.0,
+          "top": 286.0,
+          "width": 24.0,
+          "height": 17.0,
+          "coordinate_system": "rendered_image_pixels_top_left"
+        },
+        "confidence": 93.305,
+        "raw_token_order": 93,
+        "tsv_hierarchy": {
+          "level": 5,
+          "page_num": 1,
+          "block_num": 1,
+          "par_num": 3,
+          "line_num": 2,
+          "word_num": 1
+        },
+        "provenance": "OCR_TSV_POSITIONED_TOKEN",
+        "token_id": "510e365c8bda8568eb02cc519c5795c24125d897029eadf1f1e042d21062cecb"
+      },
+      {
+        "text": "ngày",
+        "x0": 270.0,
+        "x1": 310.0,
+        "top": 286.0,
+        "bottom": 304.0,
+        "bbox": {
+          "left": 270.0,
+          "top": 286.0,
+          "width": 40.0,
+          "height": 18.0,
+          "coordinate_system": "rendered_image_pixels_top_left"
+        },
+        "confidence": 93.223946,
+        "raw_token_order": 94,
+        "tsv_hierarchy": {
+          "level": 5,
+          "page_num": 1,
+          "block_num": 1,
+          "par_num": 3,
+          "line_num": 2,
+          "word_num": 2
+        },
+        "provenance": "OCR_TSV_POSITIONED_TOKEN",
+        "token_id": "0eb24c19b02e38cc18a6a05159a82f9063b3dfbe1fd61ee4895ad24b389d09f3"
+      },
+      {
+        "text": "31",
+        "x0": 317.0,
+        "x1": 334.0,
+        "top": 287.0,
+        "bottom": 301.0,
+        "bbox": {
+          "left": 317.0,
+          "top": 287.0,
+          "width": 17.0,
+          "height": 14.0,
+          "coordinate_system": "rendered_image_pixels_top_left"
+        },
+        "confidence": 93.23159,
+        "raw_token_order": 95,
+        "tsv_hierarchy": {
+          "level": 5,
+          "page_num": 1,
+          "block_num": 1,
+          "par_num": 3,
+          "line_num": 2,
+          "word_num": 3
+        },
+        "provenance": "OCR_TSV_POSITIONED_TOKEN",
+        "token_id": "943692a74a30317770214e2d5b47cf7645bb5d2dcab438af421ae2c4471e46d8"
+      },
+      {
+        "text": "thang",
+        "x0": 344.0,
+        "x1": 392.0,
+        "top": 285.0,
+        "bottom": 304.0,
+        "bbox": {
+          "left": 344.0,
+          "top": 285.0,
+          "width": 48.0,
+          "height": 19.0,
+          "coordinate_system": "rendered_image_pixels_top_left"
+        },
+        "confidence": 93.524376,
+        "raw_token_order": 96,
+        "tsv_hierarchy": {
+          "level": 5,
+          "page_num": 1,
+          "block_num": 1,
+          "par_num": 3,
+          "line_num": 2,
+          "word_num": 4
+        },
+        "provenance": "OCR_TSV_POSITIONED_TOKEN",
+        "token_id": "8c8957da7c523385e244aeedf9704f2c010a7e085844921afa4c02413da0041d"
+      },
+      {
+        "text": "12",
+        "x0": 401.0,
+        "x1": 419.0,
+        "top": 287.0,
+        "bottom": 300.0,
+        "bbox": {
+          "left": 401.0,
+          "top": 287.0,
+          "width": 18.0,
+          "height": 13.0,
+          "coordinate_system": "rendered_image_pixels_top_left"
+        },
+        "confidence": 93.240021,
+        "raw_token_order": 97,
+        "tsv_hierarchy": {
+          "level": 5,
+          "page_num": 1,
+          "block_num": 1,
+          "par_num": 3,
+          "line_num": 2,
+          "word_num": 5
+        },
+        "provenance": "OCR_TSV_POSITIONED_TOKEN",
+        "token_id": "ccfd6a519d9af74f08138f371a56b0e8e262a94b7a942eb59e727808782014b7"
+      },
+      {
+        "text": "năm",
+        "x0": 428.0,
+        "x1": 464.0,
+        "top": 286.0,
+        "bottom": 300.0,
+        "bbox": {
+          "left": 428.0,
+          "top": 286.0,
+          "width": 36.0,
+          "height": 14.0,
+          "coordinate_system": "rendered_image_pixels_top_left"
+        },
+        "confidence": 92.673561,
+        "raw_token_order": 98,
+        "tsv_hierarchy": {
+          "level": 5,
+          "page_num": 1,
+          "block_num": 1,
+          "par_num": 3,
+          "line_num": 2,
+          "word_num": 6
+        },
+        "provenance": "OCR_TSV_POSITIONED_TOKEN",
+        "token_id": "94a023d784197ed4be8da77817620698a0cc5129d6332dcbd73926610c004124"
+      },
+      {
+        "text": "2025,",
+        "x0": 472.0,
+        "x1": 519.0,
+        "top": 286.0,
+        "bottom": 302.0,
+        "bbox": {
+          "left": 472.0,
+          "top": 286.0,
+          "width": 47.0,
+          "height": 16.0,
+          "coordinate_system": "rendered_image_pixels_top_left"
+        },
+        "confidence": 94.567673,
+        "raw_token_order": 99,
+        "tsv_hierarchy": {
+          "level": 5,
+          "page_num": 1,
+          "block_num": 1,
+          "par_num": 3,
+          "line_num": 2,
+          "word_num": 7
+        },
+        "provenance": "OCR_TSV_POSITIONED_TOKEN",
+        "token_id": "fc8afc1ae77e92dfa28d21c1dbd9f0b2554214f6345a1d613815b54d5bfb0d8f"
+      },
+      {
+        "text": "theo",
+        "x0": 527.0,
+        "x1": 565.0,
+        "top": 286.0,
+        "bottom": 300.0,
+        "bbox": {
+          "left": 527.0,
+          "top": 286.0,
+          "width": 38.0,
+          "height": 14.0,
+          "coordinate_system": "rendered_image_pixels_top_left"
+        },
+        "confidence": 93.305649,
+        "raw_token_order": 100,
+        "tsv_hierarchy": {
+          "level": 5,
+          "page_num": 1,
+          "block_num": 1,
+          "par_num": 3,
+          "line_num": 2,
+          "word_num": 8
+        },
+        "provenance": "OCR_TSV_POSITIONED_TOKEN",
+        "token_id": "aa5bf9ce540ff67d7d468e22843b83f3ae787405f9cb5c2f52340382fe3222be"
+      },
+      {
+        "text": "Giấy",
+        "x0": 573.0,
+        "x1": 610.0,
+        "top": 284.0,
+        "bottom": 303.0,
+        "bbox": {
+          "left": 573.0,
+          "top": 284.0,
+          "width": 37.0,
+          "height": 19.0,
+          "coordinate_system": "rendered_image_pixels_top_left"
+        },
+        "confidence": 87.621452,
+        "raw_token_order": 101,
+        "tsv_hierarchy": {
+          "level": 5,
+          "page_num": 1,
+          "block_num": 1,
+          "par_num": 3,
+          "line_num": 2,
+          "word_num": 9
+        },
+        "provenance": "OCR_TSV_POSITIONED_TOKEN",
+        "token_id": "ca557c9cfc5c7db78fcb6ec7cec7bdbcae7ed22056c3af2348ece8805d8bcae0"
+      },
+      {
+        "text": "chứng",
+        "x0": 618.0,
+        "x1": 671.0,
+        "top": 285.0,
+        "bottom": 303.0,
+        "bbox": {
+          "left": 618.0,
+          "top": 285.0,
+          "width": 53.0,
+          "height": 18.0,
+          "coordinate_system": "rendered_image_pixels_top_left"
+        },
+        "confidence": 90.500015,
+        "raw_token_order": 102,
+        "tsv_hierarchy": {
+          "level": 5,
+          "page_num": 1,
+          "block_num": 1,
+          "par_num": 3,
+          "line_num": 2,
+          "word_num": 10
+        },
+        "provenance": "OCR_TSV_POSITIONED_TOKEN",
+        "token_id": "7597b3d6bf142e2fc49ddccc9ed28535f4333098552a8b77577922fd0e58a328"
+      },
+      {
+        "text": "nhận",
+        "x0": 679.0,
+        "x1": 720.0,
+        "top": 285.0,
+        "bottom": 302.0,
+        "bbox": {
+          "left": 679.0,
+          "top": 285.0,
+          "width": 41.0,
+          "height": 17.0,
+          "coordinate_system": "rendered_image_pixels_top_left"
+        },
+        "confidence": 93.190819,
+        "raw_token_order": 103,
+        "tsv_hierarchy": {
+          "level": 5,
+          "page_num": 1,
+          "block_num": 1,
+          "par_num": 3,
+          "line_num": 2,
+          "word_num": 11
+        },
+        "provenance": "OCR_TSV_POSITIONED_TOKEN",
+        "token_id": "024b1536490a66cba247522086d227abe1ef0f4351107184a68954f9859cd790"
+      },
+      {
+        "text": "dang",
+        "x0": 728.0,
+        "x1": 770.0,
+        "top": 285.0,
+        "bottom": 303.0,
+        "bbox": {
+          "left": 728.0,
+          "top": 285.0,
+          "width": 42.0,
+          "height": 18.0,
+          "coordinate_system": "rendered_image_pixels_top_left"
+        },
+        "confidence": 96.756699,
+        "raw_token_order": 104,
+        "tsv_hierarchy": {
+          "level": 5,
+          "page_num": 1,
+          "block_num": 1,
+          "par_num": 3,
+          "line_num": 2,
+          "word_num": 12
+        },
+        "provenance": "OCR_TSV_POSITIONED_TOKEN",
+        "token_id": "d40e13acc39ee216611085e13715746ab8cbb1f5f170f64cd4d4746c9d14e0fe"
+      },
+      {
+        "text": "ky",
+        "x0": 778.0,
+        "x1": 795.0,
+        "top": 285.0,
+        "bottom": 303.0,
+        "bbox": {
+          "left": 778.0,
+          "top": 285.0,
+          "width": 17.0,
+          "height": 18.0,
+          "coordinate_system": "rendered_image_pixels_top_left"
+        },
+        "confidence": 93.285126,
+        "raw_token_order": 105,
+        "tsv_hierarchy": {
+          "level": 5,
+          "page_num": 1,
+          "block_num": 1,
+          "par_num": 3,
+          "line_num": 2,
+          "word_num": 13
+        },
+        "provenance": "OCR_TSV_POSITIONED_TOKEN",
+        "token_id": "fa988ff2f08b452b11bd9dd5279e6a880b00a35d9e549e8d76d03fc6b051d9ad"
+      },
+      {
+        "text": "dºanh",
+        "x0": 802.0,
+        "x1": 855.0,
+        "top": 286.0,
+        "bottom": 300.0,
+        "bbox": {
+          "left": 802.0,
+          "top": 286.0,
+          "width": 53.0,
+          "height": 14.0,
+          "coordinate_system": "rendered_image_pixels_top_left"
+        },
+        "confidence": 92.792984,
+        "raw_token_order": 106,
+        "tsv_hierarchy": {
+          "level": 5,
+          "page_num": 1,
+          "block_num": 1,
+          "par_num": 3,
+          "line_num": 2,
+          "word_num": 14
+        },
+        "provenance": "OCR_TSV_POSITIONED_TOKEN",
+        "token_id": "1a8c80a0bf8050430175d418be5c4ea5b91c17dcfb6c166cedb0cf9d55e6c4b0"
+      },
+      {
+        "text": "nghiệp",
+        "x0": 864.0,
+        "x1": 920.0,
+        "top": 285.0,
+        "bottom": 303.0,
+        "bbox": {
+          "left": 864.0,
+          "top": 285.0,
+          "width": 56.0,
+          "height": 18.0,
+          "coordinate_system": "rendered_image_pixels_top_left"
+        },
+        "confidence": 93.150139,
+        "raw_token_order": 107,
+        "tsv_hierarchy": {
+          "level": 5,
+          "page_num": 1,
+          "block_num": 1,
+          "par_num": 3,
+          "line_num": 2,
+          "word_num": 15
+        },
+        "provenance": "OCR_TSV_POSITIONED_TOKEN",
+        "token_id": "1af639dd0955f13e7d3d076903fb097b7d434692f5bcbed6f956479e410e191c"
+      },
+      {
+        "text": "thay",
+        "x0": 927.0,
+        "x1": 964.0,
+        "top": 285.0,
+        "bottom": 303.0,
+        "bbox": {
+          "left": 927.0,
+          "top": 285.0,
+          "width": 37.0,
+          "height": 18.0,
+          "coordinate_system": "rendered_image_pixels_top_left"
+        },
+        "confidence": 93.273613,
+        "raw_token_order": 108,
+        "tsv_hierarchy": {
+          "level": 5,
+          "page_num": 1,
+          "block_num": 1,
+          "par_num": 3,
+          "line_num": 2,
+          "word_num": 16
+        },
+        "provenance": "OCR_TSV_POSITIONED_TOKEN",
+        "token_id": "db65ca065f9b4be16743a0c5bb69ecf84f67a17cc375d3c73804c98854dc210c"
+      },
+      {
+        "text": "đổi",
+        "x0": 971.0,
+        "x1": 996.0,
+        "top": 283.0,
+        "bottom": 299.0,
+        "bbox": {
+          "left": 971.0,
+          "top": 283.0,
+          "width": 25.0,
+          "height": 16.0,
+          "coordinate_system": "rendered_image_pixels_top_left"
+        },
+        "confidence": 92.088593,
+        "raw_token_order": 109,
+        "tsv_hierarchy": {
+          "level": 5,
+          "page_num": 1,
+          "block_num": 1,
+          "par_num": 3,
+          "line_num": 2,
+          "word_num": 17
+        },
+        "provenance": "OCR_TSV_POSITIONED_TOKEN",
+        "token_id": "66d069e8798ade9f2503d05003217d73c04f04e6f8fef3605c60a9f39045d73a"
+      },
+      {
+        "text": "lan",
+        "x0": 1005.0,
+        "x1": 1030.0,
+        "top": 283.0,
+        "bottom": 299.0,
+        "bbox": {
+          "left": 1005.0,
+          "top": 283.0,
+          "width": 25.0,
+          "height": 16.0,
+          "coordinate_system": "rendered_image_pixels_top_left"
+        },
+        "confidence": 91.382889,
+        "raw_token_order": 110,
+        "tsv_hierarchy": {
+          "level": 5,
+          "page_num": 1,
+          "block_num": 1,
+          "par_num": 3,
+          "line_num": 2,
+          "word_num": 18
+        },
+        "provenance": "OCR_TSV_POSITIONED_TOKEN",
+        "token_id": "f50081629580c02f68b7b60b09ee13c48dbb60a4efaa153f0b027a5e8a5ed4d4"
+      },
+      {
+        "text": "thứ",
+        "x0": 1037.0,
+        "x1": 1068.0,
+        "top": 285.0,
+        "bottom": 299.0,
+        "bbox": {
+          "left": 1037.0,
+          "top": 285.0,
+          "width": 31.0,
+          "height": 14.0,
+          "coordinate_system": "rendered_image_pixels_top_left"
+        },
+        "confidence": 93.174866,
+        "raw_token_order": 111,
+        "tsv_hierarchy": {
+          "level": 5,
+          "page_num": 1,
+          "block_num": 1,
+          "par_num": 3,
+          "line_num": 2,
+          "word_num": 19
+        },
+        "provenance": "OCR_TSV_POSITIONED_TOKEN",
+        "token_id": "ca22c2416cd3cb469a65d01db12477b4e1f0c0826eab19be364b7efdd415d465"
+      },
+      {
+        "text": "38",
+        "x0": 1074.0,
+        "x1": 1094.0,
+        "top": 285.0,
+        "bottom": 299.0,
+        "bbox": {
+          "left": 1074.0,
+          "top": 285.0,
+          "width": 20.0,
+          "height": 14.0,
+          "coordinate_system": "rendered_image_pixels_top_left"
+        },
+        "confidence": 93.151466,
+        "raw_token_order": 112,
+        "tsv_hierarchy": {
+          "level": 5,
+          "page_num": 1,
+          "block_num": 1,
+          "par_num": 3,
+          "line_num": 2,
+          "word_num": 20
+        },
+        "provenance": "OCR_TSV_POSITIONED_TOKEN",
+        "token_id": "33742dec64be274a1c6c3f8572df39b71a1071002acc1a3ead519438a09bd2a1"
+      },
+      {
+        "text": "ngày",
+        "x0": 1102.0,
+        "x1": 1141.0,
+        "top": 284.0,
+        "bottom": 303.0,
+        "bbox": {
+          "left": 1102.0,
+          "top": 284.0,
+          "width": 39.0,
+          "height": 19.0,
+          "coordinate_system": "rendered_image_pixels_top_left"
+        },
+        "confidence": 93.151466,
+        "raw_token_order": 113,
+        "tsv_hierarchy": {
+          "level": 5,
+          "page_num": 1,
+          "block_num": 1,
+          "par_num": 3,
+          "line_num": 2,
+          "word_num": 21
+        },
+        "provenance": "OCR_TSV_POSITIONED_TOKEN",
+        "token_id": "19bf27a0319a6cccefbcca48f79e73932b515a3dd3402c5a8ea437cb5e553292"
+      },
+      {
+        "text": "11",
+        "x0": 1149.0,
+        "x1": 1165.0,
+        "top": 285.0,
+        "bottom": 299.0,
+        "bbox": {
+          "left": 1149.0,
+          "top": 285.0,
+          "width": 16.0,
+          "height": 14.0,
+          "coordinate_system": "rendered_image_pixels_top_left"
+        },
+        "confidence": 93.209953,
+        "raw_token_order": 114,
+        "tsv_hierarchy": {
+          "level": 5,
+          "page_num": 1,
+          "block_num": 1,
+          "par_num": 3,
+          "line_num": 2,
+          "word_num": 22
+        },
+        "provenance": "OCR_TSV_POSITIONED_TOKEN",
+        "token_id": "e42e81b6e4425d2d58aec24fa4f164a300523feba98bafb4f49121e3e8dafeb0"
+      },
+      {
+        "text": "thang",
+        "x0": 1175.0,
+        "x1": 1224.0,
+        "top": 284.0,
+        "bottom": 302.0,
+        "bbox": {
+          "left": 1175.0,
+          "top": 284.0,
+          "width": 49.0,
+          "height": 18.0,
+          "coordinate_system": "rendered_image_pixels_top_left"
+        },
+        "confidence": 94.219574,
+        "raw_token_order": 115,
+        "tsv_hierarchy": {
+          "level": 5,
+          "page_num": 1,
+          "block_num": 1,
+          "par_num": 3,
+          "line_num": 2,
+          "word_num": 23
+        },
+        "provenance": "OCR_TSV_POSITIONED_TOKEN",
+        "token_id": "632a5c969dfc113b76f5070888942768d75c8a6b3c240624a514a6cad4250728"
+      },
+      {
+        "text": "8",
+        "x0": 1231.0,
+        "x1": 1240.0,
+        "top": 285.0,
+        "bottom": 299.0,
+        "bbox": {
+          "left": 1231.0,
+          "top": 285.0,
+          "width": 9.0,
+          "height": 14.0,
+          "coordinate_system": "rendered_image_pixels_top_left"
+        },
+        "confidence": 93.190964,
+        "raw_token_order": 116,
+        "tsv_hierarchy": {
+          "level": 5,
+          "page_num": 1,
+          "block_num": 1,
+          "par_num": 3,
+          "line_num": 2,
+          "word_num": 24
+        },
+        "provenance": "OCR_TSV_POSITIONED_TOKEN",
+        "token_id": "7780044cedcb4d47965907871cd29496f302fdcb8ea72f635cc4c662cecc27e1"
+      },
+      {
+        "text": "năm",
+        "x0": 1248.0,
+        "x1": 1284.0,
+        "top": 285.0,
+        "bottom": 299.0,
+        "bbox": {
+          "left": 1248.0,
+          "top": 285.0,
+          "width": 36.0,
+          "height": 14.0,
+          "coordinate_system": "rendered_image_pixels_top_left"
+        },
+        "confidence": 90.492508,
+        "raw_token_order": 117,
+        "tsv_hierarchy": {
+          "level": 5,
+          "page_num": 1,
+          "block_num": 1,
+          "par_num": 3,
+          "line_num": 2,
+          "word_num": 25
+        },
+        "provenance": "OCR_TSV_POSITIONED_TOKEN",
+        "token_id": "7a8881cf05facd14eadcc4facddc1ced2bc6805f191d59cb8832ec54c4f3737c"
+      },
+      {
+        "text": "2025,",
+        "x0": 1293.0,
+        "x1": 1339.0,
+        "top": 285.0,
+        "bottom": 301.0,
+        "bbox": {
+          "left": 1293.0,
+          "top": 285.0,
+          "width": 46.0,
+          "height": 16.0,
+          "coordinate_system": "rendered_image_pixels_top_left"
+        },
+        "confidence": 92.952942,
+        "raw_token_order": 118,
+        "tsv_hierarchy": {
+          "level": 5,
+          "page_num": 1,
+          "block_num": 1,
+          "par_num": 3,
+          "line_num": 2,
+          "word_num": 26
+        },
+        "provenance": "OCR_TSV_POSITIONED_TOKEN",
+        "token_id": "029680ca8b0c0e1f173556d8aba52f1b4c39a5c267d781e893bfee8d739492e6"
+      },
+      {
+        "text": "vốn",
+        "x0": 1347.0,
+        "x1": 1377.0,
+        "top": 282.0,
+        "bottom": 299.0,
+        "bbox": {
+          "left": 1347.0,
+          "top": 282.0,
+          "width": 30.0,
+          "height": 17.0,
+          "coordinate_system": "rendered_image_pixels_top_left"
+        },
+        "confidence": 92.893654,
+        "raw_token_order": 119,
+        "tsv_hierarchy": {
+          "level": 5,
+          "page_num": 1,
+          "block_num": 1,
+          "par_num": 3,
+          "line_num": 2,
+          "word_num": 27
+        },
+        "provenance": "OCR_TSV_POSITIONED_TOKEN",
+        "token_id": "ea813fc5c70ea5132dc1cee9832833cc79c259a684490d48d5c0b2edc300692a"
+      },
+      {
+        "text": "điều",
+        "x0": 1385.0,
+        "x1": 1421.0,
+        "top": 282.0,
+        "bottom": 299.0,
+        "bbox": {
+          "left": 1385.0,
+          "top": 282.0,
+          "width": 36.0,
+          "height": 17.0,
+          "coordinate_system": "rendered_image_pixels_top_left"
+        },
+        "confidence": 92.472031,
+        "raw_token_order": 120,
+        "tsv_hierarchy": {
+          "level": 5,
+          "page_num": 1,
+          "block_num": 1,
+          "par_num": 3,
+          "line_num": 2,
+          "word_num": 28
+        },
+        "provenance": "OCR_TSV_POSITIONED_TOKEN",
+        "token_id": "97b075c2c5aacd7c50ccdb97478dc50799cb565336cf2284f089615f0bd80f04"
+      },
+      {
+        "text": "lệ",
+        "x0": 1429.0,
+        "x1": 1443.0,
+        "top": 284.0,
+        "bottom": 301.0,
+        "bbox": {
+          "left": 1429.0,
+          "top": 284.0,
+          "width": 14.0,
+          "height": 17.0,
+          "coordinate_system": "rendered_image_pixels_top_left"
+        },
+        "confidence": 90.652657,
+        "raw_token_order": 121,
+        "tsv_hierarchy": {
+          "level": 5,
+          "page_num": 1,
+          "block_num": 1,
+          "par_num": 3,
+          "line_num": 2,
+          "word_num": 29
+        },
+        "provenance": "OCR_TSV_POSITIONED_TOKEN",
+        "token_id": "b6d727b37ec8418112c2314412f4538c67f6410568b7b1dbb319d644638489db"
+      },
+      {
+        "text": "của",
+        "x0": 1451.0,
+        "x1": 1481.0,
+        "top": 283.0,
+        "bottom": 299.0,
+        "bbox": {
+          "left": 1451.0,
+          "top": 283.0,
+          "width": 30.0,
+          "height": 16.0,
+          "coordinate_system": "rendered_image_pixels_top_left"
+        },
+        "confidence": 92.876175,
+        "raw_token_order": 122,
+        "tsv_hierarchy": {
+          "level": 5,
+          "page_num": 1,
+          "block_num": 1,
+          "par_num": 3,
+          "line_num": 2,
+          "word_num": 30
+        },
+        "provenance": "OCR_TSV_POSITIONED_TOKEN",
+        "token_id": "3ee1e68cb90876a941c77ea20051bce2da7125ea7135f8455754c15e6ad758fc"
+      },
+      {
+        "text": "Công",
+        "x0": 1489.0,
+        "x1": 1534.0,
+        "top": 284.0,
+        "bottom": 302.0,
+        "bbox": {
+          "left": 1489.0,
+          "top": 284.0,
+          "width": 45.0,
+          "height": 18.0,
+          "coordinate_system": "rendered_image_pixels_top_left"
+        },
+        "confidence": 92.665131,
+        "raw_token_order": 123,
+        "tsv_hierarchy": {
+          "level": 5,
+          "page_num": 1,
+          "block_num": 1,
+          "par_num": 3,
+          "line_num": 2,
+          "word_num": 31
+        },
+        "provenance": "OCR_TSV_POSITIONED_TOKEN",
+        "token_id": "3ee1af38b78258f9812404fe284819e53ef343d66d165a94213f9fe4e3c6771a"
+      },
+      {
+        "text": "ty",
+        "x0": 1540.0,
+        "x1": 1556.0,
+        "top": 286.0,
+        "bottom": 302.0,
+        "bbox": {
+          "left": 1540.0,
+          "top": 286.0,
+          "width": 16.0,
+          "height": 16.0,
+          "coordinate_system": "rendered_image_pixels_top_left"
+        },
+        "confidence": 96.323235,
+        "raw_token_order": 124,
+        "tsv_hierarchy": {
+          "level": 5,
+          "page_num": 1,
+          "block_num": 1,
+          "par_num": 3,
+          "line_num": 2,
+          "word_num": 32
+        },
+        "provenance": "OCR_TSV_POSITIONED_TOKEN",
+        "token_id": "549631d50f6c4f6c888b5979e44e5d1393fdc4c8a933be72707d1c0ae9cabce0"
+      },
+      {
+        "text": "la",
+        "x0": 1563.0,
+        "x1": 1577.0,
+        "top": 284.0,
+        "bottom": 298.0,
+        "bbox": {
+          "left": 1563.0,
+          "top": 284.0,
+          "width": 14.0,
+          "height": 14.0,
+          "coordinate_system": "rendered_image_pixels_top_left"
+        },
+        "confidence": 86.351959,
+        "raw_token_order": 125,
+        "tsv_hierarchy": {
+          "level": 5,
+          "page_num": 1,
+          "block_num": 1,
+          "par_num": 3,
+          "line_num": 2,
+          "word_num": 33
+        },
+        "provenance": "OCR_TSV_POSITIONED_TOKEN",
+        "token_id": "cb23d2fb598488a1ca2023755363f7c397a2def24c6f1494b7ec39f6e6975807"
+      }
+    ],
+    "render_rotation": 270
+  },
+  "assurance_evidence": {
+    "audit_or_review_status": "audited",
+    "citation_id": "6c307b6636858483beb877297cf6193e1345a2833d1a3b02844cfb2f055011d5",
+    "contract_version": "official_financial_assurance_evidence/v1",
+    "document_sha256": "f38c5f75becf7d3f145d27183eec81f119fd4f75e378b983a2763ddc3f7e0c07",
+    "evidence_id": "6c307b6636858483beb877297cf6193e1345a2833d1a3b02844cfb2f055011d5",
+    "inheritance": "document_level_report_applies_to_all_statements_in_document",
+    "matched_anchors": [
+      "bao cao kiem toan doc lap"
+    ],
+    "materialization_id": "f628cd4afae6ce4ba744dddb2010452504e6d80b13ae32d8d671c02a4bd87f91",
+    "page_number": 5,
+    "page_text_sha256": "6de8cd62fe73eeb6ef1e8cdf2958b7f724ca593e683f75677d1a4a5076186808",
+    "rendered_image_sha256": "e25da13593daeb96b7084809ff88b2dfdcfc04c98b96b842dfad7dec8a06d6e4",
+    "scope_of_assurance": "consolidated_statements",
+    "state": "QUALIFIED",
+    "title_span": {
+      "raw_token_order": [
+        51,
+        52,
+        53,
+        54,
+        55,
+        56
+      ],
+      "token_ids": [
+        "c71f1ad651582fdc5d2d91c9f8d92fde36cf31ddf6e10a47ac32517ba988e9bd",
+        "ad29c4c42f1ea046d23792ca302f8281abb7f7add87bdbd6e435294b35657799",
+        "3179556f3a2435b2efb241e0395688da5c104aa022ef75dc367523c7a2ac189b",
+        "65060f06fd53e794daa6dd83c7fd82c981438f579413930ebe055bdb2d3357d9",
+        "477cfdc9ce4ecf65557268dfc5835940f9293786f6bc6116d0eba68e1f489baf",
+        "40bf1f2845a2c2a08926d7cafe8d3da4b227c1b32451aa3dc89682d84a77c76e"
+      ]
+    }
+  },
+  "limitations": [
+    "POINT_OBSERVATION_ONLY",
+    "SUBSEQUENT_SHARE_CHANGING_CONTINUITY_NOT_PROVEN",
+    "NO_COMPLETED_SESSION_OR_T0_BACKFILL"
+  ],
+  "citation_id": "4582458bb3b5edaab078800bbb4631f8835a097706208ece9ace9b3d9ebd6296"
+}

@@ -156,6 +156,7 @@ The new ROE peer distribution remains below the compatible minimum; existing
 valuation peer verdicts retain their upstream scope. Default Daily behavior is unchanged.
 
 ### 11. Corporate Intelligence
+[Shareholder economics](corporate_shareholder_economics_research_v1_contract.md): additive non-voting research; offline inspection adds qualified endpoint/stage arithmetic, denominator risk and explicit Hub #39 candidates. Existing HPG point reused, no new denominator/factor authority; Owner release gated.
 - Local projection checkpoint: exact selected session event context joins the three retained
   historical chains. Prior contexts require deterministic session projection with immutable
   parent identity; missing selection is explicit UNAVAILABLE. Governance/ownership remain
