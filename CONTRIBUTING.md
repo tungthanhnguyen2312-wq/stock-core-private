@@ -27,6 +27,6 @@ test fail. Trên clone sạch, đặt `STOCKLOOKUP_RETAINED_EVIDENCE_POLICY=skip
 với `-m "not retained_evidence and not provider_runtime"`. Chi tiết:
 [docs/CI_AND_DEPENDENCY_TIERS.md](docs/CI_AND_DEPENDENCY_TIERS.md).
 
-**Kiểm thử toàn bộ (Integration)**: Các bài kiểm thử toàn bộ vòng đời release yêu cầu có clone của repository `ai-core-private` (Consumer) nằm cùng cấp (sibling) với thư mục này. Nếu thiếu repository này, các bài test tích hợp liên quan sẽ tự động bị bỏ qua (skipped) mà không gây lỗi thu thập (collection error).
+**Kiểm thử toàn bộ (Integration)**: Các bài kiểm thử toàn bộ vòng đời release yêu cầu có clone của repository `stocklookup-ai-research` (Consumer, thư mục `ai-core-private`) nằm cùng cấp (sibling) với thư mục này. Nếu thiếu repository này, các bài test tích hợp liên quan sẽ tự động bị bỏ qua (skipped) mà không gây lỗi thu thập (collection error).
 
 **Người dùng Windows**: Phải cấu hình `git config --global core.longpaths true` để tránh lỗi chiều dài đường dẫn khi pull các artifact kiểm tra.

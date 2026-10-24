@@ -157,7 +157,7 @@ Kinds: **CURRENT FACT** (verified), **HOST-LOCAL** (untracked; re-verify),
    not launch.** There is no override flag; the Owner launcher re-runs it in phase 1, before
    Canonical Daily is shown as started. Run `python -B tools/check_owner_daily_host_preflight.py` in the canonical main
    checkout. Bands: [owner_daily_host_preflight_contract.md](owner_daily_host_preflight_contract.md).
-2. Producer, Consumer (`ai-core-private`) and Dashboard (`market-dashboard`) checkouts pass the Owner
+2. Producer, Consumer (`ai-core-private`) and Dashboard (`market-dashboard`) folders (GitHub `stocklookup-engine`/`-ai-research`/`-dashboard` since 2026-10-24, [identity](../release_checkout_identity.py)) pass the Owner
    repository preflight (`tools/run_owner_daily.py`): right repo/origin, on `main`, clean, fast-forwardable.
    Untracked-path allowances are **per checkout** and defined by `checkout_cleanliness_contract.py` as applied
    there: the Consumer allows only `.worktrees/` (`CONSUMER_APPROVED_UNTRACKED_PREFIXES`); Producer and
@@ -294,7 +294,7 @@ Kinds: **CURRENT FACT** (verified), **HOST-LOCAL** (untracked; re-verify),
   are admitted in the current closeout; historical files stay preserved and Phase C's release scope is unchanged.
 - R7 authority promotion (`AUTHORITY_PROMOTION_PENDING_EVIDENCE_OR_OWNER_APPROVAL`).
 - Any later analytical milestone, new provider, new authority, or calibration use of learning outputs.
-- Worktree pruning (186 worktrees listed at last count) and artifact/scratch cleanup beyond what the owner approved.
+- Worktree/scratch cleanup beyond the Owner-approved 2026-10-24 retirement.
 
 ## 8. Actual blockers right now
 
@@ -316,5 +316,5 @@ then stop for separate release approval. No successor. [Financial intake](offici
 ## 10. Owner approvals that remain open
 
 - Work outside the source-only program; admitted in-scope merges are delegated with native receipts/exact-head CI. Source/runtime approvals stay separate.
-- Any further cleanup of host scratch / `Temp\*` / worktrees (only the five rehearsal directories were approved).
+- Further host scratch / `Temp\*` / worktree cleanup beyond the 2026-10-24 approval.
 - R7 / RAW / PIT / execution authority promotion; any new provider; any threshold change to the host preflight.

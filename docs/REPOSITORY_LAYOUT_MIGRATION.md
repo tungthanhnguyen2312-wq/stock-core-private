@@ -18,6 +18,14 @@ That creates three problems:
 
 This is real technical debt, but it is not justification for a one-shot package migration.
 
+Progress (2026-10-24): 258 root `.py` files remain (baseline 595). Wave 3 moved 19 single-milestone engines to
+`tools/replay/official_financial_evidence/`, `tools/replay/market_data_recovery/` and `tools/replay/pilots/`, and two leaf
+modules to `stocklookup_core/evidence/` ([relocation map](../tests/fixtures/root_tool_engine_w3_relocations.json)).
+Of the remaining root modules, 180 cannot move without a frozen-source transition: 45 are pinned directly (E2/E3
+frozen hashes, path launchers, source transitions, E4/provider digests), 159 are imported by a pinned file and 42 by
+historically executed sources (sets overlap). The other 78 import at least one of those, and a core package may not import
+the root. Further reduction therefore goes through the reviewed frozen-source transition procedure, family by family.
+
 ## 2. Target shape
 
 The 2026-10-10 admitted scope uses ordinary source-checkout packages. No packaging

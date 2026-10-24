@@ -44,6 +44,29 @@ Quy trình production hiện tại được vận hành qua luồng Owner Daily 
 - **AI là lớp nghiên cứu.** AI có thể giải thích và phản biện luận điểm, nhưng không được tạo ra dữ kiện tài chính, ngày giao dịch không hưởng quyền, xác suất hoặc authority cho giá mục tiêu.
 - **Con người phê duyệt cuối cùng.** Trạng thái hành động phục vụ nghiên cứu không phải lệnh thực thi giao dịch.
 
+<a id="stock-lookup-repositories"></a>
+## Các repository của Stock Lookup
+
+| Repository | Vai trò | Thư mục cục bộ |
+|---|---|---|
+| [stocklookup-engine](https://github.com/tungthanhnguyen2312-wq/stocklookup-engine) (repository này) | Producer: thu thập evidence, chuẩn hóa, bộ máy tài chính/định giá/quyết định tất định, Owner Daily và phát hành | `stock-core-private` |
+| [stocklookup-ai-research](https://github.com/tungthanhnguyen2312-wq/stocklookup-ai-research) | Consumer: dựng ngữ cảnh và báo cáo nghiên cứu AI từ artifact của Producer | `ai-core-private` |
+| [stocklookup-dashboard](https://github.com/tungthanhnguyen2312-wq/stocklookup-dashboard) | Dashboard công khai: <https://tungthanhnguyen2312-wq.github.io/stocklookup-dashboard/> | `market-dashboard` |
+
+Tên thư mục cục bộ được giữ nguyên sau khi đổi tên trên GitHub ngày 2026-10-24; `release_checkout_identity.CHECKOUT_ORIGIN_REPOSITORIES` ánh xạ chính xác từng thư mục với origin được chấp nhận.
+
+<a id="where-things-live"></a>
+## Mã nguồn nằm ở đâu
+
+| Thư mục | Nội dung |
+|---|---|
+| `stocklookup.ps1` → `stocklookup.py` | Điểm vào được hỗ trợ duy nhất: `.\stocklookup.ps1 daily` (Owner Daily) |
+| [stocklookup_core/](stocklookup_core/) | Triển khai chuẩn, theo tầng: `acquisition` → `evidence` → `financial` → `valuation` / `tactical` → `research` → `portfolio` → `decision` |
+| [tools/](tools/) | Runner và công cụ phát triển có thể tái sử dụng (`tools/run_owner_daily.py` là luồng Daily) |
+| [tools/replay/](tools/replay/) | Engine và pilot lịch sử của các milestone đã hoàn tất; không chạy trong Daily |
+| Module `.py` ở thư mục gốc | Mã cũ được ghi nhận: bị đóng băng theo hash, khởi chạy bằng đường dẫn, hoặc được nguồn đóng băng import; xem [docs/REPOSITORY_LAYOUT_MIGRATION.md](docs/REPOSITORY_LAYOUT_MIGRATION.md) |
+| [config/](config/), [tests/](tests/), [docs/](docs/) | Registry/chính sách, kiểm thử tất định, hợp đồng và trạng thái hiện tại |
+
 <a id="public-project-map"></a>
 ## Bản đồ dự án dành cho người đọc
 
@@ -97,7 +120,7 @@ Các nhánh cần authority cao hơn như RAW_AS_TRADED lịch sử đầy đủ
 <a id="repository-structure"></a>
 ## Cấu trúc repository
 
-Repository có cấu trúc phẳng từ trước và hiện còn nhiều module Python ở cấp cao nhất. Đây là nợ kỹ thuật đã được ghi nhận, không phải cấu trúc package đích.
+Repository có cấu trúc phẳng từ trước. Thư mục gốc đã giảm từ 595 xuống 258 module Python (2026-10-24); phần còn lại chủ yếu bị ràng buộc bởi nguồn Daily đóng băng, launcher theo đường dẫn hoặc nguồn lịch sử được thực thi lại. Đây là nợ kỹ thuật đã được ghi nhận, không phải cấu trúc package đích.
 
 Chính sách di chuyển là **từng bước và dựa trên đồ thị lời gọi**:
 
