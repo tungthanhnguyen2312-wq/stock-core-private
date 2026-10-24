@@ -1028,3 +1028,31 @@ def test_pipeline_json_write_is_atomic_and_byte_identical(tmp_path, monkeypatch)
         pipeline._write_json(target, {"new": 1})
     assert json.loads(target.read_text(encoding="utf-8")) == {"a": None, "b": [1, {"é": 2}]}
     assert not list(target.parent.glob("*.tmp"))
+
+
+@pytest.mark.parametrize("folder, origin, admitted", [
+    ("stock-core-private", "https://github.com/tungthanhnguyen2312-wq/stocklookup-engine.git", True),
+    ("stock-core-private", "https://github.com/tungthanhnguyen2312-wq/stock-core-private.git", True),
+    ("stock-core-private", "https://github.com/someone-else/stock-core-private.git", False),
+    ("stock-core-private", "https://github.com/tungthanhnguyen2312-wq/stocklookup-ai-research.git", False),
+    ("ai-core-private", "git@github.com:tungthanhnguyen2312-wq/stocklookup-ai-research.git", True),
+    ("market-dashboard", "https://github.com/tungthanhnguyen2312-wq/stocklookup-dashboard", True),
+    ("market-dashboard", "https://github.com/tungthanhnguyen2312-wq/market-dashboard-copy.git", False),
+    ("stocklookup-ai-handoffs", "https://github.com/tungthanhnguyen2312-wq/stocklookup-ai-handoffs.git", True),
+])
+def test_github_origin_is_matched_exactly_by_checkout_folder(tmp_path, monkeypatch, folder, origin, admitted):
+    root = tmp_path / folder
+    (root / ".git").mkdir(parents=True)
+
+    class FetchReached(Exception):
+        pass
+
+    def fake_git(_root, *args):
+        if args[:2] == ("remote", "get-url"):
+            return origin
+        raise FetchReached(args)
+
+    monkeypatch.setattr(workflow, "_git", fake_git)
+    expectation = pytest.raises(FetchReached) if admitted else pytest.raises(workflow.OwnerDailyError, match="WRONG_ORIGIN")
+    with expectation:
+        workflow.preflight_repository(root, expected_name=folder, expected_remote_fragment=folder)

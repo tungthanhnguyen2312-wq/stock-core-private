@@ -4,7 +4,9 @@ One web checkout is allowed to receive a live release:
 
     C:\\Projects\\StockLookup\\market-dashboard
 
-on branch ``main``, origin ``tungthanhnguyen2312-wq/market-dashboard``.
+on branch ``main``, origin ``tungthanhnguyen2312-wq/stocklookup-dashboard``.
+The local folder names stay unchanged after the 2026-10-24 GitHub rename;
+``CHECKOUT_ORIGIN_REPOSITORIES`` maps each folder to its exact admitted origins.
 A successful ``git push`` is ``GITHUB_SOURCE_UPDATED``. ``PUBLISHED`` is a later
 state and is never implied by push alone.
 
@@ -26,11 +28,17 @@ CANONICAL_PRODUCER_PUBLISH_DASHBOARD = CANONICAL_PRODUCER_ROOT / "publish_dashbo
 CANONICAL_PRODUCER_PUBLISH_RELEASE = CANONICAL_PRODUCER_ROOT / "tools" / "publish_release.py"
 CANONICAL_PRODUCER_ORCHESTRATOR = CANONICAL_PRODUCER_ROOT / "tools" / "release_orchestrator.py"
 CANONICAL_BRANCH = "main"
-CANONICAL_ORIGIN_REPO = "tungthanhnguyen2312-wq/market-dashboard"
-CANONICAL_ORIGIN_MARKERS = (
-    "github.com/tungthanhnguyen2312-wq/market-dashboard",
-    "github.com:tungthanhnguyen2312-wq/market-dashboard",
-)
+GITHUB_OWNER = "tungthanhnguyen2312-wq"
+# Local checkout folder -> exact GitHub repositories admitted as its origin. The first
+# name is canonical (2026-10-24 rename); the second is the pre-rename name, admitted
+# only so checkouts whose remote still names it keep working. Matching is exact.
+CHECKOUT_ORIGIN_REPOSITORIES = {
+    "stock-core-private": ("stocklookup-engine", "stock-core-private"),
+    "ai-core-private": ("stocklookup-ai-research", "ai-core-private"),
+    "market-dashboard": ("stocklookup-dashboard", "market-dashboard"),
+    "stocklookup-ai-handoffs": ("stocklookup-ai-handoffs",),
+}
+CANONICAL_ORIGIN_REPO = GITHUB_OWNER + "/" + CHECKOUT_ORIGIN_REPOSITORIES["market-dashboard"][0]
 TEST_FIXTURE_ENV = "STOCK_LOOKUP_RELEASE_IDENTITY_TEST_FIXTURE"
 
 GITHUB_SOURCE_UPDATED = "GITHUB_SOURCE_UPDATED"
@@ -75,12 +83,25 @@ def is_test_fixture(web_dir: Path) -> bool:
     return _norm(Path(raw)) == _norm(web_dir)
 
 
-def origin_is_canonical(origin_url: str) -> bool:
+def origin_repository(origin_url: str) -> str | None:
+    """The exact ``owner/name`` of a GitHub https/ssh origin URL, else None."""
     normalized = origin_url.strip().lower().replace("\\", "/")
     normalized = normalized.removesuffix("/").removesuffix(".git")
-    return normalized in {"https://github.com/" + CANONICAL_ORIGIN_REPO,
-                          "git@github.com:" + CANONICAL_ORIGIN_REPO,
-                          "ssh://git@github.com/" + CANONICAL_ORIGIN_REPO}
+    for prefix in ("https://github.com/", "git@github.com:", "ssh://git@github.com/"):
+        if normalized.startswith(prefix):
+            slug = normalized[len(prefix):]
+            return slug if slug.count("/") == 1 else None
+    return None
+
+
+def origin_matches_checkout(origin_url: str, checkout_name: str) -> bool:
+    """True only when the origin is exactly one of the repositories admitted for that folder."""
+    names = CHECKOUT_ORIGIN_REPOSITORIES.get(checkout_name, ())
+    return origin_repository(origin_url) in {(GITHUB_OWNER + "/" + name).lower() for name in names}
+
+
+def origin_is_canonical(origin_url: str) -> bool:
+    return origin_matches_checkout(origin_url, "market-dashboard")
 
 
 def _requalify_workspace():

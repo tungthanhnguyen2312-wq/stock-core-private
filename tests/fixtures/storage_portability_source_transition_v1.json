@@ -31,7 +31,7 @@
     "tools/run_owner_daily.py": {
       "archive": "tests/fixtures/storage_portability_v1_sources/tools/run_owner_daily.py.txt",
       "prior_sha256_lf": "18848d9f82e08dee2af6fa82c01a3491d033e1efdc7d6828461e3d0452a26311",
-      "active_sha256_lf": "4e24a845488dc062c7b02a7e84037f78ccb20900aa8517303d4dd7aa73452066"
+      "active_sha256_lf": "ff22d387aa979c659ced0813b5c0c7d1abf1cce4798f0027659792b17a32e2bb"
     }
   },
   "compatibility": "Historical diagnostics only. Existing E4 V1/V2 pins, origination v2 transition and archived reader remain unchanged. Active execution hashes active sources; no historical cache adoption or production activation."

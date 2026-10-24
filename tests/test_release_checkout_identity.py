@@ -24,6 +24,8 @@ from release_checkout_identity import (
     assert_runtime_root_identity,
     assert_web_checkout_identity,
     origin_is_canonical,
+    origin_matches_checkout,
+    CHECKOUT_ORIGIN_REPOSITORIES,
     publication_state_after_push,
 )
 
@@ -31,10 +33,35 @@ from release_checkout_identity import (
 class OriginAndPublisherAuthorityTests(unittest.TestCase):
     def test_canonical_https_and_ssh_origins(self):
         self.assertTrue(origin_is_canonical(
-            "https://github.com/tungthanhnguyen2312-wq/market-dashboard.git"))
+            "https://github.com/tungthanhnguyen2312-wq/stocklookup-dashboard.git"))
         self.assertTrue(origin_is_canonical(
-            "git@github.com:tungthanhnguyen2312-wq/market-dashboard.git"))
+            "git@github.com:tungthanhnguyen2312-wq/stocklookup-dashboard.git"))
+        # The pre-rename name stays admitted exactly; nothing else is.
+        self.assertTrue(origin_is_canonical(
+            "https://github.com/tungthanhnguyen2312-wq/market-dashboard.git"))
         self.assertFalse(origin_is_canonical("https://github.com/other/market-dashboard.git"))
+        self.assertFalse(origin_is_canonical("https://github.com/other/stocklookup-dashboard.git"))
+        self.assertFalse(origin_is_canonical(
+            "https://github.com/tungthanhnguyen2312-wq/stocklookup-dashboard-fork.git"))
+        self.assertFalse(origin_is_canonical(
+            "https://github.com/tungthanhnguyen2312-wq/stocklookup-engine.git"))
+
+    def test_every_checkout_folder_admits_only_its_exact_repositories(self):
+        owner = "https://github.com/tungthanhnguyen2312-wq/"
+        for folder, (canonical, *legacy) in CHECKOUT_ORIGIN_REPOSITORIES.items():
+            for name in (canonical, *legacy):
+                self.assertTrue(origin_matches_checkout(owner + name + ".git", folder))
+                self.assertTrue(origin_matches_checkout(
+                    "git@github.com:tungthanhnguyen2312-wq/" + name, folder))
+            self.assertFalse(origin_matches_checkout(owner + canonical + "-x.git", folder))
+            self.assertFalse(origin_matches_checkout(
+                "https://github.com/someone/" + canonical + ".git", folder))
+            self.assertFalse(origin_matches_checkout(
+                "https://example.com/tungthanhnguyen2312-wq/" + canonical + ".git", folder))
+        self.assertEqual(CHECKOUT_ORIGIN_REPOSITORIES["stock-core-private"][0], "stocklookup-engine")
+        self.assertEqual(CHECKOUT_ORIGIN_REPOSITORIES["ai-core-private"][0], "stocklookup-ai-research")
+        self.assertFalse(origin_matches_checkout(owner + "stocklookup-engine.git", "ai-core-private"))
+        self.assertFalse(origin_matches_checkout(owner + "stocklookup-engine.git", "unknown-folder"))
 
     def test_producer_files_are_the_only_publisher_authority(self):
         assert_producer_publisher_file(CANONICAL_PRODUCER_PUBLISH_DASHBOARD, role="publish_dashboard")

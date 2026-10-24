@@ -26,7 +26,7 @@ import stocklookup
 from release_checkout_identity import CANONICAL_WEB_ROOT, ReleaseIdentityError, assert_web_checkout_identity
 from tools import run_owner_daily as workflow
 
-DASHBOARD_ORIGIN_URL = "https://github.com/tungthanhnguyen2312-wq/market-dashboard.git"
+DASHBOARD_ORIGIN_URL = "https://github.com/tungthanhnguyen2312-wq/stocklookup-dashboard.git"
 
 
 # ----------------------------------------------------------------------------- Defect 1
