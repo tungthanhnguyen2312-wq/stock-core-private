@@ -15,11 +15,33 @@
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "QUALIFIED_QUARTERLY_STATEMENT_THROUGHPUT_V1",
+    "milestone": "OFFICIAL_PRIOR_PERIOD_PAIRING_DAILY_FROZEN_SOURCE_TRANSITION_V1",
     "state": "COMPLETE"
   },
   "queued_next": [],
   "milestones": [
+    {
+      "milestone_id": "OFFICIAL_PRIOR_PERIOD_PAIRING_DAILY_FROZEN_SOURCE_TRANSITION_V1",
+      "state": "COMPLETE",
+      "starting_checkpoint": "829500e7c132e4289147e5fa61764da47f3dce67",
+      "candidate_branch": "feat/official-prior-period-pairing-daily-v1",
+      "dependencies": [
+        "QUALIFIED_QUARTERLY_STATEMENT_THROUGHPUT_V1"
+      ],
+      "unlocks": [],
+      "owner_authorized": true,
+      "owner_override": "Owner 2026-10-24 authorizes one isolated Producer milestone: existing qualified prior-period loader and pairing into exact frozen Daily caller via source transition plus existing non-voting historical income research cards. Local implementation/test/checkpoint and PR-ready handoff only; no push, merge, deploy, Daily production, DB writes, authority promotion, D-1/comparative gates, policy/trajectory/valuation/TTM changes or successor. Shareholder worktree untouched.",
+      "authority_effect": "NONE",
+      "source_doc": "docs/official_prior_period_pairing_daily_frozen_source_transition_v1_contract.md",
+      "state_history": [
+        "DEFERRED",
+        "ACTIVE",
+        "COMPLETE"
+      ],
+      "checkpoint": "e51369a407e398f34bda2211070a5bff1238b6f6",
+      "terminal_disposition": "LOCAL_IMPLEMENTATION_COMPLETE_NOT_PROMOTED",
+      "notes": "Owner 2026-10-24 authorizes one isolated Producer milestone: existing qualified prior-period loader and pairing into exact frozen Daily caller via source transition plus existing non-voting historical income research cards. Local implementation/test/checkpoint and PR-ready handoff only; no push, merge, deploy, Daily production, DB writes, authority promotion, D-1/comparative gates, policy/trajectory/valuation/TTM changes or successor. Shareholder worktree untouched. Local closeout: Owner-authorized local integration complete: 1095 regression tests pass, 2 skipped, 4 deselected; HPG historical revenue +12.43 percent and line60 PAT +29.08 percent at valid prospective cutoff, explicit UNKNOWNs; 130 retained/sealed file hashes unchanged; plain projections match main, additive pairing only. Gates remain off, no votes/valuation/TTM/trajectory changes. Local checkpoint and PR-ready handoff only, no push/merge/production run/authority promotion/successor.; no main release, authority promotion or successor."
+    },
     {
       "milestone_id": "QUALIFIED_QUARTERLY_STATEMENT_THROUGHPUT_V1",
       "state": "COMPLETE",

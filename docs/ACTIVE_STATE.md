@@ -28,9 +28,9 @@ Kinds: **CURRENT FACT** (verified), **HOST-LOCAL** (untracked; re-verify),
 **BLOCKED**, **DEFERRED**, **HISTORICAL**.
 
 ## 1. The operational gate
-- **PR182-184 merged:** [earnings/cash](reviewed_interim_earnings_and_cash_research_v1_contract.md), [pairing](qualified_quarterly_statement_throughput_v1_contract.md); non-voting; gates/Daily gated.
+- **Prior-period Daily integration:** [scope](official_prior_period_pairing_daily_frozen_source_transition_v1_contract.md); base PR182-184 merged; source transition + historical non-voting cards; LOCAL COMPLETE / NOT PROMOTED.
 - **[Native releases](parallel_domain_development_control_plane_v1_contract.md):** declaration correction; explicit coupled source review.
-- **RELEASED / VALIDATED SOURCE WAVE 2026-10-14:** PR145 released at `f582bfab80dac6d206083a0bd4a0ba57db199691`; all five post-merge jobs PASS (38491150319). Native rev93 admits Codex lane `STOCKLOOKUP_PRODUCER_DEEP_SIMPLIFICATION_20261014`: six existing financial/valuation computation owners, exact leases and output parity. Implementation validated: 630 tests PASS, 12 retained-data cases absent in this clean worktree; native and hosted exact-head gates govern release disposition. Conditional validated source push/PR/merge authorized; no Daily, production or authority/evidence changes. PNJ/FPT unadmitted; Oct13 seals unchanged.
+- **RELEASED:** PR145/146 source wave; exact historical acceptance remains in [SYSTEM_MAP](SYSTEM_MAP.md). No new source authority or production admission follows.
 - [Oct13](daily_20261013_handoff_route_recovery_contract.md).
 - **RELEASED — [financial intake](official_financial_quarterly_intake_contract.md):** PR137; candidates; source admission gated.
 - **RELEASED — [Wave 1 replay](SYSTEM_MAP.md#wave-1-historical-replay-relocation--2026-10-13):** PR139; `tools/replay/`: 34 modules; root 325 → 291; replay unchanged.

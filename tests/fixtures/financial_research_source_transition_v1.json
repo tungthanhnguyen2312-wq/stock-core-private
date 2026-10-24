@@ -23,6 +23,17 @@
       "active_sha256_lf": "bd0a852b2f531863bf3294bf5cd68c32bed9e09b742321a712b31a2477cbd0f0",
       "archive": "tests/fixtures/financial_research_v1_sources/technical_structure_context.py.txt",
       "prior_sha256_lf": "c56569dbd5d76b56dc3778df520e70015ce1f0e98a981c7537edf7c98431c51d"
+    },
+    "daily_session_level2_package.py": {
+      "archive": "tests/fixtures/financial_research_v1_sources/daily_session_level2_package.py.txt",
+      "prior_sha256_lf": "3a83b39dbb1428749f01db9fcfa6bebb9be2b81f4933c7762bae1051f9277eb0",
+      "active_sha256_lf": "7bfb48d66554918c2bddda4e446e03690adabe9a962e5caa26ac9a09cd1f1a05",
+      "milestone": "OFFICIAL_PRIOR_PERIOD_PAIRING_DAILY_FROZEN_SOURCE_TRANSITION_V1",
+      "base_commit": "829500e7c132e4289147e5fa61764da47f3dce67",
+      "scope": "EXACT_DAILY_PRIOR_PAIRING_CALLER_ONLY_NO_HISTORICAL_RECEIPT_ADOPTION",
+      "prior_declared_e4_v2_digest": "23595d916d6e49400cbcb2d1b5b62c4eef4241a8afee6e129b76ea1df609154d",
+      "base_live_e4_v2_digest": "e03461b30787196d26e3368d031e7dc0d9d90bba649af83eb5a17e91d57b86a0",
+      "active_e4_v2_digest": "ebb592d0ceddc67f9186184c6e13f093c18ff0ddb749ccfc4e6b6cb49599a693"
     }
   }
 }

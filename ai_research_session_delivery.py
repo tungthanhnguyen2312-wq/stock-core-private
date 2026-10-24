@@ -224,6 +224,11 @@ def financial_research_card(card: Mapping[str, Any], fundamental: Mapping[str, A
         "official_income": official_income_research_context(fundamental, cutoff=cutoff, ticker=card.get("ticker")),
         "earnings_cash": interim_earnings_cash_research_context(fundamental, cutoff=cutoff, ticker=card.get("ticker")),
         "use": "NON_VOTING_RESEARCH_ONLY", "is_actionable": False}
+    from stocklookup_core.financial.official_income_prior_period_pairing import research_card_pairing
+    income = result["fundamental_research_context"]["official_income"]
+    pairing = research_card_pairing(fundamental, income, ticker=card.get("ticker"), cutoff=cutoff)
+    if pairing is not None:
+        income["prior_period_pairing"] = pairing
     return result
 
 

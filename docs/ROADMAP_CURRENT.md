@@ -5,16 +5,17 @@ Verified analytical baseline 2026-10-14 `a9c799397a74641a0e16c8ea84454d2dc4d0745
 Nothing below auto-starts; native standing admission required (AI_RULES 11).
 Facts: [ACTIVE_STATE.md](ACTIVE_STATE.md).
 
-## NOW — QUALIFIED QUARTERLY STATEMENT THROUGHPUT V1
+## NOW — OFFICIAL PRIOR-PERIOD PAIRING DAILY TRANSITION V1 (LOCAL COMPLETE)
 
-[Scope](qualified_quarterly_statement_throughput_v1_contract.md): non-voting prior-period income
-pairing; gates off; D-1 unchanged; Daily not wired. PR182-184 Owner-merged 10-23.
+[Scope](official_prior_period_pairing_daily_frozen_source_transition_v1_contract.md): existing
+qualified loader into frozen Daily caller; historical non-voting cards. Local checkpoint only;
+no push, merge, production run, gate/authority change or successor. Base PR182-184 merged.
 
 ## PRIOR — STOCKLOOKUP_PRODUCER_DEEP_SIMPLIFICATION (RELEASED PR146)
 
 [Scope](parallel_domain_development_control_plane_v1_contract.md): disjoint native lanes;
 Owner merge gate. PR133 released; post-merge CI PASS (38318598892).
-2026-10-14: PR145 and all five post-merge CI jobs released; native rev93 admitted the financial computation lane. Implementation validated; exact native receipt and hosted CI govern source release disposition. One bounded Codex-owned implementation wave; existing identities and Consumer/Dashboard interfaces preserved. Conditional validated source push/PR/merge authorized; no production/Daily/evidence writes, authority promotion or automatic successor.
+PR145 released 2026-10-14; exact source-wave history and native receipts remain in STATE/ROADMAP. No successor or production activation follows.
 V3 PR131 merged `d11b101`; V2 PR130 merged `d53999b`.
 E5 PR127 merged `70fbba9`; post-merge CI PASS (38190156979).
 E4 PR126 merged `e9ee2fe`; four post-merge jobs PASS (38186488312).

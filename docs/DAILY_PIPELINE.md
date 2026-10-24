@@ -15,6 +15,8 @@ acceptance is independently verified; exact identities are in ACTIVE_STATE.
 
 Released October-7 integration extends K2's existing fundamental builder with a
 new session projection of the immutable annual baseline and qualified retained overlay.
+[Prior pairing](official_prior_period_pairing_daily_frozen_source_transition_v1_contract.md)
+loads existing qualified originals only for new projections; historical cards never vote.
 Reviewed USD income fields remain currency-preserving context and are excluded from VND
 canonical citations/valuation inputs. Reported disposal components and an audited annual
 provision component follow the
