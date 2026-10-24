@@ -50,7 +50,7 @@ performance+GitHub Pages ở phase này) — audit riêng cho việc PUBLISH:
   (USER_GUIDE.md, CLI_REFERENCE.md...), không phải nơi chứa site. `dashboard.html`/`index.html`/
   `assets/` đều nằm ở gốc repo. Nhầm sang `/docs` sẽ làm site build ra tài liệu thay vì dashboard.
 - Không có `CNAME` → không dùng custom domain, site chạy ở domain mặc định GitHub cấp.
-- Site là **project page** (`tungthanhnguyen2312-wq.github.io/market-dashboard/`), KHÔNG phải
+- Site là **project page** (`tungthanhnguyen2312-wq.github.io/stocklookup-dashboard/`; trước 2026-10-24 là `/market-dashboard/`, nay trả 404), KHÔNG phải
   domain gốc — đã audit toàn bộ `href`/`src`/`url()` trong `.html`/`.css`/`.js`: 100% đường dẫn
   tương đối (không có path tuyệt đối `/...`), tương thích đúng với subpath này.
 
