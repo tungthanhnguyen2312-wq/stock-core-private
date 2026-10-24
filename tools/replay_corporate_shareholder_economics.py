@@ -111,9 +111,9 @@ def main():
     parser.add_argument("--base-ref")
     parser.add_argument("--inspect", action="store_true", help="Offline/opt-in issuer research inspection; never a Daily stage")
     parser.add_argument("--candidate-index", type=Path)
-    parser.add_argument("--share-note", type=Path)
-    parser.add_argument("--original-root", type=Path)
-    parser.add_argument("--original-manifest", type=Path)
+    parser.add_argument("--share-note", type=Path, action="append")
+    parser.add_argument("--original-root", type=Path, action="append")
+    parser.add_argument("--original-manifest", type=Path, action="append")
     parser.add_argument("--cutoff")
     parser.add_argument("--tickers", default="HPG,PNJ,SSI,PVD,POW,QNS")
     args = vars(parser.parse_args())
@@ -143,40 +143,57 @@ def inspect_research(*, candidate_index, output, cutoff, tickers="HPG,PNJ,SSI,PV
         raise ValueError("REPLAY_OUTPUT_MUST_BE_IN_WORKTREE_SCRATCH")
     if bool(original_root) != bool(original_manifest):
         raise ValueError("EXPLICIT_ORIGINAL_ROOT_AND_MANIFEST_REQUIRED_TOGETHER")
-    paths = [Path(candidate_index)]+([Path(share_note)] if share_note else [])+([Path(original_manifest)] if original_manifest else [])
+    def many(value):
+        return list(value) if isinstance(value, (list, tuple)) else [value] if value else []
+    roots, manifests, note_paths = map(many, (original_root, original_manifest, share_note))
+    if len(roots) != len(manifests):
+        raise ValueError("EXPLICIT_ORIGINAL_ROOT_AND_MANIFEST_REQUIRED_TOGETHER")
+    paths = [Path(candidate_index)]+[Path(p) for p in note_paths+manifests]
     before = {str(p.resolve()): digest(p) for p in paths}
     index = json.loads(Path(candidate_index).read_bytes())
-    notes = [json.loads(Path(share_note).read_bytes())] if share_note else []
-    records = json.loads(Path(original_manifest).read_bytes()).get("records", []) if original_manifest else []
+    notes = []
+    for path in note_paths:
+        data = json.loads(Path(path).read_bytes())
+        if 'qualification_inputs' in data:
+            from stocklookup_core.evidence.current_common_shares_official_evidence_acquisition import qualify_retained_share_capital_note
+            notes.extend(qualify_retained_share_capital_note(**row) for row in data['qualification_inputs'])
+        else:
+            notes.extend(data['notes'] if 'notes' in data else [data])
+    records = [(r, Path(root)) for root, manifest in zip(roots, manifests)
+        for r in json.loads(Path(manifest).read_bytes()).get("records", [])]
     verifications, matched_records = {}, {}
     originals_before = {}
     for doc in index["source_manifest"]["documents"]:
         key = doc.get("source_id")
-        matches = [r for r in records if r.get("ticker") == doc.get("issuer")
-            and r.get("canonical_url") == doc.get("url") and r.get("sha256") == doc.get("sha256")
+        matches = [(r, root) for r, root in records if r.get("ticker") == doc.get("issuer")
+            and str(r.get("canonical_url")).replace(' ', '%20') == str(doc.get("url")).replace(' ', '%20')
+            and r.get("sha256") == doc.get("sha256")
             and r.get("acquisition_status") == "retained"]
         reasons = ["RETAINED_ORIGINAL_BYTES_NOT_VERIFIED"]
         if len(matches) == 1:
-            record = matches[0]
-            path = (Path(original_root)/record["relative_path"]).resolve()
-            if not path.is_relative_to(Path(original_root).resolve()):
+            record, root = matches[0]
+            path = (root/record["relative_path"]).resolve()
+            if not path.is_relative_to(root.resolve()):
                 reasons = ["ORIGINAL_PATH_OUTSIDE_EXPLICIT_ROOT"]
             elif path.is_file():
                 actual = digest(path)
                 originals_before[str(path)] = actual
                 reasons = [] if actual == doc["sha256"] else ["ORIGINAL_BYTE_HASH_MISMATCH"]
                 if not reasons:
-                    matched_records[(doc["issuer"], doc["sha256"], doc["url"])] = record
+                    matched_records[(record["ticker"], record["sha256"], record["canonical_url"])] = record
             else:
                 reasons = ["ORIGINAL_BYTES_MISSING"]
         verifications[key] = dict(status="RAW_BYTES_AND_MANIFEST_MATCHED" if not reasons else "UNVERIFIED",
             sha256=doc.get("sha256"), reason_codes=reasons,
-            retained_manifest_observed_at=matches[0].get("observed_at") if len(matches) == 1 else None,
-            retained_manifest_published_at=matches[0].get("published_at") if len(matches) == 1 else None)
+            retained_manifest_observed_at=matches[0][0].get("observed_at") if len(matches) == 1 else None,
+            retained_manifest_published_at=matches[0][0].get("published_at") if len(matches) == 1 else None)
     accepted_notes, note_blockers = [], []
     for note in notes:
-        match = matched_records.get((note.get("ticker"), note.get("document_sha256"), note.get("source_url")))
-        if match is not None and match.get("observed_at") == note.get("observed_at"):
+        source = note.get('document') if note.get('contract_version') == 'retained_share_capital_note/v1' else dict(
+            ticker=note.get('ticker'), sha256=note.get('document_sha256'), canonical_url=note.get('source_url'),
+            observed_at=note.get('observed_at'), published_at=note.get('published_at'))
+        match = matched_records.get((source.get('ticker'), source.get('sha256'), source.get('canonical_url')))
+        if match is not None and all(match.get(k) == source.get(k) for k in ('observed_at', 'published_at')):
             accepted_notes.append(note)
         else:
             note_blockers.append(dict(citation_id=note.get("citation_id"), reason="EXISTING_NOTE_ORIGINAL_BYTES_OR_MANIFEST_NOT_VERIFIED"))
@@ -202,7 +219,13 @@ def inspect_research(*, candidate_index, output, cutoff, tickers="HPG,PNJ,SSI,PV
         context, discovery = card["shareholder_economics_context"], card["candidate_discovery"]
         lines += ["## "+ticker, "", f"Admitted observations: {len(context['claims'])}; candidate report: {discovery['status']}."]
         for claim in context["claims"]:
-            lines.append(f"- QUALIFIED POINT ONLY: {claim['kind']} {claim['value']} {claim['unit']} at {claim.get('effective_date')}; citation {claim['citation_id']}. Later continuity remains UNKNOWN.")
+            lines.append(f"- QUALIFIED HISTORICAL {claim['state']}: {claim['kind']} {claim['value']} {claim['unit']} at {claim.get('effective_date')}; scope {claim.get('scope')}; citation {claim['citation_id']}. Later continuity remains UNKNOWN.")
+        for change in context['share_capital_research']['endpoint_changes']:
+            ratio = change['change_ratio']
+            percent = f' ({ratio:+.2%})' if ratio is not None else ''
+            lines.append(f"- ENDPOINT RESEARCH {change['kind']} ({change['scope']}): "
+                f"{change['prior_value']:,} at {change['prior_date']} to {change['current_value']:,} at {change['current_date']}; "
+                f"change {change['change']:+,} shares{percent}. Continuity and ownership dilution remain UNKNOWN.")
         for finding in discovery.get("research_findings", []):
             lines.append(f"- {finding['classification']}: {finding['text']}"+(
                 f" Reported legal/accounting basis {finding['reported_legal_basis_count']}; EPS basis {finding['reported_eps_basis_count']}; difference {finding['eps_minus_legal_count']} shares ({', '.join(finding['source_rows'])})."

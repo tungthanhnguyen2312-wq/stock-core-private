@@ -26,6 +26,12 @@ CONTRACT_VERSION = "official_document_qualification/v1"
 QUALIFICATION_SUCCESS_STATUS = "QUALIFIED_RETAINED_FINANCIAL_STATEMENT"
 QUALIFICATION_FAILURE_STATUS = "DISQUALIFIED_RETAINED_DOCUMENT"
 
+
+def retained_assurance_is_bound(status, evidence, *, document_sha256):
+    """Reuse this owner's existing assurance identity check for retained fields."""
+    from official_financial_assurance_evidence import assurance_proof_is_bound
+    return assurance_proof_is_bound(status, evidence, document_sha256=document_sha256)
+
 SUPPORTED_DOCUMENT_CLASSES = frozenset({
     "audited_annual_financial_statements",
     "reviewed_interim_financial_statements",

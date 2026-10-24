@@ -1,5 +1,144 @@
 # Corporate shareholder economics research V1
 
+## Official share-capital qualification scaleout (local, 2026-10-24)
+
+Owner milestone `OFFICIAL_SHARE_CAPITAL_EVIDENCE_QUALIFICATION_SCALEOUT_V1` starts
+from merged Producer `92fe761287f08d97ab88602dbe9349ab656a1fe6`. PR188's engine is
+reused; Consumer PR7 and all production inputs remain outside this writer's scope.
+This section supersedes earlier "no new field" statements only for the exact
+bounded historical observations below. It grants no production activation or
+broader source, issuer, financial, continuity or strict per-share authority.
+
+### Existing owner and exact scope
+
+`current_common_shares_official_evidence_acquisition.qualify_retained_share_capital_note`
+extends the existing retained-note owner with three visually reviewed, byte-pinned
+layouts. It reads literal positioned cells, labels, columns and retained source
+clocks; callers cannot supply the economic values, stages, dates or scope.
+PNJ/PVD require the existing assurance owner's source-bound audited/reviewed proof.
+SSI is a first-party issuer notice, explicitly **not audited or reviewed assurance**.
+No parser framework, source registry, qualification score or new financial owner
+is introduced. Future filings do not inherit these layout admissions.
+
+The same `project_context(retained_common_share_notes=...)` seam replays the owner
+qualifier and compares the complete receipt before admitting any amounts. It
+checks knowledge/retrieval/effective dates at the requested cutoff. Publication
+time remains UNKNOWN (null) in all three acquisition receipts: even SSI's printed
+publication day supplies no exact release time. No receipt is eligible for
+historical PIT. The generic typed-observation gate still requires publication;
+this bounded retained-note adapter does not relax that gate.
+
+The existing offline inspection accepts repeated `--share-note`, `--original-root`
+and `--original-manifest` arguments (paired roots/manifests). Original PDF bytes,
+issuer, hash, canonical URL and retained clocks are independently checked before
+inspection admission; source bytes and manifests are hashed before/after. Only a
+literal space versus its URI spelling `%20` is equivalent for discovery URL
+matching (the existing PVD receipt uses spaces); no host, path case or encoded
+separator equivalence is inferred. GrokBot's index remains candidate discovery.
+
+### Independently qualified observations
+
+| Original / citation | Point dates | Definition / exact shares |
+|---|---|---|
+| PNJ FY2025 audited consolidated filing, PDF89 / printed35, ordinary-share note; left/right year-end columns | 2025-12-31 / 2024-12-31 | issued 341,318,666 / 338,074,776; outstanding 341,149,107 / 337,905,217; treasury subtraction 169,559 / 169,559 |
+| PVD H1 reviewed consolidated filing, PDF34 / printed32, issuer ordinary shares; self-held treasury, share-count columns (not adjacent VND) | 2026-06-30 / 2025-12-31 | issued 556,296,006 / 556,296,006; outstanding 555,880,006 / 555,880,006; treasury 416,000 / 416,000 |
+| SSI CV1448/2026, PDF2, before/after columns; all reported classes in issuer notice | 2026-06-15 / 2026-08-18 | total shares 2,503,089,220 / 3,003,293,801; voting outstanding 2,501,097,752 / 3,001,302,333; treasury 1,991,468 / 1,991,468 |
+| Same SSI table, explicit charter capital (VND) | 2026-06-15 / 2026-08-18 | 25,030,892,200,000 / 30,032,938,010,000 VND; no division by par |
+| Same SSI notice, completed equity-source issuance with explicit closing date | 2026-08-18 | 500,204,581 shares EXECUTED / BONUS_FROM_EQUITY; no financing cash receipt |
+
+These are **21 new historical claims for three issuers**, plus the unchanged HPG
+FY2025 qualified outstanding anchor (7,675,465,855 at 2025-12-31). SSI's caption
+"Total number of shares" is preserved as `TOTAL_SHARES`, not reinterpreted as an
+issued, listed, tradable or common-outstanding count. PNJ treasury parentheses
+denote subtraction in the source table, not negative shares. No blank or dash is
+converted to a zero. PNJ's unchanged treasury and increased issued/outstanding
+endpoints are observations, not a newly qualified ESOP execution event.
+
+Pinned originals:
+
+- PNJ: `309f86836d9f00b37e3cccb25da9e7ffd0dab6c531be995618542004acccdf1d`.
+- PVD: `a7360d2fc9a8a67a1535820813cda2bb8ef288466cd36c949e050c2f2a1b290a`.
+- SSI: `53ec367048e5fc6b5e34620b3d1f9f08d2026309c37f847cbee9a10d573bfb58`.
+
+The real acquisition receipts, original positioned tokens and existing assurance
+proofs are retained in `tests/fixtures/retained_share_capital_scaleout_v1.json`.
+Pass this file explicitly as `--share-note` to replay qualification in memory;
+it is an offline replay input, never a runtime loader. Its token
+subsets retain original text and identity; only the existing metadata heading
+fold is reused for PNJ's year labels, never for numeric amounts. Amounts with
+ambiguous OCR characters fail closed. Research claim citations retain the selected
+cell, page, rendered-image hash, document identity, scope, assurance and clocks.
+
+### Actual acceptance and remaining evidence gates
+
+Offline acceptance reuses the existing six-issuer inspection and checks the
+original PDFs against their retained manifests. Human-readable cards show PNJ
+issued and outstanding endpoint increases of **3,243,890 shares**, unchanged
+treasury, PVD's unchanged reported endpoints, and SSI's total/voting increases of
+**500,204,581** alongside its independently explicit completed bonus stage.
+The engine labels endpoint arithmetic as inference from qualified points; it
+does not reconstruct intervening events or quantify ownership loss. There is no
+qualified proposed stage for SSI in this batch, so no planned/executed variance
+is manufactured. HPG's original anchor is preserved, not counted as new coverage.
+
+Bounded acquisition used the existing approved `issuer_ir` acquirer, one attempt
+per missing QNS/SSI/POW original, isolated in development scratch. All three hashes
+match the discovery index. PNJ/PVD originals and their existing assurance proofs
+were reused. Only missing, image-only capital pages were materialized; no usable
+native page or already-usable HPG note was OCRed again. Existing source bytes,
+production and sealed sessions were not written.
+
+- HPG H1 PDF61 visually distinguishes EPS's retrospectively restated 8,442,964,520
+  from the dated FY2025 outstanding anchor. Exact-field qualification is still
+  blocked by `AUDITOR_EVIDENCE_NOT_QUALIFIED` for that H1 original; the EPS number
+  and subsequent-event claims remain candidates. No current outstanding or ex-date
+  is inferred from EPS, charter capital, listing or first-trading dates.
+- QNS FY2025 original hash
+  `562c814c82c1d02993710ba3e8f0b15408414cc2f04772317684031c05ff3f33`
+  has usable native share-note text at PDF30. It explicitly attributes the
+  55,534,605 consolidated treasury shares to subsidiary Thanh Phat; this is not
+  interchangeable with issuer self-held treasury. Qualification remains blocked
+  by `ASSURANCE_STATUS_NOT_EXPLICIT`: the retained audit-page text/OCR misreads
+  the report title. The assurance recognizer is not relaxed and those quantities
+  remain candidates, not qualified zeros or a scope conflict.
+- POW FY2025 original hash
+  `5f540a3c1f49bb62343e88fa7357a3a69d2cf89f0523c54ee9da24e29b588ed9`
+  has broken embedded text at PDF22–23; row/column semantics are not qualified
+  (`CAPITAL_NOTE_LAYOUT_NOT_REVIEWED`). No charter/par inference or follow-up OCR
+  campaign is launched merely to increase coverage.
+
+Strict valuation, ex-date/factor chains, RAW/PIT, current share continuity, sizing,
+execution and financial authority owners are unchanged. Publication uncertainty
+and later knowledge prevent historical session backfill. Conversion versus cash,
+proposed versus executed and subsidiary versus issuer treasury stay independently
+tested by the existing shareholder suite. Release requires Owner review; this
+milestone authorizes a local checkpoint only, with no push, merge or successor.
+
+Local validation: focused shareholder/source-assurance/share-authority/transition,
+layout, architecture, invocation-shape and active-navigation suite: **322 passed,
+1 host symlink skip, 2 subtests passed**. After the final explicit-input inspection
+change, the 89 shareholder/inspection tests passed again (same symlink skip).
+Final navigation/layout/architecture/roadmap regressions: **193 passed**.
+The native roadmap remains ON_TRACK; the active reading set remains under 100 KiB.
+The CI selection adds the new offline fixture regressions and refreshes only that
+workflow's exact launcher fingerprint; production command contracts are unchanged.
+
+The existing October22 retained replay still compares **1,507 corporate records /
+72 cards** against its original integration baseline `e86b5f96`, with all eight
+input/seal hashes unchanged and no production writes. This historical replay is
+not described as a full repository comparison against new main. The existing HPG
+qualifier and current-share acquisition-result function are AST-identical to
+merged `92fe7612`; no strict share authority implementation is changed.
+
+Separate legacy fixture gate: all three tests in
+`tests/test_current_common_shares_official_evidence_acquisition.py` fail with
+FileNotFoundError because the four exact acquisition manifests named by
+`tools/derive_current_common_shares_official_evidence_acquisition.py::MANIFESTS`
+are absent from the available retained/source checkouts. Their assertions are not
+changed or skipped. This does not block the 21 new source-bound observations or
+the actual original-PDF acceptance; a full legacy acquisition replay still needs
+those original manifests. No replacement evidence is synthesized.
+
 Owner selects `CORPORATE_SHAREHOLDER_ECONOMICS_RESEARCH_V1` on 2026-10-23. Codex is
 the sole Producer writer, in an isolated worktree. Base `a8c24f1ad84ce5405d47223a278e173a82a5bb35`
 (open PR183), stacked on PR182 `37068de74834063d564604a9fa923dc808c80979`, main

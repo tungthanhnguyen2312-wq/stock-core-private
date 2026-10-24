@@ -25,6 +25,7 @@ STATES = {
     "ISSUANCE": {"APPROVED_PROPOSAL", "REGISTERED_OFFER", "EXECUTED"},
     "SUBSCRIPTION_RIGHTS": {"ENTITLEMENT"},
     "ISSUED_SHARES": {"DATED_OBSERVATION"},
+    "TOTAL_SHARES": {"DATED_OBSERVATION"},
     "OUTSTANDING_SHARES": {"DATED_OBSERVATION"},
     "TREASURY_SHARES": {"DATED_OBSERVATION"},
     "VOTING_SHARES": {"DATED_OBSERVATION"},
@@ -354,6 +355,21 @@ def project_context(*, ticker: str, cutoff: str, observations: Sequence[Mapping[
             claims.append(_claim(row))
     for note in retained_common_share_notes:
         try:
+            if note.get('contract_version') == 'retained_share_capital_note/v1':
+                from stocklookup_core.evidence.current_common_shares_official_evidence_acquisition import qualify_retained_share_capital_note
+                verified = qualify_retained_share_capital_note(**{k: note[k] for k in
+                    ('document', 'materialization', 'assurance', 'knowledge_available_at')})
+                if verified != note or note['ticker'] != ticker:
+                    raise ValueError('RETAINED_NOTE_RECEIPT_MISMATCH')
+                admitted = copy.deepcopy(note['claims'])
+                for row in admitted:
+                    if any(_instant(row.get(k)) is None or _instant(row[k]) > boundary
+                           for k in ('observed_at', 'knowledge_available_at')) or _day(row['effective_date']) > boundary.date():
+                        raise ValueError('SOURCE_NOT_KNOWN_AT_CUTOFF')
+                    if row.get('published_at') is not None and _instant(row['published_at']) > boundary:
+                        raise ValueError('SOURCE_NOT_KNOWN_AT_CUTOFF')
+                claims.extend(admitted)
+                continue
             # Reuse the exact existing HPG source-token qualifier. Publication may
             # remain null under THAT contract; this is not a new generic admission.
             from stocklookup_core.evidence.current_common_shares_official_evidence_acquisition import qualify_retained_common_share_note
