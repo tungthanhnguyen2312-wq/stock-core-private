@@ -118,6 +118,9 @@ def build_artifact(*, opportunity: Mapping[str,Any], scenario: Mapping[str,Any]|
    business_context=((security.get("corporate_intelligence_context") or {}).get("forward_driver_context") or {}).get("business_update_context")
    if business_context is not None:
     row["components"]["business_update_context"]=copy.deepcopy(business_context)
+   economics=((security.get("corporate_intelligence_context") or {}).get("forward_driver_context") or {}).get("shareholder_economics_context")
+   if economics is not None:
+    row["components"]["shareholder_economics_context"]=copy.deepcopy(economics)
    if "valuation_balance_sheet_divergence" in security:
     row["components"]["valuation_balance_sheet_divergence"]=copy.deepcopy(security["valuation_balance_sheet_divergence"])
    row["security_decision"]={key:copy.deepcopy(security.get(key)) for key in (

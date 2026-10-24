@@ -24,10 +24,10 @@ Verified release baseline: `a9c799397a74641a0e16c8ea84454d2dc4d0745b`. PR146 rel
   and obtain an explicit owner decision.
 Verify governing sources; chat memory/prose recency are not authority (§6).
 
-Kinds: **CURRENT FACT** (verified), **HOST-LOCAL** (untracked; re-verify),
-**BLOCKED**, **DEFERRED**, **HISTORICAL**.
+Kinds: **CURRENT FACT** (verified), **HOST-LOCAL** (untracked; re-verify), **BLOCKED**, **DEFERRED**, **HISTORICAL**.
 
 ## 1. The operational gate
+- [Shareholder/dilution](corporate_shareholder_economics_research_v1_contract.md): LOCAL COMPLETE, OFFLINE/NON_VOTING; #39 candidate; no authority promotion or release.
 - **Prior-period Daily integration:** [scope](official_prior_period_pairing_daily_frozen_source_transition_v1_contract.md); base PR182-184 merged; source transition + historical non-voting cards; LOCAL COMPLETE / NOT PROMOTED.
 - **[Native releases](parallel_domain_development_control_plane_v1_contract.md):** declaration correction; explicit coupled source review.
 - **RELEASED:** PR145/146 source wave; exact historical acceptance remains in [SYSTEM_MAP](SYSTEM_MAP.md). No new source authority or production admission follows.

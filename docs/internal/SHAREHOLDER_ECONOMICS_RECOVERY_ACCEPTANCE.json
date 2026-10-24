@@ -1,0 +1,33 @@
+{
+  "contract_version": "shareholder_economics_context/v1",
+  "session": "2026-10-22",
+  "base_ref": "829500e7c132e4289147e5fa61764da47f3dce67",
+  "corporate_records_parity": 1507,
+  "primary_card_parity": 72,
+  "context_status_counts": {
+    "UNKNOWN": 70,
+    "AVAILABLE": 2
+  },
+  "sealed_bytes_unchanged": true,
+  "production_writes": 0,
+  "authority_effect": "NONE",
+  "candidate_evidence_used": false,
+  "retained_hashes_match": true,
+  "retained_source_sha256": {
+    "market_wide_current_fundamental_research_artifact.json": "204b21c941dd4d774b49586e6e145dc1012098acaba198d09c5ca088cd578832",
+    "market_wide_current_valuation_artifact.json": "840cb394484a2bd2440cc03580c8963a15c6c7602ca1a68a0dc042b9ff3df7b1",
+    "d77e16f82893df419689b24356d066d6a6431bd3c27e09190e3c319e004abb55.json": "1552ebb30c77e4c25ba91f9e2e7cf14e806f1e825dd93733d7794707857f8585",
+    "d6dcb499009e16ebc46def2cc065b6d3ea21a939970c56c1850c90aac84eeff1.json": "f45c72e4dce2fdd41e45f136d6c3ce2cd06946c21bb9c3089542f2e80b2cc044",
+    "ai_research_session_bundle.json": "02740143933e612bb6edd871074d33215c2b97fb688a929f9fc109ee70e3c509",
+    "current_research_valuation_context_artifact.json": "97a821218b980e87409cfdb915427d603cb878ebcb81d4dd5ffcb17bac7b76ff",
+    "current_research_decision_packet_artifact.json": "2728eeea048de09a21bd1ae6d65d8dd2af3030df33851b1969f1808a661391f4",
+    "current_decision_cockpit_projection.json": "92183975e0d3596d68bbcbd3c70f0aefdb5ef57a91876ef97dffc4b866cb9dce"
+  },
+  "issuer_statuses": {
+    "HPG": "UNKNOWN",
+    "NVL": "UNKNOWN",
+    "PAN": "UNKNOWN",
+    "PNJ": "AVAILABLE",
+    "SSI": "UNKNOWN"
+  }
+}

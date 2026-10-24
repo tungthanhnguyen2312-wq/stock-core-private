@@ -1539,7 +1539,7 @@ def test_run_post_handoff_presentation_projection_writes_to_new_directory_never_
     written = {}
 
     def fake_materialize(*, root, session, operation_dir, registry_inputs, requested_at, runtime_root_override,
-                         integrated_investment_decision_product=None):
+                         integrated_investment_decision_product=None, evaluated_valuation=None):
         written["operation_dir"] = operation_dir
         operation_dir.mkdir(parents=True, exist_ok=True)
         (operation_dir / "investment_decision_workspace_projection.json").write_text(json.dumps({
@@ -1582,7 +1582,7 @@ def test_run_post_handoff_presentation_projection_unavailable_on_lineage_diverge
     monkeypatch.setattr(dros, "resolve_inputs", lambda root, s, registry: ({}, {}))
 
     def fake_materialize(*, root, session, operation_dir, registry_inputs, requested_at, runtime_root_override,
-                         integrated_investment_decision_product=None):
+                         integrated_investment_decision_product=None, evaluated_valuation=None):
         operation_dir.mkdir(parents=True, exist_ok=True)
         (operation_dir / "investment_decision_workspace_projection.json").write_text(json.dumps({
             "artifact_identity": "investment_decision_workspace_projection/v1:new",
@@ -1632,7 +1632,7 @@ def test_run_post_handoff_presentation_projection_without_producer_run_dir_skips
     monkeypatch.setattr(dros, "resolve_inputs", lambda root, s, registry: ({}, {}))
 
     def fake_materialize(*, root, session, operation_dir, registry_inputs, requested_at, runtime_root_override,
-                         integrated_investment_decision_product=None):
+                         integrated_investment_decision_product=None, evaluated_valuation=None):
         operation_dir.mkdir(parents=True, exist_ok=True)
         (operation_dir / "investment_decision_workspace_projection.json").write_text(json.dumps({
             "artifact_identity": "investment_decision_workspace_projection/v1:new", "source_artifacts": {},

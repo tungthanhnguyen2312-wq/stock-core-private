@@ -18,8 +18,8 @@
       ]
     },
     "canonical_post_close_pipeline.py": {
-      "ast_sha256": "66a613d8b429d62829ba4f4edc849d8b76649c500d3a65017b9935847a4e9c26",
-      "reason": "Child argv passed to imported run_observed_subprocess and progress wrapper; exact source contract covers delegation. 2026-10-21 review: AST refresh is the approved evaluated-valuation join only; resolved subprocess argv is unchanged from origin/main.",
+      "ast_sha256": "54bf949950b6eb6bfa02f736836cdda8bba593081e3987e3e93aa9afa7a39b54",
+      "reason": "Child argv passed to imported run_observed_subprocess and progress wrapper; exact source contract covers delegation. 2026-10-21 review: AST refresh is the approved evaluated-valuation join only; resolved subprocess argv is unchanged from origin/main. Shareholder research join only; invocation paths and unresolved argv sites match e86b5f96 exactly.",
       "targets": [
         "tools/run_prospective_decision_outcome_feedback.py",
         "tools/run_prospective_research_cohort_collection.py",
@@ -119,7 +119,7 @@
     ".github/workflows/producer-ci.yml": {
       "kind": "compile_and_cli",
       "reason": "Exact reviewed shell/CI command contract, normalized line endings.",
-      "sha256": "e273cf22da70a06b36e00428c5fe30390bd4b336ff071ea20c78244e0da41fa1",
+      "sha256": "6db06f5f03fab3f3d6811b9c2527e89fab0ecc362c2f7268d4cfa5dbe65b8b36",
       "targets": [
         "canonical_daily_operation.py",
         "daily_analysis_pipeline.py",

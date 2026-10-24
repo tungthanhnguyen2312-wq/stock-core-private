@@ -219,6 +219,11 @@ def financial_research_card(card: Mapping[str, Any], fundamental: Mapping[str, A
     from stocklookup_core.financial.fundamental_signal_consumption_contract import official_income_research_context
     from stocklookup_core.financial.interim_earnings_cash_research import interim_earnings_cash_research_context
     result = copy.deepcopy(dict(card))
+    from stocklookup_core.research.shareholder_economics import project_context
+    inherited = (((integrated or {}).get("corporate_intelligence_context") or {}).get("forward_driver_context") or {}).get("shareholder_economics_context")
+    result["shareholder_economics_context"] = project_context(
+        ticker=card.get("ticker"), cutoff=cutoff or f"{(integrated or {}).get('as_of_session')}T15:00:00+07:00",
+        financial_record=fundamental, inherited_context=inherited)
     result["fundamental_research_context"] = {
         "composite": financial_research_composite(integrated or {}),
         "official_income": official_income_research_context(fundamental, cutoff=cutoff, ticker=card.get("ticker")),
@@ -707,6 +712,8 @@ def build_dashboard_projection(
                 earnings_cash = (source_card.get("fundamental_context") or {}).get("interim_earnings_cash_research_context")
             if earnings_cash is not None and isinstance(decision_card.get("fundamental"), dict):
                 decision_card["fundamental"]["interim_earnings_cash_research_context"] = copy.deepcopy(earnings_cash)
+            if source_card.get("shareholder_economics_context") is not None:
+                decision_card["shareholder_economics_context"] = copy.deepcopy(source_card["shareholder_economics_context"])
         projection["integrated_decision_overlay_v1"] = {
             key: copy.deepcopy(value)
             for key, value in overlay.items()

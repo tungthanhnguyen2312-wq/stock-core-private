@@ -1,0 +1,40 @@
+{
+  "milestone": "CORPORATE_SHAREHOLDER_ECONOMICS_AND_DILUTION_RESEARCH_INTEGRATION_V1",
+  "base": "e86b5f96ab073fe5a0fd673351332466094aff82",
+  "reused_checkpoint": "119a9e1e641a9c71482756e7875e52f9acd0d93b",
+  "hub_commit": "4ba741960c9859fc370cc667d2cdeb10f70a91ea",
+  "corporate_records_parity": 1507,
+  "primary_card_parity": 72,
+  "context_status_counts": {
+    "UNKNOWN": 70,
+    "AVAILABLE": 2
+  },
+  "retained_october22_sha256": {
+    "market_wide_current_fundamental_research_artifact.json": "204b21c941dd4d774b49586e6e145dc1012098acaba198d09c5ca088cd578832",
+    "market_wide_current_valuation_artifact.json": "840cb394484a2bd2440cc03580c8963a15c6c7602ca1a68a0dc042b9ff3df7b1",
+    "d77e16f82893df419689b24356d066d6a6431bd3c27e09190e3c319e004abb55.json": "1552ebb30c77e4c25ba91f9e2e7cf14e806f1e825dd93733d7794707857f8585",
+    "d6dcb499009e16ebc46def2cc065b6d3ea21a939970c56c1850c90aac84eeff1.json": "f45c72e4dce2fdd41e45f136d6c3ce2cd06946c21bb9c3089542f2e80b2cc044",
+    "ai_research_session_bundle.json": "02740143933e612bb6edd871074d33215c2b97fb688a929f9fc109ee70e3c509",
+    "current_research_valuation_context_artifact.json": "97a821218b980e87409cfdb915427d603cb878ebcb81d4dd5ffcb17bac7b76ff",
+    "current_research_decision_packet_artifact.json": "2728eeea048de09a21bd1ae6d65d8dd2af3030df33851b1969f1808a661391f4",
+    "current_decision_cockpit_projection.json": "92183975e0d3596d68bbcbd3c70f0aefdb5ef57a91876ef97dffc4b866cb9dce"
+  },
+  "sealed_october23_sha256": {
+    "run_manifest.json": "0aed9a91d9ef9eafff3f6cbce3023c0ff779b66e9176bd8d870d308ab47a0ce4",
+    "ai_research_bundle_manifest.json": "d7635e90a49a690288914b6200c39403b0183104d5bc1cdcc565a4b380deb969",
+    "ai_research_session_bundle.json": "602587173c8a1df65f5a4cf5a42bbc8d3ba6aaddd4ed8ba9dc39a6edc03af343"
+  },
+  "sealed_inputs_unchanged": true,
+  "source_bound_inspection_issuers": 14,
+  "verified_raw_documents": 5,
+  "previously_qualified_share_observations_reused": 1,
+  "newly_qualified_share_fields": 0,
+  "hub_candidate_sources": 40,
+  "hub_candidate_events": 35,
+  "hub_candidate_continuity_points": 32,
+  "hub_candidate_gaps": 24,
+  "october24_candidate_values_at_october23": 0,
+  "authority_effect": "NONE",
+  "production_writes": 0,
+  "hosted_ci": "NOT_RUN_NO_PUSH_AUTHORIZATION"
+}
