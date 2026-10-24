@@ -465,11 +465,13 @@ def test_w3_engines_leave_the_root_without_shim_or_pinned_caller():
             assert not moved.intersection(n.split(".")[0] for n in names), (ref, relative, names)
 
 
-def test_w3_moved_engines_keep_the_checkout_root(tmp_path, monkeypatch):
-    monkeypatch.chdir(tmp_path)
+def test_w3_moved_engines_keep_the_checkout_root():
+    """Static: optional extras (e.g. PyMuPDF) are not installed in every CI tier, so nothing is imported."""
     for new in W3["relocations"].values():
         if not new.startswith("tools/replay/"):
             continue
-        module = importlib.import_module(new[:-3].replace("/", "."))
-        if hasattr(module, "ROOT"):
-            assert Path(module.ROOT).resolve() == ROOT.resolve(), new
+        tree = ast.parse((ROOT / new).read_text(encoding="utf-8"))
+        for node in tree.body:
+            if isinstance(node, ast.Assign) and any(isinstance(t, ast.Name) and t.id == "ROOT" for t in node.targets):
+                assert ast.unparse(node.value) == "Path(__file__).resolve().parents[3]", new
+                assert (ROOT / new).resolve().parents[3] == ROOT.resolve(), new
